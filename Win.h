@@ -1,6 +1,9 @@
 #pragma once
 
 #include <ostream>
+#include <vector>
+#include <cassert>
+#include <algorithm>
 
 #ifndef SAFE_DELETE
 #define SAFE_DELETE(x) if(nullptr != x) { delete x; x = nullptr; }
@@ -11,12 +14,21 @@
 #ifndef SAFE_FCLOSE
 #define SAFE_FCLOSE(x) if(nullptr != x) { fclose(x); x = nullptr; }
 #endif
+#ifndef VERIFY
+#ifdef  _DEBUG
+#define VERIFY(x) assert(x)
+#else
+#define VERIFY(x) (x)
+#endif
+#endif
 
 class Win
 {
 public:
 	Win();
 	virtual ~Win();
+
+	virtual void OnInitialize(HWND hWnd, HINSTANCE hInstance) {}
 
 	virtual void OnCreate(HWND hWnd) {}
 	virtual void OnSize(HWND hWnd) {}

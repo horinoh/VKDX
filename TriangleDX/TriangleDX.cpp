@@ -111,7 +111,10 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    }
 
 #pragma region Code
-   Inst = new DX();
+   Inst = new TriangleDX();
+   if (nullptr != Inst) {
+	   Inst->OnInitialize(hWnd, hInstance);
+   }
 #pragma endregion
 
    ShowWindow(hWnd, nCmdShow);
