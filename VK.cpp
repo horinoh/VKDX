@@ -11,7 +11,7 @@ VK::~VK()
 {
 }
 
-void VK::OnInitialize(HWND hWnd, HINSTANCE hInstance)
+void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 {
 	CreateInstance();
 	CreateDevice();
@@ -28,20 +28,16 @@ void VK::OnInitialize(HWND hWnd, HINSTANCE hInstance)
 
 	CreateSetupCommandBuffer();
 }
-
-void VK::OnCreate(HWND hWnd)
+void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 {
 }
-void VK::OnSize(HWND hWnd)
+void VK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
 }
-void VK::OnTimer(HWND hWnd)
+void VK::OnPaint(HWND hWnd, HINSTANCE hInstance)
 {
 }
-void VK::OnPaint(HWND hWnd)
-{
-}
-void VK::OnDestroy(HWND hWnd)
+void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 	for (auto i : Framebuffers) {
 		vkDestroyFramebuffer(Device, i, nullptr);

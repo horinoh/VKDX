@@ -110,13 +110,6 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
       return FALSE;
    }
 
-#pragma region Code
-   Inst = new TriangleDX();
-   if (nullptr != Inst) {
-	   Inst->OnInitialize(hWnd, hInstance);
-   }
-#pragma endregion
-
    ShowWindow(hWnd, nCmdShow);
    UpdateWindow(hWnd);
 
@@ -156,18 +149,21 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 #pragma region Code
 	case WM_CREATE:
+		if (nullptr == Inst) {
+			Inst = new TriangleDX();
+		}
 		if (nullptr != Inst) {
-			Inst->OnCreate(hWnd);
+			Inst->OnCreate(hWnd, hInst);
 		}
 		break;
 	case WM_TIMER:
 		if (nullptr != Inst) {
-			Inst->OnTimer(hWnd);
+			Inst->OnTimer(hWnd, hInst);
 		}
 		break;
 	case WM_SIZE:
 		if (nullptr != Inst) {
-			Inst->OnSize(hWnd);
+			Inst->OnSize(hWnd, hInst);
 		}
 		break;
 	case WM_KEYDOWN:
@@ -183,7 +179,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             // TODO: Add any drawing code that uses hdc here...
 #pragma region Code
 			if (nullptr != Inst) {
-				Inst->OnPaint(hWnd);
+				Inst->OnPaint(hWnd, hInst);
 			}
 #pragma endregion
             EndPaint(hWnd, &ps);
@@ -192,7 +188,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
 #pragma region Code
 		if (nullptr != Inst) {
-			Inst->OnDestroy(hWnd);
+			Inst->OnDestroy(hWnd, hInst);
 		}
 		SAFE_DELETE(Inst);
 #pragma endregion

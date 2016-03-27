@@ -16,13 +16,11 @@ public:
 	VK();
 	virtual ~VK();
 
-	virtual void OnInitialize(HWND hWnd, HINSTANCE hInstance) override;
-
-	virtual void OnCreate(HWND hWnd) override;
-	virtual void OnSize(HWND hWnd) override;
-	virtual void OnTimer(HWND hWnd) override;
-	virtual void OnPaint(HWND hWnd) override;
-	virtual void OnDestroy(HWND hWnd) override;
+	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance) override;
+	virtual void OnSize(HWND hWnd, HINSTANCE hInstance) override;
+	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override;
+	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override;
+	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 
 protected:
 	virtual void CreateInstance();

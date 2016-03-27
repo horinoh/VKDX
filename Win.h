@@ -28,13 +28,13 @@ public:
 	Win();
 	virtual ~Win();
 
-	virtual void OnInitialize(HWND hWnd, HINSTANCE hInstance) {}
+	//virtual void OnInitialize(HWND hWnd, HINSTANCE hInstance) {}
 
-	virtual void OnCreate(HWND hWnd) {}
-	virtual void OnSize(HWND hWnd) {}
-	virtual void OnTimer(HWND hWnd) {}
-	virtual void OnPaint(HWND hWnd) {}
-	virtual void OnDestroy(HWND hWnd) {}
+	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance) {}
+	virtual void OnSize(HWND hWnd, HINSTANCE hInstance) {}
+	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) {}
+	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) {}
+	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) {}
 
 	static void SetColor(const WORD Color = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE) {
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), Color | FOREGROUND_INTENSITY);
