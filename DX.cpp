@@ -19,9 +19,16 @@ DX::~DX()
 void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 {
 	CreateDevice(hWnd);
+	CreateCommandQueue();
+	CreateSwapChain(hWnd);
 	CreateRootSignature();
+	CreateInputLayout();
+	CreateShader();
 	CreatePipelineState();
 	CreateCommandList();
+	CreateVertexBuffer();
+	CreateIndexBuffer();
+	CreateFence();
 }
 void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 {
@@ -31,9 +38,19 @@ void DX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 }
 void DX::OnPaint(HWND hWnd, HINSTANCE hInstance)
 {
+	PopulateCommandList();
+
+	ID3D12CommandList* CommandLists[] = { CommandList.Get() };
+	CommandQueue->ExecuteCommandLists(_countof(CommandLists), CommandLists);
+
+	VERIFY_SUCCEEDED(SwapChain3->Present(1, 0));
+
+	WaitForFence();
 }
 void DX::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
+	WaitForFence();
+	CloseHandle(FenceEvent);
 }
 
 void DX::CreateDevice(HWND hWnd)
@@ -48,71 +65,76 @@ void DX::CreateDevice(HWND hWnd)
 
 #pragma region CreateDevice
 	ComPtr<IDXGIFactory4> Factory4;
-	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&Factory4))); {
-		if (false/*WarpDevice*/) { // todo
-			ComPtr<IDXGIAdapter> Adapter;
-			VERIFY_SUCCEEDED(Factory4->EnumWarpAdapter(IID_PPV_ARGS(&Adapter)));
-			VERIFY_SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&Device)));
-		}
-		else {
-			ComPtr<IDXGIAdapter1> Adapter;
-			for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory4->EnumAdapters1(i, &Adapter); ++i) {
-				DXGI_ADAPTER_DESC1 AdapterDesc1;
-				Adapter->GetDesc1(&AdapterDesc1);
-				if (AdapterDesc1.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {
-					continue;
-				}
-				if (SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&Device)))) {
-					break;
-				}
+	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&Factory4)));
+	if (false/*WarpDevice*/) { // todo : WarpDevice は今のところやらない
+		ComPtr<IDXGIAdapter> Adapter;
+		VERIFY_SUCCEEDED(Factory4->EnumWarpAdapter(IID_PPV_ARGS(&Adapter)));
+		VERIFY_SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&Device)));
+	}
+	else {
+		ComPtr<IDXGIAdapter1> Adapter;
+		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory4->EnumAdapters1(i, &Adapter); ++i) {
+			DXGI_ADAPTER_DESC1 AdapterDesc1;
+			Adapter->GetDesc1(&AdapterDesc1);
+			if (AdapterDesc1.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {
+				continue;
+			}
+			if (SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&Device)))) {
+				break;
 			}
 		}
 	}
 #pragma endregion
+}
 
+void DX::CreateCommandQueue()
+{
 #pragma region CreateCommandQueue
-	{
-		D3D12_COMMAND_QUEUE_DESC CommandQueueDesc = {};
-		CommandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		CommandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-		VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(&CommandQueue)));
-	}
+	D3D12_COMMAND_QUEUE_DESC CommandQueueDesc = {};
+	CommandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+	CommandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+	VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(&CommandQueue)));
 #pragma endregion
+}
+
+void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
+{
+	using namespace Microsoft::WRL;
+
+	ComPtr<IDXGIFactory4> Factory4;
+	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&Factory4)));
 
 #pragma region CreateSwapChain
-	{
-		DXGI_SWAP_CHAIN_DESC1 SwapChainDesc1 = {};
-		SwapChainDesc1.BufferCount = 2;
-		SwapChainDesc1.Width = 1280; // todo
-		SwapChainDesc1.Height = 720; // todo
-		SwapChainDesc1.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-		SwapChainDesc1.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-		SwapChainDesc1.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-		SwapChainDesc1.SampleDesc.Count = 1;
+	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc1 = {};
+	SwapChainDesc1.BufferCount = BufferCount;
+	SwapChainDesc1.Width = 1280; // todo
+	SwapChainDesc1.Height = 720; // todo
+	SwapChainDesc1.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	SwapChainDesc1.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+	SwapChainDesc1.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+	SwapChainDesc1.SampleDesc.Count = 1;
 
-		ComPtr<IDXGISwapChain1> SwapChain1;
-		VERIFY_SUCCEEDED(Factory4->CreateSwapChainForHwnd(CommandQueue.Get(), hWnd, &SwapChainDesc1, nullptr, nullptr, &SwapChain1));
-		VERIFY_SUCCEEDED(Factory4->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER));
-		VERIFY_SUCCEEDED(SwapChain1.As(&SwapChain3));
-		BackBufferIndex = SwapChain3->GetCurrentBackBufferIndex();
-	}
+	ComPtr<IDXGISwapChain1> SwapChain1;
+	VERIFY_SUCCEEDED(Factory4->CreateSwapChainForHwnd(CommandQueue.Get(), hWnd, &SwapChainDesc1, nullptr, nullptr, &SwapChain1));
+	VERIFY_SUCCEEDED(Factory4->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER));
+	VERIFY_SUCCEEDED(SwapChain1.As(&SwapChain3));
+	BackBufferIndex = SwapChain3->GetCurrentBackBufferIndex();
 #pragma endregion
 
-#pragma region CreateRTV
-	{
-		D3D12_DESCRIPTOR_HEAP_DESC DescripterHeapDesc = {};
-		DescripterHeapDesc.NumDescriptors = 2;
-		DescripterHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-		DescripterHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescripterHeapDesc, IID_PPV_ARGS(&RenderTargetViewHeap)));
+	//!< デスクリプタヒープ(ビュー)を作成
+#pragma region CreateRenderTargetView
+	D3D12_DESCRIPTOR_HEAP_DESC DescripterHeapDesc = {};
+	DescripterHeapDesc.NumDescriptors = BufferCount;
+	DescripterHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	DescripterHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescripterHeapDesc, IID_PPV_ARGS(&RenderTargetViewHeap)));
 
-		const auto DescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetViewHandle(RenderTargetViewHeap->GetCPUDescriptorHandleForHeapStart());
-		for (UINT i = 0; i < 2; ++i) {
-			VERIFY_SUCCEEDED(SwapChain3->GetBuffer(i, IID_PPV_ARGS(&RenderTargets[i])));
-			Device->CreateRenderTargetView(RenderTargets[i].Get(), nullptr, RenderTargetViewHandle);
-			RenderTargetViewHandle.ptr += DescriptorSize;
-		}
+	D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetViewHandle(RenderTargetViewHeap->GetCPUDescriptorHandleForHeapStart());
+	const auto DescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	for (UINT i = 0; i < BufferCount; ++i) {
+		VERIFY_SUCCEEDED(SwapChain3->GetBuffer(i, IID_PPV_ARGS(&RenderTargets[i])));
+		Device->CreateRenderTargetView(RenderTargets[i].Get(), nullptr, RenderTargetViewHandle);
+		RenderTargetViewHandle.ptr += DescriptorSize;
 	}
 #pragma endregion
 }
@@ -134,26 +156,46 @@ void DX::CreateRootSignature()
 	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(&RootSignature)));
 }
 
+void DX::CreateInputLayout()
+{
+	D3D12_INPUT_ELEMENT_DESC InputElementDescs[] = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		//{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+	InputLayoutDescs.push_back({ InputElementDescs, _countof(InputElementDescs) });
+}
+
+/**
+@note VisualStudio に HLSL ファイルを追加すれば、コンパイルされて *.cso ファイルが作成される ( 出力先は x64/Debug/, x64/Release/ など)
+*/
+void DX::CreateShader()
+{
+	using namespace Microsoft::WRL;
+
+	D3DReadFileToBlob(L"XXXVS.cso", &BlobVS);// todo
+	ShaderBytecodesVSs.push_back({ BlobVS->GetBufferPointer(), BlobVS->GetBufferSize() });
+	
+	D3DReadFileToBlob(L"XXXPS.cso", &BlobPS);// todo
+	ShaderBytecodesPSs.push_back({ BlobPS->GetBufferPointer(), BlobPS->GetBufferSize() });
+}
+
 void DX::CreatePipelineState()
 {
+	//!< 要 RootSignature
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineStateDesc = {};
 	GraphicsPipelineStateDesc.pRootSignature = RootSignature.Get();
 
-	D3D12_INPUT_ELEMENT_DESC InputElementDescs[] = {
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-	}; 
-	GraphicsPipelineStateDesc.InputLayout = { InputElementDescs, _countof(InputElementDescs) };
-	
-	D3D12_SHADER_BYTECODE ShaderBytecode_VS = {}; {
-		//ShaderBytecode_VS.pShaderBytecode = BlobVS->GetBufferPointer(); // todo
-		//ShaderBytecode_VS.BytecodeLength = BlobVS->GetBufferSize(); // todo
-	} GraphicsPipelineStateDesc.VS = ShaderBytecode_VS; 
-	D3D12_SHADER_BYTECODE ShaderBytecode_PS = {}; {
-		//ShaderBytecode_PS.pShaderBytecode = BlobPS->GetBufferPointer(); // todo
-		//ShaderBytecode_PS.BytecodeLength = BlobPS->GetBufferSize(); // todo
-	} GraphicsPipelineStateDesc.PS = ShaderBytecode_PS;
-	
+	if (!InputLayoutDescs.empty()) {
+		GraphicsPipelineStateDesc.InputLayout = InputLayoutDescs[0];
+	}
+
+	if (!ShaderBytecodesVSs.empty()) {
+		GraphicsPipelineStateDesc.VS = ShaderBytecodesVSs[0];
+	}
+	if (!ShaderBytecodesPSs.empty()) {
+		GraphicsPipelineStateDesc.PS = ShaderBytecodesPSs[0];
+	}
+
 	D3D12_RASTERIZER_DESC RasterizerDesc = {}; {
 		RasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
 		RasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
@@ -200,4 +242,95 @@ void DX::CreateCommandList()
 	VERIFY_SUCCEEDED(CommandList->Close());
 }
 
+void DX::CreateVertexBuffer()
+{
+	const D3D12_HEAP_PROPERTIES HeapProperties = { D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 1, 1 };
+	const DirectX::XMFLOAT3 Vertices[] = { { 0.0f, 0.25f, 0.0f },{ 0.25f, -0.25f, 0.0f },{ -0.25f, -0.25f, 0.0f }, };
+	const auto Width = sizeof(Vertices);
+	const D3D12_RESOURCE_DESC ResourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, Width, 1, 1, 1, DXGI_FORMAT_UNKNOWN, 1, 0, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, 
+		D3D12_HEAP_FLAG_NONE, 
+		&ResourceDesc, 
+		D3D12_RESOURCE_STATE_GENERIC_READ, 
+		nullptr,
+		IID_PPV_ARGS(&VertexBuffer)));
+
+	UINT8* Data;
+	D3D12_RANGE Range = { 0, 0 };
+	VERIFY_SUCCEEDED(VertexBuffer->Map(0, &Range, reinterpret_cast<void **>(&Data))); {
+		memcpy(Data, Vertices, sizeof(Vertices));
+	} VertexBuffer->Unmap(0, nullptr);
+
+	VertexBufferView = { VertexBuffer->GetGPUVirtualAddress(), sizeof(Vertices[0]), sizeof(Vertices) };
+}
+
+void DX::CreateIndexBuffer()
+{
+	const D3D12_HEAP_PROPERTIES HeapProperties = { D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 1, 1 };
+	const UINT32 Indices[] = { 0, 1, 2, };
+	const auto Width = sizeof(Indices);
+	const D3D12_RESOURCE_DESC ResourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, Width, 1, 1, 1, DXGI_FORMAT_UNKNOWN, 1, 0, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&IndexBuffer)));
+
+	UINT8* Data;
+	D3D12_RANGE Range = { 0, 0 };
+	VERIFY_SUCCEEDED(IndexBuffer->Map(0, &Range, reinterpret_cast<void **>(&Data))); {
+		memcpy(Data, Indices, sizeof(Indices));
+	} IndexBuffer->Unmap(0, nullptr);
+
+	IndexBufferView = { IndexBuffer->GetGPUVirtualAddress(), sizeof(Indices[0]), sizeof(Indices) };
+}
+
+void DX::CreateFence()
+{
+	//!< 初期値を 0 として作成
+	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&Fence)));
+	//!< 次回に備えて 1 にしておく
+	FenceValue = 1;
+
+	FenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	assert(nullptr != FenceEvent);
+
+	WaitForFence();
+}
+
+void DX::PopulateCommandList()
+{
+	VERIFY_SUCCEEDED(CommandAllocator->Reset());
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator.Get(), PipelineState.Get()));
+
+	{
+		CommandList->SetGraphicsRootSignature(RootSignature.Get());
+
+		D3D12_VIEWPORT Viewport = { 0.0f, 0.0f, 1280.0f, 720.0f, 0.0f, 1.0f };
+		CommandList->RSSetViewports(1, &Viewport);
+		D3D12_RECT ScissorRect = { 0, 0, 1280, 720 };
+		CommandList->RSSetScissorRects(1, &ScissorRect);
+	}
+
+	VERIFY_SUCCEEDED(CommandList->Close());
+}
+
+void DX::WaitForFence()
+{
+	const auto Value = FenceValue;
+	//!< コマンドキューの実行が終わった時に Fence を Value にする (初回なら Fence の値 0 が 1 になる)
+	VERIFY_SUCCEEDED(CommandQueue->Signal(Fence.Get(), Value));
+	++FenceValue;
+
+	//!< この短い間に Fence の値が Value になっていないことを確認してから「待ち」に入る
+	if (Fence->GetCompletedValue() < Value)	{
+		//!< Fence の値が Value になったら FenceEvent 発行 (初回なら Fence の値 0 が 1 になったら)
+		VERIFY_SUCCEEDED(Fence->SetEventOnCompletion(Value, FenceEvent));
+		//!< ↑ FenceEvent が発行されるまで待つ
+		WaitForSingleObject(FenceEvent, INFINITE);
+	}
+
+	BackBufferIndex = SwapChain3->GetCurrentBackBufferIndex();
+}
 

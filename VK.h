@@ -39,6 +39,10 @@ protected:
 	virtual void CreatePipelineCache();
 	virtual void CreateFramebuffers();
 	virtual void FlushSetupCommandBuffer();
+	virtual void CreateVertexBuffer();
+	virtual void CreateIndexBuffer();
+
+	virtual void PopulateCommandBuffer();
 
 protected:
 	VkInstance Instance;

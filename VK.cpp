@@ -27,6 +27,9 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	FlushSetupCommandBuffer();
 
 	CreateSetupCommandBuffer();
+
+	CreateVertexBuffer();
+	CreateIndexBuffer();
 }
 void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 {
@@ -36,6 +39,13 @@ void VK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 }
 void VK::OnPaint(HWND hWnd, HINSTANCE hInstance)
 {
+	PopulateCommandBuffer();
+
+	// executeCommandbufer
+
+	// swapchain->present()
+	
+	// Waitforfence()
 }
 void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
@@ -658,4 +668,19 @@ void VK::FlushSetupCommandBuffer()
 		vkFreeCommandBuffers(Device, CommandPool, 1, &SetupCommandBuffer);
 		SetupCommandBuffer = VK_NULL_HANDLE;
 	}
+}
+
+void VK::CreateVertexBuffer()
+{
+
+}
+
+void VK::CreateIndexBuffer()
+{
+
+}
+
+void VK::PopulateCommandBuffer()
+{
+
 }
