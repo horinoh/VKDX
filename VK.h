@@ -36,6 +36,8 @@ protected:
 	VkBool32 VK::GetMemoryType(uint32_t TypeBits, VkFlags Properties, uint32_t* TypeIndex);
 	virtual void CreateDepthStencil();
 	virtual void CreateRenderPass();
+	virtual void CreateShader(const std::string& Path, const VkShaderStageFlagBits Stage);
+	virtual void CreateShader();
 	virtual void CreatePipelineCache();
 	virtual void CreateFramebuffers();
 	virtual void FlushSetupCommandBuffer();
@@ -87,6 +89,8 @@ protected:
 	VulkanDepthStencil DepthStencil;
 
 	VkRenderPass RenderPass;
+
+	std::vector<VkPipelineShaderStageCreateInfo> ShaderStageCreateInfos;
 
 	VkPipelineCache PipelineCache;
 

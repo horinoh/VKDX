@@ -1,5 +1,7 @@
 #include "stdafx.h"
 
+#include <fstream>
+
 #include "VK.h"
 
 #pragma comment(lib, "vulkan-1.lib")
@@ -21,6 +23,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateSwapchain();
 	CreateDrawCommandBuffers();
 	CreateDepthStencil();
+	CreateShader();
 	CreatePipelineCache();
 	CreateFramebuffers();
 
@@ -54,6 +57,10 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 
 	vkDestroyPipelineCache(Device, PipelineCache, nullptr);
+
+	for (auto& i : ShaderStageCreateInfos) {
+		vkDestroyShaderModule(Device, i.module, nullptr);
+	}
 
 	vkDestroyRenderPass(Device, RenderPass, nullptr);
 
@@ -620,6 +627,49 @@ void VK::CreateRenderPass()
 	}
 #pragma endregion
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, nullptr, &RenderPass));
+}
+
+/**
+@brief glslangValidator.exe を用いてコンパイルする。
+(環境変数 Path が通っているのでフルパスを指定せずに使用可能)
+Build Event - Post-Build Event に以下のように記述してある
+	for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator -V %%1 -o %%1.spv
+*/
+void VK::CreateShader(const std::string& Path, const VkShaderStageFlagBits Stage)
+{
+	VkPipelineShaderStageCreateInfo ShaderStageCreateInfo = {};
+	ShaderStageCreateInfo.stage = Stage;
+	ShaderStageCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	{
+		VkShaderModuleCreateInfo ModuleCreateInfo;
+		ModuleCreateInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+		ModuleCreateInfo.pNext = nullptr;
+		ModuleCreateInfo.flags = 0;
+
+		std::ifstream In(Path.c_str(), std::ios::in | std::ios::binary);
+		assert(false == In.fail());
+
+		In.seekg(0, std::ios_base::end);
+		const auto CodeSize = In.tellg();
+		In.seekg(0, std::ios_base::beg);
+
+		auto Code = new char[CodeSize];
+		In.read(Code, CodeSize);
+		In.close();
+
+		ModuleCreateInfo.codeSize = CodeSize;
+		ModuleCreateInfo.pCode = reinterpret_cast<uint32_t*>(Code);
+
+		VERIFY_SUCCEEDED(vkCreateShaderModule(Device, &ModuleCreateInfo, nullptr, &ShaderStageCreateInfo.module));
+		delete[] Code;
+	}
+	ShaderStageCreateInfo.pName = "Main";
+	ShaderStageCreateInfos.push_back(ShaderStageCreateInfo);
+}
+void VK::CreateShader()
+{
+	CreateShader("XXX.vert.spv", VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT); //todo
+	CreateShader("XXX.frag.spv", VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT); //todo
 }
 
 void VK::CreatePipelineCache()
