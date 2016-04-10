@@ -29,6 +29,8 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 	CreateFence();
+
+	PopulateCommandList();
 }
 void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 {
@@ -38,12 +40,11 @@ void DX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 }
 void DX::OnPaint(HWND hWnd, HINSTANCE hInstance)
 {
-	PopulateCommandList();
+	//PopulateCommandList();
 
-	ID3D12CommandList* CommandLists[] = { CommandList.Get() };
-	CommandQueue->ExecuteCommandLists(_countof(CommandLists), CommandLists);
+	ExecuteCommandList();
 
-	VERIFY_SUCCEEDED(SwapChain3->Present(1, 0));
+	Present();
 
 	WaitForFence();
 }
@@ -118,7 +119,7 @@ void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
 	VERIFY_SUCCEEDED(Factory4->CreateSwapChainForHwnd(CommandQueue.Get(), hWnd, &SwapChainDesc1, nullptr, nullptr, &SwapChain1));
 	VERIFY_SUCCEEDED(Factory4->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER));
 	VERIFY_SUCCEEDED(SwapChain1.As(&SwapChain3));
-	BackBufferIndex = SwapChain3->GetCurrentBackBufferIndex();
+	CurrentBackBufferIndex = SwapChain3->GetCurrentBackBufferIndex();
 #pragma endregion
 
 	//!< デスクリプタヒープ(ビュー)を作成
@@ -316,6 +317,17 @@ void DX::PopulateCommandList()
 	VERIFY_SUCCEEDED(CommandList->Close());
 }
 
+void DX::ExecuteCommandList()
+{
+	ID3D12CommandList* CommandLists[] = { CommandList.Get() };
+	CommandQueue->ExecuteCommandLists(_countof(CommandLists), CommandLists);
+}
+
+void DX::Present()
+{
+	VERIFY_SUCCEEDED(SwapChain3->Present(1, 0));
+}
+
 void DX::WaitForFence()
 {
 	const auto Value = FenceValue;
@@ -331,6 +343,6 @@ void DX::WaitForFence()
 		WaitForSingleObject(FenceEvent, INFINITE);
 	}
 
-	BackBufferIndex = SwapChain3->GetCurrentBackBufferIndex();
+	CurrentBackBufferIndex = SwapChain3->GetCurrentBackBufferIndex();
 }
 

@@ -27,10 +27,13 @@ public:
 protected:
 	virtual void CreateDevice(HWND hWnd);
 	virtual void CreateCommandQueue();
+
 	virtual void CreateSwapChain(HWND hWnd, const UINT BufferCount = 2);
 	virtual void CreateRootSignature();
 	virtual void CreateInputLayout();
+
 	virtual void CreateShader();
+
 	virtual void CreatePipelineState();
 	virtual void CreateCommandList();
 	virtual void CreateVertexBuffer();
@@ -38,6 +41,8 @@ protected:
 	virtual void CreateFence();
 
 	virtual void PopulateCommandList();
+	virtual void ExecuteCommandList();
+	virtual void Present();
 	virtual void WaitForFence();
 
 protected:
@@ -45,7 +50,7 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> CommandQueue;
 
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain3;
-	UINT BackBufferIndex;
+	UINT CurrentBackBufferIndex;
 
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> RenderTargetViewHeap;
 	Microsoft::WRL::ComPtr<ID3D12Resource> RenderTargets[2];
@@ -58,7 +63,7 @@ protected:
 	std::vector<D3D12_SHADER_BYTECODE> ShaderBytecodesVSs;
 	Microsoft::WRL::ComPtr<ID3DBlob> BlobPS;
 	std::vector<D3D12_SHADER_BYTECODE> ShaderBytecodesPSs;
-	
+
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
 
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
