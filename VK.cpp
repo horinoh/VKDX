@@ -15,6 +15,8 @@ VK::~VK()
 
 void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 {
+	Super::OnCreate(hWnd, hInstance);
+
 	CreateInstance();
 	CreateDevice(); 
 
@@ -33,7 +35,10 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateDepthStencil();
 	
 	CreateShader();
-	
+	CreateUniformBuffer();
+
+	CreateViewport();
+
 	CreatePipelineCache();
 	
 	CreateFramebuffers();
@@ -52,12 +57,16 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 }
 void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 {
+	Super::OnSize(hWnd, hInstance);
 }
 void VK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
+	Super::OnTimer(hWnd, hInstance);
 }
 void VK::OnPaint(HWND hWnd, HINSTANCE hInstance)
 {
+	Super::OnPaint(hWnd, hInstance);
+
 	//PopulateCommandBuffer();
 
 	ExecuteCommandBuffer();
@@ -68,6 +77,8 @@ void VK::OnPaint(HWND hWnd, HINSTANCE hInstance)
 }
 void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
+	Super::OnDestroy(hWnd, hInstance);
+
 	vkDestroyFence(Device, Fence, nullptr);
 
 	for (auto i : Framebuffers) {
@@ -82,6 +93,9 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 
 	vkDestroyPipeline(Device, Pipeline, nullptr);
 	vkDestroyPipelineCache(Device, PipelineCache, nullptr);
+
+	vkFreeMemory(Device, UniformDeviceMemory, nullptr);
+	vkDestroyBuffer(Device, UniformBuffer, nullptr);
 
 	for (auto& i : ShaderStageCreateInfos) {
 		vkDestroyShaderModule(Device, i.module, nullptr);
@@ -707,6 +721,44 @@ void VK::CreateShader()
 	CreateShader("XXX.frag.spv", VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT); //todo
 }
 
+void VK::CreateUniformBuffer()
+{
+	const auto Size = sizeof(glm::mat4) * 3; //!< World, View, Projection
+
+	VkBufferCreateInfo BufferCreateInfo = {};
+	BufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	BufferCreateInfo.size = Size;
+	BufferCreateInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &UniformBuffer));
+
+	VkMemoryAllocateInfo MemoryAllocateInfo = {};
+	MemoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+	MemoryAllocateInfo.pNext = nullptr;
+	MemoryAllocateInfo.allocationSize = 0;
+	MemoryAllocateInfo.memoryTypeIndex = 0; 
+	VkMemoryRequirements MemoryRequirements; {
+		vkGetBufferMemoryRequirements(Device, UniformBuffer, &MemoryRequirements);
+		MemoryAllocateInfo.allocationSize = MemoryRequirements.size;
+	}
+
+	GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &MemoryAllocateInfo.memoryTypeIndex);
+	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &UniformDeviceMemory));
+	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffer, UniformDeviceMemory, 0));
+
+	UniformDescriptorBufferInfo.buffer = UniformBuffer;
+	UniformDescriptorBufferInfo.offset = 0;
+	UniformDescriptorBufferInfo.range = Size;
+}
+
+void VK::CreateViewport()
+{
+	const auto Width = GetWidth();
+	const auto Height = GetHeight();
+
+	Viewports.push_back({ 0.0f, 0.0f, static_cast<float>(Width), static_cast<float>(Height), 0.0f, 1.0f });
+	ScissorRects.push_back({ { 0, 0 },{ static_cast<uint32_t>(Width), static_cast<uint32_t>(Height) } });
+}
+
 void VK::CreatePipelineCache()
 {
 	VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {};
@@ -778,6 +830,19 @@ void VK::CreateVertexInput()
 	}
 }
 
+VkBool32 VK::GetMemoryType(uint32_t TypeBits, VkFlags Properties, uint32_t* TypeIndex) const
+{
+	for (auto i = 0; i < 32; ++i) {
+		if (TypeBits & 1) {
+			if ((PhysicalDeviceMemoryProperties.memoryTypes[i].propertyFlags & Properties) == Properties) {
+				*TypeIndex = i;
+				return true;
+			}
+		}
+		TypeBits >>= 1;
+	}
+	return false;
+}
 void VK::CreateVertexBuffer()
 {
 	const std::vector<glm::vec3> Vertices = { {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} }; //todo
@@ -797,7 +862,7 @@ void VK::CreateVertexBuffer()
 		VkMemoryRequirements MemoryRequirements;
 		vkGetBufferMemoryRequirements(Device, StagingBuffer, &MemoryRequirements);
 		MemoryAllocateInfo.allocationSize = MemoryRequirements.size;
-		//getMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &MemoryAllocateInfo.memoryTypeIndex); todo
+		GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &MemoryAllocateInfo.memoryTypeIndex);
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &StagingDeviceMemory));
 		void *Data;
 		VERIFY_SUCCEEDED(vkMapMemory(Device, StagingDeviceMemory, 0, MemoryAllocateInfo.allocationSize, 0, &Data)); {
@@ -811,7 +876,7 @@ void VK::CreateVertexBuffer()
 		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &VertexBuffer));
 		vkGetBufferMemoryRequirements(Device, VertexBuffer, &MemoryRequirements);
 		MemoryAllocateInfo.allocationSize = MemoryRequirements.size;
-		//getMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &MemoryAllocateInfo.memoryTypeIndex); todo
+		GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &MemoryAllocateInfo.memoryTypeIndex);
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &VertexDeviceMemory));
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, VertexBuffer, VertexDeviceMemory, 0));
 #pragma endregion
@@ -865,7 +930,7 @@ void VK::CreateIndexBuffer()
 		VkMemoryRequirements MemoryRequirements;
 		vkGetBufferMemoryRequirements(Device, StagingBuffer, &MemoryRequirements);
 		MemoryAllocateInfo.allocationSize = MemoryRequirements.size;
-		//getMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &MemoryAllocateInfo.memoryTypeIndex); todo
+		GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &MemoryAllocateInfo.memoryTypeIndex);
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &StagingDeviceMemory));
 		void *Data;
 		VERIFY_SUCCEEDED(vkMapMemory(Device, StagingDeviceMemory, 0, sizeof(Indices), 0, &Data)); {
@@ -879,7 +944,7 @@ void VK::CreateIndexBuffer()
 		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &IndexBuffer));
 		vkGetBufferMemoryRequirements(Device, IndexBuffer, &MemoryRequirements);
 		MemoryAllocateInfo.allocationSize = MemoryRequirements.size;
-		//getMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &MemoryRequirements.memoryTypeIndex); todo
+		GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &MemoryAllocateInfo.memoryTypeIndex);
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &IndexDeviceMemory));
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, IndexBuffer, IndexDeviceMemory, 0));
 		
@@ -930,7 +995,17 @@ void VK::CreatePipeline()
 	//GraphicsPipelineCreateInfo.pRasterizationState = &rasterizationState; todo
 	//GraphicsPipelineCreateInfo.pColorBlendState = &colorBlendState; todo
 	//GraphicsPipelineCreateInfo.pMultisampleState = &multisampleState; todo
-	//GraphicsPipelineCreateInfo.pViewportState = &viewportState; todo
+	VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo = {}; {
+		PipelineViewportStateCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		PipelineViewportStateCreateInfo.pNext = nullptr;
+		PipelineViewportStateCreateInfo.flags = 0;
+		PipelineViewportStateCreateInfo.viewportCount = static_cast<uint32_t>(Viewports.size());
+		PipelineViewportStateCreateInfo.pViewports = Viewports.data();
+		PipelineViewportStateCreateInfo.scissorCount = static_cast<uint32_t>(ScissorRects.size());
+		PipelineViewportStateCreateInfo.pScissors = ScissorRects.data();
+		
+		GraphicsPipelineCreateInfo.pViewportState = &PipelineViewportStateCreateInfo;
+	}
 	//GraphicsPipelineCreateInfo.pDepthStencilState = &depthStencilState; todo
 	//GraphicsPipelineCreateInfo.renderPass = renderPass; todo
 	//GraphicsPipelineCreateInfo.pDynamicState = &dynamicState; todo
@@ -958,6 +1033,9 @@ void VK::PopulateCommandBuffer()
 	//!< バッファインデックスの更新
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphore, nullptr, &CurrentSwapchainBufferIndex));
 
+	vkCmdSetViewport(CommandBuffers[CurrentSwapchainBufferIndex], 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+	vkCmdSetScissor(CommandBuffers[CurrentSwapchainBufferIndex], 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+
 	VkDeviceSize Offsets[1] = { 0 };
 	vkCmdBindVertexBuffers(CommandBuffers[CurrentSwapchainBufferIndex], 0, 1, &VertexBuffer, Offsets);
 	vkCmdBindIndexBuffer(CommandBuffers[CurrentSwapchainBufferIndex], IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
@@ -977,6 +1055,8 @@ void VK::PopulateCommandBuffer()
 
 void VK::ExecuteCommandBuffer()
 {
+	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
+
 	VkSubmitInfo SubmitInfo = {};
 	SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	SubmitInfo.commandBufferCount = 1;
@@ -1004,6 +1084,8 @@ void VK::ExecuteCommandBuffer()
 	}
 	VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
 #endif
+
+	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 }
 
 void VK::Present()

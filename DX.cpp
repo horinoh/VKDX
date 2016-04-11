@@ -9,21 +9,23 @@
 
 DX::DX()
 {
-
 }
 DX::~DX()
 {
-
 }
 
 void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 {
+	Super::OnCreate(hWnd, hInstance);
+
 	CreateDevice(hWnd);
 	CreateCommandQueue();
 	CreateSwapChain(hWnd);
 	CreateRootSignature();
 	CreateInputLayout();
 	CreateShader();
+	CreateConstantBuffer();
+	CreateViewport();
 	CreatePipelineState();
 	CreateCommandList();
 	CreateVertexBuffer();
@@ -34,12 +36,16 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 }
 void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 {
+	Super::OnSize(hWnd, hInstance);
 }
 void DX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
+	Super::OnTimer(hWnd, hInstance);
 }
 void DX::OnPaint(HWND hWnd, HINSTANCE hInstance)
 {
+	Super::OnPaint(hWnd, hInstance);
+
 	//PopulateCommandList();
 
 	ExecuteCommandList();
@@ -50,6 +56,8 @@ void DX::OnPaint(HWND hWnd, HINSTANCE hInstance)
 }
 void DX::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
+	Super::OnDestroy(hWnd, hInstance);
+
 	WaitForFence();
 	CloseHandle(FenceEvent);
 }
@@ -157,15 +165,6 @@ void DX::CreateRootSignature()
 	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(&RootSignature)));
 }
 
-void DX::CreateInputLayout()
-{
-	D3D12_INPUT_ELEMENT_DESC InputElementDescs[] = {
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		//{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-	};
-	InputLayoutDescs.push_back({ InputElementDescs, _countof(InputElementDescs) });
-}
-
 /**
 @note VisualStudio に HLSL ファイルを追加すれば、コンパイルされて *.cso ファイルが作成される ( 出力先は x64/Debug/, x64/Release/ など)
 */
@@ -178,6 +177,20 @@ void DX::CreateShader()
 	
 	D3DReadFileToBlob(L"XXXPS.cso", &BlobPS);// todo
 	ShaderBytecodesPSs.push_back({ BlobPS->GetBufferPointer(), BlobPS->GetBufferSize() });
+}
+
+void DX::CreateConstantBuffer()
+{
+
+}
+
+void DX::CreateViewport()
+{
+	const auto Width = GetWidth();
+	const auto Height = GetHeight();
+
+	Viewports.push_back({ 0.0f, 0.0f, static_cast<FLOAT>(Width), static_cast<FLOAT>(Height), 0.0f, 1.0f });
+	ScissorRects.push_back({ 0, 0, Width, Height });
 }
 
 void DX::CreatePipelineState()
@@ -243,6 +256,15 @@ void DX::CreateCommandList()
 	VERIFY_SUCCEEDED(CommandList->Close());
 }
 
+void DX::CreateInputLayout()
+{
+	D3D12_INPUT_ELEMENT_DESC InputElementDescs[] = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		//{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+	InputLayoutDescs.push_back({ InputElementDescs, _countof(InputElementDescs) });
+}
+
 void DX::CreateVertexBuffer()
 {
 	const D3D12_HEAP_PROPERTIES HeapProperties = { D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 1, 1 };
@@ -305,14 +327,10 @@ void DX::PopulateCommandList()
 	VERIFY_SUCCEEDED(CommandAllocator->Reset());
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator.Get(), PipelineState.Get()));
 
-	{
-		CommandList->SetGraphicsRootSignature(RootSignature.Get());
+	CommandList->SetGraphicsRootSignature(RootSignature.Get());
 
-		D3D12_VIEWPORT Viewport = { 0.0f, 0.0f, 1280.0f, 720.0f, 0.0f, 1.0f };
-		CommandList->RSSetViewports(1, &Viewport);
-		D3D12_RECT ScissorRect = { 0, 0, 1280, 720 };
-		CommandList->RSSetScissorRects(1, &ScissorRect);
-	}
+	CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+	CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
 	VERIFY_SUCCEEDED(CommandList->Close());
 }

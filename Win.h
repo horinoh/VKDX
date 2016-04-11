@@ -30,7 +30,7 @@ public:
 
 	//virtual void OnInitialize(HWND hWnd, HINSTANCE hInstance) {}
 
-	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance) {}
+	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance) { GetClientRect(hWnd, &Rect); }
 	virtual void OnSize(HWND hWnd, HINSTANCE hInstance) {}
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) {}
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) {}
@@ -39,6 +39,13 @@ public:
 	static void SetColor(const WORD Color = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE) {
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), Color | FOREGROUND_INTENSITY);
 	}
+
+	LONG GetWidth() const { return Rect.right - Rect.left; }
+	LONG GetHeight() const { return Rect.bottom - Rect.top; }
+
+protected:
+	RECT Rect;
+
 private:
 	FILE* StdOut;
 	FILE* StdErr;
