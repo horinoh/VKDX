@@ -37,17 +37,15 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateUniformBuffer();
 
 	CreateViewport();
-
-	CreatePipelineCache();
 	
 	CreateFramebuffers();
 
 	FlushSetupCommandBuffer();
-
 	CreateSetupCommandBuffer();
-
 	CreateVertexBuffer();
 	CreateIndexBuffer();
+
+	CreatePipelineCache();
 	CreatePipeline();
 
 	CreateFence();
@@ -130,6 +128,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	vkDestroySemaphore(Device, PresentSemaphore, nullptr);
 	vkDestroyDevice(Device, nullptr);
 	
+	//vkDestroyInstance(Instance, &AllocationCallbacks);
 	vkDestroyInstance(Instance, nullptr);
 }
 
@@ -167,41 +166,39 @@ VkBool32 VK::GetMemoryType(uint32_t TypeBits, VkFlags Properties, uint32_t* Type
 }
 void VK::CreateInstance()
 {
-	VkInstanceCreateInfo InstanceCreateInfo = {};
-	InstanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-	InstanceCreateInfo.pNext = nullptr;
-
-	VkApplicationInfo ApplicationInfo = {};	{
-		ApplicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-		ApplicationInfo.pApplicationName = "VK";
-		ApplicationInfo.pEngineName = "None";
-		ApplicationInfo.apiVersion = VK_MAKE_VERSION(1, 0, 5);
-
-		InstanceCreateInfo.pApplicationInfo = &ApplicationInfo;
-	}
-
+	const VkApplicationInfo ApplicationInfo = {
+		VK_STRUCTURE_TYPE_APPLICATION_INFO,
+		nullptr,
+		"VK", 0,
+		"NONE", 0,
+		VK_MAKE_VERSION(1, 0, 5)
+	};
 	const std::vector<const char*> EnabledExtensions = {
 		VK_KHR_SURFACE_EXTENSION_NAME,
 		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
 #if defined(_WIN32)
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 #endif
-	}; {
-		InstanceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(EnabledExtensions.size());
-		InstanceCreateInfo.ppEnabledExtensionNames = EnabledExtensions.data();
-	}
+	};
+	const VkInstanceCreateInfo InstanceCreateInfo = {
+		VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+		nullptr,
+		0,
+		&ApplicationInfo,
+		0, nullptr,
+		static_cast<uint32_t>(EnabledExtensions.size()), EnabledExtensions.data()
+	};
 
+	//AllocationCallbacks = {
+	//	nullptr,
+	//	AlignedMalloc,
+	//	AlignedRealloc,
+	//	AlignedFree,
+	//	nullptr,
+	//	nullptr
+	//};
+	//VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, &AllocationCallbacks, &Instance));
 	VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance));
-}
-void VK::CreateSemaphore()
-{
-	VkSemaphoreCreateInfo SemaphoreCreateInfo = {};
-	SemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-	SemaphoreCreateInfo.pNext = nullptr;
-	SemaphoreCreateInfo.flags = 0;
-
-	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &PresentSemaphore));
-	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
 }
 VkPhysicalDevice VK::CreateDevice()
 {
@@ -229,29 +226,28 @@ void VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
 		for (uint32_t i = 0; i < QueueCount; ++i) {
 			//!< 描画機能のある最初のキューを探す
 			if (QueueProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-				VkDeviceCreateInfo DeviceCreateInfo = {};
-				DeviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-				DeviceCreateInfo.pNext = nullptr;
-				DeviceCreateInfo.pEnabledFeatures = nullptr;
-
-				VkDeviceQueueCreateInfo QueueCreateInfo = {};
-				const std::vector<float> QueuePriorities = { 0.0f }; {
-					QueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-					QueueCreateInfo.queueFamilyIndex = i;
-
-					QueueCreateInfo.queueCount = static_cast<uint32_t>(QueuePriorities.size());
-					QueueCreateInfo.pQueuePriorities = QueuePriorities.data();
-
-					DeviceCreateInfo.queueCreateInfoCount = 1;
-					DeviceCreateInfo.pQueueCreateInfos = &QueueCreateInfo;
-				}
-
-				const std::vector<const char*> EnabledExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME }; {
-					DeviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(EnabledExtensions.size());
-					DeviceCreateInfo.ppEnabledExtensionNames = EnabledExtensions.data();
-				}
-
+				const std::vector<float> QueuePriorities = { 0.0f };
+				const std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos = {
+					{
+						VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+						nullptr,
+						0,
+						i,
+						static_cast<uint32_t>(QueuePriorities.size()), QueuePriorities.data()
+					}
+				};
+				const std::vector<const char*> EnabledExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+				const VkDeviceCreateInfo DeviceCreateInfo = {
+					VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+					nullptr,
+					0,
+					static_cast<uint32_t>(QueueCreateInfos.size()), QueueCreateInfos.data(),
+					0, nullptr,
+					static_cast<uint32_t>(EnabledExtensions.size()), EnabledExtensions.data(),
+					nullptr
+				};
 				VERIFY_SUCCEEDED(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &Device));
+
 				//!< キューを取得
 				vkGetDeviceQueue(Device, i, 0, &Queue);
 
@@ -268,10 +264,13 @@ void VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
 void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice)
 {
 #if defined(_WIN32)
-	VkWin32SurfaceCreateInfoKHR SurfaceCreateInfo = {};
-	SurfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-	SurfaceCreateInfo.hwnd = hWnd;
-	SurfaceCreateInfo.hinstance = hInstance;
+	const VkWin32SurfaceCreateInfoKHR SurfaceCreateInfo = {
+		VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
+		nullptr,
+		0,
+		hInstance,
+		hWnd
+	};
 	VERIFY_SUCCEEDED(vkCreateWin32SurfaceKHR(Instance, &SurfaceCreateInfo, nullptr, &Surface));
 #endif
 
@@ -326,12 +325,24 @@ void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice Physical
 	}
 }
 
+void VK::CreateSemaphore()
+{
+	const VkSemaphoreCreateInfo SemaphoreCreateInfo = {
+		VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+		nullptr,
+		0
+	};
+	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &PresentSemaphore));
+	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
+}
 void VK::CreateCommandPool()
 {
-	VkCommandPoolCreateInfo CommandPoolInfo = {};
-	CommandPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	CommandPoolInfo.queueFamilyIndex = QueueFamilyIndex;
-	CommandPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	const VkCommandPoolCreateInfo CommandPoolInfo = {
+		VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+		nullptr,
+		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		QueueFamilyIndex
+	};
 	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, nullptr, &CommandPool));
 }
 
@@ -443,8 +454,8 @@ void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice)
 
 		VkExtent2D Extent2D = {};
 		if (SurfaceCapabilities.currentExtent.width == -1) {
-			Extent2D.width = 1280;
-			Extent2D.height = 720;
+			Extent2D.width = GetWidth();
+			Extent2D.height = GetHeight();
 		}
 		else {
 			Extent2D = SurfaceCapabilities.currentExtent;
@@ -593,8 +604,7 @@ void VK::CreateDepthStencil()
 				ImageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 				ImageCreateInfo.flags = 0;
 				ImageCreateInfo.format = DepthFormat;
-				//ImageCreateInfo.extent = { width, height, 1 }; todo
-				ImageCreateInfo.extent = { 1280, 720, 1 };
+				ImageCreateInfo.extent = { static_cast<uint32_t>(GetWidth()), static_cast<uint32_t>(GetHeight()), 1 };
 
 				VERIFY_SUCCEEDED(vkCreateImage(Device, &ImageCreateInfo, nullptr, &DepthStencil.Image));
 			}
@@ -623,62 +633,59 @@ void VK::CreateDepthStencil()
 
 void VK::CreateRenderPass()
 {
-	VkRenderPassCreateInfo RenderPassCreateInfo = {};
-	RenderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	RenderPassCreateInfo.pNext = nullptr;
-	RenderPassCreateInfo.subpassCount = 1;
-	RenderPassCreateInfo.dependencyCount = 0;
-	RenderPassCreateInfo.pDependencies = nullptr;
 #pragma region AttachmentDescriptions
-	std::vector<VkAttachmentDescription> AttachmentDescriptions(2);	{
-		AttachmentDescriptions[0].samples = VK_SAMPLE_COUNT_1_BIT;
-		AttachmentDescriptions[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		AttachmentDescriptions[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		AttachmentDescriptions[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		AttachmentDescriptions[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		AttachmentDescriptions[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		AttachmentDescriptions[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		AttachmentDescriptions[0].format = ColorFormat;
-
-		AttachmentDescriptions[1].samples = VK_SAMPLE_COUNT_1_BIT;
-		AttachmentDescriptions[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		AttachmentDescriptions[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-		AttachmentDescriptions[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		AttachmentDescriptions[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		AttachmentDescriptions[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		AttachmentDescriptions[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		AttachmentDescriptions[1].format = DepthFormat;
-		RenderPassCreateInfo.attachmentCount = static_cast<uint32_t>(AttachmentDescriptions.size());
-		RenderPassCreateInfo.pAttachments = AttachmentDescriptions.data();
-	}
+	const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
+		{
+			0,
+			ColorFormat,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_ATTACHMENT_LOAD_OP_CLEAR,
+			VK_ATTACHMENT_STORE_OP_STORE,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+		},
+		{
+			0,
+			 DepthFormat,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_ATTACHMENT_LOAD_OP_CLEAR,
+			VK_ATTACHMENT_STORE_OP_STORE,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+		}
+	};
 #pragma endregion
+
 #pragma region Subpass
-	VkSubpassDescription SubpassDescription = {};
-	VkAttachmentReference ColorAttachmentReference = {}; 
-	VkAttachmentReference DepthAttachmentReference = {}; {
-		SubpassDescription.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		SubpassDescription.flags = 0;
-		SubpassDescription.inputAttachmentCount = 0;
-		SubpassDescription.pInputAttachments = nullptr;
-		SubpassDescription.pResolveAttachments = nullptr;
-		SubpassDescription.preserveAttachmentCount = 0;
-		SubpassDescription.pPreserveAttachments = nullptr;
+	const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
+		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }
+	};
+	const VkAttachmentReference DepthAttachmentReference = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+	const std::vector<VkSubpassDescription> SubpassDescriptions = {
 		{
-			ColorAttachmentReference.attachment = 0;
-			ColorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			
-			SubpassDescription.colorAttachmentCount = 1;
-			SubpassDescription.pColorAttachments = &ColorAttachmentReference;
+			0,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			0, nullptr,
+			static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(),
+			nullptr,
+			&DepthAttachmentReference,
+			0, nullptr
 		}
-		{
-			DepthAttachmentReference.attachment = 1;
-			DepthAttachmentReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-			SubpassDescription.pDepthStencilAttachment = &DepthAttachmentReference;
-		}
-		RenderPassCreateInfo.pSubpasses = &SubpassDescription;
-	}
+	};
 #pragma endregion
+
+	const VkRenderPassCreateInfo RenderPassCreateInfo = {
+		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(AttachmentDescriptions.size()), AttachmentDescriptions.data(),
+		static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
+		0, nullptr
+	};
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, nullptr, &RenderPass));
 }
 
@@ -775,8 +782,8 @@ void VK::CreateFramebuffers()
 	VkFramebufferCreateInfo FrameBufferCreateInfo = {};
 	FrameBufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 	FrameBufferCreateInfo.pNext = nullptr;
-	FrameBufferCreateInfo.width = 1280;//width; todo
-	FrameBufferCreateInfo.height = 720;//height; todo
+	FrameBufferCreateInfo.width = GetWidth();
+	FrameBufferCreateInfo.height = GetHeight();
 	FrameBufferCreateInfo.layers = 1;
 	FrameBufferCreateInfo.renderPass = RenderPass;
 	std::vector<VkImageView> ImageViews(2); {
