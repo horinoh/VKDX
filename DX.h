@@ -42,10 +42,6 @@ protected:
 	virtual void CreateShader();
 #pragma endregion
 
-#pragma region UniformBuffer
-	virtual void CreateConstantBuffer();
-#pragma endregion
-
 #pragma region Viewport
 	virtual void CreateViewport();
 #pragma endregion
@@ -61,6 +57,10 @@ protected:
 #pragma region VertexBuffer
 	virtual void CreateVertexBuffer();
 	virtual void CreateIndexBuffer();
+#pragma endregion
+
+#pragma region UniformBuffer
+	virtual void CreateConstantBuffer();
 #pragma endregion
 
 	virtual void CreateFence();
@@ -95,10 +95,6 @@ protected:
 	std::vector<D3D12_SHADER_BYTECODE> ShaderBytecodesPSs;
 #pragma endregion
 
-#pragma region UniformBuffer
-	//todo
-#pragma endregion
-
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
 
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
@@ -116,8 +112,15 @@ protected:
 #pragma region VertexBuffer
 	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW VertexBufferView;	
+
 	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBuffer;
-	D3D12_VERTEX_BUFFER_VIEW IndexBufferView;
+	D3D12_INDEX_BUFFER_VIEW IndexBufferView;
+	UINT IndexCount = 3;
+#pragma endregion
+
+#pragma region UniformBuffer
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> ConstantBufferViewHeap;
+	Microsoft::WRL::ComPtr<ID3D12Resource> ConstantBuffer;
 #pragma endregion
 
 	Microsoft::WRL::ComPtr<ID3D12Fence> Fence;

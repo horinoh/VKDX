@@ -34,22 +34,28 @@ public:
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 
 protected:
+	static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
+	static FORCEINLINE void* AlignedRealloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_realloc(pOriginal, size, alignment); }
+	static FORCEINLINE void AlignedFree(void* pUserData, void* pMemory) { _aligned_free(pMemory); }
+	VkBool32 GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, VkFormat& Format);
+	VkBool32 GetMemoryType(uint32_t TypeBits, VkFlags Properties, uint32_t* TypeIndex) const;
+
 #pragma region DeviceQueue
 	virtual void CreateInstance();
-	VkBool32 GetSupportedDepthFormat(VkFormat& Format);
-	virtual void CreateSemaphore();
-	virtual void CreateDevice();
+	virtual VkPhysicalDevice CreateDevice();
+	virtual void CreateDevice(VkPhysicalDevice PhysicalDevice);
+	virtual void CreateSurface(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice);
 #pragma endregion
-
-	virtual void CreateSurface(HWND hWnd, HINSTANCE hInstance);
 	
+	virtual void CreateSemaphore();
+
 	virtual void CreateCommandPool();
 	virtual void CreateSetupCommandBuffer();
 	
 #pragma region SwapChain
 	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange);
 	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
-	virtual void CreateSwapchain();
+	virtual void CreateSwapchain(VkPhysicalDevice PhysicalDevice);
 #pragma endregion
 
 #pragma region RootSignature
@@ -58,7 +64,6 @@ protected:
 
 	virtual void CreateCommandBuffers();
 
-	VkBool32 VK::GetMemoryType(uint32_t TypeBits, VkFlags Properties, uint32_t* TypeIndex);
 	virtual void CreateDepthStencil();
 	virtual void CreateRenderPass();
 
@@ -67,15 +72,10 @@ protected:
 	virtual void CreateShader();
 #pragma endregion
 
-#pragma region ConstantBuffer
-	virtual void CreateUniformBuffer();
-#pragma endregion
-
 #pragma region Viewport
 	virtual void CreateViewport();
 #pragma endregion
 
-	virtual void CreatePipelineCache();
 	virtual void CreateFramebuffers();
 	virtual void FlushSetupCommandBuffer();
 
@@ -84,11 +84,15 @@ protected:
 #pragma endregion
 
 #pragma region VertexBuffer
-	VkBool32 GetMemoryType(uint32_t TypeBits, VkFlags Properties, uint32_t* TypeIndex) const;
 	virtual void CreateVertexBuffer();
 	virtual void CreateIndexBuffer();
 #pragma endregion
 
+#pragma region ConstantBuffer
+	virtual void CreateUniformBuffer();
+#pragma endregion
+
+	virtual void CreatePipelineCache();
 	virtual void CreatePipeline();
 
 	virtual void CreateFence();
@@ -100,11 +104,10 @@ protected:
 
 protected:
 #pragma  region DeviceQueue
+	VkAllocationCallbacks AllocationCallbacks;
 	VkInstance Instance;
-	VkPhysicalDevice PhysicalDevice;
 	VkDevice Device;
 	VkQueue Queue;
-	VkPhysicalDeviceProperties PhysicalDeviceProperties;
 	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
 	VkFormat DepthFormat; 
 #pragma endregion
@@ -115,7 +118,7 @@ protected:
 	//VkPipelineStageFlags SubmitPipelineStages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
 	VkSurfaceKHR Surface;
-	uint32_t QueueNodeIndex = UINT32_MAX;
+	uint32_t QueueFamilyIndex = UINT32_MAX;
 	VkFormat ColorFormat;
 	VkColorSpaceKHR ColorSpace;
 
@@ -135,8 +138,8 @@ protected:
 #pragma endregion
 
 #pragma region RootSignature
-	//VkDescriptorSet DescriptorSet;
 	VkDescriptorSetLayout DescriptorSetLayout;
+	VkDescriptorSet DescriptorSet;
 	VkPipelineLayout PipelineLayout;
 #pragma endregion
 
@@ -158,20 +161,13 @@ protected:
 	std::vector<VkPipelineShaderStageCreateInfo> ShaderStageCreateInfos;
 #pragma endregion
 
-#pragma region ConstantBuffer
-	VkBuffer UniformBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory UniformDeviceMemory = VK_NULL_HANDLE;
-	VkDescriptorBufferInfo UniformDescriptorBufferInfo;
-#pragma endregion
-
+	VkPipeline Pipeline;
 	VkPipelineCache PipelineCache;
 
 #pragma region Viewport
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;
 #pragma endregion
-
-	VkPipeline Pipeline;
 
 #pragma region InputLayout
 	VkPipelineVertexInputStateCreateInfo PipelineVertexInputStateCreateInfo;
@@ -184,6 +180,13 @@ protected:
 	VkDeviceMemory VertexDeviceMemory = VK_NULL_HANDLE;
 	VkBuffer IndexBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory IndexDeviceMemory = VK_NULL_HANDLE;
+	uint32_t IndexCount = 3;
+#pragma endregion
+
+#pragma region ConstantBuffer
+	VkBuffer UniformBuffer = VK_NULL_HANDLE;
+	VkDeviceMemory UniformDeviceMemory = VK_NULL_HANDLE;
+	VkDescriptorBufferInfo UniformDescriptorBufferInfo;
 #pragma endregion
 
 	std::vector<VkFramebuffer> Framebuffers;

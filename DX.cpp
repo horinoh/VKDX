@@ -24,12 +24,14 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateRootSignature();
 	CreateInputLayout();
 	CreateShader();
-	CreateConstantBuffer();
 	CreateViewport();
 	CreatePipelineState();
 	CreateCommandList();
+
 	CreateVertexBuffer();
 	CreateIndexBuffer();
+	CreateConstantBuffer();
+
 	CreateFence();
 
 	PopulateCommandList();
@@ -179,11 +181,6 @@ void DX::CreateShader()
 	ShaderBytecodesPSs.push_back({ BlobPS->GetBufferPointer(), BlobPS->GetBufferSize() });
 }
 
-void DX::CreateConstantBuffer()
-{
-
-}
-
 void DX::CreateViewport()
 {
 	const auto Width = GetWidth();
@@ -267,11 +264,13 @@ void DX::CreateInputLayout()
 
 void DX::CreateVertexBuffer()
 {
-	const D3D12_HEAP_PROPERTIES HeapProperties = { D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 1, 1 };
 	const DirectX::XMFLOAT3 Vertices[] = { { 0.0f, 0.25f, 0.0f },{ 0.25f, -0.25f, 0.0f },{ -0.25f, -0.25f, 0.0f }, };
-	const auto Width = sizeof(Vertices);
-	const D3D12_RESOURCE_DESC ResourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, Width, 1, 1, 1, DXGI_FORMAT_UNKNOWN, 1, 0, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, 
+	const auto Size = sizeof(Vertices);
+	const auto Stride = sizeof(Vertices[0]);
+
+	const D3D12_RESOURCE_DESC ResourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, Size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, 1, 0, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
+	const D3D12_HEAP_PROPERTIES HeapProperties = { D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 1, 1 };
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
 		D3D12_HEAP_FLAG_NONE, 
 		&ResourceDesc, 
 		D3D12_RESOURCE_STATE_GENERIC_READ, 
@@ -281,18 +280,20 @@ void DX::CreateVertexBuffer()
 	UINT8* Data;
 	D3D12_RANGE Range = { 0, 0 };
 	VERIFY_SUCCEEDED(VertexBuffer->Map(0, &Range, reinterpret_cast<void **>(&Data))); {
-		memcpy(Data, Vertices, sizeof(Vertices));
+		memcpy(Data, Vertices, Size);
 	} VertexBuffer->Unmap(0, nullptr);
 
-	VertexBufferView = { VertexBuffer->GetGPUVirtualAddress(), sizeof(Vertices[0]), sizeof(Vertices) };
+	VertexBufferView = { VertexBuffer->GetGPUVirtualAddress(), Size, Stride };
 }
 
 void DX::CreateIndexBuffer()
 {
+	const std::vector<UINT32> Indices = { 0, 1, 2 };
+	const auto Size = sizeof(Indices);
+	IndexCount = static_cast<UINT32>(Indices.size());
+
+	const D3D12_RESOURCE_DESC ResourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, Size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, 1, 0, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
 	const D3D12_HEAP_PROPERTIES HeapProperties = { D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 1, 1 };
-	const UINT32 Indices[] = { 0, 1, 2, };
-	const auto Width = sizeof(Indices);
-	const D3D12_RESOURCE_DESC ResourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, Width, 1, 1, 1, DXGI_FORMAT_UNKNOWN, 1, 0, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,
@@ -303,10 +304,33 @@ void DX::CreateIndexBuffer()
 	UINT8* Data;
 	D3D12_RANGE Range = { 0, 0 };
 	VERIFY_SUCCEEDED(IndexBuffer->Map(0, &Range, reinterpret_cast<void **>(&Data))); {
-		memcpy(Data, Indices, sizeof(Indices));
+		memcpy(Data, Indices.data(), Size);
 	} IndexBuffer->Unmap(0, nullptr);
 
-	IndexBufferView = { IndexBuffer->GetGPUVirtualAddress(), sizeof(Indices[0]), sizeof(Indices) };
+	IndexBufferView = { IndexBuffer->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT };
+}
+
+void DX::CreateConstantBuffer()
+{
+	const auto Size = 1024 * 64;
+
+	const D3D12_HEAP_PROPERTIES HeapProperties = { D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 1, 1 };
+	const D3D12_RESOURCE_DESC ResourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, Size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, 1, 0, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, 
+		D3D12_HEAP_FLAG_NONE, 
+		&ResourceDesc, 
+		D3D12_RESOURCE_STATE_GENERIC_READ, 
+		nullptr, 
+		IID_PPV_ARGS(&ConstantBuffer)));
+
+	D3D12_CONSTANT_BUFFER_VIEW_DESC ConstantBufferViewDesc = {};
+	ConstantBufferViewDesc.BufferLocation = ConstantBuffer->GetGPUVirtualAddress();
+	ConstantBufferViewDesc.SizeInBytes = (sizeof(ConstantBuffer) + 255) & ~255;	//!< コンスタントバッファは 256 byte アラインでないとならない
+	{
+		D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(&ConstantBufferViewHeap)));
+	}
+	Device->CreateConstantBufferView(&ConstantBufferViewDesc, ConstantBufferViewHeap->GetCPUDescriptorHandleForHeapStart());
 }
 
 void DX::CreateFence()
@@ -331,6 +355,22 @@ void DX::PopulateCommandList()
 
 	CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 	CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+
+	{
+		using namespace DirectX;
+		const std::vector<XMMATRIX> WVP = { XMMatrixIdentity(), XMMatrixIdentity(), XMMatrixIdentity() };
+
+		UINT8* Data;
+		D3D12_RANGE Range = { 0, 0 };
+		VERIFY_SUCCEEDED(ConstantBuffer->Map(0, &Range, reinterpret_cast<void**>(&Data))); {
+			memcpy(Data, &WVP, sizeof(WVP));
+		} ConstantBuffer->Unmap(0, nullptr); //!< サンプルには アプリが終了するまで Unmap しない、リソースはマップされたままでOKと書いてあるが...よく分からない
+	}
+
+	CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	CommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
+	CommandList->IASetIndexBuffer(&IndexBufferView);
+	CommandList->DrawInstanced(IndexCount, 1, 0, 0);
 
 	VERIFY_SUCCEEDED(CommandList->Close());
 }
