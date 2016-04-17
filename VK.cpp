@@ -18,16 +18,15 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	Super::OnCreate(hWnd, hInstance);
 
 	CreateInstance();
-	CreateDevice(); 
+	auto PhysicalDevice = CreateDevice(); 
+	CreateSurface(hWnd, hInstance, PhysicalDevice);
 
 	CreateSemaphore();
-
-	CreateSurface(hWnd, hInstance);
 
 	CreateCommandPool();
 	CreateSetupCommandBuffer();
 
-	CreateSwapchain();
+	CreateSwapchain(PhysicalDevice);
 	
 	CreatePipelineLayout();
 
@@ -134,6 +133,38 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	vkDestroyInstance(Instance, nullptr);
 }
 
+VkBool32 VK::GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, VkFormat& Format)
+{
+	const std::vector<VkFormat> DepthFormats = {
+		VK_FORMAT_D32_SFLOAT_S8_UINT,
+		VK_FORMAT_D32_SFLOAT,
+		VK_FORMAT_D24_UNORM_S8_UINT,
+		VK_FORMAT_D16_UNORM_S8_UINT,
+		VK_FORMAT_D16_UNORM
+	};
+	for (auto& f : DepthFormats) {
+		VkFormatProperties FormatProperties;
+		vkGetPhysicalDeviceFormatProperties(PhysicalDevice, f, &FormatProperties);
+		if (FormatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+			Format = f;
+			return true;
+		}
+	}
+	return false;
+}
+VkBool32 VK::GetMemoryType(uint32_t TypeBits, VkFlags Properties, uint32_t* TypeIndex) const
+{
+	for (auto i = 0; i < 32; ++i) {
+		if (TypeBits & 1) {
+			if ((PhysicalDeviceMemoryProperties.memoryTypes[i].propertyFlags & Properties) == Properties) {
+				*TypeIndex = i;
+				return true;
+			}
+		}
+		TypeBits >>= 1;
+	}
+	return false;
+}
 void VK::CreateInstance()
 {
 	VkInstanceCreateInfo InstanceCreateInfo = {};
@@ -162,25 +193,6 @@ void VK::CreateInstance()
 
 	VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance));
 }
-VkBool32 VK::GetSupportedDepthFormat(VkFormat& Format)
-{
-	const std::vector<VkFormat> DepthFormats = {
-		VK_FORMAT_D32_SFLOAT_S8_UINT,
-		VK_FORMAT_D32_SFLOAT,
-		VK_FORMAT_D24_UNORM_S8_UINT,
-		VK_FORMAT_D16_UNORM_S8_UINT,
-		VK_FORMAT_D16_UNORM
-	};
-	for (auto& f : DepthFormats) {
-		VkFormatProperties FormatProperties;
-		vkGetPhysicalDeviceFormatProperties(PhysicalDevice, f, &FormatProperties);
-		if (FormatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-			Format = f;
-			return true;
-		}
-	}
-	return false;
-}
 void VK::CreateSemaphore()
 {
 	VkSemaphoreCreateInfo SemaphoreCreateInfo = {};
@@ -191,7 +203,7 @@ void VK::CreateSemaphore()
 	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &PresentSemaphore));
 	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
 }
-void VK::CreateDevice()
+VkPhysicalDevice VK::CreateDevice()
 {
 	uint32_t PhysicalDeviceCount = 0;
 	VERIFY_SUCCEEDED(vkEnumeratePhysicalDevices(Instance, &PhysicalDeviceCount, nullptr));
@@ -200,54 +212,60 @@ void VK::CreateDevice()
 		VERIFY_SUCCEEDED(vkEnumeratePhysicalDevices(Instance, &PhysicalDeviceCount, PhysicalDevices.data()));
 
 		//!< ここでは最初の物理デバイスを使用することにする
-		PhysicalDevice = PhysicalDevices[0];
+		auto PhysicalDevice = PhysicalDevices[0];
+		CreateDevice(PhysicalDevice);
+		return PhysicalDevice;
+	}
+	return nullptr;
+}
 
-		uint32_t QueueCount;
-		vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueCount, nullptr);
-		if (QueueCount) {
-			std::vector<VkQueueFamilyProperties> QueueProperties(QueueCount);
-			vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueCount, QueueProperties.data());
-			for (uint32_t i = 0; i < QueueCount; ++i) {
-				//!< 描画機能のある最初のキューを探す
-				if (QueueProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-					VkDeviceCreateInfo DeviceCreateInfo = {};
-					DeviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-					DeviceCreateInfo.pNext = nullptr;
-					DeviceCreateInfo.pEnabledFeatures = nullptr;
+void VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
+{
+	uint32_t QueueCount;
+	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueCount, nullptr);
+	if (QueueCount) {
+		std::vector<VkQueueFamilyProperties> QueueProperties(QueueCount);
+		vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueCount, QueueProperties.data());
+		for (uint32_t i = 0; i < QueueCount; ++i) {
+			//!< 描画機能のある最初のキューを探す
+			if (QueueProperties[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+				VkDeviceCreateInfo DeviceCreateInfo = {};
+				DeviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+				DeviceCreateInfo.pNext = nullptr;
+				DeviceCreateInfo.pEnabledFeatures = nullptr;
 
-					VkDeviceQueueCreateInfo QueueCreateInfo = {}; 
-					const std::vector<float> QueuePriorities = { 0.0f }; {
-						QueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-						QueueCreateInfo.queueFamilyIndex = i;
+				VkDeviceQueueCreateInfo QueueCreateInfo = {};
+				const std::vector<float> QueuePriorities = { 0.0f }; {
+					QueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+					QueueCreateInfo.queueFamilyIndex = i;
 
-						QueueCreateInfo.queueCount = static_cast<uint32_t>(QueuePriorities.size());
-						QueueCreateInfo.pQueuePriorities = QueuePriorities.data();
-						
-						DeviceCreateInfo.queueCreateInfoCount = 1;
-						DeviceCreateInfo.pQueueCreateInfos = &QueueCreateInfo;
-					}
+					QueueCreateInfo.queueCount = static_cast<uint32_t>(QueuePriorities.size());
+					QueueCreateInfo.pQueuePriorities = QueuePriorities.data();
 
-					const std::vector<const char*> EnabledExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME }; {
-						DeviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(EnabledExtensions.size());
-						DeviceCreateInfo.ppEnabledExtensionNames = EnabledExtensions.data();
-					}
-
-					VERIFY_SUCCEEDED(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &Device));
-					//!< キューを取得
-					vkGetDeviceQueue(Device, i, 0, &Queue); 
-
-					vkGetPhysicalDeviceProperties(PhysicalDevice, &PhysicalDeviceProperties);
-					vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
-
-					VERIFY(GetSupportedDepthFormat(DepthFormat));
-					break;
+					DeviceCreateInfo.queueCreateInfoCount = 1;
+					DeviceCreateInfo.pQueueCreateInfos = &QueueCreateInfo;
 				}
+
+				const std::vector<const char*> EnabledExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME }; {
+					DeviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(EnabledExtensions.size());
+					DeviceCreateInfo.ppEnabledExtensionNames = EnabledExtensions.data();
+				}
+
+				VERIFY_SUCCEEDED(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &Device));
+				//!< キューを取得
+				vkGetDeviceQueue(Device, i, 0, &Queue);
+
+				//vkGetPhysicalDeviceProperties(PhysicalDevice, &PhysicalDeviceProperties);
+				vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
+
+				VERIFY(GetSupportedDepthFormat(PhysicalDevice, DepthFormat));
+				break;
 			}
 		}
 	}
 }
 
-void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
+void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice)
 {
 #if defined(_WIN32)
 	VkWin32SurfaceCreateInfoKHR SurfaceCreateInfo = {};
@@ -294,7 +312,7 @@ void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
 		VERIFY(GraphicsQueueNodeIndex == PresentQueueNodeIndex);
 
 		//!< キューノードインデックスを覚える
-		QueueNodeIndex = GraphicsQueueNodeIndex;
+		QueueFamilyIndex = GraphicsQueueNodeIndex;
 
 		uint32_t FormatCount;
 		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, Surface, &FormatCount, nullptr));
@@ -312,7 +330,7 @@ void VK::CreateCommandPool()
 {
 	VkCommandPoolCreateInfo CommandPoolInfo = {};
 	CommandPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	CommandPoolInfo.queueFamilyIndex = QueueNodeIndex;
+	CommandPoolInfo.queueFamilyIndex = QueueFamilyIndex;
 	CommandPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, nullptr, &CommandPool));
 }
@@ -397,7 +415,7 @@ void VK::SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAsp
 	SetImageLayout(CommandBuffer, Image, ImageAspectFlags, OldImageLayout, NewImageLayout, ImageSubresourceRange);
 }
 
-void VK::CreateSwapchain()
+void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice)
 {
 	VkSwapchainKHR OldSwapchain = Swapchain;
 
@@ -537,20 +555,6 @@ void VK::CreateCommandBuffers()
 	CommandBufferAllocateInfo.commandBufferCount = 1;
 	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PrePresentCommandBuffer));
 	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PostPresentCommandBuffer));
-}
-
-VkBool32 VK::GetMemoryType(uint32_t TypeBits, VkFlags Properties, uint32_t* TypeIndex)
-{
-	for (uint32_t i = 0; i < 32; i++) {
-		if ((TypeBits & 1) == 1) {
-			if ((PhysicalDeviceMemoryProperties.memoryTypes[i].propertyFlags & Properties) == Properties) {
-				*TypeIndex = i;
-				return true;
-			}
-		}
-		TypeBits >>= 1;
-	}
-	return false;
 }
 void VK::CreateDepthStencil()
 {
@@ -830,19 +834,6 @@ void VK::CreateVertexInput()
 	}
 }
 
-VkBool32 VK::GetMemoryType(uint32_t TypeBits, VkFlags Properties, uint32_t* TypeIndex) const
-{
-	for (auto i = 0; i < 32; ++i) {
-		if (TypeBits & 1) {
-			if ((PhysicalDeviceMemoryProperties.memoryTypes[i].propertyFlags & Properties) == Properties) {
-				*TypeIndex = i;
-				return true;
-			}
-		}
-		TypeBits >>= 1;
-	}
-	return false;
-}
 void VK::CreateVertexBuffer()
 {
 	const std::vector<glm::vec3> Vertices = { {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} }; //todo
