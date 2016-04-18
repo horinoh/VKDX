@@ -28,6 +28,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateSwapchain(PhysicalDevice);
 	
+	CreateDescriptorSet();
 	CreatePipelineLayout();
 
 	CreateCommandBuffers();
@@ -108,8 +109,13 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	vkFreeCommandBuffers(Device, CommandPool, 1, &PrePresentCommandBuffer);
 	vkFreeCommandBuffers(Device, CommandPool, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
 
-	vkDestroyDescriptorSetLayout(Device, DescriptorSetLayout, nullptr);
 	vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
+	
+	vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
+	vkDestroyDescriptorPool(Device, DescriptorPool, nullptr);
+	for (auto& i : DescriptorSetLayouts) {
+		vkDestroyDescriptorSetLayout(Device, i, nullptr);
+	}
 
 	for (auto& i : SwapchainBuffers) {
 		vkDestroyImageView(Device, i.ImageView, nullptr);
@@ -542,30 +548,58 @@ void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice)
 #pragma endregion
 }
 
-void VK::CreatePipelineLayout()
+void VK::CreateDescriptorSet()
 {
 	const std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings = {
 		{
 			0,
 			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			1,
-			VK_SHADER_STAGE_VERTEX_BIT,
-			nullptr
+		1,
+		VK_SHADER_STAGE_VERTEX_BIT,
+		nullptr
 		}
-	}; 
+	};
 	const VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 		nullptr,
 		0,
-		static_cast<uint32_t>(DescriptorSetLayoutBindings.size()), DescriptorSetLayoutBindings.data() 
+		static_cast<uint32_t>(DescriptorSetLayoutBindings.size()), DescriptorSetLayoutBindings.data()
 	};
-	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, nullptr, &DescriptorSetLayout));
+	DescriptorSetLayouts.reserve(1);
+	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, nullptr, DescriptorSetLayouts.data()));
 
+	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
+		{
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			1
+		}
+	};
+	const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		nullptr,
+		0,
+		1,
+		static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
+
+	const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		nullptr,
+		DescriptorPool,
+		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
+	};
+	DescriptorSets.reserve(1);
+	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, DescriptorSets.data()));
+}
+
+void VK::CreatePipelineLayout()
+{
 	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		nullptr,
 		0,
-		1, &DescriptorSetLayout,
+		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
 		0, nullptr
 	};
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, nullptr, &PipelineLayout));

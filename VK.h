@@ -59,6 +59,7 @@ protected:
 #pragma endregion
 
 #pragma region RootSignature
+	virtual void CreateDescriptorSet();
 	virtual void CreatePipelineLayout();
 #pragma endregion
 
@@ -138,8 +139,10 @@ protected:
 #pragma endregion
 
 #pragma region RootSignature
-	VkDescriptorSetLayout DescriptorSetLayout;
-	VkDescriptorSet DescriptorSet;
+	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
+	VkDescriptorPool DescriptorPool;
+	std::vector<VkDescriptorSet> DescriptorSets;
+
 	VkPipelineLayout PipelineLayout;
 #pragma endregion
 
