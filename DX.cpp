@@ -118,8 +118,8 @@ void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
 #pragma region CreateSwapChain
 	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc1 = {};
 	SwapChainDesc1.BufferCount = BufferCount;
-	SwapChainDesc1.Width = GetWidth();
-	SwapChainDesc1.Height = GetHeight();
+	SwapChainDesc1.Width = GetClientRectWidth();
+	SwapChainDesc1.Height = GetClientRectHeight();
 	SwapChainDesc1.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	SwapChainDesc1.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	SwapChainDesc1.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
@@ -183,8 +183,8 @@ void DX::CreateShader()
 
 void DX::CreateViewport()
 {
-	const auto Width = GetWidth();
-	const auto Height = GetHeight();
+	const auto Width = GetClientRectWidth();
+	const auto Height = GetClientRectHeight();
 
 	Viewports.push_back({ 0.0f, 0.0f, static_cast<FLOAT>(Width), static_cast<FLOAT>(Height), 0.0f, 1.0f });
 	ScissorRects.push_back({ 0, 0, Width, Height });

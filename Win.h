@@ -40,8 +40,8 @@ public:
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), Color | FOREGROUND_INTENSITY);
 	}
 
-	LONG GetWidth() const { return Rect.right - Rect.left; }
-	LONG GetHeight() const { return Rect.bottom - Rect.top; }
+	LONG GetClientRectWidth() const { return Rect.right - Rect.left; }
+	LONG GetClientRectHeight() const { return Rect.bottom - Rect.top; }
 
 protected:
 	RECT Rect;

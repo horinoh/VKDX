@@ -40,23 +40,22 @@ protected:
 	VkBool32 GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, VkFormat& Format);
 	VkBool32 GetMemoryType(uint32_t TypeBits, VkFlags Properties, uint32_t* TypeIndex) const;
 
-#pragma region DeviceQueue
 	virtual void CreateInstance();
+
 	virtual VkPhysicalDevice CreateDevice();
 	virtual void CreateDevice(VkPhysicalDevice PhysicalDevice);
-	virtual void CreateSurface(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice);
-#pragma endregion
+
+	//virtual VkSurfaceKHR CreateSurface(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice);
+	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange);
+	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
+	virtual void CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice);
 	
 	virtual void CreateSemaphore();
 
 	virtual void CreateCommandPool();
 	virtual void CreateSetupCommandBuffer();
 	
-#pragma region SwapChain
-	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange);
-	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
-	virtual void CreateSwapchain(VkPhysicalDevice PhysicalDevice);
-#pragma endregion
+
 
 #pragma region RootSignature
 	virtual void CreateDescriptorSet();
@@ -109,7 +108,7 @@ protected:
 	VkInstance Instance;
 	VkDevice Device;
 	VkQueue Queue;
-	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
+	//VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
 	VkFormat DepthFormat; 
 #pragma endregion
 
@@ -118,7 +117,7 @@ protected:
 
 	//VkPipelineStageFlags SubmitPipelineStages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
-	VkSurfaceKHR Surface;
+	//VkSurfaceKHR Surface;
 	uint32_t QueueFamilyIndex = UINT32_MAX;
 	VkFormat ColorFormat;
 	VkColorSpaceKHR ColorSpace;
@@ -128,7 +127,10 @@ protected:
 	VkCommandBuffer SetupCommandBuffer = VK_NULL_HANDLE;
 
 #pragma region SwapChain
+	VkExtent2D ImageExtent;
 	VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
+	std::vector<VkImage> SwapchainImages;
+	std::vector<VkImageView> SwapchainImageViews;
 	struct VulkanSwapchainBuffer {
 		VkImage Image;
 		VkImageView ImageView;
