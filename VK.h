@@ -37,46 +37,51 @@ protected:
 	static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
 	static FORCEINLINE void* AlignedRealloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_realloc(pOriginal, size, alignment); }
 	static FORCEINLINE void AlignedFree(void* pUserData, void* pMemory) { _aligned_free(pMemory); }
-	VkBool32 GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, VkFormat& Format);
-	VkBool32 GetMemoryType(uint32_t TypeBits, VkFlags Properties, uint32_t* TypeIndex) const;
+	VkFormat GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice) const;
+	uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, uint32_t TypeBits, VkFlags Properties) const;
+	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const;
+	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout) const;
+	virtual VkShaderModule CreateShaderModule(const std::string& Path) const;
 
 	virtual void CreateInstance();
 
 	virtual VkPhysicalDevice CreateDevice();
 	virtual void CreateDevice(VkPhysicalDevice PhysicalDevice);
 
-	//virtual VkSurfaceKHR CreateSurface(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice);
-	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange);
-	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
 	virtual void CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice);
 	
+	virtual void CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkFormat DepthFormat);
+	
+	virtual void CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat);
+
+	virtual void CreateFramebuffers();
+
+	virtual void CreateShader();
+
+	virtual void CreateDescriptorSetLayout();
+	virtual void CreatePipelineLayout();
+
+
+
+	virtual void CreatePipeline();
+
+
+
 	virtual void CreateSemaphore();
 
 	virtual void CreateCommandPool();
 	virtual void CreateSetupCommandBuffer();
 	
-
-
 #pragma region RootSignature
 	virtual void CreateDescriptorSet();
-	virtual void CreatePipelineLayout();
 #pragma endregion
 
 	virtual void CreateCommandBuffers();
-
-	virtual void CreateDepthStencil();
-	virtual void CreateRenderPass();
-
-#pragma region Shader
-	virtual void CreateShader(const std::string& Path, const VkShaderStageFlagBits Stage);
-	virtual void CreateShader();
-#pragma endregion
 
 #pragma region Viewport
 	virtual void CreateViewport();
 #pragma endregion
 
-	virtual void CreateFramebuffers();
 	virtual void FlushSetupCommandBuffer();
 
 #pragma region InputLayout
@@ -92,9 +97,6 @@ protected:
 	virtual void CreateUniformBuffer();
 #pragma endregion
 
-	virtual void CreatePipelineCache();
-	virtual void CreatePipeline();
-
 	virtual void CreateFence();
 
 	virtual void PopulateCommandBuffer();
@@ -103,14 +105,52 @@ protected:
 	virtual void WaitForFence();
 
 protected:
-#pragma  region DeviceQueue
+#ifdef _DEBUG
+	const std::vector<const char*> EnabledLayerNames = { "VK_LAYER_LUNARG_standard_validation" };
+#endif
+
+#pragma  region Instnce
 	VkAllocationCallbacks AllocationCallbacks;
 	VkInstance Instance;
+#pragma endregion
+
+#pragma region Device
 	VkDevice Device;
 	VkQueue Queue;
-	//VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
-	VkFormat DepthFormat; 
 #pragma endregion
+
+#pragma region SwapChain
+	VkExtent2D ImageExtent;
+	VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
+	std::vector<VkImage> SwapchainImages;
+	std::vector<VkImageView> SwapchainImageViews;
+	VkSemaphore Semaphore;
+	uint32_t SwapchainImageIndex = 0;
+#pragma endregion
+
+#pragma region DepthStencil
+	VkImage DepthStencilImage;
+	VkDeviceMemory DepthStencilDeviceMemory;
+	VkImageView DepthStencilImageView;
+#pragma endregion
+
+	VkRenderPass RenderPass;
+
+#pragma region Framebuffer
+	std::vector<VkFramebuffer> Framebuffers;
+#pragma endregion
+
+#pragma region Shader
+	std::vector<VkShaderModule> ShaderModules;
+#pragma endregion
+
+#pragma region DescriptorSetLayout
+	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
+#pragma endregion
+
+	VkPipelineLayout PipelineLayout;
+
+	//-------------------------------
 
 	VkSemaphore PresentSemaphore = VK_NULL_HANDLE;
 	VkSemaphore RenderSemaphore = VK_NULL_HANDLE;
@@ -126,45 +166,16 @@ protected:
 
 	VkCommandBuffer SetupCommandBuffer = VK_NULL_HANDLE;
 
-#pragma region SwapChain
-	VkExtent2D ImageExtent;
-	VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
-	std::vector<VkImage> SwapchainImages;
-	std::vector<VkImageView> SwapchainImageViews;
-	struct VulkanSwapchainBuffer {
-		VkImage Image;
-		VkImageView ImageView;
-	};
-	using VulkanSwapchainBuffer = struct VulkanSwapchainBuffer;
-	std::vector<VulkanSwapchainBuffer> SwapchainBuffers;
-	uint32_t CurrentSwapchainBufferIndex = 0; //!< SwapchainBuffers[], DrawCommandBuffers[] “™‚Ì“YŽš‚Æ‚µ‚ÄŽg‚í‚ê‚é
-#pragma endregion
-
 #pragma region RootSignature
-	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
 	VkDescriptorPool DescriptorPool;
 	std::vector<VkDescriptorSet> DescriptorSets;
-
-	VkPipelineLayout PipelineLayout;
 #pragma endregion
 
 	std::vector<VkCommandBuffer> CommandBuffers;
 	VkCommandBuffer PrePresentCommandBuffer = VK_NULL_HANDLE;
 	VkCommandBuffer PostPresentCommandBuffer = VK_NULL_HANDLE;
 
-	struct VulkanDepthStencil {
-		VkImage Image;
-		VkDeviceMemory DeviceMemory;
-		VkImageView ImageView;
-	} ;
-	using VulkanDepthStencil = struct VulkanDepthStencil;
-	VulkanDepthStencil DepthStencil;
-
-	VkRenderPass RenderPass;
-
-#pragma region Shader
-	std::vector<VkPipelineShaderStageCreateInfo> ShaderStageCreateInfos;
-#pragma endregion
+//	std::vector<VkPipelineShaderStageCreateInfo> ShaderStageCreateInfos;
 
 	VkPipeline Pipeline;
 	VkPipelineCache PipelineCache;
@@ -193,8 +204,6 @@ protected:
 	VkDeviceMemory UniformDeviceMemory = VK_NULL_HANDLE;
 	VkDescriptorBufferInfo UniformDescriptorBufferInfo;
 #pragma endregion
-
-	std::vector<VkFramebuffer> Framebuffers;
 
 	VkFence Fence;
 };
