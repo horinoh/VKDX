@@ -21,14 +21,14 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	
 	auto PhysicalDevice = CreateDevice(); 
 	
-	CreateSwapchain(hWnd, hInstance, PhysicalDevice);
+	const auto ColorFomat = VK_FORMAT_B8G8R8A8_UNORM;
+	CreateSwapchain(hWnd, hInstance, PhysicalDevice, ColorFormat);
 
 	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
 	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);	
 	const auto DepthFormat = GetSupportedDepthFormat(PhysicalDevice);
 	CreateDepthStencil(PhysicalDeviceMemoryProperties, DepthFormat);
 
-	const auto ColorFomat = VK_FORMAT_B8G8R8A8_UNORM;
 	CreateRenderPass(ColorFormat, DepthFormat);
 
 	CreateFramebuffers();
@@ -38,8 +38,8 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateDescriptorSetLayout();
 	CreatePipelineLayout();
 
-	//----------------------
-
+	CreateVertexInput();
+	CreateViewport();
 	CreatePipeline();
 
 	//------------------------------------------
@@ -54,8 +54,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateCommandBuffers();
 	
 	CreateUniformBuffer();
-
-	CreateViewport();
 	
 	FlushSetupCommandBuffer();
 	CreateSetupCommandBuffer();
@@ -98,9 +96,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	vkFreeMemory(Device, VertexDeviceMemory, nullptr);
 	vkDestroyBuffer(Device, VertexBuffer, nullptr);
 
-	vkDestroyPipeline(Device, Pipeline, nullptr);
-	vkDestroyPipelineCache(Device, PipelineCache, nullptr);
-
 	vkFreeMemory(Device, UniformDeviceMemory, nullptr);
 	vkDestroyBuffer(Device, UniformBuffer, nullptr);
 
@@ -111,6 +106,10 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	vkFreeCommandBuffers(Device, CommandPool, 1, &PostPresentCommandBuffer);
 	vkFreeCommandBuffers(Device, CommandPool, 1, &PrePresentCommandBuffer);
 	vkFreeCommandBuffers(Device, CommandPool, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
+
+
+	vkDestroyPipeline(Device, Pipeline, nullptr);
+	vkDestroyPipelineCache(Device, PipelineCache, nullptr);
 
 	vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
 	
@@ -303,17 +302,6 @@ VkShaderModule VK::CreateShaderModule(const std::string& Path) const
 
 	assert(VK_NULL_HANDLE != ShaderModule);
 	return ShaderModule;
-
-	//const VkPipelineShaderStageCreateInfo ShaderStageCreateInfo = {
-	//	VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-	//	nullptr,
-	//	0,
-	//	VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT,
-	//	ShaderModule,
-	//	"Main",
-	//	nullptr
-	//};
-	//ShaderStageCreateInfos.push_back(ShaderStageCreateInfo);
 }
 void VK::CreateInstance()
 {
@@ -415,7 +403,7 @@ void VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
 		}
 	}
 }
-void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice)
+void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice, const VkFormat ColorFormat)
 {
 	VkSurfaceKHR Surface = VK_NULL_HANDLE;
 #if defined(_WIN32)
@@ -503,7 +491,6 @@ void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice Physic
 #pragma endregion
 
 #pragma region SwapchainImageView
-	const VkFormat ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 	SwapchainImageViews.resize(SwapchainImageCount);
 	for (uint32_t i = 0; i < SwapchainImageCount; ++i) {
 		SetImageLayout(SetupCommandBuffer, SwapchainImages[i], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -683,6 +670,25 @@ void VK::CreateShader()
 {
 	ShaderModules.push_back(CreateShaderModule("XXX.vert.spv"));
 	ShaderModules.push_back(CreateShaderModule("XXX.frag.spv"));
+
+	PipelineShaderStageCreateInfos = {
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+		0,
+		VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
+		"main",
+		nullptr
+		},
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+		0,
+		VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
+		"main",
+		nullptr
+		}
+	};
 }
 /**
 @brief シェーダとのバインディングのレイアウト
@@ -720,25 +726,51 @@ void VK::CreatePipelineLayout()
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, nullptr, &PipelineLayout));
 }
 
+void VK::CreateVertexInput()
+{
+	std::tuple<glm::vec3, glm::vec3> Vertex;
+
+	VertexInputBindingDescriptions = {
+		{ 0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX }
+	};
+	VertexInputAttributeDescriptions = {
+		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+		{ 1, 0, VK_FORMAT_R32G32B32_SFLOAT, sizeof(std::get<0>(Vertex)) }
+	};
+	PipelineVertexInputStateCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(VertexInputBindingDescriptions.size()), VertexInputBindingDescriptions.data(),
+		static_cast<uint32_t>(VertexInputAttributeDescriptions.size()), VertexInputAttributeDescriptions.data()
+	};
+}
+
+void VK::CreateViewport()
+{
+	Viewports = {
+		{
+			0, 0,
+			static_cast<float>(ImageExtent.width), static_cast<float>(ImageExtent.height),
+			0.0f, 1.0f
+		}
+	};
+	ScissorRects = {
+		{
+			{ 0, 0 },
+			{ ImageExtent.width, ImageExtent.height }
+		}
+	};
+}
+
 void VK::CreatePipeline()
 {
-	const std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos = {
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
+	const VkPipelineInputAssemblyStateCreateInfo PipelineInputAssemblyStateCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+		nullptr,
 		0,
-		VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
-		"main",
-		nullptr
-		},
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-		0,
-		VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
-		"main",
-		nullptr
-		}
+		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+		VK_FALSE
 	};
 
 	const VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo = {
@@ -746,8 +778,10 @@ void VK::CreatePipeline()
 		nullptr,
 		0,
 		static_cast<uint32_t>(Viewports.size()), Viewports.data(),
-		static_cast<uint32_t>(ScissorRects.size()),  ScissorRects.data()
+		static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data()
 	};
+
+	
 	const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
 		nullptr,
@@ -886,18 +920,6 @@ void VK::CreateCommandBuffers()
 	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PrePresentCommandBuffer));
 	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PostPresentCommandBuffer));
 }
-void VK::CreateViewport()
-{
-	const auto Width = GetClientRectWidth();
-	const auto Height = GetClientRectHeight();
-	Viewports = {
-		{ 0.0f, 0.0f, static_cast<float>(Width), static_cast<float>(Height), 0.0f, 1.0f }
-	};
-	ScissorRects = {
-		{ { 0, 0 }, { static_cast<uint32_t>(Width), static_cast<uint32_t>(Height) } }
-	};
-}
-
 void VK::FlushSetupCommandBuffer()
 {
 	if (SetupCommandBuffer != VK_NULL_HANDLE) {
@@ -918,23 +940,6 @@ void VK::FlushSetupCommandBuffer()
 		vkFreeCommandBuffers(Device, CommandPool, 1, &SetupCommandBuffer);
 		SetupCommandBuffer = VK_NULL_HANDLE;
 	}
-}
-
-void VK::CreateVertexInput()
-{
-	VertexInputBindingDescriptions = {
-		{ 0, sizeof(float) * 3, VK_VERTEX_INPUT_RATE_VERTEX }
-	};
-	VertexInputAttributeDescriptions = {
-		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 }
-	};
-	PipelineVertexInputStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(VertexInputBindingDescriptions.size()), VertexInputBindingDescriptions.data(),
-		static_cast<uint32_t>(VertexInputAttributeDescriptions.size()), VertexInputAttributeDescriptions.data()
-	};
 }
 
 void VK::CreateVertexBuffer()
@@ -1038,7 +1043,7 @@ void VK::CreateIndexBuffer()
 		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &IndexBuffer));
 		vkGetBufferMemoryRequirements(Device, IndexBuffer, &MemoryRequirements);
 		MemoryAllocateInfo.allocationSize = MemoryRequirements.size;
-		GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &MemoryAllocateInfo.memoryTypeIndex);
+		MemoryAllocateInfo.memoryTypeIndex = GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &IndexDeviceMemory));
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, IndexBuffer, IndexDeviceMemory, 0));
 		
@@ -1095,7 +1100,7 @@ void VK::CreateUniformBuffer()
 		MemoryAllocateInfo.allocationSize = MemoryRequirements.size;
 	}
 
-	GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, &MemoryAllocateInfo.memoryTypeIndex);
+	MemoryAllocateInfo.memoryTypeIndex = GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &UniformDeviceMemory));
 	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffer, UniformDeviceMemory, 0));
 
@@ -1154,7 +1159,7 @@ void VK::ExecuteCommandBuffer()
 		nullptr,
 		0, nullptr,
 		nullptr,
-		1,  &CommandBuffers[CurrentSwapchainBufferIndex],
+		1,  &CommandBuffers[SwapchainImageIndex],
 		0, nullptr
 	};
 #if 1

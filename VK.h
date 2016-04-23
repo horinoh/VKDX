@@ -48,7 +48,7 @@ protected:
 	virtual VkPhysicalDevice CreateDevice();
 	virtual void CreateDevice(VkPhysicalDevice PhysicalDevice);
 
-	virtual void CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice);
+	virtual void CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice, const VkFormat ColorFormat);
 	
 	virtual void CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkFormat DepthFormat);
 	
@@ -61,7 +61,9 @@ protected:
 	virtual void CreateDescriptorSetLayout();
 	virtual void CreatePipelineLayout();
 
-
+	virtual void CreateVertexInput();
+	
+	virtual void CreateViewport();
 
 	virtual void CreatePipeline();
 
@@ -78,15 +80,7 @@ protected:
 
 	virtual void CreateCommandBuffers();
 
-#pragma region Viewport
-	virtual void CreateViewport();
-#pragma endregion
-
 	virtual void FlushSetupCommandBuffer();
-
-#pragma region InputLayout
-	virtual void CreateVertexInput();
-#pragma endregion
 
 #pragma region VertexBuffer
 	virtual void CreateVertexBuffer();
@@ -142,6 +136,7 @@ protected:
 
 #pragma region Shader
 	std::vector<VkShaderModule> ShaderModules;
+	std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos;
 #pragma endregion
 
 #pragma region DescriptorSetLayout
@@ -149,6 +144,22 @@ protected:
 #pragma endregion
 
 	VkPipelineLayout PipelineLayout;
+
+#pragma region VertexInput
+	std::vector<VkVertexInputBindingDescription> VertexInputBindingDescriptions;
+	std::vector<VkVertexInputAttributeDescription> VertexInputAttributeDescriptions;
+	VkPipelineVertexInputStateCreateInfo PipelineVertexInputStateCreateInfo;
+#pragma endregion
+
+#pragma region Viewport
+	std::vector<VkViewport> Viewports;
+	std::vector<VkRect2D> ScissorRects;
+#pragma endregion
+
+#pragma region GraphicsPipeline
+	VkPipelineCache PipelineCache;
+	VkPipeline Pipeline;
+#pragma endregion
 
 	//-------------------------------
 
@@ -176,20 +187,6 @@ protected:
 	VkCommandBuffer PostPresentCommandBuffer = VK_NULL_HANDLE;
 
 //	std::vector<VkPipelineShaderStageCreateInfo> ShaderStageCreateInfos;
-
-	VkPipeline Pipeline;
-	VkPipelineCache PipelineCache;
-
-#pragma region Viewport
-	std::vector<VkViewport> Viewports;
-	std::vector<VkRect2D> ScissorRects;
-#pragma endregion
-
-#pragma region InputLayout
-	VkPipelineVertexInputStateCreateInfo PipelineVertexInputStateCreateInfo;
-	std::vector<VkVertexInputBindingDescription> VertexInputBindingDescriptions;
-	std::vector<VkVertexInputAttributeDescription> VertexInputAttributeDescriptions;
-#pragma endregion
 
 #pragma region VertexBuffer
 	VkBuffer VertexBuffer = VK_NULL_HANDLE;
