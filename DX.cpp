@@ -20,7 +20,11 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateDevice(hWnd);
 	CreateCommandQueue();
+
 	CreateSwapChain(hWnd);
+
+	CreateDepthStencil();
+
 	CreateRootSignature();
 	CreateInputLayout();
 	CreateShader();
@@ -74,7 +78,6 @@ void DX::CreateDevice(HWND hWnd)
 	Debug->EnableDebugLayer();
 #endif
 
-#pragma region CreateDevice
 	ComPtr<IDXGIFactory4> Factory4;
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&Factory4)));
 	if (false/*WarpDevice*/) { // todo : WarpDevice は今のところやらない
@@ -95,17 +98,13 @@ void DX::CreateDevice(HWND hWnd)
 			}
 		}
 	}
-#pragma endregion
 }
-
 void DX::CreateCommandQueue()
 {
-#pragma region CreateCommandQueue
 	D3D12_COMMAND_QUEUE_DESC CommandQueueDesc = {};
 	CommandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 	CommandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
 	VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(&CommandQueue)));
-#pragma endregion
 }
 
 void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
@@ -115,7 +114,7 @@ void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
 	ComPtr<IDXGIFactory4> Factory4;
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&Factory4)));
 
-#pragma region CreateSwapChain
+#pragma region SwapChain
 	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc1 = {};
 	SwapChainDesc1.BufferCount = BufferCount;
 	SwapChainDesc1.Width = GetClientRectWidth();
@@ -133,7 +132,7 @@ void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
 #pragma endregion
 
 	//!< デスクリプタヒープ(ビュー)を作成
-#pragma region CreateRenderTargetView
+#pragma region SwapChainView
 	D3D12_DESCRIPTOR_HEAP_DESC DescripterHeapDesc = {};
 	DescripterHeapDesc.NumDescriptors = BufferCount;
 	DescripterHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -147,6 +146,47 @@ void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
 		Device->CreateRenderTargetView(RenderTargets[i].Get(), nullptr, RenderTargetViewHandle);
 		RenderTargetViewHandle.ptr += DescriptorSize;
 	}
+#pragma endregion
+}
+
+void DX::CreateDepthStencil()
+{
+	const D3D12_HEAP_PROPERTIES HeapProperties = {
+		D3D12_HEAP_TYPE_DEFAULT,
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	const D3D12_RESOURCE_DESC ResourceDesc = {
+		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+		0,
+		static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
+		1,
+		1,
+		DXGI_FORMAT_R32_TYPELESS,
+		{ 1, 0 },
+		D3D12_TEXTURE_LAYOUT_UNKNOWN,
+		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
+	};
+	const D3D12_CLEAR_VALUE ClearValue = {
+		DXGI_FORMAT_D32_FLOAT,
+		{ 1.0f, 0 }
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &ClearValue, IID_PPV_ARGS(&DepthStencil)));
+
+#pragma region DepthStencilView
+	const D3D12_DEPTH_STENCIL_VIEW_DESC DepthStencilViewDesc = {
+		DXGI_FORMAT_D32_FLOAT,
+		D3D12_DSV_DIMENSION_TEXTURE2D,
+		D3D12_DSV_FLAG_NONE,
+		{ 0 }
+	};
+	const auto Size = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	// TODO
+	//D3D12_CPU_DESCRIPTOR_HANDLE depthHandle(pDsvHeap->GetCPUDescriptorHandleForHeapStart(), 1 + frameResourceIndex, Size);
+	//D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilViewHandle;
+	//Device->CreateDepthStencilView(DepthStencil.Get(), &DepthStencilViewDesc, DepthStencilViewHandle);
 #pragma endregion
 }
 

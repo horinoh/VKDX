@@ -25,14 +25,12 @@ public:
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 
 protected:
-#pragma region DeviceQueue
 	virtual void CreateDevice(HWND hWnd);
 	virtual void CreateCommandQueue();
-#pragma endregion
 
-#pragma region Swapchain
 	virtual void CreateSwapChain(HWND hWnd, const UINT BufferCount = 2);
-#pragma endregion
+
+	virtual void CreateDepthStencil();
 
 #pragma region PipelineLayout
 	virtual void CreateRootSignature();
@@ -79,10 +77,13 @@ protected:
 #pragma region Swapchain
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain3;
 	UINT CurrentBackBufferIndex;
-#pragma endregion
-
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> RenderTargetViewHeap;
 	Microsoft::WRL::ComPtr<ID3D12Resource> RenderTargets[2];
+#pragma endregion
+
+#pragma region DepthStencil
+	Microsoft::WRL::ComPtr<ID3D12Resource> DepthStencil;
+#pragma endregion
 
 #pragma region PipelineLayout
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;

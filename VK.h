@@ -44,7 +44,6 @@ protected:
 	virtual VkShaderModule CreateShaderModule(const std::string& Path) const;
 
 	virtual void CreateInstance();
-
 	virtual VkPhysicalDevice CreateDevice();
 	virtual void CreateDevice(VkPhysicalDevice PhysicalDevice);
 
@@ -69,26 +68,24 @@ protected:
 
 
 
+	virtual void CreateDescriptorSet();
+
 	virtual void CreateSemaphore();
 
 	virtual void CreateCommandPool();
 	virtual void CreateSetupCommandBuffer();
 	
-#pragma region RootSignature
-	virtual void CreateDescriptorSet();
-#pragma endregion
-
 	virtual void CreateCommandBuffers();
 
 	virtual void FlushSetupCommandBuffer();
 
 #pragma region VertexBuffer
-	virtual void CreateVertexBuffer();
-	virtual void CreateIndexBuffer();
+	virtual void CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
+	virtual void CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 #pragma endregion
 
 #pragma region ConstantBuffer
-	virtual void CreateUniformBuffer();
+	virtual void CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 #pragma endregion
 
 	virtual void CreateFence();

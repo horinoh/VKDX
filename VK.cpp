@@ -18,7 +18,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	Super::OnCreate(hWnd, hInstance);
 
 	CreateInstance();
-	
 	auto PhysicalDevice = CreateDevice(); 
 	
 	const auto ColorFomat = VK_FORMAT_B8G8R8A8_UNORM;
@@ -42,23 +41,23 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateViewport();
 	CreatePipeline();
 
+	CreateDescriptorSet();
+
 	//------------------------------------------
 
 	CreateSemaphore();
 
 	CreateCommandPool();
 	CreateSetupCommandBuffer();
-	
-	CreateDescriptorSet();
 
 	CreateCommandBuffers();
 	
-	CreateUniformBuffer();
+	CreateUniformBuffer(PhysicalDeviceMemoryProperties);
 	
 	FlushSetupCommandBuffer();
 	CreateSetupCommandBuffer();
-	CreateVertexBuffer();
-	CreateIndexBuffer();
+	CreateVertexBuffer(PhysicalDeviceMemoryProperties);
+	CreateIndexBuffer(PhysicalDeviceMemoryProperties);
 
 	CreateFence();
 
@@ -781,7 +780,84 @@ void VK::CreatePipeline()
 		static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data()
 	};
 
-	
+	const VkPipelineRasterizationStateCreateInfo PipelineRasterizationStateCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		VK_FALSE,
+		VK_FALSE,
+		VK_POLYGON_MODE_FILL,
+		VK_CULL_MODE_NONE,
+		VK_FRONT_FACE_COUNTER_CLOCKWISE,
+		VK_FALSE, 0.0f, 0.0f, 0.0f,
+		0.0f
+	};
+
+	const VkPipelineMultisampleStateCreateInfo PipelineMultisampleStateCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		VK_SAMPLE_COUNT_1_BIT,
+		VK_FALSE, 0.0f,
+		nullptr,
+		VK_FALSE, VK_FALSE
+	};
+
+	const VkPipelineDepthStencilStateCreateInfo PipelineDepthStencilStateCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		VK_TRUE,
+		VK_TRUE,
+		VK_COMPARE_OP_LESS_OR_EQUAL,
+		VK_FALSE,
+		VK_FALSE,
+		{
+			VK_STENCIL_OP_KEEP,
+			VK_STENCIL_OP_KEEP,
+			VK_STENCIL_OP_KEEP,
+			VK_COMPARE_OP_NEVER, 0, 0, 0
+		},
+		{
+			VK_STENCIL_OP_KEEP,
+			VK_STENCIL_OP_KEEP,
+			VK_STENCIL_OP_KEEP,
+			VK_COMPARE_OP_ALWAYS, 0, 0, 0
+		},
+		0.0f, 0.0f
+	};
+
+	const std::vector<VkPipelineColorBlendAttachmentState> VkPipelineColorBlendAttachmentStates = {
+		{
+			VK_FALSE,
+			VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO,
+			VK_BLEND_OP_ADD,
+			VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO,
+			VK_BLEND_OP_ADD,
+			0,
+		}
+	};
+	const VkPipelineColorBlendStateCreateInfo PipelineColorBlendStateCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		VK_FALSE, VK_LOGIC_OP_CLEAR,
+		static_cast<uint32_t>(VkPipelineColorBlendAttachmentStates.size()), VkPipelineColorBlendAttachmentStates.data(),
+		{ 0.0f, 0.0f, 0.0f, 0.0f }
+	};
+
+	const std::vector<VkDynamicState> DynamicStates = {
+		VK_DYNAMIC_STATE_VIEWPORT,
+		VK_DYNAMIC_STATE_SCISSOR
+	};
+	const VkPipelineDynamicStateCreateInfo PipelineDynamicStateCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DynamicStates.size()), DynamicStates.data()
+	};
+
+	//!< パイプラインをコンパイルして、vkGetPipelineCacheData()でディスクへ保存可能
 	const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
 		nullptr,
@@ -789,27 +865,56 @@ void VK::CreatePipeline()
 		0, nullptr
 	};
 	VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, nullptr, &PipelineCache));
-	const VkGraphicsPipelineCreateInfo GraphicsPipelineCreateInfo = {
-		VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+
+	const std::vector<VkGraphicsPipelineCreateInfo> GraphicsPipelineCreateInfos = {
+		{
+			VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+			nullptr,
+			0,
+			static_cast<uint32_t>(PipelineShaderStageCreateInfos.size()), PipelineShaderStageCreateInfos.data(),
+			&PipelineVertexInputStateCreateInfo,
+			&PipelineInputAssemblyStateCreateInfo,
+			nullptr,
+			&PipelineViewportStateCreateInfo,
+			&PipelineRasterizationStateCreateInfo,
+			&PipelineMultisampleStateCreateInfo,
+			&PipelineDepthStencilStateCreateInfo,
+			&PipelineColorBlendStateCreateInfo,
+			&PipelineDynamicStateCreateInfo,
+			PipelineLayout,
+			RenderPass,
+			0,
+			VK_NULL_HANDLE, 0
+		}
+	};
+	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, PipelineCache, static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), nullptr, &Pipeline));
+}
+
+void VK::CreateDescriptorSet()
+{
+	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
+		{
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			1
+		}
+	};
+	const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 		nullptr,
 		0,
-		static_cast<uint32_t>(PipelineShaderStageCreateInfos.size()), PipelineShaderStageCreateInfos.data(),
-		&PipelineVertexInputStateCreateInfo,
-		nullptr, //VkPipelineInputAssemblyStateCreateInfo* pInputAssemblyState
-		nullptr, //VkPipelineTessellationStateCreateInfo* pTessellationState
-		&PipelineViewportStateCreateInfo,
-		nullptr, //VkPipelineRasterizationStateCreateInfo* pRasterizationState
-		nullptr, //VkPipelineMultisampleStateCreateInfo* pMultisampleState
-		nullptr, //VkPipelineDepthStencilStateCreateInfo* pDepthStencilState
-		nullptr, //VkPipelineColorBlendStateCreateInfo* pColorBlendState
-		nullptr, //VkPipelineDynamicStateCreateInfo* pDynamicState
-		PipelineLayout,
-		nullptr, //VkRenderPass renderPass
-		0, //uint32_t subpass
-		nullptr, //VkPipeline basePipelineHandle
-		0 //int32_t basePipelineIndex
+		1,
+		static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
 	};
-	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, PipelineCache, 1, &GraphicsPipelineCreateInfo, nullptr, &Pipeline));
+	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
+
+	const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		nullptr,
+		DescriptorPool,
+		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
+	};
+	DescriptorSets.reserve(1);
+	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, DescriptorSets.data()));
 }
 
 void VK::CreateSemaphore()
@@ -858,50 +963,7 @@ void VK::CreateSetupCommandBuffer()
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SetupCommandBuffer, &CommandBufferBeginInfo));
 }
 
-void VK::CreateDescriptorSet()
-{
-	//const std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings = {
-	//	{
-	//		0,
-	//		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-	//	1,
-	//	VK_SHADER_STAGE_VERTEX_BIT,
-	//	nullptr
-	//	}
-	//};
-	//const VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo = {
-	//	VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-	//	nullptr,
-	//	0,
-	//	static_cast<uint32_t>(DescriptorSetLayoutBindings.size()), DescriptorSetLayoutBindings.data()
-	//};
-	//DescriptorSetLayouts.reserve(1);
-	//VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, nullptr, DescriptorSetLayouts.data()));
 
-	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
-		{
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			1
-		}
-	};
-	const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		nullptr,
-		0,
-		1,
-		static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
-
-	const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		nullptr,
-		DescriptorPool,
-		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
-	};
-	DescriptorSets.reserve(1);
-	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, DescriptorSets.data()));
-}
 
 void VK::CreateCommandBuffers()
 {
@@ -942,7 +1004,7 @@ void VK::FlushSetupCommandBuffer()
 	}
 }
 
-void VK::CreateVertexBuffer()
+void VK::CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
 	const std::vector<glm::vec3> Vertices = { {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} }; //todo
 
@@ -961,7 +1023,7 @@ void VK::CreateVertexBuffer()
 		VkMemoryRequirements MemoryRequirements;
 		vkGetBufferMemoryRequirements(Device, StagingBuffer, &MemoryRequirements);
 		MemoryAllocateInfo.allocationSize = MemoryRequirements.size;
-		MemoryAllocateInfo.memoryTypeIndex = GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		MemoryAllocateInfo.memoryTypeIndex = GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &StagingDeviceMemory));
 		void *Data;
 		VERIFY_SUCCEEDED(vkMapMemory(Device, StagingDeviceMemory, 0, MemoryAllocateInfo.allocationSize, 0, &Data)); {
@@ -975,7 +1037,7 @@ void VK::CreateVertexBuffer()
 		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &VertexBuffer));
 		vkGetBufferMemoryRequirements(Device, VertexBuffer, &MemoryRequirements);
 		MemoryAllocateInfo.allocationSize = MemoryRequirements.size;
-		MemoryAllocateInfo.memoryTypeIndex = GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		MemoryAllocateInfo.memoryTypeIndex = GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &VertexDeviceMemory));
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, VertexBuffer, VertexDeviceMemory, 0));
 #pragma endregion
@@ -1010,7 +1072,7 @@ void VK::CreateVertexBuffer()
 	vkFreeMemory(Device, StagingDeviceMemory, nullptr);
 }
 
-void VK::CreateIndexBuffer()
+void VK::CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
 	const std::vector<uint32_t> Indices = { 0, 1, 2 };
 
@@ -1029,7 +1091,7 @@ void VK::CreateIndexBuffer()
 		VkMemoryRequirements MemoryRequirements;
 		vkGetBufferMemoryRequirements(Device, StagingBuffer, &MemoryRequirements);
 		MemoryAllocateInfo.allocationSize = MemoryRequirements.size;
-		MemoryAllocateInfo.memoryTypeIndex = GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		MemoryAllocateInfo.memoryTypeIndex = GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &StagingDeviceMemory));
 		void *Data;
 		VERIFY_SUCCEEDED(vkMapMemory(Device, StagingDeviceMemory, 0, sizeof(Indices), 0, &Data)); {
@@ -1043,7 +1105,7 @@ void VK::CreateIndexBuffer()
 		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &IndexBuffer));
 		vkGetBufferMemoryRequirements(Device, IndexBuffer, &MemoryRequirements);
 		MemoryAllocateInfo.allocationSize = MemoryRequirements.size;
-		MemoryAllocateInfo.memoryTypeIndex = GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		MemoryAllocateInfo.memoryTypeIndex = GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &IndexDeviceMemory));
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, IndexBuffer, IndexDeviceMemory, 0));
 		
@@ -1080,7 +1142,7 @@ void VK::CreateIndexBuffer()
 	vkFreeMemory(Device, StagingDeviceMemory, nullptr);
 }
 
-void VK::CreateUniformBuffer()
+void VK::CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
 	const auto Size = sizeof(glm::mat4) * 3; //!< World, View, Projection
 
@@ -1100,7 +1162,7 @@ void VK::CreateUniformBuffer()
 		MemoryAllocateInfo.allocationSize = MemoryRequirements.size;
 	}
 
-	MemoryAllocateInfo.memoryTypeIndex = GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	MemoryAllocateInfo.memoryTypeIndex = GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &UniformDeviceMemory));
 	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffer, UniformDeviceMemory, 0));
 
