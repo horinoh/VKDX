@@ -43,6 +43,10 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateDescriptorSet();
 
+	CreateVertexBuffer(PhysicalDeviceMemoryProperties);
+	CreateIndexBuffer(PhysicalDeviceMemoryProperties);
+	CreateUniformBuffer(PhysicalDeviceMemoryProperties);
+
 	//------------------------------------------
 
 	CreateSemaphore();
@@ -52,12 +56,9 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateCommandBuffers();
 	
-	CreateUniformBuffer(PhysicalDeviceMemoryProperties);
-	
 	FlushSetupCommandBuffer();
 	CreateSetupCommandBuffer();
-	CreateVertexBuffer(PhysicalDeviceMemoryProperties);
-	CreateIndexBuffer(PhysicalDeviceMemoryProperties);
+	
 
 	CreateFence();
 
@@ -727,14 +728,13 @@ void VK::CreatePipelineLayout()
 
 void VK::CreateVertexInput()
 {
-	std::tuple<glm::vec3, glm::vec3> Vertex;
-
+	Vertex Vertices;
 	VertexInputBindingDescriptions = {
 		{ 0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX }
 	};
 	VertexInputAttributeDescriptions = {
 		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
-		{ 1, 0, VK_FORMAT_R32G32B32_SFLOAT, sizeof(std::get<0>(Vertex)) }
+		{ 1, 0, VK_FORMAT_R32G32B32_SFLOAT, sizeof(std::get<0>(Vertex())) }
 	};
 	PipelineVertexInputStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -917,157 +917,119 @@ void VK::CreateDescriptorSet()
 	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, DescriptorSets.data()));
 }
 
-void VK::CreateSemaphore()
-{
-	const VkSemaphoreCreateInfo SemaphoreCreateInfo = {
-		VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-		nullptr,
-		0
-	};
-	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &PresentSemaphore));
-	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
-}
-void VK::CreateCommandPool()
-{
-	const VkCommandPoolCreateInfo CommandPoolInfo = {
-		VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-		nullptr,
-		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-		QueueFamilyIndex
-	};
-	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, nullptr, &CommandPool));
-}
-
-void VK::CreateSetupCommandBuffer()
-{
-	if (SetupCommandBuffer != VK_NULL_HANDLE) {
-		vkFreeCommandBuffers(Device, CommandPool, 1, &SetupCommandBuffer);
-		SetupCommandBuffer = VK_NULL_HANDLE;
-	}
-
-	const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-		nullptr,
-		CommandPool,
-		VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-		1
-	};
-	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &SetupCommandBuffer));
-
-	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		0,
-		nullptr
-	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SetupCommandBuffer, &CommandBufferBeginInfo));
-}
-
-
-
-void VK::CreateCommandBuffers()
-{
-	//CommandBuffers.resize(SwapchainBuffers.size()/*ImageCount*/);
-
-	/*const*/ VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-		nullptr,
-		CommandPool,
-		VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-		static_cast<uint32_t>(CommandBuffers.size())
-	};
-	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, CommandBuffers.data()));
-
-	CommandBufferAllocateInfo.commandBufferCount = 1;
-	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PrePresentCommandBuffer));
-	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PostPresentCommandBuffer));
-}
-void VK::FlushSetupCommandBuffer()
-{
-	if (SetupCommandBuffer != VK_NULL_HANDLE) {
-		VERIFY_SUCCEEDED(vkEndCommandBuffer(SetupCommandBuffer));
-
-		const VkSubmitInfo SubmitInfo = {
-			VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			nullptr,
-			0, nullptr,
-			nullptr,
-			1, &SetupCommandBuffer,
-			0, nullptr
-		};
-		VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
-
-		VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
-
-		vkFreeCommandBuffers(Device, CommandPool, 1, &SetupCommandBuffer);
-		SetupCommandBuffer = VK_NULL_HANDLE;
-	}
-}
-
 void VK::CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
-	const std::vector<glm::vec3> Vertices = { {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f} }; //todo
+	const std::vector<Vertex> Vertices = {
+		{ Vertex({ 0.0f,   0.25f, 0.0f },{ 0.0f, 0.0f, 0.0f, 1.0f }) },
+		{ Vertex({ 0.25f, -0.25f, 0.0f },{ 0.0f, 0.0f, 0.0f, 1.0f }) },
+		{ Vertex({ -0.25f, -0.25f, 0.0f },{ 0.0f, 0.0f, 0.0f, 1.0f }) },
+	};
 
-#pragma region Staging
+	const auto Size = sizeof(Vertices);
+	const auto Stride = sizeof(Vertices[0]);
+
 	VkBuffer StagingBuffer;
 	VkDeviceMemory StagingDeviceMemory;
+
+#pragma region Staging
 	{
-		VkBufferCreateInfo BufferCreateInfo = {};
-		BufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		BufferCreateInfo.size = sizeof(Vertices);
-		BufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		const VkBufferCreateInfo BufferCreateInfo = {
+			VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+			nullptr,
+			0,
+			Size,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_SHARING_MODE_EXCLUSIVE,
+			0, nullptr
+		};
 		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &StagingBuffer));
 
-		VkMemoryAllocateInfo MemoryAllocateInfo = {};
-		MemoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		VkMemoryRequirements MemoryRequirements;
 		vkGetBufferMemoryRequirements(Device, StagingBuffer, &MemoryRequirements);
-		MemoryAllocateInfo.allocationSize = MemoryRequirements.size;
-		MemoryAllocateInfo.memoryTypeIndex = GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
+		const VkMemoryAllocateInfo MemoryAllocateInfo = {
+			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+			nullptr,
+			MemoryRequirements.size,
+			GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+		};
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &StagingDeviceMemory));
+
 		void *Data;
 		VERIFY_SUCCEEDED(vkMapMemory(Device, StagingDeviceMemory, 0, MemoryAllocateInfo.allocationSize, 0, &Data)); {
 			memcpy(Data, Vertices.data(), sizeof(Vertices));
 		} vkUnmapMemory(Device, StagingDeviceMemory);
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, StagingBuffer, StagingDeviceMemory, 0));
+	}
 #pragma endregion
 
 #pragma region VRAM
-		BufferCreateInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+	{
+		const VkBufferCreateInfo BufferCreateInfo = {
+			VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+			nullptr,
+			0,
+			Size,
+			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			VK_SHARING_MODE_EXCLUSIVE,
+			0, nullptr
+		};
 		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &VertexBuffer));
+
+		VkMemoryRequirements MemoryRequirements;
 		vkGetBufferMemoryRequirements(Device, VertexBuffer, &MemoryRequirements);
-		MemoryAllocateInfo.allocationSize = MemoryRequirements.size;
-		MemoryAllocateInfo.memoryTypeIndex = GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		const VkMemoryAllocateInfo MemoryAllocateInfo = {
+			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+			nullptr,
+			MemoryRequirements.size,
+			GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+		};
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &VertexDeviceMemory));
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, VertexBuffer, VertexDeviceMemory, 0));
+	}
 #pragma endregion
 
 #pragma region ToVRAMCommand
-		VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {};
-		CommandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		CommandBufferAllocateInfo.commandPool = CommandPool;
-		CommandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		CommandBufferAllocateInfo.commandBufferCount = 1;
+	{
+		const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
+			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			nullptr,
+			CommandPool,
+			VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+			1
+		};
 		VkCommandBuffer CopyCommandBuffer;
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CopyCommandBuffer)); {
-			VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
-			CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			CommandBufferBeginInfo.pNext = nullptr;
+			const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
+				VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+				nullptr,
+				0,
+				nullptr
+			};
 			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CopyCommandBuffer, &CommandBufferBeginInfo)); {
-				VkBufferCopy BufferCopy = {};
-				BufferCopy.size = Vertices.size();
+				const VkBufferCopy BufferCopy = {
+					0,
+					0,
+					Size
+				};
 				vkCmdCopyBuffer(CopyCommandBuffer, StagingBuffer, VertexBuffer, 1, &BufferCopy);
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CopyCommandBuffer));
 
-			VkSubmitInfo SubmitInfo = {};
-			SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-			SubmitInfo.commandBufferCount = 1;
-			SubmitInfo.pCommandBuffers = &CopyCommandBuffer;
+			const VkSubmitInfo SubmitInfo = {
+				VK_STRUCTURE_TYPE_SUBMIT_INFO,
+				nullptr,
+				0, nullptr,
+				nullptr,
+				1, &CopyCommandBuffer,
+				0, nullptr
+			};
 			VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
 			VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
 		} vkFreeCommandBuffers(Device, CommandPool, 1, &CopyCommandBuffer);
-#pragma endregion
 	} 
+#pragma endregion
+
 	vkDestroyBuffer(Device, StagingBuffer, nullptr);
 	vkFreeMemory(Device, StagingDeviceMemory, nullptr);
 }
@@ -1171,6 +1133,93 @@ void VK::CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDev
 	UniformDescriptorBufferInfo.range = Size;
 }
 
+void VK::CreateSemaphore()
+{
+	const VkSemaphoreCreateInfo SemaphoreCreateInfo = {
+		VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+		nullptr,
+		0
+	};
+	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &PresentSemaphore));
+	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
+}
+void VK::CreateCommandPool()
+{
+	const VkCommandPoolCreateInfo CommandPoolInfo = {
+		VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+		nullptr,
+		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		QueueFamilyIndex
+	};
+	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, nullptr, &CommandPool));
+}
+
+void VK::CreateSetupCommandBuffer()
+{
+	if (SetupCommandBuffer != VK_NULL_HANDLE) {
+		vkFreeCommandBuffers(Device, CommandPool, 1, &SetupCommandBuffer);
+		SetupCommandBuffer = VK_NULL_HANDLE;
+	}
+
+	const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		nullptr,
+		CommandPool,
+		VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+		1
+	};
+	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &SetupCommandBuffer));
+
+	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		nullptr,
+		0,
+		nullptr
+	};
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SetupCommandBuffer, &CommandBufferBeginInfo));
+}
+
+
+
+void VK::CreateCommandBuffers()
+{
+	//CommandBuffers.resize(SwapchainBuffers.size()/*ImageCount*/);
+
+	/*const*/ VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		nullptr,
+		CommandPool,
+		VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+		static_cast<uint32_t>(CommandBuffers.size())
+	};
+	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, CommandBuffers.data()));
+
+	CommandBufferAllocateInfo.commandBufferCount = 1;
+	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PrePresentCommandBuffer));
+	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PostPresentCommandBuffer));
+}
+void VK::FlushSetupCommandBuffer()
+{
+	if (SetupCommandBuffer != VK_NULL_HANDLE) {
+		VERIFY_SUCCEEDED(vkEndCommandBuffer(SetupCommandBuffer));
+
+		const VkSubmitInfo SubmitInfo = {
+			VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			nullptr,
+			0, nullptr,
+			nullptr,
+			1, &SetupCommandBuffer,
+			0, nullptr
+		};
+		VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
+
+		VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
+
+		vkFreeCommandBuffers(Device, CommandPool, 1, &SetupCommandBuffer);
+		SetupCommandBuffer = VK_NULL_HANDLE;
+	}
+}
+
 void VK::CreateFence()
 {
 	const VkFenceCreateInfo FenceCreateInfo = {
@@ -1190,14 +1239,14 @@ void VK::PopulateCommandBuffer()
 	//} VERIFY_SUCCEEDED(vkEndCommandBuffer(drawCmdBuffers[i]));
 
 	//!< バッファインデックスの更新
-	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphore, nullptr, &CurrentSwapchainBufferIndex));
+	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphore, nullptr, &SwapchainImageIndex));
 
-	vkCmdSetViewport(CommandBuffers[CurrentSwapchainBufferIndex], 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-	vkCmdSetScissor(CommandBuffers[CurrentSwapchainBufferIndex], 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+	vkCmdSetViewport(CommandBuffers[SwapchainImageIndex], 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+	vkCmdSetScissor(CommandBuffers[SwapchainImageIndex], 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 	const VkDeviceSize Offsets[] = { 0 };
-	vkCmdBindVertexBuffers(CommandBuffers[CurrentSwapchainBufferIndex], 0, 1, &VertexBuffer, Offsets);
-	vkCmdBindIndexBuffer(CommandBuffers[CurrentSwapchainBufferIndex], IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+	vkCmdBindVertexBuffers(CommandBuffers[SwapchainImageIndex], 0, 1, &VertexBuffer, Offsets);
+	vkCmdBindIndexBuffer(CommandBuffers[SwapchainImageIndex], IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
 	//VkImageMemoryBarrier postPresentBarrier = {};
 	//postPresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -1258,7 +1307,7 @@ void VK::Present()
 		nullptr,
 		0, nullptr,
 		1, &Swapchain,
-		&CurrentSwapchainBufferIndex,
+		&SwapchainImageIndex,
 		nullptr
 	};
 #if 0

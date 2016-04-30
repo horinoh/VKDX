@@ -297,14 +297,18 @@ void DX::CreateInputLayout()
 {
 	D3D12_INPUT_ELEMENT_DESC InputElementDescs[] = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		//{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 	};
 	InputLayoutDescs.push_back({ InputElementDescs, _countof(InputElementDescs) });
 }
-
 void DX::CreateVertexBuffer()
 {
-	const DirectX::XMFLOAT3 Vertices[] = { { 0.0f, 0.25f, 0.0f },{ 0.25f, -0.25f, 0.0f },{ -0.25f, -0.25f, 0.0f }, };
+	const std::vector<Vertex> Vertices = {
+		{ Vertex({  0.0f,   0.25f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }) },
+		{ Vertex({  0.25f, -0.25f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }) },
+		{ Vertex({ -0.25f, -0.25f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }) },
+	};
+
 	const auto Size = sizeof(Vertices);
 	const auto Stride = sizeof(Vertices[0]);
 
@@ -320,7 +324,7 @@ void DX::CreateVertexBuffer()
 	UINT8* Data;
 	D3D12_RANGE Range = { 0, 0 };
 	VERIFY_SUCCEEDED(VertexBuffer->Map(0, &Range, reinterpret_cast<void **>(&Data))); {
-		memcpy(Data, Vertices, Size);
+		memcpy(Data, Vertices.data(), Size);
 	} VertexBuffer->Unmap(0, nullptr);
 
 	VertexBufferView = { VertexBuffer->GetGPUVirtualAddress(), Size, Stride };

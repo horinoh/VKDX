@@ -106,7 +106,10 @@ protected:
 	std::vector<D3D12_RECT> ScissorRects;
 #pragma endregion
 
-#pragma region VertexInput
+#pragma region InputLayout
+private:
+	using Vertex = std::tuple<DirectX::XMFLOAT3, DirectX::XMFLOAT4>;
+protected:
 	std::vector<D3D12_INPUT_LAYOUT_DESC> InputLayoutDescs;
 #pragma endregion
 

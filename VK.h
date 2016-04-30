@@ -66,9 +66,13 @@ protected:
 
 	virtual void CreatePipeline();
 
-
-
 	virtual void CreateDescriptorSet();
+
+	virtual void CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
+	virtual void CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
+	virtual void CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
+
+	// ----------------------------------
 
 	virtual void CreateSemaphore();
 
@@ -78,15 +82,6 @@ protected:
 	virtual void CreateCommandBuffers();
 
 	virtual void FlushSetupCommandBuffer();
-
-#pragma region VertexBuffer
-	virtual void CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
-	virtual void CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
-#pragma endregion
-
-#pragma region ConstantBuffer
-	virtual void CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
-#pragma endregion
 
 	virtual void CreateFence();
 
@@ -143,6 +138,9 @@ protected:
 	VkPipelineLayout PipelineLayout;
 
 #pragma region VertexInput
+private:
+	using Vertex = std::tuple<glm::vec3, glm::vec4>;
+protected:
 	std::vector<VkVertexInputBindingDescription> VertexInputBindingDescriptions;
 	std::vector<VkVertexInputAttributeDescription> VertexInputAttributeDescriptions;
 	VkPipelineVertexInputStateCreateInfo PipelineVertexInputStateCreateInfo;
