@@ -32,34 +32,20 @@ protected:
 
 	virtual void CreateDepthStencil();
 
-#pragma region PipelineLayout
-	virtual void CreateRootSignature();
-#pragma endregion
-
-#pragma region Shader
 	virtual void CreateShader();
-#pragma endregion
 
-#pragma region Viewport
+	virtual void CreateRootSignature();
+
+	virtual void CreateInputLayout();
 	virtual void CreateViewport();
-#pragma endregion
-
 	virtual void CreatePipelineState();
+
+	virtual void CreateVertexBuffer();
+	virtual void CreateIndexBuffer();
+	virtual void CreateConstantBuffer();
 
 	virtual void CreateCommandList();
 
-#pragma region VertexInput
-	virtual void CreateInputLayout();
-#pragma endregion
-
-#pragma region VertexBuffer
-	virtual void CreateVertexBuffer();
-	virtual void CreateIndexBuffer();
-#pragma endregion
-
-#pragma region UniformBuffer
-	virtual void CreateConstantBuffer();
-#pragma endregion
 
 	virtual void CreateFence();
 
@@ -85,10 +71,6 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12Resource> DepthStencil;
 #pragma endregion
 
-#pragma region PipelineLayout
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
-#pragma endregion
-
 #pragma region Shader
 	Microsoft::WRL::ComPtr<ID3DBlob> BlobVS;
 	std::vector<D3D12_SHADER_BYTECODE> ShaderBytecodesVSs;
@@ -96,14 +78,8 @@ protected:
 	std::vector<D3D12_SHADER_BYTECODE> ShaderBytecodesPSs;
 #pragma endregion
 
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
-
-	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> CommandList;
-
-#pragma region Viewport
-	std::vector<D3D12_VIEWPORT> Viewports;
-	std::vector<D3D12_RECT> ScissorRects;
+#pragma region RootSignature
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
 #pragma endregion
 
 #pragma region InputLayout
@@ -113,18 +89,34 @@ protected:
 	std::vector<D3D12_INPUT_LAYOUT_DESC> InputLayoutDescs;
 #pragma endregion
 
+#pragma region Viewport
+	std::vector<D3D12_VIEWPORT> Viewports;
+	std::vector<D3D12_RECT> ScissorRects;
+#pragma endregion
+
+#pragma region PipelineState
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
+#pragma endregion
+
 #pragma region VertexBuffer
 	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBuffer;
-	D3D12_VERTEX_BUFFER_VIEW VertexBufferView;	
+	D3D12_VERTEX_BUFFER_VIEW VertexBufferView;
+#pragma endregion
 
+#pragma region IndexBuffer
 	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBuffer;
 	D3D12_INDEX_BUFFER_VIEW IndexBufferView;
 	UINT IndexCount = 0;
 #pragma endregion
 
-#pragma region UniformBuffer
+#pragma region ConstantBuffer
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> ConstantBufferViewHeap;
 	Microsoft::WRL::ComPtr<ID3D12Resource> ConstantBuffer;
+#pragma endregion
+
+#pragma region CommandList
+	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> CommandList;
 #pragma endregion
 
 	Microsoft::WRL::ComPtr<ID3D12Fence> Fence;

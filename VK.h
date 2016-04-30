@@ -45,7 +45,8 @@ protected:
 
 	virtual void CreateInstance();
 	virtual VkPhysicalDevice CreateDevice();
-	virtual void CreateDevice(VkPhysicalDevice PhysicalDevice);
+	virtual uint32_t CreateDevice(VkPhysicalDevice PhysicalDevice);
+	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
 
 	virtual void CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice, const VkFormat ColorFormat);
 	
@@ -72,16 +73,14 @@ protected:
 	virtual void CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 
-	// ----------------------------------
-
-	virtual void CreateSemaphore();
-
-	virtual void CreateCommandPool();
-	virtual void CreateSetupCommandBuffer();
-	
 	virtual void CreateCommandBuffers();
 
-	virtual void FlushSetupCommandBuffer();
+	// ----------------------------------
+
+	//virtual void CreateSemaphore();
+
+	//virtual void CreateSetupCommandBuffer();
+	//virtual void FlushSetupCommandBuffer();
 
 	virtual void CreateFence();
 
@@ -104,6 +103,8 @@ protected:
 	VkDevice Device;
 	VkQueue Queue;
 #pragma endregion
+	
+	VkCommandPool CommandPool = VK_NULL_HANDLE;
 
 #pragma region SwapChain
 	VkExtent2D ImageExtent;
@@ -156,20 +157,40 @@ protected:
 	VkPipeline Pipeline;
 #pragma endregion
 
+#pragma region VertexBuffer
+	VkBuffer VertexBuffer = VK_NULL_HANDLE;
+	VkDeviceMemory VertexDeviceMemory = VK_NULL_HANDLE;
+#pragma endregion
+
+#pragma region IndexBuffer
+	VkBuffer IndexBuffer = VK_NULL_HANDLE;
+	VkDeviceMemory IndexDeviceMemory = VK_NULL_HANDLE;
+	uint32_t IndexCount = 0;
+#pragma endregion
+
+#pragma region UniformBuffer
+	VkBuffer UniformBuffer = VK_NULL_HANDLE;
+	VkDeviceMemory UniformDeviceMemory = VK_NULL_HANDLE;
+	VkDescriptorBufferInfo UniformDescriptorBufferInfo;
+	std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
+#pragma endregion
+
+#pragma region CommandBuffer
+	std::vector<VkCommandBuffer> CommandBuffers;
+#pragma endregion
+
 	//-------------------------------
 
-	VkSemaphore PresentSemaphore = VK_NULL_HANDLE;
-	VkSemaphore RenderSemaphore = VK_NULL_HANDLE;
+	//VkSemaphore PresentSemaphore = VK_NULL_HANDLE;
+	//VkSemaphore RenderSemaphore = VK_NULL_HANDLE;
 
 	//VkPipelineStageFlags SubmitPipelineStages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
 	//VkSurfaceKHR Surface;
-	uint32_t QueueFamilyIndex = UINT32_MAX;
+	/*uint32_t QueueFamilyIndex = UINT32_MAX;
 	VkFormat ColorFormat;
 	VkColorSpaceKHR ColorSpace;
-
-	VkCommandPool CommandPool;
-
+*/
 	VkCommandBuffer SetupCommandBuffer = VK_NULL_HANDLE;
 
 #pragma region RootSignature
@@ -177,25 +198,10 @@ protected:
 	std::vector<VkDescriptorSet> DescriptorSets;
 #pragma endregion
 
-	std::vector<VkCommandBuffer> CommandBuffers;
-	VkCommandBuffer PrePresentCommandBuffer = VK_NULL_HANDLE;
-	VkCommandBuffer PostPresentCommandBuffer = VK_NULL_HANDLE;
+	//VkCommandBuffer PrePresentCommandBuffer = VK_NULL_HANDLE;
+	//VkCommandBuffer PostPresentCommandBuffer = VK_NULL_HANDLE;
 
 //	std::vector<VkPipelineShaderStageCreateInfo> ShaderStageCreateInfos;
-
-#pragma region VertexBuffer
-	VkBuffer VertexBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory VertexDeviceMemory = VK_NULL_HANDLE;
-	VkBuffer IndexBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory IndexDeviceMemory = VK_NULL_HANDLE;
-	uint32_t IndexCount = 0;
-#pragma endregion
-
-#pragma region ConstantBuffer
-	VkBuffer UniformBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory UniformDeviceMemory = VK_NULL_HANDLE;
-	VkDescriptorBufferInfo UniformDescriptorBufferInfo;
-#pragma endregion
 
 	VkFence Fence;
 };

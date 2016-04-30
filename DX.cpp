@@ -25,16 +25,22 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateDepthStencil();
 
-	CreateRootSignature();
-	CreateInputLayout();
 	CreateShader();
+
+	CreateRootSignature();
+
+	CreateInputLayout();
 	CreateViewport();
 	CreatePipelineState();
-	CreateCommandList();
 
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 	CreateConstantBuffer();
+
+	CreateCommandList();
+
+	// -----------------------
+
 
 	CreateFence();
 
@@ -101,9 +107,12 @@ void DX::CreateDevice(HWND hWnd)
 }
 void DX::CreateCommandQueue()
 {
-	D3D12_COMMAND_QUEUE_DESC CommandQueueDesc = {};
-	CommandQueueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-	CommandQueueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+	const D3D12_COMMAND_QUEUE_DESC CommandQueueDesc = {
+		D3D12_COMMAND_LIST_TYPE_DIRECT,
+		0,
+		D3D12_COMMAND_QUEUE_FLAG_NONE,
+		0
+	};
 	VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(&CommandQueue)));
 }
 
@@ -115,14 +124,18 @@ void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&Factory4)));
 
 #pragma region SwapChain
-	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc1 = {};
-	SwapChainDesc1.BufferCount = BufferCount;
-	SwapChainDesc1.Width = GetClientRectWidth();
-	SwapChainDesc1.Height = GetClientRectHeight();
-	SwapChainDesc1.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	SwapChainDesc1.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	SwapChainDesc1.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	SwapChainDesc1.SampleDesc.Count = 1;
+	const DXGI_SWAP_CHAIN_DESC1 SwapChainDesc1 = {
+		static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
+		DXGI_FORMAT_R8G8B8A8_UNORM,
+		FALSE,
+		{ 1, 0 },
+		DXGI_USAGE_RENDER_TARGET_OUTPUT,
+		BufferCount,
+		DXGI_SCALING_STRETCH,
+		DXGI_SWAP_EFFECT_FLIP_DISCARD,
+		DXGI_ALPHA_MODE_UNSPECIFIED,
+		0
+	};
 
 	ComPtr<IDXGISwapChain1> SwapChain1;
 	VERIFY_SUCCEEDED(Factory4->CreateSwapChainForHwnd(CommandQueue.Get(), hWnd, &SwapChainDesc1, nullptr, nullptr, &SwapChain1));
@@ -133,13 +146,15 @@ void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
 
 	//!< デスクリプタヒープ(ビュー)を作成
 #pragma region SwapChainView
-	D3D12_DESCRIPTOR_HEAP_DESC DescripterHeapDesc = {};
-	DescripterHeapDesc.NumDescriptors = BufferCount;
-	DescripterHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	DescripterHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	const D3D12_DESCRIPTOR_HEAP_DESC DescripterHeapDesc = {
+		D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+		BufferCount,
+		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+		0
+	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescripterHeapDesc, IID_PPV_ARGS(&RenderTargetViewHeap)));
 
-	D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetViewHandle(RenderTargetViewHeap->GetCPUDescriptorHandleForHeapStart());
+	auto RenderTargetViewHandle(RenderTargetViewHeap->GetCPUDescriptorHandleForHeapStart());
 	const auto DescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	for (UINT i = 0; i < BufferCount; ++i) {
 		VERIFY_SUCCEEDED(SwapChain3->GetBuffer(i, IID_PPV_ARGS(&RenderTargets[i])));
@@ -190,6 +205,20 @@ void DX::CreateDepthStencil()
 #pragma endregion
 }
 
+/**
+@note VisualStudio に HLSL ファイルを追加すれば、コンパイルされて *.cso ファイルが作成される ( 出力先は x64/Debug/, x64/Release/ など)
+*/
+void DX::CreateShader()
+{
+	using namespace Microsoft::WRL;
+
+	D3DReadFileToBlob(L"XXXVS.cso", &BlobVS);// todo
+	ShaderBytecodesVSs.push_back({ BlobVS->GetBufferPointer(), BlobVS->GetBufferSize() });
+	
+	D3DReadFileToBlob(L"XXXPS.cso", &BlobPS);// todo
+	ShaderBytecodesPSs.push_back({ BlobPS->GetBufferPointer(), BlobPS->GetBufferSize() });
+}
+
 void DX::CreateRootSignature()
 {
 	using namespace Microsoft::WRL;
@@ -207,20 +236,14 @@ void DX::CreateRootSignature()
 	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(&RootSignature)));
 }
 
-/**
-@note VisualStudio に HLSL ファイルを追加すれば、コンパイルされて *.cso ファイルが作成される ( 出力先は x64/Debug/, x64/Release/ など)
-*/
-void DX::CreateShader()
+void DX::CreateInputLayout()
 {
-	using namespace Microsoft::WRL;
-
-	D3DReadFileToBlob(L"XXXVS.cso", &BlobVS);// todo
-	ShaderBytecodesVSs.push_back({ BlobVS->GetBufferPointer(), BlobVS->GetBufferSize() });
-	
-	D3DReadFileToBlob(L"XXXPS.cso", &BlobPS);// todo
-	ShaderBytecodesPSs.push_back({ BlobPS->GetBufferPointer(), BlobPS->GetBufferSize() });
+	const std::vector<D3D12_INPUT_ELEMENT_DESC> InputElementDescs = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+	InputLayoutDescs.push_back({ InputElementDescs.data(), static_cast<UINT>(InputElementDescs.size()) });
 }
-
 void DX::CreateViewport()
 {
 	const auto Width = GetClientRectWidth();
@@ -229,7 +252,6 @@ void DX::CreateViewport()
 	Viewports.push_back({ 0.0f, 0.0f, static_cast<FLOAT>(Width), static_cast<FLOAT>(Height), 0.0f, 1.0f });
 	ScissorRects.push_back({ 0, 0, Width, Height });
 }
-
 void DX::CreatePipelineState()
 {
 	//!< 要 RootSignature
@@ -286,21 +308,6 @@ void DX::CreatePipelineState()
 	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, IID_PPV_ARGS(&PipelineState)));
 }
 
-void DX::CreateCommandList()
-{
-	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&CommandAllocator)));
-	VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, CommandAllocator.Get(), PipelineState.Get(), IID_PPV_ARGS(&CommandList)));
-	VERIFY_SUCCEEDED(CommandList->Close());
-}
-
-void DX::CreateInputLayout()
-{
-	D3D12_INPUT_ELEMENT_DESC InputElementDescs[] = {
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-	};
-	InputLayoutDescs.push_back({ InputElementDescs, _countof(InputElementDescs) });
-}
 void DX::CreateVertexBuffer()
 {
 	const std::vector<Vertex> Vertices = {
@@ -312,8 +319,24 @@ void DX::CreateVertexBuffer()
 	const auto Size = sizeof(Vertices);
 	const auto Stride = sizeof(Vertices[0]);
 
-	const D3D12_RESOURCE_DESC ResourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, Size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, 1, 0, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
-	const D3D12_HEAP_PROPERTIES HeapProperties = { D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 1, 1 };
+	const D3D12_RESOURCE_DESC ResourceDesc = { 
+		D3D12_RESOURCE_DIMENSION_BUFFER, 
+		0, 
+		Size, 1, 
+		1, 
+		1, 
+		DXGI_FORMAT_UNKNOWN, 
+		{ 1, 0 },
+		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+		D3D12_RESOURCE_FLAG_NONE 
+	};
+	const D3D12_HEAP_PROPERTIES HeapProperties = { 
+		D3D12_HEAP_TYPE_UPLOAD, 
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN, 
+		1,
+		1
+	};
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
 		D3D12_HEAP_FLAG_NONE, 
 		&ResourceDesc, 
@@ -322,14 +345,17 @@ void DX::CreateVertexBuffer()
 		IID_PPV_ARGS(&VertexBuffer)));
 
 	UINT8* Data;
-	D3D12_RANGE Range = { 0, 0 };
+	const D3D12_RANGE Range = { 0, 0 };
 	VERIFY_SUCCEEDED(VertexBuffer->Map(0, &Range, reinterpret_cast<void **>(&Data))); {
 		memcpy(Data, Vertices.data(), Size);
 	} VertexBuffer->Unmap(0, nullptr);
 
-	VertexBufferView = { VertexBuffer->GetGPUVirtualAddress(), Size, Stride };
+	VertexBufferView = {
+		VertexBuffer->GetGPUVirtualAddress(), 
+		Size,
+		Stride
+	};
 }
-
 void DX::CreateIndexBuffer()
 {
 	const std::vector<UINT32> Indices = { 0, 1, 2 };
@@ -338,8 +364,24 @@ void DX::CreateIndexBuffer()
 	//!< DrawInstanced() が引数に取るので覚えておく必要がある
 	IndexCount = static_cast<UINT32>(Indices.size());
 
-	const D3D12_RESOURCE_DESC ResourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, Size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, 1, 0, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
-	const D3D12_HEAP_PROPERTIES HeapProperties = { D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 1, 1 };
+	const D3D12_RESOURCE_DESC ResourceDesc = { 
+		D3D12_RESOURCE_DIMENSION_BUFFER, 
+		0,
+		Size, 1,
+		1,
+		1, 
+		DXGI_FORMAT_UNKNOWN, 
+		{ 1, 0 },
+		D3D12_TEXTURE_LAYOUT_ROW_MAJOR, 
+		D3D12_RESOURCE_FLAG_NONE 
+	};
+	const D3D12_HEAP_PROPERTIES HeapProperties = { 
+		D3D12_HEAP_TYPE_UPLOAD, 
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN, 
+		D3D12_MEMORY_POOL_UNKNOWN, 
+		1, 
+		1
+	};
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,
@@ -353,30 +395,61 @@ void DX::CreateIndexBuffer()
 		memcpy(Data, Indices.data(), Size);
 	} IndexBuffer->Unmap(0, nullptr);
 
-	IndexBufferView = { IndexBuffer->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT };
+	IndexBufferView = { 
+		IndexBuffer->GetGPUVirtualAddress(), 
+		Size, 
+		DXGI_FORMAT_R32_UINT 
+	};
 }
 
 void DX::CreateConstantBuffer()
 {
 	const auto Size = 1024 * 64;
 
-	const D3D12_HEAP_PROPERTIES HeapProperties = { D3D12_HEAP_TYPE_UPLOAD, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 1, 1 };
-	const D3D12_RESOURCE_DESC ResourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, Size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, 1, 0, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, 
-		D3D12_HEAP_FLAG_NONE, 
-		&ResourceDesc, 
-		D3D12_RESOURCE_STATE_GENERIC_READ, 
-		nullptr, 
+	const D3D12_RESOURCE_DESC ResourceDesc = {
+		D3D12_RESOURCE_DIMENSION_BUFFER,
+		0,
+		Size, 1,
+		1,
+		1,
+		DXGI_FORMAT_UNKNOWN,
+		{ 1, 0 },
+		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+		D3D12_RESOURCE_FLAG_NONE
+	};
+	const D3D12_HEAP_PROPERTIES HeapProperties = {
+		D3D12_HEAP_TYPE_UPLOAD,
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
 		IID_PPV_ARGS(&ConstantBuffer)));
 
-	D3D12_CONSTANT_BUFFER_VIEW_DESC ConstantBufferViewDesc = {};
-	ConstantBufferViewDesc.BufferLocation = ConstantBuffer->GetGPUVirtualAddress();
-	ConstantBufferViewDesc.SizeInBytes = (sizeof(ConstantBuffer) + 255) & ~255;	//!< コンスタントバッファは 256 byte アラインでないとならない
-	{
-		D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(&ConstantBufferViewHeap)));
-	}
+	const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
+		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+		1,
+		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+		0
+	};
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(&ConstantBufferViewHeap)));
+	const D3D12_CONSTANT_BUFFER_VIEW_DESC ConstantBufferViewDesc = {
+		ConstantBuffer->GetGPUVirtualAddress(),
+		(sizeof(ConstantBuffer) + 255) & ~255 //!< コンスタントバッファは 256 byte アラインでないとならない
+	};
 	Device->CreateConstantBufferView(&ConstantBufferViewDesc, ConstantBufferViewHeap->GetCPUDescriptorHandleForHeapStart());
+}
+
+void DX::CreateCommandList()
+{
+	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&CommandAllocator)));
+	VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, CommandAllocator.Get(), PipelineState.Get(), IID_PPV_ARGS(&CommandList)));
+	VERIFY_SUCCEEDED(CommandList->Close());
 }
 
 void DX::CreateFence()

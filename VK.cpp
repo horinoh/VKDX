@@ -20,7 +20,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateInstance();
 	auto PhysicalDevice = CreateDevice(); 
 	
-	const auto ColorFomat = VK_FORMAT_B8G8R8A8_UNORM;
+	const auto ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 	CreateSwapchain(hWnd, hInstance, PhysicalDevice, ColorFormat);
 
 	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
@@ -47,19 +47,16 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateIndexBuffer(PhysicalDeviceMemoryProperties);
 	CreateUniformBuffer(PhysicalDeviceMemoryProperties);
 
+	CreateCommandBuffers();
+
 	//------------------------------------------
 
-	CreateSemaphore();
+	//CreateSemaphore();
 
-	CreateCommandPool();
-	CreateSetupCommandBuffer();
-
-	CreateCommandBuffers();
+	//CreateSetupCommandBuffer();
+	//FlushSetupCommandBuffer();
+	//CreateSetupCommandBuffer();
 	
-	FlushSetupCommandBuffer();
-	CreateSetupCommandBuffer();
-	
-
 	CreateFence();
 
 	PopulateCommandBuffer();
@@ -90,23 +87,19 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 
 	vkDestroyFence(Device, Fence, nullptr);
 
+	//vkFreeCommandBuffers(Device, CommandPool, 1, &PostPresentCommandBuffer);
+	//vkFreeCommandBuffers(Device, CommandPool, 1, &PrePresentCommandBuffer);
+
+	vkFreeCommandBuffers(Device, CommandPool, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
+
+	vkFreeMemory(Device, UniformDeviceMemory, nullptr);
+	vkDestroyBuffer(Device, UniformBuffer, nullptr);
+
 	vkFreeMemory(Device, IndexDeviceMemory, nullptr);
 	vkDestroyBuffer(Device, IndexBuffer, nullptr);
 
 	vkFreeMemory(Device, VertexDeviceMemory, nullptr);
 	vkDestroyBuffer(Device, VertexBuffer, nullptr);
-
-	vkFreeMemory(Device, UniformDeviceMemory, nullptr);
-	vkDestroyBuffer(Device, UniformBuffer, nullptr);
-
-	//for (auto& i : ShaderStageCreateInfos) {
-	//	vkDestroyShaderModule(Device, i.module, nullptr);
-	//}
-
-	vkFreeCommandBuffers(Device, CommandPool, 1, &PostPresentCommandBuffer);
-	vkFreeCommandBuffers(Device, CommandPool, 1, &PrePresentCommandBuffer);
-	vkFreeCommandBuffers(Device, CommandPool, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
-
 
 	vkDestroyPipeline(Device, Pipeline, nullptr);
 	vkDestroyPipelineCache(Device, PipelineCache, nullptr);
@@ -120,10 +113,8 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkFreeCommandBuffers(Device, CommandPool, 1, &SetupCommandBuffer);
 	}
 
-	vkDestroyCommandPool(Device, CommandPool, nullptr);
-
-	vkDestroySemaphore(Device, RenderSemaphore, nullptr);
-	vkDestroySemaphore(Device, PresentSemaphore, nullptr);
+	//vkDestroySemaphore(Device, RenderSemaphore, nullptr);
+	//vkDestroySemaphore(Device, PresentSemaphore, nullptr);
 
 #pragma region DescriptorSetLayout
 	for (auto i : DescriptorSetLayouts) {
@@ -143,9 +134,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 #pragma endregion
 	
-#pragma region RenderPass
 	vkDestroyRenderPass(Device, RenderPass, nullptr);
-#pragma endregion
 
 #pragma region DepthStencil
 	vkDestroyImageView(Device, DepthStencilImageView, nullptr);
@@ -164,12 +153,12 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	vkDestroySwapchainKHR(Device, Swapchain, nullptr);
 #pragma endregion
 
+	vkDestroyCommandPool(Device, CommandPool, nullptr);
+
 	vkDestroyDevice(Device, nullptr);
 	
-#pragma region Instance
 	//vkDestroyInstance(Instance, &AllocationCallbacks);
 	vkDestroyInstance(Instance, nullptr);
-#pragma endregion
 }
 
 VkFormat VK::GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice) const
@@ -353,10 +342,12 @@ VkPhysicalDevice VK::CreateDevice()
 	//!< ここでは最初の物理デバイスを使用することにする
 	auto PhysicalDevice = PhysicalDevices[0];
 
-	CreateDevice(PhysicalDevice);
+	const auto QueueFamilyIndex = CreateDevice(PhysicalDevice);
+	CreateCommandPool(QueueFamilyIndex);
+
 	return PhysicalDevice;
 }
-void VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
+uint32_t VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
 {
 	uint32_t QueueFamilyPropertyCount;
 	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyPropertyCount, nullptr);
@@ -399,10 +390,24 @@ void VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
 			//vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
 
 			//GetSupportedDepthFormat(PhysicalDevice);
-			break;
+			return i;
 		}
 	}
+
+	assert(false && "QueueFamilyIndex not found");
+	return 0;
 }
+void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
+{
+	const VkCommandPoolCreateInfo CommandPoolInfo = {
+		VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+		nullptr,
+		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		QueueFamilyIndex
+	};
+	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, nullptr, &CommandPool));
+}
+
 void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice, const VkFormat ColorFormat)
 {
 	VkSurfaceKHR Surface = VK_NULL_HANDLE;
@@ -920,9 +925,9 @@ void VK::CreateDescriptorSet()
 void VK::CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
 	const std::vector<Vertex> Vertices = {
-		{ Vertex({ 0.0f,   0.25f, 0.0f },{ 0.0f, 0.0f, 0.0f, 1.0f }) },
-		{ Vertex({ 0.25f, -0.25f, 0.0f },{ 0.0f, 0.0f, 0.0f, 1.0f }) },
-		{ Vertex({ -0.25f, -0.25f, 0.0f },{ 0.0f, 0.0f, 0.0f, 1.0f }) },
+		{ Vertex({ 0.0f,   0.25f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }) },
+		{ Vertex({ 0.25f, -0.25f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }) },
+		{ Vertex({ -0.25f, -0.25f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }) },
 	};
 
 	const auto Size = sizeof(Vertices);
@@ -1039,7 +1044,7 @@ void VK::CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDevic
 
 	const auto Size = sizeof(Indices);
 	//!< vkCmdDrawIndexed() が引数に取るので覚えておく必要がある
-	IndexCount = static_cast<UINT32>(Indices.size());
+	IndexCount = static_cast<uint32_t>(Indices.size());
 
 	VkBuffer StagingBuffer;
 	VkDeviceMemory StagingDeviceMemory;
@@ -1149,84 +1154,58 @@ void VK::CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDev
 {
 	const auto Size = sizeof(glm::mat4) * 3; //!< World, View, Projection
 
-	VkBufferCreateInfo BufferCreateInfo = {};
-	BufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	BufferCreateInfo.size = Size;
-	BufferCreateInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+	const VkBufferCreateInfo BufferCreateInfo = {
+		VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		nullptr,
+		0,
+		Size,
+		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+		VK_SHARING_MODE_EXCLUSIVE,
+		0, nullptr
+	};
 	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &UniformBuffer));
 
-	VkMemoryAllocateInfo MemoryAllocateInfo = {};
-	MemoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-	MemoryAllocateInfo.pNext = nullptr;
-	MemoryAllocateInfo.allocationSize = 0;
-	MemoryAllocateInfo.memoryTypeIndex = 0; 
-	VkMemoryRequirements MemoryRequirements; {
-		vkGetBufferMemoryRequirements(Device, UniformBuffer, &MemoryRequirements);
-		MemoryAllocateInfo.allocationSize = MemoryRequirements.size;
-	}
-
-	MemoryAllocateInfo.memoryTypeIndex = GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	VkMemoryRequirements MemoryRequirements;
+	vkGetBufferMemoryRequirements(Device, UniformBuffer, &MemoryRequirements); 
+	const VkMemoryAllocateInfo MemoryAllocateInfo = {
+		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		nullptr,
+		MemoryRequirements.size,
+		GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+	};
 	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &UniformDeviceMemory));
 	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffer, UniformDeviceMemory, 0));
 
-	UniformDescriptorBufferInfo.buffer = UniformBuffer;
-	UniformDescriptorBufferInfo.offset = 0;
-	UniformDescriptorBufferInfo.range = Size;
-}
-
-void VK::CreateSemaphore()
-{
-	const VkSemaphoreCreateInfo SemaphoreCreateInfo = {
-		VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-		nullptr,
-		0
-	};
-	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &PresentSemaphore));
-	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
-}
-void VK::CreateCommandPool()
-{
-	const VkCommandPoolCreateInfo CommandPoolInfo = {
-		VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-		nullptr,
-		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-		QueueFamilyIndex
-	};
-	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, nullptr, &CommandPool));
-}
-
-void VK::CreateSetupCommandBuffer()
-{
-	if (SetupCommandBuffer != VK_NULL_HANDLE) {
-		vkFreeCommandBuffers(Device, CommandPool, 1, &SetupCommandBuffer);
-		SetupCommandBuffer = VK_NULL_HANDLE;
-	}
-
-	const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-		nullptr,
-		CommandPool,
-		VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-		1
-	};
-	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &SetupCommandBuffer));
-
-	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
+	UniformDescriptorBufferInfo = {
+		UniformBuffer,
 		0,
-		nullptr
+		Size
 	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SetupCommandBuffer, &CommandBufferBeginInfo));
+
+	WriteDescriptorSets = {
+		{
+			// todo
+			VK_STRUCTURE_TYPE_APPLICATION_INFO,
+			nullptr,
+			//VkStructureType                  sType;
+			//const void*                      pNext;
+			//VkDescriptorSet                  dstSet;
+			//uint32_t                         dstBinding;
+			//uint32_t                         dstArrayElement;
+			//uint32_t                         descriptorCount;
+			//VkDescriptorType                 descriptorType;
+			//const VkDescriptorImageInfo*     pImageInfo;
+			//const VkDescriptorBufferInfo*    pBufferInfo;
+			//const VkBufferView*              pTexelBufferView;
+		}
+	};
+	vkUpdateDescriptorSets(Device, static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(), 0, nullptr);
 }
-
-
 
 void VK::CreateCommandBuffers()
 {
-	//CommandBuffers.resize(SwapchainBuffers.size()/*ImageCount*/);
-
-	/*const*/ VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
+	CommandBuffers.resize(1/*SwapchainImageViews.size()*/);
+	const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 		nullptr,
 		CommandPool,
@@ -1235,31 +1214,68 @@ void VK::CreateCommandBuffers()
 	};
 	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, CommandBuffers.data()));
 
-	CommandBufferAllocateInfo.commandBufferCount = 1;
-	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PrePresentCommandBuffer));
-	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PostPresentCommandBuffer));
+	//CommandBufferAllocateInfo.commandBufferCount = 1;
+	//VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PrePresentCommandBuffer));
+	//VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PostPresentCommandBuffer));
 }
-void VK::FlushSetupCommandBuffer()
-{
-	if (SetupCommandBuffer != VK_NULL_HANDLE) {
-		VERIFY_SUCCEEDED(vkEndCommandBuffer(SetupCommandBuffer));
+//void VK::CreateSemaphore()
+//{
+//	const VkSemaphoreCreateInfo SemaphoreCreateInfo = {
+//		VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+//		nullptr,
+//		0
+//	};
+//	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &PresentSemaphore));
+//	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
+//}
+//void VK::CreateSetupCommandBuffer()
+//{
+//	if (SetupCommandBuffer != VK_NULL_HANDLE) {
+//		vkFreeCommandBuffers(Device, CommandPool, 1, &SetupCommandBuffer);
+//		SetupCommandBuffer = VK_NULL_HANDLE;
+//	}
+//
+//	const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
+//		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+//		nullptr,
+//		CommandPool,
+//		VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+//		1
+//	};
+//	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &SetupCommandBuffer));
+//
+//	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
+//		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+//		nullptr,
+//		0,
+//		nullptr
+//	};
+//	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SetupCommandBuffer, &CommandBufferBeginInfo));
+//}
 
-		const VkSubmitInfo SubmitInfo = {
-			VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			nullptr,
-			0, nullptr,
-			nullptr,
-			1, &SetupCommandBuffer,
-			0, nullptr
-		};
-		VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
 
-		VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
 
-		vkFreeCommandBuffers(Device, CommandPool, 1, &SetupCommandBuffer);
-		SetupCommandBuffer = VK_NULL_HANDLE;
-	}
-}
+//void VK::FlushSetupCommandBuffer()
+//{
+//	if (SetupCommandBuffer != VK_NULL_HANDLE) {
+//		VERIFY_SUCCEEDED(vkEndCommandBuffer(SetupCommandBuffer));
+//
+//		const VkSubmitInfo SubmitInfo = {
+//			VK_STRUCTURE_TYPE_SUBMIT_INFO,
+//			nullptr,
+//			0, nullptr,
+//			nullptr,
+//			1, &SetupCommandBuffer,
+//			0, nullptr
+//		};
+//		VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
+//
+//		VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
+//
+//		vkFreeCommandBuffers(Device, CommandPool, 1, &SetupCommandBuffer);
+//		SetupCommandBuffer = VK_NULL_HANDLE;
+//	}
+//}
 
 void VK::CreateFence()
 {
@@ -1280,7 +1296,7 @@ void VK::PopulateCommandBuffer()
 	//} VERIFY_SUCCEEDED(vkEndCommandBuffer(drawCmdBuffers[i]));
 
 	//!< バッファインデックスの更新
-	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphore, nullptr, &SwapchainImageIndex));
+	//VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphore, nullptr, &SwapchainImageIndex));
 
 	vkCmdSetViewport(CommandBuffers[SwapchainImageIndex], 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 	vkCmdSetScissor(CommandBuffers[SwapchainImageIndex], 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
