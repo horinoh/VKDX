@@ -188,7 +188,7 @@ protected:
 	VkDeviceMemory VertexDeviceMemory = VK_NULL_HANDLE;
 	VkBuffer IndexBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory IndexDeviceMemory = VK_NULL_HANDLE;
-	uint32_t IndexCount = 3;
+	uint32_t IndexCount = 0;
 #pragma endregion
 
 #pragma region ConstantBuffer

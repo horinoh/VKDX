@@ -333,7 +333,9 @@ void DX::CreateVertexBuffer()
 void DX::CreateIndexBuffer()
 {
 	const std::vector<UINT32> Indices = { 0, 1, 2 };
+
 	const auto Size = sizeof(Indices);
+	//!< DrawInstanced() ‚ªˆø”‚ÉŽæ‚é‚Ì‚ÅŠo‚¦‚Ä‚¨‚­•K—v‚ª‚ ‚é
 	IndexCount = static_cast<UINT32>(Indices.size());
 
 	const D3D12_RESOURCE_DESC ResourceDesc = { D3D12_RESOURCE_DIMENSION_BUFFER, 0, Size, 1, 1, 1, DXGI_FORMAT_UNKNOWN, 1, 0, D3D12_TEXTURE_LAYOUT_ROW_MAJOR, D3D12_RESOURCE_FLAG_NONE };

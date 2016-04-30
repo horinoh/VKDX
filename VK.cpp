@@ -946,7 +946,6 @@ void VK::CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDevi
 
 		VkMemoryRequirements MemoryRequirements;
 		vkGetBufferMemoryRequirements(Device, StagingBuffer, &MemoryRequirements);
-
 		const VkMemoryAllocateInfo MemoryAllocateInfo = {
 			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 			nullptr,
@@ -956,8 +955,8 @@ void VK::CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDevi
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &StagingDeviceMemory));
 
 		void *Data;
-		VERIFY_SUCCEEDED(vkMapMemory(Device, StagingDeviceMemory, 0, MemoryAllocateInfo.allocationSize, 0, &Data)); {
-			memcpy(Data, Vertices.data(), sizeof(Vertices));
+		VERIFY_SUCCEEDED(vkMapMemory(Device, StagingDeviceMemory, 0, /*MemoryAllocateInfo.allocationSize*/Size, 0, &Data)); {
+			memcpy(Data, Vertices.data(), Size);
 		} vkUnmapMemory(Device, StagingDeviceMemory);
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, StagingBuffer, StagingDeviceMemory, 0));
 	}
@@ -1038,68 +1037,110 @@ void VK::CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDevic
 {
 	const std::vector<uint32_t> Indices = { 0, 1, 2 };
 
-#pragma region Staging
+	const auto Size = sizeof(Indices);
+	//!< vkCmdDrawIndexed() が引数に取るので覚えておく必要がある
+	IndexCount = static_cast<UINT32>(Indices.size());
+
 	VkBuffer StagingBuffer;
-	VkDeviceMemory StagingDeviceMemory; 
+	VkDeviceMemory StagingDeviceMemory;
+#pragma region Staging
 	{
-		VkBufferCreateInfo BufferCreateInfo = {};
-		BufferCreateInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		BufferCreateInfo.size = sizeof(Indices);
-		BufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		const VkBufferCreateInfo BufferCreateInfo = {
+			VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+			nullptr,
+			0,
+			Size,
+			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_SHARING_MODE_EXCLUSIVE,
+			0, nullptr
+		};
 		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &StagingBuffer));
 
-		VkMemoryAllocateInfo MemoryAllocateInfo = {};
-		MemoryAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		VkMemoryRequirements MemoryRequirements;
 		vkGetBufferMemoryRequirements(Device, StagingBuffer, &MemoryRequirements);
-		MemoryAllocateInfo.allocationSize = MemoryRequirements.size;
-		MemoryAllocateInfo.memoryTypeIndex = GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		const VkMemoryAllocateInfo MemoryAllocateInfo = {
+			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+			nullptr,
+			MemoryRequirements.size,
+			GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+		};
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &StagingDeviceMemory));
+
 		void *Data;
-		VERIFY_SUCCEEDED(vkMapMemory(Device, StagingDeviceMemory, 0, sizeof(Indices), 0, &Data)); {
-			memcpy(Data, Indices.data(), sizeof(Indices));
+		VERIFY_SUCCEEDED(vkMapMemory(Device, StagingDeviceMemory, 0, /*MemoryAllocateInfo.allocationSize*/Size, 0, &Data)); {
+			memcpy(Data, Indices.data(), Size);
 		} vkUnmapMemory(Device, StagingDeviceMemory);
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, StagingBuffer, StagingDeviceMemory, 0));
+	}
 #pragma endregion
 
 #pragma region VRAM
-		BufferCreateInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &IndexBuffer));
+	{
+		const VkBufferCreateInfo BufferCreateInfo = {
+			VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+			nullptr,
+			0,
+			Size,
+			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			VK_SHARING_MODE_EXCLUSIVE,
+			0, nullptr
+		};
+		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &VertexBuffer));
+
+		VkMemoryRequirements MemoryRequirements;
 		vkGetBufferMemoryRequirements(Device, IndexBuffer, &MemoryRequirements);
-		MemoryAllocateInfo.allocationSize = MemoryRequirements.size;
-		MemoryAllocateInfo.memoryTypeIndex = GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		const VkMemoryAllocateInfo MemoryAllocateInfo = {
+			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+			nullptr,
+			MemoryRequirements.size,
+			GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+		};
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &IndexDeviceMemory));
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, IndexBuffer, IndexDeviceMemory, 0));
-		
-		//vkCmdDrawIndexed() が Indices.size() を引数に取るので覚えておく必要がある todo
+	}
 #pragma endregion
 
 #pragma region ToVRAMCommand
-		VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {};
-		CommandBufferAllocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		CommandBufferAllocateInfo.commandPool = CommandPool;
-		CommandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		CommandBufferAllocateInfo.commandBufferCount = 1;
+	{
+		const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
+			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			nullptr,
+			CommandPool,
+			VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+			1
+		};
 		VkCommandBuffer CopyCommandBuffer;
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CopyCommandBuffer)); {
-			VkCommandBufferBeginInfo CommandBufferBeginInfo = {};
-			CommandBufferBeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			CommandBufferBeginInfo.pNext = nullptr;
+			const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
+				VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+				nullptr,
+				0,
+				nullptr
+			};
 			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CopyCommandBuffer, &CommandBufferBeginInfo)); {
-				VkBufferCopy BufferCopy = {};
-				BufferCopy.size = Indices.size();
+				const VkBufferCopy BufferCopy = {
+					0,
+					0,
+					Size
+				};
 				vkCmdCopyBuffer(CopyCommandBuffer, StagingBuffer, IndexBuffer, 1, &BufferCopy);
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CopyCommandBuffer));
 
-			VkSubmitInfo SubmitInfo = {};
-			SubmitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-			SubmitInfo.commandBufferCount = 1;
-			SubmitInfo.pCommandBuffers = &CopyCommandBuffer;
+			const VkSubmitInfo SubmitInfo = {
+				VK_STRUCTURE_TYPE_SUBMIT_INFO,
+				nullptr,
+				0, nullptr,
+				nullptr,
+				1, &CopyCommandBuffer,
+				0, nullptr
+			};
 			VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
 			VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
 		} vkFreeCommandBuffers(Device, CommandPool, 1, &CopyCommandBuffer);
-#pragma endregion
 	}
+#pragma endregion
+
 	vkDestroyBuffer(Device, StagingBuffer, nullptr);
 	vkFreeMemory(Device, StagingDeviceMemory, nullptr);
 }

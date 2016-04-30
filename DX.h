@@ -119,7 +119,7 @@ protected:
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBuffer;
 	D3D12_INDEX_BUFFER_VIEW IndexBufferView;
-	UINT IndexCount = 3;
+	UINT IndexCount = 0;
 #pragma endregion
 
 #pragma region UniformBuffer
