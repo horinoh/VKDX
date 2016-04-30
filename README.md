@@ -5,6 +5,7 @@
 * SDK
     * https://vulkan.lunarg.com/signin
     * インストールすると環境変数 **VK_SDK_PATH** が自動的に作成される
+    * Visual Stuido で C/C++ - Preprocessor - Preprocessor Definitions に **VK_USE_PLATFORM_WIN32_KHR** を定義した
     
 * ドライバ
     * https://www.khronos.org/vulkan/
@@ -18,7 +19,7 @@
 
 * シェーダコンパイル
     * glslangValidator.exe でコンパイルする 環境変数 **Path** が通っているらしくそのまま使用できる
-    * BuildEvent - Post-Build Event に以下のように指定した 
+    * Visual Studio で BuildEvent - Post-Build Event に以下のように指定した 
     
     `for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator -V %%1 -o %%1.spv`
     
