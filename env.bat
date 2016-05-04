@@ -1,0 +1,1 @@
+@setx FBX_SDK_PATH "C:\Program Files\Autodesk\FBX\FBX SDK\2017.0.1"

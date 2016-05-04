@@ -299,7 +299,11 @@ void VK::CreateInstance()
 		nullptr,
 		"ApplicationName", 0,
 		"EngineName", 0,
+#ifdef VK_API_VERSION
 		VK_API_VERSION
+#else
+		VK_MAKE_VERSION(1, 0, 0)
+#endif
 	};
 	const std::vector<const char*> EnabledExtensions = {
 		VK_KHR_SURFACE_EXTENSION_NAME

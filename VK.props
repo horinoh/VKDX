@@ -9,7 +9,7 @@
       </Command>
     </PreBuildEvent>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;$(GLM_SDK_PATH);$(GLI_SDK_PATH)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;..\..\glm;..\..\gli</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(VK_SDK_PATH)\Source\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
