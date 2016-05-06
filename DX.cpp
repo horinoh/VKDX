@@ -211,11 +211,18 @@ void DX::CreateDepthStencil()
 void DX::CreateShader()
 {
 	using namespace Microsoft::WRL;
-
-	D3DReadFileToBlob(L"XXXVS.cso", &BlobVS);// todo
+#ifdef _DEBUG
+	D3DReadFileToBlob(L"..\\x64\\Debug\\" L"vs.cso", &BlobVS);
+#else
+	D3DReadFileToBlob(L"..\\x64\\Release\\" L"vs.cso", &BlobVS);
+#endif
 	ShaderBytecodesVSs.push_back({ BlobVS->GetBufferPointer(), BlobVS->GetBufferSize() });
-	
-	D3DReadFileToBlob(L"XXXPS.cso", &BlobPS);// todo
+
+#ifdef _DEBUG
+	D3DReadFileToBlob(L"..\\x64\\Debug\\" L"ps.cso", &BlobPS);
+#else
+	D3DReadFileToBlob(L"..\\x64\\Release\\" L"ps.cso", &BlobPS);
+#endif
 	ShaderBytecodesPSs.push_back({ BlobPS->GetBufferPointer(), BlobPS->GetBufferSize() });
 }
 
