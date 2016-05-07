@@ -5,6 +5,7 @@
 #include <tuple>
 #include <cassert>
 #include <algorithm>
+#include <iostream>
 
 #ifndef SAFE_DELETE
 #define SAFE_DELETE(x) if(nullptr != x) { delete x; x = nullptr; }
@@ -59,3 +60,6 @@ static std::ostream& Yellow(std::ostream& rhs) { Win::SetColor(FOREGROUND_RED | 
 static std::ostream& Purple(std::ostream& rhs) { Win::SetColor(FOREGROUND_RED | FOREGROUND_BLUE); return rhs; }
 static std::ostream& Lightblue(std::ostream& rhs) { Win::SetColor(FOREGROUND_GREEN | FOREGROUND_BLUE); return rhs; }
 static std::ostream& White(std::ostream& rhs) { Win::SetColor(FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE); return rhs; }
+
+#define COUT_OK White << " [ " << Green << "OK" << White << " ]"
+#define COUT_NG White << " [ " << Red << "NG" << White << " ]"

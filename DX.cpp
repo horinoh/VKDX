@@ -89,19 +89,38 @@ void DX::CreateDevice(HWND hWnd)
 	if (false/*WarpDevice*/) { // todo : WarpDevice は今のところやらない
 		ComPtr<IDXGIAdapter> Adapter;
 		VERIFY_SUCCEEDED(Factory4->EnumWarpAdapter(IID_PPV_ARGS(&Adapter)));
-		VERIFY_SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&Device)));
+		VERIFY_SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&Device)));
 	}
 	else {
 		ComPtr<IDXGIAdapter1> Adapter;
+
+		//!< discrete GPU が(DXGI_ADAPTER_FLAG_SOFTWARE以外で)最後に列挙されるのでこうしている
+		UINT AdapterIndex = 0xffffffff;
 		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory4->EnumAdapters1(i, &Adapter); ++i) {
 			DXGI_ADAPTER_DESC1 AdapterDesc1;
 			Adapter->GetDesc1(&AdapterDesc1);
-			if (AdapterDesc1.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {
-				continue;
+			if (!(DXGI_ADAPTER_FLAG_SOFTWARE & AdapterDesc1.Flags)) {
+				AdapterIndex = i;
 			}
-			if (SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&Device)))) {
-				break;
-			}
+		}
+		assert(0xffffffff != AdapterIndex && "");
+
+#ifdef _DEBUG
+		std::cout << Yellow << "\t" << "Adapters" << White << std::endl;
+		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory4->EnumAdapters1(i, &Adapter); ++i) {
+			DXGI_ADAPTER_DESC1 AdapterDesc1;
+			Adapter->GetDesc1(&AdapterDesc1);
+			if (AdapterIndex == i) { std::cout << Red; }
+			std::wcout << "\t" << "\t" << AdapterDesc1.Description << std::endl;
+			std::cout << White;
+		}
+#endif
+
+		Factory4->EnumAdapters1(AdapterIndex, &Adapter);
+		if (SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&Device)))) {
+#ifdef _DEBUG
+			std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
+#endif
 		}
 	}
 }
@@ -114,6 +133,10 @@ void DX::CreateCommandQueue()
 		0
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(&CommandQueue)));
+
+#ifdef _DEBUG
+	std::cout << "CreateCommandQueue" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
@@ -142,9 +165,12 @@ void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
 	VERIFY_SUCCEEDED(Factory4->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER));
 	VERIFY_SUCCEEDED(SwapChain1.As(&SwapChain3));
 	CurrentBackBufferIndex = SwapChain3->GetCurrentBackBufferIndex();
+#ifdef _DEBUG
+	std::cout << "\t" << "SwapChain3" << std::endl;
+	std::cout << "\t" << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;
+#endif
 #pragma endregion
 
-	//!< デスクリプタヒープ(ビュー)を作成
 #pragma region SwapChainView
 	const D3D12_DESCRIPTOR_HEAP_DESC DescripterHeapDesc = {
 		D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
@@ -160,12 +186,23 @@ void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
 		VERIFY_SUCCEEDED(SwapChain3->GetBuffer(i, IID_PPV_ARGS(&RenderTargets[i])));
 		Device->CreateRenderTargetView(RenderTargets[i].Get(), nullptr, RenderTargetViewHandle);
 		RenderTargetViewHandle.ptr += DescriptorSize;
+#ifdef _DEBUG
+		std::cout << "\t" << "\t" << "RenderTarget" << std::endl;
+#endif
 	}
+#ifdef _DEBUG
+	std::cout << "\t" << "RenderTargetView" << std::endl;
+#endif
 #pragma endregion
+
+#ifdef _DEBUG
+	std::cout << "CreateSwapChain" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void DX::CreateDepthStencil()
 {
+#pragma region DepthStencil
 	const D3D12_HEAP_PROPERTIES HeapProperties = {
 		D3D12_HEAP_TYPE_DEFAULT,
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
@@ -189,6 +226,10 @@ void DX::CreateDepthStencil()
 		{ 1.0f, 0 }
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &ClearValue, IID_PPV_ARGS(&DepthStencil)));
+#ifdef _DEBUG
+	std::cout << "\t" << "DepthStencil" << std::endl;
+#endif
+#pragma endregion
 
 #pragma region DepthStencilView
 	const D3D12_DEPTH_STENCIL_VIEW_DESC DepthStencilViewDesc = {
@@ -202,7 +243,15 @@ void DX::CreateDepthStencil()
 	//D3D12_CPU_DESCRIPTOR_HANDLE depthHandle(pDsvHeap->GetCPUDescriptorHandleForHeapStart(), 1 + frameResourceIndex, Size);
 	//D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilViewHandle;
 	//Device->CreateDepthStencilView(DepthStencil.Get(), &DepthStencilViewDesc, DepthStencilViewHandle);
+
+#ifdef _DEBUG
+	std::cout << "\t" << "DepthStencilView" << std::endl;
+#endif
 #pragma endregion
+
+#ifdef _DEBUG
+	std::cout << "CreateDepthStencil" << COUT_NG << std::endl << std::endl;
+#endif
 }
 
 /**
@@ -224,32 +273,45 @@ void DX::CreateShader()
 	D3DReadFileToBlob(L"..\\x64\\Release\\" L"ps.cso", &BlobPS);
 #endif
 	ShaderBytecodesPSs.push_back({ BlobPS->GetBufferPointer(), BlobPS->GetBufferSize() });
+
+#ifdef _DEBUG
+	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void DX::CreateRootSignature()
 {
 	using namespace Microsoft::WRL;
 
-	D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc;
-	RootSignatureDesc.NumParameters = 0;
-	RootSignatureDesc.pParameters = nullptr;
-	RootSignatureDesc.NumStaticSamplers = 0;
-	RootSignatureDesc.pStaticSamplers = nullptr;
-	RootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
+		0, nullptr,
+		0, nullptr,
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+	};
 
 	ComPtr<ID3DBlob> Blob;
 	ComPtr<ID3DBlob> ErrorBlob;
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &Blob, &ErrorBlob));
 	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(&RootSignature)));
+
+#ifdef _DEBUG
+	std::cout << "CreateRootSignature" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void DX::CreateInputLayout()
 {
-	const std::vector<D3D12_INPUT_ELEMENT_DESC> InputElementDescs = {
+	InputElementDescs = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
 	};
-	InputLayoutDescs.push_back({ InputElementDescs.data(), static_cast<UINT>(InputElementDescs.size()) });
+	InputLayoutDesc = { 
+		InputElementDescs.data(), static_cast<UINT>(InputElementDescs.size()) 
+	};
+
+#ifdef _DEBUG
+	std::cout << "CreateInputLayout" << COUT_OK << std::endl << std::endl;
+#endif
 }
 void DX::CreateViewport()
 {
@@ -258,61 +320,79 @@ void DX::CreateViewport()
 
 	Viewports.push_back({ 0.0f, 0.0f, static_cast<FLOAT>(Width), static_cast<FLOAT>(Height), 0.0f, 1.0f });
 	ScissorRects.push_back({ 0, 0, Width, Height });
+
+#ifdef _DEBUG
+	std::cout << "CreateViewport" << COUT_OK << std::endl << std::endl;
+#endif
 }
 void DX::CreatePipelineState()
 {
-	//!< 要 RootSignature
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineStateDesc = {};
-	GraphicsPipelineStateDesc.pRootSignature = RootSignature.Get();
-
-	if (!InputLayoutDescs.empty()) {
-		GraphicsPipelineStateDesc.InputLayout = InputLayoutDescs[0];
-	}
-
-	if (!ShaderBytecodesVSs.empty()) {
-		GraphicsPipelineStateDesc.VS = ShaderBytecodesVSs[0];
-	}
-	if (!ShaderBytecodesPSs.empty()) {
-		GraphicsPipelineStateDesc.PS = ShaderBytecodesPSs[0];
-	}
-
-	D3D12_RASTERIZER_DESC RasterizerDesc = {}; {
-		RasterizerDesc.FillMode = D3D12_FILL_MODE_SOLID;
-		RasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
-		RasterizerDesc.FrontCounterClockwise = FALSE;
-		RasterizerDesc.DepthBias = D3D12_DEFAULT_DEPTH_BIAS;
-		RasterizerDesc.DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP;
-		RasterizerDesc.SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS;
-		RasterizerDesc.DepthClipEnable = TRUE;
-		RasterizerDesc.MultisampleEnable = FALSE;
-		RasterizerDesc.AntialiasedLineEnable = FALSE;
-		RasterizerDesc.ForcedSampleCount = 0;
-		RasterizerDesc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
-	} GraphicsPipelineStateDesc.RasterizerState = RasterizerDesc;
-
-	D3D12_BLEND_DESC BlendDesc = {}; {
-		BlendDesc.AlphaToCoverageEnable = FALSE;
-		BlendDesc.IndependentBlendEnable = FALSE;
-		const D3D12_RENDER_TARGET_BLEND_DESC RenderTargetBlendDesc = {
-			FALSE, FALSE,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-			D3D12_LOGIC_OP_NOOP,
-			D3D12_COLOR_WRITE_ENABLE_ALL,
-		};
-		for (auto& i : BlendDesc.RenderTarget) {
-			i = RenderTargetBlendDesc;
-		}
-	} GraphicsPipelineStateDesc.BlendState = BlendDesc;
-
-	GraphicsPipelineStateDesc.DepthStencilState.DepthEnable = FALSE;
-	GraphicsPipelineStateDesc.DepthStencilState.StencilEnable = FALSE;
-	GraphicsPipelineStateDesc.SampleMask = UINT_MAX;
-	GraphicsPipelineStateDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-	GraphicsPipelineStateDesc.NumRenderTargets = 1;
-	GraphicsPipelineStateDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
-	GraphicsPipelineStateDesc.SampleDesc.Count = 1;
+	const D3D12_SHADER_BYTECODE DefaultShaderBytecode = { nullptr, 0 };
+	const D3D12_RENDER_TARGET_BLEND_DESC DefaultRenderTargetBlendDesc = {
+		FALSE, FALSE,
+		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+		D3D12_LOGIC_OP_NOOP,
+		D3D12_COLOR_WRITE_ENABLE_ALL,
+	};
+	const D3D12_BLEND_DESC BlendDesc = {
+		FALSE,
+		FALSE,
+		{ DefaultRenderTargetBlendDesc/*, ... x8*/ }
+	};
+	const D3D12_RASTERIZER_DESC RasterizerDesc = {
+		D3D12_FILL_MODE_SOLID,
+		D3D12_CULL_MODE_BACK, FALSE,
+		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
+		TRUE,
+		FALSE,
+		FALSE,
+		0,
+		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
+	};
+	const D3D12_DEPTH_STENCILOP_DESC DepthStencilOpDesc = {
+		D3D12_STENCIL_OP_KEEP,
+		D3D12_STENCIL_OP_KEEP,
+		D3D12_STENCIL_OP_KEEP,
+		D3D12_COMPARISON_FUNC_NEVER
+	};
+	const D3D12_DEPTH_STENCIL_DESC DepthStencilDesc = {
+		FALSE,
+		D3D12_DEPTH_WRITE_MASK_ZERO,
+		D3D12_COMPARISON_FUNC_NEVER,
+		FALSE,
+		0,
+		0,
+		DepthStencilOpDesc,
+		DepthStencilOpDesc
+	};
+	const D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineStateDesc = {
+		RootSignature.Get(),
+		ShaderBytecodesVSs[0], ShaderBytecodesPSs[0], DefaultShaderBytecode, DefaultShaderBytecode, DefaultShaderBytecode,
+		{
+			nullptr, 0,
+			nullptr, 0,
+			0
+		},
+		BlendDesc,
+		UINT_MAX,
+		RasterizerDesc,
+		DepthStencilDesc,
+		InputLayoutDesc,
+		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
+		D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
+		1, { DXGI_FORMAT_R8G8B8A8_UNORM/*, ... x8*/ },
+		DXGI_FORMAT_D32_FLOAT,
+		{ 1, 0 },
+		0,
+		{ nullptr, 0 },
+		D3D12_PIPELINE_STATE_FLAG_NONE
+	};
 	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, IID_PPV_ARGS(&PipelineState)));
+
+#ifdef _DEBUG
+	std::cout << "CreateGraphicsPipelineState" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void DX::CreateVertexBuffer()

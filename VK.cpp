@@ -334,6 +334,10 @@ void VK::CreateInstance()
 	//};
 	//VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, &AllocationCallbacks, &Instance));
 	VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance));
+
+#ifdef _DEBUG
+	std::cout << "CreateInstace" << COUT_OK << std::endl << std::endl;
+#endif
 }
 VkPhysicalDevice VK::CreateDevice()
 {
@@ -342,6 +346,18 @@ VkPhysicalDevice VK::CreateDevice()
 	assert(PhysicalDeviceCount);
 	std::vector<VkPhysicalDevice> PhysicalDevices(PhysicalDeviceCount);
 	VERIFY_SUCCEEDED(vkEnumeratePhysicalDevices(Instance, &PhysicalDeviceCount, PhysicalDevices.data()));
+
+#ifdef _DEBUG
+	std::cout << Yellow << "\t" << "PhysicalDevices" << White << std::endl;
+	for (const auto& i : PhysicalDevices) {
+		VkPhysicalDeviceProperties PhysicalDeviceProperties;
+		vkGetPhysicalDeviceProperties(i, &PhysicalDeviceProperties);
+		std::cout << "\t" << "\t" << PhysicalDeviceProperties.deviceName << std::endl;
+
+		//VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
+		//vkGetPhysicalDeviceFeatures(i, &PhysicalDeviceFeatures);
+	}
+#endif
 
 	//!< ここでは最初の物理デバイスを使用することにする
 	auto PhysicalDevice = PhysicalDevices[0];
@@ -358,9 +374,22 @@ uint32_t VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
 	assert(QueueFamilyPropertyCount);
 	std::vector<VkQueueFamilyProperties> QueueProperties(QueueFamilyPropertyCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyPropertyCount, QueueProperties.data());
+
+#ifdef _DEBUG
+	std::cout << Yellow << "\t" << "QueueProperties" << White << std::endl;
+	for (const auto& i : QueueProperties) {
+		if (VK_QUEUE_GRAPHICS_BIT & i.queueFlags) { std::cout << Red; }
+		std::cout << "\t" << "\t" << "QueueFlags = " << i.queueFlags << std::endl;
+		std::cout << White;
+	}
+#endif
+
 	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i) {
 		//!< 描画機能のある最初のキューを探す
 		if (VK_QUEUE_GRAPHICS_BIT & QueueProperties[i].queueFlags) {
+#ifdef _DEBUG
+			std::cout << "\t" << "QueueFamilyIndex = " << i << std::endl;
+#endif
 			const std::vector<float> QueuePriorities = { 0.0f };
 			const std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos = {
 				{
@@ -390,14 +419,12 @@ uint32_t VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
 			//!< キューを取得
 			vkGetDeviceQueue(Device, i, 0, &Queue);
 
-			//vkGetPhysicalDeviceProperties(PhysicalDevice, &PhysicalDeviceProperties);
-			//vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
-
-			//GetSupportedDepthFormat(PhysicalDevice);
+#ifdef _DEBUG
+			std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
+#endif
 			return i;
 		}
 	}
-
 	assert(false && "QueueFamilyIndex not found");
 	return 0;
 }
@@ -410,12 +437,16 @@ void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 		QueueFamilyIndex
 	};
 	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, nullptr, &CommandPool));
+
+#ifdef _DEBUG
+	std::cout << "CreateCommandPool" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice, const VkFormat ColorFormat)
 {
-	VkSurfaceKHR Surface = VK_NULL_HANDLE;
-#if defined(_WIN32)
+	VkSurfaceKHR Surface/* = VK_NULL_HANDLE*/;
+#ifdef _WIN32
 	const VkWin32SurfaceCreateInfoKHR SurfaceCreateInfo = {
 		VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
 		nullptr,
@@ -425,9 +456,12 @@ void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice Physic
 	};
 	VERIFY_SUCCEEDED(vkCreateWin32SurfaceKHR(Instance, &SurfaceCreateInfo, nullptr, &Surface));
 #endif
+
 	{
 		VkSurfaceCapabilitiesKHR SurfaceCapabilities;
-		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PhysicalDevice, Surface, &SurfaceCapabilities));
+		PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR fpGetPhysicalDeviceSurfaceCapabilitiesKHR = reinterpret_cast<PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR>(vkGetInstanceProcAddr(Instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR"));
+		VERIFY_SUCCEEDED(fpGetPhysicalDeviceSurfaceCapabilitiesKHR(PhysicalDevice, Surface, &SurfaceCapabilities));
+		//VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PhysicalDevice, Surface, &SurfaceCapabilities));
 		const auto MinImageCount = (std::min)(SurfaceCapabilities.minImageCount + 1, SurfaceCapabilities.maxImageCount);
 
 		uint32_t SurfaceFormatCount;

@@ -86,7 +86,8 @@ protected:
 private:
 	using Vertex = std::tuple<DirectX::XMFLOAT3, DirectX::XMFLOAT4>;
 protected:
-	std::vector<D3D12_INPUT_LAYOUT_DESC> InputLayoutDescs;
+	std::vector<D3D12_INPUT_ELEMENT_DESC> InputElementDescs;
+	D3D12_INPUT_LAYOUT_DESC InputLayoutDesc;
 #pragma endregion
 
 #pragma region Viewport
