@@ -226,6 +226,7 @@ void DX::CreateDepthStencil()
 		{ 1.0f, 0 }
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &ClearValue, IID_PPV_ARGS(&DepthStencil)));
+
 #ifdef _DEBUG
 	std::cout << "\t" << "DepthStencil" << std::endl;
 #endif
@@ -238,11 +239,19 @@ void DX::CreateDepthStencil()
 		D3D12_DSV_FLAG_NONE,
 		{ 0 }
 	};
-	const auto Size = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-	// TODO
-	//D3D12_CPU_DESCRIPTOR_HANDLE depthHandle(pDsvHeap->GetCPUDescriptorHandleForHeapStart(), 1 + frameResourceIndex, Size);
-	//D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilViewHandle;
-	//Device->CreateDepthStencilView(DepthStencil.Get(), &DepthStencilViewDesc, DepthStencilViewHandle);
+
+	const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
+		D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
+		1,
+		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+		0
+	};
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(&DepthStencilViewHeap)));
+
+	auto DepthStencilViewHandle(DepthStencilViewHeap->GetCPUDescriptorHandleForHeapStart());
+	const auto DescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	DepthStencilViewHandle.ptr += 0 * DescriptorSize;
+	Device->CreateDepthStencilView(DepthStencil.Get(), &DepthStencilViewDesc, DepthStencilViewHandle);
 
 #ifdef _DEBUG
 	std::cout << "\t" << "DepthStencilView" << std::endl;
@@ -250,7 +259,7 @@ void DX::CreateDepthStencil()
 #pragma endregion
 
 #ifdef _DEBUG
-	std::cout << "CreateDepthStencil" << COUT_NG << std::endl << std::endl;
+	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
@@ -442,6 +451,10 @@ void DX::CreateVertexBuffer()
 		Size,
 		Stride
 	};
+
+#ifdef _DEBUG
+	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
+#endif
 }
 void DX::CreateIndexBuffer()
 {
@@ -487,6 +500,10 @@ void DX::CreateIndexBuffer()
 		Size, 
 		DXGI_FORMAT_R32_UINT 
 	};
+
+#ifdef _DEBUG
+	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void DX::CreateConstantBuffer()
@@ -530,6 +547,10 @@ void DX::CreateConstantBuffer()
 		(sizeof(ConstantBuffer) + 255) & ~255 //!< コンスタントバッファは 256 byte アラインでないとならない
 	};
 	Device->CreateConstantBufferView(&ConstantBufferViewDesc, ConstantBufferViewHeap->GetCPUDescriptorHandleForHeapStart());
+
+#ifdef _DEBUG
+	std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void DX::CreateCommandList()
@@ -537,6 +558,10 @@ void DX::CreateCommandList()
 	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&CommandAllocator)));
 	VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, CommandAllocator.Get(), PipelineState.Get(), IID_PPV_ARGS(&CommandList)));
 	VERIFY_SUCCEEDED(CommandList->Close());
+
+#ifdef _DEBUG
+	std::cout << "CreateCommandList" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void DX::CreateFence()
@@ -573,9 +598,27 @@ void DX::PopulateCommandList()
 		} ConstantBuffer->Unmap(0, nullptr); //!< サンプルには アプリが終了するまで Unmap しない、リソースはマップされたままでOKと書いてあるが...よく分からない
 	}
 
+	auto RenderTargetViewHandle(RenderTargetViewHeap->GetCPUDescriptorHandleForHeapStart());
+	{
+		const auto DescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		RenderTargetViewHandle.ptr += CurrentBackBufferIndex * DescriptorSize;
+	}
+
+	auto DepthStencilViewHandle(DepthStencilViewHeap->GetCPUDescriptorHandleForHeapStart());
+	{
+		const auto DescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		DepthStencilViewHandle.ptr += 0 * DescriptorSize;
+	}
+	CommandList->OMSetRenderTargets(1, &RenderTargetViewHandle, FALSE, nullptr);
+
+	const float ClearColor[] = { 0.5f, 0.5f, 1.0f, 1.0f };
+	CommandList->ClearRenderTargetView(RenderTargetViewHandle, ClearColor, 0, nullptr);
+	CommandList->ClearDepthStencilView(DepthStencilViewHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
 	CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	CommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
 	CommandList->IASetIndexBuffer(&IndexBufferView);
+
 	CommandList->DrawInstanced(IndexCount, 1, 0, 0);
 
 	VERIFY_SUCCEEDED(CommandList->Close());

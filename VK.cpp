@@ -20,6 +20,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateInstance();
 	auto PhysicalDevice = CreateDevice(); 
 	
+	CreateCommandBuffers();
 	const auto ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 	CreateSwapchain(hWnd, hInstance, PhysicalDevice, ColorFormat);
 
@@ -32,22 +33,20 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateFramebuffers();
 
-	CreateShader();
+	//CreateShader();
 	
 	CreateDescriptorSetLayout();
 	CreatePipelineLayout();
 
 	CreateVertexInput();
 	CreateViewport();
-	CreatePipeline();
+	//CreatePipeline();
 
 	CreateDescriptorSet();
 
 	CreateVertexBuffer(PhysicalDeviceMemoryProperties);
-	CreateIndexBuffer(PhysicalDeviceMemoryProperties);
-	CreateUniformBuffer(PhysicalDeviceMemoryProperties);
-
-	CreateCommandBuffers();
+	//CreateIndexBuffer(PhysicalDeviceMemoryProperties);
+	//CreateUniformBuffer(PhysicalDeviceMemoryProperties);
 
 	//------------------------------------------
 
@@ -92,19 +91,37 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 
 	vkFreeCommandBuffers(Device, CommandPool, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
 
-	vkFreeMemory(Device, UniformDeviceMemory, nullptr);
-	vkDestroyBuffer(Device, UniformBuffer, nullptr);
+	if (VK_NULL_HANDLE != UniformDeviceMemory) {
+		vkFreeMemory(Device, UniformDeviceMemory, nullptr);
+	}
+	if (VK_NULL_HANDLE != UniformBuffer) {
+		vkDestroyBuffer(Device, UniformBuffer, nullptr);
+	}
 
-	vkFreeMemory(Device, IndexDeviceMemory, nullptr);
-	vkDestroyBuffer(Device, IndexBuffer, nullptr);
+	if (VK_NULL_HANDLE != IndexDeviceMemory) {
+		vkFreeMemory(Device, IndexDeviceMemory, nullptr);
+	}
+	if (VK_NULL_HANDLE != IndexBuffer) {
+		vkDestroyBuffer(Device, IndexBuffer, nullptr);
+	}
 
-	vkFreeMemory(Device, VertexDeviceMemory, nullptr);
-	vkDestroyBuffer(Device, VertexBuffer, nullptr);
+	if (VK_NULL_HANDLE != VertexDeviceMemory) {
+		vkFreeMemory(Device, VertexDeviceMemory, nullptr);
+	}
+	if (VK_NULL_HANDLE != VertexBuffer) {
+		vkDestroyBuffer(Device, VertexBuffer, nullptr);
+	}
 
-	vkDestroyPipeline(Device, Pipeline, nullptr);
-	vkDestroyPipelineCache(Device, PipelineCache, nullptr);
+	if (VK_NULL_HANDLE != Pipeline) {
+		vkDestroyPipeline(Device, Pipeline, nullptr);
+	}
+	if (VK_NULL_HANDLE != PipelineCache) {
+		vkDestroyPipelineCache(Device, PipelineCache, nullptr);
+	}
 
-	vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
+	if (VK_NULL_HANDLE != PipelineLayout) {
+		vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
+	}
 	
 	vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
 	vkDestroyDescriptorPool(Device, DescriptorPool, nullptr);
@@ -150,10 +167,14 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	for (auto i : SwapchainImages) {
 		vkDestroyImage(Device, i, nullptr);
 	}
-	vkDestroySwapchainKHR(Device, Swapchain, nullptr);
+	if (VK_NULL_HANDLE != Swapchain) {
+		vkDestroySwapchainKHR(Device, Swapchain, nullptr);
+	}
 #pragma endregion
 
-	vkDestroyCommandPool(Device, CommandPool, nullptr);
+	if (VK_NULL_HANDLE != CommandPool) {
+		vkDestroyCommandPool(Device, CommandPool, nullptr);
+	}
 
 	vkDestroyDevice(Device, nullptr);
 	
@@ -299,16 +320,13 @@ void VK::CreateInstance()
 		nullptr,
 		"ApplicationName", 0,
 		"EngineName", 0,
-#ifdef VK_API_VERSION
-		VK_API_VERSION
-#else
-		VK_MAKE_VERSION(1, 0, 0)
-#endif
+		VK_API_VERSION_1_0
 	};
 	const std::vector<const char*> EnabledExtensions = {
-		VK_KHR_SURFACE_EXTENSION_NAME
+		VK_KHR_SURFACE_EXTENSION_NAME,
+		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 #ifdef _DEBUG
-		, VK_EXT_DEBUG_REPORT_EXTENSION_NAME
+		VK_EXT_DEBUG_REPORT_EXTENSION_NAME
 #endif
 	};
 	const VkInstanceCreateInfo InstanceCreateInfo = {
@@ -385,7 +403,6 @@ uint32_t VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
 #endif
 
 	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i) {
-		//!< 描画機能のある最初のキューを探す
 		if (VK_QUEUE_GRAPHICS_BIT & QueueProperties[i].queueFlags) {
 #ifdef _DEBUG
 			std::cout << "\t" << "QueueFamilyIndex = " << i << std::endl;
@@ -416,7 +433,6 @@ uint32_t VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
 			};
 			VERIFY_SUCCEEDED(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &Device));
 
-			//!< キューを取得
 			vkGetDeviceQueue(Device, i, 0, &Queue);
 
 #ifdef _DEBUG
@@ -443,9 +459,25 @@ void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 #endif
 }
 
+void VK::CreateCommandBuffers()
+{
+	CommandBuffers.resize(1/*SwapchainImageViews.size()*/);
+	const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		nullptr,
+		CommandPool,
+		VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+		static_cast<uint32_t>(CommandBuffers.size())
+	};
+	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, CommandBuffers.data()));
+
+	//CommandBufferAllocateInfo.commandBufferCount = 1;
+	//VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PrePresentCommandBuffer));
+	//VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PostPresentCommandBuffer));
+}
 void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice, const VkFormat ColorFormat)
 {
-	VkSurfaceKHR Surface/* = VK_NULL_HANDLE*/;
+	VkSurfaceKHR Surface = VK_NULL_HANDLE;
 #ifdef _WIN32
 	const VkWin32SurfaceCreateInfoKHR SurfaceCreateInfo = {
 		VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
@@ -457,41 +489,37 @@ void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice Physic
 	VERIFY_SUCCEEDED(vkCreateWin32SurfaceKHR(Instance, &SurfaceCreateInfo, nullptr, &Surface));
 #endif
 
-	{
-		VkSurfaceCapabilitiesKHR SurfaceCapabilities;
-		PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR fpGetPhysicalDeviceSurfaceCapabilitiesKHR = reinterpret_cast<PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR>(vkGetInstanceProcAddr(Instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR"));
-		VERIFY_SUCCEEDED(fpGetPhysicalDeviceSurfaceCapabilitiesKHR(PhysicalDevice, Surface, &SurfaceCapabilities));
-		//VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PhysicalDevice, Surface, &SurfaceCapabilities));
-		const auto MinImageCount = (std::min)(SurfaceCapabilities.minImageCount + 1, SurfaceCapabilities.maxImageCount);
+	VkSurfaceCapabilitiesKHR SurfaceCapabilities;
+	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PhysicalDevice, Surface, &SurfaceCapabilities));
+	const auto MinImageCount = (std::min)(SurfaceCapabilities.minImageCount + 1, SurfaceCapabilities.maxImageCount);
 
-		uint32_t SurfaceFormatCount;
-		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, Surface, &SurfaceFormatCount, nullptr));
-		assert(SurfaceFormatCount);
-		std::vector<VkSurfaceFormatKHR> SurfaceFormats(SurfaceFormatCount);
-		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, Surface, &SurfaceFormatCount, SurfaceFormats.data()));
-		const auto ImageFormat = (1 == SurfaceFormatCount && VK_FORMAT_UNDEFINED == SurfaceFormats[0].format) ? VK_FORMAT_B8G8R8A8_UNORM : SurfaceFormats[0].format;
-		const auto ImageColorSpace = SurfaceFormats[0].colorSpace;
-		//!< イメージの幅と高さを覚えておく
-		ImageExtent = SurfaceCapabilities.currentExtent;
-		if (-1 == SurfaceCapabilities.currentExtent.width) {
-			ImageExtent = { static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()) };
+	uint32_t SurfaceFormatCount;
+	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, Surface, &SurfaceFormatCount, nullptr));
+	assert(SurfaceFormatCount);
+	std::vector<VkSurfaceFormatKHR> SurfaceFormats(SurfaceFormatCount);
+	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, Surface, &SurfaceFormatCount, SurfaceFormats.data()));
+	const auto ImageFormat = (1 == SurfaceFormatCount && VK_FORMAT_UNDEFINED == SurfaceFormats[0].format) ? VK_FORMAT_B8G8R8A8_UNORM : SurfaceFormats[0].format;
+	const auto ImageColorSpace = SurfaceFormats[0].colorSpace;
+	//!< イメージの幅と高さを覚えておく
+	ImageExtent = SurfaceCapabilities.currentExtent;
+	if (-1 == SurfaceCapabilities.currentExtent.width) {
+		ImageExtent = { static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()) };
+	}
+	const auto PreTransform = (SurfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : SurfaceCapabilities.currentTransform;;
+
+	uint32_t PresentModeCount;
+	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, Surface, &PresentModeCount, nullptr));
+	assert(PresentModeCount);
+	std::vector<VkPresentModeKHR> PresentModes(PresentModeCount);
+	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, Surface, &PresentModeCount, PresentModes.data()));
+	VkPresentModeKHR PresentMode = VK_PRESENT_MODE_FIFO_KHR;
+	for (auto i : PresentModes) {
+		if (VK_PRESENT_MODE_MAILBOX_KHR == i) {
+			PresentMode = i;
+			break;
 		}
-		const auto PreTransform = (SurfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : SurfaceCapabilities.currentTransform;;
-
-		uint32_t PresentModeCount;
-		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, Surface, &PresentModeCount, nullptr));
-		assert(PresentModeCount);
-		std::vector<VkPresentModeKHR> PresentModes(PresentModeCount);
-		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, Surface, &PresentModeCount, PresentModes.data()));
-		VkPresentModeKHR PresentMode = VK_PRESENT_MODE_FIFO_KHR;
-		for (auto i : PresentModes) {
-			if (VK_PRESENT_MODE_MAILBOX_KHR == i) {
-				PresentMode = i;
-				break;
-			}
-			else if (VK_PRESENT_MODE_IMMEDIATE_KHR == i) {
-				PresentMode = i;
-			}
+		else if (VK_PRESENT_MODE_IMMEDIATE_KHR == i) {
+			PresentMode = i;
 		}
 
 #pragma region Swapchain
@@ -536,7 +564,7 @@ void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice Physic
 #pragma region SwapchainImageView
 	SwapchainImageViews.resize(SwapchainImageCount);
 	for (uint32_t i = 0; i < SwapchainImageCount; ++i) {
-		SetImageLayout(SetupCommandBuffer, SwapchainImages[i], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		SetImageLayout(/*SetupCommandBuffer*/CommandBuffers[0], SwapchainImages[i], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 		const VkImageViewCreateInfo ImageViewCreateInfo = {
 			VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 			nullptr,
@@ -564,6 +592,10 @@ void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice Physic
 	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &Semaphore));
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, Semaphore, nullptr, &SwapchainImageIndex));
 #pragma endregion
+
+#ifdef _DEBUG
+	std::cout << "CreateSwapchain" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void VK::CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkFormat DepthFormat)
@@ -603,7 +635,7 @@ void VK::CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDevi
 #pragma endregion
 
 #pragma region DepthStencilImageView
-	SetImageLayout(SetupCommandBuffer, DepthStencilImage, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	SetImageLayout(/*SetupCommandBuffer*/CommandBuffers[0], DepthStencilImage, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 	const VkImageViewCreateInfo ImageViewCreateInfo = {
 		VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 		nullptr,
@@ -620,6 +652,10 @@ void VK::CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDevi
 	};
 	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, &DepthStencilImageView));
 #pragma endregion
+
+#ifdef _DEBUG
+	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void VK::CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat)
@@ -718,18 +754,18 @@ void VK::CreateShader()
 		{
 			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 			nullptr,
-		0,
-		VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
-		"main",
-		nullptr
+			0,
+			VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
+			"main",
+			nullptr
 		},
 		{
 			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 			nullptr,
-		0,
-		VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
-		"main",
-		nullptr
+			0,
+			VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
+			"main",
+			nullptr
 		}
 	};
 }
@@ -1240,22 +1276,6 @@ void VK::CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDev
 	vkUpdateDescriptorSets(Device, static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(), 0, nullptr);
 }
 
-void VK::CreateCommandBuffers()
-{
-	CommandBuffers.resize(1/*SwapchainImageViews.size()*/);
-	const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-		nullptr,
-		CommandPool,
-		VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-		static_cast<uint32_t>(CommandBuffers.size())
-	};
-	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, CommandBuffers.data()));
-
-	//CommandBufferAllocateInfo.commandBufferCount = 1;
-	//VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PrePresentCommandBuffer));
-	//VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PostPresentCommandBuffer));
-}
 //void VK::CreateSemaphore()
 //{
 //	const VkSemaphoreCreateInfo SemaphoreCreateInfo = {
@@ -1339,9 +1359,44 @@ void VK::PopulateCommandBuffer()
 	vkCmdSetViewport(CommandBuffers[SwapchainImageIndex], 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 	vkCmdSetScissor(CommandBuffers[SwapchainImageIndex], 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-	const VkDeviceSize Offsets[] = { 0 };
-	vkCmdBindVertexBuffers(CommandBuffers[SwapchainImageIndex], 0, 1, &VertexBuffer, Offsets);
-	vkCmdBindIndexBuffer(CommandBuffers[SwapchainImageIndex], IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+	{
+		const VkClearColorValue ClearColor = {
+			0.5f, 0.5f, 1.0f, 1.0f
+		};
+		const std::vector<VkImageSubresourceRange> Ranges = {
+			{
+				VK_IMAGE_ASPECT_COLOR_BIT,
+				0, 1,
+				0, 1
+			}
+		};
+		vkCmdClearColorImage(CommandBuffers[SwapchainImageIndex],
+			SwapchainImages[SwapchainImageIndex],
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			&ClearColor,
+			static_cast<uint32_t>(Ranges.size()), Ranges.data());
+	}
+	{
+		const VkClearDepthStencilValue ClearDepthStencil = {
+			1.0f, 0
+		};
+		const std::vector<VkImageSubresourceRange> Ranges = {
+			{
+				VK_IMAGE_ASPECT_DEPTH_BIT,
+				0, 1,
+				0, 1
+			}
+		};
+		vkCmdClearDepthStencilImage(CommandBuffers[SwapchainImageIndex],
+			DepthStencilImage,
+			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			&ClearDepthStencil,
+			static_cast<uint32_t>(Ranges.size()), Ranges.data());
+	}
+
+	//const VkDeviceSize Offsets[] = { 0 };
+	//vkCmdBindVertexBuffers(CommandBuffers[SwapchainImageIndex], 0, 1, &VertexBuffer, Offsets);
+	//vkCmdBindIndexBuffer(CommandBuffers[SwapchainImageIndex], IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
 	//VkImageMemoryBarrier postPresentBarrier = {};
 	//postPresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;

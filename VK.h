@@ -48,6 +48,8 @@ protected:
 	virtual uint32_t CreateDevice(VkPhysicalDevice PhysicalDevice);
 	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
 
+	virtual void CreateCommandBuffers();
+
 	virtual void CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice, const VkFormat ColorFormat);
 	
 	virtual void CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkFormat DepthFormat);
@@ -72,8 +74,6 @@ protected:
 	virtual void CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
-
-	virtual void CreateCommandBuffers();
 
 	// ----------------------------------
 
@@ -116,9 +116,9 @@ protected:
 #pragma endregion
 
 #pragma region DepthStencil
-	VkImage DepthStencilImage;
-	VkDeviceMemory DepthStencilDeviceMemory;
-	VkImageView DepthStencilImageView;
+	VkImage DepthStencilImage = VK_NULL_HANDLE;
+	VkDeviceMemory DepthStencilDeviceMemory = VK_NULL_HANDLE;
+	VkImageView DepthStencilImageView = VK_NULL_HANDLE;
 #pragma endregion
 
 	VkRenderPass RenderPass;

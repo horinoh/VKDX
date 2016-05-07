@@ -68,6 +68,7 @@ protected:
 #pragma endregion
 
 #pragma region DepthStencil
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DepthStencilViewHeap;
 	Microsoft::WRL::ComPtr<ID3D12Resource> DepthStencil;
 #pragma endregion
 
