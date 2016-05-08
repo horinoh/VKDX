@@ -48,17 +48,17 @@ protected:
 	virtual uint32_t CreateDevice(VkPhysicalDevice PhysicalDevice);
 	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
 
-	virtual void CreateCommandBuffers();
+	virtual void CreateCommandBuffer();
 
 	virtual void CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice, const VkFormat ColorFormat);
 	
 	virtual void CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkFormat DepthFormat);
 	
+	virtual void CreateShader();
+
 	virtual void CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat);
 
 	virtual void CreateFramebuffers();
-
-	virtual void CreateShader();
 
 	virtual void CreateDescriptorSetLayout();
 	virtual void CreatePipelineLayout();
@@ -96,17 +96,20 @@ protected:
 
 #pragma  region Instnce
 	VkAllocationCallbacks AllocationCallbacks;
-	VkInstance Instance;
+	VkInstance Instance = VK_NULL_HANDLE;
 #pragma endregion
 
 #pragma region Device
-	VkDevice Device;
-	VkQueue Queue;
+	VkDevice Device = VK_NULL_HANDLE;
+	VkQueue Queue = VK_NULL_HANDLE;
 #pragma endregion
 	
+#pragma region CommandBuffer
 	VkCommandPool CommandPool = VK_NULL_HANDLE;
+	std::vector<VkCommandBuffer> CommandBuffers;
+#pragma endregion
 
-#pragma region SwapChain
+#pragma region Swapchain
 	VkExtent2D ImageExtent;
 	VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
 	std::vector<VkImage> SwapchainImages;
@@ -121,15 +124,15 @@ protected:
 	VkImageView DepthStencilImageView = VK_NULL_HANDLE;
 #pragma endregion
 
-	VkRenderPass RenderPass;
-
-#pragma region Framebuffer
-	std::vector<VkFramebuffer> Framebuffers;
-#pragma endregion
-
 #pragma region Shader
 	std::vector<VkShaderModule> ShaderModules;
 	std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos;
+#pragma endregion
+
+	VkRenderPass RenderPass = VK_NULL_HANDLE;
+
+#pragma region Framebuffer
+	std::vector<VkFramebuffer> Framebuffers;
 #pragma endregion
 
 #pragma region DescriptorSetLayout
@@ -175,10 +178,6 @@ protected:
 	std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
 #pragma endregion
 
-#pragma region CommandBuffer
-	std::vector<VkCommandBuffer> CommandBuffers;
-#pragma endregion
-
 	//-------------------------------
 
 	//VkSemaphore PresentSemaphore = VK_NULL_HANDLE;
@@ -191,7 +190,7 @@ protected:
 	VkFormat ColorFormat;
 	VkColorSpaceKHR ColorSpace;
 */
-	VkCommandBuffer SetupCommandBuffer = VK_NULL_HANDLE;
+	//VkCommandBuffer SetupCommandBuffer = VK_NULL_HANDLE;
 
 #pragma region RootSignature
 	VkDescriptorPool DescriptorPool;

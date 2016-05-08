@@ -9,6 +9,11 @@
 #include "Win.h"
 
 #define VERIFY_SUCCEEDED(hr) VERIFY(SUCCEEDED(hr))
+#ifdef _DEBUG
+#define SHADER_PATH L"..\\x64\\Debug\\"
+#else
+#define SHADER_PATH L"..\\x64\\Release\\"
+#endif
 
 class DX : public Win
 {
@@ -28,6 +33,8 @@ protected:
 	virtual void CreateDevice(HWND hWnd);
 	virtual void CreateCommandQueue();
 
+	virtual void CreateCommandList();
+
 	virtual void CreateSwapChain(HWND hWnd, const UINT BufferCount = 2);
 
 	virtual void CreateDepthStencil();
@@ -44,9 +51,6 @@ protected:
 	virtual void CreateIndexBuffer();
 	virtual void CreateConstantBuffer();
 
-	virtual void CreateCommandList();
-
-
 	virtual void CreateFence();
 
 	virtual void PopulateCommandList();
@@ -55,12 +59,17 @@ protected:
 	virtual void WaitForFence();
 
 protected:
-#pragma  region DeviceQueue
+#pragma  region Device
 	Microsoft::WRL::ComPtr<ID3D12Device> Device;
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> CommandQueue;
 #pragma endregion
 
-#pragma region Swapchain
+#pragma region CommandList
+	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> CommandList;
+#pragma endregion
+
+#pragma region SwapChain
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain3;
 	UINT CurrentBackBufferIndex;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> RenderTargetViewHeap;
@@ -114,11 +123,6 @@ protected:
 #pragma region ConstantBuffer
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> ConstantBufferViewHeap;
 	Microsoft::WRL::ComPtr<ID3D12Resource> ConstantBuffer;
-#pragma endregion
-
-#pragma region CommandList
-	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> CommandList;
 #pragma endregion
 
 	Microsoft::WRL::ComPtr<ID3D12Fence> Fence;

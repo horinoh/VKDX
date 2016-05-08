@@ -20,7 +20,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateInstance();
 	auto PhysicalDevice = CreateDevice(); 
 	
-	CreateCommandBuffers();
+	CreateCommandBuffer();
 	const auto ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 	CreateSwapchain(hWnd, hInstance, PhysicalDevice, ColorFormat);
 
@@ -29,11 +29,11 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	const auto DepthFormat = GetSupportedDepthFormat(PhysicalDevice);
 	CreateDepthStencil(PhysicalDeviceMemoryProperties, DepthFormat);
 
+	CreateShader();
+
 	CreateRenderPass(ColorFormat, DepthFormat);
 
 	CreateFramebuffers();
-
-	//CreateShader();
 	
 	CreateDescriptorSetLayout();
 	CreatePipelineLayout();
@@ -89,8 +89,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	//vkFreeCommandBuffers(Device, CommandPool, 1, &PostPresentCommandBuffer);
 	//vkFreeCommandBuffers(Device, CommandPool, 1, &PrePresentCommandBuffer);
 
-	vkFreeCommandBuffers(Device, CommandPool, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
-
 	if (VK_NULL_HANDLE != UniformDeviceMemory) {
 		vkFreeMemory(Device, UniformDeviceMemory, nullptr);
 	}
@@ -126,9 +124,9 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
 	vkDestroyDescriptorPool(Device, DescriptorPool, nullptr);
 	
-	if (SetupCommandBuffer != VK_NULL_HANDLE) {
-		vkFreeCommandBuffers(Device, CommandPool, 1, &SetupCommandBuffer);
-	}
+	//if (SetupCommandBuffer != VK_NULL_HANDLE) {
+	//	vkFreeCommandBuffers(Device, CommandPool, 1, &SetupCommandBuffer);
+	//}
 
 	//vkDestroySemaphore(Device, RenderSemaphore, nullptr);
 	//vkDestroySemaphore(Device, PresentSemaphore, nullptr);
@@ -139,19 +137,21 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 #pragma endregion
 
-#pragma region Shader
-	for (auto i : ShaderModules) {
-		vkDestroyShaderModule(Device, i, nullptr);
-	}
-#pragma endregion
-
 #pragma region Framebuffer
 	for (auto i : Framebuffers) {
 		vkDestroyFramebuffer(Device, i, nullptr);
 	}
 #pragma endregion
 	
-	vkDestroyRenderPass(Device, RenderPass, nullptr);
+	if (VK_NULL_HANDLE != RenderPass) {
+		vkDestroyRenderPass(Device, RenderPass, nullptr);
+	}
+
+#pragma region Shader
+	for (auto i : ShaderModules) {
+		vkDestroyShaderModule(Device, i, nullptr);
+	}
+#pragma endregion
 
 #pragma region DepthStencil
 	vkDestroyImageView(Device, DepthStencilImageView, nullptr);
@@ -172,14 +172,21 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 #pragma endregion
 
+#pragma region CommandBuffer
+	vkFreeCommandBuffers(Device, CommandPool, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
 	if (VK_NULL_HANDLE != CommandPool) {
 		vkDestroyCommandPool(Device, CommandPool, nullptr);
 	}
+#pragma endregion
 
-	vkDestroyDevice(Device, nullptr);
-	
-	//vkDestroyInstance(Instance, &AllocationCallbacks);
-	vkDestroyInstance(Instance, nullptr);
+	if (VK_NULL_HANDLE != Device) {
+		vkDestroyDevice(Device, nullptr);
+	}
+
+	if (VK_NULL_HANDLE != Instance) {
+		//vkDestroyInstance(Instance, &AllocationCallbacks);
+		vkDestroyInstance(Instance, nullptr);
+	}
 }
 
 VkFormat VK::GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice) const
@@ -459,9 +466,9 @@ void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 #endif
 }
 
-void VK::CreateCommandBuffers()
+void VK::CreateCommandBuffer()
 {
-	CommandBuffers.resize(1/*SwapchainImageViews.size()*/);
+	CommandBuffers.resize(1);
 	const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 		nullptr,
@@ -471,10 +478,11 @@ void VK::CreateCommandBuffers()
 	};
 	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, CommandBuffers.data()));
 
-	//CommandBufferAllocateInfo.commandBufferCount = 1;
-	//VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PrePresentCommandBuffer));
-	//VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &PostPresentCommandBuffer));
+#ifdef _DEBUG
+	std::cout << "CreateCommandBuffer" << COUT_OK << std::endl << std::endl;
+#endif
 }
+
 void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice, const VkFormat ColorFormat)
 {
 	VkSurfaceKHR Surface = VK_NULL_HANDLE;
@@ -487,6 +495,9 @@ void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice Physic
 		hWnd
 	};
 	VERIFY_SUCCEEDED(vkCreateWin32SurfaceKHR(Instance, &SurfaceCreateInfo, nullptr, &Surface));
+#ifdef _DEBUG
+	std::cout << "\t" << "Surface" << std::endl;
+#endif
 #endif
 
 	VkSurfaceCapabilitiesKHR SurfaceCapabilities;
@@ -544,7 +555,11 @@ void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice Physic
 			OldSwapchain
 		};
 		VERIFY_SUCCEEDED(vkCreateSwapchainKHR(Device, &SwapchainCreateInfo, nullptr, &Swapchain));
+#ifdef _DEBUG
+		std::cout << "\t" << "Swapchain" << std::endl;
+#endif
 #pragma endregion
+
 		if (VK_NULL_HANDLE != OldSwapchain) {
 			vkDestroySwapchainKHR(Device, OldSwapchain, nullptr);
 		}
@@ -559,6 +574,11 @@ void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice Physic
 	assert(SwapchainImageCount);
 	SwapchainImages.resize(SwapchainImageCount);
 	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &SwapchainImageCount, SwapchainImages.data()));
+#ifdef _DEBUG
+	for (const auto& i : SwapchainImages) {
+		std::cout << "\t" << "SwapchainImage" << std::endl;
+	}
+#endif
 #pragma endregion
 
 #pragma region SwapchainImageView
@@ -580,6 +600,9 @@ void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice Physic
 			}
 		};
 		VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, &SwapchainImageViews[i]));
+#ifdef _DEBUG
+		std::cout << "\t" << "SwapchainImageView" << std::endl;
+#endif
 	}
 #pragma endregion
 
@@ -618,6 +641,9 @@ void VK::CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDevi
 		VK_IMAGE_LAYOUT_UNDEFINED
 	};
 	VERIFY_SUCCEEDED(vkCreateImage(Device, &ImageCreateInfo, nullptr, &DepthStencilImage));
+#ifdef _DEBUG
+	std::cout << "\t" << "DepthStencilImage" << std::endl;
+#endif
 #pragma endregion
 
 #pragma region DepthStencilDeviceMemory
@@ -651,10 +677,42 @@ void VK::CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDevi
 		}
 	};
 	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, &DepthStencilImageView));
+#ifdef _DEBUG
+	std::cout << "\t" << "DepthStencilImageView" << std::endl;
+#endif
 #pragma endregion
 
 #ifdef _DEBUG
 	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void VK::CreateShader()
+{
+	ShaderModules.push_back(CreateShaderModule("VS.vert.spv"));
+	ShaderModules.push_back(CreateShaderModule("FS.frag.spv"));
+
+	PipelineShaderStageCreateInfos = {
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
+			"main",
+			nullptr
+		},
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
+			"main",
+			nullptr
+		}
+	};
+
+#ifdef _DEBUG
+	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
@@ -745,30 +803,6 @@ void VK::CreateFramebuffers()
 	}
 }
 
-void VK::CreateShader()
-{
-	ShaderModules.push_back(CreateShaderModule("XXX.vert.spv"));
-	ShaderModules.push_back(CreateShaderModule("XXX.frag.spv"));
-
-	PipelineShaderStageCreateInfos = {
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
-			"main",
-			nullptr
-		},
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
-			"main",
-			nullptr
-		}
-	};
-}
 /**
 @brief シェーダとのバインディングのレイアウト
 @note DescriptorSetLayt は型のようなもの、DescriptorSet はインスタンスのようなもの

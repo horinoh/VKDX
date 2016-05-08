@@ -67,4 +67,12 @@
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="FS.frag">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="VS.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+  </ItemGroup>
 </Project>

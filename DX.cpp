@@ -20,6 +20,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateDevice(hWnd);
 	CreateCommandQueue();
+	CreateCommandList();
 
 	CreateSwapChain(hWnd);
 
@@ -36,8 +37,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 	CreateConstantBuffer();
-
-	CreateCommandList();
 
 	// -----------------------
 
@@ -136,6 +135,17 @@ void DX::CreateCommandQueue()
 
 #ifdef _DEBUG
 	std::cout << "CreateCommandQueue" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void DX::CreateCommandList()
+{
+	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&CommandAllocator)));
+	VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, CommandAllocator.Get(), PipelineState.Get(), IID_PPV_ARGS(&CommandList)));
+	VERIFY_SUCCEEDED(CommandList->Close());
+
+#ifdef _DEBUG
+	std::cout << "CreateCommandList" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
@@ -269,18 +279,10 @@ void DX::CreateDepthStencil()
 void DX::CreateShader()
 {
 	using namespace Microsoft::WRL;
-#ifdef _DEBUG
-	D3DReadFileToBlob(L"..\\x64\\Debug\\" L"vs.cso", &BlobVS);
-#else
-	D3DReadFileToBlob(L"..\\x64\\Release\\" L"vs.cso", &BlobVS);
-#endif
+	D3DReadFileToBlob(SHADER_PATH L"VS.cso", &BlobVS);
 	ShaderBytecodesVSs.push_back({ BlobVS->GetBufferPointer(), BlobVS->GetBufferSize() });
 
-#ifdef _DEBUG
-	D3DReadFileToBlob(L"..\\x64\\Debug\\" L"ps.cso", &BlobPS);
-#else
-	D3DReadFileToBlob(L"..\\x64\\Release\\" L"ps.cso", &BlobPS);
-#endif
+	D3DReadFileToBlob(SHADER_PATH L"PS.cso", &BlobPS);
 	ShaderBytecodesPSs.push_back({ BlobPS->GetBufferPointer(), BlobPS->GetBufferSize() });
 
 #ifdef _DEBUG
@@ -550,17 +552,6 @@ void DX::CreateConstantBuffer()
 
 #ifdef _DEBUG
 	std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
-void DX::CreateCommandList()
-{
-	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&CommandAllocator)));
-	VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, CommandAllocator.Get(), PipelineState.Get(), IID_PPV_ARGS(&CommandList)));
-	VERIFY_SUCCEEDED(CommandList->Close());
-
-#ifdef _DEBUG
-	std::cout << "CreateCommandList" << COUT_OK << std::endl << std::endl;
 #endif
 }
 

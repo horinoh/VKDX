@@ -184,6 +184,10 @@
     <Image Include="small.ico" />
     <Image Include="TriangleVK.ico" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="FS.frag" />
+    <None Include="VS.vert" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
