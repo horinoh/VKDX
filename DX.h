@@ -36,11 +36,9 @@ protected:
 	virtual void CreateCommandList();
 
 	virtual void CreateSwapChain(HWND hWnd, const UINT BufferCount = 2);
-
 	virtual void CreateDepthStencil();
 
 	virtual void CreateShader();
-
 	virtual void CreateRootSignature();
 
 	virtual void CreateInputLayout();
@@ -87,7 +85,6 @@ protected:
 	Microsoft::WRL::ComPtr<ID3DBlob> BlobPS;
 	std::vector<D3D12_SHADER_BYTECODE> ShaderBytecodesPSs;
 #pragma endregion
-
 #pragma region RootSignature
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
 #pragma endregion

@@ -377,6 +377,10 @@ void DX::CreatePipelineState()
 		DepthStencilOpDesc,
 		DepthStencilOpDesc
 	};
+
+	assert(nullptr != RootSignature);
+	assert(!ShaderBytecodesVSs.empty());
+	assert(!ShaderBytecodesPSs.empty());
 	const D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineStateDesc = {
 		RootSignature.Get(),
 		ShaderBytecodesVSs[0], ShaderBytecodesPSs[0], DefaultShaderBytecode, DefaultShaderBytecode, DefaultShaderBytecode,

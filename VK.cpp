@@ -30,24 +30,21 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateDepthStencil(PhysicalDeviceMemoryProperties, DepthFormat);
 
 	CreateShader();
-
-	CreateRenderPass(ColorFormat, DepthFormat);
-
-	CreateFramebuffers();
-	
 	CreateDescriptorSetLayout();
 	CreatePipelineLayout();
 
 	CreateVertexInput();
 	CreateViewport();
-	//CreatePipeline();
+	CreatePipeline();
+
+	CreateVertexBuffer(PhysicalDeviceMemoryProperties);
+	CreateIndexBuffer(PhysicalDeviceMemoryProperties);
+	CreateUniformBuffer(PhysicalDeviceMemoryProperties);
 
 	CreateDescriptorSet();
 
-	CreateVertexBuffer(PhysicalDeviceMemoryProperties);
-	//CreateIndexBuffer(PhysicalDeviceMemoryProperties);
-	//CreateUniformBuffer(PhysicalDeviceMemoryProperties);
-
+	CreateFramebuffers();
+	CreateRenderPass(ColorFormat, DepthFormat);
 	//------------------------------------------
 
 	//CreateSemaphore();
@@ -86,29 +83,44 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 
 	vkDestroyFence(Device, Fence, nullptr);
 
-	//vkFreeCommandBuffers(Device, CommandPool, 1, &PostPresentCommandBuffer);
-	//vkFreeCommandBuffers(Device, CommandPool, 1, &PrePresentCommandBuffer);
+#pragma region DescriptorSet
+	vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
+	vkDestroyDescriptorPool(Device, DescriptorPool, nullptr);
+#pragma endregion
 
+#pragma region RenderPass
+	if (VK_NULL_HANDLE != RenderPass) {
+		vkDestroyRenderPass(Device, RenderPass, nullptr);
+	}
+	for (auto i : Framebuffers) {
+		vkDestroyFramebuffer(Device, i, nullptr);
+	}
+#pragma endregion
+
+#pragma region UniformBuffer
 	if (VK_NULL_HANDLE != UniformDeviceMemory) {
 		vkFreeMemory(Device, UniformDeviceMemory, nullptr);
 	}
 	if (VK_NULL_HANDLE != UniformBuffer) {
 		vkDestroyBuffer(Device, UniformBuffer, nullptr);
 	}
-
+#pragma endregion
+#pragma region IndexBuffer
 	if (VK_NULL_HANDLE != IndexDeviceMemory) {
 		vkFreeMemory(Device, IndexDeviceMemory, nullptr);
 	}
 	if (VK_NULL_HANDLE != IndexBuffer) {
 		vkDestroyBuffer(Device, IndexBuffer, nullptr);
 	}
-
+#pragma endregion
+#pragma region VertexBuffer
 	if (VK_NULL_HANDLE != VertexDeviceMemory) {
 		vkFreeMemory(Device, VertexDeviceMemory, nullptr);
 	}
 	if (VK_NULL_HANDLE != VertexBuffer) {
 		vkDestroyBuffer(Device, VertexBuffer, nullptr);
 	}
+#pragma endregion
 
 	if (VK_NULL_HANDLE != Pipeline) {
 		vkDestroyPipeline(Device, Pipeline, nullptr);
@@ -117,37 +129,13 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyPipelineCache(Device, PipelineCache, nullptr);
 	}
 
+#pragma region Shader
 	if (VK_NULL_HANDLE != PipelineLayout) {
 		vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
 	}
-	
-	vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
-	vkDestroyDescriptorPool(Device, DescriptorPool, nullptr);
-	
-	//if (SetupCommandBuffer != VK_NULL_HANDLE) {
-	//	vkFreeCommandBuffers(Device, CommandPool, 1, &SetupCommandBuffer);
-	//}
-
-	//vkDestroySemaphore(Device, RenderSemaphore, nullptr);
-	//vkDestroySemaphore(Device, PresentSemaphore, nullptr);
-
-#pragma region DescriptorSetLayout
 	for (auto i : DescriptorSetLayouts) {
 		vkDestroyDescriptorSetLayout(Device, i, nullptr);
 	}
-#pragma endregion
-
-#pragma region Framebuffer
-	for (auto i : Framebuffers) {
-		vkDestroyFramebuffer(Device, i, nullptr);
-	}
-#pragma endregion
-	
-	if (VK_NULL_HANDLE != RenderPass) {
-		vkDestroyRenderPass(Device, RenderPass, nullptr);
-	}
-
-#pragma region Shader
 	for (auto i : ShaderModules) {
 		vkDestroyShaderModule(Device, i, nullptr);
 	}
@@ -716,93 +704,6 @@ void VK::CreateShader()
 #endif
 }
 
-void VK::CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat)
-{
-#pragma region Attachment
-	const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
-		{
-			0,
-			ColorFormat,
-			VK_SAMPLE_COUNT_1_BIT,
-			VK_ATTACHMENT_LOAD_OP_CLEAR,
-			VK_ATTACHMENT_STORE_OP_STORE,
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-			VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-		},
-		{
-			0,
-			DepthFormat,
-			VK_SAMPLE_COUNT_1_BIT,
-			VK_ATTACHMENT_LOAD_OP_CLEAR,
-			VK_ATTACHMENT_STORE_OP_STORE,
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-			VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-		}
-	};
-#pragma endregion
-
-#pragma region Subpass
-	const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
-		{
-			0,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-		}
-	};
-	const VkAttachmentReference DepthAttachmentReference = {
-		1,
-		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-	};
-	const std::vector<VkSubpassDescription> SubpassDescriptions = {
-		{
-			0,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			0, nullptr,
-			static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(),
-			nullptr,
-			&DepthAttachmentReference,
-			0, nullptr
-		}
-	};
-#pragma endregion
-
-#pragma region RenderPass
-	const VkRenderPassCreateInfo RenderPassCreateInfo = {
-		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(AttachmentDescriptions.size()), AttachmentDescriptions.data(),
-		static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
-		0, nullptr
-	};
-	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, nullptr, &RenderPass));
-#pragma endregion
-}
-
-void VK::CreateFramebuffers()
-{
-	Framebuffers.resize(SwapchainImages.size());
-	for (uint32_t i = 0; i < Framebuffers.size(); ++i) {
-		const std::vector<VkImageView> Attachments = {
-			SwapchainImageViews[i],
-			DepthStencilImageView
-		};
-		const VkFramebufferCreateInfo FramebufferCreateInfo = {
-			VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-			nullptr,
-			0,
-			RenderPass,
-			static_cast<uint32_t>(Attachments.size()), Attachments.data(),
-			ImageExtent.width, ImageExtent.height,
-			1
-		};
-		VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, nullptr, &Framebuffers[i]));
-	}
-}
-
 /**
 @brief シェーダとのバインディングのレイアウト
 @note DescriptorSetLayt は型のようなもの、DescriptorSet はインスタンスのようなもの
@@ -1003,33 +904,6 @@ void VK::CreatePipeline()
 	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, PipelineCache, static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), nullptr, &Pipeline));
 }
 
-void VK::CreateDescriptorSet()
-{
-	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
-		{
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			1
-		}
-	};
-	const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		nullptr,
-		0,
-		1,
-		static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
-
-	const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		nullptr,
-		DescriptorPool,
-		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
-	};
-	DescriptorSets.reserve(1);
-	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, DescriptorSets.data()));
-}
-
 void VK::CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
 	const std::vector<Vertex> Vertices = {
@@ -1144,6 +1018,10 @@ void VK::CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDevi
 
 	vkDestroyBuffer(Device, StagingBuffer, nullptr);
 	vkFreeMemory(Device, StagingDeviceMemory, nullptr);
+
+#ifdef _DEBUG
+	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void VK::CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
@@ -1198,7 +1076,7 @@ void VK::CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDevic
 			VK_SHARING_MODE_EXCLUSIVE,
 			0, nullptr
 		};
-		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &VertexBuffer));
+		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &IndexBuffer));
 
 		VkMemoryRequirements MemoryRequirements;
 		vkGetBufferMemoryRequirements(Device, IndexBuffer, &MemoryRequirements);
@@ -1256,6 +1134,10 @@ void VK::CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDevic
 
 	vkDestroyBuffer(Device, StagingBuffer, nullptr);
 	vkFreeMemory(Device, StagingDeviceMemory, nullptr);
+
+#ifdef _DEBUG
+	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void VK::CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
@@ -1307,7 +1189,40 @@ void VK::CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDev
 			//const VkBufferView*              pTexelBufferView;
 		}
 	};
-	vkUpdateDescriptorSets(Device, static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(), 0, nullptr);
+
+	//todo
+	//vkUpdateDescriptorSets(Device, static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(), 0, nullptr);
+
+#ifdef _DEBUG
+	std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void VK::CreateDescriptorSet()
+{
+	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
+		{
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			1
+		}
+	};
+	const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		nullptr,
+		0,
+		1,
+		static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
+
+	const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		nullptr,
+		DescriptorPool,
+		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
+	};
+	DescriptorSets.reserve(1);
+	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, DescriptorSets.data()));
 }
 
 //void VK::CreateSemaphore()
@@ -1345,7 +1260,92 @@ void VK::CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDev
 //	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SetupCommandBuffer, &CommandBufferBeginInfo));
 //}
 
+void VK::CreateFramebuffers()
+{
+	Framebuffers.resize(SwapchainImages.size());
+	for (uint32_t i = 0; i < Framebuffers.size(); ++i) {
+		const std::vector<VkImageView> Attachments = {
+			SwapchainImageViews[i],
+			DepthStencilImageView
+		};
+		const VkFramebufferCreateInfo FramebufferCreateInfo = {
+			VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+			nullptr,
+			0,
+			RenderPass,
+			static_cast<uint32_t>(Attachments.size()), Attachments.data(),
+			ImageExtent.width, ImageExtent.height,
+			1
+		};
+		VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, nullptr, &Framebuffers[i]));
+	}
+}
 
+void VK::CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat)
+{
+#pragma region Attachment
+	const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
+		{
+			0,
+			ColorFormat,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_ATTACHMENT_LOAD_OP_CLEAR,
+			VK_ATTACHMENT_STORE_OP_STORE,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+		},
+		{
+			0,
+			DepthFormat,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_ATTACHMENT_LOAD_OP_CLEAR,
+			VK_ATTACHMENT_STORE_OP_STORE,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+		}
+	};
+#pragma endregion
+
+#pragma region Subpass
+	const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
+		{
+			0,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+		}
+	};
+	const VkAttachmentReference DepthAttachmentReference = {
+		1,
+		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+	};
+	const std::vector<VkSubpassDescription> SubpassDescriptions = {
+		{
+			0,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			0, nullptr,
+			static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(),
+			nullptr,
+			&DepthAttachmentReference,
+			0, nullptr
+		}
+	};
+#pragma endregion
+
+#pragma region RenderPass
+	const VkRenderPassCreateInfo RenderPassCreateInfo = {
+		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(AttachmentDescriptions.size()), AttachmentDescriptions.data(),
+		static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
+		0, nullptr
+	};
+	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, nullptr, &RenderPass));
+#pragma endregion
+}
 
 //void VK::FlushSetupCommandBuffer()
 //{
@@ -1500,7 +1500,8 @@ void VK::Present()
 		PresentInfo.pWaitSemaphores = &RenderSemaphore;
 	}
 #endif
-	VERIFY_SUCCEEDED(vkQueuePresentKHR(Queue, &PresentInfo));
+	//todo
+	//VERIFY_SUCCEEDED(vkQueuePresentKHR(Queue, &PresentInfo));
 }
 
 void VK::WaitForFence()

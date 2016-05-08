@@ -51,29 +51,24 @@ protected:
 	virtual void CreateCommandBuffer();
 
 	virtual void CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice, const VkFormat ColorFormat);
-	
 	virtual void CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkFormat DepthFormat);
 	
 	virtual void CreateShader();
-
-	virtual void CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat);
-
-	virtual void CreateFramebuffers();
-
 	virtual void CreateDescriptorSetLayout();
 	virtual void CreatePipelineLayout();
 
 	virtual void CreateVertexInput();
-	
 	virtual void CreateViewport();
-
 	virtual void CreatePipeline();
-
-	virtual void CreateDescriptorSet();
 
 	virtual void CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
+
+	virtual void CreateDescriptorSet();
+
+	virtual void CreateFramebuffers();
+	virtual void CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat);
 
 	// ----------------------------------
 
@@ -128,18 +123,10 @@ protected:
 	std::vector<VkShaderModule> ShaderModules;
 	std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos;
 #pragma endregion
-
-	VkRenderPass RenderPass = VK_NULL_HANDLE;
-
-#pragma region Framebuffer
-	std::vector<VkFramebuffer> Framebuffers;
-#pragma endregion
-
-#pragma region DescriptorSetLayout
+#pragma region Layout
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
-#pragma endregion
-
 	VkPipelineLayout PipelineLayout;
+#pragma endregion
 
 #pragma region VertexInput
 private:
@@ -149,12 +136,10 @@ protected:
 	std::vector<VkVertexInputAttributeDescription> VertexInputAttributeDescriptions;
 	VkPipelineVertexInputStateCreateInfo PipelineVertexInputStateCreateInfo;
 #pragma endregion
-
 #pragma region Viewport
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;
 #pragma endregion
-
 #pragma region GraphicsPipeline
 	VkPipelineCache PipelineCache;
 	VkPipeline Pipeline;
@@ -164,18 +149,21 @@ protected:
 	VkBuffer VertexBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory VertexDeviceMemory = VK_NULL_HANDLE;
 #pragma endregion
-
 #pragma region IndexBuffer
 	VkBuffer IndexBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory IndexDeviceMemory = VK_NULL_HANDLE;
 	uint32_t IndexCount = 0;
 #pragma endregion
-
 #pragma region UniformBuffer
 	VkBuffer UniformBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory UniformDeviceMemory = VK_NULL_HANDLE;
 	VkDescriptorBufferInfo UniformDescriptorBufferInfo;
 	std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
+#pragma endregion
+
+#pragma region RenderPass
+	std::vector<VkFramebuffer> Framebuffers;
+	VkRenderPass RenderPass = VK_NULL_HANDLE;
 #pragma endregion
 
 	//-------------------------------
@@ -192,7 +180,7 @@ protected:
 */
 	//VkCommandBuffer SetupCommandBuffer = VK_NULL_HANDLE;
 
-#pragma region RootSignature
+#pragma region DescriptorSet
 	VkDescriptorPool DescriptorPool;
 	std::vector<VkDescriptorSet> DescriptorSets;
 #pragma endregion
