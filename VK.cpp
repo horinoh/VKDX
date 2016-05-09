@@ -32,6 +32,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateShader();
 	CreateDescriptorSetLayout();
 	CreatePipelineLayout();
+	CreateDescriptorSet();
 
 	CreateVertexInput();
 	CreateViewport();
@@ -40,8 +41,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateVertexBuffer(PhysicalDeviceMemoryProperties);
 	CreateIndexBuffer(PhysicalDeviceMemoryProperties);
 	CreateUniformBuffer(PhysicalDeviceMemoryProperties);
-
-	CreateDescriptorSet();
 
 	CreateFramebuffers();
 	CreateRenderPass(ColorFormat, DepthFormat);
@@ -83,11 +82,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 
 	vkDestroyFence(Device, Fence, nullptr);
 
-#pragma region DescriptorSet
-	vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
-	vkDestroyDescriptorPool(Device, DescriptorPool, nullptr);
-#pragma endregion
-
 #pragma region RenderPass
 	if (VK_NULL_HANDLE != RenderPass) {
 		vkDestroyRenderPass(Device, RenderPass, nullptr);
@@ -122,20 +116,28 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 #pragma endregion
 
+#pragma region Pipeline
 	if (VK_NULL_HANDLE != Pipeline) {
 		vkDestroyPipeline(Device, Pipeline, nullptr);
 	}
 	if (VK_NULL_HANDLE != PipelineCache) {
 		vkDestroyPipelineCache(Device, PipelineCache, nullptr);
 	}
+#pragma endregion
 
-#pragma region Shader
+#pragma region DescriptorSet
+	vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
+	if (VK_NULL_HANDLE != DescriptorPool) {
+		vkDestroyDescriptorPool(Device, DescriptorPool, nullptr);
+	}
 	if (VK_NULL_HANDLE != PipelineLayout) {
 		vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
 	}
 	for (auto i : DescriptorSetLayouts) {
 		vkDestroyDescriptorSetLayout(Device, i, nullptr);
 	}
+#pragma endregion
+#pragma region Shader
 	for (auto i : ShaderModules) {
 		vkDestroyShaderModule(Device, i, nullptr);
 	}
@@ -167,14 +169,15 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 #pragma endregion
 
+#pragma region Device
 	if (VK_NULL_HANDLE != Device) {
 		vkDestroyDevice(Device, nullptr);
 	}
-
 	if (VK_NULL_HANDLE != Instance) {
 		//vkDestroyInstance(Instance, &AllocationCallbacks);
 		vkDestroyInstance(Instance, nullptr);
 	}
+#pragma endregion
 }
 
 VkFormat VK::GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice) const
@@ -703,7 +706,6 @@ void VK::CreateShader()
 	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
 #endif
 }
-
 /**
 @brief シェーダとのバインディングのレイアウト
 @note DescriptorSetLayt は型のようなもの、DescriptorSet はインスタンスのようなもの
@@ -727,6 +729,10 @@ void VK::CreateDescriptorSetLayout()
 	};
 	DescriptorSetLayouts.resize(1);
 	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, nullptr, DescriptorSetLayouts.data()));
+
+#ifdef _DEBUG
+	std::cout << "CreateDescriptorSetLayout" << COUT_OK << std::endl << std::endl;
+#endif
 }
 void VK::CreatePipelineLayout()
 {
@@ -738,6 +744,40 @@ void VK::CreatePipelineLayout()
 		0, nullptr
 	};
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, nullptr, &PipelineLayout));
+
+#ifdef _DEBUG
+	std::cout << "CreatePipelineLayout" << COUT_OK << std::endl << std::endl;
+#endif
+}
+void VK::CreateDescriptorSet()
+{
+	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
+		{
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			1
+		}
+	};
+	const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		nullptr,
+		0,
+		1,
+		static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
+
+	const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		nullptr,
+		DescriptorPool,
+		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
+	};
+	DescriptorSets.reserve(1);
+	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, DescriptorSets.data()));
+
+#ifdef _DEBUG
+	std::cout << "CreateDescriptorSet" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void VK::CreateVertexInput()
@@ -757,6 +797,10 @@ void VK::CreateVertexInput()
 		static_cast<uint32_t>(VertexInputBindingDescriptions.size()), VertexInputBindingDescriptions.data(),
 		static_cast<uint32_t>(VertexInputAttributeDescriptions.size()), VertexInputAttributeDescriptions.data()
 	};
+
+#ifdef _DEBUG
+	std::cout << "CreateVertexInput" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void VK::CreateViewport()
@@ -774,6 +818,10 @@ void VK::CreateViewport()
 			{ ImageExtent.width, ImageExtent.height }
 		}
 	};
+
+#ifdef _DEBUG
+	std::cout << "CreateViewport" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void VK::CreatePipeline()
@@ -902,6 +950,10 @@ void VK::CreatePipeline()
 		}
 	};
 	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, PipelineCache, static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), nullptr, &Pipeline));
+
+#ifdef _DEBUG
+	std::cout << "CreatePipeline" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void VK::CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
@@ -1196,33 +1248,6 @@ void VK::CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDev
 #ifdef _DEBUG
 	std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
 #endif
-}
-
-void VK::CreateDescriptorSet()
-{
-	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
-		{
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			1
-		}
-	};
-	const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		nullptr,
-		0,
-		1,
-		static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
-
-	const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		nullptr,
-		DescriptorPool,
-		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
-	};
-	DescriptorSets.reserve(1);
-	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, DescriptorSets.data()));
 }
 
 //void VK::CreateSemaphore()

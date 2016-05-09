@@ -4,8 +4,8 @@
 
 //!< d3d12.lib が無いと言われる場合は、プロジェクトを右クリック - Retarget SDK Version で Windows10 にする
 #pragma comment(lib, "d3d12.lib")
-#pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3dcompiler.lib")
+#pragma comment(lib, "dxgi.lib")
 
 DX::DX()
 {
@@ -85,14 +85,14 @@ void DX::CreateDevice(HWND hWnd)
 
 	ComPtr<IDXGIFactory4> Factory4;
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&Factory4)));
-	if (false/*WarpDevice*/) { // todo : WarpDevice は今のところやらない
+	if (false) {
+		//!< WarpDevice
 		ComPtr<IDXGIAdapter> Adapter;
 		VERIFY_SUCCEEDED(Factory4->EnumWarpAdapter(IID_PPV_ARGS(&Adapter)));
 		VERIFY_SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&Device)));
 	}
 	else {
 		ComPtr<IDXGIAdapter1> Adapter;
-
 		//!< discrete GPU が(DXGI_ADAPTER_FLAG_SOFTWARE以外で)最後に列挙されるのでこうしている
 		UINT AdapterIndex = 0xffffffff;
 		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory4->EnumAdapters1(i, &Adapter); ++i) {
@@ -103,7 +103,6 @@ void DX::CreateDevice(HWND hWnd)
 			}
 		}
 		assert(0xffffffff != AdapterIndex && "");
-
 #ifdef _DEBUG
 		std::cout << Yellow << "\t" << "Adapters" << White << std::endl;
 		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory4->EnumAdapters1(i, &Adapter); ++i) {

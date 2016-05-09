@@ -56,6 +56,7 @@ protected:
 	virtual void CreateShader();
 	virtual void CreateDescriptorSetLayout();
 	virtual void CreatePipelineLayout();
+	virtual void CreateDescriptorSet();
 
 	virtual void CreateVertexInput();
 	virtual void CreateViewport();
@@ -64,8 +65,6 @@ protected:
 	virtual void CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
-
-	virtual void CreateDescriptorSet();
 
 	virtual void CreateFramebuffers();
 	virtual void CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat);
@@ -89,12 +88,9 @@ protected:
 	const std::vector<const char*> EnabledLayerNames = { "VK_LAYER_LUNARG_standard_validation" };
 #endif
 
-#pragma  region Instnce
+#pragma region Device
 	VkAllocationCallbacks AllocationCallbacks;
 	VkInstance Instance = VK_NULL_HANDLE;
-#pragma endregion
-
-#pragma region Device
 	VkDevice Device = VK_NULL_HANDLE;
 	VkQueue Queue = VK_NULL_HANDLE;
 #pragma endregion
@@ -123,9 +119,11 @@ protected:
 	std::vector<VkShaderModule> ShaderModules;
 	std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos;
 #pragma endregion
-#pragma region Layout
+#pragma region DescriptorSet
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
-	VkPipelineLayout PipelineLayout;
+	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
+	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
+	std::vector<VkDescriptorSet> DescriptorSets;
 #pragma endregion
 
 #pragma region VertexInput
@@ -179,11 +177,6 @@ protected:
 	VkColorSpaceKHR ColorSpace;
 */
 	//VkCommandBuffer SetupCommandBuffer = VK_NULL_HANDLE;
-
-#pragma region DescriptorSet
-	VkDescriptorPool DescriptorPool;
-	std::vector<VkDescriptorSet> DescriptorSets;
-#pragma endregion
 
 	//VkCommandBuffer PrePresentCommandBuffer = VK_NULL_HANDLE;
 	//VkCommandBuffer PostPresentCommandBuffer = VK_NULL_HANDLE;

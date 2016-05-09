@@ -1,10 +1,13 @@
 #pragma once
 
 #include <wrl.h>
+
 #include <d3d12.h>
-#include <DXGI1_4.h>
-#include <DirectXMath.h>
 #include <d3dcompiler.h>
+#include <DXGI1_4.h>
+
+#include <DirectXMath.h>
+#include <DirectXPackedVector.h>
 
 #include "Win.h"
 
