@@ -11,11 +11,8 @@
 
 #include "Win.h"
 
+#ifndef VERIFY_SUCCEEDED
 #define VERIFY_SUCCEEDED(hr) VERIFY(SUCCEEDED(hr))
-#ifdef _DEBUG
-#define SHADER_PATH L"..\\x64\\Debug\\"
-#else
-#define SHADER_PATH L"..\\x64\\Release\\"
 #endif
 
 class DX : public Win
@@ -74,7 +71,8 @@ protected:
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain3;
 	UINT CurrentBackBufferIndex;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> RenderTargetViewHeap;
-	Microsoft::WRL::ComPtr<ID3D12Resource> RenderTargets[2];
+	//Microsoft::WRL::ComPtr<ID3D12Resource> RenderTargets[2];
+	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> RenderTargets;
 #pragma endregion
 
 #pragma region DepthStencil
@@ -127,7 +125,6 @@ protected:
 
 	Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
 	UINT64 FenceValue;
-	HANDLE FenceEvent;
 
 	//UINT RTVDescriptorSize;
 };

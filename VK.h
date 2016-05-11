@@ -17,7 +17,9 @@
 
 #include "Win.h"
 
+#ifndef VERIFY_SUCCEEDED
 #define VERIFY_SUCCEEDED(vr) VERIFY(VK_SUCCESS == (vr))
+#endif
 
 class VK : public Win
 {
@@ -41,7 +43,7 @@ protected:
 	uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, uint32_t TypeBits, VkFlags Properties) const;
 	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const;
 	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout) const;
-	virtual VkShaderModule CreateShaderModule(const std::string& Path) const;
+	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 
 	virtual void CreateInstance();
 	virtual VkPhysicalDevice CreateDevice();
@@ -69,14 +71,14 @@ protected:
 	virtual void CreateFramebuffers();
 	virtual void CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat);
 
+	virtual void CreateFence();
+
 	// ----------------------------------
 
 	//virtual void CreateSemaphore();
 
 	//virtual void CreateSetupCommandBuffer();
 	//virtual void FlushSetupCommandBuffer();
-
-	virtual void CreateFence();
 
 	virtual void PopulateCommandBuffer();
 	virtual void ExecuteCommandBuffer();
@@ -164,6 +166,8 @@ protected:
 	VkRenderPass RenderPass = VK_NULL_HANDLE;
 #pragma endregion
 
+	VkFence Fence = VK_NULL_HANDLE;
+
 	//-------------------------------
 
 	//VkSemaphore PresentSemaphore = VK_NULL_HANDLE;
@@ -182,7 +186,5 @@ protected:
 	//VkCommandBuffer PostPresentCommandBuffer = VK_NULL_HANDLE;
 
 //	std::vector<VkPipelineShaderStageCreateInfo> ShaderStageCreateInfos;
-
-	VkFence Fence;
 };
 

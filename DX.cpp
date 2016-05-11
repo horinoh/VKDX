@@ -38,9 +38,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateIndexBuffer();
 	CreateConstantBuffer();
 
-	// -----------------------
-
-
 	CreateFence();
 
 	PopulateCommandList();
@@ -70,7 +67,6 @@ void DX::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	Super::OnDestroy(hWnd, hInstance);
 
 	WaitForFence();
-	CloseHandle(FenceEvent);
 }
 
 void DX::CreateDevice(HWND hWnd)
@@ -79,48 +75,81 @@ void DX::CreateDevice(HWND hWnd)
 
 #ifdef _DEBUG
 	ComPtr<ID3D12Debug> Debug;
-	VERIFY_SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&Debug)));
+	VERIFY_SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(Debug.GetAddressOf())));
 	Debug->EnableDebugLayer();
 #endif
 
-	ComPtr<IDXGIFactory4> Factory4;
-	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&Factory4)));
-	if (false) {
-		//!< WarpDevice
-		ComPtr<IDXGIAdapter> Adapter;
-		VERIFY_SUCCEEDED(Factory4->EnumWarpAdapter(IID_PPV_ARGS(&Adapter)));
-		VERIFY_SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&Device)));
-	}
-	else {
-		ComPtr<IDXGIAdapter1> Adapter;
-		//!< discrete GPU が(DXGI_ADAPTER_FLAG_SOFTWARE以外で)最後に列挙されるのでこうしている
-		UINT AdapterIndex = 0xffffffff;
-		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory4->EnumAdapters1(i, &Adapter); ++i) {
-			DXGI_ADAPTER_DESC1 AdapterDesc1;
-			Adapter->GetDesc1(&AdapterDesc1);
-			if (!(DXGI_ADAPTER_FLAG_SOFTWARE & AdapterDesc1.Flags)) {
-				AdapterIndex = i;
-			}
+	ComPtr<IDXGIFactory4> Factory;
+	VERIFY_SUCCEEDED(CreateDXGIFactory(IID_PPV_ARGS(Factory.GetAddressOf()))); 
+	ComPtr<IDXGIAdapter1> Adapter;
+	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters1(i, Adapter.GetAddressOf()); ++i) {
+		DXGI_ADAPTER_DESC1 AdapterDesc;
+		VERIFY_SUCCEEDED(Adapter->GetDesc1(&AdapterDesc));
+		if (!(DXGI_ADAPTER_FLAG_SOFTWARE & AdapterDesc.Flags)) {
+			std::cout << Yellow;
 		}
-		assert(0xffffffff != AdapterIndex && "");
-#ifdef _DEBUG
-		std::cout << Yellow << "\t" << "Adapters" << White << std::endl;
-		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory4->EnumAdapters1(i, &Adapter); ++i) {
-			DXGI_ADAPTER_DESC1 AdapterDesc1;
-			Adapter->GetDesc1(&AdapterDesc1);
-			if (AdapterIndex == i) { std::cout << Red; }
-			std::wcout << "\t" << "\t" << AdapterDesc1.Description << std::endl;
+		std::wcout << "\t" << AdapterDesc.Description << std::endl;
+		std::cout << White;
+
+		ComPtr<IDXGIOutput> Output;
+		for (UINT j = 0; DXGI_ERROR_NOT_FOUND != Adapter->EnumOutputs(j, Output.GetAddressOf()); ++j) {
+			DXGI_OUTPUT_DESC OutputDesc;
+			VERIFY_SUCCEEDED(Output->GetDesc(&OutputDesc));
+			const auto Width = OutputDesc.DesktopCoordinates.right - OutputDesc.DesktopCoordinates.left;
+			const auto Height = OutputDesc.DesktopCoordinates.bottom - OutputDesc.DesktopCoordinates.top;
+			std::cout << Blue;
+			std::wcout << "\t" << "\t" << OutputDesc.DeviceName << " = " << Width << " x " << Height << std::endl;
 			std::cout << White;
+
+			UINT NumModes;
+			VERIFY_SUCCEEDED(Output->GetDisplayModeList(DXGI_FORMAT_B8G8R8A8_UNORM, 0, &NumModes, nullptr));
+			std::vector<DXGI_MODE_DESC> ModeDescs(NumModes);
+			VERIFY_SUCCEEDED(Output->GetDisplayModeList(DXGI_FORMAT_B8G8R8A8_UNORM, 0, &NumModes, ModeDescs.data()));
+			//for (const auto& k : ModeDescs) {
+			//	std::wcout << "\t" << "\t" << "\t" << k.Width << " x " << k.Height << " @ " << k.RefreshRate.Numerator / k.RefreshRate.Denominator << std::endl;
+			//}
 		}
+	}
+	Factory->EnumAdapters1(/*0*/1, Adapter.GetAddressOf());
+	if (!SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(Device.GetAddressOf())))) {
+#ifdef _DEBUG
+		std::cout << "\t" << Red << "WarpDevice" << White << std::endl;
+#endif
+		VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(IID_PPV_ARGS(Adapter.GetAddressOf())));
+		VERIFY_SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(Device.GetAddressOf())));
+	}
+
+	//!< フィーチャのチェック
+#ifdef _DEBUG
+	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS DataMultisampleQualityLevels = {
+		DXGI_FORMAT_B8G8R8A8_UNORM,
+		4,
+		D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE,
+		0
+	};
+	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &DataMultisampleQualityLevels, sizeof(DataMultisampleQualityLevels)));
+	std::cout << "\t" << "\t" << "SampleCount = " << DataMultisampleQualityLevels.SampleCount << ", ";
+	std::cout << "QualityLevel = 0 - " << DataMultisampleQualityLevels.NumQualityLevels - 1 << std::endl;
+
+	const std::vector<D3D_FEATURE_LEVEL> FeatureLevels = {
+		D3D_FEATURE_LEVEL_9_1, D3D_FEATURE_LEVEL_9_2, D3D_FEATURE_LEVEL_9_3,
+		D3D_FEATURE_LEVEL_10_0, D3D_FEATURE_LEVEL_10_1,
+		D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_11_1,
+		D3D_FEATURE_LEVEL_12_0, D3D_FEATURE_LEVEL_12_1
+	};
+	D3D12_FEATURE_DATA_FEATURE_LEVELS DataFeatureLevels = {
+		static_cast<UINT>(FeatureLevels.size()),
+		FeatureLevels.data(),
+		D3D_FEATURE_LEVEL_9_1
+	};
+	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &DataFeatureLevels, sizeof(DataFeatureLevels)));
+	assert(D3D_FEATURE_LEVEL_12_1 <= DataFeatureLevels.MaxSupportedFeatureLevel && "Feature level not satisfied");
+	std::cout << Red << "\t" << "\t" << "D3D_FEATURE_LEVEL_12_1" << White << std::endl;
 #endif
 
-		Factory4->EnumAdapters1(AdapterIndex, &Adapter);
-		if (SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&Device)))) {
 #ifdef _DEBUG
-			std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
+	std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
 #endif
-		}
-	}
 }
 void DX::CreateCommandQueue()
 {
@@ -130,17 +159,27 @@ void DX::CreateCommandQueue()
 		D3D12_COMMAND_QUEUE_FLAG_NONE,
 		0
 	};
-	VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(&CommandQueue)));
+	VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(CommandQueue.GetAddressOf())));
 
 #ifdef _DEBUG
 	std::cout << "CreateCommandQueue" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
+/**
+CommandQueue->ExecuteCommandLists(1, &CommandList) の後に、
+VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, PipelineState))
+でコマンドリストをリセットすれば再利用が可能
+(コマンドキューはコマンドリストではなく、コマンドアロケータを参照している)
+
+GPU が参照している間は
+VERIFY_SUCCEEDED(CommandAllocator->Reset())
+でコマンドアロケータをリセットしてはいけない
+*/
 void DX::CreateCommandList()
 {
-	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&CommandAllocator)));
-	VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, CommandAllocator.Get(), PipelineState.Get(), IID_PPV_ARGS(&CommandList)));
+	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(CommandAllocator.GetAddressOf())));
+	VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, CommandAllocator.Get(), PipelineState.Get(), IID_PPV_ARGS(CommandList.GetAddressOf())));
 	VERIFY_SUCCEEDED(CommandList->Close());
 
 #ifdef _DEBUG
@@ -152,11 +191,11 @@ void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
 {
 	using namespace Microsoft::WRL;
 
-	ComPtr<IDXGIFactory4> Factory4;
-	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(&Factory4)));
+	ComPtr<IDXGIFactory4> Factory;
+	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.GetAddressOf())));
 
 #pragma region SwapChain
-	const DXGI_SWAP_CHAIN_DESC1 SwapChainDesc1 = {
+	const DXGI_SWAP_CHAIN_DESC1 SwapChainDesc = {
 		static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
 		DXGI_FORMAT_R8G8B8A8_UNORM,
 		FALSE,
@@ -170,12 +209,12 @@ void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
 	};
 
 	ComPtr<IDXGISwapChain1> SwapChain1;
-	VERIFY_SUCCEEDED(Factory4->CreateSwapChainForHwnd(CommandQueue.Get(), hWnd, &SwapChainDesc1, nullptr, nullptr, &SwapChain1));
-	VERIFY_SUCCEEDED(Factory4->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER));
+	VERIFY_SUCCEEDED(Factory->CreateSwapChainForHwnd(CommandQueue.Get(), hWnd, &SwapChainDesc, nullptr, nullptr, SwapChain1.GetAddressOf()));
+	VERIFY_SUCCEEDED(Factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER));
 	VERIFY_SUCCEEDED(SwapChain1.As(&SwapChain3));
 	CurrentBackBufferIndex = SwapChain3->GetCurrentBackBufferIndex();
 #ifdef _DEBUG
-	std::cout << "\t" << "SwapChain3" << std::endl;
+	std::cout << "\t" << "SwapChain" << std::endl;
 	std::cout << "\t" << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;
 #endif
 #pragma endregion
@@ -187,12 +226,13 @@ void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
 		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 		0
 	};
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescripterHeapDesc, IID_PPV_ARGS(&RenderTargetViewHeap)));
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescripterHeapDesc, IID_PPV_ARGS(RenderTargetViewHeap.GetAddressOf())));
 
 	auto RenderTargetViewHandle(RenderTargetViewHeap->GetCPUDescriptorHandleForHeapStart());
 	const auto DescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	RenderTargets.resize(BufferCount);
 	for (UINT i = 0; i < BufferCount; ++i) {
-		VERIFY_SUCCEEDED(SwapChain3->GetBuffer(i, IID_PPV_ARGS(&RenderTargets[i])));
+		VERIFY_SUCCEEDED(SwapChain3->GetBuffer(i, IID_PPV_ARGS(RenderTargets[i].GetAddressOf())));
 		Device->CreateRenderTargetView(RenderTargets[i].Get(), nullptr, RenderTargetViewHandle);
 		RenderTargetViewHandle.ptr += DescriptorSize;
 #ifdef _DEBUG
@@ -234,34 +274,31 @@ void DX::CreateDepthStencil()
 		DXGI_FORMAT_D32_FLOAT,
 		{ 1.0f, 0 }
 	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &ClearValue, IID_PPV_ARGS(&DepthStencil)));
-
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &ClearValue, IID_PPV_ARGS(DepthStencil.GetAddressOf())));
 #ifdef _DEBUG
 	std::cout << "\t" << "DepthStencil" << std::endl;
 #endif
 #pragma endregion
 
 #pragma region DepthStencilView
-	const D3D12_DEPTH_STENCIL_VIEW_DESC DepthStencilViewDesc = {
-		DXGI_FORMAT_D32_FLOAT,
-		D3D12_DSV_DIMENSION_TEXTURE2D,
-		D3D12_DSV_FLAG_NONE,
-		{ 0 }
-	};
-
 	const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
 		D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
 		1,
 		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 		0
 	};
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(&DepthStencilViewHeap)));
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DepthStencilViewHeap.GetAddressOf())));
 
 	auto DepthStencilViewHandle(DepthStencilViewHeap->GetCPUDescriptorHandleForHeapStart());
 	const auto DescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 	DepthStencilViewHandle.ptr += 0 * DescriptorSize;
+	const D3D12_DEPTH_STENCIL_VIEW_DESC DepthStencilViewDesc = {
+		DXGI_FORMAT_D32_FLOAT,
+		D3D12_DSV_DIMENSION_TEXTURE2D,
+		D3D12_DSV_FLAG_NONE,
+		{ 0 }
+	};
 	Device->CreateDepthStencilView(DepthStencil.Get(), &DepthStencilViewDesc, DepthStencilViewHandle);
-
 #ifdef _DEBUG
 	std::cout << "\t" << "DepthStencilView" << std::endl;
 #endif
@@ -560,15 +597,12 @@ void DX::CreateConstantBuffer()
 
 void DX::CreateFence()
 {
-	//!< 初期値を 0 として作成
-	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&Fence)));
-	//!< 次回に備えて 1 にしておく
-	FenceValue = 1;
+	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(Fence.GetAddressOf())));
+#ifdef _DEBUG
+	std::cout << "CreateFence" << COUT_OK << std::endl << std::endl;
+#endif
 
-	FenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-	assert(nullptr != FenceEvent);
-
-	WaitForFence();
+	//WaitForFence();
 }
 
 void DX::PopulateCommandList()
@@ -631,17 +665,17 @@ void DX::Present()
 
 void DX::WaitForFence()
 {
-	const auto Value = FenceValue;
-	//!< コマンドキューの実行が終わった時に Fence を Value にする (初回なら Fence の値 0 が 1 になる)
-	VERIFY_SUCCEEDED(CommandQueue->Signal(Fence.Get(), Value));
+	//!< CPU 側のフェンス値をインクリメント
 	++FenceValue;
-
-	//!< この短い間に Fence の値が Value になっていないことを確認してから「待ち」に入る
-	if (Fence->GetCompletedValue() < Value)	{
-		//!< Fence の値が Value になったら FenceEvent 発行 (初回なら Fence の値 0 が 1 になったら)
-		VERIFY_SUCCEEDED(Fence->SetEventOnCompletion(Value, FenceEvent));
-		//!< ↑ FenceEvent が発行されるまで待つ
-		WaitForSingleObject(FenceEvent, INFINITE);
+	//!< キューにシグナルを追加、GPU 側でシグナルまでコマンドが到達すればフェンス値が追いつく
+	VERIFY_SUCCEEDED(CommandQueue->Signal(Fence.Get(), FenceValue));
+	if (Fence->GetCompletedValue() < FenceValue) { 
+		auto hEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+		//!< フェンス値が追いついた時にイベントを発行
+		VERIFY_SUCCEEDED(Fence->SetEventOnCompletion(FenceValue, hEvent));
+		//!< イベント発行まで待つ
+		WaitForSingleObject(hEvent, INFINITE);
+		CloseHandle(hEvent);
 	}
 
 	CurrentBackBufferIndex = SwapChain3->GetCurrentBackBufferIndex();

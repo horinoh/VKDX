@@ -19,7 +19,7 @@
       </Command>
     </CustomBuildStep>
     <PostBuildEvent>
-      <Command>for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator -V %%1 -o %%1.spv</Command>
+      <Command>for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator -V %%1 -o $(OutDir)%%1.spv</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup />

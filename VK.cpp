@@ -44,7 +44,8 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateFramebuffers();
 	CreateRenderPass(ColorFormat, DepthFormat);
-	//------------------------------------------
+	
+	CreateFence();
 
 	//CreateSemaphore();
 
@@ -52,8 +53,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	//FlushSetupCommandBuffer();
 	//CreateSetupCommandBuffer();
 	
-	CreateFence();
-
 	PopulateCommandBuffer();
 }
 void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
@@ -74,12 +73,13 @@ void VK::OnPaint(HWND hWnd, HINSTANCE hInstance)
 
 	Present();
 	
-	//WaitForFence(); todo : fence と barrier の使い分け
+	//WaitForFence();
 }
 void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnDestroy(hWnd, hInstance);
 
+	//WaitForFence();
 	vkDestroyFence(Device, Fence, nullptr);
 
 #pragma region RenderPass
@@ -283,7 +283,7 @@ void VK::SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAsp
 Build Event - Post-Build Event に以下のように記述してある
 for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator -V %%1 -o %%1.spv
 */
-VkShaderModule VK::CreateShaderModule(const std::string& Path) const
+VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 {
 	VkShaderModule ShaderModule = VK_NULL_HANDLE;
 
@@ -680,8 +680,8 @@ void VK::CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDevi
 
 void VK::CreateShader()
 {
-	ShaderModules.push_back(CreateShaderModule("VS.vert.spv"));
-	ShaderModules.push_back(CreateShaderModule("FS.frag.spv"));
+	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"VS.vert.spv"));
+	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"FS.frag.spv"));
 
 	PipelineShaderStageCreateInfos = {
 		{
@@ -1402,6 +1402,9 @@ void VK::CreateFence()
 		0
 	};
 	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, nullptr, &Fence));
+#ifdef _DEBUG
+	std::cout << "CreateFence" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void VK::PopulateCommandBuffer()
@@ -1483,12 +1486,7 @@ void VK::ExecuteCommandBuffer()
 		0, nullptr
 	};
 #if 1
-	if (VK_NULL_HANDLE != Fence) {
-		VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, Fence));
-	}
-	else {
-		VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
-	}
+	VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, Fence));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
 #else
 	//!< 複数のコマンドバッファをサブミットしたい場合はセマフォと配列を使う
