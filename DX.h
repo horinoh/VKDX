@@ -51,7 +51,12 @@ protected:
 
 	virtual void CreateFence();
 
+	virtual void Clear();
+	virtual void BarrierRender();
+	virtual void BarrierPresent();
 	virtual void PopulateCommandList();
+
+	virtual void Draw();
 	virtual void ExecuteCommandList();
 	virtual void Present();
 	virtual void WaitForFence();
@@ -71,7 +76,6 @@ protected:
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain3;
 	UINT CurrentBackBufferIndex;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> RenderTargetViewHeap;
-	//Microsoft::WRL::ComPtr<ID3D12Resource> RenderTargets[2];
 	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> RenderTargets;
 #pragma endregion
 
@@ -81,10 +85,8 @@ protected:
 #pragma endregion
 
 #pragma region Shader
-	Microsoft::WRL::ComPtr<ID3DBlob> BlobVS;
-	std::vector<D3D12_SHADER_BYTECODE> ShaderBytecodesVSs;
-	Microsoft::WRL::ComPtr<ID3DBlob> BlobPS;
-	std::vector<D3D12_SHADER_BYTECODE> ShaderBytecodesPSs;
+	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> BlobVSs;
+	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> BlobPSs;
 #pragma endregion
 #pragma region RootSignature
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;

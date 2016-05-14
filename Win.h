@@ -39,9 +39,9 @@ public:
 
 	//virtual void OnInitialize(HWND hWnd, HINSTANCE hInstance) {}
 
-	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance) { GetClientRect(hWnd, &Rect); }
+	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance) { GetClientRect(hWnd, &Rect); SetTimer(hWnd, NULL, 1000 / 60, nullptr); }
 	virtual void OnSize(HWND hWnd, HINSTANCE hInstance) {}
-	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) {}
+	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) { /*SendMessage(hWnd, WM_PAINT, 0, 0);*/ }
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) {}
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) {}
 

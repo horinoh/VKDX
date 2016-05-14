@@ -54,13 +54,7 @@ void DX::OnPaint(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnPaint(hWnd, hInstance);
 
-	//PopulateCommandList();
-
-	ExecuteCommandList();
-
-	Present();
-
-	WaitForFence();
+	Draw();
 }
 void DX::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
@@ -82,17 +76,13 @@ void DX::CreateDevice(HWND hWnd)
 	ComPtr<IDXGIFactory4> Factory;
 	VERIFY_SUCCEEDED(CreateDXGIFactory(IID_PPV_ARGS(Factory.GetAddressOf()))); 
 	ComPtr<IDXGIAdapter1> Adapter;
-	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters1(i, Adapter.GetAddressOf()); ++i) {
+#ifdef _DEBUG
+	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters1(i, Adapter.ReleaseAndGetAddressOf()); ++i) {
 		DXGI_ADAPTER_DESC1 AdapterDesc;
 		VERIFY_SUCCEEDED(Adapter->GetDesc1(&AdapterDesc));
-		if (!(DXGI_ADAPTER_FLAG_SOFTWARE & AdapterDesc.Flags)) {
-			std::cout << Yellow;
-		}
 		std::wcout << "\t" << AdapterDesc.Description << std::endl;
-		std::cout << White;
-
 		ComPtr<IDXGIOutput> Output;
-		for (UINT j = 0; DXGI_ERROR_NOT_FOUND != Adapter->EnumOutputs(j, Output.GetAddressOf()); ++j) {
+		for (UINT j = 0; DXGI_ERROR_NOT_FOUND != Adapter->EnumOutputs(j, Output.ReleaseAndGetAddressOf()); ++j) {
 			DXGI_OUTPUT_DESC OutputDesc;
 			VERIFY_SUCCEEDED(Output->GetDesc(&OutputDesc));
 			const auto Width = OutputDesc.DesktopCoordinates.right - OutputDesc.DesktopCoordinates.left;
@@ -105,21 +95,53 @@ void DX::CreateDevice(HWND hWnd)
 			VERIFY_SUCCEEDED(Output->GetDisplayModeList(DXGI_FORMAT_B8G8R8A8_UNORM, 0, &NumModes, nullptr));
 			std::vector<DXGI_MODE_DESC> ModeDescs(NumModes);
 			VERIFY_SUCCEEDED(Output->GetDisplayModeList(DXGI_FORMAT_B8G8R8A8_UNORM, 0, &NumModes, ModeDescs.data()));
-			//for (const auto& k : ModeDescs) {
-			//	std::wcout << "\t" << "\t" << "\t" << k.Width << " x " << k.Height << " @ " << k.RefreshRate.Numerator / k.RefreshRate.Denominator << std::endl;
-			//}
+#if 1
+			auto ModeIndex = 0;
+			for (const auto& k : ModeDescs) {
+				if (ModeIndex < 1 || ModeIndex > ModeDescs.size() - 2) {
+					std::wcout << "\t" << "\t" << "\t" << k.Width << " x " << k.Height << " @ " << k.RefreshRate.Numerator / k.RefreshRate.Denominator << std::endl;
+				}
+				else if (2 == ModeIndex) {
+					std::cout << "\t" << "\t" << "\t" << "..." << std::endl;
+				}
+				++ModeIndex;
+			}
+#else
+			for (const auto& k : ModeDescs) {
+				std::wcout << "\t" << "\t" << "\t" << k.Width << " x " << k.Height << " @ " << k.RefreshRate.Numerator / k.RefreshRate.Denominator << std::endl;
+			}
+#endif
 		}
 	}
-	Factory->EnumAdapters1(/*0*/1, Adapter.GetAddressOf());
+#endif
+	//!< ディスクリートGPU が最後に列挙されるので
+	//!< Because discrete GPU is enumerated last in my environment
+	auto GetLastIndexOfHardwareAdapter = [&]() {
+		UINT Index = UINT_MAX;
+		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters1(i, Adapter.ReleaseAndGetAddressOf()); ++i) {
+			DXGI_ADAPTER_DESC1 AdapterDesc;
+			VERIFY_SUCCEEDED(Adapter->GetDesc1(&AdapterDesc));
+			if (!(DXGI_ADAPTER_FLAG_SOFTWARE & AdapterDesc.Flags)) {
+				Index = i;
+			}
+		}
+		assert(UINT_MAX != Index);
+		return Index;
+	};
+	Factory->EnumAdapters1(GetLastIndexOfHardwareAdapter(), Adapter.ReleaseAndGetAddressOf());
+#ifdef _DEBUG
+	DXGI_ADAPTER_DESC1 AdapterDesc;
+	VERIFY_SUCCEEDED(Adapter->GetDesc1(&AdapterDesc));
+	std::cout << Red; std::wcout << "\t" << AdapterDesc.Description; std::cout << White << " is selected" << std::endl;
+#endif
 	if (!SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(Device.GetAddressOf())))) {
 #ifdef _DEBUG
-		std::cout << "\t" << Red << "WarpDevice" << White << std::endl;
+		std::cout << "\t" << Red << "Cannot create device, trying WarpDevice ..." << White << std::endl;
 #endif
 		VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(IID_PPV_ARGS(Adapter.GetAddressOf())));
 		VERIFY_SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(Device.GetAddressOf())));
 	}
 
-	//!< フィーチャのチェック
 #ifdef _DEBUG
 	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS DataMultisampleQualityLevels = {
 		DXGI_FORMAT_B8G8R8A8_UNORM,
@@ -144,7 +166,7 @@ void DX::CreateDevice(HWND hWnd)
 	};
 	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &DataFeatureLevels, sizeof(DataFeatureLevels)));
 	assert(D3D_FEATURE_LEVEL_12_1 <= DataFeatureLevels.MaxSupportedFeatureLevel && "Feature level not satisfied");
-	std::cout << Red << "\t" << "\t" << "D3D_FEATURE_LEVEL_12_1" << White << std::endl;
+	std::cout << Red << "\t" << "\t" << "D3D_FEATURE_LEVEL_12_1" << White << " is supported" << std::endl;
 #endif
 
 #ifdef _DEBUG
@@ -166,16 +188,6 @@ void DX::CreateCommandQueue()
 #endif
 }
 
-/**
-CommandQueue->ExecuteCommandLists(1, &CommandList) の後に、
-VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, PipelineState))
-でコマンドリストをリセットすれば再利用が可能
-(コマンドキューはコマンドリストではなく、コマンドアロケータを参照している)
-
-GPU が参照している間は
-VERIFY_SUCCEEDED(CommandAllocator->Reset())
-でコマンドアロケータをリセットしてはいけない
-*/
 void DX::CreateCommandList()
 {
 	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(CommandAllocator.GetAddressOf())));
@@ -315,11 +327,11 @@ void DX::CreateDepthStencil()
 void DX::CreateShader()
 {
 	using namespace Microsoft::WRL;
-	D3DReadFileToBlob(SHADER_PATH L"VS.cso", &BlobVS);
-	ShaderBytecodesVSs.push_back({ BlobVS->GetBufferPointer(), BlobVS->GetBufferSize() });
+	BlobVSs.resize(1);
+	D3DReadFileToBlob(SHADER_PATH L"VS.cso", BlobVSs[0].GetAddressOf());
 
-	D3DReadFileToBlob(SHADER_PATH L"PS.cso", &BlobPS);
-	ShaderBytecodesPSs.push_back({ BlobPS->GetBufferPointer(), BlobPS->GetBufferSize() });
+	BlobPSs.resize(1);
+	D3DReadFileToBlob(SHADER_PATH L"PS.cso", BlobPSs[0].GetAddressOf());
 
 #ifdef _DEBUG
 	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
@@ -374,7 +386,13 @@ void DX::CreateViewport()
 }
 void DX::CreatePipelineState()
 {
+	assert(nullptr != RootSignature);
+	assert(!BlobVSs.empty());
+	const D3D12_SHADER_BYTECODE ShaderBytecodesVS = { BlobVSs[0]->GetBufferPointer(), BlobVSs[0]->GetBufferSize() };
+	assert(!BlobPSs.empty());
+	const D3D12_SHADER_BYTECODE ShaderBytecodesPS = { BlobPSs[0]->GetBufferPointer(), BlobPSs[0]->GetBufferSize() };
 	const D3D12_SHADER_BYTECODE DefaultShaderBytecode = { nullptr, 0 };
+
 	const D3D12_RENDER_TARGET_BLEND_DESC DefaultRenderTargetBlendDesc = {
 		FALSE, FALSE,
 		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
@@ -414,12 +432,9 @@ void DX::CreatePipelineState()
 		DepthStencilOpDesc
 	};
 
-	assert(nullptr != RootSignature);
-	assert(!ShaderBytecodesVSs.empty());
-	assert(!ShaderBytecodesPSs.empty());
 	const D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineStateDesc = {
 		RootSignature.Get(),
-		ShaderBytecodesVSs[0], ShaderBytecodesPSs[0], DefaultShaderBytecode, DefaultShaderBytecode, DefaultShaderBytecode,
+		ShaderBytecodesVS, ShaderBytecodesPS, DefaultShaderBytecode, DefaultShaderBytecode, DefaultShaderBytecode,
 		{
 			nullptr, 0,
 			nullptr, 0,
@@ -605,64 +620,115 @@ void DX::CreateFence()
 	//WaitForFence();
 }
 
-void DX::PopulateCommandList()
+void DX::Clear()
 {
-	VERIFY_SUCCEEDED(CommandAllocator->Reset());
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator.Get(), PipelineState.Get()));
-
-	CommandList->SetGraphicsRootSignature(RootSignature.Get());
-
-	CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-	CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
-
-	{
-		using namespace DirectX;
-		const std::vector<XMMATRIX> WVP = { XMMatrixIdentity(), XMMatrixIdentity(), XMMatrixIdentity() };
-
-		UINT8* Data;
-		D3D12_RANGE Range = { 0, 0 };
-		VERIFY_SUCCEEDED(ConstantBuffer->Map(0, &Range, reinterpret_cast<void**>(&Data))); {
-			memcpy(Data, &WVP, sizeof(WVP));
-		} ConstantBuffer->Unmap(0, nullptr); //!< サンプルには アプリが終了するまで Unmap しない、リソースはマップされたままでOKと書いてあるが...よく分からない
-	}
-
 	auto RenderTargetViewHandle(RenderTargetViewHeap->GetCPUDescriptorHandleForHeapStart());
-	{
-		const auto DescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		RenderTargetViewHandle.ptr += CurrentBackBufferIndex * DescriptorSize;
-	}
-
-	auto DepthStencilViewHandle(DepthStencilViewHeap->GetCPUDescriptorHandleForHeapStart());
-	{
-		const auto DescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-		DepthStencilViewHandle.ptr += 0 * DescriptorSize;
-	}
-	CommandList->OMSetRenderTargets(1, &RenderTargetViewHandle, FALSE, nullptr);
-
+	RenderTargetViewHandle.ptr += CurrentBackBufferIndex * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	const float ClearColor[] = { 0.5f, 0.5f, 1.0f, 1.0f };
 	CommandList->ClearRenderTargetView(RenderTargetViewHandle, ClearColor, 0, nullptr);
+	
+	auto DepthStencilViewHandle(DepthStencilViewHeap->GetCPUDescriptorHandleForHeapStart());
+	DepthStencilViewHandle.ptr += 0 * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV); 
 	CommandList->ClearDepthStencilView(DepthStencilViewHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+}
+void DX::BarrierRender()
+{
+	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarrier = {
+		{
+			D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+			D3D12_RESOURCE_BARRIER_FLAG_NONE,
+			{
+				RenderTargets[CurrentBackBufferIndex].Get(),
+				D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+				D3D12_RESOURCE_STATE_PRESENT,
+				D3D12_RESOURCE_STATE_RENDER_TARGET
+			}
+		}
+	};
+	CommandList->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
+}
+void DX::BarrierPresent()
+{
+	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarrier = {
+		{
+			D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+			D3D12_RESOURCE_BARRIER_FLAG_NONE,
+			{
+				RenderTargets[CurrentBackBufferIndex].Get(),
+				D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+				D3D12_RESOURCE_STATE_RENDER_TARGET,
+				D3D12_RESOURCE_STATE_PRESENT
+			}
+		}
+	};
+	CommandList->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
+}
+void DX::PopulateCommandList()
+{
+	//!< GPU が参照している間は CommandAllocator->Reset() できない
+	VERIFY_SUCCEEDED(CommandAllocator->Reset());
+	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能
+	//!< コマンドキューはコマンドリストではなく、コマンドアロケータを参照している
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator.Get(), PipelineState.Get()));
+	{
+		CommandList->SetGraphicsRootSignature(RootSignature.Get());
 
-	CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	CommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
-	CommandList->IASetIndexBuffer(&IndexBufferView);
+		CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
-	CommandList->DrawInstanced(IndexCount, 1, 0, 0);
+		BarrierRender();
+		{
+			Clear();
 
+			//!< レンダーターゲット(フレームバッファ)
+			auto RenderTargetViewHandle(RenderTargetViewHeap->GetCPUDescriptorHandleForHeapStart());
+			RenderTargetViewHandle.ptr += CurrentBackBufferIndex * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+			auto DepthStencilViewHandle(DepthStencilViewHeap->GetCPUDescriptorHandleForHeapStart());
+			DepthStencilViewHandle.ptr += 0 * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+			CommandList->OMSetRenderTargets(1, &RenderTargetViewHandle, FALSE, &DepthStencilViewHandle);
+
+			//{
+			//	using namespace DirectX;
+			//	const std::vector<XMMATRIX> WVP = { XMMatrixIdentity(), XMMatrixIdentity(), XMMatrixIdentity() };
+
+			//	UINT8* Data;
+			//	D3D12_RANGE Range = { 0, 0 };
+			//	VERIFY_SUCCEEDED(ConstantBuffer->Map(0, &Range, reinterpret_cast<void**>(&Data))); {
+			//		memcpy(Data, &WVP, sizeof(WVP));
+			//	} ConstantBuffer->Unmap(0, nullptr); //!< サンプルには アプリが終了するまで Unmap しない、リソースはマップされたままでOKと書いてあるが...よく分からない
+			//}
+
+			CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+			CommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
+			CommandList->IASetIndexBuffer(&IndexBufferView);
+
+			CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
+		}
+		BarrierPresent();
+	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 }
 
+void DX::Draw()
+{
+	ExecuteCommandList();
+	Present();
+	WaitForFence();
+}
 void DX::ExecuteCommandList()
 {
 	ID3D12CommandList* CommandLists[] = { CommandList.Get() };
 	CommandQueue->ExecuteCommandLists(_countof(CommandLists), CommandLists);
 }
-
 void DX::Present()
 {
-	VERIFY_SUCCEEDED(SwapChain3->Present(1, 0));
+	VERIFY_SUCCEEDED(SwapChain3->Present(0, 0));
+	CurrentBackBufferIndex = ++CurrentBackBufferIndex % static_cast<UINT>(RenderTargets.size());
+#ifdef _DEBUG
+	std::cout << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;
+#endif
 }
-
 void DX::WaitForFence()
 {
 	//!< CPU 側のフェンス値をインクリメント
@@ -677,7 +743,5 @@ void DX::WaitForFence()
 		WaitForSingleObject(hEvent, INFINITE);
 		CloseHandle(hEvent);
 	}
-
-	CurrentBackBufferIndex = SwapChain3->GetCurrentBackBufferIndex();
 }
 

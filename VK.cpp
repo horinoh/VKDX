@@ -30,8 +30,10 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateDepthStencil(PhysicalDeviceMemoryProperties, DepthFormat);
 
 	CreateShader();
+
 	CreateDescriptorSetLayout();
 	CreatePipelineLayout();
+
 	CreateDescriptorSet();
 
 	CreateVertexInput();
@@ -67,13 +69,7 @@ void VK::OnPaint(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnPaint(hWnd, hInstance);
 
-	//PopulateCommandBuffer();
-
-	ExecuteCommandBuffer();
-
-	Present();
-	
-	//WaitForFence();
+	Draw();
 }
 void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
@@ -125,18 +121,20 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 #pragma endregion
 
-#pragma region DescriptorSet
-	vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
-	if (VK_NULL_HANDLE != DescriptorPool) {
-		vkDestroyDescriptorPool(Device, DescriptorPool, nullptr);
-	}
+#pragma region Layout
 	if (VK_NULL_HANDLE != PipelineLayout) {
 		vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
 	}
+	vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
+#pragma endregion
+	
 	for (auto i : DescriptorSetLayouts) {
 		vkDestroyDescriptorSetLayout(Device, i, nullptr);
 	}
-#pragma endregion
+	if (VK_NULL_HANDLE != DescriptorPool) {
+		vkDestroyDescriptorPool(Device, DescriptorPool, nullptr);
+	}
+
 #pragma region Shader
 	for (auto i : ShaderModules) {
 		vkDestroyShaderModule(Device, i, nullptr);
@@ -605,6 +603,10 @@ void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice Physic
 	};
 	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &Semaphore));
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, Semaphore, nullptr, &SwapchainImageIndex));
+#ifdef _DEBUG
+	std::cout << "\t" << "Semaphore" << std::endl;
+	std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
+#endif
 #pragma endregion
 
 #ifdef _DEBUG
@@ -1407,72 +1409,153 @@ void VK::CreateFence()
 #endif
 }
 
+void VK::Clear()
+{
+	auto CommandBuffer = CommandBuffers[SwapchainImageIndex];
+
+	const VkClearColorValue ClearColor = { 0.5f, 0.5f, 1.0f, 1.0f };
+	const std::vector<VkImageSubresourceRange> ImageSubresourceRanges_Color = {
+		{
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			0, 1,
+			0, 1
+		}
+	};
+	vkCmdClearColorImage(CommandBuffer,
+		SwapchainImages[SwapchainImageIndex],
+		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		&ClearColor,
+		static_cast<uint32_t>(ImageSubresourceRanges_Color.size()), ImageSubresourceRanges_Color.data());
+
+	const VkClearDepthStencilValue ClearDepthStencil = { 1.0f, 0 };
+	const std::vector<VkImageSubresourceRange> ImageSubresourceRanges_DepthStencil = {
+		{
+			VK_IMAGE_ASPECT_DEPTH_BIT,
+			0, 1,
+			0, 1
+		}
+	};
+	vkCmdClearDepthStencilImage(CommandBuffer,
+		DepthStencilImage,
+		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+		&ClearDepthStencil,
+		static_cast<uint32_t>(ImageSubresourceRanges_DepthStencil.size()), ImageSubresourceRanges_DepthStencil.data());
+}
+void VK::BarrierRender()
+{
+	auto CommandBuffer = CommandBuffers[SwapchainImageIndex];
+
+	const VkImageSubresourceRange ImageSubresourceRange = {
+		VK_IMAGE_ASPECT_COLOR_BIT,
+		0, 1,
+		0, 1,
+	};
+	const VkImageMemoryBarrier MemoryBarrier = {
+		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		nullptr,
+		0,
+		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		VK_QUEUE_FAMILY_IGNORED,
+		VK_QUEUE_FAMILY_IGNORED,
+		SwapchainImages[SwapchainImageIndex],
+		ImageSubresourceRange
+	};
+	vkCmdPipelineBarrier(CommandBuffer,
+		VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		0,
+		0, nullptr,
+		0, nullptr,
+		1, &MemoryBarrier);
+}
+void VK::BarrierPresent()
+{
+	auto CommandBuffer = CommandBuffers[SwapchainImageIndex];
+
+	const VkImageSubresourceRange ImageSubresourceRange = {
+		VK_IMAGE_ASPECT_COLOR_BIT,
+		0, 1,
+		0, 1,
+	};
+	const VkImageMemoryBarrier MemoryBarrier = {
+		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		nullptr,
+		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+		0,
+		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+		VK_QUEUE_FAMILY_IGNORED,
+		VK_QUEUE_FAMILY_IGNORED,
+		SwapchainImages[SwapchainImageIndex],
+		ImageSubresourceRange
+	};
+	vkCmdPipelineBarrier(CommandBuffer,
+		VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		0,
+		0, nullptr,
+		0, nullptr,
+		1, &MemoryBarrier);
+}
 void VK::PopulateCommandBuffer()
 {
-	//VERIFY_SUCCEEDED(vkBeginCommandBuffer(drawCmdBuffers[i], &cmdBufInfo)); {
-	//vkCmdBeginRenderPass(drawCmdBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-	//vkCmdBindPipeline(drawCmdBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines.solid);
-	//vkCmdPipelineBarrier();
-	//} VERIFY_SUCCEEDED(vkEndCommandBuffer(drawCmdBuffers[i]));
+	auto CommandBuffer = CommandBuffers[SwapchainImageIndex];
 
-	//!< バッファインデックスの更新
-	//VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphore, nullptr, &SwapchainImageIndex));
-
-	vkCmdSetViewport(CommandBuffers[SwapchainImageIndex], 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-	vkCmdSetScissor(CommandBuffers[SwapchainImageIndex], 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
-
+	const VkCommandBufferBeginInfo BeginInfo = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		nullptr,
+		0,
+		nullptr
+	};
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo));
 	{
-		const VkClearColorValue ClearColor = {
-			0.5f, 0.5f, 1.0f, 1.0f
-		};
-		const std::vector<VkImageSubresourceRange> Ranges = {
-			{
-				VK_IMAGE_ASPECT_COLOR_BIT,
-				0, 1,
-				0, 1
-			}
-		};
-		vkCmdClearColorImage(CommandBuffers[SwapchainImageIndex],
-			SwapchainImages[SwapchainImageIndex],
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			&ClearColor,
-			static_cast<uint32_t>(Ranges.size()), Ranges.data());
-	}
-	{
-		const VkClearDepthStencilValue ClearDepthStencil = {
-			1.0f, 0
-		};
-		const std::vector<VkImageSubresourceRange> Ranges = {
-			{
-				VK_IMAGE_ASPECT_DEPTH_BIT,
-				0, 1,
-				0, 1
-			}
-		};
-		vkCmdClearDepthStencilImage(CommandBuffers[SwapchainImageIndex],
-			DepthStencilImage,
-			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-			&ClearDepthStencil,
-			static_cast<uint32_t>(Ranges.size()), Ranges.data());
-	}
+		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-	//const VkDeviceSize Offsets[] = { 0 };
-	//vkCmdBindVertexBuffers(CommandBuffers[SwapchainImageIndex], 0, 1, &VertexBuffer, Offsets);
-	//vkCmdBindIndexBuffer(CommandBuffers[SwapchainImageIndex], IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+		BarrierRender();
+		{
+			Clear();
 
-	//VkImageMemoryBarrier postPresentBarrier = {};
-	//postPresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	//postPresentBarrier.pNext = nullptr;
-	//postPresentBarrier.srcAccessMask = 0;
-	//postPresentBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-	//postPresentBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-	//postPresentBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	//postPresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	//postPresentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-	//postPresentBarrier.subresourceRange = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
-	//postPresentBarrier.image = SwapchainBuffers[CurrentSwapchainBufferIndex].Image;
+			//!< レンダーターゲット(フレームバッファ)
+			const VkRect2D Rect2D = {
+				{ 0, 0 },
+				{ 1280, 720 }, 
+			};
+			std::vector<VkClearValue> ClearValues(2);
+			ClearValues[0].color = { 0.5f, 0.5f, 1.0f, 1.0f };
+			ClearValues[1].depthStencil = { 1.0f, 0 };
+			const VkRenderPassBeginInfo RenderPassBeginInfo = {
+				VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+				nullptr,
+				RenderPass,
+				Framebuffers[SwapchainImageIndex],
+				Rect2D,
+				static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
+			};
+			vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+	
+			//!< トポロジは Pipeline にある
+			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+
+			const VkDeviceSize Offsets[] = { 0 };
+			vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
+			vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+			vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
+		}
+		BarrierPresent();
+	}
+	VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }
 
+void VK::Draw()
+{
+	ExecuteCommandBuffer();
+	Present();
+	//WaitForFence();
+}
 void VK::ExecuteCommandBuffer()
 {
 	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
@@ -1506,7 +1589,6 @@ void VK::ExecuteCommandBuffer()
 
 	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 }
-
 void VK::Present()
 {
 	const VkPresentInfoKHR PresentInfo = {
@@ -1525,8 +1607,12 @@ void VK::Present()
 #endif
 	//todo
 	//VERIFY_SUCCEEDED(vkQueuePresentKHR(Queue, &PresentInfo));
-}
 
+	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, Semaphore, nullptr, &SwapchainImageIndex));
+#ifdef _DEBUG
+	std::cout << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
+#endif
+}
 void VK::WaitForFence()
 {
 	VkResult Result;

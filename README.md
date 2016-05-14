@@ -22,7 +22,7 @@
 * glslangValidator.exe でコンパイルする 環境変数 **Path** が通っているらしくそのまま使用できる
 * Visual Studio で BuildEvent - Post-Build Event に以下のように指定した 
 ~~~
-for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator -V %%1 -o %%1.spv
+for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator -V %%1 -o $(OutDir)%%1.spv
 ~~~
     
 ## DX

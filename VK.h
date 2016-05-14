@@ -80,7 +80,12 @@ protected:
 	//virtual void CreateSetupCommandBuffer();
 	//virtual void FlushSetupCommandBuffer();
 
+	virtual void Clear();
+	virtual void BarrierRender();
+	virtual void BarrierPresent();
 	virtual void PopulateCommandBuffer();
+
+	virtual void Draw();
 	virtual void ExecuteCommandBuffer();
 	virtual void Present();
 	virtual void WaitForFence();
@@ -121,12 +126,13 @@ protected:
 	std::vector<VkShaderModule> ShaderModules;
 	std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos;
 #pragma endregion
-#pragma region DescriptorSet
+#pragma region Layout
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
 	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
+#pragma endregion
+
 	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
 	std::vector<VkDescriptorSet> DescriptorSets;
-#pragma endregion
 
 #pragma region VertexInput
 private:
