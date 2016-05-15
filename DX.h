@@ -30,13 +30,17 @@ public:
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 
 protected:
-	virtual void CreateDevice(HWND hWnd);
+	virtual void CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat);
 	virtual void CreateCommandQueue();
 
 	virtual void CreateCommandList();
 
-	virtual void CreateSwapChain(HWND hWnd, const UINT BufferCount = 2);
-	virtual void CreateDepthStencil();
+	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT BufferCount = 2);
+
+	virtual void CreateDepthStencil(const DXGI_FORMAT TyplessDepthFormat, const DXGI_FORMAT TypedDepthFormat);
+	virtual void CreateDepthStencil(const DXGI_FORMAT TypedDepthFormat) { CreateDepthStencil(TypedDepthFormat, TypedDepthFormat); }
+	virtual void CreateDepthStencilView(const DXGI_FORMAT TypedDepthFormat);
+	virtual void CreateDepthStencilView();
 
 	virtual void CreateShader();
 	virtual void CreateRootSignature();
@@ -73,7 +77,7 @@ protected:
 #pragma endregion
 
 #pragma region SwapChain
-	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain3;
+	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain;
 	UINT CurrentBackBufferIndex;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> RenderTargetViewHeap;
 	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> RenderTargets;

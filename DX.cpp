@@ -16,15 +16,37 @@ DX::~DX()
 
 void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 {
-	Super::OnCreate(hWnd, hInstance);
+	__int64 A;
+	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&A));
 
-	CreateDevice(hWnd);
+	Super::OnCreate(hWnd, hInstance);
+	
+	const auto ColorFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+#ifdef _DEBUG
+		std::cout << "\t" << Yellow << "R8G8B8A8_UNORM" << White << std::endl;
+#endif
+	CreateDevice(hWnd, ColorFormat);
 	CreateCommandQueue();
 	CreateCommandList();
 
-	CreateSwapChain(hWnd);
-
-	CreateDepthStencil();
+	CreateSwapChain(hWnd, ColorFormat);
+#if 1
+	//!< DepthFormat が具体的なフォーマットの場合は、ビューのフォーマットは指定しなくて良い
+	const auto TypedDepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+#ifdef _DEBUG
+	std::cout << "\t" << Yellow << "D32_FLOAT_S8X24_UINT" << White << std::endl;
+#endif
+	CreateDepthStencil(TypedDepthFormat);
+#else
+	//!< DepthFormat が TYPELESS の場合は、ビュー作成の為に具体的なフォーマットも指定する
+	const auto TypelessDepthFormat = DXGI_FORMAT_R32G8X24_TYPELESS;
+	const auto TypedDepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+#ifdef _DEBUG
+	std::cout << "\t" << Yellow << "R32G8X24_TYPELESS" << White << std::endl;
+	std::cout << "\t" << Yellow << "D32_FLOAT_S8X24_UINT" << White << std::endl;
+#endif
+	CreateDepthStencil(TypelessDepthFormat, TypedDepthFormat);
+#endif
 
 	CreateShader();
 
@@ -41,6 +63,10 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateFence();
 
 	PopulateCommandList();
+
+	__int64 B;
+	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&B));
+	std::cout << "It takes : " << (B - A) * SecondsPerCount << " sec" << std::endl;
 }
 void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 {
@@ -63,7 +89,7 @@ void DX::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	WaitForFence();
 }
 
-void DX::CreateDevice(HWND hWnd)
+void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
 {
 	using namespace Microsoft::WRL;
 
@@ -92,9 +118,9 @@ void DX::CreateDevice(HWND hWnd)
 			std::cout << White;
 
 			UINT NumModes;
-			VERIFY_SUCCEEDED(Output->GetDisplayModeList(DXGI_FORMAT_B8G8R8A8_UNORM, 0, &NumModes, nullptr));
+			VERIFY_SUCCEEDED(Output->GetDisplayModeList(ColorFormat, 0, &NumModes, nullptr));
 			std::vector<DXGI_MODE_DESC> ModeDescs(NumModes);
-			VERIFY_SUCCEEDED(Output->GetDisplayModeList(DXGI_FORMAT_B8G8R8A8_UNORM, 0, &NumModes, ModeDescs.data()));
+			VERIFY_SUCCEEDED(Output->GetDisplayModeList(ColorFormat, 0, &NumModes, ModeDescs.data()));
 #if 1
 			auto ModeIndex = 0;
 			for (const auto& k : ModeDescs) {
@@ -144,8 +170,8 @@ void DX::CreateDevice(HWND hWnd)
 
 #ifdef _DEBUG
 	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS DataMultisampleQualityLevels = {
-		DXGI_FORMAT_B8G8R8A8_UNORM,
-		4,
+		ColorFormat,
+		1/*4*/,
 		D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE,
 		0
 	};
@@ -199,7 +225,7 @@ void DX::CreateCommandList()
 #endif
 }
 
-void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
+void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT BufferCount)
 {
 	using namespace Microsoft::WRL;
 
@@ -207,11 +233,12 @@ void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.GetAddressOf())));
 
 #pragma region SwapChain
+	const DXGI_SAMPLE_DESC SampleDesc = { 1/*4*/, 0 };
 	const DXGI_SWAP_CHAIN_DESC1 SwapChainDesc = {
 		static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
-		DXGI_FORMAT_R8G8B8A8_UNORM,
+		ColorFormat,
 		FALSE,
-		{ 1, 0 },
+		SampleDesc,
 		DXGI_USAGE_RENDER_TARGET_OUTPUT,
 		BufferCount,
 		DXGI_SCALING_STRETCH,
@@ -223,8 +250,8 @@ void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
 	ComPtr<IDXGISwapChain1> SwapChain1;
 	VERIFY_SUCCEEDED(Factory->CreateSwapChainForHwnd(CommandQueue.Get(), hWnd, &SwapChainDesc, nullptr, nullptr, SwapChain1.GetAddressOf()));
 	VERIFY_SUCCEEDED(Factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER));
-	VERIFY_SUCCEEDED(SwapChain1.As(&SwapChain3));
-	CurrentBackBufferIndex = SwapChain3->GetCurrentBackBufferIndex();
+	VERIFY_SUCCEEDED(SwapChain1.As(&SwapChain));
+	CurrentBackBufferIndex = SwapChain->GetCurrentBackBufferIndex();
 #ifdef _DEBUG
 	std::cout << "\t" << "SwapChain" << std::endl;
 	std::cout << "\t" << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;
@@ -244,7 +271,7 @@ void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
 	const auto DescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	RenderTargets.resize(BufferCount);
 	for (UINT i = 0; i < BufferCount; ++i) {
-		VERIFY_SUCCEEDED(SwapChain3->GetBuffer(i, IID_PPV_ARGS(RenderTargets[i].GetAddressOf())));
+		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, IID_PPV_ARGS(RenderTargets[i].GetAddressOf())));
 		Device->CreateRenderTargetView(RenderTargets[i].Get(), nullptr, RenderTargetViewHandle);
 		RenderTargetViewHandle.ptr += DescriptorSize;
 #ifdef _DEBUG
@@ -261,9 +288,8 @@ void DX::CreateSwapChain(HWND hWnd, const UINT BufferCount)
 #endif
 }
 
-void DX::CreateDepthStencil()
+void DX::CreateDepthStencil(const DXGI_FORMAT TyplessDepthFormat, const DXGI_FORMAT TypedDepthFormat)
 {
-#pragma region DepthStencil
 	const D3D12_HEAP_PROPERTIES HeapProperties = {
 		D3D12_HEAP_TYPE_DEFAULT,
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
@@ -271,28 +297,41 @@ void DX::CreateDepthStencil()
 		1,
 		1
 	};
+	const DXGI_SAMPLE_DESC SampleDesc = { 1/*4*/, 0 };
 	const D3D12_RESOURCE_DESC ResourceDesc = {
 		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
 		0,
 		static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
 		1,
 		1,
-		DXGI_FORMAT_R32_TYPELESS,
-		{ 1, 0 },
+		TyplessDepthFormat,
+		SampleDesc,
 		D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
 	};
 	const D3D12_CLEAR_VALUE ClearValue = {
-		DXGI_FORMAT_D32_FLOAT,
+		TypedDepthFormat,
 		{ 1.0f, 0 }
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &ClearValue, IID_PPV_ARGS(DepthStencil.GetAddressOf())));
 #ifdef _DEBUG
 	std::cout << "\t" << "DepthStencil" << std::endl;
 #endif
-#pragma endregion
 
-#pragma region DepthStencilView
+	if(TyplessDepthFormat == TypedDepthFormat) {
+		CreateDepthStencilView();
+	}
+	else {
+		CreateDepthStencilView(TypedDepthFormat);
+	}
+
+#ifdef _DEBUG
+	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void DX::CreateDepthStencilView(const DXGI_FORMAT TypedDepthFormat)
+{
 	const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
 		D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
 		1,
@@ -304,8 +343,9 @@ void DX::CreateDepthStencil()
 	auto DepthStencilViewHandle(DepthStencilViewHeap->GetCPUDescriptorHandleForHeapStart());
 	const auto DescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 	DepthStencilViewHandle.ptr += 0 * DescriptorSize;
+
 	const D3D12_DEPTH_STENCIL_VIEW_DESC DepthStencilViewDesc = {
-		DXGI_FORMAT_D32_FLOAT,
+		TypedDepthFormat,
 		D3D12_DSV_DIMENSION_TEXTURE2D,
 		D3D12_DSV_FLAG_NONE,
 		{ 0 }
@@ -314,10 +354,26 @@ void DX::CreateDepthStencil()
 #ifdef _DEBUG
 	std::cout << "\t" << "DepthStencilView" << std::endl;
 #endif
-#pragma endregion
+}
+void DX::CreateDepthStencilView()
+{
+	const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
+		D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
+		1,
+		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+		0
+	};
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DepthStencilViewHeap.GetAddressOf())));
+
+	auto DepthStencilViewHandle(DepthStencilViewHeap->GetCPUDescriptorHandleForHeapStart());
+	const auto DescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	DepthStencilViewHandle.ptr += 0 * DescriptorSize;
+
+	//!< DepthFormat が具体的なフォーマットであれば(TYPELESS でなければ) D3D12_DEPTH_STENCIL_VIEW_DESC* に nullptr を指定できる
+	Device->CreateDepthStencilView(DepthStencil.Get(), nullptr, DepthStencilViewHandle);
 
 #ifdef _DEBUG
-	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
+	std::cout << "\t" << "DepthStencilView" << std::endl;
 #endif
 }
 
@@ -671,10 +727,7 @@ void DX::PopulateCommandList()
 	//!< コマンドキューはコマンドリストではなく、コマンドアロケータを参照している
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator.Get(), PipelineState.Get()));
 	{
-		CommandList->SetGraphicsRootSignature(RootSignature.Get());
-
-		CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+		//CommandList->SetGraphicsRootSignature(RootSignature.Get());
 
 		BarrierRender();
 		{
@@ -698,12 +751,15 @@ void DX::PopulateCommandList()
 			//	} ConstantBuffer->Unmap(0, nullptr); //!< サンプルには アプリが終了するまで Unmap しない、リソースはマップされたままでOKと書いてあるが...よく分からない
 			//}
 
-			CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			//CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-			CommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
-			CommandList->IASetIndexBuffer(&IndexBufferView);
+			//CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+			//CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
-			CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
+			//CommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
+			//CommandList->IASetIndexBuffer(&IndexBufferView);
+
+			//CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
 		}
 		BarrierPresent();
 	}
@@ -723,7 +779,7 @@ void DX::ExecuteCommandList()
 }
 void DX::Present()
 {
-	VERIFY_SUCCEEDED(SwapChain3->Present(0, 0));
+	VERIFY_SUCCEEDED(SwapChain->Present(0, 0));
 	CurrentBackBufferIndex = ++CurrentBackBufferIndex % static_cast<UINT>(RenderTargets.size());
 #ifdef _DEBUG
 	std::cout << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;

@@ -53,8 +53,14 @@ protected:
 	virtual void CreateCommandBuffer();
 
 	virtual void CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice, const VkFormat ColorFormat);
+	virtual uint32_t GetSwapchainImage();
+	virtual void CreateSwapchainImageView(const VkFormat ColorFormat, const uint32_t SwapchainImageCount);
+
 	virtual void CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkFormat DepthFormat);
-	
+	virtual void CreateDepthStencilImage(const VkFormat DepthFormat);
+	virtual void CreateDepthStencilDeviceMemory(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
+	virtual void CreateDepthStencilView(const VkFormat DepthFormat);
+
 	virtual void CreateShader();
 	virtual void CreateDescriptorSetLayout();
 	virtual void CreatePipelineLayout();

@@ -38,10 +38,17 @@ public:
 	virtual ~Win();
 
 	//virtual void OnInitialize(HWND hWnd, HINSTANCE hInstance) {}
-
+#if 1
+	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance) { GetClientRect(hWnd, &Rect); SetTimer(hWnd, NULL, 5000, nullptr); }
+#else
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance) { GetClientRect(hWnd, &Rect); SetTimer(hWnd, NULL, 1000 / 60, nullptr); }
+#endif
 	virtual void OnSize(HWND hWnd, HINSTANCE hInstance) {}
-	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) { /*SendMessage(hWnd, WM_PAINT, 0, 0);*/ }
+#if 0
+	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) {}
+#else
+	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) { SendMessage(hWnd, WM_PAINT, 0, 0); }
+#endif
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) {}
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) {}
 
@@ -54,6 +61,7 @@ public:
 
 protected:
 	RECT Rect;
+	double SecondsPerCount = 0.0;
 
 private:
 	FILE* StdOut;

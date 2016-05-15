@@ -15,6 +15,9 @@ VK::~VK()
 
 void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 {
+	__int64 A;
+	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&A));
+
 	Super::OnCreate(hWnd, hInstance);
 
 	CreateInstance();
@@ -22,11 +25,19 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	
 	CreateCommandBuffer();
 	const auto ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
+#ifdef _DEBUG
+	std::cout << "\t" << Yellow << "B8G8R8A8_UNORM" << White << std::endl;
+#endif
 	CreateSwapchain(hWnd, hInstance, PhysicalDevice, ColorFormat);
 
 	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
 	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);	
 	const auto DepthFormat = GetSupportedDepthFormat(PhysicalDevice);
+#ifdef _DEBUG
+	if (VK_FORMAT_D32_SFLOAT_S8_UINT == DepthFormat) {
+		std::cout << "\t" << Yellow << "D32_SFLOAT_S8_UINT" << White << std::endl;
+	}
+#endif
 	CreateDepthStencil(PhysicalDeviceMemoryProperties, DepthFormat);
 
 	CreateShader();
@@ -55,7 +66,11 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	//FlushSetupCommandBuffer();
 	//CreateSetupCommandBuffer();
 	
-	PopulateCommandBuffer();
+	//PopulateCommandBuffer();
+
+	__int64 B;
+	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&B));
+	std::cout << "It takes : " << (B - A) * SecondsPerCount << " sec" << std::endl;
 }
 void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 {
@@ -557,43 +572,9 @@ void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice Physic
 		vkDestroySurfaceKHR(Instance, Surface, nullptr);
 	}
 
-#pragma region SwapchainImage
-	uint32_t SwapchainImageCount;
-	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &SwapchainImageCount, nullptr));
-	assert(SwapchainImageCount);
-	SwapchainImages.resize(SwapchainImageCount);
-	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &SwapchainImageCount, SwapchainImages.data()));
-#ifdef _DEBUG
-	for (const auto& i : SwapchainImages) {
-		std::cout << "\t" << "SwapchainImage" << std::endl;
-	}
-#endif
-#pragma endregion
+	const auto SwapchainImageCount = GetSwapchainImage();
 
-#pragma region SwapchainImageView
-	SwapchainImageViews.resize(SwapchainImageCount);
-	for (uint32_t i = 0; i < SwapchainImageCount; ++i) {
-		SetImageLayout(/*SetupCommandBuffer*/CommandBuffers[0], SwapchainImages[i], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-		const VkImageViewCreateInfo ImageViewCreateInfo = {
-			VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-			nullptr,
-			0,
-			SwapchainImages[i],
-			VK_IMAGE_VIEW_TYPE_2D,
-			ColorFormat,
-			{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
-			{
-				VK_IMAGE_ASPECT_COLOR_BIT,
-				0, 1,
-				0, 1
-			}
-		};
-		VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, &SwapchainImageViews[i]));
-#ifdef _DEBUG
-		std::cout << "\t" << "SwapchainImageView" << std::endl;
-#endif
-	}
-#pragma endregion
+	CreateSwapchainImageView(ColorFormat, SwapchainImageCount);
 
 #pragma region SwapchainImageIndex
 	const VkSemaphoreCreateInfo SemaphoreCreateInfo = {
@@ -613,10 +594,60 @@ void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice Physic
 	std::cout << "CreateSwapchain" << COUT_OK << std::endl << std::endl;
 #endif
 }
+uint32_t VK::GetSwapchainImage()
+{
+	uint32_t SwapchainImageCount;
+	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &SwapchainImageCount, nullptr));
+	assert(SwapchainImageCount);
+	SwapchainImages.resize(SwapchainImageCount);
+	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &SwapchainImageCount, SwapchainImages.data()));
+
+#ifdef _DEBUG
+	for (const auto& i : SwapchainImages) {
+		std::cout << "\t" << "SwapchainImage" << std::endl;
+	}
+#endif
+	return SwapchainImageCount;
+}
+void VK::CreateSwapchainImageView(const VkFormat ColorFormat, const uint32_t SwapchainImageCount)
+{
+	SwapchainImageViews.resize(SwapchainImageCount);
+	for (uint32_t i = 0; i < SwapchainImageCount; ++i) {
+		SetImageLayout(/*SetupCommandBuffer*/CommandBuffers[0], SwapchainImages[i], VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		const VkImageViewCreateInfo ImageViewCreateInfo = {
+			VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+			nullptr,
+			0,
+			SwapchainImages[i],
+			VK_IMAGE_VIEW_TYPE_2D,
+			ColorFormat,
+			{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
+			{
+				VK_IMAGE_ASPECT_COLOR_BIT,
+				0, 1,
+				0, 1
+			}
+		};
+		VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, &SwapchainImageViews[i]));
+
+#ifdef _DEBUG
+		std::cout << "\t" << "SwapchainImageView" << std::endl;
+#endif
+	}
+}
 
 void VK::CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkFormat DepthFormat)
 {
-#pragma region DepthStencilImage
+	CreateDepthStencilImage(DepthFormat);
+	CreateDepthStencilDeviceMemory(PhysicalDeviceMemoryProperties);
+	CreateDepthStencilView(DepthFormat);
+
+#ifdef _DEBUG
+	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
+#endif
+}
+void VK::CreateDepthStencilImage(const VkFormat DepthFormat)
+{
 	const VkImageCreateInfo ImageCreateInfo = {
 		VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		nullptr,
@@ -634,12 +665,13 @@ void VK::CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDevi
 		VK_IMAGE_LAYOUT_UNDEFINED
 	};
 	VERIFY_SUCCEEDED(vkCreateImage(Device, &ImageCreateInfo, nullptr, &DepthStencilImage));
+
 #ifdef _DEBUG
 	std::cout << "\t" << "DepthStencilImage" << std::endl;
 #endif
-#pragma endregion
-
-#pragma region DepthStencilDeviceMemory
+}
+void VK::CreateDepthStencilDeviceMemory(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
+{
 	VkMemoryRequirements MemoryRequirements;
 	vkGetImageMemoryRequirements(Device, DepthStencilImage, &MemoryRequirements);
 	const auto MemoryTypeIndex = GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -651,9 +683,13 @@ void VK::CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDevi
 	};
 	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &DepthStencilDeviceMemory));
 	VERIFY_SUCCEEDED(vkBindImageMemory(Device, DepthStencilImage, DepthStencilDeviceMemory, 0));
-#pragma endregion
 
-#pragma region DepthStencilImageView
+#ifdef _DEBUG
+	std::cout << "\t" << "DepthStencilDeviceMemory" << std::endl;
+#endif
+}
+void VK::CreateDepthStencilView(const VkFormat DepthFormat)
+{
 	SetImageLayout(/*SetupCommandBuffer*/CommandBuffers[0], DepthStencilImage, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 	const VkImageViewCreateInfo ImageViewCreateInfo = {
 		VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -670,13 +706,9 @@ void VK::CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDevi
 		}
 	};
 	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, &DepthStencilImageView));
-#ifdef _DEBUG
-	std::cout << "\t" << "DepthStencilImageView" << std::endl;
-#endif
-#pragma endregion
 
 #ifdef _DEBUG
-	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
+	std::cout << "\t" << "DepthStencilImageView" << std::endl;
 #endif
 }
 
@@ -861,7 +893,7 @@ void VK::CreatePipeline()
 		VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
 		nullptr,
 		0,
-		VK_SAMPLE_COUNT_1_BIT,
+		VK_SAMPLE_COUNT_1_BIT/*VK_SAMPLE_COUNT_4_BIT*/,
 		VK_FALSE, 0.0f,
 		nullptr,
 		VK_FALSE, VK_FALSE
@@ -1511,9 +1543,6 @@ void VK::PopulateCommandBuffer()
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo));
 	{
-		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
-
 		BarrierRender();
 		{
 			Clear();
@@ -1538,6 +1567,9 @@ void VK::PopulateCommandBuffer()
 	
 			//!< トポロジは Pipeline にある
 			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+			//!< Pipeline でビューポートとシザーは設定しているが↓は必要？
+			//vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+			//vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 			const VkDeviceSize Offsets[] = { 0 };
 			vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
