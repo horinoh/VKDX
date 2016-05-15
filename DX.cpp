@@ -100,7 +100,43 @@ void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
 #endif
 
 	ComPtr<IDXGIFactory4> Factory;
-	VERIFY_SUCCEEDED(CreateDXGIFactory(IID_PPV_ARGS(Factory.GetAddressOf()))); 
+	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.GetAddressOf())));
+#ifdef _DEBUG
+	EnumAdapter(Factory.Get());
+#endif
+
+#if 1
+	ComPtr<IDXGIAdapter> Adapter;
+	//!< ディスクリートGPU が最後に列挙されるので
+	//!< Because discrete GPU is enumerated last in my environment
+	auto GetLastIndexOfHardwareAdapter = [&]() {
+		UINT Index = UINT_MAX;
+		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, Adapter.ReleaseAndGetAddressOf()); ++i) {
+			DXGI_ADAPTER_DESC AdapterDesc;
+			VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
+			if (AdapterDesc.DedicatedVideoMemory) {
+				Index = i;
+			}
+		}
+		assert(UINT_MAX != Index);
+		return Index;
+	};
+	Factory->EnumAdapters(GetLastIndexOfHardwareAdapter(), Adapter.ReleaseAndGetAddressOf());
+#ifdef _DEBUG
+	DXGI_ADAPTER_DESC AdapterDesc;
+	VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
+	std::cout << Red; std::wcout << "\t" << AdapterDesc.Description; std::cout << White << " is selected" << std::endl;
+#endif
+	if (!SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(Device.GetAddressOf())))) {
+#ifdef _DEBUG
+		std::cout << "\t" << Red << "Cannot create device, trying WarpDevice ..." << White << std::endl;
+#endif
+		VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(IID_PPV_ARGS(Adapter.GetAddressOf())));
+		VERIFY_SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(Device.GetAddressOf())));
+	}
+
+#else
+
 	ComPtr<IDXGIAdapter1> Adapter;
 #ifdef _DEBUG
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters1(i, Adapter.ReleaseAndGetAddressOf()); ++i) {
@@ -122,6 +158,7 @@ void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
 			std::vector<DXGI_MODE_DESC> ModeDescs(NumModes);
 			VERIFY_SUCCEEDED(Output->GetDisplayModeList(ColorFormat, 0, &NumModes, ModeDescs.data()));
 #if 1
+			//!< モードが多いので出力を端折る
 			auto ModeIndex = 0;
 			for (const auto& k : ModeDescs) {
 				if (ModeIndex < 1 || ModeIndex > ModeDescs.size() - 2) {
@@ -195,10 +232,60 @@ void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
 	std::cout << Red << "\t" << "\t" << "D3D_FEATURE_LEVEL_12_1" << White << " is supported" << std::endl;
 #endif
 
+#endif
+
 #ifdef _DEBUG
 	std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
 #endif
 }
+void DX::EnumAdapter(IDXGIFactory4* Factory)
+{
+	using namespace Microsoft::WRL;
+	
+	ComPtr<IDXGIAdapter> Adapter;
+	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, Adapter.ReleaseAndGetAddressOf()); ++i) {
+		DXGI_ADAPTER_DESC AdapterDesc;
+		VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
+#ifdef _DEBUG
+		std::wcout << "\t" << AdapterDesc.Description << std::endl;
+		std::cout << "\t" << "\t" << "DedicatedVideoMemory = " << AdapterDesc.DedicatedVideoMemory << std::endl;
+#endif
+
+		EnumOutput(Adapter.Get());
+	}
+}
+void DX::EnumOutput(IDXGIAdapter* Adapter)
+{
+	using namespace Microsoft::WRL;
+
+	ComPtr<IDXGIOutput> Output;
+	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Adapter->EnumOutputs(i, Output.ReleaseAndGetAddressOf()); ++i) {
+		DXGI_OUTPUT_DESC OutputDesc;
+		VERIFY_SUCCEEDED(Output->GetDesc(&OutputDesc));
+#ifdef _DEBUG
+		const auto Width = OutputDesc.DesktopCoordinates.right - OutputDesc.DesktopCoordinates.left;
+		const auto Height = OutputDesc.DesktopCoordinates.bottom - OutputDesc.DesktopCoordinates.top;
+		std::wcout << "\t" << "\t" << "\t" << OutputDesc.DeviceName << " = " << Width << " x " << Height << std::endl;
+#endif
+
+		GetDisplayModeList(Output.Get(), DXGI_FORMAT_R8G8B8A8_UNORM);
+	}
+}
+void DX::GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format)
+{
+	UINT NumModes;
+	VERIFY_SUCCEEDED(Output->GetDisplayModeList(Format, 0, &NumModes, nullptr));
+	if (NumModes) {
+		std::vector<DXGI_MODE_DESC> ModeDescs(NumModes);
+		VERIFY_SUCCEEDED(Output->GetDisplayModeList(Format, 0, &NumModes, ModeDescs.data()));
+#ifdef _DEBUG
+		for (const auto& i : ModeDescs) {
+			std::wcout << "\t" << "\t" << "\t" << "\t" << i.Width << " x " << i.Height << " @ " << i.RefreshRate.Numerator / i.RefreshRate.Denominator << std::endl;
+		}
+#endif
+	}
+}
+
 void DX::CreateCommandQueue()
 {
 	const D3D12_COMMAND_QUEUE_DESC CommandQueueDesc = {
@@ -232,7 +319,28 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Bu
 	ComPtr<IDXGIFactory4> Factory;
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.GetAddressOf())));
 
-#pragma region SwapChain
+#if 1
+	const DXGI_RATIONAL Rational = { 60, 1 };
+	const DXGI_MODE_DESC ModeDesc = {
+		static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
+		Rational,
+		ColorFormat,
+		DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
+		DXGI_MODE_SCALING_UNSPECIFIED
+	}; 
+	const DXGI_SAMPLE_DESC SampleDesc = { 1/*4*/, 0 };
+	DXGI_SWAP_CHAIN_DESC SwapChainDesc = {
+		ModeDesc,
+		SampleDesc,
+		DXGI_USAGE_RENDER_TARGET_OUTPUT,
+		BufferCount,
+		hWnd,
+		TRUE,
+		DXGI_SWAP_EFFECT_FLIP_DISCARD,
+		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
+	};
+	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.Get(), &SwapChainDesc, SwapChain.GetAddressOf()));
+#else
 	const DXGI_SAMPLE_DESC SampleDesc = { 1/*4*/, 0 };
 	const DXGI_SWAP_CHAIN_DESC1 SwapChainDesc = {
 		static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
@@ -244,21 +352,30 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Bu
 		DXGI_SCALING_STRETCH,
 		DXGI_SWAP_EFFECT_FLIP_DISCARD,
 		DXGI_ALPHA_MODE_UNSPECIFIED,
-		0
+		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
 	};
-
 	ComPtr<IDXGISwapChain1> SwapChain1;
 	VERIFY_SUCCEEDED(Factory->CreateSwapChainForHwnd(CommandQueue.Get(), hWnd, &SwapChainDesc, nullptr, nullptr, SwapChain1.GetAddressOf()));
 	VERIFY_SUCCEEDED(Factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER));
 	VERIFY_SUCCEEDED(SwapChain1.As(&SwapChain));
-	CurrentBackBufferIndex = SwapChain->GetCurrentBackBufferIndex();
+#endif
 #ifdef _DEBUG
 	std::cout << "\t" << "SwapChain" << std::endl;
+#endif
+
+	CurrentBackBufferIndex = 0;// SwapChain->GetCurrentBackBufferIndex();
+#ifdef _DEBUG
 	std::cout << "\t" << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;
 #endif
-#pragma endregion
 
-#pragma region SwapChainView
+	CreateSwapChainView(BufferCount);
+
+#ifdef _DEBUG
+	std::cout << "CreateSwapChain" << COUT_OK << std::endl << std::endl;
+#endif
+}
+void DX::CreateSwapChainView(const UINT BufferCount)
+{
 	const D3D12_DESCRIPTOR_HEAP_DESC DescripterHeapDesc = {
 		D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
 		BufferCount,
@@ -279,12 +396,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Bu
 #endif
 	}
 #ifdef _DEBUG
-	std::cout << "\t" << "RenderTargetView" << std::endl;
-#endif
-#pragma endregion
-
-#ifdef _DEBUG
-	std::cout << "CreateSwapChain" << COUT_OK << std::endl << std::endl;
+	std::cout << "\t" << "SwapChainView" << std::endl;
 #endif
 }
 
@@ -774,16 +886,24 @@ void DX::Draw()
 }
 void DX::ExecuteCommandList()
 {
-	ID3D12CommandList* CommandLists[] = { CommandList.Get() };
-	CommandQueue->ExecuteCommandLists(_countof(CommandLists), CommandLists);
+	std::vector<ID3D12CommandList*> CommandLists = { CommandList.Get() };
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
 }
 void DX::Present()
 {
-	VERIFY_SUCCEEDED(SwapChain->Present(0, 0));
-	CurrentBackBufferIndex = ++CurrentBackBufferIndex % static_cast<UINT>(RenderTargets.size());
+	//SwapChain->Present(0, 0);
+	//VERIFY_SUCCEEDED(SwapChain->Present(0, 0));
+	const auto HR = SwapChain->Present(0, 0);
+	if (0x887a0005 == HR) {
+		const auto HR1 = Device->GetDeviceRemovedReason();
+		VERIFY_SUCCEEDED(HR1);
+	}
+	VERIFY_SUCCEEDED(HR);
+
 #ifdef _DEBUG
 	std::cout << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;
 #endif
+	CurrentBackBufferIndex = ++CurrentBackBufferIndex % static_cast<UINT>(RenderTargets.size());
 }
 void DX::WaitForFence()
 {

@@ -31,11 +31,15 @@ public:
 
 protected:
 	virtual void CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat);
+	virtual void EnumAdapter(IDXGIFactory4* Factory);
+	virtual void EnumOutput(IDXGIAdapter* Adapter);
+	virtual void GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format);
 	virtual void CreateCommandQueue();
 
 	virtual void CreateCommandList();
 
 	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT BufferCount = 2);
+	virtual void CreateSwapChainView(const UINT BufferCount);
 
 	virtual void CreateDepthStencil(const DXGI_FORMAT TyplessDepthFormat, const DXGI_FORMAT TypedDepthFormat);
 	virtual void CreateDepthStencil(const DXGI_FORMAT TypedDepthFormat) { CreateDepthStencil(TypedDepthFormat, TypedDepthFormat); }
@@ -77,7 +81,8 @@ protected:
 #pragma endregion
 
 #pragma region SwapChain
-	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain;
+	//Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain;
+	Microsoft::WRL::ComPtr<IDXGISwapChain> SwapChain;
 	UINT CurrentBackBufferIndex;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> RenderTargetViewHeap;
 	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> RenderTargets;

@@ -39,12 +39,12 @@ public:
 
 	//virtual void OnInitialize(HWND hWnd, HINSTANCE hInstance) {}
 #if 1
-	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance) { GetClientRect(hWnd, &Rect); SetTimer(hWnd, NULL, 5000, nullptr); }
-#else
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance) { GetClientRect(hWnd, &Rect); SetTimer(hWnd, NULL, 1000 / 60, nullptr); }
+#else
+	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance) { GetClientRect(hWnd, &Rect); SetTimer(hWnd, NULL, 5000, nullptr); }
 #endif
 	virtual void OnSize(HWND hWnd, HINSTANCE hInstance) {}
-#if 0
+#if 1
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) {}
 #else
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) { SendMessage(hWnd, WM_PAINT, 0, 0); }
