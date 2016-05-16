@@ -31,34 +31,23 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateSwapChain(hWnd, ColorFormat);
 #if 1
-	//!< DepthFormat が具体的なフォーマットの場合は、ビューのフォーマットは指定しなくて良い
-	const auto TypedDepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-#ifdef _DEBUG
-	std::cout << "\t" << Yellow << "D32_FLOAT_S8X24_UINT" << White << std::endl;
-#endif
-	CreateDepthStencil(TypedDepthFormat);
+	CreateDepthStencil(DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
 #else
 	//!< DepthFormat が TYPELESS の場合は、ビュー作成の為に具体的なフォーマットも指定する
-	const auto TypelessDepthFormat = DXGI_FORMAT_R32G8X24_TYPELESS;
-	const auto TypedDepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
-#ifdef _DEBUG
-	std::cout << "\t" << Yellow << "R32G8X24_TYPELESS" << White << std::endl;
-	std::cout << "\t" << Yellow << "D32_FLOAT_S8X24_UINT" << White << std::endl;
-#endif
-	CreateDepthStencil(TypelessDepthFormat, TypedDepthFormat);
+	//CreateDepthStencil(DXGI_FORMAT_R32G8X24_TYPELESS, DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
 #endif
 
-	CreateShader();
+	//CreateShader();
 
-	CreateRootSignature();
+	//CreateRootSignature();
 
-	CreateInputLayout();
-	CreateViewport();
-	CreatePipelineState();
+	//CreateInputLayout();
+	//CreateViewport();
+	//CreatePipelineState();
 
-	CreateVertexBuffer();
-	CreateIndexBuffer();
-	CreateConstantBuffer();
+	//CreateVertexBuffer();
+	//CreateIndexBuffer();
+	//CreateConstantBuffer();
 
 	CreateFence();
 
@@ -105,10 +94,8 @@ void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
 	EnumAdapter(Factory.Get());
 #endif
 
-#if 1
+#pragma region SelectAdapter
 	ComPtr<IDXGIAdapter> Adapter;
-	//!< ディスクリートGPU が最後に列挙されるので
-	//!< Because discrete GPU is enumerated last in my environment
 	auto GetLastIndexOfHardwareAdapter = [&]() {
 		UINT Index = UINT_MAX;
 		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, Adapter.ReleaseAndGetAddressOf()); ++i) {
@@ -127,112 +114,16 @@ void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
 	VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
 	std::cout << Red; std::wcout << "\t" << AdapterDesc.Description; std::cout << White << " is selected" << std::endl;
 #endif
-	if (!SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(Device.GetAddressOf())))) {
+#pragma endregion
+
+	if (FAILED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(Device.GetAddressOf())))) {
+	//if (FAILED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(Device.GetAddressOf())))) {
 #ifdef _DEBUG
 		std::cout << "\t" << Red << "Cannot create device, trying WarpDevice ..." << White << std::endl;
 #endif
 		VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(IID_PPV_ARGS(Adapter.GetAddressOf())));
 		VERIFY_SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(Device.GetAddressOf())));
 	}
-
-#else
-
-	ComPtr<IDXGIAdapter1> Adapter;
-#ifdef _DEBUG
-	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters1(i, Adapter.ReleaseAndGetAddressOf()); ++i) {
-		DXGI_ADAPTER_DESC1 AdapterDesc;
-		VERIFY_SUCCEEDED(Adapter->GetDesc1(&AdapterDesc));
-		std::wcout << "\t" << AdapterDesc.Description << std::endl;
-		ComPtr<IDXGIOutput> Output;
-		for (UINT j = 0; DXGI_ERROR_NOT_FOUND != Adapter->EnumOutputs(j, Output.ReleaseAndGetAddressOf()); ++j) {
-			DXGI_OUTPUT_DESC OutputDesc;
-			VERIFY_SUCCEEDED(Output->GetDesc(&OutputDesc));
-			const auto Width = OutputDesc.DesktopCoordinates.right - OutputDesc.DesktopCoordinates.left;
-			const auto Height = OutputDesc.DesktopCoordinates.bottom - OutputDesc.DesktopCoordinates.top;
-			std::cout << Blue;
-			std::wcout << "\t" << "\t" << OutputDesc.DeviceName << " = " << Width << " x " << Height << std::endl;
-			std::cout << White;
-
-			UINT NumModes;
-			VERIFY_SUCCEEDED(Output->GetDisplayModeList(ColorFormat, 0, &NumModes, nullptr));
-			std::vector<DXGI_MODE_DESC> ModeDescs(NumModes);
-			VERIFY_SUCCEEDED(Output->GetDisplayModeList(ColorFormat, 0, &NumModes, ModeDescs.data()));
-#if 1
-			//!< モードが多いので出力を端折る
-			auto ModeIndex = 0;
-			for (const auto& k : ModeDescs) {
-				if (ModeIndex < 1 || ModeIndex > ModeDescs.size() - 2) {
-					std::wcout << "\t" << "\t" << "\t" << k.Width << " x " << k.Height << " @ " << k.RefreshRate.Numerator / k.RefreshRate.Denominator << std::endl;
-				}
-				else if (2 == ModeIndex) {
-					std::cout << "\t" << "\t" << "\t" << "..." << std::endl;
-				}
-				++ModeIndex;
-			}
-#else
-			for (const auto& k : ModeDescs) {
-				std::wcout << "\t" << "\t" << "\t" << k.Width << " x " << k.Height << " @ " << k.RefreshRate.Numerator / k.RefreshRate.Denominator << std::endl;
-			}
-#endif
-		}
-	}
-#endif
-	//!< ディスクリートGPU が最後に列挙されるので
-	//!< Because discrete GPU is enumerated last in my environment
-	auto GetLastIndexOfHardwareAdapter = [&]() {
-		UINT Index = UINT_MAX;
-		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters1(i, Adapter.ReleaseAndGetAddressOf()); ++i) {
-			DXGI_ADAPTER_DESC1 AdapterDesc;
-			VERIFY_SUCCEEDED(Adapter->GetDesc1(&AdapterDesc));
-			if (!(DXGI_ADAPTER_FLAG_SOFTWARE & AdapterDesc.Flags)) {
-				Index = i;
-			}
-		}
-		assert(UINT_MAX != Index);
-		return Index;
-	};
-	Factory->EnumAdapters1(GetLastIndexOfHardwareAdapter(), Adapter.ReleaseAndGetAddressOf());
-#ifdef _DEBUG
-	DXGI_ADAPTER_DESC1 AdapterDesc;
-	VERIFY_SUCCEEDED(Adapter->GetDesc1(&AdapterDesc));
-	std::cout << Red; std::wcout << "\t" << AdapterDesc.Description; std::cout << White << " is selected" << std::endl;
-#endif
-	if (!SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(Device.GetAddressOf())))) {
-#ifdef _DEBUG
-		std::cout << "\t" << Red << "Cannot create device, trying WarpDevice ..." << White << std::endl;
-#endif
-		VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(IID_PPV_ARGS(Adapter.GetAddressOf())));
-		VERIFY_SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(Device.GetAddressOf())));
-	}
-
-#ifdef _DEBUG
-	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS DataMultisampleQualityLevels = {
-		ColorFormat,
-		1/*4*/,
-		D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE,
-		0
-	};
-	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, &DataMultisampleQualityLevels, sizeof(DataMultisampleQualityLevels)));
-	std::cout << "\t" << "\t" << "SampleCount = " << DataMultisampleQualityLevels.SampleCount << ", ";
-	std::cout << "QualityLevel = 0 - " << DataMultisampleQualityLevels.NumQualityLevels - 1 << std::endl;
-
-	const std::vector<D3D_FEATURE_LEVEL> FeatureLevels = {
-		D3D_FEATURE_LEVEL_9_1, D3D_FEATURE_LEVEL_9_2, D3D_FEATURE_LEVEL_9_3,
-		D3D_FEATURE_LEVEL_10_0, D3D_FEATURE_LEVEL_10_1,
-		D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_11_1,
-		D3D_FEATURE_LEVEL_12_0, D3D_FEATURE_LEVEL_12_1
-	};
-	D3D12_FEATURE_DATA_FEATURE_LEVELS DataFeatureLevels = {
-		static_cast<UINT>(FeatureLevels.size()),
-		FeatureLevels.data(),
-		D3D_FEATURE_LEVEL_9_1
-	};
-	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &DataFeatureLevels, sizeof(DataFeatureLevels)));
-	assert(D3D_FEATURE_LEVEL_12_1 <= DataFeatureLevels.MaxSupportedFeatureLevel && "Feature level not satisfied");
-	std::cout << Red << "\t" << "\t" << "D3D_FEATURE_LEVEL_12_1" << White << " is supported" << std::endl;
-#endif
-
-#endif
 
 #ifdef _DEBUG
 	std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
@@ -319,7 +210,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Bu
 	ComPtr<IDXGIFactory4> Factory;
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.GetAddressOf())));
 
-#if 1
+#if 0
 	const DXGI_RATIONAL Rational = { 60, 1 };
 	const DXGI_MODE_DESC ModeDesc = {
 		static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
@@ -339,7 +230,9 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Bu
 		DXGI_SWAP_EFFECT_FLIP_DISCARD,
 		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
 	};
-	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.Get(), &SwapChainDesc, SwapChain.GetAddressOf()));
+	Microsoft::WRL::ComPtr<IDXGISwapChain> SC;
+	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.Get(), &SwapChainDesc, SC.GetAddressOf()));
+	VERIFY_SUCCEEDED(SC.As(&SwapChain));
 #else
 	const DXGI_SAMPLE_DESC SampleDesc = { 1/*4*/, 0 };
 	const DXGI_SWAP_CHAIN_DESC1 SwapChainDesc = {
@@ -362,8 +255,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Bu
 #ifdef _DEBUG
 	std::cout << "\t" << "SwapChain" << std::endl;
 #endif
-
-	CurrentBackBufferIndex = 0;// SwapChain->GetCurrentBackBufferIndex();
+	CurrentBackBufferIndex = SwapChain->GetCurrentBackBufferIndex();
 #ifdef _DEBUG
 	std::cout << "\t" << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;
 #endif
@@ -841,39 +733,39 @@ void DX::PopulateCommandList()
 	{
 		//CommandList->SetGraphicsRootSignature(RootSignature.Get());
 
-		BarrierRender();
-		{
-			Clear();
+		//BarrierRender();
+		//{
+		//	Clear();
 
-			//!< レンダーターゲット(フレームバッファ)
-			auto RenderTargetViewHandle(RenderTargetViewHeap->GetCPUDescriptorHandleForHeapStart());
-			RenderTargetViewHandle.ptr += CurrentBackBufferIndex * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-			auto DepthStencilViewHandle(DepthStencilViewHeap->GetCPUDescriptorHandleForHeapStart());
-			DepthStencilViewHandle.ptr += 0 * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-			CommandList->OMSetRenderTargets(1, &RenderTargetViewHandle, FALSE, &DepthStencilViewHandle);
+		//	//!< レンダーターゲット(フレームバッファ)
+		//	auto RenderTargetViewHandle(RenderTargetViewHeap->GetCPUDescriptorHandleForHeapStart());
+		//	RenderTargetViewHandle.ptr += CurrentBackBufferIndex * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		//	auto DepthStencilViewHandle(DepthStencilViewHeap->GetCPUDescriptorHandleForHeapStart());
+		//	DepthStencilViewHandle.ptr += 0 * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		//	CommandList->OMSetRenderTargets(1, &RenderTargetViewHandle, FALSE, &DepthStencilViewHandle);
 
-			//{
-			//	using namespace DirectX;
-			//	const std::vector<XMMATRIX> WVP = { XMMatrixIdentity(), XMMatrixIdentity(), XMMatrixIdentity() };
+		//	//{
+		//	//	using namespace DirectX;
+		//	//	const std::vector<XMMATRIX> WVP = { XMMatrixIdentity(), XMMatrixIdentity(), XMMatrixIdentity() };
 
-			//	UINT8* Data;
-			//	D3D12_RANGE Range = { 0, 0 };
-			//	VERIFY_SUCCEEDED(ConstantBuffer->Map(0, &Range, reinterpret_cast<void**>(&Data))); {
-			//		memcpy(Data, &WVP, sizeof(WVP));
-			//	} ConstantBuffer->Unmap(0, nullptr); //!< サンプルには アプリが終了するまで Unmap しない、リソースはマップされたままでOKと書いてあるが...よく分からない
-			//}
+		//	//	UINT8* Data;
+		//	//	D3D12_RANGE Range = { 0, 0 };
+		//	//	VERIFY_SUCCEEDED(ConstantBuffer->Map(0, &Range, reinterpret_cast<void**>(&Data))); {
+		//	//		memcpy(Data, &WVP, sizeof(WVP));
+		//	//	} ConstantBuffer->Unmap(0, nullptr); //!< サンプルには アプリが終了するまで Unmap しない、リソースはマップされたままでOKと書いてあるが...よく分からない
+		//	//}
 
-			//CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		//	//CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-			//CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-			//CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+		//	//CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+		//	//CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
-			//CommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
-			//CommandList->IASetIndexBuffer(&IndexBufferView);
+		//	//CommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
+		//	//CommandList->IASetIndexBuffer(&IndexBufferView);
 
-			//CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
-		}
-		BarrierPresent();
+		//	//CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
+		//}
+		//BarrierPresent();
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 }
@@ -891,17 +783,17 @@ void DX::ExecuteCommandList()
 }
 void DX::Present()
 {
-	//SwapChain->Present(0, 0);
-	//VERIFY_SUCCEEDED(SwapChain->Present(0, 0));
-	const auto HR = SwapChain->Present(0, 0);
-	if (0x887a0005 == HR) {
-		const auto HR1 = Device->GetDeviceRemovedReason();
-		VERIFY_SUCCEEDED(HR1);
-	}
-	VERIFY_SUCCEEDED(HR);
+	VERIFY_SUCCEEDED(SwapChain->Present(1, 0));
+	//const auto HR = SwapChain->Present(1, 0);
+	//if (0x887a0005 == HR) {
+	//	const auto HR1 = Device->GetDeviceRemovedReason();
+	//	VERIFY_SUCCEEDED(HR1);
+	//}
+	//VERIFY_SUCCEEDED(HR);
 
 #ifdef _DEBUG
-	std::cout << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;
+	//	std::cout << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;
+	std::cout << CurrentBackBufferIndex;
 #endif
 	CurrentBackBufferIndex = ++CurrentBackBufferIndex % static_cast<UINT>(RenderTargets.size());
 }

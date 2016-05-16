@@ -81,8 +81,8 @@ protected:
 #pragma endregion
 
 #pragma region SwapChain
-	//Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain;
-	Microsoft::WRL::ComPtr<IDXGISwapChain> SwapChain;
+	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain;
+	//Microsoft::WRL::ComPtr<IDXGISwapChain> SwapChain;
 	UINT CurrentBackBufferIndex;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> RenderTargetViewHeap;
 	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> RenderTargets;

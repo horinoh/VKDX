@@ -40,33 +40,27 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 #endif
 	CreateDepthStencil(PhysicalDeviceMemoryProperties, DepthFormat);
 
-	CreateShader();
+	//CreateShader();
 
-	CreateDescriptorSetLayout();
-	CreatePipelineLayout();
+	//CreateDescriptorSetLayout();
+	//CreatePipelineLayout();
 
-	CreateDescriptorSet();
+	//CreateDescriptorSet();
 
-	CreateVertexInput();
-	CreateViewport();
-	CreatePipeline();
+	//CreateVertexInput();
+	//CreateViewport();
+	//CreatePipeline();
 
-	CreateVertexBuffer(PhysicalDeviceMemoryProperties);
-	CreateIndexBuffer(PhysicalDeviceMemoryProperties);
-	CreateUniformBuffer(PhysicalDeviceMemoryProperties);
+	//CreateVertexBuffer(PhysicalDeviceMemoryProperties);
+	//CreateIndexBuffer(PhysicalDeviceMemoryProperties);
+	//CreateUniformBuffer(PhysicalDeviceMemoryProperties);
 
-	CreateFramebuffers();
-	CreateRenderPass(ColorFormat, DepthFormat);
+	//CreateFramebuffers();
+	//CreateRenderPass(ColorFormat, DepthFormat);
 	
 	CreateFence();
 
-	//CreateSemaphore();
-
-	//CreateSetupCommandBuffer();
-	//FlushSetupCommandBuffer();
-	//CreateSetupCommandBuffer();
-	
-	//PopulateCommandBuffer();
+	PopulateCommandBuffer();
 
 	__int64 B;
 	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&B));
@@ -1284,41 +1278,6 @@ void VK::CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDev
 #endif
 }
 
-//void VK::CreateSemaphore()
-//{
-//	const VkSemaphoreCreateInfo SemaphoreCreateInfo = {
-//		VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-//		nullptr,
-//		0
-//	};
-//	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &PresentSemaphore));
-//	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
-//}
-//void VK::CreateSetupCommandBuffer()
-//{
-//	if (SetupCommandBuffer != VK_NULL_HANDLE) {
-//		vkFreeCommandBuffers(Device, CommandPool, 1, &SetupCommandBuffer);
-//		SetupCommandBuffer = VK_NULL_HANDLE;
-//	}
-//
-//	const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
-//		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-//		nullptr,
-//		CommandPool,
-//		VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-//		1
-//	};
-//	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &SetupCommandBuffer));
-//
-//	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
-//		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-//		nullptr,
-//		0,
-//		nullptr
-//	};
-//	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SetupCommandBuffer, &CommandBufferBeginInfo));
-//}
-
 void VK::CreateFramebuffers()
 {
 	Framebuffers.resize(SwapchainImages.size());
@@ -1406,28 +1365,6 @@ void VK::CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat
 #pragma endregion
 }
 
-//void VK::FlushSetupCommandBuffer()
-//{
-//	if (SetupCommandBuffer != VK_NULL_HANDLE) {
-//		VERIFY_SUCCEEDED(vkEndCommandBuffer(SetupCommandBuffer));
-//
-//		const VkSubmitInfo SubmitInfo = {
-//			VK_STRUCTURE_TYPE_SUBMIT_INFO,
-//			nullptr,
-//			0, nullptr,
-//			nullptr,
-//			1, &SetupCommandBuffer,
-//			0, nullptr
-//		};
-//		VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
-//
-//		VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
-//
-//		vkFreeCommandBuffers(Device, CommandPool, 1, &SetupCommandBuffer);
-//		SetupCommandBuffer = VK_NULL_HANDLE;
-//	}
-//}
-
 void VK::CreateFence()
 {
 	const VkFenceCreateInfo FenceCreateInfo = {
@@ -1443,7 +1380,7 @@ void VK::CreateFence()
 
 void VK::Clear()
 {
-	auto CommandBuffer = CommandBuffers[SwapchainImageIndex];
+	auto CommandBuffer = CommandBuffers[0/*SwapchainImageIndex*/];
 
 	const VkClearColorValue ClearColor = { 0.5f, 0.5f, 1.0f, 1.0f };
 	const std::vector<VkImageSubresourceRange> ImageSubresourceRanges_Color = {
@@ -1475,7 +1412,7 @@ void VK::Clear()
 }
 void VK::BarrierRender()
 {
-	auto CommandBuffer = CommandBuffers[SwapchainImageIndex];
+	auto CommandBuffer = CommandBuffers[0/*SwapchainImageIndex*/];
 
 	const VkImageSubresourceRange ImageSubresourceRange = {
 		VK_IMAGE_ASPECT_COLOR_BIT,
@@ -1504,7 +1441,7 @@ void VK::BarrierRender()
 }
 void VK::BarrierPresent()
 {
-	auto CommandBuffer = CommandBuffers[SwapchainImageIndex];
+	auto CommandBuffer = CommandBuffers[0/*SwapchainImageIndex*/];
 
 	const VkImageSubresourceRange ImageSubresourceRange = {
 		VK_IMAGE_ASPECT_COLOR_BIT,
@@ -1533,7 +1470,7 @@ void VK::BarrierPresent()
 }
 void VK::PopulateCommandBuffer()
 {
-	auto CommandBuffer = CommandBuffers[SwapchainImageIndex];
+	auto CommandBuffer = CommandBuffers[0/*SwapchainImageIndex*/];
 
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -1545,37 +1482,37 @@ void VK::PopulateCommandBuffer()
 	{
 		BarrierRender();
 		{
-			Clear();
+		//	Clear();
 
-			//!< レンダーターゲット(フレームバッファ)
-			const VkRect2D Rect2D = {
-				{ 0, 0 },
-				{ 1280, 720 }, 
-			};
-			std::vector<VkClearValue> ClearValues(2);
-			ClearValues[0].color = { 0.5f, 0.5f, 1.0f, 1.0f };
-			ClearValues[1].depthStencil = { 1.0f, 0 };
-			const VkRenderPassBeginInfo RenderPassBeginInfo = {
-				VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-				nullptr,
-				RenderPass,
-				Framebuffers[SwapchainImageIndex],
-				Rect2D,
-				static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
-			};
-			vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+		//	//!< レンダーターゲット(フレームバッファ)
+		//	const VkRect2D Rect2D = {
+		//		{ 0, 0 },
+		//		{ 1280, 720 }, 
+		//	};
+		//	std::vector<VkClearValue> ClearValues(2);
+		//	ClearValues[0].color = { 0.5f, 0.5f, 1.0f, 1.0f };
+		//	ClearValues[1].depthStencil = { 1.0f, 0 };
+		//	const VkRenderPassBeginInfo RenderPassBeginInfo = {
+		//		VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+		//		nullptr,
+		//		RenderPass,
+		//		Framebuffers[SwapchainImageIndex],
+		//		Rect2D,
+		//		static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
+		//	};
+		//	vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 	
-			//!< トポロジは Pipeline にある
-			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
-			//!< Pipeline でビューポートとシザーは設定しているが↓は必要？
-			//vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-			//vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+		//	//!< トポロジは Pipeline にある
+		//	vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+		//	//!< Pipeline でビューポートとシザーは設定しているが↓は必要？
+		//	//vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+		//	//vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-			const VkDeviceSize Offsets[] = { 0 };
-			vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
-			vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+		//	const VkDeviceSize Offsets[] = { 0 };
+		//	vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
+		//	vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-			vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
+		//	vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
 		}
 		BarrierPresent();
 	}
@@ -1597,7 +1534,7 @@ void VK::ExecuteCommandBuffer()
 		nullptr,
 		0, nullptr,
 		nullptr,
-		1,  &CommandBuffers[SwapchainImageIndex],
+		1,  &CommandBuffers[0/*SwapchainImageIndex*/],
 		0, nullptr
 	};
 #if 1
@@ -1637,12 +1574,12 @@ void VK::Present()
 		PresentInfo.pWaitSemaphores = &RenderSemaphore;
 	}
 #endif
-	//todo
-	//VERIFY_SUCCEEDED(vkQueuePresentKHR(Queue, &PresentInfo));
+	VERIFY_SUCCEEDED(vkQueuePresentKHR(Queue, &PresentInfo));
 
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, Semaphore, nullptr, &SwapchainImageIndex));
 #ifdef _DEBUG
-	std::cout << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
+	//std::cout << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
+	std::cout << SwapchainImageIndex;
 #endif
 }
 void VK::WaitForFence()

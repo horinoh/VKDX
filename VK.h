@@ -81,11 +81,6 @@ protected:
 
 	// ----------------------------------
 
-	//virtual void CreateSemaphore();
-
-	//virtual void CreateSetupCommandBuffer();
-	//virtual void FlushSetupCommandBuffer();
-
 	virtual void Clear();
 	virtual void BarrierRender();
 	virtual void BarrierPresent();
