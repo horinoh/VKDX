@@ -134,7 +134,9 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	if (VK_NULL_HANDLE != PipelineLayout) {
 		vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
 	}
-	vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
+	if(!DescriptorSets.empty()) {
+		vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
+	}
 #pragma endregion
 	
 	for (auto i : DescriptorSetLayouts) {
@@ -1382,7 +1384,7 @@ void VK::Clear()
 {
 	auto CommandBuffer = CommandBuffers[0/*SwapchainImageIndex*/];
 
-	const VkClearColorValue ClearColor = { 0.5f, 0.5f, 1.0f, 1.0f };
+	const VkClearColorValue SkyBlue = { 0.529411793f, 0.807843208f, 0.921568692f, 1.0f };
 	const std::vector<VkImageSubresourceRange> ImageSubresourceRanges_Color = {
 		{
 			VK_IMAGE_ASPECT_COLOR_BIT,
@@ -1393,7 +1395,7 @@ void VK::Clear()
 	vkCmdClearColorImage(CommandBuffer,
 		SwapchainImages[SwapchainImageIndex],
 		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		&ClearColor,
+		&SkyBlue,
 		static_cast<uint32_t>(ImageSubresourceRanges_Color.size()), ImageSubresourceRanges_Color.data());
 
 	const VkClearDepthStencilValue ClearDepthStencil = { 1.0f, 0 };
@@ -1482,7 +1484,7 @@ void VK::PopulateCommandBuffer()
 	{
 		BarrierRender();
 		{
-		//	Clear();
+			Clear();
 
 		//	//!< レンダーターゲット(フレームバッファ)
 		//	const VkRect2D Rect2D = {
@@ -1523,7 +1525,7 @@ void VK::Draw()
 {
 	ExecuteCommandBuffer();
 	Present();
-	//WaitForFence();
+	WaitForFence();
 }
 void VK::ExecuteCommandBuffer()
 {
@@ -1588,6 +1590,7 @@ void VK::WaitForFence()
 	const uint64_t TimeOut = 100000000;
 	do {
 		Result = vkWaitForFences(Device, 1, &Fence, VK_TRUE, TimeOut);
-	} while (VK_TIMEOUT != Result);
+	//} while (VK_TIMEOUT != Result);
+	} while (VK_SUCCESS != Result);
 	VERIFY_SUCCEEDED(Result);
 }

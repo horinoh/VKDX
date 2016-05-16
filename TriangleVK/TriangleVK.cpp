@@ -153,7 +153,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			Inst = new TriangleVK();
 		}
 		if (nullptr != Inst) {
-			Inst->OnCreate(hWnd, hInst);
+			try {
+				Inst->OnCreate(hWnd, hInst);
+			}
+			catch (std::exception& e) {
+				std::cerr << e.what() << std::endl;
+			}
 		}
 		break;
 	case WM_TIMER:

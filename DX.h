@@ -8,11 +8,13 @@
 
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
+#include <DirectXColors.h>
 
 #include "Win.h"
 
 #ifndef VERIFY_SUCCEEDED
-#define VERIFY_SUCCEEDED(hr) VERIFY(SUCCEEDED(hr))
+//#define VERIFY_SUCCEEDED(hr) VERIFY(SUCCEEDED(hr))
+#define VERIFY_SUCCEEDED(hr) if(FAILED(hr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed"); }
 #endif
 
 class DX : public Win

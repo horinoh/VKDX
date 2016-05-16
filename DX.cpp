@@ -30,12 +30,9 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateCommandList();
 
 	CreateSwapChain(hWnd, ColorFormat);
-#if 1
 	CreateDepthStencil(DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
-#else
 	//!< DepthFormat が TYPELESS の場合は、ビュー作成の為に具体的なフォーマットも指定する
 	//CreateDepthStencil(DXGI_FORMAT_R32G8X24_TYPELESS, DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
-#endif
 
 	//CreateShader();
 
@@ -119,7 +116,7 @@ void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
 	if (FAILED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(Device.GetAddressOf())))) {
 	//if (FAILED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(Device.GetAddressOf())))) {
 #ifdef _DEBUG
-		std::cout << "\t" << Red << "Cannot create device, trying WarpDevice ..." << White << std::endl;
+		std::cout << "\t" << Red << "Cannot create device, trying to create WarpDevice ..." << White << std::endl;
 #endif
 		VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(IID_PPV_ARGS(Adapter.GetAddressOf())));
 		VERIFY_SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(Device.GetAddressOf())));
@@ -195,7 +192,10 @@ void DX::CreateCommandQueue()
 void DX::CreateCommandList()
 {
 	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(CommandAllocator.GetAddressOf())));
-	VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, CommandAllocator.Get(), PipelineState.Get(), IID_PPV_ARGS(CommandList.GetAddressOf())));
+#ifdef _DEBUG
+	std::cout << "\t" << "CommandAllocator" << std::endl;
+#endif
+	VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, CommandAllocator.Get(), /*PipelineState.Get()*/nullptr, IID_PPV_ARGS(CommandList.GetAddressOf())));
 	VERIFY_SUCCEEDED(CommandList->Close());
 
 #ifdef _DEBUG
@@ -210,7 +210,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Bu
 	ComPtr<IDXGIFactory4> Factory;
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.GetAddressOf())));
 
-#if 0
+#if 1
 	const DXGI_RATIONAL Rational = { 60, 1 };
 	const DXGI_MODE_DESC ModeDesc = {
 		static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
@@ -355,6 +355,7 @@ void DX::CreateDepthStencilView(const DXGI_FORMAT TypedDepthFormat)
 		{ 0 }
 	};
 	Device->CreateDepthStencilView(DepthStencil.Get(), &DepthStencilViewDesc, DepthStencilViewHandle);
+
 #ifdef _DEBUG
 	std::cout << "\t" << "DepthStencilView" << std::endl;
 #endif
@@ -684,8 +685,7 @@ void DX::Clear()
 {
 	auto RenderTargetViewHandle(RenderTargetViewHeap->GetCPUDescriptorHandleForHeapStart());
 	RenderTargetViewHandle.ptr += CurrentBackBufferIndex * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	const float ClearColor[] = { 0.5f, 0.5f, 1.0f, 1.0f };
-	CommandList->ClearRenderTargetView(RenderTargetViewHandle, ClearColor, 0, nullptr);
+	CommandList->ClearRenderTargetView(RenderTargetViewHandle, DirectX::Colors::SkyBlue, 0, nullptr);
 	
 	auto DepthStencilViewHandle(DepthStencilViewHeap->GetCPUDescriptorHandleForHeapStart());
 	DepthStencilViewHandle.ptr += 0 * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV); 
@@ -730,19 +730,19 @@ void DX::PopulateCommandList()
 	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能
 	//!< コマンドキューはコマンドリストではなく、コマンドアロケータを参照している
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator.Get(), PipelineState.Get()));
-	{
+	if(0){
 		//CommandList->SetGraphicsRootSignature(RootSignature.Get());
 
-		//BarrierRender();
-		//{
-		//	Clear();
+		BarrierRender();
+		{
+			//Clear();
 
-		//	//!< レンダーターゲット(フレームバッファ)
-		//	auto RenderTargetViewHandle(RenderTargetViewHeap->GetCPUDescriptorHandleForHeapStart());
-		//	RenderTargetViewHandle.ptr += CurrentBackBufferIndex * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		//	auto DepthStencilViewHandle(DepthStencilViewHeap->GetCPUDescriptorHandleForHeapStart());
-		//	DepthStencilViewHandle.ptr += 0 * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-		//	CommandList->OMSetRenderTargets(1, &RenderTargetViewHandle, FALSE, &DepthStencilViewHandle);
+			//!< レンダーターゲット(フレームバッファ)
+			//auto RenderTargetViewHandle(RenderTargetViewHeap->GetCPUDescriptorHandleForHeapStart());
+			//RenderTargetViewHandle.ptr += CurrentBackBufferIndex * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+			//auto DepthStencilViewHandle(DepthStencilViewHeap->GetCPUDescriptorHandleForHeapStart());
+			//DepthStencilViewHandle.ptr += 0 * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+			//CommandList->OMSetRenderTargets(1, &RenderTargetViewHandle, FALSE, &DepthStencilViewHandle);
 
 		//	//{
 		//	//	using namespace DirectX;
@@ -764,8 +764,8 @@ void DX::PopulateCommandList()
 		//	//CommandList->IASetIndexBuffer(&IndexBufferView);
 
 		//	//CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
-		//}
-		//BarrierPresent();
+		}
+		BarrierPresent();
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 }
@@ -784,12 +784,6 @@ void DX::ExecuteCommandList()
 void DX::Present()
 {
 	VERIFY_SUCCEEDED(SwapChain->Present(1, 0));
-	//const auto HR = SwapChain->Present(1, 0);
-	//if (0x887a0005 == HR) {
-	//	const auto HR1 = Device->GetDeviceRemovedReason();
-	//	VERIFY_SUCCEEDED(HR1);
-	//}
-	//VERIFY_SUCCEEDED(HR);
 
 #ifdef _DEBUG
 	//	std::cout << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;
