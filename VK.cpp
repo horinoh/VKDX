@@ -84,7 +84,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnDestroy(hWnd, hInstance);
 
-	//WaitForFence();
+	WaitForFence();
 	vkDestroyFence(Device, Fence, nullptr);
 
 #pragma region RenderPass
@@ -1593,4 +1593,6 @@ void VK::WaitForFence()
 	//} while (VK_TIMEOUT != Result);
 	} while (VK_SUCCESS != Result);
 	VERIFY_SUCCEEDED(Result);
+
+	vkResetFences(Device, 1, &Fence);
 }

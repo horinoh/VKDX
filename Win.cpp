@@ -31,3 +31,23 @@ Win::~Win()
 	FreeConsole();
 #endif
 }
+
+void Win::OnCreate(HWND hWnd, HINSTANCE hInstance)
+{
+	GetClientRect(hWnd, &Rect);
+	SetTimer(hWnd, NULL, 1000 / 60, nullptr);
+}
+void Win::OnSize(HWND hWnd, HINSTANCE hInstance)
+{
+	GetClientRect(hWnd, &Rect);
+}
+void Win::OnTimer(HWND hWnd, HINSTANCE hInstance)
+{
+	SendMessage(hWnd, WM_PAINT, 0, 0);
+}
+void Win::OnPaint(HWND hWnd, HINSTANCE hInstance)
+{
+}
+void Win::OnDestroy(HWND hWnd, HINSTANCE hInstance)
+{
+}

@@ -72,36 +72,25 @@ protected:
 	virtual void WaitForFence();
 
 protected:
-#pragma  region Device
 	Microsoft::WRL::ComPtr<ID3D12Device> Device;
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> CommandQueue;
-#pragma endregion
 
-#pragma region CommandList
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> CommandList;
-#pragma endregion
 
-#pragma region SwapChain
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain;
 	//Microsoft::WRL::ComPtr<IDXGISwapChain> SwapChain;
 	UINT CurrentBackBufferIndex;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> RenderTargetViewHeap;
-	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> RenderTargets;
-#pragma endregion
+	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> SwapChainResources;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> SwapChainDescriptorHeap;
 
-#pragma region DepthStencil
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DepthStencilViewHeap;
-	Microsoft::WRL::ComPtr<ID3D12Resource> DepthStencil;
-#pragma endregion
+	Microsoft::WRL::ComPtr<ID3D12Resource> DepthStencilResource;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DepthStencilDescriptorHeap;
 
-#pragma region Shader
 	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> BlobVSs;
 	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> BlobPSs;
-#pragma endregion
-#pragma region RootSignature
+
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
-#pragma endregion
 
 #pragma region InputLayout
 private:
@@ -121,19 +110,19 @@ protected:
 #pragma endregion
 
 #pragma region VertexBuffer
-	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBuffer;
+	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferResource;
 	D3D12_VERTEX_BUFFER_VIEW VertexBufferView;
 #pragma endregion
 
 #pragma region IndexBuffer
-	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBuffer;
+	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferResource;
 	D3D12_INDEX_BUFFER_VIEW IndexBufferView;
 	UINT IndexCount = 0;
 #pragma endregion
 
 #pragma region ConstantBuffer
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> ConstantBufferViewHeap;
-	Microsoft::WRL::ComPtr<ID3D12Resource> ConstantBuffer;
+	Microsoft::WRL::ComPtr<ID3D12Resource> ConstantBufferResource;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> ConstantBufferDescriptorHeap;
 #pragma endregion
 
 	Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
