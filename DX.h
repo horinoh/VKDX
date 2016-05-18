@@ -38,15 +38,13 @@ protected:
 	virtual void GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format);
 	virtual void CreateCommandQueue();
 
-	virtual void CreateCommandList();
+	virtual void CreateCommandList(ID3D12PipelineState* PipelineState = nullptr);
 
 	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT BufferCount = 2);
-	virtual void CreateSwapChainView(const UINT BufferCount);
+	virtual void ResizeSwapChain();
 
-	virtual void CreateDepthStencil(const DXGI_FORMAT TyplessDepthFormat, const DXGI_FORMAT TypedDepthFormat);
-	virtual void CreateDepthStencil(const DXGI_FORMAT TypedDepthFormat) { CreateDepthStencil(TypedDepthFormat, TypedDepthFormat); }
-	virtual void CreateDepthStencilView(const DXGI_FORMAT TypedDepthFormat);
-	virtual void CreateDepthStencilView();
+	virtual void CreateDepthStencil();
+	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
 
 	virtual void CreateShader();
 	virtual void CreateRootSignature();
@@ -62,7 +60,8 @@ protected:
 	virtual void CreateFence();
 
 	virtual void Clear();
-	virtual void BarrierRender();
+	virtual void BarrierDepthWrite();
+	virtual void BarrierRenderTarget();
 	virtual void BarrierPresent();
 	virtual void PopulateCommandList();
 
@@ -76,7 +75,7 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> CommandQueue;
 
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> CommandList;
+	std::vector<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>> CommandLists;
 
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain;
 	//Microsoft::WRL::ComPtr<IDXGISwapChain> SwapChain;

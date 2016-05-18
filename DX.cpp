@@ -27,9 +27,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateCommandList();
 
 	CreateSwapChain(hWnd, ColorFormat);
-	//CreateDepthStencil(DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
-	//!< DepthFormat が TYPELESS の場合は、ビュー作成の為に具体的なフォーマットも指定する
-	//CreateDepthStencil(DXGI_FORMAT_R32G8X24_TYPELESS, DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
+	CreateDepthStencil();
 
 	//CreateShader();
 
@@ -57,31 +55,16 @@ void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 
 	WaitForFence();
 
+	const auto CommandList = CommandLists.back();
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator.Get(), nullptr));
-	{
-		for (auto& i : SwapChainResources) { i.Reset(); }
-		//DepthStencilResource.Reset();
-
-		VERIFY_SUCCEEDED(SwapChain->ResizeBuffers(static_cast<UINT>(SwapChainResources.size()),
-			static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
-			DXGI_FORMAT_R8G8B8A8_UNORM,
-			DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH));
-
-		CurrentBackBufferIndex = SwapChain->GetCurrentBackBufferIndex();
-
-		auto CpuDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-		const auto IncremntSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
-		SwapChainResources.resize(2);
-		for (UINT i = 0; i < SwapChainResources.size(); ++i) {
-			VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, IID_PPV_ARGS(SwapChainResources[i].GetAddressOf())));
-			Device->CreateRenderTargetView(SwapChainResources[i].Get(), nullptr, CpuDescriptorHandle);
-			CpuDescriptorHandle.ptr += IncremntSize;
-		}
+	{		
+		ResizeSwapChain();
+		ResizeDepthStencil();
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 
 	ExecuteCommandList();
+	
 	WaitForFence();
 }
 void DX::OnTimer(HWND hWnd, HINSTANCE hInstance)
@@ -136,7 +119,7 @@ void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
 #ifdef _DEBUG
 	DXGI_ADAPTER_DESC AdapterDesc;
 	VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
-	std::cout << Red; std::wcout << "\t" << AdapterDesc.Description; std::cout << White << " is selected" << std::endl;
+	//std::cout << Red; std::wcout << "\t" << AdapterDesc.Description; std::cout << White << " is selected" << std::endl;
 #endif
 #pragma endregion
 
@@ -216,17 +199,16 @@ void DX::CreateCommandQueue()
 #endif
 }
 
-void DX::CreateCommandList()
+void DX::CreateCommandList(ID3D12PipelineState* PipelineState)
 {
 	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(CommandAllocator.GetAddressOf())));
 #ifdef _DEBUG
 	std::cout << "\t" << "CommandAllocator" << std::endl;
 #endif
+	CommandLists.resize(CommandLists.size() + 1);
 	//!< 描画コマンドを発行する CommandList の場合は PipelineState の指定が必要
-	//VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, CommandAllocator.Get(), PipelineState.Get(), IID_PPV_ARGS(CommandList.GetAddressOf())));
-	VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, CommandAllocator.Get(), nullptr, IID_PPV_ARGS(CommandList.GetAddressOf())));
-	VERIFY_SUCCEEDED(CommandList->Close());
-
+	VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, CommandAllocator.Get(), PipelineState, IID_PPV_ARGS(CommandLists.back().GetAddressOf())));
+	VERIFY_SUCCEEDED(CommandLists.back()->Close());
 #ifdef _DEBUG
 	std::cout << "CreateCommandList" << COUT_OK << std::endl << std::endl;
 #endif
@@ -261,14 +243,8 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Bu
 	Microsoft::WRL::ComPtr<IDXGISwapChain> SC;
 	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.Get(), &SwapChainDesc, SC.GetAddressOf()));
 	VERIFY_SUCCEEDED(SC.As(&SwapChain));
-
 #ifdef _DEBUG
 	std::cout << "\t" << "SwapChain" << std::endl;
-#endif
-
-	CurrentBackBufferIndex = SwapChain->GetCurrentBackBufferIndex();
-#ifdef _DEBUG
-	std::cout << "\t" << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;
 #endif
 
 	const D3D12_DESCRIPTOR_HEAP_DESC DescripterHeapDesc = {
@@ -278,32 +254,70 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Bu
 		0
 	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescripterHeapDesc, IID_PPV_ARGS(SwapChainDescriptorHeap.GetAddressOf())));
-
-	//CreateSwapChainView(BufferCount);
+#ifdef _DEBUG
+	std::cout << "\t" << "SwapChainDescriptorHeap" << std::endl;
+#endif
 
 #ifdef _DEBUG
 	std::cout << "CreateSwapChain" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void DX::CreateSwapChainView(const UINT BufferCount)
+
+void DX::ResizeSwapChain()
 {
-	auto RenderTargetViewHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	const auto DescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	SwapChainResources.resize(BufferCount);
-	for (UINT i = 0; i < BufferCount; ++i) {
-		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, IID_PPV_ARGS(SwapChainResources[i].GetAddressOf())));
-		Device->CreateRenderTargetView(SwapChainResources[i].Get(), nullptr, RenderTargetViewHandle);
-		RenderTargetViewHandle.ptr += DescriptorSize;
+	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
+	SwapChain->GetDesc1(&SwapChainDesc);
+
+	VERIFY_SUCCEEDED(SwapChain->ResizeBuffers(SwapChainDesc.BufferCount,
+		static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
+		SwapChainDesc.Format/*DXGI_FORMAT_R8G8B8A8_UNORM*/,
+		SwapChainDesc.Flags/*DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH*/));
 #ifdef _DEBUG
-		std::cout << "\t" << "\t" << "RenderTarget" << std::endl;
+	std::cout << "\t" << "ResizeBuffers" << std::endl;
 #endif
+
+	CurrentBackBufferIndex = SwapChain->GetCurrentBackBufferIndex();
+#ifdef _DEBUG
+	std::cout << "\t" << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;
+#endif
+
+	auto CpuDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+	SwapChainResources.resize(SwapChainDesc.BufferCount);
+	for (UINT i = 0; i < SwapChainResources.size(); ++i) {
+		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, IID_PPV_ARGS(SwapChainResources[i].ReleaseAndGetAddressOf())));
+		Device->CreateRenderTargetView(SwapChainResources[i].Get(), nullptr, CpuDescriptorHandle);
+		CpuDescriptorHandle.ptr += IncrementSize;
 	}
 #ifdef _DEBUG
-	std::cout << "\t" << "SwapChainView" << std::endl;
+	std::cout << "\t" << "RenderTargetView" << std::endl;
+#endif
+
+#ifdef _DEBUG
+	std::cout << "ResizeSwapChain" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
-void DX::CreateDepthStencil(const DXGI_FORMAT TyplessDepthFormat, const DXGI_FORMAT TypedDepthFormat)
+void DX::CreateDepthStencil()
+{
+	const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
+		D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
+		1,
+		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+		0
+	};
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DepthStencilDescriptorHeap.GetAddressOf())));
+#ifdef _DEBUG
+	std::cout << "\t" << "DepthStencilDescriptorHeap" << std::endl;
+#endif
+
+#ifdef _DEBUG
+	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void DX::ResizeDepthStencil(const DXGI_FORMAT DepthFormat)
 {
 	const D3D12_HEAP_PROPERTIES HeapProperties = {
 		D3D12_HEAP_TYPE_DEFAULT,
@@ -319,69 +333,48 @@ void DX::CreateDepthStencil(const DXGI_FORMAT TyplessDepthFormat, const DXGI_FOR
 		static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
 		1,
 		1,
-		TyplessDepthFormat,
+		DepthFormat,
 		SampleDesc,
 		D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
 	};
-	const D3D12_CLEAR_VALUE ClearValue = {
-		TypedDepthFormat,
-		{ 1.0f, 0 }
-	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &ClearValue, IID_PPV_ARGS(DepthStencilResource.GetAddressOf())));
+	//const D3D12_CLEAR_VALUE ClearValue = {
+	//	DepthFormat,
+	//	{ 1.0f, 0 }
+	//};
+	//!< ClearValue を指定しない場合は nullptr にできる
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		nullptr,//&ClearValue, 
+		IID_PPV_ARGS(DepthStencilResource.ReleaseAndGetAddressOf())));
 #ifdef _DEBUG
-	std::cout << "\t" << "DepthStencil" << std::endl;
+	std::cout << "\t" << "CommittedResource" << std::endl;
 #endif
 
-	const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
-		D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
-		1,
-		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-		0
-	};
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DepthStencilDescriptorHeap.GetAddressOf())));
+	auto CpuDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	//const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 
-	if(TyplessDepthFormat == TypedDepthFormat) {
-		CreateDepthStencilView();
-	}
-	else {
-		CreateDepthStencilView(TypedDepthFormat);
-	}
-
-#ifdef _DEBUG
-	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
-void DX::CreateDepthStencilView(const DXGI_FORMAT TypedDepthFormat)
-{
-	auto DepthStencilViewHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	const auto DescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-	DepthStencilViewHandle.ptr += 0 * DescriptorSize;
-
-	const D3D12_DEPTH_STENCIL_VIEW_DESC DepthStencilViewDesc = {
-		TypedDepthFormat,
-		D3D12_DSV_DIMENSION_TEXTURE2D,
-		D3D12_DSV_FLAG_NONE,
-		{ 0 }
-	};
-	Device->CreateDepthStencilView(DepthStencilResource.Get(), &DepthStencilViewDesc, DepthStencilViewHandle);
-
+	//const D3D12_DEPTH_STENCIL_VIEW_DESC DepthStencilViewDesc = {
+	//	DepthFormat,
+	//	D3D12_DSV_DIMENSION_TEXTURE2D,
+	//	D3D12_DSV_FLAG_NONE,
+	//	{ 0 }
+	//};
+	//!< DepthFormat が具体的なフォーマットであれば(TYPELESS でなければ) DepthStencilViewDesc に nullptr を指定できる
+	Device->CreateDepthStencilView(DepthStencilResource.Get(), 
+		nullptr,//&DepthStencilViewDesc
+		CpuDescriptorHandle);
+	//CpuDescriptorHandle.ptr += IncrementSize;
 #ifdef _DEBUG
 	std::cout << "\t" << "DepthStencilView" << std::endl;
 #endif
-}
-void DX::CreateDepthStencilView()
-{
-	auto DepthStencilViewHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	const auto DescriptorSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-	DepthStencilViewHandle.ptr += 0 * DescriptorSize;
 
-	//!< DepthFormat が具体的なフォーマットであれば(TYPELESS でなければ) D3D12_DEPTH_STENCIL_VIEW_DESC* に nullptr を指定できる
-	Device->CreateDepthStencilView(DepthStencilResource.Get(), nullptr, DepthStencilViewHandle);
+	BarrierDepthWrite();
 
 #ifdef _DEBUG
-	std::cout << "\t" << "DepthStencilView" << std::endl;
+	std::cout << "ResizeDepthStencil" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
@@ -513,7 +506,7 @@ void DX::CreatePipelineState()
 		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
 		D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
 		1, { DXGI_FORMAT_R8G8B8A8_UNORM/*, ... x8*/ },
-		DXGI_FORMAT_D32_FLOAT,
+		DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
 		{ 1, 0 },
 		0,
 		{ nullptr, 0 },
@@ -687,6 +680,8 @@ void DX::CreateFence()
 
 void DX::Clear()
 {
+	const auto CommandList = CommandLists.back();
+
 	auto RenderTargetViewHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 	RenderTargetViewHandle.ptr += CurrentBackBufferIndex * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	CommandList->ClearRenderTargetView(RenderTargetViewHandle, DirectX::Colors::SkyBlue, 0, nullptr);
@@ -695,8 +690,33 @@ void DX::Clear()
 	//DepthStencilViewHandle.ptr += 0 * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV); 
 	//CommandList->ClearDepthStencilView(DepthStencilViewHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 }
-void DX::BarrierRender()
+
+void DX::BarrierDepthWrite()
 {
+	const auto CommandList = CommandLists.back();
+
+	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarrier = {
+		{
+			D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+			D3D12_RESOURCE_BARRIER_FLAG_NONE,
+			{
+				DepthStencilResource.Get(),
+				D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+				D3D12_RESOURCE_STATE_COMMON,
+				D3D12_RESOURCE_STATE_DEPTH_WRITE
+			}
+		}
+	};
+	CommandList->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
+
+#ifdef _DEBUG
+	std::cout << "\t" << "ResourceBarrier" << " " << "Transition to DepthWrite" << std::endl;
+#endif
+}
+void DX::BarrierRenderTarget()
+{
+	const auto CommandList = CommandLists.back();
+
 	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarrier = {
 		{
 			D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
@@ -710,9 +730,15 @@ void DX::BarrierRender()
 		}
 	};
 	CommandList->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
+
+#ifdef _DEBUG
+	//std::cout << "\t" << "ResourceBarrier" << " " << "Transition to RenderTarget" << std::endl;
+#endif
 }
 void DX::BarrierPresent()
 {
+	const auto CommandList = CommandLists.back();
+
 	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarrier = {
 		{
 			D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
@@ -726,9 +752,15 @@ void DX::BarrierPresent()
 		}
 	};
 	CommandList->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
+
+#ifdef _DEBUG
+	//std::cout << "\t" << "ResourceBarrier" << " " << "Transition to Present" << std::endl;
+#endif
 }
 void DX::PopulateCommandList()
 {
+	const auto CommandList = CommandLists.back();
+
 	//!< GPU が参照している間は CommandAllocator->Reset() できない
 	VERIFY_SUCCEEDED(CommandAllocator->Reset());
 	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能
@@ -737,7 +769,7 @@ void DX::PopulateCommandList()
 	if(0){
 		//CommandList->SetGraphicsRootSignature(RootSignature.Get());
 
-		BarrierRender();
+		BarrierRenderTarget();
 		{
 			//Clear();
 
@@ -782,6 +814,8 @@ void DX::Draw()
 }
 void DX::ExecuteCommandList()
 {
+	const auto CommandList = CommandLists.back();
+
 	std::vector<ID3D12CommandList*> CommandLists = { CommandList.Get() };
 	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
 }
@@ -790,8 +824,7 @@ void DX::Present()
 	VERIFY_SUCCEEDED(SwapChain->Present(1, 0));
 
 #ifdef _DEBUG
-	//	std::cout << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;
-	std::cout << CurrentBackBufferIndex;
+	//std::cout << CurrentBackBufferIndex;
 #endif
 	CurrentBackBufferIndex = ++CurrentBackBufferIndex % static_cast<UINT>(SwapChainResources.size());
 }
