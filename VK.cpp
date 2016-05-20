@@ -15,8 +15,10 @@ VK::~VK()
 
 void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 {
+#ifdef _DEBUG
 	__int64 A;
 	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&A));
+#endif
 
 	Super::OnCreate(hWnd, hInstance);
 
@@ -60,15 +62,30 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	
 	CreateFence();
 
+	OnSize(hWnd, hInstance);
+
 	PopulateCommandBuffer();
 
+#ifdef _DEBUG
 	__int64 B;
 	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&B));
-	std::cout << "It takes : " << (B - A) * SecondsPerCount << " sec" << std::endl;
+	std::cout << "OnCreate : " << (B - A) * SecondsPerCount << " sec" << std::endl << std::endl;
+#endif
 }
 void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 {
+#ifdef _DEBUG
+	__int64 A;
+	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&A));
+#endif
+
 	Super::OnSize(hWnd, hInstance);
+
+#ifdef _DEBUG
+	__int64 B;
+	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&B));
+	std::cout << "OnSize : " << (B - A) * SecondsPerCount << " sec" << std::endl << std::endl;
+#endif
 }
 void VK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
