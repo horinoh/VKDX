@@ -14,7 +14,7 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Shader Files">
-      <UniqueIdentifier>{cbdd7e3b-c833-47c6-a43e-fd458b9e26e9}</UniqueIdentifier>
+      <UniqueIdentifier>{899c523e-8ffa-4931-9b8b-6f84046557dc}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -30,10 +30,10 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="TriangleDX.h">
+    <ClInclude Include="ClearVK.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\DX.h">
+    <ClInclude Include="..\VK.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Win.h">
@@ -44,10 +44,10 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TriangleDX.cpp">
+    <ClCompile Include="ClearVK.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\DX.cpp">
+    <ClCompile Include="..\VK.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Win.cpp">
@@ -55,7 +55,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="TriangleDX.rc">
+    <ResourceCompile Include="ClearVK.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
@@ -63,16 +63,8 @@
     <Image Include="small.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="TriangleDX.ico">
+    <Image Include="ClearVK.ico">
       <Filter>Resource Files</Filter>
     </Image>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="PS.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
-    <FxCompile Include="VS.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
   </ItemGroup>
 </Project>

@@ -14,7 +14,7 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Shader Files">
-      <UniqueIdentifier>{cbdd7e3b-c833-47c6-a43e-fd458b9e26e9}</UniqueIdentifier>
+      <UniqueIdentifier>{ece3d1a6-4f65-4b20-b622-5dda0f554e2a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -30,7 +30,7 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="TriangleDX.h">
+    <ClInclude Include="ClearDX.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\DX.h">
@@ -44,7 +44,7 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TriangleDX.cpp">
+    <ClCompile Include="ClearDX.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\DX.cpp">
@@ -55,7 +55,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="TriangleDX.rc">
+    <ResourceCompile Include="ClearDX.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
@@ -63,16 +63,8 @@
     <Image Include="small.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="TriangleDX.ico">
+    <Image Include="ClearDX.ico">
       <Filter>Resource Files</Filter>
     </Image>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="PS.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
-    <FxCompile Include="VS.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
   </ItemGroup>
 </Project>

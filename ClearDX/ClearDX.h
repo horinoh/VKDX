@@ -5,12 +5,12 @@
 #pragma region Code
 #include "../DX.h"
 
-class TriangleDX : public DX
+class ClearDX : public DX
 {
 private:
 	using Super = DX;
 public:
-	TriangleDX() : DX() {}
-	virtual ~TriangleDX() {}
+	ClearDX() : DX() {}
+	virtual ~ClearDX() {}
 };
 #pragma endregion

@@ -1,4 +1,4 @@
-# VKDX
+﻿# VKDX
 
 ## VK
 
@@ -34,6 +34,24 @@ for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator 
 #### シェーダコンパイル
  * シェーダは Visual Studio に追加すると自動的にコンパイルされる]
  * Properties - HLSLCompiler - General - Shader Type を適切に設定しておかないと、頂点シェーダでコンパイルされるので注意
+
+## プロジェクトの追加方法 (自分用覚書)
+ * ソリューションを右クリック - Add - New Project で Win32 Project
+ * プロジェクトを右クリック - Retarget SDK Verson で 10以上にする
+
+### DX
+ * Header Files に Win.h、DX.h を追加 
+ * Source Files に Win.cpp、DX.cpp を追加
+ * XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
+ * 必要に応じて Shader Files フォルダを作成し、シェーダを突っ込む
+  * 右クリック - プロパティ - HLSL Compiler - General - Shader Type でタイプを適切に選択しておく
+
+### VK
+ * Header Files に Win.h、VK.h を追加
+ * Source Files に Win.cpp、VK.cpp を追加
+ * XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
+ * 必要に応じて Shader Files フォルダを作成し、シェーダを突っ込む
+  * 拡張子を glslangValidator に沿うようにタイプを選択しておく。(VS.vert、 PS.frag、...)
 
 <!-- 
 ## FBX
