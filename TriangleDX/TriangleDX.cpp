@@ -224,3 +224,136 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return (INT_PTR)FALSE;
 }
+
+void TriangleDX::CreateShader()
+{
+	using namespace Microsoft::WRL;
+
+	BlobVSs.resize(1);
+	D3DReadFileToBlob(SHADER_PATH L"VS.cso", BlobVSs[0].GetAddressOf());
+
+	BlobPSs.resize(1);
+	D3DReadFileToBlob(SHADER_PATH L"PS.cso", BlobPSs[0].GetAddressOf());
+
+#ifdef _DEBUG
+	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void TriangleDX::CreateInputLayout()
+{
+	InputElementDescs = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, sizeof(std::get<0>(Vertex())), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+	InputLayoutDesc = {
+		InputElementDescs.data(), static_cast<UINT>(InputElementDescs.size())
+	};
+
+#ifdef _DEBUG
+	std::cout << "CreateInputLayout" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void TriangleDX::CreateVertexBuffer()
+{
+	const std::vector<Vertex> Vertices = {
+		{ Vertex({ 0.0f,   0.25f, 0.0f },{ 0.0f, 0.0f, 0.0f, 1.0f }) },
+		{ Vertex({ 0.25f, -0.25f, 0.0f },{ 0.0f, 0.0f, 0.0f, 1.0f }) },
+		{ Vertex({ -0.25f, -0.25f, 0.0f },{ 0.0f, 0.0f, 0.0f, 1.0f }) },
+	};
+
+	const auto Size = sizeof(Vertices);
+	const auto Stride = sizeof(Vertices[0]);
+
+	const D3D12_RESOURCE_DESC ResourceDesc = {
+		D3D12_RESOURCE_DIMENSION_BUFFER,
+		0,
+		Size, 1,
+		1,
+		1,
+		DXGI_FORMAT_UNKNOWN,
+		{ 1, 0 },
+		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+		D3D12_RESOURCE_FLAG_NONE
+	};
+	const D3D12_HEAP_PROPERTIES HeapProperties = {
+		D3D12_HEAP_TYPE_UPLOAD,
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&VertexBufferResource)));
+
+	UINT8* Data;
+	const D3D12_RANGE Range = { 0, 0 };
+	VERIFY_SUCCEEDED(VertexBufferResource->Map(0, &Range, reinterpret_cast<void **>(&Data))); {
+		memcpy(Data, Vertices.data(), Size);
+	} VertexBufferResource->Unmap(0, nullptr);
+
+	VertexBufferView = {
+		VertexBufferResource->GetGPUVirtualAddress(),
+		Size,
+		Stride
+	};
+
+#ifdef _DEBUG
+	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void TriangleDX::CreateIndexBuffer()
+{
+	const std::vector<UINT32> Indices = { 0, 1, 2 };
+
+	const auto Size = sizeof(Indices);
+	//!< DrawInstanced() ‚ªˆø”‚ÉŽæ‚é‚Ì‚ÅŠo‚¦‚Ä‚¨‚­•K—v‚ª‚ ‚é
+	IndexCount = static_cast<UINT32>(Indices.size());
+
+	const D3D12_RESOURCE_DESC ResourceDesc = {
+		D3D12_RESOURCE_DIMENSION_BUFFER,
+		0,
+		Size, 1,
+		1,
+		1,
+		DXGI_FORMAT_UNKNOWN,
+		{ 1, 0 },
+		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+		D3D12_RESOURCE_FLAG_NONE
+	};
+	const D3D12_HEAP_PROPERTIES HeapProperties = {
+		D3D12_HEAP_TYPE_UPLOAD,
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(&IndexBufferResource)));
+
+	UINT8* Data;
+	D3D12_RANGE Range = { 0, 0 };
+	VERIFY_SUCCEEDED(IndexBufferResource->Map(0, &Range, reinterpret_cast<void **>(&Data))); {
+		memcpy(Data, Indices.data(), Size);
+	} IndexBufferResource->Unmap(0, nullptr);
+
+	IndexBufferView = {
+		IndexBufferResource->GetGPUVirtualAddress(),
+		Size,
+		DXGI_FORMAT_R32_UINT
+	};
+
+#ifdef _DEBUG
+	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
+#endif
+}

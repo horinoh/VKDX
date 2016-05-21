@@ -137,8 +137,6 @@ protected:
 	std::vector<VkDescriptorSet> DescriptorSets;
 
 #pragma region VertexInput
-private:
-	using Vertex = std::tuple<glm::vec3, glm::vec4>;
 protected:
 	std::vector<VkVertexInputBindingDescription> VertexInputBindingDescriptions;
 	std::vector<VkVertexInputAttributeDescription> VertexInputAttributeDescriptions;

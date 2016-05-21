@@ -36,6 +36,8 @@ protected:
 	virtual void EnumAdapter(IDXGIFactory4* Factory);
 	virtual void EnumOutput(IDXGIAdapter* Adapter);
 	virtual void GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format);
+	virtual void CheckFeature();
+
 	virtual void CreateCommandQueue();
 
 	virtual void CreateCommandList(ID3D12PipelineState* PipelineState = nullptr);
@@ -75,7 +77,7 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> CommandQueue;
 
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
-	std::vector<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>> CommandLists;
+	std::vector<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>> GraphicsCommandLists;
 
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain;
 	//Microsoft::WRL::ComPtr<IDXGISwapChain> SwapChain;
@@ -92,8 +94,6 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
 
 #pragma region InputLayout
-private:
-	using Vertex = std::tuple<DirectX::XMFLOAT3, DirectX::XMFLOAT4>;
 protected:
 	std::vector<D3D12_INPUT_ELEMENT_DESC> InputElementDescs;
 	D3D12_INPUT_LAYOUT_DESC InputLayoutDesc;

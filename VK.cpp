@@ -42,19 +42,19 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 #endif
 	CreateDepthStencil(PhysicalDeviceMemoryProperties, DepthFormat);
 
-	//CreateShader();
+	CreateShader();
 
 	//CreateDescriptorSetLayout();
 	//CreatePipelineLayout();
 
 	//CreateDescriptorSet();
 
-	//CreateVertexInput();
+	CreateVertexInput();
 	//CreateViewport();
 	//CreatePipeline();
 
-	//CreateVertexBuffer(PhysicalDeviceMemoryProperties);
-	//CreateIndexBuffer(PhysicalDeviceMemoryProperties);
+	CreateVertexBuffer(PhysicalDeviceMemoryProperties);
+	CreateIndexBuffer(PhysicalDeviceMemoryProperties);
 	//CreateUniformBuffer(PhysicalDeviceMemoryProperties);
 
 	//CreateFramebuffers();
@@ -80,6 +80,11 @@ void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 #endif
 
 	Super::OnSize(hWnd, hInstance);
+
+	//!< TODO
+	
+	
+	CreateViewport();
 
 #ifdef _DEBUG
 	__int64 B;
@@ -727,28 +732,6 @@ void VK::CreateDepthStencilView(const VkFormat DepthFormat)
 
 void VK::CreateShader()
 {
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"VS.vert.spv"));
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"FS.frag.spv"));
-
-	PipelineShaderStageCreateInfos = {
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
-			"main",
-			nullptr
-		},
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
-			"main",
-			nullptr
-		}
-	};
-
 #ifdef _DEBUG
 	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
 #endif
@@ -829,22 +812,6 @@ void VK::CreateDescriptorSet()
 
 void VK::CreateVertexInput()
 {
-	Vertex Vertices;
-	VertexInputBindingDescriptions = {
-		{ 0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX }
-	};
-	VertexInputAttributeDescriptions = {
-		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
-		{ 1, 0, VK_FORMAT_R32G32B32_SFLOAT, sizeof(std::get<0>(Vertex())) }
-	};
-	PipelineVertexInputStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(VertexInputBindingDescriptions.size()), VertexInputBindingDescriptions.data(),
-		static_cast<uint32_t>(VertexInputAttributeDescriptions.size()), VertexInputAttributeDescriptions.data()
-	};
-
 #ifdef _DEBUG
 	std::cout << "CreateVertexInput" << COUT_OK << std::endl << std::endl;
 #endif
@@ -1005,240 +972,16 @@ void VK::CreatePipeline()
 
 void VK::CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
-	const std::vector<Vertex> Vertices = {
-		{ Vertex({ 0.0f,   0.25f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }) },
-		{ Vertex({ 0.25f, -0.25f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }) },
-		{ Vertex({ -0.25f, -0.25f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }) },
-	};
-
-	const auto Size = sizeof(Vertices);
-	const auto Stride = sizeof(Vertices[0]);
-
-	VkBuffer StagingBuffer;
-	VkDeviceMemory StagingDeviceMemory;
-
-#pragma region Staging
-	{
-		const VkBufferCreateInfo BufferCreateInfo = {
-			VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-			nullptr,
-			0,
-			Size,
-			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_SHARING_MODE_EXCLUSIVE,
-			0, nullptr
-		};
-		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &StagingBuffer));
-
-		VkMemoryRequirements MemoryRequirements;
-		vkGetBufferMemoryRequirements(Device, StagingBuffer, &MemoryRequirements);
-		const VkMemoryAllocateInfo MemoryAllocateInfo = {
-			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-			nullptr,
-			MemoryRequirements.size,
-			GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-		};
-		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &StagingDeviceMemory));
-
-		void *Data;
-		VERIFY_SUCCEEDED(vkMapMemory(Device, StagingDeviceMemory, 0, /*MemoryAllocateInfo.allocationSize*/Size, 0, &Data)); {
-			memcpy(Data, Vertices.data(), Size);
-		} vkUnmapMemory(Device, StagingDeviceMemory);
-		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, StagingBuffer, StagingDeviceMemory, 0));
-	}
-#pragma endregion
-
-#pragma region VRAM
-	{
-		const VkBufferCreateInfo BufferCreateInfo = {
-			VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-			nullptr,
-			0,
-			Size,
-			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-			VK_SHARING_MODE_EXCLUSIVE,
-			0, nullptr
-		};
-		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &VertexBuffer));
-
-		VkMemoryRequirements MemoryRequirements;
-		vkGetBufferMemoryRequirements(Device, VertexBuffer, &MemoryRequirements);
-
-		const VkMemoryAllocateInfo MemoryAllocateInfo = {
-			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-			nullptr,
-			MemoryRequirements.size,
-			GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-		};
-		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &VertexDeviceMemory));
-		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, VertexBuffer, VertexDeviceMemory, 0));
-	}
-#pragma endregion
-
-#pragma region ToVRAMCommand
-	{
-		const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			nullptr,
-			CommandPool,
-			VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-			1
-		};
-		VkCommandBuffer CopyCommandBuffer;
-		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CopyCommandBuffer)); {
-			const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
-				VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-				nullptr,
-				0,
-				nullptr
-			};
-			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CopyCommandBuffer, &CommandBufferBeginInfo)); {
-				const VkBufferCopy BufferCopy = {
-					0,
-					0,
-					Size
-				};
-				vkCmdCopyBuffer(CopyCommandBuffer, StagingBuffer, VertexBuffer, 1, &BufferCopy);
-			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CopyCommandBuffer));
-
-			const VkSubmitInfo SubmitInfo = {
-				VK_STRUCTURE_TYPE_SUBMIT_INFO,
-				nullptr,
-				0, nullptr,
-				nullptr,
-				1, &CopyCommandBuffer,
-				0, nullptr
-			};
-			VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
-			VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
-		} vkFreeCommandBuffers(Device, CommandPool, 1, &CopyCommandBuffer);
-	} 
-#pragma endregion
-
-	vkDestroyBuffer(Device, StagingBuffer, nullptr);
-	vkFreeMemory(Device, StagingDeviceMemory, nullptr);
-
 #ifdef _DEBUG
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-
 void VK::CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
-	const std::vector<uint32_t> Indices = { 0, 1, 2 };
-
-	const auto Size = sizeof(Indices);
-	//!< vkCmdDrawIndexed() ‚ªˆø”‚ÉŽæ‚é‚Ì‚ÅŠo‚¦‚Ä‚¨‚­•K—v‚ª‚ ‚é
-	IndexCount = static_cast<uint32_t>(Indices.size());
-
-	VkBuffer StagingBuffer;
-	VkDeviceMemory StagingDeviceMemory;
-#pragma region Staging
-	{
-		const VkBufferCreateInfo BufferCreateInfo = {
-			VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-			nullptr,
-			0,
-			Size,
-			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_SHARING_MODE_EXCLUSIVE,
-			0, nullptr
-		};
-		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &StagingBuffer));
-
-		VkMemoryRequirements MemoryRequirements;
-		vkGetBufferMemoryRequirements(Device, StagingBuffer, &MemoryRequirements);
-		const VkMemoryAllocateInfo MemoryAllocateInfo = {
-			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-			nullptr,
-			MemoryRequirements.size,
-			GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-		};
-		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &StagingDeviceMemory));
-
-		void *Data;
-		VERIFY_SUCCEEDED(vkMapMemory(Device, StagingDeviceMemory, 0, /*MemoryAllocateInfo.allocationSize*/Size, 0, &Data)); {
-			memcpy(Data, Indices.data(), Size);
-		} vkUnmapMemory(Device, StagingDeviceMemory);
-		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, StagingBuffer, StagingDeviceMemory, 0));
-	}
-#pragma endregion
-
-#pragma region VRAM
-	{
-		const VkBufferCreateInfo BufferCreateInfo = {
-			VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-			nullptr,
-			0,
-			Size,
-			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-			VK_SHARING_MODE_EXCLUSIVE,
-			0, nullptr
-		};
-		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &IndexBuffer));
-
-		VkMemoryRequirements MemoryRequirements;
-		vkGetBufferMemoryRequirements(Device, IndexBuffer, &MemoryRequirements);
-
-		const VkMemoryAllocateInfo MemoryAllocateInfo = {
-			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-			nullptr,
-			MemoryRequirements.size,
-			GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-		};
-		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &IndexDeviceMemory));
-		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, IndexBuffer, IndexDeviceMemory, 0));
-	}
-#pragma endregion
-
-#pragma region ToVRAMCommand
-	{
-		const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			nullptr,
-			CommandPool,
-			VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-			1
-		};
-		VkCommandBuffer CopyCommandBuffer;
-		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CopyCommandBuffer)); {
-			const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
-				VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-				nullptr,
-				0,
-				nullptr
-			};
-			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CopyCommandBuffer, &CommandBufferBeginInfo)); {
-				const VkBufferCopy BufferCopy = {
-					0,
-					0,
-					Size
-				};
-				vkCmdCopyBuffer(CopyCommandBuffer, StagingBuffer, IndexBuffer, 1, &BufferCopy);
-			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CopyCommandBuffer));
-
-			const VkSubmitInfo SubmitInfo = {
-				VK_STRUCTURE_TYPE_SUBMIT_INFO,
-				nullptr,
-				0, nullptr,
-				nullptr,
-				1, &CopyCommandBuffer,
-				0, nullptr
-			};
-			VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
-			VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
-		} vkFreeCommandBuffers(Device, CommandPool, 1, &CopyCommandBuffer);
-	}
-#pragma endregion
-
-	vkDestroyBuffer(Device, StagingBuffer, nullptr);
-	vkFreeMemory(Device, StagingDeviceMemory, nullptr);
-
 #ifdef _DEBUG
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-
 void VK::CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
 	const auto Size = sizeof(glm::mat4) * 3; //!< World, View, Projection
@@ -1607,9 +1350,17 @@ void VK::WaitForFence()
 	const uint64_t TimeOut = 100000000;
 	do {
 		Result = vkWaitForFences(Device, 1, &Fence, VK_TRUE, TimeOut);
-	//} while (VK_TIMEOUT != Result);
+		if (VK_TIMEOUT == Result) {
+#ifdef _DEBUG
+			std::cout << "TIMEOUT" << std::endl;
+#endif
+		}
 	} while (VK_SUCCESS != Result);
 	VERIFY_SUCCEEDED(Result);
 
 	vkResetFences(Device, 1, &Fence);
+
+#ifdef _DEBUG
+	//std::cout << "Fence" << std::endl;
+#endif
 }

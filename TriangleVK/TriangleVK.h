@@ -12,5 +12,14 @@ private:
 public:
 	TriangleVK() : VK() {}
 	virtual ~TriangleVK() {}
+
+protected:
+	virtual void CreateShader() override;
+	virtual void CreateVertexInput() override;
+	virtual void CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties) override;
+	virtual void CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties) override;
+
+private:
+	using Vertex = std::tuple<glm::vec3, glm::vec4>;
 };
 #pragma endregion
