@@ -46,8 +46,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	OnSize(hWnd, hInstance);
 
-	PopulateCommandList();
-
 #ifdef _DEBUG
 	__int64 B;
 	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&B));
@@ -66,6 +64,7 @@ void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 	WaitForFence();
 
 	const auto CommandList = GraphicsCommandLists.back();
+
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator.Get(), nullptr));
 	{		
 		ResizeSwapChain();
@@ -84,8 +83,6 @@ void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 #endif
 
 	CreateViewport();
-
-	//PopulateCommandList();
 }
 void DX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
@@ -698,7 +695,7 @@ void DX::BarrierDepthWrite()
 	CommandList->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
 
 #ifdef _DEBUG
-	std::cout << "\t" << "ResourceBarrier" << " : " << "To DepthWrite" << std::endl;
+	//std::cout << "\t" << "ResourceBarrier" << " : " << "To DepthWrite" << std::endl;
 #endif
 }
 void DX::BarrierRenderTarget()
@@ -720,7 +717,7 @@ void DX::BarrierRenderTarget()
 	CommandList->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
 
 #ifdef _DEBUG
-	std::cout << "\t" << "ResourceBarrier" << " : " << "To RenderTarget" << std::endl;
+	//std::cout << "\t" << "ResourceBarrier" << " : " << "To RenderTarget" << std::endl;
 #endif
 }
 void DX::BarrierPresent()
@@ -742,71 +739,72 @@ void DX::BarrierPresent()
 	CommandList->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
 
 #ifdef _DEBUG
-	std::cout << "\t" << "ResourceBarrier" << " :  " << "To Present" << std::endl;
+	//std::cout << "\t" << "ResourceBarrier" << " :  " << "To Present" << std::endl;
 #endif
 }
 void DX::PopulateCommandList()
+{
+	Clear();
+	
+	//!< レンダーターゲット(フレームバッファ)
+	//auto RenderTargetViewHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	//RenderTargetViewHandle.ptr += CurrentBackBufferIndex * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	////auto DepthStencilViewHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	////DepthStencilViewHandle.ptr += 0 * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	//CommandList->OMSetRenderTargets(1, &RenderTargetViewHandle, FALSE, nullptr/*&DepthStencilViewHandle*/);
+
+//	//{
+//	//	using namespace DirectX;
+//	//	const std::vector<XMMATRIX> WVP = { XMMatrixIdentity(), XMMatrixIdentity(), XMMatrixIdentity() };
+
+//	//	UINT8* Data;
+//	//	D3D12_RANGE Range = { 0, 0 };
+//	//	VERIFY_SUCCEEDED(ConstantBuffer->Map(0, &Range, reinterpret_cast<void**>(&Data))); {
+//	//		memcpy(Data, &WVP, sizeof(WVP));
+//	//	} ConstantBuffer->Unmap(0, nullptr); //!< サンプルには アプリが終了するまで Unmap しない、リソースはマップされたままでOKと書いてあるが...よく分からない
+//	//}
+
+//	//CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	//CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+	//CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+
+//	//CommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
+//	//CommandList->IASetIndexBuffer(&IndexBufferView);
+
+//	//CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
+}
+
+void DX::Draw()
 {
 	const auto CommandList = GraphicsCommandLists.back();
 
 	//!< GPU が参照している間は CommandAllocator->Reset() できない
 	VERIFY_SUCCEEDED(CommandAllocator->Reset());
+	
 	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能
 	//!< コマンドキューはコマンドリストではなく、コマンドアロケータを参照している
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator.Get(), PipelineState.Get()));
 	{
-		//CommandList->SetGraphicsRootSignature(RootSignature.Get());
-
 		BarrierRenderTarget();
 		{
-			Clear();
-
-			//!< レンダーターゲット(フレームバッファ)
-			//auto RenderTargetViewHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-			//RenderTargetViewHandle.ptr += CurrentBackBufferIndex * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-			////auto DepthStencilViewHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-			////DepthStencilViewHandle.ptr += 0 * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-			//CommandList->OMSetRenderTargets(1, &RenderTargetViewHandle, FALSE, nullptr/*&DepthStencilViewHandle*/);
-
-		//	//{
-		//	//	using namespace DirectX;
-		//	//	const std::vector<XMMATRIX> WVP = { XMMatrixIdentity(), XMMatrixIdentity(), XMMatrixIdentity() };
-
-		//	//	UINT8* Data;
-		//	//	D3D12_RANGE Range = { 0, 0 };
-		//	//	VERIFY_SUCCEEDED(ConstantBuffer->Map(0, &Range, reinterpret_cast<void**>(&Data))); {
-		//	//		memcpy(Data, &WVP, sizeof(WVP));
-		//	//	} ConstantBuffer->Unmap(0, nullptr); //!< サンプルには アプリが終了するまで Unmap しない、リソースはマップされたままでOKと書いてあるが...よく分からない
-		//	//}
-
-		//	//CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-			//CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-			//CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
-
-		//	//CommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
-		//	//CommandList->IASetIndexBuffer(&IndexBufferView);
-
-		//	//CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
+			PopulateCommandList();
 		}
 		BarrierPresent();
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
-}
 
-void DX::Draw()
-{
 	ExecuteCommandList();
+
 	Present();
+
 	WaitForFence();
 }
 void DX::ExecuteCommandList()
 {
-	const auto CommandList = GraphicsCommandLists.back();
+	auto CommandList = GraphicsCommandLists.back();
 
-	std::vector<ID3D12CommandList*> CommandLists = {
-		CommandList.Get()
-	};
+	std::vector<ID3D12CommandList*> CommandLists = { CommandList.Get() };
 	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
 }
 void DX::Present()
@@ -814,7 +812,7 @@ void DX::Present()
 	VERIFY_SUCCEEDED(SwapChain->Present(1, 0));
 
 #ifdef _DEBUG
-	std::cout << CurrentBackBufferIndex;
+	//std::cout << CurrentBackBufferIndex;
 #endif
 	CurrentBackBufferIndex = ++CurrentBackBufferIndex % static_cast<UINT>(SwapChainResources.size());
 }

@@ -83,7 +83,7 @@ protected:
 	// ----------------------------------
 
 	virtual void Clear();
-	virtual void BarrierRender();
+	virtual void BarrierColorAttachment();
 	virtual void BarrierPresent();
 	virtual void PopulateCommandBuffer();
 

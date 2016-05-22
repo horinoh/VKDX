@@ -64,8 +64,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	OnSize(hWnd, hInstance);
 
-	PopulateCommandBuffer();
-
 #ifdef _DEBUG
 	__int64 B;
 	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&B));
@@ -1172,7 +1170,7 @@ void VK::Clear()
 		&ClearDepthStencil,
 		static_cast<uint32_t>(ImageSubresourceRanges_DepthStencil.size()), ImageSubresourceRanges_DepthStencil.data());
 }
-void VK::BarrierRender()
+void VK::BarrierColorAttachment()
 {
 	auto CommandBuffer = CommandBuffers[0/*SwapchainImageIndex*/];
 
@@ -1232,7 +1230,44 @@ void VK::BarrierPresent()
 }
 void VK::PopulateCommandBuffer()
 {
+	Clear();
+
+	//	//!< レンダーターゲット(フレームバッファ)
+	//	const VkRect2D Rect2D = {
+	//		{ 0, 0 },
+	//		{ 1280, 720 }, 
+	//	};
+	//	std::vector<VkClearValue> ClearValues(2);
+	//	ClearValues[0].color = { 0.5f, 0.5f, 1.0f, 1.0f };
+	//	ClearValues[1].depthStencil = { 1.0f, 0 };
+	//	const VkRenderPassBeginInfo RenderPassBeginInfo = {
+	//		VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+	//		nullptr,
+	//		RenderPass,
+	//		Framebuffers[SwapchainImageIndex],
+	//		Rect2D,
+	//		static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
+	//	};
+	//	vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	//	//!< トポロジは Pipeline にある
+	//	vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+	//	//!< Pipeline でビューポートとシザーは設定しているが↓は必要？
+	//	//vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+	//	//vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+
+	//	const VkDeviceSize Offsets[] = { 0 };
+	//	vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
+	//	vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+	//	vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
+}
+
+void VK::Draw()
+{
 	auto CommandBuffer = CommandBuffers[0/*SwapchainImageIndex*/];
+
+	VERIFY_SUCCEEDED(vkResetCommandPool(Device, CommandPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT));
 
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -1242,49 +1277,18 @@ void VK::PopulateCommandBuffer()
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo));
 	{
-		BarrierRender();
+		BarrierColorAttachment();
 		{
-			Clear();
-
-		//	//!< レンダーターゲット(フレームバッファ)
-		//	const VkRect2D Rect2D = {
-		//		{ 0, 0 },
-		//		{ 1280, 720 }, 
-		//	};
-		//	std::vector<VkClearValue> ClearValues(2);
-		//	ClearValues[0].color = { 0.5f, 0.5f, 1.0f, 1.0f };
-		//	ClearValues[1].depthStencil = { 1.0f, 0 };
-		//	const VkRenderPassBeginInfo RenderPassBeginInfo = {
-		//		VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-		//		nullptr,
-		//		RenderPass,
-		//		Framebuffers[SwapchainImageIndex],
-		//		Rect2D,
-		//		static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
-		//	};
-		//	vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-	
-		//	//!< トポロジは Pipeline にある
-		//	vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
-		//	//!< Pipeline でビューポートとシザーは設定しているが↓は必要？
-		//	//vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		//	//vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
-
-		//	const VkDeviceSize Offsets[] = { 0 };
-		//	vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
-		//	vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-		//	vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
+			PopulateCommandBuffer();
 		}
 		BarrierPresent();
 	}
 	VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
-}
 
-void VK::Draw()
-{
 	ExecuteCommandBuffer();
+
 	Present();
+
 	WaitForFence();
 }
 void VK::ExecuteCommandBuffer()
@@ -1341,7 +1345,7 @@ void VK::Present()
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, Semaphore, nullptr, &SwapchainImageIndex));
 #ifdef _DEBUG
 	//std::cout << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
-	std::cout << SwapchainImageIndex;
+	//std::cout << SwapchainImageIndex;
 #endif
 }
 void VK::WaitForFence()
