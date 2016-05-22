@@ -12,11 +12,11 @@
 
 #### GLM
 * https://github.com/g-truc/glm
-* ~~環境変数 **GLM_SDK_PATH** を作成した~~ 同じ階層に GLM をクローンして **..\..\glm** にパスを通した
+* 同じ階層に GLM をクローンして **..\..\glm** にパスを通した
 
 #### GLI
 * https://github.com/g-truc/gli
-* ~~環境変数 **GLI_SDK_PATH** を作成した~~ 同じ階層に GLI をクローンして **..\..\gli** にパスを通した
+* 同じ階層に GLI をクローンして **..\..\gli** にパスを通した
 
 #### シェーダコンパイル
 * glslangValidator.exe でコンパイルする 環境変数 **Path** が通っているらしくそのまま使用できる
@@ -27,31 +27,44 @@ for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator 
     
 ## DX
 
+#### d3dx12.h
+ * https://github.com/Microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HelloWorld/src/HelloTriangle/d3dx12.h からコピー
+ * 同じ階層に DirectX-Graphics-Samples をクローンした
+ * * Visual Studio で BuildEvent - Pre-Build Event に以下のように指定した 
+~~~
+xcopy /y  ..\..\DirectX-Graphics-Samples\Samples\Desktop\D3D12HelloWorld\src\HelloTriangle\d3dx12.h ..
+~~~
+
 #### Visual Studio
  * Visual Studio のインストール時に Universal Windows App Development Tools - Tools and Windows 10 SDK 10.XXX をチェックしておく必要がある
  * インストール済みの場合は「プログラムと機能」から更新インストールする 
 
 #### シェーダコンパイル
- * シェーダは Visual Studio に追加すると自動的にコンパイルされる]
+ * シェーダは Visual Studio に追加すると自動的にコンパイルされる
  * Properties - HLSLCompiler - General - Shader Type を適切に設定しておかないと、頂点シェーダでコンパイルされるので注意
+  * Debug, Release に対して設定する
 
+<!-- 
 ## プロジェクトの追加方法 (自分用覚書)
  * ソリューションを右クリック - Add - New Project で Win32 Project
  * プロジェクトを右クリック - Retarget SDK Verson で 10以上にする
 
-### DX
+#### DX
+ * プロパティマネージャで Add Existing Property Sheet... - Props/D3DX12.props, HLSL.props
  * Header Files に Win.h、DX.h を追加 
  * Source Files に Win.cpp、DX.cpp を追加
  * XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * 必要に応じて Shader Files フォルダを作成し、シェーダを突っ込む
   * 右クリック - プロパティ - HLSL Compiler - General - Shader Type でタイプを適切に選択しておく
 
-### VK
+#### VK
+ * プロパティマネージャで Add Existing Property Sheet... - Props/GLSL.props
  * Header Files に Win.h、VK.h を追加
  * Source Files に Win.cpp、VK.cpp を追加
  * XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * 必要に応じて Shader Files フォルダを作成し、シェーダを突っ込む
   * 拡張子を glslangValidator に沿うようにタイプを選択しておく。(VS.vert、 PS.frag、...)
+ -->
 
 <!-- 
 ## FBX
@@ -71,3 +84,10 @@ for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator 
  Path=%Path%:%OPENCV_SDK_PATH%\x64\vc14\bin
  ~~~
  -->
+
+<!--
+TODO
+* コマンドバッファをセットアップ用と描画用に分ける
+* GLSL のコンパイルのカスタムビルドを作る？
+* よく使うパターンは DX.h, VK.h へ持たせたい
+ --> 

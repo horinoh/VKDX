@@ -10,6 +10,9 @@
 #include <DirectXPackedVector.h>
 #include <DirectXColors.h>
 
+//!< https://github.com/Microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HelloWorld/src/HelloTriangle/d3dx12.h 
+#include "d3dx12.h"
+
 #include "Win.h"
 
 #ifndef VERIFY_SUCCEEDED
@@ -64,9 +67,7 @@ protected:
 	virtual void Clear();
 	virtual void PopulateCommandList();
 
-	virtual void BarrierDepthWrite();
-	virtual void BarrierRenderTarget();
-	virtual void BarrierPresent();
+	virtual void BarrierTransition(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After);
 
 	virtual void Draw();
 	virtual void ExecuteCommandList();
@@ -104,11 +105,13 @@ protected:
 
 #pragma region VertexBuffer
 	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferResource;
+	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferUploadResource;
 	D3D12_VERTEX_BUFFER_VIEW VertexBufferView;
 #pragma endregion
 
 #pragma region IndexBuffer
 	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferResource;
+	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferUploadResource;
 	D3D12_INDEX_BUFFER_VIEW IndexBufferView;
 	UINT IndexCount = 0;
 #pragma endregion

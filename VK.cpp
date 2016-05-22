@@ -1205,25 +1205,23 @@ void VK::PopulateCommandBuffer()
 	//	vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
 }
 
-void VK::BarrierColorAttachment()
+void VK::ImageBarrier(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout Old, VkImageLayout New)
 {
-	auto CommandBuffer = CommandBuffers[0/*SwapchainImageIndex*/];
-
 	const VkImageSubresourceRange ImageSubresourceRange = {
 		VK_IMAGE_ASPECT_COLOR_BIT,
 		0, 1,
 		0, 1,
 	};
-	const VkImageMemoryBarrier MemoryBarrier = {
+	const VkImageMemoryBarrier ImageMemoryBarrier = {
 		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 		nullptr,
 		0,
 		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		Old,
+		New,
 		VK_QUEUE_FAMILY_IGNORED,
 		VK_QUEUE_FAMILY_IGNORED,
-		SwapchainImages[SwapchainImageIndex],
+		Image,
 		ImageSubresourceRange
 	};
 	vkCmdPipelineBarrier(CommandBuffer,
@@ -1232,37 +1230,9 @@ void VK::BarrierColorAttachment()
 		0,
 		0, nullptr,
 		0, nullptr,
-		1, &MemoryBarrier);
+		1, &ImageMemoryBarrier);
 }
-void VK::BarrierPresent()
-{
-	auto CommandBuffer = CommandBuffers[0/*SwapchainImageIndex*/];
 
-	const VkImageSubresourceRange ImageSubresourceRange = {
-		VK_IMAGE_ASPECT_COLOR_BIT,
-		0, 1,
-		0, 1,
-	};
-	const VkImageMemoryBarrier MemoryBarrier = {
-		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-		nullptr,
-		VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-		0,
-		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-		VK_QUEUE_FAMILY_IGNORED,
-		VK_QUEUE_FAMILY_IGNORED,
-		SwapchainImages[SwapchainImageIndex],
-		ImageSubresourceRange
-	};
-	vkCmdPipelineBarrier(CommandBuffer,
-		VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-		0,
-		0, nullptr,
-		0, nullptr,
-		1, &MemoryBarrier);
-}
 void VK::Draw()
 {
 	auto CommandBuffer = CommandBuffers[0/*SwapchainImageIndex*/];
@@ -1277,11 +1247,11 @@ void VK::Draw()
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo));
 	{
-		BarrierColorAttachment();
+		ImageBarrier(CommandBuffer, SwapchainImages[SwapchainImageIndex], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		{
 			PopulateCommandBuffer();
 		}
-		BarrierPresent();
+		ImageBarrier(CommandBuffer, SwapchainImages[SwapchainImageIndex], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 	}
 	VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 

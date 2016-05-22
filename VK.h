@@ -85,8 +85,7 @@ protected:
 	virtual void Clear();
 	virtual void PopulateCommandBuffer();
 
-	virtual void BarrierColorAttachment();
-	virtual void BarrierPresent();
+	virtual void ImageBarrier(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout Old, VkImageLayout New);
 
 	virtual void Draw();
 	virtual void ExecuteCommandBuffer();

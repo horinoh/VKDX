@@ -278,25 +278,57 @@ void TriangleDX::CreateVertexBuffer()
 		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
 		D3D12_RESOURCE_FLAG_NONE
 	};
-	const D3D12_HEAP_PROPERTIES HeapProperties = {
-		D3D12_HEAP_TYPE_UPLOAD,
-		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		D3D12_MEMORY_POOL_UNKNOWN,
-		1,
-		1
-	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&VertexBufferResource)));
+	//!< リソースを作成
+	{
+		const D3D12_HEAP_PROPERTIES HeapProperties = {
+			D3D12_HEAP_TYPE_DEFAULT,
+			D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+			D3D12_MEMORY_POOL_UNKNOWN,
+			1,
+			1
+		};
+		VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+			D3D12_HEAP_FLAG_NONE,
+			&ResourceDesc,
+			D3D12_RESOURCE_STATE_COMMON,
+			nullptr,
+			IID_PPV_ARGS(&VertexBufferResource)));
+	}
+	//!< アップロード用のリソースを作成
+	{
+		const D3D12_HEAP_PROPERTIES HeapProperties = {
+			D3D12_HEAP_TYPE_UPLOAD,
+			D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+			D3D12_MEMORY_POOL_UNKNOWN,
+			1,
+			1
+		};
+		VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+			D3D12_HEAP_FLAG_NONE,
+			&ResourceDesc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&VertexBufferUploadResource)));
+	}
 
-	UINT8* Data;
-	const D3D12_RANGE Range = { 0, 0 };
-	VERIFY_SUCCEEDED(VertexBufferResource->Map(0, &Range, reinterpret_cast<void **>(&Data))); {
-		memcpy(Data, Vertices.data(), Size);
-	} VertexBufferResource->Unmap(0, nullptr);
+	auto CommandList = GraphicsCommandLists.back();
+	BarrierTransition(CommandList.Get(), VertexBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+	{
+		D3D12_SUBRESOURCE_DATA SubresourceData = {
+			Vertices.data(),
+			Size, Size
+		};
+		UpdateSubresources<1>(CommandList.Get(), VertexBufferResource.Get(), VertexBufferUploadResource.Get(), 0, 0, 1, &SubresourceData);
+	}
+	BarrierTransition(CommandList.Get(), VertexBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+
+	//BYTE* Data;
+	////D3D12_RANGE Range = { 0, 0 };
+	//VERIFY_SUCCEEDED(VertexBufferUploadResource->Map(0, /*&Range*/nullptr, reinterpret_cast<void**>(&Data)));
+	//{
+	//	memcpy(Data, Vertices.data(), Size);
+	//}
+	//VertexBufferUploadResource->Unmap(0, nullptr);
 
 	VertexBufferView = {
 		VertexBufferResource->GetGPUVirtualAddress(),
@@ -329,25 +361,55 @@ void TriangleDX::CreateIndexBuffer()
 		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
 		D3D12_RESOURCE_FLAG_NONE
 	};
-	const D3D12_HEAP_PROPERTIES HeapProperties = {
-		D3D12_HEAP_TYPE_UPLOAD,
-		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		D3D12_MEMORY_POOL_UNKNOWN,
-		1,
-		1
-	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(&IndexBufferResource)));
+	//!< リソースを作成
+	{
+		const D3D12_HEAP_PROPERTIES HeapProperties = {
+			D3D12_HEAP_TYPE_DEFAULT,
+			D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+			D3D12_MEMORY_POOL_UNKNOWN,
+			1,
+			1
+		};
+		VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+			D3D12_HEAP_FLAG_NONE,
+			&ResourceDesc,
+			D3D12_RESOURCE_STATE_COMMON,
+			nullptr,
+			IID_PPV_ARGS(&IndexBufferResource)));
+	}
+	//!< アップロード用のリソースを作成
+	{
+		const D3D12_HEAP_PROPERTIES HeapProperties = {
+			D3D12_HEAP_TYPE_UPLOAD,
+			D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+			D3D12_MEMORY_POOL_UNKNOWN,
+			1,
+			1
+		};
+		VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+			D3D12_HEAP_FLAG_NONE,
+			&ResourceDesc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&IndexBufferResource)));
+	}
 
-	UINT8* Data;
-	D3D12_RANGE Range = { 0, 0 };
-	VERIFY_SUCCEEDED(IndexBufferResource->Map(0, &Range, reinterpret_cast<void **>(&Data))); {
-		memcpy(Data, Indices.data(), Size);
-	} IndexBufferResource->Unmap(0, nullptr);
+	auto CommandList = GraphicsCommandLists.back();
+	BarrierTransition(CommandList.Get(), IndexBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+	{
+		D3D12_SUBRESOURCE_DATA SubresourceData = {
+			Indices.data(),
+			Size, Size
+		};
+		UpdateSubresources<1>(CommandList.Get(), IndexBufferResource.Get(), IndexBufferUploadResource.Get(), 0, 0, 1, &SubresourceData);
+	}
+	BarrierTransition(CommandList.Get(), IndexBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+
+	//BYTE* Data;
+	////D3D12_RANGE Range = { 0, 0 };
+	//VERIFY_SUCCEEDED(IndexBufferResource->Map(0, /*&Range*/nullptr, reinterpret_cast<void **>(&Data))); {
+	//	memcpy(Data, Indices.data(), Size);
+	//} IndexBufferResource->Unmap(0, nullptr);
 
 	IndexBufferView = {
 		IndexBufferResource->GetGPUVirtualAddress(),

@@ -448,7 +448,9 @@ void DX::ResizeDepthStencil(const DXGI_FORMAT DepthFormat)
 	std::cout << "\t" << "DepthStencilView" << std::endl;
 #endif
 
-	BarrierDepthWrite();
+	auto CommandList = GraphicsCommandLists.back();
+
+	BarrierTransition(CommandList.Get(), DepthStencilResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 #endif
 
 #ifdef _DEBUG
@@ -709,72 +711,23 @@ void DX::PopulateCommandList()
 //	//CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
 }
 
-void DX::BarrierDepthWrite()
+void DX::BarrierTransition(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After)
 {
-	const auto CommandList = GraphicsCommandLists.back();
-
 	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarrier = {
 		{
 			D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 			D3D12_RESOURCE_BARRIER_FLAG_NONE,
 			{
-				DepthStencilResource.Get(),
+				Resource,
 				D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-				D3D12_RESOURCE_STATE_COMMON,
-				D3D12_RESOURCE_STATE_DEPTH_WRITE
+				Before,
+				After
 			}
 		}
 	};
 	CommandList->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
-
-#ifdef _DEBUG
-	//std::cout << "\t" << "ResourceBarrier" << " : " << "To DepthWrite" << std::endl;
-#endif
 }
-void DX::BarrierRenderTarget()
-{
-	const auto CommandList = GraphicsCommandLists.back();
 
-	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarrier = {
-		{
-			D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-			D3D12_RESOURCE_BARRIER_FLAG_NONE,
-			{
-				SwapChainResources[CurrentBackBufferIndex].Get(),
-				D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-				D3D12_RESOURCE_STATE_PRESENT,
-				D3D12_RESOURCE_STATE_RENDER_TARGET
-			}
-		}
-	};
-	CommandList->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
-
-#ifdef _DEBUG
-	//std::cout << "\t" << "ResourceBarrier" << " : " << "To RenderTarget" << std::endl;
-#endif
-}
-void DX::BarrierPresent()
-{
-	const auto CommandList = GraphicsCommandLists.back();
-
-	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarrier = {
-		{
-			D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-			D3D12_RESOURCE_BARRIER_FLAG_NONE,
-			{
-				SwapChainResources[CurrentBackBufferIndex].Get(),
-				D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-				D3D12_RESOURCE_STATE_RENDER_TARGET,
-				D3D12_RESOURCE_STATE_PRESENT
-			}
-		}
-	};
-	CommandList->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
-
-#ifdef _DEBUG
-	//std::cout << "\t" << "ResourceBarrier" << " :  " << "To Present" << std::endl;
-#endif
-}
 void DX::Draw()
 {
 	const auto CommandList = GraphicsCommandLists.back();
@@ -786,11 +739,11 @@ void DX::Draw()
 	//!< コマンドキューはコマンドリストではなく、コマンドアロケータを参照している
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator.Get(), PipelineState.Get()));
 	{
-		BarrierRenderTarget();
+		BarrierTransition(CommandList.Get(), SwapChainResources[CurrentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
 			PopulateCommandList();
 		}
-		BarrierPresent();
+		BarrierTransition(CommandList.Get(), SwapChainResources[CurrentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 
