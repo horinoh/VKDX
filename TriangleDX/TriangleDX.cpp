@@ -266,6 +266,7 @@ void TriangleDX::CreateVertexBuffer()
 	const auto Size = sizeof(Vertices);
 	const auto Stride = sizeof(Vertices[0]);
 
+	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
 	const D3D12_RESOURCE_DESC ResourceDesc = {
 		D3D12_RESOURCE_DIMENSION_BUFFER,
 		0,
@@ -273,7 +274,7 @@ void TriangleDX::CreateVertexBuffer()
 		1,
 		1,
 		DXGI_FORMAT_UNKNOWN,
-		{ 1, 0 },
+		SampleDesc,
 		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
 		D3D12_RESOURCE_FLAG_NONE
 	};
@@ -316,6 +317,7 @@ void TriangleDX::CreateIndexBuffer()
 	//!< DrawInstanced() ‚ªˆø”‚ÉŽæ‚é‚Ì‚ÅŠo‚¦‚Ä‚¨‚­•K—v‚ª‚ ‚é
 	IndexCount = static_cast<UINT32>(Indices.size());
 
+	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
 	const D3D12_RESOURCE_DESC ResourceDesc = {
 		D3D12_RESOURCE_DIMENSION_BUFFER,
 		0,
@@ -323,7 +325,7 @@ void TriangleDX::CreateIndexBuffer()
 		1,
 		1,
 		DXGI_FORMAT_UNKNOWN,
-		{ 1, 0 },
+		SampleDesc,
 		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
 		D3D12_RESOURCE_FLAG_NONE
 	};

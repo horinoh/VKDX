@@ -62,7 +62,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	
 	CreateFence();
 
-	OnSize(hWnd, hInstance);
+	//OnSize(hWnd, hInstance);
 
 #ifdef _DEBUG
 	__int64 B;
@@ -1170,6 +1170,41 @@ void VK::Clear()
 		&ClearDepthStencil,
 		static_cast<uint32_t>(ImageSubresourceRanges_DepthStencil.size()), ImageSubresourceRanges_DepthStencil.data());
 }
+void VK::PopulateCommandBuffer()
+{
+	Clear();
+
+	//	//!< レンダーターゲット(フレームバッファ)
+	//	const VkRect2D Rect2D = {
+	//		{ 0, 0 },
+	//		{ 1280, 720 }, 
+	//	};
+	//	std::vector<VkClearValue> ClearValues(2);
+	//	ClearValues[0].color = { 0.5f, 0.5f, 1.0f, 1.0f };
+	//	ClearValues[1].depthStencil = { 1.0f, 0 };
+	//	const VkRenderPassBeginInfo RenderPassBeginInfo = {
+	//		VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+	//		nullptr,
+	//		RenderPass,
+	//		Framebuffers[SwapchainImageIndex],
+	//		Rect2D,
+	//		static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
+	//	};
+	//	vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+	//	//!< トポロジは Pipeline にある
+	//	vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+	//	//!< Pipeline でビューポートとシザーは設定しているが↓は必要？
+	//	//vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+	//	//vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+
+	//	const VkDeviceSize Offsets[] = { 0 };
+	//	vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
+	//	vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+	//	vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
+}
+
 void VK::BarrierColorAttachment()
 {
 	auto CommandBuffer = CommandBuffers[0/*SwapchainImageIndex*/];
@@ -1228,41 +1263,6 @@ void VK::BarrierPresent()
 		0, nullptr,
 		1, &MemoryBarrier);
 }
-void VK::PopulateCommandBuffer()
-{
-	Clear();
-
-	//	//!< レンダーターゲット(フレームバッファ)
-	//	const VkRect2D Rect2D = {
-	//		{ 0, 0 },
-	//		{ 1280, 720 }, 
-	//	};
-	//	std::vector<VkClearValue> ClearValues(2);
-	//	ClearValues[0].color = { 0.5f, 0.5f, 1.0f, 1.0f };
-	//	ClearValues[1].depthStencil = { 1.0f, 0 };
-	//	const VkRenderPassBeginInfo RenderPassBeginInfo = {
-	//		VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-	//		nullptr,
-	//		RenderPass,
-	//		Framebuffers[SwapchainImageIndex],
-	//		Rect2D,
-	//		static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
-	//	};
-	//	vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-	//	//!< トポロジは Pipeline にある
-	//	vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
-	//	//!< Pipeline でビューポートとシザーは設定しているが↓は必要？
-	//	//vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-	//	//vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
-
-	//	const VkDeviceSize Offsets[] = { 0 };
-	//	vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
-	//	vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-	//	vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
-}
-
 void VK::Draw()
 {
 	auto CommandBuffer = CommandBuffers[0/*SwapchainImageIndex*/];

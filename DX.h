@@ -62,10 +62,11 @@ protected:
 	virtual void CreateFence();
 
 	virtual void Clear();
+	virtual void PopulateCommandList();
+
 	virtual void BarrierDepthWrite();
 	virtual void BarrierRenderTarget();
 	virtual void BarrierPresent();
-	virtual void PopulateCommandList();
 
 	virtual void Draw();
 	virtual void ExecuteCommandList();
@@ -93,20 +94,13 @@ protected:
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
 
-#pragma region InputLayout
-protected:
 	std::vector<D3D12_INPUT_ELEMENT_DESC> InputElementDescs;
 	D3D12_INPUT_LAYOUT_DESC InputLayoutDesc;
-#pragma endregion
 
-#pragma region Viewport
 	std::vector<D3D12_VIEWPORT> Viewports;
 	std::vector<D3D12_RECT> ScissorRects;
-#pragma endregion
 
-#pragma region PipelineState
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
-#pragma endregion
 
 #pragma region VertexBuffer
 	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferResource;
@@ -126,6 +120,4 @@ protected:
 
 	Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
 	UINT64 FenceValue;
-
-	//UINT RTVDescriptorSize;
 };

@@ -44,7 +44,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateFence();
 
-	OnSize(hWnd, hInstance);
+	//OnSize(hWnd, hInstance);
 
 #ifdef _DEBUG
 	__int64 B;
@@ -676,6 +676,39 @@ void DX::Clear()
 	//CommandList->ClearDepthStencilView(DepthStencilViewHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 }
 
+void DX::PopulateCommandList()
+{
+	Clear();
+	
+	//!< レンダーターゲット(フレームバッファ)
+	//auto RenderTargetViewHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	//RenderTargetViewHandle.ptr += CurrentBackBufferIndex * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	////auto DepthStencilViewHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	////DepthStencilViewHandle.ptr += 0 * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	//CommandList->OMSetRenderTargets(1, &RenderTargetViewHandle, FALSE, nullptr/*&DepthStencilViewHandle*/);
+
+//	//{
+//	//	using namespace DirectX;
+//	//	const std::vector<XMMATRIX> WVP = { XMMatrixIdentity(), XMMatrixIdentity(), XMMatrixIdentity() };
+
+//	//	UINT8* Data;
+//	//	D3D12_RANGE Range = { 0, 0 };
+//	//	VERIFY_SUCCEEDED(ConstantBuffer->Map(0, &Range, reinterpret_cast<void**>(&Data))); {
+//	//		memcpy(Data, &WVP, sizeof(WVP));
+//	//	} ConstantBuffer->Unmap(0, nullptr); //!< サンプルには アプリが終了するまで Unmap しない、リソースはマップされたままでOKと書いてあるが...よく分からない
+//	//}
+
+//	//CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	//CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+	//CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+
+//	//CommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
+//	//CommandList->IASetIndexBuffer(&IndexBufferView);
+
+//	//CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
+}
+
 void DX::BarrierDepthWrite()
 {
 	const auto CommandList = GraphicsCommandLists.back();
@@ -742,39 +775,6 @@ void DX::BarrierPresent()
 	//std::cout << "\t" << "ResourceBarrier" << " :  " << "To Present" << std::endl;
 #endif
 }
-void DX::PopulateCommandList()
-{
-	Clear();
-	
-	//!< レンダーターゲット(フレームバッファ)
-	//auto RenderTargetViewHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	//RenderTargetViewHandle.ptr += CurrentBackBufferIndex * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	////auto DepthStencilViewHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	////DepthStencilViewHandle.ptr += 0 * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-	//CommandList->OMSetRenderTargets(1, &RenderTargetViewHandle, FALSE, nullptr/*&DepthStencilViewHandle*/);
-
-//	//{
-//	//	using namespace DirectX;
-//	//	const std::vector<XMMATRIX> WVP = { XMMatrixIdentity(), XMMatrixIdentity(), XMMatrixIdentity() };
-
-//	//	UINT8* Data;
-//	//	D3D12_RANGE Range = { 0, 0 };
-//	//	VERIFY_SUCCEEDED(ConstantBuffer->Map(0, &Range, reinterpret_cast<void**>(&Data))); {
-//	//		memcpy(Data, &WVP, sizeof(WVP));
-//	//	} ConstantBuffer->Unmap(0, nullptr); //!< サンプルには アプリが終了するまで Unmap しない、リソースはマップされたままでOKと書いてあるが...よく分からない
-//	//}
-
-//	//CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-	//CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-	//CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
-
-//	//CommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
-//	//CommandList->IASetIndexBuffer(&IndexBufferView);
-
-//	//CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
-}
-
 void DX::Draw()
 {
 	const auto CommandList = GraphicsCommandLists.back();
