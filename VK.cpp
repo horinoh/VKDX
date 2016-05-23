@@ -25,7 +25,10 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateInstance();
 	auto PhysicalDevice = CreateDevice(); 
 	
-	CreateCommandBuffer();
+	CreateCommandBuffer(CommandPools[0]);
+	
+	CreateFence();
+
 	const auto ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 #ifdef _DEBUG
 	std::cout << "\t" << Yellow << "B8G8R8A8_UNORM" << White << std::endl;
@@ -53,15 +56,15 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	//CreateViewport();
 	//CreatePipeline();
 
-	CreateVertexBuffer(PhysicalDeviceMemoryProperties);
-	CreateIndexBuffer(PhysicalDeviceMemoryProperties);
+	//CreateCommandBuffer(CommandPools[1]);
+
+	CreateVertexBuffer(CommandPools[0], PhysicalDeviceMemoryProperties);
+	CreateIndexBuffer(CommandPools[0], PhysicalDeviceMemoryProperties);
 	//CreateUniformBuffer(PhysicalDeviceMemoryProperties);
 
 	//CreateFramebuffers();
 	//CreateRenderPass(ColorFormat, DepthFormat);
 	
-	CreateFence();
-
 	//OnSize(hWnd, hInstance);
 
 #ifdef _DEBUG
@@ -105,7 +108,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	Super::OnDestroy(hWnd, hInstance);
 
 	WaitForFence();
-	vkDestroyFence(Device, Fence, nullptr);
 
 #pragma region RenderPass
 	if (VK_NULL_HANDLE != RenderPass) {
@@ -191,10 +193,13 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 #pragma endregion
 
+	vkDestroyFence(Device, Fence, nullptr);
+
 #pragma region CommandBuffer
-	vkFreeCommandBuffers(Device, CommandPool, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
-	if (VK_NULL_HANDLE != CommandPool) {
-		vkDestroyCommandPool(Device, CommandPool, nullptr);
+	vkFreeCommandBuffers(Device, CommandPools[0], 1, &CommandBuffers[0]);
+	//vkFreeCommandBuffers(Device, CommandPools[1], 1, &CommandBuffers[1]);
+	for (auto i : CommandPools) {
+		vkDestroyCommandPool(Device, i, nullptr);
 	}
 #pragma endregion
 
@@ -479,16 +484,19 @@ void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 		QueueFamilyIndex
 	};
-	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, nullptr, &CommandPool));
+	CommandPools.resize(2);
+	for (auto& i : CommandPools) {
+		VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, nullptr, &i));
+	}
 
 #ifdef _DEBUG
 	std::cout << "CreateCommandPool" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
-void VK::CreateCommandBuffer()
+void VK::CreateCommandBuffer(const VkCommandPool CommandPool)
 {
-	CommandBuffers.resize(1);
+	CommandBuffers.resize(CommandBuffers.size() + 1);
 	const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 		nullptr,
@@ -496,10 +504,23 @@ void VK::CreateCommandBuffer()
 		VK_COMMAND_BUFFER_LEVEL_PRIMARY,
 		static_cast<uint32_t>(CommandBuffers.size())
 	};
-	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, CommandBuffers.data()));
+	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CommandBuffers.back()));
 
 #ifdef _DEBUG
 	std::cout << "CreateCommandBuffer" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void VK::CreateFence()
+{
+	const VkFenceCreateInfo FenceCreateInfo = {
+		VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+		nullptr,
+		0
+	};
+	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, nullptr, &Fence));
+#ifdef _DEBUG
+	std::cout << "CreateFence" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
@@ -734,6 +755,11 @@ void VK::CreateShader()
 	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
 #endif
 }
+void VK::CreateShader_VSPS()
+{
+
+}
+
 /**
 @brief シェーダとのバインディングのレイアウト
 @note DescriptorSetLayt は型のようなもの、DescriptorSet はインスタンスのようなもの
@@ -813,6 +839,10 @@ void VK::CreateVertexInput()
 #ifdef _DEBUG
 	std::cout << "CreateVertexInput" << COUT_OK << std::endl << std::endl;
 #endif
+}
+void VK::CreateVertexInput_PositionColor()
+{
+
 }
 
 void VK::CreateViewport()
@@ -968,13 +998,13 @@ void VK::CreatePipeline()
 #endif
 }
 
-void VK::CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
+void VK::CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
 #ifdef _DEBUG
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void VK::CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
+void VK::CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
 #ifdef _DEBUG
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
@@ -1125,23 +1155,8 @@ void VK::CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat
 #pragma endregion
 }
 
-void VK::CreateFence()
+void VK::Clear(const VkCommandBuffer CommandBuffer)
 {
-	const VkFenceCreateInfo FenceCreateInfo = {
-		VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-		nullptr,
-		0
-	};
-	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, nullptr, &Fence));
-#ifdef _DEBUG
-	std::cout << "CreateFence" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
-void VK::Clear()
-{
-	auto CommandBuffer = CommandBuffers[0/*SwapchainImageIndex*/];
-
 	const VkClearColorValue SkyBlue = { 0.529411793f, 0.807843208f, 0.921568692f, 1.0f };
 	const std::vector<VkImageSubresourceRange> ImageSubresourceRanges_Color = {
 		{
@@ -1170,9 +1185,9 @@ void VK::Clear()
 		&ClearDepthStencil,
 		static_cast<uint32_t>(ImageSubresourceRanges_DepthStencil.size()), ImageSubresourceRanges_DepthStencil.data());
 }
-void VK::PopulateCommandBuffer()
+void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 {
-	Clear();
+	Clear(CommandBuffer);
 
 	//	//!< レンダーターゲット(フレームバッファ)
 	//	const VkRect2D Rect2D = {
@@ -1235,7 +1250,8 @@ void VK::ImageBarrier(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayou
 
 void VK::Draw()
 {
-	auto CommandBuffer = CommandBuffers[0/*SwapchainImageIndex*/];
+	auto CommandPool = CommandPools[0];
+	auto CommandBuffer = CommandBuffers[0];
 
 	VERIFY_SUCCEEDED(vkResetCommandPool(Device, CommandPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT));
 
@@ -1249,19 +1265,19 @@ void VK::Draw()
 	{
 		ImageBarrier(CommandBuffer, SwapchainImages[SwapchainImageIndex], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		{
-			PopulateCommandBuffer();
+			PopulateCommandBuffer(CommandBuffer);
 		}
 		ImageBarrier(CommandBuffer, SwapchainImages[SwapchainImageIndex], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 	}
 	VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 
-	ExecuteCommandBuffer();
+	ExecuteCommandBuffer(CommandBuffer);
 
 	Present();
 
 	WaitForFence();
 }
-void VK::ExecuteCommandBuffer()
+void VK::ExecuteCommandBuffer(const VkCommandBuffer CommandBuffer)
 {
 	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 
@@ -1270,7 +1286,7 @@ void VK::ExecuteCommandBuffer()
 		nullptr,
 		0, nullptr,
 		nullptr,
-		1,  &CommandBuffers[0/*SwapchainImageIndex*/],
+		1,  &CommandBuffer,
 		0, nullptr
 	};
 #if 1

@@ -225,44 +225,22 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     return (INT_PTR)FALSE;
 }
 
+#pragma region Code
 void TriangleDX::CreateShader()
 {
-	using namespace Microsoft::WRL;
-
-	BlobVSs.resize(1);
-	D3DReadFileToBlob(SHADER_PATH L"VS.cso", BlobVSs[0].GetAddressOf());
-
-	BlobPSs.resize(1);
-	D3DReadFileToBlob(SHADER_PATH L"PS.cso", BlobPSs[0].GetAddressOf());
-
-#ifdef _DEBUG
-	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
-#endif
+	CreateShader_VSPS();
 }
-
 void TriangleDX::CreateInputLayout()
 {
-	InputElementDescs = {
-		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, sizeof(std::get<0>(Vertex())), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-	};
-	InputLayoutDesc = {
-		InputElementDescs.data(), static_cast<UINT>(InputElementDescs.size())
-	};
-
-#ifdef _DEBUG
-	std::cout << "CreateInputLayout" << COUT_OK << std::endl << std::endl;
-#endif
+	CreateInputLayout_PositionColor();
 }
-
-void TriangleDX::CreateVertexBuffer()
+void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
 {
 	const std::vector<Vertex> Vertices = {
-		{ Vertex({ 0.0f,   0.25f, 0.0f },{ 0.0f, 0.0f, 0.0f, 1.0f }) },
-		{ Vertex({ 0.25f, -0.25f, 0.0f },{ 0.0f, 0.0f, 0.0f, 1.0f }) },
-		{ Vertex({ -0.25f, -0.25f, 0.0f },{ 0.0f, 0.0f, 0.0f, 1.0f }) },
+		{ Vertex({ 0.0f,   0.25f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }) },
+		{ Vertex({ 0.25f, -0.25f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }) },
+		{ Vertex({ -0.25f, -0.25f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }) },
 	};
-
 	const auto Size = sizeof(Vertices);
 	const auto Stride = sizeof(Vertices[0]);
 
@@ -278,7 +256,7 @@ void TriangleDX::CreateVertexBuffer()
 		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
 		D3D12_RESOURCE_FLAG_NONE
 	};
-	//!< リソースを作成
+	//!< ターゲットのリソースを作成
 	{
 		const D3D12_HEAP_PROPERTIES HeapProperties = {
 			D3D12_HEAP_TYPE_DEFAULT,
@@ -311,24 +289,21 @@ void TriangleDX::CreateVertexBuffer()
 			IID_PPV_ARGS(&VertexBufferUploadResource)));
 	}
 
-	auto CommandList = GraphicsCommandLists.back();
-	BarrierTransition(CommandList.Get(), VertexBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr));
 	{
-		D3D12_SUBRESOURCE_DATA SubresourceData = {
-			Vertices.data(),
-			Size, Size
-		};
-		UpdateSubresources<1>(CommandList.Get(), VertexBufferResource.Get(), VertexBufferUploadResource.Get(), 0, 0, 1, &SubresourceData);
+		BarrierTransition(CommandList, VertexBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+		{
+			D3D12_SUBRESOURCE_DATA SubresourceData = {
+				Vertices.data(),
+				Size, Size
+			};
+			VERIFY(0 != UpdateSubresources<1>(CommandList, VertexBufferResource.Get(), VertexBufferUploadResource.Get(), 0, 0, 1, &SubresourceData));
+		}
+		BarrierTransition(CommandList, VertexBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
 	}
-	BarrierTransition(CommandList.Get(), VertexBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+	VERIFY_SUCCEEDED(CommandList->Close());
 
-	//BYTE* Data;
-	////D3D12_RANGE Range = { 0, 0 };
-	//VERIFY_SUCCEEDED(VertexBufferUploadResource->Map(0, /*&Range*/nullptr, reinterpret_cast<void**>(&Data)));
-	//{
-	//	memcpy(Data, Vertices.data(), Size);
-	//}
-	//VertexBufferUploadResource->Unmap(0, nullptr);
+	ExecuteCommandList(CommandList);
 
 	VertexBufferView = {
 		VertexBufferResource->GetGPUVirtualAddress(),
@@ -340,11 +315,9 @@ void TriangleDX::CreateVertexBuffer()
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-
-void TriangleDX::CreateIndexBuffer()
+void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
 {
 	const std::vector<UINT32> Indices = { 0, 1, 2 };
-
 	const auto Size = sizeof(Indices);
 	//!< DrawInstanced() が引数に取るので覚えておく必要がある
 	IndexCount = static_cast<UINT32>(Indices.size());
@@ -361,7 +334,7 @@ void TriangleDX::CreateIndexBuffer()
 		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
 		D3D12_RESOURCE_FLAG_NONE
 	};
-	//!< リソースを作成
+	//!< ターゲットのリソースを作成
 	{
 		const D3D12_HEAP_PROPERTIES HeapProperties = {
 			D3D12_HEAP_TYPE_DEFAULT,
@@ -391,25 +364,24 @@ void TriangleDX::CreateIndexBuffer()
 			&ResourceDesc,
 			D3D12_RESOURCE_STATE_GENERIC_READ,
 			nullptr,
-			IID_PPV_ARGS(&IndexBufferResource)));
+			IID_PPV_ARGS(&IndexBufferUploadResource)));
 	}
 
-	auto CommandList = GraphicsCommandLists.back();
-	BarrierTransition(CommandList.Get(), IndexBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr));
 	{
-		D3D12_SUBRESOURCE_DATA SubresourceData = {
-			Indices.data(),
-			Size, Size
-		};
-		UpdateSubresources<1>(CommandList.Get(), IndexBufferResource.Get(), IndexBufferUploadResource.Get(), 0, 0, 1, &SubresourceData);
+		BarrierTransition(CommandList, IndexBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+		{
+			D3D12_SUBRESOURCE_DATA SubresourceData = {
+				Indices.data(),
+				Size, Size
+			};
+			VERIFY(0 != UpdateSubresources<1>(CommandList, IndexBufferResource.Get(), IndexBufferUploadResource.Get(), 0, 0, 1, &SubresourceData));
+		}
+		BarrierTransition(CommandList, IndexBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
 	}
-	BarrierTransition(CommandList.Get(), IndexBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+	VERIFY_SUCCEEDED(CommandList->Close());
 
-	//BYTE* Data;
-	////D3D12_RANGE Range = { 0, 0 };
-	//VERIFY_SUCCEEDED(IndexBufferResource->Map(0, /*&Range*/nullptr, reinterpret_cast<void **>(&Data))); {
-	//	memcpy(Data, Indices.data(), Size);
-	//} IndexBufferResource->Unmap(0, nullptr);
+	ExecuteCommandList(CommandList);
 
 	IndexBufferView = {
 		IndexBufferResource->GetGPUVirtualAddress(),
@@ -421,3 +393,4 @@ void TriangleDX::CreateIndexBuffer()
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
+#pragma endregion

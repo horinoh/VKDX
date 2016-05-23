@@ -25,7 +25,10 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	const auto ColorFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 	CreateDevice(hWnd, ColorFormat);
 	CreateCommandQueue();
-	CreateCommandList();
+	CreateCommandAllocator();
+	CreateCommandList(CommandAllocators[0].Get());
+
+	CreateFence();
 
 	CreateSwapChain(hWnd, ColorFormat);
 	CreateDepthStencil();
@@ -38,11 +41,11 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	//CreateViewport();
 	//CreatePipelineState();
 
-	CreateVertexBuffer();
-	CreateIndexBuffer();
-	//CreateConstantBuffer();
+	//CreateCommandList(CommandAllocators[1].Get()/*, Pipeline*/);
 
-	CreateFence();
+	CreateVertexBuffer(CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
+	CreateIndexBuffer(CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
+	//CreateConstantBuffer();
 
 	//OnSize(hWnd, hInstance);
 
@@ -63,16 +66,16 @@ void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 
 	WaitForFence();
 
-	const auto CommandList = GraphicsCommandLists.back();
+	const auto CommandList = GraphicsCommandLists[0].Get();
 
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator.Get(), nullptr));
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocators[0].Get(), nullptr));
 	{		
 		ResizeSwapChain();
 		ResizeDepthStencil();
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 
-	ExecuteCommandList();
+	ExecuteCommandList(CommandList);
 	
 	WaitForFence();
 
@@ -255,25 +258,42 @@ void DX::CreateCommandQueue()
 #endif
 }
 
-/**
-@brief ID3D12CommandAllocator と ID3D12GraphicsCommandList を作成
-描画コマンドを発行する場合は PipelineState の指定が必要
-TODO CommandList をいくつ作ってどう運用するか？
-*/
-void DX::CreateCommandList(ID3D12PipelineState* PipelineState)
+void DX::CreateCommandAllocator()
 {
-	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(CommandAllocator.GetAddressOf())));
+	CommandAllocators.resize(2);
+	for (auto& i : CommandAllocators) {
+		VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(i.GetAddressOf())));
+	}
+
 #ifdef _DEBUG
 	std::cout << "\t" << "CommandAllocator" << std::endl;
 #endif
+}
 
+/**
+@brief ID3D12CommandAllocator と ID3D12GraphicsCommandList を作成
+描画コマンドを発行する場合は PipelineState の指定が必要
+*/
+void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator, ID3D12PipelineState* PipelineState)
+{
 	GraphicsCommandLists.resize(GraphicsCommandLists.size() + 1);
 	//!< 描画コマンドを発行する CommandList の場合は PipelineState の指定が必要
-	VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, CommandAllocator.Get(), PipelineState, IID_PPV_ARGS(GraphicsCommandLists.back().GetAddressOf())));
+	VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, CommandAllocator, PipelineState, IID_PPV_ARGS(GraphicsCommandLists.back().GetAddressOf())));
 	VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
+
 #ifdef _DEBUG
 	std::cout << "CreateCommandList" << COUT_OK << std::endl << std::endl;
 #endif
+}
+
+void DX::CreateFence()
+{
+	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(Fence.GetAddressOf())));
+
+#ifdef _DEBUG
+	std::cout << "CreateFence" << COUT_OK << std::endl << std::endl;
+#endif
+	//WaitForFence();
 }
 
 /**
@@ -448,7 +468,7 @@ void DX::ResizeDepthStencil(const DXGI_FORMAT DepthFormat)
 	std::cout << "\t" << "DepthStencilView" << std::endl;
 #endif
 
-	auto CommandList = GraphicsCommandLists.back();
+	auto CommandList = GraphicsCommandLists[0];
 
 	BarrierTransition(CommandList.Get(), DepthStencilResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 #endif
@@ -463,6 +483,20 @@ void DX::ResizeDepthStencil(const DXGI_FORMAT DepthFormat)
 */
 void DX::CreateShader()
 {
+#ifdef _DEBUG
+	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
+#endif
+}
+void DX::CreateShader_VSPS()
+{
+	using namespace Microsoft::WRL;
+
+	BlobVSs.resize(1);
+	D3DReadFileToBlob(SHADER_PATH L"VS.cso", BlobVSs[0].GetAddressOf());
+
+	BlobPSs.resize(1);
+	D3DReadFileToBlob(SHADER_PATH L"PS.cso", BlobPSs[0].GetAddressOf());
+
 #ifdef _DEBUG
 	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
 #endif
@@ -494,6 +528,21 @@ void DX::CreateInputLayout()
 	std::cout << "CreateInputLayout" << COUT_OK << std::endl << std::endl;
 #endif
 }
+void DX::CreateInputLayout_PositionColor()
+{
+	InputElementDescs = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+	};
+	InputLayoutDesc = {
+		InputElementDescs.data(), static_cast<UINT>(InputElementDescs.size())
+	};
+
+#ifdef _DEBUG
+	std::cout << "CreateInputLayout" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
 void DX::CreateViewport()
 {
 	const auto Width = GetClientRectWidth();
@@ -596,13 +645,13 @@ void DX::CreatePipelineState()
 #endif
 }
 
-void DX::CreateVertexBuffer()
+void DX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
 {
 #ifdef _DEBUG
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void DX::CreateIndexBuffer()
+void DX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
 {
 #ifdef _DEBUG
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
@@ -655,32 +704,20 @@ void DX::CreateConstantBuffer()
 #endif
 }
 
-void DX::CreateFence()
+void DX::Clear(ID3D12GraphicsCommandList* GraphicsCommandList)
 {
-	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(Fence.GetAddressOf())));
-#ifdef _DEBUG
-	std::cout << "CreateFence" << COUT_OK << std::endl << std::endl;
-#endif
-
-	//WaitForFence();
-}
-
-void DX::Clear()
-{
-	const auto CommandList = GraphicsCommandLists.back();
-
 	auto CpuDescritptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 	CpuDescritptorHandle.ptr += CurrentBackBufferIndex * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	CommandList->ClearRenderTargetView(CpuDescritptorHandle, DirectX::Colors::SkyBlue, 0, nullptr);
+	GraphicsCommandList->ClearRenderTargetView(CpuDescritptorHandle, DirectX::Colors::SkyBlue, 0, nullptr);
 	
 	//auto DepthStencilViewHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 	//DepthStencilViewHandle.ptr += 0 * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV); 
-	//CommandList->ClearDepthStencilView(DepthStencilViewHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+	//GraphicsCommandList->ClearDepthStencilView(DepthStencilViewHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 }
 
-void DX::PopulateCommandList()
+void DX::PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList)
 {
-	Clear();
+	Clear(GraphicsCommandList);
 	
 	//!< レンダーターゲット(フレームバッファ)
 	//auto RenderTargetViewHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
@@ -730,43 +767,39 @@ void DX::BarrierTransition(ID3D12GraphicsCommandList* CommandList, ID3D12Resourc
 
 void DX::Draw()
 {
-	const auto CommandList = GraphicsCommandLists.back();
+	const auto CommandAllocator = CommandAllocators[0].Get();
+	const auto CommandList = GraphicsCommandLists[0].Get();
 
 	//!< GPU が参照している間は CommandAllocator->Reset() できない
 	VERIFY_SUCCEEDED(CommandAllocator->Reset());
 	
 	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能
 	//!< コマンドキューはコマンドリストではなく、コマンドアロケータを参照している
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator.Get(), PipelineState.Get()));
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, PipelineState.Get()));
 	{
-		BarrierTransition(CommandList.Get(), SwapChainResources[CurrentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		BarrierTransition(CommandList, SwapChainResources[CurrentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
-			PopulateCommandList();
+			PopulateCommandList(CommandList);
 		}
-		BarrierTransition(CommandList.Get(), SwapChainResources[CurrentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		BarrierTransition(CommandList, SwapChainResources[CurrentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 
-	ExecuteCommandList();
+	ExecuteCommandList(CommandList);
 
 	Present();
 
 	WaitForFence();
 }
-void DX::ExecuteCommandList()
+void DX::ExecuteCommandList(ID3D12GraphicsCommandList* GraphicsCommandList)
 {
-	auto CommandList = GraphicsCommandLists.back();
-
-	std::vector<ID3D12CommandList*> CommandLists = { CommandList.Get() };
+	std::vector<ID3D12CommandList*> CommandLists = { GraphicsCommandList };
 	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
 }
 void DX::Present()
 {
 	VERIFY_SUCCEEDED(SwapChain->Present(1, 0));
 
-#ifdef _DEBUG
-	//std::cout << CurrentBackBufferIndex;
-#endif
 	CurrentBackBufferIndex = ++CurrentBackBufferIndex % static_cast<UINT>(SwapChainResources.size());
 }
 void DX::WaitForFence()
@@ -785,9 +818,5 @@ void DX::WaitForFence()
 		WaitForSingleObject(hEvent, INFINITE);
 		CloseHandle(hEvent);
 	}
-
-#ifdef _DEBUG
-	//std::cout << "Fence = " << FenceValue << std::endl;
-#endif
 }
 

@@ -12,7 +12,7 @@
 //!< fopen でなく fopen_s を使えと怒られるが、gli のコードは書き換えたくないので warning を抑制する
 #pragma warning (push)
 #pragma warning (disable : 4996)
-#include <gli/gli.hpp>
+//#include <gli/gli.hpp>
 #pragma warning (pop) 
 
 #include "Win.h"
@@ -49,9 +49,11 @@ protected:
 	virtual void CreateInstance();
 	virtual VkPhysicalDevice CreateDevice();
 	virtual uint32_t CreateDevice(VkPhysicalDevice PhysicalDevice);
-	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
 
-	virtual void CreateCommandBuffer();
+	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
+	virtual void CreateCommandBuffer(const VkCommandPool CommandPool);
+
+	virtual void CreateFence();
 
 	virtual void CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice, const VkFormat ColorFormat);
 	virtual uint32_t GetSwapchainImage();
@@ -63,32 +65,32 @@ protected:
 	virtual void CreateDepthStencilView(const VkFormat DepthFormat);
 
 	virtual void CreateShader();
+	virtual void CreateShader_VSPS();
 	virtual void CreateDescriptorSetLayout();
 	virtual void CreatePipelineLayout();
 	virtual void CreateDescriptorSet();
 
 	virtual void CreateVertexInput();
+	virtual void CreateVertexInput_PositionColor();
 	virtual void CreateViewport();
 	virtual void CreatePipeline();
 
-	virtual void CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
-	virtual void CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
+	virtual void CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
+	virtual void CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 
 	virtual void CreateFramebuffers();
 	virtual void CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat);
 
-	virtual void CreateFence();
-
 	// ----------------------------------
 
-	virtual void Clear();
-	virtual void PopulateCommandBuffer();
+	virtual void Clear(const VkCommandBuffer CommandBuffer);
+	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer);
 
 	virtual void ImageBarrier(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout Old, VkImageLayout New);
 
 	virtual void Draw();
-	virtual void ExecuteCommandBuffer();
+	virtual void ExecuteCommandBuffer(const VkCommandBuffer CommandBuffer);
 	virtual void Present();
 	virtual void WaitForFence();
 
@@ -97,17 +99,13 @@ protected:
 	const std::vector<const char*> EnabledLayerNames = { "VK_LAYER_LUNARG_standard_validation" };
 #endif
 
-#pragma region Device
 	VkAllocationCallbacks AllocationCallbacks;
 	VkInstance Instance = VK_NULL_HANDLE;
 	VkDevice Device = VK_NULL_HANDLE;
 	VkQueue Queue = VK_NULL_HANDLE;
-#pragma endregion
 	
-#pragma region CommandBuffer
-	VkCommandPool CommandPool = VK_NULL_HANDLE;
+	std::vector<VkCommandPool> CommandPools;
 	std::vector<VkCommandBuffer> CommandBuffers;
-#pragma endregion
 
 #pragma region Swapchain
 	VkExtent2D ImageExtent;

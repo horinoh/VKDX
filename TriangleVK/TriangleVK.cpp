@@ -225,6 +225,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     return (INT_PTR)FALSE;
 }
 
+#pragma region Code
 void TriangleVK::CreateShader()
 {
 	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"VS.vert.spv"));
@@ -277,7 +278,7 @@ void TriangleVK::CreateVertexInput()
 #endif
 }
 
-void TriangleVK::CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
+void TriangleVK::CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
 #if 0
 	const std::vector<Vertex> Vertices = {
@@ -285,7 +286,6 @@ void TriangleVK::CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& Phys
 		{ Vertex({ 0.25f, -0.25f, 0.0f },{ 0.0f, 0.0f, 0.0f, 1.0f }) },
 		{ Vertex({ -0.25f, -0.25f, 0.0f },{ 0.0f, 0.0f, 0.0f, 1.0f }) },
 	};
-
 	const auto Size = sizeof(Vertices);
 	const auto Stride = sizeof(Vertices[0]);
 
@@ -399,7 +399,7 @@ void TriangleVK::CreateVertexBuffer(const VkPhysicalDeviceMemoryProperties& Phys
 #endif
 }
 
-void TriangleVK::CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
+void TriangleVK::CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
 	const std::vector<uint32_t> Indices = { 0, 1, 2 };
 
@@ -472,7 +472,7 @@ void TriangleVK::CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& Physi
 		const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
 			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 			nullptr,
-			CommandPool,
+			CommandPools[0],
 			VK_COMMAND_BUFFER_LEVEL_PRIMARY,
 			1
 		};
@@ -503,7 +503,7 @@ void TriangleVK::CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& Physi
 			};
 			VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
 			VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
-		} vkFreeCommandBuffers(Device, CommandPool, 1, &CopyCommandBuffer);
+		} vkFreeCommandBuffers(Device, CommandPools[0], 1, &CopyCommandBuffer);
 	}
 #pragma endregion
 
@@ -514,3 +514,4 @@ void TriangleVK::CreateIndexBuffer(const VkPhysicalDeviceMemoryProperties& Physi
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
+#pragma endregion

@@ -43,7 +43,10 @@ protected:
 
 	virtual void CreateCommandQueue();
 
-	virtual void CreateCommandList(ID3D12PipelineState* PipelineState = nullptr);
+	virtual void CreateCommandAllocator();
+	virtual void CreateCommandList(ID3D12CommandAllocator* CommandAllocator, ID3D12PipelineState* PipelineState = nullptr);
+
+	virtual void CreateFence();
 
 	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT BufferCount = 2);
 	virtual void ResizeSwapChain();
@@ -52,25 +55,25 @@ protected:
 	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
 
 	virtual void CreateShader();
+	virtual void CreateShader_VSPS();
 	virtual void CreateRootSignature();
 
 	virtual void CreateInputLayout();
+	virtual void CreateInputLayout_PositionColor();
 	virtual void CreateViewport();
 	virtual void CreatePipelineState();
 
-	virtual void CreateVertexBuffer();
-	virtual void CreateIndexBuffer();
+	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
+	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
 	virtual void CreateConstantBuffer();
 
-	virtual void CreateFence();
-
-	virtual void Clear();
-	virtual void PopulateCommandList();
+	virtual void Clear(ID3D12GraphicsCommandList* GraphicsCommandList);
+	virtual void PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList);
 
 	virtual void BarrierTransition(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After);
 
 	virtual void Draw();
-	virtual void ExecuteCommandList();
+	virtual void ExecuteCommandList(ID3D12GraphicsCommandList* GraphicsCommandList);
 	virtual void Present();
 	virtual void WaitForFence();
 
@@ -78,7 +81,7 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12Device> Device;
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> CommandQueue;
 
-	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
+	std::vector<Microsoft::WRL::ComPtr<ID3D12CommandAllocator>> CommandAllocators;
 	std::vector<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>> GraphicsCommandLists;
 
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain;

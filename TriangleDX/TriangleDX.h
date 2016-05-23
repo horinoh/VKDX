@@ -16,8 +16,8 @@ public:
 protected:
 	virtual void CreateShader() override;
 	virtual void CreateInputLayout() override;
-	virtual void CreateVertexBuffer() override;
-	virtual void CreateIndexBuffer() override;
+	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) override;
+	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) override;
 
 private:
 	using Vertex = std::tuple<DirectX::XMFLOAT3, DirectX::XMFLOAT4>;

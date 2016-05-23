@@ -30,7 +30,7 @@ for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator 
 #### d3dx12.h
  * https://github.com/Microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HelloWorld/src/HelloTriangle/d3dx12.h からコピー
  * 同じ階層に DirectX-Graphics-Samples をクローンした
- * * Visual Studio で BuildEvent - Pre-Build Event に以下のように指定した 
+ * Visual Studio で BuildEvent - Pre-Build Event に以下のように指定した 
 ~~~
 xcopy /y  ..\..\DirectX-Graphics-Samples\Samples\Desktop\D3D12HelloWorld\src\HelloTriangle\d3dx12.h ..
 ~~~
