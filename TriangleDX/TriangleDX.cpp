@@ -237,9 +237,9 @@ void TriangleDX::CreateInputLayout()
 void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
 {
 	const std::vector<Vertex> Vertices = {
-		{ Vertex({ 0.0f,   0.25f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }) },
-		{ Vertex({ 0.25f, -0.25f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }) },
-		{ Vertex({ -0.25f, -0.25f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f }) },
+		{ Vertex({ 0.0f,   0.25f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }) },
+		{ Vertex({ 0.25f, -0.25f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f }) },
+		{ Vertex({ -0.25f, -0.25f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }) },
 	};
 	const auto Size = sizeof(Vertices);
 	const auto Stride = sizeof(Vertices[0]);
@@ -393,4 +393,121 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
+
+void TriangleDX::CreateGraphicsPipelineState()
+{
+	assert(nullptr != RootSignature);
+	assert(!BlobVSs.empty());
+	assert(!BlobPSs.empty());
+	
+	const D3D12_SHADER_BYTECODE ShaderBytecodesVS = { BlobVSs[0]->GetBufferPointer(), BlobVSs[0]->GetBufferSize() };
+	const D3D12_SHADER_BYTECODE ShaderBytecodesPS = { BlobPSs[0]->GetBufferPointer(), BlobPSs[0]->GetBufferSize() };
+	const D3D12_SHADER_BYTECODE DefaultShaderBytecode = { nullptr, 0 };
+
+	const D3D12_STREAM_OUTPUT_DESC StreamOutputDesc = {
+		nullptr, 0,
+		nullptr, 0,
+		0
+	};
+
+	const D3D12_RENDER_TARGET_BLEND_DESC DefaultRenderTargetBlendDesc = {
+		FALSE, FALSE,
+		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+		D3D12_LOGIC_OP_NOOP,
+		D3D12_COLOR_WRITE_ENABLE_ALL,
+	};
+	const D3D12_BLEND_DESC BlendDesc = {
+		FALSE,
+		FALSE,
+		{ DefaultRenderTargetBlendDesc/*, ... x8*/ }
+	};
+
+	const D3D12_RASTERIZER_DESC RasterizerDesc = {
+		D3D12_FILL_MODE_SOLID,
+#if 1
+		D3D12_CULL_MODE_NONE, FALSE,
+#else
+		D3D12_CULL_MODE_BACK, FALSE,
+#endif
+		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
+		TRUE,
+		FALSE,
+		FALSE,
+		0,
+		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
+	};
+	
+	const D3D12_DEPTH_STENCILOP_DESC DepthStencilOpDesc = {
+		D3D12_STENCIL_OP_KEEP,
+		D3D12_STENCIL_OP_KEEP,
+		D3D12_STENCIL_OP_KEEP,
+		D3D12_COMPARISON_FUNC_NEVER
+	};
+	
+	const D3D12_DEPTH_STENCIL_DESC DepthStencilDesc = {
+		FALSE,
+		D3D12_DEPTH_WRITE_MASK_ZERO,
+		D3D12_COMPARISON_FUNC_NEVER,
+		FALSE,
+		0,
+		0,
+		DepthStencilOpDesc,
+		DepthStencilOpDesc
+	};
+
+	const DXGI_SAMPLE_DESC SampleDesc = { 1/*4*/, 0 };
+	const D3D12_CACHED_PIPELINE_STATE CachedPipelineState = { nullptr, 0 };
+	const D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineStateDesc = {
+		RootSignature.Get(),
+		ShaderBytecodesVS, ShaderBytecodesPS, DefaultShaderBytecode, DefaultShaderBytecode, DefaultShaderBytecode,
+		StreamOutputDesc,
+		BlendDesc,
+		UINT_MAX,
+		RasterizerDesc,
+		DepthStencilDesc,
+		InputLayoutDesc,
+		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
+		D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
+		1, { DXGI_FORMAT_R8G8B8A8_UNORM/*, ... x8*/ },
+		DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
+		SampleDesc,
+		0,
+		CachedPipelineState,
+		D3D12_PIPELINE_STATE_FLAG_NONE
+	};
+	
+	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, IID_PPV_ARGS(&PipelineState)));
+
+#ifdef _DEBUG
+	std::cout << "CreateGraphicsPipelineState" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList)
+{
+	Super::PopulateCommandList(GraphicsCommandList);
+
+	GraphicsCommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+	GraphicsCommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+
+	auto RTDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	RTDescriptorHandle.ptr += CurrentBackBufferIndex * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	//auto DSDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+
+	//GraphicsCommandList->ClearRenderTargetView(RTDescriptorHandle, DirectX::Colors::Red, 0, nullptr);
+	//GraphicsCommandList->ClearDepthStencilView(DSDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+	const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { RTDescriptorHandle };
+	GraphicsCommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
+
+	//GraphicsCommandList->SetGraphicsRootSignature(RootSignature.Get());
+
+	GraphicsCommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
+	GraphicsCommandList->IASetIndexBuffer(&IndexBufferView);
+	GraphicsCommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	GraphicsCommandList->DrawIndexedInstanced(3, 1, 0, 0, 0);
+}
+
 #pragma endregion

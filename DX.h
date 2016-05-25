@@ -61,7 +61,7 @@ protected:
 	virtual void CreateInputLayout();
 	virtual void CreateInputLayout_PositionColor();
 	virtual void CreateViewport();
-	virtual void CreatePipelineState();
+	virtual void CreateGraphicsPipelineState();
 
 	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
 	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);

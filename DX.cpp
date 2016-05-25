@@ -35,11 +35,11 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateShader();
 
-	//CreateRootSignature();
+	CreateRootSignature();
 
 	CreateInputLayout();
 	//CreateViewport();
-	//CreatePipelineState();
+	CreateGraphicsPipelineState();
 
 	//CreateCommandList(CommandAllocators[1].Get()/*, Pipeline*/);
 
@@ -514,8 +514,8 @@ void DX::CreateRootSignature()
 
 	ComPtr<ID3DBlob> Blob;
 	ComPtr<ID3DBlob> ErrorBlob;
-	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &Blob, &ErrorBlob));
-	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(&RootSignature)));
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
+	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
 
 #ifdef _DEBUG
 	std::cout << "CreateRootSignature" << COUT_OK << std::endl << std::endl;
@@ -567,8 +567,9 @@ void DX::CreateViewport()
 	std::cout << "CreateViewport" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void DX::CreatePipelineState()
+void DX::CreateGraphicsPipelineState()
 {
+#if 0
 	//assert(nullptr != RootSignature);
 	//assert(!BlobVSs.empty());
 	//const D3D12_SHADER_BYTECODE ShaderBytecodesVS = { BlobVSs[0]->GetBufferPointer(), BlobVSs[0]->GetBufferSize() };
@@ -639,6 +640,7 @@ void DX::CreatePipelineState()
 		D3D12_PIPELINE_STATE_FLAG_NONE
 	};
 	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, IID_PPV_ARGS(&PipelineState)));
+#endif
 
 #ifdef _DEBUG
 	std::cout << "CreateGraphicsPipelineState" << COUT_OK << std::endl << std::endl;
