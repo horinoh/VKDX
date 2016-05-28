@@ -10,13 +10,9 @@
 #include <DirectXPackedVector.h>
 #include <DirectXColors.h>
 
-//!< https://github.com/Microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HelloWorld/src/HelloTriangle/d3dx12.h 
-#include "d3dx12.h"
-
 #include "Win.h"
 
 #ifndef VERIFY_SUCCEEDED
-//#define VERIFY_SUCCEEDED(hr) VERIFY(SUCCEEDED(hr))
 #define VERIFY_SUCCEEDED(hr) if(FAILED(hr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed"); }
 #endif
 
@@ -107,15 +103,11 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferResource;
-	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferUploadResource;
 	D3D12_VERTEX_BUFFER_VIEW VertexBufferView;
-	//Microsoft::WRL::ComPtr<ID3DBlob> VertexBufferBlob; //!< CPU 側にもコピーを持たせる場合? 多分いらない?
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferResource;
-	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferUploadResource;
 	D3D12_INDEX_BUFFER_VIEW IndexBufferView;
 	UINT IndexCount = 0;
-	//Microsoft::WRL::ComPtr<ID3DBlob> IndexBufferBlob; //!< CPU 側にもコピーを持たせる場合? 多分いらない?
 
 #pragma region ConstantBuffer
 	Microsoft::WRL::ComPtr<ID3D12Resource> ConstantBufferResource;

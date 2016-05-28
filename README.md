@@ -27,14 +27,6 @@ for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator 
     
 ## DX
 
-#### d3dx12.h
- * https://github.com/Microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HelloWorld/src/HelloTriangle/d3dx12.h からコピー
- * 同じ階層に DirectX-Graphics-Samples をクローンした
- * Visual Studio で BuildEvent - Pre-Build Event に以下のように指定してコピーするようにした
-~~~
-xcopy /y  ..\..\DirectX-Graphics-Samples\Samples\Desktop\D3D12HelloWorld\src\HelloTriangle\d3dx12.h ..
-~~~
-
 #### Visual Studio
  * Visual Studio のインストール時に Universal Windows App Development Tools - Tools and Windows 10 SDK 10.XXX をチェックしておく必要がある
  * インストール済みの場合は「プログラムと機能」から更新インストールする 
@@ -49,7 +41,11 @@ xcopy /y  ..\..\DirectX-Graphics-Samples\Samples\Desktop\D3D12HelloWorld\src\Hel
 	* PrintScreen でキャプチャ (Debug - Graphics - Capture Frame)
 	* キャプチャしたフレームがサムネイルされる、ダブルクリックすると Analyzer が起動する
 		* 下の方に出るので Frame time, Frames per second を閉じないと見えないかも
- 
+
+## DDS ツール
+* https://directxtex.codeplex.com/wikipage?title=Texconv&referringTitle=Documentation
+* https://directxtex.codeplex.com/wikipage?title=Texassemble&referringTitle=Documentation
+
 <!-- 
 ## プロジェクトの追加方法 (自分用覚書)
  * ソリューションを右クリック - Add - New Project で Win32 Project

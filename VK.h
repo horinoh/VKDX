@@ -18,7 +18,6 @@
 #include "Win.h"
 
 #ifndef VERIFY_SUCCEEDED
-//#define VERIFY_SUCCEEDED(vr) VERIFY(VK_SUCCESS == (vr))
 #define VERIFY_SUCCEEDED(vr) if(VK_SUCCESS != (vr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed"); }
 #endif
 

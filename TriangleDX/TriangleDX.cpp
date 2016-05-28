@@ -244,12 +244,6 @@ void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
 
-	//!< CPU 側にもコピーを持たせる、多分必要ない?
-	//{
-	//	VERIFY_SUCCEEDED(D3DCreateBlob(Size, VertexBufferBlob.GetAddressOf()));
-	//	CopyMemory(VertexBufferBlob->GetBufferPointer(), Vertices.data(), Size);
-	//}
-
 	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
 	const D3D12_RESOURCE_DESC ResourceDesc = {
 		D3D12_RESOURCE_DIMENSION_BUFFER,
@@ -262,54 +256,58 @@ void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID
 		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
 		D3D12_RESOURCE_FLAG_NONE
 	};
-	//!< ターゲットのリソースを作成
-	{
-		const D3D12_HEAP_PROPERTIES HeapProperties = {
-			D3D12_HEAP_TYPE_DEFAULT,
-			D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-			D3D12_MEMORY_POOL_UNKNOWN,
-			1,
-			1
-		};
-		VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&ResourceDesc,
-			D3D12_RESOURCE_STATE_COMMON,
-			nullptr,
-			IID_PPV_ARGS(&VertexBufferResource)));
-	}
+
 	//!< アップロード用のリソースを作成
+	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
+	const D3D12_HEAP_PROPERTIES HeapProperties_Upload = {
+		D3D12_HEAP_TYPE_UPLOAD,
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties_Upload,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(UploadResource.GetAddressOf())));
 	{
-		const D3D12_HEAP_PROPERTIES HeapProperties = {
-			D3D12_HEAP_TYPE_UPLOAD,
-			D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-			D3D12_MEMORY_POOL_UNKNOWN,
-			1,
-			1
-		};
-		VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&ResourceDesc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&VertexBufferUploadResource)));
+		BYTE* Data;
+		VERIFY_SUCCEEDED(UploadResource->Map(0, nullptr, reinterpret_cast<void**>(&Data)));
+		{
+			memcpy(Data, Vertices.data(), Size);
+		}
+		UploadResource->Unmap(0, nullptr);
 	}
 
+	//!< ターゲットのリソースを作成
+	const D3D12_HEAP_PROPERTIES HeapProperties = {
+		D3D12_HEAP_TYPE_DEFAULT,
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_COMMON,
+		nullptr,
+		IID_PPV_ARGS(VertexBufferResource.GetAddressOf())));
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr));
 	{
 		BarrierTransition(CommandList, VertexBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
 		{
-			D3D12_SUBRESOURCE_DATA SubresourceData = {
-				Vertices.data(),
-				static_cast<LONG_PTR>(Size), static_cast<LONG_PTR>(Size)
-			};
-			VERIFY(0 != UpdateSubresources<1>(CommandList, VertexBufferResource.Get(), VertexBufferUploadResource.Get(), 0, 0, 1, &SubresourceData));
+			CommandList->CopyBufferRegion(VertexBufferResource.Get(), 0, UploadResource.Get(), 0, Size);
 		}
 		BarrierTransition(CommandList, VertexBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 
 	ExecuteCommandList(CommandList);
+
+	//WaitForFence();
 
 	VertexBufferView = {
 		VertexBufferResource->GetGPUVirtualAddress(),
@@ -325,14 +323,8 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 {
 	const std::vector<UINT32> Indices = { 0, 1, 2 };
 	//!< DrawInstanced() が引数に取るので覚えておく必要がある
-	IndexCount = static_cast<UINT32>(Indices.size()); 
+	IndexCount = static_cast<UINT32>(Indices.size());
 	const auto Size = static_cast<UINT32>(sizeof(Indices[0]) * IndexCount);
-	
-	//!< CPU 側にもコピーを持たせる、多分必要ない?
-	//{
-	//	VERIFY_SUCCEEDED(D3DCreateBlob(Size, IndexBufferBlob.GetAddressOf()));
-	//	CopyMemory(IndexBufferBlob->GetBufferPointer(), Indices.data(), Size);
-	//}
 
 	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
 	const D3D12_RESOURCE_DESC ResourceDesc = {
@@ -346,54 +338,58 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
 		D3D12_RESOURCE_FLAG_NONE
 	};
-	//!< ターゲットのリソースを作成
-	{
-		const D3D12_HEAP_PROPERTIES HeapProperties = {
-			D3D12_HEAP_TYPE_DEFAULT,
-			D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-			D3D12_MEMORY_POOL_UNKNOWN,
-			1,
-			1
-		};
-		VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&ResourceDesc,
-			D3D12_RESOURCE_STATE_COMMON,
-			nullptr,
-			IID_PPV_ARGS(&IndexBufferResource)));
-	}
+
 	//!< アップロード用のリソースを作成
+	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
+	const D3D12_HEAP_PROPERTIES HeapProperties_Upload = {
+		D3D12_HEAP_TYPE_UPLOAD,
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties_Upload,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(UploadResource.GetAddressOf())));
 	{
-		const D3D12_HEAP_PROPERTIES HeapProperties = {
-			D3D12_HEAP_TYPE_UPLOAD,
-			D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-			D3D12_MEMORY_POOL_UNKNOWN,
-			1,
-			1
-		};
-		VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
-			D3D12_HEAP_FLAG_NONE,
-			&ResourceDesc,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&IndexBufferUploadResource)));
+		BYTE* Data;
+		VERIFY_SUCCEEDED(UploadResource->Map(0, nullptr, reinterpret_cast<void**>(&Data)));
+		{
+			memcpy(Data, Indices.data(), Size);
+		}
+		UploadResource->Unmap(0, nullptr);
 	}
 
+	//!< ターゲットのリソースを作成
+	const D3D12_HEAP_PROPERTIES HeapProperties = {
+		D3D12_HEAP_TYPE_DEFAULT,
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_COMMON,
+		nullptr,
+		IID_PPV_ARGS(IndexBufferResource.GetAddressOf())));
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr));
 	{
 		BarrierTransition(CommandList, IndexBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
 		{
-			D3D12_SUBRESOURCE_DATA SubresourceData = {
-				Indices.data(),
-				static_cast<LONG_PTR>(Size), static_cast<LONG_PTR>(Size)
-			};
-			VERIFY(0 != UpdateSubresources<1>(CommandList, IndexBufferResource.Get(), IndexBufferUploadResource.Get(), 0, 0, 1, &SubresourceData));
+			CommandList->CopyBufferRegion(IndexBufferResource.Get(), 0, UploadResource.Get(), 0, Size);
 		}
 		BarrierTransition(CommandList, IndexBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 
 	ExecuteCommandList(CommandList);
+
+	//WaitForFence();
 
 	IndexBufferView = {
 		IndexBufferResource->GetGPUVirtualAddress(),

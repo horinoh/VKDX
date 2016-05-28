@@ -647,12 +647,22 @@ void DX::CreateGraphicsPipelineState()
 
 void DX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
 {
+	//!< CPU 側にもコピーを持たせる、多分必要ない?
+	//Microsoft::WRL::ComPtr<ID3DBlob> VertexBufferBlob;
+	//VERIFY_SUCCEEDED(D3DCreateBlob(Size, VertexBufferBlob.GetAddressOf()));
+	//CopyMemory(VertexBufferBlob->GetBufferPointer(), Vertices.data(), Size);
+
 #ifdef _DEBUG
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
 void DX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
 {
+	//!< CPU 側にもコピーを持たせる、多分必要ない?
+	//Microsoft::WRL::ComPtr<ID3DBlob> IndexBufferBlob;
+	//VERIFY_SUCCEEDED(D3DCreateBlob(Size, IndexBufferBlob.GetAddressOf()));
+	//CopyMemory(IndexBufferBlob->GetBufferPointer(), Indices.data(), Size);
+
 #ifdef _DEBUG
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
