@@ -30,7 +30,7 @@ for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator 
 #### d3dx12.h
  * https://github.com/Microsoft/DirectX-Graphics-Samples/blob/master/Samples/Desktop/D3D12HelloWorld/src/HelloTriangle/d3dx12.h からコピー
  * 同じ階層に DirectX-Graphics-Samples をクローンした
- * Visual Studio で BuildEvent - Pre-Build Event に以下のように指定した 
+ * Visual Studio で BuildEvent - Pre-Build Event に以下のように指定してコピーするようにした
 ~~~
 xcopy /y  ..\..\DirectX-Graphics-Samples\Samples\Desktop\D3D12HelloWorld\src\HelloTriangle\d3dx12.h ..
 ~~~
@@ -42,14 +42,13 @@ xcopy /y  ..\..\DirectX-Graphics-Samples\Samples\Desktop\D3D12HelloWorld\src\Hel
 #### シェーダコンパイル
  * シェーダは Visual Studio に追加すると自動的にコンパイルされる
  * Properties - HLSLCompiler - General - Shader Type を適切に設定しておかないと、頂点シェーダでコンパイルされるので注意
-  * Debug, Release に対して設定する
 
 #### デバッグ
- * Alt + F5 で開始 (Debug - Graphics - Start Graphics Debugging)
- * PrintScreen でキャプチャ (Debug - Graphics - Capture Frame)
- * キャプチャしたフレームがサムネイルされる
-  * ダブルクリックすると Analyzer が起動する
  * 参考 https://msdn.microsoft.com/ja-jp/library/hh873204.aspx
+	* Alt + F5 で開始 (Debug - Graphics - Start Graphics Debugging)
+	* PrintScreen でキャプチャ (Debug - Graphics - Capture Frame)
+	* キャプチャしたフレームがサムネイルされる、ダブルクリックすると Analyzer が起動する
+		* 下の方に出るので Frame time, Frames per second を閉じないと見えないかも
  
 <!-- 
 ## プロジェクトの追加方法 (自分用覚書)
