@@ -2,7 +2,6 @@
 
 #include <ostream>
 #include <vector>
-#include <tuple>
 #include <cassert>
 #include <algorithm>
 #include <iostream>

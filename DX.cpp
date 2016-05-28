@@ -41,8 +41,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	//CreateViewport();
 	CreateGraphicsPipelineState();
 
-	//CreateCommandList(CommandAllocators[1].Get()/*, Pipeline*/);
-
 	CreateVertexBuffer(CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 	CreateIndexBuffer(CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 	//CreateConstantBuffer();
@@ -272,13 +270,13 @@ void DX::CreateCommandAllocator()
 
 /**
 @brief ID3D12CommandAllocator と ID3D12GraphicsCommandList を作成
-描画コマンドを発行する場合は PipelineState の指定が必要
+描画コマンドを発行する場合は PipelineState の指定が必要だが、
+CommandList->Reset(Allocator, PipelineState) の引数で指定できるのでここでは PipelineState == nullptr で作成してしまっている
 */
-void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator, ID3D12PipelineState* PipelineState)
+void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator)
 {
 	GraphicsCommandLists.resize(GraphicsCommandLists.size() + 1);
-	//!< 描画コマンドを発行する CommandList の場合は PipelineState の指定が必要
-	VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, CommandAllocator, PipelineState, IID_PPV_ARGS(GraphicsCommandLists.back().GetAddressOf())));
+	VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, CommandAllocator, nullptr, IID_PPV_ARGS(GraphicsCommandLists.back().GetAddressOf())));
 	VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
 
 #ifdef _DEBUG
@@ -775,10 +773,13 @@ void DX::Draw()
 	//!< GPU が参照している間は CommandAllocator->Reset() できない
 	VERIFY_SUCCEEDED(CommandAllocator->Reset());
 	
-	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能
-	//!< コマンドキューはコマンドリストではなく、コマンドアロケータを参照している
+	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能 (コマンドキューはコマンドリストではなく、コマンドアロケータを参照している)
+	//!< CommandList 作成時に PipelineState を指定していなくても、ここで指定すれば OK
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, PipelineState.Get()));
 	{
+		CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+
 		BarrierTransition(CommandList, SwapChainResources[CurrentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
 			PopulateCommandList(CommandList);

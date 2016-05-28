@@ -263,7 +263,7 @@ void TriangleVK::CreateVertexInput()
 	};
 	VertexInputAttributeDescriptions = {
 		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
-		{ 1, 0, VK_FORMAT_R32G32B32_SFLOAT, sizeof(std::get<0>(Vertex())) }
+		{ 1, 0, VK_FORMAT_R32G32B32_SFLOAT, 12 }
 	};
 	PipelineVertexInputStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
@@ -280,15 +280,15 @@ void TriangleVK::CreateVertexInput()
 
 void TriangleVK::CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
-#if 0
 	const std::vector<Vertex> Vertices = {
-		{ Vertex({ 0.0f,   0.25f, 0.0f },{ 0.0f, 0.0f, 0.0f, 1.0f }) },
-		{ Vertex({ 0.25f, -0.25f, 0.0f },{ 0.0f, 0.0f, 0.0f, 1.0f }) },
-		{ Vertex({ -0.25f, -0.25f, 0.0f },{ 0.0f, 0.0f, 0.0f, 1.0f }) },
+		{ { 0.0f, 0.5f, 0.0f },{ 1.0f, 0.0f, 0.0f, 1.0f } },
+		{ { 0.5f, -0.5f, 0.0f },{ 0.0f, 1.0f, 0.0f, 1.0f } },
+		{ { -0.5f, -0.5f, 0.0f },{ 0.0f, 0.0f, 1.0f, 1.0f } },
 	};
-	const auto Size = sizeof(Vertices);
 	const auto Stride = sizeof(Vertices[0]);
+	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 
+#if 0
 	VkBuffer StagingBuffer;
 	VkDeviceMemory StagingDeviceMemory;
 
@@ -403,10 +403,10 @@ void TriangleVK::CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhys
 {
 	const std::vector<uint32_t> Indices = { 0, 1, 2 };
 
-	const auto Size = sizeof(Indices);
 	//!< vkCmdDrawIndexed() ‚ªˆø”‚ÉŽæ‚é‚Ì‚ÅŠo‚¦‚Ä‚¨‚­•K—v‚ª‚ ‚é
-	IndexCount = static_cast<uint32_t>(Indices.size());
-
+	IndexCount = static_cast<uint32_t>(Indices.size()); 
+	const auto Size = static_cast<VkDeviceSize>(sizeof(Indices[0]) * IndexCount);
+	
 	VkBuffer StagingBuffer;
 	VkDeviceMemory StagingDeviceMemory;
 #pragma region Staging

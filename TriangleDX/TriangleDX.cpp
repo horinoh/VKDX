@@ -237,12 +237,18 @@ void TriangleDX::CreateInputLayout()
 void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
 {
 	const std::vector<Vertex> Vertices = {
-		{ Vertex({ 0.0f,   0.25f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }) },
-		{ Vertex({ 0.25f, -0.25f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f }) },
-		{ Vertex({ -0.25f, -0.25f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }) },
+		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+		{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+		{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
 	};
-	const auto Size = sizeof(Vertices);
 	const auto Stride = sizeof(Vertices[0]);
+	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
+
+	//!< CPU 側にもコピーを持たせる、多分必要ない?
+	//{
+	//	VERIFY_SUCCEEDED(D3DCreateBlob(Size, VertexBufferBlob.GetAddressOf()));
+	//	CopyMemory(VertexBufferBlob->GetBufferPointer(), Vertices.data(), Size);
+	//}
 
 	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
 	const D3D12_RESOURCE_DESC ResourceDesc = {
@@ -295,7 +301,7 @@ void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID
 		{
 			D3D12_SUBRESOURCE_DATA SubresourceData = {
 				Vertices.data(),
-				Size, Size
+				static_cast<LONG_PTR>(Size), static_cast<LONG_PTR>(Size)
 			};
 			VERIFY(0 != UpdateSubresources<1>(CommandList, VertexBufferResource.Get(), VertexBufferUploadResource.Get(), 0, 0, 1, &SubresourceData));
 		}
@@ -318,9 +324,15 @@ void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID
 void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
 {
 	const std::vector<UINT32> Indices = { 0, 1, 2 };
-	const auto Size = sizeof(Indices);
 	//!< DrawInstanced() が引数に取るので覚えておく必要がある
-	IndexCount = static_cast<UINT32>(Indices.size());
+	IndexCount = static_cast<UINT32>(Indices.size()); 
+	const auto Size = static_cast<UINT32>(sizeof(Indices[0]) * IndexCount);
+	
+	//!< CPU 側にもコピーを持たせる、多分必要ない?
+	//{
+	//	VERIFY_SUCCEEDED(D3DCreateBlob(Size, IndexBufferBlob.GetAddressOf()));
+	//	CopyMemory(IndexBufferBlob->GetBufferPointer(), Indices.data(), Size);
+	//}
 
 	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
 	const D3D12_RESOURCE_DESC ResourceDesc = {
@@ -373,7 +385,7 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 		{
 			D3D12_SUBRESOURCE_DATA SubresourceData = {
 				Indices.data(),
-				Size, Size
+				static_cast<LONG_PTR>(Size), static_cast<LONG_PTR>(Size)
 			};
 			VERIFY(0 != UpdateSubresources<1>(CommandList, IndexBufferResource.Get(), IndexBufferUploadResource.Get(), 0, 0, 1, &SubresourceData));
 		}
@@ -425,11 +437,7 @@ void TriangleDX::CreateGraphicsPipelineState()
 
 	const D3D12_RASTERIZER_DESC RasterizerDesc = {
 		D3D12_FILL_MODE_SOLID,
-#if 1
-		D3D12_CULL_MODE_NONE, FALSE,
-#else
 		D3D12_CULL_MODE_BACK, FALSE,
-#endif
 		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
 		TRUE,
 		FALSE,
@@ -488,20 +496,12 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandL
 {
 	Super::PopulateCommandList(GraphicsCommandList);
 
-	GraphicsCommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-	GraphicsCommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
-
 	auto RTDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 	RTDescriptorHandle.ptr += CurrentBackBufferIndex * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	//auto DSDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-
-	//GraphicsCommandList->ClearRenderTargetView(RTDescriptorHandle, DirectX::Colors::Red, 0, nullptr);
-	//GraphicsCommandList->ClearDepthStencilView(DSDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-
 	const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { RTDescriptorHandle };
 	GraphicsCommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
 
-	//GraphicsCommandList->SetGraphicsRootSignature(RootSignature.Get());
+	GraphicsCommandList->SetGraphicsRootSignature(RootSignature.Get());
 
 	GraphicsCommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
 	GraphicsCommandList->IASetIndexBuffer(&IndexBufferView);

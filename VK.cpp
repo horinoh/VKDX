@@ -949,7 +949,6 @@ void VK::CreatePipeline()
 		static_cast<uint32_t>(VkPipelineColorBlendAttachmentStates.size()), VkPipelineColorBlendAttachmentStates.data(),
 		{ 0.0f, 0.0f, 0.0f, 0.0f }
 	};
-
 	const std::vector<VkDynamicState> DynamicStates = {
 		VK_DYNAMIC_STATE_VIEWPORT,
 		VK_DYNAMIC_STATE_SCISSOR
@@ -1263,6 +1262,9 @@ void VK::Draw()
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo));
 	{
+		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+
 		ImageBarrier(CommandBuffer, SwapchainImages[SwapchainImageIndex], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		{
 			PopulateCommandBuffer(CommandBuffer);

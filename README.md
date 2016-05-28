@@ -44,6 +44,13 @@ xcopy /y  ..\..\DirectX-Graphics-Samples\Samples\Desktop\D3D12HelloWorld\src\Hel
  * Properties - HLSLCompiler - General - Shader Type を適切に設定しておかないと、頂点シェーダでコンパイルされるので注意
   * Debug, Release に対して設定する
 
+#### デバッグ
+ * Alt + F5 で開始 (Debug - Graphics - Start Graphics Debugging)
+ * PrintScreen でキャプチャ (Debug - Graphics - Capture Frame)
+ * キャプチャしたフレームがサムネイルされる
+  * ダブルクリックすると Analyzer が起動する
+ * 参考 https://msdn.microsoft.com/ja-jp/library/hh873204.aspx
+ 
 <!-- 
 ## プロジェクトの追加方法 (自分用覚書)
  * ソリューションを右クリック - Add - New Project で Win32 Project

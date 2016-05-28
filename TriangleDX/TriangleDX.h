@@ -23,6 +23,6 @@ protected:
 	virtual void PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList) override;
 
 private:
-	using Vertex = std::tuple<DirectX::XMFLOAT3, DirectX::XMFLOAT4>;
+	using Vertex = struct Vertex { DirectX::XMFLOAT3 Positon; DirectX::XMFLOAT4 Color; };
 };
 #pragma endregion

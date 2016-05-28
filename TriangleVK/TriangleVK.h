@@ -20,6 +20,6 @@ protected:
 	virtual void CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties) override;
 
 private:
-	using Vertex = std::tuple<glm::vec3, glm::vec4>;
+	using Vertex = struct Vertex { glm::vec3 Positon; glm::vec4 Color; };
 };
 #pragma endregion

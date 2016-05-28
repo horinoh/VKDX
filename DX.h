@@ -44,7 +44,7 @@ protected:
 	virtual void CreateCommandQueue();
 
 	virtual void CreateCommandAllocator();
-	virtual void CreateCommandList(ID3D12CommandAllocator* CommandAllocator, ID3D12PipelineState* PipelineState = nullptr);
+	virtual void CreateCommandList(ID3D12CommandAllocator* CommandAllocator);
 
 	virtual void CreateFence();
 
@@ -106,18 +106,16 @@ protected:
 
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
 
-#pragma region VertexBuffer
 	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferResource;
 	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferUploadResource;
 	D3D12_VERTEX_BUFFER_VIEW VertexBufferView;
-#pragma endregion
+	//Microsoft::WRL::ComPtr<ID3DBlob> VertexBufferBlob; //!< CPU 側にもコピーを持たせる場合? 多分いらない?
 
-#pragma region IndexBuffer
 	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferResource;
 	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferUploadResource;
 	D3D12_INDEX_BUFFER_VIEW IndexBufferView;
 	UINT IndexCount = 0;
-#pragma endregion
+	//Microsoft::WRL::ComPtr<ID3DBlob> IndexBufferBlob; //!< CPU 側にもコピーを持たせる場合? 多分いらない?
 
 #pragma region ConstantBuffer
 	Microsoft::WRL::ComPtr<ID3D12Resource> ConstantBufferResource;
