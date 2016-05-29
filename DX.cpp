@@ -669,21 +669,25 @@ void DX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12Graph
 }
 void DX::CreateConstantBuffer()
 {
-	const auto Size = 1024 * 64;
+	const DirectX::XMFLOAT4X4 WVP;
+	const auto Size = sizeof(WVP);
+	//!< コンスタントバッファサイズは 256kb アライン
+	const auto CBSize = (Size + 255) & ~255;
 
+	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
 	const D3D12_RESOURCE_DESC ResourceDesc = {
 		D3D12_RESOURCE_DIMENSION_BUFFER,
 		0,
-		Size, 1,
+		CBSize, 1,
 		1,
 		1,
 		DXGI_FORMAT_UNKNOWN,
-		{ 1, 0 },
+		SampleDesc,
 		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
 		D3D12_RESOURCE_FLAG_NONE
 	};
 	const D3D12_HEAP_PROPERTIES HeapProperties = {
-		D3D12_HEAP_TYPE_UPLOAD,
+		D3D12_HEAP_TYPE_UPLOAD, //!< コンスタントバッファは CPU から更新するので UPLOAD にする
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
 		1,
@@ -694,7 +698,7 @@ void DX::CreateConstantBuffer()
 		&ResourceDesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
-		IID_PPV_ARGS(&ConstantBufferResource)));
+		IID_PPV_ARGS(ConstantBufferResource.GetAddressOf())));
 
 	const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
 		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
@@ -702,12 +706,19 @@ void DX::CreateConstantBuffer()
 		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 		0
 	};
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(&ConstantBufferDescriptorHeap)));
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(ConstantBufferDescriptorHeap.GetAddressOf())));
+
 	const D3D12_CONSTANT_BUFFER_VIEW_DESC ConstantBufferViewDesc = {
-		ConstantBufferResource->GetGPUVirtualAddress(),
-		(sizeof(ConstantBufferResource) + 255) & ~255 //!< コンスタントバッファは 256 byte アラインでないとならない
+		ConstantBufferResource->GetGPUVirtualAddress() + 0 * CBSize,
+		CBSize
 	};
 	Device->CreateConstantBufferView(&ConstantBufferViewDesc, ConstantBufferDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+
+	//!< TODO コンスタントバッファの更新
+	//BYTE* Data;
+	//VERIFY_SUCCEEDED(ConstantBufferResource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
+	//	memcpy(Data, nullptr/*TODO*/, CBSize);
+	//} ConstantBufferResource->Unmap(0, nullptr);
 
 #ifdef _DEBUG
 	std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;

@@ -5,7 +5,6 @@
 #include "TriangleDX.h"
 
 #pragma region Code
-#include "../DX.h"
 DX* Inst = nullptr;
 #pragma endregion
 
@@ -257,7 +256,7 @@ void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID
 		D3D12_RESOURCE_FLAG_NONE
 	};
 
-	//!< アップロード用のリソースを作成
+#pragma region Upload
 	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
 	const D3D12_HEAP_PROPERTIES HeapProperties_Upload = {
 		D3D12_HEAP_TYPE_UPLOAD,
@@ -272,16 +271,12 @@ void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(UploadResource.GetAddressOf())));
-	{
-		BYTE* Data;
-		VERIFY_SUCCEEDED(UploadResource->Map(0, nullptr, reinterpret_cast<void**>(&Data)));
-		{
-			memcpy(Data, Vertices.data(), Size);
-		}
-		UploadResource->Unmap(0, nullptr);
-	}
+	BYTE* Data;
+	VERIFY_SUCCEEDED(UploadResource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
+		memcpy(Data, Vertices.data(), Size);
+	} UploadResource->Unmap(0, nullptr);
+#pragma endregion
 
-	//!< ターゲットのリソースを作成
 	const D3D12_HEAP_PROPERTIES HeapProperties = {
 		D3D12_HEAP_TYPE_DEFAULT,
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
@@ -295,15 +290,11 @@ void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID
 		D3D12_RESOURCE_STATE_COMMON,
 		nullptr,
 		IID_PPV_ARGS(VertexBufferResource.GetAddressOf())));
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr));
-	{
-		BarrierTransition(CommandList, VertexBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
-		{
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
+		BarrierTransition(CommandList, VertexBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
 			CommandList->CopyBufferRegion(VertexBufferResource.Get(), 0, UploadResource.Get(), 0, Size);
-		}
-		BarrierTransition(CommandList, VertexBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
-	}
-	VERIFY_SUCCEEDED(CommandList->Close());
+		} BarrierTransition(CommandList, VertexBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+	} VERIFY_SUCCEEDED(CommandList->Close());
 
 	ExecuteCommandList(CommandList);
 
@@ -339,7 +330,7 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 		D3D12_RESOURCE_FLAG_NONE
 	};
 
-	//!< アップロード用のリソースを作成
+#pragma region Upload
 	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
 	const D3D12_HEAP_PROPERTIES HeapProperties_Upload = {
 		D3D12_HEAP_TYPE_UPLOAD,
@@ -354,16 +345,12 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 		D3D12_RESOURCE_STATE_GENERIC_READ,
 		nullptr,
 		IID_PPV_ARGS(UploadResource.GetAddressOf())));
-	{
-		BYTE* Data;
-		VERIFY_SUCCEEDED(UploadResource->Map(0, nullptr, reinterpret_cast<void**>(&Data)));
-		{
-			memcpy(Data, Indices.data(), Size);
-		}
-		UploadResource->Unmap(0, nullptr);
-	}
+	BYTE* Data;
+	VERIFY_SUCCEEDED(UploadResource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
+		memcpy(Data, Indices.data(), Size);
+	} UploadResource->Unmap(0, nullptr);
+#pragma endregion
 
-	//!< ターゲットのリソースを作成
 	const D3D12_HEAP_PROPERTIES HeapProperties = {
 		D3D12_HEAP_TYPE_DEFAULT,
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
@@ -377,15 +364,11 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 		D3D12_RESOURCE_STATE_COMMON,
 		nullptr,
 		IID_PPV_ARGS(IndexBufferResource.GetAddressOf())));
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr));
-	{
-		BarrierTransition(CommandList, IndexBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
-		{
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
+		BarrierTransition(CommandList, IndexBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
 			CommandList->CopyBufferRegion(IndexBufferResource.Get(), 0, UploadResource.Get(), 0, Size);
-		}
-		BarrierTransition(CommandList, IndexBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
-	}
-	VERIFY_SUCCEEDED(CommandList->Close());
+		} BarrierTransition(CommandList, IndexBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+	} VERIFY_SUCCEEDED(CommandList->Close());
 
 	ExecuteCommandList(CommandList);
 

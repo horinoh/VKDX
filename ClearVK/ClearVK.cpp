@@ -5,7 +5,6 @@
 #include "ClearVK.h"
 
 #pragma region Code
-#include "../VK.h"
 VK* Inst = nullptr;
 #pragma endregion
 

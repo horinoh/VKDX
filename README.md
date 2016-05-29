@@ -52,7 +52,7 @@ for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator 
  * プロジェクトを右クリック - Retarget SDK Verson で 10以上にする
 
 #### DX
- * プロパティマネージャで Add Existing Property Sheet... - Props/D3DX12.props, HLSL.props
+ * プロパティマネージャで Add Existing Property Sheet... - Props/HLSL.props
  * Header Files に Win.h、DX.h を追加 
  * Source Files に Win.cpp、DX.cpp を追加
  * XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
@@ -89,7 +89,27 @@ for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator 
 
 <!--
 TODO
-* コマンドバッファをセットアップ用と描画用に分ける
+
 * GLSL のコンパイルのカスタムビルドを作る？
 * よく使うパターンは DX.h, VK.h へ持たせたい
+
+* ビルボード
+* インスタンシング
+* GSインスタンシング
+* コンピュート
+* パラメトリックサーフェス
+* ポストプロセス
+* フラットシェーディング
+* プロシージャルテクスチャ
+
+* テクスチャ
+	* CUBEマップ
+	* ディスプレースメント
+
+* FBX
+	* アニメーション
+
+* Gバッファ
+	* シャドウマップ
+	* SSAO
  --> 
