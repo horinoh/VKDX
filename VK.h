@@ -72,7 +72,9 @@ protected:
 	virtual void CreateVertexInput();
 	virtual void CreateVertexInput_PositionColor();
 	virtual void CreateViewport();
-	virtual void CreatePipeline();
+	virtual void CreatePipeline() { CreateGraphicsPipeline(); }
+	virtual void CreateGraphicsPipeline();
+	virtual void CreateComputePipeline();
 
 	virtual void CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
@@ -125,6 +127,7 @@ protected:
 	std::vector<VkShaderModule> ShaderModules;
 	std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos;
 #pragma endregion
+
 #pragma region Layout
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
 	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;

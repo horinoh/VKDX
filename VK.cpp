@@ -54,7 +54,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateVertexInput();
 	//CreateViewport();
-	//CreatePipeline();
+	CreatePipeline();
 
 	//CreateCommandBuffer(CommandPools[1]);
 
@@ -866,7 +866,7 @@ void VK::CreateViewport()
 #endif
 }
 
-void VK::CreatePipeline()
+void VK::CreateGraphicsPipeline()
 {
 	const VkPipelineInputAssemblyStateCreateInfo PipelineInputAssemblyStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
@@ -993,7 +993,13 @@ void VK::CreatePipeline()
 	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, PipelineCache, static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), nullptr, &Pipeline));
 
 #ifdef _DEBUG
-	std::cout << "CreatePipeline" << COUT_OK << std::endl << std::endl;
+	std::cout << "CreateGraphicsPipeline" << COUT_OK << std::endl << std::endl;
+#endif
+}
+void VK::CreateComputePipeline()
+{
+#ifdef _DEBUG
+	std::cout << "CreateComputePipeline" << COUT_OK << std::endl << std::endl;
 #endif
 }
 

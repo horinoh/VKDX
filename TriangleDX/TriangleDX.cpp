@@ -388,11 +388,9 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 void TriangleDX::CreateGraphicsPipelineState()
 {
 	assert(nullptr != RootSignature);
-	assert(!BlobVSs.empty());
-	assert(!BlobPSs.empty());
 	
-	const D3D12_SHADER_BYTECODE ShaderBytecodesVS = { BlobVSs[0]->GetBufferPointer(), BlobVSs[0]->GetBufferSize() };
-	const D3D12_SHADER_BYTECODE ShaderBytecodesPS = { BlobPSs[0]->GetBufferPointer(), BlobPSs[0]->GetBufferSize() };
+	const D3D12_SHADER_BYTECODE ShaderBytecodesVS = { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() };
+	const D3D12_SHADER_BYTECODE ShaderBytecodesPS = { ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() };
 	const D3D12_SHADER_BYTECODE DefaultShaderBytecode = { nullptr, 0 };
 
 	const D3D12_STREAM_OUTPUT_DESC StreamOutputDesc = {
@@ -461,7 +459,7 @@ void TriangleDX::CreateGraphicsPipelineState()
 		SampleDesc,
 		0,
 		CachedPipelineState,
-		D3D12_PIPELINE_STATE_FLAG_NONE
+		D3D12_PIPELINE_STATE_FLAG_NONE //!< D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG ... は Warp デバイスのみ
 	};
 	
 	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, IID_PPV_ARGS(&PipelineState)));

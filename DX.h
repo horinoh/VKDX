@@ -57,7 +57,9 @@ protected:
 	virtual void CreateInputLayout();
 	virtual void CreateInputLayout_PositionColor();
 	virtual void CreateViewport();
+	virtual void CreatePipelineState() { CreateGraphicsPipelineState(); }
 	virtual void CreateGraphicsPipelineState();
+	virtual void CreateComputePipelineState();
 
 	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
 	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
@@ -89,8 +91,7 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12Resource> DepthStencilResource;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DepthStencilDescriptorHeap;
 
-	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> BlobVSs;
-	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> BlobPSs;
+	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs;
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
 

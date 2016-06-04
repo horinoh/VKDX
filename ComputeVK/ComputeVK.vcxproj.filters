@@ -67,4 +67,9 @@
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="CS.comp">
+      <Filter>Shader Files</Filter>
+    </None>
+  </ItemGroup>
 </Project>

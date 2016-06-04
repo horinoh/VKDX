@@ -39,7 +39,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateInputLayout();
 	//CreateViewport();
-	CreateGraphicsPipelineState();
+	CreatePipelineState();
 
 	CreateVertexBuffer(CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 	CreateIndexBuffer(CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
@@ -489,11 +489,9 @@ void DX::CreateShader_VSPS()
 {
 	using namespace Microsoft::WRL;
 
-	BlobVSs.resize(1);
-	D3DReadFileToBlob(SHADER_PATH L"VS.cso", BlobVSs[0].GetAddressOf());
-
-	BlobPSs.resize(1);
-	D3DReadFileToBlob(SHADER_PATH L"PS.cso", BlobPSs[0].GetAddressOf());
+	ShaderBlobs.resize(2);
+	D3DReadFileToBlob(SHADER_PATH L"VS.cso", ShaderBlobs[0].GetAddressOf());
+	D3DReadFileToBlob(SHADER_PATH L"PS.cso", ShaderBlobs[1].GetAddressOf());
 
 #ifdef _DEBUG
 	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
@@ -568,11 +566,6 @@ void DX::CreateViewport()
 void DX::CreateGraphicsPipelineState()
 {
 #if 0
-	//assert(nullptr != RootSignature);
-	//assert(!BlobVSs.empty());
-	//const D3D12_SHADER_BYTECODE ShaderBytecodesVS = { BlobVSs[0]->GetBufferPointer(), BlobVSs[0]->GetBufferSize() };
-	//assert(!BlobPSs.empty());
-	//const D3D12_SHADER_BYTECODE ShaderBytecodesPS = { BlobPSs[0]->GetBufferPointer(), BlobPSs[0]->GetBufferSize() };
 	const D3D12_SHADER_BYTECODE DefaultShaderBytecode = { nullptr, 0 };
 
 	const D3D12_RENDER_TARGET_BLEND_DESC DefaultRenderTargetBlendDesc = {
@@ -642,6 +635,23 @@ void DX::CreateGraphicsPipelineState()
 
 #ifdef _DEBUG
 	std::cout << "CreateGraphicsPipelineState" << COUT_OK << std::endl << std::endl;
+#endif
+}
+void DX::CreateComputePipelineState()
+{
+	const D3D12_SHADER_BYTECODE ShaderBytecodesCS = { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() };
+	const D3D12_CACHED_PIPELINE_STATE CachedPipelineState = { nullptr, 0 };
+	const D3D12_COMPUTE_PIPELINE_STATE_DESC ComputePipelineStateDesc = {
+		nullptr, //RootSignature.Get(),
+		ShaderBytecodesCS,
+		0, // NodeMask ... マルチGPUの場合
+		CachedPipelineState,
+		D3D12_PIPELINE_STATE_FLAG_NONE //!< D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG ... は Warp デバイスのみ
+	};
+	VERIFY_SUCCEEDED(Device->CreateComputePipelineState(&ComputePipelineStateDesc, IID_PPV_ARGS(&PipelineState)));
+
+#ifdef _DEBUG
+	std::cout << "CreateComputePipelineState" << COUT_OK << std::endl << std::endl;
 #endif
 }
 

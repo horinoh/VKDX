@@ -2,16 +2,6 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-//in gl_PerVertex
-//{
-//	vec4 gl_Position;
-//} gl_in[];
-
-//out gl_PerVertex
-//{
-//	vec4 gl_Position;
-//};
-
 layout (triangles, invocations = 1) in;
 layout (triangle_strip, max_vertices = 3) out;
 void main()

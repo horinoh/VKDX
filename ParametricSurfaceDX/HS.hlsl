@@ -12,7 +12,7 @@ struct OUT
 	float3 Dummy : POSITION;
 };
 
-TESS_FACTOR chs()
+TESS_FACTOR ConstantHS()
 {
 	TESS_FACTOR Out;
 	const float t = 15;
@@ -29,7 +29,7 @@ TESS_FACTOR chs()
 [partitioning("integer")]
 [outputtopology("triangle_ccw")]
 [outputcontrolpoints(4)]
-[patchconstantfunc("chs")]
+[patchconstantfunc("ConstantHS")]
 [maxtessfactor(64.0f)]
 OUT main(const InputPatch<IN, 4> patch, uint i : SV_OutputControlPointID, uint p : SV_PrimitiveID)
 {

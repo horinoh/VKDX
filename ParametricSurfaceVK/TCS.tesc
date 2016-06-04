@@ -2,16 +2,6 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-//in gl_PerVertex
-//{
-//	vec4 gl_Position;
-//} gl_in[];
-
-//out gl_PerVertex
-//{
-//	vec4 gl_Position;
-//} gl_out[];
-
 layout (vertices = 4) out;
 void main()
 {

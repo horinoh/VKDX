@@ -1,0 +1,53 @@
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+/*!
+@brief マンデルブロ集合
+Z(n+1) = Z(n)^2 + C
+C = a + b * i;
+*/
+uint Mandelbrot(const vec2 c, const uint iterations)
+{
+	vec2 z = vec2(0.0f);
+	uint i = 0;
+	while(i < iterations && dot(z, z) < 4.0f) {
+		z = vec2(z.x * z.x - z.y * z.y, 2.0f * z.x * z.y) + c;
+		++i;
+	}
+	return i;
+}
+
+
+//!< sampler2Dではなく、image2Dを使用
+layout (binding=0, rgba8) uniform image2D TextureMap;
+
+layout (local_size_x=32, local_size_y=32, local_size_z=1) in;
+
+void main()
+{
+#if 0
+	//!< 複素時空領域
+	//!< (x, y, z, w) = (LT実数部, LT虚数部, RB実数部, RB虚数部)
+	const vec4 complexSpace = vec4(-2.0f, -1.0f, 1.0f, 1.0f);
+	const ivec2 size = imageSize(TextureMap);
+
+	//!< 複素時空でのピクセルサイズを求める
+	const vec2 d = (complexSpace.zw - complexSpace.xy) / size;
+
+	//!< テクセル(gl_GlobalInvocationID.xy)を複素時空へ変換
+	const vec2 c = d * gl_GlobalInvocationID.xy + complexSpace.xy;
+
+	//!< マンデルブロ集合
+	const uint i = Mandelbrot(c, 100);
+
+	const vec3 color = vec3(smoothstep(0, 5, i), smoothstep(5, 10, i), smoothstep(10, 15, i)) * max(sign(i - Iterations), 0);
+
+	//!< imageStore()でテクスチャへ書き込む
+	imageStore(TextureMap, ivec2(gl_GlobalInvocationID.xy), vec4(color, 1.0f));
+#else
+	//!< 格子模様
+	imageStore(TextureMap, ivec2(gl_GlobalInvocationID.xy), vec4(vec2(gl_LocalInvocationID.xy) / vec2(gl_WorkGroupSize.xy), 0.0f, 1.0f));
+#endif
+	memoryBarrier();
+}

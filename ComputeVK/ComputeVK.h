@@ -15,7 +15,7 @@ public:
 
 protected:
 	//virtual void CreateShader() override;
-	//virtual void CreatePipeline() override;
+	virtual void CreatePipeline() override { Super::CreateComputePipeline(); }
 
 	//virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer) override;
 
