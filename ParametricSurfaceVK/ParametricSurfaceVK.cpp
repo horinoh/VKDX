@@ -225,8 +225,4 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void ParametricSurfaceVK::CreateShader()
-{
-	Super::CreateShader();
-}
 #pragma endregion

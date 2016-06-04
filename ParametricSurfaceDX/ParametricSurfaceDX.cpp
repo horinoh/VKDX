@@ -225,16 +225,10 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void ParametricSurfaceDX::CreateShader()
-{
-	Super::CreateShader();
-}
-void ParametricSurfaceDX::CreateGraphicsPipelineState()
-{
-	Super::CreateGraphicsPipelineState();
-}
 void ParametricSurfaceDX::PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList)
 {
 	Super::PopulateCommandList(GraphicsCommandList);
+	
+	//TODO
 }
 #pragma endregion

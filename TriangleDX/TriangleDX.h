@@ -14,11 +14,11 @@ public:
 	virtual ~TriangleDX() {}
 
 protected:
-	virtual void CreateShader() override;
-	virtual void CreateInputLayout() override;
+	virtual void CreateShader() override { CreateShader_VsPs(); }
+	virtual void CreateInputLayout() override { CreateInputLayout_PositionColor(); }
 	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) override;
 	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) override;
-	virtual void CreateGraphicsPipelineState() override;
+	virtual void CreateGraphicsPipelineState() override { CreateGraphicsPipelineState_VsPs(); }
 
 	virtual void PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList) override;
 

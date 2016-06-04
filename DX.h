@@ -51,21 +51,30 @@ protected:
 	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
 
 	virtual void CreateShader();
-	virtual void CreateShader_VSPS();
+	virtual void CreateShader_VsPs();
+	virtual void CreateShader_VsPsDsHsGs();
+	virtual void CreateShader_Cs();
+
 	virtual void CreateRootSignature();
 
 	virtual void CreateInputLayout();
 	virtual void CreateInputLayout_PositionColor();
+
 	virtual void CreateViewport();
+
 	virtual void CreatePipelineState() { CreateGraphicsPipelineState(); }
 	virtual void CreateGraphicsPipelineState();
+	virtual void CreateGraphicsPipelineState_VsPs();
+	virtual void CreateGraphicsPipelineState_VsPsDsHsGs();
 	virtual void CreateComputePipelineState();
 
 	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
 	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
 	virtual void CreateConstantBuffer();
 
-	virtual void Clear(ID3D12GraphicsCommandList* GraphicsCommandList);
+	virtual void Clear(ID3D12GraphicsCommandList* GraphicsCommandList) { Clear_Color(GraphicsCommandList); Clear_Depth(GraphicsCommandList); }
+	virtual void Clear_Color(ID3D12GraphicsCommandList* GraphicsCommandList);
+	virtual void Clear_Depth(ID3D12GraphicsCommandList* GraphicsCommandList);
 	virtual void PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList);
 
 	virtual void BarrierTransition(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After);
@@ -110,10 +119,10 @@ protected:
 	D3D12_INDEX_BUFFER_VIEW IndexBufferView;
 	UINT IndexCount = 0;
 
-#pragma region ConstantBuffer
 	Microsoft::WRL::ComPtr<ID3D12Resource> ConstantBufferResource;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> ConstantBufferDescriptorHeap;
-#pragma endregion
+
+	//Microsoft::WRL::ComPtr<ID3D12Resource> UnorderedAccessResource;
 
 	Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
 	UINT64 FenceValue;

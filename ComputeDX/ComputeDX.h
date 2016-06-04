@@ -14,11 +14,14 @@ public:
 	virtual ~ComputeDX() {}
 
 protected:
-	//virtual void CreateShader() override;
+	virtual void Draw() override {}
+
+	virtual void CreateShader() override { CreateShader_Cs(); }
 	virtual void CreatePipelineState() override { Super::CreateComputePipelineState(); }
 
 	//virtual void PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList) override;
 
 private:
+
 };
 #pragma endregion

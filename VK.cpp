@@ -193,7 +193,9 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 #pragma endregion
 
-	vkDestroyFence(Device, Fence, nullptr);
+	if (VK_NULL_HANDLE != Fence) {
+		vkDestroyFence(Device, Fence, nullptr);
+	}
 
 #pragma region CommandBuffer
 	vkFreeCommandBuffers(Device, CommandPools[0], 1, &CommandBuffers[0]);
@@ -755,11 +757,35 @@ void VK::CreateShader()
 	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void VK::CreateShader_VSPS()
+void VK::CreateShader_VsPs()
 {
+	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"VS.vert.spv"));
+	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"FS.frag.spv"));
 
+#ifdef _DEBUG
+	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
+#endif
 }
+void VK::CreateShader_VsPsTesTcsGs()
+{
+	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"VS.vert.spv"));
+	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"FS.frag.spv"));
+	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"TES.tese.spv"));
+	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"TCS.tesc.spv"));
+	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"GS.geom.spv"));
 
+#ifdef _DEBUG
+	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
+#endif
+}
+void VK::CreateShader_Cs()
+{
+	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"CS.cpom.spv"));
+
+#ifdef _DEBUG
+	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
+#endif
+}
 /**
 @brief シェーダとのバインディングのレイアウト
 @note DescriptorSetLayt は型のようなもの、DescriptorSet はインスタンスのようなもの
@@ -842,7 +868,24 @@ void VK::CreateVertexInput()
 }
 void VK::CreateVertexInput_PositionColor()
 {
+	VertexInputBindingDescriptions = {
+		{ 0, sizeof(glm::vec3) + sizeof(glm::vec4), VK_VERTEX_INPUT_RATE_VERTEX }
+	};
+	VertexInputAttributeDescriptions = {
+		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+		{ 1, 0, VK_FORMAT_R32G32B32_SFLOAT, sizeof(glm::vec3) }
+	};
+	PipelineVertexInputStateCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(VertexInputBindingDescriptions.size()), VertexInputBindingDescriptions.data(),
+		static_cast<uint32_t>(VertexInputAttributeDescriptions.size()), VertexInputAttributeDescriptions.data()
+	};
 
+#ifdef _DEBUG
+	std::cout << "CreateVertexInput" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void VK::CreateViewport()
@@ -868,6 +911,37 @@ void VK::CreateViewport()
 
 void VK::CreateGraphicsPipeline()
 {
+#ifdef _DEBUG
+	std::cout << "CreateGraphicsPipeline" << COUT_OK << std::endl << std::endl;
+#endif
+}
+void VK::CreateGraphicsPipeline_VsPs()
+{
+	assert(1 < ShaderModules.size());
+
+	//!< HLSL コンパイル時のデフォルトエントリポイント名が "main" なのでそれに合わせることにする
+	const char* EntrypointName = "main";
+	const std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos = {
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
+			EntrypointName,
+			nullptr
+		},
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
+			EntrypointName,
+			nullptr
+		}
+	};
+
+	//!< PipelineVertexInputStateCreateInfo は CreateVertexInput() 内で作成してある
+
 	const VkPipelineInputAssemblyStateCreateInfo PipelineInputAssemblyStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
 		nullptr,
@@ -876,6 +950,11 @@ void VK::CreateGraphicsPipeline()
 		VK_FALSE
 	};
 
+	/**
+	@brief デフォルト指定
+	VkDynamicState に VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR を指定するので
+	vkCmdSetViewport(), vkCmdSetScissor() で後からコマンドバッファによる上書きが可能
+	*/
 	const VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
 		nullptr,
@@ -883,7 +962,7 @@ void VK::CreateGraphicsPipeline()
 		static_cast<uint32_t>(Viewports.size()), Viewports.data(),
 		static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data()
 	};
-
+	
 	const VkPipelineRasterizationStateCreateInfo PipelineRasterizationStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 		nullptr,
@@ -907,6 +986,18 @@ void VK::CreateGraphicsPipeline()
 		VK_FALSE, VK_FALSE
 	};
 
+	const VkStencilOpState StencilOpState_Front = {
+		VK_STENCIL_OP_KEEP,
+		VK_STENCIL_OP_KEEP,
+		VK_STENCIL_OP_KEEP,
+		VK_COMPARE_OP_NEVER, 0, 0, 0
+	};
+	const VkStencilOpState StencilOpState_Back = {
+		VK_STENCIL_OP_KEEP,
+		VK_STENCIL_OP_KEEP,
+		VK_STENCIL_OP_KEEP,
+		VK_COMPARE_OP_ALWAYS, 0, 0, 0
+	};
 	const VkPipelineDepthStencilStateCreateInfo PipelineDepthStencilStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 		nullptr,
@@ -916,22 +1007,12 @@ void VK::CreateGraphicsPipeline()
 		VK_COMPARE_OP_LESS_OR_EQUAL,
 		VK_FALSE,
 		VK_FALSE,
-		{
-			VK_STENCIL_OP_KEEP,
-			VK_STENCIL_OP_KEEP,
-			VK_STENCIL_OP_KEEP,
-			VK_COMPARE_OP_NEVER, 0, 0, 0
-		},
-		{
-			VK_STENCIL_OP_KEEP,
-			VK_STENCIL_OP_KEEP,
-			VK_STENCIL_OP_KEEP,
-			VK_COMPARE_OP_ALWAYS, 0, 0, 0
-		},
+		StencilOpState_Front,
+		StencilOpState_Back,
 		0.0f, 0.0f
 	};
 
-	const std::vector<VkPipelineColorBlendAttachmentState> VkPipelineColorBlendAttachmentStates = {
+	const std::vector<VkPipelineColorBlendAttachmentState> PipelineColorBlendAttachmentStates = {
 		{
 			VK_FALSE,
 			VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO,
@@ -946,9 +1027,10 @@ void VK::CreateGraphicsPipeline()
 		nullptr,
 		0,
 		VK_FALSE, VK_LOGIC_OP_CLEAR,
-		static_cast<uint32_t>(VkPipelineColorBlendAttachmentStates.size()), VkPipelineColorBlendAttachmentStates.data(),
-		{ 0.0f, 0.0f, 0.0f, 0.0f }
+		static_cast<uint32_t>(PipelineColorBlendAttachmentStates.size()), PipelineColorBlendAttachmentStates.data(),
+		{ 0.0f, 0.0f, 0.0f, 0.0f } //!< BlendConstants
 	};
+
 	const std::vector<VkDynamicState> DynamicStates = {
 		VK_DYNAMIC_STATE_VIEWPORT,
 		VK_DYNAMIC_STATE_SCISSOR
@@ -959,15 +1041,6 @@ void VK::CreateGraphicsPipeline()
 		0,
 		static_cast<uint32_t>(DynamicStates.size()), DynamicStates.data()
 	};
-
-	//!< パイプラインをコンパイルして、vkGetPipelineCacheData()でディスクへ保存可能
-	const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-		nullptr,
-		0,
-		0, nullptr
-	};
-	VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, nullptr, &PipelineCache));
 
 	const std::vector<VkGraphicsPipelineCreateInfo> GraphicsPipelineCreateInfos = {
 		{
@@ -990,8 +1063,22 @@ void VK::CreateGraphicsPipeline()
 			VK_NULL_HANDLE, 0
 		}
 	};
+	//!< パイプラインをコンパイルして、vkGetPipelineCacheData()でディスクへ保存可能
+	const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+		nullptr,
+		0,
+		0, nullptr
+	};
+	VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, nullptr, &PipelineCache));
 	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, PipelineCache, static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), nullptr, &Pipeline));
 
+#ifdef _DEBUG
+	std::cout << "CreateGraphicsPipeline" << COUT_OK << std::endl << std::endl;
+#endif
+}
+void VK::CreateGraphicsPipeline_VsPsTesTcsGs()
+{
 #ifdef _DEBUG
 	std::cout << "CreateGraphicsPipeline" << COUT_OK << std::endl << std::endl;
 #endif
@@ -1160,7 +1247,7 @@ void VK::CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat
 #pragma endregion
 }
 
-void VK::Clear(const VkCommandBuffer CommandBuffer)
+void VK::Clear_Color(const VkCommandBuffer CommandBuffer)
 {
 	const VkClearColorValue SkyBlue = { 0.529411793f, 0.807843208f, 0.921568692f, 1.0f };
 	const std::vector<VkImageSubresourceRange> ImageSubresourceRanges_Color = {
@@ -1175,54 +1262,29 @@ void VK::Clear(const VkCommandBuffer CommandBuffer)
 		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		&SkyBlue,
 		static_cast<uint32_t>(ImageSubresourceRanges_Color.size()), ImageSubresourceRanges_Color.data());
-
-	const VkClearDepthStencilValue ClearDepthStencil = { 1.0f, 0 };
-	const std::vector<VkImageSubresourceRange> ImageSubresourceRanges_DepthStencil = {
-		{
-			VK_IMAGE_ASPECT_DEPTH_BIT,
-			0, 1,
-			0, 1
-		}
-	};
-	vkCmdClearDepthStencilImage(CommandBuffer,
-		DepthStencilImage,
-		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-		&ClearDepthStencil,
-		static_cast<uint32_t>(ImageSubresourceRanges_DepthStencil.size()), ImageSubresourceRanges_DepthStencil.data());
 }
+void VK::Clear_Depth(const VkCommandBuffer CommandBuffer)
+{
+	if (VK_NULL_HANDLE != DepthStencilImage) {
+		const VkClearDepthStencilValue ClearDepthStencil = { 1.0f, 0 };
+		const std::vector<VkImageSubresourceRange> ImageSubresourceRanges_DepthStencil = {
+			{
+				VK_IMAGE_ASPECT_DEPTH_BIT,
+				0, 1,
+				0, 1
+			}
+		};
+		vkCmdClearDepthStencilImage(CommandBuffer,
+			DepthStencilImage,
+			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			&ClearDepthStencil,
+			static_cast<uint32_t>(ImageSubresourceRanges_DepthStencil.size()), ImageSubresourceRanges_DepthStencil.data());
+	}
+}
+
 void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 {
 	Clear(CommandBuffer);
-
-	//	//!< レンダーターゲット(フレームバッファ)
-	//	const VkRect2D Rect2D = {
-	//		{ 0, 0 },
-	//		{ 1280, 720 }, 
-	//	};
-	//	std::vector<VkClearValue> ClearValues(2);
-	//	ClearValues[0].color = { 0.5f, 0.5f, 1.0f, 1.0f };
-	//	ClearValues[1].depthStencil = { 1.0f, 0 };
-	//	const VkRenderPassBeginInfo RenderPassBeginInfo = {
-	//		VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-	//		nullptr,
-	//		RenderPass,
-	//		Framebuffers[SwapchainImageIndex],
-	//		Rect2D,
-	//		static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
-	//	};
-	//	vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-	//	//!< トポロジは Pipeline にある
-	//	vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
-	//	//!< Pipeline でビューポートとシザーは設定しているが↓は必要？
-	//	//vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-	//	//vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
-
-	//	const VkDeviceSize Offsets[] = { 0 };
-	//	vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
-	//	vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
-
-	//	vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
 }
 
 void VK::ImageBarrier(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout Old, VkImageLayout New)

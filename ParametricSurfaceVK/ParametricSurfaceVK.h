@@ -14,8 +14,9 @@ public:
 	virtual ~ParametricSurfaceVK() {}
 
 protected:
-	virtual void CreateShader() override;
+	virtual void CreateShader() override { CreateShader_VsPsTesTcsGs(); }
 	//virtual void CreateVertexInput() override;
+	virtual void CreateGraphicsPipeline() override { CreateGraphicsPipeline_VsPsTesTcsGs(); }
 
 private:
 };

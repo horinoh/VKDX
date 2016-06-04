@@ -64,16 +64,23 @@ protected:
 	virtual void CreateDepthStencilView(const VkFormat DepthFormat);
 
 	virtual void CreateShader();
-	virtual void CreateShader_VSPS();
+	virtual void CreateShader_VsPs();
+	virtual void CreateShader_VsPsTesTcsGs();
+	virtual void CreateShader_Cs();
+
 	virtual void CreateDescriptorSetLayout();
 	virtual void CreatePipelineLayout();
 	virtual void CreateDescriptorSet();
 
 	virtual void CreateVertexInput();
 	virtual void CreateVertexInput_PositionColor();
+	
 	virtual void CreateViewport();
+
 	virtual void CreatePipeline() { CreateGraphicsPipeline(); }
 	virtual void CreateGraphicsPipeline();
+	virtual void CreateGraphicsPipeline_VsPs();
+	virtual void CreateGraphicsPipeline_VsPsTesTcsGs();
 	virtual void CreateComputePipeline();
 
 	virtual void CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
@@ -85,7 +92,9 @@ protected:
 
 	// ----------------------------------
 
-	virtual void Clear(const VkCommandBuffer CommandBuffer);
+	virtual void Clear(const VkCommandBuffer CommandBuffer) { Clear_Color(CommandBuffer); Clear_Depth(CommandBuffer); }
+	virtual void Clear_Color(const VkCommandBuffer CommandBuffer);
+	virtual void Clear_Depth(const VkCommandBuffer CommandBuffer);
 	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer);
 
 	virtual void ImageBarrier(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout Old, VkImageLayout New);
@@ -108,71 +117,51 @@ protected:
 	std::vector<VkCommandPool> CommandPools;
 	std::vector<VkCommandBuffer> CommandBuffers;
 
-#pragma region Swapchain
+	VkFence Fence = VK_NULL_HANDLE;
+
 	VkExtent2D ImageExtent;
 	VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
 	std::vector<VkImage> SwapchainImages;
 	std::vector<VkImageView> SwapchainImageViews;
 	VkSemaphore Semaphore;
 	uint32_t SwapchainImageIndex = 0;
-#pragma endregion
 
-#pragma region DepthStencil
 	VkImage DepthStencilImage = VK_NULL_HANDLE;
 	VkDeviceMemory DepthStencilDeviceMemory = VK_NULL_HANDLE;
 	VkImageView DepthStencilImageView = VK_NULL_HANDLE;
-#pragma endregion
 
-#pragma region Shader
 	std::vector<VkShaderModule> ShaderModules;
-	std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos;
-#pragma endregion
 
-#pragma region Layout
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
 	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
-#pragma endregion
 
 	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
 	std::vector<VkDescriptorSet> DescriptorSets;
 
-#pragma region VertexInput
-protected:
 	std::vector<VkVertexInputBindingDescription> VertexInputBindingDescriptions;
 	std::vector<VkVertexInputAttributeDescription> VertexInputAttributeDescriptions;
 	VkPipelineVertexInputStateCreateInfo PipelineVertexInputStateCreateInfo;
-#pragma endregion
-#pragma region Viewport
+
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;
-#pragma endregion
-#pragma region GraphicsPipeline
+
 	VkPipelineCache PipelineCache;
 	VkPipeline Pipeline;
-#pragma endregion
 
-#pragma region VertexBuffer
 	VkBuffer VertexBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory VertexDeviceMemory = VK_NULL_HANDLE;
-#pragma endregion
-#pragma region IndexBuffer
+
 	VkBuffer IndexBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory IndexDeviceMemory = VK_NULL_HANDLE;
 	uint32_t IndexCount = 0;
-#pragma endregion
-#pragma region UniformBuffer
+
 	VkBuffer UniformBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory UniformDeviceMemory = VK_NULL_HANDLE;
 	VkDescriptorBufferInfo UniformDescriptorBufferInfo;
 	std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
-#pragma endregion
 
-#pragma region RenderPass
 	std::vector<VkFramebuffer> Framebuffers;
 	VkRenderPass RenderPass = VK_NULL_HANDLE;
-#pragma endregion
-
-	VkFence Fence = VK_NULL_HANDLE;
 
 	//-------------------------------
 

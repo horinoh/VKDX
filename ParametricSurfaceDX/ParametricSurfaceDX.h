@@ -14,9 +14,9 @@ public:
 	virtual ~ParametricSurfaceDX() {}
 
 protected:
-	virtual void CreateShader() override;
+	virtual void CreateShader() override { CreateShader_VsPsDsHsGs(); }
 	//virtual void CreateInputLayout() override;
-	virtual void CreateGraphicsPipelineState() override;
+	virtual void CreateGraphicsPipelineState() override { CreateGraphicsPipelineState_VsPsDsHsGs(); }
 
 	virtual void PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList) override;
 private:

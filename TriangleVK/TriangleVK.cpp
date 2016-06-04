@@ -225,60 +225,6 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void TriangleVK::CreateShader()
-{
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"VS.vert.spv"));
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"FS.frag.spv"));
-
-	//!< HLSL コンパイル時のデフォルトエントリポイント名が "main" なのでそれに合わせることにする
-	const char* EntrypointName = "main";
-	PipelineShaderStageCreateInfos = {
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
-			EntrypointName,
-			nullptr
-		},
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
-			EntrypointName,
-			nullptr
-		}
-	};
-
-#ifdef _DEBUG
-	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
-void TriangleVK::CreateVertexInput()
-{
-	Vertex Vertices;
-	VertexInputBindingDescriptions = {
-		{ 0, sizeof(Vertex), VK_VERTEX_INPUT_RATE_VERTEX }
-	};
-	VertexInputAttributeDescriptions = {
-		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
-		{ 1, 0, VK_FORMAT_R32G32B32_SFLOAT, 12 }
-	};
-	PipelineVertexInputStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(VertexInputBindingDescriptions.size()), VertexInputBindingDescriptions.data(),
-		static_cast<uint32_t>(VertexInputAttributeDescriptions.size()), VertexInputAttributeDescriptions.data()
-	};
-
-#ifdef _DEBUG
-	std::cout << "CreateVertexInput" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
 void TriangleVK::CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
 	const std::vector<Vertex> Vertices = {
@@ -498,14 +444,42 @@ void TriangleVK::CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhys
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void TriangleVK::CreateGraphicsPipeline()
-{
-	//TODO
-	Super::CreateGraphicsPipeline();
-}
 void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 {
-	//TODO
 	Super::PopulateCommandBuffer(CommandBuffer);
+
+	//vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+	//vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+
+	//TODO
+#if 0
+	{
+		assert(!Framebuffers.empty());
+		assert(!ScissorRects.empty());
+
+		const std::vector<VkClearValue> ClearValues = {
+			{ 0.5f, 0.5f, 1.0f, 1.0f }, { 1.0f, 0 }
+		};
+		const VkRenderPassBeginInfo RenderPassBeginInfo = {
+			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			nullptr,
+			RenderPass,
+			Framebuffers[SwapchainImageIndex],
+			ScissorRects[0],
+			static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
+		};
+		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);	
+	}
+
+	//SetGraphicsRootSignature()
+
+	const VkDeviceSize Offsets[] = { 0 };
+	vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
+	vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+	//!< トポロジは Pipeline - VkPipelineInputAssemblyStateCreateInfo で指定しているのでパイプラインをバインド
+	vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+	
+	vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
+#endif
 }
 #pragma endregion
