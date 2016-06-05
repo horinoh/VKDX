@@ -866,6 +866,26 @@ void VK::CreateVertexInput()
 	std::cout << "CreateVertexInput" << COUT_OK << std::endl << std::endl;
 #endif
 }
+void VK::CreateVertexInput_Position()
+{
+	VertexInputBindingDescriptions = {
+		{ 0, sizeof(glm::vec3), VK_VERTEX_INPUT_RATE_VERTEX }
+	};
+	VertexInputAttributeDescriptions = {
+		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+	};
+	PipelineVertexInputStateCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(VertexInputBindingDescriptions.size()), VertexInputBindingDescriptions.data(),
+		static_cast<uint32_t>(VertexInputAttributeDescriptions.size()), VertexInputAttributeDescriptions.data()
+	};
+
+#ifdef _DEBUG
+	std::cout << "CreateVertexInput" << COUT_OK << std::endl << std::endl;
+#endif
+}
 void VK::CreateVertexInput_PositionColor()
 {
 	VertexInputBindingDescriptions = {

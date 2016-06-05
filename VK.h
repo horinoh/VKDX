@@ -12,7 +12,7 @@
 //!< fopen でなく fopen_s を使えと怒られるが、gli のコードは書き換えたくないので warning を抑制する
 #pragma warning (push)
 #pragma warning (disable : 4996)
-//#include <gli/gli.hpp>
+#include <gli/gli.hpp>
 #pragma warning (pop) 
 
 #include "Win.h"
@@ -73,8 +73,9 @@ protected:
 	virtual void CreateDescriptorSet();
 
 	virtual void CreateVertexInput();
+	virtual void CreateVertexInput_Position();
 	virtual void CreateVertexInput_PositionColor();
-	
+
 	virtual void CreateViewport();
 
 	virtual void CreatePipeline() { CreateGraphicsPipeline(); }

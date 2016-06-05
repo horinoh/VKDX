@@ -58,6 +58,7 @@ protected:
 	virtual void CreateRootSignature();
 
 	virtual void CreateInputLayout();
+	virtual void CreateInputLayout_Position();
 	virtual void CreateInputLayout_PositionColor();
 
 	virtual void CreateViewport();

@@ -2,16 +2,16 @@ struct IN
 {
 	float3 Dummy : POSITION;
 }; 
-struct TESS_FACTOR
-{
-	float Edge[4] : SV_TessFactor;
-	float Inside[2] : SV_InsideTessFactor;
-};
 struct OUT
 {
 	float3 Dummy : POSITION;
 };
 
+struct TESS_FACTOR
+{
+	float Edge[4] : SV_TessFactor;
+	float Inside[2] : SV_InsideTessFactor;
+};
 TESS_FACTOR ConstantHS()
 {
 	TESS_FACTOR Out;

@@ -1,9 +1,16 @@
+struct IN
+{
+	float3 Dummy : POSITION;
+}; 
 struct OUT
 {
 	float3 Dummy : POSITION;
 };
 
-OUT main()
+OUT main(IN In)
 {
-	return (OUT)0;
+	OUT Out;
+	Out.Dummy = In.Dummy;
+	return Out;
+	//return (OUT)0;
 }

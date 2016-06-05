@@ -396,9 +396,10 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandL
 
 	GraphicsCommandList->SetGraphicsRootSignature(RootSignature.Get());
 
+	GraphicsCommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
 	GraphicsCommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
 	GraphicsCommandList->IASetIndexBuffer(&IndexBufferView);
-	GraphicsCommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 	GraphicsCommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
 }

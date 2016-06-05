@@ -15,7 +15,7 @@ public:
 
 protected:
 	virtual void CreateShader() override { CreateShader_VsPsTesTcsGs(); }
-	//virtual void CreateVertexInput() override;
+	virtual void CreateVertexInput() override { CreateVertexInput_Position(); }
 	virtual void CreateGraphicsPipeline() override { CreateGraphicsPipeline_VsPsTesTcsGs(); }
 
 private:

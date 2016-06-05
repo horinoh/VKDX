@@ -543,6 +543,19 @@ void DX::CreateInputLayout()
 	std::cout << "CreateInputLayout" << COUT_OK << std::endl << std::endl;
 #endif
 }
+void DX::CreateInputLayout_Position()
+{
+	InputElementDescs = {
+		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	};
+	InputLayoutDesc = {
+		InputElementDescs.data(), static_cast<UINT>(InputElementDescs.size())
+	};
+
+#ifdef _DEBUG
+	std::cout << "CreateInputLayout" << COUT_OK << std::endl << std::endl;
+#endif
+}
 void DX::CreateInputLayout_PositionColor()
 {
 	InputElementDescs = {

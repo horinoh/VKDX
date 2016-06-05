@@ -15,7 +15,7 @@ public:
 
 protected:
 	virtual void CreateShader() override { CreateShader_VsPsDsHsGs(); }
-	//virtual void CreateInputLayout() override;
+	virtual void CreateInputLayout() override { CreateInputLayout_Position(); }
 	virtual void CreateGraphicsPipelineState() override { CreateGraphicsPipelineState_VsPsDsHsGs(); }
 
 	virtual void PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList) override;
