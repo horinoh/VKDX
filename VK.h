@@ -18,7 +18,7 @@
 #include "Win.h"
 
 #ifndef VERIFY_SUCCEEDED
-#define VERIFY_SUCCEEDED(vr) if(VK_SUCCESS != (vr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed"); }
+#define VERIFY_SUCCEEDED(vr) if(VK_SUCCESS != (vr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + VK::GetVkResultString(vr)); }
 #endif
 
 class VK : public Win
@@ -35,6 +35,7 @@ public:
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override;
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 
+	static std::string GetVkResultString(const VkResult Result);
 protected:
 	static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
 	static FORCEINLINE void* AlignedRealloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_realloc(pOriginal, size, alignment); }

@@ -101,6 +101,27 @@ void DX::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 
 	WaitForFence();
 }
+#include <codecvt> 
+std::string DX::GetHRESULTString(const HRESULT Result)
+{
+	_com_error Error(Result);
+	const auto WErrorString = std::wstring(Error.ErrorMessage());
+	
+	//!< 16進の文字列表記
+	std::stringstream ss;
+	ss << "0x" << std::hex << Result << std::dec;
+	ss.str();
+
+#if 1
+	//!< 日本語対応
+	char Temporary[256];
+	size_t NumOfCharConverted;
+	wcstombs_s(&NumOfCharConverted, Temporary, WErrorString.c_str(), _countof(Temporary));
+	return std::string(Temporary);
+#else
+	return std::string(WErrorString.begin(), WErrorString.end());
+#endif
+}
 
 void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
 {

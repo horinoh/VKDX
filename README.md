@@ -9,6 +9,7 @@
     
 #### ドライバ
 * https://www.khronos.org/vulkan/
+	* NVIDIA のドライバアップデート後に vkCreateInstance() でコケるようになったら、恐らく Vulkan ドライバを再インストールすると治る
 
 #### GLM
 * https://github.com/g-truc/glm

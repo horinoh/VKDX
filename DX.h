@@ -10,10 +10,12 @@
 #include <DirectXPackedVector.h>
 #include <DirectXColors.h>
 
+#include <comdef.h>
+
 #include "Win.h"
 
 #ifndef VERIFY_SUCCEEDED
-#define VERIFY_SUCCEEDED(hr) if(FAILED(hr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed"); }
+#define VERIFY_SUCCEEDED(hr) if(FAILED(hr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + DX::GetHRESULTString(hr)); }
 #endif
 
 class DX : public Win
@@ -30,6 +32,7 @@ public:
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override;
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 
+	static std::string GetHRESULTString(const HRESULT Result);
 protected:
 	virtual void CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat);
 	virtual void EnumAdapter(IDXGIFactory4* Factory);

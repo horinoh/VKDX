@@ -5,6 +5,7 @@
 #include <cassert>
 #include <algorithm>
 #include <iostream>
+#include <sstream>
 
 #ifndef SAFE_DELETE
 #define SAFE_DELETE(x) if(nullptr != x) { delete x; x = nullptr; }
