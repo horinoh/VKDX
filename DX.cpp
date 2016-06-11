@@ -21,7 +21,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 #endif
 
 	Super::OnCreate(hWnd, hInstance);
-	
+
 	const auto ColorFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 	CreateDevice(hWnd, ColorFormat);
 	CreateCommandQueue();
@@ -101,26 +101,27 @@ void DX::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 
 	WaitForFence();
 }
-#include <codecvt> 
 std::string DX::GetHRESULTString(const HRESULT Result)
 {
-	_com_error Error(Result);
-	const auto WErrorString = std::wstring(Error.ErrorMessage());
-	
-	//!< 16進の文字列表記
-	std::stringstream ss;
-	ss << "0x" << std::hex << Result << std::dec;
-	ss.str();
-
+	const auto WResultString = GetHRESULTStringW(Result);
 #if 1
 	//!< 日本語対応
 	char Temporary[256];
 	size_t NumOfCharConverted;
-	wcstombs_s(&NumOfCharConverted, Temporary, WErrorString.c_str(), _countof(Temporary));
+	wcstombs_s(&NumOfCharConverted, Temporary, WResultString.c_str(), _countof(Temporary));
 	return std::string(Temporary);
 #else
-	return std::string(WErrorString.begin(), WErrorString.end());
+	return std::string(WResultString.begin(), WResultString.end());
 #endif
+}
+std::wstring DX::GetHRESULTStringW(const HRESULT Result)
+{
+	//!< 16進の文字列表記
+	//std::stringstream ss;
+	//ss << "0x" << std::hex << Result << std::dec;
+	//ss.str();
+
+	return std::wstring(_com_error(Result).ErrorMessage());
 }
 
 void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
@@ -933,6 +934,8 @@ void DX::BarrierTransition(ID3D12GraphicsCommandList* CommandList, ID3D12Resourc
 
 void DX::Draw()
 {
+	if (CommandAllocators.empty() || GraphicsCommandLists.empty()) { return; }
+
 	const auto CommandAllocator = CommandAllocators[0].Get();
 	const auto CommandList = GraphicsCommandLists[0].Get();
 

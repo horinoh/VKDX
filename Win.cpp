@@ -54,3 +54,12 @@ void Win::OnPaint(HWND hWnd, HINSTANCE hInstance)
 void Win::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 }
+
+void Win::ShowMessageBox(HWND hWnd, const std::string Message)
+{
+	MessageBox(hWnd, std::wstring(Message.begin(), Message.end()).c_str(), L"VERIFY_SUCCEEDED", MB_OK);
+}
+void Win::ShowMessageBoxW(HWND hWnd, const std::wstring Message)
+{
+	MessageBox(hWnd, Message.c_str(), L"VERIFY_SUCCEEDED", MB_OK);
+}

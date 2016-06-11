@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iostream>
 #include <sstream>
+#include <codecvt> 
 
 #ifndef SAFE_DELETE
 #define SAFE_DELETE(x) if(nullptr != x) { delete x; x = nullptr; }
@@ -51,6 +52,9 @@ public:
 
 	LONG GetClientRectWidth() const { return Rect.right - Rect.left; }
 	LONG GetClientRectHeight() const { return Rect.bottom - Rect.top; }
+
+	static void ShowMessageBox(HWND hWnd, const std::string Message);
+	static void ShowMessageBoxW(HWND hWnd, const std::wstring Message);
 
 protected:
 	RECT Rect;

@@ -17,8 +17,15 @@
 
 #include "Win.h"
 
+#ifndef THROW_ON_FAILED
+#define THROW_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + VK::GetVkResultString(vr)); }
+#endif
+#ifndef MESSAGEBOX_ON_FAILED
+#define MESSAGEBOX_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Win::ShowMessageBoxW(nullptr, VK::GetVkResultStringW(vr)); }
+#endif
 #ifndef VERIFY_SUCCEEDED
-#define VERIFY_SUCCEEDED(vr) if(VK_SUCCESS != (vr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + VK::GetVkResultString(vr)); }
+#define VERIFY_SUCCEEDED(vr) THROW_ON_FAILED(vr)
+//#define VERIFY_SUCCEEDED(vr) MESSAGEBOX_ON_FAILED(vr)
 #endif
 
 class VK : public Win
@@ -36,6 +43,7 @@ public:
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 
 	static std::string GetVkResultString(const VkResult Result);
+	static std::wstring GetVkResultStringW(const VkResult Result);
 protected:
 	static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
 	static FORCEINLINE void* AlignedRealloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_realloc(pOriginal, size, alignment); }

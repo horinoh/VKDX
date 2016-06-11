@@ -14,8 +14,15 @@
 
 #include "Win.h"
 
+#ifndef THROW_ON_FAILED
+#define THROW_ON_FAILED(hr) if(FAILED(hr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + DX::GetHRESULTString(hr)); }
+#endif
+#ifndef MESSAGEBOX_ON_FAILED
+#define MESSAGEBOX_ON_FAILED(hr) if(FAILED(hr)) { Win::ShowMessageBoxW(nullptr, DX::GetHRESULTStringW(hr)); }
+#endif
 #ifndef VERIFY_SUCCEEDED
-#define VERIFY_SUCCEEDED(hr) if(FAILED(hr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + DX::GetHRESULTString(hr)); }
+#define VERIFY_SUCCEEDED(hr) THROW_ON_FAILED(hr)
+//#define VERIFY_SUCCEEDED(hr) MESSAGEBOX_ON_FAILED(hr)
 #endif
 
 class DX : public Win
@@ -33,6 +40,7 @@ public:
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 
 	static std::string GetHRESULTString(const HRESULT Result);
+	static std::wstring GetHRESULTStringW(const HRESULT Result);
 protected:
 	virtual void CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat);
 	virtual void EnumAdapter(IDXGIFactory4* Factory);

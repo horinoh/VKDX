@@ -219,9 +219,9 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 std::string VK::GetVkResultString(const VkResult Result)
 {
 	//!< 16i‚Ì•¶Žš—ñ•\‹L
-	std::stringstream ss;
-	ss << "0x" << std::hex << Result << std::dec;
-	ss.str();
+	//std::stringstream ss;
+	//ss << "0x" << std::hex << Result << std::dec;
+	//ss.str();
 
 #define VK_RESULT_CASE(vr) case vr: return #vr
 	switch (Result)
@@ -256,6 +256,11 @@ std::string VK::GetVkResultString(const VkResult Result)
 		VK_RESULT_CASE(VK_RESULT_RANGE_SIZE);
 	}
 #undef VK_RESULT_CASE
+}
+std::wstring VK::GetVkResultStringW(const VkResult Result)
+{
+	const auto ResultString = GetVkResultString(Result);
+	return std::wstring(ResultString.begin(), ResultString.end());
 }
 
 VkFormat VK::GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice) const
@@ -1381,6 +1386,8 @@ void VK::ImageBarrier(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayou
 
 void VK::Draw()
 {
+	if (CommandPools.empty() || CommandBuffers.empty()) { return; }
+
 	auto CommandPool = CommandPools[0];
 	auto CommandBuffer = CommandBuffers[0];
 
