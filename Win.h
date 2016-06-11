@@ -26,11 +26,7 @@
 #endif
 #endif
 #ifndef SHADER_PATH
-#ifdef _DEBUG
-#define SHADER_PATH L"..\\x64\\Debug\\"
-#else
-#define SHADER_PATH L"..\\x64\\Release\\"
-#endif
+#define SHADER_PATH L".\\"
 #endif
 
 class Win

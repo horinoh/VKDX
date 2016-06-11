@@ -5,8 +5,9 @@
 #### SDK
 * https://vulkan.lunarg.com/signin
 * インストールすると環境変数 **VK_SDK_PATH** が自動的に作成される
+	* 新しいバージョンをインストールしたら(環境変数は維持されるが)パスが変わるので VAssistX - Visual Assist Options - Performance - Rebuild しておく
 * Visual Stuido で C/C++ - Preprocessor - Preprocessor Definitions に **VK_USE_PLATFORM_WIN32_KHR** を定義した
-    
+
 #### ドライバ
 * https://www.khronos.org/vulkan/
 	* NVIDIA のドライバアップデート後に vkCreateInstance() でコケるようになったら、恐らく Vulkan ドライバを再インストールすると治る
@@ -23,7 +24,7 @@
 * glslangValidator.exe でコンパイルする 環境変数 **Path** が通っているらしくそのまま使用できる
 * Visual Studio で BuildEvent - Post-Build Event に以下のように指定した 
 ~~~
-for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator -V %%1 -o $(OutDir)%%1.spv
+for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator -V %%1 -o $(ProjectDir)%%1.spv
 ~~~
     
 ## DX
@@ -35,6 +36,7 @@ for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator 
 #### シェーダコンパイル
  * シェーダは Visual Studio に追加すると自動的にコンパイルされる
  * Properties - HLSLCompiler - General - Shader Type を適切に設定しておかないと、頂点シェーダでコンパイルされるので注意
+ * HLSL Compiler - Output Files - $(OutDir)%(Filename).cso を $(ProjectDir)%(Filename).cso へ変更した
 
 #### デバッグ
  * 参考 https://msdn.microsoft.com/ja-jp/library/hh873204.aspx
