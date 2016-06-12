@@ -44,6 +44,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateVertexBuffer(CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 	CreateIndexBuffer(CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 	//CreateConstantBuffer();
+	//CreateUnorderedAccessTexture();
 
 	//OnSize(hWnd, hInstance);
 
@@ -358,7 +359,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Bu
 		D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
 		BufferCount,
 		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-		0
+		0 // NodeMask ... マルチGPUの場合
 	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescripterHeapDesc, IID_PPV_ARGS(SwapChainDescriptorHeap.GetAddressOf())));
 #ifdef _DEBUG
@@ -874,7 +875,7 @@ void DX::CreateConstantBuffer()
 		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
 		1,
 		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-		0
+		0 // NodeMask ... マルチGPUの場合
 	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(ConstantBufferDescriptorHeap.GetAddressOf())));
 
@@ -895,18 +896,85 @@ void DX::CreateConstantBuffer()
 #endif
 }
 
+void DX::CreateUnorderedAccessTexture()
+{
+	const UINT64 Width = 256;
+	const UINT Height = 256;
+
+	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
+	const D3D12_RESOURCE_DESC ResourceDesc = {
+		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+		0,
+		Width, Height, 1, 1,
+		DXGI_FORMAT_R8G8B8A8_UNORM,
+		SampleDesc,
+		D3D12_TEXTURE_LAYOUT_UNKNOWN,
+		D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS //!< ALLOW_UNORDERED_ACCESS にする
+	};
+	const D3D12_HEAP_PROPERTIES HeapProperties = {
+		D3D12_HEAP_TYPE_DEFAULT,
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_COMMON,
+		nullptr,
+		IID_PPV_ARGS(UnorderedAccessTextureResource.GetAddressOf())));
+
+	const auto Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+
+	const D3D12_DESCRIPTOR_HEAP_DESC DescritporHeapDesc = {
+		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+		2, //!< SRV, UAV の 2 つ
+		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+		0 // NodeMask ... マルチGPUの場合
+	};
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescritporHeapDesc, IID_PPV_ARGS(UnorderedAccessTextureDescriptorHeap.GetAddressOf())));
+
+	auto CPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+	CPUDescriptorHandle.ptr += 0 * IncrementSize;
+	/*const*/D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {
+		Format,
+		D3D12_SRV_DIMENSION_TEXTURE2D,
+		D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+	};
+	SRVDesc.Texture2D.MostDetailedMip = 0;
+	SRVDesc.Texture1D.MipLevels = 1;
+	Device->CreateShaderResourceView(UnorderedAccessTextureResource.Get(), &SRVDesc, CPUDescriptorHandle);
+
+	CPUDescriptorHandle.ptr += 1 * IncrementSize;
+	/*const*/D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {
+		Format,
+		D3D12_UAV_DIMENSION_TEXTURE2D,
+	};
+	UAVDesc.Texture2D.MipSlice = 0;
+	Device->CreateUnorderedAccessView(UnorderedAccessTextureResource.Get(), nullptr, &UAVDesc, CPUDescriptorHandle);
+
+#ifdef _DEBUG
+	std::cout << "CreateUnorderedAccessBuffer" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
 void DX::Clear_Color(ID3D12GraphicsCommandList* GraphicsCommandList)
 {
-	auto RTDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	RTDescriptorHandle.ptr += CurrentBackBufferIndex * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	GraphicsCommandList->ClearRenderTargetView(RTDescriptorHandle, DirectX::Colors::SkyBlue, 0, nullptr);
+	auto CPUDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	CPUDescriptorHandle.ptr += CurrentBackBufferIndex * IncrementSize;
+	GraphicsCommandList->ClearRenderTargetView(CPUDescriptorHandle, DirectX::Colors::SkyBlue, 0, nullptr);
 }
 void DX::Clear_Depth(ID3D12GraphicsCommandList* GraphicsCommandList)
 {
 	if (nullptr != DepthStencilDescriptorHeap) {
-		auto DSDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-		DSDescriptorHandle.ptr += 0 * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-		GraphicsCommandList->ClearDepthStencilView(DSDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+		auto CPUDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		CPUDescriptorHandle.ptr += 0 * IncrementSize;
+		GraphicsCommandList->ClearDepthStencilView(CPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 	}
 }
 
@@ -917,7 +985,7 @@ void DX::PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList)
 
 void DX::BarrierTransition(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After)
 {
-	std::vector<D3D12_RESOURCE_BARRIER> ResourceBarrier = {
+	const std::vector<D3D12_RESOURCE_BARRIER> ResourceBarrier = {
 		{
 			D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 			D3D12_RESOURCE_BARRIER_FLAG_NONE,

@@ -22,6 +22,5 @@ protected:
 	//virtual void PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList) override;
 
 private:
-
 };
 #pragma endregion

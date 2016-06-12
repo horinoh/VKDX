@@ -83,6 +83,7 @@ protected:
 	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
 	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
 	virtual void CreateConstantBuffer();
+	virtual void CreateUnorderedAccessTexture();
 
 	virtual void Clear(ID3D12GraphicsCommandList* GraphicsCommandList) { Clear_Color(GraphicsCommandList); Clear_Depth(GraphicsCommandList); }
 	virtual void Clear_Color(ID3D12GraphicsCommandList* GraphicsCommandList);
@@ -134,7 +135,8 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12Resource> ConstantBufferResource;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> ConstantBufferDescriptorHeap;
 
-	//Microsoft::WRL::ComPtr<ID3D12Resource> UnorderedAccessResource;
+	Microsoft::WRL::ComPtr<ID3D12Resource> UnorderedAccessTextureResource;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> UnorderedAccessTextureDescriptorHeap;
 
 	Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
 	UINT64 FenceValue;
