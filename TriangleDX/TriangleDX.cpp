@@ -235,6 +235,7 @@ void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
 
+	//!< アップロード用、目的のリソースで共用する リソースデスクリプタ
 	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
 	const D3D12_RESOURCE_DESC ResourceDesc = {
 		D3D12_RESOURCE_DIMENSION_BUFFER,
@@ -248,10 +249,11 @@ void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID
 		D3D12_RESOURCE_FLAG_NONE
 	};
 
+	//!< アップロード用のリソースを作成し、Map() して CPU からコピーする
 #pragma region Upload
 	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
 	const D3D12_HEAP_PROPERTIES HeapProperties_Upload = {
-		D3D12_HEAP_TYPE_UPLOAD,
+		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
 		1,
@@ -260,7 +262,7 @@ void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties_Upload,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
+		D3D12_RESOURCE_STATE_GENERIC_READ, //!< UPLOAD では GENERIC_READ にすること
 		nullptr,
 		IID_PPV_ARGS(UploadResource.GetAddressOf())));
 	BYTE* Data;
@@ -269,8 +271,9 @@ void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID
 	} UploadResource->Unmap(0, nullptr);
 #pragma endregion
 
+	//!< 目的のリソースを作成し、アップロード用のリソースからコピーするコマンドリストを発行する
 	const D3D12_HEAP_PROPERTIES HeapProperties = {
-		D3D12_HEAP_TYPE_DEFAULT,
+		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
 		1,
@@ -279,7 +282,7 @@ void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,
-		D3D12_RESOURCE_STATE_COMMON,
+		D3D12_RESOURCE_STATE_COMMON, //!< COMMON にすること
 		nullptr,
 		IID_PPV_ARGS(VertexBufferResource.GetAddressOf())));
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
@@ -309,6 +312,7 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 	IndexCount = static_cast<UINT32>(Indices.size());
 	const auto Size = static_cast<UINT32>(sizeof(Indices[0]) * IndexCount);
 
+	//!< アップロード用、目的のリソースで共用する リソースデスクリプタ
 	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
 	const D3D12_RESOURCE_DESC ResourceDesc = {
 		D3D12_RESOURCE_DIMENSION_BUFFER,
@@ -322,10 +326,11 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 		D3D12_RESOURCE_FLAG_NONE
 	};
 
+	//!< アップロード用のリソースを作成し、Map() して CPU からコピーする
 #pragma region Upload
 	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
 	const D3D12_HEAP_PROPERTIES HeapProperties_Upload = {
-		D3D12_HEAP_TYPE_UPLOAD,
+		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
 		1,
@@ -334,7 +339,7 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties_Upload,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
+		D3D12_RESOURCE_STATE_GENERIC_READ, //!< UPLOAD では GENERIC_READ にすること
 		nullptr,
 		IID_PPV_ARGS(UploadResource.GetAddressOf())));
 	BYTE* Data;
@@ -343,8 +348,9 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 	} UploadResource->Unmap(0, nullptr);
 #pragma endregion
 
+	//!< 目的のリソースを作成し、アップロード用のリソースからコピーするコマンドリストを発行する
 	const D3D12_HEAP_PROPERTIES HeapProperties = {
-		D3D12_HEAP_TYPE_DEFAULT,
+		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
 		1,
@@ -353,7 +359,7 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,
-		D3D12_RESOURCE_STATE_COMMON,
+		D3D12_RESOURCE_STATE_COMMON, //!< COMMON にすること
 		nullptr,
 		IID_PPV_ARGS(IndexBufferResource.GetAddressOf())));
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
@@ -385,11 +391,13 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandL
 
 	{
 		auto RTDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-		RTDescriptorHandle.ptr += CurrentBackBufferIndex * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		const auto RTIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		RTDescriptorHandle.ptr += CurrentBackBufferIndex * RTIncrementSize;
 		const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { RTDescriptorHandle };
 
 		//auto DSDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-		////DSDescriptorHandle.ptr += 0 * Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		////const auto DSIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		////DSDescriptorHandle.ptr += 0 * DSIncrementSize;
 		
 		GraphicsCommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
 	}

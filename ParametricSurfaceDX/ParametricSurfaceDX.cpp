@@ -225,10 +225,175 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
+void ParametricSurfaceDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
+{
+	const std::vector<DirectX::XMFLOAT3> Vertices = {
+		{ 0.0f, 0.5f, 0.0f },
+	};
+	const auto Stride = sizeof(Vertices[0]);
+	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
+
+	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
+	const D3D12_RESOURCE_DESC ResourceDesc = {
+		D3D12_RESOURCE_DIMENSION_BUFFER,
+		0,
+		Size, 1,
+		1,
+		1,
+		DXGI_FORMAT_UNKNOWN,
+		SampleDesc,
+		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+		D3D12_RESOURCE_FLAG_NONE
+	};
+
+#pragma region Upload
+	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
+	const D3D12_HEAP_PROPERTIES HeapProperties_Upload = {
+		D3D12_HEAP_TYPE_UPLOAD,
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties_Upload,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(UploadResource.GetAddressOf())));
+	BYTE* Data;
+	VERIFY_SUCCEEDED(UploadResource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
+		memcpy(Data, Vertices.data(), Size);
+	} UploadResource->Unmap(0, nullptr);
+#pragma endregion
+
+	const D3D12_HEAP_PROPERTIES HeapProperties = {
+		D3D12_HEAP_TYPE_DEFAULT,
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_COMMON,
+		nullptr,
+		IID_PPV_ARGS(VertexBufferResource.GetAddressOf())));
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
+		BarrierTransition(CommandList, VertexBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
+			CommandList->CopyBufferRegion(VertexBufferResource.Get(), 0, UploadResource.Get(), 0, Size);
+		} BarrierTransition(CommandList, VertexBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+	} VERIFY_SUCCEEDED(CommandList->Close());
+
+	ExecuteCommandList(CommandList);
+
+	VertexBufferView = {
+		VertexBufferResource->GetGPUVirtualAddress(),
+		Size,
+		Stride
+	};
+
+#ifdef _DEBUG
+	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
+#endif
+}
+void ParametricSurfaceDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
+{
+	const std::vector<UINT32> Indices = { 0 };
+	IndexCount = static_cast<UINT32>(Indices.size());
+	const auto Size = static_cast<UINT32>(sizeof(Indices[0]) * IndexCount);
+
+	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
+	const D3D12_RESOURCE_DESC ResourceDesc = {
+		D3D12_RESOURCE_DIMENSION_BUFFER,
+		0,
+		Size, 1,
+		1,
+		1,
+		DXGI_FORMAT_UNKNOWN,
+		SampleDesc,
+		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+		D3D12_RESOURCE_FLAG_NONE
+	};
+
+#pragma region Upload
+	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
+	const D3D12_HEAP_PROPERTIES HeapProperties_Upload = {
+		D3D12_HEAP_TYPE_UPLOAD,
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties_Upload,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ,
+		nullptr,
+		IID_PPV_ARGS(UploadResource.GetAddressOf())));
+	BYTE* Data;
+	VERIFY_SUCCEEDED(UploadResource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
+		memcpy(Data, Indices.data(), Size);
+	} UploadResource->Unmap(0, nullptr);
+#pragma endregion
+
+	const D3D12_HEAP_PROPERTIES HeapProperties = {
+		D3D12_HEAP_TYPE_DEFAULT,
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_COMMON,
+		nullptr,
+		IID_PPV_ARGS(IndexBufferResource.GetAddressOf())));
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
+		BarrierTransition(CommandList, IndexBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
+			CommandList->CopyBufferRegion(IndexBufferResource.Get(), 0, UploadResource.Get(), 0, Size);
+		} BarrierTransition(CommandList, IndexBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+	} VERIFY_SUCCEEDED(CommandList->Close());
+
+	ExecuteCommandList(CommandList);
+
+	IndexBufferView = {
+		IndexBufferResource->GetGPUVirtualAddress(),
+		Size,
+		DXGI_FORMAT_R32_UINT
+	};
+
+#ifdef _DEBUG
+	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
+#endif
+}
 void ParametricSurfaceDX::PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList)
 {
 	Super::PopulateCommandList(GraphicsCommandList);
 	
-	//TODO
+	{
+		auto RTDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		const auto RTIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+		RTDescriptorHandle.ptr += CurrentBackBufferIndex * RTIncrementSize;
+		const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { RTDescriptorHandle };
+
+		//auto DSDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		////const auto DSIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		////DSDescriptorHandle.ptr += 0 * DSIncrementSize;
+
+		GraphicsCommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
+	}
+
+	GraphicsCommandList->SetGraphicsRootSignature(RootSignature.Get());
+
+	GraphicsCommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+
+	GraphicsCommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
+	GraphicsCommandList->IASetIndexBuffer(&IndexBufferView);
+
+	GraphicsCommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
 }
 #pragma endregion
+

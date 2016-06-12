@@ -596,11 +596,13 @@ void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice Physic
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PhysicalDevice, Surface, &SurfaceCapabilities));
 	const auto MinImageCount = (std::min)(SurfaceCapabilities.minImageCount + 1, SurfaceCapabilities.maxImageCount);
 
+	//!< サーフェスのフォーマットを取得
 	uint32_t SurfaceFormatCount;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, Surface, &SurfaceFormatCount, nullptr));
 	assert(SurfaceFormatCount);
 	std::vector<VkSurfaceFormatKHR> SurfaceFormats(SurfaceFormatCount);
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, Surface, &SurfaceFormatCount, SurfaceFormats.data()));
+	//!< 最初のサーフェスのフォーマットにする (VK_FORMAT_UNDEFINED の場合は VK_FORMAT_B8G8R8A8_UNORM)
 	const auto ImageFormat = (1 == SurfaceFormatCount && VK_FORMAT_UNDEFINED == SurfaceFormats[0].format) ? VK_FORMAT_B8G8R8A8_UNORM : SurfaceFormats[0].format;
 	const auto ImageColorSpace = SurfaceFormats[0].colorSpace;
 	//!< イメージの幅と高さを覚えておく
@@ -608,8 +610,12 @@ void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice Physic
 	if (-1 == SurfaceCapabilities.currentExtent.width) {
 		ImageExtent = { static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()) };
 	}
+#ifdef _DEBUG
+	std::cout << "\t" << "\t" << "ImageExtent " << ImageExtent.width << " x " << ImageExtent.height << std::endl;
+#endif
 	const auto PreTransform = (SurfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : SurfaceCapabilities.currentTransform;;
 
+	//!< プレゼントモードの取得 (可能なら VK_PRESENT_MODE_MAILBOX_KHR にする)
 	uint32_t PresentModeCount;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, Surface, &PresentModeCount, nullptr));
 	assert(PresentModeCount);
