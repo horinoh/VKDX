@@ -816,6 +816,70 @@ void DX::CreateComputePipelineState()
 #endif
 }
 
+void DX::CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const void* Source, const size_t Size)
+{
+	//!< アップロード用、目的のリソースで共用する リソースデスクリプタ
+	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
+	const D3D12_RESOURCE_DESC ResourceDesc = {
+		D3D12_RESOURCE_DIMENSION_BUFFER,
+		0,
+		Size, 1,
+		1,
+		1,
+		DXGI_FORMAT_UNKNOWN,
+		SampleDesc,
+		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+		D3D12_RESOURCE_FLAG_NONE
+	};
+
+	//!< アップロード用のリソースを作成し、Map() して CPU からコピーする
+#pragma region Upload
+	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
+	const D3D12_HEAP_PROPERTIES HeapProperties_Upload = {
+		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties_Upload,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ, //!< UPLOAD では GENERIC_READ にすること
+		nullptr,
+		IID_PPV_ARGS(UploadResource.GetAddressOf())));
+	BYTE* Data;
+	VERIFY_SUCCEEDED(UploadResource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
+		memcpy(Data, Source, Size);
+	} UploadResource->Unmap(0, nullptr);
+#pragma endregion
+
+	//!< 目的のリソースを作成し、アップロード用のリソースからコピーするコマンドリストを発行する
+	const D3D12_HEAP_PROPERTIES HeapProperties = {
+		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_COMMON, //!< COMMON にすること
+		nullptr,
+		//IID_PPV_ARGS(Resource->GetAddressOf())));
+		IID_PPV_ARGS(Resource)));
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
+		BarrierTransition(CommandList, *Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
+			CommandList->CopyBufferRegion(*Resource, 0, UploadResource.Get(), 0, Size);
+		} BarrierTransition(CommandList, *Resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+	} VERIFY_SUCCEEDED(CommandList->Close());
+
+	ExecuteCommandList(CommandList);
+
+	WaitForFence();
+}
+
 void DX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
 {
 	//!< CPU 側にもコピーを持たせる、多分必要ない?

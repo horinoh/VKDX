@@ -235,65 +235,7 @@ void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
 
-	//!< アップロード用、目的のリソースで共用する リソースデスクリプタ
-	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
-	const D3D12_RESOURCE_DESC ResourceDesc = {
-		D3D12_RESOURCE_DIMENSION_BUFFER,
-		0,
-		Size, 1,
-		1,
-		1,
-		DXGI_FORMAT_UNKNOWN,
-		SampleDesc,
-		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-		D3D12_RESOURCE_FLAG_NONE
-	};
-
-	//!< アップロード用のリソースを作成し、Map() して CPU からコピーする
-#pragma region Upload
-	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-	const D3D12_HEAP_PROPERTIES HeapProperties_Upload = {
-		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること
-		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		D3D12_MEMORY_POOL_UNKNOWN,
-		1,
-		1
-	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties_Upload,
-		D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ, //!< UPLOAD では GENERIC_READ にすること
-		nullptr,
-		IID_PPV_ARGS(UploadResource.GetAddressOf())));
-	BYTE* Data;
-	VERIFY_SUCCEEDED(UploadResource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
-		memcpy(Data, Vertices.data(), Size);
-	} UploadResource->Unmap(0, nullptr);
-#pragma endregion
-
-	//!< 目的のリソースを作成し、アップロード用のリソースからコピーするコマンドリストを発行する
-	const D3D12_HEAP_PROPERTIES HeapProperties = {
-		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること
-		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		D3D12_MEMORY_POOL_UNKNOWN,
-		1,
-		1
-	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc,
-		D3D12_RESOURCE_STATE_COMMON, //!< COMMON にすること
-		nullptr,
-		IID_PPV_ARGS(VertexBufferResource.GetAddressOf())));
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
-		BarrierTransition(CommandList, VertexBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
-			CommandList->CopyBufferRegion(VertexBufferResource.Get(), 0, UploadResource.Get(), 0, Size);
-		} BarrierTransition(CommandList, VertexBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
-	} VERIFY_SUCCEEDED(CommandList->Close());
-
-	ExecuteCommandList(CommandList);
-
-	//WaitForFence();
+	CreateBuffer(CommandAllocator, CommandList, VertexBufferResource.GetAddressOf(), Vertices.data(), Size);
 
 	VertexBufferView = {
 		VertexBufferResource->GetGPUVirtualAddress(),
@@ -312,65 +254,7 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 	IndexCount = static_cast<UINT32>(Indices.size());
 	const auto Size = static_cast<UINT32>(sizeof(Indices[0]) * IndexCount);
 
-	//!< アップロード用、目的のリソースで共用する リソースデスクリプタ
-	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
-	const D3D12_RESOURCE_DESC ResourceDesc = {
-		D3D12_RESOURCE_DIMENSION_BUFFER,
-		0,
-		Size, 1,
-		1,
-		1,
-		DXGI_FORMAT_UNKNOWN,
-		SampleDesc,
-		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-		D3D12_RESOURCE_FLAG_NONE
-	};
-
-	//!< アップロード用のリソースを作成し、Map() して CPU からコピーする
-#pragma region Upload
-	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-	const D3D12_HEAP_PROPERTIES HeapProperties_Upload = {
-		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること
-		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		D3D12_MEMORY_POOL_UNKNOWN,
-		1,
-		1
-	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties_Upload,
-		D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ, //!< UPLOAD では GENERIC_READ にすること
-		nullptr,
-		IID_PPV_ARGS(UploadResource.GetAddressOf())));
-	BYTE* Data;
-	VERIFY_SUCCEEDED(UploadResource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
-		memcpy(Data, Indices.data(), Size);
-	} UploadResource->Unmap(0, nullptr);
-#pragma endregion
-
-	//!< 目的のリソースを作成し、アップロード用のリソースからコピーするコマンドリストを発行する
-	const D3D12_HEAP_PROPERTIES HeapProperties = {
-		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること
-		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		D3D12_MEMORY_POOL_UNKNOWN,
-		1,
-		1
-	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc,
-		D3D12_RESOURCE_STATE_COMMON, //!< COMMON にすること
-		nullptr,
-		IID_PPV_ARGS(IndexBufferResource.GetAddressOf())));
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
-		BarrierTransition(CommandList, IndexBufferResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
-			CommandList->CopyBufferRegion(IndexBufferResource.Get(), 0, UploadResource.Get(), 0, Size);
-		} BarrierTransition(CommandList, IndexBufferResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
-	} VERIFY_SUCCEEDED(CommandList->Close());
-
-	ExecuteCommandList(CommandList);
-
-	//WaitForFence();
+	CreateBuffer(CommandAllocator, CommandList, IndexBufferResource.GetAddressOf(), Indices.data(), Size);
 
 	IndexBufferView = {
 		IndexBufferResource->GetGPUVirtualAddress(),

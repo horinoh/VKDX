@@ -80,6 +80,7 @@ protected:
 	virtual void CreateGraphicsPipelineState_VsPsDsHsGs();
 	virtual void CreateComputePipelineState();
 
+	virtual void CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const void* Source, const size_t Size);
 	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
 	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
 	virtual void CreateConstantBuffer();
