@@ -24,7 +24,9 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	const auto ColorFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 	CreateDevice(hWnd, ColorFormat);
+	
 	CreateCommandQueue();
+
 	CreateCommandAllocator();
 	CreateCommandList(CommandAllocators[0].Get());
 
@@ -818,7 +820,7 @@ void DX::CreateComputePipelineState()
 
 void DX::CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const void* Source, const size_t Size)
 {
-	//!< アップロード用、目的のリソースで共用する リソースデスクリプタ
+	//!< リソースデスクリプタ(共用)
 	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
 	const D3D12_RESOURCE_DESC ResourceDesc = {
 		D3D12_RESOURCE_DIMENSION_BUFFER,
@@ -832,7 +834,7 @@ void DX::CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCo
 		D3D12_RESOURCE_FLAG_NONE
 	};
 
-	//!< アップロード用のリソースを作成し、Map() して CPU からコピーする
+	//!< アップロード用のリソースを作成(Map() してコピー)
 #pragma region Upload
 	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
 	const D3D12_HEAP_PROPERTIES HeapProperties_Upload = {
@@ -854,7 +856,7 @@ void DX::CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCo
 	} UploadResource->Unmap(0, nullptr);
 #pragma endregion
 
-	//!< 目的のリソースを作成し、アップロード用のリソースからコピーするコマンドリストを発行する
+	//!< リソースを作成
 	const D3D12_HEAP_PROPERTIES HeapProperties = {
 		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
@@ -869,6 +871,8 @@ void DX::CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCo
 		nullptr,
 		//IID_PPV_ARGS(Resource->GetAddressOf())));
 		IID_PPV_ARGS(Resource)));
+	
+	//!< コピーするコマンドリストを発行する
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
 		BarrierTransition(CommandList, *Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
 			CommandList->CopyBufferRegion(*Resource, 0, UploadResource.Get(), 0, Size);

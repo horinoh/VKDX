@@ -55,17 +55,18 @@ protected:
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 
 	virtual void CreateInstance();
-	virtual VkPhysicalDevice CreateDevice();
-	virtual uint32_t CreateDevice(VkPhysicalDevice PhysicalDevice);
+	virtual VkPhysicalDevice EnumeratePhysicalDevice();
+	virtual void CreateDevice(VkPhysicalDevice PhysicalDevice);
+	virtual void GetDeviceQueue(VkDevice Device, const uint32_t QueueFamilyIndex);
 
 	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
 	virtual void CreateCommandBuffer(const VkCommandPool CommandPool);
 
 	virtual void CreateFence();
 
-	virtual void CreateSwapchain(HWND hWnd, HINSTANCE hInstance, VkPhysicalDevice PhysicalDevice, const VkFormat ColorFormat);
-	virtual uint32_t GetSwapchainImage();
-	virtual void CreateSwapchainImageView(const VkFormat ColorFormat, const uint32_t SwapchainImageCount);
+	virtual void CreateSurface(HWND hWnd, HINSTANCE hInstance, VkSurfaceKHR* Surface);
+	virtual void CreateSwapchain(VkSurfaceKHR Surface, VkPhysicalDevice PhysicalDevice);
+	virtual void CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat ColorFormat);
 
 	virtual void CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkFormat DepthFormat);
 	virtual void CreateDepthStencilImage(const VkFormat DepthFormat);
@@ -93,6 +94,7 @@ protected:
 	virtual void CreateGraphicsPipeline_VsPsTesTcsGs();
 	virtual void CreateComputePipeline();
 
+	virtual void CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer Buffer, VkDeviceMemory DeviceMemory, const void* Source, const size_t Size);
 	virtual void CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
@@ -122,8 +124,10 @@ protected:
 	VkAllocationCallbacks AllocationCallbacks;
 	VkInstance Instance = VK_NULL_HANDLE;
 	VkDevice Device = VK_NULL_HANDLE;
-	VkQueue Queue = VK_NULL_HANDLE;
 	
+	VkQueue Queue = VK_NULL_HANDLE;
+	uint32_t QueueFamilyIndex = UINT_MAX;
+
 	std::vector<VkCommandPool> CommandPools;
 	std::vector<VkCommandBuffer> CommandBuffers;
 
