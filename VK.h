@@ -68,10 +68,9 @@ protected:
 	virtual void CreateSwapchain(VkSurfaceKHR Surface, VkPhysicalDevice PhysicalDevice);
 	virtual void CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat ColorFormat);
 
-	virtual void CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkFormat DepthFormat);
 	virtual void CreateDepthStencilImage(const VkFormat DepthFormat);
 	virtual void CreateDepthStencilDeviceMemory(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
-	virtual void CreateDepthStencilView(const VkFormat DepthFormat);
+	virtual void CreateDepthStencilView(VkCommandBuffer CommandBuffer, const VkFormat DepthFormat);
 
 	virtual void CreateShader();
 	virtual void CreateShader_VsPs();

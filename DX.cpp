@@ -33,6 +33,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateFence();
 
 	CreateSwapChain(hWnd, ColorFormat);
+
 	CreateDepthStencil();
 
 	CreateShader();

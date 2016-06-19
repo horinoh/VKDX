@@ -23,7 +23,9 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	Super::OnCreate(hWnd, hInstance);
 
 	CreateInstance();
-	auto PhysicalDevice = EnumeratePhysicalDevice(); 
+	auto PhysicalDevice = EnumeratePhysicalDevice();
+	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
+	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
 	CreateDevice(PhysicalDevice);
 
 	GetDeviceQueue(Device, QueueFamilyIndex);
@@ -33,13 +35,13 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	
 	CreateFence();
 
+	const auto ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 	{
 		VkSurfaceKHR Surface;
 		CreateSurface(hWnd, hInstance, &Surface);
 
 		CreateSwapchain(Surface, PhysicalDevice);
 
-		const auto ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 		CreateSwapchainImageView(CommandBuffers[0], ColorFormat);
 
 		if (VK_NULL_HANDLE != Surface) {
@@ -47,15 +49,14 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 		}
 	}
 
-	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
-	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);	
 	const auto DepthFormat = GetSupportedDepthFormat(PhysicalDevice);
-#ifdef _DEBUG
-	if (VK_FORMAT_D32_SFLOAT_S8_UINT == DepthFormat) {
-		std::cout << "\t" << Yellow << "D32_SFLOAT_S8_UINT" << White << std::endl;
+	{
+		CreateDepthStencilImage(DepthFormat);
+			
+		CreateDepthStencilDeviceMemory(PhysicalDeviceMemoryProperties);
+		
+		CreateDepthStencilView(CommandBuffers[0], DepthFormat);
 	}
-#endif
-	CreateDepthStencil(PhysicalDeviceMemoryProperties, DepthFormat);
 
 	CreateShader();
 
@@ -75,7 +76,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	//CreateUniformBuffer(PhysicalDeviceMemoryProperties);
 
 	//CreateFramebuffers();
-	//CreateRenderPass(ColorFormat, DepthFormat);
+	CreateRenderPass(ColorFormat, DepthFormat);
 	
 	//OnSize(hWnd, hInstance);
 
@@ -717,7 +718,6 @@ void VK::CreateSwapchain(VkSurfaceKHR Surface, VkPhysicalDevice PhysicalDevice)
 	std::cout << "CreateSwapchain" << COUT_OK << std::endl << std::endl;
 #endif
 }
-
 void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat ColorFormat)
 {
 	//!< スワップチェインイメージの列挙
@@ -764,25 +764,18 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat 
 	}
 }
 
-void VK::CreateDepthStencil(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkFormat DepthFormat)
-{
-	CreateDepthStencilImage(DepthFormat);
-	CreateDepthStencilDeviceMemory(PhysicalDeviceMemoryProperties);
-	CreateDepthStencilView(DepthFormat);
-
-#ifdef _DEBUG
-	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
-#endif
-}
 void VK::CreateDepthStencilImage(const VkFormat DepthFormat)
 {
+	const VkExtent3D Extent3D = {
+		ImageExtent.width, ImageExtent.height, 1
+	};
 	const VkImageCreateInfo ImageCreateInfo = {
 		VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		nullptr,
 		0,
 		VK_IMAGE_TYPE_2D,
 		DepthFormat,
-		{ ImageExtent.width, ImageExtent.height, 1 },
+		Extent3D,
 		1,
 		1,
 		VK_SAMPLE_COUNT_1_BIT,
@@ -816,9 +809,20 @@ void VK::CreateDepthStencilDeviceMemory(const VkPhysicalDeviceMemoryProperties& 
 	std::cout << "\t" << "DepthStencilDeviceMemory" << std::endl;
 #endif
 }
-void VK::CreateDepthStencilView(const VkFormat DepthFormat)
+void VK::CreateDepthStencilView(VkCommandBuffer CommandBuffer, const VkFormat DepthFormat)
 {
-	SetImageLayout(/*SetupCommandBuffer*/CommandBuffers[0], DepthStencilImage, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	SetImageLayout(	CommandBuffer, DepthStencilImage, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+	const VkComponentMapping ComponentMapping = {
+		VK_COMPONENT_SWIZZLE_IDENTITY, 
+		VK_COMPONENT_SWIZZLE_IDENTITY,
+		VK_COMPONENT_SWIZZLE_IDENTITY,
+		VK_COMPONENT_SWIZZLE_IDENTITY
+	};
+	const VkImageSubresourceRange ImageSubresourceRange = {
+		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+		0, 1,
+		0, 1
+	};
 	const VkImageViewCreateInfo ImageViewCreateInfo = {
 		VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 		nullptr,
@@ -826,12 +830,8 @@ void VK::CreateDepthStencilView(const VkFormat DepthFormat)
 		DepthStencilImage,
 		VK_IMAGE_VIEW_TYPE_2D,
 		DepthFormat,
-		{ VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY },
-		{
-			VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
-			0, 1,
-			0, 1
-		}
+		ComponentMapping,
+		ImageSubresourceRange
 	};
 	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, &DepthStencilImageView));
 
@@ -1392,7 +1392,6 @@ void VK::CreateFramebuffers()
 
 void VK::CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat)
 {
-#pragma region Attachment
 	const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
 		{
 			0,
@@ -1405,31 +1404,29 @@ void VK::CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat
 			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
 		},
-		{
-			0,
-			DepthFormat,
-			VK_SAMPLE_COUNT_1_BIT,
-			VK_ATTACHMENT_LOAD_OP_CLEAR,
-			VK_ATTACHMENT_STORE_OP_STORE,
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-			VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-		}
+		//{
+		//	0,
+		//	DepthFormat,
+		//	VK_SAMPLE_COUNT_1_BIT,
+		//	VK_ATTACHMENT_LOAD_OP_CLEAR,
+		//	VK_ATTACHMENT_STORE_OP_STORE,
+		//	VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+		//	VK_ATTACHMENT_STORE_OP_DONT_CARE,
+		//	VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+		//	VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+		//}
 	};
-#pragma endregion
 
-#pragma region Subpass
 	const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
 		{
 			0,
 			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
 		}
 	};
-	const VkAttachmentReference DepthAttachmentReference = {
-		1,
-		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-	};
+	//const VkAttachmentReference DepthAttachmentReference = {
+	//	1,
+	//	VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+	//};
 	const std::vector<VkSubpassDescription> SubpassDescriptions = {
 		{
 			0,
@@ -1437,13 +1434,11 @@ void VK::CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat
 			0, nullptr,
 			static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(),
 			nullptr,
-			&DepthAttachmentReference,
+			nullptr,//&DepthAttachmentReference,
 			0, nullptr
 		}
 	};
-#pragma endregion
 
-#pragma region RenderPass
 	const VkRenderPassCreateInfo RenderPassCreateInfo = {
 		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 		nullptr,
@@ -1453,7 +1448,10 @@ void VK::CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat
 		0, nullptr
 	};
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, nullptr, &RenderPass));
-#pragma endregion
+
+#ifdef _DEBUG
+	std::cout << "CreateRenderPass" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void VK::Clear_Color(const VkCommandBuffer CommandBuffer)
