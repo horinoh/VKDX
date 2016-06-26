@@ -41,15 +41,13 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateRootSignature();
 
 	CreateInputLayout();
-	//CreateViewport();
+
 	CreatePipelineState();
 
 	CreateVertexBuffer(CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 	CreateIndexBuffer(CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 	//CreateConstantBuffer();
 	//CreateUnorderedAccessTexture();
-
-	//OnSize(hWnd, hInstance);
 
 #ifdef _DEBUG
 	__int64 B;

@@ -63,6 +63,7 @@ protected:
 	virtual void CreateCommandBuffer(const VkCommandPool CommandPool);
 
 	virtual void CreateFence();
+	virtual void CreateSemaphore();
 
 	virtual void CreateSurface(HWND hWnd, HINSTANCE hInstance, VkSurfaceKHR* Surface);
 	virtual void CreateSwapchain(VkSurfaceKHR Surface, VkPhysicalDevice PhysicalDevice);
@@ -93,13 +94,18 @@ protected:
 	virtual void CreateGraphicsPipeline_VsPsTesTcsGs();
 	virtual void CreateComputePipeline();
 
+	virtual void CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat);
+	virtual void CreateRenderPass_Color(const VkFormat ColorFormat);
+	virtual void CreateRenderPass_ColorDepth(const VkFormat ColorFormat, const VkFormat DepthFormat);
+
+	virtual void CreateFramebuffer();
+	virtual void CreateFramebuffer_Color();
+	virtual void CreateFramebuffer_ColorDepth();
+
 	virtual void CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer Buffer, VkDeviceMemory DeviceMemory, const void* Source, const size_t Size);
 	virtual void CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
-
-	virtual void CreateFramebuffers();
-	virtual void CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat);
 
 	// ----------------------------------
 
@@ -116,9 +122,11 @@ protected:
 	virtual void WaitForFence();
 
 protected:
+	const std::vector<const char*> EnabledLayerNames = { 
 #ifdef _DEBUG
-	const std::vector<const char*> EnabledLayerNames = { "VK_LAYER_LUNARG_standard_validation" };
+		"VK_LAYER_LUNARG_standard_validation"
 #endif
+	};
 
 	VkAllocationCallbacks AllocationCallbacks;
 	VkInstance Instance = VK_NULL_HANDLE;
@@ -132,11 +140,13 @@ protected:
 
 	VkFence Fence = VK_NULL_HANDLE;
 
+	std::vector<VkSemaphore> PresentSemaphores;
+	std::vector<VkSemaphore> RenderSemaphores;
+
 	VkExtent2D ImageExtent;
 	VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
 	std::vector<VkImage> SwapchainImages;
 	std::vector<VkImageView> SwapchainImageViews;
-	VkSemaphore Semaphore;
 	uint32_t SwapchainImageIndex = 0;
 
 	VkImage DepthStencilImage = VK_NULL_HANDLE;
@@ -158,8 +168,10 @@ protected:
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;
 
-	VkPipelineCache PipelineCache;
-	VkPipeline Pipeline;
+	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
+	VkPipeline Pipeline = VK_NULL_HANDLE;
+	VkRenderPass RenderPass = VK_NULL_HANDLE;
+	std::vector<VkFramebuffer> Framebuffers;
 
 	VkBuffer VertexBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory VertexDeviceMemory = VK_NULL_HANDLE;
@@ -172,9 +184,6 @@ protected:
 	VkDeviceMemory UniformDeviceMemory = VK_NULL_HANDLE;
 	VkDescriptorBufferInfo UniformDescriptorBufferInfo;
 	std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
-
-	std::vector<VkFramebuffer> Framebuffers;
-	VkRenderPass RenderPass = VK_NULL_HANDLE;
 
 	//-------------------------------
 

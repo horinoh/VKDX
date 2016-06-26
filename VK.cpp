@@ -34,16 +34,14 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateCommandBuffer(CommandPools[0]);
 	
 	CreateFence();
+	CreateSemaphore();
 
 	const auto ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 	{
 		VkSurfaceKHR Surface;
 		CreateSurface(hWnd, hInstance, &Surface);
-
 		CreateSwapchain(Surface, PhysicalDevice);
-
 		CreateSwapchainImageView(CommandBuffers[0], ColorFormat);
-
 		if (VK_NULL_HANDLE != Surface) {
 			vkDestroySurfaceKHR(Instance, Surface, nullptr);
 		}
@@ -52,33 +50,25 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	const auto DepthFormat = GetSupportedDepthFormat(PhysicalDevice);
 	{
 		CreateDepthStencilImage(DepthFormat);
-			
 		CreateDepthStencilDeviceMemory(PhysicalDeviceMemoryProperties);
-		
 		CreateDepthStencilView(CommandBuffers[0], DepthFormat);
 	}
 
 	CreateShader();
 
-	//CreateDescriptorSetLayout();
-	//CreatePipelineLayout();
-
-	//CreateDescriptorSet();
+	CreateDescriptorSetLayout();
+	CreatePipelineLayout();
+	CreateDescriptorSet();
 
 	CreateVertexInput();
-	//CreateViewport();
-	CreatePipeline();
 
-	//CreateCommandBuffer(CommandPools[1]);
+	CreatePipeline();
+	CreateRenderPass(ColorFormat, DepthFormat);
+	CreateFramebuffer();
 
 	CreateVertexBuffer(CommandPools[0], PhysicalDeviceMemoryProperties);
 	CreateIndexBuffer(CommandPools[0], PhysicalDeviceMemoryProperties);
 	//CreateUniformBuffer(PhysicalDeviceMemoryProperties);
-
-	//CreateFramebuffers();
-	CreateRenderPass(ColorFormat, DepthFormat);
-	
-	//OnSize(hWnd, hInstance);
 
 #ifdef _DEBUG
 	__int64 B;
@@ -94,9 +84,6 @@ void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 #endif
 
 	Super::OnSize(hWnd, hInstance);
-
-	//!< TODO
-	
 	
 	CreateViewport();
 
@@ -121,16 +108,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	Super::OnDestroy(hWnd, hInstance);
 
 	WaitForFence();
-
-#pragma region RenderPass
-	if (VK_NULL_HANDLE != RenderPass) {
-		vkDestroyRenderPass(Device, RenderPass, nullptr);
-	}
-	for (auto i : Framebuffers) {
-		vkDestroyFramebuffer(Device, i, nullptr);
-	}
-#pragma endregion
-
+	
 #pragma region UniformBuffer
 	if (VK_NULL_HANDLE != UniformDeviceMemory) {
 		vkFreeMemory(Device, UniformDeviceMemory, nullptr);
@@ -156,6 +134,12 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 #pragma endregion
 
+	for (auto i : Framebuffers) {
+		vkDestroyFramebuffer(Device, i, nullptr);
+	}
+	if (VK_NULL_HANDLE != RenderPass) {
+		vkDestroyRenderPass(Device, RenderPass, nullptr);
+	}
 #pragma region Pipeline
 	if (VK_NULL_HANDLE != Pipeline) {
 		vkDestroyPipeline(Device, Pipeline, nullptr);
@@ -194,7 +178,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 #pragma endregion
 
 #pragma region Swapchain
-	vkDestroySemaphore(Device, Semaphore, nullptr);
 	for (auto i : SwapchainImageViews) {
 		vkDestroyImageView(Device, i, nullptr);
 	}
@@ -205,6 +188,13 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroySwapchainKHR(Device, Swapchain, nullptr);
 	}
 #pragma endregion
+
+	for (auto i : RenderSemaphores) {
+		vkDestroySemaphore(Device, i, nullptr);
+	}
+	for (auto i : PresentSemaphores) {
+		vkDestroySemaphore(Device, i, nullptr);
+	}
 
 	if (VK_NULL_HANDLE != Fence) {
 		vkDestroyFence(Device, Fence, nullptr);
@@ -424,11 +414,7 @@ void VK::CreateInstance()
 		nullptr,
 		0,
 		&ApplicationInfo,
-#ifdef _DEBUG
 		static_cast<uint32_t>(EnabledLayerNames.size()), EnabledLayerNames.data(),
-#else
-		0, nullptr,
-#endif
 		static_cast<uint32_t>(EnabledExtensions.size()), EnabledExtensions.data()
 	};
 
@@ -527,11 +513,7 @@ void VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
 				nullptr,
 				0,
 				static_cast<uint32_t>(QueueCreateInfos.size()), QueueCreateInfos.data(),
-#ifdef _DEBUG
 				static_cast<uint32_t>(EnabledLayerNames.size()), EnabledLayerNames.data(),
-#else
-				0, nullptr,
-#endif
 				static_cast<uint32_t>(EnabledExtensions.size()), EnabledExtensions.data(),
 				nullptr
 			};
@@ -605,6 +587,29 @@ void VK::CreateFence()
 
 #ifdef _DEBUG
 	std::cout << "CreateFence" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void VK::CreateSemaphore()
+{
+	const VkSemaphoreCreateInfo SemaphoreCreateInfo = {
+		VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+		nullptr,
+		0
+	};
+
+	//!< プレゼント完了同期用
+	VkSemaphore PresentSemaphore;
+	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &PresentSemaphore));
+	PresentSemaphores.push_back(PresentSemaphore);
+
+	//!< 描画完了同期用
+	VkSemaphore RenderSemaphore;
+	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
+	RenderSemaphores.push_back(RenderSemaphore);
+
+#ifdef _DEBUG
+	std::cout << "CreateSemaphore" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
@@ -701,13 +706,8 @@ void VK::CreateSwapchain(VkSurfaceKHR Surface, VkPhysicalDevice PhysicalDevice)
 	}
 
 #pragma region SwapchainImageIndex
-	const VkSemaphoreCreateInfo SemaphoreCreateInfo = {
-		VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-		nullptr,
-		0
-	};
-	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &Semaphore));
-	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, Semaphore, nullptr, &SwapchainImageIndex));
+	assert(!PresentSemaphores.empty() && "PresentSemaphore is empty");
+	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphores[0], nullptr, &SwapchainImageIndex));
 #ifdef _DEBUG
 	std::cout << "\t" << "Semaphore" << std::endl;
 	std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
@@ -734,6 +734,17 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat 
 
 	for(auto i : SwapchainImages) {
 		SetImageLayout(CommandBuffer, i, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		const VkComponentMapping ComponentMapping = {
+			VK_COMPONENT_SWIZZLE_R,
+			VK_COMPONENT_SWIZZLE_G,
+			VK_COMPONENT_SWIZZLE_B,
+			VK_COMPONENT_SWIZZLE_A
+		};
+		const VkImageSubresourceRange ImageSubresourceRange = {
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			0, 1,
+			0, 1
+		};
 		const VkImageViewCreateInfo ImageViewCreateInfo = {
 			VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 			nullptr,
@@ -741,17 +752,8 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat 
 			i,
 			VK_IMAGE_VIEW_TYPE_2D,
 			ColorFormat,
-			{ 
-				VK_COMPONENT_SWIZZLE_R, 
-				VK_COMPONENT_SWIZZLE_G, 
-				VK_COMPONENT_SWIZZLE_B,
-				VK_COMPONENT_SWIZZLE_A 
-			},
-			{
-				VK_IMAGE_ASPECT_COLOR_BIT,
-				0, 1,
-				0, 1
-			}
+			ComponentMapping,
+			ImageSubresourceRange,
 		};
 
 		VkImageView ImageView;
@@ -877,7 +879,7 @@ void VK::CreateShader_Cs()
 }
 /**
 @brief シェーダとのバインディングのレイアウト
-@note DescriptorSetLayt は型のようなもの、DescriptorSet はインスタンスのようなもの
+@note DescriptorSetLayt は型のようなもの
 */
 void VK::CreateDescriptorSetLayout()
 {
@@ -918,6 +920,10 @@ void VK::CreatePipelineLayout()
 	std::cout << "CreatePipelineLayout" << COUT_OK << std::endl << std::endl;
 #endif
 }
+/**
+@brief シェーダとのバインディングのレイアウト
+@note DescriptorSet はインスタンスのようなもの
+*/
 void VK::CreateDescriptorSet()
 {
 	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
@@ -1026,7 +1032,7 @@ void VK::CreateGraphicsPipeline()
 }
 void VK::CreateGraphicsPipeline_VsPs()
 {
-	assert(1 < ShaderModules.size());
+	assert(1 < ShaderModules.size() && "ShaderModules is not enough");
 
 	//!< HLSL コンパイル時のデフォルトエントリポイント名が "main" なのでそれに合わせることにする
 	const char* EntrypointName = "main";
@@ -1137,7 +1143,7 @@ void VK::CreateGraphicsPipeline_VsPs()
 		0,
 		VK_FALSE, VK_LOGIC_OP_CLEAR,
 		static_cast<uint32_t>(PipelineColorBlendAttachmentStates.size()), PipelineColorBlendAttachmentStates.data(),
-		{ 0.0f, 0.0f, 0.0f, 0.0f } //!< BlendConstants
+		{ 0.0f, 0.0f, 0.0f, 0.0f } //!< float blendConstants[4];
 	};
 
 	const std::vector<VkDynamicState> DynamicStates = {
@@ -1197,6 +1203,166 @@ void VK::CreateComputePipeline()
 #ifdef _DEBUG
 	std::cout << "CreateComputePipeline" << COUT_OK << std::endl << std::endl;
 #endif
+}
+
+void VK::CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat)
+{
+	CreateRenderPass_Color(ColorFormat);
+
+#ifdef _DEBUG
+	std::cout << "CreateRenderPass" << COUT_OK << std::endl << std::endl;
+#endif
+}
+void VK::CreateRenderPass_Color(const VkFormat ColorFormat)
+{
+	const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
+		{
+			0,
+			ColorFormat,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_ATTACHMENT_LOAD_OP_CLEAR,
+			VK_ATTACHMENT_STORE_OP_STORE,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+		},
+	};
+
+	const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
+		{
+			0,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+		}
+	};
+	const std::vector<VkSubpassDescription> SubpassDescriptions = {
+		{
+			0,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			0, nullptr,
+			static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(),
+			nullptr,
+			nullptr,
+			0, nullptr
+		}
+	};
+
+	const VkRenderPassCreateInfo RenderPassCreateInfo = {
+		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(AttachmentDescriptions.size()), AttachmentDescriptions.data(),
+		static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
+		0, nullptr
+	};
+	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, nullptr, &RenderPass));
+}
+void VK::CreateRenderPass_ColorDepth(const VkFormat ColorFormat, const VkFormat DepthFormat)
+{
+	const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
+		{
+			0,
+			ColorFormat,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_ATTACHMENT_LOAD_OP_CLEAR,
+			VK_ATTACHMENT_STORE_OP_STORE,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+		},
+		{
+			0,
+			DepthFormat,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_ATTACHMENT_LOAD_OP_CLEAR,
+			VK_ATTACHMENT_STORE_OP_STORE,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+		}
+	};
+
+	const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
+		{
+			0,
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+		}
+	};
+	const VkAttachmentReference DepthAttachmentReference = {
+		1,
+		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+	};
+	const std::vector<VkSubpassDescription> SubpassDescriptions = {
+		{
+			0,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			0, nullptr,
+			static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(),
+			nullptr,
+			&DepthAttachmentReference,
+			0, nullptr
+		}
+	};
+
+	const VkRenderPassCreateInfo RenderPassCreateInfo = {
+		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(AttachmentDescriptions.size()), AttachmentDescriptions.data(),
+		static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
+		0, nullptr
+	};
+	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, nullptr, &RenderPass));
+}
+
+void VK::CreateFramebuffer()
+{
+	CreateFramebuffer_Color();
+
+#ifdef _DEBUG
+	std::cout << "CreateFramebuffer" << COUT_OK << std::endl << std::endl;
+#endif
+}
+void VK::CreateFramebuffer_Color()
+{
+	Framebuffers.resize(SwapchainImages.size());
+	for (uint32_t i = 0; i < Framebuffers.size(); ++i) {
+		const std::vector<VkImageView> Attachments = {
+			SwapchainImageViews[i],
+		};
+		const VkFramebufferCreateInfo FramebufferCreateInfo = {
+			VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+			nullptr,
+			0,
+			RenderPass,
+			static_cast<uint32_t>(Attachments.size()), Attachments.data(),
+			ImageExtent.width, ImageExtent.height,
+			1
+		};
+		VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, nullptr, &Framebuffers[i]));
+	}
+}
+void VK::CreateFramebuffer_ColorDepth()
+{
+	Framebuffers.resize(SwapchainImages.size());
+	for (uint32_t i = 0; i < Framebuffers.size(); ++i) {
+		const std::vector<VkImageView> Attachments = {
+			SwapchainImageViews[i],
+			DepthStencilImageView
+		};
+		const VkFramebufferCreateInfo FramebufferCreateInfo = {
+			VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+			nullptr,
+			0,
+			RenderPass,
+			static_cast<uint32_t>(Attachments.size()), Attachments.data(),
+			ImageExtent.width, ImageExtent.height,
+			1
+		};
+		VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, nullptr, &Framebuffers[i]));
+	}
 }
 
 void VK::CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer Buffer, VkDeviceMemory DeviceMemory, const void* Source, const size_t Size)
@@ -1285,10 +1451,10 @@ void VK::CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMem
 			const VkSubmitInfo SubmitInfo = {
 				VK_STRUCTURE_TYPE_SUBMIT_INFO,
 				nullptr,
-				0, nullptr,
+				static_cast<uint32_t>(PresentSemaphores.size()), PresentSemaphores.data(),
 				nullptr,
 				1, &CopyCommandBuffer,
-				0, nullptr
+				static_cast<uint32_t>(RenderSemaphores.size()), RenderSemaphores.data()
 			};
 			//!< 一般的なキューを再利用するよりも転送専用のキューを作った方が良いらしい
 			VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
@@ -1366,91 +1532,6 @@ void VK::CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDev
 
 #ifdef _DEBUG
 	std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
-void VK::CreateFramebuffers()
-{
-	Framebuffers.resize(SwapchainImages.size());
-	for (uint32_t i = 0; i < Framebuffers.size(); ++i) {
-		const std::vector<VkImageView> Attachments = {
-			SwapchainImageViews[i],
-			DepthStencilImageView
-		};
-		const VkFramebufferCreateInfo FramebufferCreateInfo = {
-			VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-			nullptr,
-			0,
-			RenderPass,
-			static_cast<uint32_t>(Attachments.size()), Attachments.data(),
-			ImageExtent.width, ImageExtent.height,
-			1
-		};
-		VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, nullptr, &Framebuffers[i]));
-	}
-}
-
-void VK::CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat)
-{
-	const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
-		{
-			0,
-			ColorFormat,
-			VK_SAMPLE_COUNT_1_BIT,
-			VK_ATTACHMENT_LOAD_OP_CLEAR,
-			VK_ATTACHMENT_STORE_OP_STORE,
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-			VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-		},
-		//{
-		//	0,
-		//	DepthFormat,
-		//	VK_SAMPLE_COUNT_1_BIT,
-		//	VK_ATTACHMENT_LOAD_OP_CLEAR,
-		//	VK_ATTACHMENT_STORE_OP_STORE,
-		//	VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-		//	VK_ATTACHMENT_STORE_OP_DONT_CARE,
-		//	VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-		//	VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-		//}
-	};
-
-	const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
-		{
-			0,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-		}
-	};
-	//const VkAttachmentReference DepthAttachmentReference = {
-	//	1,
-	//	VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-	//};
-	const std::vector<VkSubpassDescription> SubpassDescriptions = {
-		{
-			0,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			0, nullptr,
-			static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(),
-			nullptr,
-			nullptr,//&DepthAttachmentReference,
-			0, nullptr
-		}
-	};
-
-	const VkRenderPassCreateInfo RenderPassCreateInfo = {
-		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(AttachmentDescriptions.size()), AttachmentDescriptions.data(),
-		static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
-		0, nullptr
-	};
-	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, nullptr, &RenderPass));
-
-#ifdef _DEBUG
-	std::cout << "CreateRenderPass" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
@@ -1560,13 +1641,14 @@ void VK::ExecuteCommandBuffer(const VkCommandBuffer CommandBuffer)
 {
 	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 
+	const VkPipelineStageFlags PipelineStageFlags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 	const VkSubmitInfo SubmitInfo = {
 		VK_STRUCTURE_TYPE_SUBMIT_INFO,
 		nullptr,
-		0, nullptr,
-		nullptr,
+		static_cast<uint32_t>(PresentSemaphores.size()), PresentSemaphores.data(),
+		&PipelineStageFlags,
 		1,  &CommandBuffer,
-		0, nullptr
+		static_cast<uint32_t>(RenderSemaphores.size()), RenderSemaphores.data()
 	};
 #if 1
 	VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, Fence));
@@ -1594,20 +1676,15 @@ void VK::Present()
 	const VkPresentInfoKHR PresentInfo = {
 		VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 		nullptr,
-		0, nullptr,
+		static_cast<uint32_t>(RenderSemaphores.size()), RenderSemaphores.data(),
 		1, &Swapchain,
 		&SwapchainImageIndex,
 		nullptr
 	};
-#if 0
-	if (VK_NULL_HANDLE != RenderSemaphore) {
-		PresentInfo.waitSemaphoreCount = 1;
-		PresentInfo.pWaitSemaphores = &RenderSemaphore;
-	}
-#endif
 	VERIFY_SUCCEEDED(vkQueuePresentKHR(Queue, &PresentInfo));
 
-	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, Semaphore, nullptr, &SwapchainImageIndex));
+	assert(!PresentSemaphores.empty() && "PresentSmaphore is empty");
+	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphores[0], nullptr, &SwapchainImageIndex));
 #ifdef _DEBUG
 	//std::cout << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
 	//std::cout << SwapchainImageIndex;
