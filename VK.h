@@ -74,9 +74,6 @@ protected:
 	virtual void CreateDepthStencilView(VkCommandBuffer CommandBuffer, const VkFormat DepthFormat);
 
 	virtual void CreateShader();
-	virtual void CreateShader_VsPs();
-	virtual void CreateShader_VsPsTesTcsGs();
-	virtual void CreateShader_Cs();
 
 	virtual void CreateDescriptorSetLayout();
 	virtual void CreateDescritporPool();
@@ -84,24 +81,16 @@ protected:
 	virtual void CreatePipelineLayout();
 
 	virtual void CreateVertexInput();
-	virtual void CreateVertexInput_Position();
-	virtual void CreateVertexInput_PositionColor();
-
+	
 	virtual void CreateViewport();
 
 	virtual void CreatePipeline() { CreateGraphicsPipeline(); }
 	virtual void CreateGraphicsPipeline();
-	virtual void CreateGraphicsPipeline_VsPs();
-	virtual void CreateGraphicsPipeline_VsPsTesTcsGs();
 	virtual void CreateComputePipeline();
 
 	virtual void CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat);
-	virtual void CreateRenderPass_Color(const VkFormat ColorFormat);
-	virtual void CreateRenderPass_ColorDepth(const VkFormat ColorFormat, const VkFormat DepthFormat);
-
+	
 	virtual void CreateFramebuffer();
-	virtual void CreateFramebuffer_Color();
-	virtual void CreateFramebuffer_ColorDepth();
 
 	virtual void CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer Buffer, VkDeviceMemory DeviceMemory, const void* Source, const size_t Size);
 	virtual void CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
@@ -110,9 +99,7 @@ protected:
 
 	// ----------------------------------
 
-	virtual void Clear(const VkCommandBuffer CommandBuffer) { Clear_Color(CommandBuffer); Clear_Depth(CommandBuffer); }
-	virtual void Clear_Color(const VkCommandBuffer CommandBuffer);
-	virtual void Clear_Depth(const VkCommandBuffer CommandBuffer);
+	virtual void Clear(const VkCommandBuffer CommandBuffer) {}
 	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer);
 
 	virtual void ImageBarrier(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout Old, VkImageLayout New);
@@ -211,4 +198,25 @@ class VKExt : public VK
 private:
 	using Super = VK;
 public:
+	virtual void CreateShader_VsPs();
+	virtual void CreateShader_VsPsTesTcsGs();
+	virtual void CreateShader_Cs();
+
+	virtual void CreateVertexInput_Position();
+	virtual void CreateVertexInput_PositionColor();
+
+	virtual void CreateGraphicsPipeline_VsPs();
+	virtual void CreateGraphicsPipeline_VsPsTesTcsGs();
+
+	virtual void CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat) { CreateRenderPass_Color(ColorFormat); }
+	virtual void CreateRenderPass_Color(const VkFormat ColorFormat);
+	virtual void CreateRenderPass_ColorDepth(const VkFormat ColorFormat, const VkFormat DepthFormat);
+	
+	virtual void CreateFramebuffer() override { CreateFramebuffer_Color(); }
+	virtual void CreateFramebuffer_Color();
+	virtual void CreateFramebuffer_ColorDepth();
+
+	virtual void Clear(const VkCommandBuffer CommandBuffer) override { Clear_Color(CommandBuffer); Clear_Depth(CommandBuffer); }
+	virtual void Clear_Color(const VkCommandBuffer CommandBuffer);
+	virtual void Clear_Depth(const VkCommandBuffer CommandBuffer);
 };

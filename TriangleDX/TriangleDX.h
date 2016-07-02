@@ -5,12 +5,12 @@
 #pragma region Code
 #include "../DX.h"
 
-class TriangleDX : public DX
+class TriangleDX : public DXExt
 {
 private:
-	using Super = DX;
+	using Super = DXExt;
 public:
-	TriangleDX() : DX() {}
+	TriangleDX() : DXExt() {}
 	virtual ~TriangleDX() {}
 
 protected:

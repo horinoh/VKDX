@@ -5,12 +5,12 @@
 #pragma region Code
 #include "../DX.h"
 
-class ParametricSurfaceDX : public DX
+class ParametricSurfaceDX : public DXExt
 {
 private:
-	using Super = DX;
+	using Super = DXExt;
 public:
-	ParametricSurfaceDX() : DX() {}
+	ParametricSurfaceDX() : DXExt() {}
 	virtual ~ParametricSurfaceDX() {}
 
 protected:

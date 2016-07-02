@@ -5,12 +5,12 @@
 #pragma region Code
 #include "../VK.h"
 
-class ParametricSurfaceVK : public VK
+class ParametricSurfaceVK : public VKExt
 {
 private:
-	using Super = VK;
+	using Super = VKExt;
 public:
-	ParametricSurfaceVK() : VK() {}
+	ParametricSurfaceVK() : VKExt() {}
 	virtual ~ParametricSurfaceVK() {}
 
 protected:

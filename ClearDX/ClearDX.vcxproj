@@ -160,7 +160,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\DX.cpp" />
-    <ClCompile Include="..\DXUtil.cpp" />
+    <ClCompile Include="..\DXExt.cpp" />
     <ClCompile Include="..\Win.cpp" />
     <ClCompile Include="ClearDX.cpp" />
     <ClCompile Include="stdafx.cpp">

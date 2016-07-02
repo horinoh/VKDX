@@ -5,12 +5,12 @@
 #pragma region Code
 #include "../DX.h"
 
-class ClearDX : public DX
+class ClearDX : public DXExt
 {
 private:
-	using Super = DX;
+	using Super = DXExt;
 public:
-	ClearDX() : DX() {}
+	ClearDX() : DXExt() {}
 	virtual ~ClearDX() {}
 };
 #pragma endregion

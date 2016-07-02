@@ -5,12 +5,12 @@
 #pragma region Code
 #include "../VK.h"
 
-class ClearVK : public VK
+class ClearVK : public VKExt
 {
 private:
-	using Super = VK;
+	using Super = VKExt;
 public:
-	ClearVK() : VK() {}
+	ClearVK() : VKExt() {}
 	virtual ~ClearVK() {}
 };
 #pragma endregion

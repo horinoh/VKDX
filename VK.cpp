@@ -986,8 +986,6 @@ void VK::CreateComputePipeline()
 
 void VK::CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat)
 {
-	CreateRenderPass_Color(ColorFormat);
-
 #ifdef _DEBUG
 	std::cout << "CreateRenderPass" << COUT_OK << std::endl << std::endl;
 #endif
@@ -995,8 +993,6 @@ void VK::CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat
 
 void VK::CreateFramebuffer()
 {
-	CreateFramebuffer_Color();
-
 #ifdef _DEBUG
 	std::cout << "CreateFramebuffer" << COUT_OK << std::endl << std::endl;
 #endif

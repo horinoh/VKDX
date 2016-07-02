@@ -156,7 +156,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\VK.cpp" />
-    <ClCompile Include="..\VKUtil.cpp" />
+    <ClCompile Include="..\VKExt.cpp" />
     <ClCompile Include="..\Win.cpp" />
     <ClCompile Include="ParametricSurfaceVK.cpp" />
     <ClCompile Include="stdafx.cpp">

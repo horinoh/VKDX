@@ -62,22 +62,15 @@ protected:
 	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
 
 	virtual void CreateShader();
-	virtual void CreateShader_VsPs();
-	virtual void CreateShader_VsPsDsHsGs();
-	virtual void CreateShader_Cs();
-
+	
 	virtual void CreateRootSignature();
 
 	virtual void CreateInputLayout();
-	virtual void CreateInputLayout_Position();
-	virtual void CreateInputLayout_PositionColor();
-
+	
 	virtual void CreateViewport();
 
 	virtual void CreatePipelineState() { CreateGraphicsPipelineState(); }
 	virtual void CreateGraphicsPipelineState();
-	virtual void CreateGraphicsPipelineState_VsPs();
-	virtual void CreateGraphicsPipelineState_VsPsDsHsGs();
 	virtual void CreateComputePipelineState();
 
 	virtual void CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const void* Source, const size_t Size);
@@ -86,9 +79,7 @@ protected:
 	virtual void CreateConstantBuffer();
 	virtual void CreateUnorderedAccessTexture();
 
-	virtual void Clear(ID3D12GraphicsCommandList* GraphicsCommandList) { Clear_Color(GraphicsCommandList); Clear_Depth(GraphicsCommandList); }
-	virtual void Clear_Color(ID3D12GraphicsCommandList* GraphicsCommandList);
-	virtual void Clear_Depth(ID3D12GraphicsCommandList* GraphicsCommandList);
+	virtual void Clear(ID3D12GraphicsCommandList* GraphicsCommandList) {}
 	virtual void PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList);
 
 	virtual void BarrierTransition(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After);
@@ -147,4 +138,18 @@ class DXExt : public DX
 {
 private:
 	using Super = DX;
+public:
+	virtual void CreateShader_VsPs();
+	virtual void CreateShader_VsPsDsHsGs();
+	virtual void CreateShader_Cs();
+
+	virtual void CreateInputLayout_Position();
+	virtual void CreateInputLayout_PositionColor();
+
+	virtual void CreateGraphicsPipelineState_VsPs();
+	virtual void CreateGraphicsPipelineState_VsPsDsHsGs();
+
+	virtual void Clear(ID3D12GraphicsCommandList* GraphicsCommandList) override { Clear_Color(GraphicsCommandList); Clear_Depth(GraphicsCommandList); }
+	virtual void Clear_Color(ID3D12GraphicsCommandList* GraphicsCommandList);
+	virtual void Clear_Depth(ID3D12GraphicsCommandList* GraphicsCommandList);
 };

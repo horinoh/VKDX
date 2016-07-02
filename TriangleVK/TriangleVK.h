@@ -5,12 +5,12 @@
 #pragma region Code
 #include "../VK.h"
 
-class TriangleVK : public VK
+class TriangleVK : public VKExt
 {
 private:
-	using Super = VK;
+	using Super = VKExt;
 public:
-	TriangleVK() : VK() {}
+	TriangleVK() : VKExt() {}
 	virtual ~TriangleVK() {}
 
 protected:

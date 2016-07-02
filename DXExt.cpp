@@ -2,7 +2,7 @@
 
 #include "DX.h"
 
-void DX::CreateShader_VsPs()
+void DXExt::CreateShader_VsPs()
 {
 	ShaderBlobs.resize(2);
 	D3DReadFileToBlob(SHADER_PATH L"VS.cso", ShaderBlobs[0].GetAddressOf());
@@ -12,7 +12,7 @@ void DX::CreateShader_VsPs()
 	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void DX::CreateShader_VsPsDsHsGs()
+void DXExt::CreateShader_VsPsDsHsGs()
 {
 	ShaderBlobs.resize(5);
 	D3DReadFileToBlob(SHADER_PATH L"VS.cso", ShaderBlobs[0].GetAddressOf());
@@ -25,7 +25,7 @@ void DX::CreateShader_VsPsDsHsGs()
 	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void DX::CreateShader_Cs()
+void DXExt::CreateShader_Cs()
 {
 	ShaderBlobs.resize(1);
 	D3DReadFileToBlob(SHADER_PATH L"CS.cso", ShaderBlobs[0].GetAddressOf());
@@ -35,7 +35,7 @@ void DX::CreateShader_Cs()
 #endif
 }
 
-void DX::CreateInputLayout_Position()
+void DXExt::CreateInputLayout_Position()
 {
 	InputElementDescs = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -48,7 +48,7 @@ void DX::CreateInputLayout_Position()
 	std::cout << "CreateInputLayout" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void DX::CreateInputLayout_PositionColor()
+void DXExt::CreateInputLayout_PositionColor()
 {
 	InputElementDescs = {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -63,7 +63,7 @@ void DX::CreateInputLayout_PositionColor()
 #endif
 }
 
-void DX::CreateGraphicsPipelineState_VsPs()
+void DXExt::CreateGraphicsPipelineState_VsPs()
 {
 	assert(nullptr != RootSignature);
 	assert(1 < ShaderBlobs.size());
@@ -147,7 +147,7 @@ void DX::CreateGraphicsPipelineState_VsPs()
 	std::cout << "CreateGraphicsPipelineState" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void DX::CreateGraphicsPipelineState_VsPsDsHsGs()
+void DXExt::CreateGraphicsPipelineState_VsPsDsHsGs()
 {
 	assert(nullptr != RootSignature);
 	assert(4 < ShaderBlobs.size());
@@ -234,14 +234,14 @@ void DX::CreateGraphicsPipelineState_VsPsDsHsGs()
 #endif
 }
 
-void DX::Clear_Color(ID3D12GraphicsCommandList* GraphicsCommandList)
+void DXExt::Clear_Color(ID3D12GraphicsCommandList* GraphicsCommandList)
 {
 	auto CPUDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 	CPUDescriptorHandle.ptr += CurrentBackBufferIndex * IncrementSize;
 	GraphicsCommandList->ClearRenderTargetView(CPUDescriptorHandle, DirectX::Colors::SkyBlue, 0, nullptr);
 }
-void DX::Clear_Depth(ID3D12GraphicsCommandList* GraphicsCommandList)
+void DXExt::Clear_Depth(ID3D12GraphicsCommandList* GraphicsCommandList)
 {
 	if (nullptr != DepthStencilDescriptorHeap) {
 		auto CPUDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
