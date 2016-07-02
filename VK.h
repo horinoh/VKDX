@@ -79,8 +79,9 @@ protected:
 	virtual void CreateShader_Cs();
 
 	virtual void CreateDescriptorSetLayout();
+	virtual void CreateDescritporPool();
+	virtual void CreateDescriptorSet(VkDescriptorPool DescritorPool);
 	virtual void CreatePipelineLayout();
-	virtual void CreateDescriptorSet();
 
 	virtual void CreateVertexInput();
 	virtual void CreateVertexInput_Position();

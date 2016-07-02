@@ -56,9 +56,14 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateShader();
 
-	CreateDescriptorSetLayout();
-	CreatePipelineLayout();
-	CreateDescriptorSet();
+	{
+		CreateDescriptorSetLayout();
+
+		CreateDescritporPool();
+		CreateDescriptorSet(DescriptorPool);
+
+		CreatePipelineLayout();
+	}
 
 	CreateVertexInput();
 
@@ -68,7 +73,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateVertexBuffer(CommandPools[0], PhysicalDeviceMemoryProperties);
 	CreateIndexBuffer(CommandPools[0], PhysicalDeviceMemoryProperties);
-	//CreateUniformBuffer(PhysicalDeviceMemoryProperties);
+	CreateUniformBuffer(PhysicalDeviceMemoryProperties);
 
 #ifdef _DEBUG
 	__int64 B;
@@ -848,49 +853,22 @@ void VK::CreateShader()
 	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void VK::CreateShader_VsPs()
-{
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"VS.vert.spv"));
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"FS.frag.spv"));
 
-#ifdef _DEBUG
-	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
-#endif
-}
-void VK::CreateShader_VsPsTesTcsGs()
-{
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"VS.vert.spv"));
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"FS.frag.spv"));
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"TES.tese.spv"));
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"TCS.tesc.spv"));
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"GS.geom.spv"));
-
-#ifdef _DEBUG
-	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
-#endif
-}
-void VK::CreateShader_Cs()
-{
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"CS.cpom.spv"));
-
-#ifdef _DEBUG
-	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
-#endif
-}
 /**
 @brief シェーダとのバインディングのレイアウト
-@note DescriptorSetLayt は型のようなもの
+@note DescriptorSetLayt は「型」のようなもの
 */
 void VK::CreateDescriptorSetLayout()
 {
 	const std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings = {
-		{
-			0,
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			1,
-			VK_SHADER_STAGE_VERTEX_BIT,
-			nullptr
-		}
+#if 0
+		//!< 配列サイズ 1 の UBO、VS から可視
+		{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
+		//!< 配列サイズ 1 の SAMPLER、全てから可視
+		{ 1, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_ALL_GRAPHICS, nullptr },
+		//!< 配列サイズ 10 の IMAGE、FS から可視
+		{ 2, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 10, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+#endif
 	};
 	const VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -898,21 +876,64 @@ void VK::CreateDescriptorSetLayout()
 		0,
 		static_cast<uint32_t>(DescriptorSetLayoutBindings.size()), DescriptorSetLayoutBindings.data()
 	};
-	DescriptorSetLayouts.resize(1);
-	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, nullptr, DescriptorSetLayouts.data()));
+	VkDescriptorSetLayout DescriptorSetLayout;
+	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, nullptr, &DescriptorSetLayout));
+	DescriptorSetLayouts.push_back(DescriptorSetLayout);
 
 #ifdef _DEBUG
 	std::cout << "CreateDescriptorSetLayout" << COUT_OK << std::endl << std::endl;
 #endif
 }
+void VK::CreateDescritporPool()
+{
+	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+	};
+	const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		nullptr,
+		0,
+		1, //!< maxSets ... プールから確保される最大のデスクリプタ数
+		static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
+}
+/**
+@brief シェーダとのバインディングのレイアウト
+@note DescriptorSet は　「DescriptorSetLayt 型」のインスタンスのようなもの
+@note 更新は vkUpdateDescriptorSets() で行う
+*/
+void VK::CreateDescriptorSet(VkDescriptorPool DescritorPool)
+{
+	const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		nullptr,
+		DescriptorPool,
+		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
+	};
+	VkDescriptorSet DescriptorSet;
+	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, &DescriptorSet));
+	DescriptorSets.push_back(DescriptorSet);
+
+#ifdef _DEBUG
+	std::cout << "CreateDescriptorSet" << COUT_OK << std::endl << std::endl;
+#endif
+}
+/**
+@brief シェーダとのバインディングのレイアウト
+@note PipelineLayout は引数に「DescriptorSetLayt 型のインスタンス」を取る「関数」のようなもの
+*/
 void VK::CreatePipelineLayout()
 {
+	const std::vector<VkPushConstantRange> PushConstantRanges = {
+		//{ VK_SHADER_STAGE_ALL_GRAPHICS, 0, 0 },
+	};
 	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		nullptr,
 		0,
 		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
-		0, nullptr
+		static_cast<uint32_t>(PushConstantRanges.size()), PushConstantRanges.data()
 	};
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, nullptr, &PipelineLayout));
 
@@ -920,84 +941,9 @@ void VK::CreatePipelineLayout()
 	std::cout << "CreatePipelineLayout" << COUT_OK << std::endl << std::endl;
 #endif
 }
-/**
-@brief シェーダとのバインディングのレイアウト
-@note DescriptorSet はインスタンスのようなもの
-*/
-void VK::CreateDescriptorSet()
-{
-	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
-		{
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			1
-		}
-	};
-	const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		nullptr,
-		0,
-		1,
-		static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
-
-	const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		nullptr,
-		DescriptorPool,
-		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
-	};
-	DescriptorSets.reserve(1);
-	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, DescriptorSets.data()));
-
-#ifdef _DEBUG
-	std::cout << "CreateDescriptorSet" << COUT_OK << std::endl << std::endl;
-#endif
-}
 
 void VK::CreateVertexInput()
 {
-#ifdef _DEBUG
-	std::cout << "CreateVertexInput" << COUT_OK << std::endl << std::endl;
-#endif
-}
-void VK::CreateVertexInput_Position()
-{
-	VertexInputBindingDescriptions = {
-		{ 0, sizeof(glm::vec3), VK_VERTEX_INPUT_RATE_VERTEX }
-	};
-	VertexInputAttributeDescriptions = {
-		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
-	};
-	PipelineVertexInputStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(VertexInputBindingDescriptions.size()), VertexInputBindingDescriptions.data(),
-		static_cast<uint32_t>(VertexInputAttributeDescriptions.size()), VertexInputAttributeDescriptions.data()
-	};
-
-#ifdef _DEBUG
-	std::cout << "CreateVertexInput" << COUT_OK << std::endl << std::endl;
-#endif
-}
-void VK::CreateVertexInput_PositionColor()
-{
-	VertexInputBindingDescriptions = {
-		{ 0, sizeof(glm::vec3) + sizeof(glm::vec4), VK_VERTEX_INPUT_RATE_VERTEX }
-	};
-	VertexInputAttributeDescriptions = {
-		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
-		{ 1, 0, VK_FORMAT_R32G32B32_SFLOAT, sizeof(glm::vec3) }
-	};
-	PipelineVertexInputStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(VertexInputBindingDescriptions.size()), VertexInputBindingDescriptions.data(),
-		static_cast<uint32_t>(VertexInputAttributeDescriptions.size()), VertexInputAttributeDescriptions.data()
-	};
-
 #ifdef _DEBUG
 	std::cout << "CreateVertexInput" << COUT_OK << std::endl << std::endl;
 #endif
@@ -1479,6 +1425,7 @@ void VK::CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhysicalDevi
 }
 void VK::CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
+#if 0
 	const auto Size = sizeof(glm::mat4) * 3; //!< World, View, Projection
 
 	const VkBufferCreateInfo BufferCreateInfo = {
@@ -1509,26 +1456,24 @@ void VK::CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDev
 		Size
 	};
 
+	VkDescriptorBufferInfo* DescriptorBufferInfo = nullptr;
 	WriteDescriptorSets = {
 		{
-			// todo
-			VK_STRUCTURE_TYPE_APPLICATION_INFO,
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			nullptr,
-			//VkStructureType                  sType;
-			//const void*                      pNext;
-			//VkDescriptorSet                  dstSet;
-			//uint32_t                         dstBinding;
-			//uint32_t                         dstArrayElement;
-			//uint32_t                         descriptorCount;
-			//VkDescriptorType                 descriptorType;
-			//const VkDescriptorImageInfo*     pImageInfo;
-			//const VkDescriptorBufferInfo*    pBufferInfo;
-			//const VkBufferView*              pTexelBufferView;
-		}
+			DescriptorSets[0], 0, //!< デスクリプタセットとバインディングポイント
+			0,
+			1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			nullptr,
+			DescriptorBufferInfo,
+			nullptr
+		},
 	};
-
-	//todo
-	//vkUpdateDescriptorSets(Device, static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(), 0, nullptr);
+	std::vector<VkCopyDescriptorSet> CopyDescriptorSets = {};
+	vkUpdateDescriptorSets(Device, 
+		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(), 
+		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
+#endif
 
 #ifdef _DEBUG
 	std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;

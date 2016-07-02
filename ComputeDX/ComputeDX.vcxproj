@@ -156,6 +156,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\DX.cpp" />
+    <ClCompile Include="..\DXUtil.cpp" />
     <ClCompile Include="..\Win.cpp" />
     <ClCompile Include="ComputeDX.cpp" />
     <ClCompile Include="stdafx.cpp">
