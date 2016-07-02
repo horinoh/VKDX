@@ -206,3 +206,9 @@ protected:
 //	std::vector<VkPipelineShaderStageCreateInfo> ShaderStageCreateInfos;
 };
 
+class VKExt : public VK
+{
+private:
+	using Super = VK;
+public:
+};

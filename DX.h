@@ -142,3 +142,9 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
 	UINT64 FenceValue;
 };
+
+class DXExt : public DX
+{
+private:
+	using Super = DX;
+};
