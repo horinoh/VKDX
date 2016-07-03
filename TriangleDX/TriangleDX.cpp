@@ -252,7 +252,8 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 	const std::vector<UINT32> Indices = { 0, 1, 2 };
 	//!< DrawInstanced() ‚ªˆø”‚ÉŽæ‚é‚Ì‚ÅŠo‚¦‚Ä‚¨‚­•K—v‚ª‚ ‚é
 	IndexCount = static_cast<UINT32>(Indices.size());
-	const auto Size = static_cast<UINT32>(sizeof(Indices[0]) * IndexCount);
+	const auto Stride = sizeof(Indices[0]);
+	const auto Size = static_cast<UINT32>(Stride * IndexCount);
 
 	CreateBuffer(CommandAllocator, CommandList, IndexBufferResource.GetAddressOf(), Indices.data(), Size);
 

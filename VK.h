@@ -216,7 +216,7 @@ public:
 	virtual void CreateFramebuffer_Color();
 	virtual void CreateFramebuffer_ColorDepth();
 
-	virtual void Clear(const VkCommandBuffer CommandBuffer) override { Clear_Color(CommandBuffer); Clear_Depth(CommandBuffer); }
+	virtual void Clear(const VkCommandBuffer CommandBuffer) override { Clear_Color(CommandBuffer); }
 	virtual void Clear_Color(const VkCommandBuffer CommandBuffer);
 	virtual void Clear_Depth(const VkCommandBuffer CommandBuffer);
 };

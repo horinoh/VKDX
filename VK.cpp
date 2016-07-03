@@ -856,7 +856,7 @@ void VK::CreateShader()
 
 /**
 @brief シェーダとのバインディングのレイアウト
-@note DescriptorSetLayt は「型」のようなもの
+@note DescriptorSetLayout は「型」のようなもの
 */
 void VK::CreateDescriptorSetLayout()
 {
@@ -887,7 +887,9 @@ void VK::CreateDescriptorSetLayout()
 void VK::CreateDescritporPool()
 {
 	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
+#if 0
 		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+#endif
 	};
 	const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
@@ -925,9 +927,8 @@ void VK::CreateDescriptorSet(VkDescriptorPool DescritorPool)
 */
 void VK::CreatePipelineLayout()
 {
-	const std::vector<VkPushConstantRange> PushConstantRanges = {
-		//{ VK_SHADER_STAGE_ALL_GRAPHICS, 0, 0 },
-	};
+	//!< Push constants represent a high speed path to modify constant data in pipelines that is expected to outperform memory-backed resource updates.
+	const std::vector<VkPushConstantRange> PushConstantRanges = {};
 	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		nullptr,

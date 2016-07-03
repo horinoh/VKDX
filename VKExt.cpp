@@ -111,7 +111,7 @@ void VKExt::CreateGraphicsPipeline_VsPs()
 
 	/**
 	@brief デフォルト指定
-	VkDynamicState に VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR を指定するので
+	ここでは VkDynamicState に VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR を指定するので
 	vkCmdSetViewport(), vkCmdSetScissor() で後からコマンドバッファによる上書きが可能
 	*/
 	const VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo = {
@@ -129,10 +129,10 @@ void VKExt::CreateGraphicsPipeline_VsPs()
 		VK_FALSE,
 		VK_FALSE,
 		VK_POLYGON_MODE_FILL,
-		VK_CULL_MODE_NONE,
+		VK_CULL_MODE_NONE,/*VK_CULL_MODE_BACK_BIT,*/
 		VK_FRONT_FACE_COUNTER_CLOCKWISE,
 		VK_FALSE, 0.0f, 0.0f, 0.0f,
-		0.0f
+		1.0f
 	};
 
 	const VkPipelineMultisampleStateCreateInfo PipelineMultisampleStateCreateInfo = {
@@ -178,7 +178,7 @@ void VKExt::CreateGraphicsPipeline_VsPs()
 			VK_BLEND_OP_ADD,
 			VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO,
 			VK_BLEND_OP_ADD,
-			0,
+			0xf,
 		}
 	};
 	const VkPipelineColorBlendStateCreateInfo PipelineColorBlendStateCreateInfo = {
@@ -260,10 +260,7 @@ void VKExt::CreateRenderPass_Color(const VkFormat ColorFormat)
 	};
 
 	const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
-		{
-			0,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-		}
+		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }
 	};
 	const std::vector<VkSubpassDescription> SubpassDescriptions = {
 		{
@@ -315,15 +312,9 @@ void VKExt::CreateRenderPass_ColorDepth(const VkFormat ColorFormat, const VkForm
 	};
 
 	const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
-		{
-			0,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-		}
+		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }
 	};
-	const VkAttachmentReference DepthAttachmentReference = {
-		1,
-		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-	};
+	const VkAttachmentReference DepthAttachmentReference = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 	const std::vector<VkSubpassDescription> SubpassDescriptions = {
 		{
 			0,

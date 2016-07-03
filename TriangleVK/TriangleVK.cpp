@@ -235,6 +235,9 @@ void TriangleVK::CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhy
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 
+#if 1
+	CreateBuffer(CommandPool, PhysicalDeviceMemoryProperties, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VertexBuffer, VertexDeviceMemory, Vertices.data(), Size);
+#else
 	VkBuffer Buffer_Upload;
 	VkDeviceMemory DeviceMemory_Upload;
 	{
@@ -330,6 +333,7 @@ void TriangleVK::CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhy
 	}
 	vkDestroyBuffer(Device, Buffer_Upload, nullptr);
 	vkFreeMemory(Device, DeviceMemory_Upload, nullptr);
+#endif
 
 #ifdef _DEBUG
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
@@ -341,9 +345,13 @@ void TriangleVK::CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhys
 	const std::vector<uint32_t> Indices = { 0, 1, 2 };
 
 	//!< vkCmdDrawIndexed() ‚ªˆø”‚ÉŽæ‚é‚Ì‚ÅŠo‚¦‚Ä‚¨‚­•K—v‚ª‚ ‚é
-	IndexCount = static_cast<uint32_t>(Indices.size()); 
-	const auto Size = static_cast<VkDeviceSize>(sizeof(Indices[0]) * IndexCount);
+	IndexCount = static_cast<uint32_t>(Indices.size());
+	const auto Stride = sizeof(Indices[0]);
+	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 	
+#if 1
+	CreateBuffer(CommandPool, PhysicalDeviceMemoryProperties, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, IndexBuffer, IndexDeviceMemory, Indices.data(), Size);
+#else
 	VkBuffer Buffer_Upload;
 	VkDeviceMemory DeviceMemory_Upload;
 	{
@@ -439,6 +447,7 @@ void TriangleVK::CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhys
 	}
 	vkDestroyBuffer(Device, Buffer_Upload, nullptr);
 	vkFreeMemory(Device, DeviceMemory_Upload, nullptr);
+#endif
 
 #ifdef _DEBUG
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;

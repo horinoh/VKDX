@@ -149,7 +149,7 @@ public:
 	virtual void CreateGraphicsPipelineState_VsPs();
 	virtual void CreateGraphicsPipelineState_VsPsDsHsGs();
 
-	virtual void Clear(ID3D12GraphicsCommandList* GraphicsCommandList) override { Clear_Color(GraphicsCommandList); Clear_Depth(GraphicsCommandList); }
+	virtual void Clear(ID3D12GraphicsCommandList* GraphicsCommandList) override { Clear_Color(GraphicsCommandList); }
 	virtual void Clear_Color(ID3D12GraphicsCommandList* GraphicsCommandList);
 	virtual void Clear_Depth(ID3D12GraphicsCommandList* GraphicsCommandList);
 };
