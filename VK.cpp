@@ -38,13 +38,9 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	const auto ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 	{
-		VkSurfaceKHR Surface;
-		CreateSurface(hWnd, hInstance, &Surface);
-		CreateSwapchain(Surface, PhysicalDevice);
+		CreateSurface(hWnd, hInstance);
+		CreateSwapchain(PhysicalDevice);
 		CreateSwapchainImageView(CommandBuffers[0], ColorFormat);
-		if (VK_NULL_HANDLE != Surface) {
-			vkDestroySurfaceKHR(Instance, Surface, nullptr);
-		}
 	}
 
 	const auto DepthFormat = GetSupportedDepthFormat(PhysicalDevice);
@@ -67,8 +63,9 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateVertexInput();
 
-	CreatePipeline();
+	CreateViewport();
 	CreateRenderPass(ColorFormat, DepthFormat);
+	CreatePipeline();
 	CreateFramebuffer();
 
 	CreateVertexBuffer(CommandPools[0], PhysicalDeviceMemoryProperties);
@@ -191,6 +188,9 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 	if (VK_NULL_HANDLE != Swapchain) {
 		vkDestroySwapchainKHR(Device, Swapchain, nullptr);
+	}
+	if (VK_NULL_HANDLE != Surface) {
+		vkDestroySurfaceKHR(Instance, Surface, nullptr);
 	}
 #pragma endregion
 
@@ -357,7 +357,15 @@ void VK::SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAsp
 	};
 	VkPipelineStageFlags SrcPipelineStageFlags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 	VkPipelineStageFlags DstPipelineStageFlags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-	vkCmdPipelineBarrier(CommandBuffer, SrcPipelineStageFlags, DstPipelineStageFlags, 0, 0, nullptr, 0, nullptr, 1, &ImageMemoryBarrier);
+	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		nullptr,
+		0,
+		nullptr
+	};
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
+		vkCmdPipelineBarrier(CommandBuffer, SrcPipelineStageFlags, DstPipelineStageFlags, 0, 0, nullptr, 0, nullptr, 1, &ImageMemoryBarrier);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }
 void VK::SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout) const
 {
@@ -618,7 +626,7 @@ void VK::CreateSemaphore()
 #endif
 }
 
-void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance, VkSurfaceKHR* Surface)
+void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
 {
 #ifdef _WIN32
 	const VkWin32SurfaceCreateInfoKHR SurfaceCreateInfo = {
@@ -628,15 +636,19 @@ void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance, VkSurfaceKHR* Surface)
 		hInstance,
 		hWnd
 	};
-	VERIFY_SUCCEEDED(vkCreateWin32SurfaceKHR(Instance, &SurfaceCreateInfo, nullptr, Surface));
+	VERIFY_SUCCEEDED(vkCreateWin32SurfaceKHR(Instance, &SurfaceCreateInfo, nullptr, &Surface));
 #ifdef _DEBUG
 	std::cout << "\t" << "Surface" << std::endl;
 #endif
 #endif
 }
 
-void VK::CreateSwapchain(VkSurfaceKHR Surface, VkPhysicalDevice PhysicalDevice)
+void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice)
 {
+	VkBool32 Supported = VK_FALSE;
+	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, QueueFamilyIndex, Surface, &Supported));
+	assert(VK_TRUE == Supported && "vkGetPhysicalDeviceSurfaceSupportKHR failed");
+
 	VkSurfaceCapabilitiesKHR SurfaceCapabilities;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PhysicalDevice, Surface, &SurfaceCapabilities));
 	const auto MinImageCount = (std::min)(SurfaceCapabilities.minImageCount + 1, SurfaceCapabilities.maxImageCount);
@@ -891,14 +903,20 @@ void VK::CreateDescritporPool()
 		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
 #endif
 	};
-	const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		nullptr,
-		0,
-		1, //!< maxSets ... プールから確保される最大のデスクリプタ数
-		static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
+	if (!DescriptorPoolSizes.empty()) {
+		const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+			nullptr,
+			0,
+			1, //!< maxSets ... プールから確保される最大のデスクリプタ数
+			static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
+		};
+		VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
+
+#ifdef _DEBUG
+		std::cout << "CreateDescriptorPool" << COUT_OK << std::endl << std::endl;
+#endif
+	}
 }
 /**
 @brief シェーダとのバインディングのレイアウト
@@ -907,19 +925,21 @@ void VK::CreateDescritporPool()
 */
 void VK::CreateDescriptorSet(VkDescriptorPool DescritorPool)
 {
-	const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		nullptr,
-		DescriptorPool,
-		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
-	};
-	VkDescriptorSet DescriptorSet;
-	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, &DescriptorSet));
-	DescriptorSets.push_back(DescriptorSet);
+	if (VK_NULL_HANDLE != DescritorPool) {
+		const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			nullptr,
+			DescriptorPool,
+			static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
+		};
+		VkDescriptorSet DescriptorSet;
+		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, &DescriptorSet));
+		DescriptorSets.push_back(DescriptorSet);
 
 #ifdef _DEBUG
-	std::cout << "CreateDescriptorSet" << COUT_OK << std::endl << std::endl;
+		std::cout << "CreateDescriptorSet" << COUT_OK << std::endl << std::endl;
 #endif
+	}
 }
 /**
 @brief シェーダとのバインディングのレイアウト
@@ -1028,7 +1048,7 @@ void VK::CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMem
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo_Upload, nullptr, &DeviceMemory_Upload));
 		void *Data;
 		VERIFY_SUCCEEDED(vkMapMemory(Device, DeviceMemory_Upload, 0, MemoryAllocateInfo_Upload.allocationSize, 0, &Data)); {
-			memcpy(Data, Source, Size);
+				memcpy(Data, Source, Size);
 		} vkUnmapMemory(Device, DeviceMemory_Upload);
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer_Upload, DeviceMemory_Upload, 0));
 

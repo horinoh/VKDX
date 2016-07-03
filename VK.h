@@ -65,8 +65,8 @@ protected:
 	virtual void CreateFence();
 	virtual void CreateSemaphore();
 
-	virtual void CreateSurface(HWND hWnd, HINSTANCE hInstance, VkSurfaceKHR* Surface);
-	virtual void CreateSwapchain(VkSurfaceKHR Surface, VkPhysicalDevice PhysicalDevice);
+	virtual void CreateSurface(HWND hWnd, HINSTANCE hInstance);
+	virtual void CreateSwapchain(VkPhysicalDevice PhysicalDevice);
 	virtual void CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat ColorFormat);
 
 	virtual void CreateDepthStencilImage(const VkFormat DepthFormat);
@@ -131,6 +131,7 @@ protected:
 	std::vector<VkSemaphore> PresentSemaphores;
 	std::vector<VkSemaphore> RenderSemaphores;
 
+	VkSurfaceKHR Surface;
 	VkExtent2D ImageExtent;
 	VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
 	std::vector<VkImage> SwapchainImages;

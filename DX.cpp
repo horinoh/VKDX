@@ -42,6 +42,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateInputLayout();
 
+	CreateViewport();
 	CreatePipelineState();
 
 	CreateVertexBuffer(CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());

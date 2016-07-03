@@ -390,7 +390,7 @@ void VKExt::Clear_Color(const VkCommandBuffer CommandBuffer)
 	};
 	vkCmdClearColorImage(CommandBuffer,
 		SwapchainImages[SwapchainImageIndex],
-		VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+		VK_IMAGE_LAYOUT_GENERAL,//VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 		&SkyBlue,
 		static_cast<uint32_t>(ImageSubresourceRanges_Color.size()), ImageSubresourceRanges_Color.data());
 }
@@ -407,7 +407,7 @@ void VKExt::Clear_Depth(const VkCommandBuffer CommandBuffer)
 		};
 		vkCmdClearDepthStencilImage(CommandBuffer,
 			DepthStencilImage,
-			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			VK_IMAGE_LAYOUT_GENERAL,//VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 			&ClearDepthStencil,
 			static_cast<uint32_t>(ImageSubresourceRanges_DepthStencil.size()), ImageSubresourceRanges_DepthStencil.data());
 	}
