@@ -44,6 +44,8 @@ public:
 
 	static std::string GetVkResultString(const VkResult Result);
 	static std::wstring GetVkResultStringW(const VkResult Result);
+	static std::string GetFormatString(const VkFormat Format);
+
 protected:
 	static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
 	static FORCEINLINE void* AlignedRealloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_realloc(pOriginal, size, alignment); }

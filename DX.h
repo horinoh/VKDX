@@ -41,12 +41,15 @@ public:
 
 	static std::string GetHRESULTString(const HRESULT Result);
 	static std::wstring GetHRESULTStringW(const HRESULT Result);
+	static std::string GetFormatString(const DXGI_FORMAT Format);
+
 protected:
 	virtual void CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat);
 	virtual void EnumAdapter(IDXGIFactory4* Factory);
 	virtual void EnumOutput(IDXGIAdapter* Adapter);
 	virtual void GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format);
-	virtual void CheckFeature();
+	virtual void CheckFeatureLevel();
+	virtual void CheckMultiSample(const DXGI_FORMAT Format);
 
 	virtual void CreateCommandQueue();
 

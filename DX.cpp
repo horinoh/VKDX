@@ -127,6 +127,17 @@ std::wstring DX::GetHRESULTStringW(const HRESULT Result)
 	return std::wstring(_com_error(Result).ErrorMessage());
 }
 
+std::string DX::GetFormatString(const DXGI_FORMAT Format)
+{
+#define DXGI_FORMAT_ENTRY(df) case DXGI_FORMAT_##df: return #df;
+	switch (Format)
+	{
+	default: assert(0 && "Unknown DXGI_FORMAT"); return "";
+#include "DXFormat.h"
+	}
+#undef DXGI_FORMAT_CASE
+}
+
 void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
 {
 	using namespace Microsoft::WRL;
@@ -139,15 +150,14 @@ void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
 
 	ComPtr<IDXGIFactory4> Factory;
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.GetAddressOf())));
-
 #ifdef _DEBUG
 	EnumAdapter(Factory.Get());
 #endif
 
-#pragma region SelectAdapter
-	ComPtr<IDXGIAdapter> Adapter;
+	//!< DedicatedVideoMemory のある最後のアダプタ(GPU)インデックスを返す
 	auto GetLastIndexOfHardwareAdapter = [&]() {
 		UINT Index = UINT_MAX;
+		ComPtr<IDXGIAdapter> Adapter;
 		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, Adapter.ReleaseAndGetAddressOf()); ++i) {
 			DXGI_ADAPTER_DESC AdapterDesc;
 			VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
@@ -158,16 +168,15 @@ void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
 		assert(UINT_MAX != Index);
 		return Index;
 	};
+	ComPtr<IDXGIAdapter> Adapter;
 	Factory->EnumAdapters(GetLastIndexOfHardwareAdapter(), Adapter.ReleaseAndGetAddressOf());
 #ifdef _DEBUG
 	DXGI_ADAPTER_DESC AdapterDesc;
 	VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
-	//std::cout << Red; std::wcout << "\t" << AdapterDesc.Description; std::cout << White << " is selected" << std::endl;
+	std::wcout << "\t[ " << Yellow << AdapterDesc.Description << White << " ]" << std::endl;
 #endif
-#pragma endregion
 
-	if (FAILED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(Device.GetAddressOf())))) {
-	//if (FAILED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(Device.GetAddressOf())))) {
+	if (FAILED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(Device.GetAddressOf())))) {
 #ifdef _DEBUG
 		std::cout << "\t" << Red << "Cannot create device, trying to create WarpDevice ..." << White << std::endl;
 #endif
@@ -176,13 +185,16 @@ void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
 	}
 
 #ifdef _DEBUG
-	CheckFeature();
+	CheckFeatureLevel();
+	CheckMultiSample(DXGI_FORMAT_R8G8B8A8_UNORM);
 #endif
 
 #ifdef _DEBUG
 	std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
 #endif
 }
+
+//!< アダプタ(GPU)の列挙
 void DX::EnumAdapter(IDXGIFactory4* Factory)
 {
 	using namespace Microsoft::WRL;
@@ -199,6 +211,8 @@ void DX::EnumAdapter(IDXGIFactory4* Factory)
 		EnumOutput(Adapter.Get());
 	}
 }
+
+//!< アウトプット(ディスプレイ)の列挙
 void DX::EnumOutput(IDXGIAdapter* Adapter)
 {
 	using namespace Microsoft::WRL;
@@ -216,6 +230,8 @@ void DX::EnumOutput(IDXGIAdapter* Adapter)
 		GetDisplayModeList(Output.Get(), DXGI_FORMAT_R8G8B8A8_UNORM);
 	}
 }
+
+//!< 描画モードの列挙
 void DX::GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format)
 {
 	UINT NumModes;
@@ -230,13 +246,18 @@ void DX::GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format)
 #endif
 	}
 }
-void DX::CheckFeature()
+void DX::CheckFeatureLevel()
 {
 	const std::vector<D3D_FEATURE_LEVEL> FeatureLevels = {
+		D3D_FEATURE_LEVEL_12_1,
 		D3D_FEATURE_LEVEL_12_0,
+		D3D_FEATURE_LEVEL_11_1,
 		D3D_FEATURE_LEVEL_11_0,
+		D3D_FEATURE_LEVEL_10_1,
 		D3D_FEATURE_LEVEL_10_0,
 		D3D_FEATURE_LEVEL_9_3,
+		D3D_FEATURE_LEVEL_9_2,
+		D3D_FEATURE_LEVEL_9_1,
 	};
 	D3D12_FEATURE_DATA_FEATURE_LEVELS DataFeatureLevels = {
 		static_cast<UINT>(FeatureLevels.size()), FeatureLevels.data()
@@ -244,26 +265,40 @@ void DX::CheckFeature()
 	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, reinterpret_cast<void*>(&DataFeatureLevels), sizeof(DataFeatureLevels)));
 #ifdef _DEBUG
 	std::cout << "\t" << "\t" << "MaxSupportedFeatureLevel = ";
+#define D3D_FEATURE_LEVEL_ENTRY(fl) case D3D_FEATURE_LEVEL_##fl: std::cout << "D3D_FEATURE_LEVEL_" #fl << std::endl; break;
 	switch (DataFeatureLevels.MaxSupportedFeatureLevel) {
-	default: std::cout << std::hex << DataFeatureLevels.MaxSupportedFeatureLevel << std::dec << std::endl; break;
-	case D3D_FEATURE_LEVEL_12_0: std::cout << "D3D_FEATURE_LEVEL_12_0" << std::endl; break;
-	case D3D_FEATURE_LEVEL_11_0: std::cout << "D3D_FEATURE_LEVEL_11_0" << std::endl; break;
-	case D3D_FEATURE_LEVEL_10_0: std::cout << "D3D_FEATURE_LEVEL_10_0" << std::endl; break;
-	case D3D_FEATURE_LEVEL_9_3: std::cout << "D3D_FEATURE_LEVEL_9_3" << std::endl; break;
+	default: assert(0 && "Unknown FeatureLevel"); break;
+	D3D_FEATURE_LEVEL_ENTRY(12_1)
+	D3D_FEATURE_LEVEL_ENTRY(12_0)
+	D3D_FEATURE_LEVEL_ENTRY(11_1)
+	D3D_FEATURE_LEVEL_ENTRY(11_0)
+	D3D_FEATURE_LEVEL_ENTRY(10_1)
+	D3D_FEATURE_LEVEL_ENTRY(10_0)
+	D3D_FEATURE_LEVEL_ENTRY(9_3)
+	D3D_FEATURE_LEVEL_ENTRY(9_2)
+	D3D_FEATURE_LEVEL_ENTRY(9_1)
 	}
+#undef D3D_FEATURE_LEVEL_ENTRY
 #endif
+}
 
-	D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS DataMultiSampleQaualityLevels = {
-		DXGI_FORMAT_R8G8B8A8_UNORM,
-		D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT,
-		D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE
-	};
-	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, reinterpret_cast<void*>(&DataMultiSampleQaualityLevels), sizeof(DataMultiSampleQaualityLevels)));
+void DX::CheckMultiSample(const DXGI_FORMAT Format)
+{
 #ifdef _DEBUG
 	std::cout << "\t" << "\t" << "MultiSample" << std::endl;
-	std::cout << "\t" << "\t" << "\t" << "Count = " << DataMultiSampleQaualityLevels.SampleCount << std::endl;
-	std::cout << "\t" << "\t" << "\t" << "QualityLevels = " << DataMultiSampleQaualityLevels.NumQualityLevels << std::endl;
+	std::cout << "\t" << "\t" << "\t" << "Format = " << GetFormatString(Format) << std::endl;
 #endif
+	for (UINT i = 1; i < D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT; ++i) {
+		D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS DataMultiSampleQaualityLevels = {
+			Format,
+			i,
+			D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE,
+		};
+		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, reinterpret_cast<void*>(&DataMultiSampleQaualityLevels), sizeof(DataMultiSampleQaualityLevels)));
+#ifdef _DEBUG
+		std::cout << "\t" << "\t" << "\t" << "Count, QualityLevels = " << DataMultiSampleQaualityLevels.SampleCount << ", " << DataMultiSampleQaualityLevels.NumQualityLevels << std::endl;
+#endif
+	}
 }
 
 void DX::CreateCommandQueue()
@@ -295,8 +330,9 @@ void DX::CreateCommandAllocator()
 
 /**
 @brief ID3D12CommandAllocator と ID3D12GraphicsCommandList を作成
-描画コマンドを発行する場合は PipelineState の指定が必要だが、
-CommandList->Reset(Allocator, PipelineState) の引数で指定できるのでここでは PipelineState == nullptr で作成してしまっている
+描画コマンドを発行するコマンドリストは PipelineState の指定が必要だが、後から CommandList->Reset(Allocator, PipelineState) の引数でも指定できる
+描画コマンドを発行しないコマンドリストは nullptr 指定で良い
+ここでは PipelineState == nullptr で作成してしまっている
 */
 void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator)
 {

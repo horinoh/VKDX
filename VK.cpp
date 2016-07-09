@@ -231,37 +231,11 @@ std::string VK::GetVkResultString(const VkResult Result)
 	//ss << "0x" << std::hex << Result << std::dec;
 	//ss.str();
 
-#define VK_RESULT_CASE(vr) case vr: return #vr
+#define VK_RESULT_ENTRY(vr) case VK_##vr: return #vr;
 	switch (Result)
 	{
 	default: assert(0 && "Unknown VkResult"); return "";
-		//VK_RESULT_CASE(VK_SUCCESS);
-		VK_RESULT_CASE(VK_NOT_READY);
-		VK_RESULT_CASE(VK_TIMEOUT);
-		VK_RESULT_CASE(VK_EVENT_SET);
-		VK_RESULT_CASE(VK_EVENT_RESET);
-		VK_RESULT_CASE(VK_INCOMPLETE);
-		VK_RESULT_CASE(VK_ERROR_OUT_OF_HOST_MEMORY);
-		VK_RESULT_CASE(VK_ERROR_OUT_OF_DEVICE_MEMORY);
-		VK_RESULT_CASE(VK_ERROR_INITIALIZATION_FAILED);
-		VK_RESULT_CASE(VK_ERROR_DEVICE_LOST);
-		VK_RESULT_CASE(VK_ERROR_MEMORY_MAP_FAILED);
-		VK_RESULT_CASE(VK_ERROR_LAYER_NOT_PRESENT);
-		VK_RESULT_CASE(VK_ERROR_EXTENSION_NOT_PRESENT);
-		VK_RESULT_CASE(VK_ERROR_FEATURE_NOT_PRESENT);
-		VK_RESULT_CASE(VK_ERROR_INCOMPATIBLE_DRIVER);
-		VK_RESULT_CASE(VK_ERROR_TOO_MANY_OBJECTS);
-		VK_RESULT_CASE(VK_ERROR_FORMAT_NOT_SUPPORTED);
-		VK_RESULT_CASE(VK_ERROR_SURFACE_LOST_KHR);
-		VK_RESULT_CASE(VK_ERROR_NATIVE_WINDOW_IN_USE_KHR);
-		VK_RESULT_CASE(VK_SUBOPTIMAL_KHR);
-		VK_RESULT_CASE(VK_ERROR_OUT_OF_DATE_KHR);
-		VK_RESULT_CASE(VK_ERROR_INCOMPATIBLE_DISPLAY_KHR);
-		VK_RESULT_CASE(VK_ERROR_VALIDATION_FAILED_EXT);
-		VK_RESULT_CASE(VK_ERROR_INVALID_SHADER_NV);
-		//VK_RESULT_CASE(VK_RESULT_BEGIN_RANGE);
-		//VK_RESULT_CASE(VK_RESULT_END_RANGE);
-		VK_RESULT_CASE(VK_RESULT_RANGE_SIZE);
+#include "VkResult.h"
 	}
 #undef VK_RESULT_CASE
 }
@@ -269,6 +243,17 @@ std::wstring VK::GetVkResultStringW(const VkResult Result)
 {
 	const auto ResultString = GetVkResultString(Result);
 	return std::wstring(ResultString.begin(), ResultString.end());
+}
+
+std::string VK::GetFormatString(const VkFormat Format)
+{
+#define VK_FORMAT_ENTRY(vf) case VK_FORMAT_##vf: return #vf;
+	switch (Format)
+	{
+	default: assert(0 && "Unknown VkFormat"); return "";
+#include "VKFormat.h"
+	}
+#undef VK_FORMAT_ENTRY
 }
 
 VkFormat VK::GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice) const
