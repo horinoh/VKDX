@@ -25,6 +25,15 @@
 //#define VERIFY_SUCCEEDED(hr) MESSAGEBOX_ON_FAILED(hr)
 #endif
 
+#if 0
+//!< リソースが作成された時 MakeResident() され、破棄された時 Evict() される。
+//!< アプリから明示的にこれを行いたい場合は以下のようにする
+ID3D12Resource* Resource;
+const std::vector<ID3D12Pageable*> Pageables = { Resource };
+Device->MakeResident(static_cast<UINT>(Pageables.size()), Pageables.data());
+Device->Evict(static_cast<UINT>(Pageables.size()), Pageables.data());
+#endif
+
 class DX : public Win
 {
 private:
@@ -53,8 +62,8 @@ protected:
 
 	virtual void CreateCommandQueue();
 
-	virtual void CreateCommandAllocator();
-	virtual void CreateCommandList(ID3D12CommandAllocator* CommandAllocator);
+	virtual void CreateCommandAllocator(const D3D12_COMMAND_LIST_TYPE CommandListType = D3D12_COMMAND_LIST_TYPE_DIRECT);
+	virtual void CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const D3D12_COMMAND_LIST_TYPE CommandListType = D3D12_COMMAND_LIST_TYPE_DIRECT);
 
 	virtual void CreateFence();
 

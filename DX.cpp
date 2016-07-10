@@ -307,7 +307,7 @@ void DX::CreateCommandQueue()
 		D3D12_COMMAND_LIST_TYPE_DIRECT,
 		0,
 		D3D12_COMMAND_QUEUE_FLAG_NONE,
-		0
+		0 // NodeMask ... マルチGPUの場合
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(CommandQueue.GetAddressOf())));
 
@@ -316,12 +316,16 @@ void DX::CreateCommandQueue()
 #endif
 }
 
-void DX::CreateCommandAllocator()
+/**
+@note コマンドアロケータに複数のコマンドリストを作成できるが、コマンドリストは同時には記録できない (Close()しないとダメ)
+@note CommandList->ExecuteCommandList() 後 GPU が CommandAllocator の参照を終えるまで、CommandAllocator->Reset() してはいけない
+*/
+void DX::CreateCommandAllocator(const D3D12_COMMAND_LIST_TYPE CommandListType)
 {
-	CommandAllocators.resize(2);
-	for (auto& i : CommandAllocators) {
-		VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(i.GetAddressOf())));
-	}
+	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
+	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(CommandListType, IID_PPV_ARGS(CommandAllocator.GetAddressOf())));
+
+	CommandAllocators.push_back(CommandAllocator);
 
 #ifdef _DEBUG
 	std::cout << "\t" << "CommandAllocator" << std::endl;
@@ -329,15 +333,20 @@ void DX::CreateCommandAllocator()
 }
 
 /**
-@brief ID3D12CommandAllocator と ID3D12GraphicsCommandList を作成
-描画コマンドを発行するコマンドリストは PipelineState の指定が必要だが、後から CommandList->Reset(Allocator, PipelineState) の引数でも指定できる
-描画コマンドを発行しないコマンドリストは nullptr 指定で良い
+@note CommandList->ExecuteCommandList() 後に CommandList->Reset() をしても良い。(CommandAllocator が覚えているので、CommandQueue には影響しない)
+描画コマンドを発行するコマンドリストは PipelineState の指定が必要
+後からCommandList->Reset(Allocator, PipelineState) の引数でも指定できる
+描画コマンドを発行しないコマンドリスト(初期化用途等)や、バンドルは nullptr 指定で良い
 ここでは PipelineState == nullptr で作成してしまっている
 */
-void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator)
+void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const D3D12_COMMAND_LIST_TYPE CommandListType)
 {
-	GraphicsCommandLists.resize(GraphicsCommandLists.size() + 1);
-	VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, CommandAllocator, nullptr, IID_PPV_ARGS(GraphicsCommandLists.back().GetAddressOf())));
+	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> GraphicsCommandList;
+	VERIFY_SUCCEEDED(Device->CreateCommandList(0, CommandListType, CommandAllocator, nullptr, IID_PPV_ARGS(GraphicsCommandList.GetAddressOf())));
+
+	GraphicsCommandLists.push_back(GraphicsCommandList);
+
+	//!< Close() しておく
 	VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
 
 #ifdef _DEBUG
@@ -345,6 +354,9 @@ void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator)
 #endif
 }
 
+/**
+@brief CPU と GPU の同期
+*/
 void DX::CreateFence()
 {
 	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(Fence.GetAddressOf())));
@@ -679,7 +691,7 @@ void DX::CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCo
 		nullptr,
 		//IID_PPV_ARGS(Resource->GetAddressOf())));
 		IID_PPV_ARGS(Resource)));
-	
+
 	//!< コピーするコマンドリストを発行する
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
 		BarrierTransition(CommandList, *Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
@@ -906,11 +918,11 @@ void DX::WaitForFence()
 	//!< CPU 側のフェンス値をインクリメント
 	++FenceValue;
 
-	//!< GPU 側からフェンス値を設定 (GPU 側でコマンドがここまで到達すればフェンス値が CPU に追いつく事になる)
+	//!< GPU コマンドが Signal() まで到達すれば GetCompletedValue() が FenceValue になり、CPUに追いついたことになる
 	VERIFY_SUCCEEDED(CommandQueue->Signal(Fence.Get(), FenceValue));
 	if (Fence->GetCompletedValue() < FenceValue) {
 		auto hEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-		//!< GPU 側のフェンス値が追いついた時にイベントが発行される
+		//!< GetCompletedValue() が FenceValue になったらイベントが発行される
 		VERIFY_SUCCEEDED(Fence->SetEventOnCompletion(FenceValue, hEvent));
 
 		//!< イベント発行まで待つ
