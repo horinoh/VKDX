@@ -246,6 +246,7 @@ void DX::GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format)
 #endif
 	}
 }
+
 void DX::CheckFeatureLevel()
 {
 	const std::vector<D3D_FEATURE_LEVEL> FeatureLevels = {
@@ -364,7 +365,6 @@ void DX::CreateFence()
 #ifdef _DEBUG
 	std::cout << "CreateFence" << COUT_OK << std::endl << std::endl;
 #endif
-	//WaitForFence();
 }
 
 /**
@@ -397,7 +397,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Bu
 		DXGI_SWAP_EFFECT_FLIP_DISCARD,
 		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
 	};
-	Microsoft::WRL::ComPtr<IDXGISwapChain> SC;
+	ComPtr<IDXGISwapChain> SC;
 	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.Get(), &SwapChainDesc, SC.GetAddressOf()));
 	SwapChain.Reset();
 	VERIFY_SUCCEEDED(SC.As(&SwapChain));
@@ -421,7 +421,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Bu
 #endif
 }
 /**
-@brief DXGISwapChain のリサイズ、SwapChainResource を再取得して、
+@brief DXGISwapChain のリサイズ
 */
 void DX::ResizeSwapChain()
 {
@@ -434,8 +434,8 @@ void DX::ResizeSwapChain()
 
 	VERIFY_SUCCEEDED(SwapChain->ResizeBuffers(SwapChainDesc.BufferCount,
 		static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
-		SwapChainDesc.Format/*DXGI_FORMAT_R8G8B8A8_UNORM*/,
-		SwapChainDesc.Flags/*DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH*/));
+		SwapChainDesc.Format,
+		SwapChainDesc.Flags));
 #ifdef _DEBUG
 	std::cout << "\t" << "ResizeBuffers" << std::endl;
 #endif
@@ -448,12 +448,17 @@ void DX::ResizeSwapChain()
 	auto CpuDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
+	//!< ミップレベル0のすべてのリソースにアクセスする場合は省略(nullptr)可能
+	//const D3D12_RENDER_TARGET_VIEW_DESC RenderTargetViewDesc = {
+	//	SwapChainDesc.Format,
+	//	D3D12_RTV_DIMENSION_TEXTURE2D,
+	//	{ 0, 0 }
+	//};
 	SwapChainResources.resize(SwapChainDesc.BufferCount);
 	for (UINT i = 0; i < SwapChainResources.size(); ++i) {
 		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, IID_PPV_ARGS(SwapChainResources[i].GetAddressOf())));
-		//!< ミップレベル0のすべてのリソースにアクセスする場合は省略(nullptr)可能
-		//D3D12_RENDER_TARGET_VIEW_DESC RenderTargetViewDesc = {};
-		Device->CreateRenderTargetView(SwapChainResources[i].Get(), nullptr/*&RenderTargetViewDesc*/, CpuDescriptorHandle);
+		//Device->CreateRenderTargetView(SwapChainResources[i].Get(), &RenderTargetViewDesc, CpuDescriptorHandle);
+		Device->CreateRenderTargetView(SwapChainResources[i].Get(), nullptr, CpuDescriptorHandle);
 		CpuDescriptorHandle.ptr += IncrementSize;
 	}
 #ifdef _DEBUG
@@ -506,11 +511,11 @@ void DX::ResizeDepthStencil(const DXGI_FORMAT DepthFormat)
 		D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
 	};
+	//!< ClearValue を指定しない場合は nullptr にできる
 	const D3D12_CLEAR_VALUE ClearValue = {
 		DepthFormat,
 		{ 1.0f, 0 }
 	};
-	//!< ClearValue を指定しない場合は nullptr にできる
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,
@@ -856,16 +861,17 @@ void DX::PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList)
 
 void DX::BarrierTransition(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After)
 {
+	const D3D12_RESOURCE_TRANSITION_BARRIER ResourceTransitionBarrier = {
+		Resource,
+		D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+		Before,
+		After
+	};
 	const std::vector<D3D12_RESOURCE_BARRIER> ResourceBarrier = {
 		{
 			D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 			D3D12_RESOURCE_BARRIER_FLAG_NONE,
-			{
-				Resource,
-				D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-				Before,
-				After
-			}
+			ResourceTransitionBarrier
 		}
 	};
 	CommandList->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
@@ -888,11 +894,12 @@ void DX::Draw()
 		CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
-		BarrierTransition(CommandList, SwapChainResources[CurrentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		auto Resource = SwapChainResources[CurrentBackBufferIndex].Get();
+		BarrierTransition(CommandList, Resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
 			PopulateCommandList(CommandList);
 		}
-		BarrierTransition(CommandList, SwapChainResources[CurrentBackBufferIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		BarrierTransition(CommandList, Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 

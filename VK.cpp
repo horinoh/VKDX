@@ -574,6 +574,9 @@ void VK::CreateCommandBuffer(const VkCommandPool CommandPool)
 #endif
 }
 
+/**
+@brief CPU ‚Æ GPU ‚Ì“¯Šú
+*/
 void VK::CreateFence()
 {
 	const VkFenceCreateInfo FenceCreateInfo = {
@@ -1226,11 +1229,12 @@ void VK::Draw()
 		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-		ImageBarrier(CommandBuffer, SwapchainImages[SwapchainImageIndex], VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		auto Image = SwapchainImages[SwapchainImageIndex];
+		ImageBarrier(CommandBuffer, Image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		{
 			PopulateCommandBuffer(CommandBuffer);
 		}
-		ImageBarrier(CommandBuffer, SwapchainImages[SwapchainImageIndex], VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		ImageBarrier(CommandBuffer, Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 	}
 	VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 
