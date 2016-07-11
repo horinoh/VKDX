@@ -389,6 +389,19 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 	assert(VK_NULL_HANDLE != ShaderModule);
 	return ShaderModule;
 }
+
+//VkBool32 VKAPI_PTR DebugCallback(VkDebugReportFlagsEXT flags,
+//	VkDebugReportObjectTypeEXT objectType,
+//	uint64_t object,
+//	size_t location,
+//	int32_t messageCode,
+//	const char* pLayerPrefix,
+//	const char* pMessage,
+//	void* pUserData)
+//{
+//	return VK_FALSE;
+//}
+
 void VK::CreateInstance()
 {
 	const VkApplicationInfo ApplicationInfo = {
@@ -427,6 +440,21 @@ void VK::CreateInstance()
 	//VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, &AllocationCallbacks, &Instance));
 	VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance));
 
+	//const VkDebugReportCallbackCreateInfoEXT DebugReportCreateInfo = {
+	//	VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
+	//	nullptr,
+	//	VK_DEBUG_REPORT_INFORMATION_BIT_EXT
+	//	| VK_DEBUG_REPORT_WARNING_BIT_EXT 
+	//	| VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT 
+	//	| VK_DEBUG_REPORT_ERROR_BIT_EXT 
+	//	| VK_DEBUG_REPORT_DEBUG_BIT_EXT 
+	//	| VK_DEBUG_REPORT_FLAG_BITS_MAX_ENUM_EXT,
+	//	DebugCallback,
+	//	nullptr
+	//};
+	//static VkDebugReportCallbackEXT DebugReportCallback;
+	//VERIFY_SUCCEEDED(vkCreateDebugReportCallbackEXT(Instance, &DebugReportCreateInfo, nullptr, &DebugReportCallback));
+
 #ifdef _DEBUG
 	std::cout << "CreateInstace" << COUT_OK << std::endl << std::endl;
 #endif
@@ -442,16 +470,16 @@ VkPhysicalDevice VK::EnumeratePhysicalDevice()
 
 #ifdef _DEBUG
 	std::cout << Yellow << "\t" << "PhysicalDevices" << White << std::endl;
-#define PHYSICAL_DEVICE_TYPE(entry) if(VK_PHYSICAL_DEVICE_TYPE_##entry == PhysicalDeviceProperties.deviceType) { std::cout << #entry << std::endl; }
+#define PHYSICAL_DEVICE_TYPE_ENTRY(entry) if(VK_PHYSICAL_DEVICE_TYPE_##entry == PhysicalDeviceProperties.deviceType) { std::cout << #entry << std::endl; }
 	for (const auto& i : PhysicalDevices) {
 		VkPhysicalDeviceProperties PhysicalDeviceProperties;
 		vkGetPhysicalDeviceProperties(i, &PhysicalDeviceProperties);
 		std::cout << "\t" << "\t" << PhysicalDeviceProperties.deviceName << " = ";
-		PHYSICAL_DEVICE_TYPE(OTHER);
-		PHYSICAL_DEVICE_TYPE(INTEGRATED_GPU);
-		PHYSICAL_DEVICE_TYPE(DISCRETE_GPU);
-		PHYSICAL_DEVICE_TYPE(VIRTUAL_GPU);
-		PHYSICAL_DEVICE_TYPE(CPU);
+		PHYSICAL_DEVICE_TYPE_ENTRY(OTHER);
+		PHYSICAL_DEVICE_TYPE_ENTRY(INTEGRATED_GPU);
+		PHYSICAL_DEVICE_TYPE_ENTRY(DISCRETE_GPU);
+		PHYSICAL_DEVICE_TYPE_ENTRY(VIRTUAL_GPU);
+		PHYSICAL_DEVICE_TYPE_ENTRY(CPU);
 		std::cout << std::endl;
 		PhysicalDeviceProperties.limits;
 
@@ -475,14 +503,14 @@ void VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
 
 #ifdef _DEBUG
 	std::cout << Yellow << "\t" << "QueueProperties" << White << std::endl;
-#define QUEUE_FLAG(entry) if(VK_QUEUE_##entry##_BIT & i.queueFlags) { std::cout << #entry << " | "; }
+#define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & i.queueFlags) { std::cout << #entry << " | "; }
 	//!< デバイスによっては転送専用キューを持つ、転送を多用する場合は専用キューを使用した方が良い
 	for (const auto& i : QueueProperties) {
-		std::cout << "\t" << "\t" << "QueueFlags = " << i.queueFlags << " = ";
-		QUEUE_FLAG(GRAPHICS);
-		QUEUE_FLAG(COMPUTE);
-		QUEUE_FLAG(TRANSFER);
-		QUEUE_FLAG(SPARSE_BINDING);
+		std::cout << "\t" << "\t" << "QueueFlags = ";
+		QUEUE_FLAG_ENTRY(GRAPHICS);
+		QUEUE_FLAG_ENTRY(COMPUTE);
+		QUEUE_FLAG_ENTRY(TRANSFER);
+		QUEUE_FLAG_ENTRY(SPARSE_BINDING);
 		std::cout << std::endl;
 	}
 #undef QUEUE_PROPS
@@ -637,9 +665,12 @@ void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice)
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, QueueFamilyIndex, Surface, &Supported));
 	assert(VK_TRUE == Supported && "vkGetPhysicalDeviceSurfaceSupportKHR failed");
 
+	//!< サーフェスの情報を取得
 	VkSurfaceCapabilitiesKHR SurfaceCapabilities;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PhysicalDevice, Surface, &SurfaceCapabilities));
+
 	const auto MinImageCount = (std::min)(SurfaceCapabilities.minImageCount + 1, SurfaceCapabilities.maxImageCount);
+
 	//!< イメージの幅と高さを覚えておく
 	ImageExtent = SurfaceCapabilities.currentExtent;
 	//!< サーフェスのサイズが未定義の場合は指定(ここではクライント矩形)。サーフェスのサイズが定義されている場合はそれに従わないとならない
@@ -647,8 +678,10 @@ void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice)
 		ImageExtent = { static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()) };
 	}
 #ifdef _DEBUG
-	std::cout << "\t" << "\t" << "ImageExtent " << ImageExtent.width << " x " << ImageExtent.height << std::endl;
+	std::cout << "\t" << "\t" << "ImageExtent = " << ImageExtent.width << " x " << ImageExtent.height << std::endl;
 #endif
+
+	//!< 
 	const auto PreTransform = (SurfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : SurfaceCapabilities.currentTransform;
 
 	//!< サーフェスのフォーマットを取得
@@ -657,9 +690,21 @@ void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice)
 	assert(SurfaceFormatCount);
 	std::vector<VkSurfaceFormatKHR> SurfaceFormats(SurfaceFormatCount);
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, Surface, &SurfaceFormatCount, SurfaceFormats.data()));
+
 	//!< 最初のサーフェスのフォーマットにする (VK_FORMAT_UNDEFINED の場合は VK_FORMAT_B8G8R8A8_UNORM)
 	const auto ImageFormat = (1 == SurfaceFormatCount && VK_FORMAT_UNDEFINED == SurfaceFormats[0].format) ? VK_FORMAT_B8G8R8A8_UNORM : SurfaceFormats[0].format;
 	const auto ImageColorSpace = SurfaceFormats[0].colorSpace;
+#ifdef _DEBUG
+	std::cout << "\t" << "\t" << "Format" << std::endl;
+	for (auto& i : SurfaceFormats) {
+		if (ImageFormat == i.format) {
+			std::cout << Yellow;
+		}
+		std::cout << "\t" << "\t" << "\t" << GetFormatString(i.format) << std::endl;
+		std::cout << White;
+	}
+	std::cout << std::endl;
+#endif
 
 	//!< プレゼントモードの取得
 	uint32_t PresentModeCount;
@@ -668,7 +713,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice)
 	std::vector<VkPresentModeKHR> PresentModes(PresentModeCount);
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, Surface, &PresentModeCount, PresentModes.data()));
 	VkPresentModeKHR PresentMode = VK_PRESENT_MODE_FIFO_KHR; //!< V-Syncを待つ
-	//!< レイテンシが低く、テアリングの無い MAILBOX を選択
+	//!< (選択できるなら)レイテンシが低く、テアリングの無い MAILBOX を選択
 	for (auto i : PresentModes) {
 		if (VK_PRESENT_MODE_MAILBOX_KHR == i) {
 			PresentMode = i;
@@ -678,6 +723,25 @@ void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice)
 			PresentMode = i;
 		}
 	}
+#ifdef _DEBUG
+	std::cout << "\t" << "Present Mode" << std::endl;
+#define VK_PRESENT_MODE_ENTRY(entry) case VK_PRESENT_MODE_##entry##_KHR: std::cout << "\t" << "\t" << #entry << std::endl; break;
+	for (auto i : PresentModes) {
+		if (PresentMode == i) {
+			std::cout << Yellow;
+		}
+		switch (i)
+		{
+		default: assert(0 && "Unknown VkPresentMode"); break;
+		VK_PRESENT_MODE_ENTRY(IMMEDIATE)
+		VK_PRESENT_MODE_ENTRY(MAILBOX)
+		VK_PRESENT_MODE_ENTRY(FIFO)
+		VK_PRESENT_MODE_ENTRY(FIFO_RELAXED)
+		}
+		std::cout << White;
+#undef VK_PRESENT_MODE_ENTRY
+	}
+#endif
 
 	auto OldSwapchain = Swapchain;
 	const VkSwapchainCreateInfoKHR SwapchainCreateInfo = {
@@ -712,7 +776,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice)
 
 #pragma region SwapchainImageIndex
 	assert(!PresentSemaphores.empty() && "PresentSemaphore is empty");
-	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphores[0], nullptr, &SwapchainImageIndex));
+	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphores[0], nullptr/*Fence*/, &SwapchainImageIndex));
 #ifdef _DEBUG
 	std::cout << "\t" << "Semaphore" << std::endl;
 	std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
@@ -736,6 +800,9 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat 
 		std::cout << "\t" << "SwapchainImage" << std::endl;
 	}
 #endif
+	for (auto& i : SwapchainImages) {
+		ImageBarrier(CommandBuffer, i, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+	}
 
 	for(auto i : SwapchainImages) {
 		SetImageLayout(CommandBuffer, i, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -1302,6 +1369,7 @@ void VK::WaitForFence()
 	VkResult Result;
 	const uint64_t TimeOut = 100000000;
 	do {
+		//!< リソース使用可能のシグナルまで待つ
 		Result = vkWaitForFences(Device, 1, &Fence, VK_TRUE, TimeOut);
 		if (VK_TIMEOUT == Result) {
 #ifdef _DEBUG
@@ -1311,6 +1379,7 @@ void VK::WaitForFence()
 	} while (VK_SUCCESS != Result);
 	VERIFY_SUCCEEDED(Result);
 
+	//!< シグナルをリセット
 	vkResetFences(Device, 1, &Fence);
 
 #ifdef _DEBUG

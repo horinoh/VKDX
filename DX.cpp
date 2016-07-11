@@ -24,11 +24,16 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	const auto ColorFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 	CreateDevice(hWnd, ColorFormat);
-	
+#ifdef _DEBUG
+	CheckFeatureLevel();
+	CheckMultiSample(DXGI_FORMAT_R8G8B8A8_UNORM);
+#endif
+
 	CreateCommandQueue();
 
 	CreateCommandAllocator();
-	CreateCommandList(CommandAllocators[0].Get());
+	auto CommandAllocator = CommandAllocators[0].Get();
+	CreateCommandList(CommandAllocator);
 
 	CreateFence();
 
@@ -45,8 +50,11 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateViewport();
 	CreatePipelineState();
 
-	CreateVertexBuffer(CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
-	CreateIndexBuffer(CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
+	auto CommandList = GraphicsCommandLists[0].Get();
+	CreateVertexBuffer(CommandAllocator, CommandList);
+	CreateIndexBuffer(CommandAllocator, CommandList);
+	WaitForFence();
+		
 	//CreateConstantBuffer();
 	//CreateUnorderedAccessTexture();
 
@@ -183,11 +191,6 @@ void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
 		VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(IID_PPV_ARGS(Adapter.GetAddressOf())));
 		VERIFY_SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(Device.GetAddressOf())));
 	}
-
-#ifdef _DEBUG
-	CheckFeatureLevel();
-	CheckMultiSample(DXGI_FORMAT_R8G8B8A8_UNORM);
-#endif
 
 #ifdef _DEBUG
 	std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
@@ -703,10 +706,8 @@ void DX::CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCo
 			CommandList->CopyBufferRegion(*Resource, 0, UploadResource.Get(), 0, Size);
 		} BarrierTransition(CommandList, *Resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
 	} VERIFY_SUCCEEDED(CommandList->Close());
-
 	ExecuteCommandList(CommandList);
-
-	WaitForFence();
+	//WaitForFence();
 }
 
 void DX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
