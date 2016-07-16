@@ -58,7 +58,8 @@ public:
 	static std::string GetFormatString(const DXGI_FORMAT Format);
 
 protected:
-	virtual void CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat);
+	virtual void CreateDevice(HWND hWnd);
+	virtual HRESULT CreateMaxFeatureLevelDevice(IDXGIAdapter* Adapter);
 	virtual void EnumAdapter(IDXGIFactory4* Factory);
 	virtual void EnumOutput(IDXGIAdapter* Adapter);
 	virtual void GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format);
@@ -72,18 +73,27 @@ protected:
 
 	virtual void CreateFence();
 
-	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT BufferCount = 2);
-	virtual void ResizeSwapChain();
+	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height, const UINT BufferCount = 2);
+	virtual void CreateSwapChainClientRect(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT BufferCount = 2) {
+		CreateSwapChain(hWnd, ColorFormat, static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), BufferCount);
+	}
+	virtual void CreateSwapChainDescriptorHeap();
+	virtual void ResetSwapChainResource();
+	virtual void CreateSwapChainResource();
+	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
+	virtual void ResizeSwapChainClientRect() { 
+		ResizeSwapChain(static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight())); 
+	}
 
 	virtual void CreateDepthStencil();
 	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
 
 	virtual void CreateShader();
-	
+
 	virtual void CreateRootSignature();
 
 	virtual void CreateInputLayout();
-	
+
 	virtual void CreateViewport();
 
 	virtual void CreatePipelineState() { CreateGraphicsPipelineState(); }
@@ -108,16 +118,16 @@ protected:
 
 protected:
 	Microsoft::WRL::ComPtr<ID3D12Device> Device;
+	std::vector<DXGI_SAMPLE_DESC> SampleDescs;
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> CommandQueue;
 
 	std::vector<Microsoft::WRL::ComPtr<ID3D12CommandAllocator>> CommandAllocators;
 	std::vector<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>> GraphicsCommandLists;
 
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain;
-	//Microsoft::WRL::ComPtr<IDXGISwapChain> SwapChain;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> SwapChainDescriptorHeap;
 	UINT CurrentBackBufferIndex;
 	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> SwapChainResources;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> SwapChainDescriptorHeap;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> DepthStencilResource;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DepthStencilDescriptorHeap;
@@ -149,6 +159,19 @@ protected:
 
 	Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
 	UINT64 FenceValue;
+
+protected:
+	const std::vector<D3D_FEATURE_LEVEL> FeatureLevels = {
+		D3D_FEATURE_LEVEL_12_1,
+		D3D_FEATURE_LEVEL_12_0,
+		D3D_FEATURE_LEVEL_11_1,
+		D3D_FEATURE_LEVEL_11_0,
+		D3D_FEATURE_LEVEL_10_1,
+		D3D_FEATURE_LEVEL_10_0,
+		D3D_FEATURE_LEVEL_9_3,
+		D3D_FEATURE_LEVEL_9_2,
+		D3D_FEATURE_LEVEL_9_1,
+	};
 };
 
 class DXExt : public DX

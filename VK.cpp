@@ -37,11 +37,9 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateSemaphore();
 
 	const auto ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
-	{
-		CreateSurface(hWnd, hInstance);
-		CreateSwapchain(PhysicalDevice);
-		CreateSwapchainImageView(CommandBuffers[0], ColorFormat);
-	}
+	CreateSurface(hWnd, hInstance);
+	CreateSwapchainClientRect(PhysicalDevice);
+	CreateSwapchainImageView(CommandBuffers[0], ColorFormat);
 
 	const auto DepthFormat = GetSupportedDepthFormat(PhysicalDevice);
 	{
@@ -503,7 +501,7 @@ void VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
 
 #ifdef _DEBUG
 	std::cout << Yellow << "\t" << "QueueProperties" << White << std::endl;
-#define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & i.queueFlags) { std::cout << #entry << " | "; }
+#define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & i.queueFlags) { std::cout << #entry << " | ; }
 	//!< デバイスによっては転送専用キューを持つ、転送を多用する場合は専用キューを使用した方が良い
 	for (const auto& i : QueueProperties) {
 		std::cout << "\t" << "\t" << "QueueFlags = ";
@@ -550,7 +548,7 @@ void VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
 #endif
 		}
 		else if (VK_QUEUE_TRANSFER_BIT & QueueProperties[i].queueFlags) {
-			//!< TODO 
+			//!< #TODO 
 			//!< デバイスによっては転送専用キューを持つ、転送を多用する場合は専用キューを使用した方が良い
 		}
 	}
@@ -659,7 +657,7 @@ void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
 #endif
 }
 
-void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice)
+void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice, const uint32_t Width, const uint32_t Height)
 {
 	VkBool32 Supported = VK_FALSE;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, QueueFamilyIndex, Surface, &Supported));
@@ -671,14 +669,15 @@ void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice)
 
 	const auto MinImageCount = (std::min)(SurfaceCapabilities.minImageCount + 1, SurfaceCapabilities.maxImageCount);
 
-	//!< イメージの幅と高さを覚えておく
+	//!< イメージのサイズを覚えておく
 	ImageExtent = SurfaceCapabilities.currentExtent;
-	//!< サーフェスのサイズが未定義の場合は指定(ここではクライント矩形)。サーフェスのサイズが定義されている場合はそれに従わないとならない
+	//!< サーフェスのサイズが未定義の場合は明示的に指定。サーフェスのサイズが定義されている場合はそれに従わないとならない
 	if (-1 == SurfaceCapabilities.currentExtent.width) {
-		ImageExtent = { static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()) };
+		ImageExtent = { Width, Height };
 	}
 #ifdef _DEBUG
-	std::cout << "\t" << "\t" << "ImageExtent = " << ImageExtent.width << " x " << ImageExtent.height << std::endl;
+	std::cout << "\t" << "\t" << Lightblue << "ImageExtent" << White << std::endl;
+	std::cout << "\t" << "\t" << "\t" << ImageExtent.width << " x " << ImageExtent.height << std::endl;
 #endif
 
 	//!< 
@@ -695,7 +694,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice)
 	const auto ImageFormat = (1 == SurfaceFormatCount && VK_FORMAT_UNDEFINED == SurfaceFormats[0].format) ? VK_FORMAT_B8G8R8A8_UNORM : SurfaceFormats[0].format;
 	const auto ImageColorSpace = SurfaceFormats[0].colorSpace;
 #ifdef _DEBUG
-	std::cout << "\t" << "\t" << "Format" << std::endl;
+	std::cout << "\t" << "\t" << Lightblue << "Format" << White << std::endl;
 	for (auto& i : SurfaceFormats) {
 		if (ImageFormat == i.format) {
 			std::cout << Yellow;

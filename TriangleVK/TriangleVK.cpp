@@ -462,7 +462,7 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 	//vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 	//vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-	//TODO
+	//!< #TODO
 #if 0
 	assert(!Framebuffers.empty());
 	assert(!ScissorRects.empty());

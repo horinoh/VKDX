@@ -68,7 +68,10 @@ protected:
 	virtual void CreateSemaphore();
 
 	virtual void CreateSurface(HWND hWnd, HINSTANCE hInstance);
-	virtual void CreateSwapchain(VkPhysicalDevice PhysicalDevice);
+	virtual void CreateSwapchain(VkPhysicalDevice PhysicalDevice, const uint32_t Width, const uint32_t Height);
+	virtual void CreateSwapchainClientRect(VkPhysicalDevice PhysicalDevice) {
+		CreateSwapchain(PhysicalDevice, static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
+	}
 	virtual void CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat ColorFormat);
 
 	virtual void CreateDepthStencilImage(const VkFormat DepthFormat);

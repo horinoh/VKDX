@@ -23,11 +23,8 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	Super::OnCreate(hWnd, hInstance);
 
 	const auto ColorFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
-	CreateDevice(hWnd, ColorFormat);
-#ifdef _DEBUG
-	CheckFeatureLevel();
-	CheckMultiSample(DXGI_FORMAT_R8G8B8A8_UNORM);
-#endif
+	CreateDevice(hWnd);
+	CheckMultiSample(ColorFormat);
 
 	CreateCommandQueue();
 
@@ -37,7 +34,9 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateFence();
 
-	CreateSwapChain(hWnd, ColorFormat);
+	CreateSwapChainClientRect(hWnd, ColorFormat);
+	CreateSwapChainDescriptorHeap();
+	//!< ResizeSwapChain() で SwapChainResources が作られる、明示的にしなくても OnSize() からコールされる
 
 	CreateDepthStencil();
 
@@ -76,10 +75,11 @@ void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 	WaitForFence();
 
 	const auto CommandList = GraphicsCommandLists[0].Get();
+	const auto CommandAllocator = CommandAllocators[0].Get();
 
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocators[0].Get(), nullptr));
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr));
 	{		
-		ResizeSwapChain();
+		ResizeSwapChainClientRect();
 		ResizeDepthStencil();
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
@@ -146,7 +146,7 @@ std::string DX::GetFormatString(const DXGI_FORMAT Format)
 #undef DXGI_FORMAT_CASE
 }
 
-void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
+void DX::CreateDevice(HWND hWnd)
 {
 	using namespace Microsoft::WRL;
 
@@ -156,6 +156,7 @@ void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
 	Debug->EnableDebugLayer();
 #endif
 
+	//!< WARP アダプタを作成するのに IDXGIFactory4(のEnumWarpAdapter) が必要
 	ComPtr<IDXGIFactory4> Factory;
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.GetAddressOf())));
 #ifdef _DEBUG
@@ -181,27 +182,46 @@ void DX::CreateDevice(HWND hWnd, const DXGI_FORMAT ColorFormat)
 #ifdef _DEBUG
 	DXGI_ADAPTER_DESC AdapterDesc;
 	VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
-	std::wcout << "\t[ " << Yellow << AdapterDesc.Description << White << " ]" << std::endl;
+	std::cout << Lightblue << "Adapter" << White << std::endl;
+	std::wcout << "\t" << Yellow << AdapterDesc.Description << White << std::endl;
 #endif
-
-	if (FAILED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(Device.GetAddressOf())))) {
+	
+	if (FAILED(CreateMaxFeatureLevelDevice(Adapter.Get()))) {
 #ifdef _DEBUG
 		std::cout << "\t" << Red << "Cannot create device, trying to create WarpDevice ..." << White << std::endl;
 #endif
+		//!< WARP : Win7以下だと D3D_FEATURE_LEVEL_10_1 まで、Win8以上だと D3D_FEATURE_LEVEL_11_1 までサポート
 		VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(IID_PPV_ARGS(Adapter.GetAddressOf())));
-		VERIFY_SUCCEEDED(D3D12CreateDevice(Adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(Device.GetAddressOf())));
+		VERIFY_SUCCEEDED(CreateMaxFeatureLevelDevice(Adapter.Get()));
 	}
 
 #ifdef _DEBUG
 	std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
 #endif
+
+#ifdef _DEBUG
+		CheckFeatureLevel();
+#endif
+}
+HRESULT DX::CreateMaxFeatureLevelDevice(IDXGIAdapter* Adapter)
+{
+	D3D_FEATURE_LEVEL FeatureLevel = D3D_FEATURE_LEVEL_9_1;
+	for (const auto i : FeatureLevels) {
+		if (SUCCEEDED(D3D12CreateDevice(Adapter, i, _uuidof(ID3D12Device), nullptr))) {
+			FeatureLevel = i;
+			break;
+		}
+	}
+	return D3D12CreateDevice(Adapter, FeatureLevel, IID_PPV_ARGS(Device.GetAddressOf()));
 }
 
 //!< アダプタ(GPU)の列挙
 void DX::EnumAdapter(IDXGIFactory4* Factory)
 {
 	using namespace Microsoft::WRL;
-	
+#ifdef _DEBUG
+	std::cout << Lightblue << "ADAPTERS" << White << std::endl;
+#endif
 	ComPtr<IDXGIAdapter> Adapter;
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, Adapter.ReleaseAndGetAddressOf()); ++i) {
 		DXGI_ADAPTER_DESC AdapterDesc;
@@ -227,7 +247,10 @@ void DX::EnumOutput(IDXGIAdapter* Adapter)
 #ifdef _DEBUG
 		const auto Width = OutputDesc.DesktopCoordinates.right - OutputDesc.DesktopCoordinates.left;
 		const auto Height = OutputDesc.DesktopCoordinates.bottom - OutputDesc.DesktopCoordinates.top;
-		std::wcout << "\t" << "\t" << "\t" << OutputDesc.DeviceName << " = " << Width << " x " << Height << std::endl;
+		if (0 == i) {
+			std::cout << Lightblue << "\t" << "OUTPUTS" << White << std::endl;
+		}
+		std::wcout << "\t" << "\t" << OutputDesc.DeviceName << " = " << Width << " x " << Height << std::endl;
 #endif
 
 		GetDisplayModeList(Output.Get(), DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -240,11 +263,15 @@ void DX::GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format)
 	UINT NumModes;
 	VERIFY_SUCCEEDED(Output->GetDisplayModeList(Format, 0, &NumModes, nullptr));
 	if (NumModes) {
+#ifdef _DEBUG
+		std::cout << Lightblue << "\t" << "\t" << "MODES" << White << std::endl;
+#endif
 		std::vector<DXGI_MODE_DESC> ModeDescs(NumModes);
 		VERIFY_SUCCEEDED(Output->GetDisplayModeList(Format, 0, &NumModes, ModeDescs.data()));
 #ifdef _DEBUG
 		for (const auto& i : ModeDescs) {
-			std::wcout << "\t" << "\t" << "\t" << "\t" << i.Width << " x " << i.Height << " @ " << i.RefreshRate.Numerator / i.RefreshRate.Denominator << std::endl;
+			//!< #TODO : DXGI_MODE_DESC を覚えておいて選択できるようにする？
+			std::wcout << "\t" << "\t" << "\t" << i.Width << " x " << i.Height << " @ " << i.RefreshRate.Numerator / i.RefreshRate.Denominator << std::endl;
 		}
 #endif
 	}
@@ -252,24 +279,13 @@ void DX::GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format)
 
 void DX::CheckFeatureLevel()
 {
-	const std::vector<D3D_FEATURE_LEVEL> FeatureLevels = {
-		D3D_FEATURE_LEVEL_12_1,
-		D3D_FEATURE_LEVEL_12_0,
-		D3D_FEATURE_LEVEL_11_1,
-		D3D_FEATURE_LEVEL_11_0,
-		D3D_FEATURE_LEVEL_10_1,
-		D3D_FEATURE_LEVEL_10_0,
-		D3D_FEATURE_LEVEL_9_3,
-		D3D_FEATURE_LEVEL_9_2,
-		D3D_FEATURE_LEVEL_9_1,
-	};
 	D3D12_FEATURE_DATA_FEATURE_LEVELS DataFeatureLevels = {
 		static_cast<UINT>(FeatureLevels.size()), FeatureLevels.data()
 	};
 	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, reinterpret_cast<void*>(&DataFeatureLevels), sizeof(DataFeatureLevels)));
 #ifdef _DEBUG
-	std::cout << "\t" << "\t" << "MaxSupportedFeatureLevel = ";
-#define D3D_FEATURE_LEVEL_ENTRY(fl) case D3D_FEATURE_LEVEL_##fl: std::cout << "D3D_FEATURE_LEVEL_" #fl << std::endl; break;
+	std::cout << Lightblue << "MaxSupportedFeatureLevel" << White << std::endl;
+#define D3D_FEATURE_LEVEL_ENTRY(fl) case D3D_FEATURE_LEVEL_##fl: std::cout << Yellow << "\t" << "D3D_FEATURE_LEVEL_" #fl << White << std::endl; break;
 	switch (DataFeatureLevels.MaxSupportedFeatureLevel) {
 	default: assert(0 && "Unknown FeatureLevel"); break;
 	D3D_FEATURE_LEVEL_ENTRY(12_1)
@@ -289,9 +305,11 @@ void DX::CheckFeatureLevel()
 void DX::CheckMultiSample(const DXGI_FORMAT Format)
 {
 #ifdef _DEBUG
-	std::cout << "\t" << "\t" << "MultiSample" << std::endl;
-	std::cout << "\t" << "\t" << "\t" << "Format = " << GetFormatString(Format) << std::endl;
+	std::cout << Lightblue << "MultiSample" << White << std::endl;
+	std::cout << "\t" << GetFormatString(Format) << std::endl;
 #endif
+
+	SampleDescs.clear();
 	for (UINT i = 1; i < D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT; ++i) {
 		D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS DataMultiSampleQaualityLevels = {
 			Format,
@@ -299,9 +317,22 @@ void DX::CheckMultiSample(const DXGI_FORMAT Format)
 			D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE,
 		};
 		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, reinterpret_cast<void*>(&DataMultiSampleQaualityLevels), sizeof(DataMultiSampleQaualityLevels)));
+		//!< 1 > NumQualityLevels の場合はサポートされていない
+		if (DataMultiSampleQaualityLevels.NumQualityLevels) {
+			const DXGI_SAMPLE_DESC SampleDesc = {
+				DataMultiSampleQaualityLevels.SampleCount,
+				DataMultiSampleQaualityLevels.NumQualityLevels - 1
+			}; 
+			SampleDescs.push_back(SampleDesc);
 #ifdef _DEBUG
-		std::cout << "\t" << "\t" << "\t" << "Count, QualityLevels = " << DataMultiSampleQaualityLevels.SampleCount << ", " << DataMultiSampleQaualityLevels.NumQualityLevels << std::endl;
+			std::cout << "\t" << "Count = " << SampleDesc.Count << ", ";
+			std::cout << "Quality = ";
+			for (UINT i = 0; i <= SampleDesc.Quality; ++i) {
+				std::cout << (i ? ", " : "") << i;
+			}
+			std::cout << std::endl;
 #endif
+		}
 	}
 }
 
@@ -321,7 +352,7 @@ void DX::CreateCommandQueue()
 }
 
 /**
-@note コマンドアロケータに複数のコマンドリストを作成できるが、コマンドリストは同時には記録できない (Close()しないとダメ)
+@note コマンドアロケータに対し複数のコマンドリストを作成できるが、コマンドリストは同時には記録できない (Close()しないとダメ)
 @note CommandList->ExecuteCommandList() 後 GPU が CommandAllocator の参照を終えるまで、CommandAllocator->Reset() してはいけない
 */
 void DX::CreateCommandAllocator(const D3D12_COMMAND_LIST_TYPE CommandListType)
@@ -359,7 +390,7 @@ void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const D3D12
 }
 
 /**
-@brief CPU と GPU の同期
+@brief CPU と GPU の同期用
 */
 void DX::CreateFence()
 {
@@ -370,26 +401,23 @@ void DX::CreateFence()
 #endif
 }
 
-/**
-@brief DXGISwapChain と ID3D12DescriptorHeap の作成
-*/
-void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT BufferCount)
+void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height, const UINT BufferCount)
 {
 	using namespace Microsoft::WRL;
 
 	ComPtr<IDXGIFactory4> Factory;
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.GetAddressOf())));
 
-	//!< TODO ModeDesc を DisplayMode の列挙から拾ってくるようにする？
+	//!< #TODO : GetDisplayModeList() で DXGI_MODE_DESC を覚えておく？
 	const DXGI_RATIONAL Rational = { 60, 1 };
 	const DXGI_MODE_DESC ModeDesc = {
-		static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
+		Width, Height,
 		Rational,
 		ColorFormat,
 		DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
 		DXGI_MODE_SCALING_UNSPECIFIED
 	}; 
-	const DXGI_SAMPLE_DESC SampleDesc = { 1/*4*/, 0 };
+	const auto& SampleDesc = SampleDescs[0];
 	DXGI_SWAP_CHAIN_DESC SwapChainDesc = {
 		ModeDesc,
 		SampleDesc,
@@ -398,55 +426,49 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Bu
 		hWnd,
 		TRUE,
 		DXGI_SWAP_EFFECT_FLIP_DISCARD,
-		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
+		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH //!< フルスクリーンにした時、最適なディスプレイモードが選択されるのを許可
 	};
-	ComPtr<IDXGISwapChain> SC;
-	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.Get(), &SwapChainDesc, SC.GetAddressOf()));
-	SwapChain.Reset();
-	VERIFY_SUCCEEDED(SC.As(&SwapChain));
+	//!< セッティングを変更してスワップチェインを再作成できるように、既存のを解放している
+	SwapChain.Reset(); 
+	ComPtr<IDXGISwapChain> NewSwapChain;
+	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.Get(), &SwapChainDesc, NewSwapChain.GetAddressOf()));
+	VERIFY_SUCCEEDED(NewSwapChain.As(&SwapChain));
 #ifdef _DEBUG
 	std::cout << "\t" << "SwapChain" << std::endl;
-#endif
-
-	const D3D12_DESCRIPTOR_HEAP_DESC DescripterHeapDesc = {
-		D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-		BufferCount,
-		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-		0 // NodeMask ... マルチGPUの場合
-	};
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescripterHeapDesc, IID_PPV_ARGS(SwapChainDescriptorHeap.GetAddressOf())));
-#ifdef _DEBUG
-	std::cout << "\t" << "SwapChainDescriptorHeap" << std::endl;
 #endif
 
 #ifdef _DEBUG
 	std::cout << "CreateSwapChain" << COUT_OK << std::endl << std::endl;
 #endif
 }
-/**
-@brief DXGISwapChain のリサイズ
-*/
-void DX::ResizeSwapChain()
+void DX::CreateSwapChainDescriptorHeap()
 {
 	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
 	SwapChain->GetDesc1(&SwapChainDesc);
 
-	for (auto& i : SwapChainResources) { 
+	const D3D12_DESCRIPTOR_HEAP_DESC DescripterHeapDesc = {
+		D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+		SwapChainDesc.BufferCount,
+		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+		0 // NodeMask ... マルチGPUの場合s
+	};
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescripterHeapDesc, IID_PPV_ARGS(SwapChainDescriptorHeap.GetAddressOf())));
+
+#ifdef _DEBUG
+	std::cout << "\t" << "SwapChainDescriptorHeap" << std::endl;
+#endif
+}
+
+void DX::ResetSwapChainResource()
+{
+	for (auto& i : SwapChainResources) {
 		i.Reset();
 	}
-
-	VERIFY_SUCCEEDED(SwapChain->ResizeBuffers(SwapChainDesc.BufferCount,
-		static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
-		SwapChainDesc.Format,
-		SwapChainDesc.Flags));
-#ifdef _DEBUG
-	std::cout << "\t" << "ResizeBuffers" << std::endl;
-#endif
-
-	CurrentBackBufferIndex = SwapChain->GetCurrentBackBufferIndex();
-#ifdef _DEBUG
-	std::cout << "\t" << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;
-#endif
+}
+void DX::CreateSwapChainResource()
+{
+	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
+	SwapChain->GetDesc1(&SwapChainDesc);
 
 	auto CpuDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -458,19 +480,36 @@ void DX::ResizeSwapChain()
 	//	{ 0, 0 }
 	//};
 	SwapChainResources.resize(SwapChainDesc.BufferCount);
-	for (UINT i = 0; i < SwapChainResources.size(); ++i) {
-		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, IID_PPV_ARGS(SwapChainResources[i].GetAddressOf())));
-		//Device->CreateRenderTargetView(SwapChainResources[i].Get(), &RenderTargetViewDesc, CpuDescriptorHandle);
-		Device->CreateRenderTargetView(SwapChainResources[i].Get(), nullptr, CpuDescriptorHandle);
+	for (auto It = SwapChainResources.begin(); It != SwapChainResources.end(); ++It) {
+		const auto Index = static_cast<UINT>(std::distance(SwapChainResources.begin(), It));
+		VERIFY_SUCCEEDED(SwapChain->GetBuffer(Index, IID_PPV_ARGS(It->GetAddressOf())));
+		//Device->CreateRenderTargetView(It->Get(), &RenderTargetViewDesc, CpuDescriptorHandle);
+		Device->CreateRenderTargetView(It->Get(), nullptr, CpuDescriptorHandle);
 		CpuDescriptorHandle.ptr += IncrementSize;
 	}
-#ifdef _DEBUG
-	std::cout << "\t" << "RenderTargetView" << std::endl;
-#endif
 
 #ifdef _DEBUG
-	std::cout << "ResizeSwapChain" << COUT_OK << std::endl << std::endl;
+	std::cout << "\t" << "SwapChainResource" << std::endl;
 #endif
+}
+
+void DX::ResizeSwapChain(const UINT Width, const UINT Height)
+{
+	ResetSwapChainResource();
+
+	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
+	SwapChain->GetDesc1(&SwapChainDesc);
+	VERIFY_SUCCEEDED(SwapChain->ResizeBuffers(SwapChainDesc.BufferCount, Width, Height, SwapChainDesc.Format, SwapChainDesc.Flags));
+#ifdef _DEBUG
+	std::cout << "\t" << "ResizeBuffers" << std::endl;
+#endif
+
+	CurrentBackBufferIndex = SwapChain->GetCurrentBackBufferIndex();
+#ifdef _DEBUG
+	std::cout << "\t" << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;
+#endif
+
+	CreateSwapChainResource();
 }
 
 void DX::CreateDepthStencil()
@@ -502,7 +541,7 @@ void DX::ResizeDepthStencil(const DXGI_FORMAT DepthFormat)
 		1,
 		1
 	};
-	const DXGI_SAMPLE_DESC SampleDesc = { 1/*4*/, 0 };
+	const auto& SampleDesc = SampleDescs[0];
 	const D3D12_RESOURCE_DESC ResourceDesc = {
 		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
 		0,
@@ -779,10 +818,10 @@ void DX::CreateConstantBuffer()
 	};
 	Device->CreateConstantBufferView(&ConstantBufferViewDesc, ConstantBufferDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
-	//!< TODO コンスタントバッファの更新
+	//!< #TODO コンスタントバッファの更新
 	//BYTE* Data;
 	//VERIFY_SUCCEEDED(ConstantBufferResource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
-	//	memcpy(Data, nullptr/*TODO*/, CBSize);
+	//	memcpy(Data, nullptr/*#TODO*/, CBSize);
 	//} ConstantBufferResource->Unmap(0, nullptr);
 
 #ifdef _DEBUG
