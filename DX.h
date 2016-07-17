@@ -85,8 +85,13 @@ protected:
 		ResizeSwapChain(static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight())); 
 	}
 
-	virtual void CreateDepthStencil();
-	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
+	virtual void CreateDepthStencilDescriptorHeap();
+	virtual void ResetDepthStencilResource();
+	virtual void CreateDepthStencilResource(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
+	virtual void ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
+	virtual void ResizeDepthStencilClientRect(const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT) {
+		ResizeDepthStencil(static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), DepthFormat);
+	}
 
 	virtual void CreateShader();
 

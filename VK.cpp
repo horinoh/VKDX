@@ -30,8 +30,9 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	GetDeviceQueue(Device, QueueFamilyIndex);
 	
+	auto CommandPool = CommandPools[0];
 	CreateCommandPool(QueueFamilyIndex);
-	CreateCommandBuffer(CommandPools[0]);
+	CreateCommandBuffer(CommandPool);
 	
 	CreateFence();
 	CreateSemaphore();
@@ -39,13 +40,14 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	const auto ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 	CreateSurface(hWnd, hInstance);
 	CreateSwapchainClientRect(PhysicalDevice);
-	CreateSwapchainImageView(CommandBuffers[0], ColorFormat);
+	auto CommandBuffer = CommandBuffers[0];
+	CreateSwapchainImageView(CommandBuffer, ColorFormat);
 
 	const auto DepthFormat = GetSupportedDepthFormat(PhysicalDevice);
 	{
 		CreateDepthStencilImage(DepthFormat);
 		CreateDepthStencilDeviceMemory(PhysicalDeviceMemoryProperties);
-		CreateDepthStencilView(CommandBuffers[0], DepthFormat);
+		CreateDepthStencilView(CommandBuffer, DepthFormat);
 	}
 
 	CreateShader();
@@ -66,8 +68,8 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreatePipeline();
 	CreateFramebuffer();
 
-	CreateVertexBuffer(CommandPools[0], PhysicalDeviceMemoryProperties);
-	CreateIndexBuffer(CommandPools[0], PhysicalDeviceMemoryProperties);
+	CreateVertexBuffer(CommandPool, PhysicalDeviceMemoryProperties);
+	CreateIndexBuffer(CommandPool, PhysicalDeviceMemoryProperties);
 	CreateUniformBuffer(PhysicalDeviceMemoryProperties);
 
 #ifdef _DEBUG
@@ -501,7 +503,7 @@ void VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
 
 #ifdef _DEBUG
 	std::cout << Yellow << "\t" << "QueueProperties" << White << std::endl;
-#define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & i.queueFlags) { std::cout << #entry << " | ; }
+#define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & i.queueFlags) { std::cout << #entry << " | "; }
 	//!< デバイスによっては転送専用キューを持つ、転送を多用する場合は専用キューを使用した方が良い
 	for (const auto& i : QueueProperties) {
 		std::cout << "\t" << "\t" << "QueueFlags = ";
@@ -680,7 +682,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice, const uint32_t Width, 
 	std::cout << "\t" << "\t" << "\t" << ImageExtent.width << " x " << ImageExtent.height << std::endl;
 #endif
 
-	//!< 
+	//!< サーフェスを回転、反転させるかどうか。回転させない VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR を指定
 	const auto PreTransform = (SurfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : SurfaceCapabilities.currentTransform;
 
 	//!< サーフェスのフォーマットを取得
@@ -711,7 +713,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice, const uint32_t Width, 
 	assert(PresentModeCount);
 	std::vector<VkPresentModeKHR> PresentModes(PresentModeCount);
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, Surface, &PresentModeCount, PresentModes.data()));
-	VkPresentModeKHR PresentMode = VK_PRESENT_MODE_FIFO_KHR; //!< V-Syncを待つ
+	VkPresentModeKHR PresentMode = VK_PRESENT_MODE_FIFO_KHR;
 	//!< (選択できるなら)レイテンシが低く、テアリングの無い MAILBOX を選択
 	for (auto i : PresentModes) {
 		if (VK_PRESENT_MODE_MAILBOX_KHR == i) {
@@ -723,7 +725,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice, const uint32_t Width, 
 		}
 	}
 #ifdef _DEBUG
-	std::cout << "\t" << "Present Mode" << std::endl;
+	std::cout << "\t" << Lightblue << "Present Mode" << White << std::endl;
 #define VK_PRESENT_MODE_ENTRY(entry) case VK_PRESENT_MODE_##entry##_KHR: std::cout << "\t" << "\t" << #entry << std::endl; break;
 	for (auto i : PresentModes) {
 		if (PresentMode == i) {
@@ -732,9 +734,9 @@ void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice, const uint32_t Width, 
 		switch (i)
 		{
 		default: assert(0 && "Unknown VkPresentMode"); break;
-		VK_PRESENT_MODE_ENTRY(IMMEDIATE)
-		VK_PRESENT_MODE_ENTRY(MAILBOX)
-		VK_PRESENT_MODE_ENTRY(FIFO)
+		VK_PRESENT_MODE_ENTRY(IMMEDIATE) //!< VSync を待たない、テアリング
+		VK_PRESENT_MODE_ENTRY(MAILBOX)   //!< V-Syncを待つ
+		VK_PRESENT_MODE_ENTRY(FIFO)		 //!< V-Syncを待つ、レイテンシが低い
 		VK_PRESENT_MODE_ENTRY(FIFO_RELAXED)
 		}
 		std::cout << White;
@@ -742,6 +744,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice, const uint32_t Width, 
 	}
 #endif
 
+	//!< セッティングを変更してスワップチェインを再作成できるように、既存のを開放する (開放するために一旦 OldSwapchainに覚えておく)
 	auto OldSwapchain = Swapchain;
 	const VkSwapchainCreateInfoKHR SwapchainCreateInfo = {
 		VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,

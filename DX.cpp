@@ -38,7 +38,8 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateSwapChainDescriptorHeap();
 	//!< ResizeSwapChain() で SwapChainResources が作られる、明示的にしなくても OnSize() からコールされる
 
-	CreateDepthStencil();
+	CreateDepthStencilDescriptorHeap();
+	//!< ResizeDepthStencil() で DepthStencilResource が作られる、明示的にしなくても OnSize() からコールされる
 
 	CreateShader();
 
@@ -80,7 +81,7 @@ void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr));
 	{		
 		ResizeSwapChainClientRect();
-		ResizeDepthStencil();
+		ResizeDepthStencilClientRect();
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 
@@ -428,7 +429,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 		DXGI_SWAP_EFFECT_FLIP_DISCARD,
 		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH //!< フルスクリーンにした時、最適なディスプレイモードが選択されるのを許可
 	};
-	//!< セッティングを変更してスワップチェインを再作成できるように、既存のを解放している
+	//!< セッティングを変更してスワップチェインを再作成できるように、既存のを開放している
 	SwapChain.Reset(); 
 	ComPtr<IDXGISwapChain> NewSwapChain;
 	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.Get(), &SwapChainDesc, NewSwapChain.GetAddressOf()));
@@ -450,7 +451,7 @@ void DX::CreateSwapChainDescriptorHeap()
 		D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
 		SwapChainDesc.BufferCount,
 		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-		0 // NodeMask ... マルチGPUの場合s
+		0 // NodeMask ... マルチGPUの場合
 	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescripterHeapDesc, IID_PPV_ARGS(SwapChainDescriptorHeap.GetAddressOf())));
 
@@ -473,17 +474,14 @@ void DX::CreateSwapChainResource()
 	auto CpuDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-	//!< ミップレベル0のすべてのリソースにアクセスする場合は省略(nullptr)可能
-	//const D3D12_RENDER_TARGET_VIEW_DESC RenderTargetViewDesc = {
-	//	SwapChainDesc.Format,
-	//	D3D12_RTV_DIMENSION_TEXTURE2D,
-	//	{ 0, 0 }
-	//};
 	SwapChainResources.resize(SwapChainDesc.BufferCount);
 	for (auto It = SwapChainResources.begin(); It != SwapChainResources.end(); ++It) {
 		const auto Index = static_cast<UINT>(std::distance(SwapChainResources.begin(), It));
+		//!< スワップチェインのバッファリソースを SwapChainResources へ取得
 		VERIFY_SUCCEEDED(SwapChain->GetBuffer(Index, IID_PPV_ARGS(It->GetAddressOf())));
-		//Device->CreateRenderTargetView(It->Get(), &RenderTargetViewDesc, CpuDescriptorHandle);
+
+		//!< レンダーターゲットビューの作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
+		//!< (リソースがタイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能)
 		Device->CreateRenderTargetView(It->Get(), nullptr, CpuDescriptorHandle);
 		CpuDescriptorHandle.ptr += IncrementSize;
 	}
@@ -492,7 +490,6 @@ void DX::CreateSwapChainResource()
 	std::cout << "\t" << "SwapChainResource" << std::endl;
 #endif
 }
-
 void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 {
 	ResetSwapChainResource();
@@ -510,11 +507,14 @@ void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 #endif
 
 	CreateSwapChainResource();
+
+#ifdef _DEBUG
+	std::cout << "ResizeSwapChain" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
-void DX::CreateDepthStencil()
+void DX::CreateDepthStencilDescriptorHeap()
 {
-#if 0
 	const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
 		D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
 		1,
@@ -525,27 +525,31 @@ void DX::CreateDepthStencil()
 #ifdef _DEBUG
 	std::cout << "\t" << "DepthStencilDescriptorHeap" << std::endl;
 #endif
-#endif
 
 #ifdef _DEBUG
 	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void DX::ResizeDepthStencil(const DXGI_FORMAT DepthFormat)
+
+void DX::ResetDepthStencilResource()
 {
-#if 0
+	DepthStencilResource.Reset();
+}
+void DX::CreateDepthStencilResource(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat)
+{
+	//!< リソースの作成
 	const D3D12_HEAP_PROPERTIES HeapProperties = {
-		D3D12_HEAP_TYPE_DEFAULT,
+		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
 		1,
 		1
 	};
-	const auto& SampleDesc = SampleDescs[0];
+	const auto& SampleDesc = SampleDescs[0]; //!< レンダーターゲットのものと一致すること
 	const D3D12_RESOURCE_DESC ResourceDesc = {
 		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
 		0,
-		static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
+		Width, Height,
 		1,
 		1,
 		DepthFormat,
@@ -553,7 +557,7 @@ void DX::ResizeDepthStencil(const DXGI_FORMAT DepthFormat)
 		D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
 	};
-	//!< ClearValue を指定しない場合は nullptr にできる
+	//!< 一致するクリア値なら最適化されるのでよく使うクリア値を指定しておく
 	const D3D12_CLEAR_VALUE ClearValue = {
 		DepthFormat,
 		{ 1.0f, 0 }
@@ -561,35 +565,34 @@ void DX::ResizeDepthStencil(const DXGI_FORMAT DepthFormat)
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,
-		D3D12_RESOURCE_STATE_DEPTH_WRITE,
-		nullptr, //&ClearValue, 
+		D3D12_RESOURCE_STATE_COMMON, //!< COMMON にすること
+		&ClearValue,
 		IID_PPV_ARGS(DepthStencilResource.ReleaseAndGetAddressOf())));
-#ifdef _DEBUG
-	std::cout << "\t" << "CommittedResource" << std::endl;
-#endif
 
 	auto CpuDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	//const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV); //!< ここでは必要ないが一応
 
-	const D3D12_DEPTH_STENCIL_VIEW_DESC DepthStencilViewDesc = {
-		DepthFormat,
-		D3D12_DSV_DIMENSION_TEXTURE2D,
-		D3D12_DSV_FLAG_NONE,
-		{ 0 }
-	};
-	//!< DepthFormat が具体的なフォーマットであれば(TYPELESS でなければ) DepthStencilViewDesc に nullptr を指定できる
-	Device->CreateDepthStencilView(DepthStencilResource.Get(), 
-		nullptr,//&DepthStencilViewDesc
-		CpuDescriptorHandle);
-	//CpuDescriptorHandle.ptr += IncrementSize;
+	//!< デプスステンシルビューの作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
+	//!< (リソースがタイプドフォーマットなら D3D12_DEPTH_STENCIL_VIEW_DESC* へ nullptr 指定可能)
+	Device->CreateDepthStencilView(DepthStencilResource.Get(), nullptr, CpuDescriptorHandle);
+	CpuDescriptorHandle.ptr += IncrementSize; //!< ここでは必要ないが一応
+
 #ifdef _DEBUG
 	std::cout << "\t" << "DepthStencilView" << std::endl;
 #endif
 
+	//!< リソースの状態を初期 → デプスへ変更
 	auto CommandList = GraphicsCommandLists[0];
-
 	BarrierTransition(CommandList.Get(), DepthStencilResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+
+#ifdef _DEBUG
+	std::cout << "CreateDepthStencilResource" << COUT_OK << std::endl << std::endl;
 #endif
+}
+void DX::ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat)
+{
+	ResetDepthStencilResource();
+	CreateDepthStencilResource(Width, Height, DepthFormat);
 
 #ifdef _DEBUG
 	std::cout << "ResizeDepthStencil" << COUT_OK << std::endl << std::endl;
