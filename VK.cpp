@@ -30,8 +30,8 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	GetDeviceQueue(Device, QueueFamilyIndex);
 	
-	auto CommandPool = CommandPools[0];
 	CreateCommandPool(QueueFamilyIndex);
+	auto CommandPool = CommandPools[0];
 	CreateCommandBuffer(CommandPool);
 	
 	CreateFence();
