@@ -380,7 +380,6 @@ void VKExt::CreateFramebuffer_ColorDepth()
 
 void VKExt::Clear_Color(const VkCommandBuffer CommandBuffer)
 {
-	const VkClearColorValue SkyBlue = { 0.529411793f, 0.807843208f, 0.921568692f, 1.0f };
 	const std::vector<VkImageSubresourceRange> ImageSubresourceRanges_Color = {
 		{
 			VK_IMAGE_ASPECT_COLOR_BIT,
@@ -391,7 +390,7 @@ void VKExt::Clear_Color(const VkCommandBuffer CommandBuffer)
 	vkCmdClearColorImage(CommandBuffer,
 		SwapchainImages[SwapchainImageIndex],
 		VK_IMAGE_LAYOUT_GENERAL,//VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		&SkyBlue,
+		&Colors::SkyBlue,
 		static_cast<uint32_t>(ImageSubresourceRanges_Color.size()), ImageSubresourceRanges_Color.data());
 }
 void VKExt::Clear_Depth(const VkCommandBuffer CommandBuffer)

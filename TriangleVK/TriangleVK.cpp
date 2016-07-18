@@ -235,7 +235,7 @@ void TriangleVK::CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhy
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 
-	CreateBuffer(CommandPool, PhysicalDeviceMemoryProperties, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VertexBuffer, VertexDeviceMemory, Vertices.data(), Size);
+	CreateBuffer(CommandPool, PhysicalDeviceMemoryProperties, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, &VertexBuffer, &VertexDeviceMemory, Vertices.data(), Size);
 
 #ifdef _DEBUG
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
@@ -251,7 +251,7 @@ void TriangleVK::CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhys
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 	
-	CreateBuffer(CommandPool, PhysicalDeviceMemoryProperties, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, IndexBuffer, IndexDeviceMemory, Indices.data(), Size);
+	CreateBuffer(CommandPool, PhysicalDeviceMemoryProperties, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, &IndexBuffer, &IndexDeviceMemory, Indices.data(), Size);
 
 #ifdef _DEBUG
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
@@ -262,12 +262,11 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 	Super::PopulateCommandBuffer(CommandBuffer);
 
 	//!< #TODO
-#if 0
 	assert(!Framebuffers.empty());
 	assert(!ScissorRects.empty());
 
 	const std::vector<VkClearValue> ClearValues = {
-		{ 0.5f, 0.5f, 1.0f, 1.0f }, { 1.0f, 0 }
+		{ Colors::SkyBlue }, { 1.0f, 0 }
 	};
 	const VkRenderPassBeginInfo RenderPassBeginInfo = {
 		VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -278,7 +277,9 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
 	};
 	vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
-		//vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout, 0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
+		if (!DescriptorSets.empty()) {
+			vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout, 0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
+		}
 
 		//!< トポロジは Pipeline - VkPipelineInputAssemblyStateCreateInfo で指定しているのでパイプラインをバインド
 		vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
@@ -290,6 +291,5 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
 
 	} vkCmdEndRenderPass(CommandBuffer);
-#endif
 }
 #pragma endregion

@@ -773,14 +773,11 @@ void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice, const uint32_t Width, 
 		vkDestroySwapchainKHR(Device, OldSwapchain, nullptr);
 	}
 
-#pragma region SwapchainImageIndex
 	assert(!PresentSemaphores.empty() && "PresentSemaphore is empty");
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphores[0], nullptr/*Fence*/, &SwapchainImageIndex));
 #ifdef _DEBUG
-	std::cout << "\t" << "Semaphore" << std::endl;
 	std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
 #endif
-#pragma endregion
 
 #ifdef _DEBUG
 	std::cout << "CreateSwapchain" << COUT_OK << std::endl << std::endl;
@@ -1092,7 +1089,7 @@ void VK::CreateFramebuffer()
 #endif
 }
 
-void VK::CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer Buffer, VkDeviceMemory DeviceMemory, const void* Source, const size_t Size)
+void VK::CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const void* Source, const size_t Size)
 {
 	VkBuffer StagingBuffer;
 	VkDeviceMemory StagingDeviceMemory;
@@ -1135,17 +1132,17 @@ void VK::CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMem
 			VK_SHARING_MODE_EXCLUSIVE,
 			0, nullptr
 		};
-		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &Buffer));
+		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, Buffer));
 		VkMemoryRequirements MemoryRequirements;
-		vkGetBufferMemoryRequirements(Device, Buffer, &MemoryRequirements);
+		vkGetBufferMemoryRequirements(Device, *Buffer, &MemoryRequirements);
 		const VkMemoryAllocateInfo MemoryAllocateInfo = {
 			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 			nullptr,
 			MemoryRequirements.size,
 			GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) //!< DEVICE_LOCAL にすること
 		};
-		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &DeviceMemory));
-		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
+		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, DeviceMemory));
+		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DeviceMemory, 0));
 
 		//!< コピーコマンドを発行
 		const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
@@ -1169,7 +1166,7 @@ void VK::CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMem
 					0,
 					Size
 				};
-				vkCmdCopyBuffer(CommandBuffer, StagingBuffer, Buffer, 1, &BufferCopy);
+				vkCmdCopyBuffer(CommandBuffer, StagingBuffer, *Buffer, 1, &BufferCopy);
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 
 			const VkSubmitInfo SubmitInfo = {
@@ -1362,6 +1359,8 @@ void VK::ExecuteCommandBuffer(const VkCommandBuffer CommandBuffer)
 }
 void VK::Present()
 {
+	//VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphores[0], nullptr, &SwapchainImageIndex));
+
 	const VkPresentInfoKHR PresentInfo = {
 		VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 		nullptr,
@@ -1373,7 +1372,9 @@ void VK::Present()
 	VERIFY_SUCCEEDED(vkQueuePresentKHR(Queue, &PresentInfo));
 
 	assert(!PresentSemaphores.empty() && "PresentSmaphore is empty");
+
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphores[0], nullptr, &SwapchainImageIndex));
+
 #ifdef _DEBUG
 	//std::cout << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
 	//std::cout << SwapchainImageIndex;

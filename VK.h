@@ -28,6 +28,24 @@
 //#define VERIFY_SUCCEEDED(vr) MESSAGEBOX_ON_FAILED(vr)
 #endif
 
+namespace Colors
+{
+	const VkClearColorValue Black = { 0.0f, 0.0f, 0.0f, 1.0f };
+	const VkClearColorValue Blue = { 0.0f, 0.0f, 1.0f, 1.0f };
+	const VkClearColorValue Brown = { 0.647058845f, 0.164705887f, 0.164705887f, 1.0f };
+	const VkClearColorValue Gray = { 0.501960814f, 0.501960814f, 0.501960814f, 1.0f };
+	const VkClearColorValue Green = { 0.0f, 0.501960814f, 0.0f, 1.0f };
+	const VkClearColorValue Magenta = { 1.0f, 0.0f, 1.0f, 1.0f };
+	const VkClearColorValue Orange = { 1.0f, 0.647058845f, 0.0f, 1.0f };
+	const VkClearColorValue Pink = { 1.0f, 0.752941251f, 0.796078503f, 1.0f };
+	const VkClearColorValue Purple = { 0.501960814f, 0.0f, 0.501960814f, 1.0f };
+	const VkClearColorValue Red = { 1.0f, 0.0f, 0.0f, 1.0f };
+	const VkClearColorValue SkyBlue = { 0.529411793f, 0.807843208f, 0.921568692f, 1.0f };
+	const VkClearColorValue Transparent = { 0.0f, 0.0f, 0.0f, 0.0f };
+	const VkClearColorValue White = { 1.0f, 1.0f, 1.0f, 1.0f };
+	const VkClearColorValue Yellow = { 1.0f, 1.0f, 0.0f, 1.0f };
+}
+
 class VK : public Win
 {
 private:
@@ -101,7 +119,7 @@ protected:
 	
 	virtual void CreateFramebuffer();
 
-	virtual void CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer Buffer, VkDeviceMemory DeviceMemory, const void* Source, const size_t Size);
+	virtual void CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const void* Source, const size_t Size);
 	virtual void CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
