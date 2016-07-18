@@ -16,8 +16,7 @@ DX::~DX()
 void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 {
 #ifdef _DEBUG
-	__int64 A;
-	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&A));
+	PerformanceCounter PC("OnCreate : ");
 #endif
 
 	Super::OnCreate(hWnd, hInstance);
@@ -47,7 +46,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateInputLayout();
 
-	CreateViewport();
+	CreateViewport(static_cast<FLOAT>(GetClientRectWidth()), static_cast<FLOAT>(GetClientRectHeight()));
 	CreatePipelineState();
 
 	auto CommandList = GraphicsCommandLists[0].Get();
@@ -57,18 +56,11 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 		
 	//CreateConstantBuffer();
 	//CreateUnorderedAccessTexture();
-
-#ifdef _DEBUG
-	__int64 B;
-	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&B));
-	std::cout << "OnCreate : " << (B - A) * SecondsPerCount << " sec" << std::endl << std::endl;
-#endif
 }
 void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 {
 #ifdef _DEBUG
-	__int64 A;
-	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&A));
+	PerformanceCounter PC("OnSize : ");
 #endif
 
 	Super::OnSize(hWnd, hInstance);
@@ -89,13 +81,7 @@ void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 	
 	WaitForFence();
 
-#ifdef _DEBUG
-	__int64 B;
-	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&B));
-	std::cout << "OnSize : " << (B - A) * SecondsPerCount << " sec" << std::endl << std::endl;
-#endif
-
-	CreateViewport();
+	CreateViewport(static_cast<FLOAT>(GetClientRectWidth()), static_cast<FLOAT>(GetClientRectHeight()));
 }
 void DX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
@@ -111,6 +97,7 @@ void DX::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnDestroy(hWnd, hInstance);
 
+	//!< GPUの完了を待たなくてはならない
 	WaitForFence();
 }
 std::string DX::GetHRESULTString(const HRESULT Result)
@@ -273,6 +260,7 @@ void DX::GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format)
 		for (const auto& i : ModeDescs) {
 			//!< #TODO : DXGI_MODE_DESC を覚えておいて選択できるようにする？
 			std::wcout << "\t" << "\t" << "\t" << i.Width << " x " << i.Height << " @ " << i.RefreshRate.Numerator / i.RefreshRate.Denominator << std::endl;
+			std::cout << "\t" << "\t" << "\t" << "..." << std::endl; break; //!< 省略
 		}
 #endif
 	}
@@ -636,23 +624,20 @@ void DX::CreateInputLayout()
 #endif
 }
 
-void DX::CreateViewport()
+void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth, const FLOAT MaxDepth)
 {
-	const auto Width = GetClientRectWidth();
-	const auto Height = GetClientRectHeight();
-
 	Viewports = {
 		{ 
 			0.0f, 0.0f, 
-			static_cast<FLOAT>(Width), static_cast<FLOAT>(Height), 
-			0.0f, 1.0f
+			Width, Height,
+			MinDepth, MaxDepth
 		}
 	};
 
 	ScissorRects = {
 		{ 
 			0, 0, 
-			Width, Height
+			static_cast<LONG>(Width), static_cast<LONG>(Height)
 		}
 	};
 
@@ -704,17 +689,16 @@ void DX::CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCo
 		D3D12_RESOURCE_FLAG_NONE
 	};
 
-	//!< アップロード用のリソースを作成(Map() してコピー)
-#pragma region Upload
+	//!< アップロード用のリソースを作成
 	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-	const D3D12_HEAP_PROPERTIES HeapProperties_Upload = {
+	const D3D12_HEAP_PROPERTIES UploadHeapProperties = {
 		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
 		1,
 		1
 	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties_Upload,
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&UploadHeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ, //!< UPLOAD では GENERIC_READ にすること
@@ -724,9 +708,8 @@ void DX::CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCo
 	VERIFY_SUCCEEDED(UploadResource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
 		memcpy(Data, Source, Size);
 	} UploadResource->Unmap(0, nullptr);
-#pragma endregion
 
-	//!< リソースを作成
+	//!< 目的のリソースを作成
 	const D3D12_HEAP_PROPERTIES HeapProperties = {
 		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
@@ -739,10 +722,9 @@ void DX::CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCo
 		&ResourceDesc,
 		D3D12_RESOURCE_STATE_COMMON, //!< COMMON にすること
 		nullptr,
-		//IID_PPV_ARGS(Resource->GetAddressOf())));
 		IID_PPV_ARGS(Resource)));
 
-	//!< コピーするコマンドリストを発行する
+	//!< コピーコマンドを発行
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
 		BarrierTransition(CommandList, *Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
 			CommandList->CopyBufferRegion(*Resource, 0, UploadResource.Get(), 0, Size);

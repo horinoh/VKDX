@@ -9,10 +9,11 @@
       </Command>
     </PreBuildEvent>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(VK_SDK_PATH)\Include;..\..\glm;..\..\gli</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>
+      </AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>$(VK_SDK_PATH)\Source\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <CustomBuildStep>
       <Command>
@@ -20,6 +21,7 @@
     </CustomBuildStep>
     <PostBuildEvent>
       <Command>for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator -V %%1 -o $(ProjectDir)%%1.spv
+for %%1 in (*.spv) do xcopy /y %%1 $(TargetDir)
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>

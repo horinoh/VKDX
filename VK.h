@@ -87,7 +87,11 @@ protected:
 
 	virtual void CreateVertexInput();
 	
-	virtual void CreateViewport();
+	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
+	virtual void CreateViewportTopFront(const float Width, const float Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
+
+	float GetAspectRatio(const float Width, const float Height) const { return Width / Height; }
+	float GetAspectRatioClientRect() const { return GetAspectRatio(static_cast<float>(GetClientRectWidth()), static_cast<float>(GetClientRectHeight())); }
 
 	virtual void CreatePipeline() { CreateGraphicsPipeline(); }
 	virtual void CreateGraphicsPipeline();

@@ -21,10 +21,6 @@ Win::Win()
 	freopen_s(&StdErr, "CON", "w", stderr);
 	std::cout << White;
 #endif
-
-	__int64 Frequency;
-	QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&Frequency));
-	SecondsPerCount = 1.0 / static_cast<double>(Frequency);
 }
 Win::~Win()
 {
@@ -63,3 +59,21 @@ void Win::ShowMessageBoxW(HWND hWnd, const std::wstring Message)
 {
 	MessageBox(hWnd, Message.c_str(), L"VERIFY_SUCCEEDED", MB_OK);
 }
+
+#ifdef _DEBUG
+PerformanceCounter::PerformanceCounter(const std::string& Label)
+	: Label(Label)
+{
+	__int64 Frequency;
+	QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&Frequency));
+	SecondsPerCount = 1.0 / static_cast<double>(Frequency);
+
+	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&Start));
+}
+PerformanceCounter::~PerformanceCounter() 
+{
+	__int64 End;
+	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&End));
+	std::cout << Label << (End - Start) * SecondsPerCount << " sec" << std::endl << std::endl;
+}
+#endif

@@ -7,6 +7,19 @@
 #include <DXGI1_4.h>
 
 #include <DirectXMath.h>
+/**
+@brief 32 bit カラー DirectX::PackedVector::XMCOLOR
+@note ARGBレイアウト
+
+XMCOLOR Color32;
+XMVECTOR Color128;
+
+@note 128 bit カラー → 32 bit カラー
+DirectX::PackedVector::XMStoreColor(&Color32, Color128);
+
+@note 32 bit カラー → 128 bit カラー
+Color128 = DirectX::PackedVector::XMLoadColor(Color32);
+*/
 #include <DirectXPackedVector.h>
 #include <DirectXColors.h>
 
@@ -99,7 +112,11 @@ protected:
 
 	virtual void CreateInputLayout();
 
-	virtual void CreateViewport();
+	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f);
+	virtual void CreateViewportTopFront(const FLOAT Width, const FLOAT Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
+	
+	FLOAT GetAspectRatio(const FLOAT Width, const FLOAT Height) const { return Width / Height; }
+	FLOAT GetAspectRatioClientRect() const { return GetAspectRatio(static_cast<FLOAT>(GetClientRectWidth()), static_cast<FLOAT>(GetClientRectHeight())); }
 
 	virtual void CreatePipelineState() { CreateGraphicsPipelineState(); }
 	virtual void CreateGraphicsPipelineState();
@@ -150,7 +167,7 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferResource;
-	D3D12_VERTEX_BUFFER_VIEW VertexBufferView;
+	std::vector<D3D12_VERTEX_BUFFER_VIEW> VertexBufferViews;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferResource;
 	D3D12_INDEX_BUFFER_VIEW IndexBufferView;

@@ -5,7 +5,10 @@
   <PropertyGroup />
   <ItemDefinitionGroup>
     <PostBuildEvent>
-      <Command>for %%1 in (*.spv) do spirv-remap --map all --input %%1 --output .</Command>
+      <Command>for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator -V %%1 -o $(ProjectDir)%%1.spv
+for %%1 in (*.spv) do spirv-remap --map all --input %%1 --output .
+for %%1 in (*.spv) do xcopy /y %%1 $(TargetDir)
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup />

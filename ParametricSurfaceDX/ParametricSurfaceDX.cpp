@@ -235,11 +235,7 @@ void ParametricSurfaceDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllo
 
 	CreateBuffer(CommandAllocator, CommandList, VertexBufferResource.GetAddressOf(), Vertices.data(), Size);
 
-	VertexBufferView = {
-		VertexBufferResource->GetGPUVirtualAddress(),
-		Size,
-		Stride
-	};
+	VertexBufferViews.push_back({ VertexBufferResource->GetGPUVirtualAddress(), Size, Stride });
 
 #ifdef _DEBUG
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
@@ -284,7 +280,7 @@ void ParametricSurfaceDX::PopulateCommandList(ID3D12GraphicsCommandList* Graphic
 
 	GraphicsCommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
-	GraphicsCommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
+	GraphicsCommandList->IASetVertexBuffers(0, static_cast<UINT>(VertexBufferViews.size()), VertexBufferViews.data());
 	GraphicsCommandList->IASetIndexBuffer(&IndexBufferView);
 
 	GraphicsCommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);

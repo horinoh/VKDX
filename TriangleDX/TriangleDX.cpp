@@ -237,11 +237,7 @@ void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID
 
 	CreateBuffer(CommandAllocator, CommandList, VertexBufferResource.GetAddressOf(), Vertices.data(), Size);
 
-	VertexBufferView = {
-		VertexBufferResource->GetGPUVirtualAddress(),
-		Size,
-		Stride
-	};
+	VertexBufferViews.push_back({ VertexBufferResource->GetGPUVirtualAddress(), Size, Stride });
 
 #ifdef _DEBUG
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
@@ -257,11 +253,7 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 
 	CreateBuffer(CommandAllocator, CommandList, IndexBufferResource.GetAddressOf(), Indices.data(), Size);
 
-	IndexBufferView = {
-		IndexBufferResource->GetGPUVirtualAddress(),
-		Size,
-		DXGI_FORMAT_R32_UINT
-	};
+	IndexBufferView = { IndexBufferResource->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT };
 
 #ifdef _DEBUG
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
@@ -270,9 +262,6 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList)
 {
 	Super::PopulateCommandList(GraphicsCommandList);
-
-	//GraphicsCommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-	//GraphicsCommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
 	{
 		auto RTDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
@@ -289,9 +278,9 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandL
 
 	GraphicsCommandList->SetGraphicsRootSignature(RootSignature.Get());
 
-	GraphicsCommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	GraphicsCommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
-	GraphicsCommandList->IASetVertexBuffers(0, 1, &VertexBufferView);
+	GraphicsCommandList->IASetVertexBuffers(0, static_cast<UINT>(VertexBufferViews.size()), VertexBufferViews.data());
 	GraphicsCommandList->IASetIndexBuffer(&IndexBufferView);
 
 	GraphicsCommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);

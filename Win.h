@@ -1,5 +1,16 @@
 #pragma once
 
+//!< ƒƒ‚ƒŠƒŠ[ƒNŒŸo
+#define _CRTDBG_MAP_ALLOC
+#include <cstdlib>
+#include <crtdbg.h>
+#ifdef _DEBUG
+#ifndef DBG_NEW 
+#define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ ) 
+#define new DBG_NEW 
+#endif 
+#endif
+
 #include <ostream>
 #include <vector>
 #include <cassert>
@@ -54,12 +65,24 @@ public:
 
 protected:
 	RECT Rect;
-	double SecondsPerCount = 0.0;
 
 private:
 	FILE* StdOut;
 	FILE* StdErr;
 };
+
+#ifdef _DEBUG
+class PerformanceCounter
+{
+public:
+	PerformanceCounter(const std::string& Label = "");
+	~PerformanceCounter();
+private:
+	double SecondsPerCount = 0.0;
+	__int64 Start;
+	std::string Label;
+};
+#endif
 
 static std::ostream& Red(std::ostream& rhs) { Win::SetColor(FOREGROUND_RED); return rhs; }
 static std::ostream& Green(std::ostream& rhs) { Win::SetColor(FOREGROUND_GREEN); return rhs; }

@@ -16,8 +16,7 @@ VK::~VK()
 void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 {
 #ifdef _DEBUG
-	__int64 A;
-	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&A));
+	PerformanceCounter PC("OnCreate : ");
 #endif
 
 	Super::OnCreate(hWnd, hInstance);
@@ -63,7 +62,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateVertexInput();
 
-	CreateViewport();
+	CreateViewport(static_cast<float>(ImageExtent.width), static_cast<float>(ImageExtent.height));
 	CreateRenderPass(ColorFormat, DepthFormat);
 	CreatePipeline();
 	CreateFramebuffer();
@@ -71,29 +70,16 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateVertexBuffer(CommandPool, PhysicalDeviceMemoryProperties);
 	CreateIndexBuffer(CommandPool, PhysicalDeviceMemoryProperties);
 	CreateUniformBuffer(PhysicalDeviceMemoryProperties);
-
-#ifdef _DEBUG
-	__int64 B;
-	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&B));
-	std::cout << "OnCreate : " << (B - A) * SecondsPerCount << " sec" << std::endl << std::endl;
-#endif
 }
 void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 {
 #ifdef _DEBUG
-	__int64 A;
-	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&A));
+	PerformanceCounter PC("OnSize : ");
 #endif
 
 	Super::OnSize(hWnd, hInstance);
 	
-	CreateViewport();
-
-#ifdef _DEBUG
-	__int64 B;
-	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&B));
-	std::cout << "OnSize : " << (B - A) * SecondsPerCount << " sec" << std::endl << std::endl;
-#endif
+	CreateViewport(static_cast<float>(ImageExtent.width), static_cast<float>(ImageExtent.height));
 }
 void VK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
@@ -109,6 +95,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnDestroy(hWnd, hInstance);
 
+	//!< GPUの完了を待たなくてはならない
 	WaitForFence();
 	
 #pragma region UniformBuffer
@@ -351,6 +338,16 @@ void VK::SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAsp
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
 		vkCmdPipelineBarrier(CommandBuffer, SrcPipelineStageFlags, DstPipelineStageFlags, 0, 0, nullptr, 0, nullptr, 1, &ImageMemoryBarrier);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
+	const VkSubmitInfo SubmitInfo = {
+		VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		nullptr,
+		0, nullptr,
+		nullptr,
+		1, &CommandBuffer,
+		0, nullptr
+	};
+	VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
+	VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
 }
 void VK::SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout) const
 {
@@ -802,9 +799,28 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat 
 		std::cout << "\t" << "SwapchainImage" << std::endl;
 	}
 #endif
-	for (auto& i : SwapchainImages) {
-		ImageBarrier(CommandBuffer, i, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-	}
+
+	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		nullptr,
+		0,
+		nullptr
+	};
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
+		for (auto& i : SwapchainImages) {
+			ImageBarrier(CommandBuffer, i, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+		}
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
+	const VkSubmitInfo SubmitInfo = {
+		VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		nullptr,
+		0, nullptr,
+		nullptr,
+		1, &CommandBuffer,
+		0, nullptr
+	};
+	VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
+	VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
 
 	for(auto i : SwapchainImages) {
 		SetImageLayout(CommandBuffer, i, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -1027,19 +1043,19 @@ void VK::CreateVertexInput()
 #endif
 }
 
-void VK::CreateViewport()
+void VK::CreateViewport(const float Width, const float Height, const float MinDepth, const float MaxDepth)
 {
 	Viewports = {
 		{
 			0, 0,
-			static_cast<float>(ImageExtent.width), static_cast<float>(ImageExtent.height),
-			0.0f, 1.0f
+			Width, Height,
+			MinDepth, MaxDepth
 		}
 	};
 	ScissorRects = {
 		{
 			{ 0, 0 },
-			{ ImageExtent.width, ImageExtent.height }
+			{ static_cast<uint32_t>(Width), static_cast<uint32_t>(Height) }
 		}
 	};
 
@@ -1078,12 +1094,11 @@ void VK::CreateFramebuffer()
 
 void VK::CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer Buffer, VkDeviceMemory DeviceMemory, const void* Source, const size_t Size)
 {
-	VkBuffer Buffer_Upload;
-	VkDeviceMemory DeviceMemory_Upload;
+	VkBuffer StagingBuffer;
+	VkDeviceMemory StagingDeviceMemory;
 	{
-		//!< アップロード用のリソースを作成(Map() してコピー)
-#pragma region Upload
-		const VkBufferCreateInfo BufferCreateInfo_Upload = {
+		//!< ステージング用のバッファとメモリを作成
+		const VkBufferCreateInfo StagingBufferCreateInfo = {
 			VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 			nullptr,
 			0,
@@ -1092,26 +1107,25 @@ void VK::CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMem
 			VK_SHARING_MODE_EXCLUSIVE,
 			0, nullptr
 		};
-		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo_Upload, nullptr, &Buffer_Upload));
-
-		VkMemoryRequirements MemoryRequirements_Upload;
-		vkGetBufferMemoryRequirements(Device, Buffer_Upload, &MemoryRequirements_Upload);
-		const VkMemoryAllocateInfo MemoryAllocateInfo_Upload = {
+		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &StagingBufferCreateInfo, nullptr, &StagingBuffer));
+		VkMemoryRequirements StagingMemoryRequirements;
+		vkGetBufferMemoryRequirements(Device, StagingBuffer, &StagingMemoryRequirements);
+		const VkMemoryAllocateInfo StagingMemoryAllocateInfo = {
 			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 			nullptr,
-			MemoryRequirements_Upload.size,
-			GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements_Upload.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) //!< HOST_VISIBLE にすること
+			StagingMemoryRequirements.size,
+			GetMemoryType(PhysicalDeviceMemoryProperties, StagingMemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) //!< HOST_VISIBLE にすること
 		};
-		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo_Upload, nullptr, &DeviceMemory_Upload));
+		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &StagingMemoryAllocateInfo, nullptr, &StagingDeviceMemory));
 		void *Data;
-		VERIFY_SUCCEEDED(vkMapMemory(Device, DeviceMemory_Upload, 0, MemoryAllocateInfo_Upload.allocationSize, 0, &Data)); {
+		//!< #TODO サンプルだと vkMapMemory() の size に MemoryAllocateInfo.allocationSize を渡しているケースと、直サイズを渡しているケースがある、どっちが正しい？
+		//VERIFY_SUCCEEDED(vkMapMemory(Device, StagingDeviceMemory, 0, StagingMemoryAllocateInfo.allocationSize, 0, &Data)); {
+		VERIFY_SUCCEEDED(vkMapMemory(Device, StagingDeviceMemory, 0, Size, 0, &Data)); {
 				memcpy(Data, Source, Size);
-		} vkUnmapMemory(Device, DeviceMemory_Upload);
-		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer_Upload, DeviceMemory_Upload, 0));
+		} vkUnmapMemory(Device, StagingDeviceMemory);
+		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, StagingBuffer, StagingDeviceMemory, 0));
 
-#pragma endregion
-
-		//!< リソースを作成
+		//!< 目的のバッファとメモリを作成
 		const VkBufferCreateInfo BufferCreateInfo = {
 			VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 			nullptr,
@@ -1122,7 +1136,6 @@ void VK::CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMem
 			0, nullptr
 		};
 		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &Buffer));
-
 		VkMemoryRequirements MemoryRequirements;
 		vkGetBufferMemoryRequirements(Device, Buffer, &MemoryRequirements);
 		const VkMemoryAllocateInfo MemoryAllocateInfo = {
@@ -1134,7 +1147,7 @@ void VK::CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMem
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &DeviceMemory));
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
 
-		//!< コピーするコマンドバッファを発行する
+		//!< コピーコマンドを発行
 		const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
 			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 			nullptr,
@@ -1142,38 +1155,38 @@ void VK::CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMem
 			VK_COMMAND_BUFFER_LEVEL_PRIMARY,
 			1
 		};
-		VkCommandBuffer CopyCommandBuffer;
-		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CopyCommandBuffer)); {
+		VkCommandBuffer CommandBuffer;
+		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CommandBuffer)); {
 			const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
 				VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 				nullptr,
 				0,
 				nullptr
 			};
-			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CopyCommandBuffer, &CommandBufferBeginInfo)); {
+			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
 				const VkBufferCopy BufferCopy = {
 					0,
 					0,
 					Size
 				};
-				vkCmdCopyBuffer(CopyCommandBuffer, Buffer_Upload, Buffer, 1, &BufferCopy);
-			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CopyCommandBuffer));
+				vkCmdCopyBuffer(CommandBuffer, StagingBuffer, Buffer, 1, &BufferCopy);
+			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 
 			const VkSubmitInfo SubmitInfo = {
 				VK_STRUCTURE_TYPE_SUBMIT_INFO,
 				nullptr,
-				static_cast<uint32_t>(PresentSemaphores.size()), PresentSemaphores.data(),
+				0, nullptr,
 				nullptr,
-				1, &CopyCommandBuffer,
-				static_cast<uint32_t>(RenderSemaphores.size()), RenderSemaphores.data()
+				1, &CommandBuffer,
+				0, nullptr
 			};
 			//!< 一般的なキューを再利用するよりも転送専用のキューを作った方が良いらしい
 			VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
 			VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
-		} vkFreeCommandBuffers(Device, CommandPool, 1, &CopyCommandBuffer);
+		} vkFreeCommandBuffers(Device, CommandPool, 1, &CommandBuffer);
 	}
-	vkDestroyBuffer(Device, Buffer_Upload, nullptr);
-	vkFreeMemory(Device, DeviceMemory_Upload, nullptr);
+	vkDestroyBuffer(Device, StagingBuffer, nullptr);
+	vkFreeMemory(Device, StagingDeviceMemory, nullptr);
 }
 
 void VK::CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)

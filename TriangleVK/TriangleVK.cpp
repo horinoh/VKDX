@@ -235,106 +235,7 @@ void TriangleVK::CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhy
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 
-#if 0
 	CreateBuffer(CommandPool, PhysicalDeviceMemoryProperties, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VertexBuffer, VertexDeviceMemory, Vertices.data(), Size);
-#else
-	VkBuffer Buffer_Upload;
-	VkDeviceMemory DeviceMemory_Upload;
-	{
-#pragma region Upload
-		const VkBufferCreateInfo BufferCreateInfo_Upload = {
-		VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-		nullptr,
-		0,
-		Size,
-		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-		VK_SHARING_MODE_EXCLUSIVE,
-		0, nullptr
-		};
-		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo_Upload, nullptr, &Buffer_Upload));
-		{
-			VkMemoryRequirements MemoryRequirements;
-			vkGetBufferMemoryRequirements(Device, Buffer_Upload, &MemoryRequirements);
-			const VkMemoryAllocateInfo MemoryAllocateInfo = {
-				VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-				nullptr,
-				MemoryRequirements.size,
-				GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-			};
-			VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &DeviceMemory_Upload));
-			void *Data;
-			//VERIFY_SUCCEEDED(vkMapMemory(Device, DeviceMemory_Upload, 0, Size, 0, &Data)); {
-			VERIFY_SUCCEEDED(vkMapMemory(Device, DeviceMemory_Upload, 0, MemoryAllocateInfo.allocationSize, 0, &Data)); {
-					memcpy(Data, Vertices.data(), Size);
-			} vkUnmapMemory(Device, DeviceMemory_Upload);
-			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer_Upload, DeviceMemory_Upload, 0));
-		}
-#pragma endregion
-
-		{
-			const VkBufferCreateInfo BufferCreateInfo = {
-				VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-				nullptr,
-				0,
-				Size,
-				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-				VK_SHARING_MODE_EXCLUSIVE,
-				0, nullptr
-			};
-			VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &VertexBuffer));
-
-			VkMemoryRequirements MemoryRequirements;
-			vkGetBufferMemoryRequirements(Device, VertexBuffer, &MemoryRequirements);
-			const VkMemoryAllocateInfo MemoryAllocateInfo = {
-				VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-				nullptr,
-				MemoryRequirements.size,
-				GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-			};
-			VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &VertexDeviceMemory));
-			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, VertexBuffer, VertexDeviceMemory, 0));
-		}
-		{
-			const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
-				VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-				nullptr,
-				CommandPool,
-				VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-				1
-			};
-			VkCommandBuffer CopyCommandBuffer;
-			VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CopyCommandBuffer)); {
-				const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
-					VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-					nullptr,
-					0,
-					nullptr
-				};
-				VERIFY_SUCCEEDED(vkBeginCommandBuffer(CopyCommandBuffer, &CommandBufferBeginInfo)); {
-					const VkBufferCopy BufferCopy = {
-						0,
-						0,
-						Size
-					};
-					vkCmdCopyBuffer(CopyCommandBuffer, Buffer_Upload, VertexBuffer, 1, &BufferCopy);
-				} VERIFY_SUCCEEDED(vkEndCommandBuffer(CopyCommandBuffer));
-
-				const VkSubmitInfo SubmitInfo = {
-					VK_STRUCTURE_TYPE_SUBMIT_INFO,
-					nullptr,
-					0, nullptr,
-					nullptr,
-					1, &CopyCommandBuffer,
-					0, nullptr
-				};
-				VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
-				VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
-			} vkFreeCommandBuffers(Device, CommandPool, 1, &CopyCommandBuffer);
-		}
-	}
-	vkDestroyBuffer(Device, Buffer_Upload, nullptr);
-	vkFreeMemory(Device, DeviceMemory_Upload, nullptr);
-#endif
 
 #ifdef _DEBUG
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
@@ -350,106 +251,7 @@ void TriangleVK::CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhys
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 	
-#if 0
 	CreateBuffer(CommandPool, PhysicalDeviceMemoryProperties, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, IndexBuffer, IndexDeviceMemory, Indices.data(), Size);
-#else
-	VkBuffer Buffer_Upload;
-	VkDeviceMemory DeviceMemory_Upload;
-	{
-#pragma region Upload
-		const VkBufferCreateInfo BufferCreateInfo = {
-			VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-			nullptr,
-			0,
-			Size,
-			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_SHARING_MODE_EXCLUSIVE,
-			0, nullptr
-		};
-		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &Buffer_Upload));
-		{
-			VkMemoryRequirements MemoryRequirements;
-			vkGetBufferMemoryRequirements(Device, Buffer_Upload, &MemoryRequirements);
-			const VkMemoryAllocateInfo MemoryAllocateInfo = {
-				VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-				nullptr,
-				MemoryRequirements.size,
-				GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-			};
-			VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &DeviceMemory_Upload));
-			void *Data;
-			//VERIFY_SUCCEEDED(vkMapMemory(Device, DeviceMemory_Upload, 0, Size, 0, &Data)); {
-			VERIFY_SUCCEEDED(vkMapMemory(Device, DeviceMemory_Upload, 0, MemoryAllocateInfo.allocationSize, 0, &Data)); {
-					memcpy(Data, Indices.data(), Size);
-			} vkUnmapMemory(Device, DeviceMemory_Upload);
-			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer_Upload, DeviceMemory_Upload, 0));
-		}
-#pragma endregion
-
-		{
-			const VkBufferCreateInfo BufferCreateInfo = {
-				VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-				nullptr,
-				0,
-				Size,
-				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-				VK_SHARING_MODE_EXCLUSIVE,
-				0, nullptr
-			};
-			VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &IndexBuffer));
-
-			VkMemoryRequirements MemoryRequirements;
-			vkGetBufferMemoryRequirements(Device, IndexBuffer, &MemoryRequirements);
-
-			const VkMemoryAllocateInfo MemoryAllocateInfo = {
-				VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-				nullptr,
-				MemoryRequirements.size,
-				GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-			};
-			VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &IndexDeviceMemory));
-			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, IndexBuffer, IndexDeviceMemory, 0));
-
-			const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
-				VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-				nullptr,
-				CommandPools[0],
-				VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-				1
-			};
-			VkCommandBuffer CopyCommandBuffer;
-			VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CopyCommandBuffer)); {
-				const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
-					VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-					nullptr,
-					0,
-					nullptr
-				};
-				VERIFY_SUCCEEDED(vkBeginCommandBuffer(CopyCommandBuffer, &CommandBufferBeginInfo)); {
-					const VkBufferCopy BufferCopy = {
-						0,
-						0,
-						Size
-					};
-					vkCmdCopyBuffer(CopyCommandBuffer, Buffer_Upload, IndexBuffer, 1, &BufferCopy);
-				} VERIFY_SUCCEEDED(vkEndCommandBuffer(CopyCommandBuffer));
-
-				const VkSubmitInfo SubmitInfo = {
-					VK_STRUCTURE_TYPE_SUBMIT_INFO,
-					nullptr,
-					0, nullptr,
-					nullptr,
-					1, &CopyCommandBuffer,
-					0, nullptr
-				};
-				VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
-				VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
-			} vkFreeCommandBuffers(Device, CommandPools[0], 1, &CopyCommandBuffer);
-		}
-	}
-	vkDestroyBuffer(Device, Buffer_Upload, nullptr);
-	vkFreeMemory(Device, DeviceMemory_Upload, nullptr);
-#endif
 
 #ifdef _DEBUG
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
@@ -458,9 +260,6 @@ void TriangleVK::CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhys
 void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 {
 	Super::PopulateCommandBuffer(CommandBuffer);
-
-	//vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-	//vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 	//!< #TODO
 #if 0
