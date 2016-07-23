@@ -53,8 +53,9 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateVertexBuffer(CommandAllocator, CommandList);
 	CreateIndexBuffer(CommandAllocator, CommandList);
 	WaitForFence();
-		
-	//CreateConstantBuffer();
+	
+	CreateConstantBuffer();
+
 	//CreateUnorderedAccessTexture();
 }
 void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
@@ -601,9 +602,30 @@ void DX::CreateRootSignature()
 {
 	using namespace Microsoft::WRL;
 
+	const std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
+		{
+			D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
+			1,
+			0,
+			0,
+			0
+		},
+	};
+	const D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable = {
+		static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
+	};
+	const std::vector<D3D12_ROOT_PARAMETER> RootParameters = {
+		{
+			D3D12_ROOT_PARAMETER_TYPE_CBV,
+			DescriptorTable,
+			D3D12_SHADER_VISIBILITY_ALL
+		},
+	};
+
+	const std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {};
 	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
-		0, nullptr,
-		0, nullptr,
+		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
+		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 	};
 
@@ -673,7 +695,13 @@ void DX::CreateComputePipelineState()
 #endif
 }
 
-void DX::CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const void* Source, const size_t Size)
+/**
+@note 
+アップロード用のリソースを D3D12_HEAP_TYPE_UPLOAD で作成してそこにデータをコピーする
+目的のリソースは D3D12_HEAP_TYPE_DEFAULT で作成する (頻繁に更新しないリソースは D3D12_HEAP_TYPE_DEFAULT にしておきたい)
+アップロードリソースから目的のリソースへのコピーコマンドを発行する
+*/
+void DX::CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source)
 {
 	//!< リソースデスクリプタ(共用)
 	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
@@ -734,6 +762,46 @@ void DX::CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCo
 	//WaitForFence();
 }
 
+/**
+@note
+アップロード用のリソースを D3D12_HEAP_TYPE_UPLOAD で作成する (頻繁に更新するリソースは D3D12_HEAP_TYPE_UPLOAD にしておきたい)
+*/
+void DX::CreateUploadBuffer(ID3D12Resource** Resource, const size_t Size, const void* Source)
+{
+	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
+	const D3D12_RESOURCE_DESC ResourceDesc = {
+		D3D12_RESOURCE_DIMENSION_BUFFER,
+		0,
+		Size, 1,
+		1,
+		1,
+		DXGI_FORMAT_UNKNOWN,
+		SampleDesc,
+		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+		D3D12_RESOURCE_FLAG_NONE
+	};
+	const D3D12_HEAP_PROPERTIES HeapProperties = {
+		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ, //!< UPLOAD では GENERIC_READ にすること
+		nullptr,
+		IID_PPV_ARGS(Resource)));
+
+	if (nullptr != Source) {
+		BYTE* Data;
+		VERIFY_SUCCEEDED((*Resource)->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
+			memcpy(Data, Source, Size);
+		} (*Resource)->Unmap(0, nullptr);
+	}
+}
+
 void DX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
 {
 	//!< CPU 側にもコピーを持たせる、多分必要ない?
@@ -756,39 +824,33 @@ void DX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12Graph
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
+
+/**
+std::vector<ID3D12DescriptorHeap*> DescriptorHeaps = { ConstantBufferDescriptorHeap.Get() };
+GraphicsCommandList->SetDescriptorHeaps(static_cast<UINT>(DescriptorHeaps.size()), DescriptorHeaps.data());
+
+auto CVDescriptorHandle(ConstantBufferDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+const auto CVIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+CVDescriptorHandle.ptr += 0 * CVIncrementSize;
+GraphicsCommandList->SetGraphicsRootDescriptorTable(0, CVDescriptorHandle);
+*/
 void DX::CreateConstantBuffer()
 {
 	const DirectX::XMFLOAT4X4 WVP;
 	const auto Size = sizeof(WVP);
-	//!< コンスタントバッファサイズは 256kb アライン
-	const auto CBSize = (Size + 255) & ~255;
 
-	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
-	const D3D12_RESOURCE_DESC ResourceDesc = {
-		D3D12_RESOURCE_DIMENSION_BUFFER,
-		0,
-		CBSize, 1,
-		1,
-		1,
-		DXGI_FORMAT_UNKNOWN,
-		SampleDesc,
-		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-		D3D12_RESOURCE_FLAG_NONE
-	};
-	const D3D12_HEAP_PROPERTIES HeapProperties = {
-		D3D12_HEAP_TYPE_UPLOAD, //!< コンスタントバッファは CPU から更新するので UPLOAD にする
-		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		D3D12_MEMORY_POOL_UNKNOWN,
-		1,
-		1
-	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ,
-		nullptr,
-		IID_PPV_ARGS(ConstantBufferResource.GetAddressOf())));
+	const auto Size256 = RoundUpTo256(Size);
+	CreateUploadBuffer(ConstantBufferResource.GetAddressOf(), Size256, &WVP);
 
+	CreateConstantBufferDescriptorHeap(static_cast<UINT>(Size256));
+
+#ifdef _DEBUG
+	std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;
+#endif
+}
+void DX::CreateConstantBufferDescriptorHeap(const UINT Size)
+{
+	//!< デスクリプタヒープの作成
 	const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
 		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
 		1,
@@ -797,20 +859,17 @@ void DX::CreateConstantBuffer()
 	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(ConstantBufferDescriptorHeap.GetAddressOf())));
 
+	//!< ここではコンスタントバッファ全体を指定している
+	//!< D3D12_CONSTANT_BUFFER_VIEW_DESC.BufferLocation, SizeInBytes は 256 の倍数で指定しなくはならない、
 	const D3D12_CONSTANT_BUFFER_VIEW_DESC ConstantBufferViewDesc = {
-		ConstantBufferResource->GetGPUVirtualAddress() + 0 * CBSize,
-		CBSize
+		ConstantBufferResource->GetGPUVirtualAddress(),
+		Size
 	};
+	//!< ビューの作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	Device->CreateConstantBufferView(&ConstantBufferViewDesc, ConstantBufferDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
-	//!< #TODO コンスタントバッファの更新
-	//BYTE* Data;
-	//VERIFY_SUCCEEDED(ConstantBufferResource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
-	//	memcpy(Data, nullptr/*#TODO*/, CBSize);
-	//} ConstantBufferResource->Unmap(0, nullptr);
-
 #ifdef _DEBUG
-	std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;
+	std::cout << "CreateConstantBufferDescriptorHeap" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
@@ -864,6 +923,7 @@ void DX::CreateUnorderedAccessTexture()
 	};
 	SRVDesc.Texture2D.MostDetailedMip = 0;
 	SRVDesc.Texture1D.MipLevels = 1;
+	//!< シェーダリソースビューの作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	Device->CreateShaderResourceView(UnorderedAccessTextureResource.Get(), &SRVDesc, CPUDescriptorHandle);
 
 	CPUDescriptorHandle.ptr += 1 * IncrementSize;
@@ -872,6 +932,7 @@ void DX::CreateUnorderedAccessTexture()
 		D3D12_UAV_DIMENSION_TEXTURE2D,
 	};
 	UAVDesc.Texture2D.MipSlice = 0;
+	//!< アンオーダードアクセスビューの作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	Device->CreateUnorderedAccessView(UnorderedAccessTextureResource.Get(), nullptr, &UAVDesc, CPUDescriptorHandle);
 
 #ifdef _DEBUG

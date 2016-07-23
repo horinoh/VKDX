@@ -122,10 +122,12 @@ protected:
 	virtual void CreateGraphicsPipelineState();
 	virtual void CreateComputePipelineState();
 
-	virtual void CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const void* Source, const size_t Size);
+	virtual void CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source);
+	virtual void CreateUploadBuffer(ID3D12Resource** Resource, const size_t Size, const void* Source);
 	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
 	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
 	virtual void CreateConstantBuffer();
+	virtual void CreateConstantBufferDescriptorHeap(const UINT Size);
 	virtual void CreateUnorderedAccessTexture();
 
 	virtual void Clear(ID3D12GraphicsCommandList* GraphicsCommandList) {}
@@ -173,6 +175,7 @@ protected:
 	D3D12_INDEX_BUFFER_VIEW IndexBufferView;
 	UINT IndexCount = 0;
 
+	//!< #TODO Œ»ó1‚Â‚Ì‚ÝA”z—ñ‚É‚·‚é
 	Microsoft::WRL::ComPtr<ID3D12Resource> ConstantBufferResource;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> ConstantBufferDescriptorHeap;
 

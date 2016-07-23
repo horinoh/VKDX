@@ -235,7 +235,7 @@ void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
 
-	CreateBuffer(CommandAllocator, CommandList, VertexBufferResource.GetAddressOf(), Vertices.data(), Size);
+	CreateBuffer(CommandAllocator, CommandList, VertexBufferResource.GetAddressOf(), Size, Vertices.data());
 
 	VertexBufferViews.push_back({ VertexBufferResource->GetGPUVirtualAddress(), Size, Stride });
 
@@ -251,7 +251,7 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<UINT32>(Stride * IndexCount);
 
-	CreateBuffer(CommandAllocator, CommandList, IndexBufferResource.GetAddressOf(), Indices.data(), Size);
+	CreateBuffer(CommandAllocator, CommandList, IndexBufferResource.GetAddressOf(), Size, Indices.data());
 
 	IndexBufferView = { IndexBufferResource->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT };
 
@@ -277,7 +277,7 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandL
 	}
 
 	GraphicsCommandList->SetGraphicsRootSignature(RootSignature.Get());
-
+	
 	GraphicsCommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 	GraphicsCommandList->IASetVertexBuffers(0, static_cast<UINT>(VertexBufferViews.size()), VertexBufferViews.data());

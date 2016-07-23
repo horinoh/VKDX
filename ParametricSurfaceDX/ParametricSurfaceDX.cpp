@@ -233,7 +233,7 @@ void ParametricSurfaceDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllo
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
 
-	CreateBuffer(CommandAllocator, CommandList, VertexBufferResource.GetAddressOf(), Vertices.data(), Size);
+	CreateBuffer(CommandAllocator, CommandList, VertexBufferResource.GetAddressOf(), Size, Vertices.data());
 
 	VertexBufferViews.push_back({ VertexBufferResource->GetGPUVirtualAddress(), Size, Stride });
 
@@ -247,7 +247,7 @@ void ParametricSurfaceDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAlloc
 	IndexCount = static_cast<UINT32>(Indices.size());
 	const auto Size = static_cast<UINT32>(sizeof(Indices[0]) * IndexCount);
 
-	CreateBuffer(CommandAllocator, CommandList, IndexBufferResource.GetAddressOf(), Indices.data(), Size);
+	CreateBuffer(CommandAllocator, CommandList, IndexBufferResource.GetAddressOf(), Size, Indices.data());
 
 	IndexBufferView = {
 		IndexBufferResource->GetGPUVirtualAddress(),
