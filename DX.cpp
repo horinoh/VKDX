@@ -836,14 +836,6 @@ GraphicsCommandList->SetGraphicsRootDescriptorTable(0, CVDescriptorHandle);
 */
 void DX::CreateConstantBuffer()
 {
-	const DirectX::XMFLOAT4 Color = DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f);
-	const auto Size = sizeof(Color);
-
-	const auto Size256 = RoundUpTo256(Size);
-	CreateUploadBuffer(ConstantBufferResource.GetAddressOf(), Size256, &Color);
-
-	CreateConstantBufferDescriptorHeap(static_cast<UINT>(Size256));
-
 #ifdef _DEBUG
 	std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;
 #endif
@@ -1023,4 +1015,3 @@ void DX::WaitForFence()
 		CloseHandle(hEvent);
 	}
 }
-

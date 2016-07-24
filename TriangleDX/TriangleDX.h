@@ -20,6 +20,10 @@ protected:
 	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) override;
 	virtual void CreateGraphicsPipelineState() override { CreateGraphicsPipelineState_VsPs(); }
 
+#if 0
+	virtual void CreateConstantBuffer() override { Super::CreateConstantBuffer<DirectX::XMFLOAT4>(DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)); }
+#endif
+
 	virtual void PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList) override;
 
 private:
