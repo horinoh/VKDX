@@ -469,7 +469,7 @@ void DX::CreateSwapChainResource()
 		//!< スワップチェインのバッファリソースを SwapChainResources へ取得
 		VERIFY_SUCCEEDED(SwapChain->GetBuffer(Index, IID_PPV_ARGS(It->GetAddressOf())));
 
-		//!< レンダーターゲットビューの作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
+		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 		//!< (リソースがタイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能)
 		Device->CreateRenderTargetView(It->Get(), nullptr, CpuDescriptorHandle);
 		CpuDescriptorHandle.ptr += IncrementSize;
@@ -561,7 +561,7 @@ void DX::CreateDepthStencilResource(const UINT Width, const UINT Height, const D
 	auto CpuDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV); //!< ここでは必要ないが一応
 
-	//!< デプスステンシルビューの作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
+	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	//!< (リソースがタイプドフォーマットなら D3D12_DEPTH_STENCIL_VIEW_DESC* へ nullptr 指定可能)
 	Device->CreateDepthStencilView(DepthStencilResource.Get(), nullptr, CpuDescriptorHandle);
 	CpuDescriptorHandle.ptr += IncrementSize; //!< ここでは必要ないが一応
@@ -605,10 +605,10 @@ void DX::CreateRootSignature()
 	const std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
 		{
 			D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
-			1,
-			0,
-			0,
-			0
+			1, //!< NumDescriptors
+			0, //!< BaseShaderRegister ... HLSL で register(b0) なら 0、register(t3) なら 3 という感じ
+			0, //!< RegisterSpace ... 通常は 0 でよい。HLSL で register(t3, space5) なら 5
+			D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND //!< OffsetInDescriptorsFromTableStart ... 通常は D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND でよい
 		},
 	};
 	const D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable = {
@@ -616,9 +616,9 @@ void DX::CreateRootSignature()
 	};
 	const std::vector<D3D12_ROOT_PARAMETER> RootParameters = {
 		{
-			D3D12_ROOT_PARAMETER_TYPE_CBV,
+			D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
 			DescriptorTable,
-			D3D12_SHADER_VISIBILITY_ALL
+			D3D12_SHADER_VISIBILITY_ALL //!< #TODO 必要とするシェーダに限定すべき
 		},
 	};
 
@@ -836,11 +836,11 @@ GraphicsCommandList->SetGraphicsRootDescriptorTable(0, CVDescriptorHandle);
 */
 void DX::CreateConstantBuffer()
 {
-	const DirectX::XMFLOAT4X4 WVP;
-	const auto Size = sizeof(WVP);
+	const DirectX::XMFLOAT4 Color = DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f);
+	const auto Size = sizeof(Color);
 
 	const auto Size256 = RoundUpTo256(Size);
-	CreateUploadBuffer(ConstantBufferResource.GetAddressOf(), Size256, &WVP);
+	CreateUploadBuffer(ConstantBufferResource.GetAddressOf(), Size256, &Color);
 
 	CreateConstantBufferDescriptorHeap(static_cast<UINT>(Size256));
 
@@ -865,7 +865,7 @@ void DX::CreateConstantBufferDescriptorHeap(const UINT Size)
 		ConstantBufferResource->GetGPUVirtualAddress(),
 		Size
 	};
-	//!< ビューの作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
+	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	Device->CreateConstantBufferView(&ConstantBufferViewDesc, ConstantBufferDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
 #ifdef _DEBUG
@@ -923,7 +923,7 @@ void DX::CreateUnorderedAccessTexture()
 	};
 	SRVDesc.Texture2D.MostDetailedMip = 0;
 	SRVDesc.Texture1D.MipLevels = 1;
-	//!< シェーダリソースビューの作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
+	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	Device->CreateShaderResourceView(UnorderedAccessTextureResource.Get(), &SRVDesc, CPUDescriptorHandle);
 
 	CPUDescriptorHandle.ptr += 1 * IncrementSize;
@@ -932,7 +932,7 @@ void DX::CreateUnorderedAccessTexture()
 		D3D12_UAV_DIMENSION_TEXTURE2D,
 	};
 	UAVDesc.Texture2D.MipSlice = 0;
-	//!< アンオーダードアクセスビューの作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
+	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	Device->CreateUnorderedAccessView(UnorderedAccessTextureResource.Get(), nullptr, &UAVDesc, CPUDescriptorHandle);
 
 #ifdef _DEBUG
