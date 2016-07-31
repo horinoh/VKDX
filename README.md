@@ -22,11 +22,16 @@
 
 #### シェーダコンパイル
 * glslangValidator.exe でコンパイルする 環境変数 **Path** が通っているらしくそのまま使用できる
-* Visual Studio で BuildEvent - Post-Build Event に以下のように指定した 
+* Visual Studio で BuildEvent - Post-Build Event に以下のように指定した
+* .exe 直起動もできるように TargetDir にもコピーしている
 ~~~
 for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator -V %%1 -o $(ProjectDir)%%1.spv
+for %%1 in (*.spv) do xcopy /y %%1 $(TargetDir)
 ~~~
-    
+
+#### Visual Studio GLSL ハイライト
+* ShaderHighlights\XXX_vs2015.reg   
+ 
 ## DX
 
 #### Visual Studio
@@ -34,9 +39,14 @@ for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator 
  * インストール済みの場合は「プログラムと機能」から更新インストールする 
 
 #### シェーダコンパイル
- * シェーダは Visual Studio に追加すると自動的にコンパイルされる
- * Properties - HLSLCompiler - General - Shader Type を適切に設定しておかないと、頂点シェーダでコンパイルされるので注意
- * HLSL Compiler - Output Files - $(OutDir)%(Filename).cso を $(ProjectDir)%(Filename).cso へ変更した
+* シェーダは Visual Studio に追加すると自動的にコンパイルされる
+* Properties - HLSLCompiler - General - Shader Type を適切に設定しておかないと、頂点シェーダでコンパイルされるので注意
+* HLSL Compiler - Output Files - $(OutDir)%(Filename).cso を $(ProjectDir)%(Filename).cso へ変更した
+* Visual Studio で BuildEvent - Post-Build Event に以下のように指定した
+* .exe 直起動もできるように TargetDir にもコピーしている
+~~~
+for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir)
+~~~
 
 #### デバッグ
  * 参考 https://msdn.microsoft.com/ja-jp/library/hh873204.aspx

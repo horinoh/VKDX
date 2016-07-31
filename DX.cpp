@@ -326,6 +326,10 @@ void DX::CheckMultiSample(const DXGI_FORMAT Format)
 	}
 }
 
+/**
+@brief マルチスレッドで「同じ」キューへサブミットできる
+@note Vulkan ではマルチスレッドで「異なる」キューへのみサブミットできるので注意
+*/
 void DX::CreateCommandQueue()
 {
 	const D3D12_COMMAND_QUEUE_DESC CommandQueueDesc = {
@@ -701,7 +705,7 @@ void DX::CreateComputePipelineState()
 目的のリソースは D3D12_HEAP_TYPE_DEFAULT で作成する (頻繁に更新しないリソースは D3D12_HEAP_TYPE_DEFAULT にしておきたい)
 アップロードリソースから目的のリソースへのコピーコマンドを発行する
 */
-void DX::CreateBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source)
+void DX::CreateDefaultBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source)
 {
 	//!< リソースデスクリプタ(共用)
 	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };

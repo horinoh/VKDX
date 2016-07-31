@@ -22,14 +22,12 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	Super::OnCreate(hWnd, hInstance);
 
 	CreateInstance();
-	auto PhysicalDevice = EnumeratePhysicalDevice();
-	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
-	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
-	CreateDevice(PhysicalDevice);
-
-	GetDeviceQueue(Device, QueueFamilyIndex);
+	PhysicalDevice = EnumeratePhysicalDevice();
+	//!< GetQueueFamily() 内で CreateDevice() される
+	GetQueueFamily(PhysicalDevice);
+	GetDeviceQueue(Device, GraphicsQueueFamilyIndex);
 	
-	CreateCommandPool(QueueFamilyIndex);
+	CreateCommandPool(GraphicsQueueFamilyIndex);
 	auto CommandPool = CommandPools[0];
 	CreateCommandBuffer(CommandPool);
 	
@@ -69,7 +67,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateVertexBuffer(CommandPool, PhysicalDeviceMemoryProperties);
 	CreateIndexBuffer(CommandPool, PhysicalDeviceMemoryProperties);
-	CreateUniformBuffer(PhysicalDeviceMemoryProperties);
+	//CreateUniformBuffer(PhysicalDeviceMemoryProperties);
 }
 void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 {
@@ -387,6 +385,31 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 	return ShaderModule;
 }
 
+void VK::EnumerateInstanceLayer()
+{
+	uint32_t InstanceLayerPropertyCount = 0;
+	VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&InstanceLayerPropertyCount, nullptr));
+	if (InstanceLayerPropertyCount) {
+		std::vector<VkLayerProperties> LayerProperties(InstanceLayerPropertyCount);
+		VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&InstanceLayerPropertyCount, LayerProperties.data()));
+		for (const auto& i : LayerProperties) {
+			i.layerName;
+		}
+	}
+}
+void VK::EnumerateInstanceExtenstion()
+{
+	uint32_t InstanceExtensionPropertyCount = 0;
+	VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(nullptr, &InstanceExtensionPropertyCount, nullptr));
+	if (InstanceExtensionPropertyCount) {
+		std::vector<VkExtensionProperties> ExtensionProperties(InstanceExtensionPropertyCount);
+		VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(nullptr, &InstanceExtensionPropertyCount, ExtensionProperties.data()));
+		for (const auto& i : ExtensionProperties) {
+			i.extensionName;
+		}
+	}
+}
+
 //VkBool32 VKAPI_PTR DebugCallback(VkDebugReportFlagsEXT flags,
 //	VkDebugReportObjectTypeEXT objectType,
 //	uint64_t object,
@@ -401,6 +424,9 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 
 void VK::CreateInstance()
 {
+	EnumerateInstanceLayer();
+	EnumerateInstanceExtenstion();
+
 	const VkApplicationInfo ApplicationInfo = {
 		VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		nullptr,
@@ -461,10 +487,9 @@ VkPhysicalDevice VK::EnumeratePhysicalDevice()
 	//!< 物理デバイス(GPU)の列挙
 	uint32_t PhysicalDeviceCount = 0;
 	VERIFY_SUCCEEDED(vkEnumeratePhysicalDevices(Instance, &PhysicalDeviceCount, nullptr));
-	assert(PhysicalDeviceCount && "Physical device count == 0");
+	assert(PhysicalDeviceCount && "PhysicalDevice not found");
 	std::vector<VkPhysicalDevice> PhysicalDevices(PhysicalDeviceCount);
 	VERIFY_SUCCEEDED(vkEnumeratePhysicalDevices(Instance, &PhysicalDeviceCount, PhysicalDevices.data()));
-
 #ifdef _DEBUG
 	std::cout << Yellow << "\t" << "PhysicalDevices" << White << std::endl;
 #define PHYSICAL_DEVICE_TYPE_ENTRY(entry) if(VK_PHYSICAL_DEVICE_TYPE_##entry == PhysicalDeviceProperties.deviceType) { std::cout << #entry << std::endl; }
@@ -489,15 +514,44 @@ VkPhysicalDevice VK::EnumeratePhysicalDevice()
 	//!< ここでは最初の物理デバイスを使用することにする
 	return PhysicalDevices[0];
 }
-void VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
+void VK::EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice)
 {
+	uint32_t DeviceLayerPropertyCount = 0;
+	VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, nullptr));
+	if (DeviceLayerPropertyCount) {
+		std::vector<VkLayerProperties> LayerProperties(DeviceLayerPropertyCount);
+		VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, LayerProperties.data()));
+		for (const auto& i : LayerProperties) {
+			i.layerName;
+		}
+	}
+}
+void VK::EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice)
+{
+	uint32_t DeviceExtensionPropertyCount = 0;
+	VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &DeviceExtensionPropertyCount, nullptr));
+	if (DeviceExtensionPropertyCount) {
+		std::vector<VkExtensionProperties> ExtensionProperties(DeviceExtensionPropertyCount);
+		VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &DeviceExtensionPropertyCount, ExtensionProperties.data()));
+		for (const auto& i : ExtensionProperties) {
+			i.extensionName;
+		}
+	}
+}
+void VK::GetQueueFamily(VkPhysicalDevice PhysicalDevice)
+{
+	EnumerateDeviceLayer(PhysicalDevice);
+	EnumerateDeviceExtenstion(PhysicalDevice);
+
+	//!< メモリプロパティを取得
+	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
+
 	//!< キューのプロパティを列挙
-	uint32_t QueueFamilyPropertyCount;
+	uint32_t QueueFamilyPropertyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyPropertyCount, nullptr);
-	assert(QueueFamilyPropertyCount);
+	assert(QueueFamilyPropertyCount && "QueueFamilyProperty not found");
 	std::vector<VkQueueFamilyProperties> QueueProperties(QueueFamilyPropertyCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyPropertyCount, QueueProperties.data());
-
 #ifdef _DEBUG
 	std::cout << Yellow << "\t" << "QueueProperties" << White << std::endl;
 #define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & i.queueFlags) { std::cout << #entry << " | "; }
@@ -513,50 +567,63 @@ void VK::CreateDevice(VkPhysicalDevice PhysicalDevice)
 #undef QUEUE_PROPS
 #endif
 
+	//!< GRAPHICS 機能を持つものを探す
 	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i) {
-		//!< GRAPHICS 機能を持つものを探す
 		if (VK_QUEUE_GRAPHICS_BIT & QueueProperties[i].queueFlags) {
-			QueueFamilyIndex = i;
+			GraphicsQueueFamilyIndex = i;
 #ifdef _DEBUG
-			std::cout << "\t" << "QueueFamilyIndex = " << QueueFamilyIndex << std::endl;
+			std::cout << "\t" << "GraphicsQueueFamilyIndex = " << GraphicsQueueFamilyIndex << std::endl;
 #endif
-			const std::vector<float> QueuePriorities = { 0.0f };
-			const std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos = {
-				{
-					VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-					nullptr,
-					0,
-					QueueFamilyIndex,
-					static_cast<uint32_t>(QueuePriorities.size()), QueuePriorities.data()
-				}
-			};
-			const std::vector<const char*> EnabledExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-			const VkDeviceCreateInfo DeviceCreateInfo = {
-				VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-				nullptr,
-				0,
-				static_cast<uint32_t>(QueueCreateInfos.size()), QueueCreateInfos.data(),
-				static_cast<uint32_t>(EnabledLayerNames.size()), EnabledLayerNames.data(),
-				static_cast<uint32_t>(EnabledExtensions.size()), EnabledExtensions.data(),
-				nullptr
-			};
-			VERIFY_SUCCEEDED(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &Device));
-
-#ifdef _DEBUG
-			std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
-#endif
+			CreateDevice(PhysicalDevice, GraphicsQueueFamilyIndex);
 		}
 		else if (VK_QUEUE_TRANSFER_BIT & QueueProperties[i].queueFlags) {
 			//!< #TODO 
 			//!< デバイスによっては転送専用キューを持つ、転送を多用する場合は専用キューを使用した方が良い
+			//TransferQueueFamilyIndex = i;
+		}
+		else if (VK_QUEUE_COMPUTE_BIT & QueueProperties[i].queueFlags) {
+			//!< #TODO
+			//ComputeQueueFamilyIndex = i;
 		}
 	}
-	assert(UINT_MAX != QueueFamilyIndex && "Queue not found");
+	assert(UINT_MAX != GraphicsQueueFamilyIndex && "GraphicsQueue not found");
 }
+void VK::CreateDevice(VkPhysicalDevice PhysicalDevice, const uint32_t QueueFamilyIndex)
+{
+	const std::vector<float> QueuePriorities = { 0.0f };
+	const std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos = {
+		{
+			VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+			nullptr,
+			0,
+			QueueFamilyIndex,
+			static_cast<uint32_t>(QueuePriorities.size()), QueuePriorities.data()
+		}
+	};
+	const std::vector<const char*> EnabledExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	const VkDeviceCreateInfo DeviceCreateInfo = {
+		VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(QueueCreateInfos.size()), QueueCreateInfos.data(),
+		static_cast<uint32_t>(EnabledLayerNames.size()), EnabledLayerNames.data(),
+		static_cast<uint32_t>(EnabledExtensions.size()), EnabledExtensions.data(),
+		nullptr
+	};
+	VERIFY_SUCCEEDED(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &Device));
 
+#ifdef _DEBUG
+	std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
+#endif
+}
+/**
+@brief マルチスレッドで「異なる」キューへサブミットできる
+@note DirectX12 はマルチスレッドで「同じ」キューへもサブミットできるので注意
+*/
 void VK::GetDeviceQueue(VkDevice Device, const uint32_t QueueFamilyIndex)
 {
 	vkGetDeviceQueue(Device, QueueFamilyIndex, 0/*QueueFamily内でのインデックス*/, &Queue);
+
 #ifdef _DEBUG
 	std::cout << "GetDeviceQueue" << COUT_OK << std::endl << std::endl;
 #endif
@@ -616,6 +683,9 @@ void VK::CreateFence()
 #endif
 }
 
+/**
+@brief 複数キュー間の同期、単一キューへの疎粒度のサブミットの同期
+*/
 void VK::CreateSemaphore()
 {
 	const VkSemaphoreCreateInfo SemaphoreCreateInfo = {
@@ -639,6 +709,9 @@ void VK::CreateSemaphore()
 #endif
 }
 
+/**
+@brief デバイス(GPU)とホスト(CPU)の同期
+*/
 void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
 {
 #ifdef _WIN32
@@ -659,7 +732,7 @@ void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
 void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice, const uint32_t Width, const uint32_t Height)
 {
 	VkBool32 Supported = VK_FALSE;
-	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, QueueFamilyIndex, Surface, &Supported));
+	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, GraphicsQueueFamilyIndex, Surface, &Supported));
 	assert(VK_TRUE == Supported && "vkGetPhysicalDeviceSurfaceSupportKHR failed");
 
 	//!< サーフェスの情報を取得
@@ -1089,7 +1162,7 @@ void VK::CreateFramebuffer()
 #endif
 }
 
-void VK::CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source)
+void VK::CreateDeviceLocalBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source)
 {
 	VkBuffer StagingBuffer;
 	VkDeviceMemory StagingDeviceMemory;
@@ -1185,7 +1258,36 @@ void VK::CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMem
 	vkDestroyBuffer(Device, StagingBuffer, nullptr);
 	vkFreeMemory(Device, StagingDeviceMemory, nullptr);
 }
+void VK::CreateHostVisibleBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source)
+{
+	const VkBufferCreateInfo BufferCreateInfo = {
+		VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		nullptr,
+		0,
+		Size,
+		static_cast<VkBufferUsageFlags>(Usage),
+		VK_SHARING_MODE_EXCLUSIVE,
+		0, nullptr
+	};
+	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, Buffer));
 
+	VkMemoryRequirements MemoryRequirements;
+	vkGetBufferMemoryRequirements(Device, UniformBuffer, &MemoryRequirements);
+	const VkMemoryAllocateInfo MemoryAllocateInfo = {
+		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		nullptr,
+		MemoryRequirements.size,
+		GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) //!< HOST_VISIBLE にすること
+	};
+	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, DeviceMemory));
+	void *Data;
+	//!< #TODO サンプルだと vkMapMemory() の size に MemoryAllocateInfo.allocationSize を渡しているケースと、直サイズを渡しているケースがある、どっちが正しい？
+	//VERIFY_SUCCEEDED(vkMapMemory(Device, *DeviceMemory, 0, MemoryAllocateInfo.allocationSize, 0, &Data)); {
+	VERIFY_SUCCEEDED(vkMapMemory(Device, *DeviceMemory, 0, Size, 0, &Data)); {
+		memcpy(Data, Source, Size);
+	} vkUnmapMemory(Device, *DeviceMemory);
+	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DeviceMemory, 0));
+}
 void VK::CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
 #ifdef _DEBUG
@@ -1200,30 +1302,10 @@ void VK::CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhysicalDevi
 }
 void VK::CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
-#if 0
-	const auto Size = sizeof(glm::mat4) * 3; //!< World, View, Projection
+	glm::vec4 Color(1.0f, 0.0f, 0.0f, 1.0f);
+	const auto Size = sizeof(Color);
 
-	const VkBufferCreateInfo BufferCreateInfo = {
-		VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-		nullptr,
-		0,
-		Size,
-		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-		VK_SHARING_MODE_EXCLUSIVE,
-		0, nullptr
-	};
-	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, &UniformBuffer));
-
-	VkMemoryRequirements MemoryRequirements;
-	vkGetBufferMemoryRequirements(Device, UniformBuffer, &MemoryRequirements); 
-	const VkMemoryAllocateInfo MemoryAllocateInfo = {
-		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-		nullptr,
-		MemoryRequirements.size,
-		GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
-	};
-	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &UniformDeviceMemory));
-	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffer, UniformDeviceMemory, 0));
+	CreateHostVisibleBuffer(PhysicalDeviceMemoryProperties, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &UniformBuffer, &UniformDeviceMemory, Size, &Color);
 
 	UniformDescriptorBufferInfo = {
 		UniformBuffer,
@@ -1248,7 +1330,6 @@ void VK::CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDev
 	vkUpdateDescriptorSets(Device, 
 		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(), 
 		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
-#endif
 
 #ifdef _DEBUG
 	std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;

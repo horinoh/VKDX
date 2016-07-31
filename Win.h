@@ -13,6 +13,7 @@
 
 #include <ostream>
 #include <vector>
+#include <array>
 #include <cassert>
 #include <algorithm>
 #include <iostream>

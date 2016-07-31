@@ -190,6 +190,7 @@ void VKExt::CreateGraphicsPipeline_VsPs()
 		{ 0.0f, 0.0f, 0.0f, 0.0f } //!< float blendConstants[4];
 	};
 
+	//!< DirectX12 ‚É‡‚í‚¹‚éˆ×AViewport ‚Æ Scissor ‚ð VkDynamicState ‚Æ‚·‚é
 	const std::vector<VkDynamicState> DynamicStates = {
 		VK_DYNAMIC_STATE_VIEWPORT,
 		VK_DYNAMIC_STATE_SCISSOR

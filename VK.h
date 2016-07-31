@@ -74,9 +74,14 @@ protected:
 	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout) const;
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 
+	virtual void EnumerateInstanceLayer();
+	virtual void EnumerateInstanceExtenstion();
 	virtual void CreateInstance();
 	virtual VkPhysicalDevice EnumeratePhysicalDevice();
-	virtual void CreateDevice(VkPhysicalDevice PhysicalDevice);
+	virtual void EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice);
+	virtual void EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice);
+	virtual void GetQueueFamily(VkPhysicalDevice PhysicalDevice);
+	virtual void CreateDevice(VkPhysicalDevice PhysicalDevice, const uint32_t QueueFamilyIndex);
 	virtual void GetDeviceQueue(VkDevice Device, const uint32_t QueueFamilyIndex);
 
 	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
@@ -119,7 +124,8 @@ protected:
 	
 	virtual void CreateFramebuffer();
 
-	virtual void CreateBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
+	virtual void CreateDeviceLocalBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
+	virtual void CreateHostVisibleBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
 	virtual void CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
@@ -145,10 +151,14 @@ protected:
 
 	VkAllocationCallbacks AllocationCallbacks;
 	VkInstance Instance = VK_NULL_HANDLE;
+	VkPhysicalDevice PhysicalDevice = VK_NULL_HANDLE;
+	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
 	VkDevice Device = VK_NULL_HANDLE;
 	
 	VkQueue Queue = VK_NULL_HANDLE;
-	uint32_t QueueFamilyIndex = UINT_MAX;
+	uint32_t GraphicsQueueFamilyIndex = UINT_MAX;
+	//uint32_t TransferQueueFamilyIndex = UINT_MAX;
+	//uint32_t ComputeQueueFamilyIndex = UINT_MAX;
 
 	std::vector<VkCommandPool> CommandPools;
 	std::vector<VkCommandBuffer> CommandBuffers;
@@ -248,6 +258,9 @@ public:
 	template<typename T>
 	void CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const T& Type) {
 		//!< #TODO
+		const auto Size = sizeof(T);
+		CreateHostVisibleBuffer(PhysicalDeviceMemoryProperties, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &UniformBuffer, &UniformDeviceMemory, Size, &Type);
+		//CreateUniformBufferDescriptorBufferInfo(static_cast<UINT>(Size));
 #ifdef _DEBUG
 		std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
 #endif
