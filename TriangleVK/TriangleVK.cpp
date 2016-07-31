@@ -225,7 +225,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void TriangleVK::CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
+void TriangleVK::CreateVertexBuffer(const VkCommandPool CommandPool)
 {
 	const std::vector<Vertex> Vertices = {
 		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
@@ -235,14 +235,14 @@ void TriangleVK::CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhy
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 
-	CreateDeviceLocalBuffer(CommandPool, PhysicalDeviceMemoryProperties, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, &VertexBuffer, &VertexDeviceMemory, Size, Vertices.data());
+	CreateDeviceLocalBuffer(CommandPool, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, &VertexBuffer, &VertexDeviceMemory, Size, Vertices.data());
 
 #ifdef _DEBUG
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
-void TriangleVK::CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
+void TriangleVK::CreateIndexBuffer(const VkCommandPool CommandPool)
 {
 	const std::vector<uint32_t> Indices = { 0, 1, 2 };
 
@@ -251,7 +251,7 @@ void TriangleVK::CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhys
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 	
-	CreateDeviceLocalBuffer(CommandPool, PhysicalDeviceMemoryProperties, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, &IndexBuffer, &IndexDeviceMemory, Size, Indices.data());
+	CreateDeviceLocalBuffer(CommandPool, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, &IndexBuffer, &IndexDeviceMemory, Size, Indices.data());
 
 #ifdef _DEBUG
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;

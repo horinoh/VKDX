@@ -16,8 +16,8 @@ public:
 protected:
 	virtual void CreateShader() override { CreateShader_VsPs(); }
 	virtual void CreateVertexInput() override { CreateVertexInput_PositionColor(); }
-	virtual void CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties) override;
-	virtual void CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties) override;
+	virtual void CreateVertexBuffer(const VkCommandPool CommandPool) override;
+	virtual void CreateIndexBuffer(const VkCommandPool CommandPool) override;
 	virtual void CreateGraphicsPipeline() override { CreateGraphicsPipeline_VsPs(); }
 
 	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer) override;

@@ -22,10 +22,10 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	Super::OnCreate(hWnd, hInstance);
 
 	CreateInstance();
-	PhysicalDevice = EnumeratePhysicalDevice();
-	//!< GetQueueFamily() 内で CreateDevice() される
-	GetQueueFamily(PhysicalDevice);
-	GetDeviceQueue(Device, GraphicsQueueFamilyIndex);
+	EnumeratePhysicalDevice();
+	GetQueueFamily();
+	CreateDevice(GraphicsQueueFamilyIndex);
+	GetDeviceQueue(GraphicsQueueFamilyIndex);
 	
 	CreateCommandPool(GraphicsQueueFamilyIndex);
 	auto CommandPool = CommandPools[0];
@@ -36,14 +36,14 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	const auto ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 	CreateSurface(hWnd, hInstance);
-	CreateSwapchainClientRect(PhysicalDevice);
+	CreateSwapchainClientRect();
 	auto CommandBuffer = CommandBuffers[0];
 	CreateSwapchainImageView(CommandBuffer, ColorFormat);
 
 	const auto DepthFormat = GetSupportedDepthFormat(PhysicalDevice);
 	{
 		CreateDepthStencilImage(DepthFormat);
-		CreateDepthStencilDeviceMemory(PhysicalDeviceMemoryProperties);
+		CreateDepthStencilDeviceMemory();
 		CreateDepthStencilView(CommandBuffer, DepthFormat);
 	}
 
@@ -65,8 +65,8 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreatePipeline();
 	CreateFramebuffer();
 
-	CreateVertexBuffer(CommandPool, PhysicalDeviceMemoryProperties);
-	CreateIndexBuffer(CommandPool, PhysicalDeviceMemoryProperties);
+	CreateVertexBuffer(CommandPool);
+	CreateIndexBuffer(CommandPool);
 	//CreateUniformBuffer(PhysicalDeviceMemoryProperties);
 }
 void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
@@ -482,7 +482,7 @@ void VK::CreateInstance()
 	std::cout << "CreateInstace" << COUT_OK << std::endl << std::endl;
 #endif
 }
-VkPhysicalDevice VK::EnumeratePhysicalDevice()
+void VK::EnumeratePhysicalDevice()
 {
 	//!< 物理デバイス(GPU)の列挙
 	uint32_t PhysicalDeviceCount = 0;
@@ -512,9 +512,16 @@ VkPhysicalDevice VK::EnumeratePhysicalDevice()
 #endif
 
 	//!< ここでは最初の物理デバイスを使用することにする
-	return PhysicalDevices[0];
+	SelectPhysicalDevice(PhysicalDevices[0]);
 }
-void VK::EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice)
+void VK::SelectPhysicalDevice(VkPhysicalDevice SelectedPhysicalDevice)
+{
+	PhysicalDevice = SelectedPhysicalDevice;
+
+	//!< メモリプロパティを取得
+	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
+}
+void VK::EnumerateDeviceLayer()
 {
 	uint32_t DeviceLayerPropertyCount = 0;
 	VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, nullptr));
@@ -526,7 +533,7 @@ void VK::EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice)
 		}
 	}
 }
-void VK::EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice)
+void VK::EnumerateDeviceExtenstion()
 {
 	uint32_t DeviceExtensionPropertyCount = 0;
 	VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &DeviceExtensionPropertyCount, nullptr));
@@ -538,13 +545,10 @@ void VK::EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice)
 		}
 	}
 }
-void VK::GetQueueFamily(VkPhysicalDevice PhysicalDevice)
+void VK::GetQueueFamily()
 {
-	EnumerateDeviceLayer(PhysicalDevice);
-	EnumerateDeviceExtenstion(PhysicalDevice);
-
-	//!< メモリプロパティを取得
-	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
+	EnumerateDeviceLayer();
+	EnumerateDeviceExtenstion();
 
 	//!< キューのプロパティを列挙
 	uint32_t QueueFamilyPropertyCount = 0;
@@ -574,7 +578,6 @@ void VK::GetQueueFamily(VkPhysicalDevice PhysicalDevice)
 #ifdef _DEBUG
 			std::cout << "\t" << "GraphicsQueueFamilyIndex = " << GraphicsQueueFamilyIndex << std::endl;
 #endif
-			CreateDevice(PhysicalDevice, GraphicsQueueFamilyIndex);
 		}
 		else if (VK_QUEUE_TRANSFER_BIT & QueueProperties[i].queueFlags) {
 			//!< #TODO 
@@ -588,7 +591,7 @@ void VK::GetQueueFamily(VkPhysicalDevice PhysicalDevice)
 	}
 	assert(UINT_MAX != GraphicsQueueFamilyIndex && "GraphicsQueue not found");
 }
-void VK::CreateDevice(VkPhysicalDevice PhysicalDevice, const uint32_t QueueFamilyIndex)
+void VK::CreateDevice(const uint32_t QueueFamilyIndex)
 {
 	const std::vector<float> QueuePriorities = { 0.0f };
 	const std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos = {
@@ -620,7 +623,7 @@ void VK::CreateDevice(VkPhysicalDevice PhysicalDevice, const uint32_t QueueFamil
 @brief マルチスレッドで「異なる」キューへサブミットできる
 @note DirectX12 はマルチスレッドで「同じ」キューへもサブミットできるので注意
 */
-void VK::GetDeviceQueue(VkDevice Device, const uint32_t QueueFamilyIndex)
+void VK::GetDeviceQueue(const uint32_t QueueFamilyIndex)
 {
 	vkGetDeviceQueue(Device, QueueFamilyIndex, 0/*QueueFamily内でのインデックス*/, &Queue);
 
@@ -729,7 +732,7 @@ void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
 #endif
 }
 
-void VK::CreateSwapchain(VkPhysicalDevice PhysicalDevice, const uint32_t Width, const uint32_t Height)
+void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 {
 	VkBool32 Supported = VK_FALSE;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, GraphicsQueueFamilyIndex, Surface, &Supported));
@@ -953,7 +956,7 @@ void VK::CreateDepthStencilImage(const VkFormat DepthFormat)
 	std::cout << "\t" << "DepthStencilImage" << std::endl;
 #endif
 }
-void VK::CreateDepthStencilDeviceMemory(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
+void VK::CreateDepthStencilDeviceMemory()
 {
 	VkMemoryRequirements MemoryRequirements;
 	vkGetImageMemoryRequirements(Device, DepthStencilImage, &MemoryRequirements);
@@ -1162,7 +1165,7 @@ void VK::CreateFramebuffer()
 #endif
 }
 
-void VK::CreateDeviceLocalBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source)
+void VK::CreateDeviceLocalBuffer(const VkCommandPool CommandPool, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source)
 {
 	VkBuffer StagingBuffer;
 	VkDeviceMemory StagingDeviceMemory;
@@ -1258,7 +1261,7 @@ void VK::CreateDeviceLocalBuffer(const VkCommandPool CommandPool, const VkPhysic
 	vkDestroyBuffer(Device, StagingBuffer, nullptr);
 	vkFreeMemory(Device, StagingDeviceMemory, nullptr);
 }
-void VK::CreateHostVisibleBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source)
+void VK::CreateHostVisibleBuffer(const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source)
 {
 	const VkBufferCreateInfo BufferCreateInfo = {
 		VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -1288,24 +1291,24 @@ void VK::CreateHostVisibleBuffer(const VkPhysicalDeviceMemoryProperties& Physica
 	} vkUnmapMemory(Device, *DeviceMemory);
 	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DeviceMemory, 0));
 }
-void VK::CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
+void VK::CreateVertexBuffer(const VkCommandPool CommandPool)
 {
 #ifdef _DEBUG
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void VK::CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
+void VK::CreateIndexBuffer(const VkCommandPool CommandPool)
 {
 #ifdef _DEBUG
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void VK::CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
+void VK::CreateUniformBuffer()
 {
 	glm::vec4 Color(1.0f, 0.0f, 0.0f, 1.0f);
 	const auto Size = sizeof(Color);
 
-	CreateHostVisibleBuffer(PhysicalDeviceMemoryProperties, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &UniformBuffer, &UniformDeviceMemory, Size, &Color);
+	CreateHostVisibleBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &UniformBuffer, &UniformDeviceMemory, Size, &Color);
 
 	UniformDescriptorBufferInfo = {
 		UniformBuffer,

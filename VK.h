@@ -77,12 +77,13 @@ protected:
 	virtual void EnumerateInstanceLayer();
 	virtual void EnumerateInstanceExtenstion();
 	virtual void CreateInstance();
-	virtual VkPhysicalDevice EnumeratePhysicalDevice();
-	virtual void EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice);
-	virtual void EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice);
-	virtual void GetQueueFamily(VkPhysicalDevice PhysicalDevice);
-	virtual void CreateDevice(VkPhysicalDevice PhysicalDevice, const uint32_t QueueFamilyIndex);
-	virtual void GetDeviceQueue(VkDevice Device, const uint32_t QueueFamilyIndex);
+	virtual void EnumeratePhysicalDevice();
+	virtual void SelectPhysicalDevice(VkPhysicalDevice SelectedPhysicalDevice);
+	virtual void EnumerateDeviceLayer();
+	virtual void EnumerateDeviceExtenstion();
+	virtual void GetQueueFamily();
+	virtual void CreateDevice(const uint32_t QueueFamilyIndex);
+	virtual void GetDeviceQueue(const uint32_t QueueFamilyIndex);
 
 	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
 	virtual void CreateCommandBuffer(const VkCommandPool CommandPool);
@@ -91,14 +92,14 @@ protected:
 	virtual void CreateSemaphore();
 
 	virtual void CreateSurface(HWND hWnd, HINSTANCE hInstance);
-	virtual void CreateSwapchain(VkPhysicalDevice PhysicalDevice, const uint32_t Width, const uint32_t Height);
-	virtual void CreateSwapchainClientRect(VkPhysicalDevice PhysicalDevice) {
-		CreateSwapchain(PhysicalDevice, static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
+	virtual void CreateSwapchain(const uint32_t Width, const uint32_t Height);
+	virtual void CreateSwapchainClientRect() {
+		CreateSwapchain(static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
 	}
 	virtual void CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat ColorFormat);
 
 	virtual void CreateDepthStencilImage(const VkFormat DepthFormat);
-	virtual void CreateDepthStencilDeviceMemory(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
+	virtual void CreateDepthStencilDeviceMemory();
 	virtual void CreateDepthStencilView(VkCommandBuffer CommandBuffer, const VkFormat DepthFormat);
 
 	virtual void CreateShader();
@@ -124,11 +125,11 @@ protected:
 	
 	virtual void CreateFramebuffer();
 
-	virtual void CreateDeviceLocalBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
-	virtual void CreateHostVisibleBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
-	virtual void CreateVertexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
-	virtual void CreateIndexBuffer(const VkCommandPool CommandPool, const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
-	virtual void CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
+	virtual void CreateDeviceLocalBuffer(const VkCommandPool CommandPool, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
+	virtual void CreateHostVisibleBuffer(const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
+	virtual void CreateVertexBuffer(const VkCommandPool CommandPool);
+	virtual void CreateIndexBuffer(const VkCommandPool CommandPool);
+	virtual void CreateUniformBuffer();
 
 	// ----------------------------------
 
