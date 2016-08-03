@@ -20,23 +20,25 @@
 * https://github.com/g-truc/gli
 * 同じ階層に GLI をクローンして **..\..\gli** にパスを通した
 
+#### Vulkan-Hpp
+* https://github.com/KhronosGroup/Vulkan-Hpp
+* 未使用
+
 #### シェーダコンパイル
 * glslangValidator.exe でコンパイルする 環境変数 **Path** が通っているらしくそのまま使用できる
 * Custom Build Tool に以下のように指定した (.exe 直起動もできるように TargetDir にもコピーしている)
-	* Command Line
+	* Outputs : `%(Identity).spv`
+	* Description : `GLSL Compiler`
+	* Link Objects : `No`
+	* Treat Output As Content : `Yes`
+	* Command Line :
 ~~~
 glslangValidator -V %(Identity) -o %(Identity).spv
 spirv-remap --map all --input %(Identity).spv --output . //!< Release のみ
 xcopy /y %(Identity).spv $(TargetDir)
 ~~~
-	* Outputs
-~~~
-%(Identity).spv
-~~~
-	* Description : GLSL Compiler
-	* Link Objects : No
-	* Treat Output As Content : Yes
-* プロパティシートへの変更は **sln を立ち上げ直さないと反映されない**っぽいので注意!
+
+* プロパティシートへの変更は **sln を立ち上げ直さないと反映されない**っぽい!
 
 #### Visual Studio GLSL ハイライト
 * ShaderHighlights\XXX_vs2015.reg   
