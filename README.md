@@ -22,12 +22,21 @@
 
 #### シェーダコンパイル
 * glslangValidator.exe でコンパイルする 環境変数 **Path** が通っているらしくそのまま使用できる
-* Visual Studio で BuildEvent - Post-Build Event に以下のように指定した
-* .exe 直起動もできるように TargetDir にもコピーしている
+* Custom Build Tool に以下のように指定した (.exe 直起動もできるように TargetDir にもコピーしている)
+	* Command Line
 ~~~
-for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator -V %%1 -o $(ProjectDir)%%1.spv
-for %%1 in (*.spv) do xcopy /y %%1 $(TargetDir)
+glslangValidator -V %(Identity) -o %(Identity).spv
+spirv-remap --map all --input %(Identity).spv --output . //!< Release のみ
+xcopy /y %(Identity).spv $(TargetDir)
 ~~~
+	* Outputs
+~~~
+%(Identity).spv
+~~~
+	* Description : GLSL Compiler
+	* Link Objects : No
+	* Treat Output As Content : Yes
+* プロパティシートへの変更は **sln を立ち上げ直さないと反映されない**っぽいので注意!
 
 #### Visual Studio GLSL ハイライト
 * ShaderHighlights\XXX_vs2015.reg   
@@ -73,12 +82,14 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir)
   * 右クリック - プロパティ - HLSL Compiler - General - Shader Type でタイプを適切に選択しておく
 
 #### VK
- * プロパティマネージャで Add Existing Property Sheet... - Props/GLSL.props
+ * プロパティマネージャで Add Existing Property Sheet... - Props/VK.props, Props/GLSL(REMAP).props
  * Header Files に Win.h、VK.h を追加
  * Source Files に Win.cpp、VK.cpp、VKUtil.cpp を追加
  * XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * 必要に応じて Shader Files フォルダを作成し、シェーダを突っ込む
   * 拡張子を glslangValidator に沿うようにタイプを選択しておく。(VS.vert、 PS.frag、...)
+  * 右クリック - プロパティ - HLSL Compiler - General - Item Type を Custom Build Tool
+   * 適用 - Custom Build Tool 項目が追加されるので GLSL Compiler になっていることを確認
  -->
 
 <!-- 

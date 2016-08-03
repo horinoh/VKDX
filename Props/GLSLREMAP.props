@@ -5,11 +5,27 @@
   <PropertyGroup />
   <ItemDefinitionGroup>
     <PostBuildEvent>
-      <Command>for %%1 in (*.vert, *.tesc, *.tese, *.geom, *.frag, *.comp) do glslangValidator -V %%1 -o $(ProjectDir)%%1.spv
-for %%1 in (*.spv) do spirv-remap --map all --input %%1 --output .
-for %%1 in (*.spv) do xcopy /y %%1 $(TargetDir)
+      <Command>
 </Command>
     </PostBuildEvent>
+    <CustomBuild>
+      <Command>glslangValidator -V %(Identity) -o %(Identity).spv
+spirv-remap --map all --input %(Identity).spv --output .
+xcopy /y %(Identity).spv $(TargetDir)
+</Command>
+    </CustomBuild>
+    <CustomBuild>
+      <Message>GLSL Compiler</Message>
+    </CustomBuild>
+    <CustomBuild>
+      <Outputs>%(Identity).spv;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild>
+      <LinkObjects>false</LinkObjects>
+    </CustomBuild>
+    <CustomBuild>
+      <TreatOutputAsContent>true</TreatOutputAsContent>
+    </CustomBuild>
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

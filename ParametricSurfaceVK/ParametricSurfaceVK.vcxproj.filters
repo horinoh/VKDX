@@ -71,20 +71,20 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="VS.vert">
+    <CustomBuild Include="FS.frag">
       <Filter>Shader Files</Filter>
-    </None>
-    <None Include="TCS.tesc">
+    </CustomBuild>
+    <CustomBuild Include="GS.geom">
       <Filter>Shader Files</Filter>
-    </None>
-    <None Include="TES.tese">
+    </CustomBuild>
+    <CustomBuild Include="TCS.tesc">
       <Filter>Shader Files</Filter>
-    </None>
-    <None Include="GS.geom">
+    </CustomBuild>
+    <CustomBuild Include="TES.tese">
       <Filter>Shader Files</Filter>
-    </None>
-    <None Include="FS.frag">
+    </CustomBuild>
+    <CustomBuild Include="VS.vert">
       <Filter>Shader Files</Filter>
-    </None>
+    </CustomBuild>
   </ItemGroup>
 </Project>
