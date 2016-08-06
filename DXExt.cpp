@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include "DX.h"
+#include "DXExt.h"
 
 void DXExt::CreateShader_VsPs()
 {

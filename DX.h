@@ -87,14 +87,14 @@ protected:
 	virtual void CreateFence();
 
 	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height, const UINT BufferCount = 2);
-	virtual void CreateSwapChainClientRect(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT BufferCount = 2) {
+	virtual void CreateSwapChainOfClientRect(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT BufferCount = 2) {
 		CreateSwapChain(hWnd, ColorFormat, static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), BufferCount);
 	}
 	virtual void CreateSwapChainDescriptorHeap();
 	virtual void ResetSwapChainResource();
 	virtual void CreateSwapChainResource();
 	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
-	virtual void ResizeSwapChainClientRect() { 
+	virtual void ResizeSwapChainToClientRect() { 
 		ResizeSwapChain(static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight())); 
 	}
 
@@ -102,7 +102,7 @@ protected:
 	virtual void ResetDepthStencilResource();
 	virtual void CreateDepthStencilResource(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
 	virtual void ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
-	virtual void ResizeDepthStencilClientRect(const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT) {
+	virtual void ResizeDepthStencilToClientRect(const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT) {
 		ResizeDepthStencil(static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), DepthFormat);
 	}
 
@@ -116,7 +116,7 @@ protected:
 	virtual void CreateViewportTopFront(const FLOAT Width, const FLOAT Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 	
 	FLOAT GetAspectRatio(const FLOAT Width, const FLOAT Height) const { return Width / Height; }
-	FLOAT GetAspectRatioClientRect() const { return GetAspectRatio(static_cast<FLOAT>(GetClientRectWidth()), static_cast<FLOAT>(GetClientRectHeight())); }
+	FLOAT GetAspectRatioOfClientRect() const { return GetAspectRatio(static_cast<FLOAT>(GetClientRectWidth()), static_cast<FLOAT>(GetClientRectHeight())); }
 
 	virtual void CreatePipelineState() { CreateGraphicsPipelineState(); }
 	virtual void CreateGraphicsPipelineState();
@@ -197,34 +197,4 @@ protected:
 		D3D_FEATURE_LEVEL_9_2,
 		D3D_FEATURE_LEVEL_9_1,
 	};
-};
-
-class DXExt : public DX
-{
-private:
-	using Super = DX;
-public:
-	virtual void CreateShader_VsPs();
-	virtual void CreateShader_VsPsDsHsGs();
-	virtual void CreateShader_Cs();
-
-	virtual void CreateInputLayout_Position();
-	virtual void CreateInputLayout_PositionColor();
-
-	virtual void CreateGraphicsPipelineState_VsPs();
-	virtual void CreateGraphicsPipelineState_VsPsDsHsGs();
-
-	template<typename T>
-	void CreateConstantBuffer(const T& Type) {
-		const auto Size = RoundUpTo256(sizeof(T));
-		CreateUploadBuffer(ConstantBufferResource.GetAddressOf(), Size, &Type);
-		CreateConstantBufferDescriptorHeap(static_cast<UINT>(Size));
-#ifdef _DEBUG
-		std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;
-#endif
-	}
-
-	virtual void Clear(ID3D12GraphicsCommandList* GraphicsCommandList) override { Clear_Color(GraphicsCommandList); }
-	virtual void Clear_Color(ID3D12GraphicsCommandList* GraphicsCommandList);
-	virtual void Clear_Depth(ID3D12GraphicsCommandList* GraphicsCommandList);
 };

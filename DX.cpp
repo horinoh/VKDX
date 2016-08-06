@@ -33,7 +33,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	CreateFence();
 
-	CreateSwapChainClientRect(hWnd, ColorFormat);
+	CreateSwapChainOfClientRect(hWnd, ColorFormat);
 	CreateSwapChainDescriptorHeap();
 	//!< ResizeSwapChain() で SwapChainResources が作られる、明示的にしなくても OnSize() からコールされる
 
@@ -73,8 +73,8 @@ void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr));
 	{		
-		ResizeSwapChainClientRect();
-		ResizeDepthStencilClientRect();
+		ResizeSwapChainToClientRect();
+		ResizeDepthStencilToClientRect();
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 

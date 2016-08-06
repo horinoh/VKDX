@@ -150,6 +150,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\VK.h" />
+    <ClInclude Include="..\VKExt.h" />
     <ClInclude Include="..\Win.h" />
     <ClInclude Include="ComputeVK.h" />
     <ClInclude Include="Resource.h" />

@@ -36,7 +36,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	const auto ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 	CreateSurface(hWnd, hInstance);
-	CreateSwapchainClientRect();
+	CreateSwapchainOfClientRect();
 	auto CommandBuffer = CommandBuffers[0];
 	CreateSwapchainImageView(CommandBuffer, ColorFormat);
 
@@ -726,18 +726,96 @@ void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
 		hWnd
 	};
 	VERIFY_SUCCEEDED(vkCreateWin32SurfaceKHR(Instance, &SurfaceCreateInfo, nullptr, &Surface));
-#ifdef _DEBUG
-	std::cout << "\t" << "Surface" << std::endl;
+#else
+	assert(false && "Not supported");
 #endif
-#endif
-}
 
-void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
-{
+	//!< デバイスのキューファミリーインデックスがプレゼントをサポートするかチェック
 	VkBool32 Supported = VK_FALSE;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, GraphicsQueueFamilyIndex, Surface, &Supported));
 	assert(VK_TRUE == Supported && "vkGetPhysicalDeviceSurfaceSupportKHR failed");
 
+
+#ifdef _DEBUG
+	std::cout << "\t" << "Surface" << std::endl;
+#endif
+}
+VkSurfaceFormatKHR VK::SelectSurfaceFormat()
+{
+	//!< サーフェスのフォーマットを取得
+	uint32_t SurfaceFormatCount;
+	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, Surface, &SurfaceFormatCount, nullptr));
+	assert(SurfaceFormatCount);
+	std::vector<VkSurfaceFormatKHR> SurfaceFormats(SurfaceFormatCount);
+	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, Surface, &SurfaceFormatCount, SurfaceFormats.data()));
+
+#ifdef _DEBUG
+	std::cout << "\t" << "\t" << Lightblue << "Format" << White << std::endl;
+	auto SelectedFormat = VK_FORMAT_UNDEFINED;
+	for (auto& i : SurfaceFormats) {
+		if (VK_FORMAT_UNDEFINED != i.format) {
+			if (VK_FORMAT_UNDEFINED == SelectedFormat) {
+				SelectedFormat = i.format;
+				std::cout << Yellow;
+			}
+		}
+		std::cout << "\t" << "\t" << "\t" << GetFormatString(i.format) << std::endl;
+		std::cout << White;
+	}
+	std::cout << std::endl;
+#endif
+
+	//!< 最初の非 VK_FORMAT_UNDEFINED を選択
+	for (auto& i : SurfaceFormats) {
+		if (VK_FORMAT_UNDEFINED != i.format) {
+			return i;
+		}
+	}
+	return VkSurfaceFormatKHR({ VK_FORMAT_B8G8R8A8_UNORM , SurfaceFormats[0].colorSpace });
+}
+VkPresentModeKHR VK::SelectSurfacePresentMode()
+{
+	uint32_t PresentModeCount;
+	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, Surface, &PresentModeCount, nullptr));
+	assert(PresentModeCount);
+	std::vector<VkPresentModeKHR> PresentModes(PresentModeCount);
+	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, Surface, &PresentModeCount, PresentModes.data()));
+
+	//!< 可能ならレイテンシが低く、テアリングの無い MAILBOX を選択する、次いで VK_PRESENT_MODE_IMMEDIATE_KHR
+	auto SelectedPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+	for (auto i : PresentModes) {
+		if (VK_PRESENT_MODE_MAILBOX_KHR == i) {
+			return i;
+		}
+		else if (VK_PRESENT_MODE_IMMEDIATE_KHR == i) {
+			SelectedPresentMode = i;
+		}
+	}
+
+#ifdef _DEBUG
+	std::cout << "\t" << Lightblue << "Present Mode" << White << std::endl;
+#define VK_PRESENT_MODE_ENTRY(entry) case VK_PRESENT_MODE_##entry##_KHR: std::cout << "\t" << "\t" << #entry << std::endl; break;
+	for (auto i : PresentModes) {
+		if (SelectedPresentMode == i) {
+			std::cout << Yellow;
+		}
+		switch (i)
+		{
+		default: assert(0 && "Unknown VkPresentMode"); break;
+			VK_PRESENT_MODE_ENTRY(IMMEDIATE) //!< VSync を待たない、テアリング
+				VK_PRESENT_MODE_ENTRY(MAILBOX)   //!< V-Syncを待つ
+				VK_PRESENT_MODE_ENTRY(FIFO)		 //!< V-Syncを待つ、レイテンシが低い
+				VK_PRESENT_MODE_ENTRY(FIFO_RELAXED)
+		}
+		std::cout << White;
+#undef VK_PRESENT_MODE_ENTRY
+	}
+#endif
+
+	return SelectedPresentMode;
+}
+void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
+{
 	//!< サーフェスの情報を取得
 	VkSurfaceCapabilitiesKHR SurfaceCapabilities;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PhysicalDevice, Surface, &SurfaceCapabilities));
@@ -746,7 +824,7 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 
 	//!< イメージのサイズを覚えておく
 	ImageExtent = SurfaceCapabilities.currentExtent;
-	//!< サーフェスのサイズが未定義の場合は明示的に指定。サーフェスのサイズが定義されている場合はそれに従わないとならない
+	//!< サーフェスのサイズが未定義の場合は明示的に指定する。(サーフェスのサイズが定義されている場合はそれに従わないとならない)
 	if (-1 == SurfaceCapabilities.currentExtent.width) {
 		ImageExtent = { Width, Height };
 	}
@@ -755,67 +833,14 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 	std::cout << "\t" << "\t" << "\t" << ImageExtent.width << " x " << ImageExtent.height << std::endl;
 #endif
 
-	//!< サーフェスを回転、反転させるかどうか。回転させない VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR を指定
+	//!< サーフェスを回転、反転させるかどうか。(回転させない VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR を指定)
 	const auto PreTransform = (SurfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : SurfaceCapabilities.currentTransform;
 
-	//!< サーフェスのフォーマットを取得
-	uint32_t SurfaceFormatCount;
-	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, Surface, &SurfaceFormatCount, nullptr));
-	assert(SurfaceFormatCount);
-	std::vector<VkSurfaceFormatKHR> SurfaceFormats(SurfaceFormatCount);
-	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, Surface, &SurfaceFormatCount, SurfaceFormats.data()));
-
-	//!< 最初のサーフェスのフォーマットにする (VK_FORMAT_UNDEFINED の場合は VK_FORMAT_B8G8R8A8_UNORM)
-	const auto ImageFormat = (1 == SurfaceFormatCount && VK_FORMAT_UNDEFINED == SurfaceFormats[0].format) ? VK_FORMAT_B8G8R8A8_UNORM : SurfaceFormats[0].format;
-	const auto ImageColorSpace = SurfaceFormats[0].colorSpace;
-#ifdef _DEBUG
-	std::cout << "\t" << "\t" << Lightblue << "Format" << White << std::endl;
-	for (auto& i : SurfaceFormats) {
-		if (ImageFormat == i.format) {
-			std::cout << Yellow;
-		}
-		std::cout << "\t" << "\t" << "\t" << GetFormatString(i.format) << std::endl;
-		std::cout << White;
-	}
-	std::cout << std::endl;
-#endif
-
-	//!< プレゼントモードの取得
-	uint32_t PresentModeCount;
-	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, Surface, &PresentModeCount, nullptr));
-	assert(PresentModeCount);
-	std::vector<VkPresentModeKHR> PresentModes(PresentModeCount);
-	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, Surface, &PresentModeCount, PresentModes.data()));
-	VkPresentModeKHR PresentMode = VK_PRESENT_MODE_FIFO_KHR;
-	//!< (選択できるなら)レイテンシが低く、テアリングの無い MAILBOX を選択
-	for (auto i : PresentModes) {
-		if (VK_PRESENT_MODE_MAILBOX_KHR == i) {
-			PresentMode = i;
-			break;
-		}
-		else if (VK_PRESENT_MODE_IMMEDIATE_KHR == i) {
-			PresentMode = i;
-		}
-	}
-#ifdef _DEBUG
-	std::cout << "\t" << Lightblue << "Present Mode" << White << std::endl;
-#define VK_PRESENT_MODE_ENTRY(entry) case VK_PRESENT_MODE_##entry##_KHR: std::cout << "\t" << "\t" << #entry << std::endl; break;
-	for (auto i : PresentModes) {
-		if (PresentMode == i) {
-			std::cout << Yellow;
-		}
-		switch (i)
-		{
-		default: assert(0 && "Unknown VkPresentMode"); break;
-		VK_PRESENT_MODE_ENTRY(IMMEDIATE) //!< VSync を待たない、テアリング
-		VK_PRESENT_MODE_ENTRY(MAILBOX)   //!< V-Syncを待つ
-		VK_PRESENT_MODE_ENTRY(FIFO)		 //!< V-Syncを待つ、レイテンシが低い
-		VK_PRESENT_MODE_ENTRY(FIFO_RELAXED)
-		}
-		std::cout << White;
-#undef VK_PRESENT_MODE_ENTRY
-	}
-#endif
+	//!< サーフェスのフォーマットを選択
+	const auto SurfaceFormat = SelectSurfaceFormat();
+	
+	//!< サーフェスのプレゼントモードを選択
+	const auto PresentMode = SelectSurfacePresentMode();
 
 	//!< セッティングを変更してスワップチェインを再作成できるように、既存のを開放する (開放するために一旦 OldSwapchainに覚えておく)
 	auto OldSwapchain = Swapchain;
@@ -825,8 +850,8 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 		0,
 		Surface,
 		MinImageCount,
-		ImageFormat,
-		ImageColorSpace,
+		SurfaceFormat.format,
+		SurfaceFormat.colorSpace,
 		ImageExtent,
 		1,
 		VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
@@ -861,16 +886,14 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 }
 void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat ColorFormat)
 {
-	//!< スワップチェインイメージの列挙
+	//!< スワップチェインイメージの取得
 	uint32_t SwapchainImageCount;
 	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &SwapchainImageCount, nullptr));
 	assert(SwapchainImageCount && "Swapchain image count == 0");
 	SwapchainImages.resize(SwapchainImageCount);
 	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &SwapchainImageCount, SwapchainImages.data()));
 #ifdef _DEBUG
-	for (const auto& i : SwapchainImages) {
-		std::cout << "\t" << "SwapchainImage" << std::endl;
-	}
+	std::cout << "\t" << "SwapchainImageCount = " << SwapchainImageCount << std::endl;
 #endif
 
 	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
@@ -884,6 +907,7 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat 
 			ImageBarrier(CommandBuffer, i, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 		}
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
+
 	const VkSubmitInfo SubmitInfo = {
 		VK_STRUCTURE_TYPE_SUBMIT_INFO,
 		nullptr,

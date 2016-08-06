@@ -148,6 +148,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\DX.h" />
+    <ClInclude Include="..\DXExt.h" />
     <ClInclude Include="..\Win.h" />
     <ClInclude Include="ComputeDX.h" />
     <ClInclude Include="Resource.h" />

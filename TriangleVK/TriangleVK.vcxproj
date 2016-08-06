@@ -162,6 +162,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\VK.h" />
+    <ClInclude Include="..\VKExt.h" />
     <ClInclude Include="..\Win.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />

@@ -3,7 +3,7 @@
 #include "resource.h"
 
 #pragma region Code
-#include "../VK.h"
+#include "../VKExt.h"
 
 class ParametricSurfaceVK : public VKExt
 {

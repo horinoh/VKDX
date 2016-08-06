@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include "VK.h"
+#include "VKExt.h"
 
 void VKExt::CreateShader_VsPs()
 {

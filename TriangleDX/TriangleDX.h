@@ -3,7 +3,7 @@
 #include "resource.h"
 
 #pragma region Code
-#include "../DX.h"
+#include "../DXExt.h"
 
 class TriangleDX : public DXExt
 {
