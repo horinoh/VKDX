@@ -1413,13 +1413,13 @@ void VK::Draw()
 
 	ExecuteCommandBuffer(CommandBuffer);
 
-	Present();
-
 	WaitForFence();
+
+	Present();
 }
 void VK::ExecuteCommandBuffer(const VkCommandBuffer CommandBuffer)
 {
-	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
+	//VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 
 	const VkPipelineStageFlags PipelineStageFlags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 	const VkSubmitInfo SubmitInfo = {
@@ -1432,7 +1432,7 @@ void VK::ExecuteCommandBuffer(const VkCommandBuffer CommandBuffer)
 	};
 #if 1
 	VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, Fence));
-	VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
+	//VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
 #else
 	//!< 複数のコマンドバッファをサブミットしたい場合はセマフォと配列を使う
 	VkPipelineStageFlags PipelineStageFlags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT; {

@@ -1015,9 +1015,9 @@ void DX::Draw()
 
 	ExecuteCommandList(CommandList);
 
-	Present();
-
 	WaitForFence();
+
+	Present();
 }
 void DX::ExecuteCommandList(ID3D12GraphicsCommandList* GraphicsCommandList)
 {
