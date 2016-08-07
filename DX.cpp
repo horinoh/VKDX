@@ -21,39 +21,46 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	Super::OnCreate(hWnd, hInstance);
 
+	//!< デバイス、キュー
 	const auto ColorFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 	CreateDevice(hWnd);
 	CheckMultiSample(ColorFormat);
-
 	CreateCommandQueue();
 
+	//!< コマンドアロケータ、リスト
 	CreateCommandAllocator();
 	auto CommandAllocator = CommandAllocators[0].Get();
 	CreateCommandList(CommandAllocator);
 
 	CreateFence();
 
+	//!< スワップチェイン
 	CreateSwapChainOfClientRect(hWnd, ColorFormat);
 	CreateSwapChainDescriptorHeap();
 	//!< ResizeSwapChain() で SwapChainResources が作られる、明示的にしなくても OnSize() からコールされる
-
+	//!< デプスステンシル
 	CreateDepthStencilDescriptorHeap();
 	//!< ResizeDepthStencil() で DepthStencilResource が作られる、明示的にしなくても OnSize() からコールされる
 
+	//!< シェーダ
 	CreateShader();
 
+	//!< ルートシグニチャ
 	CreateRootSignature();
 
+	//!< インプットレイアウト
 	CreateInputLayout();
 
-	CreateViewport(static_cast<FLOAT>(GetClientRectWidth()), static_cast<FLOAT>(GetClientRectHeight()));
+	//!< パイプライン
 	CreatePipelineState();
 
+	//!< バーテックスバッファ、インデックスバッファ
 	auto CommandList = GraphicsCommandLists[0].Get();
 	CreateVertexBuffer(CommandAllocator, CommandList);
 	CreateIndexBuffer(CommandAllocator, CommandList);
 	WaitForFence();
 	
+	//!< コンスタントバッファ
 	CreateConstantBuffer();
 
 	//CreateUnorderedAccessTexture();
@@ -602,10 +609,12 @@ void DX::CreateShader()
 #endif
 }
 
+//!< # TODO ここの実装は消す、Extへ持っていく
 void DX::CreateRootSignature()
 {
 	using namespace Microsoft::WRL;
 
+#if 0
 	const std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
 		{
 			D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
@@ -625,18 +634,37 @@ void DX::CreateRootSignature()
 			D3D12_SHADER_VISIBILITY_ALL //!< #TODO 必要とするシェーダに限定すべき
 		},
 	};
-
-	const std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {};
+	const std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {
+	};
 	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
 		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
 		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 	};
-
 	ComPtr<ID3DBlob> Blob;
 	ComPtr<ID3DBlob> ErrorBlob;
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
 	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
+#else
+	const std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
+	};
+	const D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable = {
+		static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
+	};
+	const std::vector<D3D12_ROOT_PARAMETER> RootParameters = {
+	};
+	const std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {
+	};
+	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
+		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
+		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+	};
+	ComPtr<ID3DBlob> Blob;
+	ComPtr<ID3DBlob> ErrorBlob;
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
+	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
+#endif
 
 #ifdef _DEBUG
 	std::cout << "CreateRootSignature" << COUT_OK << std::endl << std::endl;

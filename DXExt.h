@@ -11,6 +11,8 @@ public:
 	virtual void CreateShader_VsPsDsHsGs();
 	virtual void CreateShader_Cs();
 
+	virtual void CreateRootSignature_1ConstantBuffer(const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL);
+
 	virtual void CreateInputLayout_Position();
 	virtual void CreateInputLayout_PositionColor();
 

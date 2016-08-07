@@ -148,6 +148,9 @@ protected:
 	std::vector<Microsoft::WRL::ComPtr<ID3D12CommandAllocator>> CommandAllocators;
 	std::vector<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>> GraphicsCommandLists;
 
+	Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
+	UINT64 FenceValue;
+
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> SwapChainDescriptorHeap;
 	UINT CurrentBackBufferIndex;
@@ -162,9 +165,6 @@ protected:
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> InputElementDescs;
 	D3D12_INPUT_LAYOUT_DESC InputLayoutDesc;
-
-	std::vector<D3D12_VIEWPORT> Viewports;
-	std::vector<D3D12_RECT> ScissorRects;
 
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
 
@@ -182,9 +182,8 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12Resource> UnorderedAccessTextureResource;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> UnorderedAccessTextureDescriptorHeap;
 
-	Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
-	UINT64 FenceValue;
-
+	std::vector<D3D12_VIEWPORT> Viewports;
+	std::vector<D3D12_RECT> ScissorRects;
 protected:
 	const std::vector<D3D_FEATURE_LEVEL> FeatureLevels = {
 		D3D_FEATURE_LEVEL_12_1,

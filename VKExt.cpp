@@ -32,6 +32,52 @@ void VKExt::CreateShader_Cs()
 #endif
 }
 
+void VKExt::CreateDescriptorSetLayout_1UniformBuffer(const VkShaderStageFlags ShaderStageFlags)
+{
+	const std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings = {
+		{ 
+			0,
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
+			1,
+			ShaderStageFlags,
+			nullptr
+		},
+	};
+	const VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DescriptorSetLayoutBindings.size()), DescriptorSetLayoutBindings.data()
+	};
+	VkDescriptorSetLayout DescriptorSetLayout;
+	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, nullptr, &DescriptorSetLayout));
+	DescriptorSetLayouts.push_back(DescriptorSetLayout);
+
+#ifdef _DEBUG
+	std::cout << "CreateDescriptorSetLayout" << COUT_OK << std::endl << std::endl;
+#endif
+}
+void VKExt::CreateDescritporPool_1UniformBuffer()
+{
+	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+	};
+	if (!DescriptorPoolSizes.empty()) {
+		const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+			nullptr,
+			0,
+			1, //!< maxSets ... プールから確保される最大のデスクリプタ数
+			static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
+		};
+		VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
+
+#ifdef _DEBUG
+		std::cout << "CreateDescriptorPool" << COUT_OK << std::endl << std::endl;
+#endif
+	}
+}
+
 void VKExt::CreateVertexInput_Position()
 {
 	VertexInputBindingDescriptions = {
@@ -111,15 +157,17 @@ void VKExt::CreateGraphicsPipeline_VsPs()
 
 	/**
 	@brief デフォルト指定
-	ここでは VkDynamicState に VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR を指定するので
-	vkCmdSetViewport(), vkCmdSetScissor() で後からコマンドバッファによる上書きが可能
+	別途 VkDynamicState に VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR を指定している
+	よって後からコマンドバッファによる上書き(vkCmdSetViewport(), vkCmdSetScissor())が可能なので、ここでは適当なダミー値ビューポートで設定しておく
 	*/
+	const std::vector<VkViewport> DummyViewports = { { 0, 0, 1280, 720, 0.0f, 1.0f } };
+	const std::vector<VkRect2D> DummyScissorRects = { { { 0, 0 }, { 1280, 720 } } };
 	const VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
 		nullptr,
 		0,
-		static_cast<uint32_t>(Viewports.size()), Viewports.data(),
-		static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data()
+		static_cast<uint32_t>(DummyViewports.size()), DummyViewports.data(),
+		static_cast<uint32_t>(DummyScissorRects.size()), DummyScissorRects.data()
 	};
 
 	const VkPipelineRasterizationStateCreateInfo PipelineRasterizationStateCreateInfo = {
@@ -129,7 +177,7 @@ void VKExt::CreateGraphicsPipeline_VsPs()
 		VK_FALSE,
 		VK_FALSE,
 		VK_POLYGON_MODE_FILL,
-		VK_CULL_MODE_NONE,/*VK_CULL_MODE_BACK_BIT,*/
+		VK_CULL_MODE_NONE, //!< #TODO デバッグ用に NONE にしている。VK_CULL_MODE_BACK_BIT,
 		VK_FRONT_FACE_COUNTER_CLOCKWISE,
 		VK_FALSE, 0.0f, 0.0f, 0.0f,
 		1.0f
@@ -239,6 +287,7 @@ void VKExt::CreateGraphicsPipeline_VsPs()
 }
 void VKExt::CreateGraphicsPipeline_VsPsTesTcsGs()
 {
+	//!< #TODO
 #ifdef _DEBUG
 	std::cout << "CreateGraphicsPipeline" << COUT_OK << std::endl << std::endl;
 #endif

@@ -109,7 +109,6 @@ protected:
 	virtual void CreateDescriptorSetLayout();
 	virtual void CreateDescritporPool();
 	virtual void CreateDescriptorSet(VkDescriptorPool DescritorPool);
-	virtual void CreatePipelineLayout();
 
 	virtual void CreateVertexInput();
 	
@@ -119,6 +118,7 @@ protected:
 	float GetAspectRatio(const float Width, const float Height) const { return Width / Height; }
 	float GetAspectRatioOfClientRect() const { return GetAspectRatio(static_cast<float>(GetClientRectWidth()), static_cast<float>(GetClientRectHeight())); }
 
+	virtual void CreatePipelineLayout();
 	virtual void CreatePipeline() { CreateGraphicsPipeline(); }
 	virtual void CreateGraphicsPipeline();
 	virtual void CreateComputePipeline();
@@ -157,7 +157,6 @@ protected:
 	VkPhysicalDevice PhysicalDevice = VK_NULL_HANDLE;
 	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
 	VkDevice Device = VK_NULL_HANDLE;
-	
 	VkQueue Queue = VK_NULL_HANDLE;
 	uint32_t GraphicsQueueFamilyIndex = UINT_MAX;
 	//uint32_t TransferQueueFamilyIndex = UINT_MAX;
@@ -167,11 +166,10 @@ protected:
 	std::vector<VkCommandBuffer> CommandBuffers;
 
 	VkFence Fence = VK_NULL_HANDLE;
-
 	std::vector<VkSemaphore> PresentSemaphores;
 	std::vector<VkSemaphore> RenderSemaphores;
 
-	VkSurfaceKHR Surface;
+	VkSurfaceKHR Surface = VK_NULL_HANDLE;
 	VkExtent2D ImageExtent;
 	VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
 	std::vector<VkImage> SwapchainImages;
@@ -185,8 +183,6 @@ protected:
 	std::vector<VkShaderModule> ShaderModules;
 
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
-	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
-
 	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
 	std::vector<VkDescriptorSet> DescriptorSets;
 
@@ -194,9 +190,7 @@ protected:
 	std::vector<VkVertexInputAttributeDescription> VertexInputAttributeDescriptions;
 	VkPipelineVertexInputStateCreateInfo PipelineVertexInputStateCreateInfo;
 
-	std::vector<VkViewport> Viewports;
-	std::vector<VkRect2D> ScissorRects;
-
+	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
 	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
 	VkPipeline Pipeline = VK_NULL_HANDLE;
 	VkRenderPass RenderPass = VK_NULL_HANDLE;
@@ -214,6 +208,9 @@ protected:
 	VkDeviceMemory UniformDeviceMemory = VK_NULL_HANDLE;
 	VkDescriptorBufferInfo UniformDescriptorBufferInfo;
 	std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
+
+	std::vector<VkViewport> Viewports;
+	std::vector<VkRect2D> ScissorRects;
 
 	//-------------------------------
 
