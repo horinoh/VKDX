@@ -6,13 +6,6 @@
 
 #pragma comment(lib, "vulkan-1.lib")
 
-VK::VK()
-{
-}
-VK::~VK()
-{
-}
-
 void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 {
 #ifdef _DEBUG
@@ -23,6 +16,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	//!< デバイス、キュー
 	CreateInstance();
+	GetInstanceProcAddr();
 	CreateDebugReportCallback();
 	EnumeratePhysicalDevice();
 	GetQueueFamily();
@@ -389,10 +383,13 @@ void VK::EnumerateInstanceLayer()
 		std::vector<VkLayerProperties> LayerProperties(InstanceLayerPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&InstanceLayerPropertyCount, LayerProperties.data()));
 		for (const auto& i : LayerProperties) {
+			if (strlen(i.layerName)) {
 #ifdef _DEBUG
-			std::cout << "\t" << i.layerName << std::endl;
+				std::cout << "\t" << i.layerName << std::endl;
+				InstanceLayerNames.push_back({ i.layerName,{} });
 #endif
-			EnumerateInstanceExtenstion(i.layerName);
+				EnumerateInstanceExtenstion(i.layerName);
+			}
 		}
 	}
 }
@@ -404,9 +401,12 @@ void VK::EnumerateInstanceExtenstion(const char* layerName)
 		std::vector<VkExtensionProperties> ExtensionProperties(InstanceExtensionPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(layerName, &InstanceExtensionPropertyCount, ExtensionProperties.data()));
 		for (const auto& i : ExtensionProperties) {
+			if (strlen(i.extensionName)) {
 #ifdef _DEBUG
-			std::cout << "\t" << "\t" << i.extensionName << std::endl;
+				std::cout << "\t" << "\t" << i.extensionName << std::endl;
+				InstanceLayerNames.back().second.push_back({ i.extensionName });
 #endif
+			}
 		}
 	}
 }
@@ -422,12 +422,20 @@ void VK::CreateInstance()
 		"VKDX Engine", 0,
 		VK_API_VERSION_1_0
 	};
+	const std::vector<const char*> EnabledLayerNames = {
+#ifdef _DEBUG
+		//!< 標準的なバリデーションレイヤセットを最適な順序でロードする指定
+		"VK_LAYER_LUNARG_standard_validation", 
+		//"VK_LAYER_LUNARG_api_dump",
+#endif
+	};
 	const std::vector<const char*> EnabledExtensions = {
 		VK_KHR_SURFACE_EXTENSION_NAME,
 #ifdef _WIN32
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 #endif
 #ifdef _DEBUG
+		//!< Vuklan デバッグ API をアプリから使用できるようにする
 		VK_EXT_DEBUG_REPORT_EXTENSION_NAME
 #endif
 	};
@@ -455,7 +463,11 @@ void VK::CreateInstance()
 	std::cout << "CreateInstace" << COUT_OK << std::endl << std::endl;
 #endif
 }
-
+void VK::GetInstanceProcAddr()
+{
+	vkCreateDebugReportCallback = GET_INSTANCE_PROC_ADDR(Instance, CreateDebugReportCallbackEXT);
+	vkDestroyDebugReportCallback = GET_INSTANCE_PROC_ADDR(Instance, DestroyDebugReportCallbackEXT);
+}
 void VK::CreateDebugReportCallback()
 {
 #ifdef _DEBUG
@@ -520,15 +532,17 @@ void VK::EnumeratePhysicalDevice()
 
 	//!< ここでは最初の物理デバイスを使用することにする
 	SelectPhysicalDevice(PhysicalDevices[0]);
+#ifdef _DEBUG
+	EnumerateDeviceLayer(PhysicalDevice);
+#endif
 }
 void VK::SelectPhysicalDevice(VkPhysicalDevice SelectedPhysicalDevice)
 {
 	PhysicalDevice = SelectedPhysicalDevice;
-
 	//!< メモリプロパティを取得
 	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
 }
-void VK::EnumerateDeviceLayer()
+void VK::EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice)
 {
 	uint32_t DeviceLayerPropertyCount = 0;
 	VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, nullptr));
@@ -536,14 +550,17 @@ void VK::EnumerateDeviceLayer()
 		std::vector<VkLayerProperties> LayerProperties(DeviceLayerPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, LayerProperties.data()));
 		for (const auto& i : LayerProperties) {
+			if (strlen(i.layerName)) {
 #ifdef _DEBUG
-			std::cout << "\t" << i.layerName << std::endl;
+				std::cout << "\t" << i.layerName << std::endl;
+				DeviceLayerNames.push_back({ i.layerName, {} });
 #endif
-			EnumerateDeviceExtenstion(i.layerName);
+				EnumerateDeviceExtenstion(PhysicalDevice, i.layerName);
+			}
 		}
 	}
 }
-void VK::EnumerateDeviceExtenstion(const char* layerName)
+void VK::EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* layerName)
 {
 	uint32_t DeviceExtensionPropertyCount = 0;
 	VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &DeviceExtensionPropertyCount, nullptr));
@@ -551,16 +568,17 @@ void VK::EnumerateDeviceExtenstion(const char* layerName)
 		std::vector<VkExtensionProperties> ExtensionProperties(DeviceExtensionPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, layerName, &DeviceExtensionPropertyCount, ExtensionProperties.data()));
 		for (const auto& i : ExtensionProperties) {
+			if (strlen(i.extensionName)) {
 #ifdef _DEBUG
-			std::cout << "\t" << "\t" << i.extensionName << std::endl;
+				std::cout << "\t" << "\t" << i.extensionName << std::endl;
+				DeviceLayerNames.back().second.push_back({ i.extensionName });
 #endif
+			}
 		}
 	}
 }
 void VK::GetQueueFamily()
 {
-	EnumerateDeviceLayer();
-
 	//!< キューのプロパティを列挙
 	uint32_t QueueFamilyPropertyCount = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyPropertyCount, nullptr);
@@ -570,7 +588,6 @@ void VK::GetQueueFamily()
 #ifdef _DEBUG
 	std::cout << Yellow << "\t" << "QueueProperties" << White << std::endl;
 #define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & i.queueFlags) { std::cout << #entry << " | "; }
-	//!< デバイスによっては転送専用キューを持つ、転送を多用する場合は専用キューを使用した方が良い
 	for (const auto& i : QueueProperties) {
 		std::cout << "\t" << "\t" << "QueueFlags = ";
 		QUEUE_FLAG_ENTRY(GRAPHICS);
@@ -582,7 +599,7 @@ void VK::GetQueueFamily()
 #undef QUEUE_PROPS
 #endif
 
-	//!< GRAPHICS 機能を持つものを探す
+	//!< グラフィック機能を持つものを探し、インデックスを覚えておく
 	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i) {
 		if (VK_QUEUE_GRAPHICS_BIT & QueueProperties[i].queueFlags) {
 			GraphicsQueueFamilyIndex = i;
@@ -614,7 +631,16 @@ void VK::CreateDevice(const uint32_t QueueFamilyIndex)
 			static_cast<uint32_t>(QueuePriorities.size()), QueuePriorities.data()
 		}
 	};
-	const std::vector<const char*> EnabledExtensions = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+	const std::vector<const char*> EnabledLayerNames = {
+#ifdef _DEBUG
+		//!< 標準的なバリデーションレイヤセットを最適な順序でロードする指定
+		"VK_LAYER_LUNARG_standard_validation", 
+#endif
+		//"VK_LAYER_NV_optimus",
+	};
+	const std::vector<const char*> EnabledExtensions = { 
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME 
+	};
 	const VkDeviceCreateInfo DeviceCreateInfo = {
 		VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
 		nullptr,

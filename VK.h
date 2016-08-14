@@ -54,11 +54,12 @@ class VK : public Win
 {
 private:
 	using Super = Win;
-public:
-	using DebugReport = std::function<VkBool32(VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char*, const char*, void*)>;
-	VK();
-	virtual ~VK();
+#ifdef _DEBUG
+	//using DebugReport = std::function<VkBool32(VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char*, const char*, void*)>;
+	using LayerNames = std::vector<std::pair<std::string, std::vector<std::string>>>;
+#endif
 
+public:
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance) override;
 	virtual void OnSize(HWND hWnd, HINSTANCE hInstance) override;
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override;
@@ -82,12 +83,11 @@ protected:
 	virtual void EnumerateInstanceLayer();
 	virtual void EnumerateInstanceExtenstion(const char* layerName);
 	virtual void CreateInstance();
+	virtual void GetInstanceProcAddr();
 	virtual void CreateDebugReportCallback();
 #ifdef _DEBUG
 	template<typename T>
-	void CreateDebugReportCallback(T Callback, VkDebugReportFlagsEXT Flags) {
-		vkCreateDebugReportCallback = GET_INSTANCE_PROC_ADDR(Instance, CreateDebugReportCallbackEXT);
-		vkDestroyDebugReportCallback = GET_INSTANCE_PROC_ADDR(Instance, DestroyDebugReportCallbackEXT);
+	void CreateDebugReportCallback(T Callback, const VkDebugReportFlagsEXT Flags) {
 		const VkDebugReportCallbackCreateInfoEXT DebugReportCallbackCreateInfo = {
 			VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
 			nullptr,
@@ -100,8 +100,8 @@ protected:
 #endif
 	virtual void EnumeratePhysicalDevice();
 	virtual void SelectPhysicalDevice(VkPhysicalDevice SelectedPhysicalDevice);
-	virtual void EnumerateDeviceLayer();
-	virtual void EnumerateDeviceExtenstion(const char* layerName);
+	virtual void EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice);
+	virtual void EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* layerName);
 	virtual void GetQueueFamily();
 	virtual void CreateDevice(const uint32_t QueueFamilyIndex);
 	virtual void GetDeviceQueue(const uint32_t QueueFamilyIndex);
@@ -167,14 +167,10 @@ protected:
 	virtual void WaitForFence();
 
 protected:
-	const std::vector<const char*> EnabledLayerNames = { 
-#ifdef _DEBUG
-		"VK_LAYER_LUNARG_standard_validation",
-		//"VK_LAYER_LUNARG_api_dump",
-#endif
-	};
-
 	VkAllocationCallbacks AllocationCallbacks;
+#ifdef _DEBUG
+	LayerNames InstanceLayerNames;
+#endif
 	VkInstance Instance = VK_NULL_HANDLE;
 #ifdef _DEBUG
 	PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallback = VK_NULL_HANDLE;
@@ -182,6 +178,9 @@ protected:
 	VkDebugReportCallbackEXT DebugReportCallback = VK_NULL_HANDLE;
 #endif
 	VkPhysicalDevice PhysicalDevice = VK_NULL_HANDLE;
+#ifdef _DEBUG
+	LayerNames DeviceLayerNames;
+#endif
 	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
 	VkDevice Device = VK_NULL_HANDLE;
 	VkQueue Queue = VK_NULL_HANDLE;

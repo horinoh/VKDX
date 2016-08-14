@@ -56,10 +56,8 @@ class DX : public Win
 {
 private:
 	using Super = Win;
-public:
-	DX();
-	virtual ~DX();
 
+public:
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance) override;
 	virtual void OnSize(HWND hWnd, HINSTANCE hInstance) override;
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override;

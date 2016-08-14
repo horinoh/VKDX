@@ -6,13 +6,6 @@
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dxgi.lib")
 
-DX::DX()
-{
-}
-DX::~DX()
-{
-}
-
 void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 {
 #ifdef _DEBUG
