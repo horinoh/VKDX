@@ -18,7 +18,8 @@
 #include <algorithm>
 #include <iostream>
 #include <sstream>
-#include <codecvt> 
+#include <codecvt>
+#include <functional>
 
 #ifndef SAFE_DELETE
 #define SAFE_DELETE(x) if(nullptr != x) { delete x; x = nullptr; }

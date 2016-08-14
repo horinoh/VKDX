@@ -28,6 +28,10 @@
 //#define VERIFY_SUCCEEDED(vr) MESSAGEBOX_ON_FAILED(vr)
 #endif
 
+#ifndef GET_INSTANCE_PROC_ADDR
+#define GET_INSTANCE_PROC_ADDR(inst, proc) reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(inst, "vk" #proc));
+#endif
+
 namespace Colors
 {
 	const VkClearColorValue Black = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -51,6 +55,7 @@ class VK : public Win
 private:
 	using Super = Win;
 public:
+	using DebugReport = std::function<VkBool32(VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char*, const char*, void*)>;
 	VK();
 	virtual ~VK();
 
@@ -75,12 +80,28 @@ protected:
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 
 	virtual void EnumerateInstanceLayer();
-	virtual void EnumerateInstanceExtenstion();
+	virtual void EnumerateInstanceExtenstion(const char* layerName);
 	virtual void CreateInstance();
+	virtual void CreateDebugReportCallback();
+#ifdef _DEBUG
+	template<typename T>
+	void CreateDebugReportCallback(T Callback, VkDebugReportFlagsEXT Flags) {
+		vkCreateDebugReportCallback = GET_INSTANCE_PROC_ADDR(Instance, CreateDebugReportCallbackEXT);
+		vkDestroyDebugReportCallback = GET_INSTANCE_PROC_ADDR(Instance, DestroyDebugReportCallbackEXT);
+		const VkDebugReportCallbackCreateInfoEXT DebugReportCallbackCreateInfo = {
+			VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
+			nullptr,
+			Flags,
+			Callback,
+			nullptr
+		};
+		vkCreateDebugReportCallback(Instance, &DebugReportCallbackCreateInfo, nullptr, &DebugReportCallback);
+	}
+#endif
 	virtual void EnumeratePhysicalDevice();
 	virtual void SelectPhysicalDevice(VkPhysicalDevice SelectedPhysicalDevice);
 	virtual void EnumerateDeviceLayer();
-	virtual void EnumerateDeviceExtenstion();
+	virtual void EnumerateDeviceExtenstion(const char* layerName);
 	virtual void GetQueueFamily();
 	virtual void CreateDevice(const uint32_t QueueFamilyIndex);
 	virtual void GetDeviceQueue(const uint32_t QueueFamilyIndex);
@@ -148,12 +169,18 @@ protected:
 protected:
 	const std::vector<const char*> EnabledLayerNames = { 
 #ifdef _DEBUG
-		"VK_LAYER_LUNARG_standard_validation"
+		"VK_LAYER_LUNARG_standard_validation",
+		//"VK_LAYER_LUNARG_api_dump",
 #endif
 	};
 
 	VkAllocationCallbacks AllocationCallbacks;
 	VkInstance Instance = VK_NULL_HANDLE;
+#ifdef _DEBUG
+	PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallback = VK_NULL_HANDLE;
+	PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallback = VK_NULL_HANDLE;
+	VkDebugReportCallbackEXT DebugReportCallback = VK_NULL_HANDLE;
+#endif
 	VkPhysicalDevice PhysicalDevice = VK_NULL_HANDLE;
 	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
 	VkDevice Device = VK_NULL_HANDLE;

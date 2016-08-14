@@ -23,6 +23,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	//!< デバイス、キュー
 	CreateInstance();
+	CreateDebugReportCallback();
 	EnumeratePhysicalDevice();
 	GetQueueFamily();
 	CreateDevice(GraphicsQueueFamilyIndex);
@@ -192,6 +193,11 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	if (VK_NULL_HANDLE != Device) {
 		vkDestroyDevice(Device, nullptr);
 	}
+#ifdef _DEBUG
+	if (nullptr != DebugReportCallback) {
+		vkDestroyDebugReportCallback(Instance, DebugReportCallback, nullptr);
+	}
+#endif
 	//!< PhysicalDevice は vkEnumeratePhysicalDevices() で取得したもの
 	if (VK_NULL_HANDLE != Instance) {
 		//vkDestroyInstance(Instance, &AllocationCallbacks);
@@ -383,39 +389,31 @@ void VK::EnumerateInstanceLayer()
 		std::vector<VkLayerProperties> LayerProperties(InstanceLayerPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&InstanceLayerPropertyCount, LayerProperties.data()));
 		for (const auto& i : LayerProperties) {
-			i.layerName;
+#ifdef _DEBUG
+			std::cout << "\t" << i.layerName << std::endl;
+#endif
+			EnumerateInstanceExtenstion(i.layerName);
 		}
 	}
 }
-void VK::EnumerateInstanceExtenstion()
+void VK::EnumerateInstanceExtenstion(const char* layerName)
 {
 	uint32_t InstanceExtensionPropertyCount = 0;
 	VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(nullptr, &InstanceExtensionPropertyCount, nullptr));
 	if (InstanceExtensionPropertyCount) {
 		std::vector<VkExtensionProperties> ExtensionProperties(InstanceExtensionPropertyCount);
-		VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(nullptr, &InstanceExtensionPropertyCount, ExtensionProperties.data()));
+		VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(layerName, &InstanceExtensionPropertyCount, ExtensionProperties.data()));
 		for (const auto& i : ExtensionProperties) {
-			i.extensionName;
+#ifdef _DEBUG
+			std::cout << "\t" << "\t" << i.extensionName << std::endl;
+#endif
 		}
 	}
 }
 
-//VkBool32 VKAPI_PTR DebugCallback(VkDebugReportFlagsEXT flags,
-//	VkDebugReportObjectTypeEXT objectType,
-//	uint64_t object,
-//	size_t location,
-//	int32_t messageCode,
-//	const char* pLayerPrefix,
-//	const char* pMessage,
-//	void* pUserData)
-//{
-//	return VK_FALSE;
-//}
-
 void VK::CreateInstance()
 {
 	EnumerateInstanceLayer();
-	EnumerateInstanceExtenstion();
 
 	const VkApplicationInfo ApplicationInfo = {
 		VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -453,25 +451,44 @@ void VK::CreateInstance()
 	//VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, &AllocationCallbacks, &Instance));
 	VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance));
 
-	//const VkDebugReportCallbackCreateInfoEXT DebugReportCreateInfo = {
-	//	VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
-	//	nullptr,
-	//	VK_DEBUG_REPORT_INFORMATION_BIT_EXT
-	//	| VK_DEBUG_REPORT_WARNING_BIT_EXT 
-	//	| VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT 
-	//	| VK_DEBUG_REPORT_ERROR_BIT_EXT 
-	//	| VK_DEBUG_REPORT_DEBUG_BIT_EXT 
-	//	| VK_DEBUG_REPORT_FLAG_BITS_MAX_ENUM_EXT,
-	//	DebugCallback,
-	//	nullptr
-	//};
-	//static VkDebugReportCallbackEXT DebugReportCallback;
-	//VERIFY_SUCCEEDED(vkCreateDebugReportCallbackEXT(Instance, &DebugReportCreateInfo, nullptr, &DebugReportCallback));
-
 #ifdef _DEBUG
 	std::cout << "CreateInstace" << COUT_OK << std::endl << std::endl;
 #endif
 }
+
+void VK::CreateDebugReportCallback()
+{
+#ifdef _DEBUG
+	auto Callback = [](VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData) -> VkBool32 
+	{
+		using namespace std;
+		if (VK_DEBUG_REPORT_ERROR_BIT_EXT & flags) {
+			cout << Red << pMessage << White << endl;
+		}
+		else if (VK_DEBUG_REPORT_WARNING_BIT_EXT & flags) {
+			cout << Yellow << pMessage << White << endl;
+		}
+		else if (VK_DEBUG_REPORT_INFORMATION_BIT_EXT & flags) {
+			//cout << Green << pMessage << White << endl;
+		}
+		else if (VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT & flags) {
+			cout << Yellow << pMessage << White << endl;
+		}
+		else if (VK_DEBUG_REPORT_DEBUG_BIT_EXT & flags) {
+			cout << Green << pMessage << White << endl;
+		}
+		return false;
+	};
+	const auto Flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT 
+		| VK_DEBUG_REPORT_WARNING_BIT_EXT 
+		| VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT 
+		| VK_DEBUG_REPORT_ERROR_BIT_EXT 
+		| VK_DEBUG_REPORT_DEBUG_BIT_EXT 
+		| VK_DEBUG_REPORT_FLAG_BITS_MAX_ENUM_EXT;
+	CreateDebugReportCallback(Callback, Flags);
+#endif
+}
+
 void VK::EnumeratePhysicalDevice()
 {
 	//!< 物理デバイス(GPU)の列挙
@@ -519,26 +536,30 @@ void VK::EnumerateDeviceLayer()
 		std::vector<VkLayerProperties> LayerProperties(DeviceLayerPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, LayerProperties.data()));
 		for (const auto& i : LayerProperties) {
-			i.layerName;
+#ifdef _DEBUG
+			std::cout << "\t" << i.layerName << std::endl;
+#endif
+			EnumerateDeviceExtenstion(i.layerName);
 		}
 	}
 }
-void VK::EnumerateDeviceExtenstion()
+void VK::EnumerateDeviceExtenstion(const char* layerName)
 {
 	uint32_t DeviceExtensionPropertyCount = 0;
 	VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &DeviceExtensionPropertyCount, nullptr));
 	if (DeviceExtensionPropertyCount) {
 		std::vector<VkExtensionProperties> ExtensionProperties(DeviceExtensionPropertyCount);
-		VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &DeviceExtensionPropertyCount, ExtensionProperties.data()));
+		VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, layerName, &DeviceExtensionPropertyCount, ExtensionProperties.data()));
 		for (const auto& i : ExtensionProperties) {
-			i.extensionName;
+#ifdef _DEBUG
+			std::cout << "\t" << "\t" << i.extensionName << std::endl;
+#endif
 		}
 	}
 }
 void VK::GetQueueFamily()
 {
 	EnumerateDeviceLayer();
-	EnumerateDeviceExtenstion();
 
 	//!< キューのプロパティを列挙
 	uint32_t QueueFamilyPropertyCount = 0;
@@ -1061,18 +1082,20 @@ void VK::CreateDescritporPool()
 {
 	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
 	};
-	const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		nullptr,
-		0,
-		1, //!< maxSets ... プールから確保される最大のデスクリプタ数
-		static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
+	if (!DescriptorPoolSizes.empty()) {
+		const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+			nullptr,
+			0,
+			1, //!< maxSets ... プールから確保される最大のデスクリプタ数
+			static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
+		};
+		VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
 
 #ifdef _DEBUG
-	std::cout << "CreateDescriptorPool" << COUT_OK << std::endl << std::endl;
+		std::cout << "CreateDescriptorPool" << COUT_OK << std::endl << std::endl;
 #endif
+	}
 }
 /**
 @brief シェーダとのバインディングのレイアウト
