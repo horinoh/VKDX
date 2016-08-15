@@ -18,10 +18,9 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateInstance();
 	GetInstanceProcAddr();
 	CreateDebugReportCallback();
-	EnumeratePhysicalDevice();
+	GetPhysicalDevice();
 	GetQueueFamily();
 	CreateDevice(GraphicsQueueFamilyIndex);
-	GetDeviceQueue(GraphicsQueueFamilyIndex);
 	
 	//!< コマンドプール、バッファ
 	CreateCommandPool(GraphicsQueueFamilyIndex);
@@ -383,13 +382,11 @@ void VK::EnumerateInstanceLayer()
 		std::vector<VkLayerProperties> LayerProperties(InstanceLayerPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&InstanceLayerPropertyCount, LayerProperties.data()));
 		for (const auto& i : LayerProperties) {
-			if (strlen(i.layerName)) {
 #ifdef _DEBUG
-				std::cout << "\t" << i.layerName << std::endl;
-				InstanceLayerNames.push_back({ i.layerName,{} });
+			std::cout << "\t" << "\"" << i.layerName << "\"" << std::endl;
+			InstanceLayerNames.push_back({ i.layerName,{} });
 #endif
-				EnumerateInstanceExtenstion(i.layerName);
-			}
+			EnumerateInstanceExtenstion(i.layerName);
 		}
 	}
 }
@@ -401,12 +398,10 @@ void VK::EnumerateInstanceExtenstion(const char* layerName)
 		std::vector<VkExtensionProperties> ExtensionProperties(InstanceExtensionPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(layerName, &InstanceExtensionPropertyCount, ExtensionProperties.data()));
 		for (const auto& i : ExtensionProperties) {
-			if (strlen(i.extensionName)) {
 #ifdef _DEBUG
-				std::cout << "\t" << "\t" << i.extensionName << std::endl;
-				InstanceLayerNames.back().second.push_back({ i.extensionName });
+			std::cout << "\t" << "\t" << "\"" << i.extensionName << "\"" << std::endl;
+			InstanceLayerNames.back().second.push_back({ i.extensionName });
 #endif
-			}
 		}
 	}
 }
@@ -501,7 +496,7 @@ void VK::CreateDebugReportCallback()
 #endif
 }
 
-void VK::EnumeratePhysicalDevice()
+void VK::GetPhysicalDevice()
 {
 	//!< 物理デバイス(GPU)の列挙
 	uint32_t PhysicalDeviceCount = 0;
@@ -513,34 +508,37 @@ void VK::EnumeratePhysicalDevice()
 	std::cout << Yellow << "\t" << "PhysicalDevices" << White << std::endl;
 #define PHYSICAL_DEVICE_TYPE_ENTRY(entry) if(VK_PHYSICAL_DEVICE_TYPE_##entry == PhysicalDeviceProperties.deviceType) { std::cout << #entry << std::endl; }
 	for (const auto& i : PhysicalDevices) {
+		//!< 物理デバイスのプロパティ
 		VkPhysicalDeviceProperties PhysicalDeviceProperties;
 		vkGetPhysicalDeviceProperties(i, &PhysicalDeviceProperties);
-		std::cout << "\t" << "\t" << PhysicalDeviceProperties.deviceName << " = ";
+		std::cout << "\t" << "\t" << PhysicalDeviceProperties.deviceName << " (";
 		PHYSICAL_DEVICE_TYPE_ENTRY(OTHER);
 		PHYSICAL_DEVICE_TYPE_ENTRY(INTEGRATED_GPU);
 		PHYSICAL_DEVICE_TYPE_ENTRY(DISCRETE_GPU);
 		PHYSICAL_DEVICE_TYPE_ENTRY(VIRTUAL_GPU);
 		PHYSICAL_DEVICE_TYPE_ENTRY(CPU);
-		std::cout << std::endl;
+		std::cout << ")" << std::endl;
 		PhysicalDeviceProperties.limits;
-
+		
+		//!< 物理デバイスのフィーチャー
 		VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
 		vkGetPhysicalDeviceFeatures(i, &PhysicalDeviceFeatures);
+
+		//!< 物理デバイスのメモリプロパティ
+		VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
+		vkGetPhysicalDeviceMemoryProperties(i, &PhysicalDeviceMemoryProperties);
 	}
 #undef PHYSICAL_DEVICE_TYPE
 #endif
 
-	//!< ここでは最初の物理デバイスを使用することにする
-	SelectPhysicalDevice(PhysicalDevices[0]);
+	//!< ここでは最初の物理デバイスを選択することにする
+	PhysicalDevice = PhysicalDevices[0];
+	//!< 選択した物理デバイスのメモリプロパティを取得
+	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
+
 #ifdef _DEBUG
 	EnumerateDeviceLayer(PhysicalDevice);
 #endif
-}
-void VK::SelectPhysicalDevice(VkPhysicalDevice SelectedPhysicalDevice)
-{
-	PhysicalDevice = SelectedPhysicalDevice;
-	//!< メモリプロパティを取得
-	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
 }
 void VK::EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice)
 {
@@ -550,13 +548,11 @@ void VK::EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice)
 		std::vector<VkLayerProperties> LayerProperties(DeviceLayerPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, LayerProperties.data()));
 		for (const auto& i : LayerProperties) {
-			if (strlen(i.layerName)) {
 #ifdef _DEBUG
-				std::cout << "\t" << i.layerName << std::endl;
-				DeviceLayerNames.push_back({ i.layerName, {} });
+			std::cout << "\t" << "\"" << i.layerName << "\"" << std::endl;
+			DeviceLayerNames.push_back({ i.layerName, {} });
 #endif
-				EnumerateDeviceExtenstion(PhysicalDevice, i.layerName);
-			}
+			EnumerateDeviceExtenstion(PhysicalDevice, i.layerName);
 		}
 	}
 }
@@ -568,12 +564,10 @@ void VK::EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* 
 		std::vector<VkExtensionProperties> ExtensionProperties(DeviceExtensionPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, layerName, &DeviceExtensionPropertyCount, ExtensionProperties.data()));
 		for (const auto& i : ExtensionProperties) {
-			if (strlen(i.extensionName)) {
 #ifdef _DEBUG
-				std::cout << "\t" << "\t" << i.extensionName << std::endl;
-				DeviceLayerNames.back().second.push_back({ i.extensionName });
+			std::cout << "\t" << "\t" << "\"" << i.extensionName << "\"" << std::endl;
+			DeviceLayerNames.back().second.push_back({ i.extensionName });
 #endif
-			}
 		}
 	}
 }
@@ -585,6 +579,7 @@ void VK::GetQueueFamily()
 	assert(QueueFamilyPropertyCount && "QueueFamilyProperty not found");
 	std::vector<VkQueueFamilyProperties> QueueProperties(QueueFamilyPropertyCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyPropertyCount, QueueProperties.data());
+
 #ifdef _DEBUG
 	std::cout << Yellow << "\t" << "QueueProperties" << White << std::endl;
 #define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & i.queueFlags) { std::cout << #entry << " | "; }
@@ -652,23 +647,13 @@ void VK::CreateDevice(const uint32_t QueueFamilyIndex)
 	};
 	VERIFY_SUCCEEDED(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &Device));
 
+	//!< マルチスレッドで「異なる」キューへサブミットできる。DirectX12 の場合はマルチスレッドで「同じ」キューへもサブミットできるので注意
+	vkGetDeviceQueue(Device, QueueFamilyIndex, 0/*QueueFamily内でのインデックス*/, &Queue);
+
 #ifdef _DEBUG
 	std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
 #endif
 }
-/**
-@brief マルチスレッドで「異なる」キューへサブミットできる
-@note DirectX12 はマルチスレッドで「同じ」キューへもサブミットできるので注意
-*/
-void VK::GetDeviceQueue(const uint32_t QueueFamilyIndex)
-{
-	vkGetDeviceQueue(Device, QueueFamilyIndex, 0/*QueueFamily内でのインデックス*/, &Queue);
-
-#ifdef _DEBUG
-	std::cout << "GetDeviceQueue" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
 void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 {
 	const VkCommandPoolCreateInfo CommandPoolInfo = {
@@ -771,7 +756,6 @@ void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
 	VkBool32 Supported = VK_FALSE;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, GraphicsQueueFamilyIndex, Surface, &Supported));
 	assert(VK_TRUE == Supported && "vkGetPhysicalDeviceSurfaceSupportKHR failed");
-
 
 #ifdef _DEBUG
 	std::cout << "\t" << "Surface" << std::endl;

@@ -98,13 +98,11 @@ protected:
 		vkCreateDebugReportCallback(Instance, &DebugReportCallbackCreateInfo, nullptr, &DebugReportCallback);
 	}
 #endif
-	virtual void EnumeratePhysicalDevice();
-	virtual void SelectPhysicalDevice(VkPhysicalDevice SelectedPhysicalDevice);
+	virtual void GetPhysicalDevice();
 	virtual void EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice);
 	virtual void EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* layerName);
 	virtual void GetQueueFamily();
 	virtual void CreateDevice(const uint32_t QueueFamilyIndex);
-	virtual void GetDeviceQueue(const uint32_t QueueFamilyIndex);
 
 	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
 	virtual void CreateCommandBuffer(const VkCommandPool CommandPool);
