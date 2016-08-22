@@ -28,10 +28,6 @@
 //#define VERIFY_SUCCEEDED(vr) MESSAGEBOX_ON_FAILED(vr)
 #endif
 
-#ifndef GET_INSTANCE_PROC_ADDR
-#define GET_INSTANCE_PROC_ADDR(inst, proc) reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(inst, "vk" #proc));
-#endif
-
 namespace Colors
 {
 	const VkClearColorValue Black = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -56,7 +52,7 @@ private:
 	using Super = Win;
 #ifdef _DEBUG
 	//using DebugReport = std::function<VkBool32(VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char*, const char*, void*)>;
-	using LayerNames = std::vector<std::pair<std::string, std::vector<std::string>>>;
+	//using LayerNames = std::vector<std::pair<std::string, std::vector<std::string>>>;
 #endif
 
 public:
@@ -74,8 +70,10 @@ protected:
 	static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
 	static FORCEINLINE void* AlignedRealloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_realloc(pOriginal, size, alignment); }
 	static FORCEINLINE void AlignedFree(void* pUserData, void* pMemory) { _aligned_free(pMemory); }
-	VkFormat GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice) const;
-	uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, uint32_t TypeBits, VkFlags Properties) const;
+	static VkFormat GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice);
+	static uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, uint32_t TypeBits, VkFlags Properties);
+	virtual FORCEINLINE VkFormat GetSupportedDepthFormat() const { return GetSupportedDepthFormat(PhysicalDevice); }
+	virtual FORCEINLINE uint32_t GetMemoryType(uint32_t TypeBits, VkFlags Properties) const { return GetMemoryType(PhysicalDeviceMemoryProperties, TypeBits, Properties); }
 	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const;
 	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout) const;
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
@@ -103,6 +101,8 @@ protected:
 	virtual void EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* layerName);
 	virtual void GetQueueFamily();
 	virtual void CreateDevice(const uint32_t QueueFamilyIndex);
+	virtual void GetDeviceProcAddr();
+	virtual void CreateDebugMarker();
 
 	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
 	virtual void CreateCommandBuffer(const VkCommandPool CommandPool);
@@ -167,19 +167,25 @@ protected:
 protected:
 	VkAllocationCallbacks AllocationCallbacks;
 #ifdef _DEBUG
-	LayerNames InstanceLayerNames;
+	//LayerNames InstanceLayerNames;
 #endif
 	VkInstance Instance = VK_NULL_HANDLE;
 #ifdef _DEBUG
-	PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallback = VK_NULL_HANDLE;
-	PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallback = VK_NULL_HANDLE;
+#define VK_INSTANCE_PROC_ADDR(proc) PFN_vk ## proc ## EXT vk ## proc = VK_NULL_HANDLE;
+#include "VKProcInstanceAddr.h"
+#undef VK_INSTANCE_PROC_ADDR
 	VkDebugReportCallbackEXT DebugReportCallback = VK_NULL_HANDLE;
 #endif
 	VkPhysicalDevice PhysicalDevice = VK_NULL_HANDLE;
 #ifdef _DEBUG
-	LayerNames DeviceLayerNames;
+	//LayerNames DeviceLayerNames;
 #endif
 	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
+#ifdef _DEBUG
+#define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc ## EXT vk ## proc = VK_NULL_HANDLE;
+#include "VKProcDeviceAddr.h"
+#undef VK_DEVICE_PROC_ADDR
+#endif
 	VkDevice Device = VK_NULL_HANDLE;
 	VkQueue Queue = VK_NULL_HANDLE;
 	uint32_t GraphicsQueueFamilyIndex = UINT_MAX;

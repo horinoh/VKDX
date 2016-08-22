@@ -1,14 +1,20 @@
 #pragma once
 
-//!< メモリリーク検出
+//!< メモリリーク検出用
 #define _CRTDBG_MAP_ALLOC
 #include <cstdlib>
 #include <crtdbg.h>
 #ifdef _DEBUG
-#ifndef DBG_NEW 
-#define DBG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ ) 
-#define new DBG_NEW 
+#ifndef DEBUG_NEW 
+#define DEBUG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ ) 
+#define new DEBUG_NEW 
 #endif 
+#endif
+
+#ifdef _DEBUG
+#ifndef DEBUG_STDOUT
+#define DEBUG_STDOUT
+#endif
 #endif
 
 #include <ostream>

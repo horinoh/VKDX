@@ -16,7 +16,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	//!< デバイス、キュー
 	CreateInstance();
-	GetInstanceProcAddr();
 	CreateDebugReportCallback();
 	GetPhysicalDevice();
 	GetQueueFamily();
@@ -37,7 +36,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	auto CommandBuffer = CommandBuffers[0];
 	CreateSwapchainImageView(CommandBuffer, ColorFormat);
 	//!< デプスステンシル
-	const auto DepthFormat = GetSupportedDepthFormat(PhysicalDevice);
+	const auto DepthFormat = GetSupportedDepthFormat();
 	CreateDepthStencilImage(DepthFormat);
 	CreateDepthStencilDeviceMemory();
 	CreateDepthStencilView(CommandBuffer, DepthFormat);
@@ -229,8 +228,7 @@ std::string VK::GetFormatString(const VkFormat Format)
 	}
 #undef VK_FORMAT_ENTRY
 }
-
-VkFormat VK::GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice) const
+VkFormat VK::GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice)
 {
 	const std::vector<VkFormat> DepthFormats = {
 		VK_FORMAT_D32_SFLOAT_S8_UINT,
@@ -249,7 +247,7 @@ VkFormat VK::GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice) const
 	assert(false && "DepthFormat not found");
 	return VK_FORMAT_UNDEFINED;
 }
-uint32_t VK::GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, uint32_t TypeBits, VkFlags Properties) const
+uint32_t VK::GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, uint32_t TypeBits, VkFlags Properties)
 {
 	for (auto i = 0; i < 32; ++i) {
 		if (TypeBits & 1) {
@@ -370,7 +368,6 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 
 	delete[] Code;
 
-	assert(VK_NULL_HANDLE != ShaderModule);
 	return ShaderModule;
 }
 
@@ -382,9 +379,9 @@ void VK::EnumerateInstanceLayer()
 		std::vector<VkLayerProperties> LayerProperties(InstanceLayerPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&InstanceLayerPropertyCount, LayerProperties.data()));
 		for (const auto& i : LayerProperties) {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 			std::cout << "\t" << "\"" << i.layerName << "\"" << std::endl;
-			InstanceLayerNames.push_back({ i.layerName,{} });
+			//InstanceLayerNames.push_back({ i.layerName,{} });
 #endif
 			EnumerateInstanceExtenstion(i.layerName);
 		}
@@ -398,9 +395,9 @@ void VK::EnumerateInstanceExtenstion(const char* layerName)
 		std::vector<VkExtensionProperties> ExtensionProperties(InstanceExtensionPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(layerName, &InstanceExtensionPropertyCount, ExtensionProperties.data()));
 		for (const auto& i : ExtensionProperties) {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 			std::cout << "\t" << "\t" << "\"" << i.extensionName << "\"" << std::endl;
-			InstanceLayerNames.back().second.push_back({ i.extensionName });
+			//InstanceLayerNames.back().second.push_back({ i.extensionName });
 #endif
 		}
 	}
@@ -454,14 +451,19 @@ void VK::CreateInstance()
 	//VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, &AllocationCallbacks, &Instance));
 	VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance));
 
-#ifdef _DEBUG
+	GetInstanceProcAddr();
+
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateInstace" << COUT_OK << std::endl << std::endl;
 #endif
 }
 void VK::GetInstanceProcAddr()
 {
-	vkCreateDebugReportCallback = GET_INSTANCE_PROC_ADDR(Instance, CreateDebugReportCallbackEXT);
-	vkDestroyDebugReportCallback = GET_INSTANCE_PROC_ADDR(Instance, DestroyDebugReportCallbackEXT);
+#ifdef _DEBUG
+#define VK_INSTANCE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetInstanceProcAddr(Instance, "vk" #proc "EXT"));
+#include "VKProcInstanceAddr.h"
+#undef VK_INSTANCE_PROC_ADDR
+#endif
 }
 void VK::CreateDebugReportCallback()
 {
@@ -495,7 +497,6 @@ void VK::CreateDebugReportCallback()
 	CreateDebugReportCallback(Callback, Flags);
 #endif
 }
-
 void VK::GetPhysicalDevice()
 {
 	//!< 物理デバイス(GPU)の列挙
@@ -504,7 +505,7 @@ void VK::GetPhysicalDevice()
 	assert(PhysicalDeviceCount && "PhysicalDevice not found");
 	std::vector<VkPhysicalDevice> PhysicalDevices(PhysicalDeviceCount);
 	VERIFY_SUCCEEDED(vkEnumeratePhysicalDevices(Instance, &PhysicalDeviceCount, PhysicalDevices.data()));
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << Yellow << "\t" << "PhysicalDevices" << White << std::endl;
 #define PHYSICAL_DEVICE_TYPE_ENTRY(entry) if(VK_PHYSICAL_DEVICE_TYPE_##entry == PhysicalDeviceProperties.deviceType) { std::cout << #entry << std::endl; }
 	for (const auto& i : PhysicalDevices) {
@@ -548,9 +549,9 @@ void VK::EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice)
 		std::vector<VkLayerProperties> LayerProperties(DeviceLayerPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, LayerProperties.data()));
 		for (const auto& i : LayerProperties) {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 			std::cout << "\t" << "\"" << i.layerName << "\"" << std::endl;
-			DeviceLayerNames.push_back({ i.layerName, {} });
+			//DeviceLayerNames.push_back({ i.layerName, {} });
 #endif
 			EnumerateDeviceExtenstion(PhysicalDevice, i.layerName);
 		}
@@ -564,9 +565,9 @@ void VK::EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* 
 		std::vector<VkExtensionProperties> ExtensionProperties(DeviceExtensionPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, layerName, &DeviceExtensionPropertyCount, ExtensionProperties.data()));
 		for (const auto& i : ExtensionProperties) {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 			std::cout << "\t" << "\t" << "\"" << i.extensionName << "\"" << std::endl;
-			DeviceLayerNames.back().second.push_back({ i.extensionName });
+			//DeviceLayerNames.back().second.push_back({ i.extensionName });
 #endif
 		}
 	}
@@ -580,7 +581,7 @@ void VK::GetQueueFamily()
 	std::vector<VkQueueFamilyProperties> QueueProperties(QueueFamilyPropertyCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyPropertyCount, QueueProperties.data());
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << Yellow << "\t" << "QueueProperties" << White << std::endl;
 #define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & i.queueFlags) { std::cout << #entry << " | "; }
 	for (const auto& i : QueueProperties) {
@@ -598,7 +599,7 @@ void VK::GetQueueFamily()
 	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i) {
 		if (VK_QUEUE_GRAPHICS_BIT & QueueProperties[i].queueFlags) {
 			GraphicsQueueFamilyIndex = i;
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 			std::cout << "\t" << "GraphicsQueueFamilyIndex = " << GraphicsQueueFamilyIndex << std::endl;
 #endif
 		}
@@ -631,10 +632,12 @@ void VK::CreateDevice(const uint32_t QueueFamilyIndex)
 		//!< 標準的なバリデーションレイヤセットを最適な順序でロードする指定
 		"VK_LAYER_LUNARG_standard_validation", 
 #endif
-		//"VK_LAYER_NV_optimus",
 	};
 	const std::vector<const char*> EnabledExtensions = { 
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME 
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+#ifdef _DEBUG
+		//VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
+#endif
 	};
 	const VkDeviceCreateInfo DeviceCreateInfo = {
 		VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -650,9 +653,24 @@ void VK::CreateDevice(const uint32_t QueueFamilyIndex)
 	//!< マルチスレッドで「異なる」キューへサブミットできる。DirectX12 の場合はマルチスレッドで「同じ」キューへもサブミットできるので注意
 	vkGetDeviceQueue(Device, QueueFamilyIndex, 0/*QueueFamily内でのインデックス*/, &Queue);
 
+	GetDeviceProcAddr();
+
 #ifdef _DEBUG
 	std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
 #endif
+}
+
+void VK::GetDeviceProcAddr()
+{
+#ifdef _DEBUG
+#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetDeviceProcAddr(Device, "vk" #proc "EXT"));
+#include "VKprocDeviceAddr.h"
+#undef VK_DEVICE_PROC_ADDR
+#endif
+}
+void VK::CreateDebugMarker()
+{
+
 }
 void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 {
@@ -752,7 +770,7 @@ void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
 	assert(false && "Not supported");
 #endif
 
-	//!< デバイスのキューファミリーインデックスがプレゼントをサポートするかチェック
+	//!< デバイスのキューファミリーインデックスがプレゼントをサポートするかチェックする
 	VkBool32 Supported = VK_FALSE;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, GraphicsQueueFamilyIndex, Surface, &Supported));
 	assert(VK_TRUE == Supported && "vkGetPhysicalDeviceSurfaceSupportKHR failed");
@@ -769,7 +787,6 @@ VkSurfaceFormatKHR VK::SelectSurfaceFormat()
 	assert(SurfaceFormatCount);
 	std::vector<VkSurfaceFormatKHR> SurfaceFormats(SurfaceFormatCount);
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, Surface, &SurfaceFormatCount, SurfaceFormats.data()));
-
 #ifdef _DEBUG
 	std::cout << "\t" << "\t" << Lightblue << "Format" << White << std::endl;
 	auto SelectedFormat = VK_FORMAT_UNDEFINED;
@@ -815,7 +832,7 @@ VkPresentModeKHR VK::SelectSurfacePresentMode()
 
 #ifdef _DEBUG
 	std::cout << "\t" << Lightblue << "Present Mode" << White << std::endl;
-#define VK_PRESENT_MODE_ENTRY(entry) case VK_PRESENT_MODE_##entry##_KHR: std::cout << "\t" << "\t" << #entry << std::endl; break;
+#define VK_PRESENT_MODE_ENTRY(entry) case VK_PRESENT_MODE_##entry##_KHR: std::cout << "\t" << "\t" << #entry << std::endl; break
 	for (auto i : PresentModes) {
 		if (SelectedPresentMode == i) {
 			std::cout << Yellow;
@@ -823,10 +840,10 @@ VkPresentModeKHR VK::SelectSurfacePresentMode()
 		switch (i)
 		{
 		default: assert(0 && "Unknown VkPresentMode"); break;
-			VK_PRESENT_MODE_ENTRY(IMMEDIATE) //!< VSync を待たない、テアリング
-				VK_PRESENT_MODE_ENTRY(MAILBOX)   //!< V-Syncを待つ
-				VK_PRESENT_MODE_ENTRY(FIFO)		 //!< V-Syncを待つ、レイテンシが低い
-				VK_PRESENT_MODE_ENTRY(FIFO_RELAXED)
+		VK_PRESENT_MODE_ENTRY(IMMEDIATE);	//!< VSync を待たない、テアリング
+		VK_PRESENT_MODE_ENTRY(MAILBOX);		//!< V-Syncを待つ
+		VK_PRESENT_MODE_ENTRY(FIFO);		//!< V-Syncを待つ、レイテンシが低い
+		VK_PRESENT_MODE_ENTRY(FIFO_RELAXED);
 		}
 		std::cout << White;
 #undef VK_PRESENT_MODE_ENTRY
@@ -1005,7 +1022,7 @@ void VK::CreateDepthStencilDeviceMemory()
 {
 	VkMemoryRequirements MemoryRequirements;
 	vkGetImageMemoryRequirements(Device, DepthStencilImage, &MemoryRequirements);
-	const auto MemoryTypeIndex = GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	const auto MemoryTypeIndex = GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	const VkMemoryAllocateInfo MemoryAllocateInfo = {
 		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 		nullptr,
@@ -1230,7 +1247,7 @@ void VK::CreateDeviceLocalBuffer(const VkCommandPool CommandPool, const VkBuffer
 			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 			nullptr,
 			StagingMemoryRequirements.size,
-			GetMemoryType(PhysicalDeviceMemoryProperties, StagingMemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) //!< HOST_VISIBLE にすること
+			GetMemoryType(StagingMemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) //!< HOST_VISIBLE にすること
 		};
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &StagingMemoryAllocateInfo, nullptr, &StagingDeviceMemory));
 		void *Data;
@@ -1258,7 +1275,7 @@ void VK::CreateDeviceLocalBuffer(const VkCommandPool CommandPool, const VkBuffer
 			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 			nullptr,
 			MemoryRequirements.size,
-			GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) //!< DEVICE_LOCAL にすること
+			GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) //!< DEVICE_LOCAL にすること
 		};
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, DeviceMemory));
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DeviceMemory, 0));
@@ -1323,7 +1340,7 @@ void VK::CreateHostVisibleBuffer(const VkBufferUsageFlagBits Usage, VkBuffer* Bu
 		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 		nullptr,
 		MemoryRequirements.size,
-		GetMemoryType(PhysicalDeviceMemoryProperties, MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) //!< HOST_VISIBLE にすること
+		GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) //!< HOST_VISIBLE にすること
 	};
 	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, DeviceMemory));
 	void *Data;

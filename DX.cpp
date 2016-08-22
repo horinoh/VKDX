@@ -168,7 +168,7 @@ void DX::CreateDevice(HWND hWnd)
 	};
 	ComPtr<IDXGIAdapter> Adapter;
 	Factory->EnumAdapters(GetLastIndexOfHardwareAdapter(), Adapter.ReleaseAndGetAddressOf());
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	DXGI_ADAPTER_DESC AdapterDesc;
 	VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
 	std::cout << Lightblue << "Adapter" << White << std::endl;
@@ -176,7 +176,7 @@ void DX::CreateDevice(HWND hWnd)
 #endif
 	
 	if (FAILED(CreateMaxFeatureLevelDevice(Adapter.Get()))) {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 		std::cout << "\t" << Red << "Cannot create device, trying to create WarpDevice ..." << White << std::endl;
 #endif
 		//!< WARP : Win7以下だと D3D_FEATURE_LEVEL_10_1 まで、Win8以上だと D3D_FEATURE_LEVEL_11_1 までサポート
