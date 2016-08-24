@@ -185,6 +185,7 @@ protected:
 #define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc ## EXT vk ## proc = VK_NULL_HANDLE;
 #include "VKProcDeviceAddr.h"
 #undef VK_DEVICE_PROC_ADDR
+	bool HasDebugMaker = false;
 #endif
 	VkDevice Device = VK_NULL_HANDLE;
 	VkQueue Queue = VK_NULL_HANDLE;

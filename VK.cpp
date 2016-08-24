@@ -484,7 +484,7 @@ void VK::CreateDebugReportCallback()
 			cout << Yellow << pMessage << White << endl;
 		}
 		else if (VK_DEBUG_REPORT_DEBUG_BIT_EXT & flags) {
-			cout << Green << pMessage << White << endl;
+			//cout << Green << pMessage << White << endl;
 		}
 		return false;
 	};
@@ -565,10 +565,18 @@ void VK::EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* 
 		std::vector<VkExtensionProperties> ExtensionProperties(DeviceExtensionPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, layerName, &DeviceExtensionPropertyCount, ExtensionProperties.data()));
 		for (const auto& i : ExtensionProperties) {
+			//!< (初回のみ)RenderDoc を起動、Warning が出ていたらクリックして VulkanCapture を有効にしておく、Windows のレジストリが作成される
+			//!< RenderDoc から実行した場合にしか VK_EXT_DEBUG_MARKER_EXTENSION_NAME は有効にならないので注意
+			if (!strcmp(VK_EXT_DEBUG_MARKER_EXTENSION_NAME, i.extensionName)) {
+				HasDebugMaker = true;
 #ifdef DEBUG_STDOUT
-			std::cout << "\t" << "\t" << "\"" << i.extensionName << "\"" << std::endl;
-			//DeviceLayerNames.back().second.push_back({ i.extensionName });
+				std::cout << Red;
 #endif
+			}
+#ifdef DEBUG_STDOUT
+			std::cout << "\t" << "\t" << "\"" << i.extensionName << "\"" << White << std::endl;
+#endif
+			//DeviceLayerNames.back().second.push_back({ i.extensionName });
 		}
 	}
 }
@@ -633,12 +641,14 @@ void VK::CreateDevice(const uint32_t QueueFamilyIndex)
 		"VK_LAYER_LUNARG_standard_validation", 
 #endif
 	};
-	const std::vector<const char*> EnabledExtensions = { 
+	/*const*/std::vector<const char*> EnabledExtensions = { 
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-#ifdef _DEBUG
-		//VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
-#endif
 	};
+#ifdef _DEBUG
+	if (HasDebugMaker) {
+		EnabledExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+	}
+#endif
 	const VkDeviceCreateInfo DeviceCreateInfo = {
 		VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
 		nullptr,
@@ -655,7 +665,7 @@ void VK::CreateDevice(const uint32_t QueueFamilyIndex)
 
 	GetDeviceProcAddr();
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
 #endif
 }
