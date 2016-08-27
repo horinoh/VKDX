@@ -1464,12 +1464,12 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		};
 		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
 
-//			auto Image = SwapchainImages[SwapchainImageIndex];
-//			ImageBarrier(CommandBuffer, Image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			auto Image = SwapchainImages[SwapchainImageIndex];
+			ImageBarrier(CommandBuffer, Image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 			{
 				Clear(CommandBuffer);
 			}
-//			ImageBarrier(CommandBuffer, Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+			ImageBarrier(CommandBuffer, Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
 		} vkCmdEndRenderPass(CommandBuffer);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));

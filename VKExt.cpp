@@ -293,7 +293,7 @@ void VKExt::CreateGraphicsPipeline_VsPsTesTcsGs()
 #endif
 }
 
-void VKExt::CreateRenderPass_Color(const VkFormat ColorFormat)
+void VKExt::CreateRenderPass_Color(const VkFormat ColorFormat, const VkFormat DepthFormat)
 {
 	const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
 		{
