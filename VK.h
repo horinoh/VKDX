@@ -76,8 +76,12 @@ protected:
 	virtual FORCEINLINE uint32_t GetMemoryType(uint32_t TypeBits, VkFlags Properties) const { return GetMemoryType(PhysicalDeviceMemoryProperties, TypeBits, Properties); }
 	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const;
 	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout) const;
-	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 #ifdef _DEBUG
+	void MarkerInsert(VkCommandBuffer CommandBuffer, const char* Name, const float* Color = nullptr);
+	void MarkerBegin(VkCommandBuffer CommandBuffer, const char* Name, const float* Color = nullptr);
+	void MarkerEnd(VkCommandBuffer CommandBuffer);
+	template<typename T> void SetObjectName(VkDevice Device, T Object, const char* Name) {}
+	template<typename T> void SetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* Tag) {}
 #include "VKMarker.h"
 #endif
 
@@ -126,6 +130,7 @@ protected:
 	virtual void CreateDepthStencilDeviceMemory();
 	virtual void CreateDepthStencilView(VkCommandBuffer CommandBuffer, const VkFormat DepthFormat);
 
+	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 	virtual void CreateShader();
 
 	virtual void CreateDescriptorSetLayout();
@@ -193,8 +198,8 @@ protected:
 	VkDevice Device = VK_NULL_HANDLE;
 	VkQueue Queue = VK_NULL_HANDLE;
 	uint32_t GraphicsQueueFamilyIndex = UINT_MAX;
-	//uint32_t TransferQueueFamilyIndex = UINT_MAX;
-	//uint32_t ComputeQueueFamilyIndex = UINT_MAX;
+	uint32_t TransferQueueFamilyIndex = UINT_MAX;
+	uint32_t ComputeQueueFamilyIndex = UINT_MAX;
 
 	std::vector<VkCommandPool> CommandPools;
 	std::vector<VkCommandBuffer> CommandBuffers;

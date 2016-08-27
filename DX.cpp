@@ -106,7 +106,7 @@ std::string DX::GetHRESULTString(const HRESULT Result)
 	const auto WResultString = GetHRESULTStringW(Result);
 #if 1
 	//!< 日本語対応
-	char Temporary[256];
+	char Temporary[BUFSIZ];
 	size_t NumOfCharConverted;
 	wcstombs_s(&NumOfCharConverted, Temporary, WResultString.c_str(), _countof(Temporary));
 	return std::string(Temporary);
@@ -184,7 +184,7 @@ void DX::CreateDevice(HWND hWnd)
 		VERIFY_SUCCEEDED(CreateMaxFeatureLevelDevice(Adapter.Get()));
 	}
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
 #endif
 
@@ -208,14 +208,14 @@ HRESULT DX::CreateMaxFeatureLevelDevice(IDXGIAdapter* Adapter)
 void DX::EnumAdapter(IDXGIFactory4* Factory)
 {
 	using namespace Microsoft::WRL;
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << Lightblue << "ADAPTERS" << White << std::endl;
 #endif
 	ComPtr<IDXGIAdapter> Adapter;
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, Adapter.ReleaseAndGetAddressOf()); ++i) {
 		DXGI_ADAPTER_DESC AdapterDesc;
 		VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 		std::wcout << "\t" << AdapterDesc.Description << std::endl;
 		std::cout << "\t" << "\t" << "DedicatedVideoMemory = " << AdapterDesc.DedicatedVideoMemory << std::endl;
 #endif
@@ -233,7 +233,7 @@ void DX::EnumOutput(IDXGIAdapter* Adapter)
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Adapter->EnumOutputs(i, Output.ReleaseAndGetAddressOf()); ++i) {
 		DXGI_OUTPUT_DESC OutputDesc;
 		VERIFY_SUCCEEDED(Output->GetDesc(&OutputDesc));
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 		const auto Width = OutputDesc.DesktopCoordinates.right - OutputDesc.DesktopCoordinates.left;
 		const auto Height = OutputDesc.DesktopCoordinates.bottom - OutputDesc.DesktopCoordinates.top;
 		if (0 == i) {
@@ -252,12 +252,12 @@ void DX::GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format)
 	UINT NumModes;
 	VERIFY_SUCCEEDED(Output->GetDisplayModeList(Format, 0, &NumModes, nullptr));
 	if (NumModes) {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 		std::cout << Lightblue << "\t" << "\t" << "MODES" << White << std::endl;
 #endif
 		std::vector<DXGI_MODE_DESC> ModeDescs(NumModes);
 		VERIFY_SUCCEEDED(Output->GetDisplayModeList(Format, 0, &NumModes, ModeDescs.data()));
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 		for (const auto& i : ModeDescs) {
 			//!< #TODO : DXGI_MODE_DESC を覚えておいて選択できるようにする？
 			std::wcout << "\t" << "\t" << "\t" << i.Width << " x " << i.Height << " @ " << i.RefreshRate.Numerator / i.RefreshRate.Denominator << std::endl;
@@ -273,7 +273,7 @@ void DX::CheckFeatureLevel()
 		static_cast<UINT>(FeatureLevels.size()), FeatureLevels.data()
 	};
 	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, reinterpret_cast<void*>(&DataFeatureLevels), sizeof(DataFeatureLevels)));
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << Lightblue << "MaxSupportedFeatureLevel" << White << std::endl;
 #define D3D_FEATURE_LEVEL_ENTRY(fl) case D3D_FEATURE_LEVEL_##fl: std::cout << Yellow << "\t" << "D3D_FEATURE_LEVEL_" #fl << White << std::endl; break;
 	switch (DataFeatureLevels.MaxSupportedFeatureLevel) {
@@ -294,7 +294,7 @@ void DX::CheckFeatureLevel()
 
 void DX::CheckMultiSample(const DXGI_FORMAT Format)
 {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << Lightblue << "MultiSample" << White << std::endl;
 	std::cout << "\t" << GetFormatString(Format) << std::endl;
 #endif
@@ -314,7 +314,7 @@ void DX::CheckMultiSample(const DXGI_FORMAT Format)
 				DataMultiSampleQaualityLevels.NumQualityLevels - 1
 			}; 
 			SampleDescs.push_back(SampleDesc);
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 			std::cout << "\t" << "Count = " << SampleDesc.Count << ", ";
 			std::cout << "Quality = ";
 			for (UINT i = 0; i <= SampleDesc.Quality; ++i) {
@@ -340,7 +340,7 @@ void DX::CreateCommandQueue()
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(CommandQueue.GetAddressOf())));
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateCommandQueue" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -356,7 +356,7 @@ void DX::CreateCommandAllocator(const D3D12_COMMAND_LIST_TYPE CommandListType)
 
 	CommandAllocators.push_back(CommandAllocator);
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "\t" << "CommandAllocator" << std::endl;
 #endif
 }
@@ -378,7 +378,7 @@ void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const D3D12
 	//!< Close() しておく
 	VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateCommandList" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -390,7 +390,7 @@ void DX::CreateFence()
 {
 	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(Fence.GetAddressOf())));
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateFence" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -427,11 +427,12 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	ComPtr<IDXGISwapChain> NewSwapChain;
 	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.Get(), &SwapChainDesc, NewSwapChain.GetAddressOf()));
 	VERIFY_SUCCEEDED(NewSwapChain.As(&SwapChain));
-#ifdef _DEBUG
+
+#ifdef DEBUG_STDOUT
 	std::cout << "\t" << "SwapChain" << std::endl;
 #endif
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateSwapChain" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -448,7 +449,7 @@ void DX::CreateSwapChainDescriptorHeap()
 	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescripterHeapDesc, IID_PPV_ARGS(SwapChainDescriptorHeap.GetAddressOf())));
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "\t" << "SwapChainDescriptorHeap" << std::endl;
 #endif
 }
@@ -479,7 +480,7 @@ void DX::CreateSwapChainResource()
 		CpuDescriptorHandle.ptr += IncrementSize;
 	}
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "\t" << "SwapChainResource" << std::endl;
 #endif
 }
@@ -490,18 +491,18 @@ void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
 	SwapChain->GetDesc1(&SwapChainDesc);
 	VERIFY_SUCCEEDED(SwapChain->ResizeBuffers(SwapChainDesc.BufferCount, Width, Height, SwapChainDesc.Format, SwapChainDesc.Flags));
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "\t" << "ResizeBuffers" << std::endl;
 #endif
 
 	CurrentBackBufferIndex = SwapChain->GetCurrentBackBufferIndex();
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "\t" << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;
 #endif
 
 	CreateSwapChainResource();
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "ResizeSwapChain" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -515,11 +516,11 @@ void DX::CreateDepthStencilDescriptorHeap()
 		0
 	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DepthStencilDescriptorHeap.GetAddressOf())));
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "\t" << "DepthStencilDescriptorHeap" << std::endl;
 #endif
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -570,7 +571,7 @@ void DX::CreateDepthStencilResource(const UINT Width, const UINT Height, const D
 	Device->CreateDepthStencilView(DepthStencilResource.Get(), nullptr, CpuDescriptorHandle);
 	CpuDescriptorHandle.ptr += IncrementSize; //!< ここでは必要ないが一応
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "\t" << "DepthStencilView" << std::endl;
 #endif
 
@@ -578,7 +579,7 @@ void DX::CreateDepthStencilResource(const UINT Width, const UINT Height, const D
 	auto CommandList = GraphicsCommandLists[0];
 	BarrierTransition(CommandList.Get(), DepthStencilResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateDepthStencilResource" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -587,7 +588,7 @@ void DX::ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORM
 	ResetDepthStencilResource();
 	CreateDepthStencilResource(Width, Height, DepthFormat);
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "ResizeDepthStencil" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -597,7 +598,7 @@ void DX::ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORM
 */
 void DX::CreateShader()
 {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -659,14 +660,14 @@ void DX::CreateRootSignature()
 	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
 #endif
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateRootSignature" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
 void DX::CreateInputLayout()
 {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateInputLayout" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -688,13 +689,13 @@ void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDe
 		}
 	};
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateViewport" << COUT_OK << std::endl << std::endl;
 #endif
 }
 void DX::CreateGraphicsPipelineState()
 {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateGraphicsPipelineState" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -715,7 +716,7 @@ void DX::CreateComputePipelineState()
 	};
 	VERIFY_SUCCEEDED(Device->CreateComputePipelineState(&ComputePipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateComputePipelineState" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -834,7 +835,7 @@ void DX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12Grap
 	//VERIFY_SUCCEEDED(D3DCreateBlob(Size, VertexBufferBlob.GetAddressOf()));
 	//CopyMemory(VertexBufferBlob->GetBufferPointer(), Vertices.data(), Size);
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -845,7 +846,7 @@ void DX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12Graph
 	//VERIFY_SUCCEEDED(D3DCreateBlob(Size, IndexBufferBlob.GetAddressOf()));
 	//CopyMemory(IndexBufferBlob->GetBufferPointer(), Indices.data(), Size);
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -861,7 +862,7 @@ GraphicsCommandList->SetGraphicsRootDescriptorTable(0, CVDescriptorHandle);
 */
 void DX::CreateConstantBuffer()
 {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -885,7 +886,7 @@ void DX::CreateConstantBufferDescriptorHeap(const UINT Size)
 	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	Device->CreateConstantBufferView(&ConstantBufferViewDesc, ConstantBufferDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateConstantBufferDescriptorHeap" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -952,7 +953,7 @@ void DX::CreateUnorderedAccessTexture()
 	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	Device->CreateUnorderedAccessView(UnorderedAccessTextureResource.Get(), nullptr, &UAVDesc, CPUDescriptorHandle);
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateUnorderedAccessBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }

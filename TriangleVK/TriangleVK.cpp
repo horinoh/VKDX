@@ -259,37 +259,46 @@ void TriangleVK::CreateIndexBuffer(const VkCommandPool CommandPool)
 }
 void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 {
-	Super::PopulateCommandBuffer(CommandBuffer);
-
-	//!< #TODO
-	assert(!Framebuffers.empty());
-	assert(!ScissorRects.empty());
-
-	const std::vector<VkClearValue> ClearValues = {
-		{ Colors::SkyBlue }, { 1.0f, 0 }
-	};
-	const VkRenderPassBeginInfo RenderPassBeginInfo = {
-		VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+	const VkCommandBufferBeginInfo BeginInfo = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
-		RenderPass,
-		Framebuffers[SwapchainImageIndex],
-		ScissorRects[0],
-		static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
+		0,
+		nullptr
 	};
-	vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
-		if (!DescriptorSets.empty()) {
-			vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout, 0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
-		}
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo)); {
+		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-		//!< トポロジは Pipeline - VkPipelineInputAssemblyStateCreateInfo で指定しているのでパイプラインをバインド
-		vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+		//!< #TODO
+		assert(!Framebuffers.empty());
+		assert(!ScissorRects.empty());
 
-		const VkDeviceSize Offsets[] = { 0 };
-		vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
-		vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
-		
-		vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
+		const std::vector<VkClearValue> ClearValues = {
+			{ Colors::SkyBlue }, { 1.0f, 0 }
+		};
+		const VkRenderPassBeginInfo RenderPassBeginInfo = {
+			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			nullptr,
+			RenderPass,
+			Framebuffers[SwapchainImageIndex],
+			ScissorRects[0],
+			static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
+		};
+		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
+			if (!DescriptorSets.empty()) {
+				vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout, 0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
+			}
 
-	} vkCmdEndRenderPass(CommandBuffer);
+			//!< トポロジは Pipeline - VkPipelineInputAssemblyStateCreateInfo で指定しているのでパイプラインをバインド
+			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+
+			const VkDeviceSize Offsets[] = { 0 };
+			vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
+			vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+			vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
+		} vkCmdEndRenderPass(CommandBuffer);
+
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }
 #pragma endregion

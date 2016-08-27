@@ -16,7 +16,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	//!< デバイス、キュー
 	CreateInstance();
-	CreateDebugReportCallback();
 	GetPhysicalDevice();
 	GetQueueFamily();
 	CreateDevice(GraphicsQueueFamilyIndex);
@@ -181,7 +180,8 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyCommandPool(Device, i, nullptr);
 	}
 
-	//!< Queue は vkGetDeviceQueue() で取得したもの
+	//!< Queue は vkGetDeviceQueue() で取得したもの、破棄しない
+
 	if (VK_NULL_HANDLE != Device) {
 		vkDestroyDevice(Device, nullptr);
 	}
@@ -190,7 +190,9 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyDebugReportCallback(Instance, DebugReportCallback, nullptr);
 	}
 #endif
-	//!< PhysicalDevice は vkEnumeratePhysicalDevices() で取得したもの
+	
+	//!< PhysicalDevice は vkEnumeratePhysicalDevices() で取得したもの、破棄しない
+
 	if (VK_NULL_HANDLE != Instance) {
 		//vkDestroyInstance(Instance, &AllocationCallbacks);
 		vkDestroyInstance(Instance, nullptr);
@@ -199,11 +201,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 
 std::string VK::GetVkResultString(const VkResult Result)
 {
-	//!< 16進の文字列表記
-	//std::stringstream ss;
-	//ss << "0x" << std::hex << Result << std::dec;
-	//ss.str();
-
 #define VK_RESULT_ENTRY(vr) case VK_##vr: return #vr;
 	switch (Result)
 	{
@@ -217,7 +214,6 @@ std::wstring VK::GetVkResultStringW(const VkResult Result)
 	const auto ResultString = GetVkResultString(Result);
 	return std::wstring(ResultString.begin(), ResultString.end());
 }
-
 std::string VK::GetFormatString(const VkFormat Format)
 {
 #define VK_FORMAT_ENTRY(vf) case VK_FORMAT_##vf: return #vf;
@@ -228,6 +224,7 @@ std::string VK::GetFormatString(const VkFormat Format)
 	}
 #undef VK_FORMAT_ENTRY
 }
+
 VkFormat VK::GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice)
 {
 	const std::vector<VkFormat> DepthFormats = {
@@ -343,33 +340,32 @@ void VK::SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAsp
 	};
 	SetImageLayout(CommandBuffer, Image, ImageAspectFlags, OldImageLayout, NewImageLayout, ImageSubresourceRange);
 }
-VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
+#ifdef _DEBUG
+void VK::MarkerInsert(VkCommandBuffer CommandBuffer, const char* Name, const float* Color /*= nullptr*/)
 {
-	VkShaderModule ShaderModule = VK_NULL_HANDLE;
-
-	std::ifstream In(Path.c_str(), std::ios::in | std::ios::binary);
-	assert(false == In.fail());
-
-	In.seekg(0, std::ios_base::end);
-	const auto CodeSize = In.tellg();
-	In.seekg(0, std::ios_base::beg);
-
-	auto Code = new char[CodeSize];
-	In.read(Code, CodeSize);
-	In.close();
-
-	const VkShaderModuleCreateInfo ModuleCreateInfo = {
-		VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+	VkDebugMarkerMarkerInfoEXT DebugMarkerMarkerInfo = {
+		VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
 		nullptr,
-		0,
-		CodeSize, reinterpret_cast<uint32_t*>(Code)
+		Name,
+		{ nullptr == Color ? 0.0f : Color[0], nullptr == Color ? 0.0f : Color[1], nullptr == Color ? 0.0f : Color[2], nullptr == Color ? 0.0f : Color[3] }
 	};
-	VERIFY_SUCCEEDED(vkCreateShaderModule(Device, &ModuleCreateInfo, nullptr, &ShaderModule));
-
-	delete[] Code;
-
-	return ShaderModule;
+	vkCmdDebugMarkerInsert(CommandBuffer, &DebugMarkerMarkerInfo);
 }
+void VK::MarkerBegin(VkCommandBuffer CommandBuffer, const char* Name, const float* Color /*= nullptr*/)
+{
+	VkDebugMarkerMarkerInfoEXT DebugMarkerMarkerInfo = {
+		VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
+		nullptr,
+		Name,
+		{ nullptr == Color ? 0.0f : Color[0], nullptr == Color ? 0.0f : Color[1], nullptr == Color ? 0.0f : Color[2], nullptr == Color ? 0.0f : Color[3] }
+	};
+	vkCmdDebugMarkerBegin(CommandBuffer, &DebugMarkerMarkerInfo);
+}
+void VK::MarkerEnd(VkCommandBuffer CommandBuffer)
+{
+	vkCmdDebugMarkerEnd(CommandBuffer);
+}
+#endif //! _DBEUG
 
 void VK::EnumerateInstanceLayer()
 {
@@ -410,13 +406,13 @@ void VK::CreateInstance()
 	const VkApplicationInfo ApplicationInfo = {
 		VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		nullptr,
-		"VKDX App", 0,
-		"VKDX Engine", 0,
+		"VKDX Application Name", 0,
+		"VKDX Engine Name", 0,
 		VK_API_VERSION_1_0
 	};
 	const std::vector<const char*> EnabledLayerNames = {
 #ifdef _DEBUG
-		//!< 標準的なバリデーションレイヤセットを最適な順序でロードする指定
+		//!< ↓標準的なバリデーションレイヤセットを最適な順序でロードする指定
 		"VK_LAYER_LUNARG_standard_validation", 
 		//"VK_LAYER_LUNARG_api_dump",
 #endif
@@ -427,7 +423,7 @@ void VK::CreateInstance()
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 #endif
 #ifdef _DEBUG
-		//!< Vuklan デバッグ API をアプリから使用できるようにする
+		//!< ↓デバッグレポート用
 		VK_EXT_DEBUG_REPORT_EXTENSION_NAME
 #endif
 	};
@@ -440,18 +436,22 @@ void VK::CreateInstance()
 		static_cast<uint32_t>(EnabledExtensions.size()), EnabledExtensions.data()
 	};
 
-	//AllocationCallbacks = {
-	//	nullptr,
-	//	AlignedMalloc,
-	//	AlignedRealloc,
-	//	AlignedFree,
-	//	nullptr,
-	//	nullptr
-	//};
-	//VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, &AllocationCallbacks, &Instance));
+#if 0
+	AllocationCallbacks = {
+		nullptr,
+		AlignedMalloc,
+		AlignedRealloc,
+		AlignedFree,
+		nullptr,
+		nullptr
+	};
+	VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, &AllocationCallbacks, &Instance));
+#else
 	VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance));
+#endif
 
 	GetInstanceProcAddr();
+	CreateDebugReportCallback();
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateInstace" << COUT_OK << std::endl << std::endl;
@@ -529,7 +529,7 @@ void VK::GetPhysicalDevice()
 		VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
 		vkGetPhysicalDeviceMemoryProperties(i, &PhysicalDeviceMemoryProperties);
 	}
-#undef PHYSICAL_DEVICE_TYPE
+#undef PHYSICAL_DEVICE_TYPE_ENTRY
 #endif
 
 	//!< ここでは最初の物理デバイスを選択することにする
@@ -600,7 +600,7 @@ void VK::GetQueueFamily()
 		QUEUE_FLAG_ENTRY(SPARSE_BINDING);
 		std::cout << std::endl;
 	}
-#undef QUEUE_PROPS
+#undef QUEUE_FLAG_ENTRY
 #endif
 
 	//!< グラフィック機能を持つものを探し、インデックスを覚えておく
@@ -614,11 +614,11 @@ void VK::GetQueueFamily()
 		else if (VK_QUEUE_TRANSFER_BIT & QueueProperties[i].queueFlags) {
 			//!< #TODO 
 			//!< デバイスによっては転送専用キューを持つ、転送を多用する場合は専用キューを使用した方が良い
-			//TransferQueueFamilyIndex = i;
+			TransferQueueFamilyIndex = i;
 		}
 		else if (VK_QUEUE_COMPUTE_BIT & QueueProperties[i].queueFlags) {
 			//!< #TODO
-			//ComputeQueueFamilyIndex = i;
+			ComputeQueueFamilyIndex = i;
 		}
 	}
 	assert(UINT_MAX != GraphicsQueueFamilyIndex && "GraphicsQueue not found");
@@ -637,17 +637,22 @@ void VK::CreateDevice(const uint32_t QueueFamilyIndex)
 	};
 	const std::vector<const char*> EnabledLayerNames = {
 #ifdef _DEBUG
-		//!< 標準的なバリデーションレイヤセットを最適な順序でロードする指定
+		//!< ↓標準的なバリデーションレイヤセットを最適な順序でロードする指定
 		"VK_LAYER_LUNARG_standard_validation", 
 #endif
 	};
-	/*const*/std::vector<const char*> EnabledExtensions = { 
+#ifdef _DEBUG
+	std::vector<const char*> EnabledExtensions = {
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	};
-#ifdef _DEBUG
+	//!< ↓デバッグマーカー拡張があるなら追加
 	if (HasDebugMaker) {
 		EnabledExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 	}
+#else
+	const std::vector<const char*> EnabledExtensions = {
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+	};
 #endif
 	const VkDeviceCreateInfo DeviceCreateInfo = {
 		VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -669,7 +674,6 @@ void VK::CreateDevice(const uint32_t QueueFamilyIndex)
 	std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
 #endif
 }
-
 void VK::GetDeviceProcAddr()
 {
 #ifdef _DEBUG
@@ -680,8 +684,8 @@ void VK::GetDeviceProcAddr()
 }
 void VK::CreateDebugMarker()
 {
-
 }
+
 void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 {
 	const VkCommandPoolCreateInfo CommandPoolInfo = {
@@ -695,7 +699,7 @@ void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, nullptr, &CommandPool));
 	CommandPools.push_back(CommandPool);
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateCommandPool" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -711,10 +715,9 @@ void VK::CreateCommandBuffer(const VkCommandPool CommandPool)
 		1
 	};
 	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CommandBuffer));
-
 	CommandBuffers.push_back(CommandBuffer);
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateCommandBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -731,7 +734,7 @@ void VK::CreateFence()
 	};
 	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, nullptr, &Fence));
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateFence" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -785,7 +788,7 @@ void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, GraphicsQueueFamilyIndex, Surface, &Supported));
 	assert(VK_TRUE == Supported && "vkGetPhysicalDeviceSurfaceSupportKHR failed");
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "\t" << "Surface" << std::endl;
 #endif
 }
@@ -797,7 +800,7 @@ VkSurfaceFormatKHR VK::SelectSurfaceFormat()
 	assert(SurfaceFormatCount);
 	std::vector<VkSurfaceFormatKHR> SurfaceFormats(SurfaceFormatCount);
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, Surface, &SurfaceFormatCount, SurfaceFormats.data()));
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "\t" << "\t" << Lightblue << "Format" << White << std::endl;
 	auto SelectedFormat = VK_FORMAT_UNDEFINED;
 	for (auto& i : SurfaceFormats) {
@@ -813,7 +816,7 @@ VkSurfaceFormatKHR VK::SelectSurfaceFormat()
 	std::cout << std::endl;
 #endif
 
-	//!< 最初の非 VK_FORMAT_UNDEFINED を選択
+	//!< ここでは、最初の非 VK_FORMAT_UNDEFINED を選択する
 	for (auto& i : SurfaceFormats) {
 		if (VK_FORMAT_UNDEFINED != i.format) {
 			return i;
@@ -840,7 +843,7 @@ VkPresentModeKHR VK::SelectSurfacePresentMode()
 		}
 	}
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "\t" << Lightblue << "Present Mode" << White << std::endl;
 #define VK_PRESENT_MODE_ENTRY(entry) case VK_PRESENT_MODE_##entry##_KHR: std::cout << "\t" << "\t" << #entry << std::endl; break
 	for (auto i : PresentModes) {
@@ -876,8 +879,8 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 	if (-1 == SurfaceCapabilities.currentExtent.width) {
 		ImageExtent = { Width, Height };
 	}
-#ifdef _DEBUG
-	std::cout << "\t" << "\t" << Lightblue << "ImageExtent" << White << std::endl;
+#ifdef DEBUG_STDOUT
+	std::cout << "\t" << "\t" << Lightblue << "ImageExtent (" << (-1 == SurfaceCapabilities.currentExtent.width ? "Undefined" : "Defined") << ")" << White << std::endl;
 	std::cout << "\t" << "\t" << "\t" << ImageExtent.width << " x " << ImageExtent.height << std::endl;
 #endif
 
@@ -890,7 +893,7 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 	//!< サーフェスのプレゼントモードを選択
 	const auto PresentMode = SelectSurfacePresentMode();
 
-	//!< セッティングを変更してスワップチェインを再作成できるように、既存のを開放する (開放するために一旦 OldSwapchainに覚えておく)
+	//!< セッティングを変更してスワップチェインを再作成できるようにしておく。既存を開放するために OldSwapchain に覚える
 	auto OldSwapchain = Swapchain;
 	const VkSwapchainCreateInfoKHR SwapchainCreateInfo = {
 		VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -912,7 +915,7 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 		OldSwapchain
 	};
 	VERIFY_SUCCEEDED(vkCreateSwapchainKHR(Device, &SwapchainCreateInfo, nullptr, &Swapchain));
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "\t" << "Swapchain" << std::endl;
 #endif
 	if (VK_NULL_HANDLE != OldSwapchain) {
@@ -924,11 +927,11 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 
 	assert(!PresentSemaphores.empty() && "PresentSemaphore is empty");
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphores[0], nullptr/*Fence*/, &SwapchainImageIndex));
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
 #endif
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateSwapchain" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -995,7 +998,7 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat 
 		VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, &ImageView));
 		SwapchainImageViews.push_back(ImageView);
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 		std::cout << "\t" << "SwapchainImageView" << std::endl;
 #endif
 	}
@@ -1024,7 +1027,7 @@ void VK::CreateDepthStencilImage(const VkFormat DepthFormat)
 	};
 	VERIFY_SUCCEEDED(vkCreateImage(Device, &ImageCreateInfo, nullptr, &DepthStencilImage));
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "\t" << "DepthStencilImage" << std::endl;
 #endif
 }
@@ -1042,7 +1045,7 @@ void VK::CreateDepthStencilDeviceMemory()
 	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &DepthStencilDeviceMemory));
 	VERIFY_SUCCEEDED(vkBindImageMemory(Device, DepthStencilImage, DepthStencilDeviceMemory, 0));
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "\t" << "DepthStencilDeviceMemory" << std::endl;
 #endif
 }
@@ -1072,14 +1075,41 @@ void VK::CreateDepthStencilView(VkCommandBuffer CommandBuffer, const VkFormat De
 	};
 	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, &DepthStencilImageView));
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "\t" << "DepthStencilImageView" << std::endl;
 #endif
 }
 
+VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
+{
+	VkShaderModule ShaderModule = VK_NULL_HANDLE;
+
+	std::ifstream In(Path.c_str(), std::ios::in | std::ios::binary);
+	assert(false == In.fail());
+
+	In.seekg(0, std::ios_base::end);
+	const auto CodeSize = In.tellg();
+	In.seekg(0, std::ios_base::beg);
+
+	auto Code = new char[CodeSize];
+	In.read(Code, CodeSize);
+	In.close();
+
+	const VkShaderModuleCreateInfo ModuleCreateInfo = {
+		VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+		nullptr,
+		0,
+		CodeSize, reinterpret_cast<uint32_t*>(Code)
+	};
+	VERIFY_SUCCEEDED(vkCreateShaderModule(Device, &ModuleCreateInfo, nullptr, &ShaderModule));
+
+	delete[] Code;
+
+	return ShaderModule;
+}
 void VK::CreateShader()
 {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -1111,7 +1141,7 @@ void VK::CreateDescriptorSetLayout()
 	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, nullptr, &DescriptorSetLayout));
 	DescriptorSetLayouts.push_back(DescriptorSetLayout);
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateDescriptorSetLayout" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -1129,14 +1159,14 @@ void VK::CreateDescritporPool()
 		};
 		VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 		std::cout << "CreateDescriptorPool" << COUT_OK << std::endl << std::endl;
 #endif
 	}
 }
 /**
 @brief シェーダとのバインディングのレイアウト
-@note DescriptorSet は　「DescriptorSetLayt 型」のインスタンスのようなもの
+@note DescriptorSet は「DescriptorSetLayt 型」のインスタンスのようなもの
 @note 更新は vkUpdateDescriptorSets() で行う
 */
 void VK::CreateDescriptorSet(VkDescriptorPool DescritorPool)
@@ -1152,14 +1182,14 @@ void VK::CreateDescriptorSet(VkDescriptorPool DescritorPool)
 		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, &DescriptorSet));
 		DescriptorSets.push_back(DescriptorSet);
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 		std::cout << "CreateDescriptorSet" << COUT_OK << std::endl << std::endl;
 #endif
 	}
 }
 void VK::CreateVertexInput()
 {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateVertexInput" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -1180,7 +1210,7 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 		}
 	};
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateViewport" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -1202,35 +1232,35 @@ void VK::CreatePipelineLayout()
 	};
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, nullptr, &PipelineLayout));
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreatePipelineLayout" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
 void VK::CreateGraphicsPipeline()
 {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateGraphicsPipeline" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
 void VK::CreateComputePipeline()
 {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateComputePipeline" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
 void VK::CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat)
 {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateRenderPass" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
 void VK::CreateFramebuffer()
 {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateFramebuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -1363,13 +1393,13 @@ void VK::CreateHostVisibleBuffer(const VkBufferUsageFlagBits Usage, VkBuffer* Bu
 }
 void VK::CreateVertexBuffer(const VkCommandPool CommandPool)
 {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
 void VK::CreateIndexBuffer(const VkCommandPool CommandPool)
 {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -1404,14 +1434,45 @@ void VK::CreateUniformBuffer()
 		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(), 
 		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
 void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 {
-	Clear(CommandBuffer);
+	const VkCommandBufferBeginInfo BeginInfo = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		nullptr,
+		0,
+		nullptr
+	};
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo)); {
+		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+
+		const std::vector<VkClearValue> ClearValues = {
+			{ Colors::SkyBlue },{ 1.0f, 0 }
+		};
+		const VkRenderPassBeginInfo RenderPassBeginInfo = {
+			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			nullptr,
+			RenderPass,
+			Framebuffers[SwapchainImageIndex],
+			ScissorRects[0],
+			static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
+		};
+		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
+
+//			auto Image = SwapchainImages[SwapchainImageIndex];
+//			ImageBarrier(CommandBuffer, Image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			{
+				Clear(CommandBuffer);
+			}
+//			ImageBarrier(CommandBuffer, Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
+		} vkCmdEndRenderPass(CommandBuffer);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }
 
 void VK::ImageBarrier(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout Old, VkImageLayout New)
@@ -1442,36 +1503,32 @@ void VK::ImageBarrier(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayou
 		1, &ImageMemoryBarrier);
 }
 
+/**
+CommandBuffer
+	BeginRenderPass
+		CommandBuffer
+		CommandBuffer			
+			BindDescriptorSet
+			BindPipeline
+			BindVertexBuffer, BindIndexBuffer
+			DrawIndexed
+		...
+	EndRenderPass
+*/
+
 void VK::Draw()
 {
-	if (CommandPools.empty() || CommandBuffers.empty()) { return; }
-
-	auto CommandPool = CommandPools[0];
-	auto CommandBuffer = CommandBuffers[0];
-
-	VERIFY_SUCCEEDED(vkResetCommandPool(Device, CommandPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT));
-
-	const VkCommandBufferBeginInfo BeginInfo = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		0,
-		nullptr
-	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo));
-	{
-		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
-
-		auto Image = SwapchainImages[SwapchainImageIndex];
-		ImageBarrier(CommandBuffer, Image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-		{
-			PopulateCommandBuffer(CommandBuffer);
-		}
-		ImageBarrier(CommandBuffer, Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+	if (!CommandPools.empty()) {
+		auto CommandPool = CommandPools[0];
+		VERIFY_SUCCEEDED(vkResetCommandPool(Device, CommandPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT));
 	}
-	VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 
-	ExecuteCommandBuffer(CommandBuffer);
+	if (!CommandBuffers.empty()) {
+		auto CommandBuffer = CommandBuffers[0];
+		PopulateCommandBuffer(CommandBuffer);
+
+		ExecuteCommandBuffer(CommandBuffer);
+	}
 
 	WaitForFence();
 
@@ -1529,7 +1586,7 @@ void VK::Present()
 
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphores[0], nullptr, &SwapchainImageIndex));
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	//std::cout << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
 	//std::cout << SwapchainImageIndex;
 #endif
@@ -1552,7 +1609,7 @@ void VK::WaitForFence()
 	//!< シグナルをリセット
 	vkResetFences(Device, 1, &Fence);
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	//std::cout << "Fence" << std::endl;
 #endif
 }
