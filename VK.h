@@ -74,8 +74,9 @@ protected:
 	static uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, uint32_t TypeBits, VkFlags Properties);
 	virtual FORCEINLINE VkFormat GetSupportedDepthFormat() const { return GetSupportedDepthFormat(PhysicalDevice); }
 	virtual FORCEINLINE uint32_t GetMemoryType(uint32_t TypeBits, VkFlags Properties) const { return GetMemoryType(PhysicalDeviceMemoryProperties, TypeBits, Properties); }
-	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const;
-	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageAspectFlags ImageAspectFlags, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout) const;
+	static VkAccessFlags GetSrcAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
+	static VkAccessFlags GetDstAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
+	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const;
 #ifdef _DEBUG
 	void MarkerInsert(VkCommandBuffer CommandBuffer, const char* Name, const float* Color = nullptr);
 	void MarkerBegin(VkCommandBuffer CommandBuffer, const char* Name, const float* Color = nullptr);
@@ -164,8 +165,6 @@ protected:
 
 	virtual void Clear(const VkCommandBuffer CommandBuffer) {}
 	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer);
-
-	virtual void ImageBarrier(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout Old, VkImageLayout New);
 
 	virtual void Draw();
 	virtual void ExecuteCommandBuffer(const VkCommandBuffer CommandBuffer);
