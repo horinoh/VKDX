@@ -948,8 +948,6 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 		vkDestroySwapchainKHR(Device, OldSwapchain, nullptr);
 	}
 
-	assert(!PresentSemaphores.empty() && "PresentSemaphore is empty");
-	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphores[0], nullptr/*Fence*/, &SwapchainImageIndex));
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
 #endif
@@ -975,6 +973,7 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat 
 		0, 1,
 		0, 1
 	};
+
 	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
@@ -983,32 +982,23 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat 
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
 		for (auto& i : SwapchainImages) {
-			SetImageLayout(CommandBuffer, i, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, ImageSubresourceRange);
+			//!< 「使用前にメモリを塗りつぶせ」と怒られるので、初期カラーで塗りつぶす
+			SetImageLayout(CommandBuffer, i, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, ImageSubresourceRange); {
+				const VkClearColorValue Green = { 0.0f, 1.0f, 0.0f, 1.0f };
+				vkCmdClearColorImage(CommandBuffer, i, VK_IMAGE_LAYOUT_GENERAL, &Green, 1, &ImageSubresourceRange);
+			} SetImageLayout(CommandBuffer, i, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, ImageSubresourceRange);
 		}
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
-	const VkSubmitInfo SubmitInfo = {
-		VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		nullptr,
-		0, nullptr,
-		nullptr,
-		1, &CommandBuffer,
-		0, nullptr
-	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
-	VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
+
+	ExecuteCommandBuffer(CommandBuffer);
+	WaitForFence();
 
 	for(auto i : SwapchainImages) {
-		//SetImageLayout(CommandBuffer, i, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, ImageSubresourceRange);
 		const VkComponentMapping ComponentMapping = {
 			VK_COMPONENT_SWIZZLE_R,
 			VK_COMPONENT_SWIZZLE_G,
 			VK_COMPONENT_SWIZZLE_B,
 			VK_COMPONENT_SWIZZLE_A
-		};
-		const VkImageSubresourceRange ImageSubresourceRange = {
-			VK_IMAGE_ASPECT_COLOR_BIT,
-			0, 1,
-			0, 1
 		};
 		const VkImageViewCreateInfo ImageViewCreateInfo = {
 			VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -1029,6 +1019,8 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat 
 		std::cout << "\t" << "SwapchainImageView" << std::endl;
 #endif
 	}
+
+	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphores[0], nullptr, &SwapchainImageIndex));
 }
 
 void VK::CreateDepthStencilImage(const VkFormat DepthFormat)
@@ -1480,82 +1472,58 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-		const std::vector<VkClearValue> ClearValues = {
-			{ Colors::SkyBlue },{ 1.0f, 0 }
+		auto Image = SwapchainImages[SwapchainImageIndex];
+		const VkImageSubresourceRange ImageSubresourceRange = {
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			0, 1,
+			0, 1
 		};
-		const VkRenderPassBeginInfo RenderPassBeginInfo = {
-			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-			nullptr,
-			RenderPass,
-			Framebuffers[SwapchainImageIndex],
-			ScissorRects[0],
-			static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
-		};
-		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
-
-			auto Image = SwapchainImages[SwapchainImageIndex];
-			const VkImageSubresourceRange ImageSubresourceRange = {
-				VK_IMAGE_ASPECT_COLOR_BIT,
-				0, 1,
-				0, 1
+		SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, ImageSubresourceRange); {
+			const std::vector<VkClearValue> ClearValues = {
+				{ Colors::SkyBlue }, { 1.0f, 0 }
 			};
-			SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, ImageSubresourceRange);
-			{
-				Clear(CommandBuffer);
-			}
-			SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, ImageSubresourceRange);
-
-		} vkCmdEndRenderPass(CommandBuffer);
+			const VkRenderPassBeginInfo RenderPassBeginInfo = {
+				VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+				nullptr,
+				RenderPass,
+				Framebuffers[SwapchainImageIndex],
+				ScissorRects[0],
+				static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
+			};
+			vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
+				//Clear(CommandBuffer);
+			} vkCmdEndRenderPass(CommandBuffer);
+		} SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, ImageSubresourceRange);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }
-
-/**
-CommandBuffer
-	BeginRenderPass
-		CommandBuffer
-		CommandBuffer			
-			BindDescriptorSet
-			BindPipeline
-			BindVertexBuffer, BindIndexBuffer
-			DrawIndexed
-		...
-	EndRenderPass
-*/
-
 void VK::Draw()
 {
-	if (!CommandPools.empty()) {
-		auto CommandPool = CommandPools[0];
-		VERIFY_SUCCEEDED(vkResetCommandPool(Device, CommandPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT));
-	}
+	auto CommandPool = CommandPools[0];
+	VERIFY_SUCCEEDED(vkResetCommandPool(Device, CommandPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT));
 
-	if (!CommandBuffers.empty()) {
-		auto CommandBuffer = CommandBuffers[0];
-		PopulateCommandBuffer(CommandBuffer);
-
-		ExecuteCommandBuffer(CommandBuffer);
-	}
-
+	auto CommandBuffer = CommandBuffers[0];
+	PopulateCommandBuffer(CommandBuffer);
+	ExecuteCommandBuffer(CommandBuffer);
 	WaitForFence();
 
 	Present();
 }
 void VK::ExecuteCommandBuffer(const VkCommandBuffer CommandBuffer)
 {
-	//VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
+	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 
 	const VkPipelineStageFlags PipelineStageFlags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 	const VkSubmitInfo SubmitInfo = {
 		VK_STRUCTURE_TYPE_SUBMIT_INFO,
 		nullptr,
-		static_cast<uint32_t>(PresentSemaphores.size()), PresentSemaphores.data(),
+		0, nullptr,//static_cast<uint32_t>(PresentSemaphores.size()), PresentSemaphores.data(),
 		&PipelineStageFlags,
 		1,  &CommandBuffer,
-		static_cast<uint32_t>(RenderSemaphores.size()), RenderSemaphores.data()
+		0, nullptr //static_cast<uint32_t>(RenderSemaphores.size()), RenderSemaphores.data()
 	};
 #if 1
 	VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, Fence));
-	//VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
+	VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
 #else
 	//!< 複数のコマンドバッファをサブミットしたい場合はセマフォと配列を使う
 	VkPipelineStageFlags PipelineStageFlags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT; {
@@ -1576,19 +1544,15 @@ void VK::ExecuteCommandBuffer(const VkCommandBuffer CommandBuffer)
 }
 void VK::Present()
 {
-	//VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphores[0], nullptr, &SwapchainImageIndex));
-
 	const VkPresentInfoKHR PresentInfo = {
 		VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 		nullptr,
-		static_cast<uint32_t>(RenderSemaphores.size()), RenderSemaphores.data(),
+		static_cast<uint32_t>(PresentSemaphores.size()), PresentSemaphores.data(),//static_cast<uint32_t>(RenderSemaphores.size()), RenderSemaphores.data(),
 		1, &Swapchain,
 		&SwapchainImageIndex,
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkQueuePresentKHR(Queue, &PresentInfo));
-
-	assert(!PresentSemaphores.empty() && "PresentSmaphore is empty");
 
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphores[0], nullptr, &SwapchainImageIndex));
 
