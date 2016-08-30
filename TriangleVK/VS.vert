@@ -2,17 +2,13 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (location = 0) in vec3 Position;
-layout (location = 1) in vec4 Color;
+layout (location = 0) in vec3 InPosition;
+layout (location = 1) in vec4 InColor;
 
-out OUT
-{
-	vec4 Position;
-	vec4 Color;
-} Out;
+layout (location = 0) out vec4 OutColor;
 
 void main()
 {
-	Out.Position = vec4(Position, 1.0f);
-	Out.Color = Color;
+	gl_Position = vec4(InPosition, 1.0f);
+	OutColor = InColor;
 }

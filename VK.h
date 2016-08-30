@@ -125,11 +125,13 @@ protected:
 	virtual void CreateSwapchainOfClientRect() {
 		CreateSwapchain(static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
 	}
-	virtual void CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat ColorFormat);
+	virtual void CreateSwapchainImageView(VkCommandBuffer CommandBuffer);
+	virtual void CreateSwapchain(HWND hWnd, HINSTANCE hInstance, const VkCommandBuffer CommandBuffer);
 
-	virtual void CreateDepthStencilImage(const VkFormat DepthFormat);
+	virtual void CreateDepthStencilImage();
 	virtual void CreateDepthStencilDeviceMemory();
-	virtual void CreateDepthStencilView(VkCommandBuffer CommandBuffer, const VkFormat DepthFormat);
+	virtual void CreateDepthStencilView(VkCommandBuffer CommandBuffer);
+	virtual void CreateDepthStencil(const VkCommandBuffer CommandBuffer);
 
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 	virtual void CreateShader();
@@ -151,14 +153,14 @@ protected:
 	virtual void CreateGraphicsPipeline();
 	virtual void CreateComputePipeline();
 
-	virtual void CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat);
+	virtual void CreateRenderPass();
 	
 	virtual void CreateFramebuffer();
 
-	virtual void CreateDeviceLocalBuffer(const VkCommandPool CommandPool, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
+	virtual void CreateDeviceLocalBuffer(const VkCommandBuffer CommandBuffer, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
 	virtual void CreateHostVisibleBuffer(const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
-	virtual void CreateVertexBuffer(const VkCommandPool CommandPool);
-	virtual void CreateIndexBuffer(const VkCommandPool CommandPool);
+	virtual void CreateVertexBuffer(const VkCommandBuffer CommandBuffer);
+	virtual void CreateIndexBuffer(const VkCommandBuffer CommandBuffer);
 	virtual void CreateUniformBuffer();
 
 	// ----------------------------------
@@ -204,16 +206,17 @@ protected:
 	std::vector<VkCommandBuffer> CommandBuffers;
 
 	VkFence Fence = VK_NULL_HANDLE;
-	std::vector<VkSemaphore> PresentSemaphores;
-	std::vector<VkSemaphore> RenderSemaphores;
+	VkSemaphore PresentSemaphore = VK_NULL_HANDLE;
 
 	VkSurfaceKHR Surface = VK_NULL_HANDLE;
-	VkExtent2D ImageExtent;
+	VkExtent2D SurfaceExtent2D;
+	VkFormat ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 	VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
 	std::vector<VkImage> SwapchainImages;
 	std::vector<VkImageView> SwapchainImageViews;
 	uint32_t SwapchainImageIndex = 0;
 
+	VkFormat DepthFormat = VK_FORMAT_D24_UNORM_S8_UINT;
 	VkImage DepthStencilImage = VK_NULL_HANDLE;
 	VkDeviceMemory DepthStencilDeviceMemory = VK_NULL_HANDLE;
 	VkImageView DepthStencilImageView = VK_NULL_HANDLE;
@@ -249,23 +252,4 @@ protected:
 
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;
-
-	//-------------------------------
-
-	//VkSemaphore PresentSemaphore = VK_NULL_HANDLE;
-	//VkSemaphore RenderSemaphore = VK_NULL_HANDLE;
-
-	//VkPipelineStageFlags SubmitPipelineStages = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-
-	//VkSurfaceKHR Surface;
-	/*uint32_t QueueFamilyIndex = UINT32_MAX;
-	VkFormat ColorFormat;
-	VkColorSpaceKHR ColorSpace;
-*/
-	//VkCommandBuffer SetupCommandBuffer = VK_NULL_HANDLE;
-
-	//VkCommandBuffer PrePresentCommandBuffer = VK_NULL_HANDLE;
-	//VkCommandBuffer PostPresentCommandBuffer = VK_NULL_HANDLE;
-
-//	std::vector<VkPipelineShaderStageCreateInfo> ShaderStageCreateInfos;
 };

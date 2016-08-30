@@ -4,15 +4,11 @@
 
 layout (early_fragment_tests) in;
 
-layout (location = 0) out vec4 Color;
+layout (location = 0) in vec4 InColor;
 
-in IN
-{
-	vec4 Position;
-	vec4 Color;
-} In;
+layout (location = 0) out vec4 OutColor;
 
 void main()
 {
-	Color = In.Color;
+	OutColor = InColor;
 }

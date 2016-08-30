@@ -225,7 +225,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void TriangleVK::CreateVertexBuffer(const VkCommandPool CommandPool)
+void TriangleVK::CreateVertexBuffer(const VkCommandBuffer CommandBuffer)
 {
 	const std::vector<Vertex> Vertices = {
 		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
@@ -235,14 +235,14 @@ void TriangleVK::CreateVertexBuffer(const VkCommandPool CommandPool)
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 
-	CreateDeviceLocalBuffer(CommandPool, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, &VertexBuffer, &VertexDeviceMemory, Size, Vertices.data());
+	CreateDeviceLocalBuffer(CommandBuffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, &VertexBuffer, &VertexDeviceMemory, Size, Vertices.data());
 
 #ifdef _DEBUG
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
-void TriangleVK::CreateIndexBuffer(const VkCommandPool CommandPool)
+void TriangleVK::CreateIndexBuffer(const VkCommandBuffer CommandBuffer)
 {
 	const std::vector<uint32_t> Indices = { 0, 1, 2 };
 
@@ -251,7 +251,7 @@ void TriangleVK::CreateIndexBuffer(const VkCommandPool CommandPool)
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 	
-	CreateDeviceLocalBuffer(CommandPool, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, &IndexBuffer, &IndexDeviceMemory, Size, Indices.data());
+	CreateDeviceLocalBuffer(CommandBuffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, &IndexBuffer, &IndexDeviceMemory, Size, Indices.data());
 
 #ifdef _DEBUG
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
@@ -269,36 +269,39 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-		//!< #TODO
-		assert(!Framebuffers.empty());
-		assert(!ScissorRects.empty());
-
-		const std::vector<VkClearValue> ClearValues = {
-			{ Colors::SkyBlue }, { 1.0f, 0 }
+		auto Image = SwapchainImages[SwapchainImageIndex];
+		const VkImageSubresourceRange ImageSubresourceRange = {
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			0, 1,
+			0, 1
 		};
-		const VkRenderPassBeginInfo RenderPassBeginInfo = {
-			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-			nullptr,
-			RenderPass,
-			Framebuffers[SwapchainImageIndex],
-			ScissorRects[0],
-			static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
-		};
-		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
-			if (!DescriptorSets.empty()) {
-				vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout, 0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
-			}
+		SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, ImageSubresourceRange); {
+			const std::vector<VkClearValue> ClearValues = {
+				{ Colors::SkyBlue }, { 1.0f, 0 }
+			};
+			const VkRenderPassBeginInfo RenderPassBeginInfo = {
+				VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+				nullptr,
+				RenderPass,
+				Framebuffers[SwapchainImageIndex],
+				ScissorRects[0],
+				static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
+			};
+			vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
+				if (!DescriptorSets.empty()) {
+					vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout, 0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
+				}
 
-			//!< トポロジは Pipeline - VkPipelineInputAssemblyStateCreateInfo で指定しているのでパイプラインをバインド
-			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+				//!< トポロジは Pipeline - VkPipelineInputAssemblyStateCreateInfo で指定しているのでパイプラインをバインド
+				vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
 
-			const VkDeviceSize Offsets[] = { 0 };
-			vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
-			vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+				const VkDeviceSize Offsets[] = { 0 };
+				vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
+				vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-			vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
-		} vkCmdEndRenderPass(CommandBuffer);
-
+				vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
+			} vkCmdEndRenderPass(CommandBuffer);
+		} SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, ImageSubresourceRange);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }
 #pragma endregion

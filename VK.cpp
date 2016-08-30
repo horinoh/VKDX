@@ -24,21 +24,15 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateCommandPool(GraphicsQueueFamilyIndex);
 	auto CommandPool = CommandPools[0];
 	CreateCommandBuffer(CommandPool);
-	
+	auto CommandBuffer = CommandBuffers[0];
+
 	CreateFence();
 	CreateSemaphore();
 
 	//!< スワップチェイン
-	const auto ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
-	CreateSurface(hWnd, hInstance);
-	CreateSwapchainOfClientRect();
-	auto CommandBuffer = CommandBuffers[0];
-	CreateSwapchainImageView(CommandBuffer, ColorFormat);
+	CreateSwapchain(hWnd, hInstance, CommandBuffer);
 	//!< デプスステンシル
-	const auto DepthFormat = GetSupportedDepthFormat();
-	CreateDepthStencilImage(DepthFormat);
-	CreateDepthStencilDeviceMemory();
-	CreateDepthStencilView(CommandBuffer, DepthFormat);
+	CreateDepthStencil(CommandBuffer);
 
 	//!< シェーダ
 	CreateShader();
@@ -53,13 +47,13 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	//!< パイプライン
 	CreatePipelineLayout();
-	CreateRenderPass(ColorFormat, DepthFormat);
+	CreateRenderPass();
 	CreatePipeline();
 	CreateFramebuffer();
 
 	//!< バーテックスバッファ、インデックスバッファ
-	CreateVertexBuffer(CommandPool);
-	CreateIndexBuffer(CommandPool);
+	CreateVertexBuffer(CommandBuffer);
+	CreateIndexBuffer(CommandBuffer);
 
 	//!< ユニフォームバッファ
 	//CreateUniformBuffer();
@@ -72,7 +66,7 @@ void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 
 	Super::OnSize(hWnd, hInstance);
 	
-	CreateViewport(static_cast<float>(ImageExtent.width), static_cast<float>(ImageExtent.height));
+	CreateViewport(static_cast<float>(SurfaceExtent2D.width), static_cast<float>(SurfaceExtent2D.height));
 }
 void VK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
@@ -88,9 +82,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnDestroy(hWnd, hInstance);
 
-	//!< GPUの完了を待たなくてはならない
-	WaitForFence();
-	
 	if (VK_NULL_HANDLE != UniformDeviceMemory) {
 		vkFreeMemory(Device, UniformDeviceMemory, nullptr);
 	}
@@ -154,9 +145,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	for (auto i : SwapchainImageViews) {
 		vkDestroyImageView(Device, i, nullptr);
 	}
-	for (auto i : SwapchainImages) {
-		vkDestroyImage(Device, i, nullptr);
-	}
+	//!< SwapchainImages は vkGetSwapchainImagesKHR() で取得したもの、破棄しない
 	if (VK_NULL_HANDLE != Swapchain) {
 		vkDestroySwapchainKHR(Device, Swapchain, nullptr);
 	}
@@ -164,11 +153,11 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroySurfaceKHR(Instance, Surface, nullptr);
 	}
 
-	for (auto i : RenderSemaphores) {
-		vkDestroySemaphore(Device, i, nullptr);
-	}
-	for (auto i : PresentSemaphores) {
-		vkDestroySemaphore(Device, i, nullptr);
+	//if (VK_NULL_HANDLE != RenderSemaphore) {
+	//	vkDestroySemaphore(Device, RenderSemaphore, nullptr);
+	//}
+	if (VK_NULL_HANDLE != PresentSemaphore) {
+		vkDestroySemaphore(Device, PresentSemaphore, nullptr);
 	}
 	if (VK_NULL_HANDLE != Fence) {
 		vkDestroyFence(Device, Fence, nullptr);
@@ -774,14 +763,10 @@ void VK::CreateSemaphore()
 	};
 
 	//!< プレゼント完了同期用
-	VkSemaphore PresentSemaphore;
 	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &PresentSemaphore));
-	PresentSemaphores.push_back(PresentSemaphore);
 
 	//!< 描画完了同期用
-	VkSemaphore RenderSemaphore;
-	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
-	RenderSemaphores.push_back(RenderSemaphore);
+	//VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
 
 #ifdef _DEBUG
 	std::cout << "CreateSemaphore" << COUT_OK << std::endl << std::endl;
@@ -897,14 +882,14 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 	const auto MinImageCount = (std::min)(SurfaceCapabilities.minImageCount + 1, SurfaceCapabilities.maxImageCount);
 
 	//!< イメージのサイズを覚えておく
-	ImageExtent = SurfaceCapabilities.currentExtent;
+	SurfaceExtent2D = SurfaceCapabilities.currentExtent;
 	//!< サーフェスのサイズが未定義の場合は明示的に指定する。(サーフェスのサイズが定義されている場合はそれに従わないとならない)
 	if (-1 == SurfaceCapabilities.currentExtent.width) {
-		ImageExtent = { Width, Height };
+		SurfaceExtent2D = { Width, Height };
 	}
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "\t" << Lightblue << "ImageExtent (" << (-1 == SurfaceCapabilities.currentExtent.width ? "Undefined" : "Defined") << ")" << White << std::endl;
-	std::cout << "\t" << "\t" << "\t" << ImageExtent.width << " x " << ImageExtent.height << std::endl;
+	std::cout << "\t" << "\t" << "\t" << SurfaceExtent2D.width << " x " << SurfaceExtent2D.height << std::endl;
 #endif
 
 	//!< サーフェスを回転、反転させるかどうか。(回転させない VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR を指定)
@@ -912,7 +897,7 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 
 	//!< サーフェスのフォーマットを選択
 	const auto SurfaceFormat = SelectSurfaceFormat();
-	
+
 	//!< サーフェスのプレゼントモードを選択
 	const auto PresentMode = SelectSurfacePresentMode();
 
@@ -924,9 +909,9 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 		0,
 		Surface,
 		MinImageCount,
-		SurfaceFormat.format,
+		(ColorFormat = SurfaceFormat.format),
 		SurfaceFormat.colorSpace,
-		ImageExtent,
+		SurfaceExtent2D,
 		1,
 		VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 		VK_SHARING_MODE_EXCLUSIVE,
@@ -951,12 +936,19 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
 #endif
+}
+void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, const VkCommandBuffer CommandBuffer)
+{
+	CreateSurface(hWnd, hInstance);
+	CreateSwapchainOfClientRect();
+	CreateSwapchainImageView(CommandBuffer);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateSwapchain" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat ColorFormat)
+
+void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer)
 {
 	//!< スワップチェインイメージの取得
 	uint32_t SwapchainImageCount;
@@ -1020,13 +1012,15 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer, const VkFormat 
 #endif
 	}
 
-	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphores[0], nullptr, &SwapchainImageIndex));
+	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphore, nullptr, &SwapchainImageIndex));
 }
 
-void VK::CreateDepthStencilImage(const VkFormat DepthFormat)
+void VK::CreateDepthStencilImage()
 {
+	DepthFormat = GetSupportedDepthFormat();
+
 	const VkExtent3D Extent3D = {
-		ImageExtent.width, ImageExtent.height, 1
+		SurfaceExtent2D.width, SurfaceExtent2D.height, 1
 	};
 	const VkImageCreateInfo ImageCreateInfo = {
 		VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -1068,21 +1062,19 @@ void VK::CreateDepthStencilDeviceMemory()
 	std::cout << "\t" << "DepthStencilDeviceMemory" << std::endl;
 #endif
 }
-void VK::CreateDepthStencilView(VkCommandBuffer CommandBuffer, const VkFormat DepthFormat)
+void VK::CreateDepthStencilView(VkCommandBuffer CommandBuffer)
 {
-#if 0
+	const VkComponentMapping ComponentMapping = {
+		VK_COMPONENT_SWIZZLE_R,
+		VK_COMPONENT_SWIZZLE_G,
+		VK_COMPONENT_SWIZZLE_B,
+		VK_COMPONENT_SWIZZLE_A
+	};
 	const VkImageSubresourceRange ImageSubresourceRange = {
 		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
 		0, 1,
 		0, 1
-	};
-	SetImageLayout(CommandBuffer, DepthStencilImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, ImageSubresourceRange);
-	const VkComponentMapping ComponentMapping = {
-		VK_COMPONENT_SWIZZLE_IDENTITY, 
-		VK_COMPONENT_SWIZZLE_IDENTITY,
-		VK_COMPONENT_SWIZZLE_IDENTITY,
-		VK_COMPONENT_SWIZZLE_IDENTITY
-	};
+	};	
 	const VkImageViewCreateInfo ImageViewCreateInfo = {
 		VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 		nullptr,
@@ -1094,10 +1086,19 @@ void VK::CreateDepthStencilView(VkCommandBuffer CommandBuffer, const VkFormat De
 		ImageSubresourceRange
 	};
 	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, &DepthStencilImageView));
-#endif
 
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "DepthStencilImageView" << std::endl;
+#endif
+}
+void VK::CreateDepthStencil(const VkCommandBuffer CommandBuffer)
+{
+	//CreateDepthStencilImage();
+	//CreateDepthStencilDeviceMemory();
+	//CreateDepthStencilView(CommandBuffer);
+
+#ifdef DEBUG_STDOUT
+	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
@@ -1272,7 +1273,7 @@ void VK::CreateComputePipeline()
 #endif
 }
 
-void VK::CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat)
+void VK::CreateRenderPass()
 {
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateRenderPass" << COUT_OK << std::endl << std::endl;
@@ -1286,10 +1287,10 @@ void VK::CreateFramebuffer()
 #endif
 }
 
-void VK::CreateDeviceLocalBuffer(const VkCommandPool CommandPool, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source)
+void VK::CreateDeviceLocalBuffer(const VkCommandBuffer CommandBuffer, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source)
 {
-	VkBuffer StagingBuffer;
-	VkDeviceMemory StagingDeviceMemory;
+	VkBuffer StagingBuffer = VK_NULL_HANDLE;
+	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
 	{
 		//!< ステージング用のバッファとメモリを作成
 		const VkBufferCreateInfo StagingBufferCreateInfo = {
@@ -1302,24 +1303,24 @@ void VK::CreateDeviceLocalBuffer(const VkCommandPool CommandPool, const VkBuffer
 			0, nullptr
 		};
 		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &StagingBufferCreateInfo, nullptr, &StagingBuffer));
+
 		VkMemoryRequirements StagingMemoryRequirements;
 		vkGetBufferMemoryRequirements(Device, StagingBuffer, &StagingMemoryRequirements);
 		const VkMemoryAllocateInfo StagingMemoryAllocateInfo = {
 			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 			nullptr,
 			StagingMemoryRequirements.size,
-			GetMemoryType(StagingMemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) //!< HOST_VISIBLE にすること
+			GetMemoryType(StagingMemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) //!< HOST_VISIBLE にすること
 		};
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &StagingMemoryAllocateInfo, nullptr, &StagingDeviceMemory));
+
 		void *Data;
-		//!< #TODO サンプルだと vkMapMemory() の size に MemoryAllocateInfo.allocationSize を渡しているケースと、直サイズを渡しているケースがある、どっちが正しい？
-		//VERIFY_SUCCEEDED(vkMapMemory(Device, StagingDeviceMemory, 0, StagingMemoryAllocateInfo.allocationSize, 0, &Data)); {
-		VERIFY_SUCCEEDED(vkMapMemory(Device, StagingDeviceMemory, 0, Size, 0, &Data)); {
+		VERIFY_SUCCEEDED(vkMapMemory(Device, StagingDeviceMemory, 0, StagingMemoryAllocateInfo.allocationSize, 0, &Data)); {
 				memcpy(Data, Source, Size);
 		} vkUnmapMemory(Device, StagingDeviceMemory);
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, StagingBuffer, StagingDeviceMemory, 0));
 
-		//!< 目的のバッファとメモリを作成
+		//!< デバイスローカル用のバッファとメモリを作成
 		const VkBufferCreateInfo BufferCreateInfo = {
 			VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 			nullptr,
@@ -1330,6 +1331,7 @@ void VK::CreateDeviceLocalBuffer(const VkCommandPool CommandPool, const VkBuffer
 			0, nullptr
 		};
 		VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, Buffer));
+
 		VkMemoryRequirements MemoryRequirements;
 		vkGetBufferMemoryRequirements(Device, *Buffer, &MemoryRequirements);
 		const VkMemoryAllocateInfo MemoryAllocateInfo = {
@@ -1341,46 +1343,32 @@ void VK::CreateDeviceLocalBuffer(const VkCommandPool CommandPool, const VkBuffer
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, DeviceMemory));
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DeviceMemory, 0));
 
-		//!< コピーコマンドを発行
-		const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		//!< ステージングバッファ から デバイスローカルバッファ　へコピーするコマンドを発行
+		const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
+			VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 			nullptr,
-			CommandPool,
-			VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-			1
+			0,
+			nullptr
 		};
-		VkCommandBuffer CommandBuffer;
-		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CommandBuffer)); {
-			const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
-				VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-				nullptr,
+		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
+			const VkBufferCopy BufferCopy = {
 				0,
-				nullptr
+				0,
+				Size
 			};
-			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
-				const VkBufferCopy BufferCopy = {
-					0,
-					0,
-					Size
-				};
-				vkCmdCopyBuffer(CommandBuffer, StagingBuffer, *Buffer, 1, &BufferCopy);
-			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
+			vkCmdCopyBuffer(CommandBuffer, StagingBuffer, *Buffer, 1, &BufferCopy);
+		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 
-			const VkSubmitInfo SubmitInfo = {
-				VK_STRUCTURE_TYPE_SUBMIT_INFO,
-				nullptr,
-				0, nullptr,
-				nullptr,
-				1, &CommandBuffer,
-				0, nullptr
-			};
-			//!< 一般的なキューを再利用するよりも転送専用のキューを作った方が良いらしい
-			VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
-			VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
-		} vkFreeCommandBuffers(Device, CommandPool, 1, &CommandBuffer);
+		ExecuteCommandBuffer(CommandBuffer);
+		WaitForFence();
 	}
-	vkDestroyBuffer(Device, StagingBuffer, nullptr);
-	vkFreeMemory(Device, StagingDeviceMemory, nullptr);
+
+	if(VK_NULL_HANDLE != StagingDeviceMemory) {
+		vkFreeMemory(Device, StagingDeviceMemory, nullptr);
+	}
+	if (VK_NULL_HANDLE != StagingBuffer) {
+		vkDestroyBuffer(Device, StagingBuffer, nullptr);
+	}
 }
 void VK::CreateHostVisibleBuffer(const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source)
 {
@@ -1396,7 +1384,7 @@ void VK::CreateHostVisibleBuffer(const VkBufferUsageFlagBits Usage, VkBuffer* Bu
 	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, Buffer));
 
 	VkMemoryRequirements MemoryRequirements;
-	vkGetBufferMemoryRequirements(Device, UniformBuffer, &MemoryRequirements);
+	vkGetBufferMemoryRequirements(Device, *Buffer, &MemoryRequirements);
 	const VkMemoryAllocateInfo MemoryAllocateInfo = {
 		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 		nullptr,
@@ -1405,20 +1393,18 @@ void VK::CreateHostVisibleBuffer(const VkBufferUsageFlagBits Usage, VkBuffer* Bu
 	};
 	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, DeviceMemory));
 	void *Data;
-	//!< #TODO サンプルだと vkMapMemory() の size に MemoryAllocateInfo.allocationSize を渡しているケースと、直サイズを渡しているケースがある、どっちが正しい？
-	//VERIFY_SUCCEEDED(vkMapMemory(Device, *DeviceMemory, 0, MemoryAllocateInfo.allocationSize, 0, &Data)); {
-	VERIFY_SUCCEEDED(vkMapMemory(Device, *DeviceMemory, 0, Size, 0, &Data)); {
+	VERIFY_SUCCEEDED(vkMapMemory(Device, *DeviceMemory, 0, MemoryAllocateInfo.allocationSize, 0, &Data)); {
 		memcpy(Data, Source, Size);
 	} vkUnmapMemory(Device, *DeviceMemory);
 	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DeviceMemory, 0));
 }
-void VK::CreateVertexBuffer(const VkCommandPool CommandPool)
+void VK::CreateVertexBuffer(const VkCommandBuffer CommandBuffer)
 {
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void VK::CreateIndexBuffer(const VkCommandPool CommandPool)
+void VK::CreateIndexBuffer(const VkCommandBuffer CommandBuffer)
 {
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
@@ -1516,45 +1502,27 @@ void VK::ExecuteCommandBuffer(const VkCommandBuffer CommandBuffer)
 	const VkSubmitInfo SubmitInfo = {
 		VK_STRUCTURE_TYPE_SUBMIT_INFO,
 		nullptr,
-		0, nullptr,//static_cast<uint32_t>(PresentSemaphores.size()), PresentSemaphores.data(),
+		0, nullptr,//1, &RenderSemaphore
 		&PipelineStageFlags,
 		1,  &CommandBuffer,
-		0, nullptr //static_cast<uint32_t>(RenderSemaphores.size()), RenderSemaphores.data()
+		0, nullptr
 	};
-#if 1
 	VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, Fence));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
-#else
-	//!< 複数のコマンドバッファをサブミットしたい場合はセマフォと配列を使う
-	VkPipelineStageFlags PipelineStageFlags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT; {
-		SubmitInfo.pWaitDstStageMask = &PipelineStageFlags;
-	}
-	if (VK_NULL_HANDLE != PresentSemaphore) {
-		SubmitInfo.waitSemaphoreCount = 1;
-		SubmitInfo.pWaitSemaphores = &PresentSemaphore;
-	}
-	if (VK_NULL_HANDLE != RenderSemaphore) {
-		SubmitInfo.signalSemaphoreCount = 1;
-		SubmitInfo.pSignalSemaphores = &RenderSemaphore;
-	}
-	VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, VK_NULL_HANDLE));
-#endif
-
-	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 }
 void VK::Present()
 {
 	const VkPresentInfoKHR PresentInfo = {
 		VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 		nullptr,
-		static_cast<uint32_t>(PresentSemaphores.size()), PresentSemaphores.data(),//static_cast<uint32_t>(RenderSemaphores.size()), RenderSemaphores.data(),
+		1, &PresentSemaphore,
 		1, &Swapchain,
 		&SwapchainImageIndex,
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkQueuePresentKHR(Queue, &PresentInfo));
 
-	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphores[0], nullptr, &SwapchainImageIndex));
+	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphore, nullptr, &SwapchainImageIndex));
 
 #ifdef DEBUG_STDOUT
 	//std::cout << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;

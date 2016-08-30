@@ -177,7 +177,7 @@ void VKExt::CreateGraphicsPipeline_VsPs()
 		VK_FALSE,
 		VK_FALSE,
 		VK_POLYGON_MODE_FILL,
-		VK_CULL_MODE_NONE, //!< #TODO デバッグ用に NONE にしている。VK_CULL_MODE_BACK_BIT,
+		VK_CULL_MODE_BACK_BIT,
 		VK_FRONT_FACE_COUNTER_CLOCKWISE,
 		VK_FALSE, 0.0f, 0.0f, 0.0f,
 		1.0f
@@ -187,7 +187,7 @@ void VKExt::CreateGraphicsPipeline_VsPs()
 		VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
 		nullptr,
 		0,
-		VK_SAMPLE_COUNT_1_BIT/*VK_SAMPLE_COUNT_4_BIT*/,
+		VK_SAMPLE_COUNT_1_BIT,
 		VK_FALSE, 0.0f,
 		nullptr,
 		VK_FALSE, VK_FALSE
@@ -226,7 +226,7 @@ void VKExt::CreateGraphicsPipeline_VsPs()
 			VK_BLEND_OP_ADD,
 			VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO,
 			VK_BLEND_OP_ADD,
-			0xf,
+			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
 		}
 	};
 	const VkPipelineColorBlendStateCreateInfo PipelineColorBlendStateCreateInfo = {
@@ -293,7 +293,7 @@ void VKExt::CreateGraphicsPipeline_VsPsTesTcsGs()
 #endif
 }
 
-void VKExt::CreateRenderPass_Color(const VkFormat ColorFormat, const VkFormat DepthFormat)
+void VKExt::CreateRenderPass_Color()
 {
 	const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
 		{
@@ -334,7 +334,7 @@ void VKExt::CreateRenderPass_Color(const VkFormat ColorFormat, const VkFormat De
 	};
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, nullptr, &RenderPass));
 }
-void VKExt::CreateRenderPass_ColorDepth(const VkFormat ColorFormat, const VkFormat DepthFormat)
+void VKExt::CreateRenderPass_ColorDepth()
 {
 	const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
 		{
@@ -401,7 +401,7 @@ void VKExt::CreateFramebuffer_Color()
 			0,
 			RenderPass,
 			static_cast<uint32_t>(Attachments.size()), Attachments.data(),
-			ImageExtent.width, ImageExtent.height,
+			SurfaceExtent2D.width, SurfaceExtent2D.height,
 			1
 		};
 		VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, nullptr, &Framebuffers[i]));
@@ -421,7 +421,7 @@ void VKExt::CreateFramebuffer_ColorDepth()
 			0,
 			RenderPass,
 			static_cast<uint32_t>(Attachments.size()), Attachments.data(),
-			ImageExtent.width, ImageExtent.height,
+			SurfaceExtent2D.width, SurfaceExtent2D.height,
 			1
 		};
 		VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, nullptr, &Framebuffers[i]));

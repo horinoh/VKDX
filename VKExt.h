@@ -20,9 +20,9 @@ public:
 	virtual void CreateGraphicsPipeline_VsPs();
 	virtual void CreateGraphicsPipeline_VsPsTesTcsGs();
 
-	virtual void CreateRenderPass(const VkFormat ColorFormat, const VkFormat DepthFormat) { CreateRenderPass_Color(ColorFormat, DepthFormat); }
-	virtual void CreateRenderPass_Color(const VkFormat ColorFormat, const VkFormat DepthFormat);
-	virtual void CreateRenderPass_ColorDepth(const VkFormat ColorFormat, const VkFormat DepthFormat);
+	virtual void CreateRenderPass() { CreateRenderPass_Color(); }
+	virtual void CreateRenderPass_Color();
+	virtual void CreateRenderPass_ColorDepth();
 
 	virtual void CreateFramebuffer() override { CreateFramebuffer_Color(); }
 	virtual void CreateFramebuffer_Color();
