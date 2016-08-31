@@ -36,14 +36,25 @@
 #ifndef SAFE_FCLOSE
 #define SAFE_FCLOSE(x) if(nullptr != x) { fclose(x); x = nullptr; }
 #endif
+
+#ifndef DEBUG_BREAK
+#ifdef _DEBUG
+#define DEBUG_BREAK() DebugBreak()
+#else
+#define DEBUG_BREAK()
+#endif
+#endif
+
 #ifndef VERIFY
 #ifdef  _DEBUG
 //#define VERIFY(x) assert(x)
+//#define VERIFY(x) if(!(x)) { DEBUG_BREA(); }
 #define VERIFY(x) if (!(x)) { throw std::runtime_error("VERIFY failed"); }
 #else
 #define VERIFY(x) (x)
 #endif
 #endif
+
 #ifndef SHADER_PATH
 #define SHADER_PATH L".\\"
 #endif

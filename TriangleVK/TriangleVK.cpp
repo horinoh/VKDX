@@ -253,6 +253,8 @@ void TriangleVK::CreateIndexBuffer(const VkCommandBuffer CommandBuffer)
 	
 	CreateDeviceLocalBuffer(CommandBuffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, &IndexBuffer, &IndexDeviceMemory, Size, Indices.data());
 
+	DebugMarker::SetName(Device, IndexBuffer, "MyIndexBuffer");
+
 #ifdef _DEBUG
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
@@ -266,6 +268,7 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo)); {
+		DebugMarker::Begin(CommandBuffer, "HOGE", glm::vec4(0,1,0,1));
 		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
@@ -302,6 +305,7 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 				vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
 			} vkCmdEndRenderPass(CommandBuffer);
 		} SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, ImageSubresourceRange);
+		DebugMarker::End(CommandBuffer);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }
 #pragma endregion

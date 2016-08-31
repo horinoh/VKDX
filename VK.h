@@ -51,7 +51,6 @@ class VK : public Win
 private:
 	using Super = Win;
 #ifdef _DEBUG
-	//using DebugReport = std::function<VkBool32(VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char*, const char*, void*)>;
 	//using LayerNames = std::vector<std::pair<std::string, std::vector<std::string>>>;
 #endif
 
@@ -77,39 +76,17 @@ protected:
 	static VkAccessFlags GetSrcAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
 	static VkAccessFlags GetDstAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
 	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const;
-#ifdef _DEBUG
-	void MarkerInsert(VkCommandBuffer CommandBuffer, const char* Name, const float* Color = nullptr);
-	void MarkerBegin(VkCommandBuffer CommandBuffer, const char* Name, const float* Color = nullptr);
-	void MarkerEnd(VkCommandBuffer CommandBuffer);
-	template<typename T> void SetObjectName(VkDevice Device, T Object, const char* Name) {}
-	template<typename T> void SetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* Tag) {}
-#include "VKMarker.h"
-#endif
 
 	virtual void EnumerateInstanceLayer();
 	virtual void EnumerateInstanceExtenstion(const char* layerName);
 	virtual void CreateInstance();
-	virtual void GetInstanceProcAddr();
 	virtual void CreateDebugReportCallback();
-#ifdef _DEBUG
-	template<typename T>
-	void CreateDebugReportCallback(T Callback, const VkDebugReportFlagsEXT Flags) {
-		const VkDebugReportCallbackCreateInfoEXT DebugReportCallbackCreateInfo = {
-			VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
-			nullptr,
-			Flags,
-			Callback,
-			nullptr
-		};
-		vkCreateDebugReportCallback(Instance, &DebugReportCallbackCreateInfo, nullptr, &DebugReportCallback);
-	}
-#endif
+
 	virtual void GetPhysicalDevice();
 	virtual void EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice);
 	virtual void EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* layerName);
 	virtual void GetQueueFamily();
 	virtual void CreateDevice(const uint32_t QueueFamilyIndex);
-	virtual void GetDeviceProcAddr();
 	virtual void CreateDebugMarker();
 
 	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
@@ -180,9 +157,6 @@ protected:
 #endif
 	VkInstance Instance = VK_NULL_HANDLE;
 #ifdef _DEBUG
-#define VK_INSTANCE_PROC_ADDR(proc) PFN_vk ## proc ## EXT vk ## proc = VK_NULL_HANDLE;
-#include "VKProcInstanceAddr.h"
-#undef VK_INSTANCE_PROC_ADDR
 	VkDebugReportCallbackEXT DebugReportCallback = VK_NULL_HANDLE;
 #endif
 	VkPhysicalDevice PhysicalDevice = VK_NULL_HANDLE;
@@ -190,12 +164,6 @@ protected:
 	//LayerNames DeviceLayerNames;
 #endif
 	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
-#ifdef _DEBUG
-#define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc ## EXT vk ## proc = VK_NULL_HANDLE;
-#include "VKProcDeviceAddr.h"
-#undef VK_DEVICE_PROC_ADDR
-	bool HasDebugMaker = false;
-#endif
 	VkDevice Device = VK_NULL_HANDLE;
 	VkQueue Queue = VK_NULL_HANDLE;
 	uint32_t GraphicsQueueFamilyIndex = UINT_MAX;
@@ -253,3 +221,55 @@ protected:
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;
 };
+
+#ifdef _DEBUG
+class DebugReport
+{
+public:
+	//using DebugReport = std::function<VkBool32(VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char*, const char*, void*)>;
+
+	static void GetInstanceProcAddr(VkInstance Instance);
+
+	template<typename T>
+	static void CreateDebugReportCallback(VkInstance Instance, T Callback, const VkDebugReportFlagsEXT Flags, VkDebugReportCallbackEXT* DebugReportCallback) {
+		if (VK_NULL_HANDLE != vkCreateDebugReportCallback) {
+			const VkDebugReportCallbackCreateInfoEXT DebugReportCallbackCreateInfo = {
+				VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
+				nullptr,
+				Flags,
+				Callback,
+				nullptr
+			};
+			vkCreateDebugReportCallback(Instance, &DebugReportCallbackCreateInfo, nullptr, DebugReportCallback);
+		}
+	}
+	static void DestroyDebugReportCallback(VkInstance Instance, VkDebugReportCallbackEXT DebugReportCallback);
+
+#define VK_INSTANCE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
+#include "VKProcInstanceAddr.h"
+#undef VK_INSTANCE_PROC_ADDR
+};
+
+class DebugMarker
+{
+public:
+	static bool HasDebugMarkerExtension(VkPhysicalDevice PhysicalDevice);
+	static void GetDeviceProcAddr(VkDevice Device);
+
+	static void Insert(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color);
+	static void Begin(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color);
+	static void End(VkCommandBuffer CommandBuffer);
+	template<typename T> static void SetName(VkDevice Device, T Object, const char* Name) { 
+		DEBUG_BREAK(); //!< テンプレート特殊化されていない、VKDebugMarker.h に実装すること
+	}
+	template<typename T> static void SetTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* Tag) { 
+		DEBUG_BREAK(); //!< テンプレート特殊化されていない、VKDebugMarker.h に実装すること
+	}
+	//!< ↓テンプレート特殊化している
+#include "VKDebugMarker.h"
+
+#define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
+#include "VKProcDeviceAddr.h"
+#undef VK_DEVICE_PROC_ADDR
+};
+#endif
