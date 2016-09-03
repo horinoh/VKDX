@@ -82,6 +82,10 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnDestroy(hWnd, hInstance);
 
+	if (VK_NULL_HANDLE != Device) {
+		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
+	}
+
 	if (VK_NULL_HANDLE != UniformDeviceMemory) {
 		vkFreeMemory(Device, UniformDeviceMemory, nullptr);
 	}
@@ -126,10 +130,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 	for (auto i : DescriptorSetLayouts) {
 		vkDestroyDescriptorSetLayout(Device, i, nullptr);
-	}
-
-	for (auto i : ShaderModules) {
-		vkDestroyShaderModule(Device, i, nullptr);
 	}
 
 	if (VK_NULL_HANDLE != DepthStencilImageView) {
@@ -838,7 +838,10 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 	SurfaceExtent2D = SurfaceCapabilities.currentExtent;
 	//!< サーフェスのサイズが未定義の場合は明示的に指定する。(サーフェスのサイズが定義されている場合はそれに従わないとならない)
 	if (-1 == SurfaceCapabilities.currentExtent.width) {
-		SurfaceExtent2D = { Width, Height };
+		SurfaceExtent2D = {
+			std::max(std::min(Width, SurfaceCapabilities.maxImageExtent.width), SurfaceCapabilities.minImageExtent.width), 
+			std::max(std::min(Height, SurfaceCapabilities.minImageExtent.height), SurfaceCapabilities.minImageExtent.height) 
+		};
 	}
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "\t" << Lightblue << "ImageExtent (" << (-1 == SurfaceCapabilities.currentExtent.width ? "Undefined" : "Defined") << ")" << White << std::endl;
@@ -913,12 +916,6 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer)
 	std::cout << "\t" << "SwapchainImageCount = " << SwapchainImageCount << std::endl;
 #endif
 
-	const VkImageSubresourceRange ImageSubresourceRange = {
-		VK_IMAGE_ASPECT_COLOR_BIT,
-		0, 1,
-		0, 1
-	};
-
 	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
@@ -928,10 +925,10 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer)
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
 		for (auto& i : SwapchainImages) {
 			//!< 「使用前にメモリを塗りつぶせ」と怒られるので、初期カラーで塗りつぶす
-			SetImageLayout(CommandBuffer, i, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, ImageSubresourceRange); {
+			SetImageLayout(CommandBuffer, i, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, ImageSubresourceRange_Color); {
 				const VkClearColorValue Green = { 0.0f, 1.0f, 0.0f, 1.0f };
-				vkCmdClearColorImage(CommandBuffer, i, VK_IMAGE_LAYOUT_GENERAL, &Green, 1, &ImageSubresourceRange);
-			} SetImageLayout(CommandBuffer, i, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, ImageSubresourceRange);
+				vkCmdClearColorImage(CommandBuffer, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Green, 1, &ImageSubresourceRange_Color);
+			} SetImageLayout(CommandBuffer, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, ImageSubresourceRange_Color);
 		}
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 
@@ -939,12 +936,6 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer)
 	WaitForFence();
 
 	for(auto i : SwapchainImages) {
-		const VkComponentMapping ComponentMapping = {
-			VK_COMPONENT_SWIZZLE_R,
-			VK_COMPONENT_SWIZZLE_G,
-			VK_COMPONENT_SWIZZLE_B,
-			VK_COMPONENT_SWIZZLE_A
-		};
 		const VkImageViewCreateInfo ImageViewCreateInfo = {
 			VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 			nullptr,
@@ -952,8 +943,8 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer)
 			i,
 			VK_IMAGE_VIEW_TYPE_2D,
 			ColorFormat,
-			ComponentMapping,
-			ImageSubresourceRange,
+			ComponentMapping_SwizzleIdentity,
+			ImageSubresourceRange_Color,
 		};
 
 		VkImageView ImageView;
@@ -1017,17 +1008,6 @@ void VK::CreateDepthStencilDeviceMemory()
 }
 void VK::CreateDepthStencilView(VkCommandBuffer CommandBuffer)
 {
-	const VkComponentMapping ComponentMapping = {
-		VK_COMPONENT_SWIZZLE_R,
-		VK_COMPONENT_SWIZZLE_G,
-		VK_COMPONENT_SWIZZLE_B,
-		VK_COMPONENT_SWIZZLE_A
-	};
-	const VkImageSubresourceRange ImageSubresourceRange = {
-		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
-		0, 1,
-		0, 1
-	};	
 	const VkImageViewCreateInfo ImageViewCreateInfo = {
 		VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 		nullptr,
@@ -1035,8 +1015,8 @@ void VK::CreateDepthStencilView(VkCommandBuffer CommandBuffer)
 		DepthStencilImage,
 		VK_IMAGE_VIEW_TYPE_2D,
 		DepthFormat,
-		ComponentMapping,
-		ImageSubresourceRange
+		ComponentMapping_SwizzleIdentity,
+		ImageSubresourceRange_DepthStencil
 	};
 	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, &DepthStencilImageView));
 
@@ -1221,6 +1201,15 @@ void VK::CreateGraphicsPipeline()
 
 void VK::CreateComputePipeline()
 {
+	std::vector<VkShaderModule> ShaderModules;
+	{
+		ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"CS.cpom.spv"));
+		//#TODO
+	}
+	for (auto i : ShaderModules) {
+		vkDestroyShaderModule(Device, i, nullptr);
+	}
+
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateComputePipeline" << COUT_OK << std::endl << std::endl;
 #endif
@@ -1412,12 +1401,7 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 		auto Image = SwapchainImages[SwapchainImageIndex];
-		const VkImageSubresourceRange ImageSubresourceRange = {
-			VK_IMAGE_ASPECT_COLOR_BIT,
-			0, 1,
-			0, 1
-		};
-		SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, ImageSubresourceRange); {
+		SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, ImageSubresourceRange_Color); {
 			const std::vector<VkClearValue> ClearValues = {
 				{ Colors::SkyBlue }, { 1.0f, 0 }
 			};
@@ -1432,7 +1416,7 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 			vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
 				//Clear(CommandBuffer);
 			} vkCmdEndRenderPass(CommandBuffer);
-		} SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, ImageSubresourceRange);
+		} SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, ImageSubresourceRange_Color);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }
 void VK::Draw()

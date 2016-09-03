@@ -2,36 +2,6 @@
 
 #include "VKExt.h"
 
-void VKExt::CreateShader_VsPs()
-{
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"VS.vert.spv"));
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"FS.frag.spv"));
-
-#ifdef _DEBUG
-	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
-#endif
-}
-void VKExt::CreateShader_VsPsTesTcsGs()
-{
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"VS.vert.spv"));
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"FS.frag.spv"));
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"TES.tese.spv"));
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"TCS.tesc.spv"));
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"GS.geom.spv"));
-
-#ifdef _DEBUG
-	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
-#endif
-}
-void VKExt::CreateShader_Cs()
-{
-	ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"CS.cpom.spv"));
-
-#ifdef _DEBUG
-	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
 void VKExt::CreateDescriptorSetLayout_1UniformBuffer(const VkShaderStageFlags ShaderStageFlags)
 {
 	const std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings = {
@@ -122,164 +92,170 @@ void VKExt::CreateVertexInput_PositionColor()
 
 void VKExt::CreateGraphicsPipeline_VsPs()
 {
-	assert(1 < ShaderModules.size() && "ShaderModules is not enough");
+	std::vector<VkShaderModule> ShaderModules;
+	{
+		ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"VS.vert.spv"));
+		ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"FS.frag.spv"));
+		//!< HLSL コンパイル時のデフォルトエントリポイント名が "main" なのでそれに合わせることにする
+		const char* EntrypointName = "main";
+		const std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos = {
+			{
+				VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+				nullptr,
+				0,
+				VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
+				EntrypointName,
+				nullptr
+			},
+			{
+				VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+				nullptr,
+				0,
+				VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
+				EntrypointName,
+				nullptr
+			}
+		};
 
-	//!< HLSL コンパイル時のデフォルトエントリポイント名が "main" なのでそれに合わせることにする
-	const char* EntrypointName = "main";
-	const std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos = {
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+		//!< PipelineVertexInputStateCreateInfo は CreateVertexInput() 内で作成してある
+
+		const VkPipelineInputAssemblyStateCreateInfo PipelineInputAssemblyStateCreateInfo = {
+			VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
 			nullptr,
 			0,
-			VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
-			EntrypointName,
-			nullptr
-		},
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+			VK_FALSE
+		};
+
+		/**
+		@brief デフォルト指定
+		別途 VkDynamicState に VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR を指定している
+		よって後からコマンドバッファによる上書き(vkCmdSetViewport(), vkCmdSetScissor())が可能なので、ここでは適当なダミー値ビューポートで設定しておく
+		*/
+		const std::vector<VkViewport> DummyViewports = { { 0, 0, 1280, 720, 0.0f, 1.0f } };
+		const std::vector<VkRect2D> DummyScissorRects = { { { 0, 0 }, { 1280, 720 } } };
+		const VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo = {
+			VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
 			nullptr,
 			0,
-			VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
-			EntrypointName,
-			nullptr
-		}
-	};
+			static_cast<uint32_t>(DummyViewports.size()), DummyViewports.data(),
+			static_cast<uint32_t>(DummyScissorRects.size()), DummyScissorRects.data()
+		};
 
-	//!< PipelineVertexInputStateCreateInfo は CreateVertexInput() 内で作成してある
-
-	const VkPipelineInputAssemblyStateCreateInfo PipelineInputAssemblyStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-		VK_FALSE
-	};
-
-	/**
-	@brief デフォルト指定
-	別途 VkDynamicState に VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR を指定している
-	よって後からコマンドバッファによる上書き(vkCmdSetViewport(), vkCmdSetScissor())が可能なので、ここでは適当なダミー値ビューポートで設定しておく
-	*/
-	const std::vector<VkViewport> DummyViewports = { { 0, 0, 1280, 720, 0.0f, 1.0f } };
-	const std::vector<VkRect2D> DummyScissorRects = { { { 0, 0 }, { 1280, 720 } } };
-	const VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DummyViewports.size()), DummyViewports.data(),
-		static_cast<uint32_t>(DummyScissorRects.size()), DummyScissorRects.data()
-	};
-
-	const VkPipelineRasterizationStateCreateInfo PipelineRasterizationStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_FALSE,
-		VK_FALSE,
-		VK_POLYGON_MODE_FILL,
-		VK_CULL_MODE_BACK_BIT,
-		VK_FRONT_FACE_COUNTER_CLOCKWISE,
-		VK_FALSE, 0.0f, 0.0f, 0.0f,
-		1.0f
-	};
-
-	const VkPipelineMultisampleStateCreateInfo PipelineMultisampleStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_SAMPLE_COUNT_1_BIT,
-		VK_FALSE, 0.0f,
-		nullptr,
-		VK_FALSE, VK_FALSE
-	};
-
-	const VkStencilOpState StencilOpState_Front = {
-		VK_STENCIL_OP_KEEP,
-		VK_STENCIL_OP_KEEP,
-		VK_STENCIL_OP_KEEP,
-		VK_COMPARE_OP_NEVER, 0, 0, 0
-	};
-	const VkStencilOpState StencilOpState_Back = {
-		VK_STENCIL_OP_KEEP,
-		VK_STENCIL_OP_KEEP,
-		VK_STENCIL_OP_KEEP,
-		VK_COMPARE_OP_ALWAYS, 0, 0, 0
-	};
-	const VkPipelineDepthStencilStateCreateInfo PipelineDepthStencilStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_TRUE,
-		VK_TRUE,
-		VK_COMPARE_OP_LESS_OR_EQUAL,
-		VK_FALSE,
-		VK_FALSE,
-		StencilOpState_Front,
-		StencilOpState_Back,
-		0.0f, 0.0f
-	};
-
-	const std::vector<VkPipelineColorBlendAttachmentState> PipelineColorBlendAttachmentStates = {
-		{
+		const VkPipelineRasterizationStateCreateInfo PipelineRasterizationStateCreateInfo = {
+			VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+			nullptr,
+			0,
 			VK_FALSE,
-			VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO,
-			VK_BLEND_OP_ADD,
-			VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO,
-			VK_BLEND_OP_ADD,
-			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-		}
-	};
-	const VkPipelineColorBlendStateCreateInfo PipelineColorBlendStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_FALSE, VK_LOGIC_OP_CLEAR,
-		static_cast<uint32_t>(PipelineColorBlendAttachmentStates.size()), PipelineColorBlendAttachmentStates.data(),
-		{ 0.0f, 0.0f, 0.0f, 0.0f } //!< float blendConstants[4];
-	};
+			VK_FALSE,
+			VK_POLYGON_MODE_FILL,
+			VK_CULL_MODE_BACK_BIT,
+			VK_FRONT_FACE_COUNTER_CLOCKWISE,
+			VK_FALSE, 0.0f, 0.0f, 0.0f,
+			1.0f
+		};
 
-	//!< DirectX12 に合わせる為、Viewport と Scissor を VkDynamicState とする
-	const std::vector<VkDynamicState> DynamicStates = {
-		VK_DYNAMIC_STATE_VIEWPORT,
-		VK_DYNAMIC_STATE_SCISSOR
-	};
-	const VkPipelineDynamicStateCreateInfo PipelineDynamicStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DynamicStates.size()), DynamicStates.data()
-	};
-
-	const std::vector<VkGraphicsPipelineCreateInfo> GraphicsPipelineCreateInfos = {
-		{
-			VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+		const VkPipelineMultisampleStateCreateInfo PipelineMultisampleStateCreateInfo = {
+			VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
 			nullptr,
 			0,
-			static_cast<uint32_t>(PipelineShaderStageCreateInfos.size()), PipelineShaderStageCreateInfos.data(),
-			&PipelineVertexInputStateCreateInfo,
-			&PipelineInputAssemblyStateCreateInfo,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_FALSE, 0.0f,
 			nullptr,
-			&PipelineViewportStateCreateInfo,
-			&PipelineRasterizationStateCreateInfo,
-			&PipelineMultisampleStateCreateInfo,
-			&PipelineDepthStencilStateCreateInfo,
-			&PipelineColorBlendStateCreateInfo,
-			&PipelineDynamicStateCreateInfo,
-			PipelineLayout,
-			RenderPass,
+			VK_FALSE, VK_FALSE
+		};
+
+		const VkStencilOpState StencilOpState_Front = {
+			VK_STENCIL_OP_KEEP,
+			VK_STENCIL_OP_KEEP,
+			VK_STENCIL_OP_KEEP,
+			VK_COMPARE_OP_NEVER, 0, 0, 0
+		};
+		const VkStencilOpState StencilOpState_Back = {
+			VK_STENCIL_OP_KEEP,
+			VK_STENCIL_OP_KEEP,
+			VK_STENCIL_OP_KEEP,
+			VK_COMPARE_OP_ALWAYS, 0, 0, 0
+		};
+		const VkPipelineDepthStencilStateCreateInfo PipelineDepthStencilStateCreateInfo = {
+			VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+			nullptr,
 			0,
-			VK_NULL_HANDLE, 0
-		}
-	};
-	//!< パイプラインをコンパイルして、vkGetPipelineCacheData()でディスクへ保存可能
-	const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-		nullptr,
-		0,
-		0, nullptr
-	};
-	VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, nullptr, &PipelineCache));
-	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, PipelineCache, static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), nullptr, &Pipeline));
+			VK_TRUE,
+			VK_TRUE,
+			VK_COMPARE_OP_LESS_OR_EQUAL,
+			VK_FALSE,
+			VK_FALSE,
+			StencilOpState_Front,
+			StencilOpState_Back,
+			0.0f, 0.0f
+		};
+
+		const std::vector<VkPipelineColorBlendAttachmentState> PipelineColorBlendAttachmentStates = {
+			{
+				VK_FALSE,
+				VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO,
+				VK_BLEND_OP_ADD,
+				VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO,
+				VK_BLEND_OP_ADD,
+				VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+			}
+		};
+		const VkPipelineColorBlendStateCreateInfo PipelineColorBlendStateCreateInfo = {
+			VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_FALSE, VK_LOGIC_OP_CLEAR,
+			static_cast<uint32_t>(PipelineColorBlendAttachmentStates.size()), PipelineColorBlendAttachmentStates.data(),
+			{ 0.0f, 0.0f, 0.0f, 0.0f } //!< float blendConstants[4];
+		};
+
+		//!< DirectX12 に合わせる為、Viewport と Scissor を VkDynamicState とする
+		const std::vector<VkDynamicState> DynamicStates = {
+			VK_DYNAMIC_STATE_VIEWPORT,
+			VK_DYNAMIC_STATE_SCISSOR
+		};
+		const VkPipelineDynamicStateCreateInfo PipelineDynamicStateCreateInfo = {
+			VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+			nullptr,
+			0,
+			static_cast<uint32_t>(DynamicStates.size()), DynamicStates.data()
+		};
+
+		const std::vector<VkGraphicsPipelineCreateInfo> GraphicsPipelineCreateInfos = {
+			{
+				VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+				nullptr,
+				0,
+				static_cast<uint32_t>(PipelineShaderStageCreateInfos.size()), PipelineShaderStageCreateInfos.data(),
+				&PipelineVertexInputStateCreateInfo,
+				&PipelineInputAssemblyStateCreateInfo,
+				nullptr,
+				&PipelineViewportStateCreateInfo,
+				&PipelineRasterizationStateCreateInfo,
+				&PipelineMultisampleStateCreateInfo,
+				&PipelineDepthStencilStateCreateInfo,
+				&PipelineColorBlendStateCreateInfo,
+				&PipelineDynamicStateCreateInfo,
+				PipelineLayout,
+				RenderPass,
+				0,
+				VK_NULL_HANDLE, 0
+			}
+		};
+		//!< パイプラインをコンパイルして、vkGetPipelineCacheData()でディスクへ保存可能
+		const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
+			VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+			nullptr,
+			0,
+			0, nullptr
+		};
+		VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, nullptr, &PipelineCache));
+		VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, PipelineCache, static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), nullptr, &Pipeline));
+	}
+	for (auto i : ShaderModules) {
+		vkDestroyShaderModule(Device, i, nullptr);
+	}
 
 #ifdef _DEBUG
 	std::cout << "CreateGraphicsPipeline" << COUT_OK << std::endl << std::endl;
@@ -287,7 +263,19 @@ void VKExt::CreateGraphicsPipeline_VsPs()
 }
 void VKExt::CreateGraphicsPipeline_VsPsTesTcsGs()
 {
-	//!< #TODO
+	std::vector<VkShaderModule> ShaderModules;
+	{
+		ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"VS.vert.spv"));
+		ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"FS.frag.spv"));
+		ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"TES.tese.spv"));
+		ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"TCS.tesc.spv"));
+		ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"GS.geom.spv"));
+		
+		//!< #TODO
+	}
+	for (auto i : ShaderModules) {
+		vkDestroyShaderModule(Device, i, nullptr);
+	}
 #ifdef _DEBUG
 	std::cout << "CreateGraphicsPipeline" << COUT_OK << std::endl << std::endl;
 #endif

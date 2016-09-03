@@ -16,7 +16,6 @@ public:
 protected:
 	virtual void Draw() override {}
 
-	virtual void CreateShader() override { CreateShader_Cs(); }
 	virtual void CreatePipelineState() override { Super::CreateComputePipelineState(); }
 
 	//virtual void PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList) override;

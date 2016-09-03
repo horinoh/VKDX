@@ -104,8 +104,6 @@ protected:
 		ResizeDepthStencil(static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), DepthFormat);
 	}
 
-	virtual void CreateShader();
-
 	virtual void CreateRootSignature();
 
 	virtual void CreateInputLayout();
@@ -156,8 +154,6 @@ protected:
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> DepthStencilResource;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DepthStencilDescriptorHeap;
-
-	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs;
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
 

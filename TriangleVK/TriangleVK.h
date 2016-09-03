@@ -14,7 +14,6 @@ public:
 	virtual ~TriangleVK() {}
 
 protected:
-	virtual void CreateShader() override { CreateShader_VsPs(); }
 	virtual void CreateVertexInput() override { CreateVertexInput_PositionColor(); }
 	virtual void CreateVertexBuffer(const VkCommandBuffer CommandBuffer) override;
 	virtual void CreateIndexBuffer(const VkCommandBuffer CommandBuffer) override;

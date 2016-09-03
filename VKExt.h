@@ -7,10 +7,6 @@ class VKExt : public VK
 private:
 	using Super = VK;
 public:
-	virtual void CreateShader_VsPs();
-	virtual void CreateShader_VsPsTesTcsGs();
-	virtual void CreateShader_Cs();
-
 	virtual void CreateDescriptorSetLayout_1UniformBuffer(const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS);
 	virtual void CreateDescritporPool_1UniformBuffer();
 

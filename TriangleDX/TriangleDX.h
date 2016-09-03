@@ -14,7 +14,6 @@ public:
 	virtual ~TriangleDX() {}
 
 protected:
-	virtual void CreateShader() override { CreateShader_VsPs(); }
 	virtual void CreateInputLayout() override { CreateInputLayout_PositionColor(); }
 	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) override;
 	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) override;

@@ -35,9 +35,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateDepthStencilDescriptorHeap();
 	//!< ResizeDepthStencil() で DepthStencilResource が作られる、明示的にしなくても OnSize() からコールされる
 
-	//!< シェーダ
-	CreateShader();
-
 	//!< ルートシグニチャ
 	CreateRootSignature();
 
@@ -593,16 +590,6 @@ void DX::ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORM
 #endif
 }
 
-/**
-@note VisualStudio に HLSL ファイルを追加すれば、コンパイルされて *.cso ファイルが作成される ( 出力先は x64/Debug/, x64/Release/ など)
-*/
-void DX::CreateShader()
-{
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
 //!< # TODO ここの実装は消す、Extへ持っていく
 void DX::CreateRootSignature()
 {
@@ -703,9 +690,11 @@ void DX::CreateGraphicsPipelineState()
 void DX::CreateComputePipelineState()
 {
 	assert(nullptr != RootSignature);
-	assert(!ShaderBlobs.empty());
 
+	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs(1);
+	D3DReadFileToBlob(SHADER_PATH L"CS.cso", ShaderBlobs[0].GetAddressOf());
 	const D3D12_SHADER_BYTECODE ShaderBytecodesCS = { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() };
+
 	const D3D12_CACHED_PIPELINE_STATE CachedPipelineState = { nullptr, 0 };
 	const D3D12_COMPUTE_PIPELINE_STATE_DESC ComputePipelineStateDesc = {
 		RootSignature.Get(),
