@@ -42,7 +42,13 @@ xcopy /y %(Identity).spv $(TargetDir)
 
 #### Visual Studio GLSL ハイライト
 * ShaderHighlights\XXX_vs2015.reg   
- 
+
+#### デバッグ
+* RenderDoc https://renderdoc.org/builds
+* 参考 http://www.saschawillems.de/?page_id=2017
+	* RenderDocをインストールして起動 - Warning をクリックするとWindowsのレジストリが作られる(初回のみ)
+	* Executable Path に exe を指定して、 Captureボタンでアプリを実行、PrintScreen でシーンをキャプチャしてアプリを閉じる
+
 ## DX
 
 #### Visual Studio
