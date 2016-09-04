@@ -23,7 +23,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	//!< コマンドプール、バッファ
 	CreateCommandPool(GraphicsQueueFamilyIndex);
 	auto CommandPool = CommandPools[0];
-	CreateCommandBuffer(CommandPool);
+	AllocateCommandBuffer(CommandPool);
 	auto CommandBuffer = CommandBuffers[0];
 
 	CreateFence();
@@ -33,9 +33,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateSwapchain(hWnd, hInstance, CommandBuffer);
 	//!< デプスステンシル
 	CreateDepthStencil(CommandBuffer);
-
-	//!< シェーダ
-	CreateShader();
 
 	//!< デスクリプタセット
 	CreateDescriptorSetLayout();
@@ -163,10 +160,10 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyFence(Device, Fence, nullptr);
 	}
 
-	vkFreeCommandBuffers(Device, CommandPools[0], 1, &CommandBuffers[0]);
-	//vkFreeCommandBuffers(Device, CommandPools[1], 1, &CommandBuffers[1]);
-	for (auto i : CommandPools) {
-		vkDestroyCommandPool(Device, i, nullptr);
+	//!< ここでは Pool と Buffer が 1:1 とする
+	for (auto i = 0; i < CommandBuffers.size(); ++i) {
+		vkFreeCommandBuffers(Device, CommandPools[i], 1, &CommandBuffers[i]);
+		vkDestroyCommandPool(Device, CommandPools[i], nullptr);
 	}
 
 	//!< Queue は vkGetDeviceQueue() で取得したもの、破棄しない
@@ -416,19 +413,8 @@ void VK::CreateInstance()
 		static_cast<uint32_t>(EnabledExtensions.size()), EnabledExtensions.data()
 	};
 
-#if 0
-	AllocationCallbacks = {
-		nullptr,
-		AlignedMalloc,
-		AlignedRealloc,
-		AlignedFree,
-		nullptr,
-		nullptr
-	};
-	VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, &AllocationCallbacks, &Instance));
-#else
+	//VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, &AllocationCallbacks, &Instance));
 	VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance));
-#endif
 
 	CreateDebugReportCallback();
 
@@ -470,6 +456,32 @@ void VK::CreateDebugReportCallback()
 	DebugReport::CreateDebugReportCallback(Instance, Callback, Flags, &DebugReportCallback);
 #endif
 }
+void VK::EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
+{
+#ifdef DEBUG_STDOUT
+	std::cout << "\t" << "\t" << "\t" << "MemoryType" << std::endl;
+	for (uint32_t i = 0; i < PhysicalDeviceMemoryProperties.memoryTypeCount; ++i) {
+		std::cout << "\t" << "\t" << "\t" << "\t";
+		std::cout << "HeapIndex = " << PhysicalDeviceMemoryProperties.memoryTypes[i].heapIndex << ", ";
+		std::cout << "PropertyFlags = ";
+#define MEMORY_PROPERTY_ENTRY(entry) if(VK_MEMORY_PROPERTY_##entry##_BIT & PhysicalDeviceMemoryProperties.memoryTypes[i].propertyFlags) { std::cout << #entry << " "; }
+		MEMORY_PROPERTY_ENTRY(DEVICE_LOCAL);
+		MEMORY_PROPERTY_ENTRY(HOST_VISIBLE);
+		MEMORY_PROPERTY_ENTRY(HOST_COHERENT);
+		MEMORY_PROPERTY_ENTRY(HOST_CACHED);
+		MEMORY_PROPERTY_ENTRY(LAZILY_ALLOCATED);
+#undef MEMORY_PROPERTY_ENTRY
+		std::cout << std::endl;
+	}
+	std::cout << "\t" << "\t" << "\t" << "MemoryHeap" << std::endl;
+	for (uint32_t i = 0; i < PhysicalDeviceMemoryProperties.memoryHeapCount; ++i) {
+		std::cout << "\t" << "\t" << "\t" << "\t";
+		std::cout << "Size = " << PhysicalDeviceMemoryProperties.memoryHeaps[i].size << ", ";
+		std::cout << "Flags = ";
+		std::cout << ((VK_MEMORY_HEAP_DEVICE_LOCAL_BIT & PhysicalDeviceMemoryProperties.memoryHeaps[i].flags) ? "DEVICE_LOCAL" : "") << std::endl;
+	}
+#endif
+}
 void VK::GetPhysicalDevice()
 {
 	//!< 物理デバイス(GPU)の列挙
@@ -480,18 +492,18 @@ void VK::GetPhysicalDevice()
 	VERIFY_SUCCEEDED(vkEnumeratePhysicalDevices(Instance, &PhysicalDeviceCount, PhysicalDevices.data()));
 #ifdef DEBUG_STDOUT
 	std::cout << Yellow << "\t" << "PhysicalDevices" << White << std::endl;
-#define PHYSICAL_DEVICE_TYPE_ENTRY(entry) if(VK_PHYSICAL_DEVICE_TYPE_##entry == PhysicalDeviceProperties.deviceType) { std::cout << #entry << std::endl; }
+#define PHYSICAL_DEVICE_TYPE_ENTRY(entry) if(VK_PHYSICAL_DEVICE_TYPE_##entry == PhysicalDeviceProperties.deviceType) { std::cout << #entry; }
 	for (const auto& i : PhysicalDevices) {
 		//!< 物理デバイスのプロパティ
 		VkPhysicalDeviceProperties PhysicalDeviceProperties;
 		vkGetPhysicalDeviceProperties(i, &PhysicalDeviceProperties);
-		std::cout << "\t" << "\t" << PhysicalDeviceProperties.deviceName << " (";
+		std::cout << "\t" << "\t" << PhysicalDeviceProperties.deviceName << ", DeviceType = ";
 		PHYSICAL_DEVICE_TYPE_ENTRY(OTHER);
 		PHYSICAL_DEVICE_TYPE_ENTRY(INTEGRATED_GPU);
 		PHYSICAL_DEVICE_TYPE_ENTRY(DISCRETE_GPU);
 		PHYSICAL_DEVICE_TYPE_ENTRY(VIRTUAL_GPU);
 		PHYSICAL_DEVICE_TYPE_ENTRY(CPU);
-		std::cout << ")" << std::endl;
+		std::cout << std::endl;
 		PhysicalDeviceProperties.limits;
 		
 		//!< 物理デバイスのフィーチャー
@@ -499,8 +511,9 @@ void VK::GetPhysicalDevice()
 		vkGetPhysicalDeviceFeatures(i, &PhysicalDeviceFeatures);
 
 		//!< 物理デバイスのメモリプロパティ
-		VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
-		vkGetPhysicalDeviceMemoryProperties(i, &PhysicalDeviceMemoryProperties);
+		//VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
+		//vkGetPhysicalDeviceMemoryProperties(i, &PhysicalDeviceMemoryProperties);
+		//EnumeratePhysicalDeviceMemoryProperties(PhysicalDeviceMemoryProperties);
 	}
 #undef PHYSICAL_DEVICE_TYPE_ENTRY
 #endif
@@ -509,6 +522,7 @@ void VK::GetPhysicalDevice()
 	PhysicalDevice = PhysicalDevices[0];
 	//!< 選択した物理デバイスのメモリプロパティを取得
 	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
+	EnumeratePhysicalDeviceMemoryProperties(PhysicalDeviceMemoryProperties);
 
 #ifdef _DEBUG
 	EnumerateDeviceLayer(PhysicalDevice);
@@ -563,7 +577,8 @@ void VK::GetQueueFamily()
 	std::cout << Yellow << "\t" << "QueueProperties" << White << std::endl;
 #define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & i.queueFlags) { std::cout << #entry << " | "; }
 	for (const auto& i : QueueProperties) {
-		std::cout << "\t" << "\t" << "QueueFlags = ";
+		std::cout << "\t" << "\t" << "QueueCount = " << i.queueCount << ", ";
+		std::cout << "QueueFlags = ";
 		QUEUE_FLAG_ENTRY(GRAPHICS);
 		QUEUE_FLAG_ENTRY(COMPUTE);
 		QUEUE_FLAG_ENTRY(TRANSFER);
@@ -636,7 +651,8 @@ void VK::CreateDevice(const uint32_t QueueFamilyIndex)
 	VERIFY_SUCCEEDED(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &Device));
 
 	//!< マルチスレッドで「異なる」キューへサブミットできる。DirectX12 の場合はマルチスレッドで「同じ」キューへもサブミットできるので注意
-	vkGetDeviceQueue(Device, QueueFamilyIndex, 0/*QueueFamily内でのインデックス*/, &Queue);
+	const uint32_t QueueIndex = 0; //!< QueueIndex < QueueProperty.queueCount
+	vkGetDeviceQueue(Device, QueueFamilyIndex, QueueIndex, &Queue);
 
 	CreateDebugMarker();
 
@@ -656,6 +672,10 @@ void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 	const VkCommandPoolCreateInfo CommandPoolInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
 		nullptr,
+		/**
+		VK_COMMAND_POOL_CREATE_TRANSIENT_BIT ... 頻繁に更新される、ライフスパンが短い場合(メモリアロケーションのヒントとなる)
+		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT ... 指定した場合は vkResetCommandBuffer(), vkBeginCommandBuffer() によるリセットが可能、指定しない場合は vkResetCommandPool() のみ可能
+		*/
 		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 		QueueFamilyIndex
 	};
@@ -669,14 +689,14 @@ void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 #endif
 }
 
-void VK::CreateCommandBuffer(const VkCommandPool CommandPool)
+void VK::AllocateCommandBuffer(const VkCommandPool CommandPool, const VkCommandBufferLevel CommandBufferLevel)
 {
 	VkCommandBuffer CommandBuffer;
 	const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 		nullptr,
 		CommandPool,
-		VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+		CommandBufferLevel,
 		1
 	};
 	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CommandBuffer));
@@ -1035,40 +1055,6 @@ void VK::CreateDepthStencil(const VkCommandBuffer CommandBuffer)
 #endif
 }
 
-VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
-{
-	VkShaderModule ShaderModule = VK_NULL_HANDLE;
-
-	std::ifstream In(Path.c_str(), std::ios::in | std::ios::binary);
-	assert(false == In.fail());
-
-	In.seekg(0, std::ios_base::end);
-	const auto CodeSize = In.tellg();
-	In.seekg(0, std::ios_base::beg);
-
-	auto Code = new char[CodeSize];
-	In.read(Code, CodeSize);
-	In.close();
-
-	const VkShaderModuleCreateInfo ModuleCreateInfo = {
-		VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-		nullptr,
-		0,
-		CodeSize, reinterpret_cast<uint32_t*>(Code)
-	};
-	VERIFY_SUCCEEDED(vkCreateShaderModule(Device, &ModuleCreateInfo, nullptr, &ShaderModule));
-
-	delete[] Code;
-
-	return ShaderModule;
-}
-void VK::CreateShader()
-{
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateShader" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
 /**
 @brief シェーダとのバインディングのレイアウト
 @note DescriptorSetLayout は「型」のようなもの
@@ -1190,6 +1176,34 @@ void VK::CreatePipelineLayout()
 #ifdef DEBUG_STDOUT
 	std::cout << "CreatePipelineLayout" << COUT_OK << std::endl << std::endl;
 #endif
+}
+
+VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
+{
+	VkShaderModule ShaderModule = VK_NULL_HANDLE;
+
+	std::ifstream In(Path.c_str(), std::ios::in | std::ios::binary);
+	assert(false == In.fail());
+
+	In.seekg(0, std::ios_base::end);
+	const auto CodeSize = In.tellg();
+	In.seekg(0, std::ios_base::beg);
+
+	auto Code = new char[CodeSize];
+	In.read(Code, CodeSize);
+	In.close();
+
+	const VkShaderModuleCreateInfo ModuleCreateInfo = {
+		VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+		nullptr,
+		0,
+		CodeSize, reinterpret_cast<uint32_t*>(Code)
+	};
+	VERIFY_SUCCEEDED(vkCreateShaderModule(Device, &ModuleCreateInfo, nullptr, &ShaderModule));
+
+	delete[] Code;
+
+	return ShaderModule;
 }
 
 void VK::CreateGraphicsPipeline()
@@ -1390,11 +1404,24 @@ void VK::CreateUniformBuffer()
 
 void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 {
+	//!< VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT ... メモリをコマンドプールへ返す
+	//VERIFY_SUCCEEDED(vkResetCommandBuffer(CommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
+
+	//const VkCommandBufferInheritanceInfo CommandBufferInheritanceInfo = {
+	//	VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+	//	nullptr,
+	//	VK_NULL_HANDLE,
+	//	0,
+	//	VK_NULL_HANDLE,
+	//	VK_FALSE,
+	//	0,
+	//	0
+	//};
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
 		0,
-		nullptr
+		nullptr//&CommandBufferInheritanceInfo
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo)); {
 		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
@@ -1439,10 +1466,10 @@ void VK::ExecuteCommandBuffer(const VkCommandBuffer CommandBuffer)
 	const VkSubmitInfo SubmitInfo = {
 		VK_STRUCTURE_TYPE_SUBMIT_INFO,
 		nullptr,
-		0, nullptr,//1, &RenderSemaphore
+		0, nullptr, //!< コマンドバッファ実行前にウエイトしなければならないセマフォ
 		&PipelineStageFlags,
 		1,  &CommandBuffer,
-		0, nullptr
+		0, nullptr //!< コマンドバッファ実行完了時にシグナルされるセマフォ
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, Fence));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));

@@ -66,9 +66,15 @@ public:
 	static std::string GetFormatString(const VkFormat Format);
 
 protected:
-	static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
-	static FORCEINLINE void* AlignedRealloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_realloc(pOriginal, size, alignment); }
-	static FORCEINLINE void AlignedFree(void* pUserData, void* pMemory) { _aligned_free(pMemory); }
+	static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { 
+		return _aligned_malloc(size, alignment); 
+	}
+	static FORCEINLINE void* AlignedRealloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) {
+		return _aligned_realloc(pOriginal, size, alignment);
+	}
+	static FORCEINLINE void AlignedFree(void* pUserData, void* pMemory) {
+		_aligned_free(pMemory); 
+	}
 	static VkFormat GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice);
 	static uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, uint32_t TypeBits, VkFlags Properties);
 	virtual FORCEINLINE VkFormat GetSupportedDepthFormat() const { return GetSupportedDepthFormat(PhysicalDevice); }
@@ -82,6 +88,7 @@ protected:
 	virtual void CreateInstance();
 	virtual void CreateDebugReportCallback();
 
+	virtual void EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void GetPhysicalDevice();
 	virtual void EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice);
 	virtual void EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* layerName);
@@ -90,7 +97,7 @@ protected:
 	virtual void CreateDebugMarker();
 
 	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
-	virtual void CreateCommandBuffer(const VkCommandPool CommandPool);
+	virtual void AllocateCommandBuffer(const VkCommandPool CommandPool, const VkCommandBufferLevel CommandBufferLevel = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
 	virtual void CreateFence();
 	virtual void CreateSemaphore();
@@ -110,9 +117,6 @@ protected:
 	virtual void CreateDepthStencilView(VkCommandBuffer CommandBuffer);
 	virtual void CreateDepthStencil(const VkCommandBuffer CommandBuffer);
 
-	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
-	virtual void CreateShader();
-
 	virtual void CreateDescriptorSetLayout();
 	virtual void CreateDescritporPool();
 	virtual void CreateDescriptorSet(VkDescriptorPool DescritorPool);
@@ -126,6 +130,7 @@ protected:
 	float GetAspectRatioOfClientRect() const { return GetAspectRatio(static_cast<float>(GetClientRectWidth()), static_cast<float>(GetClientRectHeight())); }
 
 	virtual void CreatePipelineLayout();
+	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 	virtual void CreatePipeline() { CreateGraphicsPipeline(); }
 	virtual void CreateGraphicsPipeline();
 	virtual void CreateComputePipeline();
@@ -150,8 +155,15 @@ protected:
 	virtual void Present();
 	virtual void WaitForFence();
 
+	const VkAllocationCallbacks AllocationCallbacks = {
+		nullptr,
+		AlignedMalloc,
+		AlignedRealloc,
+		AlignedFree,
+		nullptr,
+		nullptr
+	};
 protected:
-	VkAllocationCallbacks AllocationCallbacks;
 #ifdef _DEBUG
 	//LayerNames InstanceLayerNames;
 #endif
