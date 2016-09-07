@@ -127,19 +127,13 @@ void VKExt::CreateGraphicsPipeline_VsPs()
 			VK_FALSE
 		};
 
-		/**
-		@brief デフォルト指定
-		別途 VkDynamicState に VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR を指定している
-		よって後からコマンドバッファによる上書き(vkCmdSetViewport(), vkCmdSetScissor())が可能なので、ここでは適当なダミー値ビューポートで設定しておく
-		*/
-		const std::vector<VkViewport> DummyViewports = { { 0, 0, 1280, 720, 0.0f, 1.0f } };
-		const std::vector<VkRect2D> DummyScissorRects = { { { 0, 0 }, { 1280, 720 } } };
+		//!< 別途 VkDynamicState にするので、ここでは nullptr を指定している、ただし個数は指定しておく必要があるので注意!
 		const VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo = {
 			VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
 			nullptr,
 			0,
-			static_cast<uint32_t>(DummyViewports.size()), DummyViewports.data(),
-			static_cast<uint32_t>(DummyScissorRects.size()), DummyScissorRects.data()
+			1, nullptr,
+			1, nullptr
 		};
 
 		const VkPipelineRasterizationStateCreateInfo PipelineRasterizationStateCreateInfo = {
@@ -311,14 +305,33 @@ void VKExt::CreateRenderPass_Color()
 			0, nullptr
 		}
 	};
-
+	const std::vector<VkSubpassDependency> SubpassDependencies = {
+		{
+			VK_SUBPASS_EXTERNAL, //!< レンダーパス外
+			0,
+			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			VK_ACCESS_MEMORY_READ_BIT,
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+			VK_DEPENDENCY_BY_REGION_BIT,
+		},
+		{
+			0,
+			VK_SUBPASS_EXTERNAL, //!< レンダーパス外
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+			VK_ACCESS_MEMORY_READ_BIT,
+			VK_DEPENDENCY_BY_REGION_BIT,
+		}
+	};
 	const VkRenderPassCreateInfo RenderPassCreateInfo = {
 		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 		nullptr,
 		0,
 		static_cast<uint32_t>(AttachmentDescriptions.size()), AttachmentDescriptions.data(),
 		static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
-		0, nullptr
+		static_cast<uint32_t>(SubpassDependencies.size()), SubpassDependencies.data()
 	};
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, nullptr, &RenderPass));
 }
@@ -364,14 +377,33 @@ void VKExt::CreateRenderPass_ColorDepth()
 			0, nullptr
 		}
 	};
-
+	const std::vector<VkSubpassDependency> SubpassDependencies = {
+		{
+			VK_SUBPASS_EXTERNAL, //!< レンダーパス外
+			0,
+			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			VK_ACCESS_MEMORY_READ_BIT,
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+			VK_DEPENDENCY_BY_REGION_BIT,
+		},
+		{
+			0,
+			VK_SUBPASS_EXTERNAL, //!< レンダーパス外
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+			VK_ACCESS_MEMORY_READ_BIT,
+			VK_DEPENDENCY_BY_REGION_BIT,
+		}
+	};
 	const VkRenderPassCreateInfo RenderPassCreateInfo = {
 		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 		nullptr,
 		0,
 		static_cast<uint32_t>(AttachmentDescriptions.size()), AttachmentDescriptions.data(),
 		static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
-		0, nullptr
+		static_cast<uint32_t>(SubpassDependencies.size()), SubpassDependencies.data()
 	};
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, nullptr, &RenderPass));
 }

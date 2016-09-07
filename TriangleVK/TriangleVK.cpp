@@ -235,7 +235,7 @@ void TriangleVK::CreateVertexBuffer(const VkCommandBuffer CommandBuffer)
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 
-	CreateDeviceLocalBuffer(CommandBuffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, &VertexBuffer, &VertexDeviceMemory, Size, Vertices.data());
+	CreateDeviceLocalBuffer(CommandBuffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, &VertexBuffer, &VertexDeviceMemory, Size, Vertices.data());
 
 #ifdef _DEBUG
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
@@ -251,7 +251,7 @@ void TriangleVK::CreateIndexBuffer(const VkCommandBuffer CommandBuffer)
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 	
-	CreateDeviceLocalBuffer(CommandBuffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, &IndexBuffer, &IndexDeviceMemory, Size, Indices.data());
+	CreateDeviceLocalBuffer(CommandBuffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, &IndexBuffer, &IndexDeviceMemory, Size, Indices.data());
 
 	DebugMarker::SetName(Device, IndexBuffer, "MyIndexBuffer");
 
@@ -268,17 +268,12 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo)); {
-		DebugMarker::Begin(CommandBuffer, "HOGE", glm::vec4(0,1,0,1));
+		//DebugMarker::Begin(CommandBuffer, "HOGE", glm::vec4(0,1,0,1));
 		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 		auto Image = SwapchainImages[SwapchainImageIndex];
-		const VkImageSubresourceRange ImageSubresourceRange = {
-			VK_IMAGE_ASPECT_COLOR_BIT,
-			0, 1,
-			0, 1
-		};
-		SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, ImageSubresourceRange); {
+		SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, ImageSubresourceRange_Color); {
 			const std::vector<VkClearValue> ClearValues = {
 				{ Colors::SkyBlue }, { 1.0f, 0 }
 			};
@@ -304,8 +299,8 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 
 				vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
 			} vkCmdEndRenderPass(CommandBuffer);
-		} SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, ImageSubresourceRange);
-		DebugMarker::End(CommandBuffer);
+		} SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, ImageSubresourceRange_Color);
+		//DebugMarker::End(CommandBuffer);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }
 #pragma endregion

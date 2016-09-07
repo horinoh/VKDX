@@ -16,9 +16,10 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 
 	//!< デバイス、キュー
 	CreateInstance();
+	CreateSurface(hWnd, hInstance);
 	GetPhysicalDevice();
 	GetQueueFamily();
-	CreateDevice(GraphicsQueueFamilyIndex);
+	CreateDevice();
 	
 	//!< コマンドプール、バッファ
 	CreateCommandPool(GraphicsQueueFamilyIndex);
@@ -30,7 +31,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
 	CreateSemaphore();
 
 	//!< スワップチェイン
-	CreateSwapchain(hWnd, hInstance, CommandBuffer);
+	CreateSwapchain(CommandBuffer);
 	//!< デプスステンシル
 	CreateDepthStencil(CommandBuffer);
 
@@ -62,7 +63,7 @@ void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 #endif
 
 	Super::OnSize(hWnd, hInstance);
-	
+
 	CreateViewport(static_cast<float>(SurfaceExtent2D.width), static_cast<float>(SurfaceExtent2D.height));
 }
 void VK::OnTimer(HWND hWnd, HINSTANCE hInstance)
@@ -146,13 +147,9 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	if (VK_NULL_HANDLE != Swapchain) {
 		vkDestroySwapchainKHR(Device, Swapchain, nullptr);
 	}
-	if (VK_NULL_HANDLE != Surface) {
-		vkDestroySurfaceKHR(Instance, Surface, nullptr);
+	if (VK_NULL_HANDLE != RenderSemaphore) {
+		vkDestroySemaphore(Device, RenderSemaphore, nullptr);
 	}
-
-	//if (VK_NULL_HANDLE != RenderSemaphore) {
-	//	vkDestroySemaphore(Device, RenderSemaphore, nullptr);
-	//}
 	if (VK_NULL_HANDLE != PresentSemaphore) {
 		vkDestroySemaphore(Device, PresentSemaphore, nullptr);
 	}
@@ -173,6 +170,10 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 	
 	//!< PhysicalDevice は vkEnumeratePhysicalDevices() で取得したもの、破棄しない
+
+	if (VK_NULL_HANDLE != Surface) {
+		vkDestroySurfaceKHR(Instance, Surface, nullptr);
+	}
 
 #ifdef _DEBUG
 	DebugReport::DestroyDebugReportCallback(Instance, DebugReportCallback);
@@ -338,7 +339,7 @@ void VK::SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLay
 	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
-		0,
+		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 		nullptr
 	};
 	vkCmdPipelineBarrier(CommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &ImageMemoryBarrier);
@@ -396,7 +397,7 @@ void VK::CreateInstance()
 	};
 	const std::vector<const char*> EnabledExtensions = {
 		VK_KHR_SURFACE_EXTENSION_NAME,
-#ifdef _WIN32
+#ifdef VK_USE_PLATFORM_WIN32_KHR
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 #endif
 #ifdef _DEBUG
@@ -456,6 +457,28 @@ void VK::CreateDebugReportCallback()
 	DebugReport::CreateDebugReportCallback(Instance, Callback, Flags, &DebugReportCallback);
 #endif
 }
+/**
+@brief デバイス(GPU)とホスト(CPU)の同期
+*/
+void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
+{
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+	const VkWin32SurfaceCreateInfoKHR SurfaceCreateInfo = {
+		VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
+		nullptr,
+		0,
+		hInstance,
+		hWnd
+	};
+	VERIFY_SUCCEEDED(vkCreateWin32SurfaceKHR(Instance, &SurfaceCreateInfo, nullptr, &Surface));
+#else
+	assert(false && "Not supported");
+#endif
+
+#ifdef DEBUG_STDOUT
+	std::cout << "\t" << "Surface" << std::endl;
+#endif
+}
 void VK::EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
 #ifdef DEBUG_STDOUT
@@ -509,17 +532,13 @@ void VK::GetPhysicalDevice()
 		//!< 物理デバイスのフィーチャー
 		VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
 		vkGetPhysicalDeviceFeatures(i, &PhysicalDeviceFeatures);
-
-		//!< 物理デバイスのメモリプロパティ
-		//VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
-		//vkGetPhysicalDeviceMemoryProperties(i, &PhysicalDeviceMemoryProperties);
-		//EnumeratePhysicalDeviceMemoryProperties(PhysicalDeviceMemoryProperties);
 	}
 #undef PHYSICAL_DEVICE_TYPE_ENTRY
 #endif
 
-	//!< ここでは最初の物理デバイスを選択することにする
+	//!< ここでは最初の物理デバイスを選択することにする #TODO
 	PhysicalDevice = PhysicalDevices[0];
+
 	//!< 選択した物理デバイスのメモリプロパティを取得
 	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
 	EnumeratePhysicalDeviceMemoryProperties(PhysicalDeviceMemoryProperties);
@@ -588,38 +607,71 @@ void VK::GetQueueFamily()
 #undef QUEUE_FLAG_ENTRY
 #endif
 
-	//!< グラフィック機能を持つものを探し、インデックスを覚えておく
 	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i) {
+		//!< グラフィック機能を持つもの
 		if (VK_QUEUE_GRAPHICS_BIT & QueueProperties[i].queueFlags) {
-			GraphicsQueueFamilyIndex = i;
-#ifdef DEBUG_STDOUT
-			std::cout << "\t" << "GraphicsQueueFamilyIndex = " << GraphicsQueueFamilyIndex << std::endl;
-#endif
+			if (UINT32_MAX != GraphicsQueueFamilyIndex) {
+				GraphicsQueueFamilyIndex = i;
+			}
 		}
-		else if (VK_QUEUE_TRANSFER_BIT & QueueProperties[i].queueFlags) {
-			//!< #TODO 
-			//!< デバイスによっては転送専用キューを持つ、転送を多用する場合は専用キューを使用した方が良い
-			TransferQueueFamilyIndex = i;
-		}
-		else if (VK_QUEUE_COMPUTE_BIT & QueueProperties[i].queueFlags) {
-			//!< #TODO
-			ComputeQueueFamilyIndex = i;
+		//else if (VK_QUEUE_TRANSFER_BIT & QueueProperties[i].queueFlags) {
+		//	//!< #TODO
+		//	TransferQueueFamilyIndex = i; //!< デバイスによっては転送専用キューを持つ、転送を多用する場合は専用キューを使用した方が良い
+		//}
+		//else if (VK_QUEUE_COMPUTE_BIT & QueueProperties[i].queueFlags) {
+		//	//!< #TODO
+		//	ComputeQueueFamilyIndex = i;
+		//}
+
+		//!< プレゼント機能を持つもの
+		VkBool32 Supported = VK_FALSE;
+		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, i, Surface, &Supported));
+		if (Supported) {
+			if (UINT32_MAX != PresentQueueFamilyIndex) {
+				PresentQueueFamilyIndex = i;
+			}
 		}
 	}
-	assert(UINT_MAX != GraphicsQueueFamilyIndex && "GraphicsQueue not found");
+	//!< グラフィックとプレゼントを同時にサポートするキューがあれば優先
+	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i) {
+		if (VK_QUEUE_GRAPHICS_BIT & QueueProperties[i].queueFlags) {
+			VkBool32 Supported = VK_FALSE;
+			VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, i, Surface, &Supported));
+			if (Supported) {
+				GraphicsQueueFamilyIndex = i;
+				PresentQueueFamilyIndex = i;
+				break;
+			}
+		}
+	}
+	assert(UINT32_MAX != GraphicsQueueFamilyIndex && "GraphicsQueue not found");
+	assert(UINT32_MAX != PresentQueueFamilyIndex && "PresentQueue not found");
 }
-void VK::CreateDevice(const uint32_t QueueFamilyIndex)
+void VK::CreateDevice()
 {
 	const std::vector<float> QueuePriorities = { 0.0f };
-	const std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos = {
+	std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos = {
 		{
 			VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
 			nullptr,
 			0,
-			QueueFamilyIndex,
+			GraphicsQueueFamilyIndex,
 			static_cast<uint32_t>(QueuePriorities.size()), QueuePriorities.data()
-		}
+		},
 	};
+	//!< グラフィックとプレゼントのキューインデックスが別の場合は追加で必要
+	if (GraphicsQueueFamilyIndex != PresentQueueFamilyIndex) {
+		QueueCreateInfos.push_back(
+			{
+				VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+				nullptr,
+				0,
+				PresentQueueFamilyIndex,
+				static_cast<uint32_t>(QueuePriorities.size()), QueuePriorities.data()
+			}
+		);
+	}
+
 	const std::vector<const char*> EnabledLayerNames = {
 #ifdef _DEBUG
 		//!< ↓標準的なバリデーションレイヤセットを最適な順序でロードする指定
@@ -650,9 +702,9 @@ void VK::CreateDevice(const uint32_t QueueFamilyIndex)
 	};
 	VERIFY_SUCCEEDED(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &Device));
 
-	//!< マルチスレッドで「異なる」キューへサブミットできる。DirectX12 の場合はマルチスレッドで「同じ」キューへもサブミットできるので注意
-	const uint32_t QueueIndex = 0; //!< QueueIndex < QueueProperty.queueCount
-	vkGetDeviceQueue(Device, QueueFamilyIndex, QueueIndex, &Queue);
+	//!< キューの取得 (グラフィック、プレゼントキューは同じインデックスの場合もあるが別名として取得)
+	vkGetDeviceQueue(Device, GraphicsQueueFamilyIndex, 0, &GraphicsQueue);
+	vkGetDeviceQueue(Device, PresentQueueFamilyIndex, 0, &PresentQueue);
 
 	CreateDebugMarker();
 
@@ -739,40 +791,13 @@ void VK::CreateSemaphore()
 	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &PresentSemaphore));
 
 	//!< 描画完了同期用
-	//VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
+	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
 
 #ifdef _DEBUG
 	std::cout << "CreateSemaphore" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
-/**
-@brief デバイス(GPU)とホスト(CPU)の同期
-*/
-void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
-{
-#ifdef _WIN32
-	const VkWin32SurfaceCreateInfoKHR SurfaceCreateInfo = {
-		VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
-		nullptr,
-		0,
-		hInstance,
-		hWnd
-	};
-	VERIFY_SUCCEEDED(vkCreateWin32SurfaceKHR(Instance, &SurfaceCreateInfo, nullptr, &Surface));
-#else
-	assert(false && "Not supported");
-#endif
-
-	//!< デバイスのキューファミリーインデックスがプレゼントをサポートするかチェックする
-	VkBool32 Supported = VK_FALSE;
-	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, GraphicsQueueFamilyIndex, Surface, &Supported));
-	assert(VK_TRUE == Supported && "vkGetPhysicalDeviceSurfaceSupportKHR failed");
-
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "Surface" << std::endl;
-#endif
-}
 VkSurfaceFormatKHR VK::SelectSurfaceFormat()
 {
 	//!< サーフェスのフォーマットを取得
@@ -813,30 +838,40 @@ VkPresentModeKHR VK::SelectSurfacePresentMode()
 	std::vector<VkPresentModeKHR> PresentModes(PresentModeCount);
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, Surface, &PresentModeCount, PresentModes.data()));
 
-	//!< 可能ならレイテンシが低く、テアリングの無い MAILBOX を選択する、次いで VK_PRESENT_MODE_IMMEDIATE_KHR
-	auto SelectedPresentMode = VK_PRESENT_MODE_FIFO_KHR;
-	for (auto i : PresentModes) {
-		if (VK_PRESENT_MODE_MAILBOX_KHR == i) {
-			return i;
+	/**
+	可能なら VK_PRESENT_MODE_MAILBOX_KHR を選択
+	VK_PRESENT_MODE_IMMEDIATE_KHR
+	VK_PRESENT_MODE_MAILBOX_KHR ... Vブランクで表示される、テアリングは起こらない、キューは1つで常に最新で上書きされる (ゲーム)
+	VK_PRESENT_MODE_FIFO_KHR ... Vブランクで表示される、テアリングは起こらない (ムービー)
+	VK_PRESENT_MODE_FIFO_RELAXED_KHR ... 1Vブランク以上経ったイメージは次のVブランクを待たずにリリースされ得る、テアリングが起こる
+	*/
+	const VkPresentModeKHR PresentMode = [&]() {
+		for (auto i : PresentModes) {
+			if (VK_PRESENT_MODE_MAILBOX_KHR == i) {
+				return i;
+			}
 		}
-		else if (VK_PRESENT_MODE_IMMEDIATE_KHR == i) {
-			SelectedPresentMode = i;
+		for (auto i : PresentModes) {
+			if (VK_PRESENT_MODE_FIFO_KHR == i) {
+				return i;
+			}
 		}
-	}
+		return PresentModes[0];
+	}();
 
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << Lightblue << "Present Mode" << White << std::endl;
 #define VK_PRESENT_MODE_ENTRY(entry) case VK_PRESENT_MODE_##entry##_KHR: std::cout << "\t" << "\t" << #entry << std::endl; break
 	for (auto i : PresentModes) {
-		if (SelectedPresentMode == i) {
+		if (PresentMode == i) {
 			std::cout << Yellow;
 		}
 		switch (i)
 		{
 		default: assert(0 && "Unknown VkPresentMode"); break;
-		VK_PRESENT_MODE_ENTRY(IMMEDIATE);	//!< VSync を待たない、テアリング
-		VK_PRESENT_MODE_ENTRY(MAILBOX);		//!< V-Syncを待つ
-		VK_PRESENT_MODE_ENTRY(FIFO);		//!< V-Syncを待つ、レイテンシが低い
+		VK_PRESENT_MODE_ENTRY(IMMEDIATE);	
+		VK_PRESENT_MODE_ENTRY(MAILBOX);		
+		VK_PRESENT_MODE_ENTRY(FIFO);		
 		VK_PRESENT_MODE_ENTRY(FIFO_RELAXED);
 		}
 		std::cout << White;
@@ -844,7 +879,7 @@ VkPresentModeKHR VK::SelectSurfacePresentMode()
 	}
 #endif
 
-	return SelectedPresentMode;
+	return PresentMode;
 }
 void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 {
@@ -852,23 +887,28 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 	VkSurfaceCapabilitiesKHR SurfaceCapabilities;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PhysicalDevice, Surface, &SurfaceCapabilities));
 
+	//!< イメージ枚数 (ここでは1枚多く取る ... MAILBOX の場合3枚あった方が良い)
 	const auto MinImageCount = (std::min)(SurfaceCapabilities.minImageCount + 1, SurfaceCapabilities.maxImageCount);
 
-	//!< イメージのサイズを覚えておく
-	SurfaceExtent2D = SurfaceCapabilities.currentExtent;
 	//!< サーフェスのサイズが未定義の場合は明示的に指定する。(サーフェスのサイズが定義されている場合はそれに従わないとならない)
 	if (-1 == SurfaceCapabilities.currentExtent.width) {
 		SurfaceExtent2D = {
-			std::max(std::min(Width, SurfaceCapabilities.maxImageExtent.width), SurfaceCapabilities.minImageExtent.width), 
-			std::max(std::min(Height, SurfaceCapabilities.minImageExtent.height), SurfaceCapabilities.minImageExtent.height) 
+			(std::max)((std::min)(Width, SurfaceCapabilities.maxImageExtent.width), SurfaceCapabilities.minImageExtent.width), 
+			(std::max)((std::min)(Height, SurfaceCapabilities.minImageExtent.height), SurfaceCapabilities.minImageExtent.height) 
 		};
+	}
+	else {
+		SurfaceExtent2D = SurfaceCapabilities.currentExtent;
 	}
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "\t" << Lightblue << "ImageExtent (" << (-1 == SurfaceCapabilities.currentExtent.width ? "Undefined" : "Defined") << ")" << White << std::endl;
 	std::cout << "\t" << "\t" << "\t" << SurfaceExtent2D.width << " x " << SurfaceExtent2D.height << std::endl;
 #endif
 
-	//!< サーフェスを回転、反転させるかどうか。(回転させない VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR を指定)
+	//!< イメージ使用法 (可能ならVK_IMAGE_USAGE_TRANSFER_DST_BIT をセットする。イメージクリアできるように)
+	const VkImageUsageFlags ImageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | (VK_IMAGE_USAGE_TRANSFER_DST_BIT & SurfaceCapabilities.supportedUsageFlags);
+
+	//!< サーフェスを回転、反転させるかどうか。(可能なら VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
 	const auto PreTransform = (SurfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : SurfaceCapabilities.currentTransform;
 
 	//!< サーフェスのフォーマットを選択
@@ -889,7 +929,7 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 		SurfaceFormat.colorSpace,
 		SurfaceExtent2D,
 		1,
-		VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+		ImageUsageFlags,
 		VK_SHARING_MODE_EXCLUSIVE,
 		0, nullptr,
 		PreTransform,
@@ -913,9 +953,8 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 	std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
 #endif
 }
-void VK::CreateSwapchain(HWND hWnd, HINSTANCE hInstance, const VkCommandBuffer CommandBuffer)
+void VK::CreateSwapchain(const VkCommandBuffer CommandBuffer)
 {
-	CreateSurface(hWnd, hInstance);
 	CreateSwapchainOfClientRect();
 	CreateSwapchainImageView(CommandBuffer);
 
@@ -939,7 +978,7 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer)
 	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
-		0,
+		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
@@ -1012,12 +1051,11 @@ void VK::CreateDepthStencilDeviceMemory()
 {
 	VkMemoryRequirements MemoryRequirements;
 	vkGetImageMemoryRequirements(Device, DepthStencilImage, &MemoryRequirements);
-	const auto MemoryTypeIndex = GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	const VkMemoryAllocateInfo MemoryAllocateInfo = {
 		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 		nullptr,
 		MemoryRequirements.size,
-		MemoryTypeIndex
+		GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) //!< DEVICE_LOCAL にすること
 	};
 	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &DepthStencilDeviceMemory));
 	VERIFY_SUCCEEDED(vkBindImageMemory(Device, DepthStencilImage, DepthStencilDeviceMemory, 0));
@@ -1243,7 +1281,7 @@ void VK::CreateFramebuffer()
 #endif
 }
 
-void VK::CreateDeviceLocalBuffer(const VkCommandBuffer CommandBuffer, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source)
+void VK::CreateDeviceLocalBuffer(const VkCommandBuffer CommandBuffer, const VkBufferUsageFlagBits Usage, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source)
 {
 	VkBuffer StagingBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
@@ -1266,13 +1304,26 @@ void VK::CreateDeviceLocalBuffer(const VkCommandBuffer CommandBuffer, const VkBu
 			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 			nullptr,
 			StagingMemoryRequirements.size,
-			GetMemoryType(StagingMemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) //!< HOST_VISIBLE にすること
+			GetMemoryType(StagingMemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT /*| VK_MEMORY_PROPERTY_HOST_COHERENT_BIT*/) //!< HOST_VISIBLE にすること
 		};
 		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &StagingMemoryAllocateInfo, nullptr, &StagingDeviceMemory));
 
 		void *Data;
 		VERIFY_SUCCEEDED(vkMapMemory(Device, StagingDeviceMemory, 0, StagingMemoryAllocateInfo.allocationSize, 0, &Data)); {
-				memcpy(Data, Source, Size);
+			memcpy(Data, Source, Size);
+
+			//!< ↓VK_MEMORY_PROPERTY_HOST_COHERENT_BIT の場合は必要なし
+			const std::vector<VkMappedMemoryRange> MappedMemoryRanges = {
+				{
+					VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+					nullptr,
+					StagingDeviceMemory,
+					0,
+					VK_WHOLE_SIZE
+				}
+			};
+			VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(MappedMemoryRanges.size()), MappedMemoryRanges.data()));
+
 		} vkUnmapMemory(Device, StagingDeviceMemory);
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, StagingBuffer, StagingDeviceMemory, 0));
 
@@ -1303,7 +1354,7 @@ void VK::CreateDeviceLocalBuffer(const VkCommandBuffer CommandBuffer, const VkBu
 		const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
 			VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 			nullptr,
-			0,
+			VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 			nullptr
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
@@ -1313,10 +1364,34 @@ void VK::CreateDeviceLocalBuffer(const VkCommandBuffer CommandBuffer, const VkBu
 				Size
 			};
 			vkCmdCopyBuffer(CommandBuffer, StagingBuffer, *Buffer, 1, &BufferCopy);
+
+			//!< バッファを「転送先として」から「目的のバッファとして」へ変更する
+			const VkBufferMemoryBarrier BufferMemoryBarrier = {
+				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+				nullptr,
+				VK_ACCESS_MEMORY_WRITE_BIT,
+				AccessFlag,
+				VK_QUEUE_FAMILY_IGNORED,
+				VK_QUEUE_FAMILY_IGNORED,
+				*Buffer,
+				0,
+				VK_WHOLE_SIZE
+			};
+			vkCmdPipelineBarrier(CommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, PipelineStageFlag, 0, 0, nullptr, 1, &BufferMemoryBarrier, 0, nullptr);
+
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 
-		ExecuteCommandBuffer(CommandBuffer);
-		WaitForFence();
+		//!< サブミット
+		const VkSubmitInfo SubmitInfo = {
+			VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			nullptr,
+			0, nullptr,
+			nullptr,
+			1, &CommandBuffer,
+			0, nullptr
+		};
+		VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
+		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device)); //!< フェンスでも良い
 	}
 
 	if(VK_NULL_HANDLE != StagingDeviceMemory) {
@@ -1345,12 +1420,25 @@ void VK::CreateHostVisibleBuffer(const VkBufferUsageFlagBits Usage, VkBuffer* Bu
 		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 		nullptr,
 		MemoryRequirements.size,
-		GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) //!< HOST_VISIBLE にすること
+		GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT/*| VK_MEMORY_PROPERTY_HOST_COHERENT_BIT*/) //!< HOST_VISIBLE にすること
 	};
 	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, DeviceMemory));
 	void *Data;
 	VERIFY_SUCCEEDED(vkMapMemory(Device, *DeviceMemory, 0, MemoryAllocateInfo.allocationSize, 0, &Data)); {
 		memcpy(Data, Source, Size);
+		
+		//!< ↓VK_MEMORY_PROPERTY_HOST_COHERENT_BIT の場合は必要なし
+		const std::vector<VkMappedMemoryRange> MappedMemoryRanges = {
+			{
+				VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+				nullptr,
+				*DeviceMemory,
+				0,
+				VK_WHOLE_SIZE
+			}
+		};
+		VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(MappedMemoryRanges.size()), MappedMemoryRanges.data()));
+
 	} vkUnmapMemory(Device, *DeviceMemory);
 	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DeviceMemory, 0));
 }
@@ -1420,7 +1508,7 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
-		0,
+		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 		nullptr//&CommandBufferInheritanceInfo
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo)); {
@@ -1471,8 +1559,8 @@ void VK::ExecuteCommandBuffer(const VkCommandBuffer CommandBuffer)
 		1,  &CommandBuffer,
 		0, nullptr //!< コマンドバッファ実行完了時にシグナルされるセマフォ
 	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(Queue, 1, &SubmitInfo, Fence));
-	VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
+	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, Fence));
+	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 }
 void VK::Present()
 {
@@ -1484,7 +1572,7 @@ void VK::Present()
 		&SwapchainImageIndex,
 		nullptr
 	};
-	VERIFY_SUCCEEDED(vkQueuePresentKHR(Queue, &PresentInfo));
+	VERIFY_SUCCEEDED(vkQueuePresentKHR(GraphicsQueue, &PresentInfo));
 
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphore, nullptr, &SwapchainImageIndex));
 

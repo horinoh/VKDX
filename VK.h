@@ -87,13 +87,14 @@ protected:
 	virtual void EnumerateInstanceExtenstion(const char* layerName);
 	virtual void CreateInstance();
 	virtual void CreateDebugReportCallback();
+	virtual void CreateSurface(HWND hWnd, HINSTANCE hInstance);
 
 	virtual void EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void GetPhysicalDevice();
 	virtual void EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice);
 	virtual void EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* layerName);
 	virtual void GetQueueFamily();
-	virtual void CreateDevice(const uint32_t QueueFamilyIndex);
+	virtual void CreateDevice();
 	virtual void CreateDebugMarker();
 
 	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
@@ -102,7 +103,6 @@ protected:
 	virtual void CreateFence();
 	virtual void CreateSemaphore();
 
-	virtual void CreateSurface(HWND hWnd, HINSTANCE hInstance);
 	virtual VkSurfaceFormatKHR SelectSurfaceFormat();
 	virtual VkPresentModeKHR SelectSurfacePresentMode();
 	virtual void CreateSwapchain(const uint32_t Width, const uint32_t Height);
@@ -110,7 +110,7 @@ protected:
 		CreateSwapchain(static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
 	}
 	virtual void CreateSwapchainImageView(VkCommandBuffer CommandBuffer);
-	virtual void CreateSwapchain(HWND hWnd, HINSTANCE hInstance, const VkCommandBuffer CommandBuffer);
+	virtual void CreateSwapchain(const VkCommandBuffer CommandBuffer);
 
 	virtual void CreateDepthStencilImage();
 	virtual void CreateDepthStencilDeviceMemory();
@@ -139,7 +139,7 @@ protected:
 	
 	virtual void CreateFramebuffer();
 
-	virtual void CreateDeviceLocalBuffer(const VkCommandBuffer CommandBuffer, const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
+	virtual void CreateDeviceLocalBuffer(const VkCommandBuffer CommandBuffer, const VkBufferUsageFlagBits Usage, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
 	virtual void CreateHostVisibleBuffer(const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
 	virtual void CreateVertexBuffer(const VkCommandBuffer CommandBuffer);
 	virtual void CreateIndexBuffer(const VkCommandBuffer CommandBuffer);
@@ -171,24 +171,27 @@ protected:
 #ifdef _DEBUG
 	VkDebugReportCallbackEXT DebugReportCallback = VK_NULL_HANDLE;
 #endif
+	VkSurfaceKHR Surface = VK_NULL_HANDLE;
 	VkPhysicalDevice PhysicalDevice = VK_NULL_HANDLE;
 #ifdef _DEBUG
 	//LayerNames DeviceLayerNames;
 #endif
 	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
 	VkDevice Device = VK_NULL_HANDLE;
-	VkQueue Queue = VK_NULL_HANDLE;
-	uint32_t GraphicsQueueFamilyIndex = UINT_MAX;
-	uint32_t TransferQueueFamilyIndex = UINT_MAX;
-	uint32_t ComputeQueueFamilyIndex = UINT_MAX;
+	VkQueue GraphicsQueue = VK_NULL_HANDLE;
+	VkQueue PresentQueue = VK_NULL_HANDLE;
+	uint32_t GraphicsQueueFamilyIndex = UINT32_MAX;
+	uint32_t PresentQueueFamilyIndex = UINT32_MAX;
+	//uint32_t TransferQueueFamilyIndex = UINT_MAX;
+	//uint32_t ComputeQueueFamilyIndex = UINT_MAX;
 
 	std::vector<VkCommandPool> CommandPools;
 	std::vector<VkCommandBuffer> CommandBuffers;
 
 	VkFence Fence = VK_NULL_HANDLE;
 	VkSemaphore PresentSemaphore = VK_NULL_HANDLE;
+	VkSemaphore RenderSemaphore = VK_NULL_HANDLE;
 
-	VkSurfaceKHR Surface = VK_NULL_HANDLE;
 	VkExtent2D SurfaceExtent2D;
 	VkFormat ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 	VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
