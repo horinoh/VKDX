@@ -983,15 +983,61 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer)
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
 		for (auto& i : SwapchainImages) {
-			//!< 「使用前にメモリを塗りつぶせ」と怒られるので、初期カラーで塗りつぶす
-			SetImageLayout(CommandBuffer, i, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, ImageSubresourceRange_Color); {
+			const VkImageMemoryBarrier ImageMemoryBarrier_PresentToTransfer = {
+				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, 
+				nullptr,                                
+				0, 
+				VK_ACCESS_TRANSFER_WRITE_BIT,         
+				VK_IMAGE_LAYOUT_UNDEFINED, //!<「現在のレイアウト」or「UNDEFINED」を指定すること、イメージコンテンツを保持したい場合は「UNDEFINED」はダメ         
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,    
+				PresentQueueFamilyIndex,
+				PresentQueueFamilyIndex, 
+				i,
+				ImageSubresourceRange_Color
+			};
+			const VkImageMemoryBarrier ImageMemoryBarrier_TransferToPresent = {
+				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,    
+				nullptr,
+				VK_ACCESS_TRANSFER_WRITE_BIT,
+				VK_ACCESS_MEMORY_READ_BIT,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				PresentQueueFamilyIndex, 
+				PresentQueueFamilyIndex,
+				i,
+				ImageSubresourceRange_Color
+			};
+			vkCmdPipelineBarrier(CommandBuffer, 
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 
+				0, 
+				0, nullptr,
+				0, nullptr, 
+				1, &ImageMemoryBarrier_PresentToTransfer); {
+
+				//!< 初期カラーで塗りつぶす
 				const VkClearColorValue Green = { 0.0f, 1.0f, 0.0f, 1.0f };
 				vkCmdClearColorImage(CommandBuffer, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Green, 1, &ImageSubresourceRange_Color);
-			} SetImageLayout(CommandBuffer, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, ImageSubresourceRange_Color);
+			
+			} vkCmdPipelineBarrier(CommandBuffer, 
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 
+				0,
+				0, nullptr, 
+				0, nullptr, 
+				1, &ImageMemoryBarrier_TransferToPresent);
 		}
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 
-	ExecuteCommandBuffer(CommandBuffer);
+	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
+	const VkSubmitInfo SubmitInfo = {
+		VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		nullptr,
+		0, nullptr, nullptr,
+		1,  &CommandBuffer,
+		0, nullptr
+	};
+	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, Fence));
+	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
+
 	WaitForFence();
 
 	for(auto i : SwapchainImages) {
@@ -1281,7 +1327,7 @@ void VK::CreateFramebuffer()
 #endif
 }
 
-void VK::CreateDeviceLocalBuffer(const VkCommandBuffer CommandBuffer, const VkBufferUsageFlagBits Usage, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source)
+void VK::CreateDeviceLocalBuffer(const VkCommandBuffer CommandBuffer, const VkBufferUsageFlags Usage, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source)
 {
 	VkBuffer StagingBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
@@ -1508,7 +1554,7 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
-		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+		VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
 		nullptr//&CommandBufferInheritanceInfo
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo)); {
@@ -1541,40 +1587,35 @@ void VK::Draw()
 
 	auto CommandBuffer = CommandBuffers[0];
 	PopulateCommandBuffer(CommandBuffer);
-	ExecuteCommandBuffer(CommandBuffer);
-	WaitForFence();
 
-	Present();
-}
-void VK::ExecuteCommandBuffer(const VkCommandBuffer CommandBuffer)
-{
 	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
-
-	const VkPipelineStageFlags PipelineStageFlags = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+	const VkPipelineStageFlags PipelineStageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT;
 	const VkSubmitInfo SubmitInfo = {
 		VK_STRUCTURE_TYPE_SUBMIT_INFO,
 		nullptr,
-		0, nullptr, //!< コマンドバッファ実行前にウエイトしなければならないセマフォ
-		&PipelineStageFlags,
+		1, &PresentSemaphore, &PipelineStageFlags,
 		1,  &CommandBuffer,
-		0, nullptr //!< コマンドバッファ実行完了時にシグナルされるセマフォ
+		1, &RenderSemaphore
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, Fence));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
+
+	WaitForFence();
+
+	Present();
 }
 void VK::Present()
 {
 	const VkPresentInfoKHR PresentInfo = {
 		VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 		nullptr,
-		1, &PresentSemaphore,
-		1, &Swapchain,
-		&SwapchainImageIndex,
+		1, &RenderSemaphore,
+		1, &Swapchain, &SwapchainImageIndex,
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkQueuePresentKHR(GraphicsQueue, &PresentInfo));
 
-	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphore, nullptr, &SwapchainImageIndex));
+	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphore, VK_NULL_HANDLE, &SwapchainImageIndex));
 
 #ifdef DEBUG_STDOUT
 	//std::cout << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;

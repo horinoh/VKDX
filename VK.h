@@ -139,7 +139,7 @@ protected:
 	
 	virtual void CreateFramebuffer();
 
-	virtual void CreateDeviceLocalBuffer(const VkCommandBuffer CommandBuffer, const VkBufferUsageFlagBits Usage, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
+	virtual void CreateDeviceLocalBuffer(const VkCommandBuffer CommandBuffer, const VkBufferUsageFlags Usage, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
 	virtual void CreateHostVisibleBuffer(const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
 	virtual void CreateVertexBuffer(const VkCommandBuffer CommandBuffer);
 	virtual void CreateIndexBuffer(const VkCommandBuffer CommandBuffer);
@@ -151,7 +151,6 @@ protected:
 	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer);
 
 	virtual void Draw();
-	virtual void ExecuteCommandBuffer(const VkCommandBuffer CommandBuffer);
 	virtual void Present();
 	virtual void WaitForFence();
 
