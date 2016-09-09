@@ -282,12 +282,12 @@ void VKExt::CreateRenderPass_Color()
 			0,
 			ColorFormat,
 			VK_SAMPLE_COUNT_1_BIT,
-			VK_ATTACHMENT_LOAD_OP_CLEAR,
-			VK_ATTACHMENT_STORE_OP_STORE,
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+			VK_ATTACHMENT_LOAD_OP_CLEAR,			//!< レンダーパスの開始時にクリアを行う
+			VK_ATTACHMENT_STORE_OP_STORE,			//!< レンダーパス終了時に保存する(表示するのに必要)
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE,		//!< (ステンシルは)カラーアタッチメントの場合は関係なし
 			VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,		//!< レンダーパス開始時のレイアウト (メモリバリアなしにサブパス間でレイアウトが変更される)
+			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR			//!< レンダーパス終了時のレイアウト
 		},
 	};
 
@@ -299,8 +299,7 @@ void VKExt::CreateRenderPass_Color()
 			0,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
 			0, nullptr,
-			static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(),
-			nullptr,
+			static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(), nullptr,
 			nullptr,
 			0, nullptr
 		}
@@ -346,8 +345,8 @@ void VKExt::CreateRenderPass_ColorDepth()
 			VK_ATTACHMENT_STORE_OP_STORE,
 			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 			VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 		},
 		{
 			0,
@@ -365,14 +364,15 @@ void VKExt::CreateRenderPass_ColorDepth()
 	const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
 		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }
 	};
-	const VkAttachmentReference DepthAttachmentReference = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+	const VkAttachmentReference DepthAttachmentReference = { 
+		1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL 
+	};
 	const std::vector<VkSubpassDescription> SubpassDescriptions = {
 		{
 			0,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
 			0, nullptr,
-			static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(),
-			nullptr,
+			static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(), nullptr,
 			&DepthAttachmentReference,
 			0, nullptr
 		}

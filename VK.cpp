@@ -995,30 +995,30 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer)
 				i,
 				ImageSubresourceRange_Color
 			};
-			const VkImageMemoryBarrier ImageMemoryBarrier_TransferToPresent = {
-				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,    
-				nullptr,
-				VK_ACCESS_TRANSFER_WRITE_BIT,
-				VK_ACCESS_MEMORY_READ_BIT,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-				PresentQueueFamilyIndex, 
-				PresentQueueFamilyIndex,
-				i,
-				ImageSubresourceRange_Color
-			};
 			vkCmdPipelineBarrier(CommandBuffer, 
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 
 				0, 
 				0, nullptr,
 				0, nullptr, 
-				1, &ImageMemoryBarrier_PresentToTransfer); {
-
+				1, &ImageMemoryBarrier_PresentToTransfer); 
+			{
 				//!< ‰ŠúƒJƒ‰[‚Å“h‚è‚Â‚Ô‚·
 				const VkClearColorValue Green = { 0.0f, 1.0f, 0.0f, 1.0f };
-				vkCmdClearColorImage(CommandBuffer, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Green, 1, &ImageSubresourceRange_Color);
-			
-			} vkCmdPipelineBarrier(CommandBuffer, 
+				vkCmdClearColorImage(CommandBuffer, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Green, 1, &ImageSubresourceRange_Color);			
+			} 
+			const VkImageMemoryBarrier ImageMemoryBarrier_TransferToPresent = {
+				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				nullptr,
+				VK_ACCESS_TRANSFER_WRITE_BIT,
+				VK_ACCESS_MEMORY_READ_BIT,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				PresentQueueFamilyIndex,
+				PresentQueueFamilyIndex,
+				i,
+				ImageSubresourceRange_Color
+			};
+			vkCmdPipelineBarrier(CommandBuffer, 
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 
 				0,
 				0, nullptr, 
@@ -1562,22 +1562,20 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 		auto Image = SwapchainImages[SwapchainImageIndex];
-		SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, ImageSubresourceRange_Color); {
-			const std::vector<VkClearValue> ClearValues = {
-				{ Colors::SkyBlue }, { 1.0f, 0 }
-			};
-			const VkRenderPassBeginInfo RenderPassBeginInfo = {
-				VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-				nullptr,
-				RenderPass,
-				Framebuffers[SwapchainImageIndex],
-				ScissorRects[0],
-				static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
-			};
-			vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
-				//Clear(CommandBuffer);
-			} vkCmdEndRenderPass(CommandBuffer);
-		} SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, ImageSubresourceRange_Color);
+		const std::vector<VkClearValue> ClearValues = {
+			{ Colors::SkyBlue }, { 1.0f, 0 }
+		};
+		const VkRenderPassBeginInfo RenderPassBeginInfo = {
+			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			nullptr,
+			RenderPass,
+			Framebuffers[SwapchainImageIndex],
+			ScissorRects[0],
+			static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
+		};
+		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
+			//Clear(CommandBuffer);
+		} vkCmdEndRenderPass(CommandBuffer);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }
 void VK::Draw()

@@ -273,33 +273,31 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 		auto Image = SwapchainImages[SwapchainImageIndex];
-		SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, ImageSubresourceRange_Color); {
-			const std::vector<VkClearValue> ClearValues = {
-				{ Colors::SkyBlue }, { 1.0f, 0 }
-			};
-			const VkRenderPassBeginInfo RenderPassBeginInfo = {
-				VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-				nullptr,
-				RenderPass,
-				Framebuffers[SwapchainImageIndex],
-				ScissorRects[0],
-				static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
-			};
-			vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
-				if (!DescriptorSets.empty()) {
-					vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout, 0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
-				}
+		const std::vector<VkClearValue> ClearValues = {
+			{ Colors::SkyBlue }, { 1.0f, 0 }
+		};
+		const VkRenderPassBeginInfo RenderPassBeginInfo = {
+			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			nullptr,
+			RenderPass,
+			Framebuffers[SwapchainImageIndex],
+			ScissorRects[0],
+			static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
+		};
+		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
+			if (!DescriptorSets.empty()) {
+				vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout, 0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
+			}
 
-				//!< トポロジは Pipeline - VkPipelineInputAssemblyStateCreateInfo で指定しているのでパイプラインをバインド
-				vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+			//!< トポロジは Pipeline - VkPipelineInputAssemblyStateCreateInfo で指定しているのでパイプラインをバインド
+			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
 
-				const VkDeviceSize Offsets[] = { 0 };
-				vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
-				vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			const VkDeviceSize Offsets[] = { 0 };
+			vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
+			vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-				vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
-			} vkCmdEndRenderPass(CommandBuffer);
-		} SetImageLayout(CommandBuffer, Image, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, ImageSubresourceRange_Color);
+			vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
+		} vkCmdEndRenderPass(CommandBuffer);
 		//DebugMarker::End(CommandBuffer);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }
