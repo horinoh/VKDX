@@ -230,17 +230,16 @@ VkFormat VK::GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice)
 	DEBUG_BREAK(); //!< DepthFormat not found
 	return VK_FORMAT_UNDEFINED;
 }
-uint32_t VK::GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, uint32_t TypeBits, VkFlags Properties)
+uint32_t VK::GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const uint32_t MemoryTypeBits, const VkFlags Properties)
 {
 	for (auto i = 0; i < 32; ++i) {
-		if (TypeBits & 1) {
+		if (MemoryTypeBits & (1 << i)) {
 			if ((PhysicalDeviceMemoryProperties.memoryTypes[i].propertyFlags & Properties) == Properties) {
 				return i;
 			}
 		}
-		TypeBits >>= 1;
 	}
-	DEBUG_BREAK(); //!< MemoryType not found
+	DEBUG_BREAK();
 	return 0;
 }
 
@@ -335,12 +334,6 @@ void VK::SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLay
 		VK_QUEUE_FAMILY_IGNORED,
 		Image,
 		ImageSubresourceRange
-	};
-	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-		nullptr
 	};
 	vkCmdPipelineBarrier(CommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &ImageMemoryBarrier);
 }
@@ -767,7 +760,7 @@ void VK::CreateFence()
 	const VkFenceCreateInfo FenceCreateInfo = {
 		VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
 		nullptr,
-		0
+		0//VK_FENCE_CREATE_SIGNALED_BIT
 	};
 	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, nullptr, &Fence));
 
@@ -806,28 +799,25 @@ VkSurfaceFormatKHR VK::SelectSurfaceFormat()
 	assert(SurfaceFormatCount);
 	std::vector<VkSurfaceFormatKHR> SurfaceFormats(SurfaceFormatCount);
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, Surface, &SurfaceFormatCount, SurfaceFormats.data()));
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "\t" << Lightblue << "Format" << White << std::endl;
-	auto SelectedFormat = VK_FORMAT_UNDEFINED;
-	for (auto& i : SurfaceFormats) {
-		if (VK_FORMAT_UNDEFINED != i.format) {
-			if (VK_FORMAT_UNDEFINED == SelectedFormat) {
-				SelectedFormat = i.format;
-				std::cout << Yellow;
-			}
-		}
-		std::cout << "\t" << "\t" << "\t" << GetFormatString(i.format) << std::endl;
-		std::cout << White;
-	}
-	std::cout << std::endl;
-#endif
 
 	//!< ここでは、最初の非 VK_FORMAT_UNDEFINED を選択する
-	for (auto& i : SurfaceFormats) {
-		if (VK_FORMAT_UNDEFINED != i.format) {
-			return i;
+	for (uint32_t i = 0; i < SurfaceFormats.size(); ++i) {
+		if (VK_FORMAT_UNDEFINED != SurfaceFormats[i].format) {
+#ifdef DEBUG_STDOUT
+			[&]() {
+				std::cout << "\t" << "\t" << Lightblue << "Format" << White << std::endl;
+				for (uint32_t j = 0; j < SurfaceFormats.size();++j) {
+					if (i == j) { std::cout << Yellow; }
+					std::cout << "\t" << "\t" << "\t" << GetFormatString(SurfaceFormats[j].format) << std::endl;
+					std::cout << White;
+				}
+				std::cout << std::endl;
+			}();
+#endif
+			return SurfaceFormats[i];
 		}
 	}
+	
 	return VkSurfaceFormatKHR({ VK_FORMAT_B8G8R8A8_UNORM , SurfaceFormats[0].colorSpace });
 }
 VkPresentModeKHR VK::SelectSurfacePresentMode()
@@ -838,14 +828,14 @@ VkPresentModeKHR VK::SelectSurfacePresentMode()
 	std::vector<VkPresentModeKHR> PresentModes(PresentModeCount);
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, Surface, &PresentModeCount, PresentModes.data()));
 
+	//!< 可能なら VK_PRESENT_MODE_MAILBOX_KHR を選択、次いで VK_PRESENT_MODE_FIFO_KHR を選択
 	/**
-	可能なら VK_PRESENT_MODE_MAILBOX_KHR を選択
 	VK_PRESENT_MODE_IMMEDIATE_KHR
-	VK_PRESENT_MODE_MAILBOX_KHR ... Vブランクで表示される、テアリングは起こらない、キューは1つで常に最新で上書きされる (ゲーム)
-	VK_PRESENT_MODE_FIFO_KHR ... Vブランクで表示される、テアリングは起こらない (ムービー)
+	VK_PRESENT_MODE_MAILBOX_KHR ... Vブランクで表示される、テアリングは起こらない、キューは1つで常に最新で上書きされる (ゲーム等)
+	VK_PRESENT_MODE_FIFO_KHR ... Vブランクで表示される、テアリングは起こらない (ムービー等)
 	VK_PRESENT_MODE_FIFO_RELAXED_KHR ... 1Vブランク以上経ったイメージは次のVブランクを待たずにリリースされ得る、テアリングが起こる
 	*/
-	const VkPresentModeKHR PresentMode = [&]() {
+	const VkPresentModeKHR SelectedPresentMode = [&]() {
 		for (auto i : PresentModes) {
 			if (VK_PRESENT_MODE_MAILBOX_KHR == i) {
 				return i;
@@ -863,11 +853,8 @@ VkPresentModeKHR VK::SelectSurfacePresentMode()
 	std::cout << "\t" << Lightblue << "Present Mode" << White << std::endl;
 #define VK_PRESENT_MODE_ENTRY(entry) case VK_PRESENT_MODE_##entry##_KHR: std::cout << "\t" << "\t" << #entry << std::endl; break
 	for (auto i : PresentModes) {
-		if (PresentMode == i) {
-			std::cout << Yellow;
-		}
-		switch (i)
-		{
+		if (SelectedPresentMode == i) { std::cout << Yellow; }
+		switch (i) {
 		default: assert(0 && "Unknown VkPresentMode"); break;
 		VK_PRESENT_MODE_ENTRY(IMMEDIATE);	
 		VK_PRESENT_MODE_ENTRY(MAILBOX);		
@@ -879,7 +866,7 @@ VkPresentModeKHR VK::SelectSurfacePresentMode()
 	}
 #endif
 
-	return PresentMode;
+	return SelectedPresentMode;
 }
 void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 {
@@ -887,8 +874,11 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 	VkSurfaceCapabilitiesKHR SurfaceCapabilities;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PhysicalDevice, Surface, &SurfaceCapabilities));
 
-	//!< イメージ枚数 (ここでは1枚多く取る ... MAILBOX の場合3枚あった方が良い)
+	//!< イメージ枚数 (ここでは1枚多く取る ... MAILBOX の場合3枚あった方が良いので)
 	const auto MinImageCount = (std::min)(SurfaceCapabilities.minImageCount + 1, SurfaceCapabilities.maxImageCount);
+#ifdef DEBUG_STDOUT
+	std::cout << "\t" << "\t" << Lightblue << "ImageCount = " << White << MinImageCount << std::endl;
+#endif
 
 	//!< サーフェスのサイズが未定義の場合は明示的に指定する。(サーフェスのサイズが定義されている場合はそれに従わないとならない)
 	if (-1 == SurfaceCapabilities.currentExtent.width) {
@@ -905,10 +895,10 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 	std::cout << "\t" << "\t" << "\t" << SurfaceExtent2D.width << " x " << SurfaceExtent2D.height << std::endl;
 #endif
 
-	//!< イメージ使用法 (可能ならVK_IMAGE_USAGE_TRANSFER_DST_BIT をセットする。イメージクリアできるように)
+	//!< イメージ使用法 (イメージクリアできるように可能ならVK_IMAGE_USAGE_TRANSFER_DST_BIT をセット)
 	const VkImageUsageFlags ImageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | (VK_IMAGE_USAGE_TRANSFER_DST_BIT & SurfaceCapabilities.supportedUsageFlags);
 
-	//!< サーフェスを回転、反転させるかどうか。(可能なら VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR)
+	//!< サーフェスを回転、反転させるかどうか。(可能なら VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR を選択)
 	const auto PreTransform = (SurfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : SurfaceCapabilities.currentTransform;
 
 	//!< サーフェスのフォーマットを選択
@@ -948,22 +938,19 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 		}
 		vkDestroySwapchainKHR(Device, OldSwapchain, nullptr);
 	}
-
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
-#endif
 }
 void VK::CreateSwapchain(const VkCommandBuffer CommandBuffer)
 {
 	CreateSwapchainOfClientRect();
-	CreateSwapchainImageView(CommandBuffer);
+	GetSwapchainImage(CommandBuffer);
+	CreateSwapchainImageView();
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateSwapchain" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
-void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer)
+void VK::GetSwapchainImage(const VkCommandBuffer CommandBuffer)
 {
 	//!< スワップチェインイメージの取得
 	uint32_t SwapchainImageCount;
@@ -975,37 +962,34 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer)
 	std::cout << "\t" << "SwapchainImageCount = " << SwapchainImageCount << std::endl;
 #endif
 
-	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-		nullptr
-	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
+	//!< イメージレイアウトの変更
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo_OneTime)); {
 		for (auto& i : SwapchainImages) {
+#if 0
+			//!< レイアウト変更と塗りつぶしを行う
 			const VkImageMemoryBarrier ImageMemoryBarrier_PresentToTransfer = {
-				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, 
-				nullptr,                                
-				0, 
-				VK_ACCESS_TRANSFER_WRITE_BIT,         
-				VK_IMAGE_LAYOUT_UNDEFINED, //!<「現在のレイアウト」or「UNDEFINED」を指定すること、イメージコンテンツを保持したい場合は「UNDEFINED」はダメ         
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,    
+				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				nullptr,
+				0,
+				VK_ACCESS_TRANSFER_WRITE_BIT,
+				VK_IMAGE_LAYOUT_UNDEFINED, //!<「現在のレイアウト」または「UNDEFINED」を指定すること、イメージコンテンツを保持したい場合は「UNDEFINED」はダメ         
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				PresentQueueFamilyIndex,
-				PresentQueueFamilyIndex, 
+				PresentQueueFamilyIndex,
 				i,
 				ImageSubresourceRange_Color
 			};
-			vkCmdPipelineBarrier(CommandBuffer, 
-				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 
-				0, 
+			vkCmdPipelineBarrier(CommandBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				0,
 				0, nullptr,
-				0, nullptr, 
-				1, &ImageMemoryBarrier_PresentToTransfer); 
+				0, nullptr,
+				1, &ImageMemoryBarrier_PresentToTransfer);
 			{
 				//!< 初期カラーで塗りつぶす
 				const VkClearColorValue Green = { 0.0f, 1.0f, 0.0f, 1.0f };
-				vkCmdClearColorImage(CommandBuffer, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Green, 1, &ImageSubresourceRange_Color);			
-			} 
+				vkCmdClearColorImage(CommandBuffer, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Green, 1, &ImageSubresourceRange_Color);
+			}
 			const VkImageMemoryBarrier ImageMemoryBarrier_TransferToPresent = {
 				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 				nullptr,
@@ -1018,12 +1002,33 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer)
 				i,
 				ImageSubresourceRange_Color
 			};
-			vkCmdPipelineBarrier(CommandBuffer, 
-				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 
+			vkCmdPipelineBarrier(CommandBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
 				0,
-				0, nullptr, 
-				0, nullptr, 
+				0, nullptr,
+				0, nullptr,
 				1, &ImageMemoryBarrier_TransferToPresent);
+#else
+			//!< レイアウト変更のみ行う
+			const VkImageMemoryBarrier ImageMemoryBarrier_ToPresent = {
+				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				nullptr,
+				0,
+				VK_ACCESS_TRANSFER_WRITE_BIT,
+				VK_IMAGE_LAYOUT_UNDEFINED, //!<「現在のレイアウト」または「UNDEFINED」を指定すること、イメージコンテンツを保持したい場合は「UNDEFINED」はダメ         
+				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				PresentQueueFamilyIndex,
+				PresentQueueFamilyIndex,
+				i,
+				ImageSubresourceRange_Color
+			};
+			vkCmdPipelineBarrier(CommandBuffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				0,
+				0, nullptr,
+				0, nullptr,
+				1, &ImageMemoryBarrier_ToPresent);
+#endif
 		}
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 
@@ -1035,11 +1040,11 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer)
 		1,  &CommandBuffer,
 		0, nullptr
 	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, Fence));
-	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
-
-	WaitForFence();
-
+	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
+	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue)); //!< フェンスでも良い
+}
+void VK::CreateSwapchainImageView()
+{
 	for(auto i : SwapchainImages) {
 		const VkImageViewCreateInfo ImageViewCreateInfo = {
 			VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -1055,13 +1060,16 @@ void VK::CreateSwapchainImageView(VkCommandBuffer CommandBuffer)
 		VkImageView ImageView;
 		VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, &ImageView));
 		SwapchainImageViews.push_back(ImageView);
-
-#ifdef DEBUG_STDOUT
-		std::cout << "\t" << "SwapchainImageView" << std::endl;
-#endif
 	}
 
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphore, nullptr, &SwapchainImageIndex));
+#ifdef DEBUG_STDOUT
+	std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
+#endif
+
+#ifdef DEBUG_STDOUT
+	std::cout << "\t" << "SwapchainImageView" << std::endl;
+#endif
 }
 
 void VK::CreateDepthStencilImage()
@@ -1397,13 +1405,7 @@ void VK::CreateDeviceLocalBuffer(const VkCommandBuffer CommandBuffer, const VkBu
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DeviceMemory, 0));
 
 		//!< ステージングバッファ から デバイスローカルバッファ　へコピーするコマンドを発行
-		const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			nullptr,
-			VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-			nullptr
-		};
-		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
+		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo_OneTime)); {
 			const VkBufferCopy BufferCopy = {
 				0,
 				0,
@@ -1551,13 +1553,13 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 	//	0,
 	//	0
 	//};
-	const VkCommandBufferBeginInfo BeginInfo = {
+	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
 		VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
 		nullptr//&CommandBufferInheritanceInfo
 	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo)); {
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
 		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
@@ -1614,10 +1616,8 @@ void VK::Present()
 	VERIFY_SUCCEEDED(vkQueuePresentKHR(GraphicsQueue, &PresentInfo));
 
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphore, VK_NULL_HANDLE, &SwapchainImageIndex));
-
 #ifdef DEBUG_STDOUT
-	//std::cout << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
-	//std::cout << SwapchainImageIndex;
+	//std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
 #endif
 }
 void VK::WaitForFence()

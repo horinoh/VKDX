@@ -76,9 +76,9 @@ protected:
 		_aligned_free(pMemory); 
 	}
 	static VkFormat GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice);
-	static uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, uint32_t TypeBits, VkFlags Properties);
+	static uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const uint32_t MemoryTypeBits, const VkFlags Properties);
 	virtual FORCEINLINE VkFormat GetSupportedDepthFormat() const { return GetSupportedDepthFormat(PhysicalDevice); }
-	virtual FORCEINLINE uint32_t GetMemoryType(uint32_t TypeBits, VkFlags Properties) const { return GetMemoryType(PhysicalDeviceMemoryProperties, TypeBits, Properties); }
+	virtual FORCEINLINE uint32_t GetMemoryType(const uint32_t MemoryTypeBits, const VkFlags Properties) const { return GetMemoryType(PhysicalDeviceMemoryProperties, MemoryTypeBits, Properties); }
 	static VkAccessFlags GetSrcAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
 	static VkAccessFlags GetDstAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
 	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const;
@@ -109,7 +109,8 @@ protected:
 	virtual void CreateSwapchainOfClientRect() {
 		CreateSwapchain(static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
 	}
-	virtual void CreateSwapchainImageView(VkCommandBuffer CommandBuffer);
+	virtual void GetSwapchainImage(const VkCommandBuffer CommandBuffer);
+	virtual void CreateSwapchainImageView();
 	virtual void CreateSwapchain(const VkCommandBuffer CommandBuffer);
 
 	virtual void CreateDepthStencilImage();
@@ -249,6 +250,12 @@ protected:
 		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
 		0, 1,
 		0, 1
+	};
+	const VkCommandBufferBeginInfo CommandBufferBeginInfo_OneTime = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		nullptr,
+		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+		nullptr
 	};
 };
 
