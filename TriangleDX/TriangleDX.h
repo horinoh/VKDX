@@ -24,7 +24,7 @@ protected:
 	virtual void CreateConstantBuffer() override { Super::CreateConstantBuffer<DirectX::XMFLOAT4>(DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)); }
 #endif
 
-	virtual void PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList) override;
+	virtual void PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12CommandAllocator* CommandAllocator) override;
 
 private:
 	using Vertex = struct Vertex { DirectX::XMFLOAT3 Positon; DirectX::XMFLOAT4 Color; };

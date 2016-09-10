@@ -259,31 +259,32 @@ void ParametricSurfaceDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAlloc
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void ParametricSurfaceDX::PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList)
+void ParametricSurfaceDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12CommandAllocator* CommandAllocator)
 {
-	Super::PopulateCommandList(GraphicsCommandList);
-	
-	{
-		auto RTDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-		const auto RTIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-		RTDescriptorHandle.ptr += CurrentBackBufferIndex * RTIncrementSize;
-		const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { RTDescriptorHandle };
+	//#TODO
+	//Super::PopulateCommandList(CommandList);
+	//
+	//{
+	//	auto RTDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	//	const auto RTIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	//	RTDescriptorHandle.ptr += CurrentBackBufferIndex * RTIncrementSize;
+	//	const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { RTDescriptorHandle };
 
-		//auto DSDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-		////const auto DSIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-		////DSDescriptorHandle.ptr += 0 * DSIncrementSize;
+	//	//auto DSDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	//	////const auto DSIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	//	////DSDescriptorHandle.ptr += 0 * DSIncrementSize;
 
-		GraphicsCommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
-	}
+	//	CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
+	//}
 
-	GraphicsCommandList->SetGraphicsRootSignature(RootSignature.Get());
+	//CommandList->SetGraphicsRootSignature(RootSignature.Get());
 
-	GraphicsCommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+	//CommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
-	GraphicsCommandList->IASetVertexBuffers(0, static_cast<UINT>(VertexBufferViews.size()), VertexBufferViews.data());
-	GraphicsCommandList->IASetIndexBuffer(&IndexBufferView);
+	//CommandList->IASetVertexBuffers(0, static_cast<UINT>(VertexBufferViews.size()), VertexBufferViews.data());
+	//CommandList->IASetIndexBuffer(&IndexBufferView);
 
-	GraphicsCommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
+	//CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
 }
 #pragma endregion
 

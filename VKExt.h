@@ -34,8 +34,4 @@ public:
 		std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 	}
-
-	virtual void Clear(const VkCommandBuffer CommandBuffer) override { Clear_Color(CommandBuffer); }
-	virtual void Clear_Color(const VkCommandBuffer CommandBuffer);
-	virtual void Clear_Depth(const VkCommandBuffer CommandBuffer);
 };

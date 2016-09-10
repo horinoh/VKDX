@@ -259,9 +259,10 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList)
+void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12CommandAllocator* CommandAllocator)
 {
-	Super::PopulateCommandList(GraphicsCommandList);
+#if 0
+	Super::PopulateCommandList(CommandList);
 
 	{
 		auto RTDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
@@ -273,27 +274,96 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandL
 		////const auto DSIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 		////DSDescriptorHandle.ptr += 0 * DSIncrementSize;
 		
-		GraphicsCommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
+		CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
 	}
 
-	GraphicsCommandList->SetGraphicsRootSignature(RootSignature.Get());
+	CommandList->SetGraphicsRootSignature(RootSignature.Get());
 
 #if 0
 	std::vector<ID3D12DescriptorHeap*> DescriptorHeaps = { ConstantBufferDescriptorHeap.Get() };
-	GraphicsCommandList->SetDescriptorHeaps(static_cast<UINT>(DescriptorHeaps.size()), DescriptorHeaps.data());
+	CommandList->SetDescriptorHeaps(static_cast<UINT>(DescriptorHeaps.size()), DescriptorHeaps.data());
 
 	auto CVDescriptorHandle(ConstantBufferDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 	const auto CVIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	CVDescriptorHandle.ptr += 0 * CVIncrementSize;
-	GraphicsCommandList->SetGraphicsRootDescriptorTable(0, CVDescriptorHandle);
+	CommandList->SetGraphicsRootDescriptorTable(0, CVDescriptorHandle);
 #endif
 
-	GraphicsCommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	CommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
-	GraphicsCommandList->IASetVertexBuffers(0, static_cast<UINT>(VertexBufferViews.size()), VertexBufferViews.data());
-	GraphicsCommandList->IASetIndexBuffer(&IndexBufferView);
+	CommandList->IASetVertexBuffers(0, static_cast<UINT>(VertexBufferViews.size()), VertexBufferViews.data());
+	CommandList->IASetIndexBuffer(&IndexBufferView);
 
-	GraphicsCommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
+	CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
+
+#else
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, PipelineState.Get()));
+	{
+		//!< ビューポート、シザー
+		CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+
+		//!< クリア
+		{
+			auto CPUDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+			const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+			CPUDescriptorHandle.ptr += CurrentBackBufferIndex * IncrementSize;
+			CommandList->ClearRenderTargetView(CPUDescriptorHandle, DirectX::Colors::SkyBlue, 0, nullptr);
+
+			//if (nullptr != DepthStencilDescriptorHeap) {
+			//	auto CPUDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+			//	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+			//	CPUDescriptorHandle.ptr += 0 * IncrementSize;
+			//	CommandList->ClearDepthStencilView(CPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+			//}
+		}
+
+		auto Resource = SwapChainResources[CurrentBackBufferIndex].Get();
+		//!< バリア
+		BarrierTransition(CommandList, Resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		{
+			//!< レンダーターゲット
+			{
+				auto RTDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+				const auto RTIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+				RTDescriptorHandle.ptr += CurrentBackBufferIndex * RTIncrementSize;
+				const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { RTDescriptorHandle };
+
+				//auto DSDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+				////const auto DSIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+				////DSDescriptorHandle.ptr += 0 * DSIncrementSize;
+
+				CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
+			}
+			//!< ルートシグニチャ
+			CommandList->SetGraphicsRootSignature(RootSignature.Get());
+#if 0
+			//!< コンスタントバッファ
+			{
+				std::vector<ID3D12DescriptorHeap*> DescriptorHeaps = { ConstantBufferDescriptorHeap.Get() };
+				CommandList->SetDescriptorHeaps(static_cast<UINT>(DescriptorHeaps.size()), DescriptorHeaps.data());
+
+				auto CVDescriptorHandle(ConstantBufferDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+				const auto CVIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				CVDescriptorHandle.ptr += 0 * CVIncrementSize;
+				CommandList->SetGraphicsRootDescriptorTable(0, CVDescriptorHandle);
+			}
+#endif
+
+			//!< トポロジ
+			CommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+			//!< バーテックスバッファ、インデックスバッファ
+			CommandList->IASetVertexBuffers(0, static_cast<UINT>(VertexBufferViews.size()), VertexBufferViews.data());
+			CommandList->IASetIndexBuffer(&IndexBufferView);
+
+			//!< 描画
+			CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
+		}
+		BarrierTransition(CommandList, Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+	}
+	VERIFY_SUCCEEDED(CommandList->Close());
+#endif
 }
 
 #pragma endregion

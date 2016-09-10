@@ -110,6 +110,7 @@ protected:
 		CreateSwapchain(static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
 	}
 	virtual void GetSwapchainImage(const VkCommandBuffer CommandBuffer);
+	virtual void GetSwapchainImage(const VkCommandBuffer CommandBuffer, const VkClearColorValue& ClearColorValue);
 	virtual void CreateSwapchainImageView();
 	virtual void CreateSwapchain(const VkCommandBuffer CommandBuffer);
 
@@ -251,6 +252,7 @@ protected:
 		0, 1,
 		0, 1
 	};
+	const VkClearDepthStencilValue ClearDepthStencilValue = { 1.0f, 0 };
 	const VkCommandBufferBeginInfo CommandBufferBeginInfo_OneTime = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,

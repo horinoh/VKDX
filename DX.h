@@ -126,13 +126,11 @@ protected:
 	virtual void CreateConstantBufferDescriptorHeap(const UINT Size);
 	virtual void CreateUnorderedAccessTexture();
 
-	virtual void Clear(ID3D12GraphicsCommandList* GraphicsCommandList) {}
-	virtual void PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList);
+	virtual void PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12CommandAllocator* CommandAllocator);
 
 	virtual void BarrierTransition(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After);
 
 	virtual void Draw();
-	virtual void ExecuteCommandList(ID3D12GraphicsCommandList* GraphicsCommandList);
 	virtual void Present();
 	virtual void WaitForFence();
 

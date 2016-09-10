@@ -282,7 +282,7 @@ void VKExt::CreateRenderPass_Color()
 			0,
 			ColorFormat,
 			VK_SAMPLE_COUNT_1_BIT,
-			VK_ATTACHMENT_LOAD_OP_CLEAR,			//!< レンダーパスの開始時にクリアを行う
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE,		//!< VK_ATTACHMENT_LOAD_OP_CLEAR にするとレンダーパスの開始時にクリアを行う (VkRenderPassBeginInfo.pClearValuesのセットが必須になる)
 			VK_ATTACHMENT_STORE_OP_STORE,			//!< レンダーパス終了時に保存する(表示するのに必要)
 			VK_ATTACHMENT_LOAD_OP_DONT_CARE,		//!< (ステンシルは)カラーアタッチメントの場合は関係なし
 			VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -341,7 +341,7 @@ void VKExt::CreateRenderPass_ColorDepth()
 			0,
 			ColorFormat,
 			VK_SAMPLE_COUNT_1_BIT,
-			VK_ATTACHMENT_LOAD_OP_CLEAR,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 			VK_ATTACHMENT_STORE_OP_STORE,
 			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 			VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -352,7 +352,7 @@ void VKExt::CreateRenderPass_ColorDepth()
 			0,
 			DepthFormat,
 			VK_SAMPLE_COUNT_1_BIT,
-			VK_ATTACHMENT_LOAD_OP_CLEAR,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 			VK_ATTACHMENT_STORE_OP_STORE,
 			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
 			VK_ATTACHMENT_STORE_OP_DONT_CARE,
@@ -445,39 +445,5 @@ void VKExt::CreateFramebuffer_ColorDepth()
 			1
 		};
 		VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, nullptr, &Framebuffers[i]));
-	}
-}
-
-void VKExt::Clear_Color(const VkCommandBuffer CommandBuffer)
-{
-	const std::vector<VkImageSubresourceRange> ImageSubresourceRanges_Color = {
-		{
-			VK_IMAGE_ASPECT_COLOR_BIT,
-			0, 1,
-			0, 1
-		}
-	};
-	vkCmdClearColorImage(CommandBuffer,
-		SwapchainImages[SwapchainImageIndex],
-		VK_IMAGE_LAYOUT_GENERAL,//VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-		&Colors::SkyBlue,
-		static_cast<uint32_t>(ImageSubresourceRanges_Color.size()), ImageSubresourceRanges_Color.data());
-}
-void VKExt::Clear_Depth(const VkCommandBuffer CommandBuffer)
-{
-	if (VK_NULL_HANDLE != DepthStencilImage) {
-		const VkClearDepthStencilValue ClearDepthStencil = { 1.0f, 0 };
-		const std::vector<VkImageSubresourceRange> ImageSubresourceRanges_DepthStencil = {
-			{
-				VK_IMAGE_ASPECT_DEPTH_BIT,
-				0, 1,
-				0, 1
-			}
-		};
-		vkCmdClearDepthStencilImage(CommandBuffer,
-			DepthStencilImage,
-			VK_IMAGE_LAYOUT_GENERAL,//VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-			&ClearDepthStencil,
-			static_cast<uint32_t>(ImageSubresourceRanges_DepthStencil.size()), ImageSubresourceRanges_DepthStencil.data());
 	}
 }

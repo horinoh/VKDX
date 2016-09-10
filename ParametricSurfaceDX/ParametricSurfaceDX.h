@@ -18,7 +18,7 @@ protected:
 	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) override;
 	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) override;	virtual void CreateGraphicsPipelineState() override { CreateGraphicsPipelineState_VsPsDsHsGs(); }
 
-	virtual void PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList) override;
+	virtual void PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12CommandAllocator* CommandAllocator) override;
 
 private:
 };

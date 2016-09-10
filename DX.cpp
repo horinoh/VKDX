@@ -75,7 +75,8 @@ void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 
-	ExecuteCommandList(CommandList);
+	std::vector<ID3D12CommandList*> CommandLists = { CommandList };
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
 	
 	WaitForFence();
 
@@ -773,7 +774,10 @@ void DX::CreateDefaultBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12Gra
 			CommandList->CopyBufferRegion(*Resource, 0, UploadResource.Get(), 0, Size);
 		} BarrierTransition(CommandList, *Resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
 	} VERIFY_SUCCEEDED(CommandList->Close());
-	ExecuteCommandList(CommandList);
+
+	std::vector<ID3D12CommandList*> CommandLists = { CommandList };
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
+
 	//WaitForFence();
 }
 
@@ -947,9 +951,32 @@ void DX::CreateUnorderedAccessTexture()
 #endif
 }
 
-void DX::PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList)
+void DX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12CommandAllocator* CommandAllocator)
 {
-	Clear(GraphicsCommandList);
+	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能 (コマンドキューはコマンドリストではなく、コマンドアロケータを参照している)
+	//!< CommandList 作成時に PipelineState を指定していなくても、ここで指定すれば OK
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, PipelineState.Get()));
+	{
+		//!< ビューポート、シザー
+		CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+
+		//!< クリア
+		{
+			auto CPUDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+			const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+			CPUDescriptorHandle.ptr += CurrentBackBufferIndex * IncrementSize;
+			CommandList->ClearRenderTargetView(CPUDescriptorHandle, DirectX::Colors::SkyBlue, 0, nullptr);
+		}
+
+		auto Resource = SwapChainResources[CurrentBackBufferIndex].Get();
+		//!< バリア
+		BarrierTransition(CommandList, Resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		{
+		}
+		BarrierTransition(CommandList, Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+	}
+	VERIFY_SUCCEEDED(CommandList->Close());
 }
 
 void DX::BarrierTransition(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After)
@@ -972,40 +999,19 @@ void DX::BarrierTransition(ID3D12GraphicsCommandList* CommandList, ID3D12Resourc
 
 void DX::Draw()
 {
-	if (CommandAllocators.empty() || GraphicsCommandLists.empty()) { return; }
-
 	const auto CommandAllocator = CommandAllocators[0].Get();
-	const auto CommandList = GraphicsCommandLists[0].Get();
-
 	//!< GPU が参照している間は CommandAllocator->Reset() できない
 	VERIFY_SUCCEEDED(CommandAllocator->Reset());
-	
-	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能 (コマンドキューはコマンドリストではなく、コマンドアロケータを参照している)
-	//!< CommandList 作成時に PipelineState を指定していなくても、ここで指定すれば OK
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, PipelineState.Get()));
-	{
-		CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
-		auto Resource = SwapChainResources[CurrentBackBufferIndex].Get();
-		BarrierTransition(CommandList, Resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		{
-			PopulateCommandList(CommandList);
-		}
-		BarrierTransition(CommandList, Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-	}
-	VERIFY_SUCCEEDED(CommandList->Close());
+	const auto CommandList = GraphicsCommandLists[0].Get();
+	PopulateCommandList(CommandList, CommandAllocator);
 
-	ExecuteCommandList(CommandList);
+	std::vector<ID3D12CommandList*> CommandLists = { CommandList };
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
 
 	WaitForFence();
 
 	Present();
-}
-void DX::ExecuteCommandList(ID3D12GraphicsCommandList* GraphicsCommandList)
-{
-	std::vector<ID3D12CommandList*> CommandLists = { GraphicsCommandList };
-	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
 }
 void DX::Present()
 {

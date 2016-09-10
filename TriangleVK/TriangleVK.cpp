@@ -269,33 +269,48 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo)); {
 		//DebugMarker::Begin(CommandBuffer, "HOGE", glm::vec4(0,1,0,1));
+
+		//!< ビューポート、シザー
 		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 		auto Image = SwapchainImages[SwapchainImageIndex];
-		const std::vector<VkClearValue> ClearValues = {
-			{ Colors::SkyBlue }, { 1.0f, 0 }
-		};
+
+		//!< クリア
+		vkCmdClearColorImage(CommandBuffer, Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Colors::SkyBlue, 1, &ImageSubresourceRange_Color);
+		//if (VK_NULL_HANDLE != DepthStencilImage) {
+		//	vkCmdClearDepthStencilImage(CommandBuffer, DepthStencilImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearDepthStencil, 1, &ImageSubresourceRange_DepthStencil);
+		//}
+
+		//!< レンダーパスでクリアする場合
+		//std::vector<VkClearValue> ClearValues(2);
+		//ClearValues[0].color = Colors::SkyBlue;
+		//ClearValues[1].depthStencil = ClearDepthStencilValue;
+		//!< バリア、レンダーターゲットの設定は RenderPass
 		const VkRenderPassBeginInfo RenderPassBeginInfo = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RenderPass,
 			Framebuffers[SwapchainImageIndex],
 			ScissorRects[0],
-			static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
+			0, nullptr //!< レンダーパスでクリアする場合は必須 static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
 		};
 		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
+#if 0
+			//!< ユニフォームバッファ
 			if (!DescriptorSets.empty()) {
 				vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout, 0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
 			}
-
+#endif
 			//!< トポロジは Pipeline - VkPipelineInputAssemblyStateCreateInfo で指定しているのでパイプラインをバインド
 			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
 
+			//!< バーテックスバッファ、インデックスバッファ
 			const VkDeviceSize Offsets[] = { 0 };
 			vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
 			vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
+			//!< 描画
 			vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
 		} vkCmdEndRenderPass(CommandBuffer);
 		//DebugMarker::End(CommandBuffer);

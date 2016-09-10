@@ -24,8 +24,4 @@ public:
 		std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 	}
-
-	virtual void Clear(ID3D12GraphicsCommandList* GraphicsCommandList) override { Clear_Color(GraphicsCommandList); }
-	virtual void Clear_Color(ID3D12GraphicsCommandList* GraphicsCommandList);
-	virtual void Clear_Depth(ID3D12GraphicsCommandList* GraphicsCommandList);
 };
