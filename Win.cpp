@@ -31,8 +31,10 @@ Win::~Win()
 #endif
 }
 
-void Win::OnCreate(HWND hWnd, HINSTANCE hInstance)
+void Win::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 {
+	SetTitleW(Title);
+
 	GetClientRect(hWnd, &Rect);
 	SetTimer(hWnd, NULL, 1000 / 60, nullptr);
 }

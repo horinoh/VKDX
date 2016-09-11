@@ -74,19 +74,19 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="VS.hlsl">
+    <FxCompile Include="ParametricSurfaceDX.hs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="HS.hlsl">
+    <FxCompile Include="ParametricSurfaceDX.ps.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="DS.hlsl">
+    <FxCompile Include="ParametricSurfaceDX.vs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="GS.hlsl">
+    <FxCompile Include="ParametricSurfaceDX.ds.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="PS.hlsl">
+    <FxCompile Include="ParametricSurfaceDX.gs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
   </ItemGroup>

@@ -153,7 +153,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		if (nullptr != Inst) {
 			try {
-				Inst->OnCreate(hWnd, hInst);
+				Inst->OnCreate(hWnd, hInst, szTitle);
 			}
 			catch (std::exception& e) {
 				std::cerr << e.what() << std::endl;

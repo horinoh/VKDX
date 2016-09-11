@@ -75,8 +75,9 @@ void DXExt::CreateGraphicsPipelineState_VsPs()
 	assert(nullptr != RootSignature);
 
 	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs(2);
-	D3DReadFileToBlob(SHADER_PATH L"VS.cso", ShaderBlobs[0].GetAddressOf());
-	D3DReadFileToBlob(SHADER_PATH L"PS.cso", ShaderBlobs[1].GetAddressOf());
+	const auto ShaderPath = GetShaderPath();
+	D3DReadFileToBlob((ShaderPath + L".vs.cso").data(), ShaderBlobs[0].GetAddressOf());
+	D3DReadFileToBlob((ShaderPath + L".ps.cso").data(), ShaderBlobs[1].GetAddressOf());
 	const D3D12_SHADER_BYTECODE ShaderBytecodesVS = { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() };
 	const D3D12_SHADER_BYTECODE ShaderBytecodesPS = { ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() };
 	const D3D12_SHADER_BYTECODE DefaultShaderBytecode = { nullptr, 0 };
@@ -161,11 +162,12 @@ void DXExt::CreateGraphicsPipelineState_VsPsDsHsGs()
 	assert(nullptr != RootSignature);
 	
 	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs(5);
-	D3DReadFileToBlob(SHADER_PATH L"VS.cso", ShaderBlobs[0].GetAddressOf());
-	D3DReadFileToBlob(SHADER_PATH L"PS.cso", ShaderBlobs[1].GetAddressOf());
-	D3DReadFileToBlob(SHADER_PATH L"DS.cso", ShaderBlobs[2].GetAddressOf());
-	D3DReadFileToBlob(SHADER_PATH L"HS.cso", ShaderBlobs[3].GetAddressOf());
-	D3DReadFileToBlob(SHADER_PATH L"GS.cso", ShaderBlobs[4].GetAddressOf());
+	const auto ShaderPath = GetShaderPath();
+	D3DReadFileToBlob((ShaderPath + L".vs.cso").data(), ShaderBlobs[0].GetAddressOf());
+	D3DReadFileToBlob((ShaderPath + L".ps.cso").data(), ShaderBlobs[0].GetAddressOf());
+	D3DReadFileToBlob((ShaderPath + L".ds.cso").data(), ShaderBlobs[0].GetAddressOf());
+	D3DReadFileToBlob((ShaderPath + L".hs.cso").data(), ShaderBlobs[0].GetAddressOf());
+	D3DReadFileToBlob((ShaderPath + L".gs.cso").data(), ShaderBlobs[0].GetAddressOf());
 	const D3D12_SHADER_BYTECODE ShaderBytecodesVS = { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() };
 	const D3D12_SHADER_BYTECODE ShaderBytecodesPS = { ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() };
 	const D3D12_SHADER_BYTECODE ShaderBytecodesDS = { ShaderBlobs[2]->GetBufferPointer(), ShaderBlobs[2]->GetBufferSize() };

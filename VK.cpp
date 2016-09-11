@@ -6,13 +6,13 @@
 
 #pragma comment(lib, "vulkan-1.lib")
 
-void VK::OnCreate(HWND hWnd, HINSTANCE hInstance)
+void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 {
 #ifdef _DEBUG
 	PerformanceCounter PC("OnCreate : ");
 #endif
 
-	Super::OnCreate(hWnd, hInstance);
+	Super::OnCreate(hWnd, hInstance, Title);
 
 	//!< デバイス、キュー
 	CreateInstance();
@@ -374,10 +374,11 @@ void VK::CreateInstance()
 {
 	EnumerateInstanceLayer();
 
+	const auto ApplicationName = GetTitle();
 	const VkApplicationInfo ApplicationInfo = {
 		VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		nullptr,
-		"VKDX Application Name", 0,
+		ApplicationName.data(), 0,
 		"VKDX Engine Name", 0,
 		VK_API_VERSION_1_0
 	};
@@ -1334,7 +1335,9 @@ void VK::CreateComputePipeline()
 {
 	std::vector<VkShaderModule> ShaderModules;
 	{
-		ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"CS.cpom.spv"));
+		const auto ShaderPath = GetShaderPath();
+		ShaderModules.push_back(CreateShaderModule((ShaderPath + L".comp.spv").data()));
+
 		//#TODO
 	}
 	for (auto i : ShaderModules) {

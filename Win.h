@@ -55,10 +55,6 @@
 #endif
 #endif
 
-#ifndef SHADER_PATH
-#define SHADER_PATH L".\\"
-#endif
-
 class Win
 {
 public:
@@ -66,7 +62,7 @@ public:
 	virtual ~Win();
 
 	//virtual void OnInitialize(HWND hWnd, HINSTANCE hInstance) {}
-	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance);
+	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title);
 	virtual void OnSize(HWND hWnd, HINSTANCE hInstance);
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance);
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance);
@@ -79,6 +75,12 @@ public:
 	LONG GetClientRectWidth() const { return Rect.right - Rect.left; }
 	LONG GetClientRectHeight() const { return Rect.bottom - Rect.top; }
 
+	virtual const std::wstring& GetTitleW() const { return TitleW; }
+	virtual std::string GetTitle() const { return std::string(TitleW.begin(), TitleW.end()); }
+	void SetTitleW(LPCWSTR Title) { TitleW = Title; }
+
+	std::wstring GetShaderPath() const { return L".\\" + GetTitleW(); }
+
 	static void ShowMessageBox(HWND hWnd, const std::string Message);
 	static void ShowMessageBoxW(HWND hWnd, const std::wstring Message);
 
@@ -86,6 +88,7 @@ public:
 
 protected:
 	RECT Rect;
+	std::wstring TitleW;
 
 private:
 	FILE* StdOut;

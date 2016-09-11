@@ -74,7 +74,7 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="CS.comp">
+    <CustomBuild Include="ComputeVK.comp">
       <Filter>Shader Files</Filter>
     </CustomBuild>
   </ItemGroup>

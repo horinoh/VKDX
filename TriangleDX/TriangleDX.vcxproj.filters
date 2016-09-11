@@ -74,10 +74,10 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="PS.hlsl">
+    <FxCompile Include="TriangleDX.ps.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="VS.hlsl">
+    <FxCompile Include="TriangleDX.vs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
   </ItemGroup>

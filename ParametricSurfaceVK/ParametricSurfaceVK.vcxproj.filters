@@ -74,19 +74,19 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="FS.frag">
+    <CustomBuild Include="ParametricSurfaceVK.frag">
       <Filter>Shader Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="GS.geom">
+    <CustomBuild Include="ParametricSurfaceVK.geom">
       <Filter>Shader Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="TCS.tesc">
+    <CustomBuild Include="ParametricSurfaceVK.tesc">
       <Filter>Shader Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="TES.tese">
+    <CustomBuild Include="ParametricSurfaceVK.tese">
       <Filter>Shader Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="VS.vert">
+    <CustomBuild Include="ParametricSurfaceVK.vert">
       <Filter>Shader Files</Filter>
     </CustomBuild>
   </ItemGroup>

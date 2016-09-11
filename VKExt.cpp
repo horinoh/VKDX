@@ -94,8 +94,10 @@ void VKExt::CreateGraphicsPipeline_VsPs()
 {
 	std::vector<VkShaderModule> ShaderModules;
 	{
-		ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"VS.vert.spv"));
-		ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"FS.frag.spv"));
+		const auto ShaderPath = GetShaderPath();
+		ShaderModules.push_back(CreateShaderModule((ShaderPath + L".vert.spv").data()));
+		ShaderModules.push_back(CreateShaderModule((ShaderPath + L".frag.spv").data()));
+		
 		//!< HLSL コンパイル時のデフォルトエントリポイント名が "main" なのでそれに合わせることにする
 		const char* EntrypointName = "main";
 		const std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos = {
@@ -259,11 +261,12 @@ void VKExt::CreateGraphicsPipeline_VsPsTesTcsGs()
 {
 	std::vector<VkShaderModule> ShaderModules;
 	{
-		ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"VS.vert.spv"));
-		ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"FS.frag.spv"));
-		ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"TES.tese.spv"));
-		ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"TCS.tesc.spv"));
-		ShaderModules.push_back(CreateShaderModule(SHADER_PATH L"GS.geom.spv"));
+		const auto ShaderPath = GetShaderPath();
+		ShaderModules.push_back(CreateShaderModule((ShaderPath + L".vert.spv").data()));
+		ShaderModules.push_back(CreateShaderModule((ShaderPath + L".frag.spv").data()));
+		ShaderModules.push_back(CreateShaderModule((ShaderPath + L".tese.spv").data()));
+		ShaderModules.push_back(CreateShaderModule((ShaderPath + L".tesc.spv").data()));
+		ShaderModules.push_back(CreateShaderModule((ShaderPath + L".geom.spv").data()));
 		
 		//!< #TODO
 	}

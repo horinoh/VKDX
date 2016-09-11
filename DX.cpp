@@ -6,13 +6,13 @@
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dxgi.lib")
 
-void DX::OnCreate(HWND hWnd, HINSTANCE hInstance)
+void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 {
 #ifdef _DEBUG
 	PerformanceCounter PC("OnCreate : ");
 #endif
 
-	Super::OnCreate(hWnd, hInstance);
+	Super::OnCreate(hWnd, hInstance, Title);
 
 	//!< デバイス、キュー
 	const auto ColorFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -693,7 +693,8 @@ void DX::CreateComputePipelineState()
 	assert(nullptr != RootSignature);
 
 	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs(1);
-	D3DReadFileToBlob(SHADER_PATH L"CS.cso", ShaderBlobs[0].GetAddressOf());
+	const auto ShaderPath = GetShaderPath();
+	D3DReadFileToBlob((ShaderPath + L".cs.cso").data(), ShaderBlobs[0].GetAddressOf());
 	const D3D12_SHADER_BYTECODE ShaderBytecodesCS = { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() };
 
 	const D3D12_CACHED_PIPELINE_STATE CachedPipelineState = { nullptr, 0 };

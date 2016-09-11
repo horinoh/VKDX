@@ -74,7 +74,7 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="CS.hlsl">
+    <FxCompile Include="ComputeDX.cs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
   </ItemGroup>

@@ -58,7 +58,7 @@ private:
 	using Super = Win;
 
 public:
-	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance) override;
+	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
 	virtual void OnSize(HWND hWnd, HINSTANCE hInstance) override;
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override;
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override;
