@@ -35,26 +35,23 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< デプスステンシル
 	CreateDepthStencil(CommandBuffer);
 
+	//!< バーテックスインプット
+	CreateVertexInput();
+	//!< バーテックスバッファ、インデックスバッファ
+	CreateVertexBuffer(CommandBuffer);
+	CreateIndexBuffer(CommandBuffer);
+	//!< ユニフォームバッファ
+	//CreateUniformBuffer();
+
 	//!< デスクリプタセット
 	CreateDescriptorSetLayout();
 	CreateDescritporPool();
 	CreateDescriptorSet(DescriptorPool);
-
-	//!< バーテックスインプット
-	CreateVertexInput();
-
 	//!< パイプライン
 	CreatePipelineLayout();
 	CreateRenderPass();
 	CreatePipeline();
 	CreateFramebuffer();
-
-	//!< バーテックスバッファ、インデックスバッファ
-	CreateVertexBuffer(CommandBuffer);
-	CreateIndexBuffer(CommandBuffer);
-
-	//!< ユニフォームバッファ
-	//CreateUniformBuffer();
 }
 void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 {
@@ -84,6 +81,35 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	}
 
+
+	for (auto i : Framebuffers) {
+		vkDestroyFramebuffer(Device, i, nullptr);
+	}
+	Framebuffers.clear();
+	if (VK_NULL_HANDLE != RenderPass) {
+		vkDestroyRenderPass(Device, RenderPass, nullptr);
+	}
+	if (VK_NULL_HANDLE != Pipeline) {
+		vkDestroyPipeline(Device, Pipeline, nullptr);
+	}
+	if (VK_NULL_HANDLE != PipelineCache) {
+		vkDestroyPipelineCache(Device, PipelineCache, nullptr);
+	}
+	if (VK_NULL_HANDLE != PipelineLayout) {
+		vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
+	}
+
+	if (!DescriptorSets.empty()) {
+		vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
+	}
+	if (VK_NULL_HANDLE != DescriptorPool) {
+		vkDestroyDescriptorPool(Device, DescriptorPool, nullptr);
+	}
+	for (auto i : DescriptorSetLayouts) {
+		vkDestroyDescriptorSetLayout(Device, i, nullptr);
+	}
+	DescriptorSetLayouts.clear();
+
 	if (VK_NULL_HANDLE != UniformDeviceMemory) {
 		vkFreeMemory(Device, UniformDeviceMemory, nullptr);
 	}
@@ -104,32 +130,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyBuffer(Device, VertexBuffer, nullptr);
 	}
 
-	for (auto i : Framebuffers) {
-		vkDestroyFramebuffer(Device, i, nullptr);
-	}
-	if (VK_NULL_HANDLE != RenderPass) {
-		vkDestroyRenderPass(Device, RenderPass, nullptr);
-	}
-	if (VK_NULL_HANDLE != Pipeline) {
-		vkDestroyPipeline(Device, Pipeline, nullptr);
-	}
-	if (VK_NULL_HANDLE != PipelineCache) {
-		vkDestroyPipelineCache(Device, PipelineCache, nullptr);
-	}
-	if (VK_NULL_HANDLE != PipelineLayout) {
-		vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
-	}
-
-	if(!DescriptorSets.empty()) {
-		vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
-	}
-	if (VK_NULL_HANDLE != DescriptorPool) {
-		vkDestroyDescriptorPool(Device, DescriptorPool, nullptr);
-	}
-	for (auto i : DescriptorSetLayouts) {
-		vkDestroyDescriptorSetLayout(Device, i, nullptr);
-	}
-
 	if (VK_NULL_HANDLE != DepthStencilImageView) {
 		vkDestroyImageView(Device, DepthStencilImageView, nullptr);
 	}
@@ -143,6 +143,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	for (auto i : SwapchainImageViews) {
 		vkDestroyImageView(Device, i, nullptr);
 	}
+	SwapchainImageViews.clear();
 	//!< SwapchainImages は vkGetSwapchainImagesKHR() で取得したもの、破棄しない
 	if (VK_NULL_HANDLE != Swapchain) {
 		vkDestroySwapchainKHR(Device, Swapchain, nullptr);
@@ -162,6 +163,8 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkFreeCommandBuffers(Device, CommandPools[i], 1, &CommandBuffers[i]);
 		vkDestroyCommandPool(Device, CommandPools[i], nullptr);
 	}
+	CommandPools.clear();
+	CommandBuffers.clear();
 
 	//!< Queue は vkGetDeviceQueue() で取得したもの、破棄しない
 
@@ -1173,79 +1176,6 @@ void VK::CreateDepthStencil(const VkCommandBuffer CommandBuffer)
 #endif
 }
 
-/**
-@brief シェーダとのバインディングのレイアウト
-@note DescriptorSetLayout は「型」のようなもの
-# TODO ここの実装は消す、Extへ持っていく
-*/
-void VK::CreateDescriptorSetLayout()
-{
-	const std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings = {
-#if 0
-		//!< 配列サイズ 1 の UBO、VS から可視
-		{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
-		//!< 配列サイズ 1 の SAMPLER、全てから可視
-		{ 1, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_ALL_GRAPHICS, nullptr },
-		//!< 配列サイズ 10 の IMAGE、FS から可視
-		{ 2, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 10, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-#endif
-	};
-	const VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DescriptorSetLayoutBindings.size()), DescriptorSetLayoutBindings.data()
-	};
-	VkDescriptorSetLayout DescriptorSetLayout;
-	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, nullptr, &DescriptorSetLayout));
-	DescriptorSetLayouts.push_back(DescriptorSetLayout);
-
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateDescriptorSetLayout" << COUT_OK << std::endl << std::endl;
-#endif
-}
-void VK::CreateDescritporPool()
-{
-	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
-	};
-	if (!DescriptorPoolSizes.empty()) {
-		const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-			nullptr,
-			0,
-			1, //!< maxSets ... プールから確保される最大のデスクリプタ数
-			static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
-		};
-		VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
-
-#ifdef DEBUG_STDOUT
-		std::cout << "CreateDescriptorPool" << COUT_OK << std::endl << std::endl;
-#endif
-	}
-}
-/**
-@brief シェーダとのバインディングのレイアウト
-@note DescriptorSet は「DescriptorSetLayt 型」のインスタンスのようなもの
-@note 更新は vkUpdateDescriptorSets() で行う
-*/
-void VK::CreateDescriptorSet(VkDescriptorPool DescritorPool)
-{
-	if (VK_NULL_HANDLE != DescritorPool) {
-		const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-			nullptr,
-			DescriptorPool,
-			static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
-		};
-		VkDescriptorSet DescriptorSet;
-		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, &DescriptorSet));
-		DescriptorSets.push_back(DescriptorSet);
-
-#ifdef DEBUG_STDOUT
-		std::cout << "CreateDescriptorSet" << COUT_OK << std::endl << std::endl;
-#endif
-	}
-}
 void VK::CreateVertexInput()
 {
 #ifdef DEBUG_STDOUT
@@ -1271,95 +1201,6 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateViewport" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
-/**
-@brief シェーダとのバインディングのレイアウト
-@note PipelineLayout は引数に「DescriptorSetLayt 型のインスタンス」を取る「関数」のようなもの
-*/
-void VK::CreatePipelineLayout()
-{
-	//!< Push constants represent a high speed path to modify constant data in pipelines that is expected to outperform memory-backed resource updates.
-	const std::vector<VkPushConstantRange> PushConstantRanges = {};
-	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
-		static_cast<uint32_t>(PushConstantRanges.size()), PushConstantRanges.data()
-	};
-	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, nullptr, &PipelineLayout));
-
-#ifdef DEBUG_STDOUT
-	std::cout << "CreatePipelineLayout" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
-VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
-{
-	VkShaderModule ShaderModule = VK_NULL_HANDLE;
-
-	std::ifstream In(Path.c_str(), std::ios::in | std::ios::binary);
-	assert(false == In.fail());
-
-	In.seekg(0, std::ios_base::end);
-	const auto CodeSize = In.tellg();
-	In.seekg(0, std::ios_base::beg);
-
-	auto Code = new char[CodeSize];
-	In.read(Code, CodeSize);
-	In.close();
-
-	const VkShaderModuleCreateInfo ModuleCreateInfo = {
-		VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-		nullptr,
-		0,
-		CodeSize, reinterpret_cast<uint32_t*>(Code)
-	};
-	VERIFY_SUCCEEDED(vkCreateShaderModule(Device, &ModuleCreateInfo, nullptr, &ShaderModule));
-
-	delete[] Code;
-
-	return ShaderModule;
-}
-
-void VK::CreateGraphicsPipeline()
-{
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateGraphicsPipeline" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
-void VK::CreateComputePipeline()
-{
-	std::vector<VkShaderModule> ShaderModules;
-	{
-		const auto ShaderPath = GetShaderPath();
-		ShaderModules.push_back(CreateShaderModule((ShaderPath + L".comp.spv").data()));
-
-		//#TODO
-	}
-	for (auto i : ShaderModules) {
-		vkDestroyShaderModule(Device, i, nullptr);
-	}
-
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateComputePipeline" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
-void VK::CreateRenderPass()
-{
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateRenderPass" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
-void VK::CreateFramebuffer()
-{
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateFramebuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
@@ -1563,6 +1404,172 @@ void VK::CreateUniformBuffer()
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+/**
+@brief シェーダとのバインディングのレイアウト
+@note DescriptorSetLayout は「型」のようなもの
+# TODO ここの実装は消す、Extへ持っていく
+*/
+void VK::CreateDescriptorSetLayout()
+{
+	const std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings = {
+#if 0
+		//!< 配列サイズ 1 の UBO、VS から可視
+		{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
+		//!< 配列サイズ 1 の SAMPLER、全てから可視
+		{ 1, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_ALL_GRAPHICS, nullptr },
+		//!< 配列サイズ 10 の IMAGE、FS から可視
+		{ 2, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 10, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+#endif
+	};
+	const VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DescriptorSetLayoutBindings.size()), DescriptorSetLayoutBindings.data()
+	};
+	VkDescriptorSetLayout DescriptorSetLayout;
+	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, nullptr, &DescriptorSetLayout));
+	DescriptorSetLayouts.push_back(DescriptorSetLayout);
+
+#ifdef DEBUG_STDOUT
+	std::cout << "CreateDescriptorSetLayout" << COUT_OK << std::endl << std::endl;
+#endif
+}
+void VK::CreateDescritporPool()
+{
+	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
+	};
+	if (!DescriptorPoolSizes.empty()) {
+		const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+			nullptr,
+			0,
+			1, //!< maxSets ... プールから確保される最大のデスクリプタ数
+			static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
+		};
+		VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
+
+#ifdef DEBUG_STDOUT
+		std::cout << "CreateDescriptorPool" << COUT_OK << std::endl << std::endl;
+#endif
+	}
+}
+/**
+@brief シェーダとのバインディングのレイアウト
+@note DescriptorSet は「DescriptorSetLayt 型」のインスタンスのようなもの
+@note 更新は vkUpdateDescriptorSets() で行う
+*/
+void VK::CreateDescriptorSet(VkDescriptorPool DescritorPool)
+{
+	if (VK_NULL_HANDLE != DescritorPool) {
+		const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			nullptr,
+			DescriptorPool,
+			static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
+		};
+		VkDescriptorSet DescriptorSet;
+		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, &DescriptorSet));
+		DescriptorSets.push_back(DescriptorSet);
+
+#ifdef DEBUG_STDOUT
+		std::cout << "CreateDescriptorSet" << COUT_OK << std::endl << std::endl;
+#endif
+	}
+}
+/**
+@brief シェーダとのバインディングのレイアウト
+@note PipelineLayout は引数に「DescriptorSetLayt 型のインスタンス」を取る「関数」のようなもの
+*/
+void VK::CreatePipelineLayout()
+{
+	//!< Push constants represent a high speed path to modify constant data in pipelines that is expected to outperform memory-backed resource updates.
+	const std::vector<VkPushConstantRange> PushConstantRanges = {};
+	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
+		static_cast<uint32_t>(PushConstantRanges.size()), PushConstantRanges.data()
+	};
+	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, nullptr, &PipelineLayout));
+
+	for (auto i : DescriptorSetLayouts) {
+		vkDestroyDescriptorSetLayout(Device, i, nullptr);
+	}
+	DescriptorSetLayouts.clear();
+
+#ifdef DEBUG_STDOUT
+	std::cout << "CreatePipelineLayout" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
+{
+	VkShaderModule ShaderModule = VK_NULL_HANDLE;
+
+	std::ifstream In(Path.c_str(), std::ios::in | std::ios::binary);
+	assert(false == In.fail());
+
+	In.seekg(0, std::ios_base::end);
+	const auto CodeSize = In.tellg();
+	In.seekg(0, std::ios_base::beg);
+
+	auto Code = new char[CodeSize];
+	In.read(Code, CodeSize);
+	In.close();
+
+	const VkShaderModuleCreateInfo ModuleCreateInfo = {
+		VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+		nullptr,
+		0,
+		CodeSize, reinterpret_cast<uint32_t*>(Code)
+	};
+	VERIFY_SUCCEEDED(vkCreateShaderModule(Device, &ModuleCreateInfo, nullptr, &ShaderModule));
+
+	delete[] Code;
+
+	return ShaderModule;
+}
+
+void VK::CreateGraphicsPipeline()
+{
+#ifdef DEBUG_STDOUT
+	std::cout << "CreateGraphicsPipeline" << COUT_OK << std::endl << std::endl;
+#endif
+}
+void VK::CreateComputePipeline()
+{
+	std::vector<VkShaderModule> ShaderModules;
+	{
+		const auto ShaderPath = GetShaderPath();
+		ShaderModules.push_back(CreateShaderModule((ShaderPath + L".comp.spv").data()));
+
+		//#TODO
+	}
+	for (auto i : ShaderModules) {
+		vkDestroyShaderModule(Device, i, nullptr);
+	}
+
+#ifdef DEBUG_STDOUT
+	std::cout << "CreateComputePipeline" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void VK::CreateRenderPass()
+{
+#ifdef DEBUG_STDOUT
+	std::cout << "CreateRenderPass" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void VK::CreateFramebuffer()
+{
+#ifdef DEBUG_STDOUT
+	std::cout << "CreateFramebuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
 

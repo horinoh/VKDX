@@ -74,6 +74,8 @@ public:
 
 	LONG GetClientRectWidth() const { return Rect.right - Rect.left; }
 	LONG GetClientRectHeight() const { return Rect.bottom - Rect.top; }
+	FLOAT GetAspectRatio(const FLOAT Width, const FLOAT Height) const { return Width / Height; }
+	FLOAT GetAspectRatioOfClientRect() const { return GetAspectRatio(static_cast<FLOAT>(GetClientRectWidth()), static_cast<FLOAT>(GetClientRectHeight())); }
 
 	virtual const std::wstring& GetTitleW() const { return TitleW; }
 	virtual std::string GetTitle() const { return std::string(TitleW.begin(), TitleW.end()); }

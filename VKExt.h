@@ -13,6 +13,17 @@ public:
 	virtual void CreateVertexInput_Position();
 	virtual void CreateVertexInput_PositionColor();
 
+	template<typename T>
+	void CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const T& Type) {
+		//!< #TODO
+		const auto Size = sizeof(T);
+		CreateHostVisibleBuffer(PhysicalDeviceMemoryProperties, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &UniformBuffer, &UniformDeviceMemory, Size, &Type);
+		//CreateUniformBufferDescriptorBufferInfo(static_cast<UINT>(Size));
+#ifdef _DEBUG
+		std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
+#endif
+	}
+
 	virtual void CreateGraphicsPipeline_VsPs();
 	virtual void CreateGraphicsPipeline_VsPsTesTcsGs();
 
@@ -24,14 +35,4 @@ public:
 	virtual void CreateFramebuffer_Color();
 	virtual void CreateFramebuffer_ColorDepth();
 
-	template<typename T>
-	void CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const T& Type) {
-		//!< #TODO
-		const auto Size = sizeof(T);
-		CreateHostVisibleBuffer(PhysicalDeviceMemoryProperties, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &UniformBuffer, &UniformDeviceMemory, Size, &Type);
-		//CreateUniformBufferDescriptorBufferInfo(static_cast<UINT>(Size));
-#ifdef _DEBUG
-		std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
-#endif
-	}
 };

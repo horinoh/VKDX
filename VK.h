@@ -119,27 +119,10 @@ protected:
 	virtual void CreateDepthStencilView(VkCommandBuffer CommandBuffer);
 	virtual void CreateDepthStencil(const VkCommandBuffer CommandBuffer);
 
-	virtual void CreateDescriptorSetLayout();
-	virtual void CreateDescritporPool();
-	virtual void CreateDescriptorSet(VkDescriptorPool DescritorPool);
-
 	virtual void CreateVertexInput();
 	
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 	virtual void CreateViewportTopFront(const float Width, const float Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
-
-	float GetAspectRatio(const float Width, const float Height) const { return Width / Height; }
-	float GetAspectRatioOfClientRect() const { return GetAspectRatio(static_cast<float>(GetClientRectWidth()), static_cast<float>(GetClientRectHeight())); }
-
-	virtual void CreatePipelineLayout();
-	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
-	virtual void CreatePipeline() { CreateGraphicsPipeline(); }
-	virtual void CreateGraphicsPipeline();
-	virtual void CreateComputePipeline();
-
-	virtual void CreateRenderPass();
-	
-	virtual void CreateFramebuffer();
 
 	virtual void CreateDeviceLocalBuffer(const VkCommandBuffer CommandBuffer, const VkBufferUsageFlags Usage, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
 	virtual void CreateHostVisibleBuffer(const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
@@ -147,9 +130,19 @@ protected:
 	virtual void CreateIndexBuffer(const VkCommandBuffer CommandBuffer);
 	virtual void CreateUniformBuffer();
 
-	// ----------------------------------
+	virtual void CreateDescriptorSetLayout();
+	virtual void CreateDescritporPool();
+	virtual void CreateDescriptorSet(VkDescriptorPool DescritorPool);
 
-	virtual void Clear(const VkCommandBuffer CommandBuffer) {}
+	virtual void CreatePipelineLayout();
+	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
+	virtual void CreatePipeline() { CreateGraphicsPipeline(); }
+	virtual void CreateGraphicsPipeline();
+	virtual void CreateComputePipeline();
+	virtual void CreateRenderPass();
+
+	virtual void CreateFramebuffer();
+
 	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer);
 
 	virtual void Draw();
@@ -205,20 +198,6 @@ protected:
 	VkDeviceMemory DepthStencilDeviceMemory = VK_NULL_HANDLE;
 	VkImageView DepthStencilImageView = VK_NULL_HANDLE;
 
-	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
-	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
-	std::vector<VkDescriptorSet> DescriptorSets;
-
-	std::vector<VkVertexInputBindingDescription> VertexInputBindingDescriptions;
-	std::vector<VkVertexInputAttributeDescription> VertexInputAttributeDescriptions;
-	VkPipelineVertexInputStateCreateInfo PipelineVertexInputStateCreateInfo;
-
-	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
-	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
-	VkPipeline Pipeline = VK_NULL_HANDLE;
-	VkRenderPass RenderPass = VK_NULL_HANDLE;
-	std::vector<VkFramebuffer> Framebuffers;
-
 	VkBuffer VertexBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory VertexDeviceMemory = VK_NULL_HANDLE;
 
@@ -234,6 +213,22 @@ protected:
 
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;
+
+
+	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
+	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
+	std::vector<VkDescriptorSet> DescriptorSets;
+
+	std::vector<VkVertexInputBindingDescription> VertexInputBindingDescriptions;
+	std::vector<VkVertexInputAttributeDescription> VertexInputAttributeDescriptions;
+	VkPipelineVertexInputStateCreateInfo PipelineVertexInputStateCreateInfo;
+
+	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
+	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
+	VkPipeline Pipeline = VK_NULL_HANDLE;
+	VkRenderPass RenderPass = VK_NULL_HANDLE;
+	std::vector<VkFramebuffer> Framebuffers;
+
 
 	//!< ‚æ‚­Žg‚¤‚â‚Â
 	const VkComponentMapping ComponentMapping_SwizzleIdentity = {

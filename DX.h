@@ -104,20 +104,8 @@ protected:
 		ResizeDepthStencil(static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), DepthFormat);
 	}
 
-	virtual void CreateRootSignature();
-
 	virtual void CreateInputLayout();
-
-	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f);
-	virtual void CreateViewportTopFront(const FLOAT Width, const FLOAT Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 	
-	FLOAT GetAspectRatio(const FLOAT Width, const FLOAT Height) const { return Width / Height; }
-	FLOAT GetAspectRatioOfClientRect() const { return GetAspectRatio(static_cast<FLOAT>(GetClientRectWidth()), static_cast<FLOAT>(GetClientRectHeight())); }
-
-	virtual void CreatePipelineState() { CreateGraphicsPipelineState(); }
-	virtual void CreateGraphicsPipelineState();
-	virtual void CreateComputePipelineState();
-
 	virtual void CreateDefaultBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source);
 	virtual void CreateUploadBuffer(ID3D12Resource** Resource, const size_t Size, const void* Source);
 	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
@@ -125,6 +113,15 @@ protected:
 	virtual void CreateConstantBuffer();
 	virtual void CreateConstantBufferDescriptorHeap(const UINT Size);
 	virtual void CreateUnorderedAccessTexture();
+
+	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f);
+	virtual void CreateViewportTopFront(const FLOAT Width, const FLOAT Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
+	
+	virtual void CreateRootSignature();
+
+	virtual void CreatePipelineState() { CreateGraphicsPipelineState(); }
+	virtual void CreateGraphicsPipelineState();
+	virtual void CreateComputePipelineState();
 
 	virtual void PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12CommandAllocator* CommandAllocator);
 

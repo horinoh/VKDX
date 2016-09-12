@@ -35,23 +35,20 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateDepthStencilDescriptorHeap();
 	//!< ResizeDepthStencil() で DepthStencilResource が作られる、明示的にしなくても OnSize() からコールされる
 
-	//!< ルートシグニチャ
-	CreateRootSignature();
-
 	//!< インプットレイアウト
 	CreateInputLayout();
-
-	//!< パイプライン
-	CreatePipelineState();
-
 	//!< バーテックスバッファ、インデックスバッファ
 	auto CommandList = GraphicsCommandLists[0].Get();
 	CreateVertexBuffer(CommandAllocator, CommandList);
 	CreateIndexBuffer(CommandAllocator, CommandList);
 	WaitForFence();
-	
 	//!< コンスタントバッファ
 	CreateConstantBuffer();
+
+	//!< ルートシグニチャ
+	CreateRootSignature();
+	//!< パイプライン
+	CreatePipelineState();
 
 	//CreateUnorderedAccessTexture();
 }
@@ -591,68 +588,6 @@ void DX::ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORM
 #endif
 }
 
-//!< # TODO ここの実装は消す、Extへ持っていく
-void DX::CreateRootSignature()
-{
-	using namespace Microsoft::WRL;
-
-#if 0
-	const std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
-		{
-			D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
-			1, //!< NumDescriptors
-			0, //!< BaseShaderRegister ... HLSL で register(b0) なら 0、register(t3) なら 3 という感じ
-			0, //!< RegisterSpace ... 通常は 0 でよい。HLSL で register(t3, space5) なら 5
-			D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND //!< OffsetInDescriptorsFromTableStart ... 通常は D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND でよい
-		},
-	};
-	const D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable = {
-		static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
-	};
-	const std::vector<D3D12_ROOT_PARAMETER> RootParameters = {
-		{
-			D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-			DescriptorTable,
-			D3D12_SHADER_VISIBILITY_ALL //!< #TODO 必要とするシェーダに限定すべき
-		},
-	};
-	const std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {
-	};
-	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
-		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
-		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
-		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
-	};
-	ComPtr<ID3DBlob> Blob;
-	ComPtr<ID3DBlob> ErrorBlob;
-	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
-	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
-#else
-	const std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
-	};
-	const D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable = {
-		static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
-	};
-	const std::vector<D3D12_ROOT_PARAMETER> RootParameters = {
-	};
-	const std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {
-	};
-	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
-		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
-		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
-		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
-	};
-	ComPtr<ID3DBlob> Blob;
-	ComPtr<ID3DBlob> ErrorBlob;
-	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
-	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
-#endif
-
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateRootSignature" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
 void DX::CreateInputLayout()
 {
 #ifdef DEBUG_STDOUT
@@ -681,37 +616,6 @@ void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDe
 	std::cout << "CreateViewport" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void DX::CreateGraphicsPipelineState()
-{
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateGraphicsPipelineState" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
-void DX::CreateComputePipelineState()
-{
-	assert(nullptr != RootSignature);
-
-	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs(1);
-	const auto ShaderPath = GetShaderPath();
-	D3DReadFileToBlob((ShaderPath + L".cs.cso").data(), ShaderBlobs[0].GetAddressOf());
-	const D3D12_SHADER_BYTECODE ShaderBytecodesCS = { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() };
-
-	const D3D12_CACHED_PIPELINE_STATE CachedPipelineState = { nullptr, 0 };
-	const D3D12_COMPUTE_PIPELINE_STATE_DESC ComputePipelineStateDesc = {
-		RootSignature.Get(),
-		ShaderBytecodesCS,
-		0, // NodeMask ... マルチGPUの場合
-		CachedPipelineState,
-		D3D12_PIPELINE_STATE_FLAG_NONE
-	};
-	VERIFY_SUCCEEDED(Device->CreateComputePipelineState(&ComputePipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
-
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateComputePipelineState" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
 /**
 @note 
 アップロード用のリソースを D3D12_HEAP_TYPE_UPLOAD で作成してそこにデータをコピーする
@@ -949,6 +853,99 @@ void DX::CreateUnorderedAccessTexture()
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateUnorderedAccessBuffer" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+//!< # TODO ここの実装は消す、Extへ持っていく
+void DX::CreateRootSignature()
+{
+	using namespace Microsoft::WRL;
+
+#if 0
+	const std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
+		{
+			D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
+			1, //!< NumDescriptors
+			0, //!< BaseShaderRegister ... HLSL で register(b0) なら 0、register(t3) なら 3 という感じ
+			0, //!< RegisterSpace ... 通常は 0 でよい。HLSL で register(t3, space5) なら 5
+			D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND //!< OffsetInDescriptorsFromTableStart ... 通常は D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND でよい
+		},
+	};
+	const D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable = {
+		static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
+	};
+	const std::vector<D3D12_ROOT_PARAMETER> RootParameters = {
+		{
+			D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+			DescriptorTable,
+			D3D12_SHADER_VISIBILITY_ALL //!< #TODO 必要とするシェーダに限定すべき
+		},
+	};
+	const std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {
+	};
+	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
+		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
+		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+	};
+	ComPtr<ID3DBlob> Blob;
+	ComPtr<ID3DBlob> ErrorBlob;
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
+	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
+#else
+	const std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
+	};
+	const D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable = {
+		static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
+	};
+	const std::vector<D3D12_ROOT_PARAMETER> RootParameters = {
+	};
+	const std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {
+	};
+	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
+		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
+		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+	};
+	ComPtr<ID3DBlob> Blob;
+	ComPtr<ID3DBlob> ErrorBlob;
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
+	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
+#endif
+
+#ifdef DEBUG_STDOUT
+	std::cout << "CreateRootSignature" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void DX::CreateGraphicsPipelineState()
+{
+#ifdef DEBUG_STDOUT
+	std::cout << "CreateGraphicsPipelineState" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void DX::CreateComputePipelineState()
+{
+	assert(nullptr != RootSignature);
+
+	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs(1);
+	const auto ShaderPath = GetShaderPath();
+	D3DReadFileToBlob((ShaderPath + L".cs.cso").data(), ShaderBlobs[0].GetAddressOf());
+	const D3D12_SHADER_BYTECODE ShaderBytecodesCS = { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() };
+
+	const D3D12_CACHED_PIPELINE_STATE CachedPipelineState = { nullptr, 0 };
+	const D3D12_COMPUTE_PIPELINE_STATE_DESC ComputePipelineStateDesc = {
+		RootSignature.Get(),
+		ShaderBytecodesCS,
+		0, // NodeMask ... マルチGPUの場合
+		CachedPipelineState,
+		D3D12_PIPELINE_STATE_FLAG_NONE
+	};
+	VERIFY_SUCCEEDED(Device->CreateComputePipelineState(&ComputePipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
+
+#ifdef DEBUG_STDOUT
+	std::cout << "CreateComputePipelineState" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
