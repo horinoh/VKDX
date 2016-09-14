@@ -44,11 +44,11 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//CreateUniformBuffer();
 
 	//!< デスクリプタセット
-	CreateDescriptorSetLayout();
+	//CreateDescriptorSetLayout();
 	CreateDescritporPool();
 	CreateDescriptorSet(DescriptorPool);
 	//!< パイプライン
-	CreatePipelineLayout();
+	//CreatePipelineLayout();
 	CreateRenderPass();
 	CreatePipeline();
 	CreateFramebuffer();
@@ -81,63 +81,77 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	}
 
-
 	for (auto i : Framebuffers) {
 		vkDestroyFramebuffer(Device, i, nullptr);
 	}
 	Framebuffers.clear();
 	if (VK_NULL_HANDLE != RenderPass) {
 		vkDestroyRenderPass(Device, RenderPass, nullptr);
+		RenderPass = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != Pipeline) {
 		vkDestroyPipeline(Device, Pipeline, nullptr);
+		Pipeline = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != PipelineCache) {
 		vkDestroyPipelineCache(Device, PipelineCache, nullptr);
+		PipelineCache = VK_NULL_HANDLE;
 	}
-	if (VK_NULL_HANDLE != PipelineLayout) {
-		vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
-	}
+	//if (VK_NULL_HANDLE != PipelineLayout) {
+	//	vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
+	//	PipelineLayout = VK_NULL_HANDLE;
+	//}
 
 	if (!DescriptorSets.empty()) {
 		vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
 	}
+	DescriptorSets.clear();
 	if (VK_NULL_HANDLE != DescriptorPool) {
 		vkDestroyDescriptorPool(Device, DescriptorPool, nullptr);
+		DescriptorPool = VK_NULL_HANDLE;
 	}
-	for (auto i : DescriptorSetLayouts) {
-		vkDestroyDescriptorSetLayout(Device, i, nullptr);
-	}
-	DescriptorSetLayouts.clear();
+	//for (auto i : DescriptorSetLayouts) {
+	//	vkDestroyDescriptorSetLayout(Device, i, nullptr);
+	//}
+	//DescriptorSetLayouts.clear();
 
 	if (VK_NULL_HANDLE != UniformDeviceMemory) {
 		vkFreeMemory(Device, UniformDeviceMemory, nullptr);
+		UniformDeviceMemory = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != UniformBuffer) {
 		vkDestroyBuffer(Device, UniformBuffer, nullptr);
+		UniformBuffer = VK_NULL_HANDLE;
 	}
 
 	if (VK_NULL_HANDLE != IndexDeviceMemory) {
 		vkFreeMemory(Device, IndexDeviceMemory, nullptr);
+		IndexDeviceMemory = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != IndexBuffer) {
 		vkDestroyBuffer(Device, IndexBuffer, nullptr);
+		IndexBuffer = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != VertexDeviceMemory) {
 		vkFreeMemory(Device, VertexDeviceMemory, nullptr);
+		VertexDeviceMemory = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != VertexBuffer) {
 		vkDestroyBuffer(Device, VertexBuffer, nullptr);
+		VertexBuffer = VK_NULL_HANDLE;
 	}
 
 	if (VK_NULL_HANDLE != DepthStencilImageView) {
 		vkDestroyImageView(Device, DepthStencilImageView, nullptr);
+		DepthStencilImageView = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != DepthStencilDeviceMemory) {
 		vkFreeMemory(Device, DepthStencilDeviceMemory, nullptr);
+		DepthStencilDeviceMemory = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != DepthStencilImage) {
 		vkDestroyImage(Device, DepthStencilImage, nullptr);
+		DepthStencilImage = VK_NULL_HANDLE;
 	}
 
 	for (auto i : SwapchainImageViews) {
@@ -147,15 +161,19 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	//!< SwapchainImages は vkGetSwapchainImagesKHR() で取得したもの、破棄しない
 	if (VK_NULL_HANDLE != Swapchain) {
 		vkDestroySwapchainKHR(Device, Swapchain, nullptr);
+		Swapchain = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != RenderSemaphore) {
 		vkDestroySemaphore(Device, RenderSemaphore, nullptr);
+		RenderSemaphore = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != PresentSemaphore) {
 		vkDestroySemaphore(Device, PresentSemaphore, nullptr);
+		PresentSemaphore = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != Fence) {
 		vkDestroyFence(Device, Fence, nullptr);
+		Fence = VK_NULL_HANDLE;
 	}
 
 	//!< ここでは Pool と Buffer が 1:1 とする
@@ -170,21 +188,27 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 
 	if (VK_NULL_HANDLE != Device) {
 		vkDestroyDevice(Device, nullptr);
+		Device = VK_NULL_HANDLE;
 	}
 	
 	//!< PhysicalDevice は vkEnumeratePhysicalDevices() で取得したもの、破棄しない
 
 	if (VK_NULL_HANDLE != Surface) {
 		vkDestroySurfaceKHR(Instance, Surface, nullptr);
+		Surface = VK_NULL_HANDLE;
 	}
 
 #ifdef _DEBUG
-	DebugReport::DestroyDebugReportCallback(Instance, DebugReportCallback);
+	if (VK_NULL_HANDLE != DebugReportCallback) {
+		DebugReport::DestroyDebugReportCallback(Instance, DebugReportCallback);
+		DebugReportCallback = VK_NULL_HANDLE;
+	}
 #endif
 
 	if (VK_NULL_HANDLE != Instance) {
 		//vkDestroyInstance(Instance, &AllocationCallbacks);
 		vkDestroyInstance(Instance, nullptr);
+		Instance = VK_NULL_HANDLE;
 	}
 }
 
@@ -1430,7 +1454,7 @@ void VK::CreateDescriptorSetLayout()
 		0,
 		static_cast<uint32_t>(DescriptorSetLayoutBindings.size()), DescriptorSetLayoutBindings.data()
 	};
-	VkDescriptorSetLayout DescriptorSetLayout;
+	VkDescriptorSetLayout DescriptorSetLayout = VK_NULL_HANDLE;
 	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, nullptr, &DescriptorSetLayout));
 	DescriptorSetLayouts.push_back(DescriptorSetLayout);
 
@@ -1484,28 +1508,28 @@ void VK::CreateDescriptorSet(VkDescriptorPool DescritorPool)
 @brief シェーダとのバインディングのレイアウト
 @note PipelineLayout は引数に「DescriptorSetLayt 型のインスタンス」を取る「関数」のようなもの
 */
-void VK::CreatePipelineLayout()
-{
-	//!< Push constants represent a high speed path to modify constant data in pipelines that is expected to outperform memory-backed resource updates.
-	const std::vector<VkPushConstantRange> PushConstantRanges = {};
-	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
-		static_cast<uint32_t>(PushConstantRanges.size()), PushConstantRanges.data()
-	};
-	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, nullptr, &PipelineLayout));
-
-	for (auto i : DescriptorSetLayouts) {
-		vkDestroyDescriptorSetLayout(Device, i, nullptr);
-	}
-	DescriptorSetLayouts.clear();
-
-#ifdef DEBUG_STDOUT
-	std::cout << "CreatePipelineLayout" << COUT_OK << std::endl << std::endl;
-#endif
-}
+//void VK::CreatePipelineLayout()
+//{
+//	//!< Push constants represent a high speed path to modify constant data in pipelines that is expected to outperform memory-backed resource updates.
+//	const std::vector<VkPushConstantRange> PushConstantRanges = {};
+//	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
+//		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+//		nullptr,
+//		0,
+//		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
+//		static_cast<uint32_t>(PushConstantRanges.size()), PushConstantRanges.data()
+//	};
+//	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, nullptr, &PipelineLayout));
+//
+//	for (auto i : DescriptorSetLayouts) {
+//		vkDestroyDescriptorSetLayout(Device, i, nullptr);
+//	}
+//	DescriptorSetLayouts.clear();
+//
+//#ifdef DEBUG_STDOUT
+//	std::cout << "CreatePipelineLayout" << COUT_OK << std::endl << std::endl;
+//#endif
+//}
 
 VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 {
@@ -1591,7 +1615,11 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
-		VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
+#if 1
+		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, //!< 毎回破棄 or リセットが行われる場合
+#else
+		VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, //!< 前回のサブミットが完了していなくても、再度サブミットされ得る場合
+#endif
 		nullptr//&CommandBufferInheritanceInfo
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {

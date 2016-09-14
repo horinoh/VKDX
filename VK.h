@@ -134,7 +134,7 @@ protected:
 	virtual void CreateDescritporPool();
 	virtual void CreateDescriptorSet(VkDescriptorPool DescritorPool);
 
-	virtual void CreatePipelineLayout();
+	//virtual void CreatePipelineLayout();
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 	virtual void CreatePipeline() { CreateGraphicsPipeline(); }
 	virtual void CreateGraphicsPipeline();
@@ -223,7 +223,7 @@ protected:
 	std::vector<VkVertexInputAttributeDescription> VertexInputAttributeDescriptions;
 	VkPipelineVertexInputStateCreateInfo PipelineVertexInputStateCreateInfo;
 
-	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
+	//VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
 	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
 	VkPipeline Pipeline = VK_NULL_HANDLE;
 	VkRenderPass RenderPass = VK_NULL_HANDLE;
