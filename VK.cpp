@@ -163,13 +163,13 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroySwapchainKHR(Device, Swapchain, nullptr);
 		Swapchain = VK_NULL_HANDLE;
 	}
-	if (VK_NULL_HANDLE != RenderSemaphore) {
-		vkDestroySemaphore(Device, RenderSemaphore, nullptr);
-		RenderSemaphore = VK_NULL_HANDLE;
+	if (VK_NULL_HANDLE != RenderFinishedSemaphore) {
+		vkDestroySemaphore(Device, RenderFinishedSemaphore, nullptr);
+		RenderFinishedSemaphore = VK_NULL_HANDLE;
 	}
-	if (VK_NULL_HANDLE != PresentSemaphore) {
-		vkDestroySemaphore(Device, PresentSemaphore, nullptr);
-		PresentSemaphore = VK_NULL_HANDLE;
+	if (VK_NULL_HANDLE != NextImageAcquiredSemaphore) {
+		vkDestroySemaphore(Device, NextImageAcquiredSemaphore, nullptr);
+		NextImageAcquiredSemaphore = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != Fence) {
 		vkDestroyFence(Device, Fence, nullptr);
@@ -749,7 +749,7 @@ void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 		VK_COMMAND_POOL_CREATE_TRANSIENT_BIT ... 頻繁に更新される、ライフスパンが短い場合(メモリアロケーションのヒントとなる)
 		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT ... 指定した場合は vkResetCommandBuffer(), vkBeginCommandBuffer() によるリセットが可能、指定しない場合は vkResetCommandPool() のみ可能
 		*/
-		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
 		QueueFamilyIndex
 	};
 
@@ -788,7 +788,7 @@ void VK::CreateFence()
 	const VkFenceCreateInfo FenceCreateInfo = {
 		VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
 		nullptr,
-		0//VK_FENCE_CREATE_SIGNALED_BIT
+		0// #TODO VK_FENCE_CREATE_SIGNALED_BIT //!< 初回と２回目以降を同じに扱う為に、シグナル済み状態で作成
 	};
 	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, nullptr, &Fence));
 
@@ -809,10 +809,10 @@ void VK::CreateSemaphore()
 	};
 
 	//!< プレゼント完了同期用
-	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &PresentSemaphore));
+	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &NextImageAcquiredSemaphore));
 
 	//!< 描画完了同期用
-	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderSemaphore));
+	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderFinishedSemaphore));
 
 #ifdef _DEBUG
 	std::cout << "CreateSemaphore" << COUT_OK << std::endl << std::endl;
@@ -1115,7 +1115,9 @@ void VK::CreateSwapchainImageView()
 		SwapchainImageViews.push_back(ImageView);
 	}
 
-	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphore, nullptr, &SwapchainImageIndex));
+	//!< 次のイメージが取得できたらセマフォが通知される
+	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, NextImageAcquiredSemaphore, nullptr, &SwapchainImageIndex));
+
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
 #endif
@@ -1659,9 +1661,9 @@ void VK::Draw()
 	const VkSubmitInfo SubmitInfo = {
 		VK_STRUCTURE_TYPE_SUBMIT_INFO,
 		nullptr,
-		1, &PresentSemaphore, &PipelineStageFlags,
+		1, &NextImageAcquiredSemaphore, &PipelineStageFlags,	//!< 次イメージが取得できる(プレゼント完了)までウエイト
 		1,  &CommandBuffer,
-		1, &RenderSemaphore
+		1, &RenderFinishedSemaphore								//!< 描画完了を通知する
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, Fence));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
@@ -1675,13 +1677,15 @@ void VK::Present()
 	const VkPresentInfoKHR PresentInfo = {
 		VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 		nullptr,
-		1, &RenderSemaphore,
+		1, &RenderFinishedSemaphore, //!< 描画が完了するまで待つ
 		1, &Swapchain, &SwapchainImageIndex,
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkQueuePresentKHR(GraphicsQueue, &PresentInfo));
 
-	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, PresentSemaphore, VK_NULL_HANDLE, &SwapchainImageIndex));
+	//!< 次のイメージが取得できたらセマフォが通知される
+	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, NextImageAcquiredSemaphore, VK_NULL_HANDLE, &SwapchainImageIndex));
+
 #ifdef DEBUG_STDOUT
 	//std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
 #endif

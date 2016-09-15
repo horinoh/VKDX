@@ -118,9 +118,9 @@ protected:
 	virtual void CreateDepthStencilDeviceMemory();
 	virtual void CreateDepthStencilView(VkCommandBuffer CommandBuffer);
 	virtual void CreateDepthStencil(const VkCommandBuffer CommandBuffer);
-
-	virtual void CreateVertexInput();
 	
+	virtual void CreateVertexInput();
+
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 	virtual void CreateViewportTopFront(const float Width, const float Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 
@@ -183,8 +183,8 @@ protected:
 	std::vector<VkCommandBuffer> CommandBuffers;
 
 	VkFence Fence = VK_NULL_HANDLE;
-	VkSemaphore PresentSemaphore = VK_NULL_HANDLE;
-	VkSemaphore RenderSemaphore = VK_NULL_HANDLE;
+	VkSemaphore NextImageAcquiredSemaphore = VK_NULL_HANDLE;
+	VkSemaphore RenderFinishedSemaphore = VK_NULL_HANDLE;
 
 	VkExtent2D SurfaceExtent2D;
 	VkFormat ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;

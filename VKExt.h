@@ -7,9 +7,33 @@ class VKExt : public VK
 private:
 	using Super = VK;
 public:
+	using Vertex_Position = struct Vertex_Position { glm::vec3 Position; };
+	using Vertex_PositionColor = struct Vertex_PositionColor { glm::vec3 Position; glm::vec4 Color; };
+
 	virtual void CreateDescriptorSetLayout_1UniformBuffer(const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS);
 	virtual void CreateDescritporPool_1UniformBuffer();
 
+	template<typename T>
+	void CreateVertexInput(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding = 0) {}
+	template<>
+	void CreateVertexInput<Vertex_Position>(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding) {
+		VertexInputBindingDescriptions = {
+			{ Binding, sizeof(Vertex_Position), VK_VERTEX_INPUT_RATE_VERTEX }
+		};
+		VertexInputAttributeDescriptions = {
+			{ 0, Binding, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_Position, Position) },
+		};
+	}
+	template<>
+	void CreateVertexInput<Vertex_PositionColor>(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding) {
+		VertexInputBindingDescriptions = {
+			{ Binding, sizeof(Vertex_PositionColor), VK_VERTEX_INPUT_RATE_VERTEX }
+		};
+		VertexInputAttributeDescriptions = {
+			{ 0, Binding, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_PositionColor, Position) },
+			{ 1, Binding, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_PositionColor, Color) }
+		};
+	}
 	virtual void CreateVertexInput_Position();
 	virtual void CreateVertexInput_PositionColor();
 
