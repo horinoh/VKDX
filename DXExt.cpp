@@ -78,9 +78,16 @@ void DXExt::CreateGraphicsPipelineState_VsPs()
 	const auto ShaderPath = GetShaderPath();
 	D3DReadFileToBlob((ShaderPath + L".vs.cso").data(), ShaderBlobs[0].GetAddressOf());
 	D3DReadFileToBlob((ShaderPath + L".ps.cso").data(), ShaderBlobs[1].GetAddressOf());
-	const D3D12_SHADER_BYTECODE ShaderBytecodesVS = { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() };
-	const D3D12_SHADER_BYTECODE ShaderBytecodesPS = { ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() };
 	const D3D12_SHADER_BYTECODE DefaultShaderBytecode = { nullptr, 0 };
+	const std::array<D3D12_SHADER_BYTECODE, 5> ShaderBytecodes {
+		D3D12_SHADER_BYTECODE({ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }),
+		D3D12_SHADER_BYTECODE({ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() }),
+		DefaultShaderBytecode,
+		DefaultShaderBytecode,
+		DefaultShaderBytecode,
+	};
+	//const D3D12_SHADER_BYTECODE ShaderBytecodesVS = { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() };
+	//const D3D12_SHADER_BYTECODE ShaderBytecodesPS = { ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() };
 
 	const D3D12_STREAM_OUTPUT_DESC StreamOutputDesc = {
 		nullptr, 0,
@@ -134,7 +141,8 @@ void DXExt::CreateGraphicsPipelineState_VsPs()
 	const D3D12_CACHED_PIPELINE_STATE CachedPipelineState = { nullptr, 0 };
 	const D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineStateDesc = {
 		RootSignature.Get(),
-		ShaderBytecodesVS, ShaderBytecodesPS, DefaultShaderBytecode, DefaultShaderBytecode, DefaultShaderBytecode,
+		//ShaderBytecodesVS, ShaderBytecodesPS, DefaultShaderBytecode, DefaultShaderBytecode, DefaultShaderBytecode,
+		ShaderBytecodes[0], ShaderBytecodes[1], ShaderBytecodes[2], ShaderBytecodes[3], ShaderBytecodes[4],
 		StreamOutputDesc,
 		BlendDesc,
 		UINT_MAX,

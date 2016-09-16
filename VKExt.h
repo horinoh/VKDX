@@ -48,6 +48,9 @@ public:
 #endif
 	}
 
+	virtual void CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const;
+	virtual void CreateShader_VsPsTesTcsGs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const;
+
 	virtual void CreateGraphicsPipeline_VsPs();
 	virtual void CreateGraphicsPipeline_VsPsTesTcsGs();
 

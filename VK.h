@@ -136,6 +136,7 @@ protected:
 
 	//virtual void CreatePipelineLayout();
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
+	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const {}
 	virtual void CreatePipeline() { CreateGraphicsPipeline(); }
 	virtual void CreateGraphicsPipeline();
 	virtual void CreateComputePipeline();

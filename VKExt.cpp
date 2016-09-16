@@ -90,8 +90,45 @@ void VKExt::CreateVertexInput_PositionColor()
 #endif
 }
 
+void VKExt::CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const
+{
+	const auto ShaderPath = GetShaderPath();
+	ShaderModules = {
+		CreateShaderModule((ShaderPath + L".vert.spv").data()),
+		CreateShaderModule((ShaderPath + L".frag.spv").data())
+	};
+	//!< HLSL コンパイル時のデフォルトエントリポイント名が "main" なのでそれに合わせることにする
+	const char* EntrypointName = "main";
+	PipelineShaderStageCreateInfos = {
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
+			EntrypointName,
+			nullptr
+		},
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
+			EntrypointName,
+			nullptr
+		}
+	};
+}
+void VKExt::CreateShader_VsPsTesTcsGs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const
+{
+
+}
 void VKExt::CreateGraphicsPipeline_VsPs()
 {
+#if 1
+	std::vector<VkShaderModule> ShaderModules;
+	std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos;
+	CreateShader_VsPs(ShaderModules, PipelineShaderStageCreateInfos);
+#else
 	const auto ShaderPath = GetShaderPath();
 	std::vector<VkShaderModule> ShaderModules = {
 		CreateShaderModule((ShaderPath + L".vert.spv").data()),
@@ -117,6 +154,7 @@ void VKExt::CreateGraphicsPipeline_VsPs()
 			nullptr
 		}
 	};
+#endif
 
 	//!< PipelineVertexInputStateCreateInfo は CreateVertexInput() 内で作成してある
 

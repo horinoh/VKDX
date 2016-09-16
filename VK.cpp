@@ -1560,7 +1560,6 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 
 	return ShaderModule;
 }
-
 void VK::CreateGraphicsPipeline()
 {
 #ifdef DEBUG_STDOUT
