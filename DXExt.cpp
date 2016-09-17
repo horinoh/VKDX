@@ -70,192 +70,36 @@ void DXExt::CreateInputLayout_PositionColor()
 #endif
 }
 
-void DXExt::CreateGraphicsPipelineState_VsPs()
+void DXExt::CreateShader_VsPs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const
 {
-	assert(nullptr != RootSignature);
-
-	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs(2);
 	const auto ShaderPath = GetShaderPath();
+	ShaderBlobs.resize(2);
 	D3DReadFileToBlob((ShaderPath + L".vs.cso").data(), ShaderBlobs[0].GetAddressOf());
 	D3DReadFileToBlob((ShaderPath + L".ps.cso").data(), ShaderBlobs[1].GetAddressOf());
 	const D3D12_SHADER_BYTECODE DefaultShaderBytecode = { nullptr, 0 };
-	const std::array<D3D12_SHADER_BYTECODE, 5> ShaderBytecodes {
+	ShaderBytecodes = {
 		D3D12_SHADER_BYTECODE({ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }),
 		D3D12_SHADER_BYTECODE({ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() }),
 		DefaultShaderBytecode,
 		DefaultShaderBytecode,
 		DefaultShaderBytecode,
 	};
-	//const D3D12_SHADER_BYTECODE ShaderBytecodesVS = { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() };
-	//const D3D12_SHADER_BYTECODE ShaderBytecodesPS = { ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() };
-
-	const D3D12_STREAM_OUTPUT_DESC StreamOutputDesc = {
-		nullptr, 0,
-		nullptr, 0,
-		0
-	};
-
-	const D3D12_RENDER_TARGET_BLEND_DESC DefaultRenderTargetBlendDesc = {
-		FALSE, FALSE,
-		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-		D3D12_LOGIC_OP_NOOP,
-		D3D12_COLOR_WRITE_ENABLE_ALL,
-	};
-	const D3D12_BLEND_DESC BlendDesc = {
-		FALSE,
-		FALSE,
-		{ DefaultRenderTargetBlendDesc/*, ... x8*/ }
-	};
-
-	const D3D12_RASTERIZER_DESC RasterizerDesc = {
-		D3D12_FILL_MODE_SOLID,
-		D3D12_CULL_MODE_BACK, FALSE,
-		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
-		TRUE,
-		FALSE,
-		FALSE,
-		0,
-		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
-	};
-
-	const D3D12_DEPTH_STENCILOP_DESC DepthStencilOpDesc = {
-		D3D12_STENCIL_OP_KEEP,
-		D3D12_STENCIL_OP_KEEP,
-		D3D12_STENCIL_OP_KEEP,
-		D3D12_COMPARISON_FUNC_NEVER
-	};
-
-	const D3D12_DEPTH_STENCIL_DESC DepthStencilDesc = {
-		FALSE,
-		D3D12_DEPTH_WRITE_MASK_ZERO,
-		D3D12_COMPARISON_FUNC_NEVER,
-		FALSE,
-		0,
-		0,
-		DepthStencilOpDesc,
-		DepthStencilOpDesc
-	};
-
-	const DXGI_SAMPLE_DESC SampleDesc = { 1/*4*/, 0 };
-	const D3D12_CACHED_PIPELINE_STATE CachedPipelineState = { nullptr, 0 };
-	const D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineStateDesc = {
-		RootSignature.Get(),
-		//ShaderBytecodesVS, ShaderBytecodesPS, DefaultShaderBytecode, DefaultShaderBytecode, DefaultShaderBytecode,
-		ShaderBytecodes[0], ShaderBytecodes[1], ShaderBytecodes[2], ShaderBytecodes[3], ShaderBytecodes[4],
-		StreamOutputDesc,
-		BlendDesc,
-		UINT_MAX,
-		RasterizerDesc,
-		DepthStencilDesc,
-		InputLayoutDesc,
-		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
-		D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
-		1,{ DXGI_FORMAT_R8G8B8A8_UNORM/*, ... x8*/ },
-		DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
-		SampleDesc,
-		0,
-		CachedPipelineState,
-		D3D12_PIPELINE_STATE_FLAG_NONE //!< D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG ... は Warp デバイスのみ
-	};
-
-	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
-
-#ifdef _DEBUG
-	std::cout << "CreateGraphicsPipelineState" << COUT_OK << std::endl << std::endl;
-#endif
 }
-void DXExt::CreateGraphicsPipelineState_VsPsDsHsGs()
+void DXExt::CreateShader_VsPsDsHsGs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const
 {
-	assert(nullptr != RootSignature);
-	
-	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs(5);
 	const auto ShaderPath = GetShaderPath();
+	ShaderBlobs.resize(5);
 	D3DReadFileToBlob((ShaderPath + L".vs.cso").data(), ShaderBlobs[0].GetAddressOf());
 	D3DReadFileToBlob((ShaderPath + L".ps.cso").data(), ShaderBlobs[1].GetAddressOf());
 	D3DReadFileToBlob((ShaderPath + L".ds.cso").data(), ShaderBlobs[2].GetAddressOf());
 	D3DReadFileToBlob((ShaderPath + L".hs.cso").data(), ShaderBlobs[3].GetAddressOf());
-	D3DReadFileToBlob((ShaderPath + L".gs.cso").data(), ShaderBlobs[4].GetAddressOf());
-	const D3D12_SHADER_BYTECODE ShaderBytecodesVS = { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() };
-	const D3D12_SHADER_BYTECODE ShaderBytecodesPS = { ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() };
-	const D3D12_SHADER_BYTECODE ShaderBytecodesDS = { ShaderBlobs[2]->GetBufferPointer(), ShaderBlobs[2]->GetBufferSize() };
-	const D3D12_SHADER_BYTECODE ShaderBytecodesHS = { ShaderBlobs[3]->GetBufferPointer(), ShaderBlobs[3]->GetBufferSize() };
-	const D3D12_SHADER_BYTECODE ShaderBytecodesGS = { ShaderBlobs[4]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() };
-
-	const D3D12_STREAM_OUTPUT_DESC StreamOutputDesc = {
-		nullptr, 0,
-		nullptr, 0,
-		0
+	D3DReadFileToBlob((ShaderPath + L".gs.cso").data(), ShaderBlobs[4].GetAddressOf());	ShaderBytecodes = {
+		D3D12_SHADER_BYTECODE({ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }),
+		D3D12_SHADER_BYTECODE({ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() }),
+		D3D12_SHADER_BYTECODE({ ShaderBlobs[2]->GetBufferPointer(), ShaderBlobs[2]->GetBufferSize() }),
+		D3D12_SHADER_BYTECODE({ ShaderBlobs[3]->GetBufferPointer(), ShaderBlobs[3]->GetBufferSize() }),
+		D3D12_SHADER_BYTECODE({ ShaderBlobs[4]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() }),
 	};
-
-	const D3D12_RENDER_TARGET_BLEND_DESC DefaultRenderTargetBlendDesc = {
-		FALSE, FALSE,
-		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-		D3D12_LOGIC_OP_NOOP,
-		D3D12_COLOR_WRITE_ENABLE_ALL,
-	};
-	const D3D12_BLEND_DESC BlendDesc = {
-		FALSE,
-		FALSE,
-		{ DefaultRenderTargetBlendDesc }
-	};
-
-	const D3D12_RASTERIZER_DESC RasterizerDesc = {
-		D3D12_FILL_MODE_SOLID,
-		D3D12_CULL_MODE_BACK, FALSE,
-		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
-		TRUE,
-		FALSE,
-		FALSE,
-		0,
-		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
-	};
-
-	const D3D12_DEPTH_STENCILOP_DESC DepthStencilOpDesc = {
-		D3D12_STENCIL_OP_KEEP,
-		D3D12_STENCIL_OP_KEEP,
-		D3D12_STENCIL_OP_KEEP,
-		D3D12_COMPARISON_FUNC_NEVER
-	};
-
-	const D3D12_DEPTH_STENCIL_DESC DepthStencilDesc = {
-		FALSE,
-		D3D12_DEPTH_WRITE_MASK_ZERO,
-		D3D12_COMPARISON_FUNC_NEVER,
-		FALSE,
-		0,
-		0,
-		DepthStencilOpDesc,
-		DepthStencilOpDesc
-	};
-
-	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
-	const D3D12_CACHED_PIPELINE_STATE CachedPipelineState = { nullptr, 0 };
-	const D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineStateDesc = {
-		RootSignature.Get(),
-		ShaderBytecodesVS, ShaderBytecodesPS, ShaderBytecodesDS, ShaderBytecodesHS, ShaderBytecodesGS,
-		StreamOutputDesc,
-		BlendDesc,
-		UINT_MAX,
-		RasterizerDesc,
-		DepthStencilDesc,
-		InputLayoutDesc,
-		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
-		D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, //!< トポロジタイプをパッチにしている
-		1,{ DXGI_FORMAT_R8G8B8A8_UNORM },
-		DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
-		SampleDesc,
-		0,
-		CachedPipelineState,
-		D3D12_PIPELINE_STATE_FLAG_NONE
-	};
-
-	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
-
-#ifdef _DEBUG
-	std::cout << "CreateGraphicsPipelineState" << COUT_OK << std::endl << std::endl;
-#endif
 }
 
 //void DXExt::Clear_Color(ID3D12GraphicsCommandList* GraphicsCommandList)

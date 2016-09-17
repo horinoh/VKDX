@@ -17,7 +17,10 @@ protected:
 	virtual void CreateInputLayout() override { CreateInputLayout_PositionColor(); }
 	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) override;
 	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) override;
-	virtual void CreateGraphicsPipelineState() override { CreateGraphicsPipelineState_VsPs(); }
+	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const override {
+		CreateShader_VsPs(ShaderBlobs, ShaderBytecodes);
+	}
+	//virtual void CreateGraphicsPipelineState() override { CreateGraphicsPipelineState_VsPs(); }
 
 #if 0
 	virtual void CreateRootSignature() override { Super::CreateRootSignature_1ConstantBuffer(D3D12_SHADER_VISIBILITY_PIXEL); }

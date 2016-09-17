@@ -30,8 +30,8 @@ public:
 	virtual void CreateInputLayout_Position();
 	virtual void CreateInputLayout_PositionColor();
 
-	virtual void CreateGraphicsPipelineState_VsPs();
-	virtual void CreateGraphicsPipelineState_VsPsDsHsGs();
+	virtual void CreateShader_VsPs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const;
+	virtual void CreateShader_VsPsDsHsGs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const;
 
 	template<typename T>
 	void CreateConstantBuffer(const T& Type) {

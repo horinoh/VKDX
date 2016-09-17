@@ -15,8 +15,8 @@ public:
 
 protected:
 	virtual void CreateVertexInput() override { CreateVertexInput_Position(); }
-	virtual void CreateGraphicsPipeline() override { CreateGraphicsPipeline_VsPsTesTcsGs(); }
-
-private:
+	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {
+		CreateShader_VsPsTesTcsGs(ShaderModules, PipelineShaderStageCreateInfos);
+	}
 };
 #pragma endregion

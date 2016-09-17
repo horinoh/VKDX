@@ -119,6 +119,8 @@ protected:
 	
 	virtual void CreateRootSignature();
 
+	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const {}
+
 	virtual void CreatePipelineState() { CreateGraphicsPipelineState(); }
 	virtual void CreateGraphicsPipelineState();
 	virtual void CreateComputePipelineState();

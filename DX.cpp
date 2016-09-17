@@ -920,7 +920,85 @@ void DX::CreateRootSignature()
 
 void DX::CreateGraphicsPipelineState()
 {
-#ifdef DEBUG_STDOUT
+	assert(nullptr != RootSignature);
+
+	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs;
+	std::array<D3D12_SHADER_BYTECODE, 5> ShaderBytecodes;
+	CreateShader(ShaderBlobs, ShaderBytecodes);
+
+	const D3D12_STREAM_OUTPUT_DESC StreamOutputDesc = {
+		nullptr, 0,
+		nullptr, 0,
+		0
+	};
+
+	const D3D12_RENDER_TARGET_BLEND_DESC DefaultRenderTargetBlendDesc = {
+		FALSE, FALSE,
+		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+		D3D12_LOGIC_OP_NOOP,
+		D3D12_COLOR_WRITE_ENABLE_ALL,
+	};
+	const D3D12_BLEND_DESC BlendDesc = {
+		FALSE,
+		FALSE,
+		{ DefaultRenderTargetBlendDesc/*, ... x8*/ }
+	};
+
+	const D3D12_RASTERIZER_DESC RasterizerDesc = {
+		D3D12_FILL_MODE_SOLID,
+		D3D12_CULL_MODE_BACK, FALSE,
+		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
+		TRUE,
+		FALSE,
+		FALSE,
+		0,
+		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
+	};
+
+	const D3D12_DEPTH_STENCILOP_DESC DepthStencilOpDesc = {
+		D3D12_STENCIL_OP_KEEP,
+		D3D12_STENCIL_OP_KEEP,
+		D3D12_STENCIL_OP_KEEP,
+		D3D12_COMPARISON_FUNC_NEVER
+	};
+
+	const D3D12_DEPTH_STENCIL_DESC DepthStencilDesc = {
+		FALSE,
+		D3D12_DEPTH_WRITE_MASK_ZERO,
+		D3D12_COMPARISON_FUNC_NEVER,
+		FALSE,
+		0,
+		0,
+		DepthStencilOpDesc,
+		DepthStencilOpDesc
+	};
+
+	const DXGI_SAMPLE_DESC SampleDesc = { 1/*4*/, 0 };
+	const D3D12_CACHED_PIPELINE_STATE CachedPipelineState = { nullptr, 0 };
+	const D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineStateDesc = {
+		RootSignature.Get(),
+		//ShaderBytecodesVS, ShaderBytecodesPS, DefaultShaderBytecode, DefaultShaderBytecode, DefaultShaderBytecode,
+		ShaderBytecodes[0], ShaderBytecodes[1], ShaderBytecodes[2], ShaderBytecodes[3], ShaderBytecodes[4],
+		StreamOutputDesc,
+		BlendDesc,
+		UINT_MAX,
+		RasterizerDesc,
+		DepthStencilDesc,
+		InputLayoutDesc,
+		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
+		D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
+		1,{ DXGI_FORMAT_R8G8B8A8_UNORM/*, ... x8*/ },
+		DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
+		SampleDesc,
+		0,
+		CachedPipelineState,
+		D3D12_PIPELINE_STATE_FLAG_NONE //!< D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG ... は Warp デバイスのみ
+	};
+
+	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
+
+#ifdef _DEBUG
 	std::cout << "CreateGraphicsPipelineState" << COUT_OK << std::endl << std::endl;
 #endif
 }

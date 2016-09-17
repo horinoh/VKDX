@@ -17,7 +17,9 @@ protected:
 	virtual void CreateVertexInput() override { CreateVertexInput_PositionColor(); }
 	virtual void CreateVertexBuffer(const VkCommandBuffer CommandBuffer) override;
 	virtual void CreateIndexBuffer(const VkCommandBuffer CommandBuffer) override;
-	virtual void CreateGraphicsPipeline() override { CreateGraphicsPipeline_VsPs(); }
+	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {
+		CreateShader_VsPs(ShaderModules, PipelineShaderStageCreateInfos);
+	}
 
 	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer) override;
 
