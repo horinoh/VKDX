@@ -375,7 +375,6 @@ void VK::EnumerateInstanceLayer()
 		for (const auto& i : LayerProperties) {
 #ifdef DEBUG_STDOUT
 			std::cout << "\t" << "\"" << i.layerName << "\"" << std::endl;
-			//InstanceLayerNames.push_back({ i.layerName,{} });
 #endif
 			EnumerateInstanceExtenstion(i.layerName);
 		}
@@ -391,7 +390,6 @@ void VK::EnumerateInstanceExtenstion(const char* layerName)
 		for (const auto& i : ExtensionProperties) {
 #ifdef DEBUG_STDOUT
 			std::cout << "\t" << "\t" << "\"" << i.extensionName << "\"" << std::endl;
-			//InstanceLayerNames.back().second.push_back({ i.extensionName });
 #endif
 		}
 	}
@@ -578,7 +576,6 @@ void VK::EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice)
 		for (const auto& i : LayerProperties) {
 #ifdef DEBUG_STDOUT
 			std::cout << "\t" << "\"" << i.layerName << "\"" << std::endl;
-			//DeviceLayerNames.push_back({ i.layerName, {} });
 #endif
 			EnumerateDeviceExtenstion(PhysicalDevice, i.layerName);
 		}
@@ -600,7 +597,6 @@ void VK::EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* 
 #ifdef DEBUG_STDOUT
 			std::cout << "\t" << "\t" << "\"" << i.extensionName << "\"" << White << std::endl;
 #endif
-			//DeviceLayerNames.back().second.push_back({ i.extensionName });
 		}
 	}
 }
@@ -1753,13 +1749,6 @@ void VK::CreateComputePipeline()
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateComputePipeline" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
-void VK::CreateRenderPass()
-{
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateRenderPass" << COUT_OK << std::endl << std::endl;
 #endif
 }
 

@@ -191,7 +191,7 @@ void VKExt::CreateRenderPass_Color()
 	};
 
 	const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
-		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }
+		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
 	};
 	const std::vector<VkSubpassDescription> SubpassDescriptions = {
 		{
@@ -201,7 +201,7 @@ void VKExt::CreateRenderPass_Color()
 			static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(), nullptr,
 			nullptr,
 			0, nullptr
-		}
+		},
 	};
 	const std::vector<VkSubpassDependency> SubpassDependencies = {
 		{
@@ -221,7 +221,7 @@ void VKExt::CreateRenderPass_Color()
 			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 			VK_ACCESS_MEMORY_READ_BIT,
 			VK_DEPENDENCY_BY_REGION_BIT,
-		}
+		},
 	};
 	const VkRenderPassCreateInfo RenderPassCreateInfo = {
 		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
@@ -257,11 +257,11 @@ void VKExt::CreateRenderPass_ColorDepth()
 			VK_ATTACHMENT_STORE_OP_DONT_CARE,
 			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
 			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-		}
+		},
 	};
 
 	const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
-		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }
+		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
 	};
 	const VkAttachmentReference DepthAttachmentReference = { 
 		1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL 
@@ -278,7 +278,7 @@ void VKExt::CreateRenderPass_ColorDepth()
 	};
 	const std::vector<VkSubpassDependency> SubpassDependencies = {
 		{
-			VK_SUBPASS_EXTERNAL, //!< レンダーパス外
+			VK_SUBPASS_EXTERNAL,
 			0,
 			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -288,13 +288,13 @@ void VKExt::CreateRenderPass_ColorDepth()
 		},
 		{
 			0,
-			VK_SUBPASS_EXTERNAL, //!< レンダーパス外
+			VK_SUBPASS_EXTERNAL,
 			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
 			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 			VK_ACCESS_MEMORY_READ_BIT,
 			VK_DEPENDENCY_BY_REGION_BIT,
-		}
+		},
 	};
 	const VkRenderPassCreateInfo RenderPassCreateInfo = {
 		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,

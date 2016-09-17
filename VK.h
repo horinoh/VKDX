@@ -50,9 +50,6 @@ class VK : public Win
 {
 private:
 	using Super = Win;
-#ifdef _DEBUG
-	//using LayerNames = std::vector<std::pair<std::string, std::vector<std::string>>>;
-#endif
 
 public:
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
@@ -134,13 +131,14 @@ protected:
 	virtual void CreateDescritporPool();
 	virtual void CreateDescriptorSet(VkDescriptorPool DescritorPool);
 
+	virtual void CreateRenderPass() {}
+
 	//virtual void CreatePipelineLayout();
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const {}
-	virtual void CreatePipeline() { CreateGraphicsPipeline(); }
+	virtual void CreatePipeline() {}
 	virtual void CreateGraphicsPipeline();
 	virtual void CreateComputePipeline();
-	virtual void CreateRenderPass();
 
 	virtual void CreateFramebuffer();
 
@@ -159,18 +157,12 @@ protected:
 		nullptr
 	};
 protected:
-#ifdef _DEBUG
-	//LayerNames InstanceLayerNames;
-#endif
 	VkInstance Instance = VK_NULL_HANDLE;
 #ifdef _DEBUG
 	VkDebugReportCallbackEXT DebugReportCallback = VK_NULL_HANDLE;
 #endif
 	VkSurfaceKHR Surface = VK_NULL_HANDLE;
 	VkPhysicalDevice PhysicalDevice = VK_NULL_HANDLE;
-#ifdef _DEBUG
-	//LayerNames DeviceLayerNames;
-#endif
 	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
 	VkDevice Device = VK_NULL_HANDLE;
 	VkQueue GraphicsQueue = VK_NULL_HANDLE;
@@ -214,7 +206,6 @@ protected:
 
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;
-
 
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
 	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
