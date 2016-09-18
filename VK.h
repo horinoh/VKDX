@@ -116,8 +116,6 @@ protected:
 	virtual void CreateDepthStencilView(VkCommandBuffer CommandBuffer);
 	virtual void CreateDepthStencil(const VkCommandBuffer CommandBuffer);
 	
-	virtual void CreateVertexInput();
-
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 	virtual void CreateViewportTopFront(const float Width, const float Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 
@@ -136,6 +134,7 @@ protected:
 	//virtual void CreatePipelineLayout();
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const {}
+	virtual void CreateVertexInput(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding = 0) const {}
 	virtual void CreatePipeline() {}
 	virtual void CreateGraphicsPipeline();
 	virtual void CreateComputePipeline();
@@ -210,10 +209,6 @@ protected:
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
 	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
 	std::vector<VkDescriptorSet> DescriptorSets;
-
-	std::vector<VkVertexInputBindingDescription> VertexInputBindingDescriptions;
-	std::vector<VkVertexInputAttributeDescription> VertexInputAttributeDescriptions;
-	VkPipelineVertexInputStateCreateInfo PipelineVertexInputStateCreateInfo;
 
 	//VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
 	VkPipelineCache PipelineCache = VK_NULL_HANDLE;

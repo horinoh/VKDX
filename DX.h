@@ -103,8 +103,6 @@ protected:
 	virtual void ResizeDepthStencilToClientRect(const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT) {
 		ResizeDepthStencil(static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), DepthFormat);
 	}
-
-	virtual void CreateInputLayout();
 	
 	virtual void CreateDefaultBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source);
 	virtual void CreateUploadBuffer(ID3D12Resource** Resource, const size_t Size, const void* Source);
@@ -120,7 +118,7 @@ protected:
 	virtual void CreateRootSignature();
 
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const {}
-
+	virtual void CreateInputLayout(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs, const UINT InputSlot = 0) const {}
 	virtual void CreatePipelineState() {}
 	virtual void CreateGraphicsPipelineState();
 	virtual void CreateComputePipelineState();
@@ -153,9 +151,6 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DepthStencilDescriptorHeap;
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
-
-	std::vector<D3D12_INPUT_ELEMENT_DESC> InputElementDescs;
-	D3D12_INPUT_LAYOUT_DESC InputLayoutDesc;
 
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
 

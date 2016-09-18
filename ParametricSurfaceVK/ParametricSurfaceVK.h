@@ -14,9 +14,11 @@ public:
 	virtual ~ParametricSurfaceVK() {}
 
 protected:
-	virtual void CreateVertexInput() override { CreateVertexInput_Position(); }
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {
 		CreateShader_VsPsTesTcsGs(ShaderModules, PipelineShaderStageCreateInfos);
+	}
+	virtual void CreateVertexInput(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding = 0) const {
+		CreateVertexInputT<Vertex_Position>(VertexInputBindingDescriptions, VertexInputAttributeDescriptions, Binding);
 	}
 };
 #pragma endregion

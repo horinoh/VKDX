@@ -35,8 +35,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateDepthStencilDescriptorHeap();
 	//!< ResizeDepthStencil() で DepthStencilResource が作られる、明示的にしなくても OnSize() からコールされる
 
-	//!< インプットレイアウト
-	CreateInputLayout();
 	//!< バーテックスバッファ、インデックスバッファ
 	auto CommandList = GraphicsCommandLists[0].Get();
 	CreateVertexBuffer(CommandAllocator, CommandList);
@@ -588,13 +586,6 @@ void DX::ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORM
 #endif
 }
 
-void DX::CreateInputLayout()
-{
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateInputLayout" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
 void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth, const FLOAT MaxDepth)
 {
 	Viewports = {
@@ -972,6 +963,12 @@ void DX::CreateGraphicsPipelineState()
 		0,
 		DepthStencilOpDesc,
 		DepthStencilOpDesc
+	};
+
+	std::vector<D3D12_INPUT_ELEMENT_DESC> InputElementDescs;
+	CreateInputLayout(InputElementDescs);
+	const D3D12_INPUT_LAYOUT_DESC InputLayoutDesc = {
+		InputElementDescs.data(), static_cast<UINT>(InputElementDescs.size())
 	};
 
 	const DXGI_SAMPLE_DESC SampleDesc = { 1/*4*/, 0 };

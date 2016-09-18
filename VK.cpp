@@ -35,8 +35,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< デプスステンシル
 	CreateDepthStencil(CommandBuffer);
 
-	//!< バーテックスインプット
-	CreateVertexInput();
 	//!< バーテックスバッファ、インデックスバッファ
 	CreateVertexBuffer(CommandBuffer);
 	CreateIndexBuffer(CommandBuffer);
@@ -1198,13 +1196,6 @@ void VK::CreateDepthStencil(const VkCommandBuffer CommandBuffer)
 #endif
 }
 
-void VK::CreateVertexInput()
-{
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateVertexInput" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
 void VK::CreateViewport(const float Width, const float Height, const float MinDepth, const float MaxDepth)
 {
 	Viewports = {
@@ -1560,10 +1551,18 @@ void VK::CreateGraphicsPipeline()
 {
 	std::vector<VkShaderModule> ShaderModules;
 	std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos;
-	//CreateShader_VsPs(ShaderModules, PipelineShaderStageCreateInfos);
 	CreateShader(ShaderModules, PipelineShaderStageCreateInfos);
 
-	//!< PipelineVertexInputStateCreateInfo は CreateVertexInput() 内で作成してある
+	std::vector<VkVertexInputBindingDescription> VertexInputBindingDescriptions;
+	std::vector<VkVertexInputAttributeDescription> VertexInputAttributeDescriptions;
+	CreateVertexInput(VertexInputBindingDescriptions, VertexInputAttributeDescriptions, 0);
+	const VkPipelineVertexInputStateCreateInfo PipelineVertexInputStateCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(VertexInputBindingDescriptions.size()), VertexInputBindingDescriptions.data(),
+		static_cast<uint32_t>(VertexInputAttributeDescriptions.size()), VertexInputAttributeDescriptions.data()
+	};
 
 	const VkPipelineInputAssemblyStateCreateInfo PipelineInputAssemblyStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
