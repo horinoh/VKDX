@@ -48,90 +48,6 @@ void VKExt::CreateDescritporPool_1UniformBuffer()
 	}
 }
 
-void VKExt::CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const
-{
-	const auto ShaderPath = GetShaderPath();
-	ShaderModules = {
-		CreateShaderModule((ShaderPath + L".vert.spv").data()),
-		CreateShaderModule((ShaderPath + L".frag.spv").data())
-	};
-	//!< HLSL コンパイル時のデフォルトエントリポイント名が "main" なのでそれに合わせることにする
-	const char* EntrypointName = "main";
-	PipelineShaderStageCreateInfos = {
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
-			EntrypointName,
-			nullptr
-		},
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
-			EntrypointName,
-			nullptr
-		}
-	};
-}
-void VKExt::CreateShader_VsPsTesTcsGs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const
-{
-	const auto ShaderPath = GetShaderPath();
-	ShaderModules = {
-		CreateShaderModule((ShaderPath + L".vert.spv").data()),
-		CreateShaderModule((ShaderPath + L".frag.spv").data()),
-		CreateShaderModule((ShaderPath + L".tese.spv").data()),
-		CreateShaderModule((ShaderPath + L".tesc.spv").data()),
-		CreateShaderModule((ShaderPath + L".geom.spv").data()) 
-	};
-	//!< HLSL コンパイル時のデフォルトエントリポイント名が "main" なのでそれに合わせることにする
-	const char* EntrypointName = "main";
-	PipelineShaderStageCreateInfos = {
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
-			EntrypointName,
-			nullptr
-		},
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
-			EntrypointName,
-			nullptr
-		},
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, ShaderModules[2],
-			EntrypointName,
-			nullptr
-		},
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, ShaderModules[3],
-			EntrypointName,
-			nullptr
-		},
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_GEOMETRY_BIT, ShaderModules[4],
-			EntrypointName,
-			nullptr
-		},
-	};
-}
-
 void VKExt::CreateRenderPass_Color()
 {
 	const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
@@ -161,6 +77,8 @@ void VKExt::CreateRenderPass_Color()
 			0, nullptr
 		},
 	};
+
+	//!< サブパス間の依存関係
 	const std::vector<VkSubpassDependency> SubpassDependencies = {
 		{
 			VK_SUBPASS_EXTERNAL,							//!< サブパス外から
@@ -181,6 +99,7 @@ void VKExt::CreateRenderPass_Color()
 			VK_DEPENDENCY_BY_REGION_BIT,
 		},
 	};
+
 	const VkRenderPassCreateInfo RenderPassCreateInfo = {
 		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 		nullptr,
@@ -234,6 +153,7 @@ void VKExt::CreateRenderPass_ColorDepth()
 			0, nullptr
 		}
 	};
+
 	const std::vector<VkSubpassDependency> SubpassDependencies = {
 		{
 			VK_SUBPASS_EXTERNAL,
@@ -254,6 +174,7 @@ void VKExt::CreateRenderPass_ColorDepth()
 			VK_DEPENDENCY_BY_REGION_BIT,
 		},
 	};
+	
 	const VkRenderPassCreateInfo RenderPassCreateInfo = {
 		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 		nullptr,
@@ -303,4 +224,87 @@ void VKExt::CreateFramebuffer_ColorDepth()
 		};
 		VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, nullptr, &Framebuffers[i]));
 	}
+}
+
+void VKExt::CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const
+{
+	const auto ShaderPath = GetShaderPath();
+	ShaderModules = {
+		CreateShaderModule((ShaderPath + L".vert.spv").data()),
+		CreateShaderModule((ShaderPath + L".frag.spv").data())
+	};
+	//!< HLSL コンパイル時のデフォルトエントリポイント名が "main" なのでそれに合わせることにする
+	const char* EntrypointName = "main";
+	PipelineShaderStageCreateInfos = {
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
+			EntrypointName,
+			nullptr
+		},
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
+			EntrypointName,
+			nullptr
+		}
+	};
+}
+void VKExt::CreateShader_VsPsTesTcsGs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const
+{
+	const auto ShaderPath = GetShaderPath();
+	ShaderModules = {
+		CreateShaderModule((ShaderPath + L".vert.spv").data()),
+		CreateShaderModule((ShaderPath + L".frag.spv").data()),
+		CreateShaderModule((ShaderPath + L".tese.spv").data()),
+		CreateShaderModule((ShaderPath + L".tesc.spv").data()),
+		CreateShaderModule((ShaderPath + L".geom.spv").data()) 
+	};
+	const char* EntrypointName = "main";
+	PipelineShaderStageCreateInfos = {
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
+			EntrypointName,
+			nullptr
+		},
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
+			EntrypointName,
+			nullptr
+		},
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, ShaderModules[2],
+			EntrypointName,
+			nullptr
+		},
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, ShaderModules[3],
+			EntrypointName,
+			nullptr
+		},
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_GEOMETRY_BIT, ShaderModules[4],
+			EntrypointName,
+			nullptr
+		},
+	};
 }

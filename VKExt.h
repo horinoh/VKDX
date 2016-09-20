@@ -45,10 +45,6 @@ public:
 		std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 	}
-
-	virtual void CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const;
-	virtual void CreateShader_VsPsTesTcsGs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const;
-
 	virtual void CreateRenderPass() { CreateRenderPass_Color(); }
 	virtual void CreateRenderPass_Color();
 	virtual void CreateRenderPass_ColorDepth();
@@ -57,4 +53,6 @@ public:
 	virtual void CreateFramebuffer_Color();
 	virtual void CreateFramebuffer_ColorDepth();
 
+	virtual void CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const;
+	virtual void CreateShader_VsPsTesTcsGs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const;	
 };

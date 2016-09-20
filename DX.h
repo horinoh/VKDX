@@ -116,7 +116,7 @@ protected:
 	virtual void CreateViewportTopFront(const FLOAT Width, const FLOAT Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 	
 	virtual void CreateRootSignature();
-
+	//virtual void CreateRootSignature(ID3D12RootSignature** RootSignature) const;
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const {}
 	virtual void CreateInputLayout(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs, const UINT InputSlot = 0) const {}
 	virtual void CreatePipelineState() {}

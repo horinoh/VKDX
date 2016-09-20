@@ -40,11 +40,13 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateVertexBuffer(CommandAllocator, CommandList);
 	CreateIndexBuffer(CommandAllocator, CommandList);
 	WaitForFence();
-	//!< コンスタントバッファ
-	CreateConstantBuffer();
 
 	//!< ルートシグニチャ
 	CreateRootSignature();
+
+	//!< コンスタントバッファ
+	CreateConstantBuffer();
+
 	//!< パイプライン
 	CreatePipelineState();
 
@@ -607,6 +609,31 @@ void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDe
 	std::cout << "CreateViewport" << COUT_OK << std::endl << std::endl;
 #endif
 }
+
+//void DX::CreateRootSignature(ID3D12RootSignature** RootSignature) const
+//{
+//	using namespace Microsoft::WRL;
+//
+//	const std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
+//	};
+//	const D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable = {
+//		static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
+//	};
+//	const std::vector<D3D12_ROOT_PARAMETER> RootParameters = {
+//	};
+//	const std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {
+//	};
+//	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
+//		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
+//		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
+//		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+//	};
+//	ComPtr<ID3DBlob> Blob;
+//	ComPtr<ID3DBlob> ErrorBlob;
+//	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
+//	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
+//}
+
 /**
 @note 
 アップロード用のリソースを D3D12_HEAP_TYPE_UPLOAD で作成してそこにデータをコピーする
@@ -912,7 +939,12 @@ void DX::CreateRootSignature()
 void DX::CreateGraphicsPipelineState()
 {
 	assert(nullptr != RootSignature);
+#if 0
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
+	CreateRootSignature(RootSignature.GetAddressOf());
+#endif
 
+	//!< シェーダ
 	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs;
 	std::array<D3D12_SHADER_BYTECODE, 5> ShaderBytecodes;
 	CreateShader(ShaderBlobs, ShaderBytecodes);
@@ -965,17 +997,17 @@ void DX::CreateGraphicsPipelineState()
 		DepthStencilOpDesc
 	};
 
+	//!< インプットレイアウト
 	std::vector<D3D12_INPUT_ELEMENT_DESC> InputElementDescs;
 	CreateInputLayout(InputElementDescs);
 	const D3D12_INPUT_LAYOUT_DESC InputLayoutDesc = {
 		InputElementDescs.data(), static_cast<UINT>(InputElementDescs.size())
 	};
 
-	const DXGI_SAMPLE_DESC SampleDesc = { 1/*4*/, 0 };
+	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
 	const D3D12_CACHED_PIPELINE_STATE CachedPipelineState = { nullptr, 0 };
 	const D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineStateDesc = {
 		RootSignature.Get(),
-		//ShaderBytecodesVS, ShaderBytecodesPS, DefaultShaderBytecode, DefaultShaderBytecode, DefaultShaderBytecode,
 		ShaderBytecodes[0], ShaderBytecodes[1], ShaderBytecodes[2], ShaderBytecodes[3], ShaderBytecodes[4],
 		StreamOutputDesc,
 		BlendDesc,
@@ -985,7 +1017,7 @@ void DX::CreateGraphicsPipelineState()
 		InputLayoutDesc,
 		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
 		D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
-		1,{ DXGI_FORMAT_R8G8B8A8_UNORM/*, ... x8*/ },
+		1, { DXGI_FORMAT_R8G8B8A8_UNORM/*, ... x8*/ },
 		DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
 		SampleDesc,
 		0,

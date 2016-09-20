@@ -126,20 +126,17 @@ protected:
 	virtual void CreateUniformBuffer();
 
 	virtual void CreateDescriptorSetLayout();
-	virtual void CreateDescritporPool();
-	virtual void CreateDescriptorSet(VkDescriptorPool DescritorPool);
+	virtual void CreateDescriptorSet();
 
 	virtual void CreateRenderPass() {}
+	virtual void CreateFramebuffer() {}
 
-	//virtual void CreatePipelineLayout();
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const {}
 	virtual void CreateVertexInput(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding = 0) const {}
 	virtual void CreatePipeline() {}
 	virtual void CreateGraphicsPipeline();
 	virtual void CreateComputePipeline();
-
-	virtual void CreateFramebuffer();
 
 	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer);
 
@@ -201,7 +198,6 @@ protected:
 	VkBuffer UniformBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory UniformDeviceMemory = VK_NULL_HANDLE;
 	VkDescriptorBufferInfo UniformDescriptorBufferInfo;
-	std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
 
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;
@@ -210,8 +206,7 @@ protected:
 	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
 	std::vector<VkDescriptorSet> DescriptorSets;
 
-	//VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
-	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
+	//VkPipelineCache PipelineCache = VK_NULL_HANDLE;
 	VkPipeline Pipeline = VK_NULL_HANDLE;
 	VkRenderPass RenderPass = VK_NULL_HANDLE;
 	std::vector<VkFramebuffer> Framebuffers;
@@ -286,7 +281,7 @@ public:
 	template<typename T> static void SetTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* Tag) { 
 		DEBUG_BREAK(); //!< テンプレート特殊化されていない、VKDebugMarker.h に実装すること
 	}
-	//!< ↓テンプレート特殊化している
+	//!< ↓ここでテンプレート特殊化している
 #include "VKDebugMarker.h"
 
 #define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;

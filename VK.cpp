@@ -38,18 +38,18 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< バーテックスバッファ、インデックスバッファ
 	CreateVertexBuffer(CommandBuffer);
 	CreateIndexBuffer(CommandBuffer);
+
+	//!< デスクリプタセット
+	CreateDescriptorSetLayout();
+	CreateDescriptorSet();
+
 	//!< ユニフォームバッファ
 	//CreateUniformBuffer();
 
-	//!< デスクリプタセット
-	//CreateDescriptorSetLayout();
-	CreateDescritporPool();
-	CreateDescriptorSet(DescriptorPool);
-	//!< パイプライン
-	//CreatePipelineLayout();
+	//!< レンダーパス、フレームバッファ、パイプライン
 	CreateRenderPass();
-	CreatePipeline();
 	CreateFramebuffer();
+	CreatePipeline();
 }
 void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 {
@@ -91,13 +91,9 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyPipeline(Device, Pipeline, nullptr);
 		Pipeline = VK_NULL_HANDLE;
 	}
-	if (VK_NULL_HANDLE != PipelineCache) {
-		vkDestroyPipelineCache(Device, PipelineCache, nullptr);
-		PipelineCache = VK_NULL_HANDLE;
-	}
-	//if (VK_NULL_HANDLE != PipelineLayout) {
-	//	vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
-	//	PipelineLayout = VK_NULL_HANDLE;
+	//if (VK_NULL_HANDLE != PipelineCache) {
+	//	vkDestroyPipelineCache(Device, PipelineCache, nullptr);
+	//	PipelineCache = VK_NULL_HANDLE;
 	//}
 
 	if (!DescriptorSets.empty()) {
@@ -108,10 +104,10 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyDescriptorPool(Device, DescriptorPool, nullptr);
 		DescriptorPool = VK_NULL_HANDLE;
 	}
-	//for (auto i : DescriptorSetLayouts) {
-	//	vkDestroyDescriptorSetLayout(Device, i, nullptr);
-	//}
-	//DescriptorSetLayouts.clear();
+	for (auto i : DescriptorSetLayouts) {
+		vkDestroyDescriptorSetLayout(Device, i, nullptr);
+	}
+	DescriptorSetLayouts.clear();
 
 	if (VK_NULL_HANDLE != UniformDeviceMemory) {
 		vkFreeMemory(Device, UniformDeviceMemory, nullptr);
@@ -1391,14 +1387,26 @@ void VK::CreateUniformBuffer()
 
 	CreateHostVisibleBuffer(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &UniformBuffer, &UniformDeviceMemory, Size, &Color);
 
-	UniformDescriptorBufferInfo = {
+	const VkBufferViewCreateInfo BufferViewCreateInfo = {
+		VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
+		nullptr,
+		0,
+		UniformBuffer,
+		VK_FORMAT_R8G8B8A8_UNORM,
+		Size,
+		VK_WHOLE_SIZE
+	};
+	VkBufferView BufferView = VK_NULL_HANDLE;
+	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BufferViewCreateInfo, nullptr, &BufferView));
+
+	const VkDescriptorBufferInfo UniformDescriptorBufferInfo = {
 		UniformBuffer,
 		0,
 		Size
 	};
 
 	VkDescriptorBufferInfo* DescriptorBufferInfo = nullptr;
-	WriteDescriptorSets = {
+	const std::vector<VkWriteDescriptorSet> WriteDescriptorSets = {
 		{
 			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			nullptr,
@@ -1451,7 +1459,12 @@ void VK::CreateDescriptorSetLayout()
 	std::cout << "CreateDescriptorSetLayout" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void VK::CreateDescritporPool()
+/**
+@brief シェーダとのバインディングのレイアウト
+@note DescriptorSet は「DescriptorSetLayt 型」のインスタンスのようなもの
+@note 更新は vkUpdateDescriptorSets() で行う
+*/
+void VK::CreateDescriptorSet()
 {
 	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
 	};
@@ -1465,60 +1478,23 @@ void VK::CreateDescritporPool()
 		};
 		VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
 
-#ifdef DEBUG_STDOUT
-		std::cout << "CreateDescriptorPool" << COUT_OK << std::endl << std::endl;
-#endif
-	}
-}
-/**
-@brief シェーダとのバインディングのレイアウト
-@note DescriptorSet は「DescriptorSetLayt 型」のインスタンスのようなもの
-@note 更新は vkUpdateDescriptorSets() で行う
-*/
-void VK::CreateDescriptorSet(VkDescriptorPool DescritorPool)
-{
-	if (VK_NULL_HANDLE != DescritorPool) {
-		const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-			nullptr,
-			DescriptorPool,
-			static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
-		};
-		VkDescriptorSet DescriptorSet;
-		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, &DescriptorSet));
-		DescriptorSets.push_back(DescriptorSet);
+		if (VK_NULL_HANDLE != DescriptorPool) {
+			const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
+				VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+				nullptr,
+				DescriptorPool,
+				static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
+			};
+			VkDescriptorSet DescriptorSet;
+			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, &DescriptorSet));
+			DescriptorSets.push_back(DescriptorSet);
 
 #ifdef DEBUG_STDOUT
-		std::cout << "CreateDescriptorSet" << COUT_OK << std::endl << std::endl;
+			std::cout << "CreateDescriptorSet" << COUT_OK << std::endl << std::endl;
 #endif
+		}
 	}
 }
-/**
-@brief シェーダとのバインディングのレイアウト
-@note PipelineLayout は引数に「DescriptorSetLayt 型のインスタンス」を取る「関数」のようなもの
-*/
-//void VK::CreatePipelineLayout()
-//{
-//	//!< Push constants represent a high speed path to modify constant data in pipelines that is expected to outperform memory-backed resource updates.
-//	const std::vector<VkPushConstantRange> PushConstantRanges = {};
-//	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
-//		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-//		nullptr,
-//		0,
-//		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
-//		static_cast<uint32_t>(PushConstantRanges.size()), PushConstantRanges.data()
-//	};
-//	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, nullptr, &PipelineLayout));
-//
-//	for (auto i : DescriptorSetLayouts) {
-//		vkDestroyDescriptorSetLayout(Device, i, nullptr);
-//	}
-//	DescriptorSetLayouts.clear();
-//
-//#ifdef DEBUG_STDOUT
-//	std::cout << "CreatePipelineLayout" << COUT_OK << std::endl << std::endl;
-//#endif
-//}
 
 VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 {
@@ -1549,10 +1525,12 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 }
 void VK::CreateGraphicsPipeline()
 {
+	//!< シェーダ
 	std::vector<VkShaderModule> ShaderModules;
 	std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos;
 	CreateShader(ShaderModules, PipelineShaderStageCreateInfos);
 
+	//!< バーテックスインプット
 	std::vector<VkVertexInputBindingDescription> VertexInputBindingDescriptions;
 	std::vector<VkVertexInputAttributeDescription> VertexInputAttributeDescriptions;
 	CreateVertexInput(VertexInputBindingDescriptions, VertexInputAttributeDescriptions, 0);
@@ -1572,7 +1550,7 @@ void VK::CreateGraphicsPipeline()
 		VK_FALSE
 	};
 
-	//!< 別途 VkDynamicState にするので、ここでは nullptr を指定している、ただし個数は指定しておく必要があるので注意!
+	//!< VkDynamicState にするので、ここでは nullptr を指定している、ただし個数は指定しておく必要があるので注意!
 	const VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
 		nullptr,
@@ -1662,7 +1640,7 @@ void VK::CreateGraphicsPipeline()
 		static_cast<uint32_t>(DynamicStates.size()), DynamicStates.data()
 	};
 
-	//!< DescriptorSetLayouts は CreateDescriptorSetLayout() 内で作成してある
+	//!< パイプラインレイアウト
 	const std::vector<VkPushConstantRange> PushConstantRanges = {
 	};
 	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
@@ -1674,11 +1652,11 @@ void VK::CreateGraphicsPipeline()
 	};
 	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, nullptr, &PipelineLayout));
-	//!< PipelineLayout を作成したら、DescritptorSetLayout は破棄して良い
-	for (auto i : DescriptorSetLayouts) {
-		vkDestroyDescriptorSetLayout(Device, i, nullptr);
-	}
-	DescriptorSetLayouts.clear();
+	//!< PipelineLayout を作成したら、DescritptorSetLayout は破棄しても良い。(DescriptorSet を再作成する場合に必要になるのでとっておくべきか？)
+	//for (auto i : DescriptorSetLayouts) {
+	//	vkDestroyDescriptorSetLayout(Device, i, nullptr);
+	//}
+	//DescriptorSetLayouts.clear();
 
 	/**
 	basePipelineHandle と basePipelineIndex は同時に使用できない(排他)
@@ -1707,23 +1685,26 @@ void VK::CreateGraphicsPipeline()
 			VK_NULL_HANDLE, 0 //!< basePipelineHandle, basePipelineIndex
 		}
 	};
-	//!< パイプラインをコンパイルして、vkGetPipelineCacheData()でディスクへ保存可能
-	const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-		nullptr,
-		0,
-		0, nullptr
-	};
-	VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, nullptr, &PipelineCache));
-	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, PipelineCache, static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), nullptr, &Pipeline));
 
-	//!< Pipeline を作成したら、ShaderModules は破棄して良い
+	//!< パイプラインをコンパイルして、vkGetPipelineCacheData()でディスクへ保存可能
+	//const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
+	//	VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+	//	nullptr,
+	//	0,
+	//	0, nullptr
+	//};
+	//VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, nullptr, &PipelineCache));
+
+	//!< (グラフィック)パイプライン
+	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, VK_NULL_HANDLE/*PipelineCache*/, static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), nullptr, &Pipeline));
+
+	//!< パイプライン を作成したら、シェーダモジュール は破棄して良い
 	for (auto i : ShaderModules) {
 		vkDestroyShaderModule(Device, i, nullptr);
 	}
 	ShaderModules.clear();
 
-	//!< Pipeline を作成したら、PipelineLayout は破棄して良い
+	//!< パイプライン を作成したら、パイプラインレイアウト は破棄して良い
 	if (VK_NULL_HANDLE != PipelineLayout) {
 		vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
 		PipelineLayout = VK_NULL_HANDLE;
@@ -1748,13 +1729,6 @@ void VK::CreateComputePipeline()
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateComputePipeline" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
-void VK::CreateFramebuffer()
-{
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateFramebuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
