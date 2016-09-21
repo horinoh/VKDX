@@ -3,6 +3,10 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 
 #include <vulkan/vulkan.h>
+#if 0
+//!< GLSL をオンラインコンパイルする場合
+#include <../glslang/SPIRV/GlslangToSpv.h>
+#endif
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -202,15 +206,16 @@ protected:
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;
 
+	//!< デスクリプタセット、パイプラインレイアウト作成時に必要になるのでメンバとする
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
 	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
+	//!< ユニフォームバッファ作成時に必要になるのでメンバとする
 	std::vector<VkDescriptorSet> DescriptorSets;
 
 	//VkPipelineCache PipelineCache = VK_NULL_HANDLE;
 	VkPipeline Pipeline = VK_NULL_HANDLE;
 	VkRenderPass RenderPass = VK_NULL_HANDLE;
 	std::vector<VkFramebuffer> Framebuffers;
-
 
 	//!< よく使うやつ
 	const VkComponentMapping ComponentMapping_SwizzleIdentity = {

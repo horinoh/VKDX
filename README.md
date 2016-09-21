@@ -38,7 +38,14 @@ spirv-remap --map all --input %(Identity).spv --output . //!< Release のみ
 xcopy /y %(Identity).spv $(TargetDir)
 ~~~
 
-* プロパティシートへの変更は **sln を立ち上げ直さないと反映されない**っぽい!
+* プロパティシートへの変更は **sln を立ち上げ直さないと反映されない**
+
+#### オンラインコンパイル
+* VulkanSDK/バージョン/glslang/CMakeList.txt を使って cmake でプロジェクトを生成
+* glslang.sln を開いて glslang, glslangValidator, OGLCompipler, OSDependent, SPIRV, spirv-remap をビルド
+	* 64bitで使う場合は x64 を追加してビルドしないとだめみたい
+* SPIRV.lib, glslang.lib, OGLCompiler.lib, OSDependent.lib
+* 未使用
 
 #### Visual Studio GLSL ハイライト
 * ShaderHighlights\XXX_vs2015.reg   
@@ -83,19 +90,19 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir)
 
 #### DX
  * プロパティマネージャで Add Existing Property Sheet... - Props/HLSL.props
- * Header Files に Win.h、DX.h を追加 
- * Source Files に Win.cpp、DX.cpp、DXUtil.cpp を追加
+ * Header Files に Win.h、DX.h、DXExt.h を追加 
+ * Source Files に Win.cpp、DX.cpp、DXExt.cpp を追加
  * XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * 必要に応じて Shader Files フォルダを作成し、シェーダを突っ込む
   * 右クリック - プロパティ - HLSL Compiler - General - Shader Type でタイプを適切に選択しておく
 
 #### VK
  * プロパティマネージャで Add Existing Property Sheet... - Props/VK.props, Props/GLSL(REMAP).props
- * Header Files に Win.h、VK.h を追加
- * Source Files に Win.cpp、VK.cpp、VKUtil.cpp を追加
+ * Header Files に Win.h、VK.h、VKExt.h を追加
+ * Source Files に Win.cpp、VK.cpp、VKExt.cpp を追加
  * XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * 必要に応じて Shader Files フォルダを作成し、シェーダを突っ込む
-  * 拡張子を glslangValidator に沿うようにタイプを選択しておく。(VS.vert、 PS.frag、...)
+  * 拡張子を glslangValidator に沿うようにタイプを選択しておく。(.vert、 PS.frag、...)
   * 右クリック - プロパティ - HLSL Compiler - General - Item Type を Custom Build Tool
    * 適用 - Custom Build Tool 項目が追加されるので GLSL Compiler になっていることを確認
  -->

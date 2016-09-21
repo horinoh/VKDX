@@ -5,6 +5,42 @@
 #include "VK.h"
 
 #pragma comment(lib, "vulkan-1.lib")
+#if 0
+//!< GLSL をオンラインコンパイルする場合
+/**
+const auto Stage = EShLangVertex;
+auto Shader = new glslang::TShader(Stage);
+const char* ShaderStrings[1];
+Shader->setStrings(ShaderStrings, sizeof(ShaderStrings));
+TBuiltInResource Resources;
+//InitailizeResource(Resources);
+const auto Message = static_cast<EShMessages>(EShMsgSpvRules | EShMsgVulkanRules);
+if (Shader->parse(&Resources, 100, false, Message)) {
+auto Program = new glslang::TProgram();
+Program->addShader(Shader);
+if (Program->link(Message)) {
+std::vector<unsigned int> Spirv;
+glslang::GlslangToSpv(*Program->getIntermediate(Stage), Spirv);
+VkShaderModuleCreateInfo ShaderModuleCreateInfo;
+ShaderModuleCreateInfo.pCode = Spirv.data();
+ShaderModuleCreateInfo.codeSize = Spirv.size() * sizeof(Spirv[0]);
+}
+delete Program;
+}
+delete Shader;
+*/
+#ifdef _DEBUG
+#pragma comment(lib, "../glslang/SPIRV/Debug/SPIRVd.lib")
+#pragma comment(lib, "../glslang/glslang/Debug/glslangd.lib")
+#pragma comment(lib, "../glslang/OGLCompilersDLL/Debug/OGLCompilerd.lib")
+#pragma comment(lib, "../glslang/glslang/OSDependent/Windows/Debug/OSDependentd.lib")
+#else
+#pragma comment(lib, "../glslang/SPIRV/Release/SPIRV.lib")
+#pragma comment(lib, "../glslang/glslang/Release/glslang.lib")
+#pragma comment(lib, "../glslang/OGLCompilersDLL/Release/OGLCompiler.lib")
+#pragma comment(lib, "../glslang/glslang/OSDependent/Windows/Release/OSDependent.lib")
+#endif
+#endif
 
 void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 {
@@ -1440,9 +1476,10 @@ void VK::CreateDescriptorSetLayout()
 		//!< 配列サイズ 1 の UBO、VS から可視
 		{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
 		//!< 配列サイズ 1 の SAMPLER、全てから可視
-		{ 1, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_ALL_GRAPHICS, nullptr },
+		{ 0, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_ALL_GRAPHICS, nullptr },
 		//!< 配列サイズ 10 の IMAGE、FS から可視
-		{ 2, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 10, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+		{ 0, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+		{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
 #endif
 	};
 	const VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo = {
@@ -1467,13 +1504,24 @@ void VK::CreateDescriptorSetLayout()
 void VK::CreateDescriptorSet()
 {
 	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
+#if 0
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
+#endif
 	};
 	if (!DescriptorPoolSizes.empty()) {
+		const uint32_t MaxSets = [&]() {
+			uint32_t MaxDescriptorCount = 0;
+			for (const auto& i : DescriptorPoolSizes) {
+				MaxDescriptorCount = std::max(MaxDescriptorCount, i.descriptorCount);
+			}
+			return MaxDescriptorCount;
+		}();
 		const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
 			VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 			nullptr,
 			0,
-			1, //!< maxSets ... プールから確保される最大のデスクリプタ数
+			MaxSets,
 			static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
 		};
 		VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
