@@ -240,9 +240,6 @@ void FullscreenVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 
 		auto Image = SwapchainImages[SwapchainImageIndex];
 
-		//!< クリア
-		vkCmdClearColorImage(CommandBuffer, Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Colors::SkyBlue, 1, &ImageSubresourceRange_Color);
-
 		//!< バリア、レンダーターゲットの設定は RenderPass
 		const VkRenderPassBeginInfo RenderPassBeginInfo = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
