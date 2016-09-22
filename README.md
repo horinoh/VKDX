@@ -62,6 +62,11 @@ xcopy /y %(Identity).spv $(TargetDir)
  * Visual Studio のインストール時に Universal Windows App Development Tools - Tools and Windows 10 SDK 10.XXX をチェックしておく必要がある
  * インストール済みの場合は「プログラムと機能」から更新インストールする 
 
+### DirectXTK
+* DirectXTex(https://github.com/Microsoft/DirectXTex/wiki/DirectXTex) はツール用途みたなので DirectXTK12(https://github.com/Microsoft/DirectXTK12) を使う
+* DirectXTK_Desktop_2015_Win10.sln を開いてビルド ← うまくいかない…
+* まだ未使用
+
 #### シェーダコンパイル
 * シェーダは Visual Studio に追加すると自動的にコンパイルされる
 * Properties - HLSLCompiler - General - Shader Type を適切に設定しておかないと、頂点シェーダでコンパイルされるので注意

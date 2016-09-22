@@ -5,6 +5,8 @@
 #pragma region Code
 #include "../DXExt.h"
 
+//#include "DDSTextureLoader.h"
+
 class TextureDX : public DXExt
 {
 private:
@@ -17,7 +19,12 @@ protected:
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const override {
 		CreateShader_VsPs(ShaderBlobs, ShaderBytecodes);
 	}
-	virtual void CreatePipelineState() override { CreateGraphicsPipelineState(); }
+	virtual void CreatePipelineState() override { CreateGraphicsPipelineState(); 
+		//ID3D12Resource* Texture;
+		//std::unique_ptr<uint8_t[]> DDSData;
+		//std::vector<D3D12_SUBRESOURCE_DATA> Subresources;
+		//DirectX::LoadDDSTextureFromFile(Device.Get(), L"XXX.dds", &Texture, DDSData, Subresources);
+	}
 	virtual void PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12CommandAllocator* CommandAllocator) override;
 };
 #pragma endregion
