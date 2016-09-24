@@ -10,7 +10,7 @@ class ComputeDX : public DXExt
 private:
 	using Super = DXExt;
 public:
-	ComputeDX() : DXExt() {}
+	ComputeDX() : Super() {}
 	virtual ~ComputeDX() {}
 
 protected:

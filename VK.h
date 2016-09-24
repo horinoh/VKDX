@@ -13,12 +13,6 @@
 #include <glm/glm.hpp>
 //#include <glm/gtc/matrix_transform.hpp>
 
-//!< fopen でなく fopen_s を使えと怒られるが、gli のコードは書き換えたくないので warning を抑制する
-#pragma warning (push)
-#pragma warning (disable : 4996)
-#include <gli/gli.hpp>
-#pragma warning (pop) 
-
 #include "Win.h"
 
 #ifndef THROW_ON_FAILED
@@ -120,6 +114,10 @@ protected:
 	virtual void CreateDepthStencilView(VkCommandBuffer CommandBuffer);
 	virtual void CreateDepthStencil(const VkCommandBuffer CommandBuffer);
 	
+	virtual void LoadTexture(const std::string& Path) {}
+	virtual void LoadTexture(const std::wstring& Path) { LoadTexture(std::string(Path.begin(), Path.end())); }
+	virtual void CreateTexture() {}
+
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 	virtual void CreateViewportTopFront(const float Width, const float Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 

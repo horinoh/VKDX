@@ -10,7 +10,7 @@ class TriangleDX : public DXExt
 private:
 	using Super = DXExt;
 public:
-	TriangleDX() : DXExt() {}
+	TriangleDX() : Super() {}
 	virtual ~TriangleDX() {}
 
 protected:

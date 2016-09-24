@@ -10,7 +10,7 @@ class ParametricSurfaceDX : public DXExt
 private:
 	using Super = DXExt;
 public:
-	ParametricSurfaceDX() : DXExt() {}
+	ParametricSurfaceDX() : Super() {}
 	virtual ~ParametricSurfaceDX() {}
 
 protected:

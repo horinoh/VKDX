@@ -22,7 +22,7 @@
     <ProjectGuid>{0748F07C-5954-4883-B0EC-0F7BD43E2F67}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>TextureVK</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -66,11 +66,15 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\Props\GLSL.props" />
     <Import Project="..\Props\VK.props" />
+    <Import Project="..\Props\GLI.props" />
+    <Import Project="..\Props\GLM.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\Props\GLSLREMAP.props" />
     <Import Project="..\Props\VK.props" />
+    <Import Project="..\Props\GLI.props" />
+    <Import Project="..\Props\GLM.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -151,6 +155,7 @@
   <ItemGroup>
     <ClInclude Include="..\VK.h" />
     <ClInclude Include="..\VKExt.h" />
+    <ClInclude Include="..\VKImage.h" />
     <ClInclude Include="..\Win.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
@@ -160,6 +165,7 @@
   <ItemGroup>
     <ClCompile Include="..\VK.cpp" />
     <ClCompile Include="..\VKExt.cpp" />
+    <ClCompile Include="..\VKImage.cpp" />
     <ClCompile Include="..\Win.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

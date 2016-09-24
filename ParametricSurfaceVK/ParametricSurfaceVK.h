@@ -10,7 +10,7 @@ class ParametricSurfaceVK : public VKExt
 private:
 	using Super = VKExt;
 public:
-	ParametricSurfaceVK() : VKExt() {}
+	ParametricSurfaceVK() : Super() {}
 	virtual ~ParametricSurfaceVK() {}
 
 protected:

@@ -10,7 +10,7 @@ class FullscreenDX : public DXExt
 private:
 	using Super = DXExt;
 public:
-	FullscreenDX() : DXExt() {}
+	FullscreenDX() : Super() {}
 	virtual ~FullscreenDX() {}
 
 protected:

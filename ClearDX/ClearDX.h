@@ -10,7 +10,7 @@ class ClearDX : public DXExt
 private:
 	using Super = DXExt;
 public:
-	ClearDX() : DXExt() {}
+	ClearDX() : Super() {}
 	virtual ~ClearDX() {}
 };
 #pragma endregion

@@ -10,7 +10,7 @@ class FullscreenVK : public VKExt
 private:
 	using Super = VKExt;
 public:
-	FullscreenVK() : VKExt() {}
+	FullscreenVK() : Super() {}
 	virtual ~FullscreenVK() {}
 
 protected:

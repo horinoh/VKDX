@@ -3,14 +3,14 @@
 #include "resource.h"
 
 #pragma region Code
-#include "../VKExt.h"
+#include "../VKImage.h"
 
-class TextureVK : public VKExt
+class TextureVK : public VKImage
 {
 private:
-	using Super = VKExt;
+	using Super = VKImage;
 public:
-	TextureVK() : VKExt() {}
+	TextureVK() : Super() {}
 	virtual ~TextureVK() {}
 
 protected:

@@ -10,7 +10,7 @@ class ComputeVK : public VKExt
 private:
 	using Super = VKExt;
 public:
-	ComputeVK() : VKExt() {}
+	ComputeVK() : Super() {}
 	virtual ~ComputeVK() {}
 
 protected:

@@ -10,7 +10,7 @@ class TriangleVK : public VKExt
 private:
 	using Super = VKExt;
 public:
-	TriangleVK() : VKExt() {}
+	TriangleVK() : Super() {}
 	virtual ~TriangleVK() {}
 
 protected:

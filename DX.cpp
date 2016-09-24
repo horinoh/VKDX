@@ -701,7 +701,7 @@ void DX::CreateDefaultBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12Gra
 	std::vector<ID3D12CommandList*> CommandLists = { CommandList };
 	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
 
-	//WaitForFence();
+	WaitForFence();
 }
 
 /**

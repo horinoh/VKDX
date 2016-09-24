@@ -1,5 +1,12 @@
 ﻿# VKDX
 
+## 共通
+* "warning C4005: '_malloca': macro redefinition" は stdafx.h 内 windows.h 前に _CRTDBG_MAP_ALLOC を定義すると出なくなる
+~~~
+#define _CRTDBG_MAP_ALLOC
+#include <windows.h>
+~~~
+
 ## VK
 
 #### SDK
@@ -63,9 +70,12 @@ xcopy /y %(Identity).spv $(TargetDir)
  * インストール済みの場合は「プログラムと機能」から更新インストールする 
 
 ### DirectXTK
-* DirectXTex(https://github.com/Microsoft/DirectXTex/wiki/DirectXTex) はツール用途みたなので DirectXTK12(https://github.com/Microsoft/DirectXTK12) を使う
-* DirectXTK_Desktop_2015_Win10.sln を開いてビルド ← うまくいかない…
-* まだ未使用
+* https://github.com/Microsoft/DirectXTK12
+* DirectXTK_Desktop_2015_Win10.sln を開いてビルド
+	* D3D12_DESCRIPTOR_RANGE1 がなくて通らない場合は  Windows 10 Anniversary Update SDK が必要(VisualStudioを更新する)
+* 同じ階層に DirectXTK12 をクローンして **..\..\DirectXTK12** にパスを通した
+* 備考
+	* DirectXTex(https://github.com/Microsoft/DirectXTex/wiki/DirectXTex) はツール用途みたい
 
 #### シェーダコンパイル
 * シェーダは Visual Studio に追加すると自動的にコンパイルされる

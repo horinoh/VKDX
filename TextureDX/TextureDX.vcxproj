@@ -22,7 +22,7 @@
     <ProjectGuid>{3286F9A6-5581-44DB-A5B5-845510A73443}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>TextureDX</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -151,6 +151,7 @@
   <ItemGroup>
     <ClInclude Include="..\DX.h" />
     <ClInclude Include="..\DXExt.h" />
+    <ClInclude Include="..\DXImage.h" />
     <ClInclude Include="..\Win.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="stdafx.h" />
@@ -160,6 +161,7 @@
   <ItemGroup>
     <ClCompile Include="..\DX.cpp" />
     <ClCompile Include="..\DXExt.cpp" />
+    <ClCompile Include="..\DXImage.cpp" />
     <ClCompile Include="..\Win.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

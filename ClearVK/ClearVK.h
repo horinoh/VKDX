@@ -10,7 +10,7 @@ class ClearVK : public VKExt
 private:
 	using Super = VKExt;
 public:
-	ClearVK() : VKExt() {}
+	ClearVK() : Super() {}
 	virtual ~ClearVK() {}
 };
 #pragma endregion
