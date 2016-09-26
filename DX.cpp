@@ -34,6 +34,8 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< デプスステンシル
 	CreateDepthStencilDescriptorHeap();
 	//!< ResizeDepthStencil() で DepthStencilResource が作られる、明示的にしなくても OnSize() からコールされる
+	
+	CreateTexture();
 
 	//!< バーテックスバッファ、インデックスバッファ
 	auto CommandList = GraphicsCommandLists[0].Get();
@@ -511,6 +513,7 @@ void DX::CreateDepthStencilDescriptorHeap()
 		0
 	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DepthStencilDescriptorHeap.GetAddressOf())));
+
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "DepthStencilDescriptorHeap" << std::endl;
 #endif
@@ -570,7 +573,7 @@ void DX::CreateDepthStencilResource(const UINT Width, const UINT Height, const D
 	std::cout << "\t" << "DepthStencilView" << std::endl;
 #endif
 
-	//!< リソースの状態を初期 → デプスへ変更
+	//!< リソースの状態を初期 → デプス書き込みへ変更
 	auto CommandList = GraphicsCommandLists[0];
 	BarrierTransition(CommandList.Get(), DepthStencilResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
@@ -586,6 +589,39 @@ void DX::ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORM
 #ifdef DEBUG_STDOUT
 	std::cout << "ResizeDepthStencil" << COUT_OK << std::endl << std::endl;
 #endif
+}
+
+void DX::CreateImageDescriptorHeap()
+{
+	const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
+		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+		1,
+		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+		0
+	};
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(ImageDescriptorHeap.GetAddressOf())));
+
+	auto CPUDescriptorHandle(ImageDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	CPUDescriptorHandle.ptr += 0 * IncrementSize;
+
+	/*const*/D3D12_SHADER_RESOURCE_VIEW_DESC ShaderResourceViewDesc = {
+		DXGI_FORMAT_R8G8B8A8_UNORM,
+		D3D12_SRV_DIMENSION_TEXTURE2D,
+		D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+	};
+	ShaderResourceViewDesc.Texture2D = {
+		0,
+		1,
+		0,
+		0.0f
+	};
+	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
+	Device->CreateShaderResourceView(ImageResource.Get(), &ShaderResourceViewDesc, CPUDescriptorHandle);
+}
+void DX::CreateImageResource()
+{
+
 }
 
 void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth, const FLOAT MaxDepth)
@@ -642,7 +678,7 @@ void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDe
 */
 void DX::CreateDefaultBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source)
 {
-	//!< リソースデスクリプタ(共用)
+	//!< リソースデスクリプタ(アップロード、ターゲット共用)
 	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
 	const D3D12_RESOURCE_DESC ResourceDesc = {
 		D3D12_RESOURCE_DIMENSION_BUFFER,
@@ -855,8 +891,9 @@ void DX::CreateUnorderedAccessTexture()
 		D3D12_SRV_DIMENSION_TEXTURE2D,
 		D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
 	};
-	SRVDesc.Texture2D.MostDetailedMip = 0;
-	SRVDesc.Texture1D.MipLevels = 1;
+	SRVDesc.Texture2D = {
+		0, 1, 0, 0.0f
+	};
 	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	Device->CreateShaderResourceView(UnorderedAccessTextureResource.Get(), &SRVDesc, CPUDescriptorHandle);
 
@@ -865,7 +902,9 @@ void DX::CreateUnorderedAccessTexture()
 		Format,
 		D3D12_UAV_DIMENSION_TEXTURE2D,
 	};
-	UAVDesc.Texture2D.MipSlice = 0;
+	UAVDesc.Texture2D = {
+		0, 0
+	};
 	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	Device->CreateUnorderedAccessView(UnorderedAccessTextureResource.Get(), nullptr, &UAVDesc, CPUDescriptorHandle);
 
@@ -1141,3 +1180,15 @@ void DX::WaitForFence()
 		CloseHandle(hEvent);
 	}
 }
+
+#ifdef _DEBUG
+void DebugEvent::Begin(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name)
+{
+	const auto Size = static_cast<UINT>((wcslen(Name) + 1) * sizeof(Name[0]));
+	CommandList->BeginEvent(0, Name, Size);
+}
+void DebugEvent::End(ID3D12GraphicsCommandList* CommandList)
+{
+	CommandList->EndEvent();
+}
+#endif

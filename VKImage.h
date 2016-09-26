@@ -14,6 +14,6 @@ private:
 	using Super = VKExt;
 protected:
 	void LoadDDS(const std::string& Path);
-	virtual void LoadTexture(const std::string& Path) override { LoadDDS(Path); }
+	virtual void LoadImage(const std::string& Path) override { LoadDDS(Path); }
 };
 

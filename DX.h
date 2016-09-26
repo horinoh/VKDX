@@ -27,6 +27,9 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 
 #include "Win.h"
 
+#ifndef BREAK_ON_FAILED
+#define BREAK_ON_FAILED(hr) if(FAILED(hr)) { DEBUG_BREAK(); }
+#endif
 #ifndef THROW_ON_FAILED
 #define THROW_ON_FAILED(hr) if(FAILED(hr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + DX::GetHRESULTString(hr)); }
 #endif
@@ -34,6 +37,7 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 #define MESSAGEBOX_ON_FAILED(hr) if(FAILED(hr)) { Win::ShowMessageBoxW(nullptr, DX::GetHRESULTStringW(hr)); }
 #endif
 #ifndef VERIFY_SUCCEEDED
+//#define VERIFY_SUCCEEDED(hr) BREAK_ON_FAILED(hr)
 #define VERIFY_SUCCEEDED(hr) THROW_ON_FAILED(hr)
 //#define VERIFY_SUCCEEDED(hr) MESSAGEBOX_ON_FAILED(hr)
 #endif
@@ -104,8 +108,11 @@ protected:
 		ResizeDepthStencil(static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), DepthFormat);
 	}
 
-	virtual void LoadTexture(const std::wstring& Path) {}
-	virtual void LoadTexture(const std::string& Path) { LoadTexture(std::wstring(Path.begin(), Path.end())); }
+	virtual void CreateImageDescriptorHeap();
+	virtual void CreateImageResource();
+	virtual void LoadImage(const std::wstring& Path) {}
+	virtual void LoadImage(const std::string& Path) { LoadImage(std::wstring(Path.begin(), Path.end())); }
+	
 	virtual void CreateTexture() {}
 
 	virtual void CreateDefaultBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source);
@@ -154,6 +161,9 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12Resource> DepthStencilResource;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DepthStencilDescriptorHeap;
 
+	Microsoft::WRL::ComPtr<ID3D12Resource> ImageResource;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> ImageDescriptorHeap;
+
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
 
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
@@ -187,3 +197,19 @@ protected:
 		D3D_FEATURE_LEVEL_9_1,
 	};
 };
+
+#ifdef _DEBUG
+class DebugEvent
+{
+public:
+	//static void Insert(ID3D12CommandList* CommandList, PCWSTR Name);
+	static void Begin(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name);
+	static void Begin(ID3D12GraphicsCommandList* CommandList, const std::wstring& Name) { Begin(CommandList, Name.c_str()); }
+	static void Begin(ID3D12GraphicsCommandList* CommandList, const std::string& Name) { Begin(CommandList, std::wstring(Name.begin(), Name.end())); }
+	static void End(ID3D12GraphicsCommandList* CommandList);
+
+	static void SetName(ID3D12DeviceChild* Resource, LPCWSTR Name) { Resource->SetName(Name); }
+	static void SetName(ID3D12DeviceChild* Resource, const std::wstring& Name) { SetName(Resource, Name.c_str()); }
+	static void SetName(ID3D12DeviceChild* Resource, const std::string& Name) { SetName(Resource, std::wstring(Name.begin(), Name.end())); }
+};
+#endif

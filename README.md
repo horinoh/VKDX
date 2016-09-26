@@ -1,11 +1,16 @@
 ﻿# VKDX
 
-## 共通
+## VK、DX 共通
+
+### コンパイル
 * "warning C4005: '_malloca': macro redefinition" は stdafx.h 内 windows.h 前に _CRTDBG_MAP_ALLOC を定義すると出なくなる
 ~~~
 #define _CRTDBG_MAP_ALLOC
 #include <windows.h>
 ~~~
+### DDS ツール
+* https://directxtex.codeplex.com/wikipage?title=Texconv&referringTitle=Documentation
+* https://directxtex.codeplex.com/wikipage?title=Texassemble&referringTitle=Documentation
 
 ## VK
 
@@ -23,13 +28,13 @@
 * https://github.com/g-truc/glm
 * 同じ階層に GLM をクローンして **..\..\glm** にパスを通した
 
-#### GLI
+#### GLI (DDS読み込みに使用)
 * https://github.com/g-truc/gli
 * 同じ階層に GLI をクローンして **..\..\gli** にパスを通した
 
 #### Vulkan-Hpp
 * https://github.com/KhronosGroup/Vulkan-Hpp
-* 未使用
+* 使っていない
 
 #### シェーダコンパイル
 * glslangValidator.exe でコンパイルする 環境変数 **Path** が通っているらしくそのまま使用できる
@@ -41,8 +46,8 @@
 	* Command Line :
 ~~~
 glslangValidator -V %(Identity) -o %(Identity).spv
-spirv-remap --map all --input %(Identity).spv --output . //!< Release のみ
-xcopy /y %(Identity).spv $(TargetDir)
+spirv-remap --map all --input %(Identity).spv --output . //!< この行は Release のみ
+xcopy /y %(Identity).spv $(TargetDir) //!< TargetDir にもコピー
 ~~~
 
 * プロパティシートへの変更は **sln を立ち上げ直さないと反映されない**
@@ -52,9 +57,9 @@ xcopy /y %(Identity).spv $(TargetDir)
 * glslang.sln を開いて glslang, glslangValidator, OGLCompipler, OSDependent, SPIRV, spirv-remap をビルド
 	* 64bitで使う場合は x64 を追加してビルドしないとだめみたい
 * SPIRV.lib, glslang.lib, OGLCompiler.lib, OSDependent.lib
-* 未使用
+* 使っていない
 
-#### Visual Studio GLSL ハイライト
+#### Visual Studio で GLSL シンタックスハイライトさせる場合
 * ShaderHighlights\XXX_vs2015.reg   
 
 #### デバッグ
@@ -69,22 +74,22 @@ xcopy /y %(Identity).spv $(TargetDir)
  * Visual Studio のインストール時に Universal Windows App Development Tools - Tools and Windows 10 SDK 10.XXX をチェックしておく必要がある
  * インストール済みの場合は「プログラムと機能」から更新インストールする 
 
-### DirectXTK
+### DirectXTK (DDS読み込みに使用)
 * https://github.com/Microsoft/DirectXTK12
 * DirectXTK_Desktop_2015_Win10.sln を開いてビルド
-	* D3D12_DESCRIPTOR_RANGE1 がなくて通らない場合は  Windows 10 Anniversary Update SDK が必要(VisualStudioを更新する)
+	* D3D12_DESCRIPTOR_RANGE1 がないと言われて、コンパイルが通らない場合は  Windows 10 Anniversary Update SDK が必要(VisualStudioを更新する)
 * 同じ階層に DirectXTK12 をクローンして **..\..\DirectXTK12** にパスを通した
 * 備考
-	* DirectXTex(https://github.com/Microsoft/DirectXTex/wiki/DirectXTex) はツール用途みたい
+	* DirectXTex(https://github.com/Microsoft/DirectXTex/wiki/DirectXTex) はツール用途みたいなのでこちらを使用
 
 #### シェーダコンパイル
 * シェーダは Visual Studio に追加すると自動的にコンパイルされる
 * Properties - HLSLCompiler - General - Shader Type を適切に設定しておかないと、頂点シェーダでコンパイルされるので注意
 * HLSL Compiler - Output Files - $(OutDir)%(Filename).cso を $(ProjectDir)%(Filename).cso へ変更した
-* Visual Studio で BuildEvent - Post-Build Event に以下のように指定した
 * .exe 直起動もできるように TargetDir にもコピーしている
+	* Visual Studio で BuildEvent - Post-Build Event に以下のように指定した
 ~~~
-for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir)
+for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
 ~~~
 
 #### デバッグ
@@ -94,27 +99,23 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir)
 	* キャプチャしたフレームがサムネイルされる、ダブルクリックすると Analyzer が起動する
 		* 下の方に出るので Frame time, Frames per second を閉じないと見えないかも
 
-## DDS ツール
-* https://directxtex.codeplex.com/wikipage?title=Texconv&referringTitle=Documentation
-* https://directxtex.codeplex.com/wikipage?title=Texassemble&referringTitle=Documentation
-
 <!-- 
-## プロジェクトの追加方法 (自分用覚書)
+## プロジェクトの追加方法 (自分用)
  * ソリューションを右クリック - Add - New Project で Win32 Project
  * プロジェクトを右クリック - Retarget SDK Verson で 10以上にする
 
 #### DX
- * プロパティマネージャで Add Existing Property Sheet... - Props/HLSL.props
- * Header Files に Win.h、DX.h、DXExt.h を追加 
- * Source Files に Win.cpp、DX.cpp、DXExt.cpp を追加
+ * プロパティマネージャで Add Existing Property Sheet... - Props/HLSL.props、(Props/DXTK(Debug).prop)
+ * Header Files に Win.h、DX.h、DXExt.h、(DXImage.h) を追加 
+ * Source Files に Win.cpp、DX.cpp、DXExt.cpp、(DXImage.cpp) を追加
  * XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * 必要に応じて Shader Files フォルダを作成し、シェーダを突っ込む
   * 右クリック - プロパティ - HLSL Compiler - General - Shader Type でタイプを適切に選択しておく
 
 #### VK
- * プロパティマネージャで Add Existing Property Sheet... - Props/VK.props, Props/GLSL(REMAP).props
- * Header Files に Win.h、VK.h、VKExt.h を追加
- * Source Files に Win.cpp、VK.cpp、VKExt.cpp を追加
+ * プロパティマネージャで Add Existing Property Sheet... - Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop、(Props/GLI.prop)
+ * Header Files に Win.h、VK.h、VKExt.h、(VKImage.h) を追加
+ * Source Files に Win.cpp、VK.cpp、VKExt.cpp、(VKImage.cpp) を追加
  * XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * 必要に応じて Shader Files フォルダを作成し、シェーダを突っ込む
   * 拡張子を glslangValidator に沿うようにタイプを選択しておく。(.vert、 PS.frag、...)
@@ -144,14 +145,9 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir)
 <!--
 TODO
 
-* GLSL のコンパイルのカスタムビルドを作る？
-* よく使うパターンは DX.h, VK.h へ持たせたい
-
 * ビルボード
 * インスタンシング
 * GSインスタンシング
-* コンピュート
-* パラメトリックサーフェス
 * ポストプロセス
 * フラットシェーディング
 * プロシージャルテクスチャ

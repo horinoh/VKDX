@@ -71,6 +71,8 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< デプスステンシル
 	CreateDepthStencil(CommandBuffer);
 
+	CreateTexture();
+
 	//!< バーテックスバッファ、インデックスバッファ
 	CreateVertexBuffer(CommandBuffer);
 	CreateIndexBuffer(CommandBuffer);
@@ -169,6 +171,19 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	if (VK_NULL_HANDLE != VertexBuffer) {
 		vkDestroyBuffer(Device, VertexBuffer, nullptr);
 		VertexBuffer = VK_NULL_HANDLE;
+	}
+
+	if (VK_NULL_HANDLE != ImageView) {
+		vkDestroyImageView(Device, ImageView, nullptr);
+		ImageView = VK_NULL_HANDLE;
+	}
+	if (VK_NULL_HANDLE != ImageDeviceMemory) {
+		vkFreeMemory(Device, ImageDeviceMemory, nullptr);
+		ImageDeviceMemory = VK_NULL_HANDLE;
+	}
+	if (VK_NULL_HANDLE != Image) {
+		vkDestroyImage(Device, Image, nullptr);
+		Image = VK_NULL_HANDLE;
 	}
 
 	if (VK_NULL_HANDLE != DepthStencilImageView) {

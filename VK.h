@@ -15,6 +15,9 @@
 
 #include "Win.h"
 
+#ifndef BREAK_ON_FAILED
+#define BREAK_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { DEBUG_BREAK(); }
+#endif
 #ifndef THROW_ON_FAILED
 #define THROW_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + VK::GetVkResultString(vr)); }
 #endif
@@ -22,7 +25,8 @@
 #define MESSAGEBOX_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Win::ShowMessageBoxW(nullptr, VK::GetVkResultStringW(vr)); }
 #endif
 #ifndef VERIFY_SUCCEEDED
-#define VERIFY_SUCCEEDED(vr) THROW_ON_FAILED(vr)
+#define VERIFY_SUCCEEDED(vr) BREAK_ON_FAILED(vr)
+//#define VERIFY_SUCCEEDED(vr) THROW_ON_FAILED(vr)
 //#define VERIFY_SUCCEEDED(vr) MESSAGEBOX_ON_FAILED(vr)
 #endif
 
@@ -114,8 +118,9 @@ protected:
 	virtual void CreateDepthStencilView(VkCommandBuffer CommandBuffer);
 	virtual void CreateDepthStencil(const VkCommandBuffer CommandBuffer);
 	
-	virtual void LoadTexture(const std::string& Path) {}
-	virtual void LoadTexture(const std::wstring& Path) { LoadTexture(std::string(Path.begin(), Path.end())); }
+	virtual void LoadImage(const std::string& Path) {}
+	virtual void LoadImage(const std::wstring& Path) { LoadImage(std::string(Path.begin(), Path.end())); }
+	
 	virtual void CreateTexture() {}
 
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
@@ -188,6 +193,10 @@ protected:
 	VkImage DepthStencilImage = VK_NULL_HANDLE;
 	VkDeviceMemory DepthStencilDeviceMemory = VK_NULL_HANDLE;
 	VkImageView DepthStencilImageView = VK_NULL_HANDLE;
+
+	VkImage Image = VK_NULL_HANDLE;
+	VkDeviceMemory ImageDeviceMemory = VK_NULL_HANDLE;
+	VkImageView ImageView = VK_NULL_HANDLE;
 
 	VkBuffer VertexBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory VertexDeviceMemory = VK_NULL_HANDLE;
@@ -276,14 +285,20 @@ public:
 	static void GetDeviceProcAddr(VkDevice Device);
 
 	static void Insert(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color);
+	static void Insert(VkCommandBuffer CommandBuffer, const std::string& Name, const glm::vec4& Color) { Insert(CommandBuffer, Name.c_str(), Color); }
+	static void Insert(VkCommandBuffer CommandBuffer, const std::wstring& Name, const glm::vec4& Color) { Insert(CommandBuffer, std::string(Name.begin(), Name.end()), Color); }
+	
 	static void Begin(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color);
+	static void Begin(VkCommandBuffer CommandBuffer, const std::string& Name, const glm::vec4& Color) { Begin(CommandBuffer, Name.c_str(), Color); }
+	static void Begin(VkCommandBuffer CommandBuffer, const std::wstring& Name, const glm::vec4& Color) { Begin(CommandBuffer, std::string(Name.begin(), Name.end()), Color); }
 	static void End(VkCommandBuffer CommandBuffer);
-	template<typename T> static void SetName(VkDevice Device, T Object, const char* Name) { 
-		DEBUG_BREAK(); //!< テンプレート特殊化されていない、VKDebugMarker.h に実装すること
-	}
-	template<typename T> static void SetTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* Tag) { 
-		DEBUG_BREAK(); //!< テンプレート特殊化されていない、VKDebugMarker.h に実装すること
-	}
+
+	template<typename T> static void SetName(VkDevice Device, T Object, const char* Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない、VKDebugMarker.h に実装すること */ }
+	template<typename T> static void SetName(VkDevice Device, T Object, const std::string& Name) { SetName(Device, Name.c_str()); }
+	template<typename T> static void SetName(VkDevice Device, T Object, const std::wstring& Name) { SetName(Device, std::string(Name.begin(), Name.end())); }
+
+	template<typename T> static void SetTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* Tag) { DEBUG_BREAK(); /* テンプレート特殊化されていない、VKDebugMarker.h に実装すること */ }
+	
 	//!< ↓ここでテンプレート特殊化している
 #include "VKDebugMarker.h"
 
