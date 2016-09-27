@@ -12,16 +12,41 @@ void DXImage::LoadDDS(const std::wstring& Path)
 
 	std::unique_ptr<uint8_t[]> DDSData;
 	std::vector<D3D12_SUBRESOURCE_DATA> SubresourceData;
+	/**
+	D3D12_SUBRESOURCE_DATA = {
+		const void *pData;
+		LONG_PTR RowPitch;
+		LONG_PTR SlicePitch;
+	}
+	*/
+	//!< DDSData, SubresourceData へデータが格納される
 	VERIFY_SUCCEEDED(DirectX::LoadDDSTextureFromFile(Device.Get(), Path.c_str(), Resource, DDSData, SubresourceData));
-	const auto NumSubresource = static_cast<UINT>(SubresourceData.size());
+	const auto SubresourceCount = static_cast<UINT>(SubresourceData.size());
 
-	//!< サイズを求める
-	UINT64 Size = 0;
-	D3D12_RESOURCE_DESC Desc = (*Resource)->GetDesc();
-	ID3D12Device* pDevice;
-	(*Resource)->GetDevice(__uuidof(*pDevice), reinterpret_cast<void**>(&pDevice));
-	pDevice->GetCopyableFootprints(&Desc, 0, NumSubresource, 0, nullptr, nullptr, nullptr, &Size);
-	pDevice->Release();
+	/**
+	D3D12_PLACED_SUBRESOURCE_FOOTPRINT = {
+	UINT64 Offset;
+	D3D12_SUBRESOURCE_FOOTPRINT Footprint = {
+	DXGI_FORMAT Format;
+	UINT Width;
+	UINT Height;
+	UINT Depth;
+	UINT RowPitch;
+	}
+	}
+	*/
+	UINT64 TotalSize = 0;
+	std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PlacedSubresourceFootprints(SubresourceCount); //!< スタック溢れるかな？
+	std::vector<UINT> NumRows(SubresourceCount);
+	std::vector<UINT64> RowSizes(SubresourceCount);
+	{
+		D3D12_RESOURCE_DESC Desc = (*Resource)->GetDesc();
+		ID3D12Device* pDevice;
+		(*Resource)->GetDevice(__uuidof(*pDevice), reinterpret_cast<void**>(&pDevice));
+		//!< PlacedSubresourceFootprints, NumRows, RowSizes へデータを格納、また TotalSize も返す
+		pDevice->GetCopyableFootprints(&Desc, 0, SubresourceCount, 0, PlacedSubresourceFootprints.data(), NumRows.data(), RowSizes.data(), &TotalSize);
+		pDevice->Release();
+	}
 
 	//!< アップロードリソースの作成
 	const D3D12_HEAP_PROPERTIES UploadHeapProperties = {
@@ -35,7 +60,7 @@ void DXImage::LoadDDS(const std::wstring& Path)
 	const D3D12_RESOURCE_DESC ResourceDesc = {
 		D3D12_RESOURCE_DIMENSION_BUFFER,
 		0,
-		Size, 1,
+		TotalSize, 1,
 		1,
 		1,
 		DXGI_FORMAT_UNKNOWN,
@@ -51,44 +76,61 @@ void DXImage::LoadDDS(const std::wstring& Path)
 		nullptr,
 		IID_PPV_ARGS(UploadResource.GetAddressOf())));
 
-	//todo
-	D3D12_PLACED_SUBRESOURCE_FOOTPRINT* PlacedSubresourceFootprint = nullptr;//todo
-	auto RowSizesInBytes = reinterpret_cast<UINT64*>(PlacedSubresourceFootprint + NumSubresource);
-	auto NumRows = reinterpret_cast<UINT*>(RowSizesInBytes + NumSubresource);
-
 	BYTE* Data;
 	VERIFY_SUCCEEDED(UploadResource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
-		//for (UINT i = 0; i < NumSubresource; ++i) {
-		//	if (RowSizesInBytes[i] <= (SIZE_T)-1) {
-		//		const D3D12_MEMCPY_DEST MemcpyDest = {
-		//			Data + PlacedSubresourceFootprint[i].Offset,
-		//			PlacedSubresourceFootprint[i].Footprint.RowPitch,
-		//			PlacedSubresourceFootprint[i].Footprint.RowPitch * NumRows[i]
-		//		};
+		for (UINT i = 0; i < SubresourceCount; ++i) {
+			const auto& PSF = PlacedSubresourceFootprints[i];
+			const auto& SD = SubresourceData[i];
 
-		//		//MemcpySubresource(&MemcpyDest, &SubresourceData[i], (SIZE_T)RowSizesInBytes[i], NumRows[i], PlacedSubresourceFootprint[i].Footprint.Depth);
-		//		for (UINT z = 0; z < PlacedSubresourceFootprint[i].Footprint.Depth; ++z) {
-		//			BYTE* pDestSlice = reinterpret_cast<BYTE*>(MemcpyDest.pData) + MemcpyDest.SlicePitch * z;
-		//			const BYTE* pSrcSlice = reinterpret_cast<const BYTE*>(MemcpyDest.pData) + SubresourceData[i].SlicePitch * z;
-		//			for (UINT y = 0; y < NumRows[i]; ++y) {
-		//				memcpy(pDestSlice + MemcpyDest.RowPitch * y, pSrcSlice + SubresourceData[i].RowPitch * y, RowSizesInBytes[i]);
-		//			}
-		//		}
-		//	}
-		//}
+			const auto SliceCount = PSF.Footprint.Depth;
+			const auto RowCount = NumRows[i];
+			const auto RowSize = RowSizes[i];
+
+			const D3D12_MEMCPY_DEST MemcpyDest = {
+				Data + PSF.Offset,
+				PSF.Footprint.RowPitch,
+				PSF.Footprint.RowPitch * RowCount
+			};
+			for (UINT z = 0; z < SliceCount; ++z) {
+				auto Dst = reinterpret_cast<BYTE*>(MemcpyDest.pData) + MemcpyDest.SlicePitch * z;
+				const auto Src = reinterpret_cast<const BYTE*>(SD.pData) + SD.SlicePitch * z;
+				for (UINT y = 0; y < RowCount; ++y) {
+					memcpy(Dst + MemcpyDest.RowPitch * y, Src + SD.RowPitch * y, RowSize);
+				}
+			}
+		}
 	} UploadResource->Unmap(0, nullptr);
 	
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
 		BarrierTransition(CommandList, *Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
-			//const D3D12_BOX Box = {
-			//	static_cast<UINT>(PlacedSubresourceFootprint[0].Offset),
-			//	0,
-			//	0,
-			//	static_cast<UINT>(PlacedSubresourceFootprint[0].Offset) + PlacedSubresourceFootprint[0].Footprint.Width,
-			//	1,
-			//	1
-			//};
-			//CommandList->CopyBufferRegion(*Resource, 0, UploadResource.Get(), PlacedSubresourceFootprint[0].Offset, PlacedSubresourceFootprint[0].Footprint.Width);
+#if 1
+			for (UINT i = 0; i < SubresourceCount; ++i) {
+				const auto& PSF = PlacedSubresourceFootprints[i];
+				const D3D12_TEXTURE_COPY_LOCATION Dst = {
+					*Resource,
+					D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+					i
+				};
+				const D3D12_TEXTURE_COPY_LOCATION Src = {
+					UploadResource.Get(),
+					D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
+					PSF
+				};
+				CommandList->CopyTextureRegion(&Dst, 0, 0, 0, &Src, nullptr);
+			}
+#else
+			//!< 転送先(*Resource)が D3D12_RESOURCE_DIMENSION_BUFFER の場合はこちら
+			const auto& PSF = PlacedSubresourceFootprints[0];
+			const D3D12_BOX Box = {
+				static_cast<UINT>(PSF.Offset),
+				0,
+				0,
+				static_cast<UINT>(PSF.Offset) + PSF.Footprint.Width,
+				1,
+				1
+			};
+			CommandList->CopyBufferRegion(*Resource, 0, UploadResource.Get(), PSF.Offset, PSF.Footprint.Width);
+#endif
 		} BarrierTransition(CommandList, *Resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	} VERIFY_SUCCEEDED(CommandList->Close());
 
