@@ -337,16 +337,17 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3
 			}
 			//!< ルートシグニチャ
 			CommandList->SetGraphicsRootSignature(RootSignature.Get());
+
 #if 0
 			//!< コンスタントバッファ
 			{
 				std::vector<ID3D12DescriptorHeap*> DescriptorHeaps = { ConstantBufferDescriptorHeap.Get() };
 				CommandList->SetDescriptorHeaps(static_cast<UINT>(DescriptorHeaps.size()), DescriptorHeaps.data());
 
-				auto CVDescriptorHandle(ConstantBufferDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-				const auto CVIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-				CVDescriptorHandle.ptr += 0 * CVIncrementSize;
-				CommandList->SetGraphicsRootDescriptorTable(0, CVDescriptorHandle);
+				auto CBDescriptorHandle(ConstantBufferDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+				const auto CBIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				CBDescriptorHandle.ptr += 0 * CBIncrementSize;
+				CommandList->SetGraphicsRootDescriptorTable(0, CBDescriptorHandle);
 			}
 #endif
 

@@ -148,22 +148,4 @@ void DXImage::LoadDDS(const std::wstring& Path)
 #else
 	// todo
 #endif
-
-	//BYTE* Data;
-	//VERIFY_SUCCEEDED(UploadResource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
-	//	memcpy(Data, Source, Size);
-	//} UploadResource->Unmap(0, nullptr);
-
-	//!< コピーコマンドを発行
-
-	//VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
-	//	BarrierTransition(CommandList, *Resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
-	//		CommandList->CopyBufferRegion(*Resource, 0, UploadResource.Get(), 0, Size);
-	//	} BarrierTransition(CommandList, *Resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	//} VERIFY_SUCCEEDED(CommandList->Close());
-
-	//std::vector<ID3D12CommandList*> CommandLists = { CommandList };
-	//CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
-
-	//WaitForFence();
 }

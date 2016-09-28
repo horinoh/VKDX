@@ -249,6 +249,16 @@ void TextureDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D
 			//!< ルートシグニチャ
 			CommandList->SetGraphicsRootSignature(RootSignature.Get());
 
+			if(0){
+				std::vector<ID3D12DescriptorHeap*> DescriptorHeaps = { ImageDescriptorHeap.Get() };
+				CommandList->SetDescriptorHeaps(static_cast<UINT>(DescriptorHeaps.size()), DescriptorHeaps.data());
+
+				auto SRVDescriptorHandle(ImageDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+				const auto SRVIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				SRVDescriptorHandle.ptr += 0 * SRVIncrementSize;
+				CommandList->SetGraphicsRootDescriptorTable(0, SRVDescriptorHandle);
+			}
+
 			//!< トポロジ
 			CommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
