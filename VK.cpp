@@ -129,10 +129,10 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyPipeline(Device, Pipeline, nullptr);
 		Pipeline = VK_NULL_HANDLE;
 	}
-	//if (VK_NULL_HANDLE != PipelineCache) {
-	//	vkDestroyPipelineCache(Device, PipelineCache, nullptr);
-	//	PipelineCache = VK_NULL_HANDLE;
-	//}
+	if (VK_NULL_HANDLE != PipelineCache) {
+		vkDestroyPipelineCache(Device, PipelineCache, nullptr);
+		PipelineCache = VK_NULL_HANDLE;
+	}
 
 	if (!DescriptorSets.empty()) {
 		vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
@@ -1586,6 +1586,39 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 
 	return ShaderModule;
 }
+
+void VK::CreatePipelineCache(const VkPipelineCache InitialPipelineCache)
+{
+	size_t InitialCacheSize = 0;
+	uint8_t* InitialCacheData = nullptr;
+	//!< 引き継ぐパイプラインキャッシュが指定されている場合は、サイズとデータを取得する
+	if (VK_NULL_HANDLE != InitialPipelineCache) {
+		VERIFY_SUCCEEDED(vkGetPipelineCacheData(Device, InitialPipelineCache, &InitialCacheSize, nullptr));
+		if (InitialCacheSize) {
+			InitialCacheData = new uint8_t[InitialCacheSize];
+			VERIFY_SUCCEEDED(vkGetPipelineCacheData(Device, InitialPipelineCache, &InitialCacheSize, InitialCacheData));
+		}
+	}
+
+	//!< パイプラインをコンパイルして、vkGetPipelineCacheData()でディスクへ保存可能
+	const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+		nullptr,
+		0,
+		InitialCacheSize, InitialCacheData
+	};
+	VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, nullptr, &PipelineCache));
+
+	if (nullptr != InitialCacheData) {
+		delete[] InitialCacheData;
+	}
+}
+
+//!< パイプラインキャシュのマージをする場合
+//const std::vector<VkPipelineCache> PipelineCaches = { PipelineCache };
+//VkPipelineCache DestinationPipelineCache = VK_NULL_HANDLE;
+//VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, DestinationPipelineCache, static_cast<uint32_t>(PipelineCaches.size()), PipelineCaches.data()));
+
 void VK::CreateGraphicsPipeline()
 {
 	//!< シェーダ
@@ -1723,7 +1756,8 @@ void VK::CreateGraphicsPipeline()
 
 	/**
 	basePipelineHandle と basePipelineIndex は同時に使用できない(排他)
-	親には VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT フラグが必要
+	親には VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT フラグが必要、子には VK_PIPELINE_CREATE_DERIVATIVE_BIT フラグが必要
+
 	・basePipelineHandle ... 既に存在する場合、親パイプラインを指定
 	・basePipelineIndex ... GraphicsPipelineCreateInfos 配列で親パイプラインも同時に作成する場合、配列内での親パイプラインの添字。親の添字の方が若い値でないといけない。
 	*/
@@ -1731,7 +1765,11 @@ void VK::CreateGraphicsPipeline()
 		{
 			VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
 			nullptr,
-			0, //!< VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT
+#ifdef _DEBUG
+			VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT/*| VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT*/,
+#else
+			0/*| VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT*/,
+#endif
 			static_cast<uint32_t>(PipelineShaderStageCreateInfos.size()), PipelineShaderStageCreateInfos.data(),
 			&PipelineVertexInputStateCreateInfo,
 			&PipelineInputAssemblyStateCreateInfo,
@@ -1749,17 +1787,10 @@ void VK::CreateGraphicsPipeline()
 		}
 	};
 
-	//!< パイプラインをコンパイルして、vkGetPipelineCacheData()でディスクへ保存可能
-	//const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
-	//	VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-	//	nullptr,
-	//	0,
-	//	0, nullptr
-	//};
-	//VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, nullptr, &PipelineCache));
+	CreatePipelineCache();
 
 	//!< (グラフィック)パイプライン
-	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, VK_NULL_HANDLE/*PipelineCache*/, static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), nullptr, &Pipeline));
+	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, PipelineCache, static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), nullptr, &Pipeline));
 
 	//!< パイプライン を作成したら、シェーダモジュール は破棄して良い
 	for (auto i : ShaderModules) {

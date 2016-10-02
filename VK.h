@@ -142,6 +142,7 @@ protected:
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const {}
 	virtual void CreateVertexInput(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding = 0) const {}
 	virtual void CreatePipeline() {}
+	virtual void CreatePipelineCache(const VkPipelineCache InitialPipelineCache = VK_NULL_HANDLE);
 	virtual void CreateGraphicsPipeline();
 	virtual void CreateComputePipeline();
 
@@ -219,7 +220,7 @@ protected:
 	//!< ユニフォームバッファ作成時に必要になるのでメンバとする
 	std::vector<VkDescriptorSet> DescriptorSets;
 
-	//VkPipelineCache PipelineCache = VK_NULL_HANDLE;
+	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
 	VkPipeline Pipeline = VK_NULL_HANDLE;
 	VkRenderPass RenderPass = VK_NULL_HANDLE;
 	std::vector<VkFramebuffer> Framebuffers;
