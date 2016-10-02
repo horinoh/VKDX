@@ -44,7 +44,7 @@ void DXExt::CreateRootSignature_1ConstantBuffer(const D3D12_SHADER_VISIBILITY Sh
 
 void DXExt::CreateShader_VsPs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const
 {
-	const auto ShaderPath = GetShaderPath();
+	const auto ShaderPath = GetBasePath();
 	ShaderBlobs.resize(2);
 	D3DReadFileToBlob((ShaderPath + L".vs.cso").data(), ShaderBlobs[0].GetAddressOf());
 	D3DReadFileToBlob((ShaderPath + L".ps.cso").data(), ShaderBlobs[1].GetAddressOf());
@@ -59,7 +59,7 @@ void DXExt::CreateShader_VsPs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& Sha
 }
 void DXExt::CreateShader_VsPsDsHsGs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const
 {
-	const auto ShaderPath = GetShaderPath();
+	const auto ShaderPath = GetBasePath();
 	ShaderBlobs.resize(5);
 	D3DReadFileToBlob((ShaderPath + L".vs.cso").data(), ShaderBlobs[0].GetAddressOf());
 	D3DReadFileToBlob((ShaderPath + L".ps.cso").data(), ShaderBlobs[1].GetAddressOf());

@@ -228,7 +228,7 @@ void VKExt::CreateFramebuffer_ColorDepth()
 
 void VKExt::CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const
 {
-	const auto ShaderPath = GetShaderPath();
+	const auto ShaderPath = GetBasePath();
 	ShaderModules = {
 		CreateShaderModule((ShaderPath + L".vert.spv").data()),
 		CreateShaderModule((ShaderPath + L".frag.spv").data())
@@ -256,7 +256,7 @@ void VKExt::CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::v
 }
 void VKExt::CreateShader_VsPsTesTcsGs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const
 {
-	const auto ShaderPath = GetShaderPath();
+	const auto ShaderPath = GetBasePath();
 	ShaderModules = {
 		CreateShaderModule((ShaderPath + L".vert.spv").data()),
 		CreateShaderModule((ShaderPath + L".frag.spv").data()),

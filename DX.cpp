@@ -1119,7 +1119,7 @@ void DX::CreateComputePipelineState()
 	assert(nullptr != RootSignature);
 
 	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs(1);
-	const auto ShaderPath = GetShaderPath();
+	const auto ShaderPath = GetBasePath();
 	D3DReadFileToBlob((ShaderPath + L".cs.cso").data(), ShaderBlobs[0].GetAddressOf());
 	const D3D12_SHADER_BYTECODE ShaderBytecodesCS = { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() };
 
