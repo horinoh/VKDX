@@ -19,7 +19,11 @@ void DXImage::LoadDDS(const std::wstring& Path)
 		LONG_PTR SlicePitch;
 	}
 	*/
-	//!< DDSData, SubresourceData へデータが格納される
+	/** 
+	DirectX::LoadDDSTextureFromFile() を使用
+	Resource が作成される
+	DDSData, SubresourceData へデータが格納される
+	*/
 	VERIFY_SUCCEEDED(DirectX::LoadDDSTextureFromFile(Device.Get(), Path.c_str(), Resource, DDSData, SubresourceData));
 	const auto SubresourceCount = static_cast<UINT>(SubresourceData.size());
 
@@ -36,7 +40,7 @@ void DXImage::LoadDDS(const std::wstring& Path)
 	}
 	*/
 	UINT64 TotalSize = 0;
-	std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PlacedSubresourceFootprints(SubresourceCount); //!< スタック溢れるかな？
+	std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PlacedSubresourceFootprints(SubresourceCount);
 	std::vector<UINT> NumRows(SubresourceCount);
 	std::vector<UINT64> RowSizes(SubresourceCount);
 	{

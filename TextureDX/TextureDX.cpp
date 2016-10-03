@@ -249,7 +249,7 @@ void TextureDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D
 			//!< ルートシグニチャ
 			CommandList->SetGraphicsRootSignature(RootSignature.Get());
 
-			if(0){
+			if(nullptr != ImageDescriptorHeap){
 				std::vector<ID3D12DescriptorHeap*> DescriptorHeaps = { ImageDescriptorHeap.Get() };
 				CommandList->SetDescriptorHeaps(static_cast<UINT>(DescriptorHeaps.size()), DescriptorHeaps.data());
 

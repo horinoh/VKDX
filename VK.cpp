@@ -1564,28 +1564,27 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 	VkShaderModule ShaderModule = VK_NULL_HANDLE;
 
 	std::ifstream In(Path.c_str(), std::ios::in | std::ios::binary);
-	assert(false == In.fail());
+	if (!In.fail()) {
+		In.seekg(0, std::ios_base::end);
+		const auto Size = In.tellg();
+		In.seekg(0, std::ios_base::beg);
 
-	In.seekg(0, std::ios_base::end);
-	const auto Size = In.tellg();
-	In.seekg(0, std::ios_base::beg);
+		if (Size) {
+			auto Data = new char[Size];
+			In.read(Data, Size);
 
-	if (Size) {
-		auto Data = new char[Size];
-		In.read(Data, Size);
+			const VkShaderModuleCreateInfo ModuleCreateInfo = {
+				VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+				nullptr,
+				0,
+				Size, reinterpret_cast<uint32_t*>(Data)
+			};
+			VERIFY_SUCCEEDED(vkCreateShaderModule(Device, &ModuleCreateInfo, nullptr, &ShaderModule));
+
+			delete[] Data;
+		}
 		In.close();
-
-		const VkShaderModuleCreateInfo ModuleCreateInfo = {
-			VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-			nullptr,
-			0,
-			Size, reinterpret_cast<uint32_t*>(Data)
-		};
-		VERIFY_SUCCEEDED(vkCreateShaderModule(Device, &ModuleCreateInfo, nullptr, &ShaderModule));
-
-		delete[] Data;
 	}
-
 	return ShaderModule;
 }
 
@@ -1594,26 +1593,26 @@ VkPipelineCache VK::LoadPipelineCache(const std::wstring& Path) const
 	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
 
 	std::ifstream In(Path.c_str(), std::ios::in | std::ios::binary);
-	assert(false == In.fail());
+	if (!In.fail()) {
+		In.seekg(0, std::ios_base::end);
+		const auto Size = In.tellg();
+		In.seekg(0, std::ios_base::beg);
 
-	In.seekg(0, std::ios_base::end);
-	const auto Size = In.tellg();
-	In.seekg(0, std::ios_base::beg);
+		if (Size) {
+			auto Data = new char[Size];
+			In.read(Data, Size);
 
-	if (Size) {
-		auto Data = new char[Size];
-		In.read(Data, Size);
+			const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
+				VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+				nullptr,
+				0,
+				Size, Data
+			};
+			VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, nullptr, &PipelineCache));
+
+			delete[] Data;
+		}
 		In.close();
-
-		const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
-			VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-			nullptr,
-			0,
-			Size, Data
-		};
-		VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, nullptr, &PipelineCache));
-
-		delete[] Data;
 	}
 
 	return PipelineCache;
@@ -1628,13 +1627,14 @@ void VK::StorePipelineCache(const std::wstring& Path, const VkPipelineCache Pipe
 			VERIFY_SUCCEEDED(vkGetPipelineCacheData(Device, PipelineCache, &Size, Data));
 
 			std::ofstream Out(Path.c_str(), std::ios::out | std::ios::binary);
-			assert(false == Out.fail());
+			if (!Out.fail()) {
 
-			Out.write(Data, Size);
+				Out.write(Data, Size);
 
-			delete[] Data;
+				delete[] Data;
 
-			Out.close();
+				Out.close();
+			}
 		}
 	}
 }
@@ -1646,27 +1646,9 @@ void VK::StorePipelineCache(const std::wstring& Path, const VkPipelineCache Pipe
 
 void VK::CreateGraphicsPipeline()
 {
-	//!< PipelineCache から Pipeline を復元して作成する方法が分からん…
-//	{
-//		const auto BasePath = GetBasePath();
-//		const auto PipelineCache = LoadPipelineCache(BasePath + L".pco");
-//		if (VK_NULL_HANDLE != PipelineCache) {
-//			const std::vector<VkGraphicsPipelineCreateInfo> GraphicsPipelineCreateInfos = {
-//				{
-//					VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-//					nullptr,
-//#ifdef _DEBUG
-//					VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT/*| VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT*/,
-//#else
-//					0/*| VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT*/,
-//#endif
-//				},
-//			};
-//			VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, VK_NULL_HANDLE, static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), nullptr, &Pipeline));
-//			vkDestroyPipelineCache(Device, PipelineCache, nullptr);
-//			return;
-//		}
-//	}
+#ifdef _DEBUG
+	PerformanceCounter PC("CreateGraphicsPipeline : ");
+#endif
 
 	//!< シェーダ
 	std::vector<VkShaderModule> ShaderModules;
@@ -1834,15 +1816,27 @@ void VK::CreateGraphicsPipeline()
 		}
 	};
 
-	//!< パイプラインキャッシュ
-	const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-		nullptr,
-		0,
-		0, nullptr
-	};
-	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
-	VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, nullptr, &PipelineCache));
+	//!< パイプラインキャッシュ (ファイルから読み込む)
+	const auto BasePath = GetBasePath();
+	auto PipelineCache = LoadPipelineCache(BasePath + L".pco");
+	if (VK_NULL_HANDLE == PipelineCache) {
+#ifdef _DEBUG
+		std::cout << "LoadPipelineCache" << COUT_NG << std::endl << std::endl;
+#endif
+		const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
+			VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+			nullptr,
+			0,
+			0, nullptr
+		};
+		//!< 読み込めなかったので作成
+		VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, nullptr, &PipelineCache));
+	}
+	else {
+#ifdef _DEBUG
+		std::cout << "LoadPipelineCache" << COUT_OK << std::endl << std::endl;
+#endif
+	}
 
 	//!< (グラフィック)パイプライン
 	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, PipelineCache, static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), nullptr, &Pipeline));
