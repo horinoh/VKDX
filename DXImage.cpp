@@ -152,4 +152,10 @@ void DXImage::LoadDDS(const std::wstring& Path)
 #else
 	// todo
 #endif
+
+	auto CpuDescriptorHandle(ImageDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); //!< ここでは必要ないが一応
+	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
+	Device->CreateShaderResourceView(ImageResource.Get(), nullptr, CpuDescriptorHandle);
+	CpuDescriptorHandle.ptr += IncrementSize; //!< ここでは必要ないが一応
 }

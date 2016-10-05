@@ -600,28 +600,16 @@ void DX::CreateImageDescriptorHeap()
 		0
 	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(ImageDescriptorHeap.GetAddressOf())));
-
-	auto CPUDescriptorHandle(ImageDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	CPUDescriptorHandle.ptr += 0 * IncrementSize;
-
-	/*const*/D3D12_SHADER_RESOURCE_VIEW_DESC ShaderResourceViewDesc = {
-		DXGI_FORMAT_R8G8B8A8_UNORM,
-		D3D12_SRV_DIMENSION_TEXTURE2D,
-		D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-	};
-	ShaderResourceViewDesc.Texture2D = {
-		0,
-		1,
-		0,
-		0.0f
-	};
-	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
-	Device->CreateShaderResourceView(ImageResource.Get(), &ShaderResourceViewDesc, CPUDescriptorHandle);
 }
 void DX::CreateImageResource()
 {
+	//!< #TODO ここで ImageDescriptorHeap を作成する
 
+	auto CpuDescriptorHandle(ImageDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); //!< ここでは必要ないが一応
+	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
+	Device->CreateShaderResourceView(ImageResource.Get(), nullptr, CpuDescriptorHandle);
+	CpuDescriptorHandle.ptr += IncrementSize; //!< ここでは必要ないが一応
 }
 
 void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth, const FLOAT MaxDepth)

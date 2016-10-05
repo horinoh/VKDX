@@ -225,6 +225,10 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
+void TextureVK::CreateTexture()
+{
+	LoadImage("UV.dds");
+}
 void TextureVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 {
 	const VkCommandBufferBeginInfo BeginInfo = {
@@ -258,4 +262,5 @@ void TextureVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		} vkCmdEndRenderPass(CommandBuffer);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }
+
 #pragma endregion

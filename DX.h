@@ -110,8 +110,8 @@ protected:
 
 	virtual void CreateImageDescriptorHeap();
 	virtual void CreateImageResource();
-	virtual void LoadImage(const std::wstring& Path) {}
-	virtual void LoadImage(const std::string& Path) { LoadImage(std::wstring(Path.begin(), Path.end())); }
+	virtual void LoadImageResource(const std::wstring& Path) {}
+	virtual void LoadImageResource(const std::string& Path) { LoadImageResource(std::wstring(Path.begin(), Path.end())); }
 	
 	virtual void CreateTexture() {}
 

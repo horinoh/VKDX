@@ -11,5 +11,5 @@ private:
 
 protected:
 	void LoadDDS(const std::wstring& Path);
-	virtual void LoadImage(const std::wstring& Path) override { LoadDDS(Path); }
+	virtual void LoadImageResource(const std::wstring& Path) override { LoadDDS(Path); }
 };
