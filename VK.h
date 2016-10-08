@@ -3,7 +3,7 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 
 #include <vulkan/vulkan.h>
-#if 0
+#ifdef VK_ONLINE_COMPILE
 //!< GLSL をオンラインコンパイルする場合
 #include <../glslang/SPIRV/GlslangToSpv.h>
 #endif
@@ -115,12 +115,14 @@ protected:
 
 	virtual void CreateDepthStencilImage();
 	virtual void CreateDepthStencilDeviceMemory();
-	virtual void CreateDepthStencilView(VkCommandBuffer CommandBuffer);
-	virtual void CreateDepthStencil(const VkCommandBuffer CommandBuffer);
+	virtual void CreateDepthStencilView();
+	virtual void CreateDepthStencil(const VkCommandBuffer CommandBuffer) { /*CreateDepthStencilImage();CreateDepthStencilDeviceMemory();CreateDepthStencilView(CommandBuffer);*/ }
 	
-	virtual void LoadImage(const std::string& Path) {}
-	virtual void LoadImage(const std::wstring& Path) { LoadImage(std::string(Path.begin(), Path.end())); }
-	
+	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path) {}
+	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::wstring& Path) { LoadImage(Image, DeviceMemory, ImageView, std::string(Path.begin(), Path.end())); }
+	virtual void CreateTextureDeviceMemory(VkDeviceMemory* DeviceMemory, const VkImage Image);
+	virtual void CreateTextureView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format);
+
 	virtual void CreateTexture() {}
 
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);

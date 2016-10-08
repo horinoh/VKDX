@@ -228,7 +228,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 void TextureDX::CreateTexture()
 {
 	CreateImageDescriptorHeap();
-	LoadImageResource(L"UV.dds");
+	LoadImageResource(L"..//DDS//UV.dds");
 }
 void TextureDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12CommandAllocator* CommandAllocator)
 {

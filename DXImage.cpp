@@ -4,7 +4,7 @@
 
 #pragma comment(lib, "DirectXTK12.lib")
 
-void DXImage::LoadDDS(const std::wstring& Path)
+void DXImage::LoadImageResource_DDS(const std::wstring& Path)
 {
 	const auto CommandList = GraphicsCommandLists[0].Get();
 	const auto CommandAllocator = CommandAllocators[0].Get();

@@ -5,8 +5,19 @@
 #include "VK.h"
 
 #pragma comment(lib, "vulkan-1.lib")
-#if 0
+#ifdef VK_ONLINE_COMPILE
 //!< GLSL をオンラインコンパイルする場合
+#ifdef _DEBUG
+#pragma comment(lib, "../glslang/SPIRV/Debug/SPIRVd.lib")
+#pragma comment(lib, "../glslang/glslang/Debug/glslangd.lib")
+#pragma comment(lib, "../glslang/OGLCompilersDLL/Debug/OGLCompilerd.lib")
+#pragma comment(lib, "../glslang/glslang/OSDependent/Windows/Debug/OSDependentd.lib")
+#else
+#pragma comment(lib, "../glslang/SPIRV/Release/SPIRV.lib")
+#pragma comment(lib, "../glslang/glslang/Release/glslang.lib")
+#pragma comment(lib, "../glslang/OGLCompilersDLL/Release/OGLCompiler.lib")
+#pragma comment(lib, "../glslang/glslang/OSDependent/Windows/Release/OSDependent.lib")
+#endif //!< _DEBUG
 /**
 const auto Stage = EShLangVertex;
 auto Shader = new glslang::TShader(Stage);
@@ -29,18 +40,7 @@ delete Program;
 }
 delete Shader;
 */
-#ifdef _DEBUG
-#pragma comment(lib, "../glslang/SPIRV/Debug/SPIRVd.lib")
-#pragma comment(lib, "../glslang/glslang/Debug/glslangd.lib")
-#pragma comment(lib, "../glslang/OGLCompilersDLL/Debug/OGLCompilerd.lib")
-#pragma comment(lib, "../glslang/glslang/OSDependent/Windows/Debug/OSDependentd.lib")
-#else
-#pragma comment(lib, "../glslang/SPIRV/Release/SPIRV.lib")
-#pragma comment(lib, "../glslang/glslang/Release/glslang.lib")
-#pragma comment(lib, "../glslang/OGLCompilersDLL/Release/OGLCompiler.lib")
-#pragma comment(lib, "../glslang/glslang/OSDependent/Windows/Release/OSDependent.lib")
-#endif
-#endif
+#endif //!< VK_ONLINE_COMPILE
 
 void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 {
@@ -1214,7 +1214,7 @@ void VK::CreateDepthStencilDeviceMemory()
 	std::cout << "\t" << "DepthStencilDeviceMemory" << std::endl;
 #endif
 }
-void VK::CreateDepthStencilView(VkCommandBuffer CommandBuffer)
+void VK::CreateDepthStencilView()
 {
 	const VkImageViewCreateInfo ImageViewCreateInfo = {
 		VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -1232,14 +1232,40 @@ void VK::CreateDepthStencilView(VkCommandBuffer CommandBuffer)
 	std::cout << "\t" << "DepthStencilImageView" << std::endl;
 #endif
 }
-void VK::CreateDepthStencil(const VkCommandBuffer CommandBuffer)
+
+void VK::CreateTextureDeviceMemory(VkDeviceMemory* DeviceMemory, const VkImage Image)
 {
-	//CreateDepthStencilImage();
-	//CreateDepthStencilDeviceMemory();
-	//CreateDepthStencilView(CommandBuffer);
+	VkMemoryRequirements MemoryRequirements;
+	vkGetImageMemoryRequirements(Device, Image, &MemoryRequirements);
+	const VkMemoryAllocateInfo MemoryAllocateInfo = {
+		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		nullptr,
+		MemoryRequirements.size,
+		GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) //!< DEVICE_LOCAL にすること
+	};
+	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, DeviceMemory));
+	VERIFY_SUCCEEDED(vkBindImageMemory(Device, Image, *DeviceMemory, 0));
 
 #ifdef DEBUG_STDOUT
-	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
+	std::cout << "\t" << "ImageDeviceMemory" << std::endl;
+#endif
+}
+void VK::CreateTextureView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format)
+{
+	const VkImageViewCreateInfo ImageViewCreateInfo = {
+		VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+		nullptr,
+		0,
+		Image,
+		ImageViewType,
+		Format,
+		ComponentMapping_SwizzleIdentity,
+		ImageSubresourceRange_Color
+	};
+	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, ImageView));
+
+#ifdef DEBUG_STDOUT
+	std::cout << "\t" << "ImageView" << std::endl;
 #endif
 }
 

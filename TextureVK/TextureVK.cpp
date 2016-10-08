@@ -227,7 +227,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void TextureVK::CreateTexture()
 {
-	LoadImage("UV.dds");
+	LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\DDS\\UV.dds");
 }
 void TextureVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 {
