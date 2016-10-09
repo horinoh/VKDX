@@ -234,8 +234,8 @@ void TriangleVK::CreateVertexBuffer(const VkCommandBuffer CommandBuffer)
 	};
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
-
-	CreateDeviceLocalBuffer(CommandBuffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, &VertexBuffer, &VertexDeviceMemory, Size, Vertices.data());
+	
+	CreateDeviceLocalBuffer(&VertexBuffer, &VertexDeviceMemory, CommandBuffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size, Vertices.data());
 
 #ifdef _DEBUG
 	DebugMarker::SetName(Device, VertexBuffer, "MyVertexBuffer");
@@ -255,7 +255,7 @@ void TriangleVK::CreateIndexBuffer(const VkCommandBuffer CommandBuffer)
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 	
-	CreateDeviceLocalBuffer(CommandBuffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, &IndexBuffer, &IndexDeviceMemory, Size, Indices.data());
+	CreateDeviceLocalBuffer(&IndexBuffer, &IndexDeviceMemory, CommandBuffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size, Indices.data());
 
 #ifdef _DEBUG
 	DebugMarker::SetName(Device, IndexBuffer, "MyIndexBuffer");

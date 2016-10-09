@@ -14,9 +14,9 @@ class VKImage : public VKExt
 private:
 	using Super = VKExt;
 
-	static VkFormat ToVKFormat(const gli::format GLIFormat);
-	static VkImageViewType ToVKImageViewType(const gli::target GLITarget);
-	static VkImageType ToVKImageType(const gli::target GLITarget);
+	static VkFormat ToVkFormat(const gli::format GLIFormat);
+	static VkImageViewType ToVkImageViewType(const gli::target GLITarget);
+	static VkImageType ToVkImageType(const gli::target GLITarget);
 
 protected:
 	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path) override { LoadImage_DDS(Image, DeviceMemory, ImageView, Path); }

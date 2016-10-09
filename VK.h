@@ -82,6 +82,66 @@ protected:
 	static VkAccessFlags GetDstAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
 	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const;
 
+	virtual void CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size);
+	virtual void SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkBuffer DstBuffer, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size);
+
+	template<typename T> void CreateHostVisibleMemory(VkDeviceMemory* DeviceMemory, const T Object, const size_t Size = 0, const void* Source = nullptr) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
+	template<> void CreateHostVisibleMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Object, const size_t Size, const void* Source) {
+		VkMemoryRequirements MemoryRequirements;
+		vkGetBufferMemoryRequirements(Device, Object, &MemoryRequirements);
+		const VkMemoryAllocateInfo MemoryAllocateInfo = {
+			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+			nullptr,
+			MemoryRequirements.size,
+			GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT/*| VK_MEMORY_PROPERTY_HOST_COHERENT_BIT*/) //!< HOST_VISIBLE にすること
+		};
+		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, DeviceMemory));
+		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Object, *DeviceMemory, 0));
+		if (Size && nullptr != Source) {
+			void *Data;
+			VERIFY_SUCCEEDED(vkMapMemory(Device, *DeviceMemory, 0, MemoryAllocateInfo.allocationSize, 0, &Data)); {
+				memcpy(Data, Source, Size);
+				//!< ↓VK_MEMORY_PROPERTY_HOST_COHERENT_BIT の場合は必要なし
+				const std::vector<VkMappedMemoryRange> MappedMemoryRanges = {
+					{
+						VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+						nullptr,
+						*DeviceMemory,
+						0,
+						VK_WHOLE_SIZE
+					}
+				};
+				VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(MappedMemoryRanges.size()), MappedMemoryRanges.data()));
+			} vkUnmapMemory(Device, *DeviceMemory);
+		}
+	}
+
+	template<typename T> void CreateDeviceLocalMemory(VkDeviceMemory* DeviceMemory, const T Object) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
+	template<> void CreateDeviceLocalMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Object) {
+		VkMemoryRequirements MemoryRequirements;
+		vkGetBufferMemoryRequirements(Device, Object, &MemoryRequirements);
+		const VkMemoryAllocateInfo MemoryAllocateInfo = {
+			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+			nullptr,
+			MemoryRequirements.size,
+			GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+		};
+		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, DeviceMemory));
+		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Object, *DeviceMemory, 0));
+	}
+	template<> void CreateDeviceLocalMemory(VkDeviceMemory* DeviceMemory, const VkImage Object) {
+		VkMemoryRequirements MemoryRequirements;
+		vkGetImageMemoryRequirements(Device, Object, &MemoryRequirements);
+		const VkMemoryAllocateInfo MemoryAllocateInfo = {
+			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+			nullptr,
+			MemoryRequirements.size,
+			GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+		};
+		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, DeviceMemory));
+		VERIFY_SUCCEEDED(vkBindImageMemory(Device, Object, *DeviceMemory, 0));
+	}
+
 	virtual void EnumerateInstanceLayer();
 	virtual void EnumerateInstanceExtenstion(const char* layerName);
 	virtual void CreateInstance();
@@ -120,7 +180,6 @@ protected:
 	
 	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path) {}
 	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::wstring& Path) { LoadImage(Image, DeviceMemory, ImageView, std::string(Path.begin(), Path.end())); }
-	virtual void CreateTextureDeviceMemory(VkDeviceMemory* DeviceMemory, const VkImage Image);
 	virtual void CreateTextureView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format);
 
 	virtual void CreateTexture() {}
@@ -128,8 +187,7 @@ protected:
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 	virtual void CreateViewportTopFront(const float Width, const float Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 
-	virtual void CreateDeviceLocalBuffer(const VkCommandBuffer CommandBuffer, const VkBufferUsageFlags Usage, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
-	virtual void CreateHostVisibleBuffer(const VkBufferUsageFlagBits Usage, VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source);
+	virtual void CreateDeviceLocalBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkCommandBuffer CommandBuffer, const VkBufferUsageFlags Usage, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size, const void* Source);
 	virtual void CreateVertexBuffer(const VkCommandBuffer CommandBuffer);
 	virtual void CreateIndexBuffer(const VkCommandBuffer CommandBuffer);
 	virtual void CreateUniformBuffer();
