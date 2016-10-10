@@ -235,7 +235,22 @@ void TriangleVK::CreateVertexBuffer(const VkCommandBuffer CommandBuffer)
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 	
-	CreateDeviceLocalBuffer(&VertexBuffer, &VertexDeviceMemory, CommandBuffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size, Vertices.data());
+	VkBuffer StagingBuffer = VK_NULL_HANDLE;
+	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
+	{
+		//!< ステージング用のバッファとメモリを作成
+		CreateStagingBufferAndMemory(&StagingBuffer, &StagingDeviceMemory, Size, Vertices.data());
+		//!< デバイスローカル用のバッファとメモリを作成
+		CreateDeviceLocalBufferAndMemory(&VertexBuffer, &VertexDeviceMemory, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, Size);
+		//!< ステージングからデバイスローカルへのコピーコマンドを発行
+		SubmitCopyBuffer(CommandBuffer, StagingBuffer, VertexBuffer, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
+	}
+	if (VK_NULL_HANDLE != StagingDeviceMemory) {
+		vkFreeMemory(Device, StagingDeviceMemory, nullptr);
+	}
+	if (VK_NULL_HANDLE != StagingBuffer) {
+		vkDestroyBuffer(Device, StagingBuffer, nullptr);
+	}
 
 #ifdef _DEBUG
 	DebugMarker::SetName(Device, VertexBuffer, "MyVertexBuffer");
@@ -255,7 +270,22 @@ void TriangleVK::CreateIndexBuffer(const VkCommandBuffer CommandBuffer)
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 	
-	CreateDeviceLocalBuffer(&IndexBuffer, &IndexDeviceMemory, CommandBuffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size, Indices.data());
+	VkBuffer StagingBuffer = VK_NULL_HANDLE;
+	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
+	{
+		//!< ステージング用のバッファとメモリを作成
+		CreateStagingBufferAndMemory(&StagingBuffer, &StagingDeviceMemory, Size, Indices.data());
+		//!< デバイスローカル用のバッファとメモリを作成
+		CreateDeviceLocalBufferAndMemory(&IndexBuffer, &IndexDeviceMemory, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, Size);
+		//!< ステージングからデバイスローカルへのコピーコマンドを発行
+		SubmitCopyBuffer(CommandBuffer, StagingBuffer, IndexBuffer, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
+	}
+	if (VK_NULL_HANDLE != StagingDeviceMemory) {
+		vkFreeMemory(Device, StagingDeviceMemory, nullptr);
+	}
+	if (VK_NULL_HANDLE != StagingBuffer) {
+		vkDestroyBuffer(Device, StagingBuffer, nullptr);
+	}
 
 #ifdef _DEBUG
 	DebugMarker::SetName(Device, IndexBuffer, "MyIndexBuffer");

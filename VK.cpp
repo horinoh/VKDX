@@ -173,6 +173,9 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		VertexBuffer = VK_NULL_HANDLE;
 	}
 
+	if (VK_NULL_HANDLE != Sampler) {
+		vkDestroySampler(Device, Sampler, nullptr);
+	}
 	if (VK_NULL_HANDLE != ImageView) {
 		vkDestroyImageView(Device, ImageView, nullptr);
 		ImageView = VK_NULL_HANDLE;
@@ -1326,31 +1329,33 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 #endif
 }
 
-void VK::CreateDeviceLocalBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkCommandBuffer CommandBuffer, const VkBufferUsageFlags Usage, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size, const void* Source)
-{
-	VkBuffer StagingBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
-	{
-		//!< ステージング用のバッファを作成
-		CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-		//!< ステージング用のメモリを作成
-		CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer, Size, Source);
-
-		//!< デバイスローカル用のバッファを作成
-		CreateBuffer(Buffer, Usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-		//!< デバイスローカル用のメモリを作成
-		CreateDeviceLocalMemory(DeviceMemory, *Buffer);
-
-		//!< ステージングからデバイスローカルへのコピーコマンドを発行
-		SubmitCopyBuffer(CommandBuffer, StagingBuffer, *Buffer, AccessFlag, PipelineStageFlag, Size);
-	}
-	if(VK_NULL_HANDLE != StagingDeviceMemory) {
-		vkFreeMemory(Device, StagingDeviceMemory, nullptr);
-	}
-	if (VK_NULL_HANDLE != StagingBuffer) {
-		vkDestroyBuffer(Device, StagingBuffer, nullptr);
-	}
-}
+//void VK::CreateDeviceLocalBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkCommandBuffer CommandBuffer, const VkBufferUsageFlags Usage, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size, const void* Source)
+//{
+//	VkBuffer StagingBuffer = VK_NULL_HANDLE;
+//	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
+//#if 0
+//	{
+//		CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
+//		CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer, Size, Source);
+//
+//		CreateBuffer(Buffer, Usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+//		CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+//
+//		//!< ステージングからデバイスローカルへのコピーコマンドを発行
+//		SubmitCopyBuffer(CommandBuffer, StagingBuffer, *Buffer, AccessFlag, PipelineStageFlag, Size);
+//	}
+//#else
+//	CreateStagingBufferAndMemory(&StagingBuffer, &StagingDeviceMemory, Size, Source);
+//	CreateDeviceLocalBufferAndMemory(Buffer, DeviceMemory, Usage, Size);
+//	SubmitCopyBuffer(CommandBuffer, StagingBuffer, *Buffer, AccessFlag, PipelineStageFlag, Size);
+//#endif
+//	if(VK_NULL_HANDLE != StagingDeviceMemory) {
+//		vkFreeMemory(Device, StagingDeviceMemory, nullptr);
+//	}
+//	if (VK_NULL_HANDLE != StagingBuffer) {
+//		vkDestroyBuffer(Device, StagingBuffer, nullptr);
+//	}
+//}
 void VK::CreateVertexBuffer(const VkCommandBuffer CommandBuffer)
 {
 #ifdef DEBUG_STDOUT

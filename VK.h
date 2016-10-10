@@ -142,6 +142,19 @@ protected:
 		VERIFY_SUCCEEDED(vkBindImageMemory(Device, Object, *DeviceMemory, 0));
 	}
 
+	void CreateStagingBufferAndMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source = nullptr) {
+		//!< 転送元のバッファを作成
+		CreateBuffer(Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
+		//!< ホストから可視のメモリを作成
+		CreateHostVisibleMemory(DeviceMemory, *Buffer, Size, Source);
+	}
+	void CreateDeviceLocalBufferAndMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkBufferUsageFlags Usage, const size_t Size) {
+		//!< 転送先のバッファを作成
+		CreateBuffer(Buffer, Usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+		//!< デバイスローカルのメモリを作成
+		CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+	}
+
 	virtual void EnumerateInstanceLayer();
 	virtual void EnumerateInstanceExtenstion(const char* layerName);
 	virtual void CreateInstance();
@@ -183,11 +196,11 @@ protected:
 	virtual void CreateTextureView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format);
 
 	virtual void CreateTexture() {}
+	virtual void CreateSampler() {}
 
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 	virtual void CreateViewportTopFront(const float Width, const float Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 
-	virtual void CreateDeviceLocalBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkCommandBuffer CommandBuffer, const VkBufferUsageFlags Usage, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size, const void* Source);
 	virtual void CreateVertexBuffer(const VkCommandBuffer CommandBuffer);
 	virtual void CreateIndexBuffer(const VkCommandBuffer CommandBuffer);
 	virtual void CreateUniformBuffer();
@@ -259,6 +272,7 @@ protected:
 	VkImage Image = VK_NULL_HANDLE;
 	VkDeviceMemory ImageDeviceMemory = VK_NULL_HANDLE;
 	VkImageView ImageView = VK_NULL_HANDLE;
+	VkSampler Sampler = VK_NULL_HANDLE;
 
 	VkBuffer VertexBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory VertexDeviceMemory = VK_NULL_HANDLE;
