@@ -14,6 +14,13 @@ public:
 	virtual ~TextureVK() {}
 
 protected:
+	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const override {
+		CreateDescriptorSetLayoutBindings_1CIS(DescriptorSetLayoutBindings, VK_SHADER_STAGE_FRAGMENT_BIT);
+	}
+	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const override { 
+		CreateDescriptorPoolSizes_1CIS(DescriptorPoolSizes); 
+	}
+
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {
 		CreateShader_VsPs(ShaderModules, PipelineShaderStageCreateInfos);
 	}

@@ -14,6 +14,7 @@ public:
 	virtual ~TextureDX() {}
 
 protected:
+	virtual void CreateRootSignature() override { CreateRootSignature_1SRV(D3D12_SHADER_VISIBILITY_PIXEL); }
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const override {
 		CreateShader_VsPs(ShaderBlobs, ShaderBytecodes);
 	}

@@ -97,7 +97,7 @@ protected:
 	virtual void CreateSwapChainResource();
 	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
 	virtual void ResizeSwapChainToClientRect() { 
-		ResizeSwapChain(static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight())); 
+		ResizeSwapChain(static_cast<const UINT>(GetClientRectWidth()), static_cast<const UINT>(GetClientRectHeight())); 
 	}
 
 	virtual void CreateDepthStencilDescriptorHeap();
@@ -113,8 +113,6 @@ protected:
 	virtual void LoadImageResource(const std::wstring& Path) {}
 	virtual void LoadImageResource(const std::string& Path) { LoadImageResource(std::wstring(Path.begin(), Path.end())); }
 	
-	virtual void CreateTexture() {}
-
 	virtual void CreateDefaultBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source);
 	virtual void CreateUploadBuffer(ID3D12Resource** Resource, const size_t Size, const void* Source);
 	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
@@ -133,6 +131,8 @@ protected:
 	virtual void CreatePipelineState() {}
 	virtual void CreateGraphicsPipelineState();
 	virtual void CreateComputePipelineState();
+
+	virtual void CreateTexture() {}
 
 	virtual void PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12CommandAllocator* CommandAllocator);
 

@@ -10,7 +10,8 @@ public:
 	using Vertex_Position = struct Vertex_Position { DirectX::XMFLOAT3 Position; };
 	using Vertex_PositionColor = struct Vertex_PositionColor { DirectX::XMFLOAT3 Position; DirectX::XMFLOAT4 Color; };
 
-	virtual void CreateRootSignature_1ConstantBuffer(const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL);
+	virtual void CreateRootSignature_1CBV(const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL);
+	virtual void CreateRootSignature_1SRV(const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL);
 
 	template<typename T>
 	void CreateInputLayoutT(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs, const UINT InputSlot) const {}

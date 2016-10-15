@@ -2,52 +2,6 @@
 
 #include "VKExt.h"
 
-void VKExt::CreateDescriptorSetLayout_1UniformBuffer(const VkShaderStageFlags ShaderStageFlags)
-{
-	const std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings = {
-		{ 
-			0,
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
-			1,
-			ShaderStageFlags,
-			nullptr
-		},
-	};
-	const VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DescriptorSetLayoutBindings.size()), DescriptorSetLayoutBindings.data()
-	};
-	VkDescriptorSetLayout DescriptorSetLayout = VK_NULL_HANDLE;
-	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, nullptr, &DescriptorSetLayout));
-	DescriptorSetLayouts.push_back(DescriptorSetLayout);
-
-#ifdef _DEBUG
-	std::cout << "CreateDescriptorSetLayout" << COUT_OK << std::endl << std::endl;
-#endif
-}
-void VKExt::CreateDescritporPool_1UniformBuffer()
-{
-	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-	};
-	if (!DescriptorPoolSizes.empty()) {
-		const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-			nullptr,
-			0,
-			1, //!< maxSets ... プールから確保される最大のデスクリプタ数
-			static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
-		};
-		VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
-
-#ifdef _DEBUG
-		std::cout << "CreateDescriptorPool" << COUT_OK << std::endl << std::endl;
-#endif
-	}
-}
-
 void VKExt::CreateRenderPass_Color()
 {
 	const std::vector<VkAttachmentDescription> AttachmentDescriptions = {

@@ -12,6 +12,12 @@
 * https://directxtex.codeplex.com/wikipage?title=Texconv&referringTitle=Documentation
 * https://directxtex.codeplex.com/wikipage?title=Texassemble&referringTitle=Documentation
 
+### 中間リソースを使用するもの(例えばDDSファイル)は PreBuildEvent で Intermediate から ProjectDir, TargetDir へコピーしている
+~~~
+xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(ProjectDir)
+xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)
+~~~
+
 ## VK
 
 #### SDK

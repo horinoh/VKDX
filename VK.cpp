@@ -71,8 +71,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< デプスステンシル
 	CreateDepthStencil(CommandBuffer);
 
-	CreateTexture();
-
 	//!< バーテックスバッファ、インデックスバッファ
 	CreateVertexBuffer(CommandBuffer);
 	CreateIndexBuffer(CommandBuffer);
@@ -80,6 +78,8 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< デスクリプタセット
 	CreateDescriptorSetLayout();
 	CreateDescriptorSet();
+
+	CreateTexture();
 
 	//!< ユニフォームバッファ
 	//CreateUniformBuffer();
@@ -96,6 +96,8 @@ void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 #endif
 
 	Super::OnSize(hWnd, hInstance);
+
+	//ResizeSwapChainToClientRect();
 
 	CreateViewport(static_cast<float>(SurfaceExtent2D.width), static_cast<float>(SurfaceExtent2D.height));
 }
@@ -319,99 +321,99 @@ uint32_t VK::GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDevic
 }
 
 //!< 遷移する前に OldImageLayout が完了していなければならないアクション
-VkAccessFlags VK::GetSrcAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout)
-{
-	VkAccessFlags AccessMask = 0;
-
-	switch (OldImageLayout)
-	{
-	case VK_IMAGE_LAYOUT_UNDEFINED:
-		AccessMask = 0;
-		break;
-	case VK_IMAGE_LAYOUT_PREINITIALIZED:
-		//!< ホストによる書き込みが完了していなければならない
-		AccessMask = VK_ACCESS_HOST_WRITE_BIT; 
-		break;
-	case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-		//!< カラーバッファ書き込みが完了していなければならない
-		AccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		break;
-	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-		//!< デプスステンシルバッファ書き込みが完了していなければならない
-		AccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		break;
-	case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-		//!< イメージ読み込みが完了していなければならない
-		AccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-		break;
-	case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-		//!< イメージへの書き込みが完了していなければならない
-		AccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		break;
-	case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-		//!< シェーダによるイメージ読み込みが完了していなければならない
-		AccessMask = VK_ACCESS_SHADER_READ_BIT;
-		break;
-	}
-	switch (NewImageLayout)
-	{
-	case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-		AccessMask |= VK_ACCESS_TRANSFER_READ_BIT;
-		break;
-	case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-		AccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-		break;
-	case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-		if (0 == AccessMask){
-			AccessMask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
-		}
-		break;
-	}
-	return AccessMask;
-}
-VkAccessFlags VK::GetDstAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout)
-{
-	VkAccessFlags AccessMask = 0;
-
-	switch (NewImageLayout)
-	{
-	case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-		AccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-		break;
-	case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-		AccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-		break;
-	case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-		AccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-		break;
-	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-		AccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		break;
-	case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-		AccessMask = VK_ACCESS_SHADER_READ_BIT;
-		break;
-	}
-	return AccessMask;
-}
-void VK::SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const
-{
-	const auto SrcAccessMask = GetSrcAccessMask(OldImageLayout, NewImageLayout);
-	const auto DstAccessMask = GetDstAccessMask(OldImageLayout, NewImageLayout);
-
-	const VkImageMemoryBarrier ImageMemoryBarrier = {
-		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-		nullptr,
-		SrcAccessMask,
-		DstAccessMask,
-		OldImageLayout,
-		NewImageLayout,
-		VK_QUEUE_FAMILY_IGNORED,
-		VK_QUEUE_FAMILY_IGNORED,
-		Image,
-		ImageSubresourceRange
-	};
-	vkCmdPipelineBarrier(CommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &ImageMemoryBarrier);
-}
+//VkAccessFlags VK::GetSrcAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout)
+//{
+//	VkAccessFlags AccessMask = 0;
+//
+//	switch (OldImageLayout)
+//	{
+//	case VK_IMAGE_LAYOUT_UNDEFINED:
+//		AccessMask = 0;
+//		break;
+//	case VK_IMAGE_LAYOUT_PREINITIALIZED:
+//		//!< ホストによる書き込みが完了していなければならない
+//		AccessMask = VK_ACCESS_HOST_WRITE_BIT; 
+//		break;
+//	case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+//		//!< カラーバッファ書き込みが完了していなければならない
+//		AccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+//		break;
+//	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+//		//!< デプスステンシルバッファ書き込みが完了していなければならない
+//		AccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+//		break;
+//	case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+//		//!< イメージ読み込みが完了していなければならない
+//		AccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+//		break;
+//	case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+//		//!< イメージへの書き込みが完了していなければならない
+//		AccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+//		break;
+//	case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+//		//!< シェーダによるイメージ読み込みが完了していなければならない
+//		AccessMask = VK_ACCESS_SHADER_READ_BIT;
+//		break;
+//	}
+//	switch (NewImageLayout)
+//	{
+//	case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+//		AccessMask |= VK_ACCESS_TRANSFER_READ_BIT;
+//		break;
+//	case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+//		AccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+//		break;
+//	case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+//		if (0 == AccessMask){
+//			AccessMask = VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
+//		}
+//		break;
+//	}
+//	return AccessMask;
+//}
+//VkAccessFlags VK::GetDstAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout)
+//{
+//	VkAccessFlags AccessMask = 0;
+//
+//	switch (NewImageLayout)
+//	{
+//	case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+//		AccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+//		break;
+//	case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+//		AccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+//		break;
+//	case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+//		AccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+//		break;
+//	case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+//		AccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+//		break;
+//	case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+//		AccessMask = VK_ACCESS_SHADER_READ_BIT;
+//		break;
+//	}
+//	return AccessMask;
+//}
+//void VK::SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const
+//{
+//	const auto SrcAccessMask = GetSrcAccessMask(OldImageLayout, NewImageLayout);
+//	const auto DstAccessMask = GetDstAccessMask(OldImageLayout, NewImageLayout);
+//
+//	const VkImageMemoryBarrier ImageMemoryBarrier = {
+//		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+//		nullptr,
+//		SrcAccessMask,
+//		DstAccessMask,
+//		OldImageLayout,
+//		NewImageLayout,
+//		VK_QUEUE_FAMILY_IGNORED,
+//		VK_QUEUE_FAMILY_IGNORED,
+//		Image,
+//		ImageSubresourceRange
+//	};
+//	vkCmdPipelineBarrier(CommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &ImageMemoryBarrier);
+//}
 
 void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size)
 {
@@ -1062,6 +1064,8 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 		for (auto i : SwapchainImageViews) {
 			vkDestroyImageView(Device, i, nullptr);
 		}
+		SwapchainImageViews.clear();
+
 		vkDestroySwapchainKHR(Device, OldSwapchain, nullptr);
 	}
 }
@@ -1075,6 +1079,27 @@ void VK::CreateSwapchain(const VkCommandBuffer CommandBuffer)
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateSwapchain" << COUT_OK << std::endl << std::endl;
 #endif
+}
+void VK::ResizeSwapchain(const uint32_t Width, const uint32_t Height)
+{
+	//!< #TODO
+	if (VK_NULL_HANDLE != Device) {
+		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
+	}
+
+	for (auto i = 0; i < CommandBuffers.size(); ++i) {
+		vkFreeCommandBuffers(Device, CommandPools[i], 1, &CommandBuffers[i]);
+		vkDestroyCommandPool(Device, CommandPools[i], nullptr);
+	}
+	CommandPools.clear();
+	CommandBuffers.clear();
+
+	CreateCommandPool(GraphicsQueueFamilyIndex);
+	auto CommandPool = CommandPools[0];
+	AllocateCommandBuffer(CommandPool);
+	auto CommandBuffer = CommandBuffers[0];
+
+	CreateSwapchain(CommandBuffer);
 }
 
 void VK::GetSwapchainImage(const VkCommandBuffer CommandBuffer)
@@ -1407,7 +1432,8 @@ void VK::CreateUniformBuffer()
 			nullptr
 		},
 	};
-	std::vector<VkCopyDescriptorSet> CopyDescriptorSets = {};
+	const std::vector<VkCopyDescriptorSet> CopyDescriptorSets = {
+	};
 	vkUpdateDescriptorSets(Device, 
 		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(), 
 		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
@@ -1424,17 +1450,17 @@ void VK::CreateUniformBuffer()
 */
 void VK::CreateDescriptorSetLayout()
 {
-	const std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings = {
-#if 0
-		//!< 配列サイズ 1 の UBO、VS から可視
-		{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr },
-		//!< 配列サイズ 1 の SAMPLER、全てから可視
-		{ 0, VK_DESCRIPTOR_TYPE_SAMPLER, 1, VK_SHADER_STAGE_ALL_GRAPHICS, nullptr },
-		//!< 配列サイズ 10 の IMAGE、FS から可視
-		{ 0, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-		{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-#endif
+	std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings = {
+		/**
+		uint32_t              binding;
+		VkDescriptorType      descriptorType; ... VK_DESCRIPTOR_TYPE_[UNIFORM_BUFFER, SAMPLER, COMBINED_IMAGE_SAMPLER, SAMPLED_IMAGE, ...]
+		uint32_t              descriptorCount;
+		VkShaderStageFlags    stageFlags; ... VK_SHADER_STAGE_[VERTEX_BIT, TESSELLATION_CONTROL_BIT, TESSELLATION_EVALUATION_BIT, GEOMETRY_BIT, FRAGMENT_BIT, COMPUTE_BIT, ALL_GRAPHICS, ALL]
+		const VkSampler*      pImmutableSamplers;
+		*/
 	};
+	CreateDescriptorSetLayoutBindings(DescriptorSetLayoutBindings);
+
 	const VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 		nullptr,
@@ -1456,12 +1482,14 @@ void VK::CreateDescriptorSetLayout()
 */
 void VK::CreateDescriptorSet()
 {
-	const std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
-#if 0
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
-#endif
+	std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
+		/**
+		VkDescriptorType    type; ... VK_DESCRIPTOR_TYPE_[SAMPLER, SAMPLED_IMAGE, UNIFORM_BUFFER, ...]
+		uint32_t            descriptorCount;
+		*/
 	};
+	CreateDescriptorPoolSizes(DescriptorPoolSizes);
+
 	if (!DescriptorPoolSizes.empty()) {
 		const uint32_t MaxSets = [&]() {
 			uint32_t MaxDescriptorCount = 0;
@@ -1473,7 +1501,7 @@ void VK::CreateDescriptorSet()
 		const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
 			VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 			nullptr,
-			0,
+			VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT/*0*/,
 			MaxSets,
 			static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
 		};

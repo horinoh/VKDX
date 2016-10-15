@@ -35,8 +35,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateDepthStencilDescriptorHeap();
 	//!< ResizeDepthStencil() で DepthStencilResource が作られる、明示的にしなくても OnSize() からコールされる
 	
-	CreateTexture();
-
 	//!< バーテックスバッファ、インデックスバッファ
 	auto CommandList = GraphicsCommandLists[0].Get();
 	CreateVertexBuffer(CommandAllocator, CommandList);
@@ -45,6 +43,8 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< ルートシグニチャ
 	CreateRootSignature();
+	
+	CreateTexture();
 
 	//!< コンスタントバッファ
 	CreateConstantBuffer();
@@ -901,105 +901,44 @@ void DX::CreateUnorderedAccessTexture()
 #endif
 }
 
-//!< # TODO ここの実装は消す、Extへ持っていく
 void DX::CreateRootSignature()
 {
-	using namespace Microsoft::WRL;
+	const std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
+		/**
+		D3D12_DESCRIPTOR_RANGE_TYPE RangeType; ... D3D12_DESCRIPTOR_RANGE_TYPE_[SRV, UAV, CBV, SAMPLER]
+		UINT NumDescriptors;
+		UINT BaseShaderRegister; ... register(b0) なら 0、register(t3) なら 3
+		UINT RegisterSpace; ... 通常は 0 でよい register(t3, space5) なら 5
+		UINT OffsetInDescriptorsFromTableStart; ... 通常は D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND でよい
+		*/
+	};
+	const D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable = {
+		static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
+	};
+	const std::vector<D3D12_ROOT_PARAMETER> RootParameters = {
+		/**
+		D3D12_ROOT_PARAMETER_TYPE ParameterType; ... D3D12_ROOT_PARAMETER_TYPE_[DESCRIPTOR_TABLE, 32BIT_CONSTANTS, CBV, SRV, UAV]
+		union
+		{
+			D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable;
+			D3D12_ROOT_CONSTANTS Constants;
+			D3D12_ROOT_DESCRIPTOR Descriptor;
+		};
+		D3D12_SHADER_VISIBILITY ShaderVisibility; ... D3D12_SHADER_VISIBILITY_[ALL, VERTEX, HULL, DOMAIN, GEOMETRY, PIXEL]
+		*/
+	};
+	const std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {
+	};
 
-#if 0
-	const std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
-		{
-			D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
-			1, //!< NumDescriptors
-			0, //!< BaseShaderRegister ... HLSL で register(b0) なら 0、register(t3) なら 3 という感じ
-			0, //!< RegisterSpace ... 通常は 0 でよい。HLSL で register(t3, space5) なら 5
-			D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND //!< OffsetInDescriptorsFromTableStart ... 通常は D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND でよい
-		},
-	};
-	const D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable = {
-		static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
-	};
-	const std::vector<D3D12_ROOT_PARAMETER> RootParameters = {
-		{
-			D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-			DescriptorTable,
-			D3D12_SHADER_VISIBILITY_ALL //!< #TODO 必要とするシェーダに限定すべき
-		},
-	};
-	const std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {
-	};
 	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
 		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
 		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 	};
-	ComPtr<ID3DBlob> Blob;
-	ComPtr<ID3DBlob> ErrorBlob;
+	Microsoft::WRL::ComPtr<ID3DBlob> Blob;
+	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
 	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
-#elif 1
-	const std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
-		{
-			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-			1, 
-			0, 
-			0, 
-			D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
-		},
-	};
-	const D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable = {
-		static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
-	};
-	const std::vector<D3D12_ROOT_PARAMETER> RootParameters = {
-		{
-			D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-			DescriptorTable,
-			D3D12_SHADER_VISIBILITY_PIXEL
-		},
-	};
-	const std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {
-		{
-			D3D12_FILTER_MIN_MAG_POINT_MIP_LINEAR,
-			D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
-			0.0f,
-			0,
-			D3D12_COMPARISON_FUNC_NEVER,
-			D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK,
-			0.0f, D3D12_FLOAT32_MAX,
-			0,
-			0, 
-			D3D12_SHADER_VISIBILITY_PIXEL
-		},
-	};
-	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
-		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
-		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
-		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
-	};
-	ComPtr<ID3DBlob> Blob;
-	ComPtr<ID3DBlob> ErrorBlob;
-	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
-	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
-#else
-	const std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
-	};
-	const D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable = {
-		static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
-	};
-	const std::vector<D3D12_ROOT_PARAMETER> RootParameters = {
-	};
-	const std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {
-	};
-	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
-		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
-		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
-		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
-	};
-	ComPtr<ID3DBlob> Blob;
-	ComPtr<ID3DBlob> ErrorBlob;
-	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
-	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
-#endif
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateRootSignature" << COUT_OK << std::endl << std::endl;

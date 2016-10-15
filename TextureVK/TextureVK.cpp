@@ -227,11 +227,34 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void TextureVK::CreateTexture()
 {
-	LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\DDS\\UV.dds");
+	LoadImage(&Image, &ImageDeviceMemory, &ImageView, "UV.dds");
+
+	const VkDescriptorImageInfo DescriptorImageInfo = {
+		Sampler,
+		ImageView,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+	};
+	const std::vector<VkWriteDescriptorSet> WriteDescriptorSets = {
+		{
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			nullptr,
+			DescriptorSets[0], 0, //!< デスクリプタセットとバインディングポイント
+			0,
+			1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			&DescriptorImageInfo,
+			nullptr,
+			nullptr
+		},
+	};
+	const std::vector<VkCopyDescriptorSet> CopyDescriptorSets = {
+	};
+	vkUpdateDescriptorSets(Device,
+		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(), 
+		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
 }
 void TextureVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
-{
-	const VkCommandBufferBeginInfo BeginInfo = {
+{		
+		const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
 		0,
@@ -262,5 +285,4 @@ void TextureVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		} vkCmdEndRenderPass(CommandBuffer);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }
-
 #pragma endregion

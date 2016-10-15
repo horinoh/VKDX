@@ -2,17 +2,15 @@
 
 #include "DXExt.h"
 
-void DXExt::CreateRootSignature_1ConstantBuffer(const D3D12_SHADER_VISIBILITY ShaderVisibility)
+void DXExt::CreateRootSignature_1CBV(const D3D12_SHADER_VISIBILITY ShaderVisibility)
 {
-	using namespace Microsoft::WRL;
-
 	const std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
 		{
 			D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
-			1, //!< NumDescriptors
-			0, //!< BaseShaderRegister ... HLSL ‚Å register(b0) ‚È‚ç 0Aregister(t3) ‚È‚ç 3 ‚Æ‚¢‚¤Š´‚¶
-			0, //!< RegisterSpace ... ’Êí‚Í 0 ‚Å‚æ‚¢BHLSL ‚Å register(t3, space5) ‚È‚ç 5
-			D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND //!< OffsetInDescriptorsFromTableStart ... ’Êí‚Í D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND ‚Å‚æ‚¢
+			1,
+			0,
+			0, 
+			D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
 		},
 	};
 	const D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable = {
@@ -27,13 +25,65 @@ void DXExt::CreateRootSignature_1ConstantBuffer(const D3D12_SHADER_VISIBILITY Sh
 	};
 	const std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {
 	};
+
 	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
 		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
 		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 	};
-	ComPtr<ID3DBlob> Blob;
-	ComPtr<ID3DBlob> ErrorBlob;
+	Microsoft::WRL::ComPtr<ID3DBlob> Blob;
+	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
+	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
+
+#ifdef _DEBUG
+	std::cout << "CreateRootSignature" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void DXExt::CreateRootSignature_1SRV(const D3D12_SHADER_VISIBILITY ShaderVisibility /*= D3D12_SHADER_VISIBILITY_ALL*/)
+{
+	const std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
+		{
+			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
+			1,
+			0,
+			0,
+			D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
+		},
+	};
+	const D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable = {
+		static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
+	};
+	const std::vector<D3D12_ROOT_PARAMETER> RootParameters = {
+		{
+			D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+			DescriptorTable,
+			D3D12_SHADER_VISIBILITY_PIXEL
+		},
+	};
+	const std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {
+		{
+			D3D12_FILTER_MIN_MAG_POINT_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP, D3D12_TEXTURE_ADDRESS_MODE_CLAMP,
+			0.0f,
+			0,
+			D3D12_COMPARISON_FUNC_NEVER,
+			D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK,
+			0.0f, D3D12_FLOAT32_MAX,
+			0,
+			0,
+			D3D12_SHADER_VISIBILITY_PIXEL
+		},
+	};
+
+	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
+		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
+		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+	};
+	Microsoft::WRL::ComPtr<ID3DBlob> Blob;
+	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
 	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
 

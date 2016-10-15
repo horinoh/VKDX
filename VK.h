@@ -78,9 +78,9 @@ protected:
 	static uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const uint32_t MemoryTypeBits, const VkFlags Properties);
 	virtual FORCEINLINE VkFormat GetSupportedDepthFormat() const { return GetSupportedDepthFormat(PhysicalDevice); }
 	virtual FORCEINLINE uint32_t GetMemoryType(const uint32_t MemoryTypeBits, const VkFlags Properties) const { return GetMemoryType(PhysicalDeviceMemoryProperties, MemoryTypeBits, Properties); }
-	static VkAccessFlags GetSrcAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
-	static VkAccessFlags GetDstAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
-	void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const;
+	//static VkAccessFlags GetSrcAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
+	//static VkAccessFlags GetDstAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
+	//void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const;
 
 	virtual void CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size);
 	virtual void SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkBuffer DstBuffer, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size);
@@ -185,6 +185,10 @@ protected:
 	virtual void GetSwapchainImage(const VkCommandBuffer CommandBuffer, const VkClearColorValue& ClearColorValue);
 	virtual void CreateSwapchainImageView();
 	virtual void CreateSwapchain(const VkCommandBuffer CommandBuffer);
+	virtual void ResizeSwapchain(const uint32_t Width, const uint32_t Height);
+	virtual void ResizeSwapChainToClientRect() {
+		ResizeSwapchain(static_cast<const uint32_t>(GetClientRectWidth()), static_cast<const uint32_t>(GetClientRectHeight()));
+	}
 
 	virtual void CreateDepthStencilImage();
 	virtual void CreateDepthStencilDeviceMemory();
@@ -195,9 +199,6 @@ protected:
 	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::wstring& Path) { LoadImage(Image, DeviceMemory, ImageView, std::string(Path.begin(), Path.end())); }
 	virtual void CreateTextureView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format);
 
-	virtual void CreateTexture() {}
-	virtual void CreateSampler() {}
-
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 	virtual void CreateViewportTopFront(const float Width, const float Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 
@@ -205,8 +206,14 @@ protected:
 	virtual void CreateIndexBuffer(const VkCommandBuffer CommandBuffer);
 	virtual void CreateUniformBuffer();
 
+	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const {}
 	virtual void CreateDescriptorSetLayout();
+
+	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {}
 	virtual void CreateDescriptorSet();
+
+	virtual void CreateTexture() {}
+	virtual void CreateSampler() {}
 
 	virtual void CreateRenderPass() {}
 	virtual void CreateFramebuffer() {}
@@ -292,10 +299,8 @@ protected:
 	//!< デスクリプタセット、パイプラインレイアウト作成時に必要になるのでメンバとする
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
 	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
-	//!< ユニフォームバッファ作成時に必要になるのでメンバとする
 	std::vector<VkDescriptorSet> DescriptorSets;
 
-	//VkPipelineCache PipelineCache = VK_NULL_HANDLE;
 	VkPipeline Pipeline = VK_NULL_HANDLE;
 	VkRenderPass RenderPass = VK_NULL_HANDLE;
 	std::vector<VkFramebuffer> Framebuffers;
