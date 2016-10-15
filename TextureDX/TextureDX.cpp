@@ -274,5 +274,4 @@ void TextureDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 }
-
 #pragma endregion

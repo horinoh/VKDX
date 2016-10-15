@@ -903,7 +903,7 @@ void DX::CreateUnorderedAccessTexture()
 
 void DX::CreateRootSignature()
 {
-	const std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
+	std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
 		/**
 		D3D12_DESCRIPTOR_RANGE_TYPE RangeType; ... D3D12_DESCRIPTOR_RANGE_TYPE_[SRV, UAV, CBV, SAMPLER]
 		UINT NumDescriptors;
@@ -912,23 +912,38 @@ void DX::CreateRootSignature()
 		UINT OffsetInDescriptorsFromTableStart; ... í èÌÇÕ D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND Ç≈ÇÊÇ¢
 		*/
 	};
-	const D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable = {
-		static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
-	};
-	const std::vector<D3D12_ROOT_PARAMETER> RootParameters = {
+	CreateDescriptorRanges(DescriptorRanges);
+
+	std::vector<D3D12_ROOT_PARAMETER> RootParameters = {
 		/**
 		D3D12_ROOT_PARAMETER_TYPE ParameterType; ... D3D12_ROOT_PARAMETER_TYPE_[DESCRIPTOR_TABLE, 32BIT_CONSTANTS, CBV, SRV, UAV]
 		union
 		{
-			D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable;
-			D3D12_ROOT_CONSTANTS Constants;
-			D3D12_ROOT_DESCRIPTOR Descriptor;
+			D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable
+			{
+				UINT NumDescriptorRanges;
+				const D3D12_DESCRIPTOR_RANGE *pDescriptorRanges;
+			};
+			D3D12_ROOT_CONSTANTS Constants
+			{
+				UINT ShaderRegister;
+				UINT RegisterSpace;
+				UINT Num32BitValues;
+			};
+			D3D12_ROOT_DESCRIPTOR Descriptor
+			{
+				UINT ShaderRegister;
+				UINT RegisterSpace;
+			};
 		};
 		D3D12_SHADER_VISIBILITY ShaderVisibility; ... D3D12_SHADER_VISIBILITY_[ALL, VERTEX, HULL, DOMAIN, GEOMETRY, PIXEL]
 		*/
 	};
-	const std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {
+	CreateRootParameters(RootParameters, DescriptorRanges);
+
+	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {
 	};
+	CreateStaticSamplerDescs(StaticSamplerDescs);
 
 	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
 		static_cast<UINT>(RootParameters.size()), RootParameters.data(),

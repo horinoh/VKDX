@@ -10,8 +10,27 @@ public:
 	using Vertex_Position = struct Vertex_Position { DirectX::XMFLOAT3 Position; };
 	using Vertex_PositionColor = struct Vertex_PositionColor { DirectX::XMFLOAT3 Position; DirectX::XMFLOAT4 Color; };
 
-	virtual void CreateRootSignature_1CBV(const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL);
-	virtual void CreateRootSignature_1SRV(const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL);
+	void CreateDescriptorRanges_1CBV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {
+		DescriptorRanges.push_back({ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND});
+	}
+	void CreateRootParameters_1CBV(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
+		const D3D12_ROOT_DESCRIPTOR_TABLE RootDescriptorTable = {
+			static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
+		};
+		RootParameters.push_back({ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, RootDescriptorTable, ShaderVisibility });
+	}
+
+	void CreateDescriptorRanges_1SRV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const { 
+		DescriptorRanges.push_back({ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }); 
+	}
+	void CreateRootParameters_1SRV(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
+		const D3D12_ROOT_DESCRIPTOR_TABLE RootDescriptorTable = {
+			static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
+		};
+		RootParameters.push_back({ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, RootDescriptorTable, ShaderVisibility });
+	}
+
+	void CreateStaticSamplerDescs_LinearWrap(std::vector<D3D12_STATIC_SAMPLER_DESC>& StaticSamplerDescs, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = D3D12_FLOAT32_MAX) const;
 
 	template<typename T>
 	void CreateInputLayoutT(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs, const UINT InputSlot) const {}
@@ -29,8 +48,8 @@ public:
 		};
 	}
 
-	virtual void CreateShader_VsPs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const;
-	virtual void CreateShader_VsPsDsHsGs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const;
+	void CreateShader_VsPs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const;
+	void CreateShader_VsPsDsHsGs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const;
 
 	template<typename T>
 	void CreateConstantBuffer(const T& Type) {

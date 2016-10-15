@@ -213,7 +213,7 @@ protected:
 	virtual void CreateDescriptorSet();
 
 	virtual void CreateTexture() {}
-	virtual void CreateSampler() {}
+	virtual void CreateSampler(const float MaxLOD = std::numeric_limits<float>::max()) {}
 
 	virtual void CreateRenderPass() {}
 	virtual void CreateFramebuffer() {}

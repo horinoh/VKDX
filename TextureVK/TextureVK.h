@@ -20,6 +20,7 @@ protected:
 	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const override { 
 		CreateDescriptorPoolSizes_1CIS(DescriptorPoolSizes); 
 	}
+	virtual void CreateSampler(const float MaxLOD = std::numeric_limits<float>::max()) override { CreateSampler_LinearRepeat(MaxLOD); }
 
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {
 		CreateShader_VsPs(ShaderModules, PipelineShaderStageCreateInfos);
