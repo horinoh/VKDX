@@ -225,10 +225,6 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void TextureVK::CreateTexture()
-{
-	LoadImage(&Image, &ImageDeviceMemory, &ImageView, "UV.dds");
-}
 void TextureVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 {		
 		const VkCommandBufferBeginInfo BeginInfo = {
@@ -256,6 +252,8 @@ void TextureVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
 			//!< トポロジは Pipeline - VkPipelineInputAssemblyStateCreateInfo で指定しているのでパイプラインをバインド
 			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+
+			vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout, 0, 1, DescriptorSets.data(), 0, nullptr);
 
 			//!< 描画
 			vkCmdDraw(CommandBuffer, 4, 1, 0, 0);

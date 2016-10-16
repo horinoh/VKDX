@@ -21,7 +21,7 @@ protected:
 		CreateRootParameters_1SRV(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_PIXEL);
 	}
 	virtual void CreateStaticSamplerDescs(std::vector<D3D12_STATIC_SAMPLER_DESC>& StaticSamplerDescs) const override {
-		//!< 予め LoadImageResource_DDS() 内で作成したサンプラを使用する (DDS から取得した MaxLOD を使用、D3D12_FLOAT32_MAXでも良いのだが念のため)
+		//!< LoadImageResource_DDS() 内で作成したサンプラを使用する (DDS から取得した MaxLOD を使用、D3D12_FLOAT32_MAXでも良いのだが念のため)
 		StaticSamplerDescs.push_back(StaticSamplerDesc);
 	}
 
@@ -29,7 +29,10 @@ protected:
 		CreateShader_VsPs(ShaderBlobs, ShaderBytecodes);
 	}
 
-	virtual void CreateTexture() override;
+	virtual void CreateTexture() override {
+		CreateImageDescriptorHeap();
+		LoadImageResource(L"UV.dds");
+	}
 	virtual void CreateSampler(const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) override {
 		CreateSampler_LinearWrap(ShaderVisibility, MaxLOD);
 	}

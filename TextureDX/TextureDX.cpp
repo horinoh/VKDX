@@ -225,11 +225,6 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void TextureDX::CreateTexture()
-{
-	CreateImageDescriptorHeap();
-	LoadImageResource(L"UV.dds");
-}
 void TextureDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12CommandAllocator* CommandAllocator)
 {
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, PipelineState.Get()));

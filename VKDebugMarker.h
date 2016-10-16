@@ -12,7 +12,8 @@ static void SetName(VkDevice Device, VkBuffer Object, const char* Name)
 			reinterpret_cast<uint64_t>(Object),
 			Name
 		};
-		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectName(Device, &DebugMarkerObjectNameInfo));
+		//!< #TODO ’Ê‚ç‚È‚­‚È‚Á‚½c
+		//VERIFY_SUCCEEDED(vkDebugMarkerSetObjectName(Device, &DebugMarkerObjectNameInfo));
 	}
 }
 template<>

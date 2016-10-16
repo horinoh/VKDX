@@ -304,6 +304,7 @@ protected:
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
 	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
 	std::vector<VkDescriptorSet> DescriptorSets;
+	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
 
 	VkPipeline Pipeline = VK_NULL_HANDLE;
 	VkRenderPass RenderPass = VK_NULL_HANDLE;

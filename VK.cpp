@@ -137,6 +137,10 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	//	PipelineCache = VK_NULL_HANDLE;
 	//}
 
+	if (VK_NULL_HANDLE != PipelineLayout) {
+		vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
+	}
+
 	if (!DescriptorSets.empty()) {
 		vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
 	}
@@ -1502,7 +1506,7 @@ void VK::CreateDescriptorSet()
 		const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
 			VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 			nullptr,
-			VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT/*0*/,
+			VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
 			MaxSets,
 			static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
 		};
@@ -1760,7 +1764,6 @@ void VK::CreateGraphicsPipeline()
 		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
 		static_cast<uint32_t>(PushConstantRanges.size()), PushConstantRanges.data()
 	};
-	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, nullptr, &PipelineLayout));
 	//!< PipelineLayout を作成したら、DescritptorSetLayout は破棄しても良い。(DescriptorSet を再作成する場合に必要になるのでとっておくべきか？)
 	//for (auto i : DescriptorSetLayouts) {
@@ -1832,11 +1835,11 @@ void VK::CreateGraphicsPipeline()
 	}
 	ShaderModules.clear();
 
-	//!< パイプライン を作成したら、パイプラインレイアウト は破棄して良い
-	if (VK_NULL_HANDLE != PipelineLayout) {
-		vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
-		PipelineLayout = VK_NULL_HANDLE;
-	}
+	//!< パイプライン を作成したら、パイプラインレイアウト は破棄して良い → ダメ vkCmdBindDescriptorSets() 等で引数に取る事がある
+	//if (VK_NULL_HANDLE != PipelineLayout) {
+	//	vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
+	//	PipelineLayout = VK_NULL_HANDLE;
+	//}
 
 	//!< パイプラインキャッシュをファイルへ保存
 	if (VK_NULL_HANDLE != PipelineCache) {

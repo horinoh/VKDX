@@ -17,7 +17,7 @@ protected:
 	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const override {
 		CreateDescriptorSetLayoutBindings_1CIS(DescriptorSetLayoutBindings, VK_SHADER_STAGE_FRAGMENT_BIT);
 	}
-	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const override { 
+	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const override {
 		CreateDescriptorPoolSizes_1CIS(DescriptorPoolSizes); 
 	}
 	virtual void CreateWriteDescriptorSets(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, VkDescriptorImageInfo* DescriptorImageInfo, VkDescriptorBufferInfo* DescriptorBufferInfo, VkBufferView* BufferView) const override {
@@ -28,7 +28,9 @@ protected:
 		CreateShader_VsPs(ShaderModules, PipelineShaderStageCreateInfos);
 	}
 	
-	virtual void CreateTexture() override;
+	virtual void CreateTexture() override {
+		LoadImage(&Image, &ImageDeviceMemory, &ImageView, "UV.dds");
+	}
 	virtual void CreateSampler(const float MaxLOD = (std::numeric_limits<float>::max)()) override {
 		CreateSampler_LinearRepeat(MaxLOD);
 	}
