@@ -2,7 +2,7 @@
 
 #include "VKExt.h"
 
-void VKExt::CreateSampler_LinearRepeat(const float MaxLOD /*= std::numeric_limits<float>::max()*/)
+void VKExt::CreateSampler_LinearRepeat(const float MaxLOD)
 {
 	const VkSamplerCreateInfo SamplerCreateInfo = {
 		VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -18,6 +18,25 @@ void VKExt::CreateSampler_LinearRepeat(const float MaxLOD /*= std::numeric_limit
 		VK_FALSE
 	};
 	VERIFY_SUCCEEDED(vkCreateSampler(Device, &SamplerCreateInfo, nullptr, &Sampler));
+}
+
+void VKExt::CreaateWriteDescriptorSets_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, VkDescriptorImageInfo* DescriptorImageInfo, VkDescriptorBufferInfo* DescriptorBufferInfo, VkBufferView* BufferView) const
+{
+	*DescriptorImageInfo = {
+		Sampler,
+		ImageView,
+		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+	};
+	WriteDescriptorSets.push_back({
+		VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, 
+		nullptr, 
+		DescriptorSets[0], 0, //!< デスクリプタセットとバインディングポイント
+		0,
+		1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		DescriptorImageInfo,
+		nullptr,
+		nullptr
+	});
 }
 
 void VKExt::CreateRenderPass_Color()

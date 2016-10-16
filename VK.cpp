@@ -75,11 +75,12 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateVertexBuffer(CommandBuffer);
 	CreateIndexBuffer(CommandBuffer);
 
+	CreateTexture();
+
 	//!< デスクリプタセット
 	CreateDescriptorSetLayout();
 	CreateDescriptorSet();
-
-	CreateTexture();
+	UpdateDescriptorSet();
 
 	//!< ユニフォームバッファ
 	//CreateUniformBuffer();
@@ -1114,14 +1115,14 @@ void VK::GetSwapchainImage(const VkCommandBuffer CommandBuffer)
 	std::cout << "\t" << "SwapchainImageCount = " << SwapchainImageCount << std::endl;
 #endif
 
-	//!< レイアウト変更を行う
+	//!< VK_IMAGE_LAYOUT_PRESENT_SRC_KHR へレイアウト変更を行う
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo_OneTime)); {
 		for (auto& i : SwapchainImages) {
 			const VkImageMemoryBarrier ImageMemoryBarrier_UndefinedToPresent = {
 				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 				nullptr,
 				0,
-				VK_ACCESS_TRANSFER_WRITE_BIT,
+				VK_ACCESS_MEMORY_READ_BIT,
 				VK_IMAGE_LAYOUT_UNDEFINED, //!<「現在のレイアウト」または「UNDEFINED」を指定すること、イメージコンテンツを保持したい場合は「UNDEFINED」はダメ         
 				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 				PresentQueueFamilyIndex,
@@ -1523,6 +1524,24 @@ void VK::CreateDescriptorSet()
 #endif
 		}
 	}
+}
+
+void VK::UpdateDescriptorSet()
+{
+	VkDescriptorImageInfo DescriptorImageInfo;
+	VkDescriptorBufferInfo DescriptorBufferInfo;
+	VkBufferView BufferView;
+	std::vector<VkWriteDescriptorSet> WriteDescriptorSets = {
+	};
+	CreateWriteDescriptorSets(WriteDescriptorSets, &DescriptorImageInfo, &DescriptorBufferInfo, &BufferView);
+
+	std::vector<VkCopyDescriptorSet> CopyDescriptorSets = {
+	};
+	CreateCopyDescriptorSets(CopyDescriptorSets);
+
+	vkUpdateDescriptorSets(Device,
+		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
+		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
 }
 
 VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const

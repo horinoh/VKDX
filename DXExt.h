@@ -29,8 +29,8 @@ public:
 		};
 		RootParameters.push_back({ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, RootDescriptorTable, ShaderVisibility });
 	}
-
-	void CreateStaticSamplerDescs_LinearWrap(std::vector<D3D12_STATIC_SAMPLER_DESC>& StaticSamplerDescs, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = D3D12_FLOAT32_MAX) const;
+	
+	void CreateSampler_LinearWrap(const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)());
 
 	template<typename T>
 	void CreateInputLayoutT(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs, const UINT InputSlot) const {}

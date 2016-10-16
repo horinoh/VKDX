@@ -136,6 +136,7 @@ protected:
 	virtual void CreateComputePipelineState();
 
 	virtual void CreateTexture() {}
+	virtual void CreateSampler(const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) {}
 
 	virtual void PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12CommandAllocator* CommandAllocator);
 
@@ -166,6 +167,7 @@ protected:
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> ImageResource;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> ImageDescriptorHeap;
+	D3D12_STATIC_SAMPLER_DESC StaticSamplerDesc;
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
 

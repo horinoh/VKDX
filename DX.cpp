@@ -41,11 +41,11 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateIndexBuffer(CommandAllocator, CommandList);
 	WaitForFence();
 
+	CreateTexture();
+
 	//!< ルートシグニチャ
 	CreateRootSignature();
 	
-	CreateTexture();
-
 	//!< コンスタントバッファ
 	CreateConstantBuffer();
 

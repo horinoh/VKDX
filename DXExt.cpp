@@ -2,18 +2,18 @@
 
 #include "DXExt.h"
 
-void DXExt::CreateStaticSamplerDescs_LinearWrap(std::vector<D3D12_STATIC_SAMPLER_DESC>& StaticSamplerDescs, const D3D12_SHADER_VISIBILITY ShaderVisibility /*= D3D12_SHADER_VISIBILITY_ALL*/, const FLOAT MaxLOD /*= D3D12_FLOAT32_MAX*/) const
+void DXExt::CreateSampler_LinearWrap(const D3D12_SHADER_VISIBILITY ShaderVisibility, const FLOAT MaxLOD)
 {
-	StaticSamplerDescs.push_back({
+	StaticSamplerDesc = {
 		D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-		0.0f,
-		0,
-		D3D12_COMPARISON_FUNC_NEVER,
-		D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-		0.0f, MaxLOD,
-		0, 0, ShaderVisibility //!< UINT ShaderRegister, UINT RegisterSpace, D3D12_SHADER_VISIBILITY ShaderVisibility
-	});
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+			0.0f,
+			0,
+			D3D12_COMPARISON_FUNC_NEVER,
+			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+			0.0f, MaxLOD,
+			0, 0, ShaderVisibility //!< UINT ShaderRegister, UINT RegisterSpace, D3D12_SHADER_VISIBILITY ShaderVisibility
+	};
 }
 
 void DXExt::CreateShader_VsPs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const

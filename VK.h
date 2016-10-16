@@ -212,8 +212,12 @@ protected:
 	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {}
 	virtual void CreateDescriptorSet();
 
+	virtual void CreateWriteDescriptorSets(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, VkDescriptorImageInfo* DescriptorImageInfo, VkDescriptorBufferInfo* DescriptorBufferInfo, VkBufferView* BufferView) const {}
+	virtual void CreateCopyDescriptorSets(std::vector<VkCopyDescriptorSet>& CopyDescriptorSets) const {}
+	virtual void UpdateDescriptorSet();
+
 	virtual void CreateTexture() {}
-	virtual void CreateSampler(const float MaxLOD = std::numeric_limits<float>::max()) {}
+	virtual void CreateSampler(const float MaxLOD = (std::numeric_limits<float>::max)()) {}
 
 	virtual void CreateRenderPass() {}
 	virtual void CreateFramebuffer() {}

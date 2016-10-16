@@ -20,12 +20,19 @@ protected:
 	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const override { 
 		CreateDescriptorPoolSizes_1CIS(DescriptorPoolSizes); 
 	}
-	virtual void CreateSampler(const float MaxLOD = std::numeric_limits<float>::max()) override { CreateSampler_LinearRepeat(MaxLOD); }
+	virtual void CreateWriteDescriptorSets(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, VkDescriptorImageInfo* DescriptorImageInfo, VkDescriptorBufferInfo* DescriptorBufferInfo, VkBufferView* BufferView) const override {
+		CreaateWriteDescriptorSets_1CIS(WriteDescriptorSets, DescriptorImageInfo, DescriptorBufferInfo, BufferView);
+	}
 
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {
 		CreateShader_VsPs(ShaderModules, PipelineShaderStageCreateInfos);
 	}
+	
 	virtual void CreateTexture() override;
+	virtual void CreateSampler(const float MaxLOD = (std::numeric_limits<float>::max)()) override {
+		CreateSampler_LinearRepeat(MaxLOD);
+	}
+
 	virtual void CreatePipeline() override { CreateGraphicsPipeline(); }
 	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer) override;
 };
