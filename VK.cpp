@@ -1233,7 +1233,7 @@ void VK::CreateSwapchainImageView()
 			i,
 			VK_IMAGE_VIEW_TYPE_2D,
 			ColorFormat,
-			ComponentMapping_SwizzleIdentity,
+			ComponentMapping_Identity,
 			ImageSubresourceRange_Color,
 		};
 
@@ -1309,7 +1309,7 @@ void VK::CreateDepthStencilView()
 		DepthStencilImage,
 		VK_IMAGE_VIEW_TYPE_2D,
 		DepthFormat,
-		ComponentMapping_SwizzleIdentity,
+		ComponentMapping_Identity,
 		ImageSubresourceRange_DepthStencil
 	};
 	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, &DepthStencilImageView));
@@ -1319,7 +1319,7 @@ void VK::CreateDepthStencilView()
 #endif
 }
 
-void VK::CreateTextureView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format)
+void VK::CreateTextureView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping)
 {
 	const VkImageViewCreateInfo ImageViewCreateInfo = {
 		VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -1328,7 +1328,7 @@ void VK::CreateTextureView(VkImageView* ImageView, const VkImage Image, const Vk
 		Image,
 		ImageViewType,
 		Format,
-		ComponentMapping_SwizzleIdentity,
+		ComponentMapping,
 		ImageSubresourceRange_Color
 	};
 	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, ImageView));

@@ -46,6 +46,20 @@ VkImageType VKImage::ToVkImageType(const gli::target GLITarget)
 	}
 	return VK_IMAGE_TYPE_MAX_ENUM;
 }
+VkComponentSwizzle VKImage::ToVkComponentSwizzle(const gli::swizzle GLISwizzle)
+{
+	switch (GLISwizzle)
+	{
+	case gli::SWIZZLE_ZERO:
+	case gli::SWIZZLE_ONE:
+	default: assert(false && "Not supported"); break;
+	case gli::SWIZZLE_RED: return VK_COMPONENT_SWIZZLE_R;
+	case gli::SWIZZLE_GREEN: return VK_COMPONENT_SWIZZLE_G;
+	case gli::SWIZZLE_BLUE: return VK_COMPONENT_SWIZZLE_B;
+	case gli::SWIZZLE_ALPHA: return VK_COMPONENT_SWIZZLE_A;
+	}
+	return VK_COMPONENT_SWIZZLE_IDENTITY;
+}
 
 void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path)
 {
@@ -199,7 +213,14 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 	}
 
 	//!< ビューを作成
-	CreateTextureView(ImageView, *Image, ToVkImageViewType(GLITexture.target()), Format);
+	const auto Swizzles = GLITexture.swizzles();
+	const VkComponentMapping ComponentMapping = {
+		ToVkComponentSwizzle(Swizzles.r),
+		ToVkComponentSwizzle(Swizzles.g),
+		ToVkComponentSwizzle(Swizzles.b),
+		ToVkComponentSwizzle(Swizzles.a),
+	};
+	CreateTextureView(ImageView, *Image, ToVkImageViewType(GLITexture.target()), Format, ComponentMapping);
 
 	//!< サンプラを作成
 	CreateSampler(static_cast<const float>(Levels));
