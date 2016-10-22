@@ -289,7 +289,8 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3
 	CommandList->SetGraphicsRootDescriptorTable(0, CVDescriptorHandle);
 #endif
 
-	CommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
+	CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 	CommandList->IASetVertexBuffers(0, static_cast<UINT>(VertexBufferViews.size()), VertexBufferViews.data());
 	CommandList->IASetIndexBuffer(&IndexBufferView);
@@ -351,8 +352,8 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3
 			}
 #endif
 
-			//!< トポロジ
-			CommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
+			CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 			//!< バーテックスバッファ、インデックスバッファ
 			CommandList->IASetVertexBuffers(0, static_cast<UINT>(VertexBufferViews.size()), VertexBufferViews.data());

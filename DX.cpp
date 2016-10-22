@@ -768,29 +768,6 @@ void DX::CreateUploadBuffer(ID3D12Resource** Resource, const size_t Size, const 
 	}
 }
 
-void DX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
-{
-	//!< CPU 側にもコピーを持たせる、多分必要ない?
-	//Microsoft::WRL::ComPtr<ID3DBlob> VertexBufferBlob;
-	//VERIFY_SUCCEEDED(D3DCreateBlob(Size, VertexBufferBlob.GetAddressOf()));
-	//CopyMemory(VertexBufferBlob->GetBufferPointer(), Vertices.data(), Size);
-
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
-#endif
-}
-void DX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
-{
-	//!< CPU 側にもコピーを持たせる、多分必要ない?
-	//Microsoft::WRL::ComPtr<ID3DBlob> IndexBufferBlob;
-	//VERIFY_SUCCEEDED(D3DCreateBlob(Size, IndexBufferBlob.GetAddressOf()));
-	//CopyMemory(IndexBufferBlob->GetBufferPointer(), Indices.data(), Size);
-
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
 /**
 std::vector<ID3D12DescriptorHeap*> DescriptorHeaps = { ConstantBufferDescriptorHeap.Get() };
 GraphicsCommandList->SetDescriptorHeaps(static_cast<UINT>(DescriptorHeaps.size()), DescriptorHeaps.data());

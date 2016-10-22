@@ -259,8 +259,8 @@ void TextureDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D
 				CommandList->SetGraphicsRootDescriptorTable(0, SRVDescriptorHandle);
 			}
 
-			//!< トポロジ
-			CommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
+			CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 			//!< 描画
 			CommandList->DrawInstanced(4, 1, 0, 0);

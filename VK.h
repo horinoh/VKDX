@@ -83,77 +83,45 @@ protected:
 	//void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const;
 
 	virtual void CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size);
+	virtual void CopyToHostVisibleMemory(const VkBuffer Buffer, const VkDeviceMemory DeviceMemory, const size_t Size = 0, const void* Source = nullptr, const VkDeviceSize Offset = 0);
 	virtual void SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkBuffer DstBuffer, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size);
 
-	template<typename T> void CreateHostVisibleMemory(VkDeviceMemory* DeviceMemory, const T Object, const size_t Size = 0, const void* Source = nullptr) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
-	template<> void CreateHostVisibleMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Object, const size_t Size, const void* Source) {
-		VkMemoryRequirements MemoryRequirements;
-		vkGetBufferMemoryRequirements(Device, Object, &MemoryRequirements);
-		const VkMemoryAllocateInfo MemoryAllocateInfo = {
-			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-			nullptr,
-			MemoryRequirements.size,
-			GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT/*| VK_MEMORY_PROPERTY_HOST_COHERENT_BIT*/) //!< HOST_VISIBLE にすること
-		};
-		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, DeviceMemory));
-		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Object, *DeviceMemory, 0));
-		if (Size && nullptr != Source) {
-			void *Data;
-			VERIFY_SUCCEEDED(vkMapMemory(Device, *DeviceMemory, 0, MemoryAllocateInfo.allocationSize, 0, &Data)); {
-				memcpy(Data, Source, Size);
-				//!< ↓VK_MEMORY_PROPERTY_HOST_COHERENT_BIT の場合は必要なし
-				const std::vector<VkMappedMemoryRange> MappedMemoryRanges = {
-					{
-						VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-						nullptr,
-						*DeviceMemory,
-						0,
-						VK_WHOLE_SIZE
-					}
-				};
-				VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(MappedMemoryRanges.size()), MappedMemoryRanges.data()));
-			} vkUnmapMemory(Device, *DeviceMemory);
-		}
-	}
-
+	template<typename T> void CreateHostVisibleMemory(VkDeviceMemory* DeviceMemory, const T Object) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
 	template<typename T> void CreateDeviceLocalMemory(VkDeviceMemory* DeviceMemory, const T Object) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
-	template<> void CreateDeviceLocalMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Object) {
-		VkMemoryRequirements MemoryRequirements;
-		vkGetBufferMemoryRequirements(Device, Object, &MemoryRequirements);
-		const VkMemoryAllocateInfo MemoryAllocateInfo = {
-			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-			nullptr,
-			MemoryRequirements.size,
-			GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-		};
-		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, DeviceMemory));
-		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Object, *DeviceMemory, 0));
-	}
-	template<> void CreateDeviceLocalMemory(VkDeviceMemory* DeviceMemory, const VkImage Object) {
-		VkMemoryRequirements MemoryRequirements;
-		vkGetImageMemoryRequirements(Device, Object, &MemoryRequirements);
-		const VkMemoryAllocateInfo MemoryAllocateInfo = {
-			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-			nullptr,
-			MemoryRequirements.size,
-			GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-		};
-		VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, DeviceMemory));
-		VERIFY_SUCCEEDED(vkBindImageMemory(Device, Object, *DeviceMemory, 0));
-	}
+	template<typename T> void BindDeviceMemory(const T Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset = 0) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
+	//!< ↓ここでテンプレート特殊化している
+#include "VKDeviceMemory.h"
 
-	void CreateStagingBufferAndMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source = nullptr) {
+	/**
+	@brief 転送用のバッファとメモリを作成して、メモリへデータをコピーする、バッファとメモリをバインドする
+	@note 大きなバッファを用意して、複数バッファを(オフセットして)バインドしていくような用途には使えないので注意 (初回分としては可能)
+	*/
+	void CreateStagingBufferAndCopyToMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source = nullptr, const VkDeviceSize Offset = 0) {
 		//!< 転送元のバッファを作成
 		CreateBuffer(Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-		//!< ホストから可視のメモリを作成
-		CreateHostVisibleMemory(DeviceMemory, *Buffer, Size, Source);
+		//!< メモリ(ホストビジブル)を作成
+		CreateHostVisibleMemory(DeviceMemory, *Buffer);
+
+		//!< メモリ(ホストビジブル)へデータをコピー
+		CopyToHostVisibleMemory(*Buffer, *DeviceMemory, Size, Source, Offset);
+		//!< バッファとメモリをバインド
+		BindDeviceMemory(*Buffer, *DeviceMemory, Offset);
 	}
-	void CreateDeviceLocalBufferAndMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkBufferUsageFlags Usage, const size_t Size) {
-		//!< 転送先のバッファを作成
-		CreateBuffer(Buffer, Usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-		//!< デバイスローカルのメモリを作成
+	/**
+	@brief デバイスローカルなバッファとメモリを作成、バッファとメモリをバインドする
+	@note 大きなバッファを用意して、複数バッファを(オフセットして)バインドしていくような用途には使えないので注意 (初回分としては可能)
+	*/
+	void CreateDeviceLocalBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkBufferUsageFlags Usage, const size_t Size, const VkDeviceSize Offset = 0) {
+		//!< バッファを作成
+		CreateBuffer(Buffer, Usage, Size);
+		//!< メモリ(デバイスローカル)を作成
 		CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+
+		//!< バッファとメモリをバインド
+		BindDeviceMemory(*Buffer, *DeviceMemory, Offset);
 	}
+
+	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
 
 	virtual void EnumerateInstanceLayer();
 	virtual void EnumerateInstanceExtenstion(const char* layerName);
@@ -192,18 +160,18 @@ protected:
 
 	virtual void CreateDepthStencilImage();
 	virtual void CreateDepthStencilDeviceMemory();
-	virtual void CreateDepthStencilView();
-	virtual void CreateDepthStencil(const VkCommandBuffer CommandBuffer) { /*CreateDepthStencilImage();CreateDepthStencilDeviceMemory();CreateDepthStencilView(CommandBuffer);*/ }
+	virtual void CreateDepthStencilView() {
+		CreateImageView(&DepthStencilImageView, DepthStencilImage, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, ComponentMapping_Identity, ImageSubresourceRange_DepthStencil);
+	}
+	virtual void CreateDepthStencil(const VkCommandBuffer CommandBuffer) { /*CreateDepthStencilImage();CreateDepthStencilDeviceMemory();CreateDepthStencilView();*/ }
 	
 	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path) {}
 	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::wstring& Path) { LoadImage(Image, DeviceMemory, ImageView, std::string(Path.begin(), Path.end())); }
-	virtual void CreateTextureView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping);
-
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 	virtual void CreateViewportTopFront(const float Width, const float Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 
-	virtual void CreateVertexBuffer(const VkCommandBuffer CommandBuffer);
-	virtual void CreateIndexBuffer(const VkCommandBuffer CommandBuffer);
+	virtual void CreateVertexBuffer(const VkCommandBuffer CommandBuffer) {}
+	virtual void CreateIndexBuffer(const VkCommandBuffer CommandBuffer) {}
 	virtual void CreateUniformBuffer();
 
 	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const {}
@@ -225,6 +193,7 @@ protected:
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const {}
 	virtual void CreateVertexInput(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding = 0) const {}
+	virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const {}
 	virtual void CreatePipeline() {}
 	virtual VkPipelineCache LoadPipelineCache(const std::wstring& Path) const;
 	virtual void StorePipelineCache(const std::wstring& Path, const VkPipelineCache PipelineCache) const;

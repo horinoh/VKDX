@@ -279,7 +279,8 @@ void ParametricSurfaceDX::PopulateCommandList(ID3D12GraphicsCommandList* Command
 
 	//CommandList->SetGraphicsRootSignature(RootSignature.Get());
 
-	//CommandList->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+	//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
+	//CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
 	//CommandList->IASetVertexBuffers(0, static_cast<UINT>(VertexBufferViews.size()), VertexBufferViews.data());
 	//CommandList->IASetIndexBuffer(&IndexBufferView);

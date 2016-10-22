@@ -50,8 +50,8 @@ VkComponentSwizzle VKImage::ToVkComponentSwizzle(const gli::swizzle GLISwizzle)
 {
 	switch (GLISwizzle)
 	{
-	case gli::SWIZZLE_ZERO:
-	case gli::SWIZZLE_ONE:
+	case gli::SWIZZLE_ZERO: //!< ?
+	case gli::SWIZZLE_ONE: //!< ?
 	default: assert(false && "Not supported"); break;
 	case gli::SWIZZLE_RED: return VK_COMPONENT_SWIZZLE_R;
 	case gli::SWIZZLE_GREEN: return VK_COMPONENT_SWIZZLE_G;
@@ -79,7 +79,7 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
 	{
 		//!< ステージング用のバッファとメモリを作成
-		CreateStagingBufferAndMemory(&StagingBuffer, &StagingDeviceMemory, GLITexture.size(), GLITexture.data());
+		CreateStagingBufferAndCopyToMemory(&StagingBuffer, &StagingDeviceMemory, GLITexture.size(), GLITexture.data());
 
 		//!< デバイスローカル用のイメージを作成
 		const auto GLIExtent3D = GLITexture.extent(0);
@@ -105,6 +105,7 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 		VERIFY_SUCCEEDED(vkCreateImage(Device, &ImageCreateInfo, nullptr, Image));
 		//!< デバイスローカル用のメモリを作成
 		CreateDeviceLocalMemory(DeviceMemory, *Image);
+		BindDeviceMemory(*Image, *DeviceMemory, 0);
 
 		//!< 転送
 		{
@@ -161,7 +162,9 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 						*Image,
 						ImageSubresourceRange
 					};
-					vkCmdPipelineBarrier(CommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+					vkCmdPipelineBarrier(CommandBuffer,
+						VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 
+						VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 						0,
 						0, nullptr,
 						0, nullptr,
@@ -220,7 +223,7 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 		ToVkComponentSwizzle(Swizzles.b),
 		ToVkComponentSwizzle(Swizzles.a),
 	};
-	CreateTextureView(ImageView, *Image, ToVkImageViewType(GLITexture.target()), Format, ComponentMapping);
+	CreateImageView(ImageView, *Image, ToVkImageViewType(GLITexture.target()), Format, ComponentMapping, ImageSubresourceRange_Color);
 
 	//!< サンプラを作成
 	CreateSampler(static_cast<const float>(Levels));

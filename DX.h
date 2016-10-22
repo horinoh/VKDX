@@ -115,8 +115,8 @@ protected:
 	
 	virtual void CreateDefaultBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source);
 	virtual void CreateUploadBuffer(ID3D12Resource** Resource, const size_t Size, const void* Source);
-	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
-	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
+	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) {}
+	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) {}
 	virtual void CreateConstantBuffer();
 	virtual void CreateConstantBufferDescriptorHeap(const UINT Size);
 	virtual void CreateUnorderedAccessTexture();

@@ -98,7 +98,7 @@ void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 
 	Super::OnSize(hWnd, hInstance);
 
-	//ResizeSwapChainToClientRect();
+	ResizeSwapChainToClientRect();
 
 	CreateViewport(static_cast<float>(SurfaceExtent2D.width), static_cast<float>(SurfaceExtent2D.height));
 }
@@ -433,7 +433,26 @@ void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const si
 	};
 	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, Buffer));
 }
-
+void VK::CopyToHostVisibleMemory(const VkBuffer Buffer, const VkDeviceMemory DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset)
+{
+	if (Size && nullptr != Source) {
+		void *Data;
+		VERIFY_SUCCEEDED(vkMapMemory(Device, DeviceMemory, Offset, Size, static_cast<VkMemoryMapFlags>(0), &Data)); {
+			memcpy(Data, Source, Size);
+			//!< ↓VK_MEMORY_PROPERTY_HOST_COHERENT_BIT の場合は必要なし
+			const std::vector<VkMappedMemoryRange> MappedMemoryRanges = {
+				{
+					VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+					nullptr,
+					DeviceMemory,
+					0,
+					VK_WHOLE_SIZE
+				}
+			};
+			VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(MappedMemoryRanges.size()), MappedMemoryRanges.data()));
+		} vkUnmapMemory(Device, DeviceMemory);
+	}
+}
 void VK::SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkBuffer DstBuffer, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size)
 {
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo_OneTime)); {
@@ -444,7 +463,6 @@ void VK::SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer Sr
 		};
 		vkCmdCopyBuffer(CommandBuffer, SrcBuffer, DstBuffer, 1, &BufferCopy);
 
-		//!< バッファを「転送先として」から「目的のバッファとして」へ変更する
 		const VkBufferMemoryBarrier BufferMemoryBarrier = {
 			VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
 			nullptr,
@@ -456,7 +474,13 @@ void VK::SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer Sr
 			0,
 			VK_WHOLE_SIZE
 		};
-		vkCmdPipelineBarrier(CommandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, PipelineStageFlag, 0, 0, nullptr, 1, &BufferMemoryBarrier, 0, nullptr);
+		//!< バッファを「VK_PIPELINE_STAGE_TRANSFER_BIT」から「PipelineStageFlag」へ変更する
+		vkCmdPipelineBarrier(CommandBuffer, 
+			VK_PIPELINE_STAGE_TRANSFER_BIT, PipelineStageFlag,
+			0, 
+			0, nullptr,
+			1, &BufferMemoryBarrier, 
+			0, nullptr);
 
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 
@@ -471,6 +495,25 @@ void VK::SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer Sr
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
 	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device)); //!< フェンスでも良い
+}
+
+void VK::CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange)
+{
+	const VkImageViewCreateInfo ImageViewCreateInfo = {
+		VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+		nullptr,
+		0,
+		Image,
+		ImageViewType,
+		Format,
+		ComponentMapping,
+		ImageSubresourceRange
+	};
+	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, ImageView));
+
+#ifdef DEBUG_STDOUT
+	std::cout << "\t" << "ImageView" << std::endl;
+#endif
 }
 
 void VK::EnumerateInstanceLayer()
@@ -1104,7 +1147,7 @@ void VK::ResizeSwapchain(const uint32_t Width, const uint32_t Height)
 	AllocateCommandBuffer(CommandPool);
 	auto CommandBuffer = CommandBuffers[0];
 
-	CreateSwapchain(CommandBuffer);
+	//CreateSwapchain(CommandBuffer);
 }
 
 void VK::GetSwapchainImage(const VkCommandBuffer CommandBuffer)
@@ -1226,19 +1269,9 @@ void VK::GetSwapchainImage(const VkCommandBuffer CommandBuffer, const VkClearCol
 void VK::CreateSwapchainImageView()
 {
 	for(auto i : SwapchainImages) {
-		const VkImageViewCreateInfo ImageViewCreateInfo = {
-			VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-			nullptr,
-			0,
-			i,
-			VK_IMAGE_VIEW_TYPE_2D,
-			ColorFormat,
-			ComponentMapping_Identity,
-			ImageSubresourceRange_Color,
-		};
-
 		VkImageView ImageView;
-		VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, &ImageView));
+		CreateImageView(&ImageView, i, VK_IMAGE_VIEW_TYPE_2D, ColorFormat, ComponentMapping_Identity, ImageSubresourceRange_Color);
+		
 		SwapchainImageViews.push_back(ImageView);
 	}
 
@@ -1285,56 +1318,12 @@ void VK::CreateDepthStencilImage()
 }
 void VK::CreateDepthStencilDeviceMemory()
 {
-	VkMemoryRequirements MemoryRequirements;
-	vkGetImageMemoryRequirements(Device, DepthStencilImage, &MemoryRequirements);
-	const VkMemoryAllocateInfo MemoryAllocateInfo = {
-		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-		nullptr,
-		MemoryRequirements.size,
-		GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) //!< DEVICE_LOCAL にすること
-	};
-	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, &DepthStencilDeviceMemory));
-	VERIFY_SUCCEEDED(vkBindImageMemory(Device, DepthStencilImage, DepthStencilDeviceMemory, 0));
+	CreateDeviceLocalMemory(&DepthStencilDeviceMemory, DepthStencilImage);
+
+	BindDeviceMemory(DepthStencilImage, DepthStencilDeviceMemory, 0);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "DepthStencilDeviceMemory" << std::endl;
-#endif
-}
-void VK::CreateDepthStencilView()
-{
-	const VkImageViewCreateInfo ImageViewCreateInfo = {
-		VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-		nullptr,
-		0,
-		DepthStencilImage,
-		VK_IMAGE_VIEW_TYPE_2D,
-		DepthFormat,
-		ComponentMapping_Identity,
-		ImageSubresourceRange_DepthStencil
-	};
-	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, &DepthStencilImageView));
-
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "DepthStencilImageView" << std::endl;
-#endif
-}
-
-void VK::CreateTextureView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping)
-{
-	const VkImageViewCreateInfo ImageViewCreateInfo = {
-		VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-		nullptr,
-		0,
-		Image,
-		ImageViewType,
-		Format,
-		ComponentMapping,
-		ImageSubresourceRange_Color
-	};
-	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, ImageView));
-
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "ImageView" << std::endl;
 #endif
 }
 
@@ -1359,52 +1348,16 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 #endif
 }
 
-//void VK::CreateDeviceLocalBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkCommandBuffer CommandBuffer, const VkBufferUsageFlags Usage, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size, const void* Source)
-//{
-//	VkBuffer StagingBuffer = VK_NULL_HANDLE;
-//	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
-//#if 0
-//	{
-//		CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-//		CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer, Size, Source);
-//
-//		CreateBuffer(Buffer, Usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-//		CreateDeviceLocalMemory(DeviceMemory, *Buffer);
-//
-//		//!< ステージングからデバイスローカルへのコピーコマンドを発行
-//		SubmitCopyBuffer(CommandBuffer, StagingBuffer, *Buffer, AccessFlag, PipelineStageFlag, Size);
-//	}
-//#else
-//	CreateStagingBufferAndMemory(&StagingBuffer, &StagingDeviceMemory, Size, Source);
-//	CreateDeviceLocalBufferAndMemory(Buffer, DeviceMemory, Usage, Size);
-//	SubmitCopyBuffer(CommandBuffer, StagingBuffer, *Buffer, AccessFlag, PipelineStageFlag, Size);
-//#endif
-//	if(VK_NULL_HANDLE != StagingDeviceMemory) {
-//		vkFreeMemory(Device, StagingDeviceMemory, nullptr);
-//	}
-//	if (VK_NULL_HANDLE != StagingBuffer) {
-//		vkDestroyBuffer(Device, StagingBuffer, nullptr);
-//	}
-//}
-void VK::CreateVertexBuffer(const VkCommandBuffer CommandBuffer)
-{
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
-#endif
-}
-void VK::CreateIndexBuffer(const VkCommandBuffer CommandBuffer)
-{
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
-#endif
-}
 void VK::CreateUniformBuffer()
 {
 	glm::vec4 Color(1.0f, 0.0f, 0.0f, 1.0f);
 	const auto Size = sizeof(Color);
 
+	//!< ユニフォームバッファは更新するのでホストビジブルとして作成する
 	CreateBuffer(&UniformBuffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, Size);
-	CreateHostVisibleMemory(&UniformDeviceMemory, UniformBuffer, Size, &Color);
+	CreateHostVisibleMemory(&UniformDeviceMemory, UniformBuffer);
+	CopyToHostVisibleMemory(UniformBuffer, UniformDeviceMemory, Size, &Color/*, 0*/);
+	BindDeviceMemory(UniformBuffer, UniformDeviceMemory/*, 0*/);
 
 	const VkBufferViewCreateInfo BufferViewCreateInfo = {
 		VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
@@ -1656,13 +1609,15 @@ void VK::CreateGraphicsPipeline()
 		static_cast<uint32_t>(VertexInputAttributeDescriptions.size()), VertexInputAttributeDescriptions.data()
 	};
 
-	const VkPipelineInputAssemblyStateCreateInfo PipelineInputAssemblyStateCreateInfo = {
+	//!< インプットアセンブリ (トポロジ)
+	VkPipelineInputAssemblyStateCreateInfo PipelineInputAssemblyStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
 		nullptr,
 		0,
 		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
 		VK_FALSE
 	};
+	CreateInputAssembly(PipelineInputAssemblyStateCreateInfo);
 
 	//!< VkDynamicState にするので、ここでは nullptr を指定している、ただし個数は指定しておく必要があるので注意!
 	const VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo = {
@@ -1722,7 +1677,8 @@ void VK::CreateGraphicsPipeline()
 		0.0f, 0.0f
 	};
 
-	//!< アタッチメント毎に異なるブレンドをしたい場合はデバイスで有効になっていないとだめ (VkPhysicalDeviceFeatures.independentBlend)
+	//!< (基本) 配列になっているにも関わらず、全要素同じ値でないとダメ
+	//!< 要素毎に異なる設定をしたい場合は、デバイスで有効になっていないとダメ (VkPhysicalDeviceFeatures.independentBlend)
 	const std::vector<VkPipelineColorBlendAttachmentState> PipelineColorBlendAttachmentStates = {
 		{
 			VK_FALSE,
