@@ -420,7 +420,7 @@ uint32_t VK::GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDevic
 //	vkCmdPipelineBarrier(CommandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0, 0, nullptr, 0, nullptr, 1, &ImageMemoryBarrier);
 //}
 
-void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size)
+void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size) const
 {
 	const VkBufferCreateInfo BufferCreateInfo = {
 		VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -433,6 +433,28 @@ void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const si
 	};
 	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, Buffer));
 }
+
+void VK::CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers) const
+{
+	const VkImageCreateInfo ImageCreateInfo = {
+		VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+		nullptr,
+		0,
+		ImageType,
+		Format,
+		Extent3D,
+		MipLevels,
+		ArrayLayers,
+		VK_SAMPLE_COUNT_1_BIT,
+		VK_IMAGE_TILING_OPTIMAL,
+		Usage,
+		VK_SHARING_MODE_EXCLUSIVE,
+		0, nullptr,
+		VK_IMAGE_LAYOUT_UNDEFINED
+	};
+	VERIFY_SUCCEEDED(vkCreateImage(Device, &ImageCreateInfo, nullptr, Image));
+}
+
 void VK::CopyToHostVisibleMemory(const VkBuffer Buffer, const VkDeviceMemory DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset)
 {
 	if (Size && nullptr != Source) {
@@ -1294,23 +1316,7 @@ void VK::CreateDepthStencilImage()
 	const VkExtent3D Extent3D = {
 		SurfaceExtent2D.width, SurfaceExtent2D.height, 1
 	};
-	const VkImageCreateInfo ImageCreateInfo = {
-		VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_IMAGE_TYPE_2D,
-		DepthFormat,
-		Extent3D,
-		1,
-		1,
-		VK_SAMPLE_COUNT_1_BIT,
-		VK_IMAGE_TILING_OPTIMAL,
-		VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-		VK_SHARING_MODE_EXCLUSIVE,
-		0, nullptr,
-		VK_IMAGE_LAYOUT_UNDEFINED
-	};
-	VERIFY_SUCCEEDED(vkCreateImage(Device, &ImageCreateInfo, nullptr, &DepthStencilImage));
+	CreateImage(&DepthStencilImage, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "DepthStencilImage" << std::endl;
@@ -1320,7 +1326,7 @@ void VK::CreateDepthStencilDeviceMemory()
 {
 	CreateDeviceLocalMemory(&DepthStencilDeviceMemory, DepthStencilImage);
 
-	BindDeviceMemory(DepthStencilImage, DepthStencilDeviceMemory, 0);
+	BindDeviceMemory(DepthStencilImage, DepthStencilDeviceMemory/*, 0*/);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "DepthStencilDeviceMemory" << std::endl;

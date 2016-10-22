@@ -18,8 +18,16 @@ private:
 	static VkImageViewType ToVkImageViewType(const gli::target GLITarget);
 	static VkImageType ToVkImageType(const gli::target GLITarget);
 	static VkComponentSwizzle ToVkComponentSwizzle(const gli::swizzle GLISwizzle);
+	static void CreateVkComponentMapping(VkComponentMapping& ComponentMapping, const gli::texture::swizzles_type GLISwizzlesType) { 
+		ComponentMapping = { ToVkComponentSwizzle(GLISwizzlesType.r), ToVkComponentSwizzle(GLISwizzlesType.g), ToVkComponentSwizzle(GLISwizzlesType.b), ToVkComponentSwizzle(GLISwizzlesType.a) };
+	}
+	static VkComponentMapping ToVkComponentMapping(const gli::texture::swizzles_type GLISwizzlesType) {
+		return { ToVkComponentSwizzle(GLISwizzlesType.r), ToVkComponentSwizzle(GLISwizzlesType.g), ToVkComponentSwizzle(GLISwizzlesType.b), ToVkComponentSwizzle(GLISwizzlesType.a) };
+	}
 
 protected:
+	virtual void CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const gli::texture& GLITexture) const;
+
 	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path) override { LoadImage_DDS(Image, DeviceMemory, ImageView, Path); }
 
 	void LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path);
