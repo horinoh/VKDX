@@ -27,6 +27,7 @@ private:
 
 protected:
 	virtual void CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const gli::texture& GLITexture) const;
+	virtual void SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkImage DstImage, const gli::texture& GLITexture);
 
 	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path) override { LoadImage_DDS(Image, DeviceMemory, ImageView, Path); }
 
