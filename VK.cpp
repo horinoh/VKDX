@@ -101,6 +101,9 @@ void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 	ResizeSwapChainToClientRect();
 
 	CreateViewport(static_cast<float>(SurfaceExtent2D.width), static_cast<float>(SurfaceExtent2D.height));
+
+	DestroyFramebuffer();
+	CreateFramebuffer();
 }
 void VK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
@@ -120,10 +123,8 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	}
 
-	for (auto i : Framebuffers) {
-		vkDestroyFramebuffer(Device, i, nullptr);
-	}
-	Framebuffers.clear();
+	DestroyFramebuffer();
+	
 	if (VK_NULL_HANDLE != RenderPass) {
 		vkDestroyRenderPass(Device, RenderPass, nullptr);
 		RenderPass = VK_NULL_HANDLE;
@@ -517,6 +518,29 @@ void VK::SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer Sr
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
 	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device)); //!< フェンスでも良い
+}
+
+void VK::CreateStagingBufferAndCopyToMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source /*= nullptr*/, const VkDeviceSize Offset /*= 0*/)
+{
+	//!< 転送元のバッファを作成
+	CreateBuffer(Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
+	//!< メモリ(ホストビジブル)を作成
+	CreateHostVisibleMemory(DeviceMemory, *Buffer);
+
+	//!< メモリ(ホストビジブル)へデータをコピー
+	CopyToHostVisibleMemory(*Buffer, *DeviceMemory, Size, Source, Offset);
+	//!< バッファとメモリをバインド
+	BindDeviceMemory(*Buffer, *DeviceMemory, Offset);
+}
+void VK::CreateDeviceLocalBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkBufferUsageFlags Usage, const size_t Size, const VkDeviceSize Offset /*= 0*/)
+{
+	//!< バッファを作成
+	CreateBuffer(Buffer, Usage, Size);
+	//!< メモリ(デバイスローカル)を作成
+	CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+
+	//!< バッファとメモリをバインド
+	BindDeviceMemory(*Buffer, *DeviceMemory, Offset);
 }
 
 void VK::CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange)
@@ -1297,9 +1321,6 @@ void VK::CreateSwapchainImageView()
 		SwapchainImageViews.push_back(ImageView);
 	}
 
-	//!< 次のイメージが取得できたらセマフォが通知される
-	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, NextImageAcquiredSemaphore, nullptr, &SwapchainImageIndex));
-
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
 #endif
@@ -1505,6 +1526,14 @@ void VK::UpdateDescriptorSet()
 	vkUpdateDescriptorSets(Device,
 		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
 		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
+}
+
+void VK::DestroyFramebuffer()
+{
+	for (auto i : Framebuffers) {
+		vkDestroyFramebuffer(Device, i, nullptr);
+	}
+	Framebuffers.clear();
 }
 
 VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
@@ -1885,6 +1914,9 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 }
 void VK::Draw()
 {
+	//!< 次のイメージが取得できたらセマフォが通知される
+	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, NextImageAcquiredSemaphore, nullptr, &SwapchainImageIndex));
+
 	auto CommandPool = CommandPools[0];
 	VERIFY_SUCCEEDED(vkResetCommandPool(Device, CommandPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT));
 
@@ -1917,9 +1949,6 @@ void VK::Present()
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkQueuePresentKHR(GraphicsQueue, &PresentInfo));
-
-	//!< 次のイメージが取得できたらセマフォが通知される
-	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, NextImageAcquiredSemaphore, VK_NULL_HANDLE, &SwapchainImageIndex));
 
 #ifdef DEBUG_STDOUT
 	//std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;

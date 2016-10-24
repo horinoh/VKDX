@@ -97,30 +97,12 @@ protected:
 	@brief 転送用のバッファとメモリを作成して、メモリへデータをコピーする、バッファとメモリをバインドする
 	@note 大きなバッファを用意して、複数バッファを(オフセットして)バインドしていくような用途には使えないので注意 (初回分としては可能)
 	*/
-	void CreateStagingBufferAndCopyToMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source = nullptr, const VkDeviceSize Offset = 0) {
-		//!< 転送元のバッファを作成
-		CreateBuffer(Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-		//!< メモリ(ホストビジブル)を作成
-		CreateHostVisibleMemory(DeviceMemory, *Buffer);
-
-		//!< メモリ(ホストビジブル)へデータをコピー
-		CopyToHostVisibleMemory(*Buffer, *DeviceMemory, Size, Source, Offset);
-		//!< バッファとメモリをバインド
-		BindDeviceMemory(*Buffer, *DeviceMemory, Offset);
-	}
+	void CreateStagingBufferAndCopyToMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source = nullptr, const VkDeviceSize Offset = 0);
 	/**
 	@brief デバイスローカルなバッファとメモリを作成、バッファとメモリをバインドする
 	@note 大きなバッファを用意して、複数バッファを(オフセットして)バインドしていくような用途には使えないので注意 (初回分としては可能)
 	*/
-	void CreateDeviceLocalBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkBufferUsageFlags Usage, const size_t Size, const VkDeviceSize Offset = 0) {
-		//!< バッファを作成
-		CreateBuffer(Buffer, Usage, Size);
-		//!< メモリ(デバイスローカル)を作成
-		CreateDeviceLocalMemory(DeviceMemory, *Buffer);
-
-		//!< バッファとメモリをバインド
-		BindDeviceMemory(*Buffer, *DeviceMemory, Offset);
-	}
+	void CreateDeviceLocalBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkBufferUsageFlags Usage, const size_t Size, const VkDeviceSize Offset = 0);
 
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
 
@@ -190,6 +172,7 @@ protected:
 
 	virtual void CreateRenderPass() {}
 	virtual void CreateFramebuffer() {}
+	virtual void DestroyFramebuffer();
 
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const {}
@@ -235,8 +218,8 @@ protected:
 	std::vector<VkCommandBuffer> CommandBuffers;
 
 	VkFence Fence = VK_NULL_HANDLE;
-	VkSemaphore NextImageAcquiredSemaphore = VK_NULL_HANDLE;
-	VkSemaphore RenderFinishedSemaphore = VK_NULL_HANDLE;
+	VkSemaphore NextImageAcquiredSemaphore = VK_NULL_HANDLE;	//!< プレゼント完了までウエイト
+	VkSemaphore RenderFinishedSemaphore = VK_NULL_HANDLE;		//!< 描画完了するまでウエイト
 
 	VkExtent2D SurfaceExtent2D;
 	VkFormat ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
@@ -279,6 +262,15 @@ protected:
 	VkPipeline Pipeline = VK_NULL_HANDLE;
 	VkRenderPass RenderPass = VK_NULL_HANDLE;
 	std::vector<VkFramebuffer> Framebuffers;
+
+	/**
+	@note バーチャルフレームに持たせるもの #TODO
+	1 コマンドバッファ
+	2 プレゼント完了セマフォ
+	3 描画完了セマフォ
+	4 フェンス
+	5 フレームバッファ
+	*/
 
 	//!< よく使うやつ
 	const VkComponentMapping ComponentMapping_Identity = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, };
