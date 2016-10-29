@@ -10,7 +10,6 @@ private:
 	using Super = DXExt;
 
 protected:
-	virtual void LoadImageResource(const std::wstring& Path) override { LoadImageResource_DDS(Path); }
-
-	void LoadImageResource_DDS(const std::wstring& Path);
+	virtual void LoadImage(ID3D12Resource** Resource, ID3D12DescriptorHeap* DescriptorHeap, const std::wstring& Path) override { LoadImage_DDS(Resource, DescriptorHeap, Path); }
+	void LoadImage_DDS(ID3D12Resource** Resource, ID3D12DescriptorHeap* DescriptorHeap, const std::wstring& Path);
 };

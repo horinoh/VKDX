@@ -238,25 +238,20 @@ void TextureDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D
 		BarrierTransition(CommandList, Resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
 			//!< レンダーターゲット
-			{
-				auto RTDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-				const auto RTIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-				RTDescriptorHandle.ptr += CurrentBackBufferIndex * RTIncrementSize;
-				const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { RTDescriptorHandle };
+			auto RTDescriptorHandle(GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CurrentBackBufferIndex));
+			const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { RTDescriptorHandle };
+			CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
 
-				CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
-			}
 			//!< ルートシグニチャ
 			CommandList->SetGraphicsRootSignature(RootSignature.Get());
 
+			//!< テクスチャ
 			if(nullptr != ImageDescriptorHeap){
-				std::vector<ID3D12DescriptorHeap*> DescriptorHeaps = { ImageDescriptorHeap.Get() };
+				const std::vector<ID3D12DescriptorHeap*> DescriptorHeaps = { ImageDescriptorHeap.Get() };
 				CommandList->SetDescriptorHeaps(static_cast<UINT>(DescriptorHeaps.size()), DescriptorHeaps.data());
 
-				auto SRVDescriptorHandle(ImageDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-				const auto SRVIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-				SRVDescriptorHandle.ptr += 0 * SRVIncrementSize;
-				CommandList->SetGraphicsRootDescriptorTable(0, SRVDescriptorHandle);
+				auto GPUDescriptorHandle(GetGPUDescriptorHandle(ImageDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+				CommandList->SetGraphicsRootDescriptorTable(0, GPUDescriptorHandle);
 			}
 
 			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)

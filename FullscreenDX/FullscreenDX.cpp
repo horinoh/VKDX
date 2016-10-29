@@ -239,11 +239,9 @@ void FullscreenDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, I
 		{
 			//!< レンダーターゲット
 			{
-				auto RTDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-				const auto RTIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-				RTDescriptorHandle.ptr += CurrentBackBufferIndex * RTIncrementSize;
-				const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { RTDescriptorHandle };
+				auto CPUDescriptorHandle(GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CurrentBackBufferIndex));
 
+				const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { CPUDescriptorHandle };
 				CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
 			}
 			//!< ルートシグニチャ

@@ -306,17 +306,14 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3
 
 		//!< クリア
 		{
-			auto CPUDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-			const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-			CPUDescriptorHandle.ptr += CurrentBackBufferIndex * IncrementSize;
-			CommandList->ClearRenderTargetView(CPUDescriptorHandle, DirectX::Colors::SkyBlue, 0, nullptr);
-
-			//if (nullptr != DepthStencilDescriptorHeap) {
-			//	auto CPUDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-			//	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-			//	CPUDescriptorHandle.ptr += 0 * IncrementSize;
-			//	CommandList->ClearDepthStencilView(CPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-			//}
+			auto RTDescriptorHandle(GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CurrentBackBufferIndex));
+			CommandList->ClearRenderTargetView(RTDescriptorHandle, DirectX::Colors::SkyBlue, 0, nullptr);
+#if 0
+			if (nullptr != DepthStencilDescriptorHeap) {
+				auto DSDescriptorHandle(GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
+				CommandList->ClearDepthStencilView(DSDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+			}
+#endif
 		}
 
 		auto Resource = SwapChainResources[CurrentBackBufferIndex].Get();
@@ -325,16 +322,19 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3
 		{
 			//!< レンダーターゲット
 			{
-				auto RTDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-				const auto RTIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-				RTDescriptorHandle.ptr += CurrentBackBufferIndex * RTIncrementSize;
+				auto RTDescriptorHandle(GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CurrentBackBufferIndex));
 				const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { RTDescriptorHandle };
-
-				//auto DSDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-				////const auto DSIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-				////DSDescriptorHandle.ptr += 0 * DSIncrementSize;
-
-				CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
+#if 0
+				if (nullptr != DepthStencilDescriptorHeap) {
+					auto DSDescriptorHandle(GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
+					CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, &DSDescriptorHandle);
+				}
+				else {
+					CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
+				}
+#else
+				CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
+#endif
 			}
 			//!< ルートシグニチャ
 			CommandList->SetGraphicsRootSignature(RootSignature.Get());
@@ -345,9 +345,7 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3
 				std::vector<ID3D12DescriptorHeap*> DescriptorHeaps = { ConstantBufferDescriptorHeap.Get() };
 				CommandList->SetDescriptorHeaps(static_cast<UINT>(DescriptorHeaps.size()), DescriptorHeaps.data());
 
-				auto CBDescriptorHandle(ConstantBufferDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-				const auto CBIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-				CBDescriptorHandle.ptr += 0 * CBIncrementSize;
+				auto CBDescriptorHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 				CommandList->SetGraphicsRootDescriptorTable(0, CBDescriptorHandle);
 			}
 #endif

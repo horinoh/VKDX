@@ -323,6 +323,21 @@ void DX::CheckMultiSample(const DXGI_FORMAT Format)
 	}
 }
 
+D3D12_CPU_DESCRIPTOR_HANDLE DX::GetCPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index /*= 0*/) const
+{
+	auto DescriptorHandle(DescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(Type);
+	DescriptorHandle.ptr += Index * IncrementSize;
+	return DescriptorHandle;
+}
+D3D12_GPU_DESCRIPTOR_HANDLE DX::GetGPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index /*= 0*/) const
+{
+	auto DescriptorHandle(DescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(Type);
+	DescriptorHandle.ptr += Index * IncrementSize;
+	return DescriptorHandle;
+}
+
 /**
 @brief マルチスレッドで「同じ」キューへサブミットできる
 @note Vulkan ではマルチスレッドで「異なる」キューへのみサブミットできるので注意
@@ -462,7 +477,7 @@ void DX::CreateSwapChainResource()
 	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
 	SwapChain->GetDesc1(&SwapChainDesc);
 
-	auto CpuDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	auto CPUDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 	SwapChainResources.resize(SwapChainDesc.BufferCount);
@@ -473,8 +488,8 @@ void DX::CreateSwapChainResource()
 
 		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 		//!< (リソースがタイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能)
-		Device->CreateRenderTargetView(It->Get(), nullptr, CpuDescriptorHandle);
-		CpuDescriptorHandle.ptr += IncrementSize;
+		Device->CreateRenderTargetView(It->Get(), nullptr, CPUDescriptorHandle);
+		CPUDescriptorHandle.ptr += IncrementSize;
 	}
 
 #ifdef DEBUG_STDOUT
@@ -561,13 +576,10 @@ void DX::CreateDepthStencilResource(const UINT Width, const UINT Height, const D
 		&ClearValue,
 		IID_PPV_ARGS(DepthStencilResource.ReleaseAndGetAddressOf())));
 
-	auto CpuDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV); //!< ここでは必要ないが一応
-
+	auto CPUDescriptorHandle(GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
 	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	//!< (リソースがタイプドフォーマットなら D3D12_DEPTH_STENCIL_VIEW_DESC* へ nullptr 指定可能)
-	Device->CreateDepthStencilView(DepthStencilResource.Get(), nullptr, CpuDescriptorHandle);
-	CpuDescriptorHandle.ptr += IncrementSize; //!< ここでは必要ないが一応
+	Device->CreateDepthStencilView(DepthStencilResource.Get(), nullptr, CPUDescriptorHandle);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "DepthStencilView" << std::endl;
@@ -600,16 +612,6 @@ void DX::CreateImageDescriptorHeap()
 		0
 	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(ImageDescriptorHeap.GetAddressOf())));
-}
-void DX::CreateImageResource()
-{
-	//!< #TODO ここで ImageDescriptorHeap を作成する
-
-	auto CpuDescriptorHandle(ImageDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV); //!< ここでは必要ないが一応
-	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
-	Device->CreateShaderResourceView(ImageResource.Get(), nullptr, CpuDescriptorHandle);
-	CpuDescriptorHandle.ptr += IncrementSize; //!< ここでは必要ないが一応
 }
 
 void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth, const FLOAT MaxDepth)
@@ -801,7 +803,8 @@ void DX::CreateConstantBufferDescriptorHeap(const UINT Size)
 		Size
 	};
 	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
-	Device->CreateConstantBufferView(&ConstantBufferViewDesc, ConstantBufferDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+	auto CPUDescriptorHandle(GetCPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+	Device->CreateConstantBufferView(&ConstantBufferViewDesc, CPUDescriptorHandle);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateConstantBufferDescriptorHeap" << COUT_OK << std::endl << std::endl;
@@ -849,8 +852,8 @@ void DX::CreateUnorderedAccessTexture()
 
 	auto CPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-
 	CPUDescriptorHandle.ptr += 0 * IncrementSize;
+
 	/*const*/D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {
 		Format,
 		D3D12_SRV_DIMENSION_TEXTURE2D,
@@ -862,7 +865,7 @@ void DX::CreateUnorderedAccessTexture()
 	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	Device->CreateShaderResourceView(UnorderedAccessTextureResource.Get(), &SRVDesc, CPUDescriptorHandle);
 
-	CPUDescriptorHandle.ptr += 1 * IncrementSize;
+	CPUDescriptorHandle.ptr += IncrementSize;
 	/*const*/D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {
 		Format,
 		D3D12_UAV_DIMENSION_TEXTURE2D,
@@ -1068,12 +1071,8 @@ void DX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Comma
 		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
 		//!< クリア
-		{
-			auto CPUDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-			const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-			CPUDescriptorHandle.ptr += CurrentBackBufferIndex * IncrementSize;
-			CommandList->ClearRenderTargetView(CPUDescriptorHandle, DirectX::Colors::SkyBlue, 0, nullptr);
-		}
+		auto RTDescriptorHandle(GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CurrentBackBufferIndex));
+		CommandList->ClearRenderTargetView(RTDescriptorHandle, DirectX::Colors::SkyBlue, 0, nullptr);
 
 		auto Resource = SwapChainResources[CurrentBackBufferIndex].Get();
 		//!< バリア

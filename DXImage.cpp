@@ -4,11 +4,10 @@
 
 #pragma comment(lib, "DirectXTK12.lib")
 
-void DXImage::LoadImageResource_DDS(const std::wstring& Path)
+void DXImage::LoadImage_DDS(ID3D12Resource** Resource, ID3D12DescriptorHeap* DescriptorHeap, const std::wstring& Path)
 {
 	const auto CommandList = GraphicsCommandLists[0].Get();
 	const auto CommandAllocator = CommandAllocators[0].Get();
-	auto Resource = ImageResource.GetAddressOf();
 
 	std::unique_ptr<uint8_t[]> DDSData;
 	std::vector<D3D12_SUBRESOURCE_DATA> SubresourceData;
@@ -153,11 +152,8 @@ void DXImage::LoadImageResource_DDS(const std::wstring& Path)
 #endif
 
 	//!< ビューを作成
-	auto CpuDescriptorHandle(ImageDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
-	Device->CreateShaderResourceView(ImageResource.Get(), nullptr, CpuDescriptorHandle);
-	CpuDescriptorHandle.ptr += IncrementSize; //!< ここでは必要ないが一応
+	auto CPUDescriptorHandle(GetCPUDescriptorHandle(DescriptorHeap, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+	Device->CreateShaderResourceView(*Resource, nullptr, CPUDescriptorHandle);
 
 	//!< サンプラを作成
 	CreateSampler(D3D12_SHADER_VISIBILITY_PIXEL, static_cast<const FLOAT>((*Resource)->GetDesc().MipLevels));

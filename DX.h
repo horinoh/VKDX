@@ -80,6 +80,8 @@ protected:
 	virtual void GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format);
 	virtual void CheckFeatureLevel();
 	virtual void CheckMultiSample(const DXGI_FORMAT Format);
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index = 0) const;
+	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index = 0) const;
 
 	virtual void CreateCommandQueue();
 
@@ -109,9 +111,8 @@ protected:
 	}
 
 	virtual void CreateImageDescriptorHeap();
-	virtual void CreateImageResource();
-	virtual void LoadImageResource(const std::wstring& Path) {}
-	virtual void LoadImageResource(const std::string& Path) { LoadImageResource(std::wstring(Path.begin(), Path.end())); }
+	virtual void LoadImage(ID3D12Resource** Resource, ID3D12DescriptorHeap* DescriptorHeap, const std::wstring& Path) {}
+	virtual void LoadImage(ID3D12Resource** Resource, ID3D12DescriptorHeap* DescriptorHeap, const std::string& Path) { LoadImage(Resource, DescriptorHeap, std::wstring(Path.begin(), Path.end())); }
 	
 	virtual void CreateDefaultBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source);
 	virtual void CreateUploadBuffer(ID3D12Resource** Resource, const size_t Size, const void* Source);
