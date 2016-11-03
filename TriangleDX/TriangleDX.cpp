@@ -235,7 +235,7 @@ void TriangleDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
 
-	CreateDefaultBuffer(CommandAllocator, CommandList, VertexBufferResource.GetAddressOf(), Size, Vertices.data());
+	CreateDefaultResource(CommandAllocator, CommandList, VertexBufferResource.GetAddressOf(), Size, Vertices.data());
 
 	VertexBufferViews.push_back({ VertexBufferResource->GetGPUVirtualAddress(), Size, Stride });
 
@@ -251,7 +251,7 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<UINT32>(Stride * IndexCount);
 
-	CreateDefaultBuffer(CommandAllocator, CommandList, IndexBufferResource.GetAddressOf(), Size, Indices.data());
+	CreateDefaultResource(CommandAllocator, CommandList, IndexBufferResource.GetAddressOf(), Size, Indices.data());
 
 	IndexBufferView = { IndexBufferResource->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT };
 

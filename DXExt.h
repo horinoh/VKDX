@@ -54,7 +54,7 @@ public:
 	template<typename T>
 	void CreateConstantBuffer(const T& Type) {
 		const auto Size = RoundUpTo256(sizeof(T));
-		CreateUploadBuffer(ConstantBufferResource.GetAddressOf(), Size, &Type);
+		CreateUploadResource(ConstantBufferResource.GetAddressOf(), Size, &Type);
 		CreateConstantBufferDescriptorHeap(static_cast<UINT>(Size));
 #ifdef _DEBUG
 		std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;

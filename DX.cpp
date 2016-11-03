@@ -326,16 +326,66 @@ void DX::CheckMultiSample(const DXGI_FORMAT Format)
 D3D12_CPU_DESCRIPTOR_HANDLE DX::GetCPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index /*= 0*/) const
 {
 	auto DescriptorHandle(DescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(Type);
-	DescriptorHandle.ptr += Index * IncrementSize;
+	DescriptorHandle.ptr += Index * Device->GetDescriptorHandleIncrementSize(Type);
 	return DescriptorHandle;
 }
 D3D12_GPU_DESCRIPTOR_HANDLE DX::GetGPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index /*= 0*/) const
 {
 	auto DescriptorHandle(DescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(Type);
-	DescriptorHandle.ptr += Index * IncrementSize;
+	DescriptorHandle.ptr += Index * Device->GetDescriptorHandleIncrementSize(Type);
 	return DescriptorHandle;
+}
+void DX::BarrierTransition(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After)
+{
+	const D3D12_RESOURCE_TRANSITION_BARRIER ResourceTransitionBarrier = {
+		Resource,
+		D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+		Before,
+		After
+	};
+	const std::vector<D3D12_RESOURCE_BARRIER> ResourceBarrier = {
+		{
+			D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+			D3D12_RESOURCE_BARRIER_FLAG_NONE,
+			ResourceTransitionBarrier
+		}
+	};
+	CommandList->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
+}
+void DX::PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints)
+{
+	BarrierTransition(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
+		for (auto It = PlacedSubresourceFootprints.cbegin(); It != PlacedSubresourceFootprints.cend(); ++It) {
+			const D3D12_TEXTURE_COPY_LOCATION TextureCopyLocation_Dst = {
+				Dst,
+				D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+				static_cast<const UINT>(std::distance(PlacedSubresourceFootprints.cbegin(), It))
+			};
+			const D3D12_TEXTURE_COPY_LOCATION TextureCopyLocation_Src = {
+				Src,
+				D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
+				*It
+			};
+			CommandList->CopyTextureRegion(&TextureCopyLocation_Dst, 0, 0, 0, &TextureCopyLocation_Src, nullptr);
+		}
+	} BarrierTransition(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+}
+void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints)
+{
+	BarrierTransition(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
+		for (auto It = PlacedSubresourceFootprints.cbegin(); It != PlacedSubresourceFootprints.cend(); ++It) {
+			//!< 色々なサンプルを見るとことごとく D3D12_BOX を作っているがどれも使ってはいない、分からん
+			//const D3D12_BOX Box = {
+			//	static_cast<UINT>(It->Offset),
+			//	0,
+			//	0,
+			//	static_cast<UINT>(It->Offset) + It->Footprint.Width,
+			//	1,
+			//	1
+			//};
+			CommandList->CopyBufferRegion(Dst, 0, Src, It->Offset, It->Footprint.Width);
+		}
+	} BarrierTransition(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 }
 
 /**
@@ -477,9 +527,6 @@ void DX::CreateSwapChainResource()
 	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
 	SwapChain->GetDesc1(&SwapChainDesc);
 
-	auto CPUDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
 	SwapChainResources.resize(SwapChainDesc.BufferCount);
 	for (auto It = SwapChainResources.begin(); It != SwapChainResources.end(); ++It) {
 		const auto Index = static_cast<UINT>(std::distance(SwapChainResources.begin(), It));
@@ -488,8 +535,7 @@ void DX::CreateSwapChainResource()
 
 		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 		//!< (リソースがタイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能)
-		Device->CreateRenderTargetView(It->Get(), nullptr, CPUDescriptorHandle);
-		CPUDescriptorHandle.ptr += IncrementSize;
+		Device->CreateRenderTargetView(It->Get(), nullptr, GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, Index));
 	}
 
 #ifdef DEBUG_STDOUT
@@ -666,7 +712,7 @@ void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDe
 目的のリソースは D3D12_HEAP_TYPE_DEFAULT で作成する (頻繁に更新しないリソースは D3D12_HEAP_TYPE_DEFAULT にしておきたい)
 アップロードリソースから目的のリソースへのコピーコマンドを発行する
 */
-void DX::CreateDefaultBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source)
+void DX::CreateDefaultResource(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source)
 {
 	//!< リソースデスクリプタ(アップロード、ターゲット共用)
 	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
@@ -734,7 +780,7 @@ void DX::CreateDefaultBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12Gra
 @note
 アップロード用のリソースを D3D12_HEAP_TYPE_UPLOAD で作成する (頻繁に更新するリソースは D3D12_HEAP_TYPE_UPLOAD にしておきたい)
 */
-void DX::CreateUploadBuffer(ID3D12Resource** Resource, const size_t Size, const void* Source)
+void DX::CreateUploadResource(ID3D12Resource** Resource, const size_t Size, const void* Source)
 {
 	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
 	const D3D12_RESOURCE_DESC ResourceDesc = {
@@ -768,6 +814,63 @@ void DX::CreateUploadBuffer(ID3D12Resource** Resource, const size_t Size, const 
 			memcpy(Data, Source, Size);
 		} (*Resource)->Unmap(0, nullptr);
 	}
+}
+
+void DX::CreateUploadResource(ID3D12Resource** Resource, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData, const UINT64 TotalSize, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes)
+{
+	assert(SubresourceData.size() == PlacedSubresourceFootprints.size() == NumRows.size() == RowSizes.size() && "");
+	const auto SubresourceCount = static_cast<const UINT>(SubresourceData.size());
+
+	const D3D12_HEAP_PROPERTIES HeapProperties = {
+		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
+	const D3D12_RESOURCE_DESC ResourceDesc = {
+		D3D12_RESOURCE_DIMENSION_BUFFER,
+		0,
+		TotalSize, 1,
+		1,
+		1,
+		DXGI_FORMAT_UNKNOWN,
+		SampleDesc,
+		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+		D3D12_RESOURCE_FLAG_NONE
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ, //!< UPLOAD では GENERIC_READ にすること
+		nullptr,
+		IID_PPV_ARGS(Resource)));
+
+	BYTE* Data;
+	VERIFY_SUCCEEDED((*Resource)->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
+		for (auto It = PlacedSubresourceFootprints.cbegin(); It != PlacedSubresourceFootprints.cend(); ++It) {
+			const auto Index = std::distance(PlacedSubresourceFootprints.cbegin(), It);
+
+			const auto& PSF = *It;
+			const auto& SD = SubresourceData[Index];
+			const auto RowCount = NumRows[Index];
+			const auto RowSize = RowSizes[Index];
+
+			const D3D12_MEMCPY_DEST MemcpyDest = {
+				Data + PSF.Offset,
+				PSF.Footprint.RowPitch,
+				PSF.Footprint.RowPitch * RowCount
+			};
+			for (UINT i = 0; i < PSF.Footprint.Depth; ++i) {
+				auto Dst = reinterpret_cast<BYTE*>(MemcpyDest.pData) + MemcpyDest.SlicePitch * i;
+				const auto Src = reinterpret_cast<const BYTE*>(SD.pData) + SD.SlicePitch * i;
+				for (UINT j = 0; j < RowCount; ++j) {
+					memcpy(Dst + MemcpyDest.RowPitch * j, Src + SD.RowPitch * j, RowSize);
+				}
+			}
+		}
+	} (*Resource)->Unmap(0, nullptr);
 }
 
 /**
@@ -850,10 +953,6 @@ void DX::CreateUnorderedAccessTexture()
 	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescritporHeapDesc, IID_PPV_ARGS(UnorderedAccessTextureDescriptorHeap.GetAddressOf())));
 
-	auto CPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	CPUDescriptorHandle.ptr += 0 * IncrementSize;
-
 	/*const*/D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {
 		Format,
 		D3D12_SRV_DIMENSION_TEXTURE2D,
@@ -863,9 +962,9 @@ void DX::CreateUnorderedAccessTexture()
 		0, 1, 0, 0.0f
 	};
 	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
-	Device->CreateShaderResourceView(UnorderedAccessTextureResource.Get(), &SRVDesc, CPUDescriptorHandle);
+	UINT Index = 0;
+	Device->CreateShaderResourceView(UnorderedAccessTextureResource.Get(), &SRVDesc, GetCPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Index++));
 
-	CPUDescriptorHandle.ptr += IncrementSize;
 	/*const*/D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {
 		Format,
 		D3D12_UAV_DIMENSION_TEXTURE2D,
@@ -874,7 +973,7 @@ void DX::CreateUnorderedAccessTexture()
 		0, 0
 	};
 	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
-	Device->CreateUnorderedAccessView(UnorderedAccessTextureResource.Get(), nullptr, &UAVDesc, CPUDescriptorHandle);
+	Device->CreateUnorderedAccessView(UnorderedAccessTextureResource.Get(), nullptr, &UAVDesc, GetCPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Index++));
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateUnorderedAccessBuffer" << COUT_OK << std::endl << std::endl;
@@ -1084,24 +1183,6 @@ void DX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Comma
 	VERIFY_SUCCEEDED(CommandList->Close());
 }
 
-void DX::BarrierTransition(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After)
-{
-	const D3D12_RESOURCE_TRANSITION_BARRIER ResourceTransitionBarrier = {
-		Resource,
-		D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-		Before,
-		After
-	};
-	const std::vector<D3D12_RESOURCE_BARRIER> ResourceBarrier = {
-		{
-			D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-			D3D12_RESOURCE_BARRIER_FLAG_NONE,
-			ResourceTransitionBarrier
-		}
-	};
-	CommandList->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
-}
-
 void DX::Draw()
 {
 	const auto CommandAllocator = CommandAllocators[0].Get();
@@ -1112,7 +1193,7 @@ void DX::Draw()
 	PopulateCommandList(CommandList, CommandAllocator);
 
 	std::vector<ID3D12CommandList*> CommandLists = { CommandList };
-	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
+	CommandQueue->ExecuteCommandLists(static_cast< UINT>(CommandLists.size()), CommandLists.data());
 
 	WaitForFence();
 
