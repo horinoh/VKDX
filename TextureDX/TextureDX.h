@@ -30,8 +30,7 @@ protected:
 	}
 
 	virtual void CreateTexture() override {
-		CreateImageDescriptorHeap();
-		LoadImage(ImageResource.GetAddressOf(), ImageDescriptorHeap.Get(), L"UV.dds");
+		LoadImage(ImageResource.GetAddressOf(), ImageDescriptorHeap.GetAddressOf(), L"UV.dds", D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}
 	virtual void CreateSampler(const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) override {
 		CreateSampler_LinearWrap(ShaderVisibility, MaxLOD);

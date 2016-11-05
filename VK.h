@@ -3,10 +3,6 @@
 #define VK_USE_PLATFORM_WIN32_KHR
 
 #include <vulkan/vulkan.h>
-#ifdef VK_ONLINE_COMPILE
-//!< GLSL をオンラインコンパイルする場合
-#include <../glslang/SPIRV/GlslangToSpv.h>
-#endif
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE

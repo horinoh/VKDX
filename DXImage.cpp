@@ -4,7 +4,7 @@
 
 #pragma comment(lib, "DirectXTK12.lib")
 
-void DXImage::LoadImage_DDS(ID3D12Resource** Resource, ID3D12DescriptorHeap* DescriptorHeap, const std::wstring& Path)
+void DXImage::LoadImage_DDS(ID3D12Resource** Resource, ID3D12DescriptorHeap* DescriptorHeap, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState)
 {
 	std::unique_ptr<uint8_t[]> DDSData;
 	std::vector<D3D12_SUBRESOURCE_DATA> SubresourceData;
@@ -23,31 +23,24 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, ID3D12DescriptorHeap* Des
 	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
 	CreateUploadResource(UploadResource.GetAddressOf(), SubresourceData, TotalSize, PlacedSubresourceFootprints, NumRows, RowSizes);
 	
-	//!< コピーコマンドの発行 ... 関数化の場合の引数 UploadResource, Resource, PlacedSubresourceFootprints
+	//!< #TODO ミップマップの生成
+	if(ResourceDesc.MipLevels != static_cast<const UINT16>(SubresourceData.size())) {
+		//UploadResource.GenerateMips(*Resource);
+	}
+
+	//!< コピーコマンドの発行
 	const auto CommandList = GraphicsCommandLists[0].Get();
 	const auto CommandAllocator = CommandAllocators[0].Get();
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
 		if (D3D12_RESOURCE_DIMENSION_BUFFER == ResourceDesc.Dimension) {
-			PopulateCopyBufferCommand(CommandList, UploadResource.Get(), *Resource, PlacedSubresourceFootprints);
+			PopulateCopyBufferCommand(CommandList, UploadResource.Get(), *Resource, PlacedSubresourceFootprints, ResourceState);
 		}
 		else {
-			PopulateCopyTextureCommand(CommandList, UploadResource.Get(), *Resource, PlacedSubresourceFootprints);
+			PopulateCopyTextureCommand(CommandList, UploadResource.Get(), *Resource, PlacedSubresourceFootprints, ResourceState);
 		}
 	} VERIFY_SUCCEEDED(CommandList->Close());
 
-	std::vector<ID3D12CommandList*> CommandLists = { CommandList };
-	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
-
-	WaitForFence();
-
-	//!< #TODO
-#if 0
-	// If it's missing mips, let's generate them
-	if (generateMipsIfMissing && subresources.size() != (*texture)->GetDesc().MipLevels)
-	{
-		resourceUpload.GenerateMips(*texture);
-	}
-#endif
+	ExecuteCommandListAndWaitForFence(CommandList);
 
 	//!< ビューを作成
 	Device->CreateShaderResourceView(*Resource, nullptr, GetCPUDescriptorHandle(DescriptorHeap, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
