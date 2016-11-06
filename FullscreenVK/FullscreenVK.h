@@ -5,6 +5,8 @@
 #pragma region Code
 #include "../VKExt.h"
 
+#define USE_DRAW_INDIRECT
+
 class FullscreenVK : public VKExt
 {
 private:
@@ -14,6 +16,10 @@ public:
 	virtual ~FullscreenVK() {}
 
 protected:
+#ifdef USE_DRAW_INDIRECT
+	virtual void CreateIndirectBuffer(const VkCommandBuffer CommandBuffer) override { CreateIndirectBuffer_Indirect4Vertices(CommandBuffer); }
+#endif
+
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {
 		CreateShader_VsPs(ShaderModules, PipelineShaderStageCreateInfos);
 	}

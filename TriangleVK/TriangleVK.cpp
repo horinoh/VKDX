@@ -262,7 +262,6 @@ void TriangleVK::CreateVertexBuffer(const VkCommandBuffer CommandBuffer)
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-
 void TriangleVK::CreateIndexBuffer(const VkCommandBuffer CommandBuffer)
 {
 	const std::vector<uint32_t> Indices = { 0, 1, 2 };
@@ -351,7 +350,11 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 			vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
 			//!< •`‰æ
+#ifdef USE_DRAW_INDIRECT
+			vkCmdDrawIndexedIndirect(CommandBuffer, IndirectBuffer, 0, 1, 0);
+#else
 			vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
+#endif
 		} vkCmdEndRenderPass(CommandBuffer);
 		//DebugMarker::End(CommandBuffer);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));

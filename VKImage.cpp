@@ -95,7 +95,7 @@ void VKImage::SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffe
 					VK_IMAGE_ASPECT_COLOR_BIT,
 					k,
 					i, 1
-				};		
+				};
 				const auto GLIExtent3D = GLITexture.extent(k);
 				const VkExtent3D Extent3D = {
 					static_cast<const uint32_t>(GLIExtent3D.x), static_cast<const uint32_t>(GLIExtent3D.y), static_cast<const uint32_t>(GLIExtent3D.z)
@@ -114,55 +114,52 @@ void VKImage::SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffe
 			}
 		}
 
-
 		const VkImageSubresourceRange ImageSubresourceRange = {
 			VK_IMAGE_ASPECT_COLOR_BIT,
 			0, MipLevels,
 			0, ArrayLayers
 		};
+		const VkImageMemoryBarrier ImageMemoryBarrier_UndefinedToTransferDst = {
+			VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+			nullptr,
+			0,
+			VK_ACCESS_TRANSFER_WRITE_BIT,
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_QUEUE_FAMILY_IGNORED,
+			VK_QUEUE_FAMILY_IGNORED,
+			DstImage,
+			ImageSubresourceRange
+		};
+		vkCmdPipelineBarrier(CommandBuffer,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &ImageMemoryBarrier_UndefinedToTransferDst);
 		{
-			const VkImageMemoryBarrier ImageMemoryBarrier = {
-				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-				nullptr,
-				0,
-				VK_ACCESS_TRANSFER_WRITE_BIT,
-				VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				VK_QUEUE_FAMILY_IGNORED,
-				VK_QUEUE_FAMILY_IGNORED,
-				DstImage,
-				ImageSubresourceRange
-			};
-			vkCmdPipelineBarrier(CommandBuffer,
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &ImageMemoryBarrier);
+			vkCmdCopyBufferToImage(CommandBuffer, SrcBuffer, DstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(BufferImageCopies.size()), BufferImageCopies.data());
 		}
-		vkCmdCopyBufferToImage(CommandBuffer, SrcBuffer, DstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(BufferImageCopies.size()), BufferImageCopies.data());
-		{
-			const VkImageMemoryBarrier ImageMemoryBarrier = {
-				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-				nullptr,
-				VK_ACCESS_TRANSFER_WRITE_BIT,
-				VK_ACCESS_SHADER_READ_BIT,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				VK_QUEUE_FAMILY_IGNORED,
-				VK_QUEUE_FAMILY_IGNORED,
-				DstImage,
-				ImageSubresourceRange
-			};
-			vkCmdPipelineBarrier(CommandBuffer,
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &ImageMemoryBarrier);
-		}
+		const VkImageMemoryBarrier ImageMemoryBarrier_TransferDstToShaderReadOnly = {
+			VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+			nullptr,
+			VK_ACCESS_TRANSFER_WRITE_BIT,
+			VK_ACCESS_SHADER_READ_BIT,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			VK_QUEUE_FAMILY_IGNORED,
+			VK_QUEUE_FAMILY_IGNORED,
+			DstImage,
+			ImageSubresourceRange
+		};
+		vkCmdPipelineBarrier(CommandBuffer,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &ImageMemoryBarrier_TransferDstToShaderReadOnly);
 
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 

@@ -470,7 +470,7 @@ void DX::CreateUploadResource(ID3D12Resource** Resource, const std::vector<D3D12
 		}
 	} (*Resource)->Unmap(0, nullptr);
 }
-void DX::BarrierTransition(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After)
+void DX::ResourceBarrier(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After)
 {
 	const D3D12_RESOURCE_TRANSITION_BARRIER ResourceTransitionBarrier = {
 		Resource,
@@ -489,7 +489,7 @@ void DX::BarrierTransition(ID3D12GraphicsCommandList* CommandList, ID3D12Resourc
 }
 void DX::PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState)
 {
-	BarrierTransition(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
+	ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
 		for (auto It = PlacedSubresourceFootprints.cbegin(); It != PlacedSubresourceFootprints.cend(); ++It) {
 			const D3D12_TEXTURE_COPY_LOCATION TextureCopyLocation_Dst = {
 				Dst,
@@ -503,11 +503,11 @@ void DX::PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CommandList, ID3D
 			};
 			CommandList->CopyTextureRegion(&TextureCopyLocation_Dst, 0, 0, 0, &TextureCopyLocation_Src, nullptr);
 		}
-	} BarrierTransition(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, ResourceState);
+	} ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, ResourceState);
 }
 void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState)
 {
-	BarrierTransition(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
+	ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
 		for (auto It = PlacedSubresourceFootprints.cbegin(); It != PlacedSubresourceFootprints.cend(); ++It) {
 			//!< 色々なサンプルを見るとことごとく D3D12_BOX を作っているがどれも使ってはいない
 			//const D3D12_BOX Box = {
@@ -520,13 +520,13 @@ void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D1
 			//};
 			CommandList->CopyBufferRegion(Dst, 0, Src, It->Offset, It->Footprint.Width);
 		}
-	} BarrierTransition(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, ResourceState);
+	} ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, ResourceState);
 }
 void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES ResourceState)
 {
-	BarrierTransition(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
+	ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
 		CommandList->CopyBufferRegion(Dst, 0, Src, 0, Size);
-	} BarrierTransition(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, ResourceState);
+	} ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, ResourceState);
 }
 
 /**
@@ -774,7 +774,7 @@ void DX::CreateDepthStencilResource(const UINT Width, const UINT Height, const D
 
 	//!< リソースの状態を初期 → デプス書き込みへ変更
 	auto CommandList = GraphicsCommandLists[0];
-	BarrierTransition(CommandList.Get(), DepthStencilResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+	ResourceBarrier(CommandList.Get(), DepthStencilResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateDepthStencilResource" << COUT_OK << std::endl << std::endl;
@@ -1149,10 +1149,10 @@ void DX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Comma
 
 		auto Resource = SwapChainResources[CurrentBackBufferIndex].Get();
 		//!< バリア
-		BarrierTransition(CommandList, Resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		ResourceBarrier(CommandList, Resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
 		}
-		BarrierTransition(CommandList, Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		ResourceBarrier(CommandList, Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 }

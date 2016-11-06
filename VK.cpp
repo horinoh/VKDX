@@ -38,6 +38,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< バーテックスバッファ、インデックスバッファ
 	CreateVertexBuffer(CommandBuffer);
 	CreateIndexBuffer(CommandBuffer);
+	CreateIndirectBuffer(CommandBuffer);
 
 	CreateTexture();
 
@@ -128,6 +129,14 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		UniformBuffer = VK_NULL_HANDLE;
 	}
 
+	if (VK_NULL_HANDLE != IndirectDeviceMemory) {
+		vkFreeMemory(Device, IndirectDeviceMemory, nullptr);
+		IndirectDeviceMemory = VK_NULL_HANDLE;
+	}
+	if (VK_NULL_HANDLE != IndirectBuffer) {
+		vkDestroyBuffer(Device, IndirectBuffer, nullptr);
+		IndirectBuffer = VK_NULL_HANDLE;
+	}
 	if (VK_NULL_HANDLE != IndexDeviceMemory) {
 		vkFreeMemory(Device, IndexDeviceMemory, nullptr);
 		IndexDeviceMemory = VK_NULL_HANDLE;

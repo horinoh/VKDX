@@ -16,11 +16,10 @@ public:
 protected:
 	virtual void CreatePipeline() override { Super::CreateComputePipeline(); }
 
-	//virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer) override;
+	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer) override;
 
 	virtual void Draw() override {}
 
 private:
-
 };
 #pragma endregion

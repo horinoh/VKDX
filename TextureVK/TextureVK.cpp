@@ -256,7 +256,11 @@ void TextureVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 			vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout, 0, 1, DescriptorSets.data(), 0, nullptr);
 
 			//!< •`‰æ
+#ifdef USE_DRAW_INDIRECT
+			vkCmdDrawIndirect(CommandBuffer, IndirectBuffer, 0, 1, 0);
+#else
 			vkCmdDraw(CommandBuffer, 4, 1, 0, 0);
+#endif
 		} vkCmdEndRenderPass(CommandBuffer);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }

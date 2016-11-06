@@ -10,6 +10,9 @@ public:
 	using Vertex_Position = struct Vertex_Position { glm::vec3 Position; };
 	using Vertex_PositionColor = struct Vertex_PositionColor { glm::vec3 Position; glm::vec4 Color; };
 
+	void CreateIndirectBuffer_Indirect4Vertices(const VkCommandBuffer CommandBuffer);
+	void CreateIndirectBuffer_IndexedIndirect(const VkCommandBuffer CommandBuffer);
+
 	void CreateDescriptorSetLayoutBindings_1UB(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const {
 		DescriptorSetLayoutBindings.push_back({ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, ShaderStageFlags, nullptr });
 	}

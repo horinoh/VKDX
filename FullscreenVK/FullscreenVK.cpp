@@ -254,7 +254,11 @@ void FullscreenVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
 
 			//!< •`‰æ
+#ifdef USE_DRAW_INDIRECT
+			vkCmdDrawIndirect(CommandBuffer, IndirectBuffer, 0, 1, 0);
+#else
 			vkCmdDraw(CommandBuffer, 4, 1, 0, 0);
+#endif
 		} vkCmdEndRenderPass(CommandBuffer);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }

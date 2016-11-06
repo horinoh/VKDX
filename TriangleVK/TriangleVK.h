@@ -5,6 +5,8 @@
 #pragma region Code
 #include "../VKExt.h"
 
+#define USE_DRAW_INDIRECT
+
 class TriangleVK : public VKExt
 {
 private:
@@ -16,6 +18,10 @@ public:
 protected:
 	virtual void CreateVertexBuffer(const VkCommandBuffer CommandBuffer) override;
 	virtual void CreateIndexBuffer(const VkCommandBuffer CommandBuffer) override;
+#ifdef USE_DRAW_INDIRECT
+	virtual void CreateIndirectBuffer(const VkCommandBuffer CommandBuffer) override { CreateIndirectBuffer_IndexedIndirect(CommandBuffer); }
+#endif
+
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {
 		CreateShader_VsPs(ShaderModules, PipelineShaderStageCreateInfos);
 	}

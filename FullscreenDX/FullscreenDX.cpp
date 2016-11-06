@@ -235,7 +235,7 @@ void FullscreenDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, I
 
 		auto Resource = SwapChainResources[CurrentBackBufferIndex].Get();
 		//!< バリア
-		BarrierTransition(CommandList, Resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		ResourceBarrier(CommandList, Resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
 			//!< レンダーターゲット
 			{
@@ -253,7 +253,7 @@ void FullscreenDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, I
 			//!< 描画
 			CommandList->DrawInstanced(4, 1, 0, 0);
 		}
-		BarrierTransition(CommandList, Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		ResourceBarrier(CommandList, Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 }

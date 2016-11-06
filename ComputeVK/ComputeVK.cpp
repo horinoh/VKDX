@@ -225,4 +225,18 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
+void ComputeVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
+{
+	//const VkCommandBufferBeginInfo BeginInfo = {
+	//	VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+	//	nullptr,
+	//	0,
+	//	nullptr
+	//};
+	//VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo)); {
+	//	vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, Pipeline);
+
+	//	//vkCmdDispatch(); or vkCmdDispatchIndirect();
+	//} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
+}
 #pragma endregion

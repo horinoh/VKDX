@@ -77,6 +77,10 @@ protected:
 	//static VkAccessFlags GetSrcAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
 	//static VkAccessFlags GetDstAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
 	//void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const;
+	
+	//virtual void MemoryBarrier() {}
+	//virtual void BufferMemoryBarrier(const VkCommandBuffer CommandBuffer, const VkBuffer Buffer) {}
+	//virtual void ImageMemoryBarrier(const VkCommandBuffer CommandBuffer, const VkImage Image) {}
 
 	virtual void CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size) const;
 	virtual void CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers) const;
@@ -151,6 +155,8 @@ protected:
 
 	virtual void CreateVertexBuffer(const VkCommandBuffer CommandBuffer) {}
 	virtual void CreateIndexBuffer(const VkCommandBuffer CommandBuffer) {}
+	virtual void CreateIndirectBuffer(const VkCommandBuffer CommandBuffer) {}
+
 	virtual void CreateUniformBuffer();
 
 	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const {}
@@ -240,6 +246,9 @@ protected:
 	VkBuffer IndexBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory IndexDeviceMemory = VK_NULL_HANDLE;
 	uint32_t IndexCount = 0;
+
+	VkBuffer IndirectBuffer = VK_NULL_HANDLE;
+	VkDeviceMemory IndirectDeviceMemory = VK_NULL_HANDLE;
 
 	//!< #TODO Œ»ó1‚Â‚Ì‚ÝA”z—ñ‚É‚·‚é
 	VkBuffer UniformBuffer = VK_NULL_HANDLE;
