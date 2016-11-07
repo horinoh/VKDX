@@ -9,6 +9,9 @@ private:
 public:
 	using Vertex_Position = struct Vertex_Position { DirectX::XMFLOAT3 Position; };
 	using Vertex_PositionColor = struct Vertex_PositionColor { DirectX::XMFLOAT3 Position; DirectX::XMFLOAT4 Color; };
+	
+	void CreateIndirectBuffer_Indirect4Vertices(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
+	void CreateIndirectBuffer_IndexedIndirect(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
 
 	void CreateDescriptorRanges_1CBV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {
 		DescriptorRanges.push_back({ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND});

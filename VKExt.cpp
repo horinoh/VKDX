@@ -23,10 +23,7 @@ void VKExt::CreateSampler_LinearRepeat(const float MaxLOD)
 void VKExt::CreateIndirectBuffer_Indirect4Vertices(const VkCommandBuffer CommandBuffer)
 {
 	const VkDrawIndirectCommand DrawIndirectCommand = {
-		4,
-		1,
-		0,
-		0
+		4, 1, 0, 0
 	};
 	const auto Stride = sizeof(DrawIndirectCommand);
 	const auto Size = static_cast<VkDeviceSize>(Stride * 1);
@@ -53,11 +50,7 @@ void VKExt::CreateIndirectBuffer_Indirect4Vertices(const VkCommandBuffer Command
 void VKExt::CreateIndirectBuffer_IndexedIndirect(const VkCommandBuffer CommandBuffer)
 {
 	const VkDrawIndexedIndirectCommand DrawIndexedIndirectCommand = {
-		IndexCount,
-		1,
-		0,
-		0,
-		0
+		IndexCount, 1, 0, 0, 0
 	};
 	const auto Stride = sizeof(DrawIndexedIndirectCommand);
 	const auto Size = static_cast<VkDeviceSize>(Stride * 1);

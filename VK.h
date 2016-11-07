@@ -156,7 +156,6 @@ protected:
 	virtual void CreateVertexBuffer(const VkCommandBuffer CommandBuffer) {}
 	virtual void CreateIndexBuffer(const VkCommandBuffer CommandBuffer) {}
 	virtual void CreateIndirectBuffer(const VkCommandBuffer CommandBuffer) {}
-
 	virtual void CreateUniformBuffer();
 
 	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const {}

@@ -129,6 +129,7 @@ protected:
 	
 	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) {}
 	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) {}
+	virtual void CreateIndirectBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) {}
 	virtual void CreateConstantBuffer();
 	virtual void CreateConstantBufferDescriptorHeap(const UINT Size);
 	virtual void CreateUnorderedAccessTexture();
@@ -189,6 +190,9 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferResource;
 	D3D12_INDEX_BUFFER_VIEW IndexBufferView;
 	UINT IndexCount = 0;
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> IndirectBufferResource;
+	Microsoft::WRL::ComPtr<ID3D12CommandSignature> IndirectCommandSignature;
 
 	//!< #TODO Œ»ó1‚Â‚Ì‚ÝA”z—ñ‚É‚·‚é
 	Microsoft::WRL::ComPtr<ID3D12Resource> ConstantBufferResource;

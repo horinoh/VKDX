@@ -39,6 +39,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	auto CommandList = GraphicsCommandLists[0].Get();
 	CreateVertexBuffer(CommandAllocator, CommandList);
 	CreateIndexBuffer(CommandAllocator, CommandList);
+	CreateIndirectBuffer(CommandAllocator, CommandList);
 	WaitForFence();
 
 	CreateTexture();

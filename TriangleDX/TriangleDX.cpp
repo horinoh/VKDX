@@ -321,7 +321,11 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3
 			CommandList->IASetIndexBuffer(&IndexBufferView);
 
 			//!< •`‰æ
+#ifdef USE_DRAW_INDIRECT
+			CommandList->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
+#else
 			CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
+#endif
 		}
 		ResourceBarrier(CommandList, Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
