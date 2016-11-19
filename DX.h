@@ -73,6 +73,23 @@ public:
 	static std::string GetFormatString(const DXGI_FORMAT Format);
 
 protected:
+	//!< Introduction To 3D Game Programming With DirectX 12 : 7.1 FRAME RESOURCES
+	class FrameResource
+	{
+	public:
+		FrameResource(const FrameResource& rhs) = delete;
+		FrameResource& operator=(const FrameResource& rhs) = delete;
+		
+		void Create(ID3D12Device* Device) {
+			VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(CommandAllocator.GetAddressOf())));
+		}
+		void Destroy() {}
+
+		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
+		//Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
+		UINT64 FenceValue = 0;
+	};
+
 	virtual void CreateDevice(HWND hWnd);
 	virtual HRESULT CreateMaxFeatureLevelDevice(IDXGIAdapter* Adapter);
 	virtual void EnumAdapter(IDXGIFactory4* Factory);
@@ -166,7 +183,7 @@ protected:
 	std::vector<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>> GraphicsCommandLists;
 
 	Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
-	UINT64 FenceValue;
+	UINT64 FenceValue = 0;
 
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> SwapChainDescriptorHeap;

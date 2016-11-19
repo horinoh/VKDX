@@ -721,6 +721,17 @@ void VK::GetPhysicalDevice()
 		//!< 物理デバイスのフィーチャー
 		VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
 		vkGetPhysicalDeviceFeatures(i, &PhysicalDeviceFeatures);
+		std::cout << "\t" << "\t" << "TextureCompression = ";
+		if (PhysicalDeviceFeatures.textureCompressionBC) {
+			std::cout << "BC, ";
+		}
+		if (PhysicalDeviceFeatures.textureCompressionETC2) {
+			std::cout << "ETC2, ";
+		}
+		if (PhysicalDeviceFeatures.textureCompressionASTC_LDR) {
+			std::cout  << "ASTC_LDR, ";
+		}
+		std::cout << std::endl;
 	}
 #undef PHYSICAL_DEVICE_TYPE_ENTRY
 #endif
@@ -954,7 +965,7 @@ void VK::CreateFence()
 	const VkFenceCreateInfo FenceCreateInfo = {
 		VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
 		nullptr,
-		0// #TODO VK_FENCE_CREATE_SIGNALED_BIT //!< 初回と２回目以降を同じに扱う為に、シグナル済み状態で作成
+		VK_FENCE_CREATE_SIGNALED_BIT //!< 初回と２回目以降を同じに扱う為に、シグナル済み状態で作成
 	};
 	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, nullptr, &Fence));
 
@@ -1893,6 +1904,8 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 }
 void VK::Draw()
 {
+	WaitForFence();
+
 	//!< 次のイメージが取得できたらセマフォが通知される
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, NextImageAcquiredSemaphore, nullptr, &SwapchainImageIndex));
 
@@ -1914,7 +1927,7 @@ void VK::Draw()
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, Fence));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 
-	WaitForFence();
+	//WaitForFence();
 
 	Present();
 }

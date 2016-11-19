@@ -61,6 +61,36 @@ public:
 	static std::string GetFormatString(const VkFormat Format);
 
 protected:
+	class Allocator
+	{
+	public:
+		static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) {
+			return static_cast<Allocator*>(pUserData)->Malloc(size, alignment, allocationScope);
+		}
+		static FORCEINLINE void* AlignedRealloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) {
+			return static_cast<Allocator*>(pUserData)->Realloc(pOriginal, size, alignment, allocationScope);
+		}
+		static FORCEINLINE void AlignedFree(void* pUserData, void* pMemory) {
+			static_cast<Allocator*>(pUserData)->Free(pMemory);
+		}
+		static void AlignedAllocNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
+		static void AligendFreeNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
+
+		void* Malloc(size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
+		void* Realloc(void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_realloc(pOriginal, size, alignment); }
+		void* Free(void* pMemory) { _aligned_free(pMemory); }
+
+		FORCEINLINE operator VkAllocationCallbacks() const {
+			return VkAllocationCallbacks({
+				reinterpret_cast<void*>(const_cast<Allocator*>(this)),
+				AlignedMalloc,
+				AlignedRealloc,
+				AlignedFree,
+				AlignedAllocNotify,
+				AligendFreeNotify
+			});
+		}
+	};
 	static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { 
 		return _aligned_malloc(size, alignment); 
 	}
@@ -70,6 +100,66 @@ protected:
 	static FORCEINLINE void AlignedFree(void* pUserData, void* pMemory) {
 		_aligned_free(pMemory); 
 	}
+	static void AlignedAllocNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
+	static void AligendFreeNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
+
+	//!< https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-4 : Rendering Resources Creation
+	class FrameResource
+	{
+	public:
+		FrameResource(const FrameResource& rhs) = delete;
+		FrameResource& operator=(const FrameResource& rhs) = delete;
+
+		void Create(const VkDevice Device, const VkCommandPool CommandPool) {
+			const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
+				VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+				nullptr,
+				CommandPool,
+				VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+				1
+			};
+			VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CommandBuffer));
+
+			const VkSemaphoreCreateInfo SemaphoreCreateInfo = {
+				VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+				nullptr,
+				0
+			};
+			VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &NextImageAcquiredSemaphore));
+			VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderFinishedSemaphore));
+
+			const VkFenceCreateInfo FenceCreateInfo = {
+				VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+				nullptr,
+				VK_FENCE_CREATE_SIGNALED_BIT
+			};
+			VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, nullptr, &Fence));
+		}
+		void Destroy(const VkDevice Device, const VkCommandPool CommandPool) {
+			if (VK_NULL_HANDLE != CommandBuffer) {
+				vkFreeCommandBuffers(Device, CommandPool, 1, &CommandBuffer);
+				CommandBuffer = VK_NULL_HANDLE;
+			}
+			if (VK_NULL_HANDLE != NextImageAcquiredSemaphore) {
+				vkDestroySemaphore(Device, NextImageAcquiredSemaphore, nullptr);
+				NextImageAcquiredSemaphore = VK_NULL_HANDLE;
+			}
+			if (VK_NULL_HANDLE != RenderFinishedSemaphore) {
+				vkDestroySemaphore(Device, RenderFinishedSemaphore, nullptr);
+				RenderFinishedSemaphore = VK_NULL_HANDLE;
+			}
+			if (VK_NULL_HANDLE != Fence) {
+				vkDestroyFence(Device, Fence, nullptr);
+				Fence = VK_NULL_HANDLE;
+			}
+		}
+
+		VkCommandBuffer CommandBuffer = VK_NULL_HANDLE;
+		VkSemaphore NextImageAcquiredSemaphore = VK_NULL_HANDLE;	//!< プレゼント完了までウエイト
+		VkSemaphore RenderFinishedSemaphore = VK_NULL_HANDLE;		//!< 描画完了するまでウエイト
+		VkFence Fence = VK_NULL_HANDLE;
+	};
+
 	static VkFormat GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice);
 	static uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const uint32_t MemoryTypeBits, const VkFlags Properties);
 	virtual FORCEINLINE VkFormat GetSupportedDepthFormat() const { return GetSupportedDepthFormat(PhysicalDevice); }
@@ -196,8 +286,8 @@ protected:
 		AlignedMalloc,
 		AlignedRealloc,
 		AlignedFree,
-		nullptr,
-		nullptr
+		AlignedAllocNotify,
+		AligendFreeNotify
 	};
 protected:
 	VkInstance Instance = VK_NULL_HANDLE;
