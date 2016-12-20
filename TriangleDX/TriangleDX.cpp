@@ -270,7 +270,7 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3
 		//!< ƒNƒŠƒA
 		{
 			auto RTDescriptorHandle(GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CurrentBackBufferIndex));
-			CommandList->ClearRenderTargetView(RTDescriptorHandle, DirectX::Colors::SkyBlue, 0, nullptr);
+			ClearColor(CommandList, RTDescriptorHandle, DirectX::Colors::SkyBlue);
 #if 0
 			if (nullptr != DepthStencilDescriptorHeap) {
 				auto DSDescriptorHandle(GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV));

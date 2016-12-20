@@ -316,7 +316,8 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		auto Image = SwapchainImages[SwapchainImageIndex];
 
 		//!< ƒNƒŠƒA
-		vkCmdClearColorImage(CommandBuffer, Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Colors::SkyBlue, 1, &ImageSubresourceRange_Color);
+		ClearColor(CommandBuffer, Image, Colors::SkyBlue);
+
 		//if (VK_NULL_HANDLE != DepthStencilImage) {
 		//	vkCmdClearDepthStencilImage(CommandBuffer, DepthStencilImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearDepthStencil, 1, &ImageSubresourceRange_DepthStencil);
 		//}

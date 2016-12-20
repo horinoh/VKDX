@@ -275,6 +275,7 @@ protected:
 	virtual void CreateGraphicsPipeline();
 	virtual void CreateComputePipeline();
 
+	virtual void ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, const VkClearColorValue& Color);
 	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer);
 
 	virtual void Draw();
@@ -379,6 +380,16 @@ protected:
 		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
 		0, 1,
 		0, 1
+	};
+	const VkImageSubresourceRange ImageSubresourceRange_ColorAll = {
+		VK_IMAGE_ASPECT_COLOR_BIT,
+		0, VK_REMAINING_MIP_LEVELS,
+		0, VK_REMAINING_ARRAY_LAYERS
+	};
+	const VkImageSubresourceRange ImageSubresourceRange_DepthStencilAll = {
+		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+		0, VK_REMAINING_MIP_LEVELS,
+		0, VK_REMAINING_ARRAY_LAYERS
 	};
 	const VkClearDepthStencilValue ClearDepthStencilValue = { 1.0f, 0 };
 	const VkCommandBufferBeginInfo CommandBufferBeginInfo_OneTime = {

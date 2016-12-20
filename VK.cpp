@@ -1847,6 +1847,48 @@ void VK::CreateComputePipeline()
 #endif
 }
 
+void VK::ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, const VkClearColorValue& Color)
+{
+	const VkImageMemoryBarrier ImageMemoryBarrier_ToTransferDst = {
+		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		nullptr,
+		VK_ACCESS_MEMORY_READ_BIT,
+		VK_ACCESS_TRANSFER_WRITE_BIT,
+		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		PresentQueueFamilyIndex,
+		PresentQueueFamilyIndex,
+		Image,
+		ImageSubresourceRange_Color
+	};
+	vkCmdPipelineBarrier(CommandBuffer,
+		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+		0,
+		0, nullptr,
+		0, nullptr,
+		1, &ImageMemoryBarrier_ToTransferDst);
+	{
+		vkCmdClearColorImage(CommandBuffer, Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Color, 1, &ImageSubresourceRange_Color);
+	}
+	const VkImageMemoryBarrier ImageMemoryBarrier_ToPresent = {
+		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		nullptr,
+		VK_ACCESS_TRANSFER_WRITE_BIT,
+		VK_ACCESS_MEMORY_READ_BIT,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+		PresentQueueFamilyIndex,
+		PresentQueueFamilyIndex,
+		Image,
+		ImageSubresourceRange_Color
+	};
+	vkCmdPipelineBarrier(CommandBuffer,
+		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+		0,
+		0, nullptr,
+		0, nullptr,
+		1, &ImageMemoryBarrier_ToPresent);
+}
 void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 {
 	//!< VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT ... メモリをコマンドプールへ返す
@@ -1880,7 +1922,7 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		auto Image = SwapchainImages[SwapchainImageIndex];
 
 		//!< クリア
-		vkCmdClearColorImage(CommandBuffer, Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Colors::SkyBlue, 1, &ImageSubresourceRange_Color);
+		ClearColor(CommandBuffer, Image, Colors::SkyBlue);
 
 #ifdef _DEBUG
 		//!< レンダーエリアの最低粒度を確保

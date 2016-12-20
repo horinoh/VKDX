@@ -1134,6 +1134,10 @@ void DX::CreateComputePipelineState()
 #endif
 }
 
+void DX::ClearColor(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const DirectX::XMVECTORF32& Color)
+{
+	CommandList->ClearRenderTargetView(DescriptorHandle, Color, 0, nullptr);
+}
 void DX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12CommandAllocator* CommandAllocator)
 {
 	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能 (コマンドキューはコマンドリストではなく、コマンドアロケータを参照している)
@@ -1146,7 +1150,7 @@ void DX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Comma
 
 		//!< クリア
 		auto RTDescriptorHandle(GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CurrentBackBufferIndex));
-		CommandList->ClearRenderTargetView(RTDescriptorHandle, DirectX::Colors::SkyBlue, 0, nullptr);
+		ClearColor(CommandList, RTDescriptorHandle, DirectX::Colors::SkyBlue);
 
 		auto Resource = SwapChainResources[CurrentBackBufferIndex].Get();
 		//!< バリア
