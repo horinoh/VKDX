@@ -22,8 +22,9 @@ xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)
 
 #### SDK
 * https://vulkan.lunarg.com/signin
-* インストールすると環境変数 **VK_SDK_PATH** が自動的に作成される
+* インストールすると環境変数 **VK_SDK_PATH**、**VULKAN_SDK** が自動的に作成される
 	* 新しいバージョンをインストールしたら(環境変数は維持されるが)パスが変わるので VAssistX - Visual Assist Options - Performance - Rebuild しておく
+	* **VULKAN_SDK** は UE4 のコンパイルが通らなくなるので消した `setx VULKAN_SDK ""`
 * Visual Stuido で C/C++ - Preprocessor - Preprocessor Definitions に **VK_USE_PLATFORM_WIN32_KHR** を定義した
 
 #### ドライバ
