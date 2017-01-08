@@ -272,6 +272,7 @@ protected:
 	virtual void CreatePipeline() {}
 	virtual VkPipelineCache LoadPipelineCache(const std::wstring& Path) const;
 	virtual void StorePipelineCache(const std::wstring& Path, const VkPipelineCache PipelineCache) const;
+	virtual VkPipelineCache CreatePipelineCache();
 	virtual void CreateGraphicsPipeline();
 	virtual void CreateComputePipeline();
 

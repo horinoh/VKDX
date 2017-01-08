@@ -12,8 +12,12 @@ static void SetName(VkDevice Device, VkBuffer Object, const char* Name)
 			reinterpret_cast<uint64_t>(Object),
 			Name
 		};
+#if 0
 		//!< #TODO 通らなくなった…
-		//VERIFY_SUCCEEDED(vkDebugMarkerSetObjectName(Device, &DebugMarkerObjectNameInfo));
+		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectName(Device, &DebugMarkerObjectNameInfo));
+#else
+		std::cout << Red << "通らなくなったので vkDebugMarkerSetObjectName はコメントアウト" << White << std::endl;
+#endif
 	}
 }
 template<>

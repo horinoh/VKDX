@@ -581,6 +581,7 @@ void VK::CreateInstance()
 #ifdef _DEBUG
 		//!< ↓標準的なバリデーションレイヤセットを最適な順序でロードする指定
 		"VK_LAYER_LUNARG_standard_validation", 
+		"VK_LAYER_LUNARG_object_tracker",
 		//"VK_LAYER_LUNARG_api_dump",
 #endif
 	};
@@ -621,18 +622,23 @@ void VK::CreateDebugReportCallback()
 	{
 		using namespace std;
 		if (VK_DEBUG_REPORT_ERROR_BIT_EXT & flags) {
+			DEBUG_BREAK();
 			cout << Red << pMessage << White << endl;
 		}
 		else if (VK_DEBUG_REPORT_WARNING_BIT_EXT & flags) {
+			DEBUG_BREAK();
 			cout << Yellow << pMessage << White << endl;
 		}
 		else if (VK_DEBUG_REPORT_INFORMATION_BIT_EXT & flags) {
+			//DEBUG_BREAK();
 			//cout << Green << pMessage << White << endl;
 		}
 		else if (VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT & flags) {
+			DEBUG_BREAK();
 			cout << Yellow << pMessage << White << endl;
 		}
 		else if (VK_DEBUG_REPORT_DEBUG_BIT_EXT & flags) {
+			//DEBUG_BREAK();
 			//cout << Green << pMessage << White << endl;
 		}
 		return false;
@@ -874,6 +880,7 @@ void VK::CreateDevice()
 #ifdef _DEBUG
 		//!< ↓標準的なバリデーションレイヤセットを最適な順序でロードする指定
 		"VK_LAYER_LUNARG_standard_validation", 
+		"VK_LAYER_LUNARG_object_tracker",
 #endif
 	};
 #ifdef _DEBUG
@@ -1499,12 +1506,10 @@ void VK::UpdateDescriptorSet()
 	VkDescriptorImageInfo DescriptorImageInfo;
 	VkDescriptorBufferInfo DescriptorBufferInfo;
 	VkBufferView BufferView;
-	std::vector<VkWriteDescriptorSet> WriteDescriptorSets = {
-	};
+	std::vector<VkWriteDescriptorSet> WriteDescriptorSets = {};
 	CreateWriteDescriptorSets(WriteDescriptorSets, &DescriptorImageInfo, &DescriptorBufferInfo, &BufferView);
 
-	std::vector<VkCopyDescriptorSet> CopyDescriptorSets = {
-	};
+	std::vector<VkCopyDescriptorSet> CopyDescriptorSets = {};
 	CreateCopyDescriptorSets(CopyDescriptorSets);
 
 	vkUpdateDescriptorSets(Device,
@@ -1598,6 +1603,34 @@ void VK::StorePipelineCache(const std::wstring& Path, const VkPipelineCache Pipe
 			}
 		}
 	}
+}
+
+//!< パイプラインキャッシュをマージする場合の例
+//const std::vector<VkPipelineCache> SrcPipelineCaches = {};
+//vkMergePipelineCaches(Device, DstPipelineCache, static_cast<uint32_t>(SrcPipelineCaches.size()), SrcPipelineCaches.data());
+VkPipelineCache VK::CreatePipelineCache()
+{
+	const auto BasePath = GetBasePath();
+	auto PipelineCache = LoadPipelineCache(BasePath + L".pco");
+	if (VK_NULL_HANDLE == PipelineCache) {
+		//!< 読み込めなかったので作成
+#ifdef _DEBUG
+		std::cout << "LoadPipelineCache" << COUT_NG << std::endl << std::endl;
+#endif
+		const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
+			VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+			nullptr,
+			0,
+			0, nullptr
+		};
+		VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, nullptr, &PipelineCache));
+	}
+	else {
+#ifdef _DEBUG
+		std::cout << "LoadPipelineCache" << COUT_OK << std::endl << std::endl;
+#endif
+	}
+	return PipelineCache;
 }
 
 //!< パイプラインキャシュのマージをする場合
@@ -1730,8 +1763,7 @@ void VK::CreateGraphicsPipeline()
 	};
 
 	//!< パイプラインレイアウト
-	const std::vector<VkPushConstantRange> PushConstantRanges = {
-	};
+	const std::vector<VkPushConstantRange> PushConstantRanges = {};
 	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		nullptr,
@@ -1740,11 +1772,8 @@ void VK::CreateGraphicsPipeline()
 		static_cast<uint32_t>(PushConstantRanges.size()), PushConstantRanges.data()
 	};
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, nullptr, &PipelineLayout));
-	//!< PipelineLayout を作成したら、DescritptorSetLayout は破棄しても良い。(DescriptorSet を再作成する場合に必要になるのでとっておくべきか？)
-	//for (auto i : DescriptorSetLayouts) {
-	//	vkDestroyDescriptorSetLayout(Device, i, nullptr);
-	//}
-	//DescriptorSetLayouts.clear();
+	//!< PipelineLayout を作成したら、DescritptorSetLayout は破棄しても良い。
+	//!< (同じレイアウトの DescriptorSet を再作成する場合に必要になるので一応残しておくことにする)
 
 	/**
 	basePipelineHandle と basePipelineIndex は同時に使用できない(排他)
@@ -1779,27 +1808,8 @@ void VK::CreateGraphicsPipeline()
 		}
 	};
 
-	//!< パイプラインキャッシュ (ファイルから読み込む)
-	const auto BasePath = GetBasePath();
-	auto PipelineCache = LoadPipelineCache(BasePath + L".pco");
-	if (VK_NULL_HANDLE == PipelineCache) {
-#ifdef _DEBUG
-		std::cout << "LoadPipelineCache" << COUT_NG << std::endl << std::endl;
-#endif
-		const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
-			VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-			nullptr,
-			0,
-			0, nullptr
-		};
-		//!< 読み込めなかったので作成
-		VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, nullptr, &PipelineCache));
-	}
-	else {
-#ifdef _DEBUG
-		std::cout << "LoadPipelineCache" << COUT_OK << std::endl << std::endl;
-#endif
-	}
+	//!< パイプラインキャッシュ (ファイルから読み込む、読み込めない場合は新規作成)
+	const auto PipelineCache = CreatePipelineCache();
 
 	//!< (グラフィック)パイプライン
 	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, PipelineCache, static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), nullptr, &Pipeline));
@@ -1810,11 +1820,7 @@ void VK::CreateGraphicsPipeline()
 	}
 	ShaderModules.clear();
 
-	//!< パイプライン を作成したら、パイプラインレイアウト は破棄して良い → ダメ vkCmdBindDescriptorSets() 等で引数に取る事がある
-	//if (VK_NULL_HANDLE != PipelineLayout) {
-	//	vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
-	//	PipelineLayout = VK_NULL_HANDLE;
-	//}
+	//!< vkCmdBindDescriptorSets() で引数に取る事があるので、(パイプライン作成済だからといって) パイプラインレイアウトは破棄しない
 
 	//!< パイプラインキャッシュをファイルへ保存
 	if (VK_NULL_HANDLE != PipelineCache) {
@@ -1822,7 +1828,6 @@ void VK::CreateGraphicsPipeline()
 		StorePipelineCache(BasePath + L".pco", PipelineCache);
 
 		vkDestroyPipelineCache(Device, PipelineCache, nullptr);
-		PipelineCache = VK_NULL_HANDLE;
 	}
 
 #ifdef DEBUG_STDOUT

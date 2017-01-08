@@ -13,6 +13,7 @@ public:
 	void CreateIndirectBuffer_Indirect4Vertices(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
 	void CreateIndirectBuffer_IndexedIndirect(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList);
 
+	//!< １つのコンスタントバッファ
 	void CreateDescriptorRanges_1CBV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {
 		DescriptorRanges.push_back({ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND});
 	}
@@ -23,6 +24,7 @@ public:
 		RootParameters.push_back({ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, RootDescriptorTable, ShaderVisibility });
 	}
 
+	//!< １つのシェーダリソースビュー
 	void CreateDescriptorRanges_1SRV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const { 
 		DescriptorRanges.push_back({ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }); 
 	}

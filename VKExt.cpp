@@ -82,15 +82,16 @@ void VKExt::CreaateWriteDescriptorSets_1CIS(std::vector<VkWriteDescriptorSet>& W
 		ImageView,
 		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 	};
+
 	WriteDescriptorSets.push_back({
 		VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, 
 		nullptr, 
 		DescriptorSets[0], 0, //!< デスクリプタセットとバインディングポイント
-		0,
-		1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		DescriptorImageInfo,
-		nullptr,
-		nullptr
+		0, //!< 配列の添字
+		1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< 個数とタイプ
+		DescriptorImageInfo, //!< ここでは VkDescriptorImageInfo* を指定
+		nullptr, //!< VkDescriptorBufferInfo*
+		nullptr //!< VkBufferView*
 	});
 }
 
@@ -279,6 +280,7 @@ void VKExt::CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::v
 		CreateShaderModule((ShaderPath + L".vert.spv").data()),
 		CreateShaderModule((ShaderPath + L".frag.spv").data())
 	};
+
 	//!< HLSL コンパイル時のデフォルトエントリポイント名が "main" なのでそれに合わせることにする
 	const char* EntrypointName = "main";
 	PipelineShaderStageCreateInfos = {
@@ -296,7 +298,7 @@ void VKExt::CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::v
 			0,
 			VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
 			EntrypointName,
-			nullptr
+			nullptr//&SpecializationInfo
 		}
 	};
 }

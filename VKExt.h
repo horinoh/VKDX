@@ -13,15 +13,29 @@ public:
 	void CreateIndirectBuffer_Indirect4Vertices(const VkCommandBuffer CommandBuffer);
 	void CreateIndirectBuffer_IndexedIndirect(const VkCommandBuffer CommandBuffer);
 
+	//!< １つのユニフォームバッファ
 	void CreateDescriptorSetLayoutBindings_1UB(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const {
-		DescriptorSetLayoutBindings.push_back({ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, ShaderStageFlags, nullptr });
+		DescriptorSetLayoutBindings.push_back({ 
+			0, //!< バインディング
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< タイプ
+			1, //!< 個数
+			ShaderStageFlags, 
+			nullptr
+		});
 	}
 	void CreateDescriptorPoolSizes_1UB(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {
 		DescriptorPoolSizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 });
 	}
 
+	//!< １つのコンバインドイメージサンプラ (イメージとサンプラをまとめたもの)
 	void CreateDescriptorSetLayoutBindings_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const {
-		DescriptorSetLayoutBindings.push_back({ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, ShaderStageFlags, nullptr });
+		DescriptorSetLayoutBindings.push_back({
+			0, //!< バインディング
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< タイプ
+			1, //!< 個数
+			ShaderStageFlags,
+			nullptr
+		});
 	}
 	void CreateDescriptorPoolSizes_1CIS(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {
 		DescriptorPoolSizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 });
@@ -71,5 +85,31 @@ public:
 	void CreateFramebuffer_ColorDepth();
 
 	void CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const;
-	void CreateShader_VsPsTesTcsGs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const;	
+	void CreateShader_VsPsTesTcsGs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const;
+
+protected:
+#if 1
+	/**
+	//!< シェーダ側には以下のような記述をする (扱えるのはスカラ値のみ)
+	layout (constant_id = 0) const int IntValue = 0;
+	layout (constant_id = 1) const float FloatValue = 0.0f;
+	layout (constant_id = 2) const bool BoolValue = false;
+	*/
+	struct SpecializationData {
+		int IntValue;
+		float FloatValue;
+		bool BoolValue;
+	};
+	SpecializationData SpecData = { 1, 1.0f, true };
+	const std::vector<VkSpecializationMapEntry> SpecializationMapEntries = {
+		{ 0, offsetof(SpecializationData, IntValue), sizeof(SpecData.IntValue) },
+		{ 1, offsetof(SpecializationData, FloatValue), sizeof(SpecData.FloatValue) },
+		{ 2, offsetof(SpecializationData, BoolValue), sizeof(SpecData.BoolValue) },
+	};
+	//!< VkPipelineShaderStageCreateInfo.pSpecializationInfo へ対して指定する
+	const VkSpecializationInfo SpecializationInfo = {
+		static_cast<uint32_t>(SpecializationMapEntries.size()), SpecializationMapEntries.data(),
+		sizeof(SpecData), &SpecData
+	};
+#endif
 };
