@@ -1,6 +1,9 @@
-@setx FBX_SDK_PATH "C:\Program Files\Autodesk\FBX\FBX SDK\2017.0.1"
+@rem setx VULKAN_SDK ""
+@rem setx FBX_SDK_PATH "C:\Program Files\Autodesk\FBX\FBX SDK\2017.0.1"
 
-@setx GLM_SDK_PATH "C:\Users\devel\Documents\GitHub\glm"
-@setx GLI_SDK_PATH "C:\Users\devel\Documents\GitHub\gli"
+setx GLM_SDK_PATH "D:\GitHub\glm"
+setx GLI_SDK_PATH "D:\GitHub\gli"
 
-@setx DXTK_SDK_PATH "C:\Users\devel\Documents\GitHub\DirectXTK12"
+setx DXTK_SDK_PATH "D:\GitHub\DirectXTK12"
+
+@pause
