@@ -339,7 +339,11 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 #if 0
 			//!< ユニフォームバッファ
 			if (!DescriptorSets.empty()) {
-				vkCmdBindDescriptorSets(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout, 0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
+				vkCmdBindDescriptorSets(CommandBuffer, 
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					PipelineLayout, 
+					0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 
+					0, nullptr);
 			}
 #endif
 			//!< トポロジは Pipeline - VkPipelineInputAssemblyStateCreateInfo で指定しているのでパイプラインをバインド

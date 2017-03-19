@@ -112,6 +112,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 	DescriptorSets.clear();
 	if (VK_NULL_HANDLE != DescriptorPool) {
+		//vkResetDescriptorPool(Device, DescriptorPool, 0);
 		vkDestroyDescriptorPool(Device, DescriptorPool, nullptr);
 		DescriptorPool = VK_NULL_HANDLE;
 	}
@@ -481,15 +482,17 @@ void VK::SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer Sr
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 
 	//!< サブミット
-	const VkSubmitInfo SubmitInfo = {
-		VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		nullptr,
-		0, nullptr,
-		nullptr,
-		1, &CommandBuffer,
-		0, nullptr
+	const std::vector<VkSubmitInfo> SubmitInfos = {
+		{
+			VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			nullptr,
+			0, nullptr,
+			nullptr,
+			1, &CommandBuffer,
+			0, nullptr
+		}
 	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
+	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SubmitInfos.size()), SubmitInfos.data(), VK_NULL_HANDLE));
 	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device)); //!< フェンスでも良い
 }
 
@@ -582,6 +585,7 @@ void VK::CreateInstance()
 		//!< ↓標準的なバリデーションレイヤセットを最適な順序でロードする指定
 		"VK_LAYER_LUNARG_standard_validation", 
 		"VK_LAYER_LUNARG_object_tracker",
+		//!< API 呼び出しとパラメータをコンソール出力する (出力がうるさいのでオフ)
 		//"VK_LAYER_LUNARG_api_dump",
 #endif
 	};
@@ -624,10 +628,12 @@ void VK::CreateDebugReportCallback()
 		if (VK_DEBUG_REPORT_ERROR_BIT_EXT & flags) {
 			DEBUG_BREAK();
 			cout << Red << pMessage << White << endl;
+			return VK_TRUE;
 		}
 		else if (VK_DEBUG_REPORT_WARNING_BIT_EXT & flags) {
 			DEBUG_BREAK();
 			cout << Yellow << pMessage << White << endl;
+			return VK_TRUE;
 		}
 		else if (VK_DEBUG_REPORT_INFORMATION_BIT_EXT & flags) {
 			//DEBUG_BREAK();
@@ -636,12 +642,13 @@ void VK::CreateDebugReportCallback()
 		else if (VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT & flags) {
 			DEBUG_BREAK();
 			cout << Yellow << pMessage << White << endl;
+			return VK_TRUE;
 		}
 		else if (VK_DEBUG_REPORT_DEBUG_BIT_EXT & flags) {
 			//DEBUG_BREAK();
 			//cout << Green << pMessage << White << endl;
 		}
-		return false;
+		return VK_FALSE;
 	};
 	const auto Flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT 
 		| VK_DEBUG_REPORT_WARNING_BIT_EXT 
@@ -883,18 +890,16 @@ void VK::CreateDevice()
 		"VK_LAYER_LUNARG_object_tracker",
 #endif
 	};
-#ifdef _DEBUG
-	std::vector<const char*> EnabledExtensions = {
+
+	/*const*/std::vector<const char*> EnabledExtensions = {
+		//!< スワップチェインはプラットフォームに特有の機能なのでデバイス作製時に VK_KHR_SWAPCHAIN_EXTENSION_NAME エクステンションを有効にして作成しておく
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	};
+#ifdef _DEBUG
 	//!< ↓デバッグマーカー拡張があるなら追加
 	if (DebugMarker::HasDebugMarkerExtension(PhysicalDevice)) {
 		EnabledExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 	}
-#else
-	const std::vector<const char*> EnabledExtensions = {
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-	};
 #endif
 	const VkDeviceCreateInfo DeviceCreateInfo = {
 		VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -931,7 +936,8 @@ void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 		nullptr,
 		/**
 		VK_COMMAND_POOL_CREATE_TRANSIENT_BIT ... 頻繁に更新される、ライフスパンが短い場合(メモリアロケーションのヒントとなる)
-		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT ... 指定した場合は vkResetCommandBuffer(), vkBeginCommandBuffer() によるリセットが可能、指定しない場合は vkResetCommandPool() のみ可能
+		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT ... 指定した場合は個別に vkResetCommandBuffer(), vkBeginCommandBuffer() によるリセットが可能、
+		指定しない場合はまとめて vkResetCommandPool() のみが可能
 		*/
 		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
 		QueueFamilyIndex
@@ -946,6 +952,14 @@ void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 #endif
 }
 
+/**
+@brief セカンダリコマンドバッファは直接サブミットできない、プライマリコマンドバッファから呼び出される
+vkCmdExecuteCommands(プライマリ, セカンダリ個数, セカンダリ配列);
+
+@brief セカンダリコマンドバッファへレンダーパスを記録する例
+vkCmdBeginRenderPass() の第一引数にセカンダリコマンドバッファ、第三引数に VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS を渡す
+vkCmdBeginRenderPass(セカンダリ, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+*/
 void VK::AllocateCommandBuffer(const VkCommandPool CommandPool, const VkCommandBufferLevel CommandBufferLevel)
 {
 	VkCommandBuffer CommandBuffer;
@@ -953,7 +967,7 @@ void VK::AllocateCommandBuffer(const VkCommandPool CommandPool, const VkCommandB
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 		nullptr,
 		CommandPool,
-		CommandBufferLevel,
+		CommandBufferLevel, //!< VK_COMMAND_BUFFER_LEVEL_PRIMARY:プライマリ、VK_COMMAND_BUFFER_LEVEL_SECONDARY:セカンダリ
 		1
 	};
 	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CommandBuffer));
@@ -1377,6 +1391,7 @@ void VK::CreateUniformBuffer()
 	CopyToHostVisibleMemory(UniformBuffer, UniformDeviceMemory, Size, &Color/*, 0*/);
 	BindDeviceMemory(UniformBuffer, UniformDeviceMemory/*, 0*/);
 
+	//!< ビューを作成
 	const VkBufferViewCreateInfo BufferViewCreateInfo = {
 		VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
 		nullptr,
@@ -1389,27 +1404,30 @@ void VK::CreateUniformBuffer()
 	VkBufferView BufferView = VK_NULL_HANDLE;
 	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BufferViewCreateInfo, nullptr, &BufferView));
 
+	//!< 書き込み
 	const VkDescriptorBufferInfo UniformDescriptorBufferInfo = {
 		UniformBuffer,
-		0,
-		Size
+		0, //!< オフセット (要アライメント)
+		Size //!< VK_WHOLE_SIZE でも良い
 	};
-
 	VkDescriptorBufferInfo* DescriptorBufferInfo = nullptr;
 	const std::vector<VkWriteDescriptorSet> WriteDescriptorSets = {
 		{
 			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			nullptr,
-			DescriptorSets[0], 0, //!< デスクリプタセットとバインディングポイント
-			0,
-			1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			DescriptorSets[0], 0, 0, 1, //!< デスクリプタセット、バインディングポイント、配列の添字(非配列の場合は0)、配列の個数(非配列の場合は1)
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			nullptr,
 			DescriptorBufferInfo,
 			nullptr
 		},
 	};
+
+	//!< コピー (ここでは未使用)
 	const std::vector<VkCopyDescriptorSet> CopyDescriptorSets = {
 	};
+	
+	//!< ホストで行われる (デバイスからのアクセスは完了していないとならない)
 	vkUpdateDescriptorSets(Device, 
 		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(), 
 		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
@@ -1477,27 +1495,26 @@ void VK::CreateDescriptorSet()
 		const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
 			VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 			nullptr,
-			VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT,
+			VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT, //!< プールから確保したデスクリプタセットを個々に解放したい場合。まとめて解放のみの場合は不要
 			MaxSets,
 			static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
 		};
 		VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
+		assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
 
-		if (VK_NULL_HANDLE != DescriptorPool) {
-			const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
-				VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-				nullptr,
-				DescriptorPool,
-				static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
-			};
-			VkDescriptorSet DescriptorSet;
-			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, &DescriptorSet));
-			DescriptorSets.push_back(DescriptorSet);
+		const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			nullptr,
+			DescriptorPool,
+			static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
+		};
+		VkDescriptorSet DescriptorSet;
+		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, &DescriptorSet));
+		DescriptorSets.push_back(DescriptorSet);
 
 #ifdef DEBUG_STDOUT
-			std::cout << "CreateDescriptorSet" << COUT_OK << std::endl << std::endl;
+		std::cout << "CreateDescriptorSet" << COUT_OK << std::endl << std::endl;
 #endif
-		}
 	}
 }
 
@@ -1553,7 +1570,16 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 	}
 	return ShaderModule;
 }
-
+void VK::CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const
+{
+	PipelineInputAssemblyStateCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+		VK_FALSE //!< 0xffff や 0xffffffff を特別なマーカとして、リスタートを可能にする場合
+	};
+}
 VkPipelineCache VK::LoadPipelineCache(const std::wstring& Path) const
 {
 	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
@@ -1662,16 +1688,10 @@ void VK::CreateGraphicsPipeline()
 	};
 
 	//!< インプットアセンブリ (トポロジ)
-	VkPipelineInputAssemblyStateCreateInfo PipelineInputAssemblyStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-		VK_FALSE
-	};
+	VkPipelineInputAssemblyStateCreateInfo PipelineInputAssemblyStateCreateInfo;
 	CreateInputAssembly(PipelineInputAssemblyStateCreateInfo);
 
-	//!< VkDynamicState にするので、ここでは nullptr を指定している、ただし個数は指定しておく必要があるので注意!
+	//!< VkDynamicState にするので、ここでは nullptr を指定している、ただし個数は指定しておく必要があるので注意。また KvDynamicState に指定した項目はコマンドバッファからセットすること
 	const VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
 		nullptr,
@@ -1772,8 +1792,8 @@ void VK::CreateGraphicsPipeline()
 		static_cast<uint32_t>(PushConstantRanges.size()), PushConstantRanges.data()
 	};
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, nullptr, &PipelineLayout));
-	//!< PipelineLayout を作成したら、DescritptorSetLayout は破棄しても良い。
-	//!< (同じレイアウトの DescriptorSet を再作成する場合に必要になるので一応残しておくことにする)
+	//!< 本来 PipelineLayout を作成したら、DescritptorSetLayout は破棄しても良い
+	//!< ただし、同じレイアウトの DescriptorSet を再作成するような場合に必要になるのでここでは残しておくことにする
 
 	/**
 	basePipelineHandle と basePipelineIndex は同時に使用できない(排他)
@@ -1819,8 +1839,6 @@ void VK::CreateGraphicsPipeline()
 		vkDestroyShaderModule(Device, i, nullptr);
 	}
 	ShaderModules.clear();
-
-	//!< vkCmdBindDescriptorSets() で引数に取る事があるので、(パイプライン作成済だからといって) パイプラインレイアウトは破棄しない
 
 	//!< パイプラインキャッシュをファイルへ保存
 	if (VK_NULL_HANDLE != PipelineCache) {
@@ -1917,7 +1935,7 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 #else
 		VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, //!< 前回のサブミットが完了していなくても、再度サブミットされ得る場合
 #endif
-		nullptr//&CommandBufferInheritanceInfo
+		nullptr//&CommandBufferInheritanceInfo //!< セカンダリコマンドバッファの場合に使用
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
 		//!< ビューポート、シザー
@@ -1933,6 +1951,7 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		//!< レンダーエリアの最低粒度を確保
 		VkExtent2D Granularity;
 		vkGetRenderAreaGranularity(Device, RenderPass, &Granularity);
+		//!< 自分の環境では Granularity = { 1, 1 } だったのでほぼなんでも大丈夫、環境によっては気をつける必要があるかもね
 		assert(ScissorRects[0].extent.width >= Granularity.width && ScissorRects[0].extent.height >= Granularity.height && "ScissorRect is too small");
 #endif
 		//!< バリアの設定は RenderPass
@@ -1942,9 +1961,12 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 			nullptr,
 			RenderPass,
 			Framebuffers[SwapchainImageIndex],
-			ScissorRects[0],
+			ScissorRects[0], //!< フレームバッファより小さいとパフォーマンスペナルティがあるかも ↑vkGetRenderAreaGranularity()参照
 			0, nullptr//!< 1, &ClearValue
 		};
+		//!< サブパスへ移行させるにはこんな感じ
+		//!< vkCmdNextSubpass(プライマリコマンドバッファ, VK_SUBPASS_CONTENTS_INLINE);
+		//!< vkCmdNextSubpass(セカンダリコマンドバッファ, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
 		} vkCmdEndRenderPass(CommandBuffer);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
@@ -1964,14 +1986,16 @@ void VK::Draw()
 
 	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	const VkPipelineStageFlags PipelineStageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT;
-	const VkSubmitInfo SubmitInfo = {
-		VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		nullptr,
-		1, &NextImageAcquiredSemaphore, &PipelineStageFlags,	//!< 次イメージが取得できる(プレゼント完了)までウエイト
-		1,  &CommandBuffer,
-		1, &RenderFinishedSemaphore								//!< 描画完了を通知する
+	const std::vector<VkSubmitInfo> SubmitInfos = {
+		{
+			VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			nullptr,
+			1, &NextImageAcquiredSemaphore, &PipelineStageFlags,	//!< 次イメージが取得できる(プレゼント完了)までウエイト
+			1,  &CommandBuffer,
+			1, &RenderFinishedSemaphore								//!< 描画完了を通知する
+		},
 	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, Fence));
+	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SubmitInfos.size()), SubmitInfos.data(), Fence));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 
 	//WaitForFence();

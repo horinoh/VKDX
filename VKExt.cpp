@@ -104,9 +104,9 @@ void VKExt::CreateRenderPass_Color()
 			VK_SAMPLE_COUNT_1_BIT,
 			VK_ATTACHMENT_LOAD_OP_DONT_CARE,		//!< VK_ATTACHMENT_LOAD_OP_CLEAR にするとレンダーパスの開始時にクリアを行う (VkRenderPassBeginInfo.pClearValuesのセットが必須になる)
 			VK_ATTACHMENT_STORE_OP_STORE,			//!< レンダーパス終了時に保存する(表示するのに必要)
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE,		//!< (ステンシルは)カラーアタッチメントの場合は関係なし
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE,		//!< (デプスステンシルは)カラーアタッチメントの場合は関係なし
 			VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,		//!< レンダーパス開始時のレイアウト (メモリバリアなしにサブパス間でレイアウトが変更される)
+			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,		//!< レンダーパス開始時のレイアウト (メモリバリアなしにレンダーパス間でレイアウトが変更される)
 			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR			//!< レンダーパス終了時のレイアウト
 		},
 	};
@@ -121,7 +121,7 @@ void VKExt::CreateRenderPass_Color()
 			0, nullptr,
 			static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(), nullptr,
 			nullptr,
-			0, nullptr
+			0, nullptr //!< Preserve はサブパスのライフサイクル中に保持される(読み書きもできない) ... このサブパスでは使用しないが、後のサブパスで使用するような場合に指定する
 		},
 	};
 

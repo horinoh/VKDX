@@ -268,7 +268,7 @@ protected:
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const {}
 	virtual void CreateVertexInput(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding = 0) const {}
-	virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const {}
+	virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const;
 	virtual void CreatePipeline() {}
 	virtual VkPipelineCache LoadPipelineCache(const std::wstring& Path) const;
 	virtual void StorePipelineCache(const std::wstring& Path, const VkPipelineCache PipelineCache) const;
