@@ -78,6 +78,16 @@ void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 	ExecuteCommandListAndWaitForFence(CommandList);
 
 	CreateViewport(static_cast<FLOAT>(GetClientRectWidth()), static_cast<FLOAT>(GetClientRectHeight()));
+
+	//!< #TODO コマンドリストの記録は一度だけにしたい
+	//{
+	//	const auto CommandAllocator = CommandAllocators[0].Get();
+	//	//!< GPU が参照している間は、コマンドアロケータの Reset() はできない
+	//	VERIFY_SUCCEEDED(CommandAllocator->Reset());
+
+	//	const auto CommandList = GraphicsCommandLists[0].Get();
+	//	PopulateCommandList(CommandList, CommandAllocator);
+	//}
 }
 void DX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
@@ -1164,14 +1174,17 @@ void DX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Comma
 
 void DX::Draw()
 {
-	const auto CommandAllocator = CommandAllocators[0].Get();
+	//!< #TODO コマンドリストの記録は一度だけにしたい
+	{
+		const auto CommandAllocator = CommandAllocators[0].Get();
+		//!< GPU が参照している間は、コマンドアロケータの Reset() はできない
+		VERIFY_SUCCEEDED(CommandAllocator->Reset());
+
+		const auto CommandList = GraphicsCommandLists[0].Get();
+		PopulateCommandList(CommandList, CommandAllocator);
+	}
+
 	const auto CommandList = GraphicsCommandLists[0].Get();
-
-	//!< GPU が参照している間は、コマンドアロケータの Reset() はできない
-	VERIFY_SUCCEEDED(CommandAllocator->Reset());
-
-	PopulateCommandList(CommandList, CommandAllocator);
-
 	ExecuteCommandListAndWaitForFence(CommandList);
 
 	Present();

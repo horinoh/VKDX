@@ -55,6 +55,14 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateFramebuffer();
 	CreatePipeline();
 }
+/**
+@note 殆どのものを壊して作り直さないとダメ #TODO
+
+LEARNING VULKAN : p367
+need to destroy and recreate the framebuffer,
+command pool, graphics pipeline, Render Pass, depth buffer image, image view, vertex
+buffer, and so on.
+*/
 void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 {
 #ifdef _DEBUG
@@ -69,6 +77,13 @@ void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 
 	DestroyFramebuffer();
 	CreateFramebuffer();
+
+	//!< #TODO コマンドバッファの記録はここで一度だけにしたい
+	//auto CommandPool = CommandPools[0];
+	//VERIFY_SUCCEEDED(vkResetCommandPool(Device, CommandPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT));
+	//auto CommandBuffer = CommandBuffers[0];
+	////VERIFY_SUCCEEDED(vkResetCommandBuffer(CommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
+	//PopulateCommandBuffer(CommandBuffer);
 }
 void VK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
@@ -436,7 +451,7 @@ void VK::CopyToHostVisibleMemory(const VkBuffer Buffer, const VkDeviceMemory Dev
 		void *Data;
 		VERIFY_SUCCEEDED(vkMapMemory(Device, DeviceMemory, Offset, Size, static_cast<VkMemoryMapFlags>(0), &Data)); {
 			memcpy(Data, Source, Size);
-			//!< ↓VK_MEMORY_PROPERTY_HOST_COHERENT_BIT の場合は必要なし
+
 			const std::vector<VkMappedMemoryRange> MappedMemoryRanges = {
 				{
 					VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
@@ -446,6 +461,9 @@ void VK::CopyToHostVisibleMemory(const VkBuffer Buffer, const VkDeviceMemory Dev
 					VK_WHOLE_SIZE
 				}
 			};
+			//!< ↓ホストから可視にするために無効化する (無くても動くけど必要？)
+			//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(MappedMemoryRanges.size()), MappedMemoryRanges.data()));
+			//!< ↓VK_MEMORY_PROPERTY_HOST_COHERENT_BIT の場合は必要なし
 			VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(MappedMemoryRanges.size()), MappedMemoryRanges.data()));
 		} vkUnmapMemory(Device, DeviceMemory);
 	}
@@ -471,7 +489,7 @@ void VK::SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer Sr
 			0,
 			VK_WHOLE_SIZE
 		};
-		//!< バッファを「VK_PIPELINE_STAGE_TRANSFER_BIT」から「PipelineStageFlag」へ変更する
+		//!< バッファを「転送先(VK_PIPELINE_STAGE_TRANSFER_BIT)」から「目的のバッファ(PipelineStageFlag(バーテックスバッファ等))」へ変更する
 		vkCmdPipelineBarrier(CommandBuffer, 
 			VK_PIPELINE_STAGE_TRANSFER_BIT, PipelineStageFlag,
 			0, 
@@ -935,11 +953,10 @@ void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 		VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
 		nullptr,
 		/**
-		VK_COMMAND_POOL_CREATE_TRANSIENT_BIT ... 頻繁に更新される、ライフスパンが短い場合(メモリアロケーションのヒントとなる)
-		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT ... 指定した場合は個別に vkResetCommandBuffer(), vkBeginCommandBuffer() によるリセットが可能、
-		指定しない場合はまとめて vkResetCommandPool() のみが可能
+		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT ... コマンドバッファ毎に vkResetCommandBuffer(), vkBeginCommandBuffer() によるリセットが可能、指定無しだとまとめて vkResetCommandPool() のみ
+		VK_COMMAND_POOL_CREATE_TRANSIENT_BIT ... 頻繁に更新される、ライフスパンが短い場合 (メモリアロケーションのヒントとなる)
 		*/
-		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT/*| VK_COMMAND_POOL_CREATE_TRANSIENT_BIT*/,
 		QueueFamilyIndex
 	};
 
@@ -1174,7 +1191,7 @@ void VK::CreateSwapchain(const VkCommandBuffer CommandBuffer)
 	GetSwapchainImage(CommandBuffer);
 	//GetSwapchainImage(CommandBuffer, VkClearColorValue({1.0f, 0.0f, 0.0f, 1.0f}));
 	CreateSwapchainImageView();
-
+	
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateSwapchain" << COUT_OK << std::endl << std::endl;
 #endif
@@ -1440,6 +1457,7 @@ void VK::CreateUniformBuffer()
 /**
 @brief シェーダとのバインディングのレイアウト
 @note DescriptorSetLayout は「型」のようなもの
+@note デスクリプタを使用しない場合でも、デスクリプタセットレイアウト自体は作成しなくてはならない
 # TODO ここの実装は消す、Extへ持っていく
 */
 void VK::CreateDescriptorSetLayout()
@@ -1978,13 +1996,17 @@ void VK::Draw()
 	//!< 次のイメージが取得できたらセマフォが通知される
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, NextImageAcquiredSemaphore, nullptr, &SwapchainImageIndex));
 
-	auto CommandPool = CommandPools[0];
-	VERIFY_SUCCEEDED(vkResetCommandPool(Device, CommandPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT));
+	{
+		//VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
+		
+		auto CommandPool = CommandPools[0];
+		VERIFY_SUCCEEDED(vkResetCommandPool(Device, CommandPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT));
+
+		auto CommandBuffer = CommandBuffers[0];
+		PopulateCommandBuffer(CommandBuffer);
+	}
 
 	auto CommandBuffer = CommandBuffers[0];
-	PopulateCommandBuffer(CommandBuffer);
-
-	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	const VkPipelineStageFlags PipelineStageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT;
 	const std::vector<VkSubmitInfo> SubmitInfos = {
 		{
@@ -1997,8 +2019,6 @@ void VK::Draw()
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SubmitInfos.size()), SubmitInfos.data(), Fence));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
-
-	//WaitForFence();
 
 	Present();
 }
