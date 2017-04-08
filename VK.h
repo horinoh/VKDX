@@ -211,7 +211,7 @@ protected:
 	virtual void CreateDebugMarker();
 
 	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
-	virtual void AllocateCommandBuffer(const VkCommandPool CommandPool, const VkCommandBufferLevel CommandBufferLevel = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+	virtual void AllocateCommandBuffer(const VkCommandPool CommandPool, const size_t Count, const VkCommandBufferLevel CommandBufferLevel = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
 	virtual void CreateFence();
 	virtual void CreateSemaphore();
@@ -222,10 +222,10 @@ protected:
 	virtual void CreateSwapchainOfClientRect() {
 		CreateSwapchain(static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
 	}
-	virtual void GetSwapchainImage(const VkCommandBuffer CommandBuffer);
-	virtual void GetSwapchainImage(const VkCommandBuffer CommandBuffer, const VkClearColorValue& ClearColorValue);
+	virtual void GetSwapchainImage();
+	virtual void GetSwapchainImage(const VkClearColorValue& ClearColorValue);
 	virtual void CreateSwapchainImageView();
-	virtual void CreateSwapchain(const VkCommandBuffer CommandBuffer);
+	virtual void CreateSwapchain();
 	virtual void ResizeSwapchain(const uint32_t Width, const uint32_t Height);
 	virtual void ResizeSwapChainToClientRect() {
 		ResizeSwapchain(static_cast<const uint32_t>(GetClientRectWidth()), static_cast<const uint32_t>(GetClientRectHeight()));
@@ -277,7 +277,8 @@ protected:
 	virtual void CreateComputePipeline();
 
 	virtual void ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, const VkClearColorValue& Color);
-	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer);
+	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer);
+	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer, const VkImage Image, const VkClearColorValue& Color);
 
 	virtual void Draw();
 	virtual void Present();
@@ -307,12 +308,12 @@ protected:
 	//uint32_t TransferQueueFamilyIndex = UINT_MAX;
 	//uint32_t ComputeQueueFamilyIndex = UINT_MAX;
 
-	std::vector<VkCommandPool> CommandPools;
-	std::vector<VkCommandBuffer> CommandBuffers;
-
 	VkFence Fence = VK_NULL_HANDLE;
 	VkSemaphore NextImageAcquiredSemaphore = VK_NULL_HANDLE;	//!< プレゼント完了までウエイト
 	VkSemaphore RenderFinishedSemaphore = VK_NULL_HANDLE;		//!< 描画完了するまでウエイト
+
+	std::vector<VkCommandPool> CommandPools;
+	std::vector<VkCommandBuffer> CommandBuffers;
 
 	VkExtent2D SurfaceExtent2D;
 	VkFormat ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
@@ -396,9 +397,25 @@ protected:
 	const VkCommandBufferBeginInfo CommandBufferBeginInfo_OneTime = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
-		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, //!< 一度だけ使用 or 毎回破棄やリセット が行われる場合
 		nullptr
 	};
+	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		nullptr,
+		0, //!< 何度もサブミットするので VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT は指定しない、VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT は前回のサブミットが完了していなくても再度サブミットされ得る場合
+		nullptr//&CommandBufferInheritanceInfo_None //!< セカンダリコマンドバッファの場合に使用
+	};
+	//const VkCommandBufferInheritanceInfo CommandBufferInheritanceInfo_None = {
+	//	VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+	//	nullptr,
+	//	VK_NULL_HANDLE,
+	//	0,
+	//	VK_NULL_HANDLE,
+	//	VK_FALSE,
+	//	0,
+	//	0
+	//};
 };
 
 #ifdef _DEBUG

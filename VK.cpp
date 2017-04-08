@@ -21,24 +21,20 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	GetQueueFamily();
 	CreateDevice();
 	
-	//!< コマンドプール、バッファ
-	CreateCommandPool(GraphicsQueueFamilyIndex);
-	auto CommandPool = CommandPools[0];
-	AllocateCommandBuffer(CommandPool);
-	auto CommandBuffer = CommandBuffers[0];
-
 	CreateFence();
 	CreateSemaphore();
 
 	//!< スワップチェイン
-	CreateSwapchain(CommandBuffer);
+	CreateSwapchain();
+
+	const auto CB = CommandBuffers[0];
 	//!< デプスステンシル
-	CreateDepthStencil(CommandBuffer);
+	CreateDepthStencil(CB);
 
 	//!< バーテックスバッファ、インデックスバッファ
-	CreateVertexBuffer(CommandBuffer);
-	CreateIndexBuffer(CommandBuffer);
-	CreateIndirectBuffer(CommandBuffer);
+	CreateVertexBuffer(CB);
+	CreateIndexBuffer(CB);
+	CreateIndirectBuffer(CB);
 
 	CreateTexture();
 
@@ -54,6 +50,12 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateRenderPass();
 	CreateFramebuffer();
 	CreatePipeline();
+	
+	//CreateViewport(static_cast<float>(SurfaceExtent2D.width), static_cast<float>(SurfaceExtent2D.height));
+
+	//for (auto i = 0; i < CommandBuffers.size(); ++i) {
+	//	PopulateCommandBuffer(CommandBuffers[i], Framebuffers[i]);
+	//}
 }
 /**
 @note 殆どのものを壊して作り直さないとダメ #TODO
@@ -71,19 +73,17 @@ void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 
 	Super::OnSize(hWnd, hInstance);
 
-	ResizeSwapChainToClientRect();
+	//ResizeSwapChainToClientRect();
 
 	CreateViewport(static_cast<float>(SurfaceExtent2D.width), static_cast<float>(SurfaceExtent2D.height));
 
-	DestroyFramebuffer();
-	CreateFramebuffer();
+	//DestroyFramebuffer();
+	//CreateFramebuffer();
 
-	//!< #TODO コマンドバッファの記録はここで一度だけにしたい
-	//auto CommandPool = CommandPools[0];
-	//VERIFY_SUCCEEDED(vkResetCommandPool(Device, CommandPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT));
-	//auto CommandBuffer = CommandBuffers[0];
-	////VERIFY_SUCCEEDED(vkResetCommandBuffer(CommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
-	//PopulateCommandBuffer(CommandBuffer);
+	for (auto i = 0; i < CommandBuffers.size(); ++i) {
+		//PopulateCommandBuffer(CommandBuffers[i], Framebuffers[i]);
+		PopulateCommandBuffer(CommandBuffers[i], Framebuffers[i], SwapchainImages[i], Colors::SkyBlue);
+	}
 }
 void VK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
@@ -208,6 +208,15 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroySwapchainKHR(Device, Swapchain, nullptr);
 		Swapchain = VK_NULL_HANDLE;
 	}
+
+	if (!CommandPools.empty() && !CommandBuffers.empty()) {
+		const auto CP = CommandPools[0]; //!< #TODO 現状は0番のコマンドプール決め打ち
+		vkFreeCommandBuffers(Device, CP, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
+	}
+	CommandBuffers.clear();
+	std::for_each(CommandPools.begin(), CommandPools.end(), [&](const VkCommandPool rhs) { vkDestroyCommandPool(Device, rhs, nullptr); });
+	CommandPools.clear();
+
 	if (VK_NULL_HANDLE != RenderFinishedSemaphore) {
 		vkDestroySemaphore(Device, RenderFinishedSemaphore, nullptr);
 		RenderFinishedSemaphore = VK_NULL_HANDLE;
@@ -220,14 +229,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyFence(Device, Fence, nullptr);
 		Fence = VK_NULL_HANDLE;
 	}
-
-	//!< ここでは Pool と Buffer が 1:1 とする
-	for (auto i = 0; i < CommandBuffers.size(); ++i) {
-		vkFreeCommandBuffers(Device, CommandPools[i], 1, &CommandBuffers[i]);
-		vkDestroyCommandPool(Device, CommandPools[i], nullptr);
-	}
-	CommandPools.clear();
-	CommandBuffers.clear();
 
 	//!< Queue は vkGetDeviceQueue() で取得したもの、破棄しない
 
@@ -977,18 +978,19 @@ vkCmdExecuteCommands(プライマリ, セカンダリ個数, セカンダリ配列);
 vkCmdBeginRenderPass() の第一引数にセカンダリコマンドバッファ、第三引数に VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS を渡す
 vkCmdBeginRenderPass(セカンダリ, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 */
-void VK::AllocateCommandBuffer(const VkCommandPool CommandPool, const VkCommandBufferLevel CommandBufferLevel)
+void VK::AllocateCommandBuffer(const VkCommandPool CommandPool, const size_t Count, const VkCommandBufferLevel CommandBufferLevel)
 {
-	VkCommandBuffer CommandBuffer;
-	const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-		nullptr,
-		CommandPool,
-		CommandBufferLevel, //!< VK_COMMAND_BUFFER_LEVEL_PRIMARY:プライマリ、VK_COMMAND_BUFFER_LEVEL_SECONDARY:セカンダリ
-		1
-	};
-	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CommandBuffer));
-	CommandBuffers.push_back(CommandBuffer);
+	if (Count) {
+		CommandBuffers.resize(Count);
+		const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
+			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			nullptr,
+			CommandPool,
+			CommandBufferLevel, //!< VK_COMMAND_BUFFER_LEVEL_PRIMARY:プライマリ、VK_COMMAND_BUFFER_LEVEL_SECONDARY:セカンダリ
+			static_cast<uint32_t>(Count)
+		};
+		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, CommandBuffers.data()));
+	}
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateCommandBuffer" << COUT_OK << std::endl << std::endl;
@@ -1185,11 +1187,13 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 		vkDestroySwapchainKHR(Device, OldSwapchain, nullptr);
 	}
 }
-void VK::CreateSwapchain(const VkCommandBuffer CommandBuffer)
+void VK::CreateSwapchain()
 {
 	CreateSwapchainOfClientRect();
-	GetSwapchainImage(CommandBuffer);
-	//GetSwapchainImage(CommandBuffer, VkClearColorValue({1.0f, 0.0f, 0.0f, 1.0f}));
+	
+	//GetSwapchainImage();
+	GetSwapchainImage(VkClearColorValue({1.0f, 0.0f, 0.0f, 1.0f}));
+
 	CreateSwapchainImageView();
 	
 #ifdef DEBUG_STDOUT
@@ -1203,22 +1207,18 @@ void VK::ResizeSwapchain(const uint32_t Width, const uint32_t Height)
 		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	}
 
-	for (auto i = 0; i < CommandBuffers.size(); ++i) {
-		vkFreeCommandBuffers(Device, CommandPools[i], 1, &CommandBuffers[i]);
-		vkDestroyCommandPool(Device, CommandPools[i], nullptr);
-	}
-	CommandPools.clear();
-	CommandBuffers.clear();
+	//if (!CommandPools.empty() && !CommandBuffers.empty()) {
+	//	const auto CP = CommandPools[0]; //!< #TODO 現状は0番のコマンドプール決め打ち
+	//	vkFreeCommandBuffers(Device, CP, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
+	//}
+	//CommandBuffers.clear();
+	//std::for_each(CommandPools.begin(), CommandPools.end(), [&](const VkCommandPool rhs) { vkDestroyCommandPool(Device, rhs, nullptr); });
+	//CommandPools.clear();
 
-	CreateCommandPool(GraphicsQueueFamilyIndex);
-	auto CommandPool = CommandPools[0];
-	AllocateCommandBuffer(CommandPool);
-	auto CommandBuffer = CommandBuffers[0];
-
-	//CreateSwapchain(CommandBuffer);
+	CreateSwapchain();
 }
 
-void VK::GetSwapchainImage(const VkCommandBuffer CommandBuffer)
+void VK::GetSwapchainImage()
 {
 	//!< スワップチェインイメージの取得
 	uint32_t SwapchainImageCount;
@@ -1230,8 +1230,12 @@ void VK::GetSwapchainImage(const VkCommandBuffer CommandBuffer)
 	std::cout << "\t" << "SwapchainImageCount = " << SwapchainImageCount << std::endl;
 #endif
 
-	//!< VK_IMAGE_LAYOUT_PRESENT_SRC_KHR へレイアウト変更を行う
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo_OneTime)); {
+	//!< スワップチェインイメージの枚数が決まったので、ここでコマンドバッファを確保する
+	CreateCommandPool(GraphicsQueueFamilyIndex);
+	AllocateCommandBuffer(CommandPools[0], SwapchainImages.size()); //!< #TODO 現状は0番のコマンドプール決め打ち
+
+	const auto CB = CommandBuffers[0];
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CommandBufferBeginInfo_OneTime)); {
 		for (auto& i : SwapchainImages) {
 			const VkImageMemoryBarrier ImageMemoryBarrier_UndefinedToPresent = {
 				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -1239,33 +1243,33 @@ void VK::GetSwapchainImage(const VkCommandBuffer CommandBuffer)
 				0,
 				VK_ACCESS_MEMORY_READ_BIT,
 				VK_IMAGE_LAYOUT_UNDEFINED, //!<「現在のレイアウト」または「UNDEFINED」を指定すること、イメージコンテンツを保持したい場合は「UNDEFINED」はダメ         
-				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, //!< プレゼンテーション可能な VK_IMAGE_LAYOUT_PRESENT_SRC_KHR へ
 				PresentQueueFamilyIndex,
 				PresentQueueFamilyIndex,
 				i,
 				ImageSubresourceRange_Color
 			};
-			vkCmdPipelineBarrier(CommandBuffer,
+			vkCmdPipelineBarrier(CB,
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 				0,
 				0, nullptr,
 				0, nullptr,
 				1, &ImageMemoryBarrier_UndefinedToPresent);
 		}
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 
 	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	const VkSubmitInfo SubmitInfo = {
 		VK_STRUCTURE_TYPE_SUBMIT_INFO,
 		nullptr,
 		0, nullptr, nullptr,
-		1,  &CommandBuffer,
+		1,  &CB,
 		0, nullptr
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue)); //!< フェンスでも良い
 }
-void VK::GetSwapchainImage(const VkCommandBuffer CommandBuffer, const VkClearColorValue& ClearColorValue)
+void VK::GetSwapchainImage(const VkClearColorValue& ClearColorValue)
 {
 	//!< スワップチェインイメージの取得
 	uint32_t SwapchainImageCount;
@@ -1276,58 +1280,66 @@ void VK::GetSwapchainImage(const VkCommandBuffer CommandBuffer, const VkClearCol
 #ifdef _DEBUG
 	std::cout << "\t" << "SwapchainImageCount = " << SwapchainImageCount << std::endl;
 #endif
+	
+	//!< コマンドプール、バッファ
+	CreateCommandPool(GraphicsQueueFamilyIndex);
+	AllocateCommandBuffer(CommandPools[0], SwapchainImages.size()); //!< #TODO 現状は0番のコマンドプール決め打ち
 
-	//!< レイアウト変更と塗りつぶしを行う
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo_OneTime)); {
+	const auto CB = CommandBuffers[0];
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CommandBufferBeginInfo_OneTime)); {
 		for (auto& i : SwapchainImages) {
+#if 0
+			ClearColor(CB, i, ClearColorValue);
+#else
 			const VkImageMemoryBarrier ImageMemoryBarrier_UndefinedToTransfer = {
 				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 				nullptr,
 				0,
 				VK_ACCESS_TRANSFER_WRITE_BIT,
 				VK_IMAGE_LAYOUT_UNDEFINED, //!<「現在のレイアウト」または「UNDEFINED」を指定すること        
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, //!< デスティネーションへ
 				PresentQueueFamilyIndex,
 				PresentQueueFamilyIndex,
 				i,
 				ImageSubresourceRange_Color
 			};
-			vkCmdPipelineBarrier(CommandBuffer,
+			vkCmdPipelineBarrier(CB,
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 				0,
 				0, nullptr,
 				0, nullptr,
 				1, &ImageMemoryBarrier_UndefinedToTransfer); 
 			{
-				vkCmdClearColorImage(CommandBuffer, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearColorValue, 1, &ImageSubresourceRange_Color);
+				vkCmdClearColorImage(CB, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearColorValue, 1, &ImageSubresourceRange_Color);
 			} 
 			const VkImageMemoryBarrier ImageMemoryBarrier_TransferToPresent = {
 				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 				nullptr,
 				VK_ACCESS_TRANSFER_WRITE_BIT,
 				VK_ACCESS_MEMORY_READ_BIT,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, //!< デスティネーションから
+				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, //!< プレゼンテーション可能な VK_IMAGE_LAYOUT_PRESENT_SRC_KHR へ
 				PresentQueueFamilyIndex,
 				PresentQueueFamilyIndex,
 				i,
 				ImageSubresourceRange_Color
 			};
-			vkCmdPipelineBarrier(CommandBuffer,
+			vkCmdPipelineBarrier(CB,
 				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
 				0,
 				0, nullptr,
 				0, nullptr,
 				1, &ImageMemoryBarrier_TransferToPresent);
+#endif
 		}
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 
 	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	const VkSubmitInfo SubmitInfo = {
 		VK_STRUCTURE_TYPE_SUBMIT_INFO,
 		nullptr,
 		0, nullptr, nullptr,
-		1,  &CommandBuffer,
+		1,  &CB,
 		0, nullptr
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
@@ -1930,40 +1942,17 @@ void VK::ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, co
 		0, nullptr,
 		1, &ImageMemoryBarrier_ToPresent);
 }
-void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
+void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer)
 {
 	//!< VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT ... メモリをコマンドプールへ返す
-	//VERIFY_SUCCEEDED(vkResetCommandBuffer(CommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
+	//VERIFY_SUCCEEDED(vkResetCommandBuffer(CommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT)); //!< vkBeginCommandBuffer() でリセットされるので不要
 
-	//const VkCommandBufferInheritanceInfo CommandBufferInheritanceInfo = {
-	//	VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-	//	nullptr,
-	//	VK_NULL_HANDLE,
-	//	0,
-	//	VK_NULL_HANDLE,
-	//	VK_FALSE,
-	//	0,
-	//	0
-	//};
-	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-#if 1
-		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, //!< 毎回破棄 or リセットが行われる場合
-#else
-		VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT, //!< 前回のサブミットが完了していなくても、再度サブミットされ得る場合
-#endif
-		nullptr//&CommandBufferInheritanceInfo //!< セカンダリコマンドバッファの場合に使用
-	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
 		//!< ビューポート、シザー
 		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-		auto Image = SwapchainImages[SwapchainImageIndex];
-
-		//!< クリア
-		ClearColor(CommandBuffer, Image, Colors::SkyBlue);
+		//!< クリアはしない
 
 #ifdef _DEBUG
 		//!< レンダーエリアの最低粒度を確保
@@ -1972,19 +1961,41 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		//!< 自分の環境では Granularity = { 1, 1 } だったのでほぼなんでも大丈夫、環境によっては気をつける必要があるかもね
 		assert(ScissorRects[0].extent.width >= Granularity.width && ScissorRects[0].extent.height >= Granularity.height && "ScissorRect is too small");
 #endif
-		//!< バリアの設定は RenderPass
-		VkClearValue ClearValue = { Colors::SkyBlue };
+		//std::vector<VkClearValue> ClearValues(2);
+		//ClearValues[0].color = Colors::SkyBlue;
+		//ClearValues[1].depthStencil = ClearDepthStencilValue;
 		const VkRenderPassBeginInfo RenderPassBeginInfo = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RenderPass,
-			Framebuffers[SwapchainImageIndex],
+			Framebuffer,
 			ScissorRects[0], //!< フレームバッファより小さいとパフォーマンスペナルティがあるかも ↑vkGetRenderAreaGranularity()参照
-			0, nullptr//!< 1, &ClearValue
+			0, nullptr
+			//static_cast<uint32_t>(ClearValues.size()), ClearValues.data() //!< レンダーパス作成時に VK_ATTACHMENT_LOAD_OP_CLEAR を指定した場合ここでクリアカラーを指定する
 		};
 		//!< サブパスへ移行させるにはこんな感じ
 		//!< vkCmdNextSubpass(プライマリコマンドバッファ, VK_SUBPASS_CONTENTS_INLINE);
 		//!< vkCmdNextSubpass(セカンダリコマンドバッファ, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
+		} vkCmdEndRenderPass(CommandBuffer);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
+}
+void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer, const VkImage Image, const VkClearColorValue& Color)
+{
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
+		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+
+		ClearColor(CommandBuffer, Image, Color);
+
+		const VkRenderPassBeginInfo RenderPassBeginInfo = {
+			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			nullptr,
+			RenderPass,
+			Framebuffer,
+			ScissorRects[0],
+			0, nullptr
+		};
 		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
 		} vkCmdEndRenderPass(CommandBuffer);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
@@ -1994,31 +2005,21 @@ void VK::Draw()
 	WaitForFence();
 
 	//!< 次のイメージが取得できたらセマフォが通知される
-	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, NextImageAcquiredSemaphore, nullptr, &SwapchainImageIndex));
+	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, NextImageAcquiredSemaphore, VK_NULL_HANDLE, &SwapchainImageIndex));
 
-	{
-		//VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
-		
-		auto CommandPool = CommandPools[0];
-		VERIFY_SUCCEEDED(vkResetCommandPool(Device, CommandPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT));
+	UpdateDescriptorSet();
 
-		auto CommandBuffer = CommandBuffers[0];
-		PopulateCommandBuffer(CommandBuffer);
-	}
-
-	auto CommandBuffer = CommandBuffers[0];
 	const VkPipelineStageFlags PipelineStageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT;
 	const std::vector<VkSubmitInfo> SubmitInfos = {
 		{
 			VK_STRUCTURE_TYPE_SUBMIT_INFO,
 			nullptr,
 			1, &NextImageAcquiredSemaphore, &PipelineStageFlags,	//!< 次イメージが取得できる(プレゼント完了)までウエイト
-			1,  &CommandBuffer,
+			1, &CommandBuffers[SwapchainImageIndex],
 			1, &RenderFinishedSemaphore								//!< 描画完了を通知する
 		},
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SubmitInfos.size()), SubmitInfos.data(), Fence));
-	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 
 	Present();
 }

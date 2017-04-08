@@ -65,4 +65,13 @@ public:
 		std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 	}
+
+	void UpdateConstantBuffer(ID3D12Resource* Resource, const size_t Size, const void* Source) {
+		if (nullptr != Resource && Size && nullptr != Source) {
+			BYTE* Data;
+			VERIFY_SUCCEEDED(Resource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
+				memcpy(Data, Source, Size);
+			} Resource->Unmap(0, nullptr);
+		}
+	}
 };

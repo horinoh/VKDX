@@ -16,7 +16,7 @@ public:
 protected:
 	virtual void CreatePipeline() override { Super::CreateComputePipeline(); }
 
-	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer) override;
+	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer) override;
 
 	virtual void Draw() override {}
 

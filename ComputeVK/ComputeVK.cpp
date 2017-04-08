@@ -225,7 +225,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void ComputeVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
+void ComputeVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer)
 {
 	//const VkCommandBufferBeginInfo BeginInfo = {
 	//	VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,

@@ -298,7 +298,7 @@ void TriangleVK::CreateIndexBuffer(const VkCommandBuffer CommandBuffer)
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
+void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer, const VkImage Image, const VkClearColorValue& Color)
 {
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -313,8 +313,6 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-		auto Image = SwapchainImages[SwapchainImageIndex];
-
 		//!< クリア
 		ClearColor(CommandBuffer, Image, Colors::SkyBlue);
 
@@ -322,18 +320,14 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		//	vkCmdClearDepthStencilImage(CommandBuffer, DepthStencilImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearDepthStencil, 1, &ImageSubresourceRange_DepthStencil);
 		//}
 
-		//!< レンダーパスでクリアする場合
-		//std::vector<VkClearValue> ClearValues(2);
-		//ClearValues[0].color = Colors::SkyBlue;
-		//ClearValues[1].depthStencil = ClearDepthStencilValue;
 		//!< バリア、レンダーターゲットの設定は RenderPass
 		const VkRenderPassBeginInfo RenderPassBeginInfo = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RenderPass,
-			Framebuffers[SwapchainImageIndex],
+			Framebuffer,
 			ScissorRects[0],
-			0, nullptr //!< レンダーパスでクリアする場合は必須 static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
+			0, nullptr
 		};
 		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
 #if 0

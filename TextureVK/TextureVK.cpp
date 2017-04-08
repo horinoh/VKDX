@@ -225,7 +225,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void TextureVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
+void TextureVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer, const VkImage Image, const VkClearColorValue& Color)
 {		
 		const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -238,14 +238,12 @@ void TextureVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer)
 		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-		auto Image = SwapchainImages[SwapchainImageIndex];
-
 		//!< バリア、レンダーターゲットの設定は RenderPass
 		const VkRenderPassBeginInfo RenderPassBeginInfo = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RenderPass,
-			Framebuffers[SwapchainImageIndex],
+			Framebuffer,
 			ScissorRects[0],
 			0, nullptr //!< レンダーパスでクリアする場合は必須 static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
 		};

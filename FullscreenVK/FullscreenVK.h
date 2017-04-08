@@ -24,6 +24,6 @@ protected:
 		CreateShader_VsPs(ShaderModules, PipelineShaderStageCreateInfos);
 	}
 	virtual void CreatePipeline() override { CreateGraphicsPipeline(); }
-	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer) override;
+	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer, const VkImage Image, const VkClearColorValue& Color) override;
 };
 #pragma endregion
