@@ -20,22 +20,20 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CheckMultiSample(ColorFormat);
 	CreateCommandQueue();
 
-	//!< コマンドアロケータ、リスト
-	CreateCommandAllocator();
-	auto CommandAllocator = CommandAllocators[0].Get();
-	CreateCommandList(CommandAllocator);
-
 	CreateFence();
 
 	//!< スワップチェイン
 	CreateSwapChainOfClientRect(hWnd, ColorFormat);
 	CreateSwapChainDescriptorHeap();
-	//!< ResizeSwapChain() で SwapChainResources が作られる、明示的にしなくても OnSize() からコールされる
+	ResizeSwapChainToClientRect();
+
 	//!< デプスステンシル
 	CreateDepthStencilDescriptorHeap();
+	ResizeDepthStencilToClientRect();
 	//!< ResizeDepthStencil() で DepthStencilResource が作られる、明示的にしなくても OnSize() からコールされる
 	
 	//!< バーテックスバッファ、インデックスバッファ
+	const auto CommandAllocator = CommandAllocators[0].Get();
 	auto CommandList = GraphicsCommandLists[0].Get();
 	CreateVertexBuffer(CommandAllocator, CommandList);
 	CreateIndexBuffer(CommandAllocator, CommandList);
@@ -65,29 +63,30 @@ void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 
 	WaitForFence();
 
-	const auto CommandList = GraphicsCommandLists[0].Get();
-	const auto CommandAllocator = CommandAllocators[0].Get();
+	//const auto CommandList = GraphicsCommandLists[0].Get();
+	//const auto CommandAllocator = CommandAllocators[0].Get();
 
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr));
-	{		
-		ResizeSwapChainToClientRect();
-		ResizeDepthStencilToClientRect();
-	}
-	VERIFY_SUCCEEDED(CommandList->Close());
+	//VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr));
+	//{		
+	//	ResizeSwapChainToClientRect();
+	//	ResizeDepthStencilToClientRect();
+	//}
+	//VERIFY_SUCCEEDED(CommandList->Close());
 
-	ExecuteCommandListAndWaitForFence(CommandList);
+	//ExecuteCommandListAndWaitForFence(CommandList);
 
 	CreateViewport(static_cast<FLOAT>(GetClientRectWidth()), static_cast<FLOAT>(GetClientRectHeight()));
 
-	//!< #TODO コマンドリストの記録は一度だけにしたい
-	//{
-	//	const auto CommandAllocator = CommandAllocators[0].Get();
-	//	//!< GPU が参照している間は、コマンドアロケータの Reset() はできない
-	//	VERIFY_SUCCEEDED(CommandAllocator->Reset());
+	for (auto i = 0; i < SwapChainResources.size(); ++i) {
+		const auto CommandList = GraphicsCommandLists[i].Get();
 
-	//	const auto CommandList = GraphicsCommandLists[0].Get();
-	//	PopulateCommandList(CommandList, CommandAllocator);
-	//}
+		//PopulateCommandList(CommandList, SwapChainResources[i].Get());
+		{
+			const auto SwapChainResource = SwapChainResources[i].Get();
+			const auto DescriptorHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
+			PopulateCommandList(CommandList, SwapChainResource, DescriptorHandle, DirectX::Colors::SkyBlue);
+		}
+	}
 }
 void DX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
@@ -582,15 +581,17 @@ void DX::CreateCommandAllocator(const D3D12_COMMAND_LIST_TYPE CommandListType)
 描画コマンドを発行しないコマンドリスト(初期化用途等)や、バンドルは nullptr 指定で良い
 ここでは PipelineState == nullptr で作成してしまっている
 */
-void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const D3D12_COMMAND_LIST_TYPE CommandListType)
+void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const size_t Count, const D3D12_COMMAND_LIST_TYPE CommandListType)
 {
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> GraphicsCommandList;
-	VERIFY_SUCCEEDED(Device->CreateCommandList(0, CommandListType, CommandAllocator, nullptr, IID_PPV_ARGS(GraphicsCommandList.GetAddressOf())));
+	for (auto i = 0; i < Count; ++i) {
+		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> GraphicsCommandList;
+		VERIFY_SUCCEEDED(Device->CreateCommandList(0, CommandListType, CommandAllocator, nullptr, IID_PPV_ARGS(GraphicsCommandList.GetAddressOf())));
 
-	GraphicsCommandLists.push_back(GraphicsCommandList);
+		GraphicsCommandLists.push_back(GraphicsCommandList);
 
-	//!< Close() しておく
-	VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
+		//!< Close() しておく
+		VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
+	}
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateCommandList" << COUT_OK << std::endl << std::endl;
@@ -680,15 +681,28 @@ void DX::CreateSwapChainResource()
 	SwapChain->GetDesc1(&SwapChainDesc);
 
 	SwapChainResources.resize(SwapChainDesc.BufferCount);
-	for (auto It = SwapChainResources.begin(); It != SwapChainResources.end(); ++It) {
-		const auto Index = static_cast<UINT>(std::distance(SwapChainResources.begin(), It));
+	//for (auto It = SwapChainResources.begin(); It != SwapChainResources.end(); ++It) {
+	//	const auto Index = static_cast<UINT>(std::distance(SwapChainResources.begin(), It));
+	//	//!< スワップチェインのバッファリソースを SwapChainResources へ取得
+	//	VERIFY_SUCCEEDED(SwapChain->GetBuffer(Index, IID_PPV_ARGS(It->GetAddressOf())));
+
+	//	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
+	//	//!< (リソースがタイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能)
+	//	Device->CreateRenderTargetView(It->Get(), nullptr, GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, Index));
+	//}
+	for (auto i = 0; i < SwapChainResources.size(); ++i) {
 		//!< スワップチェインのバッファリソースを SwapChainResources へ取得
-		VERIFY_SUCCEEDED(SwapChain->GetBuffer(Index, IID_PPV_ARGS(It->GetAddressOf())));
+		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, IID_PPV_ARGS(SwapChainResources[i].GetAddressOf())));
 
 		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 		//!< (リソースがタイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能)
-		Device->CreateRenderTargetView(It->Get(), nullptr, GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, Index));
+		Device->CreateRenderTargetView(SwapChainResources[i].Get(), nullptr, GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i));
 	}
+
+	//!< スワップチェインリソースの数が決まったので、ここでコマンドリストを作成
+	CreateCommandAllocator();
+	auto CommandAllocator = CommandAllocators[0].Get();
+	CreateCommandList(CommandAllocator, SwapChainResources.size());
 
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "SwapChainResource" << std::endl;
@@ -1148,8 +1162,12 @@ void DX::ClearColor(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESC
 {
 	CommandList->ClearRenderTargetView(DescriptorHandle, Color, 0, nullptr);
 }
-void DX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12CommandAllocator* CommandAllocator)
+void DX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle)
 {
+	const auto CommandAllocator = CommandAllocators[0].Get();
+	//!< GPU が参照している間は、コマンドアロケータの Reset() はできない
+	//VERIFY_SUCCEEDED(CommandAllocator->Reset());
+
 	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能 (コマンドキューはコマンドリストではなく、コマンドアロケータを参照している)
 	//!< CommandList 作成時に PipelineState を指定していなくても、ここで指定すれば OK
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, PipelineState.Get()));
@@ -1158,42 +1176,49 @@ void DX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Comma
 		CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
-		//!< クリア
-		auto RTDescriptorHandle(GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CurrentBackBufferIndex));
-		ClearColor(CommandList, RTDescriptorHandle, DirectX::Colors::SkyBlue);
-
-		auto Resource = SwapChainResources[CurrentBackBufferIndex].Get();
 		//!< バリア
-		ResourceBarrier(CommandList, Resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
 		}
-		ResourceBarrier(CommandList, Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 }
+void DX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const DirectX::XMVECTORF32& Color)
+{
+	const auto CommandAllocator = CommandAllocators[0].Get();
 
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, PipelineState.Get()));
+	{
+		CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+
+		//!< クリア
+		ClearColor(CommandList, DescriptorHandle, Color);
+
+		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		{
+		}
+		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+	}
+	VERIFY_SUCCEEDED(CommandList->Close());
+}
 void DX::Draw()
 {
-	//!< #TODO コマンドリストの記録は一度だけにしたい
-	{
-		const auto CommandAllocator = CommandAllocators[0].Get();
-		//!< GPU が参照している間は、コマンドアロケータの Reset() はできない
-		VERIFY_SUCCEEDED(CommandAllocator->Reset());
+	WaitForFence();
 
-		const auto CommandList = GraphicsCommandLists[0].Get();
-		PopulateCommandList(CommandList, CommandAllocator);
-	}
+	//CurrentBackBufferIndex = ++CurrentBackBufferIndex % static_cast<const UINT>(SwapChainResources.size());
 
-	const auto CommandList = GraphicsCommandLists[0].Get();
-	ExecuteCommandListAndWaitForFence(CommandList);
-
+	const std::vector<ID3D12CommandList*> CommandLists = { GraphicsCommandLists[CurrentBackBufferIndex].Get() };
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
+	
 	Present();
+
+	CurrentBackBufferIndex = ++CurrentBackBufferIndex % static_cast<const UINT>(SwapChainResources.size());
 }
 void DX::Present()
 {
 	VERIFY_SUCCEEDED(SwapChain->Present(1, 0));
-
-	CurrentBackBufferIndex = ++CurrentBackBufferIndex % static_cast<const UINT>(SwapChainResources.size());
 }
 void DX::WaitForFence()
 {

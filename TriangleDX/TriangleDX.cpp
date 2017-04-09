@@ -259,8 +259,10 @@ void TriangleDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12CommandAllocator* CommandAllocator)
+void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const DirectX::XMVECTORF32& Color)
 {
+	const auto CommandAllocator = CommandAllocators[0].Get();
+
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, PipelineState.Get()));
 	{
 		//!< ビューポート、シザー
@@ -269,8 +271,7 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3
 
 		//!< クリア
 		{
-			auto RTDescriptorHandle(GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CurrentBackBufferIndex));
-			ClearColor(CommandList, RTDescriptorHandle, DirectX::Colors::SkyBlue);
+			ClearColor(CommandList, DescriptorHandle, DirectX::Colors::SkyBlue);
 #if 0
 			if (nullptr != DepthStencilDescriptorHeap) {
 				auto DSDescriptorHandle(GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
@@ -279,14 +280,12 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3
 #endif
 		}
 
-		auto Resource = SwapChainResources[CurrentBackBufferIndex].Get();
 		//!< バリア
-		ResourceBarrier(CommandList, Resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
 			//!< レンダーターゲット
 			{
-				auto RTDescriptorHandle(GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CurrentBackBufferIndex));
-				const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { RTDescriptorHandle };
+				const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { DescriptorHandle };
 #if 0
 				if (nullptr != DepthStencilDescriptorHeap) {
 					auto DSDescriptorHandle(GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
@@ -327,7 +326,7 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3
 			CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
 #endif
 		}
-		ResourceBarrier(CommandList, Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 }

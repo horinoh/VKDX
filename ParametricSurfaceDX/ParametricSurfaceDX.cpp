@@ -259,8 +259,10 @@ void ParametricSurfaceDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAlloc
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void ParametricSurfaceDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12CommandAllocator* CommandAllocator)
+void ParametricSurfaceDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle)
 {
+	const auto CommandAllocator = CommandAllocators[0].Get();
+	
 	//#TODO
 	//Super::PopulateCommandList(CommandList);
 	//

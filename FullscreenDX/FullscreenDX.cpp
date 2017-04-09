@@ -225,25 +225,23 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void FullscreenDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12CommandAllocator* CommandAllocator)
+void FullscreenDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const DirectX::XMVECTORF32& Color)
 {
+	const auto CommandAllocator = CommandAllocators[0].Get();
+
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, PipelineState.Get()));
 	{
 		//!< ビューポート、シザー
 		CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
-		auto Resource = SwapChainResources[CurrentBackBufferIndex].Get();
 		//!< バリア
-		ResourceBarrier(CommandList, Resource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
 			//!< レンダーターゲット
-			{
-				auto CPUDescriptorHandle(GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, CurrentBackBufferIndex));
+			const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { DescriptorHandle };
+			CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
 
-				const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { CPUDescriptorHandle };
-				CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
-			}
 			//!< ルートシグニチャ
 			CommandList->SetGraphicsRootSignature(RootSignature.Get());
 
@@ -257,8 +255,9 @@ void FullscreenDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, I
 			CommandList->DrawInstanced(4, 1, 0, 0);
 #endif
 		}
-		ResourceBarrier(CommandList, Resource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
 	VERIFY_SUCCEEDED(CommandList->Close());
 }
+
 #pragma endregion

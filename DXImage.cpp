@@ -40,7 +40,10 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, ID3D12DescriptorHeap* Des
 		}
 	} VERIFY_SUCCEEDED(CommandList->Close());
 
-	ExecuteCommandListAndWaitForFence(CommandList);
+	//ExecuteCommandListAndWaitForFence(CommandList);
+	const std::vector<ID3D12CommandList*> CommandLists = { CommandList };
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
+	WaitForFence();
 
 	//!< ƒrƒ…[‚ðì¬
 	Device->CreateShaderResourceView(*Resource, nullptr, GetCPUDescriptorHandle(DescriptorHeap, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
