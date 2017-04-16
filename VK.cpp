@@ -2007,7 +2007,8 @@ void VK::Draw()
 	//!< 次のイメージが取得できたらセマフォが通知される
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, NextImageAcquiredSemaphore, VK_NULL_HANDLE, &SwapchainImageIndex));
 
-	UpdateDescriptorSet();
+	//!< デスクリプタセットを更新したら、コマンドバッファを記録し直さないとダメ？
+	//UpdateDescriptorSet();
 
 	const VkPipelineStageFlags PipelineStageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT;
 	const std::vector<VkSubmitInfo> SubmitInfos = {

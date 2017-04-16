@@ -309,7 +309,6 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, cons
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo)); {
 		//DebugMarker::Begin(CommandBuffer, "HOGE", glm::vec4(0,1,0,1));
 
-		//!< ビューポート、シザー
 		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
@@ -320,7 +319,6 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, cons
 		//	vkCmdClearDepthStencilImage(CommandBuffer, DepthStencilImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearDepthStencil, 1, &ImageSubresourceRange_DepthStencil);
 		//}
 
-		//!< バリア、レンダーターゲットの設定は RenderPass
 		const VkRenderPassBeginInfo RenderPassBeginInfo = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
@@ -340,10 +338,8 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, cons
 					0, nullptr);
 			}
 #endif
-			//!< トポロジは Pipeline - VkPipelineInputAssemblyStateCreateInfo で指定しているのでパイプラインをバインド
 			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
 
-			//!< バーテックスバッファ、インデックスバッファ
 			const VkDeviceSize Offsets[] = { 0 };
 			vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
 			vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
