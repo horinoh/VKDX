@@ -14,7 +14,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	Super::OnCreate(hWnd, hInstance, Title);
 
-	//!< デバイス、キュー
 	CreateInstance();
 	CreateSurface(hWnd, hInstance);
 	GetPhysicalDevice();
@@ -24,38 +23,29 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateFence();
 	CreateSemaphore();
 
-	//!< スワップチェイン
 	CreateSwapchain();
 
-	const auto CB = CommandBuffers[0];
-	//!< デプスステンシル
-	CreateDepthStencil(CB);
+	CreateDepthStencil();
 
-	//!< バーテックスバッファ、インデックスバッファ
-	CreateVertexBuffer(CB);
-	CreateIndexBuffer(CB);
-	CreateIndirectBuffer(CB);
+	{
+		const auto CB = CommandBuffers[0];
+		CreateVertexBuffer(CB);
+		CreateIndexBuffer(CB);
+		CreateIndirectBuffer(CB);
+	}
 
 	CreateTexture();
 
-	//!< デスクリプタセット
 	CreateDescriptorSetLayout();
 	CreateDescriptorSet();
 	UpdateDescriptorSet();
 
-	//!< ユニフォームバッファ
+	//!< ユニフォームバッファ #TODO
 	//CreateUniformBuffer();
 
-	//!< レンダーパス、フレームバッファ、パイプライン
 	CreateRenderPass();
 	CreateFramebuffer();
 	CreatePipeline();
-	
-	//CreateViewport(static_cast<float>(SurfaceExtent2D.width), static_cast<float>(SurfaceExtent2D.height));
-
-	//for (auto i = 0; i < CommandBuffers.size(); ++i) {
-	//	PopulateCommandBuffer(CommandBuffers[i], Framebuffers[i]);
-	//}
 }
 /**
 @note 殆どのものを壊して作り直さないとダメ #TODO
@@ -566,7 +556,9 @@ void VK::EnumerateInstanceLayer()
 		VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&InstanceLayerPropertyCount, LayerProperties.data()));
 		for (const auto& i : LayerProperties) {
 #ifdef DEBUG_STDOUT
-			std::cout << "\t" << "\"" << i.layerName << "\"" << std::endl;
+			if (strlen(i.layerName)) {
+				std::cout << "\t" << "\"" << i.layerName << "\"" << std::endl;
+			}
 #endif
 			EnumerateInstanceExtenstion(i.layerName);
 		}
@@ -581,7 +573,9 @@ void VK::EnumerateInstanceExtenstion(const char* layerName)
 		VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(layerName, &InstanceExtensionPropertyCount, ExtensionProperties.data()));
 		for (const auto& i : ExtensionProperties) {
 #ifdef DEBUG_STDOUT
-			std::cout << "\t" << "\t" << "\"" << i.extensionName << "\"" << std::endl;
+			if (strlen(i.extensionName)) {
+				std::cout << "\t" << "\t" << "\"" << i.extensionName << "\"" << std::endl;
+			}
 #endif
 		}
 	}
@@ -788,7 +782,9 @@ void VK::EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice)
 		VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, LayerProperties.data()));
 		for (const auto& i : LayerProperties) {
 #ifdef DEBUG_STDOUT
-			std::cout << "\t" << "\"" << i.layerName << "\"" << std::endl;
+			if (strlen(i.layerName)) {
+				std::cout << "\t" << "\"" << i.layerName << "\"" << std::endl;
+			}
 #endif
 			EnumerateDeviceExtenstion(PhysicalDevice, i.layerName);
 		}
@@ -808,7 +804,10 @@ void VK::EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* 
 #endif
 			}
 #ifdef DEBUG_STDOUT
-			std::cout << "\t" << "\t" << "\"" << i.extensionName << "\"" << White << std::endl;
+			if (strlen(i.extensionName)) {
+				std::cout << "\t" << "\t" << "\"" << i.extensionName << "\"" << std::endl;
+			}
+			std::cout << White;
 #endif
 		}
 	}
@@ -1191,8 +1190,14 @@ void VK::CreateSwapchain()
 {
 	CreateSwapchainOfClientRect();
 	
-	//GetSwapchainImage();
-	GetSwapchainImage(VkClearColorValue({1.0f, 0.0f, 0.0f, 1.0f}));
+	GetSwapchainImage();
+
+	//!< スワップチェインイメージの枚数が決まったので、ここでコマンドバッファを確保する
+	CreateCommandPool(GraphicsQueueFamilyIndex);
+	AllocateCommandBuffer(CommandPools[0], SwapchainImages.size()); //!< #TODO 現状は0番のコマンドプール決め打ち
+
+	InitializeSwapchainImage(CommandBuffers[0]);
+	//InitializeSwapchainImage(CommandBuffers[0], &VkClearColorValue({ 1.0f, 0.0f, 0.0f, 1.0f }));
 
 	CreateSwapchainImageView();
 	
@@ -1229,123 +1234,86 @@ void VK::GetSwapchainImage()
 #ifdef _DEBUG
 	std::cout << "\t" << "SwapchainImageCount = " << SwapchainImageCount << std::endl;
 #endif
-
-	//!< スワップチェインイメージの枚数が決まったので、ここでコマンドバッファを確保する
-	CreateCommandPool(GraphicsQueueFamilyIndex);
-	AllocateCommandBuffer(CommandPools[0], SwapchainImages.size()); //!< #TODO 現状は0番のコマンドプール決め打ち
-
-	const auto CB = CommandBuffers[0];
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CommandBufferBeginInfo_OneTime)); {
+}
+void VK::InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkClearColorValue* ClearColorValue)
+{
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo_OneTime)); {
 		for (auto& i : SwapchainImages) {
-			const VkImageMemoryBarrier ImageMemoryBarrier_UndefinedToPresent = {
-				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-				nullptr,
-				0,
-				VK_ACCESS_MEMORY_READ_BIT,
-				VK_IMAGE_LAYOUT_UNDEFINED, //!<「現在のレイアウト」または「UNDEFINED」を指定すること、イメージコンテンツを保持したい場合は「UNDEFINED」はダメ         
-				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, //!< プレゼンテーション可能な VK_IMAGE_LAYOUT_PRESENT_SRC_KHR へ
-				PresentQueueFamilyIndex,
-				PresentQueueFamilyIndex,
-				i,
-				ImageSubresourceRange_Color
-			};
-			vkCmdPipelineBarrier(CB,
-				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &ImageMemoryBarrier_UndefinedToPresent);
+			if (nullptr == ClearColorValue) {
+				const VkImageMemoryBarrier ImageMemoryBarrier_UndefinedToPresent = {
+					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					nullptr,
+					0,
+					VK_ACCESS_MEMORY_READ_BIT,
+					VK_IMAGE_LAYOUT_UNDEFINED, //!<「現在のレイアウト」または「UNDEFINED」を指定すること、イメージコンテンツを保持したい場合は「UNDEFINED」はダメ         
+					VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, //!< プレゼンテーション可能な VK_IMAGE_LAYOUT_PRESENT_SRC_KHR へ
+					PresentQueueFamilyIndex,
+					PresentQueueFamilyIndex,
+					i,
+					ImageSubresourceRange_Color
+				};
+				vkCmdPipelineBarrier(CommandBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT/*VK_PIPELINE_STAGE_TRANSFER_BIT*/,
+					0,
+					0, nullptr,
+					0, nullptr,
+					1, &ImageMemoryBarrier_UndefinedToPresent);
+			}
+			else {
+				const VkImageMemoryBarrier ImageMemoryBarrier_UndefinedToTransfer = {
+					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					nullptr,
+					0,
+					VK_ACCESS_TRANSFER_WRITE_BIT,
+					VK_IMAGE_LAYOUT_UNDEFINED, //!<「現在のレイアウト」または「UNDEFINED」を指定すること        
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, //!< デスティネーションへ
+					PresentQueueFamilyIndex,
+					PresentQueueFamilyIndex,
+					i,
+					ImageSubresourceRange_Color
+				};
+				vkCmdPipelineBarrier(CommandBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+					0,
+					0, nullptr,
+					0, nullptr,
+					1, &ImageMemoryBarrier_UndefinedToTransfer);
+				{
+					vkCmdClearColorImage(CommandBuffer, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, ClearColorValue, 1, &ImageSubresourceRange_Color);
+				}
+				const VkImageMemoryBarrier ImageMemoryBarrier_TransferToPresent = {
+					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					nullptr,
+					VK_ACCESS_TRANSFER_WRITE_BIT,
+					VK_ACCESS_MEMORY_READ_BIT,
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, //!< デスティネーションから
+					VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, //!< プレゼンテーション可能な VK_IMAGE_LAYOUT_PRESENT_SRC_KHR へ
+					PresentQueueFamilyIndex,
+					PresentQueueFamilyIndex,
+					i,
+					ImageSubresourceRange_Color
+				};
+				vkCmdPipelineBarrier(CommandBuffer,
+					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+					0,
+					0, nullptr,
+					0, nullptr,
+					1, &ImageMemoryBarrier_TransferToPresent);
+			}
 		}
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 
 	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	const VkSubmitInfo SubmitInfo = {
 		VK_STRUCTURE_TYPE_SUBMIT_INFO,
 		nullptr,
 		0, nullptr, nullptr,
-		1,  &CB,
+		1,  &CommandBuffer,
 		0, nullptr
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue)); //!< フェンスでも良い
 }
-void VK::GetSwapchainImage(const VkClearColorValue& ClearColorValue)
-{
-	//!< スワップチェインイメージの取得
-	uint32_t SwapchainImageCount;
-	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &SwapchainImageCount, nullptr));
-	assert(SwapchainImageCount && "Swapchain image count == 0");
-	SwapchainImages.resize(SwapchainImageCount);
-	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &SwapchainImageCount, SwapchainImages.data()));
-#ifdef _DEBUG
-	std::cout << "\t" << "SwapchainImageCount = " << SwapchainImageCount << std::endl;
-#endif
-	
-	//!< コマンドプール、バッファ
-	CreateCommandPool(GraphicsQueueFamilyIndex);
-	AllocateCommandBuffer(CommandPools[0], SwapchainImages.size()); //!< #TODO 現状は0番のコマンドプール決め打ち
-
-	const auto CB = CommandBuffers[0];
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CommandBufferBeginInfo_OneTime)); {
-		for (auto& i : SwapchainImages) {
-#if 0
-			ClearColor(CB, i, ClearColorValue);
-#else
-			const VkImageMemoryBarrier ImageMemoryBarrier_UndefinedToTransfer = {
-				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-				nullptr,
-				0,
-				VK_ACCESS_TRANSFER_WRITE_BIT,
-				VK_IMAGE_LAYOUT_UNDEFINED, //!<「現在のレイアウト」または「UNDEFINED」を指定すること        
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, //!< デスティネーションへ
-				PresentQueueFamilyIndex,
-				PresentQueueFamilyIndex,
-				i,
-				ImageSubresourceRange_Color
-			};
-			vkCmdPipelineBarrier(CB,
-				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &ImageMemoryBarrier_UndefinedToTransfer); 
-			{
-				vkCmdClearColorImage(CB, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearColorValue, 1, &ImageSubresourceRange_Color);
-			} 
-			const VkImageMemoryBarrier ImageMemoryBarrier_TransferToPresent = {
-				VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-				nullptr,
-				VK_ACCESS_TRANSFER_WRITE_BIT,
-				VK_ACCESS_MEMORY_READ_BIT,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, //!< デスティネーションから
-				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, //!< プレゼンテーション可能な VK_IMAGE_LAYOUT_PRESENT_SRC_KHR へ
-				PresentQueueFamilyIndex,
-				PresentQueueFamilyIndex,
-				i,
-				ImageSubresourceRange_Color
-			};
-			vkCmdPipelineBarrier(CB,
-				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &ImageMemoryBarrier_TransferToPresent);
-#endif
-		}
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-
-	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
-	const VkSubmitInfo SubmitInfo = {
-		VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		nullptr,
-		0, nullptr, nullptr,
-		1,  &CB,
-		0, nullptr
-	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
-	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue)); //!< フェンスでも良
-}
-
 void VK::CreateSwapchainImageView()
 {
 	for(auto i : SwapchainImages) {

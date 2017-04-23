@@ -14,7 +14,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	Super::OnCreate(hWnd, hInstance, Title);
 
-	//!< デバイス、キュー
 	const auto ColorFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 	CreateDevice(hWnd);
 	CheckMultiSample(ColorFormat);
@@ -22,33 +21,27 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateFence();
 
-	//!< スワップチェイン
 	CreateSwapChainOfClientRect(hWnd, ColorFormat);
 	CreateSwapChainDescriptorHeap();
 	ResizeSwapChainToClientRect();
 
-	//!< デプスステンシル
 	CreateDepthStencilDescriptorHeap();
 	ResizeDepthStencilToClientRect();
-	//!< ResizeDepthStencil() で DepthStencilResource が作られる、明示的にしなくても OnSize() からコールされる
 	
-	//!< バーテックスバッファ、インデックスバッファ
-	const auto CommandAllocator = CommandAllocators[0].Get();
-	auto CommandList = GraphicsCommandLists[0].Get();
-	CreateVertexBuffer(CommandAllocator, CommandList);
-	CreateIndexBuffer(CommandAllocator, CommandList);
-	CreateIndirectBuffer(CommandAllocator, CommandList);
-	WaitForFence();
+	{
+		const auto CA = CommandAllocators[0].Get();
+		auto CL = GraphicsCommandLists[0].Get();
+		CreateVertexBuffer(CA, CL);
+		CreateIndexBuffer(CA, CL);
+		CreateIndirectBuffer(CA, CL);
+	}
 
 	CreateTexture();
 
-	//!< ルートシグニチャ
 	CreateRootSignature();
 	
-	//!< コンスタントバッファ
 	CreateConstantBuffer();
 
-	//!< パイプライン
 	CreatePipelineState();
 
 	//CreateUnorderedAccessTexture();
