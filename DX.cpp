@@ -21,12 +21,9 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateFence();
 
-	CreateSwapChainOfClientRect(hWnd, ColorFormat);
-	CreateSwapChainDescriptorHeap();
-	ResizeSwapChainToClientRect();
+	CreateSwapchain(hWnd, ColorFormat);
 
-	CreateDepthStencilDescriptorHeap();
-	ResizeDepthStencilToClientRect();
+	CreateDepthStencil();
 	
 	{
 		const auto CA = CommandAllocators[0].Get();
@@ -71,14 +68,11 @@ void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 	CreateViewport(static_cast<FLOAT>(GetClientRectWidth()), static_cast<FLOAT>(GetClientRectHeight()));
 
 	for (auto i = 0; i < SwapChainResources.size(); ++i) {
-		const auto CommandList = GraphicsCommandLists[i].Get();
-
-		//PopulateCommandList(CommandList, SwapChainResources[i].Get());
-		{
-			const auto SwapChainResource = SwapChainResources[i].Get();
-			const auto DescriptorHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
-			PopulateCommandList(CommandList, SwapChainResource, DescriptorHandle, DirectX::Colors::SkyBlue);
-		}
+		const auto CL = GraphicsCommandLists[i].Get();
+		const auto SCR = SwapChainResources[i].Get();
+		const auto CDH = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
+		//PopulateCommandList(CL, SCR, DH);
+		PopulateCommandList(CL, SCR, CDH, DirectX::Colors::SkyBlue);
 	}
 }
 void DX::OnTimer(HWND hWnd, HINSTANCE hInstance)
@@ -603,9 +597,36 @@ void DX::CreateFence()
 #endif
 }
 
-void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height, const UINT BufferCount)
+void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
+{
+	CreateSwapChainOfClientRect(hWnd, ColorFormat);
+
+	//!< スワップチェインの枚数が決まったので、ここでコマンドリストを作成
+	//!< Count of swapchain is fixed, create commandlist here
+	{
+		DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
+		SwapChain->GetDesc1(&SwapChainDesc);
+
+		CreateCommandAllocator();
+		CreateCommandList(CommandAllocators[0].Get(), SwapChainDesc.BufferCount);
+	}
+
+	//!< ビューを作成
+	//!< Create view
+	CreateSwapChainResource();
+
+	//!< イメージの初期化 #TODO
+	//!< Initialize images
+#if 1
+	//InitializeSwapchainImage(CommandAllocators[0].Get());
+	InitializeSwapchainImage(CommandAllocators[0].Get(), &DirectX::Colors::Red);
+#endif
+}
+void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height)
 {
 	using namespace Microsoft::WRL;
+
+	const UINT BufferCount = 3;
 
 	ComPtr<IDXGIFactory4> Factory;
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.GetAddressOf())));
@@ -636,19 +657,6 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.Get(), &SwapChainDesc, NewSwapChain.GetAddressOf()));
 	VERIFY_SUCCEEDED(NewSwapChain.As(&SwapChain));
 
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "SwapChain" << std::endl;
-#endif
-
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateSwapChain" << COUT_OK << std::endl << std::endl;
-#endif
-}
-void DX::CreateSwapChainDescriptorHeap()
-{
-	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
-	SwapChain->GetDesc1(&SwapChainDesc);
-
 	const D3D12_DESCRIPTOR_HEAP_DESC DescripterHeapDesc = {
 		D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
 		SwapChainDesc.BufferCount,
@@ -658,15 +666,8 @@ void DX::CreateSwapChainDescriptorHeap()
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescripterHeapDesc, IID_PPV_ARGS(SwapChainDescriptorHeap.GetAddressOf())));
 
 #ifdef DEBUG_STDOUT
-	std::cout << "\t" << "SwapChainDescriptorHeap" << std::endl;
+	std::cout << "CreateSwapChain" << COUT_OK << std::endl << std::endl;
 #endif
-}
-
-void DX::ResetSwapChainResource()
-{
-	for (auto& i : SwapChainResources) {
-		i.Reset();
-	}
 }
 void DX::CreateSwapChainResource()
 {
@@ -689,18 +690,51 @@ void DX::CreateSwapChainResource()
 
 		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 		//!< (リソースがタイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能)
-		Device->CreateRenderTargetView(SwapChainResources[i].Get(), nullptr, GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i));
+		const auto SCR = SwapChainResources[i].Get();
+		const auto CDH = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
+		Device->CreateRenderTargetView(SCR, nullptr, CDH);
 	}
-
-	//!< スワップチェインリソースの数が決まったので、ここでコマンドリストを作成
-	CreateCommandAllocator();
-	auto CommandAllocator = CommandAllocators[0].Get();
-	CreateCommandList(CommandAllocator, SwapChainResources.size());
 
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "SwapChainResource" << std::endl;
 #endif
 }
+
+/**
+@note Vulkanと違って、スワップチェインイメージ毎に、別のコマンドリストを使用しないとダメっぽい
+*/
+void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, const DirectX::XMVECTORF32* Color)
+{
+	for (auto i = 0; i < SwapChainResources.size(); ++i) {
+		const auto CL = GraphicsCommandLists[i].Get();
+
+		VERIFY_SUCCEEDED(CL->Reset(CommandAllocator, nullptr));
+		{
+			const auto SCR = SwapChainResources[i].Get();
+			const auto CDH = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
+
+			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			if (nullptr != Color) {
+				CL->ClearRenderTargetView(CDH, *Color, 0, nullptr);
+			}
+			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		}
+		VERIFY_SUCCEEDED(CL->Close());
+	}
+
+	//!< #TODO 
+#if 1
+	const std::vector<ID3D12CommandList*> CommandLists = { GraphicsCommandLists[0].Get() };
+#else
+	std::vector<ID3D12CommandList*> CommandLists;
+	CommandLists.reserve(GraphicsCommandLists.size());
+	for (auto i : GraphicsCommandLists) { CommandLists.push_back(i.Get()); }
+#endif
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
+
+	WaitForFence();
+}
+
 void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 {
 	ResetSwapChainResource();
@@ -724,6 +758,11 @@ void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 #endif
 }
 
+void DX::CreateDepthStencil()
+{
+	CreateDepthStencilDescriptorHeap();
+	ResizeDepthStencilToClientRect();
+}
 void DX::CreateDepthStencilDescriptorHeap()
 {
 	const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
@@ -781,10 +820,10 @@ void DX::CreateDepthStencilResource(const UINT Width, const UINT Height, const D
 		&ClearValue,
 		IID_PPV_ARGS(DepthStencilResource.ReleaseAndGetAddressOf())));
 
-	auto CPUDescriptorHandle(GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
+	const auto CDH = GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	//!< (リソースがタイプドフォーマットなら D3D12_DEPTH_STENCIL_VIEW_DESC* へ nullptr 指定可能)
-	Device->CreateDepthStencilView(DepthStencilResource.Get(), nullptr, CPUDescriptorHandle);
+	Device->CreateDepthStencilView(DepthStencilResource.Get(), nullptr, CDH);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "DepthStencilView" << std::endl;
@@ -898,8 +937,8 @@ void DX::CreateConstantBufferDescriptorHeap(const UINT Size)
 		Size
 	};
 	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
-	auto CPUDescriptorHandle(GetCPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-	Device->CreateConstantBufferView(&ConstantBufferViewDesc, CPUDescriptorHandle);
+	const auto CDH = GetCPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	Device->CreateConstantBufferView(&ConstantBufferViewDesc, CDH);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateConstantBufferDescriptorHeap" << COUT_OK << std::endl << std::endl;
@@ -945,27 +984,33 @@ void DX::CreateUnorderedAccessTexture()
 	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescritporHeapDesc, IID_PPV_ARGS(UnorderedAccessTextureDescriptorHeap.GetAddressOf())));
 
-	/*const*/D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {
-		Format,
-		D3D12_SRV_DIMENSION_TEXTURE2D,
-		D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-	};
-	SRVDesc.Texture2D = {
-		0, 1, 0, 0.0f
-	};
 	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	UINT Index = 0;
-	Device->CreateShaderResourceView(UnorderedAccessTextureResource.Get(), &SRVDesc, GetCPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Index++));
+	{
+		/*const*/D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {
+			Format,
+			D3D12_SRV_DIMENSION_TEXTURE2D,
+			D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+		};
+		SRVDesc.Texture2D = {
+			0, 1, 0, 0.0f
+		};
+		const auto CDH = GetCPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Index++);
+		Device->CreateShaderResourceView(UnorderedAccessTextureResource.Get(), &SRVDesc, CDH);
+	}
 
-	/*const*/D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {
-		Format,
-		D3D12_UAV_DIMENSION_TEXTURE2D,
-	};
-	UAVDesc.Texture2D = {
-		0, 0
-	};
-	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
-	Device->CreateUnorderedAccessView(UnorderedAccessTextureResource.Get(), nullptr, &UAVDesc, GetCPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Index++));
+	{
+		/*const*/D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {
+			Format,
+			D3D12_UAV_DIMENSION_TEXTURE2D,
+		};
+		UAVDesc.Texture2D = {
+			0, 0
+		};
+		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
+		const auto CDH = GetCPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Index++);
+		Device->CreateUnorderedAccessView(UnorderedAccessTextureResource.Get(), nullptr, &UAVDesc, CDH);
+	}
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateUnorderedAccessBuffer" << COUT_OK << std::endl << std::endl;
@@ -1186,11 +1231,9 @@ void DX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resou
 		CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
-		//!< クリア
-		ClearColor(CommandList, DescriptorHandle, Color);
-
 		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
+			ClearColor(CommandList, DescriptorHandle, Color);
 		}
 		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}

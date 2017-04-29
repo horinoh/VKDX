@@ -46,7 +46,8 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, ID3D12DescriptorHeap* Des
 	WaitForFence();
 
 	//!< ビューを作成
-	Device->CreateShaderResourceView(*Resource, nullptr, GetCPUDescriptorHandle(DescriptorHeap, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+	const auto CDH = GetCPUDescriptorHandle(DescriptorHeap, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	Device->CreateShaderResourceView(*Resource, nullptr, CDH);
 
 	//!< サンプラを作成
 	CreateSampler(D3D12_SHADER_VISIBILITY_PIXEL, static_cast<const FLOAT>((*Resource)->GetDesc().MipLevels));

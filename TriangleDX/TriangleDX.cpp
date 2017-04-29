@@ -269,20 +269,20 @@ void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3
 		CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
-		//!< クリア
-		{
-			ClearColor(CommandList, DescriptorHandle, DirectX::Colors::SkyBlue);
-#if 0
-			if (nullptr != DepthStencilDescriptorHeap) {
-				auto DSDescriptorHandle(GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
-				CommandList->ClearDepthStencilView(DSDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-			}
-#endif
-		}
-
 		//!< バリア
 		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
+			//!< クリア
+			{
+				ClearColor(CommandList, DescriptorHandle, DirectX::Colors::SkyBlue);
+#if 0
+				if (nullptr != DepthStencilDescriptorHeap) {
+					auto DSDescriptorHandle(GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
+					CommandList->ClearDepthStencilView(DSDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+				}
+#endif
+			}
+
 			//!< レンダーターゲット
 			{
 				const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { DescriptorHandle };

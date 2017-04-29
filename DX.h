@@ -120,18 +120,20 @@ protected:
 
 	virtual void CreateFence();
 
-	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height, const UINT BufferCount = 2);
-	virtual void CreateSwapChainOfClientRect(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT BufferCount = 2) {
-		CreateSwapChain(hWnd, ColorFormat, static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), BufferCount);
+	virtual void CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat);
+	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height);
+	virtual void CreateSwapChainOfClientRect(HWND hWnd, const DXGI_FORMAT ColorFormat) {
+		CreateSwapChain(hWnd, ColorFormat, static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()));
 	}
-	virtual void CreateSwapChainDescriptorHeap();
-	virtual void ResetSwapChainResource();
 	virtual void CreateSwapChainResource();
+	virtual void InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, const DirectX::XMVECTORF32* Color = nullptr);
+	virtual void ResetSwapChainResource() { for (auto& i : SwapChainResources) { i.Reset(); } }
 	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
 	virtual void ResizeSwapChainToClientRect() { 
 		ResizeSwapChain(static_cast<const UINT>(GetClientRectWidth()), static_cast<const UINT>(GetClientRectHeight())); 
 	}
 
+	virtual void CreateDepthStencil();
 	virtual void CreateDepthStencilDescriptorHeap();
 	virtual void ResetDepthStencilResource();
 	virtual void CreateDepthStencilResource(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT);

@@ -250,8 +250,8 @@ void TextureDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D
 				const std::vector<ID3D12DescriptorHeap*> DescriptorHeaps = { ImageDescriptorHeap.Get() };
 				CommandList->SetDescriptorHeaps(static_cast<UINT>(DescriptorHeaps.size()), DescriptorHeaps.data());
 
-				auto GPUDescriptorHandle(GetGPUDescriptorHandle(ImageDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-				CommandList->SetGraphicsRootDescriptorTable(0, GPUDescriptorHandle);
+				const auto GDH = GetGPUDescriptorHandle(ImageDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				CommandList->SetGraphicsRootDescriptorTable(0, GDH);
 			}
 
 			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)

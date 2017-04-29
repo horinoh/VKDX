@@ -216,27 +216,26 @@ protected:
 	virtual void CreateFence();
 	virtual void CreateSemaphore();
 
+	virtual void CreateSwapchain();
 	virtual VkSurfaceFormatKHR SelectSurfaceFormat();
 	virtual VkPresentModeKHR SelectSurfacePresentMode();
 	virtual void CreateSwapchain(const uint32_t Width, const uint32_t Height);
 	virtual void CreateSwapchainOfClientRect() {
 		CreateSwapchain(static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
 	}
-	virtual void GetSwapchainImage();
-	virtual void InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkClearColorValue* ClearColorValue = nullptr);
 	virtual void CreateSwapchainImageView();
-	virtual void CreateSwapchain();
+	virtual void InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkClearColorValue* ClearColorValue = nullptr);
 	virtual void ResizeSwapchain(const uint32_t Width, const uint32_t Height);
 	virtual void ResizeSwapChainToClientRect() {
 		ResizeSwapchain(static_cast<const uint32_t>(GetClientRectWidth()), static_cast<const uint32_t>(GetClientRectHeight()));
 	}
 
+	virtual void CreateDepthStencil() { /*CreateDepthStencilImage();CreateDepthStencilDeviceMemory();CreateDepthStencilView();*/ }
 	virtual void CreateDepthStencilImage();
 	virtual void CreateDepthStencilDeviceMemory();
 	virtual void CreateDepthStencilView() {
 		CreateImageView(&DepthStencilImageView, DepthStencilImage, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, ComponentMapping_Identity, ImageSubresourceRange_DepthStencil);
 	}
-	virtual void CreateDepthStencil() { /*CreateDepthStencilImage();CreateDepthStencilDeviceMemory();CreateDepthStencilView();*/ }
 	
 	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path) {}
 	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::wstring& Path) { LoadImage(Image, DeviceMemory, ImageView, std::string(Path.begin(), Path.end())); }

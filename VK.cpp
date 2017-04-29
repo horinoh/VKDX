@@ -193,7 +193,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyImageView(Device, i, nullptr);
 	}
 	SwapchainImageViews.clear();
-	//!< SwapchainImages は vkGetSwapchainImagesKHR() で取得したもの、破棄しない
+	//!< SwapchainImages は作成したわけではなく、取得しただけなので破棄する必要はない
 	if (VK_NULL_HANDLE != Swapchain) {
 		vkDestroySwapchainKHR(Device, Swapchain, nullptr);
 		Swapchain = VK_NULL_HANDLE;
@@ -1035,6 +1035,30 @@ void VK::CreateSemaphore()
 #endif
 }
 
+void VK::CreateSwapchain()
+{
+	CreateSwapchainOfClientRect();
+	
+	//!< スワップチェインイメージの枚数が決まったので、ここでコマンドバッファを確保する
+	//!< Count of swapchain image is fixed, create commandbuffer here
+	{
+		CreateCommandPool(GraphicsQueueFamilyIndex);
+		AllocateCommandBuffer(CommandPools[0], SwapchainImages.size()); //!< #TODO 現状は0番のコマンドプール決め打ち
+	}
+
+	//!< ビューを作成
+	//!< Create view
+	CreateSwapchainImageView();
+	
+	//!< イメージの初期化
+	//!< Initialize images
+	InitializeSwapchainImage(CommandBuffers[0]);
+	//InitializeSwapchainImage(CommandBuffers[0], &VkClearColorValue({ 1.0f, 0.0f, 0.0f, 1.0f }));
+
+#ifdef DEBUG_STDOUT
+	std::cout << "CreateSwapchain" << COUT_OK << std::endl << std::endl;
+#endif
+}
 VkSurfaceFormatKHR VK::SelectSurfaceFormat()
 {
 	//!< サーフェスのフォーマットを取得
@@ -1185,56 +1209,18 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 
 		vkDestroySwapchainKHR(Device, OldSwapchain, nullptr);
 	}
-}
-void VK::CreateSwapchain()
-{
-	CreateSwapchainOfClientRect();
-	
-	GetSwapchainImage();
 
-	//!< スワップチェインイメージの枚数が決まったので、ここでコマンドバッファを確保する
-	CreateCommandPool(GraphicsQueueFamilyIndex);
-	AllocateCommandBuffer(CommandPools[0], SwapchainImages.size()); //!< #TODO 現状は0番のコマンドプール決め打ち
-
-	InitializeSwapchainImage(CommandBuffers[0]);
-	//InitializeSwapchainImage(CommandBuffers[0], &VkClearColorValue({ 1.0f, 0.0f, 0.0f, 1.0f }));
-
-	CreateSwapchainImageView();
-	
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateSwapchain" << COUT_OK << std::endl << std::endl;
-#endif
-}
-void VK::ResizeSwapchain(const uint32_t Width, const uint32_t Height)
-{
-	//!< #TODO
-	if (VK_NULL_HANDLE != Device) {
-		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
-	}
-
-	//if (!CommandPools.empty() && !CommandBuffers.empty()) {
-	//	const auto CP = CommandPools[0]; //!< #TODO 現状は0番のコマンドプール決め打ち
-	//	vkFreeCommandBuffers(Device, CP, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
-	//}
-	//CommandBuffers.clear();
-	//std::for_each(CommandPools.begin(), CommandPools.end(), [&](const VkCommandPool rhs) { vkDestroyCommandPool(Device, rhs, nullptr); });
-	//CommandPools.clear();
-
-	CreateSwapchain();
-}
-
-void VK::GetSwapchainImage()
-{
 	//!< スワップチェインイメージの取得
 	uint32_t SwapchainImageCount;
 	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &SwapchainImageCount, nullptr));
 	assert(SwapchainImageCount && "Swapchain image count == 0");
 	SwapchainImages.resize(SwapchainImageCount);
 	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &SwapchainImageCount, SwapchainImages.data()));
-#ifdef _DEBUG
-	std::cout << "\t" << "SwapchainImageCount = " << SwapchainImageCount << std::endl;
-#endif
 }
+
+/**
+@note Vulaknでは、1つのコマンドバッファで複数のスワップチェインイメージをまとめて処理できるっぽい
+*/
 void VK::InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkClearColorValue* ClearColorValue)
 {
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo_OneTime)); {
@@ -1314,6 +1300,24 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkC
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue)); //!< フェンスでも良い
 }
+void VK::ResizeSwapchain(const uint32_t Width, const uint32_t Height)
+{
+	//!< #TODO
+	if (VK_NULL_HANDLE != Device) {
+		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
+	}
+
+	//if (!CommandPools.empty() && !CommandBuffers.empty()) {
+	//	const auto CP = CommandPools[0]; //!< #TODO 現状は0番のコマンドプール決め打ち
+	//	vkFreeCommandBuffers(Device, CP, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
+	//}
+	//CommandBuffers.clear();
+	//std::for_each(CommandPools.begin(), CommandPools.end(), [&](const VkCommandPool rhs) { vkDestroyCommandPool(Device, rhs, nullptr); });
+	//CommandPools.clear();
+
+	CreateSwapchain();
+}
+
 void VK::CreateSwapchainImageView()
 {
 	for(auto i : SwapchainImages) {
