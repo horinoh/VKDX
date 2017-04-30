@@ -225,8 +225,10 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void TriangleVK::CreateVertexBuffer(const VkCommandBuffer CommandBuffer)
+void TriangleVK::CreateVertexBuffer()
 {
+	const auto CB = CommandBuffers[0];
+
 	const std::vector<Vertex> Vertices = {
 		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
 		{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
@@ -245,7 +247,7 @@ void TriangleVK::CreateVertexBuffer(const VkCommandBuffer CommandBuffer)
 		CreateDeviceLocalBuffer(&VertexBuffer, &VertexDeviceMemory, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
 		
 		//!< ステージングからデバイスローカルへのコピーコマンドを発行
-		SubmitCopyBuffer(CommandBuffer, StagingBuffer, VertexBuffer, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
+		SubmitCopyBuffer(CB, StagingBuffer, VertexBuffer, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
 	}
 	if (VK_NULL_HANDLE != StagingDeviceMemory) {
 		vkFreeMemory(Device, StagingDeviceMemory, nullptr);
@@ -262,8 +264,10 @@ void TriangleVK::CreateVertexBuffer(const VkCommandBuffer CommandBuffer)
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void TriangleVK::CreateIndexBuffer(const VkCommandBuffer CommandBuffer)
+void TriangleVK::CreateIndexBuffer()
 {
+	const auto CB = CommandBuffers[0];
+
 	const std::vector<uint32_t> Indices = { 0, 1, 2 };
 
 	//!< vkCmdDrawIndexed() が引数に取るので覚えておく必要がある
@@ -281,7 +285,7 @@ void TriangleVK::CreateIndexBuffer(const VkCommandBuffer CommandBuffer)
 		CreateDeviceLocalBuffer(&IndexBuffer, &IndexDeviceMemory, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
 		
 		//!< ステージングからデバイスローカルへのコピーコマンドを発行
-		SubmitCopyBuffer(CommandBuffer, StagingBuffer, IndexBuffer, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
+		SubmitCopyBuffer(CB, StagingBuffer, IndexBuffer, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
 	}
 	if (VK_NULL_HANDLE != StagingDeviceMemory) {
 		vkFreeMemory(Device, StagingDeviceMemory, nullptr);

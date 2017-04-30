@@ -17,7 +17,7 @@ public:
 
 protected:
 #ifdef USE_DRAW_INDIRECT
-	virtual void CreateIndirectBuffer(const VkCommandBuffer CommandBuffer) override { CreateIndirectBuffer_Indirect4Vertices(CommandBuffer); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Indirect4Vertices(); }
 #endif
 
 	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const override {

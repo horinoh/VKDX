@@ -242,9 +242,9 @@ protected:
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 	virtual void CreateViewportTopFront(const float Width, const float Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 
-	virtual void CreateVertexBuffer(const VkCommandBuffer CommandBuffer) {}
-	virtual void CreateIndexBuffer(const VkCommandBuffer CommandBuffer) {}
-	virtual void CreateIndirectBuffer(const VkCommandBuffer CommandBuffer) {}
+	virtual void CreateVertexBuffer() {}
+	virtual void CreateIndexBuffer() {}
+	virtual void CreateIndirectBuffer() {}
 	virtual void CreateUniformBuffer();
 
 	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const {}

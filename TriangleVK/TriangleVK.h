@@ -16,10 +16,10 @@ public:
 	virtual ~TriangleVK() {}
 
 protected:
-	virtual void CreateVertexBuffer(const VkCommandBuffer CommandBuffer) override;
-	virtual void CreateIndexBuffer(const VkCommandBuffer CommandBuffer) override;
+	virtual void CreateVertexBuffer() override;
+	virtual void CreateIndexBuffer() override;
 #ifdef USE_DRAW_INDIRECT
-	virtual void CreateIndirectBuffer(const VkCommandBuffer CommandBuffer) override { CreateIndirectBuffer_IndexedIndirect(CommandBuffer); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_IndexedIndirect(); }
 #endif
 
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {

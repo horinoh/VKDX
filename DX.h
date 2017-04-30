@@ -132,6 +132,9 @@ protected:
 	virtual void ResizeSwapChainToClientRect() { 
 		ResizeSwapChain(static_cast<const UINT>(GetClientRectWidth()), static_cast<const UINT>(GetClientRectHeight())); 
 	}
+	UINT AcquireNextBackBufferIndex() const {
+		return 0xffffffff == CurrentBackBufferIndex ? SwapChain->GetCurrentBackBufferIndex() : (CurrentBackBufferIndex + 1) % static_cast<const UINT>(SwapChainResources.size());
+	}
 
 	virtual void CreateDepthStencil();
 	virtual void CreateDepthStencilDescriptorHeap();
@@ -146,9 +149,9 @@ protected:
 	virtual void LoadImage(ID3D12Resource** Resource, ID3D12DescriptorHeap** DescriptorHeap, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { CreateImageDescriptorHeap(DescriptorHeap); }
 	virtual void LoadImage(ID3D12Resource** Resource, ID3D12DescriptorHeap** DescriptorHeap, const std::string& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { LoadImage(Resource, DescriptorHeap, std::wstring(Path.begin(), Path.end()), ResourceState); }
 	
-	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) {}
-	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) {}
-	virtual void CreateIndirectBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) {}
+	virtual void CreateVertexBuffer() {}
+	virtual void CreateIndexBuffer() {}
+	virtual void CreateIndirectBuffer() {}
 	virtual void CreateConstantBuffer();
 	virtual void CreateConstantBufferDescriptorHeap(const UINT Size);
 	virtual void CreateUnorderedAccessTexture();
@@ -191,7 +194,7 @@ protected:
 
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> SwapChainDescriptorHeap;
-	UINT CurrentBackBufferIndex;
+	UINT CurrentBackBufferIndex = 0xffffffff;
 	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> SwapChainResources;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> DepthStencilResource;

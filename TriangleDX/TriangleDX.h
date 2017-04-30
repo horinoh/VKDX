@@ -17,10 +17,10 @@ public:
 
 protected:
 	//virtual void CreateInputLayout() override { CreateInputLayout_PositionColor(); }
-	virtual void CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) override;
-	virtual void CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) override;
+	virtual void CreateVertexBuffer() override;
+	virtual void CreateIndexBuffer() override;
 #ifdef USE_DRAW_INDIRECT
-	virtual void CreateIndirectBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList) override { CreateIndirectBuffer_IndexedIndirect(CommandAllocator, CommandList); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_IndexedIndirect(); }
 #endif
 
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const override {

@@ -225,15 +225,18 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void ParametricSurfaceDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
+void ParametricSurfaceDX::CreateVertexBuffer()
 {
+	const auto CA = CommandAllocators[0].Get();
+	const auto CL = GraphicsCommandLists[0].Get();
+
 	const std::vector<DirectX::XMFLOAT3> Vertices = {
 		{ 0.0f, 0.5f, 0.0f },
 	};
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
 
-	CreateDefaultResource(CommandAllocator, CommandList, VertexBufferResource.GetAddressOf(), Size, Vertices.data());
+	CreateDefaultResource(CA, CL, VertexBufferResource.GetAddressOf(), Size, Vertices.data());
 
 	VertexBufferViews.push_back({ VertexBufferResource->GetGPUVirtualAddress(), Size, Stride });
 
@@ -241,13 +244,16 @@ void ParametricSurfaceDX::CreateVertexBuffer(ID3D12CommandAllocator* CommandAllo
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void ParametricSurfaceDX::CreateIndexBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
+void ParametricSurfaceDX::CreateIndexBuffer()
 {
+	const auto CA = CommandAllocators[0].Get();
+	const auto CL = GraphicsCommandLists[0].Get();
+
 	const std::vector<UINT32> Indices = { 0 };
 	IndexCount = static_cast<UINT32>(Indices.size());
 	const auto Size = static_cast<UINT32>(sizeof(Indices[0]) * IndexCount);
 
-	CreateDefaultResource(CommandAllocator, CommandList, IndexBufferResource.GetAddressOf(), Size, Indices.data());
+	CreateDefaultResource(CA, CL, IndexBufferResource.GetAddressOf(), Size, Indices.data());
 
 	IndexBufferView = {
 		IndexBufferResource->GetGPUVirtualAddress(),

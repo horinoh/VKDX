@@ -2,15 +2,18 @@
 
 #include "DXExt.h"
 
-void DXExt::CreateIndirectBuffer_Indirect4Vertices(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
+void DXExt::CreateIndirectBuffer_Indirect4Vertices()
 {
+	const auto CA = CommandAllocators[0].Get();
+	const auto CL = GraphicsCommandLists[0].Get();
+
 	const D3D12_DRAW_ARGUMENTS DrawArguments = {
 		4, 1, 0, 0
 	};
 	const auto Stride = sizeof(DrawArguments);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 
-	CreateDefaultResource(CommandAllocator, CommandList, IndirectBufferResource.GetAddressOf(), Size, &DrawArguments);
+	CreateDefaultResource(CA, CL, IndirectBufferResource.GetAddressOf(), Size, &DrawArguments);
 
 	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndirectArgumentDescs = {
 		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW },
@@ -22,15 +25,18 @@ void DXExt::CreateIndirectBuffer_Indirect4Vertices(ID3D12CommandAllocator* Comma
 	};
 	Device->CreateCommandSignature(&CommandSignatureDesc, RootSignature.Get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
 }
-void DXExt::CreateIndirectBuffer_IndexedIndirect(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList)
+void DXExt::CreateIndirectBuffer_IndexedIndirect()
 {
+	const auto CA = CommandAllocators[0].Get();
+	const auto CL = GraphicsCommandLists[0].Get();
+
 	const D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments = {
 		IndexCount, 1, 0, 0, 0
 	};
 	const auto Stride = sizeof(DrawIndexedArguments);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 
-	CreateDefaultResource(CommandAllocator, CommandList, IndirectBufferResource.GetAddressOf(), Size, &DrawIndexedArguments);
+	CreateDefaultResource(CA, CL, IndirectBufferResource.GetAddressOf(), Size, &DrawIndexedArguments);
 
 	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndirectArgumentDescs = {
 		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED },

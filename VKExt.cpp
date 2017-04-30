@@ -20,8 +20,10 @@ void VKExt::CreateSampler_LinearRepeat(const float MaxLOD)
 	VERIFY_SUCCEEDED(vkCreateSampler(Device, &SamplerCreateInfo, nullptr, &Sampler));
 }
 
-void VKExt::CreateIndirectBuffer_Indirect4Vertices(const VkCommandBuffer CommandBuffer)
+void VKExt::CreateIndirectBuffer_Indirect4Vertices()
 {
+	const auto CB = CommandBuffers[0];
+
 	const VkDrawIndirectCommand DrawIndirectCommand = {
 		4, 1, 0, 0
 	};
@@ -38,7 +40,7 @@ void VKExt::CreateIndirectBuffer_Indirect4Vertices(const VkCommandBuffer Command
 		CreateDeviceLocalBuffer(&IndirectBuffer, &IndirectDeviceMemory, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
 
 		//!< ステージングからデバイスローカルへのコピーコマンドを発行
-		SubmitCopyBuffer(CommandBuffer, StagingBuffer, IndirectBuffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
+		SubmitCopyBuffer(CB, StagingBuffer, IndirectBuffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
 	}
 	if (VK_NULL_HANDLE != StagingDeviceMemory) {
 		vkFreeMemory(Device, StagingDeviceMemory, nullptr);
@@ -47,8 +49,10 @@ void VKExt::CreateIndirectBuffer_Indirect4Vertices(const VkCommandBuffer Command
 		vkDestroyBuffer(Device, StagingBuffer, nullptr);
 	}
 }
-void VKExt::CreateIndirectBuffer_IndexedIndirect(const VkCommandBuffer CommandBuffer)
+void VKExt::CreateIndirectBuffer_IndexedIndirect()
 {
+	const auto CB = CommandBuffers[0];
+
 	const VkDrawIndexedIndirectCommand DrawIndexedIndirectCommand = {
 		IndexCount, 1, 0, 0, 0
 	};
@@ -65,7 +69,7 @@ void VKExt::CreateIndirectBuffer_IndexedIndirect(const VkCommandBuffer CommandBu
 		CreateDeviceLocalBuffer(&IndirectBuffer, &IndirectDeviceMemory, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
 
 		//!< ステージングからデバイスローカルへのコピーコマンドを発行
-		SubmitCopyBuffer(CommandBuffer, StagingBuffer, IndirectBuffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
+		SubmitCopyBuffer(CB, StagingBuffer, IndirectBuffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
 	}
 	if (VK_NULL_HANDLE != StagingDeviceMemory) {
 		vkFreeMemory(Device, StagingDeviceMemory, nullptr);

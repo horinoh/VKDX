@@ -25,13 +25,9 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateDepthStencil();
 	
-	{
-		const auto CA = CommandAllocators[0].Get();
-		auto CL = GraphicsCommandLists[0].Get();
-		CreateVertexBuffer(CA, CL);
-		CreateIndexBuffer(CA, CL);
-		CreateIndirectBuffer(CA, CL);
-	}
+	CreateVertexBuffer();
+	CreateIndexBuffer();
+	CreateIndirectBuffer();
 
 	CreateTexture();
 
@@ -722,7 +718,7 @@ void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, cons
 		VERIFY_SUCCEEDED(CL->Close());
 	}
 
-	//!< #TODO 
+	//!< #TODO : 0 ”Ô–Ú‚µ‚©ƒNƒŠƒA‚µ‚Ä‚¢‚È‚¢
 #if 1
 	const std::vector<ID3D12CommandList*> CommandLists = { GraphicsCommandLists[0].Get() };
 #else
@@ -744,11 +740,6 @@ void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 	VERIFY_SUCCEEDED(SwapChain->ResizeBuffers(SwapChainDesc.BufferCount, Width, Height, SwapChainDesc.Format, SwapChainDesc.Flags));
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "ResizeBuffers" << std::endl;
-#endif
-
-	CurrentBackBufferIndex = SwapChain->GetCurrentBackBufferIndex();
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "CurrentBackBufferIndex = " << CurrentBackBufferIndex << std::endl;
 #endif
 
 	CreateSwapChainResource();
@@ -1243,14 +1234,14 @@ void DX::Draw()
 {
 	WaitForFence();
 
-	//CurrentBackBufferIndex = ++CurrentBackBufferIndex % static_cast<const UINT>(SwapChainResources.size());
+	CurrentBackBufferIndex = AcquireNextBackBufferIndex();
 
-	const std::vector<ID3D12CommandList*> CommandLists = { GraphicsCommandLists[CurrentBackBufferIndex].Get() };
+	const std::vector<ID3D12CommandList*> CommandLists = { 
+		GraphicsCommandLists[CurrentBackBufferIndex].Get() 
+	};
 	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
 	
 	Present();
-
-	CurrentBackBufferIndex = ++CurrentBackBufferIndex % static_cast<const UINT>(SwapChainResources.size());
 }
 void DX::Present()
 {

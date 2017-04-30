@@ -27,12 +27,9 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateDepthStencil();
 
-	{
-		const auto CB = CommandBuffers[0];
-		CreateVertexBuffer(CB);
-		CreateIndexBuffer(CB);
-		CreateIndirectBuffer(CB);
-	}
+	CreateVertexBuffer();
+	CreateIndexBuffer();
+	CreateIndirectBuffer();
 
 	CreateTexture();
 
