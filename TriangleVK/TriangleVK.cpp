@@ -250,10 +250,10 @@ void TriangleVK::CreateVertexBuffer()
 		SubmitCopyBuffer(CB, StagingBuffer, VertexBuffer, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
 	}
 	if (VK_NULL_HANDLE != StagingDeviceMemory) {
-		vkFreeMemory(Device, StagingDeviceMemory, nullptr);
+		vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
 	}
 	if (VK_NULL_HANDLE != StagingBuffer) {
-		vkDestroyBuffer(Device, StagingBuffer, nullptr);
+		vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
 	}
 
 #ifdef _DEBUG
@@ -288,10 +288,10 @@ void TriangleVK::CreateIndexBuffer()
 		SubmitCopyBuffer(CB, StagingBuffer, IndexBuffer, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
 	}
 	if (VK_NULL_HANDLE != StagingDeviceMemory) {
-		vkFreeMemory(Device, StagingDeviceMemory, nullptr);
+		vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
 	}
 	if (VK_NULL_HANDLE != StagingBuffer) {
-		vkDestroyBuffer(Device, StagingBuffer, nullptr);
+		vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
 	}
 
 #ifdef _DEBUG

@@ -46,6 +46,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 }
 /**
 @note 殆どのものを壊して作り直さないとダメ #TODO
+almost every thing must be recreated
 
 LEARNING VULKAN : p367
 need to destroy and recreate the framebuffer,
@@ -72,20 +73,12 @@ void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 		PopulateCommandBuffer(CommandBuffers[i], Framebuffers[i], SwapchainImages[i], Colors::SkyBlue);
 	}
 }
-void VK::OnTimer(HWND hWnd, HINSTANCE hInstance)
-{
-	Super::OnTimer(hWnd, hInstance);
-}
-void VK::OnPaint(HWND hWnd, HINSTANCE hInstance)
-{
-	Super::OnPaint(hWnd, hInstance);
-
-	Draw();
-}
 void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnDestroy(hWnd, hInstance);
 
+	//!< GPUが完了するまでここで待機 
+	//!< Wait GPU
 	if (VK_NULL_HANDLE != Device) {
 		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	}
@@ -93,20 +86,20 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	DestroyFramebuffer();
 	
 	if (VK_NULL_HANDLE != RenderPass) {
-		vkDestroyRenderPass(Device, RenderPass, nullptr);
+		vkDestroyRenderPass(Device, RenderPass, GetAllocationCallbacks());
 		RenderPass = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != Pipeline) {
-		vkDestroyPipeline(Device, Pipeline, nullptr);
+		vkDestroyPipeline(Device, Pipeline, GetAllocationCallbacks());
 		Pipeline = VK_NULL_HANDLE;
 	}
 	//if (VK_NULL_HANDLE != PipelineCache) {
-	//	vkDestroyPipelineCache(Device, PipelineCache, nullptr);
+	//	vkDestroyPipelineCache(Device, PipelineCache, GetAllocationCallbacks());
 	//	PipelineCache = VK_NULL_HANDLE;
 	//}
 
 	if (VK_NULL_HANDLE != PipelineLayout) {
-		vkDestroyPipelineLayout(Device, PipelineLayout, nullptr);
+		vkDestroyPipelineLayout(Device, PipelineLayout, GetAllocationCallbacks());
 	}
 
 	if (!DescriptorSets.empty()) {
@@ -114,85 +107,84 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 	DescriptorSets.clear();
 	if (VK_NULL_HANDLE != DescriptorPool) {
-		//vkResetDescriptorPool(Device, DescriptorPool, 0);
-		vkDestroyDescriptorPool(Device, DescriptorPool, nullptr);
+		vkDestroyDescriptorPool(Device, DescriptorPool, GetAllocationCallbacks());
 		DescriptorPool = VK_NULL_HANDLE;
 	}
 	for (auto i : DescriptorSetLayouts) {
-		vkDestroyDescriptorSetLayout(Device, i, nullptr);
+		vkDestroyDescriptorSetLayout(Device, i, GetAllocationCallbacks());
 	}
 	DescriptorSetLayouts.clear();
 
 	if (VK_NULL_HANDLE != UniformDeviceMemory) {
-		vkFreeMemory(Device, UniformDeviceMemory, nullptr);
+		vkFreeMemory(Device, UniformDeviceMemory, GetAllocationCallbacks());
 		UniformDeviceMemory = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != UniformBuffer) {
-		vkDestroyBuffer(Device, UniformBuffer, nullptr);
+		vkDestroyBuffer(Device, UniformBuffer, GetAllocationCallbacks());
 		UniformBuffer = VK_NULL_HANDLE;
 	}
 
 	if (VK_NULL_HANDLE != IndirectDeviceMemory) {
-		vkFreeMemory(Device, IndirectDeviceMemory, nullptr);
+		vkFreeMemory(Device, IndirectDeviceMemory, GetAllocationCallbacks());
 		IndirectDeviceMemory = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != IndirectBuffer) {
-		vkDestroyBuffer(Device, IndirectBuffer, nullptr);
+		vkDestroyBuffer(Device, IndirectBuffer, GetAllocationCallbacks());
 		IndirectBuffer = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != IndexDeviceMemory) {
-		vkFreeMemory(Device, IndexDeviceMemory, nullptr);
+		vkFreeMemory(Device, IndexDeviceMemory, GetAllocationCallbacks());
 		IndexDeviceMemory = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != IndexBuffer) {
-		vkDestroyBuffer(Device, IndexBuffer, nullptr);
+		vkDestroyBuffer(Device, IndexBuffer, GetAllocationCallbacks());
 		IndexBuffer = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != VertexDeviceMemory) {
-		vkFreeMemory(Device, VertexDeviceMemory, nullptr);
+		vkFreeMemory(Device, VertexDeviceMemory, GetAllocationCallbacks());
 		VertexDeviceMemory = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != VertexBuffer) {
-		vkDestroyBuffer(Device, VertexBuffer, nullptr);
+		vkDestroyBuffer(Device, VertexBuffer, GetAllocationCallbacks());
 		VertexBuffer = VK_NULL_HANDLE;
 	}
 
 	if (VK_NULL_HANDLE != Sampler) {
-		vkDestroySampler(Device, Sampler, nullptr);
+		vkDestroySampler(Device, Sampler, GetAllocationCallbacks());
 	}
 	if (VK_NULL_HANDLE != ImageView) {
-		vkDestroyImageView(Device, ImageView, nullptr);
+		vkDestroyImageView(Device, ImageView, GetAllocationCallbacks());
 		ImageView = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != ImageDeviceMemory) {
-		vkFreeMemory(Device, ImageDeviceMemory, nullptr);
+		vkFreeMemory(Device, ImageDeviceMemory, GetAllocationCallbacks());
 		ImageDeviceMemory = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != Image) {
-		vkDestroyImage(Device, Image, nullptr);
+		vkDestroyImage(Device, Image, GetAllocationCallbacks());
 		Image = VK_NULL_HANDLE;
 	}
 
 	if (VK_NULL_HANDLE != DepthStencilImageView) {
-		vkDestroyImageView(Device, DepthStencilImageView, nullptr);
+		vkDestroyImageView(Device, DepthStencilImageView, GetAllocationCallbacks());
 		DepthStencilImageView = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != DepthStencilDeviceMemory) {
-		vkFreeMemory(Device, DepthStencilDeviceMemory, nullptr);
+		vkFreeMemory(Device, DepthStencilDeviceMemory, GetAllocationCallbacks());
 		DepthStencilDeviceMemory = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != DepthStencilImage) {
-		vkDestroyImage(Device, DepthStencilImage, nullptr);
+		vkDestroyImage(Device, DepthStencilImage, GetAllocationCallbacks());
 		DepthStencilImage = VK_NULL_HANDLE;
 	}
 
 	for (auto i : SwapchainImageViews) {
-		vkDestroyImageView(Device, i, nullptr);
+		vkDestroyImageView(Device, i, GetAllocationCallbacks());
 	}
 	SwapchainImageViews.clear();
-	//!< SwapchainImages は作成したわけではなく、取得しただけなので破棄する必要はない
+	//!< SwapchainImages は取得したもの、破棄しない
 	if (VK_NULL_HANDLE != Swapchain) {
-		vkDestroySwapchainKHR(Device, Swapchain, nullptr);
+		vkDestroySwapchainKHR(Device, Swapchain, GetAllocationCallbacks());
 		Swapchain = VK_NULL_HANDLE;
 	}
 
@@ -201,33 +193,33 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkFreeCommandBuffers(Device, CP, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
 	}
 	CommandBuffers.clear();
-	std::for_each(CommandPools.begin(), CommandPools.end(), [&](const VkCommandPool rhs) { vkDestroyCommandPool(Device, rhs, nullptr); });
+	std::for_each(CommandPools.begin(), CommandPools.end(), [&](const VkCommandPool rhs) { vkDestroyCommandPool(Device, rhs, GetAllocationCallbacks()); });
 	CommandPools.clear();
 
 	if (VK_NULL_HANDLE != RenderFinishedSemaphore) {
-		vkDestroySemaphore(Device, RenderFinishedSemaphore, nullptr);
+		vkDestroySemaphore(Device, RenderFinishedSemaphore, GetAllocationCallbacks());
 		RenderFinishedSemaphore = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != NextImageAcquiredSemaphore) {
-		vkDestroySemaphore(Device, NextImageAcquiredSemaphore, nullptr);
+		vkDestroySemaphore(Device, NextImageAcquiredSemaphore, GetAllocationCallbacks());
 		NextImageAcquiredSemaphore = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != Fence) {
-		vkDestroyFence(Device, Fence, nullptr);
+		vkDestroyFence(Device, Fence, GetAllocationCallbacks());
 		Fence = VK_NULL_HANDLE;
 	}
 
 	//!< Queue は vkGetDeviceQueue() で取得したもの、破棄しない
 
 	if (VK_NULL_HANDLE != Device) {
-		vkDestroyDevice(Device, nullptr);
+		vkDestroyDevice(Device, GetAllocationCallbacks());
 		Device = VK_NULL_HANDLE;
 	}
 	
 	//!< PhysicalDevice は vkEnumeratePhysicalDevices() で取得したもの、破棄しない
 
 	if (VK_NULL_HANDLE != Surface) {
-		vkDestroySurfaceKHR(Instance, Surface, nullptr);
+		vkDestroySurfaceKHR(Instance, Surface, GetAllocationCallbacks());
 		Surface = VK_NULL_HANDLE;
 	}
 
@@ -239,8 +231,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 #endif
 
 	if (VK_NULL_HANDLE != Instance) {
-		//vkDestroyInstance(Instance, &AllocationCallbacks);
-		vkDestroyInstance(Instance, nullptr);
+		vkDestroyInstance(Instance, GetAllocationCallbacks());
 		Instance = VK_NULL_HANDLE;
 	}
 }
@@ -409,7 +400,7 @@ void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const si
 		VK_SHARING_MODE_EXCLUSIVE,
 		0, nullptr
 	};
-	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, nullptr, Buffer));
+	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, GetAllocationCallbacks(), Buffer));
 }
 
 void VK::CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers) const
@@ -430,7 +421,7 @@ void VK::CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkImag
 		0, nullptr,
 		VK_IMAGE_LAYOUT_UNDEFINED
 	};
-	VERIFY_SUCCEEDED(vkCreateImage(Device, &ImageCreateInfo, nullptr, Image));
+	VERIFY_SUCCEEDED(vkCreateImage(Device, &ImageCreateInfo, GetAllocationCallbacks(), Image));
 }
 
 void VK::CopyToHostVisibleMemory(const VkBuffer Buffer, const VkDeviceMemory DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset)
@@ -502,7 +493,7 @@ void VK::SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer Sr
 	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device)); //!< フェンスでも良い
 }
 
-void VK::CreateStagingBufferAndCopyToMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source /*= nullptr*/, const VkDeviceSize Offset /*= 0*/)
+void VK::CreateStagingBufferAndCopyToMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset)
 {
 	//!< 転送元のバッファを作成
 	CreateBuffer(Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
@@ -514,7 +505,7 @@ void VK::CreateStagingBufferAndCopyToMemory(VkBuffer* Buffer, VkDeviceMemory* De
 	//!< バッファとメモリをバインド
 	BindDeviceMemory(*Buffer, *DeviceMemory, Offset);
 }
-void VK::CreateDeviceLocalBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkBufferUsageFlags Usage, const size_t Size, const VkDeviceSize Offset /*= 0*/)
+void VK::CreateDeviceLocalBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkBufferUsageFlags Usage, const size_t Size, const VkDeviceSize Offset)
 {
 	//!< バッファを作成
 	CreateBuffer(Buffer, Usage, Size);
@@ -537,7 +528,7 @@ void VK::CreateImageView(VkImageView* ImageView, const VkImage Image, const VkIm
 		ComponentMapping,
 		ImageSubresourceRange
 	};
-	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, nullptr, ImageView));
+	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, GetAllocationCallbacks(), ImageView));
 
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "ImageView" << std::endl;
@@ -618,8 +609,7 @@ void VK::CreateInstance()
 		static_cast<uint32_t>(EnabledExtensions.size()), EnabledExtensions.data()
 	};
 
-	//VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, &AllocationCallbacks, &Instance));
-	VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, nullptr, &Instance));
+	VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, GetAllocationCallbacks(), &Instance));
 
 	CreateDebugReportCallback();
 
@@ -682,7 +672,7 @@ void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
 		hInstance,
 		hWnd
 	};
-	VERIFY_SUCCEEDED(vkCreateWin32SurfaceKHR(Instance, &SurfaceCreateInfo, nullptr, &Surface));
+	VERIFY_SUCCEEDED(vkCreateWin32SurfaceKHR(Instance, &SurfaceCreateInfo, GetAllocationCallbacks(), &Surface));
 #else
 	assert(false && "Not supported");
 #endif
@@ -925,7 +915,7 @@ void VK::CreateDevice()
 		static_cast<uint32_t>(EnabledExtensions.size()), EnabledExtensions.data(),
 		nullptr
 	};
-	VERIFY_SUCCEEDED(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, nullptr, &Device));
+	VERIFY_SUCCEEDED(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, GetAllocationCallbacks(), &Device));
 
 	//!< キューの取得 (グラフィック、プレゼントキューは同じインデックスの場合もあるが別名として取得)
 	vkGetDeviceQueue(Device, GraphicsQueueFamilyIndex, 0, &GraphicsQueue);
@@ -944,6 +934,45 @@ void VK::CreateDebugMarker()
 #endif
 }
 
+/**
+@brief CPU と GPU の同期
+*/
+void VK::CreateFence()
+{
+	const VkFenceCreateInfo FenceCreateInfo = {
+		VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+		nullptr,
+		VK_FENCE_CREATE_SIGNALED_BIT //!< 初回と２回目以降を同じに扱う為に、シグナル済み状態で作成
+	};
+	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, GetAllocationCallbacks(), &Fence));
+
+#ifdef DEBUG_STDOUT
+	std::cout << "CreateFence" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+/**
+@brief 複数キュー間の同期、単一キューへの疎粒度のサブミットの同期
+*/
+void VK::CreateSemaphore()
+{
+	const VkSemaphoreCreateInfo SemaphoreCreateInfo = {
+		VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+		nullptr,
+		0
+	};
+
+	//!< プレゼント完了同期用
+	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, GetAllocationCallbacks(), &NextImageAcquiredSemaphore));
+
+	//!< 描画完了同期用
+	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, GetAllocationCallbacks(), &RenderFinishedSemaphore));
+
+#ifdef _DEBUG
+	std::cout << "CreateSemaphore" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
 void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 {
 	const VkCommandPoolCreateInfo CommandPoolInfo = {
@@ -958,7 +987,7 @@ void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 	};
 
 	VkCommandPool CommandPool;
-	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, nullptr, &CommandPool));
+	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, GetAllocationCallbacks(), &CommandPool));
 	CommandPools.push_back(CommandPool);
 
 #ifdef DEBUG_STDOUT
@@ -993,45 +1022,6 @@ void VK::AllocateCommandBuffer(const VkCommandPool CommandPool, const size_t Cou
 #endif
 }
 
-/**
-@brief CPU と GPU の同期
-*/
-void VK::CreateFence()
-{
-	const VkFenceCreateInfo FenceCreateInfo = {
-		VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-		nullptr,
-		VK_FENCE_CREATE_SIGNALED_BIT //!< 初回と２回目以降を同じに扱う為に、シグナル済み状態で作成
-	};
-	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, nullptr, &Fence));
-
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateFence" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
-/**
-@brief 複数キュー間の同期、単一キューへの疎粒度のサブミットの同期
-*/
-void VK::CreateSemaphore()
-{
-	const VkSemaphoreCreateInfo SemaphoreCreateInfo = {
-		VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-		nullptr,
-		0
-	};
-
-	//!< プレゼント完了同期用
-	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &NextImageAcquiredSemaphore));
-
-	//!< 描画完了同期用
-	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderFinishedSemaphore));
-
-#ifdef _DEBUG
-	std::cout << "CreateSemaphore" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
 void VK::CreateSwapchain()
 {
 	CreateSwapchainOfClientRect();
@@ -1049,8 +1039,8 @@ void VK::CreateSwapchain()
 	
 	//!< イメージの初期化
 	//!< Initialize images
-	InitializeSwapchainImage(CommandBuffers[0]);
-	//InitializeSwapchainImage(CommandBuffers[0], &VkClearColorValue({ 1.0f, 0.0f, 0.0f, 1.0f }));
+	//InitializeSwapchainImage(CommandBuffers[0]);
+	InitializeSwapchainImage(CommandBuffers[0], &Colors::Red);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateSwapchain" << COUT_OK << std::endl << std::endl;
@@ -1194,17 +1184,17 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 		true,
 		OldSwapchain
 	};
-	VERIFY_SUCCEEDED(vkCreateSwapchainKHR(Device, &SwapchainCreateInfo, nullptr, &Swapchain));
+	VERIFY_SUCCEEDED(vkCreateSwapchainKHR(Device, &SwapchainCreateInfo, GetAllocationCallbacks(), &Swapchain));
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "Swapchain" << std::endl;
 #endif
 	if (VK_NULL_HANDLE != OldSwapchain) {
 		for (auto i : SwapchainImageViews) {
-			vkDestroyImageView(Device, i, nullptr);
+			vkDestroyImageView(Device, i, GetAllocationCallbacks());
 		}
 		SwapchainImageViews.clear();
 
-		vkDestroySwapchainKHR(Device, OldSwapchain, nullptr);
+		vkDestroySwapchainKHR(Device, OldSwapchain, GetAllocationCallbacks());
 	}
 
 	//!< スワップチェインイメージの取得
@@ -1309,7 +1299,7 @@ void VK::ResizeSwapchain(const uint32_t Width, const uint32_t Height)
 	//	vkFreeCommandBuffers(Device, CP, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
 	//}
 	//CommandBuffers.clear();
-	//std::for_each(CommandPools.begin(), CommandPools.end(), [&](const VkCommandPool rhs) { vkDestroyCommandPool(Device, rhs, nullptr); });
+	//std::for_each(CommandPools.begin(), CommandPools.end(), [&](const VkCommandPool rhs) { vkDestroyCommandPool(Device, rhs, GetAllocationCallbacks()); });
 	//CommandPools.clear();
 
 	CreateSwapchain();
@@ -1400,7 +1390,7 @@ void VK::CreateUniformBuffer()
 		VK_WHOLE_SIZE
 	};
 	VkBufferView BufferView = VK_NULL_HANDLE;
-	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BufferViewCreateInfo, nullptr, &BufferView));
+	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BufferViewCreateInfo, GetAllocationCallbacks(), &BufferView));
 
 	//!< 書き込み
 	const VkDescriptorBufferInfo UniformDescriptorBufferInfo = {
@@ -1461,7 +1451,7 @@ void VK::CreateDescriptorSetLayout()
 		static_cast<uint32_t>(DescriptorSetLayoutBindings.size()), DescriptorSetLayoutBindings.data()
 	};
 	VkDescriptorSetLayout DescriptorSetLayout = VK_NULL_HANDLE;
-	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, nullptr, &DescriptorSetLayout));
+	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, GetAllocationCallbacks(), &DescriptorSetLayout));
 	DescriptorSetLayouts.push_back(DescriptorSetLayout);
 
 #ifdef DEBUG_STDOUT
@@ -1498,7 +1488,7 @@ void VK::CreateDescriptorSet()
 			MaxSets,
 			static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
 		};
-		VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, nullptr, &DescriptorPool));
+		VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, GetAllocationCallbacks(), &DescriptorPool));
 		assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
 
 		const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
@@ -1536,7 +1526,7 @@ void VK::UpdateDescriptorSet()
 void VK::DestroyFramebuffer()
 {
 	for (auto i : Framebuffers) {
-		vkDestroyFramebuffer(Device, i, nullptr);
+		vkDestroyFramebuffer(Device, i, GetAllocationCallbacks());
 	}
 	Framebuffers.clear();
 }
@@ -1561,7 +1551,7 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 				0,
 				Size, reinterpret_cast<uint32_t*>(Data)
 			};
-			VERIFY_SUCCEEDED(vkCreateShaderModule(Device, &ModuleCreateInfo, nullptr, &ShaderModule));
+			VERIFY_SUCCEEDED(vkCreateShaderModule(Device, &ModuleCreateInfo, GetAllocationCallbacks(), &ShaderModule));
 
 			delete[] Data;
 		}
@@ -1599,7 +1589,7 @@ VkPipelineCache VK::LoadPipelineCache(const std::wstring& Path) const
 				0,
 				Size, Data
 			};
-			VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, nullptr, &PipelineCache));
+			VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, GetAllocationCallbacks(), &PipelineCache));
 
 			delete[] Data;
 		}
@@ -1648,7 +1638,7 @@ VkPipelineCache VK::CreatePipelineCache()
 			0,
 			0, nullptr
 		};
-		VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, nullptr, &PipelineCache));
+		VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, GetAllocationCallbacks(), &PipelineCache));
 	}
 	else {
 #ifdef _DEBUG
@@ -1790,7 +1780,7 @@ void VK::CreateGraphicsPipeline()
 		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
 		static_cast<uint32_t>(PushConstantRanges.size()), PushConstantRanges.data()
 	};
-	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, nullptr, &PipelineLayout));
+	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, GetAllocationCallbacks(), &PipelineLayout));
 	//!< 本来 PipelineLayout を作成したら、DescritptorSetLayout は破棄しても良い
 	//!< ただし、同じレイアウトの DescriptorSet を再作成するような場合に必要になるのでここでは残しておくことにする
 
@@ -1831,11 +1821,15 @@ void VK::CreateGraphicsPipeline()
 	const auto PipelineCache = CreatePipelineCache();
 
 	//!< (グラフィック)パイプライン
-	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, PipelineCache, static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), nullptr, &Pipeline));
+	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, 
+		PipelineCache, 
+		static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), 
+		GetAllocationCallbacks(), 
+		&Pipeline));
 
 	//!< パイプライン を作成したら、シェーダモジュール は破棄して良い
 	for (auto i : ShaderModules) {
-		vkDestroyShaderModule(Device, i, nullptr);
+		vkDestroyShaderModule(Device, i, GetAllocationCallbacks());
 	}
 	ShaderModules.clear();
 
@@ -1844,7 +1838,7 @@ void VK::CreateGraphicsPipeline()
 		const auto BasePath = GetBasePath();
 		StorePipelineCache(BasePath + L".pco", PipelineCache);
 
-		vkDestroyPipelineCache(Device, PipelineCache, nullptr);
+		vkDestroyPipelineCache(Device, PipelineCache, GetAllocationCallbacks());
 	}
 
 #ifdef DEBUG_STDOUT
@@ -1861,7 +1855,7 @@ void VK::CreateComputePipeline()
 		//#TODO
 	}
 	for (auto i : ShaderModules) {
-		vkDestroyShaderModule(Device, i, nullptr);
+		vkDestroyShaderModule(Device, i, GetAllocationCallbacks());
 	}
 
 #ifdef DEBUG_STDOUT

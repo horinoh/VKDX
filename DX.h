@@ -25,10 +25,8 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 
 #include <comdef.h>
 
-#include "Win.h"
-
 #ifndef BREAK_ON_FAILED
-#define BREAK_ON_FAILED(hr) if(FAILED(hr)) { DEBUG_BREAK(); }
+#define BREAK_ON_FAILED(vr) if(FAILED(vr)) { DEBUG_BREAK(); }
 #endif
 #ifndef THROW_ON_FAILED
 #define THROW_ON_FAILED(hr) if(FAILED(hr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + DX::GetHRESULTString(hr)); }
@@ -36,11 +34,7 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 #ifndef MESSAGEBOX_ON_FAILED
 #define MESSAGEBOX_ON_FAILED(hr) if(FAILED(hr)) { Win::ShowMessageBoxW(nullptr, DX::GetHRESULTStringW(hr)); }
 #endif
-#ifndef VERIFY_SUCCEEDED
-//#define VERIFY_SUCCEEDED(hr) BREAK_ON_FAILED(hr)
-#define VERIFY_SUCCEEDED(hr) THROW_ON_FAILED(hr)
-//#define VERIFY_SUCCEEDED(hr) MESSAGEBOX_ON_FAILED(hr)
-#endif
+#include "Win.h"
 
 /**
 リソースが作成された時 MakeResident() され、破棄された時 Evict() される。
@@ -64,8 +58,8 @@ private:
 public:
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
 	virtual void OnSize(HWND hWnd, HINSTANCE hInstance) override;
-	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override;
-	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override;
+	//virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override { Super::OnTimer(hWnd, hInstance); }
+	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { Super::OnPaint(hWnd, hInstance); Draw(); }
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 
 	static std::string GetHRESULTString(const HRESULT Result);
@@ -73,22 +67,14 @@ public:
 	static std::string GetFormatString(const DXGI_FORMAT Format);
 
 protected:
-	//!< Introduction To 3D Game Programming With DirectX 12 : 7.1 FRAME RESOURCES
-	class FrameResource
-	{
-	public:
-		FrameResource(const FrameResource& rhs) = delete;
-		FrameResource& operator=(const FrameResource& rhs) = delete;
-		
-		void Create(ID3D12Device* Device) {
-			VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(CommandAllocator.GetAddressOf())));
-		}
-		void Destroy() {}
-
-		Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
-		//Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
-		UINT64 FenceValue = 0;
-	};
+	virtual void CreateDefaultResource(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source);
+	virtual void CreateUploadResource(ID3D12Resource** Resource, const size_t Size, const void* Source);
+	virtual void CreateUploadResource(ID3D12Resource** Resource, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData, const UINT64 TotalSize, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes);
+	virtual void ResourceBarrier(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After);
+	virtual void PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState);
+	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState);
+	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES ResourceState);
+	
 
 	virtual void CreateDevice(HWND hWnd);
 	virtual HRESULT CreateMaxFeatureLevelDevice(IDXGIAdapter* Adapter);
@@ -100,25 +86,12 @@ protected:
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index = 0) const;
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index = 0) const;
 	
-	virtual void CreateDefaultResource(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source);
-	virtual void CreateUploadResource(ID3D12Resource** Resource, const size_t Size, const void* Source);
-	virtual void CreateUploadResource(ID3D12Resource** Resource, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData, const UINT64 TotalSize, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes);
-	virtual void ResourceBarrier(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After);
-	virtual void PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState);
-	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState);
-	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES ResourceState);
-	virtual void ExecuteCommandListAndWaitForFence(ID3D12CommandList* CommandList) {
-		const std::vector<ID3D12CommandList*> CommandLists = { CommandList };
-		CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
-		WaitForFence();
-	}
-
 	virtual void CreateCommandQueue();
+
+	virtual void CreateFence();
 
 	virtual void CreateCommandAllocator(const D3D12_COMMAND_LIST_TYPE CommandListType = D3D12_COMMAND_LIST_TYPE_DIRECT);
 	virtual void CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const size_t Count, const D3D12_COMMAND_LIST_TYPE CommandListType = D3D12_COMMAND_LIST_TYPE_DIRECT);
-
-	virtual void CreateFence();
 
 	virtual void CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat);
 	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height);

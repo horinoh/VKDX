@@ -1,5 +1,11 @@
 #pragma once
 
+#ifndef VERIFY_SUCCEEDED
+#define VERIFY_SUCCEEDED(vr) BREAK_ON_FAILED(vr)
+//#define VERIFY_SUCCEEDED(vr) THROW_ON_FAILED(vr)
+//#define VERIFY_SUCCEEDED(vr) MESSAGEBOX_ON_FAILED(vr)
+#endif
+
 //!< メモリリーク検出用
 #define _CRTDBG_MAP_ALLOC
 #include <cstdlib>

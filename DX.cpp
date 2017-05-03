@@ -71,21 +71,12 @@ void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 		PopulateCommandList(CL, SCR, CDH, DirectX::Colors::SkyBlue);
 	}
 }
-void DX::OnTimer(HWND hWnd, HINSTANCE hInstance)
-{
-	Super::OnTimer(hWnd, hInstance);
-}
-void DX::OnPaint(HWND hWnd, HINSTANCE hInstance)
-{
-	Super::OnPaint(hWnd, hInstance);
-
-	Draw();
-}
 void DX::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnDestroy(hWnd, hInstance);
 
-	//!< GPUの完了を待たなくてはならない
+	//!< GPUが完了するまでここで待機 
+	//!< Wait GPU
 	WaitForFence();
 }
 std::string DX::GetHRESULTString(const HRESULT Result)
@@ -120,6 +111,205 @@ std::string DX::GetFormatString(const DXGI_FORMAT Format)
 #include "DXFormat.h"
 	}
 #undef DXGI_FORMAT_CASE
+}
+
+/**
+@note 
+アップロード用のリソースを D3D12_HEAP_TYPE_UPLOAD で作成してそこにデータをコピーする
+目的のリソースは D3D12_HEAP_TYPE_DEFAULT で作成する (頻繁に更新しないリソースは D3D12_HEAP_TYPE_DEFAULT にしておきたい)
+アップロードリソースから目的のリソースへのコピーコマンドを発行する
+*/
+void DX::CreateDefaultResource(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source)
+{
+	//!< アップロードリソースの作成
+	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
+	CreateUploadResource(UploadResource.GetAddressOf(), Size, Source);
+
+	//!< リソースデスクリプタ
+	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
+	const D3D12_RESOURCE_DESC ResourceDesc = {
+		D3D12_RESOURCE_DIMENSION_BUFFER,
+		0,
+		Size, 1,
+		1,
+		1,
+		DXGI_FORMAT_UNKNOWN,
+		SampleDesc,
+		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+		D3D12_RESOURCE_FLAG_NONE
+	};
+	//!< リソースを作成
+	const D3D12_HEAP_PROPERTIES HeapProperties = {
+		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_COMMON, //!< COMMON にすること
+		nullptr,
+		IID_PPV_ARGS(Resource)));
+
+	//!< コピーコマンドを発行
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
+		PopulateCopyBufferCommand(CommandList, UploadResource.Get(), *Resource, Size, D3D12_RESOURCE_STATE_GENERIC_READ);
+	} VERIFY_SUCCEEDED(CommandList->Close());
+
+	const std::vector<ID3D12CommandList*> CommandLists = { CommandList };
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
+	WaitForFence();
+}
+void DX::CreateUploadResource(ID3D12Resource** Resource, const size_t Size, const void* Source)
+{
+	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
+	const D3D12_RESOURCE_DESC ResourceDesc = {
+		D3D12_RESOURCE_DIMENSION_BUFFER,
+		0,
+		Size, 1,
+		1,
+		1,
+		DXGI_FORMAT_UNKNOWN,
+		SampleDesc,
+		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+		D3D12_RESOURCE_FLAG_NONE
+	};
+	const D3D12_HEAP_PROPERTIES HeapProperties = {
+		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ, //!< UPLOAD では GENERIC_READ にすること
+		nullptr,
+		IID_PPV_ARGS(Resource)));
+
+	if (nullptr != Source) {
+		BYTE* Data;
+		VERIFY_SUCCEEDED((*Resource)->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
+			memcpy(Data, Source, Size);
+		} (*Resource)->Unmap(0, nullptr);
+	}
+}
+void DX::CreateUploadResource(ID3D12Resource** Resource, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData, const UINT64 TotalSize, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes)
+{
+	assert(SubresourceData.size() == PlacedSubresourceFootprints.size() == NumRows.size() == RowSizes.size() && "");
+	const auto SubresourceCount = static_cast<const UINT>(SubresourceData.size());
+
+	const D3D12_HEAP_PROPERTIES HeapProperties = {
+		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
+	const D3D12_RESOURCE_DESC ResourceDesc = {
+		D3D12_RESOURCE_DIMENSION_BUFFER,
+		0,
+		TotalSize, 1,
+		1,
+		1,
+		DXGI_FORMAT_UNKNOWN,
+		SampleDesc,
+		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+		D3D12_RESOURCE_FLAG_NONE
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_GENERIC_READ, //!< UPLOAD では GENERIC_READ にすること
+		nullptr,
+		IID_PPV_ARGS(Resource)));
+
+	BYTE* Data;
+	VERIFY_SUCCEEDED((*Resource)->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
+		for (auto It = PlacedSubresourceFootprints.cbegin(); It != PlacedSubresourceFootprints.cend(); ++It) {
+			const auto Index = std::distance(PlacedSubresourceFootprints.cbegin(), It);
+
+			const auto& PSF = *It;
+			const auto& SD = SubresourceData[Index];
+			const auto RowCount = NumRows[Index];
+			const auto RowSize = RowSizes[Index];
+
+			const D3D12_MEMCPY_DEST MemcpyDest = {
+				Data + PSF.Offset,
+				PSF.Footprint.RowPitch,
+				PSF.Footprint.RowPitch * RowCount
+			};
+			for (UINT i = 0; i < PSF.Footprint.Depth; ++i) {
+				auto Dst = reinterpret_cast<BYTE*>(MemcpyDest.pData) + MemcpyDest.SlicePitch * i;
+				const auto Src = reinterpret_cast<const BYTE*>(SD.pData) + SD.SlicePitch * i;
+				for (UINT j = 0; j < RowCount; ++j) {
+					memcpy(Dst + MemcpyDest.RowPitch * j, Src + SD.RowPitch * j, RowSize);
+				}
+			}
+		}
+	} (*Resource)->Unmap(0, nullptr);
+}
+void DX::ResourceBarrier(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After)
+{
+	const D3D12_RESOURCE_TRANSITION_BARRIER ResourceTransitionBarrier = {
+		Resource,
+		D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+		Before,
+		After
+	};
+	const std::vector<D3D12_RESOURCE_BARRIER> ResourceBarrier = {
+		{
+			D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+			D3D12_RESOURCE_BARRIER_FLAG_NONE,
+			ResourceTransitionBarrier
+		}
+	};
+	CommandList->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
+}
+void DX::PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState)
+{
+	ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
+		for (auto It = PlacedSubresourceFootprints.cbegin(); It != PlacedSubresourceFootprints.cend(); ++It) {
+			const D3D12_TEXTURE_COPY_LOCATION TextureCopyLocation_Dst = {
+				Dst,
+				D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+				static_cast<const UINT>(std::distance(PlacedSubresourceFootprints.cbegin(), It))
+			};
+			const D3D12_TEXTURE_COPY_LOCATION TextureCopyLocation_Src = {
+				Src,
+				D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
+				*It
+			};
+			CommandList->CopyTextureRegion(&TextureCopyLocation_Dst, 0, 0, 0, &TextureCopyLocation_Src, nullptr);
+		}
+	} ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, ResourceState);
+}
+void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState)
+{
+	ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
+		for (auto It = PlacedSubresourceFootprints.cbegin(); It != PlacedSubresourceFootprints.cend(); ++It) {
+			//!< 色々なサンプルを見るとことごとく D3D12_BOX を作っているがどれも使ってはいない
+			//const D3D12_BOX Box = {
+			//	static_cast<UINT>(It->Offset),
+			//	0,
+			//	0,
+			//	static_cast<UINT>(It->Offset) + It->Footprint.Width,
+			//	1,
+			//	1
+			//};
+			CommandList->CopyBufferRegion(Dst, 0, Src, It->Offset, It->Footprint.Width);
+		}
+	} ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, ResourceState);
+}
+void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES ResourceState)
+{
+	ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
+		CommandList->CopyBufferRegion(Dst, 0, Src, 0, Size);
+	} ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, ResourceState);
 }
 
 void DX::CreateDevice(HWND hWnd)
@@ -326,203 +516,6 @@ D3D12_GPU_DESCRIPTOR_HANDLE DX::GetGPUDescriptorHandle(ID3D12DescriptorHeap* Des
 	return DescriptorHandle;
 }
 /**
-@note 
-アップロード用のリソースを D3D12_HEAP_TYPE_UPLOAD で作成してそこにデータをコピーする
-目的のリソースは D3D12_HEAP_TYPE_DEFAULT で作成する (頻繁に更新しないリソースは D3D12_HEAP_TYPE_DEFAULT にしておきたい)
-アップロードリソースから目的のリソースへのコピーコマンドを発行する
-*/
-void DX::CreateDefaultResource(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source)
-{
-	//!< アップロードリソースの作成
-	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-	CreateUploadResource(UploadResource.GetAddressOf(), Size, Source);
-
-	//!< リソースデスクリプタ
-	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
-	const D3D12_RESOURCE_DESC ResourceDesc = {
-		D3D12_RESOURCE_DIMENSION_BUFFER,
-		0,
-		Size, 1,
-		1,
-		1,
-		DXGI_FORMAT_UNKNOWN,
-		SampleDesc,
-		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-		D3D12_RESOURCE_FLAG_NONE
-	};
-	//!< リソースを作成
-	const D3D12_HEAP_PROPERTIES HeapProperties = {
-		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること
-		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		D3D12_MEMORY_POOL_UNKNOWN,
-		1,
-		1
-	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc,
-		D3D12_RESOURCE_STATE_COMMON, //!< COMMON にすること
-		nullptr,
-		IID_PPV_ARGS(Resource)));
-
-	//!< コピーコマンドを発行
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
-		PopulateCopyBufferCommand(CommandList, UploadResource.Get(), *Resource, Size, D3D12_RESOURCE_STATE_GENERIC_READ);
-	} VERIFY_SUCCEEDED(CommandList->Close());
-
-	ExecuteCommandListAndWaitForFence(CommandList);
-}
-void DX::CreateUploadResource(ID3D12Resource** Resource, const size_t Size, const void* Source)
-{
-	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
-	const D3D12_RESOURCE_DESC ResourceDesc = {
-		D3D12_RESOURCE_DIMENSION_BUFFER,
-		0,
-		Size, 1,
-		1,
-		1,
-		DXGI_FORMAT_UNKNOWN,
-		SampleDesc,
-		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-		D3D12_RESOURCE_FLAG_NONE
-	};
-	const D3D12_HEAP_PROPERTIES HeapProperties = {
-		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること
-		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		D3D12_MEMORY_POOL_UNKNOWN,
-		1,
-		1
-	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ, //!< UPLOAD では GENERIC_READ にすること
-		nullptr,
-		IID_PPV_ARGS(Resource)));
-
-	if (nullptr != Source) {
-		BYTE* Data;
-		VERIFY_SUCCEEDED((*Resource)->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
-			memcpy(Data, Source, Size);
-		} (*Resource)->Unmap(0, nullptr);
-	}
-}
-void DX::CreateUploadResource(ID3D12Resource** Resource, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData, const UINT64 TotalSize, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes)
-{
-	assert(SubresourceData.size() == PlacedSubresourceFootprints.size() == NumRows.size() == RowSizes.size() && "");
-	const auto SubresourceCount = static_cast<const UINT>(SubresourceData.size());
-
-	const D3D12_HEAP_PROPERTIES HeapProperties = {
-		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること
-		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		D3D12_MEMORY_POOL_UNKNOWN,
-		1,
-		1
-	};
-	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
-	const D3D12_RESOURCE_DESC ResourceDesc = {
-		D3D12_RESOURCE_DIMENSION_BUFFER,
-		0,
-		TotalSize, 1,
-		1,
-		1,
-		DXGI_FORMAT_UNKNOWN,
-		SampleDesc,
-		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-		D3D12_RESOURCE_FLAG_NONE
-	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ, //!< UPLOAD では GENERIC_READ にすること
-		nullptr,
-		IID_PPV_ARGS(Resource)));
-
-	BYTE* Data;
-	VERIFY_SUCCEEDED((*Resource)->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
-		for (auto It = PlacedSubresourceFootprints.cbegin(); It != PlacedSubresourceFootprints.cend(); ++It) {
-			const auto Index = std::distance(PlacedSubresourceFootprints.cbegin(), It);
-
-			const auto& PSF = *It;
-			const auto& SD = SubresourceData[Index];
-			const auto RowCount = NumRows[Index];
-			const auto RowSize = RowSizes[Index];
-
-			const D3D12_MEMCPY_DEST MemcpyDest = {
-				Data + PSF.Offset,
-				PSF.Footprint.RowPitch,
-				PSF.Footprint.RowPitch * RowCount
-			};
-			for (UINT i = 0; i < PSF.Footprint.Depth; ++i) {
-				auto Dst = reinterpret_cast<BYTE*>(MemcpyDest.pData) + MemcpyDest.SlicePitch * i;
-				const auto Src = reinterpret_cast<const BYTE*>(SD.pData) + SD.SlicePitch * i;
-				for (UINT j = 0; j < RowCount; ++j) {
-					memcpy(Dst + MemcpyDest.RowPitch * j, Src + SD.RowPitch * j, RowSize);
-				}
-			}
-		}
-	} (*Resource)->Unmap(0, nullptr);
-}
-void DX::ResourceBarrier(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After)
-{
-	const D3D12_RESOURCE_TRANSITION_BARRIER ResourceTransitionBarrier = {
-		Resource,
-		D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-		Before,
-		After
-	};
-	const std::vector<D3D12_RESOURCE_BARRIER> ResourceBarrier = {
-		{
-			D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-			D3D12_RESOURCE_BARRIER_FLAG_NONE,
-			ResourceTransitionBarrier
-		}
-	};
-	CommandList->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
-}
-void DX::PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState)
-{
-	ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
-		for (auto It = PlacedSubresourceFootprints.cbegin(); It != PlacedSubresourceFootprints.cend(); ++It) {
-			const D3D12_TEXTURE_COPY_LOCATION TextureCopyLocation_Dst = {
-				Dst,
-				D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
-				static_cast<const UINT>(std::distance(PlacedSubresourceFootprints.cbegin(), It))
-			};
-			const D3D12_TEXTURE_COPY_LOCATION TextureCopyLocation_Src = {
-				Src,
-				D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
-				*It
-			};
-			CommandList->CopyTextureRegion(&TextureCopyLocation_Dst, 0, 0, 0, &TextureCopyLocation_Src, nullptr);
-		}
-	} ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, ResourceState);
-}
-void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState)
-{
-	ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
-		for (auto It = PlacedSubresourceFootprints.cbegin(); It != PlacedSubresourceFootprints.cend(); ++It) {
-			//!< 色々なサンプルを見るとことごとく D3D12_BOX を作っているがどれも使ってはいない
-			//const D3D12_BOX Box = {
-			//	static_cast<UINT>(It->Offset),
-			//	0,
-			//	0,
-			//	static_cast<UINT>(It->Offset) + It->Footprint.Width,
-			//	1,
-			//	1
-			//};
-			CommandList->CopyBufferRegion(Dst, 0, Src, It->Offset, It->Footprint.Width);
-		}
-	} ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, ResourceState);
-}
-void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES ResourceState)
-{
-	ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
-		CommandList->CopyBufferRegion(Dst, 0, Src, 0, Size);
-	} ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, ResourceState);
-}
-
-/**
 @brief マルチスレッドで「同じ」キューへサブミットできる
 @note Vulkan ではマルチスレッドで「異なる」キューへのみサブミットできるので注意
 */
@@ -538,6 +531,18 @@ void DX::CreateCommandQueue()
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateCommandQueue" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+/**
+@brief CPU と GPU の同期用
+*/
+void DX::CreateFence()
+{
+	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(Fence.GetAddressOf())));
+
+#ifdef DEBUG_STDOUT
+	std::cout << "CreateFence" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
@@ -578,18 +583,6 @@ void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const size_
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateCommandList" << COUT_OK << std::endl << std::endl;
-#endif
-}
-
-/**
-@brief CPU と GPU の同期用
-*/
-void DX::CreateFence()
-{
-	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(Fence.GetAddressOf())));
-
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateFence" << COUT_OK << std::endl << std::endl;
 #endif
 }
 

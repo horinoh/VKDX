@@ -107,7 +107,7 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
 		* 下の方に出るので Frame time, Frames per second を閉じないと見えないかも
 
 <!-- 
-## プロジェクトの追加方法 (自分用)
+## プロジェクトの追加方法 (自分用覚書)
  * ソリューションを右クリック - Add - New Project で Win32 Project
  * プロジェクトを右クリック - Retarget SDK Verson で 10以上にする
 

@@ -17,7 +17,7 @@ void VKExt::CreateSampler_LinearRepeat(const float MaxLOD)
 		VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
 		VK_FALSE
 	};
-	VERIFY_SUCCEEDED(vkCreateSampler(Device, &SamplerCreateInfo, nullptr, &Sampler));
+	VERIFY_SUCCEEDED(vkCreateSampler(Device, &SamplerCreateInfo, GetAllocationCallbacks(), &Sampler));
 }
 
 void VKExt::CreateIndirectBuffer_Indirect4Vertices()
@@ -43,10 +43,10 @@ void VKExt::CreateIndirectBuffer_Indirect4Vertices()
 		SubmitCopyBuffer(CB, StagingBuffer, IndirectBuffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
 	}
 	if (VK_NULL_HANDLE != StagingDeviceMemory) {
-		vkFreeMemory(Device, StagingDeviceMemory, nullptr);
+		vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
 	}
 	if (VK_NULL_HANDLE != StagingBuffer) {
-		vkDestroyBuffer(Device, StagingBuffer, nullptr);
+		vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
 	}
 }
 void VKExt::CreateIndirectBuffer_IndexedIndirect()
@@ -72,10 +72,10 @@ void VKExt::CreateIndirectBuffer_IndexedIndirect()
 		SubmitCopyBuffer(CB, StagingBuffer, IndirectBuffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
 	}
 	if (VK_NULL_HANDLE != StagingDeviceMemory) {
-		vkFreeMemory(Device, StagingDeviceMemory, nullptr);
+		vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
 	}
 	if (VK_NULL_HANDLE != StagingBuffer) {
-		vkDestroyBuffer(Device, StagingBuffer, nullptr);
+		vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
 	}
 }
 
@@ -159,7 +159,7 @@ void VKExt::CreateRenderPass_Color()
 		static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
 		static_cast<uint32_t>(SubpassDependencies.size()), SubpassDependencies.data()
 	};
-	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, nullptr, &RenderPass));
+	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, GetAllocationCallbacks(), &RenderPass));
 }
 void VKExt::CreateRenderPass_ColorDepth()
 {
@@ -234,7 +234,7 @@ void VKExt::CreateRenderPass_ColorDepth()
 		static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
 		static_cast<uint32_t>(SubpassDependencies.size()), SubpassDependencies.data()
 	};
-	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, nullptr, &RenderPass));
+	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, GetAllocationCallbacks(), &RenderPass));
 }
 
 void VKExt::CreateFramebuffer_Color()
@@ -253,7 +253,7 @@ void VKExt::CreateFramebuffer_Color()
 			SurfaceExtent2D.width, SurfaceExtent2D.height,
 			1
 		};
-		VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, nullptr, &Framebuffers[i]));
+		VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, GetAllocationCallbacks(), &Framebuffers[i]));
 	}
 }
 void VKExt::CreateFramebuffer_ColorDepth()
@@ -273,7 +273,7 @@ void VKExt::CreateFramebuffer_ColorDepth()
 			SurfaceExtent2D.width, SurfaceExtent2D.height,
 			1
 		};
-		VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, nullptr, &Framebuffers[i]));
+		VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, GetAllocationCallbacks(), &Framebuffers[i]));
 	}
 }
 

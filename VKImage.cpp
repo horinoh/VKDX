@@ -206,10 +206,10 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 		SubmitCopyImage(CommandBuffer, StagingBuffer, *Image, GLITexture);
 	}
 	if (VK_NULL_HANDLE != StagingDeviceMemory) {
-		vkFreeMemory(Device, StagingDeviceMemory, nullptr);
+		vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
 	}
 	if (VK_NULL_HANDLE != StagingBuffer) {
-		vkDestroyBuffer(Device, StagingBuffer, nullptr);
+		vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
 	}
 
 	//!< ƒrƒ…[‚ðì¬

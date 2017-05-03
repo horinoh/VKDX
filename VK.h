@@ -9,8 +9,6 @@
 #include <glm/glm.hpp>
 //#include <glm/gtc/matrix_transform.hpp>
 
-#include "Win.h"
-
 #ifndef BREAK_ON_FAILED
 #define BREAK_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { DEBUG_BREAK(); }
 #endif
@@ -20,11 +18,7 @@
 #ifndef MESSAGEBOX_ON_FAILED
 #define MESSAGEBOX_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Win::ShowMessageBoxW(nullptr, VK::GetVkResultStringW(vr)); }
 #endif
-#ifndef VERIFY_SUCCEEDED
-#define VERIFY_SUCCEEDED(vr) BREAK_ON_FAILED(vr)
-//#define VERIFY_SUCCEEDED(vr) THROW_ON_FAILED(vr)
-//#define VERIFY_SUCCEEDED(vr) MESSAGEBOX_ON_FAILED(vr)
-#endif
+#include "Win.h"
 
 namespace Colors
 {
@@ -52,8 +46,8 @@ private:
 public:
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
 	virtual void OnSize(HWND hWnd, HINSTANCE hInstance) override;
-	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override;
-	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override;
+	//virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override { Super::OnTimer(hWnd, hInstance); }
+	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { Super::OnPaint(hWnd, hInstance); Draw(); }
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 
 	static std::string GetVkResultString(const VkResult Result);
@@ -61,104 +55,11 @@ public:
 	static std::string GetFormatString(const VkFormat Format);
 
 protected:
-	class Allocator
-	{
-	public:
-		static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) {
-			return static_cast<Allocator*>(pUserData)->Malloc(size, alignment, allocationScope);
-		}
-		static FORCEINLINE void* AlignedRealloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) {
-			return static_cast<Allocator*>(pUserData)->Realloc(pOriginal, size, alignment, allocationScope);
-		}
-		static FORCEINLINE void AlignedFree(void* pUserData, void* pMemory) {
-			static_cast<Allocator*>(pUserData)->Free(pMemory);
-		}
-		static void AlignedAllocNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
-		static void AligendFreeNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
-
-		void* Malloc(size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
-		void* Realloc(void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_realloc(pOriginal, size, alignment); }
-		void* Free(void* pMemory) { _aligned_free(pMemory); }
-
-		FORCEINLINE operator VkAllocationCallbacks() const {
-			return VkAllocationCallbacks({
-				reinterpret_cast<void*>(const_cast<Allocator*>(this)),
-				AlignedMalloc,
-				AlignedRealloc,
-				AlignedFree,
-				AlignedAllocNotify,
-				AligendFreeNotify
-			});
-		}
-	};
-	static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { 
-		return _aligned_malloc(size, alignment); 
-	}
-	static FORCEINLINE void* AlignedRealloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) {
-		return _aligned_realloc(pOriginal, size, alignment);
-	}
-	static FORCEINLINE void AlignedFree(void* pUserData, void* pMemory) {
-		_aligned_free(pMemory); 
-	}
+	static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
+	static FORCEINLINE void* AlignedRealloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_realloc(pOriginal, size, alignment); }
+	static FORCEINLINE void AlignedFree(void* pUserData, void* pMemory) { _aligned_free(pMemory); }
 	static void AlignedAllocNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
 	static void AligendFreeNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
-
-	//!< https://software.intel.com/en-us/articles/api-without-secrets-introduction-to-vulkan-part-4 : Rendering Resources Creation
-	class FrameResource
-	{
-	public:
-		FrameResource(const FrameResource& rhs) = delete;
-		FrameResource& operator=(const FrameResource& rhs) = delete;
-
-		void Create(const VkDevice Device, const VkCommandPool CommandPool) {
-			const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
-				VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-				nullptr,
-				CommandPool,
-				VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-				1
-			};
-			VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, &CommandBuffer));
-
-			const VkSemaphoreCreateInfo SemaphoreCreateInfo = {
-				VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-				nullptr,
-				0
-			};
-			VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &NextImageAcquiredSemaphore));
-			VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, nullptr, &RenderFinishedSemaphore));
-
-			const VkFenceCreateInfo FenceCreateInfo = {
-				VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-				nullptr,
-				VK_FENCE_CREATE_SIGNALED_BIT
-			};
-			VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, nullptr, &Fence));
-		}
-		void Destroy(const VkDevice Device, const VkCommandPool CommandPool) {
-			if (VK_NULL_HANDLE != CommandBuffer) {
-				vkFreeCommandBuffers(Device, CommandPool, 1, &CommandBuffer);
-				CommandBuffer = VK_NULL_HANDLE;
-			}
-			if (VK_NULL_HANDLE != NextImageAcquiredSemaphore) {
-				vkDestroySemaphore(Device, NextImageAcquiredSemaphore, nullptr);
-				NextImageAcquiredSemaphore = VK_NULL_HANDLE;
-			}
-			if (VK_NULL_HANDLE != RenderFinishedSemaphore) {
-				vkDestroySemaphore(Device, RenderFinishedSemaphore, nullptr);
-				RenderFinishedSemaphore = VK_NULL_HANDLE;
-			}
-			if (VK_NULL_HANDLE != Fence) {
-				vkDestroyFence(Device, Fence, nullptr);
-				Fence = VK_NULL_HANDLE;
-			}
-		}
-
-		VkCommandBuffer CommandBuffer = VK_NULL_HANDLE;
-		VkSemaphore NextImageAcquiredSemaphore = VK_NULL_HANDLE;	//!< プレゼント完了までウエイト
-		VkSemaphore RenderFinishedSemaphore = VK_NULL_HANDLE;		//!< 描画完了するまでウエイト
-		VkFence Fence = VK_NULL_HANDLE;
-	};
 
 	static VkFormat GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice);
 	static uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const uint32_t MemoryTypeBits, const VkFlags Properties);
@@ -167,22 +68,18 @@ protected:
 	//static VkAccessFlags GetSrcAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
 	//static VkAccessFlags GetDstAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
 	//void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const;
-	
 	//virtual void MemoryBarrier() {}
 	//virtual void BufferMemoryBarrier(const VkCommandBuffer CommandBuffer, const VkBuffer Buffer) {}
 	//virtual void ImageMemoryBarrier(const VkCommandBuffer CommandBuffer, const VkImage Image) {}
-
 	virtual void CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size) const;
 	virtual void CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers) const;
 	virtual void CopyToHostVisibleMemory(const VkBuffer Buffer, const VkDeviceMemory DeviceMemory, const size_t Size = 0, const void* Source = nullptr, const VkDeviceSize Offset = 0);
 	virtual void SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkBuffer DstBuffer, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size);
-
 	template<typename T> void CreateHostVisibleMemory(VkDeviceMemory* DeviceMemory, const T Object) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
 	template<typename T> void CreateDeviceLocalMemory(VkDeviceMemory* DeviceMemory, const T Object) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
 	template<typename T> void BindDeviceMemory(const T Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset = 0) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
-	//!< ↓ここでテンプレート特殊化している
+	//!< ↓ ここでテンプレート特殊化している Template specialization here
 #include "VKDeviceMemory.h"
-
 	/**
 	@brief 転送用のバッファとメモリを作成して、メモリへデータをコピーする、バッファとメモリをバインドする
 	@note 大きなバッファを用意して、複数バッファを(オフセットして)バインドしていくような用途には使えないので注意 (初回分としては可能)
@@ -193,8 +90,8 @@ protected:
 	@note 大きなバッファを用意して、複数バッファを(オフセットして)バインドしていくような用途には使えないので注意 (初回分としては可能)
 	*/
 	void CreateDeviceLocalBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkBufferUsageFlags Usage, const size_t Size, const VkDeviceSize Offset = 0);
-
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
+
 
 	virtual void EnumerateInstanceLayer();
 	virtual void EnumerateInstanceExtenstion(const char* layerName);
@@ -210,11 +107,11 @@ protected:
 	virtual void CreateDevice();
 	virtual void CreateDebugMarker();
 
-	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
-	virtual void AllocateCommandBuffer(const VkCommandPool CommandPool, const size_t Count, const VkCommandBufferLevel CommandBufferLevel = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-
 	virtual void CreateFence();
 	virtual void CreateSemaphore();
+
+	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
+	virtual void AllocateCommandBuffer(const VkCommandPool CommandPool, const size_t Count, const VkCommandBufferLevel CommandBufferLevel = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
 	virtual void CreateSwapchain();
 	virtual VkSurfaceFormatKHR SelectSurfaceFormat();
@@ -291,6 +188,8 @@ protected:
 		AlignedAllocNotify,
 		AligendFreeNotify
 	};
+	const VkAllocationCallbacks* GetAllocationCallbacks() const { return nullptr/*&AllocationCallbacks*/; }
+
 protected:
 	VkInstance Instance = VK_NULL_HANDLE;
 #ifdef _DEBUG
