@@ -4,6 +4,7 @@
 template<>
 static void SetName(VkDevice Device, VkBuffer Object, const char* Name)
 {
+#if 0
 	if (VK_NULL_HANDLE != vkDebugMarkerSetObjectName) {
 		VkDebugMarkerObjectNameInfoEXT DebugMarkerObjectNameInfo = {
 			VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
@@ -19,10 +20,12 @@ static void SetName(VkDevice Device, VkBuffer Object, const char* Name)
 		std::cout << Red << "通らなくなったので vkDebugMarkerSetObjectName はコメントアウト" << White << std::endl;
 #endif
 	}
+#endif
 }
 template<>
 static void SetTag(VkDevice Device, VkBuffer Object, const uint64_t TagName, const size_t TagSize, const void* TagData)
 {
+#if 0
 	if (VK_NULL_HANDLE != vkDebugMarkerSetObjectTag) {
 		VkDebugMarkerObjectTagInfoEXT DebugMarkerObjectTagInfo = {
 			VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_TAG_INFO_EXT,
@@ -35,11 +38,13 @@ static void SetTag(VkDevice Device, VkBuffer Object, const uint64_t TagName, con
 		};
 		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectTag(Device, &DebugMarkerObjectTagInfo));
 	}
+#endif
 }
 
 template<>
 static void SetName(VkDevice Device, VkBufferView Object, const char* Name)
 {
+#if 0
 	if (VK_NULL_HANDLE != vkDebugMarkerSetObjectName) {
 		VkDebugMarkerObjectNameInfoEXT DebugMarkerObjectNameInfo = {
 		VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
@@ -50,10 +55,12 @@ static void SetName(VkDevice Device, VkBufferView Object, const char* Name)
 		};
 		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectName(Device, &DebugMarkerObjectNameInfo));
 	}
+#endif
 }
 template<>
 static void SetTag(VkDevice Device, VkBufferView Object, const uint64_t TagName, const size_t TagSize, const void* TagData)
 {
+#if 0
 	if (VK_NULL_HANDLE != vkDebugMarkerSetObjectTag) {
 		VkDebugMarkerObjectTagInfoEXT DebugMarkerObjectTagInfo = {
 			VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_TAG_INFO_EXT,
@@ -66,11 +73,13 @@ static void SetTag(VkDevice Device, VkBufferView Object, const uint64_t TagName,
 		};
 		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectTag(Device, &DebugMarkerObjectTagInfo));
 	}
+#endif
 }
 
 template<>
 static void SetName(VkDevice Device, VkSwapchainKHR Object, const char* Name)
 {
+#if 0
 	if (VK_NULL_HANDLE != vkDebugMarkerSetObjectName) {
 		VkDebugMarkerObjectNameInfoEXT DebugMarkerObjectNameInfo = {
 			VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
@@ -81,10 +90,12 @@ static void SetName(VkDevice Device, VkSwapchainKHR Object, const char* Name)
 		};
 		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectName(Device, &DebugMarkerObjectNameInfo));
 	}
+#endif
 }
 template<>
 static void SetTag(VkDevice Device, VkSwapchainKHR Object, const uint64_t TagName, const size_t TagSize, const void* TagData)
 {
+#if 0
 	if (VK_NULL_HANDLE != vkDebugMarkerSetObjectTag) {
 		VkDebugMarkerObjectTagInfoEXT DebugMarkerObjectTagInfo = {
 			VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_TAG_INFO_EXT,
@@ -97,4 +108,5 @@ static void SetTag(VkDevice Device, VkSwapchainKHR Object, const uint64_t TagNam
 		};
 		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectTag(Device, &DebugMarkerObjectTagInfo));
 	}
+#endif
 }

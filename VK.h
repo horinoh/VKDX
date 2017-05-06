@@ -1,7 +1,6 @@
 #pragma once
 
 #define VK_USE_PLATFORM_WIN32_KHR
-
 #include <vulkan/vulkan.h>
 
 #define GLM_FORCE_RADIANS
@@ -79,7 +78,7 @@ protected:
 	template<typename T> void CreateDeviceLocalMemory(VkDeviceMemory* DeviceMemory, const T Object) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
 	template<typename T> void BindDeviceMemory(const T Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset = 0) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
 	//!< ↓ ここでテンプレート特殊化している Template specialization here
-#include "VKDeviceMemory.h"
+#include "VKDeviceMemory.inl"
 	/**
 	@brief 転送用のバッファとメモリを作成して、メモリへデータをコピーする、バッファとメモリをバインドする
 	@note 大きなバッファを用意して、複数バッファを(オフセットして)バインドしていくような用途には使えないので注意 (初回分としては可能)
@@ -92,11 +91,30 @@ protected:
 	void CreateDeviceLocalBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkBufferUsageFlags Usage, const size_t Size, const VkDeviceSize Offset = 0);
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
 
+#ifdef VK_NO_PROTOYYPES
+	virtual void LoadDLL();
+#endif
+
+	template<typename T>
+	static void CreateDebugReportCallback(VkInstance Instance, T Callback, const VkDebugReportFlagsEXT Flags, VkDebugReportCallbackEXT* DebugReportCallback) {
+		if (VK_NULL_HANDLE != vkCreateDebugReportCallback) {
+			const VkDebugReportCallbackCreateInfoEXT DebugReportCallbackCreateInfo = {
+				VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
+				nullptr,
+				Flags,
+				Callback,
+				nullptr
+			};
+			vkCreateDebugReportCallback(Instance, &DebugReportCallbackCreateInfo, nullptr, DebugReportCallback);
+		}
+	}
 
 	virtual void EnumerateInstanceLayer();
 	virtual void EnumerateInstanceExtenstion(const char* layerName);
 	virtual void CreateInstance();
+#ifdef _DEBUG
 	virtual void CreateDebugReportCallback();
+#endif
 	virtual void CreateSurface(HWND hWnd, HINSTANCE hInstance);
 
 	virtual void EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
@@ -105,7 +123,9 @@ protected:
 	virtual void EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* layerName);
 	virtual void GetQueueFamily();
 	virtual void CreateDevice();
+#ifdef _DEBUG
 	virtual void CreateDebugMarker();
+#endif
 
 	virtual void CreateFence();
 	virtual void CreateSemaphore();
@@ -189,6 +209,37 @@ protected:
 		AligendFreeNotify
 	};
 	const VkAllocationCallbacks* GetAllocationCallbacks() const { return nullptr/*&AllocationCallbacks*/; }
+
+#ifdef VK_NO_PROTOYYPES
+protected:
+	HMODULE VulkanDLL = nullptr;
+public:
+#define VK_GLOBAL_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
+#include "VKGlobalProcAddr.h"
+#undef VK_GLOBAL_PROC_ADDR
+#define VK_INSTANCE_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
+#include "VKInstanceProcAddr.h"
+#undef VK_INSTANCE_PROC_ADDR
+#define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
+#include "VKDeviceProcAddr.h"
+#undef VK_DEVICE_PROC_ADDR
+#endif //!< VK_NO_PROTOYYPES
+
+#ifdef _DEBUG
+public:
+#define VK_INSTANCE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
+VK_INSTANCE_PROC_ADDR(CreateDebugReportCallback)
+VK_INSTANCE_PROC_ADDR(DestroyDebugReportCallback)
+#undef VK_INSTANCE_PROC_ADDR
+#define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
+VK_DEVICE_PROC_ADDR(DebugMarkerSetObjectTag)
+VK_DEVICE_PROC_ADDR(DebugMarkerSetObjectName)
+VK_DEVICE_PROC_ADDR(CmdDebugMarkerBegin)
+VK_DEVICE_PROC_ADDR(CmdDebugMarkerEnd)
+VK_DEVICE_PROC_ADDR(CmdDebugMarkerInsert)
+#undef VK_DEVICE_PROC_ADDR
+protected:
+#endif //!< _DEBUG
 
 protected:
 	VkInstance Instance = VK_NULL_HANDLE;
@@ -317,38 +368,10 @@ protected:
 };
 
 #ifdef _DEBUG
-class DebugReport
-{
-public:
-	//using DebugReport = std::function<VkBool32(VkDebugReportFlagsEXT, VkDebugReportObjectTypeEXT, uint64_t, size_t, int32_t, const char*, const char*, void*)>;
-
-	static void GetInstanceProcAddr(VkInstance Instance);
-
-	template<typename T>
-	static void CreateDebugReportCallback(VkInstance Instance, T Callback, const VkDebugReportFlagsEXT Flags, VkDebugReportCallbackEXT* DebugReportCallback) {
-		if (VK_NULL_HANDLE != vkCreateDebugReportCallback) {
-			const VkDebugReportCallbackCreateInfoEXT DebugReportCallbackCreateInfo = {
-				VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
-				nullptr,
-				Flags,
-				Callback,
-				nullptr
-			};
-			vkCreateDebugReportCallback(Instance, &DebugReportCallbackCreateInfo, nullptr, DebugReportCallback);
-		}
-	}
-	static void DestroyDebugReportCallback(VkInstance Instance, VkDebugReportCallbackEXT DebugReportCallback);
-
-#define VK_INSTANCE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
-#include "VKProcInstanceAddr.h"
-#undef VK_INSTANCE_PROC_ADDR
-};
-
 class DebugMarker
 {
 public:
 	static bool HasDebugMarkerExtension(VkPhysicalDevice PhysicalDevice);
-	static void GetDeviceProcAddr(VkDevice Device);
 
 	static void Insert(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color);
 	static void Insert(VkCommandBuffer CommandBuffer, const std::string& Name, const glm::vec4& Color) { Insert(CommandBuffer, Name.c_str(), Color); }
@@ -365,11 +388,7 @@ public:
 
 	template<typename T> static void SetTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* Tag) { DEBUG_BREAK(); /* テンプレート特殊化されていない、VKDebugMarker.h に実装すること */ }
 	
-	//!< ↓ここでテンプレート特殊化している
-#include "VKDebugMarker.h"
-
-#define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
-#include "VKProcDeviceAddr.h"
-#undef VK_DEVICE_PROC_ADDR
+	//!< ↓ここでテンプレート特殊化している Template specialization here
+#include "VKDebugMarker.inl"
 };
 #endif

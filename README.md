@@ -26,6 +26,15 @@ xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)
 	* 新しいバージョンをインストールしたら(環境変数は維持されるが)パスが変わるので VAssistX - Visual Assist Options - Performance - Rebuild しておく
 	* **VULKAN_SDK** は UE4 のコンパイルが通らなくなるので消した `setx VULKAN_SDK ""`
 * Visual Stuido で C/C++ - Preprocessor - Preprocessor Definitions に **VK_USE_PLATFORM_WIN32_KHR** を定義した
+* 環境変数 VK_INSTANCE_LAYERS を作成しておくか、インスタンス作成持にプログラム中から指定してもよい
+~~~
+setx VK_INSTANCE_LAYERS VK_LAYER_LUNARG_standard_validation
+~~~
+* DLL を使用する場合は C/C++ - Preprocessor - Preprocessor Definitions に VK_NO_PROTOYYPES を定義しておく
+* DLL
+	* %VK_SDK_PATH%\RunTimeInstaller\VulkanRT-XXX-Installer.exe を実行すると DLL がインストールされる (SDKのインストール時に自動的に行われている？)
+* レイヤ設定
+	* %VK_SDK_PATH%\Config\vk_layer_settings.txt を exe と同じ場所へコピーしておく
 
 #### ドライバ
 * https://www.khronos.org/vulkan/

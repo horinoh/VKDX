@@ -1,2 +1,0 @@
-VK_INSTANCE_PROC_ADDR(CreateDebugReportCallback)
-VK_INSTANCE_PROC_ADDR(DestroyDebugReportCallback)

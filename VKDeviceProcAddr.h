@@ -1,0 +1,3 @@
+VK_DEVICE_PROC_ADDR(GetDeviceProcAddr)
+VK_DEVICE_PROC_ADDR(EnumerateDeviceExtensionProperties)
+VK_DEVICE_PROC_ADDR(DestroyDevice)

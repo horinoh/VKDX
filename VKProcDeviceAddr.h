@@ -1,5 +1,0 @@
-VK_DEVICE_PROC_ADDR(DebugMarkerSetObjectTag)
-VK_DEVICE_PROC_ADDR(DebugMarkerSetObjectName)
-VK_DEVICE_PROC_ADDR(CmdDebugMarkerBegin)
-VK_DEVICE_PROC_ADDR(CmdDebugMarkerEnd)
-VK_DEVICE_PROC_ADDR(CmdDebugMarkerInsert)
