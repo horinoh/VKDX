@@ -41,7 +41,12 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	Super::OnCreate(hWnd, hInstance, Title);
 
 #ifdef VK_NO_PROTOYYPES
-	LoadDLL();
+	VulkanDLL = LoadLibraryA("vulkan-1.dll");
+	//VulkanDLL = dlopen("libvulkan.so.1", RTLD_NOW);
+	assert(nullptr != VulkanDLL && "LoadLibrary Failed");
+#define VK_GLOBAL_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(nullptr, "vk" #proc));
+#include "VKGlobalProcAddr.h"
+#undef VK_GLOBAL_PROC_ADDR
 #endif
 
 	CreateInstance();
@@ -571,23 +576,6 @@ void VK::CreateImageView(VkImageView* ImageView, const VkImage Image, const VkIm
 #endif
 }
 
-#ifdef VK_NO_PROTOYYPES
-void VK::LoadDLL()
-{
-	VulkanDLL = LoadLibraryA("vulkan-1.dll");
-	//VulkanDLL = dlopen("libvulkan.so.1", RTLD_NOW);
-	assert(nullptr != VulkanDLL && "LoadLibrary Failed");
-
-#define VK_INSTANCE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(Instance, "vk" #proc));
-#include "VKInstanceProcAddr.h"
-#undef VK_INSTANCE_PROC_ADDR
-
-#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc));
-#include "VKDeviceProcAddr.h"
-#undef VK_DEVICE_PROC_ADDR
-}
-#endif
-
 void VK::EnumerateInstanceLayer()
 {
 	uint32_t InstanceLayerPropertyCount = 0;
@@ -665,6 +653,12 @@ void VK::CreateInstance()
 
 	VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, GetAllocationCallbacks(), &Instance));
 
+#ifdef VK_NO_PROTOYYPES
+#define VK_INSTANCE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(Instance, "vk" #proc));
+#include "VKInstanceProcAddr.h"
+#undef VK_INSTANCE_PROC_ADDR
+#endif //!< VK_NO_PROTOYYPES
+
 #ifdef _DEBUG
 	CreateDebugReportCallback();
 #endif
@@ -716,6 +710,34 @@ VK_INSTANCE_PROC_ADDR(DestroyDebugReportCallback)
 	
 	CreateDebugReportCallback(Instance, Callback, Flags, &DebugReportCallback);
 }
+/**
+(初回のみ)RenderDoc を起動、Warning が出ていたらクリックして VulkanCapture を有効にしておくこと、Windows のレジストリが作成される
+RenderDoc から実行した場合にしか VK_EXT_DEBUG_MARKER_EXTENSION_NAME は有効にならないので注意
+*/
+bool VK::HasDebugMarkerExtension(const VkPhysicalDevice PhysicalDevice)
+{
+	uint32_t DeviceLayerPropertyCount = 0;
+	VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, nullptr));
+	if (DeviceLayerPropertyCount) {
+		std::vector<VkLayerProperties> LayerProperties(DeviceLayerPropertyCount);
+		VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, LayerProperties.data()));
+		for (const auto& i : LayerProperties) {
+			uint32_t DeviceExtensionPropertyCount = 0;
+			VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &DeviceExtensionPropertyCount, nullptr));
+			if (DeviceExtensionPropertyCount) {
+				std::vector<VkExtensionProperties> ExtensionProperties(DeviceExtensionPropertyCount);
+				VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, i.layerName, &DeviceExtensionPropertyCount, ExtensionProperties.data()));
+				for (const auto& j : ExtensionProperties) {
+					if (!strcmp(VK_EXT_DEBUG_MARKER_EXTENSION_NAME, j.extensionName)) {
+						return true;
+					}
+				}
+			}
+		}
+	}
+	return false;
+}
+
 #endif
 
 /**
@@ -961,7 +983,7 @@ void VK::CreateDevice()
 	};
 #ifdef _DEBUG
 	//!< ↓デバッグマーカー拡張があるなら追加
-	if (DebugMarker::HasDebugMarkerExtension(PhysicalDevice)) {
+	if (HasDebugMarkerExtension(PhysicalDevice)) {
 		EnabledExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 	}
 #endif
@@ -980,6 +1002,12 @@ void VK::CreateDevice()
 	vkGetDeviceQueue(Device, GraphicsQueueFamilyIndex, 0, &GraphicsQueue);
 	vkGetDeviceQueue(Device, PresentQueueFamilyIndex, 0, &PresentQueue);
 
+#ifdef VK_NO_PROTOYYPES
+#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc));
+#include "VKDeviceProcAddr.h"
+#undef VK_DEVICE_PROC_ADDR
+#endif //!< VK_NO_PROTOYYPES
+	 
 #ifdef _DEBUG
 	CreateDebugMarker();
 #endif
@@ -2093,42 +2121,6 @@ void VK::WaitForFence()
 }
 
 #ifdef _DEBUG
-//void DebugReport::DestroyDebugReportCallback(VkInstance Instance, VkDebugReportCallbackEXT DebugReportCallback)
-//{
-//#if 0
-//	if (VK_NULL_HANDLE != DebugReportCallback) {
-//		vkDestroyDebugReportCallback(Instance, DebugReportCallback, nullptr);
-//	}
-//#endif
-//}
-
-/**
-(初回のみ)RenderDoc を起動、Warning が出ていたらクリックして VulkanCapture を有効にしておくこと、Windows のレジストリが作成される
-RenderDoc から実行した場合にしか VK_EXT_DEBUG_MARKER_EXTENSION_NAME は有効にならないので注意
-*/
-bool DebugMarker::HasDebugMarkerExtension(VkPhysicalDevice PhysicalDevice)
-{
-	uint32_t DeviceLayerPropertyCount = 0;
-	VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, nullptr));
-	if (DeviceLayerPropertyCount) {
-		std::vector<VkLayerProperties> LayerProperties(DeviceLayerPropertyCount);
-		VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, LayerProperties.data()));
-		for (const auto& i : LayerProperties) {
-			uint32_t DeviceExtensionPropertyCount = 0;
-			VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &DeviceExtensionPropertyCount, nullptr));
-			if (DeviceExtensionPropertyCount) {
-				std::vector<VkExtensionProperties> ExtensionProperties(DeviceExtensionPropertyCount);
-				VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, i.layerName, &DeviceExtensionPropertyCount, ExtensionProperties.data()));
-				for (const auto& j : ExtensionProperties) {
-					if (!strcmp(VK_EXT_DEBUG_MARKER_EXTENSION_NAME, j.extensionName)) {
-						return true;
-					}
-				}
-			}
-		}
-	}
-	return false;
-}
 void DebugMarker::Insert(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color)
 {
 	if (VK_NULL_HANDLE != VK::vkCmdDebugMarkerInsert) {

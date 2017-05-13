@@ -91,10 +91,7 @@ protected:
 	void CreateDeviceLocalBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkBufferUsageFlags Usage, const size_t Size, const VkDeviceSize Offset = 0);
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
 
-#ifdef VK_NO_PROTOYYPES
-	virtual void LoadDLL();
-#endif
-
+#ifdef _DEBUG
 	template<typename T>
 	static void CreateDebugReportCallback(VkInstance Instance, T Callback, const VkDebugReportFlagsEXT Flags, VkDebugReportCallbackEXT* DebugReportCallback) {
 		if (VK_NULL_HANDLE != vkCreateDebugReportCallback) {
@@ -108,6 +105,8 @@ protected:
 			vkCreateDebugReportCallback(Instance, &DebugReportCallbackCreateInfo, nullptr, DebugReportCallback);
 		}
 	}
+	static bool HasDebugMarkerExtension(const VkPhysicalDevice PhysicalDevice);
+#endif
 
 	virtual void EnumerateInstanceLayer();
 	virtual void EnumerateInstanceExtenstion(const char* layerName);
@@ -371,8 +370,6 @@ protected:
 class DebugMarker
 {
 public:
-	static bool HasDebugMarkerExtension(VkPhysicalDevice PhysicalDevice);
-
 	static void Insert(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color);
 	static void Insert(VkCommandBuffer CommandBuffer, const std::string& Name, const glm::vec4& Color) { Insert(CommandBuffer, Name.c_str(), Color); }
 	static void Insert(VkCommandBuffer CommandBuffer, const std::wstring& Name, const glm::vec4& Color) { Insert(CommandBuffer, std::string(Name.begin(), Name.end()), Color); }

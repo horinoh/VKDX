@@ -1,1 +1,4 @@
 VK_INSTANCE_PROC_ADDR(EnumerateInstanceExtensionProperties)
+VK_INSTANCE_PROC_ADDR(EnumerateInstanceLayerProperties)
+VK_INSTANCE_PROC_ADDR(DestroySurfaceKHR)
+VK_INSTANCE_PROC_ADDR(CreateWin32SurfaceKHR)
