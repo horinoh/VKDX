@@ -1,5 +1,9 @@
 #pragma once
 
+//!< VK_NO_PROTOYYPES ‚ª’è‹`‚³‚ê‚Ä‚éê‡‚Í DLL ‚ðŽg—p‚·‚é
+//!< If VK_NO_PROTOYYPES is defined, use DLL
+//#define VK_NO_PROTOYYPES
+
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
 

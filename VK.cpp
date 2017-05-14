@@ -4,6 +4,8 @@
 
 #include "VK.h"
 
+#pragma comment(lib, "vulkan-1.lib")
+
 #ifdef VK_NO_PROTOYYPES
 #define VK_GLOBAL_PROC_ADDR(proc) PFN_vk ## proc VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKGlobalProcAddr.h"
@@ -14,8 +16,6 @@
 #define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKDeviceProcAddr.h"
 #undef VK_DEVICE_PROC_ADDR
-#else
-#pragma comment(lib, "vulkan-1.lib")
 #endif //!< VK_NO_PROTOYYPES
 
 #ifdef _DEBUG
@@ -44,7 +44,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	VulkanDLL = LoadLibraryA("vulkan-1.dll");
 	//VulkanDLL = dlopen("libvulkan.so.1", RTLD_NOW);
 	assert(nullptr != VulkanDLL && "LoadLibrary Failed");
-#define VK_GLOBAL_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(nullptr, "vk" #proc));
+#define VK_GLOBAL_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(nullptr, "vk" #proc)); assert(nullptr != vk ## proc && #proc);
 #include "VKGlobalProcAddr.h"
 #undef VK_GLOBAL_PROC_ADDR
 #endif
@@ -654,7 +654,7 @@ void VK::CreateInstance()
 	VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, GetAllocationCallbacks(), &Instance));
 
 #ifdef VK_NO_PROTOYYPES
-#define VK_INSTANCE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(Instance, "vk" #proc));
+#define VK_INSTANCE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(Instance, "vk" #proc)); assert(nullptr != vk ## proc && #proc);
 #include "VKInstanceProcAddr.h"
 #undef VK_INSTANCE_PROC_ADDR
 #endif //!< VK_NO_PROTOYYPES
@@ -670,7 +670,7 @@ void VK::CreateInstance()
 #ifdef _DEBUG
 void VK::CreateDebugReportCallback()
 {
-#define VK_INSTANCE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetInstanceProcAddr(Instance, "vk" #proc "EXT"));
+#define VK_INSTANCE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetInstanceProcAddr(Instance, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
 VK_INSTANCE_PROC_ADDR(CreateDebugReportCallback)
 VK_INSTANCE_PROC_ADDR(DestroyDebugReportCallback)
 #undef VK_INSTANCE_PROC_ADDR
@@ -998,16 +998,16 @@ void VK::CreateDevice()
 	};
 	VERIFY_SUCCEEDED(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, GetAllocationCallbacks(), &Device));
 
-	//!< キューの取得 (グラフィック、プレゼントキューは同じインデックスの場合もあるが別名として取得)
-	vkGetDeviceQueue(Device, GraphicsQueueFamilyIndex, 0, &GraphicsQueue);
-	vkGetDeviceQueue(Device, PresentQueueFamilyIndex, 0, &PresentQueue);
-
 #ifdef VK_NO_PROTOYYPES
-#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc));
+#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc)); assert(nullptr != vk ## proc && #proc); assert(nullptr != vk ## proc && #proc);
 #include "VKDeviceProcAddr.h"
 #undef VK_DEVICE_PROC_ADDR
 #endif //!< VK_NO_PROTOYYPES
-	 
+
+	//!< キューの取得 (グラフィック、プレゼントキューは同じインデックスの場合もあるが別名として取得)
+	vkGetDeviceQueue(Device, GraphicsQueueFamilyIndex, 0, &GraphicsQueue);
+	vkGetDeviceQueue(Device, PresentQueueFamilyIndex, 0, &PresentQueue);
+ 
 #ifdef _DEBUG
 	CreateDebugMarker();
 #endif
@@ -1019,7 +1019,7 @@ void VK::CreateDevice()
 #ifdef _DEBUG
 void VK::CreateDebugMarker()
 {
-#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetDeviceProcAddr(Device, "vk" #proc "EXT"));
+#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetDeviceProcAddr(Device, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
 VK_DEVICE_PROC_ADDR(DebugMarkerSetObjectTag)
 VK_DEVICE_PROC_ADDR(DebugMarkerSetObjectName)
 VK_DEVICE_PROC_ADDR(CmdDebugMarkerBegin)
