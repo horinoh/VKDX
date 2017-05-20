@@ -191,7 +191,7 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12Resource> IndirectBufferResource;
 	Microsoft::WRL::ComPtr<ID3D12CommandSignature> IndirectCommandSignature;
 
-	//!< #TODO 現状1つのみ、配列にする
+	//!< 現状1つのみ、配列にする #DX_TODO
 	Microsoft::WRL::ComPtr<ID3D12Resource> ConstantBufferResource;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> ConstantBufferDescriptorHeap;
 

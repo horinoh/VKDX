@@ -11,8 +11,7 @@
 ### DDS ツール
 * https://directxtex.codeplex.com/wikipage?title=Texconv&referringTitle=Documentation
 * https://directxtex.codeplex.com/wikipage?title=Texassemble&referringTitle=Documentation
-
-### 中間リソースを使用するもの(例えばDDSファイル)は PreBuildEvent で Intermediate から ProjectDir, TargetDir へコピーしている
+* 中間リソースを使用するもの(例えばDDSファイル)は PreBuildEvent で Intermediate から ProjectDir, TargetDir へコピーしている (VS 起動時と exe 直起動時用)
 ~~~
 xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(ProjectDir)
 xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)
@@ -23,18 +22,22 @@ xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)
 #### SDK
 * https://vulkan.lunarg.com/signin
 * インストールすると環境変数 **VK_SDK_PATH**、**VULKAN_SDK** が自動的に作成される
-	* 新しいバージョンをインストールしたら(環境変数は維持されるが)パスが変わるので VAssistX - Visual Assist Options - Performance - Rebuild しておく
-	* **VULKAN_SDK** は UE4 のコンパイルが通らなくなるので消した `setx VULKAN_SDK ""`
+	* 新しいバージョンをインストールしたらパスが変わるので VAssistX - Visual Assist Options - Performance - Rebuild しておく
+	* 環境変数 **VULKAN_SDK** は UE4 のコンパイルが通らなくなるので消した `setx VULKAN_SDK ""`
 * Visual Stuido で C/C++ - Preprocessor - Preprocessor Definitions に **VK_USE_PLATFORM_WIN32_KHR** を定義した
-* 環境変数 VK_INSTANCE_LAYERS を作成しておくか、インスタンス作成持にプログラム中から指定してもよい
+* 環境変数 **VK_INSTANCE_LAYERS** を作成しておくか、インスタンス作成持にプログラム中から指定してもよい。
 ~~~
 setx VK_INSTANCE_LAYERS VK_LAYER_LUNARG_standard_validation
 ~~~
-* DLL を使用する場合は C/C++ - Preprocessor - Preprocessor Definitions に VK_NO_PROTOYYPES を定義しておく
+* DLL を使用する場合は C/C++ - Preprocessor - Preprocessor Definitions に **VK_NO_PROTOYYPES** を定義しておく
 * DLL
 	* %VK_SDK_PATH%\RunTimeInstaller\VulkanRT-XXX-Installer.exe を実行すると DLL がインストールされる (SDKのインストール時に自動的に行われている？)
 * レイヤ設定
 	* %VK_SDK_PATH%\Config\vk_layer_settings.txt を exe と同じ場所へコピーしておく
+~~~
+xcopy /y %VK_SDK_PATH%\Config\vk_layer_settings.txt $(ProjectDir)
+xcopy /y %VK_SDK_PATH%\Config\vk_layer_settings.txt $(TargetDir)
+~~~
 
 #### ドライバ
 * https://www.khronos.org/vulkan/
@@ -49,11 +52,10 @@ setx VK_INSTANCE_LAYERS VK_LAYER_LUNARG_standard_validation
 * 同じ階層に GLI をクローンして **..\..\gli** にパスを通した
 
 #### Vulkan-Hpp
-* https://github.com/KhronosGroup/Vulkan-Hpp
-* 使っていない
+* ~~https://github.com/KhronosGroup/Vulkan-Hpp~~ 今は通常インストールに入っているみたい
 
 #### シェーダコンパイル
-* glslangValidator.exe でコンパイルする 環境変数 **Path** が通っているらしくそのまま使用できる
+* glslangValidator.exe でコンパイルする、環境変数 **Path** が通っているらしくそのまま使用できる
 * Custom Build Tool に以下のように指定した (.exe 直起動もできるように TargetDir にもコピーしている)
 	* Outputs : `%(Identity).spv`
 	* Description : `GLSL Compiler`
@@ -73,7 +75,7 @@ xcopy /y %(Identity).spv $(TargetDir) //!< TargetDir にもコピー
 * glslang.sln を開いて glslang, glslangValidator, OGLCompipler, OSDependent, SPIRV, spirv-remap をビルド
 	* 64bitで使う場合は x64 を追加してビルドしないとだめみたい
 * SPIRV.lib, glslang.lib, OGLCompiler.lib, OSDependent.lib
-* 使っていない
+* ここでは未使用
 
 #### Visual Studio で GLSL シンタックスハイライトさせる場合
 * ShaderHighlights\XXX_vs2015.reg   
@@ -82,7 +84,9 @@ xcopy /y %(Identity).spv $(TargetDir) //!< TargetDir にもコピー
 * RenderDoc https://renderdoc.org/builds
 * 参考 http://www.saschawillems.de/?page_id=2017
 	* RenderDocをインストールして起動 - Warning をクリックするとWindowsのレジストリが作られる(初回のみ)
-	* Executable Path に exe を指定して、 Captureボタンでアプリを実行、PrintScreen でシーンをキャプチャしてアプリを閉じる
+	* Executable Path に exe を指定して、 Launch ボタンでアプリを実行、PrintScreen でシーンをキャプチャしてアプリを閉じる
+		* 必要に応じて上記のexe指定を cap ファイルに保存しておく
+	* **RenderDoc から実行した場合にしか VK_EXT_DEBUG_MARKER_EXTENSION_NAME は有効にならないみたいなので注意**
 
 ## DX
 

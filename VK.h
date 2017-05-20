@@ -1,8 +1,7 @@
 #pragma once
 
-//!< VK_NO_PROTOYYPES が定義されてる場合は DLL を使用する
-//!< If VK_NO_PROTOYYPES is defined, use DLL
-//#define VK_NO_PROTOYYPES
+//!< VK_NO_PROTOYYPES が定義されてる場合は DLL を使用する。If VK_NO_PROTOYYPES is defined, using DLL. 
+//!< C/C++ - Preprocessor - Preprocessor Definitions に定義。 Definition is in C/C++ - Preprocessor - Preprocessor Definitions
 
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <vulkan/vulkan.h>
@@ -64,6 +63,7 @@ protected:
 	static void AlignedAllocNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
 	static void AligendFreeNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
 
+	static bool HasExtension(const VkPhysicalDevice PhysicalDevice, const char* ExtensionName);
 	static VkFormat GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice);
 	static uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const uint32_t MemoryTypeBits, const VkFlags Properties);
 	virtual FORCEINLINE VkFormat GetSupportedDepthFormat() const { return GetSupportedDepthFormat(PhysicalDevice); }
@@ -109,7 +109,21 @@ protected:
 			vkCreateDebugReportCallback(Instance, &DebugReportCallbackCreateInfo, nullptr, DebugReportCallback);
 		}
 	}
-	static bool HasDebugMarkerExtension(const VkPhysicalDevice PhysicalDevice);
+#endif
+#ifdef _DEBUG
+	static void MarkerInsert(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color);
+	static void MarkerInsert(VkCommandBuffer CommandBuffer, const std::string& Name, const glm::vec4& Color) { MarkerInsert(CommandBuffer, Name.c_str(), Color); }
+	static void MarkerInsert(VkCommandBuffer CommandBuffer, const std::wstring& Name, const glm::vec4& Color) { MarkerInsert(CommandBuffer, std::string(Name.begin(), Name.end()), Color); }
+	static void MarkerBegin(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color);
+	static void MarkerBegin(VkCommandBuffer CommandBuffer, const std::string& Name, const glm::vec4& Color) { MarkerBegin(CommandBuffer, Name.c_str(), Color); }
+	static void MarkerBegin(VkCommandBuffer CommandBuffer, const std::wstring& Name, const glm::vec4& Color) { MarkerBegin(CommandBuffer, std::string(Name.begin(), Name.end()), Color); }
+	static void MarkerEnd(VkCommandBuffer CommandBuffer);
+	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const char* Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない、VKDebugMarker.h に実装すること */ }
+	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::string& Name) { MarkerSetObjectName(Device, Name.c_str()); }
+	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::wstring& Name) { MarkerSetObjectName(Device, std::string(Name.begin(), Name.end())); }
+	template<typename T> static void MarkerSetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* Tag) { DEBUG_BREAK(); /* テンプレート特殊化されていない、VKDebugMarker.h に実装すること */ }
+	//!< ↓ここでテンプレート特殊化している Template specialization here
+#include "VKDebugMarker.inl"
 #endif
 
 	virtual void EnumerateInstanceLayer();
@@ -126,9 +140,6 @@ protected:
 	virtual void EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* layerName);
 	virtual void GetQueueFamily();
 	virtual void CreateDevice();
-#ifdef _DEBUG
-	virtual void CreateDebugMarker();
-#endif
 
 	virtual void CreateFence();
 	virtual void CreateSemaphore();
@@ -231,15 +242,10 @@ public:
 #ifdef _DEBUG
 public:
 #define VK_INSTANCE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
-VK_INSTANCE_PROC_ADDR(CreateDebugReportCallback)
-VK_INSTANCE_PROC_ADDR(DestroyDebugReportCallback)
+#include "VKDebugReport.h"
 #undef VK_INSTANCE_PROC_ADDR
 #define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
-VK_DEVICE_PROC_ADDR(DebugMarkerSetObjectTag)
-VK_DEVICE_PROC_ADDR(DebugMarkerSetObjectName)
-VK_DEVICE_PROC_ADDR(CmdDebugMarkerBegin)
-VK_DEVICE_PROC_ADDR(CmdDebugMarkerEnd)
-VK_DEVICE_PROC_ADDR(CmdDebugMarkerInsert)
+#include "VKDebugMarker.h"
 #undef VK_DEVICE_PROC_ADDR
 protected:
 #endif //!< _DEBUG
@@ -294,7 +300,7 @@ protected:
 	VkBuffer IndirectBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory IndirectDeviceMemory = VK_NULL_HANDLE;
 
-	//!< #TODO 現状1つのみ、配列にする
+	//!< 現状1つのみ、配列にする #VK_TODO
 	VkBuffer UniformBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory UniformDeviceMemory = VK_NULL_HANDLE;
 	VkDescriptorBufferInfo UniformDescriptorBufferInfo;
@@ -369,27 +375,3 @@ protected:
 	//	0
 	//};
 };
-
-#ifdef _DEBUG
-class DebugMarker
-{
-public:
-	static void Insert(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color);
-	static void Insert(VkCommandBuffer CommandBuffer, const std::string& Name, const glm::vec4& Color) { Insert(CommandBuffer, Name.c_str(), Color); }
-	static void Insert(VkCommandBuffer CommandBuffer, const std::wstring& Name, const glm::vec4& Color) { Insert(CommandBuffer, std::string(Name.begin(), Name.end()), Color); }
-	
-	static void Begin(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color);
-	static void Begin(VkCommandBuffer CommandBuffer, const std::string& Name, const glm::vec4& Color) { Begin(CommandBuffer, Name.c_str(), Color); }
-	static void Begin(VkCommandBuffer CommandBuffer, const std::wstring& Name, const glm::vec4& Color) { Begin(CommandBuffer, std::string(Name.begin(), Name.end()), Color); }
-	static void End(VkCommandBuffer CommandBuffer);
-
-	template<typename T> static void SetName(VkDevice Device, T Object, const char* Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない、VKDebugMarker.h に実装すること */ }
-	template<typename T> static void SetName(VkDevice Device, T Object, const std::string& Name) { SetName(Device, Name.c_str()); }
-	template<typename T> static void SetName(VkDevice Device, T Object, const std::wstring& Name) { SetName(Device, std::string(Name.begin(), Name.end())); }
-
-	template<typename T> static void SetTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* Tag) { DEBUG_BREAK(); /* テンプレート特殊化されていない、VKDebugMarker.h に実装すること */ }
-	
-	//!< ↓ここでテンプレート特殊化している Template specialization here
-#include "VKDebugMarker.inl"
-};
-#endif

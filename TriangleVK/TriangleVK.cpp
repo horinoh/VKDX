@@ -257,7 +257,7 @@ void TriangleVK::CreateVertexBuffer()
 	}
 
 #ifdef _DEBUG
-	DebugMarker::SetName(Device, VertexBuffer, "MyVertexBuffer");
+	MarkerSetObjectName(Device, VertexBuffer, "MyVertexBuffer");
 #endif
 
 #ifdef _DEBUG
@@ -295,7 +295,7 @@ void TriangleVK::CreateIndexBuffer()
 	}
 
 #ifdef _DEBUG
-	DebugMarker::SetName(Device, IndexBuffer, "MyIndexBuffer");
+	MarkerSetObjectName(Device, IndexBuffer, "MyIndexBuffer");
 #endif
 
 #ifdef _DEBUG
@@ -311,7 +311,7 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, cons
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo)); {
-		//DebugMarker::Begin(CommandBuffer, "HOGE", glm::vec4(0,1,0,1));
+		MarkerBegin(CommandBuffer, "HOGE", glm::vec4(0,1,0,1));
 
 		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
@@ -355,7 +355,7 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, cons
 			vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
 #endif
 		} vkCmdEndRenderPass(CommandBuffer);
-		//DebugMarker::End(CommandBuffer);
+		MarkerEnd(CommandBuffer);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }
 #pragma endregion

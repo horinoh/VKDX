@@ -19,16 +19,11 @@
 #endif //!< VK_NO_PROTOYYPES
 
 #ifdef _DEBUG
-#define VK_INSTANCE_PROC_ADDR(proc) PFN_vk ## proc ## EXT VK::vk ## proc;
-VK_INSTANCE_PROC_ADDR(CreateDebugReportCallback)
-VK_INSTANCE_PROC_ADDR(DestroyDebugReportCallback)
+#define VK_INSTANCE_PROC_ADDR(proc) PFN_vk ## proc ## EXT VK::vk ## proc = VK_NULL_HANDLE;
+#include "VKDebugReport.h"
 #undef VK_INSTANCE_PROC_ADDR
-#define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc ## EXT VK::vk ## proc;
-VK_DEVICE_PROC_ADDR(DebugMarkerSetObjectTag)
-VK_DEVICE_PROC_ADDR(DebugMarkerSetObjectName)
-VK_DEVICE_PROC_ADDR(CmdDebugMarkerBegin)
-VK_DEVICE_PROC_ADDR(CmdDebugMarkerEnd)
-VK_DEVICE_PROC_ADDR(CmdDebugMarkerInsert)
+#define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc ## EXT VK::vk ## proc = VK_NULL_HANDLE;
+#include "VKDebugMarker.h"
 #undef VK_DEVICE_PROC_ADDR
 #endif //!< _DEBUG
 
@@ -47,7 +42,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 #define VK_GLOBAL_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(nullptr, "vk" #proc)); assert(nullptr != vk ## proc && #proc);
 #include "VKGlobalProcAddr.h"
 #undef VK_GLOBAL_PROC_ADDR
-#endif
+#endif //!< VK_NO_PROTOYYPES
 
 	CreateInstance();
 	CreateSurface(hWnd, hInstance);
@@ -72,7 +67,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateDescriptorSet();
 	UpdateDescriptorSet();
 
-	//!< ユニフォームバッファ #TODO
+	//!< ユニフォームバッファ #VK_TODO
 	//CreateUniformBuffer();
 
 	CreateRenderPass();
@@ -80,7 +75,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreatePipeline();
 }
 /**
-@note 殆どのものを壊して作り直さないとダメ #TODO
+@note 殆どのものを壊して作り直さないとダメ #VK_TODO
 almost every thing must be recreated
 
 LEARNING VULKAN : p367
@@ -112,8 +107,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnDestroy(hWnd, hInstance);
 
-	//!< GPUが完了するまでここで待機 
-	//!< Wait GPU
+	//!< GPUが完了するまでここで待機 Wait GPU
 	if (VK_NULL_HANDLE != Device) {
 		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	}
@@ -274,7 +268,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	if (!FreeLibrary(VulkanDLL)) {
 		assert(false && "FreeLibrary failed");
 	}
-#endif
+#endif //!< VK_NO_PROTOYYPES
 }
 
 std::string VK::GetVkResultString(const VkResult Result)
@@ -301,6 +295,30 @@ std::string VK::GetFormatString(const VkFormat Format)
 #include "VKFormat.h"
 	}
 #undef VK_FORMAT_ENTRY
+}
+
+bool VK::HasExtension(const VkPhysicalDevice PhysicalDevice, const char* ExtensionName)
+{
+	uint32_t DeviceLayerPropertyCount = 0;
+	VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, nullptr));
+	if (DeviceLayerPropertyCount) {
+		std::vector<VkLayerProperties> LayerProperties(DeviceLayerPropertyCount);
+		VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, LayerProperties.data()));
+		for (const auto& i : LayerProperties) {
+			uint32_t DeviceExtensionPropertyCount = 0;
+			VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &DeviceExtensionPropertyCount, nullptr));
+			if (DeviceExtensionPropertyCount) {
+				std::vector<VkExtensionProperties> ExtensionProperties(DeviceExtensionPropertyCount);
+				VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, i.layerName, &DeviceExtensionPropertyCount, ExtensionProperties.data()));
+				for (const auto& j : ExtensionProperties) {
+					if (!strcmp(ExtensionName, j.extensionName)) {
+						return true;
+					}
+				}
+			}
+		}
+	}
+	return false;
 }
 
 VkFormat VK::GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice)
@@ -667,12 +685,12 @@ void VK::CreateInstance()
 	std::cout << "CreateInstace" << COUT_OK << std::endl << std::endl;
 #endif
 }
+
 #ifdef _DEBUG
 void VK::CreateDebugReportCallback()
 {
 #define VK_INSTANCE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetInstanceProcAddr(Instance, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
-VK_INSTANCE_PROC_ADDR(CreateDebugReportCallback)
-VK_INSTANCE_PROC_ADDR(DestroyDebugReportCallback)
+#include "VKDebugReport.h"
 #undef VK_INSTANCE_PROC_ADDR
 
 	auto Callback = [](VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData) -> VkBool32
@@ -710,35 +728,40 @@ VK_INSTANCE_PROC_ADDR(DestroyDebugReportCallback)
 	
 	CreateDebugReportCallback(Instance, Callback, Flags, &DebugReportCallback);
 }
-/**
-(初回のみ)RenderDoc を起動、Warning が出ていたらクリックして VulkanCapture を有効にしておくこと、Windows のレジストリが作成される
-RenderDoc から実行した場合にしか VK_EXT_DEBUG_MARKER_EXTENSION_NAME は有効にならないので注意
-*/
-bool VK::HasDebugMarkerExtension(const VkPhysicalDevice PhysicalDevice)
-{
-	uint32_t DeviceLayerPropertyCount = 0;
-	VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, nullptr));
-	if (DeviceLayerPropertyCount) {
-		std::vector<VkLayerProperties> LayerProperties(DeviceLayerPropertyCount);
-		VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, LayerProperties.data()));
-		for (const auto& i : LayerProperties) {
-			uint32_t DeviceExtensionPropertyCount = 0;
-			VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &DeviceExtensionPropertyCount, nullptr));
-			if (DeviceExtensionPropertyCount) {
-				std::vector<VkExtensionProperties> ExtensionProperties(DeviceExtensionPropertyCount);
-				VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, i.layerName, &DeviceExtensionPropertyCount, ExtensionProperties.data()));
-				for (const auto& j : ExtensionProperties) {
-					if (!strcmp(VK_EXT_DEBUG_MARKER_EXTENSION_NAME, j.extensionName)) {
-						return true;
-					}
-				}
-			}
-		}
-	}
-	return false;
-}
+#endif //!< _DEBUG
 
-#endif
+#ifdef _DEBUG
+void VK::MarkerInsert(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color)
+{
+	if (VK_NULL_HANDLE != vkCmdDebugMarkerInsert) {
+		VkDebugMarkerMarkerInfoEXT DebugMarkerMarkerInfo = {
+			VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
+			nullptr,
+			Name,
+		};
+		memcpy(DebugMarkerMarkerInfo.color, &Color, sizeof(DebugMarkerMarkerInfo.color));
+		vkCmdDebugMarkerInsert(CommandBuffer, &DebugMarkerMarkerInfo);
+	}
+}
+void VK::MarkerBegin(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color)
+{
+	if (VK_NULL_HANDLE != vkCmdDebugMarkerBegin) {
+		VkDebugMarkerMarkerInfoEXT DebugMarkerMarkerInfo = {
+			VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
+			nullptr,
+			Name,
+		};
+		memcpy(DebugMarkerMarkerInfo.color, &Color, sizeof(DebugMarkerMarkerInfo.color));
+		vkCmdDebugMarkerBegin(CommandBuffer, &DebugMarkerMarkerInfo);
+	}
+}
+void VK::MarkerEnd(VkCommandBuffer CommandBuffer)
+{
+	if (VK_NULL_HANDLE != vkCmdDebugMarkerEnd) {
+		vkCmdDebugMarkerEnd(CommandBuffer);
+	}
+}
+#endif //!< _DEBUG
 
 /**
 @brief デバイス(GPU)とホスト(CPU)の同期
@@ -810,8 +833,9 @@ void VK::GetPhysicalDevice()
 		PHYSICAL_DEVICE_TYPE_ENTRY(VIRTUAL_GPU);
 		PHYSICAL_DEVICE_TYPE_ENTRY(CPU);
 		std::cout << std::endl;
+		//!< PhysicalDeviceProperties.limits から各種限界値が取れる
 		PhysicalDeviceProperties.limits;
-		
+
 		//!< 物理デバイスのフィーチャー
 		VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
 		vkGetPhysicalDeviceFeatures(i, &PhysicalDeviceFeatures);
@@ -830,7 +854,7 @@ void VK::GetPhysicalDevice()
 #undef PHYSICAL_DEVICE_TYPE_ENTRY
 #endif
 
-	//!< ここでは最初の物理デバイスを選択することにする #TODO
+	//!< ここでは最初の物理デバイスを選択することにする #VK_TODO
 	PhysicalDevice = PhysicalDevices[0];
 
 	//!< 選択した物理デバイスのメモリプロパティを取得
@@ -982,8 +1006,10 @@ void VK::CreateDevice()
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	};
 #ifdef _DEBUG
-	//!< ↓デバッグマーカー拡張があるなら追加
-	if (HasDebugMarkerExtension(PhysicalDevice)) {
+	//!< ↓デバッグマーカー拡張があるなら追加。If we have debug marker extension, add
+	//!< RenderDoc から起動した時にのみ拡張は有効みたい。This extention will be valid, only if invoked from RenderDoc
+	const auto HasDebugMarkerExt = HasExtension(PhysicalDevice, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+	if (HasDebugMarkerExt) {
 		EnabledExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 	}
 #endif
@@ -1009,25 +1035,17 @@ void VK::CreateDevice()
 	vkGetDeviceQueue(Device, PresentQueueFamilyIndex, 0, &PresentQueue);
  
 #ifdef _DEBUG
-	CreateDebugMarker();
+	if (HasDebugMarkerExt) {
+#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetDeviceProcAddr(Device, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
+#include "VKDebugMarker.h"
+#undef VK_DEVICE_PROC_ADDR
+	}
 #endif
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
 #endif
 }
-#ifdef _DEBUG
-void VK::CreateDebugMarker()
-{
-#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetDeviceProcAddr(Device, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
-VK_DEVICE_PROC_ADDR(DebugMarkerSetObjectTag)
-VK_DEVICE_PROC_ADDR(DebugMarkerSetObjectName)
-VK_DEVICE_PROC_ADDR(CmdDebugMarkerBegin)
-VK_DEVICE_PROC_ADDR(CmdDebugMarkerEnd)
-VK_DEVICE_PROC_ADDR(CmdDebugMarkerInsert)
-#undef VK_DEVICE_PROC_ADDR
-}
-#endif
 
 /**
 @brief CPU と GPU の同期
@@ -2119,38 +2137,3 @@ void VK::WaitForFence()
 	//std::cout << "Fence" << std::endl;
 #endif
 }
-
-#ifdef _DEBUG
-void DebugMarker::Insert(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color)
-{
-	if (VK_NULL_HANDLE != VK::vkCmdDebugMarkerInsert) {
-		VkDebugMarkerMarkerInfoEXT DebugMarkerMarkerInfo = {
-			VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
-			nullptr,
-			Name,
-		};
-		memcpy(DebugMarkerMarkerInfo.color, &Color, sizeof(DebugMarkerMarkerInfo.color));
-		VK::vkCmdDebugMarkerInsert(CommandBuffer, &DebugMarkerMarkerInfo);
-	}
-}
-void DebugMarker::Begin(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color)
-{
-	if (VK_NULL_HANDLE != VK::vkCmdDebugMarkerBegin) {
-		VkDebugMarkerMarkerInfoEXT DebugMarkerMarkerInfo = {
-			VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
-			nullptr,
-			Name,
-		};
-		memcpy(DebugMarkerMarkerInfo.color, &Color, sizeof(DebugMarkerMarkerInfo.color));
-		VK::vkCmdDebugMarkerBegin(CommandBuffer, &DebugMarkerMarkerInfo);
-	}
-}
-void DebugMarker::End(VkCommandBuffer CommandBuffer)
-{
-	if (VK_NULL_HANDLE != VK::vkCmdDebugMarkerEnd) {
-		VK::vkCmdDebugMarkerEnd(CommandBuffer);
-	}
-}
-#endif
-
-
