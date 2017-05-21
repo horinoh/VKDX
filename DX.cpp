@@ -312,6 +312,19 @@ void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D1
 	} ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, ResourceState);
 }
 
+#ifdef _DEBUG
+void DX::BeginEvent(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name)
+{
+	const auto Size = static_cast<UINT>((wcslen(Name) + 1) * sizeof(Name[0]));
+	CommandList->BeginEvent(0, Name, Size);
+}
+void DX::EndEvent(ID3D12GraphicsCommandList* CommandList)
+{
+	CommandList->EndEvent();
+}
+#endif //!< _DEBUG
+
+
 void DX::CreateDevice(HWND hWnd)
 {
 	using namespace Microsoft::WRL;
@@ -1257,15 +1270,3 @@ void DX::WaitForFence()
 		CloseHandle(hEvent);
 	}
 }
-
-#ifdef _DEBUG
-void DebugEvent::Begin(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name)
-{
-	const auto Size = static_cast<UINT>((wcslen(Name) + 1) * sizeof(Name[0]));
-	CommandList->BeginEvent(0, Name, Size);
-}
-void DebugEvent::End(ID3D12GraphicsCommandList* CommandList)
-{
-	CommandList->EndEvent();
-}
-#endif

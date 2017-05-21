@@ -52,7 +52,7 @@ xcopy /y %VK_SDK_PATH%\Config\vk_layer_settings.txt $(TargetDir)
 * 同じ階層に GLI をクローンして **..\..\gli** にパスを通した
 
 #### Vulkan-Hpp
-* ~~https://github.com/KhronosGroup/Vulkan-Hpp~~ 今は通常インストールに入っているみたい
+* ~~https://github.com/KhronosGroup/Vulkan-Hpp~~ 今は通常インストールに含まれるみたい (未使用)
 
 #### シェーダコンパイル
 * glslangValidator.exe でコンパイルする、環境変数 **Path** が通っているらしくそのまま使用できる
@@ -78,7 +78,7 @@ xcopy /y %(Identity).spv $(TargetDir) //!< TargetDir にもコピー
 * ここでは未使用
 
 #### Visual Studio で GLSL シンタックスハイライトさせる場合
-* ShaderHighlights\XXX_vs2015.reg   
+* ShaderHighlights\XXX_vs2015.reg を実行して Visual Studio を再起動 
 
 #### デバッグ
 * RenderDoc https://renderdoc.org/builds

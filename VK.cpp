@@ -218,7 +218,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 
 	if (!CommandPools.empty() && !CommandBuffers.empty()) {
-		const auto CP = CommandPools[0]; //!< #TODO 現状は0番のコマンドプール決め打ち
+		const auto CP = CommandPools[0]; //!< 現状は0番のコマンドプール決め打ち #VK_TODO 
 		vkFreeCommandBuffers(Device, CP, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
 	}
 	CommandBuffers.clear();
@@ -1143,7 +1143,7 @@ void VK::CreateSwapchain()
 	//!< Count of swapchain image is fixed, create commandbuffer here
 	{
 		CreateCommandPool(GraphicsQueueFamilyIndex);
-		AllocateCommandBuffer(CommandPools[0], SwapchainImages.size()); //!< #TODO 現状は0番のコマンドプール決め打ち
+		AllocateCommandBuffer(CommandPools[0], SwapchainImages.size()); //!< 現状は0番のコマンドプール決め打ち #VK_TODO 
 	}
 
 	//!< ビューを作成
@@ -1408,7 +1408,7 @@ void VK::ResizeSwapchain(const uint32_t Width, const uint32_t Height)
 	}
 
 	//if (!CommandPools.empty() && !CommandBuffers.empty()) {
-	//	const auto CP = CommandPools[0]; //!< #TODO 現状は0番のコマンドプール決め打ち
+	//	const auto CP = CommandPools[0]; //!< 現状は0番のコマンドプール決め打ち #VK_TODO 
 	//	vkFreeCommandBuffers(Device, CP, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
 	//}
 	//CommandBuffers.clear();

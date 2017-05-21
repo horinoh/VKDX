@@ -75,6 +75,16 @@ protected:
 	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState);
 	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES ResourceState);
 	
+#ifdef _DEBUG
+	//!< Insert() ‘Š“–‚Í–³‚¢H
+	static void BeginEvent(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name);
+	static void BeginEvent(ID3D12GraphicsCommandList* CommandList, const std::wstring& Name) { BeginEvent(CommandList, Name.c_str()); }
+	static void BeginEvent(ID3D12GraphicsCommandList* CommandList, const std::string& Name) { BeginEvent(CommandList, std::wstring(Name.begin(), Name.end())); }
+	static void EndEvent(ID3D12GraphicsCommandList* CommandList);
+	static void SetName(ID3D12DeviceChild* Resource, LPCWSTR Name) { Resource->SetName(Name); }
+	static void SetName(ID3D12DeviceChild* Resource, const std::wstring& Name) { SetName(Resource, Name.c_str()); }
+	static void SetName(ID3D12DeviceChild* Resource, const std::string& Name) { SetName(Resource, std::wstring(Name.begin(), Name.end())); }
+#endif
 
 	virtual void CreateDevice(HWND hWnd);
 	virtual HRESULT CreateMaxFeatureLevelDevice(IDXGIAdapter* Adapter);
@@ -214,19 +224,3 @@ protected:
 		D3D_FEATURE_LEVEL_9_1,
 	};
 };
-
-#ifdef _DEBUG
-class DebugEvent
-{
-public:
-	//static void Insert(ID3D12CommandList* CommandList, PCWSTR Name);
-	static void Begin(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name);
-	static void Begin(ID3D12GraphicsCommandList* CommandList, const std::wstring& Name) { Begin(CommandList, Name.c_str()); }
-	static void Begin(ID3D12GraphicsCommandList* CommandList, const std::string& Name) { Begin(CommandList, std::wstring(Name.begin(), Name.end())); }
-	static void End(ID3D12GraphicsCommandList* CommandList);
-
-	static void SetName(ID3D12DeviceChild* Resource, LPCWSTR Name) { Resource->SetName(Name); }
-	static void SetName(ID3D12DeviceChild* Resource, const std::wstring& Name) { SetName(Resource, Name.c_str()); }
-	static void SetName(ID3D12DeviceChild* Resource, const std::string& Name) { SetName(Resource, std::wstring(Name.begin(), Name.end())); }
-};
-#endif

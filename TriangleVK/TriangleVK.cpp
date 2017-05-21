@@ -311,7 +311,9 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, cons
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo)); {
-		MarkerBegin(CommandBuffer, "HOGE", glm::vec4(0,1,0,1));
+#ifdef _DEBUG
+		MarkerBegin(CommandBuffer, "Command Begin, End", glm::vec4(0,1,0,1));
+#endif
 
 		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
@@ -355,7 +357,9 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, cons
 			vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
 #endif
 		} vkCmdEndRenderPass(CommandBuffer);
+#ifdef _DEBUG
 		MarkerEnd(CommandBuffer);
+#endif
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }
 #pragma endregion

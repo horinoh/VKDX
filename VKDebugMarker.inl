@@ -1,6 +1,6 @@
 #pragma once
 
-//!< テンプレート特殊化
+//!< テンプレート特殊化 Template specialization
 template<>
 static void MarkerSetObjectName(VkDevice Device, VkBuffer Object, const char* Name)
 {

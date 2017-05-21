@@ -118,10 +118,10 @@ protected:
 	static void MarkerBegin(VkCommandBuffer CommandBuffer, const std::string& Name, const glm::vec4& Color) { MarkerBegin(CommandBuffer, Name.c_str(), Color); }
 	static void MarkerBegin(VkCommandBuffer CommandBuffer, const std::wstring& Name, const glm::vec4& Color) { MarkerBegin(CommandBuffer, std::string(Name.begin(), Name.end()), Color); }
 	static void MarkerEnd(VkCommandBuffer CommandBuffer);
-	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const char* Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない、VKDebugMarker.h に実装すること */ }
+	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const char* Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない Not template specialized */ }
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::string& Name) { MarkerSetObjectName(Device, Name.c_str()); }
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::wstring& Name) { MarkerSetObjectName(Device, std::string(Name.begin(), Name.end())); }
-	template<typename T> static void MarkerSetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* Tag) { DEBUG_BREAK(); /* テンプレート特殊化されていない、VKDebugMarker.h に実装すること */ }
+	template<typename T> static void MarkerSetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* Tag) { DEBUG_BREAK(); /* テンプレート特殊化されていない Not template specialized */ }
 	//!< ↓ここでテンプレート特殊化している Template specialization here
 #include "VKDebugMarker.inl"
 #endif
