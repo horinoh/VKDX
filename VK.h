@@ -55,6 +55,7 @@ public:
 	static std::string GetVkResultString(const VkResult Result);
 	static std::wstring GetVkResultStringW(const VkResult Result);
 	static std::string GetFormatString(const VkFormat Format);
+	static std::string GetColorSpaceString(const VkColorSpaceKHR ColorSpace);
 
 protected:
 	static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
@@ -74,9 +75,10 @@ protected:
 	//virtual void MemoryBarrier() {}
 	//virtual void BufferMemoryBarrier(const VkCommandBuffer CommandBuffer, const VkBuffer Buffer) {}
 	//virtual void ImageMemoryBarrier(const VkCommandBuffer CommandBuffer, const VkImage Image) {}
+
 	virtual void CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size) const;
 	virtual void CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers) const;
-	virtual void CopyToHostVisibleMemory(const VkBuffer Buffer, const VkDeviceMemory DeviceMemory, const size_t Size = 0, const void* Source = nullptr, const VkDeviceSize Offset = 0);
+	virtual void CopyToHostVisibleMemory(const VkDeviceMemory DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset = 0);
 	virtual void SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkBuffer DstBuffer, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size);
 	template<typename T> void CreateHostVisibleMemory(VkDeviceMemory* DeviceMemory, const T Object) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
 	template<typename T> void CreateDeviceLocalMemory(VkDeviceMemory* DeviceMemory, const T Object) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
@@ -128,6 +130,21 @@ protected:
 
 	virtual void EnumerateInstanceLayer();
 	virtual void EnumerateInstanceExtenstion(const char* layerName);
+	//const VkCommandBufferInheritanceInfo CommandBufferInheritanceInfo_None = {
+	//	VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+	//	nullptr,
+	//	VK_NULL_HANDLE,
+	//	0,
+	//	VK_NULL_HANDLE,
+	//	VK_FALSE,
+	//	0,
+	//	0
+	//};
+
+#ifdef VK_NO_PROTOYYPES
+	void LoadVulkanDLL();
+#endif //!< VK_NO_PROTOYYPES
+	
 	virtual void CreateInstance();
 #ifdef _DEBUG
 	virtual void CreateDebugReportCallback();
@@ -364,14 +381,4 @@ protected:
 		0, //!< 何度もサブミットするので VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT は指定しない、VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT は前回のサブミットが完了していなくても再度サブミットされ得る場合
 		nullptr//&CommandBufferInheritanceInfo_None //!< セカンダリコマンドバッファの場合に使用
 	};
-	//const VkCommandBufferInheritanceInfo CommandBufferInheritanceInfo_None = {
-	//	VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-	//	nullptr,
-	//	VK_NULL_HANDLE,
-	//	0,
-	//	VK_NULL_HANDLE,
-	//	VK_FALSE,
-	//	0,
-	//	0
-	//};
 };

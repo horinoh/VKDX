@@ -36,12 +36,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	Super::OnCreate(hWnd, hInstance, Title);
 
 #ifdef VK_NO_PROTOYYPES
-	VulkanDLL = LoadLibraryA("vulkan-1.dll");
-	//VulkanDLL = dlopen("libvulkan.so.1", RTLD_NOW);
-	assert(nullptr != VulkanDLL && "LoadLibrary Failed");
-#define VK_GLOBAL_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(nullptr, "vk" #proc)); assert(nullptr != vk ## proc && #proc);
-#include "VKGlobalProcAddr.h"
-#undef VK_GLOBAL_PROC_ADDR
+	LoadVulkanDLL();
 #endif //!< VK_NO_PROTOYYPES
 
 	CreateInstance();
@@ -122,10 +117,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyPipeline(Device, Pipeline, GetAllocationCallbacks());
 		Pipeline = VK_NULL_HANDLE;
 	}
-	//if (VK_NULL_HANDLE != PipelineCache) {
-	//	vkDestroyPipelineCache(Device, PipelineCache, GetAllocationCallbacks());
-	//	PipelineCache = VK_NULL_HANDLE;
-	//}
 
 	if (VK_NULL_HANDLE != PipelineLayout) {
 		vkDestroyPipelineLayout(Device, PipelineLayout, GetAllocationCallbacks());
@@ -276,7 +267,7 @@ std::string VK::GetVkResultString(const VkResult Result)
 #define VK_RESULT_ENTRY(vr) case VK_##vr: return #vr;
 	switch (Result)
 	{
-	default: DEBUG_BREAK(); return "";
+	default: DEBUG_BREAK(); return "Not found";
 #include "VkResult.h"
 	}
 #undef VK_RESULT_CASE
@@ -291,10 +282,20 @@ std::string VK::GetFormatString(const VkFormat Format)
 #define VK_FORMAT_ENTRY(vf) case VK_FORMAT_##vf: return #vf;
 	switch (Format)
 	{
-	default: DEBUG_BREAK(); return "";
+	default: DEBUG_BREAK(); return "Not found";
 #include "VKFormat.h"
 	}
 #undef VK_FORMAT_ENTRY
+}
+std::string VK::GetColorSpaceString(const VkColorSpaceKHR ColorSpace)
+{
+#define VK_COLOR_SPACE_ENTRY(vcs) case VK_COLOR_SPACE_##vcs: return #vcs;
+	switch (ColorSpace)
+	{
+	default: DEBUG_BREAK(); return "Not found";
+#include "VKColorSpace.h"
+	}
+#undef VK_COLOR_SPACE_ENTRY
 }
 
 bool VK::HasExtension(const VkPhysicalDevice PhysicalDevice, const char* ExtensionName)
@@ -483,7 +484,7 @@ void VK::CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkImag
 	VERIFY_SUCCEEDED(vkCreateImage(Device, &ImageCreateInfo, GetAllocationCallbacks(), Image));
 }
 
-void VK::CopyToHostVisibleMemory(const VkBuffer Buffer, const VkDeviceMemory DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset)
+void VK::CopyToHostVisibleMemory(const VkDeviceMemory DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset)
 {
 	if (Size && nullptr != Source) {
 		void *Data;
@@ -560,7 +561,7 @@ void VK::CreateStagingBufferAndCopyToMemory(VkBuffer* Buffer, VkDeviceMemory* De
 	CreateHostVisibleMemory(DeviceMemory, *Buffer);
 
 	//!< メモリ(ホストビジブル)へデータをコピー
-	CopyToHostVisibleMemory(*Buffer, *DeviceMemory, Size, Source, Offset);
+	CopyToHostVisibleMemory(*DeviceMemory, Size, Source, Offset);
 	//!< バッファとメモリをバインド
 	BindDeviceMemory(*Buffer, *DeviceMemory, Offset);
 }
@@ -627,6 +628,18 @@ void VK::EnumerateInstanceExtenstion(const char* layerName)
 		}
 	}
 }
+
+#ifdef VK_NO_PROTOYYPES
+void VK::LoadVulkanDLL()
+{
+	VulkanDLL = LoadLibraryA("vulkan-1.dll");
+	//VulkanDLL = dlopen("libvulkan.so.1", RTLD_NOW);
+	assert(nullptr != VulkanDLL && "LoadLibrary failed");
+#define VK_GLOBAL_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(nullptr, "vk" #proc)); assert(nullptr != vk ## proc && #proc);
+#include "VKGlobalProcAddr.h"
+#undef VK_GLOBAL_PROC_ADDR
+}
+#endif //!< VK_NO_PROTOYYPES
 
 void VK::CreateInstance()
 {
@@ -1139,36 +1152,28 @@ void VK::CreateSwapchain()
 {
 	CreateSwapchainOfClientRect();
 	
-	//!< スワップチェインイメージの枚数が決まったので、ここでコマンドバッファを確保する
-	//!< Count of swapchain image is fixed, create commandbuffer here
+	//!< スワップチェインイメージの枚数が決まったので、ここでコマンドバッファを確保する Count of swapchain image is fixed, create commandbuffer here
 	{
 		CreateCommandPool(GraphicsQueueFamilyIndex);
-		AllocateCommandBuffer(CommandPools[0], SwapchainImages.size()); //!< 現状は0番のコマンドプール決め打ち #VK_TODO 
+		AllocateCommandBuffer(CommandPools[0], SwapchainImages.size()); //!< 現状は0番のコマンドプール決め打ち #VK_TODO
 	}
 
-	//!< ビューを作成
-	//!< Create view
+	//!< ビューを作成 CreateView
 	CreateSwapchainImageView();
 	
-	//!< イメージの初期化
-	//!< Initialize images
+	//!< イメージの初期化 Initialize images
 	//InitializeSwapchainImage(CommandBuffers[0]);
 	InitializeSwapchainImage(CommandBuffers[0], &Colors::Red);
-
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateSwapchain" << COUT_OK << std::endl << std::endl;
-#endif
 }
 VkSurfaceFormatKHR VK::SelectSurfaceFormat()
 {
-	//!< サーフェスのフォーマットを取得
 	uint32_t SurfaceFormatCount;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, Surface, &SurfaceFormatCount, nullptr));
-	assert(SurfaceFormatCount);
+	assert(SurfaceFormatCount && "Surface format count is zero");
 	std::vector<VkSurfaceFormatKHR> SurfaceFormats(SurfaceFormatCount);
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PhysicalDevice, Surface, &SurfaceFormatCount, SurfaceFormats.data()));
 
-	//!< ここでは、最初の非 VK_FORMAT_UNDEFINED を選択する
+	//!< ここでは、最初の非 UNDEFINED を選択する。Select first format but UNDEFINED here
 	for (uint32_t i = 0; i < SurfaceFormats.size(); ++i) {
 		if (VK_FORMAT_UNDEFINED != SurfaceFormats[i].format) {
 #ifdef DEBUG_STDOUT
@@ -1176,7 +1181,7 @@ VkSurfaceFormatKHR VK::SelectSurfaceFormat()
 				std::cout << "\t" << "\t" << Lightblue << "Format" << White << std::endl;
 				for (uint32_t j = 0; j < SurfaceFormats.size();++j) {
 					if (i == j) { std::cout << Yellow; }
-					std::cout << "\t" << "\t" << "\t" << GetFormatString(SurfaceFormats[j].format) << std::endl;
+					std::cout << "\t" << "\t" << "\tFormat = " << GetFormatString(SurfaceFormats[j].format) << ", ColorSpace = " << GetColorSpaceString(SurfaceFormats[j].colorSpace) << std::endl;
 					std::cout << White;
 				}
 				std::cout << std::endl;
@@ -1186,7 +1191,18 @@ VkSurfaceFormatKHR VK::SelectSurfaceFormat()
 		}
 	}
 	
-	return VkSurfaceFormatKHR({ VK_FORMAT_B8G8R8A8_UNORM , SurfaceFormats[0].colorSpace });
+	//!< 要素が 1 つのみで UNDEFINED の場合、好きなものを選択できる。Has only 1 element and is UNDEFINED, we can choose
+	if (1 == SurfaceFormats.size() && VK_FORMAT_UNDEFINED == SurfaceFormats[0].format) {
+#ifdef DEBUG_STDOUT
+		std::cout << Yellow;
+		std::cout << "\t" << "\t" << "\tFormat = " << GetFormatString(VK_FORMAT_B8G8R8A8_UNORM) << ", ColorSpace = " << GetColorSpaceString(VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) << std::endl;
+		std::cout << White;
+#endif
+		return VkSurfaceFormatKHR({ VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR });
+	}
+
+	assert(false && "Valid surface format not found");
+	return SurfaceFormats[0];
 }
 VkPresentModeKHR VK::SelectSurfacePresentMode()
 {
@@ -1198,19 +1214,21 @@ VkPresentModeKHR VK::SelectSurfacePresentMode()
 
 	//!< 可能なら VK_PRESENT_MODE_MAILBOX_KHR を選択、次いで VK_PRESENT_MODE_FIFO_KHR を選択
 	/**
-	VK_PRESENT_MODE_IMMEDIATE_KHR
-	VK_PRESENT_MODE_MAILBOX_KHR ... Vブランクで表示される、テアリングは起こらない、キューは1つで常に最新で上書きされる (ゲーム等)
-	VK_PRESENT_MODE_FIFO_KHR ... Vブランクで表示される、テアリングは起こらない (ムービー等)
-	VK_PRESENT_MODE_FIFO_RELAXED_KHR ... 1Vブランク以上経ったイメージは次のVブランクを待たずにリリースされ得る、テアリングが起こる
+	VK_PRESENT_MODE_IMMEDIATE_KHR ... テアリングが起こる。 Tearing happen
+	VK_PRESENT_MODE_MAILBOX_KHR ... キューは 1 つで常に最新で上書きされる。Queue is 1, and always update to new image
+	VK_PRESENT_MODE_FIFO_KHR ... VulkanAPI が必ずサポートする VulkanAPI always support this
+	VK_PRESENT_MODE_FIFO_RELAXED_KHR ... 1Vブランク以上経ったイメージは次のVブランクを待たずにプレゼンテーションされ得る (余裕が無い場合にはテアリングが起こる)
 	*/
 	const VkPresentModeKHR SelectedPresentMode = [&]() {
 		for (auto i : PresentModes) {
 			if (VK_PRESENT_MODE_MAILBOX_KHR == i) {
+				//!< 可能なら MAILBOX。Want to use MAILBOX
 				return i;
 			}
 		}
 		for (auto i : PresentModes) {
 			if (VK_PRESENT_MODE_FIFO_KHR == i) {
+				//!< FIFO は VulkanAPI が必ずサポートする。 VulkanAPI always support FIFO
 				return i;
 			}
 		}
@@ -1238,37 +1256,38 @@ VkPresentModeKHR VK::SelectSurfacePresentMode()
 }
 void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 {
-	//!< サーフェスの情報を取得
 	VkSurfaceCapabilitiesKHR SurfaceCapabilities;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PhysicalDevice, Surface, &SurfaceCapabilities));
 
-	//!< イメージ枚数 (ここでは1枚多く取る ... MAILBOX の場合3枚あった方が良いので)
+	//!< minImageCount + 1 枚取る (MAILBOX では 3 枚欲しいので) Use minImageCount + 1 images (We want 3 image to use MAILBOX)
+	//!< 自分の環境では minImageCount は 2。In my environment minImageCount is 2
 	const auto MinImageCount = (std::min)(SurfaceCapabilities.minImageCount + 1, SurfaceCapabilities.maxImageCount);
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "\t" << Lightblue << "ImageCount = " << White << MinImageCount << std::endl;
 #endif
 
-	//!< サーフェスサイズ
-	//!< 未定義の場合は明示的に指定する。(サイズが定義されている場合はそれに従わないとならない)
-	if (-1 == SurfaceCapabilities.currentExtent.width) {
+	if (0xffffffff == SurfaceCapabilities.currentExtent.width) {
+		//!< 0xffffffff の場合はイメージサイズがウインドウサイズを決定する。If 0xffffffff, size of image determines the size of the window
 		SurfaceExtent2D = {
 			(std::max)((std::min)(Width, SurfaceCapabilities.maxImageExtent.width), SurfaceCapabilities.minImageExtent.width), 
 			(std::max)((std::min)(Height, SurfaceCapabilities.minImageExtent.height), SurfaceCapabilities.minImageExtent.height) 
 		};
 	}
 	else {
+		//!< そうでない場合は currentExtent。Otherwise, use currentExtent
 		SurfaceExtent2D = SurfaceCapabilities.currentExtent;
 	}
 #ifdef DEBUG_STDOUT
-	std::cout << "\t" << "\t" << Lightblue << "ImageExtent (" << (-1 == SurfaceCapabilities.currentExtent.width ? "Undefined" : "Defined") << ")" << White << std::endl;
+	std::cout << "\t" << "\t" << Lightblue << "ImageExtent (" << (0xffffffff == SurfaceCapabilities.currentExtent.width ? "Undefined" : "Defined") << ")" << White << std::endl;
 	std::cout << "\t" << "\t" << "\t" << SurfaceExtent2D.width << " x " << SurfaceExtent2D.height << std::endl;
 #endif
 
-	//!< イメージ使用法 (イメージクリアできるように可能ならVK_IMAGE_USAGE_TRANSFER_DST_BIT をセット)
-	const VkImageUsageFlags ImageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | (VK_IMAGE_USAGE_TRANSFER_DST_BIT & SurfaceCapabilities.supportedUsageFlags);
+	const auto DesiredUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT; //!< イメージクリア用に TRANSFER_DST を希望。For clear image we want TRANSFER_DST
+	const VkImageUsageFlags ImageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | (DesiredUsage & SurfaceCapabilities.supportedUsageFlags);
 
-	//!< サーフェスを回転、反転させるかどうか。(可能なら VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR を選択)
-	const auto PreTransform = (SurfaceCapabilities.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : SurfaceCapabilities.currentTransform;
+	//!< サーフェスを回転、反転させるかどうか。Rotate, mirror surface or not
+	const auto DesiredTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR; //!< ここでは IDENTITY を希望。Want IDENTITY here
+	const auto PreTransform = (SurfaceCapabilities.supportedTransforms & DesiredTransform) ? DesiredTransform : SurfaceCapabilities.currentTransform;
 
 	//!< サーフェスのフォーマットを選択
 	const auto SurfaceFormat = SelectSurfaceFormat();
@@ -1299,8 +1318,9 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 	};
 	VERIFY_SUCCEEDED(vkCreateSwapchainKHR(Device, &SwapchainCreateInfo, GetAllocationCallbacks(), &Swapchain));
 #ifdef DEBUG_STDOUT
-	std::cout << "\t" << "Swapchain" << std::endl;
+	std::cout << "CreateSwapchain" << COUT_OK << std::endl << std::endl;
 #endif
+
 	if (VK_NULL_HANDLE != OldSwapchain) {
 		for (auto i : SwapchainImageViews) {
 			vkDestroyImageView(Device, i, GetAllocationCallbacks());
@@ -1316,6 +1336,9 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 	assert(SwapchainImageCount && "Swapchain image count == 0");
 	SwapchainImages.resize(SwapchainImageCount);
 	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &SwapchainImageCount, SwapchainImages.data()));
+#ifdef DEBUG_STDOUT
+	std::cout << "GetSwapchainImages" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 /**
@@ -1399,6 +1422,10 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkC
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue)); //!< フェンスでも良い
+
+#ifdef DEBUG_STDOUT
+	std::cout << "InitializeSwapchainImage" << COUT_OK << std::endl << std::endl;
+#endif
 }
 void VK::ResizeSwapchain(const uint32_t Width, const uint32_t Height)
 {
@@ -1432,7 +1459,7 @@ void VK::CreateSwapchainImageView()
 #endif
 
 #ifdef DEBUG_STDOUT
-	std::cout << "\t" << "SwapchainImageView" << std::endl;
+	std::cout << "CreateSwapchainImageView" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
@@ -1489,7 +1516,7 @@ void VK::CreateUniformBuffer()
 	//!< ユニフォームバッファは更新するのでホストビジブルとして作成する
 	CreateBuffer(&UniformBuffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, Size);
 	CreateHostVisibleMemory(&UniformDeviceMemory, UniformBuffer);
-	CopyToHostVisibleMemory(UniformBuffer, UniformDeviceMemory, Size, &Color/*, 0*/);
+	CopyToHostVisibleMemory(UniformDeviceMemory, Size, &Color/*, 0*/);
 	BindDeviceMemory(UniformBuffer, UniformDeviceMemory/*, 0*/);
 
 	//!< ビューを作成

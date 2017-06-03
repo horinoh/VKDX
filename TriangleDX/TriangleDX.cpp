@@ -238,7 +238,17 @@ void TriangleDX::CreateVertexBuffer()
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
 
+#if 0
+	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
+	CreateUploadResource(UploadResource.GetAddressOf(), Size);
+	CopyToUploadResource(UploadResource.Get(), Size, , Vertices.data());
+
+	CreateDefaultResource(VertexBufferResource.GetAddressOf(), Size);
+
+	//void DX::ExecuteCopyBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SrcResource, ID3D12Resource* DstResource, const size_t Size)
+#else
 	CreateDefaultResource(CA, CL, VertexBufferResource.GetAddressOf(), Size, Vertices.data());
+#endif
 
 	VertexBufferViews.push_back({ VertexBufferResource->GetGPUVirtualAddress(), Size, Stride });
 

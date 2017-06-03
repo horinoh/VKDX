@@ -121,48 +121,16 @@ std::string DX::GetFormatString(const DXGI_FORMAT Format)
 */
 void DX::CreateDefaultResource(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source)
 {
-	//!< アップロードリソースの作成
 	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-	CreateUploadResource(UploadResource.GetAddressOf(), Size, Source);
+	CreateUploadResource(UploadResource.GetAddressOf(), Size);
+	CopyToUploadResource(UploadResource.Get(), Size, Source);
 
-	//!< リソースデスクリプタ
-	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
-	const D3D12_RESOURCE_DESC ResourceDesc = {
-		D3D12_RESOURCE_DIMENSION_BUFFER,
-		0,
-		Size, 1,
-		1,
-		1,
-		DXGI_FORMAT_UNKNOWN,
-		SampleDesc,
-		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-		D3D12_RESOURCE_FLAG_NONE
-	};
-	//!< リソースを作成
-	const D3D12_HEAP_PROPERTIES HeapProperties = {
-		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること
-		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		D3D12_MEMORY_POOL_UNKNOWN,
-		1,
-		1
-	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc,
-		D3D12_RESOURCE_STATE_COMMON, //!< COMMON にすること
-		nullptr,
-		IID_PPV_ARGS(Resource)));
+	CreateDefaultResource(Resource, Size);
 
-	//!< コピーコマンドを発行
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
-		PopulateCopyBufferCommand(CommandList, UploadResource.Get(), *Resource, Size, D3D12_RESOURCE_STATE_GENERIC_READ);
-	} VERIFY_SUCCEEDED(CommandList->Close());
-
-	const std::vector<ID3D12CommandList*> CommandLists = { CommandList };
-	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
-	WaitForFence();
+	ExecuteCopyBuffer(CommandAllocator, CommandList, UploadResource.Get(), *Resource, Size);
 }
-void DX::CreateUploadResource(ID3D12Resource** Resource, const size_t Size, const void* Source)
+
+void DX::CreateUploadResource(ID3D12Resource** Resource, const size_t Size)
 {
 	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
 	const D3D12_RESOURCE_DESC ResourceDesc = {
@@ -177,7 +145,7 @@ void DX::CreateUploadResource(ID3D12Resource** Resource, const size_t Size, cons
 		D3D12_RESOURCE_FLAG_NONE
 	};
 	const D3D12_HEAP_PROPERTIES HeapProperties = {
-		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること
+		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること Must be UPLOAD
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
 		1,
@@ -186,50 +154,26 @@ void DX::CreateUploadResource(ID3D12Resource** Resource, const size_t Size, cons
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
 		&ResourceDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ, //!< UPLOAD では GENERIC_READ にすること
+		D3D12_RESOURCE_STATE_GENERIC_READ, //!< GENERIC_READ にすること Must be GENERIC_READ
 		nullptr,
 		IID_PPV_ARGS(Resource)));
-
-	if (nullptr != Source) {
+}
+void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source)
+{
+	if (Size && nullptr != Source) {
 		BYTE* Data;
-		VERIFY_SUCCEEDED((*Resource)->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
+		VERIFY_SUCCEEDED(Resource->Map(0, static_cast<const D3D12_RANGE*>(nullptr), reinterpret_cast<void**>(&Data))); {
 			memcpy(Data, Source, Size);
-		} (*Resource)->Unmap(0, nullptr);
+		} Resource->Unmap(0, nullptr);
 	}
 }
-void DX::CreateUploadResource(ID3D12Resource** Resource, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData, const UINT64 TotalSize, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes)
+void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes)
 {
-	assert(SubresourceData.size() == PlacedSubresourceFootprints.size() == NumRows.size() == RowSizes.size() && "");
+	assert(SubresourceData.size() == PlacedSubresourceFootprints.size() == NumRows.size() == RowSizes.size() && "Invalid size");
 	const auto SubresourceCount = static_cast<const UINT>(SubresourceData.size());
 
-	const D3D12_HEAP_PROPERTIES HeapProperties = {
-		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること
-		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		D3D12_MEMORY_POOL_UNKNOWN,
-		1,
-		1
-	};
-	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
-	const D3D12_RESOURCE_DESC ResourceDesc = {
-		D3D12_RESOURCE_DIMENSION_BUFFER,
-		0,
-		TotalSize, 1,
-		1,
-		1,
-		DXGI_FORMAT_UNKNOWN,
-		SampleDesc,
-		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
-		D3D12_RESOURCE_FLAG_NONE
-	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc,
-		D3D12_RESOURCE_STATE_GENERIC_READ, //!< UPLOAD では GENERIC_READ にすること
-		nullptr,
-		IID_PPV_ARGS(Resource)));
-
 	BYTE* Data;
-	VERIFY_SUCCEEDED((*Resource)->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
+	VERIFY_SUCCEEDED(Resource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
 		for (auto It = PlacedSubresourceFootprints.cbegin(); It != PlacedSubresourceFootprints.cend(); ++It) {
 			const auto Index = std::distance(PlacedSubresourceFootprints.cbegin(), It);
 
@@ -251,7 +195,63 @@ void DX::CreateUploadResource(ID3D12Resource** Resource, const std::vector<D3D12
 				}
 			}
 		}
-	} (*Resource)->Unmap(0, nullptr);
+	} Resource->Unmap(0, nullptr);
+}
+
+void DX::ExecuteCopyBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SrcResource, ID3D12Resource* DstResource, const size_t Size)
+{
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
+		PopulateCopyBufferCommand(CommandList, SrcResource, DstResource, Size, D3D12_RESOURCE_STATE_GENERIC_READ);
+	} VERIFY_SUCCEEDED(CommandList->Close());
+
+	const std::vector<ID3D12CommandList*> CommandLists = { CommandList };
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
+	WaitForFence();
+}
+
+void DX::ExecuteCopyTexture(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SrcResource, ID3D12Resource* DstResource, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState)
+{
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
+		if (D3D12_RESOURCE_DIMENSION_BUFFER == DstResource->GetDesc().Dimension) {
+			PopulateCopyBufferCommand(CommandList, SrcResource, DstResource, PlacedSubresourceFootprints, ResourceState);
+		}
+		else {
+			PopulateCopyTextureCommand(CommandList, SrcResource, DstResource, PlacedSubresourceFootprints, ResourceState);
+		}
+	} VERIFY_SUCCEEDED(CommandList->Close());
+
+	const std::vector<ID3D12CommandList*> CommandLists = { CommandList };
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
+	WaitForFence();
+}
+
+void DX::CreateDefaultResource(ID3D12Resource** Resource, const size_t Size)
+{
+	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
+	const D3D12_RESOURCE_DESC ResourceDesc = {
+		D3D12_RESOURCE_DIMENSION_BUFFER,
+		0,
+		Size, 1,
+		1,
+		1,
+		DXGI_FORMAT_UNKNOWN,
+		SampleDesc,
+		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+		D3D12_RESOURCE_FLAG_NONE
+	};
+	const D3D12_HEAP_PROPERTIES HeapProperties = {
+		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること Must be DEFAULT
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+		D3D12_HEAP_FLAG_NONE,
+		&ResourceDesc,
+		D3D12_RESOURCE_STATE_COMMON, //!< COMMON にすること Must be COMMON
+		nullptr,
+		IID_PPV_ARGS(Resource)));
 }
 void DX::ResourceBarrier(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After)
 {
@@ -613,12 +613,10 @@ void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
 		CreateCommandList(CommandAllocators[0].Get(), SwapChainDesc.BufferCount);
 	}
 
-	//!< ビューを作成
-	//!< Create view
+	//!< ビューを作成 Create view
 	CreateSwapChainResource();
 
-	//!< イメージの初期化 #TODO
-	//!< Initialize images
+	//!< イメージの初期化 Initialize images #TODO
 #if 1
 	//InitializeSwapchainImage(CommandAllocators[0].Get());
 	InitializeSwapchainImage(CommandAllocators[0].Get(), &DirectX::Colors::Red);
@@ -698,7 +696,7 @@ void DX::CreateSwapChainResource()
 	}
 
 #ifdef DEBUG_STDOUT
-	std::cout << "\t" << "SwapChainResource" << std::endl;
+	std::cout << "CreateSwapChainResource" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
@@ -735,6 +733,10 @@ void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, cons
 	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
 
 	WaitForFence();
+
+#ifdef DEBUG_STDOUT
+	std::cout << "InitializeSwapchainImage" << COUT_OK << std::endl << std::endl;
+#endif
 }
 
 void DX::ResizeSwapChain(const UINT Width, const UINT Height)
