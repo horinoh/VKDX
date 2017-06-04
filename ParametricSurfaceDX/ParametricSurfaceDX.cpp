@@ -227,16 +227,24 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void ParametricSurfaceDX::CreateVertexBuffer()
 {
-	const auto CA = CommandAllocators[0].Get();
-	const auto CL = GraphicsCommandLists[0].Get();
-
 	const std::vector<DirectX::XMFLOAT3> Vertices = {
 		{ 0.0f, 0.5f, 0.0f },
 	};
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
 
-	CreateDefaultResource(CA, CL, VertexBufferResource.GetAddressOf(), Size, Vertices.data());
+	//!< アップロード用のリソースを作成、データをコピー Create upload resource, and copy data
+	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
+	CreateUploadResource(UploadResource.GetAddressOf(), Size);
+	CopyToUploadResource(UploadResource.Get(), Size, Vertices.data());
+
+	//!< デフォルトのリソースを作成 Create default resource
+	CreateDefaultResource(VertexBufferResource.GetAddressOf(), Size);
+
+	//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
+	const auto CA = CommandAllocators[0].Get();
+	const auto CL = GraphicsCommandLists[0].Get();
+	ExecuteCopyBuffer(CA, CL, UploadResource.Get(), VertexBufferResource.Get(), Size);
 
 	VertexBufferViews.push_back({ VertexBufferResource->GetGPUVirtualAddress(), Size, Stride });
 
@@ -246,14 +254,22 @@ void ParametricSurfaceDX::CreateVertexBuffer()
 }
 void ParametricSurfaceDX::CreateIndexBuffer()
 {
-	const auto CA = CommandAllocators[0].Get();
-	const auto CL = GraphicsCommandLists[0].Get();
-
 	const std::vector<UINT32> Indices = { 0 };
 	IndexCount = static_cast<UINT32>(Indices.size());
 	const auto Size = static_cast<UINT32>(sizeof(Indices[0]) * IndexCount);
 
-	CreateDefaultResource(CA, CL, IndexBufferResource.GetAddressOf(), Size, Indices.data());
+	//!< アップロード用のリソースを作成、データをコピー Create upload resource, and copy data
+	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
+	CreateUploadResource(UploadResource.GetAddressOf(), Size);
+	CopyToUploadResource(UploadResource.Get(), Size, Indices.data());
+
+	//!< デフォルトのリソースを作成 Create default resource
+	CreateDefaultResource(IndexBufferResource.GetAddressOf(), Size);
+
+	//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
+	const auto CA = CommandAllocators[0].Get();
+	const auto CL = GraphicsCommandLists[0].Get();
+	ExecuteCopyBuffer(CA, CL, UploadResource.Get(), IndexBufferResource.Get(), Size);
 
 	IndexBufferView = {
 		IndexBufferResource->GetGPUVirtualAddress(),

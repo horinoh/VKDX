@@ -113,23 +113,6 @@ std::string DX::GetFormatString(const DXGI_FORMAT Format)
 #undef DXGI_FORMAT_CASE
 }
 
-/**
-@note 
-アップロード用のリソースを D3D12_HEAP_TYPE_UPLOAD で作成してそこにデータをコピーする
-目的のリソースは D3D12_HEAP_TYPE_DEFAULT で作成する (頻繁に更新しないリソースは D3D12_HEAP_TYPE_DEFAULT にしておきたい)
-アップロードリソースから目的のリソースへのコピーコマンドを発行する
-*/
-void DX::CreateDefaultResource(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource** Resource, const size_t Size, const void* Source)
-{
-	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-	CreateUploadResource(UploadResource.GetAddressOf(), Size);
-	CopyToUploadResource(UploadResource.Get(), Size, Source);
-
-	CreateDefaultResource(Resource, Size);
-
-	ExecuteCopyBuffer(CommandAllocator, CommandList, UploadResource.Get(), *Resource, Size);
-}
-
 void DX::CreateUploadResource(ID3D12Resource** Resource, const size_t Size)
 {
 	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };

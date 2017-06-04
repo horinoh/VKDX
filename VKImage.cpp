@@ -187,19 +187,21 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 	//VkFormatProperties FormatProperties;
 	//vkGetPhysicalDeviceFormatProperties(PhysicalDevice, Format, &FormatProperties);
 	//assert(VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT & FormatProperties.optimalTilingFeatures && "");
+	const auto Size = static_cast<VkDeviceSize>(GLITexture.size());
 
 	VkBuffer StagingBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
 	{
-		//!< ステージング用のバッファとメモリを作成、データをメモリへコピー、バインド
-		CreateStagingBufferAndCopyToMemory(&StagingBuffer, &StagingDeviceMemory, GLITexture.size(), GLITexture.data());
+		//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
+		CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
+		CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
+		CopyToHostVisibleMemory(StagingDeviceMemory, Size, GLITexture.data());
+		BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
-		//!< イメージを作成
+		//!< デバイスローカルのイメージとメモリを作成 Create device local image and memory
 		CreateImage(Image, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, GLITexture);
-		//!< デバイスローカル用のメモリを作成
 		CreateDeviceLocalMemory(DeviceMemory, *Image);
-		//!< バインド
-		BindDeviceMemory(*Image, *DeviceMemory/*, 0*/);
+		BindDeviceMemory(*Image, *DeviceMemory);
 
 		//!< ステージングからデバイスローカルへのコピーコマンドを発行
 		const VkCommandBuffer CommandBuffer = CommandBuffers[0];

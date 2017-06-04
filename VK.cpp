@@ -553,29 +553,6 @@ void VK::SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer Sr
 	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device)); //!< フェンスでも良い
 }
 
-void VK::CreateStagingBufferAndCopyToMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset)
-{
-	//!< 転送元のバッファを作成
-	CreateBuffer(Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-	//!< メモリ(ホストビジブル)を作成
-	CreateHostVisibleMemory(DeviceMemory, *Buffer);
-
-	//!< メモリ(ホストビジブル)へデータをコピー
-	CopyToHostVisibleMemory(*DeviceMemory, Size, Source, Offset);
-	//!< バッファとメモリをバインド
-	BindDeviceMemory(*Buffer, *DeviceMemory, Offset);
-}
-void VK::CreateDeviceLocalBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkBufferUsageFlags Usage, const size_t Size, const VkDeviceSize Offset)
-{
-	//!< バッファを作成
-	CreateBuffer(Buffer, Usage, Size);
-	//!< メモリ(デバイスローカル)を作成
-	CreateDeviceLocalMemory(DeviceMemory, *Buffer);
-
-	//!< バッファとメモリをバインド
-	BindDeviceMemory(*Buffer, *DeviceMemory, Offset);
-}
-
 void VK::CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange)
 {
 	const VkImageViewCreateInfo ImageViewCreateInfo = {

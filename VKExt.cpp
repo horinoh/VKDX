@@ -33,13 +33,18 @@ void VKExt::CreateIndirectBuffer_Indirect4Vertices()
 	VkBuffer StagingBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
 	{
-		//!< ステージング用のバッファとメモリを作成、データをメモリへコピー、バインド
-		CreateStagingBufferAndCopyToMemory(&StagingBuffer, &StagingDeviceMemory, Size, &DrawIndirectCommand);
+		//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
+		CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
+		CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
+		CopyToHostVisibleMemory(StagingDeviceMemory, Size, &DrawIndirectCommand);
+		BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
-		//!< デバイスローカル用のバッファとメモリを作成、バインド
-		CreateDeviceLocalBuffer(&IndirectBuffer, &IndirectDeviceMemory, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+		//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
+		CreateBuffer(&IndirectBuffer, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+		CreateDeviceLocalMemory(&IndirectDeviceMemory, IndirectBuffer);
+		BindDeviceMemory(IndirectBuffer, IndirectDeviceMemory);
 
-		//!< ステージングからデバイスローカルへのコピーコマンドを発行
+		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
 		SubmitCopyBuffer(CB, StagingBuffer, IndirectBuffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
 	}
 	if (VK_NULL_HANDLE != StagingDeviceMemory) {
@@ -62,13 +67,18 @@ void VKExt::CreateIndirectBuffer_IndexedIndirect()
 	VkBuffer StagingBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
 	{
-		//!< ステージング用のバッファとメモリを作成、データをメモリへコピー、バインド
-		CreateStagingBufferAndCopyToMemory(&StagingBuffer, &StagingDeviceMemory, Size, &DrawIndexedIndirectCommand);
+		//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
+		CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
+		CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
+		CopyToHostVisibleMemory(StagingDeviceMemory, Size, &DrawIndexedIndirectCommand);
+		BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
-		//!< デバイスローカル用のバッファとメモリを作成、バインド
-		CreateDeviceLocalBuffer(&IndirectBuffer, &IndirectDeviceMemory, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+		//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
+		CreateBuffer(&IndirectBuffer, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+		CreateDeviceLocalMemory(&IndirectDeviceMemory, IndirectBuffer);
+		BindDeviceMemory(IndirectBuffer, IndirectDeviceMemory);
 
-		//!< ステージングからデバイスローカルへのコピーコマンドを発行
+		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
 		SubmitCopyBuffer(CB, StagingBuffer, IndirectBuffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
 	}
 	if (VK_NULL_HANDLE != StagingDeviceMemory) {

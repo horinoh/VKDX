@@ -4,16 +4,24 @@
 
 void DXExt::CreateIndirectBuffer_Indirect4Vertices()
 {
-	const auto CA = CommandAllocators[0].Get();
-	const auto CL = GraphicsCommandLists[0].Get();
-
 	const D3D12_DRAW_ARGUMENTS DrawArguments = {
 		4, 1, 0, 0
 	};
 	const auto Stride = sizeof(DrawArguments);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 
-	CreateDefaultResource(CA, CL, IndirectBufferResource.GetAddressOf(), Size, &DrawArguments);
+	//!< アップロード用のリソースを作成、データをコピー Create upload resource, and copy data
+	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
+	CreateUploadResource(UploadResource.GetAddressOf(), Size);
+	CopyToUploadResource(UploadResource.Get(), Size, &DrawArguments);
+
+	//!< デフォルトのリソースを作成 Create default resource
+	CreateDefaultResource(IndirectBufferResource.GetAddressOf(), Size);
+
+	//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
+	const auto CA = CommandAllocators[0].Get();
+	const auto CL = GraphicsCommandLists[0].Get();
+	ExecuteCopyBuffer(CA, CL, UploadResource.Get(), IndirectBufferResource.Get(), Size);
 
 	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndirectArgumentDescs = {
 		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW },
@@ -27,16 +35,24 @@ void DXExt::CreateIndirectBuffer_Indirect4Vertices()
 }
 void DXExt::CreateIndirectBuffer_IndexedIndirect()
 {
-	const auto CA = CommandAllocators[0].Get();
-	const auto CL = GraphicsCommandLists[0].Get();
-
 	const D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments = {
 		IndexCount, 1, 0, 0, 0
 	};
 	const auto Stride = sizeof(DrawIndexedArguments);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 
-	CreateDefaultResource(CA, CL, IndirectBufferResource.GetAddressOf(), Size, &DrawIndexedArguments);
+	//!< アップロード用のリソースを作成、データをコピー Create upload resource, and copy data
+	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
+	CreateUploadResource(UploadResource.GetAddressOf(), Size);
+	CopyToUploadResource(UploadResource.Get(), Size, &DrawIndexedArguments);
+
+	//!< デフォルトのリソースを作成 Create default resource
+	CreateDefaultResource(IndirectBufferResource.GetAddressOf(), Size);
+
+	//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
+	const auto CA = CommandAllocators[0].Get();
+	const auto CL = GraphicsCommandLists[0].Get();
+	ExecuteCopyBuffer(CA, CL, UploadResource.Get(), IndirectBufferResource.Get(), Size);
 
 	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndirectArgumentDescs = {
 		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED },

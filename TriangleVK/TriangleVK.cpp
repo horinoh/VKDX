@@ -227,8 +227,6 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void TriangleVK::CreateVertexBuffer()
 {
-	const auto CB = CommandBuffers[0];
-
 	const std::vector<Vertex> Vertices = {
 		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
 		{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
@@ -240,13 +238,19 @@ void TriangleVK::CreateVertexBuffer()
 	VkBuffer StagingBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
 	{
-		//!< ステージング用のバッファとメモリを作成、データをメモリへコピー、バインド
-		CreateStagingBufferAndCopyToMemory(&StagingBuffer, &StagingDeviceMemory, Size, Vertices.data());
+		//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
+		CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
+		CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
+		CopyToHostVisibleMemory(StagingDeviceMemory, Size, Vertices.data());
+		BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
-		//!< デバイスローカル用のバッファとメモリを作成、バインド
-		CreateDeviceLocalBuffer(&VertexBuffer, &VertexDeviceMemory, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-		
-		//!< ステージングからデバイスローカルへのコピーコマンドを発行
+		//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
+		CreateBuffer(&VertexBuffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+		CreateDeviceLocalMemory(&VertexDeviceMemory, VertexBuffer);
+		BindDeviceMemory(VertexBuffer, VertexDeviceMemory);
+
+		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
+		const auto CB = CommandBuffers[0];
 		SubmitCopyBuffer(CB, StagingBuffer, VertexBuffer, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
 	}
 	if (VK_NULL_HANDLE != StagingDeviceMemory) {
@@ -266,8 +270,6 @@ void TriangleVK::CreateVertexBuffer()
 }
 void TriangleVK::CreateIndexBuffer()
 {
-	const auto CB = CommandBuffers[0];
-
 	const std::vector<uint32_t> Indices = { 0, 1, 2 };
 
 	//!< vkCmdDrawIndexed() が引数に取るので覚えておく必要がある
@@ -278,13 +280,19 @@ void TriangleVK::CreateIndexBuffer()
 	VkBuffer StagingBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
 	{
-		//!< ステージング用のバッファとメモリを作成、データをメモリへコピー、バインド
-		CreateStagingBufferAndCopyToMemory(&StagingBuffer, &StagingDeviceMemory, Size, Indices.data());
+		//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
+		CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
+		CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
+		CopyToHostVisibleMemory(StagingDeviceMemory, Size, Indices.data());
+		BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
-		//!< デバイスローカル用のバッファとメモリを作成、バインド
-		CreateDeviceLocalBuffer(&IndexBuffer, &IndexDeviceMemory, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-		
-		//!< ステージングからデバイスローカルへのコピーコマンドを発行
+		//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
+		CreateBuffer(&IndexBuffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+		CreateDeviceLocalMemory(&IndexDeviceMemory, IndexBuffer);
+		BindDeviceMemory(IndexBuffer, IndexDeviceMemory);
+
+		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
+		const auto CB = CommandBuffers[0];
 		SubmitCopyBuffer(CB, StagingBuffer, IndexBuffer, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
 	}
 	if (VK_NULL_HANDLE != StagingDeviceMemory) {
