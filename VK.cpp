@@ -102,7 +102,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnDestroy(hWnd, hInstance);
 
-	//!< GPUが完了するまでここで待機 Wait GPU
 	if (VK_NULL_HANDLE != Device) {
 		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	}
@@ -550,7 +549,7 @@ void VK::SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer Sr
 		}
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SubmitInfos.size()), SubmitInfos.data(), VK_NULL_HANDLE));
-	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device)); //!< フェンスでも良い
+	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 }
 
 void VK::CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange)
@@ -753,9 +752,6 @@ void VK::MarkerEnd(VkCommandBuffer CommandBuffer)
 }
 #endif //!< _DEBUG
 
-/**
-@brief デバイス(GPU)とホスト(CPU)の同期
-*/
 void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
 {
 #ifdef VK_USE_PLATFORM_WIN32_KHR
@@ -926,11 +922,11 @@ void VK::GetQueueFamily()
 			}
 		}
 		//else if (VK_QUEUE_TRANSFER_BIT & QueueProperties[i].queueFlags) {
-		//	//!< #TODO
+		//	//!< #VK_TODO
 		//	TransferQueueFamilyIndex = i; //!< デバイスによっては転送専用キューを持つ、転送を多用する場合は専用キューを使用した方が良い
 		//}
 		//else if (VK_QUEUE_COMPUTE_BIT & QueueProperties[i].queueFlags) {
-		//	//!< #TODO
+		//	//!< #VK_TODO
 		//	ComputeQueueFamilyIndex = i;
 		//}
 
@@ -1037,15 +1033,12 @@ void VK::CreateDevice()
 #endif
 }
 
-/**
-@brief CPU と GPU の同期
-*/
 void VK::CreateFence()
 {
 	const VkFenceCreateInfo FenceCreateInfo = {
 		VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
 		nullptr,
-		VK_FENCE_CREATE_SIGNALED_BIT //!< 初回と２回目以降を同じに扱う為に、シグナル済み状態で作成
+		VK_FENCE_CREATE_SIGNALED_BIT //!< 初回と２回目以降を同じに扱う為にシグナル済み状態で作成 Create signaled state to do same operation on first time and second time
 	};
 	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, GetAllocationCallbacks(), &Fence));
 
@@ -1065,10 +1058,10 @@ void VK::CreateSemaphore()
 		0
 	};
 
-	//!< プレゼント完了同期用
+	//!< プレゼント完了同期用 To wait presentation finish
 	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, GetAllocationCallbacks(), &NextImageAcquiredSemaphore));
 
-	//!< 描画完了同期用
+	//!< 描画完了同期用 To wait render finish
 	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, GetAllocationCallbacks(), &RenderFinishedSemaphore));
 
 #ifdef _DEBUG
@@ -1078,13 +1071,14 @@ void VK::CreateSemaphore()
 
 void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 {
+	/**
+	@brief VkCommandPoolCreateFlags
+	* VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT	... コマンドバッファ毎にリセットが可能、指定無しだとプール単位でまとめてリセットしかできない
+	* VK_COMMAND_POOL_CREATE_TRANSIENT_BIT			... 頻繁に更新される、ライフスパンが短い場合 (メモリアロケーションのヒントとなる)
+	*/
 	const VkCommandPoolCreateInfo CommandPoolInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
 		nullptr,
-		/**
-		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT ... コマンドバッファ毎に vkResetCommandBuffer(), vkBeginCommandBuffer() によるリセットが可能、指定無しだとまとめて vkResetCommandPool() のみ
-		VK_COMMAND_POOL_CREATE_TRANSIENT_BIT ... 頻繁に更新される、ライフスパンが短い場合 (メモリアロケーションのヒントとなる)
-		*/
 		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT/*| VK_COMMAND_POOL_CREATE_TRANSIENT_BIT*/,
 		QueueFamilyIndex
 	};
@@ -1098,14 +1092,6 @@ void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 #endif
 }
 
-/**
-@brief セカンダリコマンドバッファは直接サブミットできない、プライマリコマンドバッファから呼び出される
-vkCmdExecuteCommands(プライマリ, セカンダリ個数, セカンダリ配列);
-
-@brief セカンダリコマンドバッファへレンダーパスを記録する例
-vkCmdBeginRenderPass() の第一引数にセカンダリコマンドバッファ、第三引数に VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS を渡す
-vkCmdBeginRenderPass(セカンダリ, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-*/
 void VK::AllocateCommandBuffer(const VkCommandPool CommandPool, const size_t Count, const VkCommandBufferLevel CommandBufferLevel)
 {
 	if (Count) {
@@ -1191,10 +1177,11 @@ VkPresentModeKHR VK::SelectSurfacePresentMode()
 
 	//!< 可能なら VK_PRESENT_MODE_MAILBOX_KHR を選択、次いで VK_PRESENT_MODE_FIFO_KHR を選択
 	/**
-	VK_PRESENT_MODE_IMMEDIATE_KHR ... テアリングが起こる。 Tearing happen
-	VK_PRESENT_MODE_MAILBOX_KHR ... キューは 1 つで常に最新で上書きされる。Queue is 1, and always update to new image
-	VK_PRESENT_MODE_FIFO_KHR ... VulkanAPI が必ずサポートする VulkanAPI always support this
-	VK_PRESENT_MODE_FIFO_RELAXED_KHR ... 1Vブランク以上経ったイメージは次のVブランクを待たずにプレゼンテーションされ得る (余裕が無い場合にはテアリングが起こる)
+	@brief VkPresentModeKHR
+	* VK_PRESENT_MODE_IMMEDIATE_KHR		... テアリングが起こる。 Tearing happen
+	* VK_PRESENT_MODE_MAILBOX_KHR		... キューは 1 つで常に最新で上書きされる。Queue is 1, and always update to new image
+	* VK_PRESENT_MODE_FIFO_KHR			... VulkanAPI が必ずサポートする VulkanAPI always support this
+	* VK_PRESENT_MODE_FIFO_RELAXED_KHR	... 1Vブランク以上経ったイメージは次のVブランクを待たずにプレゼンテーションされ得る (余裕が無い場合にはテアリングが起こる)
 	*/
 	const VkPresentModeKHR SelectedPresentMode = [&]() {
 		for (auto i : PresentModes) {
@@ -1389,7 +1376,6 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkC
 		}
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 
-	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	const VkSubmitInfo SubmitInfo = {
 		VK_STRUCTURE_TYPE_SUBMIT_INFO,
 		nullptr,
@@ -1398,7 +1384,7 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkC
 		0, nullptr
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
-	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue)); //!< フェンスでも良い
+	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 
 #ifdef DEBUG_STDOUT
 	std::cout << "InitializeSwapchainImage" << COUT_OK << std::endl << std::endl;
@@ -2024,9 +2010,12 @@ void VK::ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, co
 }
 void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer)
 {
-	//!< VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT ... メモリをコマンドプールへ返す
-	//VERIFY_SUCCEEDED(vkResetCommandBuffer(CommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT)); //!< vkBeginCommandBuffer() でリセットされるので不要
-
+	/**
+	@brief コマンドバッファのリセット Reset of command buffer
+	* vkBeginCommandBuffer() で自動的にリセットされるので、明示的に vkResetCommandBuffer() をコールしなくても良い
+	* ただし vkResetCommandBuffer() で明示的にリセットする場合には、メモリを開放するかどうかを指定できる
+	*/
+	//VERIFY_SUCCEEDED(vkResetCommandBuffer(CommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
 		//!< ビューポート、シザー
 		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
@@ -2053,9 +2042,10 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFram
 			0, nullptr
 			//static_cast<uint32_t>(ClearValues.size()), ClearValues.data() //!< レンダーパス作成時に VK_ATTACHMENT_LOAD_OP_CLEAR を指定した場合ここでクリアカラーを指定する
 		};
+
 		//!< サブパスへ移行させるにはこんな感じ
-		//!< vkCmdNextSubpass(プライマリコマンドバッファ, VK_SUBPASS_CONTENTS_INLINE);
-		//!< vkCmdNextSubpass(セカンダリコマンドバッファ, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+		//!< vkCmdNextSubpass(CommandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+
 		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
 		} vkCmdEndRenderPass(CommandBuffer);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
@@ -2090,6 +2080,10 @@ void VK::Draw()
 	//!< デスクリプタセットを更新したら、コマンドバッファを記録し直さないとダメ？
 	//UpdateDescriptorSet();
 
+	/**
+	@brief 各々のセマフォはパイプラインステージに関連付けられる
+	コマンドは指定のパイプラインステージに到達するまで実行され、そこでセマフォがシグナルされるまで待つ
+	*/
 	const VkPipelineStageFlags PipelineStageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT;
 	const std::vector<VkSubmitInfo> SubmitInfos = {
 		{

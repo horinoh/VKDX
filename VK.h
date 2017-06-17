@@ -364,16 +364,35 @@ protected:
 		0, VK_REMAINING_ARRAY_LAYERS
 	};
 	const VkClearDepthStencilValue ClearDepthStencilValue = { 1.0f, 0 };
+
+	/**
+	@brief VkCommandBufferUsageFlags 
+	* VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT		... 一度だけ使用する場合、毎回リセットする場合に指定、何度もサブミットするものには指定しない
+	* VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT		... 前回のサブミットが完了してなくても、再度サブミットする場合に指定、パフォーマンス的に避けるべき
+	* VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT	... セカンダリコマンドバッファでかつ、完全にレンダーパス内の場合に指定する
+
+	@brief セカンダリコマンドバッファ
+	* 基本的に、セカンダリ(コマンドバッファ)はプライマリ(コマンドバッファ)のステートを継承しない
+	* セカンダリ記録後のプライマリのステートも未定義、プライマリに戻って再記録する場合はステートを再設定しなくてはならない
+	* 例外) プライマリがレンダーパス内でそこからセカンダリを呼び出す場合には、プライマリのレンダーパス、サプバスステートは継承される
+	* 全てのコマンドがプライマリ、セカンダリの両方で記録できるわけではない
+
+	* セカンダリは直接サブミットできない、プライマリから呼び出される
+		* vkCmdExecuteCommands(プライマリ, セカンダリ個数, セカンダリ配列);
+	* セカンダリの場合は VK_SUBPASS_CONTENTS_INLINE の代わりに VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS を指定する
+		* vkCmdBeginRenderPass(..., VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+		* vkCmdNextSubpass(..., VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+	*/
 	const VkCommandBufferBeginInfo CommandBufferBeginInfo_OneTime = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
-		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, //!< 一度だけ使用 or 毎回破棄やリセット が行われる場合
+		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 		nullptr
 	};
 	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		0, //!< 何度もサブミットするので VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT は指定しない、VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT は前回のサブミットが完了していなくても再度サブミットされ得る場合
-		nullptr//&CommandBufferInheritanceInfo_None //!< セカンダリコマンドバッファの場合に使用
+		nullptr, 
+		0,
+		nullptr/*&CommandBufferInheritanceInfo_None*/ //!< セカンダリコマンドバッファの場合に使用
 	};
 };
