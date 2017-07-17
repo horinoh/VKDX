@@ -56,6 +56,14 @@ public:
 	static std::wstring GetVkResultStringW(const VkResult Result);
 	static std::string GetFormatString(const VkFormat Format);
 	static std::string GetColorSpaceString(const VkColorSpaceKHR ColorSpace);
+	static std::string GetImageViewTypeString(const VkImageViewType ImageViewType);
+	static std::string GetComponentSwizzleString(const VkComponentSwizzle ComponentSwizzle);
+	static std::string GetComponentMappingString(const VkComponentMapping& ComponentMapping) {
+		return GetComponentSwizzleString(ComponentMapping.r) 
+			+ ", " + GetComponentSwizzleString(ComponentMapping.g) 
+			+ ", " + GetComponentSwizzleString(ComponentMapping.b)
+			+ ", " + GetComponentSwizzleString(ComponentMapping.a);
+	}
 
 protected:
 	static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
@@ -77,7 +85,7 @@ protected:
 	//virtual void ImageMemoryBarrier(const VkCommandBuffer CommandBuffer, const VkImage Image) {}
 
 	virtual void CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size) const;
-	virtual void CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers) const;
+	virtual void CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkSampleCountFlagBits SampleCount, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers) const;
 	
 	virtual void CopyToHostVisibleMemory(const VkDeviceMemory DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset = 0);
 	
@@ -353,6 +361,8 @@ protected:
 		0, 1,
 		0, 1
 	};
+	//!< 全てのミップマップ(レイヤー)を使用したい場合は、正確な値を知らなくても VK_REMAINING_MIP_LEVELS(VK_REMAINING_ARRAY_LAYERS) を指定すれば良い
+	//!< If want to use all miplevels(layer), we can use VK_REMAINING_MIP_LEVELS(VK_REMAINING_ARRAY_LAYERS) without knowing the exact number
 	const VkImageSubresourceRange ImageSubresourceRange_ColorAll = {
 		VK_IMAGE_ASPECT_COLOR_BIT,
 		0, VK_REMAINING_MIP_LEVELS,

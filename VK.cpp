@@ -35,6 +35,9 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	Super::OnCreate(hWnd, hInstance, Title);
 
+#ifdef DEBUG_STDOUT
+	std::cout << "VK_HEADER_VERSION = " << VK_HEADER_VERSION << std::endl;
+#endif
 #ifdef VK_NO_PROTOYYPES
 	LoadVulkanDLL();
 #endif //!< VK_NO_PROTOYYPES
@@ -69,6 +72,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateFramebuffer();
 	CreatePipeline();
 }
+
 /**
 @note 殆どのものを壊して作り直さないとダメ #VK_TODO
 almost every thing must be recreated
@@ -297,6 +301,28 @@ std::string VK::GetColorSpaceString(const VkColorSpaceKHR ColorSpace)
 #undef VK_COLOR_SPACE_ENTRY
 }
 
+std::string VK::GetImageViewTypeString(const VkImageViewType ImageViewType)
+{
+#define VK_IMAGE_VIEW_TYPE_ENTRY(vivt) case VK_IMAGE_VIEW_TYPE_##vivt: return #vivt;
+	switch (ImageViewType)
+	{
+	default: DEBUG_BREAK(); return "Not found";
+#include "VKImageViewType.h"
+	}
+#undef VK_IMAGE_VIEW_TYPE_ENTRY
+}
+
+std::string VK::GetComponentSwizzleString(const VkComponentSwizzle ComponentSwizzle)
+{
+#define VK_COMPONENT_SWIZZLE_ENTRY(vcs) case VK_COMPONENT_SWIZZLE_##vcs: return #vcs;
+	switch (ComponentSwizzle)
+	{
+	default: DEBUG_BREAK(); return "Not found";
+#include "VKComponentSwizzle.h"
+	}
+#undef VK_COMPONENT_SWIZZLE_ENTRY
+}
+
 bool VK::HasExtension(const VkPhysicalDevice PhysicalDevice, const char* ExtensionName)
 {
 	uint32_t DeviceLayerPropertyCount = 0;
@@ -462,7 +488,7 @@ void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const si
 	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BufferCreateInfo, GetAllocationCallbacks(), Buffer));
 }
 
-void VK::CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers) const
+void VK::CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkSampleCountFlagBits SampleCount, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers) const
 {
 	const VkImageCreateInfo ImageCreateInfo = {
 		VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -473,7 +499,7 @@ void VK::CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkImag
 		Extent3D,
 		MipLevels,
 		ArrayLayers,
-		VK_SAMPLE_COUNT_1_BIT,
+		SampleCount, //!< キューブマップの場合は VK_SAMPLE_COUNT_1_BIT しか使えない
 		VK_IMAGE_TILING_OPTIMAL,
 		Usage,
 		VK_SHARING_MODE_EXCLUSIVE,
@@ -501,7 +527,8 @@ void VK::CopyToHostVisibleMemory(const VkDeviceMemory DeviceMemory, const size_t
 			};
 			//!< ↓ホストから可視にするために無効化する (無くても動くけど必要？)
 			//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(MappedMemoryRanges.size()), MappedMemoryRanges.data()));
-			//!< ↓VK_MEMORY_PROPERTY_HOST_COHERENT_BIT の場合は必要なし
+
+			//!< フラッシュしておかないと、サブミットされた他のコマンドからはすぐには見えない (VK_MEMORY_PROPERTY_HOST_COHERENT_BIT の場合は必要なし)
 			VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(MappedMemoryRanges.size()), MappedMemoryRanges.data()));
 		} vkUnmapMemory(Device, DeviceMemory);
 	}
@@ -552,6 +579,7 @@ void VK::SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer Sr
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 }
 
+//!< Cubemapを作る場合、まずレイヤ化されたイメージを作成し、(イメージビューを用いて)レイヤをフェイスとして扱うようハードウエアに伝える
 void VK::CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange)
 {
 	const VkImageViewCreateInfo ImageViewCreateInfo = {
@@ -567,7 +595,13 @@ void VK::CreateImageView(VkImageView* ImageView, const VkImage Image, const VkIm
 	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, GetAllocationCallbacks(), ImageView));
 
 #ifdef DEBUG_STDOUT
-	std::cout << "\t" << "ImageView" << std::endl;
+	std::cout << "\t" << "\t" << "ImageViewType = " << GetImageViewTypeString(ImageViewType) << std::endl;
+	std::cout << "\t" << "\t" << "Format = " << GetFormatString(Format) << std::endl;
+	std::cout << "\t" << "\t" << "ComponentMapping = (" << GetComponentMappingString(ComponentMapping) << ")" << std::endl;
+#endif
+
+#ifdef DEBUG_STDOUT
+	std::cout << "\t" << "CreateImageView" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
@@ -777,23 +811,31 @@ void VK::EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryPro
 	std::cout << "\t" << "\t" << "\t" << "MemoryType" << std::endl;
 	for (uint32_t i = 0; i < PhysicalDeviceMemoryProperties.memoryTypeCount; ++i) {
 		std::cout << "\t" << "\t" << "\t" << "\t";
-		std::cout << "HeapIndex = " << PhysicalDeviceMemoryProperties.memoryTypes[i].heapIndex << ", ";
-		std::cout << "PropertyFlags = ";
-#define MEMORY_PROPERTY_ENTRY(entry) if(VK_MEMORY_PROPERTY_##entry##_BIT & PhysicalDeviceMemoryProperties.memoryTypes[i].propertyFlags) { std::cout << #entry << " "; }
-		MEMORY_PROPERTY_ENTRY(DEVICE_LOCAL);
-		MEMORY_PROPERTY_ENTRY(HOST_VISIBLE);
-		MEMORY_PROPERTY_ENTRY(HOST_COHERENT);
-		MEMORY_PROPERTY_ENTRY(HOST_CACHED);
-		MEMORY_PROPERTY_ENTRY(LAZILY_ALLOCATED);
+		std::cout << "[" << i << "] ";
+		std::cout << "HeapIndex = " << PhysicalDeviceMemoryProperties.memoryTypes[i].heapIndex;
+		if (PhysicalDeviceMemoryProperties.memoryTypes[i].propertyFlags) {
+			std::cout << ", PropertyFlags = ";
+#define MEMORY_PROPERTY_ENTRY(entry) if(VK_MEMORY_PROPERTY_##entry##_BIT & PhysicalDeviceMemoryProperties.memoryTypes[i].propertyFlags) { std::cout << #entry << " | "; }
+			MEMORY_PROPERTY_ENTRY(DEVICE_LOCAL);
+			MEMORY_PROPERTY_ENTRY(HOST_VISIBLE);
+			MEMORY_PROPERTY_ENTRY(HOST_COHERENT);
+			MEMORY_PROPERTY_ENTRY(HOST_CACHED);
+			MEMORY_PROPERTY_ENTRY(LAZILY_ALLOCATED);
 #undef MEMORY_PROPERTY_ENTRY
+		}
 		std::cout << std::endl;
 	}
 	std::cout << "\t" << "\t" << "\t" << "MemoryHeap" << std::endl;
 	for (uint32_t i = 0; i < PhysicalDeviceMemoryProperties.memoryHeapCount; ++i) {
 		std::cout << "\t" << "\t" << "\t" << "\t";
-		std::cout << "Size = " << PhysicalDeviceMemoryProperties.memoryHeaps[i].size << ", ";
-		std::cout << "Flags = ";
-		std::cout << ((VK_MEMORY_HEAP_DEVICE_LOCAL_BIT & PhysicalDeviceMemoryProperties.memoryHeaps[i].flags) ? "DEVICE_LOCAL" : "") << std::endl;
+		std::cout << "[" << i << "] ";
+		std::cout << "Size = " << PhysicalDeviceMemoryProperties.memoryHeaps[i].size;
+		if (PhysicalDeviceMemoryProperties.memoryHeaps[i].flags) {
+			std::cout << ", Flags = ";
+			if (VK_MEMORY_HEAP_DEVICE_LOCAL_BIT & PhysicalDeviceMemoryProperties.memoryHeaps[i].flags) { std::cout << "DEVICE_LOCAL" << " | "; }
+			if (VK_MEMORY_HEAP_MULTI_INSTANCE_BIT_KHX & PhysicalDeviceMemoryProperties.memoryHeaps[i].flags) { std::cout << "MULTI_INSTANCE" << " | "; }
+		}
+		std::cout << std::endl;
 	}
 #endif
 }
@@ -843,7 +885,7 @@ void VK::GetPhysicalDevice()
 	//!< ここでは最初の物理デバイスを選択することにする #VK_TODO
 	PhysicalDevice = PhysicalDevices[0];
 
-	//!< 選択した物理デバイスのメモリプロパティを取得
+	//!< 選択した物理デバイスのメモリプロパティを取得 (よく使うので覚えておく)
 	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
 	EnumeratePhysicalDeviceMemoryProperties(PhysicalDeviceMemoryProperties);
 
@@ -901,21 +943,27 @@ void VK::GetQueueFamily()
 
 #ifdef DEBUG_STDOUT
 	std::cout << Yellow << "\t" << "QueueProperties" << White << std::endl;
-#define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & i.queueFlags) { std::cout << #entry << " | "; }
-	for (const auto& i : QueueProperties) {
-		std::cout << "\t" << "\t" << "QueueCount = " << i.queueCount << ", ";
+#define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & QueueProperties[i].queueFlags) { std::cout << #entry << " | "; }
+	for (uint32_t i = 0; i < QueueProperties.size(); ++i) {
+		std::cout << "\t" << "\t" << "[" << i << "] " << "QueueCount = " << QueueProperties[i].queueCount << ", ";
 		std::cout << "QueueFlags = ";
 		QUEUE_FLAG_ENTRY(GRAPHICS);
 		QUEUE_FLAG_ENTRY(COMPUTE);
 		QUEUE_FLAG_ENTRY(TRANSFER);
 		QUEUE_FLAG_ENTRY(SPARSE_BINDING);
 		std::cout << std::endl;
+
+		VkBool32 Supported = VK_FALSE;
+		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, i, Surface, &Supported));
+		if (Supported) {
+			std::cout << "\t" << "\t" << "\t" << "Surface(Present) Supported" << std::endl;
+		}
 	}
 #undef QUEUE_FLAG_ENTRY
 #endif
 
-	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i) {
-		//!< グラフィック機能を持つもの
+	for (uint32_t i = 0; i < QueueProperties.size(); ++i) {
+		//!< グラフィック機能を持つキュー Queue index which has graphics
 		if (VK_QUEUE_GRAPHICS_BIT & QueueProperties[i].queueFlags) {
 			if (UINT32_MAX != GraphicsQueueFamilyIndex) {
 				GraphicsQueueFamilyIndex = i;
@@ -930,7 +978,7 @@ void VK::GetQueueFamily()
 		//	ComputeQueueFamilyIndex = i;
 		//}
 
-		//!< プレゼント機能を持つもの
+		//!< プレゼンテーション機能を持つキュー Queue index which has presentation
 		VkBool32 Supported = VK_FALSE;
 		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, i, Surface, &Supported));
 		if (Supported) {
@@ -939,7 +987,7 @@ void VK::GetQueueFamily()
 			}
 		}
 	}
-	//!< グラフィックとプレゼントを同時にサポートするキューがあれば優先
+	//!< グラフィックとプレゼンテーションを同時にサポートするキューがあれば優先 Prioritize queue which support both of graphics and presentation
 	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i) {
 		if (VK_QUEUE_GRAPHICS_BIT & QueueProperties[i].queueFlags) {
 			VkBool32 Supported = VK_FALSE;
@@ -953,6 +1001,12 @@ void VK::GetQueueFamily()
 	}
 	assert(UINT32_MAX != GraphicsQueueFamilyIndex && "GraphicsQueue not found");
 	assert(UINT32_MAX != PresentQueueFamilyIndex && "PresentQueue not found");
+
+#ifdef DEBUG_STDOUT
+	std::cout << std::endl;
+	std::cout << "\t" << "\t" << "GraphicsQueueFamilyIndex = " << GraphicsQueueFamilyIndex << std::endl;
+	std::cout << "\t" << "\t" << "PresentQueueFamilyIndex = " << PresentQueueFamilyIndex << std::endl;
+#endif
 }
 void VK::CreateDevice()
 {
@@ -966,7 +1020,7 @@ void VK::CreateDevice()
 			static_cast<uint32_t>(QueuePriorities.size()), QueuePriorities.data()
 		},
 	};
-	//!< グラフィックとプレゼントのキューインデックスが別の場合は追加で必要
+	//!< グラフィックとプレゼントのキューインデックスが別の場合は追加で必要 If graphics and presentation queue index is different, we must add one more
 	if (GraphicsQueueFamilyIndex != PresentQueueFamilyIndex) {
 		QueueCreateInfos.push_back(
 			{
@@ -1016,7 +1070,7 @@ void VK::CreateDevice()
 #undef VK_DEVICE_PROC_ADDR
 #endif //!< VK_NO_PROTOYYPES
 
-	//!< キューの取得 (グラフィック、プレゼントキューは同じインデックスの場合もあるが別名として取得)
+	//!< キューの取得 (グラフィック、プレゼントキューは同じインデックスの場合もあるが別の変数に取得しておく) Graphics and presentation index may be same, but save to individual variables
 	vkGetDeviceQueue(Device, GraphicsQueueFamilyIndex, 0, &GraphicsQueue);
 	vkGetDeviceQueue(Device, PresentQueueFamilyIndex, 0, &PresentQueue);
  
@@ -1433,7 +1487,7 @@ void VK::CreateDepthStencilImage()
 	const VkExtent3D Extent3D = {
 		SurfaceExtent2D.width, SurfaceExtent2D.height, 1
 	};
-	CreateImage(&DepthStencilImage, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1);
+	CreateImage(&DepthStencilImage, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "DepthStencilImage" << std::endl;

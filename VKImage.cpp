@@ -65,38 +65,40 @@ VkComponentSwizzle VKImage::ToVkComponentSwizzle(const gli::swizzle GLISwizzle)
 	return VK_COMPONENT_SWIZZLE_IDENTITY;
 }
 
-void VKImage::CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const gli::texture& GLITexture) const
+void VKImage::CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkSampleCountFlagBits SampleCount, const gli::texture& GLITexture) const
 {
 	const auto GLIExtent3D = GLITexture.extent(0);
 	const VkExtent3D Extent3D = {
 		static_cast<const uint32_t>(GLIExtent3D.x), static_cast<const uint32_t>(GLIExtent3D.y), static_cast<const uint32_t>(GLIExtent3D.z)
 	};
-	Super::CreateImage(Image, Usage, ToVkImageType(GLITexture.target()), ToVkFormat(GLITexture.format()), Extent3D, static_cast<const uint32_t>(GLITexture.levels()), static_cast<const uint32_t>(GLITexture.layers()));
+	Super::CreateImage(Image, Usage, SampleCount, ToVkImageType(GLITexture.target()), ToVkFormat(GLITexture.format()), Extent3D, static_cast<const uint32_t>(GLITexture.levels()), static_cast<const uint32_t>(GLITexture.layers(), SampleCount));
 }
 
 void VKImage::SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkImage DstImage, const gli::texture& GLITexture)
 {
-	const auto ArrayLayers = static_cast<const uint32_t>(GLITexture.layers());
-	//const auto Faces = static_cast<const uint32_t>(GLITexture.faces());
-	const auto MipLevels = static_cast<const uint32_t>(GLITexture.levels());
+	//!< キューブマップの場合は、複数レイヤのイメージとして作成する。When cubemap, create as layered image.
+	//!< イメージビューを介して、レイヤをフェイスとして扱うようハードウエアへ伝える。Tell the hardware that it should interpret its layers as faces
+	//!< キューブマップの場合フェイスの順序は +X-X+Y-Y+Z-Z When cubemap, faces order is +X-X+Y-Y+Z-Z
+
+	const auto Faces = static_cast<const uint32_t>(GLITexture.faces());
+	const auto Layers = static_cast<const uint32_t>(GLITexture.layers()) * Faces;
+	const auto Levels = static_cast<const uint32_t>(GLITexture.levels());
 
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo_OneTime)); {
-		//!< 各レイヤー、ミップレベルの、バッファコピー領域を準備
+		//!< 各バッファコピー領域を準備 Prepare each buffer copy
 		std::vector<VkBufferImageCopy> BufferImageCopies;
-		BufferImageCopies.reserve(ArrayLayers);
+		BufferImageCopies.reserve(Layers);
+		const VkOffset3D Offset3D = { 0, 0, 0 };
 		VkDeviceSize Offset = 0;
-		const VkOffset3D Offset3D = {
-			0, 0, 0
-		};
-		for (uint32_t i = 0; i < ArrayLayers; ++i) {
-			//for (uint32_t j = 0; j < Faces; ++j) {}
-			for (uint32_t k = 0; k < MipLevels; ++k) {
+
+		for (uint32_t i = 0; i < Layers; ++i) {
+			for (uint32_t j = 0; j < Levels; ++j) {
 				const VkImageSubresourceLayers ImageSubresourceLayers = {
 					VK_IMAGE_ASPECT_COLOR_BIT,
-					k,
+					j,
 					i, 1
 				};
-				const auto GLIExtent3D = GLITexture.extent(k);
+				const auto GLIExtent3D = GLITexture.extent(j);
 				const VkExtent3D Extent3D = {
 					static_cast<const uint32_t>(GLIExtent3D.x), static_cast<const uint32_t>(GLIExtent3D.y), static_cast<const uint32_t>(GLIExtent3D.z)
 				};
@@ -110,14 +112,14 @@ void VKImage::SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffe
 				};
 				BufferImageCopies.push_back(BufferImageCopy);
 
-				Offset += static_cast<const VkDeviceSize>(GLITexture.size(k));
+				Offset += static_cast<const VkDeviceSize>(GLITexture.size(j));
 			}
 		}
 
 		const VkImageSubresourceRange ImageSubresourceRange = {
 			VK_IMAGE_ASPECT_COLOR_BIT,
-			0, MipLevels,
-			0, ArrayLayers
+			0, Levels,
+			0, Layers
 		};
 		const VkImageMemoryBarrier ImageMemoryBarrier_UndefinedToTransferDst = {
 			VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -173,7 +175,12 @@ void VKImage::SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffe
 		0, nullptr
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
-	VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device)); //!< フェンスでも良い
+	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
+}
+
+void VKImage::CreateImageView(VkImageView* ImageView, const VkImage Image, const gli::texture& GLITexture)
+{
+	Super::CreateImageView(ImageView, Image, ToVkImageViewType(GLITexture.target()), ToVkFormat(GLITexture.format()), ToVkComponentMapping(GLITexture.swizzles()), ImageSubresourceRange_ColorAll);
 }
 
 void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path)
@@ -182,11 +189,46 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 	const auto GLITexture(gli::load_dds(Path.c_str()));
 	assert(!GLITexture.empty() && "Load image failed");
 
-	//const auto ArrayLayers = static_cast<const uint32_t>(GLITexture.layers());
+#ifdef DEBUG_STDOUT
+	VkFormatProperties FormatProperties;
+	vkGetPhysicalDeviceFormatProperties(PhysicalDevice, ToVkFormat(GLITexture.format()), &FormatProperties);
 
-	//VkFormatProperties FormatProperties;
-	//vkGetPhysicalDeviceFormatProperties(PhysicalDevice, Format, &FormatProperties);
-	//assert(VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT & FormatProperties.optimalTilingFeatures && "");
+#define FORMAT_ENTRIES() FORMAT_PROPERTY_ENTRY(SAMPLED_IMAGE_BIT);\
+	FORMAT_PROPERTY_ENTRY(STORAGE_IMAGE_BIT);\
+	FORMAT_PROPERTY_ENTRY(STORAGE_IMAGE_ATOMIC_BIT);\
+	FORMAT_PROPERTY_ENTRY(UNIFORM_TEXEL_BUFFER_BIT);\
+	FORMAT_PROPERTY_ENTRY(STORAGE_TEXEL_BUFFER_BIT);\
+	FORMAT_PROPERTY_ENTRY(STORAGE_TEXEL_BUFFER_ATOMIC_BIT);\
+	FORMAT_PROPERTY_ENTRY(VERTEX_BUFFER_BIT);\
+	FORMAT_PROPERTY_ENTRY(COLOR_ATTACHMENT_BIT);\
+	FORMAT_PROPERTY_ENTRY(COLOR_ATTACHMENT_BLEND_BIT);\
+	FORMAT_PROPERTY_ENTRY(DEPTH_STENCIL_ATTACHMENT_BIT);\
+	FORMAT_PROPERTY_ENTRY(BLIT_SRC_BIT);\
+	FORMAT_PROPERTY_ENTRY(BLIT_DST_BIT);\
+	FORMAT_PROPERTY_ENTRY(SAMPLED_IMAGE_FILTER_LINEAR_BIT);\
+	FORMAT_PROPERTY_ENTRY(SAMPLED_IMAGE_FILTER_CUBIC_BIT_IMG);\
+	FORMAT_PROPERTY_ENTRY(TRANSFER_SRC_BIT_KHR);\
+	FORMAT_PROPERTY_ENTRY(TRANSFER_DST_BIT_KHR);\
+	std::cout << std::endl; std::cout << std::endl;
+
+	std::cout << "\t" << "\t" << "linearTilingFeatures = ";
+#define FORMAT_PROPERTY_ENTRY(entry) if(VK_FORMAT_FEATURE_##entry & FormatProperties.linearTilingFeatures) { std::cout << #entry << " | "; }
+	FORMAT_ENTRIES()
+#undef FORMAT_PROPERTY_ENTRY
+
+	std::cout << "\t" << "\t" << "optimalTilingFeatures = ";
+#define FORMAT_PROPERTY_ENTRY(entry) if(VK_FORMAT_FEATURE_##entry & FormatProperties.optimalTilingFeatures) { std::cout << #entry << " | "; }
+	FORMAT_ENTRIES()
+#undef FORMAT_PROPERTY_ENTRY
+
+	std::cout << "\t" << "\t" << "bufferFeatures = ";
+#define FORMAT_PROPERTY_ENTRY(entry) if(VK_FORMAT_FEATURE_##entry & FormatProperties.bufferFeatures) { std::cout << #entry << " | "; }
+	FORMAT_ENTRIES()
+#undef FORMAT_PROPERTY_ENTRY
+
+	std::cout << std::endl;
+#endif //!< DEBUG_STDOUT
+
 	const auto Size = static_cast<VkDeviceSize>(GLITexture.size());
 
 	VkBuffer StagingBuffer = VK_NULL_HANDLE;
@@ -199,11 +241,11 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 		BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
 		//!< デバイスローカルのイメージとメモリを作成 Create device local image and memory
-		CreateImage(Image, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, GLITexture);
+		CreateImage(Image, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SAMPLE_COUNT_1_BIT, GLITexture);
 		CreateDeviceLocalMemory(DeviceMemory, *Image);
 		BindDeviceMemory(*Image, *DeviceMemory);
 
-		//!< ステージングからデバイスローカルへのコピーコマンドを発行
+		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command from host visible to device local
 		const VkCommandBuffer CommandBuffer = CommandBuffers[0];
 		SubmitCopyImage(CommandBuffer, StagingBuffer, *Image, GLITexture);
 	}
@@ -215,7 +257,7 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 	}
 
 	//!< ビューを作成
-	CreateImageView(ImageView, *Image, ToVkImageViewType(GLITexture.target()), ToVkFormat(GLITexture.format()), ToVkComponentMapping(GLITexture.swizzles()), ImageSubresourceRange_Color);
+	CreateImageView(ImageView, *Image, GLITexture);
 
 	//!< サンプラを作成
 	CreateSampler(static_cast<const float>(GLITexture.levels()));

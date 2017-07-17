@@ -42,6 +42,12 @@
     <ClInclude Include="..\VKExt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\VKImageViewType.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VKComponentSwizzle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
