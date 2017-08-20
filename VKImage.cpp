@@ -54,9 +54,8 @@ VkComponentSwizzle VKImage::ToVkComponentSwizzle(const gli::swizzle GLISwizzle)
 {
 	switch (GLISwizzle)
 	{
-	case gli::SWIZZLE_ZERO: //!< ?
-	case gli::SWIZZLE_ONE: //!< ?
-	default: assert(false && "Not supported"); break;
+	case gli::SWIZZLE_ZERO: return VK_COMPONENT_SWIZZLE_ZERO;
+	case gli::SWIZZLE_ONE: return VK_COMPONENT_SWIZZLE_ONE;
 	case gli::SWIZZLE_RED: return VK_COMPONENT_SWIZZLE_R;
 	case gli::SWIZZLE_GREEN: return VK_COMPONENT_SWIZZLE_G;
 	case gli::SWIZZLE_BLUE: return VK_COMPONENT_SWIZZLE_B;
@@ -67,11 +66,19 @@ VkComponentSwizzle VKImage::ToVkComponentSwizzle(const gli::swizzle GLISwizzle)
 
 void VKImage::CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkSampleCountFlagBits SampleCount, const gli::texture& GLITexture) const
 {
+	const auto Type = ToVkImageType(GLITexture.target());
+	const auto Format = ToVkFormat(GLITexture.format());
+
 	const auto GLIExtent3D = GLITexture.extent(0);
 	const VkExtent3D Extent3D = {
 		static_cast<const uint32_t>(GLIExtent3D.x), static_cast<const uint32_t>(GLIExtent3D.y), static_cast<const uint32_t>(GLIExtent3D.z)
 	};
-	Super::CreateImage(Image, Usage, SampleCount, ToVkImageType(GLITexture.target()), ToVkFormat(GLITexture.format()), Extent3D, static_cast<const uint32_t>(GLITexture.levels()), static_cast<const uint32_t>(GLITexture.layers(), SampleCount));
+	
+	const auto Faces = static_cast<const uint32_t>(GLITexture.faces());
+	const auto Layers = static_cast<const uint32_t>(GLITexture.layers()) * Faces;
+	const auto Levels = static_cast<const uint32_t>(GLITexture.levels());
+
+	Super::CreateImage(Image, Usage, SampleCount, Type, Format, Extent3D, Levels, Layers);
 }
 
 void VKImage::SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkImage DstImage, const gli::texture& GLITexture)
@@ -135,7 +142,7 @@ void VKImage::SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffe
 		};
 		vkCmdPipelineBarrier(CommandBuffer,
 			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
 			0,
 			0, nullptr,
 			0, nullptr,
@@ -156,8 +163,8 @@ void VKImage::SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffe
 			ImageSubresourceRange
 		};
 		vkCmdPipelineBarrier(CommandBuffer,
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_PIPELINE_STAGE_TRANSFER_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 			0,
 			0, nullptr,
 			0, nullptr,
@@ -180,12 +187,16 @@ void VKImage::SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffe
 
 void VKImage::CreateImageView(VkImageView* ImageView, const VkImage Image, const gli::texture& GLITexture)
 {
-	Super::CreateImageView(ImageView, Image, ToVkImageViewType(GLITexture.target()), ToVkFormat(GLITexture.format()), ToVkComponentMapping(GLITexture.swizzles()), ImageSubresourceRange_ColorAll);
+	const auto Type = ToVkImageViewType(GLITexture.target());
+	const auto Format = ToVkFormat(GLITexture.format());
+	const auto CompMap = ToVkComponentMapping(GLITexture.swizzles());
+
+	Super::CreateImageView(ImageView, Image, Type, Format, CompMap, ImageSubresourceRange_ColorAll);
 }
 
 void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path)
 {
-	//const auto GLITexture(gli::load(Path.c_str())); //!< DDS or KTX or KMG
+	//const auto GLITexture(gli::load(Path.c_str())); //!< ‚±‚¿‚ç‚Å‚à‚æ‚¢ DDS or KTX or KMG ‚ð“Ç‚Ýž‚ß‚é
 	const auto GLITexture(gli::load_dds(Path.c_str()));
 	assert(!GLITexture.empty() && "Load image failed");
 

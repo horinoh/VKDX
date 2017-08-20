@@ -490,6 +490,43 @@ void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const si
 
 void VK::CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkSampleCountFlagBits SampleCount, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers) const
 {
+#if 0//def _DEBUG
+	VkFormatProperties FormatProperties;
+	vkGetPhysicalDeviceFormatProperties(PhysicalDevice, Format, &FormatProperties);
+
+	//!< サンプルドイメージでは全てのフォーマットがサポートされてるわけではない Not all formats are supported for sampled images
+	if (Usage & VK_IMAGE_USAGE_SAMPLED_BIT) {	
+		if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
+			std::cout << Yellow << "VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT not supported" << White << std::endl;
+			DEBUG_BREAK();
+		}
+		//!< #VK_TODO リニア使用時のみチェックする
+		const auto bUseLiner = true;//!< VK_FILTER_LINEAR == VkSamplerCreateInfo.magFilter || VK_FILTER_LINEAR == VkSamplerCreateInfo.minFilter || VK_SAMPLER_MIPMAP_MODE_LINEAR == VkSamplerCreateInfo.mipmapMode;
+		if (bUseLiner) { 
+			if (!(FormatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+				std::cout << Yellow << "VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported" << White << std::endl;
+				DEBUG_BREAK();
+			}
+		}
+	}
+
+	if (Usage & VK_IMAGE_USAGE_STORAGE_BIT) {
+		if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
+			std::cout << Yellow << "VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT not supported" << White << std::endl;
+			DEBUG_BREAK();
+		}
+		//!< #VK_TODO アトミック使用時のみチェックする
+		const auto bUseAtomic = false;
+		if (bUseAtomic) {
+			if (!(FormatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)) {
+				std::cout << Yellow << "VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT not supported" << White << std::endl;
+				DEBUG_BREAK();
+			}
+		}
+	}
+#endif
+	ValidateFomatProperties(Usage, Format);
+
 	const VkImageCreateInfo ImageCreateInfo = {
 		VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		nullptr,
@@ -602,6 +639,81 @@ void VK::CreateImageView(VkImageView* ImageView, const VkImage Image, const VkIm
 
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "CreateImageView" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void VK::CreateBufferView(VkBufferView* BufferView, const VkBuffer Buffer, const VkFormat Format, const VkDeviceSize Offset, const VkDeviceSize Range)
+{
+	const VkBufferViewCreateInfo BufferViewCreateInfo = {
+		VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
+		nullptr,
+		0,
+		Buffer,
+		Format,
+		Offset,
+		Range
+	};
+	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BufferViewCreateInfo, GetAllocationCallbacks(), BufferView));
+}
+
+void VK::ValidateFomatProperties(const VkImageUsageFlags Usage, const VkFormat Format) const
+{
+#ifdef _DEBUG
+	VkFormatProperties FormatProperties;
+	vkGetPhysicalDeviceFormatProperties(PhysicalDevice, Format, &FormatProperties);
+
+	//!< サンプルドイメージでは全てのフォーマットがサポートされてるわけではない Not all formats are supported for sampled images
+	if (Usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
+		if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
+			std::cout << Yellow << "VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT not supported" << White << std::endl;
+			DEBUG_BREAK();
+		}
+		//!< #VK_TODO リニア使用時のみチェックする
+		const auto bUseLiner = true;//!< VK_FILTER_LINEAR == VkSamplerCreateInfo.magFilter || VK_FILTER_LINEAR == VkSamplerCreateInfo.minFilter || VK_SAMPLER_MIPMAP_MODE_LINEAR == VkSamplerCreateInfo.mipmapMode;
+		if (bUseLiner) {
+			if (!(FormatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+				std::cout << Yellow << "VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported" << White << std::endl;
+				DEBUG_BREAK();
+			}
+		}
+	}
+
+	if (Usage & VK_IMAGE_USAGE_STORAGE_BIT) {
+		if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
+			std::cout << Yellow << "VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT not supported" << White << std::endl;
+			DEBUG_BREAK();
+		}
+		//!< #VK_TODO アトミック使用時のみチェックする
+		const auto bUseAtomic = false; 
+		if (bUseAtomic) {
+			if (!(FormatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)) {
+				std::cout << Yellow << "VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT not supported" << White << std::endl;
+				DEBUG_BREAK();
+			}
+		}
+	}
+
+	if (Usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) {
+		if (!(FormatProperties.bufferFeatures &  VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)) {
+			std::cout << Yellow << "VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT not supported" << White << std::endl;
+			DEBUG_BREAK();
+		}
+	}
+
+	if (Usage & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT) {
+		if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT)) {
+			std::cout << Yellow << "VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT not supported" << White << std::endl;
+			DEBUG_BREAK();
+		}
+		//!< #VK_TODO アトミック使用時のみチェックする
+		const auto bUseAtomic = false;
+		if (bUseAtomic) {
+			if (!(FormatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT)) {
+				std::cout << Yellow << "VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT not supported" << White << std::endl;
+				DEBUG_BREAK();
+			}
+		}
+	}
 #endif
 }
 
@@ -721,24 +833,24 @@ void VK::CreateDebugReportCallback()
 		using namespace std;
 		if (VK_DEBUG_REPORT_ERROR_BIT_EXT & flags) {
 			DEBUG_BREAK();
-			cout << Red << pMessage << White << endl;
+			cout << Red << "[ DebugReport ] : " << pMessage << White << endl;
 			return VK_TRUE;
 		}
 		else if (VK_DEBUG_REPORT_WARNING_BIT_EXT & flags) {
 			DEBUG_BREAK();
-			cout << Yellow << pMessage << White << endl;
+			cout << Yellow << "[ DebugReport ] : " << pMessage << White << endl;
 			return VK_TRUE;
 		}
 		else if (VK_DEBUG_REPORT_INFORMATION_BIT_EXT & flags) {
-			//cout << Green << pMessage << White << endl;
+			//cout << Green << "[ DebugReport ] : " << pMessage << White << endl;
 		}
 		else if (VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT & flags) {
 			DEBUG_BREAK();
-			cout << Yellow << pMessage << White << endl;
+			cout << Yellow << "[ DebugReport ] : " << pMessage << White << endl;
 			return VK_TRUE;
 		}
 		else if (VK_DEBUG_REPORT_DEBUG_BIT_EXT & flags) {
-			//cout << Green << pMessage << White << endl;
+			//cout << Green << "[ DebugReport ] : " << pMessage << White << endl;
 		}
 		return VK_FALSE;
 	};
@@ -1041,7 +1153,7 @@ void VK::CreateDevice()
 #endif
 	};
 
-	/*const*/std::vector<const char*> EnabledExtensions = {
+	std::vector<const char*> EnabledExtensions = {
 		//!< スワップチェインはプラットフォームに特有の機能なのでデバイス作製時に VK_KHR_SWAPCHAIN_EXTENSION_NAME エクステンションを有効にして作成しておく
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 	};
@@ -1525,29 +1637,24 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 #endif
 }
 
+//!< 小さなデータの場合、UniformBuffer より PushConstants を使用した方が効率が良い
 void VK::CreateUniformBuffer()
 {
 	glm::vec4 Color(1.0f, 0.0f, 0.0f, 1.0f);
 	const auto Size = sizeof(Color);
 
+	const auto Usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+	CreateBuffer(&UniformBuffer, Usage, Size);
+#if 1
 	//!< ユニフォームバッファは更新するのでホストビジブルとして作成する
-	CreateBuffer(&UniformBuffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, Size);
 	CreateHostVisibleMemory(&UniformDeviceMemory, UniformBuffer);
-	CopyToHostVisibleMemory(UniformDeviceMemory, Size, &Color/*, 0*/);
-	BindDeviceMemory(UniformBuffer, UniformDeviceMemory/*, 0*/);
-
-	//!< ビューを作成
-	const VkBufferViewCreateInfo BufferViewCreateInfo = {
-		VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
-		nullptr,
-		0,
-		UniformBuffer,
-		VK_FORMAT_R8G8B8A8_UNORM,
-		Size,
-		VK_WHOLE_SIZE
-	};
-	VkBufferView BufferView = VK_NULL_HANDLE;
-	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BufferViewCreateInfo, GetAllocationCallbacks(), &BufferView));
+	CopyToHostVisibleMemory(UniformDeviceMemory, Size, &Color);
+#else
+	CreateDeviceLocalMemory(&UniformDeviceMemory, UniformBuffer);
+#endif
+	BindDeviceMemory(UniformBuffer, UniformDeviceMemory);
+	
+	//!< View は必要ない No need view
 
 	//!< 書き込み
 	const VkDescriptorBufferInfo UniformDescriptorBufferInfo = {
@@ -1580,6 +1687,59 @@ void VK::CreateUniformBuffer()
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
 #endif
+}
+void VK::CreateStorageBuffer()
+{
+	glm::vec4 Color(1.0f, 0.0f, 0.0f, 1.0f);
+	const auto Size = sizeof(Color);
+
+	VkBuffer StorageBuffer = VK_NULL_HANDLE;
+	VkDeviceMemory StorageDeviceMemory = VK_NULL_HANDLE;
+
+	const auto Usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+	CreateBuffer(&StorageBuffer, Usage, Size);
+	CreateDeviceLocalMemory(&StorageDeviceMemory, StorageBuffer);
+	BindDeviceMemory(StorageBuffer, StorageDeviceMemory);
+
+	//!< View は必要ない No need view
+}
+void VK::CreateUniformTexelBuffer()
+{
+	glm::vec4 Color(1.0f, 0.0f, 0.0f, 1.0f);
+	const auto Size = sizeof(Color);
+
+	VkBuffer UniformTexelBuffer = VK_NULL_HANDLE;
+	VkDeviceMemory UniformTexelDeviceMemory = VK_NULL_HANDLE;
+	VkBufferView UniformTexelBufferView = VK_NULL_HANDLE;
+
+	const auto Usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
+	CreateBuffer(&UniformTexelBuffer, Usage, Size);
+	CreateDeviceLocalMemory(&UniformTexelDeviceMemory, UniformTexelBuffer);
+	BindDeviceMemory(UniformTexelBuffer, UniformTexelDeviceMemory);
+
+	//!< UniformTexelBuffer の場合は、フォーマットを指定する必要があるため、ビューを作成する UniformTexelBuffer need format, so create view
+	const auto Format = VK_FORMAT_R8G8B8A8_UNORM;
+	ValidateFomatProperties(Usage, Format);
+	CreateBufferView(&UniformTexelBufferView, UniformTexelBuffer, Format);
+}
+void VK::CreateStorageTexelBuffer()
+{
+	glm::vec4 Color(1.0f, 0.0f, 0.0f, 1.0f);
+	const auto Size = sizeof(Color);
+
+	VkBuffer StorageTexelBuffer = VK_NULL_HANDLE;
+	VkDeviceMemory StorageTexelDeviceMemory = VK_NULL_HANDLE;
+	VkBufferView StorageTexelBufferView = VK_NULL_HANDLE;
+
+	const auto Usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
+	CreateBuffer(&StorageTexelBuffer, Usage, Size);
+	CreateDeviceLocalMemory(&StorageTexelDeviceMemory, StorageTexelBuffer);
+	BindDeviceMemory(StorageTexelBuffer, StorageTexelDeviceMemory);
+
+	//!< UniformStorageBuffer の場合は、フォーマットを指定する必要があるため、ビューを作成する UniformStorageBuffer need format, so create view
+	const auto Format = VK_FORMAT_R8G8B8A8_UNORM;
+	ValidateFomatProperties(Usage, Format);
+	CreateBufferView(&StorageTexelBufferView, StorageTexelBuffer, Format);
 }
 
 /**

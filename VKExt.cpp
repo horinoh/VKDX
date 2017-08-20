@@ -4,6 +4,7 @@
 
 void VKExt::CreateSampler_LinearRepeat(const float MaxLOD)
 {
+	//!< #VK_TODO よく使う VkSamplerCreateInfo のパターンは用意しておく
 	const VkSamplerCreateInfo SamplerCreateInfo = {
 		VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 		nullptr,

@@ -99,6 +99,9 @@ protected:
 #include "VKDeviceMemory.inl"
 
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
+	virtual void CreateBufferView(VkBufferView* BufferView, const VkBuffer Buffer, const VkFormat Format, const VkDeviceSize Offset = 0, const VkDeviceSize Range = VK_WHOLE_SIZE);
+	
+	virtual void ValidateFomatProperties(const VkImageUsageFlags Usage, const VkFormat Format) const;
 
 #ifdef _DEBUG
 	template<typename T>
@@ -196,7 +199,11 @@ protected:
 	virtual void CreateVertexBuffer() {}
 	virtual void CreateIndexBuffer() {}
 	virtual void CreateIndirectBuffer() {}
+
 	virtual void CreateUniformBuffer();
+	virtual void CreateStorageBuffer();
+	virtual void CreateUniformTexelBuffer();
+	virtual void CreateStorageTexelBuffer();
 
 	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const {}
 	virtual void CreateDescriptorSetLayout();

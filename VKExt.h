@@ -27,6 +27,40 @@ public:
 		DescriptorPoolSizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 });
 	}
 
+	/** 
+	プラットフォームによってはコンバインドイメージサンプラを用いた方が効率が良い場合がある On some platforms, it may be more optimal to use combined image sampler
+	
+	VK_DESCRIPTOR_TYPE_SAMPLER ... サンプラ
+		layout (set=0, binding=0) uniform sampler MySampler;
+	VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ... サンプルドイメージ
+		layout (set=0, binding=0) uniform texture2D MyTexture2D;
+	VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ... コンバインドイメージサンプラ
+		layout (set=0, binding=0) uniform sampler2D MySampler2D;
+	VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ... ストレージイメージ (シェーダから書き込み可能)
+		layout (set=0, binding=0, r32f) uniform image2D MyImage2D;
+
+	VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER ... ユニフォームテクセルバッファ
+		layout (set=0, binding=0) uniform samplerBuffer MySamplerBuffer;
+	VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER ... ストレージテクセルバッファ(シェーダから書き込み可能)
+		layout (set=0, binding=0, r32f) uniform imageBuffer MyImageBuffer;
+
+	VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ... 
+	VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ... 
+		layout (set=0, binding=0) uniform MyUniform
+		{
+			vec4 MyVec4;
+			mat4 MyMat4;
+		}
+
+	VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ... 
+	VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC ...
+		layout (set=0, binding=0) buffer MyBuffer
+		{
+			vec4 MyVec4;
+			mat4 MyMat4;
+		}
+	*/
+
 	//!< １つのコンバインドイメージサンプラ (イメージとサンプラをまとめたもの)
 	void CreateDescriptorSetLayoutBindings_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const {
 		DescriptorSetLayoutBindings.push_back({
