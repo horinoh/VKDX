@@ -1,0 +1,4 @@
+	VK_GLOBAL_PROC_ADDR(CreateInstance)
+	VK_GLOBAL_PROC_ADDR(EnumerateInstanceExtensionProperties)
+	VK_GLOBAL_PROC_ADDR(EnumerateInstanceLayerProperties)
+	
