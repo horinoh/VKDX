@@ -239,33 +239,34 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 
 	std::cout << std::endl;
 #endif //!< DEBUG_STDOUT
+	
+	[&](VkImage* Image, VkDeviceMemory* DeviceMemory, VkImageView* ImageView, const gli::texture& GLITexture, const VkCommandBuffer CB) {
+		const auto Size = static_cast<VkDeviceSize>(GLITexture.size());
 
-	const auto Size = static_cast<VkDeviceSize>(GLITexture.size());
+		VkBuffer StagingBuffer = VK_NULL_HANDLE;
+		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
+		{
+			//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
+			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
+			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
+			CopyToHostVisibleMemory(StagingDeviceMemory, Size, GLITexture.data());
+			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
-	VkBuffer StagingBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
-	{
-		//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
-		CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-		CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
-		CopyToHostVisibleMemory(StagingDeviceMemory, Size, GLITexture.data());
-		BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
+			//!< デバイスローカルのイメージとメモリを作成 Create device local image and memory
+			CreateImage(Image, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SAMPLE_COUNT_1_BIT, GLITexture);
+			CreateDeviceLocalMemory(DeviceMemory, *Image);
+			BindDeviceMemory(*Image, *DeviceMemory);
 
-		//!< デバイスローカルのイメージとメモリを作成 Create device local image and memory
-		CreateImage(Image, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SAMPLE_COUNT_1_BIT, GLITexture);
-		CreateDeviceLocalMemory(DeviceMemory, *Image);
-		BindDeviceMemory(*Image, *DeviceMemory);
-
-		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command from host visible to device local
-		const VkCommandBuffer CommandBuffer = CommandBuffers[0];
-		SubmitCopyImage(CommandBuffer, StagingBuffer, *Image, GLITexture);
-	}
-	if (VK_NULL_HANDLE != StagingDeviceMemory) {
-		vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
-	}
-	if (VK_NULL_HANDLE != StagingBuffer) {
-		vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
-	}
+			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command from host visible to device local
+			SubmitCopyImage(CB, StagingBuffer, *Image, GLITexture);
+		}
+		if (VK_NULL_HANDLE != StagingDeviceMemory) {
+			vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
+		}
+		if (VK_NULL_HANDLE != StagingBuffer) {
+			vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
+		}
+	}(Image, DeviceMemory, ImageView, GLITexture, CommandBuffers[0]);
 
 	//!< ビューを作成
 	CreateImageView(ImageView, *Image, GLITexture);

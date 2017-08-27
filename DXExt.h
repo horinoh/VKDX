@@ -10,8 +10,8 @@ public:
 	using Vertex_Position = struct Vertex_Position { DirectX::XMFLOAT3 Position; };
 	using Vertex_PositionColor = struct Vertex_PositionColor { DirectX::XMFLOAT3 Position; DirectX::XMFLOAT4 Color; };
 	
-	void CreateIndirectBuffer_Indirect4Vertices();
-	void CreateIndirectBuffer_IndexedIndirect();
+	void CreateIndirectBuffer_4Vertices();
+	void CreateIndirectBuffer_Indexed();
 
 	//!< １つのコンスタントバッファ
 	void CreateDescriptorRanges_1CBV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {

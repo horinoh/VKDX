@@ -235,30 +235,34 @@ void TriangleVK::CreateVertexBuffer()
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 	
-	VkBuffer StagingBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
-	{
-		//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
-		CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-		CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
-		CopyToHostVisibleMemory(StagingDeviceMemory, Size, Vertices.data());
-		BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
+	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data, const VkCommandBuffer CB) {
+		VkBuffer StagingBuffer = VK_NULL_HANDLE;
+		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
+		{
+			//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
+			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
+			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
+			CopyToHostVisibleMemory(StagingDeviceMemory, Size, Data);
+			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
-		//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
-		CreateBuffer(&VertexBuffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-		CreateDeviceLocalMemory(&VertexDeviceMemory, VertexBuffer);
-		BindDeviceMemory(VertexBuffer, VertexDeviceMemory);
+			//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
+			CreateBuffer(Buffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+			CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+			BindDeviceMemory(*Buffer, *DeviceMemory);
 
-		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
-		const auto CB = CommandBuffers[0];
-		SubmitCopyBuffer(CB, StagingBuffer, VertexBuffer, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
-	}
-	if (VK_NULL_HANDLE != StagingDeviceMemory) {
-		vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
-	}
-	if (VK_NULL_HANDLE != StagingBuffer) {
-		vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
-	}
+			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
+			SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
+
+		}
+		if (VK_NULL_HANDLE != StagingDeviceMemory) {
+			vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
+		}
+		if (VK_NULL_HANDLE != StagingBuffer) {
+			vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
+		}
+	}(&VertexBuffer, &VertexDeviceMemory, Size, Vertices.data(), CommandBuffers[0]);
+
+	//!< ビューは必要ない No need view
 
 #ifdef _DEBUG
 	MarkerSetObjectName(Device, VertexBuffer, "MyVertexBuffer");
@@ -272,35 +276,38 @@ void TriangleVK::CreateIndexBuffer()
 {
 	const std::vector<uint32_t> Indices = { 0, 1, 2 };
 
-	//!< vkCmdDrawIndexed() が引数に取るので覚えておく必要がある
+	//!< vkCmdDrawIndexed() が引数に取るので覚えておく必要がある Save this value because vkCmdDrawIndexed() will use it
 	IndexCount = static_cast<uint32_t>(Indices.size());
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 	
-	VkBuffer StagingBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
-	{
-		//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
-		CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-		CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
-		CopyToHostVisibleMemory(StagingDeviceMemory, Size, Indices.data());
-		BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
+	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data, const VkCommandBuffer CB) {
+		VkBuffer StagingBuffer = VK_NULL_HANDLE;
+		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
+		{
+			//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
+			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
+			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
+			CopyToHostVisibleMemory(StagingDeviceMemory, Size, Data);
+			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
-		//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
-		CreateBuffer(&IndexBuffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-		CreateDeviceLocalMemory(&IndexDeviceMemory, IndexBuffer);
-		BindDeviceMemory(IndexBuffer, IndexDeviceMemory);
+			//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
+			CreateBuffer(Buffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+			CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+			BindDeviceMemory(*Buffer, *DeviceMemory);
 
-		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
-		const auto CB = CommandBuffers[0];
-		SubmitCopyBuffer(CB, StagingBuffer, IndexBuffer, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
-	}
-	if (VK_NULL_HANDLE != StagingDeviceMemory) {
-		vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
-	}
-	if (VK_NULL_HANDLE != StagingBuffer) {
-		vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
-	}
+			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
+			SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
+		}
+		if (VK_NULL_HANDLE != StagingDeviceMemory) {
+			vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
+		}
+		if (VK_NULL_HANDLE != StagingBuffer) {
+			vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
+		}
+	}(&IndexBuffer, &IndexDeviceMemory, Size, Indices.data(), CommandBuffers[0]);
+
+	//!< ビューは必要ない No need view
 
 #ifdef _DEBUG
 	MarkerSetObjectName(Device, IndexBuffer, "MyIndexBuffer");

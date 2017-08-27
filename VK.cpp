@@ -490,42 +490,7 @@ void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const si
 
 void VK::CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkSampleCountFlagBits SampleCount, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers) const
 {
-#if 0//def _DEBUG
-	VkFormatProperties FormatProperties;
-	vkGetPhysicalDeviceFormatProperties(PhysicalDevice, Format, &FormatProperties);
-
-	//!< サンプルドイメージでは全てのフォーマットがサポートされてるわけではない Not all formats are supported for sampled images
-	if (Usage & VK_IMAGE_USAGE_SAMPLED_BIT) {	
-		if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
-			std::cout << Yellow << "VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT not supported" << White << std::endl;
-			DEBUG_BREAK();
-		}
-		//!< #VK_TODO リニア使用時のみチェックする
-		const auto bUseLiner = true;//!< VK_FILTER_LINEAR == VkSamplerCreateInfo.magFilter || VK_FILTER_LINEAR == VkSamplerCreateInfo.minFilter || VK_SAMPLER_MIPMAP_MODE_LINEAR == VkSamplerCreateInfo.mipmapMode;
-		if (bUseLiner) { 
-			if (!(FormatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-				std::cout << Yellow << "VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported" << White << std::endl;
-				DEBUG_BREAK();
-			}
-		}
-	}
-
-	if (Usage & VK_IMAGE_USAGE_STORAGE_BIT) {
-		if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
-			std::cout << Yellow << "VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT not supported" << White << std::endl;
-			DEBUG_BREAK();
-		}
-		//!< #VK_TODO アトミック使用時のみチェックする
-		const auto bUseAtomic = false;
-		if (bUseAtomic) {
-			if (!(FormatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)) {
-				std::cout << Yellow << "VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT not supported" << White << std::endl;
-				DEBUG_BREAK();
-			}
-		}
-	}
-#endif
-	ValidateFomatProperties(Usage, Format);
+	ValidateFormatProperties(Usage, Format);
 
 	const VkImageCreateInfo ImageCreateInfo = {
 		VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -656,7 +621,7 @@ void VK::CreateBufferView(VkBufferView* BufferView, const VkBuffer Buffer, const
 	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BufferViewCreateInfo, GetAllocationCallbacks(), BufferView));
 }
 
-void VK::ValidateFomatProperties(const VkImageUsageFlags Usage, const VkFormat Format) const
+void VK::ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat Format) const
 {
 #ifdef _DEBUG
 	VkFormatProperties FormatProperties;
@@ -693,6 +658,23 @@ void VK::ValidateFomatProperties(const VkImageUsageFlags Usage, const VkFormat F
 		}
 	}
 
+	if (Usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT) {
+		if (true) { //!< #VK_TODO
+					//!< カラーの場合 Color
+			if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) {
+				std::cout << Yellow << "VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT not supported" << White << std::endl;
+				DEBUG_BREAK();
+			}
+		}
+		else {
+			//!< デプスステンシルの場合 DepthStencil
+			if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
+				std::cout << Yellow << "VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT not supported" << White << std::endl;
+				DEBUG_BREAK();
+			}
+		}
+	}
+
 	if (Usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) {
 		if (!(FormatProperties.bufferFeatures &  VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)) {
 			std::cout << Yellow << "VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT not supported" << White << std::endl;
@@ -700,8 +682,8 @@ void VK::ValidateFomatProperties(const VkImageUsageFlags Usage, const VkFormat F
 		}
 	}
 
-	if (Usage & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT) {
-		if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT)) {
+	if (Usage & VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT) {
+		if (!(FormatProperties.bufferFeatures &  VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT)) {
 			std::cout << Yellow << "VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT not supported" << White << std::endl;
 			DEBUG_BREAK();
 		}
@@ -1643,18 +1625,23 @@ void VK::CreateUniformBuffer()
 	glm::vec4 Color(1.0f, 0.0f, 0.0f, 1.0f);
 	const auto Size = sizeof(Color);
 
-	const auto Usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-	CreateBuffer(&UniformBuffer, Usage, Size);
-#if 1
-	//!< ユニフォームバッファは更新するのでホストビジブルとして作成する
-	CreateHostVisibleMemory(&UniformDeviceMemory, UniformBuffer);
-	CopyToHostVisibleMemory(UniformDeviceMemory, Size, &Color);
+	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data) {
+		const auto Usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+		CreateBuffer(Buffer, Usage, Size);
+#if 1   //!< よく更新するのでホストビジブルとして作成 This will be frequently updated, so create as host visible
+		CreateHostVisibleMemory(DeviceMemory, *Buffer);
+		CopyToHostVisibleMemory(*DeviceMemory, Size, Data);
 #else
-	CreateDeviceLocalMemory(&UniformDeviceMemory, UniformBuffer);
+		CreateDeviceLocalMemory(DeviceMemory, *Buffer);
 #endif
-	BindDeviceMemory(UniformBuffer, UniformDeviceMemory);
-	
-	//!< View は必要ない No need view
+		BindDeviceMemory(*Buffer, *DeviceMemory);
+
+		//!< View は必要ない No need view
+
+	}(&UniformBuffer, &UniformDeviceMemory, Size, &Color);
+
+	//!< ↓以下は別関数にしたい #VK_TODO
 
 	//!< 書き込み
 	const VkDescriptorBufferInfo UniformDescriptorBufferInfo = {
@@ -1693,53 +1680,90 @@ void VK::CreateStorageBuffer()
 	glm::vec4 Color(1.0f, 0.0f, 0.0f, 1.0f);
 	const auto Size = sizeof(Color);
 
-	VkBuffer StorageBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory StorageDeviceMemory = VK_NULL_HANDLE;
+	VkBuffer Buffer = VK_NULL_HANDLE;
+	VkDeviceMemory DeviceMemory = VK_NULL_HANDLE;
 
-	const auto Usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-	CreateBuffer(&StorageBuffer, Usage, Size);
-	CreateDeviceLocalMemory(&StorageDeviceMemory, StorageBuffer);
-	BindDeviceMemory(StorageBuffer, StorageDeviceMemory);
+	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data) {
+		const auto Usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
-	//!< View は必要ない No need view
+		CreateBuffer(Buffer, Usage, Size);
+		CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+		BindDeviceMemory(*Buffer, *DeviceMemory);
+
+		//!< View は必要ない No need view
+
+	}(&Buffer, &DeviceMemory, Size, &Color);
+
+	if (VK_NULL_HANDLE != DeviceMemory) {
+		vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
+	}
+	if (VK_NULL_HANDLE != Buffer) {
+		vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
+	}
 }
 void VK::CreateUniformTexelBuffer()
 {
 	glm::vec4 Color(1.0f, 0.0f, 0.0f, 1.0f);
 	const auto Size = sizeof(Color);
 
-	VkBuffer UniformTexelBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory UniformTexelDeviceMemory = VK_NULL_HANDLE;
-	VkBufferView UniformTexelBufferView = VK_NULL_HANDLE;
+	VkBuffer Buffer = VK_NULL_HANDLE;
+	VkDeviceMemory DeviceMemory = VK_NULL_HANDLE;
+	VkBufferView View = VK_NULL_HANDLE;
 
-	const auto Usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
-	CreateBuffer(&UniformTexelBuffer, Usage, Size);
-	CreateDeviceLocalMemory(&UniformTexelDeviceMemory, UniformTexelBuffer);
-	BindDeviceMemory(UniformTexelBuffer, UniformTexelDeviceMemory);
+	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, VkBufferView* View, const VkDeviceSize Size, const void* Data) {
+		const auto Usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
 
-	//!< UniformTexelBuffer の場合は、フォーマットを指定する必要があるため、ビューを作成する UniformTexelBuffer need format, so create view
-	const auto Format = VK_FORMAT_R8G8B8A8_UNORM;
-	ValidateFomatProperties(Usage, Format);
-	CreateBufferView(&UniformTexelBufferView, UniformTexelBuffer, Format);
+		CreateBuffer(Buffer, Usage, Size);
+		CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+		BindDeviceMemory(*Buffer, *DeviceMemory);
+
+		//!< UniformTexelBuffer の場合は、フォーマットを指定する必要があるため、ビューを作成する UniformTexelBuffer need format, so create view
+		const auto Format = VK_FORMAT_R8G8B8A8_UNORM;
+		ValidateFormatProperties(Usage, Format);
+		CreateBufferView(View, *Buffer, Format);
+	}(&Buffer, &DeviceMemory, &View, Size, &Color);
+
+	if (VK_NULL_HANDLE != DeviceMemory) {
+		vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
+	}
+	if (VK_NULL_HANDLE != Buffer) {
+		vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
+	}
+	if (VK_NULL_HANDLE != View) {
+		vkDestroyBufferView(Device, View, GetAllocationCallbacks());
+	}
 }
 void VK::CreateStorageTexelBuffer()
 {
 	glm::vec4 Color(1.0f, 0.0f, 0.0f, 1.0f);
 	const auto Size = sizeof(Color);
 
-	VkBuffer StorageTexelBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory StorageTexelDeviceMemory = VK_NULL_HANDLE;
-	VkBufferView StorageTexelBufferView = VK_NULL_HANDLE;
+	VkBuffer Buffer = VK_NULL_HANDLE;
+	VkDeviceMemory DeviceMemory = VK_NULL_HANDLE;
+	VkBufferView View = VK_NULL_HANDLE;
+	
+	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, VkBufferView* View, const VkDeviceSize Size, const void* Data) {
+		const auto Usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
 
-	const auto Usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
-	CreateBuffer(&StorageTexelBuffer, Usage, Size);
-	CreateDeviceLocalMemory(&StorageTexelDeviceMemory, StorageTexelBuffer);
-	BindDeviceMemory(StorageTexelBuffer, StorageTexelDeviceMemory);
+		CreateBuffer(Buffer, Usage, Size);
+		CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+		BindDeviceMemory(*Buffer, *DeviceMemory);
 
-	//!< UniformStorageBuffer の場合は、フォーマットを指定する必要があるため、ビューを作成する UniformStorageBuffer need format, so create view
-	const auto Format = VK_FORMAT_R8G8B8A8_UNORM;
-	ValidateFomatProperties(Usage, Format);
-	CreateBufferView(&StorageTexelBufferView, StorageTexelBuffer, Format);
+		//!< UniformStorageBuffer の場合は、フォーマットを指定する必要があるため、ビューを作成する UniformStorageBuffer need format, so create view
+		const auto Format = VK_FORMAT_R8G8B8A8_UNORM;
+		ValidateFormatProperties(Usage, Format);
+		CreateBufferView(View, *Buffer, Format);
+	}(&Buffer, &DeviceMemory, &View, Size, &Color);
+	
+	if (VK_NULL_HANDLE != DeviceMemory) {
+		vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
+	}
+	if (VK_NULL_HANDLE != Buffer) {
+		vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
+	}
+	if (VK_NULL_HANDLE != View) {
+		vkDestroyBufferView(Device, View, GetAllocationCallbacks());
+	}
 }
 
 /**

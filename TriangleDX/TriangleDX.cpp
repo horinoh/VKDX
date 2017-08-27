@@ -235,19 +235,20 @@ void TriangleDX::CreateVertexBuffer()
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
 
-	//!< アップロード用のリソースを作成、データをコピー Create upload resource, and copy data
-	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-	CreateUploadResource(UploadResource.GetAddressOf(), Size);
-	CopyToUploadResource(UploadResource.Get(), Size, Vertices.data());
+	[&](ID3D12Resource** Resource, const UINT32 Size, const void* Data, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL) {
+		//!< アップロード用のリソースを作成、データをコピー Create upload resource, and copy data
+		Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
+		CreateUploadResource(UploadResource.GetAddressOf(), Size);
+		CopyToUploadResource(UploadResource.Get(), Size, Data);
 
-	//!< デフォルトのリソースを作成 Create default resource
-	CreateDefaultResource(VertexBufferResource.GetAddressOf(), Size);
+		//!< デフォルトのリソースを作成 Create default resource
+		CreateDefaultResource(Resource, Size);
 
-	//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
-	const auto CA = CommandAllocators[0].Get();
-	const auto CL = GraphicsCommandLists[0].Get();
-	ExecuteCopyBuffer(CA, CL, UploadResource.Get(), VertexBufferResource.Get(), Size);
+		//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
+		ExecuteCopyBuffer(CA, CL, UploadResource.Get(), *Resource, Size);
+	}(VertexBufferResource.GetAddressOf(), Size, Vertices.data(), CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 
+	//!< DXではビューが必要 Need view
 	VertexBufferViews.push_back({ VertexBufferResource->GetGPUVirtualAddress(), Size, Stride });
 
 #ifdef _DEBUG
@@ -261,24 +262,25 @@ void TriangleDX::CreateVertexBuffer()
 void TriangleDX::CreateIndexBuffer()
 {
 	const std::vector<UINT32> Indices = { 0, 1, 2 };
-	//!< DrawInstanced() が引数に取るので覚えておく必要がある
+	//!< DrawInstanced() が引数に取るので覚えておく必要がある Save this value because DrawInstanced() will use it
 	IndexCount = static_cast<UINT32>(Indices.size());
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<UINT32>(Stride * IndexCount);
 
-	//!< アップロード用のリソースを作成、データをコピー Create upload resource, and copy data
-	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-	CreateUploadResource(UploadResource.GetAddressOf(), Size);
-	CopyToUploadResource(UploadResource.Get(), Size, Indices.data());
+	[&](ID3D12Resource** Resource, const UINT32 Size, const void* Data, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL) {
+		//!< アップロード用のリソースを作成、データをコピー Create upload resource, and copy data
+		Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
+		CreateUploadResource(UploadResource.GetAddressOf(), Size);
+		CopyToUploadResource(UploadResource.Get(), Size, Data);
 
-	//!< デフォルトのリソースを作成 Create default resource
-	CreateDefaultResource(IndexBufferResource.GetAddressOf(), Size);
+		//!< デフォルトのリソースを作成 Create default resource
+		CreateDefaultResource(Resource, Size);
 
-	//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
-	const auto CA = CommandAllocators[0].Get();
-	const auto CL = GraphicsCommandLists[0].Get();
-	ExecuteCopyBuffer(CA, CL, UploadResource.Get(), IndexBufferResource.Get(), Size);
+		//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
+		ExecuteCopyBuffer(CA, CL, UploadResource.Get(), *Resource, Size);
+	}(IndexBufferResource.GetAddressOf(), Size, Indices.data(), CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 
+	//!< DXではビューが必要 Need view
 	IndexBufferView = { IndexBufferResource->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT };
 
 #ifdef _DEBUG

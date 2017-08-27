@@ -21,9 +21,9 @@ void VKExt::CreateSampler_LinearRepeat(const float MaxLOD)
 	VERIFY_SUCCEEDED(vkCreateSampler(Device, &SamplerCreateInfo, GetAllocationCallbacks(), &Sampler));
 }
 
-void VKExt::CreateIndirectBuffer_Indirect4Vertices()
+void VKExt::CreateIndirectBuffer_4Vertices()
 {
-	const auto CB = CommandBuffers[0];
+	//const auto CB = CommandBuffers[0];
 
 	const VkDrawIndirectCommand DrawIndirectCommand = {
 		4, 1, 0, 0
@@ -31,63 +31,65 @@ void VKExt::CreateIndirectBuffer_Indirect4Vertices()
 	const auto Stride = sizeof(DrawIndirectCommand);
 	const auto Size = static_cast<VkDeviceSize>(Stride * 1);
 
-	VkBuffer StagingBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
-	{
-		//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
-		CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-		CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
-		CopyToHostVisibleMemory(StagingDeviceMemory, Size, &DrawIndirectCommand);
-		BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
+	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data, const VkCommandBuffer CB) {
+		VkBuffer StagingBuffer = VK_NULL_HANDLE;
+		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
+		{
+			//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
+			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
+			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
+			CopyToHostVisibleMemory(StagingDeviceMemory, Size, Data);
+			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
-		//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
-		CreateBuffer(&IndirectBuffer, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-		CreateDeviceLocalMemory(&IndirectDeviceMemory, IndirectBuffer);
-		BindDeviceMemory(IndirectBuffer, IndirectDeviceMemory);
+			//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
+			CreateBuffer(Buffer, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+			CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+			BindDeviceMemory(*Buffer, *DeviceMemory);
 
-		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
-		SubmitCopyBuffer(CB, StagingBuffer, IndirectBuffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
-	}
-	if (VK_NULL_HANDLE != StagingDeviceMemory) {
-		vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
-	}
-	if (VK_NULL_HANDLE != StagingBuffer) {
-		vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
-	}
+			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
+			SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
+		}
+		if (VK_NULL_HANDLE != StagingDeviceMemory) {
+			vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
+		}
+		if (VK_NULL_HANDLE != StagingBuffer) {
+			vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
+		}
+	}(&IndirectBuffer, &IndirectDeviceMemory, Size, &DrawIndirectCommand, CommandBuffers[0]);
 }
-void VKExt::CreateIndirectBuffer_IndexedIndirect()
+void VKExt::CreateIndirectBuffer_Indexed()
 {
-	const auto CB = CommandBuffers[0];
-
 	const VkDrawIndexedIndirectCommand DrawIndexedIndirectCommand = {
 		IndexCount, 1, 0, 0, 0
 	};
 	const auto Stride = sizeof(DrawIndexedIndirectCommand);
 	const auto Size = static_cast<VkDeviceSize>(Stride * 1);
 
-	VkBuffer StagingBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
-	{
-		//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
-		CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-		CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
-		CopyToHostVisibleMemory(StagingDeviceMemory, Size, &DrawIndexedIndirectCommand);
-		BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
+	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data, const VkCommandBuffer CB) {
+		VkBuffer StagingBuffer = VK_NULL_HANDLE;
+		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
+		{
+			//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
+			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
+			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
+			CopyToHostVisibleMemory(StagingDeviceMemory, Size, Data);
+			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
-		//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
-		CreateBuffer(&IndirectBuffer, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-		CreateDeviceLocalMemory(&IndirectDeviceMemory, IndirectBuffer);
-		BindDeviceMemory(IndirectBuffer, IndirectDeviceMemory);
+			//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
+			CreateBuffer(Buffer, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+			CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+			BindDeviceMemory(*Buffer, *DeviceMemory);
 
-		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
-		SubmitCopyBuffer(CB, StagingBuffer, IndirectBuffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
-	}
-	if (VK_NULL_HANDLE != StagingDeviceMemory) {
-		vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
-	}
-	if (VK_NULL_HANDLE != StagingBuffer) {
-		vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
-	}
+			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
+			SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
+		}
+		if (VK_NULL_HANDLE != StagingDeviceMemory) {
+			vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
+		}
+		if (VK_NULL_HANDLE != StagingBuffer) {
+			vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
+		}
+	}(&IndirectBuffer, &IndirectDeviceMemory, Size, &DrawIndexedIndirectCommand, CommandBuffers[0]);
 }
 
 void VKExt::CreaateWriteDescriptorSets_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, VkDescriptorImageInfo* DescriptorImageInfo, VkDescriptorBufferInfo* DescriptorBufferInfo, VkBufferView* BufferView) const

@@ -142,6 +142,7 @@ protected:
 	virtual void CreateIndexBuffer() {}
 	virtual void CreateIndirectBuffer() {}
 	virtual void CreateConstantBuffer();
+
 	virtual void CreateConstantBufferDescriptorHeap(const UINT Size);
 	virtual void CreateUnorderedAccessTexture();
 
