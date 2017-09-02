@@ -59,8 +59,11 @@ public:
 			vec4 MyVec4;
 			mat4 MyMat4;
 		}
-	*/
+	
+	VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT ... (前レンダーパスで)レンダーターゲット(アタッチメント)として使われたものを(レンダーパス中で)入力として取る場合
+		layout (input_attachment_index=0, set=0, binding=0) uniform subpassInput MySubpassInput;
 
+	*/
 	//!< １つのコンバインドイメージサンプラ (イメージとサンプラをまとめたもの)
 	void CreateDescriptorSetLayoutBindings_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const {
 		DescriptorSetLayoutBindings.push_back({

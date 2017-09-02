@@ -660,14 +660,14 @@ void VK::ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat 
 
 	if (Usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT) {
 		if (true) { //!< #VK_TODO
-					//!< カラーの場合 Color
+			//!< カラーの場合 In case color
 			if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) {
 				std::cout << Yellow << "VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT not supported" << White << std::endl;
 				DEBUG_BREAK();
 			}
 		}
 		else {
-			//!< デプスステンシルの場合 DepthStencil
+			//!< デプスステンシルの場合 In case depth stencil
 			if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
 				std::cout << Yellow << "VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT not supported" << White << std::endl;
 				DEBUG_BREAK();
@@ -1394,7 +1394,7 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 	std::cout << "\t" << "\t" << "\t" << SurfaceExtent2D.width << " x " << SurfaceExtent2D.height << std::endl;
 #endif
 
-	const auto DesiredUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT; //!< イメージクリア用に TRANSFER_DST を希望。For clear image we want TRANSFER_DST
+	const auto DesiredUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT; //!< イメージクリア用に TRANSFER_DST(サポートされていれば) For clear image TRANSFER_DST(If supported)
 	const VkImageUsageFlags ImageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | (DesiredUsage & SurfaceCapabilities.supportedUsageFlags);
 
 	//!< サーフェスを回転、反転させるかどうか。Rotate, mirror surface or not
@@ -1581,7 +1581,8 @@ void VK::CreateDepthStencilImage()
 	const VkExtent3D Extent3D = {
 		SurfaceExtent2D.width, SurfaceExtent2D.height, 1
 	};
-	CreateImage(&DepthStencilImage, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1);
+	const VkImageUsageFlags Usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+	CreateImage(&DepthStencilImage, Usage, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "DepthStencilImage" << std::endl;

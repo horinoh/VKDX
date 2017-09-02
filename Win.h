@@ -54,7 +54,7 @@
 #ifndef VERIFY
 #ifdef  _DEBUG
 //#define VERIFY(x) assert(x)
-//#define VERIFY(x) if(!(x)) { DEBUG_BREA(); }
+//#define VERIFY(x) if(!(x)) { DEBUG_BREAK(); }
 #define VERIFY(x) if (!(x)) { throw std::runtime_error("VERIFY failed"); }
 #else
 #define VERIFY(x) (x)

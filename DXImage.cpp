@@ -4,37 +4,56 @@
 
 #pragma comment(lib, "DirectXTK12.lib")
 
+void DXImage::LoadImage(ID3D12Resource** Resource, ID3D12DescriptorHeap** DescriptorHeap, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState /*= D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE*/)
+{
+	CreateImageDescriptorHeap(DescriptorHeap);
+
+	LoadImage_DDS(Resource, *DescriptorHeap, Path, ResourceState);
+
+#ifdef DEBUG_STDOUT
+	std::wcout << "\t" << "ImageFile = " << Path.c_str() << std::endl;
+#endif
+
+#ifdef DEBUG_STDOUT
+	std::cout << "LoadImage" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
 void DXImage::LoadImage_DDS(ID3D12Resource** Resource, ID3D12DescriptorHeap* DescriptorHeap, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState)
 {
-	std::unique_ptr<uint8_t[]> DDSData;
-	std::vector<D3D12_SUBRESOURCE_DATA> SubresourceData;
-	VERIFY_SUCCEEDED(DirectX::LoadDDSTextureFromFile(Device.Get(), Path.c_str(), Resource, DDSData, SubresourceData));
+	[&](ID3D12Resource** Resource, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL) {
+		//!< サブリソースデータを取得 Acquire sub resource data
+		std::unique_ptr<uint8_t[]> DDSData; //!< 未使用 Not used
+		std::vector<D3D12_SUBRESOURCE_DATA> Subresource;
+		VERIFY_SUCCEEDED(DirectX::LoadDDSTextureFromFile(Device.Get(), Path.c_str(), Resource, DDSData, Subresource));
 
-	//!< フットプリントの取得 Acquire footprint
-	UINT64 Size = 0;
-	std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PlacedSubresourceFootprints(SubresourceData.size());
-	std::vector<UINT> NumRows(SubresourceData.size());
-	std::vector<UINT64> RowSizes(SubresourceData.size());
-	const auto ResourceDesc = (*Resource)->GetDesc();
-	Device->GetCopyableFootprints(&ResourceDesc, 0, static_cast<const UINT>(SubresourceData.size()), 0, PlacedSubresourceFootprints.data(), NumRows.data(), RowSizes.data(), &Size);
+		//!< フットプリントの取得 Acquire footprint
+		UINT64 TotalBytes = 0;
+		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> Footprint(Subresource.size());
+		std::vector<UINT> NumRows(Subresource.size());
+		std::vector<UINT64> RowBytes(Subresource.size());
+		const auto ResourceDesc = (*Resource)->GetDesc();
+		Device->GetCopyableFootprints(&ResourceDesc, 
+			0, static_cast<const UINT>(Subresource.size()), 
+			0, Footprint.data(), 
+			NumRows.data(), RowBytes.data(), &TotalBytes);
 
-	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-	CreateUploadResource(UploadResource.GetAddressOf(), Size);
-	CopyToUploadResource(UploadResource.Get(), SubresourceData, PlacedSubresourceFootprints, NumRows, RowSizes);
+		Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
+		CreateUploadResource(UploadResource.GetAddressOf(), TotalBytes);
+		CopyToUploadResource(UploadResource.Get(), Subresource, Footprint, NumRows, RowBytes);
 
-	//!< #DX_TODO ミップマップの生成
-	//if(ResourceDesc.MipLevels != static_cast<const UINT16>(SubresourceData.size())) {
-	//	UploadResource.GenerateMips(*Resource);
-	//}
+		//!< #DX_TODO ミップマップの生成 Mipmap
+		//if(ResourceDesc.MipLevels != static_cast<const UINT16>(SubresourceData.size())) {
+		//	UploadResource.GenerateMips(*Resource);
+		//}
 
-	const auto CommandList = GraphicsCommandLists[0].Get();
-	const auto CommandAllocator = CommandAllocators[0].Get();
-	ExecuteCopyTexture(CommandAllocator, CommandList, UploadResource.Get(), *Resource, PlacedSubresourceFootprints, ResourceState);
+		ExecuteCopyTexture(CA, CL, UploadResource.Get(), *Resource, Footprint, ResourceState);
+	}(Resource, Path, ResourceState, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 
-	//!< ビューを作成
+	//!< ビューを作成 Create view
 	const auto CDH = GetCPUDescriptorHandle(DescriptorHeap, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 	Device->CreateShaderResourceView(*Resource, nullptr, CDH);
 
-	//!< サンプラを作成
+	//!< サンプラを作成 Create sampler
 	CreateSampler(D3D12_SHADER_VISIBILITY_PIXEL, static_cast<const FLOAT>((*Resource)->GetDesc().MipLevels));
 }

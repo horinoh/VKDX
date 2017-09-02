@@ -194,10 +194,23 @@ void VKImage::CreateImageView(VkImageView* ImageView, const VkImage Image, const
 	Super::CreateImageView(ImageView, Image, Type, Format, CompMap, ImageSubresourceRange_ColorAll);
 }
 
+void VKImage::LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path)
+{
+	//!< DDS or KTX or KMG を読み込める DDS or KTX or KMG can be read
+	LoadImage_DDS(Image, DeviceMemory, ImageView, Path);
+
+#ifdef DEBUG_STDOUT
+	std::cout << "\t" << "ImageFile = " << Path.c_str() << std::endl;
+#endif
+	
+#ifdef DEBUG_STDOUT
+		std::cout << "LoadImage" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
 void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path)
 {
-	//const auto GLITexture(gli::load(Path.c_str())); //!< こちらでもよい DDS or KTX or KMG を読み込める
-	const auto GLITexture(gli::load_dds(Path.c_str()));
+	const auto GLITexture(gli::load(Path.c_str()));
 	assert(!GLITexture.empty() && "Load image failed");
 
 #ifdef DEBUG_STDOUT
@@ -252,8 +265,10 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 			CopyToHostVisibleMemory(StagingDeviceMemory, Size, GLITexture.data());
 			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
+			//!< (前レンダーパスで)レンダーターゲット(アタッチメント)として使われたものを(レンダーパス中で)入力として使う場合 VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT を指定
+			const VkImageUsageFlags Usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT/*| VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT*/;
 			//!< デバイスローカルのイメージとメモリを作成 Create device local image and memory
-			CreateImage(Image, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_SAMPLE_COUNT_1_BIT, GLITexture);
+			CreateImage(Image, Usage, VK_SAMPLE_COUNT_1_BIT, GLITexture);
 			CreateDeviceLocalMemory(DeviceMemory, *Image);
 			BindDeviceMemory(*Image, *DeviceMemory);
 

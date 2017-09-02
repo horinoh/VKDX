@@ -30,18 +30,7 @@ protected:
 	virtual void SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkImage DstImage, const gli::texture& GLITexture);
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const gli::texture& GLITexture);
 
-	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path) override { 
-		LoadImage_DDS(Image, DeviceMemory, ImageView, Path);
-
-#ifdef DEBUG_STDOUT
-		std::cout << "\t" << "\t" << "ImageFile = " << Path.c_str() << std::endl;
-#endif
-
-#ifdef DEBUG_STDOUT
-		std::cout << "\t" << "LoadImage" << COUT_OK << std::endl << std::endl;
-#endif
-	}
-
+	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path) override;
 	void LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path);
 };
 

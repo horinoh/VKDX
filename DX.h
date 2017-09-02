@@ -135,7 +135,7 @@ protected:
 	}
 
 	virtual void CreateImageDescriptorHeap(ID3D12DescriptorHeap** DescriptorHeap);
-	virtual void LoadImage(ID3D12Resource** Resource, ID3D12DescriptorHeap** DescriptorHeap, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { CreateImageDescriptorHeap(DescriptorHeap); }
+	virtual void LoadImage(ID3D12Resource** Resource, ID3D12DescriptorHeap** DescriptorHeap, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { assert(false && "Not implemanted"); }
 	virtual void LoadImage(ID3D12Resource** Resource, ID3D12DescriptorHeap** DescriptorHeap, const std::string& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { LoadImage(Resource, DescriptorHeap, std::wstring(Path.begin(), Path.end()), ResourceState); }
 	
 	virtual void CreateVertexBuffer() {}
