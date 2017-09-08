@@ -26,8 +26,11 @@ protected:
 	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const override {
 		CreateDescriptorPoolSizes_1CIS(DescriptorPoolSizes); 
 	}
-	virtual void CreateWriteDescriptorSets(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, VkDescriptorImageInfo* DescriptorImageInfo, VkDescriptorBufferInfo* DescriptorBufferInfo, VkBufferView* BufferView) const override {
-		CreaateWriteDescriptorSets_1CIS(WriteDescriptorSets, DescriptorImageInfo, DescriptorBufferInfo, BufferView);
+	virtual void CreateWriteDescriptorSets(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkBufferView>& BufferViews) const override {
+		CreaateWriteDescriptorSets_1CIS(WriteDescriptorSet, DescriptorImageInfos);
+	}
+	virtual void UpdateDescriptorSet() override {
+		UpdateDescriptorSet_1CIS();
 	}
 
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {

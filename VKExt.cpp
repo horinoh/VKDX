@@ -92,24 +92,70 @@ void VKExt::CreateIndirectBuffer_Indexed()
 	}(&IndirectBuffer, &IndirectDeviceMemory, Size, &DrawIndexedIndirectCommand, CommandBuffers[0]);
 }
 
-void VKExt::CreaateWriteDescriptorSets_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, VkDescriptorImageInfo* DescriptorImageInfo, VkDescriptorBufferInfo* DescriptorBufferInfo, VkBufferView* BufferView) const
+void VKExt::CreaateWriteDescriptorSets_1UB(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos) const
 {
-	*DescriptorImageInfo = {
-		Sampler,
-		ImageView,
-		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+	WriteDescriptorSet = {
+		VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+		nullptr,
+		DescriptorSets[0], 0, 0,//!< デスクリプタセット、バインディングポイント、配列の場合の添字(配列でなければ0)
+		static_cast<uint32_t>(DescriptorBufferInfos.size()),
+		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		nullptr,
+		DescriptorBufferInfos.data(),
+		nullptr
 	};
+}
+void VKExt::UpdateDescriptorSet_1UB()
+{
+	std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
+	WriteDescriptorSets.resize(1);
+	const std::vector<VkDescriptorBufferInfo> DescriptorBufferInfos = {
+		{
+			UniformBuffer,
+			0, //!< オフセット (要アライメント)
+			VK_WHOLE_SIZE
+		},
+	};
+	CreateWriteDescriptorSets(WriteDescriptorSets.back(), {}, DescriptorBufferInfos, {});
 
-	WriteDescriptorSets.push_back({
+	std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
+
+	vkUpdateDescriptorSets(Device,
+		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
+		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
+}
+
+void VKExt::CreaateWriteDescriptorSets_1CIS(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const
+{
+	WriteDescriptorSet = {
 		VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, 
 		nullptr, 
-		DescriptorSets[0], 0, //!< デスクリプタセットとバインディングポイント
-		0, //!< 配列の添字
-		1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< 個数とタイプ
-		DescriptorImageInfo, //!< ここでは VkDescriptorImageInfo* を指定
-		nullptr, //!< VkDescriptorBufferInfo*
-		nullptr //!< VkBufferView*
-	});
+		DescriptorSets[0], 0, 0,//!< デスクリプタセット、バインディングポイント、配列の場合の添字(配列でなければ0)
+		static_cast<uint32_t>(DescriptorImageInfos.size()),
+		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+		DescriptorImageInfos.data(),
+		nullptr,
+		nullptr
+	};
+}
+void VKExt::UpdateDescriptorSet_1CIS()
+{
+	std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
+	WriteDescriptorSets.resize(1);
+	const std::vector<VkDescriptorImageInfo> DescriptorImageInfos = {
+		{ 
+			Sampler, 
+			ImageView, 
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL 
+		},
+	};
+	CreateWriteDescriptorSets(WriteDescriptorSets.back(), DescriptorImageInfos, {}, {});
+
+	std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
+
+	vkUpdateDescriptorSets(Device,
+		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
+		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
 }
 
 void VKExt::CreateRenderPass_Color()

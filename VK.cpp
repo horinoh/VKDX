@@ -125,9 +125,12 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyPipelineLayout(Device, PipelineLayout, GetAllocationCallbacks());
 	}
 
+	//!< VkDescriptorPoolCreateInfo に VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT を指定した場合のみデスクリプタセットを個別に開放できる
+#if 0
 	if (!DescriptorSets.empty()) {
 		vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
 	}
+#endif
 	DescriptorSets.clear();
 	if (VK_NULL_HANDLE != DescriptorPool) {
 		vkDestroyDescriptorPool(Device, DescriptorPool, GetAllocationCallbacks());
@@ -1642,36 +1645,6 @@ void VK::CreateUniformBuffer()
 
 	}(&UniformBuffer, &UniformDeviceMemory, Size, &Color);
 
-	//!< ↓以下は別関数にしたい #VK_TODO
-
-	//!< 書き込み
-	const VkDescriptorBufferInfo UniformDescriptorBufferInfo = {
-		UniformBuffer,
-		0, //!< オフセット (要アライメント)
-		Size //!< VK_WHOLE_SIZE でも良い
-	};
-	VkDescriptorBufferInfo* DescriptorBufferInfo = nullptr;
-	const std::vector<VkWriteDescriptorSet> WriteDescriptorSets = {
-		{
-			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			nullptr,
-			DescriptorSets[0], 0, 0, 1, //!< デスクリプタセット、バインディングポイント、配列の添字(非配列の場合は0)、配列の個数(非配列の場合は1)
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			nullptr,
-			DescriptorBufferInfo,
-			nullptr
-		},
-	};
-
-	//!< コピー (ここでは未使用)
-	const std::vector<VkCopyDescriptorSet> CopyDescriptorSets = {
-	};
-	
-	//!< ホストで行われる (デバイスからのアクセスは完了していないとならない)
-	vkUpdateDescriptorSets(Device, 
-		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(), 
-		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
-
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
 #endif
@@ -1771,7 +1744,6 @@ void VK::CreateStorageTexelBuffer()
 @brief シェーダとのバインディングのレイアウト
 @note DescriptorSetLayout は「型」のようなもの
 @note デスクリプタを使用しない場合でも、デスクリプタセットレイアウト自体は作成しなくてはならない
-# TODO ここの実装は消す、Extへ持っていく
 */
 void VK::CreateDescriptorSetLayout()
 {
@@ -1816,6 +1788,7 @@ void VK::CreateDescriptorSet()
 	CreateDescriptorPoolSizes(DescriptorPoolSizes);
 
 	if (!DescriptorPoolSizes.empty()) {
+		//!< プールを作成 Create pool
 		const uint32_t MaxSets = [&]() {
 			uint32_t MaxDescriptorCount = 0;
 			for (const auto& i : DescriptorPoolSizes) {
@@ -1826,22 +1799,22 @@ void VK::CreateDescriptorSet()
 		const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
 			VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 			nullptr,
-			VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT, //!< プールから確保したデスクリプタセットを個々に解放したい場合。まとめて解放のみの場合は不要
+			0/*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/, //!< デスクリプタセットを個々に解放したい場合に指定(プールごとの場合は不要)
 			MaxSets,
 			static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
 		};
 		VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, GetAllocationCallbacks(), &DescriptorPool));
 		assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
 
+		//!< プールからデスクリプタセットを作成 Create descriptor set from pool
 		const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
 			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			nullptr,
 			DescriptorPool,
 			static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
 		};
-		VkDescriptorSet DescriptorSet;
-		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, &DescriptorSet));
-		DescriptorSets.push_back(DescriptorSet);
+		DescriptorSets.resize(DescriptorSetLayouts.size());
+		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, DescriptorSets.data()));
 
 #ifdef DEBUG_STDOUT
 		std::cout << "CreateDescriptorSet" << COUT_OK << std::endl << std::endl;
@@ -1851,14 +1824,16 @@ void VK::CreateDescriptorSet()
 
 void VK::UpdateDescriptorSet()
 {
-	VkDescriptorImageInfo DescriptorImageInfo;
-	VkDescriptorBufferInfo DescriptorBufferInfo;
-	VkBufferView BufferView;
-	std::vector<VkWriteDescriptorSet> WriteDescriptorSets = {};
-	CreateWriteDescriptorSets(WriteDescriptorSets, &DescriptorImageInfo, &DescriptorBufferInfo, &BufferView);
+	std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
+	//WriteDescriptorSets.resize(1);
+	//std::vector<VkDescriptorImageInfo> DescriptorImageInfos;
+	//std::vector<VkDescriptorBufferInfo> DescriptorBufferInfos;
+	//std::vector<VkBufferView> BufferViews;
+	//CreateWriteDescriptorSets(WriteDescriptorSets.back(), DescriptorImageInfos, DescriptorBufferInfos, BufferViews);
 
-	std::vector<VkCopyDescriptorSet> CopyDescriptorSets = {};
-	CreateCopyDescriptorSets(CopyDescriptorSets);
+	std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
+	//CopyDescriptorSets.resize(1);
+	//CreateCopyDescriptorSets(CopyDescriptorSets.back());
 
 	vkUpdateDescriptorSets(Device,
 		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),

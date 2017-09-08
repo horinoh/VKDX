@@ -13,12 +13,12 @@ public:
 	void CreateIndirectBuffer_4Vertices();
 	void CreateIndirectBuffer_Indexed();
 
-	//!< １つのユニフォームバッファ
+	//!< １つのユニフォームバッファ One uniform buffer
 	void CreateDescriptorSetLayoutBindings_1UB(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const {
 		DescriptorSetLayoutBindings.push_back({ 
-			0, //!< バインディング
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< タイプ
-			1, //!< 個数
+			0, //!< バインディング Binding
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< タイプ Type
+			1, //!< 個数 Count
 			ShaderStageFlags, 
 			nullptr
 		});
@@ -26,6 +26,8 @@ public:
 	void CreateDescriptorPoolSizes_1UB(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {
 		DescriptorPoolSizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 });
 	}
+	void CreaateWriteDescriptorSets_1UB(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos) const;
+	void UpdateDescriptorSet_1UB();
 
 	/** 
 	プラットフォームによってはコンバインドイメージサンプラを用いた方が効率が良い場合がある On some platforms, it may be more optimal to use combined image sampler
@@ -77,7 +79,8 @@ public:
 	void CreateDescriptorPoolSizes_1CIS(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {
 		DescriptorPoolSizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 });
 	}
-	void CreaateWriteDescriptorSets_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, VkDescriptorImageInfo* DescriptorImageInfo, VkDescriptorBufferInfo* DescriptorBufferInfo, VkBufferView* BufferView) const;
+	void CreaateWriteDescriptorSets_1CIS(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const;
+	void UpdateDescriptorSet_1CIS() ;
 
 	void CreateSampler_LinearRepeat(const float MaxLOD = (std::numeric_limits<float>::max)());
 
