@@ -143,7 +143,7 @@ void DX::CreateUploadResource(ID3D12Resource** Resource, const size_t Size)
 }
 void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source)
 {
-	if (Size && nullptr != Source) {
+	if (nullptr != Resource && Size && nullptr != Source) {
 		BYTE* Data;
 		VERIFY_SUCCEEDED(Resource->Map(0, static_cast<const D3D12_RANGE*>(nullptr), reinterpret_cast<void**>(&Data))); {
 			memcpy(Data, Source, Size);
@@ -152,33 +152,35 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const
 }
 void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes)
 {
-	assert(SubresourceData.size() == PlacedSubresourceFootprints.size() == NumRows.size() == RowSizes.size() && "Invalid size");
-	const auto SubresourceCount = static_cast<const UINT>(SubresourceData.size());
+	if (nullptr != Resource) {
+		assert(SubresourceData.size() == PlacedSubresourceFootprints.size() == NumRows.size() == RowSizes.size() && "Invalid size");
+		const auto SubresourceCount = static_cast<const UINT>(SubresourceData.size());
 
-	BYTE* Data;
-	VERIFY_SUCCEEDED(Resource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
-		for (auto It = PlacedSubresourceFootprints.cbegin(); It != PlacedSubresourceFootprints.cend(); ++It) {
-			const auto Index = std::distance(PlacedSubresourceFootprints.cbegin(), It);
+		BYTE* Data;
+		VERIFY_SUCCEEDED(Resource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
+			for (auto It = PlacedSubresourceFootprints.cbegin(); It != PlacedSubresourceFootprints.cend(); ++It) {
+				const auto Index = std::distance(PlacedSubresourceFootprints.cbegin(), It);
 
-			const auto& PSF = *It;
-			const auto& SD = SubresourceData[Index];
-			const auto RowCount = NumRows[Index];
-			const auto RowSize = RowSizes[Index];
+				const auto& PSF = *It;
+				const auto& SD = SubresourceData[Index];
+				const auto RowCount = NumRows[Index];
+				const auto RowSize = RowSizes[Index];
 
-			const D3D12_MEMCPY_DEST MemcpyDest = {
-				Data + PSF.Offset,
-				PSF.Footprint.RowPitch,
-				PSF.Footprint.RowPitch * RowCount
-			};
-			for (UINT i = 0; i < PSF.Footprint.Depth; ++i) {
-				auto Dst = reinterpret_cast<BYTE*>(MemcpyDest.pData) + MemcpyDest.SlicePitch * i;
-				const auto Src = reinterpret_cast<const BYTE*>(SD.pData) + SD.SlicePitch * i;
-				for (UINT j = 0; j < RowCount; ++j) {
-					memcpy(Dst + MemcpyDest.RowPitch * j, Src + SD.RowPitch * j, RowSize);
+				const D3D12_MEMCPY_DEST MemcpyDest = {
+					Data + PSF.Offset,
+					PSF.Footprint.RowPitch,
+					PSF.Footprint.RowPitch * RowCount
+				};
+				for (UINT i = 0; i < PSF.Footprint.Depth; ++i) {
+					auto Dst = reinterpret_cast<BYTE*>(MemcpyDest.pData) + MemcpyDest.SlicePitch * i;
+					const auto Src = reinterpret_cast<const BYTE*>(SD.pData) + SD.SlicePitch * i;
+					for (UINT j = 0; j < RowCount; ++j) {
+						memcpy(Dst + MemcpyDest.RowPitch * j, Src + SD.RowPitch * j, RowSize);
+					}
 				}
 			}
-		}
-	} Resource->Unmap(0, nullptr);
+		} Resource->Unmap(0, nullptr);
+	}
 }
 
 void DX::ExecuteCopyBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SrcResource, ID3D12Resource* DstResource, const size_t Size)
@@ -999,6 +1001,9 @@ void DX::CreateUnorderedAccessTexture()
 #endif
 }
 
+/**
+@brief シェーダとのバインディング (VK::CreateDescriptorSetLayout() 相当)
+*/
 void DX::CreateRootSignature()
 {
 	std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {

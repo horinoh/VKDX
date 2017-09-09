@@ -199,10 +199,10 @@ protected:
 	virtual void CreateVertexBuffer() {}
 	virtual void CreateIndexBuffer() {}
 	virtual void CreateIndirectBuffer() {}
-	virtual void CreateUniformBuffer();
-	virtual void CreateStorageBuffer();
-	virtual void CreateUniformTexelBuffer();
-	virtual void CreateStorageTexelBuffer();
+	virtual void CreateUniformBuffer() {} //!< 小さなデータの場合、UniformBuffer より PushConstants を使用した方が効率が良い
+	virtual void CreateStorageBuffer() {}
+	virtual void CreateUniformTexelBuffer() {}
+	virtual void CreateStorageTexelBuffer() {}
 
 	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const {}
 	virtual void CreateDescriptorSetLayout();

@@ -106,16 +106,6 @@ public:
 		};
 	}
 
-//	template<typename T>
-//	void CreateUniformBuffer(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const T& Type) {
-//		//!< #TODO
-//		const auto Size = sizeof(T);
-//		CreateHostVisibleBuffer(PhysicalDeviceMemoryProperties, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, &UniformBuffer, &UniformDeviceMemory, Size, &Type);
-//		//CreateUniformBufferDescriptorBufferInfo(static_cast<UINT>(Size));
-//#ifdef _DEBUG
-//		std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
-//#endif
-//	}
 	virtual void CreateRenderPass() { CreateRenderPass_Color(); }
 	void CreateRenderPass_Color();
 	void CreateRenderPass_ColorDepth();
@@ -127,6 +117,27 @@ public:
 	void CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const;
 	void CreateShader_VsPsTesTcsGs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const;
 
+	template<typename T>
+	void CreateUniformBuffer(const T& Type) {
+		const auto Size = sizeof(T);
+
+		[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data) {
+			const auto Usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+			CreateBuffer(Buffer, Usage, Size);
+			CreateHostVisibleMemory(DeviceMemory, *Buffer);
+			CopyToHostVisibleMemory(*DeviceMemory, Size, Data);
+
+			BindDeviceMemory(*Buffer, *DeviceMemory);
+
+			//!< View ‚Í•K—v‚È‚¢ No need view
+
+		}(&UniformBuffer, &UniformDeviceMemory, Size, &Type);
+
+#ifdef _DEBUG
+		std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
+#endif
+	}
 protected:
 #if 1
 	/**

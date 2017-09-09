@@ -1623,41 +1623,15 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 #endif
 }
 
-//!< 小さなデータの場合、UniformBuffer より PushConstants を使用した方が効率が良い
-void VK::CreateUniformBuffer()
-{
-	glm::vec4 Color(1.0f, 0.0f, 0.0f, 1.0f);
-	const auto Size = sizeof(Color);
-
-	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data) {
-		const auto Usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-
-		CreateBuffer(Buffer, Usage, Size);
-#if 1   //!< よく更新するのでホストビジブルとして作成 This will be frequently updated, so create as host visible
-		CreateHostVisibleMemory(DeviceMemory, *Buffer);
-		CopyToHostVisibleMemory(*DeviceMemory, Size, Data);
-#else
-		CreateDeviceLocalMemory(DeviceMemory, *Buffer);
-#endif
-		BindDeviceMemory(*Buffer, *DeviceMemory);
-
-		//!< View は必要ない No need view
-
-	}(&UniformBuffer, &UniformDeviceMemory, Size, &Color);
-
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
-#endif
-}
+#if 0
 void VK::CreateStorageBuffer()
 {
-	glm::vec4 Color(1.0f, 0.0f, 0.0f, 1.0f);
-	const auto Size = sizeof(Color);
+	const auto Size = 256;
 
 	VkBuffer Buffer = VK_NULL_HANDLE;
 	VkDeviceMemory DeviceMemory = VK_NULL_HANDLE;
 
-	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data) {
+	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size) {
 		const auto Usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
 		CreateBuffer(Buffer, Usage, Size);
@@ -1666,7 +1640,7 @@ void VK::CreateStorageBuffer()
 
 		//!< View は必要ない No need view
 
-	}(&Buffer, &DeviceMemory, Size, &Color);
+	}(&Buffer, &DeviceMemory, Size);
 
 	if (VK_NULL_HANDLE != DeviceMemory) {
 		vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
@@ -1677,25 +1651,25 @@ void VK::CreateStorageBuffer()
 }
 void VK::CreateUniformTexelBuffer()
 {
-	glm::vec4 Color(1.0f, 0.0f, 0.0f, 1.0f);
-	const auto Size = sizeof(Color);
+	const auto Size = 256;
 
 	VkBuffer Buffer = VK_NULL_HANDLE;
 	VkDeviceMemory DeviceMemory = VK_NULL_HANDLE;
 	VkBufferView View = VK_NULL_HANDLE;
 
-	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, VkBufferView* View, const VkDeviceSize Size, const void* Data) {
+	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, VkBufferView* View, const VkDeviceSize Size) {
 		const auto Usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
 
 		CreateBuffer(Buffer, Usage, Size);
 		CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+
 		BindDeviceMemory(*Buffer, *DeviceMemory);
 
 		//!< UniformTexelBuffer の場合は、フォーマットを指定する必要があるため、ビューを作成する UniformTexelBuffer need format, so create view
 		const auto Format = VK_FORMAT_R8G8B8A8_UNORM;
 		ValidateFormatProperties(Usage, Format);
 		CreateBufferView(View, *Buffer, Format);
-	}(&Buffer, &DeviceMemory, &View, Size, &Color);
+	}(&Buffer, &DeviceMemory, &View, Size);
 
 	if (VK_NULL_HANDLE != DeviceMemory) {
 		vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
@@ -1709,14 +1683,13 @@ void VK::CreateUniformTexelBuffer()
 }
 void VK::CreateStorageTexelBuffer()
 {
-	glm::vec4 Color(1.0f, 0.0f, 0.0f, 1.0f);
-	const auto Size = sizeof(Color);
+	const auto Size = 256;
 
 	VkBuffer Buffer = VK_NULL_HANDLE;
 	VkDeviceMemory DeviceMemory = VK_NULL_HANDLE;
 	VkBufferView View = VK_NULL_HANDLE;
 	
-	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, VkBufferView* View, const VkDeviceSize Size, const void* Data) {
+	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, VkBufferView* View, const VkDeviceSize Size) {
 		const auto Usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
 
 		CreateBuffer(Buffer, Usage, Size);
@@ -1727,7 +1700,7 @@ void VK::CreateStorageTexelBuffer()
 		const auto Format = VK_FORMAT_R8G8B8A8_UNORM;
 		ValidateFormatProperties(Usage, Format);
 		CreateBufferView(View, *Buffer, Format);
-	}(&Buffer, &DeviceMemory, &View, Size, &Color);
+	}(&Buffer, &DeviceMemory, &View, Size);
 	
 	if (VK_NULL_HANDLE != DeviceMemory) {
 		vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
@@ -1739,10 +1712,10 @@ void VK::CreateStorageTexelBuffer()
 		vkDestroyBufferView(Device, View, GetAllocationCallbacks());
 	}
 }
+#endif
 
 /**
-@brief シェーダとのバインディングのレイアウト
-@note DescriptorSetLayout は「型」のようなもの
+@brief シェーダとのバインディング (DX::CreateRootSignature()相当)
 @note デスクリプタを使用しない場合でも、デスクリプタセットレイアウト自体は作成しなくてはならない
 */
 void VK::CreateDescriptorSetLayout()

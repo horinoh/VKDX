@@ -14,10 +14,10 @@ public:
 	void CreateIndirectBuffer_Indexed();
 
 	//!< １つのコンスタントバッファ
-	void CreateDescriptorRanges_1CBV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {
+	void CreateDescriptorRanges_1CB(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {
 		DescriptorRanges.push_back({ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND});
 	}
-	void CreateRootParameters_1CBV(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
+	void CreateRootParameters_1CB(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
 		const D3D12_ROOT_DESCRIPTOR_TABLE RootDescriptorTable = {
 			static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
 		};
@@ -59,19 +59,14 @@ public:
 	template<typename T>
 	void CreateConstantBuffer(const T& Type) {
 		const auto Size = RoundUpTo256(sizeof(T));
-		CreateUploadResource(ConstantBufferResource.GetAddressOf(), Size, &Type);
+
+		CreateUploadResource(ConstantBufferResource.GetAddressOf(), Size);
+		CopyToUploadResource(ConstantBufferResource.Get(), Size, &Type);
+
 		CreateConstantBufferDescriptorHeap(static_cast<UINT>(Size));
+
 #ifdef _DEBUG
 		std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;
 #endif
-	}
-
-	void UpdateConstantBuffer(ID3D12Resource* Resource, const size_t Size, const void* Source) {
-		if (nullptr != Resource && Size && nullptr != Source) {
-			BYTE* Data;
-			VERIFY_SUCCEEDED(Resource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
-				memcpy(Data, Source, Size);
-			} Resource->Unmap(0, nullptr);
-		}
 	}
 };
