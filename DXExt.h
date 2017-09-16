@@ -13,28 +13,50 @@ public:
 	void CreateIndirectBuffer_4Vertices();
 	void CreateIndirectBuffer_Indexed();
 
+	void CreateRootParameters_DT(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
+		RootParameters.push_back({ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data() }, ShaderVisibility });
+	}
+
 	//!< １つのコンスタントバッファ
-	void CreateDescriptorRanges_1CB(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {
+	void CreateDescriptorRanges_1CBV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {
 		DescriptorRanges.push_back({ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND});
 	}
-	void CreateRootParameters_1CB(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
-		const D3D12_ROOT_DESCRIPTOR_TABLE RootDescriptorTable = {
-			static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
-		};
-		RootParameters.push_back({ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, RootDescriptorTable, ShaderVisibility });
+	template<typename T>
+	void CreateDescriptorHeap_1CBV(const T& Type) {
+		const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		const auto Count = 1;
+		const auto Size = RoundUpTo256(sizeof(T));
+
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, ID3D12DescriptorHeap** DescriptorHeap) {
+			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
+				Type,
+				Count,
+				D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+				0 // NodeMask ... マルチGPUの場合 Use with multi GPU
+			};
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
+		}(Type, Count, ConstantBufferDescriptorHeap.GetAddressOf());
+
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12Resource* Resource, ID3D12DescriptorHeap* DescriptorHeap, const UINT Size) {
+			//!< 256アラインされていること Must be 256 aligned
+			const D3D12_CONSTANT_BUFFER_VIEW_DESC ConstantBufferViewDesc = {
+				Resource->GetGPUVirtualAddress(),
+				Size
+			};
+			//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
+			const auto CDH = GetCPUDescriptorHandle(DescriptorHeap, Type);
+			Device->CreateConstantBufferView(&ConstantBufferViewDesc, CDH);
+		}(Type, ConstantBufferResource.Get(), ConstantBufferDescriptorHeap.Get(), Size);
+#ifdef DEBUG_STDOUT
+		std::cout << "CreateDescriptorHeap" << COUT_OK << std::endl << std::endl;
+#endif
 	}
 
 	//!< １つのシェーダリソースビュー
 	void CreateDescriptorRanges_1SRV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const { 
 		DescriptorRanges.push_back({ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }); 
 	}
-	void CreateRootParameters_1SRV(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
-		const D3D12_ROOT_DESCRIPTOR_TABLE RootDescriptorTable = {
-			static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
-		};
-		RootParameters.push_back({ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, RootDescriptorTable, ShaderVisibility });
-	}
-	
+
 	void CreateSampler_LinearWrap(const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)());
 
 	template<typename T>
@@ -62,8 +84,6 @@ public:
 
 		CreateUploadResource(ConstantBufferResource.GetAddressOf(), Size);
 		CopyToUploadResource(ConstantBufferResource.Get(), Size, &Type);
-
-		CreateConstantBufferDescriptorHeap(static_cast<UINT>(Size));
 
 #ifdef _DEBUG
 		std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;

@@ -80,7 +80,7 @@ public:
 		DescriptorPoolSizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 });
 	}
 	void CreaateWriteDescriptorSets_1CIS(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const;
-	void UpdateDescriptorSet_1CIS() ;
+	void UpdateDescriptorSet_1CIS();
 
 	void CreateSampler_LinearRepeat(const float MaxLOD = (std::numeric_limits<float>::max)());
 

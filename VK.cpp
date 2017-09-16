@@ -62,11 +62,12 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateTexture();
 
 	CreateDescriptorSetLayout();
+	{
+		//!< #VK_TODO
+		//CreateUniformBuffer();
+	}
 	CreateDescriptorSet();
 	UpdateDescriptorSet();
-
-	//!< ユニフォームバッファ #VK_TODO
-	//CreateUniformBuffer();
 
 	CreateRenderPass();
 	CreateFramebuffer();

@@ -32,8 +32,11 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateTexture();
 
 	CreateRootSignature();
-	
-	CreateConstantBuffer();
+	{
+		CreateConstantBuffer();
+	}
+	CreateDescriptorHeap();
+	UpdateDescriptorHeap();
 
 	CreatePipelineState();
 
@@ -642,13 +645,20 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.Get(), &SwapChainDesc, NewSwapChain.GetAddressOf()));
 	VERIFY_SUCCEEDED(NewSwapChain.As(&SwapChain));
 
-	const D3D12_DESCRIPTOR_HEAP_DESC DescripterHeapDesc = {
-		D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-		SwapChainDesc.BufferCount,
-		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-		0 // NodeMask ... マルチGPUの場合
-	};
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescripterHeapDesc, IID_PPV_ARGS(SwapChainDescriptorHeap.GetAddressOf())));
+	{
+		const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+		const auto Count = SwapChainDesc.BufferCount;
+
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, ID3D12DescriptorHeap** DescriptorHeap) {
+			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
+				Type,
+				Count,
+				D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+				0 // NodeMask ... マルチGPUの場合
+			};
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
+		}(Type, Count, SwapChainDescriptorHeap.GetAddressOf());
+	}
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateSwapChain" << COUT_OK << std::endl << std::endl;
@@ -744,22 +754,19 @@ void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 
 void DX::CreateDepthStencil()
 {
-	CreateDepthStencilDescriptorHeap();
-	ResizeDepthStencilToClientRect();
-}
-void DX::CreateDepthStencilDescriptorHeap()
-{
-	const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
-		D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
-		1,
-		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-		0
-	};
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DepthStencilDescriptorHeap.GetAddressOf())));
+	const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+	const auto Count = 1;
+	[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, ID3D12DescriptorHeap** DescriptorHeap) {
+		const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
+			Type,
+			Count,
+			D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+			0
+		};
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
+	}(Type, Count, DepthStencilDescriptorHeap.GetAddressOf());
 
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "DepthStencilDescriptorHeap" << std::endl;
-#endif
+	ResizeDepthStencilToClientRect();
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
@@ -831,17 +838,6 @@ void DX::ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORM
 #endif
 }
 
-void DX::CreateImageDescriptorHeap(ID3D12DescriptorHeap** DescriptorHeap)
-{
-	const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
-		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-		1,
-		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-		0
-	};
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
-}
-
 void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth, const FLOAT MaxDepth)
 {
 	Viewports = {
@@ -901,31 +897,6 @@ void DX::CreateConstantBuffer()
 {
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;
-#endif
-}
-void DX::CreateConstantBufferDescriptorHeap(const UINT Size)
-{
-	//!< デスクリプタヒープの作成
-	const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
-		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-		1,
-		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-		0 // NodeMask ... マルチGPUの場合
-	};
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(ConstantBufferDescriptorHeap.GetAddressOf())));
-
-	//!< ここではコンスタントバッファ全体を指定している
-	//!< D3D12_CONSTANT_BUFFER_VIEW_DESC.BufferLocation, SizeInBytes は 256 の倍数で指定しなくはならない、
-	const D3D12_CONSTANT_BUFFER_VIEW_DESC ConstantBufferViewDesc = {
-		ConstantBufferResource->GetGPUVirtualAddress(),
-		Size
-	};
-	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
-	const auto CDH = GetCPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	Device->CreateConstantBufferView(&ConstantBufferViewDesc, CDH);
-
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateConstantBufferDescriptorHeap" << COUT_OK << std::endl << std::endl;
 #endif
 }
 

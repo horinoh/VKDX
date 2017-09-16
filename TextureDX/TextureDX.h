@@ -23,8 +23,9 @@ protected:
 	virtual void CreateDescriptorRanges(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override { 
 		CreateDescriptorRanges_1SRV(DescriptorRanges); 
 	}
-	virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override { 
-		CreateRootParameters_1SRV(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_PIXEL);
+
+	virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges,const D3D12_SHADER_VISIBILITY ShaderVisibility) const override {
+		CreateRootParameters_DT(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_PIXEL);
 	}
 	virtual void CreateStaticSamplerDescs(std::vector<D3D12_STATIC_SAMPLER_DESC>& StaticSamplerDescs) const override {
 		//!< LoadImageResource_DDS() 内で作成したサンプラを使用する (DDS から取得した MaxLOD を使用、D3D12_FLOAT32_MAXでも良いのだが念のため)
