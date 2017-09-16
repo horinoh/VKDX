@@ -13,11 +13,12 @@ public:
 	void CreateIndirectBuffer_4Vertices();
 	void CreateIndirectBuffer_Indexed();
 
-	void CreateRootParameters_DT(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
+	//!< 1つのデスクリプタテーブル One descriptor table
+	void CreateRootParameters_1DT(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
 		RootParameters.push_back({ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data() }, ShaderVisibility });
 	}
 
-	//!< １つのコンスタントバッファ
+	//!< １つのコンスタントバッファ One constant buffer view
 	void CreateDescriptorRanges_1CBV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {
 		DescriptorRanges.push_back({ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND});
 	}
@@ -32,7 +33,7 @@ public:
 				Type,
 				Count,
 				D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-				0 // NodeMask ... マルチGPUの場合 Use with multi GPU
+				0 //!< NodeMask ... マルチGPUの場合 Use with multi GPU
 			};
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
 		}(Type, Count, ConstantBufferDescriptorHeap.GetAddressOf());
@@ -47,14 +48,38 @@ public:
 			const auto CDH = GetCPUDescriptorHandle(DescriptorHeap, Type);
 			Device->CreateConstantBufferView(&ConstantBufferViewDesc, CDH);
 		}(Type, ConstantBufferResource.Get(), ConstantBufferDescriptorHeap.Get(), Size);
+
 #ifdef DEBUG_STDOUT
 		std::cout << "CreateDescriptorHeap" << COUT_OK << std::endl << std::endl;
 #endif
 	}
 
-	//!< １つのシェーダリソースビュー
+	//!< １つのシェーダリソースビュー One shader resource view
 	void CreateDescriptorRanges_1SRV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const { 
 		DescriptorRanges.push_back({ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }); 
+	}
+	void CreateDescriptorHeap_1SRV() {
+		const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		const auto Count = 1;
+
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, ID3D12DescriptorHeap** DescriptorHeap) {
+			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
+				Type,
+				Count,
+				D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+				0
+			};
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
+		}(Type, Count, ImageDescriptorHeap.GetAddressOf());
+
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12Resource* Resource, ID3D12DescriptorHeap* DescriptorHeap) {
+			const auto CDH = GetCPUDescriptorHandle(DescriptorHeap, Type);
+			Device->CreateShaderResourceView(Resource, nullptr, CDH);
+		}(Type, ImageResource.Get(), ImageDescriptorHeap.Get());
+
+#ifdef DEBUG_STDOUT
+		std::cout << "CreateDescriptorHeap" << COUT_OK << std::endl << std::endl;
+#endif
 	}
 
 	void CreateSampler_LinearWrap(const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)());

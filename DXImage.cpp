@@ -4,17 +4,9 @@
 
 #pragma comment(lib, "DirectXTK12.lib")
 
-void DXImage::LoadImage(ID3D12Resource** Resource, ID3D12DescriptorHeap** DescriptorHeap, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState /*= D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE*/)
+void DXImage::LoadImage(ID3D12Resource** Resource, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState /*= D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE*/)
 {
-	const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
-		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-		1,
-		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-		0
-	};
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
-
-	LoadImage_DDS(Resource, *DescriptorHeap, Path, ResourceState);
+	LoadImage_DDS(Resource, Path, ResourceState);
 
 #ifdef DEBUG_STDOUT
 	std::wcout << "\t" << "ImageFile = " << Path.c_str() << std::endl;
@@ -25,7 +17,7 @@ void DXImage::LoadImage(ID3D12Resource** Resource, ID3D12DescriptorHeap** Descri
 #endif
 }
 
-void DXImage::LoadImage_DDS(ID3D12Resource** Resource, ID3D12DescriptorHeap* DescriptorHeap, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState)
+void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState)
 {
 	[&](ID3D12Resource** Resource, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL) {
 		//!< サブリソースデータを取得 Acquire sub resource data
@@ -55,10 +47,6 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, ID3D12DescriptorHeap* Des
 
 		ExecuteCopyTexture(CA, CL, UploadResource.Get(), *Resource, Footprint, ResourceState);
 	}(Resource, Path, ResourceState, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
-
-	//!< ビューを作成 Create view
-	const auto CDH = GetCPUDescriptorHandle(DescriptorHeap, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-	Device->CreateShaderResourceView(*Resource, nullptr, CDH);
 
 	//!< サンプラを作成 Create sampler
 	CreateSampler(D3D12_SHADER_VISIBILITY_PIXEL, static_cast<const FLOAT>((*Resource)->GetDesc().MipLevels));
