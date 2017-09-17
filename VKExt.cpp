@@ -2,23 +2,24 @@
 
 #include "VKExt.h"
 
-void VKExt::CreateSampler_LinearRepeat(const float MaxLOD)
+void VKExt::CreateSampler_LR(VkSampler* Sampler, const float MaxLOD) const
 {
-	//!< #VK_TODO よく使う VkSamplerCreateInfo のパターンは用意しておく
-	const VkSamplerCreateInfo SamplerCreateInfo = {
-		VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-		nullptr,
-		0,
-		VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR,
-		VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
-		0.0f,
-		VK_FALSE, 1.0f,
-		VK_FALSE, VK_COMPARE_OP_NEVER,
-		0.0f, MaxLOD,
-		VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-		VK_FALSE
-	};
-	VERIFY_SUCCEEDED(vkCreateSampler(Device, &SamplerCreateInfo, GetAllocationCallbacks(), &Sampler));
+	[&](VkSampler* Sampler, const float MaxLOD) {
+		const VkSamplerCreateInfo SamplerCreateInfo = {
+			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+			nullptr,
+			0,
+			VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR,
+			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
+			0.0f,
+			VK_FALSE, 1.0f,
+			VK_FALSE, VK_COMPARE_OP_NEVER,
+			0.0f, MaxLOD,
+			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+			VK_FALSE
+		};
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SamplerCreateInfo, GetAllocationCallbacks(), Sampler));
+	}(Sampler, MaxLOD);
 }
 
 void VKExt::CreateIndirectBuffer_4Vertices()
@@ -107,22 +108,24 @@ void VKExt::CreaateWriteDescriptorSets_1UB(VkWriteDescriptorSet& WriteDescriptor
 }
 void VKExt::UpdateDescriptorSet_1UB()
 {
-	std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
-	WriteDescriptorSets.resize(1);
-	const std::vector<VkDescriptorBufferInfo> DescriptorBufferInfos = {
-		{
-			UniformBuffer,
-			0, //!< オフセット (要アライメント)
-			VK_WHOLE_SIZE
-		},
-	};
-	CreateWriteDescriptorSets(WriteDescriptorSets.back(), {}, DescriptorBufferInfos, {});
+	[&](const VkBuffer Buffer) {
+		std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
+		WriteDescriptorSets.resize(1);
+		const std::vector<VkDescriptorBufferInfo> DescriptorBufferInfos = {
+			{
+				Buffer,
+				0, //!< オフセット (要アライメント)
+				VK_WHOLE_SIZE
+			},
+		};
+		CreateWriteDescriptorSets(WriteDescriptorSets.back(), {}, DescriptorBufferInfos, {});
 
-	std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
+		std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
 
-	vkUpdateDescriptorSets(Device,
-		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
-		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
+		vkUpdateDescriptorSets(Device,
+			static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
+			static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
+	}(UniformBuffer);
 }
 
 void VKExt::CreaateWriteDescriptorSets_1CIS(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const
@@ -140,22 +143,26 @@ void VKExt::CreaateWriteDescriptorSets_1CIS(VkWriteDescriptorSet& WriteDescripto
 }
 void VKExt::UpdateDescriptorSet_1CIS()
 {
-	std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
-	WriteDescriptorSets.resize(1);
-	const std::vector<VkDescriptorImageInfo> DescriptorImageInfos = {
-		{ 
-			Sampler, 
-			ImageView, 
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL 
-		},
-	};
-	CreateWriteDescriptorSets(WriteDescriptorSets.back(), DescriptorImageInfos, {}, {});
+	[&](const VkSampler Sampler, const VkImageView ImageView) {
+		std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
+		WriteDescriptorSets.resize(1);
+
+		const std::vector<VkDescriptorImageInfo> DescriptorImageInfos = {
+			{
+				Sampler,
+				ImageView,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+			},
+		};
+		CreateWriteDescriptorSets(WriteDescriptorSets.back(), DescriptorImageInfos, {}, {});
 
 	std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
 
 	vkUpdateDescriptorSets(Device,
 		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
 		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
+
+	}(Samplers[0], ImageView);
 }
 
 void VKExt::CreateRenderPass_Color()

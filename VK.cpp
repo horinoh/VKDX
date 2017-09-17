@@ -112,7 +112,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 
 	DestroyFramebuffer();
-	
+
 	if (VK_NULL_HANDLE != RenderPass) {
 		vkDestroyRenderPass(Device, RenderPass, GetAllocationCallbacks());
 		RenderPass = VK_NULL_HANDLE;
@@ -176,9 +176,10 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		VertexBuffer = VK_NULL_HANDLE;
 	}
 
-	if (VK_NULL_HANDLE != Sampler) {
-		vkDestroySampler(Device, Sampler, GetAllocationCallbacks());
+	for (auto i : Samplers) {
+		vkDestroySampler(Device, i, GetAllocationCallbacks());
 	}
+
 	if (VK_NULL_HANDLE != ImageView) {
 		vkDestroyImageView(Device, ImageView, GetAllocationCallbacks());
 		ImageView = VK_NULL_HANDLE;

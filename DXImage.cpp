@@ -48,6 +48,8 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const std::wstring& Path,
 		ExecuteCopyTexture(CA, CL, UploadResource.Get(), *Resource, Footprint, ResourceState);
 	}(Resource, Path, ResourceState, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 
-	//!< サンプラを作成 Create sampler
-	CreateSampler(D3D12_SHADER_VISIBILITY_PIXEL, static_cast<const FLOAT>((*Resource)->GetDesc().MipLevels));
+	//!< スタティックサンプラデスクリプタを作成 Create static sampler descritor
+	D3D12_STATIC_SAMPLER_DESC SSD;
+	CreateStaticSamplerDesc(SSD, D3D12_SHADER_VISIBILITY_PIXEL, static_cast<const FLOAT>((*Resource)->GetDesc().MipLevels));
+	StaticSamplerDescs.push_back(SSD);
 }

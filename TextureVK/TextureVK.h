@@ -88,8 +88,8 @@ protected:
 		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken8_rgba8_srgb.dds");
 #endif
 	}
-	virtual void CreateSampler(const float MaxLOD = (std::numeric_limits<float>::max)()) override {
-		CreateSampler_LinearRepeat(MaxLOD);
+	virtual void CreateSampler(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const override {
+		CreateSampler_LR(Sampler, MaxLOD);
 	}
 
 	virtual void CreatePipeline() override { CreateGraphicsPipeline(); }

@@ -61,7 +61,7 @@ void DXExt::CreateIndirectBuffer_Indexed()
 	Device->CreateCommandSignature(&CommandSignatureDesc, RootSignature.Get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
 }
 
-void DXExt::CreateSampler_LinearWrap(const D3D12_SHADER_VISIBILITY ShaderVisibility, const FLOAT MaxLOD)
+void DXExt::CreateStaticSamplerDesc_LW(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility, const FLOAT MaxLOD) const
 {
 	StaticSamplerDesc = {
 		D3D12_FILTER_MIN_MAG_MIP_LINEAR,

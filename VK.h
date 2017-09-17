@@ -215,7 +215,7 @@ protected:
 	virtual void UpdateDescriptorSet();
 
 	virtual void CreateTexture() {}
-	virtual void CreateSampler(const float MaxLOD = (std::numeric_limits<float>::max)()) {}
+	virtual void CreateSampler(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const {}
 
 	virtual void CreateRenderPass() {}
 	virtual void CreateFramebuffer() {}
@@ -314,7 +314,7 @@ protected:
 	VkImage Image = VK_NULL_HANDLE;
 	VkDeviceMemory ImageDeviceMemory = VK_NULL_HANDLE;
 	VkImageView ImageView = VK_NULL_HANDLE;
-	VkSampler Sampler = VK_NULL_HANDLE;
+	std::vector<VkSampler> Samplers;
 
 	VkBuffer VertexBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory VertexDeviceMemory = VK_NULL_HANDLE;

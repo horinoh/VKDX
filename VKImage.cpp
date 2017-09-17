@@ -287,5 +287,7 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 	CreateImageView(ImageView, *Image, GLITexture);
 
 	//!< ƒTƒ“ƒvƒ‰‚ðì¬
-	CreateSampler(static_cast<const float>(GLITexture.levels()));
+	VkSampler Sampler;
+	CreateSampler(&Sampler, static_cast<const float>(GLITexture.levels()));
+	Samplers.push_back(Sampler);
 }

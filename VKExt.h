@@ -82,7 +82,8 @@ public:
 	void CreaateWriteDescriptorSets_1CIS(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const;
 	void UpdateDescriptorSet_1CIS();
 
-	void CreateSampler_LinearRepeat(const float MaxLOD = (std::numeric_limits<float>::max)());
+	//!< LinearRepeat
+	void CreateSampler_LR(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const;
 
 	template<typename T>
 	void CreateVertexInputT(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding) const {}

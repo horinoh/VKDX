@@ -31,11 +31,6 @@ protected:
 		CreateDescriptorHeap_1SRV();
 	}
 
-	virtual void CreateStaticSamplerDescs(std::vector<D3D12_STATIC_SAMPLER_DESC>& StaticSamplerDescs) const override {
-		//!< LoadImageResource_DDS() 内で作成したサンプラを使用する (DDS から取得した MaxLOD を使用、D3D12_FLOAT32_MAXでも良いのだが念のため)
-		StaticSamplerDescs.push_back(StaticSamplerDesc);
-	}
-
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const override {
 		CreateShader_VsPs(ShaderBlobs, ShaderBytecodes);
 	}
@@ -91,8 +86,8 @@ protected:
 		//LoadImage(ImageResource.GetAddressOf(), L"..\\Intermediate\\Image\\kueken8_rgba8_srgb.dds", D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE); //!< #DX_TODO
 #endif
 	}
-	virtual void CreateSampler(const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) override {
-		CreateSampler_LinearWrap(ShaderVisibility, MaxLOD);
+	virtual void CreateStaticSamplerDesc(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) const override {
+		CreateStaticSamplerDesc_LW(StaticSamplerDesc, ShaderVisibility, MaxLOD);
 	}
 
 	virtual void CreatePipelineState() override { CreateGraphicsPipelineState(); }

@@ -1015,10 +1015,6 @@ void DX::CreateRootSignature()
 	};
 	CreateRootParameters(RootParameters, DescriptorRanges);
 
-	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {
-	};
-	CreateStaticSamplerDescs(StaticSamplerDescs);
-
 	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
 		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
 		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
