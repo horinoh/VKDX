@@ -71,6 +71,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateRenderPass();
 	CreateFramebuffer();
+
 	CreatePipeline();
 }
 
@@ -1945,7 +1946,7 @@ VkPipelineCache VK::CreatePipelineCache()
 //VkPipelineCache DestinationPipelineCache = VK_NULL_HANDLE;
 //VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, DestinationPipelineCache, static_cast<uint32_t>(PipelineCaches.size()), PipelineCaches.data()));
 
-void VK::CreateGraphicsPipeline()
+void VK::CreatePipeline_Graphics()
 {
 #ifdef _DEBUG
 	PerformanceCounter PC("CreateGraphicsPipeline : ");
@@ -2134,10 +2135,10 @@ void VK::CreateGraphicsPipeline()
 	}
 
 #ifdef DEBUG_STDOUT
-	std::cout << "CreateGraphicsPipeline" << COUT_OK << std::endl << std::endl;
+	std::cout << "CreatePipeline_Graphics" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void VK::CreateComputePipeline()
+void VK::CreatePipeline_Compute()
 {
 	std::vector<VkShaderModule> ShaderModules;
 	{
@@ -2151,7 +2152,7 @@ void VK::CreateComputePipeline()
 	}
 
 #ifdef DEBUG_STDOUT
-	std::cout << "CreateComputePipeline" << COUT_OK << std::endl << std::endl;
+	std::cout << "CreatePipeline_Compute" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
@@ -2216,20 +2217,21 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFram
 		//!< レンダーエリアの最低粒度を確保
 		VkExtent2D Granularity;
 		vkGetRenderAreaGranularity(Device, RenderPass, &Granularity);
-		//!< 自分の環境では Granularity = { 1, 1 } だったのでほぼなんでも大丈夫、環境によっては気をつける必要があるかもね
+		//!<「自分の環境では」 Granularity = { 1, 1 } だったのでほぼなんでも大丈夫みたい、環境によっては注意が必要
 		assert(ScissorRects[0].extent.width >= Granularity.width && ScissorRects[0].extent.height >= Granularity.height && "ScissorRect is too small");
 #endif
-		//std::vector<VkClearValue> ClearValues(2);
+		//!< カラーはクリアしないが、デプスはクリアする設定にしている Not clear color, but clear depth
+		std::vector<VkClearValue> ClearValues(2);
 		//ClearValues[0].color = Colors::SkyBlue;
-		//ClearValues[1].depthStencil = ClearDepthStencilValue;
+		ClearValues[1].depthStencil = ClearDepthStencilValue;
+		//const std::vector<VkClearValue> ClearValues = { { Colors::SkyBlue }, { .depthStencil = ClearDepthStencilValue } };
 		const VkRenderPassBeginInfo RenderPassBeginInfo = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RenderPass,
 			Framebuffer,
-			ScissorRects[0], //!< フレームバッファより小さいとパフォーマンスペナルティがあるかも ↑vkGetRenderAreaGranularity()参照
-			0, nullptr
-			//static_cast<uint32_t>(ClearValues.size()), ClearValues.data() //!< レンダーパス作成時に VK_ATTACHMENT_LOAD_OP_CLEAR を指定した場合ここでクリアカラーを指定する
+			ScissorRects[0], //!< フレームバッファのサイズ以下を指定できる
+			static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
 		};
 
 		//!< サブパスへ移行させるにはこんな感じ

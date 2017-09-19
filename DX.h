@@ -156,8 +156,8 @@ protected:
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const {}
 	virtual void CreateInputLayout(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs, const UINT InputSlot = 0) const {}
 	virtual void CreatePipelineState() {}
-	virtual void CreateGraphicsPipelineState();
-	virtual void CreateComputePipelineState();
+	virtual void CreatePipelineState_Graphics();
+	virtual void CreatePipelineState_Compute();
 
 	virtual void CreateTexture() {}
 	virtual void CreateStaticSamplerDesc(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) const {}

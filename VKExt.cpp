@@ -167,179 +167,273 @@ void VKExt::UpdateDescriptorSet_1CIS()
 
 void VKExt::CreateRenderPass_Color()
 {
-	const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
-		{
-			0,
-			ColorFormat,
-			VK_SAMPLE_COUNT_1_BIT,
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE,		//!< VK_ATTACHMENT_LOAD_OP_CLEAR にするとレンダーパスの開始時にクリアを行う (VkRenderPassBeginInfo.pClearValuesのセットが必須になる)
-			VK_ATTACHMENT_STORE_OP_STORE,			//!< レンダーパス終了時に保存する(表示するのに必要)
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE,		//!< (デプスステンシルは)カラーアタッチメントの場合は関係なし
-			VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,		//!< レンダーパス開始時のレイアウト (メモリバリアなしにレンダーパス間でレイアウトが変更される)
-			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR			//!< レンダーパス終了時のレイアウト
-		},
-	};
+	[&](VkRenderPass* RenderPass, const VkFormat ColorFormat) {
+		const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
+			{
+				0,
+				ColorFormat,
+				VK_SAMPLE_COUNT_1_BIT,
+				VK_ATTACHMENT_LOAD_OP_DONT_CARE,		//!< VK_ATTACHMENT_LOAD_OP_CLEAR にするとレンダーパスの開始時にクリアを行う (VkRenderPassBeginInfo.pClearValuesのセットが必須になる)
+				VK_ATTACHMENT_STORE_OP_STORE,			//!< レンダーパス終了時に保存する(表示するのに必要)
+				VK_ATTACHMENT_LOAD_OP_DONT_CARE,		//!< (ここでは)ステンシルは未使用
+				VK_ATTACHMENT_STORE_OP_DONT_CARE,		//!< (ここでは)ステンシルは未使用
+				VK_IMAGE_LAYOUT_UNDEFINED,				//!< レンダーパス開始時のレイアウト (メモリバリアなしにレンダーパス間でレイアウトが変更される)
+				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR			//!< レンダーパス終了時のレイアウト
+			},
+		};
 
-	const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
-		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
-	};
-	const std::vector<VkSubpassDescription> SubpassDescriptions = {
-		{
-			0,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			0, nullptr,
-			static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(), nullptr,
+		const std::vector<VkAttachmentReference> InputAttachmentReferences = {};
+		const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
+			{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
+		};
+		//const std::vector<VkAttachmentReference> ResolveAttachmentReferences = {
+		//	{ VK_ATTACHMENT_UNUSED },
+		//}; 
+		//assert(ColorAttachmentReferences.size() == ResolveAttachmentReferences.size() && "Size must be same");
+		const VkAttachmentReference* DepthStencilAttachmentReference = nullptr;
+		const std::vector<uint32_t> PreserveAttachments = {}; //!< このサブバス内では使用しないが、サブパス全体においてコンテンツを保持しなくてはならないインデックスを指定
+
+		const std::vector<VkSubpassDescription> SubpassDescriptions = {
+			{
+				0,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				static_cast<uint32_t>(InputAttachmentReferences.size()), InputAttachmentReferences.data(),
+				static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(), nullptr/*ResolveAttachmentReferences.data()*/,
+				DepthStencilAttachmentReference,
+				static_cast<uint32_t>(PreserveAttachments.size()), PreserveAttachments.data()
+			},
+		};
+
+		//!< サブパス間の依存関係 (前の描画結果を次の処理で使用する場合など)
+		const std::vector<VkSubpassDependency> SubpassDependencies = {
+#if 0
+			//!< 必要無いが、あえて書くならこんな感じ No need this code, but if dare to write like this
+			{
+				VK_SUBPASS_EXTERNAL,							//!< サブパス外から
+				0,												//!< サブパス0へ
+				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,			//!< パイプラインの最終ステージから
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< カラー出力ステージへ
+				VK_ACCESS_MEMORY_READ_BIT,						//!< 読み込みから
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,			//!< カラー書き込みへ
+				VK_DEPENDENCY_BY_REGION_BIT,					//!< 同じメモリ領域に対する書き込みが完了してから読み込み (指定しない場合は自前で書き込み完了を管理)
+			},
+			{
+				0,												//!< サブパス0から
+				VK_SUBPASS_EXTERNAL,							//!< サブパス外へ
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< カラー出力ステージから
+				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,			//!< パイプラインの最終ステージへ
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,			//!< カラー書き込みから
+				VK_ACCESS_MEMORY_READ_BIT,						//!< 読み込みへ
+				VK_DEPENDENCY_BY_REGION_BIT,
+			},
+#endif
+		};
+
+		const VkRenderPassCreateInfo RenderPassCreateInfo = {
+			VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 			nullptr,
-			0, nullptr //!< Preserve はサブパスのライフサイクル中に保持される(読み書きもできない) ... このサブパスでは使用しないが、後のサブパスで使用するような場合に指定する
-		},
-	};
-
-	//!< サブパス間の依存関係
-	const std::vector<VkSubpassDependency> SubpassDependencies = {
-		{
-			VK_SUBPASS_EXTERNAL,							//!< サブパス外から
-			0,												//!< サブパス0へ
-			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,			//!< パイプラインの最終ステージから
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< カラー出力ステージへ
-			VK_ACCESS_MEMORY_READ_BIT,						//!< リードから
-			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,			//!< ライトへ
-			VK_DEPENDENCY_BY_REGION_BIT,
-		},
-		{
 			0,
-			VK_SUBPASS_EXTERNAL,
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-			VK_ACCESS_MEMORY_READ_BIT,
-			VK_DEPENDENCY_BY_REGION_BIT,
-		},
-	};
-
-	const VkRenderPassCreateInfo RenderPassCreateInfo = {
-		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(AttachmentDescriptions.size()), AttachmentDescriptions.data(),
-		static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
-		static_cast<uint32_t>(SubpassDependencies.size()), SubpassDependencies.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, GetAllocationCallbacks(), &RenderPass));
+			static_cast<uint32_t>(AttachmentDescriptions.size()), AttachmentDescriptions.data(),
+			static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
+			static_cast<uint32_t>(SubpassDependencies.size()), SubpassDependencies.data()
+		};
+		VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, GetAllocationCallbacks(), RenderPass));
+	}(&RenderPass, ColorFormat);
 }
 void VKExt::CreateRenderPass_ColorDepth()
 {
-	const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
-		{
-			0,
-			ColorFormat,
-			VK_SAMPLE_COUNT_1_BIT,
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-			VK_ATTACHMENT_STORE_OP_STORE,
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-			VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-		},
-		{
-			0,
-			DepthFormat,
-			VK_SAMPLE_COUNT_1_BIT,
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-			VK_ATTACHMENT_STORE_OP_STORE,
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-			VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-		},
-	};
+	[&](VkRenderPass* RenderPass, const VkFormat ColorFormat, const VkFormat DepthFormat) {
+		const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
+			{
+				0,
+				ColorFormat,
+				VK_SAMPLE_COUNT_1_BIT,
+				VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				VK_ATTACHMENT_STORE_OP_STORE,
+				VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+			},
+			{
+				0,
+				DepthFormat,
+				VK_SAMPLE_COUNT_1_BIT,
+				VK_ATTACHMENT_LOAD_OP_CLEAR,
+				VK_ATTACHMENT_STORE_OP_STORE,
+				VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+			},
+		};
 
-	const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
-		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
-	};
-	const VkAttachmentReference DepthAttachmentReference = { 
-		1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL 
-	};
-	const std::vector<VkSubpassDescription> SubpassDescriptions = {
-		{
-			0,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			0, nullptr,
-			static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(), nullptr,
-			&DepthAttachmentReference,
-			0, nullptr
-		}
-	};
+		const std::vector<VkAttachmentReference> InputAttachmentReferences = {};
+		const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
+			{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
+		};
+		const VkAttachmentReference DepthStencilAttachmentReference = {
+			1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+		};
+		const std::vector<uint32_t> PreserveAttachments = {};
+		const std::vector<VkSubpassDescription> SubpassDescriptions = {
+			{
+				0,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				static_cast<uint32_t>(InputAttachmentReferences.size()), InputAttachmentReferences.data(),
+				static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(), nullptr,
+				&DepthStencilAttachmentReference,
+				static_cast<uint32_t>(PreserveAttachments.size()), PreserveAttachments.data()
+			}
+		};
 
-	const std::vector<VkSubpassDependency> SubpassDependencies = {
-		{
-			VK_SUBPASS_EXTERNAL,
+		const std::vector<VkSubpassDependency> SubpassDependencies = {};
+
+		const VkRenderPassCreateInfo RenderPassCreateInfo = {
+			VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+			nullptr,
 			0,
-			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			VK_ACCESS_MEMORY_READ_BIT,
-			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-			VK_DEPENDENCY_BY_REGION_BIT,
-		},
-		{
+			static_cast<uint32_t>(AttachmentDescriptions.size()), AttachmentDescriptions.data(),
+			static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
+			static_cast<uint32_t>(SubpassDependencies.size()), SubpassDependencies.data()
+		};
+		VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, GetAllocationCallbacks(), RenderPass));
+	}(&RenderPass, ColorFormat, DepthFormat);
+}
+
+//!< ファーストパスで ColorDepth に書き込み、セカンドパスで PostProcess を行う In first pass ColorDepth, second pass PostProcess
+void VKExt::CreateRenderPass_CD_PP()
+{
+	[&](VkRenderPass* RenderPass, const VkFormat ColorFormat, const VkFormat DepthFormat) {
+		const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
+			{
+				0,
+				ColorFormat,
+				VK_SAMPLE_COUNT_1_BIT,
+				VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+			},
+			{
+				0,
+				DepthFormat,
+				VK_SAMPLE_COUNT_1_BIT,
+				VK_ATTACHMENT_LOAD_OP_CLEAR,
+				VK_ATTACHMENT_STORE_OP_STORE,
+				VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+			},
+			{
+				0,
+				ColorFormat,
+				VK_SAMPLE_COUNT_1_BIT,
+				VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				VK_ATTACHMENT_STORE_OP_STORE,
+				VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+				VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+			},
+		};
+
+		const std::vector<VkAttachmentReference> InputAttachmentReferences_Pass0 = {};
+		const std::vector<VkAttachmentReference> ColorAttachmentReferences_Pass0 = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
+		const VkAttachmentReference DepthStencilAttachmentReference_Pass0 = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+
+		const std::vector<VkAttachmentReference> InputAttachmentReferences_Pass1 = { { 0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, };
+		const std::vector<VkAttachmentReference> ColorAttachmentReferences_Pass1 = { { 2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
+
+		const std::vector<uint32_t> PreserveAttachments = {};
+		const std::vector<VkSubpassDescription> SubpassDescriptions = {
+			{
+				0,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				static_cast<uint32_t>(InputAttachmentReferences_Pass0.size()), InputAttachmentReferences_Pass0.data(),
+				static_cast<uint32_t>(ColorAttachmentReferences_Pass0.size()), ColorAttachmentReferences_Pass0.data(), nullptr,
+				&DepthStencilAttachmentReference_Pass0,
+				static_cast<uint32_t>(PreserveAttachments.size()), PreserveAttachments.data()
+			},
+			{
+				0,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				static_cast<uint32_t>(InputAttachmentReferences_Pass1.size()), InputAttachmentReferences_Pass1.data(),
+				static_cast<uint32_t>(ColorAttachmentReferences_Pass1.size()), ColorAttachmentReferences_Pass1.data(), nullptr,
+				nullptr,
+				static_cast<uint32_t>(PreserveAttachments.size()), PreserveAttachments.data()
+			}
+		};
+
+
+		const std::vector<VkSubpassDependency> SubpassDependencies = {
+			{
+				0,
+				1,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				VK_ACCESS_INPUT_ATTACHMENT_READ_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT,
+			},
+		};
+
+		const VkRenderPassCreateInfo RenderPassCreateInfo = {
+			VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+			nullptr,
 			0,
-			VK_SUBPASS_EXTERNAL,
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-			VK_ACCESS_MEMORY_READ_BIT,
-			VK_DEPENDENCY_BY_REGION_BIT,
-		},
-	};
-	
-	const VkRenderPassCreateInfo RenderPassCreateInfo = {
-		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(AttachmentDescriptions.size()), AttachmentDescriptions.data(),
-		static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
-		static_cast<uint32_t>(SubpassDependencies.size()), SubpassDependencies.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, GetAllocationCallbacks(), &RenderPass));
+			static_cast<uint32_t>(AttachmentDescriptions.size()), AttachmentDescriptions.data(),
+			static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
+			static_cast<uint32_t>(SubpassDependencies.size()), SubpassDependencies.data()
+		};
+		VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, GetAllocationCallbacks(), RenderPass));
+	}(&RenderPass, ColorFormat, DepthFormat);
 }
 
 void VKExt::CreateFramebuffer_Color()
 {
 	Framebuffers.resize(SwapchainImages.size());
 	for (uint32_t i = 0; i < Framebuffers.size(); ++i) {
-		const std::vector<VkImageView> Attachments = {
-			SwapchainImageViews[i],
-		};
-		const VkFramebufferCreateInfo FramebufferCreateInfo = {
-			VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-			nullptr,
-			0,
-			RenderPass,
-			static_cast<uint32_t>(Attachments.size()), Attachments.data(),
-			SurfaceExtent2D.width, SurfaceExtent2D.height,
-			1
-		};
-		VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, GetAllocationCallbacks(), &Framebuffers[i]));
+		[&](VkFramebuffer* Framebuffer, const VkImageView ColorView, const VkRenderPass RenderPass, const uint32_t Width, const uint32_t Height) {
+			const std::vector<VkImageView> Attachments = {
+				ColorView 
+			};
+			const VkFramebufferCreateInfo FramebufferCreateInfo = {
+				VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+				nullptr,
+				0,
+				RenderPass, //!< ここで作成するフレームバッファは RenderPass と「コンパチ」な別のレンダーパスでも使用可能
+				static_cast<uint32_t>(Attachments.size()), Attachments.data(),
+				Width, Height,
+				1
+			};
+			VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, GetAllocationCallbacks(), Framebuffer));
+		}(&Framebuffers[i], SwapchainImageViews[i], RenderPass, SurfaceExtent2D.width, SurfaceExtent2D.height);
 	}
 }
 void VKExt::CreateFramebuffer_ColorDepth()
 {
 	Framebuffers.resize(SwapchainImages.size());
 	for (uint32_t i = 0; i < Framebuffers.size(); ++i) {
-		const std::vector<VkImageView> Attachments = {
-			SwapchainImageViews[i],
-			DepthStencilImageView
-		};
-		const VkFramebufferCreateInfo FramebufferCreateInfo = {
-			VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-			nullptr,
-			0,
-			RenderPass,
-			static_cast<uint32_t>(Attachments.size()), Attachments.data(),
-			SurfaceExtent2D.width, SurfaceExtent2D.height,
-			1
-		};
-		VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, GetAllocationCallbacks(), &Framebuffers[i]));
+		[&](VkFramebuffer* Framebuffer, const VkImageView ColorView, const VkImageView DepthStencilView, const VkRenderPass RenderPass, const uint32_t Width, const uint32_t Height) {
+			const std::vector<VkImageView> Attachments = {
+				ColorView,
+				DepthStencilView
+			};
+			const VkFramebufferCreateInfo FramebufferCreateInfo = {
+				VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+				nullptr,
+				0,
+				RenderPass,
+				static_cast<uint32_t>(Attachments.size()), Attachments.data(),
+				Width, Height,
+				1
+			};
+			VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, GetAllocationCallbacks(), Framebuffer));
+		}(&Framebuffers[i], SwapchainImageViews[i], DepthStencilImageView, RenderPass, SurfaceExtent2D.width, SurfaceExtent2D.height);
 	}
 }
 

@@ -110,6 +110,7 @@ public:
 	virtual void CreateRenderPass() { CreateRenderPass_Color(); }
 	void CreateRenderPass_Color();
 	void CreateRenderPass_ColorDepth();
+	void CreateRenderPass_CD_PP();
 
 	virtual void CreateFramebuffer() override { CreateFramebuffer_Color(); }
 	void CreateFramebuffer_Color();

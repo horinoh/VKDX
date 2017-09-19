@@ -1030,7 +1030,7 @@ void DX::CreateRootSignature()
 #endif
 }
 
-void DX::CreateGraphicsPipelineState()
+void DX::CreatePipelineState_Graphics()
 {
 	assert(nullptr != RootSignature);
 #if 0
@@ -1122,11 +1122,11 @@ void DX::CreateGraphicsPipelineState()
 	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
 
 #ifdef _DEBUG
-	std::cout << "CreateGraphicsPipelineState" << COUT_OK << std::endl << std::endl;
+	std::cout << "CreatePipelineState_Graphics" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
-void DX::CreateComputePipelineState()
+void DX::CreatePipelineState_Compute()
 {
 	assert(nullptr != RootSignature);
 
@@ -1146,7 +1146,7 @@ void DX::CreateComputePipelineState()
 	VERIFY_SUCCEEDED(Device->CreateComputePipelineState(&ComputePipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
 
 #ifdef DEBUG_STDOUT
-	std::cout << "CreateComputePipelineState" << COUT_OK << std::endl << std::endl;
+	std::cout << "CreatePipelineState_Compute" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
