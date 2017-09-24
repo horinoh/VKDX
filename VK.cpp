@@ -127,7 +127,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyPipelineLayout(Device, PipelineLayout, GetAllocationCallbacks());
 	}
 
-	//!< VkDescriptorPoolCreateInfo に VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT を指定した場合のみデスクリプタセットを個別に開放できる
+	//!< VkDescriptorPoolCreateInfo に VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT を指定した場合「のみ」デスクリプタセットを個別に開放できる
 #if 0
 	if (!DescriptorSets.empty()) {
 		vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
@@ -331,6 +331,12 @@ std::string VK::GetComponentSwizzleString(const VkComponentSwizzle ComponentSwiz
 
 bool VK::HasExtension(const VkPhysicalDevice PhysicalDevice, const char* ExtensionName)
 {
+	//!< エクステンションは見つかるのに、有効化すると怒られるので封印...
+#if 1
+	//!< VK_EXT_debug_marker not available for devices associated with ICD nvoglv64.dll
+	//!< https://devtalk.nvidia.com/default/topic/1001794/vulkan-vk_ext_debug_marker-missing-after-new-5-2-build-update-/
+	return false;
+#else
 	uint32_t DeviceLayerPropertyCount = 0;
 	VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, nullptr));
 	if (DeviceLayerPropertyCount) {
@@ -351,6 +357,7 @@ bool VK::HasExtension(const VkPhysicalDevice PhysicalDevice, const char* Extensi
 		}
 	}
 	return false;
+#endif
 }
 
 VkFormat VK::GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice)
@@ -967,16 +974,25 @@ void VK::GetPhysicalDevice()
 		//!< 物理デバイスのフィーチャー
 		VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
 		vkGetPhysicalDeviceFeatures(i, &PhysicalDeviceFeatures);
-		std::cout << "\t" << "\t" << "TextureCompression = ";
+		std::cout << "\t" << "\t" << "PhysicalDeviceFeatures = ";
 		if (PhysicalDeviceFeatures.textureCompressionBC) {
-			std::cout << "BC, ";
+			std::cout << "textureCompressionBC, ";
 		}
 		if (PhysicalDeviceFeatures.textureCompressionETC2) {
-			std::cout << "ETC2, ";
+			std::cout << "textureCompressionETC2, ";
 		}
 		if (PhysicalDeviceFeatures.textureCompressionASTC_LDR) {
-			std::cout  << "ASTC_LDR, ";
+			std::cout << "textureCompressionASTC_LDR, ";
 		}
+
+		if (PhysicalDeviceFeatures.fillModeNonSolid) {
+			std::cout << "fillModeNonSolid, ";
+		}
+		
+		if (PhysicalDeviceFeatures.tessellationShader) {
+			std::cout << "tessellationShader, ";
+		}
+
 		std::cout << std::endl;
 	}
 #undef PHYSICAL_DEVICE_TYPE_ENTRY
@@ -1153,6 +1169,9 @@ void VK::CreateDevice()
 		EnabledExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 	}
 #endif
+	VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
+	vkGetPhysicalDeviceFeatures(PhysicalDevice, &PhysicalDeviceFeatures);
+	OverridePhysicalDeviceFeatures(PhysicalDeviceFeatures);
 	const VkDeviceCreateInfo DeviceCreateInfo = {
 		VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
 		nullptr,
@@ -1160,7 +1179,7 @@ void VK::CreateDevice()
 		static_cast<uint32_t>(QueueCreateInfos.size()), QueueCreateInfos.data(),
 		static_cast<uint32_t>(EnabledLayerNames.size()), EnabledLayerNames.data(),
 		static_cast<uint32_t>(EnabledExtensions.size()), EnabledExtensions.data(),
-		nullptr
+		&PhysicalDeviceFeatures
 	};
 	VERIFY_SUCCEEDED(vkCreateDevice(PhysicalDevice, &DeviceCreateInfo, GetAllocationCallbacks(), &Device));
 
@@ -1852,16 +1871,6 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 	}
 	return ShaderModule;
 }
-void VK::CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const
-{
-	PipelineInputAssemblyStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-		VK_FALSE //!< 0xffff や 0xffffffff を特別なマーカとして、リスタートを可能にする場合
-	};
-}
 VkPipelineCache VK::LoadPipelineCache(const std::wstring& Path) const
 {
 	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
@@ -1972,6 +1981,10 @@ void VK::CreatePipeline_Graphics()
 	//!< インプットアセンブリ (トポロジ)
 	VkPipelineInputAssemblyStateCreateInfo PipelineInputAssemblyStateCreateInfo;
 	CreateInputAssembly(PipelineInputAssemblyStateCreateInfo);
+
+	//!< テセレーションステート
+	VkPipelineTessellationStateCreateInfo PipelineTessellationStateCreateInfo;
+	CreateTessellationState(PipelineTessellationStateCreateInfo);
 
 	//!< VkDynamicState にするので、ここでは nullptr を指定している、ただし個数は指定しておく必要があるので注意。また KvDynamicState に指定した項目はコマンドバッファからセットすること
 	const VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo = {
@@ -2096,7 +2109,7 @@ void VK::CreatePipeline_Graphics()
 			static_cast<uint32_t>(PipelineShaderStageCreateInfos.size()), PipelineShaderStageCreateInfos.data(),
 			&PipelineVertexInputStateCreateInfo,
 			&PipelineInputAssemblyStateCreateInfo,
-			nullptr,
+			&PipelineTessellationStateCreateInfo,
 			&PipelineViewportStateCreateInfo,
 			&PipelineRasterizationStateCreateInfo,
 			&PipelineMultisampleStateCreateInfo,
@@ -2221,6 +2234,7 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFram
 		assert(ScissorRects[0].extent.width >= Granularity.width && ScissorRects[0].extent.height >= Granularity.height && "ScissorRect is too small");
 #endif
 		//!< カラーはクリアしないが、デプスはクリアする設定にしている Not clear color, but clear depth
+		//!< CreateRenderPass() レンダーパス内 VkAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR の場合
 		std::vector<VkClearValue> ClearValues(2);
 		//ClearValues[0].color = Colors::SkyBlue;
 		ClearValues[1].depthStencil = ClearDepthStencilValue;
@@ -2234,10 +2248,14 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFram
 			static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
 		};
 
-		//!< サブパスへ移行させるにはこんな感じ
-		//!< vkCmdNextSubpass(CommandBuffer, VK_SUBPASS_CONTENTS_INLINE);
-
 		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
+			//vkCmdBindPipeline();
+			//vkCmdBindDescriptorSets();
+			//vkCmdBindVertexBuffers();
+			//vkCmdBindIndexBuffer();
+			//vkCmdDrawIndirect();
+
+			//!< vkCmdNextSubpass(CommandBuffer, VK_SUBPASS_CONTENTS_INLINE);
 		} vkCmdEndRenderPass(CommandBuffer);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }
@@ -2249,13 +2267,21 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFram
 
 		ClearColor(CommandBuffer, Image, Color);
 
+#ifdef _DEBUG
+		VkExtent2D Granularity;
+		vkGetRenderAreaGranularity(Device, RenderPass, &Granularity);
+		assert(ScissorRects[0].extent.width >= Granularity.width && ScissorRects[0].extent.height >= Granularity.height && "ScissorRect is too small");
+#endif
+
+		std::vector<VkClearValue> ClearValues(2);
+		ClearValues[1].depthStencil = ClearDepthStencilValue;
 		const VkRenderPassBeginInfo RenderPassBeginInfo = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RenderPass,
 			Framebuffer,
 			ScissorRects[0],
-			0, nullptr
+			static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
 		};
 		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
 		} vkCmdEndRenderPass(CommandBuffer);

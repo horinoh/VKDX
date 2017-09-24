@@ -12,5 +12,8 @@ private:
 public:
 	ClearVK() : Super() {}
 	virtual ~ClearVK() {}
+
+protected:
+	virtual void CreatePipeline() override {}
 };
 #pragma endregion

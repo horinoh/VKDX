@@ -23,7 +23,6 @@ protected:
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {
 		CreateShader_VsPs(ShaderModules, PipelineShaderStageCreateInfos);
 	}
-	virtual void CreatePipeline() override { CreatePipeline_Graphics(); }
 	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer, const VkImage Image, const VkClearColorValue& Color) override;
 };
 #pragma endregion

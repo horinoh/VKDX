@@ -377,4 +377,4 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, cons
 #endif
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
 }
-#pragma endregion
+#pragma endregion //!< Code

@@ -162,6 +162,7 @@ protected:
 	virtual void EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice);
 	virtual void EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* layerName);
 	virtual void GetQueueFamily();
+	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PhysicalDeviceFeatures) const {}
 	virtual void CreateDevice();
 
 	virtual void CreateFence();
@@ -224,11 +225,21 @@ protected:
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const {}
 	virtual void CreateVertexInput(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding = 0) const {}
-	virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const;
+	virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const {}
+	virtual void CreateInputAssembly_Topology(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo, const VkPrimitiveTopology Topology) const {
+		PipelineInputAssemblyStateCreateInfo = {
+			VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+			nullptr,
+			0,
+			Topology,
+			VK_FALSE //!< 0xffff や 0xffffffff を特別なマーカとして、リスタートを可能にする場合
+		};
+	}
+	virtual void CreateTessellationState(VkPipelineTessellationStateCreateInfo& PipelineTessellationStateCreateInfo) const {}
 	virtual VkPipelineCache LoadPipelineCache(const std::wstring& Path) const;
 	virtual void StorePipelineCache(const std::wstring& Path, const VkPipelineCache PipelineCache) const;
 	virtual VkPipelineCache CreatePipelineCache();
-	virtual void CreatePipeline() {}
+	virtual void CreatePipeline() { CreatePipeline_Graphics(); }
 	virtual void CreatePipeline_Graphics();
 	virtual void CreatePipeline_Compute();
 

@@ -12,6 +12,6 @@ void main()
 	for(int i=0;i<gl_TessLevelInner.length();++i) {
 		gl_TessLevelInner[i] = t;
 	}
-	gl_out[ gl_InvocationID ].gl_Position = gl_in[ gl_InvocationID ].gl_Position;
+	gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 }
 

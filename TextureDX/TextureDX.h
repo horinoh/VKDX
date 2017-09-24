@@ -90,7 +90,6 @@ protected:
 		CreateStaticSamplerDesc_LW(StaticSamplerDesc, ShaderVisibility, MaxLOD);
 	}
 
-	virtual void CreatePipelineState() override { CreatePipelineState_Graphics(); }
 	//virtual void PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle) override;
 	virtual void PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const DirectX::XMVECTORF32& Color) override;
 };

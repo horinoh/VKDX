@@ -155,7 +155,7 @@ protected:
 
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const {}
 	virtual void CreateInputLayout(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs, const UINT InputSlot = 0) const {}
-	virtual void CreatePipelineState() {}
+	virtual void CreatePipelineState() { CreatePipelineState_Graphics(); }
 	virtual void CreatePipelineState_Graphics();
 	virtual void CreatePipelineState_Compute();
 

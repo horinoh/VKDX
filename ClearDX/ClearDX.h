@@ -12,5 +12,8 @@ private:
 public:
 	ClearDX() : Super() {}
 	virtual ~ClearDX() {}
+
+protected:
+	virtual void CreatePipelineState() override {}
 };
 #pragma endregion

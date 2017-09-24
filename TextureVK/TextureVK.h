@@ -92,7 +92,6 @@ protected:
 		CreateSampler_LR(Sampler, MaxLOD);
 	}
 
-	virtual void CreatePipeline() override { CreatePipeline_Graphics(); }
 	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer, const VkImage Image, const VkClearColorValue& Color) override;
 };
 #pragma endregion

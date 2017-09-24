@@ -225,4 +225,4 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-#pragma endregion
+#pragma endregion //!< Code

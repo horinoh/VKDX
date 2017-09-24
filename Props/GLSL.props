@@ -21,11 +21,10 @@
     </CustomBuildStep>
     <PostBuildEvent>
       <Command>
-
-</Command>
+      </Command>
     </PostBuildEvent>
     <CustomBuild>
-      <Command>glslangValidator -V %(Identity) -o %(Identity).spv
+      <Command>glslangValidator -H %(Identity) -o %(Identity).spv &gt; %(Identity).txt
 xcopy /y %(Identity).spv $(TargetDir)</Command>
     </CustomBuild>
     <CustomBuild>

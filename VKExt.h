@@ -140,6 +140,11 @@ public:
 		std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 	}
+
+	virtual void CreateInputAssembly_TS(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const { CreateInputAssembly_Topology(PipelineInputAssemblyStateCreateInfo, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP); }
+	virtual void CreateInputAssembly_PL(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const { CreateInputAssembly_Topology(PipelineInputAssemblyStateCreateInfo, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST); }
+	virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const override { CreateInputAssembly_TS(PipelineInputAssemblyStateCreateInfo); }
+
 protected:
 #if 1
 	/**

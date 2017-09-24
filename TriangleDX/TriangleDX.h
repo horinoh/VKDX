@@ -30,8 +30,6 @@ protected:
 		CreateInputLayoutT<Vertex_PositionColor>(InputElementDescs, InputSlot);
 	}
 
-	virtual void CreatePipelineState() override { CreatePipelineState_Graphics(); }
-
 #if 0
 	virtual void CreateRootSignature() override { Super::CreateRootSignature_1CBV(D3D12_SHADER_VISIBILITY_PIXEL); }
 	virtual void CreateConstantBuffer() override { Super::CreateConstantBuffer<DirectX::XMFLOAT4>(DirectX::XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f)); }
