@@ -332,7 +332,7 @@ std::string VK::GetComponentSwizzleString(const VkComponentSwizzle ComponentSwiz
 bool VK::HasExtension(const VkPhysicalDevice PhysicalDevice, const char* ExtensionName)
 {
 	//!< エクステンションは見つかるのに、有効化すると怒られるので封印...
-#if 1
+#if 0
 	//!< VK_EXT_debug_marker not available for devices associated with ICD nvoglv64.dll
 	//!< https://devtalk.nvidia.com/default/topic/1001794/vulkan-vk_ext_debug_marker-missing-after-new-5-2-build-update-/
 	return false;
@@ -832,7 +832,7 @@ void VK::CreateDebugReportCallback()
 			return VK_TRUE;
 		}
 		else if (VK_DEBUG_REPORT_WARNING_BIT_EXT & flags) {
-			DEBUG_BREAK();
+			//DEBUG_BREAK();
 			cout << Yellow << "[ DebugReport ] : " << pMessage << White << endl;
 			return VK_TRUE;
 		}
@@ -840,7 +840,7 @@ void VK::CreateDebugReportCallback()
 			//cout << Green << "[ DebugReport ] : " << pMessage << White << endl;
 		}
 		else if (VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT & flags) {
-			DEBUG_BREAK();
+			//DEBUG_BREAK();
 			cout << Yellow << "[ DebugReport ] : " << pMessage << White << endl;
 			return VK_TRUE;
 		}

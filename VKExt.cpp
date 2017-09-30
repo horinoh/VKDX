@@ -22,12 +22,10 @@ void VKExt::CreateSampler_LR(VkSampler* Sampler, const float MaxLOD) const
 	}(Sampler, MaxLOD);
 }
 
-void VKExt::CreateIndirectBuffer_4Vertices()
+void VKExt::CreateIndirectBuffer_Vertices(const uint32_t Count)
 {
-	//const auto CB = CommandBuffers[0];
-
 	const VkDrawIndirectCommand DrawIndirectCommand = {
-		4, 1, 0, 0
+		Count, 1, 0, 0
 	};
 	const auto Stride = sizeof(DrawIndirectCommand);
 	const auto Size = static_cast<VkDeviceSize>(Stride * 1);
@@ -58,10 +56,10 @@ void VKExt::CreateIndirectBuffer_4Vertices()
 		}
 	}(&IndirectBuffer, &IndirectDeviceMemory, Size, &DrawIndirectCommand, CommandBuffers[0]);
 }
-void VKExt::CreateIndirectBuffer_Indexed()
+void VKExt::CreateIndirectBuffer_Indexed(const uint32_t Count)
 {
 	const VkDrawIndexedIndirectCommand DrawIndexedIndirectCommand = {
-		IndexCount, 1, 0, 0, 0
+		Count, 1, 0, 0, 0
 	};
 	const auto Stride = sizeof(DrawIndexedIndirectCommand);
 	const auto Size = static_cast<VkDeviceSize>(Stride * 1);
@@ -301,7 +299,7 @@ void VKExt::CreateRenderPass_ColorDepth()
 	}(&RenderPass, ColorFormat, DepthFormat);
 }
 
-//!< ファーストパスで ColorDepth に書き込み、セカンドパスで PostProcess を行う In first pass ColorDepth, second pass PostProcess
+//!< ファーストパスで ColorDepth に書き込み、セカンドパスで PostProcess を行う場合の例 In first pass ColorDepth, second pass PostProcess
 void VKExt::CreateRenderPass_CD_PP()
 {
 	[&](VkRenderPass* RenderPass, const VkFormat ColorFormat, const VkFormat DepthFormat) {

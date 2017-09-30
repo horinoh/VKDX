@@ -2,9 +2,11 @@
 
 #include "DXExt.h"
 
-void DXExt::CreateIndirectBuffer_4Vertices()
+void DXExt::CreateIndirectBuffer_Vertices(const UINT Count)
 {
-	const D3D12_DRAW_ARGUMENTS DrawArguments = { 4, 1, 0, 0 };
+	const D3D12_DRAW_ARGUMENTS DrawArguments = { 
+		Count, 1, 0, 0 
+	};
 	const auto Stride = sizeof(DrawArguments);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 
@@ -31,9 +33,12 @@ void DXExt::CreateIndirectBuffer_4Vertices()
 	};
 	Device->CreateCommandSignature(&CommandSignatureDesc, RootSignature.Get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
 }
-void DXExt::CreateIndirectBuffer_Indexed()
+
+void DXExt::CreateIndirectBuffer_Indexed(const UINT Count)
 {
-	const D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments = { IndexCount, 1, 0, 0, 0 };
+	const D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments = { 
+		Count, 1, 0, 0, 0 
+	};
 	const auto Stride = sizeof(DrawIndexedArguments);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 

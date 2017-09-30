@@ -17,7 +17,7 @@ public:
 
 protected:
 #ifdef USE_DRAW_INDIRECT
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_4Vertices(); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Vertices(4); }
 #endif
 
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const override {

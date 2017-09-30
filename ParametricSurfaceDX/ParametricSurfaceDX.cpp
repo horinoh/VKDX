@@ -225,91 +225,34 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void ParametricSurfaceDX::CreateVertexBuffer()
-{
-	const std::vector<DirectX::XMFLOAT3> Vertices = {
-		{ 0.0f, 0.5f, 0.0f },
-	};
-	const auto Stride = sizeof(Vertices[0]);
-	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
-
-	//!< アップロード用のリソースを作成、データをコピー Create upload resource, and copy data
-	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-	CreateUploadResource(UploadResource.GetAddressOf(), Size);
-	CopyToUploadResource(UploadResource.Get(), Size, Vertices.data());
-
-	//!< デフォルトのリソースを作成 Create default resource
-	CreateDefaultResource(VertexBufferResource.GetAddressOf(), Size);
-
-	//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
-	const auto CA = CommandAllocators[0].Get();
-	const auto CL = GraphicsCommandLists[0].Get();
-	ExecuteCopyBuffer(CA, CL, UploadResource.Get(), VertexBufferResource.Get(), Size);
-
-	VertexBufferViews.push_back({ VertexBufferResource->GetGPUVirtualAddress(), Size, Stride });
-
-#ifdef _DEBUG
-	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
-#endif
-}
-void ParametricSurfaceDX::CreateIndexBuffer()
-{
-	const std::vector<UINT32> Indices = { 0 };
-	IndexCount = static_cast<UINT32>(Indices.size());
-	const auto Size = static_cast<UINT32>(sizeof(Indices[0]) * IndexCount);
-
-	//!< アップロード用のリソースを作成、データをコピー Create upload resource, and copy data
-	Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-	CreateUploadResource(UploadResource.GetAddressOf(), Size);
-	CopyToUploadResource(UploadResource.Get(), Size, Indices.data());
-
-	//!< デフォルトのリソースを作成 Create default resource
-	CreateDefaultResource(IndexBufferResource.GetAddressOf(), Size);
-
-	//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
-	const auto CA = CommandAllocators[0].Get();
-	const auto CL = GraphicsCommandLists[0].Get();
-	ExecuteCopyBuffer(CA, CL, UploadResource.Get(), IndexBufferResource.Get(), Size);
-
-	IndexBufferView = {
-		IndexBufferResource->GetGPUVirtualAddress(),
-		Size,
-		DXGI_FORMAT_R32_UINT
-	};
-
-#ifdef _DEBUG
-	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
-#endif
-}
 void ParametricSurfaceDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle)
 {
 	const auto CommandAllocator = CommandAllocators[0].Get();
-	
-	//#TODO
-	//Super::PopulateCommandList(CommandList);
-	//
-	//{
-	//	auto RTDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	//	const auto RTIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	//	RTDescriptorHandle.ptr += CurrentBackBufferIndex * RTIncrementSize;
-	//	const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { RTDescriptorHandle };
 
-	//	//auto DSDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	//	////const auto DSIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-	//	////DSDescriptorHandle.ptr += 0 * DSIncrementSize;
+	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, PipelineState.Get()));
+	{
+		CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
-	//	CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
-	//}
+		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		{
+			ClearColor(CommandList, DescriptorHandle, DirectX::Colors::SkyBlue);
 
-	//CommandList->SetGraphicsRootSignature(RootSignature.Get());
+			{
+				const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { DescriptorHandle };
+				CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
+			}
 
-	//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
-	//CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+			CommandList->SetGraphicsRootSignature(RootSignature.Get());
 
-	//CommandList->IASetVertexBuffers(0, static_cast<UINT>(VertexBufferViews.size()), VertexBufferViews.data());
-	//CommandList->IASetIndexBuffer(&IndexBufferView);
+			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
+			CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
-	//CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
+			CommandList->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
+		}
+		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+	}
+	VERIFY_SUCCEEDED(CommandList->Close());
 }
 #pragma endregion
 

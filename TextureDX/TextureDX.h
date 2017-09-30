@@ -17,7 +17,7 @@ public:
 
 protected:
 #ifdef USE_DRAW_INDIRECT
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_4Vertices(); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Vertices(4); }
 #endif
 
 	virtual void CreateDescriptorRanges(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override { 

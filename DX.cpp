@@ -1110,7 +1110,7 @@ void DX::CreatePipelineState_Graphics()
 		DepthStencilDesc,
 		InputLayoutDesc,
 		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
-		D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
+		GetPrimitiveTopologyType(),
 		1, { DXGI_FORMAT_R8G8B8A8_UNORM/*, ... x8*/ },
 		DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
 		SampleDesc,

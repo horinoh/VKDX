@@ -20,7 +20,7 @@ protected:
 	virtual void CreateVertexBuffer() override;
 	virtual void CreateIndexBuffer() override;
 #ifdef USE_DRAW_INDIRECT
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Indexed(); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Indexed(IndexCount); }
 #endif
 
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const override {
