@@ -1843,6 +1843,9 @@ void VK::DestroyFramebuffer()
 	Framebuffers.clear();
 }
 
+/**
+@brief シェーダコンパイル、リンクはパイプラインオブジェクト作成時に行われる Shader compilation and linkage is performed during the pipeline object creation
+*/
 VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 {
 	VkShaderModule ShaderModule = VK_NULL_HANDLE;

@@ -90,10 +90,10 @@ public:
 	template<>
 	void CreateVertexInputT<Vertex_Position>(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding) const {
 		VertexInputBindingDescriptions = {
-			{ Binding, sizeof(Vertex_Position), VK_VERTEX_INPUT_RATE_VERTEX }
+			{ Binding, sizeof(Vertex_Position), VK_VERTEX_INPUT_RATE_VERTEX } //!< バーテックス毎(インスタンス毎にする場合にはVK_VERTEX_INPUT_RATE_INSTANCEを使用する)
 		};
 		VertexInputAttributeDescriptions = {
-			{ 0, Binding, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_Position, Position) },
+			{ 0, Binding, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_Position, Position) }, //!< layout (location = 0) in vec3 InPosition
 		};
 	}
 	template<>
@@ -102,8 +102,8 @@ public:
 			{ Binding, sizeof(Vertex_PositionColor), VK_VERTEX_INPUT_RATE_VERTEX }
 		};
 		VertexInputAttributeDescriptions = {
-			{ 0, Binding, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_PositionColor, Position) },
-			{ 1, Binding, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_PositionColor, Color) }
+			{ 0, Binding, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_PositionColor, Position) }, //!< layout(location = 0) in vec3 InPosition;
+			{ 1, Binding, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Vertex_PositionColor, Color) }, //!< layout(location = 1) in vec4 InColor
 		};
 	}
 

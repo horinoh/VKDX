@@ -445,6 +445,16 @@ void VKExt::CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::v
 
 	//!< HLSL コンパイル時のデフォルトエントリポイント名が "main" なのでそれに合わせることにする
 	const char* EntrypointName = "main";
+
+	//!< シェーダ内のコンスタント変数をパイプライン作成時に変更する場合に使用
+	const std::vector<VkSpecializationMapEntry> SpecializationMapEntries = {
+		//{ uint32_t constantID, uint32_t offset, size_t size },
+	};
+	const VkSpecializationInfo SpecializationInfo = {
+		static_cast<uint32_t>(SpecializationMapEntries.size()), SpecializationMapEntries.data(),
+		//size_t dataSize, const void* pData
+	};
+
 	PipelineShaderStageCreateInfos = {
 		{
 			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -452,7 +462,7 @@ void VKExt::CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::v
 			0,
 			VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
 			EntrypointName,
-			nullptr
+			nullptr //!< &SpecializationInfo
 		},
 		{
 			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -460,7 +470,7 @@ void VKExt::CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::v
 			0,
 			VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
 			EntrypointName,
-			nullptr//&SpecializationInfo
+			nullptr
 		}
 	};
 }
