@@ -21,7 +21,10 @@ protected:
 	virtual void CreateInputLayout(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs, const UINT InputSlot = 0) const override {
 		CreateInputLayoutT<Vertex_Position>(InputElementDescs, InputSlot);
 	}
-	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType() const override { return D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH; }
+
+	virtual D3D_PRIMITIVE_TOPOLOGY GetPrimitiveTopology() const override { return GetPrimitiveTopology_1ControlPointPatchlist(); }
+	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType() const override { return GetPrimitiveTopologyType_Patch(); }
+
 	virtual void PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle) override;
 };
 #pragma endregion

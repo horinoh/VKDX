@@ -321,7 +321,14 @@ void DX::CreateDevice(HWND hWnd)
 	ComPtr<ID3D12Debug> Debug;
 	VERIFY_SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(Debug.GetAddressOf())));
 	Debug->EnableDebugLayer();
+	
+	//!< GPU-Based Validation
+#if 0
+	ComPtr<ID3D12Debug1> Debug1;
+	VERIFY_SUCCEEDED(Debug->QueryInterface(IID_PPV_ARGS(Debug1.GetAddressOf())));
+	Debug1->SetEnableGPUBasedValidation(true);
 #endif
+#endif //!< _DEBUG
 
 	//!< WARP アダプタを作成するのに IDXGIFactory4(のEnumWarpAdapter) が必要
 	ComPtr<IDXGIFactory4> Factory;
@@ -765,8 +772,6 @@ void DX::CreateDepthStencil()
 		};
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
 	}(Type, Count, DepthStencilDescriptorHeap.GetAddressOf());
-
-	ResizeDepthStencilToClientRect();
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;

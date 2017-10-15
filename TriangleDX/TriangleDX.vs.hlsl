@@ -3,6 +3,7 @@ struct IN
 	float3 Position : POSITION;
 	float4 Color : COLOR;
 };
+
 struct OUT
 {
 	float4 Position : SV_POSITION;

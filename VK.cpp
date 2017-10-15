@@ -849,13 +849,11 @@ void VK::CreateDebugReportCallback()
 		}
 		return VK_FALSE;
 	};
-	const auto Flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT 
-		| VK_DEBUG_REPORT_WARNING_BIT_EXT 
-		| VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT 
-		| VK_DEBUG_REPORT_ERROR_BIT_EXT 
-		| VK_DEBUG_REPORT_DEBUG_BIT_EXT 
-		| VK_DEBUG_REPORT_FLAG_BITS_MAX_ENUM_EXT;
-	
+	const auto Flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT
+		| VK_DEBUG_REPORT_WARNING_BIT_EXT
+		| VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT
+		| VK_DEBUG_REPORT_ERROR_BIT_EXT
+		| VK_DEBUG_REPORT_DEBUG_BIT_EXT;
 	CreateDebugReportCallback(Instance, Callback, Flags, &DebugReportCallback);
 }
 #endif //!< _DEBUG
@@ -1124,6 +1122,15 @@ void VK::GetQueueFamily()
 	std::cout << "\t" << "\t" << "PresentQueueFamilyIndex = " << PresentQueueFamilyIndex << std::endl;
 #endif
 }
+void VK::OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PhysicalDeviceFeatures) const
+{
+#ifdef DEBUG_STDOUT
+	std::cout << "\t" << Yellow << "DeviceFeatures" << White << std::endl;
+#define VK_DEVICEFEATURE_ENTRY(entry) if(PhysicalDeviceFeatures.entry) { std::cout << "\t" << "\t" << #entry << std::endl; }
+#include "VKDeviceFeature.h"
+#undef VK_DEVICEFEATURE_ENTRY
+#endif //!< DEBUG_STDOUT
+}
 void VK::CreateDevice()
 {
 	const std::vector<float> QueuePriorities = { 0.0f };
@@ -1169,7 +1176,10 @@ void VK::CreateDevice()
 		EnabledExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 	}
 #endif
+
 	VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
+	//!< デバイスフィーチャーを「有効にしないと」と使用できない機能が多々あるので注意
+	//!< ここでは可能なだけ有効にしている (パフォーマンス的には良くない)
 	vkGetPhysicalDeviceFeatures(PhysicalDevice, &PhysicalDeviceFeatures);
 	OverridePhysicalDeviceFeatures(PhysicalDeviceFeatures);
 	const VkDeviceCreateInfo DeviceCreateInfo = {
@@ -1985,11 +1995,15 @@ void VK::CreatePipeline_Graphics()
 	VkPipelineInputAssemblyStateCreateInfo PipelineInputAssemblyStateCreateInfo;
 	CreateInputAssembly(PipelineInputAssemblyStateCreateInfo);
 
-	//!< テセレーションステート
+	//!< テセレーションステート (テセレーションを使用する場合には、不定値のままにしないこと)
 	VkPipelineTessellationStateCreateInfo PipelineTessellationStateCreateInfo;
 	CreateTessellationState(PipelineTessellationStateCreateInfo);
 
-	//!< VkDynamicState にするので、ここでは nullptr を指定している、ただし個数は指定しておく必要があるので注意。また KvDynamicState に指定した項目はコマンドバッファからセットすること
+	//!< VkDynamicState にするので、ここでは nullptr を指定している We use VkDynamicState, so specifying nullptr here
+	//!< ただし個数はここで指定しておく必要があるので注意 But count must be specified here
+	//!< 2つ以上のビューポートを使用する場合にはデバイスフィーチャー multiViewport が有効であること
+	//!< 後でコマンドバッファへセットすること Must be set to commandbuffer later
+	//!< ビューポートのインデックスはジオメトリシェーダで指定する
 	const VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
 		nullptr,
@@ -2002,37 +2016,26 @@ void VK::CreatePipeline_Graphics()
 		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 		nullptr,
 		0,
+		VK_FALSE, //!< VK_TRUE にするにはデバイスフィーチャー depthClampEnable が有効であること
 		VK_FALSE,
-		VK_FALSE,
-		VK_POLYGON_MODE_FILL,
+		VK_POLYGON_MODE_FILL, //!< LINEやPOINT を有効にするにはデバイスフィーチャー fillModeNonSolid が有効であること
 		VK_CULL_MODE_BACK_BIT,
 		VK_FRONT_FACE_COUNTER_CLOCKWISE,
 		VK_FALSE, 0.0f, 0.0f, 0.0f,
-		1.0f
+		1.0f //!< 1.0f より大きな値を指定するにはデバイスフィーチャー widelines が有効であること
 	};
 
+	//const VkSampleMask SampleMask = 0xffffffff;
 	const VkPipelineMultisampleStateCreateInfo PipelineMultisampleStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
 		nullptr,
 		0,
 		VK_SAMPLE_COUNT_1_BIT,
-		VK_FALSE, 0.0f,
-		nullptr,
-		VK_FALSE, VK_FALSE
+		VK_FALSE, 0.0f, //! VK_TRUE にするにはデバイスフィーチャー minSampleShading が有効であること
+		nullptr/*&SampleMask*/, //!< 0xffffffff の場合 nullptr でよい
+		VK_FALSE, VK_FALSE //!< alphaToOneEnable を VK_TRUE にするにはデバイスフィーチャー alphaToOne が有効であること
 	};
 
-	const VkStencilOpState StencilOpState_Front = {
-		VK_STENCIL_OP_KEEP,
-		VK_STENCIL_OP_KEEP,
-		VK_STENCIL_OP_KEEP,
-		VK_COMPARE_OP_NEVER, 0, 0, 0
-	};
-	const VkStencilOpState StencilOpState_Back = {
-		VK_STENCIL_OP_KEEP,
-		VK_STENCIL_OP_KEEP,
-		VK_STENCIL_OP_KEEP,
-		VK_COMPARE_OP_ALWAYS, 0, 0, 0
-	};
 	const VkPipelineDepthStencilStateCreateInfo PipelineDepthStencilStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 		nullptr,
@@ -2042,9 +2045,9 @@ void VK::CreatePipeline_Graphics()
 		VK_COMPARE_OP_LESS_OR_EQUAL,
 		VK_FALSE,
 		VK_FALSE,
-		StencilOpState_Front,
-		StencilOpState_Back,
-		0.0f, 0.0f
+		{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_NEVER, 0, 0, 0 },
+		{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
+		0.0f, 1.0f
 	};
 
 	//!< (基本) 配列になっているにも関わらず、全要素同じ値でないとダメ

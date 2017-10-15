@@ -101,6 +101,14 @@ public:
 		};
 	}
 
+	D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType_Triangle() const { return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; }
+	D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType_Patch() const { return D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH; }
+	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType() const override { return GetPrimitiveTopologyType_Triangle(); }
+
+	D3D_PRIMITIVE_TOPOLOGY GetPrimitiveTopology_Trianglestrip() const { return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP; }
+	D3D_PRIMITIVE_TOPOLOGY GetPrimitiveTopology_1ControlPointPatchlist() const { return D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST; }
+	virtual D3D_PRIMITIVE_TOPOLOGY GetPrimitiveTopology() const override { return GetPrimitiveTopology_Trianglestrip(); }
+
 	void CreateShader_VsPs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const;
 	void CreateShader_VsPsDsHsGs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const;
 

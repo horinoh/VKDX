@@ -246,7 +246,7 @@ void FullscreenDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, I
 			CommandList->SetGraphicsRootSignature(RootSignature.Get());
 
 			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
-			CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			CommandList->IASetPrimitiveTopology(GetPrimitiveTopology());
 
 			//!< 描画
 #ifdef USE_DRAW_INDIRECT

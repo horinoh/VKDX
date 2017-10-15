@@ -162,7 +162,7 @@ protected:
 	virtual void EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice);
 	virtual void EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* layerName);
 	virtual void GetQueueFamily();
-	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PhysicalDeviceFeatures) const {}
+	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PhysicalDeviceFeatures) const;
 	virtual void CreateDevice();
 
 	virtual void CreateFence();
@@ -231,8 +231,8 @@ protected:
 			VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
 			nullptr,
 			0,
-			Topology,
-			VK_FALSE //!< 0xffff や 0xffffffff を特別なマーカとして、リスタートを可能にする場合
+			Topology, //!< WITH_ADJACENCY 使用時にはデバイスフィーチャー geometryShader が、PATCH_LIST 使用時には tessellationShader が有効であること
+			VK_FALSE //!< 0xffff や 0xffffffff を特別なマーカとして、ストリップ系トポロジでリスタートを可能にする(リスト系には使えない)
 		};
 	}
 	virtual void CreateTessellationState(VkPipelineTessellationStateCreateInfo& PipelineTessellationStateCreateInfo) const {}

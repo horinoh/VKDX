@@ -246,7 +246,7 @@ void ParametricSurfaceDX::PopulateCommandList(ID3D12GraphicsCommandList* Command
 			CommandList->SetGraphicsRootSignature(RootSignature.Get());
 
 			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
-			CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+			CommandList->IASetPrimitiveTopology(GetPrimitiveTopology());
 
 			CommandList->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
 		}
