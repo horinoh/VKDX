@@ -69,6 +69,8 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateDescriptorSet();
 	UpdateDescriptorSet();
 
+	CreatePushConstantRanges();
+
 	CreateRenderPass();
 	CreateFramebuffer();
 
@@ -1845,6 +1847,25 @@ void VK::UpdateDescriptorSet()
 		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
 }
 
+/**
+@brief デスクリプタセットよりも高速
+パイプラインレイアウト全体で128 Byte (ハードが許せばこれ以上使える場合もある)
+
+各シェーダステージは1つのプッシュコンスタントにしかアクセスできない
+各々のシェーダステージが共通のレンジを持たないようなワーストケースでは 128 / 5(シェーダステージ) = 25 で 1シェーダステージで 25 Byte
+*/
+void VK::CreatePushConstantRanges()
+{
+#if 0
+	PushConstantRanges = {
+		VK_SHADER_STAGE_VERTEX_BIT, //!< シェーダステージ
+		0 * 4, //!< オフセット (4の倍数)
+		1 * 4  //!< サイズ(4の倍数)
+	};
+#endif
+	PushConstantRanges = {}; //!< #VK_TODO
+}
+
 void VK::DestroyFramebuffer()
 {
 	for (auto i : Framebuffers) {
@@ -1884,6 +1905,24 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 	}
 	return ShaderModule;
 }
+
+/**
+@brief DXに合わせるため、ここでは VkDynamicState を使用している For compatibility with DX, we use VkDynamicState
+ここでは個数のみを指定して nullptr を指定している、後で vkCmdSetViewport(), vkCmdSetScissor() で指定すること We specifying only count, and set nulloptr, later use vkCmdSetViewport(), vkCmdSetScissor()
+2つ以上のビューポートを使用するにはデバイスフィーチャー multiViewport が有効であること If we use 2 or more viewport device feature multiViewport must be enabled
+ビューポートのインデックスはジオメトリシェーダで指定する Viewport index is specified in geometry shader
+*/
+void VK::CreateViewportState_Dynamic(VkPipelineViewportStateCreateInfo& PipelineViewportStateCreateInfo, const uint32_t Count) const
+{
+	PipelineViewportStateCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		Count, nullptr,
+		Count, nullptr
+	};
+}
+
 VkPipelineCache VK::LoadPipelineCache(const std::wstring& Path) const
 {
 	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
@@ -1924,13 +1963,11 @@ void VK::StorePipelineCache(const std::wstring& Path, const VkPipelineCache Pipe
 
 			std::ofstream Out(Path.c_str(), std::ios::out | std::ios::binary);
 			if (!Out.fail()) {
-
 				Out.write(Data, Size);
-
-				delete[] Data;
-
 				Out.close();
 			}
+
+			delete[] Data;
 		}
 	}
 }
@@ -1999,18 +2036,9 @@ void VK::CreatePipeline_Graphics()
 	VkPipelineTessellationStateCreateInfo PipelineTessellationStateCreateInfo;
 	CreateTessellationState(PipelineTessellationStateCreateInfo);
 
-	//!< VkDynamicState にするので、ここでは nullptr を指定している We use VkDynamicState, so specifying nullptr here
-	//!< ただし個数はここで指定しておく必要があるので注意 But count must be specified here
-	//!< 2つ以上のビューポートを使用する場合にはデバイスフィーチャー multiViewport が有効であること
-	//!< 後でコマンドバッファへセットすること Must be set to commandbuffer later
-	//!< ビューポートのインデックスはジオメトリシェーダで指定する
-	const VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		1, nullptr,
-		1, nullptr
-	};
+	//!< ビューポート(シザー)
+	VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo;
+	CreateViewportState(PipelineViewportStateCreateInfo);
 
 	const VkPipelineRasterizationStateCreateInfo PipelineRasterizationStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -2050,15 +2078,14 @@ void VK::CreatePipeline_Graphics()
 		0.0f, 1.0f
 	};
 
-	//!< (基本) 配列になっているにも関わらず、全要素同じ値でないとダメ
-	//!< 要素毎に異なる設定をしたい場合は、デバイスで有効になっていないとダメ (VkPhysicalDeviceFeatures.independentBlend)
+	//!< デバイスフィーチャー independentBlend が有効で無い場合は、配列の各要素は「完全に同じ値」であること If device feature independentBlend is not enabled, each array element must be exactly same
+	//!< VK_BLEND_FACTOR_SRC1 系をを使用するには、デバイスフィーチャー dualSrcBlend が有効であること
+	///!< SRCコンポーネント * SRCファクタ OP DSTコンポーネント * DSTファクタ
 	const std::vector<VkPipelineColorBlendAttachmentState> PipelineColorBlendAttachmentStates = {
 		{
 			VK_FALSE,
-			VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO,
-			VK_BLEND_OP_ADD,
-			VK_BLEND_FACTOR_ZERO, VK_BLEND_FACTOR_ZERO,
-			VK_BLEND_OP_ADD,
+			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
+			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
 			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
 		}
 	};
@@ -2066,16 +2093,14 @@ void VK::CreatePipeline_Graphics()
 		VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
 		nullptr,
 		0,
-		VK_FALSE, VK_LOGIC_OP_CLEAR,
+		VK_FALSE, VK_LOGIC_OP_COPY, //!< ブレンド時に論理オペレーションを行う (ブレンドは無効になる) (整数型アタッチメントに対してのみ)
 		static_cast<uint32_t>(PipelineColorBlendAttachmentStates.size()), PipelineColorBlendAttachmentStates.data(),
-		{ 0.0f, 0.0f, 0.0f, 0.0f } //!< float blendConstants[4];
+		{ 1.0f, 1.0f, 1.0f, 1.0f }
 	};
 
-	//!< DirectX12 に合わせる為、Viewport と Scissor を VkDynamicState とする
-	const std::vector<VkDynamicState> DynamicStates = {
-		VK_DYNAMIC_STATE_VIEWPORT,
-		VK_DYNAMIC_STATE_SCISSOR
-	};
+	//!< ダイナミックステート
+	std::vector<VkDynamicState> DynamicStates;
+	CreateDynamicState(DynamicStates);
 	const VkPipelineDynamicStateCreateInfo PipelineDynamicStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
 		nullptr,
@@ -2084,7 +2109,6 @@ void VK::CreatePipeline_Graphics()
 	};
 
 	//!< パイプラインレイアウト
-	const std::vector<VkPushConstantRange> PushConstantRanges = {};
 	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		nullptr,
@@ -2097,20 +2121,20 @@ void VK::CreatePipeline_Graphics()
 	//!< ただし、同じレイアウトの DescriptorSet を再作成するような場合に必要になるのでここでは残しておくことにする
 
 	/**
-	basePipelineHandle と basePipelineIndex は同時に使用できない(排他)
+	@brief 継承
+	basePipelineHandle, basePipelineIndex は同時に使用できない、それぞれ使用しない場合は VK_NULL_HANDLE, -1 を指定
 	親には VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT フラグが必要、子には VK_PIPELINE_CREATE_DERIVATIVE_BIT フラグが必要
-
-	・basePipelineHandle ... 既に存在する場合、親パイプラインを指定
-	・basePipelineIndex ... GraphicsPipelineCreateInfos 配列で親パイプラインも同時に作成する場合、配列内での親パイプラインの添字。親の添字の方が若い値でないといけない。
+	・basePipelineHandle ... 既に親とするパイプラインが存在する場合に指定
+	・basePipelineIndex ... 同配列内で親パイプラインも同時に作成する場合、配列内での親パイプラインの添字、親の添字の方が若い値でないといけない
 	*/
 	const std::vector<VkGraphicsPipelineCreateInfo> GraphicsPipelineCreateInfos = {
 		{
 			VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
 			nullptr,
 #ifdef _DEBUG
-			VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT/*| VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT*/,
+			VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
 #else
-			0/*| VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT*/,
+			0,
 #endif
 			static_cast<uint32_t>(PipelineShaderStageCreateInfos.size()), PipelineShaderStageCreateInfos.data(),
 			&PipelineVertexInputStateCreateInfo,
@@ -2123,9 +2147,8 @@ void VK::CreatePipeline_Graphics()
 			&PipelineColorBlendStateCreateInfo,
 			&PipelineDynamicStateCreateInfo,
 			PipelineLayout,
-			RenderPass,
-			0,
-			VK_NULL_HANDLE, 0 //!< basePipelineHandle, basePipelineIndex
+			RenderPass, 0, //!< 指定したレンダーパス限定ではなく、互換性のある他のレンダーパスでも使用可能
+			VK_NULL_HANDLE, -1 //!< basePipelineHandle, basePipelineIndex
 		}
 	};
 
@@ -2133,6 +2156,7 @@ void VK::CreatePipeline_Graphics()
 	const auto PipelineCache = CreatePipelineCache();
 
 	//!< (グラフィック)パイプライン
+	//!< キャッシュがデータを含む場合はドライバはパイプライン作成時に使用する、またドライバはパイプライン作成結果をキャッシュする
 	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, 
 		PipelineCache, 
 		static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), 
@@ -2144,6 +2168,13 @@ void VK::CreatePipeline_Graphics()
 		vkDestroyShaderModule(Device, i, GetAllocationCallbacks());
 	}
 	ShaderModules.clear();
+
+#if 0
+	//!< パイプラインマージの例
+	const std::vector<VkPipelineCache> SrcCaches = { PipelineCache };
+	VkPipelineCache DstCache;
+	VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, DstCache, static_cast<uint32_t>(SrcCaches.size()), SrcCaches.data()));
+#endif
 
 	//!< パイプラインキャッシュをファイルへ保存
 	if (VK_NULL_HANDLE != PipelineCache) {

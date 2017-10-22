@@ -215,6 +215,8 @@ protected:
 	virtual void CreateCopyDescriptorSets(VkCopyDescriptorSet& CopyDescriptorSet) const {}
 	virtual void UpdateDescriptorSet();
 
+	virtual void CreatePushConstantRanges();
+
 	virtual void CreateTexture() {}
 	virtual void CreateSampler(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const {}
 
@@ -236,6 +238,11 @@ protected:
 		};
 	}
 	virtual void CreateTessellationState(VkPipelineTessellationStateCreateInfo& PipelineTessellationStateCreateInfo) const {}
+	virtual void CreateViewportState(VkPipelineViewportStateCreateInfo& PipelineViewportStateCreateInfo) const { CreateViewportState_Dynamic(PipelineViewportStateCreateInfo); }
+	void CreateViewportState_Dynamic(VkPipelineViewportStateCreateInfo& PipelineViewportStateCreateInfo, const uint32_t Count = 1) const;
+	virtual void CreateDynamicState(std::vector<VkDynamicState>& DynamicStates) const { CreateDynamicState_ViewportScissor(DynamicStates); }
+	void CreateDynamicState_ViewportScissor(std::vector<VkDynamicState>& DynamicStates) const { DynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR }; }
+
 	virtual VkPipelineCache LoadPipelineCache(const std::wstring& Path) const;
 	virtual void StorePipelineCache(const std::wstring& Path, const VkPipelineCache PipelineCache) const;
 	virtual VkPipelineCache CreatePipelineCache();
@@ -350,6 +357,8 @@ protected:
 	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
 	std::vector<VkDescriptorSet> DescriptorSets;
 	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
+
+	std::vector<VkPushConstantRange> PushConstantRanges;
 
 	VkPipeline Pipeline = VK_NULL_HANDLE;
 	VkRenderPass RenderPass = VK_NULL_HANDLE;
