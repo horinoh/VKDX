@@ -244,9 +244,11 @@ protected:
 	void CreateDynamicState_ViewportScissor(std::vector<VkDynamicState>& DynamicStates) const { DynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR }; }
 
 	virtual VkPipelineCache LoadPipelineCache(const std::wstring& Path) const;
+	virtual void LoadPipelineCaches(const std::wstring& Path, std::vector<VkPipelineCache>& PipelineCaches) const;
 	virtual void StorePipelineCache(const std::wstring& Path, const VkPipelineCache PipelineCache) const;
-	virtual VkPipelineCache CreatePipelineCache();
-	virtual void CreatePipeline() { CreatePipeline_Graphics(); }
+	virtual VkPipelineCache CreatePipelineCache() const;
+	virtual void CreatePipelineCaches(std::vector<VkPipelineCache>& PipelineCaches) const;
+	virtual void CreatePipeline();
 	virtual void CreatePipeline_Graphics();
 	virtual void CreatePipeline_Compute();
 

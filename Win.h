@@ -32,6 +32,7 @@
 #include <sstream>
 #include <codecvt>
 #include <functional>
+#include <thread>
 
 #ifndef SAFE_DELETE
 #define SAFE_DELETE(x) if(nullptr != x) { delete x; x = nullptr; }

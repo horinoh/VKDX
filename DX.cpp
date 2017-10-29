@@ -1035,8 +1035,16 @@ void DX::CreateRootSignature()
 #endif
 }
 
+void DX::CreatePipelineState()
+{
+	CreatePipelineState_Graphics();
+}
 void DX::CreatePipelineState_Graphics()
 {
+#ifdef _DEBUG
+	PerformanceCounter PC("CreatePipelineState_Graphics : ");
+#endif
+
 	assert(nullptr != RootSignature);
 #if 0
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
@@ -1133,6 +1141,10 @@ void DX::CreatePipelineState_Graphics()
 
 void DX::CreatePipelineState_Compute()
 {
+#ifdef _DEBUG
+	PerformanceCounter PC("CreatePipelineState_Compute : ");
+#endif
+
 	assert(nullptr != RootSignature);
 
 	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs(1);
