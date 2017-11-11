@@ -333,8 +333,8 @@ std::string VK::GetComponentSwizzleString(const VkComponentSwizzle ComponentSwiz
 
 bool VK::HasExtension(const VkPhysicalDevice PhysicalDevice, const char* ExtensionName)
 {
-	//!< エクステンションは見つかるのに、有効化すると怒られるので封印...
-#if 0
+	//!< エクステンションは見つかるのに、使用できないので封印... Extension is found, but not available...
+#if 1
 	//!< VK_EXT_debug_marker not available for devices associated with ICD nvoglv64.dll
 	//!< https://devtalk.nvidia.com/default/topic/1001794/vulkan-vk_ext_debug_marker-missing-after-new-5-2-build-update-/
 	return false;
@@ -652,7 +652,7 @@ void VK::ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat 
 		const auto bUseLiner = true;//!< VK_FILTER_LINEAR == VkSamplerCreateInfo.magFilter || VK_FILTER_LINEAR == VkSamplerCreateInfo.minFilter || VK_SAMPLER_MIPMAP_MODE_LINEAR == VkSamplerCreateInfo.mipmapMode;
 		if (bUseLiner) {
 			if (!(FormatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-				std::cout << Yellow << "VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported" << White << std::endl;
+				std::cout << Red << "VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported" << White << std::endl;
 				DEBUG_BREAK();
 			}
 		}
@@ -660,14 +660,14 @@ void VK::ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat 
 
 	if (Usage & VK_IMAGE_USAGE_STORAGE_BIT) {
 		if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
-			std::cout << Yellow << "VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT not supported" << White << std::endl;
+			std::cout << Red << "VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT not supported" << White << std::endl;
 			DEBUG_BREAK();
 		}
 		//!< #VK_TODO アトミック使用時のみチェックする
 		const auto bUseAtomic = false; 
 		if (bUseAtomic) {
 			if (!(FormatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)) {
-				std::cout << Yellow << "VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT not supported" << White << std::endl;
+				std::cout << Red << "VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT not supported" << White << std::endl;
 				DEBUG_BREAK();
 			}
 		}
@@ -677,14 +677,14 @@ void VK::ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat 
 		if (true) { //!< #VK_TODO
 			//!< カラーの場合 In case color
 			if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) {
-				std::cout << Yellow << "VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT not supported" << White << std::endl;
+				std::cout << Red << "VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT not supported" << White << std::endl;
 				DEBUG_BREAK();
 			}
 		}
 		else {
 			//!< デプスステンシルの場合 In case depth stencil
 			if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
-				std::cout << Yellow << "VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT not supported" << White << std::endl;
+				std::cout << Red << "VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT not supported" << White << std::endl;
 				DEBUG_BREAK();
 			}
 		}
@@ -692,21 +692,21 @@ void VK::ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat 
 
 	if (Usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) {
 		if (!(FormatProperties.bufferFeatures &  VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)) {
-			std::cout << Yellow << "VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT not supported" << White << std::endl;
+			std::cout << Red << "VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT not supported" << White << std::endl;
 			DEBUG_BREAK();
 		}
 	}
 
 	if (Usage & VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT) {
 		if (!(FormatProperties.bufferFeatures &  VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT)) {
-			std::cout << Yellow << "VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT not supported" << White << std::endl;
+			std::cout << Red << "VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT not supported" << White << std::endl;
 			DEBUG_BREAK();
 		}
 		//!< #VK_TODO アトミック使用時のみチェックする
 		const auto bUseAtomic = false;
 		if (bUseAtomic) {
 			if (!(FormatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT)) {
-				std::cout << Yellow << "VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT not supported" << White << std::endl;
+				std::cout << Red << "VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT not supported" << White << std::endl;
 				DEBUG_BREAK();
 			}
 		}
@@ -834,7 +834,7 @@ void VK::CreateDebugReportCallback()
 			return VK_TRUE;
 		}
 		else if (VK_DEBUG_REPORT_WARNING_BIT_EXT & flags) {
-			//DEBUG_BREAK();
+			DEBUG_BREAK();
 			cout << Yellow << "[ DebugReport ] : " << pMessage << White << endl;
 			return VK_TRUE;
 		}
@@ -955,7 +955,7 @@ void VK::GetPhysicalDevice()
 	std::vector<VkPhysicalDevice> PhysicalDevices(PhysicalDeviceCount);
 	VERIFY_SUCCEEDED(vkEnumeratePhysicalDevices(Instance, &PhysicalDeviceCount, PhysicalDevices.data()));
 #ifdef DEBUG_STDOUT
-	std::cout << Yellow << "\t" << "PhysicalDevices" << White << std::endl;
+	std::cout << "\t" << "PhysicalDevices" << std::endl;
 #define PHYSICAL_DEVICE_TYPE_ENTRY(entry) if(VK_PHYSICAL_DEVICE_TYPE_##entry == PhysicalDeviceProperties.deviceType) { std::cout << #entry; }
 	for (const auto& i : PhysicalDevices) {
 		//!< 物理デバイスのプロパティ
@@ -1034,12 +1034,8 @@ void VK::EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* 
 		std::vector<VkExtensionProperties> ExtensionProperties(DeviceExtensionPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, layerName, &DeviceExtensionPropertyCount, ExtensionProperties.data()));
 		for (const auto& i : ExtensionProperties) {
-			if (!strcmp(VK_EXT_DEBUG_MARKER_EXTENSION_NAME, i.extensionName)) {
 #ifdef DEBUG_STDOUT
-				std::cout << Red;
-#endif
-			}
-#ifdef DEBUG_STDOUT
+			if (!strcmp(VK_EXT_DEBUG_MARKER_EXTENSION_NAME, i.extensionName)) { std::cout << Yellow; }
 			if (strlen(i.extensionName)) {
 				std::cout << "\t" << "\t" << "\"" << i.extensionName << "\"" << std::endl;
 			}
@@ -1058,7 +1054,7 @@ void VK::GetQueueFamily()
 	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyPropertyCount, QueueProperties.data());
 
 #ifdef DEBUG_STDOUT
-	std::cout << Yellow << "\t" << "QueueProperties" << White << std::endl;
+	std::cout << "\t" << "QueueProperties" << std::endl;
 #define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & QueueProperties[i].queueFlags) { std::cout << #entry << " | "; }
 	for (uint32_t i = 0; i < QueueProperties.size(); ++i) {
 		std::cout << "\t" << "\t" << "[" << i << "] " << "QueueCount = " << QueueProperties[i].queueCount << ", ";
@@ -1127,7 +1123,7 @@ void VK::GetQueueFamily()
 void VK::OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PhysicalDeviceFeatures) const
 {
 #ifdef DEBUG_STDOUT
-	std::cout << "\t" << Yellow << "DeviceFeatures" << White << std::endl;
+	std::cout << "\t" << "DeviceFeatures" << std::endl;
 #define VK_DEVICEFEATURE_ENTRY(entry) if(PhysicalDeviceFeatures.entry) { std::cout << "\t" << "\t" << #entry << std::endl; }
 #include "VKDeviceFeature.h"
 #undef VK_DEVICEFEATURE_ENTRY
