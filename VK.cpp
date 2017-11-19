@@ -2308,9 +2308,16 @@ void VK::CreatePipeline_Compute()
 #endif
 }
 
+/**
+@brief クリア Clear
+@note 「レンダーパス外」でクリア Out of renderpass ... vkCmdClearColorImage()
+@note 「レンダーパス開始時」にクリア Begining of renderpass ... VkAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, VkRenderPassBeginInfo.pClearValues
+@note 「各々のサブパス」でクリア Each subpass ... vkCmdClearAttachments()
+*/
+//!< 「レンダーパス外」にてクリアを行う
 void VK::ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, const VkClearColorValue& Color)
 {
-	const VkImageMemoryBarrier ImageMemoryBarrier_ToTransferDst = {
+	const VkImageMemoryBarrier ImageMemoryBarrier_PresentToTransfer = {
 		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 		nullptr,
 		VK_ACCESS_MEMORY_READ_BIT,
@@ -2327,11 +2334,12 @@ void VK::ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, co
 		0,
 		0, nullptr,
 		0, nullptr,
-		1, &ImageMemoryBarrier_ToTransferDst);
+		1, &ImageMemoryBarrier_PresentToTransfer);
 	{
+		//!< vkCmdClearColorImage() はレンダーパス内では使用できない
 		vkCmdClearColorImage(CommandBuffer, Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Color, 1, &ImageSubresourceRange_Color);
 	}
-	const VkImageMemoryBarrier ImageMemoryBarrier_ToPresent = {
+	const VkImageMemoryBarrier ImageMemoryBarrier_TransferToPresent = {
 		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 		nullptr,
 		VK_ACCESS_TRANSFER_WRITE_BIT,
@@ -2348,8 +2356,95 @@ void VK::ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, co
 		0,
 		0, nullptr,
 		0, nullptr,
-		1, &ImageMemoryBarrier_ToPresent);
+		1, &ImageMemoryBarrier_TransferToPresent);
 }
+void VK::ClearDepthStencil(const VkCommandBuffer CommandBuffer, const VkImage Image, const VkClearDepthStencilValue& DepthStencil)
+{
+	const VkImageMemoryBarrier ImageMemoryBarrier_DepthToTransfer = {
+		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		nullptr,
+		VK_ACCESS_MEMORY_READ_BIT,
+		VK_ACCESS_TRANSFER_WRITE_BIT,
+		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		PresentQueueFamilyIndex,
+		PresentQueueFamilyIndex,
+		Image,
+		ImageSubresourceRange_DepthStencil
+	};
+	vkCmdPipelineBarrier(CommandBuffer,
+		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+		0,
+		0, nullptr,
+		0, nullptr,
+		1, &ImageMemoryBarrier_DepthToTransfer);
+	{
+		//!< vkCmdClearDepthStencilImage() はレンダーパス内では使用できない
+		vkCmdClearDepthStencilImage(CommandBuffer, Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearDepthStencilValue, 1, &ImageSubresourceRange_DepthStencil);
+	}
+	const VkImageMemoryBarrier ImageMemoryBarrier_TransferToDepth = {
+		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+		nullptr,
+		VK_ACCESS_TRANSFER_WRITE_BIT,
+		VK_ACCESS_MEMORY_READ_BIT,
+		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+		PresentQueueFamilyIndex,
+		PresentQueueFamilyIndex,
+		Image,
+		ImageSubresourceRange_DepthStencil
+	};
+	vkCmdPipelineBarrier(CommandBuffer,
+		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+		0,
+		0, nullptr,
+		0, nullptr,
+		1, &ImageMemoryBarrier_TransferToDepth);
+}
+//!<「サブパス」にてクリアするときに使う
+//!< Drawコール前に使用すると、「それなら VkAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR を使え」と Warnning が出るので注意
+void VK::ClearColorAttachment(const VkCommandBuffer CommandBuffer, const VkClearColorValue& Color)
+{
+	const VkClearValue ClearValue = { Color };
+	const std::vector<VkClearAttachment> ClearAttachments = {
+		{
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			0, //!< カラーアタッチメントのインデックス #VK_TODO 現状決め打ち
+			ClearValue
+		},
+	};
+	const std::vector<VkClearRect> ClearRects = {
+		{
+			ScissorRects[0],
+			0, 1 //!< 開始レイヤとレイヤ数 #VK_TODO 現状決め打ち
+		},
+	};
+	vkCmdClearAttachments(CommandBuffer,
+		static_cast<uint32_t>(ClearAttachments.size()), ClearAttachments.data(),
+		static_cast<uint32_t>(ClearRects.size()), ClearRects.data());
+}
+void VK::ClearDepthStencilAttachment(const VkCommandBuffer CommandBuffer, const VkClearDepthStencilValue& DepthStencil)
+{
+	VkClearValue ClearValue;
+	ClearValue.depthStencil = DepthStencil;
+	const std::vector<VkClearAttachment> ClearAttachments = {
+		{
+			VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+			0, //!< ここでは無視される
+			ClearValue
+		},
+	};
+	const std::vector<VkClearRect> ClearRects = {
+		{
+			ScissorRects[0],
+			0, 1 //!< 開始レイヤとレイヤ数 #VK_TODO 現状決め打ち
+		},
+	};
+	vkCmdClearAttachments(CommandBuffer,
+		static_cast<uint32_t>(ClearAttachments.size()), ClearAttachments.data(),
+		static_cast<uint32_t>(ClearRects.size()), ClearRects.data());
+}
+
 void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer)
 {
 	/**
@@ -2372,12 +2467,10 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFram
 		//!<「自分の環境では」 Granularity = { 1, 1 } だったのでほぼなんでも大丈夫みたい、環境によっては注意が必要
 		assert(ScissorRects[0].extent.width >= Granularity.width && ScissorRects[0].extent.height >= Granularity.height && "ScissorRect is too small");
 #endif
-		//!< カラーはクリアしないが、デプスはクリアする設定にしている Not clear color, but clear depth
-		//!< CreateRenderPass() レンダーパス内 VkAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR の場合
+		//!< (ここでは)レンダーパス開始時にカラーはクリアせず、デプスはクリアしている In this case, not clear color, but clear depth on begining of renderpas
 		std::vector<VkClearValue> ClearValues(2);
-		//ClearValues[0].color = Colors::SkyBlue;
+		//ClearValues[0].color = Colors::SkyBlue; //!< If VkAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, need this
 		ClearValues[1].depthStencil = ClearDepthStencilValue;
-		//const std::vector<VkClearValue> ClearValues = { { Colors::SkyBlue }, { .depthStencil = ClearDepthStencilValue } };
 		const VkRenderPassBeginInfo RenderPassBeginInfo = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,

@@ -253,6 +253,9 @@ protected:
 	virtual void CreatePipeline_Compute();
 
 	virtual void ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, const VkClearColorValue& Color);
+	virtual void ClearDepthStencil(const VkCommandBuffer CommandBuffer, const VkImage Image, const VkClearDepthStencilValue& DepthStencil);
+	virtual void ClearColorAttachment(const VkCommandBuffer CommandBuffer, const VkClearColorValue& Color);
+	virtual void ClearDepthStencilAttachment(const VkCommandBuffer CommandBuffer, const VkClearDepthStencilValue& DepthStencil);
 	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer);
 	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer, const VkImage Image, const VkClearColorValue& Color);
 
@@ -402,7 +405,7 @@ protected:
 		0, VK_REMAINING_ARRAY_LAYERS
 	};
 	const VkClearDepthStencilValue ClearDepthStencilValue = { 1.0f, 0 };
-
+	
 	/**
 	@brief VkCommandBufferUsageFlags 
 	* VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT		... 一度だけ使用する場合、毎回リセットする場合に指定、何度もサブミットするものには指定しない

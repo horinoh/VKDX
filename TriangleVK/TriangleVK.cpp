@@ -335,10 +335,7 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, cons
 
 		//!< ƒNƒŠƒA
 		ClearColor(CommandBuffer, Image, Colors::SkyBlue);
-
-		//if (VK_NULL_HANDLE != DepthStencilImage) {
-		//	vkCmdClearDepthStencilImage(CommandBuffer, DepthStencilImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearDepthStencil, 1, &ImageSubresourceRange_DepthStencil);
-		//}
+		//ClearDepthStencil(CommandBuffer, DepthStencilImage, ClearDepthStencilValue);
 
 		const VkRenderPassBeginInfo RenderPassBeginInfo = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
