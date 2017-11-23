@@ -954,11 +954,13 @@ void VK::GetPhysicalDevice()
 	if (!PhysicalDeviceCount) { DEBUG_BREAK(); } //!< PhysicalDevice not found
 	std::vector<VkPhysicalDevice> PhysicalDevices(PhysicalDeviceCount);
 	VERIFY_SUCCEEDED(vkEnumeratePhysicalDevices(Instance, &PhysicalDeviceCount, PhysicalDevices.data()));
+
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "PhysicalDevices" << std::endl;
 #define PHYSICAL_DEVICE_TYPE_ENTRY(entry) if(VK_PHYSICAL_DEVICE_TYPE_##entry == PhysicalDeviceProperties.deviceType) { std::cout << #entry; }
+#define PROPERTY_LIMITS_ENTRY(entry) std::cout << "\t" << "\t" << "\t" << "\t" << #entry << " = " << PhysicalDeviceProperties.limits.##entry << std::endl
+#define DEVICE_FEATURE_ENTRY(entry) if (PhysicalDeviceFeatures.##entry) { std::cout << "\t" << "\t" << "\t" << "\t" << #entry << std::endl; }
 	for (const auto& i : PhysicalDevices) {
-		//!< 物理デバイスのプロパティ
 		VkPhysicalDeviceProperties PhysicalDeviceProperties;
 		vkGetPhysicalDeviceProperties(i, &PhysicalDeviceProperties);
 		std::cout << "\t" << "\t" << PhysicalDeviceProperties.deviceName << ", DeviceType = ";
@@ -968,47 +970,42 @@ void VK::GetPhysicalDevice()
 		PHYSICAL_DEVICE_TYPE_ENTRY(VIRTUAL_GPU);
 		PHYSICAL_DEVICE_TYPE_ENTRY(CPU);
 		std::cout << std::endl;
-		//!< PhysicalDeviceProperties.limits から各種限界値が取れる
-		PhysicalDeviceProperties.limits;
+		{
+			std::cout << "\t" << "\t" << "\t" << "PhysicalDeviceProperties.PhysicalDeviceLimits" << std::endl;
+			PROPERTY_LIMITS_ENTRY(maxUniformBufferRange);
+			//PROPERTY_LIMITS_ENTRY(maxStorageBufferRange);
+			PROPERTY_LIMITS_ENTRY(maxPushConstantsSize);
+			PROPERTY_LIMITS_ENTRY(maxFragmentOutputAttachments);
+			PROPERTY_LIMITS_ENTRY(maxColorAttachments);			
+		}
 
-		//!< 物理デバイスのフィーチャー
 		VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
 		vkGetPhysicalDeviceFeatures(i, &PhysicalDeviceFeatures);
-		std::cout << "\t" << "\t" << "PhysicalDeviceFeatures = ";
-		if (PhysicalDeviceFeatures.textureCompressionBC) {
-			std::cout << "textureCompressionBC, ";
-		}
-		if (PhysicalDeviceFeatures.textureCompressionETC2) {
-			std::cout << "textureCompressionETC2, ";
-		}
-		if (PhysicalDeviceFeatures.textureCompressionASTC_LDR) {
-			std::cout << "textureCompressionASTC_LDR, ";
-		}
+		std::cout << "\t" << "\t" << "\t" << "PhysicalDeviceFeatures" << std::endl;
+		DEVICE_FEATURE_ENTRY(textureCompressionBC);
+		DEVICE_FEATURE_ENTRY(textureCompressionETC2);
+		DEVICE_FEATURE_ENTRY(textureCompressionASTC_LDR);
+		DEVICE_FEATURE_ENTRY(fillModeNonSolid);
+		DEVICE_FEATURE_ENTRY(tessellationShader);
 
-		if (PhysicalDeviceFeatures.fillModeNonSolid) {
-			std::cout << "fillModeNonSolid, ";
-		}
-		
-		if (PhysicalDeviceFeatures.tessellationShader) {
-			std::cout << "tessellationShader, ";
-		}
+		VkPhysicalDeviceMemoryProperties PDMP;
+		vkGetPhysicalDeviceMemoryProperties(i, &PDMP);
+		EnumeratePhysicalDeviceMemoryProperties(PDMP);
+		EnumerateDeviceLayer(i);
 
 		std::cout << std::endl;
 	}
 #undef PHYSICAL_DEVICE_TYPE_ENTRY
+#undef PROPERTY_LIMITS_ENTRY
+#undef DEVICE_FEATURE_ENTRY
 #endif
 
 	//!< ここでは最初の物理デバイスを選択することにする #VK_TODO
 	PhysicalDevice = PhysicalDevices[0];
-
 	//!< 選択した物理デバイスのメモリプロパティを取得 (よく使うので覚えておく)
 	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
-	EnumeratePhysicalDeviceMemoryProperties(PhysicalDeviceMemoryProperties);
-
-#ifdef _DEBUG
-	EnumerateDeviceLayer(PhysicalDevice);
-#endif
 }
+#ifdef DEBUG_STDOUT
 void VK::EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice)
 {
 	uint32_t DeviceLayerPropertyCount = 0;
@@ -1017,11 +1014,9 @@ void VK::EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice)
 		std::vector<VkLayerProperties> LayerProperties(DeviceLayerPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, LayerProperties.data()));
 		for (const auto& i : LayerProperties) {
-#ifdef DEBUG_STDOUT
 			if (strlen(i.layerName)) {
-				std::cout << "\t" << "\"" << i.layerName << "\"" << std::endl;
+				std::cout << "\t" << "\t" << "\t" << "\"" << i.layerName << "\"" << std::endl;
 			}
-#endif
 			EnumerateDeviceExtenstion(PhysicalDevice, i.layerName);
 		}
 	}
@@ -1034,16 +1029,16 @@ void VK::EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* 
 		std::vector<VkExtensionProperties> ExtensionProperties(DeviceExtensionPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, layerName, &DeviceExtensionPropertyCount, ExtensionProperties.data()));
 		for (const auto& i : ExtensionProperties) {
-#ifdef DEBUG_STDOUT
 			if (!strcmp(VK_EXT_DEBUG_MARKER_EXTENSION_NAME, i.extensionName)) { std::cout << Yellow; }
 			if (strlen(i.extensionName)) {
-				std::cout << "\t" << "\t" << "\"" << i.extensionName << "\"" << std::endl;
+				std::cout << "\t" << "\t" << "\t" << "\t" << "\"" << i.extensionName << "\"" << std::endl;
 			}
 			std::cout << White;
-#endif
 		}
 	}
 }
+#endif //!< DEBUG_STDOUT
+
 void VK::GetQueueFamily()
 {
 	//!< キューのプロパティを列挙
@@ -1845,21 +1840,22 @@ void VK::UpdateDescriptorSet()
 
 /**
 @brief デスクリプタセットよりも高速
-パイプラインレイアウト全体で128 Byte (ハードが許せばこれ以上使える場合もある)
+パイプラインレイアウト全体で128 Byte (ハードが許せばこれ以上使える場合もある ex)GTX970M ... 256byte)
 
 各シェーダステージは1つのプッシュコンスタントにしかアクセスできない
-各々のシェーダステージが共通のレンジを持たないようなワーストケースでは 128 / 5(シェーダステージ) = 25 で 1シェーダステージで 25 Byte
+各々のシェーダステージが共通のレンジを持たないような「ワーストケース」では 128 / 5(シェーダステージ)で 1シェーダステージで 25-6 Byte程度になる
 */
 void VK::CreatePushConstantRanges()
 {
-#if 0
+#if 1
+	//!< ここではバーテックス、フラグメントシェーダに 64byte 確保 (使用しない分には問題ない) In this case, assign 64byte for vertex and fragment shader
 	PushConstantRanges = {
-		VK_SHADER_STAGE_VERTEX_BIT, //!< シェーダステージ
-		0 * 4, //!< オフセット (4の倍数)
-		1 * 4  //!< サイズ(4の倍数)
+		{ VK_SHADER_STAGE_VERTEX_BIT, 0, 64 },
+		{ VK_SHADER_STAGE_FRAGMENT_BIT, 64, 64 },
 	};
+#else
+	PushConstantRanges = {};
 #endif
-	PushConstantRanges = {}; //!< #VK_TODO
 }
 
 void VK::DestroyFramebuffer()
