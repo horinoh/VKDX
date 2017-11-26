@@ -4,10 +4,10 @@
 
 void DXExt::CreateIndirectBuffer_Vertices(const UINT Count)
 {
-	const D3D12_DRAW_ARGUMENTS DrawArguments = { 
+	const D3D12_DRAW_ARGUMENTS Arguments = { 
 		Count, 1, 0, 0 
 	};
-	const auto Stride = sizeof(DrawArguments);
+	const auto Stride = sizeof(Arguments);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 
 	[&](ID3D12Resource** Resource, const UINT32 Size, const void* Data, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL) {
@@ -21,7 +21,7 @@ void DXExt::CreateIndirectBuffer_Vertices(const UINT Count)
 
 		//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
 		ExecuteCopyBuffer(CA, CL, UploadResource.Get(), *Resource, Size);
-	}(IndirectBufferResource.GetAddressOf(), Size, &DrawArguments, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
+	}(IndirectBufferResource.GetAddressOf(), Size, &Arguments, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 
 	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndirectArgumentDescs = {
 		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW },
@@ -36,27 +36,54 @@ void DXExt::CreateIndirectBuffer_Vertices(const UINT Count)
 
 void DXExt::CreateIndirectBuffer_Indexed(const UINT Count)
 {
-	const D3D12_DRAW_INDEXED_ARGUMENTS DrawIndexedArguments = { 
+	const D3D12_DRAW_INDEXED_ARGUMENTS Arguments = { 
 		Count, 1, 0, 0, 0 
 	};
-	const auto Stride = sizeof(DrawIndexedArguments);
+	const auto Stride = sizeof(Arguments);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 
 	[&](ID3D12Resource** Resource, const UINT32 Size, const void* Data, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL) {
-		//!< アップロード用のリソースを作成、データをコピー Create upload resource, and copy data
 		Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
 		CreateUploadResource(UploadResource.GetAddressOf(), Size);
 		CopyToUploadResource(UploadResource.Get(), Size, Data);
 
-		//!< デフォルトのリソースを作成 Create default resource
 		CreateDefaultResource(Resource, Size);
 
-		//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
 		ExecuteCopyBuffer(CA, CL, UploadResource.Get(), *Resource, Size);
-	}(IndirectBufferResource.GetAddressOf(), Size, &DrawIndexedArguments, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
+	}(IndirectBufferResource.GetAddressOf(), Size, &Arguments, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 
 	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndirectArgumentDescs = {
 		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED },
+	};
+	const D3D12_COMMAND_SIGNATURE_DESC CommandSignatureDesc = {
+		Stride,
+		static_cast<const UINT>(IndirectArgumentDescs.size()), IndirectArgumentDescs.data(),
+		0
+	};
+	Device->CreateCommandSignature(&CommandSignatureDesc, RootSignature.Get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
+}
+
+void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT Z)
+{
+	const D3D12_DISPATCH_ARGUMENTS Arguments = {
+		X, Y, Z
+	};
+	const auto Stride = sizeof(Arguments);
+	const auto Size = static_cast<UINT32>(Stride * 1);
+
+	[&](ID3D12Resource** Resource, const UINT32 Size, const void* Data, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL) {
+		Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
+		CreateUploadResource(UploadResource.GetAddressOf(), Size);
+		CopyToUploadResource(UploadResource.Get(), Size, Data);
+
+		CreateDefaultResource(Resource, Size);
+
+		ExecuteCopyBuffer(CA, CL, UploadResource.Get(), *Resource, Size);
+		//!< #DX_TODO GraphicsCommandListではダメ
+	}(IndirectBufferResource.GetAddressOf(), Size, &Arguments, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get()); 
+
+	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndirectArgumentDescs = {
+		{ D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH },
 	};
 	const D3D12_COMMAND_SIGNATURE_DESC CommandSignatureDesc = {
 		Stride,

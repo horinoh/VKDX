@@ -12,6 +12,7 @@ public:
 	
 	void CreateIndirectBuffer_Vertices(const UINT Count);
 	void CreateIndirectBuffer_Indexed(const UINT Count);
+	void CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT Z);
 
 	//!< 1つのデスクリプタテーブル One descriptor table
 	void CreateRootParameters_1DT(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {

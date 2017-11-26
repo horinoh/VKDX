@@ -225,39 +225,43 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void FullscreenVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer, const VkImage Image, const VkClearColorValue& Color)
+void FullscreenVK::PopulateCommandBuffer(const size_t i)
 {
+	const auto CB = CommandBuffers[i];
+	const auto FB = Framebuffers[i];
+	const auto Image = SwapchainImages[i];
+
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
 		0,
 		nullptr
 	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo)); {
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &BeginInfo)); {
 		//!< ビューポート、シザー
-		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 		//!< バリア、レンダーターゲットの設定は RenderPass
 		const VkRenderPassBeginInfo RenderPassBeginInfo = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RenderPass,
-			Framebuffer,
+			FB,
 			ScissorRects[0],
 			0, nullptr //!< レンダーパスでクリアする場合は必須 static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
 		};
-		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
+		vkCmdBeginRenderPass(CB, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
 			//!< トポロジは Pipeline - VkPipelineInputAssemblyStateCreateInfo で指定しているのでパイプラインをバインド
-			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
 
 			//!< 描画
 #ifdef USE_DRAW_INDIRECT
-			vkCmdDrawIndirect(CommandBuffer, IndirectBuffer, 0, 1, 0);
+			vkCmdDrawIndirect(CB, IndirectBuffer, 0, 1, 0);
 #else
-			vkCmdDraw(CommandBuffer, 4, 1, 0, 0);
+			vkCmdDraw(CB, 4, 1, 0, 0);
 #endif
-		} vkCmdEndRenderPass(CommandBuffer);
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
+		} vkCmdEndRenderPass(CB);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
 #pragma endregion

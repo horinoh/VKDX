@@ -102,8 +102,7 @@ void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 	//CreateFramebuffer();
 
 	for (auto i = 0; i < CommandBuffers.size(); ++i) {
-		//PopulateCommandBuffer(CommandBuffers[i], Framebuffers[i]);
-		PopulateCommandBuffer(CommandBuffers[i], Framebuffers[i], SwapchainImages[i], Colors::SkyBlue);
+		PopulateCommandBuffer(i);
 	}
 }
 void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
@@ -2441,20 +2440,27 @@ void VK::ClearDepthStencilAttachment(const VkCommandBuffer CommandBuffer, const 
 		static_cast<uint32_t>(ClearRects.size()), ClearRects.data());
 }
 
-void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer)
+void VK::PopulateCommandBuffer(const size_t i)
 {
+	const auto CB = CommandBuffers[i];
+	const auto FB = Framebuffers[i];
+	const auto Image = SwapchainImages[i];
+
 	/**
 	@brief コマンドバッファのリセット Reset of command buffer
 	* vkBeginCommandBuffer() で自動的にリセットされるので、明示的に vkResetCommandBuffer() をコールしなくても良い
 	* ただし vkResetCommandBuffer() で明示的にリセットする場合には、メモリを開放するかどうかを指定できる
 	*/
-	//VERIFY_SUCCEEDED(vkResetCommandBuffer(CommandBuffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
+	//VERIFY_SUCCEEDED(vkResetCommandBuffer(CB, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CommandBufferBeginInfo)); {
 		//!< ビューポート、シザー
-		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-		//!< クリアはしない
+#if 1
+		//!< クリア
+		ClearColor(CB, Image, Colors::SkyBlue);
+#endif
 
 #ifdef _DEBUG
 		//!< レンダーエリアの最低粒度を確保
@@ -2471,12 +2477,12 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFram
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RenderPass,
-			Framebuffer,
+			FB,
 			ScissorRects[0], //!< フレームバッファのサイズ以下を指定できる
 			static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
 		};
 
-		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
+		vkCmdBeginRenderPass(CB, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
 			//vkCmdBindPipeline();
 			//vkCmdBindDescriptorSets();
 			//vkCmdBindVertexBuffers();
@@ -2484,37 +2490,10 @@ void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFram
 			//vkCmdDrawIndirect();
 
 			//!< vkCmdNextSubpass(CommandBuffer, VK_SUBPASS_CONTENTS_INLINE);
-		} vkCmdEndRenderPass(CommandBuffer);
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
+		} vkCmdEndRenderPass(CB);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
-void VK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer, const VkImage Image, const VkClearColorValue& Color)
-{
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo)); {
-		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-		ClearColor(CommandBuffer, Image, Color);
-
-#ifdef _DEBUG
-		VkExtent2D Granularity;
-		vkGetRenderAreaGranularity(Device, RenderPass, &Granularity);
-		assert(ScissorRects[0].extent.width >= Granularity.width && ScissorRects[0].extent.height >= Granularity.height && "ScissorRect is too small");
-#endif
-
-		std::vector<VkClearValue> ClearValues(2);
-		ClearValues[1].depthStencil = ClearDepthStencilValue;
-		const VkRenderPassBeginInfo RenderPassBeginInfo = {
-			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-			nullptr,
-			RenderPass,
-			Framebuffer,
-			ScissorRects[0],
-			static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
-		};
-		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
-		} vkCmdEndRenderPass(CommandBuffer);
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
-}
 void VK::Draw()
 {
 	WaitForFence();
@@ -2542,6 +2521,10 @@ void VK::Draw()
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SubmitInfos.size()), SubmitInfos.data(), Fence));
 
 	Present();
+}
+void VK::Dispatch()
+{
+	//!< #VK_TODO
 }
 void VK::Present()
 {

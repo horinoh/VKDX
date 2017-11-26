@@ -92,6 +92,6 @@ protected:
 		CreateSampler_LR(Sampler, MaxLOD);
 	}
 
-	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer, const VkImage Image, const VkClearColorValue& Color) override;
+	virtual void PopulateCommandBuffer(const size_t i) override;
 };
 #pragma endregion

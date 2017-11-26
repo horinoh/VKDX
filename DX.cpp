@@ -66,12 +66,8 @@ void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 
 	CreateViewport(static_cast<FLOAT>(GetClientRectWidth()), static_cast<FLOAT>(GetClientRectHeight()));
 
-	for (auto i = 0; i < SwapChainResources.size(); ++i) {
-		const auto CL = GraphicsCommandLists[i].Get();
-		const auto SCR = SwapChainResources[i].Get();
-		const auto CDH = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
-		//PopulateCommandList(CL, SCR, DH);
-		PopulateCommandList(CL, SCR, CDH, DirectX::Colors::SkyBlue);
+	for (auto i = 0; i < GraphicsCommandLists.size(); ++i) {
+		PopulateCommandList(i);
 	}
 }
 void DX::OnDestroy(HWND hWnd, HINSTANCE hInstance)
@@ -718,16 +714,16 @@ void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, cons
 			const auto SCR = SwapChainResources[i].Get();
 			const auto CDH = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
 
-			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-			if (nullptr != Color) {
-				CL->ClearRenderTargetView(CDH, *Color, 0, nullptr);
-			}
-			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET); {
+				if (nullptr != Color) {
+					CL->ClearRenderTargetView(CDH, *Color, 0, nullptr);
+				}
+			} ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		}
 		VERIFY_SUCCEEDED(CL->Close());
 	}
 
-	//!< #TODO : 0 番目しかクリアしていない
+	//!< #DX_TODO : 0 番目しかクリアしていない
 #if 1
 	const std::vector<ID3D12CommandList*> CommandLists = { GraphicsCommandLists[0].Get() };
 #else
@@ -1174,45 +1170,41 @@ void DX::ClearColor(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESC
 {
 	CommandList->ClearRenderTargetView(DescriptorHandle, Color, 0, nullptr);
 }
-void DX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle)
+
+void DX::ClearDepthStencil(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const FLOAT Depth, const UINT8 Stencil)
 {
-	const auto CommandAllocator = CommandAllocators[0].Get();
+	CommandList->ClearDepthStencilView(DescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, Depth, Stencil, 0, nullptr);
+}
+
+void DX::PopulateCommandList(const size_t i)
+{
+	const auto CL = GraphicsCommandLists[i].Get();
+	const auto SCR = SwapChainResources[i].Get();
+	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
+
+	const auto CA = CommandAllocators[0].Get();
 	//!< GPU が参照している間は、コマンドアロケータの Reset() はできない
-	//VERIFY_SUCCEEDED(CommandAllocator->Reset());
+	//VERIFY_SUCCEEDED(CA->Reset());
 
 	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能 (コマンドキューはコマンドリストではなく、コマンドアロケータを参照している)
 	//!< CommandList 作成時に PipelineState を指定していなくても、ここで指定すれば OK
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, PipelineState.Get()));
+	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
 	{
 		//!< ビューポート、シザー
-		CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
 		//!< バリア
-		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		{
-		}
-		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET); {
+#if 1
+			//!< クリア
+			ClearColor(CL, SCHandle, DirectX::Colors::SkyBlue);
+#endif
+		} ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
-	VERIFY_SUCCEEDED(CommandList->Close());
+	VERIFY_SUCCEEDED(CL->Close());
 }
-void DX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const DirectX::XMVECTORF32& Color)
-{
-	const auto CommandAllocator = CommandAllocators[0].Get();
 
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, PipelineState.Get()));
-	{
-		CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
-
-		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		{
-			ClearColor(CommandList, DescriptorHandle, Color);
-		}
-		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-	}
-	VERIFY_SUCCEEDED(CommandList->Close());
-}
 void DX::Draw()
 {
 	WaitForFence();
@@ -1225,6 +1217,10 @@ void DX::Draw()
 	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
 	
 	Present();
+}
+void DX::Dispatch()
+{
+	//!< #DX_TODO
 }
 void DX::Present()
 {

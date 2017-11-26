@@ -12,6 +12,7 @@ public:
 
 	void CreateIndirectBuffer_Vertices(const uint32_t Count);
 	void CreateIndirectBuffer_Indexed(const uint32_t Count);
+	void CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z);
 
 	//!< １つのユニフォームバッファ One uniform buffer
 	void CreateDescriptorSetLayoutBindings_1UB(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const {

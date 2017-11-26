@@ -291,83 +291,87 @@ void TriangleDX::CreateIndexBuffer()
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void TriangleDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const DirectX::XMVECTORF32& Color)
+void TriangleDX::PopulateCommandList(const size_t i)
 {
-	const auto CommandAllocator = CommandAllocators[0].Get();
+	const auto CL = GraphicsCommandLists[i].Get();
+	const auto SCR = SwapChainResources[i].Get();
+	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
 
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, PipelineState.Get()));
+	const auto CA = CommandAllocators[0].Get();
+
+	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
 	{
 #ifdef _DEBUG
-		BeginEvent(CommandList, L"Command Begin, End");
+		BeginEvent(CL, L"Command Begin, End");
 #endif
 
 		//!< ビューポート、シザー
-		CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
 		//!< バリア
-		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
 			//!< クリア
 			{
-				ClearColor(CommandList, DescriptorHandle, DirectX::Colors::SkyBlue);
+				ClearColor(CL, SCHandle, DirectX::Colors::SkyBlue);
 #if 0
 				if (nullptr != DepthStencilDescriptorHeap) {
-					auto DSDescriptorHandle(GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
-					CommandList->ClearDepthStencilView(DSDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+					const auto DSHandle(GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
+					ClearDepthStencil(CL, DSHandle, 1.0f, 0);
 				}
 #endif
 			}
 
 			//!< レンダーターゲット
 			{
-				const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { DescriptorHandle };
+				const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { SCHandle };
 #if 0
 				if (nullptr != DepthStencilDescriptorHeap) {
-					auto DSDescriptorHandle(GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
-					CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, &DSDescriptorHandle);
+					const auto DSHandle(GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
+					CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, &DSHandle);
 				}
 				else {
-					CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
+					CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
 				}
 #else
-				CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
+				CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
 #endif
 			}
 			//!< ルートシグニチャ
-			CommandList->SetGraphicsRootSignature(RootSignature.Get());
+			CL->SetGraphicsRootSignature(RootSignature.Get());
 
 #if 0
 			//!< コンスタントバッファ
 			{
-				std::vector<ID3D12DescriptorHeap*> DescriptorHeaps = { ConstantBufferDescriptorHeap.Get() };
-				CommandList->SetDescriptorHeaps(static_cast<UINT>(DescriptorHeaps.size()), DescriptorHeaps.data());
+				const std::vector<ID3D12DescriptorHeap*> DH = { ConstantBufferDescriptorHeap.Get() };
+				CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
 
-				auto CBDescriptorHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-				CommandList->SetGraphicsRootDescriptorTable(0, CBDescriptorHandle);
+				auto CBHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+				CL->SetGraphicsRootDescriptorTable(0, CBHandle);
 			}
 #endif
 
 			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
-			CommandList->IASetPrimitiveTopology(GetPrimitiveTopology());
+			CL->IASetPrimitiveTopology(GetPrimitiveTopology());
 
 			//!< バーテックスバッファ、インデックスバッファ
-			CommandList->IASetVertexBuffers(0, static_cast<UINT>(VertexBufferViews.size()), VertexBufferViews.data());
-			CommandList->IASetIndexBuffer(&IndexBufferView);
+			CL->IASetVertexBuffers(0, static_cast<UINT>(VertexBufferViews.size()), VertexBufferViews.data());
+			CL->IASetIndexBuffer(&IndexBufferView);
 
 			//!< 描画
 #ifdef USE_DRAW_INDIRECT
-			CommandList->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
+			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
 #else
-			CommandList->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
+			CL->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
 #endif
 		}
-		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
 #ifdef _DEBUG
-		EndEvent(CommandList);
+		EndEvent(CL);
 #endif
 	}
-	VERIFY_SUCCEEDED(CommandList->Close());
+	VERIFY_SUCCEEDED(CL->Close());
 }
 #pragma endregion

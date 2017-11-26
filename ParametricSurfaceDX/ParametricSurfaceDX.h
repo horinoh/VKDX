@@ -25,6 +25,6 @@ protected:
 	virtual D3D_PRIMITIVE_TOPOLOGY GetPrimitiveTopology() const override { return GetPrimitiveTopology_1ControlPointPatchlist(); }
 	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType() const override { return GetPrimitiveTopologyType_Patch(); }
 
-	virtual void PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle) override;
+	virtual void PopulateCommandList(const size_t i) override;
 };
 #pragma endregion

@@ -14,11 +14,13 @@ public:
 	virtual ~ComputeDX() {}
 
 protected:
-	virtual void Draw() override {}
-
 	virtual void CreatePipelineState() override { Super::CreatePipelineState_Compute(); }
 
-	//virtual void PopulateCommandList(ID3D12GraphicsCommandList* GraphicsCommandList) override;
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
+
+	virtual void PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle);
+
+	virtual void Draw() override { Dispatch(); }
 
 private:
 };

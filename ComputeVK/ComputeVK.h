@@ -15,10 +15,12 @@ public:
 
 protected:
 	virtual void CreatePipeline() override { Super::CreatePipeline_Compute(); }
+	
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
 
-	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer) override;
+	virtual void PopulateCommandBuffer(const size_t i) override;
 
-	virtual void Draw() override {}
+	virtual void Draw() override { Dispatch(); }
 
 private:
 };

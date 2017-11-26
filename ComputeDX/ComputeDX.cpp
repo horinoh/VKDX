@@ -225,4 +225,8 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
+void ComputeDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle)
+{
+	//!< #DX_TODO
+}
 #pragma region

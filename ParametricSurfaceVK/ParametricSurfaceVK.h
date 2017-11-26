@@ -22,6 +22,6 @@ protected:
 	}
 	virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const override { CreateInputAssembly_PatchList(PipelineInputAssemblyStateCreateInfo); }
 	virtual void CreateTessellationState(VkPipelineTessellationStateCreateInfo& PipelineTessellationStateCreateInfo) const override { CreateTessellationState_PatchControlPoint(PipelineTessellationStateCreateInfo, 1); }
-	virtual void PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer, const VkImage Image, const VkClearColorValue& Color) override;
+	virtual void PopulateCommandBuffer(const size_t i) override;
 };
 #pragma endregion

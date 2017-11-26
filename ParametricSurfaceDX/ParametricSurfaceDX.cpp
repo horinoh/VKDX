@@ -225,34 +225,38 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void ParametricSurfaceDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle)
+void ParametricSurfaceDX::PopulateCommandList(const size_t i)
 {
-	const auto CommandAllocator = CommandAllocators[0].Get();
+	const auto CL = GraphicsCommandLists[i].Get();
+	const auto SCR = SwapChainResources[i].Get();
+	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
 
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, PipelineState.Get()));
+	const auto CA = CommandAllocators[0].Get();
+
+	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
 	{
-		CommandList->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-		CommandList->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
-		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
-			ClearColor(CommandList, DescriptorHandle, DirectX::Colors::SkyBlue);
+			ClearColor(CL, SCHandle, DirectX::Colors::SkyBlue);
 
 			{
-				const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { DescriptorHandle };
-				CommandList->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
+				const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { SCHandle };
+				CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
 			}
 
-			CommandList->SetGraphicsRootSignature(RootSignature.Get());
+			CL->SetGraphicsRootSignature(RootSignature.Get());
 
 			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
-			CommandList->IASetPrimitiveTopology(GetPrimitiveTopology());
+			CL->IASetPrimitiveTopology(GetPrimitiveTopology());
 
-			CommandList->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
+			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
 		}
-		ResourceBarrier(CommandList, SwapChainResource, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
-	VERIFY_SUCCEEDED(CommandList->Close());
+	VERIFY_SUCCEEDED(CL->Close());
 }
 #pragma endregion
 

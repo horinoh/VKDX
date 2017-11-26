@@ -317,35 +317,39 @@ void TriangleVK::CreateIndexBuffer()
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, const VkFramebuffer Framebuffer, const VkImage Image, const VkClearColorValue& Color)
+void TriangleVK::PopulateCommandBuffer(const size_t i)
 {
+	const auto CB = CommandBuffers[i];
+	const auto FB = Framebuffers[i];
+	const auto Image = SwapchainImages[i];
+
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
 		0,
 		nullptr
 	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo)); {
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &BeginInfo)); {
 #ifdef _DEBUG
-		MarkerBegin(CommandBuffer, "Command Begin, End", glm::vec4(0,1,0,1));
+		MarkerBegin(CB, "Command Begin, End", glm::vec4(0,1,0,1));
 #endif
 
-		vkCmdSetViewport(CommandBuffer, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		vkCmdSetScissor(CommandBuffer, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 		//!< クリア
-		ClearColor(CommandBuffer, Image, Colors::SkyBlue);
+		ClearColor(CB, Image, Colors::SkyBlue);
 		//ClearDepthStencil(CommandBuffer, DepthStencilImage, ClearDepthStencilValue);
 
 		const VkRenderPassBeginInfo RenderPassBeginInfo = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RenderPass,
-			Framebuffer,
+			FB,
 			ScissorRects[0],
 			0, nullptr
 		};
-		vkCmdBeginRenderPass(CommandBuffer, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
+		vkCmdBeginRenderPass(CB, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
 #if 0
 			//!< ユニフォームバッファ UniformBuffer
 			if (!DescriptorSets.empty()) {
@@ -365,22 +369,22 @@ void TriangleVK::PopulateCommandBuffer(const VkCommandBuffer CommandBuffer, cons
 			vkCmdPushConstants(CommandBuffer, PipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, Offset, Size, Color.data());
 #endif
 
-			vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
 
 			const VkDeviceSize Offsets[] = { 0 };
-			vkCmdBindVertexBuffers(CommandBuffer, 0, 1, &VertexBuffer, Offsets);
-			vkCmdBindIndexBuffer(CommandBuffer, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindVertexBuffers(CB, 0, 1, &VertexBuffer, Offsets);
+			vkCmdBindIndexBuffer(CB, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
 			//!< 描画
 #ifdef USE_DRAW_INDIRECT
-			vkCmdDrawIndexedIndirect(CommandBuffer, IndirectBuffer, 0, 1, 0);
+			vkCmdDrawIndexedIndirect(CB, IndirectBuffer, 0, 1, 0);
 #else
-			vkCmdDrawIndexed(CommandBuffer, IndexCount, 1, 0, 0, 0);
+			vkCmdDrawIndexed(CB, IndexCount, 1, 0, 0, 0);
 #endif
-		} vkCmdEndRenderPass(CommandBuffer);
+		} vkCmdEndRenderPass(CB);
 #ifdef _DEBUG
-		MarkerEnd(CommandBuffer);
+		MarkerEnd(CB);
 #endif
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
 #pragma endregion //!< Code
