@@ -227,16 +227,21 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void ComputeVK::PopulateCommandBuffer(const size_t i)
 {
-	//const VkCommandBufferBeginInfo BeginInfo = {
-	//	VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-	//	nullptr,
-	//	0,
-	//	nullptr
-	//};
-	//VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &BeginInfo)); {
-	//	vkCmdBindPipeline(CommandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, Pipeline);
+#if 0
+	const auto CB = CommandBuffers[i];
+	//const auto SCB = SecondaryCommandBuffers[i];
 
-		//vkCmdDispatchIndirect(CommandBuffer);
-	//} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
+	const VkCommandBufferBeginInfo BeginInfo = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		nullptr,
+		0,
+		nullptr
+	};
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &BeginInfo)); {
+		vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_COMPUTE, Pipeline);
+
+		vkCmdDispatchIndirect(CB, IndirectBuffer, 0);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+#endif
 }
 #pragma endregion

@@ -9,7 +9,7 @@
 
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
 // Windows Header Files:
-#define _CRTDBG_MAP_ALLOC //!< "warning C4005: '_malloca': macro redefinition" ‘Îô
+#include "../PreWindows.h"
 #include <windows.h>
 
 // C RunTime Header Files

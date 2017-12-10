@@ -100,8 +100,8 @@ protected:
 	std::wstring TitleW;
 
 private:
-	FILE* StdOut;
-	FILE* StdErr;
+	FILE* StdOut = nullptr; 
+	FILE* StdErr = nullptr;
 };
 
 #ifdef _DEBUG

@@ -5,8 +5,6 @@
 #include "Win.h"
 
 Win::Win()
-	: StdOut(nullptr)
-	, StdErr(nullptr)
 {
 #ifdef _DEBUG
 	//!< ƒƒP[ƒ‹‚ð‹K’è‚É‚·‚é

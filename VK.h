@@ -171,7 +171,7 @@ protected:
 	virtual void CreateSemaphore();
 
 	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
-	virtual void AllocateCommandBuffer(const VkCommandPool CommandPool, const size_t Count, const VkCommandBufferLevel CommandBufferLevel = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+	virtual void AllocateCommandBuffer(const VkCommandPool CommandPool, const size_t Count, const size_t SecondaryCount = 0);
 
 	virtual void CreateSwapchain();
 	virtual VkSurfaceFormatKHR SelectSurfaceFormat();
@@ -323,6 +323,7 @@ protected:
 
 	std::vector<VkCommandPool> CommandPools;
 	std::vector<VkCommandBuffer> CommandBuffers;
+	std::vector<std::vector<VkCommandBuffer>> SecondaryCommandBuffers;
 
 	VkExtent2D SurfaceExtent2D;
 	VkFormat ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;

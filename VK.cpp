@@ -218,14 +218,25 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		Swapchain = VK_NULL_HANDLE;
 	}
 
-	if (!CommandPools.empty() && !CommandBuffers.empty()) {
+	if (!CommandPools.empty()) {
 		const auto CP = CommandPools[0]; //!< 現状は0番のコマンドプール決め打ち #VK_TODO 
-		vkFreeCommandBuffers(Device, CP, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
-	}
-	CommandBuffers.clear();
-	std::for_each(CommandPools.begin(), CommandPools.end(), [&](const VkCommandPool rhs) { vkDestroyCommandPool(Device, rhs, GetAllocationCallbacks()); });
-	CommandPools.clear();
 
+		for (auto i : SecondaryCommandBuffers) {
+			if (!i.empty()) {
+				vkFreeCommandBuffers(Device, CP, static_cast<uint32_t>(i.size()), i.data());
+				i.clear();
+			}
+		}
+		SecondaryCommandBuffers.clear();
+
+		if (!CommandBuffers.empty()) {
+			vkFreeCommandBuffers(Device, CP, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
+			CommandBuffers.clear();
+		}
+		std::for_each(CommandPools.begin(), CommandPools.end(), [&](const VkCommandPool rhs) { vkDestroyCommandPool(Device, rhs, GetAllocationCallbacks()); });
+		CommandPools.clear();
+	}
+	
 	if (VK_NULL_HANDLE != RenderFinishedSemaphore) {
 		vkDestroySemaphore(Device, RenderFinishedSemaphore, GetAllocationCallbacks());
 		RenderFinishedSemaphore = VK_NULL_HANDLE;
@@ -1267,18 +1278,40 @@ void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 #endif
 }
 
-void VK::AllocateCommandBuffer(const VkCommandPool CommandPool, const size_t Count, const VkCommandBufferLevel CommandBufferLevel)
+/**
+@brief 以下のように確保される Allocate like this
+CommandBuffers[Count]
+SecondaryCommandBuffers[Count][SecondaryCount]
+*/
+void VK::AllocateCommandBuffer(const VkCommandPool CommandPool, const size_t Count, const size_t SecondaryCount)
 {
 	if (Count) {
-		CommandBuffers.resize(Count);
 		const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
 			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 			nullptr,
 			CommandPool,
-			CommandBufferLevel, //!< VK_COMMAND_BUFFER_LEVEL_PRIMARY:プライマリ、VK_COMMAND_BUFFER_LEVEL_SECONDARY:セカンダリ
+			VK_COMMAND_BUFFER_LEVEL_PRIMARY,
 			static_cast<uint32_t>(Count)
-		};
+		}; 
+
+		CommandBuffers.resize(Count);
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, CommandBuffers.data()));
+
+		SecondaryCommandBuffers.resize(Count);
+		if (SecondaryCount) {
+			const VkCommandBufferAllocateInfo SecondaryCommandBufferAllocateInfo = {
+				VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+				nullptr,
+				CommandPool,
+				VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+				static_cast<uint32_t>(SecondaryCount)
+			};
+
+			for (auto i : SecondaryCommandBuffers) {
+				i.resize(SecondaryCount);
+				VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &SecondaryCommandBufferAllocateInfo, i.data()));
+			}
+		}
 	}
 
 #ifdef DEBUG_STDOUT
@@ -2033,17 +2066,35 @@ void VK::CreatePipeline()
 	//!< スレッドでパイプラインを作成する例(パイプラインキャッシュを活用)
 #if 0
 	const auto ThreadCount = 10;
+	const auto PipelineCountPerThread = 1;
 
-	//!< パイプラインキャッシュをファイルから読み込む (同じものをスレッド数分だけ用意する)
+	//!< パイプラインキャッシュをファイルから読み込む (スレッド数分だけ(同じものを)用意する)
 	std::vector<VkPipelineCache> PipelineCaches(ThreadCount);
 	LoadPipelineCaches(GetBasePath() + L".pco", PipelineCaches);
 
 	//!< パイプラインキャッシュを使用して、各スレッドでパイプラインを作成する
-	std::vector<VkPipeline> Pipelines(ThreadCount); //!< 本来1スレッドに複数パイプラインを作成させた方が良い #VK_TODO
+	std::vector<std::vector<VkPipeline>> Pipelines(ThreadCount);
+	for (auto i : Pipelines) { i.resize(PipelineCountPerThread); }
+
 	std::vector<std::thread> Threads(ThreadCount);
 	for (auto i = 0; i < Threads.size(); ++i) {
-		//!< パイプラインを作成する関数 #VK_TODO
-		Threads[i] = std::thread::thread([&](VkPipeline, VkPipelineCache) { std::cout << "Hello Thread\n"; }, Pipelines[i], PipelineCaches[i]);
+		Threads[i] = std::thread::thread([&](std::vector<VkPipeline>& Pipelines, VkPipelineCache PipelineCache) {
+			//const std::vector<VkGraphicsPipelineCreateInfo> GraphicsPipelineCreateInfos(Pipelines.size());
+			//VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device,
+			//	PipelineCache,
+			//	static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), 
+			//	GetAllocationCallbacks(),
+			//	Pipelines.data()));
+
+			//const std::vector<VkComputePipelineCreateInfo> ComputePipelineCreateInfos(Pipelines.size());
+			//VERIFY_SUCCEEDED(vkCreateComputePipelines(Device,
+			//	PipelineCache,
+			//	static_cast<uint32_t>(ComputePipelineCreateInfos.size()), ComputePipelineCreateInfos.data(),
+			//	GetAllocationCallbacks(),
+			//	Pipelines.data()));
+
+			std::cout << "Creating pipelines in thread\n"; 
+		}, Pipelines[i], PipelineCaches[i]);
 	}
 	for (auto& i : Threads) {
 		i.join();
@@ -2443,6 +2494,7 @@ void VK::ClearDepthStencilAttachment(const VkCommandBuffer CommandBuffer, const 
 void VK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandBuffers[i];
+	const auto SCB = SecondaryCommandBuffers[i];
 	const auto FB = Framebuffers[i];
 	const auto Image = SwapchainImages[i];
 
@@ -2490,6 +2542,10 @@ void VK::PopulateCommandBuffer(const size_t i)
 			//vkCmdDrawIndirect();
 
 			//!< vkCmdNextSubpass(CommandBuffer, VK_SUBPASS_CONTENTS_INLINE);
+
+			//if (!SCB.empty()) {
+			//	vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCB.size()), SCB.data());
+			//}
 		} vkCmdEndRenderPass(CB);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }

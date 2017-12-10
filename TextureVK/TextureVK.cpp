@@ -228,6 +228,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 void TextureVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandBuffers[i];
+	//const auto SCB = SecondaryCommandBuffers[i];
 	const auto FB = Framebuffers[i];
 	const auto Image = SwapchainImages[i];
 

@@ -320,6 +320,7 @@ void TriangleVK::CreateIndexBuffer()
 void TriangleVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandBuffers[i];
+	//const auto SCB = SecondaryCommandBuffers[i];
 	const auto FB = Framebuffers[i];
 	const auto Image = SwapchainImages[i];
 
