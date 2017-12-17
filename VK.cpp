@@ -128,7 +128,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyPipelineLayout(Device, PipelineLayout, GetAllocationCallbacks());
 	}
 
-	//!< VkDescriptorPoolCreateInfo に VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT を指定した場合「のみ」デスクリプタセットを個別に開放できる
+	//!< VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT の場合のみ個別に開放できる If only VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT is used, can be release individually
 #if 0
 	if (!DescriptorSets.empty()) {
 		vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
@@ -212,7 +212,9 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyImageView(Device, i, GetAllocationCallbacks());
 	}
 	SwapchainImageViews.clear();
+
 	//!< SwapchainImages は取得したもの、破棄しない
+	
 	if (VK_NULL_HANDLE != Swapchain) {
 		vkDestroySwapchainKHR(Device, Swapchain, GetAllocationCallbacks());
 		Swapchain = VK_NULL_HANDLE;
@@ -343,12 +345,6 @@ std::string VK::GetComponentSwizzleString(const VkComponentSwizzle ComponentSwiz
 
 bool VK::HasExtension(const VkPhysicalDevice PhysicalDevice, const char* ExtensionName)
 {
-	//!< エクステンションは見つかるのに、使用できないので封印... Extension is found, but not available...
-#if 1
-	//!< VK_EXT_debug_marker not available for devices associated with ICD nvoglv64.dll
-	//!< https://devtalk.nvidia.com/default/topic/1001794/vulkan-vk_ext_debug_marker-missing-after-new-5-2-build-update-/
-	return false;
-#else
 	uint32_t DeviceLayerPropertyCount = 0;
 	VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, nullptr));
 	if (DeviceLayerPropertyCount) {
@@ -369,7 +365,6 @@ bool VK::HasExtension(const VkPhysicalDevice PhysicalDevice, const char* Extensi
 		}
 	}
 	return false;
-#endif
 }
 
 VkFormat VK::GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice)
@@ -1174,7 +1169,12 @@ void VK::CreateDevice()
 #ifdef _DEBUG
 	//!< ↓デバッグマーカー拡張があるなら追加。If we have debug marker extension, add
 	//!< RenderDoc から起動した時にのみ拡張は有効みたい。This extention will be valid, only if invoked from RenderDoc
-	const auto HasDebugMarkerExt = HasExtension(PhysicalDevice, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+	const auto HasDebugMarkerExt =
+#ifdef USE_DEBUG_MARKER
+	HasExtension(PhysicalDevice, VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+#else
+	 false;
+#endif
 	if (HasDebugMarkerExt) {
 		EnabledExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 	}
@@ -1182,7 +1182,7 @@ void VK::CreateDevice()
 
 	VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
 	//!< デバイスフィーチャーを「有効にしないと」と使用できない機能が多々あるので注意
-	//!< ここでは可能なだけ有効にしている (パフォーマンス的には良くない)
+	//!< ここでは可能なだけ有効にしてしまっている (パフォーマンス的には良くないので注意)
 	vkGetPhysicalDeviceFeatures(PhysicalDevice, &PhysicalDeviceFeatures);
 	OverridePhysicalDeviceFeatures(PhysicalDeviceFeatures);
 	const VkDeviceCreateInfo DeviceCreateInfo = {
@@ -1282,6 +1282,8 @@ void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 @brief 以下のように確保される Allocate like this
 CommandBuffers[Count]
 SecondaryCommandBuffers[Count][SecondaryCount]
+
+@note 現状セカンダリは使用していない Currently secondary is not used
 */
 void VK::AllocateCommandBuffer(const VkCommandPool CommandPool, const size_t Count, const size_t SecondaryCount)
 {
@@ -1323,7 +1325,7 @@ void VK::CreateSwapchain()
 {
 	CreateSwapchainOfClientRect();
 	
-	//!< スワップチェインイメージの枚数が決まったので、ここでコマンドバッファを確保する Count of swapchain image is fixed, create commandbuffer here
+	//!< スワップチェインイメージの枚数が決まったので、ここでコマンドバッファを確保する Because count of swapchain image is fixed, create commandbuffer here
 	{
 		CreateCommandPool(GraphicsQueueFamilyIndex);
 		AllocateCommandBuffer(CommandPools[0], SwapchainImages.size()); //!< 現状は0番のコマンドプール決め打ち #VK_TODO
@@ -1379,7 +1381,7 @@ VkPresentModeKHR VK::SelectSurfacePresentMode()
 {
 	uint32_t PresentModeCount;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, Surface, &PresentModeCount, nullptr));
-	assert(PresentModeCount);
+	assert(PresentModeCount && "Present mode count is zero");
 	std::vector<VkPresentModeKHR> PresentModes(PresentModeCount);
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PhysicalDevice, Surface, &PresentModeCount, PresentModes.data()));
 
@@ -1394,13 +1396,13 @@ VkPresentModeKHR VK::SelectSurfacePresentMode()
 	const VkPresentModeKHR SelectedPresentMode = [&]() {
 		for (auto i : PresentModes) {
 			if (VK_PRESENT_MODE_MAILBOX_KHR == i) {
-				//!< 可能なら MAILBOX。Want to use MAILBOX
+				//!< 可能なら MAILBOX Want to use MAILBOX
 				return i;
 			}
 		}
 		for (auto i : PresentModes) {
 			if (VK_PRESENT_MODE_FIFO_KHR == i) {
-				//!< FIFO は VulkanAPI が必ずサポートする。 VulkanAPI always support FIFO
+				//!< FIFO は VulkanAPI が必ずサポートする VulkanAPI always support FIFO
 				return i;
 			}
 		}
@@ -1432,7 +1434,7 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PhysicalDevice, Surface, &SurfaceCapabilities));
 
 	//!< minImageCount + 1 枚取る (MAILBOX では 3 枚欲しいので) Use minImageCount + 1 images (We want 3 image to use MAILBOX)
-	//!< 自分の環境では minImageCount は 2。In my environment minImageCount is 2
+	//!< ex) 自分の環境では minImageCount は 2 In my environment minImageCount is 2
 	const auto MinImageCount = (std::min)(SurfaceCapabilities.minImageCount + 1, SurfaceCapabilities.maxImageCount);
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "\t" << Lightblue << "ImageCount = " << White << MinImageCount << std::endl;
@@ -1441,8 +1443,8 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 	if (0xffffffff == SurfaceCapabilities.currentExtent.width) {
 		//!< 0xffffffff の場合はイメージサイズがウインドウサイズを決定する。If 0xffffffff, size of image determines the size of the window
 		SurfaceExtent2D = {
-			(std::max)((std::min)(Width, SurfaceCapabilities.maxImageExtent.width), SurfaceCapabilities.minImageExtent.width), 
-			(std::max)((std::min)(Height, SurfaceCapabilities.minImageExtent.height), SurfaceCapabilities.minImageExtent.height) 
+			std::max(std::min(Width, SurfaceCapabilities.maxImageExtent.width), SurfaceCapabilities.minImageExtent.width),
+			std::max(std::min(Height, SurfaceCapabilities.minImageExtent.height), SurfaceCapabilities.minImageExtent.height)
 		};
 	}
 	else {
@@ -1505,7 +1507,7 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 	//!< スワップチェインイメージの取得
 	uint32_t SwapchainImageCount;
 	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &SwapchainImageCount, nullptr));
-	assert(SwapchainImageCount && "Swapchain image count == 0");
+	assert(SwapchainImageCount && "Swapchain image count is zero");
 	SwapchainImages.resize(SwapchainImageCount);
 	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &SwapchainImageCount, SwapchainImages.data()));
 #ifdef DEBUG_STDOUT
@@ -1541,6 +1543,7 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkC
 					1, &ImageMemoryBarrier_UndefinedToPresent);
 			}
 			else {
+				//!< クリアカラーが指定されている場合 If clear color is specified
 				const VkImageMemoryBarrier ImageMemoryBarrier_UndefinedToTransfer = {
 					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 					nullptr,
@@ -2276,23 +2279,6 @@ void VK::CreatePipeline_Graphics()
 		vkDestroyShaderModule(Device, i, GetAllocationCallbacks());
 	}
 	ShaderModules.clear();
-
-#if 0
-	//!< パイプラインマージの例
-	const std::vector<VkPipelineCache> SrcCaches = { PipelineCache };
-	VkPipelineCache DstCache;
-	VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, DstCache, static_cast<uint32_t>(SrcCaches.size()), SrcCaches.data()));
-#endif
-
-#if 0
-	//!< パイプラインキャッシュをファイルへ保存
-	if (VK_NULL_HANDLE != PipelineCache) {
-		const auto BasePath = GetBasePath();
-		StorePipelineCache(BasePath + L".pco", PipelineCache);
-
-		vkDestroyPipelineCache(Device, PipelineCache, GetAllocationCallbacks());
-	}
-#endif
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreatePipeline_Graphics" << COUT_OK << std::endl << std::endl;

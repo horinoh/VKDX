@@ -22,6 +22,13 @@
 #endif
 #include "Win.h"
 
+#ifndef USE_DEBUG_MARKER
+//!< エクステンションは見つかるのに、使用できないので封印... Extension is found, but not available...
+//!< VK_EXT_debug_marker not available for devices associated with ICD nvoglv64.dll
+//!< https://devtalk.nvidia.com/default/topic/1001794/vulkan-vk_ext_debug_marker-missing-after-new-5-2-build-update-/
+//#define USE_DEBUG_MARKER
+#endif
+
 namespace Colors
 {
 	const VkClearColorValue Black = { 0.0f, 0.0f, 0.0f, 1.0f };
