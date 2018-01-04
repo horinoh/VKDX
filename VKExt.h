@@ -119,6 +119,7 @@ public:
 
 	void CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const;
 	void CreateShader_VsPsTesTcsGs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const;
+	void CreateShader_Cs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const;
 
 	template<typename T>
 	void CreateUniformBuffer(const T& Type) {
@@ -142,15 +143,25 @@ public:
 #endif
 	}
 
-	virtual void CreateInputAssembly_TriangleStrip(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const { CreateInputAssembly_Topology(PipelineInputAssemblyStateCreateInfo, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP); }
-	virtual void CreateInputAssembly_PatchList(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const { CreateInputAssembly_Topology(PipelineInputAssemblyStateCreateInfo, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST); }
-	virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const override { CreateInputAssembly_TriangleStrip(PipelineInputAssemblyStateCreateInfo); }
+	virtual void CreateInputAssembly_TriangleStrip(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const { 
+		CreateInputAssembly_Topology(PipelineInputAssemblyStateCreateInfo, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
+	}
+	virtual void CreateInputAssembly_PatchList(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const { 
+		CreateInputAssembly_Topology(PipelineInputAssemblyStateCreateInfo, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST);
+	}
+	virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const override { 
+		CreateInputAssembly_TriangleStrip(PipelineInputAssemblyStateCreateInfo); 
+	}
 
-	void CreateTessellationState_PatchControlPoint(VkPipelineTessellationStateCreateInfo& PipelineTessellationStateCreateInfo, const uint32_t PatchControlPoint) const { PipelineTessellationStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO, nullptr, 0, PatchControlPoint }; }
+	void CreateTessellationState_PatchControlPoint(VkPipelineTessellationStateCreateInfo& PipelineTessellationStateCreateInfo, const uint32_t PatchControlPoint) const { 
+		PipelineTessellationStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO, nullptr, 0, PatchControlPoint };
+	}
 
 protected:
 #if 1
 	/**
+	@brief パイプライン作成時にシェーダ内の定数値を上書き指定できる
+	
 	//!< シェーダ側には以下のような記述をする (扱えるのはスカラ値のみ)
 	layout (constant_id = 0) const int IntValue = 0;
 	layout (constant_id = 1) const float FloatValue = 0.0f;

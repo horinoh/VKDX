@@ -20,7 +20,7 @@ protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Vertices(4); }
 #endif
 
-	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const override {
+	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::vector<D3D12_SHADER_BYTECODE>& ShaderBytecodes) const override {
 		CreateShader_VsPs(ShaderBlobs, ShaderBytecodes);
 	}
 	virtual void PopulateCommandList(const size_t i) override;

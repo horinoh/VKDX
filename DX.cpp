@@ -1052,7 +1052,7 @@ void DX::CreatePipelineState_Graphics()
 
 	//!< シェーダ
 	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs;
-	std::array<D3D12_SHADER_BYTECODE, 5> ShaderBytecodes;
+	std::vector<D3D12_SHADER_BYTECODE> ShaderBytecodes;
 	CreateShader(ShaderBlobs, ShaderBytecodes);
 
 	const D3D12_STREAM_OUTPUT_DESC StreamOutputDesc = {
@@ -1146,15 +1146,15 @@ void DX::CreatePipelineState_Compute()
 
 	assert(nullptr != RootSignature);
 
-	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs(1);
-	const auto ShaderPath = GetBasePath();
-	D3DReadFileToBlob((ShaderPath + L".cs.cso").data(), ShaderBlobs[0].GetAddressOf());
-	const D3D12_SHADER_BYTECODE ShaderBytecodesCS = { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() };
+	//!< シェーダ
+	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs;
+	std::vector<D3D12_SHADER_BYTECODE> ShaderBytecodes;
+	CreateShader(ShaderBlobs, ShaderBytecodes);
 
 	const D3D12_CACHED_PIPELINE_STATE CachedPipelineState = { nullptr, 0 };
 	const D3D12_COMPUTE_PIPELINE_STATE_DESC ComputePipelineStateDesc = {
 		RootSignature.Get(),
-		ShaderBytecodesCS,
+		ShaderBytecodes[0],
 		0, // NodeMask ... マルチGPUの場合
 		CachedPipelineState,
 		D3D12_PIPELINE_STATE_FLAG_NONE

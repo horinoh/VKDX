@@ -153,7 +153,7 @@ protected:
 	virtual void CreateDescriptorHeap() {}
 	virtual void UpdateDescriptorHeap() { /*CopyToUploadResource()等を行う*/ }
 
-	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const {}
+	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::vector<D3D12_SHADER_BYTECODE>& ShaderBytecodes) const {}
 	virtual void CreateInputLayout(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs, const UINT InputSlot = 0) const {}
 	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType() const = 0; //!< D3D12_GRAPHICS_PIPELINE_STATE_DESC 作成時に使用
 	virtual D3D_PRIMITIVE_TOPOLOGY GetPrimitiveTopology() const = 0; //!< IASetPrimitiveTopology() 時に使用

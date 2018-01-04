@@ -16,7 +16,7 @@
   </Options>
   <Inject>false</Inject>
   <AutoStart>false</AutoStart>
-  <Executable>C:\Users\devel\Documents\GitHub\VKDX\x64\Debug\FullscreenVK.exe</Executable>
+  <Executable>D:\GitHub\VKDX\x64\Debug\FullscreenVK.exe</Executable>
   <WorkingDir />
   <CmdLine />
   <Environment />

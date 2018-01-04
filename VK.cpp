@@ -847,7 +847,7 @@ void VK::CreateDebugReportCallback()
 			//cout << Green << "[ DebugReport ] : " << pMessage << White << endl;
 		}
 		else if (VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT & flags) {
-			//DEBUG_BREAK();
+			DEBUG_BREAK();
 			cout << Yellow << "[ DebugReport ] : " << pMessage << White << endl;
 			return VK_TRUE;
 		}
@@ -2290,18 +2290,10 @@ void VK::CreatePipeline_Compute()
 	PerformanceCounter PC("CreatePipeline_Compute : ");
 #endif
 
-	//!< シェーダモジュール
-	const auto ShaderPath = GetBasePath();
-	const auto ShaderModule = CreateShaderModule((ShaderPath + L".comp.spv").data());
-	const char* EntrypointName = "main";
-	const VkPipelineShaderStageCreateInfo PipelineShaderStageCreateInfo = {
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_COMPUTE_BIT, ShaderModule,
-			EntrypointName,
-			nullptr //!< &SpecializationInfo
-	};
+	//!< シェーダ
+	std::vector<VkShaderModule> ShaderModules;
+	std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos;
+	CreateShader(ShaderModules, PipelineShaderStageCreateInfos);
 	
 	//!< パイプラインレイアウト
 	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
@@ -2322,7 +2314,7 @@ void VK::CreatePipeline_Compute()
 #else
 			0,
 #endif
-			PipelineShaderStageCreateInfo,
+			PipelineShaderStageCreateInfos[0],
 			PipelineLayout,
 			VK_NULL_HANDLE, -1 //!< basePipelineHandle, basePipelineIndex
 		},
@@ -2333,7 +2325,7 @@ void VK::CreatePipeline_Compute()
 		GetAllocationCallbacks(),
 		&Pipeline));
 
-	vkDestroyShaderModule(Device, ShaderModule, GetAllocationCallbacks());
+	vkDestroyShaderModule(Device, ShaderModules[0], GetAllocationCallbacks());
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreatePipeline_Compute" << COUT_OK << std::endl << std::endl;

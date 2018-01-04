@@ -20,8 +20,16 @@ protected:
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {
 		CreateShader_VsPsTesTcsGs(ShaderModules, PipelineShaderStageCreateInfos);
 	}
-	virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const override { CreateInputAssembly_PatchList(PipelineInputAssemblyStateCreateInfo); }
-	virtual void CreateTessellationState(VkPipelineTessellationStateCreateInfo& PipelineTessellationStateCreateInfo) const override { CreateTessellationState_PatchControlPoint(PipelineTessellationStateCreateInfo, 1); }
+
+	virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const override {
+		CreateInputAssembly_PatchList(PipelineInputAssemblyStateCreateInfo);
+	}
+	virtual void CreateTessellationState(VkPipelineTessellationStateCreateInfo& PipelineTessellationStateCreateInfo) const override { 
+		CreateTessellationState_PatchControlPoint(PipelineTessellationStateCreateInfo, 1); 
+	}
 	virtual void PopulateCommandBuffer(const size_t i) override;
+
+private:
+	using Vertex = struct Vertex { glm::vec3 Positon; };
 };
 #pragma endregion

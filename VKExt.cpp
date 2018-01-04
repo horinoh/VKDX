@@ -555,3 +555,22 @@ void VKExt::CreateShader_VsPsTesTcsGs(std::vector<VkShaderModule>& ShaderModules
 		},
 	};
 }
+
+void VKExt::CreateShader_Cs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const
+{
+	const auto ShaderPath = GetBasePath();
+	ShaderModules = {
+		CreateShaderModule((ShaderPath + L".comp.spv").data()),
+	};
+	const char* EntrypointName = "main";
+	PipelineShaderStageCreateInfos = {
+		{
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_COMPUTE_BIT, ShaderModules[0],
+			EntrypointName,
+			nullptr
+		},
+	};
+}

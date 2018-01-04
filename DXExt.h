@@ -110,8 +110,9 @@ public:
 	D3D_PRIMITIVE_TOPOLOGY GetPrimitiveTopology_1ControlPointPatchlist() const { return D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST; }
 	virtual D3D_PRIMITIVE_TOPOLOGY GetPrimitiveTopology() const override { return GetPrimitiveTopology_Trianglestrip(); }
 
-	void CreateShader_VsPs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const;
-	void CreateShader_VsPsDsHsGs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBytecodes) const;
+	void CreateShader_VsPs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::vector<D3D12_SHADER_BYTECODE>& ShaderBytecodes) const;
+	void CreateShader_VsPsDsHsGs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::vector<D3D12_SHADER_BYTECODE>& ShaderBytecodes) const;
+	void CreateShader_Cs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::vector<D3D12_SHADER_BYTECODE>& ShaderBytecodes) const;
 
 	template<typename T>
 	void CreateConstantBuffer(const T& Type) {
