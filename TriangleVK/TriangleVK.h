@@ -30,8 +30,5 @@ protected:
 	}
 
 	virtual void PopulateCommandBuffer(const size_t i) override;
-
-private:
-	using Vertex = struct Vertex { glm::vec3 Positon; glm::vec4 Color; };
 };
 #pragma endregion

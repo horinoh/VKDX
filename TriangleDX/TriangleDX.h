@@ -16,7 +16,6 @@ public:
 	virtual ~TriangleDX() {}
 
 protected:
-	//virtual void CreateInputLayout() override { CreateInputLayout_PositionColor(); }
 	virtual void CreateVertexBuffer() override;
 	virtual void CreateIndexBuffer() override;
 #ifdef USE_DRAW_INDIRECT
@@ -36,8 +35,5 @@ protected:
 #endif
 
 	virtual void PopulateCommandList(const size_t i) override;
-
-private:
-	using Vertex = struct Vertex { DirectX::XMFLOAT3 Positon; DirectX::XMFLOAT4 Color; };
 };
 #pragma endregion

@@ -227,7 +227,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void TriangleVK::CreateVertexBuffer()
 {
-	const std::vector<Vertex> Vertices = {
+	const std::vector<Vertex_PositionColor> Vertices = {
 		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
 		{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
 		{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
@@ -372,9 +372,11 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
 
-			const VkDeviceSize Offsets[] = { 0 };
-			vkCmdBindVertexBuffers(CB, 0, 1, &VertexBuffer, Offsets);
-			vkCmdBindIndexBuffer(CB, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			if (VK_NULL_HANDLE != VertexBuffer && VK_NULL_HANDLE != IndexBuffer) {
+				const VkDeviceSize Offsets[] = { 0 };
+				vkCmdBindVertexBuffers(CB, 0, 1, &VertexBuffer, Offsets);
+				vkCmdBindIndexBuffer(CB, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+			}
 
 			//!< •`‰æ
 #ifdef USE_DRAW_INDIRECT

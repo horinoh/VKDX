@@ -1,6 +1,6 @@
 struct IN
 {
-	float3 Dummy : POSITION;
+	float3 Position : POSITION;
 }; 
 struct TESS_FACTOR
 {

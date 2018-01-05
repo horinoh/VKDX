@@ -143,18 +143,8 @@ public:
 #endif
 	}
 
-	virtual void CreateInputAssembly_TriangleStrip(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const { 
-		CreateInputAssembly_Topology(PipelineInputAssemblyStateCreateInfo, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
-	}
-	virtual void CreateInputAssembly_PatchList(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const { 
-		CreateInputAssembly_Topology(PipelineInputAssemblyStateCreateInfo, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST);
-	}
 	virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const override { 
-		CreateInputAssembly_TriangleStrip(PipelineInputAssemblyStateCreateInfo); 
-	}
-
-	void CreateTessellationState_PatchControlPoint(VkPipelineTessellationStateCreateInfo& PipelineTessellationStateCreateInfo, const uint32_t PatchControlPoint) const { 
-		PipelineTessellationStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO, nullptr, 0, PatchControlPoint };
+		CreateInputAssembly_Topology(PipelineInputAssemblyStateCreateInfo, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
 	}
 
 protected:

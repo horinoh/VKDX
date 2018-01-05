@@ -1,16 +1,9 @@
-struct IN
-{
-	float3 Dummy : POSITION;
-}; 
 struct OUT
 {
-	float3 Dummy : POSITION;
+	float3 Position : POSITION;
 };
 
-OUT main(IN In)
+OUT main(uint VertexId : SV_VertexID)
 {
-	OUT Out;
-	Out.Dummy = In.Dummy;
-	return Out;
-	//return (OUT)0;
+	return (OUT)0;
 }

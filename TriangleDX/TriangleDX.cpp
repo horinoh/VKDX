@@ -227,7 +227,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void TriangleDX::CreateVertexBuffer()
 {
-	const std::vector<Vertex> Vertices = {
+	const std::vector<Vertex_PositionColor> Vertices = {
 		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
 		{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
 		{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
@@ -356,8 +356,10 @@ void TriangleDX::PopulateCommandList(const size_t i)
 			CL->IASetPrimitiveTopology(GetPrimitiveTopology());
 
 			//!< バーテックスバッファ、インデックスバッファ
-			CL->IASetVertexBuffers(0, static_cast<UINT>(VertexBufferViews.size()), VertexBufferViews.data());
-			CL->IASetIndexBuffer(&IndexBufferView);
+			if (!VertexBufferViews.empty()) {
+				CL->IASetVertexBuffers(0, static_cast<UINT>(VertexBufferViews.size()), VertexBufferViews.data());
+				CL->IASetIndexBuffer(&IndexBufferView);
+			}
 
 			//!< 描画
 #ifdef USE_DRAW_INDIRECT
