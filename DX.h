@@ -199,6 +199,7 @@ protected:
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
 
+	Microsoft::WRL::ComPtr<ID3D12PipelineLibrary> PipelineLibrary;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferResource;

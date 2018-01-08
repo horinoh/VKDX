@@ -5,7 +5,7 @@
 layout (vertices = 4) out;
 void main()
 {
-	const float t = 15;
+	const float t = 15.0f;
 	for(int i=0;i<gl_TessLevelOuter.length();++i) {
 		gl_TessLevelOuter[i] = t;
 	}

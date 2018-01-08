@@ -252,7 +252,7 @@ void TriangleDX::CreateVertexBuffer()
 	VertexBufferViews.push_back({ VertexBufferResource->GetGPUVirtualAddress(), Size, Stride });
 
 #ifdef _DEBUG
-	SetName(VertexBufferResource.Get(), L"MyVertexBuffer");
+	SetName(VertexBufferResource.Get(), TEXT("MyVertexBuffer"));
 #endif
 
 #ifdef _DEBUG
@@ -284,7 +284,7 @@ void TriangleDX::CreateIndexBuffer()
 	IndexBufferView = { IndexBufferResource->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT };
 
 #ifdef _DEBUG
-	SetName(IndexBufferResource.Get(), L"MyIndexBuffer");
+	SetName(IndexBufferResource.Get(), TEXT("MyIndexBuffer"));
 #endif
 
 #ifdef _DEBUG
@@ -302,7 +302,7 @@ void TriangleDX::PopulateCommandList(const size_t i)
 	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
 	{
 #ifdef _DEBUG
-		BeginEvent(CL, L"Command Begin, End");
+		BeginEvent(CL, TEXT("Command Begin, End"));
 #endif
 
 		//!< ビューポート、シザー

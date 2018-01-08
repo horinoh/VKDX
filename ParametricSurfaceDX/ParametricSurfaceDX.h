@@ -14,7 +14,7 @@ public:
 	virtual ~ParametricSurfaceDX() {}
 
 protected:
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Indexed(0); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Indexed(1); } //!< インデックス数0だと最適化されてしまうので1にしておく
 
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::vector<D3D12_SHADER_BYTECODE>& ShaderBytecodes) const override {
 		CreateShader_VsPsDsHsGs(ShaderBlobs, ShaderBytecodes);
@@ -24,7 +24,7 @@ protected:
 		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
 	}
 	virtual D3D_PRIMITIVE_TOPOLOGY GetPrimitiveTopology() const override {
-		const UINT PatchControlPoint = 4;
+		const UINT PatchControlPoint = 1;
 		return static_cast<D3D_PRIMITIVE_TOPOLOGY>(static_cast<UINT>(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST) + (PatchControlPoint - 1));
 	}
 	

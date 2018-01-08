@@ -7,6 +7,9 @@
     <FxCompile>
       <ShaderModel>5.1</ShaderModel>
       <ObjectFileOutput>$(ProjectDir)%(Filename).cso</ObjectFileOutput>
+      <TreatWarningAsError>true</TreatWarningAsError>
+      <AssemblerOutput>AssemblyCode</AssemblerOutput>
+      <AssemblerOutputFile>$(ProjectDir)%(Filename).asm</AssemblerOutputFile>
     </FxCompile>
     <PostBuildEvent>
       <Command>for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir)</Command>

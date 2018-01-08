@@ -466,8 +466,8 @@ void VKExt::CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::v
 {
 	const auto ShaderPath = GetBasePath();
 	ShaderModules = {
-		CreateShaderModule((ShaderPath + L".vert.spv").data()),
-		CreateShaderModule((ShaderPath + L".frag.spv").data())
+		CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()),
+		CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data())
 	};
 
 	//!< HLSL コンパイル時のデフォルトエントリポイント名が "main" なのでそれに合わせることにする
@@ -505,11 +505,11 @@ void VKExt::CreateShader_VsPsTesTcsGs(std::vector<VkShaderModule>& ShaderModules
 {
 	const auto ShaderPath = GetBasePath();
 	ShaderModules = {
-		CreateShaderModule((ShaderPath + L".vert.spv").data()),
-		CreateShaderModule((ShaderPath + L".frag.spv").data()),
-		CreateShaderModule((ShaderPath + L".tese.spv").data()),
-		CreateShaderModule((ShaderPath + L".tesc.spv").data()),
-		CreateShaderModule((ShaderPath + L".geom.spv").data()) 
+		CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()),
+		CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()),
+		CreateShaderModule((ShaderPath + TEXT(".tese.spv")).data()),
+		CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data()),
+		CreateShaderModule((ShaderPath + TEXT(".geom.spv")).data()) 
 	};
 	const char* EntrypointName = "main";
 	PipelineShaderStageCreateInfos = {
@@ -560,7 +560,7 @@ void VKExt::CreateShader_Cs(std::vector<VkShaderModule>& ShaderModules, std::vec
 {
 	const auto ShaderPath = GetBasePath();
 	ShaderModules = {
-		CreateShaderModule((ShaderPath + L".comp.spv").data()),
+		CreateShaderModule((ShaderPath + TEXT(".comp.spv")).data()),
 	};
 	const char* EntrypointName = "main";
 	PipelineShaderStageCreateInfos = {

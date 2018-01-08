@@ -2073,7 +2073,8 @@ void VK::CreatePipeline()
 
 	//!< パイプラインキャッシュをファイルから読み込む (スレッド数分だけ(同じものを)用意する)
 	std::vector<VkPipelineCache> PipelineCaches(ThreadCount);
-	LoadPipelineCaches(GetBasePath() + L".pco", PipelineCaches);
+	const auto PCOPath = GetBasePath() + TEXT(".pco");
+	LoadPipelineCaches(PCOPath, PipelineCaches);
 
 	//!< パイプラインキャッシュを使用して、各スレッドでパイプラインを作成する
 	std::vector<std::vector<VkPipeline>> Pipelines(ThreadCount);
@@ -2106,7 +2107,7 @@ void VK::CreatePipeline()
 	//!< 各スレッドが作成したパイプラインキャッシュをマージする (ここでは最後の要素へマージしている)
 	VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, PipelineCaches.back(), static_cast<uint32_t>(PipelineCaches.size() - 1), PipelineCaches.data()));	
 	//!< マージ後のパイプラインキャッシュをファイルへ保存
-	StorePipelineCache(GetBasePath() + L".pco", PipelineCaches.back());
+	StorePipelineCache(PCOPath, PipelineCaches.back());
 	//!< 破棄して良い
 	for (auto& i : PipelineCaches) {
 		vkDestroyPipelineCache(Device, i, GetAllocationCallbacks());
@@ -2263,9 +2264,9 @@ void VK::CreatePipeline_Graphics()
 		}
 	};
 
-	//!< パイプラインキャッシュ (ファイルから読み込む、読み込めない場合は新規作成)
-	const auto PipelineCache = VK_NULL_HANDLE;//LoadPipelineCache(GetBasePath() + L".pco");
-
+	//!< パイプラインキャッシュオブジェクト Pipeline Cache Object
+	const auto PCOPath = GetBasePath() + TEXT(".pco");
+	const auto PipelineCache = LoadPipelineCache(PCOPath);
 	//!< (グラフィック)パイプライン
 	//!< キャッシュがデータを含む場合はドライバはパイプライン作成時に使用する、またドライバはパイプライン作成結果をキャッシュする
 	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, 
@@ -2273,6 +2274,12 @@ void VK::CreatePipeline_Graphics()
 		static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), 
 		GetAllocationCallbacks(), 
 		&Pipeline));
+	if (VK_NULL_HANDLE != PipelineCache) {
+		//!< ここではマージの必要は無い In this case no need to merge
+		//VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, PipelineCache, 1, PipelineCache));
+		StorePipelineCache(PCOPath, PipelineCache);
+		vkDestroyPipelineCache(Device, PipelineCache, GetAllocationCallbacks());
+	}
 
 	//!< パイプライン を作成したら、シェーダモジュール は破棄して良い
 	for (auto i : ShaderModules) {

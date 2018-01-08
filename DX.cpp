@@ -1131,7 +1131,33 @@ void DX::CreatePipelineState_Graphics()
 		D3D12_PIPELINE_STATE_FLAG_NONE //!< D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG ... は Warp デバイスのみ
 	};
 
-	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
+	Microsoft::WRL::ComPtr<ID3D12Device1> Device1;
+	VERIFY_SUCCEEDED(Device->QueryInterface(IID_PPV_ARGS(Device1.GetAddressOf())));
+	//!< パイプラインキャッシュオブジェクト Pipeline Cache Object
+	const auto PCOPath = GetBasePath() + TEXT(".pco");
+	Microsoft::WRL::ComPtr<ID3DBlob> Blob;
+	if (SUCCEEDED(D3DReadFileToBlob(PCOPath.data(), Blob.GetAddressOf())) && Blob->GetBufferSize()) {
+		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(PipelineLibrary.GetAddressOf())));
+
+		//!< ライブラリからパイプラインステートを取得する (重複を防ぐためにライブラリのデータベースとDescが比較される)
+		VERIFY_SUCCEEDED(PipelineLibrary->LoadGraphicsPipeline(PCOPath.data(), &GraphicsPipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
+	}
+	else {
+		VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
+
+		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, IID_PPV_ARGS(PipelineLibrary.GetAddressOf())));
+		//!< 名前指定で内部データベースへ追加する
+		VERIFY_SUCCEEDED(PipelineLibrary->StorePipeline(PCOPath.data(), PipelineState.Get()));
+
+		//!< ライブラリコンテンツを書き出す
+		const auto Size = PipelineLibrary->GetSerializedSize();
+		if (Size) {
+			Microsoft::WRL::ComPtr<ID3DBlob> Blob;
+			VERIFY_SUCCEEDED(D3DCreateBlob(Size, Blob.GetAddressOf()));
+			PipelineLibrary->Serialize(Blob->GetBufferPointer(), Size);
+			VERIFY_SUCCEEDED(D3DWriteBlobToFile(Blob.Get(), PCOPath.data(), TRUE));
+		}
+	}
 
 #ifdef _DEBUG
 	std::cout << "CreatePipelineState_Graphics" << COUT_OK << std::endl << std::endl;

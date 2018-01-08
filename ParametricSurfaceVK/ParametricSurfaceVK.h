@@ -16,7 +16,7 @@ public:
 protected:
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PhysicalDeviceFeatures) const { assert(PhysicalDeviceFeatures.tessellationShader && "tessellationShader not enabled"); }
 
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Indexed(0); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Indexed(1); }
 
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {
 		CreateShader_VsPsTesTcsGs(ShaderModules, PipelineShaderStageCreateInfos);
@@ -26,7 +26,7 @@ protected:
 		CreateInputAssembly_Topology(PipelineInputAssemblyStateCreateInfo, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST);
 	}
 	virtual void CreateTessellationState(VkPipelineTessellationStateCreateInfo& PipelineTessellationStateCreateInfo) const override {
-		const uint32_t PatchControlPoint = 4;
+		const uint32_t PatchControlPoint = 1;
 		PipelineTessellationStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO, nullptr, 0, PatchControlPoint };
 	}
 
