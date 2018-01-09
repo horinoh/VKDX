@@ -157,6 +157,8 @@ protected:
 	virtual void CreateInputLayout(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs, const UINT InputSlot = 0) const {}
 	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType() const = 0; //!< D3D12_GRAPHICS_PIPELINE_STATE_DESC 作成時に使用
 	virtual D3D_PRIMITIVE_TOPOLOGY GetPrimitiveTopology() const = 0; //!< IASetPrimitiveTopology() 時に使用
+	virtual BOOL LoadPipelineLibrary(const std::wstring& Path);
+	virtual void StorePipelineLibrary(const std::wstring& Path) const;
 	virtual void CreatePipelineState();
 	virtual void CreatePipelineState_Graphics();
 	virtual void CreatePipelineState_Compute();

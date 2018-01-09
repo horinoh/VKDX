@@ -1984,7 +1984,6 @@ VkPipelineCache VK::LoadPipelineCache(const std::wstring& Path) const
 
 	return PipelineCache;
 }
-
 void VK::LoadPipelineCaches(const std::wstring& Path, std::vector<VkPipelineCache>& PipelineCaches) const
 {
 	size_t Size = 0;
@@ -2276,7 +2275,7 @@ void VK::CreatePipeline_Graphics()
 		&Pipeline));
 	if (VK_NULL_HANDLE != PipelineCache) {
 		//!< ここではマージの必要は無い In this case no need to merge
-		//VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, PipelineCache, 1, PipelineCache));
+		//VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, DstPipelineCache, 1, SrcPipelineCache));
 		StorePipelineCache(PCOPath, PipelineCache);
 		vkDestroyPipelineCache(Device, PipelineCache, GetAllocationCallbacks());
 	}

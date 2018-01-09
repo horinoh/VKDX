@@ -88,7 +88,7 @@ public:
 	virtual std::string GetTitle() const { return std::string(TitleW.begin(), TitleW.end()); }
 	void SetTitleW(LPCWSTR Title) { TitleW = Title; }
 
-	std::wstring GetBasePath() const { return TEXT(".\\" + GetTitleW()); }
+	std::wstring GetBasePath() const { return TEXT(".\\") + GetTitleW(); }
 
 	static void ShowMessageBox(HWND hWnd, const std::string Message);
 	static void ShowMessageBoxW(HWND hWnd, const std::wstring Message);
