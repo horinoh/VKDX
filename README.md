@@ -62,12 +62,24 @@ xcopy /y %VK_SDK_PATH%\Config\vk_layer_settings.txt $(TargetDir)
 	* Link Objects : `No`
 	* Treat Output As Content : `Yes`
 	* Command Line :
+* Debug
 ~~~
-glslangValidator -V %(Identity) -o %(Identity).spv
-spirv-remap --map all --input %(Identity).spv --output . //!< この行は Release のみ
+glslangValidator -H %(Identity) -o %(Identity).spv > %(Identity).asm
 xcopy /y %(Identity).spv $(TargetDir) //!< TargetDir にもコピー
 ~~~
-
+* Release
+~~~
+glslangValidator -V %(Identity) -o %(Identity).spv
+spirv-remap --map all --input %(Identity).spv --output .
+xcopy /y %(Identity).spv $(TargetDir)
+~~~
+* その他オプション
+  * -H SPIR-Vコードを標準出力へ
+  * -e エントリポイント
+  * -S シェーダステージ (vert, frag,...)
+  * -D HLSLファイルを指定する場合
+  * -D マクロを指定する場合(-Dの後にスペースを入れずに指定)
+    
 * プロパティシートへの変更は **sln を立ち上げ直さないと反映されない**
 
 #### オンラインコンパイル
@@ -170,7 +182,7 @@ TODO
 - デプスステンシルを有効にして試してない
 - コンピュートの検証
 - パラメトリックサーフェスの実装
-- ユニフォームバッファ 1UBという名前で作ってあるが未使用
+- ユニフォームバッファ(1UBという名前で作ってあるが未使用)
 - DebugMarkerが使えなくなった
 - ストレージバッファ、ユニフォームテクセルバッファ、ストレージテクセルバッファの検証
 - マルチスレッドでのコマンド作成(テストコード止まり)
