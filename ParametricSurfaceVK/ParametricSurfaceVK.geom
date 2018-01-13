@@ -6,7 +6,7 @@
 //layout (push_constants) uniform Transform { mat4 Projection; mat4 View; mat4 World; } PushConstant;
 
 layout (triangles, invocations = 1) in;
-layout (triangle_strip, max_vertices = 3) out;
+layout (line_strip/*triangle_strip*/, max_vertices = 3) out;
 void main()
 {
 	//const mat4 PVW = Projection * View * World;

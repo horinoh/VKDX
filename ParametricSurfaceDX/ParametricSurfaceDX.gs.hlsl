@@ -11,10 +11,10 @@ struct OUT
 
 [instance(1)]
 [maxvertexcount(3)]
-void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instanceID : SV_GSInstanceID)
+void main(const triangle IN In[3], inout LineStream<OUT>/*TriangleStream<OUT>*/ stream, uint instanceID : SV_GSInstanceID)
 {
 	OUT Out;
-
+	
 	//const float4x4 PVW = mul(mul(Projection, View), World);
 
 	[unroll]
