@@ -77,9 +77,6 @@
     <CustomBuild Include="BillboardVK.frag">
       <Filter>Shader Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="BillboardVK.geom">
-      <Filter>Shader Files</Filter>
-    </CustomBuild>
     <CustomBuild Include="BillboardVK.tesc">
       <Filter>Shader Files</Filter>
     </CustomBuild>
@@ -87,6 +84,9 @@
       <Filter>Shader Files</Filter>
     </CustomBuild>
     <CustomBuild Include="BillboardVK.vert">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="BillboardVK.geom">
       <Filter>Shader Files</Filter>
     </CustomBuild>
   </ItemGroup>

@@ -14,7 +14,7 @@ public:
 	virtual ~BillboardDX() {}
 
 protected:
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Indexed(1); } //!< 最低でもインデックス数1が必要 At least index count must be 1
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Indexed(1); }
 
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::vector<D3D12_SHADER_BYTECODE>& ShaderBytecodes) const override {
 		CreateShader_VsPsDsHsGs(ShaderBlobs, ShaderBytecodes);

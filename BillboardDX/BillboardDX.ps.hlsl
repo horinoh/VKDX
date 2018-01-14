@@ -1,6 +1,7 @@
 struct IN
 {
 	float4 Position : SV_POSITION;
+	float2 Texcoord : TEXCOORD0;
 };
 struct OUT
 {
@@ -11,7 +12,7 @@ struct OUT
 OUT main(const IN In)
 {
 	OUT Out;
-	Out.Color = float4(1.0f, 0.0f, 0.0f, 1.0f);
+	Out.Color = float4(In.Texcoord, 0.0f, 1.0f);
 	return Out;
 }
 

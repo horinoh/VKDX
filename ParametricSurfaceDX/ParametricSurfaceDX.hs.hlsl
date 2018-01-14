@@ -7,7 +7,6 @@ struct OUT
 	float3 Position : POSITION;
 };
 
-// <internal error> could not get find UDT(User Defined Type) child with correct offset in PDB Ç∆Ç»ÇËèoóÕÇ≥ÇÍÇ»Ç¢Åc
 struct TESS_FACTOR
 {
 	float Edge[4] : SV_TessFactor;
