@@ -1160,7 +1160,7 @@ void DX::CreatePipelineState_Graphics()
 	//!< パイプラインキャッシュオブジェクト Pipeline Cache Object
 	const auto PCOPath = GetBasePath() + TEXT(".pco"); //!< シリアライズファイルパス Searialize file path
 	const auto PCOName = GetTitleW() + TEXT(".pco"); //!< ライブラリデータベースへ登録する名前 Name to store in library
-	//DeleteFile(PCOPath.data());
+	DeleteFile(PCOPath.data());
 	if(LoadPipelineLibrary(PCOPath)) {
 		//!< ライブラリからパイプラインステートを取得する (重複を防ぐためにライブラリデータベースとDescが比較される)
 		VERIFY_SUCCEEDED(PipelineLibrary->LoadGraphicsPipeline(PCOName.data(), &GraphicsPipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));

@@ -140,8 +140,11 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
  * プロパティマネージャで Add Existing Property Sheet... - Props/HLSL.props、(Props/DXTK(Debug).prop)
  * Header Files に Win.h、DX.h、DXExt.h、(DXImage.h) を追加 
  * Source Files に Win.cpp、DX.cpp、DXExt.cpp、(DXImage.cpp) を追加
- * XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
+ * XxxDX.h、XxxDX.cpp, stdafx.h は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * 必要に応じて Shader Files フォルダを作成し、シェーダを突っ込む
+  * 右クリック - プロパティ - Configuration Propeties - General
+   * Excluded From Build を No
+   * Content を Yes
   * 右クリック - プロパティ - HLSL Compiler - General - Shader Type でタイプを適切に選択しておく
 
 #### VK
@@ -150,9 +153,12 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
  * Source Files に Win.cpp、VK.cpp、VKExt.cpp、(VKImage.cpp) を追加
  * XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * 必要に応じて Shader Files フォルダを作成し、シェーダを突っ込む
-  * 拡張子を glslangValidator に沿うようにタイプを選択しておく。(.vert、 PS.frag、...)
-  * 右クリック - プロパティ - HLSL Compiler - General - Item Type を Custom Build Tool
-   * 適用 - Custom Build Tool 項目が追加されるので GLSL Compiler になっていることを確認
+  * 拡張子を glslangValidator に沿うようにタイプを選択しておく。(.vert、.frag、...)
+  * 右クリック - プロパティ - Configuration Propeties - General
+    * Excluded From Build を No
+    * Content を Yes
+    * Item Type を Custom Build Tool
+   * 適用 - Custom Build Tool 項目が追加されるので GLSL Compiler になっていることを確認 (↑のプロパティを先に設定しておくこと)
  -->
 
 <!-- 
