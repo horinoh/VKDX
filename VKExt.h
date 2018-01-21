@@ -27,7 +27,7 @@ public:
 	void CreateDescriptorPoolSizes_1UB(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {
 		DescriptorPoolSizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 });
 	}
-	void CreaateWriteDescriptorSets_1UB(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos) const;
+	void CreateWriteDescriptorSets_1UB(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos) const;
 	void UpdateDescriptorSet_1UB();
 
 	/** 

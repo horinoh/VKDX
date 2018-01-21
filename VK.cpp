@@ -63,8 +63,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateDescriptorSetLayout();
 	{
-		//!< #VK_TODO
-		//CreateUniformBuffer();
+		CreateUniformBuffer();
 	}
 	CreateDescriptorSet();
 	UpdateDescriptorSet();

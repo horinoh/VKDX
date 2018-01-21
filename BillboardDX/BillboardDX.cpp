@@ -249,6 +249,15 @@ void BillboardDX::PopulateCommandList(const size_t i)
 
 			CL->SetGraphicsRootSignature(RootSignature.Get());
 
+			//!< コンスタントバッファ
+			{
+				const std::vector<ID3D12DescriptorHeap*> DH = { ConstantBufferDescriptorHeap.Get() };
+				CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
+
+				auto CBHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+				CL->SetGraphicsRootDescriptorTable(0, CBHandle);
+			}
+
 			CL->IASetPrimitiveTopology(GetPrimitiveTopology());
 
 			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);

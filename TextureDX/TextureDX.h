@@ -26,7 +26,6 @@ protected:
 	virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
 		CreateRootParameters_1DT(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_PIXEL);
 	}
-	
 	virtual void CreateDescriptorHeap() override {
 		CreateDescriptorHeap_1SRV();
 	}

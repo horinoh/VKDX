@@ -28,6 +28,6 @@ float3 GetPosition_Torus(const float2 uv)
 OUT main(const TESS_FACTOR tess, const float2 uv : SV_DomainLocation, const OutputPatch<IN, 4> quad)
 {
 	OUT Out;
-	Out.Position = GetPosition_Torus(uv) * 0.5f;
+	Out.Position = GetPosition_Torus(uv);
 	return Out;
 }

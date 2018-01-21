@@ -118,7 +118,7 @@ void VKExt::CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, co
 		}
 	}(&IndirectBuffer, &IndirectDeviceMemory, Size, &Command, CommandBuffers[0]);
 }
-void VKExt::CreaateWriteDescriptorSets_1UB(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos) const
+void VKExt::CreateWriteDescriptorSets_1UB(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos) const
 {
 	WriteDescriptorSet = {
 		VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -139,13 +139,18 @@ void VKExt::UpdateDescriptorSet_1UB()
 		const std::vector<VkDescriptorBufferInfo> DescriptorBufferInfos = {
 			{
 				Buffer,
-				0, //!< オフセット (要アライメント)
+				0/*オフセット(要アライン)*/,
 				VK_WHOLE_SIZE
-			},
+			}
 		};
-		CreateWriteDescriptorSets(WriteDescriptorSets.back(), {}, DescriptorBufferInfos, {});
+		if (!WriteDescriptorSets.empty()) {		
+			CreateWriteDescriptorSets(WriteDescriptorSets.back(), {}, DescriptorBufferInfos, {});
+		}
 
 		std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
+		if (!CopyDescriptorSets.empty()) {
+			CreateCopyDescriptorSets(CopyDescriptorSets.back());
+		}
 
 		vkUpdateDescriptorSets(Device,
 			static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
@@ -171,7 +176,6 @@ void VKExt::UpdateDescriptorSet_1CIS()
 	[&](const VkSampler Sampler, const VkImageView ImageView) {
 		std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
 		WriteDescriptorSets.resize(1);
-
 		const std::vector<VkDescriptorImageInfo> DescriptorImageInfos = {
 			{
 				Sampler,
@@ -179,9 +183,14 @@ void VKExt::UpdateDescriptorSet_1CIS()
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 			},
 		};
-		CreateWriteDescriptorSets(WriteDescriptorSets.back(), DescriptorImageInfos, {}, {});
+		if (!WriteDescriptorSets.empty()) {			
+			CreateWriteDescriptorSets(WriteDescriptorSets.back(), DescriptorImageInfos, {}, {});
+		}
 
-	std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
+		std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
+		if (!CopyDescriptorSets.empty()) {
+			CreateCopyDescriptorSets(CopyDescriptorSets.back());
+		}
 
 	vkUpdateDescriptorSets(Device,
 		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),

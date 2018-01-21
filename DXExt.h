@@ -24,7 +24,7 @@ public:
 		DescriptorRanges.push_back({ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND});
 	}
 	template<typename T>
-	void CreateDescriptorHeap_1CBV(const T& Type) {
+	void CreateDescriptorHeap_1CBV() {
 		const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		const auto Count = 1;
 		const auto Size = RoundUpTo256(sizeof(T));
@@ -48,7 +48,7 @@ public:
 			//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 			const auto CDH = GetCPUDescriptorHandle(DescriptorHeap, Type);
 			Device->CreateConstantBufferView(&ConstantBufferViewDesc, CDH);
-		}(Type, ConstantBufferResource.Get(), ConstantBufferDescriptorHeap.Get(), Size);
+		}(Type, ConstantBufferResource.Get(), ConstantBufferDescriptorHeap.Get(), static_cast<UINT>(Size));
 
 #ifdef DEBUG_STDOUT
 		std::cout << "CreateDescriptorHeap" << COUT_OK << std::endl << std::endl;

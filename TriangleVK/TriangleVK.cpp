@@ -352,17 +352,6 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 		};
 		vkCmdBeginRenderPass(CB, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
 #if 0
-			//!< ユニフォームバッファ UniformBuffer
-			if (!DescriptorSets.empty()) {
-				vkCmdBindDescriptorSets(CommandBuffer, 
-					VK_PIPELINE_BIND_POINT_GRAPHICS,
-					PipelineLayout, 
-					0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 
-					0, nullptr);
-			}
-#endif
-
-#if 0
 			//!< プッシュコンスタント PushConstants
 			const uint32_t Offset = 64; //!< 4の倍数であること(ここではフラグメントシェーダ用は 64byte オフセットしている) Mulitiple of 4(For fragment shader offset 64 byte in this case)
 			const std::array<float, 4> Color = { 0.0f, 0.7f, 0.4f, 0.1f };
