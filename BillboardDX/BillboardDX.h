@@ -14,6 +14,10 @@ public:
 	virtual ~BillboardDX() {}
 
 protected:
+	virtual void CreateDepthStencil() override {
+		//CreateDepthStencilOfClientRect(DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
+	}
+
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Indexed(1); }
 
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::vector<D3D12_SHADER_BYTECODE>& ShaderBytecodes) const override {
@@ -42,10 +46,10 @@ protected:
 
 	virtual void CreateConstantBuffer() override {
 		const auto Fov = 0.16f * DirectX::XM_PI;
-		const auto Aspect = 1.0f;
+		const auto Aspect = GetAspectRatioOfClientRect();
 		const auto ZFar = 100.0f;
 		const auto ZNear = ZFar * 0.0001f;
-		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 10.0f, 1.0f);
+		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 6.0f, 1.0f);
 		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		Super::CreateConstantBuffer<Transform>({

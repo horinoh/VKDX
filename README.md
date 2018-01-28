@@ -141,7 +141,7 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
  * Header Files に Win.h、DX.h、DXExt.h、(DXImage.h) を追加 
  * Source Files に Win.cpp、DX.cpp、DXExt.cpp、(DXImage.cpp) を追加
  * XxxDX.h、XxxDX.cpp, stdafx.h は既存のものを参考に編集 (#pragma region Code でマークしてある)
- * 必要に応じて Shader Files フォルダを作成し、シェーダを突っ込む
+ * Shader Files フォルダを作成し、シェーダを突っ込む
   * 右クリック - プロパティ - Configuration Propeties - General
    * Excluded From Build を No
    * Content を Yes
@@ -152,7 +152,7 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
  * Header Files に Win.h、VK.h、VKExt.h、(VKImage.h) を追加
  * Source Files に Win.cpp、VK.cpp、VKExt.cpp、(VKImage.cpp) を追加
  * XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
- * 必要に応じて Shader Files フォルダを作成し、シェーダを突っ込む
+ * Shader Files フォルダを作成し、シェーダを突っ込む
   * 拡張子を glslangValidator に沿うようにタイプを選択しておく。(.vert、.frag、...)
   * 右クリック - プロパティ - Configuration Propeties - General
     * Excluded From Build を No

@@ -74,6 +74,6 @@ PerformanceCounter::~PerformanceCounter()
 {
 	__int64 End;
 	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&End));
-	std::cout << Label << (End - Start) * SecondsPerCount << " sec" << std::endl << std::endl;
+	std::cout << Label << (End - Start) * SecondsPerCount * 1000.0 << " msec" << std::endl << std::endl;
 }
 #endif

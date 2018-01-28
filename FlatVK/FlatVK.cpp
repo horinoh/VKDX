@@ -1,8 +1,8 @@
-// TriangleVK.cpp : Defines the entry point for the application.
+// FlatVK.cpp : Defines the entry point for the application.
 //
 
 #include "stdafx.h"
-#include "TriangleVK.h"
+#include "FlatVK.h"
 
 #pragma region Code
 VK* Inst = nullptr;
@@ -33,7 +33,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_TRIANGLEVK, szWindowClass, MAX_LOADSTRING);
+    LoadStringW(hInstance, IDC_FLATVK, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
@@ -42,7 +42,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_TRIANGLEVK));
+    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_FLATVK));
 
     MSG msg;
 
@@ -77,10 +77,10 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_TRIANGLEVK));
+    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_FLATVK));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_TRIANGLEVK);
+    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_FLATVK);
     wcex.lpszClassName  = szWindowClass;
     wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
@@ -149,7 +149,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 	case WM_CREATE:
 		if (nullptr == Inst) {
-			Inst = new TriangleVK();
+			Inst = new FlatVK();
 		}
 		if (nullptr != Inst) {
 			try {
@@ -225,99 +225,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void TriangleVK::CreateVertexBuffer()
-{
-	const std::vector<Vertex_PositionColor> Vertices = {
-		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-		{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-		{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
-	};
-	const auto Stride = sizeof(Vertices[0]);
-	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
-	
-	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data, const VkCommandBuffer CB) {
-		VkBuffer StagingBuffer = VK_NULL_HANDLE;
-		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
-		{
-			//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
-			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
-			CopyToHostVisibleMemory(StagingDeviceMemory, Size, Data);
-			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
-
-			//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
-			CreateBuffer(Buffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-			CreateDeviceLocalMemory(DeviceMemory, *Buffer);
-			BindDeviceMemory(*Buffer, *DeviceMemory);
-
-			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
-			SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
-
-		}
-		if (VK_NULL_HANDLE != StagingDeviceMemory) {
-			vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
-		}
-		if (VK_NULL_HANDLE != StagingBuffer) {
-			vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
-		}
-	}(&VertexBuffer, &VertexDeviceMemory, Size, Vertices.data(), CommandBuffers[0]);
-
-	//!< ビューは必要ない No need view
-
-#ifdef _DEBUG
-	MarkerSetObjectName(Device, VertexBuffer, "MyVertexBuffer");
-#endif
-
-#ifdef _DEBUG
-	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
-#endif
-}
-void TriangleVK::CreateIndexBuffer()
-{
-	const std::vector<uint32_t> Indices = { 0, 1, 2 };
-
-	//!< vkCmdDrawIndexed() が引数に取るので覚えておく必要がある Save this value because vkCmdDrawIndexed() will use it
-	IndexCount = static_cast<uint32_t>(Indices.size());
-	const auto Stride = sizeof(Indices[0]);
-	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
-	
-	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data, const VkCommandBuffer CB) {
-		VkBuffer StagingBuffer = VK_NULL_HANDLE;
-		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
-		{
-			//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
-			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
-			CopyToHostVisibleMemory(StagingDeviceMemory, Size, Data);
-			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
-
-			//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
-			CreateBuffer(Buffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-			CreateDeviceLocalMemory(DeviceMemory, *Buffer);
-			BindDeviceMemory(*Buffer, *DeviceMemory);
-
-			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
-			SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
-		}
-		if (VK_NULL_HANDLE != StagingDeviceMemory) {
-			vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
-		}
-		if (VK_NULL_HANDLE != StagingBuffer) {
-			vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
-		}
-	}(&IndexBuffer, &IndexDeviceMemory, Size, Indices.data(), CommandBuffers[0]);
-
-	//!< ビューは必要ない No need view
-
-#ifdef _DEBUG
-	MarkerSetObjectName(Device, IndexBuffer, "MyIndexBuffer");
-#endif
-
-#ifdef _DEBUG
-	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
-#endif
-}
-void TriangleVK::PopulateCommandBuffer(const size_t i)
+void FlatVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandBuffers[i];
 	//const auto SCB = SecondaryCommandBuffers[i];
@@ -331,14 +239,9 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &BeginInfo)); {
-#ifdef _DEBUG
-		MarkerBegin(CB, "Command Begin, End", glm::vec4(0,1,0,1));
-#endif
-
 		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-		//!< クリア
 		ClearColor(CB, Image, Colors::SkyBlue);
 
 		const VkRenderPassBeginInfo RenderPassBeginInfo = {
@@ -350,32 +253,11 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 			0, nullptr
 		};
 		vkCmdBeginRenderPass(CB, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
-#if 0
-			//!< プッシュコンスタント PushConstants
-			const uint32_t Offset = 64; //!< 4の倍数であること(ここではフラグメントシェーダ用は 64byte オフセットしている) Mulitiple of 4(For fragment shader offset 64 byte in this case)
-			const std::array<float, 4> Color = { 0.0f, 0.7f, 0.4f, 0.1f };
-			const auto Size = static_cast<uint32_t>(Color.size() * sizeof(Color[0])); //!< 4の倍数であること Mulitiple of 4
-			vkCmdPushConstants(CommandBuffer, PipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, Offset, Size, Color.data());
-#endif
-
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
 
-			if (VK_NULL_HANDLE != VertexBuffer && VK_NULL_HANDLE != IndexBuffer) {
-				const VkDeviceSize Offsets[] = { 0 };
-				vkCmdBindVertexBuffers(CB, 0, 1, &VertexBuffer, Offsets);
-				vkCmdBindIndexBuffer(CB, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
-			}
+			vkCmdDrawIndirect(CB, IndirectBuffer, 0, 1, 0);
 
-			//!< 描画
-#ifdef USE_DRAW_INDIRECT
-			vkCmdDrawIndexedIndirect(CB, IndirectBuffer, 0, 1, 0);
-#else
-			vkCmdDrawIndexed(CB, IndexCount, 1, 0, 0, 0);
-#endif
 		} vkCmdEndRenderPass(CB);
-#ifdef _DEBUG
-		MarkerEnd(CB);
-#endif
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
-#pragma endregion //!< Code
+#pragma endregion

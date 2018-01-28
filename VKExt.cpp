@@ -276,6 +276,9 @@ void VKExt::CreateRenderPass_Color()
 }
 void VKExt::CreateRenderPass_ColorDepth()
 {
+	const auto CF = ColorFormat;
+	const auto DF = VK_FORMAT_D24_UNORM_S8_UINT;
+
 	[&](VkRenderPass* RenderPass, const VkFormat ColorFormat, const VkFormat DepthFormat) {
 		const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
 			{
@@ -332,12 +335,15 @@ void VKExt::CreateRenderPass_ColorDepth()
 			static_cast<uint32_t>(SubpassDependencies.size()), SubpassDependencies.data()
 		};
 		VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, GetAllocationCallbacks(), RenderPass));
-	}(&RenderPass, ColorFormat, DepthFormat);
+	}(&RenderPass, CF, DF);
 }
 
 //!< ファーストパスで ColorDepth に書き込み、セカンドパスで PostProcess を行う場合の例 In first pass ColorDepth, second pass PostProcess
 void VKExt::CreateRenderPass_CD_PP()
 {
+	const auto CF = ColorFormat;
+	const auto DF = VK_FORMAT_D24_UNORM_S8_UINT;
+
 	[&](VkRenderPass* RenderPass, const VkFormat ColorFormat, const VkFormat DepthFormat) {
 		const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
 			{
@@ -424,7 +430,7 @@ void VKExt::CreateRenderPass_CD_PP()
 			static_cast<uint32_t>(SubpassDependencies.size()), SubpassDependencies.data()
 		};
 		VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, GetAllocationCallbacks(), RenderPass));
-	}(&RenderPass, ColorFormat, DepthFormat);
+	}(&RenderPass, CF, DF);
 }
 
 void VKExt::CreateFramebuffer_Color()

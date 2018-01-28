@@ -758,7 +758,7 @@ void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 #endif
 }
 
-void DX::CreateDepthStencil()
+void DX::CreateDepthStencil(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat)
 {
 	const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 	const auto Count = 1;
@@ -772,15 +772,13 @@ void DX::CreateDepthStencil()
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
 	}(Type, Count, DepthStencilDescriptorHeap.GetAddressOf());
 
+	CreateDepthStencilResource(Width, Height, DepthFormat);
+
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
-void DX::ResetDepthStencilResource()
-{
-	DepthStencilResource.Reset();
-}
 void DX::CreateDepthStencilResource(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat)
 {
 	//!< リソースの作成
@@ -825,8 +823,8 @@ void DX::CreateDepthStencilResource(const UINT Width, const UINT Height, const D
 #endif
 
 	//!< リソースの状態を初期 → デプス書き込みへ変更
-	auto CommandList = GraphicsCommandLists[0];
-	ResourceBarrier(CommandList.Get(), DepthStencilResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+	auto CL = GraphicsCommandLists[0];
+	ResourceBarrier(CL.Get(), DepthStencilResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateDepthStencilResource" << COUT_OK << std::endl << std::endl;
@@ -834,7 +832,8 @@ void DX::CreateDepthStencilResource(const UINT Width, const UINT Height, const D
 }
 void DX::ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat)
 {
-	ResetDepthStencilResource();
+	DepthStencilResource.Reset();
+
 	CreateDepthStencilResource(Width, Height, DepthFormat);
 
 #ifdef DEBUG_STDOUT

@@ -313,31 +313,12 @@ void TriangleDX::PopulateCommandList(const size_t i)
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
 			//!< クリア
-			{
-				ClearColor(CL, SCHandle, DirectX::Colors::SkyBlue);
-#if 0
-				if (nullptr != DepthStencilDescriptorHeap) {
-					const auto DSHandle(GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
-					ClearDepthStencil(CL, DSHandle, 1.0f, 0);
-				}
-#endif
-			}
+			ClearColor(CL, SCHandle, DirectX::Colors::SkyBlue);
 
 			//!< レンダーターゲット
-			{
-				const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { SCHandle };
-#if 0
-				if (nullptr != DepthStencilDescriptorHeap) {
-					const auto DSHandle(GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
-					CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, &DSHandle);
-				}
-				else {
-					CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
-				}
-#else
-				CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
-#endif
-			}
+			const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { SCHandle };
+			CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
+
 			//!< ルートシグニチャ
 			CL->SetGraphicsRootSignature(RootSignature.Get());
 

@@ -243,6 +243,9 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 		ClearColor(CB, Image, Colors::SkyBlue);
+		if (VK_NULL_HANDLE != DepthStencilImage) {
+			ClearDepthStencil(CB, DepthStencilImage, ClearDepthStencilValue);
+		}
 
 		const VkRenderPassBeginInfo RenderPassBeginInfo = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

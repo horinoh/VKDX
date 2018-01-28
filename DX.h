@@ -125,11 +125,14 @@ protected:
 		return 0xffffffff == CurrentBackBufferIndex ? SwapChain->GetCurrentBackBufferIndex() : (CurrentBackBufferIndex + 1) % static_cast<const UINT>(SwapChainResources.size());
 	}
 
-	virtual void CreateDepthStencil();
-	virtual void ResetDepthStencilResource();
-	virtual void CreateDepthStencilResource(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
-	virtual void ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
-	virtual void ResizeDepthStencilToClientRect(const DXGI_FORMAT DepthFormat = DXGI_FORMAT_D32_FLOAT_S8X24_UINT) {
+	virtual void CreateDepthStencil() {}
+	virtual void CreateDepthStencil(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat);
+	virtual void CreateDepthStencilOfClientRect(const DXGI_FORMAT DepthFormat) {
+		CreateDepthStencil(static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), DepthFormat);
+	}
+	virtual void CreateDepthStencilResource(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat);
+	virtual void ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat);
+	virtual void ResizeDepthStencilToClientRect(const DXGI_FORMAT DepthFormat) {
 		ResizeDepthStencil(static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), DepthFormat);
 	}
 
@@ -167,7 +170,7 @@ protected:
 	virtual void CreateStaticSamplerDesc(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) const {}
 
 	virtual void ClearColor(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const DirectX::XMVECTORF32& Color);
-	virtual void ClearDepthStencil(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const FLOAT Depth, const UINT8 Stencil);
+	virtual void ClearDepthStencil(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const FLOAT Depth = 1.0f, const UINT8 Stencil = 0);
 	virtual void PopulateCommandList(const size_t i);
 
 	virtual void Draw();

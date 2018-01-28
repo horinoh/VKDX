@@ -80,9 +80,8 @@ protected:
 	static void AligendFreeNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
 
 	static bool HasExtension(const VkPhysicalDevice PhysicalDevice, const char* ExtensionName);
-	static VkFormat GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice);
+	static bool IsSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, const VkFormat DepthFormat);
 	static uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const uint32_t MemoryTypeBits, const VkFlags Properties);
-	virtual FORCEINLINE VkFormat GetSupportedDepthFormat() const { return GetSupportedDepthFormat(PhysicalDevice); }
 	virtual FORCEINLINE uint32_t GetMemoryType(const uint32_t MemoryTypeBits, const VkFlags Properties) const { return GetMemoryType(PhysicalDeviceMemoryProperties, MemoryTypeBits, Properties); }
 	//static VkAccessFlags GetSrcAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
 	//static VkAccessFlags GetDstAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
@@ -194,10 +193,11 @@ protected:
 		ResizeSwapchain(static_cast<const uint32_t>(GetClientRectWidth()), static_cast<const uint32_t>(GetClientRectHeight()));
 	}
 
-	virtual void CreateDepthStencil() { /*CreateDepthStencilImage();CreateDepthStencilDeviceMemory();CreateDepthStencilView();*/ }
-	virtual void CreateDepthStencilImage();
+	virtual void CreateDepthStencil() {}
+	virtual void CreateDepthStencil(const uint32_t Width, const uint32_t Height, const VkFormat DepthFormat);
+	virtual void CreateDepthStencilImage(const uint32_t Width, const uint32_t Height, const VkFormat DepthFormat);
 	virtual void CreateDepthStencilDeviceMemory();
-	virtual void CreateDepthStencilView() {
+	virtual void CreateDepthStencilView(const VkFormat DepthFormat) {
 		CreateImageView(&DepthStencilImageView, DepthStencilImage, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, ComponentMapping_Identity, ImageSubresourceRange_DepthStencil);
 	}
 	
@@ -339,7 +339,7 @@ protected:
 	std::vector<VkImageView> SwapchainImageViews;
 	uint32_t SwapchainImageIndex = 0;
 
-	VkFormat DepthFormat = VK_FORMAT_D24_UNORM_S8_UINT;
+	//VkFormat DepthFormat = VK_FORMAT_D24_UNORM_S8_UINT;
 	VkImage DepthStencilImage = VK_NULL_HANDLE;
 	VkDeviceMemory DepthStencilDeviceMemory = VK_NULL_HANDLE;
 	VkImageView DepthStencilImageView = VK_NULL_HANDLE;

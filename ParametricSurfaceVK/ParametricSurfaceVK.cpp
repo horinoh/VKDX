@@ -260,4 +260,4 @@ void ParametricSurfaceVK::PopulateCommandBuffer(const size_t i)
 		} vkCmdEndRenderPass(CB);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
-#pragma endregion //!< Code
+#pragma endregion

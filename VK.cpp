@@ -366,25 +366,16 @@ bool VK::HasExtension(const VkPhysicalDevice PhysicalDevice, const char* Extensi
 	return false;
 }
 
-VkFormat VK::GetSupportedDepthFormat(VkPhysicalDevice PhysicalDevice)
+bool VK::IsSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, const VkFormat DepthFormat)
 {
-	const std::vector<VkFormat> DepthFormats = {
-		VK_FORMAT_D32_SFLOAT_S8_UINT,
-		VK_FORMAT_D32_SFLOAT,
-		VK_FORMAT_D24_UNORM_S8_UINT,
-		VK_FORMAT_D16_UNORM_S8_UINT,
-		VK_FORMAT_D16_UNORM
-	};
-	for (auto& i : DepthFormats) {
-		VkFormatProperties FormatProperties;
-		vkGetPhysicalDeviceFormatProperties(PhysicalDevice, i, &FormatProperties);
-		if (FormatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-			return i;
-		}
+	VkFormatProperties FormatProperties;
+	vkGetPhysicalDeviceFormatProperties(PhysicalDevice, DepthFormat, &FormatProperties);
+	if (FormatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+		return true;
 	}
-	DEBUG_BREAK(); //!< DepthFormat not found
-	return VK_FORMAT_UNDEFINED;
+	return false;
 }
+
 uint32_t VK::GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const uint32_t MemoryTypeBits, const VkFlags Properties)
 {
 	for (auto i = 0; i < 32; ++i) {
@@ -1636,12 +1627,23 @@ void VK::CreateSwapchainImageView()
 #endif
 }
 
-void VK::CreateDepthStencilImage()
+void VK::CreateDepthStencil(const uint32_t Width, const uint32_t Height, const VkFormat DepthFormat)
 {
-	DepthFormat = GetSupportedDepthFormat();
+	CreateDepthStencilImage(Width, Height, DepthFormat);
+	CreateDepthStencilDeviceMemory();
+	CreateDepthStencilView(DepthFormat);
+
+#ifdef DEBUG_STDOUT
+	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void VK::CreateDepthStencilImage(const uint32_t Width, const uint32_t Height, const VkFormat DepthFormat)
+{
+	assert(IsSupportedDepthFormat(PhysicalDevice, DepthFormat) && "Not supported depth format");
 
 	const VkExtent3D Extent3D = {
-		SurfaceExtent2D.width, SurfaceExtent2D.height, 1
+		Width, Height, 1
 	};
 	const VkImageUsageFlags Usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	CreateImage(&DepthStencilImage, Usage, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1);

@@ -1,8 +1,8 @@
-// BillboardDX.cpp : Defines the entry point for the application.
+// FlatDX.cpp : Defines the entry point for the application.
 //
 
 #include "stdafx.h"
-#include "BillboardDX.h"
+#include "FlatDX.h"
 
 #pragma region Code
 DX* Inst = nullptr;
@@ -33,7 +33,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_BILLBOARDDX, szWindowClass, MAX_LOADSTRING);
+    LoadStringW(hInstance, IDC_FLATDX, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
@@ -42,7 +42,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_BILLBOARDDX));
+    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_FLATDX));
 
     MSG msg;
 
@@ -77,10 +77,10 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_BILLBOARDDX));
+    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_FLATDX));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_BILLBOARDDX);
+    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_FLATDX);
     wcex.lpszClassName  = szWindowClass;
     wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
@@ -149,7 +149,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 	case WM_CREATE:
 		if (nullptr == Inst) {
-			Inst = new BillboardDX();
+			Inst = new FlatDX();
 		}
 		if (nullptr != Inst) {
 			try {
@@ -225,7 +225,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void BillboardDX::PopulateCommandList(const size_t i)
+void FlatDX::PopulateCommandList(const size_t i)
 {
 	const auto CL = GraphicsCommandLists[i].Get();
 	const auto SCR = SwapChainResources[i].Get();
@@ -241,31 +241,15 @@ void BillboardDX::PopulateCommandList(const size_t i)
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
 			ClearColor(CL, SCHandle, DirectX::Colors::SkyBlue);
-			//if (nullptr != DepthStencilDescriptorHeap) {
-			//	ClearDepthStencil(CL, GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
-			//}
 
-			const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { SCHandle };
-			CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
-			//if (nullptr != DepthStencilDescriptorHeap) {
-			//	const auto DSHandle(GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV));
-			//	CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, &DSHandle);
-			//}
-			//else {
-			//	CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
-			//}
+			{
+				const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { SCHandle };
+				CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
+			}
 
 			CL->SetGraphicsRootSignature(RootSignature.Get());
 
-			//!< コンスタントバッファ
-			{
-				const std::vector<ID3D12DescriptorHeap*> DH = { ConstantBufferDescriptorHeap.Get() };
-				CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
-
-				auto CBHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-				CL->SetGraphicsRootDescriptorTable(0, CBHandle);
-			}
-
+			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
 			CL->IASetPrimitiveTopology(GetPrimitiveTopology());
 
 			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
