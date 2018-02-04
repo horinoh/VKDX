@@ -2,9 +2,9 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout(location = 0) out vec2 Texcoord;
-
 layout (set=0, binding=0) uniform Transform { mat4 Projection; mat4 View; mat4 World; };
+
+layout(location = 0) out vec2 Texcoord;
 
 layout (triangles, invocations = 1) in;
 layout (triangle_strip, max_vertices = 4) out;

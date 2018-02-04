@@ -14,7 +14,7 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Shader Files">
-      <UniqueIdentifier>{18403495-1381-47b8-8bf8-c07bc337f777}</UniqueIdentifier>
+      <UniqueIdentifier>{354d8310-e2fe-43d1-9a32-cb538000088c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -30,13 +30,16 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FlatVK.h">
+    <ClInclude Include="NormalMapVK.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\VK.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\VKExt.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\VKImage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Win.h">
@@ -47,7 +50,7 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FlatVK.cpp">
+    <ClCompile Include="NormalMapVK.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\VK.cpp">
@@ -59,9 +62,12 @@
     <ClCompile Include="..\Win.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\VKImage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="FlatVK.rc">
+    <ResourceCompile Include="NormalMapVK.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
@@ -69,15 +75,25 @@
     <Image Include="small.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="FlatVK.ico">
+    <Image Include="NormalMapVK.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="FlatVK.frag" />
-    <CustomBuild Include="FlatVK.geom" />
-    <CustomBuild Include="FlatVK.tesc" />
-    <CustomBuild Include="FlatVK.tese" />
-    <CustomBuild Include="FlatVK.vert" />
+    <None Include="NormalMapVK.geom">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="NormalMapVK.tese">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="NormalMapVK.vert">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="NormalMapVK.tesc">
+      <Filter>Shader Files</Filter>
+    </None>
+    <None Include="NormalMapVK.frag">
+      <Filter>Shader Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

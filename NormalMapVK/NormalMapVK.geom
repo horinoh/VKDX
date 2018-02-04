@@ -1,0 +1,29 @@
+#version 450
+#extension GL_ARB_separate_shader_objects : enable
+#extension GL_ARB_shading_language_420pack : enable
+
+layout (location = 0) in vec3 InNormal[];
+layout (location = 1) in vec3 InTangent[];
+layout (location = 2) in vec2 InTexcoord[];
+
+//layout (set=0, binding=0) uniform Transform { mat4 Projection; mat4 View; mat4 World; };
+
+layout (location = 0) out vec3 OutNormal;
+layout (location = 1) out vec4 OutTangent;
+layout (location = 2) out vec2 OutTexcoord;
+
+layout (triangles, invocations = 1) in;
+layout (triangle_strip, max_vertices = 3) out;
+void main()
+{
+	//const mat4 PVW = Projection * View * World;
+
+	for(int i=0;i<gl_in.length();++i) {
+		gl_Position = gl_in[i].gl_Position;//PVW * gl_in[i].gl_Position;
+		OutNormal = InNormal[i];//mat3(World) * InNormal[i];
+		OutTangent = vec4(InTangent[i], 1.0f);//vec4(mat3(World) * InTangent[i], 1.0f);
+		OutTexcoord = InTexcoord[i];//(TextureTransform * vec4(InTexcoord[i], 0.0f, 1.0f)).xy;
+		EmitVertex();
+	}
+	EndPrimitive();	
+}

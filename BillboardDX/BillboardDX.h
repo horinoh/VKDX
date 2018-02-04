@@ -14,6 +14,10 @@ public:
 	virtual ~BillboardDX() {}
 
 protected:
+	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
+		//UpdateDescriptorHeap();
+	}
+
 	virtual void CreateDepthStencil() override {
 		//CreateDepthStencilOfClientRect(DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
 	}
@@ -42,7 +46,16 @@ protected:
 	virtual void CreateDescriptorHeap() override {
 		CreateDescriptorHeap_1CBV<Transform>();
 	}
-	virtual void UpdateDescriptorHeap() override {}
+	virtual void UpdateDescriptorHeap() override {
+		//static FLOAT Angle = 0.0f;
+		//DirectX::XMMATRIX World = DirectX::XMMatrixRotationX(Angle);
+		//D3D12_RANGE Range = { offsetof(Transform, World), offsetof(Transform, World) + sizeof(World) };
+		//BYTE* Data;
+		//VERIFY_SUCCEEDED(ConstantBufferResource->Map(0, &Range, reinterpret_cast<void**>(&Data))); {
+		//	memcpy(Data, reinterpret_cast<const void*>(&World), sizeof(World));
+		//} ConstantBufferResource->Unmap(0, nullptr);
+		//Angle += 1.0f;
+	}
 
 	virtual void CreateConstantBuffer() override {
 		const auto Fov = 0.16f * DirectX::XM_PI;
@@ -69,5 +82,7 @@ private:
 		DirectX::XMMATRIX World;
 	};
 	using Transform = struct Transform;
+public:
+
 };
 #pragma endregion

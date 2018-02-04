@@ -2,13 +2,14 @@ struct IN
 {
 	float3 Position : POSITION;
 };
+
+cbuffer Transform { float4x4 Projection; float4x4 View; float4x4 World; };
+
 struct OUT
 {
 	float4 Position : SV_POSITION;
 	float2 Texcoord : TEXCOORD0;
 };
-
-cbuffer Transform { float4x4 Projection; float4x4 View; float4x4 World; };
 
 [instance(1)]
 [maxvertexcount(4)]

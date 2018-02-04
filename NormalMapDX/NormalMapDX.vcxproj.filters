@@ -14,7 +14,7 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Shader Files">
-      <UniqueIdentifier>{18403495-1381-47b8-8bf8-c07bc337f777}</UniqueIdentifier>
+      <UniqueIdentifier>{a8332045-47af-4c0d-b81c-af25ed79cc5c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -30,13 +30,16 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FlatVK.h">
+    <ClInclude Include="NormalMapDX.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\VK.h">
+    <ClInclude Include="..\DX.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\VKExt.h">
+    <ClInclude Include="..\DXExt.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\DXImage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Win.h">
@@ -47,13 +50,16 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="FlatVK.cpp">
+    <ClCompile Include="NormalMapDX.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\VK.cpp">
+    <ClCompile Include="..\DX.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\VKExt.cpp">
+    <ClCompile Include="..\DXExt.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DXImage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Win.cpp">
@@ -61,7 +67,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="FlatVK.rc">
+    <ResourceCompile Include="NormalMapDX.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
@@ -69,15 +75,25 @@
     <Image Include="small.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="FlatVK.ico">
+    <Image Include="NormalMapDX.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="FlatVK.frag" />
-    <CustomBuild Include="FlatVK.geom" />
-    <CustomBuild Include="FlatVK.tesc" />
-    <CustomBuild Include="FlatVK.tese" />
-    <CustomBuild Include="FlatVK.vert" />
+    <FxCompile Include="NormalMapDX.gs.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="NormalMapDX.hs.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="NormalMapDX.ps.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="NormalMapDX.vs.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="NormalMapDX.ds.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
