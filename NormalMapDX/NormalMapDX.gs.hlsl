@@ -14,6 +14,7 @@ struct OUT
 	float3 Normal : NORMAL;
 	float4 Tangent : TANGENT;
 	float2 Texcoord : TEXCOORD0;
+	float3 ViewDirection : TEXCOORD1;
 };
 
 [instance(1)]
@@ -22,6 +23,7 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 {
 	OUT Out;
 	
+	//const float3 CamPos = -float3(View[0][3], View[1][3], View[2][3]);
 	//const float4x4 PVW = mul(mul(Projection, View), World);
 
 	[unroll]
@@ -30,6 +32,7 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 		Out.Normal = In[i].Normal;//mul((float3x3)World, In[i].Normal);
 		Out.Tangent = float4(In[i].Tangent, 1.0f);//float4(mul((float3x3)World, In[i].Tangent), 1.0f);
 		Out.Texcoord = In[i].Texcoord;//mul(TextureTransform, float4(In[i].Texcoord, 0.0f, 1.0f)).xy;
+		Out.ViewDirection = Out.Position.xyz;//CamPos - mul(World, Out.Position).xyz;
 		stream.Append(Out);
 	}
 	stream.RestartStrip();

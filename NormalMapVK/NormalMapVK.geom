@@ -11,11 +11,13 @@ layout (location = 2) in vec2 InTexcoord[];
 layout (location = 0) out vec3 OutNormal;
 layout (location = 1) out vec4 OutTangent;
 layout (location = 2) out vec2 OutTexcoord;
+layout (location = 3) out vec3 OutViewDirection;
 
 layout (triangles, invocations = 1) in;
 layout (triangle_strip, max_vertices = 3) out;
 void main()
 {
+	//const vec3 CamPos = vec3(View[3][0], View[3][1], View[3][2]);
 	//const mat4 PVW = Projection * View * World;
 
 	for(int i=0;i<gl_in.length();++i) {
@@ -23,6 +25,7 @@ void main()
 		OutNormal = InNormal[i];//mat3(World) * InNormal[i];
 		OutTangent = vec4(InTangent[i], 1.0f);//vec4(mat3(World) * InTangent[i], 1.0f);
 		OutTexcoord = InTexcoord[i];//(TextureTransform * vec4(InTexcoord[i], 0.0f, 1.0f)).xy;
+		OutViewDirection = gl_Position.xyz;//CamPos - (World * gl_Position).xyz;
 		EmitVertex();
 	}
 	EndPrimitive();	

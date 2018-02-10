@@ -80,20 +80,20 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="NormalMapVK.geom">
+    <CustomBuild Include="NormalMapVK.frag">
       <Filter>Shader Files</Filter>
-    </None>
-    <None Include="NormalMapVK.tese">
+    </CustomBuild>
+    <CustomBuild Include="NormalMapVK.geom">
       <Filter>Shader Files</Filter>
-    </None>
-    <None Include="NormalMapVK.vert">
+    </CustomBuild>
+    <CustomBuild Include="NormalMapVK.tesc">
       <Filter>Shader Files</Filter>
-    </None>
-    <None Include="NormalMapVK.tesc">
+    </CustomBuild>
+    <CustomBuild Include="NormalMapVK.tese">
       <Filter>Shader Files</Filter>
-    </None>
-    <None Include="NormalMapVK.frag">
+    </CustomBuild>
+    <CustomBuild Include="NormalMapVK.vert">
       <Filter>Shader Files</Filter>
-    </None>
+    </CustomBuild>
   </ItemGroup>
 </Project>

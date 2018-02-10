@@ -74,10 +74,20 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="FlatVK.frag" />
-    <CustomBuild Include="FlatVK.geom" />
-    <CustomBuild Include="FlatVK.tesc" />
-    <CustomBuild Include="FlatVK.tese" />
-    <CustomBuild Include="FlatVK.vert" />
+    <CustomBuild Include="FlatVK.frag">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="FlatVK.geom">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="FlatVK.tesc">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="FlatVK.tese">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="FlatVK.vert">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>
