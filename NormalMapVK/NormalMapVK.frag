@@ -49,4 +49,8 @@ void main()
 	const float Spt = 1.0f;
 
 	Color = vec4((Amb + (Dif + Spc) * Atn) * Spt, 1.0f);
+
+	//Color = vec4(n * 0.5f + 0.5f, 1.0f); // revY
+	//Color = vec4(t * 0.5f + 0.5f, 1.0f); // revY
+	//Color = vec4(b * 0.5f + 0.5f, 1.0f); // revY
 }

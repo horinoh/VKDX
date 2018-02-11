@@ -64,8 +64,9 @@ protected:
 		const auto CamPos = glm::vec3(0.0f, 0.0f, 6.0f);
 		const auto CamTag = glm::vec3(0.0f);
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
 		Super::CreateUniformBuffer<Transform>({
-			glm::perspective(Fov, Aspect, ZNear, ZFar),
+			/*GetVulkanClipSpace() */ glm::perspective(Fov, Aspect, ZNear, ZFar),
 			glm::lookAt(CamPos, CamTag, CamUp),
 			glm::mat4(1.0f)
 		});

@@ -80,7 +80,7 @@ public:
 	void CreateDescriptorPoolSizes_1CIS(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {
 		DescriptorPoolSizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 });
 	}
-	void CreaateWriteDescriptorSets_1CIS(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const;
+	void CreateWriteDescriptorSets_1CIS(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const;
 	void UpdateDescriptorSet_1CIS();
 
 	//!< LinearRepeat

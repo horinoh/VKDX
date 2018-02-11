@@ -158,7 +158,7 @@ void VKExt::UpdateDescriptorSet_1UB()
 	}(UniformBuffer);
 }
 
-void VKExt::CreaateWriteDescriptorSets_1CIS(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const
+void VKExt::CreateWriteDescriptorSets_1CIS(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const
 {
 	WriteDescriptorSet = {
 		VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, 

@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include "resource.h"
@@ -82,7 +83,5 @@ private:
 		DirectX::XMMATRIX World;
 	};
 	using Transform = struct Transform;
-public:
-
 };
 #pragma endregion

@@ -27,7 +27,7 @@ protected:
 		CreateDescriptorPoolSizes_1CIS(DescriptorPoolSizes); 
 	}
 	virtual void CreateWriteDescriptorSets(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkBufferView>& BufferViews) const override {
-		CreaateWriteDescriptorSets_1CIS(WriteDescriptorSet, DescriptorImageInfos);
+		CreateWriteDescriptorSets_1CIS(WriteDescriptorSet, DescriptorImageInfos);
 	}
 	virtual void UpdateDescriptorSet() override {
 		UpdateDescriptorSet_1CIS();

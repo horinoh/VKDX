@@ -34,6 +34,6 @@ void main()
 	gl_Position = PVW * vec4(Center + Scale * Right + Scale * Axis, 1.0f); //!< LU
 	Texcoord = vec2(1.0f, 1.0f);
 	EmitVertex();
-
+	
 	EndPrimitive();
 }

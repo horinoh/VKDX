@@ -6,7 +6,7 @@ struct IN
 	float2 Texcoord : TEXCOORD0;
 };
 
-//cbuffer Transform { float4x4 Projection; float4x4 View; float4x4 World; };
+cbuffer Transform { float4x4 Projection; float4x4 View; float4x4 World; };
 
 struct OUT
 {
@@ -23,16 +23,16 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 {
 	OUT Out;
 	
-	//const float3 CamPos = -float3(View[0][3], View[1][3], View[2][3]);
-	//const float4x4 PVW = mul(mul(Projection, View), World);
+	const float3 CamPos = -float3(View[0][3], View[1][3], View[2][3]);
+	const float4x4 PVW = mul(mul(Projection, View), World);
 
 	[unroll]
 	for (int i = 0; i<3; ++i) {
-		Out.Position = float4(In[i].Position, 1.0f);//mul(PVW, float4(In[i].Position, 1.0f));
-		Out.Normal = In[i].Normal;//mul((float3x3)World, In[i].Normal);
-		Out.Tangent = float4(In[i].Tangent, 1.0f);//float4(mul((float3x3)World, In[i].Tangent), 1.0f);
+		Out.Position = mul(PVW, float4(In[i].Position, 1.0f));
+		Out.Normal = mul((float3x3)World, In[i].Normal);
+		Out.Tangent = float4(mul((float3x3)World, In[i].Tangent), 1.0f);
 		Out.Texcoord = In[i].Texcoord;//mul(TextureTransform, float4(In[i].Texcoord, 0.0f, 1.0f)).xy;
-		Out.ViewDirection = Out.Position.xyz;//CamPos - mul(World, Out.Position).xyz;
+		Out.ViewDirection = CamPos - mul(World, Out.Position).xyz;
 		stream.Append(Out);
 	}
 	stream.RestartStrip();

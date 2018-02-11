@@ -56,6 +56,10 @@ OUT main(const IN In)
 
 	Out.Color = float4((Amb + (Dif + Spc) * Atn) * Spt, 1.0f);
 	
+	//Out.Color = float4(n * 0.5f + 0.5f, 1.0f); // revY
+	//Out.Color = float4(t * 0.5f + 0.5f, 1.0f); // revY
+	//Out.Color = float4(b * 0.5f + 0.5f, 1.0f); // revY
+
 	return Out;
 }
 

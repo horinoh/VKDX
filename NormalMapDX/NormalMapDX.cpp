@@ -249,6 +249,14 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 
 			CL->SetGraphicsRootSignature(RootSignature.Get());
 
+			{
+				const std::vector<ID3D12DescriptorHeap*> DH = { ConstantBufferDescriptorHeap.Get() };
+				CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
+
+				auto CBHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+				CL->SetGraphicsRootDescriptorTable(0, CBHandle);
+			}
+
 			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
 			CL->IASetPrimitiveTopology(GetPrimitiveTopology());
 

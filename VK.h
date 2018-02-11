@@ -379,6 +379,15 @@ protected:
 	VkRenderPass RenderPass = VK_NULL_HANDLE;
 	std::vector<VkFramebuffer> Framebuffers;
 
+	//!< https://matthewwellings.com/blog/the-new-vulkan-coordinate-system/
+	//!< VKのクリップスペースはYが反転、Zが半分 Vulkan clip space has inverted Y and half Z
+	static glm::mat4 GetVulkanClipSpace() {
+		return glm::mat4(1.0f, 0.0f, 0.0f, 0.0f,
+				0.0f, -1.0f, 0.0f, 0.0f,
+				0.0f, 0.0f, 0.5f, 0.0f,
+				0.0f, 0.0f, 0.5f, 1.0f);
+	}
+
 	/**
 	@note バーチャルフレームに持たせるもの #TODO
 	1 コマンドバッファ
