@@ -14,20 +14,39 @@ public:
 	void CreateIndirectBuffer_Indexed(const uint32_t Count);
 	void CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z);
 
-	//!< １つのユニフォームバッファ One uniform buffer
+	/*
+	@brief １つのユニフォームバッファ One uniform buffer
+	*/
 	void CreateDescriptorSetLayoutBindings_1UB(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const {
-		DescriptorSetLayoutBindings.push_back({ 
-			0, //!< バインディング Binding
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< タイプ Type
-			1, //!< 個数 Count
-			ShaderStageFlags, 
-			nullptr
-		});
+		DescriptorSetLayoutBindings = {
+			{
+				0, //!< バインディング Binding
+				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< タイプ Type
+				1, //!< 個数 Count
+				ShaderStageFlags,
+				nullptr
+			},
+		};
 	}
 	void CreateDescriptorPoolSizes_1UB(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {
-		DescriptorPoolSizes.push_back({ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 });
+		DescriptorPoolSizes = {
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+		};
 	}
-	void CreateWriteDescriptorSets_1UB(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos) const;
+	void CreateWriteDescriptorSets_1UB(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos) const {
+		WriteDescriptorSets = {
+			{
+				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				nullptr,
+				DescriptorSets[0], 0, 0, //!< デスクリプタセット、バインディングポイント、配列の場合の添字(配列でなければ0)
+				static_cast<uint32_t>(DescriptorBufferInfos.size()),
+				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				nullptr,
+				DescriptorBufferInfos.data(),
+				nullptr
+			},
+		};
+	}
 	void UpdateDescriptorSet_1UB();
 
 	/** 
@@ -67,21 +86,94 @@ public:
 		layout (input_attachment_index=0, set=0, binding=0) uniform subpassInput MySubpassInput;
 
 	*/
-	//!< １つのコンバインドイメージサンプラ (イメージとサンプラをまとめたもの)
+	/*
+	@brief １つのコンバインドイメージサンプラ(イメージ + サンプラ) One combined image sampler
+	*/
 	void CreateDescriptorSetLayoutBindings_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const {
-		DescriptorSetLayoutBindings.push_back({
-			0, //!< バインディング
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< タイプ
-			1, //!< 個数
-			ShaderStageFlags,
-			nullptr
-		});
+		DescriptorSetLayoutBindings = {
+			{
+				0,
+				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				1,
+				ShaderStageFlags,
+				nullptr
+			},
+		};
 	}
 	void CreateDescriptorPoolSizes_1CIS(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {
-		DescriptorPoolSizes.push_back({ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 });
+		DescriptorPoolSizes = {
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
+		};
 	}
-	void CreateWriteDescriptorSets_1CIS(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const;
+	void CreateWriteDescriptorSets_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const {
+		WriteDescriptorSets = {
+			{
+				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				nullptr,
+				DescriptorSets[0], 0, 0,
+				static_cast<uint32_t>(DescriptorImageInfos.size()),
+				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				DescriptorImageInfos.data(),
+				nullptr,
+				nullptr
+			},
+		};
+	}
 	void UpdateDescriptorSet_1CIS();
+
+	/*
+	@brief 1つのユニフォームバッファと1つのコンバインドイメージサンプラ One uniform buffer and one combined image sampler 
+	*/
+	void CreateDescriptorSetLayoutBindings_1UB_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags_UB = VK_SHADER_STAGE_ALL_GRAPHICS, const VkShaderStageFlags ShaderStageFlags_CIS = VK_SHADER_STAGE_ALL_GRAPHICS) const {
+		DescriptorSetLayoutBindings = {
+			{
+				0,
+				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				1,
+				ShaderStageFlags_UB,
+				nullptr
+			},
+			{
+				1,
+				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				1,
+				ShaderStageFlags_CIS,
+				nullptr
+			}
+		};
+	}
+	void CreateDescriptorPoolSizes_1UB_1CIS(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {
+		DescriptorPoolSizes = {
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
+		};
+	}
+	void CreateWriteDescriptorSets_1UB_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const {
+		WriteDescriptorSets = {
+			{
+				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				nullptr,
+				DescriptorSets[0], 0, 0,
+				static_cast<uint32_t>(DescriptorBufferInfos.size()),
+				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				nullptr,
+				DescriptorBufferInfos.data(),
+				nullptr
+				},
+			{
+				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				nullptr,
+				DescriptorSets[0], 1, 0,
+				static_cast<uint32_t>(DescriptorImageInfos.size()),
+				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				DescriptorImageInfos.data(),
+				nullptr,
+				nullptr
+			},
+		};
+	}
+	void UpdateDescriptorSet_1UB_1CIS();
+
 
 	//!< LinearRepeat
 	void CreateSampler_LR(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const;

@@ -36,14 +36,13 @@ protected:
 		const UINT PatchControlPoint = 1;
 		return static_cast<D3D_PRIMITIVE_TOPOLOGY>(static_cast<UINT>(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST) + (PatchControlPoint - 1));
 	}
-
+	
+	virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
+		CreateRootParameters_1CBV(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_GEOMETRY);
+	}
 	virtual void CreateDescriptorRanges(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
 		CreateDescriptorRanges_1CBV(DescriptorRanges);
 	}
-	virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
-		CreateRootParameters_1DT(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_GEOMETRY);
-	}
-
 	virtual void CreateDescriptorHeap() override {
 		CreateDescriptorHeap_1CBV<Transform>();
 	}

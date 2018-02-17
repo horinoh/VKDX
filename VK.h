@@ -220,8 +220,8 @@ protected:
 	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {}
 	virtual void CreateDescriptorSet();
 
-	virtual void CreateWriteDescriptorSets(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkBufferView>& BufferViews) const {}
-	virtual void CreateCopyDescriptorSets(VkCopyDescriptorSet& CopyDescriptorSet) const {}
+	virtual void CreateWriteDescriptorSets(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos, const std::vector<VkBufferView>& BufferViews) const {}
+	virtual void CreateCopyDescriptorSets(std::vector<VkCopyDescriptorSet>& CopyDescriptorSets) const {}
 	virtual void UpdateDescriptorSet();
 
 	virtual void CreatePushConstantRanges();

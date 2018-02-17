@@ -118,24 +118,10 @@ void VKExt::CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, co
 		}
 	}(&IndirectBuffer, &IndirectDeviceMemory, Size, &Command, CommandBuffers[0]);
 }
-void VKExt::CreateWriteDescriptorSets_1UB(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos) const
-{
-	WriteDescriptorSet = {
-		VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-		nullptr,
-		DescriptorSets[0], 0, 0,//!< デスクリプタセット、バインディングポイント、配列の場合の添字(配列でなければ0)
-		static_cast<uint32_t>(DescriptorBufferInfos.size()),
-		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-		nullptr,
-		DescriptorBufferInfos.data(),
-		nullptr
-	};
-}
 void VKExt::UpdateDescriptorSet_1UB()
 {
 	[&](const VkBuffer Buffer) {
 		std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
-		WriteDescriptorSets.resize(1);
 		const std::vector<VkDescriptorBufferInfo> DescriptorBufferInfos = {
 			{
 				Buffer,
@@ -143,39 +129,20 @@ void VKExt::UpdateDescriptorSet_1UB()
 				VK_WHOLE_SIZE
 			}
 		};
-		if (!WriteDescriptorSets.empty()) {		
-			CreateWriteDescriptorSets(WriteDescriptorSets.back(), {}, DescriptorBufferInfos, {});
-		}
+		CreateWriteDescriptorSets(WriteDescriptorSets, DescriptorBufferInfos, {}, {});
 
 		std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
-		if (!CopyDescriptorSets.empty()) {
-			CreateCopyDescriptorSets(CopyDescriptorSets.back());
-		}
+		CreateCopyDescriptorSets(CopyDescriptorSets);
 
 		vkUpdateDescriptorSets(Device,
 			static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
 			static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
 	}(UniformBuffer);
 }
-
-void VKExt::CreateWriteDescriptorSets_1CIS(VkWriteDescriptorSet& WriteDescriptorSet, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const
-{
-	WriteDescriptorSet = {
-		VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET, 
-		nullptr, 
-		DescriptorSets[0], 0, 0,//!< デスクリプタセット、バインディングポイント、配列の場合の添字(配列でなければ0)
-		static_cast<uint32_t>(DescriptorImageInfos.size()),
-		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		DescriptorImageInfos.data(),
-		nullptr,
-		nullptr
-	};
-}
 void VKExt::UpdateDescriptorSet_1CIS()
 {
 	[&](const VkSampler Sampler, const VkImageView ImageView) {
 		std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
-		WriteDescriptorSets.resize(1);
 		const std::vector<VkDescriptorImageInfo> DescriptorImageInfos = {
 			{
 				Sampler,
@@ -183,20 +150,45 @@ void VKExt::UpdateDescriptorSet_1CIS()
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 			},
 		};
-		if (!WriteDescriptorSets.empty()) {			
-			CreateWriteDescriptorSets(WriteDescriptorSets.back(), DescriptorImageInfos, {}, {});
-		}
+		CreateWriteDescriptorSets(WriteDescriptorSets, {}, DescriptorImageInfos, {});
 
 		std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
-		if (!CopyDescriptorSets.empty()) {
-			CreateCopyDescriptorSets(CopyDescriptorSets.back());
-		}
+		CreateCopyDescriptorSets(CopyDescriptorSets);
 
-	vkUpdateDescriptorSets(Device,
-		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
-		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
+		vkUpdateDescriptorSets(Device,
+			static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
+			static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
 
 	}(Samplers[0], ImageView);
+}
+void VKExt::UpdateDescriptorSet_1UB_1CIS()
+{
+	[&](const VkBuffer Buffer, const VkSampler Sampler, const VkImageView ImageView) {
+		std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
+		WriteDescriptorSets.resize(1);
+		const std::vector<VkDescriptorBufferInfo> DescriptorBufferInfos = {
+			{
+				Buffer,
+				0,
+				VK_WHOLE_SIZE
+			}
+		};
+		const std::vector<VkDescriptorImageInfo> DescriptorImageInfos = {
+			{
+				Sampler,
+				ImageView,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+			},
+		};
+		CreateWriteDescriptorSets(WriteDescriptorSets, DescriptorBufferInfos, DescriptorImageInfos, {});
+
+		std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
+		CreateCopyDescriptorSets(CopyDescriptorSets);
+
+		vkUpdateDescriptorSets(Device,
+			static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
+			static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
+	}(UniformBuffer, Samplers[0], ImageView);
 }
 
 void VKExt::CreateRenderPass_Color()

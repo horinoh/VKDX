@@ -9,8 +9,15 @@
 #include <windows.h>
 ~~~
 ### DDS ツール
-* https://directxtex.codeplex.com/wikipage?title=Texconv&referringTitle=Documentation
-* https://directxtex.codeplex.com/wikipage?title=Texassemble&referringTitle=Documentation
+* DirectXTex https://github.com/Microsoft/DirectXTex
+  * DirectXTex\DirectXTex_Desktop_2015.sln を開いて Release、x64 にしてビルドすると実行ファイルが作成される
+~~~
+DDSView\Bin\Desktop_2015\x64\Release\DDSView.exe
+Texassemble\Bin\Desktop_2015\x64\Release\texassemble.exe
+Texconv\Bin\Desktop_2015\x64\Release\texconv.exe
+Texdiag\Bin\Desktop_2015\x64\Release\texdiag.exe
+~~~
+
 * 中間リソースを使用するもの(例えばDDSファイル)は PreBuildEvent で Intermediate から ProjectDir, TargetDir へコピーしている (VS 起動時と exe 直起動時用)
 ~~~
 xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(ProjectDir)

@@ -32,18 +32,17 @@ protected:
 		return static_cast<D3D_PRIMITIVE_TOPOLOGY>(static_cast<UINT>(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST) + (PatchControlPoint - 1));
 	}
 
+	virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
+		CreateRootParameters_1CBV(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_GEOMETRY);
+		//CreateRootParameters_1CBV_1SRV(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_GEOMETRY, D3D12_SHADER_VISIBILITY_PIXEL);
+	}
 	virtual void CreateDescriptorRanges(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
 		CreateDescriptorRanges_1CBV(DescriptorRanges);
-		//CreateDescriptorRanges_1SRV(DescriptorRanges);
+		//CreateDescriptorRanges_1CBV_1SRV(DescriptorRanges);
 	}
-	virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
-		CreateRootParameters_1DT(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_GEOMETRY);
-		//CreateRootParameters_1DT(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_PIXEL);
-	}
-
 	virtual void CreateDescriptorHeap() override {
 		CreateDescriptorHeap_1CBV<Transform>();
-		//CreateDescriptorHeap_1SRV();
+		//CreateDescriptorHeap_1CBV_1SRV<Transform>();
 	}
 	virtual void UpdateDescriptorHeap() override {
 	}
@@ -63,12 +62,12 @@ protected:
 		});
 	}
 
-	//virtual void CreateTexture() override {
-	//	LoadImage(ImageResource.GetAddressOf(), TEXT("UV.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-	//}
-	//virtual void CreateStaticSamplerDesc(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) const override {
-	//	CreateStaticSamplerDesc_LW(StaticSamplerDesc, ShaderVisibility, MaxLOD);
-	//}
+	virtual void CreateTexture() override {
+		//LoadImage(ImageResource.GetAddressOf(), TEXT("NormalMap.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	}
+	virtual void CreateStaticSamplerDesc(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) const override {
+		//CreateStaticSamplerDesc_LW(StaticSamplerDesc, ShaderVisibility, MaxLOD);
+	}
 
 	virtual void PopulateCommandList(const size_t i) override;
 
