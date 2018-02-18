@@ -10,6 +10,7 @@ struct TESS_FACTOR
 struct OUT
 {
 	float3 Position : POSITION;
+	float2 Texcoord : TEXCOORD0;
 };
 
 static const float PI = 4.0f * atan(1.0f);
@@ -33,5 +34,7 @@ OUT main(const TESS_FACTOR tess, const float2 uv : SV_DomainLocation, const Outp
 #else
 	Out.Position = float3(2.0f * uv - 1.0f, 1.0f);
 #endif
+	Out.Texcoord = uv;
+
 	return Out;
 }

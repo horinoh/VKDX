@@ -17,6 +17,14 @@ OUT main(uint VertexId : SV_VertexID)
 
 	Out.Position = float4(Position[VertexId], 0.0f, 1.0f);
 	Out.Texcoord = float2(Out.Position.x, -Out.Position.y) * 0.5f + 0.5f;
+	
+#if 0
+	const float4x4 TexTransform = float4x4(4.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 4.0f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.0, 0.0f, 0.0f, 1.0f);
+	Out.Texcoord = mul(TexTransform, float4(Out.Texcoord, 0.0f, 1.0f)).xy;
+#endif
 
 	return Out;
 }

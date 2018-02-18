@@ -7,8 +7,8 @@ struct IN
 	float3 ViewDirection : TEXCOORD1;
 };
 
-//Texture2D NormalMap : register(t0);
-//SamplerState SS : register(s0);
+Texture2D NormalMap : register(t0, space0);
+SamplerState SS : register(s0, space0);
 
 struct OUT
 {
@@ -32,7 +32,8 @@ OUT main(const IN In)
 	const float3 t = normalize(In.Tangent.xyz - dot(In.Tangent.xyz, n) * n);
 	const float3 b = cross(n, t) * In.Tangent.w;
 	const float3x3 tbn = transpose(float3x3(t, b, n));
-	const float3 N = n;//mul(tbn, NormalMap.Sample(SS, In.Texcoord).xyz * 2.0f - 1.0f); // TODO
+	const float3 N = n;
+	//const float3 N = mul(tbn, NormalMap.Sample(SS, In.Texcoord).xyz * 2.0f - 1.0f);
 
 	//!< L
 	const float3 LightDirection = float3(0, 1, 0); // TODO
@@ -59,6 +60,7 @@ OUT main(const IN In)
 	//Out.Color = float4(n * 0.5f + 0.5f, 1.0f); // revY
 	//Out.Color = float4(t * 0.5f + 0.5f, 1.0f); // revY
 	//Out.Color = float4(b * 0.5f + 0.5f, 1.0f); // revY
+	//Out.Color = float4(In.Texcoord, 0.0f, 1.0f); // rev
 
 	return Out;
 }

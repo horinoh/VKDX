@@ -7,7 +7,7 @@ layout (location = 1) in vec4 InTangent;
 layout (location = 2) in vec2 InTexcoord;
 layout (location = 3) in vec3 InViewDirection;
 
-//layout (binding = 0) uniform sampler2D NormalMap;
+layout (binding = 0) uniform sampler2D NormalMap;
 
 layout (location = 0) out vec4 Color;
 
@@ -26,7 +26,8 @@ void main()
 	const vec3 t = normalize(InTangent.xyz - dot(InTangent.xyz, n) * n);
 	const vec3 b = cross(n, t) * InTangent.w;
 	const mat3 tbn = mat3(t, b, n);
-	const vec3 N = n;//tbn * (texture(NormalMap, InTexcoord).xyz * 2.0f - 1.0f); // TODO
+	const vec3 N = n;
+	//const vec3 N = tbn * (texture(NormalMap, InTexcoord).xyz * 2.0f - 1.0f); // TODO
 
 	//!< L
 	const vec3 LightDirection = vec3(0, 1, 0); // TODO
@@ -53,4 +54,5 @@ void main()
 	//Color = vec4(n * 0.5f + 0.5f, 1.0f); // revY
 	//Color = vec4(t * 0.5f + 0.5f, 1.0f); // revY
 	//Color = vec4(b * 0.5f + 0.5f, 1.0f); // revY
+	//Color = vec4(InTexcoord, 0.0f, 1.0f); // rev
 }

@@ -35,20 +35,20 @@ protected:
 	}
 
 	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const override {
-		CreateDescriptorSetLayoutBindings_1UB(DescriptorSetLayoutBindings, VK_SHADER_STAGE_GEOMETRY_BIT);
-		//CreateDescriptorSetLayoutBindings_1UB_1CIS(DescriptorSetLayoutBindings, VK_SHADER_STAGE_GEOMETRY_BIT, VK_SHADER_STAGE_FRAGMENT_BIT);
+		//CreateDescriptorSetLayoutBindings_1UB(DescriptorSetLayoutBindings, VK_SHADER_STAGE_GEOMETRY_BIT);
+		CreateDescriptorSetLayoutBindings_1UB_1CIS(DescriptorSetLayoutBindings, VK_SHADER_STAGE_GEOMETRY_BIT, VK_SHADER_STAGE_FRAGMENT_BIT);
 	}
 	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const override {
-		CreateDescriptorPoolSizes_1UB(DescriptorPoolSizes);
-		//CreateDescriptorPoolSizes_1UB_1CIS(DescriptorPoolSizes);
+		//CreateDescriptorPoolSizes_1UB(DescriptorPoolSizes);
+		CreateDescriptorPoolSizes_1UB_1CIS(DescriptorPoolSizes);
 	}
 	virtual void CreateWriteDescriptorSets(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos, const std::vector<VkBufferView>& BufferViews) const override {
-		CreateWriteDescriptorSets_1UB(WriteDescriptorSets, DescriptorBufferInfos);
-		//CreateWriteDescriptorSets_1UB_1CIS(WriteDescriptorSets, DescriptorBufferInfos, DescriptorImageInfos);
+		//CreateWriteDescriptorSets_1UB(WriteDescriptorSets, DescriptorBufferInfos);
+		CreateWriteDescriptorSets_1UB_1CIS(WriteDescriptorSets, DescriptorBufferInfos, DescriptorImageInfos);
 	}
 	virtual void UpdateDescriptorSet() override {
-		UpdateDescriptorSet_1UB();
-		//UpdateDescriptorSet_1UB_1CIS();
+		//UpdateDescriptorSet_1UB();
+		UpdateDescriptorSet_1UB_1CIS();
 	}
 		
 	virtual void CreateUniformBuffer() override {
@@ -68,10 +68,10 @@ protected:
 	}
 
 	virtual void CreateTexture() override {
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "NormalMap.dds");
+		LoadImage(&Image, &ImageDeviceMemory, &ImageView, "NormalMap.dds");
 	}
 	virtual void CreateSampler(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const override {
-		//CreateSampler_LR(Sampler, MaxLOD);
+		CreateSampler_LR(Sampler, MaxLOD);
 	}
 
 	virtual void PopulateCommandBuffer(const size_t i) override;
