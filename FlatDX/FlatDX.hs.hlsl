@@ -27,7 +27,7 @@ TESS_FACTOR ConstantHS()
 
 [domain("quad")]
 [partitioning("integer")]
-[outputtopology("triangle_ccw")]
+[outputtopology("triangle_cw")] //!< D3D12_RASTERIZER_DESC.FrontCounterClockwise == TRUE ‚Æ‚©‚¿‡‚¤‚Ì‚Å‚±‚±‚Å‚Í cw ‚ðŽw’è
 [outputcontrolpoints(4)]
 [patchconstantfunc("ConstantHS")]
 [maxtessfactor(64.0f)]

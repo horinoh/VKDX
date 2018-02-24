@@ -26,20 +26,20 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 	const float3 Right = cross(Axis, Forward);
 	const float Scale = 0.05f;
 
-	Out.Position = mul(PVW, float4(Center + Scale * Right - Scale * Axis, 1.0f)); //!< RB
-	Out.Texcoord = float2(1.0f, 1.0f);
-	stream.Append(Out);
-	
-	Out.Position = mul(PVW, float4(Center + Scale * Right + Scale * Axis, 1.0f)); //!< RT
-	Out.Texcoord = float2(1.0f, 0.0f);
+	Out.Position = mul(PVW, float4(Center - Scale * Right + Scale * Axis, 1.0f)); //!< LT
+	Out.Texcoord = float2(0.0f, 0.0f);
 	stream.Append(Out);
 
 	Out.Position = mul(PVW, float4(Center - Scale * Right - Scale * Axis, 1.0f)); //!< LB
 	Out.Texcoord = float2(0.0f, 1.0f);
 	stream.Append(Out);
 
-	Out.Position = mul(PVW, float4(Center - Scale * Right + Scale * Axis, 1.0f)); //!< LT
-	Out.Texcoord = float2(0.0f, 0.0f);
+	Out.Position = mul(PVW, float4(Center + Scale * Right + Scale * Axis, 1.0f)); //!< RT
+	Out.Texcoord = float2(1.0f, 0.0f);
+	stream.Append(Out);
+
+	Out.Position = mul(PVW, float4(Center + Scale * Right - Scale * Axis, 1.0f)); //!< RB
+	Out.Texcoord = float2(1.0f, 1.0f);
 	stream.Append(Out);
 
 	stream.RestartStrip();

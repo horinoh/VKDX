@@ -27,7 +27,7 @@ TESS_FACTOR ConstantHS(/*const InputPatch<IN, 1> patch, const uint p : SV_Primit
 
 [domain("quad")]
 [partitioning("integer")]
-[outputtopology("triangle_ccw")]
+[outputtopology("triangle_cw")]
 [outputcontrolpoints(4)]
 [patchconstantfunc("ConstantHS")]
 [maxtessfactor(64.0f)]
