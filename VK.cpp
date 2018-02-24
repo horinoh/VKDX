@@ -2158,7 +2158,7 @@ void VK::CreatePipeline_Graphics()
 		0,
 		VK_FALSE, //!< VK_TRUE にするにはデバイスフィーチャー depthClampEnable が有効であること
 		VK_FALSE,
-		VK_POLYGON_MODE_FILL, //!< LINEやPOINT を有効にするにはデバイスフィーチャー fillModeNonSolid が有効であること
+		VK_POLYGON_MODE_FILL, //!< LINE や POINT を有効にするにはデバイスフィーチャー fillModeNonSolid が有効であること
 		VK_CULL_MODE_BACK_BIT,
 		VK_FRONT_FACE_COUNTER_CLOCKWISE,
 		VK_FALSE, 0.0f, 0.0f, 0.0f,
