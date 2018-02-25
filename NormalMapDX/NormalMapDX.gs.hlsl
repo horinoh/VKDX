@@ -35,7 +35,6 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 		Out.Position = mul(PVW, float4(In[i].Position, 1.0f));
 		Out.Normal = mul((float3x3)World, In[i].Normal);
 		Out.Tangent = float4(mul((float3x3)World, In[i].Tangent), 1.0f);
-		//Out.Texcoord = In[i].Texcoord;
 		Out.Texcoord = mul(TexTransform, float4(In[i].Texcoord, 0.0f, 1.0f)).xy;
 		Out.ViewDirection = CamPos - mul(World, Out.Position).xyz;
 		stream.Append(Out);

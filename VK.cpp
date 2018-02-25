@@ -1856,23 +1856,23 @@ void VK::CreateDescriptorSet()
 	}
 }
 
-void VK::UpdateDescriptorSet()
-{
-	std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
-	//WriteDescriptorSets.resize(1);
-	//std::vector<VkDescriptorImageInfo> DescriptorImageInfos;
-	//std::vector<VkDescriptorBufferInfo> DescriptorBufferInfos;
-	//std::vector<VkBufferView> BufferViews;
-	//CreateWriteDescriptorSets(WriteDescriptorSets.back(), DescriptorImageInfos, DescriptorBufferInfos, BufferViews);
-
-	std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
-	//CopyDescriptorSets.resize(1);
-	//CreateCopyDescriptorSets(CopyDescriptorSets.back());
-
-	vkUpdateDescriptorSets(Device,
-		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
-		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
-}
+//void VK::UpdateDescriptorSet()
+//{
+//	std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
+//	//WriteDescriptorSets.resize(1);
+//	//std::vector<VkDescriptorImageInfo> DescriptorImageInfos;
+//	//std::vector<VkDescriptorBufferInfo> DescriptorBufferInfos;
+//	//std::vector<VkBufferView> BufferViews;
+//	//CreateWriteDescriptorSets(WriteDescriptorSets.back(), DescriptorImageInfos, DescriptorBufferInfos, BufferViews);
+//
+//	std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
+//	//CopyDescriptorSets.resize(1);
+//	//CreateCopyDescriptorSets(CopyDescriptorSets.back());
+//
+//	vkUpdateDescriptorSets(Device,
+//		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
+//		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
+//}
 
 /**
 @brief デスクリプタセットよりも高速

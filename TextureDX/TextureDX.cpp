@@ -251,11 +251,11 @@ void TextureDX::PopulateCommandList(const size_t i)
 
 			//!< テクスチャ
 			if(nullptr != ImageDescriptorHeap){
-				const std::vector<ID3D12DescriptorHeap*> DescriptorHeaps = { ImageDescriptorHeap.Get() };
-				CL->SetDescriptorHeaps(static_cast<UINT>(DescriptorHeaps.size()), DescriptorHeaps.data());
+				const std::vector<ID3D12DescriptorHeap*> DH = { ImageDescriptorHeap.Get() };
+				CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
 
-				const auto GDH = GetGPUDescriptorHandle(ImageDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-				CL->SetGraphicsRootDescriptorTable(0, GDH);
+				const auto ImgHandle = GetGPUDescriptorHandle(ImageDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				CL->SetGraphicsRootDescriptorTable(0, ImgHandle);
 			}
 
 			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)

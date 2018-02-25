@@ -249,7 +249,6 @@ void FlatDX::PopulateCommandList(const size_t i)
 
 			CL->SetGraphicsRootSignature(RootSignature.Get());
 
-			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
 			CL->IASetPrimitiveTopology(GetPrimitiveTopology());
 
 			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);

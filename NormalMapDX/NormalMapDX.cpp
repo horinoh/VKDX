@@ -256,8 +256,14 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 				auto CBHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 				CL->SetGraphicsRootDescriptorTable(0, CBHandle);
 			}
+			if (nullptr != ImageDescriptorHeap) {
+				const std::vector<ID3D12DescriptorHeap*> DH = { ImageDescriptorHeap.Get() };
+				CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
 
-			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
+				const auto ImgHandle = GetGPUDescriptorHandle(ImageDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				CL->SetGraphicsRootDescriptorTable(1, ImgHandle);
+			}
+
 			CL->IASetPrimitiveTopology(GetPrimitiveTopology());
 
 			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);

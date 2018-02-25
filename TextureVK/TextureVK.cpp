@@ -253,7 +253,13 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 		vkCmdBeginRenderPass(CB, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
 
-			vkCmdBindDescriptorSets(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayout, 0, 1, DescriptorSets.data(), 0, nullptr);
+			if (!DescriptorSets.empty()) {
+				vkCmdBindDescriptorSets(CB,
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					PipelineLayout,
+					0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(),
+					0, nullptr);
+			}
 
 			//!< •`‰æ
 #ifdef USE_DRAW_INDIRECT

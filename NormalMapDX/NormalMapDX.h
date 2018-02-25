@@ -33,16 +33,13 @@ protected:
 	}
 
 	virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
-		CreateRootParameters_1CBV(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_GEOMETRY);
-		//CreateRootParameters_1CBV_1SRV(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_GEOMETRY, D3D12_SHADER_VISIBILITY_PIXEL);
+		CreateRootParameters_1CBV_1SRV(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_GEOMETRY, D3D12_SHADER_VISIBILITY_PIXEL);
 	}
 	virtual void CreateDescriptorRanges(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
-		CreateDescriptorRanges_1CBV(DescriptorRanges);
-		//CreateDescriptorRanges_1CBV_1SRV(DescriptorRanges);
+		CreateDescriptorRanges_1CBV_1SRV(DescriptorRanges);
 	}
 	virtual void CreateDescriptorHeap() override {
-		CreateDescriptorHeap_1CBV<Transform>();
-		//CreateDescriptorHeap_1CBV_1SRV<Transform>();
+		CreateDescriptorHeap_1CBV_1SRV<Transform>();
 	}
 	virtual void UpdateDescriptorHeap() override {
 	}
