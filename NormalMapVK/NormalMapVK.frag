@@ -7,7 +7,7 @@ layout (location = 1) in vec4 InTangent;
 layout (location = 2) in vec2 InTexcoord;
 layout (location = 3) in vec3 InViewDirection;
 
-layout (binding = 0) uniform sampler2D NormalMap;
+layout (set = 0, binding = 1) uniform sampler2D NormalMap;
 
 layout (location = 0) out vec4 Color;
 
@@ -55,5 +55,5 @@ void main()
 	//Color = vec4(t * 0.5f + 0.5f, 1.0f);
 	//Color = vec4(b * 0.5f + 0.5f, 1.0f);
 	//Color = vec4(InTexcoord, 0.0f, 1.0f);
-	Color = vec4(texture(NormalMap, InTexcoord).xyz, 1.0f);
+	//Color = vec4(texture(NormalMap, InTexcoord).xyz, 1.0f);
 }

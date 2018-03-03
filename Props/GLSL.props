@@ -24,7 +24,8 @@
       </Command>
     </PostBuildEvent>
     <CustomBuild>
-      <Command>glslangValidator -H %(Identity) -o %(Identity).spv &gt; %(Identity).asm
+      <Command>glslangValidator -V %(Identity) -o %(Identity).spv
+glslangValidator -H %(Identity) &gt; %(Identity).asm
 xcopy /y %(Identity).spv $(TargetDir)</Command>
     </CustomBuild>
     <CustomBuild>

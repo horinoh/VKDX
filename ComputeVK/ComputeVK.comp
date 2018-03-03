@@ -20,7 +20,7 @@ uint Mandelbrot(const vec2 c, const uint iterations)
 
 
 //!< sampler2D‚Å‚Í‚È‚­Aimage2D‚ðŽg—p
-layout (set=0, binding=0, rgba8) uniform image2D TextureMap;
+layout (set = 0, binding = 0, rgba8) uniform image2D TextureMap;
 
 layout (local_size_x=32, local_size_y=32, local_size_z=1) in;
 void main()
