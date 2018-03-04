@@ -10,11 +10,19 @@ struct OUT
 	float4 Color : SV_TARGET;
 };
 
-float3 diffuse(const float3 MC, const float3 LC, const float LN) { return saturate(saturate(LN) * MC * LC); }
+float toon(const float shade, const float steps)
+{
+	return floor(shade * steps) / steps;
+	//return ceil(shade * steps) / steps; 
+}
+float3 diffuse(const float3 MC, const float3 LC, const float LN) 
+{ 
+	return saturate(toon(saturate(LN), 5.0f) * MC * LC); 
+}
 float3 specular(const float3 MC, const float4 LC, const float LN, const float3 L, const float3 N, const float3 V)
 {
-	return saturate(saturate(sign(LN)) * pow(saturate(dot(reflect(-L, N), V)), LC.a) * LC.rgb * MC); // phong
-	//return saturate(saturate(sign(LN)) * pow(saturate(dot(N, normalize(V + L))), LC.a) * LC.rgb * MC); // blinn
+	return saturate(saturate(sign(LN)) * toon(pow(saturate(dot(reflect(-L, N), V)), LC.a), 5.0f) * LC.rgb * MC); // phong
+	//return saturate(saturate(sign(LN)) * toon(pow(saturate(dot(N, normalize(V + L))), LC.a), 5.0f) * LC.rgb * MC); // blinn
 }
 
 [earlydepthstencil]

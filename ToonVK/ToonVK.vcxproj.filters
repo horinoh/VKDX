@@ -74,20 +74,20 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="ToonVK.frag">
+    <CustomBuild Include="ToonVK.frag">
       <Filter>Shader Files</Filter>
-    </None>
-    <None Include="ToonVK.geom">
+    </CustomBuild>
+    <CustomBuild Include="ToonVK.geom">
       <Filter>Shader Files</Filter>
-    </None>
-    <None Include="ToonVK.tesc">
+    </CustomBuild>
+    <CustomBuild Include="ToonVK.tesc">
       <Filter>Shader Files</Filter>
-    </None>
-    <None Include="ToonVK.tese">
+    </CustomBuild>
+    <CustomBuild Include="ToonVK.tese">
       <Filter>Shader Files</Filter>
-    </None>
-    <None Include="ToonVK.vert">
+    </CustomBuild>
+    <CustomBuild Include="ToonVK.vert">
       <Filter>Shader Files</Filter>
-    </None>
+    </CustomBuild>
   </ItemGroup>
 </Project>

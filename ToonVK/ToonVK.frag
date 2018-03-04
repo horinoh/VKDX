@@ -7,11 +7,19 @@ layout (location = 1) in vec3 InViewDirection;
 
 layout (location = 0) out vec4 Color;
 
-vec3 diffuse(const vec3 MC, const vec3 LC, const float LN) { return clamp(clamp(LN, 0.0f, 1.0f) * MC * LC, 0.0f, 1.0f); }
+float toon(const float shade, const float steps)
+{
+	return floor(shade * steps) / steps;
+	//return ceil(shade * steps) / steps
+}
+vec3 diffuse(const vec3 MC, const vec3 LC, const float LN) 
+{
+	return clamp(toon(clamp(LN, 0.0f, 1.0f), 5.0f) * MC * LC, 0.0f, 1.0f); 
+}
 vec3 specular(const vec3 MC, const vec4 LC, const float LN, const vec3 L, const vec3 N, const vec3 V)
 {
-	return clamp(clamp(sign(LN), 0.0f, 1.0f) * pow(clamp(dot(reflect(-L, N), V), 0.0f, 1.0f), LC.a) * LC.rgb * MC, 0.0f, 1.0f); // phong
-	//return clamp(clamp(sign(LN), 0.0f, 1.0f) * pow(clamp(dot(N, normalize(V + L)), 0.0f, 1.0f), LC.a) * LC.rgb * MC, 0.0f, 1.0f); // blinn
+	return clamp(clamp(sign(LN), 0.0f, 1.0f) * toon(pow(clamp(dot(reflect(-L, N), V), 0.0f, 1.0f), LC.a), 5.0f) * LC.rgb * MC, 0.0f, 1.0f); // phong
+	//return clamp(clamp(sign(LN), 0.0f, 1.0f) * toon(pow(clamp(dot(N, normalize(V + L)), 0.0f, 1.0f), LC.a), 5.0f) * LC.rgb * MC, 0.0f, 1.0f); // blinn
 }
 
 layout (early_fragment_tests) in;
