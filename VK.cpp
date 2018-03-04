@@ -1778,9 +1778,12 @@ void VK::CreateStorageTexelBuffer()
 /**
 @brief シェーダとのバインディング (DX::CreateRootSignature()相当)
 @note デスクリプタを使用しない場合でも、デスクリプタセットレイアウト自体は作成しなくてはならない
+@note シェーダからのアクセス時は set がVkDescriptorSetLayout番号、binding が(VkDescriptorSetLayout内の)VkDescriptorSetLayoutBinding番号 に相当する
+(set = VkDescriptorSetLayout番号, binding = (VkDescriptorSetLayout内の)VkDescriptorSetLayoutBinding番号)
 */
 void VK::CreateDescriptorSetLayout()
 {
+	//!< binding = [0, DescriptorSetLayoutBindings.size()-1]
 	std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings = {
 		/**
 		uint32_t              binding;
@@ -1800,6 +1803,7 @@ void VK::CreateDescriptorSetLayout()
 	};
 	VkDescriptorSetLayout DescriptorSetLayout = VK_NULL_HANDLE;
 	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, GetAllocationCallbacks(), &DescriptorSetLayout));
+	//!< set = [0, DescriptorSetLayouts.size()-1]
 	DescriptorSetLayouts.push_back(DescriptorSetLayout);
 
 #ifdef DEBUG_STDOUT
@@ -1855,24 +1859,6 @@ void VK::CreateDescriptorSet()
 #endif
 	}
 }
-
-//void VK::UpdateDescriptorSet()
-//{
-//	std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
-//	//WriteDescriptorSets.resize(1);
-//	//std::vector<VkDescriptorImageInfo> DescriptorImageInfos;
-//	//std::vector<VkDescriptorBufferInfo> DescriptorBufferInfos;
-//	//std::vector<VkBufferView> BufferViews;
-//	//CreateWriteDescriptorSets(WriteDescriptorSets.back(), DescriptorImageInfos, DescriptorBufferInfos, BufferViews);
-//
-//	std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
-//	//CopyDescriptorSets.resize(1);
-//	//CreateCopyDescriptorSets(CopyDescriptorSets.back());
-//
-//	vkUpdateDescriptorSets(Device,
-//		static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
-//		static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
-//}
 
 /**
 @brief デスクリプタセットよりも高速

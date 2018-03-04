@@ -14,10 +14,6 @@ public:
 	virtual ~NormalMapDX() {}
 
 protected:
-	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
-		//UpdateDescriptorHeap();
-	}
-
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Indexed(1); }
 
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::vector<D3D12_SHADER_BYTECODE>& ShaderBytecodes) const override {
@@ -36,6 +32,7 @@ protected:
 		CreateRootParameters_1CBV_1SRV(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_GEOMETRY, D3D12_SHADER_VISIBILITY_PIXEL);
 	}
 	virtual void CreateDescriptorRanges(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
+		//!< CBV:register(b0, space0), SRV:register(t0, space0)
 		CreateDescriptorRanges_1CBV_1SRV(DescriptorRanges);
 	}
 	virtual void CreateDescriptorHeap() override {

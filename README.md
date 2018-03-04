@@ -144,10 +144,10 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
  * プロジェクトを右クリック - Retarget SDK Verson で 10以上にする
 
 #### DX
- * プロパティマネージャで Add Existing Property Sheet... - Props/HLSL.props、(Props/DXTK(Debug).prop)
+ * プロパティマネージャで Add Existing Property Sheet... - Props/HLSL.props、(Props/DXTK.prop)
  * Header Files に Win.h、DX.h、DXExt.h、(DXImage.h) を追加 
  * Source Files に Win.cpp、DX.cpp、DXExt.cpp、(DXImage.cpp) を追加
- * XxxDX.h、XxxDX.cpp, stdafx.h は既存のものを参考に編集 (#pragma region Code でマークしてある)
+ * stdafx.h、XxxDX.h、XxxDX.cpp, stdafx.h は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * Shader Files フォルダを作成し、シェーダを突っ込む
   * 右クリック - プロパティ - Configuration Propeties - General
    * Excluded From Build を No
@@ -158,7 +158,7 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
  * プロパティマネージャで Add Existing Property Sheet... - Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop、(Props/GLI.prop)
  * Header Files に Win.h、VK.h、VKExt.h、(VKImage.h) を追加
  * Source Files に Win.cpp、VK.cpp、VKExt.cpp、(VKImage.cpp) を追加
- * XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
+ * stdafx.h、XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * Shader Files フォルダを作成し、シェーダを突っ込む
   * 拡張子を glslangValidator に沿うようにタイプを選択しておく。(.vert、.frag、...)
   * 右クリック - プロパティ - Configuration Propeties - General
@@ -197,8 +197,8 @@ TODO
 - DebugMarkerが使えなくなった
 - ストレージバッファ、ユニフォームテクセルバッファ、ストレージテクセルバッファの検証
 - マルチスレッドでのコマンド作成(テストコード止まり)
-- ユニフォームバッファ、テクスチャ(NormalMap)
 - テクスチャ読み込み現状ミップマップ１のみ
+- vkUpdateDescriptorSets()のタイミングを精査
 
 # DX
 - ウインドウサイズ変更時の処理 OnSize() スワップチェインのりサイズ
@@ -207,18 +207,19 @@ TODO
 - PushConstants 相当を調査
 - コマンドリスト、グラフィクスコマンドリストまわりをまとめる
 - クリアカラーまわりがVKと同様にできるか検証
-- コンスタントバッファ、テクスチャ(NormalMap)
 - テクスチャ読み込み現状ミップマップ１のみ
 
 * インスタンシング
 * GSインスタンシング
 * ポストプロセス
 * プロシージャルテクスチャ
+* Gバッファ(MRT)
+* シャドウマップ
 
 * テクスチャ
-	* CUBEマップ
 	* ディスプレースメント
 	* 圧縮テクスチャ
+	* キューブマップ(環境マップ)
 
 * FBX
 	* アニメーション

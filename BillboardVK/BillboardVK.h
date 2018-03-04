@@ -14,10 +14,6 @@ public:
 	virtual ~BillboardVK() {}
 
 protected:
-	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
-		//UpdateDescriptorSet();
-	}
-
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PhysicalDeviceFeatures) const { assert(PhysicalDeviceFeatures.tessellationShader && "tessellationShader not enabled"); }
 
 	virtual void CreateDepthStencil() override {

@@ -3,15 +3,15 @@
 #include "resource.h"
 
 #pragma region Code
-#include "../VKImage.h"
+#include "../VKExt.h"
 
-class NormalMapVK : public VKImage
+class ToonVK : public VKExt
 {
 private:
-	using Super = VKImage;
+	using Super = VKExt;
 public:
-	NormalMapVK() : Super() {}
-	virtual ~NormalMapVK() {}
+	ToonVK() : Super() {}
+	virtual ~ToonVK() {}
 
 protected:
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PhysicalDeviceFeatures) const { assert(PhysicalDeviceFeatures.tessellationShader && "tessellationShader not enabled"); }
@@ -31,19 +31,18 @@ protected:
 	}
 
 	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const override {
-		//!< UB:(set = ..., binding = 0), CIS:(set = ..., binding = 1)
-		CreateDescriptorSetLayoutBindings_1UB_1CIS(DescriptorSetLayoutBindings, VK_SHADER_STAGE_GEOMETRY_BIT, VK_SHADER_STAGE_FRAGMENT_BIT);
+		CreateDescriptorSetLayoutBindings_1UB(DescriptorSetLayoutBindings, VK_SHADER_STAGE_GEOMETRY_BIT);
 	}
 	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const override {
-		CreateDescriptorPoolSizes_1UB_1CIS(DescriptorPoolSizes);
+		CreateDescriptorPoolSizes_1UB(DescriptorPoolSizes);
 	}
 	virtual void CreateWriteDescriptorSets(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos, const std::vector<VkBufferView>& BufferViews) const override {
-		CreateWriteDescriptorSets_1UB_1CIS(WriteDescriptorSets, DescriptorBufferInfos, DescriptorImageInfos);
+		CreateWriteDescriptorSets_1UB(WriteDescriptorSets, DescriptorBufferInfos);
 	}
 	virtual void UpdateDescriptorSet() override {
-		UpdateDescriptorSet_1UB_1CIS();
+		UpdateDescriptorSet_1UB();
 	}
-		
+
 	virtual void CreateUniformBuffer() override {
 		const auto Fov = 0.16f * glm::pi<float>();
 		const auto Aspect = GetAspectRatioOfClientRect();
@@ -58,13 +57,6 @@ protected:
 			glm::lookAt(CamPos, CamTag, CamUp),
 			glm::mat4(1.0f)
 		});
-	}
-
-	virtual void CreateTexture() override {
-		LoadImage(&Image, &ImageDeviceMemory, &ImageView, "NormalMap.dds");
-	}
-	virtual void CreateSampler(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const override {
-		CreateSampler_LR(Sampler, MaxLOD);
 	}
 
 	virtual void PopulateCommandBuffer(const size_t i) override;

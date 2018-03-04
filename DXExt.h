@@ -31,8 +31,8 @@ public:
 			{ 
 				D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
 				1, //!< NumDescriptors 無制限の場合 UINT_MAX を指定、無制限にできるのは最後の要素のみ
-				0, //!< BaseShaderRegister 例えば ": register(t3);" の "3"
-				0, //!< RegisterSpace 通常は0、例えば ": register(t3,space5);" の "5"
+				0, //!< b0 BaseShaderRegister 例えば ": register(t3);" の "3"
+				0, //!< space0 RegisterSpace 通常は0、例えば ": register(t3,space5);" の "5"
 				D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
 			},
 		};
@@ -86,8 +86,8 @@ public:
 			{ 
 				D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
 				1, 
-				0, 
-				0,
+				0, //!< t0
+				0, //!< space0
 				D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND 
 			},
 		};
@@ -138,15 +138,15 @@ public:
 			{ 
 				D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 
 				1,
-				0, 
-				0, 
+				0, //!< b0
+				0, //!< space0
 				D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
 			},
 			{ 
 				D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
 				1,
-				0, 
-				0,
+				0, //!< t0
+				0, //!< space0
 				D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND 
 			},
 		};

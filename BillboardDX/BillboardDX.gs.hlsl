@@ -3,7 +3,7 @@ struct IN
 	float3 Position : POSITION;
 };
 
-cbuffer Transform { float4x4 Projection; float4x4 View; float4x4 World; };
+cbuffer Transform : register(b0, space0) { float4x4 Projection; float4x4 View; float4x4 World; };
 
 struct OUT
 {

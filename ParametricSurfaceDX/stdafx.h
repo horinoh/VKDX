@@ -12,7 +12,6 @@
 #pragma region Code
 #include "../PreWindows.h"
 #pragma endregion
-#include "../PreWindows.h"
 #include <windows.h>
 
 // C RunTime Header Files

@@ -3,11 +3,7 @@
 #extension GL_ARB_shading_language_420pack : enable
 
 layout (location = 0) in vec3 InNormal;
-layout (location = 1) in vec4 InTangent;
-layout (location = 2) in vec2 InTexcoord;
-layout (location = 3) in vec3 InViewDirection;
-
-layout (set = 0, binding = 1) uniform sampler2D NormalMap;
+layout (location = 1) in vec3 InViewDirection;
 
 layout (location = 0) out vec4 Color;
 
@@ -22,12 +18,7 @@ layout (early_fragment_tests) in;
 void main()
 {
 	//!< N
-	const vec3 n = normalize(InNormal);
-	const vec3 t = normalize(InTangent.xyz - dot(InTangent.xyz, n) * n);
-	const vec3 b = cross(n, t) * InTangent.w;
-	const mat3 tbn = mat3(t, b, n);
-	//const vec3 N = n;
-	const vec3 N = tbn * (texture(NormalMap, InTexcoord).xyz * 2.0f - 1.0f);
+	const vec3 N = normalize(InNormal);
 
 	//!< L
 	const vec3 LightDirection = vec3(0.0f, 1.0f, 0.0f);
@@ -51,9 +42,5 @@ void main()
 
 	Color = vec4((Amb + (Dif + Spc) * Atn) * Spt, 1.0f);
 
-	//Color = vec4(n * 0.5f + 0.5f, 1.0f);
-	//Color = vec4(t * 0.5f + 0.5f, 1.0f);
-	//Color = vec4(b * 0.5f + 0.5f, 1.0f);
-	//Color = vec4(InTexcoord, 0.0f, 1.0f);
-	//Color = vec4(texture(NormalMap, InTexcoord).xyz, 1.0f);
+	//Color = vec4(N * 0.5f + 0.5f, 1.0f);
 }

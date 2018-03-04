@@ -20,7 +20,7 @@ public:
 	void CreateDescriptorSetLayoutBindings_1UB(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const {
 		DescriptorSetLayoutBindings = {
 			{
-				0, //!< バインディング Binding
+				0, //!< binding = 0 バインディング Binding
 				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< タイプ Type
 				1, //!< 個数 Count
 				ShaderStageFlags,
@@ -92,7 +92,7 @@ public:
 	void CreateDescriptorSetLayoutBindings_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const {
 		DescriptorSetLayoutBindings = {
 			{
-				0,
+				0, //!< binding = 0
 				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				1,
 				ShaderStageFlags,
@@ -127,14 +127,14 @@ public:
 	void CreateDescriptorSetLayoutBindings_1UB_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags_UB = VK_SHADER_STAGE_ALL_GRAPHICS, const VkShaderStageFlags ShaderStageFlags_CIS = VK_SHADER_STAGE_ALL_GRAPHICS) const {
 		DescriptorSetLayoutBindings = {
 			{
-				0,
+				0, //!< binding = 0
 				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				1,
 				ShaderStageFlags_UB,
 				nullptr
 			},
 			{
-				1,
+				1, //!< binding = 1
 				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				1,
 				ShaderStageFlags_CIS,
