@@ -165,10 +165,8 @@ protected:
 
 	virtual void EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
 	virtual void GetPhysicalDevice();
-#ifdef DEBUG_STDOUT
 	virtual void EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice);
 	virtual void EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* layerName);
-#endif
 	virtual void GetQueueFamily();
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PhysicalDeviceFeatures) const;
 	virtual void CreateDevice();
