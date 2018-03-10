@@ -35,9 +35,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	Super::OnCreate(hWnd, hInstance, Title);
 
-#ifdef DEBUG_STDOUT
-	std::cout << "VK_HEADER_VERSION = " << VK_HEADER_VERSION << std::endl;
-#endif
 #ifdef VK_NO_PROTOYYPES
 	LoadVulkanDLL();
 #endif //!< VK_NO_PROTOYYPES
@@ -759,13 +756,24 @@ void VK::CreateInstance()
 {
 	EnumerateInstanceLayer();
 
+	//!< ここでは、最新バージョンでのみ動くようにしておく Use latest version here
+	uint32_t APIVersion/* = VK_API_VERSION_1_1*/;
+	VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
+#ifdef DEBUG_STDOUT
+	const auto MajorVersion = VK_VERSION_MAJOR(APIVersion);
+	const auto MinorVersion = VK_VERSION_MINOR(APIVersion);
+	const auto PatchVersion = VK_VERSION_PATCH(APIVersion);
+	std::cout << "API Version = " << MajorVersion << ", " << MinorVersion << ", " << PatchVersion << std::endl << std::endl;
+	//std::cout << "VK_HEADER_VERSION = " << VK_HEADER_VERSION << std::endl;
+#endif
+
 	const auto ApplicationName = GetTitle();
 	const VkApplicationInfo ApplicationInfo = {
 		VK_STRUCTURE_TYPE_APPLICATION_INFO,
 		nullptr,
 		ApplicationName.data(), 0,
 		"VKDX Engine Name", 0,
-		VK_API_VERSION_1_0
+		APIVersion
 	};
 	const std::vector<const char*> EnabledLayerNames = {
 #ifdef _DEBUG
@@ -935,7 +943,7 @@ void VK::EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryPro
 		if (PhysicalDeviceMemoryProperties.memoryHeaps[i].flags) {
 			std::cout << ", Flags = ";
 			if (VK_MEMORY_HEAP_DEVICE_LOCAL_BIT & PhysicalDeviceMemoryProperties.memoryHeaps[i].flags) { std::cout << "DEVICE_LOCAL" << " | "; }
-			if (VK_MEMORY_HEAP_MULTI_INSTANCE_BIT_KHX & PhysicalDeviceMemoryProperties.memoryHeaps[i].flags) { std::cout << "MULTI_INSTANCE" << " | "; }
+			if (VK_MEMORY_HEAP_MULTI_INSTANCE_BIT_KHR & PhysicalDeviceMemoryProperties.memoryHeaps[i].flags) { std::cout << "MULTI_INSTANCE" << " | "; }
 		}
 		std::cout << std::endl;
 	}
@@ -950,14 +958,37 @@ void VK::GetPhysicalDevice()
 	std::vector<VkPhysicalDevice> PhysicalDevices(PhysicalDeviceCount);
 	VERIFY_SUCCEEDED(vkEnumeratePhysicalDevices(Instance, &PhysicalDeviceCount, PhysicalDevices.data()));
 
+#ifdef _DEBUG
+	uint32_t APIVersion;
+	VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
+#endif
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "PhysicalDevices" << std::endl;
 #define PHYSICAL_DEVICE_TYPE_ENTRY(entry) if(VK_PHYSICAL_DEVICE_TYPE_##entry == PhysicalDeviceProperties.deviceType) { std::cout << #entry; }
 #define PROPERTY_LIMITS_ENTRY(entry) std::cout << "\t" << "\t" << "\t" << "\t" << #entry << " = " << PhysicalDeviceProperties.limits.##entry << std::endl
 #define DEVICE_FEATURE_ENTRY(entry) if (PhysicalDeviceFeatures.##entry) { std::cout << "\t" << "\t" << "\t" << "\t" << #entry << std::endl; }
+#endif
 	for (const auto& i : PhysicalDevices) {
 		VkPhysicalDeviceProperties PhysicalDeviceProperties;
 		vkGetPhysicalDeviceProperties(i, &PhysicalDeviceProperties);
+#ifdef DEBUG_STDOUT
+		std::cout << "\t" << "\t" << "Version = " << VK_VERSION_MAJOR(PhysicalDeviceProperties.apiVersion) << ", " << VK_VERSION_MINOR(PhysicalDeviceProperties.apiVersion) << "," << VK_VERSION_PATCH(PhysicalDeviceProperties.apiVersion) << std::endl;
+#endif
+#ifdef _DEBUG
+		if (PhysicalDeviceProperties.apiVersion < APIVersion) {
+#ifdef DEBUG_STDOUT
+			std::cout << "\t" << "\t" << Red
+				<< VK_VERSION_MAJOR(PhysicalDeviceProperties.apiVersion) << ", " << VK_VERSION_MINOR(PhysicalDeviceProperties.apiVersion) << "," << VK_VERSION_PATCH(PhysicalDeviceProperties.apiVersion)
+				<< " != "
+				<< VK_VERSION_MAJOR(APIVersion) << ", " << VK_VERSION_MINOR(APIVersion) << ", " << VK_VERSION_PATCH(APIVersion)
+				<< White << std::endl;
+#else
+			DEBUG_BREAK();
+#endif
+		}
+#endif
+
+#ifdef DEBUG_STDOUT
 		std::cout << "\t" << "\t" << PhysicalDeviceProperties.deviceName << ", DeviceType = ";
 		PHYSICAL_DEVICE_TYPE_ENTRY(OTHER);
 		PHYSICAL_DEVICE_TYPE_ENTRY(INTEGRATED_GPU);
@@ -973,16 +1004,17 @@ void VK::GetPhysicalDevice()
 			PROPERTY_LIMITS_ENTRY(maxFragmentOutputAttachments);
 			PROPERTY_LIMITS_ENTRY(maxColorAttachments);			
 		}
-
+#endif
 		VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
 		vkGetPhysicalDeviceFeatures(i, &PhysicalDeviceFeatures);
+#ifdef DEBUG_STDOUT
 		std::cout << "\t" << "\t" << "\t" << "PhysicalDeviceFeatures" << std::endl;
 		DEVICE_FEATURE_ENTRY(textureCompressionBC);
 		DEVICE_FEATURE_ENTRY(textureCompressionETC2);
 		DEVICE_FEATURE_ENTRY(textureCompressionASTC_LDR);
 		DEVICE_FEATURE_ENTRY(fillModeNonSolid);
 		DEVICE_FEATURE_ENTRY(tessellationShader);
-
+#endif
 		VkPhysicalDeviceMemoryProperties PDMP;
 		vkGetPhysicalDeviceMemoryProperties(i, &PDMP);
 		EnumeratePhysicalDeviceMemoryProperties(PDMP);
@@ -990,6 +1022,7 @@ void VK::GetPhysicalDevice()
 
 		std::cout << std::endl;
 	}
+#ifdef DEBUG_STDOUT
 #undef PHYSICAL_DEVICE_TYPE_ENTRY
 #undef PROPERTY_LIMITS_ENTRY
 #undef DEVICE_FEATURE_ENTRY
@@ -1000,9 +1033,9 @@ void VK::GetPhysicalDevice()
 	//!< 選択した物理デバイスのメモリプロパティを取得 (よく使うので覚えておく)
 	vkGetPhysicalDeviceMemoryProperties(PhysicalDevice, &PhysicalDeviceMemoryProperties);
 }
-#ifdef DEBUG_STDOUT
 void VK::EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice)
 {
+#ifdef DEBUG_STDOUT
 	uint32_t DeviceLayerPropertyCount = 0;
 	VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PhysicalDevice, &DeviceLayerPropertyCount, nullptr));
 	if (DeviceLayerPropertyCount) {
@@ -1015,9 +1048,11 @@ void VK::EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice)
 			EnumerateDeviceExtenstion(PhysicalDevice, i.layerName);
 		}
 	}
+#endif
 }
 void VK::EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* layerName)
 {
+#ifdef DEBUG_STDOUT
 	uint32_t DeviceExtensionPropertyCount = 0;
 	VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PhysicalDevice, nullptr, &DeviceExtensionPropertyCount, nullptr));
 	if (DeviceExtensionPropertyCount) {
@@ -1031,8 +1066,8 @@ void VK::EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* 
 			std::cout << White;
 		}
 	}
+#endif
 }
-#endif //!< DEBUG_STDOUT
 
 void VK::GetQueueFamily()
 {
@@ -1425,7 +1460,8 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 
 	//!< minImageCount + 1 枚取る (MAILBOX では 3 枚欲しいので) Use minImageCount + 1 images (We want 3 image to use MAILBOX)
 	//!< ex) 自分の環境では minImageCount は 2 In my environment minImageCount is 2
-	const auto MinImageCount = (std::min)(SurfaceCapabilities.minImageCount + 1, SurfaceCapabilities.maxImageCount);
+	//!< 無制限の場合は maxImageCount が 0 を返す
+	const auto MinImageCount = (std::min)(SurfaceCapabilities.minImageCount + 1, 0 == SurfaceCapabilities.maxImageCount ? UINT32_MAX : SurfaceCapabilities.maxImageCount);
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "\t" << Lightblue << "ImageCount = " << White << MinImageCount << std::endl;
 #endif
