@@ -958,10 +958,6 @@ void VK::GetPhysicalDevice()
 	std::vector<VkPhysicalDevice> PhysicalDevices(PhysicalDeviceCount);
 	VERIFY_SUCCEEDED(vkEnumeratePhysicalDevices(Instance, &PhysicalDeviceCount, PhysicalDevices.data()));
 
-#ifdef _DEBUG
-	uint32_t APIVersion;
-	VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
-#endif
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "PhysicalDevices" << std::endl;
 #define PHYSICAL_DEVICE_TYPE_ENTRY(entry) if(VK_PHYSICAL_DEVICE_TYPE_##entry == PhysicalDeviceProperties.deviceType) { std::cout << #entry; }
@@ -974,18 +970,21 @@ void VK::GetPhysicalDevice()
 #ifdef DEBUG_STDOUT
 		std::cout << "\t" << "\t" << "Version = " << VK_VERSION_MAJOR(PhysicalDeviceProperties.apiVersion) << ", " << VK_VERSION_MINOR(PhysicalDeviceProperties.apiVersion) << "," << VK_VERSION_PATCH(PhysicalDeviceProperties.apiVersion) << std::endl;
 #endif
+		//!< バージョンチェック Check version
 #ifdef _DEBUG
-		if (PhysicalDeviceProperties.apiVersion < APIVersion) {
+		[&](const uint32_t Version) {
+			uint32_t APIVersion;
+			VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
+			if (Version < APIVersion) {
 #ifdef DEBUG_STDOUT
-			std::cout << "\t" << "\t" << Red
-				<< VK_VERSION_MAJOR(PhysicalDeviceProperties.apiVersion) << ", " << VK_VERSION_MINOR(PhysicalDeviceProperties.apiVersion) << "," << VK_VERSION_PATCH(PhysicalDeviceProperties.apiVersion)
-				<< " != "
-				<< VK_VERSION_MAJOR(APIVersion) << ", " << VK_VERSION_MINOR(APIVersion) << ", " << VK_VERSION_PATCH(APIVersion)
-				<< White << std::endl;
-#else
-			DEBUG_BREAK();
+				std::cout << "\t" << "\t" << Red
+					<< VK_VERSION_MAJOR(Version) << ", " << VK_VERSION_MINOR(Version) << "," << VK_VERSION_PATCH(Version)
+					<< " < "
+					<< VK_VERSION_MAJOR(APIVersion) << ", " << VK_VERSION_MINOR(APIVersion) << ", " << VK_VERSION_PATCH(APIVersion)
+					<< White << std::endl;
 #endif
-		}
+			}
+		}(PhysicalDeviceProperties.apiVersion);
 #endif
 
 #ifdef DEBUG_STDOUT
