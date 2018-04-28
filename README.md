@@ -52,11 +52,11 @@ xcopy /y %VK_SDK_PATH%\Config\vk_layer_settings.txt $(TargetDir)
 
 #### GLM
 * https://github.com/g-truc/glm
-* 同じ階層に GLM をクローンして **..\..\glm** にパスを通した
+* 同じ階層に GLM をクローンして **..\\..\glm** にパスを通した
 
 #### GLI (DDS読み込みに使用)
 * https://github.com/g-truc/gli
-* 同じ階層に GLI をクローンして **..\..\gli** にパスを通した
+* 同じ階層に GLI をクローンして **..\\..\gli** にパスを通した
 
 #### Vulkan-Hpp
 * ~~https://github.com/KhronosGroup/Vulkan-Hpp~~ 今は通常インストールに含まれるみたい (未使用)
@@ -177,13 +177,32 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
  Path=%Path%:%FBX_SDK_PATH%\lib\vs2015\x64\debug
  Path=%Path%:%FBX_SDK_PATH%\lib\vs2015\x64\release
  ~~~
- 
+ ~~~
+ #include <fbxsdk.h
+ #pragma comment(lib, "vs2015\\x64\\debug\\libfbxsdk.lib")
+ ~~~
  ## OPENCV
  
  * 環境変数 **OPENCV_SDK_PATH** を定義しておく
  * 環境変数 **Path** に DLL のパスを通しておく
  ~~~
  Path=%Path%:%OPENCV_SDK_PATH%\x64\vc14\bin
+ ~~~
+ ~~~
+ #include <opencv2/opencv.hpp>
+ #pragma comment(lib, "opencv_core310.lib")
+ ...
+ ~~~
+ ## SDL
+
+ * 環境変数 **SDL_SDK_PATH** を定義しておく
+ * 環境変数 **Path** に DLL のパスを通しておく
+ ~~~
+ Path=%Path%:%SDL_SDK_PATH%\lib\x64
+ ~~~
+ ~~~
+ #include <SDL.h>
+ #pragma comment(lib, "SDL2.lib")
  ~~~
  -->
 

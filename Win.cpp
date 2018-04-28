@@ -1,7 +1,5 @@
 #include "stdafx.h"
 
-#include <iostream>
-
 #include "Win.h"
 
 Win::Win()

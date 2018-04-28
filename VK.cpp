@@ -763,8 +763,7 @@ void VK::CreateInstance()
 	const auto MajorVersion = VK_VERSION_MAJOR(APIVersion);
 	const auto MinorVersion = VK_VERSION_MINOR(APIVersion);
 	const auto PatchVersion = VK_VERSION_PATCH(APIVersion);
-	std::cout << "API Version = " << MajorVersion << ", " << MinorVersion << ", " << PatchVersion << std::endl << std::endl;
-	//std::cout << "VK_HEADER_VERSION = " << VK_HEADER_VERSION << std::endl;
+	std::cout << "API Version = " << MajorVersion << "." << MinorVersion << ".(Header = " << VK_HEADER_VERSION  << ")" << " (Patch = " << PatchVersion <<")" << std::endl << std::endl;
 #endif
 
 	const auto ApplicationName = GetTitle();
@@ -780,7 +779,10 @@ void VK::CreateInstance()
 		//!< ↓標準的なバリデーションレイヤセットを最適な順序でロードする指定
 		//!< (プログラムからやらない場合は環境変数 VK_INSTANCE_LAYERS へセットしておいてもよい)
 		"VK_LAYER_LUNARG_standard_validation", 
-		"VK_LAYER_LUNARG_object_tracker",
+		
+		//!< #VK_TODO Ver1.1.73 2018/04/20 から、VK_LAYER_LUNARG_object_trackerを指定したら動かなくなった…
+		//"VK_LAYER_LUNARG_object_tracker",
+
 		//!< API 呼び出しとパラメータをコンソール出力する (出力がうるさいのでここでは指定しない)
 		//"VK_LAYER_LUNARG_api_dump",
 #endif
@@ -968,7 +970,7 @@ void VK::GetPhysicalDevice()
 		VkPhysicalDeviceProperties PhysicalDeviceProperties;
 		vkGetPhysicalDeviceProperties(i, &PhysicalDeviceProperties);
 #ifdef DEBUG_STDOUT
-		std::cout << "\t" << "\t" << "Version = " << VK_VERSION_MAJOR(PhysicalDeviceProperties.apiVersion) << ", " << VK_VERSION_MINOR(PhysicalDeviceProperties.apiVersion) << "," << VK_VERSION_PATCH(PhysicalDeviceProperties.apiVersion) << std::endl;
+		std::cout << "\t" << "\t" << "Version = " << VK_VERSION_MAJOR(PhysicalDeviceProperties.apiVersion) << "." << VK_VERSION_MINOR(PhysicalDeviceProperties.apiVersion) << " (Patch = " << VK_VERSION_PATCH(PhysicalDeviceProperties.apiVersion) << ")" << std::endl;
 #endif
 		//!< バージョンチェック Check version
 #ifdef _DEBUG
@@ -978,9 +980,11 @@ void VK::GetPhysicalDevice()
 			if (Version < APIVersion) {
 #ifdef DEBUG_STDOUT
 				std::cout << "\t" << "\t" << Red
-					<< VK_VERSION_MAJOR(Version) << ", " << VK_VERSION_MINOR(Version) << "," << VK_VERSION_PATCH(Version)
+					<< "[ DEVICE ] "
+					<< VK_VERSION_MAJOR(Version) << "." << VK_VERSION_MINOR(Version) << " (Patch = " << VK_VERSION_PATCH(Version) << ")"
 					<< " < "
-					<< VK_VERSION_MAJOR(APIVersion) << ", " << VK_VERSION_MINOR(APIVersion) << ", " << VK_VERSION_PATCH(APIVersion)
+					<< VK_VERSION_MAJOR(APIVersion) << "." << VK_VERSION_MINOR(APIVersion) << " (Patch = "<< VK_VERSION_PATCH(APIVersion) << ")"
+					<< " [ INSTANCE ]"
 					<< White << std::endl;
 #endif
 			}
@@ -1181,8 +1185,10 @@ void VK::CreateDevice()
 	const std::vector<const char*> EnabledLayerNames = {
 #ifdef _DEBUG
 		//!< ↓標準的なバリデーションレイヤセットを最適な順序でロードする指定
-		"VK_LAYER_LUNARG_standard_validation", 
-		"VK_LAYER_LUNARG_object_tracker",
+		"VK_LAYER_LUNARG_standard_validation",
+
+		//!< #VK_TODO Ver1.1.73 2018/04/20 から、インスタンス作成時にVK_LAYER_LUNARG_object_trackerを指定したら。動かなくなったのでこっちもやめておくことにする…
+		//"VK_LAYER_LUNARG_object_tracker",
 #endif
 	};
 
@@ -1944,7 +1950,7 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 				VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
 				nullptr,
 				0,
-				Size, reinterpret_cast<uint32_t*>(Data)
+				static_cast<size_t>(Size), reinterpret_cast<uint32_t*>(Data)
 			};
 			VERIFY_SUCCEEDED(vkCreateShaderModule(Device, &ModuleCreateInfo, GetAllocationCallbacks(), &ShaderModule));
 

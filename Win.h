@@ -23,12 +23,12 @@
 #endif
 #endif
 
+#include <iostream>
 #include <ostream>
 #include <vector>
 #include <array>
 #include <cassert>
 #include <algorithm>
-#include <iostream>
 #include <sstream>
 #include <codecvt>
 #include <functional>
