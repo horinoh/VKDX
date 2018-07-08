@@ -237,7 +237,7 @@ void DX::CreateDefaultResource(ID3D12Resource** Resource, const size_t Size)
 		nullptr,
 		IID_PPV_ARGS(Resource)));
 }
-void DX::ResourceBarrier(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After)
+void DX::ResourceBarrier(ID3D12GraphicsCommandList* CL, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After)
 {
 	const D3D12_RESOURCE_TRANSITION_BARRIER ResourceTransitionBarrier = {
 		Resource,
@@ -252,7 +252,7 @@ void DX::ResourceBarrier(ID3D12GraphicsCommandList* CommandList, ID3D12Resource*
 			ResourceTransitionBarrier
 		}
 	};
-	CommandList->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
+	CL->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
 }
 void DX::PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState)
 {
@@ -300,14 +300,27 @@ void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D1
 }
 
 #ifdef _DEBUG
+void DX::SetMarker(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name, const UINT Color)
+{
+	PIXSetMarker(CommandList, Color, Name);
+}
+
 void DX::BeginEvent(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name)
 {
+#if 0
 	const auto Size = static_cast<UINT>((wcslen(Name) + 1) * sizeof(Name[0]));
 	CommandList->BeginEvent(0, Name, Size);
+#else
+	PIXBeginEvent(CommandList, PIX_COLOR(255, 0, 0), Name);
+#endif
 }
 void DX::EndEvent(ID3D12GraphicsCommandList* CommandList)
 {
+#if 0
 	CommandList->EndEvent();
+#else
+	PIXEndEvent();
+#endif
 }
 #endif //!< _DEBUG
 
@@ -378,7 +391,7 @@ void DX::CreateDevice(HWND hWnd)
 }
 HRESULT DX::CreateMaxFeatureLevelDevice(IDXGIAdapter* Adapter)
 {
-	D3D_FEATURE_LEVEL FeatureLevel = D3D_FEATURE_LEVEL_9_1;
+	auto FeatureLevel = D3D_FEATURE_LEVEL_9_1;
 	for (const auto i : FeatureLevels) {
 		if (SUCCEEDED(D3D12CreateDevice(Adapter, i, _uuidof(ID3D12Device), nullptr))) {
 			FeatureLevel = i;
@@ -597,21 +610,19 @@ void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
 {
 	CreateSwapChainOfClientRect(hWnd, ColorFormat);
 
-	//!< スワップチェインの枚数が決まったので、ここでコマンドリストを作成
-	//!< Count of swapchain is fixed, create commandlist here
-	{
-		DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
-		SwapChain->GetDesc1(&SwapChainDesc);
-
-		CreateCommandAllocator();
-		CreateCommandList(CommandAllocators[0].Get(), SwapChainDesc.BufferCount);
-	}
-
 	//!< ビューを作成 Create view
 	CreateSwapChainResource();
 
-	//!< イメージの初期化 Initialize images #TODO
+	//!< スワップチェインの枚数が決まったので、ここでコマンドリストを作成
+	//!< イメージの初期化(する場合)でコマンドリストが必要
+	//!< Count of swapchain is fixed, create commandlist here
+	//!< In case initialize image, we need command list
+	CreateCommandAllocator();
+	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
+	SwapChain->GetDesc1(&SwapChainDesc);
+	CreateCommandList(CommandAllocators[0].Get(), SwapChainDesc.BufferCount);
 #if 1
+	//!< イメージの初期化 Initialize images #TODO
 	//InitializeSwapchainImage(CommandAllocators[0].Get());
 	InitializeSwapchainImage(CommandAllocators[0].Get(), &DirectX::Colors::Red);
 #endif

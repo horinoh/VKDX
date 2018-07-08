@@ -1354,19 +1354,21 @@ void VK::AllocateCommandBuffer(const VkCommandPool CommandPool, const size_t Cou
 void VK::CreateSwapchain()
 {
 	CreateSwapchainOfClientRect();
-	
-	//!< スワップチェインイメージの枚数が決まったので、ここでコマンドバッファを確保する Because count of swapchain image is fixed, create commandbuffer here
-	{
-		CreateCommandPool(GraphicsQueueFamilyIndex);
-		AllocateCommandBuffer(CommandPools[0], SwapchainImages.size()); //!< 現状は0番のコマンドプール決め打ち #VK_TODO
-	}
 
 	//!< ビューを作成 CreateView
 	CreateSwapchainImageView();
 	
+	//!< スワップチェインイメージの枚数が決まったので、ここでコマンドバッファを確保する
+	//!< イメージの初期化(する場合)でコマンドバッファが必要
+	//!< Because count of swapchain image is fixed, create commandbuffer here
+	//!< In case initialize image, we need command buffer
+	CreateCommandPool(GraphicsQueueFamilyIndex);
+	AllocateCommandBuffer(CommandPools[0], SwapchainImages.size()); //!< 現状は0番のコマンドプール決め打ち #VK_TODO
+#if 1
 	//!< イメージの初期化 Initialize images
 	//InitializeSwapchainImage(CommandBuffers[0]);
 	InitializeSwapchainImage(CommandBuffers[0], &Colors::Red);
+#endif
 }
 VkSurfaceFormatKHR VK::SelectSurfaceFormat()
 {

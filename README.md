@@ -29,16 +29,17 @@ xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)
 #### SDK
 * https://vulkan.lunarg.com/signin
 * インストールすると環境変数 **VK_SDK_PATH**、**VULKAN_SDK** が自動的に作成される
-	* 新しいバージョンをインストールしたらパスが変わるので VAssistX - Visual Assist Options - Performance - Rebuild しておく
-	* 環境変数 **VULKAN_SDK** は UE4 のコンパイルが通らなくなるので消した `setx VULKAN_SDK ""`
-* Visual Stuido で C/C++ - Preprocessor - Preprocessor Definitions に **VK_USE_PLATFORM_WIN32_KHR** を定義した
+	* VAX : 新しいバージョンをインストールしたらパスが変わるので VAssistX - Visual Assist Options - Performance - Rebuild しておく
+	* UE4 : 環境変数 **VULKAN_SDK** は UE4 のコンパイルが通らなくなるので消した `setx VULKAN_SDK ""`
+* C/C++ - Preprocessor - Preprocessor Definitions に **VK_USE_PLATFORM_WIN32_KHR** を定義した
 * 環境変数 **VK_INSTANCE_LAYERS** を作成しておくか、インスタンス作成持にプログラム中から指定してもよい。
 ~~~
 setx VK_INSTANCE_LAYERS VK_LAYER_LUNARG_standard_validation
 ~~~
-* DLL を使用する場合は C/C++ - Preprocessor - Preprocessor Definitions に **VK_NO_PROTOYYPES** を定義しておく
 * DLL
-	* %VK_SDK_PATH%\RunTimeInstaller\VulkanRT-XXX-Installer.exe を実行すると DLL がインストールされる (SDKのインストール時に自動的に行われている？)
+	* C/C++ - Preprocessor - Preprocessor Definitions に **VK_NO_PROTOYYPES** を定義しておく
+	* %VK_SDK_PATH%\RunTimeInstaller\VulkanRT-XXX-Installer.exe を実行すると DLL がインストールされる
+		* SDKのインストール時に自動的に行われている？
 * レイヤ設定
 	* %VK_SDK_PATH%\Config\vk_layer_settings.txt を exe と同じ場所へコピーしておく
 ~~~
@@ -54,15 +55,16 @@ xcopy /y %VK_SDK_PATH%\Config\vk_layer_settings.txt $(TargetDir)
 * https://github.com/g-truc/glm
 * 同じ階層に GLM をクローンして **..\\..\glm** にパスを通した
 
-#### GLI (DDS読み込みに使用)
+#### GLI
 * https://github.com/g-truc/gli
 * 同じ階層に GLI をクローンして **..\\..\gli** にパスを通した
 
 #### Vulkan-Hpp
-* ~~https://github.com/KhronosGroup/Vulkan-Hpp~~ 今は通常インストールに含まれるみたい (未使用)
+* ~~https://github.com/KhronosGroup/Vulkan-Hpp~~ 今は通常インストールに含まれるみたい
+	* ここでは未使用
 
 #### シェーダコンパイル
-* glslangValidator.exe でコンパイルする、環境変数 **Path** が通っているらしくそのまま使用できる
+* glslangValidator.exe でコンパイルする、SDKインストールで環境変数 **Path** が通るらしくそのまま使用できる
 * Custom Build Tool に以下のように指定した (.exe 直起動もできるように TargetDir にもコピーしている)
 	* Outputs : `%(Identity).spv`
 	* Description : `GLSL Compiler`
@@ -94,10 +96,11 @@ xcopy /y %(Identity).spv $(TargetDir)
 * glslang.sln を開いて glslang, glslangValidator, OGLCompipler, OSDependent, SPIRV, spirv-remap をビルド
 	* 64bitで使う場合は x64 を追加してビルドしないとだめみたい
 * SPIRV.lib, glslang.lib, OGLCompiler.lib, OSDependent.lib
-* ここでは未使用
+	* ここでは未使用
 
 #### Visual Studio で GLSL シンタックスハイライトさせる場合
-* ShaderHighlights\XXX_vs2015.reg を実行して Visual Studio を再起動 
+* ShaderHighlights\XXX_vs2015.reg を実行して Visual Studio を再起動
+* ShaderHighlights\XXX_vs2017.reg を実行して Visual Studio を再起動
 
 #### デバッグ
 * RenderDoc https://renderdoc.org/builds
@@ -132,6 +135,10 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
 ~~~
 
 #### デバッグ
+* WinPixEventRuntimeのインストール
+	* ソリューション右クリック - ソリューションのNuGetパッケージの管理 - 参照タブ - WinPixEventRuntimeで検索 - プロジェクトを選択してインストール
+		* これをすると #include <pix3.h> が可能になる
+
  * 参考 https://msdn.microsoft.com/ja-jp/library/hh873204.aspx
 	* Alt + F5 で開始 (Debug - Graphics - Start Graphics Debugging)
 	* PrintScreen でキャプチャ (Debug - Graphics - Capture Frame)
@@ -153,6 +160,8 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
    * Excluded From Build を No
    * Content を Yes
   * 右クリック - プロパティ - HLSL Compiler - General - Shader Type でタイプを適切に選択しておく
+* WinPixEventRuntimeのインストール
+	* 右クリック - NuGetパッケージの管理 - 参照タブ - WinPixEventRuntimeで検索 - インストール
 
 #### VK
  * プロパティマネージャで Add Existing Property Sheet... - Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop、(Props/GLI.prop)
@@ -170,7 +179,6 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
 
 <!-- 
 ## FBX
-
  * 環境変数 **FBX_SDK_PATH** を定義しておく
  * 環境変数 **Path** に DLL のパスを通しておく
  ~~~
@@ -181,8 +189,8 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
  #include <fbxsdk.h
  #pragma comment(lib, "vs2015\\x64\\debug\\libfbxsdk.lib")
  ~~~
+
  ## OPENCV
- 
  * 環境変数 **OPENCV_SDK_PATH** を定義しておく
  * 環境変数 **Path** に DLL のパスを通しておく
  ~~~
@@ -193,8 +201,8 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
  #pragma comment(lib, "opencv_core310.lib")
  ...
  ~~~
- ## SDL
 
+ ## SDL
  * 環境変数 **SDL_SDK_PATH** を定義しておく
  * 環境変数 **Path** に DLL のパスを通しておく
  ~~~
@@ -203,6 +211,15 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
  ~~~
  #include <SDL.h>
  #pragma comment(lib, "SDL2.lib")
+ ~~~
+
+ ## Draco
+ * 環境変数 **DRACO_SDK_PATH** を定義しておく
+ ~~~
+ #include "draco/compression/decode.h"
+ #pragma comment(lib, "draco.lib")
+ #pragma comment(lib, "dracodec.lib")
+ #pragma comment(lib, "dracoenc.lib")
  ~~~
  -->
 
@@ -228,6 +245,7 @@ TODO
 - クリアカラーまわりがVKと同様にできるか検証
 - テクスチャ読み込み現状ミップマップ１のみ
 
+# 共通
 * インスタンシング
 * GSインスタンシング
 * ポストプロセス

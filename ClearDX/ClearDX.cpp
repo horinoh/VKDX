@@ -148,17 +148,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 #pragma region Code
 	case WM_CREATE:
-		if (nullptr == Inst) {
-			Inst = new ClearDX();
-		}
-		if (nullptr != Inst) {
-			try {
-				Inst->OnCreate(hWnd, hInst, szTitle);
+			if (nullptr == Inst) {
+				Inst = new ClearDX();
 			}
-			catch (std::exception& e) {
-				std::cerr << e.what() << std::endl;
+			if (nullptr != Inst) {
+				try {
+					Inst->OnCreate(hWnd, hInst, szTitle);
+				}
+				catch (std::exception& e) {
+					std::cerr << e.what() << std::endl;
+				}
 			}
-		}
 		break;
 	case WM_TIMER:
 		if (nullptr != Inst) {

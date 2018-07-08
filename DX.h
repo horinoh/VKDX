@@ -25,6 +25,8 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 
 #include <comdef.h>
 
+#include <pix3.h>
+
 #ifndef BREAK_ON_FAILED
 #define BREAK_ON_FAILED(vr) if(FAILED(vr)) { DEBUG_BREAK(); }
 #endif
@@ -76,13 +78,13 @@ protected:
 	virtual void CreateUploadResource(ID3D12Resource** Resource, const size_t Size);
 	virtual void CreateDefaultResource(ID3D12Resource** Resource, const size_t Size);
 
-	virtual void ResourceBarrier(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After);
+	virtual void ResourceBarrier(ID3D12GraphicsCommandList* CL, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After);
 	virtual void PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState);
 	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState);
 	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES ResourceState);
 	
 #ifdef _DEBUG
-	//!< Insert() ‘Š“–‚Í–³‚¢H
+	static void SetMarker(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name, const UINT Color);
 	static void BeginEvent(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name);
 	static void BeginEvent(ID3D12GraphicsCommandList* CommandList, const std::wstring& Name) { BeginEvent(CommandList, Name.c_str()); }
 	static void BeginEvent(ID3D12GraphicsCommandList* CommandList, const std::string& Name) { BeginEvent(CommandList, std::wstring(Name.begin(), Name.end())); }
