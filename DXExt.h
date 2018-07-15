@@ -41,7 +41,7 @@ public:
 	void CreateDescriptorHeap_1CBV() {
 		const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		const auto Count = 1;
-		const auto Size = RoundUpTo256(sizeof(T));
+		const auto Size = RoundUp(sizeof(T), 0xff); //!< 256バイトアライン
 
 		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, ID3D12DescriptorHeap** DescriptorHeap) {
 			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
@@ -183,13 +183,13 @@ public:
 
 	virtual D3D_PRIMITIVE_TOPOLOGY GetPrimitiveTopology() const override { return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP; }
 
-	void CreateShader_VsPs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::vector<D3D12_SHADER_BYTECODE>& ShaderBytecodes) const;
-	void CreateShader_VsPsDsHsGs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::vector<D3D12_SHADER_BYTECODE>& ShaderBytecodes) const;
-	void CreateShader_Cs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::vector<D3D12_SHADER_BYTECODE>& ShaderBytecodes) const;
+	void CreateShader_VsPs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
+	void CreateShader_VsPsDsHsGs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
+	void CreateShader_Cs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
 
 	template<typename T>
 	void CreateConstantBuffer(const T& Type) {
-		const auto Size = RoundUpTo256(sizeof(T));
+		const auto Size = RoundUp(sizeof(T), 0xff); //!< 256バイトアライン
 
 		CreateUploadResource(ConstantBufferResource.GetAddressOf(), Size);
 		CopyToUploadResource(ConstantBufferResource.Get(), Size, &Type);

@@ -20,8 +20,9 @@ protected:
 	virtual void CreatePipelineState() override { Super::CreatePipelineState_Compute(); }
 
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
-	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::vector<D3D12_SHADER_BYTECODE>& ShaderBytecodes) const override {
-		CreateShader_Cs(ShaderBlobs, ShaderBytecodes);
+	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const override {
+		CreateShader_Cs(ShaderBlobs);
+		Super::CreateShader(ShaderBlobs);
 	}
 
 	virtual void PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle);

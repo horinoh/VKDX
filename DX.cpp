@@ -299,7 +299,7 @@ void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D1
 	} ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, ResourceState);
 }
 
-#ifdef _DEBUG
+#if defined(_DEBUG) || defined(USE_PIX)
 void DX::SetMarker(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name, const UINT Color)
 {
 	PIXSetMarker(CommandList, Color, Name);
@@ -307,33 +307,37 @@ void DX::SetMarker(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name, const U
 
 void DX::BeginEvent(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name)
 {
-#if 0
-	const auto Size = static_cast<UINT>((wcslen(Name) + 1) * sizeof(Name[0]));
-	CommandList->BeginEvent(0, Name, Size);
-#else
 	PIXBeginEvent(CommandList, PIX_COLOR(255, 0, 0), Name);
-#endif
 }
 void DX::EndEvent(ID3D12GraphicsCommandList* CommandList)
 {
-#if 0
-	CommandList->EndEvent();
-#else
 	PIXEndEvent();
-#endif
 }
-#endif //!< _DEBUG
+//!< #TODO
+//PIXReportCounter(PCWSTR, float);
+//PIXNotifyWakeFromFenceSignal(HANDLE);
+//PIXScopedEvent(ID3D12GraphicsCommandList, PIX_COLOR(), PCWSTR);
+#endif //!< _DEBUG || USE_PIX
 
 
 void DX::CreateDevice(HWND hWnd)
 {
 	using namespace Microsoft::WRL;
 
+#if defined(_DEBUG) || defined(USE_PIX)
+	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&GraphicsAnalysis)))) {
+		//!< グラフィックス診断は Alt + F5 で起動した場合のみ成功する Enabled only if executed with Alt + F5
+		std::cout << "Graphics Analysis is enabled" << std::endl;
+
+		//!< GraphicsAnalysis->BeginCapture(), GraphicsAnalysis->EndCapture() でキャプチャ開始、終了する
+	}
+#endif
+
 #ifdef _DEBUG
 	ComPtr<ID3D12Debug> Debug;
 	VERIFY_SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(Debug.GetAddressOf())));
 	Debug->EnableDebugLayer();
-	
+
 	//!< GPU-Based Validation
 #if 0
 	ComPtr<ID3D12Debug1> Debug1;
@@ -371,7 +375,7 @@ void DX::CreateDevice(HWND hWnd)
 	std::cout << Lightblue << "Adapter" << White << std::endl;
 	std::wcout << "\t" << Yellow << AdapterDesc.Description << White << std::endl;
 #endif
-	
+
 	if (FAILED(CreateMaxFeatureLevelDevice(Adapter.Get()))) {
 #ifdef DEBUG_STDOUT
 		std::cout << "\t" << Red << "Cannot create device, trying to create WarpDevice ..." << White << std::endl;
@@ -386,7 +390,7 @@ void DX::CreateDevice(HWND hWnd)
 #endif
 
 #ifdef _DEBUG
-		CheckFeatureLevel();
+	CheckFeatureLevel();
 #endif
 }
 HRESULT DX::CreateMaxFeatureLevelDevice(IDXGIAdapter* Adapter)
@@ -1044,6 +1048,54 @@ void DX::CreateRootSignature()
 #endif
 }
 
+void DX::CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const
+{
+	for (auto i : ShaderBlobs) {
+		//!< 「PDBパート」を取得
+		Microsoft::WRL::ComPtr<ID3DBlob> PDBPart;
+		VERIFY_SUCCEEDED(D3DGetBlobPart(i->GetBufferPointer(), i->GetBufferSize(), D3D_BLOB_PDB, 0, PDBPart.GetAddressOf()));
+
+#if 1
+		//!< 任意の(「デバッグ名」)データ
+		const char DebugName[] = "XXXX";
+
+		//!< 4バイトアラインされたストレージ
+		const auto Size = RoundUp(_countof(DebugName), 0x3);
+		auto Data = new BYTE [Size];
+		memcpy(Data, DebugName, _countof(DebugName));
+
+		//!< 「デバッグ名」の付いたブロブ
+		Microsoft::WRL::ComPtr<ID3DBlob> WithDebugNamePart;
+		if (SUCCEEDED(D3DSetBlobPart(i->GetBufferPointer(), i->GetBufferSize(), D3D_BLOB_DEBUG_NAME, 0, Data, Size, WithDebugNamePart.GetAddressOf()))) {
+			//!<「デバッグ名」パートを取得
+			Microsoft::WRL::ComPtr<ID3DBlob> DebugNamePart;
+			if (SUCCEEDED(D3DGetBlobPart(WithDebugNamePart->GetBufferPointer(), WithDebugNamePart->GetBufferSize(), D3D_BLOB_DEBUG_NAME, 0, DebugNamePart.GetAddressOf()))) {
+				std::cout << reinterpret_cast<const char*>(DebugNamePart->GetBufferPointer()) << std::endl;
+			}
+		}
+
+		delete[] Data;
+#endif
+	}
+
+	//!< デバッグ情報を取り除く
+#ifndef _DEBUG
+	for (auto i : ShaderBlobs) {
+		if (nullptr != i) {
+			VERIFY_SUCCEEDED(D3DStripShader(i->GetBufferPointer(), i->GetBufferSize(), D3DCOMPILER_STRIP_DEBUG_INFO, i.GetAddressOf()));
+		}
+	}
+#endif
+}
+
+//!< @brief (よく使うパターンとして)VS, PS, DS, HS, GS の順で詰めていく、歯抜けにしたい場合はオーバーライドして実装する必要あり
+void DX::CreateShaderByteCode(const std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBCs) const
+{
+	for (auto i = 0; i < ShaderBlobs.size(); ++i) {
+		ShaderBCs[i] = D3D12_SHADER_BYTECODE({ ShaderBlobs[i]->GetBufferPointer(), ShaderBlobs[i]->GetBufferSize() });
+	}
+}
+
 BOOL DX::LoadPipelineLibrary(const std::wstring& Path)
 {
 	Microsoft::WRL::ComPtr<ID3D12Device1> Device1;
@@ -1088,8 +1140,9 @@ void DX::CreatePipelineState_Graphics()
 
 	//!< シェーダ
 	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs;
-	std::vector<D3D12_SHADER_BYTECODE> ShaderBytecodes;
-	CreateShader(ShaderBlobs, ShaderBytecodes);
+	CreateShader(ShaderBlobs);
+	std::array<D3D12_SHADER_BYTECODE, 5> ShaderBCs{ NullShaderBC, NullShaderBC, NullShaderBC, NullShaderBC, NullShaderBC };
+	CreateShaderByteCode(ShaderBlobs, ShaderBCs);
 
 	const D3D12_STREAM_OUTPUT_DESC StreamOutputDesc = {
 		nullptr, 0,
@@ -1150,7 +1203,7 @@ void DX::CreatePipelineState_Graphics()
 	const D3D12_CACHED_PIPELINE_STATE CachedPipelineState = { nullptr, 0 };
 	const D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineStateDesc = {
 		RootSignature.Get(),
-		ShaderBytecodes[0], ShaderBytecodes[1], ShaderBytecodes[2], ShaderBytecodes[3], ShaderBytecodes[4],
+		ShaderBCs[0], ShaderBCs[1], ShaderBCs[2], ShaderBCs[3], ShaderBCs[4],
 		StreamOutputDesc,
 		BlendDesc,
 		UINT_MAX,
@@ -1194,17 +1247,17 @@ void DX::CreatePipelineState_Compute()
 	PerformanceCounter PC("CreatePipelineState_Compute : ");
 #endif
 
-	assert(nullptr != RootSignature);
+	assert(nullptr != RootSignature && "");
 
 	//!< シェーダ
 	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs;
-	std::vector<D3D12_SHADER_BYTECODE> ShaderBytecodes;
-	CreateShader(ShaderBlobs, ShaderBytecodes);
+	CreateShader(ShaderBlobs);
+	assert(!ShaderBlobs.empty() && "");
 
 	const D3D12_CACHED_PIPELINE_STATE CachedPipelineState = { nullptr, 0 };
 	const D3D12_COMPUTE_PIPELINE_STATE_DESC ComputePipelineStateDesc = {
 		RootSignature.Get(),
-		ShaderBytecodes[0],
+		D3D12_SHADER_BYTECODE({ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }),
 		0, // NodeMask ... マルチGPUの場合
 		CachedPipelineState,
 		D3D12_PIPELINE_STATE_FLAG_NONE

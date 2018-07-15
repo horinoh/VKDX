@@ -25,7 +25,14 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 
 #include <comdef.h>
 
+//!< _DEBUG であれば PIX 使用可能、Release で PIX を使用したいような場合は USE_PIX を定義する 
+//!< When want to use pix in Release build, define USE_PIX
+//#define USE_PIX
 #include <pix3.h>
+//!< プログラムからキャプチャを行いたい場合
+#if defined(_DEBUG) || defined(USE_PIX)
+#include <DXProgrammableCapture.h>
+#endif
 
 #ifndef BREAK_ON_FAILED
 #define BREAK_ON_FAILED(vr) if(FAILED(vr)) { DEBUG_BREAK(); }
@@ -83,7 +90,7 @@ protected:
 	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState);
 	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES ResourceState);
 	
-#ifdef _DEBUG
+#if defined(_DEBUG) || defined(USE_PIX)
 	static void SetMarker(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name, const UINT Color);
 	static void BeginEvent(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name);
 	static void BeginEvent(ID3D12GraphicsCommandList* CommandList, const std::wstring& Name) { BeginEvent(CommandList, Name.c_str()); }
@@ -158,7 +165,8 @@ protected:
 	virtual void CreateDescriptorHeap() {}
 	virtual void UpdateDescriptorHeap() { /*CopyToUploadResource()等を行う*/ }
 
-	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::vector<D3D12_SHADER_BYTECODE>& ShaderBytecodes) const {}
+	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
+	virtual void CreateShaderByteCode(const std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBCs) const;
 	virtual void CreateInputLayout(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs, const UINT InputSlot = 0) const {}
 	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType() const = 0; //!< D3D12_GRAPHICS_PIPELINE_STATE_DESC 作成時に使用
 	virtual D3D_PRIMITIVE_TOPOLOGY GetPrimitiveTopology() const = 0; //!< IASetPrimitiveTopology() 時に使用
@@ -181,6 +189,10 @@ protected:
 	virtual void WaitForFence();
 
 protected:
+#if defined(_DEBUG) || defined(USE_PIX)
+	Microsoft::WRL::ComPtr<IDXGraphicsAnalysis> GraphicsAnalysis;
+#endif
+
 	Microsoft::WRL::ComPtr<ID3D12Device> Device;
 	std::vector<DXGI_SAMPLE_DESC> SampleDescs;
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> CommandQueue;
@@ -241,4 +253,5 @@ protected:
 		D3D_FEATURE_LEVEL_9_2,
 		D3D_FEATURE_LEVEL_9_1,
 	};
+	const D3D12_SHADER_BYTECODE NullShaderBC = { nullptr, 0 };
 };

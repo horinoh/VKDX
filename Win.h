@@ -93,7 +93,7 @@ public:
 	static void ShowMessageBox(HWND hWnd, const std::string Message);
 	static void ShowMessageBoxW(HWND hWnd, const std::wstring Message);
 
-	static size_t RoundUpTo256(const size_t Size) { return (Size + 255) & ~255; }
+	static size_t RoundUp(const size_t Size, const uint16_t Aligh) { return (Size + Aligh) & ~Aligh; }
 
 protected:
 	RECT Rect;
