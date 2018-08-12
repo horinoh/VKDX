@@ -125,13 +125,21 @@ protected:
 	}
 #endif
 #ifdef _DEBUG
-	static void MarkerInsert(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color);
-	static void MarkerInsert(VkCommandBuffer CommandBuffer, const std::string& Name, const glm::vec4& Color) { MarkerInsert(CommandBuffer, Name.c_str(), Color); }
-	static void MarkerInsert(VkCommandBuffer CommandBuffer, const std::wstring& Name, const glm::vec4& Color) { MarkerInsert(CommandBuffer, std::string(Name.begin(), Name.end()), Color); }
-	static void MarkerBegin(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color);
-	static void MarkerBegin(VkCommandBuffer CommandBuffer, const std::string& Name, const glm::vec4& Color) { MarkerBegin(CommandBuffer, Name.c_str(), Color); }
-	static void MarkerBegin(VkCommandBuffer CommandBuffer, const std::wstring& Name, const glm::vec4& Color) { MarkerBegin(CommandBuffer, std::string(Name.begin(), Name.end()), Color); }
-	static void MarkerEnd(VkCommandBuffer CommandBuffer);
+	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
+	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerInsert(CB, Color, Name.c_str()); }
+	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::wstring& Name) { MarkerInsert(CB, Color, std::string(Name.begin(), Name.end())); }
+	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
+	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerBegin(CB, Color, Name.c_str()); }
+	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const std::wstring& Name) { MarkerBegin(CB, Color, std::string(Name.begin(), Name.end())); }
+	static void MarkerEnd(VkCommandBuffer CB);
+	class ScopedMarker 
+	{
+	public:
+		ScopedMarker(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) : CommandBuffer(CB) { MarkerBegin(CommandBuffer, Color, Name); }
+		~ScopedMarker() { MarkerEnd(CommandBuffer); }
+	private:
+		VkCommandBuffer CommandBuffer;
+	};
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const char* Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない Not template specialized */ }
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::string& Name) { MarkerSetObjectName(Device, Name.c_str()); }
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::wstring& Name) { MarkerSetObjectName(Device, std::string(Name.begin(), Name.end())); }

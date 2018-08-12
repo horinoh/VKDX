@@ -333,7 +333,10 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &BeginInfo)); {
 #ifdef _DEBUG
-		MarkerBegin(CB, "Command Begin, End", glm::vec4(0,1,0,1));
+		//MarkerBegin(CB, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), "Command Begin");
+		ScopedMarker(CB, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), "Command Begin");
+
+		//MarkerInsert(CB, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), "Command");
 #endif
 
 		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
@@ -375,7 +378,7 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 #endif
 		} vkCmdEndRenderPass(CB);
 #ifdef _DEBUG
-		MarkerEnd(CB);
+		//MarkerEnd(CB);
 #endif
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }

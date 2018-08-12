@@ -866,7 +866,7 @@ void VK::CreateDebugReportCallback()
 #endif //!< _DEBUG
 
 #ifdef _DEBUG
-void VK::MarkerInsert(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color)
+void VK::MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name)
 {
 	if (VK_NULL_HANDLE != vkCmdDebugMarkerInsert) {
 		VkDebugMarkerMarkerInfoEXT DebugMarkerMarkerInfo = {
@@ -875,10 +875,10 @@ void VK::MarkerInsert(VkCommandBuffer CommandBuffer, const char* Name, const glm
 			Name,
 		};
 		memcpy(DebugMarkerMarkerInfo.color, &Color, sizeof(DebugMarkerMarkerInfo.color));
-		vkCmdDebugMarkerInsert(CommandBuffer, &DebugMarkerMarkerInfo);
+		vkCmdDebugMarkerInsert(CB, &DebugMarkerMarkerInfo);
 	}
 }
-void VK::MarkerBegin(VkCommandBuffer CommandBuffer, const char* Name, const glm::vec4& Color)
+void VK::MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const char* Name)
 {
 	if (VK_NULL_HANDLE != vkCmdDebugMarkerBegin) {
 		VkDebugMarkerMarkerInfoEXT DebugMarkerMarkerInfo = {
@@ -887,13 +887,13 @@ void VK::MarkerBegin(VkCommandBuffer CommandBuffer, const char* Name, const glm:
 			Name,
 		};
 		memcpy(DebugMarkerMarkerInfo.color, &Color, sizeof(DebugMarkerMarkerInfo.color));
-		vkCmdDebugMarkerBegin(CommandBuffer, &DebugMarkerMarkerInfo);
+		vkCmdDebugMarkerBegin(CB, &DebugMarkerMarkerInfo);
 	}
 }
-void VK::MarkerEnd(VkCommandBuffer CommandBuffer)
+void VK::MarkerEnd(VkCommandBuffer CB)
 {
 	if (VK_NULL_HANDLE != vkCmdDebugMarkerEnd) {
-		vkCmdDebugMarkerEnd(CommandBuffer);
+		vkCmdDebugMarkerEnd(CB);
 	}
 }
 #endif //!< _DEBUG

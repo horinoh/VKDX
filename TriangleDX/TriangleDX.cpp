@@ -301,8 +301,11 @@ void TriangleDX::PopulateCommandList(const size_t i)
 
 	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
 	{
-#ifdef _DEBUG
-		BeginEvent(CL, TEXT("Command Begin, End"));
+#if defined(_DEBUG) || defined(USE_PIX)
+		//PIXBeginEvent(CL, PIX_COLOR(0, 255, 0), TEXT("Command Begin"));
+		PIXScopedEvent(CL, PIX_COLOR(0, 255, 0), TEXT("Command Begin"));
+
+		//PIXSetMarker(CL, PIX_COLOR(255, 0, 0), TEXT("Command"));
 #endif
 
 		//!< ビューポート、シザー
@@ -340,8 +343,8 @@ void TriangleDX::PopulateCommandList(const size_t i)
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 
-#ifdef _DEBUG
-		EndEvent(CL);
+#if defined(_DEBUG) || defined(USE_PIX)
+		//PIXEndEvent(CL);
 #endif
 	}
 	VERIFY_SUCCEEDED(CL->Close());

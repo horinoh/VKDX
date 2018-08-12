@@ -25,11 +25,11 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 
 #include <comdef.h>
 
-//!< _DEBUG であれば PIX 使用可能、Release で PIX を使用したいような場合は USE_PIX を定義する 
+//!< _DEBUG であれば何もしなくても PIX 使用可能、Release で PIX を使用したいような場合は USE_PIX を定義する 
 //!< When want to use pix in Release build, define USE_PIX
 //#define USE_PIX
 #include <pix3.h>
-//!< プログラムからキャプチャを行いたい場合
+//!< プログラムからキャプチャを行いたい場合 Capture in program code
 #if defined(_DEBUG) || defined(USE_PIX)
 #include <DXProgrammableCapture.h>
 #endif
@@ -91,11 +91,9 @@ protected:
 	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES ResourceState);
 	
 #if defined(_DEBUG) || defined(USE_PIX)
-	static void SetMarker(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name, const UINT Color);
-	static void BeginEvent(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name);
-	static void BeginEvent(ID3D12GraphicsCommandList* CommandList, const std::wstring& Name) { BeginEvent(CommandList, Name.c_str()); }
-	static void BeginEvent(ID3D12GraphicsCommandList* CommandList, const std::string& Name) { BeginEvent(CommandList, std::wstring(Name.begin(), Name.end())); }
-	static void EndEvent(ID3D12GraphicsCommandList* CommandList);
+	//!< #TODO
+	//PIXReportCounter(PCWSTR, float);
+	//PIXNotifyWakeFromFenceSignal(HANDLE);
 	static void SetName(ID3D12DeviceChild* Resource, LPCWSTR Name) { Resource->SetName(Name); }
 	static void SetName(ID3D12DeviceChild* Resource, const std::wstring& Name) { SetName(Resource, Name.c_str()); }
 	static void SetName(ID3D12DeviceChild* Resource, const std::string& Name) { SetName(Resource, std::wstring(Name.begin(), Name.end())); }

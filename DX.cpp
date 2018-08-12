@@ -299,27 +299,6 @@ void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D1
 	} ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, ResourceState);
 }
 
-#if defined(_DEBUG) || defined(USE_PIX)
-void DX::SetMarker(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name, const UINT Color)
-{
-	PIXSetMarker(CommandList, Color, Name);
-}
-
-void DX::BeginEvent(ID3D12GraphicsCommandList* CommandList, LPCWSTR Name)
-{
-	PIXBeginEvent(CommandList, PIX_COLOR(255, 0, 0), Name);
-}
-void DX::EndEvent(ID3D12GraphicsCommandList* CommandList)
-{
-	PIXEndEvent();
-}
-//!< #TODO
-//PIXReportCounter(PCWSTR, float);
-//PIXNotifyWakeFromFenceSignal(HANDLE);
-//PIXScopedEvent(ID3D12GraphicsCommandList, PIX_COLOR(), PCWSTR);
-#endif //!< _DEBUG || USE_PIX
-
-
 void DX::CreateDevice(HWND hWnd)
 {
 	using namespace Microsoft::WRL;
