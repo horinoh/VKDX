@@ -1,13 +1,11 @@
 #pragma once
 
-//!< fopen ‚Å‚È‚­ fopen_s ‚ðŽg‚¦‚Æ“{‚ç‚ê‚é‚ªAgli ‚ÌƒR[ƒh‚Í‘‚«Š·‚¦‚½‚­‚È‚¢‚Ì‚Å warning ‚ð—}§‚·‚é
-#pragma warning (push)
-#pragma warning (disable : 4996)
+#include "VKExt.h"
+
+//!< single_channel_bitmap_data_snorm() ‚Å uint_t ‚ª–³‚¢‚Æ“{‚ç‚ê‚é‚Ì‚Å’è‹`‚µ‚Ä‚¨‚­
+using uint_t = uint8_t;
 #include <gli/gli.hpp>
 //#include <gli/convert.hpp>
-#pragma warning (pop)
-
-#include "VKExt.h"
 
 class VKImage : public VKExt
 {
@@ -18,12 +16,7 @@ private:
 	static VkImageViewType ToVkImageViewType(const gli::target GLITarget);
 	static VkImageType ToVkImageType(const gli::target GLITarget);
 	static VkComponentSwizzle ToVkComponentSwizzle(const gli::swizzle GLISwizzle);
-	static void CreateVkComponentMapping(VkComponentMapping& ComponentMapping, const gli::texture::swizzles_type GLISwizzlesType) { 
-		ComponentMapping = { ToVkComponentSwizzle(GLISwizzlesType.r), ToVkComponentSwizzle(GLISwizzlesType.g), ToVkComponentSwizzle(GLISwizzlesType.b), ToVkComponentSwizzle(GLISwizzlesType.a) };
-	}
-	static VkComponentMapping ToVkComponentMapping(const gli::texture::swizzles_type GLISwizzlesType) {
-		return { ToVkComponentSwizzle(GLISwizzlesType.r), ToVkComponentSwizzle(GLISwizzlesType.g), ToVkComponentSwizzle(GLISwizzlesType.b), ToVkComponentSwizzle(GLISwizzlesType.a) };
-	}
+	static VkComponentMapping ToVkComponentMapping(const gli::texture::swizzles_type GLISwizzlesType);
 
 protected:
 	virtual void CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkSampleCountFlagBits SampleCount, const gli::texture& GLITexture) const;

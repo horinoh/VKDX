@@ -75,10 +75,6 @@ public:
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance);
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance);
 
-	static void SetColor(const WORD Color = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE) {
-		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), Color | FOREGROUND_INTENSITY);
-	}
-
 	LONG GetClientRectWidth() const { return Rect.right - Rect.left; }
 	LONG GetClientRectHeight() const { return Rect.bottom - Rect.top; }
 	FLOAT GetAspectRatio(const FLOAT Width, const FLOAT Height) const { return Width / Height; }
@@ -93,6 +89,14 @@ public:
 	static void ShowMessageBox(HWND hWnd, const std::string Message);
 	static void ShowMessageBoxW(HWND hWnd, const std::wstring Message);
 
+#ifdef DEBUG_STDOUT
+	static void SetColor(const WORD Color = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE) {
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), Color | FOREGROUND_INTENSITY);
+	}
+	int Printf(const char* Format, ...);
+#endif
+
+	//!< #TODO_WIN •Ê‚ÉWindowsŠÖŒW‚È‚¢
 	static size_t RoundUp(const size_t Size, const uint16_t Aligh) { return (Size + Aligh) & ~Aligh; }
 
 protected:
@@ -117,6 +121,7 @@ private:
 };
 #endif
 
+#ifdef DEBUG_STDOUT
 static std::ostream& Red(std::ostream& rhs) { Win::SetColor(FOREGROUND_RED); return rhs; }
 static std::ostream& Green(std::ostream& rhs) { Win::SetColor(FOREGROUND_GREEN); return rhs; }
 static std::ostream& Blue(std::ostream& rhs) { Win::SetColor(FOREGROUND_BLUE); return rhs; }
@@ -135,3 +140,4 @@ static std::wostream& White(std::wostream& rhs) { Win::SetColor(FOREGROUND_RED |
 
 #define COUT_OK White << " [ " << Green << "OK" << White << " ]"
 #define COUT_NG White << " [ " << Red << "NG" << White << " ]"
+#endif

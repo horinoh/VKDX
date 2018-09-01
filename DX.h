@@ -91,7 +91,7 @@ protected:
 	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES ResourceState);
 	
 #if defined(_DEBUG) || defined(USE_PIX)
-	//!< #TODO
+	//!< #DX_TODO PIX ŠÖ˜A
 	//PIXReportCounter(PCWSTR, float);
 	//PIXNotifyWakeFromFenceSignal(HANDLE);
 	static void SetName(ID3D12DeviceChild* Resource, LPCWSTR Name) { Resource->SetName(Name); }
@@ -114,7 +114,8 @@ protected:
 	virtual void CreateFence();
 
 	virtual void CreateCommandAllocator(const D3D12_COMMAND_LIST_TYPE CommandListType = D3D12_COMMAND_LIST_TYPE_DIRECT);
-	virtual void CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const size_t Count, const D3D12_COMMAND_LIST_TYPE CommandListType = D3D12_COMMAND_LIST_TYPE_DIRECT);
+	virtual void CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const size_t Count, const D3D12_COMMAND_LIST_TYPE CommandListType);
+	virtual void CreateCommandList();
 
 	virtual void CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat);
 	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height);
@@ -123,6 +124,7 @@ protected:
 	}
 	virtual void CreateSwapChainResource();
 	virtual void InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, const DirectX::XMVECTORF32* Color = nullptr);
+	virtual void InitializeSwapChain();
 	virtual void ResetSwapChainResource() { for (auto& i : SwapChainResources) { i.Reset(); } }
 	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
 	virtual void ResizeSwapChainToClientRect() { 

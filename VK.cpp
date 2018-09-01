@@ -37,7 +37,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 #ifdef VK_NO_PROTOYYPES
 	LoadVulkanDLL();
-#endif //!< VK_NO_PROTOYYPES
+#endif
 
 	CreateInstance();
 	CreateSurface(hWnd, hInstance);
@@ -49,6 +49,8 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateSemaphore();
 
 	CreateSwapchain();
+	CreateCommandBuffer();
+	InitializeSwapchain();
 
 	CreateDepthStencil();
 
@@ -278,7 +280,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	if (!FreeLibrary(VulkanDLL)) {
 		assert(false && "FreeLibrary failed");
 	}
-#endif //!< VK_NO_PROTOYYPES
+#endif
 }
 
 std::string VK::GetVkResultString(const VkResult Result)
@@ -289,7 +291,7 @@ std::string VK::GetVkResultString(const VkResult Result)
 	default: DEBUG_BREAK(); return "Not found";
 #include "VkResult.h"
 	}
-#undef VK_RESULT_CASE
+#undef VK_RESULT_ENTRY
 }
 std::wstring VK::GetVkResultStringW(const VkResult Result)
 {
@@ -666,7 +668,8 @@ void VK::ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat 
 	}
 
 	if (Usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT) {
-		if (true) { //!< #VK_TODO
+		// !< #VK_TODO 現状カラーに決め打ちしている
+		if (true) {
 			//!< カラーの場合 In case color
 			if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) {
 				std::cout << Red << "VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT not supported" << White << std::endl;
@@ -703,7 +706,7 @@ void VK::ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat 
 			}
 		}
 	}
-#endif
+#endif //!< _DEBUG
 }
 
 void VK::EnumerateInstanceLayer()
@@ -780,8 +783,8 @@ void VK::CreateInstance()
 		//!< (プログラムからやらない場合は環境変数 VK_INSTANCE_LAYERS へセットしておいてもよい)
 		"VK_LAYER_LUNARG_standard_validation", 
 		
-		//!< #VK_TODO Ver1.1.73 2018/04/20 から、VK_LAYER_LUNARG_object_trackerを指定したら動かなくなった…
-		//"VK_LAYER_LUNARG_object_tracker",
+		//!< 一時的に指定できないバージョンがあったが、Ver1.1.82 では問題なくなっていた
+		"VK_LAYER_LUNARG_object_tracker",
 
 		//!< API 呼び出しとパラメータをコンソール出力する (出力がうるさいのでここでは指定しない)
 		//"VK_LAYER_LUNARG_api_dump",
@@ -1110,11 +1113,11 @@ void VK::GetQueueFamily()
 			}
 		}
 		//else if (VK_QUEUE_TRANSFER_BIT & QueueProperties[i].queueFlags) {
-		//	//!< #VK_TODO
+		//	//!< #VK_TODO 転送専用キュー
 		//	TransferQueueFamilyIndex = i; //!< デバイスによっては転送専用キューを持つ、転送を多用する場合は専用キューを使用した方が良い
 		//}
 		//else if (VK_QUEUE_COMPUTE_BIT & QueueProperties[i].queueFlags) {
-		//	//!< #VK_TODO
+		//	//!< #VK_TODO コンピュートキュー
 		//	ComputeQueueFamilyIndex = i;
 		//}
 
@@ -1187,8 +1190,8 @@ void VK::CreateDevice()
 		//!< ↓標準的なバリデーションレイヤセットを最適な順序でロードする指定
 		"VK_LAYER_LUNARG_standard_validation",
 
-		//!< #VK_TODO Ver1.1.73 2018/04/20 から、インスタンス作成時にVK_LAYER_LUNARG_object_trackerを指定したら。動かなくなったのでこっちもやめておくことにする…
-		//"VK_LAYER_LUNARG_object_tracker",
+		//!< 一時的に指定できないバージョンがあったが、Ver1.1.82 では問題なくなっていた
+		"VK_LAYER_LUNARG_object_tracker",
 #endif
 	};
 
@@ -1351,24 +1354,18 @@ void VK::AllocateCommandBuffer(const VkCommandPool CommandPool, const size_t Cou
 #endif
 }
 
+void VK::CreateCommandBuffer()
+{
+	CreateCommandPool(GraphicsQueueFamilyIndex);
+	AllocateCommandBuffer(CommandPools[0], SwapchainImages.size()); //!< 現状は0番のコマンドプール決め打ち #VK_TODO
+}
+
 void VK::CreateSwapchain()
 {
 	CreateSwapchainOfClientRect();
 
 	//!< ビューを作成 CreateView
 	CreateSwapchainImageView();
-	
-	//!< スワップチェインイメージの枚数が決まったので、ここでコマンドバッファを確保する
-	//!< イメージの初期化(する場合)でコマンドバッファが必要
-	//!< Because count of swapchain image is fixed, create commandbuffer here
-	//!< In case initialize image, we need command buffer
-	CreateCommandPool(GraphicsQueueFamilyIndex);
-	AllocateCommandBuffer(CommandPools[0], SwapchainImages.size()); //!< 現状は0番のコマンドプール決め打ち #VK_TODO
-#if 1
-	//!< イメージの初期化 Initialize images
-	//InitializeSwapchainImage(CommandBuffers[0]);
-	InitializeSwapchainImage(CommandBuffers[0], &Colors::Red);
-#endif
 }
 VkSurfaceFormatKHR VK::SelectSurfaceFormat()
 {
@@ -1634,9 +1631,17 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkC
 	std::cout << "InitializeSwapchainImage" << COUT_OK << std::endl << std::endl;
 #endif
 }
+void VK::InitializeSwapchain()
+{
+#if 1
+	//!< イメージの初期化 Initialize images
+	//InitializeSwapchainImage(CommandBuffers[0]);
+	InitializeSwapchainImage(CommandBuffers[0], &Colors::Red);
+#endif
+}
 void VK::ResizeSwapchain(const uint32_t Width, const uint32_t Height)
 {
-	//!< #TODO
+	//!< #VK_TODO スワップチェインのリサイズ対応
 	if (VK_NULL_HANDLE != Device) {
 		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	}
@@ -2100,26 +2105,32 @@ void VK::CreatePipeline()
 	const auto ThreadCount = 10;
 	const auto PipelineCountPerThread = 1;
 
-	//!< パイプラインキャッシュをファイルから読み込む (スレッド数分だけ(同じものを)用意する)
+	//!< パイプラインキャッシュをファイルから読み込む (スレッド数分だけ同じものを用意する)
 	std::vector<VkPipelineCache> PipelineCaches(ThreadCount);
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
 	LoadPipelineCaches(PCOPath, PipelineCaches);
 
-	//!< パイプラインキャッシュを使用して、各スレッドでパイプラインを作成する
+	//!< パイプライン格納先
 	std::vector<std::vector<VkPipeline>> Pipelines(ThreadCount);
-	for (auto i : Pipelines) { i.resize(PipelineCountPerThread); }
+	for (auto i : Pipelines) { 
+		i.resize(PipelineCountPerThread); 
+	}
 
+	//!< パイプラインキャッシュを使用して、各スレッドでパイプラインを作成する
 	std::vector<std::thread> Threads(ThreadCount);
 	for (auto i = 0; i < Threads.size(); ++i) {
 		Threads[i] = std::thread::thread([&](std::vector<VkPipeline>& Pipelines, VkPipelineCache PipelineCache) {
-			//const std::vector<VkGraphicsPipelineCreateInfo> GraphicsPipelineCreateInfos(Pipelines.size());
+			//!< パイプラインを作成の処理をここに書く Create pipeline here 
+			//std::vector<VkGraphicsPipelineCreateInfo> GraphicsPipelineCreateInfos(Pipelines.size());
+			// ...
 			//VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device,
 			//	PipelineCache,
 			//	static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), 
 			//	GetAllocationCallbacks(),
 			//	Pipelines.data()));
 
-			//const std::vector<VkComputePipelineCreateInfo> ComputePipelineCreateInfos(Pipelines.size());
+			//std::vector<VkComputePipelineCreateInfo> ComputePipelineCreateInfos(Pipelines.size());
+			// ...
 			//VERIFY_SUCCEEDED(vkCreateComputePipelines(Device,
 			//	PipelineCache,
 			//	static_cast<uint32_t>(ComputePipelineCreateInfos.size()), ComputePipelineCreateInfos.data(),
@@ -2594,7 +2605,8 @@ void VK::Draw()
 }
 void VK::Dispatch()
 {
-	//!< #VK_TODO
+	//!< #VK_TODO Dispatch実装
+	DEBUG_BREAK();
 }
 void VK::Present()
 {

@@ -371,11 +371,7 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 			}
 
 			//!< •`‰æ
-#ifdef USE_DRAW_INDIRECT
 			vkCmdDrawIndexedIndirect(CB, IndirectBuffer, 0, 1, 0);
-#else
-			vkCmdDrawIndexed(CB, IndexCount, 1, 0, 0, 0);
-#endif
 		} vkCmdEndRenderPass(CB);
 #ifdef _DEBUG
 		//MarkerEnd(CB);

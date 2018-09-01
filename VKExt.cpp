@@ -2,26 +2,6 @@
 
 #include "VKExt.h"
 
-void VKExt::CreateSampler_LR(VkSampler* Sampler, const float MaxLOD) const
-{
-	[&](VkSampler* Sampler, const float MaxLOD) {
-		const VkSamplerCreateInfo SamplerCreateInfo = {
-			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-			nullptr,
-			0,
-			VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR,
-			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
-			0.0f,
-			VK_FALSE, 1.0f,
-			VK_FALSE, VK_COMPARE_OP_NEVER,
-			0.0f, MaxLOD,
-			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-			VK_FALSE
-		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SamplerCreateInfo, GetAllocationCallbacks(), Sampler));
-	}(Sampler, MaxLOD);
-}
-
 void VKExt::CreateIndirectBuffer_Vertices(const uint32_t Count)
 {
 	const VkDrawIndirectCommand Command = {
@@ -189,6 +169,26 @@ void VKExt::UpdateDescriptorSet_1UB_1CIS()
 			static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
 			static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
 	}(UniformBuffer, Samplers[0], ImageView);
+}
+
+void VKExt::CreateSampler_LR(VkSampler* Sampler, const float MaxLOD) const
+{
+	[&](VkSampler* Sampler, const float MaxLOD) {
+		const VkSamplerCreateInfo SamplerCreateInfo = {
+			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+			nullptr,
+			0,
+			VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR,
+			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
+			0.0f,
+			VK_FALSE, 1.0f,
+			VK_FALSE, VK_COMPARE_OP_NEVER,
+			0.0f, MaxLOD,
+			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+			VK_FALSE
+		};
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SamplerCreateInfo, GetAllocationCallbacks(), Sampler));
+	}(Sampler, MaxLOD);
 }
 
 void VKExt::CreateRenderPass_Color()

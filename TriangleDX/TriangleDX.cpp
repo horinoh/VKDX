@@ -335,11 +335,7 @@ void TriangleDX::PopulateCommandList(const size_t i)
 			}
 
 			//!< •`‰æ
-#ifdef USE_DRAW_INDIRECT
 			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
-#else
-			CL->DrawIndexedInstanced(IndexCount, 1, 0, 0, 0);
-#endif
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 

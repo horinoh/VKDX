@@ -5,8 +5,6 @@
 #pragma region Code
 #include "../DXImage.h"
 
-#define USE_DRAW_INDIRECT
-
 class TextureDX : public DXImage
 {
 private:
@@ -16,9 +14,7 @@ public:
 	virtual ~TextureDX() {}
 
 protected:
-#ifdef USE_DRAW_INDIRECT
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Vertices(4); }
-#endif
 
 	virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
 		CreateRootParameters_1SRV(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_PIXEL);

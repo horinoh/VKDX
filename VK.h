@@ -184,6 +184,7 @@ protected:
 
 	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
 	virtual void AllocateCommandBuffer(const VkCommandPool CommandPool, const size_t Count, const size_t SecondaryCount = 0);
+	virtual void CreateCommandBuffer();
 
 	virtual void CreateSwapchain();
 	virtual VkSurfaceFormatKHR SelectSurfaceFormat();
@@ -194,6 +195,7 @@ protected:
 	}
 	virtual void CreateSwapchainImageView();
 	virtual void InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkClearColorValue* ClearColorValue = nullptr);
+	virtual void InitializeSwapchain();
 	virtual void ResizeSwapchain(const uint32_t Width, const uint32_t Height);
 	virtual void ResizeSwapChainToClientRect() {
 		ResizeSwapchain(static_cast<const uint32_t>(GetClientRectWidth()), static_cast<const uint32_t>(GetClientRectHeight()));
@@ -395,7 +397,7 @@ protected:
 	}
 
 	/**
-	@note バーチャルフレームに持たせるもの #TODO
+	@note バーチャルフレームに持たせるもの #VK_TODO
 	1 コマンドバッファ
 	2 プレゼント完了セマフォ
 	3 描画完了セマフォ

@@ -5,8 +5,6 @@
 #pragma region Code
 #include "../DXExt.h"
 
-#define USE_DRAW_INDIRECT
-
 class TriangleDX : public DXExt
 {
 private:
@@ -18,9 +16,7 @@ public:
 protected:
 	virtual void CreateVertexBuffer() override;
 	virtual void CreateIndexBuffer() override;
-#ifdef USE_DRAW_INDIRECT
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Indexed(IndexCount); }
-#endif
 
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const override {
 		CreateShader_VsPs(ShaderBlobs);

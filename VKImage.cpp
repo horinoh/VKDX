@@ -64,6 +64,16 @@ VkComponentSwizzle VKImage::ToVkComponentSwizzle(const gli::swizzle GLISwizzle)
 	return VK_COMPONENT_SWIZZLE_IDENTITY;
 }
 
+VkComponentMapping VKImage::ToVkComponentMapping(const gli::texture::swizzles_type GLISwizzlesType)
+{
+	return { 
+		ToVkComponentSwizzle(GLISwizzlesType.r), 
+		ToVkComponentSwizzle(GLISwizzlesType.g), 
+		ToVkComponentSwizzle(GLISwizzlesType.b), 
+		ToVkComponentSwizzle(GLISwizzlesType.a)
+	};
+}
+
 void VKImage::CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkSampleCountFlagBits SampleCount, const gli::texture& GLITexture) const
 {
 	const auto Type = ToVkImageType(GLITexture.target());

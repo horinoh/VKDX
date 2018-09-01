@@ -262,11 +262,7 @@ void TextureDX::PopulateCommandList(const size_t i)
 			CL->IASetPrimitiveTopology(GetPrimitiveTopology());
 
 			//!< •`‰æ
-#ifdef USE_DRAW_INDIRECT
 			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
-#else
-			CL->DrawInstanced(4, 1, 0, 0);
-#endif
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}

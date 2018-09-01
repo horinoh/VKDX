@@ -5,8 +5,6 @@
 #pragma region Code
 #include "../VKImage.h"
 
-#define USE_DRAW_INDIRECT
-
 class TextureVK : public VKImage
 {
 private:
@@ -16,9 +14,7 @@ public:
 	virtual ~TextureVK() {}
 
 protected:
-#ifdef USE_DRAW_INDIRECT
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Vertices(4); }
-#endif
 
 	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const override {
 		CreateDescriptorSetLayoutBindings_1CIS(DescriptorSetLayoutBindings, VK_SHADER_STAGE_FRAGMENT_BIT);

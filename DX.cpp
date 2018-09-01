@@ -22,6 +22,8 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateFence();
 
 	CreateSwapchain(hWnd, ColorFormat);
+	CreateCommandList();
+	InitializeSwapChain();
 
 	CreateDepthStencil();
 	
@@ -355,6 +357,11 @@ void DX::CreateDevice(HWND hWnd)
 	std::wcout << "\t" << Yellow << AdapterDesc.Description << White << std::endl;
 #endif
 
+#if 0
+	const std::vector<UUID> Experimental = { D3D12ExperimentalShaderModels, /*D3D12RaytracingPrototype*/ };
+	VERIFY_SUCCEEDED(D3D12EnableExperimentalFeatures(static_cast<UINT>(Experimental.size()), Experimental.data(), nullptr, nullptr));
+#endif
+
 	if (FAILED(CreateMaxFeatureLevelDevice(Adapter.Get()))) {
 #ifdef DEBUG_STDOUT
 		std::cout << "\t" << Red << "Cannot create device, trying to create WarpDevice ..." << White << std::endl;
@@ -439,7 +446,7 @@ void DX::GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format)
 		VERIFY_SUCCEEDED(Output->GetDisplayModeList(Format, 0, &NumModes, ModeDescs.data()));
 #ifdef DEBUG_STDOUT
 		for (const auto& i : ModeDescs) {
-			//!< #TODO : DXGI_MODE_DESC を覚えておいて選択できるようにする？
+			//!< #DX_TODO : DXGI_MODE_DESC を覚えておいて選択できるようにする？
 			std::wcout << "\t" << "\t" << "\t" << i.Width << " x " << i.Height << " @ " << i.RefreshRate.Numerator / i.RefreshRate.Denominator << std::endl;
 			std::cout << "\t" << "\t" << "\t" << "..." << std::endl; break; //!< 省略
 		}
@@ -581,6 +588,10 @@ void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const size_
 		GraphicsCommandLists.push_back(GraphicsCommandList);
 
 		//!< Close() しておく
+		//const auto GCL = static_cast<ID3D12GraphicsCommandList*>(GraphicsCommandLists.back().Get());
+		//if (nullptr != GCL) {
+		//	VERIFY_SUCCEEDED(GCL->Close());
+		//}
 		VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
 	}
 
@@ -589,26 +600,20 @@ void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const size_
 #endif
 }
 
+void DX::CreateCommandList()
+{
+	CreateCommandAllocator();
+	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
+	SwapChain->GetDesc1(&SwapChainDesc);
+	CreateCommandList(CommandAllocators[0].Get(), SwapChainDesc.BufferCount, D3D12_COMMAND_LIST_TYPE_DIRECT); //!< 現状は0番のコマンドアロケータ決め打ち #DX_TODO
+}
+
 void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
 {
 	CreateSwapChainOfClientRect(hWnd, ColorFormat);
 
 	//!< ビューを作成 Create view
 	CreateSwapChainResource();
-
-	//!< スワップチェインの枚数が決まったので、ここでコマンドリストを作成
-	//!< イメージの初期化(する場合)でコマンドリストが必要
-	//!< Count of swapchain is fixed, create commandlist here
-	//!< In case initialize image, we need command list
-	CreateCommandAllocator();
-	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
-	SwapChain->GetDesc1(&SwapChainDesc);
-	CreateCommandList(CommandAllocators[0].Get(), SwapChainDesc.BufferCount);
-#if 1
-	//!< イメージの初期化 Initialize images #TODO
-	//InitializeSwapchainImage(CommandAllocators[0].Get());
-	InitializeSwapchainImage(CommandAllocators[0].Get(), &DirectX::Colors::Red);
-#endif
 }
 void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height)
 {
@@ -619,7 +624,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	ComPtr<IDXGIFactory4> Factory;
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.GetAddressOf())));
 
-	//!< #TODO : GetDisplayModeList() で DXGI_MODE_DESC を覚えておく？
+	//!< #DX_TODO : GetDisplayModeList() で DXGI_MODE_DESC を覚えておく？
 	const DXGI_RATIONAL Rational = { 60, 1 };
 	const DXGI_MODE_DESC ModeDesc = {
 		Width, Height,
@@ -731,6 +736,15 @@ void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, cons
 
 #ifdef DEBUG_STDOUT
 	std::cout << "InitializeSwapchainImage" << COUT_OK << std::endl << std::endl;
+#endif
+}
+
+void DX::InitializeSwapChain()
+{
+#if 1
+	//!< イメージの初期化 Initialize images
+	//InitializeSwapchainImage(CommandAllocators[0].Get());
+	InitializeSwapchainImage(CommandAllocators[0].Get(), &DirectX::Colors::Red);
 #endif
 }
 
@@ -1302,7 +1316,8 @@ void DX::Draw()
 }
 void DX::Dispatch()
 {
-	//!< #DX_TODO
+	//!< #DX_TODO Dispatch実装
+	DEBUG_BREAK();
 }
 void DX::Present()
 {

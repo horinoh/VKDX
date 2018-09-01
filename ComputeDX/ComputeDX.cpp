@@ -225,8 +225,24 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void ComputeDX::PopulateCommandList(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SwapChainResource, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle)
+void ComputeDX::PopulateCommandList(const size_t i)
 {
-	//!< #DX_TODO
+	const auto CL = GraphicsCommandLists[i].Get();
+	const auto CA = CommandAllocators[0].Get();
+
+	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
+	{
+		//if (nullptr != UnorderedAccessTextureDescriptorHeap) {
+		//	const std::vector<ID3D12DescriptorHeap*> DH = { UnorderedAccessTextureDescriptorHeap.Get() };
+		//	CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
+
+		//	const auto Handle = GetGPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		//	CL->SetGraphicsRootDescriptorTable(0, Handle);
+		//}
+
+		CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
+	}
+	VERIFY_SUCCEEDED(CL->Close());
 }
+
 #pragma region

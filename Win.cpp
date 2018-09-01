@@ -4,7 +4,7 @@
 
 Win::Win()
 {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	//!< ƒƒP[ƒ‹‚ð‹K’è‚É‚·‚é
 	setlocale(LC_ALL, "");
 
@@ -20,7 +20,7 @@ Win::Win()
 }
 Win::~Win()
 {
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	SAFE_FCLOSE(StdOut);
 	SAFE_FCLOSE(StdErr);
 	FreeConsole();
@@ -57,6 +57,22 @@ void Win::ShowMessageBoxW(HWND hWnd, const std::wstring Message)
 {
 	MessageBox(hWnd, Message.c_str(), TEXT("VERIFY_SUCCEEDED"), MB_OK);
 }
+
+#ifdef DEBUG_STDOUT
+int Win::Printf(const char* Format, ...)
+{
+	va_list List;
+	va_start(List, Format);
+	static char Buffer[1024];
+	const auto Count = vsnprintf(Buffer, sizeof(Buffer), Format, List);
+	if (Count) {
+		OutputDebugString(std::wstring(&Buffer[0], &Buffer[Count]).c_str());
+	}
+	va_end(List);
+
+	return Count;
+}
+#endif
 
 #ifdef _DEBUG
 PerformanceCounter::PerformanceCounter(const std::string& Label)
