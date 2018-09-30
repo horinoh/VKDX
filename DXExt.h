@@ -19,10 +19,10 @@ public:
 	*/
 	void CreateRootParameters_1CBV(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
 		RootParameters = {
-			{ 
+			{
 				D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-				{ 1, &DescriptorRanges[0] }, 
-				ShaderVisibility 
+				{ 1, &DescriptorRanges[0] },
+				ShaderVisibility
 			},
 		};
 	}
@@ -159,6 +159,60 @@ public:
 		std::cout << "CreateDescriptorHeap" << COUT_OK << std::endl << std::endl;
 #endif
 	}
+	
+	/*
+	@brief １つのアンオーダードアクセスビュー One unordered access view
+	*/
+	void CreateRootParameters_1UAV(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
+		RootParameters = {
+			{
+				D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+				{ 1, &DescriptorRanges[0] },
+				ShaderVisibility
+			},
+		};
+	}
+	void CreateDescriptorRanges_1UAV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {
+		DescriptorRanges = {
+			{
+				D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+				1,
+				0, //!< u0
+				0, //!< space0
+				D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
+			},
+		};
+	}
+	void CreateDescriptorHeap_1UAV() {
+		const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		const auto Count = 1;
+
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, ID3D12DescriptorHeap** DescriptorHeap) {
+			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
+				Type,
+				Count,
+				D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+				0
+			};
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
+		}(Type, Count, UnorderedAccessTextureDescriptorHeap.GetAddressOf());
+
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12Resource* Resource, ID3D12DescriptorHeap* DescriptorHeap) {
+			const auto CDH = GetCPUDescriptorHandle(DescriptorHeap, Type);
+			D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {
+				DXGI_FORMAT_R8G8B8A8_UNORM,
+				D3D12_UAV_DIMENSION_TEXTURE2D,
+			};
+			UAVDesc.Texture2D.MipSlice = 0;
+			UAVDesc.Texture2D.PlaneSlice = 0;
+			Device->CreateUnorderedAccessView(Resource, nullptr, &UAVDesc, CDH);
+		}(Type, UnorderedAccessTextureResource.Get(), UnorderedAccessTextureDescriptorHeap.Get());
+
+#ifdef DEBUG_STDOUT
+		std::cout << "CreateDescriptorHeap" << COUT_OK << std::endl << std::endl;
+#endif
+	}
+
 
 	//!< LinearWarp
 	void CreateStaticSamplerDesc_LW(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) const;

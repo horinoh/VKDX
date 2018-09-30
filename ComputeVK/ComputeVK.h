@@ -21,18 +21,18 @@ protected:
 	virtual void CreatePipeline() override { Super::CreatePipeline_Compute(); }
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
 
-	//virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const override {
-	//	CreateDescriptorSetLayoutBindings_1UAV(DescriptorSetLayoutBindings, VK_SHADER_STAGE_FRAGMENT_BIT);
-	//}
-	//virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const override {
-	//	CreateDescriptorPoolSizes_1UAV(DescriptorPoolSizes);
-	//}
-	//virtual void CreateWriteDescriptorSets(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos, const std::vector<VkBufferView>& BufferViews) const override {
-	//	CreateWriteDescriptorSets_1UAV(WriteDescriptorSets, DescriptorImageInfos);
-	//}
-	//virtual void UpdateDescriptorSet() override {
-	//	UpdateDescriptorSet_1UAV();
-	//}
+	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const override {
+		CreateDescriptorSetLayoutBindings_1SI(DescriptorSetLayoutBindings, VK_SHADER_STAGE_COMPUTE_BIT);
+	}
+	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const override {
+		CreateDescriptorPoolSizes_1SI(DescriptorPoolSizes);
+	}
+	virtual void CreateWriteDescriptorSets(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos, const std::vector<VkBufferView>& BufferViews) const override {
+		CreateWriteDescriptorSets_1SI(WriteDescriptorSets, DescriptorImageInfos);
+	}
+	virtual void UpdateDescriptorSet() override {
+		UpdateDescriptorSet_1SI();
+	}
 
 	virtual void CreateShader(std::vector<VkShaderModule>& SM, std::vector<VkPipelineShaderStageCreateInfo>& CreateInfo) const override {
 		CreateShader_Cs(SM, CreateInfo);

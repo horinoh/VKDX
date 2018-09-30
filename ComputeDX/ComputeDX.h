@@ -21,15 +21,15 @@ protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
 
 	//!< #DX_TODO 出力テクスチャ用のUAVを用意しないとならない
-	//virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
-	//	CreateRootParameters_1UAV(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_PIXEL);
-	//}
-	//virtual void CreateDescriptorRanges(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
-	//	CreateDescriptorRanges_1UAV(DescriptorRanges);
-	//}
-	//virtual void CreateDescriptorHeap() override {
-	//	CreateDescriptorHeap_1UAV();
-	//}
+	virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
+		CreateRootParameters_1UAV(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_PIXEL/*#DX_TODO COMPUTE無い*/);
+	}
+	virtual void CreateDescriptorRanges(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
+		CreateDescriptorRanges_1UAV(DescriptorRanges);
+	}
+	virtual void CreateDescriptorHeap() override {
+		CreateDescriptorHeap_1UAV();
+	}
 
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const override {
 		CreateShader_Cs(ShaderBlobs);

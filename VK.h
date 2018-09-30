@@ -327,10 +327,14 @@ protected:
 	VkDevice Device = VK_NULL_HANDLE;
 	VkQueue GraphicsQueue = VK_NULL_HANDLE;
 	VkQueue PresentQueue = VK_NULL_HANDLE;
+	VkQueue TransferQueue = VK_NULL_HANDLE;
+	VkQueue ComputeQueue = VK_NULL_HANDLE;
+	VkQueue SparceBindingQueue = VK_NULL_HANDLE;
 	uint32_t GraphicsQueueFamilyIndex = UINT32_MAX;
 	uint32_t PresentQueueFamilyIndex = UINT32_MAX;
-	//uint32_t TransferQueueFamilyIndex = UINT32_MAX;
-	//uint32_t ComputeQueueFamilyIndex = UINT32_MAX;
+	uint32_t TransferQueueFamilyIndex = UINT32_MAX;
+	uint32_t ComputeQueueFamilyIndex = UINT32_MAX;
+	uint32_t SparceBindingQueueFamilyIndex = UINT32_MAX;
 
 	VkFence Fence = VK_NULL_HANDLE;
 	VkSemaphore NextImageAcquiredSemaphore = VK_NULL_HANDLE;	//!< プレゼント完了までウエイト

@@ -43,6 +43,8 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreatePipelineState();
 
 	//CreateUnorderedAccessTexture();
+
+	SetTimer(hWnd, NULL, 1000 / 60, nullptr);
 }
 void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 {
@@ -1048,9 +1050,9 @@ void DX::CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs
 		Microsoft::WRL::ComPtr<ID3DBlob> PDBPart;
 		VERIFY_SUCCEEDED(D3DGetBlobPart(i->GetBufferPointer(), i->GetBufferSize(), D3D_BLOB_PDB, 0, PDBPart.GetAddressOf()));
 
-#if 1
+#if 0
 		//!< 任意の(「デバッグ名」)データ
-		const char DebugName[] = "XXXX";
+		const char DebugName[] = "DebugName";
 
 		//!< 4バイトアラインされたストレージ
 		const auto Size = RoundUp(_countof(DebugName), 0x3);

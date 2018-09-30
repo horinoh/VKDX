@@ -121,7 +121,7 @@ void VKExt::UpdateDescriptorSet_1UB()
 }
 void VKExt::UpdateDescriptorSet_1CIS()
 {
-	[&](const VkSampler Sampler, const VkImageView ImageView) {
+	[&](const VkImageView ImageView, const VkSampler Sampler) {
 		std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
 		const std::vector<VkDescriptorImageInfo> DescriptorImageInfos = {
 			{
@@ -139,11 +139,11 @@ void VKExt::UpdateDescriptorSet_1CIS()
 			static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
 			static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
 
-	}(Samplers[0], ImageView);
+	}(ImageView, Samplers[0]);
 }
 void VKExt::UpdateDescriptorSet_1UB_1CIS()
 {
-	[&](const VkBuffer Buffer, const VkSampler Sampler, const VkImageView ImageView) {
+	[&](const VkBuffer Buffer, const VkImageView ImageView, const VkSampler Sampler) {
 		std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
 		WriteDescriptorSets.resize(1);
 		const std::vector<VkDescriptorBufferInfo> DescriptorBufferInfos = {
@@ -168,9 +168,30 @@ void VKExt::UpdateDescriptorSet_1UB_1CIS()
 		vkUpdateDescriptorSets(Device,
 			static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
 			static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
-	}(UniformBuffer, Samplers[0], ImageView);
+	}(UniformBuffer, ImageView, Samplers[0]);
 }
+void VKExt::UpdateDescriptorSet_1SI()
+{
+	//!< #VK_TODO
+	[&](const VkImageView ImageView) {
+		std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
+		const std::vector<VkDescriptorImageInfo> DescriptorImageInfos = {
+			{
+				VK_NULL_HANDLE,
+				ImageView,
+				VK_IMAGE_LAYOUT_GENERAL
+			},
+		};
+		CreateWriteDescriptorSets(WriteDescriptorSets, {}, DescriptorImageInfos, {});
 
+		std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
+		CreateCopyDescriptorSets(CopyDescriptorSets);
+
+		vkUpdateDescriptorSets(Device,
+			static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
+			static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
+	}(ImageView);
+}
 void VKExt::CreateSampler_LR(VkSampler* Sampler, const float MaxLOD) const
 {
 	[&](VkSampler* Sampler, const float MaxLOD) {

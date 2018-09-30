@@ -174,6 +174,40 @@ public:
 	}
 	void UpdateDescriptorSet_1UB_1CIS();
 
+	/*
+	@brief １つのストレージイメージ One storage image
+	*/
+	void CreateDescriptorSetLayoutBindings_1SI(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const {
+		DescriptorSetLayoutBindings = {
+			{
+				0, //!< binding = 0
+				VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+				1,
+				ShaderStageFlags,
+				nullptr
+			},
+		};
+	}
+	void CreateDescriptorPoolSizes_1SI(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {
+		DescriptorPoolSizes = {
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
+		};
+	}
+	void CreateWriteDescriptorSets_1SI(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const {
+		WriteDescriptorSets = {
+			{
+				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				nullptr,
+				DescriptorSets[0], 0, 0,
+				static_cast<uint32_t>(DescriptorImageInfos.size()),
+				VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+				DescriptorImageInfos.data(),
+				nullptr,
+				nullptr
+			},
+		};
+	}
+	void UpdateDescriptorSet_1SI();
 
 	//!< LinearRepeat
 	void CreateSampler_LR(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const;

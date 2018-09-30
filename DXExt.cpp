@@ -79,7 +79,6 @@ void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT
 		CreateDefaultResource(Resource, Size);
 
 		ExecuteCopyBuffer(CA, CL, UploadResource.Get(), *Resource, Size);
-		//!< #DX_TODO GraphicsCommandList‚Å‚Íƒ_ƒ
 	}(IndirectBufferResource.GetAddressOf(), Size, &Arguments, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get()); 
 
 	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndirectArgumentDescs = {

@@ -73,6 +73,8 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateFramebuffer();
 
 	CreatePipeline();
+
+	SetTimer(hWnd, NULL, 1000 / 60, nullptr);
 }
 
 /**
@@ -1085,6 +1087,9 @@ void VK::GetQueueFamily()
 	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyPropertyCount, QueueProperties.data());
 
 #ifdef DEBUG_STDOUT
+	//!< 自分の環境(Geforce970M)だと以下のような状態だった
+	//!< QueueFamilyIndex == 0 : Grahics | Compute | Transfer | SparceBinding および Present
+	//!< QueueFamilyIndex == 1 : Transfer
 	std::cout << "\t" << "QueueProperties" << std::endl;
 #define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & QueueProperties[i].queueFlags) { std::cout << #entry << " | "; }
 	for (uint32_t i = 0; i < QueueProperties.size(); ++i) {
@@ -1106,31 +1111,44 @@ void VK::GetQueueFamily()
 #endif
 
 	for (uint32_t i = 0; i < QueueProperties.size(); ++i) {
-		//!< グラフィック機能を持つキュー Queue index which has graphics
+		//!< グラフィック機能を持つ「最初」のキュー Queue index which has graphics
 		if (VK_QUEUE_GRAPHICS_BIT & QueueProperties[i].queueFlags) {
-			if (UINT32_MAX != GraphicsQueueFamilyIndex) {
+			if (UINT32_MAX == GraphicsQueueFamilyIndex) {
 				GraphicsQueueFamilyIndex = i;
 			}
 		}
-		//else if (VK_QUEUE_TRANSFER_BIT & QueueProperties[i].queueFlags) {
-		//	//!< #VK_TODO 転送専用キュー
-		//	TransferQueueFamilyIndex = i; //!< デバイスによっては転送専用キューを持つ、転送を多用する場合は専用キューを使用した方が良い
-		//}
-		//else if (VK_QUEUE_COMPUTE_BIT & QueueProperties[i].queueFlags) {
-		//	//!< #VK_TODO コンピュートキュー
-		//	ComputeQueueFamilyIndex = i;
-		//}
 
-		//!< プレゼンテーション機能を持つキュー Queue index which has presentation
+		//!< 転送機能を持つ「最初」のキュー (デバイスによっては転送専用キューを持つ、転送を多用する場合は専用キューを使用した方が良い)
+		if (VK_QUEUE_TRANSFER_BIT & QueueProperties[i].queueFlags) {
+			if (UINT32_MAX == TransferQueueFamilyIndex) {
+				TransferQueueFamilyIndex = i;
+			}
+		}
+
+		//!< コンピュート機能を持つ「最初」のキュー
+		if (VK_QUEUE_COMPUTE_BIT & QueueProperties[i].queueFlags) {
+			if (UINT32_MAX == ComputeQueueFamilyIndex) {
+				ComputeQueueFamilyIndex = i;
+			}
+		}
+
+		//!< スパースバインディング機能を持つ「最初」のキュー
+		if (VK_QUEUE_SPARSE_BINDING_BIT & QueueProperties[i].queueFlags) {
+			if (UINT32_MAX == SparceBindingQueueFamilyIndex) {
+				SparceBindingQueueFamilyIndex = i;
+			}
+		}
+
+		//!< プレゼンテーション機能を持つ「最初」のキュー Queue index which has presentation
 		VkBool32 Supported = VK_FALSE;
 		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, i, Surface, &Supported));
 		if (Supported) {
-			if (UINT32_MAX != PresentQueueFamilyIndex) {
+			if (UINT32_MAX == PresentQueueFamilyIndex) {
 				PresentQueueFamilyIndex = i;
 			}
 		}
 	}
-	//!< グラフィックとプレゼンテーションを同時にサポートするキューがあれば優先 Prioritize queue which support both of graphics and presentation
+	//!< グラフィックとプレゼンテーションを「同時に」サポートするキューがあれば優先 Prioritize queue which support both of graphics and presentation
 	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i) {
 		if (VK_QUEUE_GRAPHICS_BIT & QueueProperties[i].queueFlags) {
 			VkBool32 Supported = VK_FALSE;
@@ -1142,13 +1160,42 @@ void VK::GetQueueFamily()
 			}
 		}
 	}
+	//!< 転送機能「専用」のキューがあれば優先
+	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i) {
+		if (VK_QUEUE_TRANSFER_BIT == QueueProperties[i].queueFlags) {
+			TransferQueueFamilyIndex = i;
+		}
+	}
+	//!< コンピュート機能「専用」のキューがあれば優先
+	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i) {
+		if (VK_QUEUE_COMPUTE_BIT == QueueProperties[i].queueFlags) {
+			ComputeQueueFamilyIndex = i;
+		}
+	}
+
 	assert(UINT32_MAX != GraphicsQueueFamilyIndex && "GraphicsQueue not found");
 	assert(UINT32_MAX != PresentQueueFamilyIndex && "PresentQueue not found");
+	assert(UINT32_MAX != TransferQueueFamilyIndex && "TransferQueue not found");
+	assert(UINT32_MAX != ComputeQueueFamilyIndex && "ComputeQueue not found");
+	assert(UINT32_MAX != SparceBindingQueueFamilyIndex && "SparceBindingQueue not found");
 
 #ifdef DEBUG_STDOUT
 	std::cout << std::endl;
-	std::cout << "\t" << "\t" << "GraphicsQueueFamilyIndex = " << GraphicsQueueFamilyIndex << std::endl;
-	std::cout << "\t" << "\t" << "PresentQueueFamilyIndex = " << PresentQueueFamilyIndex << std::endl;
+	if (UINT32_MAX != GraphicsQueueFamilyIndex) {
+		std::cout << "\t" << "\t" << "GraphicsQueueFamilyIndex = " << GraphicsQueueFamilyIndex << std::endl;
+	}
+	if (UINT32_MAX != PresentQueueFamilyIndex) {
+		std::cout << "\t" << "\t" << "PresentQueueFamilyIndex = " << PresentQueueFamilyIndex << std::endl;
+	}
+	if (UINT32_MAX != TransferQueueFamilyIndex) {
+		std::cout << "\t" << "\t" << "TransferQueueFamilyIndex = " << TransferQueueFamilyIndex << std::endl;
+	}
+	if (UINT32_MAX != ComputeQueueFamilyIndex) {
+		std::cout << "\t" << "\t" << "ComputeQueueFamilyIndex = " << ComputeQueueFamilyIndex << std::endl;
+	}
+	if (UINT32_MAX != SparceBindingQueueFamilyIndex) {
+		std::cout << "\t" << "\t" << "SparceBindingQueueFamilyIndex = " << SparceBindingQueueFamilyIndex << std::endl;
+	}
 #endif
 }
 void VK::OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PhysicalDeviceFeatures) const
@@ -1162,7 +1209,44 @@ void VK::OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PhysicalDevice
 }
 void VK::CreateDevice()
 {
-	const std::vector<float> QueuePriorities = { 0.0f };
+	//!<  #VK_TODO 現状、グラフィックスとキューを共用している or 各機能専用の単独キューがあるような想定で計算しているので注意!
+	//!< ファミリ内でのプライオリティ(テーブル)
+	std::vector<float> QueuePriorities = { 0.5f };
+	uint32_t Count = 0;
+	//!< ファミリ内でのインデックスを計算する
+	const uint32_t GraphicsQueueIndexInFamily = 0;
+	uint32_t PresentQueueIndexInFamily = 0;
+	uint32_t TransferQueueIndexInFamily = 0;
+	uint32_t ComputeQueueIndexInFamily = 0;
+	//uint32_t SparceBindingQueueIndexInFamily = 0;
+	//!< グラフィックと同じファミリの場合は、ファミリ内インデックスをインクリメント(プライオリティも追加する)
+	if (GraphicsQueueFamilyIndex == PresentQueueFamilyIndex) {
+		PresentQueueIndexInFamily = ++Count;
+		QueuePriorities.push_back(0.3f);
+	}
+	if (GraphicsQueueFamilyIndex == TransferQueueFamilyIndex) {
+		TransferQueueIndexInFamily = ++Count;
+		QueuePriorities.push_back(0.3f);
+	}
+	if (GraphicsQueueFamilyIndex == ComputeQueueFamilyIndex) {
+		ComputeQueueIndexInFamily = ++Count;
+		QueuePriorities.push_back(0.3f);
+	}
+	//if (GraphicsQueueFamilyIndex == SparceBindingQueueIndexInFamily) {
+	//	SparceBindingQueueIndexInFamily = ++Count;
+	//	QueuePriorities.push_back(0.3f);
+	//}
+
+#ifdef DEBUG_STDOUT
+	//!< ファミリインデックス、およびファミリ内インデックス
+	std::cout << "\t" << "\t" << "Graphics(FamilyIndex, IndexInFamily) = (" << GraphicsQueueFamilyIndex << ", " << GraphicsQueueIndexInFamily << ")" << std::endl;
+	std::cout << "\t" << "\t" << "Present(FamilyIndex, IndexInFamily) = (" << PresentQueueFamilyIndex << ", " << PresentQueueIndexInFamily << ")" << std::endl;
+	std::cout << "\t" << "\t" << "Compute(FamilyIndex, IndexInFamily) = (" << ComputeQueueFamilyIndex << ", " << ComputeQueueIndexInFamily << ")" << std::endl;
+	std::cout << "\t" << "\t" << "Transfer(FamilyIndex, IndexInFamily) = (" << TransferQueueFamilyIndex << ", " << TransferQueueIndexInFamily << ")" << std::endl;
+	//std::cout << "\t" << "\t" << "SparceBinding(FamilyIndex, IndexInFamily) = (" << SparceBindingQueueFamilyIndex << ", " << SparceBindingQueueIndexInFamily << ")" << std::endl;
+#endif
+
+	//!< グラフィックと同じファミリのものはここでまとめられる
 	std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos = {
 		{
 			VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -1172,7 +1256,7 @@ void VK::CreateDevice()
 			static_cast<uint32_t>(QueuePriorities.size()), QueuePriorities.data()
 		},
 	};
-	//!< グラフィックとプレゼントのキューインデックスが別の場合は追加で必要 If graphics and presentation queue index is different, we must add one more
+	//!< グラフィックとファミリが別のものは各々追加する
 	if (GraphicsQueueFamilyIndex != PresentQueueFamilyIndex) {
 		QueueCreateInfos.push_back(
 			{
@@ -1180,10 +1264,43 @@ void VK::CreateDevice()
 				nullptr,
 				0,
 				PresentQueueFamilyIndex,
-				static_cast<uint32_t>(QueuePriorities.size()), QueuePriorities.data()
+				1, QueuePriorities.data()
 			}
 		);
 	}
+	if (GraphicsQueueFamilyIndex != TransferQueueFamilyIndex) {
+		QueueCreateInfos.push_back(
+			{
+				VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+				nullptr,
+				0,
+				TransferQueueFamilyIndex,
+				1, QueuePriorities.data()
+			}
+		);
+	}
+	if (GraphicsQueueFamilyIndex != ComputeQueueFamilyIndex) {
+		QueueCreateInfos.push_back(
+			{
+				VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+				nullptr,
+				0,
+				ComputeQueueFamilyIndex,
+				1, QueuePriorities.data()
+			}
+		);
+	}
+	//if (GraphicsQueueFamilyIndex != SparceBindingQueueFamilyIndex) {
+	//	QueueCreateInfos.push_back(
+	//		{
+	//			VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+	//			nullptr,
+	//			0,
+	//			SparceBindingQueueFamilyIndex,
+	//			1, QueuePriorities.data()
+	//		}
+	//	);
+	//}
 
 	const std::vector<const char*> EnabledLayerNames = {
 #ifdef _DEBUG
@@ -1236,9 +1353,12 @@ void VK::CreateDevice()
 #endif //!< VK_NO_PROTOYYPES
 
 	//!< キューの取得 (グラフィック、プレゼントキューは同じインデックスの場合もあるが別の変数に取得しておく) Graphics and presentation index may be same, but save to individual variables
-	vkGetDeviceQueue(Device, GraphicsQueueFamilyIndex, 0, &GraphicsQueue);
-	vkGetDeviceQueue(Device, PresentQueueFamilyIndex, 0, &PresentQueue);
- 
+	vkGetDeviceQueue(Device, GraphicsQueueFamilyIndex, GraphicsQueueIndexInFamily, &GraphicsQueue);
+	vkGetDeviceQueue(Device, PresentQueueFamilyIndex, PresentQueueIndexInFamily, &PresentQueue);
+	vkGetDeviceQueue(Device, TransferQueueFamilyIndex, TransferQueueIndexInFamily, &TransferQueue);
+	vkGetDeviceQueue(Device, ComputeQueueFamilyIndex, ComputeQueueIndexInFamily, &ComputeQueue);
+	//vkGetDeviceQueue(Device, SparceBindingQueueFamilyIndex, SparceBindingQueueIndex, &SparceBindingQueue);
+
 #ifdef _DEBUG
 	if (HasDebugMarkerExt) {
 #define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetDeviceProcAddr(Device, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
@@ -2100,12 +2220,12 @@ void VK::CreatePipelineCaches(std::vector<VkPipelineCache>& PipelineCaches) cons
 
 void VK::CreatePipeline()
 {
-	//!< スレッドでパイプラインを作成する例(パイプラインキャッシュを活用)
 #if 0
+	//!< スレッドでパイプライン (ThreadCount * PipelineCountPerThread 個) を作成する例 (パイプラインキャッシュを活用する)
 	const auto ThreadCount = 10;
 	const auto PipelineCountPerThread = 1;
 
-	//!< パイプラインキャッシュをファイルから読み込む (スレッド数分だけ同じものを用意する)
+	//!< パイプラインキャッシュをファイルから読み込む (スレッド数分だけ(同じものを)用意する)
 	std::vector<VkPipelineCache> PipelineCaches(ThreadCount);
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
 	LoadPipelineCaches(PCOPath, PipelineCaches);
@@ -2116,10 +2236,11 @@ void VK::CreatePipeline()
 		i.resize(PipelineCountPerThread); 
 	}
 
-	//!< パイプラインキャッシュを使用して、各スレッドでパイプラインを作成する
+	//!< パイプラインキャッシュを使用して、各々のスレッドでパイプラインを作成する
 	std::vector<std::thread> Threads(ThreadCount);
 	for (auto i = 0; i < Threads.size(); ++i) {
 		Threads[i] = std::thread::thread([&](std::vector<VkPipeline>& Pipelines, VkPipelineCache PipelineCache) {
+			//!< #VK_TODO
 			//!< パイプラインを作成の処理をここに書く Create pipeline here 
 			//std::vector<VkGraphicsPipelineCreateInfo> GraphicsPipelineCreateInfos(Pipelines.size());
 			// ...
@@ -2144,11 +2265,11 @@ void VK::CreatePipeline()
 		i.join();
 	}
 
-	//!< 各スレッドが作成したパイプラインキャッシュをマージする (ここでは最後の要素へマージしている)
+	//!< 各々のスレッドが作成したパイプラインキャッシュをマージする (ここでは最後の要素へマージしている)
 	VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, PipelineCaches.back(), static_cast<uint32_t>(PipelineCaches.size() - 1), PipelineCaches.data()));	
 	//!< マージ後のパイプラインキャッシュをファイルへ保存
 	StorePipelineCache(PCOPath, PipelineCaches.back());
-	//!< 破棄して良い
+	//!< もう破棄して良い
 	for (auto& i : PipelineCaches) {
 		vkDestroyPipelineCache(Device, i, GetAllocationCallbacks());
 	}
@@ -2307,16 +2428,13 @@ void VK::CreatePipeline_Graphics()
 	//!< パイプラインキャッシュオブジェクト Pipeline Cache Object
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
 	const auto PipelineCache = LoadPipelineCache(PCOPath);
-	//!< (グラフィック)パイプライン
-	//!< キャッシュがデータを含む場合はドライバはパイプライン作成時に使用する、またドライバはパイプライン作成結果をキャッシュする
+	//!< パイプライン作成時にキャッシュが活用される、また今回の作成結果もキャッシュされる
 	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, 
 		PipelineCache, 
 		static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), 
 		GetAllocationCallbacks(), 
 		&Pipeline));
 	if (VK_NULL_HANDLE != PipelineCache) {
-		//!< ここではマージの必要は無い In this case no need to merge
-		//VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, DstPipelineCache, 1, SrcPipelineCache));
 		StorePipelineCache(PCOPath, PipelineCache);
 		vkDestroyPipelineCache(Device, PipelineCache, GetAllocationCallbacks());
 	}
@@ -2337,12 +2455,10 @@ void VK::CreatePipeline_Compute()
 	PerformanceCounter PC("CreatePipeline_Compute : ");
 #endif
 
-	//!< シェーダ
 	std::vector<VkShaderModule> ShaderModules;
 	std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos;
 	CreateShader(ShaderModules, PipelineShaderStageCreateInfos);
 	
-	//!< パイプラインレイアウト
 	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		nullptr,
@@ -2366,13 +2482,23 @@ void VK::CreatePipeline_Compute()
 			VK_NULL_HANDLE, -1 //!< basePipelineHandle, basePipelineIndex
 		},
 	};
+
+	const auto PCOPath = GetBasePath() + TEXT(".pco");
+	const auto PipelineCache = LoadPipelineCache(PCOPath);
 	VERIFY_SUCCEEDED(vkCreateComputePipelines(Device,
-		/*PipelineCache*/VK_NULL_HANDLE,
+		PipelineCache,
 		static_cast<uint32_t>(ComputePipelineCreateInfos.size()), ComputePipelineCreateInfos.data(),
 		GetAllocationCallbacks(),
 		&Pipeline));
+	if (VK_NULL_HANDLE != PipelineCache) {
+		StorePipelineCache(PCOPath, PipelineCache);
+		vkDestroyPipelineCache(Device, PipelineCache, GetAllocationCallbacks());
+	}
 
-	vkDestroyShaderModule(Device, ShaderModules[0], GetAllocationCallbacks());
+	for (auto i : ShaderModules) {
+		vkDestroyShaderModule(Device, i, GetAllocationCallbacks());
+	}
+	ShaderModules.clear();
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreatePipeline_Compute" << COUT_OK << std::endl << std::endl;
@@ -2617,7 +2743,7 @@ void VK::Present()
 		1, &Swapchain, &SwapchainImageIndex,
 		nullptr
 	};
-	VERIFY_SUCCEEDED(vkQueuePresentKHR(GraphicsQueue, &PresentInfo));
+	VERIFY_SUCCEEDED(vkQueuePresentKHR(PresentQueue, &PresentInfo));
 
 #ifdef DEBUG_STDOUT
 	//std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;

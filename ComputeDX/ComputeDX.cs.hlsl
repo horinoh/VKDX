@@ -14,7 +14,7 @@ uint Mandelbrot(const float2 c, const uint iterations)
 	return i;
 }
 
-RWTexture2D<float4> TextureMap : register(u0);
+RWTexture2D<float4> TextureMap : register(u0, space0);
 
 static const uint3 WorkGroupSize = uint3(32, 32, 1);
 [numthreads(WorkGroupSize.x, WorkGroupSize.y, WorkGroupSize.z)]
