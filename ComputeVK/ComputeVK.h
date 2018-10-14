@@ -37,6 +37,34 @@ protected:
 	virtual void CreateShader(std::vector<VkShaderModule>& SM, std::vector<VkPipelineShaderStageCreateInfo>& CreateInfo) const override {
 		CreateShader_Cs(SM, CreateInfo);
 	}
+
+	virtual void CreateTexture() override {
+		const auto Format = VK_FORMAT_R8G8B8A8_UINT;
+
+		{
+			const auto Type = VK_IMAGE_TYPE_2D;
+
+			const VkExtent3D Extent3D = { 800, 600, 1 };
+
+			const auto Faces = 1;
+			const auto Layers = 1 * Faces;
+			const auto Levels = 1;
+
+			//!< ŽQl : VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
+			const VkImageUsageFlags Usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
+			CreateImage(&Image, Usage, VK_SAMPLE_COUNT_1_BIT, Type, Format, Extent3D, Levels, Layers);
+			CreateDeviceLocalMemory(&ImageDeviceMemory, Image);
+			BindDeviceMemory(Image, ImageDeviceMemory);
+		}
+
+		{
+			const auto Type = VK_IMAGE_VIEW_TYPE_2D;
+			const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+
+			CreateImageView(&ImageView, Image, Type, Format, CompMap, ImageSubresourceRange_ColorAll);
+		}
+	}
+
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 	virtual void Draw() override { Dispatch(); }

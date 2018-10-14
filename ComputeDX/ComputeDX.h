@@ -36,6 +36,11 @@ protected:
 		Super::CreateShader(ShaderBlobs);
 	}
 
+	virtual void CreateTexture() override {
+		//!< #DX_TODO
+		//CreateDefaultResource();
+	}
+
 	virtual void PopulateCommandList(const size_t i) override;
 
 	virtual void Draw() override { Dispatch(); }

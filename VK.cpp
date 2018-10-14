@@ -220,23 +220,25 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		Swapchain = VK_NULL_HANDLE;
 	}
 
-	if (!CommandPools.empty()) {
-		const auto CP = CommandPools[0]; //!< 現状は0番のコマンドプール決め打ち #VK_TODO 
+	if (VK_NULL_HANDLE != CommandPool) {
+		const auto CP = CommandPool;
+		auto& CB = CommandBuffers;
 
-		for (auto i : SecondaryCommandBuffers) {
-			if (!i.empty()) {
-				vkFreeCommandBuffers(Device, CP, static_cast<uint32_t>(i.size()), i.data());
-				i.clear();
-			}
+		if (!CB.empty()) {
+			vkFreeCommandBuffers(Device, CP, static_cast<uint32_t>(CB.size()), CB.data());
+			CB.clear();
 		}
-		SecondaryCommandBuffers.clear();
+		vkDestroyCommandPool(Device, CP, GetAllocationCallbacks());
+	}
+	if (VK_NULL_HANDLE != ComputeCommandPool) {
+		const auto CP = ComputeCommandPool;
+		auto& CB = ComputeCommandBuffers;
 
-		if (!CommandBuffers.empty()) {
-			vkFreeCommandBuffers(Device, CP, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
-			CommandBuffers.clear();
+		if (!CB.empty()) {
+			vkFreeCommandBuffers(Device, CP, static_cast<uint32_t>(CB.size()), CB.data());
+			CB.clear();
 		}
-		std::for_each(CommandPools.begin(), CommandPools.end(), [&](const VkCommandPool rhs) { vkDestroyCommandPool(Device, rhs, GetAllocationCallbacks()); });
-		CommandPools.clear();
+		vkDestroyCommandPool(Device, CP, GetAllocationCallbacks());
 	}
 	
 	if (VK_NULL_HANDLE != RenderFinishedSemaphore) {
@@ -250,6 +252,10 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	if (VK_NULL_HANDLE != Fence) {
 		vkDestroyFence(Device, Fence, GetAllocationCallbacks());
 		Fence = VK_NULL_HANDLE;
+	}
+	if (VK_NULL_HANDLE != ComputeFence) {
+		vkDestroyFence(Device, ComputeFence, GetAllocationCallbacks());
+		ComputeFence = VK_NULL_HANDLE;
 	}
 
 	//!< Queue は vkGetDeviceQueue() で取得したもの、破棄しない
@@ -1088,7 +1094,7 @@ void VK::GetQueueFamily()
 
 #ifdef DEBUG_STDOUT
 	//!< 自分の環境(Geforce970M)だと以下のような状態だった
-	//!< QueueFamilyIndex == 0 : Grahics | Compute | Transfer | SparceBinding および Present
+	//!< QueueFamilyIndex == 0 : Grahics | Compute | Transfer | SparceBindiBinding および Present
 	//!< QueueFamilyIndex == 1 : Transfer
 	std::cout << "\t" << "QueueProperties" << std::endl;
 #define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & QueueProperties[i].queueFlags) { std::cout << #entry << " | "; }
@@ -1380,6 +1386,7 @@ void VK::CreateFence()
 		VK_FENCE_CREATE_SIGNALED_BIT //!< 初回と２回目以降を同じに扱う為にシグナル済み状態で作成 Create signaled state to do same operation on first time and second time
 	};
 	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, GetAllocationCallbacks(), &Fence));
+	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, GetAllocationCallbacks(), &ComputeFence));
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateFence" << COUT_OK << std::endl << std::endl;
@@ -1408,12 +1415,13 @@ void VK::CreateSemaphore()
 #endif
 }
 
-void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
+//!< キューファミリが異なる場合は、各々別のコマンドプールを用意する必要がある #VK_TODO
+void VK::CreateCommandPool(VkCommandPool& CP, const uint32_t QueueFamilyIndex)
 {
 	/**
 	@brief VkCommandPoolCreateFlags
 	* VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT	... コマンドバッファ毎にリセットが可能、指定無しだとプール単位でまとめてリセットしかできない
-	* VK_COMMAND_POOL_CREATE_TRANSIENT_BIT			... 頻繁に更新される、ライフスパンが短い場合 (メモリアロケーションのヒントとなる)
+	* VK_COMMAND_POOL_CREATE_TRANSIENT_BIT				... 頻繁に更新される、ライフスパンが短い場合に指定 (メモリアロケーションのヒントとなる)
 	*/
 	const VkCommandPoolCreateInfo CommandPoolInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -1422,51 +1430,26 @@ void VK::CreateCommandPool(const uint32_t QueueFamilyIndex)
 		QueueFamilyIndex
 	};
 
-	VkCommandPool CommandPool;
-	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, GetAllocationCallbacks(), &CommandPool));
-	CommandPools.push_back(CommandPool);
+	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, GetAllocationCallbacks(), &CP));
 
 #ifdef DEBUG_STDOUT
 	std::cout << "CreateCommandPool" << COUT_OK << std::endl << std::endl;
 #endif
 }
 
-/**
-@brief 以下のように確保される Allocate like this
-CommandBuffers[Count]
-SecondaryCommandBuffers[Count][SecondaryCount]
-
-@note 現状セカンダリは使用していない Currently secondary is not used
-*/
-void VK::AllocateCommandBuffer(const VkCommandPool CommandPool, const size_t Count, const size_t SecondaryCount)
+void VK::AllocateCommandBuffer(std::vector<VkCommandBuffer>& CBs, const VkCommandPool CP, const size_t Count, const VkCommandBufferLevel Level)
 {
 	if (Count) {
-		const VkCommandBufferAllocateInfo CommandBufferAllocateInfo = {
+		const VkCommandBufferAllocateInfo AllocateInfo = {
 			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 			nullptr,
-			CommandPool,
-			VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+			CP,
+			Level,
 			static_cast<uint32_t>(Count)
-		}; 
+		};
 
-		CommandBuffers.resize(Count);
-		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CommandBufferAllocateInfo, CommandBuffers.data()));
-
-		SecondaryCommandBuffers.resize(Count);
-		if (SecondaryCount) {
-			const VkCommandBufferAllocateInfo SecondaryCommandBufferAllocateInfo = {
-				VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-				nullptr,
-				CommandPool,
-				VK_COMMAND_BUFFER_LEVEL_SECONDARY,
-				static_cast<uint32_t>(SecondaryCount)
-			};
-
-			for (auto i : SecondaryCommandBuffers) {
-				i.resize(SecondaryCount);
-				VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &SecondaryCommandBufferAllocateInfo, i.data()));
-			}
-		}
+		CBs.resize(Count);
+		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &AllocateInfo, CBs.data()));
 	}
 
 #ifdef DEBUG_STDOUT
@@ -1476,15 +1459,24 @@ void VK::AllocateCommandBuffer(const VkCommandPool CommandPool, const size_t Cou
 
 void VK::CreateCommandBuffer()
 {
-	CreateCommandPool(GraphicsQueueFamilyIndex);
-	AllocateCommandBuffer(CommandPools[0], SwapchainImages.size()); //!< 現状は0番のコマンドプール決め打ち #VK_TODO
+	//!< キューファミリが異なる場合は、別のコマンドプールを用意する必要がある #VK_TODO
+	auto& CP = CommandPool;
+	auto& CB = CommandBuffers;
+	CreateCommandPool(CP, GraphicsQueueFamilyIndex);
+	AllocateCommandBuffer(CB, CP, SwapchainImages.size(), VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+
+	if (GraphicsQueueFamilyIndex != ComputeQueueFamilyIndex) {
+		auto& CP = ComputeCommandPool;
+		auto& CB = ComputeCommandBuffers;
+		CreateCommandPool(CP, ComputeQueueFamilyIndex);
+		AllocateCommandBuffer(CB, CP, 1, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+	}
 }
 
 void VK::CreateSwapchain()
 {
 	CreateSwapchainOfClientRect();
 
-	//!< ビューを作成 CreateView
 	CreateSwapchainImageView();
 }
 VkSurfaceFormatKHR VK::SelectSurfaceFormat()
@@ -2645,7 +2637,6 @@ void VK::ClearDepthStencilAttachment(const VkCommandBuffer CommandBuffer, const 
 void VK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandBuffers[i];
-	const auto SCB = SecondaryCommandBuffers[i];
 	const auto FB = Framebuffers[i];
 	const auto Image = SwapchainImages[i];
 
@@ -2703,7 +2694,7 @@ void VK::PopulateCommandBuffer(const size_t i)
 
 void VK::Draw()
 {
-	WaitForFence();
+	WaitForFence(Fence);
 
 	//!< 次のイメージが取得できたらセマフォが通知される
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, NextImageAcquiredSemaphore, VK_NULL_HANDLE, &SwapchainImageIndex));
@@ -2731,8 +2722,18 @@ void VK::Draw()
 }
 void VK::Dispatch()
 {
-	//!< #VK_TODO Dispatch実装
-	DEBUG_BREAK();
+	WaitForFence(ComputeFence);
+
+	const std::vector<VkSubmitInfo> SubmitInfos = {
+		{
+			VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			nullptr,
+			0, nullptr, nullptr,
+			1, &ComputeCommandBuffers[0],
+			0, nullptr,
+		},
+	};
+	VERIFY_SUCCEEDED(vkQueueSubmit(ComputeQueue, static_cast<uint32_t>(SubmitInfos.size()), SubmitInfos.data(), ComputeFence));
 }
 void VK::Present()
 {
@@ -2749,10 +2750,9 @@ void VK::Present()
 	//std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
 #endif
 }
-void VK::WaitForFence()
+void VK::WaitForFence(VkFence& Fence, const uint64_t TimeOut)
 {
 	VkResult Result;
-	const uint64_t TimeOut = 100000000;
 	do {
 		//!< リソース使用可能のシグナルまで待つ
 		Result = vkWaitForFences(Device, 1, &Fence, VK_TRUE, TimeOut);
@@ -2766,8 +2766,5 @@ void VK::WaitForFence()
 
 	//!< シグナルをリセット
 	vkResetFences(Device, 1, &Fence);
-
-#ifdef DEBUG_STDOUT
-	//std::cout << "Fence" << std::endl;
-#endif
 }
+

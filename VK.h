@@ -182,8 +182,8 @@ protected:
 	virtual void CreateFence();
 	virtual void CreateSemaphore();
 
-	virtual void CreateCommandPool(const uint32_t QueueFamilyIndex);
-	virtual void AllocateCommandBuffer(const VkCommandPool CommandPool, const size_t Count, const size_t SecondaryCount = 0);
+	virtual void CreateCommandPool(VkCommandPool& CP, const uint32_t QueueFamilyIndex);
+	virtual void AllocateCommandBuffer(std::vector<VkCommandBuffer>& CBs, const VkCommandPool CP, const size_t Count, const VkCommandBufferLevel Level);
 	virtual void CreateCommandBuffer();
 
 	virtual void CreateSwapchain();
@@ -278,7 +278,7 @@ protected:
 	virtual void Draw();
 	virtual void Dispatch();
 	virtual void Present();
-	virtual void WaitForFence();
+	virtual void WaitForFence(VkFence& Fence, const uint64_t TimeOut = 100000000);
 
 	const VkAllocationCallbacks AllocationCallbacks = {
 		nullptr,
@@ -336,13 +336,21 @@ protected:
 	uint32_t ComputeQueueFamilyIndex = UINT32_MAX;
 	uint32_t SparceBindingQueueFamilyIndex = UINT32_MAX;
 
+	/**
+	フェンス		... デバイスとホストの同期(GPUとCPUの同期)
+	セマフォ		... 複数キュー間の同期
+	イベント		... コマンドバッファ間の同期(同一キューファミリ)
+	バリア		... コマンドバッファ内の同期
+	*/
 	VkFence Fence = VK_NULL_HANDLE;
+	VkFence ComputeFence = VK_NULL_HANDLE;
 	VkSemaphore NextImageAcquiredSemaphore = VK_NULL_HANDLE;	//!< プレゼント完了までウエイト
 	VkSemaphore RenderFinishedSemaphore = VK_NULL_HANDLE;		//!< 描画完了するまでウエイト
 
-	std::vector<VkCommandPool> CommandPools;
+	VkCommandPool CommandPool = VK_NULL_HANDLE;
+	VkCommandPool ComputeCommandPool = VK_NULL_HANDLE;
 	std::vector<VkCommandBuffer> CommandBuffers;
-	std::vector<std::vector<VkCommandBuffer>> SecondaryCommandBuffers;
+	std::vector<VkCommandBuffer> ComputeCommandBuffers;
 
 	VkExtent2D SurfaceExtent2D;
 	VkFormat ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
