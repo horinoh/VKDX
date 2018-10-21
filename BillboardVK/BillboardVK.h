@@ -25,7 +25,7 @@ protected:
 		//Super::CreateDepthStencil(SurfaceExtent2D.width, SurfaceExtent2D.height, VK_FORMAT_D24_UNORM_S8_UINT);
 	}
 
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Indexed(1); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1); }
 
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {
 		CreateShader_VsPsTesTcsGs(ShaderModules, PipelineShaderStageCreateInfos);

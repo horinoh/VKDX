@@ -10,8 +10,8 @@ public:
 	using Vertex_Position = struct Vertex_Position { DirectX::XMFLOAT3 Position; };
 	using Vertex_PositionColor = struct Vertex_PositionColor { DirectX::XMFLOAT3 Position; DirectX::XMFLOAT4 Color; };
 	
-	void CreateIndirectBuffer_Vertices(const UINT Count);
-	void CreateIndirectBuffer_Indexed(const UINT Count);
+	void CreateIndirectBuffer_Draw(const UINT Count);
+	void CreateIndirectBuffer_DrawIndexed(const UINT Count);
 	void CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT Z);
 
 	/*
@@ -217,21 +217,9 @@ public:
 	//!< LinearWarp
 	void CreateStaticSamplerDesc_LW(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) const;
 
-	template<typename T>
-	void CreateInputLayoutT(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs, const UINT InputSlot) const {}
-	template<>
-	void CreateInputLayoutT<Vertex_Position>(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs, const UINT InputSlot) const {
-		InputElementDescs = {
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, InputSlot, offsetof(Vertex_Position, Position), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-		};
-	}
-	template<>
-	void CreateInputLayoutT<Vertex_PositionColor>(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs, const UINT InputSlot) const {
-		InputElementDescs = {
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, InputSlot, offsetof(Vertex_PositionColor, Position), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, InputSlot, offsetof(Vertex_PositionColor, Color), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-		};
-	}
+	template<typename T> void CreateInputLayoutSlot(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs, const UINT InputSlot) const {}
+	//!< ↓ここでテンプレート特殊化している Template specialization here
+#include "DXInputLayout.inl"
 
 	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType() const override { return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; }
 

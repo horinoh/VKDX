@@ -14,7 +14,7 @@ public:
 	virtual ~ParametricSurfaceDX() {}
 
 protected:
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Indexed(1); } //!< 最低でもインデックス数1が必要 At least index count must be 1
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1); } //!< 最低でもインデックス数1が必要 At least index count must be 1
 
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const override {
 		CreateShader_VsPsDsHsGs(ShaderBlobs);

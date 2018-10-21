@@ -8,6 +8,12 @@
 #define _CRTDBG_MAP_ALLOC
 #include <windows.h>
 ~~~
+
+### Visual Assist X
+* 検索対象に拡張子(inl)を追加する
+	* Tool - Options - Text Editor - File Extension - Editor で Microsoft Visual C++ を選択 - Extension に inl を記述 - Add
+	* Visual Assist X をリビルドする
+
 ### DDS ツール
 * DirectXTex https://github.com/Microsoft/DirectXTex
   * DirectXTex\DirectXTex_Desktop_2015.sln を開いて Release、x64 にしてビルドすると実行ファイルが作成される

@@ -19,7 +19,7 @@ protected:
 		//CreateDepthStencilOfClientRect(DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
 	}
 
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Indexed(1); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1); }
 
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const override {
 		CreateShader_VsPsDsHsGs(ShaderBlobs);

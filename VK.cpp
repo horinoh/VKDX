@@ -552,15 +552,11 @@ void VK::CopyToHostVisibleMemory(const VkDeviceMemory DeviceMemory, const size_t
 		} vkUnmapMemory(Device, DeviceMemory);
 	}
 }
-void VK::SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkBuffer DstBuffer, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size)
+void VK::SubmitCopyBuffer(const VkCommandBuffer CB, const VkBuffer Src, const VkBuffer Dst, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size)
 {
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo_OneTime)); {
-		const VkBufferCopy BufferCopy = {
-			0,
-			0,
-			Size
-		};
-		vkCmdCopyBuffer(CommandBuffer, SrcBuffer, DstBuffer, 1, &BufferCopy);
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CommandBufferBeginInfo_OneTime)); {
+		const VkBufferCopy BufferCopy = { 0, 0, Size };
+		vkCmdCopyBuffer(CB, Src, Dst, 1, &BufferCopy);
 
 		const VkBufferMemoryBarrier BufferMemoryBarrier = {
 			VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
@@ -569,19 +565,19 @@ void VK::SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer Sr
 			AccessFlag,
 			VK_QUEUE_FAMILY_IGNORED,
 			VK_QUEUE_FAMILY_IGNORED,
-			DstBuffer,
+			Dst,
 			0,
 			VK_WHOLE_SIZE
 		};
 		//!< バッファを「転送先(VK_PIPELINE_STAGE_TRANSFER_BIT)」から「目的のバッファ(PipelineStageFlag(バーテックスバッファ等))」へ変更する
-		vkCmdPipelineBarrier(CommandBuffer, 
+		vkCmdPipelineBarrier(CB, 
 			VK_PIPELINE_STAGE_TRANSFER_BIT, PipelineStageFlag,
 			0, 
 			0, nullptr,
 			1, &BufferMemoryBarrier, 
 			0, nullptr);
 
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 
 	//!< サブミット
 	const std::vector<VkSubmitInfo> SubmitInfos = {
@@ -590,12 +586,62 @@ void VK::SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer Sr
 			nullptr,
 			0, nullptr,
 			nullptr,
-			1, &CommandBuffer,
+			1, &CB,
 			0, nullptr
 		}
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SubmitInfos.size()), SubmitInfos.data(), VK_NULL_HANDLE));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
+}
+
+void VK::CreateHostVisibleBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Object)
+{
+	VkMemoryRequirements MemoryRequirements;
+	//!< MemoryRequirements の取得の仕方がバッファ毎に異なるのでテンプレート化している
+	//!< Because vkGetImageMemoryRequirements is different, using template specialization
+	vkGetBufferMemoryRequirements(Device, Object, &MemoryRequirements);
+	const VkMemoryAllocateInfo MemoryAllocateInfo = {
+		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		nullptr,
+		MemoryRequirements.size,
+		GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT/*| VK_MEMORY_PROPERTY_HOST_COHERENT_BIT*/) //!< HOST_VISIBLE にすること Must be HOST_VISIBLE
+	};
+	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, DeviceMemory));
+}
+
+void VK::CreateDeviceLocalBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Object)
+{
+	VkMemoryRequirements MemoryRequirements;
+	//!< MemoryRequirements の取得の仕方がバッファ毎に異なるのでテンプレート化している
+	//!< Because vkGetImageMemoryRequirements is different, using template specialization
+	vkGetBufferMemoryRequirements(Device, Object, &MemoryRequirements);
+	const VkMemoryAllocateInfo MemoryAllocateInfo = {
+		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		nullptr,
+		MemoryRequirements.size,
+		GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+	};
+	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, DeviceMemory));
+}
+
+void VK::CreateHostVisibleImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Object)
+{
+	assert(false && "Not implemented");
+}
+
+void VK::CreateDeviceLocalImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Object)
+{
+	VkMemoryRequirements MemoryRequirements;
+	//!< MemoryRequirements の取得の仕方がバッファ毎に異なるのでテンプレート化している
+	//!< Because vkGetImageMemoryRequirements is different, using template specialization
+	vkGetImageMemoryRequirements(Device, Object, &MemoryRequirements);
+	const VkMemoryAllocateInfo MemoryAllocateInfo = {
+		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		nullptr,
+		MemoryRequirements.size,
+		GetMemoryType(MemoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+	};
+	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MemoryAllocateInfo, nullptr, DeviceMemory));
 }
 
 //!< Cubemapを作る場合、まずレイヤ化されたイメージを作成し、(イメージビューを用いて)レイヤをフェイスとして扱うようハードウエアに伝える
@@ -841,38 +887,46 @@ void VK::CreateDebugReportCallback()
 #include "VKDebugReport.h"
 #undef VK_INSTANCE_PROC_ADDR
 
-	auto Callback = [](VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData) -> VkBool32
-	{
-		using namespace std;
-		if (VK_DEBUG_REPORT_ERROR_BIT_EXT & flags) {
-			DEBUG_BREAK();
-			cout << Red << "[ DebugReport ] : " << pMessage << White << endl;
-			return VK_TRUE;
-		}
-		else if (VK_DEBUG_REPORT_WARNING_BIT_EXT & flags) {
-			DEBUG_BREAK();
-			cout << Yellow << "[ DebugReport ] : " << pMessage << White << endl;
-			return VK_TRUE;
-		}
-		else if (VK_DEBUG_REPORT_INFORMATION_BIT_EXT & flags) {
-			//cout << Green << "[ DebugReport ] : " << pMessage << White << endl;
-		}
-		else if (VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT & flags) {
-			DEBUG_BREAK();
-			cout << Yellow << "[ DebugReport ] : " << pMessage << White << endl;
-			return VK_TRUE;
-		}
-		else if (VK_DEBUG_REPORT_DEBUG_BIT_EXT & flags) {
-			//cout << Green << "[ DebugReport ] : " << pMessage << White << endl;
-		}
-		return VK_FALSE;
-	};
 	const auto Flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT
 		| VK_DEBUG_REPORT_WARNING_BIT_EXT
 		| VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT
 		| VK_DEBUG_REPORT_ERROR_BIT_EXT
 		| VK_DEBUG_REPORT_DEBUG_BIT_EXT;
-	CreateDebugReportCallback(Instance, Callback, Flags, &DebugReportCallback);
+
+	if (VK_NULL_HANDLE != vkCreateDebugReportCallback) {
+		const VkDebugReportCallbackCreateInfoEXT DebugReportCallbackCreateInfo = {
+			VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
+			nullptr,
+			Flags,
+			[](VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)->VkBool32 {
+					using namespace std;
+					if (VK_DEBUG_REPORT_ERROR_BIT_EXT & flags) {
+						DEBUG_BREAK();
+						cout << Red << "[ DebugReport ] : " << pMessage << White << endl;
+						return VK_TRUE;
+					}
+					else if (VK_DEBUG_REPORT_WARNING_BIT_EXT & flags) {
+						DEBUG_BREAK();
+						cout << Yellow << "[ DebugReport ] : " << pMessage << White << endl;
+						return VK_TRUE;
+					}
+					else if (VK_DEBUG_REPORT_INFORMATION_BIT_EXT & flags) {
+						//cout << Green << "[ DebugReport ] : " << pMessage << White << endl;
+					}
+					else if (VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT & flags) {
+						DEBUG_BREAK();
+						cout << Yellow << "[ DebugReport ] : " << pMessage << White << endl;
+						return VK_TRUE;
+					}
+					else if (VK_DEBUG_REPORT_DEBUG_BIT_EXT & flags) {
+						//cout << Green << "[ DebugReport ] : " << pMessage << White << endl;
+					}
+					return VK_FALSE;
+			},
+			nullptr
+		};
+		vkCreateDebugReportCallback(Instance, &DebugReportCallbackCreateInfo, nullptr, &DebugReportCallback);
+	}
 }
 #endif //!< _DEBUG
 
@@ -907,6 +961,37 @@ void VK::MarkerEnd(VkCommandBuffer CB)
 		vkCmdDebugMarkerEnd(CB);
 	}
 }
+
+void VK::MarkerSetName(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const char* Name)
+{
+	if (VK_NULL_HANDLE != vkDebugMarkerSetObjectName) {
+		VkDebugMarkerObjectNameInfoEXT DebugMarkerObjectNameInfo = {
+			VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
+			nullptr,
+			Type,
+			Object,
+			Name
+		};
+		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectName(Device, &DebugMarkerObjectNameInfo));
+	}
+}
+
+void VK::MarkerSetTag(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const uint64_t TagName, const size_t TagSize, const void* TagData)
+{
+	if (VK_NULL_HANDLE != vkDebugMarkerSetObjectTag) {
+		VkDebugMarkerObjectTagInfoEXT DebugMarkerObjectTagInfo = {
+			VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_TAG_INFO_EXT,
+			nullptr,
+			Type,
+			Object,
+			TagName,
+			TagSize,
+			TagData
+		};
+		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectTag(Device, &DebugMarkerObjectTagInfo));
+	}
+}
+
 #endif //!< _DEBUG
 
 void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
@@ -1816,7 +1901,7 @@ void VK::CreateDepthStencilDeviceMemory()
 {
 	CreateDeviceLocalMemory(&DepthStencilDeviceMemory, DepthStencilImage);
 
-	BindDeviceMemory(DepthStencilImage, DepthStencilDeviceMemory/*, 0*/);
+	BindMemory(DepthStencilImage, DepthStencilDeviceMemory/*, 0*/);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "DepthStencilDeviceMemory" << std::endl;
@@ -1844,6 +1929,33 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 #endif
 }
 
+void VK::CreateIndirectBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB)
+{
+	VkBuffer StagingBuffer = VK_NULL_HANDLE;
+	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
+	
+	//!< ホストビジブルのバッファとメモリを作成し、そこへデータをコピーする Create host visible buffer and memory, and copy data
+	CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
+	CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
+	CopyToHostVisibleMemory(StagingDeviceMemory, Size, Source);
+	BindMemory(StagingBuffer, StagingDeviceMemory);
+
+	//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
+	CreateBuffer(Buffer, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+	CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+	BindMemory(*Buffer, *DeviceMemory);
+
+	//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
+	SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT/*Dispatchの場合もこれで良い？*/, Size);
+
+	if (VK_NULL_HANDLE != StagingDeviceMemory) {
+		vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
+	}
+	if (VK_NULL_HANDLE != StagingBuffer) {
+		vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
+	}
+}
+
 #if 0
 void VK::CreateStorageBuffer()
 {
@@ -1857,7 +1969,7 @@ void VK::CreateStorageBuffer()
 
 		CreateBuffer(Buffer, Usage, Size);
 		CreateDeviceLocalMemory(DeviceMemory, *Buffer);
-		BindDeviceMemory(*Buffer, *DeviceMemory);
+		BindMemory(*Buffer, *DeviceMemory);
 
 		//!< View は必要ない No need view
 
@@ -2284,7 +2396,7 @@ void VK::CreatePipeline_Graphics()
 	//!< バーテックスインプット
 	std::vector<VkVertexInputBindingDescription> VertexInputBindingDescriptions;
 	std::vector<VkVertexInputAttributeDescription> VertexInputAttributeDescriptions;
-	CreateVertexInput(VertexInputBindingDescriptions, VertexInputAttributeDescriptions, 0);
+	CreateVertexInput(VertexInputBindingDescriptions, VertexInputAttributeDescriptions);
 	const VkPipelineVertexInputStateCreateInfo PipelineVertexInputStateCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
 		nullptr,

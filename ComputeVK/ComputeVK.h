@@ -54,7 +54,7 @@ protected:
 			const VkImageUsageFlags Usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
 			CreateImage(&Image, Usage, VK_SAMPLE_COUNT_1_BIT, Type, Format, Extent3D, Levels, Layers);
 			CreateDeviceLocalMemory(&ImageDeviceMemory, Image);
-			BindDeviceMemory(Image, ImageDeviceMemory);
+			BindMemory(Image, ImageDeviceMemory);
 		}
 
 		{

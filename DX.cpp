@@ -851,6 +851,20 @@ void DX::ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORM
 #endif
 }
 
+void DX::CreateIndirectBuffer(ID3D12Resource** Resource, const UINT32 Size, const void* Source, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL)
+{
+	//!< アップロード用のリソースを作成、データをコピー Create upload resource, and copy data
+	Microsoft::WRL::ComPtr<ID3D12Resource> UploadRes;
+	CreateUploadResource(UploadRes.GetAddressOf(), Size);
+	CopyToUploadResource(UploadRes.Get(), Size, Source);
+
+	//!< デフォルトのリソースを作成 Create default resource
+	CreateDefaultResource(Resource, Size);
+
+	//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
+	ExecuteCopyBuffer(CA, CL, UploadRes.Get(), *Resource, Size);
+}
+
 void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth, const FLOAT MaxDepth)
 {
 	Viewports = {

@@ -16,7 +16,7 @@ public:
 protected:
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PhysicalDeviceFeatures) const { assert(PhysicalDeviceFeatures.tessellationShader && "tessellationShader not enabled"); }
 
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Indexed(1); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1); }
 
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {
 		CreateShader_VsPsTesTcsGs(ShaderModules, PipelineShaderStageCreateInfos);

@@ -97,10 +97,15 @@ protected:
 	
 	virtual void SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkBuffer DstBuffer, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size);
 	
+	void CreateHostVisibleBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Object);
+	void CreateDeviceLocalBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Object);
+	void BindBufferMemory(const VkBuffer Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset) { VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Object, DeviceMemory, Offset)); }
+	void CreateHostVisibleImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Object);
+	void CreateDeviceLocalImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Object);
+	void BindImageMemory(const VkImage Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset) { VERIFY_SUCCEEDED(vkBindImageMemory(Device, Object, DeviceMemory, Offset)); }
 	template<typename T> void CreateHostVisibleMemory(VkDeviceMemory* DeviceMemory, const T Object) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
 	template<typename T> void CreateDeviceLocalMemory(VkDeviceMemory* DeviceMemory, const T Object) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
-	
-	template<typename T> void BindDeviceMemory(const T Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset = 0) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
+	template<typename T> void BindMemory(const T Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset = 0) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
 	//!< ↓ ここでテンプレート特殊化している Template specialization here
 #include "VKDeviceMemory.inl"
 
@@ -109,21 +114,6 @@ protected:
 	
 	virtual void ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat Format) const;
 
-#ifdef _DEBUG
-	template<typename T>
-	static void CreateDebugReportCallback(VkInstance Instance, T Callback, const VkDebugReportFlagsEXT Flags, VkDebugReportCallbackEXT* DebugReportCallback) {
-		if (VK_NULL_HANDLE != vkCreateDebugReportCallback) {
-			const VkDebugReportCallbackCreateInfoEXT DebugReportCallbackCreateInfo = {
-				VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
-				nullptr,
-				Flags,
-				Callback,
-				nullptr
-			};
-			vkCreateDebugReportCallback(Instance, &DebugReportCallbackCreateInfo, nullptr, DebugReportCallback);
-		}
-	}
-#endif
 #ifdef _DEBUG
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerInsert(CB, Color, Name.c_str()); }
@@ -140,10 +130,13 @@ protected:
 	private:
 		VkCommandBuffer CommandBuffer;
 	};
+
+	static void MarkerSetName(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const char* Name);
+	static void MarkerSetTag(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const uint64_t TagName, const size_t TagSize, const void* TagData);
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const char* Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない Not template specialized */ }
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::string& Name) { MarkerSetObjectName(Device, Name.c_str()); }
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::wstring& Name) { MarkerSetObjectName(Device, std::string(Name.begin(), Name.end())); }
-	template<typename T> static void MarkerSetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* Tag) { DEBUG_BREAK(); /* テンプレート特殊化されていない Not template specialized */ }
+	template<typename T> static void MarkerSetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* TagData) { DEBUG_BREAK(); /* テンプレート特殊化されていない Not template specialized */ }
 	//!< ↓ここでテンプレート特殊化している Template specialization here
 #include "VKDebugMarker.inl"
 #endif
@@ -216,6 +209,7 @@ protected:
 
 	virtual void CreateVertexBuffer() {}
 	virtual void CreateIndexBuffer() {}
+	virtual void CreateIndirectBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB);
 	virtual void CreateIndirectBuffer() {}
 	virtual void CreateUniformBuffer() {} //!< 小さなデータの場合、UniformBuffer より PushConstants を使用した方が効率が良い
 	virtual void CreateStorageBuffer() {}
@@ -243,7 +237,7 @@ protected:
 
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const {}
-	virtual void CreateVertexInput(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding = 0) const {}
+	virtual void CreateVertexInput(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions) const {}
 	virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const {}
 	virtual void CreateInputAssembly_Topology(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo, const VkPrimitiveTopology Topology) const {
 		PipelineInputAssemblyStateCreateInfo = {

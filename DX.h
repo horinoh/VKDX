@@ -150,6 +150,7 @@ protected:
 	
 	virtual void CreateVertexBuffer() {}
 	virtual void CreateIndexBuffer() {}
+	virtual void CreateIndirectBuffer(ID3D12Resource** Resource, const UINT32 Size, const void* Source, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL);
 	virtual void CreateIndirectBuffer() {}
 	virtual void CreateConstantBuffer();
 
@@ -167,7 +168,7 @@ protected:
 
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
 	virtual void CreateShaderByteCode(const std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBCs) const;
-	virtual void CreateInputLayout(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs, const UINT InputSlot = 0) const {}
+	virtual void CreateInputLayout(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs) const {}
 	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType() const = 0; //!< D3D12_GRAPHICS_PIPELINE_STATE_DESC 作成時に使用
 	virtual D3D_PRIMITIVE_TOPOLOGY GetPrimitiveTopology() const = 0; //!< IASetPrimitiveTopology() 時に使用
 	virtual BOOL LoadPipelineLibrary(const std::wstring& Path);

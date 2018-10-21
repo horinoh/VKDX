@@ -2,101 +2,66 @@
 
 #include "VKExt.h"
 
-void VKExt::CreateIndirectBuffer_Vertices(const uint32_t Count)
+void VKExt::CreateIndirectBuffer_Draw(const uint32_t Count)
 {
-	const VkDrawIndirectCommand Command = {
-		Count, 1, 0, 0
-	};
-	const auto Stride = sizeof(Command);
+	const VkDrawIndirectCommand Source = { Count, 1, 0, 0 };
+	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<VkDeviceSize>(Stride * 1);
+	const auto CB = CommandBuffers[0];
 
-	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data, const VkCommandBuffer CB) {
-		VkBuffer StagingBuffer = VK_NULL_HANDLE;
-		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
-		{
-			//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
-			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
-			CopyToHostVisibleMemory(StagingDeviceMemory, Size, Data);
-			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
-
-			//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
-			CreateBuffer(Buffer, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-			CreateDeviceLocalMemory(DeviceMemory, *Buffer);
-			BindDeviceMemory(*Buffer, *DeviceMemory);
-
-			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
-			SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
-		}
-		if (VK_NULL_HANDLE != StagingDeviceMemory) {
-			vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
-		}
-		if (VK_NULL_HANDLE != StagingBuffer) {
-			vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
-		}
-	}(&IndirectBuffer, &IndirectDeviceMemory, Size, &Command, CommandBuffers[0]);
+	CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, Size, &Source, CB);
 }
-void VKExt::CreateIndirectBuffer_Indexed(const uint32_t Count)
+void VKExt::CreateIndirectBuffer_DrawIndexed(const uint32_t Count)
 {
-	const VkDrawIndexedIndirectCommand Command = {
-		Count, 1, 0, 0, 0
-	};
-	const auto Stride = sizeof(Command);
+	const VkDrawIndexedIndirectCommand Source = { Count, 1, 0, 0, 0 };
+	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<VkDeviceSize>(Stride * 1);
+	const auto CB = CommandBuffers[0];
 
-	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data, const VkCommandBuffer CB) {
-		VkBuffer StagingBuffer = VK_NULL_HANDLE;
-		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
-		{
-			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
-			CopyToHostVisibleMemory(StagingDeviceMemory, Size, Data);
-			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
-
-			CreateBuffer(Buffer, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-			CreateDeviceLocalMemory(DeviceMemory, *Buffer);
-			BindDeviceMemory(*Buffer, *DeviceMemory);
-
-			SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
-		}
-		if (VK_NULL_HANDLE != StagingDeviceMemory) {
-			vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
-		}
-		if (VK_NULL_HANDLE != StagingBuffer) {
-			vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
-		}
-	}(&IndirectBuffer, &IndirectDeviceMemory, Size, &Command, CommandBuffers[0]);
+	CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, Size, &Source, CB);
 }
 void VKExt::CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z)
 {
-	const VkDispatchIndirectCommand Command = {
-		X, Y, Z
-	};
-	const auto Stride = sizeof(Command);
+	const VkDispatchIndirectCommand Source = { X, Y, Z };
+	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<VkDeviceSize>(Stride * 1);
+	const auto CB = CommandBuffers[0];//ComputeCommandBuffers[0];
 
-	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data, const VkCommandBuffer CB) {
-		VkBuffer StagingBuffer = VK_NULL_HANDLE;
-		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
+	CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, Size, &Source, CB);
+}
+
+void VKExt::CreateDescriptorSetLayoutBindings_1UB(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags /*= VK_SHADER_STAGE_ALL_GRAPHICS*/) const
+{
+	DescriptorSetLayoutBindings = {
 		{
-			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
-			CopyToHostVisibleMemory(StagingDeviceMemory, Size, Data);
-			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
-
-			CreateBuffer(Buffer, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-			CreateDeviceLocalMemory(DeviceMemory, *Buffer);
-			BindDeviceMemory(*Buffer, *DeviceMemory);
-
-			SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
-		}
-		if (VK_NULL_HANDLE != StagingDeviceMemory) {
-			vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
-		}
-		if (VK_NULL_HANDLE != StagingBuffer) {
-			vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
-		}
-	}(&IndirectBuffer, &IndirectDeviceMemory, Size, &Command, CommandBuffers[0]);
+			0, //!< binding = 0 バインディング Binding
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< タイプ Type
+			1, //!< 個数 Count
+			ShaderStageFlags,
+			nullptr
+		},
+	};
+}
+void VKExt::CreateDescriptorPoolSizes_1UB(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const
+{
+	DescriptorPoolSizes = {
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+	};
+}
+void VKExt::CreateWriteDescriptorSets_1UB(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos) const
+{
+	WriteDescriptorSets = {
+		{
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			nullptr,
+			DescriptorSets[0], 0, 0, //!< デスクリプタセット、バインディングポイント、配列の場合の添字(配列でなければ0)
+			static_cast<uint32_t>(DescriptorBufferInfos.size()),
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			nullptr,
+			DescriptorBufferInfos.data(),
+			nullptr
+		},
+	};
 }
 void VKExt::UpdateDescriptorSet_1UB()
 {
@@ -119,6 +84,40 @@ void VKExt::UpdateDescriptorSet_1UB()
 			static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
 	}(UniformBuffer);
 }
+
+void VKExt::CreateDescriptorSetLayoutBindings_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags /*= VK_SHADER_STAGE_ALL_GRAPHICS*/) const
+{
+	DescriptorSetLayoutBindings = {
+		{
+			0, //!< binding = 0
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			1,
+			ShaderStageFlags,
+			nullptr
+		},
+	};
+}
+void VKExt::CreateDescriptorPoolSizes_1CIS(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const
+{
+	DescriptorPoolSizes = {
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
+	};
+}
+void VKExt::CreateWriteDescriptorSets_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const
+{
+	WriteDescriptorSets = {
+		{
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			nullptr,
+			DescriptorSets[0], 0, 0,
+			static_cast<uint32_t>(DescriptorImageInfos.size()),
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			DescriptorImageInfos.data(),
+			nullptr,
+			nullptr
+		},
+	};
+}
 void VKExt::UpdateDescriptorSet_1CIS()
 {
 	[&](const VkImageView ImageView, const VkSampler Sampler) {
@@ -140,6 +139,58 @@ void VKExt::UpdateDescriptorSet_1CIS()
 			static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
 
 	}(ImageView, Samplers[0]);
+}
+
+void VKExt::CreateDescriptorSetLayoutBindings_1UB_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags_UB /*= VK_SHADER_STAGE_ALL_GRAPHICS*/, const VkShaderStageFlags ShaderStageFlags_CIS /*= VK_SHADER_STAGE_ALL_GRAPHICS*/) const
+{
+	DescriptorSetLayoutBindings = {
+		{
+			0, //!< binding = 0
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			1,
+			ShaderStageFlags_UB,
+			nullptr
+		},
+		{
+			1, //!< binding = 1
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			1,
+			ShaderStageFlags_CIS,
+			nullptr
+		}
+	};
+}
+void VKExt::CreateDescriptorPoolSizes_1UB_1CIS(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const
+{
+	DescriptorPoolSizes = {
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
+	};
+}
+void VKExt::CreateWriteDescriptorSets_1UB_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const
+{
+	WriteDescriptorSets = {
+		{
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			nullptr,
+			DescriptorSets[0], 0, 0,
+			static_cast<uint32_t>(DescriptorBufferInfos.size()),
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			nullptr,
+			DescriptorBufferInfos.data(),
+			nullptr
+			},
+		{
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			nullptr,
+			DescriptorSets[0], 1, 0,
+			static_cast<uint32_t>(DescriptorImageInfos.size()),
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			DescriptorImageInfos.data(),
+			nullptr,
+			nullptr
+		},
+	};
 }
 void VKExt::UpdateDescriptorSet_1UB_1CIS()
 {
@@ -170,9 +221,42 @@ void VKExt::UpdateDescriptorSet_1UB_1CIS()
 			static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
 	}(UniformBuffer, ImageView, Samplers[0]);
 }
+
+void VKExt::CreateDescriptorSetLayoutBindings_1SI(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags /*= VK_SHADER_STAGE_ALL_GRAPHICS*/) const
+{
+	DescriptorSetLayoutBindings = {
+		{
+			0, //!< binding = 0
+			VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+			1,
+			ShaderStageFlags,
+			nullptr
+		},
+	};
+}
+void VKExt::CreateDescriptorPoolSizes_1SI(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const
+{
+	DescriptorPoolSizes = {
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
+	};
+}
+void VKExt::CreateWriteDescriptorSets_1SI(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const
+{
+	WriteDescriptorSets = {
+		{
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			nullptr,
+			DescriptorSets[0], 0, 0,
+			static_cast<uint32_t>(DescriptorImageInfos.size()),
+			VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+			DescriptorImageInfos.data(),
+			nullptr,
+			nullptr
+		},
+	};
+}
 void VKExt::UpdateDescriptorSet_1SI()
 {
-	//!< #VK_TODO
 	[&](const VkImageView ImageView) {
 		std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
 		const std::vector<VkDescriptorImageInfo> DescriptorImageInfos = {
@@ -192,6 +276,7 @@ void VKExt::UpdateDescriptorSet_1SI()
 			static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
 	}(ImageView);
 }
+
 void VKExt::CreateSampler_LR(VkSampler* Sampler, const float MaxLOD) const
 {
 	[&](VkSampler* Sampler, const float MaxLOD) {

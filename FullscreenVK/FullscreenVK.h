@@ -17,7 +17,7 @@ public:
 
 protected:
 #ifdef USE_DRAW_INDIRECT
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Vertices(4); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4); }
 #endif
 
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {

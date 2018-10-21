@@ -232,13 +232,13 @@ void ComputeDX::PopulateCommandList(const size_t i)
 
 	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
 	{
-		//if (nullptr != UnorderedAccessTextureDescriptorHeap) {
-		//	const std::vector<ID3D12DescriptorHeap*> DH = { UnorderedAccessTextureDescriptorHeap.Get() };
-		//	CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
+		if (nullptr != UnorderedAccessTextureDescriptorHeap) {
+			const std::vector<ID3D12DescriptorHeap*> DH = { UnorderedAccessTextureDescriptorHeap.Get() };
+			CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
 
-		//	const auto Handle = GetGPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		//	CL->SetGraphicsRootDescriptorTable(0, Handle);
-		//}
+			const auto Handle = GetGPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			CL->SetGraphicsRootDescriptorTable(0, Handle);
+		}
 
 		CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
 	}

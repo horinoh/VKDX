@@ -273,14 +273,14 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
 			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
 			CopyToHostVisibleMemory(StagingDeviceMemory, Size, GLITexture.data());
-			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
+			BindMemory(StagingBuffer, StagingDeviceMemory);
 
 			//!< (前レンダーパスで)レンダーターゲット(アタッチメント)として使われたものを(レンダーパス中で)入力として使う場合 VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT を指定
 			const VkImageUsageFlags Usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT/*| VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT*/;
 			//!< デバイスローカルのイメージとメモリを作成 Create device local image and memory
 			CreateImage(Image, Usage, VK_SAMPLE_COUNT_1_BIT, GLITexture);
 			CreateDeviceLocalMemory(DeviceMemory, *Image);
-			BindDeviceMemory(*Image, *DeviceMemory);
+			BindMemory(*Image, *DeviceMemory);
 
 			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command from host visible to device local
 			SubmitCopyImage(CB, StagingBuffer, *Image, GLITexture);

@@ -14,7 +14,7 @@ public:
 	virtual ~TextureDX() {}
 
 protected:
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Vertices(4); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4); }
 
 	virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
 		CreateRootParameters_1SRV(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_PIXEL);

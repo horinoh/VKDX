@@ -244,12 +244,12 @@ void TriangleVK::CreateVertexBuffer()
 			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
 			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
 			CopyToHostVisibleMemory(StagingDeviceMemory, Size, Data);
-			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
+			BindMemory(StagingBuffer, StagingDeviceMemory);
 
 			//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
 			CreateBuffer(Buffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
 			CreateDeviceLocalMemory(DeviceMemory, *Buffer);
-			BindDeviceMemory(*Buffer, *DeviceMemory);
+			BindMemory(*Buffer, *DeviceMemory);
 
 			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
 			SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
@@ -290,12 +290,12 @@ void TriangleVK::CreateIndexBuffer()
 			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
 			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
 			CopyToHostVisibleMemory(StagingDeviceMemory, Size, Data);
-			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
+			BindMemory(StagingBuffer, StagingDeviceMemory);
 
 			//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
 			CreateBuffer(Buffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
 			CreateDeviceLocalMemory(DeviceMemory, *Buffer);
-			BindDeviceMemory(*Buffer, *DeviceMemory);
+			BindMemory(*Buffer, *DeviceMemory);
 
 			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
 			SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);

@@ -14,7 +14,7 @@ public:
 	virtual ~TextureVK() {}
 
 protected:
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Vertices(4); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4); }
 
 	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const override {
 		CreateDescriptorSetLayoutBindings_1CIS(DescriptorSetLayoutBindings, VK_SHADER_STAGE_FRAGMENT_BIT);

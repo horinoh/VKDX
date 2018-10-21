@@ -10,43 +10,14 @@ public:
 	using Vertex_Position = struct Vertex_Position { glm::vec3 Position; };
 	using Vertex_PositionColor = struct Vertex_PositionColor { glm::vec3 Position; glm::vec4 Color; };
 
-	void CreateIndirectBuffer_Vertices(const uint32_t Count);
-	void CreateIndirectBuffer_Indexed(const uint32_t Count);
+	void CreateIndirectBuffer_Draw(const uint32_t Count);
+	void CreateIndirectBuffer_DrawIndexed(const uint32_t Count);
 	void CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z);
 
-	/*
-	@brief １つのユニフォームバッファ One uniform buffer
-	*/
-	void CreateDescriptorSetLayoutBindings_1UB(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const {
-		DescriptorSetLayoutBindings = {
-			{
-				0, //!< binding = 0 バインディング Binding
-				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< タイプ Type
-				1, //!< 個数 Count
-				ShaderStageFlags,
-				nullptr
-			},
-		};
-	}
-	void CreateDescriptorPoolSizes_1UB(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {
-		DescriptorPoolSizes = {
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-		};
-	}
-	void CreateWriteDescriptorSets_1UB(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos) const {
-		WriteDescriptorSets = {
-			{
-				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				nullptr,
-				DescriptorSets[0], 0, 0, //!< デスクリプタセット、バインディングポイント、配列の場合の添字(配列でなければ0)
-				static_cast<uint32_t>(DescriptorBufferInfos.size()),
-				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				nullptr,
-				DescriptorBufferInfos.data(),
-				nullptr
-			},
-		};
-	}
+	//!<１つのユニフォームバッファ One uniform buffer
+	void CreateDescriptorSetLayoutBindings_1UB(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const;
+	void CreateDescriptorPoolSizes_1UB(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const;
+	void CreateWriteDescriptorSets_1UB(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos) const;
 	void UpdateDescriptorSet_1UB();
 
 	/** 
@@ -86,153 +57,30 @@ public:
 		layout (input_attachment_index=0, set=0, binding=0) uniform subpassInput MySubpassInput;
 
 	*/
-	/*
-	@brief １つのコンバインドイメージサンプラ(イメージ + サンプラ) One combined image sampler
-	*/
-	void CreateDescriptorSetLayoutBindings_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const {
-		DescriptorSetLayoutBindings = {
-			{
-				0, //!< binding = 0
-				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				1,
-				ShaderStageFlags,
-				nullptr
-			},
-		};
-	}
-	void CreateDescriptorPoolSizes_1CIS(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {
-		DescriptorPoolSizes = {
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
-		};
-	}
-	void CreateWriteDescriptorSets_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const {
-		WriteDescriptorSets = {
-			{
-				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				nullptr,
-				DescriptorSets[0], 0, 0,
-				static_cast<uint32_t>(DescriptorImageInfos.size()),
-				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				DescriptorImageInfos.data(),
-				nullptr,
-				nullptr
-			},
-		};
-	}
+	//!< １つのコンバインドイメージサンプラ(イメージ + サンプラ) One combined image sampler
+	void CreateDescriptorSetLayoutBindings_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const;
+	void CreateDescriptorPoolSizes_1CIS(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const;
+	void CreateWriteDescriptorSets_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const;
 	void UpdateDescriptorSet_1CIS();
 
-	/*
-	@brief 1つのユニフォームバッファと1つのコンバインドイメージサンプラ One uniform buffer and one combined image sampler 
-	*/
-	void CreateDescriptorSetLayoutBindings_1UB_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags_UB = VK_SHADER_STAGE_ALL_GRAPHICS, const VkShaderStageFlags ShaderStageFlags_CIS = VK_SHADER_STAGE_ALL_GRAPHICS) const {
-		DescriptorSetLayoutBindings = {
-			{
-				0, //!< binding = 0
-				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				1,
-				ShaderStageFlags_UB,
-				nullptr
-			},
-			{
-				1, //!< binding = 1
-				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				1,
-				ShaderStageFlags_CIS,
-				nullptr
-			}
-		};
-	}
-	void CreateDescriptorPoolSizes_1UB_1CIS(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {
-		DescriptorPoolSizes = {
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
-		};
-	}
-	void CreateWriteDescriptorSets_1UB_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const {
-		WriteDescriptorSets = {
-			{
-				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				nullptr,
-				DescriptorSets[0], 0, 0,
-				static_cast<uint32_t>(DescriptorBufferInfos.size()),
-				VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				nullptr,
-				DescriptorBufferInfos.data(),
-				nullptr
-				},
-			{
-				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				nullptr,
-				DescriptorSets[0], 1, 0,
-				static_cast<uint32_t>(DescriptorImageInfos.size()),
-				VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				DescriptorImageInfos.data(),
-				nullptr,
-				nullptr
-			},
-		};
-	}
+	//!< 1つのユニフォームバッファと1つのコンバインドイメージサンプラ One uniform buffer and one combined image sampler 
+	void CreateDescriptorSetLayoutBindings_1UB_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags_UB = VK_SHADER_STAGE_ALL_GRAPHICS, const VkShaderStageFlags ShaderStageFlags_CIS = VK_SHADER_STAGE_ALL_GRAPHICS) const;
+	void CreateDescriptorPoolSizes_1UB_1CIS(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const;
+	void CreateWriteDescriptorSets_1UB_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const;
 	void UpdateDescriptorSet_1UB_1CIS();
 
-	/*
-	@brief １つのストレージイメージ One storage image
-	*/
-	void CreateDescriptorSetLayoutBindings_1SI(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const {
-		DescriptorSetLayoutBindings = {
-			{
-				0, //!< binding = 0
-				VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-				1,
-				ShaderStageFlags,
-				nullptr
-			},
-		};
-	}
-	void CreateDescriptorPoolSizes_1SI(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {
-		DescriptorPoolSizes = {
-			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
-		};
-	}
-	void CreateWriteDescriptorSets_1SI(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const {
-		WriteDescriptorSets = {
-			{
-				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				nullptr,
-				DescriptorSets[0], 0, 0,
-				static_cast<uint32_t>(DescriptorImageInfos.size()),
-				VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-				DescriptorImageInfos.data(),
-				nullptr,
-				nullptr
-			},
-		};
-	}
+	//!< １つのストレージイメージ One storage image
+	void CreateDescriptorSetLayoutBindings_1SI(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const;
+	void CreateDescriptorPoolSizes_1SI(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const;
+	void CreateWriteDescriptorSets_1SI(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const;
 	void UpdateDescriptorSet_1SI();
 
 	//!< LinearRepeat
 	void CreateSampler_LR(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const;
 
-	template<typename T>
-	void CreateVertexInputT(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding) const {}
-	template<>
-	void CreateVertexInputT<Vertex_Position>(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding) const {
-		VertexInputBindingDescriptions = {
-			{ Binding, sizeof(Vertex_Position), VK_VERTEX_INPUT_RATE_VERTEX } //!< バーテックス毎(インスタンス毎にする場合にはVK_VERTEX_INPUT_RATE_INSTANCEを使用する)
-		};
-		VertexInputAttributeDescriptions = {
-			{ 0, Binding, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_Position, Position) }, //!< layout (location = 0) in vec3 InPosition
-		};
-	}
-	template<>
-	void CreateVertexInputT<Vertex_PositionColor>(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding) const {
-		VertexInputBindingDescriptions = {
-			{ Binding, sizeof(Vertex_PositionColor), VK_VERTEX_INPUT_RATE_VERTEX }
-		};
-		VertexInputAttributeDescriptions = {
-			{ 0, Binding, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_PositionColor, Position) }, //!< layout(location = 0) in vec3 InPosition;
-			{ 1, Binding, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Vertex_PositionColor, Color) }, //!< layout(location = 1) in vec4 InColor
-		};
-	}
+	template<typename T> void CreateVertexInputBinding(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding) const {}
+	//!< ↓ここでテンプレート特殊化している Template specialization here
+#include "VKVertexInput.inl"
 
 	virtual void CreateRenderPass() { CreateRenderPass_Color(); }
 	void CreateRenderPass_Color();
@@ -258,7 +106,7 @@ public:
 			CreateHostVisibleMemory(DeviceMemory, *Buffer);
 			CopyToHostVisibleMemory(*DeviceMemory, Size, Data);
 
-			BindDeviceMemory(*Buffer, *DeviceMemory);
+			BindMemory(*Buffer, *DeviceMemory);
 
 			//!< View は必要ない No need view
 
