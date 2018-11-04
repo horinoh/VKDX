@@ -112,7 +112,7 @@ public:
 
 		}(&UniformBuffer, &UniformDeviceMemory, Size, &Type);
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 		std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 	}

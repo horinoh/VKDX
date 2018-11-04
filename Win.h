@@ -21,6 +21,9 @@
 #ifndef DEBUG_STDOUT
 #define DEBUG_STDOUT
 #endif
+#ifndef DEBUG_OUTPUT
+#define DEBUG_OUTPUT
+#endif
 #endif
 
 #include <iostream>
@@ -86,15 +89,30 @@ public:
 
 	std::wstring GetBasePath() const { return TEXT(".\\") + GetTitleW(); }
 
-	static void ShowMessageBox(HWND hWnd, const std::string Message);
-	static void ShowMessageBoxW(HWND hWnd, const std::wstring Message);
-
+	static void ShowMessageBox(HWND hWnd, const char* Str) { MessageBox(hWnd, std::wstring(&Str[0], &Str[strlen(Str)]).c_str(), TEXT("CAPTION"), MB_OK); }
 #ifdef DEBUG_STDOUT
-	static void SetColor(const WORD Color = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE) {
+	static void SetColor(const WORD Color = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE) { 
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), Color | FOREGROUND_INTENSITY);
 	}
-	int Printf(const char* Format, ...);
 #endif
+	enum class LogType : unsigned char
+	{
+		Log,
+		Warning,
+		Error,
+	};
+private:
+	static void Log(const LogType Type, const char* Str);
+	static void Logf(const LogType Type, const char* Format, ...);
+public:
+	static void Log(const char* Str) { Log(LogType::Log, Str); }
+	static void Warning(const char* Str) { Log(LogType::Warning, Str); }
+	static void Error(const char* Str) { Log(LogType::Error, Str); }
+	template <typename ... T> static void Logf(const char *Format, T const & ... Args) { Logf(LogType::Log, Format, Args ...); }
+	template <typename ... T> static void Warningf(const char *Format, T const & ... Args) { Logf(LogType::Warning, Format, Args ...); }
+	template <typename ... T> static void Errorf(const char *Format, T const & ... Args) { Logf(LogType::Error, Format, Args ...); }
+	static void LogOK(const char* Str);
+	static void LogNG(const char* Str);
 
 	//!< #TODO_WIN •Ê‚ÉWindowsŠÖŒW‚È‚¢
 	static size_t RoundUp(const size_t Size, const uint16_t Aligh) { return (Size + Aligh) & ~Aligh; }
@@ -103,9 +121,11 @@ protected:
 	RECT Rect;
 	std::wstring TitleW;
 
+#ifdef DEBUG_STDOUT
 private:
 	FILE* StdOut = nullptr; 
 	FILE* StdErr = nullptr;
+#endif
 };
 
 #ifdef _DEBUG

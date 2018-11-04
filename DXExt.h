@@ -236,7 +236,7 @@ public:
 		CreateUploadResource(ConstantBufferResource.GetAddressOf(), Size);
 		CopyToUploadResource(ConstantBufferResource.Get(), Size, &Type);
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 		std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 	}

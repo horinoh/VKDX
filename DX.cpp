@@ -373,9 +373,7 @@ void DX::CreateDevice(HWND hWnd)
 		VERIFY_SUCCEEDED(CreateMaxFeatureLevelDevice(Adapter.Get()));
 	}
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateDevice");
 
 #ifdef _DEBUG
 	CheckFeatureLevel();
@@ -541,9 +539,7 @@ void DX::CreateCommandQueue()
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(CommandQueue.GetAddressOf())));
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateCommandQueue" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateCommandQueue");
 }
 
 /**
@@ -553,9 +549,7 @@ void DX::CreateFence()
 {
 	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(Fence.GetAddressOf())));
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateFence" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateFence");
 }
 
 /**
@@ -597,9 +591,7 @@ void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const size_
 		VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
 	}
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateCommandList" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateCommandList");
 }
 
 void DX::CreateCommandList()
@@ -667,9 +659,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 		}(Type, Count, SwapChainDescriptorHeap.GetAddressOf());
 	}
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateSwapChain" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateSwapChain");
 }
 void DX::CreateSwapChainResource()
 {
@@ -697,9 +687,7 @@ void DX::CreateSwapChainResource()
 		Device->CreateRenderTargetView(SCR, nullptr, CDH);
 	}
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateSwapChainResource" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateSwapChainResource");
 }
 
 /**
@@ -736,9 +724,7 @@ void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, cons
 
 	WaitForFence();
 
-#ifdef DEBUG_STDOUT
-	std::cout << "InitializeSwapchainImage" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("InitializeSwapchainImage");
 }
 
 void DX::InitializeSwapChain()
@@ -763,9 +749,7 @@ void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 
 	CreateSwapChainResource();
 
-#ifdef DEBUG_STDOUT
-	std::cout << "ResizeSwapChain" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("ResizeSwapChain");
 }
 
 void DX::CreateDepthStencil(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat)
@@ -784,9 +768,7 @@ void DX::CreateDepthStencil(const UINT Width, const UINT Height, const DXGI_FORM
 
 	CreateDepthStencilResource(Width, Height, DepthFormat);
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateDepthStencil");
 }
 
 void DX::CreateDepthStencilResource(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat)
@@ -836,9 +818,7 @@ void DX::CreateDepthStencilResource(const UINT Width, const UINT Height, const D
 	auto CL = GraphicsCommandLists[0];
 	ResourceBarrier(CL.Get(), DepthStencilResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateDepthStencilResource" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateDepthStencilResource");
 }
 void DX::ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat)
 {
@@ -846,9 +826,7 @@ void DX::ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORM
 
 	CreateDepthStencilResource(Width, Height, DepthFormat);
 
-#ifdef DEBUG_STDOUT
-	std::cout << "ResizeDepthStencil" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("ResizeDepthStencil");
 }
 
 void DX::CreateIndirectBuffer(ID3D12Resource** Resource, const UINT32 Size, const void* Source, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL)
@@ -882,9 +860,7 @@ void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDe
 		}
 	};
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateViewport" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateViewport");
 }
 
 //void DX::CreateRootSignature(ID3D12RootSignature** RootSignature) const
@@ -922,9 +898,7 @@ GraphicsCommandList->SetGraphicsRootDescriptorTable(0, CVDescriptorHandle);
 */
 void DX::CreateConstantBuffer()
 {
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateConstantBuffer");
 }
 
 void DX::CreateUnorderedAccessTexture()
@@ -994,9 +968,7 @@ void DX::CreateUnorderedAccessTexture()
 		Device->CreateUnorderedAccessView(UnorderedAccessTextureResource.Get(), nullptr, &UAVDesc, CDH);
 	}
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateUnorderedAccessBuffer" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateUnorderedAccessBuffer");
 }
 
 /**
@@ -1052,9 +1024,7 @@ void DX::CreateRootSignature()
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
 	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateRootSignature" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateRootSignature");
 }
 
 void DX::CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const
@@ -1245,9 +1215,7 @@ void DX::CreatePipelineState_Graphics()
 		StorePipelineLibrary(PCOPath);
 	}
 
-#ifdef _DEBUG
-	std::cout << "CreatePipelineState_Graphics" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreatePipelineState_Graphics");
 }
 
 void DX::CreatePipelineState_Compute()
@@ -1273,9 +1241,7 @@ void DX::CreatePipelineState_Compute()
 	};
 	VERIFY_SUCCEEDED(Device->CreateComputePipelineState(&ComputePipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreatePipelineState_Compute" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreatePipelineState_Compute");
 }
 
 void DX::ClearColor(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const DirectX::XMVECTORF32& Color)

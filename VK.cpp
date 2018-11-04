@@ -659,15 +659,11 @@ void VK::CreateImageView(VkImageView* ImageView, const VkImage Image, const VkIm
 	};
 	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, GetAllocationCallbacks(), ImageView));
 
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "\t" << "ImageViewType = " << GetImageViewTypeString(ImageViewType) << std::endl;
-	std::cout << "\t" << "\t" << "Format = " << GetFormatString(Format) << std::endl;
-	std::cout << "\t" << "\t" << "ComponentMapping = (" << GetComponentMappingString(ComponentMapping) << ")" << std::endl;
-#endif
+	Logf("\t\tImageViewType = %s\n", GetImageViewTypeString(ImageViewType).c_str());
+	Logf("\t\tFormat = %s\n", GetFormatString(Format).c_str());
+	Logf("\t\tComponentMapping = (%s)\n", GetComponentMappingString(ComponentMapping).c_str());
 
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "CreateImageView" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateImageView");
 }
 
 void VK::CreateBufferView(VkBufferView* BufferView, const VkBuffer Buffer, const VkFormat Format, const VkDeviceSize Offset, const VkDeviceSize Range)
@@ -686,21 +682,20 @@ void VK::CreateBufferView(VkBufferView* BufferView, const VkBuffer Buffer, const
 
 void VK::ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat Format) const
 {
-#ifdef _DEBUG
 	VkFormatProperties FormatProperties;
 	vkGetPhysicalDeviceFormatProperties(PhysicalDevice, Format, &FormatProperties);
 
 	//!< サンプルドイメージでは全てのフォーマットがサポートされてるわけではない Not all formats are supported for sampled images
 	if (Usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
 		if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
-			std::cout << Yellow << "VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT not supported" << White << std::endl;
+			Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT not supported\n");
 			DEBUG_BREAK();
 		}
 		//!< #VK_TODO リニア使用時のみチェックする
 		const auto bUseLiner = true;//!< VK_FILTER_LINEAR == VkSamplerCreateInfo.magFilter || VK_FILTER_LINEAR == VkSamplerCreateInfo.minFilter || VK_SAMPLER_MIPMAP_MODE_LINEAR == VkSamplerCreateInfo.mipmapMode;
 		if (bUseLiner) {
 			if (!(FormatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-				std::cout << Red << "VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported" << White << std::endl;
+				Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported\n");
 				DEBUG_BREAK();
 			}
 		}
@@ -708,14 +703,14 @@ void VK::ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat 
 
 	if (Usage & VK_IMAGE_USAGE_STORAGE_BIT) {
 		if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
-			std::cout << Red << "VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT not supported" << White << std::endl;
+			Error("VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT not supported\n");
 			DEBUG_BREAK();
 		}
 		//!< #VK_TODO アトミック使用時のみチェックする
 		const auto bUseAtomic = false; 
 		if (bUseAtomic) {
 			if (!(FormatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)) {
-				std::cout << Red << "VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT not supported" << White << std::endl;
+				Error("VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT not supported\n");
 				DEBUG_BREAK();
 			}
 		}
@@ -726,14 +721,14 @@ void VK::ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat 
 		if (true) {
 			//!< カラーの場合 In case color
 			if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) {
-				std::cout << Red << "VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT not supported" << White << std::endl;
+				Error("VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT not supported\n");
 				DEBUG_BREAK();
 			}
 		}
 		else {
 			//!< デプスステンシルの場合 In case depth stencil
 			if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
-				std::cout << Red << "VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT not supported" << White << std::endl;
+				Error("VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT not supported\n");
 				DEBUG_BREAK();
 			}
 		}
@@ -741,26 +736,25 @@ void VK::ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat 
 
 	if (Usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) {
 		if (!(FormatProperties.bufferFeatures &  VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)) {
-			std::cout << Red << "VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT not supported" << White << std::endl;
+			Error("VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT not supported\n");
 			DEBUG_BREAK();
 		}
 	}
 
 	if (Usage & VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT) {
 		if (!(FormatProperties.bufferFeatures &  VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT)) {
-			std::cout << Red << "VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT not supported" << White << std::endl;
+			Error("VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT not supported\n");
 			DEBUG_BREAK();
 		}
 		//!< #VK_TODO アトミック使用時のみチェックする
 		const auto bUseAtomic = false;
 		if (bUseAtomic) {
 			if (!(FormatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT)) {
-				std::cout << Red << "VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT not supported" << White << std::endl;
+				Error("VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT not supported\n");
 				DEBUG_BREAK();
 			}
 		}
 	}
-#endif //!< _DEBUG
 }
 
 void VK::EnumerateInstanceLayer()
@@ -771,11 +765,9 @@ void VK::EnumerateInstanceLayer()
 		std::vector<VkLayerProperties> LayerProperties(InstanceLayerPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&InstanceLayerPropertyCount, LayerProperties.data()));
 		for (const auto& i : LayerProperties) {
-#ifdef DEBUG_STDOUT
 			if (strlen(i.layerName)) {
-				std::cout << "\t" << "\"" << i.layerName << "\"" << std::endl;
+				Logf("\t\"%s\"\n", i.layerName);
 			}
-#endif
 			EnumerateInstanceExtenstion(i.layerName);
 		}
 	}
@@ -788,11 +780,9 @@ void VK::EnumerateInstanceExtenstion(const char* layerName)
 		std::vector<VkExtensionProperties> ExtensionProperties(InstanceExtensionPropertyCount);
 		VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(layerName, &InstanceExtensionPropertyCount, ExtensionProperties.data()));
 		for (const auto& i : ExtensionProperties) {
-#ifdef DEBUG_STDOUT
 			if (strlen(i.extensionName)) {
-				std::cout << "\t" << "\t" << "\"" << i.extensionName << "\"" << std::endl;
+				Logf("\t\t\"%s\"\n", i.extensionName);
 			}
-#endif
 		}
 	}
 }
@@ -816,12 +806,10 @@ void VK::CreateInstance()
 	//!< ここでは、最新バージョンでのみ動くようにしておく Use latest version here
 	uint32_t APIVersion/* = VK_API_VERSION_1_1*/;
 	VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
-#ifdef DEBUG_STDOUT
 	const auto MajorVersion = VK_VERSION_MAJOR(APIVersion);
 	const auto MinorVersion = VK_VERSION_MINOR(APIVersion);
 	const auto PatchVersion = VK_VERSION_PATCH(APIVersion);
-	std::cout << "API Version = " << MajorVersion << "." << MinorVersion << ".(Header = " << VK_HEADER_VERSION  << ")" << " (Patch = " << PatchVersion <<")" << std::endl << std::endl;
-#endif
+	Logf("API Version = %d.%d.(Header = %d)(Patch = %d)\n", MajorVersion, MinorVersion, VK_HEADER_VERSION, PatchVersion);
 
 	const auto ApplicationName = GetTitle();
 	const VkApplicationInfo ApplicationInfo = {
@@ -875,9 +863,7 @@ void VK::CreateInstance()
 	CreateDebugReportCallback();
 #endif
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateInstace" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateInstance");
 }
 
 #ifdef _DEBUG
@@ -902,24 +888,24 @@ void VK::CreateDebugReportCallback()
 					using namespace std;
 					if (VK_DEBUG_REPORT_ERROR_BIT_EXT & flags) {
 						DEBUG_BREAK();
-						cout << Red << "[ DebugReport ] : " << pMessage << White << endl;
+						Errorf("%s\n", pMessage);
 						return VK_TRUE;
 					}
 					else if (VK_DEBUG_REPORT_WARNING_BIT_EXT & flags) {
 						DEBUG_BREAK();
-						cout << Yellow << "[ DebugReport ] : " << pMessage << White << endl;
+						Warningf("%s\n", pMessage);
 						return VK_TRUE;
 					}
 					else if (VK_DEBUG_REPORT_INFORMATION_BIT_EXT & flags) {
-						//cout << Green << "[ DebugReport ] : " << pMessage << White << endl;
+						//Logf(" %s\n", pMessage);
 					}
 					else if (VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT & flags) {
 						DEBUG_BREAK();
-						cout << Yellow << "[ DebugReport ] : " << pMessage << White << endl;
+						Logf("%s\n", pMessage);
 						return VK_TRUE;
 					}
 					else if (VK_DEBUG_REPORT_DEBUG_BIT_EXT & flags) {
-						//cout << Green << "[ DebugReport ] : " << pMessage << White << endl;
+						//Logf("%s\n", pMessage);
 					}
 					return VK_FALSE;
 			},
@@ -1009,21 +995,18 @@ void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
 	assert(false && "Not supported");
 #endif
 
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "Surface" << std::endl;
-#endif
+	Log("\tCreateSurface");
 }
 void VK::EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties)
 {
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "\t" << "\t" << "MemoryType" << std::endl;
+	Log("\t\t\tMemoryType\n");
 	for (uint32_t i = 0; i < PhysicalDeviceMemoryProperties.memoryTypeCount; ++i) {
-		std::cout << "\t" << "\t" << "\t" << "\t";
-		std::cout << "[" << i << "] ";
-		std::cout << "HeapIndex = " << PhysicalDeviceMemoryProperties.memoryTypes[i].heapIndex;
+		Log("\t\t\t\t");
+		Logf("[%d] HeapIndex = %d", i, PhysicalDeviceMemoryProperties.memoryTypes[i].heapIndex);
+
 		if (PhysicalDeviceMemoryProperties.memoryTypes[i].propertyFlags) {
-			std::cout << ", PropertyFlags = ";
-#define MEMORY_PROPERTY_ENTRY(entry) if(VK_MEMORY_PROPERTY_##entry##_BIT & PhysicalDeviceMemoryProperties.memoryTypes[i].propertyFlags) { std::cout << #entry << " | "; }
+			Log(", PropertyFlags = ");
+#define MEMORY_PROPERTY_ENTRY(entry) if(VK_MEMORY_PROPERTY_##entry##_BIT & PhysicalDeviceMemoryProperties.memoryTypes[i].propertyFlags) { Log(#entry " | "); }
 			MEMORY_PROPERTY_ENTRY(DEVICE_LOCAL);
 			MEMORY_PROPERTY_ENTRY(HOST_VISIBLE);
 			MEMORY_PROPERTY_ENTRY(HOST_COHERENT);
@@ -1031,21 +1014,21 @@ void VK::EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryPro
 			MEMORY_PROPERTY_ENTRY(LAZILY_ALLOCATED);
 #undef MEMORY_PROPERTY_ENTRY
 		}
-		std::cout << std::endl;
+		Log("\n");
 	}
-	std::cout << "\t" << "\t" << "\t" << "MemoryHeap" << std::endl;
+
+	Log("\t\t\tMemoryHeap\n");
 	for (uint32_t i = 0; i < PhysicalDeviceMemoryProperties.memoryHeapCount; ++i) {
-		std::cout << "\t" << "\t" << "\t" << "\t";
-		std::cout << "[" << i << "] ";
-		std::cout << "Size = " << PhysicalDeviceMemoryProperties.memoryHeaps[i].size;
+		Log("\t\t\t\t");
+		Logf("[%d] Size = %d", i, PhysicalDeviceMemoryProperties.memoryHeaps[i].size);
+
 		if (PhysicalDeviceMemoryProperties.memoryHeaps[i].flags) {
-			std::cout << ", Flags = ";
-			if (VK_MEMORY_HEAP_DEVICE_LOCAL_BIT & PhysicalDeviceMemoryProperties.memoryHeaps[i].flags) { std::cout << "DEVICE_LOCAL" << " | "; }
-			if (VK_MEMORY_HEAP_MULTI_INSTANCE_BIT_KHR & PhysicalDeviceMemoryProperties.memoryHeaps[i].flags) { std::cout << "MULTI_INSTANCE" << " | "; }
+			Log(", Flags = ");
+			if (VK_MEMORY_HEAP_DEVICE_LOCAL_BIT & PhysicalDeviceMemoryProperties.memoryHeaps[i].flags) { Log("DEVICE_LOCAL | "); }
+			if (VK_MEMORY_HEAP_MULTI_INSTANCE_BIT_KHR & PhysicalDeviceMemoryProperties.memoryHeaps[i].flags) { Log("MULTI_INSTANCE | "); }
 		}
-		std::cout << std::endl;
+		Log("\n");
 	}
-#endif
 }
 void VK::GetPhysicalDevice()
 {
@@ -1056,76 +1039,65 @@ void VK::GetPhysicalDevice()
 	std::vector<VkPhysicalDevice> PhysicalDevices(PhysicalDeviceCount);
 	VERIFY_SUCCEEDED(vkEnumeratePhysicalDevices(Instance, &PhysicalDeviceCount, PhysicalDevices.data()));
 
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "PhysicalDevices" << std::endl;
-#define PHYSICAL_DEVICE_TYPE_ENTRY(entry) if(VK_PHYSICAL_DEVICE_TYPE_##entry == PhysicalDeviceProperties.deviceType) { std::cout << #entry; }
-#define PROPERTY_LIMITS_ENTRY(entry) std::cout << "\t" << "\t" << "\t" << "\t" << #entry << " = " << PhysicalDeviceProperties.limits.##entry << std::endl
-#define DEVICE_FEATURE_ENTRY(entry) if (PhysicalDeviceFeatures.##entry) { std::cout << "\t" << "\t" << "\t" << "\t" << #entry << std::endl; }
-#endif
+	Log("\tPhysicalDevices\n");
+#define PHYSICAL_DEVICE_TYPE_ENTRY(entry) if(VK_PHYSICAL_DEVICE_TYPE_##entry == PhysicalDeviceProperties.deviceType) { Log(#entry); }
+#define PROPERTY_LIMITS_ENTRY(entry) Logf("\t\t\t\t%s = %d\n", #entry, PhysicalDeviceProperties.limits.##entry);
+#define DEVICE_FEATURE_ENTRY(entry) if (PhysicalDeviceFeatures.##entry) { Log("\t\t\t\t" #entry "\n"); }
 	for (const auto& i : PhysicalDevices) {
 		VkPhysicalDeviceProperties PhysicalDeviceProperties;
 		vkGetPhysicalDeviceProperties(i, &PhysicalDeviceProperties);
-#ifdef DEBUG_STDOUT
-		std::cout << "\t" << "\t" << "Version = " << VK_VERSION_MAJOR(PhysicalDeviceProperties.apiVersion) << "." << VK_VERSION_MINOR(PhysicalDeviceProperties.apiVersion) << " (Patch = " << VK_VERSION_PATCH(PhysicalDeviceProperties.apiVersion) << ")" << std::endl;
-#endif
+
+		Log("\t\tVersion = ");
+		Logf("%d.%d(Patch = %d)\n", VK_VERSION_MAJOR(PhysicalDeviceProperties.apiVersion), VK_VERSION_MINOR(PhysicalDeviceProperties.apiVersion), VK_VERSION_PATCH(PhysicalDeviceProperties.apiVersion));
+
 		//!< バージョンチェック Check version
 #ifdef _DEBUG
 		[&](const uint32_t Version) {
 			uint32_t APIVersion;
 			VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
 			if (Version < APIVersion) {
-#ifdef DEBUG_STDOUT
-				std::cout << "\t" << "\t" << Red
-					<< "[ DEVICE ] "
-					<< VK_VERSION_MAJOR(Version) << "." << VK_VERSION_MINOR(Version) << " (Patch = " << VK_VERSION_PATCH(Version) << ")"
-					<< " < "
-					<< VK_VERSION_MAJOR(APIVersion) << "." << VK_VERSION_MINOR(APIVersion) << " (Patch = "<< VK_VERSION_PATCH(APIVersion) << ")"
-					<< " [ INSTANCE ]"
-					<< White << std::endl;
-#endif
+				Log("\t\t");
+				Warningf("[ DEVICE ] %d.%d(Patch = %d) < %d.%d(Patch = %d) [ INSTANCE ]\n",
+					VK_VERSION_MAJOR(Version), VK_VERSION_MINOR(Version), VK_VERSION_PATCH(Version),
+					VK_VERSION_MAJOR(APIVersion), VK_VERSION_MINOR(APIVersion), VK_VERSION_PATCH(APIVersion));
 			}
 		}(PhysicalDeviceProperties.apiVersion);
 #endif
 
-#ifdef DEBUG_STDOUT
-		std::cout << "\t" << "\t" << PhysicalDeviceProperties.deviceName << ", DeviceType = ";
+		Logf("\t\t%s, DeviceType = ", PhysicalDeviceProperties.deviceName);
 		PHYSICAL_DEVICE_TYPE_ENTRY(OTHER);
 		PHYSICAL_DEVICE_TYPE_ENTRY(INTEGRATED_GPU);
 		PHYSICAL_DEVICE_TYPE_ENTRY(DISCRETE_GPU);
 		PHYSICAL_DEVICE_TYPE_ENTRY(VIRTUAL_GPU);
 		PHYSICAL_DEVICE_TYPE_ENTRY(CPU);
-		std::cout << std::endl;
-		{
-			std::cout << "\t" << "\t" << "\t" << "PhysicalDeviceProperties.PhysicalDeviceLimits" << std::endl;
-			PROPERTY_LIMITS_ENTRY(maxUniformBufferRange);
-			//PROPERTY_LIMITS_ENTRY(maxStorageBufferRange);
-			PROPERTY_LIMITS_ENTRY(maxPushConstantsSize);
-			PROPERTY_LIMITS_ENTRY(maxFragmentOutputAttachments);
-			PROPERTY_LIMITS_ENTRY(maxColorAttachments);			
-		}
-#endif
+		Log("\n");
+
+		Log("\t\t\tPhysicalDeviceProperties.PhysicalDeviceLimits\n");
+		PROPERTY_LIMITS_ENTRY(maxUniformBufferRange);
+		//PROPERTY_LIMITS_ENTRY(maxStorageBufferRange);
+		PROPERTY_LIMITS_ENTRY(maxPushConstantsSize);
+		PROPERTY_LIMITS_ENTRY(maxFragmentOutputAttachments);
+		PROPERTY_LIMITS_ENTRY(maxColorAttachments);			
+
 		VkPhysicalDeviceFeatures PhysicalDeviceFeatures;
 		vkGetPhysicalDeviceFeatures(i, &PhysicalDeviceFeatures);
-#ifdef DEBUG_STDOUT
-		std::cout << "\t" << "\t" << "\t" << "PhysicalDeviceFeatures" << std::endl;
+		Log("\t\t\tPhysicalDeviceFeatures\n");
 		DEVICE_FEATURE_ENTRY(textureCompressionBC);
 		DEVICE_FEATURE_ENTRY(textureCompressionETC2);
 		DEVICE_FEATURE_ENTRY(textureCompressionASTC_LDR);
 		DEVICE_FEATURE_ENTRY(fillModeNonSolid);
 		DEVICE_FEATURE_ENTRY(tessellationShader);
-#endif
+
 		VkPhysicalDeviceMemoryProperties PDMP;
 		vkGetPhysicalDeviceMemoryProperties(i, &PDMP);
 		EnumeratePhysicalDeviceMemoryProperties(PDMP);
 		EnumerateDeviceLayer(i);
 
-		std::cout << std::endl;
+		Log("\n");
 	}
-#ifdef DEBUG_STDOUT
 #undef PHYSICAL_DEVICE_TYPE_ENTRY
 #undef PROPERTY_LIMITS_ENTRY
 #undef DEVICE_FEATURE_ENTRY
-#endif
 
 	//!< ここでは最初の物理デバイスを選択することにする #VK_TODO
 	PhysicalDevice = PhysicalDevices[0];
@@ -1458,9 +1430,7 @@ void VK::CreateDevice()
 	}
 #endif
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateDevice" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateDevice");
 }
 
 void VK::CreateFence()
@@ -1473,9 +1443,7 @@ void VK::CreateFence()
 	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, GetAllocationCallbacks(), &Fence));
 	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, GetAllocationCallbacks(), &ComputeFence));
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateFence" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateFence");
 }
 
 /**
@@ -1495,9 +1463,7 @@ void VK::CreateSemaphore()
 	//!< 描画完了同期用 To wait render finish
 	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, GetAllocationCallbacks(), &RenderFinishedSemaphore));
 
-#ifdef _DEBUG
-	std::cout << "CreateSemaphore" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateSemaphore");
 }
 
 //!< キューファミリが異なる場合は、各々別のコマンドプールを用意する必要がある #VK_TODO
@@ -1517,9 +1483,7 @@ void VK::CreateCommandPool(VkCommandPool& CP, const uint32_t QueueFamilyIndex)
 
 	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, GetAllocationCallbacks(), &CP));
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateCommandPool" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateCommandPool");
 }
 
 void VK::AllocateCommandBuffer(std::vector<VkCommandBuffer>& CBs, const VkCommandPool CP, const size_t Count, const VkCommandBufferLevel Level)
@@ -1537,9 +1501,7 @@ void VK::AllocateCommandBuffer(std::vector<VkCommandBuffer>& CBs, const VkComman
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &AllocateInfo, CBs.data()));
 	}
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateCommandBuffer" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateCommandBuffer");
 }
 
 void VK::CreateCommandBuffer()
@@ -1718,9 +1680,8 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 		OldSwapchain
 	};
 	VERIFY_SUCCEEDED(vkCreateSwapchainKHR(Device, &SwapchainCreateInfo, GetAllocationCallbacks(), &Swapchain));
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateSwapchain" << COUT_OK << std::endl << std::endl;
-#endif
+
+	LogOK("CreateSwapchain");
 
 	if (VK_NULL_HANDLE != OldSwapchain) {
 		for (auto i : SwapchainImageViews) {
@@ -1737,9 +1698,8 @@ void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
 	assert(SwapchainImageCount && "Swapchain image count is zero");
 	SwapchainImages.resize(SwapchainImageCount);
 	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &SwapchainImageCount, SwapchainImages.data()));
-#ifdef DEBUG_STDOUT
-	std::cout << "GetSwapchainImages" << COUT_OK << std::endl << std::endl;
-#endif
+
+	LogOK("GetSwapchainImages");
 }
 
 /**
@@ -1824,9 +1784,7 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkC
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 
-#ifdef DEBUG_STDOUT
-	std::cout << "InitializeSwapchainImage" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("InitializeSwapchainImage");
 }
 void VK::InitializeSwapchain()
 {
@@ -1867,9 +1825,7 @@ void VK::CreateSwapchainImageView()
 	std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
 #endif
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateSwapchainImageView" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateSwapchainImageView");
 }
 
 void VK::CreateDepthStencil(const uint32_t Width, const uint32_t Height, const VkFormat DepthFormat)
@@ -1878,9 +1834,7 @@ void VK::CreateDepthStencil(const uint32_t Width, const uint32_t Height, const V
 	CreateDepthStencilDeviceMemory();
 	CreateDepthStencilView(DepthFormat);
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateDepthStencil" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateDepthStencil");
 }
 
 void VK::CreateDepthStencilImage(const uint32_t Width, const uint32_t Height, const VkFormat DepthFormat)
@@ -1924,9 +1878,7 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 		}
 	};
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateViewport" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateViewport");
 }
 
 void VK::CreateIndirectBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB)
@@ -2078,9 +2030,7 @@ void VK::CreateDescriptorSetLayout()
 	//!< set = [0, DescriptorSetLayouts.size()-1]
 	DescriptorSetLayouts.push_back(DescriptorSetLayout);
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateDescriptorSetLayout" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreateDescriptorSetLayout");
 }
 /**
 @brief シェーダとのバインディングのレイアウト
@@ -2126,9 +2076,7 @@ void VK::CreateDescriptorSet()
 		DescriptorSets.resize(DescriptorSetLayouts.size());
 		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, DescriptorSets.data()));
 
-#ifdef DEBUG_STDOUT
-		std::cout << "CreateDescriptorSet" << COUT_OK << std::endl << std::endl;
-#endif
+		LogOK("CreateDescriptorSet");
 	}
 }
 
@@ -2549,9 +2497,7 @@ void VK::CreatePipeline_Graphics()
 	}
 	ShaderModules.clear();
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreatePipeline_Graphics" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreatePipeline_Graphics");
 }
 void VK::CreatePipeline_Compute()
 {
@@ -2604,9 +2550,7 @@ void VK::CreatePipeline_Compute()
 	}
 	ShaderModules.clear();
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreatePipeline_Compute" << COUT_OK << std::endl << std::endl;
-#endif
+	LogOK("CreatePipeline_Compute");
 }
 
 /**

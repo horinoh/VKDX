@@ -269,7 +269,7 @@ void TriangleVK::CreateVertexBuffer()
 	MarkerSetObjectName(Device, VertexBuffer, "MyVertexBuffer");
 #endif
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
@@ -314,7 +314,7 @@ void TriangleVK::CreateIndexBuffer()
 	MarkerSetObjectName(Device, IndexBuffer, "MyIndexBuffer");
 #endif
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }

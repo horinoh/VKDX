@@ -50,30 +50,60 @@ void Win::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 }
 
-void Win::ShowMessageBox(HWND hWnd, const std::string Message)
+void Win::Log(const LogType Type, const char* Str)
 {
-	MessageBox(hWnd, std::wstring(Message.begin(), Message.end()).c_str(), TEXT("VERIFY_SUCCEEDED"), MB_OK);
-}
-void Win::ShowMessageBoxW(HWND hWnd, const std::wstring Message)
-{
-	MessageBox(hWnd, Message.c_str(), TEXT("VERIFY_SUCCEEDED"), MB_OK);
-}
-
 #ifdef DEBUG_STDOUT
-int Win::Printf(const char* Format, ...)
+	switch (Type)
+	{
+	default: break;
+	case LogType::Log: 
+		std::cout << Str;
+		break;
+	case LogType::Warning: 
+		std::cout << Yellow << Str << White; 
+		break;
+	case LogType::Error: 
+		std::cerr << Red << Str << White; 
+		break;
+	}
+#endif
+#ifdef DEBUG_OUTPUT
+	OutputDebugString(std::wstring(&Str[0], &Str[strlen(Str)]).c_str());
+#endif	
+}
+void Win::Logf(const LogType Type, const char* Format, ...)
 {
 	va_list List;
 	va_start(List, Format);
 	static char Buffer[1024];
 	const auto Count = vsnprintf(Buffer, sizeof(Buffer), Format, List);
 	if (Count) {
-		OutputDebugString(std::wstring(&Buffer[0], &Buffer[Count]).c_str());
+		Log(Type, std::string(&Buffer[0], &Buffer[Count]).c_str());
 	}
 	va_end(List);
-
-	return Count;
 }
+
+void Win::LogOK(const char* Str)
+{
+#ifdef DEBUG_STDOUT
+	std::cout << Str << COUT_OK << std::endl;
 #endif
+#ifdef DEBUG_OUTPUT
+	OutputDebugString(std::wstring(&Str[0], &Str[strlen(Str)]).c_str());
+	OutputDebugString(TEXT("[ OK ]\n"));
+#endif	
+}
+void Win::LogNG(const char* Str)
+{
+#ifdef DEBUG_STDOUT
+	std::cerr << Str << COUT_NG << std::endl;
+#endif
+#ifdef DEBUG_OUTPUT
+	OutputDebugString(std::wstring(&Str[0], &Str[strlen(Str)]).c_str());
+	OutputDebugString(TEXT("[ NG ]\n"));
+#endif
+}
+
 
 #ifdef _DEBUG
 PerformanceCounter::PerformanceCounter(const std::string& Label)
