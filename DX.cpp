@@ -365,9 +365,8 @@ void DX::CreateDevice(HWND hWnd)
 #endif
 
 	if (FAILED(CreateMaxFeatureLevelDevice(Adapter.Get()))) {
-#ifdef DEBUG_STDOUT
-		std::cout << "\t" << Red << "Cannot create device, trying to create WarpDevice ..." << White << std::endl;
-#endif
+		Error(TEXT("Cannot create device, trying to create WarpDevice ...\n"));
+
 		//!< WARP : Win7以下だと D3D_FEATURE_LEVEL_10_1 まで、Win8以上だと D3D_FEATURE_LEVEL_11_1 までサポート
 		VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(IID_PPV_ARGS(Adapter.GetAddressOf())));
 		VERIFY_SUCCEEDED(CreateMaxFeatureLevelDevice(Adapter.Get()));
@@ -402,10 +401,8 @@ void DX::EnumAdapter(IDXGIFactory4* Factory)
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, Adapter.ReleaseAndGetAddressOf()); ++i) {
 		DXGI_ADAPTER_DESC AdapterDesc;
 		VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
-#ifdef DEBUG_STDOUT
-		std::wcout << "\t" << AdapterDesc.Description << std::endl;
-		std::cout << "\t" << "\t" << "DedicatedVideoMemory = " << AdapterDesc.DedicatedVideoMemory << std::endl;
-#endif
+		Logf(TEXT("\t%s\n"), AdapterDesc.Description);
+		Logf(TEXT("\t\tDedicatedVideoMemory = %d\n"), AdapterDesc.DedicatedVideoMemory);
 
 		EnumOutput(Adapter.Get());
 	}

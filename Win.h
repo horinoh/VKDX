@@ -89,7 +89,9 @@ public:
 
 	std::wstring GetBasePath() const { return TEXT(".\\") + GetTitleW(); }
 
-	static void ShowMessageBox(HWND hWnd, const char* Str) { MessageBox(hWnd, std::wstring(&Str[0], &Str[strlen(Str)]).c_str(), TEXT("CAPTION"), MB_OK); }
+	static void ShowMessageBox(HWND hWnd, const char* Str) { 
+		MessageBox(hWnd, std::wstring(&Str[0], &Str[strlen(Str)]).c_str(), TEXT("CAPTION"), MB_OK); 
+	}
 #ifdef DEBUG_STDOUT
 	static void SetColor(const WORD Color = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE) { 
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), Color | FOREGROUND_INTENSITY);
@@ -102,17 +104,20 @@ public:
 		Error,
 	};
 private:
-	static void Log(const LogType Type, const char* Str);
-	static void Logf(const LogType Type, const char* Format, ...);
+	template <typename T> static void _Log(const LogType Type, T Str);
+	template <typename T> static void _Logf(const LogType Type, T Format, ...);
 public:
-	static void Log(const char* Str) { Log(LogType::Log, Str); }
-	static void Warning(const char* Str) { Log(LogType::Warning, Str); }
-	static void Error(const char* Str) { Log(LogType::Error, Str); }
-	template <typename ... T> static void Logf(const char *Format, T const & ... Args) { Logf(LogType::Log, Format, Args ...); }
-	template <typename ... T> static void Warningf(const char *Format, T const & ... Args) { Logf(LogType::Warning, Format, Args ...); }
-	template <typename ... T> static void Errorf(const char *Format, T const & ... Args) { Logf(LogType::Error, Format, Args ...); }
-	static void LogOK(const char* Str);
-	static void LogNG(const char* Str);
+	template <typename T> static void Log(const T Str) { _Log(LogType::Log, Str); }
+	template <typename T> static void Warning(const T Str) { _Log(LogType::Warning, Str); }
+	template <typename T> static void Error(const T Str) { _Log(LogType::Error, Str); }
+	template <typename ... T> static void Logf(const char *Format, T const & ... Args) { _Logf(LogType::Log, Format, Args ...); }
+	template <typename ... T> static void Logf(const WCHAR *Format, T const & ... Args) { _Logf(LogType::Log, Format, Args ...); }
+	template <typename ... T> static void Warningf(const char *Format, T const & ... Args) { _Logf(LogType::Warning, Format, Args ...); }
+	template <typename ... T> static void Warningf(const WCHAR *Format, T const & ... Args) { _Logf(LogType::Warning, Format, Args ...); }
+	template <typename ... T> static void Errorf(const char *Format, T const & ... Args) { _Logf(LogType::Error, Format, Args ...); }
+	template <typename ... T> static void Errorf(const WCHAR *Format, T const & ... Args) { _Logf(LogType::Error, Format, Args ...); }
+	template <typename T> static void LogOK(T Str);
+	template <typename T> static void LogNG(T Str);
 
 	//!< #TODO_WIN •Ê‚ÉWindowsŠÖŒW‚È‚¢
 	static size_t RoundUp(const size_t Size, const uint16_t Aligh) { return (Size + Aligh) & ~Aligh; }

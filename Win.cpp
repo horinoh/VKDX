@@ -50,20 +50,20 @@ void Win::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 }
 
-void Win::Log(const LogType Type, const char* Str)
+template<> void Win::_Log(const LogType Type, const char* Str)
 {
 #ifdef DEBUG_STDOUT
 	switch (Type)
 	{
 	default: break;
-	case LogType::Log: 
+	case LogType::Log:
 		std::cout << Str;
 		break;
-	case LogType::Warning: 
-		std::cout << Yellow << Str << White; 
+	case LogType::Warning:
+		std::cout << Yellow << Str << White;
 		break;
-	case LogType::Error: 
-		std::cerr << Red << Str << White; 
+	case LogType::Error:
+		std::cerr << Red << Str << White;
 		break;
 	}
 #endif
@@ -71,39 +71,85 @@ void Win::Log(const LogType Type, const char* Str)
 	OutputDebugString(std::wstring(&Str[0], &Str[strlen(Str)]).c_str());
 #endif	
 }
-void Win::Logf(const LogType Type, const char* Format, ...)
+template<> void Win::_Log(const LogType Type, const WCHAR* Str)
+{
+#ifdef DEBUG_STDOUT
+	switch (Type)
+	{
+	default: break;
+	case LogType::Log:
+		std::wcout << Str;
+		break;
+	case LogType::Warning:
+		std::wcout << Yellow << Str << White;
+		break;
+	case LogType::Error:
+		std::wcerr << Red << Str << White;
+		break;
+	}
+#endif
+#ifdef DEBUG_OUTPUT
+	OutputDebugString(Str);
+#endif	
+}
+template<> void Win::_Logf(const LogType Type, const char* Format, ...)
 {
 	va_list List;
 	va_start(List, Format);
 	static char Buffer[1024];
 	const auto Count = vsnprintf(Buffer, sizeof(Buffer), Format, List);
 	if (Count) {
-		Log(Type, std::string(&Buffer[0], &Buffer[Count]).c_str());
+		_Log<const char*>(Type, Buffer);
 	}
 	va_end(List);
 }
-
-void Win::LogOK(const char* Str)
+template<> void Win::_Logf(const LogType Type, const WCHAR* Format, ...)
+{
+	va_list List;
+	va_start(List, Format);
+	static WCHAR Buffer[1024];
+	const auto Count = vswprintf(Buffer, sizeof(Buffer), Format, List);
+	if (Count) {
+		_Log<const WCHAR*>(Type, Buffer);
+	}
+	va_end(List);
+}
+template<> static void Win::LogOK(const char* Str)
 {
 #ifdef DEBUG_STDOUT
 	std::cout << Str << COUT_OK << std::endl;
 #endif
 #ifdef DEBUG_OUTPUT
-	OutputDebugString(std::wstring(&Str[0], &Str[strlen(Str)]).c_str());
-	OutputDebugString(TEXT("[ OK ]\n"));
+	OutputDebugString(std::wstring(&Str[0], &Str[strlen(Str)]).c_str()); OutputDebugString(TEXT("[ OK ]\n"));
 #endif	
 }
-void Win::LogNG(const char* Str)
+template<> static void Win::LogOK(const WCHAR* Str)
+{
+#ifdef DEBUG_STDOUT
+	std::wcout << Str << COUT_OK << std::endl;
+#endif
+#ifdef DEBUG_OUTPUT
+	OutputDebugString(Str); OutputDebugString(TEXT("[ OK ]\n"));
+#endif	
+}
+template<> static void Win::LogNG(const char* Str)
 {
 #ifdef DEBUG_STDOUT
 	std::cerr << Str << COUT_NG << std::endl;
 #endif
 #ifdef DEBUG_OUTPUT
-	OutputDebugString(std::wstring(&Str[0], &Str[strlen(Str)]).c_str());
-	OutputDebugString(TEXT("[ NG ]\n"));
+	OutputDebugString(std::wstring(&Str[0], &Str[strlen(Str)]).c_str()); OutputDebugString(TEXT("[ NG ]\n"));
 #endif
 }
-
+template<> static void Win::LogNG(const WCHAR* Str)
+{
+#ifdef DEBUG_STDOUT
+	std::wcerr << Str << COUT_NG << std::endl;
+#endif
+#ifdef DEBUG_OUTPUT
+	OutputDebugString(Str); OutputDebugString(TEXT("[ NG ]\n"));
+#endif
+}
 
 #ifdef _DEBUG
 PerformanceCounter::PerformanceCounter(const std::string& Label)
