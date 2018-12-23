@@ -22,7 +22,7 @@
     <ProjectGuid>{0EEB4185-17EC-4A6F-890D-691B47D19A51}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>ParametricSurfaceDX</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

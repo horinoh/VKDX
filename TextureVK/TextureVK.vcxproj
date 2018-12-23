@@ -22,7 +22,7 @@
     <ProjectGuid>{0748F07C-5954-4883-B0EC-0F7BD43E2F67}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>TextureVK</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">

@@ -22,7 +22,7 @@
     <ProjectGuid>{102C86B4-5D69-4981-9B62-7F69632563E6}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>NormalMapDX</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.17763.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
