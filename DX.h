@@ -27,6 +27,7 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 
 //!< _DEBUG であれば何もしなくても PIX 使用可能、Release で PIX を使用したいような場合は USE_PIX を定義する 
 //!< When want to use pix in Release build, define USE_PIX
+//!< ソリューション右クリック - ソリューションのNuGetパッケージの管理 - 参照タブ - WinPixEventRuntimeで検索 - プロジェクトを選択してインストールしておくこと
 //#define USE_PIX
 #include <pix3.h>
 //!< プログラムからキャプチャを行いたい場合 Capture in program code

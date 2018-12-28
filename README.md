@@ -151,6 +151,11 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
 	* キャプチャしたフレームがサムネイルされる、ダブルクリックすると Analyzer が起動する
 		* 下の方に出るので Frame time, Frames per second を閉じないと見えないかも
 
+#### トラブルシューティング
+* 「このプロジェクトは、このコンピュータ上にないNugetパッケージを参照しています」と出る場合
+	* .vcproj の <Target>...</Target> を消す
+	* WinPixEventRuntimeのアンインストール、インストールを行う
+
 <!-- 
 ## プロジェクトの追加方法 (自分用覚書)
  * ソリューションを右クリック - Add - New Project で Win32 Project
