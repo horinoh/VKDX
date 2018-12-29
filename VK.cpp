@@ -1272,6 +1272,9 @@ void VK::OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PhysicalDevice
 }
 void VK::CreateDevice()
 {
+	uint32_t QueueFamilyPropertyCount = 0;
+	vkGetPhysicalDeviceQueueFamilyProperties(PhysicalDevice, &QueueFamilyPropertyCount, nullptr);
+
 	//!<  #VK_TODO 現状、グラフィックスとキューを共用している or 各機能専用の単独キューがあるような想定で計算しているので注意!
 	//!< ファミリ内でのプライオリティ(テーブル)
 	std::vector<float> QueuePriorities = { 0.5f };
@@ -1282,22 +1285,29 @@ void VK::CreateDevice()
 	uint32_t TransferQueueIndexInFamily = 0;
 	uint32_t ComputeQueueIndexInFamily = 0;
 	//uint32_t SparceBindingQueueIndexInFamily = 0;
-	//!< グラフィックと同じファミリの場合は、ファミリ内インデックスをインクリメント(プライオリティも追加する)
-	if (GraphicsQueueFamilyIndex == PresentQueueFamilyIndex) {
-		PresentQueueIndexInFamily = ++Count;
-		QueuePriorities.push_back(0.3f);
+
+	if (QueuePriorities.size() < QueueFamilyPropertyCount) {
+		//!< グラフィックと同じファミリの場合は、ファミリ内インデックスをインクリメント(プライオリティも追加する)
+		if (GraphicsQueueFamilyIndex == PresentQueueFamilyIndex) {
+			PresentQueueIndexInFamily = ++Count;
+			QueuePriorities.push_back(0.3f);
+		}
 	}
-	if (GraphicsQueueFamilyIndex == TransferQueueFamilyIndex) {
-		TransferQueueIndexInFamily = ++Count;
-		QueuePriorities.push_back(0.3f);
+	if (QueuePriorities.size() < QueueFamilyPropertyCount) {
+		if (GraphicsQueueFamilyIndex == TransferQueueFamilyIndex) {
+			TransferQueueIndexInFamily = ++Count;
+			QueuePriorities.push_back(0.3f);
+		}
+		if (GraphicsQueueFamilyIndex == ComputeQueueFamilyIndex) {
+			ComputeQueueIndexInFamily = ++Count;
+			QueuePriorities.push_back(0.3f);
+		}
 	}
-	if (GraphicsQueueFamilyIndex == ComputeQueueFamilyIndex) {
-		ComputeQueueIndexInFamily = ++Count;
-		QueuePriorities.push_back(0.3f);
-	}
-	//if (GraphicsQueueFamilyIndex == SparceBindingQueueIndexInFamily) {
-	//	SparceBindingQueueIndexInFamily = ++Count;
-	//	QueuePriorities.push_back(0.3f);
+	//if (QueuePriorities.size() < QueueFamilyPropertyCount) {
+	//	if (GraphicsQueueFamilyIndex == SparceBindingQueueIndexInFamily) {
+	//		SparceBindingQueueIndexInFamily = ++Count;
+	//		QueuePriorities.push_back(0.3f);
+	//	}
 	//}
 
 #ifdef DEBUG_STDOUT
