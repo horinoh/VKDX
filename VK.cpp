@@ -1279,32 +1279,35 @@ void VK::CreateDevice()
 	//!< ファミリ内でのプライオリティ(テーブル)
 	std::vector<float> QueuePriorities = { 0.5f };
 	uint32_t Count = 0;
-	//!< ファミリ内でのインデックスを計算する
+	//!< ファミリ内でのインデックス
 	const uint32_t GraphicsQueueIndexInFamily = 0;
 	uint32_t PresentQueueIndexInFamily = 0;
 	uint32_t TransferQueueIndexInFamily = 0;
 	uint32_t ComputeQueueIndexInFamily = 0;
 	//uint32_t SparceBindingQueueIndexInFamily = 0;
 
-	if (QueuePriorities.size() < QueueFamilyPropertyCount) {
-		//!< グラフィックと同じファミリの場合は、ファミリ内インデックスをインクリメント(プライオリティも追加する)
-		if (GraphicsQueueFamilyIndex == PresentQueueFamilyIndex) {
+	//!< グラフィックと同じファミリの場合
+	if (GraphicsQueueFamilyIndex == PresentQueueFamilyIndex) {
+		//!< (追加できるなら‘)ファミリ内インデックスをインクリメントしプライオリティも追加する
+		if (QueuePriorities.size() < QueueFamilyPropertyCount) {
 			PresentQueueIndexInFamily = ++Count;
 			QueuePriorities.push_back(0.3f);
 		}
 	}
-	if (QueuePriorities.size() < QueueFamilyPropertyCount) {
-		if (GraphicsQueueFamilyIndex == TransferQueueFamilyIndex) {
+	if (GraphicsQueueFamilyIndex == TransferQueueFamilyIndex) {
+		if (QueuePriorities.size() < QueueFamilyPropertyCount) {
 			TransferQueueIndexInFamily = ++Count;
 			QueuePriorities.push_back(0.3f);
 		}
-		if (GraphicsQueueFamilyIndex == ComputeQueueFamilyIndex) {
+	}
+	if (GraphicsQueueFamilyIndex == ComputeQueueFamilyIndex) {
+		if (QueuePriorities.size() < QueueFamilyPropertyCount) {
 			ComputeQueueIndexInFamily = ++Count;
 			QueuePriorities.push_back(0.3f);
 		}
 	}
-	//if (QueuePriorities.size() < QueueFamilyPropertyCount) {
-	//	if (GraphicsQueueFamilyIndex == SparceBindingQueueIndexInFamily) {
+	//if (GraphicsQueueFamilyIndex == SparceBindingQueueIndexInFamily) {
+	//	if (QueuePriorities.size() < QueueFamilyPropertyCount) {
 	//		SparceBindingQueueIndexInFamily = ++Count;
 	//		QueuePriorities.push_back(0.3f);
 	//	}
@@ -1319,7 +1322,7 @@ void VK::CreateDevice()
 	//std::cout << "\t" << "\t" << "SparceBinding(FamilyIndex, IndexInFamily) = (" << SparceBindingQueueFamilyIndex << ", " << SparceBindingQueueIndexInFamily << ")" << std::endl;
 #endif
 
-	//!< グラフィックと同じファミリのものはここでまとめられる
+	//!< グラフィックと同じファミリのものはここでまとめる
 	std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos = {
 		{
 			VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
