@@ -1173,36 +1173,33 @@ void VK::GetQueueFamily()
 #undef QUEUE_FLAG_ENTRY
 #endif
 
+	//!< まずは機能を持つ最初のキューを取得する ((デバイスによっては)専用キューが存在する、その場合は専用キューを使用したほうが良い)
 	for (uint32_t i = 0; i < QueueProperties.size(); ++i) {
-		//!< グラフィック機能を持つ「最初」のキュー Queue index which has graphics
+		//!< まずはグラフィック機能を持つ最初のキューを取得する Queue index which has graphics
 		if (VK_QUEUE_GRAPHICS_BIT & QueueProperties[i].queueFlags) {
 			if (UINT32_MAX == GraphicsQueueFamilyIndex) {
 				GraphicsQueueFamilyIndex = i;
 			}
 		}
-
-		//!< 転送機能を持つ「最初」のキュー (デバイスによっては転送専用キューを持つ、転送を多用する場合は専用キューを使用した方が良い)
+		//!< まずは転送機能を持つ最初のキューを取得する
 		if (VK_QUEUE_TRANSFER_BIT & QueueProperties[i].queueFlags) {
 			if (UINT32_MAX == TransferQueueFamilyIndex) {
 				TransferQueueFamilyIndex = i;
 			}
 		}
-
-		//!< コンピュート機能を持つ「最初」のキュー
+		//!< まずはコンピュート機能を持つ最初のキューを取得する
 		if (VK_QUEUE_COMPUTE_BIT & QueueProperties[i].queueFlags) {
 			if (UINT32_MAX == ComputeQueueFamilyIndex) {
 				ComputeQueueFamilyIndex = i;
 			}
 		}
-
-		//!< スパースバインディング機能を持つ「最初」のキュー
+		//!< まずはスパースバインディング機能を持つ最初のキューを取得する
 		if (VK_QUEUE_SPARSE_BINDING_BIT & QueueProperties[i].queueFlags) {
 			if (UINT32_MAX == SparceBindingQueueFamilyIndex) {
 				SparceBindingQueueFamilyIndex = i;
 			}
 		}
-
-		//!< プレゼンテーション機能を持つ「最初」のキュー Queue index which has presentation
+		//!< まずはプレゼンテーション機能を持つ最初のキューを取得する Queue index which has presentation
 		VkBool32 Supported = VK_FALSE;
 		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PhysicalDevice, i, Surface, &Supported));
 		if (Supported) {
@@ -1211,6 +1208,7 @@ void VK::GetQueueFamily()
 			}
 		}
 	}
+
 	//!< グラフィックとプレゼンテーションを「同時に」サポートするキューがあれば優先 Prioritize queue which support both of graphics and presentation
 	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i) {
 		if (VK_QUEUE_GRAPHICS_BIT & QueueProperties[i].queueFlags) {
@@ -1219,20 +1217,30 @@ void VK::GetQueueFamily()
 			if (Supported) {
 				GraphicsQueueFamilyIndex = i;
 				PresentQueueFamilyIndex = i;
+				Logf("\t\t\tFound Graphics and Presentation supoort queue [%d]\n", i);
 				break;
 			}
 		}
 	}
-	//!< 転送機能「専用」のキューがあれば優先
+	//!< 転送機能専用のキューがあれば優先
 	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i) {
 		if (VK_QUEUE_TRANSFER_BIT == QueueProperties[i].queueFlags) {
 			TransferQueueFamilyIndex = i;
+			Logf("\t\t\tFound Transfer dedicated supoort queue [%d]\n", i);
 		}
 	}
-	//!< コンピュート機能「専用」のキューがあれば優先
+	//!< コンピュート機能専用のキューがあれば優先
 	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i) {
 		if (VK_QUEUE_COMPUTE_BIT == QueueProperties[i].queueFlags) {
 			ComputeQueueFamilyIndex = i;
+			Logf("\t\t\tFound Compute dedicated supoort queue [%d]\n", i);
+		}
+	}
+	//!< コンピュート機能専用のキューがあれば優先
+	for (uint32_t i = 0; i < QueueFamilyPropertyCount; ++i) {
+		if (VK_QUEUE_SPARSE_BINDING_BIT == QueueProperties[i].queueFlags) {
+			SparceBindingQueueFamilyIndex = i;
+			Logf("\t\t\tFound SparceBinding dedicated supoort queue [%d]\n", i);
 		}
 	}
 
@@ -1288,7 +1296,7 @@ void VK::CreateDevice()
 
 	//!< グラフィックと同じファミリの場合
 	if (GraphicsQueueFamilyIndex == PresentQueueFamilyIndex) {
-		//!< (追加できるなら‘)ファミリ内インデックスをインクリメントしプライオリティも追加する
+		//!< (追加できるなら)ファミリ内インデックスをインクリメントしプライオリティも追加する
 		if (QueuePriorities.size() < QueueFamilyPropertyCount) {
 			PresentQueueIndexInFamily = ++Count;
 			QueuePriorities.push_back(0.3f);
