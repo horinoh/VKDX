@@ -124,7 +124,7 @@ xcopy /y %(Identity).spv $(TargetDir)
 
 ### DirectXTK (DDS読み込みに使用)
 * https://github.com/Microsoft/DirectXTK12
-* DirectXTK_Desktop_2015_Win10.sln を開いてビルド
+* DirectXTK_Desktop_2017_Win10.sln を開いてビルド(Debug, Release)
 	* D3D12_DESCRIPTOR_RANGE1 がないと言われて、コンパイルが通らない場合は  Windows 10 Anniversary Update SDK が必要(VisualStudioを更新する)
 * 同じ階層に DirectXTK12 をクローンして **..\..\DirectXTK12** にパスを通した
 * 備考
