@@ -1,9 +1,12 @@
 #pragma once
 
 //!< VK_NO_PROTOYYPES が定義されてる場合は DLL を使用する。If VK_NO_PROTOYYPES is defined, using DLL. 
-//!< C/C++ - Preprocessor - Preprocessor Definitions に定義。 Definition is in C/C++ - Preprocessor - Preprocessor Definitions
+//!< Vk.props 内 C/C++ - Preprocessor - Preprocessor Definitions に定義してある Definition is in VK.props in C/C++ - Preprocessor - Preprocessor Definitions
+//#define VK_NO_PROTOTYPES //!< VK.props に定義
 
+#ifdef _WINDOWS
 #define VK_USE_PLATFORM_WIN32_KHR
+#endif
 #include <vulkan/vulkan.h>
 
 #define GLM_FORCE_RADIANS
@@ -20,7 +23,15 @@
 #ifndef MESSAGEBOX_ON_FAILED
 #define MESSAGEBOX_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Win::ShowMessageBoxW(nullptr, VK::GetVkResultStringW(vr)); }
 #endif
+
+#ifdef _DEBUG
+#define USE_RENDERDOC
+#endif
+
+#include "Cmn.h"
+#ifdef _WINDOWS
 #include "Win.h"
+#endif
 
 #ifndef USE_DEBUG_MARKER
 //!< エクステンションは見つかるのに、使用できないので封印... Extension is found, but not available...
@@ -47,17 +58,22 @@ namespace Colors
 	const VkClearColorValue Yellow = { 1.0f, 1.0f, 0.0f, 1.0f };
 }
 
-class VK : public Win
+class VK : public Cmn
+#ifdef _WINDOWS
+	, public Win
+#endif
 {
 private:
 	using Super = Win;
 
 public:
+#ifdef _WINDOWS
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
 	virtual void OnSize(HWND hWnd, HINSTANCE hInstance) override;
 	//virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override { Super::OnTimer(hWnd, hInstance); }
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { Super::OnPaint(hWnd, hInstance); Draw(); }
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
+#endif
 
 	static std::string GetVkResultString(const VkResult Result);
 	static std::wstring GetVkResultStringW(const VkResult Result);
@@ -79,10 +95,9 @@ protected:
 	static void AlignedAllocNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
 	static void AligendFreeNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
 
-	static bool HasExtension(const VkPhysicalDevice PhysicalDevice, const char* ExtensionName);
 	static bool IsSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, const VkFormat DepthFormat);
 	static uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const uint32_t MemoryTypeBits, const VkFlags Properties);
-	virtual FORCEINLINE uint32_t GetMemoryType(const uint32_t MemoryTypeBits, const VkFlags Properties) const { return GetMemoryType(PhysicalDeviceMemoryProperties, MemoryTypeBits, Properties); }
+	virtual FORCEINLINE uint32_t GetMemoryType(const uint32_t MemoryTypeBits, const VkFlags Properties) const { return GetMemoryType(GetCurrentPhysicalDeviceMemoryProperties(), MemoryTypeBits, Properties); }
 	//static VkAccessFlags GetSrcAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
 	//static VkAccessFlags GetDstAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
 	//void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const;
@@ -141,8 +156,8 @@ protected:
 #include "VKDebugMarker.inl"
 #endif
 
-	virtual void EnumerateInstanceLayer();
-	virtual void EnumerateInstanceExtenstion(const char* layerName);
+	virtual void EnumerateInstanceLayerProperties();
+	virtual void EnumerateInstanceExtensionProperties(const char* layerName);
 	//const VkCommandBufferInheritanceInfo CommandBufferInheritanceInfo_None = {
 	//	VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
 	//	nullptr,
@@ -155,7 +170,7 @@ protected:
 	//};
 
 #ifdef VK_NO_PROTOYYPES
-	void LoadVulkanDLL();
+	void LoadVulkanLibrary();
 #endif //!< VK_NO_PROTOYYPES
 	
 	virtual void CreateInstance();
@@ -164,10 +179,12 @@ protected:
 #endif
 	virtual void CreateSurface(HWND hWnd, HINSTANCE hInstance);
 
-	virtual void EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties);
-	virtual void GetPhysicalDevice();
-	virtual void EnumerateDeviceLayer(VkPhysicalDevice PhysicalDevice);
-	virtual void EnumerateDeviceExtenstion(VkPhysicalDevice PhysicalDevice, const char* layerName);
+	virtual void EnumeratePhysicalDeviceProperties(const VkPhysicalDeviceProperties& PDP);
+	virtual void EnumeratePhysicalDeviceFeatures(const VkPhysicalDeviceFeatures& PDF);
+	virtual void EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryProperties& PDMP);
+	virtual void EnumeratePhysicalDevice();
+	virtual void EnumerateDeviceLayerProperties(VkPhysicalDevice PhysicalDevice);
+	virtual void EnumerateDeviceExtensionProperties(VkPhysicalDevice PhysicalDevice, const char* layerName);
 	virtual void GetQueueFamily();
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PhysicalDeviceFeatures) const;
 	virtual void CreateDevice();
@@ -283,17 +300,33 @@ protected:
 		AligendFreeNotify
 	};
 	const VkAllocationCallbacks* GetAllocationCallbacks() const { return nullptr/*&AllocationCallbacks*/; }
+	
+	void SetCurrentPhysicalDevice(VkPhysicalDevice PD) { CurrentPhysicalDevice = PD; vkGetPhysicalDeviceMemoryProperties(CurrentPhysicalDevice, &CurrentPhysicalDeviceMemoryProperties); }
+	virtual VkPhysicalDevice GetCurrentPhysicalDevice() const { return CurrentPhysicalDevice; }; 
+	virtual VkPhysicalDeviceMemoryProperties GetCurrentPhysicalDeviceMemoryProperties() const { return CurrentPhysicalDeviceMemoryProperties; }
 
 #ifdef VK_NO_PROTOYYPES
 protected:
-	HMODULE VulkanDLL = nullptr;
+#ifdef _WINDOWS
+	HMODULE VulkanLibrary = nullptr;
+#else
+	void* VulkanLibrary = nullptr;
+#endif
+
 public:
+	//static PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
+
+	//!< グローバルレベル関数 Global level functions
 #define VK_GLOBAL_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #include "VKGlobalProcAddr.h"
 #undef VK_GLOBAL_PROC_ADDR
+
+	//!< インスタンスレベル関数 Instance level functions
 #define VK_INSTANCE_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #include "VKInstanceProcAddr.h"
 #undef VK_INSTANCE_PROC_ADDR
+
+	//!< デバイスレベル関数 Device level functions
 #define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #include "VKDeviceProcAddr.h"
 #undef VK_DEVICE_PROC_ADDR
@@ -301,23 +334,33 @@ public:
 
 #ifdef _DEBUG
 public:
+	//!< インスタンスレベル関数(Debug) Instance level functions(Debug)
 #define VK_INSTANCE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
 #include "VKDebugReport.h"
 #undef VK_INSTANCE_PROC_ADDR
+
+	//!< デバイスレベル関数(Debug) Device level functions(Debug)
 #define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
 #include "VKDebugMarker.h"
 #undef VK_DEVICE_PROC_ADDR
-protected:
 #endif //!< _DEBUG
 
 protected:
+	using LAYER_PROPERTY = std::pair<VkLayerProperties, std::vector<VkExtensionProperties>>;
+	using LAYER_PROPERTIES = std::vector<LAYER_PROPERTY>;
+	using PHYSICAL_DEVICE_LAYER_PROPERTY = std::pair<VkPhysicalDevice, LAYER_PROPERTIES>;
+	using PHYSICAL_DEVICE_LAYER_PROPERTIES = std::vector<PHYSICAL_DEVICE_LAYER_PROPERTY>;
+	LAYER_PROPERTIES InstanceLayerProperties;
+	PHYSICAL_DEVICE_LAYER_PROPERTIES PhysicalDeviceLayerProperties;
+
 	VkInstance Instance = VK_NULL_HANDLE;
 #ifdef _DEBUG
 	VkDebugReportCallbackEXT DebugReportCallback = VK_NULL_HANDLE;
 #endif
 	VkSurfaceKHR Surface = VK_NULL_HANDLE;
-	VkPhysicalDevice PhysicalDevice = VK_NULL_HANDLE;
-	VkPhysicalDeviceMemoryProperties PhysicalDeviceMemoryProperties;
+	std::vector<VkPhysicalDevice> PhysicalDevices;
+	VkPhysicalDevice CurrentPhysicalDevice = VK_NULL_HANDLE;
+	VkPhysicalDeviceMemoryProperties CurrentPhysicalDeviceMemoryProperties;
 	VkDevice Device = VK_NULL_HANDLE;
 	VkQueue GraphicsQueue = VK_NULL_HANDLE;
 	VkQueue PresentQueue = VK_NULL_HANDLE;

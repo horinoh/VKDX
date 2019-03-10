@@ -46,11 +46,17 @@ setx VK_INSTANCE_LAYERS VK_LAYER_LUNARG_standard_validation
 	* C/C++ - Preprocessor - Preprocessor Definitions に **VK_NO_PROTOYYPES** を定義しておく
 	* %VK_SDK_PATH%\RunTimeInstaller\VulkanRT-XXX-Installer.exe を実行すると DLL がインストールされる
 		* SDKのインストール時に自動的に行われている？
-* レイヤ設定
-	* %VK_SDK_PATH%\Config\vk_layer_settings.txt を exe と同じ場所へコピーしておく
+
+* バリデーションレイヤ
+	* アプリ と VulkanAPI の間のレイヤ
+	* コード中からやらない場合は以下のようにする
+		* %VK_SDK_PATH%\Config\vk_layer_settings.txt をデバッグしたい exe と同じ場所へコピーし、環境変数 VK_INSTANCE_LAYER を定義しておく
 ~~~
 xcopy /y %VK_SDK_PATH%\Config\vk_layer_settings.txt $(ProjectDir)
 xcopy /y %VK_SDK_PATH%\Config\vk_layer_settings.txt $(TargetDir)
+~~~
+~~~
+setx VK_INSTANCE_LAYERS VK_LAYER_LUNARG_standard_validation
 ~~~
 
 #### ドライバ

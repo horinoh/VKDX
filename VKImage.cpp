@@ -225,7 +225,7 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 
 #ifdef DEBUG_STDOUT
 	VkFormatProperties FormatProperties;
-	vkGetPhysicalDeviceFormatProperties(PhysicalDevice, ToVkFormat(GLITexture.format()), &FormatProperties);
+	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), ToVkFormat(GLITexture.format()), &FormatProperties);
 
 #define FORMAT_ENTRIES() FORMAT_PROPERTY_ENTRY(SAMPLED_IMAGE_BIT);\
 	FORMAT_PROPERTY_ENTRY(STORAGE_IMAGE_BIT);\

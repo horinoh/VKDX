@@ -44,6 +44,8 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 #ifndef MESSAGEBOX_ON_FAILED
 #define MESSAGEBOX_ON_FAILED(hr) if(FAILED(hr)) { Win::ShowMessageBoxW(nullptr, DX::GetHRESULTStringW(hr)); }
 #endif
+
+#include "Cmn.h"
 #include "Win.h"
 
 /**
@@ -60,7 +62,7 @@ CommandList、CommandAllocator はスレッドセーフではないので各スレッド毎に持つ必要
 CommandQueue はスレッドフリーで各スレッドから使用可能
 */
 
-class DX : public Win
+class DX : public Cmn, public Win
 {
 private:
 	using Super = Win;

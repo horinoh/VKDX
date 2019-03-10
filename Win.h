@@ -119,9 +119,6 @@ public:
 	template <typename T> static void LogOK(T Str);
 	template <typename T> static void LogNG(T Str);
 
-	//!< #TODO_WIN •Ê‚ÉWindowsŠÖŒW‚È‚¢
-	static size_t RoundUp(const size_t Size, const uint16_t Aligh) { return (Size + Aligh) & ~Aligh; }
-
 protected:
 	RECT Rect;
 	std::wstring TitleW;
