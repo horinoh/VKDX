@@ -1209,11 +1209,6 @@ void VK::EnumerateQueueFamily(VkPhysicalDevice PD)
 	std::bitset<8> ComputeQueueFamilyBits;
 	std::bitset<8> TransferQueueFamilyBits;
 	std::bitset<8> SparceBindingQueueFamilyBits;
-/*	GraphicsQueueFamilyBits.reset();
-	PresentQueueFamilyBits.reset();
-	ComputeQueueFamilyBits.reset();
-	TransferQueueFamilyBits.reset();
-	SparceBindingQueueFamilyBits.reset()*/;
 	for (uint32_t i = 0; i < QueueProperties.size(); ++i) {
 		const auto& QP = QueueProperties[i];
 
