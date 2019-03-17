@@ -36,6 +36,7 @@
 #include <codecvt>
 #include <functional>
 #include <thread>
+#include <bitset>
 
 #ifndef SAFE_DELETE
 #define SAFE_DELETE(x) if(nullptr != x) { delete x; x = nullptr; }

@@ -183,11 +183,12 @@ protected:
 	virtual void EnumeratePhysicalDeviceFeatures(const VkPhysicalDeviceFeatures& PDF);
 	virtual void EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryProperties& PDMP);
 	virtual void EnumeratePhysicalDevice();
-	virtual void EnumerateDeviceLayerProperties(VkPhysicalDevice PhysicalDevice);
-	virtual void EnumerateDeviceExtensionProperties(VkPhysicalDevice PhysicalDevice, const char* layerName);
-	virtual void GetQueueFamily();
-	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PhysicalDeviceFeatures) const;
-	virtual void CreateDevice();
+	virtual void EnumerateDeviceLayerProperties(VkPhysicalDevice PD);
+	virtual void EnumerateDeviceExtensionProperties(VkPhysicalDevice PD, const char* layerName);
+	virtual void EnumerateQueueFamily(VkPhysicalDevice PD);
+	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const;
+	virtual void CreateQueueFamilyPriorities(VkPhysicalDevice PD, std::vector<std::vector<float>>& QueueFamilyPriorites);
+	virtual void CreateLogicalDevice(VkPhysicalDevice PD);
 
 	virtual void CreateFence();
 	virtual void CreateSemaphore();
@@ -362,16 +363,22 @@ protected:
 	VkPhysicalDevice CurrentPhysicalDevice = VK_NULL_HANDLE;
 	VkPhysicalDeviceMemoryProperties CurrentPhysicalDeviceMemoryProperties;
 	VkDevice Device = VK_NULL_HANDLE;
+	std::vector<VkQueueFamilyProperties> QueueProperties;
 	VkQueue GraphicsQueue = VK_NULL_HANDLE;
 	VkQueue PresentQueue = VK_NULL_HANDLE;
-	VkQueue TransferQueue = VK_NULL_HANDLE;
 	VkQueue ComputeQueue = VK_NULL_HANDLE;
-	VkQueue SparceBindingQueue = VK_NULL_HANDLE;
+	//VkQueue TransferQueue = VK_NULL_HANDLE;
+	//VkQueue SparceBindingQueue = VK_NULL_HANDLE;
 	uint32_t GraphicsQueueFamilyIndex = UINT32_MAX;
+	uint32_t GraphicsQueueIndex = UINT32_MAX; //!< ファミリ内でのインデックス (必ずしも覚えておく必要は無いが一応覚えておく)
 	uint32_t PresentQueueFamilyIndex = UINT32_MAX;
-	uint32_t TransferQueueFamilyIndex = UINT32_MAX;
+	uint32_t PresentQueueIndex = UINT32_MAX;
 	uint32_t ComputeQueueFamilyIndex = UINT32_MAX;
-	uint32_t SparceBindingQueueFamilyIndex = UINT32_MAX;
+	uint32_t ComputeQueueIndex = UINT32_MAX;
+	//uint32_t TransferQueueFamilyIndex = UINT32_MAX;
+	//uint32_t TransferQueueIndex = UINT32_MAX;;
+	//uint32_t SparceBindingQueueFamilyIndex = UINT32_MAX;
+	//uint32_t SparceBindingQueueIndex = UINT32_MAX;;
 
 	/**
 	フェンス		... デバイスとホストの同期(GPUとCPUの同期)
