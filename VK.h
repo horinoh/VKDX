@@ -6,6 +6,9 @@
 
 #ifdef _WINDOWS
 #define VK_USE_PLATFORM_WIN32_KHR
+#else
+#define VK_USE_PLATFORM_XLIB_KHR
+//#define VK_USE_PLATFORM_XCB_KHR
 #endif
 #include <vulkan/vulkan.h>
 
@@ -177,18 +180,26 @@ protected:
 #ifdef _DEBUG
 	virtual void CreateDebugReportCallback();
 #endif
-	virtual void CreateSurface(HWND hWnd, HINSTANCE hInstance);
+	virtual void CreateSurface(
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+		HWND hWnd, HINSTANCE hInstance
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+		Display* Dsp, Window Wnd
+#else
+		xcb_connection_t* Cnt, xcb_window_t Wnd
+#endif
+	);
 
 	virtual void EnumeratePhysicalDeviceProperties(const VkPhysicalDeviceProperties& PDP);
 	virtual void EnumeratePhysicalDeviceFeatures(const VkPhysicalDeviceFeatures& PDF);
 	virtual void EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryProperties& PDMP);
-	virtual void EnumeratePhysicalDevice();
+	virtual void EnumeratePhysicalDevice(VkInstance Instance);
 	virtual void EnumerateDeviceLayerProperties(VkPhysicalDevice PD);
-	virtual void EnumerateDeviceExtensionProperties(VkPhysicalDevice PD, const char* layerName);
-	virtual void EnumerateQueueFamily(VkPhysicalDevice PD);
+	virtual void EnumerateDeviceExtensionProperties(VkPhysicalDevice PD, const char* LayerName);
+	virtual void EnumerateQueueFamilyProperties(VkPhysicalDevice PD, VkSurfaceKHR Surface, std::vector<VkQueueFamilyProperties>& QFPs);
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const;
-	virtual void CreateQueueFamilyPriorities(VkPhysicalDevice PD, std::vector<std::vector<float>>& QueueFamilyPriorites);
-	virtual void CreateLogicalDevice(VkPhysicalDevice PD);
+	virtual void CreateQueueFamilyPriorities(VkPhysicalDevice PD, VkSurfaceKHR Surface, const std::vector<VkQueueFamilyProperties>& QFPs, std::vector<std::vector<float>>& QueueFamilyPriorites);
+	virtual void CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 
 	virtual void CreateFence();
 	virtual void CreateSemaphore();
@@ -199,18 +210,14 @@ protected:
 
 	virtual void CreateSwapchain();
 	virtual VkSurfaceFormatKHR SelectSurfaceFormat();
-	virtual VkPresentModeKHR SelectSurfacePresentMode();
+	virtual VkPresentModeKHR SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 	virtual void CreateSwapchain(const uint32_t Width, const uint32_t Height);
-	virtual void CreateSwapchainOfClientRect() {
-		CreateSwapchain(static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
-	}
+	virtual void CreateSwapchain(const RECT& Rect) { CreateSwapchain(static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
 	virtual void CreateSwapchainImageView();
 	virtual void InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkClearColorValue* ClearColorValue = nullptr);
 	virtual void InitializeSwapchain();
 	virtual void ResizeSwapchain(const uint32_t Width, const uint32_t Height);
-	virtual void ResizeSwapChainToClientRect() {
-		ResizeSwapchain(static_cast<const uint32_t>(GetClientRectWidth()), static_cast<const uint32_t>(GetClientRectHeight()));
-	}
+	virtual void ResizeSwapchain(const RECT& Rect) { ResizeSwapchain(static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
 
 	virtual void CreateDepthStencil() {}
 	virtual void CreateDepthStencil(const uint32_t Width, const uint32_t Height, const VkFormat DepthFormat);
@@ -363,7 +370,6 @@ protected:
 	VkPhysicalDevice CurrentPhysicalDevice = VK_NULL_HANDLE;
 	VkPhysicalDeviceMemoryProperties CurrentPhysicalDeviceMemoryProperties;
 	VkDevice Device = VK_NULL_HANDLE;
-	std::vector<VkQueueFamilyProperties> QueueProperties;
 	VkQueue GraphicsQueue = VK_NULL_HANDLE;
 	VkQueue PresentQueue = VK_NULL_HANDLE;
 	VkQueue ComputeQueue = VK_NULL_HANDLE;

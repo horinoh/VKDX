@@ -61,14 +61,14 @@ void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 
 	//VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr));
 	//{		
-	//	ResizeSwapChainToClientRect();
-	//	ResizeDepthStencilToClientRect();
+	//	ResizeSwapChain(Rect);
+	//	ResizeDepthStencil(Rect);
 	//}
 	//VERIFY_SUCCEEDED(CommandList->Close());
 
 	//ExecuteCommandListAndWaitForFence(CommandList);
 
-	CreateViewport(static_cast<FLOAT>(GetClientRectWidth()), static_cast<FLOAT>(GetClientRectHeight()));
+	CreateViewport(Rect);
 
 	for (auto i = 0; i < GraphicsCommandLists.size(); ++i) {
 		PopulateCommandList(i);
@@ -601,7 +601,7 @@ void DX::CreateCommandList()
 
 void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
 {
-	CreateSwapChainOfClientRect(hWnd, ColorFormat);
+	CreateSwapChain(hWnd, ColorFormat, Rect);
 
 	//!< ビューを作成 Create view
 	CreateSwapChainResource();
@@ -749,7 +749,7 @@ void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 	LogOK("ResizeSwapChain");
 }
 
-void DX::CreateDepthStencil(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat)
+void DX::CreateDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height)
 {
 	const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 	const auto Count = 1;
@@ -763,12 +763,12 @@ void DX::CreateDepthStencil(const UINT Width, const UINT Height, const DXGI_FORM
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
 	}(Type, Count, DepthStencilDescriptorHeap.GetAddressOf());
 
-	CreateDepthStencilResource(Width, Height, DepthFormat);
+	CreateDepthStencilResource(DepthFormat, Width, Height);
 
 	LogOK("CreateDepthStencil");
 }
 
-void DX::CreateDepthStencilResource(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat)
+void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height)
 {
 	//!< リソースの作成
 	const D3D12_HEAP_PROPERTIES HeapProperties = {
@@ -817,11 +817,11 @@ void DX::CreateDepthStencilResource(const UINT Width, const UINT Height, const D
 
 	LogOK("CreateDepthStencilResource");
 }
-void DX::ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat)
+void DX::ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height)
 {
 	DepthStencilResource.Reset();
 
-	CreateDepthStencilResource(Width, Height, DepthFormat);
+	CreateDepthStencilResource(DepthFormat, Width, Height);
 
 	LogOK("ResizeDepthStencil");
 }

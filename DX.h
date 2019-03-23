@@ -122,31 +122,23 @@ protected:
 
 	virtual void CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat);
 	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height);
-	virtual void CreateSwapChainOfClientRect(HWND hWnd, const DXGI_FORMAT ColorFormat) {
-		CreateSwapChain(hWnd, ColorFormat, static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()));
-	}
+	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const RECT& Rect) { CreateSwapChain(hWnd, ColorFormat, static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
 	virtual void CreateSwapChainResource();
 	virtual void InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, const DirectX::XMVECTORF32* Color = nullptr);
 	virtual void InitializeSwapChain();
 	virtual void ResetSwapChainResource() { for (auto& i : SwapChainResources) { i.Reset(); } }
 	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
-	virtual void ResizeSwapChainToClientRect() { 
-		ResizeSwapChain(static_cast<const UINT>(GetClientRectWidth()), static_cast<const UINT>(GetClientRectHeight())); 
-	}
+	virtual void ResizeSwapChain(const RECT& Rect) { ResizeSwapChain(static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
 	UINT AcquireNextBackBufferIndex() const {
 		return 0xffffffff == CurrentBackBufferIndex ? SwapChain->GetCurrentBackBufferIndex() : (CurrentBackBufferIndex + 1) % static_cast<const UINT>(SwapChainResources.size());
 	}
 
 	virtual void CreateDepthStencil() {}
-	virtual void CreateDepthStencil(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat);
-	virtual void CreateDepthStencilOfClientRect(const DXGI_FORMAT DepthFormat) {
-		CreateDepthStencil(static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), DepthFormat);
-	}
-	virtual void CreateDepthStencilResource(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat);
-	virtual void ResizeDepthStencil(const UINT Width, const UINT Height, const DXGI_FORMAT DepthFormat);
-	virtual void ResizeDepthStencilToClientRect(const DXGI_FORMAT DepthFormat) {
-		ResizeDepthStencil(static_cast<UINT>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), DepthFormat);
-	}
+	virtual void CreateDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
+	virtual void CreateDepthStencil(const DXGI_FORMAT DepthFormat, const RECT& Rect) { CreateDepthStencil(DepthFormat, static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
+	virtual void CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
+	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
+	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const RECT& Rect) { ResizeDepthStencil(DepthFormat, static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
 
 	virtual void LoadImage(ID3D12Resource** Resource/*, ID3D12DescriptorHeap** DescriptorHeap*/, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { assert(false && "Not implemanted"); }
 	virtual void LoadImage(ID3D12Resource** Resource/*, ID3D12DescriptorHeap** DescriptorHeap*/, const std::string& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { LoadImage(Resource/*, DescriptorHeap*/, std::wstring(Path.begin(), Path.end()), ResourceState); }
@@ -160,6 +152,7 @@ protected:
 	virtual void CreateUnorderedAccessTexture();
 
 	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f);
+	virtual void CreateViewport(const RECT& Rect, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f) { CreateViewport(static_cast<FLOAT>(Rect.right - Rect.left), static_cast<FLOAT>(Rect.bottom - Rect.top), MinDepth, MaxDepth); }
 	virtual void CreateViewportTopFront(const FLOAT Width, const FLOAT Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 	
 	virtual void CreateDescriptorRanges(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {}

@@ -16,7 +16,7 @@ public:
 
 protected:
 	virtual void CreateDepthStencil() override {
-		//CreateDepthStencilOfClientRect(DXGI_FORMAT_D32_FLOAT_S8X24_UINT);
+		//CreateDepthStencil(DXGI_FORMAT_D32_FLOAT_S8X24_UINT, Rect);
 	}
 
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1); }
