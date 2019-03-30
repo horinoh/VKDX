@@ -60,7 +60,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateFence();
 	CreateSemaphore();
 
-	CreateSwapchain();
+	CreateSwapchain(GetCurrentPhysicalDevice(), Surface);
 	CreateCommandBuffer();
 	InitializeSwapchain();
 
@@ -320,11 +320,6 @@ std::string VK::GetVkResultString(const VkResult Result)
 	}
 #undef VK_RESULT_ENTRY
 }
-std::wstring VK::GetVkResultStringW(const VkResult Result)
-{
-	const auto ResultString = GetVkResultString(Result);
-	return std::wstring(ResultString.begin(), ResultString.end());
-}
 std::string VK::GetFormatString(const VkFormat Format)
 {
 #define VK_FORMAT_ENTRY(vf) case VK_FORMAT_##vf: return #vf;
@@ -335,6 +330,7 @@ std::string VK::GetFormatString(const VkFormat Format)
 	}
 #undef VK_FORMAT_ENTRY
 }
+
 std::string VK::GetColorSpaceString(const VkColorSpaceKHR ColorSpace)
 {
 #define VK_COLOR_SPACE_ENTRY(vcs) case VK_COLOR_SPACE_##vcs: return #vcs;
@@ -771,20 +767,20 @@ void VK::EnumerateInstanceLayerProperties()
 	Logf("Instance Layer Properties\n");
 	for (const auto& i : InstanceLayerProperties) {
 		if (strlen(i.first.layerName)) {
-			Logf("\t\"%s\"\n", i.first.layerName);
+			Logf("\t\"%s\" (%s)\n", i.first.layerName, i.first.description);
 			for (const auto j : i.second) {
 				Logf("\t\t\"%s\"\n", j.extensionName);
 			}
 		}
 	}
 }
-void VK::EnumerateInstanceExtensionProperties(const char* layerName)
+void VK::EnumerateInstanceExtensionProperties(const char* LayerName)
 {
 	uint32_t Count = 0;
-	VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(layerName, &Count, nullptr));
+	VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(LayerName, &Count, nullptr));
 	if (Count) {
 		InstanceLayerProperties.back().second.resize(Count);
-		VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(layerName, &Count, InstanceLayerProperties.back().second.data()));
+		VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(LayerName, &Count, InstanceLayerProperties.back().second.data()));
 	}
 }
 
@@ -1152,7 +1148,7 @@ void VK::EnumeratePhysicalDevice(VkInstance Instance)
 		EnumeratePhysicalDeviceMemoryProperties(PDMP);
 
 		//!< デバイスレベルのレイヤー、エクステンションの列挙
-		EnumerateDeviceLayerProperties(i);
+		EnumeratePhysicalDeviceLayerProperties(i);
 
 		Log("\n");
 	}
@@ -1160,7 +1156,7 @@ void VK::EnumeratePhysicalDevice(VkInstance Instance)
 	assert(!PhysicalDevices.empty() && "No physical device found");
 	SetCurrentPhysicalDevice(PhysicalDevices[0]); //!< ここでは最初の物理デバイスを選択することにする #VK_TODO
 }
-void VK::EnumerateDeviceLayerProperties(VkPhysicalDevice PD)
+void VK::EnumeratePhysicalDeviceLayerProperties(VkPhysicalDevice PD)
 {
 	PhysicalDeviceLayerProperties.push_back(PHYSICAL_DEVICE_LAYER_PROPERTY(PD, {}));
 
@@ -1172,21 +1168,21 @@ void VK::EnumerateDeviceLayerProperties(VkPhysicalDevice PD)
 		VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PD, &Count, LayerProp.data()));
 		for (const auto& i : LayerProp) {
 			PhysicalDeviceLayerProperties.back().second.push_back(LAYER_PROPERTY(i, {}));
-			EnumerateDeviceExtensionProperties(PD, i.layerName);
+			EnumeratePhysicalDeviceExtensionProperties(PD, i.layerName);
 		}
 	}
 
 	Logf("Device Layer Properties\n");
 	for (const auto& i : PhysicalDeviceLayerProperties.back().second) {
 		if (strlen(i.first.layerName)) {
-			Logf("\t\"%s\"\n", i.first.layerName);
+			Logf("\t\"%s\" (%s)\n", i.first.layerName, i.first.description);
 			for (const auto j : i.second) {
 				Logf("\t\t\"%s\"\n", j.extensionName);
 			}
 		}
 	}
 }
-void VK::EnumerateDeviceExtensionProperties(VkPhysicalDevice PD, const char* LayerName)
+void VK::EnumeratePhysicalDeviceExtensionProperties(VkPhysicalDevice PD, const char* LayerName)
 {
 	uint32_t Count = 0;
 	VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PD, LayerName, &Count, nullptr));
@@ -1205,11 +1201,10 @@ void VK::EnumerateQueueFamilyProperties(VkPhysicalDevice PD, VkSurfaceKHR Surfac
 	QFPs.resize(Count);
 	vkGetPhysicalDeviceQueueFamilyProperties(PD, &Count, QFPs.data());
 
-#ifdef DEBUG_STDOUT
 	//!< Geforce970Mだと以下のような状態だった In case of Geforce970M
 	//!< QueueFamilyIndex == 0 : Grahics | Compute | Transfer | SparceBinding and Present
 	//!< QueueFamilyIndex == 1 : Transfer
-	std::cout << "\t" << "QueueFamilyProperties" << std::endl;
+	Log("\tQueueFamilyProperties\n");
 #define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & QFPs[i].queueFlags) { Logf("%s | ", #entry); }
 	for (uint32_t i = 0; i < QFPs.size(); ++i) {
 		Logf("\t\t[%d] QueueCount = %d, ", i, QFPs[i].queueCount);
@@ -1285,6 +1280,7 @@ void VK::EnumerateQueueFamilyProperties(VkPhysicalDevice PD, VkSurfaceKHR Surfac
 	//Logf("\t\tComputeQueueFamilyBits = %s\n", ComputeQueueFamilyBits.to_string());
 	//Logf("\t\tTansferQueueFamilyBits = %s\n", TransferQueueFamilyBits.to_string());
 	//Logf("\t\tSparceBindingQueueFamilyBits = %s\n", SparceBindingQueueFamilyBits.to_string());
+#ifdef DEBUG_STDOUT
 	std::cout << std::endl;
 	std::cout << "\t" << "\t" << "GraphicsQueueFamilyBits = " << GraphicsQueueFamilyBits.to_string() << std::endl;
 	std::cout << "\t" << "\t" << "PresentQueueFamilyBits = " << PresentQueueFamilyBits.to_string() << std::endl;
@@ -1370,14 +1366,12 @@ void VK::CreateQueueFamilyPriorities(VkPhysicalDevice PD, VkSurfaceKHR Surface, 
 	//	}
 	//}
 
-#ifdef DEBUG_STDOUT
 	Log("\n");
 	Logf("\t\tGraphics QueueFamilyIndex = %d, QueueIndex = %d\n", GraphicsQueueFamilyIndex, GraphicsQueueIndex);
 	Logf("\t\tPresent QueueFamilyIndex = %d, QueueIndex = %d\n", PresentQueueFamilyIndex, PresentQueueIndex);
 	Logf("\t\tCompute QueueFamilyIndex = %d, QueueIndex = %d\n", ComputeQueueFamilyIndex, ComputeQueueIndex);
 	//Logf("\t\tTransfer\tQueueFamilyIndex = %d, QueueIndex = %d\n", TransferQueueFamilyIndex, TransferQueueIndex);
 	//Logf("\t\tSparceBinding\tQueueFamilyIndex = %d, QueueIndex = %d\n", SparceBindingQueueFamilyIndex, SparceBindingQueueIndex);
-#endif
 }
 void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface)
 {
@@ -1403,26 +1397,14 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface)
 		}
 	}	
 
-	const std::vector<const char*> EnabledLayerNames = {
-#ifdef _DEBUG
-		//!< ↓標準的なバリデーションレイヤセットを最適な順序でロードする指定
-		"VK_LAYER_LUNARG_standard_validation",
-		"VK_LAYER_LUNARG_object_tracker",
-#endif
-#ifdef USE_RENDERDOC
-		"VK_LAYER_RENDERDOC_Capture",
-#endif
-	};
-
 	const std::vector<const char*> EnabledExtensions = {
 		//!< スワップチェインはプラットフォームに特有の機能なのでデバイス作製時に VK_KHR_SWAPCHAIN_EXTENSION_NAME エクステンションを有効にして作成しておく
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 #ifdef USE_RENDERDOC
 		VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
 #endif
+		VK_EXT_VALIDATION_CACHE_EXTENSION_NAME,
 	};
-
-	//!< #VK_TODO 有効にしているものが、DeviceLayerProperties に含まれているかチェックする
 
 	//!< vkGetPhysicalDeviceFeatures() で可能なフィーチャーが全て VkPhysicalDeviceFeatures になったPDFが返る
 	//!< このままでは可能なだけ有効になってしまうのでパフォーマンス的には良くない(必要な項目だけ true にし、それ以外は false にするのが本来は良い)
@@ -1436,7 +1418,7 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface)
 		nullptr,
 		0,
 		static_cast<uint32_t>(QueueCreateInfos.size()), QueueCreateInfos.data(),
-		static_cast<uint32_t>(EnabledLayerNames.size()), EnabledLayerNames.data(),
+		0, nullptr, //!< デバイスのレイヤは非推奨 (Device layer is deprecated)
 		static_cast<uint32_t>(EnabledExtensions.size()), EnabledExtensions.data(),
 		&PDF
 	};
@@ -1548,59 +1530,82 @@ void VK::CreateCommandBuffer()
 //	AllocateCommandBuffer(CommandBuffers, CommandPool, 1, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 }
 
-void VK::CreateSwapchain()
+void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Surface)
 {
-	CreateSwapchain(Rect);
+	CreateSwapchain(PD, Surface, Rect);
 
 	CreateSwapchainImageView();
 }
-VkSurfaceFormatKHR VK::SelectSurfaceFormat()
+VkSurfaceFormatKHR VK::SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface)
 {
-	auto PD = GetCurrentPhysicalDevice();
 	uint32_t Count;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PD, Surface, &Count, nullptr));
 	assert(Count && "Surface format count is zero");
-	std::vector<VkSurfaceFormatKHR> SurfaceFormats(Count);
-	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PD, Surface, &Count, SurfaceFormats.data()));
+	std::vector<VkSurfaceFormatKHR> SFs(Count);
+	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PD, Surface, &Count, SFs.data()));
 
-	//!< ここでは、最初の非 UNDEFINED を選択する。Select first format but UNDEFINED here
-	for (uint32_t i = 0; i < SurfaceFormats.size(); ++i) {
-		if (VK_FORMAT_UNDEFINED != SurfaceFormats[i].format) {
-#ifdef DEBUG_STDOUT
-			[&]() {
-				std::cout << "\t" << "\t" << Lightblue << "Format" << White << std::endl;
-				for (uint32_t j = 0; j < SurfaceFormats.size();++j) {
-					if (i == j) { std::cout << Yellow; }
-					std::cout << "\t" << "\t" << "\tFormat = " << GetFormatString(SurfaceFormats[j].format) << ", ColorSpace = " << GetColorSpaceString(SurfaceFormats[j].colorSpace) << std::endl;
-					std::cout << White;
-				}
-				std::cout << std::endl;
-			}();
-#endif
-			return SurfaceFormats[i];
+	//!< ここでは最初に見つかった UNDEFINED でないものを選択している (Select first format but UNDEFINED here)
+	const auto SelectedIndex = [&]() {
+		//!< 要素が 1 つのみで UNDEFINED の場合、制限は無く好きなものを選択できる (If there is only 1 element and which is UNDEFINED, we can choose any)
+		if (1 == SFs.size() && VK_FORMAT_UNDEFINED == SFs[0].format) {
+			return -1;
 		}
+		for (auto i = 0; i < SFs.size(); ++i) {
+			if (VK_FORMAT_UNDEFINED != SFs[i].format) {
+				return i;
+			}
+		}
+		//!< ここに来てはいけない
+		assert(false && "Valid surface format not found");
+		return 0;
+	}();
+
+	//!< ColorSpace はハードウェア上でのカラーコンポーネントの表現(リニア、ノンリニア、エンコード、デコード等)
+	Log("\t\tFormats\n");
+	for (auto i = 0; i < SFs.size(); ++i) {
+		Log("\t\t\t");
+		if (i == SelectedIndex) {
+			Log("->");
+		}
+		//Logf("Format = %s, ColorSpace = %s\n", GetFormatString(i.format), GetColorSpaceString(i.colorSpace));
+		std::cout << "Format = " << GetFormatString(SFs[i].format) << ", ColorSpace = " << GetColorSpaceString(SFs[i].colorSpace) << std::endl;
 	}
-	
-	//!< 要素が 1 つのみで UNDEFINED の場合、好きなものを選択できる。Has only 1 element and is UNDEFINED, we can choose
-	if (1 == SurfaceFormats.size() && VK_FORMAT_UNDEFINED == SurfaceFormats[0].format) {
-#ifdef DEBUG_STDOUT
-		std::cout << Yellow;
-		std::cout << "\t" << "\t" << "\tFormat = " << GetFormatString(VK_FORMAT_B8G8R8A8_UNORM) << ", ColorSpace = " << GetColorSpaceString(VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) << std::endl;
-		std::cout << White;
-#endif
-		return VkSurfaceFormatKHR({ VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR });
+	if (-1 == SelectedIndex) {
+		Log("\t\t\t->");
+		std::cout << "Format = " << GetFormatString(VK_FORMAT_B8G8R8A8_UNORM) << ", ColorSpace = " << GetColorSpaceString(VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) << std::endl;
 	}
 
-	assert(false && "Valid surface format not found");
-	return SurfaceFormats[0];
+	return -1 == SelectedIndex ? VkSurfaceFormatKHR({ VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR }) : SFs[SelectedIndex];
+}
+VkExtent2D VK::SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& Cap, const uint32_t Width, const uint32_t Height)
+{
+	if (0xffffffff == Cap.currentExtent.width) {
+		//!< 0xffffffff の場合はスワップチェインイメージサイズがウインドウサイズを決定することになる (If 0xffffffff, size of swapchain image determines the size of the window)
+		//!< (クランプした)引数のWidth, Heightを使用する (In this case, use argument (clamped) Width and Heigt) 
+		return VkExtent2D({ std::max(std::min(Width, Cap.maxImageExtent.width), Cap.minImageExtent.width), std::max(std::min(Height, Cap.minImageExtent.height), Cap.minImageExtent.height) });
+	}
+	else {
+		//!< そうでない場合はcurrentExtentを使用する (Otherwise, use currentExtent)
+		return Cap.currentExtent;
+	}
+}
+VkImageUsageFlags VK::SelectImageUsage(const VkSurfaceCapabilitiesKHR& Cap)
+{
+	//!< (サポートされていれば)イメージクリア用として VK_IMAGE_USAGE_TRANSFER_DST_BIT も立てている (If supported, set VK_IMAGE_USAGE_TRANSFER_DST_BIT for image clear)
+	return VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | (VK_IMAGE_USAGE_TRANSFER_DST_BIT & Cap.supportedUsageFlags);
+}
+VkSurfaceTransformFlagBitsKHR VK::SelectSurfaceTransform(const VkSurfaceCapabilitiesKHR& Cap)
+{
+	const auto Desired = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+	return (Desired & Cap.supportedTransforms) ? Desired : Cap.currentTransform;
 }
 VkPresentModeKHR VK::SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface)
 {
 	uint32_t Count;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PD, Surface, &Count, nullptr));
 	assert(Count && "Present mode count is zero");
-	std::vector<VkPresentModeKHR> PresentModes(Count);
-	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PD, Surface, &Count, PresentModes.data()));
+	std::vector<VkPresentModeKHR> PMs(Count);
+	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PD, Surface, &Count, PMs.data()));
 
 	//!< 可能なら VK_PRESENT_MODE_MAILBOX_KHR を選択、そうでなければ VK_PRESENT_MODE_FIFO_KHR を選択
 	/**
@@ -1611,26 +1616,25 @@ VkPresentModeKHR VK::SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR 
 	* VK_PRESENT_MODE_FIFO_RELAXED_KHR	... FIFOに在庫がある場合は vsyncを待つが、間に合わない場合は即座に更新されテアリングが起こる (If FIFO is not empty wait vsync. but if empty, updated immediately and tearing will happen)
 	*/
 	const VkPresentModeKHR SelectedPresentMode = [&]() {
-		for (auto i : PresentModes) {
+		for (auto i : PMs) {
 			if (VK_PRESENT_MODE_MAILBOX_KHR == i) {
 				//!< 可能なら MAILBOX (If possible, want to use MAILBOX)
 				return i;
 			}
 		}
-		for (auto i : PresentModes) {
+		for (auto i : PMs) {
 			if (VK_PRESENT_MODE_FIFO_KHR == i) {
 				//!< FIFO は VulkanAPI が必ずサポートする (VulkanAPI always support FIFO)
 				return i;
 			}
 		}
 		assert(false && "Not foud");
-		return PresentModes[0];
+		return PMs[0];
 	}();
 
-#ifdef DEBUG_STDOUT
 	Log("\tPresent Mode\n");
 #define VK_PRESENT_MODE_ENTRY(entry) case VK_PRESENT_MODE_##entry##_KHR: Logf("%s\n", #entry); break
-	for (auto i : PresentModes) {
+	for (auto i : PMs) {
 		Logf("\t\t%s", SelectedPresentMode == i ? "-> " : "");
 		switch (i) {
 		default: assert(0 && "Unknown VkPresentMode"); break;
@@ -1641,83 +1645,130 @@ VkPresentModeKHR VK::SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR 
 		}
 #undef VK_PRESENT_MODE_ENTRY
 	}
-#endif
 
 	return SelectedPresentMode;
 }
-void VK::CreateSwapchain(const uint32_t Width, const uint32_t Height)
+void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Surface, const uint32_t Width, const uint32_t Height)
 {
-	VkSurfaceCapabilitiesKHR SurfaceCapabilities;
-	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(GetCurrentPhysicalDevice(), Surface, &SurfaceCapabilities));
+	VkSurfaceCapabilitiesKHR SurfaceCap;
+	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PD, Surface, &SurfaceCap));
 
-	//!< minImageCount + 1 枚取る (MAILBOX では 3 枚欲しいので) Use minImageCount + 1 images (We want 3 image to use MAILBOX)
-	//!< ex) 自分の環境では minImageCount は 2 In my environment minImageCount is 2
-	//!< 無制限の場合は maxImageCount が 0 を返す
-	const auto MinImageCount = (std::min)(SurfaceCapabilities.minImageCount + 1, 0 == SurfaceCapabilities.maxImageCount ? UINT32_MAX : SurfaceCapabilities.maxImageCount);
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "\t" << Lightblue << "ImageCount = " << White << MinImageCount << std::endl;
-#endif
+	Log("\tSurfaceCapabilities\n");
+	Logf("\t\tminImageCount = %d\n", SurfaceCap.minImageCount);
+	Logf("\t\tmaxImageCount = %d\n", SurfaceCap.maxImageCount);
+	Logf("\t\tcurrentExtent = %d x %d\n", SurfaceCap.minImageExtent.width, SurfaceCap.currentExtent.height);
+	Logf("\t\tminImageExtent = %d x %d\n", SurfaceCap.currentExtent.width, SurfaceCap.minImageExtent.height);
+	Logf("\t\tmaxImageExtent = %d x %d\n", SurfaceCap.maxImageExtent.width, SurfaceCap.maxImageExtent.height);
+	Logf("\t\tmaxImageArrayLayers = %d\n", SurfaceCap.maxImageArrayLayers);
+	Log("\t\tsupportedTransforms = ");
+#define VK_SURFACE_TRANSFORM_ENTRY(entry) if(SurfaceCap.supportedTransforms & VK_SURFACE_TRANSFORM_##entry##_BIT_KHR) { Logf("%s | ", #entry); }
+	VK_SURFACE_TRANSFORM_ENTRY(IDENTITY);
+	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_90);
+	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_180);
+	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_270);
+	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR);
+	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_90);
+	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_180);
+	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_270);
+	VK_SURFACE_TRANSFORM_ENTRY(INHERIT);
+#undef VK_SURFACE_TRANSFORM_ENTRY
+	Log("\n");
+	Log("\t\tcurrentTransform = ");
+#define VK_SURFACE_TRANSFORM_ENTRY(entry) if(SurfaceCap.currentTransform == VK_SURFACE_TRANSFORM_##entry##_BIT_KHR) { Logf("%s\n", #entry); }
+	VK_SURFACE_TRANSFORM_ENTRY(IDENTITY);
+	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_90);
+	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_180);
+	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_270);
+	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR);
+	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_90);
+	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_180);
+	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_270);
+	VK_SURFACE_TRANSFORM_ENTRY(INHERIT);
+#undef VK_SURFACE_TRANSFORM_ENTRY
+	Log("\t\tsupportedCompositeAlpha = ");
+#define VK_COMPOSITE_ALPHA_ENTRY(entry) if(SurfaceCap.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_##entry##_BIT_KHR) { Logf("%s | ", #entry); }
+	VK_COMPOSITE_ALPHA_ENTRY(OPAQUE);
+	VK_COMPOSITE_ALPHA_ENTRY(PRE_MULTIPLIED);
+	VK_COMPOSITE_ALPHA_ENTRY(POST_MULTIPLIED);
+	VK_COMPOSITE_ALPHA_ENTRY(INHERIT);
+#undef VK_COMPOSITE_ALPHA_ENTRY
+	Log("\n");
+	Log("\t\tsupportedUsageFlags = ");
+#define VK_IMAGE_USAGE_ENTRY(entry) if(SurfaceCap.supportedUsageFlags & VK_IMAGE_USAGE_##entry) { Logf("%s | ", #entry); }
+	VK_IMAGE_USAGE_ENTRY(TRANSFER_SRC_BIT);
+	VK_IMAGE_USAGE_ENTRY(TRANSFER_DST_BIT);
+	VK_IMAGE_USAGE_ENTRY(SAMPLED_BIT);
+	VK_IMAGE_USAGE_ENTRY(STORAGE_BIT);
+	VK_IMAGE_USAGE_ENTRY(COLOR_ATTACHMENT_BIT);
+	VK_IMAGE_USAGE_ENTRY(DEPTH_STENCIL_ATTACHMENT_BIT);
+	VK_IMAGE_USAGE_ENTRY(TRANSIENT_ATTACHMENT_BIT);
+	VK_IMAGE_USAGE_ENTRY(INPUT_ATTACHMENT_BIT);
+	VK_IMAGE_USAGE_ENTRY(SHADING_RATE_IMAGE_BIT_NV);
+	VK_IMAGE_USAGE_ENTRY(FRAGMENT_DENSITY_MAP_BIT_EXT);
+#undef VK_IMAGE_USAGE_ENTRY
+	Log("\n");
 
-	if (0xffffffff == SurfaceCapabilities.currentExtent.width) {
-		//!< 0xffffffff の場合はイメージサイズがウインドウサイズを決定する。If 0xffffffff, size of image determines the size of the window
-		SurfaceExtent2D = {
-			std::max(std::min(Width, SurfaceCapabilities.maxImageExtent.width), SurfaceCapabilities.minImageExtent.width),
-			std::max(std::min(Height, SurfaceCapabilities.minImageExtent.height), SurfaceCapabilities.minImageExtent.height)
-		};
-	}
-	else {
-		//!< そうでない場合は currentExtent。Otherwise, use currentExtent
-		SurfaceExtent2D = SurfaceCapabilities.currentExtent;
-	}
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "\t" << Lightblue << "ImageExtent (" << (0xffffffff == SurfaceCapabilities.currentExtent.width ? "Undefined" : "Defined") << ")" << White << std::endl;
-	std::cout << "\t" << "\t" << "\t" << SurfaceExtent2D.width << " x " << SurfaceExtent2D.height << std::endl;
-#endif
-
-	const auto DesiredUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT; //!< イメージクリア用に TRANSFER_DST(サポートされていれば) For clear image TRANSFER_DST(If supported)
-	const VkImageUsageFlags ImageUsageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | (DesiredUsage & SurfaceCapabilities.supportedUsageFlags);
-
-	//!< サーフェスを回転、反転させるかどうか。Rotate, mirror surface or not
-	const auto DesiredTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR; //!< ここでは IDENTITY を希望。Want IDENTITY here
-	const auto PreTransform = (SurfaceCapabilities.supportedTransforms & DesiredTransform) ? DesiredTransform : SurfaceCapabilities.currentTransform;
+	//!< 最低よりも1枚多く取りたい、ただし最大値でクランプする(maxImageCount が0の場合は上限無し)
+	const auto ImageCount = (std::min)(SurfaceCap.minImageCount + 1, 0 == SurfaceCap.maxImageCount ? UINT32_MAX : SurfaceCap.maxImageCount);
+	Logf("\t\t\tImagCount = %d\n", ImageCount);
 
 	//!< サーフェスのフォーマットを選択
-	const auto SurfaceFormat = SelectSurfaceFormat();
+	const auto SurfaceFormat = SelectSurfaceFormat(PD, Surface);
+	ColorFormat = SurfaceFormat.format; //!< カラーファーマットは覚えておく
 
+	//!< サーフェスのサイズを選択
+	SurfaceExtent2D = SelectSurfaceExtent(SurfaceCap, Width, Height);
+	Logf("\t\t\tSurfaceExtent = %d x %d\n", SurfaceExtent2D.width, SurfaceExtent2D.height);
+
+	//!< レイヤー、ステレオレンダリング等をしたい場合は1以上になるが、ここでは1
+	uint32_t ImageArrayLayers = 1;
+
+	//!< サーフェスの使用法 (Surface usage)
+	const auto ImageUsage = SelectImageUsage(SurfaceCap);
+
+	//!< グラフィックとプレゼントのキューファミリが異なる場合はキューファミリインデックスの配列が必要、また VK_SHARING_MODE_CONCURRENT を指定すること
+	//!< (ただし VK_SHARING_MODE_CONCURRENT にするとパフォーマンスが落ちる場合がある)
+	std::vector<uint32_t> QueueFamilyIndices;
+	if (GraphicsQueueFamilyIndex != PresentQueueFamilyIndex) {
+		QueueFamilyIndices.push_back(GraphicsQueueFamilyIndex);
+		QueueFamilyIndices.push_back(PresentQueueFamilyIndex);
+	}
+
+	//!< サーフェスを回転、反転等させるかどうか (Rotate, mirror surface or not)
+	const auto SurfaceTransform = SelectSurfaceTransform(SurfaceCap);
+	
 	//!< サーフェスのプレゼントモードを選択
-	const auto PresentMode = SelectSurfacePresentMode(GetCurrentPhysicalDevice(), Surface);
+	const auto SurfacePresentMode = SelectSurfacePresentMode(PD, Surface);
 
-	//!< セッティングを変更してスワップチェインを再作成できるようにしておく。既存を開放するために OldSwapchain に覚える
+	//!< 既存のは後で開放するので OldSwapchain に覚えておく (セッティングを変更してスワップチェインを再作成する場合等に備える)
 	auto OldSwapchain = Swapchain;
 	const VkSwapchainCreateInfoKHR SwapchainCreateInfo = {
 		VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
 		nullptr,
 		0,
 		Surface,
-		MinImageCount,
-		(ColorFormat = SurfaceFormat.format),
-		SurfaceFormat.colorSpace,
+		ImageCount,
+		SurfaceFormat.format, SurfaceFormat.colorSpace,
 		SurfaceExtent2D,
-		1,
-		ImageUsageFlags,
-		VK_SHARING_MODE_EXCLUSIVE,
-		0, nullptr,
-		PreTransform,
+		ImageArrayLayers,
+		ImageUsage,
+		QueueFamilyIndices.empty() ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT, static_cast<uint32_t>(QueueFamilyIndices.size()), QueueFamilyIndices.data(),
+		SurfaceTransform,
 		VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-		PresentMode,
-		true,
+		SurfacePresentMode,
+		VK_TRUE,
 		OldSwapchain
 	};
 	VERIFY_SUCCEEDED(vkCreateSwapchainKHR(Device, &SwapchainCreateInfo, GetAllocationCallbacks(), &Swapchain));
 
 	LogOK("CreateSwapchain");
 
+	//!< (あれば)前のやつは破棄
 	if (VK_NULL_HANDLE != OldSwapchain) {
 		for (auto i : SwapchainImageViews) {
 			vkDestroyImageView(Device, i, GetAllocationCallbacks());
 		}
 		SwapchainImageViews.clear();
-
 		vkDestroySwapchainKHR(Device, OldSwapchain, GetAllocationCallbacks());
 	}
 
@@ -1838,7 +1889,7 @@ void VK::ResizeSwapchain(const uint32_t Width, const uint32_t Height)
 	//std::for_each(CommandPools.begin(), CommandPools.end(), [&](const VkCommandPool rhs) { vkDestroyCommandPool(Device, rhs, GetAllocationCallbacks()); });
 	//CommandPools.clear();
 
-	CreateSwapchain();
+	CreateSwapchain(GetCurrentPhysicalDevice(), Surface);
 }
 
 void VK::CreateSwapchainImageView()

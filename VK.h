@@ -9,6 +9,8 @@
 #else
 #define VK_USE_PLATFORM_XLIB_KHR
 //#define VK_USE_PLATFORM_XCB_KHR
+//#define VK_USE_PLATFORM_WAYLAND_KHR
+//#define VK_USE_PLATFORM_ANDROID_KHR
 #endif
 #include <vulkan/vulkan.h>
 
@@ -79,17 +81,22 @@ public:
 #endif
 
 	static std::string GetVkResultString(const VkResult Result);
-	static std::wstring GetVkResultStringW(const VkResult Result);
+	static std::wstring GetVkResultStringW(const VkResult Result) { const auto Str = GetVkResultString(Result); return std::wstring(Str.begin(), Str.end()); }
 	static std::string GetFormatString(const VkFormat Format);
+	static std::wstring GetFormatStringW(const VkFormat Format) { const auto Str = GetFormatString(Format); return std::wstring(Str.begin(), Str.end()); }
 	static std::string GetColorSpaceString(const VkColorSpaceKHR ColorSpace);
+	static std::wstring GetColorSpaceStringW(const VkColorSpaceKHR ColorSpace) { const auto Str = GetColorSpaceString(ColorSpace); return std::wstring(Str.begin(), Str.end()); }
 	static std::string GetImageViewTypeString(const VkImageViewType ImageViewType);
+	static std::wstring GetImageViewTypeStringW(const VkImageViewType ImageViewType) { const auto Str = GetImageViewTypeString(ImageViewType); return std::wstring(Str.begin(), Str.end()); }
 	static std::string GetComponentSwizzleString(const VkComponentSwizzle ComponentSwizzle);
+	static std::wstring GetComponentSwizzleStringW(const VkComponentSwizzle ComponentSwizzle) { const auto Str = GetComponentSwizzleString(ComponentSwizzle); return std::wstring(Str.begin(), Str.end()); }
 	static std::string GetComponentMappingString(const VkComponentMapping& ComponentMapping) {
-		return GetComponentSwizzleString(ComponentMapping.r) 
+		return GetComponentSwizzleString(ComponentMapping.r)
 			+ ", " + GetComponentSwizzleString(ComponentMapping.g) 
 			+ ", " + GetComponentSwizzleString(ComponentMapping.b)
 			+ ", " + GetComponentSwizzleString(ComponentMapping.a);
 	}
+	static std::wstring GetComponentMappingStringW(const VkComponentMapping& ComponentMapping) { const auto Str = GetComponentMappingString(ComponentMapping); return std::wstring(Str.begin(), Str.end()); }
 
 protected:
 	static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
@@ -160,7 +167,7 @@ protected:
 #endif
 
 	virtual void EnumerateInstanceLayerProperties();
-	virtual void EnumerateInstanceExtensionProperties(const char* layerName);
+	virtual void EnumerateInstanceExtensionProperties(const char* LayerName);
 	//const VkCommandBufferInheritanceInfo CommandBufferInheritanceInfo_None = {
 	//	VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
 	//	nullptr,
@@ -194,8 +201,8 @@ protected:
 	virtual void EnumeratePhysicalDeviceFeatures(const VkPhysicalDeviceFeatures& PDF);
 	virtual void EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryProperties& PDMP);
 	virtual void EnumeratePhysicalDevice(VkInstance Instance);
-	virtual void EnumerateDeviceLayerProperties(VkPhysicalDevice PD);
-	virtual void EnumerateDeviceExtensionProperties(VkPhysicalDevice PD, const char* LayerName);
+	virtual void EnumeratePhysicalDeviceLayerProperties(VkPhysicalDevice PD);
+	virtual void EnumeratePhysicalDeviceExtensionProperties(VkPhysicalDevice PD, const char* LayerName);
 	virtual void EnumerateQueueFamilyProperties(VkPhysicalDevice PD, VkSurfaceKHR Surface, std::vector<VkQueueFamilyProperties>& QFPs);
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const;
 	virtual void CreateQueueFamilyPriorities(VkPhysicalDevice PD, VkSurfaceKHR Surface, const std::vector<VkQueueFamilyProperties>& QFPs, std::vector<std::vector<float>>& QueueFamilyPriorites);
@@ -208,11 +215,14 @@ protected:
 	virtual void AllocateCommandBuffer(std::vector<VkCommandBuffer>& CBs, const VkCommandPool CP, const size_t Count, const VkCommandBufferLevel Level);
 	virtual void CreateCommandBuffer();
 
-	virtual void CreateSwapchain();
-	virtual VkSurfaceFormatKHR SelectSurfaceFormat();
+	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Surface);
+	virtual VkSurfaceFormatKHR SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface);
+	virtual VkExtent2D SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& Cap, const uint32_t Width, const uint32_t Height);
+	virtual VkImageUsageFlags SelectImageUsage(const VkSurfaceCapabilitiesKHR& Cap);
+	virtual VkSurfaceTransformFlagBitsKHR SelectSurfaceTransform(const VkSurfaceCapabilitiesKHR& Cap);
 	virtual VkPresentModeKHR SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface);
-	virtual void CreateSwapchain(const uint32_t Width, const uint32_t Height);
-	virtual void CreateSwapchain(const RECT& Rect) { CreateSwapchain(static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
+	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Surface, const uint32_t Width, const uint32_t Height);
+	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Surface, const RECT& Rect) { CreateSwapchain(PD, Surface, static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
 	virtual void CreateSwapchainImageView();
 	virtual void InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkClearColorValue* ClearColorValue = nullptr);
 	virtual void InitializeSwapchain();
