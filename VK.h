@@ -80,23 +80,29 @@ public:
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 #endif
 
-	static std::string GetVkResultString(const VkResult Result);
-	static std::wstring GetVkResultStringW(const VkResult Result) { const auto Str = GetVkResultString(Result); return std::wstring(Str.begin(), Str.end()); }
-	static std::string GetFormatString(const VkFormat Format);
-	static std::wstring GetFormatStringW(const VkFormat Format) { const auto Str = GetFormatString(Format); return std::wstring(Str.begin(), Str.end()); }
-	static std::string GetColorSpaceString(const VkColorSpaceKHR ColorSpace);
-	static std::wstring GetColorSpaceStringW(const VkColorSpaceKHR ColorSpace) { const auto Str = GetColorSpaceString(ColorSpace); return std::wstring(Str.begin(), Str.end()); }
-	static std::string GetImageViewTypeString(const VkImageViewType ImageViewType);
-	static std::wstring GetImageViewTypeStringW(const VkImageViewType ImageViewType) { const auto Str = GetImageViewTypeString(ImageViewType); return std::wstring(Str.begin(), Str.end()); }
-	static std::string GetComponentSwizzleString(const VkComponentSwizzle ComponentSwizzle);
-	static std::wstring GetComponentSwizzleStringW(const VkComponentSwizzle ComponentSwizzle) { const auto Str = GetComponentSwizzleString(ComponentSwizzle); return std::wstring(Str.begin(), Str.end()); }
+	static char* GetVkResultChar(const VkResult Result);
+	static std::string GetVkResultString(const VkResult Result) { return std::string(GetVkResultChar(Result)); }
+	static std::wstring GetVkResultWstring(const VkResult Result) { const auto Str = GetVkResultString(Result); return std::wstring(Str.begin(), Str.end()); }
+	static char* GetFormatChar(const VkFormat Format);
+	static std::string GetFormatString(const VkFormat Format) { return std::string(GetFormatChar(Format)); }
+	static std::wstring GetFormatWstring(const VkFormat Format) { const auto Str = GetFormatString(Format); return std::wstring(Str.begin(), Str.end()); }
+	static char* GetColorSpaceChar(const VkColorSpaceKHR ColorSpace);
+	static std::string GetColorSpaceString(const VkColorSpaceKHR ColorSpace) { return std::string(GetColorSpaceChar(ColorSpace)); }
+	static std::wstring GetColorSpaceWstring(const VkColorSpaceKHR ColorSpace) { const auto Str = GetColorSpaceString(ColorSpace); return std::wstring(Str.begin(), Str.end()); }
+	static char* GetImageViewTypeChar(const VkImageViewType ImageViewType);
+	static std::string GetImageViewTypeString(const VkImageViewType ImageViewType) { return std::string(GetImageViewTypeChar(ImageViewType)); }
+	static std::wstring GetImageViewTypeWstring(const VkImageViewType ImageViewType) { const auto Str = GetImageViewTypeString(ImageViewType); return std::wstring(Str.begin(), Str.end()); }
+	static char* GetComponentSwizzleChar(const VkComponentSwizzle ComponentSwizzle);
+	static std::string GetComponentSwizzleString(const VkComponentSwizzle ComponentSwizzle) { return std::string(GetComponentSwizzleChar(ComponentSwizzle)); }
+	static std::wstring GetComponentSwizzleWstring(const VkComponentSwizzle ComponentSwizzle) { const auto Str = GetComponentSwizzleString(ComponentSwizzle); return std::wstring(Str.begin(), Str.end()); }
+	//static char* GetComponentMappingChar(const VkComponentMapping& ComponentMapping);
 	static std::string GetComponentMappingString(const VkComponentMapping& ComponentMapping) {
-		return GetComponentSwizzleString(ComponentMapping.r)
+			return GetComponentSwizzleString(ComponentMapping.r)
 			+ ", " + GetComponentSwizzleString(ComponentMapping.g) 
 			+ ", " + GetComponentSwizzleString(ComponentMapping.b)
 			+ ", " + GetComponentSwizzleString(ComponentMapping.a);
 	}
-	static std::wstring GetComponentMappingStringW(const VkComponentMapping& ComponentMapping) { const auto Str = GetComponentMappingString(ComponentMapping); return std::wstring(Str.begin(), Str.end()); }
+	static std::wstring GetComponentMappingWstring(const VkComponentMapping& ComponentMapping) { const auto Str = GetComponentMappingString(ComponentMapping); return std::wstring(Str.begin(), Str.end()); }
 
 protected:
 	static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
@@ -208,14 +214,15 @@ protected:
 	virtual void CreateQueueFamilyPriorities(VkPhysicalDevice PD, VkSurfaceKHR Surface, const std::vector<VkQueueFamilyProperties>& QFPs, std::vector<std::vector<float>>& QueueFamilyPriorites);
 	virtual void CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 
-	virtual void CreateFence();
-	virtual void CreateSemaphore();
+	virtual void CreateFence(VkDevice Device);
+	virtual void CreateSemaphore(VkDevice Device);
 
-	virtual void CreateCommandPool(VkCommandPool& CP, const uint32_t QueueFamilyIndex);
-	virtual void AllocateCommandBuffer(std::vector<VkCommandBuffer>& CBs, const VkCommandPool CP, const size_t Count, const VkCommandBufferLevel Level);
+	using COMMAND_POOL = std::pair<VkCommandPool, std::vector<VkCommandBuffer>>;
+	using COMMAND_POOLS = std::vector<COMMAND_POOL>;
+	virtual void CreateCommandPool(VkDevice Device, const uint32_t QueueFamilyIndex);
+	virtual void AllocateCommandBuffer(const VkCommandBufferLevel Level, const size_t Count, COMMAND_POOL& Command);
 	virtual void CreateCommandBuffer();
 
-	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 	virtual VkSurfaceFormatKHR SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 	virtual VkExtent2D SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& Cap, const uint32_t Width, const uint32_t Height);
 	virtual VkImageUsageFlags SelectImageUsage(const VkSurfaceCapabilitiesKHR& Cap);
@@ -223,12 +230,13 @@ protected:
 	virtual VkPresentModeKHR SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Surface, const uint32_t Width, const uint32_t Height);
 	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Surface, const RECT& Rect) { CreateSwapchain(PD, Surface, static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
+	virtual void ResizeSwapchain(const uint32_t Width, const uint32_t Height);
+	virtual void ResizeSwapchain(const RECT& Rect) { ResizeSwapchain(static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
+	virtual void GetSwapchainImage(VkDevice Device, VkSwapchainKHR Swapchain);
 	virtual void CreateSwapchainImageView();
 	virtual void InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkClearColorValue* ClearColorValue = nullptr);
 	virtual void InitializeSwapchain();
-	virtual void ResizeSwapchain(const uint32_t Width, const uint32_t Height);
-	virtual void ResizeSwapchain(const RECT& Rect) { ResizeSwapchain(static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
-
+	
 	virtual void CreateDepthStencil() {}
 	virtual void CreateDepthStencil(const uint32_t Width, const uint32_t Height, const VkFormat DepthFormat);
 	virtual void CreateDepthStencilImage(const uint32_t Width, const uint32_t Height, const VkFormat DepthFormat);
@@ -307,7 +315,6 @@ protected:
 	virtual void Draw();
 	virtual void Dispatch();
 	virtual void Present();
-	virtual void WaitForFence(VkFence& Fence, const uint64_t TimeOut = 100000000);
 
 	const VkAllocationCallbacks AllocationCallbacks = {
 		nullptr,
@@ -364,12 +371,12 @@ public:
 #endif //!< _DEBUG
 
 protected:
-	using LAYER_PROPERTY = std::pair<VkLayerProperties, std::vector<VkExtensionProperties>>;
-	using LAYER_PROPERTIES = std::vector<LAYER_PROPERTY>;
-	using PHYSICAL_DEVICE_LAYER_PROPERTY = std::pair<VkPhysicalDevice, LAYER_PROPERTIES>;
-	using PHYSICAL_DEVICE_LAYER_PROPERTIES = std::vector<PHYSICAL_DEVICE_LAYER_PROPERTY>;
-	LAYER_PROPERTIES InstanceLayerProperties;
-	PHYSICAL_DEVICE_LAYER_PROPERTIES PhysicalDeviceLayerProperties;
+	//using LAYER_PROPERTY = std::pair<VkLayerProperties, std::vector<VkExtensionProperties>>;
+	//using LAYER_PROPERTIES = std::vector<LAYER_PROPERTY>;
+	//using PHYSICAL_DEVICE_LAYER_PROPERTY = std::pair<VkPhysicalDevice, LAYER_PROPERTIES>;
+	//using PHYSICAL_DEVICE_LAYER_PROPERTIES = std::vector<PHYSICAL_DEVICE_LAYER_PROPERTY>;
+	//LAYER_PROPERTIES InstanceLayerProperties;
+	//PHYSICAL_DEVICE_LAYER_PROPERTIES PhysicalDeviceLayerProperties;
 
 	VkInstance Instance = VK_NULL_HANDLE;
 #ifdef _DEBUG
@@ -407,17 +414,14 @@ protected:
 	VkSemaphore NextImageAcquiredSemaphore = VK_NULL_HANDLE;	//!< プレゼント完了までウエイト
 	VkSemaphore RenderFinishedSemaphore = VK_NULL_HANDLE;		//!< 描画完了するまでウエイト
 
-	VkCommandPool CommandPool = VK_NULL_HANDLE;
-	VkCommandPool ComputeCommandPool = VK_NULL_HANDLE;
-	std::vector<VkCommandBuffer> CommandBuffers;
-	std::vector<VkCommandBuffer> ComputeCommandBuffers;
+	COMMAND_POOLS CommandPools;
 
 	VkExtent2D SurfaceExtent2D;
 	VkFormat ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 	VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
 	std::vector<VkImage> SwapchainImages;
-	std::vector<VkImageView> SwapchainImageViews;
 	uint32_t SwapchainImageIndex = 0;
+	std::vector<VkImageView> SwapchainImageViews;
 
 	//VkFormat DepthFormat = VK_FORMAT_D24_UNORM_S8_UINT;
 	VkImage DepthStencilImage = VK_NULL_HANDLE;
@@ -507,9 +511,9 @@ protected:
 	
 	/**
 	@brief VkCommandBufferUsageFlags 
-	* VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT		... 一度だけ使用する場合、毎回リセットする場合に指定、何度もサブミットするものには指定しない
-	* VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT		... 前回のサブミットが完了してなくても、再度サブミットする場合に指定、パフォーマンス的に避けるべき
-	* VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT	... セカンダリコマンドバッファでかつ、完全にレンダーパス内の場合に指定する
+	* VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT		... 一度だけ使用する場合や毎回リセットする場合に指定、何度もサブミットするものには指定しない
+	* VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT		... デバイスでまだ実行されている間に、コマンドバッファを再度サブミットする必要がある場合に指定 ()
+	* VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT	... セカンダリコマンドバッファでかつレンダーパス内の場合に指定する
 
 	@brief セカンダリコマンドバッファ
 	* 基本的に、セカンダリ(コマンドバッファ)はプライマリ(コマンドバッファ)のステートを継承しない
@@ -533,6 +537,13 @@ protected:
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr, 
 		0,
-		nullptr/*&CommandBufferInheritanceInfo_None*/ //!< セカンダリコマンドバッファの場合に使用
+		nullptr
+	};
+
+	const VkCommandBufferBeginInfo CommandBufferBeginInfo_Secondary = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		nullptr,
+		VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
+		nullptr, //&VkCommandBufferInheritanceInfo #VK_TODO
 	};
 };

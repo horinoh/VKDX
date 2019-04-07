@@ -7,7 +7,7 @@ void VKExt::CreateIndirectBuffer_Draw(const uint32_t Count)
 	const VkDrawIndirectCommand Source = { Count, 1, 0, 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<VkDeviceSize>(Stride * 1);
-	const auto CB = CommandBuffers[0];
+	const auto CB = CommandPools[0].second[0];//CommandBuffers[0];
 
 	CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, Size, &Source, CB);
 }
@@ -16,7 +16,7 @@ void VKExt::CreateIndirectBuffer_DrawIndexed(const uint32_t Count)
 	const VkDrawIndexedIndirectCommand Source = { Count, 1, 0, 0, 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<VkDeviceSize>(Stride * 1);
-	const auto CB = CommandBuffers[0];
+	const auto CB = CommandPools[0].second[0]; //CommandBuffers[0];
 
 	CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, Size, &Source, CB);
 }
@@ -25,7 +25,7 @@ void VKExt::CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, co
 	const VkDispatchIndirectCommand Source = { X, Y, Z };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<VkDeviceSize>(Stride * 1);
-	const auto CB = CommandBuffers[0];//ComputeCommandBuffers[0];
+	const auto CB = CommandPools[0].second[0]; //CommandBuffers[0];//ComputeCommandBuffers[0];
 
 	CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, Size, &Source, CB);
 }

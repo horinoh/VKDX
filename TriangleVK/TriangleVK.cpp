@@ -236,6 +236,7 @@ void TriangleVK::CreateVertexBuffer()
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 	
+	const auto CB = CommandPools[0].second[0];
 	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data, const VkCommandBuffer CB) {
 		VkBuffer StagingBuffer = VK_NULL_HANDLE;
 		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
@@ -261,7 +262,7 @@ void TriangleVK::CreateVertexBuffer()
 		if (VK_NULL_HANDLE != StagingBuffer) {
 			vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
 		}
-	}(&VertexBuffer, &VertexDeviceMemory, Size, Vertices.data(), CommandBuffers[0]);
+	}(&VertexBuffer, &VertexDeviceMemory, Size, Vertices.data(), CB);
 
 	//!< ビューは必要ない No need view
 
@@ -282,6 +283,7 @@ void TriangleVK::CreateIndexBuffer()
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 	
+	const auto CB = CommandPools[0].second[0];
 	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data, const VkCommandBuffer CB) {
 		VkBuffer StagingBuffer = VK_NULL_HANDLE;
 		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
@@ -306,7 +308,7 @@ void TriangleVK::CreateIndexBuffer()
 		if (VK_NULL_HANDLE != StagingBuffer) {
 			vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
 		}
-	}(&IndexBuffer, &IndexDeviceMemory, Size, Indices.data(), CommandBuffers[0]);
+	}(&IndexBuffer, &IndexDeviceMemory, Size, Indices.data(), CB);
 
 	//!< ビューは必要ない No need view
 
@@ -320,7 +322,7 @@ void TriangleVK::CreateIndexBuffer()
 }
 void TriangleVK::PopulateCommandBuffer(const size_t i)
 {
-	const auto CB = CommandBuffers[i];
+	const auto CB = CommandPools[0].second[i];//CommandBuffers[i];
 	//const auto SCB = SecondaryCommandBuffers[i];
 	const auto FB = Framebuffers[i];
 	const auto Image = SwapchainImages[i];

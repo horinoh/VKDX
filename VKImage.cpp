@@ -263,6 +263,7 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 	std::cout << std::endl;
 #endif //!< DEBUG_STDOUT
 	
+	auto CB = CommandPools[0].second[0];
 	[&](VkImage* Image, VkDeviceMemory* DeviceMemory, VkImageView* ImageView, const gli::texture& GLITexture, const VkCommandBuffer CB) {
 		const auto Size = static_cast<VkDeviceSize>(GLITexture.size());
 
@@ -291,7 +292,7 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 		if (VK_NULL_HANDLE != StagingBuffer) {
 			vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
 		}
-	}(Image, DeviceMemory, ImageView, GLITexture, CommandBuffers[0]);
+	}(Image, DeviceMemory, ImageView, GLITexture, CB);
 
 	//!< ƒrƒ…[‚ðì¬
 	CreateImageView(ImageView, *Image, GLITexture);

@@ -227,7 +227,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void NormalMapVK::PopulateCommandBuffer(const size_t i)
 {
-	const auto CB = CommandBuffers[i];
+	const auto CB = CommandPools[0].second[i];//CommandBuffers[i];
 	//const auto SCB = SecondaryCommandBuffers[i];
 	const auto FB = Framebuffers[i];
 	const auto Image = SwapchainImages[i];

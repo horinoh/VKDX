@@ -227,7 +227,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void ComputeVK::PopulateCommandBuffer(const size_t i)
 {
-	const auto CB = CommandBuffers[i];
+	const auto CB = CommandPools[0].second[i];//CommandBuffers[i];
 
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
