@@ -14,32 +14,43 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	Super::OnCreate(hWnd, hInstance, Title);
 
+	//!< デバイス
 	const auto ColorFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 	CreateDevice(hWnd);
 	CheckMultiSample(ColorFormat);
 	CreateCommandQueue();
 
+	//!< 同期
 	CreateFence();
 
+	//!< スワップチェイン
 	CreateSwapchain(hWnd, ColorFormat);
+
+	//!< コマンド
 	CreateCommandList();
 	InitializeSwapChain();
 
+	//!< デプス
 	CreateDepthStencil();
 	
+	//!< 頂点
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 	CreateIndirectBuffer();
 
 	CreateTexture();
 
+	//!< ルートシグネチャ(デスクリプタセットレイアウト)
 	CreateRootSignature();
 	{
+		//!< コンスタントバッファ(ユニフォームバッファ)
 		CreateConstantBuffer();
 	}
+	//!< デスクリプタ
 	CreateDescriptorHeap();
 	UpdateDescriptorHeap();
 
+	//!< パイプライン
 	CreatePipelineState();
 
 	//CreateUnorderedAccessTexture();

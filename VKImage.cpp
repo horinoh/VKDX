@@ -101,7 +101,13 @@ void VKImage::SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffe
 	const auto Layers = static_cast<const uint32_t>(GLITexture.layers()) * Faces;
 	const auto Levels = static_cast<const uint32_t>(GLITexture.levels());
 
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CommandBufferBeginInfo_OneTime)); {
+	const VkCommandBufferBeginInfo CBBI = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		nullptr,
+		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+		nullptr
+	};
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CBBI)); {
 		//!< 各バッファコピー領域を準備 Prepare each buffer copy
 		std::vector<VkBufferImageCopy> BufferImageCopies;
 		BufferImageCopies.reserve(Layers);

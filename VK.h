@@ -112,37 +112,36 @@ protected:
 	static void AligendFreeNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
 
 	static bool IsSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, const VkFormat DepthFormat);
-	static uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PhysicalDeviceMemoryProperties, const uint32_t MemoryTypeBits, const VkFlags Properties);
-	virtual FORCEINLINE uint32_t GetMemoryType(const uint32_t MemoryTypeBits, const VkFlags Properties) const { return GetMemoryType(GetCurrentPhysicalDeviceMemoryProperties(), MemoryTypeBits, Properties); }
-	//static VkAccessFlags GetSrcAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
-	//static VkAccessFlags GetDstAccessMask(VkImageLayout OldImageLayout, VkImageLayout NewImageLayout);
-	//void SetImageLayout(VkCommandBuffer CommandBuffer, VkImage Image, VkImageLayout OldImageLayout, VkImageLayout NewImageLayout, VkImageSubresourceRange ImageSubresourceRange) const;
-	//virtual void MemoryBarrier() {}
-	//virtual void BufferMemoryBarrier(const VkCommandBuffer CommandBuffer, const VkBuffer Buffer) {}
-	//virtual void ImageMemoryBarrier(const VkCommandBuffer CommandBuffer, const VkImage Image) {}
+	static uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PDMP, const uint32_t MemoryTypeBits, const VkFlags Properties);
 
 	virtual void CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size) const;
 	virtual void CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkSampleCountFlagBits SampleCount, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers) const;
 	
 	virtual void CopyToHostVisibleMemory(const VkDeviceMemory DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset = 0);
-	
 	virtual void SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkBuffer DstBuffer, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size);
 	
-	void CreateHostVisibleBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Object);
-	void CreateDeviceLocalBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Object);
-	void BindBufferMemory(const VkBuffer Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset) { VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Object, DeviceMemory, Offset)); }
-	void CreateHostVisibleImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Object);
-	void CreateDeviceLocalImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Object);
-	void BindImageMemory(const VkImage Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset) { VERIFY_SUCCEEDED(vkBindImageMemory(Device, Object, DeviceMemory, Offset)); }
-	template<typename T> void CreateHostVisibleMemory(VkDeviceMemory* DeviceMemory, const T Object) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
-	template<typename T> void CreateDeviceLocalMemory(VkDeviceMemory* DeviceMemory, const T Object) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
-	template<typename T> void BindMemory(const T Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset = 0) { DEBUG_BREAK(); /* テンプレート特殊化されていない、実装すること */ }
-	//!< ↓ ここでテンプレート特殊化している Template specialization here
+	void CreateBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF);
+	void CreateHostVisibleBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Buffer) {
+		//!< VK_MEMORY_PROPERTY_HOST_COHERENT_BIT を指定した場合 vkFlushMappedMemoryRanges() や vkInvalidateMappedMemoryRanges() をコールする必要がなくなる (If VK_MEMORY_PROPERTY_HOST_COHERENT_BIT is specified, no need to call vkFlushMappedMemoryRanges() and vkInvalidateMappedMemoryRanges())
+		CreateBufferMemory(DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT/*| VK_MEMORY_PROPERTY_HOST_COHERENT_BIT*/);
+	}
+	void CreateDeviceLocalBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Buffer) { CreateBufferMemory(DeviceMemory, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); }
+	void BindBufferMemory(const VkBuffer Buffer, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset) { VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, Offset)); }
+
+	void CreateImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Image, const VkMemoryPropertyFlags MPF);
+	void CreateHostVisibleImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Image) { assert(false && "Not implemented"); }
+	void CreateDeviceLocalImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Image) { CreateImageMemory(DeviceMemory, Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); }
+	void BindImageMemory(const VkImage Image, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset) { VERIFY_SUCCEEDED(vkBindImageMemory(Device, Image, DeviceMemory, Offset)); }
+	
+	template<typename T> void CreateHostVisibleMemory(VkDeviceMemory* DeviceMemory, const T Object) { static_assert(false, "Need to implement templete specialization"); }
+	template<typename T> void CreateDeviceLocalMemory(VkDeviceMemory* DeviceMemory, const T Object) { static_assert(false, "Need to implement templete specialization"); }
+	template<typename T> void BindMemory(const T Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset = 0) { static_assert(false, "Need to implement templete specialization"); }
+	//!< ↓ ここでテンプレート特殊化している (Template specialization here)
 #include "VKDeviceMemory.inl"
 
-	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
 	virtual void CreateBufferView(VkBufferView* BufferView, const VkBuffer Buffer, const VkFormat Format, const VkDeviceSize Offset = 0, const VkDeviceSize Range = VK_WHOLE_SIZE);
-	
+	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
+
 	virtual void ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat Format) const;
 
 #ifdef _DEBUG
@@ -508,42 +507,4 @@ protected:
 		0, VK_REMAINING_ARRAY_LAYERS
 	};
 	const VkClearDepthStencilValue ClearDepthStencilValue = { 1.0f, 0 };
-	
-	/**
-	@brief VkCommandBufferUsageFlags 
-	* VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT		... 一度だけ使用する場合や毎回リセットする場合に指定、何度もサブミットするものには指定しない
-	* VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT		... デバイスでまだ実行されている間に、コマンドバッファを再度サブミットする必要がある場合に指定 ()
-	* VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT	... セカンダリコマンドバッファでかつレンダーパス内の場合に指定する
-
-	@brief セカンダリコマンドバッファ
-	* 基本的に、セカンダリ(コマンドバッファ)はプライマリ(コマンドバッファ)のステートを継承しない
-	* セカンダリ記録後のプライマリのステートも未定義、プライマリに戻って再記録する場合はステートを再設定しなくてはならない
-	* 例外) プライマリがレンダーパス内でそこからセカンダリを呼び出す場合には、プライマリのレンダーパス、サプバスステートは継承される
-	* 全てのコマンドがプライマリ、セカンダリの両方で記録できるわけではない
-
-	* セカンダリは直接サブミットできない、プライマリから呼び出される
-		* vkCmdExecuteCommands(プライマリ, セカンダリ個数, セカンダリ配列);
-	* セカンダリの場合は VK_SUBPASS_CONTENTS_INLINE の代わりに VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS を指定する
-		* vkCmdBeginRenderPass(..., VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-		* vkCmdNextSubpass(..., VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-	*/
-	const VkCommandBufferBeginInfo CommandBufferBeginInfo_OneTime = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-		nullptr
-	};
-	const VkCommandBufferBeginInfo CommandBufferBeginInfo = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr, 
-		0,
-		nullptr
-	};
-
-	const VkCommandBufferBeginInfo CommandBufferBeginInfo_Secondary = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
-		nullptr, //&VkCommandBufferInheritanceInfo #VK_TODO
-	};
 };

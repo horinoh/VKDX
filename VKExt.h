@@ -103,12 +103,13 @@ public:
 			const auto Usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 
 			CreateBuffer(Buffer, Usage, Size);
+
+			//!< #VK_TODO_PERF 本来はバッファ毎にメモリを確保するのではなく、予め大きなメモリを作成しておいてその一部を複数のバッファへ割り当てる方がよい
 			CreateHostVisibleMemory(DeviceMemory, *Buffer);
 			CopyToHostVisibleMemory(*DeviceMemory, Size, Data);
-
 			BindMemory(*Buffer, *DeviceMemory);
 
-			//!< View は必要ない No need view
+			//!< View は必要ない (No need view)
 
 		}(&UniformBuffer, &UniformDeviceMemory, Size, &Type);
 
