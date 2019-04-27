@@ -96,27 +96,7 @@ public:
 	void CreateShader_Cs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const;
 
 	template<typename T>
-	void CreateUniformBuffer(const T& Type) {
-		const auto Size = sizeof(T);
-
-		[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data) {
-			const auto Usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-
-			CreateBuffer(Buffer, Usage, Size);
-
-			//!< #VK_TODO_PERF 本来はバッファ毎にメモリを確保するのではなく、予め大きなメモリを作成しておいてその一部を複数のバッファへ割り当てる方がよい
-			CreateHostVisibleMemory(DeviceMemory, *Buffer);
-			CopyToHostVisibleMemory(*DeviceMemory, Size, Data);
-			BindMemory(*Buffer, *DeviceMemory);
-
-			//!< View は必要ない (No need view)
-
-		}(&UniformBuffer, &UniformDeviceMemory, Size, &Type);
-
-#ifdef DEBUG_STDOUT
-		std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
-#endif
-	}
+	void CreateUniformBufferT(const T& Type) { CreateUniformBuffer(&UniformBuffer, &UniformDeviceMemory, sizeof(Type), &Type); }
 
 	virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const override { 
 		CreateInputAssembly_Topology(PipelineInputAssemblyStateCreateInfo, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);

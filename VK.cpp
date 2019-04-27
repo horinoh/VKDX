@@ -386,10 +386,15 @@ bool VK::IsSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, const VkFormat 
 	return false;
 }
 
-uint32_t VK::GetMemoryType(const VkPhysicalDeviceMemoryProperties& PDMP, const uint32_t MemoryTypeBits, const VkFlags Properties)
+//!< @brief メモリプロパティフラグを(サポートされているかチェックしつつ)メモリタイプへ変換
+//!< @param 物理デバイスのメモリプロパティ
+//!< @param バッファ(イメージ)の要求するメモリタイプ
+//!< @param 希望のメモリプロパティフラグ
+//!< @return メモリタイプ
+uint32_t VK::GetMemoryType(const VkPhysicalDeviceMemoryProperties& PDMP, const VkMemoryRequirements& MR, const VkFlags Properties)
 {
-	for (auto i = 0; i < 32; ++i) {
-		if (MemoryTypeBits & (1 << i)) {
+	for (uint32_t i = 0; i < PDMP.memoryTypeCount; ++i) {
+		if (MR.memoryTypeBits & (1 << i)) {
 			if ((PDMP.memoryTypes[i].propertyFlags & Properties) == Properties) {
 				return i;
 			}
@@ -476,28 +481,32 @@ void VK::SubmitCopyBuffer(const VkCommandBuffer CB, const VkBuffer Src, const Vk
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		const VkBufferCopy BufferCopy = { 0, 0, Size };
-		vkCmdCopyBuffer(CB, Src, Dst, 1, &BufferCopy);
-
-		const VkBufferMemoryBarrier BufferMemoryBarrier = {
-			VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-			nullptr,
-			VK_ACCESS_MEMORY_WRITE_BIT,
-			AccessFlag,
-			VK_QUEUE_FAMILY_IGNORED,
-			VK_QUEUE_FAMILY_IGNORED,
-			Dst,
-			0,
-			VK_WHOLE_SIZE
+		const std::vector<VkBufferCopy> BCs = {
+			{ 0, 0, Size },
 		};
-		//!< バッファを「転送先(VK_PIPELINE_STAGE_TRANSFER_BIT)」から「目的のバッファ(PipelineStageFlag(バーテックスバッファ等))」へ変更する
+		vkCmdCopyBuffer(CB, Src, Dst, static_cast<uint32_t>(BCs.size()), BCs.data());
+
+		//!< バッファの用途が変わるのでバリアが必要
+		const std::vector<VkBufferMemoryBarrier> BMBs = {
+			{
+				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+				nullptr,
+				//!< バッファがどう扱われるかのフラグ「これまで」と「これから」、例えば(VK_ACCESS_MEMORY_WRITE_BIT)から頂点(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)へ等
+				VK_ACCESS_MEMORY_WRITE_BIT, AccessFlag,
+				//!< (VK_SHARING_MODE_EXCLUSIVEで作成されたバッファを)参照しているキューファミリを変更「これまで」と「これから」、ここでは変更しないのでVK_QUEUE_FAMILY_IGNORED
+				VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+				Dst,
+				0,
+				VK_WHOLE_SIZE
+			},
+		};
 		vkCmdPipelineBarrier(CB, 
+			//!< バッファが使われるパイプラインステージ「これまで」と「これから」、例えば転送先(VK_PIPELINE_STAGE_TRANSFER_BIT)から頂点バッファ(VK_PIPELINE_STAGE_VERTEX_INPUT_BIT)へ等
 			VK_PIPELINE_STAGE_TRANSFER_BIT, PipelineStageFlag,
 			0, 
 			0, nullptr,
-			1, &BufferMemoryBarrier, 
+			static_cast<uint32_t>(BMBs.size()), BMBs.data(), 
 			0, nullptr);
-
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 
 	//!< サブミット
@@ -515,29 +524,58 @@ void VK::SubmitCopyBuffer(const VkCommandBuffer CB, const VkBuffer Src, const Vk
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 }
 
+void VK::EnumerateMemoryRequirements(const VkMemoryRequirements& MR)
+{
+	const auto& PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+
+	Logf("\t\tsize=%d\n", MR.size);
+	Logf("\t\talignment=%d\n", MR.alignment);
+	for (uint32_t i = 0; i < PDMP.memoryTypeCount; ++i) {
+		if (MR.memoryTypeBits & (1 << i)) {
+			Logf("\t\tmemoryTypeBits[%d] = ", i);
+#define MEMORY_PROPERTY_ENTRY(entry) if(VK_MEMORY_PROPERTY_##entry##_BIT & PDMP.memoryTypes[i].propertyFlags) { Log(#entry " | "); }
+			MEMORY_PROPERTY_ENTRY(DEVICE_LOCAL);
+			MEMORY_PROPERTY_ENTRY(HOST_VISIBLE);
+			MEMORY_PROPERTY_ENTRY(HOST_COHERENT);
+			MEMORY_PROPERTY_ENTRY(HOST_CACHED);
+			MEMORY_PROPERTY_ENTRY(LAZILY_ALLOCATED);
+			MEMORY_PROPERTY_ENTRY(PROTECTED);
+#undef MEMORY_PROPERTY_ENTRY
+			Log("\n");
+		}
+	}
+}
+
+//!< MemoryRequirements の取得の仕方がバッファ、イメージで異なるのでテンプレート化している (Because vkGetImageMemoryRequirements is different, using template specialization)
 void VK::CreateBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF)
 {
+	const auto& PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+
 	VkMemoryRequirements MR;
-	//!< MemoryRequirements の取得の仕方がバッファ、イメージで異なるのでテンプレート化している (Because vkGetImageMemoryRequirements is different, using template specialization)
 	vkGetBufferMemoryRequirements(Device, Buffer, &MR);
+	EnumerateMemoryRequirements(MR);
+
 	const VkMemoryAllocateInfo MAI = {
 		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 		nullptr,
 		MR.size,
-		GetMemoryType(GetCurrentPhysicalDeviceMemoryProperties(), MR.memoryTypeBits, MPF)
+		GetMemoryType(PDMP, MR, MPF)
 	};
 	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, nullptr, DeviceMemory));
 }
 void VK::CreateImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Image, const VkMemoryPropertyFlags MPF)
 {
+	const auto& PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+
 	VkMemoryRequirements MR;
-	//!< MemoryRequirements の取得の仕方がバッファ、イメージで異なるのでテンプレート化している (Because vkGetImageMemoryRequirements is different, using template specialization)
 	vkGetImageMemoryRequirements(Device, Image, &MR);
+	EnumerateMemoryRequirements(MR);
+
 	const VkMemoryAllocateInfo MAI = {
 		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 		nullptr,
 		MR.size,
-		GetMemoryType(GetCurrentPhysicalDeviceMemoryProperties(), MR.memoryTypeBits, MPF)
+		GetMemoryType(PDMP, MR, MPF)
 	};
 	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, nullptr, DeviceMemory));
 }
@@ -1001,6 +1039,7 @@ void VK::EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryPro
 			MEMORY_PROPERTY_ENTRY(HOST_COHERENT);
 			MEMORY_PROPERTY_ENTRY(HOST_CACHED);
 			MEMORY_PROPERTY_ENTRY(LAZILY_ALLOCATED);
+			MEMORY_PROPERTY_ENTRY(PROTECTED);
 #undef MEMORY_PROPERTY_ENTRY
 		}
 		Log("\n");
@@ -1881,6 +1920,8 @@ void VK::CreateIndirectBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, co
 	CreateDeviceLocalMemory(DeviceMemory, *Buffer);
 	BindMemory(*Buffer, *DeviceMemory);
 
+	//!< View は必要ない (No need view)
+
 	//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
 	SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT/*Dispatchの場合もこれで良い？*/, Size);
 
@@ -1890,6 +1931,24 @@ void VK::CreateIndirectBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, co
 	if (VK_NULL_HANDLE != StagingBuffer) {
 		vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
 	}
+}
+
+void VK::CreateUniformBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source)
+{
+	const auto Usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+	CreateBuffer(Buffer, Usage, Size);
+
+	//!< #VK_TODO_PERF 本来はバッファ毎にメモリを確保するのではなく、予め大きなメモリを作成しておいてその一部を複数のバッファへ割り当てる方がよい
+	CreateHostVisibleMemory(DeviceMemory, *Buffer);
+	CopyToHostVisibleMemory(*DeviceMemory, Size, Source);
+	BindMemory(*Buffer, *DeviceMemory);
+
+	//!< View は必要ない (No need view)
+
+//#ifdef DEBUG_STDOUT
+//	std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
+//#endif
 }
 
 #if 0
@@ -1907,7 +1966,7 @@ void VK::CreateStorageBuffer()
 		CreateDeviceLocalMemory(DeviceMemory, *Buffer);
 		BindMemory(*Buffer, *DeviceMemory);
 
-		//!< View は必要ない No need view
+		//!< View は必要ない (No need view)
 
 	}(&Buffer, &DeviceMemory, Size);
 
@@ -2767,6 +2826,7 @@ void VK::PopulateCommandBuffer(const size_t i)
 
 void VK::Draw()
 {
+	//!< サブミットしたコマンドの完了を待つ
 	std::vector<VkFence> Fences = { Fence };
 #if 1
 	VERIFY_SUCCEEDED(vkWaitForFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data(), VK_TRUE, (std::numeric_limits<uint64_t>::max)()));

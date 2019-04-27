@@ -112,7 +112,7 @@ protected:
 	static void AligendFreeNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
 
 	static bool IsSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, const VkFormat DepthFormat);
-	static uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PDMP, const uint32_t MemoryTypeBits, const VkFlags Properties);
+	static uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PDMP, const VkMemoryRequirements& MR, const VkFlags Properties);
 
 	virtual void CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size) const;
 	virtual void CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkSampleCountFlagBits SampleCount, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers) const;
@@ -120,6 +120,8 @@ protected:
 	virtual void CopyToHostVisibleMemory(const VkDeviceMemory DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset = 0);
 	virtual void SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkBuffer DstBuffer, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size);
 	
+	void EnumerateMemoryRequirements(const VkMemoryRequirements& MR);
+
 	void CreateBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF);
 	void CreateHostVisibleBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Buffer) {
 		//!< VK_MEMORY_PROPERTY_HOST_COHERENT_BIT を指定した場合 vkFlushMappedMemoryRanges() や vkInvalidateMappedMemoryRanges() をコールする必要がなくなる (If VK_MEMORY_PROPERTY_HOST_COHERENT_BIT is specified, no need to call vkFlushMappedMemoryRanges() and vkInvalidateMappedMemoryRanges())
@@ -253,6 +255,7 @@ protected:
 	virtual void CreateIndexBuffer() {}
 	virtual void CreateIndirectBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB);
 	virtual void CreateIndirectBuffer() {}
+	virtual void CreateUniformBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source);
 	virtual void CreateUniformBuffer() {} //!< 小さなデータの場合、UniformBuffer より PushConstants を使用した方が効率が良い
 	virtual void CreateStorageBuffer() {}
 	virtual void CreateUniformTexelBuffer() {}
