@@ -82,19 +82,19 @@ public:
 
 	static char* GetVkResultChar(const VkResult Result);
 	static std::string GetVkResultString(const VkResult Result) { return std::string(GetVkResultChar(Result)); }
-	static std::wstring GetVkResultWstring(const VkResult Result) { const auto Str = GetVkResultString(Result); return std::wstring(Str.begin(), Str.end()); }
+	static std::wstring GetVkResultWstring(const VkResult Result) { return ToWString(GetVkResultString(Result)); }
 	static char* GetFormatChar(const VkFormat Format);
 	static std::string GetFormatString(const VkFormat Format) { return std::string(GetFormatChar(Format)); }
-	static std::wstring GetFormatWstring(const VkFormat Format) { const auto Str = GetFormatString(Format); return std::wstring(Str.begin(), Str.end()); }
+	static std::wstring GetFormatWstring(const VkFormat Format) { return ToWString(GetFormatString(Format)); }
 	static char* GetColorSpaceChar(const VkColorSpaceKHR ColorSpace);
 	static std::string GetColorSpaceString(const VkColorSpaceKHR ColorSpace) { return std::string(GetColorSpaceChar(ColorSpace)); }
-	static std::wstring GetColorSpaceWstring(const VkColorSpaceKHR ColorSpace) { const auto Str = GetColorSpaceString(ColorSpace); return std::wstring(Str.begin(), Str.end()); }
+	static std::wstring GetColorSpaceWstring(const VkColorSpaceKHR ColorSpace) { return ToWString(GetColorSpaceString(ColorSpace)); }
 	static char* GetImageViewTypeChar(const VkImageViewType ImageViewType);
 	static std::string GetImageViewTypeString(const VkImageViewType ImageViewType) { return std::string(GetImageViewTypeChar(ImageViewType)); }
-	static std::wstring GetImageViewTypeWstring(const VkImageViewType ImageViewType) { const auto Str = GetImageViewTypeString(ImageViewType); return std::wstring(Str.begin(), Str.end()); }
+	static std::wstring GetImageViewTypeWstring(const VkImageViewType ImageViewType) { return ToWString(GetImageViewTypeString(ImageViewType)); }
 	static char* GetComponentSwizzleChar(const VkComponentSwizzle ComponentSwizzle);
 	static std::string GetComponentSwizzleString(const VkComponentSwizzle ComponentSwizzle) { return std::string(GetComponentSwizzleChar(ComponentSwizzle)); }
-	static std::wstring GetComponentSwizzleWstring(const VkComponentSwizzle ComponentSwizzle) { const auto Str = GetComponentSwizzleString(ComponentSwizzle); return std::wstring(Str.begin(), Str.end()); }
+	static std::wstring GetComponentSwizzleWstring(const VkComponentSwizzle ComponentSwizzle) { return ToWString(GetComponentSwizzleString(ComponentSwizzle)); }
 	//static char* GetComponentMappingChar(const VkComponentMapping& ComponentMapping);
 	static std::string GetComponentMappingString(const VkComponentMapping& ComponentMapping) {
 			return GetComponentSwizzleString(ComponentMapping.r)
@@ -102,7 +102,7 @@ public:
 			+ ", " + GetComponentSwizzleString(ComponentMapping.b)
 			+ ", " + GetComponentSwizzleString(ComponentMapping.a);
 	}
-	static std::wstring GetComponentMappingWstring(const VkComponentMapping& ComponentMapping) { const auto Str = GetComponentMappingString(ComponentMapping); return std::wstring(Str.begin(), Str.end()); }
+	static std::wstring GetComponentMappingWstring(const VkComponentMapping& ComponentMapping) { return ToWString(GetComponentMappingString(ComponentMapping)); }
 
 protected:
 	static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
@@ -149,10 +149,10 @@ protected:
 #ifdef _DEBUG
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerInsert(CB, Color, Name.c_str()); }
-	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::wstring& Name) { MarkerInsert(CB, Color, std::string(Name.begin(), Name.end())); }
+	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::wstring& Name) { MarkerInsert(CB, Color, ToString(Name)); }
 	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
 	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerBegin(CB, Color, Name.c_str()); }
-	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const std::wstring& Name) { MarkerBegin(CB, Color, std::string(Name.begin(), Name.end())); }
+	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const std::wstring& Name) { MarkerBegin(CB, Color, ToString(Name)); }
 	static void MarkerEnd(VkCommandBuffer CB);
 	class ScopedMarker 
 	{
@@ -167,7 +167,7 @@ protected:
 	static void MarkerSetTag(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const uint64_t TagName, const size_t TagSize, const void* TagData);
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const char* Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない Not template specialized */ }
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::string& Name) { MarkerSetObjectName(Device, Name.c_str()); }
-	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::wstring& Name) { MarkerSetObjectName(Device, std::string(Name.begin(), Name.end())); }
+	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::wstring& Name) { MarkerSetObjectName(Device, ToString(Name)); }
 	template<typename T> static void MarkerSetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* TagData) { DEBUG_BREAK(); /* テンプレート特殊化されていない Not template specialized */ }
 	//!< ↓ここでテンプレート特殊化している Template specialization here
 #include "VKDebugMarker.inl"
@@ -247,7 +247,7 @@ protected:
 	}
 	
 	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path) { assert(false && "Not implemanted"); }
-	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::wstring& Path) { LoadImage(Image, DeviceMemory, ImageView, std::string(Path.begin(), Path.end())); }
+	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::wstring& Path) { LoadImage(Image, DeviceMemory, ImageView, ToString(Path)); }
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 	virtual void CreateViewportTopFront(const float Width, const float Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 

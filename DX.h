@@ -74,8 +74,8 @@ public:
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { Super::OnPaint(hWnd, hInstance); Draw(); }
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 
-	static std::string GetHRESULTString(const HRESULT Result);
-	static std::wstring GetHRESULTStringW(const HRESULT Result);
+	static std::string GetHRESULTString(const HRESULT Result) { return ToString(GetHRESULTWString(Result)); }
+	static std::wstring GetHRESULTWString(const HRESULT Result) { return std::wstring(_com_error(Result).ErrorMessage()); }
 	static std::string GetFormatString(const DXGI_FORMAT Format);
 
 protected:
@@ -99,7 +99,7 @@ protected:
 	//PIXNotifyWakeFromFenceSignal(HANDLE);
 	static void SetName(ID3D12DeviceChild* Resource, LPCWSTR Name) { Resource->SetName(Name); }
 	static void SetName(ID3D12DeviceChild* Resource, const std::wstring& Name) { SetName(Resource, Name.c_str()); }
-	static void SetName(ID3D12DeviceChild* Resource, const std::string& Name) { SetName(Resource, std::wstring(Name.begin(), Name.end())); }
+	static void SetName(ID3D12DeviceChild* Resource, const std::string& Name) { SetName(Resource, ToWString(Name)); }
 #endif
 
 	virtual void CreateDevice(HWND hWnd);
@@ -141,7 +141,7 @@ protected:
 	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const RECT& Rect) { ResizeDepthStencil(DepthFormat, static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
 
 	virtual void LoadImage(ID3D12Resource** Resource/*, ID3D12DescriptorHeap** DescriptorHeap*/, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { assert(false && "Not implemanted"); }
-	virtual void LoadImage(ID3D12Resource** Resource/*, ID3D12DescriptorHeap** DescriptorHeap*/, const std::string& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { LoadImage(Resource/*, DescriptorHeap*/, std::wstring(Path.begin(), Path.end()), ResourceState); }
+	virtual void LoadImage(ID3D12Resource** Resource/*, ID3D12DescriptorHeap** DescriptorHeap*/, const std::string& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { LoadImage(Resource/*, DescriptorHeap*/, ToWString(Path), ResourceState); }
 	
 	virtual void CreateVertexBuffer() {}
 	virtual void CreateIndexBuffer() {}

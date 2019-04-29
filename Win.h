@@ -24,7 +24,7 @@
 #ifndef DEBUG_OUTPUT
 #define DEBUG_OUTPUT
 #endif
-#endif
+#endif //!< _DEBUG
 
 #include <iostream>
 #include <ostream>
@@ -84,15 +84,56 @@ public:
 	FLOAT GetAspectRatio(const FLOAT Width, const FLOAT Height) const { return Width / Height; }
 	FLOAT GetAspectRatioOfClientRect() const { return GetAspectRatio(static_cast<FLOAT>(GetClientRectWidth()), static_cast<FLOAT>(GetClientRectHeight())); }
 
+	static std::string ToString(const std::wstring& WStr) {
+#if 1
+		const auto Size = WideCharToMultiByte(CP_UTF8, 0, WStr.c_str(), -1, nullptr, 0, nullptr, nullptr);
+		auto Buffer = new CHAR[Size];
+		WideCharToMultiByte(CP_UTF8, 0, WStr.c_str(), -1, Buffer, Size, nullptr, nullptr);
+		const auto Str = std::string(Buffer, Buffer + Size - 1);
+		delete[] Buffer;
+		return Str;
+#elif 0
+		const auto Size = lstrlen(WStr.c_str()) + 1;
+		auto Buffer = new char[Size];
+		size_t i;
+		wcstombs_s(&i, Buffer, Size, WStr.c_str(), _TRUNCATE);
+		const auto Str = std::string(Buffer, Buffer + Size - 1);
+		delete[] Buffer;
+		return Str;
+#else
+		//!< VS2019 : C4244
+		return std::string(WStr.begin(), WStr.end());
+#endif
+	}
+	static std::wstring ToWString(const std::string& Str) {
+#if 0
+		const auto Size = MultiByteToWideChar(CP_UTF8, 0, Str.c_str(), -1, nullptr, 0);
+		auto Buffer = new wchar_t[Size];
+		MultiByteToWideChar(CP_UTF8, 0, Str.c_str(), -1, Buffer, Size);
+		const auto WStr = std::wstring(Buffer, Buffer + Size - 1);
+		delete[] Buffer;
+		return WStr;
+#elif 0
+		const auto Size = strlen(Str.c_str()) + 1;
+		auto Buffer = new wchar_t[Size];
+		size_t i;
+		mbstowcs_s(&i, Buffer, Size, Str.c_str(), _TRUNCATE);
+		const auto WStr = std::wstring(Buffer, Buffer + Size - 1);
+		delete[] Buffer;
+		return WStr;
+#else
+		return std::wstring(Str.begin(), Str.end());
+#endif
+	}
+	static std::wstring ToWString(const char* Str) { return std::wstring(&Str[0], &Str[strlen(Str)]); }
+
 	virtual const std::wstring& GetTitleW() const { return TitleW; }
-	virtual std::string GetTitle() const { return std::string(TitleW.begin(), TitleW.end()); }
+	virtual std::string GetTitle() const { return ToString(TitleW); }
 	void SetTitleW(LPCWSTR Title) { TitleW = Title; }
 
 	std::wstring GetBasePath() const { return TEXT(".\\") + GetTitleW(); }
 
-	static void ShowMessageBox(HWND hWnd, const char* Str) { 
-		MessageBox(hWnd, std::wstring(&Str[0], &Str[strlen(Str)]).c_str(), TEXT("CAPTION"), MB_OK); 
-	}
+	static void ShowMessageBox(HWND hWnd, const char* Str) { MessageBox(hWnd, ToWString(Str).c_str(), TEXT("CAPTION"), MB_OK); }
 #ifdef DEBUG_STDOUT
 	static void SetColor(const WORD Color = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE) { 
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), Color | FOREGROUND_INTENSITY);

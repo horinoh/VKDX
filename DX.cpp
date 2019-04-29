@@ -93,28 +93,6 @@ void DX::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	//!< Wait GPU
 	WaitForFence();
 }
-std::string DX::GetHRESULTString(const HRESULT Result)
-{
-	const auto WResultString = GetHRESULTStringW(Result);
-#if 1
-	//!< 日本語対応
-	char Temporary[BUFSIZ];
-	size_t NumOfCharConverted;
-	wcstombs_s(&NumOfCharConverted, Temporary, WResultString.c_str(), _countof(Temporary));
-	return std::string(Temporary);
-#else
-	return std::string(WResultString.begin(), WResultString.end());
-#endif
-}
-std::wstring DX::GetHRESULTStringW(const HRESULT Result)
-{
-	//!< 16進の文字列表記
-	//std::stringstream ss;
-	//ss << "0x" << std::hex << Result << std::dec;
-	//ss.str();
-
-	return std::wstring(_com_error(Result).ErrorMessage());
-}
 
 std::string DX::GetFormatString(const DXGI_FORMAT Format)
 {

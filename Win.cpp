@@ -68,7 +68,7 @@ template<> void Win::_Log(const LogType Type, const char* Str)
 	}
 #endif
 #ifdef DEBUG_OUTPUT
-	OutputDebugString(std::wstring(&Str[0], &Str[strlen(Str)]).c_str());
+	OutputDebugString(ToWString(Str).c_str());
 #endif	
 }
 template<> void Win::_Log(const LogType Type, const WCHAR* Str)
@@ -120,7 +120,8 @@ template<> static void Win::LogOK(const char* Str)
 	std::cout << Str << COUT_OK << std::endl;
 #endif
 #ifdef DEBUG_OUTPUT
-	OutputDebugString(std::wstring(&Str[0], &Str[strlen(Str)]).c_str()); OutputDebugString(TEXT("[ OK ]\n"));
+	OutputDebugString(ToWString(Str).c_str());
+	OutputDebugString(TEXT("[ OK ]\n"));
 #endif	
 }
 template<> static void Win::LogOK(const WCHAR* Str)
@@ -138,7 +139,8 @@ template<> static void Win::LogNG(const char* Str)
 	std::cerr << Str << COUT_NG << std::endl;
 #endif
 #ifdef DEBUG_OUTPUT
-	OutputDebugString(std::wstring(&Str[0], &Str[strlen(Str)]).c_str()); OutputDebugString(TEXT("[ NG ]\n"));
+	OutputDebugString(ToWString(Str).c_str());
+	OutputDebugString(TEXT("[ NG ]\n"));
 #endif
 }
 template<> static void Win::LogNG(const WCHAR* Str)
