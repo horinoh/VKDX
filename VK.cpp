@@ -69,10 +69,11 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< コマンド
 	CreateCommandBuffer();
-	InitializeSwapchain();
+	InitializeSwapchainImage(CommandPools[0].second[0], &Colors::Red);
 
 	//!< デプス
 	CreateDepthStencil();
+	InitializeDepthStencilImage(CommandPools[0].second[0]);
 
 	//!< 頂点
 	CreateVertexBuffer();
@@ -421,11 +422,11 @@ void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const si
 	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BCI, GetAllocationCallbacks(), Buffer));
 }
 
-void VK::CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkSampleCountFlagBits SampleCount, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers) const
+void VK::CreateImage(VkImage* Image, const VkImageCreateFlags CreateFlags, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage) const
 {
-	ValidateFormatProperties(Usage, Format);
+	ValidateFormatProperties(GetCurrentPhysicalDevice(), Usage, Format);
 
-	const VkImageCreateInfo ImageCreateInfo = {
+	const VkImageCreateInfo ICI = {
 		VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		nullptr,
 		0,
@@ -434,14 +435,15 @@ void VK::CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkSamp
 		Extent3D,
 		MipLevels,
 		ArrayLayers,
-		SampleCount, //!< キューブマップの場合は VK_SAMPLE_COUNT_1_BIT しか使えない
-		VK_IMAGE_TILING_OPTIMAL,
+		SampleCount,
+		VK_IMAGE_TILING_OPTIMAL, //!< リニアはパフォーマンスが悪いので、ここでは OPTIMAL に決め打ちしている
 		Usage,
 		VK_SHARING_MODE_EXCLUSIVE,
 		0, nullptr,
-		VK_IMAGE_LAYOUT_UNDEFINED
+		VK_IMAGE_LAYOUT_UNDEFINED //!< 作成時に指定できるのは UNDEFINED, PREINITIALIZED のみ、実際に使用する前にレイアウトを変更する必要がある
 	};
-	VERIFY_SUCCEEDED(vkCreateImage(Device, &ImageCreateInfo, GetAllocationCallbacks(), Image));
+	ValidateImageCreateInfo(ICI);
+	VERIFY_SUCCEEDED(vkCreateImage(Device, &ICI, GetAllocationCallbacks(), Image));
 }
 
 void VK::CopyToHostVisibleMemory(const VkDeviceMemory DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset)
@@ -615,21 +617,21 @@ void VK::CreateImageView(VkImageView* ImageView, const VkImage Image, const VkIm
 	LogOK("CreateImageView");
 }
 
-void VK::ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat Format) const
+void VK::ValidateFormatProperties(VkPhysicalDevice PD, const VkImageUsageFlags Usage, const VkFormat Format) const
 {
-	VkFormatProperties FormatProperties;
-	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), Format, &FormatProperties);
+	VkFormatProperties FP;
+	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
 
-	//!< サンプルドイメージでは全てのフォーマットがサポートされてるわけではない Not all formats are supported for sampled images
+	//!< サンプルドイメージでは全てのフォーマットがサポートされてるわけではない (Not all formats are supported for sampled images)
 	if (Usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
-		if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
+		if (!(FP.optimalTilingFeatures &  VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
 			Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT not supported\n");
 			DEBUG_BREAK();
 		}
 		//!< #VK_TODO リニア使用時のみチェックする
 		const auto bUseLiner = true;//!< VK_FILTER_LINEAR == VkSamplerCreateInfo.magFilter || VK_FILTER_LINEAR == VkSamplerCreateInfo.minFilter || VK_SAMPLER_MIPMAP_MODE_LINEAR == VkSamplerCreateInfo.mipmapMode;
 		if (bUseLiner) {
-			if (!(FormatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
 				Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported\n");
 				DEBUG_BREAK();
 			}
@@ -637,14 +639,14 @@ void VK::ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat 
 	}
 
 	if (Usage & VK_IMAGE_USAGE_STORAGE_BIT) {
-		if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
+		if (!(FP.optimalTilingFeatures &  VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
 			Error("VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT not supported\n");
 			DEBUG_BREAK();
 		}
 		//!< #VK_TODO アトミック使用時のみチェックする
 		const auto bUseAtomic = false; 
 		if (bUseAtomic) {
-			if (!(FormatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)) {
+			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)) {
 				Error("VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT not supported\n");
 				DEBUG_BREAK();
 			}
@@ -652,39 +654,36 @@ void VK::ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat 
 	}
 
 	if (Usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT) {
-		// !< #VK_TODO 現状カラーに決め打ちしている
-		if (true) {
-			//!< カラーの場合 In case color
-			if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) {
-				Error("VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT not supported\n");
-				DEBUG_BREAK();
-			}
+#if 0
+		//!< カラーの場合 (In case color)
+		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) {
+			Error("VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT not supported\n");
+			DEBUG_BREAK();
 		}
-		else {
-			//!< デプスステンシルの場合 In case depth stencil
-			if (!(FormatProperties.optimalTilingFeatures &  VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
-				Error("VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT not supported\n");
-				DEBUG_BREAK();
-			}
+		//!< デプスステンシルの場合 (In case depth stencil)
+		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
+			Error("VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT not supported\n");
+			DEBUG_BREAK();
 		}
+#endif
 	}
 
 	if (Usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) {
-		if (!(FormatProperties.bufferFeatures &  VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)) {
+		if (!(FP.bufferFeatures &  VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)) {
 			Error("VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT not supported\n");
 			DEBUG_BREAK();
 		}
 	}
 
 	if (Usage & VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT) {
-		if (!(FormatProperties.bufferFeatures &  VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT)) {
+		if (!(FP.bufferFeatures &  VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT)) {
 			Error("VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT not supported\n");
 			DEBUG_BREAK();
 		}
 		//!< #VK_TODO アトミック使用時のみチェックする
 		const auto bUseAtomic = false;
 		if (bUseAtomic) {
-			if (!(FormatProperties.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT)) {
+			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT)) {
 				Error("VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT not supported\n");
 				DEBUG_BREAK();
 			}
@@ -1712,12 +1711,13 @@ void VK::ResizeSwapchain(const uint32_t Width, const uint32_t Height)
 		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	}
 
-	//if (!CommandPools.empty() && !CommandBuffers.empty()) {
-	//	const auto CP = CommandPools[0]; //!< 現状は0番のコマンドプール決め打ち #VK_TODO 
-	//	vkFreeCommandBuffers(Device, CP, static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
+	//for (auto i : CommandPools) {
+	//	//if (!i.second.empty()) {
+	//	//	vkFreeCommandBuffers(Device, i.first, static_cast<uint32_t>(i.second.size()), i.second.data());
+	//	//	i.second.clear();
+	//	//}
+	//	vkDestroyCommandPool(Device, i.first, GetAllocationCallbacks());
 	//}
-	//CommandBuffers.clear();
-	//std::for_each(CommandPools.begin(), CommandPools.end(), [&](const VkCommandPool rhs) { vkDestroyCommandPool(Device, rhs, GetAllocationCallbacks()); });
 	//CommandPools.clear();
 
 	CreateSwapchain(GetCurrentPhysicalDevice(), Surface, Rect);
@@ -1739,7 +1739,7 @@ void VK::GetSwapchainImage(VkDevice Device, VkSwapchainKHR Swapchain)
 /**
 @note Vulaknでは、1つのコマンドバッファで複数のスワップチェインイメージをまとめて処理できるっぽい
 */
-void VK::InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkClearColorValue* ClearColorValue)
+void VK::InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorValue* CCV)
 {
 	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -1747,9 +1747,9 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkC
 		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 		nullptr
 	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CBBI)); {
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 		for (auto& i : SwapchainImages) {
-			if (nullptr == ClearColorValue) {
+			if (nullptr == CCV) {
 				const VkImageMemoryBarrier ImageMemoryBarrier_UndefinedToPresent = {
 					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 					nullptr,
@@ -1762,7 +1762,7 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkC
 					i,
 					ImageSubresourceRange_Color
 				};
-				vkCmdPipelineBarrier(CommandBuffer,
+				vkCmdPipelineBarrier(CB,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT/*VK_PIPELINE_STAGE_TRANSFER_BIT*/,
 					0,
 					0, nullptr,
@@ -1770,7 +1770,7 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkC
 					1, &ImageMemoryBarrier_UndefinedToPresent);
 			}
 			else {
-				//!< クリアカラーが指定されている場合 If clear color is specified
+				//!< クリアカラーが指定されている場合 (If clear color is specified)
 				const VkImageMemoryBarrier ImageMemoryBarrier_UndefinedToTransfer = {
 					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 					nullptr,
@@ -1783,14 +1783,14 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkC
 					i,
 					ImageSubresourceRange_Color
 				};
-				vkCmdPipelineBarrier(CommandBuffer,
+				vkCmdPipelineBarrier(CB,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 					0,
 					0, nullptr,
 					0, nullptr,
 					1, &ImageMemoryBarrier_UndefinedToTransfer);
 				{
-					vkCmdClearColorImage(CommandBuffer, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, ClearColorValue, 1, &ImageSubresourceRange_Color);
+					vkCmdClearColorImage(CB, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, CCV, 1, &ImageSubresourceRange_Color);
 				}
 				const VkImageMemoryBarrier ImageMemoryBarrier_TransferToPresent = {
 					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -1804,7 +1804,7 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkC
 					i,
 					ImageSubresourceRange_Color
 				};
-				vkCmdPipelineBarrier(CommandBuffer,
+				vkCmdPipelineBarrier(CB,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
 					0,
 					0, nullptr,
@@ -1812,13 +1812,13 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkC
 					1, &ImageMemoryBarrier_TransferToPresent);
 			}
 		}
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 
 	const VkSubmitInfo SubmitInfo = {
 		VK_STRUCTURE_TYPE_SUBMIT_INFO,
 		nullptr,
 		0, nullptr, nullptr,
-		1,  &CommandBuffer,
+		1,  &CB,
 		0, nullptr
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
@@ -1826,13 +1826,6 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkC
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 
 	LogOK("InitializeSwapchainImage");
-}
-void VK::InitializeSwapchain()
-{
-#if 1
-	//!< イメージの初期化 Initialize images
-	InitializeSwapchainImage(CommandPools[0].second[0], &Colors::Red);
-#endif
 }
 
 void VK::CreateSwapchainImageView()
@@ -1844,45 +1837,62 @@ void VK::CreateSwapchainImageView()
 		SwapchainImageViews.push_back(ImageView);
 	}
 
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "SwapchainImageIndex = " << SwapchainImageIndex << std::endl;
-#endif
-
 	LogOK("CreateSwapchainImageView");
 }
 
 void VK::CreateDepthStencil(const uint32_t Width, const uint32_t Height, const VkFormat DepthFormat)
 {
-	CreateDepthStencilImage(Width, Height, DepthFormat);
-	CreateDepthStencilDeviceMemory();
-	CreateDepthStencilView(DepthFormat);
+	assert(IsSupportedDepthFormat(GetCurrentPhysicalDevice(), DepthFormat) && "Not supported depth format");
+
+	const VkExtent3D Extent3D = { Width, Height, 1 };
+	CreateImage(&DepthStencilImage, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+	CreateDeviceLocalMemory(&DepthStencilDeviceMemory, DepthStencilImage);
+	BindDeviceMemory(DepthStencilImage, DepthStencilDeviceMemory);
+	CreateImageView(&DepthStencilImageView, DepthStencilImage, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, ComponentMapping_Identity, ImageSubresourceRange_DepthStencil);
 
 	LogOK("CreateDepthStencil");
 }
 
-void VK::CreateDepthStencilImage(const uint32_t Width, const uint32_t Height, const VkFormat DepthFormat)
+void VK::InitializeDepthStencilImage(const VkCommandBuffer CB)
 {
-	assert(IsSupportedDepthFormat(GetCurrentPhysicalDevice(), DepthFormat) && "Not supported depth format");
+	if (VK_NULL_HANDLE == DepthStencilImage) return;
 
-	const VkExtent3D Extent3D = {
-		Width, Height, 1
+	//!< VK_IMAGE_LAYOUT_UNDEFINED で作成されているので、レイアウトを変更する必要がある
+	const VkCommandBufferBeginInfo CBBI = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		nullptr,
+		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+		nullptr
 	};
-	const VkImageUsageFlags Usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-	CreateImage(&DepthStencilImage, Usage, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1);
-
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "DepthStencilImage" << std::endl;
-#endif
-}
-void VK::CreateDepthStencilDeviceMemory()
-{
-	CreateDeviceLocalMemory(&DepthStencilDeviceMemory, DepthStencilImage);
-
-	BindMemory(DepthStencilImage, DepthStencilDeviceMemory/*, 0*/);
-
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "DepthStencilDeviceMemory" << std::endl;
-#endif
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+		const VkImageMemoryBarrier IMB = {
+			VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+			nullptr,
+			0,
+			0,
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			VK_QUEUE_FAMILY_IGNORED,
+			VK_QUEUE_FAMILY_IGNORED,
+			DepthStencilImage,
+			ImageSubresourceRange_DepthStencil
+		};
+		vkCmdPipelineBarrier(CB,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &IMB);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+	const VkSubmitInfo SubmitInfo = {
+		VK_STRUCTURE_TYPE_SUBMIT_INFO,
+		nullptr,
+		0, nullptr, nullptr,
+		1,  &CB,
+		0, nullptr
+	};
+	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
+	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 }
 
 void VK::CreateViewport(const float Width, const float Height, const float MinDepth, const float MaxDepth)
@@ -1909,16 +1919,16 @@ void VK::CreateIndirectBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, co
 	VkBuffer StagingBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
 	
-	//!< ホストビジブルのバッファとメモリを作成し、そこへデータをコピーする Create host visible buffer and memory, and copy data
+	//!< ホストビジブルのバッファとメモリを作成し、そこへデータをコピーする (Create host visible buffer and memory, and copy data)
 	CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
 	CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
 	CopyToHostVisibleMemory(StagingDeviceMemory, Size, Source);
-	BindMemory(StagingBuffer, StagingDeviceMemory);
+	BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
-	//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
+	//!< デバイスローカルのバッファとメモリを作成 (Create device local buffer and memory)
 	CreateBuffer(Buffer, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
 	CreateDeviceLocalMemory(DeviceMemory, *Buffer);
-	BindMemory(*Buffer, *DeviceMemory);
+	BindDeviceMemory(*Buffer, *DeviceMemory);
 
 	//!< View は必要ない (No need view)
 
@@ -1942,7 +1952,7 @@ void VK::CreateUniformBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, con
 	//!< #VK_TODO_PERF 本来はバッファ毎にメモリを確保するのではなく、予め大きなメモリを作成しておいてその一部を複数のバッファへ割り当てる方がよい
 	CreateHostVisibleMemory(DeviceMemory, *Buffer);
 	CopyToHostVisibleMemory(*DeviceMemory, Size, Source);
-	BindMemory(*Buffer, *DeviceMemory);
+	BindDeviceMemory(*Buffer, *DeviceMemory);
 
 	//!< View は必要ない (No need view)
 
@@ -2603,7 +2613,7 @@ void VK::CreatePipeline_Compute()
 @note 「各々のサブパス」でクリア Each subpass ... vkCmdClearAttachments()
 */
 //!< 「レンダーパス外」にてクリアを行う
-void VK::ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, const VkClearColorValue& Color)
+void VK::ClearColor(const VkCommandBuffer CB, const VkImage Image, const VkClearColorValue& Color)
 {
 	const VkImageMemoryBarrier ImageMemoryBarrier_PresentToTransfer = {
 		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -2617,7 +2627,7 @@ void VK::ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, co
 		Image,
 		ImageSubresourceRange_Color
 	};
-	vkCmdPipelineBarrier(CommandBuffer,
+	vkCmdPipelineBarrier(CB,
 		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 		0,
 		0, nullptr,
@@ -2625,7 +2635,7 @@ void VK::ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, co
 		1, &ImageMemoryBarrier_PresentToTransfer);
 	{
 		//!< vkCmdClearColorImage() はレンダーパス内では使用できない
-		vkCmdClearColorImage(CommandBuffer, Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Color, 1, &ImageSubresourceRange_Color);
+		vkCmdClearColorImage(CB, Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Color, 1, &ImageSubresourceRange_Color);
 	}
 	const VkImageMemoryBarrier ImageMemoryBarrier_TransferToPresent = {
 		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -2639,14 +2649,14 @@ void VK::ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, co
 		Image,
 		ImageSubresourceRange_Color
 	};
-	vkCmdPipelineBarrier(CommandBuffer,
+	vkCmdPipelineBarrier(CB,
 		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 		0,
 		0, nullptr,
 		0, nullptr,
 		1, &ImageMemoryBarrier_TransferToPresent);
 }
-void VK::ClearDepthStencil(const VkCommandBuffer CommandBuffer, const VkImage Image, const VkClearDepthStencilValue& DepthStencil)
+void VK::ClearDepthStencil(const VkCommandBuffer CB, const VkImage Image, const VkClearDepthStencilValue& DepthStencil)
 {
 	const VkImageMemoryBarrier ImageMemoryBarrier_DepthToTransfer = {
 		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -2660,7 +2670,7 @@ void VK::ClearDepthStencil(const VkCommandBuffer CommandBuffer, const VkImage Im
 		Image,
 		ImageSubresourceRange_DepthStencil
 	};
-	vkCmdPipelineBarrier(CommandBuffer,
+	vkCmdPipelineBarrier(CB,
 		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 		0,
 		0, nullptr,
@@ -2668,7 +2678,7 @@ void VK::ClearDepthStencil(const VkCommandBuffer CommandBuffer, const VkImage Im
 		1, &ImageMemoryBarrier_DepthToTransfer);
 	{
 		//!< vkCmdClearDepthStencilImage() はレンダーパス内では使用できない
-		vkCmdClearDepthStencilImage(CommandBuffer, Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearDepthStencilValue, 1, &ImageSubresourceRange_DepthStencil);
+		vkCmdClearDepthStencilImage(CB, Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearDepthStencilValue, 1, &ImageSubresourceRange_DepthStencil);
 	}
 	const VkImageMemoryBarrier ImageMemoryBarrier_TransferToDepth = {
 		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -2682,7 +2692,7 @@ void VK::ClearDepthStencil(const VkCommandBuffer CommandBuffer, const VkImage Im
 		Image,
 		ImageSubresourceRange_DepthStencil
 	};
-	vkCmdPipelineBarrier(CommandBuffer,
+	vkCmdPipelineBarrier(CB,
 		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 		0,
 		0, nullptr,
@@ -2691,7 +2701,7 @@ void VK::ClearDepthStencil(const VkCommandBuffer CommandBuffer, const VkImage Im
 }
 //!<「サブパス」にてクリアするときに使う
 //!< Drawコール前に使用すると、「それなら VkAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR を使え」と Warnning が出るので注意
-void VK::ClearColorAttachment(const VkCommandBuffer CommandBuffer, const VkClearColorValue& Color)
+void VK::ClearColorAttachment(const VkCommandBuffer CB, const VkClearColorValue& Color)
 {
 	const VkClearValue ClearValue = { Color };
 	const std::vector<VkClearAttachment> ClearAttachments = {
@@ -2707,11 +2717,11 @@ void VK::ClearColorAttachment(const VkCommandBuffer CommandBuffer, const VkClear
 			0, 1 //!< 開始レイヤとレイヤ数 #VK_TODO 現状決め打ち
 		},
 	};
-	vkCmdClearAttachments(CommandBuffer,
+	vkCmdClearAttachments(CB,
 		static_cast<uint32_t>(ClearAttachments.size()), ClearAttachments.data(),
 		static_cast<uint32_t>(ClearRects.size()), ClearRects.data());
 }
-void VK::ClearDepthStencilAttachment(const VkCommandBuffer CommandBuffer, const VkClearDepthStencilValue& DepthStencil)
+void VK::ClearDepthStencilAttachment(const VkCommandBuffer CB, const VkClearDepthStencilValue& DepthStencil)
 {
 	VkClearValue ClearValue;
 	ClearValue.depthStencil = DepthStencil;
@@ -2728,7 +2738,7 @@ void VK::ClearDepthStencilAttachment(const VkCommandBuffer CommandBuffer, const 
 			0, 1 //!< 開始レイヤとレイヤ数 #VK_TODO 現状決め打ち
 		},
 	};
-	vkCmdClearAttachments(CommandBuffer,
+	vkCmdClearAttachments(CB,
 		static_cast<uint32_t>(ClearAttachments.size()), ClearAttachments.data(),
 		static_cast<uint32_t>(ClearRects.size()), ClearRects.data());
 }
@@ -2902,6 +2912,4 @@ void VK::Present()
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkQueuePresentKHR(PresentQueue, &PresentInfo));
-
-	//Logf("\tSwapchainImageIndex = %d\n", SwapchainImageIndex);
 }

@@ -241,20 +241,19 @@ void TriangleVK::CreateVertexBuffer()
 		VkBuffer StagingBuffer = VK_NULL_HANDLE;
 		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
 		{
-			//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
+			//!< ホストビジブルのバッファとメモリを作成、データをコピー (Create host visible buffer and memory, and copy data)
 			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
 			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
 			CopyToHostVisibleMemory(StagingDeviceMemory, Size, Data);
-			BindMemory(StagingBuffer, StagingDeviceMemory);
+			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
-			//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
+			//!< デバイスローカルのバッファとメモリを作成 (Create device local buffer and memory)
 			CreateBuffer(Buffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
 			CreateDeviceLocalMemory(DeviceMemory, *Buffer);
-			BindMemory(*Buffer, *DeviceMemory);
+			BindDeviceMemory(*Buffer, *DeviceMemory);
 
-			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
+			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit copy command host visible to device local)
 			SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
-
 		}
 		if (VK_NULL_HANDLE != StagingDeviceMemory) {
 			vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
@@ -292,12 +291,12 @@ void TriangleVK::CreateIndexBuffer()
 			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
 			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
 			CopyToHostVisibleMemory(StagingDeviceMemory, Size, Data);
-			BindMemory(StagingBuffer, StagingDeviceMemory);
+			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
 			//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
 			CreateBuffer(Buffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
 			CreateDeviceLocalMemory(DeviceMemory, *Buffer);
-			BindMemory(*Buffer, *DeviceMemory);
+			BindDeviceMemory(*Buffer, *DeviceMemory);
 
 			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
 			SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);

@@ -50,6 +50,19 @@ VkImageType VKImage::ToVkImageType(const gli::target GLITarget)
 	}
 	return VK_IMAGE_TYPE_MAX_ENUM;
 }
+
+bool VKImage::IsCube(const gli::target GLITarget)
+{
+	switch (GLITarget)
+	{
+	default: break;
+	case gli::target::TARGET_CUBE:
+	case gli::target::TARGET_CUBE_ARRAY:
+		return true;
+	}
+	return false;
+}
+
 VkComponentSwizzle VKImage::ToVkComponentSwizzle(const gli::swizzle GLISwizzle)
 {
 	switch (GLISwizzle)
@@ -74,8 +87,9 @@ VkComponentMapping VKImage::ToVkComponentMapping(const gli::texture::swizzles_ty
 	};
 }
 
-void VKImage::CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkSampleCountFlagBits SampleCount, const gli::texture& GLITexture) const
+void VKImage::CreateImage(VkImage* Image, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage, const gli::texture& GLITexture) const
 {
+	const auto CreateFlag = IsCube(GLITexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 	const auto Type = ToVkImageType(GLITexture.target());
 	const auto Format = ToVkFormat(GLITexture.format());
 
@@ -83,15 +97,15 @@ void VKImage::CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const V
 	const VkExtent3D Extent3D = {
 		static_cast<const uint32_t>(GLIExtent3D.x), static_cast<const uint32_t>(GLIExtent3D.y), static_cast<const uint32_t>(GLIExtent3D.z)
 	};
-	
+
 	const auto Faces = static_cast<const uint32_t>(GLITexture.faces());
 	const auto Layers = static_cast<const uint32_t>(GLITexture.layers()) * Faces;
 	const auto Levels = static_cast<const uint32_t>(GLITexture.levels());
 
-	Super::CreateImage(Image, Usage, SampleCount, Type, Format, Extent3D, Levels, Layers);
+	Super::CreateImage(Image, CreateFlag, Type, Format, Extent3D, Levels, Layers, SampleCount, Usage);
 }
 
-void VKImage::SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkImage DstImage, const gli::texture& GLITexture)
+void VKImage::SubmitCopyImage(const VkCommandBuffer CB, const VkBuffer SrcBuffer, const VkImage DstImage, const gli::texture& GLITexture)
 {
 	//!< キューブマップの場合は、複数レイヤのイメージとして作成する。When cubemap, create as layered image.
 	//!< イメージビューを介して、レイヤをフェイスとして扱うようハードウエアへ伝える。Tell the hardware that it should interpret its layers as faces
@@ -107,7 +121,7 @@ void VKImage::SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffe
 		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
 		nullptr
 	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CommandBuffer, &CBBI)); {
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 		//!< 各バッファコピー領域を準備 Prepare each buffer copy
 		std::vector<VkBufferImageCopy> BufferImageCopies;
 		BufferImageCopies.reserve(Layers);
@@ -156,7 +170,7 @@ void VKImage::SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffe
 			DstImage,
 			ImageSubresourceRange
 		};
-		vkCmdPipelineBarrier(CommandBuffer,
+		vkCmdPipelineBarrier(CB,
 			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 			VK_PIPELINE_STAGE_TRANSFER_BIT,
 			0,
@@ -164,7 +178,7 @@ void VKImage::SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffe
 			0, nullptr,
 			1, &ImageMemoryBarrier_UndefinedToTransferDst);
 		{
-			vkCmdCopyBufferToImage(CommandBuffer, SrcBuffer, DstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(BufferImageCopies.size()), BufferImageCopies.data());
+			vkCmdCopyBufferToImage(CB, SrcBuffer, DstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(BufferImageCopies.size()), BufferImageCopies.data());
 		}
 		const VkImageMemoryBarrier ImageMemoryBarrier_TransferDstToShaderReadOnly = {
 			VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -178,7 +192,7 @@ void VKImage::SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffe
 			DstImage,
 			ImageSubresourceRange
 		};
-		vkCmdPipelineBarrier(CommandBuffer,
+		vkCmdPipelineBarrier(CB,
 			VK_PIPELINE_STAGE_TRANSFER_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 			0,
@@ -186,7 +200,7 @@ void VKImage::SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffe
 			0, nullptr,
 			1, &ImageMemoryBarrier_TransferDstToShaderReadOnly);
 
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CommandBuffer));
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 
 	//!< サブミット
 	const VkSubmitInfo SubmitInfo = {
@@ -194,7 +208,7 @@ void VKImage::SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffe
 		nullptr,
 		0, nullptr,
 		nullptr,
-		1, &CommandBuffer,
+		1, &CB,
 		0, nullptr
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
@@ -280,14 +294,12 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
 			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
 			CopyToHostVisibleMemory(StagingDeviceMemory, Size, GLITexture.data());
-			BindMemory(StagingBuffer, StagingDeviceMemory);
+			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
-			//!< (前レンダーパスで)レンダーターゲット(アタッチメント)として使われたものを(レンダーパス中で)入力として使う場合 VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT を指定
-			const VkImageUsageFlags Usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT/*| VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT*/;
 			//!< デバイスローカルのイメージとメモリを作成 Create device local image and memory
-			CreateImage(Image, Usage, VK_SAMPLE_COUNT_1_BIT, GLITexture);
+			CreateImage(Image, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, GLITexture);
 			CreateDeviceLocalMemory(DeviceMemory, *Image);
-			BindMemory(*Image, *DeviceMemory);
+			BindDeviceMemory(*Image, *DeviceMemory);
 
 			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command from host visible to device local
 			SubmitCopyImage(CB, StagingBuffer, *Image, GLITexture);

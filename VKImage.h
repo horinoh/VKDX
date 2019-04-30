@@ -15,11 +15,12 @@ private:
 	static VkFormat ToVkFormat(const gli::format GLIFormat);
 	static VkImageViewType ToVkImageViewType(const gli::target GLITarget);
 	static VkImageType ToVkImageType(const gli::target GLITarget);
+	static bool IsCube(const gli::target GLITarget);
 	static VkComponentSwizzle ToVkComponentSwizzle(const gli::swizzle GLISwizzle);
 	static VkComponentMapping ToVkComponentMapping(const gli::texture::swizzles_type GLISwizzlesType);
 
 protected:
-	virtual void CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkSampleCountFlagBits SampleCount, const gli::texture& GLITexture) const;
+	virtual void CreateImage(VkImage* Image, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage, const gli::texture& GLITexture) const;
 	virtual void SubmitCopyImage(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkImage DstImage, const gli::texture& GLITexture);
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const gli::texture& GLITexture);
 

@@ -51,10 +51,9 @@ protected:
 			const auto Levels = 1;
 
 			//!< ŽQl : VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
-			const VkImageUsageFlags Usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT;
-			CreateImage(&Image, Usage, VK_SAMPLE_COUNT_1_BIT, Type, Format, Extent3D, Levels, Layers);
+			CreateImage(&Image, 0, Type, Format, Extent3D, Levels, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT);
 			CreateDeviceLocalMemory(&ImageDeviceMemory, Image);
-			BindMemory(Image, ImageDeviceMemory);
+			BindDeviceMemory(Image, ImageDeviceMemory);
 		}
 
 		{

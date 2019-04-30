@@ -47,7 +47,7 @@ protected:
 		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f);
 		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		Super::CreateConstantBuffer<Transform>({
+		Super::CreateConstantBufferT<Transform>({
 			DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar),
 			DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp),
 			DirectX::XMMatrixIdentity()

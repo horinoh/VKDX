@@ -115,8 +115,18 @@ protected:
 	static uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PDMP, const VkMemoryRequirements& MR, const VkFlags Properties);
 
 	virtual void CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size) const;
-	virtual void CreateImage(VkImage* Image, const VkImageUsageFlags Usage, const VkSampleCountFlagBits SampleCount, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers) const;
-	
+	virtual void ValidateImageCreateInfo(const VkImageCreateInfo& ICI) const {
+		if (ICI.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) {
+			assert(ICI.samples == VK_SAMPLE_COUNT_1_BIT && "Must be VK_SAMPLE_COUNT_1_BIT");
+			assert(ICI.extent.width == ICI.extent.height && "Must be square");
+			assert(ICI.arrayLayers >= 6 && "Invalid ArrayLayers");
+		}
+		else {
+			assert(ICI.arrayLayers >= 1 && "Invalid ArrayLayers");
+		}
+	}
+	virtual void CreateImage(VkImage* Image, const VkImageCreateFlags CreateFlags, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage) const;
+
 	virtual void CopyToHostVisibleMemory(const VkDeviceMemory DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset = 0);
 	virtual void SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkBuffer DstBuffer, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size);
 	
@@ -131,20 +141,20 @@ protected:
 	void BindBufferMemory(const VkBuffer Buffer, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset) { VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, Offset)); }
 
 	void CreateImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Image, const VkMemoryPropertyFlags MPF);
-	void CreateHostVisibleImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Image) { assert(false && "Not implemented"); }
+	//void CreateHostVisibleImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Image) { assert(false && "Not implemented"); }
 	void CreateDeviceLocalImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Image) { CreateImageMemory(DeviceMemory, Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); }
 	void BindImageMemory(const VkImage Image, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset) { VERIFY_SUCCEEDED(vkBindImageMemory(Device, Image, DeviceMemory, Offset)); }
 	
 	template<typename T> void CreateHostVisibleMemory(VkDeviceMemory* DeviceMemory, const T Object) { static_assert(false, "Need to implement templete specialization"); }
 	template<typename T> void CreateDeviceLocalMemory(VkDeviceMemory* DeviceMemory, const T Object) { static_assert(false, "Need to implement templete specialization"); }
-	template<typename T> void BindMemory(const T Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset = 0) { static_assert(false, "Need to implement templete specialization"); }
+	template<typename T> void BindDeviceMemory(const T Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset = 0) { static_assert(false, "Need to implement templete specialization"); }
 	//!< ↓ ここでテンプレート特殊化している (Template specialization here)
 #include "VKDeviceMemory.inl"
 
 	virtual void CreateBufferView(VkBufferView* BufferView, const VkBuffer Buffer, const VkFormat Format, const VkDeviceSize Offset = 0, const VkDeviceSize Range = VK_WHOLE_SIZE);
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
 
-	virtual void ValidateFormatProperties(const VkImageUsageFlags Usage, const VkFormat Format) const;
+	virtual void ValidateFormatProperties(VkPhysicalDevice PD, const VkImageUsageFlags Usage, const VkFormat Format) const;
 
 #ifdef _DEBUG
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
@@ -235,16 +245,11 @@ protected:
 	virtual void ResizeSwapchain(const RECT& Rect) { ResizeSwapchain(static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
 	virtual void GetSwapchainImage(VkDevice Device, VkSwapchainKHR Swapchain);
 	virtual void CreateSwapchainImageView();
-	virtual void InitializeSwapchainImage(const VkCommandBuffer CommandBuffer, const VkClearColorValue* ClearColorValue = nullptr);
-	virtual void InitializeSwapchain();
+	virtual void InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorValue* CCV = nullptr);
 	
 	virtual void CreateDepthStencil() {}
 	virtual void CreateDepthStencil(const uint32_t Width, const uint32_t Height, const VkFormat DepthFormat);
-	virtual void CreateDepthStencilImage(const uint32_t Width, const uint32_t Height, const VkFormat DepthFormat);
-	virtual void CreateDepthStencilDeviceMemory();
-	virtual void CreateDepthStencilView(const VkFormat DepthFormat) {
-		CreateImageView(&DepthStencilImageView, DepthStencilImage, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, ComponentMapping_Identity, ImageSubresourceRange_DepthStencil);
-	}
+	virtual void InitializeDepthStencilImage(const VkCommandBuffer CB);
 	
 	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path) { assert(false && "Not implemanted"); }
 	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::wstring& Path) { LoadImage(Image, DeviceMemory, ImageView, ToString(Path)); }
@@ -466,7 +471,7 @@ protected:
 	std::vector<VkFramebuffer> Framebuffers;
 
 	//!< https://matthewwellings.com/blog/the-new-vulkan-coordinate-system/
-	//!< VKのクリップスペースはYが反転、Zが半分 Vulkan clip space has inverted Y and half Z
+	//!< VKのクリップスペースはYが反転、Zが半分 (Vulkan clip space has inverted Y and half Z)
 	static glm::mat4 GetVulkanClipSpace() {
 		return glm::mat4(1.0f, 0.0f, 0.0f, 0.0f,
 				0.0f, -1.0f, 0.0f, 0.0f,

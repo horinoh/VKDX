@@ -230,9 +230,10 @@ public:
 	void CreateShader_Cs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
 
 	template<typename T>
-	void CreateConstantBuffer(const T& Type) {
-		const auto Size = RoundUp(sizeof(T), 0xff); //!< 256バイトアライン
+	void CreateConstantBufferT(const T& Type) {
+		const auto Size = RoundUp(sizeof(Type), 0xff); //!< 256バイトアライン
 
+		//!< #DX_TODO_PERF 本来はバッファ毎にメモリを確保するのではなく、予め大きなメモリを作成しておいてその一部を複数のバッファへ割り当てる方がよい
 		CreateUploadResource(ConstantBufferResource.GetAddressOf(), Size);
 		CopyToUploadResource(ConstantBufferResource.Get(), Size, &Type);
 
