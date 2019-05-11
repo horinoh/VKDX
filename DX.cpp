@@ -527,7 +527,11 @@ void DX::CreateCommandQueue()
 		D3D12_COMMAND_QUEUE_FLAG_NONE,
 		0 // NodeMask ... マルチGPUの場合
 	};
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CommandQueueDesc, __uuidof(CommandQueue), CommandQueue.put_void()));
+#elif defined(USE_WRL)
 	VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(CommandQueue.GetAddressOf())));
+#endif
 
 	LogOK("CreateCommandQueue");
 }
@@ -537,7 +541,11 @@ void DX::CreateCommandQueue()
 */
 void DX::CreateFence()
 {
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, __uuidof(Fence), Fence.put_void()));
+#elif defined(USE_WRL)
 	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(Fence.GetAddressOf())));
+#endif
 
 	LogOK("CreateFence");
 }
@@ -548,13 +556,17 @@ void DX::CreateFence()
 */
 void DX::CreateCommandAllocator(const D3D12_COMMAND_LIST_TYPE CommandListType)
 {
-	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandAllocator;
-	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(CommandListType, IID_PPV_ARGS(CommandAllocator.GetAddressOf())));
-
-	CommandAllocators.push_back(CommandAllocator);
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3D12CommandAllocator> CA;
+	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(CommandListType, __uuidof(CA), CA.put_void()));
+#elif defined(USE_WRL)
+	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CA;
+	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(CommandListType, IID_PPV_ARGS(CA.GetAddressOf())));
+#endif
+	CommandAllocators.push_back(CA);
 
 #ifdef DEBUG_STDOUT
-	std::cout << "\t" << "CommandAllocator" << std::endl;
+	Log("\tCommandAllocator\n");
 #endif
 }
 
@@ -568,10 +580,14 @@ void DX::CreateCommandAllocator(const D3D12_COMMAND_LIST_TYPE CommandListType)
 void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const size_t Count, const D3D12_COMMAND_LIST_TYPE CommandListType)
 {
 	for (auto i = 0; i < Count; ++i) {
-		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> GraphicsCommandList;
-		VERIFY_SUCCEEDED(Device->CreateCommandList(0, CommandListType, CommandAllocator, nullptr, IID_PPV_ARGS(GraphicsCommandList.GetAddressOf())));
-
-		GraphicsCommandLists.push_back(GraphicsCommandList);
+#ifdef USE_WINRT
+		winrt::com_ptr<ID3D12GraphicsCommandList> CL;
+		VERIFY_SUCCEEDED(Device->CreateCommandList(0, CommandListType, CommandAllocator, nullptr, __uuidof(CL), CL.put_void()));
+#elif defined(USE_WRL)
+		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> CL;
+		VERIFY_SUCCEEDED(Device->CreateCommandList(0, CommandListType, CommandAllocator, nullptr, IID_PPV_ARGS(CL.GetAddressOf()))); 
+#endif
+		GraphicsCommandLists.push_back(CL);
 
 		//!< Close() しておく
 		//const auto GCL = static_cast<ID3D12GraphicsCommandList*>(GraphicsCommandLists.back().Get());
@@ -589,7 +605,12 @@ void DX::CreateCommandList()
 	CreateCommandAllocator();
 	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
 	SwapChain->GetDesc1(&SwapChainDesc);
-	CreateCommandList(CommandAllocators[0].Get(), SwapChainDesc.BufferCount, D3D12_COMMAND_LIST_TYPE_DIRECT); //!< 現状は0番のコマンドアロケータ決め打ち #DX_TODO
+	//!< 現状は0番のコマンドアロケータ決め打ち #DX_TODO
+#ifdef USE_WINRT
+	CreateCommandList(CommandAllocators[0].get(), SwapChainDesc.BufferCount, D3D12_COMMAND_LIST_TYPE_DIRECT); 
+#elif defined(USE_WRL)
+	CreateCommandList(CommandAllocators[0].Get(), SwapChainDesc.BufferCount, D3D12_COMMAND_LIST_TYPE_DIRECT);
+#endif
 }
 
 void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
@@ -631,7 +652,11 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	//!< セッティングを変更してスワップチェインを再作成できるように、既存のを開放している
 	SwapChain.Reset(); 
 	ComPtr<IDXGISwapChain> NewSwapChain;
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.get(), &SwapChainDesc, NewSwapChain.GetAddressOf()));
+#elif defined(USE_WRL)
 	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.Get(), &SwapChainDesc, NewSwapChain.GetAddressOf()));
+#endif
 	VERIFY_SUCCEEDED(NewSwapChain.As(&SwapChain));
 
 	{
@@ -686,7 +711,11 @@ void DX::CreateSwapChainResource()
 void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, const DirectX::XMVECTORF32* Color)
 {
 	for (auto i = 0; i < SwapChainResources.size(); ++i) {
+#ifdef USE_WINRT
+		const auto CL = GraphicsCommandLists[i].get();
+#elif defined(USE_WRL)
 		const auto CL = GraphicsCommandLists[i].Get();
+#endif
 
 		VERIFY_SUCCEEDED(CL->Reset(CommandAllocator, nullptr));
 		{
@@ -704,7 +733,11 @@ void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, cons
 
 	//!< #DX_TODO : 0 番目しかクリアしていない
 #if 1
+#ifdef USE_WINRT
+	const std::vector<ID3D12CommandList*> CommandLists = { GraphicsCommandLists[0].get() };
+#elif defined(USE_WRL)
 	const std::vector<ID3D12CommandList*> CommandLists = { GraphicsCommandLists[0].Get() };
+#endif
 #else
 	std::vector<ID3D12CommandList*> CommandLists;
 	CommandLists.reserve(GraphicsCommandLists.size());
@@ -721,8 +754,14 @@ void DX::InitializeSwapChain()
 {
 #if 1
 	//!< イメージの初期化 Initialize images
+#ifdef USE_WINRT
+	//InitializeSwapchainImage(CommandAllocators[0].get());
+	InitializeSwapchainImage(CommandAllocators[0].get(), &DirectX::Colors::Red); 
+#elif defined(USE_WRL)
 	//InitializeSwapchainImage(CommandAllocators[0].Get());
-	InitializeSwapchainImage(CommandAllocators[0].Get(), &DirectX::Colors::Red);
+	InitializeSwapchainImage(CommandAllocators[0].Get(), &DirectX::Colors::Red); 
+#endif
+	
 #endif
 }
 
@@ -806,7 +845,11 @@ void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Wi
 
 	//!< リソースの状態を初期 → デプス書き込みへ変更
 	auto CL = GraphicsCommandLists[0];
+#ifdef USE_WINRT
+	ResourceBarrier(CL.get(), DepthStencilResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+#elif defined(USE_WRL)
 	ResourceBarrier(CL.Get(), DepthStencilResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+#endif
 
 	LogOK("CreateDepthStencilResource");
 }
@@ -1246,11 +1289,16 @@ void DX::ClearDepthStencil(ID3D12GraphicsCommandList* CommandList, const D3D12_C
 
 void DX::PopulateCommandList(const size_t i)
 {
+#ifdef USE_WINRT
+	const auto CL = GraphicsCommandLists[i].get();
+	const auto CA = CommandAllocators[0].get();
+#elif defined(USE_WRL)
 	const auto CL = GraphicsCommandLists[i].Get();
+	const auto CA = CommandAllocators[0].Get();
+#endif
 	const auto SCR = SwapChainResources[i].Get();
 	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
 
-	const auto CA = CommandAllocators[0].Get();
 	//!< GPU が参照している間は、コマンドアロケータの Reset() はできない
 	//VERIFY_SUCCEEDED(CA->Reset());
 
@@ -1279,10 +1327,12 @@ void DX::Draw()
 
 	CurrentBackBufferIndex = AcquireNextBackBufferIndex();
 
-	const std::vector<ID3D12CommandList*> CommandLists = { 
-		GraphicsCommandLists[CurrentBackBufferIndex].Get() 
-	};
-	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
+#ifdef USE_WINRT
+	const std::vector<ID3D12CommandList*> CLs = { GraphicsCommandLists[CurrentBackBufferIndex].get() };
+#elif defined(USE_WRL)
+	const std::vector<ID3D12CommandList*> CLs = { GraphicsCommandLists[CurrentBackBufferIndex].Get() };
+#endif
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CLs.size()), CLs.data());
 	
 	Present();
 }
@@ -1301,7 +1351,11 @@ void DX::WaitForFence()
 	++FenceValue;
 
 	//!< GPU コマンドが Signal() まで到達すれば GetCompletedValue() が FenceValue になり、CPUに追いついたことになる
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(CommandQueue->Signal(Fence.get(), FenceValue));
+#elif defined(USE_WRL)
 	VERIFY_SUCCEEDED(CommandQueue->Signal(Fence.Get(), FenceValue));
+#endif
 	if (Fence->GetCompletedValue() < FenceValue) {
 		auto hEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
 		//!< GetCompletedValue() が FenceValue になったらイベントが発行される

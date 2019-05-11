@@ -227,11 +227,15 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void FlatDX::PopulateCommandList(const size_t i)
 {
+#ifdef USE_WINRT
+	const auto CL = GraphicsCommandLists[i].get();
+	const auto CA = CommandAllocators[0].get();
+#elif defined(USE_WRL)
 	const auto CL = GraphicsCommandLists[i].Get();
+	const auto CA = CommandAllocators[0].Get();
+#endif
 	const auto SCR = SwapChainResources[i].Get();
 	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
-
-	const auto CA = CommandAllocators[0].Get();
 
 	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
 	{

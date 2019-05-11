@@ -49,7 +49,12 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const std::wstring& Path,
 		//}
 
 		ExecuteCopyTexture(CA, CL, UploadResource.Get(), *Resource, Footprint, ResourceState);
-	}(Resource, Path, ResourceState, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
+	}
+#ifdef USE_WINRT
+	(Resource, Path, ResourceState, CommandAllocators[0].get(), GraphicsCommandLists[0].get());
+#elif defined(USE_WRL)
+	(Resource, Path, ResourceState, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
+#endif
 
 	//!< スタティックサンプラデスクリプタを作成 Create static sampler descritor
 	D3D12_STATIC_SAMPLER_DESC SSD;

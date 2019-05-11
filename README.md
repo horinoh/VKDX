@@ -145,6 +145,9 @@ __uuidof(XXX), XXX.put_void())
 
 //XXX.Get()
 XXX.get()
+
+//&XXX
+XXX.put()
 ~~~
 
 ### DirectXTK (DDS読み込みに使用)

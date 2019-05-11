@@ -227,8 +227,13 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void ComputeDX::PopulateCommandList(const size_t i)
 {
+#ifdef USE_WINRT
+	const auto CL = GraphicsCommandLists[i].get();
+	const auto CA = CommandAllocators[0].get();
+#elif defined(USE_WRL)
 	const auto CL = GraphicsCommandLists[i].Get();
 	const auto CA = CommandAllocators[0].Get();
+#endif
 
 	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
 	{

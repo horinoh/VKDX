@@ -197,21 +197,36 @@ protected:
 #if defined(_DEBUG) || defined(USE_PIX)
 	Microsoft::WRL::ComPtr<IDXGraphicsAnalysis> GraphicsAnalysis;
 #endif
+
+#ifdef USE_WINRT
+#elif defined(USE_WRL)
+#endif
+
 #ifdef USE_WINRT
 	winrt::com_ptr<ID3D12Device> Device;
 #elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3D12Device> Device;
 #endif
 	std::vector<DXGI_SAMPLE_DESC> SampleDescs;
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3D12CommandQueue> CommandQueue;
+	winrt::com_ptr<ID3D12Fence> Fence;
+#elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> CommandQueue;
-
 	Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
+#endif
 	UINT64 FenceValue = 0;
 
+#ifdef USE_WINRT
+	std::vector<winrt::com_ptr<ID3D12CommandAllocator>> CommandAllocators;
+	std::vector<winrt::com_ptr<ID3D12GraphicsCommandList>> GraphicsCommandLists;
+	//std::vector<winrt::com_ptr<ID3D12CommandList>> CommandLists;
+#elif defined(USE_WRL)
 	std::vector<Microsoft::WRL::ComPtr<ID3D12CommandAllocator>> CommandAllocators;
 	std::vector<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>> GraphicsCommandLists;
 	//std::vector<Microsoft::WRL::ComPtr<ID3D12CommandList>> CommandLists;
-
+#endif
+	
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> SwapChainDescriptorHeap;
 	UINT CurrentBackBufferIndex = 0xffffffff;

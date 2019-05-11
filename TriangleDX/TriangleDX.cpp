@@ -246,7 +246,12 @@ void TriangleDX::CreateVertexBuffer()
 
 		//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
 		ExecuteCopyBuffer(CA, CL, UploadResource.Get(), *Resource, Size);
-	}(VertexBufferResource.GetAddressOf(), Size, Vertices.data(), CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
+	}
+#ifdef USE_WINRT
+	(VertexBufferResource.GetAddressOf(), Size, Vertices.data(), CommandAllocators[0].get(), GraphicsCommandLists[0].get());
+#elif defined(USE_WRL)
+	(VertexBufferResource.GetAddressOf(), Size, Vertices.data(), CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
+#endif
 
 	//!< DXではビューが必要 Need view
 	VertexBufferViews.push_back({ VertexBufferResource->GetGPUVirtualAddress(), Size, Stride });
@@ -278,7 +283,12 @@ void TriangleDX::CreateIndexBuffer()
 
 		//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
 		ExecuteCopyBuffer(CA, CL, UploadResource.Get(), *Resource, Size);
-	}(IndexBufferResource.GetAddressOf(), Size, Indices.data(), CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
+	}
+#ifdef USE_WINRT
+	(IndexBufferResource.GetAddressOf(), Size, Indices.data(), CommandAllocators[0].get(), GraphicsCommandLists[0].get());
+#elif defined(USE_WRL)
+	(IndexBufferResource.GetAddressOf(), Size, Indices.data(), CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
+#endif
 
 	//!< DXではビューが必要 Need view
 	IndexBufferView = { IndexBufferResource->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT };
@@ -293,11 +303,16 @@ void TriangleDX::CreateIndexBuffer()
 }
 void TriangleDX::PopulateCommandList(const size_t i)
 {
+#ifdef USE_WINRT
+	const auto CL = GraphicsCommandLists[i].get();
+	const auto CA = CommandAllocators[0].get();
+#elif defined(USE_WRL)
 	const auto CL = GraphicsCommandLists[i].Get();
+	const auto CA = CommandAllocators[0].Get();
+#endif
+
 	const auto SCR = SwapChainResources[i].Get();
 	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
-
-	const auto CA = CommandAllocators[0].Get();
 
 	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
 	{
