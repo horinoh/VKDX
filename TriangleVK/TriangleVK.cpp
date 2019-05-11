@@ -243,17 +243,31 @@ void TriangleVK::CreateVertexBuffer()
 		{
 			//!< ホストビジブルのバッファとメモリを作成、データをコピー (Create host visible buffer and memory, and copy data)
 			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
-			CopyToHostVisibleMemory(StagingDeviceMemory, Size, Data);
+			CreateDeviceMemory(&StagingDeviceMemory, StagingBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+			CopyToDeviceMemory(StagingDeviceMemory, Size, Data);
 			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
 			//!< デバイスローカルのバッファとメモリを作成 (Create device local buffer and memory)
 			CreateBuffer(Buffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-			CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+			CreateDeviceMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			BindDeviceMemory(*Buffer, *DeviceMemory);
 
+			//!< View は必要ない (No need view)
+
 			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit copy command host visible to device local)
-			SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
+			CopyBufferToBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
+			const std::vector<VkSubmitInfo> SIs = {
+				{
+					VK_STRUCTURE_TYPE_SUBMIT_INFO,
+					nullptr,
+					0, nullptr,
+					nullptr,
+					1, &CB,
+					0, nullptr
+				}
+			};
+			VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), VK_NULL_HANDLE));
+			VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 		}
 		if (VK_NULL_HANDLE != StagingDeviceMemory) {
 			vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
@@ -289,17 +303,31 @@ void TriangleVK::CreateIndexBuffer()
 		{
 			//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
 			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-			CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
-			CopyToHostVisibleMemory(StagingDeviceMemory, Size, Data);
+			CreateDeviceMemory(&StagingDeviceMemory, StagingBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+			CopyToDeviceMemory(StagingDeviceMemory, Size, Data);
 			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
-			//!< デバイスローカルのバッファとメモリを作成 Create device local buffer and memory
+			//!< デバイスローカルのバッファとメモリを作成 (Create device local buffer and memory)
 			CreateBuffer(Buffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-			CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+			CreateDeviceMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			BindDeviceMemory(*Buffer, *DeviceMemory);
 
-			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
-			SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
+			//!< View は必要ない (No need view)
+
+			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit copy command host visible to device local)
+			CopyBufferToBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
+			const std::vector<VkSubmitInfo> SIs = {
+				{
+					VK_STRUCTURE_TYPE_SUBMIT_INFO,
+					nullptr,
+					0, nullptr,
+					nullptr,
+					1, &CB,
+					0, nullptr
+				}
+			};
+			VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), VK_NULL_HANDLE));
+			VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 		}
 		if (VK_NULL_HANDLE != StagingDeviceMemory) {
 			vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());

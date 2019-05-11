@@ -127,26 +127,18 @@ protected:
 	}
 	virtual void CreateImage(VkImage* Image, const VkImageCreateFlags CreateFlags, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage) const;
 
-	virtual void CopyToHostVisibleMemory(const VkDeviceMemory DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset = 0);
-	virtual void SubmitCopyBuffer(const VkCommandBuffer CommandBuffer, const VkBuffer SrcBuffer, const VkBuffer DstBuffer, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size);
+	virtual void CopyToDeviceMemory(const VkDeviceMemory DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset = 0);
+	virtual void CopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, const VkBuffer Dst, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF, const size_t Size);
 	
 	void EnumerateMemoryRequirements(const VkMemoryRequirements& MR);
 
 	void CreateBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF);
-	void CreateHostVisibleBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Buffer) {
-		//!< VK_MEMORY_PROPERTY_HOST_COHERENT_BIT を指定した場合 vkFlushMappedMemoryRanges() や vkInvalidateMappedMemoryRanges() をコールする必要がなくなる (If VK_MEMORY_PROPERTY_HOST_COHERENT_BIT is specified, no need to call vkFlushMappedMemoryRanges() and vkInvalidateMappedMemoryRanges())
-		CreateBufferMemory(DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT/*| VK_MEMORY_PROPERTY_HOST_COHERENT_BIT*/);
-	}
-	void CreateDeviceLocalBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Buffer) { CreateBufferMemory(DeviceMemory, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); }
 	void BindBufferMemory(const VkBuffer Buffer, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset) { VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, Offset)); }
 
 	void CreateImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Image, const VkMemoryPropertyFlags MPF);
-	//void CreateHostVisibleImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Image) { assert(false && "Not implemented"); }
-	void CreateDeviceLocalImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Image) { CreateImageMemory(DeviceMemory, Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); }
 	void BindImageMemory(const VkImage Image, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset) { VERIFY_SUCCEEDED(vkBindImageMemory(Device, Image, DeviceMemory, Offset)); }
 	
-	template<typename T> void CreateHostVisibleMemory(VkDeviceMemory* DeviceMemory, const T Object) { static_assert(false, "Need to implement templete specialization"); }
-	template<typename T> void CreateDeviceLocalMemory(VkDeviceMemory* DeviceMemory, const T Object) { static_assert(false, "Need to implement templete specialization"); }
+	template<typename T> void CreateDeviceMemory(VkDeviceMemory* DeviceMemory, const T Object, const VkMemoryPropertyFlags MPF) { static_assert(false, "Need to implement templete specialization"); }
 	template<typename T> void BindDeviceMemory(const T Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset = 0) { static_assert(false, "Need to implement templete specialization"); }
 	//!< ↓ ここでテンプレート特殊化している (Template specialization here)
 #include "VKDeviceMemory.inl"

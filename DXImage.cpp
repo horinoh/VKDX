@@ -23,8 +23,11 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const std::wstring& Path,
 		//!< サブリソースデータを取得 Acquire sub resource data
 		std::unique_ptr<uint8_t[]> DDSData; //!< 未使用 Not used
 		std::vector<D3D12_SUBRESOURCE_DATA> Subresource;
+#ifdef USE_WINRT
+		VERIFY_SUCCEEDED(DirectX::LoadDDSTextureFromFile(Device.get(), Path.c_str(), Resource, DDSData, Subresource));
+#elif defined(USE_WRL)
 		VERIFY_SUCCEEDED(DirectX::LoadDDSTextureFromFile(Device.Get(), Path.c_str(), Resource, DDSData, Subresource));
-
+#endif
 		//!< フットプリントの取得 Acquire footprint
 		UINT64 TotalBytes = 0;
 		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> Footprint(Subresource.size());

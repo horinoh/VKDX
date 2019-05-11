@@ -1,6 +1,14 @@
 #pragma once
 
+#define USE_WINRT
+#define USE_WRL
+#ifdef USE_WINRT
+//!< プロジェクト右クリック - Property - All Configurations にする - C / C++ - Language - C++ Language Standard - ISO C++17 Standard を選択しておくこと (デフォルトではC++14)
+#include <winrt/base.h>
+#endif
+#ifdef USE_WRL
 #include <wrl.h>
+#endif
 
 #include <d3d12.h>
 #include <d3dcompiler.h>
@@ -189,8 +197,11 @@ protected:
 #if defined(_DEBUG) || defined(USE_PIX)
 	Microsoft::WRL::ComPtr<IDXGraphicsAnalysis> GraphicsAnalysis;
 #endif
-
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3D12Device> Device;
+#elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3D12Device> Device;
+#endif
 	std::vector<DXGI_SAMPLE_DESC> SampleDescs;
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> CommandQueue;
 

@@ -124,9 +124,28 @@ xcopy /y %(Identity).spv $(TargetDir)
 
 ## DX
 
-#### Visual Studio
+### Visual Studio
  * Visual Studio のインストール時に Universal Windows App Development Tools - Tools and Windows 10 SDK 10.XXX をチェックしておく必要がある
  * インストール済みの場合は「プログラムと機能」から更新インストールする 
+
+#### WinRt
+* Microsoft::WRL::ComPtr -> winrt::com_ptr への移行 (参考 https://docs.microsoft.com/ja-jp/windows/uwp/cpp-and-winrt-apis/move-to-winrt-from-wrl)
+	* プロジェクト右クリック - Property - All Configurations にする - C/C++ - Language - C++ Language Standard - ISO C++17 Standard を選択
+		* デフォルトでは C++14になっているみたい
+	* 以下のようなコード変更を行う
+~~~
+//#include <wrl.h>
+#include <winrt/base.h>
+
+//Microsoft::WRL::ComPtr<ID3D12Device> Device;
+winrt::com_ptr<ID3D12Device> Dev;
+
+//IID_PPV_ARGS(&XXX)
+__uuidof(XXX), XXX.put_void())
+
+//XXX.Get()
+XXX.get()
+~~~
 
 ### DirectXTK (DDS読み込みに使用)
 * https://github.com/Microsoft/DirectXTK12
@@ -166,6 +185,7 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
 ## プロジェクトの追加方法 (自分用覚書)
  * ソリューションを右クリック - Add - New Project で Win32 Project
  * プロジェクトを右クリック - Retarget SDK Verson で 10以上にする
+ * プロジェクト右クリック - Property - All Configurations にする - C/C++ - Language - C++ Language Standard - ISO C++17 Standard を選択しておく(デフォルトではC++14なので)
 
 #### DX
  * プロパティマネージャで Add Existing Property Sheet... - Props/HLSL.props、(Props/DXTK.prop)

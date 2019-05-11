@@ -446,7 +446,7 @@ void VK::CreateImage(VkImage* Image, const VkImageCreateFlags CreateFlags, const
 	VERIFY_SUCCEEDED(vkCreateImage(Device, &ICI, GetAllocationCallbacks(), Image));
 }
 
-void VK::CopyToHostVisibleMemory(const VkDeviceMemory DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset)
+void VK::CopyToDeviceMemory(const VkDeviceMemory DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset)
 {
 	if (Size && nullptr != Source) {
 		void *Data;
@@ -463,18 +463,19 @@ void VK::CopyToHostVisibleMemory(const VkDeviceMemory DeviceMemory, const size_t
 				}
 			};
 
-			//!< バッファ作成時にVK_MEMORY_PROPERTY_HOST_COHERENT_BITを指定した場合は必要ない
-#pragma region VK_MEMORY_PROPERTY_HOST_COHERENT_BIT_IfNotSpecified
-			//!< ホストから可視にするために無効化する、
-			VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
-			//!< フラッシュしておかないと、サブミットされた他のコマンドからはすぐには見えない
+			//!< デバスメモリ確保時に VK_MEMORY_PROPERTY_HOST_COHERENT_BIT を指定した場合は必要ない CreateDeviceMemory(..., VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			//!< メモリコンテンツが変更されたことをドライバへ知らせる
 			VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
-#pragma endregion
-
+			//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
 		} vkUnmapMemory(Device, DeviceMemory);
 	}
 }
-void VK::SubmitCopyBuffer(const VkCommandBuffer CB, const VkBuffer Src, const VkBuffer Dst, const VkAccessFlags AccessFlag, const VkPipelineStageFlagBits PipelineStageFlag, const size_t Size)
+//!< @param コマンドバッファ
+//!< @param コピー元バッファ
+//!< @param コピー先バッファ
+//!< @param (コピー後の)バッファのアクセスフラグ ex) VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_ACCESS_INDEX_READ_BIT, VK_ACCESS_INDIRECT_READ_BIT,...等
+//!< @param (コピー後に)バッファが使われるパイプラインステージ ex) VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,...等
+void VK::CopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, const VkBuffer Dst, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF, const size_t Size)
 {
 	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -486,15 +487,12 @@ void VK::SubmitCopyBuffer(const VkCommandBuffer CB, const VkBuffer Src, const Vk
 		const std::vector<VkBufferCopy> BCs = {
 			{ 0, 0, Size },
 		};
-		vkCmdCopyBuffer(CB, Src, Dst, static_cast<uint32_t>(BCs.size()), BCs.data());
-
-		//!< バッファの用途が変わるのでバリアが必要
-		const std::vector<VkBufferMemoryBarrier> BMBs = {
+		const std::vector<VkBufferMemoryBarrier> BMBs_Pre = {
 			{
 				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
 				nullptr,
-				//!< バッファがどう扱われるかのフラグ「これまで」と「これから」、例えば(VK_ACCESS_MEMORY_WRITE_BIT)から頂点(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)へ等
-				VK_ACCESS_MEMORY_WRITE_BIT, AccessFlag,
+				//!< バッファがどう扱われるかのフラグ「これまで」と「これから」、0から書き込み(VK_ACCESS_MEMORY_WRITE_BIT)へ
+				0, VK_ACCESS_MEMORY_WRITE_BIT,
 				//!< (VK_SHARING_MODE_EXCLUSIVEで作成されたバッファを)参照しているキューファミリを変更「これまで」と「これから」、ここでは変更しないのでVK_QUEUE_FAMILY_IGNORED
 				VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
 				Dst,
@@ -502,28 +500,37 @@ void VK::SubmitCopyBuffer(const VkCommandBuffer CB, const VkBuffer Src, const Vk
 				VK_WHOLE_SIZE
 			},
 		};
+		vkCmdPipelineBarrier(CB,
+			//!< バッファが使われるパイプラインステージ「これまで」と「これから」、VK_PIPELINE_STAGE_TOP_OF_PIPE_BITから転送(VK_PIPELINE_STAGE_TRANSFER_BIT)へ
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			0,
+			0, nullptr,
+			static_cast<uint32_t>(BMBs_Pre.size()), BMBs_Pre.data(),
+			0, nullptr);
+		{
+			vkCmdCopyBuffer(CB, Src, Dst, static_cast<uint32_t>(BCs.size()), BCs.data());
+		}
+		const std::vector<VkBufferMemoryBarrier> BMBs_Post = {
+			{
+				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+				nullptr,
+				//!< バッファがどう扱われるかのフラグ「これまで」と「これから」、例えば(VK_ACCESS_MEMORY_WRITE_BIT)から頂点(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)へ等
+				VK_ACCESS_MEMORY_WRITE_BIT, AF,
+				VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+				Dst,
+				0,
+				VK_WHOLE_SIZE
+			},
+		};
+		assert(BMBs_Pre[0].dstAccessMask == BMBs_Post[0].srcAccessMask);
 		vkCmdPipelineBarrier(CB, 
 			//!< バッファが使われるパイプラインステージ「これまで」と「これから」、例えば転送先(VK_PIPELINE_STAGE_TRANSFER_BIT)から頂点バッファ(VK_PIPELINE_STAGE_VERTEX_INPUT_BIT)へ等
-			VK_PIPELINE_STAGE_TRANSFER_BIT, PipelineStageFlag,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, PSF,
 			0, 
 			0, nullptr,
-			static_cast<uint32_t>(BMBs.size()), BMBs.data(), 
+			static_cast<uint32_t>(BMBs_Post.size()), BMBs_Post.data(), 
 			0, nullptr);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-
-	//!< サブミット
-	const std::vector<VkSubmitInfo> SubmitInfos = {
-		{
-			VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			nullptr,
-			0, nullptr,
-			nullptr,
-			1, &CB,
-			0, nullptr
-		}
-	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SubmitInfos.size()), SubmitInfos.data(), VK_NULL_HANDLE));
-	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 }
 
 void VK::EnumerateMemoryRequirements(const VkMemoryRequirements& MR)
@@ -548,7 +555,6 @@ void VK::EnumerateMemoryRequirements(const VkMemoryRequirements& MR)
 	}
 }
 
-//!< MemoryRequirements の取得の仕方がバッファ、イメージで異なるのでテンプレート化している (Because vkGetImageMemoryRequirements is different, using template specialization)
 void VK::CreateBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF)
 {
 	const auto& PDMP = GetCurrentPhysicalDeviceMemoryProperties();
@@ -846,7 +852,7 @@ void VK::CreateDebugReportCallback()
 					if (VK_DEBUG_REPORT_ERROR_BIT_EXT & flags) {
 						DEBUG_BREAK();
 						Errorf("%s\n", pMessage);
-						return VK_TRUE;
+							return VK_TRUE;
 					}
 					else if (VK_DEBUG_REPORT_WARNING_BIT_EXT & flags) {
 						DEBUG_BREAK();
@@ -1814,14 +1820,17 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorVa
 		}
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 
-	const VkSubmitInfo SubmitInfo = {
-		VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		nullptr,
-		0, nullptr, nullptr,
-		1,  &CB,
-		0, nullptr
+	const std::vector<VkSubmitInfo> SIs = {
+		{
+			VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			nullptr,
+			0, nullptr, nullptr,
+			1,  &CB,
+			0, nullptr
+		}
 	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
+	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), VK_NULL_HANDLE));
+
 	//!< キューにサブミットされたコマンドが完了するまでブロッキング (フェンスを用いないブロッキング方法)
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 
@@ -1846,7 +1855,7 @@ void VK::CreateDepthStencil(const uint32_t Width, const uint32_t Height, const V
 
 	const VkExtent3D Extent3D = { Width, Height, 1 };
 	CreateImage(&DepthStencilImage, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-	CreateDeviceLocalMemory(&DepthStencilDeviceMemory, DepthStencilImage);
+	CreateDeviceMemory(&DepthStencilDeviceMemory, DepthStencilImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	BindDeviceMemory(DepthStencilImage, DepthStencilDeviceMemory);
 	CreateImageView(&DepthStencilImageView, DepthStencilImage, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, ComponentMapping_Identity, ImageSubresourceRange_DepthStencil);
 
@@ -1884,14 +1893,16 @@ void VK::InitializeDepthStencilImage(const VkCommandBuffer CB)
 			0, nullptr,
 			1, &IMB);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-	const VkSubmitInfo SubmitInfo = {
-		VK_STRUCTURE_TYPE_SUBMIT_INFO,
-		nullptr,
-		0, nullptr, nullptr,
-		1,  &CB,
-		0, nullptr
+	const std::vector<VkSubmitInfo> SIs = {
+		{
+			VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			nullptr,
+			0, nullptr, nullptr,
+			1,  &CB,
+			0, nullptr
+		}
 	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, 1, &SubmitInfo, VK_NULL_HANDLE));
+	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), VK_NULL_HANDLE));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 }
 
@@ -1921,19 +1932,31 @@ void VK::CreateIndirectBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, co
 	
 	//!< ホストビジブルのバッファとメモリを作成し、そこへデータをコピーする (Create host visible buffer and memory, and copy data)
 	CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-	CreateHostVisibleMemory(&StagingDeviceMemory, StagingBuffer);
-	CopyToHostVisibleMemory(StagingDeviceMemory, Size, Source);
+	CreateDeviceMemory(&StagingDeviceMemory, StagingBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	CopyToDeviceMemory(StagingDeviceMemory, Size, Source);
 	BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
 	//!< デバイスローカルのバッファとメモリを作成 (Create device local buffer and memory)
 	CreateBuffer(Buffer, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-	CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+	CreateDeviceMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	BindDeviceMemory(*Buffer, *DeviceMemory);
 
 	//!< View は必要ない (No need view)
 
 	//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
-	SubmitCopyBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT/*Dispatchの場合もこれで良い？*/, Size);
+	CopyBufferToBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
+	const std::vector<VkSubmitInfo> SIs = {
+		{
+			VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			nullptr,
+			0, nullptr,
+			nullptr,
+			1, &CB,
+			0, nullptr
+		}
+	};
+	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), VK_NULL_HANDLE));
+	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 
 	if (VK_NULL_HANDLE != StagingDeviceMemory) {
 		vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
@@ -1950,8 +1973,8 @@ void VK::CreateUniformBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, con
 	CreateBuffer(Buffer, Usage, Size);
 
 	//!< #VK_TODO_PERF 本来はバッファ毎にメモリを確保するのではなく、予め大きなメモリを作成しておいてその一部を複数のバッファへ割り当てる方がよい
-	CreateHostVisibleMemory(DeviceMemory, *Buffer);
-	CopyToHostVisibleMemory(*DeviceMemory, Size, Source);
+	CreateDeviceMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	CopyToDeviceMemory(*DeviceMemory, Size, Source);
 	BindDeviceMemory(*Buffer, *DeviceMemory);
 
 	//!< View は必要ない (No need view)
@@ -1973,7 +1996,7 @@ void VK::CreateStorageBuffer()
 		const auto Usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
 		CreateBuffer(Buffer, Usage, Size);
-		CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+		CreateDeviceMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 		BindMemory(*Buffer, *DeviceMemory);
 
 		//!< View は必要ない (No need view)
@@ -1999,7 +2022,7 @@ void VK::CreateUniformTexelBuffer()
 		const auto Usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
 
 		CreateBuffer(Buffer, Usage, Size);
-		CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+		CreateDeviceMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 		BindDeviceMemory(*Buffer, *DeviceMemory);
 
@@ -2031,7 +2054,7 @@ void VK::CreateStorageTexelBuffer()
 		const auto Usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
 
 		CreateBuffer(Buffer, Usage, Size);
-		CreateDeviceLocalMemory(DeviceMemory, *Buffer);
+		CreateDeviceMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 		BindDeviceMemory(*Buffer, *DeviceMemory);
 
 		//!< UniformStorageBuffer の場合は、フォーマットを指定する必要があるため、ビューを作成する UniformStorageBuffer need format, so create view
@@ -2864,7 +2887,7 @@ void VK::Draw()
 	const std::vector<VkCommandBuffer> CBs = { CommandPools[0].second[SwapchainImageIndex] };
 	//!< 完了時にシグナルされるセマフォ(RenderFinishedSemaphore)
 	const std::vector<VkSemaphore> SemaphoresToSignal = { RenderFinishedSemaphore };
-	const std::vector<VkSubmitInfo> SubmitInfos = {
+	const std::vector<VkSubmitInfo> SIs = {
 		{
 			VK_STRUCTURE_TYPE_SUBMIT_INFO,
 			nullptr,
@@ -2873,7 +2896,7 @@ void VK::Draw()
 			static_cast<uint32_t>(SemaphoresToSignal.size()), SemaphoresToSignal.data() //!< 描画完了を通知する
 		},
 	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SubmitInfos.size()), SubmitInfos.data(), Fence));
+	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), Fence));
 
 	Present();
 }
@@ -2885,7 +2908,7 @@ void VK::Dispatch()
 	vkResetFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data());
 
 	const auto& CB = CommandPools[0].second[0];
-	const std::vector<VkSubmitInfo> SubmitInfos = {
+	const std::vector<VkSubmitInfo> SIs = {
 		{
 			VK_STRUCTURE_TYPE_SUBMIT_INFO,
 			nullptr,
@@ -2894,7 +2917,7 @@ void VK::Dispatch()
 			0, nullptr,
 		},
 	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(ComputeQueue, static_cast<uint32_t>(SubmitInfos.size()), SubmitInfos.data(), ComputeFence));
+	VERIFY_SUCCEEDED(vkQueueSubmit(ComputeQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), ComputeFence));
 }
 void VK::Present()
 {

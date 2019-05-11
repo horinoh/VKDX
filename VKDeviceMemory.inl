@@ -1,12 +1,10 @@
 #pragma once
 
-//!< テンプレート特殊化
-//!< template specialization
+//!< テンプレート特殊化 (template specialization)
 
-template<> void CreateHostVisibleMemory(VkDeviceMemory* DeviceMemory, const VkBuffer T) { CreateHostVisibleBufferMemory(DeviceMemory, T); }
-template<> void CreateDeviceLocalMemory(VkDeviceMemory* DeviceMemory, const VkBuffer T) { CreateDeviceLocalBufferMemory(DeviceMemory, T); }
-template<> void BindDeviceMemory(const VkBuffer T, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset) { BindBufferMemory(T, DeviceMemory, Offset); }
+//!< MemoryRequirements の取得の仕方がバッファ、イメージで異なるのでテンプレート化している (Because vkGetImageMemoryRequirements is different, using template specialization)
+template<> void CreateDeviceMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Object, const VkMemoryPropertyFlags MPF) { CreateBufferMemory(DeviceMemory, Object, MPF); }
+template<> void BindDeviceMemory(const VkBuffer Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset) { BindBufferMemory(Object, DeviceMemory, Offset); }
 
-//template<> void CreateHostVisibleMemory(VkDeviceMemory* DeviceMemory, const VkImage T) { CreateHostVisibleImageMemory(DeviceMemory, T); }
-template<> void CreateDeviceLocalMemory(VkDeviceMemory* DeviceMemory, const VkImage T) { CreateDeviceLocalImageMemory(DeviceMemory, T); }
-template<> void BindDeviceMemory(const VkImage T, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset) { BindImageMemory(T, DeviceMemory, Offset); }
+template<> void CreateDeviceMemory(VkDeviceMemory* DeviceMemory, const VkImage Object, const VkMemoryPropertyFlags MPF) { CreateImageMemory(DeviceMemory, Object, MPF); }
+template<> void BindDeviceMemory(const VkImage Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset) { BindImageMemory(Object, DeviceMemory, Offset); }

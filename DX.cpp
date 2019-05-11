@@ -376,7 +376,11 @@ HRESULT DX::CreateMaxFeatureLevelDevice(IDXGIAdapter* Adapter)
 			break;
 		}
 	}
+#ifdef USE_WINRT
+	return D3D12CreateDevice(Adapter, FeatureLevel, __uuidof(Device), Device.put_void());
+#elif defined(USE_WRL)
 	return D3D12CreateDevice(Adapter, FeatureLevel, IID_PPV_ARGS(Device.GetAddressOf()));
+#endif
 }
 
 //!< アダプタ(GPU)の列挙
