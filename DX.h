@@ -134,7 +134,15 @@ protected:
 	virtual void CreateSwapChainResource();
 	virtual void InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, const DirectX::XMVECTORF32* Color = nullptr);
 	virtual void InitializeSwapChain();
-	virtual void ResetSwapChainResource() { for (auto& i : SwapChainResources) { i.Reset(); } }
+	virtual void ResetSwapChainResource() { 
+		for (auto& i : SwapChainResources) {
+#ifdef USE_WINRT
+			i = nullptr;
+#elif defined(USE_WRL)
+			i.Reset();
+#endif
+		} 
+	}
 	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
 	virtual void ResizeSwapChain(const RECT& Rect) { ResizeSwapChain(static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
 	UINT AcquireNextBackBufferIndex() const {
@@ -227,10 +235,16 @@ protected:
 	//std::vector<Microsoft::WRL::ComPtr<ID3D12CommandList>> CommandLists;
 #endif
 	
+#if 0//def USE_WINRT
+	winrt::com_ptr<IDXGISwapChain3> SwapChain;
+	winrt::com_ptr<ID3D12DescriptorHeap> SwapChainDescriptorHeap;
+	std::vector<winrt::com_ptr<ID3D12Resource>> SwapChainResources;
+#elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> SwapChainDescriptorHeap;
-	UINT CurrentBackBufferIndex = 0xffffffff;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> SwapChainDescriptorHeap; 
 	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> SwapChainResources;
+#endif
+	UINT CurrentBackBufferIndex = 0xffffffff;
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> DepthStencilResource;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DepthStencilDescriptorHeap;
@@ -239,10 +253,20 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> ImageDescriptorHeap;
 	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
 
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3D12RootSignature> RootSignature;
+#elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
+#endif
 
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3D12PipelineLibrary> PipelineLibrary;
+	winrt::com_ptr<ID3D12PipelineState> PipelineState; 
+#elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3D12PipelineLibrary> PipelineLibrary;
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState; 
+#endif
+	
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferResource;
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> VertexBufferViews;

@@ -622,13 +622,15 @@ void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
 }
 void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height)
 {
-	using namespace Microsoft::WRL;
-
 	const UINT BufferCount = 3;
-
-	ComPtr<IDXGIFactory4> Factory;
+#ifdef USE_WINRT
+	winrt::com_ptr<IDXGIFactory4> Factory;
+	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.put()))); 
+#elif defined(USE_WRL)
+	Microsoft::WRL::ComPtr<IDXGIFactory4> Factory;
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.GetAddressOf())));
-
+#endif
+	
 	//!< #DX_TODO : GetDisplayModeList() で DXGI_MODE_DESC を覚えておく？
 	const DXGI_RATIONAL Rational = { 60, 1 };
 	const DXGI_MODE_DESC ModeDesc = {
@@ -650,14 +652,18 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH //!< フルスクリーンにした時、最適なディスプレイモードが選択されるのを許可
 	};
 	//!< セッティングを変更してスワップチェインを再作成できるように、既存のを開放している
-	SwapChain.Reset(); 
-	ComPtr<IDXGISwapChain> NewSwapChain;
-#ifdef USE_WINRT
-	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.get(), &SwapChainDesc, NewSwapChain.GetAddressOf()));
+#if 0//def USE_WINRT
+	SwapChain = nullptr;
+	winrt::com_ptr<IDXGISwapChain> NewSwapChain;
+	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.get(), &SwapChainDesc, NewSwapChain.put()));
+	//VERIFY_SUCCEEDED(NewSwapChain.As(&SwapChain)); //!< #DX_TODO As() 相当が見つからない
 #elif defined(USE_WRL)
-	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.Get(), &SwapChainDesc, NewSwapChain.GetAddressOf()));
-#endif
+	SwapChain.Reset();
+	Microsoft::WRL::ComPtr<IDXGISwapChain> NewSwapChain;
+	//VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.Get(), &SwapChainDesc, NewSwapChain.GetAddressOf()));
+	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.get(), &SwapChainDesc, NewSwapChain.GetAddressOf()));
 	VERIFY_SUCCEEDED(NewSwapChain.As(&SwapChain));
+#endif
 
 	{
 		const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
@@ -671,7 +677,12 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 				0 // NodeMask ... マルチGPUの場合
 			};
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
-		}(Type, Count, SwapChainDescriptorHeap.GetAddressOf());
+		}
+#if 0//def USE_WINRT
+		(Type, Count, SwapChainDescriptorHeap.put());
+#elif defined(USE_WRL)
+		(Type, Count, SwapChainDescriptorHeap.GetAddressOf());
+#endif
 	}
 
 	LogOK("CreateSwapChain");
@@ -692,13 +703,19 @@ void DX::CreateSwapChainResource()
 	//	Device->CreateRenderTargetView(It->Get(), nullptr, GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, Index));
 	//}
 	for (auto i = 0; i < SwapChainResources.size(); ++i) {
+#if 0//def USE_WINRT
 		//!< スワップチェインのバッファリソースを SwapChainResources へ取得
-		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, IID_PPV_ARGS(SwapChainResources[i].GetAddressOf())));
+		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, IID_PPV_ARGS(SwapChainResources[i].put())));
 
 		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 		//!< (リソースがタイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能)
+		const auto SCR = SwapChainResources[i].get();
+		const auto CDH = GetCPUDescriptorHandle(SwapChainDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
+#elif defined(USE_WRL)
+		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, IID_PPV_ARGS(SwapChainResources[i].GetAddressOf())));
 		const auto SCR = SwapChainResources[i].Get();
-		const auto CDH = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
+		const auto CDH = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i); 
+#endif		
 		Device->CreateRenderTargetView(SCR, nullptr, CDH);
 	}
 
@@ -719,9 +736,13 @@ void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, cons
 
 		VERIFY_SUCCEEDED(CL->Reset(CommandAllocator, nullptr));
 		{
+#if 0//def USE_WINRT
+			const auto SCR = SwapChainResources[i].get();
+			const auto CDH = GetCPUDescriptorHandle(SwapChainDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
+#elif defined(USE_WRL)
 			const auto SCR = SwapChainResources[i].Get();
 			const auto CDH = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
-
+#endif
 			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET); {
 				if (nullptr != Color) {
 					CL->ClearRenderTargetView(CDH, *Color, 0, nullptr);
@@ -1055,7 +1076,11 @@ void DX::CreateRootSignature()
 	Microsoft::WRL::ComPtr<ID3DBlob> Blob;
 	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(RootSignature), RootSignature.put_void()));
+#elif defined(USE_WRL)
 	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
+#endif
 
 	LogOK("CreateRootSignature");
 }
@@ -1115,11 +1140,19 @@ BOOL DX::LoadPipelineLibrary(const std::wstring& Path)
 
 	Microsoft::WRL::ComPtr<ID3DBlob> Blob;
 	if (SUCCEEDED(D3DReadFileToBlob(Path.data(), Blob.GetAddressOf())) && Blob->GetBufferSize()) {
+#ifdef USE_WINRT
+		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(PipelineLibrary.put())));
+#elif defined(USE_WRL)
 		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(PipelineLibrary.GetAddressOf())));
+#endif
 		return TRUE;
 	}
 	else {
+#ifdef USE_WINRT
+		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, IID_PPV_ARGS(PipelineLibrary.put())));
+#elif defined(USE_WRL)
 		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, IID_PPV_ARGS(PipelineLibrary.GetAddressOf())));
+#endif
 		return FALSE;
 	}
 }
@@ -1214,7 +1247,11 @@ void DX::CreatePipelineState_Graphics()
 	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
 	const D3D12_CACHED_PIPELINE_STATE CachedPipelineState = { nullptr, 0 };
 	const D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineStateDesc = {
+#ifdef USE_WINRT
+		RootSignature.get(),
+#elif defined(USE_WRL)
 		RootSignature.Get(),
+#endif
 		ShaderBCs[0], ShaderBCs[1], ShaderBCs[2], ShaderBCs[3], ShaderBCs[4],
 		StreamOutputDesc,
 		BlendDesc,
@@ -1238,12 +1275,21 @@ void DX::CreatePipelineState_Graphics()
 	DeleteFile(PCOPath.data());
 	if(LoadPipelineLibrary(PCOPath)) {
 		//!< ライブラリからパイプラインステートを取得する (重複を防ぐためにライブラリデータベースとDescが比較される)
+#ifdef USE_WINRT
+		VERIFY_SUCCEEDED(PipelineLibrary->LoadGraphicsPipeline(PCOName.data(), &GraphicsPipelineStateDesc, IID_PPV_ARGS(PipelineState.put())));
+#elif defined(USE_WRL)
 		VERIFY_SUCCEEDED(PipelineLibrary->LoadGraphicsPipeline(PCOName.data(), &GraphicsPipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
+#endif
 	}
 	else {
-		VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
+#ifdef USE_WINRT
+		VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, IID_PPV_ARGS(PipelineState.put())));
 		//!< 名前指定でライブラリデータベースへ追加する
+		VERIFY_SUCCEEDED(PipelineLibrary->StorePipeline(PCOName.data(), PipelineState.get()));
+#elif defined(USE_WRL)
+		VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
 		VERIFY_SUCCEEDED(PipelineLibrary->StorePipeline(PCOName.data(), PipelineState.Get()));
+#endif
 
 		StorePipelineLibrary(PCOPath);
 	}
@@ -1266,13 +1312,21 @@ void DX::CreatePipelineState_Compute()
 
 	const D3D12_CACHED_PIPELINE_STATE CachedPipelineState = { nullptr, 0 };
 	const D3D12_COMPUTE_PIPELINE_STATE_DESC ComputePipelineStateDesc = {
+#ifdef USE_WINRT
+		RootSignature.get(),
+#elif defined(USE_WRL)
 		RootSignature.Get(),
+#endif
 		D3D12_SHADER_BYTECODE({ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }),
 		0, // NodeMask ... マルチGPUの場合
 		CachedPipelineState,
 		D3D12_PIPELINE_STATE_FLAG_NONE
 	};
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(Device->CreateComputePipelineState(&ComputePipelineStateDesc, __uuidof(PipelineState), PipelineState.put_void()));
+#elif defined(USE_WRL)
 	VERIFY_SUCCEEDED(Device->CreateComputePipelineState(&ComputePipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
+#endif
 
 	LogOK("CreatePipelineState_Compute");
 }
@@ -1296,15 +1350,25 @@ void DX::PopulateCommandList(const size_t i)
 	const auto CL = GraphicsCommandLists[i].Get();
 	const auto CA = CommandAllocators[0].Get();
 #endif
+
+#if 0//def USE_WINRT
+	const auto SCR = SwapChainResources[i].get();
+	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
+#elif defined(USE_WRL)
 	const auto SCR = SwapChainResources[i].Get();
 	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
+#endif
 
 	//!< GPU が参照している間は、コマンドアロケータの Reset() はできない
 	//VERIFY_SUCCEEDED(CA->Reset());
 
 	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能 (コマンドキューはコマンドリストではなく、コマンドアロケータを参照している)
 	//!< CommandList 作成時に PipelineState を指定していなくても、ここで指定すれば OK
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.get()));
+#elif defined(USE_WRL)
 	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
+#endif
 	{
 		//!< ビューポート、シザー
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());

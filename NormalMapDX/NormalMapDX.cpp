@@ -237,7 +237,11 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 	const auto SCR = SwapChainResources[i].Get();
 	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
 
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.get()));
+#elif defined(USE_WRL)
 	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
+#endif
 	{
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
@@ -251,7 +255,11 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 				CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
 			}
 
+#ifdef USE_WINRT
+			CL->SetGraphicsRootSignature(RootSignature.get());
+#elif defined(USE_WRL)
 			CL->SetGraphicsRootSignature(RootSignature.Get());
+#endif
 
 			{
 				const std::vector<ID3D12DescriptorHeap*> DH = { ConstantBufferDescriptorHeap.Get() };

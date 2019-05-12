@@ -147,7 +147,14 @@ __uuidof(XXX), XXX.put_void())
 XXX.get()
 
 //&XXX
+//XXX.GetAddressOf()
 XXX.put()
+
+//XXX.Reset
+XXX = nullptr
+
+//XXX.As(&YYY)
+??? As()相当が見つからない…
 ~~~
 
 ### DirectXTK (DDS読み込みに使用)

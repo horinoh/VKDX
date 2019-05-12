@@ -314,7 +314,11 @@ void TriangleDX::PopulateCommandList(const size_t i)
 	const auto SCR = SwapChainResources[i].Get();
 	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
 
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.get()));
+#elif defined(USE_WRL)
 	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
+#endif
 	{
 #if defined(_DEBUG) || defined(USE_PIX)
 		//PIXBeginEvent(CL, PIX_COLOR(0, 255, 0), TEXT("Command Begin"));
@@ -338,7 +342,11 @@ void TriangleDX::PopulateCommandList(const size_t i)
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
 
 			//!< ルートシグニチャ
+#ifdef USE_WINRT
+			CL->SetGraphicsRootSignature(RootSignature.get());
+#elif defined(USE_WRL)
 			CL->SetGraphicsRootSignature(RootSignature.Get());
+#endif
 
 			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
 			CL->IASetPrimitiveTopology(GetPrimitiveTopology());

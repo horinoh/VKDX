@@ -235,7 +235,11 @@ void ComputeDX::PopulateCommandList(const size_t i)
 	const auto CA = CommandAllocators[0].Get();
 #endif
 
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.get()));
+#elif defined(USE_WRL)
 	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
+#endif
 	{
 		if (nullptr != UnorderedAccessTextureDescriptorHeap) {
 			const std::vector<ID3D12DescriptorHeap*> DH = { UnorderedAccessTextureDescriptorHeap.Get() };

@@ -229,15 +229,25 @@ void BillboardDX::PopulateCommandList(const size_t i)
 {
 #ifdef USE_WINRT
 	const auto CL = GraphicsCommandLists[i].get();
-	const auto CA = CommandAllocators[0].get();
+	const auto CA = CommandAllocators[0].get(); 
 #elif defined(USE_WRL)
 	const auto CL = GraphicsCommandLists[i].Get();
 	const auto CA = CommandAllocators[0].Get();
 #endif
-	const auto SCR = SwapChainResources[i].Get();
-	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
 
+#if 0//def USE_WINRT
+	const auto SCR = SwapChainResources[i].get();
+	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
+#elif defined(USE_WRL)
+	const auto SCR = SwapChainResources[i].Get();
+	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
+#endif
+	
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.get()));
+#elif defined(USE_WRL)
 	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
+#endif
 	{
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
@@ -259,7 +269,11 @@ void BillboardDX::PopulateCommandList(const size_t i)
 			//	CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
 			//}
 
+#ifdef USE_WINRT
+			CL->SetGraphicsRootSignature(RootSignature.get());
+#elif defined(USE_WRL)
 			CL->SetGraphicsRootSignature(RootSignature.Get());
+#endif
 
 			//!< コンスタントバッファ
 			{

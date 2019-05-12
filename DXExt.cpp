@@ -25,7 +25,11 @@ void DXExt::CreateIndirectBuffer_Draw(const UINT Count)
 		static_cast<const UINT>(IndArgDescs.size()), IndArgDescs.data(),
 		0
 	};
+#ifdef USE_WINRT
+	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
+#elif defined(USE_WRL)
 	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.Get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
+#endif
 }
 
 void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT Count)
@@ -51,7 +55,11 @@ void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT Count)
 		static_cast<const UINT>(IndArgDescs.size()), IndArgDescs.data(),
 		0
 	};
+#ifdef USE_WINRT
+	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
+#elif defined(USE_WRL)
 	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.Get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
+#endif
 }
 
 void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT Z)
@@ -76,7 +84,11 @@ void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT
 		static_cast<const UINT>(IndArgDescs.size()), IndArgDescs.data(),
 		0
 	};
+#ifdef USE_WINRT
+	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
+#elif defined(USE_WRL)
 	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.Get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
+#endif
 }
 
 void DXExt::CreateStaticSamplerDesc_LW(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility, const FLOAT MaxLOD) const
