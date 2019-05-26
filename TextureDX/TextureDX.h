@@ -33,7 +33,11 @@ protected:
 
 	virtual void CreateTexture() override {
 #if 1
+#ifdef USE_WINRT
+		LoadImage(ImageResource.put(), TEXT("UV.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+#elif defined(USE_WRL)
 		LoadImage(ImageResource.GetAddressOf(), TEXT("UV.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+#endif
 #else
 		//LoadImage(ImageResource.GetAddressOf(), TEXT("..\\Intermediate\\Image\\kueken7_a8_unorm.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		//LoadImage(ImageResource.GetAddressOf(), TEXT("..\\Intermediate\\Image\\kueken7_bgr8_srgb.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE); //!< #DX_TODO

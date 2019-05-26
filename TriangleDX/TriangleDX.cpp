@@ -248,7 +248,7 @@ void TriangleDX::CreateVertexBuffer()
 		ExecuteCopyBuffer(CA, CL, UploadResource.Get(), *Resource, Size);
 	}
 #ifdef USE_WINRT
-	(VertexBufferResource.GetAddressOf(), Size, Vertices.data(), CommandAllocators[0].get(), GraphicsCommandLists[0].get());
+	(VertexBufferResource.put(), Size, Vertices.data(), CommandAllocators[0].get(), GraphicsCommandLists[0].get());
 #elif defined(USE_WRL)
 	(VertexBufferResource.GetAddressOf(), Size, Vertices.data(), CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 #endif
@@ -257,7 +257,11 @@ void TriangleDX::CreateVertexBuffer()
 	VertexBufferViews.push_back({ VertexBufferResource->GetGPUVirtualAddress(), Size, Stride });
 
 #ifdef _DEBUG
+#ifdef USE_WINRT
+	SetName(VertexBufferResource.get(), TEXT("MyVertexBuffer"));
+#elif defined(USE_WRL)
 	SetName(VertexBufferResource.Get(), TEXT("MyVertexBuffer"));
+#endif
 #endif
 
 #ifdef DEBUG_STDOUT
@@ -285,7 +289,7 @@ void TriangleDX::CreateIndexBuffer()
 		ExecuteCopyBuffer(CA, CL, UploadResource.Get(), *Resource, Size);
 	}
 #ifdef USE_WINRT
-	(IndexBufferResource.GetAddressOf(), Size, Indices.data(), CommandAllocators[0].get(), GraphicsCommandLists[0].get());
+	(IndexBufferResource.put(), Size, Indices.data(), CommandAllocators[0].get(), GraphicsCommandLists[0].get());
 #elif defined(USE_WRL)
 	(IndexBufferResource.GetAddressOf(), Size, Indices.data(), CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 #endif
@@ -294,7 +298,11 @@ void TriangleDX::CreateIndexBuffer()
 	IndexBufferView = { IndexBufferResource->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT };
 
 #ifdef _DEBUG
+#ifdef USE_WINRT
+	SetName(IndexBufferResource.get(), TEXT("MyIndexBuffer"));
+#elif defined(USE_WRL)
 	SetName(IndexBufferResource.Get(), TEXT("MyIndexBuffer"));
+#endif
 #endif
 
 #ifdef DEBUG_STDOUT
@@ -311,8 +319,14 @@ void TriangleDX::PopulateCommandList(const size_t i)
 	const auto CA = CommandAllocators[0].Get();
 #endif
 
+#ifdef USE_WINRT
+	const auto SCR = SwapChainResources[i].get();
+	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
+#elif defined(USE_WRL)
 	const auto SCR = SwapChainResources[i].Get();
-	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
+	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
+#endif
+
 
 #ifdef USE_WINRT
 	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.get()));
@@ -358,7 +372,11 @@ void TriangleDX::PopulateCommandList(const size_t i)
 			}
 
 			//!< •`‰æ
+#ifdef USE_WINRT
+			CL->ExecuteIndirect(IndirectCommandSignature.get(), 1, IndirectBufferResource.get(), 0, nullptr, 0);
+#elif defined(USE_WRL)
 			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
+#endif
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 

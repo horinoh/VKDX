@@ -43,15 +43,23 @@ public:
 		const auto Count = 1;
 		const auto Size = RoundUp(sizeof(T), 0xff); //!< 256バイトアライン
 
-		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, ID3D12DescriptorHeap** DescriptorHeap) {
+#ifdef USE_WINRT
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
+#elif defined(USE_WRL)
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH) {
+#endif
 			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
 				Type,
 				Count,
 				D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 				0 //!< NodeMask ... マルチGPUの場合 Use with multi GPU
 			};
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
-		}(Type, Count, ConstantBufferDescriptorHeap.GetAddressOf());
+#ifdef USE_WINRT
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, __uuidof(DH), DH.put_void()));
+#elif defined(USE_WRL)
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DH)));
+#endif
+		}(Type, Count, ConstantBufferDescriptorHeap);
 
 		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12Resource* Resource, ID3D12DescriptorHeap* DescriptorHeap, const UINT Size) {
 			//!< 256アラインされていること Must be 256 aligned
@@ -62,7 +70,12 @@ public:
 			//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 			const auto CDH = GetCPUDescriptorHandle(DescriptorHeap, Type);
 			Device->CreateConstantBufferView(&ConstantBufferViewDesc, CDH);
-		}(Type, ConstantBufferResource.Get(), ConstantBufferDescriptorHeap.Get(), static_cast<UINT>(Size));
+		}
+#ifdef USE_WINRT
+		(Type, ConstantBufferResource.get(), ConstantBufferDescriptorHeap.get(), static_cast<UINT>(Size));
+#elif defined(USE_WRL)
+		(Type, ConstantBufferResource.Get(), ConstantBufferDescriptorHeap.Get(), static_cast<UINT>(Size));
+#endif
 
 #ifdef DEBUG_STDOUT
 		std::cout << "CreateDescriptorHeap" << COUT_OK << std::endl << std::endl;
@@ -76,7 +89,7 @@ public:
 		RootParameters = {
 			{
 				D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-				{ 1, &DescriptorRanges[0] },
+				{ static_cast<uint32_t>(DescriptorRanges.size()), DescriptorRanges.data() },
 				ShaderVisibility
 			},
 		};
@@ -96,20 +109,33 @@ public:
 		const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		const auto Count = 1;
 
-		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, ID3D12DescriptorHeap** DescriptorHeap) {
+#ifdef USE_WINRT
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, winrt::com_ptr<ID3D12DescriptorHeap>& DH){
+#elif defined(USE_WRL)
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DH){
+#endif
 			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
 				Type,
 				Count,
 				D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 				0
 			};
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
-		}(Type, Count, ImageDescriptorHeap.GetAddressOf());
+#ifdef USE_WINRT
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, __uuidof(DH), DH.put_void()));
+#elif defined(USE_WRL)
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DH)));
+#endif
+		}(Type, Count, ImageDescriptorHeap);
 
 		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12Resource* Resource, ID3D12DescriptorHeap* DescriptorHeap) {
 			const auto CDH = GetCPUDescriptorHandle(DescriptorHeap, Type);
 			Device->CreateShaderResourceView(Resource, nullptr, CDH);
-		}(Type, ImageResource.Get(), ImageDescriptorHeap.Get());
+		}
+#ifdef USE_WINRT
+		(Type, ImageResource.get(), ImageDescriptorHeap.get());
+#elif defined(USE_WRL)
+		(Type, ImageResource.Get(), ImageDescriptorHeap.Get());
+#endif
 
 #ifdef DEBUG_STDOUT
 		std::cout << "CreateDescriptorHeap" << COUT_OK << std::endl << std::endl;
@@ -187,15 +213,23 @@ public:
 		const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 		const auto Count = 1;
 
-		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, ID3D12DescriptorHeap** DescriptorHeap) {
+#ifdef USE_WINRT
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
+#elif defined(USE_WRL)
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH) {
+#endif
 			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
 				Type,
 				Count,
 				D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 				0
 			};
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
-		}(Type, Count, UnorderedAccessTextureDescriptorHeap.GetAddressOf());
+#ifdef USE_WINRT
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, __uuidof(DH), DH.put_void()));
+#elif defined(USE_WRL)
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DH)));
+#endif
+		}(Type, Count, UnorderedAccessTextureDescriptorHeap);
 
 		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12Resource* Resource, ID3D12DescriptorHeap* DescriptorHeap) {
 			const auto CDH = GetCPUDescriptorHandle(DescriptorHeap, Type);
@@ -206,7 +240,12 @@ public:
 			UAVDesc.Texture2D.MipSlice = 0;
 			UAVDesc.Texture2D.PlaneSlice = 0;
 			Device->CreateUnorderedAccessView(Resource, nullptr, &UAVDesc, CDH);
-		}(Type, UnorderedAccessTextureResource.Get(), UnorderedAccessTextureDescriptorHeap.Get());
+		}
+#ifdef USE_WINRT
+		(Type, UnorderedAccessTextureResource.get(), UnorderedAccessTextureDescriptorHeap.get());
+#elif defined(USE_WRL)
+		(Type, UnorderedAccessTextureResource.Get(), UnorderedAccessTextureDescriptorHeap.Get());
+#endif
 
 #ifdef DEBUG_STDOUT
 		std::cout << "CreateDescriptorHeap" << COUT_OK << std::endl << std::endl;
@@ -234,9 +273,14 @@ public:
 		const auto Size = RoundUp(sizeof(Type), 0xff); //!< 256バイトアライン
 
 		//!< #DX_TODO_PERF 本来はバッファ毎にメモリを確保するのではなく、予め大きなメモリを作成しておいてその一部を複数のバッファへ割り当てる方がよい
+#ifdef USE_WINRT
+		CreateUploadResource(ConstantBufferResource.put(), Size);
+		CopyToUploadResource(ConstantBufferResource.get(), Size, &Type); 
+#elif defined(USE_WRL)
 		CreateUploadResource(ConstantBufferResource.GetAddressOf(), Size);
-		CopyToUploadResource(ConstantBufferResource.Get(), Size, &Type);
-
+		CopyToUploadResource(ConstantBufferResource.Get(), Size, &Type); 
+#endif
+	
 #ifdef DEBUG_STDOUT
 		std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;
 #endif

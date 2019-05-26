@@ -652,16 +652,19 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH //!< フルスクリーンにした時、最適なディスプレイモードが選択されるのを許可
 	};
 	//!< セッティングを変更してスワップチェインを再作成できるように、既存のを開放している
-#if 0//def USE_WINRT
+#ifdef USE_WINRT
 	SwapChain = nullptr;
 	winrt::com_ptr<IDXGISwapChain> NewSwapChain;
 	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.get(), &SwapChainDesc, NewSwapChain.put()));
-	//VERIFY_SUCCEEDED(NewSwapChain.As(&SwapChain)); //!< #DX_TODO As() 相当が見つからない
+#if 1
+	winrt::copy_to_abi(NewSwapChain, *SwapChain.put_void());
+#else
+	VERIFY_SUCCEEDED(NewSwapChain->QueryInterface(__uuidof(SwapChain), SwapChain.put_void()));
+#endif
 #elif defined(USE_WRL)
 	SwapChain.Reset();
 	Microsoft::WRL::ComPtr<IDXGISwapChain> NewSwapChain;
-	//VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.Get(), &SwapChainDesc, NewSwapChain.GetAddressOf()));
-	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.get(), &SwapChainDesc, NewSwapChain.GetAddressOf()));
+	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.Get(), &SwapChainDesc, NewSwapChain.GetAddressOf()));
 	VERIFY_SUCCEEDED(NewSwapChain.As(&SwapChain));
 #endif
 
@@ -678,7 +681,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 			};
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
 		}
-#if 0//def USE_WINRT
+#ifdef USE_WINRT
 		(Type, Count, SwapChainDescriptorHeap.put());
 #elif defined(USE_WRL)
 		(Type, Count, SwapChainDescriptorHeap.GetAddressOf());
@@ -703,7 +706,7 @@ void DX::CreateSwapChainResource()
 	//	Device->CreateRenderTargetView(It->Get(), nullptr, GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, Index));
 	//}
 	for (auto i = 0; i < SwapChainResources.size(); ++i) {
-#if 0//def USE_WINRT
+#ifdef USE_WINRT
 		//!< スワップチェインのバッファリソースを SwapChainResources へ取得
 		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, IID_PPV_ARGS(SwapChainResources[i].put())));
 
@@ -736,7 +739,7 @@ void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, cons
 
 		VERIFY_SUCCEEDED(CL->Reset(CommandAllocator, nullptr));
 		{
-#if 0//def USE_WINRT
+#ifdef USE_WINRT
 			const auto SCR = SwapChainResources[i].get();
 			const auto CDH = GetCPUDescriptorHandle(SwapChainDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
 #elif defined(USE_WRL)
@@ -806,15 +809,19 @@ void DX::CreateDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, con
 {
 	const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 	const auto Count = 1;
-	[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, ID3D12DescriptorHeap** DescriptorHeap) {
+	[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count/*, ID3D12DescriptorHeap** DescriptorHeap*/) {
 		const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
 			Type,
 			Count,
 			D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 			0
 		};
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
-	}(Type, Count, DepthStencilDescriptorHeap.GetAddressOf());
+#ifdef USE_WINRT
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, __uuidof(DepthStencilDescriptorHeap), DepthStencilDescriptorHeap.put_void()));
+#elif defined(USE_WRL)
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DepthStencilDescriptorHeap)));
+#endif
+	}(Type, Count);
 
 	CreateDepthStencilResource(DepthFormat, Width, Height);
 
@@ -848,17 +855,22 @@ void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Wi
 		DepthFormat,
 		{ 1.0f, 0 }
 	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc,
-		D3D12_RESOURCE_STATE_COMMON, //!< COMMON にすること
-		&ClearValue,
-		IID_PPV_ARGS(DepthStencilResource.ReleaseAndGetAddressOf())));
+#ifdef USE_WINRT
+	DepthStencilResource = nullptr;
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COMMON/*COMMON にすること*/, &ClearValue, __uuidof(DepthStencilResource), DepthStencilResource.put_void()));
+#elif defined(USE_WRL)
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COMMON, &ClearValue, IID_PPV_ARGS(DepthStencilResource.ReleaseAndGetAddressOf()))); 
+#endif
 
-	const auto CDH = GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+#ifdef USE_WINRT
+	const auto CDH = GetCPUDescriptorHandle(DepthStencilDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
 	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	//!< (リソースがタイプドフォーマットなら D3D12_DEPTH_STENCIL_VIEW_DESC* へ nullptr 指定可能)
-	Device->CreateDepthStencilView(DepthStencilResource.Get(), nullptr, CDH);
+	Device->CreateDepthStencilView(DepthStencilResource.get(), nullptr, CDH); 
+#elif defined(USE_WRL)
+	const auto CDH = GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	Device->CreateDepthStencilView(DepthStencilResource.Get(), nullptr, CDH); 
+#endif
 
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "DepthStencilView" << std::endl;
@@ -867,7 +879,7 @@ void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Wi
 	//!< リソースの状態を初期 → デプス書き込みへ変更
 	auto CL = GraphicsCommandLists[0];
 #ifdef USE_WINRT
-	ResourceBarrier(CL.get(), DepthStencilResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+	ResourceBarrier(CL.get(), DepthStencilResource.get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 #elif defined(USE_WRL)
 	ResourceBarrier(CL.Get(), DepthStencilResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 #endif
@@ -876,7 +888,11 @@ void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Wi
 }
 void DX::ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height)
 {
+#ifdef USE_WINRT
+	DepthStencilResource = nullptr;
+#elif defined(USE_WRL)
 	DepthStencilResource.Reset();
+#endif
 
 	CreateDepthStencilResource(DepthFormat, Width, Height);
 
@@ -977,12 +993,11 @@ void DX::CreateUnorderedAccessTexture()
 		1,
 		1
 	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
-		D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc,
-		D3D12_RESOURCE_STATE_COMMON,
-		nullptr,
-		IID_PPV_ARGS(UnorderedAccessTextureResource.GetAddressOf())));
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, __uuidof(UnorderedAccessTextureResource), UnorderedAccessTextureResource.put_void()));
+#elif defined(USE_WRL)
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(UnorderedAccessTextureResource.GetAddressOf())));
+#endif
 
 	const auto Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 
@@ -992,7 +1007,11 @@ void DX::CreateUnorderedAccessTexture()
 		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 		0 // NodeMask ... マルチGPUの場合
 	};
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescritporHeapDesc, __uuidof(UnorderedAccessTextureDescriptorHeap), UnorderedAccessTextureDescriptorHeap.put_void()));
+#elif defined(USE_WRL)
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescritporHeapDesc, IID_PPV_ARGS(UnorderedAccessTextureDescriptorHeap.GetAddressOf())));
+#endif
 
 	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	UINT Index = 0;
@@ -1005,8 +1024,13 @@ void DX::CreateUnorderedAccessTexture()
 		SRVDesc.Texture2D = {
 			0, 1, 0, 0.0f
 		};
+#ifdef USE_WINRT
+		const auto CDH = GetCPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Index++);
+		Device->CreateShaderResourceView(UnorderedAccessTextureResource.get(), &SRVDesc, CDH); 
+#elif defined(USE_WRL)
 		const auto CDH = GetCPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Index++);
-		Device->CreateShaderResourceView(UnorderedAccessTextureResource.Get(), &SRVDesc, CDH);
+		Device->CreateShaderResourceView(UnorderedAccessTextureResource.Get(), &SRVDesc, CDH); 
+#endif		
 	}
 
 	{
@@ -1018,8 +1042,14 @@ void DX::CreateUnorderedAccessTexture()
 			0, 0
 		};
 		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
+#ifdef USE_WINRT
+		const auto CDH = GetCPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Index++);
+		Device->CreateUnorderedAccessView(UnorderedAccessTextureResource.get(), nullptr, &UAVDesc, CDH);
+#elif defined(USE_WRL)
 		const auto CDH = GetCPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Index++);
 		Device->CreateUnorderedAccessView(UnorderedAccessTextureResource.Get(), nullptr, &UAVDesc, CDH);
+#endif
+		
 	}
 
 	LogOK("CreateUnorderedAccessBuffer");
@@ -1070,6 +1100,7 @@ void DX::CreateRootSignature()
 
 	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
 		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
+		//!< 複数のルートシグネチャで同じサンプラを使い回すような場合はスタイティックサンプラを作成しておくと良い
 		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 	};
@@ -1081,7 +1112,7 @@ void DX::CreateRootSignature()
 #elif defined(USE_WRL)
 	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
 #endif
-
+	
 	LogOK("CreateRootSignature");
 }
 
@@ -1283,7 +1314,7 @@ void DX::CreatePipelineState_Graphics()
 	}
 	else {
 #ifdef USE_WINRT
-		VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, IID_PPV_ARGS(PipelineState.put())));
+		VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, __uuidof(PipelineState), PipelineState.put_void()));
 		//!< 名前指定でライブラリデータベースへ追加する
 		VERIFY_SUCCEEDED(PipelineLibrary->StorePipeline(PCOName.data(), PipelineState.get()));
 #elif defined(USE_WRL)
@@ -1351,7 +1382,7 @@ void DX::PopulateCommandList(const size_t i)
 	const auto CA = CommandAllocators[0].Get();
 #endif
 
-#if 0//def USE_WINRT
+#ifdef USE_WINRT
 	const auto SCR = SwapChainResources[i].get();
 	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
 #elif defined(USE_WRL)

@@ -207,10 +207,6 @@ protected:
 #endif
 
 #ifdef USE_WINRT
-#elif defined(USE_WRL)
-#endif
-
-#ifdef USE_WINRT
 	winrt::com_ptr<ID3D12Device> Device;
 #elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3D12Device> Device;
@@ -235,7 +231,7 @@ protected:
 	//std::vector<Microsoft::WRL::ComPtr<ID3D12CommandList>> CommandLists;
 #endif
 	
-#if 0//def USE_WINRT
+#ifdef USE_WINRT
 	winrt::com_ptr<IDXGISwapChain3> SwapChain;
 	winrt::com_ptr<ID3D12DescriptorHeap> SwapChainDescriptorHeap;
 	std::vector<winrt::com_ptr<ID3D12Resource>> SwapChainResources;
@@ -246,11 +242,29 @@ protected:
 #endif
 	UINT CurrentBackBufferIndex = 0xffffffff;
 
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3D12Resource> DepthStencilResource;
+	winrt::com_ptr<ID3D12DescriptorHeap> DepthStencilDescriptorHeap;
+#elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3D12Resource> DepthStencilResource;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DepthStencilDescriptorHeap;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DepthStencilDescriptorHeap; 
+#endif
 
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3D12Resource> ImageResource;
+	winrt::com_ptr<ID3D12DescriptorHeap> ImageDescriptorHeap;
+#elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3D12Resource> ImageResource;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> ImageDescriptorHeap;
+#endif
+
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3D12Resource> SamplerResource;
+	winrt::com_ptr<ID3D12DescriptorHeap> SamplerDescriptorHeap;
+#elif defined(USE_WRL)
+	Microsoft::WRL::ComPtr<ID3D12Resource> SamplerResource;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> SamplerDescriptorHeap; 
+#endif
 	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
 
 #ifdef USE_WINRT
@@ -267,24 +281,46 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState; 
 #endif
 	
-
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3D12Resource> VertexBufferResource;
+#elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferResource;
+#endif
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> VertexBufferViews;
 
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3D12Resource> IndexBufferResource;
+#elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferResource;
+#endif
 	D3D12_INDEX_BUFFER_VIEW IndexBufferView;
 	UINT IndexCount = 0;
 
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3D12Resource> IndirectBufferResource;
+	winrt::com_ptr<ID3D12CommandSignature> IndirectCommandSignature; 
+#elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3D12Resource> IndirectBufferResource;
-	Microsoft::WRL::ComPtr<ID3D12CommandSignature> IndirectCommandSignature;
+	Microsoft::WRL::ComPtr<ID3D12CommandSignature> IndirectCommandSignature; 
+#endif
 
 	//!< Œ»ó1‚Â‚Ì‚ÝA”z—ñ‚É‚·‚é #DX_TODO
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3D12Resource> ConstantBufferResource;
+	winrt::com_ptr<ID3D12DescriptorHeap> ConstantBufferDescriptorHeap; 
+#elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3D12Resource> ConstantBufferResource;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> ConstantBufferDescriptorHeap;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> ConstantBufferDescriptorHeap; 
+#endif
 
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3D12Resource> UnorderedAccessTextureResource;
+	winrt::com_ptr<ID3D12DescriptorHeap> UnorderedAccessTextureDescriptorHeap; 
+#elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3D12Resource> UnorderedAccessTextureResource;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> UnorderedAccessTextureDescriptorHeap;
-
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> UnorderedAccessTextureDescriptorHeap; 
+#endif
+	
 	std::vector<D3D12_VIEWPORT> Viewports;
 	std::vector<D3D12_RECT> ScissorRects;
 

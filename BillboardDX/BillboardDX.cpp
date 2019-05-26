@@ -235,7 +235,7 @@ void BillboardDX::PopulateCommandList(const size_t i)
 	const auto CA = CommandAllocators[0].Get();
 #endif
 
-#if 0//def USE_WINRT
+#ifdef USE_WINRT
 	const auto SCR = SwapChainResources[i].get();
 	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
 #elif defined(USE_WRL)
@@ -277,16 +277,28 @@ void BillboardDX::PopulateCommandList(const size_t i)
 
 			//!< コンスタントバッファ
 			{
+#ifdef USE_WINRT
+				const std::vector<ID3D12DescriptorHeap*> DH = { ConstantBufferDescriptorHeap.get() };
+#elif defined(USE_WRL)
 				const std::vector<ID3D12DescriptorHeap*> DH = { ConstantBufferDescriptorHeap.Get() };
+#endif
 				CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
 
+#ifdef USE_WINRT
+				auto CBHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+#elif defined(USE_WRL)
 				auto CBHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+#endif
 				CL->SetGraphicsRootDescriptorTable(0, CBHandle);
 			}
 
 			CL->IASetPrimitiveTopology(GetPrimitiveTopology());
 
+#ifdef USE_WINRT
+			CL->ExecuteIndirect(IndirectCommandSignature.get(), 1, IndirectBufferResource.get(), 0, nullptr, 0);
+#elif defined(USE_WRL)
 			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
+#endif
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}

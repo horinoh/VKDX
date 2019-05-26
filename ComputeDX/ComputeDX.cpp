@@ -242,14 +242,26 @@ void ComputeDX::PopulateCommandList(const size_t i)
 #endif
 	{
 		if (nullptr != UnorderedAccessTextureDescriptorHeap) {
+#ifdef USE_WINRT
+			const std::vector<ID3D12DescriptorHeap*> DH = { UnorderedAccessTextureDescriptorHeap.get() };
+#elif defined(USE_WRL)
 			const std::vector<ID3D12DescriptorHeap*> DH = { UnorderedAccessTextureDescriptorHeap.Get() };
+#endif
 			CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
 
+#ifdef USE_WINRT
+			const auto Handle = GetGPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+#elif defined(USE_WRL)
 			const auto Handle = GetGPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+#endif
 			CL->SetGraphicsRootDescriptorTable(0, Handle);
 		}
 
+#ifdef USE_WINRT
+		CL->ExecuteIndirect(IndirectCommandSignature.get(), 1, IndirectBufferResource.get(), 0, nullptr, 0);
+#elif defined(USE_WRL)
 		CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
+#endif
 	}
 	VERIFY_SUCCEEDED(CL->Close());
 }

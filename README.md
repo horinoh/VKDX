@@ -141,7 +141,12 @@ xcopy /y %(Identity).spv $(TargetDir)
 winrt::com_ptr<ID3D12Device> Dev;
 
 //IID_PPV_ARGS(&XXX)
-__uuidof(XXX), XXX.put_void())
+//IID_PPV_ARGS(XXX.GetAddressOf())
+__uuidof(XXX), XXX.put_void()
+
+//IID_PPV_ARGS(XXX.ReleaseAndGetAddressOf())
+XXX = nullptr;
+__uuidof(XXX), XXX.put_void()
 
 //XXX.Get()
 XXX.get()
@@ -149,12 +154,19 @@ XXX.get()
 //&XXX
 //XXX.GetAddressOf()
 XXX.put()
+XXX.put_void()
 
-//XXX.Reset
+//XXX.ReleaseAndGetAddressOf()
+XXX = nullptr;
+XXX.put()
+XXX.put_void()
+
+//XXX.Reset()
 XXX = nullptr
 
 //XXX.As(&YYY)
-??? As()相当が見つからない…
+XXX->QueryInterface(__uuidof(YYY), YYY.put_void());
+winrt::copy_to_abi(XXX, *YYY.put_void());
 ~~~
 
 ### DirectXTK (DDS読み込みに使用)
@@ -163,7 +175,7 @@ XXX = nullptr
 	* D3D12_DESCRIPTOR_RANGE1 がないと言われて、コンパイルが通らない場合は  Windows 10 Anniversary Update SDK が必要(VisualStudioを更新する)
 * 同じ階層に DirectXTK12 をクローンして **..\..\DirectXTK12** にパスを通した
 * 備考
-	* DirectXTex(https://github.com/Microsoft/DirectXTex/wiki/DirectXTex) はツール用途みたいなのでこちらを使用
+	* DirectXTex(https://github.com/Microsoft/DirectXTex/wiki/DirectXTex) もある、こちらでもよい
 
 #### シェーダコンパイル
 * シェーダは Visual Studio に追加すると自動的にコンパイルされる
@@ -300,6 +312,8 @@ TODO
 * プロシージャルテクスチャ
 * Gバッファ(MRT)
 * シャドウマップ
+* サンプラの整理
+	DXではシェーダ可視性やレジスタ番号も入っているのでどう扱うか
 
 * テクスチャ
 	* ディスプレースメント

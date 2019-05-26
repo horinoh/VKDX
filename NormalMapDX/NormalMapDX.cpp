@@ -234,8 +234,15 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 	const auto CL = GraphicsCommandLists[i].Get();
 	const auto CA = CommandAllocators[0].Get();
 #endif
+
+#ifdef USE_WINRT
+	const auto SCR = SwapChainResources[i].get();
+	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
+#elif defined(USE_WRL)
 	const auto SCR = SwapChainResources[i].Get();
-	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
+	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
+#endif
+	
 
 #ifdef USE_WINRT
 	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.get()));
@@ -262,23 +269,47 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 #endif
 
 			{
+#ifdef USE_WINRT
+				const std::vector<ID3D12DescriptorHeap*> DH = { ConstantBufferDescriptorHeap.get() };
+#elif defined(USE_WRL)
 				const std::vector<ID3D12DescriptorHeap*> DH = { ConstantBufferDescriptorHeap.Get() };
+#endif
 				CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
 
+#ifdef USE_WINRT
+				auto CBHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+#elif defined(USE_WRL)
 				auto CBHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+#endif
 				CL->SetGraphicsRootDescriptorTable(0, CBHandle);
 			}
 			if (nullptr != ImageDescriptorHeap) {
+#ifdef USE_WINRT
+				const std::vector<ID3D12DescriptorHeap*> DH = { ImageDescriptorHeap.get() };
+#elif defined(USE_WRL)
 				const std::vector<ID3D12DescriptorHeap*> DH = { ImageDescriptorHeap.Get() };
+#endif
 				CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
 
+#ifdef USE_WINRT
+				const auto ImgHandle = GetGPUDescriptorHandle(ImageDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+#elif defined(USE_WRL)
 				const auto ImgHandle = GetGPUDescriptorHandle(ImageDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+#endif
 				CL->SetGraphicsRootDescriptorTable(1, ImgHandle);
+			}
+
+			if (nullptr != SamplerDescriptorHeap) {
+				CL->SetGraphicsRootDescriptorTable(0, SamplerDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 			}
 
 			CL->IASetPrimitiveTopology(GetPrimitiveTopology());
 
+#ifdef USE_WINRT
+			CL->ExecuteIndirect(IndirectCommandSignature.get(), 1, IndirectBufferResource.get(), 0, nullptr, 0);
+#elif defined(USE_WRL)
 			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
+#endif
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}

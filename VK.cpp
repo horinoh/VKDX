@@ -2233,6 +2233,35 @@ void VK::CreateViewportState_Dynamic(VkPipelineViewportStateCreateInfo& Pipeline
 	};
 }
 
+bool VK::ValidatePipelineCache(const size_t Size, const void* Data) const
+{
+	VkPhysicalDeviceProperties PDP;
+	vkGetPhysicalDeviceProperties(GetCurrentPhysicalDevice(), &PDP);
+
+	auto Ptr = reinterpret_cast<const uint32_t*>(Data);
+	const auto PCSize = *Ptr++;
+	const auto PCVersion = *Ptr++;
+	const auto PCVenderID = *Ptr++;
+	const auto PCDeviceID = *Ptr++;
+	uint8_t PCUUID[VK_UUID_SIZE];
+	memcpy(PCUUID, Ptr, sizeof(PCUUID));
+
+	assert(Size == PCSize && "");
+	assert(VK_PIPELINE_CACHE_HEADER_VERSION_ONE == PCVersion && "");
+	assert(PDP.vendorID == PCVenderID && "");
+	assert(PDP.deviceID == PCDeviceID && "");
+	//assert(0 == memcmp(PDP.pipelineCacheUUID, PCUUID, sizeof(PDP.pipelineCacheUUID)) && "");
+
+	Log("Validate PipelineCache\n");
+	Logf("\tSize = %d\n", PCSize);
+	Logf("\tVersion = %s\n", PCVersion == VK_PIPELINE_CACHE_HEADER_VERSION_ONE ? "VK_PIPELINE_CACHE_HEADER_VERSION_ONE" : "Unknown");
+	Logf("\tVenderID = %d\n", PCVenderID);
+	Logf("\tDeviceID = %d\n", PCDeviceID);
+	Log("\tUUID = "); for (auto i = 0; i < sizeof(PCUUID); ++i) { Logf("%c", PCUUID[i]); } Log("\n");
+	//Log("\tUUID = "); for (auto i = 0; i < sizeof(PDP.pipelineCacheUUID); ++i) { Logf("%c", PDP.pipelineCacheUUID[i]); } Log("\n");
+
+	return Size == PCSize && VK_PIPELINE_CACHE_HEADER_VERSION_ONE == PCVersion && PDP.vendorID == PCVenderID && PDP.deviceID == PCDeviceID/*&& 0 == memcmp(PDP.pipelineCacheUUID, PCUUID, sizeof(PDP.pipelineCacheUUID))*/;
+}
 VkPipelineCache VK::LoadPipelineCache(const std::wstring& Path) const
 {
 	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
@@ -2250,6 +2279,8 @@ VkPipelineCache VK::LoadPipelineCache(const std::wstring& Path) const
 		Data = new char[Size];
 		In.read(Data, Size);
 	}
+
+	ValidatePipelineCache(Size, Data);
 
 	const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
@@ -2283,6 +2314,8 @@ void VK::LoadPipelineCaches(const std::wstring& Path, std::vector<VkPipelineCach
 		Data = new char[Size];
 		In.read(Data, Size);
 	}
+
+	ValidatePipelineCache(Size, Data);
 
 	const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
 		VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
@@ -2394,6 +2427,7 @@ void VK::CreatePipeline()
 	}
 
 	//!< 各々のスレッドが作成したパイプラインキャッシュをマージする (ここでは最後の要素へマージしている)
+	//!< デスティネーションがソース群に「含まれていてはならない」ので注意 (ソースの個数をPipelineCaches.size() - 1として、最後の要素を含めないようにしている)
 	VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, PipelineCaches.back(), static_cast<uint32_t>(PipelineCaches.size() - 1), PipelineCaches.data()));	
 	//!< マージ後のパイプラインキャッシュをファイルへ保存
 	StorePipelineCache(PCOPath, PipelineCaches.back());

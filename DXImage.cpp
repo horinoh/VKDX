@@ -33,8 +33,8 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const std::wstring& Path,
 		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> Footprint(Subresource.size());
 		std::vector<UINT> NumRows(Subresource.size());
 		std::vector<UINT64> RowBytes(Subresource.size());
-		const auto ResourceDesc = (*Resource)->GetDesc();
-		Device->GetCopyableFootprints(&ResourceDesc, 
+		const auto RD = (*Resource)->GetDesc();
+		Device->GetCopyableFootprints(&RD, 
 			0, static_cast<const UINT>(Subresource.size()), 
 			0, Footprint.data(), 
 			NumRows.data(), RowBytes.data(), &TotalBytes);
@@ -56,8 +56,35 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const std::wstring& Path,
 	(Resource, Path, ResourceState, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 #endif
 
-	//!< スタティックサンプラデスクリプタを作成 Create static sampler descritor
+#if 1
+	//!< ルートシグネチャに登録して使う 複数のルートシグネチャでサンプラを使い回すような場合スタティックサンプラにしておくと良い
+	//!< デスクリプタヒープ等は不要
 	D3D12_STATIC_SAMPLER_DESC SSD;
 	CreateStaticSamplerDesc(SSD, D3D12_SHADER_VISIBILITY_PIXEL, static_cast<const FLOAT>((*Resource)->GetDesc().MipLevels));
 	StaticSamplerDescs.push_back(SSD);
+#else
+	//!< #DX_TODO スタティックサンプラを使用しない
+	const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
+			D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
+			1,
+			D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+			0
+	};
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, __uuidof(SamplerDescriptorHeap), SamplerDescriptorHeap.put_void()));
+#elif defined(USE_WRL)
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, IID_PPV_ARGS(SamplerDescriptorHeap)));
+#endif
+
+	D3D12_SAMPLER_DESC SD = {
+		D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		0.0f,
+		0,
+		D3D12_COMPARISON_FUNC_NEVER,
+		D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE, 
+		0.0f, static_cast<const FLOAT>((*Resource)->GetDesc().MipLevels),
+	};
+	Device->CreateSampler(&SD, SamplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+#endif
 }

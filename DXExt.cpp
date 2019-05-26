@@ -15,7 +15,11 @@ void DXExt::CreateIndirectBuffer_Draw(const UINT Count)
 	const auto CL = GraphicsCommandLists[0].Get(); 
 #endif
 	
+#ifdef USE_WINRT
+	CreateIndirectBuffer(IndirectBufferResource.put(), Size, &Source, CA, CL);
+#elif defined(USE_WRL)
 	CreateIndirectBuffer(IndirectBufferResource.GetAddressOf(), Size, &Source, CA, CL);
+#endif
 
 	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndArgDescs = {
 		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW },
@@ -26,7 +30,7 @@ void DXExt::CreateIndirectBuffer_Draw(const UINT Count)
 		0
 	};
 #ifdef USE_WINRT
-	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
+	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.get(), __uuidof(IndirectCommandSignature), IndirectCommandSignature.put_void());
 #elif defined(USE_WRL)
 	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.Get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
 #endif
@@ -45,7 +49,12 @@ void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT Count)
 	const auto CA = CommandAllocators[0].Get();
 	const auto CL = GraphicsCommandLists[0].Get();
 #endif
+
+#ifdef USE_WINRT
+	CreateIndirectBuffer(IndirectBufferResource.put(), Size, &Source, CA, CL);
+#elif defined(USE_WRL)
 	CreateIndirectBuffer(IndirectBufferResource.GetAddressOf(), Size, &Source, CA, CL);
+#endif
 
 	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndArgDescs = {
 		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED },
@@ -56,7 +65,7 @@ void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT Count)
 		0
 	};
 #ifdef USE_WINRT
-	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
+	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.get(), __uuidof(IndirectCommandSignature), IndirectCommandSignature.put_void());
 #elif defined(USE_WRL)
 	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.Get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
 #endif
@@ -74,7 +83,12 @@ void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT
 	const auto CA = CommandAllocators[0].Get();
 	const auto CL = GraphicsCommandLists[0].Get();
 #endif
+
+#ifdef USE_WINRT
+	CreateIndirectBuffer(IndirectBufferResource.put(), Size, &Source, CA, CL);
+#elif defined(USE_WRL)
 	CreateIndirectBuffer(IndirectBufferResource.GetAddressOf(), Size, &Source, CA, CL);
+#endif
 
 	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndArgDescs = {
 		{ D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH },
@@ -85,7 +99,7 @@ void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT
 		0
 	};
 #ifdef USE_WINRT
-	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
+	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.get(), __uuidof(IndirectCommandSignature), IndirectCommandSignature.put_void());
 #elif defined(USE_WRL)
 	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.Get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
 #endif
@@ -93,14 +107,16 @@ void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT
 
 void DXExt::CreateStaticSamplerDesc_LW(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility, const FLOAT MaxLOD) const
 {
+	//!< シェーダ内での記述例 SamplerState Sampler : register(s0, space0);
+	//!< DXには正規化座標の設定は無く、シェーダビジビリティトレジスタの設定がある
 	StaticSamplerDesc = {
-		D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-			0.0f,
-			0,
-			D3D12_COMPARISON_FUNC_NEVER,
-			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-			0.0f, MaxLOD,
+			D3D12_FILTER_MIN_MAG_MIP_LINEAR, // min, mag, mip
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, // u, v, w
+			0.0f, // lod bias
+			0, // anisotropy
+			D3D12_COMPARISON_FUNC_NEVER, // compare
+			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE, // border
+			0.0f, MaxLOD, // min, maxlod
 			0, 0, ShaderVisibility //!< UINT ShaderRegister, UINT RegisterSpace, D3D12_SHADER_VISIBILITY ShaderVisibility
 	};
 }
