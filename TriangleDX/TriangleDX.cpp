@@ -237,15 +237,25 @@ void TriangleDX::CreateVertexBuffer()
 
 	[&](ID3D12Resource** Resource, const UINT32 Size, const void* Data, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL) {
 		//!< アップロード用のリソースを作成、データをコピー Create upload resource, and copy data
+#ifdef USE_WINRT
+		winrt::com_ptr<ID3D12Resource> UploadResource;
+		CreateUploadResource(UploadResource.put(), Size);
+		CopyToUploadResource(UploadResource.get(), Size, Data); 
+#elif defined(USE_WRL)
 		Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
 		CreateUploadResource(UploadResource.GetAddressOf(), Size);
-		CopyToUploadResource(UploadResource.Get(), Size, Data);
+		CopyToUploadResource(UploadResource.Get(), Size, Data); 
+#endif
 
 		//!< デフォルトのリソースを作成 Create default resource
 		CreateDefaultResource(Resource, Size);
 
 		//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
+#ifdef USE_WINRT
+		ExecuteCopyBuffer(CA, CL, UploadResource.get(), *Resource, Size);
+#elif defined(USE_WRL)
 		ExecuteCopyBuffer(CA, CL, UploadResource.Get(), *Resource, Size);
+#endif
 	}
 #ifdef USE_WINRT
 	(VertexBufferResource.put(), Size, Vertices.data(), CommandAllocators[0].get(), GraphicsCommandLists[0].get());
@@ -278,15 +288,25 @@ void TriangleDX::CreateIndexBuffer()
 
 	[&](ID3D12Resource** Resource, const UINT32 Size, const void* Data, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL) {
 		//!< アップロード用のリソースを作成、データをコピー Create upload resource, and copy data
+#ifdef USE_WINRT
+		winrt::com_ptr<ID3D12Resource> UploadResource;
+		CreateUploadResource(UploadResource.put(), Size);
+		CopyToUploadResource(UploadResource.get(), Size, Data); 
+#elif defined(USE_WRL)
 		Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
 		CreateUploadResource(UploadResource.GetAddressOf(), Size);
-		CopyToUploadResource(UploadResource.Get(), Size, Data);
+		CopyToUploadResource(UploadResource.Get(), Size, Data); 
+#endif
 
 		//!< デフォルトのリソースを作成 Create default resource
 		CreateDefaultResource(Resource, Size);
 
 		//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
+#ifdef USE_WINRT
+		ExecuteCopyBuffer(CA, CL, UploadResource.get(), *Resource, Size);
+#elif defined(USE_WRL)
 		ExecuteCopyBuffer(CA, CL, UploadResource.Get(), *Resource, Size);
+#endif
 	}
 #ifdef USE_WINRT
 	(IndexBufferResource.put(), Size, Indices.data(), CommandAllocators[0].get(), GraphicsCommandLists[0].get());

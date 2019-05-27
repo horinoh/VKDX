@@ -57,7 +57,7 @@ public:
 #ifdef USE_WINRT
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, __uuidof(DH), DH.put_void()));
 #elif defined(USE_WRL)
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DH)));
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DH.GetAddressOf())));
 #endif
 		}(Type, Count, ConstantBufferDescriptorHeap);
 
@@ -112,7 +112,7 @@ public:
 #ifdef USE_WINRT
 		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, winrt::com_ptr<ID3D12DescriptorHeap>& DH){
 #elif defined(USE_WRL)
-		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DH){
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH){
 #endif
 			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
 				Type,
@@ -123,7 +123,7 @@ public:
 #ifdef USE_WINRT
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, __uuidof(DH), DH.put_void()));
 #elif defined(USE_WRL)
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DH)));
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DH.GetAddressOf())));
 #endif
 		}(Type, Count, ImageDescriptorHeap);
 
@@ -227,7 +227,7 @@ public:
 #ifdef USE_WINRT
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, __uuidof(DH), DH.put_void()));
 #elif defined(USE_WRL)
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DH)));
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DH.GetAddressOf())));
 #endif
 		}(Type, Count, UnorderedAccessTextureDescriptorHeap);
 
@@ -264,9 +264,15 @@ public:
 
 	virtual D3D_PRIMITIVE_TOPOLOGY GetPrimitiveTopology() const override { return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP; }
 
+#ifdef USE_WINRT
+	void CreateShader_VsPs(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const;
+	void CreateShader_VsPsDsHsGs(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const;
+	void CreateShader_Cs(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const; 
+#elif defined(USE_WRL)
 	void CreateShader_VsPs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
 	void CreateShader_VsPsDsHsGs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
 	void CreateShader_Cs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
+#endif
 
 	template<typename T>
 	void CreateConstantBufferT(const T& Type) {

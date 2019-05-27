@@ -16,7 +16,11 @@ public:
 protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1); } //!< 最低でもインデックス数1が必要 At least index count must be 1
 
-	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const override {
+#ifdef USE_WINRT
+	virtual void CreateShader(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const override {
+#elif defined(USE_WRL)
+	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> & ShaderBlobs) const override {
+#endif
 		CreateShader_VsPsDsHsGs(ShaderBlobs);
 		Super::CreateShader(ShaderBlobs);
 	}

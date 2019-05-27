@@ -178,8 +178,13 @@ protected:
 	virtual void CreateDescriptorHeap() {}
 	virtual void UpdateDescriptorHeap() { /*CopyToUploadResource()等を行う*/ }
 
+#ifdef USE_WINRT
+	virtual void CreateShader(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const;
+	virtual void CreateShaderByteCode(const std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBCs) const; 
+#elif defined(USE_WRL)
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
-	virtual void CreateShaderByteCode(const std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBCs) const;
+	virtual void CreateShaderByteCode(const std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBCs) const; 
+#endif	
 	virtual void CreateInputLayout(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs) const {}
 	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType() const = 0; //!< D3D12_GRAPHICS_PIPELINE_STATE_DESC 作成時に使用
 	virtual D3D_PRIMITIVE_TOPOLOGY GetPrimitiveTopology() const = 0; //!< IASetPrimitiveTopology() 時に使用
@@ -203,7 +208,11 @@ protected:
 
 protected:
 #if defined(_DEBUG) || defined(USE_PIX)
+#ifdef USE_WINRT
+	winrt::com_ptr<IDXGraphicsAnalysis> GraphicsAnalysis;
+#elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<IDXGraphicsAnalysis> GraphicsAnalysis;
+#endif
 #endif
 
 #ifdef USE_WINRT

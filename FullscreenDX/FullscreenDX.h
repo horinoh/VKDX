@@ -20,7 +20,11 @@ protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4); }
 #endif
 
-	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const override {
+#ifdef USE_WINRT
+	virtual void CreateShader(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const override {
+#elif defined(USE_WRL)
+	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> & ShaderBlobs) const override {
+#endif
 		CreateShader_VsPs(ShaderBlobs);
 		Super::CreateShader(ShaderBlobs);
 	}

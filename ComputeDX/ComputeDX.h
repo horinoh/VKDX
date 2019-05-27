@@ -30,8 +30,11 @@ protected:
 	virtual void CreateDescriptorHeap() override {
 		CreateDescriptorHeap_1UAV();
 	}
-
-	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const override {
+#ifdef USE_WINRT
+	virtual void CreateShader(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const override {
+#elif defined(USE_WRL)
+	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> & ShaderBlobs) const override {
+#endif
 		CreateShader_Cs(ShaderBlobs);
 		Super::CreateShader(ShaderBlobs);
 	}

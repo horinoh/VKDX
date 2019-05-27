@@ -39,16 +39,26 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const std::wstring& Path,
 			0, Footprint.data(), 
 			NumRows.data(), RowBytes.data(), &TotalBytes);
 
+#ifdef USE_WINRT
+		winrt::com_ptr<ID3D12Resource> UploadResource;
+		CreateUploadResource(UploadResource.put(), TotalBytes);
+		CopyToUploadResource(UploadResource.get(), Subresource, Footprint, NumRows, RowBytes); 
+#elif defined(USE_WRL)
 		Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
 		CreateUploadResource(UploadResource.GetAddressOf(), TotalBytes);
-		CopyToUploadResource(UploadResource.Get(), Subresource, Footprint, NumRows, RowBytes);
+		CopyToUploadResource(UploadResource.Get(), Subresource, Footprint, NumRows, RowBytes); 
+#endif
 
 		//!< #DX_TODO ミップマップの生成 Mipmap
 		//if(ResourceDesc.MipLevels != static_cast<const UINT16>(SubresourceData.size())) {
 		//	UploadResource.GenerateMips(*Resource);
 		//}
 
+#ifdef USE_WINRT
+		ExecuteCopyTexture(CA, CL, UploadResource.get(), *Resource, Footprint, ResourceState);
+#elif defined(USE_WRL)
 		ExecuteCopyTexture(CA, CL, UploadResource.Get(), *Resource, Footprint, ResourceState);
+#endif
 	}
 #ifdef USE_WINRT
 	(Resource, Path, ResourceState, CommandAllocators[0].get(), GraphicsCommandLists[0].get());
