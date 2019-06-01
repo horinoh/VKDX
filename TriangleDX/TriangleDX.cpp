@@ -170,6 +170,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			Inst->OnSize(hWnd, hInst);
 		}
 		break;
+	case WM_EXITSIZEMOVE:
+		if (nullptr != Inst) {
+			Inst->OnExitSizeMove(hWnd, hInst);
+		}
+		break;
 	case WM_KEYDOWN:
 		if (VK_ESCAPE == wParam) {
 			SendMessage(hWnd, WM_DESTROY, 0, 0);

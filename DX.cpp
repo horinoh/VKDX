@@ -56,14 +56,24 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//CreateUnorderedAccessTexture();
 
 	SetTimer(hWnd, NULL, 1000 / 60, nullptr);
+
+	//!< ウインドウサイズ変更時に作り直すもの
+	OnExitSizeMove(hWnd, hInstance);
 }
-void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
+
+/**
+リサイズするのもの
+	BackBuffer ... SwapChain->ResizeBuffers() を使用
+作り直すもの
+	DepthStencilBuffer, RenderTargetView, DepthStencilView
+*/
+void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 {
 #ifdef _DEBUG
-	PerformanceCounter PC("OnSize : ");
+	PerformanceCounter PC("OnExitSizeMove : ");
 #endif
 
-	Super::OnSize(hWnd, hInstance);
+	Super::OnExitSizeMove(hWnd, hInstance);
 
 	WaitForFence();
 
@@ -85,6 +95,7 @@ void DX::OnSize(HWND hWnd, HINSTANCE hInstance)
 		PopulateCommandList(i);
 	}
 }
+
 void DX::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnDestroy(hWnd, hInstance);
@@ -423,82 +434,96 @@ HRESULT DX::CreateMaxFeatureLevelDevice(IDXGIAdapter* Adapter)
 //!< アダプタ(GPU)の列挙
 void DX::EnumAdapter(IDXGIFactory4* Factory)
 {
-#ifdef DEBUG_STDOUT
-	std::cout << Lightblue << "ADAPTERS" << White << std::endl;
-#endif
 #ifdef USE_WINRT
 	winrt::com_ptr<IDXGIAdapter> Adapter;
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, Adapter.put()); ++i) {
+		DXGI_ADAPTER_DESC AdapterDesc;
+		VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
+		if (0 == i) { Log("[ Aadapters ]\n"); }
+		Logf(TEXT("\t%s\n"), AdapterDesc.Description);
+		Logf(TEXT("\t\tDedicatedVideoMemory = %lld\n"), AdapterDesc.DedicatedVideoMemory);
+		Logf(TEXT("\t\tDedicatedSystemMemory = %lld\n"), AdapterDesc.DedicatedSystemMemory);
+		Logf(TEXT("\t\tSharedSystemMemory = %lld\n"), AdapterDesc.SharedSystemMemory);
+
+		EnumOutput(Adapter.get());
+
+		Adapter = nullptr;
+	}
 #elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<IDXGIAdapter> Adapter;
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, Adapter.ReleaseAndGetAddressOf()); ++i) {
-#endif
 		DXGI_ADAPTER_DESC AdapterDesc;
 		VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
+		if (0 == i) { Log("[ Aadapters ]\n"); }
 		Logf(TEXT("\t%s\n"), AdapterDesc.Description);
-		Logf(TEXT("\t\tDedicatedVideoMemory = %d\n"), AdapterDesc.DedicatedVideoMemory);
+		Logf(TEXT("\t\tDedicatedVideoMemory = %lld\n"), AdapterDesc.DedicatedVideoMemory);
+		Logf(TEXT("\t\tDedicatedSystemMemory = %lld\n"), AdapterDesc.DedicatedSystemMemory);
+		Logf(TEXT("\t\tSharedSystemMemory = %lld\n"), AdapterDesc.SharedSystemMemory);
 
-#ifdef USE_WINRT
-		EnumOutput(Adapter.get());
-#elif defined(USE_WRL)
 		EnumOutput(Adapter.Get());
-#endif
-#ifdef USE_WINRT
-		Adapter = nullptr;
-#endif
 	}
+#endif
 }
 
-//!< アウトプット(ディスプレイ)の列挙
+//!< アダプター(GPU)に接続されている、アウトプット(ディスプレイ)の列挙
 void DX::EnumOutput(IDXGIAdapter* Adapter)
 {
 #ifdef USE_WINRT
 	winrt::com_ptr<IDXGIOutput> Output;
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Adapter->EnumOutputs(i, Output.put()); ++i) {
+		DXGI_OUTPUT_DESC OutputDesc;
+		VERIFY_SUCCEEDED(Output->GetDesc(&OutputDesc));
+
+		const auto Width = OutputDesc.DesktopCoordinates.right - OutputDesc.DesktopCoordinates.left;
+		const auto Height = OutputDesc.DesktopCoordinates.bottom - OutputDesc.DesktopCoordinates.top;
+		if (0 == i) { Log("\t\t[ Output ]\n"); }
+		Logf(TEXT("\t\t\t%s\n"), OutputDesc.DeviceName);
+		Logf(TEXT("\t\t\t%d x %d\n"), Width, Height);
+		switch (OutputDesc.Rotation)
+		{
+		default: break;
+		case DXGI_MODE_ROTATION_UNSPECIFIED: Log("\t\t\tROTATION_UNSPECIFIED\n"); break;
+		case DXGI_MODE_ROTATION_IDENTITY: Log("\t\t\tROTATION_IDENTITY\n"); break;
+		case DXGI_MODE_ROTATION_ROTATE90: Log("\t\t\tROTATE90\n"); break;
+		case DXGI_MODE_ROTATION_ROTATE180: Log("\t\t\tROTATE180\n"); break;
+		case DXGI_MODE_ROTATION_ROTATE270: Log("\t\t\tROTATE270\n"); break;
+		}
+
+		GetDisplayModeList(Output.get(), DXGI_FORMAT_R8G8B8A8_UNORM);
+
+		Output = nullptr;
+	}
+
 #elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<IDXGIOutput> Output;
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Adapter->EnumOutputs(i, Output.ReleaseAndGetAddressOf()); ++i) {
-#endif
 		DXGI_OUTPUT_DESC OutputDesc;
 		VERIFY_SUCCEEDED(Output->GetDesc(&OutputDesc));
-#ifdef DEBUG_STDOUT
+
 		const auto Width = OutputDesc.DesktopCoordinates.right - OutputDesc.DesktopCoordinates.left;
 		const auto Height = OutputDesc.DesktopCoordinates.bottom - OutputDesc.DesktopCoordinates.top;
-		if (0 == i) {
-			std::cout << Lightblue << "\t" << "OUTPUTS" << White << std::endl;
-		}
-		std::wcout << "\t" << "\t" << OutputDesc.DeviceName << " = " << Width << " x " << Height << std::endl;
-#endif
+		if (0 == i) { Log("\t\t[ Output ]\n"); }
+		Logf(TEXT("\t\t\t%s\n"), OutputDesc.DeviceName);
+		Logf(TEXT("\t\t\t%d x %d\n"), Width, Height);
 
-#ifdef USE_WINRT
-		GetDisplayModeList(Output.get(), DXGI_FORMAT_R8G8B8A8_UNORM);
-#elif defined(USE_WRL)
 		GetDisplayModeList(Output.Get(), DXGI_FORMAT_R8G8B8A8_UNORM);
-#endif
-#ifdef USE_WINRT
-		Output = nullptr;
-#endif
 	}
+#endif
 }
 
-//!< 描画モードの列挙
+//!< アウトプット(ディスプレイ)の描画モードの列挙
 void DX::GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format)
 {
 	UINT NumModes;
 	VERIFY_SUCCEEDED(Output->GetDisplayModeList(Format, 0, &NumModes, nullptr));
 	if (NumModes) {
-#ifdef DEBUG_STDOUT
-		std::cout << Lightblue << "\t" << "\t" << "MODES" << White << std::endl;
-#endif
+		Log("\t\t\t[ DisplayModes ]\n");
+
 		std::vector<DXGI_MODE_DESC> ModeDescs(NumModes);
 		VERIFY_SUCCEEDED(Output->GetDisplayModeList(Format, 0, &NumModes, ModeDescs.data()));
-#ifdef DEBUG_STDOUT
 		for (const auto& i : ModeDescs) {
-			//!< #DX_TODO : DXGI_MODE_DESC を覚えておいて選択できるようにする？
-			std::wcout << "\t" << "\t" << "\t" << i.Width << " x " << i.Height << " @ " << i.RefreshRate.Numerator / i.RefreshRate.Denominator << std::endl;
-			std::cout << "\t" << "\t" << "\t" << "..." << std::endl; break; //!< 省略
+			Logf("\t\t\t\t%d x %d @ %d\n", i.Width, i.Height, i.RefreshRate.Numerator / i.RefreshRate.Denominator);
 		}
-#endif
 	}
 }
 
@@ -507,10 +532,11 @@ void DX::CheckFeatureLevel()
 	D3D12_FEATURE_DATA_FEATURE_LEVELS DataFeatureLevels = {
 		static_cast<UINT>(FeatureLevels.size()), FeatureLevels.data()
 	};
+	//!< NumFeatureLevels, pFeatureLevelsRequested は CheckFeatureSupport() への入力、MaxSupportedFeatureLevel には CheckFeatureSupport() からの出力が返る
 	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, reinterpret_cast<void*>(&DataFeatureLevels), sizeof(DataFeatureLevels)));
-#ifdef DEBUG_STDOUT
-	std::cout << Lightblue << "MaxSupportedFeatureLevel" << White << std::endl;
-#define D3D_FEATURE_LEVEL_ENTRY(fl) case D3D_FEATURE_LEVEL_##fl: std::cout << Yellow << "\t" << "D3D_FEATURE_LEVEL_" #fl << White << std::endl; break;
+
+	Log("MaxSupportedFeatureLevel\n");
+#define D3D_FEATURE_LEVEL_ENTRY(fl) case D3D_FEATURE_LEVEL_##fl: Logf("\tD3D_FEATURE_LEVEL_%s\n", #fl); break;
 	switch (DataFeatureLevels.MaxSupportedFeatureLevel) {
 	default: assert(0 && "Unknown FeatureLevel"); break;
 	D3D_FEATURE_LEVEL_ENTRY(12_1)
@@ -524,39 +550,31 @@ void DX::CheckFeatureLevel()
 	D3D_FEATURE_LEVEL_ENTRY(9_1)
 	}
 #undef D3D_FEATURE_LEVEL_ENTRY
-#endif
 }
 
 void DX::CheckMultiSample(const DXGI_FORMAT Format)
 {
-#ifdef DEBUG_STDOUT
-	std::cout << Lightblue << "MultiSample" << White << std::endl;
-	std::cout << "\t" << GetFormatString(Format) << std::endl;
-#endif
+	Logf("MultiSample for %s\n", GetFormatString(Format).c_str());
 
 	SampleDescs.clear();
 	for (UINT i = 1; i < D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT; ++i) {
+		//!< Format, SampleCount, Flags は CheckFeatureSupport() への入力、NumQualityLevels には CheckFeatureSupport() からの出力が返る
 		D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS DataMultiSampleQaualityLevels = {
 			Format,
 			i,
 			D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE,
+			0
 		};
 		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, reinterpret_cast<void*>(&DataMultiSampleQaualityLevels), sizeof(DataMultiSampleQaualityLevels)));
-		//!< 1 > NumQualityLevels の場合はサポートされていない
+		//!< 0 == NumQualityLevels の場合はサポートされていないということ
 		if (DataMultiSampleQaualityLevels.NumQualityLevels) {
 			const DXGI_SAMPLE_DESC SampleDesc = {
 				DataMultiSampleQaualityLevels.SampleCount,
 				DataMultiSampleQaualityLevels.NumQualityLevels - 1
 			}; 
 			SampleDescs.push_back(SampleDesc);
-#ifdef DEBUG_STDOUT
-			std::cout << "\t" << "Count = " << SampleDesc.Count << ", ";
-			std::cout << "Quality = ";
-			for (UINT i = 0; i <= SampleDesc.Quality; ++i) {
-				std::cout << (i ? ", " : "") << i;
-			}
-			std::cout << std::endl;
-#endif
+
+			Logf("\tCount = %d, Quality = %d\n", SampleDesc.Count, SampleDesc.Quality);
 		}
 	}
 }
@@ -689,7 +707,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.GetAddressOf())));
 #endif
 	
-	//!< #DX_TODO : GetDisplayModeList() で DXGI_MODE_DESC を覚えておく？
+	//!< 最適なフルスクリーンのパフォーマンスを得るには、IDXGIOutput->GetDisplayModeList() で取得する(ディスプレイのサポートする)DXGI_MODE_DESC でないとダメなので注意  #DX_TODO
 	const DXGI_RATIONAL Rational = { 60, 1 };
 	const DXGI_MODE_DESC ModeDesc = {
 		Width, Height,

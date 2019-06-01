@@ -101,6 +101,9 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreatePipeline();
 
 	SetTimer(hWnd, NULL, 1000 / 60, nullptr);
+
+	//!< ウインドウサイズ変更時に作り直すもの
+	OnExitSizeMove(hWnd, hInstance);
 }
 
 /**
@@ -112,13 +115,13 @@ need to destroy and recreate the framebuffer,
 command pool, graphics pipeline, Render Pass, depth buffer image, image view, vertex
 buffer, and so on.
 */
-void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
+void VK::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 {
 #ifdef _DEBUG
-	PerformanceCounter PC("OnSize : ");
+	PerformanceCounter PC("OnExitSizeMove : ");
 #endif
 
-	Super::OnSize(hWnd, hInstance);
+	Super::OnExitSizeMove(hWnd, hInstance);
 
 	//ResizeSwapChain(Rect);
 
@@ -136,6 +139,7 @@ void VK::OnSize(HWND hWnd, HINSTANCE hInstance)
 		}
 	}
 }
+
 void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnDestroy(hWnd, hInstance);

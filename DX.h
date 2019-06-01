@@ -77,7 +77,8 @@ private:
 
 public:
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
-	virtual void OnSize(HWND hWnd, HINSTANCE hInstance) override;
+	//virtual void OnSize(HWND hWnd, HINSTANCE hInstance) override {}
+	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
 	//virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override { Super::OnTimer(hWnd, hInstance); }
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { Super::OnPaint(hWnd, hInstance); Draw(); }
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;

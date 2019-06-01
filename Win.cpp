@@ -35,7 +35,7 @@ void Win::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//SetTimer(hWnd, NULL, 1000 / 60, nullptr);
 }
-void Win::OnSize(HWND hWnd, HINSTANCE hInstance)
+void Win::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 {
 	GetClientRect(hWnd, &Rect);
 }
