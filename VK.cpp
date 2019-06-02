@@ -123,6 +123,10 @@ void VK::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 
 	Super::OnExitSizeMove(hWnd, hInstance);
 
+	std::vector<VkFence> Fences = { Fence };
+	VERIFY_SUCCEEDED(vkWaitForFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data(), VK_TRUE, (std::numeric_limits<uint64_t>::max)()));
+	//vkResetFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data());
+
 	//ResizeSwapChain(Rect);
 
 	CreateViewport(static_cast<float>(SurfaceExtent2D.width), static_cast<float>(SurfaceExtent2D.height));
@@ -428,7 +432,8 @@ void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const si
 
 void VK::CreateImage(VkImage* Image, const VkImageCreateFlags CreateFlags, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage) const
 {
-	ValidateFormatProperties(GetCurrentPhysicalDevice(), Usage, Format);
+	//!< Usage に VK_IMAGE_USAGE_SAMPLED_BIT が指定されいる場合、フォーマットやフィルタが使用可能かチェック #VK_TODO ここではリニアフィルタ決め打ち
+	ValidateFormatProperties_Sampled(GetCurrentPhysicalDevice(), Format, Usage, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
 
 	const VkImageCreateInfo ICI = {
 		VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -627,26 +632,10 @@ void VK::CreateImageView(VkImageView* ImageView, const VkImage Image, const VkIm
 	LogOK("CreateImageView");
 }
 
-void VK::ValidateFormatProperties(VkPhysicalDevice PD, const VkImageUsageFlags Usage, const VkFormat Format) const
+void VK::ValidateFormatProperties(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage) const
 {
 	VkFormatProperties FP;
 	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
-
-	//!< サンプルドイメージでは全てのフォーマットがサポートされてるわけではない (Not all formats are supported for sampled images)
-	if (Usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
-		if (!(FP.optimalTilingFeatures &  VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
-			Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT not supported\n");
-			DEBUG_BREAK();
-		}
-		//!< #VK_TODO リニア使用時のみチェックする
-		const auto bUseLiner = true;//!< VK_FILTER_LINEAR == VkSamplerCreateInfo.magFilter || VK_FILTER_LINEAR == VkSamplerCreateInfo.minFilter || VK_SAMPLER_MIPMAP_MODE_LINEAR == VkSamplerCreateInfo.mipmapMode;
-		if (bUseLiner) {
-			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-				Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported\n");
-				DEBUG_BREAK();
-			}
-		}
-	}
 
 	if (Usage & VK_IMAGE_USAGE_STORAGE_BIT) {
 		if (!(FP.optimalTilingFeatures &  VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
@@ -695,6 +684,24 @@ void VK::ValidateFormatProperties(VkPhysicalDevice PD, const VkImageUsageFlags U
 		if (bUseAtomic) {
 			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT)) {
 				Error("VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT not supported\n");
+				DEBUG_BREAK();
+			}
+		}
+	}
+}
+void VK::ValidateFormatProperties_Sampled(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const VkFilter Mag, const VkFilter Min, const VkSamplerMipmapMode Mip) const
+{
+	VkFormatProperties FP;
+	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
+
+	if (Usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
+		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
+			Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT not supported\n");
+			DEBUG_BREAK();
+		}
+		if (VK_FILTER_LINEAR == Mag || VK_FILTER_LINEAR == Min || VK_SAMPLER_MIPMAP_MODE_LINEAR == Mip) {
+			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+				Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported\n");
 				DEBUG_BREAK();
 			}
 		}

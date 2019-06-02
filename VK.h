@@ -20,7 +20,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #ifndef BREAK_ON_FAILED
-#define BREAK_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { DEBUG_BREAK(); }
+#define BREAK_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Log(VK::GetVkResultString(vr).c_str()); DEBUG_BREAK(); }
 #endif
 #ifndef THROW_ON_FAILED
 #define THROW_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + VK::GetVkResultString(vr)); }
@@ -147,7 +147,8 @@ protected:
 	virtual void CreateBufferView(VkBufferView* BufferView, const VkBuffer Buffer, const VkFormat Format, const VkDeviceSize Offset = 0, const VkDeviceSize Range = VK_WHOLE_SIZE);
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
 
-	virtual void ValidateFormatProperties(VkPhysicalDevice PD, const VkImageUsageFlags Usage, const VkFormat Format) const;
+	virtual void ValidateFormatProperties(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage) const;
+	virtual void ValidateFormatProperties_Sampled(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const VkFilter Mag, const VkFilter Min, const VkSamplerMipmapMode Mip) const;
 
 #ifdef _DEBUG
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);

@@ -8,10 +8,16 @@ layout (location = 0) in vec2 InTexcoord;
 
 layout (location = 0) out vec4 OutColor;
 
-layout (set=0, binding=0) uniform sampler2D Sampler;
+//!< サンプラ
+//layout (set=0, binding=0) uniform sampler Sampler;
+//!< サンプルドイメージ
+//layout (set=0, binding=0) uniform texture2D Texture;
+
+//!< コンバインドイメージサンプラ(サンプラ + サンプルドイメージ) ... アプリからは通常通りサンプラとサンプルドイメージを作成する、シェーダ内での解釈のみが異なる
+layout (set=0, binding=0) uniform sampler2D Sampler2D;
 
 void main()
 {
 	//OutColor = vec4(InTexcoord, 0.0f, 1.0f);
-	OutColor = texture(Sampler, InTexcoord);
+	OutColor = texture(Sampler2D, InTexcoord);
 }

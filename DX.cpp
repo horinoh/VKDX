@@ -1168,6 +1168,14 @@ void DX::CreateRootSignature()
 				UINT NumDescriptorRanges;
 				const D3D12_DESCRIPTOR_RANGE *pDescriptorRanges;
 			};
+			D3D12_DESCRIPTOR_RANGE
+			{
+				D3D12_DESCRIPTOR_RANGE_TYPE RangeType;
+				UINT NumDescriptors;
+				UINT BaseShaderRegister;
+				UINT RegisterSpace;
+				UINT OffsetInDescriptorsFromTableStart;
+			}
 			D3D12_ROOT_CONSTANTS Constants
 			{
 				UINT ShaderRegister;

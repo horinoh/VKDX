@@ -44,7 +44,7 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 #endif
 
 #ifndef BREAK_ON_FAILED
-#define BREAK_ON_FAILED(vr) if(FAILED(vr)) { DEBUG_BREAK(); }
+#define BREAK_ON_FAILED(vr) if(FAILED(vr)) { Log(DX::GetHRESULTString(vr).c_str()); DEBUG_BREAK(); }
 #endif
 #ifndef THROW_ON_FAILED
 #define THROW_ON_FAILED(hr) if(FAILED(hr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + DX::GetHRESULTString(hr)); }

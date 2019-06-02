@@ -90,7 +90,7 @@ void VKExt::CreateDescriptorSetLayoutBindings_1CIS(std::vector<VkDescriptorSetLa
 	DescriptorSetLayoutBindings = {
 		{
 			0, //!< binding = 0
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER/*VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE*/,
 			1,
 			ShaderStageFlags,
 			nullptr
@@ -100,7 +100,7 @@ void VKExt::CreateDescriptorSetLayoutBindings_1CIS(std::vector<VkDescriptorSetLa
 void VKExt::CreateDescriptorPoolSizes_1CIS(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const
 {
 	DescriptorPoolSizes = {
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER/*VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE*/, 1 },
 	};
 }
 void VKExt::CreateWriteDescriptorSets_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const
@@ -111,7 +111,7 @@ void VKExt::CreateWriteDescriptorSets_1CIS(std::vector<VkWriteDescriptorSet>& Wr
 			nullptr,
 			DescriptorSets[0], 0, 0,
 			static_cast<uint32_t>(DescriptorImageInfos.size()),
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER/*VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE*/,
 			DescriptorImageInfos.data(),
 			nullptr,
 			nullptr
@@ -153,7 +153,7 @@ void VKExt::CreateDescriptorSetLayoutBindings_1UB_1CIS(std::vector<VkDescriptorS
 		},
 		{
 			1, //!< binding = 1
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER/*VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE*/,
 			1,
 			ShaderStageFlags_CIS,
 			nullptr
@@ -164,7 +164,7 @@ void VKExt::CreateDescriptorPoolSizes_1UB_1CIS(std::vector<VkDescriptorPoolSize>
 {
 	DescriptorPoolSizes = {
 		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER/*VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE*/, 1 },
 	};
 }
 void VKExt::CreateWriteDescriptorSets_1UB_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const
@@ -185,7 +185,7 @@ void VKExt::CreateWriteDescriptorSets_1UB_1CIS(std::vector<VkWriteDescriptorSet>
 			nullptr,
 			DescriptorSets[0], 1, 0,
 			static_cast<uint32_t>(DescriptorImageInfos.size()),
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER/*VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE*/,
 			DescriptorImageInfos.data(),
 			nullptr,
 			nullptr

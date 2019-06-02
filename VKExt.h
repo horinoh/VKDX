@@ -21,16 +21,20 @@ public:
 	void UpdateDescriptorSet_1UB();
 
 	/** 
-	プラットフォームによってはコンバインドイメージサンプラを用いた方が効率が良い場合がある On some platforms, it may be more optimal to use combined image sampler
-	
+	アプリ内ではサンプラとサンプルドイメージは別のオブジェクトとして扱うが、シェーダ内ではまとめた一つのオブジェクトとして扱うことができ、プラットフォームによっては効率が良い場合がある
+	(コンバインドイメージサンプラ == サンプラ + サンプルドイメージ)
+	デスクリプタタイプに VK_DESCRIPTOR_TYPE_SAMPLER や VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE を指定するか、VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER を指定するかの違い
+
 	VK_DESCRIPTOR_TYPE_SAMPLER ... サンプラ
 		layout (set=0, binding=0) uniform sampler MySampler;
 	VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ... サンプルドイメージ
 		layout (set=0, binding=0) uniform texture2D MyTexture2D;
+
 	VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ... コンバインドイメージサンプラ
 		layout (set=0, binding=0) uniform sampler2D MySampler2D;
+
 	VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ... ストレージイメージ (シェーダから書き込み可能)
-		layout (set=0, binding=0, r32f) uniform image2D MyImage2D;
+	layout (set=0, binding=0, r32f) uniform image2D MyImage2D;
 
 	VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER ... ユニフォームテクセルバッファ
 		layout (set=0, binding=0) uniform samplerBuffer MySamplerBuffer;
