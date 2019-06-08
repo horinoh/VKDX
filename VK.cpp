@@ -2283,29 +2283,29 @@ VkPipelineCache VK::LoadPipelineCache(const std::wstring& Path) const
 		In.seekg(0, std::ios_base::end);
 		Size = In.tellg();
 		In.seekg(0, std::ios_base::beg);
+
+		char* Data = nullptr;
+		if (Size) {
+			Data = new char[Size];
+			In.read(Data, Size);
+
+			ValidatePipelineCache(Size, Data);
+
+			const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
+				VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+				nullptr,
+				0,
+				Size, Data
+			};
+			VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, GetAllocationCallbacks(), &PipelineCache));
+
+			if (nullptr != Data) {
+				delete[] Data;
+			}
+		}
+
+		In.close();
 	}
-
-	char* Data = nullptr;
-	if (Size) {
-		Data = new char[Size];
-		In.read(Data, Size);
-	}
-
-	ValidatePipelineCache(Size, Data);
-
-	const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-		nullptr,
-		0,
-		Size, Data
-	};
-	VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, GetAllocationCallbacks(), &PipelineCache));
-
-	if (nullptr != Data) {
-		delete[] Data;
-	}
-
-	In.close();
 
 	return PipelineCache;
 }
