@@ -10,14 +10,10 @@ void DXExt::CreateIndirectBuffer_Draw(const UINT Count)
 #ifdef USE_WINRT
 	const auto CA = CommandAllocators[0].get();
 	const auto CL = GraphicsCommandLists[0].get(); 
-#elif defined(USE_WRL)
-	const auto CA = CommandAllocators[0].Get();
-	const auto CL = GraphicsCommandLists[0].Get(); 
-#endif
-	
-#ifdef USE_WINRT
 	CreateIndirectBuffer(IndirectBufferResource.put(), Size, &Source, CA, CL);
 #elif defined(USE_WRL)
+	const auto CA = CommandAllocators[0].Get();
+	const auto CL = GraphicsCommandLists[0].Get();
 	CreateIndirectBuffer(IndirectBufferResource.GetAddressOf(), Size, &Source, CA, CL);
 #endif
 
@@ -45,14 +41,10 @@ void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT Count)
 #ifdef USE_WINRT
 	const auto CA = CommandAllocators[0].get();
 	const auto CL = GraphicsCommandLists[0].get();
+	CreateIndirectBuffer(IndirectBufferResource.put(), Size, &Source, CA, CL);
 #elif defined(USE_WRL)
 	const auto CA = CommandAllocators[0].Get();
 	const auto CL = GraphicsCommandLists[0].Get();
-#endif
-
-#ifdef USE_WINRT
-	CreateIndirectBuffer(IndirectBufferResource.put(), Size, &Source, CA, CL);
-#elif defined(USE_WRL)
 	CreateIndirectBuffer(IndirectBufferResource.GetAddressOf(), Size, &Source, CA, CL);
 #endif
 
@@ -79,14 +71,10 @@ void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT
 #ifdef USE_WINRT
 	const auto CA = CommandAllocators[0].get();
 	const auto CL = GraphicsCommandLists[0].get();
+	CreateIndirectBuffer(IndirectBufferResource.put(), Size, &Source, CA, CL);
 #elif defined(USE_WRL)
 	const auto CA = CommandAllocators[0].Get();
 	const auto CL = GraphicsCommandLists[0].Get();
-#endif
-
-#ifdef USE_WINRT
-	CreateIndirectBuffer(IndirectBufferResource.put(), Size, &Source, CA, CL);
-#elif defined(USE_WRL)
 	CreateIndirectBuffer(IndirectBufferResource.GetAddressOf(), Size, &Source, CA, CL);
 #endif
 
@@ -123,56 +111,61 @@ void DXExt::CreateStaticSamplerDesc_LW(D3D12_STATIC_SAMPLER_DESC& StaticSamplerD
 
 #ifdef USE_WINRT
 void DXExt::CreateShader_VsPs(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const
-#elif defined(USE_WRL)
-void DXExt::CreateShader_VsPs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const
-#endif
 {
 	const auto ShaderPath = GetBasePath();
 	ShaderBlobs.resize(2);
-#ifdef USE_WINRT
 	D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), ShaderBlobs[0].put());
-	D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].put()); 
+	D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].put());
+}
 #elif defined(USE_WRL)
+void DXExt::CreateShader_VsPs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const
+{
+	const auto ShaderPath = GetBasePath();
+	ShaderBlobs.resize(2);
 	D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), ShaderBlobs[0].GetAddressOf());
 	D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].GetAddressOf()); 
-#endif
 }
+#endif
+
 #ifdef USE_WINRT
 void DXExt::CreateShader_VsPsDsHsGs(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const
-#elif defined(USE_WRL)
-void DXExt::CreateShader_VsPsDsHsGs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const
-#endif
 {
 	const auto ShaderPath = GetBasePath();
 	ShaderBlobs.resize(5);
-#ifdef USE_WINRT
 	D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), ShaderBlobs[0].put());
 	D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].put());
 	D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), ShaderBlobs[2].put());
 	D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), ShaderBlobs[3].put());
-	D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), ShaderBlobs[4].put());	
+	D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), ShaderBlobs[4].put());
+}
 #elif defined(USE_WRL)
+void DXExt::CreateShader_VsPsDsHsGs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const
+{
+	const auto ShaderPath = GetBasePath();
+	ShaderBlobs.resize(5);
 	D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), ShaderBlobs[0].GetAddressOf());
 	D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].GetAddressOf());
 	D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), ShaderBlobs[2].GetAddressOf());
 	D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), ShaderBlobs[3].GetAddressOf());
-	D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), ShaderBlobs[4].GetAddressOf());	
-#endif
+	D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), ShaderBlobs[4].GetAddressOf());
 }
+#endif
+
 #ifdef USE_WINRT
 void DXExt::CreateShader_Cs(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const
-#elif defined(USE_WRL)
-void DXExt::CreateShader_Cs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const
-#endif
 {
 	const auto ShaderPath = GetBasePath();
 	ShaderBlobs.resize(1);
-#ifdef USE_WINRT
 	D3DReadFileToBlob((ShaderPath + TEXT(".cs.cso")).data(), ShaderBlobs[0].put());
-#elif defined(USE_WRL)
-	D3DReadFileToBlob((ShaderPath + TEXT(".cs.cso")).data(), ShaderBlobs[0].GetAddressOf());
-#endif
 }
+#elif defined(USE_WRL)
+void DXExt::CreateShader_Cs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const
+{
+	const auto ShaderPath = GetBasePath();
+	ShaderBlobs.resize(1);
+	D3DReadFileToBlob((ShaderPath + TEXT(".cs.cso")).data(), ShaderBlobs[0].GetAddressOf());
+}
+#endif
 
 //void DXExt::Clear_Color(ID3D12GraphicsCommandList* GraphicsCommandList)
 //{

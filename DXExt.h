@@ -31,8 +31,8 @@ public:
 			{ 
 				D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
 				1, //!< NumDescriptors 無制限の場合 UINT_MAX を指定、無制限にできるのは最後の要素のみ
-				0, //!< b0 BaseShaderRegister 例えば ": register(t3);" の "3"
-				0, //!< space0 RegisterSpace 通常は0、例えば ": register(t3,space5);" の "5"
+				0, //!< b0 BaseShaderRegister ... 例) ": register(t3);" の "3"
+				0, //!< space0 RegisterSpace 通常は0 .... 例) ": register(t3,space5);" の "5"
 				D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
 			},
 		};
@@ -40,50 +40,59 @@ public:
 	template<typename T>
 	void CreateDescriptorHeap_1CBV() {
 		const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		const auto Count = 1;
-		const auto Size = RoundUp(sizeof(T), 0xff); //!< 256バイトアライン
 
 #ifdef USE_WINRT
 		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
-#elif defined(USE_WRL)
-		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH) {
-#endif
 			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
 				Type,
 				Count,
 				D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-				0 //!< NodeMask ... マルチGPUの場合 Use with multi GPU
+				0 //!< NodeMask ... マルチGPUの場合 (Use with multi GPU)
 			};
-#ifdef USE_WINRT
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, __uuidof(DH), DH.put_void()));
+		}
 #elif defined(USE_WRL)
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH) {
+			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
+				Type,
+				Count,
+				D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+				0
+			};
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DH.GetAddressOf())));
+		}
 #endif
-		}(Type, Count, ConstantBufferDescriptorHeap);
+		(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, ConstantBufferDescriptorHeap);
 
-		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12Resource* Resource, ID3D12DescriptorHeap* DescriptorHeap, const UINT Size) {
-			//!< 256アラインされていること Must be 256 aligned
+		const auto Size256 = RoundUp(sizeof(T), 0xff); //!< 256 byte align
+#ifdef USE_WINRT
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, winrt::com_ptr<ID3D12Resource> Resource, winrt::com_ptr<ID3D12DescriptorHeap>& DH, const UINT Size) {
+			//!< 256アラインされていること (Must be 256 byte aligned)
 			const D3D12_CONSTANT_BUFFER_VIEW_DESC ConstantBufferViewDesc = {
 				Resource->GetGPUVirtualAddress(),
 				Size
 			};
 			//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
-			const auto CDH = GetCPUDescriptorHandle(DescriptorHeap, Type);
+			const auto CDH = GetCPUDescriptorHandle(DH.get(), Type);
 			Device->CreateConstantBufferView(&ConstantBufferViewDesc, CDH);
 		}
-#ifdef USE_WINRT
-		(Type, ConstantBufferResource.get(), ConstantBufferDescriptorHeap.get(), static_cast<UINT>(Size));
 #elif defined(USE_WRL)
-		(Type, ConstantBufferResource.Get(), ConstantBufferDescriptorHeap.Get(), static_cast<UINT>(Size));
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, Microsoft::WRL::ComPtr<ID3D12Resource> Resource, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH, const UINT Size) {
+			const D3D12_CONSTANT_BUFFER_VIEW_DESC ConstantBufferViewDesc = {
+				Resource->GetGPUVirtualAddress(),
+				Size
+			};
+			const auto CDH = GetCPUDescriptorHandle(DH.Get(), Type);
+			Device->CreateConstantBufferView(&ConstantBufferViewDesc, CDH);
+		}
 #endif
+		(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, ConstantBufferResource, ConstantBufferDescriptorHeap, static_cast<UINT>(Size256));
 
-#ifdef DEBUG_STDOUT
-		std::cout << "CreateDescriptorHeap" << COUT_OK << std::endl << std::endl;
-#endif
+		LogOK("CreateDescriptorHeap");
 	}
 
 	/*
-	@brief １つのシェーダリソースビュー One shader resource view
+	@brief １つのシェーダリソースビュー (One shader resource view)
 	*/
 	void CreateRootParameters_1SRV(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
 		RootParameters = {
@@ -107,43 +116,48 @@ public:
 	}
 	void CreateDescriptorHeap_1SRV() {
 		const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		const auto Count = 1;
 
 #ifdef USE_WINRT
 		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, winrt::com_ptr<ID3D12DescriptorHeap>& DH){
-#elif defined(USE_WRL)
-		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH){
-#endif
 			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
 				Type,
 				Count,
 				D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 				0
 			};
-#ifdef USE_WINRT
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, __uuidof(DH), DH.put_void()));
-#elif defined(USE_WRL)
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DH.GetAddressOf())));
-#endif
-		}(Type, Count, ImageDescriptorHeap);
-
-		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12Resource* Resource, ID3D12DescriptorHeap* DescriptorHeap) {
-			const auto CDH = GetCPUDescriptorHandle(DescriptorHeap, Type);
-			Device->CreateShaderResourceView(Resource, nullptr, CDH);
 		}
-#ifdef USE_WINRT
-		(Type, ImageResource.get(), ImageDescriptorHeap.get());
 #elif defined(USE_WRL)
-		(Type, ImageResource.Get(), ImageDescriptorHeap.Get());
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH) {
+			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
+				Type,
+				Count,
+				D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+				0
+			};
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DH.GetAddressOf())));
+		}
 #endif
+		(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, ImageDescriptorHeap);
 
-#ifdef DEBUG_STDOUT
-		std::cout << "CreateDescriptorHeap" << COUT_OK << std::endl << std::endl;
+#ifdef USE_WINRT
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, winrt::com_ptr<ID3D12Resource> Resource, winrt::com_ptr<ID3D12DescriptorHeap> DH) {
+			const auto CDH = GetCPUDescriptorHandle(DH.get(), Type);
+			Device->CreateShaderResourceView(Resource.get(), nullptr, CDH);
+		}
+#elif defined(USE_WRL)
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, Microsoft::WRL::ComPtr<ID3D12Resource> Resource, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DH) {
+			const auto CDH = GetCPUDescriptorHandle(DH.Get(), Type);
+			Device->CreateShaderResourceView(Resource.Get(), nullptr, CDH);
+		} 
 #endif
+		(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, ImageResource, ImageDescriptorHeap);
+
+		LogOK("CreateDescriptorHeap");
 	}
 
 	/*
-	@brief １つのコンスタントバッファと１つのシェーダリソースビュー One constant buffer view and one shader resource view
+	@brief １つのコンスタントバッファと１つのシェーダリソースビュー (One constant buffer view and one shader resource view)
 	*/
 	void CreateRootParameters_1CBV_1SRV(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility_CBV = D3D12_SHADER_VISIBILITY_ALL, const D3D12_SHADER_VISIBILITY ShaderVisibility_SRV = D3D12_SHADER_VISIBILITY_ALL) const {
 		RootParameters = {
@@ -181,13 +195,12 @@ public:
 	void CreateDescriptorHeap_1CBV_1SRV() {
 		CreateDescriptorHeap_1CBV<T>();
 		CreateDescriptorHeap_1SRV();
-#ifdef DEBUG_STDOUT
-		std::cout << "CreateDescriptorHeap" << COUT_OK << std::endl << std::endl;
-#endif
+
+		LogOK("CreateDescriptorHeap");
 	}
 	
 	/*
-	@brief １つのアンオーダードアクセスビュー One unordered access view
+	@brief １つのアンオーダードアクセスビュー (One unordered access view)
 	*/
 	void CreateRootParameters_1UAV(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
 		RootParameters = {
@@ -210,54 +223,63 @@ public:
 		};
 	}
 	void CreateDescriptorHeap_1UAV() {
-		const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		const auto Count = 1;
-
 #ifdef USE_WINRT
 		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
-#elif defined(USE_WRL)
-		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH) {
-#endif
 			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
 				Type,
 				Count,
 				D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 				0
 			};
-#ifdef USE_WINRT
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, __uuidof(DH), DH.put_void()));
+		}
 #elif defined(USE_WRL)
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH) {
+			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
+				Type,
+				Count,
+				D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+				0
+			};
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DH.GetAddressOf())));
+		}
 #endif
-		}(Type, Count, UnorderedAccessTextureDescriptorHeap);
+		(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, UnorderedAccessTextureDescriptorHeap);
 
-		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, ID3D12Resource* Resource, ID3D12DescriptorHeap* DescriptorHeap) {
-			const auto CDH = GetCPUDescriptorHandle(DescriptorHeap, Type);
+#ifdef USE_WINRT
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, winrt::com_ptr<ID3D12Resource> Resource, winrt::com_ptr<ID3D12DescriptorHeap> DH) {
+			const auto CDH = GetCPUDescriptorHandle(DH.get(), Type);
 			D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {
 				DXGI_FORMAT_R8G8B8A8_UNORM,
 				D3D12_UAV_DIMENSION_TEXTURE2D,
 			};
 			UAVDesc.Texture2D.MipSlice = 0;
 			UAVDesc.Texture2D.PlaneSlice = 0;
-			Device->CreateUnorderedAccessView(Resource, nullptr, &UAVDesc, CDH);
+			Device->CreateUnorderedAccessView(Resource.get(), nullptr, &UAVDesc, CDH);
 		}
-#ifdef USE_WINRT
-		(Type, UnorderedAccessTextureResource.get(), UnorderedAccessTextureDescriptorHeap.get());
 #elif defined(USE_WRL)
-		(Type, UnorderedAccessTextureResource.Get(), UnorderedAccessTextureDescriptorHeap.Get());
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, Microsoft::WRL::ComPtr<ID3D12Resource> Resource, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DH) {
+			const auto CDH = GetCPUDescriptorHandle(DH.Get(), Type);
+			D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {
+				DXGI_FORMAT_R8G8B8A8_UNORM,
+				D3D12_UAV_DIMENSION_TEXTURE2D,
+			};
+			UAVDesc.Texture2D.MipSlice = 0;
+			UAVDesc.Texture2D.PlaneSlice = 0;
+			Device->CreateUnorderedAccessView(Resource.Get(), nullptr, &UAVDesc, CDH);
+		}
 #endif
+		(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, UnorderedAccessTextureResource, UnorderedAccessTextureDescriptorHeap);
 
-#ifdef DEBUG_STDOUT
-		std::cout << "CreateDescriptorHeap" << COUT_OK << std::endl << std::endl;
-#endif
+		LogOK("CreateDescriptorHeap");
 	}
 
 
-	//!< LinearWarp
+	//!< LinearWrap
 	void CreateStaticSamplerDesc_LW(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) const;
 
 	template<typename T> void CreateInputLayoutSlot(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs, const UINT InputSlot) const {}
-	//!< ↓ここでテンプレート特殊化している Template specialization here
+	//!< ↓ここでテンプレート特殊化している (Template specialization here)
 #include "DXInputLayout.inl"
 
 	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType() const override { return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE; }
@@ -287,8 +309,6 @@ public:
 		CopyToUploadResource(ConstantBufferResource.Get(), Size, &Type); 
 #endif
 	
-#ifdef DEBUG_STDOUT
-		std::cout << "CreateConstantBuffer" << COUT_OK << std::endl << std::endl;
-#endif
+		LogOK("CreateConstantBuffer");
 	}
 };

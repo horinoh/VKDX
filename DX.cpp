@@ -142,7 +142,13 @@ void DX::CreateUploadResource(ID3D12Resource** Resource, const size_t Size)
 		&ResourceDesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ, //!< GENERIC_READ にすること Must be GENERIC_READ
 		nullptr,
-		IID_PPV_ARGS(Resource)));
+//#ifdef USE_WINRT
+//		__uuidof(Resource), Resource.put_void()
+//#elif defined(USE_WRL)
+//		IID_PPV_ARGS(Resource.GetAddressOf())
+//#endif
+		IID_PPV_ARGS(Resource)
+	));
 }
 void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source)
 {
@@ -239,7 +245,13 @@ void DX::CreateDefaultResource(ID3D12Resource** Resource, const size_t Size)
 		&ResourceDesc,
 		D3D12_RESOURCE_STATE_COMMON, //!< COMMON にすること Must be COMMON
 		nullptr,
-		IID_PPV_ARGS(Resource)));
+//#ifdef USE_WINRT
+//		__uuidof(Resource), Resource.put_void()
+//#elif defined(USE_WRL)
+//		IID_PPV_ARGS(Resource.GetAddressOf())
+//#endif
+		IID_PPV_ARGS(Resource)
+	));
 }
 void DX::ResourceBarrier(ID3D12GraphicsCommandList* CL, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After)
 {
@@ -305,31 +317,21 @@ void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D1
 
 void DX::CreateDevice(HWND hWnd)
 {
-#if defined(_DEBUG) || defined(USE_PIX)
 #ifdef USE_WINRT
+#if defined(_DEBUG) || defined(USE_PIX)
 	if (SUCCEEDED(DXGIGetDebugInterface1(0, __uuidof(GraphicsAnalysis), GraphicsAnalysis.put_void()))) {
-#elif defined(USE_WRL)
-	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(GraphicsAnalysis.GetAddressOf())))) {
-#endif
-		//!< グラフィックス診断は Alt + F5 で起動した場合のみ成功する Enabled only if executed with Alt + F5
-		std::cout << "Graphics Analysis is enabled" << std::endl;
-
+		//!< グラフィックス診断は Alt + F5 で起動した場合のみ成功する (Enabled only if executed with Alt + F5)
+		Log("Graphics Analysis is enabled\n");
 		//!< GraphicsAnalysis->BeginCapture(), GraphicsAnalysis->EndCapture() でキャプチャ開始、終了する
 	}
 #endif
 
 #ifdef _DEBUG
-#ifdef USE_WINRT
 	winrt::com_ptr<ID3D12Debug> Debug;
-	VERIFY_SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(Debug.put())));
-#elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3D12Debug> Debug;
-	VERIFY_SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(Debug.GetAddressOf())));
-#endif
+	VERIFY_SUCCEEDED(D3D12GetDebugInterface(__uuidof(Debug), Debug.put_void()));
 	Debug->EnableDebugLayer();
-
-	//!< GPU-Based Validation
 #if 0
+	//!< GPU-Based Validation
 	Microsoft::WRL::ComPtr<ID3D12Debug1> Debug1;
 	VERIFY_SUCCEEDED(Debug->QueryInterface(IID_PPV_ARGS(Debug1.GetAddressOf())));
 	Debug1->SetEnableGPUBasedValidation(true);
@@ -337,84 +339,101 @@ void DX::CreateDevice(HWND hWnd)
 #endif //!< _DEBUG
 
 	//!< WARP アダプタを作成するのに IDXGIFactory4(のEnumWarpAdapter) が必要
-#ifdef USE_WINRT
 	winrt::com_ptr<IDXGIFactory4> Factory;
-	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.put())));
+	VERIFY_SUCCEEDED(CreateDXGIFactory1(__uuidof(Factory), Factory.put_void()));
 #ifdef _DEBUG
 	EnumAdapter(Factory.get());
-#endif
-#elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<IDXGIFactory4> Factory;
-	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.GetAddressOf())));
-#ifdef _DEBUG
-	EnumAdapter(Factory.Get());
-#endif
 #endif
 
 	//!< DedicatedVideoMemory のある最後のアダプタ(GPU)インデックスを返す
 	auto GetLastIndexOfHardwareAdapter = [&]() {
 		UINT Index = UINT_MAX;
-#ifdef USE_WINRT
 		winrt::com_ptr<IDXGIAdapter> Adapter;
 		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, Adapter.put()); ++i) {
-#elif defined(USE_WRL)
-		Microsoft::WRL::ComPtr<IDXGIAdapter> Adapter;
-		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, Adapter.ReleaseAndGetAddressOf()); ++i) {
-#endif
 			DXGI_ADAPTER_DESC AdapterDesc;
 			VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
 			if (AdapterDesc.DedicatedVideoMemory) {
 				Index = i;
 			}
-#ifdef USE_WINRT
 			Adapter = nullptr;
-#endif
 		}
 		assert(UINT_MAX != Index);
 		return Index;
 	};
-#ifdef USE_WINRT
 	winrt::com_ptr<IDXGIAdapter> Adapter;
 	Factory->EnumAdapters(GetLastIndexOfHardwareAdapter(), Adapter.put());
-#elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<IDXGIAdapter> Adapter;
-	Factory->EnumAdapters(GetLastIndexOfHardwareAdapter(), Adapter.GetAddressOf());
-#endif
-#ifdef DEBUG_STDOUT
+
 	DXGI_ADAPTER_DESC AdapterDesc;
 	VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
-	std::cout << Lightblue << "Adapter" << White << std::endl;
-	std::wcout << "\t" << Yellow << AdapterDesc.Description << White << std::endl;
-#endif
+	Logf("\t%s\n", AdapterDesc.Description);
 
 #if 0
 	const std::vector<UUID> Experimental = { D3D12ExperimentalShaderModels, /*D3D12RaytracingPrototype*/ };
 	VERIFY_SUCCEEDED(D3D12EnableExperimentalFeatures(static_cast<UINT>(Experimental.size()), Experimental.data(), nullptr, nullptr));
 #endif
 
-#ifdef USE_WINRT
 	if (FAILED(CreateMaxFeatureLevelDevice(Adapter.get()))) {
-#elif defined(USE_WRL)
-	if (FAILED(CreateMaxFeatureLevelDevice(Adapter.Get()))) {
-#endif
 		Error(TEXT("Cannot create device, trying to create WarpDevice ...\n"));
 
 		//!< WARP : Win7以下だと D3D_FEATURE_LEVEL_10_1 まで、Win8以上だと D3D_FEATURE_LEVEL_11_1 までサポート
-#ifdef USE_WINRT
-		VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(IID_PPV_ARGS(Adapter.put())));
-		VERIFY_SUCCEEDED(CreateMaxFeatureLevelDevice(Adapter.get())); 
-#elif defined(USE_WRL)
-		VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(IID_PPV_ARGS(Adapter.GetAddressOf())));
-		VERIFY_SUCCEEDED(CreateMaxFeatureLevelDevice(Adapter.Get())); 
-#endif	
+		VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(__uuidof(Adapter), Adapter.put_void()));
+		VERIFY_SUCCEEDED(CreateMaxFeatureLevelDevice(Adapter.get()));
 	}
 
-	LogOK("CreateDevice");
+#elif defined(USE_WRL)
 
+#if defined(_DEBUG) || defined(USE_PIX)
+	if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(GraphicsAnalysis.GetAddressOf())))) {
+		Log("Graphics Analysis is enabled\n");
+	}
+#endif
+
+#ifdef _DEBUG
+	Microsoft::WRL::ComPtr<ID3D12Debug> Debug;
+	VERIFY_SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(Debug.GetAddressOf())));
+	Debug->EnableDebugLayer();
+#endif 
+
+	Microsoft::WRL::ComPtr<IDXGIFactory4> Factory;
+	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.GetAddressOf())));
+#ifdef _DEBUG
+	EnumAdapter(Factory.Get());
+#endif
+
+	auto GetLastIndexOfHardwareAdapter = [&]() {
+		UINT Index = UINT_MAX;
+		Microsoft::WRL::ComPtr<IDXGIAdapter> Adapter;
+		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, Adapter.ReleaseAndGetAddressOf()); ++i) {
+			DXGI_ADAPTER_DESC AdapterDesc;
+			VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
+			if (AdapterDesc.DedicatedVideoMemory) {
+				Index = i;
+			}
+		}
+		assert(UINT_MAX != Index);
+		return Index;
+		};
+	winrt::com_ptr<IDXGIAdapter> Adapter;
+	Factory->EnumAdapters(GetLastIndexOfHardwareAdapter(), Adapter.put());
+
+	DXGI_ADAPTER_DESC AdapterDesc;
+	VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
+	Logf("\t%s\n", AdapterDesc.Description);
+
+	if (FAILED(CreateMaxFeatureLevelDevice(Adapter.Get()))) {
+		Error(TEXT("Cannot create device, trying to create WarpDevice ...\n"));
+		VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(IID_PPV_ARGS(Adapter.GetAddressOf())));
+		VERIFY_SUCCEEDED(CreateMaxFeatureLevelDevice(Adapter.Get()));
+	}
+
+#endif //!< USE_WINRT
+
+	LogOK("CreateDevice");
 #ifdef _DEBUG
 	CheckFeatureLevel();
 #endif
 }
+
 HRESULT DX::CreateMaxFeatureLevelDevice(IDXGIAdapter* Adapter)
 {
 	auto FeatureLevel = D3D_FEATURE_LEVEL_9_1;
@@ -505,6 +524,15 @@ void DX::EnumOutput(IDXGIAdapter* Adapter)
 		if (0 == i) { Log("\t\t[ Output ]\n"); }
 		Logf(TEXT("\t\t\t%s\n"), OutputDesc.DeviceName);
 		Logf(TEXT("\t\t\t%d x %d\n"), Width, Height);
+		switch (OutputDesc.Rotation)
+		{
+		default: break;
+		case DXGI_MODE_ROTATION_UNSPECIFIED: Log("\t\t\tROTATION_UNSPECIFIED\n"); break;
+		case DXGI_MODE_ROTATION_IDENTITY: Log("\t\t\tROTATION_IDENTITY\n"); break;
+		case DXGI_MODE_ROTATION_ROTATE90: Log("\t\t\tROTATE90\n"); break;
+		case DXGI_MODE_ROTATION_ROTATE180: Log("\t\t\tROTATE180\n"); break;
+		case DXGI_MODE_ROTATION_ROTATE270: Log("\t\t\tROTATE270\n"); break;
+		}
 
 		GetDisplayModeList(Output.Get(), DXGI_FORMAT_R8G8B8A8_UNORM);
 	}
@@ -641,9 +669,7 @@ void DX::CreateCommandAllocator(const D3D12_COMMAND_LIST_TYPE CommandListType)
 #endif
 	CommandAllocators.push_back(CA);
 
-#ifdef DEBUG_STDOUT
 	Log("\tCommandAllocator\n");
-#endif
 }
 
 /**
@@ -701,12 +727,12 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	const UINT BufferCount = 3;
 #ifdef USE_WINRT
 	winrt::com_ptr<IDXGIFactory4> Factory;
-	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.put()))); 
+	VERIFY_SUCCEEDED(CreateDXGIFactory1(__uuidof(Factory), Factory.put_void()));
 #elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<IDXGIFactory4> Factory;
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(IID_PPV_ARGS(Factory.GetAddressOf())));
 #endif
-	
+
 	//!< 最適なフルスクリーンのパフォーマンスを得るには、IDXGIOutput->GetDisplayModeList() で取得する(ディスプレイのサポートする)DXGI_MODE_DESC でないとダメなので注意  #DX_TODO
 	const DXGI_RATIONAL Rational = { 60, 1 };
 	const DXGI_MODE_DESC ModeDesc = {
@@ -715,7 +741,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 		ColorFormat,
 		DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
 		DXGI_MODE_SCALING_UNSPECIFIED
-	}; 
+	};
 	const auto& SampleDesc = SampleDescs[0];
 	DXGI_SWAP_CHAIN_DESC SwapChainDesc = {
 		ModeDesc,
@@ -732,11 +758,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	SwapChain = nullptr;
 	winrt::com_ptr<IDXGISwapChain> NewSwapChain;
 	VERIFY_SUCCEEDED(Factory->CreateSwapChain(CommandQueue.get(), &SwapChainDesc, NewSwapChain.put()));
-#if 1
 	winrt::copy_to_abi(NewSwapChain, *SwapChain.put_void());
-#else
-	VERIFY_SUCCEEDED(NewSwapChain->QueryInterface(__uuidof(SwapChain), SwapChain.put_void()));
-#endif
 #elif defined(USE_WRL)
 	SwapChain.Reset();
 	Microsoft::WRL::ComPtr<IDXGISwapChain> NewSwapChain;
@@ -744,25 +766,29 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	VERIFY_SUCCEEDED(NewSwapChain.As(&SwapChain));
 #endif
 
-	{
-		const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-		const auto Count = SwapChainDesc.BufferCount;
-
-		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, ID3D12DescriptorHeap** DescriptorHeap) {
-			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
-				Type,
-				Count,
-				D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-				0 // NodeMask ... マルチGPUの場合
-			};
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DescriptorHeap)));
-		}
 #ifdef USE_WINRT
-		(Type, Count, SwapChainDescriptorHeap.put());
-#elif defined(USE_WRL)
-		(Type, Count, SwapChainDescriptorHeap.GetAddressOf());
-#endif
+	[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
+		const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
+			Type,
+			Count,
+			D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+			0 // NodeMask ... マルチGPUの場合
+		};
+		//VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, __uuidof(DH). DH.put_void()));
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DH.put())));
 	}
+#elif defined(USE_WRL)
+	[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH) {
+		const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
+			Type,
+			Count,
+			D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+			0
+		};
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DH.GetAddressOf())));
+	}
+#endif
+	(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, SwapChainDesc.BufferCount, SwapChainDescriptorHeap);
 
 	LogOK("CreateSwapChain");
 }
@@ -775,7 +801,8 @@ void DX::CreateSwapChainResource()
 	//for (auto It = SwapChainResources.begin(); It != SwapChainResources.end(); ++It) {
 	//	const auto Index = static_cast<UINT>(std::distance(SwapChainResources.begin(), It));
 	//	//!< スワップチェインのバッファリソースを SwapChainResources へ取得
-	//	VERIFY_SUCCEEDED(SwapChain->GetBuffer(Index, IID_PPV_ARGS(It->GetAddressOf())));
+	//	VERIFY_SUCCEEDED(SwapChain->GetBuffer(Index, __uuidof(It), It.put_void()));
+	////VERIFY_SUCCEEDED(SwapChain->GetBuffer(Index, IID_PPV_ARGS(It->GetAddressOf())));
 
 	//	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	//	//!< (リソースがタイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能)
@@ -784,8 +811,7 @@ void DX::CreateSwapChainResource()
 	for (auto i = 0; i < SwapChainResources.size(); ++i) {
 #ifdef USE_WINRT
 		//!< スワップチェインのバッファリソースを SwapChainResources へ取得
-		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, IID_PPV_ARGS(SwapChainResources[i].put())));
-
+		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, __uuidof(SwapChainResources[i]), SwapChainResources[i].put_void()));
 		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 		//!< (リソースがタイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能)
 		const auto SCR = SwapChainResources[i].get();
@@ -806,22 +832,13 @@ void DX::CreateSwapChainResource()
 */
 void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, const DirectX::XMVECTORF32* Color)
 {
-	for (auto i = 0; i < SwapChainResources.size(); ++i) {
 #ifdef USE_WINRT
+	for (auto i = 0; i < SwapChainResources.size(); ++i) {
 		const auto CL = GraphicsCommandLists[i].get();
-#elif defined(USE_WRL)
-		const auto CL = GraphicsCommandLists[i].Get();
-#endif
-
 		VERIFY_SUCCEEDED(CL->Reset(CommandAllocator, nullptr));
 		{
-#ifdef USE_WINRT
 			const auto SCR = SwapChainResources[i].get();
 			const auto CDH = GetCPUDescriptorHandle(SwapChainDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
-#elif defined(USE_WRL)
-			const auto SCR = SwapChainResources[i].Get();
-			const auto CDH = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
-#endif
 			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET); {
 				if (nullptr != Color) {
 					CL->ClearRenderTargetView(CDH, *Color, 0, nullptr);
@@ -832,18 +849,30 @@ void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, cons
 	}
 
 	//!< #DX_TODO : 0 番目しかクリアしていない
-#if 1
-#ifdef USE_WINRT
 	const std::vector<ID3D12CommandList*> CommandLists = { GraphicsCommandLists[0].get() };
-#elif defined(USE_WRL)
-	const std::vector<ID3D12CommandList*> CommandLists = { GraphicsCommandLists[0].Get() };
-#endif
-#else
-	std::vector<ID3D12CommandList*> CommandLists;
-	CommandLists.reserve(GraphicsCommandLists.size());
-	for (auto i : GraphicsCommandLists) { CommandLists.push_back(i.Get()); }
-#endif
 	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
+
+#elif defined(USE_WRL)
+
+	for (auto i = 0; i < SwapChainResources.size(); ++i) {
+		const auto CL = GraphicsCommandLists[i].Get();
+		VERIFY_SUCCEEDED(CL->Reset(CommandAllocator, nullptr));
+		{
+			const auto SCR = SwapChainResources[i].Get();
+			const auto CDH = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
+			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET); {
+				if (nullptr != Color) {
+					CL->ClearRenderTargetView(CDH, *Color, 0, nullptr);
+				}
+			} ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		}
+		VERIFY_SUCCEEDED(CL->Close());
+	}
+
+	const std::vector<ID3D12CommandList*> CommandLists = { GraphicsCommandLists[0].Get() };
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
+
+#endif //!< USE_WINRT
 
 	WaitForFence();
 
@@ -852,16 +881,12 @@ void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, cons
 
 void DX::InitializeSwapChain()
 {
-#if 1
 	//!< イメージの初期化 Initialize images
 #ifdef USE_WINRT
 	//InitializeSwapchainImage(CommandAllocators[0].get());
 	InitializeSwapchainImage(CommandAllocators[0].get(), &DirectX::Colors::Red); 
 #elif defined(USE_WRL)
-	//InitializeSwapchainImage(CommandAllocators[0].Get());
 	InitializeSwapchainImage(CommandAllocators[0].Get(), &DirectX::Colors::Red); 
-#endif
-	
 #endif
 }
 
@@ -872,9 +897,7 @@ void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
 	SwapChain->GetDesc1(&SwapChainDesc);
 	VERIFY_SUCCEEDED(SwapChain->ResizeBuffers(SwapChainDesc.BufferCount, Width, Height, SwapChainDesc.Format, SwapChainDesc.Flags));
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "ResizeBuffers" << std::endl;
-#endif
+	Log("\tResizeBuffers\n");
 
 	CreateSwapChainResource();
 
@@ -883,8 +906,6 @@ void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 
 void DX::CreateDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height)
 {
-	const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-	const auto Count = 1;
 	[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count/*, ID3D12DescriptorHeap** DescriptorHeap*/) {
 		const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
 			Type,
@@ -897,7 +918,7 @@ void DX::CreateDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, con
 #elif defined(USE_WRL)
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DepthStencilDescriptorHeap.GetAddressOf())));
 #endif
-	}(Type, Count);
+	}(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1);
 
 	CreateDepthStencilResource(DepthFormat, Width, Height);
 
@@ -1041,7 +1062,8 @@ void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDe
 //	ComPtr<ID3DBlob> Blob;
 //	ComPtr<ID3DBlob> ErrorBlob;
 //	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
-//	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
+//	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(RootSignature), RootSignature.put_void()));
+////VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
 //}
 
 /**
@@ -1283,7 +1305,7 @@ BOOL DX::LoadPipelineLibrary(const std::wstring& Path)
 {
 #ifdef USE_WINRT
 	winrt::com_ptr<ID3D12Device1> Device1;
-	VERIFY_SUCCEEDED(Device->QueryInterface(IID_PPV_ARGS(Device1.put())));
+	VERIFY_SUCCEEDED(Device->QueryInterface(__uuidof(Device1), Device1.put_void()));
 #elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3D12Device1> Device1;
 	VERIFY_SUCCEEDED(Device->QueryInterface(IID_PPV_ARGS(Device1.GetAddressOf())));
@@ -1292,7 +1314,7 @@ BOOL DX::LoadPipelineLibrary(const std::wstring& Path)
 #ifdef USE_WINRT
 	winrt::com_ptr<ID3DBlob> Blob;
 	if (SUCCEEDED(D3DReadFileToBlob(Path.data(), Blob.put())) && Blob->GetBufferSize()) {
-		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(PipelineLibrary.put())));
+		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(PipelineLibrary), PipelineLibrary.put_void()));
 		return TRUE;
 	}
 #elif defined(USE_WRL)
@@ -1304,7 +1326,7 @@ BOOL DX::LoadPipelineLibrary(const std::wstring& Path)
 #endif
 	else {
 #ifdef USE_WINRT
-		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, IID_PPV_ARGS(PipelineLibrary.put())));
+		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, __uuidof(PipelineLibrary), PipelineLibrary.put_void()));
 #elif defined(USE_WRL)
 		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, IID_PPV_ARGS(PipelineLibrary.GetAddressOf())));
 #endif
@@ -1442,7 +1464,7 @@ void DX::CreatePipelineState_Graphics()
 	if(LoadPipelineLibrary(PCOPath)) {
 		//!< ライブラリからパイプラインステートを取得する (重複を防ぐためにライブラリデータベースとDescが比較される)
 #ifdef USE_WINRT
-		VERIFY_SUCCEEDED(PipelineLibrary->LoadGraphicsPipeline(PCOName.data(), &GraphicsPipelineStateDesc, IID_PPV_ARGS(PipelineState.put())));
+		VERIFY_SUCCEEDED(PipelineLibrary->LoadGraphicsPipeline(PCOName.data(), &GraphicsPipelineStateDesc, __uuidof(PipelineState), PipelineState.put_void()));
 #elif defined(USE_WRL)
 		VERIFY_SUCCEEDED(PipelineLibrary->LoadGraphicsPipeline(PCOName.data(), &GraphicsPipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
 #endif
@@ -1468,7 +1490,6 @@ void DX::CreatePipelineState_Compute()
 #ifdef _DEBUG
 	PerformanceCounter PC("CreatePipelineState_Compute : ");
 #endif
-
 	assert(nullptr != RootSignature && "");
 
 	//!< シェーダ
@@ -1516,17 +1537,13 @@ void DX::PopulateCommandList(const size_t i)
 #ifdef USE_WINRT
 	const auto CL = GraphicsCommandLists[i].get();
 	const auto CA = CommandAllocators[0].get();
-#elif defined(USE_WRL)
-	const auto CL = GraphicsCommandLists[i].Get();
-	const auto CA = CommandAllocators[0].Get();
-#endif
-
-#ifdef USE_WINRT
 	const auto SCR = SwapChainResources[i].get();
 	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
 #elif defined(USE_WRL)
 	const auto SCR = SwapChainResources[i].Get();
 	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
+	const auto CL = GraphicsCommandLists[i].Get();
+	const auto CA = CommandAllocators[0].Get();
 #endif
 
 	//!< GPU が参照している間は、コマンドアロケータの Reset() はできない
