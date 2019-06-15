@@ -30,6 +30,9 @@ xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(ProjectDir)
 xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)
 ~~~
 
+### エディット & コンティニュー
+- Tools - Option - Debugging - General - Enable Edit and Continue
+
 ## VK
 
 #### SDK
@@ -197,6 +200,21 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
 	* PrintScreen でキャプチャ (Debug - Graphics - Capture Frame)
 	* キャプチャしたフレームがサムネイルされる、ダブルクリックすると Analyzer が起動する
 		* 下の方に出るので Frame time, Frames per second を閉じないと見えないかも
+
+#### ルートシグネチャをHLSLで指定する
+* 参考
+	* https://docs.microsoft.com/en-us/windows/desktop/direct3d12/specifying-root-signatures-in-hlsl
+* 以下のような define定義を書いたファイル RS.hlsl を準備する
+~~~
+#define RS "..."
+~~~
+* コンパイル 
+	* fxc.exe は C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x64 以下などにあるはず
+	* RS.fxo をBlobとして読み込んで使う
+	* ファイル名が RS.hlsl、define定義名が RS、出力ファイルが RS.fxo の場合の例
+~~~
+fxc /T rootsig_1_1 RS.hlsl /E RS /Fo RS.fxo
+~~~
 
 #### トラブルシューティング
 * 「このプロジェクトは、このコンピュータ上にないNugetパッケージを参照しています」と出る場合

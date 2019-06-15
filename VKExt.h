@@ -25,20 +25,25 @@ public:
 	(コンバインドイメージサンプラ == サンプラ + サンプルドイメージ)
 	デスクリプタタイプに VK_DESCRIPTOR_TYPE_SAMPLER や VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE を指定するか、VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER を指定するかの違い
 
-	VK_DESCRIPTOR_TYPE_SAMPLER ... サンプラ
+	VK_DESCRIPTOR_TYPE_SAMPLER ... サンプラ (VkSampler)
 		layout (set=0, binding=0) uniform sampler MySampler;
-	VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ... サンプルドイメージ
+	VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE ... サンプルドイメージ (VkImage)
 		layout (set=0, binding=0) uniform texture2D MyTexture2D;
-
-	VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ... コンバインドイメージサンプラ
+	VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ... コンバインドイメージサンプラ (VkSampler + VkImage)
 		layout (set=0, binding=0) uniform sampler2D MySampler2D;
-
-	VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ... ストレージイメージ (シェーダから書き込み可能)
+	VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ... ストレージイメージ (VkImage)
+		シェーダから書き込み可能
+		アトミックな操作が可能
+		レイアウトは VK_IMAGE_LAYOUT_GENERAL にしておくこと
 	layout (set=0, binding=0, r32f) uniform image2D MyImage2D;
 
-	VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER ... ユニフォームテクセルバッファ
+	VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER ... ユニフォームテクセルバッファ (VkBuffer)
+		1Dのイメージのように扱われる
+		1Dイメージは最低限4096テクセルだが、ユニフォームテクセルバッファは最低限65536テクセル(イメージよりも大きなデータへアクセス可能)
 		layout (set=0, binding=0) uniform samplerBuffer MySamplerBuffer;
-	VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER ... ストレージテクセルバッファ(シェーダから書き込み可能)
+	VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER ... ストレージテクセルバッファ (vkBuffer)
+		シェーダから書き込み可能
+		アトミックな操作が可能
 		layout (set=0, binding=0, r32f) uniform imageBuffer MyImageBuffer;
 
 	VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ... 

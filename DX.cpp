@@ -1164,10 +1164,12 @@ void DX::CreateUnorderedAccessTexture()
 	LogOK("CreateUnorderedAccessBuffer");
 }
 
-/**
-@brief シェーダとのバインディング (VK::CreateDescriptorSetLayout() 相当)
-*/
-void DX::CreateRootSignature()
+//!< ルートシグネチャをシリアライズしてブロブを作る
+#ifdef USE_WINRT
+void DX::SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob)
+#elif defined(USE_WRL)
+void DX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
+#endif
 {
 	std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
 		/**
@@ -1222,17 +1224,58 @@ void DX::CreateRootSignature()
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 	};
 #ifdef USE_WINRT
-	winrt::com_ptr<ID3DBlob> Blob;
 	winrt::com_ptr<ID3DBlob> ErrorBlob;
-	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.put(), ErrorBlob.put()));
-	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(RootSignature), RootSignature.put_void()));
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.put(), ErrorBlob.put()));
 #elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3DBlob> Blob;
 	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
-	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
-	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.GetAddressOf(), ErrorBlob.GetAddressOf()));
+#endif
+}
+
+//!< シェーダからルートシグネチャパートを取り出しブロブを作る
+#ifdef USE_WINRT
+void DX::GetRootSignaturePartFromShader(winrt::com_ptr<ID3DBlob>& RSBlob)
+#elif defined(USE_WRL)
+void DX::GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
+#endif
+{
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3DBlob> ShaderBlob;
+	D3DReadFileToBlob((GetBasePath() + TEXT(".rs.cso")).data(), ShaderBlob.put());
+#elif defined(USE_WRL)
+	Microsoft::WRL::ComPtr<ID3DBlob> ShaderBlob;
+	D3DReadFileToBlob((GetBasePath() + TEXT(".rs.cso")).data(), ShaderBlob.GetAddressOf());
+#endif
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(D3DGetBlobPart(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, RSBlob.put()));
+#elif defined(USE_WRL)
+	VERIFY_SUCCEEDED(D3DGetBlobPart(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, RSBlob.GetAddressOf()));
+#endif
+}
+
+/**
+@brief シェーダとのバインディング (VK::CreateDescriptorSetLayout() 相当)
+*/
+void DX::CreateRootSignature()
+{
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3DBlob> RSBlob;
+#elif defined(USE_WRL)
+Microsoft::WRL::ComPtr<ID3DBlob> RSBlob;
 #endif
 	
+#ifdef ROOTSIGNATRUE_FROM_SHADER
+	GetRootSignaturePartFromShader(RSBlob);
+#else
+	SerializeRootSignature(RSBlob);
+#endif
+
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, RSBlob->GetBufferPointer(), RSBlob->GetBufferSize(), __uuidof(RootSignature), RootSignature.put_void()));
+#elif defined(USE_WRL)
+	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, RSBlob->GetBufferPointer(), RSBlob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
+#endif
+
 	LogOK("CreateRootSignature");
 }
 
@@ -1275,14 +1318,16 @@ void DX::CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs
 #endif
 	}
 
-	//!< デバッグ情報を取り除く
+	//!< デバッグ情報、ルートシグネチャを取り除く
 #ifndef _DEBUG
 	for (auto i : ShaderBlobs) {
 		if (nullptr != i) {
 #ifdef USE_WINRT
 			VERIFY_SUCCEEDED(D3DStripShader(i->GetBufferPointer(), i->GetBufferSize(), D3DCOMPILER_STRIP_DEBUG_INFO, i.put()));
+			VERIFY_SUCCEEDED(D3DStripShader(i->GetBufferPointer(), i->GetBufferSize(), D3DCOMPILER_STRIP_ROOT_SIGNATURE, i.put()));
 #elif defined(USE_WRL)
 			VERIFY_SUCCEEDED(D3DStripShader(i->GetBufferPointer(), i->GetBufferSize(), D3DCOMPILER_STRIP_DEBUG_INFO, i.GetAddressOf()));
+			VERIFY_SUCCEEDED(D3DStripShader(i->GetBufferPointer(), i->GetBufferSize(), D3DCOMPILER_STRIP_ROOT_SIGNATURE, i.GetAddressOf()));
 #endif
 		}
 	}

@@ -230,6 +230,15 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
+#ifdef USE_WINRT
+void BillboardDX::SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob)
+#elif defined(USE_WRL)
+void BillboardDX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
+#endif
+{
+	Super::SerializeRootSignature(RSBlob);
+}
+
 void BillboardDX::PopulateCommandList(const size_t i)
 {
 #ifdef USE_WINRT
@@ -309,5 +318,6 @@ void BillboardDX::PopulateCommandList(const size_t i)
 	}
 	VERIFY_SUCCEEDED(CL->Close());
 }
+
 #pragma endregion
 

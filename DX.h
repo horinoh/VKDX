@@ -33,8 +33,7 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 
 #include <comdef.h>
 
-//!< _DEBUG であれば何もしなくても PIX 使用可能、Release で PIX を使用したいような場合は USE_PIX を定義する 
-//!< When want to use pix in Release build, define USE_PIX
+//!< _DEBUG であれば何もしなくても PIX 使用可能、Release で PIX を使用したいような場合は USE_PIX を定義する (When want to use pix in Release build, define USE_PIX)
 //!< ソリューション右クリック - ソリューションのNuGetパッケージの管理 - 参照タブ - WinPixEventRuntimeで検索 - プロジェクトを選択してインストールしておくこと
 //#define USE_PIX
 #include <pix3.h>
@@ -42,6 +41,9 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 #if defined(_DEBUG) || defined(USE_PIX)
 #include <DXProgrammableCapture.h>
 #endif
+
+//!< シェーダブロブからルートシグネチャを作成する場合 (Create root signature from shader blob)
+//#define ROOTSIGNATRUE_FROM_SHADER
 
 #ifndef BREAK_ON_FAILED
 #define BREAK_ON_FAILED(vr) if(FAILED(vr)) { Log(DX::GetHRESULTString(vr).c_str()); DEBUG_BREAK(); }
@@ -172,6 +174,13 @@ protected:
 	virtual void CreateViewport(const RECT& Rect, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f) { CreateViewport(static_cast<FLOAT>(Rect.right - Rect.left), static_cast<FLOAT>(Rect.bottom - Rect.top), MinDepth, MaxDepth); }
 	virtual void CreateViewportTopFront(const FLOAT Width, const FLOAT Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 	
+#ifdef USE_WINRT
+	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob);
+	virtual void GetRootSignaturePartFromShader(winrt::com_ptr<ID3DBlob>& RSBlob);
+#elif defined(USE_WRL)
+	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob);
+	virtual void GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob);
+#endif	
 	virtual void CreateDescriptorRanges(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {}
 	virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {}
 	virtual void CreateRootSignature();

@@ -637,21 +637,6 @@ void VK::ValidateFormatProperties(VkPhysicalDevice PD, const VkFormat Format, co
 	VkFormatProperties FP;
 	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
 
-	if (Usage & VK_IMAGE_USAGE_STORAGE_BIT) {
-		if (!(FP.optimalTilingFeatures &  VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
-			Error("VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT not supported\n");
-			DEBUG_BREAK();
-		}
-		//!< #VK_TODO アトミック使用時のみチェックする
-		const auto bUseAtomic = false; 
-		if (bUseAtomic) {
-			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)) {
-				Error("VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT not supported\n");
-				DEBUG_BREAK();
-			}
-		}
-	}
-
 	if (Usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT) {
 #if 0
 		//!< カラーの場合 (In case color)
@@ -702,6 +687,26 @@ void VK::ValidateFormatProperties_Sampled(VkPhysicalDevice PD, const VkFormat Fo
 		if (VK_FILTER_LINEAR == Mag || VK_FILTER_LINEAR == Min || VK_SAMPLER_MIPMAP_MODE_LINEAR == Mip) {
 			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
 				Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported\n");
+				DEBUG_BREAK();
+			}
+		}
+	}
+}
+
+void VK::ValidateFormatProperties_Storage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const bool UseAtomic) const
+{
+	VkFormatProperties FP;
+	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
+
+	if (Usage & VK_IMAGE_USAGE_STORAGE_BIT) {
+		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
+			Error("VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT not supported\n");
+			DEBUG_BREAK();
+		}
+		if (UseAtomic) {
+			//!< アトミック操作が保証されているのは VK_FORMAT_R32_UINT, VK_FORMAT_R32_SINT のみ、それ以外でやりたい場合はサポートされているか調べる必要がある
+			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)) {
+				Error("VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT not supported\n");
 				DEBUG_BREAK();
 			}
 		}
@@ -785,11 +790,13 @@ void VK::CreateInstance()
 #ifdef _DEBUG
 		//!< ↓標準的なバリデーションレイヤセットを最適な順序でロードする指定
 		//!< (プログラムからやらない場合は環境変数 VK_INSTANCE_LAYERS へセットしておいてもよい)
-		"VK_LAYER_LUNARG_standard_validation", 
+		"VK_LAYER_LUNARG_standard_validation",
 		//!< 
 		"VK_LAYER_LUNARG_object_tracker",
 		//!< API 呼び出しとパラメータをコンソール出力する (出力がうるさいのでここでは指定しない)
 		//"VK_LAYER_LUNARG_api_dump",
+#else
+		"VK_LAYER_LUNARG_core_validation",
 #endif
 #ifdef USE_RENDERDOC
 		"VK_LAYER_RENDERDOC_Capture",
@@ -1363,7 +1370,7 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface)
 
 	//!< デバイスレベルの関数をロードする Load device level functions
 #ifdef VK_NO_PROTOYYPES
-#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc)); assert(nullptr != vk ## proc && #proc); assert(nullptr != vk ## proc && #proc);
+#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc)); assert(nullptr != vk ## proc && #proc && #proc);
 #include "VKDeviceProcAddr.h"
 #undef VK_DEVICE_PROC_ADDR
 #endif //!< VK_NO_PROTOYYPES

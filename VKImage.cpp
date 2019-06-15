@@ -463,3 +463,17 @@ void VKImage::XXX(VkBuffer* Buf, VkDeviceMemory* DM, const gli::texture& GLIText
 		vkDestroyBuffer(Device, *Buf, GetAllocationCallbacks());
 }
 #endif
+
+#if 0
+//!< Storage Image を作成する例
+VkDeviceMemory* DeviceMemory;
+VkImage* Image;
+VkImageView* ImageView;
+Super::CreateImage(Image, 0, VK_IMAGE_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM, { 1280, 720 }, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_STORAGE_BIT);
+CreateDeviceMemory(DeviceMemory, *Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+BindDeviceMemory(*Image, *DeviceMemory);
+Super::CreateImageView(ImageView, *Image, VK_IMAGE_VIEW_TYPE_2D, VK_FORMAT_R8G8B8A8_UNORM, 
+	{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A }, 
+	ImageSubresourceRange_ColorAll);
+//!< イメージレイアウトを VK_IMAGE_LAYOUT_GENERAL へ変更すること、このレイアウトでのみ操作がサポートされている
+#endif
