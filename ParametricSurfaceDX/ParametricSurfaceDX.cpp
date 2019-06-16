@@ -230,6 +230,29 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
+#ifdef USE_WINRT
+void ParametricSurfaceDX::SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob)
+#elif defined(USE_WRL)
+void ParametricSurfaceDX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
+#endif
+{
+	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
+		0, nullptr,
+		0, nullptr,
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+	};
+
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3DBlob> ErrorBlob;
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.put(), ErrorBlob.put()));
+#elif defined(USE_WRL)
+	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.GetAddressOf(), ErrorBlob.GetAddressOf()));
+#endif
+
+	LogOK("SerializeRootSignature");
+}
+
 void ParametricSurfaceDX::PopulateCommandList(const size_t i)
 {
 #ifdef USE_WINRT

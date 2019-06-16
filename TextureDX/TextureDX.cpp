@@ -256,10 +256,23 @@ void TextureDX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
 		},
 	};
 
+	const std::array<D3D12_STATIC_SAMPLER_DESC, 1> StaticSamplerDescs = {
+		{
+			D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+			0.0f,
+			0,
+			D3D12_COMPARISON_FUNC_NEVER,
+			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+			0.0f, 1.0f,
+			0, 0, D3D12_SHADER_VISIBILITY_PIXEL
+		}
+	};
+
 	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
 		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
 		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
-		D3D12_ROOT_SIGNATURE_FLAG_NONE//D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+		D3D12_ROOT_SIGNATURE_FLAG_NONE
 	};
 
 #ifdef USE_WINRT

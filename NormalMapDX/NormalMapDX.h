@@ -33,13 +33,12 @@ protected:
 		return static_cast<D3D_PRIMITIVE_TOPOLOGY>(static_cast<UINT>(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST) + (PatchControlPoint - 1));
 	}
 
-	virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
-		CreateRootParameters_1CBV_1SRV(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_GEOMETRY, D3D12_SHADER_VISIBILITY_PIXEL);
-	}
-	virtual void CreateDescriptorRanges(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
-		//!< CBV:register(b0, space0), SRV:register(t0, space0)
-		CreateDescriptorRanges_1CBV_1SRV(DescriptorRanges);
-	}
+#ifdef USE_WINRT
+	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob) override;
+#elif defined(USE_WRL)
+	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob) override;
+#endif
+
 	virtual void CreateDescriptorHeap() override {
 		CreateDescriptorHeap_1CBV_1SRV<Transform>();
 	}
@@ -67,9 +66,6 @@ protected:
 #elif defined(USE_WRL)
 		LoadImage(ImageResource.GetAddressOf(), TEXT("NormalMap.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 #endif
-	}
-	virtual void CreateStaticSamplerDesc(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) const override {
-		CreateStaticSamplerDesc_LW(StaticSamplerDesc, ShaderVisibility, MaxLOD);
 	}
 
 	virtual void PopulateCommandList(const size_t i) override;

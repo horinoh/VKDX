@@ -30,10 +30,8 @@ protected:
 		PipelineTessellationStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO, nullptr, 0, PatchControlPoint };
 	}
 
-	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const override {
-		//!< UB:(set = ..., binding = 0), CIS:(set = ..., binding = 1)
-		CreateDescriptorSetLayoutBindings_1UB_1CIS(DescriptorSetLayoutBindings, VK_SHADER_STAGE_GEOMETRY_BIT, VK_SHADER_STAGE_FRAGMENT_BIT);
-	}
+	virtual void CreateDescriptorSetLayout() override;
+
 	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const override {
 		CreateDescriptorPoolSizes_1UB_1CIS(DescriptorPoolSizes);
 	}
