@@ -230,6 +230,31 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
+void TextureVK::CreateDescriptorSetLayout()
+{
+	const std::array<VkDescriptorSetLayoutBinding, 1> DescriptorSetLayoutBindings = {
+		{
+			0,
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER/*VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE*/,
+			1,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			nullptr
+		}, 
+	};
+
+	const VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DescriptorSetLayoutBindings.size()), DescriptorSetLayoutBindings.data()
+	};
+
+	VkDescriptorSetLayout DescriptorSetLayout = VK_NULL_HANDLE;
+	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, GetAllocationCallbacks(), &DescriptorSetLayout));
+	DescriptorSetLayouts.push_back(DescriptorSetLayout);
+
+	LogOK("CreateDescriptorSetLayout");
+}
 void TextureVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandPools[0].second[i];//CommandBuffers[i];

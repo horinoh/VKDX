@@ -40,19 +40,14 @@ protected:
 	
 #ifdef USE_WINRT
 	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob) override;
-#else
+#elif defined(USE_WRL)
 	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob) override;
 #endif
 
-	virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
-		CreateRootParameters_1CBV(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_GEOMETRY);
-	}
-	virtual void CreateDescriptorRanges(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
-		CreateDescriptorRanges_1CBV(DescriptorRanges);
-	}
 	virtual void CreateDescriptorHeap() override {
 		CreateDescriptorHeap_1CBV<Transform>();
 	}
+
 	virtual void UpdateDescriptorHeap() override {
 		//static FLOAT Angle = 0.0f;
 		//DirectX::XMMATRIX World = DirectX::XMMatrixRotationX(Angle);

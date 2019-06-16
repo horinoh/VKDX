@@ -112,7 +112,8 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(ProjectDir)
+      <Command>fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
+xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(ProjectDir)
 xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
@@ -151,7 +152,8 @@ xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)</Command>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(ProjectDir)
+      <Command>fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
+xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(ProjectDir)
 xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>

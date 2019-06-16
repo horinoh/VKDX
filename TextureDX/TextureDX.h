@@ -16,12 +16,12 @@ public:
 protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4); }
 
-	virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
-		CreateRootParameters_1SRV(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_PIXEL);
-	}
-	virtual void CreateDescriptorRanges(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
-		CreateDescriptorRanges_1SRV(DescriptorRanges);
-	}
+#ifdef USE_WINRT
+	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob) override;
+#elif defined(USE_WRL)
+	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob) override;
+#endif
+
 	virtual void CreateDescriptorHeap() override {
 		CreateDescriptorHeap_1SRV();
 	}

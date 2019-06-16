@@ -16,8 +16,7 @@ uint Mandelbrot(const float2 c, const uint iterations)
 
 RWTexture2D<float4> TextureMap : register(u0, space0);
 
-static const uint3 WorkGroupSize = uint3(32, 32, 1);
-[numthreads(WorkGroupSize.x, WorkGroupSize.y, WorkGroupSize.z)]
+[numthreads(32, 32, 1)]
 void main(uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID, uint3 dispatchThreadId : SV_DispatchThreadID, uint groupIndex : SV_GroupIndex)
 {
 #if 0
@@ -43,7 +42,7 @@ void main(uint3 groupId : SV_GroupID, uint3 groupThreadId : SV_GroupThreadID, ui
 	TextureMap[dispatchThreadId.xy] = float4(color, 1.0f);
 #else
 	//!< ŠiŽq–Í—l
-	TextureMap[dispatchThreadId.xy] = float4(float2(groupThreadId.xy) / float2(WorkGroupSize.xy), 0.0f, 1.0f);
+	TextureMap[dispatchThreadId.xy] = float4(float2(groupThreadId.xy) / float2(32.0f, 32.0f), 0.0f, 1.0f);
 #endif
 
 	AllMemoryBarrier();

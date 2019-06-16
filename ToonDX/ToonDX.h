@@ -39,6 +39,7 @@ protected:
 	virtual void CreateDescriptorRanges(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
 		CreateDescriptorRanges_1CBV(DescriptorRanges);
 	}
+
 	virtual void CreateDescriptorHeap() override {
 		CreateDescriptorHeap_1CBV<Transform>();
 	}

@@ -352,6 +352,20 @@ void TriangleVK::CreateIndexBuffer()
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
+void TriangleVK::CreateDescriptorSetLayout()
+{
+	const VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+			nullptr,
+			0,
+			0, nullptr
+	};
+	VkDescriptorSetLayout DescriptorSetLayout = VK_NULL_HANDLE;
+	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, GetAllocationCallbacks(), &DescriptorSetLayout));
+	DescriptorSetLayouts.push_back(DescriptorSetLayout);
+
+	LogOK("CreateDescriptorSetLayout");
+}
 void TriangleVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandPools[0].second[i];//CommandBuffers[i];

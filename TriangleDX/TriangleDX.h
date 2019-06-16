@@ -26,6 +26,13 @@ protected:
 		CreateShader_VsPs(ShaderBlobs);
 		Super::CreateShader(ShaderBlobs);
 	}
+	
+#ifdef USE_WINRT
+	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob) override;
+#elif defined(USE_WRL)
+	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob) override;
+#endif
+
 	virtual void CreateInputLayout(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs) const override {
 		CreateInputLayoutSlot<Vertex_PositionColor>(InputElementDescs, 0);
 	}

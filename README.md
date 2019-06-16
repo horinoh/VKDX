@@ -210,11 +210,25 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
 ~~~
 * コンパイル 
 	* fxc.exe は C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x64 以下などにあるはず
+	* fxc の代わりに dxc だとうまくいかなかった (コンパイルはできるが、読み込むと死ぬ)
 	* RS.fxo をBlobとして読み込んで使う
-	* ファイル名が RS.hlsl、define定義名が RS、出力ファイルが RS.fxo の場合の例
+	* ファイル名が RS.hlsl、define定義名が RS、出力ファイルが RS.cso の場合の例
 ~~~
-fxc /T rootsig_1_1 RS.hlsl /E RS /Fo RS.fxo
+fxc /T rootsig_1_1 RS.hlsl /E RS /Fo RS.cso
 ~~~
+* Visual Studio への追加
+	* Proerties - Build Events - Pre Build Event - Command Line に以下のように記述
+~~~
+fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
+~~~
+<!--
+	* Properties - HLSLCompiler - General - Shader Type を Generate Root Signature Object にする (しなくても大丈夫だが一応しておく)
+	* Properties - HLSLCompiler - All Options - Entry Point Name に main とあるのを消す (しなくても大丈夫だが一応しておく)
+	* Properties - HLSLCompiler - Command Line に以下のように記述
+~~~
+/T rootsig_1_1 /E RS
+~~~
+-->
 
 #### トラブルシューティング
 * 「このプロジェクトは、このコンピュータ上にないNugetパッケージを参照しています」と出る場合

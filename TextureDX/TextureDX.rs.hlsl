@@ -1,0 +1,2 @@
+#define RS	"DescriptorTable(SRV(t0, space=0), visibility=SHADER_VISIBILITY_PIXEL),"\
+			"StaticSampler(s0, space=0, filter=FILTER_MIN_MAG_MIP_LINEAR, addressU=TEXTURE_ADDRESS_WRAP, addressV=TEXTURE_ADDRESS_WRAP, addressW=TEXTURE_ADDRESS_WRAP, mipLODBias=0.f, minLOD=0.f, maxLOD=1.f, maxAnisotropy=0, comparisonFunc=COMPARISON_NEVER, borderColor=STATIC_BORDER_COLOR_OPAQUE_WHITE, visibility=SHADER_VISIBILITY_PIXEL)"

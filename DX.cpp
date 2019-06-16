@@ -1223,6 +1223,7 @@ void DX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
 		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 	};
+
 #ifdef USE_WINRT
 	winrt::com_ptr<ID3DBlob> ErrorBlob;
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.put(), ErrorBlob.put()));
@@ -1230,6 +1231,8 @@ void DX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
 	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.GetAddressOf(), ErrorBlob.GetAddressOf()));
 #endif
+
+	LogOK("SerializeRootSignature");
 }
 
 //!< シェーダからルートシグネチャパートを取り出しブロブを作る
@@ -1241,16 +1244,18 @@ void DX::GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob
 {
 #ifdef USE_WINRT
 	winrt::com_ptr<ID3DBlob> ShaderBlob;
-	D3DReadFileToBlob((GetBasePath() + TEXT(".rs.cso")).data(), ShaderBlob.put());
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((GetBasePath() + TEXT(".rs.cso")).data(), ShaderBlob.put()));
 #elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3DBlob> ShaderBlob;
-	D3DReadFileToBlob((GetBasePath() + TEXT(".rs.cso")).data(), ShaderBlob.GetAddressOf());
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((GetBasePath() + TEXT(".rs.cso")).data(), ShaderBlob.GetAddressOf()));
 #endif
 #ifdef USE_WINRT
 	VERIFY_SUCCEEDED(D3DGetBlobPart(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, RSBlob.put()));
 #elif defined(USE_WRL)
 	VERIFY_SUCCEEDED(D3DGetBlobPart(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, RSBlob.GetAddressOf()));
 #endif
+
+	LogOK("GetRootSignaturePartFromShader");
 }
 
 /**
@@ -1286,13 +1291,13 @@ void DX::CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs
 #endif
 {
 	for (auto i : ShaderBlobs) {
-		//!< 「PDBパート」を取得
+		//!< PDBパート、無い場合もあるので HRESULT は VERIFY しない
 #ifdef USE_WINRT
 		winrt::com_ptr<ID3DBlob> PDBPart;
-		VERIFY_SUCCEEDED(D3DGetBlobPart(i->GetBufferPointer(), i->GetBufferSize(), D3D_BLOB_PDB, 0, PDBPart.put())); 
+		const auto HR = D3DGetBlobPart(i->GetBufferPointer(), i->GetBufferSize(), D3D_BLOB_PDB, 0, PDBPart.put());
 #elif defined(USE_WRL)
 		Microsoft::WRL::ComPtr<ID3DBlob> PDBPart;
-		VERIFY_SUCCEEDED(D3DGetBlobPart(i->GetBufferPointer(), i->GetBufferSize(), D3D_BLOB_PDB, 0, PDBPart.GetAddressOf())); 
+		const auto HR = D3DGetBlobPart(i->GetBufferPointer(), i->GetBufferSize(), D3D_BLOB_PDB, 0, PDBPart.GetAddressOf());
 #endif
 
 #if 0

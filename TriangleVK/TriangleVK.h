@@ -24,7 +24,7 @@ protected:
 	virtual void CreateVertexInput(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions) const override {
 		CreateVertexInputBinding<Vertex_PositionColor>(VertexInputBindingDescriptions, VertexInputAttributeDescriptions, 0);
 	}
-
+	virtual void CreateDescriptorSetLayout() override;
 	virtual void PopulateCommandBuffer(const size_t i) override;
 };
 #pragma endregion
