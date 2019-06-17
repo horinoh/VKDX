@@ -40,7 +40,7 @@ protected:
 		PipelineTessellationStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO, nullptr, 0, PatchControlPoint };
 	}
 
-	virtual void CreateDescriptorSetLayout() override;
+	virtual void CreatePipelineLayout() override;
 
 	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const override {
 		CreateDescriptorPoolSizes_1UB(DescriptorPoolSizes);

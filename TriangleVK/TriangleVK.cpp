@@ -352,19 +352,33 @@ void TriangleVK::CreateIndexBuffer()
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void TriangleVK::CreateDescriptorSetLayout()
+void TriangleVK::CreatePipelineLayout()
 {
-	const VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-			nullptr,
-			0,
-			0, nullptr
-	};
-	VkDescriptorSetLayout DescriptorSetLayout = VK_NULL_HANDLE;
-	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, GetAllocationCallbacks(), &DescriptorSetLayout));
-	DescriptorSetLayouts.push_back(DescriptorSetLayout);
+	const std::array<VkDescriptorSetLayoutBinding, 0> DSLBs = {};
 
-	LogOK("CreateDescriptorSetLayout");
+	const VkDescriptorSetLayoutCreateInfo DSLCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
+	};
+
+	VkDescriptorSetLayout DSL = VK_NULL_HANDLE;
+	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
+	DescriptorSetLayouts.push_back(DSL);
+
+	const std::array<VkPushConstantRange, 0> PCRs = {};
+
+	const VkPipelineLayoutCreateInfo PLCI = {
+		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
+		static_cast<uint32_t>(PCRs.size()), PCRs.data()
+	};
+	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PipelineLayout));
+
+	LogOK("CreatePipelineLayout");
 }
 void TriangleVK::PopulateCommandBuffer(const size_t i)
 {

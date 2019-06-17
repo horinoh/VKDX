@@ -82,17 +82,14 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateTexture();
 
-	//!< デスクリプタセットレイアウト(ルートシグネチャ)
-	CreateDescriptorSetLayout();
-	{
-		//!< ユニフォームバッファ(コンスタントバッファ)
-		CreateUniformBuffer();
-	}
+	//!< パイプラインレイアウト (ルートシグネチャ相当)
+	CreatePipelineLayout();
+
+	//!< ユニフォームバッファ(コンスタントバッファ相当)
+	CreateUniformBuffer();
 	//!< デスクリプタ
 	CreateDescriptorSet();
 	UpdateDescriptorSet();
-
-	CreatePushConstantRanges();
 
 	CreateRenderPass();
 	CreateFramebuffer();
@@ -2126,6 +2123,43 @@ void VK::CreateDescriptorSetLayout()
 
 	LogOK("CreateDescriptorSetLayout");
 }
+
+void VK::CreatePipelineLayout()
+{
+	const std::array<VkDescriptorSetLayoutBinding, 0> DSLBs = {};
+
+	const VkDescriptorSetLayoutCreateInfo DSLCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
+	};
+
+	VkDescriptorSetLayout DSL = VK_NULL_HANDLE;
+	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
+	DescriptorSetLayouts.push_back(DSL);
+
+	//!< デスクリプタセットよりも高速
+	//!< パイプラインレイアウト全体で128 Byte(ハードが許せばこれ以上使える場合もある ex)GTX970M ... 256byte)
+	//!< 各シェーダステージは1つのプッシュコンスタントにしかアクセスできない
+	//!< 各々のシェーダステージが共通のレンジを持たないような「ワーストケース」では 128 / 5(シェーダステージ)で 1シェーダステージで 25 - 6 Byte程度になる
+	const std::array<VkPushConstantRange, 0> PCRs = {
+		//{ VK_SHADER_STAGE_VERTEX_BIT, 0, 64 },
+		//{ VK_SHADER_STAGE_FRAGMENT_BIT, 64, 64 },
+	};
+
+	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
+		static_cast<uint32_t>(PCRs.size()), PCRs.data()
+	};
+	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, GetAllocationCallbacks(), &PipelineLayout));
+
+	LogOK("CreatePipelineLayout");
+}
+
 /**
 @brief シェーダとのバインディングのレイアウト
 @note DescriptorSet は「DescriptorSetLayt 型」のインスタンスのようなもの
@@ -2172,26 +2206,6 @@ void VK::CreateDescriptorSet()
 
 		LogOK("CreateDescriptorSet");
 	}
-}
-
-/**
-@brief デスクリプタセットよりも高速
-パイプラインレイアウト全体で128 Byte (ハードが許せばこれ以上使える場合もある ex)GTX970M ... 256byte)
-
-各シェーダステージは1つのプッシュコンスタントにしかアクセスできない
-各々のシェーダステージが共通のレンジを持たないような「ワーストケース」では 128 / 5(シェーダステージ)で 1シェーダステージで 25-6 Byte程度になる
-*/
-void VK::CreatePushConstantRanges()
-{
-#if 1
-	//!< ここではバーテックス、フラグメントシェーダに 64byte 確保 (使用しない分には問題ない) In this case, assign 64byte for vertex and fragment shader
-	PushConstantRanges = {
-		{ VK_SHADER_STAGE_VERTEX_BIT, 0, 64 },
-		{ VK_SHADER_STAGE_FRAGMENT_BIT, 64, 64 },
-	};
-#else
-	PushConstantRanges = {};
-#endif
 }
 
 void VK::DestroyFramebuffer()
@@ -2561,18 +2575,6 @@ void VK::CreatePipeline_Graphics()
 		static_cast<uint32_t>(DynamicStates.size()), DynamicStates.data()
 	};
 
-	//!< パイプラインレイアウト
-	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
-		static_cast<uint32_t>(PushConstantRanges.size()), PushConstantRanges.data()
-	};
-	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, GetAllocationCallbacks(), &PipelineLayout));
-	//!< 本来 PipelineLayout を作成したら、DescritptorSetLayout は破棄しても良い
-	//!< ただし、同じレイアウトの DescriptorSet を再作成するような場合に必要になるのでここでは残しておくことにする
-
 	/**
 	@brief 継承
 	basePipelineHandle, basePipelineIndex は同時に使用できない、それぞれ使用しない場合は VK_NULL_HANDLE, -1 を指定
@@ -2637,15 +2639,6 @@ void VK::CreatePipeline_Compute()
 	std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos;
 	CreateShader(ShaderModules, PipelineShaderStageCreateInfos);
 	
-	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
-		static_cast<uint32_t>(PushConstantRanges.size()), PushConstantRanges.data()
-	};
-	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, GetAllocationCallbacks(), &PipelineLayout));
-
 	const std::vector<VkComputePipelineCreateInfo> ComputePipelineCreateInfos = {
 		{
 			VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,

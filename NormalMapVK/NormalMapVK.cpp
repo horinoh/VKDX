@@ -230,9 +230,27 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void NormalMapVK::CreateDescriptorSetLayout()
+void NormalMapVK::CreatePipelineLayout()
 {
-	const std::array<VkDescriptorSetLayoutBinding, 2> DescriptorSetLayoutBindings = { { //!< arrayの初期化は"{"が余計に必要
+	//!< ImmutableSampler == STATIC_SAMPLER_DESC 相当？
+	//const VkSamplerCreateInfo SCI = {
+	//	VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+	//	nullptr,
+	//	0,
+	//	VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR,
+	//	VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
+	//	0.0f,
+	//	VK_FALSE, 1.0f,
+	//	VK_FALSE, VK_COMPARE_OP_NEVER,
+	//	0.0f, 1.0f,
+	//	VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+	//	VK_FALSE
+	//};
+	//VkSampler Sampler = VK_NULL_HANDLE;
+	//VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Sampler));
+	//const std::array<VkSampler, 1> ISs = {{ Sampler }};
+
+	const std::array<VkDescriptorSetLayoutBinding, 2> DSLBs = { { //!< arrayの初期化は"{"が余計に必要
 		{
 			0,
 			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -243,24 +261,37 @@ void NormalMapVK::CreateDescriptorSetLayout()
 		{
 			1,
 			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			1,
+			1,//static_cast<uint32_t>(ISs.size()),
 			VK_SHADER_STAGE_FRAGMENT_BIT,
-			nullptr
+			nullptr//ISs.data()
 		}
 	}};
 
-	const VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo = {
+	const VkDescriptorSetLayoutCreateInfo DSLCI = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 		nullptr,
 		0,
-		static_cast<uint32_t>(DescriptorSetLayoutBindings.size()), DescriptorSetLayoutBindings.data()
+		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
 	};
 
-	VkDescriptorSetLayout DescriptorSetLayout = VK_NULL_HANDLE;
-	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, GetAllocationCallbacks(), &DescriptorSetLayout));
-	DescriptorSetLayouts.push_back(DescriptorSetLayout);
+	VkDescriptorSetLayout DSL = VK_NULL_HANDLE;
+	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
+	DescriptorSetLayouts.push_back(DSL);
 
-	LogOK("CreateDescriptorSetLayout");
+	const std::array<VkPushConstantRange, 0> PCRs = {};
+
+	const VkPipelineLayoutCreateInfo PLCI = {
+		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
+		static_cast<uint32_t>(PCRs.size()), PCRs.data()
+	};
+	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PipelineLayout));
+
+	//vkDestroySampler(Device, Sampler, GetAllocationCallbacks());
+
+	LogOK("CreatePipelineLayout");
 }
 void NormalMapVK::PopulateCommandBuffer(const size_t i)
 {

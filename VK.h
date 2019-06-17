@@ -263,6 +263,7 @@ protected:
 
 	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const {}
 	virtual void CreateDescriptorSetLayout();
+	virtual void CreatePipelineLayout();
 
 	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {}
 	virtual void CreateDescriptorSet();
@@ -270,8 +271,6 @@ protected:
 	virtual void CreateWriteDescriptorSets(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos, const std::vector<VkBufferView>& BufferViews) const {}
 	virtual void CreateCopyDescriptorSets(std::vector<VkCopyDescriptorSet>& CopyDescriptorSets) const {}
 	virtual void UpdateDescriptorSet() {}
-
-	virtual void CreatePushConstantRanges();
 
 	virtual void CreateTexture() {}
 	virtual void CreateSampler(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const {}
@@ -454,13 +453,10 @@ protected:
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;
 
-	//!< デスクリプタセット、パイプラインレイアウト作成時に必要になるのでメンバとする
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
 	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
 	std::vector<VkDescriptorSet> DescriptorSets;
 	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
-
-	std::vector<VkPushConstantRange> PushConstantRanges;
 
 	VkPipeline Pipeline = VK_NULL_HANDLE;
 	VkRenderPass RenderPass = VK_NULL_HANDLE;

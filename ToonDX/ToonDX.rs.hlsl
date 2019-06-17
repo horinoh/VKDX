@@ -1,1 +1,1 @@
-#define RS ""
+#define RS "DescriptorTable(CBV(b0, space=0), visibility=SHADER_VISIBILITY_GEOMETRY)"
