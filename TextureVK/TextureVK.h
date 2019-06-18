@@ -16,7 +16,7 @@ public:
 protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4); }
 
-	virtual void CreateDescriptorSetLayout() override;
+	virtual void CreatePipelineLayout() override;
 
 	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const override {
 		CreateDescriptorPoolSizes_1CIS(DescriptorPoolSizes); 
