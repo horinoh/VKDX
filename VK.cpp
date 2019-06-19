@@ -1925,6 +1925,8 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 {
 	Viewports = {
 		{
+			//!< VKではデフォルトで「Yが下」を向くが、高さに負の値を指定すると「Yが上」を向きDXと同様になる
+			//!< 通常基点は「左上」を指定するが、高さに負の値を指定する場合は「左下」を指定すること
 #ifdef USE_VIEWPORT_Y_UP
 			0, Height,
 			Width, -Height,

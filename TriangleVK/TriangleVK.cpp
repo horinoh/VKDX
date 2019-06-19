@@ -232,7 +232,6 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void TriangleVK::CreateVertexBuffer()
 {
-	//!< DX‚ÆY‚ª‹t‚È‚Ì‚Å”½“] Y is inverse compared to DX
 	const std::vector<Vertex_PositionColor> Vertices = {
 		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
 		{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } }, //!< LB
