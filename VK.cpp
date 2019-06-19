@@ -1925,8 +1925,13 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 {
 	Viewports = {
 		{
+#ifdef USE_VIEWPORT_Y_UP
+			0, Height,
+			Width, -Height,
+#else
 			0, 0,
 			Width, Height,
+#endif
 			MinDepth, MaxDepth
 		}
 	};

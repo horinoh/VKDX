@@ -33,6 +33,8 @@
 #define USE_RENDERDOC
 #endif
 
+#define USE_VIEWPORT_Y_UP
+
 #include "Cmn.h"
 #ifdef _WINDOWS
 #include "Win.h"

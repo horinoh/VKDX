@@ -234,9 +234,9 @@ void TriangleVK::CreateVertexBuffer()
 {
 	//!< DX‚ÆY‚ª‹t‚È‚Ì‚Å”½“] Y is inverse compared to DX
 	const std::vector<Vertex_PositionColor> Vertices = {
-		{ { 0.0f, 0.5f * -1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
-		{ { -0.5f, -0.5f * -1.0f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } }, //!< LB
-		{ { 0.5f, -0.5f * -1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }, //!< RB
+		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
+		{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } }, //!< LB
+		{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }, //!< RB
 	};
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());

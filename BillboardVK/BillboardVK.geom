@@ -19,19 +19,19 @@ void main()
 	const vec3 Right = cross(Forward, Axis);
 	const float Scale = 0.05f;
 
-	gl_Position = PVW * vec4(Center - Scale * Right - Scale * Axis, 1.0f); //!< LT
+	gl_Position = PVW * vec4(Center - Scale * Right + Scale * Axis, 1.0f); //!< LT
 	Texcoord = vec2(0.0f, 0.0f);
 	EmitVertex();
 	
-	gl_Position = PVW * vec4(Center - Scale * Right + Scale * Axis, 1.0f); //!< LB
+	gl_Position = PVW * vec4(Center - Scale * Right - Scale * Axis, 1.0f); //!< LB
 	Texcoord = vec2(0.0f, 1.0f);
 	EmitVertex();
 
-	gl_Position = PVW * vec4(Center + Scale * Right - Scale * Axis, 1.0f); //!< RT
+	gl_Position = PVW * vec4(Center + Scale * Right + Scale * Axis, 1.0f); //!< RT
 	Texcoord = vec2(1.0f, 0.0f);
 	EmitVertex();
 
-	gl_Position = PVW * vec4(Center + Scale * Right + Scale * Axis, 1.0f); //!< RB
+	gl_Position = PVW * vec4(Center + Scale * Right - Scale * Axis, 1.0f); //!< RB
 	Texcoord = vec2(1.0f, 1.0f);
 	EmitVertex();
 
