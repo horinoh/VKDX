@@ -22,7 +22,8 @@ vec3 GetNormal_Torus(const vec2 uv, const vec3 pos)
 
 layout (location = 0) out vec3 OutNormal;
 
-layout (quads, equal_spacing, ccw) in;
+//!< VkPipelineRasterizationStateCreateInfo.frontFace == VK_FRONT_FACE_COUNTER_CLOCKWISE ‚Æ‚©‚¿‡‚¤‚Ì‚Å‚±‚±‚Å‚Í cw ‚ðŽw’è
+layout (quads, equal_spacing, cw) in;
 void main()
 {
 	gl_Position = vec4(GetPosition_Torus(gl_TessCoord.xy) * 0.5f, 1.0f);

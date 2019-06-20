@@ -29,12 +29,12 @@ layout (location = 0) out vec3 OutNormal;
 layout (location = 1) out vec3 OutTangent;
 layout (location = 2) out vec2 OutTexcoord;
 
-layout (quads, equal_spacing, ccw) in;
+layout (quads, equal_spacing, cw) in;
 void main()
 {
 	gl_Position = vec4(GetPosition_Torus(gl_TessCoord.xy) * 0.5f, 1.0f);
 	OutNormal = GetNormal_Torus(gl_TessCoord.xy, gl_Position.xyz);
 	OutTangent = GetTangent_Torus(gl_TessCoord.xy, gl_Position.xyz);
-	OutTexcoord = gl_TessCoord.xy;
+	OutTexcoord = vec2(gl_TessCoord.x, 1.0f - gl_TessCoord.y);
 }
 

@@ -34,7 +34,7 @@ OUT main(const TESS_FACTOR tess, const float2 uv : SV_DomainLocation, const Outp
 #else
 	Out.Position = float3(2.0f * uv - 1.0f, 1.0f);
 #endif
-	Out.Texcoord = uv;
+	Out.Texcoord = float2(uv.x, 1.0f - uv.y);
 
 	return Out;
 }

@@ -14,7 +14,7 @@ vec3 GetPosition_Torus(const vec2 uv)
 	return vec3((R.y + R.x * cos(UV.y)) * cos(UV.x), (R.y + R.x * cos(UV.y)) * sin(UV.x), R.x * sin(UV.y));
 }
 
-layout (quads, equal_spacing, ccw) in;
+layout (quads, equal_spacing, cw) in;
 void main()
 {
 	gl_Position = vec4(GetPosition_Torus(gl_TessCoord.xy), 1.0f);

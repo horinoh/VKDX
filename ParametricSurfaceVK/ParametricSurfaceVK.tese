@@ -16,7 +16,7 @@ vec3 GetPosition_Torus(const vec2 uv)
 
 layout (location = 0) out vec2 OutTexcoord;
 
-layout (quads, equal_spacing, ccw) in;
+layout (quads, equal_spacing, cw) in;
 void main()
 {
 #if 1
@@ -24,6 +24,6 @@ void main()
 #else
 	gl_Position = vec4(2.0f * gl_TessCoord.xy - 1.0f, gl_TessCoord.z, 1.0f);
 #endif
-	OutTexcoord = gl_TessCoord.xy;
+	OutTexcoord = vec2(gl_TessCoord.x, 1.0f - gl_TessCoord.y);
 }
 
