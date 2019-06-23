@@ -37,58 +37,36 @@ public:
 			},
 		};
 	}
-	template<typename T>
-	void CreateDescriptorHeap_1CBV() {
-		const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 
-#ifdef USE_WINRT
-		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
-			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
-				Type,
-				Count,
+	void CreateDescriptorHeap_1CBV() {
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
+				D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+				1,
 				D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
 				0 //!< NodeMask ... マルチGPUの場合 (Use with multi GPU)
-			};
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, __uuidof(DH), DH.put_void()));
-		}
-#elif defined(USE_WRL)
-		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH) {
-			const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
-				Type,
-				Count,
-				D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-				0
-			};
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, IID_PPV_ARGS(DH.GetAddressOf())));
-		}
-#endif
-		(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, ConstantBufferDescriptorHeap);
-
-		const auto Size256 = RoundUp(sizeof(T), 0xff); //!< 256 byte align
+		};
 #ifdef USE_WINRT
-		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, winrt::com_ptr<ID3D12Resource> Resource, winrt::com_ptr<ID3D12DescriptorHeap>& DH, const UINT Size) {
-			//!< 256アラインされていること (Must be 256 byte aligned)
-			const D3D12_CONSTANT_BUFFER_VIEW_DESC ConstantBufferViewDesc = {
-				Resource->GetGPUVirtualAddress(),
-				Size
-			};
-			//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
-			const auto CDH = GetCPUDescriptorHandle(DH.get(), Type);
-			Device->CreateConstantBufferView(&ConstantBufferViewDesc, CDH);
-		}
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, __uuidof(ConstantBufferDescriptorHeap), ConstantBufferDescriptorHeap.put_void()));
 #elif defined(USE_WRL)
-		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, Microsoft::WRL::ComPtr<ID3D12Resource> Resource, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH, const UINT Size) {
-			const D3D12_CONSTANT_BUFFER_VIEW_DESC ConstantBufferViewDesc = {
-				Resource->GetGPUVirtualAddress(),
-				Size
-			};
-			const auto CDH = GetCPUDescriptorHandle(DH.Get(), Type);
-			Device->CreateConstantBufferView(&ConstantBufferViewDesc, CDH);
-		}
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, IID_PPV_ARGS(ConstantBufferDescriptorHeap.GetAddressOf())));
 #endif
-		(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, ConstantBufferResource, ConstantBufferDescriptorHeap, static_cast<UINT>(Size256));
+	}
 
-		LogOK("CreateDescriptorHeap");
+	template<typename T>
+	void CreateDescriptorView_1CBV() {
+		const auto Size256 = static_cast<UINT>(RoundUp(sizeof(T), 0xff)); //!< 256 byte align
+		const D3D12_CONSTANT_BUFFER_VIEW_DESC ConstantBufferViewDesc = {
+			ConstantBufferResource->GetGPUVirtualAddress(),
+			Size256
+		};
+#ifdef USE_WINRT
+		const auto CDH = GetCPUDescriptorHandle(ConstantBufferDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+#elif defined(USE_WRL)
+		const auto CDH = GetCPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+#endif
+		Device->CreateConstantBufferView(&ConstantBufferViewDesc, CDH);
+
+		LogOK("CreateDescriptorView");
 	}
 
 	/*
@@ -193,7 +171,8 @@ public:
 	}
 	template<typename T>
 	void CreateDescriptorHeap_1CBV_1SRV() {
-		CreateDescriptorHeap_1CBV<T>();
+		CreateDescriptorHeap_1CBV();
+		CreateDescriptorView_1CBV<T>();
 		CreateDescriptorHeap_1SRV();
 
 		LogOK("CreateDescriptorHeap");

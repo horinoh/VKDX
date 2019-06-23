@@ -2,10 +2,7 @@
 
 #include "VKExt.h"
 
-//!< single_channel_bitmap_data_snorm() ‚Å uint_t ‚ª–³‚¢‚Æ“{‚ç‚ê‚é‚Ì‚Å’è‹`‚µ‚Ä‚¨‚­
-using uint_t = uint8_t;
 #include <gli/gli.hpp>
-//#include <gli/convert.hpp>
 
 class VKImage : public VKExt
 {

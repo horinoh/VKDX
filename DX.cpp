@@ -40,14 +40,16 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateTexture();
 
-	//!< ルートシグネチャ(デスクリプタセットレイアウト)
+	//!< ルートシグネチャ (パイプライントレイアウト相当)
 	CreateRootSignature();
-	{
-		//!< コンスタントバッファ(ユニフォームバッファ)
-		CreateConstantBuffer();
-	}
-	//!< デスクリプタ
+
+	//!< コンスタントバッファリソースの作成 (ユニフォームバッファ相当)
+	CreateConstantBuffer();
+
+	//!< デスクリプタヒープ (デスクリプタプール相当)
 	CreateDescriptorHeap();
+	//!< デスクリプタビュー (デスクリプタセット相当)
+	CreateDescriptorView();
 	UpdateDescriptorHeap();
 
 	//!< パイプライン

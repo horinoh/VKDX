@@ -293,6 +293,84 @@ void NormalMapVK::CreatePipelineLayout()
 
 	LogOK("CreatePipelineLayout");
 }
+void NormalMapVK::CreateDescriptorPool()
+{
+	const std::array<VkDescriptorPoolSize, 2> DPSs = { {
+		{
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			1
+		},
+		{
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			1
+		}
+	}};
+	const uint32_t MaxSets = [&]() {
+		uint32_t Count = 0;
+		for (const auto& i : DPSs) {
+			Count = std::max(Count, i.descriptorCount);
+		}
+		return Count;
+	}();
+	const VkDescriptorPoolCreateInfo DPCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		nullptr,
+		0,
+		MaxSets,
+		static_cast<uint32_t>(DPSs.size()), DPSs.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DescriptorPool));
+	assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
+
+	LogOK("CreateDescriptorPool");
+}
+void NormalMapVK::UpdateDescriptorSet()
+{
+	const std::array<VkDescriptorBufferInfo, 1> DBIs = {
+		{
+			UniformBuffer,
+			0,
+			VK_WHOLE_SIZE
+		}
+	};
+	const std::array<VkDescriptorImageInfo, 1> DIIs = {
+		{
+			Samplers[0],
+			ImageView,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		}
+	};
+	const std::array<VkWriteDescriptorSet, 2> WDSs = { {
+		{
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			nullptr,
+			DescriptorSets[0], 0, 0,
+			static_cast<uint32_t>(DBIs.size()),
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			nullptr,
+			DBIs.data(),
+			nullptr
+		},
+		{
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			nullptr,
+			DescriptorSets[0], 1, 0,
+			static_cast<uint32_t>(DIIs.size()),
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			DIIs.data(),
+			nullptr,
+			nullptr
+		}
+	}};
+
+	const std::array<VkCopyDescriptorSet, 0> CDSs = {};
+
+	vkUpdateDescriptorSets(Device,
+		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
+		static_cast<uint32_t>(CDSs.size()), CDSs.data());
+
+	LogOK("UpdateDescriptorSet");
+}
 void NormalMapVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandPools[0].second[i];//CommandBuffers[i];

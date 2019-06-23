@@ -272,7 +272,37 @@ void BillboardDX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlo
 
 	LogOK("SerializeRootSignature");
 }
+void BillboardDX::CreateDescriptorHeap()
+{
+	const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
+		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+		1,
+		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+		0
+	};
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, __uuidof(ConstantBufferDescriptorHeap), ConstantBufferDescriptorHeap.put_void()));
+#elif defined(USE_WRL)
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, IID_PPV_ARGS(ConstantBufferDescriptorHeap.GetAddressOf())));
+#endif
 
+	LogOK("CreateDescriptorHeap");
+}
+void BillboardDX::CreateDescriptorView()
+{
+	const D3D12_CONSTANT_BUFFER_VIEW_DESC ConstantBufferViewDesc = {
+		ConstantBufferResource->GetGPUVirtualAddress(),
+		static_cast<UINT>(RoundUp(sizeof(Transform), 0xff))
+	};
+#ifdef USE_WINRT
+	const auto CDH = GetCPUDescriptorHandle(ConstantBufferDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+#elif defined(USE_WRL)
+	const auto CDH = GetCPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+#endif
+	Device->CreateConstantBufferView(&ConstantBufferViewDesc, CDH);
+
+	LogOK("CreateDescriptorView");
+}
 void BillboardDX::PopulateCommandList(const size_t i)
 {
 #ifdef USE_WINRT
@@ -352,6 +382,5 @@ void BillboardDX::PopulateCommandList(const size_t i)
 	}
 	VERIFY_SUCCEEDED(CL->Close());
 }
-
 #pragma endregion
 

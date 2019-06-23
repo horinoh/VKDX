@@ -46,7 +46,8 @@ protected:
 	}
 
 	virtual void CreateDescriptorHeap() override {
-		CreateDescriptorHeap_1CBV<Transform>();
+		CreateDescriptorHeap_1CBV();
+		CreateDescriptorView_1CBV<Transform>();
 	}
 
 	virtual void CreateConstantBuffer() override {

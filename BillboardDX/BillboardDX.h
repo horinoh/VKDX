@@ -44,21 +44,6 @@ protected:
 	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob) override;
 #endif
 
-	virtual void CreateDescriptorHeap() override {
-		CreateDescriptorHeap_1CBV<Transform>();
-	}
-
-	virtual void UpdateDescriptorHeap() override {
-		//static FLOAT Angle = 0.0f;
-		//DirectX::XMMATRIX World = DirectX::XMMatrixRotationX(Angle);
-		//D3D12_RANGE Range = { offsetof(Transform, World), offsetof(Transform, World) + sizeof(World) };
-		//BYTE* Data;
-		//VERIFY_SUCCEEDED(ConstantBufferResource->Map(0, &Range, reinterpret_cast<void**>(&Data))); {
-		//	memcpy(Data, reinterpret_cast<const void*>(&World), sizeof(World));
-		//} ConstantBufferResource->Unmap(0, nullptr);
-		//Angle += 1.0f;
-	}
-
 	virtual void CreateConstantBuffer() override {
 		const auto Fov = 0.16f * DirectX::XM_PI;
 		const auto Aspect = GetAspectRatioOfClientRect();
@@ -73,7 +58,21 @@ protected:
 			DirectX::XMMatrixIdentity()
 		});
 	}
-	
+
+	virtual void CreateDescriptorHeap() override;
+	virtual void CreateDescriptorView() override;
+
+	virtual void UpdateDescriptorHeap() override {
+		//static FLOAT Angle = 0.0f;
+		//DirectX::XMMATRIX World = DirectX::XMMatrixRotationX(Angle);
+		//D3D12_RANGE Range = { offsetof(Transform, World), offsetof(Transform, World) + sizeof(World) };
+		//BYTE* Data;
+		//VERIFY_SUCCEEDED(ConstantBufferResource->Map(0, &Range, reinterpret_cast<void**>(&Data))); {
+		//	memcpy(Data, reinterpret_cast<const void*>(&World), sizeof(World));
+		//} ConstantBufferResource->Unmap(0, nullptr);
+		//Angle += 1.0f;
+	}
+
 	virtual void PopulateCommandList(const size_t i) override;
 
 private: 

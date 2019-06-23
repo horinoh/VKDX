@@ -85,9 +85,12 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< パイプラインレイアウト (ルートシグネチャ相当)
 	CreatePipelineLayout();
 
-	//!< ユニフォームバッファ(コンスタントバッファ相当)
+	//!< ユニフォームバッファ (コンスタントバッファ相当)
 	CreateUniformBuffer();
-	//!< デスクリプタ
+
+	//!< デスクリプタプール (デスクリプタヒープ相当)
+	CreateDescriptorPool();
+	//!< デスクリプタセット (デスクリプタビュー相当)
 	CreateDescriptorSet();
 	UpdateDescriptorSet();
 
@@ -867,7 +870,7 @@ void VK::CreateDebugReportCallback()
 					if (VK_DEBUG_REPORT_ERROR_BIT_EXT & flags) {
 						DEBUG_BREAK();
 						Errorf("%s\n", pMessage);
-							return VK_TRUE;
+						return VK_TRUE;
 					}
 					else if (VK_DEBUG_REPORT_WARNING_BIT_EXT & flags) {
 						DEBUG_BREAK();
@@ -2166,13 +2169,27 @@ void VK::CreatePipelineLayout()
 
 	LogOK("CreatePipelineLayout");
 }
+void VK::CreateDescriptorSet()
+{
+	if (!DescriptorSetLayouts.empty()) {
+		const VkDescriptorSetAllocateInfo DSAI = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			nullptr,
+			DescriptorPool,
+			static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
+		};
+		DescriptorSets.resize(DescriptorSetLayouts.size());
+		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, DescriptorSets.data()));
+	}
 
+	LogOK("CreateDescriptorSetLayout");
+}
 /**
 @brief シェーダとのバインディングのレイアウト
 @note DescriptorSet は「DescriptorSetLayt 型」のインスタンスのようなもの
 @note 更新は vkUpdateDescriptorSets() で行う
 */
-void VK::CreateDescriptorSet()
+void VK::CreateDescriptorSet_deprecated()
 {
 	std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
 		/**

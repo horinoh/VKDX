@@ -186,6 +186,7 @@ protected:
 	virtual void CreateRootSignature();
 
 	virtual void CreateDescriptorHeap() {}
+	virtual void CreateDescriptorView() {}
 	virtual void UpdateDescriptorHeap() { /*CopyToUploadResource()“™‚ğs‚¤*/ }
 
 #ifdef USE_WINRT

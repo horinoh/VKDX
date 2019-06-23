@@ -16,22 +16,15 @@ public:
 protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4); }
 
-	virtual void CreatePipelineLayout() override;
-
-	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const override {
-		CreateDescriptorPoolSizes_1CIS(DescriptorPoolSizes); 
-	}
-	virtual void CreateWriteDescriptorSets(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos, const std::vector<VkBufferView>& BufferViews) const override {
-		CreateWriteDescriptorSets_1CIS(WriteDescriptorSets, DescriptorImageInfos);
-	}
-	virtual void UpdateDescriptorSet() override {
-		UpdateDescriptorSet_1CIS();
-	}
-
 	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {
 		CreateShader_VsPs(ShaderModules, PipelineShaderStageCreateInfos);
 	}
-	
+
+	virtual void CreatePipelineLayout() override;
+
+	virtual void CreateDescriptorPool() override;
+	virtual void UpdateDescriptorSet() override;
+
 	virtual void CreateTexture() override {
 #if 1
 		LoadImage(&Image, &ImageDeviceMemory, &ImageView, "UV.dds");

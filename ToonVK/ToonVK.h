@@ -32,16 +32,6 @@ protected:
 
 	virtual void CreatePipelineLayout() override;
 
-	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const override {
-		CreateDescriptorPoolSizes_1UB(DescriptorPoolSizes);
-	}
-	virtual void CreateWriteDescriptorSets(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos, const std::vector<VkBufferView>& BufferViews) const override {
-		CreateWriteDescriptorSets_1UB(WriteDescriptorSets, DescriptorBufferInfos);
-	}
-	virtual void UpdateDescriptorSet() override {
-		UpdateDescriptorSet_1UB();
-	}
-
 	virtual void CreateUniformBuffer() override {
 		const auto Fov = 0.16f * glm::pi<float>();
 		const auto Aspect = GetAspectRatioOfClientRect();
@@ -57,6 +47,9 @@ protected:
 			glm::mat4(1.0f)
 		});
 	}
+
+	virtual void CreateDescriptorPool() override;
+	virtual void UpdateDescriptorSet() override;
 
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
