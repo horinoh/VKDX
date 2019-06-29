@@ -5,3 +5,4 @@
 *.ilk
 *.iobj
 *.ipdb
+*.vcxproj.user
