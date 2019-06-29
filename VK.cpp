@@ -43,7 +43,7 @@
 void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 {
 #ifdef _DEBUG
-	PerformanceCounter PC("OnCreate : ");
+	PerformanceCounter PC(__func__);
 #endif
 
 	Super::OnCreate(hWnd, hInstance, Title);
@@ -84,21 +84,20 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< パイプラインレイアウト (ルートシグネチャ相当)
 	CreatePipelineLayout();
+	CreateRenderPass();
+	//!< パイプライン
+	CreatePipeline();
+
+	//!< フレームバッファ
+	CreateFramebuffer();
 
 	//!< ユニフォームバッファ (コンスタントバッファ相当)
 	CreateUniformBuffer();
-
 	//!< デスクリプタプール (デスクリプタヒープ相当)
 	CreateDescriptorPool();
 	//!< デスクリプタセット (デスクリプタビュー相当)
 	CreateDescriptorSet();
 	UpdateDescriptorSet();
-
-	CreateRenderPass();
-	CreateFramebuffer();
-
-	//!< パイプライン
-	CreatePipeline();
 
 	SetTimer(hWnd, NULL, 1000 / 60, nullptr);
 
@@ -118,7 +117,7 @@ buffer, and so on.
 void VK::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 {
 #ifdef _DEBUG
-	PerformanceCounter PC("OnExitSizeMove : ");
+	PerformanceCounter PC(__func__);
 #endif
 
 	Super::OnExitSizeMove(hWnd, hInstance);
@@ -629,7 +628,7 @@ void VK::CreateImageView(VkImageView* ImageView, const VkImage Image, const VkIm
 	Logf("\t\tFormat = %s\n", GetFormatChar(Format));
 	Logf("\t\tComponentMapping = (%s)\n", GetComponentMappingString(ComponentMapping).c_str());
 
-	LogOK("CreateImageView");
+	LogOK(__func__);
 }
 
 void VK::ValidateFormatProperties(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage) const
@@ -844,7 +843,7 @@ void VK::CreateInstance()
 	CreateDebugReportCallback();
 #endif
 
-	LogOK("CreateInstance");
+	LogOK(__func__);
 }
 
 #ifdef _DEBUG
@@ -1390,7 +1389,7 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface)
 	//}
 #endif
 
-	LogOK("CreateDevice");
+	LogOK(__func__);
 }
 
 //!< ホストとデバイスの同期 (Synchronization between host and device)
@@ -1406,7 +1405,7 @@ void VK::CreateFence(VkDevice Device)
 	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, GetAllocationCallbacks(), &Fence));
 	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, GetAllocationCallbacks(), &ComputeFence));
 
-	LogOK("CreateFence");
+	LogOK(__func__);
 }
 
 //!< キュー内での同期(異なるキュー間の同期も可能) (Synchronization internal queue)
@@ -1425,7 +1424,7 @@ void VK::CreateSemaphore(VkDevice Device)
 	//!< 描画完了同期用 (Wait for render finish)
 	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, GetAllocationCallbacks(), &RenderFinishedSemaphore));
 
-	LogOK("CreateSemaphore");
+	LogOK(__func__);
 }
 
 //!< キューファミリが異なる場合は別のコマンドプールを用意する必要がある、そのキューにのみサブミットできる
@@ -1444,7 +1443,7 @@ void VK::CreateCommandPool(VkDevice Device, const uint32_t QueueFamilyIndex)
 	};
 	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, GetAllocationCallbacks(), &CommandPools.back().first));
 
-	LogOK("CreateCommandPool");
+	LogOK(__func__);
 }
 
 void VK::AllocateCommandBuffer(const VkCommandBufferLevel Level, const size_t Count, COMMAND_POOL& Command)
@@ -1464,7 +1463,8 @@ void VK::AllocateCommandBuffer(const VkCommandBufferLevel Level, const size_t Co
 		};
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &AllocateInfo, &Command.second[PrevCount]));
 	}
-	LogOK("AllocateCommandBuffer");
+
+	LogOK(__func__);
 }
 
 void VK::CreateCommandBuffer()
@@ -1717,8 +1717,6 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Surface, const uint32
 	};
 	VERIFY_SUCCEEDED(vkCreateSwapchainKHR(Device, &SwapchainCreateInfo, GetAllocationCallbacks(), &Swapchain));
 
-	LogOK("CreateSwapchain");
-
 	//!< (あれば)前のやつは破棄
 	if (VK_NULL_HANDLE != OldSwapchain) {
 		for (auto i : SwapchainImageViews) {
@@ -1727,6 +1725,8 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Surface, const uint32
 		SwapchainImageViews.clear();
 		vkDestroySwapchainKHR(Device, OldSwapchain, GetAllocationCallbacks());
 	}
+
+	LogOK(__func__);
 }
 void VK::ResizeSwapchain(const uint32_t Width, const uint32_t Height)
 {
@@ -1758,7 +1758,7 @@ void VK::GetSwapchainImage(VkDevice Device, VkSwapchainKHR Swapchain)
 	SwapchainImages.resize(Count);
 	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &Count, SwapchainImages.data()));
 
-	LogOK("GetSwapchainImages");
+	LogOK(__func__);
 }
 /**
 @note Vulaknでは、1つのコマンドバッファで複数のスワップチェインイメージをまとめて処理できるっぽい
@@ -1852,7 +1852,7 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorVa
 	//!< キューにサブミットされたコマンドが完了するまでブロッキング (フェンスを用いないブロッキング方法)
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 
-	LogOK("InitializeSwapchainImage");
+	LogOK(__func__);
 }
 
 void VK::CreateSwapchainImageView()
@@ -1864,7 +1864,7 @@ void VK::CreateSwapchainImageView()
 		SwapchainImageViews.push_back(ImageView);
 	}
 
-	LogOK("CreateSwapchainImageView");
+	LogOK(__func__);
 }
 
 void VK::CreateDepthStencil(const uint32_t Width, const uint32_t Height, const VkFormat DepthFormat)
@@ -1877,7 +1877,7 @@ void VK::CreateDepthStencil(const uint32_t Width, const uint32_t Height, const V
 	BindDeviceMemory(DepthStencilImage, DepthStencilDeviceMemory);
 	CreateImageView(&DepthStencilImageView, DepthStencilImage, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, ComponentMapping_Identity, ImageSubresourceRange_DepthStencil);
 
-	LogOK("CreateDepthStencil");
+	LogOK(__func__);
 }
 
 void VK::InitializeDepthStencilImage(const VkCommandBuffer CB)
@@ -1947,7 +1947,7 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 		}
 	};
 
-	LogOK("CreateViewport");
+	LogOK(__func__);
 }
 
 void VK::CreateIndirectBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB)
@@ -2106,7 +2106,7 @@ void VK::CreateStorageTexelBuffer()
 @note シェーダからのアクセス時は set がVkDescriptorSetLayout番号、binding が(VkDescriptorSetLayout内の)VkDescriptorSetLayoutBinding番号 に相当する
 (set = VkDescriptorSetLayout番号, binding = (VkDescriptorSetLayout内の)VkDescriptorSetLayoutBinding番号)
 */
-void VK::CreateDescriptorSetLayout()
+void VK::CreateDescriptorSetLayout_deprecated()
 {
 	//!< binding = [0, DescriptorSetLayoutBindings.size()-1]
 	std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings = {
@@ -2131,7 +2131,7 @@ void VK::CreateDescriptorSetLayout()
 	//!< set = [0, DescriptorSetLayouts.size()-1]
 	DescriptorSetLayouts.push_back(DescriptorSetLayout);
 
-	LogOK("CreateDescriptorSetLayout");
+	LogOK(__func__);
 }
 
 void VK::CreatePipelineLayout()
@@ -2167,11 +2167,11 @@ void VK::CreatePipelineLayout()
 	};
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, GetAllocationCallbacks(), &PipelineLayout));
 
-	LogOK("CreatePipelineLayout");
+	LogOK(__func__);
 }
 void VK::CreateDescriptorSet()
 {
-	if (!DescriptorSetLayouts.empty()) {
+	if (!DescriptorSetLayouts.empty() && VK_NULL_HANDLE != DescriptorPool) {
 		const VkDescriptorSetAllocateInfo DSAI = {
 			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			nullptr,
@@ -2182,7 +2182,7 @@ void VK::CreateDescriptorSet()
 		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, DescriptorSets.data()));
 	}
 
-	LogOK("CreateDescriptorSetLayout");
+	LogOK(__func__);
 }
 /**
 @brief シェーダとのバインディングのレイアウト
@@ -2228,7 +2228,7 @@ void VK::CreateDescriptorSet_deprecated()
 		DescriptorSets.resize(DescriptorSetLayouts.size());
 		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, DescriptorSets.data()));
 
-		LogOK("CreateDescriptorSet");
+		LogOK(__func__);
 	}
 }
 
@@ -2350,6 +2350,15 @@ VkPipelineCache VK::LoadPipelineCache(const std::wstring& Path) const
 		}
 
 		In.close();
+	}
+	else {
+		const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
+				VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+				nullptr,
+				0,
+				0, nullptr
+		};
+		VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, GetAllocationCallbacks(), &PipelineCache));
 	}
 
 	return PipelineCache;
@@ -2484,22 +2493,292 @@ void VK::CreatePipeline()
 
 	//!< 各々のスレッドが作成したパイプラインキャッシュをマージする (ここでは最後の要素へマージしている)
 	//!< デスティネーションがソース群に「含まれていてはならない」ので注意 (ソースの個数をPipelineCaches.size() - 1として、最後の要素を含めないようにしている)
-	VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, PipelineCaches.back(), static_cast<uint32_t>(PipelineCaches.size() - 1), PipelineCaches.data()));	
+	VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, PipelineCaches.back(), static_cast<uint32_t>(PipelineCaches.size() - 1), PipelineCaches.data()));
 	//!< マージ後のパイプラインキャッシュをファイルへ保存
 	StorePipelineCache(PCOPath, PipelineCaches.back());
 	//!< もう破棄して良い
 	for (auto& i : PipelineCaches) {
 		vkDestroyPipelineCache(Device, i, GetAllocationCallbacks());
 	}
+#else
+
+#ifdef LOAD_PIPELINE
+	const auto PCOPath = GetBasePath() + TEXT(".pco");
+	PipelineCache = LoadPipelineCache(PCOPath);
 #endif
 
-	CreatePipeline_Graphics();
+	//!< 引数に参照を渡す例
+	//!< std::thread::thread(Func, std::ref(arg));
+	auto Thread = std::thread::thread([&]() { CreatePipeline_Graphics(); });
+	//!< ...
+	Thread.join();
+
+#ifdef LOAD_PIPELINE
+	if (VK_NULL_HANDLE != PipelineCache) {
+		VkPipelineCache MergedPipelineCache = VK_NULL_HANDLE;
+		const VkPipelineCacheCreateInfo PCCI = {
+				VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
+				nullptr,
+				0,
+				0, nullptr
+		};
+		VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PCCI, GetAllocationCallbacks(), &MergedPipelineCache));
+
+		const std::array<VkPipelineCache, 1> PipelineCaches = { PipelineCache };
+		VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, MergedPipelineCache, static_cast<uint32_t>(PipelineCaches.size()), PipelineCaches.data()));
+		StorePipelineCache(PCOPath, MergedPipelineCache);
+
+		vkDestroyPipelineCache(Device, MergedPipelineCache, GetAllocationCallbacks());
+		vkDestroyPipelineCache(Device, PipelineCache, GetAllocationCallbacks());
+	}
+#endif
+#endif
+}
+
+void VK::CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PipelineLayout,
+	const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS, 
+	const VkRenderPass RenderPass)
+{
+	PERFORMANCE_COUNTER();
+
+	//!< バリデーションの為にデバイスフィーチャーを取得
+	VkPhysicalDeviceFeatures PDF;
+	vkGetPhysicalDeviceFeatures(GetCurrentPhysicalDevice(), &PDF);
+
+	//!< シェーダ (Shader)
+	std::vector<VkPipelineShaderStageCreateInfo> PSSCI;
+	//!< シェーダ内のコンスタント変数をパイプライン作成時に変更する場合に使用
+	//const std::array<VkSpecializationMapEntry, 0> SMEs = { /*{ uint32_t constantID, uint32_t offset, size_t size },*/ };
+	//const VkSpecializationInfo SI = { static_cast<uint32_t>(SMEs.size()), SMEs.data() };
+	if (VK_NULL_HANDLE != VS) {
+		PSSCI.push_back({
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_VERTEX_BIT, VS,
+			"main",
+			nullptr//&SI
+		});
+	}
+	if (VK_NULL_HANDLE != FS) {
+		PSSCI.push_back({
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_FRAGMENT_BIT, FS,
+			"main",
+			nullptr
+		});
+	}
+	if (VK_NULL_HANDLE != TES) {
+		PSSCI.push_back({
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, TES,
+			"main",
+			nullptr
+		});
+	}
+	if (VK_NULL_HANDLE != TCS) {
+		PSSCI.push_back({
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, TCS,
+			"main",
+			nullptr
+		});
+	}
+	if (VK_NULL_HANDLE != GS) {
+		PSSCI.push_back({
+			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_SHADER_STAGE_GEOMETRY_BIT, GS,
+			"main",
+			nullptr
+		});
+	}
+
+	//!< バーテックスインプット (VertexInput)
+	const std::array<VkVertexInputBindingDescription, 0> VIBDs = {};
+	const std::array<VkVertexInputAttributeDescription, 0> VIADs = {};
+	const VkPipelineVertexInputStateCreateInfo PVISCI = {
+		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(VIBDs.size()), VIBDs.data(),
+		static_cast<uint32_t>(VIADs.size()), VIADs.data()
+	};
+
+	//!< インプットアセンブリ (InputAssembly)
+	const VkPipelineInputAssemblyStateCreateInfo PIASCI = {
+		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+		VK_FALSE
+	};
+	//!< WITH_ADJACENCY 系使用時には デバイスフィーチャー geometryShader が有効であること
+	assert((
+		(PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_LINE_LIST_WITH_ADJACENCY || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_WITH_ADJACENCY || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_WITH_ADJACENCY)
+		|| PDF.geometryShader) && "");
+	//!< PATCH_LIST 使用時には デバイスフィーチャー tessellationShader が有効であること
+	assert((PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST || PDF.tessellationShader) && "");
+	//!< インデックス 0xffffffff(VK_INDEX_TYPE_UINT32), 0xffff(VK_INDEX_TYPE_UINT16) をプリミティブのリスタートとする、インデックス系描画の場合(vkCmdDrawIndexed, vkCmdDrawIndexedIndirect)のみ有効
+	//!< LIST 系使用時 primitiveRestartEnable 無効であること
+	assert((
+		(PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_POINT_LIST || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_LINE_LIST || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_LINE_LIST_WITH_ADJACENCY || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST)
+		|| PIASCI.primitiveRestartEnable == VK_FALSE) && "");
+
+	//!< テセレーション (Tessellation)
+	const VkPipelineTessellationStateCreateInfo PTSCI = {
+		VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,
+		nullptr, 
+		0, 
+		0//!< patchControlPoints
+	};
+
+	//!< ビューポート (Viewport)
+	//!< VkDynamicState を使用するため、ここではビューポート(シザー)の個数のみ指定している (To use VkDynamicState, specify only count of viewport(scissor) here)
+	//!< 後に vkCmdSetViewport(), vkCmdSetScissor() で指定する (Use vkCmdSetViewport(), vkCmdSetScissor() later)
+	const VkPipelineViewportStateCreateInfo PVSCI = {
+		VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		1, nullptr, //!< Viewport
+		1, nullptr	//!< Scissor
+	};
+	//!< 2つ以上のビューポートを使用するにはデバイスフィーチャー multiViewport が有効であること (If use 2 or more viewport device feature multiViewport must be enabled)
+	//!< ビューポートのインデックスはジオメトリシェーダで指定する (Viewport index is specified in geometry shader)
+	assert((PVSCI.viewportCount <= 1 || PDF.multiViewport) && "");
+
+	//!< ラスタライゼーション (Rasterization)
+	const VkPipelineRasterizationStateCreateInfo PRSCI = {
+		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		VK_FALSE, 
+		VK_FALSE,
+		VK_POLYGON_MODE_FILL, 
+		VK_CULL_MODE_BACK_BIT,
+		VK_FRONT_FACE_COUNTER_CLOCKWISE,
+		VK_FALSE, 0.0f, 0.0f, 0.0f,
+		1.0f 
+	};
+	//!< depthClampEnable にはデバイスフィーチャー depthClamp が有効であること
+	assert((!PRSCI.depthClampEnable || PDF.depthClamp) && "");
+	//!< FILL 以外にはデバイスフィーチャー fillModeNonSolid が有効であること
+	assert((PRSCI.polygonMode != VK_POLYGON_MODE_FILL || PDF.fillModeNonSolid) && "");
+	//!< 1.0f より大きな値にはデバイスフィーチャー widelines が有効であること
+	assert((PRSCI.lineWidth <= 1.0f || PDF.wideLines) && "");
+
+	//!< マルチサンプル (Multisample)
+	const VkSampleMask SM = 0xffffffff; //!< 0xffffffff 指定の場合は nullptr でもよい
+	const VkPipelineMultisampleStateCreateInfo PMSCI = {
+		VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		VK_SAMPLE_COUNT_1_BIT,
+		VK_FALSE, 0.0f, //! VK_TRUE にするにはデバイスフィーチャー minSampleShading が有効であること
+		&SM,
+		VK_FALSE, VK_FALSE //!< alphaToOneEnable を VK_TRUE にするにはデバイスフィーチャー alphaToOne が有効であること
+	};
+
+	//!< デプスステンシル (DepthStencil)
+	const VkPipelineDepthStencilStateCreateInfo PDSSCI = {
+		VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		VK_TRUE,
+		VK_TRUE,
+		VK_COMPARE_OP_LESS_OR_EQUAL,
+		VK_FALSE,
+		VK_FALSE,
+		{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_NEVER, 0, 0, 0 },
+		{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
+		0.0f, 1.0f
+	};
+
+	//!< カラーブレンド (ColorBlend)
+	//!< デバイスフィーチャー independentBlend が有効で無い場合は、配列の各要素は「完全に同じ値」であること If device feature independentBlend is not enabled, each array element must be exactly same
+	//!< VK_BLEND_FACTOR_SRC1 系をを使用するには、デバイスフィーチャー dualSrcBlend が有効であること
+	///!< SRCコンポーネント * SRCファクタ OP DSTコンポーネント * DSTファクタ
+	const std::array<VkPipelineColorBlendAttachmentState, 1> PCBASs = {
+		{
+			VK_FALSE,
+			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
+			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
+			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+		}
+	};
+	const VkPipelineColorBlendStateCreateInfo PCBSCI = {
+		VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		VK_FALSE, VK_LOGIC_OP_COPY, //!< ブレンド時に論理オペレーションを行う (ブレンドは無効になる) (整数型アタッチメントに対してのみ)
+		static_cast<uint32_t>(PCBASs.size()), PCBASs.data(),
+		{ 1.0f, 1.0f, 1.0f, 1.0f }
+	};
+
+	//!< ダイナミックステート (DynamicState)
+	const std::array<VkDynamicState, 2> DSs = {
+		VK_DYNAMIC_STATE_VIEWPORT, 
+		VK_DYNAMIC_STATE_SCISSOR
+	};
+	const VkPipelineDynamicStateCreateInfo PDSCI = {
+		VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DSs.size()), DSs.data()
+	};
+
+	/**
+	@brief 継承
+	basePipelineHandle, basePipelineIndex は同時に使用できない、それぞれ使用しない場合は VK_NULL_HANDLE, -1 を指定	
+	親には VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT フラグが必要、子には VK_PIPELINE_CREATE_DERIVATIVE_BIT フラグが必要		
+	・basePipelineHandle ... 既に親とするパイプラインが存在する場合に指定
+	・basePipelineIndex ... 同配列内で親パイプラインも同時に作成する場合、配列内での親パイプラインの添字、親の添字の方が若い値でないといけない
+	*/
+	const std::array<VkGraphicsPipelineCreateInfo, 1> GPCIs = {
+		{
+			VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+			nullptr,
+#ifdef _DEBUG
+			VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+#else
+			0,
+#endif
+			static_cast<uint32_t>(PSSCI.size()), PSSCI.data(),
+			&PVISCI,
+			&PIASCI,
+			&PTSCI,
+			&PVSCI,
+			&PRSCI,
+			&PMSCI,
+			&PDSSCI,
+			&PCBSCI,
+			&PDSCI,
+			PipelineLayout,
+			RenderPass, 0, //!< 指定したレンダーパス限定ではなく、互換性のある他のレンダーパスでも使用可能
+			VK_NULL_HANDLE, -1 //!< basePipelineHandle, basePipelineIndex
+		}
+	};
+
+	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device,
+		/*PipelineCache*/VK_NULL_HANDLE, //!< #VK_TODO
+		static_cast<uint32_t>(GPCIs.size()), GPCIs.data(),
+		GetAllocationCallbacks(),
+		&Pipeline));
+
+	LOG_OK();
 }
 
 void VK::CreatePipeline_Graphics()
 {
 #ifdef _DEBUG
-	PerformanceCounter PC("CreatePipeline_Graphics : ");
+	PerformanceCounter PC(__func__);
 #endif
 
 	//!< シェーダ
@@ -2631,12 +2910,13 @@ void VK::CreatePipeline_Graphics()
 		}
 	};
 
+#if 0
 	//!< パイプラインキャッシュオブジェクト Pipeline Cache Object
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
-	const auto PipelineCache = LoadPipelineCache(PCOPath);
+	PipelineCache = LoadPipelineCache(PCOPath);
 	//!< パイプライン作成時にキャッシュが活用される、また今回の作成結果もキャッシュされる
-	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, 
-		PipelineCache, 
+	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device,
+		PipelineCache,
 		static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(), 
 		GetAllocationCallbacks(), 
 		&Pipeline));
@@ -2644,6 +2924,13 @@ void VK::CreatePipeline_Graphics()
 		StorePipelineCache(PCOPath, PipelineCache);
 		vkDestroyPipelineCache(Device, PipelineCache, GetAllocationCallbacks());
 	}
+#else
+	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device,
+		PipelineCache,
+		static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(),
+		GetAllocationCallbacks(),
+		&Pipeline));
+#endif
 
 	//!< パイプライン を作成したら、シェーダモジュール は破棄して良い
 	for (auto i : ShaderModules) {
@@ -2651,12 +2938,12 @@ void VK::CreatePipeline_Graphics()
 	}
 	ShaderModules.clear();
 
-	LogOK("CreatePipeline_Graphics");
+	LogOK(__func__);
 }
 void VK::CreatePipeline_Compute()
 {
 #ifdef _DEBUG
-	PerformanceCounter PC("CreatePipeline_Compute : ");
+	PerformanceCounter PC(__func__);
 #endif
 
 	std::vector<VkShaderModule> ShaderModules;
@@ -2678,6 +2965,7 @@ void VK::CreatePipeline_Compute()
 		},
 	};
 
+#if 0
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
 	const auto PipelineCache = LoadPipelineCache(PCOPath);
 	VERIFY_SUCCEEDED(vkCreateComputePipelines(Device,
@@ -2689,13 +2977,20 @@ void VK::CreatePipeline_Compute()
 		StorePipelineCache(PCOPath, PipelineCache);
 		vkDestroyPipelineCache(Device, PipelineCache, GetAllocationCallbacks());
 	}
+#else
+	VERIFY_SUCCEEDED(vkCreateComputePipelines(Device,
+		PipelineCache,
+		static_cast<uint32_t>(ComputePipelineCreateInfos.size()), ComputePipelineCreateInfos.data(),
+		GetAllocationCallbacks(),
+		&Pipeline));
+#endif
 
 	for (auto i : ShaderModules) {
 		vkDestroyShaderModule(Device, i, GetAllocationCallbacks());
 	}
 	ShaderModules.clear();
 
-	LogOK("CreatePipeline_Compute");
+	LogOK(__func__);
 }
 
 /**

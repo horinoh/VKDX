@@ -66,6 +66,14 @@
 #endif
 #endif
 
+#ifndef LOG_OK
+#define LOG_OK() LogOK(__func__)
+#endif
+
+#ifndef PERFORMANCE_COUNTER
+#define PERFORMANCE_COUNTER() PerformanceCounter __PC(__func__)
+#endif
+
 class Win
 {
 public:
@@ -173,7 +181,6 @@ private:
 #endif
 };
 
-#ifdef _DEBUG
 class PerformanceCounter
 {
 public:
@@ -184,7 +191,6 @@ private:
 	__int64 Start;
 	std::string Label;
 };
-#endif
 
 #ifdef DEBUG_STDOUT
 static std::ostream& Red(std::ostream& rhs) { Win::SetColor(FOREGROUND_RED); return rhs; }

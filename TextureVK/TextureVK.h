@@ -20,10 +20,10 @@ protected:
 		CreateShader_VsPs(ShaderModules, PipelineShaderStageCreateInfos);
 	}
 
-	virtual void CreatePipelineLayout() override;
+	virtual void CreatePipelineLayout() override { CreatePipelineLayout_1CIS_FS(); }
 
-	virtual void CreateDescriptorPool() override;
-	virtual void UpdateDescriptorSet() override;
+	virtual void CreateDescriptorPool() override { CreateDescriptorPool_1CIS(); }
+	virtual void UpdateDescriptorSet() override { UpdateDescriptorSet_1CIS(); }
 
 	virtual void CreateTexture() override {
 #if 1

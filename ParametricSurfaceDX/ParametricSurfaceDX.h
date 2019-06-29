@@ -25,12 +25,6 @@ protected:
 		Super::CreateShader(ShaderBlobs);
 	}
 
-#ifdef USE_WINRT
-	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob) override;
-#elif defined(USE_WRL)
-	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob) override;
-#endif
-
 	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType() const override {
 		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH;
 	}

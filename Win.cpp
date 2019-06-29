@@ -153,7 +153,6 @@ template<> static void Win::LogNG(const WCHAR* Str)
 #endif
 }
 
-#ifdef _DEBUG
 PerformanceCounter::PerformanceCounter(const std::string& Label)
 	: Label(Label)
 {
@@ -167,6 +166,7 @@ PerformanceCounter::~PerformanceCounter()
 {
 	__int64 End;
 	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&End));
-	std::cout << Label << (End - Start) * SecondsPerCount * 1000.0 << " msec" << std::endl << std::endl;
-}
+#ifdef DEBUG_STDOUT
+	std::cout << Label << " : " << (End - Start) * SecondsPerCount * 1000.0 << " msec" << std::endl << std::endl;
 #endif
+}

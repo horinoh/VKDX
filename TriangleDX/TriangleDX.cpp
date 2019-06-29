@@ -355,7 +355,7 @@ void TriangleDX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.GetAddressOf(), ErrorBlob.GetAddressOf()));
 #endif
 
-	LogOK("SerializeRootSignature");
+	LogOK(__func__);
 }
 
 void TriangleDX::PopulateCommandList(const size_t i)
@@ -410,7 +410,7 @@ void TriangleDX::PopulateCommandList(const size_t i)
 			CL->SetGraphicsRootSignature(RootSignature.Get());
 #endif
 
-			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
+			//!< インプットアセンブリのプリミティブタイプ
 			CL->IASetPrimitiveTopology(GetPrimitiveTopology());
 
 			//!< バーテックスバッファ、インデックスバッファ

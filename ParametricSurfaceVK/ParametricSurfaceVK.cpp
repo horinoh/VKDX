@@ -230,34 +230,6 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void ParametricSurfaceVK::CreatePipelineLayout()
-{
-	const std::array<VkDescriptorSetLayoutBinding, 0> DSLBs = {};
-
-	const VkDescriptorSetLayoutCreateInfo DSLCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
-	};
-
-	VkDescriptorSetLayout DSL = VK_NULL_HANDLE;
-	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
-	DescriptorSetLayouts.push_back(DSL);
-
-	const std::array<VkPushConstantRange, 0> PCRs = {};
-
-	const VkPipelineLayoutCreateInfo PLCI = {
-		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
-		static_cast<uint32_t>(PCRs.size()), PCRs.data()
-	};
-	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PipelineLayout));
-
-	LogOK("CreatePipelineLayout");
-}
 void ParametricSurfaceVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandPools[0].second[i];//CommandBuffers[i];

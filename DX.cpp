@@ -9,7 +9,7 @@
 void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 {
 #ifdef _DEBUG
-	PerformanceCounter PC("OnCreate : ");
+	PerformanceCounter PC(__func__);
 #endif
 
 	Super::OnCreate(hWnd, hInstance, Title);
@@ -42,18 +42,16 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< ルートシグネチャ (パイプライントレイアウト相当)
 	CreateRootSignature();
+	//!< パイプライン
+	CreatePipelineState();
 
 	//!< コンスタントバッファリソースの作成 (ユニフォームバッファ相当)
 	CreateConstantBuffer();
-
 	//!< デスクリプタヒープ (デスクリプタプール相当)
 	CreateDescriptorHeap();
 	//!< デスクリプタビュー (デスクリプタセット相当)
 	CreateDescriptorView();
 	UpdateDescriptorHeap();
-
-	//!< パイプライン
-	CreatePipelineState();
 
 	//CreateUnorderedAccessTexture();
 
@@ -72,7 +70,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 {
 #ifdef _DEBUG
-	PerformanceCounter PC("OnExitSizeMove : ");
+	PerformanceCounter PC(__func__);
 #endif
 
 	Super::OnExitSizeMove(hWnd, hInstance);
@@ -430,7 +428,7 @@ void DX::CreateDevice(HWND hWnd)
 
 #endif //!< USE_WINRT
 
-	LogOK("CreateDevice");
+	LogOK(__func__);
 #ifdef _DEBUG
 	CheckFeatureLevel();
 #endif
@@ -639,7 +637,7 @@ void DX::CreateCommandQueue()
 	VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(CommandQueue.GetAddressOf())));
 #endif
 
-	LogOK("CreateCommandQueue");
+	LogOK(__func__);
 }
 
 /**
@@ -653,7 +651,7 @@ void DX::CreateFence()
 	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(Fence.GetAddressOf())));
 #endif
 
-	LogOK("CreateFence");
+	LogOK(__func__);
 }
 
 /**
@@ -701,7 +699,7 @@ void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const size_
 		VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
 	}
 
-	LogOK("CreateCommandList");
+	LogOK(__func__);
 }
 
 void DX::CreateCommandList()
@@ -792,7 +790,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 #endif
 	(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, SwapChainDesc.BufferCount, SwapChainDescriptorHeap);
 
-	LogOK("CreateSwapChain");
+	LogOK(__func__);
 }
 void DX::CreateSwapChainResource()
 {
@@ -826,7 +824,7 @@ void DX::CreateSwapChainResource()
 		Device->CreateRenderTargetView(SCR, nullptr, CDH);
 	}
 
-	LogOK("CreateSwapChainResource");
+	LogOK(__func__);
 }
 
 /**
@@ -878,7 +876,7 @@ void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, cons
 
 	WaitForFence();
 
-	LogOK("InitializeSwapchainImage");
+	LogOK(__func__);
 }
 
 void DX::InitializeSwapChain()
@@ -903,7 +901,7 @@ void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 
 	CreateSwapChainResource();
 
-	LogOK("ResizeSwapChain");
+	LogOK(__func__);
 }
 
 void DX::CreateDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height)
@@ -924,7 +922,7 @@ void DX::CreateDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, con
 
 	CreateDepthStencilResource(DepthFormat, Width, Height);
 
-	LogOK("CreateDepthStencil");
+	LogOK(__func__);
 }
 
 void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height)
@@ -983,7 +981,7 @@ void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Wi
 	ResourceBarrier(CL.Get(), DepthStencilResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 #endif
 
-	LogOK("CreateDepthStencilResource");
+	LogOK(__func__);
 }
 void DX::ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height)
 {
@@ -995,7 +993,7 @@ void DX::ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, con
 
 	CreateDepthStencilResource(DepthFormat, Width, Height);
 
-	LogOK("ResizeDepthStencil");
+	LogOK(__func__);
 }
 
 void DX::CreateIndirectBuffer(ID3D12Resource** Resource, const UINT32 Size, const void* Source, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL)
@@ -1040,7 +1038,7 @@ void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDe
 		}
 	};
 
-	LogOK("CreateViewport");
+	LogOK(__func__);
 }
 
 //void DX::CreateRootSignature(ID3D12RootSignature** RootSignature) const
@@ -1079,7 +1077,7 @@ GraphicsCommandList->SetGraphicsRootDescriptorTable(0, CVDescriptorHandle);
 */
 void DX::CreateConstantBuffer()
 {
-	LogOK("CreateConstantBuffer");
+	LogOK(__func__);
 }
 
 void DX::CreateUnorderedAccessTexture()
@@ -1163,7 +1161,7 @@ void DX::CreateUnorderedAccessTexture()
 		
 	}
 
-	LogOK("CreateUnorderedAccessBuffer");
+	LogOK(__func__);
 }
 
 //!< ルートシグネチャをシリアライズしてブロブを作る
@@ -1173,6 +1171,13 @@ void DX::SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob)
 void DX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
 #endif
 {
+#if 1
+	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
+		0, nullptr,
+		0, nullptr,
+		D3D12_ROOT_SIGNATURE_FLAG_NONE
+	};
+#else
 	std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
 		/**
 		D3D12_DESCRIPTOR_RANGE_TYPE RangeType; ... D3D12_DESCRIPTOR_RANGE_TYPE_[SRV, UAV, CBV, SAMPLER]
@@ -1225,6 +1230,7 @@ void DX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
 		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
 		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
 	};
+#endif
 
 #ifdef USE_WINRT
 	winrt::com_ptr<ID3DBlob> ErrorBlob;
@@ -1234,7 +1240,7 @@ void DX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.GetAddressOf(), ErrorBlob.GetAddressOf()));
 #endif
 
-	LogOK("SerializeRootSignature");
+	LogOK(__func__);
 }
 
 //!< シェーダからルートシグネチャパートを取り出しブロブを作る
@@ -1257,7 +1263,7 @@ void DX::GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob
 	VERIFY_SUCCEEDED(D3DGetBlobPart(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, RSBlob.GetAddressOf()));
 #endif
 
-	LogOK("GetRootSignaturePartFromShader");
+	LogOK(__func__);
 }
 
 /**
@@ -1283,7 +1289,7 @@ Microsoft::WRL::ComPtr<ID3DBlob> RSBlob;
 	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, RSBlob->GetBufferPointer(), RSBlob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
 #endif
 
-	LogOK("CreateRootSignature");
+	LogOK(__func__);
 }
 
 #ifdef USE_WINRT
@@ -1407,17 +1413,106 @@ void DX::CreatePipelineState()
 {
 	CreatePipelineState_Graphics();
 }
+void DX::CreatePipelineState_Default(winrt::com_ptr<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RootSignature, 
+	const D3D12_SHADER_BYTECODE& VS, const D3D12_SHADER_BYTECODE& PS, const D3D12_SHADER_BYTECODE& DS, const D3D12_SHADER_BYTECODE& HS, const D3D12_SHADER_BYTECODE& GS)
+{
+	PERFORMANCE_COUNTER();
+
+	//!< ストリームアウトプット (StreamOutput)
+	const D3D12_STREAM_OUTPUT_DESC SOD = {
+		nullptr, 0,
+		nullptr, 0,
+		0
+	};
+
+	//!< ブレンド (Blend)
+	const D3D12_RENDER_TARGET_BLEND_DESC RTBD = {
+		FALSE, FALSE,
+		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
+		D3D12_LOGIC_OP_NOOP,
+		D3D12_COLOR_WRITE_ENABLE_ALL,
+	};
+	const D3D12_BLEND_DESC BD = {
+		FALSE,
+		FALSE,
+		{ RTBD/*, ... x8*/ }
+	};
+
+	//!< ラスタライザ (Rasterizer)
+	const D3D12_RASTERIZER_DESC RD = {
+		D3D12_FILL_MODE_SOLID,
+		D3D12_CULL_MODE_BACK, TRUE/*CCW*/,
+		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
+		TRUE,
+		FALSE,
+		FALSE,
+		0,
+		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
+	};
+
+	//!< デプスステンシル (DepthStencil)
+	const D3D12_DEPTH_STENCILOP_DESC DSOD = {
+		D3D12_STENCIL_OP_KEEP,
+		D3D12_STENCIL_OP_KEEP,
+		D3D12_STENCIL_OP_KEEP,
+		D3D12_COMPARISON_FUNC_NEVER
+	};
+	const D3D12_DEPTH_STENCIL_DESC DSD = {
+		FALSE,
+		D3D12_DEPTH_WRITE_MASK_ZERO,
+		D3D12_COMPARISON_FUNC_NEVER,
+		FALSE,
+		0,
+		0,
+		DSOD,
+		DSOD
+	};
+
+	//!< インプットレイアウト (InputLayout)
+	const std::array<D3D12_INPUT_ELEMENT_DESC, 0> IEDs = {};
+	const D3D12_INPUT_LAYOUT_DESC ILD = {
+		IEDs.data(), static_cast<UINT>(IEDs.size())
+	};
+
+	//!< サンプル (Sample)
+	const DXGI_SAMPLE_DESC SD = { 1, 0 };
+
+	//!< キャッシュドパイプライン (CachedPipeline)
+	const D3D12_CACHED_PIPELINE_STATE CPS = { nullptr, 0 };
+
+	const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {
+		RootSignature,
+		VS, PS, DS, HS, GS,
+		SOD,
+		BD,
+		UINT_MAX,
+		RD,
+		DSD,
+		ILD,
+		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
+		D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, //!< ハルシェーダ、ジオメトリシェーダのインプットプリミティブ
+		1, { DXGI_FORMAT_R8G8B8A8_UNORM }, DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
+		SD,
+		0,
+		CPS,
+		D3D12_PIPELINE_STATE_FLAG_NONE //!< D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG ... は Warp デバイスのみ
+	};
+	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
+
+#ifdef USE_WINRT
+	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, __uuidof(PipelineState), PipelineState.put_void()));
+#elif defined(USE_WRL)
+	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, IID_PPV_ARGS(PipelineState.GetAddressOf())));
+#endif
+}
 void DX::CreatePipelineState_Graphics()
 {
 #ifdef _DEBUG
-	PerformanceCounter PC("CreatePipelineState_Graphics : ");
+	PERFORMANCE_COUNTER();
 #endif
 
 	assert(nullptr != RootSignature);
-#if 0
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
-	CreateRootSignature(RootSignature.GetAddressOf());
-#endif
 
 	//!< シェーダ
 #ifdef USE_WINRT
@@ -1534,13 +1629,13 @@ void DX::CreatePipelineState_Graphics()
 		StorePipelineLibrary(PCOPath);
 	}
 
-	LogOK("CreatePipelineState_Graphics");
+	LogOK(__func__);
 }
 
 void DX::CreatePipelineState_Compute()
 {
 #ifdef _DEBUG
-	PerformanceCounter PC("CreatePipelineState_Compute : ");
+	PerformanceCounter PC(__func__);
 #endif
 	assert(nullptr != RootSignature && "");
 
@@ -1571,7 +1666,7 @@ void DX::CreatePipelineState_Compute()
 	VERIFY_SUCCEEDED(Device->CreateComputePipelineState(&ComputePipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
 #endif
 
-	LogOK("CreatePipelineState_Compute");
+	LogOK(__func__);
 }
 
 void DX::ClearColor(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const DirectX::XMVECTORF32& Color)

@@ -30,7 +30,7 @@ protected:
 		PipelineTessellationStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO, nullptr, 0, PatchControlPoint };
 	}
 
-	virtual void CreatePipelineLayout() override;
+	virtual void CreatePipelineLayout() override { CreatePipelineLayout_1UB_GS(); }
 
 	virtual void CreateUniformBuffer() override {
 		const auto Fov = 0.16f * glm::pi<float>();
@@ -48,8 +48,8 @@ protected:
 		});
 	}
 
-	virtual void CreateDescriptorPool() override;
-	virtual void UpdateDescriptorSet() override;
+	virtual void CreateDescriptorPool() override { CreateDescriptorPool_1UB(); }
+	virtual void UpdateDescriptorSet() override { UpdateDescriptorSet_1UB(); }
 
 	virtual void PopulateCommandBuffer(const size_t i) override;
 

@@ -2,279 +2,518 @@
 
 #include "VKExt.h"
 
-void VKExt::CreateIndirectBuffer_Draw(const uint32_t Count)
-{
-	const VkDrawIndirectCommand Source = { Count, 1, 0, 0 };
-	const auto Stride = sizeof(Source);
-	const auto Size = static_cast<VkDeviceSize>(Stride * 1);
-	const auto CB = CommandPools[0].second[0];//CommandBuffers[0];
+//void VKExt::CreateDescriptorSetLayoutBindings_1UB(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags /*= VK_SHADER_STAGE_ALL_GRAPHICS*/) const
+//{
+//	DescriptorSetLayoutBindings = {
+//		{
+//			0, //!< binding = 0 バインディング Binding
+//			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< タイプ Type
+//			1, //!< 個数 Count
+//			ShaderStageFlags,
+//			nullptr
+//		},
+//	};
+//}
+//void VKExt::CreateDescriptorSetLayoutBindings_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags /*= VK_SHADER_STAGE_ALL_GRAPHICS*/) const
+//{
+//	DescriptorSetLayoutBindings = {
+//		{
+//			0, //!< binding = 0
+//			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER/*VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE*/,
+//			1,
+//			ShaderStageFlags,
+//			nullptr
+//		},
+//	};
+//}
+//void VKExt::CreateDescriptorSetLayoutBindings_1UB_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags_UB /*= VK_SHADER_STAGE_ALL_GRAPHICS*/, const VkShaderStageFlags ShaderStageFlags_CIS /*= VK_SHADER_STAGE_ALL_GRAPHICS*/) const
+//{
+//	DescriptorSetLayoutBindings = {
+//		{
+//			0, //!< binding = 0
+//			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+//			1,
+//			ShaderStageFlags_UB,
+//			nullptr
+//		},
+//		{
+//			1, //!< binding = 1
+//			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER/*VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE*/,
+//			1,
+//			ShaderStageFlags_CIS,
+//			nullptr
+//		}
+//	};
+//}
+//void VKExt::CreateDescriptorSetLayoutBindings_1SI(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags /*= VK_SHADER_STAGE_ALL_GRAPHICS*/) const
+//{
+//	DescriptorSetLayoutBindings = {
+//		{
+//			0, //!< binding = 0
+//			VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+//			1,
+//			ShaderStageFlags,
+//			nullptr
+//		},
+//	};
+//}
 
-	CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, Size, &Source, CB);
-}
-void VKExt::CreateIndirectBuffer_DrawIndexed(const uint32_t Count)
+void VKExt::CreatePipelineLayout_1UB_GS()
 {
-	const VkDrawIndexedIndirectCommand Source = { Count, 1, 0, 0, 0 };
-	const auto Stride = sizeof(Source);
-	const auto Size = static_cast<VkDeviceSize>(Stride * 1);
-	const auto CB = CommandPools[0].second[0]; //CommandBuffers[0];
-
-	CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, Size, &Source, CB);
-}
-void VKExt::CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z)
-{
-	const VkDispatchIndirectCommand Source = { X, Y, Z };
-	const auto Stride = sizeof(Source);
-	const auto Size = static_cast<VkDeviceSize>(Stride * 1);
-	const auto CB = CommandPools[0].second[0]; //CommandBuffers[0];//ComputeCommandBuffers[0];
-
-	CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, Size, &Source, CB);
-}
-
-void VKExt::CreateDescriptorSetLayoutBindings_1UB(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags /*= VK_SHADER_STAGE_ALL_GRAPHICS*/) const
-{
-	DescriptorSetLayoutBindings = {
+	const  std::array<VkDescriptorSetLayoutBinding, 1> DSLBs = {
 		{
-			0, //!< binding = 0 バインディング Binding
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< タイプ Type
-			1, //!< 個数 Count
-			ShaderStageFlags,
+			0,
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			1,
+			VK_SHADER_STAGE_GEOMETRY_BIT,
 			nullptr
 		},
 	};
-}
-void VKExt::CreateDescriptorPoolSizes_1UB(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const
-{
-	DescriptorPoolSizes = {
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+
+	const VkDescriptorSetLayoutCreateInfo DSLCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
 	};
+
+	VkDescriptorSetLayout DSL = VK_NULL_HANDLE;
+	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
+	DescriptorSetLayouts.push_back(DSL);
+
+	const std::array<VkPushConstantRange, 0> PCRs = {};
+
+	const VkPipelineLayoutCreateInfo PLCI = {
+		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
+		static_cast<uint32_t>(PCRs.size()), PCRs.data()
+	};
+	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PipelineLayout));
+
+	LogOK(__func__);
 }
-void VKExt::CreateWriteDescriptorSets_1UB(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos) const
+void VKExt::CreateDescriptorPool_1UB()
 {
-	WriteDescriptorSets = {
+	const std::array<VkDescriptorPoolSize, 1> DPSs = {
+		{
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			1
+		}
+	};
+	const uint32_t MaxSets = [&]() {
+		uint32_t Count = 0;
+		for (const auto& i : DPSs) {
+			Count = std::max(Count, i.descriptorCount);
+		}
+		return Count;
+	}();
+	const VkDescriptorPoolCreateInfo DPCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		nullptr,
+		0, //!< デスクリプタセットを個々に解放したい場合には VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT を指定(プールごとの場合は不要)
+		MaxSets,
+		static_cast<uint32_t>(DPSs.size()), DPSs.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DescriptorPool));
+	assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
+
+	LogOK(__func__);
+}
+void VKExt::UpdateDescriptorSet_1UB()
+{
+	const std::array<VkDescriptorBufferInfo, 1> DBIs = {
+			{
+				UniformBuffer,
+				0/*オフセット(要アライン)*/,
+				VK_WHOLE_SIZE
+			}
+	};
+	const std::array<VkWriteDescriptorSet, 1> WDSs = {
 		{
 			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			nullptr,
 			DescriptorSets[0], 0, 0, //!< デスクリプタセット、バインディングポイント、配列の場合の添字(配列でなければ0)
-			static_cast<uint32_t>(DescriptorBufferInfos.size()),
+			static_cast<uint32_t>(DBIs.size()),
 			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			nullptr,
-			DescriptorBufferInfos.data(),
-			nullptr
-		},
-	};
-}
-void VKExt::UpdateDescriptorSet_1UB()
-{
-	[&](const VkBuffer Buffer) {
-		std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
-		const std::vector<VkDescriptorBufferInfo> DescriptorBufferInfos = {
-			{
-				Buffer,
-				0/*オフセット(要アライン)*/,
-				VK_WHOLE_SIZE
-			}
-		};
-		CreateWriteDescriptorSets(WriteDescriptorSets, DescriptorBufferInfos, {}, {});
-
-		std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
-		CreateCopyDescriptorSets(CopyDescriptorSets);
-
-		vkUpdateDescriptorSets(Device,
-			static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
-			static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
-	}(UniformBuffer);
-}
-
-void VKExt::CreateDescriptorSetLayoutBindings_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags /*= VK_SHADER_STAGE_ALL_GRAPHICS*/) const
-{
-	DescriptorSetLayoutBindings = {
-		{
-			0, //!< binding = 0
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER/*VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE*/,
-			1,
-			ShaderStageFlags,
-			nullptr
-		},
-	};
-}
-void VKExt::CreateDescriptorPoolSizes_1CIS(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const
-{
-	DescriptorPoolSizes = {
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER/*VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE*/, 1 },
-	};
-}
-void VKExt::CreateWriteDescriptorSets_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const
-{
-	WriteDescriptorSets = {
-		{
-			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			nullptr,
-			DescriptorSets[0], 0, 0,
-			static_cast<uint32_t>(DescriptorImageInfos.size()),
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER/*VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE*/,
-			DescriptorImageInfos.data(),
-			nullptr,
-			nullptr
-		},
-	};
-}
-void VKExt::UpdateDescriptorSet_1CIS()
-{
-	[&](const VkImageView ImageView, const VkSampler Sampler) {
-		std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
-		const std::vector<VkDescriptorImageInfo> DescriptorImageInfos = {
-			{
-				Sampler,
-				ImageView,
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-			},
-		};
-		CreateWriteDescriptorSets(WriteDescriptorSets, {}, DescriptorImageInfos, {});
-
-		std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
-		CreateCopyDescriptorSets(CopyDescriptorSets);
-
-		vkUpdateDescriptorSets(Device,
-			static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
-			static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
-
-	}(ImageView, Samplers[0]);
-}
-
-void VKExt::CreateDescriptorSetLayoutBindings_1UB_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags_UB /*= VK_SHADER_STAGE_ALL_GRAPHICS*/, const VkShaderStageFlags ShaderStageFlags_CIS /*= VK_SHADER_STAGE_ALL_GRAPHICS*/) const
-{
-	DescriptorSetLayoutBindings = {
-		{
-			0, //!< binding = 0
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			1,
-			ShaderStageFlags_UB,
-			nullptr
-		},
-		{
-			1, //!< binding = 1
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER/*VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE*/,
-			1,
-			ShaderStageFlags_CIS,
+			DBIs.data(),
 			nullptr
 		}
 	};
+
+	const std::array<VkCopyDescriptorSet, 0> CDSs = {};
+
+	vkUpdateDescriptorSets(Device,
+		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
+		static_cast<uint32_t>(CDSs.size()), CDSs.data());
+
+	LogOK(__func__);
 }
-void VKExt::CreateDescriptorPoolSizes_1UB_1CIS(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const
+
+void VKExt::CreatePipelineLayout_1CIS_FS()
 {
-	DescriptorPoolSizes = {
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER/*VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE*/, 1 },
+	//!< ImmutableSampler == STATIC_SAMPLER_DESC 相当？
+#if 0
+	const VkSamplerCreateInfo SCI = {
+		VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+		nullptr,
+		0,
+		VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR,
+		VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		0.0f,
+		VK_FALSE, 1.0f,
+		VK_FALSE, VK_COMPARE_OP_NEVER,
+		0.0f, 1.0f,
+		VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+		VK_FALSE
 	};
+	VkSampler Sampler = VK_NULL_HANDLE;
+	VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Sampler));
+	const std::array<VkSampler, 1> ISs = { { Sampler } };
+	const std::array<VkDescriptorSetLayoutBinding, 1> DSLBs = {
+		{
+			0,
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			static_cast<uint32_t>(ISs.size()),
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			ISs.data()
+		},
+	};
+#else
+	const std::array<VkDescriptorSetLayoutBinding, 1> DSLBs = {
+		{
+			0,
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			1,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			nullptr
+		},
+	};
+#endif
+	const VkDescriptorSetLayoutCreateInfo DSLCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
+	};
+
+	VkDescriptorSetLayout DSL = VK_NULL_HANDLE;
+	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
+	DescriptorSetLayouts.push_back(DSL);
+
+	const std::array<VkPushConstantRange, 0> PCRs = {};
+
+	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
+		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
+		static_cast<uint32_t>(PCRs.size()), PCRs.data()
+	};
+	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, GetAllocationCallbacks(), &PipelineLayout));
+
+	LogOK(__func__);
 }
-void VKExt::CreateWriteDescriptorSets_1UB_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const
+void VKExt::CreateDescriptorPool_1CIS()
 {
-	WriteDescriptorSets = {
+	const std::array<VkDescriptorPoolSize, 1> DPSs = {
+		{
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			1
+		}
+	};
+	const uint32_t MaxSets = [&]() {
+		uint32_t Count = 0;
+		for (const auto& i : DPSs) {
+			Count = std::max(Count, i.descriptorCount);
+		}
+		return Count;
+	}();
+	const VkDescriptorPoolCreateInfo DPCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		nullptr,
+		0,
+		MaxSets,
+		static_cast<uint32_t>(DPSs.size()), DPSs.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DescriptorPool));
+	assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
+
+	LogOK(__func__);
+}
+
+void VKExt::UpdateDescriptorSet_1CIS()
+{
+	const std::array<VkDescriptorImageInfo, 1> DIIs = {
+		{
+			Samplers[0],
+			ImageView,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		}
+	};
+	const std::array<VkWriteDescriptorSet, 1> WDSs = {
 		{
 			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			nullptr,
 			DescriptorSets[0], 0, 0,
-			static_cast<uint32_t>(DescriptorBufferInfos.size()),
+			static_cast<uint32_t>(DIIs.size()),
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			DIIs.data(),
+			nullptr,
+			nullptr
+		}
+	};
+
+	const std::array<VkCopyDescriptorSet, 0> CDSs = {};
+
+	vkUpdateDescriptorSets(Device,
+		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
+		static_cast<uint32_t>(CDSs.size()), CDSs.data());
+
+	LogOK(__func__);
+}
+
+#if 0
+void VKExt::CreateDescriptorPool_1SI()
+{
+	const std::array<VkDescriptorPoolSize, 1> DPSs = {
+		{ 
+			VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 
+			1
+		}
+	};
+	const uint32_t MaxSets = [&]() {
+		uint32_t Count = 0;
+		for (const auto& i : DPSs) {
+			Count = std::max(Count, i.descriptorCount);
+		}
+		return Count;
+	}();
+	const VkDescriptorPoolCreateInfo DPCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		nullptr,
+		0,
+		MaxSets,
+		static_cast<uint32_t>(DPSs.size()), DPSs.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DescriptorPool));
+	assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
+
+	LogOK(__func__);
+}
+void VKExt::UpdateDescriptorSet_1SI()
+{
+	const std::array<VkDescriptorImageInfo, 1> DIIs = {
+		{
+			Samplers[0],
+			ImageView,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		}
+	};
+	const std::array<VkWriteDescriptorSet, 1> WDSs = {
+		{
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			nullptr,
+			DescriptorSets[0], 0, 0,
+			static_cast<uint32_t>(DIIs.size()),
+			VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+			DIIs.data(),
+			nullptr,
+			nullptr
+		}
+	};
+
+	const std::array<VkCopyDescriptorSet, 0> CDSs = {};
+
+	vkUpdateDescriptorSets(Device,
+		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
+		static_cast<uint32_t>(CDSs.size()), CDSs.data());
+
+	LogOK(__func__);
+}
+#endif
+#if 1
+void VKExt::CreateDescriptorPool_1SI()
+{
+	const std::array<VkDescriptorPoolSize, 1> DPSs = {
+	{
+		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+		1
+	}
+	};
+	const uint32_t MaxSets = [&]() {
+		uint32_t Count = 0;
+		for (const auto& i : DPSs) {
+			Count = std::max(Count, i.descriptorCount);
+		}
+		return Count;
+	}();
+	const VkDescriptorPoolCreateInfo DPCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		nullptr,
+		0,
+		MaxSets,
+		static_cast<uint32_t>(DPSs.size()), DPSs.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DescriptorPool));
+	assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
+
+	LogOK(__func__);
+}
+void VKExt::UpdateDescriptorSet_1SI()
+{
+	const std::array<VkDescriptorImageInfo, 1> DIIs = {
+	{
+		VK_NULL_HANDLE,
+		ImageView,
+		VK_IMAGE_LAYOUT_GENERAL
+	}
+	};
+	const std::array<VkWriteDescriptorSet, 1> WDSs = {
+		{
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			nullptr,
+			DescriptorSets[0], 0, 0,
+			static_cast<uint32_t>(DIIs.size()),
+			VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+			DIIs.data(),
+			nullptr,
+			nullptr
+		}
+	};
+
+	const std::array<VkCopyDescriptorSet, 0> CDSs = {};
+
+	vkUpdateDescriptorSets(Device,
+		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
+		static_cast<uint32_t>(CDSs.size()), CDSs.data());
+
+	LogOK(__func__);
+}
+#endif
+
+void VKExt::CreatePipelineLayout_1UB_GS_1CIS_FS()
+{
+	const std::array<VkDescriptorSetLayoutBinding, 2> DSLBs = { {
+		{
+			0,
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			1,
+			VK_SHADER_STAGE_GEOMETRY_BIT,
+			nullptr
+		},
+		{
+			1,
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			1,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			nullptr
+		}
+	} };
+
+	const VkDescriptorSetLayoutCreateInfo DSLCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
+	};
+
+	VkDescriptorSetLayout DSL = VK_NULL_HANDLE;
+	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
+	DescriptorSetLayouts.push_back(DSL);
+
+	const std::array<VkPushConstantRange, 0> PCRs = {};
+
+	const VkPipelineLayoutCreateInfo PLCI = {
+		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
+		static_cast<uint32_t>(PCRs.size()), PCRs.data()
+	};
+	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PipelineLayout));
+
+	LogOK(__func__);
+}
+void VKExt::CreateDescriptorPool_1UB_1CIS()
+{
+	const std::array<VkDescriptorPoolSize, 2> DPSs = { {
+		{
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			1
+		},
+		{
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			1
+		}
+	} };
+	const uint32_t MaxSets = [&]() {
+		uint32_t Count = 0;
+		for (const auto& i : DPSs) {
+			Count = std::max(Count, i.descriptorCount);
+		}
+		return Count;
+	}();
+	const VkDescriptorPoolCreateInfo DPCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		nullptr,
+		0,
+		MaxSets,
+		static_cast<uint32_t>(DPSs.size()), DPSs.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DescriptorPool));
+	assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
+
+	LogOK(__func__);
+}
+void VKExt::UpdateDescriptorSet_1UB_1CIS()
+{
+	const std::array<VkDescriptorBufferInfo, 1> DBIs = {
+		{
+			UniformBuffer,
+			0,
+			VK_WHOLE_SIZE
+		}
+	};
+	const std::array<VkDescriptorImageInfo, 1> DIIs = {
+		{
+			Samplers[0],
+			ImageView,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		}
+	};
+	const std::array<VkWriteDescriptorSet, 2> WDSs = { {
+		{
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			nullptr,
+			DescriptorSets[0], 0, 0,
+			static_cast<uint32_t>(DBIs.size()),
 			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			nullptr,
-			DescriptorBufferInfos.data(),
+			DBIs.data(),
 			nullptr
-			},
+		},
 		{
 			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			nullptr,
 			DescriptorSets[0], 1, 0,
-			static_cast<uint32_t>(DescriptorImageInfos.size()),
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER/*VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE*/,
-			DescriptorImageInfos.data(),
+			static_cast<uint32_t>(DIIs.size()),
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			DIIs.data(),
 			nullptr,
 			nullptr
-		},
-	};
-}
-void VKExt::UpdateDescriptorSet_1UB_1CIS()
-{
-	[&](const VkBuffer Buffer, const VkImageView ImageView, const VkSampler Sampler) {
-		std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
-		WriteDescriptorSets.resize(1);
-		const std::vector<VkDescriptorBufferInfo> DescriptorBufferInfos = {
-			{
-				Buffer,
-				0,
-				VK_WHOLE_SIZE
-			}
-		};
-		const std::vector<VkDescriptorImageInfo> DescriptorImageInfos = {
-			{
-				Sampler,
-				ImageView,
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-			},
-		};
-		CreateWriteDescriptorSets(WriteDescriptorSets, DescriptorBufferInfos, DescriptorImageInfos, {});
+		}
+	} };
 
-		std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
-		CreateCopyDescriptorSets(CopyDescriptorSets);
+	const std::array<VkCopyDescriptorSet, 0> CDSs = {};
 
-		vkUpdateDescriptorSets(Device,
-			static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
-			static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
-	}(UniformBuffer, ImageView, Samplers[0]);
-}
+	vkUpdateDescriptorSets(Device,
+		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
+		static_cast<uint32_t>(CDSs.size()), CDSs.data());
 
-void VKExt::CreateDescriptorSetLayoutBindings_1SI(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags /*= VK_SHADER_STAGE_ALL_GRAPHICS*/) const
-{
-	DescriptorSetLayoutBindings = {
-		{
-			0, //!< binding = 0
-			VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-			1,
-			ShaderStageFlags,
-			nullptr
-		},
-	};
-}
-void VKExt::CreateDescriptorPoolSizes_1SI(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const
-{
-	DescriptorPoolSizes = {
-		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 },
-	};
-}
-void VKExt::CreateWriteDescriptorSets_1SI(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const
-{
-	WriteDescriptorSets = {
-		{
-			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			nullptr,
-			DescriptorSets[0], 0, 0,
-			static_cast<uint32_t>(DescriptorImageInfos.size()),
-			VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-			DescriptorImageInfos.data(),
-			nullptr,
-			nullptr
-		},
-	};
-}
-void VKExt::UpdateDescriptorSet_1SI()
-{
-	[&](const VkImageView ImageView) {
-		std::vector<VkWriteDescriptorSet> WriteDescriptorSets;
-		const std::vector<VkDescriptorImageInfo> DescriptorImageInfos = {
-			{
-				VK_NULL_HANDLE,
-				ImageView,
-				VK_IMAGE_LAYOUT_GENERAL
-			},
-		};
-		CreateWriteDescriptorSets(WriteDescriptorSets, {}, DescriptorImageInfos, {});
-
-		std::vector<VkCopyDescriptorSet> CopyDescriptorSets;
-		CreateCopyDescriptorSets(CopyDescriptorSets);
-
-		vkUpdateDescriptorSets(Device,
-			static_cast<uint32_t>(WriteDescriptorSets.size()), WriteDescriptorSets.data(),
-			static_cast<uint32_t>(CopyDescriptorSets.size()), CopyDescriptorSets.data());
-	}(ImageView);
+	LogOK(__func__);
 }
 
 void VKExt::CreateSampler_LR(VkSampler* Sampler, const float MaxLOD) const
@@ -299,81 +538,83 @@ void VKExt::CreateSampler_LR(VkSampler* Sampler, const float MaxLOD) const
 	}(Sampler, MaxLOD);
 }
 
-void VKExt::CreateRenderPass_Color()
+void VKExt::CreateRenderPass_1C(VkRenderPass& RenderPass, const VkFormat Format)
 {
-	[&](VkRenderPass* RenderPass, const VkFormat ColorFormat) {
-		const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
-			{
-				0,
-				ColorFormat,
-				VK_SAMPLE_COUNT_1_BIT,
-				VK_ATTACHMENT_LOAD_OP_DONT_CARE,		//!< VK_ATTACHMENT_LOAD_OP_CLEAR にするとレンダーパスの開始時にクリアを行う (VkRenderPassBeginInfo.pClearValuesのセットが必須になる)
-				VK_ATTACHMENT_STORE_OP_STORE,			//!< レンダーパス終了時に保存する(表示するのに必要)
-				VK_ATTACHMENT_LOAD_OP_DONT_CARE,		//!< (ここでは)ステンシルは未使用
-				VK_ATTACHMENT_STORE_OP_DONT_CARE,		//!< (ここでは)ステンシルは未使用
-				VK_IMAGE_LAYOUT_UNDEFINED,				//!< レンダーパス開始時のレイアウト (メモリバリアなしにレンダーパス間でレイアウトが変更される)
-				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR			//!< レンダーパス終了時のレイアウト
-			},
-		};
-
-		const std::vector<VkAttachmentReference> InputAttachmentReferences = {};
-		const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
-			{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
-		};
-		//const std::vector<VkAttachmentReference> ResolveAttachmentReferences = {
-		//	{ VK_ATTACHMENT_UNUSED },
-		//}; 
-		//assert(ColorAttachmentReferences.size() == ResolveAttachmentReferences.size() && "Size must be same");
-		const VkAttachmentReference* DepthStencilAttachmentReference = nullptr;
-		const std::vector<uint32_t> PreserveAttachments = {}; //!< このサブバス内では使用しないが、サブパス全体においてコンテンツを保持しなくてはならないインデックスを指定
-
-		const std::vector<VkSubpassDescription> SubpassDescriptions = {
-			{
-				0,
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				static_cast<uint32_t>(InputAttachmentReferences.size()), InputAttachmentReferences.data(),
-				static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(), nullptr/*ResolveAttachmentReferences.data()*/,
-				DepthStencilAttachmentReference,
-				static_cast<uint32_t>(PreserveAttachments.size()), PreserveAttachments.data()
-			},
-		};
-
-		//!< サブパス間の依存関係 (前の描画結果を次の処理で使用する場合など)
-		const std::vector<VkSubpassDependency> SubpassDependencies = {
-#if 0
-			//!< 必要無いが、あえて書くならこんな感じ No need this code, but if dare to write like this
-			{
-				VK_SUBPASS_EXTERNAL,							//!< サブパス外から
-				0,												//!< サブパス0へ
-				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,			//!< パイプラインの最終ステージから
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< カラー出力ステージへ
-				VK_ACCESS_MEMORY_READ_BIT,						//!< 読み込みから
-				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,			//!< カラー書き込みへ
-				VK_DEPENDENCY_BY_REGION_BIT,					//!< 同じメモリ領域に対する書き込みが完了してから読み込み (指定しない場合は自前で書き込み完了を管理)
-			},
-			{
-				0,												//!< サブパス0から
-				VK_SUBPASS_EXTERNAL,							//!< サブパス外へ
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< カラー出力ステージから
-				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,			//!< パイプラインの最終ステージへ
-				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,			//!< カラー書き込みから
-				VK_ACCESS_MEMORY_READ_BIT,						//!< 読み込みへ
-				VK_DEPENDENCY_BY_REGION_BIT,
-			},
-#endif
-		};
-
-		const VkRenderPassCreateInfo RenderPassCreateInfo = {
-			VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-			nullptr,
+	//!< アタッチメントディスクリプション
+	const std::array<VkAttachmentDescription, 1> AttachDescs = {
+		{
 			0,
-			static_cast<uint32_t>(AttachmentDescriptions.size()), AttachmentDescriptions.data(),
-			static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
-			static_cast<uint32_t>(SubpassDependencies.size()), SubpassDependencies.data()
-		};
-		VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, GetAllocationCallbacks(), RenderPass));
-	}(&RenderPass, ColorFormat);
+			Format,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE,		//!< VK_ATTACHMENT_LOAD_OP_CLEAR にするとレンダーパスの開始時にクリアを行う (VkRenderPassBeginInfo.pClearValuesのセットが必須になる)
+			VK_ATTACHMENT_STORE_OP_STORE,			//!< レンダーパス終了時に保存する(表示するのに必要)
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE,		//!< (ここでは)ステンシルは未使用
+			VK_ATTACHMENT_STORE_OP_DONT_CARE,		//!< (ここでは)ステンシルは未使用
+			VK_IMAGE_LAYOUT_UNDEFINED,				//!< レンダーパス開始時のレイアウト (メモリバリアなしにレンダーパス間でレイアウトが変更される)
+			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR			//!< レンダーパス終了時のレイアウト
+		}
+	};
+
+	//!< アタッチメントリファレンス
+	const std::array<VkAttachmentReference, 0> InputAttachRefs = {};
+	const std::array<VkAttachmentReference, 1> ColorAttachRefs = {
+		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }
+	};
+	const std::array<VkAttachmentReference, 1> ResolveAttachRefs = {
+		{ VK_ATTACHMENT_UNUSED },
+	};
+	assert(ColorAttachRefs.size() == ResolveAttachRefs.size() && "Size must be same");
+	const VkAttachmentReference* DepthAR = nullptr;
+	const std::array<uint32_t, 0> PreserveAttach = {}; //!< このサブバス内では使用しないが、サブパス全体においてコンテンツを保持しなくてはならないインデックスを指定
+	const std::array<VkSubpassDescription, 1> SubpassDescs = {
+		{
+			0,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			static_cast<uint32_t>(InputAttachRefs.size()), InputAttachRefs.data(),
+			static_cast<uint32_t>(ColorAttachRefs.size()), ColorAttachRefs.data(), ResolveAttachRefs.data(),
+			DepthAR,
+			static_cast<uint32_t>(PreserveAttach.size()), PreserveAttach.data()
+		}
+	};
+
+	//!< サブパス
+#if 0
+	const std::array<VkSubpassDependency, 0> SubpassDepends = {};
+#else
+	const std::array<VkSubpassDependency, 2> SubpassDepends = { {
+		//!< 必要無いが、あえて書くならこんな感じ No need this code, but if dare to write like this
+		{
+			VK_SUBPASS_EXTERNAL,							//!< サブパス外から
+			0,												//!< サブパス0へ
+			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,			//!< パイプラインの最終ステージから
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< カラー出力ステージへ
+			VK_ACCESS_MEMORY_READ_BIT,						//!< 読み込みから
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,			//!< カラー書き込みへ
+			VK_DEPENDENCY_BY_REGION_BIT,					//!< 同じメモリ領域に対する書き込みが完了してから読み込み (指定しない場合は自前で書き込み完了を管理)
+		},
+		{
+			0,												//!< サブパス0から
+			VK_SUBPASS_EXTERNAL,							//!< サブパス外へ
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< カラー出力ステージから
+			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,			//!< パイプラインの最終ステージへ
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,			//!< カラー書き込みから
+			VK_ACCESS_MEMORY_READ_BIT,						//!< 読み込みへ
+			VK_DEPENDENCY_BY_REGION_BIT,
+		}
+	} };
+#endif
+
+	const VkRenderPassCreateInfo RPCI = {
+		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(AttachDescs.size()), AttachDescs.data(),
+		static_cast<uint32_t>(SubpassDescs.size()), SubpassDescs.data(),
+		static_cast<uint32_t>(SubpassDepends.size()), SubpassDepends.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RenderPass));
 }
+
 void VKExt::CreateRenderPass_ColorDepth()
 {
 	const auto CF = ColorFormat;
@@ -589,13 +830,8 @@ void VKExt::CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::v
 	const char* EntrypointName = "main";
 
 	//!< シェーダ内のコンスタント変数をパイプライン作成時に変更する場合に使用
-	const std::vector<VkSpecializationMapEntry> SpecializationMapEntries = {
-		//{ uint32_t constantID, uint32_t offset, size_t size },
-	};
-	const VkSpecializationInfo SpecializationInfo = {
-		static_cast<uint32_t>(SpecializationMapEntries.size()), SpecializationMapEntries.data(),
-		//size_t dataSize, const void* pData
-	};
+	const std::array<VkSpecializationMapEntry, 0> SMEs = { /*{ uint32_t constantID, uint32_t offset, size_t size },*/};
+	const VkSpecializationInfo SI = { static_cast<uint32_t>(SMEs.size()), SMEs.data() };
 
 	PipelineShaderStageCreateInfos = {
 		{
@@ -604,7 +840,7 @@ void VKExt::CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::v
 			0,
 			VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
 			EntrypointName,
-			nullptr //!< &SpecializationInfo
+			nullptr //!< &SI
 		},
 		{
 			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,

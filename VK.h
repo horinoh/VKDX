@@ -35,6 +35,8 @@
 
 #define USE_VIEWPORT_Y_UP
 
+//#define LOAD_PIPELINE
+
 #include "Cmn.h"
 #ifdef _WINDOWS
 #include "Win.h"
@@ -264,7 +266,7 @@ protected:
 	virtual void CreateStorageTexelBuffer() {}
 
 	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const {}
-	virtual void CreateDescriptorSetLayout();
+	virtual void CreateDescriptorSetLayout_deprecated();
 	virtual void CreatePipelineLayout();
 
 	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {}
@@ -309,6 +311,9 @@ protected:
 	virtual VkPipelineCache CreatePipelineCache() const;
 	virtual void CreatePipelineCaches(std::vector<VkPipelineCache>& PipelineCaches) const;
 	virtual void CreatePipeline();
+	virtual void CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PipelineLayout, 
+		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
+		const VkRenderPass RenderPass);
 	virtual void CreatePipeline_Graphics();
 	virtual void CreatePipeline_Compute();
 
@@ -463,6 +468,7 @@ protected:
 	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
 
 	VkPipeline Pipeline = VK_NULL_HANDLE;
+	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
 	VkRenderPass RenderPass = VK_NULL_HANDLE;
 	std::vector<VkFramebuffer> Framebuffers;
 

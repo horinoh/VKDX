@@ -10,6 +10,8 @@
 #include <wrl.h>
 #endif
 
+#define LOAD_PIPELINE
+
 #include <d3d12.h>
 #include <d3dcompiler.h>
 #include <DXGI1_4.h>
@@ -202,6 +204,8 @@ protected:
 	virtual BOOL LoadPipelineLibrary(const std::wstring& Path);
 	virtual void StorePipelineLibrary(const std::wstring& Path) const;
 	virtual void CreatePipelineState();
+	virtual void CreatePipelineState_Default(winrt::com_ptr<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RootSignature,
+		const D3D12_SHADER_BYTECODE& VS, const D3D12_SHADER_BYTECODE& PS, const D3D12_SHADER_BYTECODE& DS, const D3D12_SHADER_BYTECODE& HS, const D3D12_SHADER_BYTECODE& GS);
 	virtual void CreatePipelineState_Graphics();
 	virtual void CreatePipelineState_Compute();
 

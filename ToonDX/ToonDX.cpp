@@ -270,7 +270,7 @@ void ToonDX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.GetAddressOf(), ErrorBlob.GetAddressOf()));
 #endif
 
-	LogOK("SerializeRootSignature");
+	LogOK(__func__);
 }
 void ToonDX::PopulateCommandList(const size_t i)
 {

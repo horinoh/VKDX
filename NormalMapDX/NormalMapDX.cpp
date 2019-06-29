@@ -299,7 +299,7 @@ void NormalMapDX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlo
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.GetAddressOf(), ErrorBlob.GetAddressOf()));
 #endif
 
-	LogOK("SerializeRootSignature");
+	LogOK(__func__);
 }
 void NormalMapDX::PopulateCommandList(const size_t i)
 {

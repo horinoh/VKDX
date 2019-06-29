@@ -66,7 +66,7 @@ public:
 #endif
 		Device->CreateConstantBufferView(&ConstantBufferViewDesc, CDH);
 
-		LogOK("CreateDescriptorView");
+		LogOK(__func__);
 	}
 
 	/*
@@ -131,7 +131,7 @@ public:
 #endif
 		(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, ImageResource, ImageDescriptorHeap);
 
-		LogOK("CreateDescriptorHeap");
+		LogOK(__func__);
 	}
 
 	/*
@@ -175,7 +175,7 @@ public:
 		CreateDescriptorView_1CBV<T>();
 		CreateDescriptorHeap_1SRV();
 
-		LogOK("CreateDescriptorHeap");
+		LogOK(__func__);
 	}
 	
 	/*
@@ -250,7 +250,7 @@ public:
 #endif
 		(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, UnorderedAccessTextureResource, UnorderedAccessTextureDescriptorHeap);
 
-		LogOK("CreateDescriptorHeap");
+		LogOK(__func__);
 	}
 
 
@@ -288,6 +288,6 @@ public:
 		CopyToUploadResource(ConstantBufferResource.Get(), Size, &Type); 
 #endif
 	
-		LogOK("CreateConstantBuffer");
+		LogOK(__func__);
 	}
 };

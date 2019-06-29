@@ -10,15 +10,39 @@ public:
 	using Vertex_Position = struct Vertex_Position { glm::vec3 Position; };
 	using Vertex_PositionColor = struct Vertex_PositionColor { glm::vec3 Position; glm::vec4 Color; };
 
-	void CreateIndirectBuffer_Draw(const uint32_t Count);
-	void CreateIndirectBuffer_DrawIndexed(const uint32_t Count);
-	void CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z);
+	void CreateIndirectBuffer_Draw(const uint32_t Count) {
+		const VkDrawIndirectCommand DIC = { Count, 1, 0, 0 };
+		CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, static_cast<VkDeviceSize>(sizeof(DIC)), &DIC, CommandPools[0].second[0]);
+	}
+	void CreateIndirectBuffer_DrawIndexed(const uint32_t Count) {
+		const VkDrawIndexedIndirectCommand DIIC = { Count, 1, 0, 0, 0 };
+		CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC, CommandPools[0].second[0]);
+	}
+	void CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z) {
+		const VkDispatchIndirectCommand DIC = { X, Y, Z };
+		CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, static_cast<VkDeviceSize>(sizeof(DIC)), &DIC, CommandPools[0].second[0]);
+	}
 
-	//!<１つのユニフォームバッファ One uniform buffer
-	void CreateDescriptorSetLayoutBindings_1UB(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const;
-	void CreateDescriptorPoolSizes_1UB(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const;
-	void CreateWriteDescriptorSets_1UB(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos) const;
+	void CreatePipelineLayout_1UB_GS();
+	void CreateDescriptorPool_1UB();
 	void UpdateDescriptorSet_1UB();
+
+	void CreatePipelineLayout_1CIS_FS();
+	void CreateDescriptorPool_1CIS();
+	void UpdateDescriptorSet_1CIS();
+
+#if 0
+	void CreateDescriptorPool_1SI();
+	void UpdateDescriptorSet_1SI();
+#endif
+#if 1
+	void CreateDescriptorPool_1SI();
+	void UpdateDescriptorSet_1SI();
+#endif
+
+	void CreatePipelineLayout_1UB_GS_1CIS_FS();
+	void CreateDescriptorPool_1UB_1CIS();
+	void UpdateDescriptorSet_1UB_1CIS();
 
 	/** 
 	アプリ内ではサンプラとサンプルドイメージは別のオブジェクトとして扱うが、シェーダ内ではまとめた一つのオブジェクトとして扱うことができ、プラットフォームによっては効率が良い場合がある
@@ -66,23 +90,6 @@ public:
 		layout (input_attachment_index=0, set=0, binding=0) uniform subpassInput MySubpassInput;
 
 	*/
-	//!< １つのコンバインドイメージサンプラ(イメージ + サンプラ) One combined image sampler
-	void CreateDescriptorSetLayoutBindings_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const;
-	void CreateDescriptorPoolSizes_1CIS(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const;
-	void CreateWriteDescriptorSets_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const;
-	void UpdateDescriptorSet_1CIS();
-
-	//!< 1つのユニフォームバッファと1つのコンバインドイメージサンプラ One uniform buffer and one combined image sampler 
-	void CreateDescriptorSetLayoutBindings_1UB_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags_UB = VK_SHADER_STAGE_ALL_GRAPHICS, const VkShaderStageFlags ShaderStageFlags_CIS = VK_SHADER_STAGE_ALL_GRAPHICS) const;
-	void CreateDescriptorPoolSizes_1UB_1CIS(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const;
-	void CreateWriteDescriptorSets_1UB_1CIS(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const;
-	void UpdateDescriptorSet_1UB_1CIS();
-
-	//!< １つのストレージイメージ One storage image
-	void CreateDescriptorSetLayoutBindings_1SI(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags = VK_SHADER_STAGE_ALL_GRAPHICS) const;
-	void CreateDescriptorPoolSizes_1SI(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const;
-	void CreateWriteDescriptorSets_1SI(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos) const;
-	void UpdateDescriptorSet_1SI();
 
 	//!< LinearRepeat
 	void CreateSampler_LR(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const;
@@ -91,8 +98,8 @@ public:
 	//!< ↓ここでテンプレート特殊化している Template specialization here
 #include "VKVertexInput.inl"
 
-	virtual void CreateRenderPass() { CreateRenderPass_Color(); }
-	void CreateRenderPass_Color();
+	virtual void CreateRenderPass() { CreateRenderPass_1C(RenderPass, ColorFormat); }
+	void CreateRenderPass_1C(VkRenderPass& RenderPass, const VkFormat Format);
 	void CreateRenderPass_ColorDepth();
 	void CreateRenderPass_CD_PP();
 

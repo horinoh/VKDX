@@ -30,8 +30,6 @@ protected:
 		PipelineTessellationStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO, nullptr, 0, PatchControlPoint };
 	}
 
-	virtual void CreatePipelineLayout() override;
-
 	virtual void PopulateCommandBuffer(const size_t i) override;
 };
 #pragma endregion

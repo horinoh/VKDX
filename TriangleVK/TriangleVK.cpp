@@ -377,7 +377,7 @@ void TriangleVK::CreatePipelineLayout()
 	};
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PipelineLayout));
 
-	LogOK("CreatePipelineLayout");
+	LogOK(__func__);
 }
 void TriangleVK::PopulateCommandBuffer(const size_t i)
 {
