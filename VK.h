@@ -472,6 +472,8 @@ protected:
 	VkRenderPass RenderPass = VK_NULL_HANDLE;
 	std::vector<VkFramebuffer> Framebuffers;
 
+	std::vector<VkShaderModule> ShaderModules;
+
 	//!< https://matthewwellings.com/blog/the-new-vulkan-coordinate-system/
 	//!< VKのクリップスペースはYが反転、Zが半分 (Vulkan clip space has inverted Y and half Z)
 	static glm::mat4 GetVulkanClipSpace() {
@@ -517,4 +519,6 @@ protected:
 		0, VK_REMAINING_ARRAY_LAYERS
 	};
 	const VkClearDepthStencilValue ClearDepthStencilValue = { 1.0f, 0 };
+
+	const VkShaderModule NullShaderModule = static_cast<const VkShaderModule>(VK_NULL_HANDLE);
 };

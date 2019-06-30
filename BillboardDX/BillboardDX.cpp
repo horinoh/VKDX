@@ -270,7 +270,6 @@ void BillboardDX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlo
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.GetAddressOf(), ErrorBlob.GetAddressOf()));
 #endif
 
-	//LogOK(__func__);
 	LOG_OK();
 }
 void BillboardDX::CreateDescriptorHeap()
@@ -287,7 +286,7 @@ void BillboardDX::CreateDescriptorHeap()
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, IID_PPV_ARGS(ConstantBufferDescriptorHeap.GetAddressOf())));
 #endif
 
-	LogOK(__func__);
+	LOG_OK();
 }
 void BillboardDX::CreateDescriptorView()
 {
@@ -302,7 +301,7 @@ void BillboardDX::CreateDescriptorView()
 #endif
 	Device->CreateConstantBufferView(&ConstantBufferViewDesc, CDH);
 
-	LogOK(__func__);
+	LOG_OK();
 }
 void BillboardDX::PopulateCommandList(const size_t i)
 {

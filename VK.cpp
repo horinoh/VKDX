@@ -84,10 +84,10 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< パイプラインレイアウト (ルートシグネチャ相当)
 	CreatePipelineLayout();
+	//!< レンダーパス
 	CreateRenderPass();
 	//!< パイプライン
 	CreatePipeline();
-
 	//!< フレームバッファ
 	CreateFramebuffer();
 
@@ -628,7 +628,7 @@ void VK::CreateImageView(VkImageView* ImageView, const VkImage Image, const VkIm
 	Logf("\t\tFormat = %s\n", GetFormatChar(Format));
 	Logf("\t\tComponentMapping = (%s)\n", GetComponentMappingString(ComponentMapping).c_str());
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void VK::ValidateFormatProperties(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage) const
@@ -843,7 +843,7 @@ void VK::CreateInstance()
 	CreateDebugReportCallback();
 #endif
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 #ifdef _DEBUG
@@ -1389,7 +1389,7 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface)
 	//}
 #endif
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 //!< ホストとデバイスの同期 (Synchronization between host and device)
@@ -1405,7 +1405,7 @@ void VK::CreateFence(VkDevice Device)
 	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, GetAllocationCallbacks(), &Fence));
 	VERIFY_SUCCEEDED(vkCreateFence(Device, &FenceCreateInfo, GetAllocationCallbacks(), &ComputeFence));
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 //!< キュー内での同期(異なるキュー間の同期も可能) (Synchronization internal queue)
@@ -1424,7 +1424,7 @@ void VK::CreateSemaphore(VkDevice Device)
 	//!< 描画完了同期用 (Wait for render finish)
 	VERIFY_SUCCEEDED(vkCreateSemaphore(Device, &SemaphoreCreateInfo, GetAllocationCallbacks(), &RenderFinishedSemaphore));
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 //!< キューファミリが異なる場合は別のコマンドプールを用意する必要がある、そのキューにのみサブミットできる
@@ -1443,7 +1443,7 @@ void VK::CreateCommandPool(VkDevice Device, const uint32_t QueueFamilyIndex)
 	};
 	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, GetAllocationCallbacks(), &CommandPools.back().first));
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void VK::AllocateCommandBuffer(const VkCommandBufferLevel Level, const size_t Count, COMMAND_POOL& Command)
@@ -1464,7 +1464,7 @@ void VK::AllocateCommandBuffer(const VkCommandBufferLevel Level, const size_t Co
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &AllocateInfo, &Command.second[PrevCount]));
 	}
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void VK::CreateCommandBuffer()
@@ -1726,7 +1726,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Surface, const uint32
 		vkDestroySwapchainKHR(Device, OldSwapchain, GetAllocationCallbacks());
 	}
 
-	LogOK(__func__);
+	LOG_OK();
 }
 void VK::ResizeSwapchain(const uint32_t Width, const uint32_t Height)
 {
@@ -1758,7 +1758,7 @@ void VK::GetSwapchainImage(VkDevice Device, VkSwapchainKHR Swapchain)
 	SwapchainImages.resize(Count);
 	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &Count, SwapchainImages.data()));
 
-	LogOK(__func__);
+	LOG_OK();
 }
 /**
 @note Vulaknでは、1つのコマンドバッファで複数のスワップチェインイメージをまとめて処理できるっぽい
@@ -1852,7 +1852,7 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorVa
 	//!< キューにサブミットされたコマンドが完了するまでブロッキング (フェンスを用いないブロッキング方法)
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void VK::CreateSwapchainImageView()
@@ -1864,7 +1864,7 @@ void VK::CreateSwapchainImageView()
 		SwapchainImageViews.push_back(ImageView);
 	}
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void VK::CreateDepthStencil(const uint32_t Width, const uint32_t Height, const VkFormat DepthFormat)
@@ -1877,7 +1877,7 @@ void VK::CreateDepthStencil(const uint32_t Width, const uint32_t Height, const V
 	BindDeviceMemory(DepthStencilImage, DepthStencilDeviceMemory);
 	CreateImageView(&DepthStencilImageView, DepthStencilImage, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, ComponentMapping_Identity, ImageSubresourceRange_DepthStencil);
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void VK::InitializeDepthStencilImage(const VkCommandBuffer CB)
@@ -1947,7 +1947,7 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 		}
 	};
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void VK::CreateIndirectBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB)
@@ -2131,7 +2131,7 @@ void VK::CreateDescriptorSetLayout_deprecated()
 	//!< set = [0, DescriptorSetLayouts.size()-1]
 	DescriptorSetLayouts.push_back(DescriptorSetLayout);
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void VK::CreatePipelineLayout()
@@ -2167,7 +2167,7 @@ void VK::CreatePipelineLayout()
 	};
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, GetAllocationCallbacks(), &PipelineLayout));
 
-	LogOK(__func__);
+	LOG_OK();
 }
 void VK::CreateDescriptorSet()
 {
@@ -2182,7 +2182,7 @@ void VK::CreateDescriptorSet()
 		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, DescriptorSets.data()));
 	}
 
-	LogOK(__func__);
+	LOG_OK();
 }
 /**
 @brief シェーダとのバインディングのレイアウト
@@ -2228,7 +2228,7 @@ void VK::CreateDescriptorSet_deprecated()
 		DescriptorSets.resize(DescriptorSetLayouts.size());
 		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, DescriptorSets.data()));
 
-		LogOK(__func__);
+		LOG_OK();
 	}
 }
 
@@ -2507,10 +2507,21 @@ void VK::CreatePipeline()
 	PipelineCache = LoadPipelineCache(PCOPath);
 #endif
 
-	//!< 引数に参照を渡す例
-	//!< std::thread::thread(Func, std::ref(arg));
+#if 1
 	auto Thread = std::thread::thread([&]() { CreatePipeline_Graphics(); });
-	//!< ...
+#else
+	ShaderModules.resize(5);
+	const auto ShaderPath = GetBasePath();
+	ShaderModules[0] = CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data());
+	ShaderModules[1] = CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data());
+
+	auto Thread = std::thread::thread([&](VkPipeline& P, const VkPipelineLayout PL,
+		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS, 
+		const VkRenderPass RP)
+		{ CreatePipeline_Default(P, PL, VS, FS, TES, TCS, GS, RP); }, 
+		std::ref(Pipeline), PipelineLayout, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, RenderPass);
+#endif
+
 	Thread.join();
 
 #ifdef LOAD_PIPELINE
@@ -2541,7 +2552,7 @@ void VK::CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout Pip
 {
 	PERFORMANCE_COUNTER();
 
-	//!< バリデーションの為にデバイスフィーチャーを取得
+	//!< (バリデーションの為に)デバイスフィーチャーを取得
 	VkPhysicalDeviceFeatures PDF;
 	vkGetPhysicalDeviceFeatures(GetCurrentPhysicalDevice(), &PDF);
 
@@ -2600,6 +2611,7 @@ void VK::CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout Pip
 			nullptr
 		});
 	}
+	assert(!PSSCI.empty() && "");
 
 	//!< バーテックスインプット (VertexInput)
 	const std::array<VkVertexInputBindingDescription, 0> VIBDs = {};
@@ -2782,9 +2794,9 @@ void VK::CreatePipeline_Graphics()
 #endif
 
 	//!< シェーダ
-	std::vector<VkShaderModule> ShaderModules;
-	std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos;
-	CreateShader(ShaderModules, PipelineShaderStageCreateInfos);
+	std::vector<VkShaderModule> SMs;
+	std::vector<VkPipelineShaderStageCreateInfo> PSSCIs;
+	CreateShader(SMs, PSSCIs);
 
 	//!< バーテックスインプット
 	std::vector<VkVertexInputBindingDescription> VertexInputBindingDescriptions;
@@ -2894,7 +2906,7 @@ void VK::CreatePipeline_Graphics()
 #else
 			0,
 #endif
-			static_cast<uint32_t>(PipelineShaderStageCreateInfos.size()), PipelineShaderStageCreateInfos.data(),
+			static_cast<uint32_t>(PSSCIs.size()), PSSCIs.data(),
 			&PipelineVertexInputStateCreateInfo,
 			&PipelineInputAssemblyStateCreateInfo,
 			&PipelineTessellationStateCreateInfo,
@@ -2933,12 +2945,12 @@ void VK::CreatePipeline_Graphics()
 #endif
 
 	//!< パイプライン を作成したら、シェーダモジュール は破棄して良い
-	for (auto i : ShaderModules) {
+	for (auto i : SMs) {
 		vkDestroyShaderModule(Device, i, GetAllocationCallbacks());
 	}
-	ShaderModules.clear();
+	SMs.clear();
 
-	LogOK(__func__);
+	LOG_OK();
 }
 void VK::CreatePipeline_Compute()
 {
@@ -2990,7 +3002,7 @@ void VK::CreatePipeline_Compute()
 	}
 	ShaderModules.clear();
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 /**

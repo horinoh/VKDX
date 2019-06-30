@@ -92,7 +92,7 @@ void VKExt::CreatePipelineLayout_1UB_GS()
 	};
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PipelineLayout));
 
-	LogOK(__func__);
+	LOG_OK();
 }
 void VKExt::CreateDescriptorPool_1UB()
 {
@@ -119,7 +119,7 @@ void VKExt::CreateDescriptorPool_1UB()
 	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DescriptorPool));
 	assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
 
-	LogOK(__func__);
+	LOG_OK();
 }
 void VKExt::UpdateDescriptorSet_1UB()
 {
@@ -149,7 +149,7 @@ void VKExt::UpdateDescriptorSet_1UB()
 		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
 		static_cast<uint32_t>(CDSs.size()), CDSs.data());
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void VKExt::CreatePipelineLayout_1CIS_FS()
@@ -214,7 +214,7 @@ void VKExt::CreatePipelineLayout_1CIS_FS()
 	};
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, GetAllocationCallbacks(), &PipelineLayout));
 
-	LogOK(__func__);
+	LOG_OK();
 }
 void VKExt::CreateDescriptorPool_1CIS()
 {
@@ -241,7 +241,7 @@ void VKExt::CreateDescriptorPool_1CIS()
 	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DescriptorPool));
 	assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void VKExt::UpdateDescriptorSet_1CIS()
@@ -272,7 +272,7 @@ void VKExt::UpdateDescriptorSet_1CIS()
 		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
 		static_cast<uint32_t>(CDSs.size()), CDSs.data());
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 #if 0
@@ -301,7 +301,7 @@ void VKExt::CreateDescriptorPool_1SI()
 	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DescriptorPool));
 	assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
 
-	LogOK(__func__);
+	LOG_OK();
 }
 void VKExt::UpdateDescriptorSet_1SI()
 {
@@ -331,7 +331,7 @@ void VKExt::UpdateDescriptorSet_1SI()
 		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
 		static_cast<uint32_t>(CDSs.size()), CDSs.data());
 
-	LogOK(__func__);
+	LOG_OK();
 }
 #endif
 #if 1
@@ -360,7 +360,7 @@ void VKExt::CreateDescriptorPool_1SI()
 	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DescriptorPool));
 	assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
 
-	LogOK(__func__);
+	LOG_OK();
 }
 void VKExt::UpdateDescriptorSet_1SI()
 {
@@ -390,7 +390,7 @@ void VKExt::UpdateDescriptorSet_1SI()
 		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
 		static_cast<uint32_t>(CDSs.size()), CDSs.data());
 
-	LogOK(__func__);
+	LOG_OK();
 }
 #endif
 
@@ -435,7 +435,7 @@ void VKExt::CreatePipelineLayout_1UB_GS_1CIS_FS()
 	};
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PipelineLayout));
 
-	LogOK(__func__);
+	LOG_OK();
 }
 void VKExt::CreateDescriptorPool_1UB_1CIS()
 {
@@ -466,7 +466,7 @@ void VKExt::CreateDescriptorPool_1UB_1CIS()
 	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DescriptorPool));
 	assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
 
-	LogOK(__func__);
+	LOG_OK();
 }
 void VKExt::UpdateDescriptorSet_1UB_1CIS()
 {
@@ -513,7 +513,7 @@ void VKExt::UpdateDescriptorSet_1UB_1CIS()
 		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
 		static_cast<uint32_t>(CDSs.size()), CDSs.data());
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void VKExt::CreateSampler_LR(VkSampler* Sampler, const float MaxLOD) const

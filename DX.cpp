@@ -8,9 +8,7 @@
 
 void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 {
-#ifdef _DEBUG
-	PerformanceCounter PC(__func__);
-#endif
+	PERFORMANCE_COUNTER();
 
 	Super::OnCreate(hWnd, hInstance, Title);
 
@@ -69,9 +67,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 */
 void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 {
-#ifdef _DEBUG
-	PerformanceCounter PC(__func__);
-#endif
+	PERFORMANCE_COUNTER();
 
 	Super::OnExitSizeMove(hWnd, hInstance);
 
@@ -428,10 +424,11 @@ void DX::CreateDevice(HWND hWnd)
 
 #endif //!< USE_WINRT
 
-	LogOK(__func__);
 #ifdef _DEBUG
 	CheckFeatureLevel();
 #endif
+
+	LOG_OK();
 }
 
 HRESULT DX::CreateMaxFeatureLevelDevice(IDXGIAdapter* Adapter)
@@ -637,7 +634,7 @@ void DX::CreateCommandQueue()
 	VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CommandQueueDesc, IID_PPV_ARGS(CommandQueue.GetAddressOf())));
 #endif
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 /**
@@ -651,7 +648,7 @@ void DX::CreateFence()
 	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(Fence.GetAddressOf())));
 #endif
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 /**
@@ -699,7 +696,7 @@ void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const size_
 		VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
 	}
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void DX::CreateCommandList()
@@ -790,7 +787,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 #endif
 	(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, SwapChainDesc.BufferCount, SwapChainDescriptorHeap);
 
-	LogOK(__func__);
+	LOG_OK();
 }
 void DX::CreateSwapChainResource()
 {
@@ -824,7 +821,7 @@ void DX::CreateSwapChainResource()
 		Device->CreateRenderTargetView(SCR, nullptr, CDH);
 	}
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 /**
@@ -876,7 +873,7 @@ void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, cons
 
 	WaitForFence();
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void DX::InitializeSwapChain()
@@ -901,7 +898,7 @@ void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 
 	CreateSwapChainResource();
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void DX::CreateDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height)
@@ -922,7 +919,7 @@ void DX::CreateDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, con
 
 	CreateDepthStencilResource(DepthFormat, Width, Height);
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height)
@@ -981,7 +978,7 @@ void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Wi
 	ResourceBarrier(CL.Get(), DepthStencilResource.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
 #endif
 
-	LogOK(__func__);
+	LOG_OK();
 }
 void DX::ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height)
 {
@@ -993,7 +990,7 @@ void DX::ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, con
 
 	CreateDepthStencilResource(DepthFormat, Width, Height);
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void DX::CreateIndirectBuffer(ID3D12Resource** Resource, const UINT32 Size, const void* Source, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL)
@@ -1038,7 +1035,7 @@ void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDe
 		}
 	};
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 //void DX::CreateRootSignature(ID3D12RootSignature** RootSignature) const
@@ -1077,7 +1074,7 @@ GraphicsCommandList->SetGraphicsRootDescriptorTable(0, CVDescriptorHandle);
 */
 void DX::CreateConstantBuffer()
 {
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void DX::CreateUnorderedAccessTexture()
@@ -1161,7 +1158,7 @@ void DX::CreateUnorderedAccessTexture()
 		
 	}
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 //!< ルートシグネチャをシリアライズしてブロブを作る
@@ -1240,7 +1237,7 @@ void DX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.GetAddressOf(), ErrorBlob.GetAddressOf()));
 #endif
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 //!< シェーダからルートシグネチャパートを取り出しブロブを作る
@@ -1263,7 +1260,7 @@ void DX::GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob
 	VERIFY_SUCCEEDED(D3DGetBlobPart(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, RSBlob.GetAddressOf()));
 #endif
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 /**
@@ -1289,7 +1286,7 @@ Microsoft::WRL::ComPtr<ID3DBlob> RSBlob;
 	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, RSBlob->GetBufferPointer(), RSBlob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
 #endif
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 #ifdef USE_WINRT
@@ -1411,12 +1408,47 @@ void DX::StorePipelineLibrary(const std::wstring& Path) const
 
 void DX::CreatePipelineState()
 {
-	CreatePipelineState_Graphics();
+#if 1
+	auto Thread = std::thread::thread([&]() { CreatePipelineState_Graphics(); });
+#else
+
+	const auto ShaderPath = GetBasePath();
+#ifdef USE_WINRT
+	ShaderBlobs.resize(5);
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), ShaderBlobs[0].put()));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].put()));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), ShaderBlobs[2].put()));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), ShaderBlobs[3].put()));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), ShaderBlobs[4].put()));
+#elif defined(USE_WRL)
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), ShaderBlobs[0].GetAddressOf()));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].GetAddressOf()));
+#endif
+	ShaderByteCodes.resize(5);
+	ShaderByteCodes[0] = { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() };
+	ShaderByteCodes[1] = { ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() };
+	ShaderByteCodes[2] = { ShaderBlobs[2]->GetBufferPointer(), ShaderBlobs[2]->GetBufferSize() };
+	ShaderByteCodes[3] = { ShaderBlobs[3]->GetBufferPointer(), ShaderBlobs[3]->GetBufferSize() };
+	ShaderByteCodes[4] = { ShaderBlobs[4]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() };
+
+	auto Thread = std::thread::thread([&](winrt::com_ptr<ID3D12PipelineState>& Pipe, ID3D12RootSignature* RS,
+		const D3D12_SHADER_BYTECODE& VS, const D3D12_SHADER_BYTECODE& PS, const D3D12_SHADER_BYTECODE& DS, const D3D12_SHADER_BYTECODE& HS, const D3D12_SHADER_BYTECODE& GS)
+		{ CreatePipelineState_Default(Pipe, RS, VS, PS, DS, HS, GS); },
+#ifdef USE_WINRT
+		std::ref(PipelineState), RootSignature.get(), ShaderByteCodes[0], NullShaderBC, NullShaderBC, NullShaderBC, NullShaderBC);
+#elif defined(USE_WRL)
+		std::ref(PipelineState), RootSignature.Get(), NullShaderBC, NullShaderBC, NullShaderBC, NullShaderBC, NullShaderBC);
+#endif
+#endif
+
+	Thread.join();
 }
 void DX::CreatePipelineState_Default(winrt::com_ptr<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RootSignature, 
 	const D3D12_SHADER_BYTECODE& VS, const D3D12_SHADER_BYTECODE& PS, const D3D12_SHADER_BYTECODE& DS, const D3D12_SHADER_BYTECODE& HS, const D3D12_SHADER_BYTECODE& GS)
 {
 	PERFORMANCE_COUNTER();
+
+	assert((VS.pShaderBytecode != nullptr && VS.BytecodeLength) && "");
 
 	//!< ストリームアウトプット (StreamOutput)
 	const D3D12_STREAM_OUTPUT_DESC SOD = {
@@ -1505,12 +1537,12 @@ void DX::CreatePipelineState_Default(winrt::com_ptr<ID3D12PipelineState>& Pipeli
 #elif defined(USE_WRL)
 	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, IID_PPV_ARGS(PipelineState.GetAddressOf())));
 #endif
+
+	LOG_OK();
 }
 void DX::CreatePipelineState_Graphics()
 {
-#ifdef _DEBUG
 	PERFORMANCE_COUNTER();
-#endif
 
 	assert(nullptr != RootSignature);
 
@@ -1629,14 +1661,13 @@ void DX::CreatePipelineState_Graphics()
 		StorePipelineLibrary(PCOPath);
 	}
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void DX::CreatePipelineState_Compute()
 {
-#ifdef _DEBUG
-	PerformanceCounter PC(__func__);
-#endif
+	PERFORMANCE_COUNTER();
+
 	assert(nullptr != RootSignature && "");
 
 	//!< シェーダ
@@ -1666,7 +1697,7 @@ void DX::CreatePipelineState_Compute()
 	VERIFY_SUCCEEDED(Device->CreateComputePipelineState(&ComputePipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
 #endif
 
-	LogOK(__func__);
+	LOG_OK();
 }
 
 void DX::ClearColor(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const DirectX::XMVECTORF32& Color)

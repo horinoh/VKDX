@@ -348,6 +348,13 @@ protected:
 	std::vector<D3D12_VIEWPORT> Viewports;
 	std::vector<D3D12_RECT> ScissorRects;
 
+#ifdef USE_WINRT
+	std::vector<winrt::com_ptr<ID3DBlob>> ShaderBlobs;
+#elif defined(USE_WRL)
+	std::vector<Microsoft::WRL::ComPtr <<ID3DBlob>> ShaderBlobs;
+#endif
+	std::vector<D3D12_SHADER_BYTECODE> ShaderByteCodes;
+
 protected:
 	const std::vector<D3D_FEATURE_LEVEL> FeatureLevels = {
 		D3D_FEATURE_LEVEL_12_1,
