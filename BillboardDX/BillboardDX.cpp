@@ -303,6 +303,74 @@ void BillboardDX::CreateDescriptorView()
 
 	LOG_OK();
 }
+void BillboardDX::CreatePipelineState()
+{
+	const auto PCOPath = GetBasePath() + TEXT(".pco");
+	DeleteFile(PCOPath.data());
+
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3D12Device1> Device1;
+	VERIFY_SUCCEEDED(Device->QueryInterface(__uuidof(Device1), Device1.put_void()));
+
+	winrt::com_ptr<ID3D12PipelineLibrary> PL;
+	winrt::com_ptr<ID3DBlob> Blob;
+	if (SUCCEEDED(D3DReadFileToBlob(PCOPath.c_str(), Blob.put())) && Blob->GetBufferSize()) {
+		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(PL), PL.put_void()));
+
+		winrt::com_ptr<ID3D12PipelineState> PS;
+		const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {};
+		VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(TEXT("0"), &GPSD, __uuidof(PS), PS.put_void()));
+	}
+	else {
+		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, __uuidof(PipelineLibrary), PL.put_void()));
+
+		const auto ShaderPath = GetBasePath();
+#ifdef USE_WINRT
+		ShaderBlobs.resize(5);
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), ShaderBlobs[0].put()));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].put()));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), ShaderBlobs[2].put()));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), ShaderBlobs[3].put()));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), ShaderBlobs[4].put()));
+#elif defined(USE_WRL)
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), ShaderBlobs[0].GetAddressOf()));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].GetAddressOf()));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), ShaderBlobs[2].GetAddressOf()));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), ShaderBlobs[3].GetAddressOf()));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), ShaderBlobs[4].GetAddressOf()));
+#endif
+		const std::array<D3D12_SHADER_BYTECODE, 5> SBCs = { {
+			{ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() },
+			{ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() },
+			{ ShaderBlobs[2]->GetBufferPointer(), ShaderBlobs[2]->GetBufferSize() },
+			{ ShaderBlobs[3]->GetBufferPointer(), ShaderBlobs[3]->GetBufferSize() },
+			{ ShaderBlobs[4]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() },
+		} };
+		auto Thread = std::thread::thread([&](winrt::com_ptr<ID3D12PipelineState>& Pipe, ID3D12RootSignature* RS,
+			const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
+			{ CreatePipelineState_Tesselation(Pipe, RS, VS, PS, DS, HS, GS); },
+#ifdef USE_WINRT
+			std::ref(PipelineState), RootSignature.get(), SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4]);
+#elif defined(USE_WRL)
+			std::ref(PipelineState), RootSignature.Get(), SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4]);
+#endif
+
+		Thread.join();
+
+		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), PipelineState.get()));
+
+		const auto Size = PL->GetSerializedSize();
+		if (Size) {
+			winrt::com_ptr<ID3DBlob> Blob;
+			VERIFY_SUCCEEDED(D3DCreateBlob(Size, Blob.put()));
+			PL->Serialize(Blob->GetBufferPointer(), Size);
+			VERIFY_SUCCEEDED(D3DWriteBlobToFile(Blob.get(), PCOPath.c_str(), TRUE));
+		}
+	}
+#elif defined(USE_WRL)
+	//!< #DX_TODO
+#endif
+}
 void BillboardDX::PopulateCommandList(const size_t i)
 {
 #ifdef USE_WINRT
@@ -370,7 +438,8 @@ void BillboardDX::PopulateCommandList(const size_t i)
 				CL->SetGraphicsRootDescriptorTable(0, CBHandle);
 			}
 
-			CL->IASetPrimitiveTopology(GetPrimitiveTopology());
+			//CL->IASetPrimitiveTopology(GetPrimitiveTopology());
+			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
 #ifdef USE_WINRT
 			CL->ExecuteIndirect(IndirectCommandSignature.get(), 1, IndirectBufferResource.get(), 0, nullptr, 0);

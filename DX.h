@@ -10,8 +10,6 @@
 #include <wrl.h>
 #endif
 
-#define LOAD_PIPELINE
-
 #include <d3d12.h>
 #include <d3dcompiler.h>
 #include <DXGI1_4.h>
@@ -193,19 +191,19 @@ protected:
 
 #ifdef USE_WINRT
 	virtual void CreateShader(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const;
-	virtual void CreateShaderByteCode(const std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBCs) const; 
+	//virtual void CreateShaderByteCode(const std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBCs) const; 
 #elif defined(USE_WRL)
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
-	virtual void CreateShaderByteCode(const std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBCs) const; 
+	//virtual void CreateShaderByteCode(const std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBCs) const; 
 #endif	
 	virtual void CreateInputLayout(std::vector<D3D12_INPUT_ELEMENT_DESC>& InputElementDescs) const {}
 	virtual D3D12_PRIMITIVE_TOPOLOGY_TYPE GetPrimitiveTopologyType() const = 0; //!< D3D12_GRAPHICS_PIPELINE_STATE_DESC 作成時に使用
 	virtual D3D_PRIMITIVE_TOPOLOGY GetPrimitiveTopology() const = 0; //!< IASetPrimitiveTopology() 時に使用
-	virtual BOOL LoadPipelineLibrary(const std::wstring& Path);
-	virtual void StorePipelineLibrary(const std::wstring& Path) const;
+	//virtual BOOL LoadPipelineLibrary(const std::wstring& Path);
+	//virtual void StorePipelineLibrary(const std::wstring& Path) const;
 	virtual void CreatePipelineState();
-	virtual void CreatePipelineState_Default(winrt::com_ptr<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RootSignature,
-		const D3D12_SHADER_BYTECODE& VS, const D3D12_SHADER_BYTECODE& PS, const D3D12_SHADER_BYTECODE& DS, const D3D12_SHADER_BYTECODE& HS, const D3D12_SHADER_BYTECODE& GS);
+	void CreatePipelineState_Default(winrt::com_ptr<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
+		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS);
 	virtual void CreatePipelineState_Graphics();
 	virtual void CreatePipelineState_Compute();
 
@@ -353,7 +351,7 @@ protected:
 #elif defined(USE_WRL)
 	std::vector<Microsoft::WRL::ComPtr <<ID3DBlob>> ShaderBlobs;
 #endif
-	std::vector<D3D12_SHADER_BYTECODE> ShaderByteCodes;
+	//std::vector<D3D12_SHADER_BYTECODE> ShaderByteCodes;
 
 protected:
 	const std::vector<D3D_FEATURE_LEVEL> FeatureLevels = {

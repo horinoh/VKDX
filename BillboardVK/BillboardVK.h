@@ -28,18 +28,6 @@ protected:
 
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1); }
 
-	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {
-		CreateShader_VsPsTesTcsGs(ShaderModules, PipelineShaderStageCreateInfos);
-	}
-
-	virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const override {
-		CreateInputAssembly_Topology(PipelineInputAssemblyStateCreateInfo, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST);
-	}
-	virtual void CreateTessellationState(VkPipelineTessellationStateCreateInfo& PipelineTessellationStateCreateInfo) const override {
-		const uint32_t PatchControlPoint = 1;
-		PipelineTessellationStateCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO, nullptr, 0, PatchControlPoint };
-	}
-
 	virtual void CreatePipelineLayout() override { CreatePipelineLayout_1UB_GS(); }
 
 	virtual void CreateUniformBuffer() override {
@@ -60,6 +48,8 @@ protected:
 
 	virtual void CreateDescriptorPool() override { CreateDescriptorPool_1UB(); }
 	virtual void UpdateDescriptorSet() override { UpdateDescriptorSet_1UB(); }
+
+	virtual void CreatePipeline() override;
 
 	virtual void PopulateCommandBuffer(const size_t i) override;
 

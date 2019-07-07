@@ -1,5 +1,7 @@
 #pragma once
 
+#include <fstream>
+
 //!< VK_NO_PROTOYYPES が定義されてる場合は DLL を使用する。If VK_NO_PROTOYYPES is defined, using DLL. 
 //!< Vk.props 内 C/C++ - Preprocessor - Preprocessor Definitions に定義してある Definition is in VK.props in C/C++ - Preprocessor - Preprocessor Definitions
 //#define VK_NO_PROTOTYPES //!< VK.props に定義
@@ -34,8 +36,6 @@
 #endif
 
 #define USE_VIEWPORT_Y_UP
-
-//#define LOAD_PIPELINE
 
 #include "Cmn.h"
 #ifdef _WINDOWS
@@ -304,16 +304,16 @@ protected:
 	virtual void CreateDynamicState(std::vector<VkDynamicState>& DynamicStates) const { CreateDynamicState_ViewportScissor(DynamicStates); }
 	void CreateDynamicState_ViewportScissor(std::vector<VkDynamicState>& DynamicStates) const { DynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR }; }
 
-	virtual bool ValidatePipelineCache(const size_t Size, const void* Data) const;
-	virtual VkPipelineCache LoadPipelineCache(const std::wstring& Path) const;
-	virtual void LoadPipelineCaches(const std::wstring& Path, std::vector<VkPipelineCache>& PipelineCaches) const;
-	virtual void StorePipelineCache(const std::wstring& Path, const VkPipelineCache PipelineCache) const;
-	virtual VkPipelineCache CreatePipelineCache() const;
-	virtual void CreatePipelineCaches(std::vector<VkPipelineCache>& PipelineCaches) const;
+	static bool ValidatePipelineCache(const VkPhysicalDevice PD, const size_t Size, const void* Data);
+	//virtual VkPipelineCache LoadPipelineCache(const std::wstring& Path) const;
+	//virtual void LoadPipelineCaches(const std::wstring& Path, std::vector<VkPipelineCache>& PipelineCaches) const;
+	//virtual void StorePipelineCache(const std::wstring& Path, const VkPipelineCache PipelineCache) const;
+	//virtual VkPipelineCache CreatePipelineCache() const;
+	//virtual void CreatePipelineCaches(std::vector<VkPipelineCache>& PipelineCaches) const;
 	virtual void CreatePipeline();
-	virtual void CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PipelineLayout, 
+	void CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PL, 
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
-		const VkRenderPass RenderPass);
+		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
 	virtual void CreatePipeline_Graphics();
 	virtual void CreatePipeline_Compute();
 

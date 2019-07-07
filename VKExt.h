@@ -91,6 +91,10 @@ public:
 
 	*/
 
+	void CreatePipeline_Tesselation(VkPipeline& Pipeline, const VkPipelineLayout PL,
+		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
+		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
+
 	//!< LinearRepeat
 	void CreateSampler_LR(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const;
 
