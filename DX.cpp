@@ -1604,7 +1604,7 @@ void DX::CreatePipelineState_Default(winrt::com_ptr<ID3D12PipelineState>& Pipeli
 		DSD,
 		ILD,
 		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
-		D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, //!< ハルシェーダ、ジオメトリシェーダのインプットプリミティブ
+		D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
 		1, { DXGI_FORMAT_R8G8B8A8_UNORM }, DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
 		SD,
 		0,
@@ -1612,6 +1612,7 @@ void DX::CreatePipelineState_Default(winrt::com_ptr<ID3D12PipelineState>& Pipeli
 		D3D12_PIPELINE_STATE_FLAG_NONE //!< D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG ... は Warp デバイスのみ
 	};
 	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
+	assert((0 == GPSD.DS.BytecodeLength || 0 == GPSD.HS.BytecodeLength || GPSD.PrimitiveTopologyType == D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH) && "");
 
 #ifdef USE_WINRT
 	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, __uuidof(PipelineState), PipelineState.put_void()));

@@ -44,7 +44,6 @@ protected:
 
 	virtual void CreateDescriptorHeap() override;
 	virtual void CreateDescriptorView() override;
-
 	virtual void UpdateDescriptorHeap() override {
 		//static FLOAT Angle = 0.0f;
 		//DirectX::XMMATRIX World = DirectX::XMMatrixRotationX(Angle);

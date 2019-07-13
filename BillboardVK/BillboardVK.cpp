@@ -284,7 +284,9 @@ void BillboardVK::CreatePipeline()
 	auto Thread = std::thread::thread([&](VkPipeline& P, const VkPipelineLayout PL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC)
-		{ CreatePipeline_Tesselation(P, PL, VS, FS, TES, TCS, GS, RP, PC); },
+		{
+			CreatePipeline_Tesselation(P, PL, VS, FS, TES, TCS, GS, RP, PC);
+		},
 		std::ref(Pipeline), PipelineLayout, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4], RenderPass, PCs[0]);
 
 	Thread.join();

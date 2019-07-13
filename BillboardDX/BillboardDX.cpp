@@ -325,20 +325,12 @@ void BillboardDX::CreatePipelineState()
 		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, __uuidof(PipelineLibrary), PL.put_void()));
 
 		const auto ShaderPath = GetBasePath();
-#ifdef USE_WINRT
 		ShaderBlobs.resize(5);
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), ShaderBlobs[0].put()));
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].put()));
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), ShaderBlobs[2].put()));
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), ShaderBlobs[3].put()));
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), ShaderBlobs[4].put()));
-#elif defined(USE_WRL)
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), ShaderBlobs[0].GetAddressOf()));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].GetAddressOf()));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), ShaderBlobs[2].GetAddressOf()));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), ShaderBlobs[3].GetAddressOf()));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), ShaderBlobs[4].GetAddressOf()));
-#endif
 		const std::array<D3D12_SHADER_BYTECODE, 5> SBCs = { {
 			{ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() },
 			{ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() },
@@ -348,12 +340,10 @@ void BillboardDX::CreatePipelineState()
 		} };
 		auto Thread = std::thread::thread([&](winrt::com_ptr<ID3D12PipelineState>& Pipe, ID3D12RootSignature* RS,
 			const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
-			{ CreatePipelineState_Tesselation(Pipe, RS, VS, PS, DS, HS, GS); },
-#ifdef USE_WINRT
+			{ 
+				CreatePipelineState_Tesselation(Pipe, RS, VS, PS, DS, HS, GS);
+			},
 			std::ref(PipelineState), RootSignature.get(), SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4]);
-#elif defined(USE_WRL)
-			std::ref(PipelineState), RootSignature.Get(), SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4]);
-#endif
 
 		Thread.join();
 

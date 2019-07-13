@@ -2611,12 +2611,17 @@ void VK::CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PL,
 		static_cast<uint32_t>(VIADs.size()), VIADs.data()
 	};
 
+	//!< DXでは「トポロジ」と「パッチコントロールポイント」の指定はIASetPrimitiveTopology()の引数としてコマンドリストへ指定する、VKとは結構異なるので注意
+	//!< (「パッチコントロールポイント」の数も何を指定するかにより決まる)
+	//!< CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+	//!< CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+
 	//!< インプットアセンブリ (InputAssembly)
 	const VkPipelineInputAssemblyStateCreateInfo PIASCI = {
 		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
 		nullptr,
 		0,
-		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, //!< トポロジ
 		VK_FALSE
 	};
 	//!< WITH_ADJACENCY 系使用時には デバイスフィーチャー geometryShader が有効であること
@@ -2636,7 +2641,7 @@ void VK::CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PL,
 		VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,
 		nullptr, 
 		0, 
-		0//!< patchControlPoints
+		0 //!< パッチコントロールポイント
 	};
 
 	//!< ビューポート (Viewport)

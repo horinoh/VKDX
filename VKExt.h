@@ -91,6 +91,14 @@ public:
 
 	*/
 
+	template<typename T> void CreatePipeline_Vertex(VkPipeline& Pipeline, const VkPipelineLayout PL,
+		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
+		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
+	//!< ↓ここでテンプレート特殊化している Template specialization here
+#include "VKPipeline.inl"
+	void CreatePipeline_VertexPositionColor(VkPipeline& Pipeline, const VkPipelineLayout PL,
+		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
+		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
 	void CreatePipeline_Tesselation(VkPipeline& Pipeline, const VkPipelineLayout PL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
