@@ -230,6 +230,28 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
+#ifdef USE_WINRT
+void FullscreenDX::SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob)
+#elif defined(USE_WRL)
+void FullscreenDX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
+#endif
+{
+	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
+		0, nullptr,
+		0, nullptr,
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+	};
+
+#ifdef USE_WINRT
+	winrt::com_ptr<ID3DBlob> ErrorBlob;
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.put(), ErrorBlob.put()));
+#elif defined(USE_WRL)
+	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.GetAddressOf(), ErrorBlob.GetAddressOf()));
+#endif
+
+	LOG_OK();
+}
 void FullscreenDX::PopulateCommandList(const size_t i)
 {
 #ifdef USE_WINRT
@@ -273,8 +295,7 @@ void FullscreenDX::PopulateCommandList(const size_t i)
 			CL->SetGraphicsRootSignature(RootSignature.Get());
 #endif
 
-			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
-			CL->IASetPrimitiveTopology(GetPrimitiveTopology());
+			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 			//!< 描画
 #ifdef USE_DRAW_INDIRECT
@@ -291,5 +312,4 @@ void FullscreenDX::PopulateCommandList(const size_t i)
 	}
 	VERIFY_SUCCEEDED(CL->Close());
 }
-
 #pragma endregion

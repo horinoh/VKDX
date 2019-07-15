@@ -7,7 +7,7 @@ class VKExt : public VK
 private:
 	using Super = VK;
 public:
-	using Vertex_Position = struct Vertex_Position { glm::vec3 Position; };
+	//using Vertex_Position = struct Vertex_Position { glm::vec3 Position; };
 	using Vertex_PositionColor = struct Vertex_PositionColor { glm::vec3 Position; glm::vec4 Color; };
 
 	void CreateIndirectBuffer_Draw(const uint32_t Count) {
@@ -31,14 +31,8 @@ public:
 	void CreateDescriptorPool_1CIS();
 	void UpdateDescriptorSet_1CIS();
 
-#if 0
 	void CreateDescriptorPool_1SI();
 	void UpdateDescriptorSet_1SI();
-#endif
-#if 1
-	void CreateDescriptorPool_1SI();
-	void UpdateDescriptorSet_1SI();
-#endif
 
 	void CreatePipelineLayout_1UB_GS_1CIS_FS();
 	void CreateDescriptorPool_1UB_1CIS();
@@ -48,6 +42,9 @@ public:
 	アプリ内ではサンプラとサンプルドイメージは別のオブジェクトとして扱うが、シェーダ内ではまとめた一つのオブジェクトとして扱うことができ、プラットフォームによっては効率が良い場合がある
 	(コンバインドイメージサンプラ == サンプラ + サンプルドイメージ)
 	デスクリプタタイプに VK_DESCRIPTOR_TYPE_SAMPLER や VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE を指定するか、VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER を指定するかの違い
+	IMAGE			... VkImage
+	TEXEL_BUFFER	... VkBuffer
+	STORAGE			... 付いているものはシェーダから書き込み可能
 
 	VK_DESCRIPTOR_TYPE_SAMPLER ... サンプラ (VkSampler)
 		layout (set=0, binding=0) uniform sampler MySampler;
@@ -56,8 +53,7 @@ public:
 	VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER ... コンバインドイメージサンプラ (VkSampler + VkImage)
 		layout (set=0, binding=0) uniform sampler2D MySampler2D;
 	VK_DESCRIPTOR_TYPE_STORAGE_IMAGE ... ストレージイメージ (VkImage)
-		シェーダから書き込み可能
-		アトミックな操作が可能
+		シェーダから書き込み可能、アトミックな操作が可能
 		レイアウトは VK_IMAGE_LAYOUT_GENERAL にしておくこと
 	layout (set=0, binding=0, r32f) uniform image2D MyImage2D;
 
@@ -66,49 +62,36 @@ public:
 		1Dイメージは最低限4096テクセルだが、ユニフォームテクセルバッファは最低限65536テクセル(イメージよりも大きなデータへアクセス可能)
 		layout (set=0, binding=0) uniform samplerBuffer MySamplerBuffer;
 	VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER ... ストレージテクセルバッファ (vkBuffer)
-		シェーダから書き込み可能
-		アトミックな操作が可能
+		シェーダから書き込み可能、アトミックな操作が可能
 		layout (set=0, binding=0, r32f) uniform imageBuffer MyImageBuffer;
 
-	VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER ... 
-	VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ... 
-		layout (set=0, binding=0) uniform MyUniform
-		{
-			vec4 MyVec4;
-			mat4 MyMat4;
-		}
+	VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ... ユニフォームバッファ (VkBuffer)
+		ダイナミックユニフォームバッファの場合は
+		layout (set=0, binding=0) uniform MyUniform { vec4 MyVec4; mat4 MyMat4; }
 
-	VK_DESCRIPTOR_TYPE_STORAGE_BUFFER ... 
-	VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC ...
-		layout (set=0, binding=0) buffer MyBuffer
-		{
-			vec4 MyVec4;
-			mat4 MyMat4;
-		}
+	VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC ... ストレージバッファ (VkBuffer)
+		シェーダから書き込み可能、アトミックな操作が可能
+		ダイナミックストレージバッファの場合は
+		layout (set=0, binding=0) buffer MyBuffer { vec4 MyVec4; mat4 MyMat4; }
 	
 	VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT ... (前レンダーパスで)レンダーターゲット(アタッチメント)として使われたものを(レンダーパス中で)入力として取る場合
 		layout (input_attachment_index=0, set=0, binding=0) uniform subpassInput MySubpassInput;
-
 	*/
 
 	template<typename T> void CreatePipeline_Vertex(VkPipeline& Pipeline, const VkPipelineLayout PL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
-	//!< ↓ここでテンプレート特殊化している Template specialization here
-#include "VKPipeline.inl"
-	void CreatePipeline_VertexPositionColor(VkPipeline& Pipeline, const VkPipelineLayout PL,
-		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
-		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
 	void CreatePipeline_Tesselation(VkPipeline& Pipeline, const VkPipelineLayout PL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
+	
+	void CreatePipeline_VsFs();
+	void CreatePipeline_VsFsTesTcsGs_Tesselation();
+	//!< ↓ここでテンプレート特殊化している (Template specialization here)
+#include "VKPipeline.inl"
 
 	//!< LinearRepeat
 	void CreateSampler_LR(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const;
-
-	template<typename T> void CreateVertexInputBinding(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions, const uint32_t Binding) const {}
-	//!< ↓ここでテンプレート特殊化している Template specialization here
-#include "VKVertexInput.inl"
 
 	virtual void CreateRenderPass() { CreateRenderPass_1C(RenderPass, ColorFormat); }
 	void CreateRenderPass_1C(VkRenderPass& RenderPass, const VkFormat Format);
@@ -126,9 +109,9 @@ public:
 	template<typename T>
 	void CreateUniformBufferT(const T& Type) { CreateUniformBuffer(&UniformBuffer, &UniformDeviceMemory, sizeof(Type), &Type); }
 
-	virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const override { 
-		CreateInputAssembly_Topology(PipelineInputAssemblyStateCreateInfo, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
-	}
+	//virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const override { 
+	//	CreateInputAssembly_Topology(PipelineInputAssemblyStateCreateInfo, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
+	//}
 
 protected:
 #if 1

@@ -283,7 +283,6 @@ void TextureDX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.GetAddressOf(), ErrorBlob.GetAddressOf()));
 #endif
 }
-
 void TextureDX::PopulateCommandList(const size_t i)
 {
 #ifdef USE_WINRT
@@ -347,8 +346,7 @@ void TextureDX::PopulateCommandList(const size_t i)
 				CL->SetGraphicsRootDescriptorTable(0, SamplerDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 			}
 
-			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
-			CL->IASetPrimitiveTopology(GetPrimitiveTopology());
+			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 			//!< 描画
 #ifdef USE_WINRT

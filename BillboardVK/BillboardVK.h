@@ -49,8 +49,7 @@ protected:
 	virtual void CreateDescriptorPool() override { CreateDescriptorPool_1UB(); }
 	virtual void UpdateDescriptorSet() override { UpdateDescriptorSet_1UB(); }
 
-	virtual void CreatePipeline() override;
-
+	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs_Tesselation(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 private:

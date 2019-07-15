@@ -34,9 +34,9 @@ protected:
 		UpdateDescriptorSet_1SI();
 	}
 
-	virtual void CreateShader(std::vector<VkShaderModule>& SM, std::vector<VkPipelineShaderStageCreateInfo>& CreateInfo) const override {
-		CreateShader_Cs(SM, CreateInfo);
-	}
+	//virtual void CreateShader(std::vector<VkShaderModule>& SM, std::vector<VkPipelineShaderStageCreateInfo>& CreateInfo) const override {
+	//	CreateShader_Cs(SM, CreateInfo);
+	//}
 
 	virtual void CreateTexture() override {
 		const auto Format = VK_FORMAT_R8G8B8A8_UINT;

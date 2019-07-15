@@ -1344,74 +1344,8 @@ void DX::CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs
 #endif
 }
 
-//!< @brief (よく使うパターンとして)VS, PS, DS, HS, GS の順で詰めていく、歯抜けにしたい場合はオーバーライドして実装する必要あり
-//#ifdef USE_WINRT
-//void DX::CreateShaderByteCode(const std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBCs) const
-//#elif defined(USE_WRL)
-//void DX::CreateShaderByteCode(const std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs, std::array<D3D12_SHADER_BYTECODE, 5>& ShaderBCs) const
-//#endif
-//{
-//	for (auto i = 0; i < ShaderBlobs.size(); ++i) {
-//		ShaderBCs[i] = D3D12_SHADER_BYTECODE({ ShaderBlobs[i]->GetBufferPointer(), ShaderBlobs[i]->GetBufferSize() });
-//	}
-//}
-
-//BOOL DX::LoadPipelineLibrary(const std::wstring& Path)
-//{
-//#ifdef USE_WINRT
-//	winrt::com_ptr<ID3D12Device1> Device1;
-//	VERIFY_SUCCEEDED(Device->QueryInterface(__uuidof(Device1), Device1.put_void()));
-//#elif defined(USE_WRL)
-//	Microsoft::WRL::ComPtr<ID3D12Device1> Device1;
-//	VERIFY_SUCCEEDED(Device->QueryInterface(IID_PPV_ARGS(Device1.GetAddressOf())));
-//#endif
-//
-//#ifdef USE_WINRT
-//	winrt::com_ptr<ID3DBlob> Blob;
-//	if (SUCCEEDED(D3DReadFileToBlob(Path.data(), Blob.put())) && Blob->GetBufferSize()) {
-//		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(PipelineLibrary), PipelineLibrary.put_void()));
-//		return TRUE;
-//	}
-//#elif defined(USE_WRL)
-//	Microsoft::WRL::ComPtr<ID3DBlob> Blob;
-//	if (SUCCEEDED(D3DReadFileToBlob(Path.data(), Blob.GetAddressOf())) && Blob->GetBufferSize()) {
-//		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(PipelineLibrary.GetAddressOf())));
-//		return TRUE;
-//	}
-//#endif
-//	else {
-//#ifdef USE_WINRT
-//		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, __uuidof(PipelineLibrary), PipelineLibrary.put_void()));
-//#elif defined(USE_WRL)
-//		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, IID_PPV_ARGS(PipelineLibrary.GetAddressOf())));
-//#endif
-//		return FALSE;
-//	}
-//}
-//void DX::StorePipelineLibrary(const std::wstring& Path) const
-//{
-//	const auto Size = PipelineLibrary->GetSerializedSize();
-//	if (Size) {
-//#ifdef USE_WINRT
-//		winrt::com_ptr<ID3DBlob> Blob;
-//		VERIFY_SUCCEEDED(D3DCreateBlob(Size, Blob.put()));
-//		PipelineLibrary->Serialize(Blob->GetBufferPointer(), Size);
-//		VERIFY_SUCCEEDED(D3DWriteBlobToFile(Blob.get(), Path.data(), TRUE)); 
-//#elif defined(USE_WRL)
-//		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
-//		VERIFY_SUCCEEDED(D3DCreateBlob(Size, Blob.GetAddressOf()));
-//		PipelineLibrary->Serialize(Blob->GetBufferPointer(), Size);
-//		VERIFY_SUCCEEDED(D3DWriteBlobToFile(Blob.Get(), Path.data(), TRUE));
-//#endif
-//	}
-//}
-
 void DX::CreatePipelineState()
 {
-#if 1
-	auto Thread = std::thread::thread([&]() { CreatePipelineState_Graphics(); });
-#else
-
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
 	//DeleteFile(PCOPath.data());
 #ifdef USE_WINRT
@@ -1507,7 +1441,6 @@ void DX::CreatePipelineState()
 		std::ref(PipelineState), RootSignature.get(), SBCs[0], NullShaderBC, NullShaderBC, NullShaderBC, NullShaderBC);
 #elif defined(USE_WRL)
 		std::ref(PipelineState), RootSignature.Get(), NullShaderBC, NullShaderBC, NullShaderBC, NullShaderBC, NullShaderBC);
-#endif
 #endif
 
 	Thread.join();
@@ -1622,113 +1555,6 @@ void DX::CreatePipelineState_Default(winrt::com_ptr<ID3D12PipelineState>& Pipeli
 
 	LOG_OK();
 }
-void DX::CreatePipelineState_Graphics()
-{
-	PERFORMANCE_COUNTER();
-
-	assert(nullptr != RootSignature);
-
-	//!< シェーダ
-#ifdef USE_WINRT
-	std::vector<winrt::com_ptr<ID3DBlob>> ShaderBlobs;
-#elif defined(USE_WRL)
-	std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> ShaderBlobs;
-#endif
-	CreateShader(ShaderBlobs);
-	std::array<D3D12_SHADER_BYTECODE, 5> ShaderBCs{ NullShaderBC, NullShaderBC, NullShaderBC, NullShaderBC, NullShaderBC };
-	//CreateShaderByteCode(ShaderBlobs, ShaderBCs);
-	for (auto i = 0; i < ShaderBlobs.size(); ++i) {
-		ShaderBCs[i] = D3D12_SHADER_BYTECODE({ ShaderBlobs[i]->GetBufferPointer(), ShaderBlobs[i]->GetBufferSize() });
-	}
-
-	const D3D12_STREAM_OUTPUT_DESC StreamOutputDesc = {
-		nullptr, 0,
-		nullptr, 0,
-		0
-	};
-
-	const D3D12_RENDER_TARGET_BLEND_DESC DefaultRenderTargetBlendDesc = {
-		FALSE, FALSE,
-		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-		D3D12_LOGIC_OP_NOOP,
-		D3D12_COLOR_WRITE_ENABLE_ALL,
-	};
-	const D3D12_BLEND_DESC BlendDesc = {
-		FALSE,
-		FALSE,
-		{ DefaultRenderTargetBlendDesc/*, ... x8*/ }
-	};
-
-	const D3D12_RASTERIZER_DESC RasterizerDesc = {
-		D3D12_FILL_MODE_SOLID,
-		D3D12_CULL_MODE_BACK, TRUE,
-		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
-		TRUE,
-		FALSE,
-		FALSE,
-		0,
-		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
-	};
-
-	const D3D12_DEPTH_STENCILOP_DESC DepthStencilOpDesc = {
-		D3D12_STENCIL_OP_KEEP,
-		D3D12_STENCIL_OP_KEEP,
-		D3D12_STENCIL_OP_KEEP,
-		D3D12_COMPARISON_FUNC_NEVER
-	};
-
-	const D3D12_DEPTH_STENCIL_DESC DepthStencilDesc = {
-		FALSE,
-		D3D12_DEPTH_WRITE_MASK_ZERO,
-		D3D12_COMPARISON_FUNC_NEVER,
-		FALSE,
-		0,
-		0,
-		DepthStencilOpDesc,
-		DepthStencilOpDesc
-	};
-
-	//!< インプットレイアウト
-	std::vector<D3D12_INPUT_ELEMENT_DESC> InputElementDescs;
-	CreateInputLayout(InputElementDescs);
-	const D3D12_INPUT_LAYOUT_DESC InputLayoutDesc = {
-		InputElementDescs.data(), static_cast<UINT>(InputElementDescs.size())
-	};
-
-	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
-	const D3D12_CACHED_PIPELINE_STATE CachedPipelineState = { nullptr, 0 };
-	const D3D12_GRAPHICS_PIPELINE_STATE_DESC GraphicsPipelineStateDesc = {
-#ifdef USE_WINRT
-		RootSignature.get(),
-#elif defined(USE_WRL)
-		RootSignature.Get(),
-#endif
-		ShaderBCs[0], ShaderBCs[1], ShaderBCs[2], ShaderBCs[3], ShaderBCs[4],
-		StreamOutputDesc,
-		BlendDesc,
-		UINT_MAX,
-		RasterizerDesc,
-		DepthStencilDesc,
-		InputLayoutDesc,
-		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
-		GetPrimitiveTopologyType(),
-		1, { DXGI_FORMAT_R8G8B8A8_UNORM/*, ... x8*/ },
-		DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
-		SampleDesc,
-		0,
-		CachedPipelineState,
-		D3D12_PIPELINE_STATE_FLAG_NONE //!< D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG ... は Warp デバイスのみ
-	};
-#ifdef USE_WINRT
-	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, __uuidof(PipelineState), PipelineState.put_void()));
-#elif defined(USE_WRL)
-	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GraphicsPipelineStateDesc, IID_PPV_ARGS(PipelineState.GetAddressOf())));
-#endif
-
-	LOG_OK();
-}
-
 void DX::CreatePipelineState_Compute()
 {
 	PERFORMANCE_COUNTER();

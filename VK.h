@@ -152,8 +152,8 @@ protected:
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
 
 	virtual void ValidateFormatProperties(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage) const;
-	virtual void ValidateFormatProperties_Sampled(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const VkFilter Mag, const VkFilter Min, const VkSamplerMipmapMode Mip) const;
-	virtual void ValidateFormatProperties_Storage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const bool Atomic) const;
+	virtual void ValidateFormatProperties_SampledImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const VkFilter Mag, const VkFilter Min, const VkSamplerMipmapMode Mip) const;
+	virtual void ValidateFormatProperties_StorageImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const bool Atomic) const;
 
 #ifdef _DEBUG
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
@@ -260,9 +260,12 @@ protected:
 	virtual void CreateIndirectBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB);
 	virtual void CreateIndirectBuffer() {}
 	virtual void CreateUniformBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source);
-	virtual void CreateUniformBuffer() {} //!< 小さなデータの場合、UniformBuffer より PushConstants を使用した方が効率が良い
+	virtual void CreateUniformBuffer() {}
+	virtual void CreateStorageBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size);
 	virtual void CreateStorageBuffer() {}
+	virtual void CreateUniformTexelBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const VkFormat Format, VkBufferView* View);
 	virtual void CreateUniformTexelBuffer() {}
+	virtual void CreateStorageTexelBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const VkFormat Format, VkBufferView* View);
 	virtual void CreateStorageTexelBuffer() {}
 
 	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const {}
@@ -286,35 +289,12 @@ protected:
 	virtual void DestroyFramebuffer();
 
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
-	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const {}
-	virtual void CreateVertexInput(std::vector<VkVertexInputBindingDescription>& VertexInputBindingDescriptions, std::vector<VkVertexInputAttributeDescription>& VertexInputAttributeDescriptions) const {}
-	virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const {}
-	virtual void CreateInputAssembly_Topology(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo, const VkPrimitiveTopology Topology) const {
-		PipelineInputAssemblyStateCreateInfo = {
-			VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-			nullptr,
-			0,
-			Topology, //!< WITH_ADJACENCY 使用時にはデバイスフィーチャー geometryShader が、PATCH_LIST 使用時には tessellationShader が有効であること
-			VK_FALSE //!< 0xffff や 0xffffffff を特別なマーカとして、ストリップ系トポロジでリスタートを可能にする(リスト系には使えない)
-		};
-	}
-	virtual void CreateTessellationState(VkPipelineTessellationStateCreateInfo& PipelineTessellationStateCreateInfo) const {}
-	virtual void CreateViewportState(VkPipelineViewportStateCreateInfo& PipelineViewportStateCreateInfo) const { CreateViewportState_Dynamic(PipelineViewportStateCreateInfo); }
-	void CreateViewportState_Dynamic(VkPipelineViewportStateCreateInfo& PipelineViewportStateCreateInfo, const uint32_t Count = 1) const;
-	virtual void CreateDynamicState(std::vector<VkDynamicState>& DynamicStates) const { CreateDynamicState_ViewportScissor(DynamicStates); }
-	void CreateDynamicState_ViewportScissor(std::vector<VkDynamicState>& DynamicStates) const { DynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR }; }
 
 	static bool ValidatePipelineCache(const VkPhysicalDevice PD, const size_t Size, const void* Data);
-	//virtual VkPipelineCache LoadPipelineCache(const std::wstring& Path) const;
-	//virtual void LoadPipelineCaches(const std::wstring& Path, std::vector<VkPipelineCache>& PipelineCaches) const;
-	//virtual void StorePipelineCache(const std::wstring& Path, const VkPipelineCache PipelineCache) const;
-	//virtual VkPipelineCache CreatePipelineCache() const;
-	//virtual void CreatePipelineCaches(std::vector<VkPipelineCache>& PipelineCaches) const;
 	virtual void CreatePipeline();
 	void CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PL, 
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
-	virtual void CreatePipeline_Graphics();
 	virtual void CreatePipeline_Compute();
 
 	virtual void ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, const VkClearColorValue& Color);

@@ -26,15 +26,6 @@ protected:
 		CreateDescriptorHeap_1SRV();
 	}
 
-#ifdef USE_WINRT
-	virtual void CreateShader(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const override {
-#elif defined(USE_WRL)
-	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const override {
-#endif
-		CreateShader_VsPs(ShaderBlobs);
-		Super::CreateShader(ShaderBlobs);
-	}
-
 	virtual void CreateTexture() override {
 #if 1
 #ifdef USE_WINRT
@@ -90,6 +81,7 @@ protected:
 		//LoadImage(ImageResource.GetAddressOf(), TEXT("..\\Intermediate\\Image\\kueken8_rgba8_srgb.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE); //!< #DX_TODO
 #endif
 	}
+	virtual void CreatePipelineState() override { CreatePipelineState_VsPs(); }
 	virtual void PopulateCommandList(const size_t i) override;
 };
 #pragma endregion

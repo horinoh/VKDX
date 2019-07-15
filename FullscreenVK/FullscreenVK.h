@@ -19,10 +19,7 @@ protected:
 #ifdef USE_DRAW_INDIRECT
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4); }
 #endif
-
-	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {
-		CreateShader_VsPs(ShaderModules, PipelineShaderStageCreateInfos);
-	}
+	virtual void CreatePipeline() override { CreatePipeline_VsFs(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 };
 #pragma endregion

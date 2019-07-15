@@ -15,11 +15,6 @@ public:
 
 protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4); }
-
-	virtual void CreateShader(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const override {
-		CreateShader_VsPs(ShaderModules, PipelineShaderStageCreateInfos);
-	}
-
 	virtual void CreatePipelineLayout() override { CreatePipelineLayout_1CIS_FS(); }
 
 	virtual void CreateDescriptorPool() override { CreateDescriptorPool_1CIS(); }
@@ -80,6 +75,7 @@ protected:
 		CreateSampler_LR(Sampler, MaxLOD);
 	}
 
+	virtual void CreatePipeline() override { CreatePipeline_VsFs(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 };
 #pragma endregion

@@ -18,7 +18,7 @@ protected:
 	virtual void CreateIndexBuffer() override;
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(IndexCount); }
 	virtual void CreatePipelineLayout() override;
-	virtual void CreatePipeline() override;
+	virtual void CreatePipeline() override { CreatePipeline_VsFs_Vertex<Vertex_PositionColor>(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 };
 #pragma endregion

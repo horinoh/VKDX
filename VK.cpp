@@ -436,7 +436,7 @@ void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const si
 void VK::CreateImage(VkImage* Image, const VkImageCreateFlags CreateFlags, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage) const
 {
 	//!< Usage に VK_IMAGE_USAGE_SAMPLED_BIT が指定されいる場合、フォーマットやフィルタが使用可能かチェック #VK_TODO ここではリニアフィルタ決め打ち
-	ValidateFormatProperties_Sampled(GetCurrentPhysicalDevice(), Format, Usage, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
+	ValidateFormatProperties_SampledImage(GetCurrentPhysicalDevice(), Format, Usage, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
 
 	const VkImageCreateInfo ICI = {
 		VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -677,7 +677,7 @@ void VK::ValidateFormatProperties(VkPhysicalDevice PD, const VkFormat Format, co
 		}
 	}
 }
-void VK::ValidateFormatProperties_Sampled(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const VkFilter Mag, const VkFilter Min, const VkSamplerMipmapMode Mip) const
+void VK::ValidateFormatProperties_SampledImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const VkFilter Mag, const VkFilter Min, const VkSamplerMipmapMode Mip) const
 {
 	VkFormatProperties FP;
 	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
@@ -696,7 +696,7 @@ void VK::ValidateFormatProperties_Sampled(VkPhysicalDevice PD, const VkFormat Fo
 	}
 }
 
-void VK::ValidateFormatProperties_Storage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const bool UseAtomic) const
+void VK::ValidateFormatProperties_StorageImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const bool UseAtomic) const
 {
 	VkFormatProperties FP;
 	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
@@ -1995,114 +1995,90 @@ void VK::CreateIndirectBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, co
 	}
 }
 
+/*
+@brief ユニフォームバッファ ... 適切なオフセットに配置する必要がある、ダイナミックではオフセットの指定の仕方が変わる、PushConstants の方が高速
+デスクリプタ
+	VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
+シェーダ内
+	layout (set=0, binding=0) uniform MyUniform { vec4 MyVec4; mat4 MyMat4; }
+*/
 void VK::CreateUniformBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source)
 {
 	const auto Usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 
 	CreateBuffer(Buffer, Usage, Size);
-
 	//!< #VK_TODO_PERF 本来はバッファ毎にメモリを確保するのではなく、予め大きなメモリを作成しておいてその一部を複数のバッファへ割り当てる方がよい
 	CreateDeviceMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	CopyToDeviceMemory(*DeviceMemory, Size, Source);
 	BindDeviceMemory(*Buffer, *DeviceMemory);
-
-	//!< View は必要ない (No need view)
-
-//#ifdef DEBUG_STDOUT
-//	std::cout << "CreateUniformBuffer" << COUT_OK << std::endl << std::endl;
-//#endif
 }
 
-#if 0
-void VK::CreateStorageBuffer()
+/*
+@brief ストレージバッファ ... 適切なオフセットに配置する必要がある、シェーダから書き込み可能、アトミックな操作が可能、ダイナミックではオフセットの指定の仕方が変わる
+デスクリプタ
+	VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC
+シェーダ内
+	layout (set=0, binding=0) buffer MyBuffer { vec4 MyVec4; mat4 MyMat4; }
+*/
+void VK::CreateStorageBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size)
 {
-	const auto Size = 256;
+	const auto Usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
-	VkBuffer Buffer = VK_NULL_HANDLE;
-	VkDeviceMemory DeviceMemory = VK_NULL_HANDLE;
-
-	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size) {
-		const auto Usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-
-		CreateBuffer(Buffer, Usage, Size);
-		CreateDeviceMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-		BindMemory(*Buffer, *DeviceMemory);
-
-		//!< View は必要ない (No need view)
-
-	}(&Buffer, &DeviceMemory, Size);
-
-	if (VK_NULL_HANDLE != DeviceMemory) {
-		vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
-	}
-	if (VK_NULL_HANDLE != Buffer) {
-		vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
-	}
+	CreateBuffer(Buffer, Usage, Size);
+	//!< #VK_TODO_PERF 本来はバッファ毎にメモリを確保するのではなく、予め大きなメモリを作成しておいてその一部を複数のバッファへ割り当てる方がよい
+	CreateDeviceMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	BindDeviceMemory(*Buffer, *DeviceMemory);
 }
-void VK::CreateUniformTexelBuffer()
+
+/*
+@brief ユニフォームテクセルバッファ ... イメージよりも大きなデータへアクセス可能 (1Dイメージは最低限4096テクセルだが、ユニフォームテクセルバッファは最低限65536テクセル)
+デスクリプタ
+	VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER
+シェーダ内
+	layout (set=0, binding=0) uniform samplerBuffer MySamplerBuffer;
+*/
+void VK::CreateUniformTexelBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const VkFormat Format, VkBufferView* View)
 {
-	const auto Size = 256;
+	const auto Usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
 
-	VkBuffer Buffer = VK_NULL_HANDLE;
-	VkDeviceMemory DeviceMemory = VK_NULL_HANDLE;
-	VkBufferView View = VK_NULL_HANDLE;
+	CreateBuffer(Buffer, Usage, Size);
+	//!< #VK_TODO_PERF 本来はバッファ毎にメモリを確保するのではなく、予め大きなメモリを作成しておいてその一部を複数のバッファへ割り当てる方がよい
+	CreateDeviceMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	BindDeviceMemory(*Buffer, *DeviceMemory);
 
-	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, VkBufferView* View, const VkDeviceSize Size) {
-		const auto Usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
+	VkFormatProperties FP;
+	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), Format, &FP);
+	assert((FP.bufferFeatures & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT) && "");
 
-		CreateBuffer(Buffer, Usage, Size);
-		CreateDeviceMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-		BindDeviceMemory(*Buffer, *DeviceMemory);
-
-		//!< UniformTexelBuffer の場合は、フォーマットを指定する必要があるため、ビューを作成する UniformTexelBuffer need format, so create view
-		const auto Format = VK_FORMAT_R8G8B8A8_UNORM;
-		ValidateFormatProperties(Usage, Format);
-		CreateBufferView(View, *Buffer, Format);
-	}(&Buffer, &DeviceMemory, &View, Size);
-
-	if (VK_NULL_HANDLE != DeviceMemory) {
-		vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
-	}
-	if (VK_NULL_HANDLE != Buffer) {
-		vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
-	}
-	if (VK_NULL_HANDLE != View) {
-		vkDestroyBufferView(Device, View, GetAllocationCallbacks());
-	}
+	CreateBufferView(View, *Buffer, Format);
 }
-void VK::CreateStorageTexelBuffer()
+
+/*
+@brief ストレージテクセルバッファ ... シェーダから書き込み可能、アトミックな操作が可能
+デスクリプタ
+	VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER
+シェーダ内
+	layout (set=0, binding=0, r32f) uniform imageBuffer MyImageBuffer;
+*/
+void VK::CreateStorageTexelBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const VkFormat Format, VkBufferView* View)
 {
-	const auto Size = 256;
+	const auto Usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
 
-	VkBuffer Buffer = VK_NULL_HANDLE;
-	VkDeviceMemory DeviceMemory = VK_NULL_HANDLE;
-	VkBufferView View = VK_NULL_HANDLE;
-	
-	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, VkBufferView* View, const VkDeviceSize Size) {
-		const auto Usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
+	CreateBuffer(Buffer, Usage, Size);
+	//!< #VK_TODO_PERF 本来はバッファ毎にメモリを確保するのではなく、予め大きなメモリを作成しておいてその一部を複数のバッファへ割り当てる方がよい
+	CreateDeviceMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	BindDeviceMemory(*Buffer, *DeviceMemory);
 
-		CreateBuffer(Buffer, Usage, Size);
-		CreateDeviceMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-		BindDeviceMemory(*Buffer, *DeviceMemory);
+	VkFormatProperties FP;
+	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), Format, &FP);
+	assert((FP.bufferFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT) && "");
+	//!< #VK_TODO アトミック操作をする場合
+	if (false/*bUseAtomic*/) {
+		assert((FP.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT) && "");
+	}
 
-		//!< UniformStorageBuffer の場合は、フォーマットを指定する必要があるため、ビューを作成する UniformStorageBuffer need format, so create view
-		const auto Format = VK_FORMAT_R8G8B8A8_UNORM;
-		ValidateFormatProperties(Usage, Format);
-		CreateBufferView(View, *Buffer, Format);
-	}(&Buffer, &DeviceMemory, &View, Size);
-	
-	if (VK_NULL_HANDLE != DeviceMemory) {
-		vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
-	}
-	if (VK_NULL_HANDLE != Buffer) {
-		vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
-	}
-	if (VK_NULL_HANDLE != View) {
-		vkDestroyBufferView(Device, View, GetAllocationCallbacks());
-	}
+	CreateBufferView(View, *Buffer, Format);
 }
-#endif
 
 /**
 @brief シェーダとのバインディング (DX::CreateRootSignature()相当)
@@ -2276,23 +2252,6 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 	return ShaderModule;
 }
 
-/**
-@brief DXに合わせるため、ここでは VkDynamicState を使用している For compatibility with DX, we use VkDynamicState
-ここでは個数のみを指定して nullptr を指定している、後で vkCmdSetViewport(), vkCmdSetScissor() で指定すること We specifying only count, and set nulloptr, later use vkCmdSetViewport(), vkCmdSetScissor()
-2つ以上のビューポートを使用するにはデバイスフィーチャー multiViewport が有効であること If we use 2 or more viewport device feature multiViewport must be enabled
-ビューポートのインデックスはジオメトリシェーダで指定する Viewport index is specified in geometry shader
-*/
-void VK::CreateViewportState_Dynamic(VkPipelineViewportStateCreateInfo& PipelineViewportStateCreateInfo, const uint32_t Count) const
-{
-	PipelineViewportStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		Count, nullptr,
-		Count, nullptr
-	};
-}
-
 bool VK::ValidatePipelineCache(const VkPhysicalDevice PD, const size_t Size, const void* Data)
 {
 	VkPhysicalDeviceProperties PDP;
@@ -2322,132 +2281,6 @@ bool VK::ValidatePipelineCache(const VkPhysicalDevice PD, const size_t Size, con
 
 	return Size == PCSize && VK_PIPELINE_CACHE_HEADER_VERSION_ONE == PCVersion && PDP.vendorID == PCVenderID && PDP.deviceID == PCDeviceID/*&& 0 == memcmp(PDP.pipelineCacheUUID, PCUUID, sizeof(PDP.pipelineCacheUUID))*/;
 }
-//VkPipelineCache VK::LoadPipelineCache(const std::wstring& Path) const
-//{
-//	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
-//	size_t Size = 0;
-//
-//	std::ifstream In(Path.c_str(), std::ios::in | std::ios::binary);
-//	if (!In.fail()) {
-//		In.seekg(0, std::ios_base::end);
-//		Size = In.tellg();
-//		In.seekg(0, std::ios_base::beg);
-//
-//		char* Data = nullptr;
-//		if (Size) {
-//			Data = new char[Size];
-//			In.read(Data, Size);
-//
-//			ValidatePipelineCache(Size, Data);
-//
-//			const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
-//				VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-//				nullptr,
-//				0,
-//				Size, Data
-//			};
-//			VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, GetAllocationCallbacks(), &PipelineCache));
-//
-//			if (nullptr != Data) {
-//				delete[] Data;
-//			}
-//		}
-//
-//		In.close();
-//	}
-//	else {
-//		const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
-//				VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-//				nullptr,
-//				0,
-//				0, nullptr
-//		};
-//		VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, GetAllocationCallbacks(), &PipelineCache));
-//	}
-//
-//	return PipelineCache;
-//}
-//void VK::LoadPipelineCaches(const std::wstring& Path, std::vector<VkPipelineCache>& PipelineCaches) const
-//{
-//	size_t Size = 0;
-//
-//	std::ifstream In(Path.c_str(), std::ios::in | std::ios::binary);
-//	if (!In.fail()) {
-//		In.seekg(0, std::ios_base::end);
-//		Size = In.tellg();
-//		In.seekg(0, std::ios_base::beg);
-//	}
-//
-//	char* Data = nullptr;
-//	if (Size) {
-//		Data = new char[Size];
-//		In.read(Data, Size);
-//	}
-//
-//	ValidatePipelineCache(Size, Data);
-//
-//	const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
-//		VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-//		nullptr,
-//		0,
-//		Size, Data
-//	};
-//	for (auto& i : PipelineCaches) {
-//		VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, GetAllocationCallbacks(), &i));
-//	}
-//
-//	if (nullptr != Data) {
-//		delete[] Data;
-//	}
-//
-//	In.close();
-//}
-//
-//void VK::StorePipelineCache(const std::wstring& Path, const VkPipelineCache PipelineCache) const
-//{
-//	if (VK_NULL_HANDLE != PipelineCache) {
-//		size_t Size;
-//		VERIFY_SUCCEEDED(vkGetPipelineCacheData(Device, PipelineCache, &Size, nullptr));
-//		if (Size) {
-//			auto Data = new char[Size];
-//			VERIFY_SUCCEEDED(vkGetPipelineCacheData(Device, PipelineCache, &Size, Data));
-//
-//			std::ofstream Out(Path.c_str(), std::ios::out | std::ios::binary);
-//			if (!Out.fail()) {
-//				Out.write(Data, Size);
-//				Out.close();
-//			}
-//
-//			delete[] Data;
-//		}
-//	}
-//}
-//
-//VkPipelineCache VK::CreatePipelineCache() const
-//{
-//	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
-//	const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
-//		VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-//		nullptr,
-//		0,
-//		0, nullptr
-//	};
-//	VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, GetAllocationCallbacks(), &PipelineCache));
-//	return PipelineCache;
-//}
-//void VK::CreatePipelineCaches(std::vector<VkPipelineCache>& PipelineCaches) const
-//{
-//	const VkPipelineCacheCreateInfo PipelineCacheCreateInfo = {
-//		VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-//		nullptr,
-//		0,
-//		0, nullptr
-//	};
-//	for (auto& i : PipelineCaches) {
-//		VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PipelineCacheCreateInfo, GetAllocationCallbacks(), &i));
-//	}
-//}
-
 void VK::CreatePipeline()
 {
 	//!< パイプラインキャッシュ (スレッド数分)
@@ -2492,9 +2325,6 @@ void VK::CreatePipeline()
 		}
 	}
 
-#if 1
-	auto Thread = std::thread::thread([&]() { CreatePipeline_Graphics(); });
-#else
 	ShaderModules.resize(5);
 	const auto ShaderPath = GetBasePath();
 	ShaderModules[0] = CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data());
@@ -2505,7 +2335,6 @@ void VK::CreatePipeline()
 		const VkRenderPass RP, VkPipelineCache PC)
 		{ CreatePipeline_Default(P, PL, VS, FS, TES, TCS, GS, RP, PC); }, 
 	std::ref(Pipeline), PipelineLayout, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, RenderPass, PCs[0]);
-#endif
 
 	Thread.join();
 
@@ -2788,155 +2617,6 @@ void VK::CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PL,
 	LOG_OK();
 }
 
-void VK::CreatePipeline_Graphics()
-{
-#ifdef _DEBUG
-	PerformanceCounter PC(__func__);
-#endif
-
-	//!< シェーダ
-	std::vector<VkShaderModule> SMs;
-	std::vector<VkPipelineShaderStageCreateInfo> PSSCIs;
-	CreateShader(SMs, PSSCIs);
-
-	//!< バーテックスインプット
-	std::vector<VkVertexInputBindingDescription> VertexInputBindingDescriptions;
-	std::vector<VkVertexInputAttributeDescription> VertexInputAttributeDescriptions;
-	CreateVertexInput(VertexInputBindingDescriptions, VertexInputAttributeDescriptions);
-	const VkPipelineVertexInputStateCreateInfo PipelineVertexInputStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(VertexInputBindingDescriptions.size()), VertexInputBindingDescriptions.data(),
-		static_cast<uint32_t>(VertexInputAttributeDescriptions.size()), VertexInputAttributeDescriptions.data()
-	};
-
-	//!< インプットアセンブリ (トポロジ)
-	VkPipelineInputAssemblyStateCreateInfo PipelineInputAssemblyStateCreateInfo;
-	CreateInputAssembly(PipelineInputAssemblyStateCreateInfo);
-
-	//!< テセレーションステート (テセレーションを使用する場合には、不定値のままにしないこと)
-	VkPipelineTessellationStateCreateInfo PipelineTessellationStateCreateInfo;
-	CreateTessellationState(PipelineTessellationStateCreateInfo);
-
-	//!< ビューポート(シザー)
-	VkPipelineViewportStateCreateInfo PipelineViewportStateCreateInfo;
-	CreateViewportState(PipelineViewportStateCreateInfo);
-
-	const VkPipelineRasterizationStateCreateInfo PipelineRasterizationStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_FALSE, //!< VK_TRUE にするにはデバイスフィーチャー depthClampEnable が有効であること
-		VK_FALSE,
-		VK_POLYGON_MODE_FILL, //!< LINE や POINT を有効にするにはデバイスフィーチャー fillModeNonSolid が有効であること
-		VK_CULL_MODE_BACK_BIT,
-		VK_FRONT_FACE_COUNTER_CLOCKWISE,
-		VK_FALSE, 0.0f, 0.0f, 0.0f,
-		1.0f //!< 1.0f より大きな値を指定するにはデバイスフィーチャー widelines が有効であること
-	};
-
-	//const VkSampleMask SampleMask = 0xffffffff;
-	const VkPipelineMultisampleStateCreateInfo PipelineMultisampleStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_SAMPLE_COUNT_1_BIT,
-		VK_FALSE, 0.0f, //! VK_TRUE にするにはデバイスフィーチャー minSampleShading が有効であること
-		nullptr/*&SampleMask*/, //!< 0xffffffff の場合 nullptr でよい
-		VK_FALSE, VK_FALSE //!< alphaToOneEnable を VK_TRUE にするにはデバイスフィーチャー alphaToOne が有効であること
-	};
-
-	const VkPipelineDepthStencilStateCreateInfo PipelineDepthStencilStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_TRUE,
-		VK_TRUE,
-		VK_COMPARE_OP_LESS_OR_EQUAL,
-		VK_FALSE,
-		VK_FALSE,
-		{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_NEVER, 0, 0, 0 },
-		{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
-		0.0f, 1.0f
-	};
-
-	//!< デバイスフィーチャー independentBlend が有効で無い場合は、配列の各要素は「完全に同じ値」であること If device feature independentBlend is not enabled, each array element must be exactly same
-	//!< VK_BLEND_FACTOR_SRC1 系をを使用するには、デバイスフィーチャー dualSrcBlend が有効であること
-	///!< SRCコンポーネント * SRCファクタ OP DSTコンポーネント * DSTファクタ
-	const std::vector<VkPipelineColorBlendAttachmentState> PipelineColorBlendAttachmentStates = {
-		{
-			VK_FALSE,
-			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-		}
-	};
-	const VkPipelineColorBlendStateCreateInfo PipelineColorBlendStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_FALSE, VK_LOGIC_OP_COPY, //!< ブレンド時に論理オペレーションを行う (ブレンドは無効になる) (整数型アタッチメントに対してのみ)
-		static_cast<uint32_t>(PipelineColorBlendAttachmentStates.size()), PipelineColorBlendAttachmentStates.data(),
-		{ 1.0f, 1.0f, 1.0f, 1.0f }
-	};
-
-	//!< ダイナミックステート
-	std::vector<VkDynamicState> DynamicStates;
-	CreateDynamicState(DynamicStates);
-	const VkPipelineDynamicStateCreateInfo PipelineDynamicStateCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DynamicStates.size()), DynamicStates.data()
-	};
-
-	/**
-	@brief 継承
-	basePipelineHandle, basePipelineIndex は同時に使用できない、それぞれ使用しない場合は VK_NULL_HANDLE, -1 を指定
-	親には VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT フラグが必要、子には VK_PIPELINE_CREATE_DERIVATIVE_BIT フラグが必要
-	・basePipelineHandle ... 既に親とするパイプラインが存在する場合に指定
-	・basePipelineIndex ... 同配列内で親パイプラインも同時に作成する場合、配列内での親パイプラインの添字、親の添字の方が若い値でないといけない
-	*/
-	const std::vector<VkGraphicsPipelineCreateInfo> GraphicsPipelineCreateInfos = {
-		{
-			VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-			nullptr,
-#ifdef _DEBUG
-			VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-#else
-			0,
-#endif
-			static_cast<uint32_t>(PSSCIs.size()), PSSCIs.data(),
-			&PipelineVertexInputStateCreateInfo,
-			&PipelineInputAssemblyStateCreateInfo,
-			&PipelineTessellationStateCreateInfo,
-			&PipelineViewportStateCreateInfo,
-			&PipelineRasterizationStateCreateInfo,
-			&PipelineMultisampleStateCreateInfo,
-			&PipelineDepthStencilStateCreateInfo,
-			&PipelineColorBlendStateCreateInfo,
-			&PipelineDynamicStateCreateInfo,
-			PipelineLayout,
-			RenderPass, 0, //!< 指定したレンダーパス限定ではなく、互換性のある他のレンダーパスでも使用可能
-			VK_NULL_HANDLE, -1 //!< basePipelineHandle, basePipelineIndex
-		}
-	};
-
-	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device,
-		PipelineCache,
-		static_cast<uint32_t>(GraphicsPipelineCreateInfos.size()), GraphicsPipelineCreateInfos.data(),
-		GetAllocationCallbacks(),
-		&Pipeline));
-
-	//!< パイプライン を作成したら、シェーダモジュール は破棄して良い
-	for (auto i : SMs) {
-		vkDestroyShaderModule(Device, i, GetAllocationCallbacks());
-	}
-	SMs.clear();
-
-	LOG_OK();
-}
 void VK::CreatePipeline_Compute()
 {
 #ifdef _DEBUG
@@ -2945,7 +2625,7 @@ void VK::CreatePipeline_Compute()
 
 	std::vector<VkShaderModule> ShaderModules;
 	std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos;
-	CreateShader(ShaderModules, PipelineShaderStageCreateInfos);
+	//CreateShader(ShaderModules, PipelineShaderStageCreateInfos);
 	
 	const std::vector<VkComputePipelineCreateInfo> ComputePipelineCreateInfos = {
 		{

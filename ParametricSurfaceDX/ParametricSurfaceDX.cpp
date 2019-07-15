@@ -273,7 +273,7 @@ void ParametricSurfaceDX::PopulateCommandList(const size_t i)
 #endif
 
 			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
-			CL->IASetPrimitiveTopology(GetPrimitiveTopology());
+			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
 #ifdef USE_WINRT
 			CL->ExecuteIndirect(IndirectCommandSignature.get(), 1, IndirectBufferResource.get(), 0, nullptr, 0);

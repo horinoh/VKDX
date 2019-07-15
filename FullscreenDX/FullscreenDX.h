@@ -19,15 +19,12 @@ protected:
 #ifdef USE_DRAW_INDIRECT
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4); }
 #endif
-
 #ifdef USE_WINRT
-	virtual void CreateShader(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const override {
+	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob) override;
 #elif defined(USE_WRL)
-	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> & ShaderBlobs) const override {
+	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob) override;
 #endif
-		CreateShader_VsPs(ShaderBlobs);
-		Super::CreateShader(ShaderBlobs);
-	}
+	virtual void CreatePipelineState() override { CreatePipelineState_VsPs(); }
 	virtual void PopulateCommandList(const size_t i) override;
 };
 #pragma endregion

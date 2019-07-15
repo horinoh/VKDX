@@ -273,7 +273,7 @@ void FlatDX::PopulateCommandList(const size_t i)
 			CL->SetGraphicsRootSignature(RootSignature.Get());
 #endif
 
-			CL->IASetPrimitiveTopology(GetPrimitiveTopology());
+			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
 #ifdef USE_WINRT
 			CL->ExecuteIndirect(IndirectCommandSignature.get(), 1, IndirectBufferResource.get(), 0, nullptr, 0);

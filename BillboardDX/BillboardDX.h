@@ -55,7 +55,7 @@ protected:
 		//Angle += 1.0f;
 	}
 
-	virtual void CreatePipelineState() override;
+	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs_Tesselation(); }
 
 	virtual void PopulateCommandList(const size_t i) override;
 

@@ -357,59 +357,58 @@ void TriangleDX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob
 
 	LOG_OK();
 }
-void TriangleDX::CreatePipelineState()
-{
-	const auto PCOPath = GetBasePath() + TEXT(".pco");
-	DeleteFile(PCOPath.data());
-
-#ifdef USE_WINRT
-	winrt::com_ptr<ID3D12Device1> Device1;
-	VERIFY_SUCCEEDED(Device->QueryInterface(__uuidof(Device1), Device1.put_void()));
-
-	winrt::com_ptr<ID3D12PipelineLibrary> PL;
-	winrt::com_ptr<ID3DBlob> Blob;
-	if (SUCCEEDED(D3DReadFileToBlob(PCOPath.c_str(), Blob.put())) && Blob->GetBufferSize()) {
-		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(PL), PL.put_void()));
-
-		winrt::com_ptr<ID3D12PipelineState> PS;
-		const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {};
-		VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(TEXT("0"), &GPSD, __uuidof(PS), PS.put_void()));
-	}
-	else {
-		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, __uuidof(PipelineLibrary), PL.put_void()));
-
-		const auto ShaderPath = GetBasePath();
-		ShaderBlobs.resize(2);
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), ShaderBlobs[0].put()));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].put()));
-		const std::array<D3D12_SHADER_BYTECODE, 2> SBCs = { {
-			{ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() },
-			{ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() },
-		} };
-		auto Thread = std::thread::thread([&](winrt::com_ptr<ID3D12PipelineState>& Pipe, ID3D12RootSignature* RS,
-			const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
-			{ 
-				//CreatePipelineState_VertexPositionColor(Pipe, RS, VS, PS, DS, HS, GS);
-				CreatePipelineState_Vertex<Vertex_PositionColor>(Pipe, RS, VS, PS, DS, HS, GS);
-			},
-			std::ref(PipelineState), RootSignature.get(), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC);
-
-		Thread.join();
-
-		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), PipelineState.get()));
-
-		const auto Size = PL->GetSerializedSize();
-		if (Size) {
-			winrt::com_ptr<ID3DBlob> Blob;
-			VERIFY_SUCCEEDED(D3DCreateBlob(Size, Blob.put()));
-			PL->Serialize(Blob->GetBufferPointer(), Size);
-			VERIFY_SUCCEEDED(D3DWriteBlobToFile(Blob.get(), PCOPath.c_str(), TRUE));
-		}
-	}
-#elif defined(USE_WRL)
-	//!< #DX_TODO
-#endif
-}
+//void TriangleDX::CreatePipelineState()
+//{
+//	const auto PCOPath = GetBasePath() + TEXT(".pco");
+//	DeleteFile(PCOPath.data());
+//
+//#ifdef USE_WINRT
+//	winrt::com_ptr<ID3D12Device1> Device1;
+//	VERIFY_SUCCEEDED(Device->QueryInterface(__uuidof(Device1), Device1.put_void()));
+//
+//	winrt::com_ptr<ID3D12PipelineLibrary> PL;
+//	winrt::com_ptr<ID3DBlob> Blob;
+//	if (SUCCEEDED(D3DReadFileToBlob(PCOPath.c_str(), Blob.put())) && Blob->GetBufferSize()) {
+//		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(PL), PL.put_void()));
+//
+//		winrt::com_ptr<ID3D12PipelineState> PS;
+//		const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {};
+//		VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(TEXT("0"), &GPSD, __uuidof(PS), PS.put_void()));
+//	}
+//	else {
+//		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, __uuidof(PipelineLibrary), PL.put_void()));
+//
+//		const auto ShaderPath = GetBasePath();
+//		ShaderBlobs.resize(2);
+//		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), ShaderBlobs[0].put()));
+//		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].put()));
+//		const std::array<D3D12_SHADER_BYTECODE, 2> SBCs = { {
+//			{ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() },
+//			{ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() },
+//		} };
+//		auto Thread = std::thread::thread([&](winrt::com_ptr<ID3D12PipelineState>& Pipe, ID3D12RootSignature* RS,
+//			const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
+//			{ 
+//				CreatePipelineState_Vertex<Vertex_PositionColor>(Pipe, RS, VS, PS, DS, HS, GS);
+//			},
+//			std::ref(PipelineState), RootSignature.get(), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC);
+//
+//		Thread.join();
+//
+//		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), PipelineState.get()));
+//
+//		const auto Size = PL->GetSerializedSize();
+//		if (Size) {
+//			winrt::com_ptr<ID3DBlob> Blob;
+//			VERIFY_SUCCEEDED(D3DCreateBlob(Size, Blob.put()));
+//			PL->Serialize(Blob->GetBufferPointer(), Size);
+//			VERIFY_SUCCEEDED(D3DWriteBlobToFile(Blob.get(), PCOPath.c_str(), TRUE));
+//		}
+//	}
+//#elif defined(USE_WRL)
+//	//!< #DX_TODO
+//#endif
+//}
 void TriangleDX::PopulateCommandList(const size_t i)
 {
 #ifdef USE_WINRT
