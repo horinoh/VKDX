@@ -15,7 +15,12 @@ public:
 
 protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4); }
-	virtual void CreatePipelineLayout() override { CreatePipelineLayout_1CIS_FS(); }
+	virtual void CreatePipelineLayout() override {
+		DescriptorSetLayouts.resize(1);
+		auto& DSL = DescriptorSetLayouts[0];
+		CreateDescriptorSetLayout_1CIS(DSL, VK_SHADER_STAGE_FRAGMENT_BIT);
+		CreatePipelineLayout_1DSL(DSL);
+	}
 
 	virtual void CreateDescriptorPool() override { CreateDescriptorPool_1CIS(); }
 	virtual void UpdateDescriptorSet() override { UpdateDescriptorSet_1CIS(); }

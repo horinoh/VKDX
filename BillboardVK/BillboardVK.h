@@ -14,7 +14,7 @@ public:
 	virtual ~BillboardVK() {}
 
 protected:
-	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PhysicalDeviceFeatures) const { assert(PhysicalDeviceFeatures.tessellationShader && "tessellationShader not enabled"); }
+	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
 	virtual void CreateDepthStencil() override {
 		//VK_FORMAT_D32_SFLOAT_S8_UINT,
@@ -28,7 +28,12 @@ protected:
 
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1); }
 
-	virtual void CreatePipelineLayout() override { CreatePipelineLayout_1UB_GS(); }
+	virtual void CreatePipelineLayout() override {
+		DescriptorSetLayouts.resize(1);
+		auto& DSL = DescriptorSetLayouts[0];
+		CreateDescriptorSetLayout_1UB(DSL, VK_SHADER_STAGE_GEOMETRY_BIT);
+		CreatePipelineLayout_1DSL(DSL);
+	}
 
 	virtual void CreateUniformBuffer() override {
 		const auto Fov = 0.16f * glm::pi<float>();

@@ -23,18 +23,23 @@ public:
 		CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, static_cast<VkDeviceSize>(sizeof(DIC)), &DIC, CommandPools[0].second[0]);
 	}
 
-	void CreatePipelineLayout_1UB_GS();
+	void CreateDescriptorSetLayout_1UB(VkDescriptorSetLayout& DSL, const VkShaderStageFlags SSF);
+	void CreateDescriptorSetLayout_1CIS(VkDescriptorSetLayout& DSL, const VkShaderStageFlags SSF);
+	void CreateDescriptorSetLayout_1UB_1CIS(VkDescriptorSetLayout& DSL, const VkShaderStageFlags SSF_UB, const VkShaderStageFlags SSF_CIS);
+
+	void CreatePipelineLayout_1DSL(const VkDescriptorSetLayout& DSL);
+
+	void CreateDescriptorSet_1DSL(VkDescriptorSet& DS, const VkDescriptorPool DP, const VkDescriptorSetLayout& DSL);
+
 	void CreateDescriptorPool_1UB();
 	void UpdateDescriptorSet_1UB();
 
-	void CreatePipelineLayout_1CIS_FS();
 	void CreateDescriptorPool_1CIS();
 	void UpdateDescriptorSet_1CIS();
 
 	void CreateDescriptorPool_1SI();
 	void UpdateDescriptorSet_1SI();
 
-	void CreatePipelineLayout_1UB_GS_1CIS_FS();
 	void CreateDescriptorPool_1UB_1CIS();
 	void UpdateDescriptorSet_1UB_1CIS();
 
@@ -93,10 +98,10 @@ public:
 	//!< LinearRepeat
 	void CreateSampler_LR(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const;
 
-	virtual void CreateRenderPass() { CreateRenderPass_1C(RenderPass, ColorFormat); }
-	void CreateRenderPass_1C(VkRenderPass& RenderPass, const VkFormat Format);
-	void CreateRenderPass_ColorDepth();
-	void CreateRenderPass_CD_PP();
+	//virtual void CreateRenderPass() { CreateRenderPass_1C(RenderPass, ColorFormat); }
+	//void CreateRenderPass_1C(VkRenderPass& RenderPass, const VkFormat Format);
+	void CreateRenderPass_ColorDepth(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth);
+	void CreateRenderPass_ColorDepth_PostProcess(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth);
 
 	virtual void CreateFramebuffer() override { CreateFramebuffer_Color(); }
 	void CreateFramebuffer_Color();

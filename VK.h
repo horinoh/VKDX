@@ -268,9 +268,10 @@ protected:
 	virtual void CreateStorageTexelBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const VkFormat Format, VkBufferView* View);
 	virtual void CreateStorageTexelBuffer() {}
 
-	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const {}
-	virtual void CreateDescriptorSetLayout_deprecated();
-	virtual void CreatePipelineLayout();
+	virtual void CreateDescriptorSetLayout() {}
+
+	virtual void CreatePipelineLayout_Default(VkPipelineLayout& PL);
+	virtual void CreatePipelineLayout() { CreatePipelineLayout_Default(PipelineLayout); }
 
 	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {}
 	virtual void CreateDescriptorPool() {}
@@ -284,7 +285,8 @@ protected:
 	virtual void CreateTexture() {}
 	virtual void CreateSampler(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const {}
 
-	virtual void CreateRenderPass() {}
+	virtual void CreateRenderPass() { RenderPasses.resize(1); CreateRenderPass_Default(RenderPasses[0], ColorFormat); }
+	virtual void CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color);
 	virtual void CreateFramebuffer() {}
 	virtual void DestroyFramebuffer();
 
@@ -444,12 +446,13 @@ protected:
 
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
 	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
+	std::vector<VkDescriptorPool> DescriptorPools;
 	std::vector<VkDescriptorSet> DescriptorSets;
 	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
 
 	VkPipeline Pipeline = VK_NULL_HANDLE;
 	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
-	VkRenderPass RenderPass = VK_NULL_HANDLE;
+	std::vector<VkRenderPass> RenderPasses;
 	std::vector<VkFramebuffer> Framebuffers;
 
 	std::vector<VkShaderModule> ShaderModules;

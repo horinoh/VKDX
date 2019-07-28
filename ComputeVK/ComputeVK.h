@@ -21,9 +21,9 @@ protected:
 	virtual void CreatePipeline() override { Super::CreatePipeline_Compute(); }
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
 
-	virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const override {
-		//CreateDescriptorSetLayoutBindings_1SI(DescriptorSetLayoutBindings, VK_SHADER_STAGE_COMPUTE_BIT);
-	}
+	//virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const override {
+	//	CreateDescriptorSetLayoutBindings_1SI(DescriptorSetLayoutBindings, VK_SHADER_STAGE_COMPUTE_BIT);
+	//}
 	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const override {
 		//CreateDescriptorPoolSizes_1SI(DescriptorPoolSizes);
 	}

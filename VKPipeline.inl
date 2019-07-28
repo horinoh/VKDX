@@ -269,13 +269,15 @@ template<typename T> void CreatePipeline_VsFs_Vertex()
 	ShaderModules[0] = CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data());
 	ShaderModules[1] = CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data());
 
+	const auto RP = RenderPasses[0];
+
 	auto Thread = std::thread::thread([&](VkPipeline& P, const VkPipelineLayout PL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC)
 		{
 			CreatePipeline_Vertex<T>(P, PL, VS, FS, TES, TCS, GS, RP, PC);
 		},
-		std::ref(Pipeline), PipelineLayout, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, RenderPass, PCs[0]);
+		std::ref(Pipeline), PipelineLayout, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
 
 	Thread.join();
 

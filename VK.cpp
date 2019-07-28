@@ -80,6 +80,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateTexture();
 
+	CreateDescriptorSetLayout();
 	//!< パイプラインレイアウト (ルートシグネチャ相当)
 	CreatePipelineLayout();
 	//!< レンダーパス
@@ -152,9 +153,8 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 
 	DestroyFramebuffer();
 
-	if (VK_NULL_HANDLE != RenderPass) {
-		vkDestroyRenderPass(Device, RenderPass, GetAllocationCallbacks());
-		RenderPass = VK_NULL_HANDLE;
+	for (auto i : RenderPasses) {
+		vkDestroyRenderPass(Device, i, GetAllocationCallbacks());
 	}
 
 	if (VK_NULL_HANDLE != Pipeline) {
@@ -171,17 +171,23 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyPipelineLayout(Device, PipelineLayout, GetAllocationCallbacks());
 	}
 
-	//!< VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT の場合のみ個別に開放できる (Only if VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT is used, can be release individually)
 #if 0
+	//!< VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT の場合のみ個別に開放できる (Only if VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT is used, can be release individually)
 	if (!DescriptorSets.empty()) {
 		vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
 	}
 #endif
 	DescriptorSets.clear();
+
+	for (auto i : DescriptorPools) {
+		vkDestroyDescriptorPool(Device, i, GetAllocationCallbacks());
+	}
+	DescriptorPools.clear();
 	if (VK_NULL_HANDLE != DescriptorPool) {
 		vkDestroyDescriptorPool(Device, DescriptorPool, GetAllocationCallbacks());
 		DescriptorPool = VK_NULL_HANDLE;
 	}
+	
 	for (auto i : DescriptorSetLayouts) {
 		vkDestroyDescriptorSetLayout(Device, i, GetAllocationCallbacks());
 	}
@@ -1238,9 +1244,9 @@ void VK::EnumerateQueueFamilyProperties(VkPhysicalDevice PD, VkSurfaceKHR Surfac
 }
 void VK::OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const
 {
-	//!< VkPhysicalDeviceFeatures には可能なフィーチャーが全て true になったものが渡されてくるので、
-	//!< 不要な項目を false にするようにオーバーライドするとパフォーマンスが良くなる
-	//!< VkPhysicalDeviceFeatures が false で渡されてくる項目を true に変えても無理
+	//!< VkPhysicalDeviceFeatures には可能なフィーチャーが全て true になったものが渡されてくる
+	//!< 不要な項目を false にオーバーライドするとパフォーマンスの改善が期待できるかもしれない
+	//!< false で渡されてくる項目は使えないフィーチャーなので true に変えても使えない
 
 	Log("\tPhysicalDeviceFeatures (Override)\n");
 #define VK_DEVICEFEATURE_ENTRY(entry) if(PDF.entry) { Logf("\t\t%s\n", #entry); }
@@ -1353,12 +1359,12 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface)
 		VK_EXT_VALIDATION_CACHE_EXTENSION_NAME,
 	};
 
-	//!< vkGetPhysicalDeviceFeatures() で可能なフィーチャーが全て VkPhysicalDeviceFeatures になったPDFが返る
+	//!< vkGetPhysicalDeviceFeatures() で可能なフィーチャーが全て有効になった VkPhysicalDeviceFeatures が返る
 	//!< このままでは可能なだけ有効になってしまうのでパフォーマンス的には良くない(必要な項目だけ true にし、それ以外は false にするのが本来は良い)
-	//!< デバイスフィーチャーを「有効にしないと」と使用できない機能が多々あるのでここでは返った値をそのまま使っている (パフォーマンスは良くない)
+	//!< デバイスフィーチャーを「有効にしないと」と使用できない機能が多々あり面倒なので、ここでは返った値をそのまま使ってしまっている (パフォーマンス的には良くない)
 	VkPhysicalDeviceFeatures PDF;
 	vkGetPhysicalDeviceFeatures(PD, &PDF);
-	//!< 必要ならここでオーバーライドして不要な項目を false にする
+	//!< 必要に応じて OverridePhysicalDeviceFeatures() をオーバーライドし、不要な項目を無効にする(パフォーマンスを考える場合)
 	OverridePhysicalDeviceFeatures(PDF);
 	const VkDeviceCreateInfo DeviceCreateInfo = {
 		VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -1378,7 +1384,7 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface)
 #undef VK_DEVICE_PROC_ADDR
 #endif //!< VK_NO_PROTOYYPES
 
-	//!< キューの取得 (グラフィック、プレゼントキューは同じインデックスの場合もあるが別の変数に取得しておく) Graphics and presentation index may be same, but save to individual variables
+	//!< キューの取得 (グラフィック、プレゼントキューは同じインデックスの場合もあるが別の変数に取得しておく) (Graphics and presentation index may be same, but save to individual variables)
 	vkGetDeviceQueue(Device, GraphicsQueueFamilyIndex, GraphicsQueueIndex, &GraphicsQueue);
 	vkGetDeviceQueue(Device, PresentQueueFamilyIndex, PresentQueueIndex, &PresentQueue);
 	//vkGetDeviceQueue(Device, ComputeQueueFamilyIndex, ComputeQueueIndex, &ComputeQueue);
@@ -2080,54 +2086,26 @@ void VK::CreateStorageTexelBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory
 	CreateBufferView(View, *Buffer, Format);
 }
 
-/**
-@brief シェーダとのバインディング (DX::CreateRootSignature()相当)
-@note デスクリプタを使用しない場合でも、デスクリプタセットレイアウト自体は作成しなくてはならない
-@note シェーダからのアクセス時は set がVkDescriptorSetLayout番号、binding が(VkDescriptorSetLayout内の)VkDescriptorSetLayoutBinding番号 に相当する
-(set = VkDescriptorSetLayout番号, binding = (VkDescriptorSetLayout内の)VkDescriptorSetLayoutBinding番号)
-*/
-void VK::CreateDescriptorSetLayout_deprecated()
-{
-	//!< binding = [0, DescriptorSetLayoutBindings.size()-1]
-	std::vector<VkDescriptorSetLayoutBinding> DescriptorSetLayoutBindings = {
-		/**
-		uint32_t              binding;
-		VkDescriptorType      descriptorType; ... VK_DESCRIPTOR_TYPE_[UNIFORM_BUFFER, SAMPLER, COMBINED_IMAGE_SAMPLER, SAMPLED_IMAGE, ...]
-		uint32_t              descriptorCount;
-		VkShaderStageFlags    stageFlags; ... VK_SHADER_STAGE_[VERTEX_BIT, TESSELLATION_CONTROL_BIT, TESSELLATION_EVALUATION_BIT, GEOMETRY_BIT, FRAGMENT_BIT, COMPUTE_BIT, ALL_GRAPHICS, ALL]
-		const VkSampler*      pImmutableSamplers;
-		*/
-	};
-	CreateDescriptorSetLayoutBindings(DescriptorSetLayoutBindings);
-
-	const VkDescriptorSetLayoutCreateInfo DescriptorSetLayoutCreateInfo = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DescriptorSetLayoutBindings.size()), DescriptorSetLayoutBindings.data()
-	};
-	VkDescriptorSetLayout DescriptorSetLayout = VK_NULL_HANDLE;
-	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DescriptorSetLayoutCreateInfo, GetAllocationCallbacks(), &DescriptorSetLayout));
-	//!< set = [0, DescriptorSetLayouts.size()-1]
-	DescriptorSetLayouts.push_back(DescriptorSetLayout);
-
-	LOG_OK();
-}
-
-void VK::CreatePipelineLayout()
+#if 0
+//!< 中身のない VkDescriptorSetLayout ならそもそも作る必要がない
+void VK::CreateDescriptorSetLayout_Default(VkDescriptorSetLayout& DSL)
 {
 	const std::array<VkDescriptorSetLayoutBinding, 0> DSLBs = {};
-
 	const VkDescriptorSetLayoutCreateInfo DSLCI = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 		nullptr,
 		0,
 		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
 	};
-
-	VkDescriptorSetLayout DSL = VK_NULL_HANDLE;
 	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
-	DescriptorSetLayouts.push_back(DSL);
+
+	LOG_OK();
+}
+#endif
+
+void VK::CreatePipelineLayout_Default(VkPipelineLayout& PL)
+{
+	const std::array<VkDescriptorSetLayout, 0> DSLs = {};
 
 	//!< デスクリプタセットよりも高速
 	//!< パイプラインレイアウト全体で128 Byte(ハードが許せばこれ以上使える場合もある ex)GTX970M ... 256byte)
@@ -2138,17 +2116,18 @@ void VK::CreatePipelineLayout()
 		//{ VK_SHADER_STAGE_FRAGMENT_BIT, 64, 64 },
 	};
 
-	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
+	const VkPipelineLayoutCreateInfo PLCI = {
 		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		nullptr,
 		0,
-		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
+		static_cast<uint32_t>(DSLs.size()), DSLs.data(),
 		static_cast<uint32_t>(PCRs.size()), PCRs.data()
 	};
-	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, GetAllocationCallbacks(), &PipelineLayout));
+	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PipelineLayout));
 
 	LOG_OK();
 }
+
 void VK::CreateDescriptorSet()
 {
 	if (!DescriptorSetLayouts.empty() && VK_NULL_HANDLE != DescriptorPool) {
@@ -2210,6 +2189,84 @@ void VK::CreateDescriptorSet_deprecated()
 
 		LOG_OK();
 	}
+}
+
+void VK::CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color)
+{
+	//!< アタッチメント ... レンダーパスでの描画先
+	const std::array<VkAttachmentDescription, 1> ADs = {
+		{
+			0,
+			Color,
+			VK_SAMPLE_COUNT_1_BIT,
+			//!< アタッチメントのロードストア :「終了時に保存」
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
+			//!< ステンシルのロードストア : (ここでは)使用しない
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			//!< レンダーパス「開始時」、「終了時」のレイアウト
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+		}
+	};
+
+	//!< インプット ... 読み取り用
+	//!< layout (input_attachment_index=0, set=0, binding=0) uniform SubpassInput XXX;
+	const std::array<VkAttachmentReference, 0> InputARs = {};
+	const std::array<VkAttachmentReference, 1> ColorARs = {
+		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }
+	};
+	const std::array<VkAttachmentReference, 1> ResolveARs = {
+		{ VK_ATTACHMENT_UNUSED },
+	};
+	assert(ColorARs.size() == ResolveARs.size() && "Size must be same");
+	const VkAttachmentReference* DepthAR = nullptr;
+	const std::array<uint32_t, 0> PreserveAttaches = {}; //!< サブパス全体においてコンテンツを保持しなくてはならないもののインデックスを指定する : (ここでは)使用しない
+	const std::array<VkSubpassDescription, 1> SubpassDescs = {
+		{
+			0,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			static_cast<uint32_t>(InputARs.size()), InputARs.data(),
+			static_cast<uint32_t>(ColorARs.size()), ColorARs.data(), ResolveARs.data(),
+			DepthAR,
+			static_cast<uint32_t>(PreserveAttaches.size()), PreserveAttaches.data()
+		}
+	};
+
+	//!< サブパス
+#if 0
+	const std::array<VkSubpassDependency, 0> SubpassDepends = {};
+#else
+	const std::array<VkSubpassDependency, 2> SubpassDepends = { {
+			//!< 必要無いが、あえて書くならこんな感じ (No need this code, but if dare to write like this)
+			{
+				VK_SUBPASS_EXTERNAL,							//!< サブパス外から
+				0,												//!< サブパス0へ
+				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,			//!< パイプラインの最終ステージから
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< カラー出力ステージへ
+				VK_ACCESS_MEMORY_READ_BIT,						//!< 読み込みから
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,			//!< カラー書き込みへ
+				VK_DEPENDENCY_BY_REGION_BIT,					//!< 同じメモリ領域に対する書き込みが完了してから読み込み (指定しない場合は自前で書き込み完了を管理)
+			},
+			{
+				0,												//!< サブパス0から
+				VK_SUBPASS_EXTERNAL,							//!< サブパス外へ
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< カラー出力ステージから
+				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,			//!< パイプラインの最終ステージへ
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,			//!< カラー書き込みから
+				VK_ACCESS_MEMORY_READ_BIT,						//!< 読み込みへ
+				VK_DEPENDENCY_BY_REGION_BIT,
+			}
+		} };
+#endif
+
+	const VkRenderPassCreateInfo RPCI = {
+		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(ADs.size()), ADs.data(),
+		static_cast<uint32_t>(SubpassDescs.size()), SubpassDescs.data(),
+		static_cast<uint32_t>(SubpassDepends.size()), SubpassDepends.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
 }
 
 void VK::DestroyFramebuffer()
@@ -2329,12 +2386,14 @@ void VK::CreatePipeline()
 	const auto ShaderPath = GetBasePath();
 	ShaderModules[0] = CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data());
 	ShaderModules[1] = CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data());
+	
+	const auto RP = RenderPasses[0];
 
 	auto Thread = std::thread::thread([&](VkPipeline& P, const VkPipelineLayout PL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS, 
 		const VkRenderPass RP, VkPipelineCache PC)
 		{ CreatePipeline_Default(P, PL, VS, FS, TES, TCS, GS, RP, PC); }, 
-	std::ref(Pipeline), PipelineLayout, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, RenderPass, PCs[0]);
+	std::ref(Pipeline), PipelineLayout, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
 
 	Thread.join();
 
@@ -2822,10 +2881,11 @@ void VK::PopulateCommandBuffer(const size_t i)
 		ClearColor(CB, Image, Colors::SkyBlue);
 #endif
 
+		const auto RP = RenderPasses[0];
 #ifdef _DEBUG
 		//!< レンダーエリアの最低粒度を確保
 		VkExtent2D Granularity;
-		vkGetRenderAreaGranularity(Device, RenderPass, &Granularity);
+		vkGetRenderAreaGranularity(Device, RP, &Granularity);
 		//!<「自分の環境では」 Granularity = { 1, 1 } だったのでほぼなんでも大丈夫みたい、環境によっては注意が必要
 		assert(ScissorRects[0].extent.width >= Granularity.width && ScissorRects[0].extent.height >= Granularity.height && "ScissorRect is too small");
 #endif
@@ -2836,7 +2896,7 @@ void VK::PopulateCommandBuffer(const size_t i)
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
-			RenderPass,
+			RP,
 			FB,
 			ScissorRects[0], //!< フレームバッファのサイズ以下を指定できる
 			static_cast<uint32_t>(ClearValues.size()), ClearValues.data()

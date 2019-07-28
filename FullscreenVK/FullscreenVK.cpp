@@ -236,6 +236,7 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
 	//const auto SCB = SecondaryCommandBuffers[i];
 	const auto FB = Framebuffers[i];
 	const auto Image = SwapchainImages[i];
+	const auto RP = RenderPasses[0];
 
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -252,7 +253,7 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
 		const VkRenderPassBeginInfo RenderPassBeginInfo = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
-			RenderPass,
+			RP,
 			FB,
 			ScissorRects[0],
 			0, nullptr //!< レンダーパスでクリアする場合は必須 static_cast<uint32_t>(ClearValues.size()), ClearValues.data()

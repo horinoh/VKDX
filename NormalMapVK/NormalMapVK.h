@@ -14,10 +14,15 @@ public:
 	virtual ~NormalMapVK() {}
 
 protected:
-	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PhysicalDeviceFeatures) const { assert(PhysicalDeviceFeatures.tessellationShader && "tessellationShader not enabled"); }
+	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1); }
-	virtual void CreatePipelineLayout() override { CreatePipelineLayout_1UB_GS_1CIS_FS(); }
+	virtual void CreatePipelineLayout() override {
+		DescriptorSetLayouts.resize(1);
+		auto& DSL = DescriptorSetLayouts[0];
+		CreateDescriptorSetLayout_1UB_1CIS(DSL, VK_SHADER_STAGE_GEOMETRY_BIT, VK_SHADER_STAGE_FRAGMENT_BIT);
+		CreatePipelineLayout_1DSL(DSL);
+	}
 
 	virtual void CreateUniformBuffer() override {
 		const auto Fov = 0.16f * glm::pi<float>();

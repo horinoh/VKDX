@@ -58,18 +58,15 @@
 //	};
 //}
 
-void VKExt::CreatePipelineLayout_1UB_GS()
+void VKExt::CreateDescriptorSetLayout_1UB(VkDescriptorSetLayout& DSL, const VkShaderStageFlags SSF)
 {
 	const  std::array<VkDescriptorSetLayoutBinding, 1> DSLBs = {
 		{
-			0,
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			1,
-			VK_SHADER_STAGE_GEOMETRY_BIT,
+			0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+			SSF,
 			nullptr
 		},
 	};
-
 	const VkDescriptorSetLayoutCreateInfo DSLCI = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 		nullptr,
@@ -77,9 +74,84 @@ void VKExt::CreatePipelineLayout_1UB_GS()
 		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
 	};
 
-	VkDescriptorSetLayout DSL = VK_NULL_HANDLE;
 	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
-	DescriptorSetLayouts.push_back(DSL);
+}
+
+void VKExt::CreateDescriptorSetLayout_1CIS(VkDescriptorSetLayout& DSL, const VkShaderStageFlags SSF)
+{
+	//!< ImmutableSampler == STATIC_SAMPLER_DESC 相当？
+#if 0
+	const VkSamplerCreateInfo SCI = {
+		VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+		nullptr,
+		0,
+		VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR,
+		VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
+		0.0f,
+		VK_FALSE, 1.0f,
+		VK_FALSE, VK_COMPARE_OP_NEVER,
+		0.0f, 1.0f,
+		VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+		VK_FALSE
+	};
+	VkSampler Sampler = VK_NULL_HANDLE;
+	VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Sampler));
+	const std::array<VkSampler, 1> ISs = { { Sampler } };
+	const std::array<VkDescriptorSetLayoutBinding, 1> DSLBs = {
+		{
+			0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()),
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			ISs.data()
+		},
+	};
+#else
+	const std::array<VkDescriptorSetLayoutBinding, 1> DSLBs = {
+		{
+			0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
+			SSF,
+			nullptr
+		},
+	};
+#endif
+	const VkDescriptorSetLayoutCreateInfo DSLCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
+	};
+
+	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
+}
+
+void VKExt::CreateDescriptorSetLayout_1UB_1CIS(VkDescriptorSetLayout& DSL, const VkShaderStageFlags SSF_UB, const VkShaderStageFlags SSF_CIS)
+{
+	const  std::array<VkDescriptorSetLayoutBinding, 2> DSLBs = { {
+		{
+			0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
+			SSF_UB,
+			nullptr
+		},
+		{
+			1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
+			SSF_CIS,
+			nullptr
+		}
+	} };
+	const VkDescriptorSetLayoutCreateInfo DSLCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
+	};
+
+	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
+}
+
+void VKExt::CreatePipelineLayout_1DSL(const VkDescriptorSetLayout& DSL)
+{
+	const std::array<VkDescriptorSetLayout, 1> DSLs = {
+		DSL,
+	};
 
 	const std::array<VkPushConstantRange, 0> PCRs = {};
 
@@ -87,13 +159,33 @@ void VKExt::CreatePipelineLayout_1UB_GS()
 		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		nullptr,
 		0,
-		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
+		static_cast<uint32_t>(DSLs.size()), DSLs.data(),
 		static_cast<uint32_t>(PCRs.size()), PCRs.data()
 	};
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PipelineLayout));
 
 	LOG_OK();
 }
+
+void VKExt::CreateDescriptorSet_1DSL(VkDescriptorSet& DS, const VkDescriptorPool DP, const VkDescriptorSetLayout& DSL)
+{
+	DescriptorSets.resize(1);
+	auto& DS = DescriptorSets[0];
+
+	const std::array<VkDescriptorSetLayout, 1> DSLs = {
+		DSL,
+	};
+	const VkDescriptorSetAllocateInfo DSAI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		nullptr,
+		DP,
+		static_cast<uint32_t>(DSLs.size()), DSLs.data()
+	};
+	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DS));
+
+	LOG_OK();
+}
+
 void VKExt::CreateDescriptorPool_1UB()
 {
 	const std::array<VkDescriptorPoolSize, 1> DPSs = {
@@ -152,70 +244,6 @@ void VKExt::UpdateDescriptorSet_1UB()
 	LOG_OK();
 }
 
-void VKExt::CreatePipelineLayout_1CIS_FS()
-{
-	//!< ImmutableSampler == STATIC_SAMPLER_DESC 相当？
-#if 0
-	const VkSamplerCreateInfo SCI = {
-		VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-		nullptr,
-		0,
-		VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR,
-		VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
-		0.0f,
-		VK_FALSE, 1.0f,
-		VK_FALSE, VK_COMPARE_OP_NEVER,
-		0.0f, 1.0f,
-		VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-		VK_FALSE
-	};
-	VkSampler Sampler = VK_NULL_HANDLE;
-	VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Sampler));
-	const std::array<VkSampler, 1> ISs = { { Sampler } };
-	const std::array<VkDescriptorSetLayoutBinding, 1> DSLBs = {
-		{
-			0,
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			static_cast<uint32_t>(ISs.size()),
-			VK_SHADER_STAGE_FRAGMENT_BIT,
-			ISs.data()
-		},
-	};
-#else
-	const std::array<VkDescriptorSetLayoutBinding, 1> DSLBs = {
-		{
-			0,
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			1,
-			VK_SHADER_STAGE_FRAGMENT_BIT,
-			nullptr
-		},
-	};
-#endif
-	const VkDescriptorSetLayoutCreateInfo DSLCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
-	};
-
-	VkDescriptorSetLayout DSL = VK_NULL_HANDLE;
-	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
-	DescriptorSetLayouts.push_back(DSL);
-
-	const std::array<VkPushConstantRange, 0> PCRs = {};
-
-	const VkPipelineLayoutCreateInfo PipelineLayoutCreateInfo = {
-		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
-		static_cast<uint32_t>(PCRs.size()), PCRs.data()
-	};
-	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PipelineLayoutCreateInfo, GetAllocationCallbacks(), &PipelineLayout));
-
-	LOG_OK();
-}
 void VKExt::CreateDescriptorPool_1CIS()
 {
 	const std::array<VkDescriptorPoolSize, 1> DPSs = {
@@ -394,49 +422,6 @@ void VKExt::UpdateDescriptorSet_1SI()
 }
 #endif
 
-void VKExt::CreatePipelineLayout_1UB_GS_1CIS_FS()
-{
-	const std::array<VkDescriptorSetLayoutBinding, 2> DSLBs = { {
-		{
-			0,
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			1,
-			VK_SHADER_STAGE_GEOMETRY_BIT,
-			nullptr
-		},
-		{
-			1,
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			1,
-			VK_SHADER_STAGE_FRAGMENT_BIT,
-			nullptr
-		}
-	} };
-
-	const VkDescriptorSetLayoutCreateInfo DSLCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
-	};
-
-	VkDescriptorSetLayout DSL = VK_NULL_HANDLE;
-	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
-	DescriptorSetLayouts.push_back(DSL);
-
-	const std::array<VkPushConstantRange, 0> PCRs = {};
-
-	const VkPipelineLayoutCreateInfo PLCI = {
-		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
-		static_cast<uint32_t>(PCRs.size()), PCRs.data()
-	};
-	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PipelineLayout));
-
-	LOG_OK();
-}
 void VKExt::CreateDescriptorPool_1UB_1CIS()
 {
 	const std::array<VkDescriptorPoolSize, 2> DPSs = { {
@@ -774,6 +759,8 @@ void VKExt::CreatePipeline_VsFs()
 	const auto ShaderPath = GetBasePath();
 	ShaderModules[0] = CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data());
 	ShaderModules[1] = CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data());
+	
+	const auto RP = RenderPasses[0];
 
 	auto Thread = std::thread::thread([&](VkPipeline& P, const VkPipelineLayout PL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
@@ -781,7 +768,7 @@ void VKExt::CreatePipeline_VsFs()
 		{
 			CreatePipeline_Default(P, PL, VS, FS, TES, TCS, GS, RP, PC);
 		},
-		std::ref(Pipeline), PipelineLayout, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, RenderPass, PCs[0]);
+		std::ref(Pipeline), PipelineLayout, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
 
 	Thread.join();
 
@@ -857,13 +844,15 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Tesselation()
 	ShaderModules[3] = CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data());
 	ShaderModules[4] = CreateShaderModule((ShaderPath + TEXT(".geom.spv")).data());
 
+	const auto RP = RenderPasses[0];
+
 	auto Thread = std::thread::thread([&](VkPipeline& P, const VkPipelineLayout PL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC)
 		{
 			CreatePipeline_Tesselation(P, PL, VS, FS, TES, TCS, GS, RP, PC);
 		},
-		std::ref(Pipeline), PipelineLayout, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4], RenderPass, PCs[0]);
+		std::ref(Pipeline), PipelineLayout, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4], RP, PCs[0]);
 
 	Thread.join();
 
@@ -887,6 +876,7 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Tesselation()
 	for (auto i : PCs) {
 		vkDestroyPipelineCache(Device, i, GetAllocationCallbacks());
 	}
+
 }
 void VKExt::CreateSampler_LR(VkSampler* Sampler, const float MaxLOD) const
 {
@@ -909,248 +899,154 @@ void VKExt::CreateSampler_LR(VkSampler* Sampler, const float MaxLOD) const
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SamplerCreateInfo, GetAllocationCallbacks(), Sampler));
 	}(Sampler, MaxLOD);
 }
-
-void VKExt::CreateRenderPass_1C(VkRenderPass& RenderPass, const VkFormat Format)
+void VKExt::CreateRenderPass_ColorDepth(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth)
 {
-	//!< アタッチメントディスクリプション
-	const std::array<VkAttachmentDescription, 1> AttachDescs = {
+	const std::array<VkAttachmentDescription, 2> ADs = { {
 		{
 			0,
-			Format,
+			Color,
 			VK_SAMPLE_COUNT_1_BIT,
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE,		//!< VK_ATTACHMENT_LOAD_OP_CLEAR にするとレンダーパスの開始時にクリアを行う (VkRenderPassBeginInfo.pClearValuesのセットが必須になる)
-			VK_ATTACHMENT_STORE_OP_STORE,			//!< レンダーパス終了時に保存する(表示するのに必要)
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE,		//!< (ここでは)ステンシルは未使用
-			VK_ATTACHMENT_STORE_OP_DONT_CARE,		//!< (ここでは)ステンシルは未使用
-			VK_IMAGE_LAYOUT_UNDEFINED,				//!< レンダーパス開始時のレイアウト (メモリバリアなしにレンダーパス間でレイアウトが変更される)
-			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR			//!< レンダーパス終了時のレイアウト
-		}
-	};
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+		},
+		{
+			0,
+			Depth,
+			VK_SAMPLE_COUNT_1_BIT,
+			//!< VK_ATTACHMENT_LOAD_OP_CLEAR : レンダーパスの「開始時にクリア」を行う (VkRenderPassBeginInfo.pClearValuesのセットが必須になる)
+			VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+		},
+	} };
 
-	//!< アタッチメントリファレンス
-	const std::array<VkAttachmentReference, 0> InputAttachRefs = {};
-	const std::array<VkAttachmentReference, 1> ColorAttachRefs = {
-		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }
+	const std::array<VkAttachmentReference, 0> InputARs = {};
+	const std::array<VkAttachmentReference, 1> ColorARs = {
+		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
 	};
-	const std::array<VkAttachmentReference, 1> ResolveAttachRefs = {
-		{ VK_ATTACHMENT_UNUSED },
+	const VkAttachmentReference DepthAR = {
+		1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
 	};
-	assert(ColorAttachRefs.size() == ResolveAttachRefs.size() && "Size must be same");
-	const VkAttachmentReference* DepthAR = nullptr;
-	const std::array<uint32_t, 0> PreserveAttach = {}; //!< このサブバス内では使用しないが、サブパス全体においてコンテンツを保持しなくてはならないインデックスを指定
+	const std::array<uint32_t, 0> PreserveAttaches = {};
 	const std::array<VkSubpassDescription, 1> SubpassDescs = {
 		{
 			0,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			static_cast<uint32_t>(InputAttachRefs.size()), InputAttachRefs.data(),
-			static_cast<uint32_t>(ColorAttachRefs.size()), ColorAttachRefs.data(), ResolveAttachRefs.data(),
-			DepthAR,
-			static_cast<uint32_t>(PreserveAttach.size()), PreserveAttach.data()
+			static_cast<uint32_t>(InputARs.size()), InputARs.data(),
+			static_cast<uint32_t>(ColorARs.size()), ColorARs.data(), nullptr,
+			&DepthAR,
+			static_cast<uint32_t>(PreserveAttaches.size()), PreserveAttaches.data()
 		}
 	};
 
-	//!< サブパス
-#if 0
 	const std::array<VkSubpassDependency, 0> SubpassDepends = {};
-#else
-	const std::array<VkSubpassDependency, 2> SubpassDepends = { {
-		//!< 必要無いが、あえて書くならこんな感じ (No need this code, but if dare to write like this)
-		{
-			VK_SUBPASS_EXTERNAL,							//!< サブパス外から
-			0,												//!< サブパス0へ
-			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,			//!< パイプラインの最終ステージから
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< カラー出力ステージへ
-			VK_ACCESS_MEMORY_READ_BIT,						//!< 読み込みから
-			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,			//!< カラー書き込みへ
-			VK_DEPENDENCY_BY_REGION_BIT,					//!< 同じメモリ領域に対する書き込みが完了してから読み込み (指定しない場合は自前で書き込み完了を管理)
-		},
-		{
-			0,												//!< サブパス0から
-			VK_SUBPASS_EXTERNAL,							//!< サブパス外へ
-			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< カラー出力ステージから
-			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,			//!< パイプラインの最終ステージへ
-			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,			//!< カラー書き込みから
-			VK_ACCESS_MEMORY_READ_BIT,						//!< 読み込みへ
-			VK_DEPENDENCY_BY_REGION_BIT,
-		}
-	} };
-#endif
 
 	const VkRenderPassCreateInfo RPCI = {
 		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 		nullptr,
 		0,
-		static_cast<uint32_t>(AttachDescs.size()), AttachDescs.data(),
+		static_cast<uint32_t>(ADs.size()), ADs.data(),
 		static_cast<uint32_t>(SubpassDescs.size()), SubpassDescs.data(),
 		static_cast<uint32_t>(SubpassDepends.size()), SubpassDepends.data()
 	};
-	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RenderPass));
-}
-
-void VKExt::CreateRenderPass_ColorDepth()
-{
-	const auto CF = ColorFormat;
-	const auto DF = VK_FORMAT_D24_UNORM_S8_UINT;
-
-	[&](VkRenderPass* RenderPass, const VkFormat ColorFormat, const VkFormat DepthFormat) {
-		const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
-			{
-				0,
-				ColorFormat,
-				VK_SAMPLE_COUNT_1_BIT,
-				VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-				VK_ATTACHMENT_STORE_OP_STORE,
-				VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-				VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-			},
-			{
-				0,
-				DepthFormat,
-				VK_SAMPLE_COUNT_1_BIT,
-				VK_ATTACHMENT_LOAD_OP_CLEAR,
-				VK_ATTACHMENT_STORE_OP_STORE,
-				VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-				VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-			},
-		};
-
-		const std::vector<VkAttachmentReference> InputAttachmentReferences = {};
-		const std::vector<VkAttachmentReference> ColorAttachmentReferences = {
-			{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
-		};
-		const VkAttachmentReference DepthStencilAttachmentReference = {
-			1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-		};
-		const std::vector<uint32_t> PreserveAttachments = {};
-		const std::vector<VkSubpassDescription> SubpassDescriptions = {
-			{
-				0,
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				static_cast<uint32_t>(InputAttachmentReferences.size()), InputAttachmentReferences.data(),
-				static_cast<uint32_t>(ColorAttachmentReferences.size()), ColorAttachmentReferences.data(), nullptr,
-				&DepthStencilAttachmentReference,
-				static_cast<uint32_t>(PreserveAttachments.size()), PreserveAttachments.data()
-			}
-		};
-
-		const std::vector<VkSubpassDependency> SubpassDependencies = {};
-
-		const VkRenderPassCreateInfo RenderPassCreateInfo = {
-			VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-			nullptr,
-			0,
-			static_cast<uint32_t>(AttachmentDescriptions.size()), AttachmentDescriptions.data(),
-			static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
-			static_cast<uint32_t>(SubpassDependencies.size()), SubpassDependencies.data()
-		};
-		VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, GetAllocationCallbacks(), RenderPass));
-	}(&RenderPass, CF, DF);
+	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
 }
 
 //!< ファーストパスで ColorDepth に書き込み、セカンドパスで PostProcess を行う場合の例 In first pass ColorDepth, second pass PostProcess
-void VKExt::CreateRenderPass_CD_PP()
+void VKExt::CreateRenderPass_ColorDepth_PostProcess(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth)
 {
-	const auto CF = ColorFormat;
-	const auto DF = VK_FORMAT_D24_UNORM_S8_UINT;
-
-	[&](VkRenderPass* RenderPass, const VkFormat ColorFormat, const VkFormat DepthFormat) {
-		const std::vector<VkAttachmentDescription> AttachmentDescriptions = {
-			{
-				0,
-				ColorFormat,
-				VK_SAMPLE_COUNT_1_BIT,
-				VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-				VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-				VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-			},
-			{
-				0,
-				DepthFormat,
-				VK_SAMPLE_COUNT_1_BIT,
-				VK_ATTACHMENT_LOAD_OP_CLEAR,
-				VK_ATTACHMENT_STORE_OP_STORE,
-				VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-				VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-			},
-			{
-				0,
-				ColorFormat,
-				VK_SAMPLE_COUNT_1_BIT,
-				VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-				VK_ATTACHMENT_STORE_OP_STORE,
-				VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-				VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				VK_IMAGE_LAYOUT_UNDEFINED,
-				VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-			},
-		};
-
-		const std::vector<VkAttachmentReference> InputAttachmentReferences_Pass0 = {};
-		const std::vector<VkAttachmentReference> ColorAttachmentReferences_Pass0 = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
-		const VkAttachmentReference DepthStencilAttachmentReference_Pass0 = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-
-		const std::vector<VkAttachmentReference> InputAttachmentReferences_Pass1 = { { 0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, };
-		const std::vector<VkAttachmentReference> ColorAttachmentReferences_Pass1 = { { 2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
-
-		const std::vector<uint32_t> PreserveAttachments = {};
-		const std::vector<VkSubpassDescription> SubpassDescriptions = {
-			{
-				0,
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				static_cast<uint32_t>(InputAttachmentReferences_Pass0.size()), InputAttachmentReferences_Pass0.data(),
-				static_cast<uint32_t>(ColorAttachmentReferences_Pass0.size()), ColorAttachmentReferences_Pass0.data(), nullptr,
-				&DepthStencilAttachmentReference_Pass0,
-				static_cast<uint32_t>(PreserveAttachments.size()), PreserveAttachments.data()
-			},
-			{
-				0,
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				static_cast<uint32_t>(InputAttachmentReferences_Pass1.size()), InputAttachmentReferences_Pass1.data(),
-				static_cast<uint32_t>(ColorAttachmentReferences_Pass1.size()), ColorAttachmentReferences_Pass1.data(), nullptr,
-				nullptr,
-				static_cast<uint32_t>(PreserveAttachments.size()), PreserveAttachments.data()
-			}
-		};
-
-
-		const std::vector<VkSubpassDependency> SubpassDependencies = {
-			{
-				0,
-				1,
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-				VK_ACCESS_INPUT_ATTACHMENT_READ_BIT,
-				VK_DEPENDENCY_BY_REGION_BIT,
-			},
-		};
-
-		const VkRenderPassCreateInfo RenderPassCreateInfo = {
-			VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-			nullptr,
+	const std::array<VkAttachmentDescription, 3> ADs = { {
+		{
 			0,
-			static_cast<uint32_t>(AttachmentDescriptions.size()), AttachmentDescriptions.data(),
-			static_cast<uint32_t>(SubpassDescriptions.size()), SubpassDescriptions.data(),
-			static_cast<uint32_t>(SubpassDependencies.size()), SubpassDependencies.data()
-		};
-		VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RenderPassCreateInfo, GetAllocationCallbacks(), RenderPass));
-	}(&RenderPass, CF, DF);
+			Color,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		},
+		{
+			0,
+			Depth,
+			VK_SAMPLE_COUNT_1_BIT,
+			//!< VK_ATTACHMENT_LOAD_OP_CLEAR : レンダーパスの「開始時にクリア」を行う (VkRenderPassBeginInfo.pClearValuesのセットが必須になる)
+			VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+		},
+		{
+			0,
+			Color,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+		},
+	} };
+
+	const std::array<VkAttachmentReference, 0> InputARs_Pass0 = {};
+	const std::array<VkAttachmentReference, 1> ColorARs_Pass0 = {
+		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, 
+	};
+	const VkAttachmentReference DepthARs_Pass0 = {
+		1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL 
+	};
+
+	const std::array<VkAttachmentReference, 1> InputARs_Pass1 = { 
+		{ 0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+	};
+	const std::array<VkAttachmentReference, 1> ColorARs_Pass1 = {
+		{ 2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, 
+	};
+
+	const std::array<uint32_t, 0> PreserveAttaches = {};
+	const std::array<VkSubpassDescription, 2> SubpassDescs = { {
+		{
+			0,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			static_cast<uint32_t>(InputARs_Pass0.size()), InputARs_Pass0.data(),
+			static_cast<uint32_t>(ColorARs_Pass0.size()), ColorARs_Pass0.data(), nullptr,
+			&DepthARs_Pass0,
+			static_cast<uint32_t>(PreserveAttaches.size()), PreserveAttaches.data()
+		},
+		{
+			0,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			static_cast<uint32_t>(InputARs_Pass1.size()), InputARs_Pass1.data(),
+			static_cast<uint32_t>(ColorARs_Pass1.size()), ColorARs_Pass1.data(), nullptr,
+			nullptr,
+			static_cast<uint32_t>(PreserveAttaches.size()), PreserveAttaches.data()
+		}
+	} };
+
+	const std::array<VkSubpassDependency, 1> SubpassDepends = {
+		{
+			0,
+			1,
+			VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+			VK_ACCESS_INPUT_ATTACHMENT_READ_BIT,
+			VK_DEPENDENCY_BY_REGION_BIT,
+		},
+	};
+
+	const VkRenderPassCreateInfo RPCI = {
+		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(ADs.size()), ADs.data(),
+		static_cast<uint32_t>(SubpassDescs.size()), SubpassDescs.data(),
+		static_cast<uint32_t>(SubpassDepends.size()), SubpassDepends.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
 }
 
 void VKExt::CreateFramebuffer_Color()
 {
 	Framebuffers.resize(SwapchainImages.size());
 	for (uint32_t i = 0; i < Framebuffers.size(); ++i) {
-		[&](VkFramebuffer* Framebuffer, const VkImageView ColorView, const VkRenderPass RenderPass, const uint32_t Width, const uint32_t Height) {
+		[&](VkFramebuffer* Framebuffer, const VkImageView ColorView, const VkRenderPass RP, const uint32_t Width, const uint32_t Height) {
 			const std::vector<VkImageView> Attachments = {
 				ColorView 
 			};
@@ -1158,20 +1054,20 @@ void VKExt::CreateFramebuffer_Color()
 				VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
 				nullptr,
 				0,
-				RenderPass, //!< ここで作成するフレームバッファは RenderPass と「コンパチ」な別のレンダーパスでも使用可能
+				RP, //!< ここで作成するフレームバッファは RenderPass と「コンパチ」な別のレンダーパスでも使用可能
 				static_cast<uint32_t>(Attachments.size()), Attachments.data(),
 				Width, Height,
 				1
 			};
 			VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, GetAllocationCallbacks(), Framebuffer));
-		}(&Framebuffers[i], SwapchainImageViews[i], RenderPass, SurfaceExtent2D.width, SurfaceExtent2D.height);
+		}(&Framebuffers[i], SwapchainImageViews[i], RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height);
 	}
 }
 void VKExt::CreateFramebuffer_ColorDepth()
 {
 	Framebuffers.resize(SwapchainImages.size());
 	for (uint32_t i = 0; i < Framebuffers.size(); ++i) {
-		[&](VkFramebuffer* Framebuffer, const VkImageView ColorView, const VkImageView DepthStencilView, const VkRenderPass RenderPass, const uint32_t Width, const uint32_t Height) {
+		[&](VkFramebuffer* Framebuffer, const VkImageView ColorView, const VkImageView DepthStencilView, const VkRenderPass RP, const uint32_t Width, const uint32_t Height) {
 			const std::vector<VkImageView> Attachments = {
 				ColorView,
 				DepthStencilView
@@ -1180,13 +1076,13 @@ void VKExt::CreateFramebuffer_ColorDepth()
 				VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
 				nullptr,
 				0,
-				RenderPass,
+				RP,
 				static_cast<uint32_t>(Attachments.size()), Attachments.data(),
 				Width, Height,
 				1
 			};
 			VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, GetAllocationCallbacks(), Framebuffer));
-		}(&Framebuffers[i], SwapchainImageViews[i], DepthStencilImageView, RenderPass, SurfaceExtent2D.width, SurfaceExtent2D.height);
+		}(&Framebuffers[i], SwapchainImageViews[i], DepthStencilImageView, RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height);
 	}
 }
 
