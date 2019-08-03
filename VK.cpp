@@ -183,10 +183,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyDescriptorPool(Device, i, GetAllocationCallbacks());
 	}
 	DescriptorPools.clear();
-	if (VK_NULL_HANDLE != DescriptorPool) {
-		vkDestroyDescriptorPool(Device, DescriptorPool, GetAllocationCallbacks());
-		DescriptorPool = VK_NULL_HANDLE;
-	}
 	
 	for (auto i : DescriptorSetLayouts) {
 		vkDestroyDescriptorSetLayout(Device, i, GetAllocationCallbacks());
@@ -2130,11 +2126,14 @@ void VK::CreatePipelineLayout_Default(VkPipelineLayout& PL)
 
 void VK::CreateDescriptorSet()
 {
-	if (!DescriptorSetLayouts.empty() && VK_NULL_HANDLE != DescriptorPool) {
+	assert(!DescriptorPools.empty() && "");
+
+	const auto DP = DescriptorPools[0];
+	if (!DescriptorSetLayouts.empty()) {
 		const VkDescriptorSetAllocateInfo DSAI = {
 			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			nullptr,
-			DescriptorPool,
+			DP,
 			static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
 		};
 		DescriptorSets.resize(DescriptorSetLayouts.size());
@@ -2142,53 +2141,6 @@ void VK::CreateDescriptorSet()
 	}
 
 	LOG_OK();
-}
-/**
-@brief シェーダとのバインディングのレイアウト
-@note DescriptorSet は「DescriptorSetLayt 型」のインスタンスのようなもの
-@note 更新は vkUpdateDescriptorSets() で行う
-*/
-void VK::CreateDescriptorSet_deprecated()
-{
-	std::vector<VkDescriptorPoolSize> DescriptorPoolSizes = {
-		/**
-		VkDescriptorType    type; ... VK_DESCRIPTOR_TYPE_[SAMPLER, SAMPLED_IMAGE, UNIFORM_BUFFER, ...]
-		uint32_t            descriptorCount;
-		*/
-	};
-	CreateDescriptorPoolSizes(DescriptorPoolSizes);
-
-	if (!DescriptorPoolSizes.empty()) {
-		//!< プールを作成 Create pool
-		const uint32_t MaxSets = [&]() {
-			uint32_t MaxDescriptorCount = 0;
-			for (const auto& i : DescriptorPoolSizes) {
-				MaxDescriptorCount = std::max(MaxDescriptorCount, i.descriptorCount);
-			}
-			return MaxDescriptorCount;
-		}();
-		const VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-			nullptr,
-			0/*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/, //!< デスクリプタセットを個々に解放したい場合に指定(プールごとの場合は不要)
-			MaxSets,
-			static_cast<uint32_t>(DescriptorPoolSizes.size()), DescriptorPoolSizes.data()
-		};
-		VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DescriptorPoolCreateInfo, GetAllocationCallbacks(), &DescriptorPool));
-		assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
-
-		//!< プールからデスクリプタセットを作成 Create descriptor set from pool
-		const VkDescriptorSetAllocateInfo DescriptorSetAllocateInfo = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-			nullptr,
-			DescriptorPool,
-			static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
-		};
-		DescriptorSets.resize(DescriptorSetLayouts.size());
-		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DescriptorSetAllocateInfo, DescriptorSets.data()));
-
-		LOG_OK();
-	}
 }
 
 void VK::CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color)

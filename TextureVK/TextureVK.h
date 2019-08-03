@@ -22,7 +22,11 @@ protected:
 		CreatePipelineLayout_1DSL(DSL);
 	}
 
-	virtual void CreateDescriptorPool() override { CreateDescriptorPool_1CIS(); }
+	virtual void CreateDescriptorPool() override { 
+		DescriptorPools.resize(1);
+		auto& DP = DescriptorPools[0];
+		VKExt::CreateDescriptorPool(DP, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 });
+	}
 	virtual void UpdateDescriptorSet() override { UpdateDescriptorSet_1CIS(); }
 
 	virtual void CreateTexture() override {

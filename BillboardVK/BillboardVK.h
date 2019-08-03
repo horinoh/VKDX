@@ -51,7 +51,11 @@ protected:
 		});
 	}
 
-	virtual void CreateDescriptorPool() override { CreateDescriptorPool_1UB(); }
+	virtual void CreateDescriptorPool() override {
+		DescriptorPools.resize(1);
+		auto& DP = DescriptorPools[0];
+		VKExt::CreateDescriptorPool(DP, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 });
+	}
 	virtual void UpdateDescriptorSet() override { UpdateDescriptorSet_1UB(); }
 
 	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs_Tesselation(); }

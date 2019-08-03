@@ -29,18 +29,16 @@ public:
 
 	void CreatePipelineLayout_1DSL(const VkDescriptorSetLayout& DSL);
 
+	
+	void CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolSize DPS);
+	void CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolSize DPS, const VkDescriptorPoolSize DPS2);
+	//CreateDescriptorPool((DP, {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1});
+
 	void CreateDescriptorSet_1DSL(VkDescriptorSet& DS, const VkDescriptorPool DP, const VkDescriptorSetLayout& DSL);
 
-	void CreateDescriptorPool_1UB();
 	void UpdateDescriptorSet_1UB();
-
-	void CreateDescriptorPool_1CIS();
 	void UpdateDescriptorSet_1CIS();
-
-	void CreateDescriptorPool_1SI();
 	void UpdateDescriptorSet_1SI();
-
-	void CreateDescriptorPool_1UB_1CIS();
 	void UpdateDescriptorSet_1UB_1CIS();
 
 	/** 

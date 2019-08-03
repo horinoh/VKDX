@@ -276,7 +276,6 @@ protected:
 	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {}
 	virtual void CreateDescriptorPool() {}
 	virtual void CreateDescriptorSet();
-	virtual void CreateDescriptorSet_deprecated();
 
 	virtual void CreateWriteDescriptorSets(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos, const std::vector<VkBufferView>& BufferViews) const {}
 	virtual void CreateCopyDescriptorSets(std::vector<VkCopyDescriptorSet>& CopyDescriptorSets) const {}
@@ -445,7 +444,6 @@ protected:
 	std::vector<VkRect2D> ScissorRects;
 
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
-	VkDescriptorPool DescriptorPool = VK_NULL_HANDLE;
 	std::vector<VkDescriptorPool> DescriptorPools;
 	std::vector<VkDescriptorSet> DescriptorSets;
 	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;

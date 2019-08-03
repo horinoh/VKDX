@@ -167,11 +167,58 @@ void VKExt::CreatePipelineLayout_1DSL(const VkDescriptorSetLayout& DSL)
 	LOG_OK();
 }
 
+//!< デスクリプタセットを個々に解放したい場合には VkDescriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT を指定する、その場合メモリ断片化は自分で管理すること
+//!< (指定しない場合はプール毎にまとめて解放となる)
+void VKExt::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolSize DPS)
+{
+	const std::array<VkDescriptorPoolSize, 1> DPSs = {
+		DPS
+	};
+
+	uint32_t MaxSets = 0;
+	for (const auto& i : DPSs) {
+		MaxSets = std::max(MaxSets, i.descriptorCount);
+	}
+
+	const VkDescriptorPoolCreateInfo DPCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		nullptr,
+		0,
+		MaxSets,
+		static_cast<uint32_t>(DPSs.size()), DPSs.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DP));
+	assert(VK_NULL_HANDLE != DP && "Failed to create descriptor pool");
+
+	LOG_OK();
+}
+
+void VKExt::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolSize DPS, const VkDescriptorPoolSize DPS2)
+{
+	const std::array<VkDescriptorPoolSize, 2> DPSs = { {
+		DPS, DPS2
+	} };
+
+	uint32_t MaxSets = 0;
+	for (const auto& i : DPSs) {
+		MaxSets = std::max(MaxSets, i.descriptorCount);
+	}
+
+	const VkDescriptorPoolCreateInfo DPCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		nullptr,
+		0,
+		MaxSets,
+		static_cast<uint32_t>(DPSs.size()), DPSs.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DP));
+	assert(VK_NULL_HANDLE != DP && "Failed to create descriptor pool");
+
+	LOG_OK();
+}
+
 void VKExt::CreateDescriptorSet_1DSL(VkDescriptorSet& DS, const VkDescriptorPool DP, const VkDescriptorSetLayout& DSL)
 {
-	DescriptorSets.resize(1);
-	auto& DS = DescriptorSets[0];
-
 	const std::array<VkDescriptorSetLayout, 1> DSLs = {
 		DSL,
 	};
@@ -186,33 +233,6 @@ void VKExt::CreateDescriptorSet_1DSL(VkDescriptorSet& DS, const VkDescriptorPool
 	LOG_OK();
 }
 
-void VKExt::CreateDescriptorPool_1UB()
-{
-	const std::array<VkDescriptorPoolSize, 1> DPSs = {
-		{
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			1
-		}
-	};
-	const uint32_t MaxSets = [&]() {
-		uint32_t Count = 0;
-		for (const auto& i : DPSs) {
-			Count = std::max(Count, i.descriptorCount);
-		}
-		return Count;
-	}();
-	const VkDescriptorPoolCreateInfo DPCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		nullptr,
-		0, //!< デスクリプタセットを個々に解放したい場合には VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT を指定(プールごとの場合は不要)
-		MaxSets,
-		static_cast<uint32_t>(DPSs.size()), DPSs.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DescriptorPool));
-	assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
-
-	LOG_OK();
-}
 void VKExt::UpdateDescriptorSet_1UB()
 {
 	const std::array<VkDescriptorBufferInfo, 1> DBIs = {
@@ -227,11 +247,10 @@ void VKExt::UpdateDescriptorSet_1UB()
 			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			nullptr,
 			DescriptorSets[0], 0, 0, //!< デスクリプタセット、バインディングポイント、配列の場合の添字(配列でなければ0)
-			static_cast<uint32_t>(DBIs.size()),
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			nullptr,
+			static_cast<uint32_t>(DBIs.size()), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
+			nullptr, //!< VkDescriptorImageInfo 未使用
 			DBIs.data(),
-			nullptr
+			nullptr //!< VkBufferView 未使用
 		}
 	};
 
@@ -240,34 +259,6 @@ void VKExt::UpdateDescriptorSet_1UB()
 	vkUpdateDescriptorSets(Device,
 		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
 		static_cast<uint32_t>(CDSs.size()), CDSs.data());
-
-	LOG_OK();
-}
-
-void VKExt::CreateDescriptorPool_1CIS()
-{
-	const std::array<VkDescriptorPoolSize, 1> DPSs = {
-		{
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			1
-		}
-	};
-	const uint32_t MaxSets = [&]() {
-		uint32_t Count = 0;
-		for (const auto& i : DPSs) {
-			Count = std::max(Count, i.descriptorCount);
-		}
-		return Count;
-	}();
-	const VkDescriptorPoolCreateInfo DPCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		nullptr,
-		0,
-		MaxSets,
-		static_cast<uint32_t>(DPSs.size()), DPSs.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DescriptorPool));
-	assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
 
 	LOG_OK();
 }
@@ -286,11 +277,10 @@ void VKExt::UpdateDescriptorSet_1CIS()
 			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			nullptr,
 			DescriptorSets[0], 0, 0,
-			static_cast<uint32_t>(DIIs.size()),
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			static_cast<uint32_t>(DIIs.size()), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			DIIs.data(),
-			nullptr,
-			nullptr
+			nullptr, //!< VkDescriptorBufferInfo 未使用
+			nullptr //!< VkBufferView 未使用
 		}
 	};
 
@@ -304,33 +294,6 @@ void VKExt::UpdateDescriptorSet_1CIS()
 }
 
 #if 0
-void VKExt::CreateDescriptorPool_1SI()
-{
-	const std::array<VkDescriptorPoolSize, 1> DPSs = {
-		{ 
-			VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 
-			1
-		}
-	};
-	const uint32_t MaxSets = [&]() {
-		uint32_t Count = 0;
-		for (const auto& i : DPSs) {
-			Count = std::max(Count, i.descriptorCount);
-		}
-		return Count;
-	}();
-	const VkDescriptorPoolCreateInfo DPCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		nullptr,
-		0,
-		MaxSets,
-		static_cast<uint32_t>(DPSs.size()), DPSs.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DescriptorPool));
-	assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
-
-	LOG_OK();
-}
 void VKExt::UpdateDescriptorSet_1SI()
 {
 	const std::array<VkDescriptorImageInfo, 1> DIIs = {
@@ -363,33 +326,6 @@ void VKExt::UpdateDescriptorSet_1SI()
 }
 #endif
 #if 1
-void VKExt::CreateDescriptorPool_1SI()
-{
-	const std::array<VkDescriptorPoolSize, 1> DPSs = {
-	{
-		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-		1
-	}
-	};
-	const uint32_t MaxSets = [&]() {
-		uint32_t Count = 0;
-		for (const auto& i : DPSs) {
-			Count = std::max(Count, i.descriptorCount);
-		}
-		return Count;
-	}();
-	const VkDescriptorPoolCreateInfo DPCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		nullptr,
-		0,
-		MaxSets,
-		static_cast<uint32_t>(DPSs.size()), DPSs.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DescriptorPool));
-	assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
-
-	LOG_OK();
-}
 void VKExt::UpdateDescriptorSet_1SI()
 {
 	const std::array<VkDescriptorImageInfo, 1> DIIs = {
@@ -422,37 +358,6 @@ void VKExt::UpdateDescriptorSet_1SI()
 }
 #endif
 
-void VKExt::CreateDescriptorPool_1UB_1CIS()
-{
-	const std::array<VkDescriptorPoolSize, 2> DPSs = { {
-		{
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			1
-		},
-		{
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			1
-		}
-	} };
-	const uint32_t MaxSets = [&]() {
-		uint32_t Count = 0;
-		for (const auto& i : DPSs) {
-			Count = std::max(Count, i.descriptorCount);
-		}
-		return Count;
-	}();
-	const VkDescriptorPoolCreateInfo DPCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		nullptr,
-		0,
-		MaxSets,
-		static_cast<uint32_t>(DPSs.size()), DPSs.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DescriptorPool));
-	assert(VK_NULL_HANDLE != DescriptorPool && "Failed to create descriptor pool");
-
-	LOG_OK();
-}
 void VKExt::UpdateDescriptorSet_1UB_1CIS()
 {
 	const std::array<VkDescriptorBufferInfo, 1> DBIs = {
