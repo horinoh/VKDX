@@ -21,17 +21,33 @@ protected:
 	virtual void CreatePipeline() override { Super::CreatePipeline_Compute(); }
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
 
-	//virtual void CreateDescriptorSetLayoutBindings(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings) const override {
-	//	CreateDescriptorSetLayoutBindings_1SI(DescriptorSetLayoutBindings, VK_SHADER_STAGE_COMPUTE_BIT);
-	//}
-	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const override {
-		//CreateDescriptorPoolSizes_1SI(DescriptorPoolSizes);
+	virtual void CreateDescriptorSetLayout() override {
+		DescriptorSetLayouts.resize(1);
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {
+				{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr } 
+			});
 	}
-	virtual void CreateWriteDescriptorSets(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos, const std::vector<VkBufferView>& BufferViews) const override {
-		//CreateWriteDescriptorSets_1SI(WriteDescriptorSets, DescriptorImageInfos);
+	virtual void CreatePipelineLayout() override {
+		assert(!DescriptorSetLayouts.empty() && "");
+		VKExt::CreatePipelineLayout(PipelineLayout, DescriptorSetLayouts[0]);
+	}
+
+	virtual void CreateDescriptorPool() override {
+		DescriptorPools.resize(1);
+		VKExt::CreateDescriptorPool(DescriptorPools[0], {
+				{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 } 
+			});
+	}
+	virtual void CreateDescriptorSet() override {
+		assert(!DescriptorPools.empty() && "");
+		assert(!DescriptorSetLayouts.empty() && "");
+		DescriptorSets.resize(1);
+		VKExt::CreateDescriptorSet(DescriptorSets[0], DescriptorPools[0], DescriptorSetLayouts[0]);
 	}
 	virtual void UpdateDescriptorSet() override {
-		UpdateDescriptorSet_1SI();
+		assert(!DescriptorSets.empty() && "");
+		assert(VK_NULL_HANDLE != ImageView && "");
+		UpdateDescriptorSet_1SI(DescriptorSets[0], ImageView);
 	}
 
 	//virtual void CreateShader(std::vector<VkShaderModule>& SM, std::vector<VkPipelineShaderStageCreateInfo>& CreateInfo) const override {

@@ -2,152 +2,22 @@
 
 #include "VKExt.h"
 
-//void VKExt::CreateDescriptorSetLayoutBindings_1UB(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags /*= VK_SHADER_STAGE_ALL_GRAPHICS*/) const
-//{
-//	DescriptorSetLayoutBindings = {
-//		{
-//			0, //!< binding = 0 バインディング Binding
-//			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< タイプ Type
-//			1, //!< 個数 Count
-//			ShaderStageFlags,
-//			nullptr
-//		},
-//	};
-//}
-//void VKExt::CreateDescriptorSetLayoutBindings_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags /*= VK_SHADER_STAGE_ALL_GRAPHICS*/) const
-//{
-//	DescriptorSetLayoutBindings = {
-//		{
-//			0, //!< binding = 0
-//			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER/*VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE*/,
-//			1,
-//			ShaderStageFlags,
-//			nullptr
-//		},
-//	};
-//}
-//void VKExt::CreateDescriptorSetLayoutBindings_1UB_1CIS(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags_UB /*= VK_SHADER_STAGE_ALL_GRAPHICS*/, const VkShaderStageFlags ShaderStageFlags_CIS /*= VK_SHADER_STAGE_ALL_GRAPHICS*/) const
-//{
-//	DescriptorSetLayoutBindings = {
-//		{
-//			0, //!< binding = 0
-//			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-//			1,
-//			ShaderStageFlags_UB,
-//			nullptr
-//		},
-//		{
-//			1, //!< binding = 1
-//			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER/*VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE*/,
-//			1,
-//			ShaderStageFlags_CIS,
-//			nullptr
-//		}
-//	};
-//}
-//void VKExt::CreateDescriptorSetLayoutBindings_1SI(std::vector<VkDescriptorSetLayoutBinding>& DescriptorSetLayoutBindings, const VkShaderStageFlags ShaderStageFlags /*= VK_SHADER_STAGE_ALL_GRAPHICS*/) const
-//{
-//	DescriptorSetLayoutBindings = {
-//		{
-//			0, //!< binding = 0
-//			VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-//			1,
-//			ShaderStageFlags,
-//			nullptr
-//		},
-//	};
-//}
-
-void VKExt::CreateDescriptorSetLayout_1UB(VkDescriptorSetLayout& DSL, const VkShaderStageFlags SSF)
+void VKExt::CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const std::initializer_list<VkDescriptorSetLayoutBinding> il_DSLBs)
 {
-	const  std::array<VkDescriptorSetLayoutBinding, 1> DSLBs = {
-		{
-			0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
-			SSF,
-			nullptr
-		},
-	};
+	const std::vector<VkDescriptorSetLayoutBinding> DSLBs(il_DSLBs.begin(), il_DSLBs.end());
+
 	const VkDescriptorSetLayoutCreateInfo DSLCI = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 		nullptr,
 		0,
 		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
 	};
-
 	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
+
+	LOG_OK();
 }
 
-void VKExt::CreateDescriptorSetLayout_1CIS(VkDescriptorSetLayout& DSL, const VkShaderStageFlags SSF)
-{
-	//!< ImmutableSampler == STATIC_SAMPLER_DESC 相当？
-#if 0
-	const VkSamplerCreateInfo SCI = {
-		VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-		nullptr,
-		0,
-		VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR,
-		VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
-		0.0f,
-		VK_FALSE, 1.0f,
-		VK_FALSE, VK_COMPARE_OP_NEVER,
-		0.0f, 1.0f,
-		VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-		VK_FALSE
-	};
-	VkSampler Sampler = VK_NULL_HANDLE;
-	VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Sampler));
-	const std::array<VkSampler, 1> ISs = { { Sampler } };
-	const std::array<VkDescriptorSetLayoutBinding, 1> DSLBs = {
-		{
-			0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()),
-			VK_SHADER_STAGE_FRAGMENT_BIT,
-			ISs.data()
-		},
-	};
-#else
-	const std::array<VkDescriptorSetLayoutBinding, 1> DSLBs = {
-		{
-			0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
-			SSF,
-			nullptr
-		},
-	};
-#endif
-	const VkDescriptorSetLayoutCreateInfo DSLCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
-	};
-
-	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
-}
-
-void VKExt::CreateDescriptorSetLayout_1UB_1CIS(VkDescriptorSetLayout& DSL, const VkShaderStageFlags SSF_UB, const VkShaderStageFlags SSF_CIS)
-{
-	const  std::array<VkDescriptorSetLayoutBinding, 2> DSLBs = { {
-		{
-			0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1,
-			SSF_UB,
-			nullptr
-		},
-		{
-			1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1,
-			SSF_CIS,
-			nullptr
-		}
-	} };
-	const VkDescriptorSetLayoutCreateInfo DSLCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
-	};
-
-	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
-}
-
-void VKExt::CreatePipelineLayout_1DSL(const VkDescriptorSetLayout& DSL)
+void VKExt::CreatePipelineLayout(VkPipelineLayout& PL, const VkDescriptorSetLayout& DSL)
 {
 	const std::array<VkDescriptorSetLayout, 1> DSLs = {
 		DSL,
@@ -162,18 +32,16 @@ void VKExt::CreatePipelineLayout_1DSL(const VkDescriptorSetLayout& DSL)
 		static_cast<uint32_t>(DSLs.size()), DSLs.data(),
 		static_cast<uint32_t>(PCRs.size()), PCRs.data()
 	};
-	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PipelineLayout));
+	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PL));
 
 	LOG_OK();
 }
 
 //!< デスクリプタセットを個々に解放したい場合には VkDescriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT を指定する、その場合メモリ断片化は自分で管理すること
 //!< (指定しない場合はプール毎にまとめて解放となる)
-void VKExt::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolSize DPS)
+void VKExt::CreateDescriptorPool(VkDescriptorPool& DP, const std::initializer_list <VkDescriptorPoolSize> il_DPSs)
 {
-	const std::array<VkDescriptorPoolSize, 1> DPSs = {
-		DPS
-	};
+	const std::vector<VkDescriptorPoolSize> DPSs(il_DPSs.begin(), il_DPSs.end());
 
 	uint32_t MaxSets = 0;
 	for (const auto& i : DPSs) {
@@ -193,31 +61,7 @@ void VKExt::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolSiz
 	LOG_OK();
 }
 
-void VKExt::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolSize DPS, const VkDescriptorPoolSize DPS2)
-{
-	const std::array<VkDescriptorPoolSize, 2> DPSs = { {
-		DPS, DPS2
-	} };
-
-	uint32_t MaxSets = 0;
-	for (const auto& i : DPSs) {
-		MaxSets = std::max(MaxSets, i.descriptorCount);
-	}
-
-	const VkDescriptorPoolCreateInfo DPCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		nullptr,
-		0,
-		MaxSets,
-		static_cast<uint32_t>(DPSs.size()), DPSs.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DP));
-	assert(VK_NULL_HANDLE != DP && "Failed to create descriptor pool");
-
-	LOG_OK();
-}
-
-void VKExt::CreateDescriptorSet_1DSL(VkDescriptorSet& DS, const VkDescriptorPool DP, const VkDescriptorSetLayout& DSL)
+void VKExt::CreateDescriptorSet(VkDescriptorSet& DS, const VkDescriptorPool DP, const VkDescriptorSetLayout& DSL)
 {
 	const std::array<VkDescriptorSetLayout, 1> DSLs = {
 		DSL,
@@ -233,24 +77,19 @@ void VKExt::CreateDescriptorSet_1DSL(VkDescriptorSet& DS, const VkDescriptorPool
 	LOG_OK();
 }
 
-void VKExt::UpdateDescriptorSet_1UB()
+void VKExt::UpdateDescriptorSet_1UB(const VkDescriptorSet DS, const VkBuffer Buffer)
 {
 	const std::array<VkDescriptorBufferInfo, 1> DBIs = {
-			{
-				UniformBuffer,
-				0/*オフセット(要アライン)*/,
-				VK_WHOLE_SIZE
-			}
+		{ Buffer, 0/*オフセット(要アライン)*/, VK_WHOLE_SIZE }
 	};
 	const std::array<VkWriteDescriptorSet, 1> WDSs = {
 		{
 			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			nullptr,
-			DescriptorSets[0], 0, 0, //!< デスクリプタセット、バインディングポイント、配列の場合の添字(配列でなければ0)
-			static_cast<uint32_t>(DBIs.size()), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 
-			nullptr, //!< VkDescriptorImageInfo 未使用
-			DBIs.data(),
-			nullptr //!< VkBufferView 未使用
+			//!< アップデートするデスクリプタセット、バインディング、配列の開始添字(VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXTの場合)
+			DS, 0, 0, 
+			//!< アップデートするデスクリプタの個数、タイプ、残り3つ(VkDescriptorImageInfo, VkDescriptorBufferInfo, VkBufferView)にはタイプにより適切な箇所に指定をすること
+			static_cast<uint32_t>(DBIs.size()), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, DBIs.data(), nullptr 
 		}
 	};
 
@@ -263,24 +102,17 @@ void VKExt::UpdateDescriptorSet_1UB()
 	LOG_OK();
 }
 
-void VKExt::UpdateDescriptorSet_1CIS()
+void VKExt::UpdateDescriptorSet_1CIS(const VkDescriptorSet DS, const VkSampler Sampler, const VkImageView IV)
 {
 	const std::array<VkDescriptorImageInfo, 1> DIIs = {
-		{
-			Samplers[0],
-			ImageView,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-		}
+		{ Sampler, IV, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
 	};
 	const std::array<VkWriteDescriptorSet, 1> WDSs = {
 		{
 			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			nullptr,
-			DescriptorSets[0], 0, 0,
-			static_cast<uint32_t>(DIIs.size()), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			DIIs.data(),
-			nullptr, //!< VkDescriptorBufferInfo 未使用
-			nullptr //!< VkBufferView 未使用
+			DS, 0, 0,
+			static_cast<uint32_t>(DIIs.size()), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, DIIs.data(), nullptr, nullptr
 		}
 	};
 
@@ -292,27 +124,17 @@ void VKExt::UpdateDescriptorSet_1CIS()
 
 	LOG_OK();
 }
-
-#if 0
-void VKExt::UpdateDescriptorSet_1SI()
+void VKExt::UpdateDescriptorSet_1SI(const VkDescriptorSet DS, const VkImageView IV)
 {
 	const std::array<VkDescriptorImageInfo, 1> DIIs = {
-		{
-			Samplers[0],
-			ImageView,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-		}
+		{ VK_NULL_HANDLE, IV, VK_IMAGE_LAYOUT_GENERAL }
 	};
 	const std::array<VkWriteDescriptorSet, 1> WDSs = {
 		{
 			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			nullptr,
-			DescriptorSets[0], 0, 0,
-			static_cast<uint32_t>(DIIs.size()),
-			VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-			DIIs.data(),
-			nullptr,
-			nullptr
+			DS, 0, 0,
+			static_cast<uint32_t>(DIIs.size()), VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, DIIs.data(), nullptr, nullptr
 		}
 	};
 
@@ -324,76 +146,27 @@ void VKExt::UpdateDescriptorSet_1SI()
 
 	LOG_OK();
 }
-#endif
-#if 1
-void VKExt::UpdateDescriptorSet_1SI()
-{
-	const std::array<VkDescriptorImageInfo, 1> DIIs = {
-	{
-		VK_NULL_HANDLE,
-		ImageView,
-		VK_IMAGE_LAYOUT_GENERAL
-	}
-	};
-	const std::array<VkWriteDescriptorSet, 1> WDSs = {
-		{
-			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			nullptr,
-			DescriptorSets[0], 0, 0,
-			static_cast<uint32_t>(DIIs.size()),
-			VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-			DIIs.data(),
-			nullptr,
-			nullptr
-		}
-	};
-
-	const std::array<VkCopyDescriptorSet, 0> CDSs = {};
-
-	vkUpdateDescriptorSets(Device,
-		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
-		static_cast<uint32_t>(CDSs.size()), CDSs.data());
-
-	LOG_OK();
-}
-#endif
-
-void VKExt::UpdateDescriptorSet_1UB_1CIS()
+void VKExt::UpdateDescriptorSet_1UB_1CIS(const VkDescriptorSet DS, const VkBuffer Buffer, const VkSampler Sampler)
 {
 	const std::array<VkDescriptorBufferInfo, 1> DBIs = {
-		{
-			UniformBuffer,
-			0,
-			VK_WHOLE_SIZE
-		}
+		{ Buffer, 0, VK_WHOLE_SIZE }
 	};
 	const std::array<VkDescriptorImageInfo, 1> DIIs = {
-		{
-			Samplers[0],
-			ImageView,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-		}
+		{ Sampler, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
 	};
+
 	const std::array<VkWriteDescriptorSet, 2> WDSs = { {
 		{
 			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			nullptr,
-			DescriptorSets[0], 0, 0,
-			static_cast<uint32_t>(DBIs.size()),
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			nullptr,
-			DBIs.data(),
-			nullptr
+			DS, 0, 0,
+			static_cast<uint32_t>(DBIs.size()), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, DBIs.data(), nullptr
 		},
 		{
 			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			nullptr,
-			DescriptorSets[0], 1, 0,
-			static_cast<uint32_t>(DIIs.size()),
-			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			DIIs.data(),
-			nullptr,
-			nullptr
+			DS, 1, 0,
+			static_cast<uint32_t>(DIIs.size()), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, DIIs.data(), nullptr, nullptr
 		}
 	} };
 

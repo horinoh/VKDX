@@ -2124,24 +2124,24 @@ void VK::CreatePipelineLayout_Default(VkPipelineLayout& PL)
 	LOG_OK();
 }
 
-void VK::CreateDescriptorSet()
-{
-	assert(!DescriptorPools.empty() && "");
-
-	const auto DP = DescriptorPools[0];
-	if (!DescriptorSetLayouts.empty()) {
-		const VkDescriptorSetAllocateInfo DSAI = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-			nullptr,
-			DP,
-			static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
-		};
-		DescriptorSets.resize(DescriptorSetLayouts.size());
-		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, DescriptorSets.data()));
-	}
-
-	LOG_OK();
-}
+//void VK::CreateDescriptorSet()
+//{
+//	assert(!DescriptorPools.empty() && "");
+//
+//	const auto DP = DescriptorPools[0];
+//	if (!DescriptorSetLayouts.empty()) {
+//		const VkDescriptorSetAllocateInfo DSAI = {
+//			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+//			nullptr,
+//			DP,
+//			static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
+//		};
+//		DescriptorSets.resize(DescriptorSetLayouts.size());
+//		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, DescriptorSets.data()));
+//	}
+//
+//	LOG_OK();
+//}
 
 void VK::CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color)
 {

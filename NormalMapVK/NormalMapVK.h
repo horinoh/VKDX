@@ -17,11 +17,18 @@ protected:
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1); }
-	virtual void CreatePipelineLayout() override {
+
+	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);
-		auto& DSL = DescriptorSetLayouts[0];
-		CreateDescriptorSetLayout_1UB_1CIS(DSL, VK_SHADER_STAGE_GEOMETRY_BIT, VK_SHADER_STAGE_FRAGMENT_BIT);
-		CreatePipelineLayout_1DSL(DSL);
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0],
+			{ 
+				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
+				{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+			});
+	}
+	virtual void CreatePipelineLayout() override {
+		assert(!DescriptorSetLayouts.empty() && "");
+		VKExt::CreatePipelineLayout(PipelineLayout, DescriptorSetLayouts[0]);
 	}
 
 	virtual void CreateUniformBuffer() override {
@@ -42,10 +49,23 @@ protected:
 
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
-		auto& DP = DescriptorPools[0];
-		VKExt::CreateDescriptorPool(DP, { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }, { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,1 });
+		VKExt::CreateDescriptorPool(DescriptorPools[0], {
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }, 
+				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,1 } 
+			});
 	}
-	virtual void UpdateDescriptorSet() override { UpdateDescriptorSet_1UB_1CIS(); }
+	virtual void CreateDescriptorSet() override {
+		assert(!DescriptorPools.empty() && "");
+		assert(!DescriptorSetLayouts.empty() && "");
+		DescriptorSets.resize(1);
+		VKExt::CreateDescriptorSet(DescriptorSets[0], DescriptorPools[0], DescriptorSetLayouts[0]);
+	}
+	virtual void UpdateDescriptorSet() override {
+		assert(!DescriptorSets.empty() && "");
+		assert(VK_NULL_HANDLE != UniformBuffer && "");
+		assert(!Samplers.empty() && "");
+		UpdateDescriptorSet_1UB_1CIS(DescriptorSets[0], UniformBuffer, Samplers[0]); 
+	}
 
 	virtual void CreateTexture() override {
 		LoadImage(&Image, &ImageDeviceMemory, &ImageView, "NormalMap.dds");

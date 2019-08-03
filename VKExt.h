@@ -23,23 +23,18 @@ public:
 		CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, static_cast<VkDeviceSize>(sizeof(DIC)), &DIC, CommandPools[0].second[0]);
 	}
 
-	void CreateDescriptorSetLayout_1UB(VkDescriptorSetLayout& DSL, const VkShaderStageFlags SSF);
-	void CreateDescriptorSetLayout_1CIS(VkDescriptorSetLayout& DSL, const VkShaderStageFlags SSF);
-	void CreateDescriptorSetLayout_1UB_1CIS(VkDescriptorSetLayout& DSL, const VkShaderStageFlags SSF_UB, const VkShaderStageFlags SSF_CIS);
+	void CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const std::initializer_list<VkDescriptorSetLayoutBinding> il_DSLBs);
 
-	void CreatePipelineLayout_1DSL(const VkDescriptorSetLayout& DSL);
+	void CreatePipelineLayout(VkPipelineLayout& PL, const VkDescriptorSetLayout& DSL);
 
-	
-	void CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolSize DPS);
-	void CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolSize DPS, const VkDescriptorPoolSize DPS2);
-	//CreateDescriptorPool((DP, {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1});
+	void CreateDescriptorPool(VkDescriptorPool& DP, const std::initializer_list <VkDescriptorPoolSize> il_DPSs);
 
-	void CreateDescriptorSet_1DSL(VkDescriptorSet& DS, const VkDescriptorPool DP, const VkDescriptorSetLayout& DSL);
+	void CreateDescriptorSet(VkDescriptorSet& DS, const VkDescriptorPool DP, const VkDescriptorSetLayout& DSL);
 
-	void UpdateDescriptorSet_1UB();
-	void UpdateDescriptorSet_1CIS();
-	void UpdateDescriptorSet_1SI();
-	void UpdateDescriptorSet_1UB_1CIS();
+	void UpdateDescriptorSet_1UB(const VkDescriptorSet DS, const VkBuffer Buffer);
+	void UpdateDescriptorSet_1CIS(const VkDescriptorSet DS, const VkSampler Sampler, const VkImageView IV);
+	void UpdateDescriptorSet_1SI(const VkDescriptorSet DS, const VkImageView IV);
+	void UpdateDescriptorSet_1UB_1CIS(const VkDescriptorSet DS, const VkBuffer Buffer, const VkSampler Sampler);
 
 	/** 
 	アプリ内ではサンプラとサンプルドイメージは別のオブジェクトとして扱うが、シェーダ内ではまとめた一つのオブジェクトとして扱うことができ、プラットフォームによっては効率が良い場合がある
