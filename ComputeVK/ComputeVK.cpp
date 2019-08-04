@@ -233,7 +233,8 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 void ComputeVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandPools[0].second[i];//CommandBuffers[i];
-
+	const auto PL = PipelineLayouts[0];
+	
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
@@ -244,7 +245,7 @@ void ComputeVK::PopulateCommandBuffer(const size_t i)
 		if (!DescriptorSets.empty()) {
 			vkCmdBindDescriptorSets(CB,
 				VK_PIPELINE_BIND_POINT_COMPUTE,
-				PipelineLayout,
+				PL,
 				0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(),
 				0, nullptr);
 		}

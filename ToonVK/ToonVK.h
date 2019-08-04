@@ -25,7 +25,10 @@ protected:
 	}
 	virtual void CreatePipelineLayout() override {
 		assert(!DescriptorSetLayouts.empty() && "");
-		VKExt::CreatePipelineLayout(PipelineLayout, DescriptorSetLayouts[0]);
+		PipelineLayouts.resize(1);
+		VKExt::CreatePipelineLayout(PipelineLayouts[0], {
+				DescriptorSetLayouts[0] 
+			}, {});
 	}
 
 	virtual void CreateUniformBuffer() override {
@@ -54,7 +57,9 @@ protected:
 		assert(!DescriptorPools.empty() && "");
 		assert(!DescriptorSetLayouts.empty() && "");
 		DescriptorSets.resize(1);
-		VKExt::CreateDescriptorSet(DescriptorSets[0], DescriptorPools[0], DescriptorSetLayouts[0]);
+		VKExt::CreateDescriptorSet(DescriptorSets[0], DescriptorPools[0], {
+				DescriptorSetLayouts[0] 
+			});
 	}
 	virtual void UpdateDescriptorSet() override {
 		assert(!DescriptorSets.empty() && "");

@@ -17,13 +17,11 @@ void VKExt::CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const std::ini
 	LOG_OK();
 }
 
-void VKExt::CreatePipelineLayout(VkPipelineLayout& PL, const VkDescriptorSetLayout& DSL)
+void VKExt::CreatePipelineLayout(VkPipelineLayout& PL, const std::initializer_list<VkDescriptorSetLayout> il_DSLs, const std::initializer_list<VkPushConstantRange> il_PCRs)
 {
-	const std::array<VkDescriptorSetLayout, 1> DSLs = {
-		DSL,
-	};
+	const std::vector<VkDescriptorSetLayout> DSLs(il_DSLs.begin(), il_DSLs.end());
 
-	const std::array<VkPushConstantRange, 0> PCRs = {};
+	const std::vector<VkPushConstantRange> PCRs(il_PCRs.begin(), il_PCRs.end());
 
 	const VkPipelineLayoutCreateInfo PLCI = {
 		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -61,11 +59,10 @@ void VKExt::CreateDescriptorPool(VkDescriptorPool& DP, const std::initializer_li
 	LOG_OK();
 }
 
-void VKExt::CreateDescriptorSet(VkDescriptorSet& DS, const VkDescriptorPool DP, const VkDescriptorSetLayout& DSL)
+void VKExt::CreateDescriptorSet(VkDescriptorSet& DS, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSL)
 {
-	const std::array<VkDescriptorSetLayout, 1> DSLs = {
-		DSL,
-	};
+	const std::vector<VkDescriptorSetLayout> DSLs(il_DSL.begin(), il_DSL.end());
+
 	const VkDescriptorSetAllocateInfo DSAI = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 		nullptr,
@@ -439,6 +436,7 @@ void VKExt::CreatePipeline_VsFs()
 	ShaderModules[1] = CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data());
 	
 	const auto RP = RenderPasses[0];
+	const auto PL = PipelineLayouts[0];
 
 	auto Thread = std::thread::thread([&](VkPipeline& P, const VkPipelineLayout PL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
@@ -446,7 +444,7 @@ void VKExt::CreatePipeline_VsFs()
 		{
 			CreatePipeline_Default(P, PL, VS, FS, TES, TCS, GS, RP, PC);
 		},
-		std::ref(Pipeline), PipelineLayout, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
+		std::ref(Pipeline), PL, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
 
 	Thread.join();
 
@@ -523,6 +521,7 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Tesselation()
 	ShaderModules[4] = CreateShaderModule((ShaderPath + TEXT(".geom.spv")).data());
 
 	const auto RP = RenderPasses[0];
+	const auto PL = PipelineLayouts[0];
 
 	auto Thread = std::thread::thread([&](VkPipeline& P, const VkPipelineLayout PL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
@@ -530,7 +529,7 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Tesselation()
 		{
 			CreatePipeline_Tesselation(P, PL, VS, FS, TES, TCS, GS, RP, PC);
 		},
-		std::ref(Pipeline), PipelineLayout, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4], RP, PCs[0]);
+		std::ref(Pipeline), PL, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4], RP, PCs[0]);
 
 	Thread.join();
 

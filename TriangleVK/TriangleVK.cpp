@@ -351,113 +351,7 @@ void TriangleVK::CreateIndexBuffer()
 	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
 #endif
 }
-void TriangleVK::CreatePipelineLayout()
-{
-	const std::array<VkDescriptorSetLayoutBinding, 0> DSLBs = {};
 
-	const VkDescriptorSetLayoutCreateInfo DSLCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
-	};
-
-	VkDescriptorSetLayout DSL = VK_NULL_HANDLE;
-	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
-	DescriptorSetLayouts.push_back(DSL);
-
-	const std::array<VkPushConstantRange, 0> PCRs = {};
-
-	const VkPipelineLayoutCreateInfo PLCI = {
-		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data(),
-		static_cast<uint32_t>(PCRs.size()), PCRs.data()
-	};
-	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PipelineLayout));
-
-	LOG_OK();
-}
-//void TriangleVK::CreatePipeline()
-//{
-//	std::array<VkPipelineCache, 1> PCs = { VK_NULL_HANDLE };
-//	const auto PCOPath = GetBasePath() + TEXT(".pco");
-//	DeleteFile(PCOPath.data());
-//
-//	{
-//		std::ifstream In(PCOPath.c_str(), std::ios::in | std::ios::binary);
-//		if (!In.fail()) {
-//			In.seekg(0, std::ios_base::end);
-//			const size_t Size = In.tellg();
-//			In.seekg(0, std::ios_base::beg);
-//			assert(Size && "");
-//			if (Size) {
-//				auto Data = new char[Size];
-//				In.read(Data, Size);
-//				ValidatePipelineCache(GetCurrentPhysicalDevice(), Size, Data);
-//				const VkPipelineCacheCreateInfo PCCI = {
-//					VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-//					nullptr,
-//					0,
-//					Size, Data
-//				};
-//				for (auto& i : PCs) {
-//					VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PCCI, GetAllocationCallbacks(), &i));
-//				}
-//				delete[] Data;
-//			}
-//			In.close();
-//		}
-//		else {
-//			const VkPipelineCacheCreateInfo PCCI = {
-//				VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-//				nullptr,
-//				0,
-//				0, nullptr
-//			};
-//			for (auto& i : PCs) {
-//				VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PCCI, GetAllocationCallbacks(), &i));
-//			}
-//		}
-//	}
-//
-//	ShaderModules.resize(5);
-//	const auto ShaderPath = GetBasePath();
-//	ShaderModules[0] = CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data());
-//	ShaderModules[1] = CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data());
-//
-//	auto Thread = std::thread::thread([&](VkPipeline& P, const VkPipelineLayout PL,
-//		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
-//		const VkRenderPass RP, VkPipelineCache PC)
-//		{ 
-//			CreatePipeline_Vertex<Vertex_Position>(P, PL, VS, FS, TES, TCS, GS, RP, PC);
-//		},
-//		std::ref(Pipeline), PipelineLayout, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, RenderPass, PCs[0]);
-//
-//	Thread.join();
-//
-//	if (PCs.size() > 1) {
-//		VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, PCs.back(), static_cast<uint32_t>(PCs.size() - 1), PCs.data()));
-//	}
-//	{
-//		size_t Size;
-//		VERIFY_SUCCEEDED(vkGetPipelineCacheData(Device, PCs.back(), &Size, nullptr));
-//		if (Size) {
-//			auto Data = new char[Size];
-//			VERIFY_SUCCEEDED(vkGetPipelineCacheData(Device, PCs.back(), &Size, Data));
-//			std::ofstream Out(PCOPath.c_str(), std::ios::out | std::ios::binary);
-//			if (!Out.fail()) {
-//				Out.write(Data, Size);
-//				Out.close();
-//			}
-//			delete[] Data;
-//		}
-//	}
-//	for (auto i : PCs) {
-//		vkDestroyPipelineCache(Device, i, GetAllocationCallbacks());
-//	}
-//}
 void TriangleVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandPools[0].second[i];//CommandBuffers[i];
@@ -500,7 +394,7 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 			const uint32_t Offset = 64; //!< 4の倍数であること(ここではフラグメントシェーダ用は 64byte オフセットしている) Mulitiple of 4(For fragment shader offset 64 byte in this case)
 			const std::array<float, 4> Color = { 0.0f, 0.7f, 0.4f, 0.1f };
 			const auto Size = static_cast<uint32_t>(Color.size() * sizeof(Color[0])); //!< 4の倍数であること Mulitiple of 4
-			vkCmdPushConstants(CommandBuffer, PipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, Offset, Size, Color.data());
+			vkCmdPushConstants(CommandBuffer, PipelineLayouts[0], VK_SHADER_STAGE_FRAGMENT_BIT, Offset, Size, Color.data());
 #endif
 
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);

@@ -25,11 +25,11 @@ public:
 
 	void CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const std::initializer_list<VkDescriptorSetLayoutBinding> il_DSLBs);
 
-	void CreatePipelineLayout(VkPipelineLayout& PL, const VkDescriptorSetLayout& DSL);
+	void CreatePipelineLayout(VkPipelineLayout& PL, const std::initializer_list<VkDescriptorSetLayout> il_DSLs, const std::initializer_list<VkPushConstantRange> il_PCRs);
 
-	void CreateDescriptorPool(VkDescriptorPool& DP, const std::initializer_list <VkDescriptorPoolSize> il_DPSs);
+	void CreateDescriptorPool(VkDescriptorPool& DP, const std::initializer_list<VkDescriptorPoolSize> il_DPSs);
 
-	void CreateDescriptorSet(VkDescriptorSet& DS, const VkDescriptorPool DP, const VkDescriptorSetLayout& DSL);
+	void CreateDescriptorSet(VkDescriptorSet& DS, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSL);
 
 	void UpdateDescriptorSet_1UB(const VkDescriptorSet DS, const VkBuffer Buffer);
 	void UpdateDescriptorSet_1CIS(const VkDescriptorSet DS, const VkSampler Sampler, const VkImageView IV);

@@ -237,6 +237,7 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 	const auto FB = Framebuffers[i];
 	const auto Image = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
+	const auto PL = PipelineLayouts[0];
 
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -262,7 +263,7 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 			if (!DescriptorSets.empty()) {
 				vkCmdBindDescriptorSets(CB,
 					VK_PIPELINE_BIND_POINT_GRAPHICS,
-					PipelineLayout,
+					PL,
 					0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(),
 					0, nullptr);
 			}

@@ -271,7 +271,10 @@ protected:
 	virtual void CreateDescriptorSetLayout() {}
 
 	virtual void CreatePipelineLayout_Default(VkPipelineLayout& PL);
-	virtual void CreatePipelineLayout() { CreatePipelineLayout_Default(PipelineLayout); }
+	virtual void CreatePipelineLayout() {
+		PipelineLayouts.resize(1);
+		CreatePipelineLayout_Default(PipelineLayouts[0]);
+	}
 
 	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {}
 	virtual void CreateDescriptorPool() {}
@@ -446,7 +449,7 @@ protected:
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
 	std::vector<VkDescriptorPool> DescriptorPools;
 	std::vector<VkDescriptorSet> DescriptorSets;
-	VkPipelineLayout PipelineLayout = VK_NULL_HANDLE;
+	std::vector< VkPipelineLayout> PipelineLayouts;
 
 	VkPipeline Pipeline = VK_NULL_HANDLE;
 	VkPipelineCache PipelineCache = VK_NULL_HANDLE;

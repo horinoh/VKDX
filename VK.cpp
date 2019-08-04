@@ -167,9 +167,10 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 	ShaderModules.clear();
 
-	if (VK_NULL_HANDLE != PipelineLayout) {
-		vkDestroyPipelineLayout(Device, PipelineLayout, GetAllocationCallbacks());
+	for (auto i : PipelineLayouts) {
+		vkDestroyPipelineLayout(Device, i, GetAllocationCallbacks());
 	}
+	PipelineLayouts.clear();
 
 #if 0
 	//!< VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT ‚Ìê‡‚Ì‚ÝŒÂ•Ê‚ÉŠJ•ú‚Å‚«‚é (Only if VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT is used, can be release individually)
@@ -2119,7 +2120,7 @@ void VK::CreatePipelineLayout_Default(VkPipelineLayout& PL)
 		static_cast<uint32_t>(DSLs.size()), DSLs.data(),
 		static_cast<uint32_t>(PCRs.size()), PCRs.data()
 	};
-	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PipelineLayout));
+	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PL));
 
 	LOG_OK();
 }
@@ -2340,12 +2341,13 @@ void VK::CreatePipeline()
 	ShaderModules[1] = CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data());
 	
 	const auto RP = RenderPasses[0];
+	const auto PL = PipelineLayouts[0];
 
 	auto Thread = std::thread::thread([&](VkPipeline& P, const VkPipelineLayout PL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS, 
 		const VkRenderPass RP, VkPipelineCache PC)
 		{ CreatePipeline_Default(P, PL, VS, FS, TES, TCS, GS, RP, PC); }, 
-	std::ref(Pipeline), PipelineLayout, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
+	std::ref(Pipeline), PL, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
 
 	Thread.join();
 
@@ -2630,16 +2632,18 @@ void VK::CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PL,
 
 void VK::CreatePipeline_Compute()
 {
-#ifdef _DEBUG
-	PerformanceCounter PC(__func__);
-#endif
+#if 0
+	PERFORMANCE_COUNTER();
 
 	std::vector<VkShaderModule> ShaderModules;
 	std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos;
 	//CreateShader(ShaderModules, PipelineShaderStageCreateInfos);
 	
+	const auto PL = PipelineLayouts[0];
+
 	const std::vector<VkComputePipelineCreateInfo> ComputePipelineCreateInfos = {
 		{
+			VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			nullptr,
 #ifdef _DEBUG
@@ -2648,7 +2652,7 @@ void VK::CreatePipeline_Compute()
 			0,
 #endif
 			PipelineShaderStageCreateInfos[0],
-			PipelineLayout,
+			PL,
 			VK_NULL_HANDLE, -1 //!< basePipelineHandle, basePipelineIndex
 		},
 	};
@@ -2665,6 +2669,7 @@ void VK::CreatePipeline_Compute()
 	ShaderModules.clear();
 
 	LOG_OK();
+#endif
 }
 
 /**
