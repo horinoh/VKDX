@@ -64,7 +64,19 @@ protected:
 	virtual void UpdateDescriptorSet() override {
 		assert(!DescriptorSets.empty() && "");
 		assert(VK_NULL_HANDLE != UniformBuffer && "");
-		UpdateDescriptorSet_1UB(DescriptorSets[0], UniformBuffer);
+		const std::array<VkDescriptorBufferInfo, 1> DBIs = {
+			{ UniformBuffer, 0, VK_WHOLE_SIZE }
+		};
+		VKExt::UpdateDescriptorSet(
+			{
+				{
+					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					nullptr,
+					DescriptorSets[0], 0, 0,
+					static_cast<uint32_t>(DBIs.size()), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, DBIs.data(), nullptr
+				}
+			},
+			{});
 	}
 
 	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs_Tesselation(); }

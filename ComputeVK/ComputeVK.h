@@ -52,7 +52,19 @@ protected:
 	virtual void UpdateDescriptorSet() override {
 		assert(!DescriptorSets.empty() && "");
 		assert(VK_NULL_HANDLE != ImageView && "");
-		UpdateDescriptorSet_1SI(DescriptorSets[0], ImageView);
+		const std::array<VkDescriptorImageInfo, 1> DIIs = {
+				{ VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_GENERAL }
+		};
+		VKExt::UpdateDescriptorSet(
+			{
+				{
+					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					nullptr,
+					DescriptorSets[0], 0, 0,
+					static_cast<uint32_t>(DIIs.size()), VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, DIIs.data(), nullptr, nullptr
+				}
+			},
+			{});
 	}
 
 	//virtual void CreateShader(std::vector<VkShaderModule>& SM, std::vector<VkPipelineShaderStageCreateInfo>& CreateInfo) const override {

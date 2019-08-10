@@ -59,9 +59,9 @@ void VKExt::CreateDescriptorPool(VkDescriptorPool& DP, const std::initializer_li
 	LOG_OK();
 }
 
-void VKExt::CreateDescriptorSet(VkDescriptorSet& DS, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSL)
+void VKExt::CreateDescriptorSet(VkDescriptorSet& DS, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSLs)
 {
-	const std::vector<VkDescriptorSetLayout> DSLs(il_DSL.begin(), il_DSL.end());
+	const std::vector<VkDescriptorSetLayout> DSLs(il_DSLs.begin(), il_DSLs.end());
 
 	const VkDescriptorSetAllocateInfo DSAI = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -74,23 +74,13 @@ void VKExt::CreateDescriptorSet(VkDescriptorSet& DS, const VkDescriptorPool DP, 
 	LOG_OK();
 }
 
-void VKExt::UpdateDescriptorSet_1UB(const VkDescriptorSet DS, const VkBuffer Buffer)
+void VKExt::UpdateDescriptorSet(const std::initializer_list <VkWriteDescriptorSet> il_WDSs, const std::initializer_list <VkCopyDescriptorSet> il_CDSs)
 {
-	const std::array<VkDescriptorBufferInfo, 1> DBIs = {
-		{ Buffer, 0/*オフセット(要アライン)*/, VK_WHOLE_SIZE }
-	};
-	const std::array<VkWriteDescriptorSet, 1> WDSs = {
-		{
-			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			nullptr,
-			//!< アップデートするデスクリプタセット、バインディング、配列の開始添字(VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXTの場合)
-			DS, 0, 0, 
-			//!< アップデートするデスクリプタの個数、タイプ、残り3つ(VkDescriptorImageInfo, VkDescriptorBufferInfo, VkBufferView)にはタイプにより適切な箇所に指定をすること
-			static_cast<uint32_t>(DBIs.size()), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, DBIs.data(), nullptr 
-		}
-	};
-
-	const std::array<VkCopyDescriptorSet, 0> CDSs = {};
+	//!< dstArrayElement ... バインディング内での配列の開始添字 (VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT指定の場合は開始バイトオフセット)
+	//!< descriptorCount ... 更新するデスクリプタセット個数 (VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT指定の場合は更新するバイト)
+	//!< 指定 descriptorType に従って、pImageInfo, pBufferInfo, pTexelBufferView の適切な箇所へ指定すること
+	const std::vector<VkWriteDescriptorSet> WDSs(il_WDSs.begin(), il_WDSs.end());
+	const std::vector<VkCopyDescriptorSet> CDSs(il_CDSs.begin(), il_CDSs.end());
 
 	vkUpdateDescriptorSets(Device,
 		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
@@ -99,82 +89,6 @@ void VKExt::UpdateDescriptorSet_1UB(const VkDescriptorSet DS, const VkBuffer Buf
 	LOG_OK();
 }
 
-void VKExt::UpdateDescriptorSet_1CIS(const VkDescriptorSet DS, const VkSampler Sampler, const VkImageView IV)
-{
-	const std::array<VkDescriptorImageInfo, 1> DIIs = {
-		{ Sampler, IV, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
-	};
-	const std::array<VkWriteDescriptorSet, 1> WDSs = {
-		{
-			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			nullptr,
-			DS, 0, 0,
-			static_cast<uint32_t>(DIIs.size()), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, DIIs.data(), nullptr, nullptr
-		}
-	};
-
-	const std::array<VkCopyDescriptorSet, 0> CDSs = {};
-
-	vkUpdateDescriptorSets(Device,
-		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
-		static_cast<uint32_t>(CDSs.size()), CDSs.data());
-
-	LOG_OK();
-}
-void VKExt::UpdateDescriptorSet_1SI(const VkDescriptorSet DS, const VkImageView IV)
-{
-	const std::array<VkDescriptorImageInfo, 1> DIIs = {
-		{ VK_NULL_HANDLE, IV, VK_IMAGE_LAYOUT_GENERAL }
-	};
-	const std::array<VkWriteDescriptorSet, 1> WDSs = {
-		{
-			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			nullptr,
-			DS, 0, 0,
-			static_cast<uint32_t>(DIIs.size()), VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, DIIs.data(), nullptr, nullptr
-		}
-	};
-
-	const std::array<VkCopyDescriptorSet, 0> CDSs = {};
-
-	vkUpdateDescriptorSets(Device,
-		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
-		static_cast<uint32_t>(CDSs.size()), CDSs.data());
-
-	LOG_OK();
-}
-void VKExt::UpdateDescriptorSet_1UB_1CIS(const VkDescriptorSet DS, const VkBuffer Buffer, const VkSampler Sampler)
-{
-	const std::array<VkDescriptorBufferInfo, 1> DBIs = {
-		{ Buffer, 0, VK_WHOLE_SIZE }
-	};
-	const std::array<VkDescriptorImageInfo, 1> DIIs = {
-		{ Sampler, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
-	};
-
-	const std::array<VkWriteDescriptorSet, 2> WDSs = { {
-		{
-			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			nullptr,
-			DS, 0, 0,
-			static_cast<uint32_t>(DBIs.size()), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, DBIs.data(), nullptr
-		},
-		{
-			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			nullptr,
-			DS, 1, 0,
-			static_cast<uint32_t>(DIIs.size()), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, DIIs.data(), nullptr, nullptr
-		}
-	} };
-
-	const std::array<VkCopyDescriptorSet, 0> CDSs = {};
-
-	vkUpdateDescriptorSets(Device,
-		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
-		static_cast<uint32_t>(CDSs.size()), CDSs.data());
-
-	LOG_OK();
-}
 void VKExt::CreatePipeline_Tesselation(VkPipeline& Pipeline, const VkPipelineLayout PL, 
 	const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS, 
 	const VkRenderPass RP, VkPipelineCache PC)
@@ -761,112 +675,4 @@ void VKExt::CreateFramebuffer_ColorDepth()
 			VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, GetAllocationCallbacks(), Framebuffer));
 		}(&Framebuffers[i], SwapchainImageViews[i], DepthStencilImageView, RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height);
 	}
-}
-
-void VKExt::CreateShader_VsPs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const
-{
-	const auto ShaderPath = GetBasePath();
-	ShaderModules = {
-		CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()),
-		CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data())
-	};
-
-	//!< HLSL コンパイル時のデフォルトエントリポイント名が "main" なのでそれに合わせることにする
-	const char* EntrypointName = "main";
-
-	//!< シェーダ内のコンスタント変数をパイプライン作成時に変更する場合に使用
-	const std::array<VkSpecializationMapEntry, 0> SMEs = { /*{ uint32_t constantID, uint32_t offset, size_t size },*/};
-	const VkSpecializationInfo SI = { static_cast<uint32_t>(SMEs.size()), SMEs.data() };
-
-	PipelineShaderStageCreateInfos = {
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
-			EntrypointName,
-			nullptr //!< &SI
-		},
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
-			EntrypointName,
-			nullptr
-		}
-	};
-}
-void VKExt::CreateShader_VsPsTesTcsGs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const
-{
-	const auto ShaderPath = GetBasePath();
-	ShaderModules = {
-		CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()),
-		CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()),
-		CreateShaderModule((ShaderPath + TEXT(".tese.spv")).data()),
-		CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data()),
-		CreateShaderModule((ShaderPath + TEXT(".geom.spv")).data()) 
-	};
-	const char* EntrypointName = "main";
-	PipelineShaderStageCreateInfos = {
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0],
-			EntrypointName,
-			nullptr
-		},
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1],
-			EntrypointName,
-			nullptr
-		},
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, ShaderModules[2],
-			EntrypointName,
-			nullptr
-		},
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, ShaderModules[3],
-			EntrypointName,
-			nullptr
-		},
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_GEOMETRY_BIT, ShaderModules[4],
-			EntrypointName,
-			nullptr
-		},
-	};
-}
-
-void VKExt::CreateShader_Cs(std::vector<VkShaderModule>& ShaderModules, std::vector<VkPipelineShaderStageCreateInfo>& PipelineShaderStageCreateInfos) const
-{
-	const auto ShaderPath = GetBasePath();
-	ShaderModules = {
-		CreateShaderModule((ShaderPath + TEXT(".comp.spv")).data()),
-	};
-	const char* EntrypointName = "main";
-	PipelineShaderStageCreateInfos = {
-		{
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_COMPUTE_BIT, ShaderModules[0],
-			EntrypointName,
-			nullptr
-		},
-	};
 }

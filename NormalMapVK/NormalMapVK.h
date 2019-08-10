@@ -69,7 +69,28 @@ protected:
 		assert(!DescriptorSets.empty() && "");
 		assert(VK_NULL_HANDLE != UniformBuffer && "");
 		assert(!Samplers.empty() && "");
-		UpdateDescriptorSet_1UB_1CIS(DescriptorSets[0], UniformBuffer, Samplers[0]); 
+		const std::array<VkDescriptorBufferInfo, 1> DBIs = {
+			{ UniformBuffer, 0, VK_WHOLE_SIZE }
+		};
+		const std::array<VkDescriptorImageInfo, 1> DIIs = {
+			{ Samplers[0], ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
+		};
+		VKExt::UpdateDescriptorSet(
+			{
+				{
+					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					nullptr,
+					DescriptorSets[0], 0, 0,
+					static_cast<uint32_t>(DBIs.size()), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, DBIs.data(), nullptr
+				},
+				{
+					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					nullptr,
+					DescriptorSets[0], 1, 0,
+					static_cast<uint32_t>(DIIs.size()), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, DIIs.data(), nullptr, nullptr
+				}
+			},
+			{});
 	}
 
 	virtual void CreateTexture() override {
