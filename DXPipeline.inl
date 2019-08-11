@@ -118,10 +118,8 @@ template<typename T> void CreatePipelineState_VsPs_Vertex()
 	else {
 		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, __uuidof(PipelineLibrary), PL.put_void()));
 
-		const auto ShaderPath = GetBasePath();
-		ShaderBlobs.resize(2);
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), ShaderBlobs[0].put()));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].put()));
+		assert(ShaderBlobs.size() > 1 && "");
+
 		const std::array<D3D12_SHADER_BYTECODE, 2> SBCs = { {
 			{ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() },
 			{ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() },

@@ -264,10 +264,7 @@ template<typename T> void CreatePipeline_VsFs_Vertex()
 		}
 	}
 
-	ShaderModules.resize(5);
-	const auto ShaderPath = GetBasePath();
-	ShaderModules[0] = CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data());
-	ShaderModules[1] = CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data());
+	assert(ShaderModules.size() > 1 && "");
 
 	const auto RP = RenderPasses[0];
 	const auto PL = PipelineLayouts[0];

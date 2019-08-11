@@ -24,6 +24,7 @@ protected:
 #elif defined(USE_WRL)
 	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob) override;
 #endif
+	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPs(); }
 	virtual void PopulateCommandList(const size_t i) override;
 };

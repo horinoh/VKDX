@@ -81,6 +81,7 @@ protected:
 		//LoadImage(ImageResource.GetAddressOf(), TEXT("..\\Intermediate\\Image\\kueken8_rgba8_srgb.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE); //!< #DX_TODO
 #endif
 	}
+	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPs(); }
 	virtual void PopulateCommandList(const size_t i) override;
 };

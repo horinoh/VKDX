@@ -68,6 +68,11 @@ public:
 	VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT ... (前レンダーパスで)レンダーターゲット(アタッチメント)として使われたものを(レンダーパス中で)入力として取る場合
 		layout (input_attachment_index=0, set=0, binding=0) uniform subpassInput MySubpassInput;
 	*/
+	
+	void CreateShaderModle(const std::initializer_list<VkShaderModule> il_SMs) { std::copy(il_SMs.begin(), il_SMs.end(), std::back_inserter(ShaderModules)); }
+	void CreateShaderModle_VsFs();
+	void CreateShaderModle_VsFsTesTcsGs();
+	void CreateShaderModle_Cs();
 
 	template<typename T> void CreatePipeline_Vertex(VkPipeline& Pipeline, const VkPipelineLayout PL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
@@ -75,7 +80,7 @@ public:
 	void CreatePipeline_Tesselation(VkPipeline& Pipeline, const VkPipelineLayout PL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
-	
+
 	void CreatePipeline_VsFs();
 	void CreatePipeline_VsFsTesTcsGs_Tesselation();
 	//!< ↓ここでテンプレート特殊化している (Template specialization here)

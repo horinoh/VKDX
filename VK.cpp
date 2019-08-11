@@ -85,6 +85,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreatePipelineLayout();
 	//!< レンダーパス
 	CreateRenderPass();
+	CreateShaderModule();
 	//!< パイプライン
 	CreatePipeline();
 	//!< フレームバッファ

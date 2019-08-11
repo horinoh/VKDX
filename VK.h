@@ -293,6 +293,7 @@ protected:
 	virtual void DestroyFramebuffer();
 
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
+	virtual void CreateShaderModule() {}
 
 	static bool ValidatePipelineCache(const VkPhysicalDevice PD, const size_t Size, const void* Data);
 	virtual void CreatePipeline();

@@ -90,6 +90,7 @@ protected:
 			{});
 	}
 
+	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }
 	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs_Tesselation(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 

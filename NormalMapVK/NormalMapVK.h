@@ -99,7 +99,7 @@ protected:
 	virtual void CreateSampler(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const override {
 		CreateSampler_LR(Sampler, MaxLOD);
 	}
-
+	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }
 	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs_Tesselation(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 

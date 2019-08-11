@@ -40,6 +40,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< ルートシグネチャ (パイプライントレイアウト相当)
 	CreateRootSignature();
+	CreateShaderBlob();
 	//!< パイプライン
 	CreatePipelineState();
 

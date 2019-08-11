@@ -96,6 +96,8 @@ protected:
 			CreateImageView(&ImageView, Image, Type, Format, CompMap, ImageSubresourceRange_ColorAll);
 		}
 	}
+	
+	virtual void CreateShaderModule() override { CreateShaderModle_Cs(); }
 
 	virtual void PopulateCommandBuffer(const size_t i) override;
 

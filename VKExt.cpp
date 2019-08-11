@@ -89,6 +89,33 @@ void VKExt::UpdateDescriptorSet(const std::initializer_list <VkWriteDescriptorSe
 	LOG_OK();
 }
 
+void VKExt::CreateShaderModle_VsFs()
+{
+	const auto ShaderPath = GetBasePath();
+	CreateShaderModle({
+		VKExt::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()),
+		VKExt::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()),
+		});
+}
+void VKExt::CreateShaderModle_VsFsTesTcsGs()
+{
+	const auto ShaderPath = GetBasePath();
+	CreateShaderModle({
+		VKExt::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()),
+		VKExt::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()),
+		VKExt::CreateShaderModule((ShaderPath + TEXT(".tese.spv")).data()),
+		VKExt::CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data()),
+		VKExt::CreateShaderModule((ShaderPath + TEXT(".geom.spv")).data()),
+		});
+}
+void VKExt::CreateShaderModle_Cs()
+{
+	const auto ShaderPath = GetBasePath();
+	CreateShaderModle({
+		VKExt::CreateShaderModule((ShaderPath + TEXT(".comp.spv")).data()),
+		});
+}
+
 void VKExt::CreatePipeline_Tesselation(VkPipeline& Pipeline, const VkPipelineLayout PL, 
 	const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS, 
 	const VkRenderPass RP, VkPipelineCache PC)
@@ -301,6 +328,7 @@ void VKExt::CreatePipeline_Tesselation(VkPipeline& Pipeline, const VkPipelineLay
 
 	LOG_OK();
 }
+
 void VKExt::CreatePipeline_VsFs()
 {
 	std::array<VkPipelineCache, 1> PCs = { VK_NULL_HANDLE };
@@ -344,10 +372,7 @@ void VKExt::CreatePipeline_VsFs()
 		}
 	}
 
-	ShaderModules.resize(5);
-	const auto ShaderPath = GetBasePath();
-	ShaderModules[0] = CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data());
-	ShaderModules[1] = CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data());
+	assert(ShaderModules.size() > 1 && "");
 	
 	const auto RP = RenderPasses[0];
 	const auto PL = PipelineLayouts[0];
@@ -426,13 +451,7 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Tesselation()
 		}
 	}
 
-	ShaderModules.resize(5);
-	const auto ShaderPath = GetBasePath();
-	ShaderModules[0] = CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data());
-	ShaderModules[1] = CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data());
-	ShaderModules[2] = CreateShaderModule((ShaderPath + TEXT(".tese.spv")).data());
-	ShaderModules[3] = CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data());
-	ShaderModules[4] = CreateShaderModule((ShaderPath + TEXT(".geom.spv")).data());
+	assert(ShaderModules.size() > 4 && "");
 
 	const auto RP = RenderPasses[0];
 	const auto PL = PipelineLayouts[0];

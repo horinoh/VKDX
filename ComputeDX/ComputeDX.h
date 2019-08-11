@@ -35,7 +35,7 @@ protected:
 #elif defined(USE_WRL)
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> & ShaderBlobs) const override {
 #endif
-		CreateShader_Cs(ShaderBlobs);
+		//CreateShader_Cs(ShaderBlobs);
 		Super::CreateShader(ShaderBlobs);
 	}
 
