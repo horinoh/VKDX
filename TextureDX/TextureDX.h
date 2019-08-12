@@ -16,11 +16,45 @@ public:
 protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4); }
 
+	virtual void CreateRootSignature() override {
 #ifdef USE_WINRT
-	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob) override;
+		winrt::com_ptr<ID3DBlob> Blob;
 #elif defined(USE_WRL)
-	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob) override;
+		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
 #endif
+
+#ifdef ROOTSIGNATRUE_FROM_SHADER
+		GetRootSignaturePartFromShader(Blob);
+#else
+		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs = {
+			{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
+		};
+		DX::SerializeRootSignature(Blob, {
+				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(DRs.size()), DRs.data() }, D3D12_SHADER_VISIBILITY_PIXEL }
+			}, {
+				{
+					D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+					D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+					0.0f,
+					0,
+					D3D12_COMPARISON_FUNC_NEVER,
+					D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+					0.0f, 1.0f,
+					0, 0, D3D12_SHADER_VISIBILITY_PIXEL
+				}
+			}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+#endif
+
+		DX::CreateRootSignature(RootSignature, Blob);
+
+		LOG_OK();
+	}
+
+//#ifdef USE_WINRT
+//	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob) override;
+//#elif defined(USE_WRL)
+//	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob) override;
+//#endif
 
 	virtual void CreateDescriptorHeap() override {
 		CreateDescriptorHeap_1SRV();

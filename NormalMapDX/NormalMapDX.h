@@ -54,6 +54,7 @@ protected:
 		LOG_OK();
 	}
 
+
 	virtual void CreateDescriptorHeap() override {
 		CreateDescriptorHeap_1CBV_1SRV<Transform>();
 	}
