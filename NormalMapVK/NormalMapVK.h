@@ -42,8 +42,7 @@ protected:
 		const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
 		const auto CamTag = glm::vec3(0.0f);
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
-
-		Super::CreateUniformBufferT<Transform>({
+		VKExt::CreateUniformBuffer<Transform>({
 			GetVulkanClipSpace() * glm::perspective(Fov, Aspect, ZNear, ZFar),
 			glm::lookAt(CamPos, CamTag, CamUp),
 			glm::mat4(1.0f)
@@ -52,18 +51,19 @@ protected:
 
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
-		VKExt::CreateDescriptorPool(DescriptorPools[0], {
+		VKExt::CreateDescriptorPool(DescriptorPools[0], /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
 				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }, 
 				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,1 } 
 			});
 	}
-	virtual void CreateDescriptorSet() override {
+	virtual void AllocateDescriptorSet() override {
 		assert(!DescriptorPools.empty() && "");
 		assert(!DescriptorSetLayouts.empty() && "");
-		DescriptorSets.resize(1);
-		VKExt::CreateDescriptorSet(DescriptorSets[0], DescriptorPools[0], {
+		std::vector<VkDescriptorSet> DSs;
+		VKExt::AllocateDescriptorSet(DSs, DescriptorPools[0], {
 				DescriptorSetLayouts[0] 
 			});
+		std::copy(DSs.begin(), DSs.end(), std::back_inserter(DescriptorSets));
 	}
 	virtual void UpdateDescriptorSet() override {
 		assert(!DescriptorSets.empty() && "");

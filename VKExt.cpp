@@ -2,93 +2,6 @@
 
 #include "VKExt.h"
 
-void VKExt::CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const std::initializer_list<VkDescriptorSetLayoutBinding> il_DSLBs)
-{
-	const std::vector<VkDescriptorSetLayoutBinding> DSLBs(il_DSLBs.begin(), il_DSLBs.end());
-
-	const VkDescriptorSetLayoutCreateInfo DSLCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
-
-	LOG_OK();
-}
-
-void VKExt::CreatePipelineLayout(VkPipelineLayout& PL, const std::initializer_list<VkDescriptorSetLayout> il_DSLs, const std::initializer_list<VkPushConstantRange> il_PCRs)
-{
-	const std::vector<VkDescriptorSetLayout> DSLs(il_DSLs.begin(), il_DSLs.end());
-
-	const std::vector<VkPushConstantRange> PCRs(il_PCRs.begin(), il_PCRs.end());
-
-	const VkPipelineLayoutCreateInfo PLCI = {
-		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DSLs.size()), DSLs.data(),
-		static_cast<uint32_t>(PCRs.size()), PCRs.data()
-	};
-	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PL));
-
-	LOG_OK();
-}
-
-//!< デスクリプタセットを個々に解放したい場合には VkDescriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT を指定する、その場合メモリ断片化は自分で管理すること
-//!< (指定しない場合はプール毎にまとめて解放となる)
-void VKExt::CreateDescriptorPool(VkDescriptorPool& DP, const std::initializer_list <VkDescriptorPoolSize> il_DPSs)
-{
-	const std::vector<VkDescriptorPoolSize> DPSs(il_DPSs.begin(), il_DPSs.end());
-
-	uint32_t MaxSets = 0;
-	for (const auto& i : DPSs) {
-		MaxSets = std::max(MaxSets, i.descriptorCount);
-	}
-
-	const VkDescriptorPoolCreateInfo DPCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		nullptr,
-		0,
-		MaxSets,
-		static_cast<uint32_t>(DPSs.size()), DPSs.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DP));
-	assert(VK_NULL_HANDLE != DP && "Failed to create descriptor pool");
-
-	LOG_OK();
-}
-
-void VKExt::CreateDescriptorSet(VkDescriptorSet& DS, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSLs)
-{
-	const std::vector<VkDescriptorSetLayout> DSLs(il_DSLs.begin(), il_DSLs.end());
-
-	const VkDescriptorSetAllocateInfo DSAI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		nullptr,
-		DP,
-		static_cast<uint32_t>(DSLs.size()), DSLs.data()
-	};
-	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DS));
-
-	LOG_OK();
-}
-
-void VKExt::UpdateDescriptorSet(const std::initializer_list <VkWriteDescriptorSet> il_WDSs, const std::initializer_list <VkCopyDescriptorSet> il_CDSs)
-{
-	//!< dstArrayElement ... バインディング内での配列の開始添字 (VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT指定の場合は開始バイトオフセット)
-	//!< descriptorCount ... 更新するデスクリプタセット個数 (VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT指定の場合は更新するバイト)
-	//!< 指定 descriptorType に従って、pImageInfo, pBufferInfo, pTexelBufferView の適切な箇所へ指定すること
-	const std::vector<VkWriteDescriptorSet> WDSs(il_WDSs.begin(), il_WDSs.end());
-	const std::vector<VkCopyDescriptorSet> CDSs(il_CDSs.begin(), il_CDSs.end());
-
-	vkUpdateDescriptorSets(Device,
-		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
-		static_cast<uint32_t>(CDSs.size()), CDSs.data());
-
-	LOG_OK();
-}
-
 void VKExt::CreateShaderModle_VsFs()
 {
 	const auto ShaderPath = GetBasePath();
@@ -509,6 +422,7 @@ void VKExt::CreateSampler_LR(VkSampler* Sampler, const float MaxLOD) const
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SamplerCreateInfo, GetAllocationCallbacks(), Sampler));
 	}(Sampler, MaxLOD);
 }
+
 void VKExt::CreateRenderPass_ColorDepth(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth)
 {
 	const std::array<VkAttachmentDescription, 2> ADs = { {
@@ -652,46 +566,38 @@ void VKExt::CreateRenderPass_ColorDepth_PostProcess(VkRenderPass& RP, const VkFo
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
 }
 
+//void VKExt::CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::initializer_list<VkImageView> il_IVs)
+//{
+//	const std::vector<VkImageView> IVs(il_IVs.begin(), il_IVs.end());
+//
+//	const VkFramebufferCreateInfo FCI = {
+//		VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+//		nullptr,
+//		0,
+//		RP, //!< ここで作成するフレームバッファは RenderPass と「コンパチ」な別のレンダーパスでも使用可能
+//		static_cast<uint32_t>(IVs.size()), IVs.data(),
+//		Width, Height,
+//		Layers
+//	};
+//	VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FCI, GetAllocationCallbacks(), &FB));
+//}
+
 void VKExt::CreateFramebuffer_Color()
 {
 	Framebuffers.resize(SwapchainImages.size());
 	for (uint32_t i = 0; i < Framebuffers.size(); ++i) {
-		[&](VkFramebuffer* Framebuffer, const VkImageView ColorView, const VkRenderPass RP, const uint32_t Width, const uint32_t Height) {
-			const std::vector<VkImageView> Attachments = {
-				ColorView 
-			};
-			const VkFramebufferCreateInfo FramebufferCreateInfo = {
-				VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-				nullptr,
-				0,
-				RP, //!< ここで作成するフレームバッファは RenderPass と「コンパチ」な別のレンダーパスでも使用可能
-				static_cast<uint32_t>(Attachments.size()), Attachments.data(),
-				Width, Height,
-				1
-			};
-			VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, GetAllocationCallbacks(), Framebuffer));
-		}(&Framebuffers[i], SwapchainImageViews[i], RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height);
+		VK::CreateFramebuffer(Framebuffers[i], RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
+			SwapchainImageViews[i]
+			});
 	}
 }
 void VKExt::CreateFramebuffer_ColorDepth()
 {
 	Framebuffers.resize(SwapchainImages.size());
 	for (uint32_t i = 0; i < Framebuffers.size(); ++i) {
-		[&](VkFramebuffer* Framebuffer, const VkImageView ColorView, const VkImageView DepthStencilView, const VkRenderPass RP, const uint32_t Width, const uint32_t Height) {
-			const std::vector<VkImageView> Attachments = {
-				ColorView,
-				DepthStencilView
-			};
-			const VkFramebufferCreateInfo FramebufferCreateInfo = {
-				VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-				nullptr,
-				0,
-				RP,
-				static_cast<uint32_t>(Attachments.size()), Attachments.data(),
-				Width, Height,
-				1
-			};
-			VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FramebufferCreateInfo, GetAllocationCallbacks(), Framebuffer));
-		}(&Framebuffers[i], SwapchainImageViews[i], DepthStencilImageView, RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height);
+		VK::CreateFramebuffer(Framebuffers[i], RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
+			SwapchainImageViews[i],
+			DepthStencilImageView
+			});
 	}
 }

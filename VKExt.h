@@ -12,22 +12,16 @@ public:
 
 	void CreateIndirectBuffer_Draw(const uint32_t Count) {
 		const VkDrawIndirectCommand DIC = { Count, 1, 0, 0 };
-		CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, static_cast<VkDeviceSize>(sizeof(DIC)), &DIC, CommandPools[0].second[0]);
+		CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, static_cast<VkDeviceSize>(sizeof(DIC)), &DIC, CommandBuffers[0]);
 	}
 	void CreateIndirectBuffer_DrawIndexed(const uint32_t Count) {
 		const VkDrawIndexedIndirectCommand DIIC = { Count, 1, 0, 0, 0 };
-		CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC, CommandPools[0].second[0]);
+		CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC, CommandBuffers[0]);
 	}
 	void CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z) {
 		const VkDispatchIndirectCommand DIC = { X, Y, Z };
-		CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, static_cast<VkDeviceSize>(sizeof(DIC)), &DIC, CommandPools[0].second[0]);
+		CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, static_cast<VkDeviceSize>(sizeof(DIC)), &DIC, CommandBuffers[0]);
 	}
-
-	void CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const std::initializer_list<VkDescriptorSetLayoutBinding> il_DSLBs);
-	void CreatePipelineLayout(VkPipelineLayout& PL, const std::initializer_list<VkDescriptorSetLayout> il_DSLs, const std::initializer_list<VkPushConstantRange> il_PCRs);
-	void CreateDescriptorPool(VkDescriptorPool& DP, const std::initializer_list<VkDescriptorPoolSize> il_DPSs);
-	void CreateDescriptorSet(VkDescriptorSet& DS, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSLs);
-	void UpdateDescriptorSet(const std::initializer_list <VkWriteDescriptorSet> il_WDSs, const std::initializer_list <VkCopyDescriptorSet> il_CDSs);
 
 	/** 
 	アプリ内ではサンプラとサンプルドイメージは別のオブジェクトとして扱うが、シェーダ内ではまとめた一つのオブジェクトとして扱うことができ、プラットフォームによっては効率が良い場合がある
@@ -69,7 +63,6 @@ public:
 		layout (input_attachment_index=0, set=0, binding=0) uniform subpassInput MySubpassInput;
 	*/
 	
-	void CreateShaderModle(const std::initializer_list<VkShaderModule> il_SMs) { std::copy(il_SMs.begin(), il_SMs.end(), std::back_inserter(ShaderModules)); }
 	void CreateShaderModle_VsFs();
 	void CreateShaderModle_VsFsTesTcsGs();
 	void CreateShaderModle_Cs();
@@ -80,56 +73,27 @@ public:
 	void CreatePipeline_Tesselation(VkPipeline& Pipeline, const VkPipelineLayout PL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
-
 	void CreatePipeline_VsFs();
 	void CreatePipeline_VsFsTesTcsGs_Tesselation();
+	void CreatePipeline_Cs() { assert(0 && "TODO"); }
 	//!< ↓ここでテンプレート特殊化している (Template specialization here)
 #include "VKPipeline.inl"
 
 	//!< LinearRepeat
 	void CreateSampler_LR(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const;
 
-	//virtual void CreateRenderPass() { CreateRenderPass_1C(RenderPass, ColorFormat); }
-	//void CreateRenderPass_1C(VkRenderPass& RenderPass, const VkFormat Format);
 	void CreateRenderPass_ColorDepth(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth);
 	void CreateRenderPass_ColorDepth_PostProcess(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth);
 
-	virtual void CreateFramebuffer() override { CreateFramebuffer_Color(); }
+	//virtual void CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::initializer_list<VkImageView> il_IVs);
 	void CreateFramebuffer_Color();
 	void CreateFramebuffer_ColorDepth();
+	virtual void CreateFramebuffer() override { CreateFramebuffer_Color(); }
 
 	template<typename T>
-	void CreateUniformBufferT(const T& Type) { CreateUniformBuffer(&UniformBuffer, &UniformDeviceMemory, sizeof(Type), &Type); }
+	void CreateUniformBuffer(const T& Type) { VK::CreateUniformBuffer(&UniformBuffer, &UniformDeviceMemory, sizeof(Type), &Type); }
 
 	//virtual void CreateInputAssembly(VkPipelineInputAssemblyStateCreateInfo& PipelineInputAssemblyStateCreateInfo) const override { 
 	//	CreateInputAssembly_Topology(PipelineInputAssemblyStateCreateInfo, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
 	//}
-
-protected:
-#if 1
-	/**
-	@brief パイプライン作成時にシェーダ内の定数値を上書き指定できる
-	
-	//!< シェーダ側には以下のような記述をする (扱えるのはスカラ値のみ)
-	layout (constant_id = 0) const int IntValue = 0;
-	layout (constant_id = 1) const float FloatValue = 0.0f;
-	layout (constant_id = 2) const bool BoolValue = false;
-	*/
-	struct SpecializationData {
-		int IntValue;
-		float FloatValue;
-		bool BoolValue;
-	};
-	SpecializationData SpecData = { 1, 1.0f, true };
-	const std::vector<VkSpecializationMapEntry> SpecializationMapEntries = {
-		{ 0, offsetof(SpecializationData, IntValue), sizeof(SpecData.IntValue) },
-		{ 1, offsetof(SpecializationData, FloatValue), sizeof(SpecData.FloatValue) },
-		{ 2, offsetof(SpecializationData, BoolValue), sizeof(SpecData.BoolValue) },
-	};
-	//!< VkPipelineShaderStageCreateInfo.pSpecializationInfo へ対して指定する
-	const VkSpecializationInfo SpecializationInfo = {
-		static_cast<uint32_t>(SpecializationMapEntries.size()), SpecializationMapEntries.data(),
-		sizeof(SpecData), &SpecData
-	};
-#endif
 };

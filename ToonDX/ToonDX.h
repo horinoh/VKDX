@@ -16,16 +16,27 @@ public:
 protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1); }
 
+	virtual void CreateRootSignature() override {
 #ifdef USE_WINRT
-	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob) override;
+		winrt::com_ptr<ID3DBlob> Blob;
 #elif defined(USE_WRL)
-	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob) override;
+		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
 #endif
-	virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
-		CreateRootParameters_1CBV(RootParameters, DescriptorRanges, D3D12_SHADER_VISIBILITY_GEOMETRY);
-	}
-	virtual void CreateDescriptorRanges(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const override {
-		CreateDescriptorRanges_1CBV(DescriptorRanges);
+
+#ifdef ROOTSIGNATRUE_FROM_SHADER
+		GetRootSignaturePartFromShader(Blob);
+#else
+		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs = {
+			{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
+		};
+		DX::SerializeRootSignature(Blob, {
+				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DRs.size()), DRs.data() }, D3D12_SHADER_VISIBILITY_GEOMETRY }
+			}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+#endif
+
+		DX::CreateRootSignature(RootSignature, Blob);
+
+		LOG_OK();
 	}
 
 	virtual void CreateDescriptorHeap() override {
@@ -47,7 +58,7 @@ protected:
 			DirectX::XMMatrixIdentity()
 		});
 	}
-
+	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs_Tesselation(); }
 	virtual void PopulateCommandList(const size_t i) override;
 

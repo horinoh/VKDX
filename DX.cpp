@@ -1162,7 +1162,7 @@ void DX::CreateUnorderedAccessTexture()
 	LOG_OK();
 }
 
-//!< ルートシグネチャをシリアライズしてブロブを作る
+#if 0
 #ifdef USE_WINRT
 void DX::SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob)
 #elif defined(USE_WRL)
@@ -1178,11 +1178,7 @@ void DX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
 #else
 	std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
 		/**
-		D3D12_DESCRIPTOR_RANGE_TYPE RangeType; ... D3D12_DESCRIPTOR_RANGE_TYPE_[SRV, UAV, CBV, SAMPLER]
-		UINT NumDescriptors;
-		UINT BaseShaderRegister; ... register(b0) なら 0、register(t3) なら 3
-		UINT RegisterSpace; ... 通常は 0 でよい register(t3, space5) なら 5
-		UINT OffsetInDescriptorsFromTableStart; ... 通常は D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND でよい
+	
 		*/
 	};
 	CreateDescriptorRanges(DescriptorRanges);
@@ -1240,52 +1236,90 @@ void DX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
 
 	LOG_OK();
 }
+#endif
 
-//!< シェーダからルートシグネチャパートを取り出しブロブを作る
-#ifdef USE_WINRT
-void DX::GetRootSignaturePartFromShader(winrt::com_ptr<ID3DBlob>& RSBlob)
-#elif defined(USE_WRL)
-void DX::GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
-#endif
+//!< ルートシグネチャをシリアライズしてブロブを作る
+void DX::SerializeRootSignature(
+#ifdef USE_WINRT 
+	winrt::com_ptr<ID3DBlob>& RSBlob,
+#elif defined(USE_WRL) 
+	Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob,
+#endif 
+	const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags)
 {
+	//!< RangeType ... D3D12_DESCRIPTOR_RANGE_TYPE_[SRV, UAV, CBV, SAMPLER]
+	//!< NumDescriptors
+	//!< BaseShaderRegister ... register(b0)なら 0、register(t3) なら 3
+	//!< RegisterSpace ... 通常は 0 でよい register(t3, space5) なら 5
+	//!< OffsetInDescriptorsFromTableStart ... 通常は D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND でよい
+	const std::vector<D3D12_ROOT_PARAMETER> RPs(il_RPs.begin(), il_RPs.end());
+	const std::vector<D3D12_STATIC_SAMPLER_DESC> SSDs(il_SSDs.begin(), il_SSDs.end());
+
+	const D3D12_ROOT_SIGNATURE_DESC RSD = {
+			static_cast<UINT>(RPs.size()), RPs.data(),
+			static_cast<UINT>(SSDs.size()), SSDs.data(),
+			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+	};
+
 #ifdef USE_WINRT
-	winrt::com_ptr<ID3DBlob> ShaderBlob;
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((GetBasePath() + TEXT(".rs.cso")).data(), ShaderBlob.put()));
+	winrt::com_ptr<ID3DBlob> ErrorBlob;
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RSD, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.put(), ErrorBlob.put()));
 #elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3DBlob> ShaderBlob;
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((GetBasePath() + TEXT(".rs.cso")).data(), ShaderBlob.GetAddressOf()));
-#endif
-#ifdef USE_WINRT
-	VERIFY_SUCCEEDED(D3DGetBlobPart(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, RSBlob.put()));
-#elif defined(USE_WRL)
-	VERIFY_SUCCEEDED(D3DGetBlobPart(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, RSBlob.GetAddressOf()));
+	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RSD, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.GetAddressOf(), ErrorBlob.GetAddressOf()));
 #endif
 
 	LOG_OK();
 }
 
+//!< シェーダからルートシグネチャパートを取り出しブロブを作る
+#ifdef USE_WINRT
+void DX::GetRootSignaturePartFromShader(winrt::com_ptr<ID3DBlob>& RSBlob)
+{
+	winrt::com_ptr<ID3DBlob> ShaderBlob;
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((GetBasePath() + TEXT(".rs.cso")).data(), ShaderBlob.put()));
+	VERIFY_SUCCEEDED(D3DGetBlobPart(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, RSBlob.put()));
+	LOG_OK();
+}
+#elif defined(USE_WRL)
+void DX::GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
+{
+	Microsoft::WRL::ComPtr<ID3DBlob> ShaderBlob;
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((GetBasePath() + TEXT(".rs.cso")).data(), ShaderBlob.GetAddressOf()));
+	VERIFY_SUCCEEDED(D3DGetBlobPart(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, RSBlob.GetAddressOf()));
+	LOG_OK();
+}
+#endif
+
 /**
 @brief シェーダとのバインディング (VK::CreateDescriptorSetLayout() 相当)
 */
+#ifdef USE_WINRT
+void DX::CreateRootSignature(winrt::com_ptr<ID3D12RootSignature>& RS, winrt::com_ptr<ID3DBlob> Blob)
+{
+	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(RS), RS.put_void()));
+}
+#elif defined(USE_WRL)
+void DX::CreateRootSignature(Microsoft::WRL::ComPtr<ID3D12RootSignature>& RS, Microsoft::WRL::ComPtr<ID3DBlob> Blob)
+{
+	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RS.GetAddressOf())));
+}
+#endif
 void DX::CreateRootSignature()
 {
 #ifdef USE_WINRT
-	winrt::com_ptr<ID3DBlob> RSBlob;
+	winrt::com_ptr<ID3DBlob> Blob;
 #elif defined(USE_WRL)
-Microsoft::WRL::ComPtr<ID3DBlob> RSBlob;
-#endif
-	
-#ifdef ROOTSIGNATRUE_FROM_SHADER
-	GetRootSignaturePartFromShader(RSBlob);
-#else
-	SerializeRootSignature(RSBlob);
+	Microsoft::WRL::ComPtr<ID3DBlob> Blob;
 #endif
 
-#ifdef USE_WINRT
-	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, RSBlob->GetBufferPointer(), RSBlob->GetBufferSize(), __uuidof(RootSignature), RootSignature.put_void()));
-#elif defined(USE_WRL)
-	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, RSBlob->GetBufferPointer(), RSBlob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
+#ifdef ROOTSIGNATRUE_FROM_SHADER
+	GetRootSignaturePartFromShader(Blob);
+#else
+	SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 #endif
+
+	CreateRootSignature(RootSignature, Blob);
 
 	LOG_OK();
 }
@@ -1556,6 +1590,7 @@ void DX::CreatePipelineState_Default(winrt::com_ptr<ID3D12PipelineState>& Pipeli
 
 	LOG_OK();
 }
+#if 0
 void DX::CreatePipelineState_Compute()
 {
 	PERFORMANCE_COUNTER();
@@ -1591,6 +1626,7 @@ void DX::CreatePipelineState_Compute()
 
 	LOG_OK();
 }
+#endif
 
 void DX::ClearColor(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const DirectX::XMVECTORF32& Color)
 {

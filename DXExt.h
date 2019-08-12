@@ -17,26 +17,26 @@ public:
 	/*
 	@brief １つのコンスタントバッファ One constant buffer view
 	*/
-	void CreateRootParameters_1CBV(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
-		RootParameters = {
-			{
-				D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-				{ 1, &DescriptorRanges[0] },
-				ShaderVisibility
-			},
-		};
-	}
-	void CreateDescriptorRanges_1CBV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {
-		DescriptorRanges = {
-			{ 
-				D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
-				1, //!< NumDescriptors 無制限の場合 UINT_MAX を指定、無制限にできるのは最後の要素のみ
-				0, //!< b0 BaseShaderRegister ... 例) ": register(t3);" の "3"
-				0, //!< space0 RegisterSpace 通常は0 .... 例) ": register(t3,space5);" の "5"
-				D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
-			},
-		};
-	}
+	//void CreateRootParameters_1CBV(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
+	//	RootParameters = {
+	//		{
+	//			D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+	//			{ 1, &DescriptorRanges[0] },
+	//			ShaderVisibility
+	//		},
+	//	};
+	//}
+	//void CreateDescriptorRanges_1CBV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {
+	//	DescriptorRanges = {
+	//		{ 
+	//			D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
+	//			1, //!< NumDescriptors 無制限の場合 UINT_MAX を指定、無制限にできるのは最後の要素のみ
+	//			0, //!< b0 BaseShaderRegister ... 例) ": register(t3);" の "3"
+	//			0, //!< space0 RegisterSpace 通常は0 .... 例) ": register(t3,space5);" の "5"
+	//			D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
+	//		},
+	//	};
+	//}
 
 	void CreateDescriptorHeap_1CBV() {
 		const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
@@ -72,26 +72,26 @@ public:
 	/*
 	@brief １つのシェーダリソースビュー (One shader resource view)
 	*/
-	void CreateRootParameters_1SRV(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
-		RootParameters = {
-			{
-				D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-				{ static_cast<uint32_t>(DescriptorRanges.size()), DescriptorRanges.data() },
-				ShaderVisibility
-			},
-		};
-	}
-	void CreateDescriptorRanges_1SRV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {
-		DescriptorRanges = {
-			{ 
-				D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
-				1, 
-				0, //!< t0
-				0, //!< space0
-				D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND 
-			},
-		};
-	}
+	//void CreateRootParameters_1SRV(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
+	//	RootParameters = {
+	//		{
+	//			D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+	//			{ static_cast<uint32_t>(DescriptorRanges.size()), DescriptorRanges.data() },
+	//			ShaderVisibility
+	//		},
+	//	};
+	//}
+	//void CreateDescriptorRanges_1SRV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {
+	//	DescriptorRanges = {
+	//		{ 
+	//			D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
+	//			1, 
+	//			0, //!< t0
+	//			0, //!< space0
+	//			D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND 
+	//		},
+	//	};
+	//}
 	void CreateDescriptorHeap_1SRV() {
 		const auto Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
 
@@ -137,38 +137,38 @@ public:
 	/*
 	@brief １つのコンスタントバッファと１つのシェーダリソースビュー (One constant buffer view and one shader resource view)
 	*/
-	void CreateRootParameters_1CBV_1SRV(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility_CBV = D3D12_SHADER_VISIBILITY_ALL, const D3D12_SHADER_VISIBILITY ShaderVisibility_SRV = D3D12_SHADER_VISIBILITY_ALL) const {
-		RootParameters = {
-			{
-				D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-				{ 1, &DescriptorRanges[0] },
-				ShaderVisibility_CBV
-			},
-			{
-				D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-				{ 1, &DescriptorRanges[1] },
-				ShaderVisibility_SRV
-			},
-		};
-	}
-	void CreateDescriptorRanges_1CBV_1SRV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {
-		DescriptorRanges = {
-			{ 
-				D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 
-				1,
-				0, //!< b0
-				0, //!< space0
-				D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
-			},
-			{ 
-				D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
-				1,
-				0, //!< t0
-				0, //!< space0
-				D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND 
-			},
-		};
-	}
+	//void CreateRootParameters_1CBV_1SRV(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility_CBV = D3D12_SHADER_VISIBILITY_ALL, const D3D12_SHADER_VISIBILITY ShaderVisibility_SRV = D3D12_SHADER_VISIBILITY_ALL) const {
+	//	RootParameters = {
+	//		{
+	//			D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+	//			{ 1, &DescriptorRanges[0] },
+	//			ShaderVisibility_CBV
+	//		},
+	//		{
+	//			D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+	//			{ 1, &DescriptorRanges[1] },
+	//			ShaderVisibility_SRV
+	//		},
+	//	};
+	//}
+	//void CreateDescriptorRanges_1CBV_1SRV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {
+	//	DescriptorRanges = {
+	//		{ 
+	//			D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 
+	//			1,
+	//			0, //!< b0
+	//			0, //!< space0
+	//			D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
+	//		},
+	//		{ 
+	//			D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
+	//			1,
+	//			0, //!< t0
+	//			0, //!< space0
+	//			D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND 
+	//		},
+	//	};
+	//}
 	template<typename T>
 	void CreateDescriptorHeap_1CBV_1SRV() {
 		CreateDescriptorHeap_1CBV();
@@ -181,26 +181,26 @@ public:
 	/*
 	@brief １つのアンオーダードアクセスビュー (One unordered access view)
 	*/
-	void CreateRootParameters_1UAV(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
-		RootParameters = {
-			{
-				D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-				{ 1, &DescriptorRanges[0] },
-				ShaderVisibility
-			},
-		};
-	}
-	void CreateDescriptorRanges_1UAV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {
-		DescriptorRanges = {
-			{
-				D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
-				1,
-				0, //!< u0
-				0, //!< space0
-				D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
-			},
-		};
-	}
+	//void CreateRootParameters_1UAV(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL) const {
+	//	RootParameters = {
+	//		{
+	//			D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+	//			{ 1, &DescriptorRanges[0] },
+	//			ShaderVisibility
+	//		},
+	//	};
+	//}
+	//void CreateDescriptorRanges_1UAV(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {
+	//	DescriptorRanges = {
+	//		{
+	//			D3D12_DESCRIPTOR_RANGE_TYPE_UAV,
+	//			1,
+	//			0, //!< u0
+	//			0, //!< space0
+	//			D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
+	//		},
+	//	};
+	//}
 	void CreateDescriptorHeap_1UAV() {
 #ifdef USE_WINRT
 		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
@@ -257,29 +257,18 @@ public:
 	//!< LinearWrap
 	void CreateStaticSamplerDesc_LW(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) const;
 
-//#ifdef USE_WINRT
-//	void CreateShader_VsPs(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const;
-//	void CreateShader_VsPsDsHsGs(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const;
-//	void CreateShader_Cs(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const; 
-//#elif defined(USE_WRL)
-//	void CreateShader_VsPs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
-//	void CreateShader_VsPsDsHsGs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
-//	void CreateShader_Cs(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
-//#endif
+	void CreateShaderBlob_VsPs();
+	void CreateShaderBlob_VsPsDsHsGs();
+	void CreateShaderBlob_Cs();
 
 	template<typename T> void CreatePipelineState_Vertex(winrt::com_ptr<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS);
 	void CreatePipelineState_Tesselation(winrt::com_ptr<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS);
 
-	//void CreateShaderModle(const std::initializer_list<winrt::com_ptr<ID3DBlob>> il_SBs) { std::copy(il_SBs.begin(), il_SBs.end(), std::back_inserter(ShaderBlobs)); }
-	void CreateShaderBlob_VsPs();
-	void CreateShaderBlob_VsPsDsHsGs();
-	void CreateShaderBlob_Cs();
-
 	void CreatePipelineState_VsPs();
 	void CreatePipelineState_VsPsDsHsGs_Tesselation();
-	
+	void CreatePipelineState_Cs() { assert(0 && "TODO"); }
 	//!< ↓ここでテンプレート特殊化している (Template specialization here)
 #include "DXPipeline.inl"
 

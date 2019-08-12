@@ -175,14 +175,14 @@ protected:
 	virtual void CreateViewportTopFront(const FLOAT Width, const FLOAT Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 	
 #ifdef USE_WINRT
-	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob);
+	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags);
 	virtual void GetRootSignaturePartFromShader(winrt::com_ptr<ID3DBlob>& RSBlob);
+	virtual void CreateRootSignature(winrt::com_ptr<ID3D12RootSignature>& RS, winrt::com_ptr<ID3DBlob> Blob);
 #elif defined(USE_WRL)
-	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob);
+	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags);
 	virtual void GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob);
-#endif	
-	virtual void CreateDescriptorRanges(std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {}
-	virtual void CreateRootParameters(std::vector<D3D12_ROOT_PARAMETER>& RootParameters, const std::vector<D3D12_DESCRIPTOR_RANGE>& DescriptorRanges) const {}
+	virtual void CreateRootSignature(Microsoft::WRL::ComPtr<ID3D12RootSignature>& RS, Microsoft::WRL::ComPtr<ID3DBlob> Blob);
+#endif
 	virtual void CreateRootSignature();
 
 	virtual void CreateDescriptorHeap() {}
@@ -193,13 +193,14 @@ protected:
 	virtual void CreateShader(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const;
 #elif defined(USE_WRL)
 	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
+	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
 #endif
 	virtual void CreateShaderBlob() {}
 
 	virtual void CreatePipelineState();
 	void CreatePipelineState_Default(winrt::com_ptr<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS);
-	virtual void CreatePipelineState_Compute();
+	//virtual void CreatePipelineState_Compute();
 
 	virtual void CreateTexture() {}
 	virtual void CreateStaticSamplerDesc(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) const {}

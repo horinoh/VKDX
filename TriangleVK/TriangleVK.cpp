@@ -240,7 +240,7 @@ void TriangleVK::CreateVertexBuffer()
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 	
-	const auto CB = CommandPools[0].second[0];
+	const auto CB = CommandBuffers[0];
 	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data, const VkCommandBuffer CB) {
 		VkBuffer StagingBuffer = VK_NULL_HANDLE;
 		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
@@ -300,7 +300,7 @@ void TriangleVK::CreateIndexBuffer()
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 	
-	const auto CB = CommandPools[0].second[0];
+	const auto CB = CommandBuffers[0];
 	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data, const VkCommandBuffer CB) {
 		VkBuffer StagingBuffer = VK_NULL_HANDLE;
 		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
@@ -354,8 +354,7 @@ void TriangleVK::CreateIndexBuffer()
 
 void TriangleVK::PopulateCommandBuffer(const size_t i)
 {
-	const auto CB = CommandPools[0].second[i];//CommandBuffers[i];
-	//const auto SCB = SecondaryCommandBuffers[i];
+	const auto CB = CommandBuffers[i];
 	const auto FB = Framebuffers[i];
 	const auto Image = SwapchainImages[i];
 	const auto RP = RenderPasses[0];

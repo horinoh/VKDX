@@ -17,11 +17,23 @@ protected:
 	virtual void CreateVertexBuffer() override;
 	virtual void CreateIndexBuffer() override;
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(IndexCount); }
+	virtual void CreateRootSignature() override {
 #ifdef USE_WINRT
-	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob) override;
+		winrt::com_ptr<ID3DBlob> Blob;
 #elif defined(USE_WRL)
-	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob) override;
+		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
 #endif
+
+#ifdef ROOTSIGNATRUE_FROM_SHADER
+		GetRootSignaturePartFromShader(Blob);
+#else
+		DX::SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+#endif
+
+		DX::CreateRootSignature(RootSignature, Blob);
+
+		LOG_OK();
+	}
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPs_Vertex<Vertex_PositionColor>(); }
 	virtual void PopulateCommandList(const size_t i) override;

@@ -230,48 +230,6 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-#ifdef USE_WINRT
-void ToonDX::SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob)
-#elif defined(USE_WRL)
-void ToonDX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
-#endif
-{
-	const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs = {
-		{
-			D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
-			1,
-			0,
-			0,
-			D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
-		},
-	};
-
-	const std::array<D3D12_ROOT_PARAMETER, 1> RPs = {
-		{
-			D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-			{
-				static_cast<UINT>(DRs.size()), DRs.data() 
-			},
-			D3D12_SHADER_VISIBILITY_GEOMETRY
-		},
-	};
-
-	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
-		static_cast<UINT>(RPs.size()), RPs.data(),
-		0, nullptr,
-		D3D12_ROOT_SIGNATURE_FLAG_NONE
-	};
-
-#ifdef USE_WINRT
-	winrt::com_ptr<ID3DBlob> ErrorBlob;
-	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.put(), ErrorBlob.put()));
-#elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
-	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.GetAddressOf(), ErrorBlob.GetAddressOf()));
-#endif
-
-	LOG_OK();
-}
 void ToonDX::PopulateCommandList(const size_t i)
 {
 #ifdef USE_WINRT

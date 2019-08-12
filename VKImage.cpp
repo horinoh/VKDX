@@ -371,7 +371,7 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 	std::cout << std::endl;
 #endif //!< DEBUG_STDOUT
 	
-	auto CB = CommandPools[0].second[0];
+	auto CB = CommandBuffers[0];//CommandPools[0].second[0];
 	[&](VkImage* Image, VkDeviceMemory* DeviceMemory, VkImageView* ImageView, const gli::texture& GLITexture, const VkCommandBuffer CB) {
 		const auto Size = static_cast<VkDeviceSize>(GLITexture.size());
 

@@ -102,8 +102,8 @@ public:
 	static std::wstring GetComponentSwizzleWstring(const VkComponentSwizzle ComponentSwizzle) { return ToWString(GetComponentSwizzleString(ComponentSwizzle)); }
 	//static char* GetComponentMappingChar(const VkComponentMapping& ComponentMapping);
 	static std::string GetComponentMappingString(const VkComponentMapping& ComponentMapping) {
-			return GetComponentSwizzleString(ComponentMapping.r)
-			+ ", " + GetComponentSwizzleString(ComponentMapping.g) 
+		return GetComponentSwizzleString(ComponentMapping.r)
+			+ ", " + GetComponentSwizzleString(ComponentMapping.g)
 			+ ", " + GetComponentSwizzleString(ComponentMapping.b)
 			+ ", " + GetComponentSwizzleString(ComponentMapping.a);
 	}
@@ -134,7 +134,7 @@ protected:
 
 	virtual void CopyToDeviceMemory(const VkDeviceMemory DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset = 0);
 	virtual void CopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, const VkBuffer Dst, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF, const size_t Size);
-	
+
 	void EnumerateMemoryRequirements(const VkMemoryRequirements& MR);
 
 	void CreateBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF);
@@ -142,7 +142,7 @@ protected:
 
 	void CreateImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Image, const VkMemoryPropertyFlags MPF);
 	void BindImageMemory(const VkImage Image, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset) { VERIFY_SUCCEEDED(vkBindImageMemory(Device, Image, DeviceMemory, Offset)); }
-	
+
 	template<typename T> void CreateDeviceMemory(VkDeviceMemory* DeviceMemory, const T Object, const VkMemoryPropertyFlags MPF) { static_assert(false, "Need to implement templete specialization"); }
 	template<typename T> void BindDeviceMemory(const T Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset = 0) { static_assert(false, "Need to implement templete specialization"); }
 	//!< ↓ ここでテンプレート特殊化している (Template specialization here)
@@ -163,7 +163,7 @@ protected:
 	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerBegin(CB, Color, Name.c_str()); }
 	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const std::wstring& Name) { MarkerBegin(CB, Color, ToString(Name)); }
 	static void MarkerEnd(VkCommandBuffer CB);
-	class ScopedMarker 
+	class ScopedMarker
 	{
 	public:
 		ScopedMarker(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) : CommandBuffer(CB) { MarkerBegin(CommandBuffer, Color, Name); }
@@ -198,7 +198,7 @@ protected:
 #ifdef VK_NO_PROTOYYPES
 	void LoadVulkanLibrary();
 #endif //!< VK_NO_PROTOYYPES
-	
+
 	virtual void CreateInstance();
 #ifdef _DEBUG
 	virtual void CreateDebugReportCallback();
@@ -227,11 +227,10 @@ protected:
 	virtual void CreateFence(VkDevice Device);
 	virtual void CreateSemaphore(VkDevice Device);
 
-	using COMMAND_POOL = std::pair<VkCommandPool, std::vector<VkCommandBuffer>>;
-	using COMMAND_POOLS = std::vector<COMMAND_POOL>;
-	virtual void CreateCommandPool(VkDevice Device, const uint32_t QueueFamilyIndex);
-	virtual void AllocateCommandBuffer(const VkCommandBufferLevel Level, const size_t Count, COMMAND_POOL& Command);
-	virtual void CreateCommandBuffer();
+	virtual void CreateCommandPool();
+	virtual void AllocateCommandBuffer();
+	virtual void CreateCommandPool(VkCommandPool& CP, VkDevice Device, const VkCommandPoolCreateFlags Flags, const uint32_t QueueFamilyIndex);
+	virtual void AllocateCommandBuffer(std::vector<VkCommandBuffer>& CB, const VkCommandPool CP, const VkCommandBufferLevel Level, const uint32_t Count);
 
 	virtual VkSurfaceFormatKHR SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 	virtual VkExtent2D SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& Cap, const uint32_t Width, const uint32_t Height);
@@ -268,20 +267,22 @@ protected:
 	virtual void CreateStorageTexelBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const VkFormat Format, VkBufferView* View);
 	virtual void CreateStorageTexelBuffer() {}
 
+	virtual void CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const std::initializer_list<VkDescriptorSetLayoutBinding> il_DSLBs);
 	virtual void CreateDescriptorSetLayout() {}
 
-	virtual void CreatePipelineLayout_Default(VkPipelineLayout& PL);
+	virtual void CreatePipelineLayout(VkPipelineLayout& PL, const std::initializer_list<VkDescriptorSetLayout> il_DSLs, const std::initializer_list<VkPushConstantRange> il_PCRs);
 	virtual void CreatePipelineLayout() {
 		PipelineLayouts.resize(1);
-		CreatePipelineLayout_Default(PipelineLayouts[0]);
+		CreatePipelineLayout(PipelineLayouts[0], {}, {});
 	}
 
-	virtual void CreateDescriptorPoolSizes(std::vector<VkDescriptorPoolSize>& DescriptorPoolSizes) const {}
+	virtual void CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreateFlags Flags, const std::initializer_list<VkDescriptorPoolSize> il_DPSs);
 	virtual void CreateDescriptorPool() {}
-	virtual void CreateDescriptorSet() {}
 
-	virtual void CreateWriteDescriptorSets(std::vector<VkWriteDescriptorSet>& WriteDescriptorSets, const std::vector<VkDescriptorBufferInfo>& DescriptorBufferInfos, const std::vector<VkDescriptorImageInfo>& DescriptorImageInfos, const std::vector<VkBufferView>& BufferViews) const {}
-	virtual void CreateCopyDescriptorSets(std::vector<VkCopyDescriptorSet>& CopyDescriptorSets) const {}
+	virtual void AllocateDescriptorSet(std::vector<VkDescriptorSet>& DSs, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSLs);
+	virtual void AllocateDescriptorSet() {}
+
+	virtual void UpdateDescriptorSet(const std::initializer_list <VkWriteDescriptorSet> il_WDSs, const std::initializer_list <VkCopyDescriptorSet> il_CDSs);
 	virtual void UpdateDescriptorSet() {}
 
 	virtual void CreateTexture() {}
@@ -289,10 +290,13 @@ protected:
 
 	virtual void CreateRenderPass() { RenderPasses.resize(1); CreateRenderPass_Default(RenderPasses[0], ColorFormat); }
 	virtual void CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color);
+
+	virtual void CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::initializer_list<VkImageView> il_IVs);
 	virtual void CreateFramebuffer() {}
 	virtual void DestroyFramebuffer();
 
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
+	virtual void CreateShaderModle(const std::initializer_list<VkShaderModule> il_SMs) { std::copy(il_SMs.begin(), il_SMs.end(), std::back_inserter(ShaderModules)); }
 	virtual void CreateShaderModule() {}
 
 	static bool ValidatePipelineCache(const VkPhysicalDevice PD, const size_t Size, const void* Data);
@@ -300,7 +304,7 @@ protected:
 	void CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PL, 
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
-	virtual void CreatePipeline_Compute();
+	//virtual void CreatePipeline_Compute();
 
 	virtual void ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, const VkClearColorValue& Color);
 	virtual void ClearDepthStencil(const VkCommandBuffer CommandBuffer, const VkImage Image, const VkClearDepthStencilValue& DepthStencil);
@@ -410,7 +414,8 @@ protected:
 	VkSemaphore NextImageAcquiredSemaphore = VK_NULL_HANDLE;	//!< プレゼント完了までウエイト
 	VkSemaphore RenderFinishedSemaphore = VK_NULL_HANDLE;		//!< 描画完了するまでウエイト
 
-	COMMAND_POOLS CommandPools;
+	std::vector<VkCommandPool> CommandPools;
+	std::vector<VkCommandBuffer> CommandBuffers;
 
 	VkExtent2D SurfaceExtent2D;
 	VkFormat ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;

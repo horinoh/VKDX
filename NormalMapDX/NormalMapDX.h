@@ -16,11 +16,43 @@ public:
 protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1); }
 
+	virtual void CreateRootSignature() override {
 #ifdef USE_WINRT
-	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob) override;
+		winrt::com_ptr<ID3DBlob> Blob;
 #elif defined(USE_WRL)
-	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob) override;
+		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
 #endif
+
+#ifdef ROOTSIGNATRUE_FROM_SHADER
+		GetRootSignaturePartFromShader(Blob);
+#else
+		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Cbv = {
+			{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
+		};
+		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Srv = {
+			{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
+		};
+		DX::SerializeRootSignature(Blob, {
+				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DRs_Cbv.size()), DRs_Cbv.data() }, D3D12_SHADER_VISIBILITY_GEOMETRY },
+				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DRs_Srv.size()), DRs_Srv.data() }, D3D12_SHADER_VISIBILITY_PIXEL },
+			}, {
+				{
+					D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+					D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+					0.0f,
+					0,
+					D3D12_COMPARISON_FUNC_NEVER,
+					D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+					0.0f, 1.0f,
+					0, 0, D3D12_SHADER_VISIBILITY_PIXEL
+				}
+			}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+#endif
+
+		DX::CreateRootSignature(RootSignature, Blob);
+
+		LOG_OK();
+	}
 
 	virtual void CreateDescriptorHeap() override {
 		CreateDescriptorHeap_1CBV_1SRV<Transform>();
@@ -50,7 +82,7 @@ protected:
 		LoadImage(ImageResource.GetAddressOf(), TEXT("NormalMap.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 #endif
 	}
-
+	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs_Tesselation(); }
 	virtual void PopulateCommandList(const size_t i) override;
 

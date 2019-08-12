@@ -18,7 +18,6 @@ protected:
 	//!< #VK_TODO コマンドバッファを作成
 	//!< #VK_TODO 出力テクスチャ用のimage2Dを用意しないとならない
 
-	virtual void CreatePipeline() override { Super::CreatePipeline_Compute(); }
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
 
 	virtual void CreateDescriptorSetLayout() override {
@@ -37,17 +36,18 @@ protected:
 
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
-		VKExt::CreateDescriptorPool(DescriptorPools[0], {
+		VKExt::CreateDescriptorPool(DescriptorPools[0], /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
 				{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 } 
 			});
 	}
-	virtual void CreateDescriptorSet() override {
+	virtual void AllocateDescriptorSet() override {
 		assert(!DescriptorPools.empty() && "");
 		assert(!DescriptorSetLayouts.empty() && "");
-		DescriptorSets.resize(1);
-		VKExt::CreateDescriptorSet(DescriptorSets[0], DescriptorPools[0], {
-				DescriptorSetLayouts[0] 
+		std::vector<VkDescriptorSet> DSs;
+		VKExt::AllocateDescriptorSet(DSs, DescriptorPools[0], {
+				DescriptorSetLayouts[0]
 			});
+		std::copy(DSs.begin(), DSs.end(), std::back_inserter(DescriptorSets));
 	}
 	virtual void UpdateDescriptorSet() override {
 		assert(!DescriptorSets.empty() && "");
@@ -66,10 +66,6 @@ protected:
 			},
 			{});
 	}
-
-	//virtual void CreateShader(std::vector<VkShaderModule>& SM, std::vector<VkPipelineShaderStageCreateInfo>& CreateInfo) const override {
-	//	CreateShader_Cs(SM, CreateInfo);
-	//}
 
 	virtual void CreateTexture() override {
 		const auto Format = VK_FORMAT_R8G8B8A8_UINT;
@@ -98,9 +94,8 @@ protected:
 	}
 	
 	virtual void CreateShaderModule() override { CreateShaderModle_Cs(); }
-
+	virtual void CreatePipeline() override { CreatePipeline_Cs(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
-
 	virtual void Draw() override { Dispatch(); }
 
 private:

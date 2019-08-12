@@ -15,6 +15,7 @@ public:
 
 protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1); } //!< 最低でもインデックス数1が必要 At least index count must be 1
+	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs_Tesselation(); }
 	virtual void PopulateCommandList(const size_t i) override;
 };

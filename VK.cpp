@@ -66,12 +66,13 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateSwapchainImageView();
 
 	//!< コマンド
-	CreateCommandBuffer();
-	InitializeSwapchainImage(CommandPools[0].second[0], &Colors::Red);
+	CreateCommandPool();
+	AllocateCommandBuffer();
+	InitializeSwapchainImage(CommandBuffers[0], &Colors::Red);
 
 	//!< デプス
 	CreateDepthStencil();
-	InitializeDepthStencilImage(CommandPools[0].second[0]);
+	InitializeDepthStencilImage(CommandBuffers[0]);
 
 	//!< 頂点
 	CreateVertexBuffer();
@@ -96,7 +97,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< デスクリプタプール (デスクリプタヒープ相当)
 	CreateDescriptorPool();
 	//!< デスクリプタセット (デスクリプタビュー相当)
-	CreateDescriptorSet();
+	AllocateDescriptorSet();
 	UpdateDescriptorSet();
 
 	SetTimer(hWnd, NULL, 1000 / 60, nullptr);
@@ -133,14 +134,14 @@ void VK::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 	//DestroyFramebuffer();
 	//CreateFramebuffer();
 
-	//for (auto i = 0; i < CommandBuffers.size(); ++i) {
-	//	PopulateCommandBuffer(i);
-	//}
-	for (auto i : CommandPools) {
-		for (auto j = 0; j < i.second.size(); ++j) {
-			PopulateCommandBuffer(j);
-		}
+	for (auto i = 0; i < CommandBuffers.size(); ++i) {
+		PopulateCommandBuffer(i);
 	}
+	//for (auto i : CommandPools) {
+	//	for (auto j = 0; j < i.second.size(); ++j) {
+	//		PopulateCommandBuffer(j);
+	//	}
+	//}
 }
 
 void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
@@ -267,16 +268,13 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		Swapchain = VK_NULL_HANDLE;
 	}
 
+	//!< コマンドプール破棄時にコマンドバッファは暗黙的に解放されるので必要無い
+	//if(!CommandBuffers.empty()) {
+	//	vkFreeCommandBuffers(Device, CommandPool[0], static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
+	//	CommandBuffers.clear();
+	//}
 	for (auto i : CommandPools) {
-		//VERIFY_SUCCEEDED(vkResetCommandPool(Device, i.first, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT));
-
-		//!< コマンドプール破棄時にコマンドバッファは暗黙的に解放されるので必要は無いが、ここでは一応コールしている
-		if (!i.second.empty()) {
-			vkFreeCommandBuffers(Device, i.first, static_cast<uint32_t>(i.second.size()), i.second.data());
-			i.second.clear();
-		}
-
-		vkDestroyCommandPool(Device, i.first, GetAllocationCallbacks());
+		vkDestroyCommandPool(Device, i, GetAllocationCallbacks());
 	}
 	CommandPools.clear();
 
@@ -1435,64 +1433,62 @@ void VK::CreateSemaphore(VkDevice Device)
 	LOG_OK();
 }
 
-//!< キューファミリが異なる場合は別のコマンドプールを用意する必要がある、そのキューにのみサブミットできる
-//!< 複数スレッドで同時にレコーディングするには、別のコマンドプールからアロケートされたコマンドバッファである必要がある (コマンドプールは複数スレッドからアクセス不可)
-void VK::CreateCommandPool(VkDevice Device, const uint32_t QueueFamilyIndex)
+//!< VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT	: コマンドバッファ毎にリセットが可能、指定しない場合はプール毎にまとめてリセット (コマンドバッファのレコーディング開始時に暗黙的にリセットされるので注意)
+//!< VK_COMMAND_POOL_CREATE_TRANSIENT_BIT				: 短命で、何度もサブミットしない、すぐにリセットやリリースされる場合に指定
+void VK::CreateCommandPool(VkCommandPool& CP, VkDevice Device, const VkCommandPoolCreateFlags Flags, const uint32_t QueueFamilyIndex)
 {
-	CommandPools.push_back(COMMAND_POOL());
-	//!< VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT	... コマンドバッファ毎にリセットが可能、指定しない場合はこのプールからアロケートされた全コマンドバッファをまとめてリセットすることになる
-	//!<														コマンドバッファのレコーディング開始時には暗黙的にリセットが行なわれるので注意
-	//!< VK_COMMAND_POOL_CREATE_TRANSIENT_BIT				... 短命で、何度もサブミットしない、すぐにリセットやリリースされる場合に指定
-	const VkCommandPoolCreateInfo CommandPoolInfo = {
+	const VkCommandPoolCreateInfo CPCI = {
 		VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
 		nullptr,
-		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		Flags,
 		QueueFamilyIndex
 	};
-	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CommandPoolInfo, GetAllocationCallbacks(), &CommandPools.back().first));
+	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &CP));
 
 	LOG_OK();
 }
-
-void VK::AllocateCommandBuffer(const VkCommandBufferLevel Level, const size_t Count, COMMAND_POOL& Command)
+//!< VK_COMMAND_BUFFER_LEVEL_PRIMARY	: 直接キューにサブミットできる、セカンダリをコールできる (Can be submit, can execute secondary)
+//!< VK_COMMAND_BUFFER_LEVEL_SECONDARY	: サブミットできない、プライマリから実行されるのみ (Cannot submit, only executed from primary)
+void VK::AllocateCommandBuffer(std::vector<VkCommandBuffer>& CB, const VkCommandPool CP, const VkCommandBufferLevel Level, const uint32_t Count)
 {
-	if (Count) {
-		const auto PrevCount = Command.second.size();
-		Command.second.resize(PrevCount + Count);
-		//!< VkCommandBufferLevel 
-		//!< VK_COMMAND_BUFFER_LEVEL_PRIMARY	: 直接キューにサブミットできる、セカンダリをコールできる (Can be submit, can execute secondary)
-		//!< VK_COMMAND_BUFFER_LEVEL_SECONDARY	: サブミットできない、プライマリから実行されるのみ (Cannot submit, only executed from primary)
-		const VkCommandBufferAllocateInfo AllocateInfo = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			nullptr,
-			Command.first,
-			Level,
-			static_cast<uint32_t>(Count)
-		};
-		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &AllocateInfo, &Command.second[PrevCount]));
-	}
+	assert(Count && "");
+	CB.resize(Count);
+	const VkCommandBufferAllocateInfo CBAI = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		nullptr,
+		CP,
+		Level,
+		Count
+	};
+	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, CB.data()));
 
 	LOG_OK();
 }
-
-void VK::CreateCommandBuffer()
+//!< キューファミリが異なる場合は別のコマンドプールを用意する必要がある、そのキューにのみサブミットできる
+//!< 複数スレッドで同時にレコーディングするには、別のコマンドプールからアロケートされたコマンドバッファである必要がある (コマンドプールは複数スレッドからアクセス不可)
+void VK::CreateCommandPool()
 {
-	CreateCommandPool(Device, GraphicsQueueFamilyIndex);
-	{
-		AllocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, SwapchainImages.size(), CommandPools.back());
-
-		//!< 例えばセカンダリを追加する場合
-		//AllocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_SECONDARY, 1, Commands.back());
-		//...
+	if (GraphicsQueueFamilyIndex == ComputeQueueFamilyIndex) {
+		CommandPools.resize(1);
+		CreateCommandPool(CommandPools[0], Device, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, GraphicsQueueFamilyIndex);
 	}
-
-	//!< キューファミリが異なる場合は、別のコマンドプールを用意する必要がある
-	if (GraphicsQueueFamilyIndex != ComputeQueueFamilyIndex) {
-		CreateCommandPool(Device, ComputeQueueFamilyIndex);
-		{
-			AllocateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1, CommandPools.back());
-		}
+	else {
+		//!< キューファミリが異なる場合は、別のコマンドプールを用意する必要がある
+		CommandPools.resize(2);
+		CreateCommandPool(CommandPools[0], Device, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, GraphicsQueueFamilyIndex);
+		CreateCommandPool(CommandPools[1], Device, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, ComputeQueueFamilyIndex);
 	}
+}
+void VK::AllocateCommandBuffer()
+{
+	assert(!CommandPools.empty() && "");
+
+	std::vector<VkCommandBuffer> CBs;
+	AllocateCommandBuffer(CBs, CommandPools[0], VK_COMMAND_BUFFER_LEVEL_PRIMARY, static_cast<uint32_t>(SwapchainImages.size()));
+	std::copy(CBs.begin(), CBs.end(), std::back_inserter(CommandBuffers));
+
+	//AllocateCommandBuffer(CBs, CommandPool[0], VK_COMMAND_BUFFER_LEVEL_SECONDARY, 1);
+	//std::copy(CBs.begin(), CBs.end(), std::back_inserter(CommandBuffers));
 }
 
 VkSurfaceFormatKHR VK::SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface)
@@ -2101,18 +2097,31 @@ void VK::CreateDescriptorSetLayout_Default(VkDescriptorSetLayout& DSL)
 }
 #endif
 
-void VK::CreatePipelineLayout_Default(VkPipelineLayout& PL)
+void VK::CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const std::initializer_list<VkDescriptorSetLayoutBinding> il_DSLBs)
 {
-	const std::array<VkDescriptorSetLayout, 0> DSLs = {};
+	const std::vector<VkDescriptorSetLayoutBinding> DSLBs(il_DSLBs.begin(), il_DSLBs.end());
 
-	//!< デスクリプタセットよりも高速
-	//!< パイプラインレイアウト全体で128 Byte(ハードが許せばこれ以上使える場合もある ex)GTX970M ... 256byte)
-	//!< 各シェーダステージは1つのプッシュコンスタントにしかアクセスできない
-	//!< 各々のシェーダステージが共通のレンジを持たないような「ワーストケース」では 128 / 5(シェーダステージ)で 1シェーダステージで 25 - 6 Byte程度になる
-	const std::array<VkPushConstantRange, 0> PCRs = {
-		//{ VK_SHADER_STAGE_VERTEX_BIT, 0, 64 },
-		//{ VK_SHADER_STAGE_FRAGMENT_BIT, 64, 64 },
+	const VkDescriptorSetLayoutCreateInfo DSLCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
 	};
+	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
+
+	LOG_OK();
+}
+
+void VK::CreatePipelineLayout(VkPipelineLayout& PL, const std::initializer_list<VkDescriptorSetLayout> il_DSLs, const std::initializer_list<VkPushConstantRange> il_PCRs)
+{
+	const std::vector<VkDescriptorSetLayout> DSLs(il_DSLs.begin(), il_DSLs.end());
+
+	//!< プッシュコンスタントレンジ : デスクリプタセットよりも高速
+	//!< パイプラインレイアウト全体で128byte (ハードによりこれ以上使える場合もある GTX970M : 256byte)
+	//!< 各シェーダステージは1つのプッシュコンスタントレンジにしかアクセスできない
+	//!< 各シェーダステージが「共通のレンジを持たない」ような「ワーストケース」では 128/5==25.6、1シェーダステージで25byte程度となる
+	//const std::array<VkPushConstantRange, 0> PCRs = { { VK_SHADER_STAGE_VERTEX_BIT, 0, 64 }, { VK_SHADER_STAGE_FRAGMENT_BIT, 64, 64 }, };
+	const std::vector<VkPushConstantRange> PCRs(il_PCRs.begin(), il_PCRs.end());
 
 	const VkPipelineLayoutCreateInfo PLCI = {
 		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -2122,6 +2131,60 @@ void VK::CreatePipelineLayout_Default(VkPipelineLayout& PL)
 		static_cast<uint32_t>(PCRs.size()), PCRs.data()
 	};
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PL));
+
+	LOG_OK();
+}
+
+//!< デスクリプタセットを個々に解放したい場合には VkDescriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT を指定する、その場合断片化は自分で管理 (指定しない場合はプール毎にまとめて解放)
+//!< 1つのブールに対して、複数スレッドで同時にデスクリプタセットを確保することはできない (スレッド毎に別プールにすること)
+void VK::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreateFlags Flags, const std::initializer_list<VkDescriptorPoolSize> il_DPSs)
+{
+	const std::vector<VkDescriptorPoolSize> DPSs(il_DPSs.begin(), il_DPSs.end());
+
+	uint32_t MaxSets = 0;
+	for (const auto& i : DPSs) {
+		MaxSets = std::max(MaxSets, i.descriptorCount);
+	}
+
+	const VkDescriptorPoolCreateInfo DPCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		nullptr,
+		Flags,
+		MaxSets,
+		static_cast<uint32_t>(DPSs.size()), DPSs.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DP));
+
+	LOG_OK();
+}
+
+//!< シェーダリソースを1つのコンテナオブジェクトにまとめる (型や数はセットレイアウトで定義され、ストレージはプールから確保される)
+void VK::AllocateDescriptorSet(std::vector<VkDescriptorSet>& DSs, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSLs)
+{
+	const std::vector<VkDescriptorSetLayout> DSLs(il_DSLs.begin(), il_DSLs.end());
+	DSs.resize(DSLs.size());
+	const VkDescriptorSetAllocateInfo DSAI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		nullptr,
+		DP,
+		static_cast<uint32_t>(DSLs.size()), DSLs.data()
+	};
+	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, DSs.data()));
+
+	LOG_OK();
+}
+
+void VK::UpdateDescriptorSet(const std::initializer_list <VkWriteDescriptorSet> il_WDSs, const std::initializer_list <VkCopyDescriptorSet> il_CDSs)
+{
+	//!< dstArrayElement ... バインディング内での配列の開始添字 (VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT指定の場合は開始バイトオフセット)
+	//!< descriptorCount ... 更新するデスクリプタセット個数 (VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT指定の場合は更新するバイト)
+	//!< 指定 descriptorType に従って、pImageInfo, pBufferInfo, pTexelBufferView の適切な箇所へ指定すること
+	const std::vector<VkWriteDescriptorSet> WDSs(il_WDSs.begin(), il_WDSs.end());
+	const std::vector<VkCopyDescriptorSet> CDSs(il_CDSs.begin(), il_CDSs.end());
+
+	vkUpdateDescriptorSets(Device,
+		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
+		static_cast<uint32_t>(CDSs.size()), CDSs.data());
 
 	LOG_OK();
 }
@@ -2221,6 +2284,22 @@ void VK::CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color)
 		static_cast<uint32_t>(SubpassDepends.size()), SubpassDepends.data()
 	};
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
+}
+
+void VK::CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::initializer_list<VkImageView> il_IVs)
+{
+	const std::vector<VkImageView> IVs(il_IVs.begin(), il_IVs.end());
+
+	const VkFramebufferCreateInfo FCI = {
+		VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+		nullptr,
+		0,
+		RP, //!< ここで指定するレンダーパスは互換性のあるものなら可
+		static_cast<uint32_t>(IVs.size()), IVs.data(),
+		Width, Height,
+		Layers
+	};
+	VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FCI, GetAllocationCallbacks(), &FB));
 }
 
 void VK::DestroyFramebuffer()
@@ -2386,6 +2465,29 @@ void VK::CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PL,
 	VkPhysicalDeviceFeatures PDF;
 	vkGetPhysicalDeviceFeatures(GetCurrentPhysicalDevice(), &PDF);
 
+	//!< パイプライン作成時にシェーダ内の定数値を上書き指定できる
+#if 0
+	//!< シェーダには以下のような記述(扱えるのはスカラ値のみ)
+	//layout(constant_id = 0) const int IntValue = 0;
+	//layout(constant_id = 1) const float FloatValue = 0.0f;
+	//layout(constant_id = 2) const bool BoolValue = false;
+	struct SpecializationData {
+		int IntValue;
+		float FloatValue;
+		bool BoolValue;
+	};
+	const SpecializationData SD = { 1, 1.0f, true };
+	const std::vector<VkSpecializationMapEntry> SMEs = {
+		{ 0, offsetof(SpecializationData, IntValue), sizeof(SD.IntValue) },
+		{ 1, offsetof(SpecializationData, FloatValue), sizeof(SD.FloatValue) },
+		{ 2, offsetof(SpecializationData, BoolValue), sizeof(SD.BoolValue) },
+	};
+	const VkSpecializationInfo SI = {
+		static_cast<uint32_t>(SMEs.size()), SMEs.data(),
+		sizeof(SD), &SD
+	};
+#endif
+
 	//!< シェーダ (Shader)
 	std::vector<VkPipelineShaderStageCreateInfo> PSSCI;
 	//!< シェーダ内のコンスタント変数をパイプライン作成時に変更したい場合に使用する
@@ -2398,7 +2500,7 @@ void VK::CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PL,
 			0,
 			VK_SHADER_STAGE_VERTEX_BIT, VS,
 			"main",
-			nullptr//&SI
+			nullptr //!< &SI
 		});
 	}
 	if (VK_NULL_HANDLE != FS) {
@@ -2408,7 +2510,7 @@ void VK::CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PL,
 			0,
 			VK_SHADER_STAGE_FRAGMENT_BIT, FS,
 			"main",
-			nullptr
+			nullptr //!< &SI
 		});
 	}
 	if (VK_NULL_HANDLE != TES) {
@@ -2418,7 +2520,7 @@ void VK::CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PL,
 			0,
 			VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, TES,
 			"main",
-			nullptr
+			nullptr //!< &SI
 		});
 	}
 	if (VK_NULL_HANDLE != TCS) {
@@ -2428,7 +2530,7 @@ void VK::CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PL,
 			0,
 			VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, TCS,
 			"main",
-			nullptr
+			nullptr //!< &SI
 		});
 	}
 	if (VK_NULL_HANDLE != GS) {
@@ -2438,7 +2540,7 @@ void VK::CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PL,
 			0,
 			VK_SHADER_STAGE_GEOMETRY_BIT, GS,
 			"main",
-			nullptr
+			nullptr //!< &SI
 		});
 	}
 	assert(!PSSCI.empty() && "");
@@ -2631,9 +2733,9 @@ void VK::CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PL,
 	LOG_OK();
 }
 
+#if 0
 void VK::CreatePipeline_Compute()
 {
-#if 0
 	PERFORMANCE_COUNTER();
 
 	std::vector<VkShaderModule> ShaderModules;
@@ -2670,8 +2772,8 @@ void VK::CreatePipeline_Compute()
 	ShaderModules.clear();
 
 	LOG_OK();
-#endif
 }
+#endif
 
 /**
 @brief クリア Clear
@@ -2812,7 +2914,7 @@ void VK::ClearDepthStencilAttachment(const VkCommandBuffer CB, const VkClearDept
 
 void VK::PopulateCommandBuffer(const size_t i)
 {
-	const auto CB = CommandPools[0].second[i];
+	const auto CB = CommandBuffers[i];//CommandPools[0].second[i];
 	const auto FB = Framebuffers[i];
 	const auto Image = SwapchainImages[i];
 
@@ -2929,7 +3031,10 @@ void VK::Draw()
 	const std::vector<VkPipelineStageFlags> PipelineStagesToWait = { VK_PIPELINE_STAGE_TRANSFER_BIT };
 	assert(SemaphoresToWait.size() == PipelineStagesToWait.size() && "Must be same size()");
 	//!< 実行するコマンドバッファ
-	const std::vector<VkCommandBuffer> CBs = { CommandPools[0].second[SwapchainImageIndex] };
+	const std::vector<VkCommandBuffer> CBs = { 
+		//CommandPools[0].second[SwapchainImageIndex]
+		CommandBuffers[SwapchainImageIndex],
+	};
 	//!< 完了時にシグナルされるセマフォ(RenderFinishedSemaphore)
 	const std::vector<VkSemaphore> SemaphoresToSignal = { RenderFinishedSemaphore };
 	const std::vector<VkSubmitInfo> SIs = {
@@ -2952,7 +3057,7 @@ void VK::Dispatch()
 	VERIFY_SUCCEEDED(vkWaitForFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data(), VK_TRUE, (std::numeric_limits<uint64_t>::max)()));
 	vkResetFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data());
 
-	const auto& CB = CommandPools[0].second[0];
+	const auto& CB = CommandBuffers[0];//CommandPools[0].second[0];
 	const std::vector<VkSubmitInfo> SIs = {
 		{
 			VK_STRUCTURE_TYPE_SUBMIT_INFO,
