@@ -26,15 +26,12 @@ protected:
 #elif defined(USE_WRL)
 		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
 #endif
-
 #ifdef ROOTSIGNATRUE_FROM_SHADER
 		GetRootSignaturePartFromShader(Blob);
 #else
 		DX::SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 #endif
-
 		DX::CreateRootSignature(RootSignature, Blob);
-
 		LOG_OK();
 	}
 

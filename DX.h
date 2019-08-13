@@ -103,12 +103,12 @@ protected:
 	virtual void PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState);
 	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState);
 	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES ResourceState);
-	
+
 #if defined(_DEBUG) || defined(USE_PIX)
 	//!< #DX_TODO PIX ä÷òA
 	//PIXReportCounter(PCWSTR, float);
 	//PIXNotifyWakeFromFenceSignal(HANDLE);
-	static void SetName(ID3D12DeviceChild* Resource, LPCWSTR Name) { Resource->SetName(Name); }
+	static void SetName(ID3D12DeviceChild * Resource, LPCWSTR Name) { Resource->SetName(Name); }
 	static void SetName(ID3D12DeviceChild* Resource, const std::wstring& Name) { SetName(Resource, Name.c_str()); }
 	static void SetName(ID3D12DeviceChild* Resource, const std::string& Name) { SetName(Resource, ToWString(Name)); }
 #endif
@@ -122,7 +122,7 @@ protected:
 	virtual void CheckMultiSample(const DXGI_FORMAT Format);
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index = 0) const;
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index = 0) const;
-	
+
 	virtual void CreateCommandQueue();
 
 	virtual void CreateFence();
@@ -137,14 +137,14 @@ protected:
 	virtual void CreateSwapChainResource();
 	virtual void InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, const DirectX::XMVECTORF32* Color = nullptr);
 	virtual void InitializeSwapChain();
-	virtual void ResetSwapChainResource() { 
+	virtual void ResetSwapChainResource() {
 		for (auto& i : SwapChainResources) {
 #ifdef USE_WINRT
 			i = nullptr;
 #elif defined(USE_WRL)
 			i.Reset();
 #endif
-		} 
+		}
 	}
 	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
 	virtual void ResizeSwapChain(const RECT& Rect) { ResizeSwapChain(static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
@@ -161,7 +161,7 @@ protected:
 
 	virtual void LoadImage(ID3D12Resource** Resource/*, ID3D12DescriptorHeap** DescriptorHeap*/, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { assert(false && "Not implemanted"); }
 	virtual void LoadImage(ID3D12Resource** Resource/*, ID3D12DescriptorHeap** DescriptorHeap*/, const std::string& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { LoadImage(Resource/*, DescriptorHeap*/, ToWString(Path), ResourceState); }
-	
+
 	virtual void CreateVertexBuffer() {}
 	virtual void CreateIndexBuffer() {}
 	virtual void CreateIndirectBuffer(ID3D12Resource** Resource, const UINT32 Size, const void* Source, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL);
@@ -173,7 +173,7 @@ protected:
 	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f);
 	virtual void CreateViewport(const RECT& Rect, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f) { CreateViewport(static_cast<FLOAT>(Rect.right - Rect.left), static_cast<FLOAT>(Rect.bottom - Rect.top), MinDepth, MaxDepth); }
 	virtual void CreateViewportTopFront(const FLOAT Width, const FLOAT Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
-	
+
 #ifdef USE_WINRT
 	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags);
 	virtual void GetRootSignaturePartFromShader(winrt::com_ptr<ID3DBlob>& RSBlob);
@@ -185,8 +185,60 @@ protected:
 #endif
 	virtual void CreateRootSignature();
 
+#ifdef USE_WINRT
+	virtual void CreateDescriptorHeap(winrt::com_ptr<ID3D12DescriptorHeap>& DH, const D3D12_DESCRIPTOR_HEAP_DESC DHD) {
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, __uuidof(DH), DH.put_void()));
+	}
+#elif defined(USE_WRL)
+	virtual void CreateDescriptorHeap(Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH, const D3D12_DESCRIPTOR_HEAP_DESC DHD) {
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, IID_PPV_ARGS(DH.GetAddressOf())));
+	}
+#endif
 	virtual void CreateDescriptorHeap() {}
+
+#ifdef USE_WINRT
+	virtual void CreateConstantBufferView(winrt::com_ptr<ID3D12Resource>& Res, winrt::com_ptr<ID3D12DescriptorHeap>& DH, const size_t Size) {
+		const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = {
+			Res->GetGPUVirtualAddress(),
+			static_cast<UINT>(RoundUp(Size, 0xff)) //!< 256 byte align
+		};
+		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(DH.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+	}
+	virtual void CreateShaderResourceView(winrt::com_ptr<ID3D12Resource>& Res, winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
+		Device->CreateShaderResourceView(Res.get(), nullptr, GetCPUDescriptorHandle(DH.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+	}
+	virtual void CreateUnorderedAccessView(winrt::com_ptr<ID3D12Resource>& Res, winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
+		D3D12_UNORDERED_ACCESS_VIEW_DESC UAVD = {
+			DXGI_FORMAT_R8G8B8A8_UNORM,
+			D3D12_UAV_DIMENSION_TEXTURE2D,
+		};
+		UAVD.Texture2D.MipSlice = 0;
+		UAVD.Texture2D.PlaneSlice = 0;
+		Device->CreateUnorderedAccessView(Res.get(), nullptr, &UAVD, GetCPUDescriptorHandle(DH.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+	}
+#elif defined(USE_WRL)
+	virtual void CreateConstantBufferView(Microsoft::WRL::ComPtr<ID3D12Resource> Res, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH, const size_t Size) {
+		const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = {
+			Res->GetGPUVirtualAddress(),
+			static_cast<UINT>(RoundUp(Size, 0xff))
+		};
+		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(DH.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+	}
+	virtual void CreateShaderResourceView(Microsoft::WRL::ComPtr<ID3D12Resource> Res, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH) {
+		Device->CreateShaderResourceView(Resource.Get(), nullptr, GetCPUDescriptorHandle(DH.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+	}
+	virtual void CreateUnorderedAccessView(winrt::com_ptr<ID3D12Resource>& Res, winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
+		D3D12_UNORDERED_ACCESS_VIEW_DESC UAVD = {
+			DXGI_FORMAT_R8G8B8A8_UNORM,
+			D3D12_UAV_DIMENSION_TEXTURE2D,
+		};
+		UAVD.Texture2D.MipSlice = 0;
+		UAVD.Texture2D.PlaneSlice = 0;
+		Device->CreateUnorderedAccessView(Res.Get(), nullptr, &UAVD, GetCPUDescriptorHandle(DH.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+	}
+#endif
 	virtual void CreateDescriptorView() {}
+
 	virtual void UpdateDescriptorHeap() { /*CopyToUploadResource()ìôÇçsÇ§*/ }
 
 #ifdef USE_WINRT

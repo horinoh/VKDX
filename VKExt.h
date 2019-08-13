@@ -79,13 +79,11 @@ public:
 	//!< ↓ここでテンプレート特殊化している (Template specialization here)
 #include "VKPipeline.inl"
 
-	//!< LinearRepeat
 	void CreateSampler_LR(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const;
 
 	void CreateRenderPass_ColorDepth(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth);
 	void CreateRenderPass_ColorDepth_PostProcess(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth);
 
-	//virtual void CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::initializer_list<VkImageView> il_IVs);
 	void CreateFramebuffer_Color();
 	void CreateFramebuffer_ColorDepth();
 	virtual void CreateFramebuffer() override { CreateFramebuffer_Color(); }

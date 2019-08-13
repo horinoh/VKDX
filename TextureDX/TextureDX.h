@@ -22,7 +22,6 @@ protected:
 #elif defined(USE_WRL)
 		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
 #endif
-
 #ifdef ROOTSIGNATRUE_FROM_SHADER
 		GetRootSignaturePartFromShader(Blob);
 #else
@@ -44,9 +43,7 @@ protected:
 				}
 			}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 #endif
-
 		DX::CreateRootSignature(RootSignature, Blob);
-
 		LOG_OK();
 	}
 
@@ -57,7 +54,22 @@ protected:
 //#endif
 
 	virtual void CreateDescriptorHeap() override {
-		CreateDescriptorHeap_1SRV();
+		DX::CreateDescriptorHeap(ImageDescriptorHeap,
+			{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
+		);
+
+#ifdef USE_WINRT
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, winrt::com_ptr<ID3D12Resource> Resource, winrt::com_ptr<ID3D12DescriptorHeap> DH) {
+			const auto CDH = GetCPUDescriptorHandle(DH.get(), Type);
+			Device->CreateShaderResourceView(Resource.get(), nullptr, CDH);
+		}
+#elif defined(USE_WRL)
+		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, Microsoft::WRL::ComPtr<ID3D12Resource> Resource, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DH) {
+			const auto CDH = GetCPUDescriptorHandle(DH.Get(), Type);
+			Device->CreateShaderResourceView(Resource.Get(), nullptr, CDH);
+		}
+#endif
+		(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, ImageResource, ImageDescriptorHeap);
 	}
 
 	virtual void CreateTexture() override {

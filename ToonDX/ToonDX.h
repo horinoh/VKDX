@@ -22,7 +22,6 @@ protected:
 #elif defined(USE_WRL)
 		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
 #endif
-
 #ifdef ROOTSIGNATRUE_FROM_SHADER
 		GetRootSignaturePartFromShader(Blob);
 #else
@@ -33,17 +32,20 @@ protected:
 				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DRs.size()), DRs.data() }, D3D12_SHADER_VISIBILITY_GEOMETRY }
 			}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 #endif
-
 		DX::CreateRootSignature(RootSignature, Blob);
-
 		LOG_OK();
 	}
 
 	virtual void CreateDescriptorHeap() override {
-		CreateDescriptorHeap_1CBV();
-		CreateDescriptorView_1CBV<Transform>();
+		DX::CreateDescriptorHeap(ConstantBufferDescriptorHeap, 
+			 { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
+			);
+		LOG_OK();
 	}
-
+	virtual void CreateDescriptorView() override {
+		DX::CreateConstantBufferView(ConstantBufferResource, ConstantBufferDescriptorHeap, sizeof(Transform));
+		LOG_OK();
+	}
 	virtual void CreateConstantBuffer() override {
 		const auto Fov = 0.16f * DirectX::XM_PI;
 		const auto Aspect = GetAspectRatioOfClientRect();

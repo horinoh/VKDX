@@ -27,7 +27,6 @@ protected:
 #elif defined(USE_WRL)
 		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
 #endif
-
 #ifdef ROOTSIGNATRUE_FROM_SHADER
 		GetRootSignaturePartFromShader(Blob);
 #else
@@ -38,9 +37,7 @@ protected:
 				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DRs.size()), DRs.data() }, D3D12_SHADER_VISIBILITY_GEOMETRY }
 			}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 #endif
-
 		DX::CreateRootSignature(RootSignature, Blob);
-
 		LOG_OK();
 	}
 	virtual void CreateConstantBuffer() override {

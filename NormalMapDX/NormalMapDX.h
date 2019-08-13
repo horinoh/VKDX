@@ -22,7 +22,6 @@ protected:
 #elif defined(USE_WRL)
 		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
 #endif
-
 #ifdef ROOTSIGNATRUE_FROM_SHADER
 		GetRootSignaturePartFromShader(Blob);
 #else
@@ -48,15 +47,24 @@ protected:
 				}
 			}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 #endif
-
 		DX::CreateRootSignature(RootSignature, Blob);
-
 		LOG_OK();
 	}
 
 
 	virtual void CreateDescriptorHeap() override {
-		CreateDescriptorHeap_1CBV_1SRV<Transform>();
+		DX::CreateDescriptorHeap(ConstantBufferDescriptorHeap,
+			{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
+		);
+		DX::CreateDescriptorHeap(ImageDescriptorHeap,
+			{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
+		);
+		LOG_OK();
+	}
+	virtual void CreateDescriptorView() override {
+		DX::CreateConstantBufferView(ConstantBufferResource, ConstantBufferDescriptorHeap, sizeof(Transform));
+		DX::CreateShaderResourceView(ImageResource, ImageDescriptorHeap);
+		LOG_OK();
 	}
 	virtual void UpdateDescriptorHeap() override {
 	}
