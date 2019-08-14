@@ -236,6 +236,7 @@ void ParametricSurfaceVK::PopulateCommandBuffer(const size_t i)
 	const auto FB = Framebuffers[i];
 	const auto Image = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
+	const auto IB = IndirectBuffers[0];
 
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -260,7 +261,7 @@ void ParametricSurfaceVK::PopulateCommandBuffer(const size_t i)
 		vkCmdBeginRenderPass(CB, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
 
-			vkCmdDrawIndirect(CB, IndirectBuffer, 0, 1, 0);
+			vkCmdDrawIndirect(CB, IB, 0, 1, 0);
 
 		} vkCmdEndRenderPass(CB);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));

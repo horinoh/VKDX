@@ -975,28 +975,26 @@ void DX::ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, con
 	LOG_OK();
 }
 
-void DX::CreateIndirectBuffer(ID3D12Resource** Resource, const UINT32 Size, const void* Source, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL)
+void DX::CreateBuffer(ID3D12Resource** Res, const UINT32 Size, const void* Source, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL)
 {
-	//!< アップロード用のリソースを作成、データをコピー Create upload resource, and copy data
 #ifdef USE_WINRT
 	winrt::com_ptr<ID3D12Resource> UploadRes;
 	CreateUploadResource(UploadRes.put(), Size);
-	CopyToUploadResource(UploadRes.get(), Size, Source); 
+	CopyToUploadResource(UploadRes.get(), Size, Source);
 #elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3D12Resource> UploadRes;
 	CreateUploadResource(UploadRes.GetAddressOf(), Size);
-	CopyToUploadResource(UploadRes.Get(), Size, Source); 
+	CopyToUploadResource(UploadRes.Get(), Size, Source);
 #endif
-	
 
 	//!< デフォルトのリソースを作成 Create default resource
-	CreateDefaultResource(Resource, Size);
+	CreateDefaultResource(Res, Size);
 
 	//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
 #ifdef USE_WINRT
-	ExecuteCopyBuffer(CA, CL, UploadRes.get(), *Resource, Size);
+	ExecuteCopyBuffer(CA, CL, UploadRes.get(), *Res, Size);
 #elif defined(USE_WRL)
-	ExecuteCopyBuffer(CA, CL, UploadRes.Get(), *Resource, Size);
+	ExecuteCopyBuffer(CA, CL, UploadRes.Get(), *Res, Size);
 #endif
 }
 

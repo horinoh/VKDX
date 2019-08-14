@@ -235,9 +235,11 @@ void FullscreenDX::PopulateCommandList(const size_t i)
 #ifdef USE_WINRT
 	const auto CL = GraphicsCommandLists[i].get();
 	const auto CA = CommandAllocators[0].get();
+	const auto IBR = IndirectBufferResources[0].get();
 #elif defined(USE_WRL)
 	const auto CL = GraphicsCommandLists[i].Get();
 	const auto CA = CommandAllocators[0].Get();
+	const auto IBR = IndirectBufferResources[0].Get();
 #endif
 
 #ifdef USE_WINRT
@@ -278,9 +280,9 @@ void FullscreenDX::PopulateCommandList(const size_t i)
 			//!< •`‰æ
 #ifdef USE_DRAW_INDIRECT
 #ifdef USE_WINRT
-			CL->ExecuteIndirect(IndirectCommandSignature.get(), 1, IndirectBufferResource.get(), 0, nullptr, 0);
+			CL->ExecuteIndirect(IndirectCommandSignature.get(), 1, IBR, 0, nullptr, 0);
 #elif defined(USE_WRL)
-			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
+			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IBR, 0, nullptr, 0);
 #endif
 #else
 			CL->DrawInstanced(4, 1, 0, 0);

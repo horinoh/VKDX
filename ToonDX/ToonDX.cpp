@@ -235,9 +235,11 @@ void ToonDX::PopulateCommandList(const size_t i)
 #ifdef USE_WINRT
 	const auto CL = GraphicsCommandLists[i].get();
 	const auto CA = CommandAllocators[0].get();
+	const auto IBR = IndirectBufferResources[0].get();
 #elif defined(USE_WRL)
 	const auto CL = GraphicsCommandLists[i].Get();
 	const auto CA = CommandAllocators[0].Get();
+	const auto IBR = IndirectBufferResources[0].Get();
 #endif
 
 #ifdef USE_WINRT
@@ -290,9 +292,9 @@ void ToonDX::PopulateCommandList(const size_t i)
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
 #ifdef USE_WINRT
-			CL->ExecuteIndirect(IndirectCommandSignature.get(), 1, IndirectBufferResource.get(), 0, nullptr, 0);
+			CL->ExecuteIndirect(IndirectCommandSignature.get(), 1, IBR, 0, nullptr, 0);
 #elif defined(USE_WRL)
-			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
+			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IBR, 0, nullptr, 0);
 #endif
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);

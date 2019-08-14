@@ -10,17 +10,32 @@ public:
 	//using Vertex_Position = struct Vertex_Position { glm::vec3 Position; };
 	using Vertex_PositionColor = struct Vertex_PositionColor { glm::vec3 Position; glm::vec4 Color; };
 
+	virtual void CreateBuffer_Vertex(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB) {
+		CreateBuffer(Buffer, DeviceMemory, Size, Source, CB, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
+	}
+	virtual void CreateBuffer_Index(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB) {
+		CreateBuffer(Buffer, DeviceMemory, Size, Source, CB, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
+	}
+	virtual void CreateBuffer_Indirect(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB) {
+		CreateBuffer(Buffer, DeviceMemory, Size, Source, CB, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
+	}
 	void CreateIndirectBuffer_Draw(const uint32_t Count) {
+		IndirectBuffers.resize(1);
+		IndirectDeviceMemories.resize(1);
 		const VkDrawIndirectCommand DIC = { Count, 1, 0, 0 };
-		CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, static_cast<VkDeviceSize>(sizeof(DIC)), &DIC, CommandBuffers[0]);
+		CreateBuffer_Indirect(&IndirectBuffers[0], &IndirectDeviceMemories[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC, CommandBuffers[0]);
 	}
 	void CreateIndirectBuffer_DrawIndexed(const uint32_t Count) {
+		IndirectBuffers.resize(1);
+		IndirectDeviceMemories.resize(1);
 		const VkDrawIndexedIndirectCommand DIIC = { Count, 1, 0, 0, 0 };
-		CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC, CommandBuffers[0]);
+		CreateBuffer_Indirect(&IndirectBuffers[0], &IndirectDeviceMemories[0], static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC, CommandBuffers[0]);
 	}
 	void CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z) {
+		IndirectBuffers.resize(1);
+		IndirectDeviceMemories.resize(1);
 		const VkDispatchIndirectCommand DIC = { X, Y, Z };
-		CreateIndirectBuffer(&IndirectBuffer, &IndirectDeviceMemory, static_cast<VkDeviceSize>(sizeof(DIC)), &DIC, CommandBuffers[0]);
+		CreateBuffer_Indirect(&IndirectBuffers[0], &IndirectDeviceMemories[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC, CommandBuffers[0]);
 	}
 
 	/** 

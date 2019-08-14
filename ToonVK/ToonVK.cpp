@@ -238,7 +238,8 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 	const auto Image = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
 	const auto PL = PipelineLayouts[0];
-	
+	const auto IB = IndirectBuffers[0];
+
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
@@ -275,7 +276,7 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
 
-			vkCmdDrawIndirect(CB, IndirectBuffer, 0, 1, 0);
+			vkCmdDrawIndirect(CB, IB, 0, 1, 0);
 
 		} vkCmdEndRenderPass(CB);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));

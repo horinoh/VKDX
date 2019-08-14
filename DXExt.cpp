@@ -4,17 +4,16 @@
 
 void DXExt::CreateIndirectBuffer_Draw(const UINT Count)
 {
+	IndirectBufferResources.resize(1);
+
 	const D3D12_DRAW_ARGUMENTS Source = { Count, 1, 0, 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
+
 #ifdef USE_WINRT
-	const auto CA = CommandAllocators[0].get();
-	const auto CL = GraphicsCommandLists[0].get(); 
-	CreateIndirectBuffer(IndirectBufferResource.put(), Size, &Source, CA, CL);
+	CreateBuffer(IndirectBufferResources[0].put(), Size, &Source, CommandAllocators[0].get(), GraphicsCommandLists[0].get());
 #elif defined(USE_WRL)
-	const auto CA = CommandAllocators[0].Get();
-	const auto CL = GraphicsCommandLists[0].Get();
-	CreateIndirectBuffer(IndirectBufferResource.GetAddressOf(), Size, &Source, CA, CL);
+	CreateBuffer(IndirectBufferResources[0].GetAddressOf(), Size, &Source, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 #endif
 
 	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndArgDescs = {
@@ -34,18 +33,16 @@ void DXExt::CreateIndirectBuffer_Draw(const UINT Count)
 
 void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT Count)
 {
+	IndirectBufferResources.resize(1);
+
 	const D3D12_DRAW_INDEXED_ARGUMENTS Source = { Count, 1, 0, 0, 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 
 #ifdef USE_WINRT
-	const auto CA = CommandAllocators[0].get();
-	const auto CL = GraphicsCommandLists[0].get();
-	CreateIndirectBuffer(IndirectBufferResource.put(), Size, &Source, CA, CL);
+	CreateBuffer(IndirectBufferResources[0].put(), Size, &Source, CommandAllocators[0].get(), GraphicsCommandLists[0].get());
 #elif defined(USE_WRL)
-	const auto CA = CommandAllocators[0].Get();
-	const auto CL = GraphicsCommandLists[0].Get();
-	CreateIndirectBuffer(IndirectBufferResource.GetAddressOf(), Size, &Source, CA, CL);
+	CreateBuffer(IndirectBufferResources[0].GetAddressOf(), Size, &Source, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 #endif
 
 	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndArgDescs = {
@@ -65,17 +62,16 @@ void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT Count)
 
 void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT Z)
 {
+	IndirectBufferResources.resize(1);
+
 	const D3D12_DISPATCH_ARGUMENTS Source = { X, Y, Z };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
+
 #ifdef USE_WINRT
-	const auto CA = CommandAllocators[0].get();
-	const auto CL = GraphicsCommandLists[0].get();
-	CreateIndirectBuffer(IndirectBufferResource.put(), Size, &Source, CA, CL);
+	CreateBuffer(IndirectBufferResources[0].put(), Size, &Source, CommandAllocators[0].get(), GraphicsCommandLists[0].get());
 #elif defined(USE_WRL)
-	const auto CA = CommandAllocators[0].Get();
-	const auto CL = GraphicsCommandLists[0].Get();
-	CreateIndirectBuffer(IndirectBufferResource.GetAddressOf(), Size, &Source, CA, CL);
+	CreateIBuffer(IndirectBufferResources[0].GetAddressOf(), Size, &Source, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 #endif
 
 	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndArgDescs = {

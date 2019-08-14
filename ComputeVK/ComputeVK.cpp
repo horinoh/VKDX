@@ -234,7 +234,8 @@ void ComputeVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandBuffers[0];//CommandPools[0].second[i];//CommandBuffers[i];
 	const auto PL = PipelineLayouts[0];
-	
+	const auto IB = IndirectBuffers[0];
+
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
@@ -252,7 +253,7 @@ void ComputeVK::PopulateCommandBuffer(const size_t i)
 		
 		vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_COMPUTE, Pipeline);
 
-		vkCmdDispatchIndirect(CB, IndirectBuffer, 0);
+		vkCmdDispatchIndirect(CB, IB, 0);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
 #pragma endregion

@@ -34,5 +34,7 @@ protected:
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPs_Vertex<Vertex_PositionColor>(); }
 	virtual void PopulateCommandList(const size_t i) override;
+
+	UINT IndexCount = 0;
 };
 #pragma endregion

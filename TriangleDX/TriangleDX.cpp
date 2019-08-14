@@ -232,6 +232,8 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void TriangleDX::CreateVertexBuffer()
 {
+	VertexBufferResources.resize(1);
+
 	const std::vector<Vertex_PositionColor> Vertices = {
 		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
 		{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } }, //!< LB
@@ -240,42 +242,20 @@ void TriangleDX::CreateVertexBuffer()
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
 
-	[&](ID3D12Resource** Resource, const UINT32 Size, const void* Data, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL) {
-		//!< アップロード用のリソースを作成、データをコピー Create upload resource, and copy data
 #ifdef USE_WINRT
-		winrt::com_ptr<ID3D12Resource> UploadResource;
-		CreateUploadResource(UploadResource.put(), Size);
-		CopyToUploadResource(UploadResource.get(), Size, Data); 
+	CreateBuffer(VertexBufferResources[0].put(), Size, Vertices.data(), CommandAllocators[0].get(), GraphicsCommandLists[0].get());
 #elif defined(USE_WRL)
-		Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-		CreateUploadResource(UploadResource.GetAddressOf(), Size);
-		CopyToUploadResource(UploadResource.Get(), Size, Data); 
-#endif
-
-		//!< デフォルトのリソースを作成 Create default resource
-		CreateDefaultResource(Resource, Size);
-
-		//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
-#ifdef USE_WINRT
-		ExecuteCopyBuffer(CA, CL, UploadResource.get(), *Resource, Size);
-#elif defined(USE_WRL)
-		ExecuteCopyBuffer(CA, CL, UploadResource.Get(), *Resource, Size);
-#endif
-	}
-#ifdef USE_WINRT
-	(VertexBufferResource.put(), Size, Vertices.data(), CommandAllocators[0].get(), GraphicsCommandLists[0].get());
-#elif defined(USE_WRL)
-	(VertexBufferResource.GetAddressOf(), Size, Vertices.data(), CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
+	CreateBuffer(VertexBufferResources[0].GetAddressOf(), Size, Vertices.data(), CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 #endif
 
 	//!< DXではビューが必要 Need view
-	VertexBufferViews.push_back({ VertexBufferResource->GetGPUVirtualAddress(), Size, Stride });
+	VertexBufferViews.push_back({ VertexBufferResources[0]->GetGPUVirtualAddress(), Size, Stride });
 
 #ifdef _DEBUG
 #ifdef USE_WINRT
-	SetName(VertexBufferResource.get(), TEXT("MyVertexBuffer"));
+	SetName(VertexBufferResources[0].get(), TEXT("MyVertexBuffer"));
 #elif defined(USE_WRL)
-	SetName(VertexBufferResource.Get(), TEXT("MyVertexBuffer"));
+	SetName(VertexBufferResources[0].Get(), TEXT("MyVertexBuffer"));
 #endif
 #endif
 
@@ -285,48 +265,28 @@ void TriangleDX::CreateVertexBuffer()
 }
 void TriangleDX::CreateIndexBuffer()
 {
+	IndexBufferResources.resize(1);
+
 	const std::vector<UINT32> Indices = { 0, 1, 2 };
 	//!< DrawInstanced() が引数に取るので覚えておく必要がある Save this value because DrawInstanced() will use it
 	IndexCount = static_cast<UINT32>(Indices.size());
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<UINT32>(Stride * IndexCount);
 
-	[&](ID3D12Resource** Resource, const UINT32 Size, const void* Data, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL) {
-		//!< アップロード用のリソースを作成、データをコピー Create upload resource, and copy data
 #ifdef USE_WINRT
-		winrt::com_ptr<ID3D12Resource> UploadResource;
-		CreateUploadResource(UploadResource.put(), Size);
-		CopyToUploadResource(UploadResource.get(), Size, Data); 
+	CreateBuffer(IndexBufferResources[0].put(), Size, Indices.data(), CommandAllocators[0].get(), GraphicsCommandLists[0].get());
 #elif defined(USE_WRL)
-		Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-		CreateUploadResource(UploadResource.GetAddressOf(), Size);
-		CopyToUploadResource(UploadResource.Get(), Size, Data); 
-#endif
-
-		//!< デフォルトのリソースを作成 Create default resource
-		CreateDefaultResource(Resource, Size);
-
-		//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 Execute copy command upload resource to default resource
-#ifdef USE_WINRT
-		ExecuteCopyBuffer(CA, CL, UploadResource.get(), *Resource, Size);
-#elif defined(USE_WRL)
-		ExecuteCopyBuffer(CA, CL, UploadResource.Get(), *Resource, Size);
-#endif
-	}
-#ifdef USE_WINRT
-	(IndexBufferResource.put(), Size, Indices.data(), CommandAllocators[0].get(), GraphicsCommandLists[0].get());
-#elif defined(USE_WRL)
-	(IndexBufferResource.GetAddressOf(), Size, Indices.data(), CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
+	CreateBuffer(IndexBufferResources[0].GetAddressOf(), Size, Indices.data(), CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 #endif
 
 	//!< DXではビューが必要 Need view
-	IndexBufferView = { IndexBufferResource->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT };
+	IndexBufferView = { IndexBufferResources[0]->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT };
 
 #ifdef _DEBUG
 #ifdef USE_WINRT
-	SetName(IndexBufferResource.get(), TEXT("MyIndexBuffer"));
+	SetName(IndexBufferResources[0].get(), TEXT("MyIndexBuffer"));
 #elif defined(USE_WRL)
-	SetName(IndexBufferResource.Get(), TEXT("MyIndexBuffer"));
+	SetName(IndexBufferResources[0].Get(), TEXT("MyIndexBuffer"));
 #endif
 #endif
 
@@ -339,9 +299,11 @@ void TriangleDX::PopulateCommandList(const size_t i)
 #ifdef USE_WINRT
 	const auto CL = GraphicsCommandLists[i].get();
 	const auto CA = CommandAllocators[0].get();
+	const auto IBR = IndirectBufferResources[0].get();
 #elif defined(USE_WRL)
 	const auto CL = GraphicsCommandLists[i].Get();
 	const auto CA = CommandAllocators[0].Get();
+	const auto IBR = IndirectBufferResources[0].Get();
 #endif
 
 #ifdef USE_WINRT
@@ -397,9 +359,9 @@ void TriangleDX::PopulateCommandList(const size_t i)
 
 			//!< 描画
 #ifdef USE_WINRT
-			CL->ExecuteIndirect(IndirectCommandSignature.get(), 1, IndirectBufferResource.get(), 0, nullptr, 0);
+			CL->ExecuteIndirect(IndirectCommandSignature.get(), 1, IBR, 0, nullptr, 0);
 #elif defined(USE_WRL)
-			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IndirectBufferResource.Get(), 0, nullptr, 0);
+			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IBR, 0, nullptr, 0);
 #endif
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);

@@ -176,9 +176,9 @@ protected:
 	virtual void LoadImage(ID3D12Resource** Resource/*, ID3D12DescriptorHeap** DescriptorHeap*/, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { assert(false && "Not implemanted"); }
 	virtual void LoadImage(ID3D12Resource** Resource/*, ID3D12DescriptorHeap** DescriptorHeap*/, const std::string& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { LoadImage(Resource/*, DescriptorHeap*/, ToWString(Path), ResourceState); }
 
+	virtual void CreateBuffer(ID3D12Resource** Res, const UINT32 Size, const void* Source, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL);
 	virtual void CreateVertexBuffer() {}
 	virtual void CreateIndexBuffer() {}
-	virtual void CreateIndirectBuffer(ID3D12Resource** Resource, const UINT32 Size, const void* Source, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL);
 	virtual void CreateIndirectBuffer() {}
 	virtual void CreateConstantBuffer();
 
@@ -367,27 +367,36 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState; 
 #endif
 	
+//#ifdef USE_WINRT
+//	winrt::com_ptr<ID3D12Resource> VertexBufferResource;
+//#elif defined(USE_WRL)
+//	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferResource;
+//#endif
 #ifdef USE_WINRT
-	winrt::com_ptr<ID3D12Resource> VertexBufferResource;
+	std::vector<winrt::com_ptr<ID3D12Resource>> VertexBufferResources;
 #elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferResource;
+	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> VertexBufferResources;
 #endif
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> VertexBufferViews;
 
+//#ifdef USE_WINRT
+//	winrt::com_ptr<ID3D12Resource> IndexBufferResource;
+//#elif defined(USE_WRL)
+//	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferResource;
+//#endif
 #ifdef USE_WINRT
-	winrt::com_ptr<ID3D12Resource> IndexBufferResource;
+	std::vector <winrt::com_ptr<ID3D12Resource>> IndexBufferResources;
 #elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferResource;
+	std::vector <Microsoft::WRL::ComPtr<ID3D12Resource>> IndexBufferResources;
 #endif
 	D3D12_INDEX_BUFFER_VIEW IndexBufferView;
-	UINT IndexCount = 0;
 
 #ifdef USE_WINRT
-	winrt::com_ptr<ID3D12Resource> IndirectBufferResource;
-	winrt::com_ptr<ID3D12CommandSignature> IndirectCommandSignature; 
+	std::vector<winrt::com_ptr<ID3D12Resource>> IndirectBufferResources;
+	winrt::com_ptr<ID3D12CommandSignature> IndirectCommandSignature;
 #elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3D12Resource> IndirectBufferResource;
-	Microsoft::WRL::ComPtr<ID3D12CommandSignature> IndirectCommandSignature; 
+	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> IndirectBufferResources;
+	Microsoft::WRL::ComPtr<ID3D12CommandSignature> IndirectCommandSignature;
 #endif
 
 	//!< Œ»ó1‚Â‚Ì‚ÝA”z—ñ‚É‚·‚é #DX_TODO

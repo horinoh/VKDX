@@ -232,6 +232,9 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void TriangleVK::CreateVertexBuffer()
 {
+	VertexBuffers.resize(1);
+	VertexDeviceMemories.resize(1);
+
 	const std::vector<Vertex_PositionColor> Vertices = {
 		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
 		{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } }, //!< LB
@@ -240,51 +243,12 @@ void TriangleVK::CreateVertexBuffer()
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 	
-	const auto CB = CommandBuffers[0];
-	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data, const VkCommandBuffer CB) {
-		VkBuffer StagingBuffer = VK_NULL_HANDLE;
-		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
-		{
-			//!< ホストビジブルのバッファとメモリを作成、データをコピー (Create host visible buffer and memory, and copy data)
-			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-			CreateDeviceMemory(&StagingDeviceMemory, StagingBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-			CopyToDeviceMemory(StagingDeviceMemory, Size, Data);
-			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
-
-			//!< デバイスローカルのバッファとメモリを作成 (Create device local buffer and memory)
-			CreateBuffer(Buffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-			CreateDeviceMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			BindDeviceMemory(*Buffer, *DeviceMemory);
-
-			//!< View は必要ない (No need view)
-
-			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit copy command host visible to device local)
-			CopyBufferToBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
-			const std::vector<VkSubmitInfo> SIs = {
-				{
-					VK_STRUCTURE_TYPE_SUBMIT_INFO,
-					nullptr,
-					0, nullptr,
-					nullptr,
-					1, &CB,
-					0, nullptr
-				}
-			};
-			VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), VK_NULL_HANDLE));
-			VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
-		}
-		if (VK_NULL_HANDLE != StagingDeviceMemory) {
-			vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
-		}
-		if (VK_NULL_HANDLE != StagingBuffer) {
-			vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
-		}
-	}(&VertexBuffer, &VertexDeviceMemory, Size, Vertices.data(), CB);
+	CreateBuffer_Vertex(&VertexBuffers[0], &VertexDeviceMemories[0], Size, Vertices.data(), CommandBuffers[0]);
 
 	//!< ビューは必要ない No need view
 
 #ifdef _DEBUG
-	MarkerSetObjectName(Device, VertexBuffer, "MyVertexBuffer");
+	MarkerSetObjectName(Device, VertexBuffers[0], "MyVertexBuffer");
 #endif
 
 #ifdef DEBUG_STDOUT
@@ -293,58 +257,22 @@ void TriangleVK::CreateVertexBuffer()
 }
 void TriangleVK::CreateIndexBuffer()
 {
+	IndexBuffers.resize(1);
+	IndexDeviceMemories.resize(1);
+
 	const std::vector<uint32_t> Indices = { 0, 1, 2 };
 
 	//!< vkCmdDrawIndexed() が引数に取るので覚えておく必要がある Save this value because vkCmdDrawIndexed() will use it
 	IndexCount = static_cast<uint32_t>(Indices.size());
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
-	
-	const auto CB = CommandBuffers[0];
-	[&](VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Data, const VkCommandBuffer CB) {
-		VkBuffer StagingBuffer = VK_NULL_HANDLE;
-		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
-		{
-			//!< ホストビジブルのバッファとメモリを作成、データをコピー Create host visible buffer and memory, and copy data
-			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-			CreateDeviceMemory(&StagingDeviceMemory, StagingBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-			CopyToDeviceMemory(StagingDeviceMemory, Size, Data);
-			BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
-			//!< デバイスローカルのバッファとメモリを作成 (Create device local buffer and memory)
-			CreateBuffer(Buffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-			CreateDeviceMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			BindDeviceMemory(*Buffer, *DeviceMemory);
-
-			//!< View は必要ない (No need view)
-
-			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit copy command host visible to device local)
-			CopyBufferToBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
-			const std::vector<VkSubmitInfo> SIs = {
-				{
-					VK_STRUCTURE_TYPE_SUBMIT_INFO,
-					nullptr,
-					0, nullptr,
-					nullptr,
-					1, &CB,
-					0, nullptr
-				}
-			};
-			VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), VK_NULL_HANDLE));
-			VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
-		}
-		if (VK_NULL_HANDLE != StagingDeviceMemory) {
-			vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
-		}
-		if (VK_NULL_HANDLE != StagingBuffer) {
-			vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
-		}
-	}(&IndexBuffer, &IndexDeviceMemory, Size, Indices.data(), CB);
+	CreateBuffer_Index(&IndexBuffers[0], &IndexDeviceMemories[0], Size, Indices.data(), CommandBuffers[0]);
 
 	//!< ビューは必要ない No need view
 
 #ifdef _DEBUG
-	MarkerSetObjectName(Device, IndexBuffer, "MyIndexBuffer");
+	MarkerSetObjectName(Device, IndexBuffers[0], "MyIndexBuffer");
 #endif
 
 #ifdef DEBUG_STDOUT
@@ -358,6 +286,9 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 	const auto FB = Framebuffers[i];
 	const auto Image = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
+	const auto& VertexB = VertexBuffers[0];
+	const auto IndexB = IndexBuffers[0];
+	const auto IndirectB = IndirectBuffers[0];
 
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -398,14 +329,12 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
 
-			if (VK_NULL_HANDLE != VertexBuffer && VK_NULL_HANDLE != IndexBuffer) {
-				const VkDeviceSize Offsets[] = { 0 };
-				vkCmdBindVertexBuffers(CB, 0, 1, &VertexBuffer, Offsets);
-				vkCmdBindIndexBuffer(CB, IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
-			}
+			const VkDeviceSize Offsets[] = { 0 };
+			vkCmdBindVertexBuffers(CB, 0, 1, &VertexB, Offsets);
+			vkCmdBindIndexBuffer(CB, IndexB, 0, VK_INDEX_TYPE_UINT32);
 
 			//!< 描画
-			vkCmdDrawIndexedIndirect(CB, IndirectBuffer, 0, 1, 0);
+			vkCmdDrawIndexedIndirect(CB, IndirectB, 0, 1, 0);
 		} vkCmdEndRenderPass(CB);
 #ifdef _DEBUG
 		//MarkerEnd(CB);

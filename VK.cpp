@@ -201,30 +201,33 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		UniformBuffer = VK_NULL_HANDLE;
 	}
 
-	if (VK_NULL_HANDLE != IndirectDeviceMemory) {
-		vkFreeMemory(Device, IndirectDeviceMemory, GetAllocationCallbacks());
-		IndirectDeviceMemory = VK_NULL_HANDLE;
+	for (auto i : IndirectDeviceMemories) {
+		vkFreeMemory(Device, i, GetAllocationCallbacks());
 	}
-	if (VK_NULL_HANDLE != IndirectBuffer) {
-		vkDestroyBuffer(Device, IndirectBuffer, GetAllocationCallbacks());
-		IndirectBuffer = VK_NULL_HANDLE;
+	IndirectDeviceMemories.clear();
+	for (auto i : IndirectBuffers) {
+		vkDestroyBuffer(Device, i, GetAllocationCallbacks());
 	}
-	if (VK_NULL_HANDLE != IndexDeviceMemory) {
-		vkFreeMemory(Device, IndexDeviceMemory, GetAllocationCallbacks());
-		IndexDeviceMemory = VK_NULL_HANDLE;
+	IndirectBuffers.clear();
+
+	for (auto i : IndexDeviceMemories) {
+		vkFreeMemory(Device, i, GetAllocationCallbacks());
 	}
-	if (VK_NULL_HANDLE != IndexBuffer) {
-		vkDestroyBuffer(Device, IndexBuffer, GetAllocationCallbacks());
-		IndexBuffer = VK_NULL_HANDLE;
+	IndexDeviceMemories.clear();
+	for (auto i : IndexBuffers) {
+		vkDestroyBuffer(Device, i, GetAllocationCallbacks());
 	}
-	if (VK_NULL_HANDLE != VertexDeviceMemory) {
-		vkFreeMemory(Device, VertexDeviceMemory, GetAllocationCallbacks());
-		VertexDeviceMemory = VK_NULL_HANDLE;
+	IndexBuffers.clear();
+
+	for (auto i : VertexDeviceMemories) {
+		vkFreeMemory(Device, i, GetAllocationCallbacks());
 	}
-	if (VK_NULL_HANDLE != VertexBuffer) {
-		vkDestroyBuffer(Device, VertexBuffer, GetAllocationCallbacks());
-		VertexBuffer = VK_NULL_HANDLE;
+	VertexDeviceMemories.clear();
+	for (auto i : VertexBuffers) {
+		vkDestroyBuffer(Device, i, GetAllocationCallbacks());
 	}
+	VertexBuffers.clear();
+
 
 	for (auto i : Samplers) {
 		vkDestroySampler(Device, i, GetAllocationCallbacks());
@@ -1954,11 +1957,11 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 	LOG_OK();
 }
 
-void VK::CreateIndirectBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB)
+void VK::CreateBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB, const VkBufferUsageFlagBits BUF, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF)
 {
 	VkBuffer StagingBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
-	
+
 	//!< ホストビジブルのバッファとメモリを作成し、そこへデータをコピーする (Create host visible buffer and memory, and copy data)
 	CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
 	CreateDeviceMemory(&StagingDeviceMemory, StagingBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
@@ -1966,14 +1969,14 @@ void VK::CreateIndirectBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, co
 	BindDeviceMemory(StagingBuffer, StagingDeviceMemory);
 
 	//!< デバイスローカルのバッファとメモリを作成 (Create device local buffer and memory)
-	CreateBuffer(Buffer, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+	CreateBuffer(Buffer, BUF | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
 	CreateDeviceMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	BindDeviceMemory(*Buffer, *DeviceMemory);
 
 	//!< View は必要ない (No need view)
 
 	//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 Submit copy command host visible to device local
-	CopyBufferToBuffer(CB, StagingBuffer, *Buffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
+	CopyBufferToBuffer(CB, StagingBuffer, *Buffer, AF, PSF, Size);
 	const std::vector<VkSubmitInfo> SIs = {
 		{
 			VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -3032,7 +3035,6 @@ void VK::Draw()
 	assert(SemaphoresToWait.size() == PipelineStagesToWait.size() && "Must be same size()");
 	//!< 実行するコマンドバッファ
 	const std::vector<VkCommandBuffer> CBs = { 
-		//CommandPools[0].second[SwapchainImageIndex]
 		CommandBuffers[SwapchainImageIndex],
 	};
 	//!< 完了時にシグナルされるセマフォ(RenderFinishedSemaphore)

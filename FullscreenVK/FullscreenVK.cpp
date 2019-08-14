@@ -236,6 +236,7 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
 	const auto FB = Framebuffers[i];
 	const auto Image = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
+	const auto IB = IndirectBuffers[0];
 
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -263,7 +264,7 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
 
 			//!< •`‰æ
 #ifdef USE_DRAW_INDIRECT
-			vkCmdDrawIndirect(CB, IndirectBuffer, 0, 1, 0);
+			vkCmdDrawIndirect(CB, IB, 0, 1, 0);
 #else
 			vkCmdDraw(CB, 4, 1, 0, 0);
 #endif

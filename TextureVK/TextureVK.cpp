@@ -238,6 +238,7 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 	const auto Image = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
 	const auto PL = PipelineLayouts[0];
+	const auto IB = IndirectBuffers[0];
 
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -269,7 +270,7 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 			}
 
 			//!< •`‰æ
-			vkCmdDrawIndirect(CB, IndirectBuffer, 0, 1, 0);
+			vkCmdDrawIndirect(CB, IB, 0, 1, 0);
 		} vkCmdEndRenderPass(CB);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }

@@ -254,9 +254,9 @@ protected:
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 	virtual void CreateViewportTopFront(const float Width, const float Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 
+	virtual void CreateBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB, const VkBufferUsageFlagBits BUF, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF);
 	virtual void CreateVertexBuffer() {}
 	virtual void CreateIndexBuffer() {}
-	virtual void CreateIndirectBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB);
 	virtual void CreateIndirectBuffer() {}
 	virtual void CreateUniformBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source);
 	virtual void CreateUniformBuffer() {}
@@ -434,15 +434,14 @@ protected:
 	VkImageView ImageView = VK_NULL_HANDLE;
 	std::vector<VkSampler> Samplers;
 
-	VkBuffer VertexBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory VertexDeviceMemory = VK_NULL_HANDLE;
+	std::vector<VkBuffer> VertexBuffers;
+	std::vector<VkDeviceMemory> VertexDeviceMemories;
 
-	VkBuffer IndexBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory IndexDeviceMemory = VK_NULL_HANDLE;
-	uint32_t IndexCount = 0;
+	std::vector<VkBuffer> IndexBuffers;
+	std::vector<VkDeviceMemory> IndexDeviceMemories;
 
-	VkBuffer IndirectBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory IndirectDeviceMemory = VK_NULL_HANDLE;
+	std::vector<VkBuffer> IndirectBuffers;
+	std::vector<VkDeviceMemory> IndirectDeviceMemories;
 
 	//!< Œ»ó1‚Â‚Ì‚ÝA”z—ñ‚É‚·‚é #VK_TODO
 	VkBuffer UniformBuffer = VK_NULL_HANDLE;

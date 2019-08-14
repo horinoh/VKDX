@@ -35,5 +35,7 @@ protected:
 	}
 	virtual void CreatePipeline() override { CreatePipeline_VsFs_Vertex<Vertex_PositionColor>(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
+
+	uint32_t IndexCount = 0;
 };
 #pragma endregion
