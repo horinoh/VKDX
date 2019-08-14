@@ -230,59 +230,6 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-//#ifdef USE_WINRT
-//void TextureDX::SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob)
-//#elif defined(USE_WRL)
-//void TextureDX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
-//#endif
-//{
-//	const std::array<D3D12_DESCRIPTOR_RANGE, 1> DescriptorRanges = {
-//		{
-//			D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-//			1,
-//			0,
-//			0,
-//			D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
-//		},
-//	};
-//
-//	const std::array<D3D12_ROOT_PARAMETER, 1> RootParameters = {
-//		{
-//			D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-//			{ 
-//				static_cast<uint32_t>(DescriptorRanges.size()), DescriptorRanges.data() 
-//			},
-//			D3D12_SHADER_VISIBILITY_PIXEL
-//		},
-//	};
-//
-//	const std::array<D3D12_STATIC_SAMPLER_DESC, 1> StaticSamplerDescs = {
-//		{
-//			D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-//			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-//			0.0f,
-//			0,
-//			D3D12_COMPARISON_FUNC_NEVER,
-//			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-//			0.0f, 1.0f,
-//			0, 0, D3D12_SHADER_VISIBILITY_PIXEL
-//		}
-//	};
-//
-//	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
-//		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
-//		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
-//		D3D12_ROOT_SIGNATURE_FLAG_NONE
-//	};
-//
-//#ifdef USE_WINRT
-//	winrt::com_ptr<ID3DBlob> ErrorBlob;
-//	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.put(), ErrorBlob.put()));
-//#elif defined(USE_WRL)
-//	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
-//	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.GetAddressOf(), ErrorBlob.GetAddressOf()));
-//#endif
-//}
 void TextureDX::PopulateCommandList(const size_t i)
 {
 #ifdef USE_WINRT

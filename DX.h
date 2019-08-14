@@ -127,8 +127,22 @@ protected:
 
 	virtual void CreateFence();
 
-	virtual void CreateCommandAllocator(const D3D12_COMMAND_LIST_TYPE CommandListType = D3D12_COMMAND_LIST_TYPE_DIRECT);
-	virtual void CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const size_t Count, const D3D12_COMMAND_LIST_TYPE CommandListType);
+#ifdef USE_WINRT
+	virtual void CreateCommandAllocator(winrt::com_ptr<ID3D12CommandAllocator>& CA, const D3D12_COMMAND_LIST_TYPE CLT) {
+		VERIFY_SUCCEEDED(Device->CreateCommandAllocator(CLT, __uuidof(CA), CA.put_void()));
+	}
+#elif defined(USE_WRL)
+	virtual void CreateCommandAllocator(Microsoft::WRL::ComPtr<ID3D12CommandAllocator>& CA, const D3D12_COMMAND_LIST_TYPE CLT) {
+		VERIFY_SUCCEEDED(Device->CreateCommandAllocator(CLT, IID_PPV_ARGS(CA.GetAddressOf())));
+	}
+#endif
+	virtual void CreateCommandAllocator();
+
+#ifdef USE_WINRT
+	virtual void CreateCommandList(winrt::com_ptr<ID3D12GraphicsCommandList>& CL, ID3D12CommandAllocator* CA, const D3D12_COMMAND_LIST_TYPE CLT);
+#elif defined(USE_WRL)
+	virtual void CreateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& CL, ID3D12CommandAllocator* CA, const D3D12_COMMAND_LIST_TYPE CLT);
+#endif
 	virtual void CreateCommandList();
 
 	virtual void CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat);
@@ -175,13 +189,17 @@ protected:
 	virtual void CreateViewportTopFront(const FLOAT Width, const FLOAT Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 
 #ifdef USE_WINRT
-	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags);
-	virtual void GetRootSignaturePartFromShader(winrt::com_ptr<ID3DBlob>& RSBlob);
-	virtual void CreateRootSignature(winrt::com_ptr<ID3D12RootSignature>& RS, winrt::com_ptr<ID3DBlob> Blob);
+	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& Blob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags);
+	virtual void GetRootSignaturePartFromShader(winrt::com_ptr<ID3DBlob>& Blob);
+	virtual void CreateRootSignature(winrt::com_ptr<ID3D12RootSignature>& RS, winrt::com_ptr<ID3DBlob> Blob) {
+		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(RS), RS.put_void()));
+	}
 #elif defined(USE_WRL)
-	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags);
-	virtual void GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob);
-	virtual void CreateRootSignature(Microsoft::WRL::ComPtr<ID3D12RootSignature>& RS, Microsoft::WRL::ComPtr<ID3DBlob> Blob);
+	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& Blob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags);
+	virtual void GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& Blob);
+	virtual void CreateRootSignature(Microsoft::WRL::ComPtr<ID3D12RootSignature>& RS, Microsoft::WRL::ComPtr<ID3DBlob> Blob) {
+		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RS.GetAddressOf())));
+	}
 #endif
 	virtual void CreateRootSignature();
 
@@ -334,7 +352,6 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12Resource> SamplerResource;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> SamplerDescriptorHeap; 
 #endif
-	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
 
 #ifdef USE_WINRT
 	winrt::com_ptr<ID3D12RootSignature> RootSignature;
@@ -413,4 +430,25 @@ protected:
 		D3D_FEATURE_LEVEL_9_1,
 	};
 	const D3D12_SHADER_BYTECODE NullShaderBC = { nullptr, 0 };
+
+	const D3D12_STATIC_SAMPLER_DESC StaticSamplerDesc_LinearWrap_All = {
+		D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		0.0f,
+		0,
+		D3D12_COMPARISON_FUNC_NEVER,
+		D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+		0.0f, 1.0f,
+		0, 0, D3D12_SHADER_VISIBILITY_ALL
+	};
+	const D3D12_STATIC_SAMPLER_DESC StaticSamplerDesc_LinearWrap_Ps = {
+		D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+		D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+		0.0f,
+		0,
+		D3D12_COMPARISON_FUNC_NEVER,
+		D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+		0.0f, 1.0f,
+		0, 0, D3D12_SHADER_VISIBILITY_PIXEL
+	};
 };

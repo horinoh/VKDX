@@ -14,7 +14,7 @@ public:
 	void CreateIndirectBuffer_DrawIndexed(const UINT Count);
 	void CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT Z);
 
-	void CreateStaticSamplerDesc_LW(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) const;
+	//void CreateStaticSamplerDesc_LW(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) const;
 
 	void CreateShaderBlob_VsPs();
 	void CreateShaderBlob_VsPsDsHsGs();

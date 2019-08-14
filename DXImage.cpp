@@ -66,14 +66,8 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const std::wstring& Path,
 	(Resource, Path, ResourceState, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 #endif
 
-#if 1
-	//!< ルートシグネチャに登録して使う 複数のルートシグネチャでサンプラを使い回すような場合スタティックサンプラにしておくと良い
-	//!< デスクリプタヒープ等は不要
-	D3D12_STATIC_SAMPLER_DESC SSD;
-	CreateStaticSamplerDesc(SSD, D3D12_SHADER_VISIBILITY_PIXEL, static_cast<const FLOAT>((*Resource)->GetDesc().MipLevels));
-	StaticSamplerDescs.push_back(SSD);
-#else
-	//!< #DX_TODO スタティックサンプラを使用しない
+#if 0
+	//!< #DX_TODO スタティックサンプラを使用しない場合
 	const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
 			D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
 			1,

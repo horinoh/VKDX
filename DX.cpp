@@ -25,6 +25,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateSwapchain(hWnd, ColorFormat);
 
 	//!< コマンド
+	CreateCommandAllocator();
 	CreateCommandList();
 	InitializeSwapChain();
 
@@ -652,65 +653,45 @@ void DX::CreateFence()
 	LOG_OK();
 }
 
-/**
-@note コマンドアロケータに対し複数のコマンドリストを作成できるが、コマンドリストは同時には記録できない (Close()しないとダメ)
-@note CommandList->ExecuteCommandList() 後 GPU が CommandAllocator の参照を終えるまで、CommandAllocator->Reset() してはいけない
-*/
-void DX::CreateCommandAllocator(const D3D12_COMMAND_LIST_TYPE CommandListType)
+//!< コマンド実行(CL->ExecuteCommandList())後、GPUがコマンドアロケータの参照を終えるまで、アロケータのリセット(CA->Reset())してはいけない、アロケータが覚えているのでコマンドのリセット(CL->Reset())はしても良い
+void DX::CreateCommandAllocator()
 {
-#ifdef USE_WINRT
-	winrt::com_ptr<ID3D12CommandAllocator> CA;
-	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(CommandListType, __uuidof(CA), CA.put_void()));
-#elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CA;
-	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(CommandListType, IID_PPV_ARGS(CA.GetAddressOf())));
-#endif
-	CommandAllocators.push_back(CA);
+	CommandAllocators.resize(1);
 
-	Log("\tCommandAllocator\n");
-}
-
-/**
-@note CommandList->ExecuteCommandList() 後に CommandList->Reset() をしても良い。(CommandAllocator が覚えているので、CommandQueue には影響しない)
-描画コマンドを発行するコマンドリストは PipelineState の指定が必要
-後からCommandList->Reset(Allocator, PipelineState) の引数でも指定できる
-描画コマンドを発行しないコマンドリスト(初期化用途等)や、バンドルは nullptr 指定で良い
-ここでは PipelineState == nullptr で作成してしまっている
-*/
-void DX::CreateCommandList(ID3D12CommandAllocator* CommandAllocator, const size_t Count, const D3D12_COMMAND_LIST_TYPE CommandListType)
-{
-	for (auto i = 0; i < Count; ++i) {
-#ifdef USE_WINRT
-		winrt::com_ptr<ID3D12GraphicsCommandList> CL;
-		VERIFY_SUCCEEDED(Device->CreateCommandList(0, CommandListType, CommandAllocator, nullptr, __uuidof(CL), CL.put_void()));
-#elif defined(USE_WRL)
-		Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> CL;
-		VERIFY_SUCCEEDED(Device->CreateCommandList(0, CommandListType, CommandAllocator, nullptr, IID_PPV_ARGS(CL.GetAddressOf()))); 
-#endif
-		GraphicsCommandLists.push_back(CL);
-
-		//!< Close() しておく
-		//const auto GCL = static_cast<ID3D12GraphicsCommandList*>(GraphicsCommandLists.back().Get());
-		//if (nullptr != GCL) {
-		//	VERIFY_SUCCEEDED(GCL->Close());
-		//}
-		VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
-	}
+	CreateCommandAllocator(CommandAllocators[0], D3D12_COMMAND_LIST_TYPE_DIRECT);
 
 	LOG_OK();
 }
 
+#ifdef USE_WINRT
+void DX::CreateCommandList(winrt::com_ptr<ID3D12GraphicsCommandList>& CL, ID3D12CommandAllocator* CA, const D3D12_COMMAND_LIST_TYPE CLT)
+{
+	//!< 描画コマンドを発行するコマンドリストにはパイプラインステートの指定が必要だが、後から指定(CL->Reset(CA, PS.get()))もできる (ここではnullptrで作成することにする)
+	VERIFY_SUCCEEDED(Device->CreateCommandList(0, CLT, CA, nullptr, __uuidof(CL), CL.put_void()));
+	VERIFY_SUCCEEDED(CL->Close());
+}
+#elif defined(USE_WRL)
+void DX::CreateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& CL, ID3D12CommandAllocator* CA, const D3D12_COMMAND_LIST_TYPE CLT)
+{
+	VERIFY_SUCCEEDED(Device->CreateCommandList(0, CLT, CA, nullptr, IID_PPV_ARGS(CL.GetAddressOf())));
+	VERIFY_SUCCEEDED(CL->Close());
+}
+#endif
 void DX::CreateCommandList()
 {
-	CreateCommandAllocator();
-	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
-	SwapChain->GetDesc1(&SwapChainDesc);
-	//!< 現状は0番のコマンドアロケータ決め打ち #DX_TODO
+	DXGI_SWAP_CHAIN_DESC1 SCD;
+	SwapChain->GetDesc1(&SCD);
+
+	GraphicsCommandLists.resize(SCD.BufferCount);
+	for (UINT i = 0; i < SCD.BufferCount; ++i) {
 #ifdef USE_WINRT
-	CreateCommandList(CommandAllocators[0].get(), SwapChainDesc.BufferCount, D3D12_COMMAND_LIST_TYPE_DIRECT); 
+		CreateCommandList(GraphicsCommandLists[i], CommandAllocators[0].get(), D3D12_COMMAND_LIST_TYPE_DIRECT);
 #elif defined(USE_WRL)
-	CreateCommandList(CommandAllocators[0].Get(), SwapChainDesc.BufferCount, D3D12_COMMAND_LIST_TYPE_DIRECT);
+		CreateCommandList(GraphicsCommandLists[i], CommandAllocators[0].Get(), D3D12_COMMAND_LIST_TYPE_DIRECT);
 #endif
+	}
+
+	LOG_OK();
 }
 
 void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
@@ -1039,31 +1020,6 @@ void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDe
 	LOG_OK();
 }
 
-//void DX::CreateRootSignature(ID3D12RootSignature** RootSignature) const
-//{
-//	using namespace Microsoft::WRL;
-//
-//	const std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
-//	};
-//	const D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable = {
-//		static_cast<UINT>(DescriptorRanges.size()), DescriptorRanges.data()
-//	};
-//	const std::vector<D3D12_ROOT_PARAMETER> RootParameters = {
-//	};
-//	const std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs = {
-//	};
-//	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
-//		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
-//		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
-//		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
-//	};
-//	ComPtr<ID3DBlob> Blob;
-//	ComPtr<ID3DBlob> ErrorBlob;
-//	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
-//	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(RootSignature), RootSignature.put_void()));
-////VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RootSignature.GetAddressOf())));
-//}
-
 /**
 std::vector<ID3D12DescriptorHeap*> DescriptorHeaps = { ConstantBufferDescriptorHeap.Get() };
 GraphicsCommandList->SetDescriptorHeaps(static_cast<UINT>(DescriptorHeaps.size()), DescriptorHeaps.data());
@@ -1162,88 +1118,12 @@ void DX::CreateUnorderedAccessTexture()
 	LOG_OK();
 }
 
-#if 0
-#ifdef USE_WINRT
-void DX::SerializeRootSignature(winrt::com_ptr<ID3DBlob>& RSBlob)
-#elif defined(USE_WRL)
-void DX::SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
-#endif
-{
-#if 1
-	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
-		0, nullptr,
-		0, nullptr,
-		D3D12_ROOT_SIGNATURE_FLAG_NONE
-	};
-#else
-	std::vector<D3D12_DESCRIPTOR_RANGE> DescriptorRanges = {
-		/**
-	
-		*/
-	};
-	CreateDescriptorRanges(DescriptorRanges);
-
-	std::vector<D3D12_ROOT_PARAMETER> RootParameters = {
-		/**
-		D3D12_ROOT_PARAMETER_TYPE ParameterType; ... D3D12_ROOT_PARAMETER_TYPE_[DESCRIPTOR_TABLE, 32BIT_CONSTANTS, CBV, SRV, UAV]
-		union
-		{
-			D3D12_ROOT_DESCRIPTOR_TABLE DescriptorTable
-			{
-				UINT NumDescriptorRanges;
-				const D3D12_DESCRIPTOR_RANGE *pDescriptorRanges;
-			};
-			D3D12_DESCRIPTOR_RANGE
-			{
-				D3D12_DESCRIPTOR_RANGE_TYPE RangeType;
-				UINT NumDescriptors;
-				UINT BaseShaderRegister;
-				UINT RegisterSpace;
-				UINT OffsetInDescriptorsFromTableStart;
-			}
-			D3D12_ROOT_CONSTANTS Constants
-			{
-				UINT ShaderRegister;
-				UINT RegisterSpace;
-				UINT Num32BitValues;
-			};
-			D3D12_ROOT_DESCRIPTOR Descriptor
-			{
-				UINT ShaderRegister;
-				UINT RegisterSpace;
-			};
-		};
-		D3D12_SHADER_VISIBILITY ShaderVisibility; ... D3D12_SHADER_VISIBILITY_[ALL, VERTEX, HULL, DOMAIN, GEOMETRY, PIXEL]
-		*/
-	};
-	CreateRootParameters(RootParameters, DescriptorRanges);
-
-	const D3D12_ROOT_SIGNATURE_DESC RootSignatureDesc = {
-		static_cast<UINT>(RootParameters.size()), RootParameters.data(),
-		//!< 複数のルートシグネチャで同じサンプラを使い回すような場合はスタイティックサンプラを作成しておくと良い
-		static_cast<UINT>(StaticSamplerDescs.size()), StaticSamplerDescs.data(),
-		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
-	};
-#endif
-
-#ifdef USE_WINRT
-	winrt::com_ptr<ID3DBlob> ErrorBlob;
-	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.put(), ErrorBlob.put()));
-#elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
-	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.GetAddressOf(), ErrorBlob.GetAddressOf()));
-#endif
-
-	LOG_OK();
-}
-#endif
-
 //!< ルートシグネチャをシリアライズしてブロブを作る
 void DX::SerializeRootSignature(
 #ifdef USE_WINRT 
-	winrt::com_ptr<ID3DBlob>& RSBlob,
+	winrt::com_ptr<ID3DBlob>& Blob,
 #elif defined(USE_WRL) 
-	Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob,
+	Microsoft::WRL::ComPtr<ID3DBlob>& Blob,
 #endif 
 	const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags)
 {
@@ -1263,10 +1143,10 @@ void DX::SerializeRootSignature(
 
 #ifdef USE_WINRT
 	winrt::com_ptr<ID3DBlob> ErrorBlob;
-	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RSD, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.put(), ErrorBlob.put()));
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RSD, D3D_ROOT_SIGNATURE_VERSION_1, Blob.put(), ErrorBlob.put()));
 #elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3DBlob> ErrorBlob;
-	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RSD, D3D_ROOT_SIGNATURE_VERSION_1, RSBlob.GetAddressOf(), ErrorBlob.GetAddressOf()));
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RSD, D3D_ROOT_SIGNATURE_VERSION_1, Blob.GetAddressOf(), ErrorBlob.GetAddressOf()));
 #endif
 
 	LOG_OK();
@@ -1274,19 +1154,19 @@ void DX::SerializeRootSignature(
 
 //!< シェーダからルートシグネチャパートを取り出しブロブを作る
 #ifdef USE_WINRT
-void DX::GetRootSignaturePartFromShader(winrt::com_ptr<ID3DBlob>& RSBlob)
+void DX::GetRootSignaturePartFromShader(winrt::com_ptr<ID3DBlob>& Blob)
 {
 	winrt::com_ptr<ID3DBlob> ShaderBlob;
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((GetBasePath() + TEXT(".rs.cso")).data(), ShaderBlob.put()));
-	VERIFY_SUCCEEDED(D3DGetBlobPart(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, RSBlob.put()));
+	VERIFY_SUCCEEDED(D3DGetBlobPart(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, Blob.put()));
 	LOG_OK();
 }
 #elif defined(USE_WRL)
-void DX::GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob)
+void DX::GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& Blob)
 {
 	Microsoft::WRL::ComPtr<ID3DBlob> ShaderBlob;
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((GetBasePath() + TEXT(".rs.cso")).data(), ShaderBlob.GetAddressOf()));
-	VERIFY_SUCCEEDED(D3DGetBlobPart(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, RSBlob.GetAddressOf()));
+	VERIFY_SUCCEEDED(D3DGetBlobPart(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, Blob.GetAddressOf()));
 	LOG_OK();
 }
 #endif
@@ -1294,17 +1174,6 @@ void DX::GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& RSBlob
 /**
 @brief シェーダとのバインディング (VK::CreateDescriptorSetLayout() 相当)
 */
-#ifdef USE_WINRT
-void DX::CreateRootSignature(winrt::com_ptr<ID3D12RootSignature>& RS, winrt::com_ptr<ID3DBlob> Blob)
-{
-	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(RS), RS.put_void()));
-}
-#elif defined(USE_WRL)
-void DX::CreateRootSignature(Microsoft::WRL::ComPtr<ID3D12RootSignature>& RS, Microsoft::WRL::ComPtr<ID3DBlob> Blob)
-{
-	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RS.GetAddressOf())));
-}
-#endif
 void DX::CreateRootSignature()
 {
 #ifdef USE_WINRT
