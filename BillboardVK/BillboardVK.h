@@ -50,12 +50,23 @@ protected:
 		const auto CamPos = glm::vec3(0.0f, 0.0f, 6.0f);
 		const auto CamTag = glm::vec3(0.0f);
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
-
-		VKExt::CreateUniformBuffer<Transform>({
+		const auto Tr = Transform({
 			/*GetVulkanClipSpace() * */ glm::perspective(Fov, Aspect, ZNear, ZFar),
 			glm::lookAt(CamPos, CamTag, CamUp),
 			glm::mat4(1.0f)
-		});
+			});
+
+		CreateBuffer(&UniformBuffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
+#if 1
+		AllocateBufferMemory(&UniformDeviceMemory, UniformBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		BindBufferMemory(UniformBuffer, UniformDeviceMemory, 0);
+		CopyToDeviceMemory(UniformDeviceMemory, sizeof(Tr), &Tr);
+#else
+		uint32_t HeapIndex;
+		VkDeviceSize Offset;
+		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		CopyToDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
+#endif
 	}
 
 	virtual void CreateDescriptorPool() override {

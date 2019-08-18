@@ -1027,10 +1027,6 @@ const auto CVIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESC
 CVDescriptorHandle.ptr += 0 * CVIncrementSize;
 GraphicsCommandList->SetGraphicsRootDescriptorTable(0, CVDescriptorHandle);
 */
-void DX::CreateConstantBuffer()
-{
-	LOG_OK();
-}
 
 void DX::CreateUnorderedAccessTexture()
 {
@@ -1547,6 +1543,10 @@ void DX::PopulateCommandList(const size_t i)
 
 void DX::Draw()
 {
+#ifdef _DEBUG
+	//PerformanceCounter PC(__func__);
+#endif
+
 	WaitForFence();
 
 	CurrentBackBufferIndex = AcquireNextBackBufferIndex();

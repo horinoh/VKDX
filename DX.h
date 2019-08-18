@@ -82,7 +82,10 @@ public:
 	//virtual void OnSize(HWND hWnd, HINSTANCE hInstance) override {}
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
 	//virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override { Super::OnTimer(hWnd, hInstance); }
-	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { Super::OnPaint(hWnd, hInstance); Draw(); }
+	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { 
+		Super::OnPaint(hWnd, hInstance); 
+		Draw();
+	}
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 
 	static std::string GetHRESULTString(const HRESULT Result) { return ToString(GetHRESULTWString(Result)); }
@@ -180,7 +183,7 @@ protected:
 	virtual void CreateVertexBuffer() {}
 	virtual void CreateIndexBuffer() {}
 	virtual void CreateIndirectBuffer() {}
-	virtual void CreateConstantBuffer();
+	virtual void CreateConstantBuffer() {}
 
 	virtual void CreateUnorderedAccessTexture();
 
@@ -215,17 +218,17 @@ protected:
 	virtual void CreateDescriptorHeap() {}
 
 #ifdef USE_WINRT
-	virtual void CreateConstantBufferView(winrt::com_ptr<ID3D12Resource>& Res, winrt::com_ptr<ID3D12DescriptorHeap>& DH, const size_t Size) {
+	virtual void CreateConstantBufferView(const winrt::com_ptr<ID3D12Resource>& Res, const winrt::com_ptr<ID3D12DescriptorHeap>& DH, const size_t Size) {
 		const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = {
 			Res->GetGPUVirtualAddress(),
 			static_cast<UINT>(RoundUp(Size, 0xff)) //!< 256 byte align
 		};
 		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(DH.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 	}
-	virtual void CreateShaderResourceView(winrt::com_ptr<ID3D12Resource>& Res, winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
+	virtual void CreateShaderResourceView(const winrt::com_ptr<ID3D12Resource>& Res, const winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
 		Device->CreateShaderResourceView(Res.get(), nullptr, GetCPUDescriptorHandle(DH.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 	}
-	virtual void CreateUnorderedAccessView(winrt::com_ptr<ID3D12Resource>& Res, winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
+	virtual void CreateUnorderedAccessView(const winrt::com_ptr<ID3D12Resource>& Res, const winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
 		D3D12_UNORDERED_ACCESS_VIEW_DESC UAVD = {
 			DXGI_FORMAT_R8G8B8A8_UNORM,
 			D3D12_UAV_DIMENSION_TEXTURE2D,
@@ -235,17 +238,17 @@ protected:
 		Device->CreateUnorderedAccessView(Res.get(), nullptr, &UAVD, GetCPUDescriptorHandle(DH.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 	}
 #elif defined(USE_WRL)
-	virtual void CreateConstantBufferView(Microsoft::WRL::ComPtr<ID3D12Resource> Res, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH, const size_t Size) {
+	virtual void CreateConstantBufferView(const Microsoft::WRL::ComPtr<ID3D12Resource> Res, const Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH, const size_t Size) {
 		const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = {
 			Res->GetGPUVirtualAddress(),
 			static_cast<UINT>(RoundUp(Size, 0xff))
 		};
 		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(DH.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 	}
-	virtual void CreateShaderResourceView(Microsoft::WRL::ComPtr<ID3D12Resource> Res, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH) {
+	virtual void CreateShaderResourceView(const Microsoft::WRL::ComPtr<ID3D12Resource> Res, const Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH) {
 		Device->CreateShaderResourceView(Resource.Get(), nullptr, GetCPUDescriptorHandle(DH.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
 	}
-	virtual void CreateUnorderedAccessView(winrt::com_ptr<ID3D12Resource>& Res, winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
+	virtual void CreateUnorderedAccessView(const winrt::com_ptr<ID3D12Resource>& Res, const winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
 		D3D12_UNORDERED_ACCESS_VIEW_DESC UAVD = {
 			DXGI_FORMAT_R8G8B8A8_UNORM,
 			D3D12_UAV_DIMENSION_TEXTURE2D,

@@ -37,6 +37,7 @@
 #include <functional>
 #include <thread>
 #include <bitset>
+//#include <cinttypes>
 
 #ifndef SAFE_DELETE
 #define SAFE_DELETE(x) if(nullptr != x) { delete x; x = nullptr; }

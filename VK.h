@@ -81,7 +81,10 @@ public:
 	//virtual void OnSize(HWND hWnd, HINSTANCE hInstance) override {}
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
 	//virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override { Super::OnTimer(hWnd, hInstance); }
-	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { Super::OnPaint(hWnd, hInstance); Draw(); }
+	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { 
+		Super::OnPaint(hWnd, hInstance);
+		Draw(); 
+	}
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 #endif
 
@@ -117,7 +120,7 @@ protected:
 	static void AligendFreeNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
 
 	static bool IsSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, const VkFormat DepthFormat);
-	static uint32_t GetMemoryType(const VkPhysicalDeviceMemoryProperties& PDMP, const VkMemoryRequirements& MR, const VkFlags Properties);
+	static uint32_t GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& PDMP, const uint32_t TypeBits, const VkFlags Properties);
 
 	virtual void CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size) const;
 	virtual void ValidateImageCreateInfo(const VkImageCreateInfo& ICI) const {
@@ -136,17 +139,13 @@ protected:
 	virtual void CopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, const VkBuffer Dst, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF, const size_t Size);
 
 	void EnumerateMemoryRequirements(const VkMemoryRequirements& MR);
-
-	void CreateBufferMemory(VkDeviceMemory* DeviceMemory, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF);
-	void BindBufferMemory(const VkBuffer Buffer, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset) { VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, Offset)); }
-
-	void CreateImageMemory(VkDeviceMemory* DeviceMemory, const VkImage Image, const VkMemoryPropertyFlags MPF);
-	void BindImageMemory(const VkImage Image, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset) { VERIFY_SUCCEEDED(vkBindImageMemory(Device, Image, DeviceMemory, Offset)); }
-
-	template<typename T> void CreateDeviceMemory(VkDeviceMemory* DeviceMemory, const T Object, const VkMemoryPropertyFlags MPF) { static_assert(false, "Need to implement templete specialization"); }
-	template<typename T> void BindDeviceMemory(const T Object, const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset = 0) { static_assert(false, "Need to implement templete specialization"); }
-	//!< ↓ ここでテンプレート特殊化している (Template specialization here)
-#include "VKDeviceMemory.inl"
+	void AllocateDeviceMemory(VkDeviceMemory* DM, const VkDeviceSize Size, const uint32_t TypeIndex);
+	void AllocateBufferMemory(VkDeviceMemory* DM, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF);
+	void SuballocateBufferMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF);
+	void AllocateImageMemory(VkDeviceMemory* DM, const VkImage Image, const VkMemoryPropertyFlags MPF);
+	void SuballocateImageMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const VkImage Image, const VkMemoryPropertyFlags MPF);
+	void BindBufferMemory(const VkBuffer Buffer, const VkDeviceMemory DM, const VkDeviceSize Offset) { VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DM, Offset)); }
+	void BindImageMemory(const VkImage Image, const VkDeviceMemory DM, const VkDeviceSize Offset) { VERIFY_SUCCEEDED(vkBindImageMemory(Device, Image, DM, Offset)); }
 
 	virtual void CreateBufferView(VkBufferView* BufferView, const VkBuffer Buffer, const VkFormat Format, const VkDeviceSize Offset = 0, const VkDeviceSize Range = VK_WHOLE_SIZE);
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
@@ -224,6 +223,8 @@ protected:
 	virtual void CreateQueueFamilyPriorities(VkPhysicalDevice PD, VkSurfaceKHR Surface, const std::vector<VkQueueFamilyProperties>& QFPs, std::vector<std::vector<float>>& QueueFamilyPriorites);
 	virtual void CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 
+	virtual void AllocateDeviceMemory();
+
 	virtual void CreateFence(VkDevice Device);
 	virtual void CreateSemaphore(VkDevice Device);
 
@@ -254,11 +255,10 @@ protected:
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 	virtual void CreateViewportTopFront(const float Width, const float Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 
-	virtual void CreateBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB, const VkBufferUsageFlagBits BUF, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF);
+	virtual void CreateBuffer(VkBuffer* Buffer, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB, const VkBufferUsageFlagBits BUF, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF);
 	virtual void CreateVertexBuffer() {}
 	virtual void CreateIndexBuffer() {}
 	virtual void CreateIndirectBuffer() {}
-	virtual void CreateUniformBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const void* Source);
 	virtual void CreateUniformBuffer() {}
 	virtual void CreateStorageBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size);
 	virtual void CreateStorageBuffer() {}
@@ -424,6 +424,9 @@ protected:
 	uint32_t SwapchainImageIndex = 0;
 	std::vector<VkImageView> SwapchainImageViews;
 
+	std::vector<VkDeviceMemory> DeviceMemories;
+	std::vector<VkDeviceSize> DeviceMemoryOffsets;
+
 	//VkFormat DepthFormat = VK_FORMAT_D24_UNORM_S8_UINT;
 	VkImage DepthStencilImage = VK_NULL_HANDLE;
 	VkDeviceMemory DepthStencilDeviceMemory = VK_NULL_HANDLE;
@@ -435,13 +438,8 @@ protected:
 	std::vector<VkSampler> Samplers;
 
 	std::vector<VkBuffer> VertexBuffers;
-	std::vector<VkDeviceMemory> VertexDeviceMemories;
-
 	std::vector<VkBuffer> IndexBuffers;
-	std::vector<VkDeviceMemory> IndexDeviceMemories;
-
 	std::vector<VkBuffer> IndirectBuffers;
-	std::vector<VkDeviceMemory> IndirectDeviceMemories;
 
 	//!< 現状1つのみ、配列にする #VK_TODO
 	VkBuffer UniformBuffer = VK_NULL_HANDLE;

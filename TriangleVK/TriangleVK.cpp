@@ -233,7 +233,6 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 void TriangleVK::CreateVertexBuffer()
 {
 	VertexBuffers.resize(1);
-	VertexDeviceMemories.resize(1);
 
 	const std::vector<Vertex_PositionColor> Vertices = {
 		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
@@ -243,7 +242,7 @@ void TriangleVK::CreateVertexBuffer()
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 	
-	CreateBuffer_Vertex(&VertexBuffers[0], &VertexDeviceMemories[0], Size, Vertices.data(), CommandBuffers[0]);
+	CreateBuffer_Vertex(&VertexBuffers[0], Size, Vertices.data(), CommandBuffers[0]);
 
 	//!< ビューは必要ない No need view
 
@@ -258,7 +257,6 @@ void TriangleVK::CreateVertexBuffer()
 void TriangleVK::CreateIndexBuffer()
 {
 	IndexBuffers.resize(1);
-	IndexDeviceMemories.resize(1);
 
 	const std::vector<uint32_t> Indices = { 0, 1, 2 };
 
@@ -267,7 +265,7 @@ void TriangleVK::CreateIndexBuffer()
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 
-	CreateBuffer_Index(&IndexBuffers[0], &IndexDeviceMemories[0], Size, Indices.data(), CommandBuffers[0]);
+	CreateBuffer_Index(&IndexBuffers[0], Size, Indices.data(), CommandBuffers[0]);
 
 	//!< ビューは必要ない No need view
 
