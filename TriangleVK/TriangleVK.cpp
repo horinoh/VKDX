@@ -242,9 +242,7 @@ void TriangleVK::CreateVertexBuffer()
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 	
-	CreateBuffer_Vertex(&VertexBuffers[0], Size, Vertices.data(), CommandBuffers[0]);
-
-	//!< ビューは必要ない No need view
+	CreateBuffer_Vertex(GraphicsQueue, CommandBuffers[0], &VertexBuffers[0], Size, Vertices.data());
 
 #ifdef _DEBUG
 	MarkerSetObjectName(Device, VertexBuffers[0], "MyVertexBuffer");
@@ -260,14 +258,12 @@ void TriangleVK::CreateIndexBuffer()
 
 	const std::vector<uint32_t> Indices = { 0, 1, 2 };
 
-	//!< vkCmdDrawIndexed() が引数に取るので覚えておく必要がある Save this value because vkCmdDrawIndexed() will use it
+	//!< vkCmdDrawIndexed() が引数に取るので覚えておく必要がある (Save this value because vkCmdDrawIndexed() will use it)
 	IndexCount = static_cast<uint32_t>(Indices.size());
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 
-	CreateBuffer_Index(&IndexBuffers[0], Size, Indices.data(), CommandBuffers[0]);
-
-	//!< ビューは必要ない No need view
+	CreateBuffer_Index(GraphicsQueue, CommandBuffers[0], &IndexBuffers[0], Size, Indices.data());
 
 #ifdef _DEBUG
 	MarkerSetObjectName(Device, IndexBuffers[0], "MyIndexBuffer");

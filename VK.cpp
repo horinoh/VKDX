@@ -457,7 +457,7 @@ void VK::CreateImage(VkImage* Image, const VkImageCreateFlags CreateFlags, const
 	VERIFY_SUCCEEDED(vkCreateImage(Device, &ICI, GetAllocationCallbacks(), Image));
 }
 
-void VK::CopyToDeviceMemory(const VkDeviceMemory DM, const size_t Size, const void* Source, const VkDeviceSize Offset)
+void VK::CopyToHostVisibleDeviceMemory(const VkDeviceMemory DM, const size_t Size, const void* Source, const VkDeviceSize Offset)
 {
 	if (Size && nullptr != Source) {
 		void *Data;
@@ -486,7 +486,7 @@ void VK::CopyToDeviceMemory(const VkDeviceMemory DM, const size_t Size, const vo
 //!< @param コピー先バッファ
 //!< @param (コピー後の)バッファのアクセスフラグ ex) VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_ACCESS_INDEX_READ_BIT, VK_ACCESS_INDIRECT_READ_BIT,...等
 //!< @param (コピー後に)バッファが使われるパイプラインステージ ex) VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,...等
-void VK::CopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, const VkBuffer Dst, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF, const size_t Size)
+void VK::CmdCopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, const VkBuffer Dst, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF, const size_t Size)
 {
 	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -568,16 +568,6 @@ void VK::EnumerateMemoryRequirements(const VkMemoryRequirements& MR)
 	}
 }
 
-void VK::AllocateDeviceMemory(VkDeviceMemory* DM, const VkDeviceSize Size, const uint32_t TypeIndex)
-{
-	const VkMemoryAllocateInfo MAI = {
-			VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-			nullptr,
-			Size,
-			TypeIndex
-	};
-	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, GetAllocationCallbacks(), DM));
-}
 void VK::AllocateBufferMemory(VkDeviceMemory* DM, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF)
 {
 	VkMemoryRequirements MR;
@@ -588,7 +578,13 @@ void VK::AllocateBufferMemory(VkDeviceMemory* DM, const VkBuffer Buffer, const V
 	const auto TypeIndex = GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, MPF);
 
 	Logf("\t\tAllocateBufferMemory = %llu / %llu (HeapIndex = %d)\n", MR.size, PDMP.memoryHeaps[PDMP.memoryTypes[TypeIndex].heapIndex].size, PDMP.memoryTypes[TypeIndex].heapIndex);
-	AllocateDeviceMemory(DM, MR.size, TypeIndex);
+	const VkMemoryAllocateInfo MAI = {
+		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		nullptr,
+		MR.size,
+		TypeIndex
+	};
+	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, GetAllocationCallbacks(), DM));
 }
 void VK::SuballocateBufferMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF)
 {
@@ -615,7 +611,13 @@ void VK::AllocateImageMemory(VkDeviceMemory* DM, const VkImage Image, const VkMe
 	const auto TypeIndex = GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, MPF);
 
 	Logf("\t\tAllocateImageMemory = %llu / %llu (HeapIndex = %d)\n", MR.size, PDMP.memoryHeaps[PDMP.memoryTypes[TypeIndex].heapIndex].size, PDMP.memoryTypes[TypeIndex].heapIndex);
-	AllocateDeviceMemory(DM, MR.size, TypeIndex);
+	const VkMemoryAllocateInfo MAI = {
+		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		nullptr,
+		MR.size,
+		TypeIndex
+	};
+	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, GetAllocationCallbacks(), DM));
 }
 void VK::SuballocateImageMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const VkImage Image, const VkMemoryPropertyFlags MPF)
 {
@@ -1941,7 +1943,7 @@ void VK::CreateDepthStencil(const uint32_t Width, const uint32_t Height, const V
 	const VkExtent3D Extent3D = { Width, Height, 1 };
 	CreateImage(&DepthStencilImage, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 	AllocateImageMemory(&DepthStencilDeviceMemory, DepthStencilImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	BindImageMemory(DepthStencilImage, DepthStencilDeviceMemory, 0);
+	VERIFY_SUCCEEDED(vkBindImageMemory(Device, DepthStencilImage, DepthStencilDeviceMemory, 0));
 	CreateImageView(&DepthStencilImageView, DepthStencilImage, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, ComponentMapping_Identity, ImageSubresourceRange_DepthStencil);
 
 	LOG_OK();
@@ -2017,31 +2019,30 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 	LOG_OK();
 }
 
-void VK::CreateBuffer(VkBuffer* Buffer, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB, const VkBufferUsageFlagBits BUF, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF)
+void VK::SubmitStagingCopy(const VkQueue Queue, const VkCommandBuffer CB, const VkBuffer Buffer, const VkDeviceSize Size, const void* Source, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF)
 {
+#define USE_SUBALLOC
 	VkBuffer StagingBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
-	//!< ステージング(ホストビジブル)バッファを作成 (Create staging(host visible) buffer)
+	//!< ホストビジブルバッファ(HVB)を作成 (Create host visible buffer(HVB))
 	CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-	//!< ステージングデバイスメモリを作成 (Create staging device memory)
+
+#ifdef USE_SUBALLOC
+	//!< デバイスローカルメモリ(DLM)をサブアロケート (Suballocate device local memory(DLM))
+	uint32_t StagingHeapIndex;
+	VkDeviceSize StagingOffset;
+	SuballocateBufferMemory(StagingHeapIndex, StagingOffset, StagingBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	CopyToHostVisibleDeviceMemory(DeviceMemories[StagingHeapIndex], Size, Source);
+	const auto StagingSize = DeviceMemoryOffsets[StagingHeapIndex] - StagingOffset;
+#else
+	//!< デバイスローカルメモリ(DLM)をアロケート (Allocate device local memory(DLM))
 	AllocateBufferMemory(&StagingDeviceMemory, StagingBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-	BindBufferMemory(StagingBuffer, StagingDeviceMemory, 0);
-	CopyToDeviceMemory(StagingDeviceMemory, Size, Source);
-	//uint32_t StagingHeapIndex;
-	//VkDeviceSize StagingOffset;
-	//SuballocateBufferMemory(StagingHeapIndex, StagingOffset, StagingBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-	//CopyToDeviceMemory(DeviceMemories[StagingHeapIndex], Size, Source);
-	//const auto StagingSize = DeviceMemoryOffsets[StagingHeapIndex] - StagingOffset;
+	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, StagingBuffer, StagingDeviceMemory, 0));
+	CopyToHostVisibleDeviceMemory(StagingDeviceMemory, Size, Source);
+#endif
 
-	//!< デバイスローカルバッファを作成 (Create device local buffer)
-	CreateBuffer(Buffer, BUF | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-	//!< デバイスメモリをサブアロケート (Suballocate device memory)
-	uint32_t HeapIndex;
-	VkDeviceSize Offset;
-	SuballocateBufferMemory(HeapIndex, Offset, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-	//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit host visible to device local copy command)
-	CopyBufferToBuffer(CB, StagingBuffer, *Buffer, AF, PSF, Size);
+	//!< HVBからDLBへのコピーコマンドを発行 (Submit HVB to DLB copy command)
+	CmdCopyBufferToBuffer(CB, StagingBuffer, Buffer, AF, PSF, Size);
 	const std::array<VkCommandBuffer, 1> CBs = { CB };
 	const std::array<VkSubmitInfo, 1> SIs = {
 		{
@@ -2053,15 +2054,20 @@ void VK::CreateBuffer(VkBuffer* Buffer, const VkDeviceSize Size, const void* Sou
 			0, nullptr
 		}
 	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), VK_NULL_HANDLE));
-	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
+	VERIFY_SUCCEEDED(vkQueueSubmit(Queue, static_cast<uint32_t>(SIs.size()), SIs.data(), VK_NULL_HANDLE));
+	VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
+#ifdef USE_SUBALLOC
+	//!< サブアロケートしたオフセット分戻す (Revert suballocated memory offset)
+	DeviceMemoryOffsets[StagingHeapIndex] -= StagingSize;
+#else
 	if (VK_NULL_HANDLE != StagingDeviceMemory) {
 		vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
 	}
+#endif
 	if (VK_NULL_HANDLE != StagingBuffer) {
 		vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
 	}
-	//DeviceMemoryOffsets[StagingHeapIndex] -= StagingSize;
+#undef USE_SUBALLOC
 }
 
 /*
@@ -2076,8 +2082,16 @@ void VK::CreateStorageBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, con
 	const auto Usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
 
 	CreateBuffer(Buffer, Usage, Size);
+
+#if 1
 	AllocateBufferMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	BindBufferMemory(*Buffer, *DeviceMemory, 0);
+	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DeviceMemory, 0));
+#else
+	uint32_t HeapIndex;
+	VkDeviceSize Offset;
+	SuballocateBufferMemory(HeapIndex, Offset, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemories[HeapIndex], Offset));
+#endif
 }
 
 /*
@@ -2093,7 +2107,7 @@ void VK::CreateUniformTexelBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory
 
 	CreateBuffer(Buffer, Usage, Size);
 	AllocateBufferMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	BindBufferMemory(*Buffer, *DeviceMemory, 0);
+	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DeviceMemory, 0));
 
 	VkFormatProperties FP;
 	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), Format, &FP);
@@ -2115,7 +2129,7 @@ void VK::CreateStorageTexelBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory
 
 	CreateBuffer(Buffer, Usage, Size);
 	AllocateBufferMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	BindBufferMemory(*Buffer, *DeviceMemory, 0);
+	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DeviceMemory, 0));
 
 	VkFormatProperties FP;
 	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), Format, &FP);

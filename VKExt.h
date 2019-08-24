@@ -10,29 +10,50 @@ public:
 	//using Vertex_Position = struct Vertex_Position { glm::vec3 Position; };
 	using Vertex_PositionColor = struct Vertex_PositionColor { glm::vec3 Position; glm::vec4 Color; };
 
-	virtual void CreateBuffer_Vertex(VkBuffer* Buffer, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB) {
-		CreateBuffer(Buffer, Size, Source, CB, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
+	virtual void CreateBuffer_Vertex(const VkQueue Queue, const VkCommandBuffer CB, VkBuffer* Buffer, const VkDeviceSize Size, const void* Source) {
+		//!< デバイスローカルバッファ(DLB)を作成 (Create device local buffer(DLB))
+		CreateBuffer(Buffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+
+		//!< デバイスローカルメモリ(DLM)をサブアロケート (Suballocate device local memory(DLM))
+		uint32_t HeapIndex;
+		VkDeviceSize Offset;
+		SuballocateBufferMemory(HeapIndex, Offset, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		//!< ステージングを用いてのDLBへのコピーコマンドを発行(ホストビジブルを作成してデータをコピーし、バッファ間のコピーによりデバイスローカルへ反映)
+		SubmitStagingCopy(GraphicsQueue, CommandBuffers[0], *Buffer, Size, Source, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
 	}
-	virtual void CreateBuffer_Index(VkBuffer* Buffer, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB) {
-		CreateBuffer(Buffer, Size, Source, CB, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
+	virtual void CreateBuffer_Index(const VkQueue Queue, const VkCommandBuffer CB, VkBuffer* Buffer, const VkDeviceSize Size, const void* Source) {
+		CreateBuffer(Buffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+
+		uint32_t HeapIndex;
+		VkDeviceSize Offset;
+		SuballocateBufferMemory(HeapIndex, Offset, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		SubmitStagingCopy(GraphicsQueue, CommandBuffers[0], *Buffer, Size, Source, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
 	}
-	virtual void CreateBuffer_Indirect(VkBuffer* Buffer, const VkDeviceSize Size, const void* Source, const VkCommandBuffer CB) {
-		CreateBuffer(Buffer, Size, Source, CB, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
+	virtual void CreateBuffer_Indirect(const VkQueue Queue, const VkCommandBuffer CB, VkBuffer* Buffer, const VkDeviceSize Size, const void* Source) {
+		CreateBuffer(Buffer, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+
+		uint32_t HeapIndex;
+		VkDeviceSize Offset;
+		SuballocateBufferMemory(HeapIndex, Offset, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		SubmitStagingCopy(GraphicsQueue, CommandBuffers[0], *Buffer, Size, Source, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
 	}
 	void CreateIndirectBuffer_Draw(const uint32_t Count) {
 		IndirectBuffers.resize(1);
 		const VkDrawIndirectCommand DIC = { Count, 1, 0, 0 };
-		CreateBuffer_Indirect(&IndirectBuffers[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC, CommandBuffers[0]);
+		CreateBuffer_Indirect(GraphicsQueue, CommandBuffers[0], &IndirectBuffers[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
 	}
 	void CreateIndirectBuffer_DrawIndexed(const uint32_t Count) {
 		IndirectBuffers.resize(1);
 		const VkDrawIndexedIndirectCommand DIIC = { Count, 1, 0, 0, 0 };
-		CreateBuffer_Indirect(&IndirectBuffers[0], static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC, CommandBuffers[0]);
+		CreateBuffer_Indirect(GraphicsQueue, CommandBuffers[0], &IndirectBuffers[0], static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
 	}
 	void CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z) {
 		IndirectBuffers.resize(1);
 		const VkDispatchIndirectCommand DIC = { X, Y, Z };
-		CreateBuffer_Indirect(&IndirectBuffers[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC, CommandBuffers[0]);
+		CreateBuffer_Indirect(GraphicsQueue, CommandBuffers[0], &IndirectBuffers[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
 	}
 
 	/** 

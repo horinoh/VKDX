@@ -82,7 +82,7 @@ protected:
 			//!< ŽQl : VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
 			CreateImage(&Image, 0, Type, Format, Extent3D, Levels, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT);
 			AllocateImageMemory(&ImageDeviceMemory, Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			BindImageMemory(Image, ImageDeviceMemory, 0);
+			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Image, ImageDeviceMemory, 0));
 		}
 
 		{

@@ -59,13 +59,13 @@ protected:
 		CreateBuffer(&UniformBuffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
 #if 1
 		AllocateBufferMemory(&UniformDeviceMemory, UniformBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-		BindBufferMemory(UniformBuffer, UniformDeviceMemory, 0);
-		CopyToDeviceMemory(UniformDeviceMemory, sizeof(Tr), &Tr);
+		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffer, UniformDeviceMemory, 0));
+		CopyToHostVisibleDeviceMemory(UniformDeviceMemory, sizeof(Tr), &Tr);
 #else
 		uint32_t HeapIndex;
 		VkDeviceSize Offset;
 		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-		CopyToDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
+		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
 #endif
 	}
 
