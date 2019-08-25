@@ -276,7 +276,8 @@ protected:
 	//virtual void CreatePipelineState_Compute();
 
 	virtual void CreateTexture() {}
-	virtual void CreateStaticSamplerDesc(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) const {}
+	virtual void CreateStaticSampler() {}
+	//virtual void CreateStaticSamplerDesc(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) const {}
 
 	virtual void ClearColor(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const DirectX::XMVECTORF32& Color);
 	virtual void ClearDepthStencil(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const FLOAT Depth = 1.0f, const UINT8 Stencil = 0);
@@ -370,11 +371,6 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState; 
 #endif
 	
-//#ifdef USE_WINRT
-//	winrt::com_ptr<ID3D12Resource> VertexBufferResource;
-//#elif defined(USE_WRL)
-//	Microsoft::WRL::ComPtr<ID3D12Resource> VertexBufferResource;
-//#endif
 #ifdef USE_WINRT
 	std::vector<winrt::com_ptr<ID3D12Resource>> VertexBufferResources;
 #elif defined(USE_WRL)
@@ -382,11 +378,6 @@ protected:
 #endif
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> VertexBufferViews;
 
-//#ifdef USE_WINRT
-//	winrt::com_ptr<ID3D12Resource> IndexBufferResource;
-//#elif defined(USE_WRL)
-//	Microsoft::WRL::ComPtr<ID3D12Resource> IndexBufferResource;
-//#endif
 #ifdef USE_WINRT
 	std::vector <winrt::com_ptr<ID3D12Resource>> IndexBufferResources;
 #elif defined(USE_WRL)
@@ -419,6 +410,8 @@ protected:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> UnorderedAccessTextureDescriptorHeap; 
 #endif
 	
+	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
+
 	std::vector<D3D12_VIEWPORT> Viewports;
 	std::vector<D3D12_RECT> ScissorRects;
 
@@ -427,7 +420,6 @@ protected:
 #elif defined(USE_WRL)
 	std::vector<Microsoft::WRL::ComPtr <<ID3DBlob>> ShaderBlobs;
 #endif
-	//std::vector<D3D12_SHADER_BYTECODE> ShaderByteCodes;
 
 protected:
 	const std::vector<D3D_FEATURE_LEVEL> FeatureLevels = {
@@ -442,25 +434,4 @@ protected:
 		D3D_FEATURE_LEVEL_9_1,
 	};
 	const D3D12_SHADER_BYTECODE NullShaderBC = { nullptr, 0 };
-
-	const D3D12_STATIC_SAMPLER_DESC StaticSamplerDesc_LinearWrap_All = {
-		D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-		0.0f,
-		0,
-		D3D12_COMPARISON_FUNC_NEVER,
-		D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-		0.0f, 1.0f,
-		0, 0, D3D12_SHADER_VISIBILITY_ALL
-	};
-	const D3D12_STATIC_SAMPLER_DESC StaticSamplerDesc_LinearWrap_Ps = {
-		D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-		0.0f,
-		0,
-		D3D12_COMPARISON_FUNC_NEVER,
-		D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-		0.0f, 1.0f,
-		0, 0, D3D12_SHADER_VISIBILITY_PIXEL
-	};
 };

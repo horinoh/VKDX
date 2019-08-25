@@ -419,10 +419,24 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 	//!< ビューを作成
 	CreateImageView(ImageView, *Image, GLITexture);
 
-	//!< サンプラを作成
-	VkSampler Sampler;
-	CreateSampler(&Sampler, static_cast<const float>(GLITexture.levels()));
-	Samplers.push_back(Sampler);
+	//!< ImmutableSamplerを使わない場合
+#if 0
+	Samplers.resize(1);
+	const VkSamplerCreateInfo SCI = {
+			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+			nullptr,
+			0,
+			VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR,
+			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
+			0.0f,
+			VK_FALSE, 1.0f,
+			VK_FALSE, VK_COMPARE_OP_NEVER,
+			0.0f, 1.0f, 
+			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+			VK_FALSE
+	};
+	VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
+#endif
 
 	ValidateFormatProperties_SampledImage(GetCurrentPhysicalDevice(), ToVkFormat(GLITexture.format()), VK_SAMPLE_COUNT_1_BIT, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
 }

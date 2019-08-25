@@ -56,6 +56,35 @@ public:
 		CreateBuffer_Indirect(GraphicsQueue, CommandBuffers[0], &IndirectBuffers[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
 	}
 
+	//!< layout(set = 0, binding = 0) buffer MyBuffer { vec4 MyVec4; mat4 MyMat4; }
+	void CreateBuffer_Storage(VkBuffer *Buffer, const VkDeviceSize Size) {
+		CreateBuffer(Buffer, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, Size);
+		//CreateBuffer(Buffer, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, Size); //!< VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC もあるよ
+		
+		uint32_t HeapIndex;
+		VkDeviceSize Offset;
+		SuballocateBufferMemory(HeapIndex, Offset, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, DeviceMemories[HeapIndex], Offset));
+	}
+	//!< layout (set=0, binding=0) uniform samplerBuffer MySamplerBuffer;
+	void CreateBuffer_UniformTexel(VkBuffer* Buffer, const VkDeviceSize Size) {
+		CreateBuffer(Buffer, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, Size);
+
+		uint32_t HeapIndex;
+		VkDeviceSize Offset;
+		SuballocateBufferMemory(HeapIndex, Offset, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, DeviceMemories[HeapIndex], Offset));
+	}
+	//!< layout (set=0, binding=0, r32f) uniform imageBuffer MyImageBuffer;
+	void CreateBuffer_StorageTexel(VkBuffer* Buffer, const VkDeviceSize Size) {
+		CreateBuffer(Buffer, VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, Size);
+
+		uint32_t HeapIndex;
+		VkDeviceSize Offset;
+		SuballocateBufferMemory(HeapIndex, Offset, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, DeviceMemories[HeapIndex], Offset));
+	}
+	
 	/** 
 	アプリ内ではサンプラとサンプルドイメージは別のオブジェクトとして扱うが、シェーダ内ではまとめた一つのオブジェクトとして扱うことができ、プラットフォームによっては効率が良い場合がある
 	(コンバインドイメージサンプラ == サンプラ + サンプルドイメージ)
@@ -111,8 +140,6 @@ public:
 	void CreatePipeline_Cs() { assert(0 && "TODO"); }
 	//!< ↓ここでテンプレート特殊化している (Template specialization here)
 #include "VKPipeline.inl"
-
-	void CreateSampler_LR(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const;
 
 	void CreateRenderPass_ColorDepth(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth);
 	void CreateRenderPass_ColorDepth_PostProcess(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth);

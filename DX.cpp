@@ -38,6 +38,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateIndirectBuffer();
 
 	CreateTexture();
+	CreateStaticSampler();
 
 	//!< ルートシグネチャ (パイプライントレイアウト相当)
 	CreateRootSignature();

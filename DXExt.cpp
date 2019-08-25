@@ -89,22 +89,6 @@ void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT
 #endif
 }
 
-//void DXExt::CreateStaticSamplerDesc_LW(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility, const FLOAT MaxLOD) const
-//{
-//	//!< シェーダ内での記述例 SamplerState Sampler : register(s0, space0);
-//	//!< DXには正規化座標の設定は無く、シェーダビジビリティトレジスタの設定がある
-//	StaticSamplerDesc = {
-//			D3D12_FILTER_MIN_MAG_MIP_LINEAR, // min, mag, mip
-//			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, // u, v, w
-//			0.0f, // lod bias
-//			0, // anisotropy
-//			D3D12_COMPARISON_FUNC_NEVER, // compare
-//			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE, // border
-//			0.0f, MaxLOD, // min, maxlod
-//			0, 0, ShaderVisibility //!< UINT ShaderRegister, UINT RegisterSpace, D3D12_SHADER_VISIBILITY ShaderVisibility
-//	};
-//}
-
 void DXExt::CreatePipelineState_Tesselation(winrt::com_ptr<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS, const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
 {
 	PERFORMANCE_COUNTER();

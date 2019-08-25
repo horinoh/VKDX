@@ -20,11 +20,20 @@ protected:
 
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);
+#if 0
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0],
 			{ 
 				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
 				{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
 			});
+#else
+		assert(!ImmutableSamplers.empty() && "");
+		const std::array<VkSampler, 1> ISs = { ImmutableSamplers[0] };
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {
+				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
+				{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
+			});
+#endif
 	}
 	virtual void CreatePipelineLayout() override {
 		assert(!DescriptorSetLayouts.empty() && "");
@@ -75,12 +84,12 @@ protected:
 	virtual void UpdateDescriptorSet() override {
 		assert(!DescriptorSets.empty() && "");
 		assert(VK_NULL_HANDLE != UniformBuffer && "");
-		assert(!Samplers.empty() && "");
+		//assert(!Samplers.empty() && "");
 		const std::array<VkDescriptorBufferInfo, 1> DBIs = {
 			{ UniformBuffer, 0, VK_WHOLE_SIZE }
 		};
 		const std::array<VkDescriptorImageInfo, 1> DIIs = {
-			{ Samplers[0], ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
+			{ /*Samplers[0]*/VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
 		};
 		VKExt::UpdateDescriptorSet(
 			{
@@ -103,9 +112,25 @@ protected:
 	virtual void CreateTexture() override {
 		LoadImage(&Image, &ImageDeviceMemory, &ImageView, "NormalMap.dds");
 	}
-	virtual void CreateSampler(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const override {
-		CreateSampler_LR(Sampler, MaxLOD);
+
+	virtual void CreateImmutableSampler() override {
+		ImmutableSamplers.resize(1);
+		const VkSamplerCreateInfo SCI = {
+			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+			nullptr,
+			0,
+			VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR,
+			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
+			0.0f,
+			VK_FALSE, 1.0f,
+			VK_FALSE, VK_COMPARE_OP_NEVER,
+			0.0f, 1.0f,
+			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+			VK_FALSE
+		};
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &ImmutableSamplers[0]));
 	}
+
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }
 	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs_Tesselation(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;

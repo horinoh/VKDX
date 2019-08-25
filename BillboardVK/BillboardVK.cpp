@@ -270,6 +270,7 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 				vkCmdBindDescriptorSets(CB,
 					VK_PIPELINE_BIND_POINT_GRAPHICS,
 					PL,
+					//!< [firstSet, firstSet + descriptorSetCount - 1] に番号付けされたデスクリプタセットが、 [0, descriptorSetCount - 1]を使う
 					0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(),
 					0, nullptr);
 			}

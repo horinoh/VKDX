@@ -401,27 +401,6 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Tesselation()
 	}
 
 }
-void VKExt::CreateSampler_LR(VkSampler* Sampler, const float MaxLOD) const
-{
-	//!< シェーダ内での記述例 layout (set=0, binding=0) uniform sampler2D Sampler;
-	//!< VK にはシェーダビジビリティとレジスタの設定が無く、正規化の設定がある
-	[&](VkSampler* Sampler, const float MaxLOD) {
-		const VkSamplerCreateInfo SamplerCreateInfo = {
-			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-			nullptr,
-			0,
-			VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, // min, mag, mip
-			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, // u, v, w
-			0.0f, // lod bias
-			VK_FALSE, 1.0f, // anisotropy
-			VK_FALSE, VK_COMPARE_OP_NEVER, // compare
-			0.0f, MaxLOD, // min, maxlod
-			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE, // border
-			VK_FALSE // addressing VK_FALSE:正規化[0.0-1.0], VK_TRUE:画像のディメンション
-		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SamplerCreateInfo, GetAllocationCallbacks(), Sampler));
-	}(Sampler, MaxLOD);
-}
 
 void VKExt::CreateRenderPass_ColorDepth(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth)
 {

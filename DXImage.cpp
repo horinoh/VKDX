@@ -86,7 +86,7 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const std::wstring& Path,
 		0.0f,
 		0,
 		D3D12_COMPARISON_FUNC_NEVER,
-		D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE, 
+		D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
 		0.0f, static_cast<const FLOAT>((*Resource)->GetDesc().MipLevels),
 	};
 	Device->CreateSampler(&SD, SamplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart());

@@ -31,11 +31,12 @@ protected:
 		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Srv = {
 			{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
 		};
+		assert(!StaticSamplerDescs.empty() && "");
 		DX::SerializeRootSignature(Blob, {
 				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DRs_Cbv.size()), DRs_Cbv.data() }, D3D12_SHADER_VISIBILITY_GEOMETRY },
 				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DRs_Srv.size()), DRs_Srv.data() }, D3D12_SHADER_VISIBILITY_PIXEL },
 			}, {
-				StaticSamplerDesc_LinearWrap_Ps
+				StaticSamplerDescs[0],
 			}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 #endif
 		DX::CreateRootSignature(RootSignature, Blob);
@@ -81,6 +82,18 @@ protected:
 #elif defined(USE_WRL)
 		LoadImage(ImageResource.GetAddressOf(), TEXT("NormalMap.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 #endif
+	}
+	virtual void CreateStaticSampler() override {
+		StaticSamplerDescs.push_back({
+				D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+				D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+				0.0f,
+				0,
+				D3D12_COMPARISON_FUNC_NEVER,
+				D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+				0.0f, 1.0f,
+				0, 0, D3D12_SHADER_VISIBILITY_PIXEL
+			});
 	}
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs_Tesselation(); }

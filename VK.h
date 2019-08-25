@@ -144,7 +144,7 @@ protected:
 	void AllocateImageMemory(VkDeviceMemory* DM, const VkImage Image, const VkMemoryPropertyFlags MPF);
 	void SuballocateImageMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const VkImage Image, const VkMemoryPropertyFlags MPF);
 
-	virtual void CreateBufferView(VkBufferView* BufferView, const VkBuffer Buffer, const VkFormat Format, const VkDeviceSize Offset = 0, const VkDeviceSize Range = VK_WHOLE_SIZE);
+	//virtual void CreateBufferView(VkBufferView* BufferView, const VkBuffer Buffer, const VkFormat Format, const VkDeviceSize Offset = 0, const VkDeviceSize Range = VK_WHOLE_SIZE);
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
 
 	virtual void ValidateFormatProperties(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage) const;
@@ -257,12 +257,9 @@ protected:
 	virtual void CreateIndexBuffer() {}
 	virtual void CreateIndirectBuffer() {}
 	virtual void CreateUniformBuffer() {}
-	virtual void CreateStorageBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size);
-	virtual void CreateStorageBuffer() {}
-	virtual void CreateUniformTexelBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const VkFormat Format, VkBufferView* View);
-	virtual void CreateUniformTexelBuffer() {}
-	virtual void CreateStorageTexelBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const VkFormat Format, VkBufferView* View);
-	virtual void CreateStorageTexelBuffer() {}
+	virtual void CreateStorageBuffer();
+	virtual void CreateUniformTexelBuffer();
+	virtual void CreateStorageTexelBuffer();
 
 	virtual void CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const std::initializer_list<VkDescriptorSetLayoutBinding> il_DSLBs);
 	virtual void CreateDescriptorSetLayout() {}
@@ -283,7 +280,7 @@ protected:
 	virtual void UpdateDescriptorSet() {}
 
 	virtual void CreateTexture() {}
-	virtual void CreateSampler(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const {}
+	virtual void CreateImmutableSampler() {}
 
 	virtual void CreateRenderPass() { RenderPasses.resize(1); CreateRenderPass_Default(RenderPasses[0], ColorFormat); }
 	virtual void CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color);
@@ -432,7 +429,9 @@ protected:
 	VkImage Image = VK_NULL_HANDLE;
 	VkDeviceMemory ImageDeviceMemory = VK_NULL_HANDLE;
 	VkImageView ImageView = VK_NULL_HANDLE;
+	
 	std::vector<VkSampler> Samplers;
+	std::vector<VkSampler> ImmutableSamplers;
 
 	std::vector<VkBuffer> VertexBuffers;
 	std::vector<VkBuffer> IndexBuffers;

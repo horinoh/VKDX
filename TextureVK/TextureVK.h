@@ -17,19 +17,21 @@ protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4); }
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);
-		const std::array<VkSampler, 0> ISs = {};
-		if (ISs.empty()) {
-			VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 
-				{
-					{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-				});
-		}
-		else {
-			//!< ImmutableSampler(DX の STATIC_SAMPLER_DESC 相当と思われる)を使う場合 
-			VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {
-					{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
-				});
-		}
+#if 0
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0],
+			{
+				{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+			});
+#else
+		assert(!ImmutableSamplers.empty() && "");
+		//!< ImmutableSampler(DX の STATIC_SAMPLER_DESC 相当と思われる)を使う場合 
+		//!< セットレイアウトに永続的にバインドされ変更できない
+		//!< コンバインドイメージサンプラーの変更の場合は、イメージビューへの変更は反映されるがサンプラへの変更は無視される
+		const std::array<VkSampler, 1> ISs = { ImmutableSamplers[0] };
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {
+				{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
+			});
+#endif
 	}
 	virtual void CreatePipelineLayout() override {
 		assert(!DescriptorSetLayouts.empty() && "");
@@ -56,10 +58,11 @@ protected:
 	}
 	virtual void UpdateDescriptorSet() override {
 		assert(!DescriptorSets.empty() && "");
-		assert(!Samplers.empty() && "");
+		//assert(!Samplers.empty() && "");
 		assert(VK_NULL_HANDLE != ImageView && "");
 		const std::array<VkDescriptorImageInfo, 1> DIIs = {
-			{ Samplers[0], ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
+			//!< ImmutableSampler使用のためサンプラはどうせ変更できない(無視される)
+			{ /*Samplers[0]*/VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
 		};
 
 		VKExt::UpdateDescriptorSet(
@@ -125,8 +128,22 @@ protected:
 		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken8_rgba8_srgb.dds");
 #endif
 	}
-	virtual void CreateSampler(VkSampler* Sampler, const float MaxLOD = (std::numeric_limits<float>::max)()) const override {
-		CreateSampler_LR(Sampler, MaxLOD);
+	virtual void CreateImmutableSampler() override {
+		ImmutableSamplers.resize(1);
+		const VkSamplerCreateInfo SCI = {
+			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+			nullptr,
+			0,
+			VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, // min, mag, mip
+			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, // u, v, w
+			0.0f, // lod bias
+			VK_FALSE, 1.0f, // anisotropy
+			VK_FALSE, VK_COMPARE_OP_NEVER, // compare
+			0.0f, 1.0f, // min, maxlod
+			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE, // border
+			VK_FALSE // addressing VK_FALSE:正規化[0.0-1.0], VK_TRUE:画像のディメンション
+		};
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &ImmutableSamplers[0]));
 	}
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFs(); }
 	virtual void CreatePipeline() override { CreatePipeline_VsFs(); }

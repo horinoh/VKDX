@@ -83,6 +83,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateIndirectBuffer();
 
 	CreateTexture();
+	CreateImmutableSampler();
 
 	CreateDescriptorSetLayout();
 	//!< パイプラインレイアウト (ルートシグネチャ相当)
@@ -222,6 +223,10 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 	DeviceMemories.clear();
 	DeviceMemoryOffsets.clear();
+
+	for (auto i : ImmutableSamplers) {
+		vkDestroySampler(Device, i, GetAllocationCallbacks());
+	}
 
 	for (auto i : Samplers) {
 		vkDestroySampler(Device, i, GetAllocationCallbacks());
@@ -634,19 +639,19 @@ void VK::SuballocateImageMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const
 	DeviceMemoryOffsets[HeapIndex] += MR.size;
 }
 
-void VK::CreateBufferView(VkBufferView* BufferView, const VkBuffer Buffer, const VkFormat Format, const VkDeviceSize Offset, const VkDeviceSize Range)
-{
-	const VkBufferViewCreateInfo BufferViewCreateInfo = {
-		VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
-		nullptr,
-		0,
-		Buffer,
-		Format,
-		Offset,
-		Range
-	};
-	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BufferViewCreateInfo, GetAllocationCallbacks(), BufferView));
-}
+//void VK::CreateBufferView(VkBufferView* BufferView, const VkBuffer Buffer, const VkFormat Format, const VkDeviceSize Offset, const VkDeviceSize Range)
+//{
+//	const VkBufferViewCreateInfo BufferViewCreateInfo = {
+//		VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
+//		nullptr,
+//		0,
+//		Buffer,
+//		Format,
+//		Offset,
+//		Range
+//	};
+//	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BufferViewCreateInfo, GetAllocationCallbacks(), BufferView));
+//}
 //!< Cubemapを作る場合、まずレイヤ化されたイメージを作成し、(イメージビューを用いて)レイヤをフェイスとして扱うようハードウエアに伝える
 void VK::CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange)
 {
@@ -2070,67 +2075,93 @@ void VK::SubmitStagingCopy(const VkQueue Queue, const VkCommandBuffer CB, const 
 #undef USE_SUBALLOC
 }
 
-/*
-@brief ストレージバッファ ... 適切なオフセットに配置する必要がある、シェーダから書き込み可能、アトミックな操作が可能、ダイナミックではオフセットの指定の仕方が変わる
-デスクリプタ
-	VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC
-シェーダ内
-	layout (set=0, binding=0) buffer MyBuffer { vec4 MyVec4; mat4 MyMat4; }
-*/
-void VK::CreateStorageBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size)
+//!< 適切なオフセットに配置する(ダイナミックではオフセット指定が変わる)
+//!< デスクリプタタイプは VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC
+//!< シェーダから読み書き可能
+//!< アトミックな操作が可能
+//!< シェーダ例 layout (set=0, binding=0) buffer MyBuffer { vec4 MyVec4; mat4 MyMat4; }
+void VK::CreateStorageBuffer()
 {
-	const auto Usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+#if 0
+	VkBuffer Buffer;
+	VkDeviceSize Size = 0;
+	CreateBuffer(&Buffer, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, Size);
+	//CreateBuffer(&Buffer, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, Size);
 
-	CreateBuffer(Buffer, Usage, Size);
-
-#if 1
-	AllocateBufferMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DeviceMemory, 0));
-#else
 	uint32_t HeapIndex;
 	VkDeviceSize Offset;
-	SuballocateBufferMemory(HeapIndex, Offset, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	SuballocateBufferMemory(HeapIndex, Offset, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemories[HeapIndex], Offset));
 #endif
 }
 
-/*
-@brief ユニフォームテクセルバッファ ... イメージよりも大きなデータへアクセス可能 (1Dイメージは最低限4096テクセルだが、ユニフォームテクセルバッファは最低限65536テクセル)
-デスクリプタ
-	VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER
-シェーダ内
-	layout (set=0, binding=0) uniform samplerBuffer MySamplerBuffer;
-*/
-void VK::CreateUniformTexelBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const VkFormat Format, VkBufferView* View)
+//!< イメージよりも大きなデータへアクセス可能(1Dイメージは最低限4096テクセルだが、ユニフォームテクセルバッファは最低限65536テクセル)
+//!< デスクリプタタイプは VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER
+//!< (TexelBuffer系は)ビューが必要
+//!< シェーダ例 layout (set=0, binding=0) uniform samplerBuffer MySamplerBuffer;
+void VK::CreateUniformTexelBuffer()
 {
-	const auto Usage = VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT;
+#if 0
+	VkBuffer Buffer;
+	const VkDeviceSize Size = 0;
+	CreateBuffer(&Buffer, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, Size);
 
-	CreateBuffer(Buffer, Usage, Size);
-	AllocateBufferMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DeviceMemory, 0));
+	uint32_t HeapIndex;
+	VkDeviceSize Offset;
+	SuballocateBufferMemory(HeapIndex, Offset, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemories[HeapIndex], Offset));
 
+	VkBufferView View;
+	const VkFormat Format = VK_FORMAT_R8G8B8A8_UINT;
+	const VkBufferViewCreateInfo BVCI = {
+			VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
+			nullptr,
+			0,
+			Buffer,
+			Format,
+			0,
+			VK_WHOLE_SIZE
+	};
+	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BVCI, GetAllocationCallbacks(), &View)); 
+
+	//!< サポートされているかのチェック
 	VkFormatProperties FP;
 	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), Format, &FP);
 	assert((FP.bufferFeatures & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT) && "");
-
-	CreateBufferView(View, *Buffer, Format);
+#endif
 }
 
-/*
-@brief ストレージテクセルバッファ ... シェーダから書き込み可能、アトミックな操作が可能
-デスクリプタ
-	VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER
-シェーダ内
-	layout (set=0, binding=0, r32f) uniform imageBuffer MyImageBuffer;
-*/
-void VK::CreateStorageTexelBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDeviceSize Size, const VkFormat Format, VkBufferView* View)
+//!< シェーダから書き込み可能
+//!< デスクリプタタイプは VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER
+//!< (TexelBuffer系は)ビューが必要
+//!< アトミックな操作が可能
+//!< シェーダ例 layout (set=0, binding=0, r32f) uniform imageBuffer MyImageBuffer;
+void VK::CreateStorageTexelBuffer()
 {
-	const auto Usage = VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT;
+#if 0
+	VkBuffer Buffer;
+	const VkDeviceSize Size = 0;
+	CreateBuffer(&Buffer, VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, Size);
 
-	CreateBuffer(Buffer, Usage, Size);
-	AllocateBufferMemory(DeviceMemory, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DeviceMemory, 0));
+	uint32_t HeapIndex;
+	VkDeviceSize Offset;
+	SuballocateBufferMemory(HeapIndex, Offset, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemories[HeapIndex], Offset));
 
+	VkBufferView View;
+	const VkFormat Format = VK_FORMAT_R8G8B8A8_UINT;
+	const VkBufferViewCreateInfo BVCI = {
+		VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
+		nullptr,
+		0,
+		Buffer,
+		Format,
+		0,
+		VK_WHOLE_SIZE
+	};
+	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BVCI, GetAllocationCallbacks(), &View));
+
+	//!< サポートされているかのチェック
 	VkFormatProperties FP;
 	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), Format, &FP);
 	assert((FP.bufferFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT) && "");
@@ -2138,26 +2169,8 @@ void VK::CreateStorageTexelBuffer(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory
 	if (false/*bUseAtomic*/) {
 		assert((FP.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT) && "");
 	}
-
-	CreateBufferView(View, *Buffer, Format);
-}
-
-#if 0
-//!< 中身のない VkDescriptorSetLayout ならそもそも作る必要がない
-void VK::CreateDescriptorSetLayout_Default(VkDescriptorSetLayout& DSL)
-{
-	const std::array<VkDescriptorSetLayoutBinding, 0> DSLBs = {};
-	const VkDescriptorSetLayoutCreateInfo DSLCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
-
-	LOG_OK();
-}
 #endif
+}
 
 void VK::CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const std::initializer_list<VkDescriptorSetLayoutBinding> il_DSLBs)
 {

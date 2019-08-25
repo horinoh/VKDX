@@ -88,15 +88,15 @@ protected:
 		assert(!DescriptorSets.empty() && "");
 		assert(VK_NULL_HANDLE != UniformBuffer && "");
 		const std::array<VkDescriptorBufferInfo, 1> DBIs = {
-			{ UniformBuffer, 0/*オフセット(要アライン)*/, VK_WHOLE_SIZE }
+			{ UniformBuffer, 0/*Offset*/, VK_WHOLE_SIZE/*range*/ }
 		};
 		VKExt::UpdateDescriptorSet(
 			{
 				{
 					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					nullptr,
-					DescriptorSets[0], 0, 0,
-					static_cast<uint32_t>(DBIs.size()), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, DBIs.data(), nullptr
+					DescriptorSets[0], 0/*binding*/, 0/*arrayElement*/,
+					static_cast<uint32_t>(DBIs.size()), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr/*VkDescriptorImageInfo*/, DBIs.data(), nullptr/*VkBufferView*/
 				}
 			},
 			{});
