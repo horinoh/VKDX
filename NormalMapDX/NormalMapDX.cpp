@@ -306,8 +306,8 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 				CL->SetGraphicsRootDescriptorTable(1, ImgHandle);
 			}
 
-			if (nullptr != SamplerDescriptorHeap) {
-				CL->SetGraphicsRootDescriptorTable(0, SamplerDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+			if (!SamplerDescriptorHeaps.empty()) {
+				CL->SetGraphicsRootDescriptorTable(0, SamplerDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart());
 			}
 
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);

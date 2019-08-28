@@ -25,15 +25,26 @@ protected:
 #ifdef ROOTSIGNATRUE_FROM_SHADER
 		GetRootSignaturePartFromShader(Blob);
 #else
-		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs = {
-			{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
-		};
+#if 0
+		const std::array<D3D12_DESCRIPTOR_RANGE, 2> DRs = { {
+			{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND },
+			{ D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND}
+		} };
+		DX::SerializeRootSignature(Blob, {
+				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(DRs.size()), DRs.data() }, D3D12_SHADER_VISIBILITY_PIXEL }
+			}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+#else
+		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs = { {
+			{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND },
+		} };
+
 		assert(!StaticSamplerDescs.empty() && "");
 		DX::SerializeRootSignature(Blob, {
 				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(DRs.size()), DRs.data() }, D3D12_SHADER_VISIBILITY_PIXEL }
 			}, {
 				StaticSamplerDescs[0],
 			}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+#endif
 #endif
 		DX::CreateRootSignature(RootSignature, Blob);
 		LOG_OK();
@@ -123,6 +134,32 @@ protected:
 			0.0f, 1.0f,
 			0, 0, D3D12_SHADER_VISIBILITY_PIXEL
 		});
+	}
+	virtual void CreateSampler() override {
+		SamplerDescriptorHeaps.resize(1);
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
+			D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
+			1, 
+			D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+			0
+		};
+#ifdef USE_WINRT
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, __uuidof(SamplerDescriptorHeaps[0]), SamplerDescriptorHeaps[0].put_void()));
+#elif defined(USE_WRL)
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, IID_PPV_ARGS(SamplerDescriptorHeaps[0].GetAddressOf())));
+#endif
+
+		const D3D12_SAMPLER_DESC SD = {
+			//D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+			D3D12_FILTER_MIN_MAG_MIP_POINT,
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+			0.0f,
+			0,
+			D3D12_COMPARISON_FUNC_NEVER,
+			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+			0.0f, 1.0f,
+		};
+		Device->CreateSampler(&SD, SamplerDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart());
 	}
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPs(); }

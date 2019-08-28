@@ -84,6 +84,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateTexture();
 	CreateImmutableSampler();
+	CreateSampler();
 
 	CreateDescriptorSetLayout();
 	//!< パイプラインレイアウト (ルートシグネチャ相当)
@@ -223,10 +224,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 	DeviceMemories.clear();
 	DeviceMemoryOffsets.clear();
-
-	for (auto i : ImmutableSamplers) {
-		vkDestroySampler(Device, i, GetAllocationCallbacks());
-	}
 
 	for (auto i : Samplers) {
 		vkDestroySampler(Device, i, GetAllocationCallbacks());

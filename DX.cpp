@@ -39,6 +39,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateTexture();
 	CreateStaticSampler();
+	CreateSampler();
 
 	//!< ルートシグネチャ (パイプライントレイアウト相当)
 	CreateRootSignature();

@@ -10,6 +10,8 @@
 #include <wrl.h>
 #endif
 
+#define USE_STATIC_SAMPLER
+
 #include <d3d12.h>
 #include <d3dcompiler.h>
 #include <DXGI1_4.h>
@@ -277,7 +279,7 @@ protected:
 
 	virtual void CreateTexture() {}
 	virtual void CreateStaticSampler() {}
-	//virtual void CreateStaticSamplerDesc(D3D12_STATIC_SAMPLER_DESC& StaticSamplerDesc, const D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL, const FLOAT MaxLOD = (std::numeric_limits<FLOAT>::max)()) const {}
+	virtual void CreateSampler() {}
 
 	virtual void ClearColor(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const DirectX::XMVECTORF32& Color);
 	virtual void ClearDepthStencil(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const FLOAT Depth = 1.0f, const UINT8 Stencil = 0);
@@ -350,14 +352,6 @@ protected:
 #endif
 
 #ifdef USE_WINRT
-	winrt::com_ptr<ID3D12Resource> SamplerResource;
-	winrt::com_ptr<ID3D12DescriptorHeap> SamplerDescriptorHeap;
-#elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3D12Resource> SamplerResource;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> SamplerDescriptorHeap; 
-#endif
-
-#ifdef USE_WINRT
 	winrt::com_ptr<ID3D12RootSignature> RootSignature;
 #elif defined(USE_WRL)
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
@@ -411,6 +405,11 @@ protected:
 #endif
 	
 	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
+#ifdef USE_WINRT
+	std::vector<winrt::com_ptr<ID3D12DescriptorHeap>> SamplerDescriptorHeaps;
+#elif defined(USE_WRL)
+	std::vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> SamplerDescriptorHeaps;
+#endif
 
 	std::vector<D3D12_VIEWPORT> Viewports;
 	std::vector<D3D12_RECT> ScissorRects;

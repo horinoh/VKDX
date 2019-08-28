@@ -20,20 +20,29 @@ protected:
 
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);
-#if 0
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0],
-			{ 
-				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
-				{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-			});
-#else
-		assert(!ImmutableSamplers.empty() && "");
-		const std::array<VkSampler, 1> ISs = { ImmutableSamplers[0] };
+#ifdef USE_IMMUTABLE_SAMPLER
+		assert(!Samplers.empty() && "");
+		const std::array<VkSampler, 1> ISs = { Samplers[0] };
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {
 				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
 				{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
 			});
+#else
+		//!< ’Êí‚ÌƒTƒ“ƒvƒ‰‚ðŽg‚¤ê‡
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0],
+			{
+				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
+				{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+			});
 #endif
+
+		//!< ‚±‚±‚Å‚ÍImmutableSampler‚Æ‚·‚é
+		//assert(!ImmutableSamplers.empty() && "");
+		//const std::array<VkSampler, 1> ISs = { ImmutableSamplers[0] };
+		//VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {
+		//		{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
+		//		{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
+		//	});
 	}
 	virtual void CreatePipelineLayout() override {
 		assert(!DescriptorSetLayouts.empty() && "");
@@ -89,7 +98,12 @@ protected:
 			{ UniformBuffer, 0, VK_WHOLE_SIZE }
 		};
 		const std::array<VkDescriptorImageInfo, 1> DIIs = {
-			{ /*Samplers[0]*/VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
+#ifdef USE_IMMUTABLE_SAMPLER
+			{ VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
+#else
+			{ Samplers[0], ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
+#endif
+			//{ /*Samplers[0]*/VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
 		};
 		VKExt::UpdateDescriptorSet(
 			{
@@ -112,9 +126,9 @@ protected:
 	virtual void CreateTexture() override {
 		LoadImage(&Image, &ImageDeviceMemory, &ImageView, "NormalMap.dds");
 	}
-
+#ifdef USE_IMMUTABLE_SAMPLER
 	virtual void CreateImmutableSampler() override {
-		ImmutableSamplers.resize(1);
+		Samplers.resize(1);
 		const VkSamplerCreateInfo SCI = {
 			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			nullptr,
@@ -128,9 +142,27 @@ protected:
 			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
 			VK_FALSE
 		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &ImmutableSamplers[0]));
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
 	}
-
+#else
+	virtual void CreateSampler() override {
+		Samplers.resize(1);
+		const VkSamplerCreateInfo SCI = {
+			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+			nullptr,
+			0,
+			VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST,
+			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
+			0.0f,
+			VK_FALSE, 1.0f,
+			VK_FALSE, VK_COMPARE_OP_NEVER,
+			0.0f, 1.0f,
+			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+			VK_FALSE
+		};
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
+	}
+#endif
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }
 	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs_Tesselation(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;

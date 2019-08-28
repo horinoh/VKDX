@@ -65,30 +65,4 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const std::wstring& Path,
 #elif defined(USE_WRL)
 	(Resource, Path, ResourceState, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
 #endif
-
-#if 0
-	//!< #DX_TODO スタティックサンプラを使用しない場合
-	const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
-			D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
-			1,
-			D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-			0
-	};
-#ifdef USE_WINRT
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, __uuidof(SamplerDescriptorHeap), SamplerDescriptorHeap.put_void()));
-#elif defined(USE_WRL)
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, IID_PPV_ARGS(SamplerDescriptorHeap)));
-#endif
-
-	D3D12_SAMPLER_DESC SD = {
-		D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-		D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-		0.0f,
-		0,
-		D3D12_COMPARISON_FUNC_NEVER,
-		D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-		0.0f, static_cast<const FLOAT>((*Resource)->GetDesc().MipLevels),
-	};
-	Device->CreateSampler(&SD, SamplerDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-#endif
 }

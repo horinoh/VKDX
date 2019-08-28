@@ -17,19 +17,20 @@ protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4); }
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);
-#if 0
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0],
-			{
-				{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-			});
-#else
-		assert(!ImmutableSamplers.empty() && "");
+#ifdef USE_IMMUTABLE_SAMPLER
+		assert(!Samplers.empty() && "");
 		//!< ImmutableSampler(DX の STATIC_SAMPLER_DESC 相当と思われる)を使う場合 
 		//!< セットレイアウトに永続的にバインドされ変更できない
 		//!< コンバインドイメージサンプラーの変更の場合は、イメージビューへの変更は反映されるがサンプラへの変更は無視される
-		const std::array<VkSampler, 1> ISs = { ImmutableSamplers[0] };
+		const std::array<VkSampler, 1> ISs = { Samplers[0] };
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {
 				{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
+			});
+#else
+		//!< 通常のサンプラを使う場合
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0],
+			{
+				{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
 			});
 #endif
 	}
@@ -58,11 +59,15 @@ protected:
 	}
 	virtual void UpdateDescriptorSet() override {
 		assert(!DescriptorSets.empty() && "");
-		//assert(!Samplers.empty() && "");
 		assert(VK_NULL_HANDLE != ImageView && "");
 		const std::array<VkDescriptorImageInfo, 1> DIIs = {
-			//!< ImmutableSampler使用のためサンプラはどうせ変更できない(無視される)
-			{ /*Samplers[0]*/VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
+#ifdef USE_IMMUTABLE_SAMPLER
+			//!< ここではイミュータブルサンプラを使用すると、サンプラをアップデート対象に指定してもどうせ無視されるので VK_NULL_HANDLE にしておく
+			{ VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
+#else
+			//!< 通常のサンプラを使う場合、ここでサンプラもアップデートできる
+			{ Samplers[0], ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
+#endif
 		};
 
 		VKExt::UpdateDescriptorSet(
@@ -128,8 +133,11 @@ protected:
 		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken8_rgba8_srgb.dds");
 #endif
 	}
+
+	//!< VKの場合イミュータブルサンプラと通常のサンプラは基本的に同じもの、デスクリプタセットレイアウトの指定が異なるだけ
+#ifdef USE_IMMUTABLE_SAMPLER
 	virtual void CreateImmutableSampler() override {
-		ImmutableSamplers.resize(1);
+		Samplers.resize(1);
 		const VkSamplerCreateInfo SCI = {
 			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			nullptr,
@@ -143,8 +151,27 @@ protected:
 			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE, // border
 			VK_FALSE // addressing VK_FALSE:正規化[0.0-1.0], VK_TRUE:画像のディメンション
 		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &ImmutableSamplers[0]));
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
 	}
+#else
+	virtual void CreateSampler() override {
+		Samplers.resize(1);
+		const VkSamplerCreateInfo SCI = {
+			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+			nullptr,
+			0,
+			VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST,
+			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
+			0.0f,
+			VK_FALSE, 1.0f,
+			VK_FALSE, VK_COMPARE_OP_NEVER,
+			0.0f, 1.0f,
+			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+			VK_FALSE
+		};
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
+	}
+#endif
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFs(); }
 	virtual void CreatePipeline() override { CreatePipeline_VsFs(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;

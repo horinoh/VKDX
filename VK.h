@@ -36,6 +36,7 @@
 #endif
 
 #define USE_VIEWPORT_Y_UP
+#define USE_IMMUTABLE_SAMPLER
 
 #include "Cmn.h"
 #ifdef _WINDOWS
@@ -281,6 +282,7 @@ protected:
 
 	virtual void CreateTexture() {}
 	virtual void CreateImmutableSampler() {}
+	virtual void CreateSampler() {}
 
 	virtual void CreateRenderPass() { RenderPasses.resize(1); CreateRenderPass_Default(RenderPasses[0], ColorFormat); }
 	virtual void CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color);
@@ -431,7 +433,6 @@ protected:
 	VkImageView ImageView = VK_NULL_HANDLE;
 	
 	std::vector<VkSampler> Samplers;
-	std::vector<VkSampler> ImmutableSamplers;
 
 	std::vector<VkBuffer> VertexBuffers;
 	std::vector<VkBuffer> IndexBuffers;
