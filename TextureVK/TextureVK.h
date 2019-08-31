@@ -22,7 +22,9 @@ protected:
 		//!< ImmutableSampler(DX の STATIC_SAMPLER_DESC 相当と思われる)を使う場合 
 		//!< セットレイアウトに永続的にバインドされ変更できない
 		//!< コンバインドイメージサンプラーの変更の場合は、イメージビューへの変更は反映されるがサンプラへの変更は無視される
-		const std::array<VkSampler, 1> ISs = { Samplers[0] };
+		const std::array<VkSampler, 1> ISs = { 
+			Samplers[0] 
+		};
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {
 				{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
 			});
@@ -135,9 +137,9 @@ protected:
 	}
 
 	//!< VKの場合イミュータブルサンプラと通常のサンプラは基本的に同じもの、デスクリプタセットレイアウトの指定が異なるだけ
-#ifdef USE_IMMUTABLE_SAMPLER
-	virtual void CreateImmutableSampler() override {
+	virtual void CreateSampler() override {
 		Samplers.resize(1);
+#ifdef USE_IMMUTABLE_SAMPLER
 		const VkSamplerCreateInfo SCI = {
 			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			nullptr,
@@ -151,11 +153,7 @@ protected:
 			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE, // border
 			VK_FALSE // addressing VK_FALSE:正規化[0.0-1.0], VK_TRUE:画像のディメンション
 		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
-	}
 #else
-	virtual void CreateSampler() override {
-		Samplers.resize(1);
 		const VkSamplerCreateInfo SCI = {
 			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			nullptr,
@@ -169,9 +167,9 @@ protected:
 			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
 			VK_FALSE
 		};
+#endif
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
 	}
-#endif
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFs(); }
 	virtual void CreatePipeline() override { CreatePipeline_VsFs(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;

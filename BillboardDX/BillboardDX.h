@@ -27,8 +27,8 @@ protected:
 #elif defined(USE_WRL)
 		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
 #endif
-#ifdef ROOTSIGNATRUE_FROM_SHADER
-		GetRootSignaturePartFromShader(Blob);
+#ifdef USE_HLSL_ROOTSIGNATRUE
+		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
 #else
 		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs = {
 			{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }

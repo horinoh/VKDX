@@ -281,7 +281,6 @@ protected:
 	virtual void UpdateDescriptorSet() {}
 
 	virtual void CreateTexture() {}
-	virtual void CreateImmutableSampler() {}
 	virtual void CreateSampler() {}
 
 	virtual void CreateRenderPass() { RenderPasses.resize(1); CreateRenderPass_Default(RenderPasses[0], ColorFormat); }

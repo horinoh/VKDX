@@ -257,9 +257,9 @@ void ComputeDX::PopulateCommandList(const size_t i)
 			CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
 
 #ifdef USE_WINRT
-			const auto Handle = GetGPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			const auto Handle = GetGPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0);
 #elif defined(USE_WRL)
-			const auto Handle = GetGPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+			const auto Handle = GetGPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0);
 #endif
 			CL->SetGraphicsRootDescriptorTable(0, Handle);
 		}

@@ -83,7 +83,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateIndirectBuffer();
 
 	CreateTexture();
-	CreateImmutableSampler();
 	CreateSampler();
 
 	CreateDescriptorSetLayout();

@@ -275,24 +275,39 @@ void TextureDX::PopulateCommandList(const size_t i)
 #endif
 
 			//!< テクスチャ
-			if(nullptr != ImageDescriptorHeap){
-#ifdef USE_WINRT
-				const std::vector<ID3D12DescriptorHeap*> DH = { ImageDescriptorHeap.get() };
-#elif defined(USE_WRL)
-				const std::vector<ID3D12DescriptorHeap*> DH = { ImageDescriptorHeap.Get() };
+			if (nullptr != ImageDescriptorHeap
+#ifndef USE_STATIC_SAMPLER
+				&& !SamplerDescriptorHeaps.empty()
 #endif
-				CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
+				) {
+#ifdef USE_STATIC_SAMPLER
+#ifdef USE_WINRT
+				const std::array<ID3D12DescriptorHeap*, 1> DHs = { ImageDescriptorHeap.get() };
+#elif defined(USE_WRL)
+				const std::array<ID3D12DescriptorHeap*, 1> DHs = { ImageDescriptorHeap.Get() };
+#endif
+#else
+#ifdef USE_WINRT
+				const std::array<ID3D12DescriptorHeap*, 2> DHs = { { ImageDescriptorHeap.get(), SamplerDescriptorHeaps[0].get() } };
+#elif defined(USE_WRL)
+				const std::array<ID3D12DescriptorHeap*, 2> DHs = { { ImageDescriptorHeap.Get(), SamplerDescriptorHeaps[0].Get() } };
+#endif
+
+#endif
+				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
 
 #ifdef USE_WINRT
-				const auto ImgHandle = GetGPUDescriptorHandle(ImageDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(ImageDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 #elif defined(USE_WRL)
-				const auto ImgHandle = GetGPUDescriptorHandle(ImageDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+				CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(ImageDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 #endif
-				CL->SetGraphicsRootDescriptorTable(0, ImgHandle);
-			}
-
-			if (!SamplerDescriptorHeaps.empty()) {
-				CL->SetGraphicsRootDescriptorTable(0, SamplerDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart());
+#ifndef USE_STATIC_SAMPLER
+#ifdef USE_WINRT
+				CL->SetGraphicsRootDescriptorTable(1, GetGPUDescriptorHandle(SamplerDescriptorHeaps[0].get(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 0));
+#elif defined(USE_WRL)
+				CL->SetGraphicsRootDescriptorTable(1, GetGPUDescriptorHandle(SamplerDescriptorHeaps[0].Get(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 0));
+#endif
+#endif				
 			}
 
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);

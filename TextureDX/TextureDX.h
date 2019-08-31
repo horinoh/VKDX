@@ -22,28 +22,31 @@ protected:
 #elif defined(USE_WRL)
 		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
 #endif
-#ifdef ROOTSIGNATRUE_FROM_SHADER
-		GetRootSignaturePartFromShader(Blob);
+#ifdef USE_HLSL_ROOTSIGNATRUE 
+#ifdef USE_STATIC_SAMPLER
+		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
 #else
-#if 0
-		const std::array<D3D12_DESCRIPTOR_RANGE, 2> DRs = { {
-			{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND },
-			{ D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND}
-		} };
-		DX::SerializeRootSignature(Blob, {
-				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(DRs.size()), DRs.data() }, D3D12_SHADER_VISIBILITY_PIXEL }
-			}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT("-S.rs.cso")).data());
+#endif
 #else
-		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs = { {
-			{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND },
-		} };
-
+		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Srv = {
+			{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
+		};
+#ifdef USE_STATIC_SAMPLER
 		assert(!StaticSamplerDescs.empty() && "");
 		DX::SerializeRootSignature(Blob, {
-				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(DRs.size()), DRs.data() }, D3D12_SHADER_VISIBILITY_PIXEL }
+				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(DRs_Srv.size()), DRs_Srv.data() }, D3D12_SHADER_VISIBILITY_PIXEL }
 			}, {
 				StaticSamplerDescs[0],
 			}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+#else
+		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Smp = { 
+			{ D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
+		};
+		DX::SerializeRootSignature(Blob, {
+			{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(DRs_Srv.size()), DRs_Srv.data() }, D3D12_SHADER_VISIBILITY_PIXEL },
+			{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(DRs_Smp.size()), DRs_Smp.data() }, D3D12_SHADER_VISIBILITY_PIXEL }
+			}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 #endif
 #endif
 		DX::CreateRootSignature(RootSignature, Blob);
@@ -53,19 +56,28 @@ protected:
 		DX::CreateDescriptorHeap(ImageDescriptorHeap,
 			{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
 		);
-
-#ifdef USE_WINRT
-		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, winrt::com_ptr<ID3D12Resource> Resource, winrt::com_ptr<ID3D12DescriptorHeap> DH) {
-			const auto CDH = GetCPUDescriptorHandle(DH.get(), Type);
-			Device->CreateShaderResourceView(Resource.get(), nullptr, CDH);
-		}
-#elif defined(USE_WRL)
-		[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, Microsoft::WRL::ComPtr<ID3D12Resource> Resource, Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DH) {
-			const auto CDH = GetCPUDescriptorHandle(DH.Get(), Type);
-			Device->CreateShaderResourceView(Resource.Get(), nullptr, CDH);
-		}
+#ifndef USE_STATIC_SAMPLER
+		SamplerDescriptorHeaps.resize(1);
+		DX::CreateDescriptorHeap(SamplerDescriptorHeaps[0],
+			{ D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
+		);
 #endif
-		(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, ImageResource, ImageDescriptorHeap);
+	}
+	virtual void CreateDescriptorView() override {
+		DX::CreateShaderResourceView(ImageResource, ImageDescriptorHeap);
+
+#ifndef USE_STATIC_SAMPLER
+		const D3D12_SAMPLER_DESC SD = {
+			D3D12_FILTER_MIN_MAG_MIP_POINT,
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+			0.0f,
+			0,
+			D3D12_COMPARISON_FUNC_NEVER,
+			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+			0.0f, 1.0f,
+		};
+		Device->CreateSampler(&SD, SamplerDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart());
+#endif
 	}
 
 	virtual void CreateTexture() override {
@@ -123,6 +135,7 @@ protected:
 		//LoadImage(ImageResource.GetAddressOf(), TEXT("..\\Intermediate\\Image\\kueken8_rgba8_srgb.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE); //!< #DX_TODO
 #endif
 	}
+#ifdef USE_STATIC_SAMPLER
 	virtual void CreateStaticSampler() override {
 		StaticSamplerDescs.push_back({
 			D3D12_FILTER_MIN_MAG_MIP_LINEAR,
@@ -135,32 +148,7 @@ protected:
 			0, 0, D3D12_SHADER_VISIBILITY_PIXEL
 		});
 	}
-	virtual void CreateSampler() override {
-		SamplerDescriptorHeaps.resize(1);
-		const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
-			D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER,
-			1, 
-			D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-			0
-		};
-#ifdef USE_WINRT
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, __uuidof(SamplerDescriptorHeaps[0]), SamplerDescriptorHeaps[0].put_void()));
-#elif defined(USE_WRL)
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, IID_PPV_ARGS(SamplerDescriptorHeaps[0].GetAddressOf())));
 #endif
-
-		const D3D12_SAMPLER_DESC SD = {
-			//D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-			D3D12_FILTER_MIN_MAG_MIP_POINT,
-			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-			0.0f,
-			0,
-			D3D12_COMPARISON_FUNC_NEVER,
-			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-			0.0f, 1.0f,
-		};
-		Device->CreateSampler(&SD, SamplerDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart());
-	}
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPs(); }
 	virtual void PopulateCommandList(const size_t i) override;

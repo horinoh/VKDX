@@ -232,6 +232,7 @@ fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
 
 #### トラブルシューティング
 * 「このプロジェクトは、このコンピュータ上にないNugetパッケージを参照しています」と出る場合
+	* まず VS を最新にアップデートする、それでダメなら以下を試す
 	* .vcproj の <Target>...</Target> を消す
 	* WinPixEventRuntimeのアンインストール、インストールを行う
 

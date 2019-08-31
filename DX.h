@@ -11,6 +11,8 @@
 #endif
 
 #define USE_STATIC_SAMPLER
+//!< HLSLからルートシグネチャを作成する (Create root signature from HLSL)
+//#define USE_HLSL_ROOTSIGNATRUE
 
 #include <d3d12.h>
 #include <d3dcompiler.h>
@@ -43,9 +45,6 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 #if defined(_DEBUG) || defined(USE_PIX)
 #include <DXProgrammableCapture.h>
 #endif
-
-//!< シェーダブロブからルートシグネチャを作成する場合 (Create root signature from shader blob)
-//#define ROOTSIGNATRUE_FROM_SHADER
 
 #ifndef BREAK_ON_FAILED
 #define BREAK_ON_FAILED(vr) if(FAILED(vr)) { Log(DX::GetHRESULTString(vr).c_str()); DEBUG_BREAK(); }
@@ -125,8 +124,8 @@ protected:
 	virtual void GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format);
 	virtual void CheckFeatureLevel();
 	virtual void CheckMultiSample(const DXGI_FORMAT Format);
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index = 0) const;
-	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index = 0) const;
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index) const;
+	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index) const;
 
 	virtual void CreateCommandQueue();
 
@@ -195,13 +194,13 @@ protected:
 
 #ifdef USE_WINRT
 	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& Blob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags);
-	virtual void GetRootSignaturePartFromShader(winrt::com_ptr<ID3DBlob>& Blob);
+	virtual void GetRootSignaturePartFromShader(winrt::com_ptr<ID3DBlob>& Blob, LPCWSTR Path);
 	virtual void CreateRootSignature(winrt::com_ptr<ID3D12RootSignature>& RS, winrt::com_ptr<ID3DBlob> Blob) {
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(RS), RS.put_void()));
 	}
 #elif defined(USE_WRL)
 	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& Blob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags);
-	virtual void GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& Blob);
+	virtual void GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& Blob, LPCWSTR Path);
 	virtual void CreateRootSignature(Microsoft::WRL::ComPtr<ID3D12RootSignature>& RS, Microsoft::WRL::ComPtr<ID3DBlob> Blob) {
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RS.GetAddressOf())));
 	}
@@ -225,10 +224,10 @@ protected:
 			Res->GetGPUVirtualAddress(),
 			static_cast<UINT>(RoundUp(Size, 0xff)) //!< 256 byte align
 		};
-		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(DH.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(DH.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 	}
 	virtual void CreateShaderResourceView(const winrt::com_ptr<ID3D12Resource>& Res, const winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
-		Device->CreateShaderResourceView(Res.get(), nullptr, GetCPUDescriptorHandle(DH.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+		Device->CreateShaderResourceView(Res.get(), nullptr, GetCPUDescriptorHandle(DH.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 	}
 	virtual void CreateUnorderedAccessView(const winrt::com_ptr<ID3D12Resource>& Res, const winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
 		D3D12_UNORDERED_ACCESS_VIEW_DESC UAVD = {
@@ -237,7 +236,7 @@ protected:
 		};
 		UAVD.Texture2D.MipSlice = 0;
 		UAVD.Texture2D.PlaneSlice = 0;
-		Device->CreateUnorderedAccessView(Res.get(), nullptr, &UAVD, GetCPUDescriptorHandle(DH.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+		Device->CreateUnorderedAccessView(Res.get(), nullptr, &UAVD, GetCPUDescriptorHandle(DH.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 	}
 #elif defined(USE_WRL)
 	virtual void CreateConstantBufferView(const Microsoft::WRL::ComPtr<ID3D12Resource> Res, const Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH, const size_t Size) {
@@ -245,10 +244,10 @@ protected:
 			Res->GetGPUVirtualAddress(),
 			static_cast<UINT>(RoundUp(Size, 0xff))
 		};
-		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(DH.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(DH.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 	}
 	virtual void CreateShaderResourceView(const Microsoft::WRL::ComPtr<ID3D12Resource> Res, const Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH) {
-		Device->CreateShaderResourceView(Resource.Get(), nullptr, GetCPUDescriptorHandle(DH.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+		Device->CreateShaderResourceView(Resource.Get(), nullptr, GetCPUDescriptorHandle(DH.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 	}
 	virtual void CreateUnorderedAccessView(const winrt::com_ptr<ID3D12Resource>& Res, const winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
 		D3D12_UNORDERED_ACCESS_VIEW_DESC UAVD = {
@@ -257,7 +256,7 @@ protected:
 		};
 		UAVD.Texture2D.MipSlice = 0;
 		UAVD.Texture2D.PlaneSlice = 0;
-		Device->CreateUnorderedAccessView(Res.Get(), nullptr, &UAVD, GetCPUDescriptorHandle(DH.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+		Device->CreateUnorderedAccessView(Res.Get(), nullptr, &UAVD, GetCPUDescriptorHandle(DH.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 	}
 #endif
 	virtual void CreateDescriptorView() {}
@@ -279,7 +278,6 @@ protected:
 
 	virtual void CreateTexture() {}
 	virtual void CreateStaticSampler() {}
-	virtual void CreateSampler() {}
 
 	virtual void ClearColor(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const DirectX::XMVECTORF32& Color);
 	virtual void ClearDepthStencil(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const FLOAT Depth = 1.0f, const UINT8 Stencil = 0);

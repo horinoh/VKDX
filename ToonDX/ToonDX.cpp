@@ -275,18 +275,17 @@ void ToonDX::PopulateCommandList(const size_t i)
 			//!< コンスタントバッファ
 			{
 #ifdef USE_WINRT
-				const std::vector<ID3D12DescriptorHeap*> DH = { ConstantBufferDescriptorHeap.get() };
+				const std::array<ID3D12DescriptorHeap*, 1> DH = { ConstantBufferDescriptorHeap.get() };
 #elif defined(USE_WRL)
-				const std::vector<ID3D12DescriptorHeap*> DH = { ConstantBufferDescriptorHeap.Get() };
+				const std::array<ID3D12DescriptorHeap*, 1> DH = { ConstantBufferDescriptorHeap.Get() };
 #endif
 				CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
 
 #ifdef USE_WINRT
-				auto CBHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+				CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 #elif defined(USE_WRL)
-				auto CBHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
-#endif
-				CL->SetGraphicsRootDescriptorTable(0, CBHandle);
+				CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+#endif	
 			}
 
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);

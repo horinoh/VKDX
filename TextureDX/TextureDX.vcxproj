@@ -66,11 +66,13 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\Props\HLSL.props" />
     <Import Project="..\Props\DXTK.props" />
+    <Import Project="..\Props\RS.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\Props\HLSL.props" />
     <Import Project="..\Props\DXTK.props" />
+    <Import Project="..\Props\RS.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -111,10 +113,14 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent />
+    <PreLinkEvent>
+      <Command>xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(ProjectDir)
+xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)</Command>
+    </PreLinkEvent>
     <PreBuildEvent>
       <Command>fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
-xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(ProjectDir)
-xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)</Command>
+fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName)-S.rs.cso /D USE_SAMPLER=1</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -151,10 +157,14 @@ xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)</Command>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent />
+    <PreLinkEvent>
+      <Command>xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(ProjectDir)
+xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)</Command>
+    </PreLinkEvent>
     <PreBuildEvent>
       <Command>fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
-xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(ProjectDir)
-xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)</Command>
+fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName)-S.rs.cso /D USE_SAMPLER=1</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

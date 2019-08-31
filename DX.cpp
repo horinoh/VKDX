@@ -39,7 +39,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateTexture();
 	CreateStaticSampler();
-	CreateSampler();
 
 	//!< ルートシグネチャ (パイプライントレイアウト相当)
 	CreateRootSignature();
@@ -614,7 +613,7 @@ D3D12_CPU_DESCRIPTOR_HANDLE DX::GetCPUDescriptorHandle(ID3D12DescriptorHeap* Des
 	DescriptorHandle.ptr += Index * Device->GetDescriptorHandleIncrementSize(Type);
 	return DescriptorHandle;
 }
-D3D12_GPU_DESCRIPTOR_HANDLE DX::GetGPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index /*= 0*/) const
+D3D12_GPU_DESCRIPTOR_HANDLE DX::GetGPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index) const
 {
 	auto DescriptorHandle(DescriptorHeap->GetGPUDescriptorHandleForHeapStart());
 	DescriptorHandle.ptr += Index * Device->GetDescriptorHandleIncrementSize(Type);
@@ -941,12 +940,12 @@ void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Wi
 #endif
 
 #ifdef USE_WINRT
-	const auto CDH = GetCPUDescriptorHandle(DepthStencilDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	const auto CDH = GetCPUDescriptorHandle(DepthStencilDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 0);
 	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	//!< (リソースがタイプドフォーマットなら D3D12_DEPTH_STENCIL_VIEW_DESC* へ nullptr 指定可能)
 	Device->CreateDepthStencilView(DepthStencilResource.get(), nullptr, CDH); 
 #elif defined(USE_WRL)
-	const auto CDH = GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+	const auto CDH = GetCPUDescriptorHandle(DepthStencilDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 0);
 	Device->CreateDepthStencilView(DepthStencilResource.Get(), nullptr, CDH); 
 #endif
 
@@ -1150,18 +1149,18 @@ void DX::SerializeRootSignature(
 
 //!< シェーダからルートシグネチャパートを取り出しブロブを作る
 #ifdef USE_WINRT
-void DX::GetRootSignaturePartFromShader(winrt::com_ptr<ID3DBlob>& Blob)
+void DX::GetRootSignaturePartFromShader(winrt::com_ptr<ID3DBlob>& Blob, LPCWSTR Path)
 {
 	winrt::com_ptr<ID3DBlob> ShaderBlob;
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((GetBasePath() + TEXT(".rs.cso")).data(), ShaderBlob.put()));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(Path, ShaderBlob.put()));
 	VERIFY_SUCCEEDED(D3DGetBlobPart(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, Blob.put()));
 	LOG_OK();
 }
 #elif defined(USE_WRL)
-void DX::GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& Blob)
+void DX::GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& Blob, LPCWSTR Path)
 {
 	Microsoft::WRL::ComPtr<ID3DBlob> ShaderBlob;
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((GetBasePath() + TEXT(".rs.cso")).data(), ShaderBlob.GetAddressOf()));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(Path, ShaderBlob.GetAddressOf()));
 	VERIFY_SUCCEEDED(D3DGetBlobPart(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, Blob.GetAddressOf()));
 	LOG_OK();
 }
@@ -1178,8 +1177,8 @@ void DX::CreateRootSignature()
 	Microsoft::WRL::ComPtr<ID3DBlob> Blob;
 #endif
 
-#ifdef ROOTSIGNATRUE_FROM_SHADER
-	GetRootSignaturePartFromShader(Blob);
+#ifdef USE_HLSL_ROOTSIGNATRUE
+	GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
 #else
 	SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 #endif

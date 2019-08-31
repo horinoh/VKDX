@@ -26,8 +26,8 @@ protected:
 #elif defined(USE_WRL)
 		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
 #endif
-#ifdef ROOTSIGNATRUE_FROM_SHADER
-		GetRootSignaturePartFromShader(Blob);
+#ifdef USE_HLSL_ROOTSIGNATRUE
+		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
 #else
 		DX::SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 #endif

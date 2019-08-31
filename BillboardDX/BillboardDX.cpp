@@ -253,9 +253,9 @@ void BillboardDX::CreateDescriptorView()
 		static_cast<UINT>(RoundUp(sizeof(Transform), 0xff))
 	};
 #ifdef USE_WINRT
-	const auto CDH = GetCPUDescriptorHandle(ConstantBufferDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	const auto CDH = GetCPUDescriptorHandle(ConstantBufferDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0);
 #elif defined(USE_WRL)
-	const auto CDH = GetCPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	const auto CDH = GetCPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0);
 #endif
 	Device->CreateConstantBufferView(&ConstantBufferViewDesc, CDH);
 
@@ -323,9 +323,9 @@ void BillboardDX::PopulateCommandList(const size_t i)
 				CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
 
 #ifdef USE_WINRT
-				auto CBHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+				auto CBHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 #elif defined(USE_WRL)
-				auto CBHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV));
+				auto CBHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 #endif
 				CL->SetGraphicsRootDescriptorTable(0, CBHandle);
 			}
