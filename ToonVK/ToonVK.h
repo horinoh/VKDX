@@ -39,17 +39,11 @@ protected:
 		const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
 		const auto CamTag = glm::vec3(0.0f);
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
-		const auto Tr = Transform({
-			GetVulkanClipSpace() * glm::perspective(Fov, Aspect, ZNear, ZFar),
-			glm::lookAt(CamPos, CamTag, CamUp),
-			glm::mat4(1.0f)
-			});
+		Tr = Transform({ GetVulkanClipSpace() * glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
 
 		CreateBuffer(&UniformBuffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-
-		uint32_t HeapIndex;
-		VkDeviceSize Offset;
 		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
 		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
 	}
 
@@ -69,6 +63,10 @@ protected:
 		std::copy(DSs.begin(), DSs.end(), std::back_inserter(DescriptorSets));
 	}
 	virtual void UpdateDescriptorSet() override {
+		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
+		Degree += 1.0f;
+		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
+
 		assert(!DescriptorSets.empty() && "");
 		assert(VK_NULL_HANDLE != UniformBuffer && "");
 		const std::array<VkDescriptorBufferInfo, 1> DBIs = {
@@ -97,5 +95,10 @@ private:
 		glm::mat4 World;
 	};
 	using Transform = struct Transform;
+
+	float Degree = 0.0f;
+	Transform Tr;
+	uint32_t HeapIndex;
+	VkDeviceSize Offset;
 };
 #pragma endregion

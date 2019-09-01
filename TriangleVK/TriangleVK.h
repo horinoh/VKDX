@@ -26,13 +26,7 @@ protected:
 		PipelineLayouts.resize(1);
 		VKExt::CreatePipelineLayout(PipelineLayouts[0], {}, {}); 
 	}
-	virtual void CreateShaderModule() override {
-		const auto ShaderPath = GetBasePath();
-		CreateShaderModle({
-			VKExt::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()),
-			VKExt::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data())
-			});
-	}
+	virtual void CreateShaderModule() override { CreateShaderModle_VsFs(); }
 	virtual void CreatePipeline() override { CreatePipeline_VsFs_Vertex<Vertex_PositionColor>(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 

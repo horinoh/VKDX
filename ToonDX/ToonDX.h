@@ -54,11 +54,17 @@ protected:
 		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f);
 		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		Super::CreateConstantBufferT<Transform>({
-			DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar),
-			DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp),
-			DirectX::XMMatrixIdentity()
-		});
+		Tr = Transform({ DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar), DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp), DirectX::XMMatrixIdentity() });
+		Super::CreateConstantBufferT(Tr);
+	}
+	virtual void UpdateDescriptorHeap() override {
+		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
+		Degree += 1.0f;
+#ifdef USE_WINRT
+		CopyToUploadResource(ConstantBufferResource.get(), RoundUp(sizeof(Tr), 0xff), &Tr);
+#elif defined(USE_WRL)
+		CopyToUploadResource(ConstantBufferResource.Get(), RoundUp(sizeof(Tr), 0xff), &Tr);
+#endif
 	}
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs_Tesselation(); }
@@ -72,5 +78,8 @@ private:
 		DirectX::XMMATRIX World;
 	};
 	using Transform = struct Transform;
+
+	FLOAT Degree = 0.0f;
+	Transform Tr;
 };
 #pragma endregion

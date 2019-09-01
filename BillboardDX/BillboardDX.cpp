@@ -230,37 +230,6 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void BillboardDX::CreateDescriptorHeap()
-{
-	const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
-		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-		1,
-		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-		0
-	};
-#ifdef USE_WINRT
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, __uuidof(ConstantBufferDescriptorHeap), ConstantBufferDescriptorHeap.put_void()));
-#elif defined(USE_WRL)
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, IID_PPV_ARGS(ConstantBufferDescriptorHeap.GetAddressOf())));
-#endif
-
-	LOG_OK();
-}
-void BillboardDX::CreateDescriptorView()
-{
-	const D3D12_CONSTANT_BUFFER_VIEW_DESC ConstantBufferViewDesc = {
-		ConstantBufferResource->GetGPUVirtualAddress(),
-		static_cast<UINT>(RoundUp(sizeof(Transform), 0xff))
-	};
-#ifdef USE_WINRT
-	const auto CDH = GetCPUDescriptorHandle(ConstantBufferDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0);
-#elif defined(USE_WRL)
-	const auto CDH = GetCPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0);
-#endif
-	Device->CreateConstantBufferView(&ConstantBufferViewDesc, CDH);
-
-	LOG_OK();
-}
 void BillboardDX::PopulateCommandList(const size_t i)
 {
 #ifdef USE_WINRT
@@ -316,18 +285,17 @@ void BillboardDX::PopulateCommandList(const size_t i)
 			//!< コンスタントバッファ
 			{
 #ifdef USE_WINRT
-				const std::vector<ID3D12DescriptorHeap*> DH = { ConstantBufferDescriptorHeap.get() };
+				const std::array<ID3D12DescriptorHeap*, 1> DHs = { ConstantBufferDescriptorHeap.get() };
 #elif defined(USE_WRL)
-				const std::vector<ID3D12DescriptorHeap*> DH = { ConstantBufferDescriptorHeap.Get() };
+				const std::array<ID3D12DescriptorHeap*, 1> DHs = { ConstantBufferDescriptorHeap.Get() };
 #endif
-				CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
+				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
 
 #ifdef USE_WINRT
-				auto CBHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+				CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 #elif defined(USE_WRL)
-				auto CBHandle(GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+				CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 #endif
-				CL->SetGraphicsRootDescriptorTable(0, CBHandle);
 			}
 
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
