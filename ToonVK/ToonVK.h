@@ -96,8 +96,9 @@ protected:
 			{ UniformBuffer, 0, VK_WHOLE_SIZE },
 		};
 
-#ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
 		assert(!DescriptorSets.empty() && "");
+#ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
+		assert(!DescriptorUpdateTemplates.empty() && "");
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 #else
 		VKExt::UpdateDescriptorSet(

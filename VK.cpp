@@ -830,41 +830,6 @@ void VK::CreateInstance()
 		APIVersion
 	};
 	
-	const std::vector<const char*> EnabledLayerNames = {
-#ifdef _DEBUG
-		//!< ↓標準的なバリデーションレイヤセットを最適な順序でロードする指定
-		//!< (プログラムからやらない場合は環境変数 VK_INSTANCE_LAYERS へセットしておいてもよい)
-		"VK_LAYER_LUNARG_standard_validation",
-		//!< 
-		"VK_LAYER_LUNARG_object_tracker",
-		//!< API 呼び出しとパラメータをコンソール出力する (出力がうるさいのでここでは指定しない)
-		//"VK_LAYER_LUNARG_api_dump",
-#else
-		"VK_LAYER_LUNARG_core_validation",
-#endif
-#ifdef USE_RENDERDOC
-		"VK_LAYER_RENDERDOC_Capture",
-#endif
-	};
-
-	const std::vector<const char*> EnabledExtensions = {
-		VK_KHR_SURFACE_EXTENSION_NAME,
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-		VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
-#else
-		VK_KHR_XCB_SURFACE_EXTENSION_NAME,
-#endif
-#ifdef _DEBUG
-		//!< デバッグレポート用
-		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-#endif
-#ifdef USE_RENDERDOC
-		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-#endif
-	};
-
 	//!< #VK_TODO 有効にしているものが、InstanceLayerProperties に含まれているかチェックする
 
 	const VkInstanceCreateInfo InstanceCreateInfo = {
@@ -872,8 +837,8 @@ void VK::CreateInstance()
 		nullptr,
 		0,
 		&ApplicationInfo,
-		static_cast<uint32_t>(EnabledLayerNames.size()), EnabledLayerNames.data(),
-		static_cast<uint32_t>(EnabledExtensions.size()), EnabledExtensions.data()
+		static_cast<uint32_t>(InstanceLayers.size()), InstanceLayers.data(),
+		static_cast<uint32_t>(InstanceExtensions.size()), InstanceExtensions.data()
 	};
 	VERIFY_SUCCEEDED(vkCreateInstance(&InstanceCreateInfo, GetAllocationCallbacks(), &Instance));
 
@@ -1385,15 +1350,6 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface)
 		}
 	}	
 
-	const std::vector<const char*> EnabledExtensions = {
-		//!< スワップチェインはプラットフォームに特有の機能なのでデバイス作製時に VK_KHR_SWAPCHAIN_EXTENSION_NAME エクステンションを有効にして作成しておく
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-#ifdef USE_RENDERDOC
-		VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
-#endif
-		VK_EXT_VALIDATION_CACHE_EXTENSION_NAME,
-	};
-
 	//!< vkGetPhysicalDeviceFeatures() で可能なフィーチャーが全て有効になった VkPhysicalDeviceFeatures が返る
 	//!< このままでは可能なだけ有効になってしまうのでパフォーマンス的には良くない(必要な項目だけ true にし、それ以外は false にするのが本来は良い)
 	//!< デバイスフィーチャーを「有効にしないと」と使用できない機能が多々あり面倒なので、ここでは返った値をそのまま使ってしまっている (パフォーマンス的には良くない)
@@ -1406,8 +1362,8 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface)
 		nullptr,
 		0,
 		static_cast<uint32_t>(QueueCreateInfos.size()), QueueCreateInfos.data(),
-		0, nullptr, //!< デバイスのレイヤは非推奨 (Device layer is deprecated)
-		static_cast<uint32_t>(EnabledExtensions.size()), EnabledExtensions.data(),
+		0, nullptr, //!< デバイスでレイヤーの有効化は非推奨 (Device layer is deprecated)
+		static_cast<uint32_t>(DeviceExtensions.size()), DeviceExtensions.data(),
 		&PDF
 	};
 	VERIFY_SUCCEEDED(vkCreateDevice(PD, &DeviceCreateInfo, GetAllocationCallbacks(), &Device));
@@ -2004,8 +1960,8 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 {
 	Viewports = {
 		{
-			//!< VKではデフォルトで「Yが下」を向くが、高さに負の値を指定すると「Yが上」を向きDXと同様になる
-			//!< 通常基点は「左上」を指定するが、高さに負の値を指定する場合は「左下」を指定すること
+			//!< VKではデフォルトで「Yが下」を向くが、高さに負の値を指定すると「Yが上」を向きDXと同様になる (In VK, by specifying negative height, Y become up. same as DX)
+			//!< 通常基点は「左上」を指定するが、高さに負の値を指定する場合は「左下」を指定すること (When negative height, specify left bottom as base, otherwise left up)
 #ifdef USE_VIEWPORT_Y_UP
 			0, Height,
 			Width, -Height,

@@ -31,7 +31,7 @@ protected:
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {
-				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr } 
+				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr }
 			});
 	}
 	virtual void CreatePipelineLayout() override {
@@ -89,7 +89,11 @@ protected:
 			nullptr,
 			0,
 			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
-			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
+#ifdef USE_PUSH_DESCRIPTOR
+			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR,
+#else
+			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET, 
+#endif
 			DescriptorSetLayouts[0],
 			VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
 		};
@@ -107,6 +111,7 @@ protected:
 			{ UniformBuffer, 0/*Offset*/, VK_WHOLE_SIZE/*range*/ },
 		};
 
+		assert(!DescriptorSets.empty() && "");
 #ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
 		assert(!DescriptorUpdateTemplates.empty() && "");
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);

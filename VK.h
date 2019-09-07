@@ -31,24 +31,18 @@
 #define MESSAGEBOX_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Win::ShowMessageBoxW(nullptr, VK::GetVkResultStringW(vr)); }
 #endif
 
-#ifdef _DEBUG
-#define USE_RENDERDOC
-#endif
-
 #define USE_VIEWPORT_Y_UP
 #define USE_IMMUTABLE_SAMPLER
-//#define USE_DESCRIPTOR_UPDATE_TEMPLATE
+#define USE_DESCRIPTOR_UPDATE_TEMPLATE
+//#define USE_PUSH_DESCRIPTOR //!< #VK_TODO
+#ifdef _DEBUG
+#define USE_RENDERDOC
+#define USE_DEBUG_MARKER
+#endif
 
 #include "Cmn.h"
 #ifdef _WINDOWS
 #include "Win.h"
-#endif
-
-#ifndef USE_DEBUG_MARKER
-//!< エクステンションは見つかるのに、使用できないので封印... Extension is found, but not available...
-//!< VK_EXT_debug_marker not available for devices associated with ICD nvoglv64.dll
-//!< https://devtalk.nvidia.com/default/topic/1001794/vulkan-vk_ext_debug_marker-missing-after-new-5-2-build-update-/
-//#define USE_DEBUG_MARKER
 #endif
 
 namespace Colors
@@ -481,6 +475,51 @@ protected:
 	4 フェンス
 	5 フレームバッファ
 	*/
+
+	std::vector<const char*> InstanceLayers = {
+#ifdef _DEBUG
+		//!< ↓標準的なバリデーションレイヤセットを最適な順序でロードする指定
+		//!< (プログラムからやらない場合は環境変数 VK_INSTANCE_LAYERS へセットしておいてもよい)
+		"VK_LAYER_LUNARG_standard_validation",
+		//!< 
+		"VK_LAYER_LUNARG_object_tracker",
+		//!< API 呼び出しとパラメータをコンソール出力する (出力がうるさいのでここでは指定しない)
+		//"VK_LAYER_LUNARG_api_dump",
+#else
+		"VK_LAYER_LUNARG_core_validation",
+#endif
+#ifdef USE_RENDERDOC
+		"VK_LAYER_RENDERDOC_Capture",
+#endif
+	};
+	std::vector<const char*> InstanceExtensions = {
+		VK_KHR_SURFACE_EXTENSION_NAME,
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+		VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
+#else
+		VK_KHR_XCB_SURFACE_EXTENSION_NAME,
+#endif
+#ifdef _DEBUG
+		//!< デバッグレポート用
+		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+#endif
+#ifdef USE_RENDERDOC
+		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+#endif
+	};
+	std::vector<const char*> DeviceExtensions = {
+		//!< スワップチェインはプラットフォームに特有の機能なのでデバイス作製時に VK_KHR_SWAPCHAIN_EXTENSION_NAME エクステンションを有効にして作成しておく
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+#ifdef USE_PUSH_DESCRIPTOR
+		VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
+#endif
+#ifdef USE_RENDERDOC
+		VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
+#endif
+		VK_EXT_VALIDATION_CACHE_EXTENSION_NAME,
+	};
 
 	//!< よく使うやつ
 	const VkComponentMapping ComponentMapping_Identity = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, };

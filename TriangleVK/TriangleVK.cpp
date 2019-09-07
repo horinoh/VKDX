@@ -278,10 +278,10 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandBuffers[i];
 	const auto FB = Framebuffers[i];
-	const auto Image = SwapchainImages[i];
+	const auto SI = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
-	const auto& VertexB = VertexBuffers[0];
-	const auto IndexB = IndexBuffers[0];
+	const auto VB = VertexBuffers[0];
+	const auto IB = IndexBuffers[0];
 	const auto IndirectB = IndirectBuffers[0];
 
 	const VkCommandBufferBeginInfo BeginInfo = {
@@ -302,7 +302,7 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 		//!< ƒNƒŠƒA
-		ClearColor(CB, Image, Colors::SkyBlue);
+		ClearColor(CB, SI, Colors::SkyBlue);
 
 		const VkRenderPassBeginInfo RenderPassBeginInfo = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -324,10 +324,10 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
 
 			const VkDeviceSize Offsets[] = { 0 };
-			vkCmdBindVertexBuffers(CB, 0, 1, &VertexB, Offsets);
-			vkCmdBindIndexBuffer(CB, IndexB, 0, VK_INDEX_TYPE_UINT32);
+			const std::array<VkBuffer, 1> VBs = { VB };
+			vkCmdBindVertexBuffers(CB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets);
+			vkCmdBindIndexBuffer(CB, IB, 0, VK_INDEX_TYPE_UINT32);
 
-			//!< •`‰æ
 			vkCmdDrawIndexedIndirect(CB, IndirectB, 0, 1, 0);
 		} vkCmdEndRenderPass(CB);
 #ifdef _DEBUG

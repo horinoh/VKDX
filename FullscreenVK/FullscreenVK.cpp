@@ -234,7 +234,7 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandBuffers[i];
 	const auto FB = Framebuffers[i];
-	const auto Image = SwapchainImages[i];
+	const auto SI = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
 	const auto IB = IndirectBuffers[0];
 

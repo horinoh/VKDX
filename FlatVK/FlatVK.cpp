@@ -232,10 +232,9 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void FlatVK::PopulateCommandBuffer(const size_t i)
 {
-	const auto CB = CommandBuffers[i];//CommandPools[0].second[i];///CommandBuffers[i];
-	//const auto SCB = SecondaryCommandBuffers[i];
+	const auto CB = CommandBuffers[i];
 	const auto FB = Framebuffers[i];
-	const auto Image = SwapchainImages[i];
+	const auto SI = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
 	const auto IB = IndirectBuffers[0];
 
@@ -249,7 +248,7 @@ void FlatVK::PopulateCommandBuffer(const size_t i)
 		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-		ClearColor(CB, Image, Colors::SkyBlue);
+		ClearColor(CB, SI, Colors::SkyBlue);
 
 		const VkRenderPassBeginInfo RenderPassBeginInfo = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

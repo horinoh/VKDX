@@ -232,10 +232,11 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void BillboardVK::PopulateCommandBuffer(const size_t i)
 {
-	const auto CB = CommandBuffers[i];//CommandPools[0].second[i];
+	const auto CB = CommandBuffers[i];
 	//const auto SCB = SecondaryCommandBuffers[i];
 	const auto FB = Framebuffers[i];
-	const auto Image = SwapchainImages[i];
+	const auto SI = SwapchainImages[i];
+	const auto DS = DescriptorSets[0];
 	const auto RP = RenderPasses[0];
 	const auto PL = PipelineLayouts[0];
 	const auto IB = IndirectBuffers[0];
@@ -250,7 +251,7 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-		ClearColor(CB, Image, Colors::SkyBlue);
+		ClearColor(CB, SI, Colors::SkyBlue);
 		if (VK_NULL_HANDLE != DepthStencilImage) {
 			ClearDepthStencil(CB, DepthStencilImage, ClearDepthStencilValue);
 		}
@@ -263,17 +264,26 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 			ScissorRects[0],
 			0, nullptr
 		};
+
+#ifdef USE_PUSH_DESCRIPTOR
+		{
+			const DescriptorUpdateInfo DUI = {
+				{ UniformBuffer, 0, VK_WHOLE_SIZE },
+			};
+			vkCmdPushDescriptorSetWithTemplateKHR(CB, DescriptorUpdateTemplates[0], PipelineLayouts[0], 0, DUI.DescriptorBufferInfos);
+		}
+#endif
+
 		vkCmdBeginRenderPass(CB, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
 
 			//!< ユニフォームバッファ UniformBuffer
-			if (!DescriptorSets.empty()) {
-				vkCmdBindDescriptorSets(CB,
-					VK_PIPELINE_BIND_POINT_GRAPHICS,
-					PL,
-					//!< [firstSet, firstSet + descriptorSetCount - 1] に番号付けされたデスクリプタセットが、 [0, descriptorSetCount - 1]を使う
-					0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(),
-					0, nullptr);
-			}
+			const std::array<VkDescriptorSet, 1> DSs = { DS };
+			vkCmdBindDescriptorSets(CB,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				PL,
+				//!< [firstSet, firstSet + descriptorSetCount - 1] に番号付けされたデスクリプタセットが、 [0, descriptorSetCount - 1]を使う
+				0, static_cast<uint32_t>(DSs.size()), DSs.data(),
+				0, nullptr);
 
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
 
