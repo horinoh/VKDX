@@ -102,6 +102,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateDescriptorPool();
 	//!< デスクリプタセット (デスクリプタビュー相当)
 	AllocateDescriptorSet();
+	CreateDescriptorUpdateTemplate();
 	UpdateDescriptorSet();
 
 	SetTimer(hWnd, NULL, 1000 / 60, nullptr);
@@ -177,6 +178,11 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyPipelineLayout(Device, i, GetAllocationCallbacks());
 	}
 	PipelineLayouts.clear();
+
+	for (auto i : DescriptorUpdateTemplates) {
+		vkDestroyDescriptorUpdateTemplate(Device, i, GetAllocationCallbacks());
+	}
+	DescriptorUpdateTemplates.clear();
 
 #if 0
 	//!< VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT の場合のみ個別に開放できる (Only if VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT is used, can be release individually)

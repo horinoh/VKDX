@@ -73,26 +73,55 @@ protected:
 			});
 		std::copy(DSs.begin(), DSs.end(), std::back_inserter(DescriptorSets));
 	}
+#ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
+	virtual void CreateDescriptorUpdateTemplate() override {
+		const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
+			{
+				0/*binding*/, 0/*arrayElement*/,
+				_countof(DescriptorUpdateInfo::DescriptorBufferInfos), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				offsetof(DescriptorUpdateInfo, DescriptorBufferInfos), sizeof(DescriptorUpdateInfo)
+			}
+		};
+
+		assert(!DescriptorSetLayouts.empty() && "");
+		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
+			nullptr,
+			0,
+			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
+			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
+			DescriptorSetLayouts[0],
+			VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
+		};
+		DescriptorUpdateTemplates.resize(1);
+		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
+	}
+#endif
 	virtual void UpdateDescriptorSet() override {
 		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
 		Degree += 1.0f;
 		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
 
-		assert(!DescriptorSets.empty() && "");
 		assert(VK_NULL_HANDLE != UniformBuffer && "");
-		const std::array<VkDescriptorBufferInfo, 1> DBIs = {
-			{ UniformBuffer, 0/*Offset*/, VK_WHOLE_SIZE/*range*/ }
+		const DescriptorUpdateInfo DUI = {
+			{ UniformBuffer, 0/*Offset*/, VK_WHOLE_SIZE/*range*/ },
 		};
+
+#ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
+		assert(!DescriptorUpdateTemplates.empty() && "");
+		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+#else
 		VKExt::UpdateDescriptorSet(
 			{
 				{
 					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					nullptr,
 					DescriptorSets[0], 0/*binding*/, 0/*arrayElement*/,
-					static_cast<uint32_t>(DBIs.size()), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr/*VkDescriptorImageInfo*/, DBIs.data(), nullptr/*VkBufferView*/
+					_countof(DescriptorUpdateInfo::DescriptorBufferInfos), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr/*VkDescriptorImageInfo*/, DUI.DescriptorBufferInfos, nullptr/*VkBufferView*/
 				}
 			},
 			{});
+#endif
 	}
 
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }
@@ -112,5 +141,10 @@ private:
 	Transform Tr;
 	uint32_t HeapIndex;
 	VkDeviceSize Offset;
+
+	struct DescriptorUpdateInfo 
+	{
+		VkDescriptorBufferInfo DescriptorBufferInfos[1];
+	};
 };
 #pragma endregion

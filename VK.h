@@ -37,6 +37,7 @@
 
 #define USE_VIEWPORT_Y_UP
 #define USE_IMMUTABLE_SAMPLER
+//#define USE_DESCRIPTOR_UPDATE_TEMPLATE
 
 #include "Cmn.h"
 #ifdef _WINDOWS
@@ -280,6 +281,8 @@ protected:
 	virtual void AllocateDescriptorSet(std::vector<VkDescriptorSet>& DSs, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSLs);
 	virtual void AllocateDescriptorSet() {}
 
+	virtual void CreateDescriptorUpdateTemplate() {}
+
 	virtual void UpdateDescriptorSet(const std::initializer_list <VkWriteDescriptorSet> il_WDSs, const std::initializer_list <VkCopyDescriptorSet> il_CDSs);
 	virtual void UpdateDescriptorSet() {}
 
@@ -451,6 +454,7 @@ protected:
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
 	std::vector<VkDescriptorPool> DescriptorPools;
 	std::vector<VkDescriptorSet> DescriptorSets;
+	std::vector<VkDescriptorUpdateTemplate> DescriptorUpdateTemplates;
 	std::vector< VkPipelineLayout> PipelineLayouts;
 
 	VkPipeline Pipeline = VK_NULL_HANDLE;

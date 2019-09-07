@@ -77,41 +77,75 @@ protected:
 			});
 		std::copy(DSs.begin(), DSs.end(), std::back_inserter(DescriptorSets));
 	}
+#ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
+	virtual void CreateDescriptorUpdateTemplate() override {
+		const std::array<VkDescriptorUpdateTemplateEntry, 2> DUTEs = { {
+			{
+				0, 0,
+				_countof(DescriptorUpdateInfo::DescriptorBufferInfos), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				offsetof(DescriptorUpdateInfo, DescriptorBufferInfos), sizeof(DescriptorUpdateInfo)
+			},
+			{
+				1, 0,
+				_countof(DescriptorUpdateInfo::DescriptorImageInfos), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				offsetof(DescriptorUpdateInfo, DescriptorImageInfos), sizeof(DescriptorUpdateInfo)
+			}
+		} };
+
+		assert(!DescriptorSetLayouts.empty() && "");
+		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
+			nullptr,
+			0,
+			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
+			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
+			DescriptorSetLayouts[0],
+			VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
+		};
+		DescriptorUpdateTemplates.resize(1);
+		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
+	}
+#endif
 	virtual void UpdateDescriptorSet() override {
 		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
 		Degree += 1.0f;
 
 		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
 
-		assert(!DescriptorSets.empty() && "");
 		assert(VK_NULL_HANDLE != UniformBuffer && "");
-		//assert(!Samplers.empty() && "");
-		const std::array<VkDescriptorBufferInfo, 1> DBIs = {
-			{ UniformBuffer, 0, VK_WHOLE_SIZE }
-		};
-		const std::array<VkDescriptorImageInfo, 1> DIIs = {
+#ifndef USE_IMMUTABLE_SAMPLER
+		assert(!Samplers.empty() && "");
+#endif
+		const DescriptorUpdateInfo DUI = {
+			{ UniformBuffer, 0, VK_WHOLE_SIZE },
 #ifdef USE_IMMUTABLE_SAMPLER
-			{ VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
+			{ VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 #else
-			{ Samplers[0], ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
+			{ Samplers[0], ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 #endif
 		};
+
+#ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
+		assert(!DescriptorSets.empty() && "");
+		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+#else
 		VKExt::UpdateDescriptorSet(
 			{
 				{
 					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					nullptr,
 					DescriptorSets[0], 0, 0,
-					static_cast<uint32_t>(DBIs.size()), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, DBIs.data(), nullptr
+					_countof(DescriptorUpdateInfo::DescriptorBufferInfos), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, DUI.DescriptorBufferInfos, nullptr
 				},
 				{
 					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					nullptr,
 					DescriptorSets[0], 1, 0,
-					static_cast<uint32_t>(DIIs.size()), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, DIIs.data(), nullptr, nullptr
+					_countof(DescriptorUpdateInfo::DescriptorImageInfos), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, DUI.DescriptorImageInfos, nullptr, nullptr
 				}
 			},
 			{});
+#endif
 	}
 
 	virtual void CreateTexture() override {
@@ -167,5 +201,11 @@ private:
 	Transform Tr;
 	uint32_t HeapIndex;
 	VkDeviceSize Offset;
+
+	struct DescriptorUpdateInfo
+	{
+		VkDescriptorBufferInfo DescriptorBufferInfos[1];
+		VkDescriptorImageInfo DescriptorImageInfos[1];
+	};
 };
 #pragma endregion
