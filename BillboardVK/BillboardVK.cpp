@@ -236,7 +236,7 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 	//const auto SCB = SecondaryCommandBuffers[i];
 	const auto FB = Framebuffers[i];
 	const auto SI = SwapchainImages[i];
-	const auto DS = DescriptorSets[0];
+	const auto DS = DescriptorSets[i];
 	const auto RP = RenderPasses[0];
 	const auto PL = PipelineLayouts[0];
 	const auto IB = IndirectBuffers[0];

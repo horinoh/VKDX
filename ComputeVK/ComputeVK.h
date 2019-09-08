@@ -23,7 +23,7 @@ protected:
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {
-				{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr } 
+				{ 0, /*VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER*/VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr }
 			});
 	}
 	virtual void CreatePipelineLayout() override {
@@ -34,6 +34,31 @@ protected:
 			}, {});
 	}
 
+#ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
+	virtual void CreateDescriptorUpdateTemplate() override {
+		const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
+			{
+				0, 0,
+				_countof(DescriptorUpdateInfo::DescriptorImageInfos), /*VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER*/VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+				offsetof(DescriptorUpdateInfo, DescriptorImageInfos), sizeof(DescriptorUpdateInfo)
+			}
+		};
+
+		assert(!DescriptorSetLayouts.empty() && "");
+		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
+			nullptr,
+			0,
+			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
+			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
+			DescriptorSetLayouts[0],
+			VK_PIPELINE_BIND_POINT_COMPUTE, VK_NULL_HANDLE, 0
+		};
+		DescriptorUpdateTemplates.resize(1);
+		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
+	}
+#endif
+
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
 		VKExt::CreateDescriptorPool(DescriptorPools[0], /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
@@ -41,30 +66,49 @@ protected:
 			});
 	}
 	virtual void AllocateDescriptorSet() override {
-		assert(!DescriptorPools.empty() && "");
 		assert(!DescriptorSetLayouts.empty() && "");
-		std::vector<VkDescriptorSet> DSs;
-		VKExt::AllocateDescriptorSet(DSs, DescriptorPools[0], {
-				DescriptorSetLayouts[0]
-			});
-		std::copy(DSs.begin(), DSs.end(), std::back_inserter(DescriptorSets));
-	}
-	virtual void UpdateDescriptorSet() override {
-		assert(!DescriptorSets.empty() && "");
-		assert(VK_NULL_HANDLE != ImageView && "");
-		const std::array<VkDescriptorImageInfo, 1> DIIs = {
-				{ VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_GENERAL }
+		const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
+		assert(!DescriptorPools.empty() && "");
+		const VkDescriptorSetAllocateInfo DSAI = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			nullptr,
+			DescriptorPools[0],
+			static_cast<uint32_t>(DSLs.size()), DSLs.data()
 		};
+		DescriptorSets.resize(1);
+		for (auto& i : DescriptorSets) {
+			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &i));
+		}
+
+		for (auto i : DescriptorSets) {
+			UpdateDescriptorSet(i);
+		}
+	}
+	virtual void UpdateDescriptorSet(const VkDescriptorSet DS) override {
+		assert(VK_NULL_HANDLE != ImageView && "");
+		const DescriptorUpdateInfo DUI = {
+			{ VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_GENERAL }
+		};
+
+#ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
+		assert(!DescriptorUpdateTemplates.empty() && "");
+		vkUpdateDescriptorSetWithTemplate(Device, DS, DescriptorUpdateTemplates[0], &DUI);
+#else
 		VKExt::UpdateDescriptorSet(
 			{
 				{
 					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					nullptr,
-					DescriptorSets[0], 0, 0,
-					static_cast<uint32_t>(DIIs.size()), VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, DIIs.data(), nullptr, nullptr
+					DS, 0, 0,
+					_countof(DescriptorUpdateInfo::DescriptorImageInfos), VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, DUI.DescriptorImageInfos, nullptr, nullptr
 				}
 			},
 			{});
+#endif
+	}
+	virtual void UpdateDescriptorSet() override {
+		assert(!DescriptorSets.empty() && "");
+		UpdateDescriptorSet(DescriptorSets[0]);
 	}
 
 	virtual void CreateTexture() override {
@@ -99,5 +143,9 @@ protected:
 	virtual void Draw() override { Dispatch(); }
 
 private:
+	struct DescriptorUpdateInfo
+	{
+		VkDescriptorImageInfo DescriptorImageInfos[1];
+	}; 
 };
 #pragma endregion

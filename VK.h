@@ -33,7 +33,7 @@
 
 #define USE_VIEWPORT_Y_UP
 #define USE_IMMUTABLE_SAMPLER
-#define USE_DESCRIPTOR_UPDATE_TEMPLATE
+//#define USE_DESCRIPTOR_UPDATE_TEMPLATE
 //#define USE_PUSH_DESCRIPTOR //!< #VK_TODO
 #ifdef _DEBUG
 #define USE_RENDERDOC
@@ -269,15 +269,16 @@ protected:
 		CreatePipelineLayout(PipelineLayouts[0], {}, {});
 	}
 
+	virtual void CreateDescriptorUpdateTemplate() {}
+
 	virtual void CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreateFlags Flags, const std::initializer_list<VkDescriptorPoolSize> il_DPSs);
 	virtual void CreateDescriptorPool() {}
 
-	virtual void AllocateDescriptorSet(std::vector<VkDescriptorSet>& DSs, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSLs);
+	//virtual void AllocateDescriptorSet(std::vector<VkDescriptorSet>& DSs, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSLs);
 	virtual void AllocateDescriptorSet() {}
 
-	virtual void CreateDescriptorUpdateTemplate() {}
-
 	virtual void UpdateDescriptorSet(const std::initializer_list <VkWriteDescriptorSet> il_WDSs, const std::initializer_list <VkCopyDescriptorSet> il_CDSs);
+	virtual void UpdateDescriptorSet(const VkDescriptorSet DS) {}
 	virtual void UpdateDescriptorSet() {}
 
 	virtual void CreateTexture() {}

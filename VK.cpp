@@ -98,12 +98,15 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< ユニフォームバッファ (コンスタントバッファ相当)
 	CreateUniformBuffer();
+
+	//!< デスクリプタアップデートテンプレート
+	CreateDescriptorUpdateTemplate();
 	//!< デスクリプタプール (デスクリプタヒープ相当)
 	CreateDescriptorPool();
 	//!< デスクリプタセット (デスクリプタビュー相当)
 	AllocateDescriptorSet();
-	CreateDescriptorUpdateTemplate();
-	UpdateDescriptorSet();
+
+	//UpdateDescriptorSet();
 
 	SetTimer(hWnd, NULL, 1000 / 60, nullptr);
 
@@ -2192,20 +2195,20 @@ void VK::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreate
 }
 
 //!< シェーダリソースを1つのコンテナオブジェクトにまとめる (型や数はセットレイアウトで定義され、ストレージはプールから確保される)
-void VK::AllocateDescriptorSet(std::vector<VkDescriptorSet>& DSs, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSLs)
-{
-	const std::vector<VkDescriptorSetLayout> DSLs(il_DSLs.begin(), il_DSLs.end());
-	DSs.resize(DSLs.size());
-	const VkDescriptorSetAllocateInfo DSAI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		nullptr,
-		DP,
-		static_cast<uint32_t>(DSLs.size()), DSLs.data()
-	};
-	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, DSs.data()));
-
-	LOG_OK();
-}
+//void VK::AllocateDescriptorSet(std::vector<VkDescriptorSet>& DSs, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSLs)
+//{
+//	const std::vector<VkDescriptorSetLayout> DSLs(il_DSLs.begin(), il_DSLs.end());
+//	DSs.resize(DSLs.size());
+//	const VkDescriptorSetAllocateInfo DSAI = {
+//		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+//		nullptr,
+//		DP,
+//		static_cast<uint32_t>(DSLs.size()), DSLs.data()
+//	};
+//	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, DSs.data()));
+//
+//	LOG_OK();
+//}
 
 void VK::UpdateDescriptorSet(const std::initializer_list <VkWriteDescriptorSet> il_WDSs, const std::initializer_list <VkCopyDescriptorSet> il_CDSs)
 {
@@ -2949,7 +2952,7 @@ void VK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandBuffers[i];//CommandPools[0].second[i];
 	const auto FB = Framebuffers[i];
-	const auto Image = SwapchainImages[i];
+	const auto SI = SwapchainImages[i];
 
 	//!< vkBeginCommandBuffer() で暗黙的にリセットされるが、明示的にリセットする場合には「メモリをプールへリリースするかどうかを指定できる」
 	//VERIFY_SUCCEEDED(vkResetCommandBuffer(CB, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
@@ -2971,7 +2974,7 @@ void VK::PopulateCommandBuffer(const size_t i)
 
 #if 1
 		//!< クリア
-		ClearColor(CB, Image, Colors::SkyBlue);
+		ClearColor(CB, SI, Colors::SkyBlue);
 #endif
 
 		const auto RP = RenderPasses[0];
@@ -3062,6 +3065,7 @@ void VK::Draw()
 
 	//!< デスクリプタセットを更新したら、コマンドバッファを記録し直さないとダメ？
 	//UpdateDescriptorSet();
+	//UpdateDescriptorSet(SwapchainImageIndex);
 	
 	//!< コマンドは指定のパイプラインステージに到達するまで実行され、そこでセマフォがシグナルされるまで待つ
 	const std::vector<VkSemaphore> SemaphoresToWait = { NextImageAcquiredSemaphore };
@@ -3093,7 +3097,7 @@ void VK::Dispatch()
 	VERIFY_SUCCEEDED(vkWaitForFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data(), VK_TRUE, (std::numeric_limits<uint64_t>::max)()));
 	vkResetFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data());
 
-	const auto& CB = CommandBuffers[0];//CommandPools[0].second[0];
+	const auto& CB = CommandBuffers[0];
 	const std::vector<VkSubmitInfo> SIs = {
 		{
 			VK_STRUCTURE_TYPE_SUBMIT_INFO,

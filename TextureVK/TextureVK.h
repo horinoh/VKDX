@@ -44,6 +44,31 @@ protected:
 			}, {});
 	}
 
+#ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
+	virtual void CreateDescriptorUpdateTemplate() override {
+		const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
+			{
+				0, 0,
+				_countof(DescriptorUpdateInfo::DescriptorImageInfos), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				offsetof(DescriptorUpdateInfo, DescriptorImageInfos), sizeof(DescriptorUpdateInfo)
+			}
+		};
+
+		assert(!DescriptorSetLayouts.empty() && "");
+		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
+			nullptr,
+			0,
+			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
+			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
+			DescriptorSetLayouts[0],
+			VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
+		};
+		DescriptorUpdateTemplates.resize(1);
+		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
+	}
+#endif
+
 	virtual void CreateDescriptorPool() override { 
 		DescriptorPools.resize(1);
 		VKExt::CreateDescriptorPool(DescriptorPools[0], /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
@@ -51,37 +76,56 @@ protected:
 			});
 	}
 	virtual void AllocateDescriptorSet() override {
-		assert(!DescriptorPools.empty() && "");
 		assert(!DescriptorSetLayouts.empty() && "");
-		std::vector<VkDescriptorSet> DSs;
-		VKExt::AllocateDescriptorSet(DSs, DescriptorPools[0], {
-				DescriptorSetLayouts[0]
-			});
-		std::copy(DSs.begin(), DSs.end(), std::back_inserter(DescriptorSets));
+		const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
+		assert(!DescriptorPools.empty() && "");
+		const VkDescriptorSetAllocateInfo DSAI = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			nullptr,
+			DescriptorPools[0],
+			static_cast<uint32_t>(DSLs.size()), DSLs.data()
+		};
+		DescriptorSets.resize(1);
+		for (auto& i : DescriptorSets) {
+			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &i));
+		}
+
+		for (auto i : DescriptorSets) {
+			UpdateDescriptorSet(i);
+		}
 	}
-	virtual void UpdateDescriptorSet() override {
-		assert(!DescriptorSets.empty() && "");
-		assert(VK_NULL_HANDLE != ImageView && "");
-		const std::array<VkDescriptorImageInfo, 1> DIIs = {
+	virtual void UpdateDescriptorSet(const VkDescriptorSet DS) override {
 #ifdef USE_IMMUTABLE_SAMPLER
-			//!< ここではイミュータブルサンプラを使用すると、サンプラをアップデート対象に指定してもどうせ無視されるので VK_NULL_HANDLE にしておく
-			{ VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
+		assert(!Samplers.empty() && "");
+#endif
+		assert(VK_NULL_HANDLE != ImageView && "");
+		const DescriptorUpdateInfo DUI = {
+#ifdef USE_IMMUTABLE_SAMPLER
+			{ VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 #else
-			//!< 通常のサンプラを使う場合、ここでサンプラもアップデートできる
-			{ Samplers[0], ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }
+			{ Samplers[0], ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 #endif
 		};
 
+#ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
+		assert(!DescriptorUpdateTemplates.empty() && "");
+		vkUpdateDescriptorSetWithTemplate(Device, DS, DescriptorUpdateTemplates[0], &DUI);
+#else
 		VKExt::UpdateDescriptorSet(
 			{
 				{
 					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					nullptr,
-					DescriptorSets[0], 0, 0,
-					static_cast<uint32_t>(DIIs.size()), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, DIIs.data(), nullptr, nullptr
+					DS, 0, 0,
+					_countof(DescriptorUpdateInfo::DescriptorImageInfos), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, DUI.DescriptorImageInfos, nullptr, nullptr
 				}
 			},
 			{});
+#endif
+	}
+	virtual void UpdateDescriptorSet() override {
+		assert(!DescriptorSets.empty() && "");
+		UpdateDescriptorSet(DescriptorSets[0]);
 	}
 
 	virtual void CreateTexture() override {
@@ -173,5 +217,11 @@ protected:
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFs(); }
 	virtual void CreatePipeline() override { CreatePipeline_VsFs(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
+
+private:
+	struct DescriptorUpdateInfo
+	{
+		VkDescriptorImageInfo DescriptorImageInfos[1];
+	};
 };
 #pragma endregion
