@@ -15,6 +15,26 @@ public:
 	virtual ~BillboardDX() {}
 
 protected:
+	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
+		Super::OnTimer(hWnd, hInstance);
+
+		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
+		Degree += 1.0f;
+#if 1
+#ifdef USE_WINRT
+		CopyToUploadResource(ConstantBufferResource.get(), RoundUp(sizeof(Tr), 0xff), &Tr);
+#elif defined(USE_WRL)
+		CopyToUploadResource(ConstantBufferResource.Get(), RoundUp(sizeof(Tr), 0xff), &Tr);
+#endif
+#else
+		D3D12_RANGE Range = { offsetof(Transform, World), offsetof(Transform, World) + sizeof(Tr.World) };
+		BYTE* Data;
+		VERIFY_SUCCEEDED(ConstantBufferResource->Map(0, &Range, reinterpret_cast<void**>(&Data))); {
+			memcpy(Data, reinterpret_cast<const void*>(&Tr.World), sizeof(Tr.World));
+		} ConstantBufferResource->Unmap(0, nullptr);
+#endif
+	}
+
 	virtual void CreateDepthStencil() override {
 		//CreateDepthStencil(DXGI_FORMAT_D32_FLOAT_S8X24_UINT, Rect);
 	}
@@ -59,23 +79,6 @@ protected:
 	}
 	virtual void CreateDescriptorView() override {
 		DX::CreateConstantBufferView(ConstantBufferResource, ConstantBufferDescriptorHeap, sizeof(Transform));
-	}
-	virtual void UpdateDescriptorHeap() override {
-		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
-		Degree += 1.0f;		
-#if 1
-#ifdef USE_WINRT
-		CopyToUploadResource(ConstantBufferResource.get(), RoundUp(sizeof(Tr), 0xff), &Tr);
-#elif defined(USE_WRL)
-		CopyToUploadResource(ConstantBufferResource.Get(), RoundUp(sizeof(Tr), 0xff), &Tr);
-#endif
-#else
-		D3D12_RANGE Range = { offsetof(Transform, World), offsetof(Transform, World) + sizeof(Tr.World) };
-		BYTE* Data;
-		VERIFY_SUCCEEDED(ConstantBufferResource->Map(0, &Range, reinterpret_cast<void**>(&Data))); {
-			memcpy(Data, reinterpret_cast<const void*>(&Tr.World), sizeof(Tr.World));
-		} ConstantBufferResource->Unmap(0, nullptr);
-#endif
 	}
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs_Tesselation(); }

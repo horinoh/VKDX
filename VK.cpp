@@ -105,8 +105,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateDescriptorPool();
 	//!< デスクリプタセット (デスクリプタビュー相当)
 	AllocateDescriptorSet();
-
-	//UpdateDescriptorSet();
+	UpdateDescriptorSet();
 
 	SetTimer(hWnd, NULL, 1000 / 60, nullptr);
 
@@ -2140,7 +2139,11 @@ void VK::CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const std::initia
 	const VkDescriptorSetLayoutCreateInfo DSLCI = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 		nullptr,
+#ifdef USE_PUSH_DESCRIPTOR
+		VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR,
+#else
 		0,
+#endif
 		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
 	};
 	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));

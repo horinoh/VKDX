@@ -14,6 +14,14 @@ public:
 	virtual ~BillboardVK() {}
 
 protected:
+	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
+		Super::OnTimer(hWnd, hInstance);
+
+		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
+		Degree += 1.0f;
+		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
+	}
+
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
 	virtual void CreateDepthStencil() override {
@@ -69,6 +77,9 @@ protected:
 		};
 
 		assert(!DescriptorSetLayouts.empty() && "");
+#ifdef USE_PUSH_DESCRIPTOR
+		assert(!PipelineLayouts.empty() && "");
+#endif		
 		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
 			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
 			nullptr,
@@ -80,18 +91,22 @@ protected:
 			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
 #endif
 			DescriptorSetLayouts[0],
+#ifdef USE_PUSH_DESCRIPTOR
+			VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[0], 0
+#else
 			VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
+#endif
 		};
 		DescriptorUpdateTemplates.resize(1);
 		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
 	}
 #endif
 
+#ifndef USE_PUSH_DESCRIPTOR
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
 		VKExt::CreateDescriptorPool(DescriptorPools[0], /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
-				//{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 } 
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(SwapchainImages.size()) }
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 } 
 			});
 	}
 	virtual void AllocateDescriptorSet() override {
@@ -104,45 +119,34 @@ protected:
 			DescriptorPools[0],
 			static_cast<uint32_t>(DSLs.size()), DSLs.data()
 		};
-		//DescriptorSets.resize(1);
-		DescriptorSets.resize(SwapchainImages.size());
+		DescriptorSets.resize(1);
 		for (auto& i : DescriptorSets) {
 			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &i));
 		}
-
-		for (auto i : DescriptorSets) {
-			UpdateDescriptorSet(i);
-		}
 	}
-	virtual void UpdateDescriptorSet(const VkDescriptorSet DS) override {
+	virtual void UpdateDescriptorSet() override {
 		const DescriptorUpdateInfo DUI = {
 			{ UniformBuffer, 0/*offset*/, VK_WHOLE_SIZE/*range*/ },
 		};
+
+		assert(!DescriptorSets.empty() && "");
 #ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
 		assert(!DescriptorUpdateTemplates.empty() && "");
-		vkUpdateDescriptorSetWithTemplate(Device, DS, DescriptorUpdateTemplates[0], &DUI);
+		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 #else
 		VKExt::UpdateDescriptorSet(
 			{
 				{
 					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					nullptr,
-					DS, 0/*binding*/, 0/*arrayElement*/,
+					DescriptorSets[0], 0/*binding*/, 0/*arrayElement*/,
 					_countof(DescriptorUpdateInfo::DescriptorBufferInfos), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr/*VkDescriptorImageInfo*/, DUI.DescriptorBufferInfos, nullptr/*VkBufferView*/
 				}
 			},
 			{});
 #endif
 	}
-
-	virtual void UpdateDescriptorSet() override {
-		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
-		Degree += 1.0f;
-		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
-
-		assert(!DescriptorSets.empty() && "");
-		UpdateDescriptorSet(DescriptorSets[0]);
-	}
+#endif
 
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }
 	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs_Tesselation(); }

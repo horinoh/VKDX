@@ -33,8 +33,8 @@
 
 #define USE_VIEWPORT_Y_UP
 #define USE_IMMUTABLE_SAMPLER
-//#define USE_DESCRIPTOR_UPDATE_TEMPLATE
-//#define USE_PUSH_DESCRIPTOR //!< #VK_TODO
+#define USE_DESCRIPTOR_UPDATE_TEMPLATE
+//#define USE_PUSH_DESCRIPTOR
 #ifdef _DEBUG
 #define USE_RENDERDOC
 #define USE_DEBUG_MARKER
@@ -278,7 +278,6 @@ protected:
 	virtual void AllocateDescriptorSet() {}
 
 	virtual void UpdateDescriptorSet(const std::initializer_list <VkWriteDescriptorSet> il_WDSs, const std::initializer_list <VkCopyDescriptorSet> il_CDSs);
-	virtual void UpdateDescriptorSet(const VkDescriptorSet DS) {}
 	virtual void UpdateDescriptorSet() {}
 
 	virtual void CreateTexture() {}

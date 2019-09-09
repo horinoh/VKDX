@@ -52,7 +52,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateDescriptorHeap();
 	//!< デスクリプタビュー (デスクリプタセット相当)
 	CreateDescriptorView();
-	UpdateDescriptorHeap();
 
 	//CreateUnorderedAccessTexture();
 

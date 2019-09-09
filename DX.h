@@ -84,7 +84,6 @@ public:
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override { 
 		Super::OnTimer(hWnd, hInstance); 
-		UpdateDescriptorHeap();
 	}
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { 
 		Super::OnPaint(hWnd, hInstance); 
@@ -263,8 +262,6 @@ protected:
 	}
 #endif
 	virtual void CreateDescriptorView() {}
-
-	virtual void UpdateDescriptorHeap() { /*CopyToUploadResource()ìôÇçsÇ§*/ }
 
 #ifdef USE_WINRT
 	virtual void CreateShader(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const;

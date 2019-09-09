@@ -89,12 +89,8 @@ protected:
 		for (auto& i : DescriptorSets) {
 			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &i));
 		}
-
-		for (auto i : DescriptorSets) {
-			UpdateDescriptorSet(i);
-		}
 	}
-	virtual void UpdateDescriptorSet(const VkDescriptorSet DS) override {
+	virtual void UpdateDescriptorSet() override {
 #ifdef USE_IMMUTABLE_SAMPLER
 		assert(!Samplers.empty() && "");
 #endif
@@ -107,25 +103,22 @@ protected:
 #endif
 		};
 
+		assert(!DescriptorSets.empty() && "");
 #ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
 		assert(!DescriptorUpdateTemplates.empty() && "");
-		vkUpdateDescriptorSetWithTemplate(Device, DS, DescriptorUpdateTemplates[0], &DUI);
+		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 #else
 		VKExt::UpdateDescriptorSet(
 			{
 				{
 					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					nullptr,
-					DS, 0, 0,
+					DescriptorSets[0], 0, 0,
 					_countof(DescriptorUpdateInfo::DescriptorImageInfos), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, DUI.DescriptorImageInfos, nullptr, nullptr
 				}
 			},
 			{});
 #endif
-	}
-	virtual void UpdateDescriptorSet() override {
-		assert(!DescriptorSets.empty() && "");
-		UpdateDescriptorSet(DescriptorSets[0]);
 	}
 
 	virtual void CreateTexture() override {

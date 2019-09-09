@@ -14,6 +14,17 @@ public:
 	virtual ~NormalMapDX() {}
 
 protected:
+	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
+		Super::OnTimer(hWnd, hInstance);
+
+		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
+		Degree += 1.0f;
+#ifdef USE_WINRT
+		CopyToUploadResource(ConstantBufferResource.get(), RoundUp(sizeof(Tr), 0xff), &Tr);
+#elif defined(USE_WRL)
+		CopyToUploadResource(ConstantBufferResource.Get(), RoundUp(sizeof(Tr), 0xff), &Tr);
+#endif
+	}
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1); }
 
 	virtual void CreateRootSignature() override {
@@ -103,15 +114,6 @@ protected:
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		Tr = Transform({ DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar), DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp), DirectX::XMMatrixIdentity() });
 		Super::CreateConstantBufferT(Tr);
-	}
-	virtual void UpdateDescriptorHeap() override {
-//		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
-//		Degree += 1.0f;
-//#ifdef USE_WINRT
-//		CopyToUploadResource(ConstantBufferResource.get(), RoundUp(sizeof(Tr), 0xff), &Tr);
-//#elif defined(USE_WRL)
-//		CopyToUploadResource(ConstantBufferResource.Get(), RoundUp(sizeof(Tr), 0xff), &Tr);
-//#endif
 	}
 	virtual void CreateTexture() override {
 #ifdef USE_WINRT

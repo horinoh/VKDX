@@ -236,7 +236,7 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 	//const auto SCB = SecondaryCommandBuffers[i];
 	const auto FB = Framebuffers[i];
 	const auto SI = SwapchainImages[i];
-	const auto DS = DescriptorSets[i];
+	const auto DS = DescriptorSets[0];
 	const auto RP = RenderPasses[0];
 	const auto PL = PipelineLayouts[0];
 	const auto IB = IndirectBuffers[0];
@@ -266,12 +266,20 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 		};
 
 #ifdef USE_PUSH_DESCRIPTOR
-		{
-			const DescriptorUpdateInfo DUI = {
-				{ UniformBuffer, 0, VK_WHOLE_SIZE },
-			};
-			vkCmdPushDescriptorSetWithTemplateKHR(CB, DescriptorUpdateTemplates[0], PipelineLayouts[0], 0, DUI.DescriptorBufferInfos);
-		}
+		const DescriptorUpdateInfo DUI = {
+			{ UniformBuffer, 0, VK_WHOLE_SIZE },
+		};
+#ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
+		vkCmdPushDescriptorSetWithTemplateKHR(CB, DescriptorUpdateTemplates[0], PipelineLayouts[0], 0, DUI.DescriptorBufferInfos);
+#else
+		const std::array<VkWriteDescriptorSet, 1> WDSs = {
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			nullptr,
+			VK_NULL_HANDLE, 0, 0,
+			_countof(DescriptorUpdateInfo::DescriptorBufferInfos), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, DUI.DescriptorBufferInfos, nullptr
+		};
+		vkCmdPushDescriptorSetKHR(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[0], 0, static_cast<uint32_t>(WDSs.size()), WDSs.data());
+#endif
 #endif
 
 		vkCmdBeginRenderPass(CB, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
