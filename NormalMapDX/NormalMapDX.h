@@ -19,20 +19,12 @@ protected:
 
 		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
 		Degree += 1.0f;
-#ifdef USE_WINRT
-		CopyToUploadResource(ConstantBufferResource.get(), RoundUp(sizeof(Tr), 0xff), &Tr);
-#elif defined(USE_WRL)
-		CopyToUploadResource(ConstantBufferResource.Get(), RoundUp(sizeof(Tr), 0xff), &Tr);
-#endif
+		CopyToUploadResource(COM_PTR_GET(ConstantBufferResource), RoundUp(sizeof(Tr), 0xff), &Tr);
 	}
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1); }
 
 	virtual void CreateRootSignature() override {
-#ifdef USE_WINRT
-		winrt::com_ptr<ID3DBlob> Blob;
-#elif defined(USE_WRL)
-		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
-#endif
+		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
 #ifdef USE_STATIC_SAMPLER
 		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
@@ -116,11 +108,7 @@ protected:
 		Super::CreateConstantBufferT(Tr);
 	}
 	virtual void CreateTexture() override {
-#ifdef USE_WINRT
-		LoadImage(ImageResource.put(), TEXT("NormalMap.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-#elif defined(USE_WRL)
-		LoadImage(ImageResource.GetAddressOf(), TEXT("NormalMap.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-#endif
+		LoadImage(COM_PTR_PUT(ImageResource), TEXT("NormalMap.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}
 #ifdef USE_STATIC_SAMPLER
 	virtual void CreateStaticSampler() override {

@@ -402,20 +402,9 @@ void DX::EnumAdapter(IDXGIFactory4* Factory)
 	COM_PTR<IDXGIAdapter> Adapter;
 #ifdef USE_WINRT
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, Adapter.put()); ++i) {
-		DXGI_ADAPTER_DESC AdapterDesc;
-		VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
-		if (0 == i) { Log("[ Aadapters ]\n"); }
-		Logf(TEXT("\t%s\n"), AdapterDesc.Description);
-		Logf(TEXT("\t\tDedicatedVideoMemory = %lld\n"), AdapterDesc.DedicatedVideoMemory);
-		Logf(TEXT("\t\tDedicatedSystemMemory = %lld\n"), AdapterDesc.DedicatedSystemMemory);
-		Logf(TEXT("\t\tSharedSystemMemory = %lld\n"), AdapterDesc.SharedSystemMemory);
-
-		EnumOutput(COM_PTR_GET(Adapter));
-
-		Adapter = nullptr;
-	}
 #elif defined(USE_WRL)
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, Adapter.ReleaseAndGetAddressOf()); ++i) {
+#endif
 		DXGI_ADAPTER_DESC AdapterDesc;
 		VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
 		if (0 == i) { Log("[ Aadapters ]\n"); }
@@ -425,8 +414,11 @@ void DX::EnumAdapter(IDXGIFactory4* Factory)
 		Logf(TEXT("\t\tSharedSystemMemory = %lld\n"), AdapterDesc.SharedSystemMemory);
 
 		EnumOutput(COM_PTR_GET(Adapter));
-	}
+
+#ifdef USE_WINRT
+		COM_PTR_RESET(Adapter);
 #endif
+	}
 }
 
 //!< アダプター(GPU)に接続されている、アウトプット(ディスプレイ)の列挙
@@ -435,31 +427,9 @@ void DX::EnumOutput(IDXGIAdapter* Adapter)
 	COM_PTR<IDXGIOutput> Output;
 #ifdef USE_WINRT
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Adapter->EnumOutputs(i, Output.put()); ++i) {
-		DXGI_OUTPUT_DESC OutputDesc;
-		VERIFY_SUCCEEDED(Output->GetDesc(&OutputDesc));
-
-		const auto Width = OutputDesc.DesktopCoordinates.right - OutputDesc.DesktopCoordinates.left;
-		const auto Height = OutputDesc.DesktopCoordinates.bottom - OutputDesc.DesktopCoordinates.top;
-		if (0 == i) { Log("\t\t[ Output ]\n"); }
-		Logf(TEXT("\t\t\t%s\n"), OutputDesc.DeviceName);
-		Logf(TEXT("\t\t\t%d x %d\n"), Width, Height);
-		switch (OutputDesc.Rotation)
-		{
-		default: break;
-		case DXGI_MODE_ROTATION_UNSPECIFIED: Log("\t\t\tROTATION_UNSPECIFIED\n"); break;
-		case DXGI_MODE_ROTATION_IDENTITY: Log("\t\t\tROTATION_IDENTITY\n"); break;
-		case DXGI_MODE_ROTATION_ROTATE90: Log("\t\t\tROTATE90\n"); break;
-		case DXGI_MODE_ROTATION_ROTATE180: Log("\t\t\tROTATE180\n"); break;
-		case DXGI_MODE_ROTATION_ROTATE270: Log("\t\t\tROTATE270\n"); break;
-		}
-
-		GetDisplayModeList(COM_PTR_GET(Output), DXGI_FORMAT_R8G8B8A8_UNORM);
-
-		Output = nullptr;
-	}
-
 #elif defined(USE_WRL)
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Adapter->EnumOutputs(i, Output.ReleaseAndGetAddressOf()); ++i) {
+#endif
 		DXGI_OUTPUT_DESC OutputDesc;
 		VERIFY_SUCCEEDED(Output->GetDesc(&OutputDesc));
 
@@ -479,8 +449,11 @@ void DX::EnumOutput(IDXGIAdapter* Adapter)
 		}
 
 		GetDisplayModeList(COM_PTR_GET(Output), DXGI_FORMAT_R8G8B8A8_UNORM);
-	}
+
+#ifdef USE_WINRT
+		COM_PTR_RESET(Output);
 #endif
+	}
 }
 
 //!< アウトプット(ディスプレイ)の描画モードの列挙
@@ -783,7 +756,7 @@ void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Wi
 	};
 #ifdef USE_WINRT
 	COM_PTR_RESET(DepthStencilResource);
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COMMON/*COMMON にすること*/, &ClearValue, __uuidof(DepthStencilResource), DepthStencilResource.put_void()));
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COMMON/*COMMON にすること*/, &ClearValue, COM_PTR_UUIDOF_PUTVOID(DepthStencilResource)));
 #elif defined(USE_WRL)
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COMMON, &ClearValue, IID_PPV_ARGS(DepthStencilResource.ReleaseAndGetAddressOf()))); 
 #endif

@@ -20,11 +20,7 @@ protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
 
 	virtual void CreateRootSignature() override {
-#ifdef USE_WINRT
-		winrt::com_ptr<ID3DBlob> Blob;
-#elif defined(USE_WRL)
-		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
-#endif
+		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
 		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
 #else
@@ -48,11 +44,7 @@ protected:
 		DX::CreateUnorderedAccessView(UnorderedAccessTextureResource, UnorderedAccessTextureDescriptorHeap);
 		LOG_OK();
 	}
-#ifdef USE_WINRT
-	virtual void CreateShader(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const override {
-#elif defined(USE_WRL)
-	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>> & ShaderBlobs) const override {
-#endif
+	virtual void CreateShader(std::vector<COM_PTR<ID3DBlob>>& ShaderBlobs) const override {
 		//CreateShader_Cs(ShaderBlobs);
 		Super::CreateShader(ShaderBlobs);
 	}

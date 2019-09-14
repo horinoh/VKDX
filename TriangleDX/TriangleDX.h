@@ -18,11 +18,7 @@ protected:
 	virtual void CreateIndexBuffer() override;
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(IndexCount); }
 	virtual void CreateRootSignature() override {
-#ifdef USE_WINRT
-		winrt::com_ptr<ID3DBlob> Blob;
-#elif defined(USE_WRL)
-		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
-#endif
+		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
 		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
 #else

@@ -232,42 +232,20 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void ComputeDX::PopulateCommandList(const size_t i)
 {
-#ifdef USE_WINRT
-	const auto CL = GraphicsCommandLists[i].get();
-	const auto CA = CommandAllocators[0].get();
-	const auto IBR = IndirectBufferResources[0].get();
-#elif defined(USE_WRL)
-	const auto CL = GraphicsCommandLists[i].Get();
-	const auto CA = CommandAllocators[0].Get();
-	const auto IBR = IndirectBufferResources[0].Get();
-#endif
+	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto CA = COM_PTR_GET(CommandAllocators[0]);
+	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
-#ifdef USE_WINRT
-	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.get()));
-#elif defined(USE_WRL)
-	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
-#endif
+	VERIFY_SUCCEEDED(CL->Reset(CA, COM_PTR_GET(PipelineState)));
 	{
 		if (nullptr != UnorderedAccessTextureDescriptorHeap) {
-#ifdef USE_WINRT
-			const std::vector<ID3D12DescriptorHeap*> DH = { UnorderedAccessTextureDescriptorHeap.get() };
-#elif defined(USE_WRL)
-			const std::vector<ID3D12DescriptorHeap*> DH = { UnorderedAccessTextureDescriptorHeap.Get() };
-#endif
+			const std::vector<ID3D12DescriptorHeap*> DH = { COM_PTR_GET(UnorderedAccessTextureDescriptorHeap) };
 			CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
 
-#ifdef USE_WINRT
-			CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
-#elif defined(USE_WRL)
-			CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
-#endif
+			CL->SetGraphicsRootDescriptorTable(0, COM_PTR_GET(GetGPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 		}
 
-#ifdef USE_WINRT
-		CL->ExecuteIndirect(IndirectCommandSignature.get(), 1, IBR, 0, nullptr, 0);
-#elif defined(USE_WRL)
-		CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IBR, 0, nullptr, 0);
-#endif
+		CL->ExecuteIndirect(COM_PTR_GET(IndirectCommandSignature), 1, IBR, 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(CL->Close());
 }

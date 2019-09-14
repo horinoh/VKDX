@@ -242,26 +242,16 @@ void TriangleDX::CreateVertexBuffer()
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
 
-#ifdef USE_WINRT
-	CreateBuffer(VertexBufferResources[0].put(), Size, Vertices.data(), CommandAllocators[0].get(), GraphicsCommandLists[0].get());
-#elif defined(USE_WRL)
-	CreateBuffer(VertexBufferResources[0].GetAddressOf(), Size, Vertices.data(), CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
-#endif
+	CreateBuffer(COM_PTR_PUT(VertexBufferResources[0]), Size, Vertices.data(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 
 	//!< DXではビューが必要 Need view
 	VertexBufferViews.push_back({ VertexBufferResources[0]->GetGPUVirtualAddress(), Size, Stride });
 
 #ifdef _DEBUG
-#ifdef USE_WINRT
-	SetName(VertexBufferResources[0].get(), TEXT("MyVertexBuffer"));
-#elif defined(USE_WRL)
-	SetName(VertexBufferResources[0].Get(), TEXT("MyVertexBuffer"));
-#endif
+	SetName(COM_PTR_GET(VertexBufferResources[0]), TEXT("MyVertexBuffer"));
 #endif
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
-#endif
+	LOG_OK();
 }
 void TriangleDX::CreateIndexBuffer()
 {
@@ -273,52 +263,27 @@ void TriangleDX::CreateIndexBuffer()
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<UINT32>(Stride * IndexCount);
 
-#ifdef USE_WINRT
-	CreateBuffer(IndexBufferResources[0].put(), Size, Indices.data(), CommandAllocators[0].get(), GraphicsCommandLists[0].get());
-#elif defined(USE_WRL)
-	CreateBuffer(IndexBufferResources[0].GetAddressOf(), Size, Indices.data(), CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
-#endif
+	CreateBuffer(COM_PTR_PUT(IndexBufferResources[0]), Size, Indices.data(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 
 	//!< DXではビューが必要 Need view
 	IndexBufferViews.push_back({ IndexBufferResources[0]->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT });
 
 #ifdef _DEBUG
-#ifdef USE_WINRT
-	SetName(IndexBufferResources[0].get(), TEXT("MyIndexBuffer"));
-#elif defined(USE_WRL)
-	SetName(IndexBufferResources[0].Get(), TEXT("MyIndexBuffer"));
-#endif
+	SetName(COM_PTR_GET(IndexBufferResources[0]), TEXT("MyIndexBuffer"));
 #endif
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
-#endif
+	LOG_OK();
 }
 void TriangleDX::PopulateCommandList(const size_t i)
 {
-#ifdef USE_WINRT
-	const auto CL = GraphicsCommandLists[i].get();
-	const auto CA = CommandAllocators[0].get();
-	const auto IBR = IndirectBufferResources[0].get();
-#elif defined(USE_WRL)
-	const auto CL = GraphicsCommandLists[i].Get();
-	const auto CA = CommandAllocators[0].Get();
-	const auto IBR = IndirectBufferResources[0].Get();
-#endif
+	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto CA = COM_PTR_GET(CommandAllocators[0]);
+	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
-#ifdef USE_WINRT
-	const auto SCR = SwapChainResources[i].get();
-	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
-#elif defined(USE_WRL)
-	const auto SCR = SwapChainResources[i].Get();
-	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
-#endif
+	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+	const auto SCHandle = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
 
-#ifdef USE_WINRT
-	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.get()));
-#elif defined(USE_WRL)
-	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
-#endif
+	VERIFY_SUCCEEDED(CL->Reset(CA, COM_PTR_GET(PipelineState)));
 	{
 #if defined(_DEBUG) || defined(USE_PIX)
 		//PIXBeginEvent(CL, PIX_COLOR(0, 255, 0), TEXT("Command Begin"));
@@ -342,11 +307,7 @@ void TriangleDX::PopulateCommandList(const size_t i)
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
 
 			//!< ルートシグニチャ
-#ifdef USE_WINRT
-			CL->SetGraphicsRootSignature(RootSignature.get());
-#elif defined(USE_WRL)
-			CL->SetGraphicsRootSignature(RootSignature.Get());
-#endif
+			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignature));
 
 			//!< インプットアセンブリのプリミティブタイプ
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
@@ -361,11 +322,7 @@ void TriangleDX::PopulateCommandList(const size_t i)
 			}
 
 			//!< 描画
-#ifdef USE_WINRT
-			CL->ExecuteIndirect(IndirectCommandSignature.get(), 1, IBR, 0, nullptr, 0);
-#elif defined(USE_WRL)
-			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IBR, 0, nullptr, 0);
-#endif
+			CL->ExecuteIndirect(COM_PTR_GET(IndirectCommandSignature), 1, IBR, 0, nullptr, 0);
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 

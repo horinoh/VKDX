@@ -23,11 +23,8 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const std::wstring& Path,
 		//!< サブリソースデータを取得 Acquire sub resource data
 		std::unique_ptr<uint8_t[]> DDSData; //!< 未使用 Not used
 		std::vector<D3D12_SUBRESOURCE_DATA> Subresource;
-#ifdef USE_WINRT
-		VERIFY_SUCCEEDED(DirectX::LoadDDSTextureFromFile(Device.get(), Path.c_str(), Resource, DDSData, Subresource));
-#elif defined(USE_WRL)
-		VERIFY_SUCCEEDED(DirectX::LoadDDSTextureFromFile(Device.Get(), Path.c_str(), Resource, DDSData, Subresource));
-#endif
+		VERIFY_SUCCEEDED(DirectX::LoadDDSTextureFromFile(COM_PTR_GET(Device), Path.c_str(), Resource, DDSData, Subresource));
+
 		//!< フットプリントの取得 Acquire footprint
 		UINT64 TotalBytes = 0;
 		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> Footprint(Subresource.size());
@@ -39,30 +36,16 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const std::wstring& Path,
 			0, Footprint.data(), 
 			NumRows.data(), RowBytes.data(), &TotalBytes);
 
-#ifdef USE_WINRT
-		winrt::com_ptr<ID3D12Resource> UploadResource;
-		CreateUploadResource(UploadResource.put(), TotalBytes);
-		CopyToUploadResource(UploadResource.get(), Subresource, Footprint, NumRows, RowBytes); 
-#elif defined(USE_WRL)
-		Microsoft::WRL::ComPtr<ID3D12Resource> UploadResource;
-		CreateUploadResource(UploadResource.GetAddressOf(), TotalBytes);
-		CopyToUploadResource(UploadResource.Get(), Subresource, Footprint, NumRows, RowBytes); 
-#endif
+		COM_PTR<ID3D12Resource> UploadResource;
+		CreateUploadResource(COM_PTR_PUT(UploadResource), TotalBytes);
+		CopyToUploadResource(COM_PTR_GET(UploadResource), Subresource, Footprint, NumRows, RowBytes); 
 
 		//!< #DX_TODO ミップマップの生成 Mipmap
 		//if(ResourceDesc.MipLevels != static_cast<const UINT16>(SubresourceData.size())) {
 		//	UploadResource.GenerateMips(*Resource);
 		//}
 
-#ifdef USE_WINRT
-		ExecuteCopyTexture(CA, CL, UploadResource.get(), *Resource, Footprint, ResourceState);
-#elif defined(USE_WRL)
-		ExecuteCopyTexture(CA, CL, UploadResource.Get(), *Resource, Footprint, ResourceState);
-#endif
+		ExecuteCopyTexture(CA, CL, COM_PTR_GET(UploadResource), *Resource, Footprint, ResourceState);
 	}
-#ifdef USE_WINRT
-	(Resource, Path, ResourceState, CommandAllocators[0].get(), GraphicsCommandLists[0].get());
-#elif defined(USE_WRL)
-	(Resource, Path, ResourceState, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
-#endif
+	(Resource, Path, ResourceState, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 }

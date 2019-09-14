@@ -232,29 +232,14 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void BillboardDX::PopulateCommandList(const size_t i)
 {
-#ifdef USE_WINRT
-	const auto CL = GraphicsCommandLists[i].get();
-	const auto CA = CommandAllocators[0].get();
-	const auto IBR = IndirectBufferResources[0].get();
-#elif defined(USE_WRL)
-	const auto CL = GraphicsCommandLists[i].Get();
-	const auto CA = CommandAllocators[0].Get();
-	const auto IBR = IndirectBufferResources[0].Get();
-#endif
+	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto CA = COM_PTR_GET(CommandAllocators[0]);
+	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
-#ifdef USE_WINRT
-	const auto SCR = SwapChainResources[i].get();
-	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
-#elif defined(USE_WRL)
-	const auto SCR = SwapChainResources[i].Get();
-	const auto SCHandle = GetCPUDescriptorHandle(SwapChainDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
-#endif
+	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+	const auto SCHandle = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
 	
-#ifdef USE_WINRT
-	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.get()));
-#elif defined(USE_WRL)
-	VERIFY_SUCCEEDED(CL->Reset(CA, PipelineState.Get()));
-#endif
+	VERIFY_SUCCEEDED(CL->Reset(CA, COM_PTR_GET(PipelineState)));
 	{
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
@@ -276,35 +261,19 @@ void BillboardDX::PopulateCommandList(const size_t i)
 			//	CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
 			//}
 
-#ifdef USE_WINRT
-			CL->SetGraphicsRootSignature(RootSignature.get());
-#elif defined(USE_WRL)
-			CL->SetGraphicsRootSignature(RootSignature.Get());
-#endif
+			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignature));
 
 			//!< コンスタントバッファ
 			{
-#ifdef USE_WINRT
-				const std::array<ID3D12DescriptorHeap*, 1> DHs = { ConstantBufferDescriptorHeap.get() };
-#elif defined(USE_WRL)
-				const std::array<ID3D12DescriptorHeap*, 1> DHs = { ConstantBufferDescriptorHeap.Get() };
-#endif
+				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(ConstantBufferDescriptorHeap) };
 				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
 
-#ifdef USE_WINRT
-				CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
-#elif defined(USE_WRL)
-				CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(ConstantBufferDescriptorHeap.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
-#endif
+				CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 			}
 
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
-#ifdef USE_WINRT
-			CL->ExecuteIndirect(IndirectCommandSignature.get(), 1, IBR, 0, nullptr, 0);
-#elif defined(USE_WRL)
-			CL->ExecuteIndirect(IndirectCommandSignature.Get(), 1, IBR, 0, nullptr, 0);
-#endif
+			CL->ExecuteIndirect(COM_PTR_GET(IndirectCommandSignature), 1, IBR, 0, nullptr, 0);
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
