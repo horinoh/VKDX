@@ -242,7 +242,7 @@ void ComputeDX::PopulateCommandList(const size_t i)
 			const std::vector<ID3D12DescriptorHeap*> DH = { COM_PTR_GET(UnorderedAccessTextureDescriptorHeap) };
 			CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
 
-			CL->SetGraphicsRootDescriptorTable(0, COM_PTR_GET(GetGPUDescriptorHandle(UnorderedAccessTextureDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+			CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(UnorderedAccessTextureDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 		}
 
 		CL->ExecuteIndirect(COM_PTR_GET(IndirectCommandSignature), 1, IBR, 0, nullptr, 0);
