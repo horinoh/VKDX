@@ -1,13 +1,27 @@
 #pragma once
 
+//!< 少なくとも USE_WINRT, USE_WRL のいずれかは定義すること、両方定義された場合は USE_WINRT が優先される (At least define USE_WINRT or USE_WRL, if both defined USE_WINRT will be used)
 #define USE_WINRT
 #define USE_WRL
 #ifdef USE_WINRT
-//!< プロジェクト右クリック - Property - All Configurations にする - C / C++ - Language - C++ Language Standard - ISO C++17 Standard を選択しておくこと (デフォルトではC++14)
+//!< Property - All Configurations, C/C++ - Language - C++ Language Standard - Select ISO C++17 Standard (Default is C++14)
 #include <winrt/base.h>
-#endif
-#ifdef USE_WRL
+#define COM_PTR winrt::com_ptr
+#define COM_PTR_GET(_x) _x.get()
+#define COM_PTR_PUT(_x) _x.put()
+#define COM_PTR_PUTVOID(_x) _x.put_void()
+#define COM_PTR_UUIDOF_PUTVOID(_x) __uuidof(_x), COM_PTR_PUTVOID(_x)
+#define COM_PTR_RESET(_x) _x = nullptr
+#define COM_PTR_AS(_x, _y) winrt::copy_to_abi(_x, *_y.put_void());
+#elif defined(USE_WRL)
 #include <wrl.h>
+#define COM_PTR Microsoft::WRL::ComPtr
+#define COM_PTR_GET(_x) _x.Get()
+#define COM_PTR_PUT(_x) _x.GetAddressOf()
+#define COM_PTR_PUTVOID(_x) _x.GetAddressOf()
+#define COM_PTR_UUIDOF_PUTVOID(_x) IID_PPV_ARGS(COM_PTR_PUTVOID(_x))
+#define COM_PTR_RESET(_x) _x.Reset()
+#define COM_PTR_AS(_x, _y) VERIFY_SUCCEEDED(_x.As(&_y));
 #endif
 
 #define USE_STATIC_SAMPLER
@@ -133,22 +147,12 @@ protected:
 
 	virtual void CreateFence();
 
-#ifdef USE_WINRT
-	virtual void CreateCommandAllocator(winrt::com_ptr<ID3D12CommandAllocator>& CA, const D3D12_COMMAND_LIST_TYPE CLT) {
-		VERIFY_SUCCEEDED(Device->CreateCommandAllocator(CLT, __uuidof(CA), CA.put_void()));
+	virtual void CreateCommandAllocator(COM_PTR<ID3D12CommandAllocator>& CA, const D3D12_COMMAND_LIST_TYPE CLT) {
+		VERIFY_SUCCEEDED(Device->CreateCommandAllocator(CLT, COM_PTR_UUIDOF_PUTVOID(CA)));
 	}
-#elif defined(USE_WRL)
-	virtual void CreateCommandAllocator(Microsoft::WRL::ComPtr<ID3D12CommandAllocator>& CA, const D3D12_COMMAND_LIST_TYPE CLT) {
-		VERIFY_SUCCEEDED(Device->CreateCommandAllocator(CLT, IID_PPV_ARGS(CA.GetAddressOf())));
-	}
-#endif
 	virtual void CreateCommandAllocator();
 
-#ifdef USE_WINRT
-	virtual void CreateCommandList(winrt::com_ptr<ID3D12GraphicsCommandList>& CL, ID3D12CommandAllocator* CA, const D3D12_COMMAND_LIST_TYPE CLT);
-#elif defined(USE_WRL)
-	virtual void CreateCommandList(Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>& CL, ID3D12CommandAllocator* CA, const D3D12_COMMAND_LIST_TYPE CLT);
-#endif
+	virtual void CreateCommandList(COM_PTR<ID3D12GraphicsCommandList>& CL, ID3D12CommandAllocator* CA, const D3D12_COMMAND_LIST_TYPE CLT);
 	virtual void CreateCommandList();
 
 	virtual void CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat);
@@ -159,11 +163,7 @@ protected:
 	virtual void InitializeSwapChain();
 	virtual void ResetSwapChainResource() {
 		for (auto& i : SwapChainResources) {
-#ifdef USE_WINRT
-			i = nullptr;
-#elif defined(USE_WRL)
-			i.Reset();
-#endif
+			COM_PTR_RESET(i);
 		}
 	}
 	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
@@ -194,85 +194,45 @@ protected:
 	virtual void CreateViewport(const RECT& Rect, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f) { CreateViewport(static_cast<FLOAT>(Rect.right - Rect.left), static_cast<FLOAT>(Rect.bottom - Rect.top), MinDepth, MaxDepth); }
 	virtual void CreateViewportTopFront(const FLOAT Width, const FLOAT Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 
-#ifdef USE_WINRT
-	virtual void SerializeRootSignature(winrt::com_ptr<ID3DBlob>& Blob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags);
-	virtual void GetRootSignaturePartFromShader(winrt::com_ptr<ID3DBlob>& Blob, LPCWSTR Path);
-	virtual void CreateRootSignature(winrt::com_ptr<ID3D12RootSignature>& RS, winrt::com_ptr<ID3DBlob> Blob) {
-		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(RS), RS.put_void()));
+	virtual void SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags);
+	virtual void GetRootSignaturePartFromShader(COM_PTR<ID3DBlob>& Blob, LPCWSTR Path);
+	virtual void CreateRootSignature(COM_PTR<ID3D12RootSignature>& RS, COM_PTR<ID3DBlob> Blob) {
+		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RS)));
 	}
-#elif defined(USE_WRL)
-	virtual void SerializeRootSignature(Microsoft::WRL::ComPtr<ID3DBlob>& Blob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags);
-	virtual void GetRootSignaturePartFromShader(Microsoft::WRL::ComPtr<ID3DBlob>& Blob, LPCWSTR Path);
-	virtual void CreateRootSignature(Microsoft::WRL::ComPtr<ID3D12RootSignature>& RS, Microsoft::WRL::ComPtr<ID3DBlob> Blob) {
-		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), IID_PPV_ARGS(RS.GetAddressOf())));
-	}
-#endif
+
 	virtual void CreateRootSignature();
 
-#ifdef USE_WINRT
-	virtual void CreateDescriptorHeap(winrt::com_ptr<ID3D12DescriptorHeap>& DH, const D3D12_DESCRIPTOR_HEAP_DESC DHD) {
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, __uuidof(DH), DH.put_void()));
+	virtual void CreateDescriptorHeap(COM_PTR<ID3D12DescriptorHeap>& DH, const D3D12_DESCRIPTOR_HEAP_DESC DHD) {
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DH)));
 	}
-#elif defined(USE_WRL)
-	virtual void CreateDescriptorHeap(Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH, const D3D12_DESCRIPTOR_HEAP_DESC DHD) {
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, IID_PPV_ARGS(DH.GetAddressOf())));
-	}
-#endif
 	virtual void CreateDescriptorHeap() {}
 
-#ifdef USE_WINRT
-	virtual void CreateConstantBufferView(const winrt::com_ptr<ID3D12Resource>& Res, const winrt::com_ptr<ID3D12DescriptorHeap>& DH, const size_t Size) {
+	virtual void CreateConstantBufferView(const COM_PTR<ID3D12Resource>& Res, const COM_PTR<ID3D12DescriptorHeap>& DH, const size_t Size) {
 		const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = {
 			Res->GetGPUVirtualAddress(),
 			static_cast<UINT>(RoundUp(Size, 0xff)) //!< 256 byte align
 		};
-		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(DH.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(COM_PTR_GET(DH), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 	}
-	virtual void CreateShaderResourceView(const winrt::com_ptr<ID3D12Resource>& Res, const winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
-		Device->CreateShaderResourceView(Res.get(), nullptr, GetCPUDescriptorHandle(DH.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+	virtual void CreateShaderResourceView(const COM_PTR<ID3D12Resource>& Res, const COM_PTR<ID3D12DescriptorHeap>& DH) {
+		Device->CreateShaderResourceView(COM_PTR_GET(Res), nullptr, GetCPUDescriptorHandle(COM_PTR_GET(DH), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 	}
-	virtual void CreateUnorderedAccessView(const winrt::com_ptr<ID3D12Resource>& Res, const winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
+	virtual void CreateUnorderedAccessView(const COM_PTR<ID3D12Resource>& Res, const COM_PTR<ID3D12DescriptorHeap>& DH) {
 		D3D12_UNORDERED_ACCESS_VIEW_DESC UAVD = {
 			DXGI_FORMAT_R8G8B8A8_UNORM,
 			D3D12_UAV_DIMENSION_TEXTURE2D,
 		};
 		UAVD.Texture2D.MipSlice = 0;
 		UAVD.Texture2D.PlaneSlice = 0;
-		Device->CreateUnorderedAccessView(Res.get(), nullptr, &UAVD, GetCPUDescriptorHandle(DH.get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+		Device->CreateUnorderedAccessView(COM_PTR_GET(Res), nullptr, &UAVD, GetCPUDescriptorHandle(COM_PTR_GET(DH), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 	}
-#elif defined(USE_WRL)
-	virtual void CreateConstantBufferView(const Microsoft::WRL::ComPtr<ID3D12Resource> Res, const Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH, const size_t Size) {
-		const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = {
-			Res->GetGPUVirtualAddress(),
-			static_cast<UINT>(RoundUp(Size, 0xff))
-		};
-		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(DH.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
-	}
-	virtual void CreateShaderResourceView(const Microsoft::WRL::ComPtr<ID3D12Resource> Res, const Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>& DH) {
-		Device->CreateShaderResourceView(Resource.Get(), nullptr, GetCPUDescriptorHandle(DH.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
-	}
-	virtual void CreateUnorderedAccessView(const winrt::com_ptr<ID3D12Resource>& Res, const winrt::com_ptr<ID3D12DescriptorHeap>& DH) {
-		D3D12_UNORDERED_ACCESS_VIEW_DESC UAVD = {
-			DXGI_FORMAT_R8G8B8A8_UNORM,
-			D3D12_UAV_DIMENSION_TEXTURE2D,
-		};
-		UAVD.Texture2D.MipSlice = 0;
-		UAVD.Texture2D.PlaneSlice = 0;
-		Device->CreateUnorderedAccessView(Res.Get(), nullptr, &UAVD, GetCPUDescriptorHandle(DH.Get(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
-	}
-#endif
 	virtual void CreateDescriptorView() {}
 
-#ifdef USE_WINRT
-	virtual void CreateShader(std::vector<winrt::com_ptr<ID3DBlob>>& ShaderBlobs) const;
-#elif defined(USE_WRL)
-	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
-	virtual void CreateShader(std::vector<Microsoft::WRL::ComPtr<ID3DBlob>>& ShaderBlobs) const;
-#endif
+	virtual void CreateShader(std::vector<COM_PTR<ID3DBlob>>& ShaderBlobs) const;
 	virtual void CreateShaderBlob() {}
 
 	virtual void CreatePipelineState();
-	void CreatePipelineState_Default(winrt::com_ptr<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
+	void CreatePipelineState_Default(COM_PTR<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS);
 	//virtual void CreatePipelineState_Compute();
 
@@ -290,133 +250,58 @@ protected:
 
 protected:
 #if defined(_DEBUG) || defined(USE_PIX)
-#ifdef USE_WINRT
-	winrt::com_ptr<IDXGraphicsAnalysis> GraphicsAnalysis;
-#elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<IDXGraphicsAnalysis> GraphicsAnalysis;
-#endif
+	COM_PTR<IDXGraphicsAnalysis> GraphicsAnalysis;
 #endif
 
-#ifdef USE_WINRT
-	winrt::com_ptr<ID3D12Device> Device;
-#elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3D12Device> Device;
-#endif
+	COM_PTR<ID3D12Device> Device;
 	std::vector<DXGI_SAMPLE_DESC> SampleDescs;
-#ifdef USE_WINRT
-	winrt::com_ptr<ID3D12CommandQueue> CommandQueue;
-	winrt::com_ptr<ID3D12Fence> Fence;
-#elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3D12CommandQueue> CommandQueue;
-	Microsoft::WRL::ComPtr<ID3D12Fence> Fence;
-#endif
+	COM_PTR<ID3D12CommandQueue> CommandQueue;
+	COM_PTR<ID3D12Fence> Fence;
 	UINT64 FenceValue = 0;
 
-#ifdef USE_WINRT
-	std::vector<winrt::com_ptr<ID3D12CommandAllocator>> CommandAllocators;
-	std::vector<winrt::com_ptr<ID3D12GraphicsCommandList>> GraphicsCommandLists;
-	//std::vector<winrt::com_ptr<ID3D12CommandList>> CommandLists;
-#elif defined(USE_WRL)
-	std::vector<Microsoft::WRL::ComPtr<ID3D12CommandAllocator>> CommandAllocators;
-	std::vector<Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList>> GraphicsCommandLists;
-	//std::vector<Microsoft::WRL::ComPtr<ID3D12CommandList>> CommandLists;
-#endif
+	std::vector<COM_PTR<ID3D12CommandAllocator>> CommandAllocators;
+	std::vector<COM_PTR<ID3D12GraphicsCommandList>> GraphicsCommandLists;
+	//std::vector<COM_PTR<ID3D12CommandList>> CommandLists;
 	
-#ifdef USE_WINRT
-	winrt::com_ptr<IDXGISwapChain3> SwapChain;
-	winrt::com_ptr<ID3D12DescriptorHeap> SwapChainDescriptorHeap;
-	std::vector<winrt::com_ptr<ID3D12Resource>> SwapChainResources;
-#elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<IDXGISwapChain3> SwapChain;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> SwapChainDescriptorHeap; 
-	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> SwapChainResources;
-#endif
+	COM_PTR<IDXGISwapChain3> SwapChain;
+	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap;
+	std::vector<COM_PTR<ID3D12Resource>> SwapChainResources;
 	UINT CurrentBackBufferIndex = 0xffffffff;
 
-#ifdef USE_WINRT
-	winrt::com_ptr<ID3D12Resource> DepthStencilResource;
-	winrt::com_ptr<ID3D12DescriptorHeap> DepthStencilDescriptorHeap;
-#elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3D12Resource> DepthStencilResource;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DepthStencilDescriptorHeap; 
-#endif
+	COM_PTR<ID3D12Resource> DepthStencilResource;
+	COM_PTR<ID3D12DescriptorHeap> DepthStencilDescriptorHeap;
 
-#ifdef USE_WINRT
-	winrt::com_ptr<ID3D12Resource> ImageResource;
-	winrt::com_ptr<ID3D12DescriptorHeap> ImageDescriptorHeap;
-#elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3D12Resource> ImageResource;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> ImageDescriptorHeap;
-#endif
+	COM_PTR<ID3D12Resource> ImageResource;
+	COM_PTR<ID3D12DescriptorHeap> ImageDescriptorHeap;
 
-#ifdef USE_WINRT
-	winrt::com_ptr<ID3D12RootSignature> RootSignature;
-#elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
-#endif
+	COM_PTR<ID3D12RootSignature> RootSignature;
 
-#ifdef USE_WINRT
-	winrt::com_ptr<ID3D12PipelineLibrary> PipelineLibrary;
-	winrt::com_ptr<ID3D12PipelineState> PipelineState; 
-#elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3D12PipelineLibrary> PipelineLibrary;
-	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState; 
-#endif
+	COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
+	COM_PTR<ID3D12PipelineState> PipelineState; 
 	
-#ifdef USE_WINRT
-	std::vector<winrt::com_ptr<ID3D12Resource>> VertexBufferResources;
-#elif defined(USE_WRL)
-	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> VertexBufferResources;
-#endif
+	std::vector<COM_PTR<ID3D12Resource>> VertexBufferResources;
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> VertexBufferViews;
 
-#ifdef USE_WINRT
-	std::vector <winrt::com_ptr<ID3D12Resource>> IndexBufferResources;
-#elif defined(USE_WRL)
-	std::vector <Microsoft::WRL::ComPtr<ID3D12Resource>> IndexBufferResources;
-#endif
-	D3D12_INDEX_BUFFER_VIEW IndexBufferView;
+	std::vector <COM_PTR<ID3D12Resource>> IndexBufferResources;
+	std::vector<D3D12_INDEX_BUFFER_VIEW> IndexBufferViews;
 
-#ifdef USE_WINRT
-	std::vector<winrt::com_ptr<ID3D12Resource>> IndirectBufferResources;
-	winrt::com_ptr<ID3D12CommandSignature> IndirectCommandSignature;
-#elif defined(USE_WRL)
-	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> IndirectBufferResources;
-	Microsoft::WRL::ComPtr<ID3D12CommandSignature> IndirectCommandSignature;
-#endif
+	std::vector<COM_PTR<ID3D12Resource>> IndirectBufferResources;
+	COM_PTR<ID3D12CommandSignature> IndirectCommandSignature;
 
 	//!< 現状1つのみ、配列にする #DX_TODO
-#ifdef USE_WINRT
-	winrt::com_ptr<ID3D12Resource> ConstantBufferResource;
-	winrt::com_ptr<ID3D12DescriptorHeap> ConstantBufferDescriptorHeap; 
-#elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3D12Resource> ConstantBufferResource;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> ConstantBufferDescriptorHeap; 
-#endif
+	COM_PTR<ID3D12Resource> ConstantBufferResource;
+	COM_PTR<ID3D12DescriptorHeap> ConstantBufferDescriptorHeap; 
 
-#ifdef USE_WINRT
-	winrt::com_ptr<ID3D12Resource> UnorderedAccessTextureResource;
-	winrt::com_ptr<ID3D12DescriptorHeap> UnorderedAccessTextureDescriptorHeap; 
-#elif defined(USE_WRL)
-	Microsoft::WRL::ComPtr<ID3D12Resource> UnorderedAccessTextureResource;
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> UnorderedAccessTextureDescriptorHeap; 
-#endif
+	COM_PTR<ID3D12Resource> UnorderedAccessTextureResource;
+	COM_PTR<ID3D12DescriptorHeap> UnorderedAccessTextureDescriptorHeap; 
 	
 	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
-#ifdef USE_WINRT
-	std::vector<winrt::com_ptr<ID3D12DescriptorHeap>> SamplerDescriptorHeaps;
-#elif defined(USE_WRL)
-	std::vector<Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>> SamplerDescriptorHeaps;
-#endif
+	std::vector<COM_PTR<ID3D12DescriptorHeap>> SamplerDescriptorHeaps;
 
 	std::vector<D3D12_VIEWPORT> Viewports;
 	std::vector<D3D12_RECT> ScissorRects;
 
-#ifdef USE_WINRT
-	std::vector<winrt::com_ptr<ID3DBlob>> ShaderBlobs;
-#elif defined(USE_WRL)
-	std::vector<Microsoft::WRL::ComPtr <<ID3DBlob>> ShaderBlobs;
-#endif
+	std::vector<COM_PTR<ID3DBlob>> ShaderBlobs;
 
 protected:
 	const std::vector<D3D_FEATURE_LEVEL> FeatureLevels = {

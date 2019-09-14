@@ -21,11 +21,12 @@ protected:
 		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
 		Degree += 1.0f;
 #if 1
-#ifdef USE_WINRT
-		CopyToUploadResource(ConstantBufferResource.get(), RoundUp(sizeof(Tr), 0xff), &Tr);
-#elif defined(USE_WRL)
-		CopyToUploadResource(ConstantBufferResource.Get(), RoundUp(sizeof(Tr), 0xff), &Tr);
-#endif
+//#ifdef USE_WINRT
+//		CopyToUploadResource(ConstantBufferResource.get(), RoundUp(sizeof(Tr), 0xff), &Tr);
+//#elif defined(USE_WRL)
+//		CopyToUploadResource(ConstantBufferResource.Get(), RoundUp(sizeof(Tr), 0xff), &Tr);
+//#endif
+		CopyToUploadResource(COM_PTR_GET(ConstantBufferResource), RoundUp(sizeof(Tr), 0xff), &Tr);
 #else
 		D3D12_RANGE Range = { offsetof(Transform, World), offsetof(Transform, World) + sizeof(Tr.World) };
 		BYTE* Data;
@@ -42,11 +43,13 @@ protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1); }
 
 	virtual void CreateRootSignature() override {
-#ifdef USE_WINRT
-		winrt::com_ptr<ID3DBlob> Blob;
-#elif defined(USE_WRL)
-		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
-#endif
+//#ifdef USE_WINRT
+//		winrt::com_ptr<ID3DBlob> Blob;
+//#elif defined(USE_WRL)
+//		Microsoft::WRL::ComPtr<ID3DBlob> Blob;
+//#endif
+		COM_PTR<ID3DBlob> Blob;
+
 #ifdef USE_HLSL_ROOTSIGNATRUE
 		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
 #else

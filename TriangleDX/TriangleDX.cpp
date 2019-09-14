@@ -280,7 +280,7 @@ void TriangleDX::CreateIndexBuffer()
 #endif
 
 	//!< DXではビューが必要 Need view
-	IndexBufferView = { IndexBufferResources[0]->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT };
+	IndexBufferViews.push_back({ IndexBufferResources[0]->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT });
 
 #ifdef _DEBUG
 #ifdef USE_WINRT
@@ -353,8 +353,11 @@ void TriangleDX::PopulateCommandList(const size_t i)
 
 			//!< バーテックスバッファ、インデックスバッファ
 			if (!VertexBufferViews.empty()) {
-				CL->IASetVertexBuffers(0, static_cast<UINT>(VertexBufferViews.size()), VertexBufferViews.data());
-				CL->IASetIndexBuffer(&IndexBufferView);
+				const std::array< D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VertexBufferViews[0] };
+				CL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
+				if (!IndexBufferViews.empty()) {
+					CL->IASetIndexBuffer(&IndexBufferViews[0]);
+				}
 			}
 
 			//!< 描画

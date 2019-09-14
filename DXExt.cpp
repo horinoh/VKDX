@@ -10,11 +10,7 @@ void DXExt::CreateIndirectBuffer_Draw(const UINT Count)
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 
-#ifdef USE_WINRT
-	CreateBuffer(IndirectBufferResources[0].put(), Size, &Source, CommandAllocators[0].get(), GraphicsCommandLists[0].get());
-#elif defined(USE_WRL)
-	CreateBuffer(IndirectBufferResources[0].GetAddressOf(), Size, &Source, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
-#endif
+	CreateBuffer(COM_PTR_PUT(IndirectBufferResources[0]), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 
 	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndArgDescs = {
 		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW },
@@ -24,11 +20,7 @@ void DXExt::CreateIndirectBuffer_Draw(const UINT Count)
 		static_cast<const UINT>(IndArgDescs.size()), IndArgDescs.data(),
 		0
 	};
-#ifdef USE_WINRT
-	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.get(), __uuidof(IndirectCommandSignature), IndirectCommandSignature.put_void());
-#elif defined(USE_WRL)
-	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.Get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
-#endif
+	Device->CreateCommandSignature(&CmdSigDesc, COM_PTR_GET(RootSignature), COM_PTR_UUIDOF_PUTVOID(IndirectCommandSignature));
 }
 
 void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT Count)
@@ -39,11 +31,7 @@ void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT Count)
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 
-#ifdef USE_WINRT
-	CreateBuffer(IndirectBufferResources[0].put(), Size, &Source, CommandAllocators[0].get(), GraphicsCommandLists[0].get());
-#elif defined(USE_WRL)
-	CreateBuffer(IndirectBufferResources[0].GetAddressOf(), Size, &Source, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
-#endif
+	CreateBuffer(COM_PTR_PUT(IndirectBufferResources[0]), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 
 	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndArgDescs = {
 		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED },
@@ -53,11 +41,7 @@ void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT Count)
 		static_cast<const UINT>(IndArgDescs.size()), IndArgDescs.data(),
 		0
 	};
-#ifdef USE_WINRT
-	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.get(), __uuidof(IndirectCommandSignature), IndirectCommandSignature.put_void());
-#elif defined(USE_WRL)
-	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.Get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
-#endif
+	Device->CreateCommandSignature(&CmdSigDesc, COM_PTR_GET(RootSignature), COM_PTR_UUIDOF_PUTVOID(IndirectCommandSignature));
 }
 
 void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT Z)
@@ -68,11 +52,7 @@ void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 
-#ifdef USE_WINRT
-	CreateBuffer(IndirectBufferResources[0].put(), Size, &Source, CommandAllocators[0].get(), GraphicsCommandLists[0].get());
-#elif defined(USE_WRL)
-	CreateIBuffer(IndirectBufferResources[0].GetAddressOf(), Size, &Source, CommandAllocators[0].Get(), GraphicsCommandLists[0].Get());
-#endif
+	CreateBuffer(COM_PTR_PUT(IndirectBufferResources[0]), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 
 	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndArgDescs = {
 		{ D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH },
@@ -82,14 +62,10 @@ void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT
 		static_cast<const UINT>(IndArgDescs.size()), IndArgDescs.data(),
 		0
 	};
-#ifdef USE_WINRT
-	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.get(), __uuidof(IndirectCommandSignature), IndirectCommandSignature.put_void());
-#elif defined(USE_WRL)
-	Device->CreateCommandSignature(&CmdSigDesc, RootSignature.Get(), IID_PPV_ARGS(IndirectCommandSignature.GetAddressOf()));
-#endif
+	Device->CreateCommandSignature(&CmdSigDesc, COM_PTR_GET(RootSignature), COM_PTR_UUIDOF_PUTVOID(IndirectCommandSignature));
 }
 
-void DXExt::CreatePipelineState_Tesselation(winrt::com_ptr<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS, const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
+void DXExt::CreatePipelineState_Tesselation(/*winrt::com_ptr*/COM_PTR<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS, const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
 {
 	PERFORMANCE_COUNTER();
 
@@ -172,11 +148,7 @@ void DXExt::CreatePipelineState_Tesselation(winrt::com_ptr<ID3D12PipelineState>&
 	//!< DXでは「パッチコントロールポイント」の指定はIASetPrimitiveTopology()の引数としてコマンドリストへ指定する、VKとは結構異なるので注意
 	//!< CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
-#ifdef USE_WINRT
-	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, __uuidof(PipelineState), PipelineState.put_void()));
-#elif defined(USE_WRL)
-	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, IID_PPV_ARGS(PipelineState.GetAddressOf())));
-#endif
+	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PipelineState)));
 
 	LOG_OK();
 }
@@ -185,41 +157,24 @@ void DXExt::CreateShaderBlob_VsPs()
 {
 	ShaderBlobs.resize(2);
 	const auto ShaderPath = GetBasePath();
-#ifdef USE_WINRT
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), ShaderBlobs[0].put()));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].put()));
-#elif defined(USE_WRL)
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), ShaderBlobs[0].GetAddressOf()));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].GetAddressOf()));
-#endif
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs[0])));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[1])));
 }
 void DXExt::CreateShaderBlob_VsPsDsHsGs()
 {
 	ShaderBlobs.resize(5);
 	const auto ShaderPath = GetBasePath();
-#ifdef USE_WINRT
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), ShaderBlobs[0].put()));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].put()));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), ShaderBlobs[2].put()));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), ShaderBlobs[3].put()));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), ShaderBlobs[4].put()));
-#elif defined(USE_WRL)
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), ShaderBlobs[0].GetAddressOf()));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), ShaderBlobs[1].GetAddressOf()));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), ShaderBlobs[2].GetAddressOf()));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), ShaderBlobs[3].GetAddressOf()));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), ShaderBlobs[4].GetAddressOf()));
-#endif
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs[0])));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[1])));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), COM_PTR_PUT(ShaderBlobs[2])));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), COM_PTR_PUT(ShaderBlobs[3])));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), COM_PTR_PUT(ShaderBlobs[4])));
 }
 void DXExt::CreateShaderBlob_Cs()
 {
 	ShaderBlobs.resize(1);
 	const auto ShaderPath = GetBasePath();
-#ifdef USE_WINRT
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".cs.cso")).data(), ShaderBlobs[0].put()));
-#elif defined(USE_WRL)
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".cs.cso")).data(), ShaderBlobs[0].GetAddressOf()));
-#endif
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".cs.cso")).data(), COM_PTR_PUT(ShaderBlobs[0])));
 }
 
 void DXExt::CreatePipelineState_VsPs()
@@ -227,70 +182,65 @@ void DXExt::CreatePipelineState_VsPs()
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
 	DeleteFile(PCOPath.data());
 
-#ifdef USE_WINRT
-	winrt::com_ptr<ID3D12Device1> Device1;
-	VERIFY_SUCCEEDED(Device->QueryInterface(__uuidof(Device1), Device1.put_void()));
+	COM_PTR<ID3D12Device1> Device1;
+	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device1)));
 
-	winrt::com_ptr<ID3D12PipelineLibrary> PL;
-	winrt::com_ptr<ID3DBlob> Blob;
-	if (SUCCEEDED(D3DReadFileToBlob(PCOPath.c_str(), Blob.put())) && Blob->GetBufferSize()) {
-		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(PL), PL.put_void()));
+	COM_PTR<ID3D12PipelineLibrary> PL;
+	COM_PTR<ID3DBlob> Blob;
+	if (SUCCEEDED(D3DReadFileToBlob(PCOPath.c_str(), COM_PTR_PUT(Blob))) && Blob->GetBufferSize()) {
+		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(PL)));
 
-		winrt::com_ptr<ID3D12PipelineState> PS;
+		COM_PTR<ID3D12PipelineState> PS;
 		const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {};
-		VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(TEXT("0"), &GPSD, __uuidof(PS), PS.put_void()));
+		VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(TEXT("0"), &GPSD, COM_PTR_UUIDOF_PUTVOID(PS)));
 	}
 	else {
-		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, __uuidof(PipelineLibrary), PL.put_void()));
+		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, COM_PTR_UUIDOF_PUTVOID(PL)));
 
 		assert(ShaderBlobs.size() > 1 && "");
 		const std::array<D3D12_SHADER_BYTECODE, 2> SBCs = { {
 			{ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() },
 			{ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() },
 		} };
-		auto Thread = std::thread::thread([&](winrt::com_ptr<ID3D12PipelineState>& Pipe, ID3D12RootSignature* RS,
+		auto Thread = std::thread::thread([&](COM_PTR<ID3D12PipelineState>& Pipe, ID3D12RootSignature* RS,
 			const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
 			{
 				CreatePipelineState_Default(Pipe, RS, VS, PS, DS, HS, GS);
 			},
-			std::ref(PipelineState), RootSignature.get(), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC);
+			std::ref(PipelineState), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC);
 
 		Thread.join();
 
-		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), PipelineState.get()));
+		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), COM_PTR_GET(PipelineState)));
 
 		const auto Size = PL->GetSerializedSize();
 		if (Size) {
-			winrt::com_ptr<ID3DBlob> Blob;
-			VERIFY_SUCCEEDED(D3DCreateBlob(Size, Blob.put()));
+			COM_PTR<ID3DBlob> Blob;
+			VERIFY_SUCCEEDED(D3DCreateBlob(Size, COM_PTR_PUT(Blob)));
 			PL->Serialize(Blob->GetBufferPointer(), Size);
-			VERIFY_SUCCEEDED(D3DWriteBlobToFile(Blob.get(), PCOPath.c_str(), TRUE));
+			VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blob), PCOPath.c_str(), TRUE));
 		}
 	}
-#elif defined(USE_WRL)
-	//!< #DX_TODO
-#endif
 }
 void DXExt::CreatePipelineState_VsPsDsHsGs_Tesselation()
 {
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
 	DeleteFile(PCOPath.data());
 
-#ifdef USE_WINRT
-	winrt::com_ptr<ID3D12Device1> Device1;
-	VERIFY_SUCCEEDED(Device->QueryInterface(__uuidof(Device1), Device1.put_void()));
+	COM_PTR<ID3D12Device1> Device1;
+	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device1)));
 
-	winrt::com_ptr<ID3D12PipelineLibrary> PL;
-	winrt::com_ptr<ID3DBlob> Blob;
-	if (SUCCEEDED(D3DReadFileToBlob(PCOPath.c_str(), Blob.put())) && Blob->GetBufferSize()) {
-		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(PL), PL.put_void()));
+	COM_PTR<ID3D12PipelineLibrary> PL;
+	COM_PTR<ID3DBlob> Blob;
+	if (SUCCEEDED(D3DReadFileToBlob(PCOPath.c_str(), COM_PTR_PUT(Blob))) && Blob->GetBufferSize()) {
+		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(PL)));
 
-		winrt::com_ptr<ID3D12PipelineState> PS;
+		COM_PTR<ID3D12PipelineState> PS;
 		const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {};
-		VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(TEXT("0"), &GPSD, __uuidof(PS), PS.put_void()));
+		VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(TEXT("0"), &GPSD, COM_PTR_UUIDOF_PUTVOID(PS)));
 	}
 	else {
-		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, __uuidof(PipelineLibrary), PL.put_void()));
+		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, COM_PTR_UUIDOF_PUTVOID(PL)));
 
 		assert(ShaderBlobs.size() > 4 && "");
 		const std::array<D3D12_SHADER_BYTECODE, 5> SBCs = { {
@@ -300,28 +250,25 @@ void DXExt::CreatePipelineState_VsPsDsHsGs_Tesselation()
 			{ ShaderBlobs[3]->GetBufferPointer(), ShaderBlobs[3]->GetBufferSize() },
 			{ ShaderBlobs[4]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() },
 		} };
-		auto Thread = std::thread::thread([&](winrt::com_ptr<ID3D12PipelineState>& Pipe, ID3D12RootSignature* RS,
+		auto Thread = std::thread::thread([&](COM_PTR<ID3D12PipelineState>& Pipe, ID3D12RootSignature* RS,
 			const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
 			{
 				CreatePipelineState_Tesselation(Pipe, RS, VS, PS, DS, HS, GS);
 			},
-			std::ref(PipelineState), RootSignature.get(), SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4]);
+			std::ref(PipelineState), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4]);
 
 		Thread.join();
 
-		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), PipelineState.get()));
+		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), COM_PTR_GET(PipelineState)));
 
 		const auto Size = PL->GetSerializedSize();
 		if (Size) {
-			winrt::com_ptr<ID3DBlob> Blob;
-			VERIFY_SUCCEEDED(D3DCreateBlob(Size, Blob.put()));
+			COM_PTR<ID3DBlob> Blob;
+			VERIFY_SUCCEEDED(D3DCreateBlob(Size, COM_PTR_PUT(Blob)));
 			PL->Serialize(Blob->GetBufferPointer(), Size);
-			VERIFY_SUCCEEDED(D3DWriteBlobToFile(Blob.get(), PCOPath.c_str(), TRUE));
+			VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blob), PCOPath.c_str(), TRUE));
 		}
 	}
-#elif defined(USE_WRL)
-	//!< #DX_TODO
-#endif
 }
 
 //void DXExt::Clear_Color(ID3D12GraphicsCommandList* GraphicsCommandList)

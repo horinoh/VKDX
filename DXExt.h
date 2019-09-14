@@ -18,9 +18,9 @@ public:
 	void CreateShaderBlob_VsPsDsHsGs();
 	void CreateShaderBlob_Cs();
 
-	template<typename T> void CreatePipelineState_Vertex(winrt::com_ptr<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
+	template<typename T> void CreatePipelineState_Vertex(/*winrt::com_ptr*/COM_PTR<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS);
-	void CreatePipelineState_Tesselation(winrt::com_ptr<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
+	void CreatePipelineState_Tesselation(/*winrt::com_ptr*/COM_PTR<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS);
 
 	void CreatePipelineState_VsPs();
@@ -33,13 +33,8 @@ public:
 	void CreateConstantBufferT(const T& Type) {
 		const auto Size = RoundUp(sizeof(Type), 0xff); //!< 256バイトアライン
 		//!< #DX_TODO_PERF 本来はバッファ毎にメモリを確保するのではなく、予め大きなメモリを作成しておいてその一部を複数のバッファへ割り当てる方がよい
-#ifdef USE_WINRT
-		CreateUploadResource(ConstantBufferResource.put(), Size);
-		CopyToUploadResource(ConstantBufferResource.get(), Size, &Type); 
-#elif defined(USE_WRL)
-		CreateUploadResource(ConstantBufferResource.GetAddressOf(), Size);
-		CopyToUploadResource(ConstantBufferResource.Get(), Size, &Type); 
-#endif
+		CreateUploadResource(COM_PTR_PUT(ConstantBufferResource), Size);
+		CopyToUploadResource(COM_PTR_GET(ConstantBufferResource), Size, &Type); 
 		LOG_OK();
 	}
 };
