@@ -37,6 +37,8 @@
 //#define USE_PUSH_DESCRIPTOR
 
 #ifdef _DEBUG
+#define USE_DEBUG_REPORT
+
 #define USE_RENDERDOC
 #ifdef USE_RENDERDOC
 #define USE_DEBUG_MARKER
@@ -153,7 +155,6 @@ protected:
 	virtual void ValidateFormatProperties_SampledImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const VkFilter Mag, const VkFilter Min, const VkSamplerMipmapMode Mip) const;
 	virtual void ValidateFormatProperties_StorageImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const bool Atomic) const;
 
-#ifdef _DEBUG
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerInsert(CB, Color, Name.c_str()); }
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::wstring& Name) { MarkerInsert(CB, Color, ToString(Name)); }
@@ -169,7 +170,6 @@ protected:
 	private:
 		VkCommandBuffer CommandBuffer;
 	};
-
 	static void MarkerSetName(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const char* Name);
 	static void MarkerSetTag(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const uint64_t TagName, const size_t TagSize, const void* TagData);
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const char* Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない Not template specialized */ }
@@ -178,7 +178,6 @@ protected:
 	template<typename T> static void MarkerSetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* TagData) { DEBUG_BREAK(); /* テンプレート特殊化されていない Not template specialized */ }
 	//!< ↓ここでテンプレート特殊化している Template specialization here
 #include "VKDebugMarker.inl"
-#endif
 
 	virtual void EnumerateInstanceLayerProperties();
 	virtual void EnumerateInstanceExtensionProperties(const char* LayerName);
@@ -198,7 +197,7 @@ protected:
 #endif //!< VK_NO_PROTOYYPES
 
 	virtual void CreateInstance();
-#ifdef _DEBUG
+#ifdef USE_DEBUG_REPORT
 	virtual void CreateDebugReportCallback();
 #endif
 	virtual void CreateSurface(
@@ -355,18 +354,20 @@ public:
 #undef VK_DEVICE_PROC_ADDR
 #endif //!< VK_NO_PROTOYYPES
 
-#ifdef _DEBUG
 public:
+#ifdef USE_DEBUG_REPORT
 	//!< インスタンスレベル関数(Debug) Instance level functions(Debug)
 #define VK_INSTANCE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
 #include "VKDebugReport.h"
 #undef VK_INSTANCE_PROC_ADDR
+#endif
 
+#ifdef USE_DEBUG_MARKER
 	//!< デバイスレベル関数(Debug) Device level functions(Debug)
 #define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
 #include "VKDebugMarker.h"
 #undef VK_DEVICE_PROC_ADDR
-#endif //!< _DEBUG
+#endif
 
 protected:
 	//using LAYER_PROPERTY = std::pair<VkLayerProperties, std::vector<VkExtensionProperties>>;
@@ -377,7 +378,7 @@ protected:
 	//PHYSICAL_DEVICE_LAYER_PROPERTIES PhysicalDeviceLayerProperties;
 
 	VkInstance Instance = VK_NULL_HANDLE;
-#ifdef _DEBUG
+#ifdef USE_DEBUG_REPORT
 	VkDebugReportCallbackEXT DebugReportCallback = VK_NULL_HANDLE;
 #endif
 	VkSurfaceKHR Surface = VK_NULL_HANDLE;
@@ -480,22 +481,17 @@ protected:
 	*/
 
 	std::vector<const char*> InstanceLayers = {
-#ifdef _DEBUG
-		//!< ↓標準的なバリデーションレイヤセットを最適な順序でロードする指定
-		//!< (プログラムからやらない場合は環境変数 VK_INSTANCE_LAYERS へセットしておいてもよい)
-		"VK_LAYER_LUNARG_standard_validation",
-		//!< 
-		"VK_LAYER_LUNARG_object_tracker",
-		//!< API 呼び出しとパラメータをコンソール出力する (出力がうるさいのでここでは指定しない)
+		//!< "VK_LAYER_LUNARG_standard_validation", is deprecated
+		"VK_LAYER_KHRONOS_validation",
 		//"VK_LAYER_LUNARG_api_dump",
-#else
-		"VK_LAYER_LUNARG_core_validation",
-#endif
 #ifdef USE_RENDERDOC
 		"VK_LAYER_RENDERDOC_Capture",
 #endif
 	};
 	std::vector<const char*> InstanceExtensions = {
+#ifndef _DEBUG
+		VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME,
+#endif
 		VK_KHR_SURFACE_EXTENSION_NAME,
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
@@ -504,7 +500,7 @@ protected:
 #else
 		VK_KHR_XCB_SURFACE_EXTENSION_NAME,
 #endif
-#ifdef _DEBUG
+#ifdef USE_DEBUG_REPORT
 		//!< デバッグレポート用
 		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
 #endif

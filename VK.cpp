@@ -25,11 +25,12 @@
 #undef VK_DEVICE_PROC_ADDR
 #endif //!< VK_NO_PROTOYYPES
 
-#ifdef _DEBUG
+#ifdef USE_DEBUG_REPORT
 	//!< インスタンスレベル関数(Debug) Instance level functions(Debug)
 #define VK_INSTANCE_PROC_ADDR(proc) PFN_vk ## proc ## EXT VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKDebugReport.h"
 #undef VK_INSTANCE_PROC_ADDR
+#endif
 
 	//!< デバイスレベル関数(Debug) Device level functions(Debug)
 #ifdef USE_DEBUG_MARKER
@@ -37,7 +38,6 @@
 #include "VKDebugMarker.h"
 #undef VK_DEVICE_PROC_ADDR
 #endif
-#endif //!< _DEBUG
 
 #ifdef _WINDOWS
 void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
@@ -316,7 +316,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		Surface = VK_NULL_HANDLE;
 	}
 
-#ifdef _DEBUG
+#ifdef USE_DEBUG_REPORT
 	if (VK_NULL_HANDLE != DebugReportCallback) {
 		vkDestroyDebugReportCallback(Instance, DebugReportCallback, nullptr);
 		DebugReportCallback = VK_NULL_HANDLE;
@@ -853,14 +853,14 @@ void VK::CreateInstance()
 #undef VK_INSTANCE_PROC_ADDR
 #endif //!< VK_NO_PROTOYYPES
 
-#ifdef _DEBUG
+#ifdef USE_DEBUG_REPORT
 	CreateDebugReportCallback();
 #endif
 
 	LOG_OK();
 }
 
-#ifdef _DEBUG
+#ifdef USE_DEBUG_REPORT
 void VK::CreateDebugReportCallback()
 {
 #define VK_INSTANCE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetInstanceProcAddr(Instance, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
@@ -908,9 +908,8 @@ void VK::CreateDebugReportCallback()
 		vkCreateDebugReportCallback(Instance, &DebugReportCallbackCreateInfo, nullptr, &DebugReportCallback);
 	}
 }
-#endif //!< _DEBUG
+#endif
 
-#ifdef _DEBUG
 void VK::MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name)
 {
 #ifdef USE_DEBUG_MARKER
@@ -982,7 +981,6 @@ void VK::MarkerSetTag(VkDevice Device, const VkDebugReportObjectTypeEXT Type, co
 #endif
 }
 
-#endif //!< _DEBUG
 
 void VK::CreateSurface(
 #ifdef VK_USE_PLATFORM_WIN32_KHR
