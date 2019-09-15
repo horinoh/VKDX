@@ -35,9 +35,12 @@
 #define USE_IMMUTABLE_SAMPLER
 #define USE_DESCRIPTOR_UPDATE_TEMPLATE
 //#define USE_PUSH_DESCRIPTOR
+
 #ifdef _DEBUG
 #define USE_RENDERDOC
+#ifdef USE_RENDERDOC
 #define USE_DEBUG_MARKER
+#endif
 #endif
 
 #include "Cmn.h"

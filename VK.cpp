@@ -32,9 +32,11 @@
 #undef VK_INSTANCE_PROC_ADDR
 
 	//!< デバイスレベル関数(Debug) Device level functions(Debug)
+#ifdef USE_DEBUG_MARKER
 #define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc ## EXT VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKDebugMarker.h"
 #undef VK_DEVICE_PROC_ADDR
+#endif
 #endif //!< _DEBUG
 
 #ifdef _WINDOWS
@@ -911,6 +913,7 @@ void VK::CreateDebugReportCallback()
 #ifdef _DEBUG
 void VK::MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name)
 {
+#ifdef USE_DEBUG_MARKER
 	if (VK_NULL_HANDLE != vkCmdDebugMarkerInsert) {
 		VkDebugMarkerMarkerInfoEXT DebugMarkerMarkerInfo = {
 			VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
@@ -920,9 +923,11 @@ void VK::MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Na
 		memcpy(DebugMarkerMarkerInfo.color, &Color, sizeof(DebugMarkerMarkerInfo.color));
 		vkCmdDebugMarkerInsert(CB, &DebugMarkerMarkerInfo);
 	}
+#endif
 }
 void VK::MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const char* Name)
 {
+#ifdef USE_DEBUG_MARKER
 	if (VK_NULL_HANDLE != vkCmdDebugMarkerBegin) {
 		VkDebugMarkerMarkerInfoEXT DebugMarkerMarkerInfo = {
 			VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
@@ -932,16 +937,20 @@ void VK::MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const char* Nam
 		memcpy(DebugMarkerMarkerInfo.color, &Color, sizeof(DebugMarkerMarkerInfo.color));
 		vkCmdDebugMarkerBegin(CB, &DebugMarkerMarkerInfo);
 	}
+#endif
 }
 void VK::MarkerEnd(VkCommandBuffer CB)
 {
+#ifdef USE_DEBUG_MARKER
 	if (VK_NULL_HANDLE != vkCmdDebugMarkerEnd) {
 		vkCmdDebugMarkerEnd(CB);
 	}
+#endif
 }
 
 void VK::MarkerSetName(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const char* Name)
 {
+#ifdef USE_DEBUG_MARKER
 	if (VK_NULL_HANDLE != vkDebugMarkerSetObjectName) {
 		VkDebugMarkerObjectNameInfoEXT DebugMarkerObjectNameInfo = {
 			VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
@@ -952,10 +961,12 @@ void VK::MarkerSetName(VkDevice Device, const VkDebugReportObjectTypeEXT Type, c
 		};
 		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectName(Device, &DebugMarkerObjectNameInfo));
 	}
+#endif
 }
 
 void VK::MarkerSetTag(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const uint64_t TagName, const size_t TagSize, const void* TagData)
 {
+#ifdef USE_DEBUG_MARKER
 	if (VK_NULL_HANDLE != vkDebugMarkerSetObjectTag) {
 		VkDebugMarkerObjectTagInfoEXT DebugMarkerObjectTagInfo = {
 			VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_TAG_INFO_EXT,
@@ -968,6 +979,7 @@ void VK::MarkerSetTag(VkDevice Device, const VkDebugReportObjectTypeEXT Type, co
 		};
 		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectTag(Device, &DebugMarkerObjectTagInfo));
 	}
+#endif
 }
 
 #endif //!< _DEBUG
@@ -1384,7 +1396,7 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface)
 	//vkGetDeviceQueue(Device, TransferQueueFamilyIndex, TransferQueueIndex, &TransferQueue);
 	//vkGetDeviceQueue(Device, SparceBindingQueueFamilyIndex, SparceBindingQueueIndex, &SparceBindingQueue);
 
-#ifdef _DEBUG
+#ifdef USE_DEBUG_MARKER
 	//if (HasDebugMarkerExt) {
 #define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetDeviceProcAddr(Device, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
 #include "VKDebugMarker.h"

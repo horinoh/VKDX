@@ -1,7 +1,7 @@
 #pragma once
 
 //!< ­‚È‚­‚Æ‚à USE_WINRT, USE_WRL ‚Ì‚¢‚¸‚ê‚©‚Í’è‹`‚·‚é‚±‚ÆA—¼•û’è‹`‚³‚ê‚½ê‡‚Í USE_WINRT ‚ª—Dæ‚³‚ê‚é (At least define USE_WINRT or USE_WRL, if both defined USE_WINRT will be used)
-#define USE_WINRT
+//#define USE_WINRT
 #define USE_WRL
 #ifdef USE_WINRT
 //!< Property - All Configurations, C/C++ - Language - C++ Language Standard - Select ISO C++17 Standard (Default is C++14)

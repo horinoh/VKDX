@@ -88,11 +88,7 @@ template<> void CreatePipelineState_Vertex<Vertex_PositionColor>(/*winrt::com_pt
 	};
 	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
 
-#ifdef USE_WINRT
-	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, __uuidof(PipelineState), PipelineState.put_void()));
-#elif defined(USE_WRL)
-	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, IID_PPV_ARGS(PipelineState.GetAddressOf())));
-#endif
+	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PipelineState)));
 
 	LOG_OK();
 }
@@ -102,21 +98,20 @@ template<typename T> void CreatePipelineState_VsPs_Vertex()
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
 	DeleteFile(PCOPath.data());
 
-#ifdef USE_WINRT
-	winrt::com_ptr<ID3D12Device1> Device1;
-	VERIFY_SUCCEEDED(Device->QueryInterface(__uuidof(Device1), Device1.put_void()));
+	COM_PTR<ID3D12Device1> Device1;
+	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device1)));
 
-	winrt::com_ptr<ID3D12PipelineLibrary> PL;
-	winrt::com_ptr<ID3DBlob> Blob;
-	if (SUCCEEDED(D3DReadFileToBlob(PCOPath.c_str(), Blob.put())) && Blob->GetBufferSize()) {
-		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), __uuidof(PL), PL.put_void()));
+	COM_PTR<ID3D12PipelineLibrary> PL;
+	COM_PTR<ID3DBlob> Blob;
+	if (SUCCEEDED(D3DReadFileToBlob(PCOPath.c_str(), COM_PTR_PUT(Blob))) && Blob->GetBufferSize()) {
+		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(PL)));
 
-		winrt::com_ptr<ID3D12PipelineState> PS;
+		COM_PTR<ID3D12PipelineState> PS;
 		const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {};
-		VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(TEXT("0"), &GPSD, __uuidof(PS), PS.put_void()));
+		VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(TEXT("0"), &GPSD, COM_PTR_UUIDOF_PUTVOID(PS)));
 	}
 	else {
-		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, __uuidof(PipelineLibrary), PL.put_void()));
+		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, COM_PTR_UUIDOF_PUTVOID(PL)));
 
 		assert(ShaderBlobs.size() > 1 && "");
 
@@ -124,26 +119,23 @@ template<typename T> void CreatePipelineState_VsPs_Vertex()
 			{ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() },
 			{ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() },
 		} };
-		auto Thread = std::thread::thread([&](winrt::com_ptr<ID3D12PipelineState>& Pipe, ID3D12RootSignature* RS,
+		auto Thread = std::thread::thread([&](COM_PTR<ID3D12PipelineState>& Pipe, ID3D12RootSignature* RS,
 			const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
 			{
 				CreatePipelineState_Vertex<T>(Pipe, RS, VS, PS, DS, HS, GS);
 			},
-			std::ref(PipelineState), RootSignature.get(), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC);
+			std::ref(PipelineState), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC);
 
 		Thread.join();
 
-		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), PipelineState.get()));
+		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), COM_PTR_GET(PipelineState)));
 
 		const auto Size = PL->GetSerializedSize();
 		if (Size) {
-			winrt::com_ptr<ID3DBlob> Blob;
-			VERIFY_SUCCEEDED(D3DCreateBlob(Size, Blob.put()));
+			COM_PTR<ID3DBlob> Blob;
+			VERIFY_SUCCEEDED(D3DCreateBlob(Size, COM_PTR_PUT(Blob)));
 			PL->Serialize(Blob->GetBufferPointer(), Size);
-			VERIFY_SUCCEEDED(D3DWriteBlobToFile(Blob.get(), PCOPath.c_str(), TRUE));
+			VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blob), PCOPath.c_str(), TRUE));
 		}
 	}
-#elif defined(USE_WRL)
-	//!< #DX_TODO
-#endif
 }
