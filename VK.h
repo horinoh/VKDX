@@ -148,7 +148,6 @@ protected:
 	void AllocateImageMemory(VkDeviceMemory* DM, const VkImage Image, const VkMemoryPropertyFlags MPF);
 	void SuballocateImageMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const VkImage Image, const VkMemoryPropertyFlags MPF);
 
-	//virtual void CreateBufferView(VkBufferView* BufferView, const VkBuffer Buffer, const VkFormat Format, const VkDeviceSize Offset = 0, const VkDeviceSize Range = VK_WHOLE_SIZE);
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
 
 	virtual void ValidateFormatProperties(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage) const;

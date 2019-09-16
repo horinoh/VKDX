@@ -474,22 +474,23 @@ void VK::CopyToHostVisibleDeviceMemory(const VkDeviceMemory DM, const size_t Siz
 		void *Data;
 		VERIFY_SUCCEEDED(vkMapMemory(Device, DM, Offset, Size, static_cast<VkMemoryMapFlags>(0), &Data)); {
 			memcpy(Data, Source, Size);
+		} vkUnmapMemory(Device, DM);
 
-			const std::array<VkMappedMemoryRange, 1> MMRs = {
+		//!< メモリコンテンツが変更されたことをドライバへ知らせる
+#if 1
+		//!< デバスメモリ確保時に VK_MEMORY_PROPERTY_HOST_COHERENT_BIT を指定した場合は必要ない CreateDeviceMemory(..., VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		const std::array<VkMappedMemoryRange, 1> MMRs = {
 				{
 					VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
 					nullptr,
 					DM,
-					0,
+					Offset,
 					VK_WHOLE_SIZE
 				}
-			};
-
-			//!< デバスメモリ確保時に VK_MEMORY_PROPERTY_HOST_COHERENT_BIT を指定した場合は必要ない CreateDeviceMemory(..., VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-			//!< メモリコンテンツが変更されたことをドライバへ知らせる
-			VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
-			//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
-		} vkUnmapMemory(Device, DM);
+		};
+		VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
+		//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
+#endif
 	}
 }
 //!< @param コマンドバッファ
@@ -1996,7 +1997,7 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 
 void VK::SubmitStagingCopy(const VkQueue Queue, const VkCommandBuffer CB, const VkBuffer Buffer, const VkDeviceSize Size, const void* Source, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF)
 {
-#define USE_SUBALLOC
+//#define USE_SUBALLOC
 	VkBuffer StagingBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
 	//!< ホストビジブルバッファ(HVB)を作成 (Create host visible buffer(HVB))

@@ -126,7 +126,7 @@ protected:
 	}
 	virtual void UpdateDescriptorSet() override {
 		const DescriptorUpdateInfo DUI = {
-			{ UniformBuffer, 0/*offset*/, VK_WHOLE_SIZE/*range*/ },
+			{ UniformBuffer, Offset/*offset*/, VK_WHOLE_SIZE/*range*/ },
 		};
 
 		assert(!DescriptorSets.empty() && "");

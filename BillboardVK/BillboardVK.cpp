@@ -267,7 +267,7 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 
 #ifdef USE_PUSH_DESCRIPTOR
 		const DescriptorUpdateInfo DUI = {
-			{ UniformBuffer, 0, VK_WHOLE_SIZE },
+			{ UniformBuffer, Offset, VK_WHOLE_SIZE },
 		};
 #ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
 		vkCmdPushDescriptorSetWithTemplateKHR(CB, DescriptorUpdateTemplates[0], PipelineLayouts[0], 0, DUI.DescriptorBufferInfos);

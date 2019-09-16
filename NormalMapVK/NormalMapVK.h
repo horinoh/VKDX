@@ -128,7 +128,7 @@ protected:
 #endif
 		assert(VK_NULL_HANDLE != ImageView && "");
 		const DescriptorUpdateInfo DUI = {
-			{ UniformBuffer, 0, VK_WHOLE_SIZE },
+			{ UniformBuffer, Offset, VK_WHOLE_SIZE },
 #ifdef USE_IMMUTABLE_SAMPLER
 			{ VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 #else
