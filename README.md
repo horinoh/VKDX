@@ -114,8 +114,9 @@ xcopy /y %(Identity).spv $(TargetDir)
 	* ここでは未使用
 
 #### Visual Studio で GLSL シンタックスハイライトさせる場合
-* ShaderHighlights\XXX_vs2015.reg を実行して Visual Studio を再起動
-* ShaderHighlights\XXX_vs2017.reg を実行して Visual Studio を再起動
+* ~~ShaderHighlights\XXX_vs2015.reg を実行して Visual Studio を再起動~~
+* ~~ShaderHighlights\XXX_vs2017.reg を実行して Visual Studio を再起動~~
+* GLSL language integration拡張をインストールする
 
 #### デバッグ
 * RenderDoc https://renderdoc.org/builds
