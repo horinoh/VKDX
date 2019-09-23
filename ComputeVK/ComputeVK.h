@@ -61,7 +61,7 @@ protected:
 
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
-		VKExt::CreateDescriptorPool(DescriptorPools[0], /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
+		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
 				{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 } 
 			});
 	}

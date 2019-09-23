@@ -193,6 +193,12 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	if (!DescriptorSets.empty()) {
 		vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
 	}
+#else
+	//!< このプールから確保された全てのデスクリプタセットを解放する (ここでは次のステップでプール自体を破棄しているのでやらなくても良い)
+	//!< (デスクリプタセットを個々に解放するのが面倒な場合、プール自体は破棄したくない場合)
+	for (auto i : DescriptorPools) {
+		vkResetDescriptorPool(Device, i, 0);
+	}
 #endif
 	DescriptorSets.clear();
 
@@ -590,6 +596,7 @@ void VK::AllocateBufferMemory(VkDeviceMemory* DM, const VkBuffer Buffer, const V
 	const auto TypeIndex = GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, MPF);
 
 	Logf("\t\tAllocateBufferMemory = %llu / %llu (HeapIndex = %d)\n", MR.size, PDMP.memoryHeaps[PDMP.memoryTypes[TypeIndex].heapIndex].size, PDMP.memoryTypes[TypeIndex].heapIndex);
+
 	const VkMemoryAllocateInfo MAI = {
 		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 		nullptr,
@@ -607,6 +614,8 @@ void VK::SuballocateBufferMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, cons
 	const auto TypeIndex = GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, MPF);
 	HeapIndex = PDMP.memoryTypes[TypeIndex].heapIndex;
 
+	Logf("\t\tSuballocateBufferMemory = %llu / %llu (HeapIndex = %d)\n", MR.size, PDMP.memoryHeaps[HeapIndex].size, HeapIndex);
+
 	Offset = DeviceMemoryOffsets[HeapIndex];
 	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemories[HeapIndex], Offset));
 
@@ -623,6 +632,7 @@ void VK::AllocateImageMemory(VkDeviceMemory* DM, const VkImage Image, const VkMe
 	const auto TypeIndex = GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, MPF);
 
 	Logf("\t\tAllocateImageMemory = %llu / %llu (HeapIndex = %d)\n", MR.size, PDMP.memoryHeaps[PDMP.memoryTypes[TypeIndex].heapIndex].size, PDMP.memoryTypes[TypeIndex].heapIndex);
+
 	const VkMemoryAllocateInfo MAI = {
 		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 		nullptr,
@@ -639,6 +649,8 @@ void VK::SuballocateImageMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const
 	const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 	const auto TypeIndex = GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, MPF);
 	HeapIndex = PDMP.memoryTypes[TypeIndex].heapIndex;
+
+	Logf("\t\tSuballocateImageMemory = %llu / %llu (HeapIndex = %d)\n", MR.size, PDMP.memoryHeaps[HeapIndex].size, HeapIndex);
 
 	Offset = DeviceMemoryOffsets[HeapIndex];
 	VERIFY_SUCCEEDED(vkBindImageMemory(Device, Image, DeviceMemories[HeapIndex], Offset));
@@ -1420,7 +1432,8 @@ void VK::AllocateDeviceMemory()
 			//!< 取り敢えずプロパティフラグが0のものは対象としない(環境依存がありそう注意 #VK_TODO) (Targeting propertyFlags!=0 here)
 			if (PDMP.memoryTypes[i].propertyFlags) {
 				const auto HeapIndex = PDMP.memoryTypes[i].heapIndex;
-				//!< 確保するデバイスメモリサイズ (Device memory size to use)
+				//!< 確保するデバイスメモリサイズ (Device memory size to use) #VK_TODO
+				//!< 最大値で取るとVK_ERROR_OUT_OF_DEVICE_MEMORYになる、あまりに大きく取ると重くなる
 				const auto HeapSize = 4096;
 				assert(HeapSize < PDMP.memoryHeaps[HeapIndex].size && "");
 				if (VK_NULL_HANDLE == DeviceMemories[HeapIndex]) {
@@ -1431,7 +1444,6 @@ void VK::AllocateDeviceMemory()
 						i
 					};
 					Logf("\t\tAllocateDeviceMemory = %llu / %llu (HeapIndex = %d)\n", HeapSize, PDMP.memoryHeaps[HeapIndex].size, PDMP.memoryTypes[i].heapIndex);
-					//!< 最大値で取るとVK_ERROR_OUT_OF_DEVICE_MEMORYになる、あまりに大きく取ると重くなる
 					VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, GetAllocationCallbacks(), &DeviceMemories[HeapIndex]));
 				}
 			}
@@ -1997,7 +2009,7 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 
 void VK::SubmitStagingCopy(const VkQueue Queue, const VkCommandBuffer CB, const VkBuffer Buffer, const VkDeviceSize Size, const void* Source, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF)
 {
-//#define USE_SUBALLOC
+#define USE_SUBALLOC
 	VkBuffer StagingBuffer = VK_NULL_HANDLE;
 	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
 	//!< ホストビジブルバッファ(HVB)を作成 (Create host visible buffer(HVB))
@@ -2035,6 +2047,7 @@ void VK::SubmitStagingCopy(const VkQueue Queue, const VkCommandBuffer CB, const 
 #ifdef USE_SUBALLOC
 	//!< サブアロケートしたオフセット分戻す (Revert suballocated memory offset)
 	DeviceMemoryOffsets[StagingHeapIndex] -= StagingSize;
+	Logf("\t\tSubreleaseBufferMemory = %llu / %llu (HeapIndex = %d)\n", DeviceMemoryOffsets[StagingHeapIndex], GetCurrentPhysicalDeviceMemoryProperties().memoryHeaps[StagingHeapIndex].size, StagingHeapIndex);
 #else
 	if (VK_NULL_HANDLE != StagingDeviceMemory) {
 		vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
@@ -2185,7 +2198,8 @@ void VK::CreatePipelineLayout(VkPipelineLayout& PL, const std::initializer_list<
 	LOG_OK();
 }
 
-//!< デスクリプタセットを個々に解放したい場合には VkDescriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT を指定する、その場合断片化は自分で管理 (指定しない場合はプール毎にまとめて解放)
+//!< デスクリプタセットを個々に解放したい場合には VkDescriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT を指定する、
+//!< その場合断片化は自分で管理しなくてはならない (指定しない場合はプール毎にまとめて解放しかできない)
 //!< 1つのブールに対して、複数スレッドで同時にデスクリプタセットを確保することはできない (スレッド毎に別プールにすること)
 void VK::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreateFlags Flags, const std::initializer_list<VkDescriptorPoolSize> il_DPSs)
 {

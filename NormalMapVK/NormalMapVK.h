@@ -100,7 +100,7 @@ protected:
 
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
-		VKExt::CreateDescriptorPool(DescriptorPools[0], /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
+		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
 				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }, 
 				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,1 } 
 			});
@@ -165,7 +165,6 @@ protected:
 	}
 	virtual void CreateSampler() override {
 		Samplers.resize(1);
-#ifdef USE_IMMUTABLE_SAMPLER
 		const VkSamplerCreateInfo SCI = {
 			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			nullptr,
@@ -179,21 +178,6 @@ protected:
 			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
 			VK_FALSE
 		};
-#else
-		const VkSamplerCreateInfo SCI = {
-			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-			nullptr,
-			0,
-			VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST,
-			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
-			0.0f,
-			VK_FALSE, 1.0f,
-			VK_FALSE, VK_COMPARE_OP_NEVER,
-			0.0f, 1.0f,
-			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-			VK_FALSE
-		};
-#endif
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
 	}
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }

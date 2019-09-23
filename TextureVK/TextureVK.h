@@ -71,7 +71,7 @@ protected:
 
 	virtual void CreateDescriptorPool() override { 
 		DescriptorPools.resize(1);
-		VKExt::CreateDescriptorPool(DescriptorPools[0], /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
+		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
 				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 } 
 			});
 	}
@@ -195,7 +195,7 @@ protected:
 			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			nullptr,
 			0,
-			VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST,
+			VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, //!< 非イミュータブルサンプラの場合敢えて NEAREST にしている
 			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
 			0.0f,
 			VK_FALSE, 1.0f,
