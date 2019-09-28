@@ -480,7 +480,7 @@ protected:
 	5 フレームバッファ
 	*/
 
-	std::vector<const char*> InstanceLayers = {
+	const std::vector<const char*> InstanceLayers = {
 		//!< "VK_LAYER_LUNARG_standard_validation", is deprecated
 		"VK_LAYER_KHRONOS_validation",
 		//"VK_LAYER_LUNARG_api_dump",
@@ -488,7 +488,7 @@ protected:
 		"VK_LAYER_RENDERDOC_Capture",
 #endif
 	};
-	std::vector<const char*> InstanceExtensions = {
+	const std::vector<const char*> InstanceExtensions = {
 #ifndef _DEBUG
 		VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME,
 #endif
@@ -508,7 +508,7 @@ protected:
 		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 #endif
 	};
-	std::vector<const char*> DeviceExtensions = {
+	const std::vector<const char*> DeviceExtensions = {
 		//!< スワップチェインはプラットフォームに特有の機能なのでデバイス作製時に VK_KHR_SWAPCHAIN_EXTENSION_NAME エクステンションを有効にして作成しておく
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 #ifdef USE_PUSH_DESCRIPTOR
@@ -516,6 +516,9 @@ protected:
 #endif
 #ifdef USE_RENDERDOC
 		VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
+#endif
+#ifdef USE_HDR
+		VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME,
 #endif
 		VK_EXT_VALIDATION_CACHE_EXTENSION_NAME,
 	};

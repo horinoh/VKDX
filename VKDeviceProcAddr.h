@@ -102,3 +102,7 @@ VK_DEVICE_PROC_ADDR(QueuePresentKHR)
 VK_DEVICE_PROC_ADDR(CmdPushDescriptorSetWithTemplateKHR)
 VK_DEVICE_PROC_ADDR(CmdPushDescriptorSetKHR)
 #endif
+
+#ifdef USE_HDR
+VK_DEVICE_PROC_ADDR(SetHdrMetadataEXT)
+#endif

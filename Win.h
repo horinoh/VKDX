@@ -26,6 +26,11 @@
 #endif
 #endif //!< _DEBUG
 
+//!< HDR環境が無いので保留…
+//!< DXの場合「HDRのゲームとアプリを使用する」設定が必要 (Need to enable "Play HDR game and apps" in windows settings )
+//!< https://support.microsoft.com/ja-jp/help/4040263/windows-10-hdr-advanced-color-settings
+//#define USE_HDR
+
 #include <iostream>
 #include <ostream>
 #include <vector>

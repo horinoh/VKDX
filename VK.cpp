@@ -1558,13 +1558,34 @@ VkSurfaceFormatKHR VK::SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Sur
 		if (1 == SFs.size() && VK_FORMAT_UNDEFINED == SFs[0].format) {
 			return -1;
 		}
+
 		for (auto i = 0; i < SFs.size(); ++i) {
+#ifdef USE_HDR
+			switch (SFs[i].colorSpace)
+			{
+			default: break;
+			case VK_COLOR_SPACE_HDR10_HLG_EXT:
+			case VK_COLOR_SPACE_HDR10_ST2084_EXT:
+			case VK_COLOR_SPACE_DOLBYVISION_EXT:
+				if (VK_FORMAT_UNDEFINED != SFs[i].format) {
+					return i;
+				}
+			}
+#else
+			//!< VK_FORMAT_UNDEFINED ‚Å‚È‚¢Å‰‚Ì‚à‚Ì
 			if (VK_FORMAT_UNDEFINED != SFs[i].format) {
 				return i;
 			}
+#endif
+		
 		}
+
 		//!< ‚±‚±‚É—ˆ‚Ä‚Í‚¢‚¯‚È‚¢
+#ifdef USE_HDR
+		assert(false && "HDR not supported");
+#else
 		assert(false && "Valid surface format not found");
+#endif
 		return 0;
 	}();
 
@@ -1773,6 +1794,24 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Surface, const uint32
 		OldSwapchain
 	};
 	VERIFY_SUCCEEDED(vkCreateSwapchainKHR(Device, &SwapchainCreateInfo, GetAllocationCallbacks(), &Swapchain));
+
+#ifdef USE_HDR
+	const std::array<VkSwapchainKHR, 1> SCs = { Swapchain };
+	const std::array<VkHdrMetadataEXT, 1> MDs = { {
+		VK_STRUCTURE_TYPE_HDR_METADATA_EXT,
+		nullptr,
+		{ 0.708f, 0.292f },
+		{ 0.17f, 0.797f },
+		{ 0.131f, 0.046f },
+		{ 0.3127f, 0.329f },
+		1000.0f,
+		0.001f,
+		2000.0f,
+		500.0f
+	} };
+	assert(SCs.size() == MDs.size() && "");
+	vkSetHdrMetadataEXT(Device, static_cast<uint32_t>(SCs.size()), SCs.data(), MDs.data());
+#endif
 
 	//!< (‚ ‚ê‚Î)‘O‚Ì‚â‚Â‚Í”jŠü
 	if (VK_NULL_HANDLE != OldSwapchain) {

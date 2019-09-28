@@ -1,7 +1,7 @@
 #pragma once
 
 //!< ­‚È‚­‚Æ‚à USE_WINRT, USE_WRL ‚Ì‚¢‚¸‚ê‚©‚Í’è‹`‚·‚é‚±‚ÆA—¼•û’è‹`‚³‚ê‚½ê‡‚Í USE_WINRT ‚ª—Dæ‚³‚ê‚é (At least define USE_WINRT or USE_WRL, if both defined USE_WINRT will be used)
-//#define USE_WINRT
+#define USE_WINRT
 #define USE_WRL
 #ifdef USE_WINRT
 //!< Property - All Configurations, C/C++ - Language - C++ Language Standard - Select ISO C++17 Standard (Default is C++14)
@@ -30,7 +30,7 @@
 
 #include <d3d12.h>
 #include <d3dcompiler.h>
-#include <DXGI1_4.h>
+#include <DXGI1_6.h>
 
 #include <DirectXMath.h>
 /**
@@ -263,7 +263,7 @@ protected:
 	std::vector<COM_PTR<ID3D12GraphicsCommandList>> GraphicsCommandLists;
 	//std::vector<COM_PTR<ID3D12CommandList>> CommandLists;
 	
-	COM_PTR<IDXGISwapChain3> SwapChain;
+	COM_PTR<IDXGISwapChain4> SwapChain;
 	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap;
 	std::vector<COM_PTR<ID3D12Resource>> SwapChainResources;
 	UINT CurrentBackBufferIndex = 0xffffffff;

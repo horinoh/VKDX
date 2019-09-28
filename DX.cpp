@@ -12,8 +12,14 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	Super::OnCreate(hWnd, hInstance, Title);
 
-	//!< デバイス
+#ifdef USE_HDR
+	const auto ColorFormat = DXGI_FORMAT_R16G16B16A16_FLOAT;
+	//const auto ColorFormat = DXGI_FORMAT_R10G10B10A2_UNORM; //!< シェーダでガンマ補正が必要
+#else
 	const auto ColorFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
+#endif
+
+	//!< デバイス
 	CreateDevice(hWnd);
 	CheckMultiSample(ColorFormat);
 	CreateCommandQueue();
@@ -430,8 +436,19 @@ void DX::EnumOutput(IDXGIAdapter* Adapter)
 #elif defined(USE_WRL)
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Adapter->EnumOutputs(i, Output.ReleaseAndGetAddressOf()); ++i) {
 #endif
+
+#ifdef USE_HDR
+		COM_PTR<IDXGIOutput6> Output6;
+		COM_PTR_AS(Output, Output6);
+
+		DXGI_OUTPUT_DESC1 OutputDesc;
+		VERIFY_SUCCEEDED(Output6->GetDesc1(&OutputDesc));
+		//!< Need to enable "Play HDR game and apps" in windows settings 
+		assert(DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020 == OutputDesc.ColorSpace && "HDR not supported");
+#else
 		DXGI_OUTPUT_DESC OutputDesc;
 		VERIFY_SUCCEEDED(Output->GetDesc(&OutputDesc));
+#endif
 
 		const auto Width = OutputDesc.DesktopCoordinates.right - OutputDesc.DesktopCoordinates.left;
 		const auto Height = OutputDesc.DesktopCoordinates.bottom - OutputDesc.DesktopCoordinates.top;
@@ -631,6 +648,57 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	COM_PTR<IDXGISwapChain> NewSwapChain;
 	VERIFY_SUCCEEDED(Factory->CreateSwapChain(COM_PTR_GET(CommandQueue), &SwapChainDesc, COM_PTR_PUT(NewSwapChain)));
 	COM_PTR_AS(NewSwapChain, SwapChain);
+
+#ifdef USE_HDR
+	switch (ColorFormat)
+	{
+	default: 
+		SwapChain->SetColorSpace1(DXGI_COLOR_SPACE_RGB_FULL_G22_NONE_P709);
+		break;
+	case DXGI_FORMAT_R16G16B16A16_FLOAT:
+		SwapChain->SetColorSpace1(DXGI_COLOR_SPACE_RGB_FULL_G10_NONE_P709);
+		break;
+	case DXGI_FORMAT_R10G10B10A2_UNORM:
+		SwapChain->SetColorSpace1(DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020);
+		break;
+	}
+#endif
+
+#ifdef USE_HDR
+	switch (ColorFormat)
+	{
+	default:
+	{
+		DXGI_HDR_METADATA_HDR10 Metadata = {
+			{ static_cast<UINT16>(0.64f * 50000.0f), static_cast<UINT16>(0.33f * 50000.0f) },
+			{ static_cast<UINT16>(0.3f * 50000.0f), static_cast<UINT16>(0.6f * 50000.0f) },
+			{ static_cast<UINT16>(0.15f * 50000.0f), static_cast<UINT16>(0.06f * 50000.0f) },
+			{ static_cast<UINT16>(0.3127f * 50000.0f), static_cast<UINT16>(0.329f * 50000.0f) },
+			static_cast<UINT>(1000.0f * 10000.0f),
+			static_cast<UINT>(0.001f * 10000.0f),
+			static_cast<UINT16>(2000.0f),
+			static_cast<UINT16>(500.0f)
+		};
+		SwapChain->SetHDRMetaData(DXGI_HDR_METADATA_TYPE_HDR10, sizeof(Metadata), &Metadata);
+	}
+	break;
+	case DXGI_FORMAT_R16G16B16A16_FLOAT:
+	{
+		DXGI_HDR_METADATA_HDR10 Metadata = {
+			{ static_cast<UINT16>(0.708f * 50000.0f), static_cast<UINT16>(0.292f * 50000.0f) },
+			{ static_cast<UINT16>(0.17f * 50000.0f), static_cast<UINT16>(0.797f * 50000.0f) },
+			{ static_cast<UINT16>(0.131f * 50000.0f), static_cast<UINT16>(0.046f * 50000.0f) },
+			{ static_cast<UINT16>(0.3127f * 50000.0f), static_cast<UINT16>(0.329f * 50000.0f) },
+			static_cast<UINT>(1000.0f * 10000.0f),
+			static_cast<UINT>(0.001f * 10000.0f),
+			static_cast<UINT16>(2000.0f),
+			static_cast<UINT16>(500.0f)
+		};
+		SwapChain->SetHDRMetaData(DXGI_HDR_METADATA_TYPE_HDR10, sizeof(Metadata), &Metadata);
+	}
+	break;
+	}
+#endif
 
 	[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, COM_PTR<ID3D12DescriptorHeap>& DH) {
 		const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
