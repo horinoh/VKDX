@@ -236,31 +236,33 @@ fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
 	* まず VS を最新にアップデートする、それでダメなら以下を試す
 	* .vcproj の <Target>...</Target> を消す
 	* WinPixEventRuntimeのアンインストール、インストールを行う
+* VK.prop を指定してるのに vulkan.h が無いと言われるとき
+	* VK.prop を一旦Removeして、再度Addするとうまく行ったりする
 
 <!-- 
 ## プロジェクトの追加方法 (自分用覚書)
- * ソリューションを右クリック - Add - New Project で Win32 Project
+ * ソリューションを右クリック - Add - New Project で Windows Desktop Application
  * プロジェクトを右クリック - Retarget SDK Verson で 10以上にする
  * プロジェクト右クリック - Property - All Configurations にする - C/C++ - Language - C++ Language Standard - ISO C++17 Standard を選択しておく(デフォルトではC++14なので)
 
 #### DX
- * プロパティマネージャで Add Existing Property Sheet... - Props/HLSL.props、(Props/DXTK.prop)
+ * プロパティマネージャで Add Existing Property Sheet... - Props/NOPRECOMP.props, Props/HLSL.props、(Props/DXTK.prop)
  * Header Files に Win.h、DX.h、DXExt.h、(DXImage.h) を追加 
  * Source Files に Win.cpp、DX.cpp、DXExt.cpp、(DXImage.cpp) を追加
- * stdafx.h、XxxDX.h、XxxDX.cpp, stdafx.h は既存のものを参考に編集 (#pragma region Code でマークしてある)
+ * framework.h(旧stdafx.h), XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * Shader Files フォルダを作成し、シェーダを突っ込む
-  * 右クリック - プロパティ - Configuration Propeties - General
+  * シェーダファイルを右クリック - プロパティ - Configuration Propeties - General
    * Excluded From Build を No
    * Content を Yes
   * 右クリック - プロパティ - HLSL Compiler - General - Shader Type でタイプを適切に選択しておく
 * WinPixEventRuntimeのインストール
-	* 右クリック - NuGetパッケージの管理 - 参照タブ - WinPixEventRuntimeで検索 - インストール
+	* 右クリック - Manage NuGet Packages - Browse - WinPixEventRuntimeで検索 - インストール
 
 #### VK
- * プロパティマネージャで Add Existing Property Sheet... - Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop、(Props/GLI.prop)
+ * プロパティマネージャで Add Existing Property Sheet... - Props/NOPRECOMP.props, Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop、(Props/GLI.prop)
  * Header Files に Win.h、VK.h、VKExt.h、(VKImage.h) を追加
  * Source Files に Win.cpp、VK.cpp、VKExt.cpp、(VKImage.cpp) を追加
- * stdafx.h、XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
+ * framework.h(旧stdafx.h)、XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * Shader Files フォルダを作成し、シェーダを突っ込む
   * 拡張子を glslangValidator に沿うようにタイプを選択しておく。(.vert、.frag、...)
   * 右クリック - プロパティ - Configuration Propeties - General

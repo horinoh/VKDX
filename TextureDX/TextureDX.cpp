@@ -1,7 +1,6 @@
 // TextureDX.cpp : Defines the entry point for the application.
 //
 
-#include "stdafx.h"
 #include "TextureDX.h"
 
 #pragma region Code

@@ -1,5 +1,3 @@
-#include "stdafx.h"
-
 #include "VKImage.h"
 
 VkFormat VKImage::ToVkFormat(const gli::format GLIFormat)

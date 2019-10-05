@@ -1,7 +1,6 @@
 // ClearDX.cpp : Defines the entry point for the application.
 //
 
-#include "stdafx.h"
 #include "ClearDX.h"
 
 #pragma region Code

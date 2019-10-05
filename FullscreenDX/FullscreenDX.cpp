@@ -1,7 +1,6 @@
 // FullscreenDX.cpp : Defines the entry point for the application.
 //
 
-#include "stdafx.h"
 #include "FullscreenDX.h"
 
 #pragma region Code

@@ -92,19 +92,19 @@ public:
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 #endif
 
-	static char* GetVkResultChar(const VkResult Result);
+	static const char* GetVkResultChar(const VkResult Result);
 	static std::string GetVkResultString(const VkResult Result) { return std::string(GetVkResultChar(Result)); }
 	static std::wstring GetVkResultWstring(const VkResult Result) { return ToWString(GetVkResultString(Result)); }
-	static char* GetFormatChar(const VkFormat Format);
+	static const char* GetFormatChar(const VkFormat Format);
 	static std::string GetFormatString(const VkFormat Format) { return std::string(GetFormatChar(Format)); }
 	static std::wstring GetFormatWstring(const VkFormat Format) { return ToWString(GetFormatString(Format)); }
-	static char* GetColorSpaceChar(const VkColorSpaceKHR ColorSpace);
+	static const char* GetColorSpaceChar(const VkColorSpaceKHR ColorSpace);
 	static std::string GetColorSpaceString(const VkColorSpaceKHR ColorSpace) { return std::string(GetColorSpaceChar(ColorSpace)); }
 	static std::wstring GetColorSpaceWstring(const VkColorSpaceKHR ColorSpace) { return ToWString(GetColorSpaceString(ColorSpace)); }
-	static char* GetImageViewTypeChar(const VkImageViewType ImageViewType);
+	static const char* GetImageViewTypeChar(const VkImageViewType ImageViewType);
 	static std::string GetImageViewTypeString(const VkImageViewType ImageViewType) { return std::string(GetImageViewTypeChar(ImageViewType)); }
 	static std::wstring GetImageViewTypeWstring(const VkImageViewType ImageViewType) { return ToWString(GetImageViewTypeString(ImageViewType)); }
-	static char* GetComponentSwizzleChar(const VkComponentSwizzle ComponentSwizzle);
+	static const char* GetComponentSwizzleChar(const VkComponentSwizzle ComponentSwizzle);
 	static std::string GetComponentSwizzleString(const VkComponentSwizzle ComponentSwizzle) { return std::string(GetComponentSwizzleChar(ComponentSwizzle)); }
 	static std::wstring GetComponentSwizzleWstring(const VkComponentSwizzle ComponentSwizzle) { return ToWString(GetComponentSwizzleString(ComponentSwizzle)); }
 	//static char* GetComponentMappingChar(const VkComponentMapping& ComponentMapping);

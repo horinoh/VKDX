@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29306.81
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TriangleVK", "TriangleVK\TriangleVK.vcxproj", "{61FF54DD-E9CB-43C2-BF2C-69E33A1506C4}"
 EndProject
@@ -42,6 +42,10 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ToonDX", "ToonDX\ToonDX.vcxproj", "{3467DD21-A3D9-450C-8881-A659652A0ADD}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ToonVK", "ToonVK\ToonVK.vcxproj", "{BCDEE905-F4BE-43DD-A0B1-3180592CBE50}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "InstancingDX", "InstancingDX\InstancingDX.vcxproj", "{2A41CA06-2927-45F1-AC24-5AB84611CBB7}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "InstancingVK", "InstancingVK\InstancingVK.vcxproj", "{EB4B30E5-64F4-4B41-9D6B-0BECBF6950D6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -211,8 +215,27 @@ Global
 		{BCDEE905-F4BE-43DD-A0B1-3180592CBE50}.Release|x64.Build.0 = Release|x64
 		{BCDEE905-F4BE-43DD-A0B1-3180592CBE50}.Release|x86.ActiveCfg = Release|Win32
 		{BCDEE905-F4BE-43DD-A0B1-3180592CBE50}.Release|x86.Build.0 = Release|Win32
+		{2A41CA06-2927-45F1-AC24-5AB84611CBB7}.Debug|x64.ActiveCfg = Debug|x64
+		{2A41CA06-2927-45F1-AC24-5AB84611CBB7}.Debug|x64.Build.0 = Debug|x64
+		{2A41CA06-2927-45F1-AC24-5AB84611CBB7}.Debug|x86.ActiveCfg = Debug|Win32
+		{2A41CA06-2927-45F1-AC24-5AB84611CBB7}.Debug|x86.Build.0 = Debug|Win32
+		{2A41CA06-2927-45F1-AC24-5AB84611CBB7}.Release|x64.ActiveCfg = Release|x64
+		{2A41CA06-2927-45F1-AC24-5AB84611CBB7}.Release|x64.Build.0 = Release|x64
+		{2A41CA06-2927-45F1-AC24-5AB84611CBB7}.Release|x86.ActiveCfg = Release|Win32
+		{2A41CA06-2927-45F1-AC24-5AB84611CBB7}.Release|x86.Build.0 = Release|Win32
+		{EB4B30E5-64F4-4B41-9D6B-0BECBF6950D6}.Debug|x64.ActiveCfg = Debug|x64
+		{EB4B30E5-64F4-4B41-9D6B-0BECBF6950D6}.Debug|x64.Build.0 = Debug|x64
+		{EB4B30E5-64F4-4B41-9D6B-0BECBF6950D6}.Debug|x86.ActiveCfg = Debug|Win32
+		{EB4B30E5-64F4-4B41-9D6B-0BECBF6950D6}.Debug|x86.Build.0 = Debug|Win32
+		{EB4B30E5-64F4-4B41-9D6B-0BECBF6950D6}.Release|x64.ActiveCfg = Release|x64
+		{EB4B30E5-64F4-4B41-9D6B-0BECBF6950D6}.Release|x64.Build.0 = Release|x64
+		{EB4B30E5-64F4-4B41-9D6B-0BECBF6950D6}.Release|x86.ActiveCfg = Release|Win32
+		{EB4B30E5-64F4-4B41-9D6B-0BECBF6950D6}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {B1414E86-01AB-4590-A9C1-1302C022AF53}
 	EndGlobalSection
 EndGlobal

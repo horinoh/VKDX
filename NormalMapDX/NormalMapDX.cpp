@@ -1,7 +1,6 @@
 // NormalMapDX.cpp : Defines the entry point for the application.
 //
 
-#include "stdafx.h"
 #include "NormalMapDX.h"
 
 #pragma region Code

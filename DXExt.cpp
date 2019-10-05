@@ -1,4 +1,5 @@
-#include "stdafx.h"
+//#include "framework.h
+//#include "stdafx.h"
 
 #include "DXExt.h"
 

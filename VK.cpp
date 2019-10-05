@@ -1,4 +1,5 @@
-#include "stdafx.h"
+//#include "stdafx.h"
+//#include "framework.h"
 
 #include "VK.h"
 
@@ -359,7 +360,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 }
 #endif //!< _WINDOWS
 
-char* VK::GetVkResultChar(const VkResult Result)
+const char* VK::GetVkResultChar(const VkResult Result)
 {
 #define VK_RESULT_ENTRY(vr) case VK_##vr: return #vr;
 	switch (Result)
@@ -370,7 +371,7 @@ char* VK::GetVkResultChar(const VkResult Result)
 #undef VK_RESULT_ENTRY
 }
 
-char* VK::GetFormatChar(const VkFormat Format)
+const char* VK::GetFormatChar(const VkFormat Format)
 {
 #define VK_FORMAT_ENTRY(vf) case VK_FORMAT_##vf: return #vf;
 	switch (Format)
@@ -381,7 +382,7 @@ char* VK::GetFormatChar(const VkFormat Format)
 #undef VK_FORMAT_ENTRY
 }
 
-char* VK::GetColorSpaceChar(const VkColorSpaceKHR ColorSpace)
+const char* VK::GetColorSpaceChar(const VkColorSpaceKHR ColorSpace)
 {
 #define VK_COLOR_SPACE_ENTRY(vcs) case VK_COLOR_SPACE_##vcs: return #vcs;
 	switch (ColorSpace)
@@ -392,7 +393,7 @@ char* VK::GetColorSpaceChar(const VkColorSpaceKHR ColorSpace)
 #undef VK_COLOR_SPACE_ENTRY
 }
 
-char* VK::GetImageViewTypeChar(const VkImageViewType ImageViewType)
+const char* VK::GetImageViewTypeChar(const VkImageViewType ImageViewType)
 {
 #define VK_IMAGE_VIEW_TYPE_ENTRY(vivt) case VK_IMAGE_VIEW_TYPE_##vivt: return #vivt;
 	switch (ImageViewType)
@@ -403,7 +404,7 @@ char* VK::GetImageViewTypeChar(const VkImageViewType ImageViewType)
 #undef VK_IMAGE_VIEW_TYPE_ENTRY
 }
 
-char* VK::GetComponentSwizzleChar(const VkComponentSwizzle ComponentSwizzle)
+const char* VK::GetComponentSwizzleChar(const VkComponentSwizzle ComponentSwizzle)
 {
 #define VK_COMPONENT_SWIZZLE_ENTRY(vcs) case VK_COMPONENT_SWIZZLE_##vcs: return #vcs;
 	switch (ComponentSwizzle)
