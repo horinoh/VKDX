@@ -233,11 +233,11 @@ void TriangleVK::CreateVertexBuffer()
 {
 	VertexBuffers.resize(1);
 
-	const std::vector<Vertex_PositionColor> Vertices = {
+	const std::array<Vertex_PositionColor, 3> Vertices = { {
 		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
 		{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } }, //!< LB
 		{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }, //!< RB
-	};
+	} };
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 	
@@ -247,15 +247,13 @@ void TriangleVK::CreateVertexBuffer()
 	MarkerSetObjectName(Device, VertexBuffers[0], "MyVertexBuffer");
 #endif
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateVertexBuffer" << COUT_OK << std::endl << std::endl;
-#endif
+	LOG_OK();
 }
 void TriangleVK::CreateIndexBuffer()
 {
 	IndexBuffers.resize(1);
 
-	const std::vector<uint32_t> Indices = { 0, 1, 2 };
+	const std::array<uint32_t, 3> Indices = { 0, 1, 2 };
 
 	//!< vkCmdDrawIndexed() ‚ªˆø”‚ÉŽæ‚é‚Ì‚ÅŠo‚¦‚Ä‚¨‚­•K—v‚ª‚ ‚é (Save this value because vkCmdDrawIndexed() will use it)
 	IndexCount = static_cast<uint32_t>(Indices.size());
@@ -268,9 +266,7 @@ void TriangleVK::CreateIndexBuffer()
 	MarkerSetObjectName(Device, IndexBuffers[0], "MyIndexBuffer");
 #endif
 
-#ifdef DEBUG_STDOUT
-	std::cout << "CreateIndexBuffer" << COUT_OK << std::endl << std::endl;
-#endif
+	LOG_OK();
 }
 
 void TriangleVK::PopulateCommandBuffer(const size_t i)
@@ -322,9 +318,10 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
 
-			const VkDeviceSize Offsets[] = { 0 };
 			const std::array<VkBuffer, 1> VBs = { VB };
-			vkCmdBindVertexBuffers(CB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets);
+			const std::array<VkDeviceSize, 1> Offsets = { 0 };
+			assert(VBs.size() == Offsets.size() && "");
+			vkCmdBindVertexBuffers(CB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets.data());
 			vkCmdBindIndexBuffer(CB, IB, 0, VK_INDEX_TYPE_UINT32);
 
 			vkCmdDrawIndexedIndirect(CB, IndirectB, 0, 1, 0);

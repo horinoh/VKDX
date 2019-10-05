@@ -67,4 +67,12 @@
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="InstancingVK.frag">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="InstancingVK.vert">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+  </ItemGroup>
 </Project>

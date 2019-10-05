@@ -21,7 +21,7 @@ protected:
 		Degree += 1.0f;
 		CopyToUploadResource(COM_PTR_GET(ConstantBufferResource), RoundUp(sizeof(Tr), 0xff), &Tr);
 	}
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;

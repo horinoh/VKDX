@@ -4,6 +4,10 @@
 #include "framework.h"
 #include "InstancingVK.h"
 
+#pragma region Code
+VK* Inst = nullptr;
+#pragma endregion
+
 #define MAX_LOADSTRING 100
 
 // Global Variables:
@@ -142,15 +146,61 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
+#pragma region Code
+	case WM_CREATE:
+		if (nullptr == Inst) {
+			Inst = new InstancingVK();
+		}
+		if (nullptr != Inst) {
+			try {
+				Inst->OnCreate(hWnd, hInst, szTitle);
+			}
+			catch (std::exception& e) {
+				std::cerr << e.what() << std::endl;
+			}
+		}
+		break;
+	case WM_TIMER:
+		if (nullptr != Inst) {
+			Inst->OnTimer(hWnd, hInst);
+		}
+		break;
+	case WM_SIZE:
+		if (nullptr != Inst) {
+			Inst->OnSize(hWnd, hInst);
+		}
+		break;
+	case WM_EXITSIZEMOVE:
+		if (nullptr != Inst) {
+			Inst->OnExitSizeMove(hWnd, hInst);
+		}
+		break;
+	case WM_KEYDOWN:
+		if (VK_ESCAPE == wParam) {
+			SendMessage(hWnd, WM_DESTROY, 0, 0);
+		}
+		break;
+#pragma endregion
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
             // TODO: Add any drawing code that uses hdc here...
+#pragma region Code
+			if (nullptr != Inst) {
+				Inst->OnPaint(hWnd, hInst);
+			}
+#pragma endregion
             EndPaint(hWnd, &ps);
         }
         break;
     case WM_DESTROY:
+#pragma region Code
+		if (nullptr != Inst) {
+			Inst->OnDestroy(hWnd, hInst);
+		}
+		SAFE_DELETE(Inst);
+#pragma endregion
         PostQuitMessage(0);
         break;
     default:
@@ -178,3 +228,93 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return (INT_PTR)FALSE;
 }
+
+#pragma region Code
+void InstancingVK::CreateVertexBuffer()
+{
+	VertexBuffers.resize(2);
+
+	{
+		const std::array<Vertex_PositionColor, 3> Vertices = { {
+			{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+			{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+			{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
+		} };
+		const auto Stride = sizeof(Vertices[0]);
+		const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
+		CreateBuffer_Vertex(GraphicsQueue, CommandBuffers[0], &VertexBuffers[0], Size, Vertices.data());
+	}
+
+	{
+		const std::array<Instance_OffsetXY, 5> Instances = { {
+			{ { -0.5f, -0.5f } },
+			{ { -0.25f, -0.25f } },
+			{ { 0.0f, 0.0f } },
+			{ { 0.25f, 0.25f } },
+			{ { 0.5f, 0.5f } },
+		} };
+		InstanceCount = static_cast<uint32_t>(Instances.size());
+		const auto Stride = sizeof(Instances[0]);
+		const auto Size = static_cast<VkDeviceSize>(Stride * InstanceCount);
+		CreateBuffer_Vertex(GraphicsQueue, CommandBuffers[0], &VertexBuffers[1], Size, Instances.data());
+	}
+
+	LOG_OK();
+}
+void InstancingVK::CreateIndexBuffer()
+{
+	IndexBuffers.resize(1);
+
+	const std::array<uint32_t, 3> Indices = { 0, 1, 2 };
+	IndexCount = static_cast<uint32_t>(Indices.size());
+	const auto Stride = sizeof(Indices[0]);
+	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
+	CreateBuffer_Index(GraphicsQueue, CommandBuffers[0], &IndexBuffers[0], Size, Indices.data());
+
+	LOG_OK();
+}
+
+void InstancingVK::PopulateCommandBuffer(const size_t i)
+{
+	const auto CB = CommandBuffers[i];
+	const auto FB = Framebuffers[i];
+	const auto SI = SwapchainImages[i];
+	const auto RP = RenderPasses[0];
+	//const auto VB = VertexBuffers[0];
+	const auto IB = IndexBuffers[0];
+	const auto IndirectB = IndirectBuffers[0];
+
+	const VkCommandBufferBeginInfo BeginInfo = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		nullptr,
+		0,
+		nullptr
+	};
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &BeginInfo)); {
+		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+
+		ClearColor(CB, SI, Colors::SkyBlue);
+
+		const VkRenderPassBeginInfo RenderPassBeginInfo = {
+			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			nullptr,
+			RP,
+			FB,
+			ScissorRects[0],
+			0, nullptr
+		};
+		vkCmdBeginRenderPass(CB, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
+			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+
+			const std::array<VkBuffer, 2> VBs = { VertexBuffers[0], VertexBuffers[1] };
+			const std::array<VkDeviceSize, 2> Offsets = { 0, 0 };
+			assert(VBs.size() == Offsets.size() && "");
+			vkCmdBindVertexBuffers(CB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets.data());
+			vkCmdBindIndexBuffer(CB, IB, 0, VK_INDEX_TYPE_UINT32);
+
+			vkCmdDrawIndexedIndirect(CB, IndirectB, 0, 1, 0);
+		} vkCmdEndRenderPass(CB);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+}
+#pragma endregion //!< Code

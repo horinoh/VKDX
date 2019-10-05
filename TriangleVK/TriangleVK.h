@@ -16,7 +16,7 @@ public:
 protected:
 	virtual void CreateVertexBuffer() override;
 	virtual void CreateIndexBuffer() override;
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(IndexCount); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(IndexCount, 1); }
 	virtual void CreateDescriptorSetLayout() override { 
 		DescriptorSetLayouts.resize(1); 
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {});

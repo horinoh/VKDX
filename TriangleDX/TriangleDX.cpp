@@ -233,11 +233,11 @@ void TriangleDX::CreateVertexBuffer()
 {
 	VertexBufferResources.resize(1);
 
-	const std::vector<Vertex_PositionColor> Vertices = {
+	const std::array<Vertex_PositionColor, 3> Vertices = { {
 		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
 		{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } }, //!< LB
 		{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }, //!< RB
-	};
+	} };
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
 
@@ -256,7 +256,7 @@ void TriangleDX::CreateIndexBuffer()
 {
 	IndexBufferResources.resize(1);
 
-	const std::vector<UINT32> Indices = { 0, 1, 2 };
+	const std::array<UINT32, 3> Indices = { 0, 1, 2 };
 	//!< DrawInstanced() が引数に取るので覚えておく必要がある Save this value because DrawInstanced() will use it
 	IndexCount = static_cast<UINT32>(Indices.size());
 	const auto Stride = sizeof(Indices[0]);
@@ -313,7 +313,7 @@ void TriangleDX::PopulateCommandList(const size_t i)
 
 			//!< バーテックスバッファ、インデックスバッファ
 			if (!VertexBufferViews.empty()) {
-				const std::array< D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VertexBufferViews[0] };
+				const std::array<D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VertexBufferViews[0] };
 				CL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
 				if (!IndexBufferViews.empty()) {
 					CL->IASetIndexBuffer(&IndexBufferViews[0]);

@@ -14,7 +14,7 @@ public:
 	virtual ~TextureVK() {}
 
 protected:
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);
 #ifdef USE_IMMUTABLE_SAMPLER

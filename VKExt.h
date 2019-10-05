@@ -9,6 +9,7 @@ private:
 public:
 	//using Vertex_Position = struct Vertex_Position { glm::vec3 Position; };
 	using Vertex_PositionColor = struct Vertex_PositionColor { glm::vec3 Position; glm::vec4 Color; };
+	using Instance_OffsetXY = struct Instance_OffsetXY { glm::vec2 Offset; };
 
 	virtual void CreateBuffer_Vertex(const VkQueue Queue, const VkCommandBuffer CB, VkBuffer* Buffer, const VkDeviceSize Size, const void* Source) {
 		//!< デバイスローカルバッファ(DLB)を作成 (Create device local buffer(DLB))
@@ -40,14 +41,14 @@ public:
 
 		SubmitStagingCopy(GraphicsQueue, CommandBuffers[0], *Buffer, Size, Source, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
 	}
-	void CreateIndirectBuffer_Draw(const uint32_t Count) {
+	void CreateIndirectBuffer_Draw(const uint32_t IndexCount, const uint32_t InstanceCount) {
 		IndirectBuffers.resize(1);
-		const VkDrawIndirectCommand DIC = { Count, 1, 0, 0 };
+		const VkDrawIndirectCommand DIC = { IndexCount, InstanceCount, 0, 0 };
 		CreateBuffer_Indirect(GraphicsQueue, CommandBuffers[0], &IndirectBuffers[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
 	}
-	void CreateIndirectBuffer_DrawIndexed(const uint32_t Count) {
+	void CreateIndirectBuffer_DrawIndexed(const uint32_t IndexCount, const uint32_t InstanceCount) {
 		IndirectBuffers.resize(1);
-		const VkDrawIndexedIndirectCommand DIIC = { Count, 1, 0, 0, 0 };
+		const VkDrawIndexedIndirectCommand DIIC = { IndexCount, InstanceCount, 0, 0, 0 };
 		CreateBuffer_Indirect(GraphicsQueue, CommandBuffers[0], &IndirectBuffers[0], static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
 	}
 	void CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z) {
@@ -130,6 +131,9 @@ public:
 	void CreateShaderModle_Cs();
 
 	template<typename T> void CreatePipeline_Vertex(VkPipeline& Pipeline, const VkPipelineLayout PL,
+		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
+		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
+	template<typename T, typename U> void CreatePipeline_Vertex_Instance(VkPipeline& Pipeline, const VkPipelineLayout PL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
 	void CreatePipeline_Tesselation(VkPipeline& Pipeline, const VkPipelineLayout PL,

@@ -4,6 +4,10 @@
 #include "framework.h"
 #include "InstancingDX.h"
 
+#pragma region Code
+DX* Inst = nullptr;
+#pragma endregion
+
 #define MAX_LOADSTRING 100
 
 // Global Variables:
@@ -142,15 +146,61 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
+#pragma region Code
+	case WM_CREATE:
+		if (nullptr == Inst) {
+			Inst = new InstancingDX();
+		}
+		if (nullptr != Inst) {
+			try {
+				Inst->OnCreate(hWnd, hInst, szTitle);
+			}
+			catch (std::exception& e) {
+				std::cerr << e.what() << std::endl;
+			}
+		}
+		break;
+	case WM_TIMER:
+		if (nullptr != Inst) {
+			Inst->OnTimer(hWnd, hInst);
+		}
+		break;
+	case WM_SIZE:
+		if (nullptr != Inst) {
+			Inst->OnSize(hWnd, hInst);
+		}
+		break;
+	case WM_EXITSIZEMOVE:
+		if (nullptr != Inst) {
+			Inst->OnExitSizeMove(hWnd, hInst);
+		}
+		break;
+	case WM_KEYDOWN:
+		if (VK_ESCAPE == wParam) {
+			SendMessage(hWnd, WM_DESTROY, 0, 0);
+		}
+		break;
+#pragma endregion
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hWnd, &ps);
             // TODO: Add any drawing code that uses hdc here...
+#pragma region Code
+			if (nullptr != Inst) {
+				Inst->OnPaint(hWnd, hInst);
+			}
+#pragma endregion
             EndPaint(hWnd, &ps);
         }
         break;
     case WM_DESTROY:
+#pragma region Code
+		if (nullptr != Inst) {
+			Inst->OnDestroy(hWnd, hInst);
+		}
+		SAFE_DELETE(Inst);
+#pragma endregion
         PostQuitMessage(0);
         break;
     default:
@@ -178,3 +228,91 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return (INT_PTR)FALSE;
 }
+
+#pragma region Code
+void InstancingDX::CreateVertexBuffer()
+{
+	VertexBufferResources.resize(2);
+
+	{
+		const std::array<Vertex_PositionColor, 3> Vertices = { {
+			{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
+			{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
+			{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
+		} };
+		const auto Stride = sizeof(Vertices[0]);
+		const auto Size = static_cast<UINT32>(Stride * Vertices.size());
+		CreateBuffer(COM_PTR_PUT(VertexBufferResources[0]), Size, Vertices.data(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+		VertexBufferViews.push_back({ VertexBufferResources[0]->GetGPUVirtualAddress(), Size, Stride });
+	}
+
+	{
+		const std::array<Instance_OffsetXY, 5> Instances = { {
+			{ { -0.5f, -0.5f } },
+			{ { -0.25f, -0.25f } },
+			{ { 0.0f, 0.0f } },
+			{ { 0.25f, 0.25f } },
+			{ { 0.5f, 0.5f } },
+		} };
+		InstanceCount = static_cast<UINT>(Instances.size());
+		const auto Stride = sizeof(Instances[0]);
+		const auto Size = static_cast<UINT32>(Stride * InstanceCount);
+		CreateBuffer(COM_PTR_PUT(VertexBufferResources[1]), Size, Instances.data(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+		VertexBufferViews.push_back({ VertexBufferResources[1]->GetGPUVirtualAddress(), Size, Stride });
+	}
+
+	LOG_OK();
+}
+void InstancingDX::CreateIndexBuffer()
+{
+	IndexBufferResources.resize(1);
+
+	const std::array<UINT32, 3> Indices = { 0, 1, 2 };
+	IndexCount = static_cast<UINT32>(Indices.size());
+	const auto Stride = sizeof(Indices[0]);
+	const auto Size = static_cast<UINT32>(Stride * IndexCount);
+	CreateBuffer(COM_PTR_PUT(IndexBufferResources[0]), Size, Indices.data(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+	IndexBufferViews.push_back({ IndexBufferResources[0]->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT });
+
+	LOG_OK();
+}
+void InstancingDX::PopulateCommandList(const size_t i)
+{
+	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto CA = COM_PTR_GET(CommandAllocators[0]);
+	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
+
+	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+	const auto SCHandle = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
+
+	VERIFY_SUCCEEDED(CL->Reset(CA, COM_PTR_GET(PipelineState)));
+	{
+		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+
+		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		{
+			ClearColor(CL, SCHandle, DirectX::Colors::SkyBlue);
+
+			const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { SCHandle };
+			CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
+
+			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignature));
+
+			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+			if (VertexBufferViews.size() > 1) {
+				const std::array<D3D12_VERTEX_BUFFER_VIEW, 2> VBVs = { VertexBufferViews[0], VertexBufferViews[1] };
+				CL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
+				if (!IndexBufferViews.empty()) {
+					CL->IASetIndexBuffer(&IndexBufferViews[0]);
+				}
+			}
+
+			CL->ExecuteIndirect(COM_PTR_GET(IndirectCommandSignature), 1, IBR, 0, nullptr, 0);
+		}
+		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+	}
+	VERIFY_SUCCEEDED(CL->Close());
+}
+#pragma endregion

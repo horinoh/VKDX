@@ -3,11 +3,11 @@
 
 #include "DXExt.h"
 
-void DXExt::CreateIndirectBuffer_Draw(const UINT Count)
+void DXExt::CreateIndirectBuffer_Draw(const UINT IndexCount, const UINT InstanceCount)
 {
 	IndirectBufferResources.resize(1);
 
-	const D3D12_DRAW_ARGUMENTS Source = { Count, 1, 0, 0 };
+	const D3D12_DRAW_ARGUMENTS Source = { IndexCount, InstanceCount, 0, 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 
@@ -24,11 +24,11 @@ void DXExt::CreateIndirectBuffer_Draw(const UINT Count)
 	Device->CreateCommandSignature(&CmdSigDesc, COM_PTR_GET(RootSignature), COM_PTR_UUIDOF_PUTVOID(IndirectCommandSignature));
 }
 
-void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT Count)
+void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT IndexCount, const UINT InstanceCount)
 {
 	IndirectBufferResources.resize(1);
 
-	const D3D12_DRAW_INDEXED_ARGUMENTS Source = { Count, 1, 0, 0, 0 };
+	const D3D12_DRAW_INDEXED_ARGUMENTS Source = { IndexCount, InstanceCount, 0, 0, 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 

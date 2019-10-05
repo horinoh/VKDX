@@ -9,18 +9,21 @@ private:
 public:
 	//using Vertex_Position = struct Vertex_Position { DirectX::XMFLOAT3 Position; };
 	using Vertex_PositionColor = struct Vertex_PositionColor { DirectX::XMFLOAT3 Position; DirectX::XMFLOAT4 Color; };
-	
-	void CreateIndirectBuffer_Draw(const UINT Count);
-	void CreateIndirectBuffer_DrawIndexed(const UINT Count);
+	using Instance_OffsetXY = struct Instance_OffsetXY { DirectX::XMFLOAT2 Offset; };
+
+	void CreateIndirectBuffer_Draw(const UINT IndexCount, const UINT InstanceCount);
+	void CreateIndirectBuffer_DrawIndexed(const UINT IndexCount, const UINT InstanceCount);
 	void CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT Z);
 
 	void CreateShaderBlob_VsPs();
 	void CreateShaderBlob_VsPsDsHsGs();
 	void CreateShaderBlob_Cs();
 
-	template<typename T> void CreatePipelineState_Vertex(/*winrt::com_ptr*/COM_PTR<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
+	template<typename T> void CreatePipelineState_Vertex(COM_PTR<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS);
-	void CreatePipelineState_Tesselation(/*winrt::com_ptr*/COM_PTR<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
+	template<typename T, typename U> void CreatePipelineState_Vertex_Instance(COM_PTR<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
+		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS);
+	void CreatePipelineState_Tesselation(COM_PTR<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS);
 
 	void CreatePipelineState_VsPs();

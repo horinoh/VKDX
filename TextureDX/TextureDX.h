@@ -14,7 +14,7 @@ public:
 	virtual ~TextureDX() {}
 
 protected:
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
 
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
