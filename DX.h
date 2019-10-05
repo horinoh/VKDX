@@ -24,6 +24,8 @@
 #define COM_PTR_AS(_x, _y) VERIFY_SUCCEEDED(_x.As(&_y));
 #endif
 
+//#define USE_WARP
+
 #define USE_STATIC_SAMPLER
 //!< HLSLからルートシグネチャを作成する (Create root signature from HLSL)
 //#define USE_HLSL_ROOTSIGNATRUE
@@ -134,11 +136,10 @@ protected:
 #endif
 
 	virtual void CreateDevice(HWND hWnd);
-	virtual HRESULT CreateMaxFeatureLevelDevice(IDXGIAdapter* Adapter);
 	virtual void EnumAdapter(IDXGIFactory4* Factory);
 	virtual void EnumOutput(IDXGIAdapter* Adapter);
 	virtual void GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format);
-	virtual void CheckFeatureLevel();
+	virtual void CheckFeatureLevel(ID3D12Device* Device);
 	virtual void CheckMultiSample(const DXGI_FORMAT Format);
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index) const;
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index) const;
@@ -165,6 +166,7 @@ protected:
 		for (auto& i : SwapChainResources) {
 			COM_PTR_RESET(i);
 		}
+		SwapChainResources.clear();
 	}
 	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
 	virtual void ResizeSwapChain(const RECT& Rect) { ResizeSwapChain(static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
@@ -252,6 +254,10 @@ protected:
 #if defined(_DEBUG) || defined(USE_PIX)
 	COM_PTR<IDXGraphicsAnalysis> GraphicsAnalysis;
 #endif
+
+	COM_PTR<IDXGIFactory4> Factory;
+	COM_PTR<IDXGIAdapter> Adapter;
+	COM_PTR<IDXGIOutput> Output;
 
 	COM_PTR<ID3D12Device> Device;
 	std::vector<DXGI_SAMPLE_DESC> SampleDescs;

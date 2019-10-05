@@ -132,11 +132,21 @@ void VK::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 
 	Super::OnExitSizeMove(hWnd, hInstance);
 
-	std::vector<VkFence> Fences = { Fence };
-	VERIFY_SUCCEEDED(vkWaitForFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data(), VK_TRUE, (std::numeric_limits<uint64_t>::max)()));
-	//vkResetFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data());
+	//!< コマンドバッファの完了を待つ
+	if (VK_NULL_HANDLE != Device) {
+		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
+	}
 
-	//ResizeSwapChain(Rect);
+#if 0
+	//!< スワップチェインの作り直し
+	CreateSwapchain(GetCurrentPhysicalDevice(), Surface, Rect);
+
+	//!< デプスバッファの破棄、作成
+
+	//!< フレームバッファの破棄、作成
+	//DestroyFramebuffer();
+	//CreateFramebuffer();
+#endif
 
 	CreateViewport(static_cast<float>(SurfaceExtent2D.width), static_cast<float>(SurfaceExtent2D.height));
 

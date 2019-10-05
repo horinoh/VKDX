@@ -79,7 +79,23 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 
 	Super::OnExitSizeMove(hWnd, hInstance);
 
-	WaitForFence();
+	//!< コマンドリストの完了を待つ
+	{
+		const UINT64 InitValue = 0;
+		const UINT64 ExpectValue = 1;
+		//!< 専用のフェンスを新規に作成
+		COM_PTR<ID3D12Fence> TmpFence;
+		VERIFY_SUCCEEDED(Device->CreateFence(InitValue, D3D12_FENCE_FLAG_NONE, COM_PTR_UUIDOF_PUTVOID(TmpFence)));
+		VERIFY_SUCCEEDED(CommandQueue->Signal(COM_PTR_GET(TmpFence), ExpectValue));
+		if (TmpFence->GetCompletedValue() != ExpectValue) {
+			auto hEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+			VERIFY_SUCCEEDED(TmpFence->SetEventOnCompletion(ExpectValue, hEvent));
+			WaitForSingleObject(hEvent, INFINITE);
+			CloseHandle(hEvent);
+		}
+	}
+
+	ResizeSwapChain(Rect);
 
 	//const auto CommandList = GraphicsCommandLists[0].Get();
 	//const auto CommandAllocator = CommandAllocators[0].Get();
@@ -333,84 +349,79 @@ void DX::CreateDevice(HWND hWnd)
 	COM_PTR<ID3D12Debug> Debug;
 	VERIFY_SUCCEEDED(D3D12GetDebugInterface(COM_PTR_UUIDOF_PUTVOID(Debug)));
 	Debug->EnableDebugLayer();
-#if 0
+
 	//!< GPU-Based Validation
 	COM_PTR<ID3D12Debug1> Debug1;
 	VERIFY_SUCCEEDED(Debug->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Debug1)));
 	Debug1->SetEnableGPUBasedValidation(true);
 #endif
-#endif //!< _DEBUG
 
 	//!< WARP アダプタを作成するのに IDXGIFactory4(のEnumWarpAdapter) が必要
-	COM_PTR<IDXGIFactory4> Factory;
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(COM_PTR_UUIDOF_PUTVOID(Factory)));
+
 #ifdef _DEBUG
 	EnumAdapter(COM_PTR_GET(Factory));
 #endif
 
-	//!< DedicatedVideoMemory のある最後のアダプタ(GPU)インデックスを返す
-	auto GetLastIndexOfHardwareAdapter = [&]() {
-		UINT Index = UINT_MAX;
-		COM_PTR<IDXGIAdapter> Adapter;
-		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, COM_PTR_PUT(Adapter)); ++i) {
-			DXGI_ADAPTER_DESC AdapterDesc;
-			VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
-			if (AdapterDesc.DedicatedVideoMemory) {
-				Index = i;
-			}
-			Adapter = nullptr;
+#ifdef USE_WARP
+	//!< WARP : Win7以下だと D3D_FEATURE_LEVEL_10_1 まで、Win8以上だと D3D_FEATURE_LEVEL_11_1 までサポート
+	VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(COM_PTR_UUIDOF_PUTVOID(Adapter)));
+#else
+	//!< VideoMemoryの最も大きなアダプター(GPU)を選択する
+	UINT Index = UINT_MAX;
+	SIZE_T VM = 0;
+	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, COM_PTR_PUT(Adapter)); ++i) {
+		DXGI_ADAPTER_DESC AD;
+		VERIFY_SUCCEEDED(Adapter->GetDesc(&AD));
+		if (AD.DedicatedVideoMemory > VM) {
+			VM = AD.DedicatedSystemMemory;
+			Index = i;
 		}
-		assert(UINT_MAX != Index);
-		return Index;
-	};
-	COM_PTR<IDXGIAdapter> Adapter;
-	Factory->EnumAdapters(GetLastIndexOfHardwareAdapter(), COM_PTR_PUT(Adapter));
+		COM_PTR_RESET(Adapter);
+	}
+	assert(UINT_MAX != Index);
+	VERIFY_SUCCEEDED(Factory->EnumAdapters(Index, COM_PTR_PUT(Adapter)));
+#endif
 
-	DXGI_ADAPTER_DESC AdapterDesc;
-	VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
-	Logf("\t%s\n", AdapterDesc.Description);
+	//!< 最初に見つかったアウトプット(Monitor)を選択する
+	COM_PTR<IDXGIAdapter> A;
+	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, COM_PTR_PUT(A)); ++i) {
+		for (UINT j = 0; DXGI_ERROR_NOT_FOUND != A->EnumOutputs(j, COM_PTR_PUT(Output)); ++j) {
+			if (nullptr != Output) {
+				break;
+			}
+			COM_PTR_RESET(Output);
+		}
+		COM_PTR_RESET(A);
+		if (nullptr != Output) {
+			break;
+		}
+	}
+
+	//!< 選択したアウトプットのディスプレイモードを列挙
+	GetDisplayModeList(COM_PTR_GET(Output), DXGI_FORMAT_R8G8B8A8_UNORM);
 
 #if 0
 	const std::vector<UUID> Experimental = { D3D12ExperimentalShaderModels, /*D3D12RaytracingPrototype*/ };
 	VERIFY_SUCCEEDED(D3D12EnableExperimentalFeatures(static_cast<UINT>(Experimental.size()), Experimental.data(), nullptr, nullptr));
 #endif
 
-	if (FAILED(CreateMaxFeatureLevelDevice(COM_PTR_GET(Adapter)))) {
-		Error(TEXT("Cannot create device, trying to create WarpDevice ...\n"));
-
-		//!< WARP : Win7以下だと D3D_FEATURE_LEVEL_10_1 まで、Win8以上だと D3D_FEATURE_LEVEL_11_1 までサポート
-		VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(COM_PTR_UUIDOF_PUTVOID(Adapter)));
-		VERIFY_SUCCEEDED(CreateMaxFeatureLevelDevice(COM_PTR_GET(Adapter)));
-	}
-
-#ifdef _DEBUG
-	CheckFeatureLevel();
-#endif
-
-	LOG_OK();
-}
-
-HRESULT DX::CreateMaxFeatureLevelDevice(IDXGIAdapter* Adapter)
-{
-	auto FeatureLevel = D3D_FEATURE_LEVEL_9_1;
+	//!< 高いフィーチャーレベル優先でデバイスを作成
 	for (const auto i : FeatureLevels) {
-		if (SUCCEEDED(D3D12CreateDevice(Adapter, i, _uuidof(ID3D12Device), nullptr))) {
-			FeatureLevel = i;
+		if (SUCCEEDED(D3D12CreateDevice(COM_PTR_GET(Adapter), i, COM_PTR_UUIDOF_PUTVOID(Device)))) {
 			break;
 		}
 	}
-	return D3D12CreateDevice(Adapter, FeatureLevel, COM_PTR_UUIDOF_PUTVOID(Device));
+	CheckFeatureLevel(COM_PTR_GET(Device));
+
+	LOG_OK();
 }
 
 //!< アダプタ(GPU)の列挙
 void DX::EnumAdapter(IDXGIFactory4* Factory)
 {
 	COM_PTR<IDXGIAdapter> Adapter;
-#ifdef USE_WINRT
-	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, Adapter.put()); ++i) {
-#elif defined(USE_WRL)
-	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, Adapter.ReleaseAndGetAddressOf()); ++i) {
-#endif
+	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, COM_PTR_PUT(Adapter)); ++i) {
 		DXGI_ADAPTER_DESC AdapterDesc;
 		VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
 		if (0 == i) { Log("[ Aadapters ]\n"); }
@@ -420,10 +431,7 @@ void DX::EnumAdapter(IDXGIFactory4* Factory)
 		Logf(TEXT("\t\tSharedSystemMemory = %lld\n"), AdapterDesc.SharedSystemMemory);
 
 		EnumOutput(COM_PTR_GET(Adapter));
-
-#ifdef USE_WINRT
 		COM_PTR_RESET(Adapter);
-#endif
 	}
 }
 
@@ -431,12 +439,7 @@ void DX::EnumAdapter(IDXGIFactory4* Factory)
 void DX::EnumOutput(IDXGIAdapter* Adapter)
 {
 	COM_PTR<IDXGIOutput> Output;
-#ifdef USE_WINRT
-	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Adapter->EnumOutputs(i, Output.put()); ++i) {
-#elif defined(USE_WRL)
-	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Adapter->EnumOutputs(i, Output.ReleaseAndGetAddressOf()); ++i) {
-#endif
-
+	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Adapter->EnumOutputs(i, COM_PTR_PUT(Output)); ++i) {
 #ifdef USE_HDR
 		COM_PTR<IDXGIOutput6> Output6;
 		COM_PTR_AS(Output, Output6);
@@ -465,36 +468,53 @@ void DX::EnumOutput(IDXGIAdapter* Adapter)
 		case DXGI_MODE_ROTATION_ROTATE270: Log("\t\t\tROTATE270\n"); break;
 		}
 
-		GetDisplayModeList(COM_PTR_GET(Output), DXGI_FORMAT_R8G8B8A8_UNORM);
-
-#ifdef USE_WINRT
 		COM_PTR_RESET(Output);
-#endif
 	}
 }
 
 //!< アウトプット(ディスプレイ)の描画モードの列挙
 void DX::GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format)
 {
-	UINT NumModes;
-	VERIFY_SUCCEEDED(Output->GetDisplayModeList(Format, 0, &NumModes, nullptr));
-	if (NumModes) {
-		Log("\t\t\t[ DisplayModes ]\n");
+	UINT Count;
+	VERIFY_SUCCEEDED(Output->GetDisplayModeList(Format, 0, &Count, nullptr));
+	if (Count) {
+		Log("[ DisplayModes ]\n");
 
-		std::vector<DXGI_MODE_DESC> ModeDescs(NumModes);
-		VERIFY_SUCCEEDED(Output->GetDisplayModeList(Format, 0, &NumModes, ModeDescs.data()));
-		for (const auto& i : ModeDescs) {
-			Logf("\t\t\t\t%d x %d @ %d\n", i.Width, i.Height, i.RefreshRate.Numerator / i.RefreshRate.Denominator);
+		std::vector<DXGI_MODE_DESC> MDs(Count);
+		VERIFY_SUCCEEDED(Output->GetDisplayModeList(Format, 0, &Count, MDs.data()));
+		for (const auto& i : MDs) {
+			Logf("\t%d x %d @ %d, ", i.Width, i.Height, i.RefreshRate.Numerator / i.RefreshRate.Denominator);
+
+#define SCANLINE_ORDERING_ENTRY(slo) case DXGI_MODE_SCANLINE_ORDER_##slo: Logf("SCANLINE_ORDER_%s, ", #slo); break;
+			switch (i.ScanlineOrdering) {
+			default: assert(0 && "Unknown ScanlineOrdering"); break;
+				SCANLINE_ORDERING_ENTRY(UNSPECIFIED)
+				SCANLINE_ORDERING_ENTRY(PROGRESSIVE)
+				SCANLINE_ORDERING_ENTRY(UPPER_FIELD_FIRST)
+				SCANLINE_ORDERING_ENTRY(LOWER_FIELD_FIRST)
+			}
+#undef SCANLINE_ORDERING_ENTRY
+
+#define SCALING_ENTRY(s) case DXGI_MODE_SCALING_##s: Logf("SCALING_%s", #s); break;
+			switch (i.Scaling) {
+			default: assert(0 && "Unknown Scaling"); break;
+				SCALING_ENTRY(UNSPECIFIED)
+				SCALING_ENTRY(CENTERED)
+				SCALING_ENTRY(STRETCHED)
+			}
+#undef SCALING_ENTRY
+
+			Log("\n");
 		}
 	}
 }
 
-void DX::CheckFeatureLevel()
+void DX::CheckFeatureLevel(ID3D12Device* Device)
 {
 	D3D12_FEATURE_DATA_FEATURE_LEVELS DataFeatureLevels = {
 		static_cast<UINT>(FeatureLevels.size()), FeatureLevels.data()
 	};
-	//!< NumFeatureLevels, pFeatureLevelsRequested は CheckFeatureSupport() への入力、MaxSupportedFeatureLevel には CheckFeatureSupport() からの出力が返る
+	//!< NumFeatureLevels, pFeatureLevelsRequested は CheckFeatureSupport() への入力、MaxSupportedFeatureLevel には出力が返る
 	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, reinterpret_cast<void*>(&DataFeatureLevels), sizeof(DataFeatureLevels)));
 
 	Log("MaxSupportedFeatureLevel\n");
@@ -619,8 +639,6 @@ void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
 void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height)
 {
 	const UINT BufferCount = 3;
-	COM_PTR<IDXGIFactory4> Factory;
-	VERIFY_SUCCEEDED(CreateDXGIFactory1(COM_PTR_UUIDOF_PUTVOID(Factory)));
 
 	//!< 最適なフルスクリーンのパフォーマンスを得るには、IDXGIOutput->GetDisplayModeList() で取得する(ディスプレイのサポートする)DXGI_MODE_DESC でないとダメなので注意  #DX_TODO
 	const DXGI_RATIONAL Rational = { 60, 1 };
@@ -632,7 +650,8 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 		DXGI_MODE_SCALING_UNSPECIFIED
 	};
 	const auto& SampleDesc = SampleDescs[0];
-	DXGI_SWAP_CHAIN_DESC SwapChainDesc = {
+
+	DXGI_SWAP_CHAIN_DESC SCD = {
 		ModeDesc,
 		SampleDesc,
 		DXGI_USAGE_RENDER_TARGET_OUTPUT,
@@ -643,11 +662,39 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH //!< フルスクリーンにした時、最適なディスプレイモードが選択されるのを許可
 	};
 	//!< セッティングを変更してスワップチェインを再作成できるように、既存のを開放している
-
 	COM_PTR_RESET(SwapChain);
 	COM_PTR<IDXGISwapChain> NewSwapChain;
-	VERIFY_SUCCEEDED(Factory->CreateSwapChain(COM_PTR_GET(CommandQueue), &SwapChainDesc, COM_PTR_PUT(NewSwapChain)));
+	VERIFY_SUCCEEDED(Factory->CreateSwapChain(COM_PTR_GET(CommandQueue), &SCD, COM_PTR_PUT(NewSwapChain)));
 	COM_PTR_AS(NewSwapChain, SwapChain);
+
+	//!< 起動時にフルスクリーンにする場合
+	//DXGI_SWAP_CHAIN_DESC1 SCD = {
+	//	Width, Height,
+	//	ColorFormat,
+	//	FALSE,
+	//	SampleDesc,
+	//	DXGI_USAGE_RENDER_TARGET_OUTPUT,
+	//	BufferCount,
+	//	DXGI_SCALING_NONE,
+	//	DXGI_SWAP_EFFECT_FLIP_DISCARD,
+	//	DXGI_ALPHA_MODE_UNSPECIFIED,
+	//	DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH,
+	//};
+	//DXGI_SWAP_CHAIN_FULLSCREEN_DESC SCFD = {
+	//	Rational,
+	//	DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
+	//	DXGI_MODE_SCALING_UNSPECIFIED,
+	//	FALSE,
+	//};
+	//COM_PTR_RESET(SwapChain);
+	//COM_PTR<IDXGISwapChain1> NewSwapChain;
+	//VERIFY_SUCCEEDED(Factory->CreateSwapChainForHwnd(COM_PTR_GET(CommandQueue), hWnd, &SCD, &SCFD, COM_PTR_GET(Output), COM_PTR_PUT(NewSwapChain)));
+
+	//!< DXGI によるフルスクリーン化(Alt + Enter)を抑制する場合
+	//Factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
+
+	//!< 任意のタイミングでフルスクリーン化する場合、以下をコールする
+	//VERIFY_SUCCEEDED(SwapChain->SetFullscreenState(TRUE, nullptr));
 
 #ifdef USE_HDR
 	switch (ColorFormat)
@@ -700,16 +747,13 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	}
 #endif
 
-	[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count, COM_PTR<ID3D12DescriptorHeap>& DH) {
-		const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
-			Type,
-			Count,
+	const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
+			D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+			SCD.BufferCount,
 			D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 			0 // NodeMask ... マルチGPUの場合
-		};
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, COM_PTR_UUIDOF_PUTVOID(DH)));
-	}
-	(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, SwapChainDesc.BufferCount, SwapChainDescriptorHeap);
+	};
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(SwapChainDescriptorHeap)));
 
 	LOG_OK();
 }
@@ -822,13 +866,8 @@ void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Wi
 		DepthFormat,
 		{ 1.0f, 0 }
 	};
-#ifdef USE_WINRT
 	COM_PTR_RESET(DepthStencilResource);
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COMMON/*COMMON にすること*/, &ClearValue, COM_PTR_UUIDOF_PUTVOID(DepthStencilResource)));
-#elif defined(USE_WRL)
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COMMON, &ClearValue, IID_PPV_ARGS(DepthStencilResource.ReleaseAndGetAddressOf()))); 
-#endif
-
 	const auto CDH = GetCPUDescriptorHandle(COM_PTR_GET(DepthStencilDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 0);
 	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 	//!< (リソースがタイプドフォーマットなら D3D12_DEPTH_STENCIL_VIEW_DESC* へ nullptr 指定可能)
