@@ -4,7 +4,7 @@ struct IN
 	float3 Position : POSITION;
 	float4 Color : COLOR;
 	
-	//!< Per Instance
+	//!< Per Instance (SV_InstanceID)
 	float2 Offset : OFFSET;
 	uint InstanceID : SV_InstanceID;
 };

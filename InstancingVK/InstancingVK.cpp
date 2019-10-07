@@ -280,7 +280,8 @@ void InstancingVK::PopulateCommandBuffer(const size_t i)
 	const auto FB = Framebuffers[i];
 	const auto SI = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
-	//const auto VB = VertexBuffers[0];
+	const auto VB0 = VertexBuffers[0];
+	const auto VB1 = VertexBuffers[1];
 	const auto IB = IndexBuffers[0];
 	const auto IndirectB = IndirectBuffers[0];
 
@@ -307,7 +308,7 @@ void InstancingVK::PopulateCommandBuffer(const size_t i)
 		vkCmdBeginRenderPass(CB, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
 
-			const std::array<VkBuffer, 2> VBs = { VertexBuffers[0], VertexBuffers[1] };
+			const std::array<VkBuffer, 2> VBs = { VB0, VB1 };
 			const std::array<VkDeviceSize, 2> Offsets = { 0, 0 };
 			assert(VBs.size() == Offsets.size() && "");
 			vkCmdBindVertexBuffers(CB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets.data());

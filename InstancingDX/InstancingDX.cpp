@@ -280,6 +280,9 @@ void InstancingDX::PopulateCommandList(const size_t i)
 {
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
+	const auto VBV0 = VertexBufferViews[0];
+	const auto VBV1 = VertexBufferViews[1];
+	const auto IBV = IndexBufferViews[0];
 	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
@@ -301,13 +304,9 @@ void InstancingDX::PopulateCommandList(const size_t i)
 
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
-			if (VertexBufferViews.size() > 1) {
-				const std::array<D3D12_VERTEX_BUFFER_VIEW, 2> VBVs = { VertexBufferViews[0], VertexBufferViews[1] };
-				CL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
-				if (!IndexBufferViews.empty()) {
-					CL->IASetIndexBuffer(&IndexBufferViews[0]);
-				}
-			}
+			const std::array<D3D12_VERTEX_BUFFER_VIEW, 2> VBVs = { VBV0, VBV1 };
+			CL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
+			CL->IASetIndexBuffer(&IBV);
 
 			CL->ExecuteIndirect(COM_PTR_GET(IndirectCommandSignature), 1, IBR, 0, nullptr, 0);
 		}

@@ -56,7 +56,6 @@ template<> void CreatePipelineState_Vertex<Vertex_PositionColor>(COM_PTR<ID3D12P
 		DSOD
 	};
 
-	//!< インプットエレメントを指定
 	const std::array<D3D12_INPUT_ELEMENT_DESC, 2> IEDs = { {
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex_PositionColor, Position), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(Vertex_PositionColor, Color), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -79,7 +78,7 @@ template<> void CreatePipelineState_Vertex<Vertex_PositionColor>(COM_PTR<ID3D12P
 		DSD,
 		ILD,
 		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
-		D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, //!< トポロジに TRIANGLE を指定
+		D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, //!< TRIANGLE
 		1, { DXGI_FORMAT_R8G8B8A8_UNORM }, DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
 		SD,
 		0,
@@ -147,8 +146,10 @@ template<> void CreatePipelineState_Vertex_Instance<Vertex_PositionColor, Instan
 	};
 
 	const std::array<D3D12_INPUT_ELEMENT_DESC, 3> IEDs = { {
+		//!< Per Vertex
 		{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex_PositionColor, Position), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 		{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(Vertex_PositionColor, Color), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+		//!< Per Instance
 		{ "OFFSET", 0, DXGI_FORMAT_R32G32_FLOAT, 1, offsetof(Instance_OffsetXY, Offset), D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
 	} };
 	const D3D12_INPUT_LAYOUT_DESC ILD = {
@@ -169,7 +170,7 @@ template<> void CreatePipelineState_Vertex_Instance<Vertex_PositionColor, Instan
 		DSD,
 		ILD,
 		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
-		D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, //!< トポロジに TRIANGLE を指定
+		D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, //!< TRIANGLE
 		1, { DXGI_FORMAT_R8G8B8A8_UNORM }, DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
 		SD,
 		0,

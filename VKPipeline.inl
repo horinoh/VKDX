@@ -84,7 +84,7 @@ template<> void CreatePipeline_Vertex<Vertex_PositionColor>(VkPipeline& Pipeline
 		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
 		nullptr,
 		0,
-		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, //!< トポロジに TRIANGLE_STRIP を指定
+		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, //!< TRIANGLE_STRIP
 		VK_FALSE
 	};
 	assert((
@@ -288,8 +288,10 @@ template<> void CreatePipeline_Vertex_Instance<Vertex_PositionColor, Instance_Of
 		{ 1, sizeof(Instance_OffsetXY), VK_VERTEX_INPUT_RATE_INSTANCE },
 	} };
 	const std::array<VkVertexInputAttributeDescription, 3> VIADs = { {
+		//!< Per Vertex
 		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_PositionColor, Position) },
 		{ 1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Vertex_PositionColor, Color) },
+		//!< Per Instance
 		{ 2, 1, VK_FORMAT_R32G32_SFLOAT, offsetof(Instance_OffsetXY, Offset) },
 	} };
 	const VkPipelineVertexInputStateCreateInfo PVISCI = {
@@ -304,7 +306,7 @@ template<> void CreatePipeline_Vertex_Instance<Vertex_PositionColor, Instance_Of
 		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
 		nullptr,
 		0,
-		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, //!< トポロジに TRIANGLE_STRIP を指定
+		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, //!< TRIANGLE_STRIP
 		VK_FALSE
 	};
 	assert((

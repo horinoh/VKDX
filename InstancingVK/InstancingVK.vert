@@ -6,7 +6,7 @@
 layout (location = 0) in vec3 InPosition;
 layout (location = 1) in vec4 InColor;
 
-//!< Per Instance
+//!< Per Instance (gl_InstanceIndex)
 layout (location = 2) in vec2 InOffset;
 
 layout (location = 0) out vec4 OutColor;

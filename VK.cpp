@@ -491,23 +491,22 @@ void VK::CopyToHostVisibleDeviceMemory(const VkDeviceMemory DM, const size_t Siz
 		void *Data;
 		VERIFY_SUCCEEDED(vkMapMemory(Device, DM, Offset, Size, static_cast<VkMemoryMapFlags>(0), &Data)); {
 			memcpy(Data, Source, Size);
-		} vkUnmapMemory(Device, DM);
-
-		//!< メモリコンテンツが変更されたことをドライバへ知らせる
 #if 1
-		//!< デバスメモリ確保時に VK_MEMORY_PROPERTY_HOST_COHERENT_BIT を指定した場合は必要ない CreateDeviceMemory(..., VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-		const std::array<VkMappedMemoryRange, 1> MMRs = {
-				{
-					VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-					nullptr,
-					DM,
-					Offset,
-					VK_WHOLE_SIZE
-				}
-		};
-		VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
-		//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
+			//!< メモリコンテンツが変更されたことをドライバへ知らせる(vkMapMemory()した状態でやること)
+			//!< デバスメモリ確保時に VK_MEMORY_PROPERTY_HOST_COHERENT_BIT を指定した場合は必要ない CreateDeviceMemory(..., VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			const std::array<VkMappedMemoryRange, 1> MMRs = {
+					{
+						VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+						nullptr,
+						DM,
+						Offset,
+						VK_WHOLE_SIZE
+					}
+			};
+			VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
+			//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
 #endif
+		} vkUnmapMemory(Device, DM);
 	}
 }
 //!< @param コマンドバッファ
@@ -2330,27 +2329,31 @@ void VK::CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color)
 			0,
 			Color,
 			VK_SAMPLE_COUNT_1_BIT,
-			//!< アタッチメントのロードストア :「終了時に保存」
+			//!< アタッチメントのロードストア :「開始時に何も(クリア)しない」「終了時に保存」
 			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
-			//!< ステンシルのロードストア : (ここでは)使用しない
+			//!< ステンシルのロードストア : (ここでは)開始時、終了時ともに「使用しない」
 			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			//!< レンダーパス「開始時」、「終了時」のレイアウト
+			//!< レンダーパスのレイアウト : 「開始時未定義」「終了時プレゼンテーションソース」
 			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 		}
 	};
 
-	//!< インプット ... 読み取り用
 	//!< layout (input_attachment_index=0, set=0, binding=0) uniform SubpassInput XXX;
+	//!< インプットアタッチメント : 読み取り用
 	const std::array<VkAttachmentReference, 0> InputARs = {};
+	//!< カラーアタッチメント : 書き込み用
 	const std::array<VkAttachmentReference, 1> ColorARs = {
 		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }
 	};
+	//!< リゾルブアタッチメント : マルチサンプル → シングルサンプル
 	const std::array<VkAttachmentReference, 1> ResolveARs = {
 		{ VK_ATTACHMENT_UNUSED },
 	};
 	assert(ColorARs.size() == ResolveARs.size() && "Size must be same");
+	//!< デプスアタッチメント : 深度用
 	const VkAttachmentReference* DepthAR = nullptr;
-	const std::array<uint32_t, 0> PreserveAttaches = {}; //!< サブパス全体においてコンテンツを保持しなくてはならないもののインデックスを指定する : (ここでは)使用しない
+	//!< プリザーブアタッチメント : サブパス全体において保持しなくてはならないコンテンツ(のインデックス)
+	const std::array<uint32_t, 0> PreserveAttaches = {};
 	const std::array<VkSubpassDescription, 1> SubpassDescs = {
 		{
 			0,
