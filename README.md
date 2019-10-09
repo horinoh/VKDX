@@ -243,10 +243,10 @@ fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
 ## プロジェクトの追加方法 (自分用覚書)
  * ソリューションを右クリック - Add - New Project で Windows Desktop Application
  * プロジェクトを右クリック - Retarget SDK Verson で 10以上にする
- * プロジェクト右クリック - Property - All Configurations にする - C/C++ - Language - C++ Language Standard - ISO C++17 Standard を選択しておく(デフォルトではC++14なので)
+ * プロジェクト右クリック - Property - All Configurations にする - C/C++ - Language - C++ Language Standard - ISO C++17 Standard を選択しておく(vs2019のデフォルトはC++14)
 
 #### DX
- * プロパティマネージャで Add Existing Property Sheet... - Props/NOPRECOMP.props, Props/HLSL.props、(Props/DXTK.prop)
+ * プロパティマネージャで Add Existing Property Sheet... - Props/NOPRECOMP.props, Props/HLSL.props、Props/RS.props. (Props/DXTK.prop)
  * Header Files に Win.h、DX.h、DXExt.h、(DXImage.h) を追加 
  * Source Files に Win.cpp、DX.cpp、DXExt.cpp、(DXImage.cpp) を追加
  * framework.h(旧stdafx.h), XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
@@ -257,6 +257,7 @@ fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
   * 右クリック - プロパティ - HLSL Compiler - General - Shader Type でタイプを適切に選択しておく
 * WinPixEventRuntimeのインストール
 	* 右クリック - Manage NuGet Packages - Browse - WinPixEventRuntimeで検索 - インストール
+* ルートシグネチャ用HLSL XxxDX.rs.hlsl を作成する
 
 #### VK
  * プロパティマネージャで Add Existing Property Sheet... - Props/NOPRECOMP.props, Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop、(Props/GLI.prop)

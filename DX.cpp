@@ -90,9 +90,11 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 		VERIFY_SUCCEEDED(CommandQueue->Signal(COM_PTR_GET(TmpFence), ExpectValue));
 		if (TmpFence->GetCompletedValue() != ExpectValue) {
 			auto hEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-			VERIFY_SUCCEEDED(TmpFence->SetEventOnCompletion(ExpectValue, hEvent));
-			WaitForSingleObject(hEvent, INFINITE);
-			CloseHandle(hEvent);
+			if (nullptr != hEvent) {
+				VERIFY_SUCCEEDED(TmpFence->SetEventOnCompletion(ExpectValue, hEvent));
+				WaitForSingleObject(hEvent, INFINITE);
+				CloseHandle(hEvent);
+			}
 		}
 	}
 
@@ -199,7 +201,7 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_
 				const D3D12_MEMCPY_DEST MemcpyDest = {
 					Data + PSF.Offset,
 					PSF.Footprint.RowPitch,
-					PSF.Footprint.RowPitch * RowCount
+					static_cast<SIZE_T>(PSF.Footprint.RowPitch) * RowCount
 				};
 				for (UINT i = 0; i < PSF.Footprint.Depth; ++i) {
 					auto Dst = reinterpret_cast<BYTE*>(MemcpyDest.pData) + MemcpyDest.SlicePitch * i;
@@ -476,7 +478,7 @@ void DX::EnumOutput(IDXGIAdapter* Adapter)
 //!< アウトプット(ディスプレイ)の描画モードの列挙
 void DX::GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format)
 {
-	UINT Count;
+	UINT Count = 0;
 	VERIFY_SUCCEEDED(Output->GetDisplayModeList(Format, 0, &Count, nullptr));
 	if (Count) {
 		Log("[ DisplayModes ]\n");
@@ -565,13 +567,13 @@ void DX::CheckMultiSample(const DXGI_FORMAT Format)
 D3D12_CPU_DESCRIPTOR_HANDLE DX::GetCPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index /*= 0*/) const
 {
 	auto DescriptorHandle(DescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	DescriptorHandle.ptr += Index * Device->GetDescriptorHandleIncrementSize(Type);
+	DescriptorHandle.ptr += static_cast<SIZE_T>(Index) * Device->GetDescriptorHandleIncrementSize(Type);
 	return DescriptorHandle;
 }
 D3D12_GPU_DESCRIPTOR_HANDLE DX::GetGPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index) const
 {
 	auto DescriptorHandle(DescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-	DescriptorHandle.ptr += Index * Device->GetDescriptorHandleIncrementSize(Type);
+	DescriptorHandle.ptr += static_cast<SIZE_T>(Index) * Device->GetDescriptorHandleIncrementSize(Type);
 	return DescriptorHandle;
 }
 /**
@@ -1349,11 +1351,13 @@ void DX::WaitForFence()
 	VERIFY_SUCCEEDED(CommandQueue->Signal(COM_PTR_GET(Fence), FenceValue));
 	if (Fence->GetCompletedValue() < FenceValue) {
 		auto hEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-		//!< GetCompletedValue() が FenceValue になったらイベントが発行される
-		VERIFY_SUCCEEDED(Fence->SetEventOnCompletion(FenceValue, hEvent));
+		if (nullptr != hEvent) {
+			//!< GetCompletedValue() が FenceValue になったらイベントが発行される
+			VERIFY_SUCCEEDED(Fence->SetEventOnCompletion(FenceValue, hEvent));
 
-		//!< イベント発行まで待つ
-		WaitForSingleObject(hEvent, INFINITE);
-		CloseHandle(hEvent);
+			//!< イベント発行まで待つ
+			WaitForSingleObject(hEvent, INFINITE);
+			CloseHandle(hEvent);
+		}
 	}
 }

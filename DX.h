@@ -28,7 +28,7 @@
 
 #define USE_STATIC_SAMPLER
 //!< HLSLからルートシグネチャを作成する (Create root signature from HLSL)
-//#define USE_HLSL_ROOTSIGNATRUE
+//	#define USE_HLSL_ROOTSIGNATRUE
 
 #include <d3d12.h>
 #include <d3dcompiler.h>

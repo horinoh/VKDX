@@ -2689,14 +2689,14 @@ void VK::CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PL,
 	//!< WITH_ADJACENCY 系使用時には デバイスフィーチャー geometryShader が有効であること
 	assert((
 		(PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_LINE_LIST_WITH_ADJACENCY || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_WITH_ADJACENCY || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_WITH_ADJACENCY)
-		|| PDF.geometryShader) && "");
+		|| PDF.geometryShader) /*&& ""*/);
 	//!< PATCH_LIST 使用時には デバイスフィーチャー tessellationShader が有効であること
 	assert((PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST || PDF.tessellationShader) && "");
 	//!< インデックス 0xffffffff(VK_INDEX_TYPE_UINT32), 0xffff(VK_INDEX_TYPE_UINT16) をプリミティブのリスタートとする、インデックス系描画の場合(vkCmdDrawIndexed, vkCmdDrawIndexedIndirect)のみ有効
 	//!< LIST 系使用時 primitiveRestartEnable 無効であること
 	assert((
 		(PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_POINT_LIST || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_LINE_LIST || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_LINE_LIST_WITH_ADJACENCY || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST)
-		|| PIASCI.primitiveRestartEnable == VK_FALSE) && "");
+		|| PIASCI.primitiveRestartEnable == VK_FALSE) /*&& ""*/);
 
 	//!< テセレーション (Tessellation)
 	const VkPipelineTessellationStateCreateInfo PTSCI = {
