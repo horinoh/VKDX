@@ -338,7 +338,7 @@ void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CommandList, ID3D1
 	} ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COPY_DEST, ResourceState);
 }
 
-void DX::CreateDevice(HWND hWnd)
+void DX::CreateDevice(HWND /*hWnd*/)
 {
 #if defined(_DEBUG) || defined(USE_PIX)
 	if (SUCCEEDED(DXGIGetDebugInterface1(0, COM_PTR_UUIDOF_PUTVOID(GraphicsAnalysis)))) {
@@ -421,31 +421,31 @@ void DX::CreateDevice(HWND hWnd)
 }
 
 //!< アダプタ(GPU)の列挙
-void DX::EnumAdapter(IDXGIFactory4* Factory)
+void DX::EnumAdapter(IDXGIFactory4* Fact)
 {
-	COM_PTR<IDXGIAdapter> Adapter;
-	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, COM_PTR_PUT(Adapter)); ++i) {
+	COM_PTR<IDXGIAdapter> Ad;
+	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Fact->EnumAdapters(i, COM_PTR_PUT(Ad)); ++i) {
 		DXGI_ADAPTER_DESC AdapterDesc;
-		VERIFY_SUCCEEDED(Adapter->GetDesc(&AdapterDesc));
+		VERIFY_SUCCEEDED(Ad->GetDesc(&AdapterDesc));
 		if (0 == i) { Log("[ Aadapters ]\n"); }
 		Logf(TEXT("\t%s\n"), AdapterDesc.Description);
 		Logf(TEXT("\t\tDedicatedVideoMemory = %lld\n"), AdapterDesc.DedicatedVideoMemory);
 		Logf(TEXT("\t\tDedicatedSystemMemory = %lld\n"), AdapterDesc.DedicatedSystemMemory);
 		Logf(TEXT("\t\tSharedSystemMemory = %lld\n"), AdapterDesc.SharedSystemMemory);
 
-		EnumOutput(COM_PTR_GET(Adapter));
-		COM_PTR_RESET(Adapter);
+		EnumOutput(COM_PTR_GET(Ad));
+		COM_PTR_RESET(Ad);
 	}
 }
 
 //!< アダプター(GPU)に接続されている、アウトプット(ディスプレイ)の列挙
-void DX::EnumOutput(IDXGIAdapter* Adapter)
+void DX::EnumOutput(IDXGIAdapter* Ad)
 {
-	COM_PTR<IDXGIOutput> Output;
-	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Adapter->EnumOutputs(i, COM_PTR_PUT(Output)); ++i) {
+	COM_PTR<IDXGIOutput> Outp;
+	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Ad->EnumOutputs(i, COM_PTR_PUT(Outp)); ++i) {
 #ifdef USE_HDR
 		COM_PTR<IDXGIOutput6> Output6;
-		COM_PTR_AS(Output, Output6);
+		COM_PTR_AS(Outp, Output6);
 
 		DXGI_OUTPUT_DESC1 OutputDesc;
 		VERIFY_SUCCEEDED(Output6->GetDesc1(&OutputDesc));
@@ -453,7 +453,7 @@ void DX::EnumOutput(IDXGIAdapter* Adapter)
 		assert(DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020 == OutputDesc.ColorSpace && "HDR not supported");
 #else
 		DXGI_OUTPUT_DESC OutputDesc;
-		VERIFY_SUCCEEDED(Output->GetDesc(&OutputDesc));
+		VERIFY_SUCCEEDED(Outp->GetDesc(&OutputDesc));
 #endif
 
 		const auto Width = OutputDesc.DesktopCoordinates.right - OutputDesc.DesktopCoordinates.left;
@@ -471,20 +471,20 @@ void DX::EnumOutput(IDXGIAdapter* Adapter)
 		case DXGI_MODE_ROTATION_ROTATE270: Log("\t\t\tROTATE270\n"); break;
 		}
 
-		COM_PTR_RESET(Output);
+		COM_PTR_RESET(Outp);
 	}
 }
 
 //!< アウトプット(ディスプレイ)の描画モードの列挙
-void DX::GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format)
+void DX::GetDisplayModeList(IDXGIOutput* Outp, const DXGI_FORMAT Format)
 {
 	UINT Count = 0;
-	VERIFY_SUCCEEDED(Output->GetDisplayModeList(Format, 0, &Count, nullptr));
+	VERIFY_SUCCEEDED(Outp->GetDisplayModeList(Format, 0, &Count, nullptr));
 	if (Count) {
 		Log("[ DisplayModes ]\n");
 
 		std::vector<DXGI_MODE_DESC> MDs(Count);
-		VERIFY_SUCCEEDED(Output->GetDisplayModeList(Format, 0, &Count, MDs.data()));
+		VERIFY_SUCCEEDED(Outp->GetDisplayModeList(Format, 0, &Count, MDs.data()));
 		for (const auto& i : MDs) {
 			Logf("\t%d x %d @ %d, ", i.Width, i.Height, i.RefreshRate.Numerator / i.RefreshRate.Denominator);
 
@@ -512,13 +512,13 @@ void DX::GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format)
 	}
 }
 
-void DX::CheckFeatureLevel(ID3D12Device* Device)
+void DX::CheckFeatureLevel(ID3D12Device* Dev)
 {
 	D3D12_FEATURE_DATA_FEATURE_LEVELS DataFeatureLevels = {
 		static_cast<UINT>(FeatureLevels.size()), FeatureLevels.data()
 	};
 	//!< NumFeatureLevels, pFeatureLevelsRequested は CheckFeatureSupport() への入力、MaxSupportedFeatureLevel には出力が返る
-	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, reinterpret_cast<void*>(&DataFeatureLevels), sizeof(DataFeatureLevels)));
+	VERIFY_SUCCEEDED(Dev->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, reinterpret_cast<void*>(&DataFeatureLevels), sizeof(DataFeatureLevels)));
 
 	Log("MaxSupportedFeatureLevel\n");
 #define D3D_FEATURE_LEVEL_ENTRY(fl) case D3D_FEATURE_LEVEL_##fl: Logf("\tD3D_FEATURE_LEVEL_%s\n", #fl); break;
@@ -1000,7 +1000,7 @@ void DX::CreateUnorderedAccessTexture()
 }
 
 //!< ルートシグネチャをシリアライズしてブロブを作る
-void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags)
+void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS /*Flags*/)
 {
 	//!< RangeType ... D3D12_DESCRIPTOR_RANGE_TYPE_[SRV, UAV, CBV, SAMPLER]
 	//!< NumDescriptors
@@ -1049,9 +1049,9 @@ void DX::CreateRootSignature()
 	LOG_OK();
 }
 
-void DX::CreateShader(std::vector<COM_PTR<ID3DBlob>>& ShaderBlobs) const
+void DX::CreateShader(std::vector<COM_PTR<ID3DBlob>>& Blobs) const
 {
-	for (auto i : ShaderBlobs) {
+	for (auto i : Blobs) {
 		//!< PDBパート、無い場合もあるので HRESULT は VERIFY しない
 		COM_PTR<ID3DBlob> PDBPart;
 		const auto HR = D3DGetBlobPart(i->GetBufferPointer(), i->GetBufferSize(), D3D_BLOB_PDB, 0, COM_PTR_PUT(PDBPart));
@@ -1081,7 +1081,7 @@ void DX::CreateShader(std::vector<COM_PTR<ID3DBlob>>& ShaderBlobs) const
 
 	//!< デバッグ情報、ルートシグネチャを取り除く
 #ifndef _DEBUG
-	for (auto i : ShaderBlobs) {
+	for (auto i : Blobs) {
 		if (nullptr != i) {
 			VERIFY_SUCCEEDED(D3DStripShader(i->GetBufferPointer(), i->GetBufferSize(), D3DCOMPILER_STRIP_DEBUG_INFO, COM_PTR_PUT(i)));
 			VERIFY_SUCCEEDED(D3DStripShader(i->GetBufferPointer(), i->GetBufferSize(), D3DCOMPILER_STRIP_ROOT_SIGNATURE, COM_PTR_PUT(i)));
@@ -1124,10 +1124,10 @@ void DX::CreatePipelineState()
 		//!< ライブラリをファイルへ書き込む
 		const auto Size = PL->GetSerializedSize();
 		if (Size) {
-			COM_PTR<ID3DBlob> Blob;
-			VERIFY_SUCCEEDED(D3DCreateBlob(Size, COM_PTR_PUT(Blob)));
-			PL->Serialize(Blob->GetBufferPointer(), Size);
-			VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blob), PCOPath.c_str(), TRUE));
+			COM_PTR<ID3DBlob> Blb;
+			VERIFY_SUCCEEDED(D3DCreateBlob(Size, COM_PTR_PUT(Blb)));
+			PL->Serialize(Blb->GetBufferPointer(), Size);
+			VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blb), PCOPath.c_str(), TRUE));
 		}
 	}
 
@@ -1152,7 +1152,7 @@ void DX::CreatePipelineState()
 
 	Thread.join();
 }
-void DX::CreatePipelineState_Default(COM_PTR<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS, 
+void DX::CreatePipelineState_Default(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, 
 	const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
 {
 	PERFORMANCE_COUNTER();
@@ -1249,7 +1249,7 @@ void DX::CreatePipelineState_Default(COM_PTR<ID3D12PipelineState>& PipelineState
 	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
 	assert((0 == GPSD.DS.BytecodeLength || 0 == GPSD.HS.BytecodeLength || GPSD.PrimitiveTopologyType == D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH) && "");
 
-	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PipelineState)));
+	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
 
 	LOG_OK();
 }

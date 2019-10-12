@@ -2,7 +2,13 @@
 
 #include "VKExt.h"
 
+#pragma warning(push)
+#pragma warning(disable : 4100)
+#pragma warning(disable : 4201)
+#pragma warning(disable : 4458)
 #include <gli/gli.hpp>
+#pragma warning(pop)
+
 
 class VKImage : public VKExt
 {

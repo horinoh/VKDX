@@ -244,6 +244,7 @@ fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
  * ソリューションを右クリック - Add - New Project で Windows Desktop Application
  * プロジェクトを右クリック - Retarget SDK Verson で 10以上にする
  * プロジェクト右クリック - Property - All Configurations にする - C/C++ - Language - C++ Language Standard - ISO C++17 Standard を選択しておく(vs2019のデフォルトはC++14)
+ * プロジェクト右クリック - Property - All Configurations にする - C/C++ - General - Warning Level を Level4、Treat Warnings As Errors を Yes にする
 
 #### DX
  * プロパティマネージャで Add Existing Property Sheet... - Props/NOPRECOMP.props, Props/HLSL.props、Props/RS.props. (Props/DXTK.prop)

@@ -14,12 +14,21 @@
 //#define VK_USE_PLATFORM_WAYLAND_KHR
 //#define VK_USE_PLATFORM_ANDROID_KHR
 #endif
+#pragma warning(push)
+//#pragma warning(disable : 26812)
+#pragma warning(disable : 4820)
 #include <vulkan/vulkan.h>
+#pragma warning(pop)
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
+
+#pragma warning(push)
+#pragma warning(disable : 4201)
+#pragma warning(disable : 4464)
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#pragma warning(pop)
 
 #ifndef BREAK_ON_FAILED
 #define BREAK_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Log(VK::GetVkResultString(vr).c_str()); DEBUG_BREAK(); }
@@ -117,11 +126,11 @@ public:
 	static std::wstring GetComponentMappingWstring(const VkComponentMapping& ComponentMapping) { return ToWString(GetComponentMappingString(ComponentMapping)); }
 
 protected:
-	static FORCEINLINE void* AlignedMalloc(void* pUserData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
-	static FORCEINLINE void* AlignedRealloc(void* pUserData, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope allocationScope) { return _aligned_realloc(pOriginal, size, alignment); }
-	static FORCEINLINE void AlignedFree(void* pUserData, void* pMemory) { _aligned_free(pMemory); }
-	static void AlignedAllocNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
-	static void AligendFreeNotify(void* pUserData, size_t size, VkInternalAllocationType allocationType, VkSystemAllocationScope allocationScope) {}
+	static FORCEINLINE void* AlignedMalloc(void* /*pUserData*/, size_t size, size_t alignment, VkSystemAllocationScope /*allocationScope*/) { return _aligned_malloc(size, alignment); }
+	static FORCEINLINE void* AlignedRealloc(void* /*pUserData*/, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope /*allocationScope*/) { return _aligned_realloc(pOriginal, size, alignment); }
+	static FORCEINLINE void AlignedFree(void* /*pUserData*/, void* pMemory) { _aligned_free(pMemory); }
+	static void AlignedAllocNotify(void* /*pUserData*/, size_t /*size*/, VkInternalAllocationType /*allocationType*/, VkSystemAllocationScope /*allocationScope*/) {}
+	static void AligendFreeNotify(void* /*pUserData*/, size_t /*size*/, VkInternalAllocationType /*allocationType*/, VkSystemAllocationScope /*allocationScope*/) {}
 
 	static bool IsSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, const VkFormat DepthFormat);
 	static uint32_t GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& PDMP, const uint32_t TypeBits, const VkFlags Properties);
@@ -235,10 +244,10 @@ protected:
 	virtual VkImageUsageFlags SelectImageUsage(const VkSurfaceCapabilitiesKHR& Cap);
 	virtual VkSurfaceTransformFlagBitsKHR SelectSurfaceTransform(const VkSurfaceCapabilitiesKHR& Cap);
 	virtual VkPresentModeKHR SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface);
-	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Surface, const uint32_t Width, const uint32_t Height);
-	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Surface, const RECT& Rect) { CreateSwapchain(PD, Surface, static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
+	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height);
+	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const RECT& Rct) { CreateSwapchain(PD, Sfc, static_cast<uint32_t>(Rct.right - Rct.left), static_cast<uint32_t>(Rct.bottom - Rct.top)); }
 	virtual void ResizeSwapchain(const uint32_t Width, const uint32_t Height);
-	virtual void ResizeSwapchain(const RECT& Rect) { ResizeSwapchain(static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
+	virtual void ResizeSwapchain(const RECT& Rct) { ResizeSwapchain(static_cast<uint32_t>(Rct.right - Rct.left), static_cast<uint32_t>(Rct.bottom - Rct.top)); }
 	virtual void GetSwapchainImage(VkDevice Device, VkSwapchainKHR Swapchain);
 	virtual void CreateSwapchainImageView();
 	virtual void InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorValue* CCV = nullptr);
@@ -247,8 +256,8 @@ protected:
 	virtual void CreateDepthStencil(const uint32_t Width, const uint32_t Height, const VkFormat DepthFormat);
 	virtual void InitializeDepthStencilImage(const VkCommandBuffer CB);
 	
-	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path) { assert(false && "Not implemanted"); }
-	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::wstring& Path) { LoadImage(Image, DeviceMemory, ImageView, ToString(Path)); }
+	virtual void LoadImage(VkImage* /*Image*/, VkDeviceMemory* /*DeviceMemory*/, VkImageView* /*ImageView*/, const std::string& /*Path*/) { assert(false && "Not implemanted"); }
+	virtual void LoadImage(VkImage* Img, VkDeviceMemory* DeviceMemory, VkImageView* IV, const std::wstring& Path) { LoadImage(Img, DeviceMemory, IV, ToString(Path)); }
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 	virtual void CreateViewportTopFront(const float Width, const float Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 

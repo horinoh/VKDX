@@ -158,7 +158,7 @@ protected:
 
 	virtual void CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat);
 	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height);
-	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const RECT& Rect) { CreateSwapChain(hWnd, ColorFormat, static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
+	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const RECT& Rct) { CreateSwapChain(hWnd, ColorFormat, static_cast<uint32_t>(Rct.right - Rct.left), static_cast<uint32_t>(Rct.bottom - Rct.top)); }
 	virtual void CreateSwapChainResource();
 	virtual void InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, const DirectX::XMVECTORF32* Color = nullptr);
 	virtual void InitializeSwapChain();
@@ -169,20 +169,20 @@ protected:
 		SwapChainResources.clear();
 	}
 	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
-	virtual void ResizeSwapChain(const RECT& Rect) { ResizeSwapChain(static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
+	virtual void ResizeSwapChain(const RECT& Rct) { ResizeSwapChain(static_cast<uint32_t>(Rct.right - Rct.left), static_cast<uint32_t>(Rct.bottom - Rct.top)); }
 	UINT AcquireNextBackBufferIndex() const {
 		return 0xffffffff == CurrentBackBufferIndex ? SwapChain->GetCurrentBackBufferIndex() : (CurrentBackBufferIndex + 1) % static_cast<const UINT>(SwapChainResources.size());
 	}
 
 	virtual void CreateDepthStencil() {}
 	virtual void CreateDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
-	virtual void CreateDepthStencil(const DXGI_FORMAT DepthFormat, const RECT& Rect) { CreateDepthStencil(DepthFormat, static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
+	virtual void CreateDepthStencil(const DXGI_FORMAT DepthFormat, const RECT& Rct) { CreateDepthStencil(DepthFormat, static_cast<uint32_t>(Rct.right - Rct.left), static_cast<uint32_t>(Rct.bottom - Rct.top)); }
 	virtual void CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
 	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
-	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const RECT& Rect) { ResizeDepthStencil(DepthFormat, static_cast<uint32_t>(Rect.right - Rect.left), static_cast<uint32_t>(Rect.bottom - Rect.top)); }
+	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const RECT& Rct) { ResizeDepthStencil(DepthFormat, static_cast<uint32_t>(Rct.right - Rct.left), static_cast<uint32_t>(Rct.bottom - Rct.top)); }
 
-	virtual void LoadImage(ID3D12Resource** Resource/*, ID3D12DescriptorHeap** DescriptorHeap*/, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { assert(false && "Not implemanted"); }
-	virtual void LoadImage(ID3D12Resource** Resource/*, ID3D12DescriptorHeap** DescriptorHeap*/, const std::string& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { LoadImage(Resource/*, DescriptorHeap*/, ToWString(Path), ResourceState); }
+	virtual void LoadImage(ID3D12Resource** /*Resource*/, const std::wstring& /*Path*/, const D3D12_RESOURCE_STATES /*ResourceState*/) { assert(false && "Not implemanted"); }
+	virtual void LoadImage(ID3D12Resource** Resource, const std::string& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { LoadImage(Resource/*, DescriptorHeap*/, ToWString(Path), ResourceState); }
 
 	virtual void CreateBuffer(ID3D12Resource** Res, const UINT32 Size, const void* Source, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL);
 	virtual void CreateVertexBuffer() {}
@@ -193,7 +193,7 @@ protected:
 	virtual void CreateUnorderedAccessTexture();
 
 	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f);
-	virtual void CreateViewport(const RECT& Rect, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f) { CreateViewport(static_cast<FLOAT>(Rect.right - Rect.left), static_cast<FLOAT>(Rect.bottom - Rect.top), MinDepth, MaxDepth); }
+	virtual void CreateViewport(const RECT& Rct, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f) { CreateViewport(static_cast<FLOAT>(Rct.right - Rct.left), static_cast<FLOAT>(Rct.bottom - Rct.top), MinDepth, MaxDepth); }
 	virtual void CreateViewportTopFront(const FLOAT Width, const FLOAT Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 
 	virtual void SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags);

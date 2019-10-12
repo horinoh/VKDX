@@ -3,7 +3,7 @@
 //!< テンプレート特殊化
 //!< template specialization
 
-template<> void CreatePipelineState_Vertex<Vertex_PositionColor>(COM_PTR<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS, const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
+template<> void CreatePipelineState_Vertex<Vertex_PositionColor>(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
 {
 	PERFORMANCE_COUNTER();
 
@@ -87,12 +87,12 @@ template<> void CreatePipelineState_Vertex<Vertex_PositionColor>(COM_PTR<ID3D12P
 	};
 	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
 
-	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PipelineState)));
+	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
 
 	LOG_OK();
 }
 
-template<> void CreatePipelineState_Vertex_Instance<Vertex_PositionColor, Instance_OffsetXY>(COM_PTR<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS, const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
+template<> void CreatePipelineState_Vertex_Instance<Vertex_PositionColor, Instance_OffsetXY>(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
 {
 	PERFORMANCE_COUNTER();
 
@@ -179,7 +179,7 @@ template<> void CreatePipelineState_Vertex_Instance<Vertex_PositionColor, Instan
 	};
 	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
 
-	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PipelineState)));
+	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
 
 	LOG_OK();
 }
@@ -223,10 +223,10 @@ template<typename T> void CreatePipelineState_VsPs_Vertex()
 
 		const auto Size = PL->GetSerializedSize();
 		if (Size) {
-			COM_PTR<ID3DBlob> Blob;
-			VERIFY_SUCCEEDED(D3DCreateBlob(Size, COM_PTR_PUT(Blob)));
-			PL->Serialize(Blob->GetBufferPointer(), Size);
-			VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blob), PCOPath.c_str(), TRUE));
+			COM_PTR<ID3DBlob> Blb;
+			VERIFY_SUCCEEDED(D3DCreateBlob(Size, COM_PTR_PUT(Blb)));
+			PL->Serialize(Blb->GetBufferPointer(), Size);
+			VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blb), PCOPath.c_str(), TRUE));
 		}
 	}
 }
@@ -270,10 +270,10 @@ template<typename T, typename U> void CreatePipelineState_VsPs_Vertex_Instance()
 
 		const auto Size = PL->GetSerializedSize();
 		if (Size) {
-			COM_PTR<ID3DBlob> Blob;
-			VERIFY_SUCCEEDED(D3DCreateBlob(Size, COM_PTR_PUT(Blob)));
-			PL->Serialize(Blob->GetBufferPointer(), Size);
-			VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blob), PCOPath.c_str(), TRUE));
+			COM_PTR<ID3DBlob> Blb;
+			VERIFY_SUCCEEDED(D3DCreateBlob(Size, COM_PTR_PUT(Blb)));
+			PL->Serialize(Blb->GetBufferPointer(), Size);
+			VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blb), PCOPath.c_str(), TRUE));
 		}
 	}
 }

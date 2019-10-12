@@ -183,7 +183,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
+            /*HDC hdc =*/BeginPaint(hWnd, &ps);
             // TODO: Add any drawing code that uses hdc here...
 #pragma region Code
 			if (nullptr != Inst) {
@@ -233,7 +233,7 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandBuffers[i];
 	const auto FB = Framebuffers[i];
-	const auto SI = SwapchainImages[i];
+	//const auto SI = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
 	const auto IB = IndirectBuffers[0];
 

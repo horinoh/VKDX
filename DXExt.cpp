@@ -66,7 +66,7 @@ void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT
 	Device->CreateCommandSignature(&CmdSigDesc, COM_PTR_GET(RootSignature), COM_PTR_UUIDOF_PUTVOID(IndirectCommandSignature));
 }
 
-void DXExt::CreatePipelineState_Tesselation(/*winrt::com_ptr*/COM_PTR<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS, const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
+void DXExt::CreatePipelineState_Tesselation(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
 {
 	PERFORMANCE_COUNTER();
 
@@ -149,7 +149,7 @@ void DXExt::CreatePipelineState_Tesselation(/*winrt::com_ptr*/COM_PTR<ID3D12Pipe
 	//!< DXでは「パッチコントロールポイント」の指定はIASetPrimitiveTopology()の引数としてコマンドリストへ指定する、VKとは結構異なるので注意
 	//!< CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
-	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PipelineState)));
+	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
 
 	LOG_OK();
 }
@@ -216,10 +216,10 @@ void DXExt::CreatePipelineState_VsPs()
 
 		const auto Size = PL->GetSerializedSize();
 		if (Size) {
-			COM_PTR<ID3DBlob> Blob;
-			VERIFY_SUCCEEDED(D3DCreateBlob(Size, COM_PTR_PUT(Blob)));
-			PL->Serialize(Blob->GetBufferPointer(), Size);
-			VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blob), PCOPath.c_str(), TRUE));
+			COM_PTR<ID3DBlob> Blb;
+			VERIFY_SUCCEEDED(D3DCreateBlob(Size, COM_PTR_PUT(Blb)));
+			PL->Serialize(Blb->GetBufferPointer(), Size);
+			VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blb), PCOPath.c_str(), TRUE));
 		}
 	}
 }
@@ -264,10 +264,10 @@ void DXExt::CreatePipelineState_VsPsDsHsGs_Tesselation()
 
 		const auto Size = PL->GetSerializedSize();
 		if (Size) {
-			COM_PTR<ID3DBlob> Blob;
-			VERIFY_SUCCEEDED(D3DCreateBlob(Size, COM_PTR_PUT(Blob)));
-			PL->Serialize(Blob->GetBufferPointer(), Size);
-			VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blob), PCOPath.c_str(), TRUE));
+			COM_PTR<ID3DBlob> Blb;
+			VERIFY_SUCCEEDED(D3DCreateBlob(Size, COM_PTR_PUT(Blb)));
+			PL->Serialize(Blb->GetBufferPointer(), Size);
+			VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blb), PCOPath.c_str(), TRUE));
 		}
 	}
 }

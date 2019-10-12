@@ -2,7 +2,7 @@
 
 #pragma comment(lib, "DirectXTK12.lib")
 
-void DXImage::LoadImage(ID3D12Resource** Resource, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState /*= D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE*/)
+void DXImage::LoadImage(ID3D12Resource** Resource, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState)
 {
 	LoadImage_DDS(Resource, Path, ResourceState);
 

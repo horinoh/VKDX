@@ -44,9 +44,9 @@ protected:
 		DX::CreateUnorderedAccessView(UnorderedAccessTextureResource, UnorderedAccessTextureDescriptorHeap);
 		LOG_OK();
 	}
-	virtual void CreateShader(std::vector<COM_PTR<ID3DBlob>>& ShaderBlobs) const override {
+	virtual void CreateShader(std::vector<COM_PTR<ID3DBlob>>& SBs) const override {
 		//CreateShader_Cs(ShaderBlobs);
-		Super::CreateShader(ShaderBlobs);
+		Super::CreateShader(SBs);
 	}
 
 	virtual void CreateTexture() override {

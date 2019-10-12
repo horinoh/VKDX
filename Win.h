@@ -1,5 +1,7 @@
 #pragma once
 
+#pragma warning(disable: 4505) //!< unreferenced function has been removed
+
 #ifndef VERIFY_SUCCEEDED
 #define VERIFY_SUCCEEDED(vr) BREAK_ON_FAILED(vr)
 //#define VERIFY_SUCCEEDED(vr) THROW_ON_FAILED(vr)
@@ -90,7 +92,7 @@ public:
 
 	//virtual void OnInitialize(HWND hWnd, HINSTANCE hInstance) {}
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title);
-	virtual void OnSize(HWND hWnd, HINSTANCE hInstance) {} //!< WM_SIZE はドラッグ中に繰り返しコールされてしまうので↓
+	virtual void OnSize(HWND /*hWnd*/, HINSTANCE /*hInstance*/) {} //!< WM_SIZE はドラッグ中に繰り返しコールされてしまうので↓
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance); //!< ウインドウサイズ確定時にコールされる WM_EXITSIZEMOVE を使用する
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance);
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance);

@@ -30,7 +30,7 @@ void VKExt::CreateShaderModle_Cs()
 		});
 }
 
-void VKExt::CreatePipeline_Tesselation(VkPipeline& Pipeline, const VkPipelineLayout PL, 
+void VKExt::CreatePipeline_Tesselation(VkPipeline& PL, const VkPipelineLayout PLL, 
 	const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS, 
 	const VkRenderPass RP, VkPipelineCache PC)
 {
@@ -229,7 +229,7 @@ void VKExt::CreatePipeline_Tesselation(VkPipeline& Pipeline, const VkPipelineLay
 			&PDSSCI,
 			&PCBSCI,
 			&PDSCI,
-			PL,
+			PLL,
 			RP, 0,
 			VK_NULL_HANDLE, -1
 		}
@@ -238,7 +238,7 @@ void VKExt::CreatePipeline_Tesselation(VkPipeline& Pipeline, const VkPipelineLay
 		PC,
 		static_cast<uint32_t>(GPCIs.size()), GPCIs.data(),
 		GetAllocationCallbacks(),
-		&Pipeline));
+		&PL));
 
 	LOG_OK();
 }

@@ -28,7 +28,7 @@ Win::~Win()
 #endif
 }
 
-void Win::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
+void Win::OnCreate(HWND hWnd, HINSTANCE /*hInstance*/, LPCWSTR Title)
 {
 	SetTitleW(Title);
 
@@ -36,24 +36,35 @@ void Win::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//SetTimer(hWnd, NULL, 1000 / 60, nullptr);
 }
-void Win::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
+void Win::OnExitSizeMove(HWND hWnd, HINSTANCE /*hInstance*/)
 {
 	GetClientRect(hWnd, &Rect);
 }
-void Win::OnTimer(HWND hWnd, HINSTANCE hInstance)
+void Win::OnTimer(HWND hWnd, HINSTANCE /*hInstance*/)
 {
 	SendMessage(hWnd, WM_PAINT, 0, 0);
 }
-void Win::OnPaint(HWND hWnd, HINSTANCE hInstance)
+void Win::OnPaint(HWND /*hWnd*/, HINSTANCE /*hInstance*/)
 {
 }
-void Win::OnDestroy(HWND hWnd, HINSTANCE hInstance)
+void Win::OnDestroy(HWND /*hWnd*/, HINSTANCE /*hInstance*/)
 {
 }
 
-template<> void Win::_Log(const LogType Type, const char* Str)
+template<> void Win::_Log(
+#ifdef DEBUG_STDOUT
+	const LogType Type,
+#else
+	const LogType /*Type*/,
+#endif
+#if defined(DEBUG_STDOUT) || defined(DEBUG_OUTPUT)
+	const char* Str)
+#else
+	const char* /*Str*/)
+#endif
 {
 #ifdef DEBUG_STDOUT
+	//!< 標準出力、エラー出力へ
 	switch (Type)
 	{
 	default: break;
@@ -69,10 +80,21 @@ template<> void Win::_Log(const LogType Type, const char* Str)
 	}
 #endif
 #ifdef DEBUG_OUTPUT
+	//!< Outputウインドウへ
 	OutputDebugString(ToWString(Str).c_str());
 #endif	
 }
-template<> void Win::_Log(const LogType Type, const WCHAR* Str)
+template<> void Win::_Log(
+#ifdef DEBUG_STDOUT
+	const LogType Type,
+#else
+	const LogType /*Type*/,
+#endif
+#if defined(DEBUG_STDOUT) || defined(DEBUG_OUTPUT)
+	const WCHAR* Str)
+#else
+	const WCHAR* /*Str*/)
+#endif
 {
 #ifdef DEBUG_STDOUT
 	switch (Type)
@@ -115,7 +137,11 @@ template<> void Win::_Logf(const LogType Type, const WCHAR* Format, ...)
 	}
 	va_end(List);
 }
+#if defined(DEBUG_STDOUT) || defined(DEBUG_OUTPUT)
 template<> static void Win::LogOK(const char* Str)
+#else
+template<> static void Win::LogOK(const char* /*Str*/)
+#endif
 {
 #ifdef DEBUG_STDOUT
 	std::cout << Str << COUT_OK << std::endl;
@@ -125,7 +151,12 @@ template<> static void Win::LogOK(const char* Str)
 	OutputDebugString(TEXT("[ OK ]\n"));
 #endif	
 }
+
+#if defined(DEBUG_STDOUT) || defined(DEBUG_OUTPUT)
 template<> static void Win::LogOK(const WCHAR* Str)
+#else
+template<> static void Win::LogOK(const WCHAR* /*Str*/)
+#endif
 {
 #ifdef DEBUG_STDOUT
 	std::wcout << Str << COUT_OK << std::endl;
@@ -134,7 +165,11 @@ template<> static void Win::LogOK(const WCHAR* Str)
 	OutputDebugString(Str); OutputDebugString(TEXT("[ OK ]\n"));
 #endif	
 }
+#if defined(DEBUG_STDOUT) || defined(DEBUG_OUTPUT)
 template<> static void Win::LogNG(const char* Str)
+#else
+template<> static void Win::LogNG(const char* /*Str*/)
+#endif
 {
 #ifdef DEBUG_STDOUT
 	std::cerr << Str << COUT_NG << std::endl;
@@ -144,7 +179,11 @@ template<> static void Win::LogNG(const char* Str)
 	OutputDebugString(TEXT("[ NG ]\n"));
 #endif
 }
+#if defined(DEBUG_STDOUT) || defined(DEBUG_OUTPUT)
 template<> static void Win::LogNG(const WCHAR* Str)
+#else
+template<> static void Win::LogNG(const WCHAR* /*Str*/)
+#endif
 {
 #ifdef DEBUG_STDOUT
 	std::wcerr << Str << COUT_NG << std::endl;

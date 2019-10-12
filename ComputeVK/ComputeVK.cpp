@@ -183,7 +183,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
+            /*HDC hdc =*/BeginPaint(hWnd, &ps);
             // TODO: Add any drawing code that uses hdc here...
 #pragma region Code
 			if (nullptr != Inst) {
@@ -231,7 +231,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void ComputeVK::PopulateCommandBuffer(const size_t i)
 {
-	const auto CB = CommandBuffers[0];
+	const auto CB = CommandBuffers[i];
 	const auto PL = PipelineLayouts[0];
 	const auto IB = IndirectBuffers[0];
 

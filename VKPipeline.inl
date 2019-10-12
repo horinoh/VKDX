@@ -3,7 +3,7 @@
 //!< テンプレート特殊化
 //!< template specialization
 
-template<> void CreatePipeline_Vertex<Vertex_PositionColor>(VkPipeline& Pipeline, const VkPipelineLayout PL, 
+template<> void CreatePipeline_Vertex<Vertex_PositionColor>(VkPipeline& PL, const VkPipelineLayout PLL, 
 	const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS, 
 	const VkRenderPass RP, VkPipelineCache PC)
 {
@@ -207,7 +207,7 @@ template<> void CreatePipeline_Vertex<Vertex_PositionColor>(VkPipeline& Pipeline
 			&PDSSCI,
 			&PCBSCI,
 			&PDSCI,
-			PL,
+			PLL,
 			RP, 0,
 			VK_NULL_HANDLE, -1
 		}
@@ -216,12 +216,12 @@ template<> void CreatePipeline_Vertex<Vertex_PositionColor>(VkPipeline& Pipeline
 		PC,
 		static_cast<uint32_t>(GPCIs.size()), GPCIs.data(),
 		GetAllocationCallbacks(),
-		&Pipeline));
+		&PL));
 
 	LOG_OK();
 }
 
-template<> void CreatePipeline_Vertex_Instance<Vertex_PositionColor, Instance_OffsetXY>(VkPipeline& Pipeline, const VkPipelineLayout PL,
+template<> void CreatePipeline_Vertex_Instance<Vertex_PositionColor, Instance_OffsetXY>(VkPipeline& PL, const VkPipelineLayout PLL,
 	const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 	const VkRenderPass RP, VkPipelineCache PC)
 {
@@ -429,7 +429,7 @@ template<> void CreatePipeline_Vertex_Instance<Vertex_PositionColor, Instance_Of
 			&PDSSCI,
 			&PCBSCI,
 			&PDSCI,
-			PL,
+			PLL,
 			RP, 0,
 			VK_NULL_HANDLE, -1
 		}
@@ -438,7 +438,7 @@ template<> void CreatePipeline_Vertex_Instance<Vertex_PositionColor, Instance_Of
 		PC,
 		static_cast<uint32_t>(GPCIs.size()), GPCIs.data(),
 		GetAllocationCallbacks(),
-		&Pipeline));
+		&PL));
 
 	LOG_OK();
 }

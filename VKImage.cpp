@@ -85,7 +85,7 @@ VkComponentMapping VKImage::ToVkComponentMapping(const gli::texture::swizzles_ty
 	};
 }
 
-void VKImage::CreateImage(VkImage* Image, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage, const gli::texture& GLITexture) const
+void VKImage::CreateImage(VkImage* Img, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage, const gli::texture& GLITexture) const
 {
 	const auto CreateFlag = IsCube(GLITexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 	const auto Type = ToVkImageType(GLITexture.target());
@@ -100,7 +100,7 @@ void VKImage::CreateImage(VkImage* Image, const VkSampleCountFlagBits SampleCoun
 	const auto Layers = static_cast<const uint32_t>(GLITexture.layers()) * Faces;
 	const auto Levels = static_cast<const uint32_t>(GLITexture.levels());
 
-	Super::CreateImage(Image, CreateFlag, Type, Format, Extent3D, Levels, Layers, SampleCount, Usage);
+	Super::CreateImage(Img, CreateFlag, Type, Format, Extent3D, Levels, Layers, SampleCount, Usage);
 }
 
 //!< @param コマンドバッファ
@@ -301,19 +301,19 @@ void VKImage::CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, con
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
 
-void VKImage::CreateImageView(VkImageView* ImageView, const VkImage Image, const gli::texture& GLITexture)
+void VKImage::CreateImageView(VkImageView* IV, const VkImage Img, const gli::texture& GLITexture)
 {
 	const auto Type = ToVkImageViewType(GLITexture.target());
 	const auto Format = ToVkFormat(GLITexture.format());
 	const auto CompMap = ToVkComponentMapping(GLITexture.swizzles());
 
-	Super::CreateImageView(ImageView, Image, Type, Format, CompMap, ImageSubresourceRange_ColorAll);
+	Super::CreateImageView(IV, Img, Type, Format, CompMap, ImageSubresourceRange_ColorAll);
 }
 
-void VKImage::LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path)
+void VKImage::LoadImage(VkImage* Img, VkDeviceMemory *DeviceMemory, VkImageView* IV, const std::string& Path)
 {
 	//!< DDS or KTX or KMG を読み込める DDS or KTX or KMG can be read
-	LoadImage_DDS(Image, DeviceMemory, ImageView, Path);
+	LoadImage_DDS(Img, DeviceMemory, IV, Path);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "ImageFile = " << Path.c_str() << std::endl;
@@ -324,7 +324,7 @@ void VKImage::LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageVie
 #endif
 }
 
-void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path)
+void VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory *DeviceMemory, VkImageView* IV, const std::string& Path)
 {
 	const auto GLITexture(gli::load(Path.c_str()));
 	assert(!GLITexture.empty() && "Load image failed");
@@ -370,7 +370,7 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 #endif //!< DEBUG_STDOUT
 	
 	auto CB = CommandBuffers[0];//CommandPools[0].second[0];
-	[&](VkImage* Image, VkDeviceMemory* DeviceMemory, VkImageView* ImageView, const gli::texture& GLITexture, const VkCommandBuffer CB) {
+	[&](VkImage* Img, VkDeviceMemory* DeviceMemory, /*VkImageView* IV,*/ const gli::texture& GLITexture, const VkCommandBuffer CB) {
 		const auto Size = static_cast<VkDeviceSize>(GLITexture.size());
 
 		VkBuffer StagingBuffer = VK_NULL_HANDLE;
@@ -386,13 +386,13 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 			//!< VK_IMAGE_USAGE_SAMPLED_BIT : サンプルドイメージ ... シェーダ内でサンプラとともに使われる為に指定する
 			//!< - 全てのテクスチャフォーマットとリニアフィルタをサポートするわけではない (ValidateFormatProoerties()でチェックしている)
 			//!< - プラットフォームによってはコンバインドイメージサンプラ(サンプラとサンプルドイメージを１つにまとめたもの)を使った方が効率が良い場合がある
-			CreateImage(Image, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, GLITexture);
-			AllocateImageMemory(DeviceMemory, *Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Image, *DeviceMemory, 0));
+			CreateImage(Img, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, GLITexture);
+			AllocateImageMemory(DeviceMemory, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Img, *DeviceMemory, 0));
 
 			//!< #VK_TODO VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT に決め打ちしている
 			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit copy command from host visible to device local)
-			CopyBufferToImage(CB, StagingBuffer, *Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, GLITexture);
+			CopyBufferToImage(CB, StagingBuffer, *Img, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, GLITexture);
 			const std::vector<VkSubmitInfo> SIs = {
 				{
 					VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -412,10 +412,10 @@ void VKImage::LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImag
 		if (VK_NULL_HANDLE != StagingBuffer) {
 			vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
 		}
-	}(Image, DeviceMemory, ImageView, GLITexture, CB);
+	}(Img, DeviceMemory, /*IV,*/ GLITexture, CB);
 
 	//!< ビューを作成
-	CreateImageView(ImageView, *Image, GLITexture);
+	CreateImageView(IV, *Img, GLITexture);
 
 	//!< ImmutableSamplerを使わない場合
 #if 0

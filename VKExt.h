@@ -11,7 +11,7 @@ public:
 	using Vertex_PositionColor = struct Vertex_PositionColor { glm::vec3 Position; glm::vec4 Color; };
 	using Instance_OffsetXY = struct Instance_OffsetXY { glm::vec2 Offset; };
 
-	virtual void CreateBuffer_Vertex(const VkQueue Queue, const VkCommandBuffer CB, VkBuffer* Buffer, const VkDeviceSize Size, const void* Source) {
+	virtual void CreateBuffer_Vertex(const VkQueue /*Queue*/, const VkCommandBuffer /*CB*/, VkBuffer* Buffer, const VkDeviceSize Size, const void* Source) {
 		//!< デバイスローカルバッファ(DLB)を作成 (Create device local buffer(DLB))
 		CreateBuffer(Buffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
 
@@ -23,7 +23,7 @@ public:
 		//!< ステージングを用いてのDLBへのコピーコマンドを発行(ホストビジブルを作成してデータをコピーし、バッファ間のコピーによりデバイスローカルへ反映)
 		SubmitStagingCopy(GraphicsQueue, CommandBuffers[0], *Buffer, Size, Source, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
 	}
-	virtual void CreateBuffer_Index(const VkQueue Queue, const VkCommandBuffer CB, VkBuffer* Buffer, const VkDeviceSize Size, const void* Source) {
+	virtual void CreateBuffer_Index(const VkQueue /*Queue*/, const VkCommandBuffer /*CB*/, VkBuffer* Buffer, const VkDeviceSize Size, const void* Source) {
 		CreateBuffer(Buffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
 
 		uint32_t HeapIndex;
@@ -32,7 +32,7 @@ public:
 
 		SubmitStagingCopy(GraphicsQueue, CommandBuffers[0], *Buffer, Size, Source, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
 	}
-	virtual void CreateBuffer_Indirect(const VkQueue Queue, const VkCommandBuffer CB, VkBuffer* Buffer, const VkDeviceSize Size, const void* Source) {
+	virtual void CreateBuffer_Indirect(const VkQueue /*Queue*/, const VkCommandBuffer /*CB*/, VkBuffer* Buffer, const VkDeviceSize Size, const void* Source) {
 		CreateBuffer(Buffer, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
 
 		uint32_t HeapIndex;

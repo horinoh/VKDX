@@ -68,20 +68,10 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="RenderTargetVK.frag">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="RenderTargetVK.geom">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="RenderTargetVK.tesc">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="RenderTargetVK.tese">
-      <Filter>Shader Files</Filter>
-    </None>
-    <None Include="RenderTargetVK.vert">
-      <Filter>Shader Files</Filter>
-    </None>
+    <CustomBuild Include="RenderTargetVK.frag" />
+    <CustomBuild Include="RenderTargetVK.geom" />
+    <CustomBuild Include="RenderTargetVK.tesc" />
+    <CustomBuild Include="RenderTargetVK.tese" />
+    <CustomBuild Include="RenderTargetVK.vert" />
   </ItemGroup>
 </Project>
