@@ -12,7 +12,7 @@ struct TESS_FACTOR
 	float Edge[4] : SV_TessFactor;
 	float Inside[2] : SV_InsideTessFactor;
 };
-TESS_FACTOR ConstantHS(/*const InputPatch<IN, 1> patch, const uint p : SV_PrimitiveID*/)
+TESS_FACTOR ConstantHS()
 {
 	TESS_FACTOR Out;
 	const float t = 15.0f;
@@ -31,7 +31,7 @@ TESS_FACTOR ConstantHS(/*const InputPatch<IN, 1> patch, const uint p : SV_Primit
 [outputcontrolpoints(4)]
 [patchconstantfunc("ConstantHS")]
 [maxtessfactor(64.0f)]
-OUT main(/*const InputPatch<IN, 1> patch, const uint i : SV_OutputControlPointID, const uint p : SV_PrimitiveID*/)
+OUT main()
 {
 	return (OUT)0;
 }

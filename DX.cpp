@@ -39,6 +39,8 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< デプス
 	CreateDepthStencil();
 	
+	CreateRenderTarget();
+
 	//!< 頂点
 	CreateVertexBuffer();
 	CreateIndexBuffer();
@@ -278,20 +280,20 @@ void DX::CreateDefaultResource(ID3D12Resource** Resource, const size_t Size)
 }
 void DX::ResourceBarrier(ID3D12GraphicsCommandList* CL, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After)
 {
-	const D3D12_RESOURCE_TRANSITION_BARRIER ResourceTransitionBarrier = {
+	const D3D12_RESOURCE_TRANSITION_BARRIER RTB = {
 		Resource,
 		D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
 		Before,
 		After
 	};
-	const std::vector<D3D12_RESOURCE_BARRIER> ResourceBarrier = {
+	const std::array<D3D12_RESOURCE_BARRIER, 1> RBs = {
 		{
 			D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 			D3D12_RESOURCE_BARRIER_FLAG_NONE,
-			ResourceTransitionBarrier
+			RTB
 		}
 	};
-	CL->ResourceBarrier(static_cast<UINT>(ResourceBarrier.size()), ResourceBarrier.data());
+	CL->ResourceBarrier(static_cast<UINT>(RBs.size()), RBs.data());
 }
 void DX::PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CommandList, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState)
 {
@@ -564,7 +566,7 @@ void DX::CheckMultiSample(const DXGI_FORMAT Format)
 	}
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE DX::GetCPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index /*= 0*/) const
+D3D12_CPU_DESCRIPTOR_HANDLE DX::GetCPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index) const
 {
 	auto DescriptorHandle(DescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 	DescriptorHandle.ptr += static_cast<SIZE_T>(Index) * Device->GetDescriptorHandleIncrementSize(Type);
@@ -825,17 +827,81 @@ void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 	LOG_OK();
 }
 
-void DX::CreateDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height)
+void DX::CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UINT Height)
 {
-	[&](const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Count/*, ID3D12DescriptorHeap** DescriptorHeap*/) {
-		const D3D12_DESCRIPTOR_HEAP_DESC DescriptorHeapDesc = {
-			Type,
-			Count,
+	const D3D12_HEAP_PROPERTIES HP = {
+		D3D12_HEAP_TYPE_DEFAULT, 
+		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		D3D12_MEMORY_POOL_UNKNOWN,
+		1,
+		1
+	};
+	const DXGI_SAMPLE_DESC SD = { 1, 0 };
+	const D3D12_RESOURCE_DESC RD = {
+		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+		0,
+		Width, Height,
+		1,
+		1,
+		Format,
+		SD,
+		D3D12_TEXTURE_LAYOUT_UNKNOWN,
+		D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
+	};
+	D3D12_CLEAR_VALUE CV = {
+		Format,
+		{
+			{ DirectX::Colors::SkyBlue[0], DirectX::Colors::SkyBlue[1], DirectX::Colors::SkyBlue[2], DirectX::Colors::SkyBlue[3] }
+		},
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_COMMON, &CV, COM_PTR_UUIDOF_PUTVOID(RenderTargetResource)));
+
+	//!< レンダーターゲットビュー
+	{
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
+			D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+			1,
 			D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 			0
 		};
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescriptorHeapDesc, COM_PTR_UUIDOF_PUTVOID(DepthStencilDescriptorHeap)));
-	}(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1);
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RenderTargetDescriptorHeap)));
+		Device->CreateRenderTargetView(COM_PTR_GET(RenderTargetResource), nullptr, GetCPUDescriptorHandle(COM_PTR_GET(RenderTargetDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 0));
+	}
+
+	//!< シェーダリソースビュー
+	{
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
+			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+			1,
+			D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+			0
+		};
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(ShaderResourceDescriptorHeap)));
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
+			Format,
+			D3D12_SRV_DIMENSION_TEXTURE2D,
+			D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+		};
+		SRVD.Texture2D.MostDetailedMip = 0;
+		SRVD.Texture2D.MipLevels = 1;
+		SRVD.Texture2D.PlaneSlice = 0;
+		SRVD.Texture2D.ResourceMinLODClamp = 0.0f;
+		Device->CreateShaderResourceView(COM_PTR_GET(RenderTargetResource), &SRVD, GetCPUDescriptorHandle(COM_PTR_GET(ShaderResourceDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+	}
+
+	LOG_OK();
+}
+
+void DX::CreateDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height)
+{
+	const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
+		D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
+		1,
+		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+		0
+	};
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DepthStencilDescriptorHeap)));
 
 	CreateDepthStencilResource(DepthFormat, Width, Height);
 
@@ -1279,22 +1345,13 @@ void DX::CreatePipelineState_Compute()
 }
 #endif
 
-void DX::ClearColor(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const DirectX::XMVECTORF32& Color)
-{
-	CommandList->ClearRenderTargetView(DescriptorHandle, Color, 0, nullptr);
-}
-
-void DX::ClearDepthStencil(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const FLOAT Depth, const UINT8 Stencil)
-{
-	CommandList->ClearDepthStencilView(DescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, Depth, Stencil, 0, nullptr);
-}
 
 void DX::PopulateCommandList(const size_t i)
 {
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-	const auto SCHandle = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
+	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
 
 	//!< GPU が参照している間は、コマンドアロケータの Reset() はできない
 	//VERIFY_SUCCEEDED(CA->Reset());
@@ -1309,10 +1366,11 @@ void DX::PopulateCommandList(const size_t i)
 
 		//!< バリア
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET); {
-#if 1
-			//!< クリア
-			ClearColor(CL, SCHandle, DirectX::Colors::SkyBlue);
-#endif
+			
+			const std::array<D3D12_RECT, 0> Rs = {};
+			CL->ClearRenderTargetView(SCH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
+			//CL->ClearDepthStencilView(DSH, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, static_cast<UINT>(Rs.size()), Rs.data());
+
 		} ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
 	VERIFY_SUCCEEDED(CL->Close());

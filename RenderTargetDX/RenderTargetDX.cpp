@@ -195,6 +195,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_DESTROY:
+#pragma region Code
+		if (nullptr != Inst) {
+			Inst->OnDestroy(hWnd, hInst);
+		}
+		SAFE_DELETE(Inst);
+#pragma endregion
         PostQuitMessage(0);
         break;
     default:
@@ -231,21 +237,38 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-	const auto SCHandle = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
+	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
+
+#if 0
+	const auto RTR = COM_PTR_GET(RenderTargetResource);
+	const auto RTH = GetCPUDescriptorHandle(COM_PTR_GET(RenderTargetDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(0));
+#endif
 
 	VERIFY_SUCCEEDED(CL->Reset(CA, COM_PTR_GET(PipelineState)));
 	{
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
+#if 0
+		ResourceBarrier(CL, RTR, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		{
+			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { RTH };
+			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
+
+			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+
+			CL->ExecuteIndirect(COM_PTR_GET(IndirectCommandSignature), 1, IBR, 0, nullptr, 0);
+		}
+		ResourceBarrier(CL, RTR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+#endif
+
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
-			ClearColor(CL, SCHandle, DirectX::Colors::SkyBlue);
+			const std::array<D3D12_RECT, 0> Rs = {};
+			CL->ClearRenderTargetView(SCH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
 
-			{
-				const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { SCHandle };
-				CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
-			}
+			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
+			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignature));
 

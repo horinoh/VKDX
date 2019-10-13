@@ -174,6 +174,9 @@ protected:
 		return 0xffffffff == CurrentBackBufferIndex ? SwapChain->GetCurrentBackBufferIndex() : (CurrentBackBufferIndex + 1) % static_cast<const UINT>(SwapChainResources.size());
 	}
 
+	virtual void CreateRenderTarget() {}
+	virtual void CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UINT Height);
+
 	virtual void CreateDepthStencil() {}
 	virtual void CreateDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
 	virtual void CreateDepthStencil(const DXGI_FORMAT DepthFormat, const RECT& Rct) { CreateDepthStencil(DepthFormat, static_cast<uint32_t>(Rct.right - Rct.left), static_cast<uint32_t>(Rct.bottom - Rct.top)); }
@@ -241,8 +244,6 @@ protected:
 	virtual void CreateTexture() {}
 	virtual void CreateStaticSampler() {}
 
-	virtual void ClearColor(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const DirectX::XMVECTORF32& Color);
-	virtual void ClearDepthStencil(ID3D12GraphicsCommandList* CommandList, const D3D12_CPU_DESCRIPTOR_HANDLE& DescriptorHandle, const FLOAT Depth = 1.0f, const UINT8 Stencil = 0);
 	virtual void PopulateCommandList(const size_t i);
 
 	virtual void Draw();
@@ -273,6 +274,10 @@ protected:
 	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap;
 	std::vector<COM_PTR<ID3D12Resource>> SwapChainResources;
 	UINT CurrentBackBufferIndex = 0xffffffff;
+
+	COM_PTR<ID3D12Resource> RenderTargetResource;
+	COM_PTR<ID3D12DescriptorHeap> RenderTargetDescriptorHeap;
+	COM_PTR<ID3D12DescriptorHeap> ShaderResourceDescriptorHeap;
 
 	COM_PTR<ID3D12Resource> DepthStencilResource;
 	COM_PTR<ID3D12DescriptorHeap> DepthStencilDescriptorHeap;

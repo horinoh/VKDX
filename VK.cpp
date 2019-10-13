@@ -80,6 +80,8 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateDepthStencil();
 	InitializeDepthStencilImage(CommandBuffers[0]);
 
+	CreateRenderTarget();
+
 	//!< ’¸“_
 	CreateVertexBuffer();
 	CreateIndexBuffer();
@@ -279,6 +281,19 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	if (VK_NULL_HANDLE != DepthStencilImage) {
 		vkDestroyImage(Device, DepthStencilImage, GetAllocationCallbacks());
 		DepthStencilImage = VK_NULL_HANDLE;
+	}
+
+	if (VK_NULL_HANDLE != RenderTargetImageView) {
+		vkDestroyImageView(Device, RenderTargetImageView, GetAllocationCallbacks());
+		RenderTargetImageView = VK_NULL_HANDLE;
+	}
+	if (VK_NULL_HANDLE != RenderTargetDeviceMemory) {
+		vkFreeMemory(Device, RenderTargetDeviceMemory, GetAllocationCallbacks());
+		RenderTargetDeviceMemory = VK_NULL_HANDLE;
+	}
+	if (VK_NULL_HANDLE != RenderTargetImage) {
+		vkDestroyImage(Device, RenderTargetImage, GetAllocationCallbacks());
+		RenderTargetImage = VK_NULL_HANDLE;
 	}
 
 	for (auto i : SwapchainImageViews) {
@@ -1985,14 +2000,29 @@ void VK::CreateSwapchainImageView()
 	LOG_OK();
 }
 
-void VK::CreateDepthStencil(const uint32_t Width, const uint32_t Height, const VkFormat DepthFormat)
+void VK::CreateRenderTarget(const VkFormat Format, const uint32_t Width, const uint32_t Height)
+{
+	const VkExtent3D Extent3D = { Width, Height, 1 };
+	CreateImage(&RenderTargetImage, 0, VK_IMAGE_TYPE_2D, Format, Extent3D, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+
+	AllocateImageMemory(&RenderTargetDeviceMemory, RenderTargetImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	VERIFY_SUCCEEDED(vkBindImageMemory(Device, RenderTargetImage, RenderTargetDeviceMemory, 0));
+
+	CreateImageView(&RenderTargetImageView, RenderTargetImage, VK_IMAGE_VIEW_TYPE_2D, Format, ComponentMapping_Identity, ImageSubresourceRange_Color);
+
+	LOG_OK();
+}
+
+void VK::CreateDepthStencil(const VkFormat DepthFormat, const uint32_t Width, const uint32_t Height)
 {
 	assert(IsSupportedDepthFormat(GetCurrentPhysicalDevice(), DepthFormat) && "Not supported depth format");
 
 	const VkExtent3D Extent3D = { Width, Height, 1 };
 	CreateImage(&DepthStencilImage, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
 	AllocateImageMemory(&DepthStencilDeviceMemory, DepthStencilImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	VERIFY_SUCCEEDED(vkBindImageMemory(Device, DepthStencilImage, DepthStencilDeviceMemory, 0));
+	
 	CreateImageView(&DepthStencilImageView, DepthStencilImage, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, ComponentMapping_Identity, ImageSubresourceRange_DepthStencil);
 
 	LOG_OK();
