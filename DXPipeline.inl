@@ -184,7 +184,7 @@ template<> void CreatePipelineState_Vertex_Instance<Vertex_PositionColor, Instan
 	LOG_OK();
 }
 
-template<typename T> void CreatePipelineState_VsPs_Vertex()
+template<typename T> void CreatePipelineState_VsPs_Vertex(COM_PTR<ID3D12PipelineState>& PS)
 {
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
 	DeleteFile(PCOPath.data());
@@ -197,7 +197,6 @@ template<typename T> void CreatePipelineState_VsPs_Vertex()
 	if (SUCCEEDED(D3DReadFileToBlob(PCOPath.c_str(), COM_PTR_PUT(Blob))) && Blob->GetBufferSize()) {
 		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(PL)));
 
-		COM_PTR<ID3D12PipelineState> PS;
 		const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {};
 		VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(TEXT("0"), &GPSD, COM_PTR_UUIDOF_PUTVOID(PS)));
 	}
@@ -215,11 +214,11 @@ template<typename T> void CreatePipelineState_VsPs_Vertex()
 			{
 				CreatePipelineState_Vertex<T>(Pipe, RS, VS, PS, DS, HS, GS);
 			},
-			std::ref(PipelineState), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC);
+			std::ref(PS), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC);
 
 		Thread.join();
 
-		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), COM_PTR_GET(PipelineState)));
+		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), COM_PTR_GET(PS)));
 
 		const auto Size = PL->GetSerializedSize();
 		if (Size) {
@@ -231,7 +230,7 @@ template<typename T> void CreatePipelineState_VsPs_Vertex()
 	}
 }
 
-template<typename T, typename U> void CreatePipelineState_VsPs_Vertex_Instance()
+template<typename T, typename U> void CreatePipelineState_VsPs_Vertex_Instance(COM_PTR<ID3D12PipelineState>& PS)
 {
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
 	DeleteFile(PCOPath.data());
@@ -244,7 +243,6 @@ template<typename T, typename U> void CreatePipelineState_VsPs_Vertex_Instance()
 	if (SUCCEEDED(D3DReadFileToBlob(PCOPath.c_str(), COM_PTR_PUT(Blob))) && Blob->GetBufferSize()) {
 		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(PL)));
 
-		COM_PTR<ID3D12PipelineState> PS;
 		const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {};
 		VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(TEXT("0"), &GPSD, COM_PTR_UUIDOF_PUTVOID(PS)));
 	}
@@ -262,11 +260,11 @@ template<typename T, typename U> void CreatePipelineState_VsPs_Vertex_Instance()
 			{
 				CreatePipelineState_Vertex_Instance<T, U>(Pipe, RS, VS, PS, DS, HS, GS);
 			},
-			std::ref(PipelineState), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC);
+			std::ref(PS), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC);
 
 		Thread.join();
 
-		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), COM_PTR_GET(PipelineState)));
+		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), COM_PTR_GET(PS)));
 
 		const auto Size = PL->GetSerializedSize();
 		if (Size) {

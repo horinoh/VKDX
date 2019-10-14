@@ -14,6 +14,6 @@ public:
 	virtual ~ClearDX() {}
 
 protected:
-	virtual void CreatePipelineState() override {}
+	virtual void CreatePipelineState() override { PipelineStates.resize(1); }
 };
 #pragma endregion

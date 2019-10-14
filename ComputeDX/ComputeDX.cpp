@@ -235,7 +235,9 @@ void ComputeDX::PopulateCommandList(const size_t i)
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
-	VERIFY_SUCCEEDED(CL->Reset(CA, COM_PTR_GET(PipelineState)));
+	const auto PS = COM_PTR_GET(PipelineStates[0]);
+
+	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
 		if (nullptr != UnorderedAccessTextureDescriptorHeap) {
 			const std::vector<ID3D12DescriptorHeap*> DH = { COM_PTR_GET(UnorderedAccessTextureDescriptorHeap) };

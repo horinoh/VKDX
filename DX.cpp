@@ -1158,6 +1158,8 @@ void DX::CreateShader(std::vector<COM_PTR<ID3DBlob>>& Blobs) const
 
 void DX::CreatePipelineState()
 {
+	PipelineStates.resize(1);
+
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
 	//DeleteFile(PCOPath.data());
 
@@ -1214,7 +1216,7 @@ void DX::CreatePipelineState()
 	auto Thread = std::thread::thread([&](/*winrt::com_ptr*/COM_PTR<ID3D12PipelineState>& Pipe, ID3D12RootSignature* RS,
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
 		{ CreatePipelineState_Default(Pipe, RS, VS, PS, DS, HS, GS); },
-		std::ref(PipelineState), COM_PTR_GET(RootSignature), SBCs[0], NullShaderBC, NullShaderBC, NullShaderBC, NullShaderBC);
+		std::ref(PipelineStates[0]), COM_PTR_GET(RootSignature), SBCs[0], NullShaderBC, NullShaderBC, NullShaderBC, NullShaderBC);
 
 	Thread.join();
 }
@@ -1352,13 +1354,14 @@ void DX::PopulateCommandList(const size_t i)
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
+	const auto PS = COM_PTR_GET(PipelineStates[0]);
 
 	//!< GPU が参照している間は、コマンドアロケータの Reset() はできない
 	//VERIFY_SUCCEEDED(CA->Reset());
 
 	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能 (コマンドキューはコマンドリストではなく、コマンドアロケータを参照している)
 	//!< CommandList 作成時に PipelineState を指定していなくても、ここで指定すれば OK
-	VERIFY_SUCCEEDED(CL->Reset(CA, COM_PTR_GET(PipelineState)));
+	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
 		//!< ビューポート、シザー
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
@@ -1367,9 +1370,9 @@ void DX::PopulateCommandList(const size_t i)
 		//!< バリア
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET); {
 			
-			const std::array<D3D12_RECT, 0> Rs = {};
-			CL->ClearRenderTargetView(SCH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
-			//CL->ClearDepthStencilView(DSH, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, static_cast<UINT>(Rs.size()), Rs.data());
+		const std::array<D3D12_RECT, 0> Rs = {};
+		CL->ClearRenderTargetView(SCH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
+		//CL->ClearDepthStencilView(DSH, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, static_cast<UINT>(Rs.size()), Rs.data());
 
 		} ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}

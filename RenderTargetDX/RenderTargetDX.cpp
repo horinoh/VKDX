@@ -239,18 +239,20 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
 
+	const auto PS0 = COM_PTR_GET(PipelineStates[0]);
+	//const auto PS1 = COM_PTR_GET(PipelineStates[1]);
+
 #if 0
 	const auto RTR = COM_PTR_GET(RenderTargetResource);
 	const auto RTH = GetCPUDescriptorHandle(COM_PTR_GET(RenderTargetDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(0));
 #endif
 
-	VERIFY_SUCCEEDED(CL->Reset(CA, COM_PTR_GET(PipelineState)));
+	VERIFY_SUCCEEDED(CL->Reset(CA, PS0));
 	{
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
 #if 0
-		ResourceBarrier(CL, RTR, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { RTH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
@@ -259,10 +261,18 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 
 			CL->ExecuteIndirect(COM_PTR_GET(IndirectCommandSignature), 1, IBR, 0, nullptr, 0);
 		}
-		ResourceBarrier(CL, RTR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-#endif
-
+		{
+			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SC = { SCR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET };
+			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_RT = { RTR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE };
+			const std::array<D3D12_RESOURCE_BARRIER, 2> RBs = { {
+				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_SC },
+				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_RT },
+			} };
+			CL->ResourceBarrier(static_cast<UINT>(RBs.size()), RBs.data());
+		}
+#else
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+#endif
 		{
 			const std::array<D3D12_RECT, 0> Rs = {};
 			CL->ClearRenderTargetView(SCH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
@@ -276,7 +286,19 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 
 			CL->ExecuteIndirect(COM_PTR_GET(IndirectCommandSignature), 1, IBR, 0, nullptr, 0);
 		}
+#if 0
+		{
+			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SC = { SCR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT };
+			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_RT = { RTR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET };
+			const std::array<D3D12_RESOURCE_BARRIER, 2> RBs = { {
+				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_SC },
+				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_RT },
+			} };
+			CL->ResourceBarrier(static_cast<UINT>(RBs.size()), RBs.data());
+		}
+#else
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+#endif
 	}
 	VERIFY_SUCCEEDED(CL->Close());
 }

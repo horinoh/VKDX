@@ -16,7 +16,11 @@ public:
 protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
-	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs_Tesselation(); }
+	virtual void CreatePipelineState() override {
+		PipelineStates.resize(2);
+		CreatePipelineState_VsPsDsHsGs_Tesselation(PipelineStates[0]);
+		//CreatePipelineState_VsPs(PipelineStates[1]);
+	}
 	virtual void PopulateCommandList(const size_t i) override;
 };
 #pragma endregion

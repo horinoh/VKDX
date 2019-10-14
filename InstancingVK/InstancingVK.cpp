@@ -284,6 +284,7 @@ void InstancingVK::PopulateCommandBuffer(const size_t i)
 	const auto VB1 = VertexBuffers[1];
 	const auto IB = IndexBuffers[0];
 	const auto IndirectB = IndirectBuffers[0];
+	const auto PL = Pipelines[0];
 
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -306,7 +307,7 @@ void InstancingVK::PopulateCommandBuffer(const size_t i)
 			0, nullptr
 		};
 		vkCmdBeginRenderPass(CB, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
-			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
 			const std::array<VkBuffer, 2> VBs = { VB0, VB1 };
 			const std::array<VkDeviceSize, 2> Offsets = { 0, 0 };

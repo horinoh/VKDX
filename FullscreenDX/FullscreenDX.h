@@ -20,7 +20,7 @@ protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
 #endif
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPs(); }
-	virtual void CreatePipelineState() override { CreatePipelineState_VsPs(); }
+	virtual void CreatePipelineState() override { PipelineStates.resize(1); CreatePipelineState_VsPs(PipelineStates[0]); }
 	virtual void PopulateCommandList(const size_t i) override;
 };
 #pragma endregion

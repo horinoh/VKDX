@@ -235,8 +235,9 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 	const auto FB = Framebuffers[i];
 	//const auto SI = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
-	const auto PL = PipelineLayouts[0];
+	const auto PLL = PipelineLayouts[0];
 	const auto IB = IndirectBuffers[0];
+	const auto PL = Pipelines[0];
 
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -257,12 +258,12 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 			0, nullptr
 		};
 		vkCmdBeginRenderPass(CB, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
-			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
 			if (!DescriptorSets.empty()) {
 				vkCmdBindDescriptorSets(CB,
 					VK_PIPELINE_BIND_POINT_GRAPHICS,
-					PL,
+					PLL,
 					0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(),
 					0, nullptr);
 			}

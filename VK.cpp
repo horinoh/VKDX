@@ -181,11 +181,10 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyRenderPass(Device, i, GetAllocationCallbacks());
 	}
 
-	if (VK_NULL_HANDLE != Pipeline) {
-		vkDestroyPipeline(Device, Pipeline, GetAllocationCallbacks());
-		Pipeline = VK_NULL_HANDLE;
+	for (auto i : Pipelines) {
+		vkDestroyPipeline(Device, i, GetAllocationCallbacks());
 	}
-	
+
 	for (auto i : ShaderModules) {
 		vkDestroyShaderModule(Device, i, GetAllocationCallbacks());
 	}
@@ -2383,28 +2382,24 @@ void VK::CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color)
 
 	//!< layout (input_attachment_index=0, set=0, binding=0) uniform SubpassInput XXX;
 	//!< インプットアタッチメント : 読み取り用
-	const std::array<VkAttachmentReference, 0> InputARs = {};
+	const std::array<VkAttachmentReference, 0> Input_Pass0 = {};
 	//!< カラーアタッチメント : 書き込み用
-	const std::array<VkAttachmentReference, 1> ColorARs = {
-		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }
-	};
+	const std::array<VkAttachmentReference, 1> Color_Pass0 = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
 	//!< リゾルブアタッチメント : マルチサンプル → シングルサンプル
-	const std::array<VkAttachmentReference, 1> ResolveARs = {
-		{ VK_ATTACHMENT_UNUSED },
-	};
-	assert(ColorARs.size() == ResolveARs.size() && "Size must be same");
+	const std::array<VkAttachmentReference, 1> Resolve_Pass0 = { { VK_ATTACHMENT_UNUSED }, };
+	//assert(ColorARs.size() == ResolveARs.size() && "Size must be same");
 	//!< デプスアタッチメント : 深度用
-	const VkAttachmentReference* DepthAR = nullptr;
+	const VkAttachmentReference* Depth_Pass0 = nullptr;
 	//!< プリザーブアタッチメント : サブパス全体において保持しなくてはならないコンテンツ(のインデックス)
-	const std::array<uint32_t, 0> PreserveAttaches = {};
+	const std::array<uint32_t, 0> Preserve_Pass0 = {};
 	const std::array<VkSubpassDescription, 1> SubpassDescs = {
 		{
 			0,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			static_cast<uint32_t>(InputARs.size()), InputARs.data(),
-			static_cast<uint32_t>(ColorARs.size()), ColorARs.data(), ResolveARs.data(),
-			DepthAR,
-			static_cast<uint32_t>(PreserveAttaches.size()), PreserveAttaches.data()
+			static_cast<uint32_t>(Input_Pass0.size()), Input_Pass0.data(),
+			static_cast<uint32_t>(Color_Pass0.size()), Color_Pass0.data(), Resolve_Pass0.data(),
+			Depth_Pass0,
+			static_cast<uint32_t>(Preserve_Pass0.size()), Preserve_Pass0.data()
 		}
 	};
 
@@ -2415,21 +2410,15 @@ void VK::CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color)
 	const std::array<VkSubpassDependency, 2> SubpassDepends = { {
 			//!< 必要無いが、あえて書くならこんな感じ (No need this code, but if dare to write like this)
 			{
-				VK_SUBPASS_EXTERNAL,							//!< サブパス外から
-				0,												//!< サブパス0へ
-				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,			//!< パイプラインの最終ステージから
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< カラー出力ステージへ
-				VK_ACCESS_MEMORY_READ_BIT,						//!< 読み込みから
-				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,			//!< カラー書き込みへ
-				VK_DEPENDENCY_BY_REGION_BIT,					//!< 同じメモリ領域に対する書き込みが完了してから読み込み (指定しない場合は自前で書き込み完了を管理)
+				VK_SUBPASS_EXTERNAL, 0,																	//!< サブパス外からサブパス0へ
+				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< パイプラインの最終ステージからカラー出力ステージへ
+				VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,						//!< 読み込みからカラー書き込みへ
+				VK_DEPENDENCY_BY_REGION_BIT,															//!< 同じメモリ領域に対する書き込みが完了してから読み込み (指定しない場合は自前で書き込み完了を管理)
 			},
 			{
-				0,												//!< サブパス0から
-				VK_SUBPASS_EXTERNAL,							//!< サブパス外へ
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< カラー出力ステージから
-				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,			//!< パイプラインの最終ステージへ
-				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,			//!< カラー書き込みから
-				VK_ACCESS_MEMORY_READ_BIT,						//!< 読み込みへ
+				0, VK_SUBPASS_EXTERNAL,																	//!< サブパス0からサブパス外へ
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,	//!< カラー出力ステージからパイプラインの最終ステージへ
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,						//!< カラー書き込みから読み込みへ
 				VK_DEPENDENCY_BY_REGION_BIT,
 			}
 		} };
@@ -2533,6 +2522,8 @@ bool VK::ValidatePipelineCache(const VkPhysicalDevice PD, const size_t Size, con
 }
 void VK::CreatePipeline()
 {
+	Pipelines.resize(1);
+
 	//!< パイプラインキャッシュ (スレッド数分)
 	std::array<VkPipelineCache, 1> PCs = { VK_NULL_HANDLE };
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
@@ -2579,15 +2570,15 @@ void VK::CreatePipeline()
 	const auto ShaderPath = GetBasePath();
 	ShaderModules[0] = CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data());
 	ShaderModules[1] = CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data());
-	
-	const auto RP = RenderPasses[0];
-	const auto PL = PipelineLayouts[0];
 
-	auto Thread = std::thread::thread([&](VkPipeline& P, const VkPipelineLayout PL,
+	const auto PLL = PipelineLayouts[0];
+	const auto RP = RenderPasses[0];
+
+	auto Thread = std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS, 
 		const VkRenderPass RP, VkPipelineCache PC)
-		{ CreatePipeline_Default(P, PL, VS, FS, TES, TCS, GS, RP, PC); }, 
-	std::ref(Pipeline), PL, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
+		{ CreatePipeline_Default(PL, PLL, VS, FS, TES, TCS, GS, RP, PC); }, 
+	std::ref(Pipelines[0]), PLL, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
 
 	Thread.join();
 

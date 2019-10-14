@@ -236,20 +236,21 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
 	//const auto SI = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
 	const auto IB = IndirectBuffers[0];
+	const auto PL = Pipelines[0];
 
-	const VkCommandBufferBeginInfo BeginInfo = {
+	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
 		0,
 		nullptr
 	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &BeginInfo)); {
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 		//!< ビューポート、シザー
 		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 		//!< バリア、レンダーターゲットの設定は RenderPass
-		const VkRenderPassBeginInfo RenderPassBeginInfo = {
+		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RP,
@@ -257,9 +258,9 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
 			ScissorRects[0],
 			0, nullptr //!< レンダーパスでクリアする場合は必須 static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
 		};
-		vkCmdBeginRenderPass(CB, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
+		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
 			//!< トポロジは Pipeline - VkPipelineInputAssemblyStateCreateInfo で指定しているのでパイプラインをバインド
-			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
 			//!< 描画
 #ifdef USE_DRAW_INDIRECT

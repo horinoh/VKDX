@@ -237,8 +237,9 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 	const auto SI = SwapchainImages[i];
 	const auto DS = DescriptorSets[0];
 	const auto RP = RenderPasses[0];
-	const auto PL = PipelineLayouts[0];
+	const auto PLL = PipelineLayouts[0];
 	const auto IB = IndirectBuffers[0];
+	const auto PL = Pipelines[0];
 
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -287,12 +288,12 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 			const std::array<VkDescriptorSet, 1> DSs = { DS };
 			vkCmdBindDescriptorSets(CB,
 				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				PL,
+				PLL,
 				//!< [firstSet, firstSet + descriptorSetCount - 1] に番号付けされたデスクリプタセットが、 [0, descriptorSetCount - 1]を使う
 				0, static_cast<uint32_t>(DSs.size()), DSs.data(),
 				0, nullptr);
 
-			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
 			vkCmdDrawIndirect(CB, IB, 0, 1, 0);
 

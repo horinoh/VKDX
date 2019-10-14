@@ -240,7 +240,9 @@ void BillboardDX::PopulateCommandList(const size_t i)
 
 	//const auto  DSH = GetCPUDescriptorHandle(COM_PTR_GET(DepthStencilDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 0);
 
-	VERIFY_SUCCEEDED(CL->Reset(CA, COM_PTR_GET(PipelineState)));
+	const auto PS = COM_PTR_GET(PipelineStates[0]);
+
+	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());

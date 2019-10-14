@@ -288,8 +288,8 @@ protected:
 	COM_PTR<ID3D12RootSignature> RootSignature;
 
 	COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
-	COM_PTR<ID3D12PipelineState> PipelineState; 
-	
+	std::vector<COM_PTR<ID3D12PipelineState>> PipelineStates;
+
 	std::vector<COM_PTR<ID3D12Resource>> VertexBufferResources;
 	std::vector<D3D12_VERTEX_BUFFER_VIEW> VertexBufferViews;
 

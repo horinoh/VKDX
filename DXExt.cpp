@@ -178,7 +178,7 @@ void DXExt::CreateShaderBlob_Cs()
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".cs.cso")).data(), COM_PTR_PUT(ShaderBlobs[0])));
 }
 
-void DXExt::CreatePipelineState_VsPs()
+void DXExt::CreatePipelineState_VsPs(COM_PTR<ID3D12PipelineState>& PS)
 {
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
 	DeleteFile(PCOPath.data());
@@ -191,7 +191,6 @@ void DXExt::CreatePipelineState_VsPs()
 	if (SUCCEEDED(D3DReadFileToBlob(PCOPath.c_str(), COM_PTR_PUT(Blob))) && Blob->GetBufferSize()) {
 		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(PL)));
 
-		COM_PTR<ID3D12PipelineState> PS;
 		const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {};
 		VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(TEXT("0"), &GPSD, COM_PTR_UUIDOF_PUTVOID(PS)));
 	}
@@ -208,11 +207,11 @@ void DXExt::CreatePipelineState_VsPs()
 			{
 				CreatePipelineState_Default(Pipe, RS, VS, PS, DS, HS, GS);
 			},
-			std::ref(PipelineState), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC);
+			std::ref(PS), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC);
 
 		Thread.join();
 
-		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), COM_PTR_GET(PipelineState)));
+		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), COM_PTR_GET(PS)));
 
 		const auto Size = PL->GetSerializedSize();
 		if (Size) {
@@ -223,7 +222,7 @@ void DXExt::CreatePipelineState_VsPs()
 		}
 	}
 }
-void DXExt::CreatePipelineState_VsPsDsHsGs_Tesselation()
+void DXExt::CreatePipelineState_VsPsDsHsGs_Tesselation(COM_PTR<ID3D12PipelineState>& PS)
 {
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
 	DeleteFile(PCOPath.data());
@@ -236,7 +235,6 @@ void DXExt::CreatePipelineState_VsPsDsHsGs_Tesselation()
 	if (SUCCEEDED(D3DReadFileToBlob(PCOPath.c_str(), COM_PTR_PUT(Blob))) && Blob->GetBufferSize()) {
 		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(PL)));
 
-		COM_PTR<ID3D12PipelineState> PS;
 		const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {};
 		VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(TEXT("0"), &GPSD, COM_PTR_UUIDOF_PUTVOID(PS)));
 	}
@@ -256,11 +254,11 @@ void DXExt::CreatePipelineState_VsPsDsHsGs_Tesselation()
 			{
 				CreatePipelineState_Tesselation(Pipe, RS, VS, PS, DS, HS, GS);
 			},
-			std::ref(PipelineState), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4]);
+			std::ref(PS), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4]);
 
 		Thread.join();
 
-		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), COM_PTR_GET(PipelineState)));
+		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), COM_PTR_GET(PS)));
 
 		const auto Size = PL->GetSerializedSize();
 		if (Size) {

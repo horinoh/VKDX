@@ -236,9 +236,11 @@ void FullscreenDX::PopulateCommandList(const size_t i)
 	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-	const auto SCHandle = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
+	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
 
-	VERIFY_SUCCEEDED(CL->Reset(CA, COM_PTR_GET(PipelineState)));
+	const auto PS = COM_PTR_GET(PipelineStates[0]);
+
+	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
 		//!< ビューポート、シザー
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
@@ -248,7 +250,7 @@ void FullscreenDX::PopulateCommandList(const size_t i)
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
 			//!< レンダーターゲット
-			const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { SCHandle };
+			const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { SCH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
 
 			//!< ルートシグニチャ

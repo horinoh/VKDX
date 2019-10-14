@@ -136,17 +136,18 @@ public:
 	template<typename T, typename U> void CreatePipeline_Vertex_Instance(VkPipeline& Pipeline, const VkPipelineLayout PL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
-	void CreatePipeline_Tesselation(VkPipeline& Pipeline, const VkPipelineLayout PL,
+	void CreatePipeline_Tesselation(VkPipeline& PL, const VkPipelineLayout PLL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
-	void CreatePipeline_VsFs();
-	void CreatePipeline_VsFsTesTcsGs_Tesselation();
-	void CreatePipeline_Cs() { assert(0 && "TODO"); }
+	void CreatePipeline_VsFs(VkPipeline& PL);
+	void CreatePipeline_VsFsTesTcsGs_Tesselation(VkPipeline& PL);
+	void CreatePipeline_Cs(VkPipeline& /*PL*/) { assert(0 && "TODO"); }
 	//!< ↓ここでテンプレート特殊化している (Template specialization here)
 #include "VKPipeline.inl"
 
 	void CreateRenderPass_ColorDepth(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth);
 	void CreateRenderPass_ColorDepth_PostProcess(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth);
+	void CreateRenderPass_Color_PostProcess(VkRenderPass& RP, const VkFormat Color);
 
 	void CreateFramebuffer_Color();
 	void CreateFramebuffer_ColorDepth();

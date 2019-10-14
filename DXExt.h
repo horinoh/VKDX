@@ -26,9 +26,9 @@ public:
 	void CreatePipelineState_Tesselation(COM_PTR<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS);
 
-	void CreatePipelineState_VsPs();
-	void CreatePipelineState_VsPsDsHsGs_Tesselation();
-	void CreatePipelineState_Cs() { assert(0 && "TODO"); }
+	void CreatePipelineState_VsPs(COM_PTR<ID3D12PipelineState>& PS);
+	void CreatePipelineState_VsPsDsHsGs_Tesselation(COM_PTR<ID3D12PipelineState>& PS);
+	void CreatePipelineState_Cs(COM_PTR<ID3D12PipelineState>& /*PS*/) { assert(0 && "TODO"); }
 	//!< ↓ここでテンプレート特殊化している (Template specialization here)
 #include "DXPipeline.inl"
 

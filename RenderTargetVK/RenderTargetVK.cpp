@@ -237,6 +237,7 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 	const auto SI = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
 	const auto IB = IndirectBuffers[0];
+	const auto PL = Pipelines[0];
 
 	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -259,7 +260,7 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 			0, nullptr
 		};
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
-			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
 			vkCmdDrawIndirect(CB, IB, 0, 1, 0);
 

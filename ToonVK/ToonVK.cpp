@@ -236,16 +236,17 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 	const auto SI = SwapchainImages[i];
 	const auto DS = DescriptorSets[0];
 	const auto RP = RenderPasses[0];
-	const auto PL = PipelineLayouts[0];
+	const auto PLL = PipelineLayouts[0];
 	const auto IB = IndirectBuffers[0];
+	const auto PL = Pipelines[0];
 
-	const VkCommandBufferBeginInfo BeginInfo = {
+	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
 		0,
 		nullptr
 	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &BeginInfo)); {
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
@@ -254,7 +255,7 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 			ClearDepthStencil(CB, DepthStencilImage, ClearDepthStencilValue);
 		}
 
-		const VkRenderPassBeginInfo RenderPassBeginInfo = {
+		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RP,
@@ -262,16 +263,16 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 			ScissorRects[0],
 			0, nullptr
 		};
-		vkCmdBeginRenderPass(CB, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
+		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
 
 			const std::array<VkDescriptorSet, 1> DSs = { DS };
 			vkCmdBindDescriptorSets(CB,
 				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				PL,
+				PLL,
 				0, static_cast<uint32_t>(DSs.size()), DSs.data(),
 				0, nullptr);
 
-			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
 			vkCmdDrawIndirect(CB, IB, 0, 1, 0);
 

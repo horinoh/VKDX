@@ -309,7 +309,7 @@ protected:
 
 	static bool ValidatePipelineCache(const VkPhysicalDevice PD, const size_t Size, const void* Data);
 	virtual void CreatePipeline();
-	void CreatePipeline_Default(VkPipeline& Pipeline, const VkPipelineLayout PL, 
+	void CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, 
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
 	//virtual void CreatePipeline_Compute();
@@ -469,9 +469,9 @@ protected:
 	std::vector<VkDescriptorPool> DescriptorPools;
 	std::vector<VkDescriptorSet> DescriptorSets;
 	std::vector<VkDescriptorUpdateTemplate> DescriptorUpdateTemplates;
-	std::vector< VkPipelineLayout> PipelineLayouts;
+	std::vector<VkPipelineLayout> PipelineLayouts;
 
-	VkPipeline Pipeline = VK_NULL_HANDLE;
+	std::vector<VkPipeline> Pipelines;
 	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
 	std::vector<VkRenderPass> RenderPasses;
 	std::vector<VkFramebuffer> Framebuffers;

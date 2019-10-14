@@ -288,7 +288,9 @@ void InstancingDX::PopulateCommandList(const size_t i)
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
 
-	VERIFY_SUCCEEDED(CL->Reset(CA, COM_PTR_GET(PipelineState)));
+	const auto PS = COM_PTR_GET(PipelineStates[0]);
+
+	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());

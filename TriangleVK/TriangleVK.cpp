@@ -278,14 +278,15 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 	const auto VB = VertexBuffers[0];
 	const auto IB = IndexBuffers[0];
 	const auto IndirectB = IndirectBuffers[0];
+	const auto PL = Pipelines[0];
 
-	const VkCommandBufferBeginInfo BeginInfo = {
+	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
 		0,
 		nullptr
 	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &BeginInfo)); {
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 #ifdef _DEBUG
 		//MarkerBegin(CB, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), "Command Begin");
 		ScopedMarker(CB, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), "Command Begin");
@@ -299,7 +300,7 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 		//!< クリア
 		ClearColor(CB, SI, Colors::SkyBlue);
 
-		const VkRenderPassBeginInfo RenderPassBeginInfo = {
+		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RP,
@@ -307,7 +308,7 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 			ScissorRects[0],
 			0, nullptr
 		};
-		vkCmdBeginRenderPass(CB, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
+		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
 #if 0
 			//!< プッシュコンスタント PushConstants
 			const uint32_t Offset = 64; //!< 4の倍数であること(ここではフラグメントシェーダ用は 64byte オフセットしている) Mulitiple of 4(For fragment shader offset 64 byte in this case)
@@ -316,7 +317,7 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 			vkCmdPushConstants(CommandBuffer, PipelineLayouts[0], VK_SHADER_STAGE_FRAGMENT_BIT, Offset, Size, Color.data());
 #endif
 
-			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipeline);
+			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
 			const std::array<VkBuffer, 1> VBs = { VB };
 			const std::array<VkDeviceSize, 1> Offsets = { 0 };

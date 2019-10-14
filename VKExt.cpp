@@ -243,7 +243,7 @@ void VKExt::CreatePipeline_Tesselation(VkPipeline& PL, const VkPipelineLayout PL
 	LOG_OK();
 }
 
-void VKExt::CreatePipeline_VsFs()
+void VKExt::CreatePipeline_VsFs(VkPipeline& PL)
 {
 	std::array<VkPipelineCache, 1> PCs = { VK_NULL_HANDLE };
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
@@ -289,15 +289,15 @@ void VKExt::CreatePipeline_VsFs()
 	assert(ShaderModules.size() > 1 && "");
 	
 	const auto RP = RenderPasses[0];
-	const auto PL = PipelineLayouts[0];
+	const auto PLL = PipelineLayouts[0];
 
-	auto Thread = std::thread::thread([&](VkPipeline& P, const VkPipelineLayout PL,
+	auto Thread = std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC)
 		{
-			CreatePipeline_Default(P, PL, VS, FS, TES, TCS, GS, RP, PC);
+			CreatePipeline_Default(PL, PLL, VS, FS, TES, TCS, GS, RP, PC);
 		},
-		std::ref(Pipeline), PL, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
+		std::ref(PL), PLL, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
 
 	Thread.join();
 
@@ -322,7 +322,7 @@ void VKExt::CreatePipeline_VsFs()
 		vkDestroyPipelineCache(Device, i, GetAllocationCallbacks());
 	}
 }
-void VKExt::CreatePipeline_VsFsTesTcsGs_Tesselation()
+void VKExt::CreatePipeline_VsFsTesTcsGs_Tesselation(VkPipeline& PL)
 {
 	std::array<VkPipelineCache, 1> PCs = { VK_NULL_HANDLE };
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
@@ -368,15 +368,15 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Tesselation()
 	assert(ShaderModules.size() > 4 && "");
 
 	const auto RP = RenderPasses[0];
-	const auto PL = PipelineLayouts[0];
+	const auto PLL = PipelineLayouts[0];
 
-	auto Thread = std::thread::thread([&](VkPipeline& P, const VkPipelineLayout PL,
+	auto Thread = std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC)
 		{
-			CreatePipeline_Tesselation(P, PL, VS, FS, TES, TCS, GS, RP, PC);
+			CreatePipeline_Tesselation(PL, PLL, VS, FS, TES, TCS, GS, RP, PC);
 		},
-		std::ref(Pipeline), PL, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4], RP, PCs[0]);
+		std::ref(PL), PLL, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4], RP, PCs[0]);
 
 	Thread.join();
 
@@ -532,6 +532,85 @@ void VKExt::CreateRenderPass_ColorDepth_PostProcess(VkRenderPass& RP, const VkFo
 			VK_DEPENDENCY_BY_REGION_BIT,
 		},
 	};
+
+	const VkRenderPassCreateInfo RPCI = {
+		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(ADs.size()), ADs.data(),
+		static_cast<uint32_t>(SubpassDescs.size()), SubpassDescs.data(),
+		static_cast<uint32_t>(SubpassDepends.size()), SubpassDepends.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
+}
+
+void VKExt::CreateRenderPass_Color_PostProcess(VkRenderPass& RP, const VkFormat Color)
+{
+	const std::array<VkAttachmentDescription, 2> ADs = { {
+		{
+			0,
+			Color,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		},
+		{
+			0,
+			Color,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+		},
+	} };
+
+	const std::array<VkAttachmentReference, 0> Input_Pass0 = {};
+	const std::array<VkAttachmentReference, 1> Color_Pass0 = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
+
+	const std::array<VkAttachmentReference, 1> Input_Pass1 = { { 0, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, };
+	const std::array<VkAttachmentReference, 1> Color_Pass1 = { { 1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
+
+	const std::array<uint32_t, 0> Preserve = {};
+	const std::array<VkSubpassDescription, 2> SubpassDescs = { {
+		{
+			0,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			static_cast<uint32_t>(Input_Pass0.size()), Input_Pass0.data(),
+			static_cast<uint32_t>(Color_Pass0.size()), Color_Pass0.data(), nullptr,
+			nullptr,
+			static_cast<uint32_t>(Preserve.size()), Preserve.data()
+		},
+		{
+			0,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			static_cast<uint32_t>(Input_Pass1.size()), Input_Pass1.data(),
+			static_cast<uint32_t>(Color_Pass1.size()), Color_Pass1.data(), nullptr,
+			nullptr,
+			static_cast<uint32_t>(Preserve.size()), Preserve.data()
+		}
+	} };
+
+	const std::array<VkSubpassDependency, 3> SubpassDepends = { {
+			{
+				VK_SUBPASS_EXTERNAL, 0,
+				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT,
+			},
+			{
+				0, 1,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_INPUT_ATTACHMENT_READ_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT,
+			},
+			{
+				1, VK_SUBPASS_EXTERNAL,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+				VK_ACCESS_INPUT_ATTACHMENT_READ_BIT, VK_ACCESS_MEMORY_READ_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT,
+			},
+	} };
 
 	const VkRenderPassCreateInfo RPCI = {
 		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,

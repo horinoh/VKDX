@@ -55,7 +55,7 @@ protected:
 	}
 
 	virtual void CreateShaderBlob() override { CreateShaderBlob_Cs(); }
-	virtual void CreatePipelineState() override { CreatePipelineState_Cs(); }
+	virtual void CreatePipelineState() override { PipelineStates.resize(1); CreatePipelineState_Cs(PipelineStates[0]); }
 	virtual void PopulateCommandList(const size_t i) override;
 
 	virtual void Draw() override { Dispatch(); }

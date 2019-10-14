@@ -232,8 +232,9 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 void ComputeVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandBuffers[i];
-	const auto PL = PipelineLayouts[0];
+	const auto PLL = PipelineLayouts[0];
 	const auto IB = IndirectBuffers[0];
+	const auto PL = Pipelines[0];
 
 	const VkCommandBufferBeginInfo BeginInfo = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -245,12 +246,12 @@ void ComputeVK::PopulateCommandBuffer(const size_t i)
 		if (!DescriptorSets.empty()) {
 			vkCmdBindDescriptorSets(CB,
 				VK_PIPELINE_BIND_POINT_COMPUTE,
-				PL,
+				PLL,
 				0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(),
 				0, nullptr);
 		}
 		
-		vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_COMPUTE, Pipeline);
+		vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_COMPUTE, PL);
 
 		vkCmdDispatchIndirect(CB, IB, 0);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));

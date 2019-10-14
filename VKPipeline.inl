@@ -443,7 +443,7 @@ template<> void CreatePipeline_Vertex_Instance<Vertex_PositionColor, Instance_Of
 	LOG_OK();
 }
 
-template<typename T> void CreatePipeline_VsFs_Vertex()
+template<typename T> void CreatePipeline_VsFs_Vertex(VkPipeline& PL)
 {
 	std::array<VkPipelineCache, 1> PCs = { VK_NULL_HANDLE };
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
@@ -489,15 +489,15 @@ template<typename T> void CreatePipeline_VsFs_Vertex()
 	assert(ShaderModules.size() > 1 && "");
 
 	const auto RP = RenderPasses[0];
-	const auto PL = PipelineLayouts[0];
+	const auto PLL = PipelineLayouts[0];
 
-	auto Thread = std::thread::thread([&](VkPipeline& P, const VkPipelineLayout PL,
+	auto Thread = std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC)
 		{
-			CreatePipeline_Vertex<T>(P, PL, VS, FS, TES, TCS, GS, RP, PC);
+			CreatePipeline_Vertex<T>(PL, PLL, VS, FS, TES, TCS, GS, RP, PC);
 		},
-		std::ref(Pipeline), PL, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
+		std::ref(PL), PLL, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
 
 	Thread.join();
 
@@ -523,7 +523,7 @@ template<typename T> void CreatePipeline_VsFs_Vertex()
 	}
 }
 
-template<typename T, typename U> void CreatePipeline_VsFs_Vertex_Instance()
+template<typename T, typename U> void CreatePipeline_VsFs_Vertex_Instance(VkPipeline& PL)
 {
 	std::array<VkPipelineCache, 1> PCs = { VK_NULL_HANDLE };
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
@@ -569,15 +569,15 @@ template<typename T, typename U> void CreatePipeline_VsFs_Vertex_Instance()
 	assert(ShaderModules.size() > 1 && "");
 
 	const auto RP = RenderPasses[0];
-	const auto PL = PipelineLayouts[0];
+	const auto PLL = PipelineLayouts[0];
 
-	auto Thread = std::thread::thread([&](VkPipeline& P, const VkPipelineLayout PL,
+	auto Thread = std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		const VkRenderPass RP, VkPipelineCache PC)
 		{
-			CreatePipeline_Vertex_Instance<T, U>(P, PL, VS, FS, TES, TCS, GS, RP, PC);
+			CreatePipeline_Vertex_Instance<T, U>(PL, PLL, VS, FS, TES, TCS, GS, RP, PC);
 		},
-		std::ref(Pipeline), PL, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
+		std::ref(PL), PLL, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
 
 	Thread.join();
 
