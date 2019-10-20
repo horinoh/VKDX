@@ -83,6 +83,12 @@
     <FxCompile Include="RenderTargetDX.ds.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+    <FxCompile Include="RenderTargetDX_1.vs.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="RenderTargetDX_1.ps.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

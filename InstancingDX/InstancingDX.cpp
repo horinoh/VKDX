@@ -290,6 +290,10 @@ void InstancingDX::PopulateCommandList(const size_t i)
 
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 
+	const auto RS = COM_PTR_GET(RootSignatures[0]);
+
+	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
+
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
@@ -303,7 +307,7 @@ void InstancingDX::PopulateCommandList(const size_t i)
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 
-			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignature));
+			CL->SetGraphicsRootSignature(RS);
 
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
@@ -311,7 +315,7 @@ void InstancingDX::PopulateCommandList(const size_t i)
 			CL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
 			CL->IASetIndexBuffer(&IBV);
 
-			CL->ExecuteIndirect(COM_PTR_GET(IndirectCommandSignature), 1, IBR, 0, nullptr, 0);
+			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}

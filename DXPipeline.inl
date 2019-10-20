@@ -233,7 +233,7 @@ template<typename T> void CreatePipelineState_VsPs_Vertex()
 				CreatePipelineState_Vertex<T>(Pipe, RS, VS, PS, DS, HS, GS);
 #endif
 			},
-			std::ref(PipelineStates[0]), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC));
+			std::ref(PipelineStates[0]), COM_PTR_GET(RootSignatures[0]), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC));
 	}
 
 	for (auto& i : Threads) {
@@ -265,7 +265,7 @@ template<typename T, typename U> void CreatePipelineState_VsPs_Vertex_Instance()
 				CreatePipelineState_Vertex_Instance<T, U>(PST, RS, VS, PS, DS, HS, GS);
 #endif
 			},
-			std::ref(PipelineStates[0]), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC));
+			std::ref(PipelineStates[0]), COM_PTR_GET(RootSignatures[0]), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC));
 	}
 	for (auto& i : Threads) {
 		i.join();

@@ -45,7 +45,8 @@ protected:
 			}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 #endif
 #endif
-		DX::CreateRootSignature(RootSignature, Blob);
+		RootSignatures.resize(1);
+		DX::CreateRootSignature(RootSignatures[0], Blob);
 		LOG_OK();
 	}
 	virtual void CreateDescriptorHeap() override {

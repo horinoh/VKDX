@@ -1,10 +1,11 @@
+#ifdef USE_PIPELINE_SERIALIZE
 class PipelineCacheSerializer
 {
 public:
 	PipelineCacheSerializer(VkDevice Dev, const wchar_t* Path, const size_t Count) : Device(Dev), FilePath(Path) {
-		//!< –ˆ‰ñì‚è’¼‚·ê‡ (If recreate everytime)
+#ifdef ALWAYS_REBUILD_PIPELINE
 		DeleteFile(FilePath);
-
+#endif
 		//!< ƒtƒ@ƒCƒ‹‚ª“Ç‚ß‚½ê‡‚Í PipelineCaches[0] ‚Ö“Ç‚Ýž‚Þ (If file is read, load to PipelineCaches[0])
 		std::ifstream In(FilePath, std::ios::in | std::ios::binary);
 		if (!In.fail()) {
@@ -84,3 +85,4 @@ private:
 	std::vector<VkPipelineCache> PipelineCaches;
 	bool IsLoaded = false;
 };
+#endif //!< USE_PIPELINE_SERIALIZE

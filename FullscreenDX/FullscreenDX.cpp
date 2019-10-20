@@ -240,6 +240,10 @@ void FullscreenDX::PopulateCommandList(const size_t i)
 
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 
+	const auto RS = COM_PTR_GET(RootSignatures[0]);
+
+	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
+
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
 		//!< ビューポート、シザー
@@ -254,13 +258,13 @@ void FullscreenDX::PopulateCommandList(const size_t i)
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
 
 			//!< ルートシグニチャ
-			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignature));
+			CL->SetGraphicsRootSignature(RS);
 
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 			//!< 描画
 #ifdef USE_DRAW_INDIRECT
-			CL->ExecuteIndirect(COM_PTR_GET(IndirectCommandSignature), 1, IBR, 0, nullptr, 0);
+			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 #else
 			CL->DrawInstanced(4, 1, 0, 0);
 #endif

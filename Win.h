@@ -32,8 +32,11 @@
 //!< DXの場合「HDRのゲームとアプリを使用する」設定が必要 (Need to enable "Play HDR game and apps" in windows settings )
 //!< https://support.microsoft.com/ja-jp/help/4040263/windows-10-hdr-advanced-color-settings
 //#define USE_HDR
+
 //#define USE_FULL_SCREEN
+
 #define USE_PIPELINE_SERIALIZE
+#define ALWAYS_REBUILD_PIPELINE
 
 #include <iostream>
 #include <ostream>

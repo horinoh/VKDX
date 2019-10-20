@@ -6,64 +6,62 @@
 void DXExt::CreateIndirectBuffer_Draw(const UINT IndexCount, const UINT InstanceCount)
 {
 	IndirectBufferResources.resize(1);
-
 	const D3D12_DRAW_ARGUMENTS Source = { IndexCount, InstanceCount, 0, 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
-
 	CreateBuffer(COM_PTR_PUT(IndirectBufferResources[0]), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 
-	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndArgDescs = {
+	IndirectCommandSignatures.resize(1);
+	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
 		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW },
 	};
-	const D3D12_COMMAND_SIGNATURE_DESC CmdSigDesc = {
+	const D3D12_COMMAND_SIGNATURE_DESC CSD = {
 		Stride,
-		static_cast<const UINT>(IndArgDescs.size()), IndArgDescs.data(),
+		static_cast<const UINT>(IADs.size()), IADs.data(),
 		0
 	};
-	Device->CreateCommandSignature(&CmdSigDesc, COM_PTR_GET(RootSignature), COM_PTR_UUIDOF_PUTVOID(IndirectCommandSignature));
+	Device->CreateCommandSignature(&CSD, /*COM_PTR_GET(RootSignatures[0])*/nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectCommandSignatures[0]));
 }
 
 void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT IndexCount, const UINT InstanceCount)
 {
 	IndirectBufferResources.resize(1);
-
 	const D3D12_DRAW_INDEXED_ARGUMENTS Source = { IndexCount, InstanceCount, 0, 0, 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
-
 	CreateBuffer(COM_PTR_PUT(IndirectBufferResources[0]), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 
-	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndArgDescs = {
+	IndirectCommandSignatures.resize(1);
+	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
 		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED },
 	};
-	const D3D12_COMMAND_SIGNATURE_DESC CmdSigDesc = {
+	const D3D12_COMMAND_SIGNATURE_DESC CSD = {
 		Stride,
-		static_cast<const UINT>(IndArgDescs.size()), IndArgDescs.data(),
+		static_cast<const UINT>(IADs.size()), IADs.data(),
 		0
 	};
-	Device->CreateCommandSignature(&CmdSigDesc, COM_PTR_GET(RootSignature), COM_PTR_UUIDOF_PUTVOID(IndirectCommandSignature));
+	//!< パイプラインのバインディングを更新するような場合はルートシグネチャが必要、Draw や Dispatch のみの場合はnullptrを指定できる
+	Device->CreateCommandSignature(&CSD, /*COM_PTR_GET(RootSignatures[0])*/nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectCommandSignatures[0]));
 }
 
 void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT Z)
 {
 	IndirectBufferResources.resize(1);
-
 	const D3D12_DISPATCH_ARGUMENTS Source = { X, Y, Z };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
-
 	CreateBuffer(COM_PTR_PUT(IndirectBufferResources[0]), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 
-	const std::vector<D3D12_INDIRECT_ARGUMENT_DESC> IndArgDescs = {
+	IndirectCommandSignatures.resize(1);
+	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
 		{ D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH },
 	};
-	const D3D12_COMMAND_SIGNATURE_DESC CmdSigDesc = {
+	const D3D12_COMMAND_SIGNATURE_DESC CSD = {
 		Stride,
-		static_cast<const UINT>(IndArgDescs.size()), IndArgDescs.data(),
+		static_cast<const UINT>(IADs.size()), IADs.data(),
 		0
 	};
-	Device->CreateCommandSignature(&CmdSigDesc, COM_PTR_GET(RootSignature), COM_PTR_UUIDOF_PUTVOID(IndirectCommandSignature));
+	Device->CreateCommandSignature(&CSD, /*COM_PTR_GET(RootSignatures[0])*/nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectCommandSignatures[0]));
 }
 
 void DXExt::CreatePipelineState_Tesselation(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, 
@@ -216,7 +214,7 @@ void DXExt::CreatePipelineState_VsPs()
 				CreatePipelineState_Default(PST, RS, VS, PS, DS, HS, GS);
 #endif
 			},
-			std::ref(PipelineStates[0]), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC));
+			std::ref(PipelineStates[0]), COM_PTR_GET(RootSignatures[0]), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC));
 	}
 
 	for (auto& i : Threads) {
@@ -251,7 +249,7 @@ void DXExt::CreatePipelineState_VsPsDsHsGs_Tesselation()
 				CreatePipelineState_Tesselation(PST, RS, VS, PS, DS, HS, GS);
 #endif
 			},
-			std::ref(PipelineStates[0]), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4]));
+			std::ref(PipelineStates[0]), COM_PTR_GET(RootSignatures[0]), SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4]));
 	}
 
 	for (auto& i : Threads) {

@@ -242,10 +242,15 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 	const auto PS0 = COM_PTR_GET(PipelineStates[0]);
 	//const auto PS1 = COM_PTR_GET(PipelineStates[1]);
 
+	const auto RS0 = COM_PTR_GET(RootSignatures[0]);
+	//const auto RS1 = COM_PTR_GET(RootSignatures[1]);
+
 #if 0
 	const auto RTR = COM_PTR_GET(RenderTargetResource);
 	const auto RTH = GetCPUDescriptorHandle(COM_PTR_GET(RenderTargetDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(0));
 #endif
+
+	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
 
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS0));
 	{
@@ -259,7 +264,7 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
-			CL->ExecuteIndirect(COM_PTR_GET(IndirectCommandSignature), 1, IBR, 0, nullptr, 0);
+			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 		}
 		{
 			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SC = { SCR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET };
@@ -280,11 +285,11 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 
-			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignature));
+			CL->SetGraphicsRootSignature(RS0);
 
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
-			CL->ExecuteIndirect(COM_PTR_GET(IndirectCommandSignature), 1, IBR, 0, nullptr, 0);
+			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 		}
 #if 0
 		{

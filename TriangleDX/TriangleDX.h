@@ -24,7 +24,8 @@ protected:
 #else
 		DX::SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 #endif
-		DX::CreateRootSignature(RootSignature, Blob);
+		RootSignatures.resize(1);
+		DX::CreateRootSignature(RootSignatures[0], Blob);
 		LOG_OK();
 	}
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPs(); }

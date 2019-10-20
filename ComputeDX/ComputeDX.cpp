@@ -237,6 +237,8 @@ void ComputeDX::PopulateCommandList(const size_t i)
 
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 
+	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
+
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
 		if (nullptr != UnorderedAccessTextureDescriptorHeap) {
@@ -246,7 +248,7 @@ void ComputeDX::PopulateCommandList(const size_t i)
 			CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(UnorderedAccessTextureDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 		}
 
-		CL->ExecuteIndirect(COM_PTR_GET(IndirectCommandSignature), 1, IBR, 0, nullptr, 0);
+		CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(CL->Close());
 }

@@ -242,6 +242,10 @@ void BillboardDX::PopulateCommandList(const size_t i)
 
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 
+	const auto RS = COM_PTR_GET(RootSignatures[0]);
+	
+	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
+
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
@@ -256,7 +260,7 @@ void BillboardDX::PopulateCommandList(const size_t i)
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 			//CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &DSH);
 
-			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignature));
+			CL->SetGraphicsRootSignature(RS);
 
 			//!< コンスタントバッファ
 			{
@@ -268,7 +272,7 @@ void BillboardDX::PopulateCommandList(const size_t i)
 
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
-			CL->ExecuteIndirect(COM_PTR_GET(IndirectCommandSignature), 1, IBR, 0, nullptr, 0);
+			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}

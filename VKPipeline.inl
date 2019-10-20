@@ -464,7 +464,7 @@ template<typename T> void CreatePipeline_VsFs_Vertex()
 #ifdef USE_PIPELINE_SERIALIZE
 				CreatePipeline_Vertex<T>(PL, PLL, RP, VS, FS, TES, TCS, GS, PCS.GetPipelineCache(0));
 #else
-				CreatePipeline_Vertex<T>(PL, PLL, RP, VS, FS, TES, TCS, GS, );
+				CreatePipeline_Vertex<T>(PL, PLL, RP, VS, FS, TES, TCS, GS);
 #endif
 			},
 			std::ref(PL), PLL, RP, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule));

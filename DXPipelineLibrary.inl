@@ -1,10 +1,11 @@
+#ifdef USE_PIPELINE_SERIALIZE
 class PipelineLibrarySerializer
 {
 public:
 	PipelineLibrarySerializer(ID3D12Device* Dev, const wchar_t* Path) : Device(Dev), FilePath(Path) {
-		//!< –ˆ‰ñì‚è’¼‚·ê‡ (If recreate everytime)
+#ifdef ALWAYS_REBUILD_PIPELINE
 		DeleteFile(FilePath);
-
+#endif
 		COM_PTR<ID3D12Device1> Device1;
 		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device1)));
 
@@ -39,3 +40,4 @@ private:
 	COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
 	bool IsLoaded = false;
 };
+#endif //!< USE_PIPELINE_SERIALIZE

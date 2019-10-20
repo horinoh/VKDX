@@ -254,7 +254,6 @@ void VKExt::CreatePipeline_VsFs()
 	std::vector<std::thread> Threads;
 
 	{
-		assert(ShaderModules.size() > 1 && "");
 		auto& PL = Pipelines[0];
 		const auto RP = RenderPasses[0];
 		const auto PLL = PipelineLayouts[0];

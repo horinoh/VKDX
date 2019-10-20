@@ -472,7 +472,6 @@ protected:
 	std::vector<VkPipelineLayout> PipelineLayouts;
 
 	std::vector<VkPipeline> Pipelines;
-	VkPipelineCache PipelineCache = VK_NULL_HANDLE;
 	std::vector<VkRenderPass> RenderPasses;
 	std::vector<VkFramebuffer> Framebuffers;
 

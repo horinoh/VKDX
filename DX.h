@@ -287,7 +287,7 @@ protected:
 	COM_PTR<ID3D12Resource> ImageResource;
 	COM_PTR<ID3D12DescriptorHeap> ImageDescriptorHeap;
 
-	COM_PTR<ID3D12RootSignature> RootSignature;
+	std::vector<COM_PTR<ID3D12RootSignature>> RootSignatures;
 
 	COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
 	std::vector<COM_PTR<ID3D12PipelineState>> PipelineStates;
@@ -299,7 +299,8 @@ protected:
 	std::vector<D3D12_INDEX_BUFFER_VIEW> IndexBufferViews;
 
 	std::vector<COM_PTR<ID3D12Resource>> IndirectBufferResources;
-	COM_PTR<ID3D12CommandSignature> IndirectCommandSignature;
+	std::vector<COM_PTR<ID3D12CommandSignature>> IndirectCommandSignatures;
+	//COM_PTR<ID3D12CommandSignature> IndirectCommandSignature;
 
 	//!< Œ»ó1‚Â‚Ì‚ÝA”z—ñ‚É‚·‚é #DX_TODO
 	COM_PTR<ID3D12Resource> ConstantBufferResource;

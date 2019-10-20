@@ -284,6 +284,10 @@ void TriangleDX::PopulateCommandList(const size_t i)
 
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 
+	const auto RS = COM_PTR_GET(RootSignatures[0]);
+
+	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
+
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
 #if defined(_DEBUG) || defined(USE_PIX)
@@ -309,7 +313,7 @@ void TriangleDX::PopulateCommandList(const size_t i)
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 
 			//!< ルートシグニチャ
-			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignature));
+			CL->SetGraphicsRootSignature(RS);
 
 			//!< インプットアセンブリのプリミティブタイプ
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
@@ -324,7 +328,7 @@ void TriangleDX::PopulateCommandList(const size_t i)
 			}
 
 			//!< 描画
-			CL->ExecuteIndirect(COM_PTR_GET(IndirectCommandSignature), 1, IBR, 0, nullptr, 0);
+			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 

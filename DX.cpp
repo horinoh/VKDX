@@ -1110,7 +1110,8 @@ void DX::CreateRootSignature()
 	SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 #endif
 
-	CreateRootSignature(RootSignature, Blob);
+	RootSignatures.resize(1);
+	CreateRootSignature(RootSignatures[0], Blob);
 
 	LOG_OK();
 }
