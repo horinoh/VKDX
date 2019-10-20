@@ -236,9 +236,11 @@ protected:
 	virtual void CreateShader(std::vector<COM_PTR<ID3DBlob>>& ShaderBlobs) const;
 	virtual void CreateShaderBlob() {}
 
-	virtual void CreatePipelineState();
+#include "DXPipelineLibrary.inl"
+	virtual void CreatePipelineState() {}
 	void CreatePipelineState_Default(COM_PTR<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
-		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS);
+		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,
+		ID3D12PipelineLibrary* PL = nullptr, LPCWSTR Name = nullptr, bool IsLoad = false);
 	//virtual void CreatePipelineState_Compute();
 
 	virtual void CreateTexture() {}

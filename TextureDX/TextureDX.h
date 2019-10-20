@@ -142,7 +142,7 @@ protected:
 	}
 #endif
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPs(); }
-	virtual void CreatePipelineState() override { PipelineStates.resize(1); CreatePipelineState_VsPs(PipelineStates[0]); }
+	virtual void CreatePipelineState() override { CreatePipelineState_VsPs(); }
 	virtual void PopulateCommandList(const size_t i) override;
 };
 #pragma endregion

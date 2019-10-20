@@ -27,7 +27,7 @@ protected:
 		VKExt::CreatePipelineLayout(PipelineLayouts[0], {}, {});
 	}
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFs(); }
-	virtual void CreatePipeline() override { Pipelines.resize(1); CreatePipeline_VsFs_Vertex_Instance<Vertex_PositionColor, Instance_OffsetXY>(Pipelines[0]); }
+	virtual void CreatePipeline() override { CreatePipeline_VsFs_Vertex_Instance<Vertex_PositionColor, Instance_OffsetXY>(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 	uint32_t IndexCount = 0;

@@ -307,11 +307,11 @@ protected:
 	virtual void CreateShaderModle(const std::initializer_list<VkShaderModule> il_SMs) { std::copy(il_SMs.begin(), il_SMs.end(), std::back_inserter(ShaderModules)); }
 	virtual void CreateShaderModule() {}
 
-	static bool ValidatePipelineCache(const VkPhysicalDevice PD, const size_t Size, const void* Data);
+#include "VKPipelineCache.inl"
 	virtual void CreatePipeline();
-	void CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, 
+	void CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
-		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
+		VkPipelineCache PC = VK_NULL_HANDLE);
 	//virtual void CreatePipeline_Compute();
 
 	virtual void ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, const VkClearColorValue& Color);

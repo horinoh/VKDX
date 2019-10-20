@@ -2491,124 +2491,41 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 	return ShaderModule;
 }
 
-bool VK::ValidatePipelineCache(const VkPhysicalDevice PD, const size_t Size, const void* Data)
-{
-	VkPhysicalDeviceProperties PDP;
-	vkGetPhysicalDeviceProperties(PD, &PDP);
-
-	auto Ptr = reinterpret_cast<const uint32_t*>(Data);
-	const auto PCSize = *Ptr++;
-	const auto PCVersion = *Ptr++;
-	const auto PCVenderID = *Ptr++;
-	const auto PCDeviceID = *Ptr++;
-	uint8_t PCUUID[VK_UUID_SIZE];
-	memcpy(PCUUID, Ptr, sizeof(PCUUID));
-
-	assert(Size == PCSize && "");
-	assert(VK_PIPELINE_CACHE_HEADER_VERSION_ONE == PCVersion && "");
-	assert(PDP.vendorID == PCVenderID && "");
-	assert(PDP.deviceID == PCDeviceID && "");
-	//assert(0 == memcmp(PDP.pipelineCacheUUID, PCUUID, sizeof(PDP.pipelineCacheUUID)) && "");
-
-	Log("Validate PipelineCache\n");
-	Logf("\tSize = %d\n", PCSize);
-	Logf("\tVersion = %s\n", PCVersion == VK_PIPELINE_CACHE_HEADER_VERSION_ONE ? "VK_PIPELINE_CACHE_HEADER_VERSION_ONE" : "Unknown");
-	Logf("\tVenderID = %d\n", PCVenderID);
-	Logf("\tDeviceID = %d\n", PCDeviceID);
-	Log("\tUUID = "); for (auto i = 0; i < sizeof(PCUUID); ++i) { Logf("%c", PCUUID[i]); } Log("\n");
-	//Log("\tUUID = "); for (auto i = 0; i < sizeof(PDP.pipelineCacheUUID); ++i) { Logf("%c", PDP.pipelineCacheUUID[i]); } Log("\n");
-
-	return Size == PCSize && VK_PIPELINE_CACHE_HEADER_VERSION_ONE == PCVersion && PDP.vendorID == PCVenderID && PDP.deviceID == PCDeviceID/*&& 0 == memcmp(PDP.pipelineCacheUUID, PCUUID, sizeof(PDP.pipelineCacheUUID))*/;
-}
 void VK::CreatePipeline()
 {
 	Pipelines.resize(1);
 
-	//!< パイプラインキャッシュ (スレッド数分)
-	std::array<VkPipelineCache, 1> PCs = { VK_NULL_HANDLE };
-	const auto PCOPath = GetBasePath() + TEXT(".pco");
-	//DeleteFile(PCOPath.data());
-	//!< パイプラインライブラリをファイルから読み込む、読み込めない場合は新たに作成する
+#ifdef USE_PIPELINE_SERIALIZE
+	PipelineCacheSerializer PCS(Device, (GetBasePath() + TEXT(".pco")).c_str(), 1);
+#endif
+
+	std::vector<std::thread> Threads;
+
 	{
-		std::ifstream In(PCOPath.c_str(), std::ios::in | std::ios::binary);
-		if (!In.fail()) {
-			In.seekg(0, std::ios_base::end);
-			const size_t Size = In.tellg();
-			In.seekg(0, std::ios_base::beg);
-			assert(Size && "");
-			if (Size) {
-				auto Data = new char[Size];
-				In.read(Data, Size);
-				ValidatePipelineCache(GetCurrentPhysicalDevice(), Size, Data);
-				const VkPipelineCacheCreateInfo PCCI = {
-					VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-					nullptr,
-					0,
-					Size, Data
-				};
-				for (auto& i : PCs) {
-					VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PCCI, GetAllocationCallbacks(), &i));
-				}
-				delete[] Data;
-			}
-			In.close();
-		}
-		else {
-			const VkPipelineCacheCreateInfo PCCI = {
-				VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-				nullptr,
-				0,
-				0, nullptr
-			};
-			for (auto& i : PCs) {
-				VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PCCI, GetAllocationCallbacks(), &i));
-			}
-		}
+		auto& PL = Pipelines[0];
+		const auto PLL = PipelineLayouts[0];
+		const auto RP = RenderPasses[0];
+
+		auto Thread = std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
+			const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS)
+			{ 
+#ifdef USE_PIPELINE_SERIALIZE
+				CreatePipeline_Default(PL, PLL, RP, VS, FS, TES, TCS, GS, PCS.GetPipelineCache(0));
+#else
+				CreatePipeline_Default(PL, PLL, RP, VS, FS, TES, TCS, GS);
+#endif
+			},
+			std::ref(PL), PLL, RP, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule);
 	}
 
-	ShaderModules.resize(5);
-	const auto ShaderPath = GetBasePath();
-	ShaderModules[0] = CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data());
-	ShaderModules[1] = CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data());
-
-	const auto PLL = PipelineLayouts[0];
-	const auto RP = RenderPasses[0];
-
-	auto Thread = std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL,
-		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS, 
-		const VkRenderPass RP, VkPipelineCache PC)
-		{ CreatePipeline_Default(PL, PLL, VS, FS, TES, TCS, GS, RP, PC); }, 
-	std::ref(Pipelines[0]), PLL, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
-
-	Thread.join();
-
-	//!< 最後の要素へマージ (ソースとデスティネーションは被らないこと)
-	if (PCs.size() > 1) {
-		VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, PCs.back(), static_cast<uint32_t>(PCs.size() - 1), PCs.data()));
-	}
-	//!< ファイルへ書き込む
-	{
-		size_t Size;
-		VERIFY_SUCCEEDED(vkGetPipelineCacheData(Device, PCs.back(), &Size, nullptr));
-		if (Size) {
-			auto Data = new char[Size];
-			VERIFY_SUCCEEDED(vkGetPipelineCacheData(Device, PCs.back(), &Size, Data));
-			std::ofstream Out(PCOPath.c_str(), std::ios::out | std::ios::binary);
-			if (!Out.fail()) {
-				Out.write(Data, Size);
-				Out.close();
-			}
-			delete[] Data;
-		}
-	}
-	for (auto i : PCs) {
-		vkDestroyPipelineCache(Device, i, GetAllocationCallbacks());
+	for (auto& i : Threads) {
+		i.join();
 	}
 }
 
-void VK::CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL,
+void VK::CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
 	const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS, 
-	const VkRenderPass RP, VkPipelineCache PC)
+	VkPipelineCache PC)
 {
 	PERFORMANCE_COUNTER();
 

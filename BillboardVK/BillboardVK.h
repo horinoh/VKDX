@@ -149,7 +149,7 @@ protected:
 #endif
 
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }
-	virtual void CreatePipeline() override { Pipelines.resize(1); CreatePipeline_VsFsTesTcsGs_Tesselation(Pipelines[0]); }
+	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs_Tesselation(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 private:

@@ -1156,72 +1156,9 @@ void DX::CreateShader(std::vector<COM_PTR<ID3DBlob>>& Blobs) const
 #endif
 }
 
-void DX::CreatePipelineState()
-{
-	PipelineStates.resize(1);
-
-	const auto PCOPath = GetBasePath() + TEXT(".pco");
-	//DeleteFile(PCOPath.data());
-
-	COM_PTR<ID3D12Device1> Device1;
-	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device1)));
-//	VERIFY_SUCCEEDED(Device->QueryInterface(__uuidof(Device1), Device1.put_void()));
-
-	//!< パイプラインライブラリをファイルから読み込む、読み込めない場合は新たに作成する
-	COM_PTR<ID3D12PipelineLibrary> PL;
-	COM_PTR<ID3DBlob> Blob;
-	if (SUCCEEDED(D3DReadFileToBlob(PCOPath.c_str(), COM_PTR_PUT(Blob))) && Blob->GetBufferSize()) {
-		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(PL)));
-
-		//!< ライブラリからパイプラインステートを読み込む
-		COM_PTR<ID3D12PipelineState> PS0, PS1;
-		const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {};
-		VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(TEXT("0"), &GPSD, COM_PTR_UUIDOF_PUTVOID(PS0)));
-		VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(TEXT("1"), &GPSD, COM_PTR_UUIDOF_PUTVOID(PS1)));
-	}
-	else {
-		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, COM_PTR_UUIDOF_PUTVOID(PL)));
-		
-		//!< ここでは パイプラインステート PS0, PS1 を作成したと仮定
-		COM_PTR<ID3D12PipelineState> PS0, PS1;
-
-		//!< パイプラインステート を ライブラリ へ登録
-		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), COM_PTR_GET(PS0)));
-		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("1"), COM_PTR_GET(PS1)));
-
-		//!< ライブラリをファイルへ書き込む
-		const auto Size = PL->GetSerializedSize();
-		if (Size) {
-			COM_PTR<ID3DBlob> Blb;
-			VERIFY_SUCCEEDED(D3DCreateBlob(Size, COM_PTR_PUT(Blb)));
-			PL->Serialize(Blb->GetBufferPointer(), Size);
-			VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blb), PCOPath.c_str(), TRUE));
-		}
-	}
-
-	const auto ShaderPath = GetBasePath();
-	ShaderBlobs.resize(5);
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs[0])));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[1])));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), COM_PTR_PUT(ShaderBlobs[2])));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), COM_PTR_PUT(ShaderBlobs[3])));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), COM_PTR_PUT(ShaderBlobs[4])));
-	const std::array<D3D12_SHADER_BYTECODE, 5> SBCs = { {
-		{ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() },
-		{ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() },
-		{ ShaderBlobs[2]->GetBufferPointer(), ShaderBlobs[2]->GetBufferSize() },
-		{ ShaderBlobs[3]->GetBufferPointer(), ShaderBlobs[3]->GetBufferSize() },
-		{ ShaderBlobs[4]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() },
-	} };
-	auto Thread = std::thread::thread([&](/*winrt::com_ptr*/COM_PTR<ID3D12PipelineState>& Pipe, ID3D12RootSignature* RS,
-		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
-		{ CreatePipelineState_Default(Pipe, RS, VS, PS, DS, HS, GS); },
-		std::ref(PipelineStates[0]), COM_PTR_GET(RootSignature), SBCs[0], NullShaderBC, NullShaderBC, NullShaderBC, NullShaderBC);
-
-	Thread.join();
-}
 void DX::CreatePipelineState_Default(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, 
-	const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
+	const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,
+	ID3D12PipelineLibrary* PL, LPCWSTR Name, bool IsLoad)
 {
 	PERFORMANCE_COUNTER();
 
@@ -1317,7 +1254,17 @@ void DX::CreatePipelineState_Default(COM_PTR<ID3D12PipelineState>& PST, ID3D12Ro
 	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
 	assert((0 == GPSD.DS.BytecodeLength || 0 == GPSD.HS.BytecodeLength || GPSD.PrimitiveTopologyType == D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH) && "");
 
-	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
+	if (IsLoad) {
+		if (nullptr != PL && nullptr != Name) {
+			VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(Name, &GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
+		}
+	}
+	else {
+		VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
+		if (nullptr != PL && nullptr != Name) {
+			VERIFY_SUCCEEDED(PL->StorePipeline(Name, COM_PTR_GET(PST)));
+		}
+	}
 
 	LOG_OK();
 }

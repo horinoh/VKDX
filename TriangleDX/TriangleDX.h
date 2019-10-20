@@ -28,7 +28,7 @@ protected:
 		LOG_OK();
 	}
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPs(); }
-	virtual void CreatePipelineState() override { PipelineStates.resize(1); CreatePipelineState_VsPs_Vertex<Vertex_PositionColor>(PipelineStates[0]); }
+	virtual void CreatePipelineState() override { CreatePipelineState_VsPs_Vertex<Vertex_PositionColor>(); }
 	virtual void PopulateCommandList(const size_t i) override;
 
 	UINT IndexCount = 0;

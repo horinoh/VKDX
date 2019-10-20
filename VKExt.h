@@ -130,17 +130,18 @@ public:
 	void CreateShaderModle_VsFsTesTcsGs();
 	void CreateShaderModle_Cs();
 
-	template<typename T> void CreatePipeline_Vertex(VkPipeline& Pipeline, const VkPipelineLayout PL,
+	template<typename T> void CreatePipeline_Vertex(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
-		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
-	template<typename T, typename U> void CreatePipeline_Vertex_Instance(VkPipeline& Pipeline, const VkPipelineLayout PL,
+		VkPipelineCache PC = VK_NULL_HANDLE);
+	template<typename T, typename U> void CreatePipeline_Vertex_Instance(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
-		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
-	void CreatePipeline_Tesselation(VkPipeline& PL, const VkPipelineLayout PLL,
+		VkPipelineCache PC = VK_NULL_HANDLE);
+	void CreatePipeline_Tesselation(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
-		const VkRenderPass RP, VkPipelineCache PC = VK_NULL_HANDLE);
-	void CreatePipeline_VsFs(VkPipeline& PL);
-	void CreatePipeline_VsFsTesTcsGs_Tesselation(VkPipeline& PL);
+		VkPipelineCache PC = VK_NULL_HANDLE);
+
+	void CreatePipeline_VsFs();
+	void CreatePipeline_VsFsTesTcsGs_Tesselation();
 	void CreatePipeline_Cs(VkPipeline& /*PL*/) { assert(0 && "TODO"); }
 	//!< ↓ここでテンプレート特殊化している (Template specialization here)
 #include "VKPipeline.inl"

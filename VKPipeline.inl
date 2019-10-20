@@ -3,9 +3,9 @@
 //!< テンプレート特殊化
 //!< template specialization
 
-template<> void CreatePipeline_Vertex<Vertex_PositionColor>(VkPipeline& PL, const VkPipelineLayout PLL, 
+template<> void CreatePipeline_Vertex<Vertex_PositionColor>(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
 	const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS, 
-	const VkRenderPass RP, VkPipelineCache PC)
+	VkPipelineCache PC)
 {
 	PERFORMANCE_COUNTER();
 
@@ -221,9 +221,9 @@ template<> void CreatePipeline_Vertex<Vertex_PositionColor>(VkPipeline& PL, cons
 	LOG_OK();
 }
 
-template<> void CreatePipeline_Vertex_Instance<Vertex_PositionColor, Instance_OffsetXY>(VkPipeline& PL, const VkPipelineLayout PLL,
+template<> void CreatePipeline_Vertex_Instance<Vertex_PositionColor, Instance_OffsetXY>(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
 	const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
-	const VkRenderPass RP, VkPipelineCache PC)
+	VkPipelineCache PC)
 {
 	PERFORMANCE_COUNTER();
 
@@ -443,162 +443,65 @@ template<> void CreatePipeline_Vertex_Instance<Vertex_PositionColor, Instance_Of
 	LOG_OK();
 }
 
-template<typename T> void CreatePipeline_VsFs_Vertex(VkPipeline& PL)
+template<typename T> void CreatePipeline_VsFs_Vertex()
 {
-	std::array<VkPipelineCache, 1> PCs = { VK_NULL_HANDLE };
+	Pipelines.resize(1);
+
+#ifdef USE_PIPELINE_SERIALIZE
 	const auto PCOPath = GetBasePath() + TEXT(".pco");
-	DeleteFile(PCOPath.data());
+	PipelineCacheSerializer PCS(Device, PCOPath.c_str(), 1);
+#endif
+
+	std::vector<std::thread> Threads;
 
 	{
-		std::ifstream In(PCOPath.c_str(), std::ios::in | std::ios::binary);
-		if (!In.fail()) {
-			In.seekg(0, std::ios_base::end);
-			const size_t Size = In.tellg();
-			In.seekg(0, std::ios_base::beg);
-			assert(Size && "");
-			if (Size) {
-				auto Data = new char[Size];
-				In.read(Data, Size);
-				ValidatePipelineCache(GetCurrentPhysicalDevice(), Size, Data);
-				const VkPipelineCacheCreateInfo PCCI = {
-					VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-					nullptr,
-					0,
-					Size, Data
-				};
-				for (auto& i : PCs) {
-					VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PCCI, GetAllocationCallbacks(), &i));
-				}
-				delete[] Data;
-			}
-			In.close();
-		}
-		else {
-			const VkPipelineCacheCreateInfo PCCI = {
-				VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-				nullptr,
-				0,
-				0, nullptr
-			};
-			for (auto& i : PCs) {
-				VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PCCI, GetAllocationCallbacks(), &i));
-			}
-		}
+		auto& PL = Pipelines[0];
+		const auto RP = RenderPasses[0];
+		const auto PLL = PipelineLayouts[0];
+		Threads.push_back(std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
+			const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS)
+			{
+#ifdef USE_PIPELINE_SERIALIZE
+				CreatePipeline_Vertex<T>(PL, PLL, RP, VS, FS, TES, TCS, GS, PCS.GetPipelineCache(0));
+#else
+				CreatePipeline_Vertex<T>(PL, PLL, RP, VS, FS, TES, TCS, GS, );
+#endif
+			},
+			std::ref(PL), PLL, RP, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule));
 	}
-
-	assert(ShaderModules.size() > 1 && "");
-
-	const auto RP = RenderPasses[0];
-	const auto PLL = PipelineLayouts[0];
-
-	auto Thread = std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL,
-		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
-		const VkRenderPass RP, VkPipelineCache PC)
-		{
-			CreatePipeline_Vertex<T>(PL, PLL, VS, FS, TES, TCS, GS, RP, PC);
-		},
-		std::ref(PL), PLL, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
-
-	Thread.join();
-
-	if (PCs.size() > 1) {
-		VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, PCs.back(), static_cast<uint32_t>(PCs.size() - 1), PCs.data()));
-	}
-	{
-		size_t Size;
-		VERIFY_SUCCEEDED(vkGetPipelineCacheData(Device, PCs.back(), &Size, nullptr));
-		if (Size) {
-			auto Data = new char[Size];
-			VERIFY_SUCCEEDED(vkGetPipelineCacheData(Device, PCs.back(), &Size, Data));
-			std::ofstream Out(PCOPath.c_str(), std::ios::out | std::ios::binary);
-			if (!Out.fail()) {
-				Out.write(Data, Size);
-				Out.close();
-			}
-			delete[] Data;
-		}
-	}
-	for (auto i : PCs) {
-		vkDestroyPipelineCache(Device, i, GetAllocationCallbacks());
+	
+	for (auto& i : Threads) {
+		i.join();
 	}
 }
 
-template<typename T, typename U> void CreatePipeline_VsFs_Vertex_Instance(VkPipeline& PL)
+template<typename T, typename U> void CreatePipeline_VsFs_Vertex_Instance()
 {
-	std::array<VkPipelineCache, 1> PCs = { VK_NULL_HANDLE };
-	const auto PCOPath = GetBasePath() + TEXT(".pco");
-	DeleteFile(PCOPath.data());
+	Pipelines.resize(1);
+
+#ifdef USE_PIPELINE_SERIALIZE
+	PipelineCacheSerializer PCS(Device, (GetBasePath() + TEXT(".pco")).c_str(), 1);
+#endif
+
+	std::vector<std::thread> Threads;
 
 	{
-		std::ifstream In(PCOPath.c_str(), std::ios::in | std::ios::binary);
-		if (!In.fail()) {
-			In.seekg(0, std::ios_base::end);
-			const size_t Size = In.tellg();
-			In.seekg(0, std::ios_base::beg);
-			assert(Size && "");
-			if (Size) {
-				auto Data = new char[Size];
-				In.read(Data, Size);
-				ValidatePipelineCache(GetCurrentPhysicalDevice(), Size, Data);
-				const VkPipelineCacheCreateInfo PCCI = {
-					VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-					nullptr,
-					0,
-					Size, Data
-				};
-				for (auto& i : PCs) {
-					VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PCCI, GetAllocationCallbacks(), &i));
-				}
-				delete[] Data;
-			}
-			In.close();
-		}
-		else {
-			const VkPipelineCacheCreateInfo PCCI = {
-				VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO,
-				nullptr,
-				0,
-				0, nullptr
-			};
-			for (auto& i : PCs) {
-				VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PCCI, GetAllocationCallbacks(), &i));
-			}
-		}
+		auto& PL = Pipelines[0];
+		const auto RP = RenderPasses[0];
+		const auto PLL = PipelineLayouts[0];
+		Threads.push_back(std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
+			const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS)
+			{
+#ifdef USE_PIPELINE_SERIALIZE
+				CreatePipeline_Vertex_Instance<T, U>(PL, PLL, RP, VS, FS, TES, TCS, GS, PCS.GetPipelineCache(0));
+#else
+				CreatePipeline_Vertex_Instance<T, U>(PL, PLL, RP, VS, FS, TES, TCS, GS);
+#endif
+			},
+			std::ref(PL), PLL, RP, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule));
 	}
 
-	assert(ShaderModules.size() > 1 && "");
-
-	const auto RP = RenderPasses[0];
-	const auto PLL = PipelineLayouts[0];
-
-	auto Thread = std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL,
-		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
-		const VkRenderPass RP, VkPipelineCache PC)
-		{
-			CreatePipeline_Vertex_Instance<T, U>(PL, PLL, VS, FS, TES, TCS, GS, RP, PC);
-		},
-		std::ref(PL), PLL, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, RP, PCs[0]);
-
-	Thread.join();
-
-	if (PCs.size() > 1) {
-		VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, PCs.back(), static_cast<uint32_t>(PCs.size() - 1), PCs.data()));
-	}
-	{
-		size_t Size;
-		VERIFY_SUCCEEDED(vkGetPipelineCacheData(Device, PCs.back(), &Size, nullptr));
-		if (Size) {
-			auto Data = new char[Size];
-			VERIFY_SUCCEEDED(vkGetPipelineCacheData(Device, PCs.back(), &Size, Data));
-			std::ofstream Out(PCOPath.c_str(), std::ios::out | std::ios::binary);
-			if (!Out.fail()) {
-				Out.write(Data, Size);
-				Out.close();
-			}
-			delete[] Data;
-		}
-	}
-	for (auto i : PCs) {
-		vkDestroyPipelineCache(Device, i, GetAllocationCallbacks());
+	for (auto& i : Threads) {
+		i.join();
 	}
 }

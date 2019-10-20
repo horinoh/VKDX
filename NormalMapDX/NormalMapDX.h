@@ -125,7 +125,7 @@ protected:
 	}
 #endif
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
-	virtual void CreatePipelineState() override { PipelineStates.resize(1); CreatePipelineState_VsPsDsHsGs_Tesselation(PipelineStates[0]); }
+	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs_Tesselation(); }
 	virtual void PopulateCommandList(const size_t i) override;
 
 private:

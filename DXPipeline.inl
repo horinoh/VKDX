@@ -3,7 +3,9 @@
 //!< テンプレート特殊化
 //!< template specialization
 
-template<> void CreatePipelineState_Vertex<Vertex_PositionColor>(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
+template<> void CreatePipelineState_Vertex<Vertex_PositionColor>(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, 
+	const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,
+	ID3D12PipelineLibrary* PL, LPCWSTR Name, const bool IsLoad)
 {
 	PERFORMANCE_COUNTER();
 
@@ -87,12 +89,24 @@ template<> void CreatePipelineState_Vertex<Vertex_PositionColor>(COM_PTR<ID3D12P
 	};
 	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
 
-	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
+	if (IsLoad) {
+		if (nullptr != PL && nullptr != Name) {
+			VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(Name, &GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
+		}
+	}
+	else {
+		VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
+		if (nullptr != PL && nullptr != Name) {
+			VERIFY_SUCCEEDED(PL->StorePipeline(Name, COM_PTR_GET(PST)));
+		}
+	}
 
 	LOG_OK();
 }
 
-template<> void CreatePipelineState_Vertex_Instance<Vertex_PositionColor, Instance_OffsetXY>(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
+template<> void CreatePipelineState_Vertex_Instance<Vertex_PositionColor, Instance_OffsetXY>(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, 
+	const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,
+	ID3D12PipelineLibrary* PL, LPCWSTR Name, const bool IsLoad)
 {
 	PERFORMANCE_COUNTER();
 
@@ -179,99 +193,81 @@ template<> void CreatePipelineState_Vertex_Instance<Vertex_PositionColor, Instan
 	};
 	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
 
-	VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
+	if (IsLoad) {
+		if (nullptr != PL && nullptr != Name) {
+			VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(Name, &GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
+		}
+	}
+	else {
+		VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
+		if (nullptr != PL && nullptr != Name) {
+			VERIFY_SUCCEEDED(PL->StorePipeline(Name, COM_PTR_GET(PST)));
+		}
+	}
 
 	LOG_OK();
 }
 
-template<typename T> void CreatePipelineState_VsPs_Vertex(COM_PTR<ID3D12PipelineState>& PS)
+template<typename T> void CreatePipelineState_VsPs_Vertex()
 {
-	const auto PCOPath = GetBasePath() + TEXT(".pco");
-	DeleteFile(PCOPath.data());
+	PipelineStates.resize(1);
 
-	COM_PTR<ID3D12Device1> Device1;
-	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device1)));
+#ifdef USE_PIPELINE_SERIALIZE
+	const auto PCOPath = GetBasePath() + TEXT(".plo");
+	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), PCOPath.c_str());
+#endif
 
-	COM_PTR<ID3D12PipelineLibrary> PL;
-	COM_PTR<ID3DBlob> Blob;
-	if (SUCCEEDED(D3DReadFileToBlob(PCOPath.c_str(), COM_PTR_PUT(Blob))) && Blob->GetBufferSize()) {
-		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(PL)));
+	std::vector<std::thread> Threads;
 
-		const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {};
-		VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(TEXT("0"), &GPSD, COM_PTR_UUIDOF_PUTVOID(PS)));
-	}
-	else {
-		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, COM_PTR_UUIDOF_PUTVOID(PL)));
-
-		assert(ShaderBlobs.size() > 1 && "");
-
+	{
 		const std::array<D3D12_SHADER_BYTECODE, 2> SBCs = { {
 			{ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() },
 			{ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() },
 		} };
-		auto Thread = std::thread::thread([&](COM_PTR<ID3D12PipelineState>& Pipe, ID3D12RootSignature* RS,
+		Threads.push_back(std::thread::thread([&](COM_PTR<ID3D12PipelineState>& Pipe, ID3D12RootSignature* RS,
 			const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
 			{
+#ifdef USE_PIPELINE_SERIALIZE
+				CreatePipelineState_Vertex<T>(Pipe, RS, VS, PS, DS, HS, GS, PLS.GetPipelineLibrary(), TEXT("0"), PLS.IsLoadSucceeded());
+#else
 				CreatePipelineState_Vertex<T>(Pipe, RS, VS, PS, DS, HS, GS);
+#endif
 			},
-			std::ref(PS), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC);
+			std::ref(PipelineStates[0]), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC));
+	}
 
-		Thread.join();
-
-		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), COM_PTR_GET(PS)));
-
-		const auto Size = PL->GetSerializedSize();
-		if (Size) {
-			COM_PTR<ID3DBlob> Blb;
-			VERIFY_SUCCEEDED(D3DCreateBlob(Size, COM_PTR_PUT(Blb)));
-			PL->Serialize(Blb->GetBufferPointer(), Size);
-			VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blb), PCOPath.c_str(), TRUE));
-		}
+	for (auto& i : Threads) {
+		i.join();
 	}
 }
 
-template<typename T, typename U> void CreatePipelineState_VsPs_Vertex_Instance(COM_PTR<ID3D12PipelineState>& PS)
+template<typename T, typename U> void CreatePipelineState_VsPs_Vertex_Instance()
 {
-	const auto PCOPath = GetBasePath() + TEXT(".pco");
-	DeleteFile(PCOPath.data());
+	PipelineStates.resize(1);
 
-	COM_PTR<ID3D12Device1> Device1;
-	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device1)));
+	const auto PCOPath = GetBasePath() + TEXT(".plo");
+#ifdef USE_PIPELINE_SERIALIZE
+	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), PCOPath.c_str());
+#endif
 
-	COM_PTR<ID3D12PipelineLibrary> PL;
-	COM_PTR<ID3DBlob> Blob;
-	if (SUCCEEDED(D3DReadFileToBlob(PCOPath.c_str(), COM_PTR_PUT(Blob))) && Blob->GetBufferSize()) {
-		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(PL)));
-
-		const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {};
-		VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(TEXT("0"), &GPSD, COM_PTR_UUIDOF_PUTVOID(PS)));
-	}
-	else {
-		VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(nullptr, 0, COM_PTR_UUIDOF_PUTVOID(PL)));
-
-		assert(ShaderBlobs.size() > 1 && "");
-
+	std::vector<std::thread> Threads;
+	{
 		const std::array<D3D12_SHADER_BYTECODE, 2> SBCs = { {
 			{ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() },
 			{ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() },
 		} };
-		auto Thread = std::thread::thread([&](COM_PTR<ID3D12PipelineState>& Pipe, ID3D12RootSignature* RS,
+		Threads.push_back(std::thread::thread([&](COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS,
 			const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
 			{
-				CreatePipelineState_Vertex_Instance<T, U>(Pipe, RS, VS, PS, DS, HS, GS);
+#ifdef USE_PIPELINE_SERIALIZE
+				CreatePipelineState_Vertex_Instance<T, U>(PST, RS, VS, PS, DS, HS, GS, PLS.GetPipelineLibrary(), TEXT("0"), PLS.IsLoadSucceeded());
+#else
+				CreatePipelineState_Vertex_Instance<T, U>(PST, RS, VS, PS, DS, HS, GS);
+#endif
 			},
-			std::ref(PS), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC);
-
-		Thread.join();
-
-		VERIFY_SUCCEEDED(PL->StorePipeline(TEXT("0"), COM_PTR_GET(PS)));
-
-		const auto Size = PL->GetSerializedSize();
-		if (Size) {
-			COM_PTR<ID3DBlob> Blb;
-			VERIFY_SUCCEEDED(D3DCreateBlob(Size, COM_PTR_PUT(Blb)));
-			PL->Serialize(Blb->GetBufferPointer(), Size);
-			VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blb), PCOPath.c_str(), TRUE));
-		}
+			std::ref(PipelineStates[0]), COM_PTR_GET(RootSignature), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC));
+	}
+	for (auto& i : Threads) {
+		i.join();
 	}
 }
