@@ -27,8 +27,11 @@
 //#define USE_WARP
 
 #define USE_STATIC_SAMPLER
+
 //!< HLSLからルートシグネチャを作成する (Create root signature from HLSL)
 //	#define USE_HLSL_ROOTSIGNATRUE
+
+#define USE_BUNDLE
 
 #include <d3d12.h>
 #include <d3dcompiler.h>
@@ -148,12 +151,7 @@ protected:
 
 	virtual void CreateFence();
 
-	virtual void CreateCommandAllocator(COM_PTR<ID3D12CommandAllocator>& CA, const D3D12_COMMAND_LIST_TYPE CLT) {
-		VERIFY_SUCCEEDED(Device->CreateCommandAllocator(CLT, COM_PTR_UUIDOF_PUTVOID(CA)));
-	}
 	virtual void CreateCommandAllocator();
-
-	virtual void CreateCommandList(COM_PTR<ID3D12GraphicsCommandList>& CL, ID3D12CommandAllocator* CA, const D3D12_COMMAND_LIST_TYPE CLT);
 	virtual void CreateCommandList();
 
 	virtual void CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat);
@@ -270,6 +268,8 @@ protected:
 
 	std::vector<COM_PTR<ID3D12CommandAllocator>> CommandAllocators;
 	std::vector<COM_PTR<ID3D12GraphicsCommandList>> GraphicsCommandLists;
+	std::vector<COM_PTR<ID3D12CommandAllocator>> BundleCommandAllocators;
+	std::vector<COM_PTR<ID3D12GraphicsCommandList>> BundleGraphicsCommandLists;
 	//std::vector<COM_PTR<ID3D12CommandList>> CommandLists;
 	
 	COM_PTR<IDXGISwapChain4> SwapChain;

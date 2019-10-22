@@ -233,6 +233,10 @@ void TextureDX::PopulateCommandList(const size_t i)
 {
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
+#ifdef USE_BUNDLE
+	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]); 
+#endif
 	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
@@ -244,6 +248,32 @@ void TextureDX::PopulateCommandList(const size_t i)
 
 	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
 
+#ifdef USE_BUNDLE
+	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
+	{
+		BCL->SetGraphicsRootSignature(RS);
+		if (nullptr != ImageDescriptorHeap
+#ifndef USE_STATIC_SAMPLER
+			&& !SamplerDescriptorHeaps.empty()
+#endif
+			) {
+#ifdef USE_STATIC_SAMPLER
+			const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(ImageDescriptorHeap) };
+#else
+			const std::array<ID3D12DescriptorHeap*, 2> DHs = { { COM_PTR_GET(ImageDescriptorHeap), COM_PTR_GET(SamplerDescriptorHeaps[0]) } };
+#endif
+			BCL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
+			BCL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ImageDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+#ifndef USE_STATIC_SAMPLER
+			BCL->SetGraphicsRootDescriptorTable(1, GetGPUDescriptorHandle(COM_PTR_GET(SamplerDescriptorHeaps[0]), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 0));
+#endif				
+		}
+		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+	}
+	VERIFY_SUCCEEDED(BCL->Close());
+#endif
+
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
@@ -254,6 +284,9 @@ void TextureDX::PopulateCommandList(const size_t i)
 			const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { SCH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
 
+#ifdef USE_BUNDLE
+			CL->ExecuteBundle(BCL);
+#else
 			CL->SetGraphicsRootSignature(RS);
 
 			//!< テクスチャ
@@ -278,6 +311,7 @@ void TextureDX::PopulateCommandList(const size_t i)
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+#endif
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}

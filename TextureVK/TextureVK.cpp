@@ -232,6 +232,9 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 void TextureVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandBuffers[i];
+#ifdef USE_SECONDARY_COMMAND_BUFFER
+	const auto SCB = SecondaryCommandBuffers[i];
+#endif
 	const auto FB = Framebuffers[i];
 	//const auto SI = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
@@ -239,17 +242,46 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 	const auto IB = IndirectBuffers[0];
 	const auto PL = Pipelines[0];
 
-	const VkCommandBufferBeginInfo BeginInfo = {
+#ifdef USE_SECONDARY_COMMAND_BUFFER
+	const VkCommandBufferInheritanceInfo CBII = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+		nullptr,
+		RP,
+		0,
+		FB,
+		VK_FALSE,
+		0,
+		0,
+	};
+	const VkCommandBufferBeginInfo SCBBI = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		nullptr,
+		VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+		&CBII
+	};
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
+		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
+		if (!DescriptorSets.empty()) {
+			vkCmdBindDescriptorSets(SCB,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				PLL,
+				0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(),
+				0, nullptr);
+		}
+		vkCmdDrawIndirect(SCB, IB, 0, 1, 0);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
+#endif
+
+	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
 		0,
 		nullptr
 	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &BeginInfo)); {
-		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
-
-		const VkRenderPassBeginInfo RenderPassBeginInfo = {
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RP,
@@ -257,7 +289,16 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 			ScissorRects[0],
 			0, nullptr
 		};
-		vkCmdBeginRenderPass(CB, &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE); {
+#ifdef USE_SECONDARY_COMMAND_BUFFER
+		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
+			const std::array<VkCommandBuffer, 1> SCBs = { SCB };
+			vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
+		} vkCmdEndRenderPass(CB);
+#else
+		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
+			vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+			vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
 			if (!DescriptorSets.empty()) {
@@ -271,6 +312,7 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 			//!< •`‰æ
 			vkCmdDrawIndirect(CB, IB, 0, 1, 0);
 		} vkCmdEndRenderPass(CB);
+#endif
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
 #pragma endregion

@@ -307,7 +307,16 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		Swapchain = VK_NULL_HANDLE;
 	}
 
-	//!< コマンドプール破棄時にコマンドバッファは暗黙的に解放されるので必要無い
+	//!< コマンドプール破棄時にコマンドバッファは暗黙的に解放されるので無くても良い
+	//if(!SecondaryCommandBuffers.empty()) {
+	//	vkFreeCommandBuffers(Device, SecondaryCommandPools[0], static_cast<uint32_t>(SecondaryCommandBuffers.size()), SecondaryCommandBuffers.data());
+	//	SecondaryCommandBuffers.clear();
+	//}	
+	for (auto i : SecondaryCommandPools) {
+		vkDestroyCommandPool(Device, i, GetAllocationCallbacks());
+	}
+	SecondaryCommandPools.clear();
+
 	//if(!CommandBuffers.empty()) {
 	//	vkFreeCommandBuffers(Device, CommandPool[0], static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
 	//	CommandBuffers.clear();
@@ -1522,62 +1531,98 @@ void VK::CreateSemaphore(VkDevice Dev)
 	LOG_OK();
 }
 
+//void VK::CreateCommandPool(VkCommandPool& CP, VkDevice Dev, const VkCommandPoolCreateFlags Flags, const uint32_t QueueFamilyIndex)
+//{
+//	const VkCommandPoolCreateInfo CPCI = {
+//		VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+//		nullptr,
+//		Flags,
+//		QueueFamilyIndex
+//	};
+//	VERIFY_SUCCEEDED(vkCreateCommandPool(Dev, &CPCI, GetAllocationCallbacks(), &CP));
+//
+//	LOG_OK();
+//}
+//!< VK_COMMAND_BUFFER_LEVEL_PRIMARY	: 直接キューにサブミットできる、セカンダリをコールできる (Can be submit, can execute secondary)
+//!< VK_COMMAND_BUFFER_LEVEL_SECONDARY	: サブミットできない、プライマリから実行されるのみ (Cannot submit, only executed from primary)
+//void VK::AllocateCommandBuffer(std::vector<VkCommandBuffer>& CB, const VkCommandPool CP, const VkCommandBufferLevel Level, const uint32_t Count)
+//{
+//	assert(Count && "");
+//	CB.resize(Count);
+//	const VkCommandBufferAllocateInfo CBAI = {
+//		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+//		nullptr,
+//		CP,
+//		Level,
+//		Count
+//	};
+//	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, CB.data()));
+//
+//	LOG_OK();
+//}
+
+//!< キューファミリが異なる場合は別のコマンドプールを用意する必要がある、そのキューにのみサブミットできる
+//!< 複数スレッドで同時にレコーディングするには、別のコマンドプールからアロケートされたコマンドバッファである必要がある (コマンドプールは複数スレッドからアクセス不可)
 //!< VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT	: コマンドバッファ毎にリセットが可能、指定しない場合はプール毎にまとめてリセット (コマンドバッファのレコーディング開始時に暗黙的にリセットされるので注意)
 //!< VK_COMMAND_POOL_CREATE_TRANSIENT_BIT				: 短命で、何度もサブミットしない、すぐにリセットやリリースされる場合に指定
-void VK::CreateCommandPool(VkCommandPool& CP, VkDevice Dev, const VkCommandPoolCreateFlags Flags, const uint32_t QueueFamilyIndex)
+void VK::CreateCommandPool()
 {
 	const VkCommandPoolCreateInfo CPCI = {
 		VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
 		nullptr,
-		Flags,
-		QueueFamilyIndex
+		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		GraphicsQueueFamilyIndex
 	};
-	VERIFY_SUCCEEDED(vkCreateCommandPool(Dev, &CPCI, GetAllocationCallbacks(), &CP));
-
-	LOG_OK();
-}
-//!< VK_COMMAND_BUFFER_LEVEL_PRIMARY	: 直接キューにサブミットできる、セカンダリをコールできる (Can be submit, can execute secondary)
-//!< VK_COMMAND_BUFFER_LEVEL_SECONDARY	: サブミットできない、プライマリから実行されるのみ (Cannot submit, only executed from primary)
-void VK::AllocateCommandBuffer(std::vector<VkCommandBuffer>& CB, const VkCommandPool CP, const VkCommandBufferLevel Level, const uint32_t Count)
-{
-	assert(Count && "");
-	CB.resize(Count);
-	const VkCommandBufferAllocateInfo CBAI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-		nullptr,
-		CP,
-		Level,
-		Count
-	};
-	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, CB.data()));
-
-	LOG_OK();
-}
-//!< キューファミリが異なる場合は別のコマンドプールを用意する必要がある、そのキューにのみサブミットできる
-//!< 複数スレッドで同時にレコーディングするには、別のコマンドプールからアロケートされたコマンドバッファである必要がある (コマンドプールは複数スレッドからアクセス不可)
-void VK::CreateCommandPool()
-{
 	if (GraphicsQueueFamilyIndex == ComputeQueueFamilyIndex) {
 		CommandPools.resize(1);
-		CreateCommandPool(CommandPools[0], Device, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, GraphicsQueueFamilyIndex);
+		VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &CommandPools[0]));
 	}
 	else {
 		//!< キューファミリが異なる場合は、別のコマンドプールを用意する必要がある
 		CommandPools.resize(2);
-		CreateCommandPool(CommandPools[0], Device, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, GraphicsQueueFamilyIndex);
-		CreateCommandPool(CommandPools[1], Device, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, ComputeQueueFamilyIndex);
+		VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &CommandPools[0]));
+		const VkCommandPoolCreateInfo CPCI_Compute = {
+			VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+			nullptr,
+			VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+			ComputeQueueFamilyIndex
+		};
+		VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI_Compute, GetAllocationCallbacks(), &CommandPools[1]));
 	}
+
+	//!< セカンダリ用に別プールにする必要は無いが、ここでは別プールとしておく
+#ifdef USE_SECONDARY_COMMAND_BUFFER
+	SecondaryCommandPools.resize(1);
+	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &SecondaryCommandPools[0]));
+#endif
 }
+//!< VK_COMMAND_BUFFER_LEVEL_PRIMARY	: 直接キューにサブミットできる、セカンダリをコールできる (Can be submit, can execute secondary)
+//!< VK_COMMAND_BUFFER_LEVEL_SECONDARY	: サブミットできない、プライマリから実行されるのみ (Cannot submit, only executed from primary)
 void VK::AllocateCommandBuffer()
 {
 	assert(!CommandPools.empty() && "");
 
-	std::vector<VkCommandBuffer> CBs;
-	AllocateCommandBuffer(CBs, CommandPools[0], VK_COMMAND_BUFFER_LEVEL_PRIMARY, static_cast<uint32_t>(SwapchainImages.size()));
-	std::copy(CBs.begin(), CBs.end(), std::back_inserter(CommandBuffers));
+	CommandBuffers.resize(SwapchainImages.size());
+	const VkCommandBufferAllocateInfo CBAI = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		nullptr,
+		CommandPools[0],
+		VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+		static_cast<uint32_t>(CommandBuffers.size())
+	};
+	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, CommandBuffers.data()));
 
-	//AllocateCommandBuffer(CBs, CommandPool[0], VK_COMMAND_BUFFER_LEVEL_SECONDARY, 1);
-	//std::copy(CBs.begin(), CBs.end(), std::back_inserter(CommandBuffers));
+#ifdef USE_SECONDARY_COMMAND_BUFFER
+	SecondaryCommandBuffers.resize(SwapchainImages.size());
+	const VkCommandBufferAllocateInfo SCBAI = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		nullptr,
+		SecondaryCommandPools[0],
+		VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+		static_cast<uint32_t>(CommandBuffers.size())
+	};
+	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &SCBAI, SecondaryCommandBuffers.data()));
+#endif
 }
 
 VkSurfaceFormatKHR VK::SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
@@ -2496,7 +2541,7 @@ void VK::CreatePipeline()
 	Pipelines.resize(1);
 
 #ifdef USE_PIPELINE_SERIALIZE
-	PipelineCacheSerializer PCS(Device, (GetBasePath() + TEXT(".pco")).c_str(), 1);
+	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
 #endif
 
 	std::vector<std::thread> Threads;

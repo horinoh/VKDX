@@ -234,6 +234,10 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 {
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
+#ifdef USE_BUNDLE
+	//const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	//const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
+#endif
 	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);

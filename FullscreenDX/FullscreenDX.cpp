@@ -233,6 +233,10 @@ void FullscreenDX::PopulateCommandList(const size_t i)
 {
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
+#ifdef USE_BUNDLE
+	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]); 
+#endif
 	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
@@ -243,6 +247,20 @@ void FullscreenDX::PopulateCommandList(const size_t i)
 	const auto RS = COM_PTR_GET(RootSignatures[0]);
 
 	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
+
+#ifdef USE_BUNDLE
+	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
+	{
+		BCL->SetGraphicsRootSignature(RS);
+		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+#ifdef USE_DRAW_INDIRECT
+		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+#else
+		BCL->DrawInstanced(4, 1, 0, 0);
+#endif
+	}
+	VERIFY_SUCCEEDED(BCL->Close());
+#endif
 
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
@@ -257,6 +275,9 @@ void FullscreenDX::PopulateCommandList(const size_t i)
 			const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { SCH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
 
+#ifdef USE_BUNDLE
+			CL->ExecuteBundle(BCL);
+#else
 			//!< ルートシグニチャ
 			CL->SetGraphicsRootSignature(RS);
 
@@ -267,6 +288,7 @@ void FullscreenDX::PopulateCommandList(const size_t i)
 			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 #else
 			CL->DrawInstanced(4, 1, 0, 0);
+#endif
 #endif
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);

@@ -195,7 +195,7 @@ void DXExt::CreatePipelineState_VsPs()
 	PipelineStates.resize(1);
 
 #ifdef USE_PIPELINE_SERIALIZE
-	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), (GetBasePath() + TEXT(".plo")).c_str());
+	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
 #endif
 
 	std::vector<std::thread> Threads;
@@ -226,7 +226,7 @@ void DXExt::CreatePipelineState_VsPsDsHsGs_Tesselation()
 	PipelineStates.resize(1);
 
 #ifdef USE_PIPELINE_SERIALIZE
-	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), (GetBasePath() + TEXT(".plo")).c_str());
+	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
 #endif
 
 	std::vector<std::thread> Threads;

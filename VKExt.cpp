@@ -248,7 +248,7 @@ void VKExt::CreatePipeline_VsFs()
 	Pipelines.resize(1);
 
 #ifdef USE_PIPELINE_SERIALIZE
-	PipelineCacheSerializer PCS(Device, (GetBasePath() + TEXT(".pco")).c_str(), 1);
+	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
 #endif
 
 	std::vector<std::thread> Threads;
@@ -278,7 +278,7 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Tesselation()
 	Pipelines.resize(1);
 
 #ifdef USE_PIPELINE_SERIALIZE
-	PipelineCacheSerializer PCS(Device, (GetBasePath() + TEXT(".pco")).c_str(), 1);
+	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
 #endif
 
 	std::vector<std::thread> Threads;

@@ -232,11 +232,44 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 void FullscreenVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandBuffers[i];
+#ifdef USE_SECONDARY_COMMAND_BUFFER
+	const auto SCB = SecondaryCommandBuffers[i];
+#endif
 	const auto FB = Framebuffers[i];
 	//const auto SI = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
 	const auto IB = IndirectBuffers[0];
 	const auto PL = Pipelines[0];
+
+#ifdef USE_SECONDARY_COMMAND_BUFFER
+	const VkCommandBufferInheritanceInfo CBII = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+		nullptr,
+		RP,
+		0,
+		FB,
+		VK_FALSE,
+		0,
+		0,
+	};
+	const VkCommandBufferBeginInfo SCBBI = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		nullptr,
+		VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+		&CBII
+	};
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
+		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+
+		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
+#ifdef USE_DRAW_INDIRECT
+		vkCmdDrawIndirect(SCB, IB, 0, 1, 0);
+#else
+		vkCmdDraw(SCB, 4, 1, 0, 0);
+#endif
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
+#endif
 
 	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -245,10 +278,6 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		//!< ビューポート、シザー
-		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
-
 		//!< バリア、レンダーターゲットの設定は RenderPass
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -258,7 +287,18 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
 			ScissorRects[0],
 			0, nullptr //!< レンダーパスでクリアする場合は必須 static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
 		};
+
+#ifdef USE_SECONDARY_COMMAND_BUFFER
+		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
+			const std::array<VkCommandBuffer, 1> SCBs = { SCB };
+			vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
+		} vkCmdEndRenderPass(CB);
+#else
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
+			//!< ビューポート、シザー
+			vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+			vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+
 			//!< トポロジは Pipeline - VkPipelineInputAssemblyStateCreateInfo で指定しているのでパイプラインをバインド
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
@@ -269,6 +309,7 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
 			vkCmdDraw(CB, 4, 1, 0, 0);
 #endif
 		} vkCmdEndRenderPass(CB);
+#endif
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
 #pragma endregion

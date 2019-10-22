@@ -609,27 +609,35 @@ void DX::CreateFence()
 void DX::CreateCommandAllocator()
 {
 	CommandAllocators.resize(1);
+	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(CommandAllocators[0])));
 
-	CreateCommandAllocator(CommandAllocators[0], D3D12_COMMAND_LIST_TYPE_DIRECT);
+#ifdef USE_BUNDLE
+	BundleCommandAllocators.resize(1);
+	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_UUIDOF_PUTVOID(BundleCommandAllocators[0])));
+#endif
 
 	LOG_OK();
 }
-
-void DX::CreateCommandList(COM_PTR<ID3D12GraphicsCommandList>& CL, ID3D12CommandAllocator* CA, const D3D12_COMMAND_LIST_TYPE CLT)
-{
-	//!< 描画コマンドを発行するコマンドリストにはパイプラインステートの指定が必要だが、後から指定(CL->Reset(CA, PS.get()))もできる (ここではnullptrで作成することにする)
-	VERIFY_SUCCEEDED(Device->CreateCommandList(0, CLT, CA, nullptr, COM_PTR_UUIDOF_PUTVOID(CL)));
-	VERIFY_SUCCEEDED(CL->Close());
-}
 void DX::CreateCommandList()
 {
+	//!< BufferCount を取得するため
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
 
 	GraphicsCommandLists.resize(SCD.BufferCount);
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
-		CreateCommandList(GraphicsCommandLists[i], COM_PTR_GET(CommandAllocators[0]), D3D12_COMMAND_LIST_TYPE_DIRECT);
+		//!< 描画コマンドを発行するコマンドリストにはパイプラインステートの指定が必要だが、後から指定(CL->Reset(CA, COM_PTR_GET(PS)))もできる (ここではnullptrで作成することにしている)
+		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(CommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandLists[i])));
+		VERIFY_SUCCEEDED(GraphicsCommandLists[i]->Close());
 	}
+
+#ifdef USE_BUNDLE
+	BundleGraphicsCommandLists.resize(SCD.BufferCount);
+	for (UINT i = 0; i < SCD.BufferCount; ++i) {
+		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleGraphicsCommandLists[i])));
+		VERIFY_SUCCEEDED(BundleGraphicsCommandLists[i]->Close());
+	}
+#endif
 
 	LOG_OK();
 }

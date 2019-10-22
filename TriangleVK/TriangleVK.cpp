@@ -272,6 +272,9 @@ void TriangleVK::CreateIndexBuffer()
 void TriangleVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandBuffers[i];
+#ifdef USE_SECONDARY_COMMAND_BUFFER
+	const auto SCB = SecondaryCommandBuffers[i];
+#endif
 	const auto FB = Framebuffers[i];
 	const auto SI = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
@@ -279,6 +282,36 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 	const auto IB = IndexBuffers[0];
 	const auto IndirectB = IndirectBuffers[0];
 	const auto PL = Pipelines[0];
+
+#ifdef USE_SECONDARY_COMMAND_BUFFER
+	const VkCommandBufferInheritanceInfo CBII = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+		nullptr,
+		RP,
+		0,
+		FB,
+		VK_FALSE,
+		0,
+		0,
+	};
+	const VkCommandBufferBeginInfo SCBBI = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		nullptr,
+		VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+		&CBII
+	};
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
+		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
+		const std::array<VkBuffer, 1> VBs = { VB };
+		const std::array<VkDeviceSize, 1> Offsets = { 0 };
+		assert(VBs.size() == Offsets.size() && "");
+		vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets.data());
+		vkCmdBindIndexBuffer(SCB, IB, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdDrawIndexedIndirect(SCB, IndirectB, 0, 1, 0);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
+#endif
 
 	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -293,10 +326,6 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 
 		//MarkerInsert(CB, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), "Command");
 #endif
-
-		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
-
 		//!< クリア
 		ClearColor(CB, SI, Colors::SkyBlue);
 
@@ -308,7 +337,15 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 			ScissorRects[0],
 			0, nullptr
 		};
+#ifdef USE_SECONDARY_COMMAND_BUFFER
+		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
+			const std::array<VkCommandBuffer, 1> SCBs = { SCB };
+			vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
+		} vkCmdEndRenderPass(CB);
+#else
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
+			vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+			vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 #if 0
 			//!< プッシュコンスタント PushConstants
 			const uint32_t Offset = 64; //!< 4の倍数であること(ここではフラグメントシェーダ用は 64byte オフセットしている) Mulitiple of 4(For fragment shader offset 64 byte in this case)
@@ -316,7 +353,6 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 			const auto Size = static_cast<uint32_t>(Color.size() * sizeof(Color[0])); //!< 4の倍数であること Mulitiple of 4
 			vkCmdPushConstants(CommandBuffer, PipelineLayouts[0], VK_SHADER_STAGE_FRAGMENT_BIT, Offset, Size, Color.data());
 #endif
-
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
 			const std::array<VkBuffer, 1> VBs = { VB };
@@ -327,6 +363,8 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 
 			vkCmdDrawIndexedIndirect(CB, IndirectB, 0, 1, 0);
 		} vkCmdEndRenderPass(CB);
+#endif
+
 #ifdef _DEBUG
 		//MarkerEnd(CB);
 #endif

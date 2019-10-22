@@ -277,6 +277,10 @@ void TriangleDX::PopulateCommandList(const size_t i)
 {
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
+#ifdef USE_BUNDLE
+	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
+#endif
 	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
@@ -288,6 +292,24 @@ void TriangleDX::PopulateCommandList(const size_t i)
 
 	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
 
+	//!< バンドルから全てのコマンドがコールできるわけではない
+#ifdef USE_BUNDLE
+	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
+	{
+		BCL->SetGraphicsRootSignature(RS);
+		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		if (!VertexBufferViews.empty()) {
+			const std::array<D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VertexBufferViews[0] };
+			BCL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
+			if (!IndexBufferViews.empty()) {
+				BCL->IASetIndexBuffer(&IndexBufferViews[0]);
+			}
+		}
+		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+	}
+	VERIFY_SUCCEEDED(BCL->Close());
+#endif
+
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
 #if defined(_DEBUG) || defined(USE_PIX)
@@ -296,7 +318,6 @@ void TriangleDX::PopulateCommandList(const size_t i)
 
 		//PIXSetMarker(CL, PIX_COLOR(255, 0, 0), TEXT("Command"));
 #endif
-
 		//!< ビューポート、シザー
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
@@ -312,6 +333,10 @@ void TriangleDX::PopulateCommandList(const size_t i)
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 
+#ifdef USE_BUNDLE
+			//!< バンドルの呼び出し
+			CL->ExecuteBundle(BCL);
+#else
 			//!< ルートシグニチャ
 			CL->SetGraphicsRootSignature(RS);
 
@@ -329,6 +354,7 @@ void TriangleDX::PopulateCommandList(const size_t i)
 
 			//!< 描画
 			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+#endif
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 

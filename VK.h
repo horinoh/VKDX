@@ -54,6 +54,8 @@
 #endif
 #endif
 
+#define USE_SECONDARY_COMMAND_BUFFER
+
 #include "Cmn.h"
 #ifdef _WINDOWS
 #include "Win.h"
@@ -236,8 +238,6 @@ protected:
 
 	virtual void CreateCommandPool();
 	virtual void AllocateCommandBuffer();
-	virtual void CreateCommandPool(VkCommandPool& CP, VkDevice Device, const VkCommandPoolCreateFlags Flags, const uint32_t QueueFamilyIndex);
-	virtual void AllocateCommandBuffer(std::vector<VkCommandBuffer>& CB, const VkCommandPool CP, const VkCommandBufferLevel Level, const uint32_t Count);
 
 	virtual VkSurfaceFormatKHR SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 	virtual VkExtent2D SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& Cap, const uint32_t Width, const uint32_t Height);
@@ -426,6 +426,8 @@ protected:
 
 	std::vector<VkCommandPool> CommandPools;
 	std::vector<VkCommandBuffer> CommandBuffers;
+	std::vector<VkCommandPool> SecondaryCommandPools;
+	std::vector<VkCommandBuffer> SecondaryCommandBuffers;
 
 	VkExtent2D SurfaceExtent2D;
 	VkFormat ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;

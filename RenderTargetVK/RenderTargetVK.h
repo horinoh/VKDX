@@ -99,7 +99,7 @@ protected:
 	virtual void CreatePipeline() override { 
 		Pipelines.resize(2); //!<
 #ifdef USE_PIPELINE_SERIALIZE
-		PipelineCacheSerializer PCS(Device, (GetBasePath() + TEXT(".pco")).c_str(), 2);
+		PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 2);
 #endif
 		std::vector<std::thread> Threads;
 		{

@@ -233,6 +233,10 @@ void ToonDX::PopulateCommandList(const size_t i)
 {
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
+#ifdef USE_BUNDLE
+	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]); 
+#endif
 	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
@@ -243,6 +247,21 @@ void ToonDX::PopulateCommandList(const size_t i)
 	const auto RS = COM_PTR_GET(RootSignatures[0]);
 
 	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
+
+#ifdef USE_BUNDLE
+	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
+	{
+		BCL->SetGraphicsRootSignature(RS);
+		{
+			const std::array<ID3D12DescriptorHeap*, 1> DH = { COM_PTR_GET(ConstantBufferDescriptorHeap) };
+			BCL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
+			BCL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+		}
+		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+	}
+	VERIFY_SUCCEEDED(BCL->Close());
+#endif
 
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
@@ -257,6 +276,9 @@ void ToonDX::PopulateCommandList(const size_t i)
 			const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDHs = { SCH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 
+#ifdef USE_BUNDLE
+			CL->ExecuteBundle(BCL);
+#else
 			CL->SetGraphicsRootSignature(RS);
 
 			//!< コンスタントバッファ
@@ -270,6 +292,7 @@ void ToonDX::PopulateCommandList(const size_t i)
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
 			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+#endif
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
