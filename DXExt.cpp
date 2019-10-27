@@ -20,6 +20,7 @@ void DXExt::CreateIndirectBuffer_Draw(const UINT IndexCount, const UINT Instance
 		static_cast<const UINT>(IADs.size()), IADs.data(),
 		0
 	};
+	//!< パイプラインのバインディングを更新するような場合はルートシグネチャが必要、Draw や Dispatch のみの場合はnullptrを指定できる
 	Device->CreateCommandSignature(&CSD, /*COM_PTR_GET(RootSignatures[0])*/nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectCommandSignatures[0]));
 }
 
@@ -40,7 +41,6 @@ void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT IndexCount, const UINT I
 		static_cast<const UINT>(IADs.size()), IADs.data(),
 		0
 	};
-	//!< パイプラインのバインディングを更新するような場合はルートシグネチャが必要、Draw や Dispatch のみの場合はnullptrを指定できる
 	Device->CreateCommandSignature(&CSD, /*COM_PTR_GET(RootSignatures[0])*/nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectCommandSignatures[0]));
 }
 
@@ -104,17 +104,23 @@ void DXExt::CreatePipelineState_Tesselation(COM_PTR<ID3D12PipelineState>& PST, I
 
 	const D3D12_DEPTH_STENCILOP_DESC DSOD = {
 		D3D12_STENCIL_OP_KEEP,
-		D3D12_STENCIL_OP_KEEP,
-		D3D12_STENCIL_OP_KEEP,
-		D3D12_COMPARISON_FUNC_NEVER
+		D3D12_STENCIL_OP_KEEP, 
+		D3D12_STENCIL_OP_KEEP, 
+		D3D12_COMPARISON_FUNC_ALWAYS
 	};
 	const D3D12_DEPTH_STENCIL_DESC DSD = {
+#if 1
+		TRUE,
+		D3D12_DEPTH_WRITE_MASK_ALL,
+		D3D12_COMPARISON_FUNC_LESS,
+#else
 		FALSE,
 		D3D12_DEPTH_WRITE_MASK_ZERO,
 		D3D12_COMPARISON_FUNC_NEVER,
-		FALSE,
-		0,
-		0,
+#endif
+		FALSE, 
+		D3D12_DEFAULT_STENCIL_READ_MASK,
+		D3D12_DEFAULT_STENCIL_WRITE_MASK,
 		DSOD,
 		DSOD
 	};

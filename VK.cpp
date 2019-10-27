@@ -67,7 +67,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateSemaphore(Device);
 
 	//!< スワップチェイン
-	CreateSwapchain(GetCurrentPhysicalDevice(), Surface, Rect);
+	CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight());
 	GetSwapchainImage(Device, Swapchain);
 	CreateSwapchainImageView();
 
@@ -1905,7 +1905,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 
 	LOG_OK();
 }
-void VK::ResizeSwapchain(const uint32_t /*Width*/, const uint32_t /*Height*/)
+void VK::ResizeSwapchain(const uint32_t Width, const uint32_t Height)
 {
 	//!< #VK_TODO スワップチェインのリサイズ対応
 	if (VK_NULL_HANDLE != Device) {
@@ -1921,7 +1921,7 @@ void VK::ResizeSwapchain(const uint32_t /*Width*/, const uint32_t /*Height*/)
 	//}
 	//CommandPools.clear();
 
-	CreateSwapchain(GetCurrentPhysicalDevice(), Surface, Rect);
+	CreateSwapchain(GetCurrentPhysicalDevice(), Surface, Width, Height);
 	GetSwapchainImage(Device, Swapchain);
 	CreateSwapchainImageView();
 }
@@ -2062,7 +2062,7 @@ void VK::CreateDepthStencil(const VkFormat DepthFormat, const uint32_t Width, co
 	assert(IsSupportedDepthFormat(GetCurrentPhysicalDevice(), DepthFormat) && "Not supported depth format");
 
 	const VkExtent3D Extent3D = { Width, Height, 1 };
-	CreateImage(&DepthStencilImage, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+	CreateImage(&DepthStencilImage, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 
 	AllocateImageMemory(&DepthStencilDeviceMemory, DepthStencilImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	VERIFY_SUCCEEDED(vkBindImageMemory(Device, DepthStencilImage, DepthStencilDeviceMemory, 0));
@@ -2094,7 +2094,7 @@ void VK::InitializeDepthStencilImage(const VkCommandBuffer CB)
 			VK_QUEUE_FAMILY_IGNORED,
 			VK_QUEUE_FAMILY_IGNORED,
 			DepthStencilImage,
-			ImageSubresourceRange_DepthStencil
+			ImageSubresourceRange_DepthStencil/*ImageSubresourceRange_Depth : デプスのみのフォーマットの場合*/
 		};
 		vkCmdPipelineBarrier(CB,
 			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -2416,8 +2416,14 @@ void VK::CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color)
 			0,
 			Color,
 			VK_SAMPLE_COUNT_1_BIT,
-			//!< アタッチメントのロードストア :「開始時に何も(クリア)しない」「終了時に保存」
+			//!< アタッチメントのロードストア
+#ifdef USE_RENDER_PASS_CLEAR
+			//!<「開始時にクリア」「終了時に保存」
+			VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+#else
+			//!<「開始時に何もしない」「終了時に保存」
 			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
+#endif
 			//!< ステンシルのロードストア : (ここでは)開始時、終了時ともに「使用しない」
 			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
 			//!< レンダーパスのレイアウト : 「開始時未定義」「終了時プレゼンテーションソース」
@@ -3029,7 +3035,6 @@ void VK::PopulateCommandBuffer(const size_t i)
 {
 	const auto CB = CommandBuffers[i];//CommandPools[0].second[i];
 	const auto FB = Framebuffers[i];
-	const auto SI = SwapchainImages[i];
 
 	//!< vkBeginCommandBuffer() で暗黙的にリセットされるが、明示的にリセットする場合には「メモリをプールへリリースするかどうかを指定できる」
 	//VERIFY_SUCCEEDED(vkResetCommandBuffer(CB, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
@@ -3049,9 +3054,8 @@ void VK::PopulateCommandBuffer(const size_t i)
 		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-#if 1
-		//!< クリア
-		ClearColor(CB, SI, Colors::SkyBlue);
+#ifndef USE_RENDER_PASS_CLEAR
+		ClearColor(CB, SwapchainImages[i], Colors::SkyBlue);
 #endif
 
 		const auto RP = RenderPasses[0];
@@ -3063,16 +3067,18 @@ void VK::PopulateCommandBuffer(const size_t i)
 		assert(ScissorRects[0].extent.width >= Granularity.width && ScissorRects[0].extent.height >= Granularity.height && "ScissorRect is too small");
 #endif
 		//!< (ここでは)レンダーパス開始時にカラーはクリアせず、デプスはクリアしている (In this case, not clear color, but clear depth on begining of renderpas)
-		std::vector<VkClearValue> ClearValues(2);
-		//ClearValues[0].color = Colors::SkyBlue; //!< If VkAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, need this
-		ClearValues[1].depthStencil = ClearDepthStencilValue;
+		std::array<VkClearValue, 2> CVs = {};
+#ifdef USE_RENDER_PASS_CLEAR
+		CVs[0].color = Colors::SkyBlue;
+#endif
+		CVs[1].depthStencil = ClearDepthStencilValue;
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RP,
 			FB,
 			ScissorRects[0], //!< フレームバッファのサイズ以下を指定できる
-			static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
+			static_cast<uint32_t>(CVs.size()), CVs.data()
 		};
 
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
@@ -3081,38 +3087,7 @@ void VK::PopulateCommandBuffer(const size_t i)
 			//vkCmdBindVertexBuffers();
 			//vkCmdBindIndexBuffer();
 			//vkCmdDrawIndirect();
-
-			//!< vkCmdNextSubpass(CB, VK_SUBPASS_CONTENTS_INLINE);
-
-#pragma region SecondaryCB
-			//!< セカンダリコマンドバッファを使用する場合 (In case use secondary command buffer)
-			std::vector<VkCommandBuffer> SCBs = {}; //!< ここでは空なので何もしない (In this case, vector is empty so do nothing)
-			if (!SCBs.empty()) {
-				//!< * 基本的に、セカンダリ(コマンドバッファ)はプライマリ(コマンドバッファ)のステートを継承しない
-				//!< * セカンダリ記録後のプライマリのステートも未定義、プライマリに戻って再記録する場合はステートを再設定しなくてはならない
-				//!< * 例外) プライマリがレンダーパス内でそこからセカンダリを呼び出す場合には、プライマリのレンダーパス、サプバスステートは継承される
-				//!< * 全てのコマンドがプライマリ、セカンダリの両方で記録できるわけではない
-				//!< * セカンダリは直接サブミットできない、プライマリから呼び出される ... vkCmdExecuteCommands(プライマリ, セカンダリ個数, セカンダリ配列);
-				//!< * セカンダリの場合は VK_SUBPASS_CONTENTS_INLINE の代わりに VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS を指定する ... vkCmdBeginRenderPass(, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS), vkCmdNextSubpass(, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-				for (auto j : SCBs) {
-					const VkCommandBufferInheritanceInfo CBII = {}; //!< #VK_TODO
-					const VkCommandBufferBeginInfo SCBBI = {
-						VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-						nullptr,
-						VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT, //!< セカンダリコマンドバッファでかつレンダーパス内の場合に指定する
-						&CBII
-					};
-					VERIFY_SUCCEEDED(vkBeginCommandBuffer(j, &SCBBI)); {
-						const VkRenderPassBeginInfo _RPBI = {}; //!< #VK_TODO
-						vkCmdBeginRenderPass(j, &_RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); { //!< セカンダリなので VK_SUBPASS_CONTENTS_INLINE ではなく VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS を指定する
-						} vkCmdEndRenderPass(j);
-						vkCmdNextSubpass(j, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); //!< セカンダリなので VK_SUBPASS_CONTENTS_INLINE ではなく VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS を指定する
-					} VERIFY_SUCCEEDED(vkEndCommandBuffer(j));
-				}
-				vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
-			}
-#pragma endregion
-
+			//vkCmdNextSubpass(CB, VK_SUBPASS_CONTENTS_INLINE);
 		} vkCmdEndRenderPass(CB);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }

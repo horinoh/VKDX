@@ -241,6 +241,9 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
+#ifdef USE_DEPTH_STENCIL
+	const auto DSH = GetCPUDescriptorHandle(COM_PTR_GET(DepthStencilDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 0);
+#endif
 
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 
@@ -288,9 +291,16 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 		{
 			const std::array<D3D12_RECT, 0> Rs = {};
 			CL->ClearRenderTargetView(SCH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
+#ifdef USE_DEPTH_STENCIL
+			CL->ClearDepthStencilView(DSH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+#endif
 
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
+#ifdef USE_DEPTH_STENCIL
+			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &DSH);
+#else
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
+#endif
 
 #ifdef USE_BUNDLE
 			CL->ExecuteBundle(BCL);
@@ -300,7 +310,6 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 			if(nullptr != ConstantBufferDescriptorHeap) {
 				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(ConstantBufferDescriptorHeap) };
 				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
-
 				CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 			}
 
@@ -315,15 +324,12 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 				const std::array<ID3D12DescriptorHeap*, 2> DHs = { { COM_PTR_GET(ImageDescriptorHeap), COM_PTR_GET(SamplerDescriptorHeaps[0]) } };
 #endif
 				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
-
 				CL->SetGraphicsRootDescriptorTable(1, GetGPUDescriptorHandle(COM_PTR_GET(ImageDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 #ifndef USE_STATIC_SAMPLER
 				CL->SetGraphicsRootDescriptorTable(2, GetGPUDescriptorHandle(COM_PTR_GET(SamplerDescriptorHeaps[0]), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 0));
 #endif	
 			}
-
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-
 			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 #endif
 		}

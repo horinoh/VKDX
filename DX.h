@@ -29,8 +29,9 @@
 #define USE_STATIC_SAMPLER
 
 //!< HLSLからルートシグネチャを作成する (Create root signature from HLSL)
-//	#define USE_HLSL_ROOTSIGNATRUE
+//#define USE_HLSL_ROOTSIGNATRUE
 
+//!< バンドル : VKのセカンダリコマンドバッファ相当
 #define USE_BUNDLE
 
 #include <d3d12.h>
@@ -156,7 +157,6 @@ protected:
 
 	virtual void CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat);
 	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height);
-	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const RECT& Rct) { CreateSwapChain(hWnd, ColorFormat, static_cast<uint32_t>(Rct.right - Rct.left), static_cast<uint32_t>(Rct.bottom - Rct.top)); }
 	virtual void CreateSwapChainResource();
 	virtual void InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, const DirectX::XMVECTORF32* Color = nullptr);
 	virtual void InitializeSwapChain();
@@ -167,7 +167,6 @@ protected:
 		SwapChainResources.clear();
 	}
 	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
-	virtual void ResizeSwapChain(const RECT& Rct) { ResizeSwapChain(static_cast<uint32_t>(Rct.right - Rct.left), static_cast<uint32_t>(Rct.bottom - Rct.top)); }
 	UINT AcquireNextBackBufferIndex() const {
 		return 0xffffffff == CurrentBackBufferIndex ? SwapChain->GetCurrentBackBufferIndex() : (CurrentBackBufferIndex + 1) % static_cast<const UINT>(SwapChainResources.size());
 	}
@@ -177,10 +176,8 @@ protected:
 
 	virtual void CreateDepthStencil() {}
 	virtual void CreateDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
-	virtual void CreateDepthStencil(const DXGI_FORMAT DepthFormat, const RECT& Rct) { CreateDepthStencil(DepthFormat, static_cast<uint32_t>(Rct.right - Rct.left), static_cast<uint32_t>(Rct.bottom - Rct.top)); }
 	virtual void CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
 	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
-	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const RECT& Rct) { ResizeDepthStencil(DepthFormat, static_cast<uint32_t>(Rct.right - Rct.left), static_cast<uint32_t>(Rct.bottom - Rct.top)); }
 
 	virtual void LoadImage(ID3D12Resource** /*Resource*/, const std::wstring& /*Path*/, const D3D12_RESOURCE_STATES /*ResourceState*/) { assert(false && "Not implemanted"); }
 	virtual void LoadImage(ID3D12Resource** Resource, const std::string& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { LoadImage(Resource/*, DescriptorHeap*/, ToWString(Path), ResourceState); }
@@ -194,7 +191,6 @@ protected:
 	virtual void CreateUnorderedAccessTexture();
 
 	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f);
-	virtual void CreateViewport(const RECT& Rct, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f) { CreateViewport(static_cast<FLOAT>(Rct.right - Rct.left), static_cast<FLOAT>(Rct.bottom - Rct.top), MinDepth, MaxDepth); }
 	virtual void CreateViewportTopFront(const FLOAT Width, const FLOAT Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 
 	virtual void SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags);

@@ -278,12 +278,8 @@ void FullscreenDX::PopulateCommandList(const size_t i)
 #ifdef USE_BUNDLE
 			CL->ExecuteBundle(BCL);
 #else
-			//!< ルートシグニチャ
 			CL->SetGraphicsRootSignature(RS);
-
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
-			//!< 描画
 #ifdef USE_DRAW_INDIRECT
 			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 #else

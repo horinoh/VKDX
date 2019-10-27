@@ -21,6 +21,11 @@ protected:
 		Degree += 1.0f;
 		CopyToUploadResource(COM_PTR_GET(ConstantBufferResource), RoundUp(sizeof(Tr), 0xff), &Tr);
 	}
+
+#ifdef USE_DEPTH_STENCIL
+	virtual void CreateDepthStencil() override { DX::CreateDepthStencil(DXGI_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
+#endif
+
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
 	virtual void CreateRootSignature() override {

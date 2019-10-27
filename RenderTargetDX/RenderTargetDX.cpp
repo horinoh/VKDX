@@ -235,8 +235,8 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 #ifdef USE_BUNDLE
-	//const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
-	//const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
+	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 #endif
 	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
@@ -256,6 +256,16 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 
 	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
 
+#ifdef USE_BUNDLE
+	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS0));
+	{
+		BCL->SetGraphicsRootSignature(RS0);
+		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+	}
+	VERIFY_SUCCEEDED(BCL->Close());
+#endif
+
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS0));
 	{
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
@@ -267,7 +277,6 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-
 			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 		}
 		{
@@ -282,19 +291,21 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 #else
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 #endif
+
 		{
 			const std::array<D3D12_RECT, 0> Rs = {};
 			CL->ClearRenderTargetView(SCH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
-
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
-
+#ifdef USE_BUNDLE
+			CL->ExecuteBundle(BCL);
+#else
 			CL->SetGraphicsRootSignature(RS0);
-
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-
 			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+#endif
 		}
+
 #if 0
 		{
 			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SC = { SCR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT };

@@ -275,10 +275,8 @@ void ParametricSurfaceDX::PopulateCommandList(const size_t i)
 			CL->ExecuteBundle(BCL);
 #else
 			CL->SetGraphicsRootSignature(RS);
-
 			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-
 			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 #endif
 		}

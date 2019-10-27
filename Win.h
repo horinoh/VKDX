@@ -35,6 +35,8 @@
 
 //#define USE_FULL_SCREEN
 
+#define USE_DEPTH_STENCIL
+
 #define USE_PIPELINE_SERIALIZE
 #define ALWAYS_REBUILD_PIPELINE
 
@@ -101,10 +103,13 @@ public:
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance);
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance);
 
-	LONG GetClientRectWidth() const { return Rect.right - Rect.left; }
-	LONG GetClientRectHeight() const { return Rect.bottom - Rect.top; }
-	FLOAT GetAspectRatio(const FLOAT Width, const FLOAT Height) const { return Width / Height; }
-	FLOAT GetAspectRatioOfClientRect() const { return GetAspectRatio(static_cast<FLOAT>(GetClientRectWidth()), static_cast<FLOAT>(GetClientRectHeight())); }
+	static LONG GetWidth(const RECT& R) { return R.right - R.left; }
+	static LONG GetHeight(const RECT& R) { return R.bottom - R.top; }
+	static FLOAT GetAspectRatio(const FLOAT Width, const FLOAT Height) { return Width / Height; }
+	const RECT& GetRect() const { return Rect; }
+	LONG GetClientRectWidth() const { return GetWidth(GetRect()); }
+	LONG GetClientRectHeight() const { return GetHeight(GetRect()); }
+	FLOAT GetAspectRatioOfClientRect() const { return GetAspectRatio(static_cast<const FLOAT>(GetClientRectWidth()), static_cast<const FLOAT>(GetClientRectHeight())); }
 
 	static std::string ToString(const std::wstring& WStr) {
 #if 1
@@ -184,11 +189,11 @@ public:
 	template <typename T> static void LogNG(T Str);
 
 protected:
-	RECT Rect;
 	std::wstring TitleW;
 
-#ifdef DEBUG_STDOUT
 private:
+	RECT Rect;
+#ifdef DEBUG_STDOUT
 	FILE* StdOut = nullptr; 
 	FILE* StdErr = nullptr;
 #endif

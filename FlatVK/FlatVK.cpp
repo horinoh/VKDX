@@ -236,7 +236,6 @@ void FlatVK::PopulateCommandBuffer(const size_t i)
 	const auto SCB = SecondaryCommandBuffers[i];
 #endif
 	const auto FB = Framebuffers[i];
-	const auto SI = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
 	const auto IB = IndirectBuffers[0];
 	const auto PL = Pipelines[0];
@@ -273,16 +272,23 @@ void FlatVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		ClearColor(CB, SI, Colors::SkyBlue);
+#ifndef USE_RENDER_PASS_CLEAR
+		ClearColor(CB, SwapchainImages[i], Colors::SkyBlue);
+#endif
 
+#ifdef USE_RENDER_PASS_CLEAR
+		std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
+#else
+		const std::array<VkClearValue, 0> CVs = {};
+#endif
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RP,
 			FB,
 			ScissorRects[0],
-			0, nullptr
-		};
+			static_cast<uint32_t>(CVs.size()), CVs.data()
+	};
 #ifdef USE_SECONDARY_COMMAND_BUFFER
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
 			const std::array<VkCommandBuffer, 1> SCBs = { SCB };
@@ -294,9 +300,7 @@ void FlatVK::PopulateCommandBuffer(const size_t i)
 			vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-
 			vkCmdDrawIndirect(CB, IB, 0, 1, 0);
-
 		} vkCmdEndRenderPass(CB);
 #endif
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));

@@ -100,7 +100,9 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 		}
 	}
 
-	ResizeSwapChain(Rect);
+	const auto W = GetClientRectWidth(), H = GetClientRectHeight();
+
+	ResizeSwapChain(W, H);
 
 	//const auto CommandList = GraphicsCommandLists[0].Get();
 	//const auto CommandAllocator = CommandAllocators[0].Get();
@@ -114,7 +116,7 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 
 	//ExecuteCommandListAndWaitForFence(CommandList);
 
-	CreateViewport(Rect);
+	CreateViewport(static_cast<const FLOAT>(W), static_cast<const FLOAT>(H));
 
 	for (auto i = 0; i < GraphicsCommandLists.size(); ++i) {
 		PopulateCommandList(i);
@@ -419,6 +421,35 @@ void DX::CreateDevice(HWND /*hWnd*/)
 	}
 	CheckFeatureLevel(COM_PTR_GET(Device));
 
+#if 0//def _DEBUG
+	COM_PTR<ID3D12InfoQueue> InfoQueue;
+	COM_PTR_AS(Device, InfoQueue);
+
+	VERIFY_SUCCEEDED(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
+
+	std::array<D3D12_MESSAGE_CATEGORY, 0> AMCs = {};
+	std::array<D3D12_MESSAGE_SEVERITY, 0> AMSs = {};
+	std::array<D3D12_MESSAGE_ID, 0> AMIs = {};
+	std::array<D3D12_MESSAGE_CATEGORY, 0> DMCs = {};
+	std::array<D3D12_MESSAGE_SEVERITY, 0> DMSs = { /*D3D12_MESSAGE_SEVERITY_INFO,*/ };
+	std::array<D3D12_MESSAGE_ID, 0> DMIs = { /*D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,*/ };
+	D3D12_INFO_QUEUE_FILTER IQF = {
+		//!< Allow List
+		{
+			static_cast<UINT>(AMCs.size()), AMCs.data(),
+			static_cast<UINT>(AMSs.size()), AMSs.data(),
+			static_cast<UINT>(AMIs.size()), AMIs.data(),
+		},
+		//!< Deny List
+		{
+			static_cast<UINT>(DMCs.size()), DMCs.data(),
+			static_cast<UINT>(DMSs.size()), DMSs.data(),
+			static_cast<UINT>(DMIs.size()), DMIs.data(),
+		},
+	};
+	VERIFY_SUCCEEDED(InfoQueue->PushStorageFilter(&IQF));
+#endif
+
 	LOG_OK();
 }
 
@@ -644,7 +675,7 @@ void DX::CreateCommandList()
 
 void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
 {
-	CreateSwapChain(hWnd, ColorFormat, Rect);
+	CreateSwapChain(hWnd, ColorFormat, GetClientRectWidth(), GetClientRectHeight());
 
 	//!< ビューを作成 Create view
 	CreateSwapChainResource();
@@ -1208,20 +1239,29 @@ void DX::CreatePipelineState_Default(COM_PTR<ID3D12PipelineState>& PST, ID3D12Ro
 
 	//!< デプスステンシル (DepthStencil)
 	const D3D12_DEPTH_STENCILOP_DESC DSOD = {
-		D3D12_STENCIL_OP_KEEP,
-		D3D12_STENCIL_OP_KEEP,
-		D3D12_STENCIL_OP_KEEP,
-		D3D12_COMPARISON_FUNC_NEVER
+		D3D12_STENCIL_OP_KEEP, //!< ステンシルテスト失敗時
+		D3D12_STENCIL_OP_KEEP, //!< ステンシルテスト成功、デプステスト失敗時
+		D3D12_STENCIL_OP_KEEP, //!< ステンシルテスト成功、デプステスト成功時
+		D3D12_COMPARISON_FUNC_ALWAYS //!< 既存のステンシル値との比較方法
 	};
 	const D3D12_DEPTH_STENCIL_DESC DSD = {
+#if 1
+		//!< デプスを使用する
+		TRUE, //!< デプス
+		D3D12_DEPTH_WRITE_MASK_ALL, //!< デプスで書き換えられる部分
+		D3D12_COMPARISON_FUNC_LESS, //!< 既存のデプス値との比較方法
+#else
+		//!< デプスを使用しない
 		FALSE,
 		D3D12_DEPTH_WRITE_MASK_ZERO,
 		D3D12_COMPARISON_FUNC_NEVER,
-		FALSE,
-		0,
-		0,
-		DSOD,
-		DSOD
+#endif
+		//!< ステンシルを使用しない
+		FALSE, //!< ステンシル
+		D3D12_DEFAULT_STENCIL_READ_MASK, //!< ステンシル読み込みマスク
+		D3D12_DEFAULT_STENCIL_WRITE_MASK, //!< ステンシル書き込みマスク
+		DSOD, //!< 法線がカメラに向いている場合のデプス、ステンシル値の使用方法
+		DSOD  //!< 法線がカメラに向いていない場合のデプス、ステンシル値の使用方法
 	};
 
 	//!< インプットレイアウト (InputLayout)

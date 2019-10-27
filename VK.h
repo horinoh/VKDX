@@ -41,20 +41,28 @@
 #endif
 
 #define USE_VIEWPORT_Y_UP
+
 #define USE_IMMUTABLE_SAMPLER
+
 #define USE_DESCRIPTOR_UPDATE_TEMPLATE
 //#define USE_PUSH_DESCRIPTOR
 
+//!< セカンダリコマンドバッファ : DXのバンドル相当
+//!< 基本的にセカンダリはプライマリのステートを継承しない
+//!< ただしプライマリがレンダーパス内からセカンダリを呼び出す場合には、プライマリのレンダーパス、サプバスステートは継承される
+//!< 全てのコマンドがプライマリ、セカンダリの両方で記録できるわけではない
+//!< セカンダリの場合は VK_SUBPASS_CONTENTS_INLINE の代わりに VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS を指定する 
+#define USE_SECONDARY_COMMAND_BUFFER
+
+#define USE_RENDER_PASS_CLEAR
+
 #ifdef _DEBUG
 #define USE_DEBUG_REPORT
-
 #define USE_RENDERDOC
 #ifdef USE_RENDERDOC
 #define USE_DEBUG_MARKER
 #endif
-#endif
-
-#define USE_SECONDARY_COMMAND_BUFFER
+#endif //!< _DEBUG
 
 #include "Cmn.h"
 #ifdef _WINDOWS
@@ -245,9 +253,7 @@ protected:
 	virtual VkSurfaceTransformFlagBitsKHR SelectSurfaceTransform(const VkSurfaceCapabilitiesKHR& Cap);
 	virtual VkPresentModeKHR SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height);
-	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const RECT& Rct) { CreateSwapchain(PD, Sfc, static_cast<uint32_t>(Rct.right - Rct.left), static_cast<uint32_t>(Rct.bottom - Rct.top)); }
 	virtual void ResizeSwapchain(const uint32_t Width, const uint32_t Height);
-	virtual void ResizeSwapchain(const RECT& Rct) { ResizeSwapchain(static_cast<uint32_t>(Rct.right - Rct.left), static_cast<uint32_t>(Rct.bottom - Rct.top)); }
 	virtual void GetSwapchainImage(VkDevice Device, VkSwapchainKHR Swapchain);
 	virtual void CreateSwapchainImageView();
 	virtual void InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorValue* CCV = nullptr);
@@ -546,6 +552,11 @@ protected:
 	const VkComponentMapping ComponentMapping_BGRA = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_A, };
 	const VkImageSubresourceRange ImageSubresourceRange_Color = {
 		VK_IMAGE_ASPECT_COLOR_BIT,
+		0, 1,
+		0, 1
+	};
+	const VkImageSubresourceRange ImageSubresourceRange_Depth = {
+		VK_IMAGE_ASPECT_DEPTH_BIT,
 		0, 1,
 		0, 1
 	};

@@ -339,10 +339,8 @@ void TriangleDX::PopulateCommandList(const size_t i)
 #else
 			//!< ルートシグニチャ
 			CL->SetGraphicsRootSignature(RS);
-
 			//!< インプットアセンブリのプリミティブタイプ
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
 			//!< バーテックスバッファ、インデックスバッファ
 			if (!VertexBufferViews.empty()) {
 				const std::array<D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VertexBufferViews[0] };
@@ -351,7 +349,6 @@ void TriangleDX::PopulateCommandList(const size_t i)
 					CL->IASetIndexBuffer(&IndexBufferViews[0]);
 				}
 			}
-
 			//!< 描画
 			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 #endif

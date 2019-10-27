@@ -236,7 +236,6 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 	const auto SCB = SecondaryCommandBuffers[i];
 #endif
 	const auto FB = Framebuffers[i];
-	//const auto SI = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
 	const auto PLL = PipelineLayouts[0];
 	const auto IB = IndirectBuffers[0];
@@ -281,13 +280,19 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+		//!< このケースの場合は全画面描画なのでクリアは必要無く、USE_RENDER_PASS_CLEAR は使用しない方が良い
+#ifdef USE_RENDER_PASS_CLEAR
+		const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
+#else
+		const std::array<VkClearValue, 0> CVs = {};
+#endif
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RP,
 			FB,
 			ScissorRects[0],
-			0, nullptr
+			static_cast<uint32_t>(CVs.size()), CVs.data()
 		};
 #ifdef USE_SECONDARY_COMMAND_BUFFER
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
@@ -300,7 +305,6 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 			vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-
 			if (!DescriptorSets.empty()) {
 				vkCmdBindDescriptorSets(CB,
 					VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -308,8 +312,6 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 					0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(),
 					0, nullptr);
 			}
-
-			//!< 描画
 			vkCmdDrawIndirect(CB, IB, 0, 1, 0);
 		} vkCmdEndRenderPass(CB);
 #endif

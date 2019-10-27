@@ -328,13 +328,10 @@ void InstancingDX::PopulateCommandList(const size_t i)
 			CL->ExecuteBundle(BCL);
 #else
 			CL->SetGraphicsRootSignature(RS);
-
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
 			const std::array<D3D12_VERTEX_BUFFER_VIEW, 2> VBVs = { VBV0, VBV1 };
 			CL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
 			CL->IASetIndexBuffer(&IBV);
-
 			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 #endif
 		}

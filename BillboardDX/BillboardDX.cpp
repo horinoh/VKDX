@@ -242,8 +242,9 @@ void BillboardDX::PopulateCommandList(const size_t i)
 
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
-
-	//const auto  DSH = GetCPUDescriptorHandle(COM_PTR_GET(DepthStencilDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 0);
+#ifdef USE_DEPTH_STENCIL
+	const auto  DSH = GetCPUDescriptorHandle(COM_PTR_GET(DepthStencilDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 0);
+#endif
 
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 
@@ -275,16 +276,21 @@ void BillboardDX::PopulateCommandList(const size_t i)
 		{
 			const std::array<D3D12_RECT, 0> Rs = {};
 			CL->ClearRenderTargetView(SCH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
+#ifdef USE_DEPTH_STENCIL
+			CL->ClearDepthStencilView(DSH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+#endif
 
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
+#ifdef USE_DEPTH_STENCIL
+			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &DSH);
+#else
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
-			//CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &DSH);
+#endif
 
 #ifdef USE_BUNDLE
 			CL->ExecuteBundle(BCL);
 #else
 			CL->SetGraphicsRootSignature(RS);
-
 			//!< コンスタントバッファ
 			{
 				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(ConstantBufferDescriptorHeap) };
@@ -292,9 +298,7 @@ void BillboardDX::PopulateCommandList(const size_t i)
 
 				CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 			}
-
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-
 			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 #endif
 		}

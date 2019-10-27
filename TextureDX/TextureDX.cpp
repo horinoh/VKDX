@@ -288,7 +288,6 @@ void TextureDX::PopulateCommandList(const size_t i)
 			CL->ExecuteBundle(BCL);
 #else
 			CL->SetGraphicsRootSignature(RS);
-
 			//!< テクスチャ
 			if (nullptr != ImageDescriptorHeap
 #ifndef USE_STATIC_SAMPLER
@@ -301,15 +300,12 @@ void TextureDX::PopulateCommandList(const size_t i)
 				const std::array<ID3D12DescriptorHeap*, 2> DHs = { { COM_PTR_GET(ImageDescriptorHeap), COM_PTR_GET(SamplerDescriptorHeaps[0]) } };
 #endif
 				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
-
 				CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ImageDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
 #ifndef USE_STATIC_SAMPLER
 				CL->SetGraphicsRootDescriptorTable(1, GetGPUDescriptorHandle(COM_PTR_GET(SamplerDescriptorHeaps[0]), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 0));
 #endif				
 			}
-
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-
 			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 #endif
 		}

@@ -281,7 +281,6 @@ void InstancingVK::PopulateCommandBuffer(const size_t i)
 	const auto SCB = SecondaryCommandBuffers[i];
 #endif
 	const auto FB = Framebuffers[i];
-	const auto SI = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
 	const auto VB0 = VertexBuffers[0];
 	const auto VB1 = VertexBuffers[1];
@@ -326,16 +325,19 @@ void InstancingVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		
-		ClearColor(CB, SI, Colors::SkyBlue);
-
+#ifdef USE_RENDER_PASS_CLEAR
+		const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
+#else
+		ClearColor(CB, SwapchainImages[i], Colors::SkyBlue);
+		const std::array<VkClearValue, 0> CVs = {};
+#endif
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RP,
 			FB,
 			ScissorRects[0],
-			0, nullptr
+			static_cast<uint32_t>(CVs.size()), CVs.data()
 		};
 #ifdef USE_SECONDARY_COMMAND_BUFFER
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
@@ -348,13 +350,11 @@ void InstancingVK::PopulateCommandBuffer(const size_t i)
 			vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-
 			const std::array<VkBuffer, 2> VBs = { VB0, VB1 };
 			const std::array<VkDeviceSize, 2> Offsets = { 0, 0 };
 			assert(VBs.size() == Offsets.size() && "");
 			vkCmdBindVertexBuffers(CB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets.data());
 			vkCmdBindIndexBuffer(CB, IB, 0, VK_INDEX_TYPE_UINT32);
-
 			vkCmdDrawIndexedIndirect(CB, IndirectB, 0, 1, 0);
 		} vkCmdEndRenderPass(CB);
 #endif

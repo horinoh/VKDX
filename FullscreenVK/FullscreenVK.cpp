@@ -236,7 +236,6 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
 	const auto SCB = SecondaryCommandBuffers[i];
 #endif
 	const auto FB = Framebuffers[i];
-	//const auto SI = SwapchainImages[i];
 	const auto RP = RenderPasses[0];
 	const auto IB = IndirectBuffers[0];
 	const auto PL = Pipelines[0];
@@ -278,14 +277,19 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		//!< バリア、レンダーターゲットの設定は RenderPass
+		//!< このケースの場合は全画面描画なのでクリアは必要無く、USE_RENDER_PASS_CLEAR は使用しない方が良い
+#ifdef USE_RENDER_PASS_CLEAR
+		const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
+#else
+		const std::array<VkClearValue, 0> CVs = {};
+#endif
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RP,
 			FB,
 			ScissorRects[0],
-			0, nullptr //!< レンダーパスでクリアする場合は必須 static_cast<uint32_t>(ClearValues.size()), ClearValues.data()
+			static_cast<uint32_t>(CVs.size()), CVs.data()
 		};
 
 #ifdef USE_SECONDARY_COMMAND_BUFFER

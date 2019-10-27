@@ -236,7 +236,6 @@ void NormalMapVK::PopulateCommandBuffer(const size_t i)
 	const auto SCB = SecondaryCommandBuffers[i];
 #endif
 	const auto FB = Framebuffers[i];
-	const auto SI = SwapchainImages[i];
 	const auto DS = DescriptorSets[0];
 	const auto RP = RenderPasses[0];
 	const auto PLL = PipelineLayouts[0];
@@ -281,15 +280,20 @@ void NormalMapVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &BeginInfo)); {
-		ClearColor(CB, SI, Colors::SkyBlue);
-
+#ifdef USE_RENDER_PASS_CLEAR
+		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
+		CVs[1].depthStencil = ClearDepthStencilValue;
+#else
+		const std::array<VkClearValue, 0> CVs = {};
+		ClearColor(CB, SwapchainImages[i], Colors::SkyBlue);
+#endif
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RP,
 			FB,
 			ScissorRects[0],
-			0, nullptr
+			static_cast<uint32_t>(CVs.size()), CVs.data()
 		};
 #ifdef USE_SECONDARY_COMMAND_BUFFER
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
@@ -307,11 +311,8 @@ void NormalMapVK::PopulateCommandBuffer(const size_t i)
 				PLL,
 				0, static_cast<uint32_t>(DSs.size()), DSs.data(),
 				0, nullptr);
-
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-
 			vkCmdDrawIndirect(CB, IB, 0, 1, 0);
-
 		} vkCmdEndRenderPass(CB);
 #endif
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
