@@ -74,7 +74,9 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< コマンド
 	CreateCommandPool();
 	AllocateCommandBuffer();
+#ifndef USE_RENDER_PASS_CLEAR
 	InitializeSwapchainImage(CommandBuffers[0], &Colors::Red);
+#endif
 
 	//!< デプス
 	CreateDepthStencil();
@@ -1698,16 +1700,6 @@ VkExtent2D VK::SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& Cap, const ui
 		return Cap.currentExtent;
 	}
 }
-VkImageUsageFlags VK::SelectImageUsage(const VkSurfaceCapabilitiesKHR& Cap)
-{
-	//!< (サポートされていれば)イメージクリア用として VK_IMAGE_USAGE_TRANSFER_DST_BIT も立てている (If supported, set VK_IMAGE_USAGE_TRANSFER_DST_BIT for image clear)
-	return VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | (VK_IMAGE_USAGE_TRANSFER_DST_BIT & Cap.supportedUsageFlags);
-}
-VkSurfaceTransformFlagBitsKHR VK::SelectSurfaceTransform(const VkSurfaceCapabilitiesKHR& Cap)
-{
-	const auto Desired = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-	return (Desired & Cap.supportedTransforms) ? Desired : Cap.currentTransform;
-}
 VkPresentModeKHR VK::SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 {
 	uint32_t Count;
@@ -1838,8 +1830,12 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 	//!< レイヤー、ステレオレンダリング等をしたい場合は1以上になるが、ここでは1
 	uint32_t ImageArrayLayers = 1;
 
-	//!< サーフェスの使用法 (Surface usage)
-	const auto ImageUsage = SelectImageUsage(SurfaceCap);
+#ifdef USE_RENDER_PASS_CLEAR
+	const auto ImageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+#else
+	//!< 自前でクリアする場合は VK_IMAGE_USAGE_TRANSFER_DST_BIT フラグが必要
+	const auto ImageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | (VK_IMAGE_USAGE_TRANSFER_DST_BIT & SurfaceCap.supportedUsageFlags);
+#endif
 
 	//!< グラフィックとプレゼントのキューファミリが異なる場合はキューファミリインデックスの配列が必要、また VK_SHARING_MODE_CONCURRENT を指定すること
 	//!< (ただし VK_SHARING_MODE_CONCURRENT にするとパフォーマンスが落ちる場合がある)
@@ -1850,8 +1846,8 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 	}
 
 	//!< サーフェスを回転、反転等させるかどうか (Rotate, mirror surface or not)
-	const auto SurfaceTransform = SelectSurfaceTransform(SurfaceCap);
-	
+	const auto SurfaceTransform = (VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR & SurfaceCap.supportedTransforms) ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : SurfaceCap.currentTransform;
+
 	//!< サーフェスのプレゼントモードを選択
 	const auto SurfacePresentMode = SelectSurfacePresentMode(PD, Sfc);
 
@@ -2062,7 +2058,8 @@ void VK::CreateDepthStencil(const VkFormat DepthFormat, const uint32_t Width, co
 	assert(IsSupportedDepthFormat(GetCurrentPhysicalDevice(), DepthFormat) && "Not supported depth format");
 
 	const VkExtent3D Extent3D = { Width, Height, 1 };
-	CreateImage(&DepthStencilImage, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+	//!< vkCmdClearDepthStencilImage を用いてクリアする場合には VK_IMAGE_USAGE_TRANSFER_DST_BIT を指定すること (ここではレンダーパスでクリアする想定で指定しない)
+	CreateImage(&DepthStencilImage, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT /*| VK_IMAGE_USAGE_TRANSFER_DST_BIT*/);
 
 	AllocateImageMemory(&DepthStencilDeviceMemory, DepthStencilImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	VERIFY_SUCCEEDED(vkBindImageMemory(Device, DepthStencilImage, DepthStencilDeviceMemory, 0));
@@ -2944,6 +2941,10 @@ void VK::ClearColor(const VkCommandBuffer CB, const VkImage Img, const VkClearCo
 		0, nullptr,
 		1, &ImageMemoryBarrier_TransferToPresent);
 }
+
+//!< 非推奨
+#if 0
+//!< これを用いてデプスをクリアする場合は、イメージ作成時に VK_IMAGE_USAGE_TRANSFER_DST_BIT を指定すること
 void VK::ClearDepthStencil(const VkCommandBuffer CB, const VkImage Img, const VkClearDepthStencilValue& /*DepthStencil*/)
 {
 	const VkImageMemoryBarrier ImageMemoryBarrier_DepthToTransfer = {
@@ -2987,6 +2988,7 @@ void VK::ClearDepthStencil(const VkCommandBuffer CB, const VkImage Img, const Vk
 		0, nullptr,
 		1, &ImageMemoryBarrier_TransferToDepth);
 }
+#endif
 //!<「サブパス」にてクリアするときに使う
 //!< Drawコール前に使用すると、「それなら VkAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR を使え」と Warnning が出るので注意
 void VK::ClearColorAttachment(const VkCommandBuffer CB, const VkClearColorValue& Color)

@@ -284,12 +284,12 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
 		CVs[1].depthStencil = ClearDepthStencilValue;
 #else
-		const std::array<VkClearValue, 0> CVs = {};
+		std::array<VkClearValue, 2> CVs = {};
+		CVs[1].depthStencil = ClearDepthStencilValue;
 		ClearColor(CB, SwapchainImages[i], Colors::SkyBlue);
-		//!< #VK_TODO
-		if (VK_NULL_HANDLE != DepthStencilImage) {
-			ClearDepthStencil(CB, DepthStencilImage, ClearDepthStencilValue);
-		}
+		//if (VK_NULL_HANDLE != DepthStencilImage) {
+		//	ClearDepthStencil(CB, DepthStencilImage, ClearDepthStencilValue);
+		//}
 #endif
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

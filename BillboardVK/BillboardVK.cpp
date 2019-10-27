@@ -294,18 +294,16 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-#ifndef USE_RENDER_PASS_CLEAR
-		ClearColor(CB, SwapchainImages[i], Colors::SkyBlue);
-#endif
-		if (VK_NULL_HANDLE != DepthStencilImage) {
-			ClearDepthStencil(CB, DepthStencilImage, ClearDepthStencilValue);
-		}
-
 #ifdef USE_RENDER_PASS_CLEAR
 		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
 		CVs[1].depthStencil = ClearDepthStencilValue;
 #else
-		const std::array<VkClearValue, 0> CVs = {};
+		std::array<VkClearValue, 2> CVs = {};
+		CVs[1].depthStencil = ClearDepthStencilValue;
+		ClearColor(CB, SwapchainImages[i], Colors::SkyBlue);
+		//if (VK_NULL_HANDLE != DepthStencilImage) {
+		//	ClearDepthStencil(CB, DepthStencilImage, ClearDepthStencilValue);
+		//}
 #endif
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

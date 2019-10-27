@@ -102,7 +102,6 @@ public:
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
 		Super::OnTimer(hWnd, hInstance);
-		//UpdateDescriptorSet(); //!< #VK_TODO
 	}
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { 
 		Super::OnPaint(hWnd, hInstance);
@@ -249,8 +248,6 @@ protected:
 
 	virtual VkSurfaceFormatKHR SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 	virtual VkExtent2D SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& Cap, const uint32_t Width, const uint32_t Height);
-	virtual VkImageUsageFlags SelectImageUsage(const VkSurfaceCapabilitiesKHR& Cap);
-	virtual VkSurfaceTransformFlagBitsKHR SelectSurfaceTransform(const VkSurfaceCapabilitiesKHR& Cap);
 	virtual VkPresentModeKHR SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height);
 	virtual void ResizeSwapchain(const uint32_t Width, const uint32_t Height);
@@ -321,7 +318,9 @@ protected:
 	//virtual void CreatePipeline_Compute();
 
 	virtual void ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, const VkClearColorValue& Color);
+#if 0
 	virtual void ClearDepthStencil(const VkCommandBuffer CommandBuffer, const VkImage Image, const VkClearDepthStencilValue& DepthStencil);
+#endif
 	virtual void ClearColorAttachment(const VkCommandBuffer CommandBuffer, const VkClearColorValue& Color);
 	virtual void ClearDepthStencilAttachment(const VkCommandBuffer CommandBuffer, const VkClearDepthStencilValue& DepthStencil);
 	virtual void PopulateCommandBuffer(const size_t i);
