@@ -68,11 +68,11 @@ setx VK_INSTANCE_LAYERS VK_LAYER_LUNARG_standard_validation
 
 #### GLM
 * https://github.com/g-truc/glm
-* 同じ階層に GLM をクローンして **..\\..\glm** にパスを通した
+* 同じ階層に GLM をクローンして **..\\..\glm** にインクルードパスを通した
 
 #### GLI
 * https://github.com/g-truc/gli
-* 同じ階層に GLI をクローンして **..\\..\gli** にパスを通した
+* 同じ階層に GLI をクローンして **..\\..\gli** にインクルードパスを通した
 
 #### Vulkan-Hpp
 * ~~https://github.com/KhronosGroup/Vulkan-Hpp~~ 今は通常インストールに含まれるみたい
@@ -120,6 +120,7 @@ xcopy /y %(Identity).spv $(TargetDir)
 
 #### デバッグ
 * RenderDoc https://renderdoc.org/builds
+* RenderDoc 無しで、Debug 版をビルドするには、USE_RENDERDOC の定義をやめる
 * 参考 http://www.saschawillems.de/?page_id=2017
 	* RenderDocをインストールして起動 - Warning をクリックするとWindowsのレジストリが作られる(初回のみ)
 	* Executable Path に exe を指定して、 Launch ボタンでアプリを実行、PrintScreen でシーンをキャプチャしてアプリを閉じる
@@ -247,7 +248,7 @@ fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
  * プロジェクト右クリック - Property - All Configurations にする - C/C++ - General - Warning Level を Level4、Treat Warnings As Errors を Yes にする
 
 #### DX
- * プロパティマネージャで Add Existing Property Sheet... - Props/NOPRECOMP.props, Props/HLSL.props、Props/RS.props. (Props/DXTK.prop)
+ * プロパティマネージャで Add Existing Property Sheet... - Props/NOPRECOMP.props, Props/HLSL.props、Props/RS.props. (Props/DXTK.prop, Props/GLFT.prop)
  * Header Files に Win.h、DX.h、DXExt.h、(DXImage.h) を追加 
  * Source Files に Win.cpp、DX.cpp、DXExt.cpp、(DXImage.cpp) を追加
  * framework.h(旧stdafx.h), XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
@@ -261,7 +262,7 @@ fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
 * ルートシグネチャ用HLSL XxxDX.rs.hlsl を作成する
 
 #### VK
- * プロパティマネージャで Add Existing Property Sheet... - Props/NOPRECOMP.props, Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop、(Props/GLI.prop)
+ * プロパティマネージャで Add Existing Property Sheet... - Props/NOPRECOMP.props, Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop、(Props/GLI.prop, Props/GLTF.prop)
  * Header Files に Win.h、VK.h、VKExt.h、(VKImage.h) を追加
  * Source Files に Win.cpp、VK.cpp、VKExt.cpp、(VKImage.cpp) を追加
  * framework.h(旧stdafx.h)、XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
@@ -275,7 +276,19 @@ fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
  -->
 
 <!-- 
+## GLTF
+ * チュートリアル https://github.com/KhronosGroup/glTF-Tutorials/blob/master/gltfTutorial/README.md
+ * サンプルデータ https://github.com/KhronosGroup/glTF-Sample-Models/tree/master/2.0
+ * C++ローダー https://github.com/jessey-git/fx-gltf
+	* 要JSON https://github.com/nlohmann/json
+ * 同じ階層に GLTF をクローンして **..\\..\fx-gltf\include** にインクルードパスを通した
+~~~
+#include <fx/gltf.h>
+~~~
+ * DXローダー https://github.com/microsoft/glTF-SDK
+
 ## FBX
+ * SDKをインストールする
  * 環境変数 **FBX_SDK_PATH** を定義しておく
  * 環境変数 **Path** に DLL のパスを通しておく
  ~~~
@@ -286,6 +299,18 @@ fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
  #include <fbxsdk.h
  #pragma comment(lib, "vs2015\\x64\\debug\\libfbxsdk.lib")
  ~~~
+* サンプルデータは $(FBX_SDK_PATH)\samples 以下にある
+
+## DRACO
+ * CMakeでプロジェクトを作成
+ * 開いて Debug, Release をビルド
+ ~~~
+ #include "draco/compression/decode.h"
+ #pragma comment(lib, "draco.lib")
+ #pragma comment(lib, "dracodec.lib")
+ #pragma comment(lib, "dracoenc.lib")
+ ~~~
+* サンプルデータは draco\testdata 以下にある
 
  ## OPENCV
  * 環境変数 **OPENCV_SDK_PATH** を定義しておく
@@ -308,15 +333,6 @@ fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
  ~~~
  #include <SDL.h>
  #pragma comment(lib, "SDL2.lib")
- ~~~
-
- ## Draco
- * 環境変数 **DRACO_SDK_PATH** を定義しておく
- ~~~
- #include "draco/compression/decode.h"
- #pragma comment(lib, "draco.lib")
- #pragma comment(lib, "dracodec.lib")
- #pragma comment(lib, "dracoenc.lib")
  ~~~
  -->
 
@@ -344,7 +360,6 @@ TODO
 
 # 共通
 * バッファ毎にデバイスメモリを確保している、大きなデバイスメモリを確保してバッファはその一部を使用するようにしたほうが良い
-* インスタンシング
 * GSインスタンシング
 * ポストプロセス
 * プロシージャルテクスチャ
@@ -358,8 +373,9 @@ TODO
 	* 圧縮テクスチャ
 	* キューブマップ(環境マップ)
 
-* FBX
+* FBX, DRACO
 	* アニメーション
+	* スキニング
 
 * Gバッファ
 	* シャドウマップ

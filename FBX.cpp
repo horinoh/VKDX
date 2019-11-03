@@ -1,5 +1,3 @@
-#include "stdafx.h"
-
 #ifdef _DEBUG
 #pragma comment(lib, "vs2015\\x64\\debug\\libfbxsdk.lib")
 //#pragma comment(lib, "vs2015\\x64\\debug\\libfbxsdk-md.lib")
