@@ -25,9 +25,12 @@ public:
 	}
 	virtual void Process(const fx::gltf::Scene& Scn) {
 		std::cout << "Scene : " << Scn.name << std::endl;
+
+		Push();
 		for (auto i : Scn.nodes) {
 			Process(Document.nodes[i]);	
 		}
+		Pop();
 	}
 	virtual void Process(const fx::gltf::Animation& Anim) {
 		std::cout << "Animation : " << Anim.name << std::endl;
@@ -71,25 +74,28 @@ public:
 	}
 
 	virtual void Process(const fx::gltf::Node& Nd) {
-		std::cout << "Node : " << Nd.name << std::endl;
+		Tabs(); std::cout << "Node : " << Nd.name << std::endl;
 
 		//!< ローカルトランスフォームは以下のいずれかで表現される
 		//!< Matrix (column-major)
-		std::cout << "\t" << "matrix = ";
+		Tabs(); std::cout << "\t" << "matrix = ";
 		for (auto i : Nd.matrix) { std::cout << i << ", "; }
 		std::cout << std::endl;
 		
 		//!< TRS
-		std::cout << "\t" << "translation = ";
+		Tabs(); std::cout << "\t" << "translation = ";
 		for (auto i : Nd.translation) { std::cout << i << ", "; }
 		std::cout << std::endl; 
-		std::cout << "\t" << "rotation = ";
+		
+		Tabs(); std::cout << "\t" << "rotation = ";
 		for (auto i : Nd.rotation) { std::cout << i << ", "; }
 		std::cout << std::endl; 
-		std::cout << "\t" << "scale = ";
+		
+		Tabs(); std::cout << "\t" << "scale = ";
 		for (auto i : Nd.scale) { std::cout << i << ", "; }
 		std::cout << std::endl; 
 
+		Push();
 		if (-1 != Nd.mesh) {
 			Process(Document.meshes[Nd.mesh]);
 		}
@@ -105,27 +111,31 @@ public:
 		for (auto i : Nd.children) {
 			Process(Document.nodes[i]);
 		}
+		Pop();
 	}
 
 	virtual void Process(const fx::gltf::Mesh& Msh) {
-		std::cout << "\t" << "Mesh : " << Msh.name << std::endl;
+		Tabs(); std::cout << "Mesh : " << Msh.name << std::endl;
 		
 		if (!Msh.weights.empty()) {
-			std::cout << "\t" << "\t" << "Weights = ";
+			Tabs(); std::cout << "\t" << "Weights = ";
 			for (auto i : Msh.weights) {
-				std::cout << i;
+				std::cout << i << ", ";
 			}
 			std::cout << std::endl;
 		}
 
+		Push();
 		for (const auto& i : Msh.primitives) {
 			Process(i);
 		}
+		Pop();
 	}
 
 	virtual void Process(fx::gltf::Skin& Skn) {
-		std::cout << "\t" << "Skin : " << Skn.name << std::endl;
+		Tabs(); std::cout << "Skin : " << Skn.name << std::endl;
 
+		Push();
 		if (-1 != Skn.inverseBindMatrices) {
 			Process(Document.accessors[Skn.inverseBindMatrices]);
 		}
@@ -133,31 +143,32 @@ public:
 		for (auto i : Skn.joints) {
 			Process(Document.nodes[i]);
 		}
+		Pop();
 	}
 
 	virtual void Process(const fx::gltf::Camera& Cam) {
-		std::cout << "\t" << "Camera : " << Cam.name << std::endl;
+		Tabs(); std::cout << "Camera : " << Cam.name << std::endl;
 
 		switch (Cam.type)
 		{
 		case fx::gltf::Camera::Type::None:
 			break;
 		case fx::gltf::Camera::Type::Orthographic:
-			std::cout << "\t" << "\t" << "Orthographic" << std::endl;
-			std::cout << "\t" << "\t" << "\t" << "xmag, ymag = " << Cam.orthographic.xmag << ", " << Cam.orthographic.ymag << std::endl;
-			std::cout << "\t" << "\t" << "\t" << "znear, zfar = " << Cam.orthographic.znear << ", " << Cam.orthographic.zfar << std::endl;
+			Tabs(); std::cout << "\t" << "type = Orthographic" << std::endl;
+			Tabs(); std::cout << "\t" << "\t" << "xmag, ymag = " << Cam.orthographic.xmag << ", " << Cam.orthographic.ymag << std::endl;
+			Tabs(); std::cout << "\t" << "\t" << "znear, zfar = " << Cam.orthographic.znear << ", " << Cam.orthographic.zfar << std::endl;
 			break;
 		case fx::gltf::Camera::Type::Perspective:
-			std::cout << "\t" << "\t" << "Perspective" << std::endl;
-			std::cout << "\t" << "\t" << "\t" << "yfov = " << Cam.perspective.yfov << std::endl;
-			std::cout << "\t" << "\t" << "\t" << "aspectRatio = " << Cam.perspective.aspectRatio << std::endl;
-			std::cout << "\t" << "\t" << "\t" << "znear, zfar = " << Cam.perspective.znear << ", " << Cam.perspective.zfar << std::endl;
+			Tabs(); std::cout << "\t" << "type = Perspective" << std::endl;
+			Tabs(); std::cout << "\t" << "\t" << "yfov = " << Cam.perspective.yfov << std::endl;
+			Tabs(); std::cout << "\t" << "\t" << "aspectRatio = " << Cam.perspective.aspectRatio << std::endl;
+			Tabs(); std::cout << "\t" << "\t" << "znear, zfar = " << Cam.perspective.znear << ", " << Cam.perspective.zfar << std::endl;
 			break;
 		}
 	}
 
 	virtual void Process(const fx::gltf::Primitive& Prim) {
-		std::cout << "\t" << "\t" << "mode = ";
+		Tabs(); std::cout << "mode = ";
 		switch (Prim.mode)
 		{
 		case fx::gltf::Primitive::Mode::Points: std::cout << "Points"; break;
@@ -170,13 +181,14 @@ public:
 		}
 		std::cout << std::endl;
 
+		Push();
 		for (auto i : Prim.attributes) {
-			std::cout << "\t" << i.first << std::endl;
+			Tabs(); std::cout << i.first << std::endl;
 			Process(Document.accessors[i.second]);
 		}
 
 		if (-1 != Prim.indices) {
-			std::cout << "\t" << "indices" << std::endl;
+			Tabs(); std::cout << "indices" << std::endl;
 			Process(Document.accessors[Prim.indices]);
 		}
 
@@ -187,18 +199,19 @@ public:
 		//!< Morph TODO
 		for (const auto& Attr : Prim.targets) {
 			for (auto i : Attr) {
-				std::cout << "\t" << i.first << std::endl;
+				Tabs(); std::cout << i.first << std::endl;
 				Process(Document.accessors[i.second]);
 			}
 		}
+		Pop();
 	}
 
 	virtual void Process(const fx::gltf::Accessor& Acc) {
-		std::cout << "\t" << "Accessor : " << Acc.name << std::endl;
-		std::cout << "\t" << "\t" << "Count = " << Acc.count << std::endl;
-		std::cout << "\t" << "\t" << "byteOffset = " << Acc.byteOffset << std::endl;
+		Tabs(); std::cout << "Accessor : " << Acc.name << std::endl;
+		Tabs(); std::cout << "\t" << "Count = " << Acc.count << std::endl;
+		Tabs(); std::cout << "\t" << "byteOffset = " << Acc.byteOffset << std::endl;
 
-		std::cout << "\t" << "\t" << "type = ";
+		Tabs(); std::cout << "\t" << "type = ";
 		switch (Acc.type)
 		{
 		case fx::gltf::Accessor::Type::None: std::cout << "None"; break;
@@ -212,7 +225,7 @@ public:
 		}
 		std::cout << std::endl;
 
-		std::cout << "\t" << "\t" << "componentType = ";
+		Tabs(); std::cout << "\t" << "componentType = ";
 		switch (Acc.componentType) {
 		case fx::gltf::Accessor::ComponentType::None: std::cout << "None"; break;
 		case fx::gltf::Accessor::ComponentType::Byte: std::cout << "Byte"; break;
@@ -225,59 +238,65 @@ public:
 		std::cout << std::endl;
 
 		//!< コンポーネント毎の最小、最大値(バウンディングボリューム等)
-		std::cout << "\t" << "\t" << "min = ";
+		Tabs(); std::cout << "\t" << "min = ";
 		for (auto i : Acc.min) { std::cout << i << ", "; }
 		std::cout << std::endl;
-		std::cout << "\t" << "\t" << "max = ";
+		
+		Tabs(); std::cout << "\t" << "max = ";
 		for (auto i : Acc.max) { std::cout << i << ", "; }
 		std::cout << std::endl;
 
-		std::cout << "\t" << "\t" << "normalized = " << Acc.normalized << std::endl;
+		Tabs(); std::cout << "\t" << "normalized = " << Acc.normalized << std::endl;
 
+		Push();
 		if (-1 != Acc.bufferView) {
 			Process(Document.bufferViews[Acc.bufferView]);
 		}
+		Pop();
 
 		//!< TODO
 		Acc.sparse;
 	}
 
 	virtual void Process(const fx::gltf::BufferView& BufV) {
-		std::cout << "\t" << "\t" << "BufferView : " << BufV.name << std::endl;
-		std::cout << "\t" << "\t" << "\t" << "byteOffset = " << BufV.byteOffset << std::endl;
-		std::cout << "\t" << "\t" << "\t" << "byteLength = " << BufV.byteLength << std::endl;
-		std::cout << "\t" << "\t" << "\t" << "byteStrikde = " << BufV.byteStride << std::endl;
-		switch (BufV.target) {
-		case fx::gltf::BufferView::TargetType::None:
-			break;
-		case fx::gltf::BufferView::TargetType::ArrayBuffer:
-			std::cout << "\t" << "\t" << "\t" << "Type = " << "ArrayBuffer" << std::endl;
-			break;
-		case fx::gltf::BufferView::TargetType::ElementArrayBuffer:
-			std::cout << "\t" << "\t" << "\t" << "Type = " << "ElementArrayBuffer" << std::endl;
-			break;
-		}
+		Tabs(); std::cout << "BufferView : " << BufV.name << std::endl;
+		Tabs(); std::cout << "\t" << "byteOffset = " << BufV.byteOffset << std::endl;
+		Tabs(); std::cout << "\t" << "byteLength = " << BufV.byteLength << std::endl;
+		Tabs(); std::cout << "\t" << "byteStrikde = " << BufV.byteStride << std::endl;
 
+		Tabs(); std::cout << "\t" << "target = ";
+		switch (BufV.target) {
+		case fx::gltf::BufferView::TargetType::None: std::cout << "None"; break;
+		case fx::gltf::BufferView::TargetType::ArrayBuffer: std::cout << "ArrayBuffer"; break;
+		case fx::gltf::BufferView::TargetType::ElementArrayBuffer: std::cout << "ElementArrayBuffer"; break;
+		}
+		std::cout << std::endl;
+
+		Push();
 		if (-1 != BufV.buffer) {
-			const auto& Buf = Document.buffers[BufV.buffer];
-			std::cout << "\t" << "\t" << "\t" << "Buffer : " << Buf.name << std::endl;
-			std::cout << "\t" << "\t" << "\t" << "\t" << "ByteLength = " << Buf.byteLength << std::endl;
-			if (Buf.IsEmbeddedResource()) {}
-			if (Buf.byteLength > 2) {
-				std::cout << "\t" << "\t" << "\t" << "\t" << "data = " << Buf.data[0] << Buf.data[1] << Buf.data[2] << "..." << std::endl;
-			}
-			if (!Buf.uri.empty()) {
-				std::cout << "\t" << "\t" << "\t" << "\t" << "uri = " << Buf.uri << std::endl;
-			}
+			Process(Document.buffers[BufV.buffer]);
+		}
+		Pop();
+	}
+
+	virtual void Process(const fx::gltf::Buffer& Buf) {
+		Tabs(); std::cout << "Buffer : " << Buf.name << std::endl;
+		Tabs(); std::cout << "\t" << "ByteLength = " << Buf.byteLength << std::endl;
+		Tabs(); std::cout << "\t" << "IsEmbeddedResource = " << Buf.IsEmbeddedResource() << std::endl;
+		if (Buf.byteLength > 2) {
+			Tabs(); std::cout << "\t" << "data = " << Buf.data[0] << Buf.data[1] << Buf.data[2] << "..." << std::endl;
+		}
+		if (!Buf.uri.empty()) {
+			Tabs(); std::cout << "\t" << "uri = " << Buf.uri << std::endl;
 		}
 	}
 
 	virtual void Process(const fx::gltf::Material& Mtl) {
-		std::cout << "Material : " << Mtl.name << std::endl;
+		Tabs(); std::cout << "Material : " << Mtl.name << std::endl;
 
-		std::cout << "\t" << "alphaCutoff = " << Mtl.alphaCutoff << std::endl;
+		Tabs(); std::cout << "\t" << "alphaCutoff = " << Mtl.alphaCutoff << std::endl;
 
-		std::cout << "\t" << "alphaMode = ";
+		Tabs(); std::cout << "\t" << "alphaMode = ";
 		switch (Mtl.alphaMode) {
 		case fx::gltf::Material::AlphaMode::Opaque: std::cout << "Opaque"; break;
 		case fx::gltf::Material::AlphaMode::Mask: std::cout << "Mask"; break;
@@ -285,54 +304,63 @@ public:
 		}
 		std::cout << std::endl;
 
-		std::cout << "\t" << "doubleSided = " << Mtl.doubleSided << std::endl;
+		Tabs(); std::cout << "\t" << "doubleSided = " << Mtl.doubleSided << std::endl;
 
-		std::cout << "\t" << "emissiveFactor = ";
+		Tabs(); std::cout << "\t" << "emissiveFactor = ";
 		for (auto i : Mtl.emissiveFactor) {
 			std::cout << i << ", ";
 		}
 		std::cout << std::endl;
 
+		Push();
 		Process(Mtl.emissiveTexture);
 		Process(Mtl.normalTexture);
 		Process(Mtl.occlusionTexture);
+		Pop();
 
 		//!< PBR (metallic-roughness model)
 		const auto& PBR = Mtl.pbrMetallicRoughness;
-		std::cout << "PBR" << std::endl;
-		std::cout << "\t" << "metallicFactor = " << PBR.metallicFactor << std::endl;
-		std::cout << "\t" << "roughnessFactor = " << PBR.roughnessFactor << std::endl;
-		std::cout << "\t" << "baseColorFactor";
+		Tabs(); std::cout << "\t" << "metallicFactor = " << PBR.metallicFactor << std::endl;
+		Tabs(); std::cout << "\t" << "roughnessFactor = " << PBR.roughnessFactor << std::endl;
+
+		Tabs(); std::cout << "\t" << "baseColorFactor";
 		for (auto i : PBR.baseColorFactor) {
 			std::cout << i << ", ";
 		}
 		std::cout << std::endl;
+		
+		Push();
 		Process(PBR.baseColorTexture);
 		Process(PBR.metallicRoughnessTexture);
+		Pop();
 	}
 
 	virtual void Process(const fx::gltf::Material::Texture& Tex) {
-		std::cout << "texCoord = " << Tex.texCoord << std::endl;
+		Tabs(); std::cout << "texCoord = " << Tex.texCoord << std::endl;
 
+		Push();
 		if (-1 != Tex.index) {
 			Process(Document.textures[Tex.index]);
 		}
+		Pop();
 	}
 	virtual void Process(const fx::gltf::Texture& Tex) {
-		std::cout << "Texture : " << Tex.name << std::endl;
+		Tabs(); std::cout << "Texture : " << Tex.name << std::endl;
 
+		Push();
 		if (-1 != Tex.sampler) {
 			Process(Document.samplers[Tex.sampler]);
 		}
 		if (-1 != Tex.source) {
 			Process(Document.images[Tex.source]);
 		}
+		Pop();
 	}
 
 	virtual void Process(const fx::gltf::Sampler& Smp) {
-		std::cout << "Sampler : " << Smp.name << std::endl;
+		Tabs(); std::cout << "Sampler : " << Smp.name << std::endl;
 
-		std::cout << "\t" << "magFilter = ";
+		Tabs(); std::cout << "\t" << "magFilter = ";
 		switch (Smp.magFilter)
 		{
 		case fx::gltf::Sampler::MagFilter::None: std::cout << "None"; break;
@@ -341,7 +369,7 @@ public:
 		}
 		std::cout << std::endl;
 
-		std::cout << "\t" << "minFilter = ";
+		Tabs(); std::cout << "\t" << "minFilter = ";
 		switch (Smp.minFilter)
 		{
 		case fx::gltf::Sampler::MinFilter::None: std::cout << "None"; break;
@@ -354,7 +382,7 @@ public:
 		}
 		std::cout << std::endl;
 
-		std::cout << "\t" << "wrapS = ";
+		Tabs(); std::cout << "\t" << "wrapS = ";
 		switch (Smp.wrapS)
 		{
 		case fx::gltf::Sampler::WrappingMode::ClampToEdge: std::cout << "ClampToEdge"; break;
@@ -363,7 +391,7 @@ public:
 		}
 		std::cout << std::endl;
 
-		std::cout << "\t" << "wrapT = ";
+		Tabs(); std::cout << "\t" << "wrapT = ";
 		switch (Smp.wrapT)
 		{
 		case fx::gltf::Sampler::WrappingMode::ClampToEdge: std::cout << "ClampToEdge"; break;
@@ -373,21 +401,36 @@ public:
 		std::cout << std::endl;
 	}
 	virtual void Process(const fx::gltf::Image& Img) {
-		std::cout << "Image : " << Img.name << std::endl;
+		Tabs(); std::cout << "Image : " << Img.name << std::endl;
 
-		std::cout << "\t" << "mimeType = " << Img.mimeType << std::endl;
-		std::cout << "\t" << "IsEmbeddedResource = " << Img.IsEmbeddedResource() << std::endl;
+		Tabs(); std::cout << "\t" << "mimeType = " << Img.mimeType << std::endl;
+		Tabs(); std::cout << "\t" << "IsEmbeddedResource = " << Img.IsEmbeddedResource() << std::endl;
 
 		if (!Img.uri.empty()) {
-			std::cout << "\t" << "uri = " << Img.uri << std::endl;
+			Tabs(); std::cout << "\t" << "uri = " << Img.uri << std::endl;
 
 			std::vector<uint8_t> Data;
 			Img.MaterializeData(Data);
 		}
 
+		Push();
 		Process(Document.bufferViews[Img.bufferView]);
+		Pop();
 	}
+
+#ifdef _DEBUG
+	void Tabs() { for (auto i = 0; i < Hierarchy; ++i) { std::cout << "\t"; } }
+	void Push() { ++Hierarchy; }
+	void Pop() { --Hierarchy; }
+#else
+	void Tabs() {}
+	void Push() {}
+	void Pop() {}
+#endif
 
 protected:
 	fx::gltf::Document Document;
+#ifdef _DEBUG
+	uint8_t Hierarchy = 0;
+#endif
 };
