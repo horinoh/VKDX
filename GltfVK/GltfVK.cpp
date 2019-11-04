@@ -232,6 +232,8 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void GltfVK::CreateVertexBuffer()
 {
+	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb");
 	VertexBuffers.resize(1);
 
 	const std::array<Vertex_PositionColor, 3> Vertices = { {

@@ -33,6 +33,15 @@ xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)
 ### エディット & コンティニュー
 - Tools - Option - Debugging - General - Enable Edit and Continue
 
+### GLTF
+ * C++ローダー https://github.com/jessey-git/fx-gltf を同じ階層にクローンする
+ * JSON を必要とするので https://github.com/nlohmann/json を同じ階層にクローンする
+ * **..\\..\fx-gltf\include** にインクルードパスを通す
+~~~
+#include <fx/gltf.h>
+~~~
+ * サンプルデータ https://github.com/KhronosGroup/glTF-Sample-Models を同じ階層にクローンする
+
 ## VK
 
 #### SDK
@@ -280,12 +289,8 @@ fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
  * チュートリアル https://github.com/KhronosGroup/glTF-Tutorials/blob/master/gltfTutorial/README.md
  * サンプルデータ https://github.com/KhronosGroup/glTF-Sample-Models/tree/master/2.0
  * C++ローダー https://github.com/jessey-git/fx-gltf
-	* 要JSON https://github.com/nlohmann/json
- * 同じ階層に GLTF をクローンして **..\\..\fx-gltf\include** にインクルードパスを通した
-~~~
-#include <fx/gltf.h>
-~~~
- * DXローダー https://github.com/microsoft/glTF-SDK
+ * JSON https://github.com/nlohmann/json
+ * DXローダー(使用していない) https://github.com/microsoft/glTF-SDK
 
 ## FBX
  * SDKをインストールする
