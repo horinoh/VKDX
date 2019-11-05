@@ -6,7 +6,22 @@ class Gltf
 {
 public:
 	virtual void Load(const std::string& Path) {
-		Document = fx::gltf::LoadFromBinary(Path, fx::gltf::ReadQuotas());
+		Document = fx::gltf::LoadFromBinary(Path, fx::gltf::ReadQuotas()); //!< .glb
+		//Document = fx::gltf::LoadFromText(Path, fx::gltf::ReadQuotas()); //!< .gltf
+
+		std::cout << "Buffers" << std::endl;
+		for (const auto& i : Document.buffers) {
+			if (!i.name.empty()) {
+				std::cout << "\t" << "name = " << i.name << std::endl;
+			}
+			if (!i.uri.empty()) {
+				std::cout << "\t" << "uri = " << i.uri << std::endl;
+			}
+			std::cout << "\t" << "IsEmbeddedResource = " << i.IsEmbeddedResource() << std::endl;
+			
+			std::cout << "\t" << "byteLength = " << i.byteLength << std::endl;
+			//i.data;
+		}
 
 		Process(Document);
 	}
@@ -33,11 +48,11 @@ public:
 		Pop();
 	}
 	virtual void Process(const fx::gltf::Animation& Anim) {
-		std::cout << "Animation : " << Anim.name << std::endl;
+		Tabs(); std::cout << "Animation : " << Anim.name << std::endl;
 
 		for (const auto& Ch : Anim.channels) {
 			const auto& Tag = Ch.target;
-			std::cout << "\t" << "path = " << Tag.path << std::endl;
+			Tabs(); std::cout << "\t" << "path = " << Tag.path << std::endl;
 			if ("translation" == Tag.path) {
 			}
 			else if ("rotation" == Tag.path) {
@@ -45,6 +60,7 @@ public:
 			else if ("scale" == Tag.path) {
 			}
 
+			Push();
 			if (-1 != Tag.node) {
 				Process(Document.nodes[Tag.node]);
 			}
@@ -52,11 +68,12 @@ public:
 			if (-1 != Ch.sampler) {
 				Process(Anim.samplers[Ch.sampler]);
 			}
+			Pop();
 		}
 	}
 
 	virtual void Process(const fx::gltf::Animation::Sampler& Smp) {
-		std::cout << "\t" << "\t" << "interpolation = ";
+		Tabs(); std::cout << "\t" << "interpolation = ";
 		switch (Smp.interpolation)
 		{
 		case fx::gltf::Animation::Sampler::Type::Linear: std::cout << "Linear"; break;
@@ -65,12 +82,16 @@ public:
 		}
 		std::cout << std::endl;
 
+		Push();
+		//!< タイム
 		if (-1 != Smp.input) {
 			Process(Document.accessors[Smp.input]);
 		}
+		//!< トランスレーション、ローテーション等 (pathによる)
 		if (-1 != Smp.output) {
 			Process(Document.accessors[Smp.output]);
 		}
+		Pop();
 	}
 
 	virtual void Process(const fx::gltf::Node& Nd) {
