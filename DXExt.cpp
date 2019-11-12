@@ -1,6 +1,3 @@
-//#include "framework.h
-//#include "stdafx.h"
-
 #include "DXExt.h"
 
 void DXExt::CreateIndirectBuffer_Draw(const UINT IndexCount, const UINT InstanceCount)

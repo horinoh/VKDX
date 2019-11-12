@@ -1,6 +1,3 @@
-//#include "framework.h"
-//#include "stdafx.h"
-
 #include "Win.h"
 
 Win::Win()

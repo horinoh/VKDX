@@ -42,6 +42,10 @@ xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)
 ~~~
  * サンプルデータ https://github.com/KhronosGroup/glTF-Sample-Models を同じ階層にクローンする
 
+### プリコンパイルヘッダーを使う
+ * (ここでは)framework.cpp を追加 - 右クリック - Properties - C/C++ - Precompiled Headers - Create(/Yc)
+ * Properties - C/C++ - Advanced - Forced Include File に framework.h を指定しているので、framework.cpp に #include "framework.h" は記述しなくて良い
+
 ## VK
 
 #### SDK

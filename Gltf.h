@@ -5,9 +5,54 @@
 class Gltf 
 {
 public:
+	static uint32_t GetTypeCount(const fx::gltf::Accessor::Type t) {
+		switch (t) {
+		default:
+		case fx::gltf::Accessor::Type::None: return 0;
+		case fx::gltf::Accessor::Type::Scalar: return 1;
+		case fx::gltf::Accessor::Type::Vec2: return 2;
+		case fx::gltf::Accessor::Type::Vec3: return 3;
+		case fx::gltf::Accessor::Type::Vec4:
+		case fx::gltf::Accessor::Type::Mat2: return 4;
+		case fx::gltf::Accessor::Type::Mat3: return 9;
+		case fx::gltf::Accessor::Type::Mat4: return 16;
+		}		
+	}
+	static uint32_t GetComponentTypeSize(const fx::gltf::Accessor::ComponentType ct) {
+		switch (ct) {
+		default:
+		case fx::gltf::Accessor::ComponentType::None: return 0;
+		case fx::gltf::Accessor::ComponentType::Byte:
+		case fx::gltf::Accessor::ComponentType::UnsignedByte: return 1;
+		case fx::gltf::Accessor::ComponentType::Short:
+		case fx::gltf::Accessor::ComponentType::UnsignedShort: return 2;
+		case fx::gltf::Accessor::ComponentType::UnsignedInt:
+		case fx::gltf::Accessor::ComponentType::Float: return 4;
+		}
+	}
+	static uint32_t GetTypeSize(const fx::gltf::Accessor& Acc) { return GetTypeCount(Acc.type) * GetComponentTypeSize(Acc.componentType); }
+
 	virtual void Load(const std::string& Path) {
-		Document = fx::gltf::LoadFromBinary(Path, fx::gltf::ReadQuotas()); //!< .glb
-		//Document = fx::gltf::LoadFromText(Path, fx::gltf::ReadQuotas()); //!< .gltf
+		if (std::string::npos != Path.rfind(".glb")){
+			Document = fx::gltf::LoadFromBinary(Path, fx::gltf::ReadQuotas()); //!< .glb
+		} else {
+			Document = fx::gltf::LoadFromText(Path, fx::gltf::ReadQuotas()); //!< .gltf
+		}
+
+		if (!Document.extensionsUsed.empty()) {
+			std::cout << "extensionsUsed = ";
+			for (const auto& i : Document.extensionsUsed) {
+				std::cout << i << ", ";
+			}
+			std::cout << std::endl;
+		}
+		if (!Document.extensionsRequired.empty()) {
+			std::cout << "extensionsRequired = ";
+			for (const auto& i : Document.extensionsRequired) {
+				std::cout << i << ", ";
+			}
+			std::cout << std::endl;
+		}
 
 		std::cout << "Buffers" << std::endl;
 		for (const auto& i : Document.buffers) {
@@ -50,8 +95,11 @@ public:
 	virtual void Process(const fx::gltf::Animation& Anim) {
 		Tabs(); std::cout << "Animation : " << Anim.name << std::endl;
 
-		for (const auto& Ch : Anim.channels) {
-			const auto& Tag = Ch.target;
+		Push();
+		for (const auto& i : Anim.channels) {			
+			const auto& Tag = i.target;
+
+			//!< アニメーションのさせ方
 			Tabs(); std::cout << "\t" << "path = " << Tag.path << std::endl;
 			if ("translation" == Tag.path) {
 			}
@@ -59,20 +107,29 @@ public:
 			}
 			else if ("scale" == Tag.path) {
 			}
+			else if ("weights" == Tag.path) {
+				//!< モーフターゲットのウエイトをアニメーションさせる場合
+			}
 
+			//!< アニメーション対象ノード
 			Push();
 			if (-1 != Tag.node) {
 				Process(Document.nodes[Tag.node]);
 			}
-			
-			if (-1 != Ch.sampler) {
-				Process(Anim.samplers[Ch.sampler]);
+			Pop();
+
+			//!< サンプリング方法
+			Push();
+			if (-1 != i.sampler) {
+				Process(Anim.samplers[i.sampler]);
 			}
 			Pop();
 		}
+		Pop();
 	}
 
 	virtual void Process(const fx::gltf::Animation::Sampler& Smp) {
+		//!< 補完方法
 		Tabs(); std::cout << "\t" << "interpolation = ";
 		switch (Smp.interpolation)
 		{
@@ -83,11 +140,11 @@ public:
 		std::cout << std::endl;
 
 		Push();
-		//!< タイム
+		//!< キーフレーム時間
 		if (-1 != Smp.input) {
 			Process(Document.accessors[Smp.input]);
 		}
-		//!< トランスレーション、ローテーション等 (pathによる)
+		//!< アニメーション値 (pathにより解釈、translation, rotation,...)
 		if (-1 != Smp.output) {
 			Process(Document.accessors[Smp.output]);
 		}
@@ -158,6 +215,8 @@ public:
 
 		Push();
 		if (-1 != Skn.inverseBindMatrices) {
+			//!< 各々のジョイントをローカルスペースへ変換するマトリクス
+			//!< JointMatrix[i] = Inverse(GlobalTransform) * GlobalJointTransform[i] * InverseBindMatrix[i]
 			Process(Document.accessors[Skn.inverseBindMatrices]);
 		}
 
@@ -203,26 +262,36 @@ public:
 		std::cout << std::endl;
 
 		Push();
-		for (auto i : Prim.attributes) {
-			Tabs(); std::cout << i.first << std::endl;
-			Process(Document.accessors[i.second]);
-		}
+		for (const auto& i : Prim.attributes) {
+			const auto& Sem = i.first;
+			Tabs(); std::cout << Sem << std::endl;
 
+			Process(Document.accessors[i.second]);
+
+			//!< モーフターゲットがある場合、セマンティクスをキーとしてアクセサインデックスを取得する
+			if (!Prim.targets.empty()) {
+				Push();
+				for (auto j : Prim.targets) {
+					const auto it = j.find(Sem);
+					if (j.end() != it) {
+						Process(Document.accessors[it->second]);
+					}
+				}
+				Pop();
+			}
+		}
+		Pop();
+
+		Push();
 		if (-1 != Prim.indices) {
 			Tabs(); std::cout << "indices" << std::endl;
 			Process(Document.accessors[Prim.indices]);
 		}
+		Pop();
 
+		Push();
 		if (-1 != Prim.material) {
 			Process(Document.materials[Prim.material]);
-		}
-
-		//!< Morph TODO
-		for (const auto& Attr : Prim.targets) {
-			for (auto i : Attr) {
-				Tabs(); std::cout << i.first << std::endl;
-				Process(Document.accessors[i.second]);
-			}
 		}
 		Pop();
 	}
@@ -271,45 +340,58 @@ public:
 
 		Push();
 		if (-1 != Acc.bufferView) {
-			Process(Document.bufferViews[Acc.bufferView]);
+			const auto& BufV = Document.bufferViews[Acc.bufferView];
+			Tabs(); std::cout << "BufferView : " << BufV.name << std::endl;
+			Tabs(); std::cout << "\t" << "byteOffset = " << BufV.byteOffset << std::endl;
+			Tabs(); std::cout << "\t" << "byteLength = " << BufV.byteLength << std::endl;
+			Tabs(); std::cout << "\t" << "byteStrikde = " << BufV.byteStride << std::endl;
+
+			Tabs(); std::cout << "\t" << "target = ";
+			switch (BufV.target) {
+			case fx::gltf::BufferView::TargetType::None: std::cout << "None"; break;
+			case fx::gltf::BufferView::TargetType::ArrayBuffer: std::cout << "ArrayBuffer"; break;
+			case fx::gltf::BufferView::TargetType::ElementArrayBuffer: std::cout << "ElementArrayBuffer"; break;
+			}
+			std::cout << std::endl;
+
+			Push();
+			if (-1 != BufV.buffer) {
+				const auto& Buf = Document.buffers[BufV.buffer];
+				Tabs(); std::cout << "Buffer : " << Buf.name << std::endl;
+				Tabs(); std::cout << "\t" << "ByteLength = " << Buf.byteLength << std::endl;
+				if (Buf.uri.empty()) {
+					if (Buf.IsEmbeddedResource()) {
+						Tabs(); std::cout << "\t" << "IsEmbeddedResource = " << Buf.IsEmbeddedResource() << std::endl;
+					} else {
+						//!< [ Example ]
+						//!< Buf.byteLength=10					|0|1|2|3|4|5|6|7|8|9|		
+						//!< BV.byteOffset=1, BV.byteLength=7	  |1|2|3|4|5|6|7|			
+						//!< Acc.byteOffset=1						|2|3|4|5|6|7|			
+						//!< BV.byteStride=3						|2|3| |5|6|				
+						//!< Acc.type=Vec2, Acc.conponentType=Byte	|x|y| |x|y|		
+
+						//const auto BufVDataPtr = &Buf.data[BufV.byteOffset];
+						//const auto BufVDataSize = BufV.byteLength;
+						//const auto DataPtr = &Buf.data[BufV.byteOffset + Acc.byteOffset];
+						//const auto DataStride = BufV.byteStride;
+					}
+				}
+				else {
+					Tabs(); std::cout << "\t" << "uri = " << Buf.uri << std::endl;
+					if (Buf.IsEmbeddedResource()) {
+						Tabs(); std::cout << "\t" << "IsEmbeddedResource = " << Buf.IsEmbeddedResource() << std::endl;
+					}
+					else {
+						const auto Path = fx::gltf::detail::GetDocumentRootPath("../../") + "/" + Buf.uri;
+					}
+				}
+			}
+			Pop();
 		}
 		Pop();
 
 		//!< TODO
 		Acc.sparse;
-	}
-
-	virtual void Process(const fx::gltf::BufferView& BufV) {
-		Tabs(); std::cout << "BufferView : " << BufV.name << std::endl;
-		Tabs(); std::cout << "\t" << "byteOffset = " << BufV.byteOffset << std::endl;
-		Tabs(); std::cout << "\t" << "byteLength = " << BufV.byteLength << std::endl;
-		Tabs(); std::cout << "\t" << "byteStrikde = " << BufV.byteStride << std::endl;
-
-		Tabs(); std::cout << "\t" << "target = ";
-		switch (BufV.target) {
-		case fx::gltf::BufferView::TargetType::None: std::cout << "None"; break;
-		case fx::gltf::BufferView::TargetType::ArrayBuffer: std::cout << "ArrayBuffer"; break;
-		case fx::gltf::BufferView::TargetType::ElementArrayBuffer: std::cout << "ElementArrayBuffer"; break;
-		}
-		std::cout << std::endl;
-
-		Push();
-		if (-1 != BufV.buffer) {
-			Process(Document.buffers[BufV.buffer]);
-		}
-		Pop();
-	}
-
-	virtual void Process(const fx::gltf::Buffer& Buf) {
-		Tabs(); std::cout << "Buffer : " << Buf.name << std::endl;
-		Tabs(); std::cout << "\t" << "ByteLength = " << Buf.byteLength << std::endl;
-		Tabs(); std::cout << "\t" << "IsEmbeddedResource = " << Buf.IsEmbeddedResource() << std::endl;
-		if (Buf.byteLength > 2) {
-			Tabs(); std::cout << "\t" << "data = " << Buf.data[0] << Buf.data[1] << Buf.data[2] << "..." << std::endl;
-		}
-		if (!Buf.uri.empty()) {
-			Tabs(); std::cout << "\t" << "uri = " << Buf.uri << std::endl;
-		}
 	}
 
 	virtual void Process(const fx::gltf::Material& Mtl) {
@@ -333,26 +415,37 @@ public:
 		}
 		std::cout << std::endl;
 
-		Push();
-		Process(Mtl.emissiveTexture);
-		Process(Mtl.normalTexture);
-		Process(Mtl.occlusionTexture);
-		Pop();
-
 		//!< PBR (metallic-roughness model)
 		const auto& PBR = Mtl.pbrMetallicRoughness;
-		Tabs(); std::cout << "\t" << "metallicFactor = " << PBR.metallicFactor << std::endl;
-		Tabs(); std::cout << "\t" << "roughnessFactor = " << PBR.roughnessFactor << std::endl;
-
+		Push();
+		Process(PBR.baseColorTexture);
+		//!< baseColorTexture が無い場合は baseColorFactor がそのまま使われる
 		Tabs(); std::cout << "\t" << "baseColorFactor";
 		for (auto i : PBR.baseColorFactor) {
 			std::cout << i << ", ";
 		}
-		std::cout << std::endl;
-		
+		std::cout << std::endl; 
+		Pop();
+
 		Push();
-		Process(PBR.baseColorTexture);
+		//!< BLUE : Metalness, GREEN : Roughness
 		Process(PBR.metallicRoughnessTexture);
+		//!< metallicRoughnessTexture が無い場合は metallicFactor, roughnessFactor がそのまま使われる
+		Tabs(); std::cout << "\t" << "metallicFactor = " << PBR.metallicFactor << std::endl;
+		Tabs(); std::cout << "\t" << "roughnessFactor = " << PBR.roughnessFactor << std::endl;
+		Pop();
+
+		Push();
+		Process(Mtl.normalTexture);
+		Pop();
+
+		Push();
+		//!< RED : Occlusion
+		Process(Mtl.occlusionTexture);
+		Pop();
+
+		Push();
+		Process(Mtl.emissiveTexture);
 		Pop();
 	}
 
@@ -425,17 +518,47 @@ public:
 		Tabs(); std::cout << "Image : " << Img.name << std::endl;
 
 		Tabs(); std::cout << "\t" << "mimeType = " << Img.mimeType << std::endl;
-		Tabs(); std::cout << "\t" << "IsEmbeddedResource = " << Img.IsEmbeddedResource() << std::endl;
+		if (Img.uri.empty()) {
+			if (Img.IsEmbeddedResource()) {
+				Tabs(); std::cout << "\t" << "IsEmbeddedResource = " << Img.IsEmbeddedResource() << std::endl;
 
-		if (!Img.uri.empty()) {
+				Tabs(); std::cout << "\t" << "MaterializeData" << std::endl;
+				std::vector<uint8_t> Data;
+				Img.MaterializeData(Data);
+
+				//const auto DataPtr = Data.data();
+				//const auto DataSize = static_cast<uint32_t>(Data.size());
+			}
+			else {
+				Push();
+				const auto& BufV = Document.bufferViews[Img.bufferView];
+				Tabs(); std::cout << "BufferView : " << BufV.name << std::endl;
+				Tabs(); std::cout << "\t" << "byteOffset = " << BufV.byteOffset << std::endl;
+				Tabs(); std::cout << "\t" << "byteLength = " << BufV.byteLength << std::endl;
+
+				Push();
+				if (-1 != BufV.buffer) {
+					const auto& Buf = Document.buffers[BufV.buffer];
+					Tabs(); std::cout << "Buffer : " << Buf.name << std::endl;
+					Tabs(); std::cout << "\t" << "ByteLength = " << Buf.byteLength << std::endl;
+				}
+				Pop();
+
+				//const auto DataPtr = &Document.buffers[BufV.buffer].data[BufV.byteOffset + 0/*ここではアクセサは無い*/];
+				//const auto DataSize = BufV.byteLength;
+				Pop();
+			}
+		}
+		else {
 			Tabs(); std::cout << "\t" << "uri = " << Img.uri << std::endl;
-
-			std::vector<uint8_t> Data;
-			Img.MaterializeData(Data);
+			if (Img.IsEmbeddedResource()) {
+				Tabs(); std::cout << "\t" << "IsEmbeddedResource = " << Img.IsEmbeddedResource() << std::endl;
+			}
+			else {
+				const auto Path = fx::gltf::detail::GetDocumentRootPath("../../") + "/" + Img.uri;
+			}
 		}
 
-		Push();
-		Process(Document.bufferViews[Img.bufferView]);
 		Pop();
 	}
 

@@ -230,11 +230,34 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void GltfVK::CreateVertexBuffer()
+
+void GltfVK::LoadScene()
 {
 	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb");
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Embedded\\Duck.gltf"); // LoadText()
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Embedded\\Duck.gltf");
+
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb");
+}
+void GltfVK::Process(const fx::gltf::Primitive& Prim)
+{
+	Gltf::Process(Prim);
+
+	for (const auto& i : Prim.attributes) {
+		Semantics = i.first;
+		Process(Document.accessors[i.second]);
+	}
+	if (-1 != Prim.indices) {
+		Process(Document.accessors[Prim.indices]);
+	}
+}
+void GltfVK::Process(const fx::gltf::Accessor& Acc)
+{
+	Gltf::Process(Acc);
+}
+
+void GltfVK::CreateVertexBuffer()
+{
 	VertexBuffers.resize(1);
 
 	const std::array<Vertex_PositionColor, 3> Vertices = { {
@@ -246,10 +269,6 @@ void GltfVK::CreateVertexBuffer()
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 
 	CreateBuffer_Vertex(GraphicsQueue, CommandBuffers[0], &VertexBuffers[0], Size, Vertices.data());
-
-#ifdef _DEBUG
-	MarkerSetObjectName(Device, VertexBuffers[0], "MyVertexBuffer");
-#endif
 
 	LOG_OK();
 }
@@ -265,10 +284,6 @@ void GltfVK::CreateIndexBuffer()
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 
 	CreateBuffer_Index(GraphicsQueue, CommandBuffers[0], &IndexBuffers[0], Size, Indices.data());
-
-#ifdef _DEBUG
-	MarkerSetObjectName(Device, IndexBuffers[0], "MyIndexBuffer");
-#endif
 
 	LOG_OK();
 }
@@ -323,12 +338,6 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-#ifdef _DEBUG
-		//MarkerBegin(CB, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), "Command Begin");
-		ScopedMarker(CB, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), "Command Begin");
-		//MarkerInsert(CB, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), "Command");
-#endif
-
 #ifdef USE_RENDER_PASS_CLEAR
 		const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
 #else
@@ -368,10 +377,6 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 			vkCmdBindIndexBuffer(CB, IB, 0, VK_INDEX_TYPE_UINT32);
 			vkCmdDrawIndexedIndirect(CB, IndirectB, 0, 1, 0);
 		} vkCmdEndRenderPass(CB);
-#endif
-
-#ifdef _DEBUG
-		//MarkerEnd(CB);
 #endif
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }

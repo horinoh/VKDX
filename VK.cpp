@@ -62,32 +62,28 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< デバイスメモリをまとめて確保
 	AllocateDeviceMemory();
 
-	//!< 同期
 	CreateFence(Device);
 	CreateSemaphore(Device);
 
-	//!< スワップチェイン
 	CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight());
 	GetSwapchainImage(Device, Swapchain);
 	CreateSwapchainImageView();
 
-	//!< コマンド
 	CreateCommandPool();
 	AllocateCommandBuffer();
 #ifndef USE_RENDER_PASS_CLEAR
 	InitializeSwapchainImage(CommandBuffers[0], &Colors::Red);
 #endif
 
-	//!< デプス
 	CreateDepthStencil();
 	InitializeDepthStencilImage(CommandBuffers[0]);
-
 	CreateRenderTarget();
 
-	//!< 頂点
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 	CreateIndirectBuffer();
+
+	LoadScene();
 
 	CreateTexture();
 	CreateSampler();

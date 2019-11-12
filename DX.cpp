@@ -1,6 +1,3 @@
-//#include "framework.h"
-//#include "stdafx.h"
-
 #include "DX.h"
 
 #pragma comment(lib, "d3d12.lib")
@@ -25,26 +22,22 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CheckMultiSample(ColorFormat);
 	CreateCommandQueue();
 
-	//!< 同期
 	CreateFence();
 
-	//!< スワップチェイン
 	CreateSwapchain(hWnd, ColorFormat);
 
-	//!< コマンド
 	CreateCommandAllocator();
 	CreateCommandList();
 	InitializeSwapChain();
 
-	//!< デプス
-	CreateDepthStencil();
-	
+	CreateDepthStencil();	
 	CreateRenderTarget();
 
-	//!< 頂点
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 	CreateIndirectBuffer();
+
+	LoadScene();
 
 	CreateTexture();
 	CreateStaticSampler();

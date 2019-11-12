@@ -15,6 +15,12 @@ public:
 	virtual ~GltfVK() {}
 
 protected:
+	virtual void LoadScene() override;
+	virtual void Process(const fx::gltf::Primitive& Prim) override;
+	virtual void Process(const fx::gltf::Accessor& Acc) override;
+
+	std::string Semantics;
+
 	virtual void CreateVertexBuffer() override;
 	virtual void CreateIndexBuffer() override;
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(IndexCount, 1); }

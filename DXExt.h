@@ -9,6 +9,7 @@ private:
 public:
 	//using Vertex_Position = struct Vertex_Position { DirectX::XMFLOAT3 Position; };
 	using Vertex_PositionColor = struct Vertex_PositionColor { DirectX::XMFLOAT3 Position; DirectX::XMFLOAT4 Color; };
+	using Vertex_PositionNormalTexcoord = struct Vertex_PositionNormalTexcoord { DirectX::XMFLOAT3 Position; DirectX::XMFLOAT3 Normal; DirectX::XMFLOAT2 Texcoord; };
 	using Instance_OffsetXY = struct Instance_OffsetXY { DirectX::XMFLOAT2 Offset; };
 
 	void CreateIndirectBuffer_Draw(const UINT IndexCount, const UINT InstanceCount);

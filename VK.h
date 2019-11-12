@@ -267,6 +267,8 @@ protected:
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 	virtual void CreateViewportTopFront(const float Width, const float Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 
+	virtual void LoadScene() {}
+
 	virtual void SubmitStagingCopy(const VkQueue Queue, const VkCommandBuffer CB, const VkBuffer Buffer, const VkDeviceSize Size, const void* Source, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF);
 	virtual void CreateVertexBuffer() {}
 	virtual void CreateIndexBuffer() {}
@@ -509,6 +511,7 @@ protected:
 #ifdef USE_RENDERDOC
 		"VK_LAYER_RENDERDOC_Capture",
 #endif
+		"VK_LAYER_LUNARG_monitor", //!< タイトルバーにFPSを表示
 	};
 	const std::vector<const char*> InstanceExtensions = {
 #ifndef _DEBUG

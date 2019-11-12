@@ -230,6 +230,81 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
+void GltfDX::LoadScene()
+{
+	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb");
+}
+void GltfDX::Process(const fx::gltf::Primitive& Prim)
+{
+	Gltf::Process(Prim);
+
+	for (const auto& i : Prim.attributes) {
+		Semantics = i.first;
+		Process(Document.accessors[i.second]);
+	}
+	if (-1 != Prim.indices) {
+		Process(Document.accessors[Prim.indices]);
+	}
+}
+void GltfDX::Process(const fx::gltf::Accessor& Acc)
+{
+	Gltf::Process(Acc);
+
+	Acc.type;
+	Acc.componentType;
+
+	if (-1 != Acc.bufferView) {
+		const auto& BufV = Document.bufferViews[Acc.bufferView];
+		
+		if (-1 != BufV.buffer) {
+			const auto& Buf = Document.buffers[BufV.buffer];
+			Buf.byteLength;
+
+			if (Buf.uri.empty()) {
+				if (Buf.IsEmbeddedResource()) {
+				}
+				else {
+					const auto Data = &Buf.data[BufV.byteOffset + Acc.byteOffset];
+					const auto Stride = BufV.byteStride;
+					const auto TypeSize = GetTypeSize(Acc);
+					const auto Size = Acc.count * (0 == Stride ? TypeSize : Stride);
+
+					if (fx::gltf::BufferView::TargetType::ElementArrayBuffer == BufV.target) {
+						IndexBufferResources.push_back(COM_PTR<ID3D12Resource>());
+
+						//if (fx::gltf::Accessor::Type::Scalar == Acc.type) {
+						//	if (fx::gltf::Accessor::ComponentType::UnsignedShort == Acc.componentType) {
+						//	}
+						//}
+
+						//IndexCount = Acc.count;
+						//CreateBuffer(COM_PTR_PUT(IndexBufferResources.back()), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+						//IndexBufferViews.push_back({ IndexBufferResources.back()->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT });
+					}
+					else if (fx::gltf::BufferView::TargetType::ArrayBuffer == BufV.target) {
+						VertexBufferResources.push_back(COM_PTR<ID3D12Resource>());
+
+						//if (fx::gltf::Accessor::Type::Vec3 == Acc.type) {
+						//	if (fx::gltf::Accessor::ComponentType::Float == Acc.componentType) {
+						//	}
+						//}
+
+						CreateBuffer(COM_PTR_PUT(VertexBufferResources.back()), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+						VertexBufferViews.push_back({ VertexBufferResources.back()->GetGPUVirtualAddress(), Size, Stride });
+					}
+				}
+			}
+			else {
+				if (Buf.IsEmbeddedResource()) {
+				}
+				else {
+					//const auto Path = fx::gltf::detail::GetDocumentRootPath("../../") + "/" + Buf.uri;
+				}
+			}
+		}
+	}
+}
+
 void GltfDX::CreateVertexBuffer()
 {
 	VertexBufferResources.resize(1);
@@ -247,10 +322,6 @@ void GltfDX::CreateVertexBuffer()
 	//!< DXではビューが必要 Need view
 	VertexBufferViews.push_back({ VertexBufferResources[0]->GetGPUVirtualAddress(), Size, Stride });
 
-#ifdef _DEBUG
-	SetName(COM_PTR_GET(VertexBufferResources[0]), TEXT("MyVertexBuffer"));
-#endif
-
 	LOG_OK();
 }
 void GltfDX::CreateIndexBuffer()
@@ -267,10 +338,6 @@ void GltfDX::CreateIndexBuffer()
 
 	//!< DXではビューが必要 Need view
 	IndexBufferViews.push_back({ IndexBufferResources[0]->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT });
-
-#ifdef _DEBUG
-	SetName(COM_PTR_GET(IndexBufferResources[0]), TEXT("MyIndexBuffer"));
-#endif
 
 	LOG_OK();
 }
@@ -298,7 +365,7 @@ void GltfDX::PopulateCommandList(const size_t i)
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 	{
 		BCL->SetGraphicsRootSignature(RS);
-		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP/*D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST*/);
 		if (!VertexBufferViews.empty()) {
 			const std::array<D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VertexBufferViews[0] };
 			BCL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
@@ -313,12 +380,6 @@ void GltfDX::PopulateCommandList(const size_t i)
 
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
-#if defined(_DEBUG) || defined(USE_PIX)
-		//PIXBeginEvent(CL, PIX_COLOR(0, 255, 0), TEXT("Command Begin"));
-		PIXScopedEvent(CL, PIX_COLOR(0, 255, 0), TEXT("Command Begin"));
-
-		//PIXSetMarker(CL, PIX_COLOR(255, 0, 0), TEXT("Command"));
-#endif
 		//!< ビューポート、シザー
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
@@ -355,10 +416,6 @@ void GltfDX::PopulateCommandList(const size_t i)
 #endif
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-
-#if defined(_DEBUG) || defined(USE_PIX)
-		//PIXEndEvent(CL);
-#endif
 	}
 	VERIFY_SUCCEEDED(CL->Close());
 }
