@@ -283,13 +283,15 @@ template<> void CreatePipeline_Vertex<Vertex_PositionNormalTexcoord>(VkPipeline&
 	}
 	assert(!PSSCI.empty() && "");
 
-	const std::array<VkVertexInputBindingDescription, 1> VIBDs = { {
-		{ 0, sizeof(Vertex_PositionNormalTexcoord), VK_VERTEX_INPUT_RATE_VERTEX },
+	const std::array<VkVertexInputBindingDescription, 3> VIBDs = { {
+		{ 0, sizeof(glm::vec3), VK_VERTEX_INPUT_RATE_VERTEX },
+		{ 1, sizeof(glm::vec3), VK_VERTEX_INPUT_RATE_VERTEX },
+		{ 2, sizeof(glm::vec2), VK_VERTEX_INPUT_RATE_VERTEX },
 	} };
 	const std::array<VkVertexInputAttributeDescription, 3> VIADs = { {
-		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_PositionNormalTexcoord, Position) },
-		{ 1, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_PositionNormalTexcoord, Normal) },
-		{ 2, 0, VK_FORMAT_R32G32_SFLOAT, offsetof(Vertex_PositionNormalTexcoord, Texcoord) },
+		{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+		{ 1, 1, VK_FORMAT_R32G32B32_SFLOAT, 0 },
+		{ 2, 2, VK_FORMAT_R32G32_SFLOAT, 0 },
 	} };
 	const VkPipelineVertexInputStateCreateInfo PVISCI = {
 		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,

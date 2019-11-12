@@ -360,6 +360,12 @@ void GltfDX::PopulateCommandList(const size_t i)
 
 	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
 
+	const auto VBV = VertexBufferViews[0];
+	//const auto VBV_Pos = VertexBufferViews[0];
+	//const auto VBV_Nrm = VertexBufferViews[1];
+	//const auto VBV_Tex = VertexBufferViews[2];
+	const auto& IBV = IndexBufferViews[0];
+
 	//!< バンドルから全てのコマンドがコールできるわけではない
 #ifdef USE_BUNDLE
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
@@ -367,10 +373,11 @@ void GltfDX::PopulateCommandList(const size_t i)
 		BCL->SetGraphicsRootSignature(RS);
 		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP/*D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST*/);
 		if (!VertexBufferViews.empty()) {
-			const std::array<D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VertexBufferViews[0] };
+			const std::array<D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VBV };
+			//const std::array<D3D12_VERTEX_BUFFER_VIEW, 2> VBVs = { VBV_Pos, VBV_Nrm, VBV_Tex };
 			BCL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
 			if (!IndexBufferViews.empty()) {
-				BCL->IASetIndexBuffer(&IndexBufferViews[0]);
+				BCL->IASetIndexBuffer(&IBV);
 			}
 		}
 		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);

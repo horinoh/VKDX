@@ -297,6 +297,9 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 	const auto FB = Framebuffers[i];
 	const auto RP = RenderPasses[0];
 	const auto VB = VertexBuffers[0];
+	//const auto VB_Pos = VertexBuffers[0];
+	//const auto VB_Nrm = VertexBuffers[1];
+	//const auto VB_Tex = VertexBuffers[2];
 	const auto IB = IndexBuffers[0];
 	const auto IndirectB = IndirectBuffers[0];
 	const auto PL = Pipelines[0];
@@ -323,6 +326,7 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 		const std::array<VkBuffer, 1> VBs = { VB };
+		//const std::array<VkBuffer, 3> VBs = { VB_Pos, VB_Nrm, VB_Tex };
 		const std::array<VkDeviceSize, 1> Offsets = { 0 };
 		assert(VBs.size() == Offsets.size() && "");
 		vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets.data());

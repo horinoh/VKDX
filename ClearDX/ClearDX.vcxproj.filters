@@ -53,6 +53,9 @@
     <ClCompile Include="..\DXExt.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="framework.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ClearDX.rc">
