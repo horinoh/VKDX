@@ -56,6 +56,9 @@
     <ClCompile Include="..\Win.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="framework.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="ToonVK.rc">

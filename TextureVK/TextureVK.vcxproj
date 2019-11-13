@@ -68,7 +68,7 @@
     <Import Project="..\Props\VK.props" />
     <Import Project="..\Props\GLI.props" />
     <Import Project="..\Props\GLM.props" />
-    <Import Project="..\Props\NOPRECOMP.props" />
+    <Import Project="..\Props\PRECOMP.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -76,7 +76,7 @@
     <Import Project="..\Props\VK.props" />
     <Import Project="..\Props\GLI.props" />
     <Import Project="..\Props\GLM.props" />
-    <Import Project="..\Props\NOPRECOMP.props" />
+    <Import Project="..\Props\PRECOMP.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -179,6 +179,10 @@ xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)</Command>
     <ClCompile Include="..\VKExt.cpp" />
     <ClCompile Include="..\VKImage.cpp" />
     <ClCompile Include="..\Win.cpp" />
+    <ClCompile Include="framework.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="TextureVK.cpp" />
   </ItemGroup>
   <ItemGroup>
