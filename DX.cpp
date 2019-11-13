@@ -33,11 +33,11 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateDepthStencil();	
 	CreateRenderTarget();
 
+	LoadScene();
+
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 	CreateIndirectBuffer();
-
-	LoadScene();
 
 	CreateTexture();
 	CreateStaticSampler();

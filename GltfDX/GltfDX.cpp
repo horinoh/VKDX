@@ -233,25 +233,13 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 void GltfDX::LoadScene()
 {
 	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb");
-}
-void GltfDX::Process(const fx::gltf::Primitive& Prim)
-{
-	Gltf::Process(Prim);
-
-	for (const auto& i : Prim.attributes) {
-		Semantics = i.first;
-		Process(Document.accessors[i.second]);
-	}
-	if (-1 != Prim.indices) {
-		Process(Document.accessors[Prim.indices]);
-	}
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Embedded\\Duck.gltf");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb");
 }
 void GltfDX::Process(const fx::gltf::Accessor& Acc)
 {
 	Gltf::Process(Acc);
-
-	Acc.type;
-	Acc.componentType;
 
 	if (-1 != Acc.bufferView) {
 		const auto& BufV = Document.bufferViews[Acc.bufferView];
@@ -272,22 +260,13 @@ void GltfDX::Process(const fx::gltf::Accessor& Acc)
 					if (fx::gltf::BufferView::TargetType::ElementArrayBuffer == BufV.target) {
 						IndexBufferResources.push_back(COM_PTR<ID3D12Resource>());
 
-						//if (fx::gltf::Accessor::Type::Scalar == Acc.type) {
-						//	if (fx::gltf::Accessor::ComponentType::UnsignedShort == Acc.componentType) {
-						//	}
-						//}
+						CreateBuffer(COM_PTR_PUT(IndexBufferResources.back()), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+						IndexBufferViews.push_back({ IndexBufferResources.back()->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R16_UINT });
 
-						//IndexCount = Acc.count;
-						//CreateBuffer(COM_PTR_PUT(IndexBufferResources.back()), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
-						//IndexBufferViews.push_back({ IndexBufferResources.back()->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT });
+						CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
 					}
 					else if (fx::gltf::BufferView::TargetType::ArrayBuffer == BufV.target) {
 						VertexBufferResources.push_back(COM_PTR<ID3D12Resource>());
-
-						//if (fx::gltf::Accessor::Type::Vec3 == Acc.type) {
-						//	if (fx::gltf::Accessor::ComponentType::Float == Acc.componentType) {
-						//	}
-						//}
 
 						CreateBuffer(COM_PTR_PUT(VertexBufferResources.back()), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 						VertexBufferViews.push_back({ VertexBufferResources.back()->GetGPUVirtualAddress(), Size, Stride });
@@ -305,42 +284,6 @@ void GltfDX::Process(const fx::gltf::Accessor& Acc)
 	}
 }
 
-void GltfDX::CreateVertexBuffer()
-{
-	VertexBufferResources.resize(1);
-
-	const std::array<Vertex_PositionColor, 3> Vertices = { {
-		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
-		{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } }, //!< LB
-		{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }, //!< RB
-	} };
-	const auto Stride = sizeof(Vertices[0]);
-	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
-
-	CreateBuffer(COM_PTR_PUT(VertexBufferResources[0]), Size, Vertices.data(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
-
-	//!< DXではビューが必要 Need view
-	VertexBufferViews.push_back({ VertexBufferResources[0]->GetGPUVirtualAddress(), Size, Stride });
-
-	LOG_OK();
-}
-void GltfDX::CreateIndexBuffer()
-{
-	IndexBufferResources.resize(1);
-
-	const std::array<UINT32, 3> Indices = { 0, 1, 2 };
-	//!< DrawInstanced() が引数に取るので覚えておく必要がある Save this value because DrawInstanced() will use it
-	IndexCount = static_cast<UINT32>(Indices.size());
-	const auto Stride = sizeof(Indices[0]);
-	const auto Size = static_cast<UINT32>(Stride * IndexCount);
-
-	CreateBuffer(COM_PTR_PUT(IndexBufferResources[0]), Size, Indices.data(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
-
-	//!< DXではビューが必要 Need view
-	IndexBufferViews.push_back({ IndexBufferResources[0]->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT });
-
-	LOG_OK();
-}
 void GltfDX::PopulateCommandList(const size_t i)
 {
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
@@ -360,10 +303,9 @@ void GltfDX::PopulateCommandList(const size_t i)
 
 	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
 
-	const auto VBV = VertexBufferViews[0];
-	//const auto VBV_Pos = VertexBufferViews[0];
-	//const auto VBV_Nrm = VertexBufferViews[1];
-	//const auto VBV_Tex = VertexBufferViews[2];
+	const auto VBV_Pos = VertexBufferViews[0];
+	const auto VBV_Nrm = VertexBufferViews[1];
+	const auto VBV_Tex = VertexBufferViews[2];
 	const auto& IBV = IndexBufferViews[0];
 
 	//!< バンドルから全てのコマンドがコールできるわけではない
@@ -371,10 +313,9 @@ void GltfDX::PopulateCommandList(const size_t i)
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 	{
 		BCL->SetGraphicsRootSignature(RS);
-		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP/*D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST*/);
+		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		if (!VertexBufferViews.empty()) {
-			const std::array<D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VBV };
-			//const std::array<D3D12_VERTEX_BUFFER_VIEW, 2> VBVs = { VBV_Pos, VBV_Nrm, VBV_Tex };
+			const std::array<D3D12_VERTEX_BUFFER_VIEW, 3> VBVs = { VBV_Pos, VBV_Nrm, VBV_Tex };
 			BCL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
 			if (!IndexBufferViews.empty()) {
 				BCL->IASetIndexBuffer(&IBV);
@@ -403,22 +344,17 @@ void GltfDX::PopulateCommandList(const size_t i)
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 
 #ifdef USE_BUNDLE
-			//!< バンドルの呼び出し
 			CL->ExecuteBundle(BCL);
 #else
-			//!< ルートシグニチャ
 			CL->SetGraphicsRootSignature(RS);
-			//!< インプットアセンブリのプリミティブタイプ
-			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-			//!< バーテックスバッファ、インデックスバッファ
+			BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 			if (!VertexBufferViews.empty()) {
-				const std::array<D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VertexBufferViews[0] };
-				CL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
+				const std::array<D3D12_VERTEX_BUFFER_VIEW, 3> VBVs = { VBV_Pos, VBV_Nrm, VBV_Tex };
+				BCL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
 				if (!IndexBufferViews.empty()) {
-					CL->IASetIndexBuffer(&IndexBufferViews[0]);
+					BCL->IASetIndexBuffer(&IBV);
 				}
 			}
-			//!< 描画
 			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 #endif
 		}

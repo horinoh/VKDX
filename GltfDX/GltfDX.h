@@ -16,14 +16,8 @@ public:
 
 protected:
 	virtual void LoadScene() override;
-	virtual void Process(const fx::gltf::Primitive& Prim) override;
 	virtual void Process(const fx::gltf::Accessor& Acc) override;
 
-	std::string Semantics;
-
-	virtual void CreateVertexBuffer() override;
-	virtual void CreateIndexBuffer() override;
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(IndexCount, 1); }
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
@@ -36,7 +30,7 @@ protected:
 		LOG_OK();
 	}
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPs(); }
-	virtual void CreatePipelineState() override { CreatePipelineState_VsPs_Vertex<Vertex_PositionColor>(); }
+	virtual void CreatePipelineState() override { CreatePipelineState_VsPs_Vertex<Vertex_PositionNormalTexcoord>(); }
 	virtual void PopulateCommandList(const size_t i) override;
 
 	UINT IndexCount = 0;

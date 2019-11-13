@@ -79,11 +79,11 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	InitializeDepthStencilImage(CommandBuffers[0]);
 	CreateRenderTarget();
 
+	LoadScene();
+
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 	CreateIndirectBuffer();
-
-	LoadScene();
 
 	CreateTexture();
 	CreateSampler();
@@ -1477,7 +1477,7 @@ void VK::AllocateDeviceMemory()
 				const auto HeapIndex = PDMP.memoryTypes[i].heapIndex;
 				//!< 確保するデバイスメモリサイズ (Device memory size to use) #VK_TODO
 				//!< 最大値で取るとVK_ERROR_OUT_OF_DEVICE_MEMORYになる、あまりに大きく取ると重くなる
-				const auto HeapSize = 4096;
+				const auto HeapSize = PDMP.memoryHeaps[HeapIndex].size / 2;
 				assert(HeapSize < PDMP.memoryHeaps[HeapIndex].size && "");
 				if (VK_NULL_HANDLE == DeviceMemories[HeapIndex]) {
 					const VkMemoryAllocateInfo MAI = {

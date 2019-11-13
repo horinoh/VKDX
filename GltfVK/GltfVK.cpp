@@ -235,57 +235,50 @@ void GltfVK::LoadScene()
 {
 	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb");
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Embedded\\Duck.gltf");
-
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb");
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb");
-}
-void GltfVK::Process(const fx::gltf::Primitive& Prim)
-{
-	Gltf::Process(Prim);
-
-	for (const auto& i : Prim.attributes) {
-		Semantics = i.first;
-		Process(Document.accessors[i.second]);
-	}
-	if (-1 != Prim.indices) {
-		Process(Document.accessors[Prim.indices]);
-	}
 }
 void GltfVK::Process(const fx::gltf::Accessor& Acc)
 {
 	Gltf::Process(Acc);
-}
 
-void GltfVK::CreateVertexBuffer()
-{
-	VertexBuffers.resize(1);
+	if (-1 != Acc.bufferView) {
+		const auto& BufV = Document.bufferViews[Acc.bufferView];
 
-	const std::array<Vertex_PositionColor, 3> Vertices = { {
-		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
-		{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } }, //!< LB
-		{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }, //!< RB
-	} };
-	const auto Stride = sizeof(Vertices[0]);
-	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
+		if (-1 != BufV.buffer) {
+			const auto& Buf = Document.buffers[BufV.buffer];
+			Buf.byteLength;
 
-	CreateBuffer_Vertex(GraphicsQueue, CommandBuffers[0], &VertexBuffers[0], Size, Vertices.data());
+			if (Buf.uri.empty()) {
+				if (Buf.IsEmbeddedResource()) {
+				}
+				else {
+					const auto Data = &Buf.data[BufV.byteOffset + Acc.byteOffset];
+					const auto Stride = BufV.byteStride;
+					const auto TypeSize = GetTypeSize(Acc);
+					const auto Size = Acc.count * (0 == Stride ? TypeSize : Stride);
 
-	LOG_OK();
-}
-void GltfVK::CreateIndexBuffer()
-{
-	IndexBuffers.resize(1);
+					if (fx::gltf::BufferView::TargetType::ElementArrayBuffer == BufV.target) {
+						IndexBuffers.push_back(VkBuffer());
+						CreateBuffer_Index(GraphicsQueue, CommandBuffers[0], &IndexBuffers.back(), Size, Data);
 
-	const std::array<uint32_t, 3> Indices = { 0, 1, 2 };
-
-	//!< vkCmdDrawIndexed() が引数に取るので覚えておく必要がある (Save this value because vkCmdDrawIndexed() will use it)
-	IndexCount = static_cast<uint32_t>(Indices.size());
-	const auto Stride = sizeof(Indices[0]);
-	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
-
-	CreateBuffer_Index(GraphicsQueue, CommandBuffers[0], &IndexBuffers[0], Size, Indices.data());
-
-	LOG_OK();
+						CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
+					}
+					else if (fx::gltf::BufferView::TargetType::ArrayBuffer == BufV.target) {
+						VertexBuffers.push_back(VkBuffer());
+						CreateBuffer_Vertex(GraphicsQueue, CommandBuffers[0], &VertexBuffers.back(), Size, Data);
+					}
+				}
+			}
+			else {
+				if (Buf.IsEmbeddedResource()) {
+				}
+				else {
+					//const auto Path = fx::gltf::detail::GetDocumentRootPath("../../") + "/" + Buf.uri;
+				}
+			}
+		}
+	}
 }
 
 void GltfVK::PopulateCommandBuffer(const size_t i)
@@ -296,10 +289,9 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 #endif
 	const auto FB = Framebuffers[i];
 	const auto RP = RenderPasses[0];
-	const auto VB = VertexBuffers[0];
-	//const auto VB_Pos = VertexBuffers[0];
-	//const auto VB_Nrm = VertexBuffers[1];
-	//const auto VB_Tex = VertexBuffers[2];
+	const auto VB_Pos = VertexBuffers[0];
+	const auto VB_Nrm = VertexBuffers[1];
+	const auto VB_Tex = VertexBuffers[2];
 	const auto IB = IndexBuffers[0];
 	const auto IndirectB = IndirectBuffers[0];
 	const auto PL = Pipelines[0];
@@ -325,12 +317,11 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-		const std::array<VkBuffer, 1> VBs = { VB };
-		//const std::array<VkBuffer, 3> VBs = { VB_Pos, VB_Nrm, VB_Tex };
-		const std::array<VkDeviceSize, 1> Offsets = { 0 };
+		const std::array<VkBuffer, 3> VBs = { VB_Pos, VB_Nrm, VB_Tex };
+		const std::array<VkDeviceSize, 3> Offsets = { 0, 0, 0 };
 		assert(VBs.size() == Offsets.size() && "");
 		vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets.data());
-		vkCmdBindIndexBuffer(SCB, IB, 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindIndexBuffer(SCB, IB, 0, VK_INDEX_TYPE_UINT16);
 		vkCmdDrawIndexedIndirect(SCB, IndirectB, 0, 1, 0);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 #endif
@@ -357,7 +348,6 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 			static_cast<uint32_t>(CVs.size()), CVs.data()
 		};
 #ifdef USE_SECONDARY_COMMAND_BUFFER
-		//!< セカンダリコマンドバッファの呼び出し
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
 			const std::array<VkCommandBuffer, 1> SCBs = { SCB };
 			vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
@@ -366,19 +356,12 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
 			vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 			vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
-#if 0
-			//!< プッシュコンスタント PushConstants
-			const uint32_t Offset = 64; //!< 4の倍数であること(ここではフラグメントシェーダ用は 64byte オフセットしている) Mulitiple of 4(For fragment shader offset 64 byte in this case)
-			const std::array<float, 4> Color = { 0.0f, 0.7f, 0.4f, 0.1f };
-			const auto Size = static_cast<uint32_t>(Color.size() * sizeof(Color[0])); //!< 4の倍数であること Mulitiple of 4
-			vkCmdPushConstants(CommandBuffer, PipelineLayouts[0], VK_SHADER_STAGE_FRAGMENT_BIT, Offset, Size, Color.data());
-#endif
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-			const std::array<VkBuffer, 1> VBs = { VB };
-			const std::array<VkDeviceSize, 1> Offsets = { 0 };
+			const std::array<VkBuffer, 3> VBs = { VB_Pos, VB_Nrm, VB_Tex };
+			const std::array<VkDeviceSize, 3> Offsets = { 0, 0, 0 };
 			assert(VBs.size() == Offsets.size() && "");
 			vkCmdBindVertexBuffers(CB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets.data());
-			vkCmdBindIndexBuffer(CB, IB, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindIndexBuffer(CB, IB, 0, VK_INDEX_TYPE_UINT16);
 			vkCmdDrawIndexedIndirect(CB, IndirectB, 0, 1, 0);
 		} vkCmdEndRenderPass(CB);
 #endif
