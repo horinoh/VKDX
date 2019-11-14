@@ -33,8 +33,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateDepthStencil();	
 	CreateRenderTarget();
 
-	LoadScene();
-
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 	CreateIndirectBuffer();
@@ -110,6 +108,8 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 	//ExecuteCommandListAndWaitForFence(CommandList);
 
 	CreateViewport(static_cast<const FLOAT>(W), static_cast<const FLOAT>(H));
+
+	LoadScene();
 
 	for (auto i = 0; i < GraphicsCommandLists.size(); ++i) {
 		PopulateCommandList(i);
@@ -1343,14 +1343,14 @@ void DX::PopulateCommandList(const size_t i)
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
-	const auto PS = COM_PTR_GET(PipelineStates[0]);
+	//const auto PS = COM_PTR_GET(PipelineStates[0]);
 
 	//!< GPU が参照している間は、コマンドアロケータの Reset() はできない
 	//VERIFY_SUCCEEDED(CA->Reset());
 
 	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能 (コマンドキューはコマンドリストではなく、コマンドアロケータを参照している)
 	//!< CommandList 作成時に PipelineState を指定していなくても、ここで指定すれば OK
-	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
+	VERIFY_SUCCEEDED(CL->Reset(CA, nullptr));
 	{
 		//!< ビューポート、シザー
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());

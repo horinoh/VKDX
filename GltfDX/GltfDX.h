@@ -14,8 +14,29 @@ public:
 	GltfDX() : Super() {}
 	virtual ~GltfDX() {}
 
+	static DXGI_FORMAT ToDXFormat(const fx::gltf::Accessor::ComponentType CT) {
+		switch (CT) {
+		case fx::gltf::Accessor::ComponentType::UnsignedShort: return DXGI_FORMAT_R16_UINT;
+		case fx::gltf::Accessor::ComponentType::UnsignedInt: return DXGI_FORMAT_R32_UINT;
+		}
+		return DXGI_FORMAT_UNKNOWN;
+	}
+	static D3D_PRIMITIVE_TOPOLOGY ToDXTopology(const fx::gltf::Primitive::Mode MD) {
+		switch (MD)
+		{
+		case fx::gltf::Primitive::Mode::Points: return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+		case fx::gltf::Primitive::Mode::Lines: return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+			//case fx::gltf::Primitive::Mode::LineLoop:
+		case fx::gltf::Primitive::Mode::LineStrip: return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+		case fx::gltf::Primitive::Mode::Triangles: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		case fx::gltf::Primitive::Mode::TriangleStrip: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+			//case fx::gltf::Primitive::Mode::TriangleFan:
+		}
+		return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
+	}
 protected:
 	virtual void LoadScene() override;
+	virtual void Process(const fx::gltf::Primitive& Prim) override;
 	virtual void Process(const fx::gltf::Accessor& Acc) override;
 
 	virtual void CreateRootSignature() override {
@@ -29,8 +50,6 @@ protected:
 		DX::CreateRootSignature(RootSignatures[0], Blob);
 		LOG_OK();
 	}
-	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPs(); }
-	virtual void CreatePipelineState() override { CreatePipelineState_VsPs_Vertex<Vertex_PositionNormalTexcoord>(); }
 	virtual void PopulateCommandList(const size_t i) override;
 
 	UINT IndexCount = 0;

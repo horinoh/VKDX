@@ -313,7 +313,7 @@ protected:
 	virtual void CreateShaderModule() {}
 
 #include "VKPipelineCache.inl"
-	virtual void CreatePipeline();
+	virtual void CreatePipeline() {}
 	void CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		VkPipelineCache PC = VK_NULL_HANDLE);

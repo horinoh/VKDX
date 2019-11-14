@@ -237,6 +237,37 @@ void GltfDX::LoadScene()
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb");
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb");
 }
+void GltfDX::Process(const fx::gltf::Primitive& Prim)
+{
+	Gltf::Process(Prim);
+
+	CreateShaderBlob_VsPs();
+	CreatePipelineState_VsPs_Vertex<Vertex_PositionNormalTexcoord>();
+
+	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
+	const auto PS = COM_PTR_GET(PipelineStates[0]);
+	const auto RS = COM_PTR_GET(RootSignatures[0]);
+
+	const auto& VBVs = VertexBufferViews;
+	const auto & IBV = IndexBufferViews[0];
+	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
+	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
+
+	for (auto i = 0; i < BundleGraphicsCommandLists.size(); ++i) {
+		const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+		const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
+
+		VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
+		{
+			BCL->SetGraphicsRootSignature(RS);
+			BCL->IASetPrimitiveTopology(ToDXTopology(Prim.mode));
+			BCL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
+			BCL->IASetIndexBuffer(&IBV);
+			BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+		}
+		VERIFY_SUCCEEDED(BCL->Close());
+	}
+}
 void GltfDX::Process(const fx::gltf::Accessor& Acc)
 {
 	Gltf::Process(Acc);
@@ -246,39 +277,25 @@ void GltfDX::Process(const fx::gltf::Accessor& Acc)
 		
 		if (-1 != BufV.buffer) {
 			const auto& Buf = Document.buffers[BufV.buffer];
-			Buf.byteLength;
 
-			if (Buf.uri.empty()) {
-				if (Buf.IsEmbeddedResource()) {
-				}
-				else {
-					const auto Data = &Buf.data[BufV.byteOffset + Acc.byteOffset];
-					const auto Stride = BufV.byteStride;
-					const auto TypeSize = GetTypeSize(Acc);
-					const auto Size = Acc.count * (0 == Stride ? TypeSize : Stride);
+			const auto Data = &Buf.data[BufV.byteOffset + Acc.byteOffset];
+			const auto Stride = BufV.byteStride;
+			const auto TypeSize = GetTypeSize(Acc);
+			const auto Size = Acc.count * (0 == Stride ? TypeSize : Stride);
 
-					if (fx::gltf::BufferView::TargetType::ElementArrayBuffer == BufV.target) {
-						IndexBufferResources.push_back(COM_PTR<ID3D12Resource>());
+			if (fx::gltf::BufferView::TargetType::ElementArrayBuffer == BufV.target) {
+				IndexBufferResources.push_back(COM_PTR<ID3D12Resource>());
 
-						CreateBuffer(COM_PTR_PUT(IndexBufferResources.back()), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
-						IndexBufferViews.push_back({ IndexBufferResources.back()->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R16_UINT });
+				CreateBuffer(COM_PTR_PUT(IndexBufferResources.back()), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+				IndexBufferViews.push_back({ IndexBufferResources.back()->GetGPUVirtualAddress(), Size, ToDXFormat(Acc.componentType) });
 
-						CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
-					}
-					else if (fx::gltf::BufferView::TargetType::ArrayBuffer == BufV.target) {
-						VertexBufferResources.push_back(COM_PTR<ID3D12Resource>());
-
-						CreateBuffer(COM_PTR_PUT(VertexBufferResources.back()), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
-						VertexBufferViews.push_back({ VertexBufferResources.back()->GetGPUVirtualAddress(), Size, Stride });
-					}
-				}
+				CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
 			}
-			else {
-				if (Buf.IsEmbeddedResource()) {
-				}
-				else {
-					//const auto Path = fx::gltf::detail::GetDocumentRootPath("../../") + "/" + Buf.uri;
-				}
+			else if (fx::gltf::BufferView::TargetType::ArrayBuffer == BufV.target) {
+				VertexBufferResources.push_back(COM_PTR<ID3D12Resource>());
+
+				CreateBuffer(COM_PTR_PUT(VertexBufferResources.back()), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+				VertexBufferViews.push_back({ VertexBufferResources.back()->GetGPUVirtualAddress(), Size, Stride });
 			}
 		}
 	}
@@ -286,77 +303,26 @@ void GltfDX::Process(const fx::gltf::Accessor& Acc)
 
 void GltfDX::PopulateCommandList(const size_t i)
 {
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-#ifdef USE_BUNDLE
+	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
-	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-#endif
-	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
-
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
 
-	const auto PS = COM_PTR_GET(PipelineStates[0]);
-
-	const auto RS = COM_PTR_GET(RootSignatures[0]);
-
-	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
-
-	const auto VBV_Pos = VertexBufferViews[0];
-	const auto VBV_Nrm = VertexBufferViews[1];
-	const auto VBV_Tex = VertexBufferViews[2];
-	const auto& IBV = IndexBufferViews[0];
-
-	//!< バンドルから全てのコマンドがコールできるわけではない
-#ifdef USE_BUNDLE
-	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
+	VERIFY_SUCCEEDED(CL->Reset(CA, nullptr));
 	{
-		BCL->SetGraphicsRootSignature(RS);
-		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-		if (!VertexBufferViews.empty()) {
-			const std::array<D3D12_VERTEX_BUFFER_VIEW, 3> VBVs = { VBV_Pos, VBV_Nrm, VBV_Tex };
-			BCL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
-			if (!IndexBufferViews.empty()) {
-				BCL->IASetIndexBuffer(&IBV);
-			}
-		}
-		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
-	}
-	VERIFY_SUCCEEDED(BCL->Close());
-#endif
-
-	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
-	{
-		//!< ビューポート、シザー
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
-		//!< バリア
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
-			//!< クリア
 			const std::array<D3D12_RECT, 0> Rs = {};
 			CL->ClearRenderTargetView(SCH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
 
-			//!< レンダーターゲット
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 
-#ifdef USE_BUNDLE
 			CL->ExecuteBundle(BCL);
-#else
-			CL->SetGraphicsRootSignature(RS);
-			BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-			if (!VertexBufferViews.empty()) {
-				const std::array<D3D12_VERTEX_BUFFER_VIEW, 3> VBVs = { VBV_Pos, VBV_Nrm, VBV_Tex };
-				BCL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
-				if (!IndexBufferViews.empty()) {
-					BCL->IASetIndexBuffer(&IBV);
-				}
-			}
-			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
-#endif
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}

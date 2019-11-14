@@ -79,8 +79,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	InitializeDepthStencilImage(CommandBuffers[0]);
 	CreateRenderTarget();
 
-	LoadScene();
-
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 	CreateIndirectBuffer();
@@ -153,6 +151,8 @@ void VK::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 
 	//DestroyFramebuffer();
 	//CreateFramebuffer();
+
+	LoadScene();
 
 	for (auto i = 0; i < CommandBuffers.size(); ++i) {
 		PopulateCommandBuffer(i);
@@ -2533,38 +2533,6 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 		In.close();
 	}
 	return ShaderModule;
-}
-
-void VK::CreatePipeline()
-{
-	Pipelines.resize(1);
-
-#ifdef USE_PIPELINE_SERIALIZE
-	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
-#endif
-
-	std::vector<std::thread> Threads;
-
-	{
-		auto& PL = Pipelines[0];
-		const auto PLL = PipelineLayouts[0];
-		const auto RP = RenderPasses[0];
-
-		auto Thread = std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
-			const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS)
-			{ 
-#ifdef USE_PIPELINE_SERIALIZE
-				CreatePipeline_Default(PL, PLL, RP, VS, FS, TES, TCS, GS, PCS.GetPipelineCache(0));
-#else
-				CreatePipeline_Default(PL, PLL, RP, VS, FS, TES, TCS, GS);
-#endif
-			},
-			std::ref(PL), PLL, RP, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule, NullShaderModule);
-	}
-
-	for (auto& i : Threads) {
-		i.join();
-	}
 }
 
 void VK::CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
