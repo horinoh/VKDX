@@ -3,7 +3,7 @@
 ## VK、DX 共通
 
 ### コンパイル
-* "warning C4005: '_malloca': macro redefinition" は stdafx.h 内 windows.h 前に _CRTDBG_MAP_ALLOC を定義すると出なくなる
+* "warning C4005: '_malloca': macro redefinition" は framework.h 内 windows.h 前に _CRTDBG_MAP_ALLOC を定義すると出なくなる
 ~~~
 #define _CRTDBG_MAP_ALLOC
 #include <windows.h>

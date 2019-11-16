@@ -232,8 +232,27 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void GltfDX::LoadScene()
 {
+	//!< POS, NRM
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMilkTruck\\glTF-Binary\\CesiumMilkTruck.glb"); 
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\2CylinderEngine\\glTF-Binary\\2CylinderEngine.glb");
+
+	//!< POS, NRM, TEX0
 	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb");
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Embedded\\Duck.gltf");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxTextured\\glTF-Binary\\BoxTextured.glb");
+
+	//!< POS, NRM, TEX0, COL0
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxVertexColors\\glTF-Binary\\BoxVertexColors.glb");
+
+	//!< POS, NRM, TAN, TEX0
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\SciFiHelmet\\glTF\\SciFiHelmet.gltf"); 
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Suzanne\\glTF\\Suzanne.gltf");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\WaterBottle\\glTF-Binary\\WaterBottle.glb"); 
+
+	//!< POS, NRM, JNT0, WEG0
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\BrainStem\\glTF-Binary\\BrainStem.glb");
+
+	//!< POS, NRM, TEX0, JNT0, WEG0
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb");
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb");
 }
@@ -241,12 +260,38 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 {
 	Gltf::Process(Prim);
 
+	std::vector<std::pair<std::string, UINT>> SemanticIndices;
+	for (const auto& i : Prim.attributes) {
+		std::string Name, Index;
+		if (DecomposeSemantic(i.first, Name, Index)) {
+			SemanticIndices.push_back({ Name.c_str(), std::stoi(Index) });
+		}
+		else {
+			SemanticIndices.push_back({ i.first.c_str(), 0 });
+		}
+	}
+
+	std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs;
+	UINT InputSlot = 0;
+	for (const auto& i : Prim.attributes) {
+		const auto& Sem = SemanticIndices[InputSlot];
+		const auto& Acc = Document.accessors[i.second];
+		IEDs.push_back({ Sem.first.c_str(), Sem.second, ToDXFormat(Acc), InputSlot, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+		++InputSlot;
+	}
+
 	CreateShaderBlob_VsPs();
+#if 0
 	CreatePipelineState_VsPs_Vertex<Vertex_PositionNormalTexcoord>();
+#else
+	const auto RS = COM_PTR_GET(RootSignatures[0]);
+
+	PipelineStates.push_back(COM_PTR<ID3D12PipelineState>());
+	DX::CreatePipelineState(std::ref(PipelineStates[0]), RS, { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }, { ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() }, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, ToDXPrimitiveTopologyType(Prim.mode));
+#endif
 
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
-	const auto RS = COM_PTR_GET(RootSignatures[0]);
 
 	const auto& VBVs = VertexBufferViews;
 	const auto & IBV = IndexBufferViews[0];
@@ -260,7 +305,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 		{
 			BCL->SetGraphicsRootSignature(RS);
-			BCL->IASetPrimitiveTopology(ToDXTopology(Prim.mode));
+			BCL->IASetPrimitiveTopology(ToDXPrimitiveTopology(Prim.mode));
 			BCL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
 			BCL->IASetIndexBuffer(&IBV);
 			BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);

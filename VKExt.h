@@ -137,9 +137,6 @@ public:
 	template<typename T, typename U> void CreatePipeline_Vertex_Instance(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
 		VkPipelineCache PC = VK_NULL_HANDLE);
-	void CreatePipeline_Tesselation(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
-		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
-		VkPipelineCache PC = VK_NULL_HANDLE);
 
 	void CreatePipeline_VsFs();
 	void CreatePipeline_VsFsTesTcsGs_Tesselation();

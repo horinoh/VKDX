@@ -5,8 +5,8 @@
 class Gltf 
 {
 public:
-	static uint32_t GetTypeCount(const fx::gltf::Accessor::Type t) {
-		switch (t) {
+	static uint32_t GetTypeCount(const fx::gltf::Accessor::Type Type) {
+		switch (Type) {
 		default:
 		case fx::gltf::Accessor::Type::None: return 0;
 		case fx::gltf::Accessor::Type::Scalar: return 1;
@@ -18,8 +18,8 @@ public:
 		case fx::gltf::Accessor::Type::Mat4: return 16;
 		}		
 	}
-	static uint32_t GetComponentTypeSize(const fx::gltf::Accessor::ComponentType ct) {
-		switch (ct) {
+	static uint32_t GetComponentTypeSize(const fx::gltf::Accessor::ComponentType CompType) {
+		switch (CompType) {
 		default:
 		case fx::gltf::Accessor::ComponentType::None: return 0;
 		case fx::gltf::Accessor::ComponentType::Byte:
@@ -31,6 +31,20 @@ public:
 		}
 	}
 	static uint32_t GetTypeSize(const fx::gltf::Accessor& Acc) { return GetTypeCount(Acc.type) * GetComponentTypeSize(Acc.componentType); }
+
+	static bool DecomposeSemantic(const std::string& Semantic, std::string& Name, std::string& Index) {
+		const auto pos = Semantic.find("_");
+		if (std::string::npos != pos) {
+			Name = Semantic.substr(0, pos);
+			Index = Semantic.substr(pos + 1);
+			//SemanticIndices.push_back({ i.first.substr(0, pos).c_str(), std::stoi(i.first.substr(pos + 1)) });
+			return true;
+		}
+		else {
+			//SemanticIndices.push_back({ i.first.c_str(), 0 });
+			return false;
+		}
+	}
 
 	virtual void Load(const std::string& Path) {
 		if (std::string::npos != Path.rfind(".glb")){

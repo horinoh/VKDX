@@ -233,8 +233,27 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 
 void GltfVK::LoadScene()
 {
+	//!< POS, NRM
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMilkTruck\\glTF-Binary\\CesiumMilkTruck.glb"); 
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\2CylinderEngine\\glTF-Binary\\2CylinderEngine.glb");
+	
+	//!< POS, NRM, TEX0
 	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb");
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Embedded\\Duck.gltf");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxTextured\\glTF-Binary\\BoxTextured.glb");
+
+	//!< POS, NRM, TEX0, COL0
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxVertexColors\\glTF-Binary\\BoxVertexColors.glb");
+
+	//!< POS, NRM, TAN, TEX0
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\SciFiHelmet\\glTF\\SciFiHelmet.gltf"); 
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Suzanne\\glTF\\Suzanne.gltf");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\WaterBottle\\glTF-Binary\\WaterBottle.glb"); 
+
+	//!< POS, NRM, JNT0, WEG0
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\BrainStem\\glTF-Binary\\BrainStem.glb");
+
+	//!< POS, NRM, TEX0, JNT0, WEG0
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb");
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb");
 }
@@ -242,11 +261,25 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 {
 	Gltf::Process(Prim);
 
+	std::vector<VkVertexInputBindingDescription> VIBDs;
+	std::vector<VkVertexInputAttributeDescription> VIADs;
+	uint32_t Binding = 0;
+	uint32_t Location = 0;
+	for (const auto& i : Prim.attributes) {
+		const auto& Acc = Document.accessors[i.second];
+		VIBDs.push_back({ Binding, GetTypeSize(Acc),  VK_VERTEX_INPUT_RATE_VERTEX });
+		VIADs.push_back({ Location, Binding, ToVKFormat(Acc), 0 });
+		++Binding;
+		++Location;
+	}
+
 	CreateShaderModle_VsFs(); 
-	//ToVKTopology(Prim.mode);
-	CreatePipeline_VsFs_Vertex<Vertex_PositionNormalTexcoord>();
 
 	const auto RP = RenderPasses[0];
+	const auto PLL = PipelineLayouts[0];
+	Pipelines.push_back(VkPipeline());
+	CreatePipeline(Pipelines[0], PLL, RP, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs, ToVKPrimitiveTopology(Prim.mode));
+
 	const auto& VBs = VertexBuffers;
 	const auto IB = IndexBuffers[0];
 	const auto IndB = IndirectBuffers[0];

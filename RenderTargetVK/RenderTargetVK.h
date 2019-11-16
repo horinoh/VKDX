@@ -110,9 +110,9 @@ protected:
 				const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS)
 				{
 #ifdef USE_PIPELINE_SERIALIZE
-					CreatePipeline_Tesselation(PL, PLL, RP, VS, FS, TES, TCS, GS, PCS.GetPipelineCache(0));
+					VK::CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PCS.GetPipelineCache(0));				
 #else
-					CreatePipeline_Tesselation(PL, PLL, RP, VS, FS, TES, TCS, GS);
+					VK::CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1);
 #endif
 				},
 				std::ref(PL), PLL, RP, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4]));
@@ -125,9 +125,9 @@ protected:
 				const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS)
 				{
 #ifdef USE_PIPELINE_SERIALIZE
-					CreatePipeline_Default(PL, PLL, RP, VS, FS, TES, TCS, GS, PCS.GetPipelineCache(1)); //!<
+					VK::CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PCS.GetPipelineCache(1)); //!< 
 #else
-					CreatePipeline_Default(PL, PLL, RP, VS, FS, TES, TCS, GS);
+					VK::CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
 #endif
 				},
 				std::ref(PL), PLL, RP, ShaderModules[5], ShaderModules[6], NullShaderModule, NullShaderModule, NullShaderModule)); //!<

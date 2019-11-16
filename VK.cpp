@@ -2535,8 +2535,9 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 	return ShaderModule;
 }
 
-void VK::CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
+void VK::CreatePipeline(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP, 
 	const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS, 
+	const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs, const VkPrimitiveTopology PT, const uint32_t PatchControlPoints,
 	VkPipelineCache PC)
 {
 	PERFORMANCE_COUNTER();
@@ -2564,7 +2565,7 @@ void VK::CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, cons
 	};
 	const VkSpecializationInfo SI = {
 		static_cast<uint32_t>(SMEs.size()), SMEs.data(),
-		sizeof(SD), &SD
+		sizeof(SD),& SD
 	};
 #endif
 
@@ -2581,7 +2582,7 @@ void VK::CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, cons
 			VK_SHADER_STAGE_VERTEX_BIT, VS,
 			"main",
 			nullptr //!< &SI
-		});
+			});
 	}
 	if (VK_NULL_HANDLE != FS) {
 		PSSCI.push_back({
@@ -2591,7 +2592,7 @@ void VK::CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, cons
 			VK_SHADER_STAGE_FRAGMENT_BIT, FS,
 			"main",
 			nullptr //!< &SI
-		});
+			});
 	}
 	if (VK_NULL_HANDLE != TES) {
 		PSSCI.push_back({
@@ -2601,7 +2602,7 @@ void VK::CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, cons
 			VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, TES,
 			"main",
 			nullptr //!< &SI
-		});
+			});
 	}
 	if (VK_NULL_HANDLE != TCS) {
 		PSSCI.push_back({
@@ -2611,7 +2612,7 @@ void VK::CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, cons
 			VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, TCS,
 			"main",
 			nullptr //!< &SI
-		});
+			});
 	}
 	if (VK_NULL_HANDLE != GS) {
 		PSSCI.push_back({
@@ -2621,13 +2622,11 @@ void VK::CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, cons
 			VK_SHADER_STAGE_GEOMETRY_BIT, GS,
 			"main",
 			nullptr //!< &SI
-		});
+			});
 	}
 	assert(!PSSCI.empty() && "");
 
 	//!< バーテックスインプット (VertexInput)
-	const std::array<VkVertexInputBindingDescription, 0> VIBDs = {};
-	const std::array<VkVertexInputAttributeDescription, 0> VIADs = {};
 	const VkPipelineVertexInputStateCreateInfo PVISCI = {
 		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
 		nullptr,
@@ -2646,7 +2645,7 @@ void VK::CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, cons
 		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
 		nullptr,
 		0,
-		VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, //!< トポロジ
+		PT,
 		VK_FALSE
 	};
 	//!< WITH_ADJACENCY 系使用時には デバイスフィーチャー geometryShader が有効であること
@@ -2662,11 +2661,12 @@ void VK::CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, cons
 		|| PIASCI.primitiveRestartEnable == VK_FALSE) /*&& ""*/);
 
 	//!< テセレーション (Tessellation)
+	assert((PT != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST || PatchControlPoints != 0) && "");
 	const VkPipelineTessellationStateCreateInfo PTSCI = {
 		VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,
-		nullptr, 
-		0, 
-		0 //!< パッチコントロールポイント
+		nullptr,
+		0,
+		PatchControlPoints//!< パッチコントロールポイント
 	};
 
 	//!< ビューポート (Viewport)
@@ -2688,13 +2688,13 @@ void VK::CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, cons
 		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 		nullptr,
 		0,
-		VK_FALSE, 
 		VK_FALSE,
-		VK_POLYGON_MODE_FILL, 
+		VK_FALSE,
+		VK_POLYGON_MODE_FILL,
 		VK_CULL_MODE_BACK_BIT,
 		VK_FRONT_FACE_COUNTER_CLOCKWISE,
 		VK_FALSE, 0.0f, 0.0f, 0.0f,
-		1.0f 
+		1.0f
 	};
 	//!< depthClampEnable にはデバイスフィーチャー depthClamp が有効であること
 	assert((!PRSCI.depthClampEnable || PDF.depthClamp) && "");
@@ -2761,7 +2761,7 @@ void VK::CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, cons
 
 	//!< ダイナミックステート (DynamicState)
 	const std::array<VkDynamicState, 2> DSs = {
-		VK_DYNAMIC_STATE_VIEWPORT, 
+		VK_DYNAMIC_STATE_VIEWPORT,
 		VK_DYNAMIC_STATE_SCISSOR
 	};
 	const VkPipelineDynamicStateCreateInfo PDSCI = {
@@ -2772,10 +2772,10 @@ void VK::CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, cons
 	};
 
 	/**
-	@brief 継承 ... 共通部分が多い場合、親パイプラインを指定して作成するとより高速に作成できる、親子間でのスイッチやバインドが有利 
+	@brief 継承 ... 共通部分が多い場合、親パイプラインを指定して作成するとより高速に作成できる、親子間でのスイッチやバインドが有利
 	(DX の D3D12_CACHED_PIPELINE_STATE 相当?)
 	basePipelineHandle, basePipelineIndex は同時に使用できない、使用しない場合はそれぞれ VK_NULL_HANDLE, -1 を指定すること
-	親には VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT フラグが必要、子には VK_PIPELINE_CREATE_DERIVATIVE_BIT フラグが必要	
+	親には VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT フラグが必要、子には VK_PIPELINE_CREATE_DERIVATIVE_BIT フラグが必要
 	・basePipelineHandle ... 既に親とするパイプライン(ハンドル)が存在する場合に指定
 	・basePipelineIndex ... 同配列内で親パイプラインも同時に作成する場合、配列内での親パイプラインの添字(親の添字の方が若い値であること)
 	*/
@@ -2789,15 +2789,15 @@ void VK::CreatePipeline_Default(VkPipeline& PL, const VkPipelineLayout PLL, cons
 			0,
 #endif
 			static_cast<uint32_t>(PSSCI.size()), PSSCI.data(),
-			&PVISCI,
-			&PIASCI,
-			&PTSCI,
-			&PVSCI,
-			&PRSCI,
-			&PMSCI,
-			&PDSSCI,
-			&PCBSCI,
-			&PDSCI,
+			& PVISCI,
+			& PIASCI,
+			& PTSCI,
+			& PVSCI,
+			& PRSCI,
+			& PMSCI,
+			& PDSSCI,
+			& PCBSCI,
+			& PDSCI,
 			PLL,
 			RP, 0, //!< 指定したレンダーパス限定ではなく、互換性のある他のレンダーパスでも使用可能
 			VK_NULL_HANDLE, -1 //!< basePipelineHandle, basePipelineIndex

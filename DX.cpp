@@ -1189,9 +1189,10 @@ void DX::CreateShader(std::vector<COM_PTR<ID3DBlob>>& Blobs) const
 #endif
 }
 
-void DX::CreatePipelineState_Default(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, 
+void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, 
 	const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,
-	ID3D12PipelineLibrary* PL, LPCWSTR Name, bool IsLoad)
+	const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT,
+	const PipelineLibrarySerializer* PLS, LPCWSTR Name)
 {
 	PERFORMANCE_COUNTER();
 
@@ -1258,7 +1259,6 @@ void DX::CreatePipelineState_Default(COM_PTR<ID3D12PipelineState>& PST, ID3D12Ro
 	};
 
 	//!< インプットレイアウト (InputLayout)
-	const std::array<D3D12_INPUT_ELEMENT_DESC, 0> IEDs = {};
 	const D3D12_INPUT_LAYOUT_DESC ILD = {
 		IEDs.data(), static_cast<UINT>(IEDs.size())
 	};
@@ -1276,6 +1276,9 @@ void DX::CreatePipelineState_Default(COM_PTR<ID3D12PipelineState>& PST, ID3D12Ro
 	const D3D12_CACHED_PIPELINE_STATE CPS = { nullptr, 0 };
 #endif
 
+	//!< DXでは「パッチコントロールポイント」個数の指定はIASetPrimitiveTopology()の引数としてコマンドリストへ指定する、VKとは結構異なるので注意
+//	//!< CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+
 	const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {
 		RS,
 		VS, PS, DS, HS, GS,
@@ -1286,7 +1289,7 @@ void DX::CreatePipelineState_Default(COM_PTR<ID3D12PipelineState>& PST, ID3D12Ro
 		DSD,
 		ILD,
 		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
-		D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE,
+		PTT,
 		1, { DXGI_FORMAT_R8G8B8A8_UNORM }, DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
 		SD,
 		0,
@@ -1296,20 +1299,20 @@ void DX::CreatePipelineState_Default(COM_PTR<ID3D12PipelineState>& PST, ID3D12Ro
 	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
 	assert((0 == GPSD.DS.BytecodeLength || 0 == GPSD.HS.BytecodeLength || GPSD.PrimitiveTopologyType == D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH) && "");
 
-	if (IsLoad) {
-		if (nullptr != PL && nullptr != Name) {
-			VERIFY_SUCCEEDED(PL->LoadGraphicsPipeline(Name, &GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
-		}
+	if (nullptr != PLS && PLS->IsLoadSucceeded()) {
+		VERIFY_SUCCEEDED(PLS->GetPipelineLibrary()->LoadGraphicsPipeline(Name, &GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
 	}
 	else {
 		VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
-		if (nullptr != PL && nullptr != Name) {
-			VERIFY_SUCCEEDED(PL->StorePipeline(Name, COM_PTR_GET(PST)));
+
+		if (nullptr != PLS) {
+			VERIFY_SUCCEEDED(PLS->GetPipelineLibrary()->StorePipeline(Name, COM_PTR_GET(PST)));
 		}
 	}
 
 	LOG_OK();
 }
+
 #if 0
 void DX::CreatePipelineState_Compute()
 {

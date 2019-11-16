@@ -36,7 +36,7 @@ public:
 		}
 		LOG_OK();
 	}
-	ID3D12PipelineLibrary* GetPipelineLibrary() { return COM_PTR_GET(PipelineLibrary); }
+	ID3D12PipelineLibrary* GetPipelineLibrary() const { return COM_PTR_GET(PipelineLibrary); }
 	bool IsLoadSucceeded() const { return IsLoaded; }
 private:
 	ID3D12Device* Device;

@@ -19,21 +19,88 @@ public:
 		case fx::gltf::Accessor::ComponentType::UnsignedShort: return DXGI_FORMAT_R16_UINT;
 		case fx::gltf::Accessor::ComponentType::UnsignedInt: return DXGI_FORMAT_R32_UINT;
 		}
+		assert(false && "");
 		return DXGI_FORMAT_UNKNOWN;
 	}
-	static D3D_PRIMITIVE_TOPOLOGY ToDXTopology(const fx::gltf::Primitive::Mode MD) {
+	static D3D12_PRIMITIVE_TOPOLOGY_TYPE ToDXPrimitiveTopologyType(const fx::gltf::Primitive::Mode MD) {
+		switch (MD)
+		{
+		case fx::gltf::Primitive::Mode::Points: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+		case fx::gltf::Primitive::Mode::Lines: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+		case fx::gltf::Primitive::Mode::LineLoop:
+		case fx::gltf::Primitive::Mode::LineStrip: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+		case fx::gltf::Primitive::Mode::Triangles:
+		case fx::gltf::Primitive::Mode::TriangleStrip:
+		case fx::gltf::Primitive::Mode::TriangleFan: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		}
+		assert(false && "");
+		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
+	}
+	static D3D12_PRIMITIVE_TOPOLOGY ToDXPrimitiveTopology(const fx::gltf::Primitive::Mode MD) {
 		switch (MD)
 		{
 		case fx::gltf::Primitive::Mode::Points: return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
 		case fx::gltf::Primitive::Mode::Lines: return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-			//case fx::gltf::Primitive::Mode::LineLoop:
+		//case fx::gltf::Primitive::Mode::LineLoop:
 		case fx::gltf::Primitive::Mode::LineStrip: return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
 		case fx::gltf::Primitive::Mode::Triangles: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		case fx::gltf::Primitive::Mode::TriangleStrip: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-			//case fx::gltf::Primitive::Mode::TriangleFan:
+		//case fx::gltf::Primitive::Mode::TriangleFan:
 		}
+		assert(false && "");
 		return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 	}
+	static DXGI_FORMAT ToDXFormat(const fx::gltf::Accessor& Acc) {
+		switch (Acc.type) {
+			//case fx::gltf::Accessor::Type::None:
+		case fx::gltf::Accessor::Type::Scalar:
+			switch (Acc.componentType) {
+			//case fx::gltf::Accessor::ComponentType::None:
+			case fx::gltf::Accessor::ComponentType::Byte: return DXGI_FORMAT_R8_SINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedByte: return DXGI_FORMAT_R8_UINT;
+			case fx::gltf::Accessor::ComponentType::Short: return DXGI_FORMAT_R16_SINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedShort: return DXGI_FORMAT_R16_UINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedInt: return DXGI_FORMAT_R32_UINT;
+			case fx::gltf::Accessor::ComponentType::Float: return DXGI_FORMAT_R32_FLOAT;
+			}
+		case fx::gltf::Accessor::Type::Vec2:
+			switch (Acc.componentType) {
+			//case fx::gltf::Accessor::ComponentType::None:
+			case fx::gltf::Accessor::ComponentType::Byte: return DXGI_FORMAT_R8G8_SINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedByte: return DXGI_FORMAT_R8G8_UINT;
+			case fx::gltf::Accessor::ComponentType::Short: return DXGI_FORMAT_R16G16_SINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedShort: return DXGI_FORMAT_R16G16_UINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedInt: return DXGI_FORMAT_R32G32_UINT;
+			case fx::gltf::Accessor::ComponentType::Float: return DXGI_FORMAT_R32G32_FLOAT;
+			}
+		case fx::gltf::Accessor::Type::Vec3:
+			switch (Acc.componentType) {
+			//case fx::gltf::Accessor::ComponentType::None:
+			//case fx::gltf::Accessor::ComponentType::Byte: return DXGI_FORMAT_R8G8B8_SINT;
+			//case fx::gltf::Accessor::ComponentType::UnsignedByte: return DXGI_FORMAT_R8G8B8_UINT;
+			//case fx::gltf::Accessor::ComponentType::Short: return DXGI_FORMAT_R16G16B16_SINT;
+			//case fx::gltf::Accessor::ComponentType::UnsignedShort: return DXGI_FORMAT_R16G16B16_UINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedInt: return DXGI_FORMAT_R32G32B32_UINT;
+			case fx::gltf::Accessor::ComponentType::Float: return DXGI_FORMAT_R32G32B32_FLOAT;
+			}
+		case fx::gltf::Accessor::Type::Vec4:
+			switch (Acc.componentType) {
+			//case fx::gltf::Accessor::ComponentType::None:
+			case fx::gltf::Accessor::ComponentType::Byte: return DXGI_FORMAT_R8G8B8A8_SINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedByte: return DXGI_FORMAT_R8G8B8A8_UINT;
+			case fx::gltf::Accessor::ComponentType::Short: return DXGI_FORMAT_R16G16B16A16_SINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedShort: return DXGI_FORMAT_R16G16B16A16_UINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedInt: return DXGI_FORMAT_R32G32B32A32_UINT;
+			case fx::gltf::Accessor::ComponentType::Float: return DXGI_FORMAT_R32G32B32A32_FLOAT;
+			}
+			//case fx::gltf::Accessor::Type::Mat2:
+			//case fx::gltf::Accessor::Type::Mat3:
+			//case fx::gltf::Accessor::Type::Mat4:
+		}
+		assert(false && "");
+		return DXGI_FORMAT_UNKNOWN;
+	}
+
 protected:
 	virtual void LoadScene() override;
 	virtual void Process(const fx::gltf::Primitive& Prim) override;

@@ -26,9 +26,6 @@ public:
 	template<typename T, typename U> void CreatePipelineState_Vertex_Instance(COM_PTR<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,
 		ID3D12PipelineLibrary* PL = nullptr, LPCWSTR Name = nullptr, const bool IsLoad = false);
-	void CreatePipelineState_Tesselation(COM_PTR<ID3D12PipelineState>& PipelineState, ID3D12RootSignature* RS,
-		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,
-		ID3D12PipelineLibrary* PL = nullptr, LPCWSTR Name = nullptr, const bool IsLoad = false);
 
 	void CreatePipelineState_VsPs();
 	void CreatePipelineState_VsPsDsHsGs_Tesselation();

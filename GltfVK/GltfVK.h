@@ -19,10 +19,11 @@ public:
 		case fx::gltf::Accessor::ComponentType::UnsignedShort: return VK_INDEX_TYPE_UINT16;
 		case fx::gltf::Accessor::ComponentType::UnsignedInt: return VK_INDEX_TYPE_UINT32;
 		}
+		assert(false && "");
 		return VK_INDEX_TYPE_MAX_ENUM;
 	}
 
-	static VkPrimitiveTopology ToVKTopology(const fx::gltf::Primitive::Mode MD) {
+	static VkPrimitiveTopology ToVKPrimitiveTopology(const fx::gltf::Primitive::Mode MD) {
 		switch (MD)
 		{
 		case fx::gltf::Primitive::Mode::Points: return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
@@ -33,7 +34,59 @@ public:
 		case fx::gltf::Primitive::Mode::TriangleStrip: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
 		case fx::gltf::Primitive::Mode::TriangleFan: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
 		}
+		assert(false && "");
 		return VK_PRIMITIVE_TOPOLOGY_MAX_ENUM;
+	}
+
+	static VkFormat ToVKFormat(const fx::gltf::Accessor& Acc) {
+		switch (Acc.type) {
+		//case fx::gltf::Accessor::Type::None:
+		case fx::gltf::Accessor::Type::Scalar:
+			switch (Acc.componentType) {
+			//case fx::gltf::Accessor::ComponentType::None:
+			case fx::gltf::Accessor::ComponentType::Byte: return VK_FORMAT_R8_SINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedByte: return VK_FORMAT_R8_UINT;
+			case fx::gltf::Accessor::ComponentType::Short: return VK_FORMAT_R16_SINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedShort: return VK_FORMAT_R16_UINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedInt: return VK_FORMAT_R32_UINT;
+			case fx::gltf::Accessor::ComponentType::Float: return VK_FORMAT_R32_SFLOAT;
+			}
+		case fx::gltf::Accessor::Type::Vec2:
+			switch (Acc.componentType) {
+			//case fx::gltf::Accessor::ComponentType::None:
+			case fx::gltf::Accessor::ComponentType::Byte: return VK_FORMAT_R8G8_SINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedByte: return VK_FORMAT_R8G8_UINT;
+			case fx::gltf::Accessor::ComponentType::Short: return VK_FORMAT_R16G16_SINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedShort: return VK_FORMAT_R16G16_UINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedInt: return VK_FORMAT_R32G32_UINT;
+			case fx::gltf::Accessor::ComponentType::Float: return VK_FORMAT_R32G32_SFLOAT;
+			}
+		case fx::gltf::Accessor::Type::Vec3:
+			switch (Acc.componentType) {
+			//case fx::gltf::Accessor::ComponentType::None:
+			case fx::gltf::Accessor::ComponentType::Byte: return VK_FORMAT_R8G8B8_SINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedByte: return VK_FORMAT_R8G8B8_UINT;
+			case fx::gltf::Accessor::ComponentType::Short: return VK_FORMAT_R16G16B16_SINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedShort: return VK_FORMAT_R16G16B16_UINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedInt: return VK_FORMAT_R32G32B32_UINT;
+			case fx::gltf::Accessor::ComponentType::Float: return VK_FORMAT_R32G32B32_SFLOAT;
+			}
+		case fx::gltf::Accessor::Type::Vec4:
+			switch (Acc.componentType) {
+			//case fx::gltf::Accessor::ComponentType::None:
+			case fx::gltf::Accessor::ComponentType::Byte: return VK_FORMAT_R8G8B8A8_SINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedByte: return VK_FORMAT_R8G8B8A8_UINT;
+			case fx::gltf::Accessor::ComponentType::Short: return VK_FORMAT_R16G16B16A16_SINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedShort: return VK_FORMAT_R16G16B16A16_UINT;
+			case fx::gltf::Accessor::ComponentType::UnsignedInt: return VK_FORMAT_R32G32B32A32_UINT;
+			case fx::gltf::Accessor::ComponentType::Float: return VK_FORMAT_R32G32B32A32_SFLOAT;
+			}
+		//case fx::gltf::Accessor::Type::Mat2:
+		//case fx::gltf::Accessor::Type::Mat3:
+		//case fx::gltf::Accessor::Type::Mat4:
+		}
+		assert(false && "");
+		return VK_FORMAT_UNDEFINED;
 	}
 
 protected:
