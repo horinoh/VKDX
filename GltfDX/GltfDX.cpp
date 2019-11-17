@@ -249,7 +249,7 @@ void GltfDX::LoadScene()
 	////Load("..\\..\\glTF-Sample-Models\\2.0\\WaterBottle\\glTF-Binary\\WaterBottle.glb"); 
 
 	//!< JPNW(JNT0, POS, NRM, WGT0)
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\BrainStem\\glTF-Binary\\BrainStem.glb");
+	////Load("..\\..\\glTF-Sample-Models\\2.0\\BrainStem\\glTF-Binary\\BrainStem.glb");
 
 	//!< JPNTW(JNT0, POS, NRM, TEX0, WGT0)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb");
@@ -300,8 +300,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	const auto IBR = COM_PTR_GET(IndirectBufferResources.back());
 	const auto ICS = COM_PTR_GET(IndirectCommandSignatures.back());
 
-	for (auto i = 0; i < /*BundleGraphicsCommandLists.size()*/(int)Count; ++i) {
-		//const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	for (auto i = 0; i < static_cast<int>(Count); ++i) {
 		const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[BundleGraphicsCommandLists.size() - Count + i]);
 		const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
 
@@ -353,9 +352,16 @@ void GltfDX::PopulateCommandList(const size_t i)
 {
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
-	//const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
+
+	DXGI_SWAP_CHAIN_DESC1 SCD;
+	SwapChain->GetDesc1(&SCD);
+	const auto PrimCount = BundleGraphicsCommandLists.size() / SCD.BufferCount;
+	std::vector<ID3D12GraphicsCommandList*> BCLs;
+	for (auto j = 0; j < PrimCount; ++j) {
+		BCLs.push_back(COM_PTR_GET(BundleGraphicsCommandLists[j * SCD.BufferCount + i]));
+	}
 
 	VERIFY_SUCCEEDED(CL->Reset(CA, nullptr));
 	{
@@ -370,11 +376,9 @@ void GltfDX::PopulateCommandList(const size_t i)
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 
-			for (auto j = 0; j < BundleGraphicsCommandLists.size() / 3; ++j) {
-				const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[j*3+i]);
-				CL->ExecuteBundle(BCL);
+			for (auto j : BCLs) { 
+				CL->ExecuteBundle(j);
 			}
-			//CL->ExecuteBundle(BCL);
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}

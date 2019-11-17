@@ -292,8 +292,7 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	const auto IndB = IndirectBuffers.back();
 	const auto PL = Pipelines.back();
 	const std::vector<VkDeviceSize> Offsets(VBs.size(), 0);
-	for (auto i = 0; i < /*SecondaryCommandBuffers.size()*/(int)Count; ++i) {
-		//const auto SCB = SecondaryCommandBuffers[i];
+	for (auto i = 0; i < static_cast<int>(Count); ++i) {
 		const auto SCB = SecondaryCommandBuffers[SecondaryCommandBuffers.size() - Count + i];
 		const auto FB = Framebuffers[i];
 		const VkCommandBufferInheritanceInfo CBII = {
@@ -358,7 +357,12 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 	const auto CB = CommandBuffers[i];
 	const auto FB = Framebuffers[i];
 
-	//const auto SCB = SecondaryCommandBuffers[i];
+	const auto SCICount = SwapchainImages.size();
+	const auto PrimCount = SecondaryCommandBuffers.size() / SwapchainImages.size();
+	std::vector<VkCommandBuffer> SCBs;
+	for (auto j = 0; j < PrimCount; ++j) {
+		SCBs.push_back(SecondaryCommandBuffers[j * SCICount + i]);
+	}
 
 	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -377,14 +381,7 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 			static_cast<uint32_t>(CVs.size()), CVs.data()
 		};
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
-			std::vector<VkCommandBuffer> SCBs;
-			for (auto j = 0; j < SecondaryCommandBuffers.size() / 3; ++j) {
-				SCBs.push_back(SecondaryCommandBuffers[j * 3 + i]);
-			}
 			vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
-
-			//const std::array<VkCommandBuffer, 1> SCBs = { SCB };
-			//vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
 		} vkCmdEndRenderPass(CB);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }

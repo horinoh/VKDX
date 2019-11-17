@@ -107,5 +107,17 @@
     <CustomBuild Include="GltfVK_TPNT.frag">
       <Filter>Shader Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="GltfVK_JPNW.vert">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GltfVK_JPNW.frag">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GltfVK_JPNTW.vert">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GltfVK_JPNTW.frag">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>
