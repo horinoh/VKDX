@@ -233,33 +233,41 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 
 void GltfVK::LoadScene()
 {
-	//!< POS, NRM
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMilkTruck\\glTF-Binary\\CesiumMilkTruck.glb"); 
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\2CylinderEngine\\glTF-Binary\\2CylinderEngine.glb");
-	
-	//!< POS, NRM, TEX0
+	//!< PN(POS, NRM)
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Box\\glTF-Binary\\Box.glb");
+
+	//!< PNT(POS, NRM, TEX0)
 	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb");
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Embedded\\Duck.gltf");
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxTextured\\glTF-Binary\\BoxTextured.glb");
 
-	//!< POS, NRM, TEX0, COL0
+	//!< CPNT(COL0, POS, NRM. TEX0)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxVertexColors\\glTF-Binary\\BoxVertexColors.glb");
 
-	//!< POS, NRM, TAN, TEX0
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\SciFiHelmet\\glTF\\SciFiHelmet.gltf"); 
+	//!< TPNT(TAN, POS, NRM, TEX0)
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\SciFiHelmet\\glTF\\SciFiHelmet.gltf");
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Suzanne\\glTF\\Suzanne.gltf");
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\WaterBottle\\glTF-Binary\\WaterBottle.glb"); 
+	////Load("..\\..\\glTF-Sample-Models\\2.0\\WaterBottle\\glTF-Binary\\WaterBottle.glb"); 
 
-	//!< POS, NRM, JNT0, WEG0
+	//!< JPNW(JNT0, POS, NRM, WGT0)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BrainStem\\glTF-Binary\\BrainStem.glb");
 
-	//!< POS, NRM, TEX0, JNT0, WEG0
+	//!< JPNTW(JNT0, POS, NRM, TEX0, WGT0)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb");
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb");
 }
 void GltfVK::Process(const fx::gltf::Primitive& Prim)
 {
 	Gltf::Process(Prim);
+
+	std::string SemanticInitial;
+	for (const auto& i : Prim.attributes) {
+		SemanticInitial += i.first.substr(0, 1);
+	}
+
+	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(SemanticInitial.begin(), SemanticInitial.end());
+	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
+	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
 
 	std::vector<VkVertexInputBindingDescription> VIBDs;
 	std::vector<VkVertexInputAttributeDescription> VIADs;
@@ -273,20 +281,20 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 		++Location;
 	}
 
-	CreateShaderModle_VsFs(); 
-
 	const auto RP = RenderPasses[0];
 	const auto PLL = PipelineLayouts[0];
 	Pipelines.push_back(VkPipeline());
-	CreatePipeline(Pipelines[0], PLL, RP, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs, ToVKPrimitiveTopology(Prim.mode));
+	CreatePipeline(Pipelines.back(), PLL, RP, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs, ToVKPrimitiveTopology(Prim.mode));
 
+	const auto Count = AddSecondaryCommandBuffer();
 	const auto& VBs = VertexBuffers;
-	const auto IB = IndexBuffers[0];
-	const auto IndB = IndirectBuffers[0];
-	const auto PL = Pipelines[0];
+	const auto IB = IndexBuffers.back();
+	const auto IndB = IndirectBuffers.back();
+	const auto PL = Pipelines.back();
 	const std::vector<VkDeviceSize> Offsets(VBs.size(), 0);
-	for (auto i = 0; i < SecondaryCommandBuffers.size(); ++i) {
-		const auto SCB = SecondaryCommandBuffers[i];
+	for (auto i = 0; i < /*SecondaryCommandBuffers.size()*/(int)Count; ++i) {
+		//const auto SCB = SecondaryCommandBuffers[i];
+		const auto SCB = SecondaryCommandBuffers[SecondaryCommandBuffers.size() - Count + i];
 		const auto FB = Framebuffers[i];
 		const VkCommandBufferInheritanceInfo CBII = {
 			VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
@@ -350,7 +358,7 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 	const auto CB = CommandBuffers[i];
 	const auto FB = Framebuffers[i];
 
-	const auto SCB = SecondaryCommandBuffers[i];
+	//const auto SCB = SecondaryCommandBuffers[i];
 
 	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -369,8 +377,14 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 			static_cast<uint32_t>(CVs.size()), CVs.data()
 		};
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
-			const std::array<VkCommandBuffer, 1> SCBs = { SCB };
+			std::vector<VkCommandBuffer> SCBs;
+			for (auto j = 0; j < SecondaryCommandBuffers.size() / 3; ++j) {
+				SCBs.push_back(SecondaryCommandBuffers[j * 3 + i]);
+			}
 			vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
+
+			//const std::array<VkCommandBuffer, 1> SCBs = { SCB };
+			//vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
 		} vkCmdEndRenderPass(CB);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }

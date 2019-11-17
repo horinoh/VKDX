@@ -22,6 +22,10 @@ protected:
 		CopyToUploadResource(COM_PTR_GET(ConstantBufferResource), RoundUp(sizeof(Tr), 0xff), &Tr);
 	}
 
+#ifdef USE_BUNDLE
+	virtual void CreateBundleCommandList() override { AddBundleCommandList(); }
+#endif
+
 #ifdef USE_DEPTH_STENCIL
 	virtual void CreateDepthStencil() override { DX::CreateDepthStencil(DXGI_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
 #endif

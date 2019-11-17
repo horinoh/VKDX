@@ -14,6 +14,9 @@ public:
 	virtual ~InstancingDX() {}
 
 protected:
+#ifdef USE_BUNDLE
+	virtual void CreateBundleCommandList() override { AddBundleCommandList(); }
+#endif
 	virtual void CreateVertexBuffer() override;
 	virtual void CreateIndexBuffer() override;
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(IndexCount, InstanceCount); }

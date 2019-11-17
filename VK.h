@@ -244,7 +244,10 @@ protected:
 	virtual void CreateSemaphore(VkDevice Device);
 
 	virtual void CreateCommandPool();
-	virtual void AllocateCommandBuffer();
+	virtual uint32_t AddCommandBuffer();
+	virtual uint32_t AddSecondaryCommandBuffer();
+	virtual void AllocateCommandBuffer() { AddCommandBuffer(); LOG_OK(); }
+	virtual void AllocateSecondaryCommandBuffer() {}
 
 	virtual VkSurfaceFormatKHR SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 	virtual VkExtent2D SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& Cap, const uint32_t Width, const uint32_t Height);
@@ -309,7 +312,6 @@ protected:
 	virtual void DestroyFramebuffer();
 
 	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
-	virtual void CreateShaderModle(const std::initializer_list<VkShaderModule> il_SMs) { std::copy(il_SMs.begin(), il_SMs.end(), std::back_inserter(ShaderModules)); }
 	virtual void CreateShaderModule() {}
 
 #include "VKPipelineCache.inl"

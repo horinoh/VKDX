@@ -232,27 +232,26 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void GltfDX::LoadScene()
 {
-	//!< POS, NRM
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMilkTruck\\glTF-Binary\\CesiumMilkTruck.glb"); 
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\2CylinderEngine\\glTF-Binary\\2CylinderEngine.glb");
+	//!< PN(POS, NRM)
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Box\\glTF-Binary\\Box.glb");
 
-	//!< POS, NRM, TEX0
+	//!< PNT(POS, NRM, TEX0)
 	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb");
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Embedded\\Duck.gltf");
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxTextured\\glTF-Binary\\BoxTextured.glb");
 
-	//!< POS, NRM, TEX0, COL0
+	//!< CPNT(COL0, POS, NRM. TEX0)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxVertexColors\\glTF-Binary\\BoxVertexColors.glb");
 
-	//!< POS, NRM, TAN, TEX0
+	//!< TPNT(TAN, POS, NRM, TEX0)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\SciFiHelmet\\glTF\\SciFiHelmet.gltf"); 
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Suzanne\\glTF\\Suzanne.gltf");
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\WaterBottle\\glTF-Binary\\WaterBottle.glb"); 
+	////Load("..\\..\\glTF-Sample-Models\\2.0\\WaterBottle\\glTF-Binary\\WaterBottle.glb"); 
 
-	//!< POS, NRM, JNT0, WEG0
+	//!< JPNW(JNT0, POS, NRM, WGT0)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BrainStem\\glTF-Binary\\BrainStem.glb");
 
-	//!< POS, NRM, TEX0, JNT0, WEG0
+	//!< JPNTW(JNT0, POS, NRM, TEX0, WGT0)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb");
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb");
 }
@@ -261,6 +260,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	Gltf::Process(Prim);
 
 	std::vector<std::pair<std::string, UINT>> SemanticIndices;
+	std::string SemnticInitial;
 	for (const auto& i : Prim.attributes) {
 		std::string Name, Index;
 		if (DecomposeSemantic(i.first, Name, Index)) {
@@ -269,7 +269,14 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		else {
 			SemanticIndices.push_back({ i.first.c_str(), 0 });
 		}
+		SemnticInitial += i.first.substr(0, 1);
 	}
+
+	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(SemnticInitial.begin(), SemnticInitial.end());
+	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs;
 	UINT InputSlot = 0;
@@ -280,26 +287,22 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		++InputSlot;
 	}
 
-	CreateShaderBlob_VsPs();
-#if 0
-	CreatePipelineState_VsPs_Vertex<Vertex_PositionNormalTexcoord>();
-#else
 	const auto RS = COM_PTR_GET(RootSignatures[0]);
-
 	PipelineStates.push_back(COM_PTR<ID3D12PipelineState>());
-	DX::CreatePipelineState(std::ref(PipelineStates[0]), RS, { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }, { ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() }, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, ToDXPrimitiveTopologyType(Prim.mode));
-#endif
+	DX::CreatePipelineState(std::ref(PipelineStates.back()), RS, { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }, { ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() }, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, ToDXPrimitiveTopologyType(Prim.mode));
 
-	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-	const auto PS = COM_PTR_GET(PipelineStates[0]);
+	const auto Count = AddBundleCommandList();
+	const auto BCA = COM_PTR_GET(BundleCommandAllocators.back());
+	const auto PS = COM_PTR_GET(PipelineStates.back());
 
 	const auto& VBVs = VertexBufferViews;
-	const auto & IBV = IndexBufferViews[0];
-	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
-	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
+	const auto& IBV = IndexBufferViews.back();
+	const auto IBR = COM_PTR_GET(IndirectBufferResources.back());
+	const auto ICS = COM_PTR_GET(IndirectCommandSignatures.back());
 
-	for (auto i = 0; i < BundleGraphicsCommandLists.size(); ++i) {
-		const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	for (auto i = 0; i < /*BundleGraphicsCommandLists.size()*/(int)Count; ++i) {
+		//const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+		const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[BundleGraphicsCommandLists.size() - Count + i]);
 		const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
 
 		VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
@@ -350,7 +353,7 @@ void GltfDX::PopulateCommandList(const size_t i)
 {
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
-	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	//const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
 
@@ -367,7 +370,11 @@ void GltfDX::PopulateCommandList(const size_t i)
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 
-			CL->ExecuteBundle(BCL);
+			for (auto j = 0; j < BundleGraphicsCommandLists.size() / 3; ++j) {
+				const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[j*3+i]);
+				CL->ExecuteBundle(BCL);
+			}
+			//CL->ExecuteBundle(BCL);
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}

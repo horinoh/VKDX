@@ -21,6 +21,9 @@ protected:
 		Degree += 1.0f;
 		CopyToUploadResource(COM_PTR_GET(ConstantBufferResource), RoundUp(sizeof(Tr), 0xff), &Tr);
 	}
+#ifdef USE_BUNDLE
+	virtual void CreateBundleCommandList() override { AddBundleCommandList(); }
+#endif
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
 #ifdef USE_DEPTH_STENCIL

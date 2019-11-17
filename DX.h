@@ -153,7 +153,10 @@ protected:
 	virtual void CreateFence();
 
 	virtual void CreateCommandAllocator();
-	virtual void CreateCommandList();
+	virtual UINT AddCommandList();
+	virtual UINT AddBundleCommandList();
+	virtual void CreateCommandList() { AddCommandList(); LOG_OK(); }
+	virtual void CreateBundleCommandList() {}
 
 	virtual void CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat);
 	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height);

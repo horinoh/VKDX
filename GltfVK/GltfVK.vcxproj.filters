@@ -83,10 +83,28 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="GltfVK.vert">
+    <CustomBuild Include="GltfVK_PNT.frag">
       <Filter>Shader Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="GltfVK.frag">
+    <CustomBuild Include="GltfVK_PNT.vert">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GltfVK_PN.frag">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GltfVK_PN.vert">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GltfVK_CPNT.frag">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GltfVK_CPNT.vert">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GltfVK_TPNT.vert">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GltfVK_TPNT.frag">
       <Filter>Shader Files</Filter>
     </CustomBuild>
   </ItemGroup>

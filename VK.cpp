@@ -71,6 +71,8 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateCommandPool();
 	AllocateCommandBuffer();
+	AllocateSecondaryCommandBuffer();
+
 #ifndef USE_RENDER_PASS_CLEAR
 	InitializeSwapchainImage(CommandBuffers[0], &Colors::Red);
 #endif
@@ -1594,35 +1596,41 @@ void VK::CreateCommandPool()
 	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &SecondaryCommandPools[0]));
 #endif
 }
+
 //!< VK_COMMAND_BUFFER_LEVEL_PRIMARY	: 直接キューにサブミットできる、セカンダリをコールできる (Can be submit, can execute secondary)
 //!< VK_COMMAND_BUFFER_LEVEL_SECONDARY	: サブミットできない、プライマリから実行されるのみ (Cannot submit, only executed from primary)
-void VK::AllocateCommandBuffer()
+uint32_t VK::AddCommandBuffer()
 {
 	assert(!CommandPools.empty() && "");
 
-	CommandBuffers.resize(SwapchainImages.size());
+	const auto PrevCount = CommandBuffers.size();
+	CommandBuffers.resize(PrevCount + SwapchainImages.size());
 	const VkCommandBufferAllocateInfo CBAI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 		nullptr,
 		CommandPools[0],
 		VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-		static_cast<uint32_t>(CommandBuffers.size())
+		static_cast<uint32_t>(SwapchainImages.size())
 	};
-	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, CommandBuffers.data()));
+	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &CommandBuffers[PrevCount]));
+	return CBAI.commandBufferCount;
+}
+uint32_t VK::AddSecondaryCommandBuffer()
+{
+	assert(!SecondaryCommandPools.empty() && "");
 
-#ifdef USE_SECONDARY_COMMAND_BUFFER
-	SecondaryCommandBuffers.resize(SwapchainImages.size());
+	const auto PrevCount = SecondaryCommandBuffers.size();
+	SecondaryCommandBuffers.resize(PrevCount + SwapchainImages.size());
 	const VkCommandBufferAllocateInfo SCBAI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 		nullptr,
 		SecondaryCommandPools[0],
 		VK_COMMAND_BUFFER_LEVEL_SECONDARY,
-		static_cast<uint32_t>(CommandBuffers.size())
+		static_cast<uint32_t>(SwapchainImages.size())
 	};
-	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &SCBAI, SecondaryCommandBuffers.data()));
-#endif
+	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &SCBAI, &SecondaryCommandBuffers[PrevCount]));
+	return SCBAI.commandBufferCount;
 }
-
 VkSurfaceFormatKHR VK::SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 {
 	uint32_t Count;

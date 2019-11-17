@@ -6,28 +6,22 @@
 void VKExt::CreateShaderModle_VsFs()
 {
 	const auto ShaderPath = GetBasePath();
-	CreateShaderModle({
-		VKExt::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()),
-		VKExt::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()),
-		});
+	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
+	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
 }
 void VKExt::CreateShaderModle_VsFsTesTcsGs()
 {
 	const auto ShaderPath = GetBasePath();
-	CreateShaderModle({
-		VKExt::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()),
-		VKExt::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()),
-		VKExt::CreateShaderModule((ShaderPath + TEXT(".tese.spv")).data()),
-		VKExt::CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data()),
-		VKExt::CreateShaderModule((ShaderPath + TEXT(".geom.spv")).data()),
-		});
+	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
+	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
+	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".tese.spv")).data()));
+	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data()));
+	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".geom.spv")).data()));
 }
 void VKExt::CreateShaderModle_Cs()
 {
 	const auto ShaderPath = GetBasePath();
-	CreateShaderModle({
-		VKExt::CreateShaderModule((ShaderPath + TEXT(".comp.spv")).data()),
-		});
+	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".comp.spv")).data()));
 }
 
 void VKExt::CreatePipeline_VsFs()

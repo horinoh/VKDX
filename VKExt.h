@@ -43,19 +43,19 @@ public:
 		SubmitStagingCopy(GraphicsQueue, CommandBuffers[0], *Buffer, Size, Source, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
 	}
 	void CreateIndirectBuffer_Draw(const uint32_t IndexCount, const uint32_t InstanceCount) {
-		IndirectBuffers.resize(1);
+		IndirectBuffers.push_back(VkBuffer());
 		const VkDrawIndirectCommand DIC = { IndexCount, InstanceCount, 0, 0 };
-		CreateBuffer_Indirect(GraphicsQueue, CommandBuffers[0], &IndirectBuffers[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
+		CreateBuffer_Indirect(GraphicsQueue, CommandBuffers[0], &IndirectBuffers.back(), static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
 	}
 	void CreateIndirectBuffer_DrawIndexed(const uint32_t IndexCount, const uint32_t InstanceCount) {
-		IndirectBuffers.resize(1);
+		IndirectBuffers.push_back(VkBuffer());
 		const VkDrawIndexedIndirectCommand DIIC = { IndexCount, InstanceCount, 0, 0, 0 };
-		CreateBuffer_Indirect(GraphicsQueue, CommandBuffers[0], &IndirectBuffers[0], static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
+		CreateBuffer_Indirect(GraphicsQueue, CommandBuffers[0], &IndirectBuffers.back(), static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
 	}
 	void CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z) {
-		IndirectBuffers.resize(1);
+		IndirectBuffers.push_back(VkBuffer());
 		const VkDispatchIndirectCommand DIC = { X, Y, Z };
-		CreateBuffer_Indirect(GraphicsQueue, CommandBuffers[0], &IndirectBuffers[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
+		CreateBuffer_Indirect(GraphicsQueue, CommandBuffers[0], &IndirectBuffers.back(), static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
 	}
 
 	//!< layout(set = 0, binding = 0) buffer MyBuffer { vec4 MyVec4; mat4 MyMat4; }

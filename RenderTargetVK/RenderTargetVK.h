@@ -16,6 +16,9 @@ public:
 protected:
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
+#ifdef USE_SECONDARY_COMMAND_BUFFER
+	virtual void AllocateSecondaryCommandBuffer() override { AddSecondaryCommandBuffer(); }
+#endif
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 //	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
 	virtual void CreateDescriptorSetLayout() override {
@@ -85,16 +88,14 @@ protected:
 	}
 	virtual void CreateShaderModule() override {
 		const auto ShaderPath = GetBasePath();
-		CreateShaderModle({
-			VKExt::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()),
-			VKExt::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()),
-			VKExt::CreateShaderModule((ShaderPath + TEXT(".tese.spv")).data()),
-			VKExt::CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data()),
-			VKExt::CreateShaderModule((ShaderPath + TEXT(".geom.spv")).data()),
+		ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".tese.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".geom.spv")).data()));
 
-			VKExt::CreateShaderModule((ShaderPath + TEXT("_1") + TEXT(".vert.spv")).data()), //!<
-			VKExt::CreateShaderModule((ShaderPath + TEXT("_1") + TEXT(".frag.spv")).data()), //!<
-			});
+		ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT("_1") + TEXT(".vert.spv")).data())); //!<
+		ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT("_1") + TEXT(".frag.spv")).data())); //!<
 	}
 	virtual void CreatePipeline() override { 
 		Pipelines.resize(2); //!<

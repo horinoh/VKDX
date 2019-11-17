@@ -2,11 +2,12 @@
 
 void DXExt::CreateIndirectBuffer_Draw(const UINT IndexCount, const UINT InstanceCount)
 {
-	IndirectBufferResources.resize(1);
+	IndirectBufferResources.push_back(COM_PTR<ID3D12Resource>());
+
 	const D3D12_DRAW_ARGUMENTS Source = { IndexCount, InstanceCount, 0, 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
-	CreateBuffer(COM_PTR_PUT(IndirectBufferResources[0]), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+	CreateBuffer(COM_PTR_PUT(IndirectBufferResources.back()), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 
 	IndirectCommandSignatures.resize(1);
 	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
@@ -23,11 +24,12 @@ void DXExt::CreateIndirectBuffer_Draw(const UINT IndexCount, const UINT Instance
 
 void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT IndexCount, const UINT InstanceCount)
 {
-	IndirectBufferResources.resize(1);
+	IndirectBufferResources.push_back(COM_PTR<ID3D12Resource>());
+
 	const D3D12_DRAW_INDEXED_ARGUMENTS Source = { IndexCount, InstanceCount, 0, 0, 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
-	CreateBuffer(COM_PTR_PUT(IndirectBufferResources[0]), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+	CreateBuffer(COM_PTR_PUT(IndirectBufferResources.back()), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 
 	IndirectCommandSignatures.resize(1);
 	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
@@ -43,11 +45,12 @@ void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT IndexCount, const UINT I
 
 void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT Z)
 {
-	IndirectBufferResources.resize(1);
+	IndirectBufferResources.push_back(COM_PTR<ID3D12Resource>());
+
 	const D3D12_DISPATCH_ARGUMENTS Source = { X, Y, Z };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
-	CreateBuffer(COM_PTR_PUT(IndirectBufferResources[0]), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+	CreateBuffer(COM_PTR_PUT(IndirectBufferResources.back()), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 
 	IndirectCommandSignatures.resize(1);
 	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
@@ -63,26 +66,31 @@ void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT
 
 void DXExt::CreateShaderBlob_VsPs()
 {
-	ShaderBlobs.resize(2);
 	const auto ShaderPath = GetBasePath();
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs[0])));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[1])));
+	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 }
 void DXExt::CreateShaderBlob_VsPsDsHsGs()
 {
-	ShaderBlobs.resize(5);
 	const auto ShaderPath = GetBasePath();
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs[0])));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[1])));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), COM_PTR_PUT(ShaderBlobs[2])));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), COM_PTR_PUT(ShaderBlobs[3])));
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), COM_PTR_PUT(ShaderBlobs[4])));
+	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 }
 void DXExt::CreateShaderBlob_Cs()
 {
-	ShaderBlobs.resize(1);
 	const auto ShaderPath = GetBasePath();
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".cs.cso")).data(), COM_PTR_PUT(ShaderBlobs[0])));
+	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".cs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 }
 
 void DXExt::CreatePipelineState_VsPs()

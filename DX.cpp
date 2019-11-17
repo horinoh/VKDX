@@ -28,6 +28,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateCommandAllocator();
 	CreateCommandList();
+	CreateBundleCommandList();
 	InitializeSwapChain();
 
 	CreateDepthStencil();	
@@ -642,28 +643,32 @@ void DX::CreateCommandAllocator()
 
 	LOG_OK();
 }
-void DX::CreateCommandList()
+
+UINT DX::AddCommandList()
 {
 	//!< BufferCount を取得するため
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
 
-	GraphicsCommandLists.resize(SCD.BufferCount);
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
-		//!< 描画コマンドを発行するコマンドリストにはパイプラインステートの指定が必要だが、後から指定(CL->Reset(CA, COM_PTR_GET(PS)))もできる (ここではnullptrで作成することにしている)
-		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(CommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandLists[i])));
+		GraphicsCommandLists.push_back(COM_PTR<ID3D12GraphicsCommandList>());
+		//!< 描画コマンドを発行するコマンドリストにはパイプラインステートの指定が必要だが、後からでも指定(CL->Reset(CA, COM_PTR_GET(PS)))できるので、ここでは使用しない(nullptr)
+		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(CommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandLists.back())));
 		VERIFY_SUCCEEDED(GraphicsCommandLists[i]->Close());
 	}
+	return SCD.BufferCount;
+}
+UINT DX::AddBundleCommandList()
+{
+	DXGI_SWAP_CHAIN_DESC1 SCD;
+	SwapChain->GetDesc1(&SCD);
 
-#ifdef USE_BUNDLE
-	BundleGraphicsCommandLists.resize(SCD.BufferCount);
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
-		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleGraphicsCommandLists[i])));
+		BundleGraphicsCommandLists.push_back(COM_PTR<ID3D12GraphicsCommandList>());
+		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleGraphicsCommandLists.back())));
 		VERIFY_SUCCEEDED(BundleGraphicsCommandLists[i]->Close());
 	}
-#endif
-
-	LOG_OK();
+	return SCD.BufferCount;
 }
 
 void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
