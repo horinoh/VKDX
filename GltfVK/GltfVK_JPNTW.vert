@@ -13,12 +13,14 @@ layout (location = 1) out vec3 OutNormal;
 layout (location = 2) out vec2 OutTexcoord;
 layout (location = 3) out vec4 OutWeights;
 
-const float Scale = 1.0f;
+const float Scale = 0.5f;
+//const float Scale = 0.02f;
 
 void main()
 {
 	OutJoints = InJoints;
 	gl_Position = vec4(InPosition * Scale, 1.0f);
 	OutNormal = InNormal;
+	OutTexcoord = InTexcoord;
 	OutWeights = InWeights;
 }

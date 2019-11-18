@@ -233,27 +233,27 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 void GltfDX::LoadScene()
 {
 	//!< PN(POS, NRM)
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\Box\\glTF-Binary\\Box.glb");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Box\\glTF-Binary\\Box.glb"); //!< Scale = 1.0f
 
 	//!< PNT(POS, NRM, TEX0)
-	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb");
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Embedded\\Duck.gltf");
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxTextured\\glTF-Binary\\BoxTextured.glb");
+	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb"); //!< Scale = 0.005f
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\DamagedHelmet\\glTF-Binary\\DamagedHelmet.glb"); //!< Scale = 0.5f (NG)
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxTextured\\glTF-Binary\\BoxTextured.glb"); //!< Scale = 1.0f
 
 	//!< CPNT(COL0, POS, NRM. TEX0)
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxVertexColors\\glTF-Binary\\BoxVertexColors.glb");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxVertexColors\\glTF-Binary\\BoxVertexColors.glb"); //!< Scale = 1.0f (NG)
 
 	//!< TPNT(TAN, POS, NRM, TEX0)
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\SciFiHelmet\\glTF\\SciFiHelmet.gltf"); 
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\Suzanne\\glTF\\Suzanne.gltf");
-	////Load("..\\..\\glTF-Sample-Models\\2.0\\WaterBottle\\glTF-Binary\\WaterBottle.glb"); 
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\SciFiHelmet\\glTF\\SciFiHelmet.gltf"); //!< Scale = 0.5f (NG)
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Suzanne\\glTF\\Suzanne.gltf"); //!< Scale = 0.5f (NG)
 
 	//!< JPNW(JNT0, POS, NRM, WGT0)
-	////Load("..\\..\\glTF-Sample-Models\\2.0\\BrainStem\\glTF-Binary\\BrainStem.glb");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\RiggedSimple\\glTF-Binary\\RiggedSimple.glb"); //!< Scale=0.2f
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\RiggedFigure\\glTF-Binary\\RiggedFigure.glb"); //!< Scale = 0.5f
 
 	//!< JPNTW(JNT0, POS, NRM, TEX0, WGT0)
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb");
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb"); //!< Scale = 0.5f
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb"); //!< Scale = 0.02f
 }
 void GltfDX::Process(const fx::gltf::Primitive& Prim)
 {
@@ -275,8 +275,10 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(SemnticInitial.begin(), SemnticInitial.end());
 	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	const auto VS = ShaderBlobs.back();
 	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	const auto PS = ShaderBlobs.back();
 
 	std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs;
 	UINT InputSlot = 0;
@@ -289,11 +291,11 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 
 	const auto RS = COM_PTR_GET(RootSignatures[0]);
 	PipelineStates.push_back(COM_PTR<ID3D12PipelineState>());
-	DX::CreatePipelineState(std::ref(PipelineStates.back()), RS, { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }, { ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() }, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, ToDXPrimitiveTopologyType(Prim.mode));
+	DX::CreatePipelineState(std::ref(PipelineStates.back()), RS, { VS->GetBufferPointer(), VS->GetBufferSize() }, { PS->GetBufferPointer(), PS->GetBufferSize() }, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, ToDXPrimitiveTopologyType(Prim.mode));
 
 	const auto Count = AddBundleCommandList();
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators.back());
-	const auto PS = COM_PTR_GET(PipelineStates.back());
+	const auto PST = COM_PTR_GET(PipelineStates.back());
 
 	const auto& VBVs = VertexBufferViews;
 	const auto& IBV = IndexBufferViews.back();
@@ -304,7 +306,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[BundleGraphicsCommandLists.size() - Count + i]);
 		const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
 
-		VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
+		VERIFY_SUCCEEDED(BCL->Reset(BCA, PST));
 		{
 			BCL->SetGraphicsRootSignature(RS);
 			BCL->IASetPrimitiveTopology(ToDXPrimitiveTopology(Prim.mode));
@@ -343,6 +345,9 @@ void GltfDX::Process(const fx::gltf::Accessor& Acc)
 
 				CreateBuffer(COM_PTR_PUT(VertexBufferResources.back()), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 				VertexBufferViews.push_back({ VertexBufferResources.back()->GetGPUVirtualAddress(), Size, Stride });
+			}
+			else {
+				std::cout << "BufferView.target == None" << std::endl;
 			}
 		}
 	}

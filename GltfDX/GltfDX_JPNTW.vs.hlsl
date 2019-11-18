@@ -16,7 +16,8 @@ struct OUT
 	float4 Weights : WEIGHTS0;
 };
 
-static const float Scale = 1.0f;
+static const float Scale = 0.5f;
+//static const float Scale = 0.02f;
 
 OUT main(IN In)
 {

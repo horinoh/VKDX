@@ -10,6 +10,8 @@ layout (location = 0) out vec3 OutNormal;
 layout (location = 1) out vec2 OutTexcoord;
 
 const float Scale = 0.005f;
+//const float Scale = 0.5f;
+//const float Scale = 1.0f;
 
 void main()
 {

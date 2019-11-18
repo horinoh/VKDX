@@ -234,27 +234,27 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 void GltfVK::LoadScene()
 {
 	//!< PN(POS, NRM)
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\Box\\glTF-Binary\\Box.glb");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Box\\glTF-Binary\\Box.glb"); //!< Scale = 1.0f
 
 	//!< PNT(POS, NRM, TEX0)
-	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb");
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Embedded\\Duck.gltf");
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxTextured\\glTF-Binary\\BoxTextured.glb");
+	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb"); //!< Scale = 0.005f
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\DamagedHelmet\\glTF-Binary\\DamagedHelmet.glb"); //!< Scale = 0.5f
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxTextured\\glTF-Binary\\BoxTextured.glb"); //!< Scale = 1.0f
 
 	//!< CPNT(COL0, POS, NRM. TEX0)
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxVertexColors\\glTF-Binary\\BoxVertexColors.glb");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxVertexColors\\glTF-Binary\\BoxVertexColors.glb"); //!< Scale = 1.0f
 
 	//!< TPNT(TAN, POS, NRM, TEX0)
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\SciFiHelmet\\glTF\\SciFiHelmet.gltf");
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\Suzanne\\glTF\\Suzanne.gltf");
-	////Load("..\\..\\glTF-Sample-Models\\2.0\\WaterBottle\\glTF-Binary\\WaterBottle.glb"); 
-
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\SciFiHelmet\\glTF\\SciFiHelmet.gltf"); //!< Scale = 0.5f
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Suzanne\\glTF\\Suzanne.gltf"); //!< Scale = 0.5f
+	 
 	//!< JPNW(JNT0, POS, NRM, WGT0)
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\BrainStem\\glTF-Binary\\BrainStem.glb");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\RiggedSimple\\glTF-Binary\\RiggedSimple.glb"); //!< Scale = 0.2f
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\RiggedFigure\\glTF-Binary\\RiggedFigure.glb"); //!< Scale = 0.5f
 
 	//!< JPNTW(JNT0, POS, NRM, TEX0, WGT0)
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb");
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb"); //!< Scale = 0.5f
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb"); //!< Scale = 0.02f
 }
 void GltfVK::Process(const fx::gltf::Primitive& Prim)
 {
@@ -267,7 +267,9 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 
 	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(SemanticInitial.begin(), SemanticInitial.end());
 	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
+	const auto VS = ShaderModules.back();
 	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
+	const auto FS = ShaderModules.back();
 
 	std::vector<VkVertexInputBindingDescription> VIBDs;
 	std::vector<VkVertexInputAttributeDescription> VIADs;
@@ -284,7 +286,7 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	const auto RP = RenderPasses[0];
 	const auto PLL = PipelineLayouts[0];
 	Pipelines.push_back(VkPipeline());
-	CreatePipeline(Pipelines.back(), PLL, RP, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs, ToVKPrimitiveTopology(Prim.mode));
+	CreatePipeline(Pipelines.back(), PLL, RP, VS, FS, NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs, ToVKPrimitiveTopology(Prim.mode));
 
 	const auto Count = AddSecondaryCommandBuffer();
 	const auto& VBs = VertexBuffers;
@@ -345,6 +347,9 @@ void GltfVK::Process(const fx::gltf::Accessor& Acc)
 			else if (fx::gltf::BufferView::TargetType::ArrayBuffer == BufV.target) {
 				VertexBuffers.push_back(VkBuffer());
 				CreateBuffer_Vertex(GraphicsQueue, CommandBuffers[0], &VertexBuffers.back(), Size, Data);
+			}
+			else {
+				std::cout << "BufferView.target == None" << std::endl;
 			}
 		}
 	}

@@ -11,7 +11,8 @@ layout (location = 0) out uvec4 OutJoints;
 layout (location = 1) out vec3 OutNormal;
 layout (location = 2) out vec4 OutWeights;
 
-const float Scale = 1.0f;
+const float Scale = 0.5f;
+//const float Scale = 0.2f;
 
 void main()
 {
