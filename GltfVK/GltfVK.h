@@ -92,7 +92,7 @@ public:
 protected:
 	virtual void LoadScene() override;
 	virtual void Process(const fx::gltf::Primitive& Prim) override;
-	virtual void Process(const fx::gltf::Accessor& Acc) override;
+	virtual void Process(const std::string& Identifier, const fx::gltf::Accessor& Acc) override;
 
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);

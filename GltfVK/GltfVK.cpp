@@ -241,6 +241,10 @@ void GltfVK::LoadScene()
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\DamagedHelmet\\glTF-Binary\\DamagedHelmet.glb"); //!< Scale = 0.5f
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxTextured\\glTF-Binary\\BoxTextured.glb"); //!< Scale = 1.0f
 
+	//!< TPN(TAN, POS, NRM)
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphCube\\glTF-Binary\\AnimatedMorphCube.glb"); //!< Scale = 50.0f
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphSphere\\glTF-Binary\\AnimatedMorphSphere.glb"); //!< Scale = 50.0f
+
 	//!< CPNT(COL0, POS, NRM. TEX0)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxVertexColors\\glTF-Binary\\BoxVertexColors.glb"); //!< Scale = 1.0f
 
@@ -323,9 +327,10 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 	}
 }
-void GltfVK::Process(const fx::gltf::Accessor& Acc)
+
+void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Acc)
 {
-	Gltf::Process(Acc);
+	Gltf::Process(Identifier, Acc);
 
 	if (-1 != Acc.bufferView) {
 		const auto& BufV = Document.bufferViews[Acc.bufferView];
@@ -338,18 +343,22 @@ void GltfVK::Process(const fx::gltf::Accessor& Acc)
 			const auto TypeSize = GetTypeSize(Acc);
 			const auto Size = Acc.count * (0 == Stride ? TypeSize : Stride);
 
-			if (fx::gltf::BufferView::TargetType::ElementArrayBuffer == BufV.target) {
+			//!< BufferView.target はセットされてない事が多々ある…
+			switch (BufV.target)
+			{
+			case fx::gltf::BufferView::TargetType::None: break;
+			case fx::gltf::BufferView::TargetType::ArrayBuffer: break;
+			case fx::gltf::BufferView::TargetType::ElementArrayBuffer: break;
+			}
+			if ("indices" == Identifier) {
 				IndexBuffers.push_back(VkBuffer());
 				CreateBuffer_Index(GraphicsQueue, CommandBuffers[0], &IndexBuffers.back(), Size, Data);
 
 				CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
 			}
-			else if (fx::gltf::BufferView::TargetType::ArrayBuffer == BufV.target) {
+			else if ("attributes" == Identifier) {
 				VertexBuffers.push_back(VkBuffer());
 				CreateBuffer_Vertex(GraphicsQueue, CommandBuffers[0], &VertexBuffers.back(), Size, Data);
-			}
-			else {
-				std::cout << "BufferView.target == None" << std::endl;
 			}
 		}
 	}

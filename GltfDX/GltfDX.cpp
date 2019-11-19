@@ -240,6 +240,10 @@ void GltfDX::LoadScene()
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\DamagedHelmet\\glTF-Binary\\DamagedHelmet.glb"); //!< Scale = 0.5f (NG)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxTextured\\glTF-Binary\\BoxTextured.glb"); //!< Scale = 1.0f
 
+	//!< TPN(TAN, POS, NRM)
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphCube\\glTF-Binary\\AnimatedMorphCube.glb"); //!< Scale = 50.0f (NG)
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphSphere\\glTF-Binary\\AnimatedMorphSphere.glb"); //!< Scale = 50.0f (NG)
+
 	//!< CPNT(COL0, POS, NRM. TEX0)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxVertexColors\\glTF-Binary\\BoxVertexColors.glb"); //!< Scale = 1.0f (NG)
 
@@ -317,13 +321,14 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		VERIFY_SUCCEEDED(BCL->Close());
 	}
 }
-void GltfDX::Process(const fx::gltf::Accessor& Acc)
+
+void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Acc)
 {
-	Gltf::Process(Acc);
+	Gltf::Process(Identifier, Acc);
 
 	if (-1 != Acc.bufferView) {
 		const auto& BufV = Document.bufferViews[Acc.bufferView];
-		
+
 		if (-1 != BufV.buffer) {
 			const auto& Buf = Document.buffers[BufV.buffer];
 
@@ -332,7 +337,15 @@ void GltfDX::Process(const fx::gltf::Accessor& Acc)
 			const auto TypeSize = GetTypeSize(Acc);
 			const auto Size = Acc.count * (0 == Stride ? TypeSize : Stride);
 
-			if (fx::gltf::BufferView::TargetType::ElementArrayBuffer == BufV.target) {
+			//!< BufferView.target はセットされてない事が多々ある…
+			switch (BufV.target)
+			{
+			case fx::gltf::BufferView::TargetType::None: break;
+			case fx::gltf::BufferView::TargetType::ArrayBuffer: break;
+			case fx::gltf::BufferView::TargetType::ElementArrayBuffer: break;
+			}
+
+			if ("indices" == Identifier) {
 				IndexBufferResources.push_back(COM_PTR<ID3D12Resource>());
 
 				CreateBuffer(COM_PTR_PUT(IndexBufferResources.back()), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
@@ -340,14 +353,11 @@ void GltfDX::Process(const fx::gltf::Accessor& Acc)
 
 				CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
 			}
-			else if (fx::gltf::BufferView::TargetType::ArrayBuffer == BufV.target) {
+			else if ("attributes" == Identifier) {
 				VertexBufferResources.push_back(COM_PTR<ID3D12Resource>());
 
 				CreateBuffer(COM_PTR_PUT(VertexBufferResources.back()), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 				VertexBufferViews.push_back({ VertexBufferResources.back()->GetGPUVirtualAddress(), Size, Stride });
-			}
-			else {
-				std::cout << "BufferView.target == None" << std::endl;
 			}
 		}
 	}

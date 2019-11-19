@@ -128,7 +128,7 @@ public:
 			//!< アニメーション対象ノード
 			Push();
 			if (-1 != Tag.node) {
-				Process(Document.nodes[Tag.node]);
+				//Process(Document.nodes[Tag.node]);
 			}
 			Pop();
 
@@ -156,11 +156,11 @@ public:
 		Push();
 		//!< キーフレーム時間
 		if (-1 != Smp.input) {
-			Process(Document.accessors[Smp.input]);
+			Process("input", Document.accessors[Smp.input]);
 		}
 		//!< アニメーション値 (pathにより解釈、translation, rotation,...)
 		if (-1 != Smp.output) {
-			Process(Document.accessors[Smp.output]);
+			Process("output", Document.accessors[Smp.output]);
 		}
 		Pop();
 	}
@@ -231,13 +231,15 @@ public:
 		if (-1 != Skn.inverseBindMatrices) {
 			//!< 各々のジョイントをローカルスペースへ変換するマトリクス
 			//!< JointMatrix[i] = Inverse(GlobalTransform) * GlobalJointTransform[i] * InverseBindMatrix[i]
-			Process(Document.accessors[Skn.inverseBindMatrices]);
-		}
-
-		for (auto i : Skn.joints) {
-			Process(Document.nodes[i]);
+			Process("inverseBindMatrices", Document.accessors[Skn.inverseBindMatrices]);
 		}
 		Pop();
+
+		//Push();
+		//for (auto i : Skn.joints) {
+		//	//Process(Document.nodes[i]);
+		//}
+		//Pop();
 	}
 
 	virtual void Process(const fx::gltf::Camera& Cam) {
@@ -277,29 +279,13 @@ public:
 
 		Push();
 		for (const auto& i : Prim.attributes) {
-			const auto& Sem = i.first;
-			Tabs(); std::cout << Sem << std::endl;
-
-			Process(Document.accessors[i.second]);
-
-			//!< モーフターゲットがある場合、セマンティクスをキーとしてアクセサインデックスを取得する
-			if (!Prim.targets.empty()) {
-				Push();
-				for (auto j : Prim.targets) {
-					const auto it = j.find(Sem);
-					if (j.end() != it) {
-						Process(Document.accessors[it->second]);
-					}
-				}
-				Pop();
-			}
+			Process("attributes", Document.accessors[i.second]);
 		}
 		Pop();
 
 		Push();
 		if (-1 != Prim.indices) {
-			Tabs(); std::cout << "indices" << std::endl;
-			Process(Document.accessors[Prim.indices]);
+			Process("indices", Document.accessors[Prim.indices]);
 		}
 		Pop();
 
@@ -308,8 +294,22 @@ public:
 			Process(Document.materials[Prim.material]);
 		}
 		Pop();
-	}
 
+		Push();
+		for (const auto& i : Prim.targets) {
+			for (const auto& j : Prim.attributes) {
+				const auto it = i.find(j.first);
+				if (i.end() != it) {
+					Process("targets", Document.accessors[it->second]);
+				}
+			}
+		}
+		Pop();
+	}
+	virtual void Process(const std::string& Identifier, const fx::gltf::Accessor& Acc) {
+		Tabs(); std::cout << Identifier << std::endl;
+		Process(Acc);
+	}
 	virtual void Process(const fx::gltf::Accessor& Acc) {
 		Tabs(); std::cout << "Accessor : " << Acc.name << std::endl;
 		Tabs(); std::cout << "\t" << "Count = " << Acc.count << std::endl;

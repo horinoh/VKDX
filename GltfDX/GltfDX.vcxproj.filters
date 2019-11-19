@@ -122,5 +122,11 @@
     <FxCompile Include="GltfDX_JPNTW.ps.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+    <FxCompile Include="GltfDX_TPN.vs.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="GltfDX_TPN.ps.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>
