@@ -94,6 +94,8 @@ protected:
 	virtual void Process(const fx::gltf::Primitive& Prim) override;
 	virtual void Process(const std::string& Identifier, const fx::gltf::Accessor& Acc) override;
 
+	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override;
+
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {});
@@ -104,5 +106,7 @@ protected:
 		VKExt::CreatePipelineLayout(PipelineLayouts[0], {}, {});
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override;
+
+	float CurrentFrame = 0.0f;
 };
 #pragma endregion

@@ -32,6 +32,26 @@ public:
 	}
 	static uint32_t GetTypeSize(const fx::gltf::Accessor& Acc) { return GetTypeCount(Acc.type) * GetComponentTypeSize(Acc.componentType); }
 
+	const uint8_t* GetData(const fx::gltf::Accessor& Acc) const {
+		if (-1 != Acc.bufferView) {
+			const auto& BufV = Document.bufferViews[Acc.bufferView];
+			if (-1 != BufV.buffer) {
+				const auto& Buf = Document.buffers[BufV.buffer];
+				return &Buf.data[BufV.byteOffset + Acc.byteOffset];
+			}
+		}
+		return nullptr;
+	}
+	const uint32_t GetStride(const fx::gltf::Accessor& Acc) const {
+		if (-1 != Acc.bufferView) {
+			const auto& BufV = Document.bufferViews[Acc.bufferView];
+			if (-1 != BufV.buffer) {
+				return 0 == BufV.byteStride ? GetTypeSize(Acc) : BufV.byteStride;
+			}
+		}
+		return 0;
+	}
+
 	static bool DecomposeSemantic(const std::string& Semantic, std::string& Name, std::string& Index) {
 		const auto pos = Semantic.find("_");
 		if (std::string::npos != pos) {

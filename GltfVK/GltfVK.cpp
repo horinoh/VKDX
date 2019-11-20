@@ -237,7 +237,7 @@ void GltfVK::LoadScene()
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Box\\glTF-Binary\\Box.glb"); //!< Scale = 1.0f
 
 	//!< PNT(POS, NRM, TEX0)
-	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb"); //!< Scale = 0.005f
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb"); //!< Scale = 0.005f
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\DamagedHelmet\\glTF-Binary\\DamagedHelmet.glb"); //!< Scale = 0.5f
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxTextured\\glTF-Binary\\BoxTextured.glb"); //!< Scale = 1.0f
 
@@ -258,7 +258,7 @@ void GltfVK::LoadScene()
 
 	//!< JPNTW(JNT0, POS, NRM, TEX0, WGT0)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb"); //!< Scale = 0.5f
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb"); //!< Scale = 0.02f
+	Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb"); //!< Scale = 0.02f
 }
 void GltfVK::Process(const fx::gltf::Primitive& Prim)
 {
@@ -343,13 +343,14 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			const auto TypeSize = GetTypeSize(Acc);
 			const auto Size = Acc.count * (0 == Stride ? TypeSize : Stride);
 
-			//!< BufferView.target はセットされてない事が多々ある…
+			//!< BufferView.target はセットされてない事が多々あるので自前でやる…
 			switch (BufV.target)
 			{
 			case fx::gltf::BufferView::TargetType::None: break;
 			case fx::gltf::BufferView::TargetType::ArrayBuffer: break;
 			case fx::gltf::BufferView::TargetType::ElementArrayBuffer: break;
 			}
+
 			if ("indices" == Identifier) {
 				IndexBuffers.push_back(VkBuffer());
 				CreateBuffer_Index(GraphicsQueue, CommandBuffers[0], &IndexBuffers.back(), Size, Data);
@@ -359,6 +360,89 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			else if ("attributes" == Identifier) {
 				VertexBuffers.push_back(VkBuffer());
 				CreateBuffer_Vertex(GraphicsQueue, CommandBuffers[0], &VertexBuffers.back(), Size, Data);
+			}
+		}
+	}
+}
+
+void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
+{
+	Super::OnTimer(hWnd, hInstance);
+
+	CurrentFrame += 0.1f;
+
+	for (const auto& i : Document.animations) {
+		for (const auto& j : i.channels) {
+			if (-1 != j.sampler) {
+				const auto& Smp = i.samplers[j.sampler];
+				if (-1 != Smp.input && -1 != Smp.output) {
+					const auto& InAcc = Document.accessors[Smp.input];
+					if (InAcc.type == fx::gltf::Accessor::Type::Scalar && InAcc.componentType == fx::gltf::Accessor::ComponentType::Float) {
+						const auto Keyframes = reinterpret_cast<const float*>(GetData(InAcc));
+						const auto Frame = std::min(CurrentFrame, Keyframes[InAcc.count - 1]);
+						uint32_t PrevIndex = 0, NextIndex = 0;
+						for (uint32_t k = 0; k < InAcc.count; ++k) {
+							if (Keyframes[k] >= Frame) {
+								NextIndex = k;
+								PrevIndex = NextIndex - 1;
+								break;
+							}
+						}
+						std::cout << "Frame = " << Keyframes[PrevIndex] << " < " << Frame << " < " << Keyframes[NextIndex] << ", Max = " << Keyframes[InAcc.count - 1] << std::endl;
+
+						const auto Ratio = (Frame - Keyframes[PrevIndex]) / (Keyframes[NextIndex] - Keyframes[PrevIndex]);
+						std::cout << "Ratio = " << Ratio << std::endl;
+
+						const auto& OutAcc = Document.accessors[Smp.output];
+						switch (Smp.interpolation)
+						{
+						case fx::gltf::Animation::Sampler::Type::Linear:
+							if ("translation" == j.target.path || "scale" == j.target.path) {
+								const auto Data = reinterpret_cast<const glm::vec3*>(GetData(OutAcc));
+								const auto V = glm::mix(Data[PrevIndex], Data[NextIndex], Ratio);
+								std::cout << "\t" << "translation = ";
+								std::cout << V.x << "," << V.y << ", " << V.z << std::endl;
+							} else if("rotation" == j.target.path) {
+								const auto Data = reinterpret_cast<const glm::quat*>(GetData(OutAcc));
+								const auto Q = glm::slerp(Data[PrevIndex], Data[NextIndex], Ratio);
+								std::cout << "\t" << "rotation = ";
+								std::cout << Q.x << "," << Q.y << ", " << Q.z << ", " << Q.w << std::endl;
+							}
+							else if ("scale" == j.target.path) {
+								const auto Data = reinterpret_cast<const glm::vec3*>(GetData(OutAcc));
+								const auto V = glm::mix(Data[PrevIndex], Data[NextIndex], Ratio);
+								std::cout << "\t" << "scale = ";
+								std::cout << V.x << "," << V.y << ", " << V.z << std::endl;
+							}
+							break;
+						case fx::gltf::Animation::Sampler::Type::Step:
+							if ("translation" == j.target.path || "scale" == j.target.path) {
+								reinterpret_cast<const glm::vec3*>(GetData(OutAcc))[PrevIndex];
+							}
+							else if ("rotation" == j.target.path) {
+								reinterpret_cast<const glm::quat*>(GetData(OutAcc))[PrevIndex];
+							}
+							else if ("scale" == j.target.path) {
+							}
+							break;
+						case fx::gltf::Animation::Sampler::Type::CubicSpline:
+							if ("translation" == j.target.path || "scale" == j.target.path) {
+							}
+							else if ("rotation" == j.target.path) {
+							}
+							else if ("scale" == j.target.path) {
+							}
+							break;
+						}						
+
+						if (-1 != j.target.node) {
+							auto& Nd = Document.nodes[j.target.node];
+							Nd.translation;
+							Nd.rotation;
+							Nd.scale;
+						}
+					}
+				}
 			}
 		}
 	}

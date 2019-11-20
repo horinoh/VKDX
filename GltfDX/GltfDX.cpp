@@ -337,7 +337,7 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			const auto TypeSize = GetTypeSize(Acc);
 			const auto Size = Acc.count * (0 == Stride ? TypeSize : Stride);
 
-			//!< BufferView.target はセットされてない事が多々ある…
+			//!< BufferView.target はセットされてない事が多々あるので自前でやる…
 			switch (BufV.target)
 			{
 			case fx::gltf::BufferView::TargetType::None: break;
@@ -361,6 +361,11 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			}
 		}
 	}
+}
+
+void GltfDX::OnTimer(HWND hWnd, HINSTANCE hInstance)
+{
+	Super::OnTimer(hWnd, hInstance);
 }
 
 void GltfDX::PopulateCommandList(const size_t i)
