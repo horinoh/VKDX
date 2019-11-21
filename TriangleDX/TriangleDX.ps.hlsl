@@ -4,16 +4,13 @@ struct IN
 	float4 Color : COLOR;
 };
 
-#if 0
-struct CB
+//#define USE_ROOT_CONSTANTS
+#ifdef USE_ROOT_CONSTANTS
+struct RootConstant
 {
 	float4 Color;
 };
-ConstantBuffer<CB> CBInst : register(b0);
-//cbuffer CB : register(b0)
-//{
-//	float4 Color;
-//}
+ConstantBuffer<RootConstant> RCInst : register(b0, space0);
 #endif
 
 #if 1
@@ -40,8 +37,8 @@ float3 ToHDR10(const float3 In)
 
 float4 main(IN In) : SV_TARGET
 {
-#if 0
-	return CBInst.Color;
+#ifdef USE_ROOT_CONSTANTS
+	return RCInst.Color;
 #else
 	return In.Color;
 	//return float4(ToHDR10(In.Color.rgb).rgb, In.Color.a);

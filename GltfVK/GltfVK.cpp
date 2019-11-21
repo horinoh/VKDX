@@ -379,40 +379,37 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 					const auto& InAcc = Document.accessors[Smp.input];
 					if (InAcc.type == fx::gltf::Accessor::Type::Scalar && InAcc.componentType == fx::gltf::Accessor::ComponentType::Float) {
 						const auto Keyframes = reinterpret_cast<const float*>(GetData(InAcc));
-						const auto Frame = std::min(CurrentFrame, Keyframes[InAcc.count - 1]);
+						const auto MaxFrame = Keyframes[InAcc.count - 1];
+						CurrentFrame = std::min(CurrentFrame, Keyframes[InAcc.count - 1]);
 						uint32_t PrevIndex = 0, NextIndex = 0;
 						for (uint32_t k = 0; k < InAcc.count; ++k) {
-							if (Keyframes[k] >= Frame) {
+							if (Keyframes[k] >= CurrentFrame) {
 								NextIndex = k;
 								PrevIndex = NextIndex - 1;
 								break;
 							}
 						}
-						std::cout << "Frame = " << Keyframes[PrevIndex] << " < " << Frame << " < " << Keyframes[NextIndex] << ", Max = " << Keyframes[InAcc.count - 1] << std::endl;
+						const auto PrevFrame = Keyframes[PrevIndex];
+						const auto NextFrame = Keyframes[NextIndex];
+						const auto DeltaFrame = NextFrame - PrevFrame;
+						std::cout << "Frame = " << PrevFrame << " < " << CurrentFrame << " < " << NextFrame << ", Max = " << MaxFrame << std::endl;
 
-						const auto Ratio = (Frame - Keyframes[PrevIndex]) / (Keyframes[NextIndex] - Keyframes[PrevIndex]);
-						std::cout << "Ratio = " << Ratio << std::endl;
+						const auto t = (CurrentFrame - PrevFrame) / DeltaFrame;
+						std::cout << "t = " << t << std::endl;
 
 						const auto& OutAcc = Document.accessors[Smp.output];
+						std::cout << "\t" << j.target.path << " = ";
 						switch (Smp.interpolation)
 						{
 						case fx::gltf::Animation::Sampler::Type::Linear:
 							if ("translation" == j.target.path || "scale" == j.target.path) {
 								const auto Data = reinterpret_cast<const glm::vec3*>(GetData(OutAcc));
-								const auto V = glm::mix(Data[PrevIndex], Data[NextIndex], Ratio);
-								std::cout << "\t" << "translation = ";
+								const auto V = glm::mix(Data[PrevIndex], Data[NextIndex], t);
 								std::cout << V.x << "," << V.y << ", " << V.z << std::endl;
 							} else if("rotation" == j.target.path) {
 								const auto Data = reinterpret_cast<const glm::quat*>(GetData(OutAcc));
-								const auto Q = glm::slerp(Data[PrevIndex], Data[NextIndex], Ratio);
-								std::cout << "\t" << "rotation = ";
+								const auto Q = glm::slerp(Data[PrevIndex], Data[NextIndex], t);
 								std::cout << Q.x << "," << Q.y << ", " << Q.z << ", " << Q.w << std::endl;
-							}
-							else if ("scale" == j.target.path) {
-								const auto Data = reinterpret_cast<const glm::vec3*>(GetData(OutAcc));
-								const auto V = glm::mix(Data[PrevIndex], Data[NextIndex], Ratio);
-								std::cout << "\t" << "scale = ";
-								std::cout << V.x << "," << V.y << ", " << V.z << std::endl;
 							}
 							break;
 						case fx::gltf::Animation::Sampler::Type::Step:
@@ -422,15 +419,11 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 							else if ("rotation" == j.target.path) {
 								reinterpret_cast<const glm::quat*>(GetData(OutAcc))[PrevIndex];
 							}
-							else if ("scale" == j.target.path) {
-							}
 							break;
 						case fx::gltf::Animation::Sampler::Type::CubicSpline:
 							if ("translation" == j.target.path || "scale" == j.target.path) {
 							}
 							else if ("rotation" == j.target.path) {
-							}
-							else if ("scale" == j.target.path) {
 							}
 							break;
 						}						

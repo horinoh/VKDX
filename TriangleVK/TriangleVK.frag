@@ -4,10 +4,11 @@
 
 layout (early_fragment_tests) in;
 
-#if 0
+//#define USE_PUSH_CONSTANTS
+#ifdef USE_PUSH_CONSTANTS
 layout (push_constant) uniform PushConstant
 {
-	layout(offset = 64) vec4 Color; //!< ここではフラグメントシェーダ用は 64byte オフセットしている For fragment shader offset 64 byte in this case
+	layout(offset = 0) vec4 Color;
 } InPushConstant;
 #endif
 
@@ -22,7 +23,7 @@ layout (location = 0) out vec4 OutColor;
 
 void main()
 {
-#if 0
+#ifdef USE_PUSH_CONSTANTS
 	OutColor = InPushConstant.Color;
 #else
 	OutColor = InColor;

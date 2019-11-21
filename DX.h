@@ -33,6 +33,8 @@
 
 //!< バンドル : VKのセカンダリコマンドバッファ相当
 #define USE_BUNDLE
+//!< ルートコンスタント : VKのプッシュコンスタント相当
+//#define USE_ROOT_CONSTANTS
 
 #include <d3d12.h>
 #include <d3dcompiler.h>

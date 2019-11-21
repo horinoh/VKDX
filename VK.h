@@ -54,6 +54,8 @@
 //!< 全てのコマンドがプライマリ、セカンダリの両方で記録できるわけではない
 //!< セカンダリの場合は VK_SUBPASS_CONTENTS_INLINE の代わりに VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS を指定する 
 #define USE_SECONDARY_COMMAND_BUFFER
+//!< プッシュコンスタント　: DXのルートコンスタント相当
+//#define  USE_PUSH_CONSTANTS
 
 #define USE_RENDER_PASS_CLEAR
 

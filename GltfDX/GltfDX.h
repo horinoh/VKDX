@@ -113,6 +113,9 @@ protected:
 #ifdef USE_HLSL_ROOTSIGNATRUE
 		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
 #else
+		D3D12_ROOT_PARAMETER RP = { D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS };
+		RP.Constants = {};
+		RP.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
 		DX::SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 #endif
 		RootSignatures.resize(1);

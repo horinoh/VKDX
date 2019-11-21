@@ -297,6 +297,9 @@ void TriangleDX::PopulateCommandList(const size_t i)
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 	{
 		BCL->SetGraphicsRootSignature(RS);
+#ifdef USE_ROOT_CONSTANTS
+		BCL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(Color.size()), Color.data(), 0);
+#endif
 		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 		if (!VertexBufferViews.empty()) {
 			const std::array<D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VertexBufferViews[0] };
@@ -339,16 +342,15 @@ void TriangleDX::PopulateCommandList(const size_t i)
 #else
 			//!< ルートシグニチャ
 			CL->SetGraphicsRootSignature(RS);
+#ifdef USE_ROOT_CONSTANTS
+			CL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(Color.size()), Color.data(), 0);
+#endif
 			//!< インプットアセンブリのプリミティブタイプ
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 			//!< バーテックスバッファ、インデックスバッファ
-			if (!VertexBufferViews.empty()) {
-				const std::array<D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VertexBufferViews[0] };
-				CL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
-				if (!IndexBufferViews.empty()) {
-					CL->IASetIndexBuffer(&IndexBufferViews[0]);
-				}
-			}
+			const std::array<D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VertexBufferViews[0] };
+			CL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
+			CL->IASetIndexBuffer(&IndexBufferViews[0]);
 			//!< 描画
 			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 #endif
