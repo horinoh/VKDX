@@ -237,7 +237,7 @@ void GltfVK::LoadScene()
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Box\\glTF-Binary\\Box.glb"); //!< Scale = 1.0f
 
 	//!< PNT(POS, NRM, TEX0)
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb"); //!< Scale = 0.005f
+	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb"); //!< Scale = 0.005f
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\DamagedHelmet\\glTF-Binary\\DamagedHelmet.glb"); //!< Scale = 0.5f
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxTextured\\glTF-Binary\\BoxTextured.glb"); //!< Scale = 1.0f
 
@@ -258,7 +258,51 @@ void GltfVK::LoadScene()
 
 	//!< JPNTW(JNT0, POS, NRM, TEX0, WGT0)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb"); //!< Scale = 0.5f
-	Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb"); //!< Scale = 0.02f
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb"); //!< Scale = 0.02f
+}
+void GltfVK::Process(const fx::gltf::Node& Nd)
+{
+	auto& Mtx = CurrentMatrix.back();
+
+	if (fx::gltf::defaults::IdentityMatrix != Nd.matrix) {
+		Mtx = glm::make_mat4(Nd.matrix.data()) * Mtx;
+	}
+	else {
+		if (fx::gltf::defaults::NullVec3 != Nd.translation) {
+			Mtx = glm::translate(Mtx, glm::make_vec3(Nd.translation.data()));
+		}
+		if (fx::gltf::defaults::IdentityVec3 != Nd.scale) {
+			Mtx = glm::scale(Mtx, glm::make_vec3(Nd.scale.data()));
+		}
+		if (fx::gltf::defaults::IdentityRotation != Nd.rotation) {
+			Mtx = glm::mat4_cast(glm::make_quat(Nd.rotation.data()));
+		}
+	}
+
+	Gltf::Process(Nd);
+}
+void GltfVK::Process(const fx::gltf::Camera& Cam)
+{
+	Gltf::Process(Cam);
+
+	glm::mat4 View = CurrentMatrix.back();
+	glm::mat4 Projection;
+	switch (Cam.type) {
+	case fx::gltf::Camera::Type::None: break;
+	case fx::gltf::Camera::Type::Orthographic:
+		Projection = glm::orthoRH(0.0f, Cam.orthographic.xmag, 0.0f, Cam.orthographic.ymag, Cam.orthographic.znear, Cam.orthographic.zfar);
+		break;
+	case fx::gltf::Camera::Type::Perspective:
+		Projection = glm::perspective(Cam.perspective.yfov, Cam.perspective.aspectRatio, Cam.perspective.znear, Cam.perspective.zfar);
+		break;
+	}
+
+#ifdef DEBUG_STDOUT
+	std::cout << "View =" << std::endl;
+	std::cout << View;
+	std::cout << "Projection =" << std::endl;
+	std::cout << Projection;
+#endif
 }
 void GltfVK::Process(const fx::gltf::Primitive& Prim)
 {
@@ -292,6 +336,11 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	Pipelines.push_back(VkPipeline());
 	CreatePipeline(Pipelines.back(), PLL, RP, VS, FS, NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs, ToVKPrimitiveTopology(Prim.mode));
 
+#ifdef DEBUG_STDOUT
+	std::cout << "World =" << std::endl;
+	std::cout << CurrentMatrix.back();
+#endif
+
 	const auto Count = AddSecondaryCommandBuffer();
 	const auto& VBs = VertexBuffers;
 	const auto IB = IndexBuffers.back();
@@ -317,9 +366,11 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 			VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
 			&CBII
 		};
+
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
 			vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 			vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+			//vkCmdPushConstants(SCB, PLL, VK_SHADER_STAGE_VERTEX_BIT, 0, static_cast<uint32_t>(sizeof(CurrentMatrix.back())), &CurrentMatrix.back());
 			vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 			vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets.data());
 			vkCmdBindIndexBuffer(SCB, IB, 0, ToVKIndexType(Document.accessors[Prim.indices].componentType));
@@ -365,11 +416,16 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 	}
 }
 
+void GltfVK::Process(fx::gltf::Skin& Skn)
+{
+	Gltf::Process(Skn);
+}
+
 void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnTimer(hWnd, hInstance);
 
-	CurrentFrame += 0.1f;
+	CurrentFrame += 0.1f; //static_cast<float>(Elapse) / 1000.0f;
 
 	for (const auto& i : Document.animations) {
 		for (const auto& j : i.channels) {
@@ -404,23 +460,24 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 						case fx::gltf::Animation::Sampler::Type::Linear:
 							if ("translation" == j.target.path || "scale" == j.target.path) {
 								const auto Data = reinterpret_cast<const glm::vec3*>(GetData(OutAcc));
-								const auto V = glm::mix(Data[PrevIndex], Data[NextIndex], t);
-								std::cout << V.x << "," << V.y << ", " << V.z << std::endl;
+								std::cout << glm::mix(Data[PrevIndex], Data[NextIndex], t);
 							} else if("rotation" == j.target.path) {
 								const auto Data = reinterpret_cast<const glm::quat*>(GetData(OutAcc));
-								const auto Q = glm::slerp(Data[PrevIndex], Data[NextIndex], t);
-								std::cout << Q.x << "," << Q.y << ", " << Q.z << ", " << Q.w << std::endl;
+								std::cout << glm::slerp(Data[PrevIndex], Data[NextIndex], t);
 							}
 							break;
 						case fx::gltf::Animation::Sampler::Type::Step:
 							if ("translation" == j.target.path || "scale" == j.target.path) {
-								reinterpret_cast<const glm::vec3*>(GetData(OutAcc))[PrevIndex];
+								const auto Data = reinterpret_cast<const glm::vec3*>(GetData(OutAcc));
+								std::cout << Data[PrevIndex];
 							}
 							else if ("rotation" == j.target.path) {
-								reinterpret_cast<const glm::quat*>(GetData(OutAcc))[PrevIndex];
+								const auto Data = reinterpret_cast<const glm::quat*>(GetData(OutAcc));
+								std::cout << Data[PrevIndex];
 							}
 							break;
 						case fx::gltf::Animation::Sampler::Type::CubicSpline:
+							//!< #TODO
 							if ("translation" == j.target.path || "scale" == j.target.path) {
 							}
 							else if ("rotation" == j.target.path) {
@@ -471,6 +528,7 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 			ScissorRects[0],
 			static_cast<uint32_t>(CVs.size()), CVs.data()
 		};
+		//vkCmdPushConstants(CB, PLL, VK_SHADER_STAGE_VERTEX_BIT, 0, static_cast<uint32_t>(sizeof(ViewProjection)), &ViewProjection);
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
 			vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
 		} vkCmdEndRenderPass(CB);

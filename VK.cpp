@@ -110,7 +110,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	AllocateDescriptorSet();
 	UpdateDescriptorSet();
 
-	SetTimer(hWnd, NULL, 1000 / 60, nullptr);
+	SetTimer(hWnd, NULL, Elapse, nullptr);
 
 	//!< ウインドウサイズ変更時に作り直すもの
 	OnExitSizeMove(hWnd, hInstance);

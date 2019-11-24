@@ -190,6 +190,7 @@ public:
 
 protected:
 	std::wstring TitleW;
+	static const UINT Elapse = 1000 / 60; //!< msec
 
 private:
 	RECT Rect;

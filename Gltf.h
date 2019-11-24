@@ -120,16 +120,16 @@ public:
 	virtual void Process(const fx::gltf::Scene& Scn) {
 		std::cout << "Scene : " << Scn.name << std::endl;
 
-		Push();
+		PushTab();
 		for (auto i : Scn.nodes) {
 			Process(Document.nodes[i]);	
 		}
-		Pop();
+		PopTab();
 	}
 	virtual void Process(const fx::gltf::Animation& Anim) {
 		Tabs(); std::cout << "Animation : " << Anim.name << std::endl;
 
-		Push();
+		PushTab();
 		for (const auto& i : Anim.channels) {			
 			const auto& Tag = i.target;
 
@@ -146,20 +146,20 @@ public:
 			}
 
 			//!< アニメーション対象ノード
-			Push();
+			PushTab();
 			if (-1 != Tag.node) {
 				//Process(Document.nodes[Tag.node]);
 			}
-			Pop();
+			PopTab();
 
 			//!< サンプリング方法
-			Push();
+			PushTab();
 			if (-1 != i.sampler) {
 				Process(Anim.samplers[i.sampler]);
 			}
-			Pop();
+			PopTab();
 		}
-		Pop();
+		PopTab();
 	}
 
 	virtual void Process(const fx::gltf::Animation::Sampler& Smp) {
@@ -173,57 +173,77 @@ public:
 		}
 		std::cout << std::endl;
 
-		Push();
+		PushTab();
 		//!< キーフレーム時間
 		if (-1 != Smp.input) {
 			Process("input", Document.accessors[Smp.input]);
 		}
+		PopTab();
+
+		PushTab();
 		//!< アニメーション値 (pathにより解釈、translation, rotation,...)
 		if (-1 != Smp.output) {
 			Process("output", Document.accessors[Smp.output]);
 		}
-		Pop();
+		PopTab();
 	}
 
+	virtual void PushNode() { PushTab(); }
+	virtual void PopNode() { PopTab(); }
 	virtual void Process(const fx::gltf::Node& Nd) {
 		Tabs(); std::cout << "Node : " << Nd.name << std::endl;
 
-		//!< ローカルトランスフォームは以下のいずれかで表現される
-		//!< Matrix (column-major)
-		Tabs(); std::cout << "\t" << "matrix = ";
-		for (auto i : Nd.matrix) { std::cout << i << ", "; }
-		std::cout << std::endl;
-		
-		//!< TRS
-		Tabs(); std::cout << "\t" << "translation = ";
-		for (auto i : Nd.translation) { std::cout << i << ", "; }
-		std::cout << std::endl; 
-		
-		Tabs(); std::cout << "\t" << "rotation = ";
-		for (auto i : Nd.rotation) { std::cout << i << ", "; }
-		std::cout << std::endl; 
-		
-		Tabs(); std::cout << "\t" << "scale = ";
-		for (auto i : Nd.scale) { std::cout << i << ", "; }
-		std::cout << std::endl; 
+		if (fx::gltf::defaults::IdentityMatrix != Nd.matrix) {
+			//!< column-major
+			Tabs(); std::cout << "\t" << "matrix = ";
+			for (auto i : Nd.matrix) { std::cout << i << ", "; }
+			std::cout << std::endl;
+		}
+		else {
+			if (fx::gltf::defaults::NullVec3 != Nd.translation) {
+				Tabs(); std::cout << "\t" << "translation = ";
+				for (auto i : Nd.translation) { std::cout << i << ", "; }
+				std::cout << std::endl;
+			}
 
-		Push();
+			if (fx::gltf::defaults::IdentityRotation != Nd.rotation) {
+				Tabs(); std::cout << "\t" << "rotation = ";
+				for (auto i : Nd.rotation) { std::cout << i << ", "; }
+				std::cout << std::endl;
+			}
+
+			if (fx::gltf::defaults::IdentityVec3 != Nd.scale) {
+				Tabs(); std::cout << "\t" << "scale = ";
+				for (auto i : Nd.scale) { std::cout << i << ", "; }
+				std::cout << std::endl;
+			}
+		}
+
+		PushTab();
 		if (-1 != Nd.mesh) {
 			Process(Document.meshes[Nd.mesh]);
 		}
-		
+		PopTab();
+
+		PushTab();
 		if (-1 != Nd.skin) {
 			Process(Document.skins[Nd.skin]);
 		}
+		PopTab();
 
+		PushTab();
 		if (-1 != Nd.camera) {
 			Process(Document.cameras[Nd.camera]);
 		}
+		PopTab();
 
-		for (auto i : Nd.children) {
-			Process(Document.nodes[i]);
+		if (!Nd.children.empty()) {
+			PushNode();
+			for (auto i : Nd.children) {
+				Process(Document.nodes[i]);
+			}
+			PopNode();
 		}
-		Pop();
 	}
 
 	virtual void Process(const fx::gltf::Mesh& Msh) {
@@ -237,23 +257,23 @@ public:
 			std::cout << std::endl;
 		}
 
-		Push();
+		PushTab();
 		for (const auto& i : Msh.primitives) {
 			Process(i);
 		}
-		Pop();
+		PopTab();
 	}
 
 	virtual void Process(fx::gltf::Skin& Skn) {
 		Tabs(); std::cout << "Skin : " << Skn.name << std::endl;
 
-		Push();
+		PushTab();
 		if (-1 != Skn.inverseBindMatrices) {
 			//!< 各々のジョイントをローカルスペースへ変換するマトリクス
 			//!< JointMatrix[i] = Inverse(GlobalTransform) * GlobalJointTransform[i] * InverseBindMatrix[i]
 			Process("inverseBindMatrices", Document.accessors[Skn.inverseBindMatrices]);
 		}
-		Pop();
+		PopTab();
 
 		//Push();
 		//for (auto i : Skn.joints) {
@@ -297,25 +317,25 @@ public:
 		}
 		std::cout << std::endl;
 
-		Push();
+		PushTab();
 		for (const auto& i : Prim.attributes) {
 			Process("attributes", Document.accessors[i.second]);
 		}
-		Pop();
+		PopTab();
 
-		Push();
+		PushTab();
 		if (-1 != Prim.indices) {
 			Process("indices", Document.accessors[Prim.indices]);
 		}
-		Pop();
+		PopTab();
 
-		Push();
+		PushTab();
 		if (-1 != Prim.material) {
 			Process(Document.materials[Prim.material]);
 		}
-		Pop();
+		PopTab();
 
-		Push();
+		PushTab();
 		for (const auto& i : Prim.targets) {
 			for (const auto& j : Prim.attributes) {
 				const auto it = i.find(j.first);
@@ -324,7 +344,7 @@ public:
 				}
 			}
 		}
-		Pop();
+		PopTab();
 	}
 	virtual void Process(const std::string& Identifier, const fx::gltf::Accessor& Acc) {
 		Tabs(); std::cout << Identifier << std::endl;
@@ -372,7 +392,7 @@ public:
 
 		Tabs(); std::cout << "\t" << "normalized = " << Acc.normalized << std::endl;
 
-		Push();
+		PushTab();
 		if (-1 != Acc.bufferView) {
 			const auto& BufV = Document.bufferViews[Acc.bufferView];
 			Tabs(); std::cout << "BufferView : " << BufV.name << std::endl;
@@ -388,7 +408,7 @@ public:
 			}
 			std::cout << std::endl;
 
-			Push();
+			PushTab();
 			if (-1 != BufV.buffer) {
 				const auto& Buf = Document.buffers[BufV.buffer];
 				Tabs(); std::cout << "Buffer : " << Buf.name << std::endl;
@@ -420,9 +440,9 @@ public:
 					}
 				}
 			}
-			Pop();
+			PopTab();
 		}
-		Pop();
+		PopTab();
 
 		//!< TODO
 		Acc.sparse;
@@ -451,7 +471,7 @@ public:
 
 		//!< PBR (metallic-roughness model)
 		const auto& PBR = Mtl.pbrMetallicRoughness;
-		Push();
+		PushTab();
 		Process(PBR.baseColorTexture);
 		//!< baseColorTexture が無い場合は baseColorFactor がそのまま使われる
 		Tabs(); std::cout << "\t" << "baseColorFactor";
@@ -459,50 +479,50 @@ public:
 			std::cout << i << ", ";
 		}
 		std::cout << std::endl; 
-		Pop();
+		PopTab();
 
-		Push();
+		PushTab();
 		//!< BLUE : Metalness, GREEN : Roughness
 		Process(PBR.metallicRoughnessTexture);
 		//!< metallicRoughnessTexture が無い場合は metallicFactor, roughnessFactor がそのまま使われる
 		Tabs(); std::cout << "\t" << "metallicFactor = " << PBR.metallicFactor << std::endl;
 		Tabs(); std::cout << "\t" << "roughnessFactor = " << PBR.roughnessFactor << std::endl;
-		Pop();
+		PopTab();
 
-		Push();
+		PushTab();
 		Process(Mtl.normalTexture);
-		Pop();
+		PopTab();
 
-		Push();
+		PushTab();
 		//!< RED : Occlusion
 		Process(Mtl.occlusionTexture);
-		Pop();
+		PopTab();
 
-		Push();
+		PushTab();
 		Process(Mtl.emissiveTexture);
-		Pop();
+		PopTab();
 	}
 
 	virtual void Process(const fx::gltf::Material::Texture& Tex) {
 		Tabs(); std::cout << "texCoord = " << Tex.texCoord << std::endl;
 
-		Push();
+		PushTab();
 		if (-1 != Tex.index) {
 			Process(Document.textures[Tex.index]);
 		}
-		Pop();
+		PopTab();
 	}
 	virtual void Process(const fx::gltf::Texture& Tex) {
 		Tabs(); std::cout << "Texture : " << Tex.name << std::endl;
 
-		Push();
+		PushTab();
 		if (-1 != Tex.sampler) {
 			Process(Document.samplers[Tex.sampler]);
 		}
 		if (-1 != Tex.source) {
 			Process(Document.images[Tex.source]);
 		}
-		Pop();
+		PopTab();
 	}
 
 	virtual void Process(const fx::gltf::Sampler& Smp) {
@@ -564,23 +584,23 @@ public:
 				//const auto DataSize = static_cast<uint32_t>(Data.size());
 			}
 			else {
-				Push();
+				PushTab();
 				const auto& BufV = Document.bufferViews[Img.bufferView];
 				Tabs(); std::cout << "BufferView : " << BufV.name << std::endl;
 				Tabs(); std::cout << "\t" << "byteOffset = " << BufV.byteOffset << std::endl;
 				Tabs(); std::cout << "\t" << "byteLength = " << BufV.byteLength << std::endl;
 
-				Push();
+				PushTab();
 				if (-1 != BufV.buffer) {
 					const auto& Buf = Document.buffers[BufV.buffer];
 					Tabs(); std::cout << "Buffer : " << Buf.name << std::endl;
 					Tabs(); std::cout << "\t" << "ByteLength = " << Buf.byteLength << std::endl;
 				}
-				Pop();
+				PopTab();
 
 				//const auto DataPtr = &Document.buffers[BufV.buffer].data[BufV.byteOffset + 0/*ここではアクセサは無い*/];
 				//const auto DataSize = BufV.byteLength;
-				Pop();
+				PopTab();
 			}
 		}
 		else {
@@ -593,22 +613,22 @@ public:
 			}
 		}
 
-		Pop();
+		PopTab();
 	}
 
 #ifdef _DEBUG
-	void Tabs() { for (auto i = 0; i < Hierarchy; ++i) { std::cout << "\t"; } }
-	void Push() { ++Hierarchy; }
-	void Pop() { --Hierarchy; }
+	void Tabs() { for (auto i = 0; i < TabDepth; ++i) { std::cout << "\t"; } }
+	void PushTab() { ++TabDepth; }
+	void PopTab() { --TabDepth; }
 #else
 	void Tabs() {}
-	void Push() {}
-	void Pop() {}
+	void PushTab() {}
+	void PopTab() {}
 #endif
 
 protected:
 	fx::gltf::Document Document;
 #ifdef _DEBUG
-	uint8_t Hierarchy = 0;
+	uint8_t TabDepth = 0;
 #endif
 };

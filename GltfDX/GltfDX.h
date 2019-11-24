@@ -103,8 +103,13 @@ public:
 
 protected:
 	virtual void LoadScene() override;
+	virtual void PushNode() override { Gltf::PushNode(); CurrentMatrix.push_back(CurrentMatrix.back()); }
+	virtual void PopNode() override { Gltf::PopNode(); CurrentMatrix.pop_back(); }
+	virtual void Process(const fx::gltf::Node& Nd) override;
+	virtual void Process(const fx::gltf::Camera& Cam) override;
 	virtual void Process(const fx::gltf::Primitive& Prim) override;
 	virtual void Process(const std::string& Identifier, const fx::gltf::Accessor& Acc) override;
+	virtual void Process(fx::gltf::Skin& Skn) override;
 
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override;
 
@@ -124,6 +129,7 @@ protected:
 	}
 	virtual void PopulateCommandList(const size_t i) override;
 
-	UINT IndexCount = 0;
+	std::vector<DirectX::XMMATRIX> CurrentMatrix = { DirectX::XMMatrixIdentity() };
+	FLOAT CurrentFrame = 0.0f;
 };
 #pragma endregion

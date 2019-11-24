@@ -259,6 +259,54 @@ void GltfDX::LoadScene()
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb"); //!< Scale = 0.5f
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb"); //!< Scale = 0.02f
 }
+void GltfDX::Process(const fx::gltf::Node& Nd)
+{
+	auto& Mtx = CurrentMatrix.back();
+
+	if (fx::gltf::defaults::IdentityMatrix != Nd.matrix) {
+		const auto Local = DirectX::XMFLOAT4X4(Nd.matrix.data());
+		Mtx *= DirectX::XMLoadFloat4x4(&Local);
+	}
+	else {
+		if (fx::gltf::defaults::NullVec3 != Nd.translation) {
+			const auto Local = DirectX::XMFLOAT3(Nd.translation.data());
+			Mtx *= DirectX::XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&Local));
+		}
+		if (fx::gltf::defaults::IdentityVec3 != Nd.scale) {
+			const auto Local = DirectX::XMFLOAT3(Nd.scale.data());
+			Mtx *= DirectX::XMMatrixScalingFromVector(DirectX::XMLoadFloat3(&Local));
+		}
+		if (fx::gltf::defaults::IdentityRotation != Nd.rotation) {
+			const auto Local = DirectX::XMFLOAT4(Nd.rotation.data());
+			Mtx *= DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&Local));
+		}
+	}
+
+	Gltf::Process(Nd);
+}
+void GltfDX::Process(const fx::gltf::Camera& Cam)
+{
+	Gltf::Process(Cam);
+
+	DirectX::XMMATRIX View = CurrentMatrix.back();
+	DirectX::XMMATRIX Projection;
+	switch (Cam.type) {
+	case fx::gltf::Camera::Type::None: break;
+	case fx::gltf::Camera::Type::Orthographic:
+		Projection = DirectX::XMMatrixOrthographicRH(Cam.orthographic.xmag, Cam.orthographic.ymag, Cam.orthographic.znear, Cam.orthographic.zfar);
+		break;
+	case fx::gltf::Camera::Type::Perspective:
+		Projection = DirectX::XMMatrixPerspectiveFovRH(Cam.perspective.yfov, Cam.perspective.aspectRatio, Cam.perspective.znear, Cam.perspective.zfar);
+		break;
+	}
+
+#ifdef DEBUG_STDOUT
+	std::cout << "View =" << std::endl;
+	std::cout << View;
+	std::cout << "Projection =" << std::endl;
+	std::cout << Projection;
+#endif
+}
 void GltfDX::Process(const fx::gltf::Primitive& Prim)
 {
 	Gltf::Process(Prim);
@@ -306,13 +354,18 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	const auto IBR = COM_PTR_GET(IndirectBufferResources.back());
 	const auto ICS = COM_PTR_GET(IndirectCommandSignatures.back());
 
+#ifdef DEBUG_STDOUT
+	std::cout << "World =" << std::endl;
+	std::cout << CurrentMatrix.back();
+#endif
+
 	for (auto i = 0; i < static_cast<int>(Count); ++i) {
 		const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[BundleGraphicsCommandLists.size() - Count + i]);
 		const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
 
 		VERIFY_SUCCEEDED(BCL->Reset(BCA, PST));
 		{
-			BCL->SetGraphicsRootSignature(RS);
+			//BCL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(sizeof(CurrentMatrix.back()) / 4), &CurrentMatrix.back(), 0);
 			BCL->IASetPrimitiveTopology(ToDXPrimitiveTopology(Prim.mode));
 			BCL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
 			BCL->IASetIndexBuffer(&IBV);
@@ -363,9 +416,16 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 	}
 }
 
+void GltfDX::Process(fx::gltf::Skin& Skn)
+{
+	Gltf::Process(Skn);
+}
+
 void GltfDX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnTimer(hWnd, hInstance);
+
+	CurrentFrame += 0.1f; //static_cast<float>(Elapse) / 1000.0f;
 }
 
 void GltfDX::PopulateCommandList(const size_t i)
@@ -374,6 +434,7 @@ void GltfDX::PopulateCommandList(const size_t i)
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
+	const auto RS = COM_PTR_GET(RootSignatures[0]);
 
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
@@ -387,6 +448,9 @@ void GltfDX::PopulateCommandList(const size_t i)
 	{
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+
+		CL->SetGraphicsRootSignature(RS);
+		//CL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(sizeof(ViewProjection) / 4), &ViewProjection, 0);
 
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
