@@ -453,27 +453,37 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 						const auto t = (CurrentFrame - PrevFrame) / DeltaFrame;
 						std::cout << "t = " << t << std::endl;
 
+#ifdef DEBUG_STDOUT
 						const auto& OutAcc = Document.accessors[Smp.output];
+#endif
 						std::cout << "\t" << j.target.path << " = ";
 						switch (Smp.interpolation)
 						{
 						case fx::gltf::Animation::Sampler::Type::Linear:
 							if ("translation" == j.target.path || "scale" == j.target.path) {
+#ifdef DEBUG_STDOUT
 								const auto Data = reinterpret_cast<const glm::vec3*>(GetData(OutAcc));
 								std::cout << glm::mix(Data[PrevIndex], Data[NextIndex], t);
+#endif
 							} else if("rotation" == j.target.path) {
+#ifdef DEBUG_STDOUT
 								const auto Data = reinterpret_cast<const glm::quat*>(GetData(OutAcc));
 								std::cout << glm::slerp(Data[PrevIndex], Data[NextIndex], t);
+#endif
 							}
 							break;
 						case fx::gltf::Animation::Sampler::Type::Step:
 							if ("translation" == j.target.path || "scale" == j.target.path) {
+#ifdef DEBUG_STDOUT
 								const auto Data = reinterpret_cast<const glm::vec3*>(GetData(OutAcc));
 								std::cout << Data[PrevIndex];
+#endif
 							}
 							else if ("rotation" == j.target.path) {
+#ifdef DEBUG_STDOUT
 								const auto Data = reinterpret_cast<const glm::quat*>(GetData(OutAcc));
 								std::cout << Data[PrevIndex];
+#endif
 							}
 							break;
 						case fx::gltf::Animation::Sampler::Type::CubicSpline:
