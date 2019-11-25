@@ -131,5 +131,6 @@ protected:
 
 	std::vector<DirectX::XMMATRIX> CurrentMatrix = { DirectX::XMMatrixIdentity() };
 	FLOAT CurrentFrame = 0.0f;
+	std::vector<const DirectX::XMMATRIX*> InverseBindMatrices;
 };
 #pragma endregion

@@ -114,5 +114,6 @@ protected:
 
 	std::vector<glm::mat4> CurrentMatrix = { glm::identity<glm::mat4>() };
 	float CurrentFrame = 0.0f;
+	std::vector<const glm::mat4*> InverseBindMatrices;
 };
 #pragma endregion

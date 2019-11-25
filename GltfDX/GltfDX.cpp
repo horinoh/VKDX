@@ -412,6 +412,15 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 				CreateBuffer(COM_PTR_PUT(VertexBufferResources.back()), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 				VertexBufferViews.push_back({ VertexBufferResources.back()->GetGPUVirtualAddress(), Size, Stride });
 			}
+			else if ("inverseBindMatrices" == Identifier) {
+				InverseBindMatrices.reserve(Acc.count);
+				for (uint32_t i = 0; i < Acc.count; ++i) {
+					InverseBindMatrices.push_back(reinterpret_cast<const DirectX::XMMATRIX*>(Data + Stride * i));
+#ifdef DEBUG_STDOUT
+					std::cout << *InverseBindMatrices.back();
+#endif
+				}
+			}
 		}
 	}
 }

@@ -390,9 +390,8 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			const auto& Buf = Document.buffers[BufV.buffer];
 
 			const auto Data = &Buf.data[BufV.byteOffset + Acc.byteOffset];
-			const auto Stride = BufV.byteStride;
-			const auto TypeSize = GetTypeSize(Acc);
-			const auto Size = Acc.count * (0 == Stride ? TypeSize : Stride);
+			const auto Stride = (0 == BufV.byteStride ? GetTypeSize(Acc) : BufV.byteStride);
+			const auto Size = Acc.count * Stride;
 
 			//!< BufferView.target はセットされてない事が多々あるので自前でやる…
 			switch (BufV.target)
@@ -411,6 +410,15 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			else if ("attributes" == Identifier) {
 				VertexBuffers.push_back(VkBuffer());
 				CreateBuffer_Vertex(GraphicsQueue, CommandBuffers[0], &VertexBuffers.back(), Size, Data);
+			}
+			else if ("inverseBindMatrices" == Identifier) {
+				InverseBindMatrices.reserve(Acc.count);
+				for (uint32_t i = 0; i < Acc.count; ++i) {
+					InverseBindMatrices.push_back(reinterpret_cast<const glm::mat4*>(Data + Stride * i));
+#ifdef DEBUG_STDOUT
+					std::cout << *InverseBindMatrices.back();
+#endif
+				}
 			}
 		}
 	}
@@ -436,7 +444,8 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 					if (InAcc.type == fx::gltf::Accessor::Type::Scalar && InAcc.componentType == fx::gltf::Accessor::ComponentType::Float) {
 						const auto Keyframes = reinterpret_cast<const float*>(GetData(InAcc));
 						const auto MaxFrame = Keyframes[InAcc.count - 1];
-						CurrentFrame = std::min(CurrentFrame, Keyframes[InAcc.count - 1]);
+						CurrentFrame = std::min(CurrentFrame, MaxFrame);
+
 						uint32_t PrevIndex = 0, NextIndex = 0;
 						for (uint32_t k = 0; k < InAcc.count; ++k) {
 							if (Keyframes[k] >= CurrentFrame) {
@@ -447,10 +456,10 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 						}
 						const auto PrevFrame = Keyframes[PrevIndex];
 						const auto NextFrame = Keyframes[NextIndex];
-						const auto DeltaFrame = NextFrame - PrevFrame;
+						const auto Delta = NextFrame - PrevFrame;
 						std::cout << "Frame = " << PrevFrame << " < " << CurrentFrame << " < " << NextFrame << ", Max = " << MaxFrame << std::endl;
 
-						const auto t = (CurrentFrame - PrevFrame) / DeltaFrame;
+						const auto t = (CurrentFrame - PrevFrame) / Delta;
 						std::cout << "t = " << t << std::endl;
 
 #ifdef DEBUG_STDOUT
@@ -487,10 +496,30 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 							}
 							break;
 						case fx::gltf::Animation::Sampler::Type::CubicSpline:
-							//!< #TODO
+							//!< https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#appendix-c-spline-interpolation
+							//!< CubicSpline の場合、(InTangent, Value, OutTangent)の3つでセットになっているので3の倍数になる
 							if ("translation" == j.target.path || "scale" == j.target.path) {
+#ifdef DEBUG_STDOUT
+								const auto Data = reinterpret_cast<const glm::vec3*>(GetData(OutAcc));
+
+								const auto PrevSet = PrevIndex * 3; //!< 0:PrevInTangent, 1:PrevValue, 2:PrevOutTangent
+								const auto NextSet = NextIndex * 3; //!< 0:NextInTangent, 1:NextValue, 3:NextOutTangent
+								
+								const auto& PrevValue = Data[PrevSet + 1];
+								const auto& PrevOutTan = Data[PrevSet + 2];
+								const auto& NextInTan = Data[NextSet + 0];
+								const auto& NextValue = Data[NextSet + 1];
+
+								const auto t2 = t * t;
+								const auto t3 = t2 * t;
+
+								std::cout << (2.0f * t3 - 3.0f * t2 + 1.0f)* PrevValue + (t3 - 2.0f * t2 + t) * PrevOutTan + (-2.0f * t3 + 3.0f * t2) * NextValue + (t3 - t2) * NextInTan << std::endl;
+#endif
 							}
 							else if ("rotation" == j.target.path) {
+#ifdef DEBUG_STDOUT
+								//const auto Data = reinterpret_cast<const glm::quat*>(GetData(OutAcc));
+#endif
 							}
 							break;
 						}						
