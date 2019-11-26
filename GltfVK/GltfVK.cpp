@@ -236,6 +236,9 @@ void GltfVK::LoadScene()
 	//!< PN(POS, NRM)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Box\\glTF-Binary\\Box.glb"); //!< Scale = 1.0f
 
+	//!< PT(POS, TEX0) ... KHR_texture_transform Šg’£î•ñ
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\TextureTransformTest\\glTF\\TextureTransformTest.gltf");
+
 	//!< PNT(POS, NRM, TEX0)
 	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb"); //!< Scale = 0.005f
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\DamagedHelmet\\glTF-Binary\\DamagedHelmet.glb"); //!< Scale = 0.5f
@@ -271,11 +274,11 @@ void GltfVK::Process(const fx::gltf::Node& Nd)
 		if (fx::gltf::defaults::NullVec3 != Nd.translation) {
 			Mtx = glm::translate(Mtx, glm::make_vec3(Nd.translation.data()));
 		}
+		if (fx::gltf::defaults::IdentityRotation != Nd.rotation) {
+			Mtx *= glm::mat4_cast(glm::make_quat(Nd.rotation.data()));
+		}
 		if (fx::gltf::defaults::IdentityVec3 != Nd.scale) {
 			Mtx = glm::scale(Mtx, glm::make_vec3(Nd.scale.data()));
-		}
-		if (fx::gltf::defaults::IdentityRotation != Nd.rotation) {
-			Mtx = glm::mat4_cast(glm::make_quat(Nd.rotation.data()));
 		}
 	}
 
@@ -424,9 +427,76 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 	}
 }
 
-void GltfVK::Process(fx::gltf::Skin& Skn)
+void GltfVK::Process(const fx::gltf::Skin& Skn)
 {
 	Gltf::Process(Skn);
+
+	JointMatrices.reserve(Skn.joints.size());
+	for (uint32_t i = 0; i < Skn.joints.size(); ++i) {
+		const auto& IBM = *InverseBindMatrices[i];
+
+		const auto& Nd = Document.nodes[Skn.joints[i]];
+		auto Wld = glm::identity<glm::mat4>();
+		if (fx::gltf::defaults::NullVec3 != Nd.translation) {
+			glm::translate(Wld, glm::make_vec3(Nd.translation.data()));
+		}
+		if (fx::gltf::defaults::IdentityRotation != Nd.rotation) {
+			Wld *= glm::mat4_cast(glm::make_quat(Nd.rotation.data()));
+		}
+		if (fx::gltf::defaults::IdentityVec3 != Nd.scale) {
+			glm::scale(Wld, glm::make_vec3(Nd.scale.data()));
+		}
+		JointMatrices.push_back(Wld * IBM);
+	}
+}
+
+void GltfVK::Process(const fx::gltf::Material::Texture& Tex)
+{
+	Gltf::Process(Tex);
+
+#ifdef DEBUG_STDOUT
+	//!< KHR_texture_transform Šg’£
+	const auto ItExtensions = Tex.extensionsAndExtras.find("extensions");
+	if (ItExtensions != Tex.extensionsAndExtras.end()) {
+		const auto ItTexTransform = ItExtensions->find("KHR_texture_transform");
+		if (ItTexTransform != ItExtensions->end()) {
+			const auto ItOffset = ItTexTransform->find("offset");
+			if (ItOffset != ItTexTransform->end()) {
+				if (ItOffset->is_array() && 2 == ItOffset->size()) {
+					if (ItOffset->at(0).is_number_float()) {
+						std::cout << ItOffset->at(0).get<float>() << ", " << ItOffset->at(1).get<float>() << std::endl;
+					}
+				}
+			}
+		}
+	}
+
+	const auto ItExtras = Tex.extensionsAndExtras.find("extras");
+	if (ItExtras != Tex.extensionsAndExtras.end()) {}
+#endif
+}
+void GltfVK::Process(const fx::gltf::Texture& Tex)
+{
+	Gltf::Process(Tex);
+
+#ifdef DEBUG_STDOUT
+	//!< MSFT_texture_dds Šg’£
+	const auto ItExtensions = Tex.extensionsAndExtras.find("extensions");
+	if (ItExtensions != Tex.extensionsAndExtras.end()) {
+		const auto ItTexDDS = ItExtensions->find("MSFT_texture_dds");
+		if (ItTexDDS != ItExtensions->end()) {
+			const auto ItSrc = ItTexDDS->find("source");
+			if (ItSrc != ItTexDDS->end()) {
+				if (ItSrc->is_number_integer()) {
+					std::cout << ItSrc->get<int32_t>() << std::endl;
+				}
+			}
+		}
+	}
+
+	const auto ItExtras = Tex.extensionsAndExtras.find("extras");
+	if (ItExtras != Tex.extensionsAndExtras.end()) {}
+#endif
 }
 
 void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)

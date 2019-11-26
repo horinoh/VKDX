@@ -235,6 +235,9 @@ void GltfDX::LoadScene()
 	//!< PN(POS, NRM)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Box\\glTF-Binary\\Box.glb"); //!< Scale = 1.0f
 
+	//!< PT(POS, TEX0) ... KHR_texture_transform Šg’£î•ñ
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\TextureTransformTest\\glTF\\TextureTransformTest.gltf");
+
 	//!< PNT(POS, NRM, TEX0)
 	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb"); //!< Scale = 0.005f
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\DamagedHelmet\\glTF-Binary\\DamagedHelmet.glb"); //!< Scale = 0.5f (NG)
@@ -272,13 +275,13 @@ void GltfDX::Process(const fx::gltf::Node& Nd)
 			const auto Local = DirectX::XMFLOAT3(Nd.translation.data());
 			Mtx *= DirectX::XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&Local));
 		}
-		if (fx::gltf::defaults::IdentityVec3 != Nd.scale) {
-			const auto Local = DirectX::XMFLOAT3(Nd.scale.data());
-			Mtx *= DirectX::XMMatrixScalingFromVector(DirectX::XMLoadFloat3(&Local));
-		}
 		if (fx::gltf::defaults::IdentityRotation != Nd.rotation) {
 			const auto Local = DirectX::XMFLOAT4(Nd.rotation.data());
 			Mtx *= DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&Local));
+		}
+		if (fx::gltf::defaults::IdentityVec3 != Nd.scale) {
+			const auto Local = DirectX::XMFLOAT3(Nd.scale.data());
+			Mtx *= DirectX::XMMatrixScalingFromVector(DirectX::XMLoadFloat3(&Local));
 		}
 	}
 
@@ -425,9 +428,76 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 	}
 }
 
-void GltfDX::Process(fx::gltf::Skin& Skn)
+void GltfDX::Process(const fx::gltf::Skin& Skn)
 {
 	Gltf::Process(Skn);
+
+	JointMatrices.reserve(Skn.joints.size());
+	for (uint32_t i = 0; i < Skn.joints.size(); ++i) {
+		const auto& IBM = *InverseBindMatrices[i];
+
+		auto Wld = DirectX::XMMatrixIdentity();
+		const auto& Nd = Document.nodes[Skn.joints[i]];
+		if (fx::gltf::defaults::NullVec3 != Nd.translation) {
+			const auto Local = DirectX::XMFLOAT3(Nd.translation.data());
+			Wld *= DirectX::XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&Local));
+		}
+		if (fx::gltf::defaults::IdentityRotation != Nd.rotation) {
+			const auto Local = DirectX::XMFLOAT4(Nd.rotation.data());
+			Wld *= DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&Local));
+		}
+		if (fx::gltf::defaults::IdentityVec3 != Nd.scale) {
+			const auto Local = DirectX::XMFLOAT3(Nd.scale.data());
+			Wld *= DirectX::XMMatrixScalingFromVector(DirectX::XMLoadFloat3(&Local));
+		}
+		
+		JointMatrices.push_back(Wld * IBM);
+	}
+}
+
+void GltfDX::Process(const fx::gltf::Material::Texture& Tex)
+{
+	Gltf::Process(Tex);
+
+#ifdef DEBUG_STDOUT
+	//!< KHR_texture_transform Šg’£
+	const auto ItExtensions = Tex.extensionsAndExtras.find("extensions");
+	if (ItExtensions != Tex.extensionsAndExtras.end()) {
+		const auto ItTexTransform = ItExtensions->find("KHR_texture_transform");
+		if (ItTexTransform != ItExtensions->end()) {
+			const auto ItOffset = ItTexTransform->find("offset");
+			if (ItOffset != ItTexTransform->end()) {
+				if (ItOffset->is_array()) {
+					std::cout << ItOffset->at(0).get<float>() << ", " << ItOffset->at(1).get<float>() << std::endl;
+				}
+			}
+		}
+	}
+	const auto ItExtras = Tex.extensionsAndExtras.find("extras");
+	if (ItExtras != Tex.extensionsAndExtras.end()) {}
+#endif
+}
+void GltfDX::Process(const fx::gltf::Texture& Tex)
+{
+	Gltf::Process(Tex);
+
+#ifdef DEBUG_STDOUT
+	//!< MSFT_texture_dds Šg’£
+	const auto ItExtensions = Tex.extensionsAndExtras.find("extensions");
+	if (ItExtensions != Tex.extensionsAndExtras.end()) {
+		const auto ItTexDDS = ItExtensions->find("MSFT_texture_dds");
+		if (ItTexDDS != ItExtensions->end()) {
+			const auto ItSrc = ItTexDDS->find("source");
+			if (ItSrc != ItTexDDS->end()) {
+				if (ItSrc->is_number_integer()) {
+					std::cout << ItSrc->get<int32_t>() << std::endl;
+				}
+			}
+		}
+	}
+	const auto ItExtras = Tex.extensionsAndExtras.find("extras");
+	if (ItExtras != Tex.extensionsAndExtras.end()) {}
+#endif
 }
 
 void GltfDX::OnTimer(HWND hWnd, HINSTANCE hInstance)

@@ -19,7 +19,7 @@ public:
 		case fx::gltf::Accessor::ComponentType::UnsignedShort: return DXGI_FORMAT_R16_UINT;
 		case fx::gltf::Accessor::ComponentType::UnsignedInt: return DXGI_FORMAT_R32_UINT;
 		}
-		assert(false && "");
+		DEBUG_BREAK();
 		return DXGI_FORMAT_UNKNOWN;
 	}
 	static D3D12_PRIMITIVE_TOPOLOGY_TYPE ToDXPrimitiveTopologyType(const fx::gltf::Primitive::Mode MD) {
@@ -33,7 +33,7 @@ public:
 		case fx::gltf::Primitive::Mode::TriangleStrip:
 		case fx::gltf::Primitive::Mode::TriangleFan: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		}
-		assert(false && "");
+		DEBUG_BREAK();
 		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
 	}
 	static D3D12_PRIMITIVE_TOPOLOGY ToDXPrimitiveTopology(const fx::gltf::Primitive::Mode MD) {
@@ -47,7 +47,7 @@ public:
 		case fx::gltf::Primitive::Mode::TriangleStrip: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
 		//case fx::gltf::Primitive::Mode::TriangleFan:
 		}
-		assert(false && "");
+		DEBUG_BREAK();
 		return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 	}
 	static DXGI_FORMAT ToDXFormat(const fx::gltf::Accessor& Acc) {
@@ -97,7 +97,7 @@ public:
 			//case fx::gltf::Accessor::Type::Mat3:
 			//case fx::gltf::Accessor::Type::Mat4:
 		}
-		assert(false && "");
+		DEBUG_BREAK();
 		return DXGI_FORMAT_UNKNOWN;
 	}
 
@@ -109,7 +109,10 @@ protected:
 	virtual void Process(const fx::gltf::Camera& Cam) override;
 	virtual void Process(const fx::gltf::Primitive& Prim) override;
 	virtual void Process(const std::string& Identifier, const fx::gltf::Accessor& Acc) override;
-	virtual void Process(fx::gltf::Skin& Skn) override;
+	virtual void Process(const fx::gltf::Skin& Skn) override;
+
+	virtual void Process(const fx::gltf::Material::Texture& Tex) override;
+	virtual void Process(const fx::gltf::Texture& Tex) override;
 
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override;
 
@@ -132,5 +135,6 @@ protected:
 	std::vector<DirectX::XMMATRIX> CurrentMatrix = { DirectX::XMMatrixIdentity() };
 	FLOAT CurrentFrame = 0.0f;
 	std::vector<const DirectX::XMMATRIX*> InverseBindMatrices;
+	std::vector<DirectX::XMMATRIX> JointMatrices;
 };
 #pragma endregion

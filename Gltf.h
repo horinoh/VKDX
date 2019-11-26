@@ -264,7 +264,7 @@ public:
 		PopTab();
 	}
 
-	virtual void Process(fx::gltf::Skin& Skn) {
+	virtual void Process(const fx::gltf::Skin& Skn) {
 		Tabs(); std::cout << "Skin : " << Skn.name << std::endl;
 
 		PushTab();
