@@ -89,31 +89,16 @@
     <FxCompile Include="GltfDX_PNT.ps.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="GltfDX_PNT.vs.hlsl">
+    <FxCompile Include="GltfDX_PN.vs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
     <FxCompile Include="GltfDX_PN.ps.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="GltfDX_PN.vs.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
-    <FxCompile Include="GltfDX_CPNT.ps.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
-    <FxCompile Include="GltfDX_CPNT.vs.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
-    <FxCompile Include="GltfDX_TPNT.vs.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
-    <FxCompile Include="GltfDX_TPNT.ps.hlsl">
+    <FxCompile Include="GltfDX_JPNW.vs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
     <FxCompile Include="GltfDX_JPNW.ps.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
-    <FxCompile Include="GltfDX_JPNW.vs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
     <FxCompile Include="GltfDX_JPNTW.vs.hlsl">
@@ -122,10 +107,25 @@
     <FxCompile Include="GltfDX_JPNTW.ps.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+    <FxCompile Include="GltfDX_CPNT.vs.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="GltfDX_CPNT.ps.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="GltfDX_TPNT.vs.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="GltfDX_TPNT.ps.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
     <FxCompile Include="GltfDX_TPN.vs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
     <FxCompile Include="GltfDX_TPN.ps.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="GltfDX_PNT.vs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
   </ItemGroup>

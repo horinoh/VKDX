@@ -235,17 +235,19 @@ void GltfDX::LoadScene()
 	//!< PN(POS, NRM)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Box\\glTF-Binary\\Box.glb"); //!< Scale = 1.0f
 
-	//!< PT(POS, TEX0) ... KHR_texture_transform 拡張情報
+	//!< PT(POS, TEX0)
+	//!< KHR_texture_transform 拡張
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\TextureTransformTest\\glTF\\TextureTransformTest.gltf");
 
 	//!< PNT(POS, NRM, TEX0)
-	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb"); //!< Scale = 0.005f
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb"); //!< Scale = 0.005f
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\DamagedHelmet\\glTF-Binary\\DamagedHelmet.glb"); //!< Scale = 0.5f (NG)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxTextured\\glTF-Binary\\BoxTextured.glb"); //!< Scale = 1.0f
 
 	//!< TPN(TAN, POS, NRM)
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphCube\\glTF-Binary\\AnimatedMorphCube.glb"); //!< Scale = 50.0f (NG)
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphSphere\\glTF-Binary\\AnimatedMorphSphere.glb"); //!< Scale = 50.0f (NG)
+	//!< モーフターゲット
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphCube\\glTF-Binary\\AnimatedMorphCube.glb");
+	Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphSphere\\glTF-Binary\\AnimatedMorphSphere.glb");
 
 	//!< CPNT(COL0, POS, NRM. TEX0)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxVertexColors\\glTF-Binary\\BoxVertexColors.glb"); //!< Scale = 1.0f (NG)
@@ -314,19 +316,12 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 {
 	Gltf::Process(Prim);
 
-	std::vector<std::pair<std::string, UINT>> SemanticIndices;
+	//!< シェーダ
+	std::vector<std::pair<std::string, UINT>> SemanticAndIndices;
 	std::string SemnticInitial;
 	for (const auto& i : Prim.attributes) {
-		std::string Name, Index;
-		if (DecomposeSemantic(i.first, Name, Index)) {
-			SemanticIndices.push_back({ Name.c_str(), std::stoi(Index) });
-		}
-		else {
-			SemanticIndices.push_back({ i.first.c_str(), 0 });
-		}
 		SemnticInitial += i.first.substr(0, 1);
 	}
-
 	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(SemnticInitial.begin(), SemnticInitial.end());
 	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
@@ -335,13 +330,48 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 	const auto PS = ShaderBlobs.back();
 
+	//!< アトリビュート
+	for (const auto& i : Prim.attributes) {
+		std::string Name, Index;
+		if (DecomposeSemantic(i.first, Name, Index)) {
+			SemanticAndIndices.push_back({ Name.c_str(), std::stoi(Index) });
+		}
+		else {
+			SemanticAndIndices.push_back({ i.first.c_str(), 0 });
+		}
+	}
+	//!< モーフターゲット
+	auto MorphIndex = 1;
+	for (const auto& i : Prim.targets) {
+		for (const auto& j : i) {
+			std::string Name, Index;
+			if (DecomposeSemantic(j.first, Name, Index)) {
+				SemanticAndIndices.push_back({ Name.c_str(), std::stoi(Index) });
+			}
+			else {
+				SemanticAndIndices.push_back({ j.first.c_str(), MorphIndex });
+			}
+		}
+		++MorphIndex;
+	}
+
+	//!< アトリビュート
 	std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs;
 	UINT InputSlot = 0;
 	for (const auto& i : Prim.attributes) {
-		const auto& Sem = SemanticIndices[InputSlot];
+		const auto& Sem = SemanticAndIndices[InputSlot];
 		const auto& Acc = Document.accessors[i.second];
 		IEDs.push_back({ Sem.first.c_str(), Sem.second, ToDXFormat(Acc), InputSlot, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
 		++InputSlot;
+	}
+	//!< モーフターゲット
+	for (const auto& i : Prim.targets) {
+		for (const auto& j : i) {
+			const auto& Sem = SemanticAndIndices[InputSlot];
+			const auto& Acc = Document.accessors[j.second];
+			IEDs.push_back({ Sem.first.c_str(), Sem.second, ToDXFormat(Acc), InputSlot, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+			++InputSlot;
+		}
 	}
 
 	const auto RS = COM_PTR_GET(RootSignatures[0]);
@@ -409,7 +439,7 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 
 				CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
 			}
-			else if ("attributes" == Identifier) {
+			else if ("attributes" == Identifier || "targets" == Identifier) {
 				VertexBufferResources.push_back(COM_PTR<ID3D12Resource>());
 
 				CreateBuffer(COM_PTR_PUT(VertexBufferResources.back()), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
@@ -427,7 +457,12 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 		}
 	}
 }
+void GltfDX::Process(const fx::gltf::Mesh& Msh)
+{
+	Gltf::Process(Msh);
 
+	MorphWeights = Msh.weights;
+}
 void GltfDX::Process(const fx::gltf::Skin& Skn)
 {
 	Gltf::Process(Skn);

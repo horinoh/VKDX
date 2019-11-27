@@ -236,17 +236,19 @@ void GltfVK::LoadScene()
 	//!< PN(POS, NRM)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Box\\glTF-Binary\\Box.glb"); //!< Scale = 1.0f
 
-	//!< PT(POS, TEX0) ... KHR_texture_transform 拡張情報
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\TextureTransformTest\\glTF\\TextureTransformTest.gltf");
+	//!< PT(POS, TEX0)
+	//!< KHR_texture_transform 拡張
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\TextureTransformTest\\glTF\\TextureTransformTest.gltf"); 
 
 	//!< PNT(POS, NRM, TEX0)
-	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb"); //!< Scale = 0.005f
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb"); //!< Scale = 0.005f
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\DamagedHelmet\\glTF-Binary\\DamagedHelmet.glb"); //!< Scale = 0.5f
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxTextured\\glTF-Binary\\BoxTextured.glb"); //!< Scale = 1.0f
 
 	//!< TPN(TAN, POS, NRM)
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphCube\\glTF-Binary\\AnimatedMorphCube.glb"); //!< Scale = 50.0f
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphSphere\\glTF-Binary\\AnimatedMorphSphere.glb"); //!< Scale = 50.0f
+	//!< モーフターゲット
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphCube\\glTF-Binary\\AnimatedMorphCube.glb");
+	Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphSphere\\glTF-Binary\\AnimatedMorphSphere.glb");
 
 	//!< CPNT(COL0, POS, NRM. TEX0)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxVertexColors\\glTF-Binary\\BoxVertexColors.glb"); //!< Scale = 1.0f
@@ -311,17 +313,18 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 {
 	Gltf::Process(Prim);
 
+	//!< シェーダ
 	std::string SemanticInitial;
 	for (const auto& i : Prim.attributes) {
 		SemanticInitial += i.first.substr(0, 1);
 	}
-
 	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(SemanticInitial.begin(), SemanticInitial.end());
 	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
 	const auto VS = ShaderModules.back();
 	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
 	const auto FS = ShaderModules.back();
 
+	//!< アトリビュート
 	std::vector<VkVertexInputBindingDescription> VIBDs;
 	std::vector<VkVertexInputAttributeDescription> VIADs;
 	uint32_t Binding = 0;
@@ -332,6 +335,17 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 		VIADs.push_back({ Location, Binding, ToVKFormat(Acc), 0 });
 		++Binding;
 		++Location;
+	}
+
+	//!< モーフターゲット
+	for (const auto& i : Prim.targets) {
+		for (const auto& j : i) {
+			const auto& Acc = Document.accessors[j.second];
+			VIBDs.push_back({ Binding, GetTypeSize(Acc),  VK_VERTEX_INPUT_RATE_VERTEX });
+			VIADs.push_back({ Location, Binding, ToVKFormat(Acc), 0 });
+			++Binding;
+			++Location;
+		}
 	}
 
 	const auto RP = RenderPasses[0];
@@ -410,7 +424,7 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 
 				CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
 			}
-			else if ("attributes" == Identifier) {
+			else if ("attributes" == Identifier || "targets" == Identifier) {
 				VertexBuffers.push_back(VkBuffer());
 				CreateBuffer_Vertex(GraphicsQueue, CommandBuffers[0], &VertexBuffers.back(), Size, Data);
 			}
@@ -426,7 +440,12 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 		}
 	}
 }
+void GltfVK::Process(const fx::gltf::Mesh& Msh)
+{
+	Gltf::Process(Msh);
 
+	MorphWeights = Msh.weights;
+}
 void GltfVK::Process(const fx::gltf::Skin& Skn)
 {
 	Gltf::Process(Skn);

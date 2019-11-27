@@ -97,6 +97,7 @@ protected:
 	virtual void Process(const fx::gltf::Camera& Cam) override;
 	virtual void Process(const fx::gltf::Primitive& Prim) override;
 	virtual void Process(const std::string& Identifier, const fx::gltf::Accessor& Acc) override;
+	virtual void Process(const fx::gltf::Mesh& Msh) override;
 	virtual void Process(const fx::gltf::Skin& Skn) override;
 
 	virtual void Process(const fx::gltf::Material::Texture& Tex) override;
@@ -116,8 +117,12 @@ protected:
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 	std::vector<glm::mat4> CurrentMatrix = { glm::identity<glm::mat4>() };
+	
 	float CurrentFrame = 0.0f;
+	
 	std::vector<const glm::mat4*> InverseBindMatrices;
 	std::vector<glm::mat4> JointMatrices;
+
+	std::vector<float> MorphWeights;
 };
 #pragma endregion

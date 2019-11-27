@@ -109,6 +109,7 @@ protected:
 	virtual void Process(const fx::gltf::Camera& Cam) override;
 	virtual void Process(const fx::gltf::Primitive& Prim) override;
 	virtual void Process(const std::string& Identifier, const fx::gltf::Accessor& Acc) override;
+	virtual void Process(const fx::gltf::Mesh& Msh) override;
 	virtual void Process(const fx::gltf::Skin& Skn) override;
 
 	virtual void Process(const fx::gltf::Material::Texture& Tex) override;
@@ -133,8 +134,12 @@ protected:
 	virtual void PopulateCommandList(const size_t i) override;
 
 	std::vector<DirectX::XMMATRIX> CurrentMatrix = { DirectX::XMMatrixIdentity() };
+	
 	FLOAT CurrentFrame = 0.0f;
+
 	std::vector<const DirectX::XMMATRIX*> InverseBindMatrices;
 	std::vector<DirectX::XMMATRIX> JointMatrices;
+
+	std::vector<float> MorphWeights;
 };
 #pragma endregion
