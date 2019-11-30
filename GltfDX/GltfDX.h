@@ -115,6 +115,19 @@ protected:
 	virtual void Process(const fx::gltf::Material::Texture& Tex) override;
 	virtual void Process(const fx::gltf::Texture& Tex) override;
 
+	virtual std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) override {
+		const auto l = DirectX::XMFLOAT3(lhs.data());
+		const auto r = DirectX::XMFLOAT3(rhs.data());
+		const auto v = DirectX::XMVectorLerp(DirectX::XMLoadFloat3(&l), DirectX::XMLoadFloat3(&r), t);
+		return { v.m128_f32[0], v.m128_f32[1], v.m128_f32[2] };
+	}
+	virtual std::array<float, 4> SLerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) override {
+		const auto l = DirectX::XMFLOAT3(lhs.data());
+		const auto r = DirectX::XMFLOAT3(rhs.data());
+		const auto q = DirectX::XMQuaternionSlerp(DirectX::XMLoadFloat3(&l), DirectX::XMLoadFloat3(&r), t);
+		return { q.m128_f32[0], q.m128_f32[1], q.m128_f32[2], q.m128_f32[3] };
+	}
+
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override;
 
 	virtual void CreateRootSignature() override {

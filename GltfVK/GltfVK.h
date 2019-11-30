@@ -103,6 +103,15 @@ protected:
 	virtual void Process(const fx::gltf::Material::Texture& Tex) override;
 	virtual void Process(const fx::gltf::Texture& Tex) override;
 
+	virtual std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) override { 
+		const auto v = glm::mix(*reinterpret_cast<const glm::vec3*>(lhs.data()), *reinterpret_cast<const glm::vec3*>(rhs.data()), t);
+		return { v.x, v.y, v.z };
+	}
+	virtual std::array<float, 4> SLerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) override { 
+		const auto q = glm::slerp(*reinterpret_cast<const glm::quat*>(lhs.data()), *reinterpret_cast<const glm::quat*>(rhs.data()), t);
+		return { q.x, q.y, q.z, q.w };
+	}
+
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override;
 
 	virtual void CreateDescriptorSetLayout() override {

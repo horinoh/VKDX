@@ -240,14 +240,14 @@ void GltfDX::LoadScene()
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\TextureTransformTest\\glTF\\TextureTransformTest.gltf");
 
 	//!< PNT(POS, NRM, TEX0)
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb"); //!< Scale = 0.005f
+	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb"); //!< Scale = 0.005f
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\DamagedHelmet\\glTF-Binary\\DamagedHelmet.glb"); //!< Scale = 0.5f (NG)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxTextured\\glTF-Binary\\BoxTextured.glb"); //!< Scale = 1.0f
 
 	//!< TPN(TAN, POS, NRM)
 	//!< モーフターゲット
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphCube\\glTF-Binary\\AnimatedMorphCube.glb");
-	Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphSphere\\glTF-Binary\\AnimatedMorphSphere.glb");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphSphere\\glTF-Binary\\AnimatedMorphSphere.glb");
 
 	//!< CPNT(COL0, POS, NRM. TEX0)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxVertexColors\\glTF-Binary\\BoxVertexColors.glb"); //!< Scale = 1.0f (NG)
@@ -540,6 +540,8 @@ void GltfDX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 	Super::OnTimer(hWnd, hInstance);
 
 	CurrentFrame += 0.1f; //static_cast<float>(Elapse) / 1000.0f;
+
+	UpdateAnimation(CurrentFrame);
 }
 
 void GltfDX::PopulateCommandList(const size_t i)

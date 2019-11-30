@@ -241,14 +241,14 @@ void GltfVK::LoadScene()
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\TextureTransformTest\\glTF\\TextureTransformTest.gltf"); 
 
 	//!< PNT(POS, NRM, TEX0)
-	//Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb"); //!< Scale = 0.005f
+	Load("..\\..\\glTF-Sample-Models\\2.0\\Duck\\glTF-Binary\\Duck.glb"); //!< Scale = 0.005f
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\DamagedHelmet\\glTF-Binary\\DamagedHelmet.glb"); //!< Scale = 0.5f
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxTextured\\glTF-Binary\\BoxTextured.glb"); //!< Scale = 1.0f
 
 	//!< TPN(TAN, POS, NRM)
 	//!< モーフターゲット
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphCube\\glTF-Binary\\AnimatedMorphCube.glb");
-	Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphSphere\\glTF-Binary\\AnimatedMorphSphere.glb");
+	//Load("..\\..\\glTF-Sample-Models\\2.0\\AnimatedMorphSphere\\glTF-Binary\\AnimatedMorphSphere.glb");
 
 	//!< CPNT(COL0, POS, NRM. TEX0)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\BoxVertexColors\\glTF-Binary\\BoxVertexColors.glb"); //!< Scale = 1.0f
@@ -524,6 +524,9 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 
 	CurrentFrame += 0.1f; //static_cast<float>(Elapse) / 1000.0f;
 
+#if 1
+	UpdateAnimation(CurrentFrame);
+#else
 	for (const auto& i : Document.animations) {
 		for (const auto& j : i.channels) {
 			if (-1 != j.sampler) {
@@ -533,8 +536,12 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 					if (InAcc.type == fx::gltf::Accessor::Type::Scalar && InAcc.componentType == fx::gltf::Accessor::ComponentType::Float) {
 						const auto Keyframes = reinterpret_cast<const float*>(GetData(InAcc));
 						const auto MaxFrame = Keyframes[InAcc.count - 1];
-						CurrentFrame = std::min(CurrentFrame, MaxFrame);
 
+						//!< アニメーションのクランプ or ループ
+						//CurrentFrame = std::min(CurrentFrame, MaxFrame); //!< Clamp
+						while (CurrentFrame > MaxFrame) { CurrentFrame -= MaxFrame; } //!< Loop
+
+						//!< 現在のフレームが含まれるキーフレーム範囲と、補完値tを求める
 						uint32_t PrevIndex = 0, NextIndex = 0;
 						for (uint32_t k = 0; k < InAcc.count; ++k) {
 							if (Keyframes[k] >= CurrentFrame) {
@@ -545,12 +552,13 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 						}
 						const auto PrevFrame = Keyframes[PrevIndex];
 						const auto NextFrame = Keyframes[NextIndex];
+						std::cout << "Frame = " << CurrentFrame << " [" << PrevFrame << ", " << NextFrame << "] / " << MaxFrame << std::endl;
 						const auto Delta = NextFrame - PrevFrame;
-						std::cout << "Frame = " << PrevFrame << " < " << CurrentFrame << " < " << NextFrame << ", Max = " << MaxFrame << std::endl;
 
-						const auto t = (CurrentFrame - PrevFrame) / Delta;
+						const auto t = std::abs(Delta) <= std::numeric_limits<float>::epsilon() ? 0.0f : (CurrentFrame - PrevFrame) / Delta;
 						std::cout << "t = " << t << std::endl;
 
+						//!< 補完、解釈(path)方法による処理の分岐
 #ifdef DEBUG_STDOUT
 						const auto& OutAcc = Document.accessors[Smp.output];
 #endif
@@ -563,10 +571,23 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 								const auto Data = reinterpret_cast<const glm::vec3*>(GetData(OutAcc));
 								std::cout << glm::mix(Data[PrevIndex], Data[NextIndex], t);
 #endif
-							} else if("rotation" == j.target.path) {
+							}
+							else if("rotation" == j.target.path) {
 #ifdef DEBUG_STDOUT
 								const auto Data = reinterpret_cast<const glm::quat*>(GetData(OutAcc));
 								std::cout << glm::slerp(Data[PrevIndex], Data[NextIndex], t);
+#endif
+							} 
+							else if ("weights" == j.target.path) {
+#ifdef DEBUG_STDOUT
+								const auto Data = reinterpret_cast<const float*>(GetData(OutAcc));
+								const auto Stride = MorphWeights.size();
+								const auto PrevSet = PrevIndex * Stride;
+								const auto NextSet = NextIndex * Stride;
+								for (uint32_t k = 0; k < Stride; ++k) {
+									std::cout << glm::mix(Data[PrevSet + k], Data[NextSet + k], t) << ", ";
+								}
+								std::cout << std::endl;
 #endif
 							}
 							break;
@@ -583,20 +604,27 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 								std::cout << Data[PrevIndex];
 #endif
 							}
+							else if ("weights" == j.target.path) {
+#ifdef DEBUG_STDOUT
+								const auto Data = reinterpret_cast<const float*>(GetData(OutAcc));
+								std::cout << Data[PrevIndex];
+#endif
+							}
 							break;
 						case fx::gltf::Animation::Sampler::Type::CubicSpline:
-							//!< https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#appendix-c-spline-interpolation
-							//!< CubicSpline の場合、(InTangent, Value, OutTangent)の3つでセットになっているので3の倍数になる
 							if ("translation" == j.target.path || "scale" == j.target.path) {
 #ifdef DEBUG_STDOUT
 								const auto Data = reinterpret_cast<const glm::vec3*>(GetData(OutAcc));
 
-								const auto PrevSet = PrevIndex * 3; //!< 0:PrevInTangent, 1:PrevValue, 2:PrevOutTangent
-								const auto NextSet = NextIndex * 3; //!< 0:NextInTangent, 1:NextValue, 3:NextOutTangent
+								//!< https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#appendix-c-spline-interpolation
+								//!< CubicSpline の場合、(InTangent, Value, OutTangent)の3つでセットになっているのでストライドは3になる
+								const auto Stride = 3; //!< 0:InTangent, 1:Value, 2:OutTangent
+								const auto PrevSet = PrevIndex * Stride; 
+								const auto NextSet = NextIndex * Stride;
 								
 								const auto& PrevValue = Data[PrevSet + 1];
-								const auto& PrevOutTan = Data[PrevSet + 2];
-								const auto& NextInTan = Data[NextSet + 0];
+								const auto& PrevOutTan = Data[PrevSet + 2] * Delta;
+								const auto& NextInTan = Data[NextSet + 0] * Delta;
 								const auto& NextValue = Data[NextSet + 1];
 
 								const auto t2 = t * t;
@@ -608,6 +636,11 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 							else if ("rotation" == j.target.path) {
 #ifdef DEBUG_STDOUT
 								//const auto Data = reinterpret_cast<const glm::quat*>(GetData(OutAcc));
+#endif
+							}
+							else if ("weights" == j.target.path) {
+#ifdef DEBUG_STDOUT
+								//const auto Data = reinterpret_cast<const float*>(GetData(OutAcc));
 #endif
 							}
 							break;
@@ -624,6 +657,7 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 			}
 		}
 	}
+#endif
 }
 
 void GltfVK::PopulateCommandBuffer(const size_t i)

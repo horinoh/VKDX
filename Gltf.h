@@ -1,7 +1,7 @@
 #pragma once
 
 #include <fx/gltf.h>
-
+#include <cmath>
 class Gltf 
 {
 public:
@@ -614,6 +614,137 @@ public:
 		}
 
 		PopTab();
+	}
+
+	virtual std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) = 0;
+	virtual std::array<float, 4> SLerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) = 0;
+
+	virtual void UpdateAnimTranslation(const std::array<float, 3>& /*Value*/) {}
+	virtual void UpdateAnimScale(const std::array<float, 3>& /*Value*/) {}
+	virtual void UpdateAnimRotation(const std::array<float, 4>& /*Value*/) {}
+	virtual void UpdateAnimWeights(const float* /*Data*/, const uint32_t /*PrevIndex*/, const uint32_t /*NextIndex*/, const float /*t*/) {}
+	virtual void UpdateAnimation(float CurrentFrame, bool bIsLoop = true) {
+		for (const auto& i : Document.animations) {
+			for (const auto& j : i.channels) {
+				if (-1 != j.sampler) {
+					const auto& Smp = i.samplers[j.sampler];
+					if (-1 != Smp.input && -1 != Smp.output) {
+						const auto& InAcc = Document.accessors[Smp.input];
+						if (InAcc.type == fx::gltf::Accessor::Type::Scalar && InAcc.componentType == fx::gltf::Accessor::ComponentType::Float) {
+							const auto Keyframes = reinterpret_cast<const float*>(GetData(InAcc));
+							const auto MaxFrame = Keyframes[InAcc.count - 1];
+
+							//!< アニメーションのクランプ or ループ
+							if (bIsLoop) {
+								while (CurrentFrame > MaxFrame) { CurrentFrame -= MaxFrame; } //!< Loop
+							}
+							else {
+								CurrentFrame = std::min(CurrentFrame, MaxFrame); //!< Clamp
+							}
+
+							//!< 現在のフレームが含まれるキーフレーム範囲と、補完値tを求める
+							uint32_t PrevIndex = 0, NextIndex = 0;
+							for (uint32_t k = 0; k < InAcc.count; ++k) {
+								if (Keyframes[k] >= CurrentFrame) {
+									NextIndex = k;
+									PrevIndex = NextIndex - 1;
+									break;
+								}
+							}
+							const auto PrevFrame = Keyframes[PrevIndex];
+							const auto NextFrame = Keyframes[NextIndex];
+							std::cout << "Frame = " << CurrentFrame << " [" << PrevFrame << ", " << NextFrame << "] / " << MaxFrame << std::endl;
+							const auto Delta = NextFrame - PrevFrame;
+
+							const auto t = std::abs(Delta) <= std::numeric_limits<float>::epsilon() ? 0.0f : (CurrentFrame - PrevFrame) / Delta;
+							const auto invt = 1.0f - t;
+							std::cout << "t = " << t << std::endl;
+
+							//!< 補完、解釈(path)方法による処理の分岐
+							const auto& OutAcc = Document.accessors[Smp.output];
+							std::cout << "\t" << j.target.path << " = ";
+							switch (Smp.interpolation)
+							{
+							case fx::gltf::Animation::Sampler::Type::Linear:
+								if ("translation" == j.target.path) {
+									const auto Data = reinterpret_cast<const std::array<float, 3>*>(GetData(OutAcc));
+									//!< std::lerp() は C++20以降
+									UpdateAnimTranslation(Lerp(Data[PrevIndex], Data[NextIndex], t));
+								}
+								else if ("scale" == j.target.path) {
+									const auto Data = reinterpret_cast<const std::array<float, 3>*>(GetData(OutAcc));
+									UpdateAnimScale(Lerp(Data[PrevIndex], Data[NextIndex], t));
+								}
+								else if ("rotation" == j.target.path) {
+									const auto Data = reinterpret_cast<const std::array<float, 4>*>(GetData(OutAcc));
+									UpdateAnimRotation(SLerp(Data[PrevIndex], Data[NextIndex], t));
+								}
+								else if ("weights" == j.target.path) {
+									const auto Data = reinterpret_cast<const float*>(GetData(OutAcc));
+									UpdateAnimWeights(Data, PrevIndex, NextIndex, t);
+								}
+								break;
+							case fx::gltf::Animation::Sampler::Type::Step:
+								if ("translation" == j.target.path || "scale" == j.target.path) {
+									const auto Data = reinterpret_cast<const std::array<float, 3>*>(GetData(OutAcc));
+									UpdateAnimTranslation(Data[PrevIndex]);
+								}
+								else if ("translation" == j.target.path || "scale" == j.target.path) {
+									const auto Data = reinterpret_cast<const std::array<float, 3>*>(GetData(OutAcc));
+									UpdateAnimScale(Data[PrevIndex]);
+								}
+								else if ("rotation" == j.target.path) {
+									const auto Data = reinterpret_cast<const std::array<float, 4>*>(GetData(OutAcc));
+									UpdateAnimRotation(Data[PrevIndex]);
+								}
+								else if ("weights" == j.target.path) {
+									const auto Data = reinterpret_cast<const float*>(GetData(OutAcc));
+									UpdateAnimWeights(Data, PrevIndex, (std::numeric_limits<uint32_t>::max)(), 0.0f);
+								}
+								break;
+							case fx::gltf::Animation::Sampler::Type::CubicSpline:
+								if ("translation" == j.target.path) {
+									//const auto Data = reinterpret_cast<const std::array<float, 3>*>(GetData(OutAcc));
+
+									////!< https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#appendix-c-spline-interpolation
+									////!< CubicSpline の場合、(InTangent, Value, OutTangent)の3つでセットになっているのでストライドは3になる
+									//const auto Stride = 3; //!< 0:InTangent, 1:Value, 2:OutTangent
+									//const auto PrevSet = PrevIndex * Stride;
+									//const auto NextSet = NextIndex * Stride;
+
+									//const auto& PrevValue = Data[PrevSet + 1];
+									//const auto& PrevOutTan = Data[PrevSet + 2] * Delta;
+									//const auto& NextInTan = Data[NextSet + 0] * Delta;
+									//const auto& NextValue = Data[NextSet + 1];
+
+									//const auto t2 = t * t;
+									//const auto t3 = t2 * t;
+
+									//std::cout << (2.0f * t3 - 3.0f * t2 + 1.0f) * PrevValue + (t3 - 2.0f * t2 + t) * PrevOutTan + (-2.0f * t3 + 3.0f * t2) * NextValue + (t3 - t2) * NextInTan << std::endl;
+								}
+								else if ("scale" == j.target.path) {
+									//const auto Data = reinterpret_cast<const std::array<float, 3>*>(GetData(OutAcc));
+								}
+								else if ("rotation" == j.target.path) {
+									//const auto Data = reinterpret_cast<const std::array<float, 4>*>(GetData(OutAcc));
+								}
+								else if ("weights" == j.target.path) {
+									//const auto Data = reinterpret_cast<const float*>(GetData(OutAcc));
+								}
+								break;
+							}
+
+							if (-1 != j.target.node) {
+								auto& Nd = Document.nodes[j.target.node];
+								Nd.translation;
+								Nd.rotation;
+								Nd.scale;
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 #ifdef _DEBUG
