@@ -139,6 +139,15 @@ public:
 	}
 	static std::wstring GetComponentMappingWstring(const VkComponentMapping& ComponentMapping) { return ToWString(GetComponentMappingString(ComponentMapping)); }
 
+	static std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) {
+		const auto v = glm::mix(*reinterpret_cast<const glm::vec3*>(lhs.data()), *reinterpret_cast<const glm::vec3*>(rhs.data()), t);
+		return { v.x, v.y, v.z };
+	}
+	static std::array<float, 4> SLerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) {
+		const auto q = glm::slerp(*reinterpret_cast<const glm::quat*>(lhs.data()), *reinterpret_cast<const glm::quat*>(rhs.data()), t);
+		return { q.x, q.y, q.z, q.w };
+	}
+
 protected:
 	static FORCEINLINE void* AlignedMalloc(void* /*pUserData*/, size_t size, size_t alignment, VkSystemAllocationScope /*allocationScope*/) { return _aligned_malloc(size, alignment); }
 	static FORCEINLINE void* AlignedRealloc(void* /*pUserData*/, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope /*allocationScope*/) { return _aligned_realloc(pOriginal, size, alignment); }

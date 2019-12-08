@@ -91,9 +91,13 @@ public:
 
 protected:
 	virtual void LoadScene() override;
+	virtual void Process(const fx::gltf::Document& Doc) override {
+		NodeMatrices.assign(Doc.nodes.size(), glm::identity<glm::mat4>());
+		Gltf::Process(Doc);
+	}
 	virtual void PushNode() override { Gltf::PushNode(); CurrentMatrix.push_back(CurrentMatrix.back()); }
 	virtual void PopNode() override { Gltf::PopNode(); CurrentMatrix.pop_back(); }
-	virtual void Process(const fx::gltf::Node& Nd) override;
+	virtual void Process(const fx::gltf::Node& Nd, const uint32_t i) override;
 	virtual void Process(const fx::gltf::Camera& Cam) override;
 	virtual void Process(const fx::gltf::Primitive& Prim) override;
 	virtual void Process(const std::string& Identifier, const fx::gltf::Accessor& Acc) override;
@@ -103,14 +107,8 @@ protected:
 	virtual void Process(const fx::gltf::Material::Texture& Tex) override;
 	virtual void Process(const fx::gltf::Texture& Tex) override;
 
-	virtual std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) override { 
-		const auto v = glm::mix(*reinterpret_cast<const glm::vec3*>(lhs.data()), *reinterpret_cast<const glm::vec3*>(rhs.data()), t);
-		return { v.x, v.y, v.z };
-	}
-	virtual std::array<float, 4> SLerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) override { 
-		const auto q = glm::slerp(*reinterpret_cast<const glm::quat*>(lhs.data()), *reinterpret_cast<const glm::quat*>(rhs.data()), t);
-		return { q.x, q.y, q.z, q.w };
-	}
+	virtual std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) override { return VK::Lerp(lhs, rhs, t); }
+	virtual std::array<float, 4> SLerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) override { return VK::SLerp(lhs, rhs, t); }
 
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override;
 
@@ -126,7 +124,8 @@ protected:
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 	std::vector<glm::mat4> CurrentMatrix = { glm::identity<glm::mat4>() };
-	
+	std::vector<glm::mat4> NodeMatrices;
+
 	float CurrentFrame = 0.0f;
 	
 	std::vector<const glm::mat4*> InverseBindMatrices;

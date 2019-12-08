@@ -117,6 +117,19 @@ public:
 	static std::wstring GetHRESULTWString(const HRESULT Result) { return std::wstring(_com_error(Result).ErrorMessage()); }
 	static std::string GetFormatString(const DXGI_FORMAT Format);
 
+	static std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) {
+		const auto l = DirectX::XMFLOAT3(lhs.data());
+		const auto r = DirectX::XMFLOAT3(rhs.data());
+		const auto v = DirectX::XMVectorLerp(DirectX::XMLoadFloat3(&l), DirectX::XMLoadFloat3(&r), t);
+		return { v.m128_f32[0], v.m128_f32[1], v.m128_f32[2] };
+	}
+	static std::array<float, 4> SLerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) {
+		const auto l = DirectX::XMFLOAT3(lhs.data());
+		const auto r = DirectX::XMFLOAT3(rhs.data());
+		const auto q = DirectX::XMQuaternionSlerp(DirectX::XMLoadFloat3(&l), DirectX::XMLoadFloat3(&r), t);
+		return { q.m128_f32[0], q.m128_f32[1], q.m128_f32[2], q.m128_f32[3] };
+	}
+
 protected:
 	virtual void CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source);
 	virtual void CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes);

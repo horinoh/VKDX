@@ -88,24 +88,29 @@ public:
 			std::cout << std::endl;
 		}
 
-		std::cout << "Buffers" << std::endl;
-		for (const auto& i : Document.buffers) {
-			if (!i.name.empty()) {
-				std::cout << "\t" << "name = " << i.name << std::endl;
-			}
-			if (!i.uri.empty()) {
-				std::cout << "\t" << "uri = " << i.uri << std::endl;
-			}
-			std::cout << "\t" << "IsEmbeddedResource = " << i.IsEmbeddedResource() << std::endl;
-			
-			std::cout << "\t" << "byteLength = " << i.byteLength << std::endl;
-			//i.data;
-		}
+		//std::cout << "Buffers" << std::endl;
+		//for (const auto& i : Document.buffers) {
+		//	if (!i.name.empty()) {
+		//		std::cout << "\t" << "name = " << i.name << std::endl;
+		//	}
+		//	if (!i.uri.empty()) {
+		//		std::cout << "\t" << "uri = " << i.uri << std::endl;
+		//	}
+		//	std::cout << "\t" << "IsEmbeddedResource = " << i.IsEmbeddedResource() << std::endl;
+		//	
+		//	std::cout << "\t" << "byteLength = " << i.byteLength << std::endl;
+		//	//i.data;
+		//}
 
 		Process(Document);
 	}
 
 	virtual void Process(const fx::gltf::Document& Doc) {
+		std::cout << "copyright = " << Doc.asset.copyright << std::endl;
+		std::cout << "version = " << Doc.asset.version << std::endl;
+		std::cout << "minVersion = " << Doc.asset.minVersion << std::endl;
+		std::cout << "generator = " << Doc.asset.generator << std::endl;
+
 		for (auto i : Doc.scenes) {
 			Process(i);
 		}
@@ -113,6 +118,8 @@ public:
 		for (const auto& i : Doc.animations) {
 			Process(i);
 		}
+
+		//for (const auto& i : Doc.nodes) {}
 
 		std::cout << std::endl;
 		std::cout << std::endl;
@@ -190,6 +197,7 @@ public:
 
 	virtual void PushNode() { PushTab(); }
 	virtual void PopNode() { PopTab(); }
+	virtual void Process(const fx::gltf::Node& Nd, const uint32_t /*i*/) { Process(Nd); }
 	virtual void Process(const fx::gltf::Node& Nd) {
 		Tabs(); std::cout << "Node : " << Nd.name << std::endl;
 
@@ -240,7 +248,7 @@ public:
 		if (!Nd.children.empty()) {
 			PushNode();
 			for (auto i : Nd.children) {
-				Process(Document.nodes[i]);
+				Process(Document.nodes[i], i);
 			}
 			PopNode();
 		}
@@ -619,9 +627,9 @@ public:
 	virtual std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) = 0;
 	virtual std::array<float, 4> SLerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) = 0;
 
-	virtual void UpdateAnimTranslation(const std::array<float, 3>& /*Value*/) {}
-	virtual void UpdateAnimScale(const std::array<float, 3>& /*Value*/) {}
-	virtual void UpdateAnimRotation(const std::array<float, 4>& /*Value*/) {}
+	virtual void UpdateAnimTranslation(const std::array<float, 3>& /*Value*/, const uint32_t /*NodeIndex*/) {}
+	virtual void UpdateAnimScale(const std::array<float, 3>& /*Value*/, const uint32_t /*NodeIndex*/) {}
+	virtual void UpdateAnimRotation(const std::array<float, 4>& /*Value*/, const uint32_t /*NodeIndex*/) {}
 	virtual void UpdateAnimWeights(const float* /*Data*/, const uint32_t /*PrevIndex*/, const uint32_t /*NextIndex*/, const float /*t*/) {}
 	virtual void UpdateAnimation(float CurrentFrame, bool bIsLoop = true) {
 		for (const auto& i : Document.animations) {
@@ -669,15 +677,15 @@ public:
 								if ("translation" == j.target.path) {
 									const auto Data = reinterpret_cast<const std::array<float, 3>*>(GetData(OutAcc));
 									//!< std::lerp() ‚Í C++20ˆÈ~
-									UpdateAnimTranslation(Lerp(Data[PrevIndex], Data[NextIndex], t));
+									UpdateAnimTranslation(Lerp(Data[PrevIndex], Data[NextIndex], t), j.target.node);
 								}
 								else if ("scale" == j.target.path) {
 									const auto Data = reinterpret_cast<const std::array<float, 3>*>(GetData(OutAcc));
-									UpdateAnimScale(Lerp(Data[PrevIndex], Data[NextIndex], t));
+									UpdateAnimScale(Lerp(Data[PrevIndex], Data[NextIndex], t), j.target.node);
 								}
 								else if ("rotation" == j.target.path) {
 									const auto Data = reinterpret_cast<const std::array<float, 4>*>(GetData(OutAcc));
-									UpdateAnimRotation(SLerp(Data[PrevIndex], Data[NextIndex], t));
+									UpdateAnimRotation(SLerp(Data[PrevIndex], Data[NextIndex], t), j.target.node);
 								}
 								else if ("weights" == j.target.path) {
 									const auto Data = reinterpret_cast<const float*>(GetData(OutAcc));
@@ -687,15 +695,15 @@ public:
 							case fx::gltf::Animation::Sampler::Type::Step:
 								if ("translation" == j.target.path || "scale" == j.target.path) {
 									const auto Data = reinterpret_cast<const std::array<float, 3>*>(GetData(OutAcc));
-									UpdateAnimTranslation(Data[PrevIndex]);
+									UpdateAnimTranslation(Data[PrevIndex], j.target.node);
 								}
 								else if ("translation" == j.target.path || "scale" == j.target.path) {
 									const auto Data = reinterpret_cast<const std::array<float, 3>*>(GetData(OutAcc));
-									UpdateAnimScale(Data[PrevIndex]);
+									UpdateAnimScale(Data[PrevIndex], j.target.node);
 								}
 								else if ("rotation" == j.target.path) {
 									const auto Data = reinterpret_cast<const std::array<float, 4>*>(GetData(OutAcc));
-									UpdateAnimRotation(Data[PrevIndex]);
+									UpdateAnimRotation(Data[PrevIndex], j.target.node);
 								}
 								else if ("weights" == j.target.path) {
 									const auto Data = reinterpret_cast<const float*>(GetData(OutAcc));

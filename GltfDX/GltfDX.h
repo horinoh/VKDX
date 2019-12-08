@@ -103,9 +103,13 @@ public:
 
 protected:
 	virtual void LoadScene() override;
+	virtual void Process(const fx::gltf::Document& Doc) override {
+		NodeMatrices.assign(Doc.nodes.size(), DirectX::XMMatrixIdentity());
+		Gltf::Process(Doc);
+	}
 	virtual void PushNode() override { Gltf::PushNode(); CurrentMatrix.push_back(CurrentMatrix.back()); }
 	virtual void PopNode() override { Gltf::PopNode(); CurrentMatrix.pop_back(); }
-	virtual void Process(const fx::gltf::Node& Nd) override;
+	virtual void Process(const fx::gltf::Node& Nd, const uint32_t i) override;
 	virtual void Process(const fx::gltf::Camera& Cam) override;
 	virtual void Process(const fx::gltf::Primitive& Prim) override;
 	virtual void Process(const std::string& Identifier, const fx::gltf::Accessor& Acc) override;
@@ -115,18 +119,8 @@ protected:
 	virtual void Process(const fx::gltf::Material::Texture& Tex) override;
 	virtual void Process(const fx::gltf::Texture& Tex) override;
 
-	virtual std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) override {
-		const auto l = DirectX::XMFLOAT3(lhs.data());
-		const auto r = DirectX::XMFLOAT3(rhs.data());
-		const auto v = DirectX::XMVectorLerp(DirectX::XMLoadFloat3(&l), DirectX::XMLoadFloat3(&r), t);
-		return { v.m128_f32[0], v.m128_f32[1], v.m128_f32[2] };
-	}
-	virtual std::array<float, 4> SLerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) override {
-		const auto l = DirectX::XMFLOAT3(lhs.data());
-		const auto r = DirectX::XMFLOAT3(rhs.data());
-		const auto q = DirectX::XMQuaternionSlerp(DirectX::XMLoadFloat3(&l), DirectX::XMLoadFloat3(&r), t);
-		return { q.m128_f32[0], q.m128_f32[1], q.m128_f32[2], q.m128_f32[3] };
-	}
+	virtual std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) override { return DX::Lerp(lhs, rhs, t); }
+	virtual std::array<float, 4> SLerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) override { return DX::SLerp(lhs, rhs, t); }
 
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override;
 
@@ -147,7 +141,8 @@ protected:
 	virtual void PopulateCommandList(const size_t i) override;
 
 	std::vector<DirectX::XMMATRIX> CurrentMatrix = { DirectX::XMMatrixIdentity() };
-	
+	std::vector<DirectX::XMMATRIX> NodeMatrices;
+
 	FLOAT CurrentFrame = 0.0f;
 
 	std::vector<const DirectX::XMMATRIX*> InverseBindMatrices;

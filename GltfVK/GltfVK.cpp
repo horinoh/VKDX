@@ -265,7 +265,7 @@ void GltfVK::LoadScene()
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb"); //!< Scale = 0.5f
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb"); //!< Scale = 0.02f
 }
-void GltfVK::Process(const fx::gltf::Node& Nd)
+void GltfVK::Process(const fx::gltf::Node& Nd, const uint32_t i)
 {
 	auto& Mtx = CurrentMatrix.back();
 
@@ -284,7 +284,9 @@ void GltfVK::Process(const fx::gltf::Node& Nd)
 		}
 	}
 
-	Gltf::Process(Nd);
+	NodeMatrices[i] = Mtx;
+
+	Gltf::Process(Nd, i);
 }
 void GltfVK::Process(const fx::gltf::Camera& Cam)
 {
