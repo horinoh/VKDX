@@ -224,14 +224,10 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 	DescriptorSetLayouts.clear();
 
-	if (VK_NULL_HANDLE != UniformDeviceMemory) {
-		vkFreeMemory(Device, UniformDeviceMemory, GetAllocationCallbacks());
-		UniformDeviceMemory = VK_NULL_HANDLE;
+	for (auto i : UniformBuffers) {
+		vkDestroyBuffer(Device, i, GetAllocationCallbacks());
 	}
-	if (VK_NULL_HANDLE != UniformBuffer) {
-		vkDestroyBuffer(Device, UniformBuffer, GetAllocationCallbacks());
-		UniformBuffer = VK_NULL_HANDLE;
-	}
+	UniformBuffers.clear();
 
 	for (auto i : IndirectBuffers) {
 		vkDestroyBuffer(Device, i, GetAllocationCallbacks());

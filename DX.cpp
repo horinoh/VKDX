@@ -163,11 +163,6 @@ void DX::CreateUploadResource(ID3D12Resource** Resource, const size_t Size)
 		&ResourceDesc,
 		D3D12_RESOURCE_STATE_GENERIC_READ, //!< GENERIC_READ にすること Must be GENERIC_READ
 		nullptr,
-//#ifdef USE_WINRT
-//		__uuidof(Resource), Resource.put_void()
-//#elif defined(USE_WRL)
-//		IID_PPV_ARGS(Resource.GetAddressOf())
-//#endif
 		IID_PPV_ARGS(Resource)
 	));
 }
@@ -266,11 +261,6 @@ void DX::CreateDefaultResource(ID3D12Resource** Resource, const size_t Size)
 		&ResourceDesc,
 		D3D12_RESOURCE_STATE_COMMON, //!< COMMON にすること Must be COMMON
 		nullptr,
-//#ifdef USE_WINRT
-//		__uuidof(Resource), Resource.put_void()
-//#elif defined(USE_WRL)
-//		IID_PPV_ARGS(Resource.GetAddressOf())
-//#endif
 		IID_PPV_ARGS(Resource)
 	));
 }
@@ -591,18 +581,18 @@ void DX::CheckMultiSample(const DXGI_FORMAT Format)
 	}
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE DX::GetCPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index) const
-{
-	auto DescriptorHandle(DescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-	DescriptorHandle.ptr += static_cast<SIZE_T>(Index) * Device->GetDescriptorHandleIncrementSize(Type);
-	return DescriptorHandle;
-}
-D3D12_GPU_DESCRIPTOR_HANDLE DX::GetGPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index) const
-{
-	auto DescriptorHandle(DescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-	DescriptorHandle.ptr += static_cast<SIZE_T>(Index) * Device->GetDescriptorHandleIncrementSize(Type);
-	return DescriptorHandle;
-}
+//D3D12_CPU_DESCRIPTOR_HANDLE DX::GetCPUDescriptorHandle(ID3D12DescriptorHeap* DH, const UINT Index) const
+//{
+//	auto CDH(DH->GetCPUDescriptorHandleForHeapStart());
+//	CDH.ptr += static_cast<SIZE_T>(Index) * Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+//	return CDH;
+//}
+//D3D12_GPU_DESCRIPTOR_HANDLE DX::GetGPUDescriptorHandle(ID3D12DescriptorHeap* DH, const UINT Index) const
+//{
+//	auto GDH(DH->GetGPUDescriptorHandleForHeapStart());
+//	GDH.ptr += static_cast<SIZE_T>(Index) * Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+//	return GDH;
+//}
 /**
 @brief マルチスレッドで「同じ」キューへサブミットできる
 @note Vulkan ではマルチスレッドで「異なる」キューへのみサブミットできるので注意
@@ -811,7 +801,7 @@ void DX::CreateSwapChainResource()
 		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
 		//!< (リソースがタイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能)
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-		const auto CDH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
+		const auto CDH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), i);
 		Device->CreateRenderTargetView(SCR, nullptr, CDH);
 	}
 
@@ -825,7 +815,7 @@ void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, cons
 		VERIFY_SUCCEEDED(CL->Reset(CommandAllocator, nullptr));
 		{
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-			const auto CDH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, i);
+			const auto CDH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), i);
 			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET); {
 				if (nullptr != Color) {
 					CL->ClearRenderTargetView(CDH, *Color, 0, nullptr);
@@ -902,7 +892,7 @@ void DX::CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UI
 			0
 		};
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RenderTargetDescriptorHeap)));
-		Device->CreateRenderTargetView(COM_PTR_GET(RenderTargetResource), nullptr, GetCPUDescriptorHandle(COM_PTR_GET(RenderTargetDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 0));
+		Device->CreateRenderTargetView(COM_PTR_GET(RenderTargetResource), nullptr, GetCPUDescriptorHandle(COM_PTR_GET(RenderTargetDescriptorHeap), 0));
 	}
 
 	//!< シェーダリソースビュー
@@ -924,7 +914,7 @@ void DX::CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UI
 		SRVD.Texture2D.MipLevels = 1;
 		SRVD.Texture2D.PlaneSlice = 0;
 		SRVD.Texture2D.ResourceMinLODClamp = 0.0f;
-		Device->CreateShaderResourceView(COM_PTR_GET(RenderTargetResource), &SRVD, GetCPUDescriptorHandle(COM_PTR_GET(ShaderResourceDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+		Device->CreateShaderResourceView(COM_PTR_GET(RenderTargetResource), &SRVD, GetCPUDescriptorHandle(COM_PTR_GET(ShaderResourceDescriptorHeap), 0));
 	}
 
 	LOG_OK();
@@ -974,8 +964,7 @@ void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Wi
 	};
 	COM_PTR_RESET(DepthStencilResource);
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COMMON/*COMMON にすること*/, &ClearValue, COM_PTR_UUIDOF_PUTVOID(DepthStencilResource)));
-	const auto CDH = GetCPUDescriptorHandle(COM_PTR_GET(DepthStencilDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 0);
-	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
+	const auto CDH = GetCPUDescriptorHandle(COM_PTR_GET(DepthStencilDescriptorHeap), 0);
 	//!< (リソースがタイプドフォーマットなら D3D12_DEPTH_STENCIL_VIEW_DESC* へ nullptr 指定可能)
 	Device->CreateDepthStencilView(COM_PTR_GET(DepthStencilResource), nullptr, CDH); 
 
@@ -1082,7 +1071,7 @@ void DX::CreateUnorderedAccessTexture()
 		SRVDesc.Texture2D = {
 			0, 1, 0, 0.0f
 		};
-		const auto CDH = GetCPUDescriptorHandle(COM_PTR_GET(UnorderedAccessTextureDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Index++);
+		const auto CDH = GetCPUDescriptorHandle(COM_PTR_GET(UnorderedAccessTextureDescriptorHeap), Index++);
 		Device->CreateShaderResourceView(COM_PTR_GET(UnorderedAccessTextureResource), &SRVDesc, CDH); 
 	}
 
@@ -1095,7 +1084,7 @@ void DX::CreateUnorderedAccessTexture()
 			0, 0
 		};
 		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
-		const auto CDH = GetCPUDescriptorHandle(COM_PTR_GET(UnorderedAccessTextureDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, Index++);
+		const auto CDH = GetCPUDescriptorHandle(COM_PTR_GET(UnorderedAccessTextureDescriptorHeap), Index++);
 		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextureResource), nullptr, &UAVDesc, CDH);
 	}
 
@@ -1350,7 +1339,7 @@ void DX::PopulateCommandList(const size_t i)
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
+	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), static_cast<UINT>(i));
 	//const auto PS = COM_PTR_GET(PipelineStates[0]);
 
 	//!< GPU が参照している間は、コマンドアロケータの Reset() はできない

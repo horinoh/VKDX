@@ -21,13 +21,13 @@ protected:
 		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
 		Degree += 1.0f;
 #if 1
-		CopyToUploadResource(COM_PTR_GET(ConstantBufferResource), RoundUp(sizeof(Tr), 0xff), &Tr);
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp(sizeof(Tr), 0xff), &Tr);
 #else
 		D3D12_RANGE Range = { offsetof(Transform, World), offsetof(Transform, World) + sizeof(Tr.World) };
 		BYTE* Data;
-		VERIFY_SUCCEEDED(ConstantBufferResource->Map(0, &Range, reinterpret_cast<void**>(&Data))); {
+		VERIFY_SUCCEEDED(ConstantBuffers[0]->Map(0, &Range, reinterpret_cast<void**>(&Data))); {
 			memcpy(Data, reinterpret_cast<const void*>(&Tr.World), sizeof(Tr.World));
-		} ConstantBufferResource->Unmap(0, nullptr);
+		} ConstantBuffers[0]->Unmap(0, nullptr);
 #endif
 	}
 
@@ -76,7 +76,7 @@ protected:
 		);
 	}
 	virtual void CreateDescriptorView() override {
-		DX::CreateConstantBufferView(ConstantBufferResource, ConstantBufferDescriptorHeap, sizeof(Transform));
+		DX::CreateConstantBufferView(ConstantBuffers[0], ConstantBufferDescriptorHeap, sizeof(Transform));
 	}
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs_Tesselation(); }

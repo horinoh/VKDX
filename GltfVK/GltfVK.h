@@ -104,13 +104,15 @@ protected:
 	virtual void Process(const fx::gltf::Mesh& Msh) override;
 	virtual void Process(const fx::gltf::Skin& Skn) override;
 
-	virtual void Process(const fx::gltf::Material::Texture& Tex) override;
-	virtual void Process(const fx::gltf::Texture& Tex) override;
-
 	virtual std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) override { return VK::Lerp(lhs, rhs, t); }
 	virtual std::array<float, 4> SLerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) override { return VK::SLerp(lhs, rhs, t); }
 
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override;
+
+	virtual void UpdateAnimTranslation(const std::array<float, 3>& Value, const uint32_t NodeIndex);
+	virtual void UpdateAnimScale(const std::array<float, 3>& Value, const uint32_t NodeIndex);
+	virtual void UpdateAnimRotation(const std::array<float, 4>& Value, const uint32_t NodeIndex);
+	virtual void UpdateAnimWeights(const float* Data, const uint32_t PrevIndex, const uint32_t NextIndex, const float t);
 
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);

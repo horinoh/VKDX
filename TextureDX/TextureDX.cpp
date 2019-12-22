@@ -240,7 +240,7 @@ void TextureDX::PopulateCommandList(const size_t i)
 	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
+	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), static_cast<UINT>(i)); 
 
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 
@@ -263,9 +263,9 @@ void TextureDX::PopulateCommandList(const size_t i)
 			const std::array<ID3D12DescriptorHeap*, 2> DHs = { { COM_PTR_GET(ImageDescriptorHeap), COM_PTR_GET(SamplerDescriptorHeaps[0]) } };
 #endif
 			BCL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
-			BCL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ImageDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+			BCL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ImageDescriptorHeap), 0));
 #ifndef USE_STATIC_SAMPLER
-			BCL->SetGraphicsRootDescriptorTable(1, GetGPUDescriptorHandle(COM_PTR_GET(SamplerDescriptorHeaps[0]), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 0));
+			BCL->SetGraphicsRootDescriptorTable(1, GetGPUDescriptorHandle(COM_PTR_GET(SamplerDescriptorHeaps[0]), 0));
 #endif				
 		}
 		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
@@ -300,9 +300,9 @@ void TextureDX::PopulateCommandList(const size_t i)
 				const std::array<ID3D12DescriptorHeap*, 2> DHs = { { COM_PTR_GET(ImageDescriptorHeap), COM_PTR_GET(SamplerDescriptorHeaps[0]) } };
 #endif
 				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
-				CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ImageDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+				CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ImageDescriptorHeap), 0));
 #ifndef USE_STATIC_SAMPLER
-				CL->SetGraphicsRootDescriptorTable(1, GetGPUDescriptorHandle(COM_PTR_GET(SamplerDescriptorHeaps[0]), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 0));
+				CL->SetGraphicsRootDescriptorTable(1, GetGPUDescriptorHandle(COM_PTR_GET(SamplerDescriptorHeaps[0]), 0));
 #endif				
 			}
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);

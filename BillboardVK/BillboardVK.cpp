@@ -263,7 +263,7 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 #ifdef USE_PUSH_DESCRIPTOR
-		const DescriptorUpdateInfo DUI = { { UniformBuffer, Offset, VK_WHOLE_SIZE },};
+		const DescriptorUpdateInfo DUI = { { UniformBuffers[0], Offset, VK_WHOLE_SIZE },};
 #ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
 		vkCmdPushDescriptorSetWithTemplateKHR(SCB, DescriptorUpdateTemplates[0], PLL, 0, DUI.DescriptorBufferInfos);
 #else
@@ -325,7 +325,7 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 
 #ifdef USE_PUSH_DESCRIPTOR
 			const DescriptorUpdateInfo DUI = {
-				{ UniformBuffer, Offset, VK_WHOLE_SIZE },
+				{ UniformBuffers[0], Offset, VK_WHOLE_SIZE },
 			};
 #ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
 			vkCmdPushDescriptorSetWithTemplateKHR(CB, DescriptorUpdateTemplates[0], PLL, 0, DUI.DescriptorBufferInfos);

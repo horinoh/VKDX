@@ -318,7 +318,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 {
 	Gltf::Process(Prim);
 
-	//!< シェーダ
+	//!< セマンティックの頭文字から読み込むシェーダを決定 (Select shader file by semantic initial)
 	std::vector<std::pair<std::string, UINT>> SemanticAndIndices;
 	std::string SemnticInitial;
 	for (const auto& i : Prim.attributes) {
@@ -332,7 +332,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 	const auto PS = ShaderBlobs.back();
 
-	//!< アトリビュート
+	//!< セマンティックとインデックスのリストを作る (Create semantic and index list)
 	for (const auto& i : Prim.attributes) {
 		std::string Name, Index;
 		if (DecomposeSemantic(i.first, Name, Index)) {
@@ -342,7 +342,6 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 			SemanticAndIndices.push_back({ i.first.c_str(), 0 });
 		}
 	}
-	//!< モーフターゲット
 	auto MorphIndex = 1;
 	for (const auto& i : Prim.targets) {
 		for (const auto& j : i) {
@@ -357,21 +356,21 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		++MorphIndex;
 	}
 
-	//!< アトリビュート
+	//!< アトリビュート (Attributes)
 	std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs;
 	UINT InputSlot = 0;
 	for (const auto& i : Prim.attributes) {
 		const auto& Sem = SemanticAndIndices[InputSlot];
 		const auto& Acc = Document.accessors[i.second];
-		IEDs.push_back({ Sem.first.c_str(), Sem.second, ToDXFormat(Acc), InputSlot, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+		IEDs.push_back({ Sem.first.c_str(), Sem.second, ToDXFormat(Acc), InputSlot, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
 		++InputSlot;
 	}
-	//!< モーフターゲット
+	//!< モーフターゲット (Morph target)
 	for (const auto& i : Prim.targets) {
 		for (const auto& j : i) {
 			const auto& Sem = SemanticAndIndices[InputSlot];
 			const auto& Acc = Document.accessors[j.second];
-			IEDs.push_back({ Sem.first.c_str(), Sem.second, ToDXFormat(Acc), InputSlot, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+			IEDs.push_back({ Sem.first.c_str(), Sem.second, ToDXFormat(Acc), InputSlot, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
 			++InputSlot;
 		}
 	}
@@ -396,7 +395,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 
 	for (auto i = 0; i < static_cast<int>(Count); ++i) {
 		const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[BundleGraphicsCommandLists.size() - Count + i]);
-		const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
+		const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), static_cast<UINT>(i));
 
 		VERIFY_SUCCEEDED(BCL->Reset(BCA, PST));
 		{
@@ -425,7 +424,7 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			const auto TypeSize = GetTypeSize(Acc);
 			const auto Size = Acc.count * (0 == Stride ? TypeSize : Stride);
 
-			//!< BufferView.target はセットされてない事が多々あるので自前でやる…
+			//!< BufferView.target はセットされてない事が多々あるので自前でIdentifierを用意…
 			switch (BufV.target)
 			{
 			case fx::gltf::BufferView::TargetType::None: break;
@@ -492,51 +491,6 @@ void GltfDX::Process(const fx::gltf::Skin& Skn)
 	}
 }
 
-void GltfDX::Process(const fx::gltf::Material::Texture& Tex)
-{
-	Gltf::Process(Tex);
-
-#ifdef DEBUG_STDOUT
-	//!< KHR_texture_transform 拡張
-	const auto ItExtensions = Tex.extensionsAndExtras.find("extensions");
-	if (ItExtensions != Tex.extensionsAndExtras.end()) {
-		const auto ItTexTransform = ItExtensions->find("KHR_texture_transform");
-		if (ItTexTransform != ItExtensions->end()) {
-			const auto ItOffset = ItTexTransform->find("offset");
-			if (ItOffset != ItTexTransform->end()) {
-				if (ItOffset->is_array()) {
-					std::cout << ItOffset->at(0).get<float>() << ", " << ItOffset->at(1).get<float>() << std::endl;
-				}
-			}
-		}
-	}
-	const auto ItExtras = Tex.extensionsAndExtras.find("extras");
-	if (ItExtras != Tex.extensionsAndExtras.end()) {}
-#endif
-}
-void GltfDX::Process(const fx::gltf::Texture& Tex)
-{
-	Gltf::Process(Tex);
-
-#ifdef DEBUG_STDOUT
-	//!< MSFT_texture_dds 拡張
-	const auto ItExtensions = Tex.extensionsAndExtras.find("extensions");
-	if (ItExtensions != Tex.extensionsAndExtras.end()) {
-		const auto ItTexDDS = ItExtensions->find("MSFT_texture_dds");
-		if (ItTexDDS != ItExtensions->end()) {
-			const auto ItSrc = ItTexDDS->find("source");
-			if (ItSrc != ItTexDDS->end()) {
-				if (ItSrc->is_number_integer()) {
-					std::cout << ItSrc->get<int32_t>() << std::endl;
-				}
-			}
-		}
-	}
-	const auto ItExtras = Tex.extensionsAndExtras.find("extras");
-	if (ItExtras != Tex.extensionsAndExtras.end()) {}
-#endif
-}
-
 void GltfDX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnTimer(hWnd, hInstance);
@@ -546,12 +500,38 @@ void GltfDX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 	UpdateAnimation(CurrentFrame);
 }
 
+void GltfDX::UpdateAnimTranslation(const std::array<float, 3>& Value, const uint32_t NodeIndex)
+{
+	if (-1 != NodeIndex) {
+		const auto Local = DirectX::XMFLOAT3(Value.data());
+		NodeMatrices[NodeIndex] * DirectX::XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&Local));
+	}
+}
+void GltfDX::UpdateAnimScale(const std::array<float, 3>& Value, const uint32_t NodeIndex)
+{
+	if (-1 != NodeIndex) {
+		const auto Local = DirectX::XMFLOAT3(Value.data());
+		NodeMatrices[NodeIndex] *= DirectX::XMMatrixScalingFromVector(DirectX::XMLoadFloat3(&Local));
+	}
+}
+void GltfDX::UpdateAnimRotation(const std::array<float, 4>& Value, const uint32_t NodeIndex)
+{
+	if (-1 != NodeIndex) {
+		const auto Local = DirectX::XMFLOAT4(Value.data());
+		NodeMatrices[NodeIndex] * DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&Local));
+	}
+}
+void GltfDX::UpdateAnimWeights(const float* /*Data*/, const uint32_t /*PrevIndex*/, const uint32_t /*NextIndex*/, const float /*t*/)
+{
+
+}
+
 void GltfDX::PopulateCommandList(const size_t i)
 {
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i));
+	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), static_cast<UINT>(i));
 	const auto RS = COM_PTR_GET(RootSignatures[0]);
 
 	DXGI_SWAP_CHAIN_DESC1 SCD;

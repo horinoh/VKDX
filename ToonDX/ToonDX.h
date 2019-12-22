@@ -19,7 +19,7 @@ protected:
 
 		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
 		Degree += 1.0f;
-		CopyToUploadResource(COM_PTR_GET(ConstantBufferResource), RoundUp(sizeof(Tr), 0xff), &Tr);
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp(sizeof(Tr), 0xff), &Tr);
 	}
 #ifdef USE_BUNDLE
 	virtual void CreateBundleCommandList() override { AddBundleCommandList(); }
@@ -54,7 +54,7 @@ protected:
 		LOG_OK();
 	}
 	virtual void CreateDescriptorView() override {
-		DX::CreateConstantBufferView(ConstantBufferResource, ConstantBufferDescriptorHeap, sizeof(Transform));
+		DX::CreateConstantBufferView(ConstantBuffers[0], ConstantBufferDescriptorHeap, sizeof(Transform));
 		LOG_OK();
 	}
 	virtual void CreateConstantBuffer() override {

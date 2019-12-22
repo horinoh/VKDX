@@ -55,6 +55,8 @@ protected:
 	}
 
 	virtual void CreateUniformBuffer() override {
+		UniformBuffers.resize(1);
+
 		const auto Fov = 0.16f * glm::pi<float>();
 		const auto Aspect = GetAspectRatioOfClientRect();
 		const auto ZFar = 100.0f;
@@ -64,8 +66,8 @@ protected:
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		Tr = Transform({ GetVulkanClipSpace() * glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
 
-		CreateBuffer(&UniformBuffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		CreateBuffer(&UniformBuffers[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
+		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
 		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
 	}
@@ -124,13 +126,13 @@ protected:
 	}
 
 	virtual void UpdateDescriptorSet() override {
-		assert(VK_NULL_HANDLE != UniformBuffer && "");
+		assert(!UniformBuffers.empty() && "");
 #ifdef USE_IMMUTABLE_SAMPLER
 		assert(!Samplers.empty() && "");
 #endif
 		assert(VK_NULL_HANDLE != ImageView && "");
 		const DescriptorUpdateInfo DUI = {
-			{ UniformBuffer, Offset, VK_WHOLE_SIZE },
+			{ UniformBuffers[0], Offset, VK_WHOLE_SIZE },
 #ifdef USE_IMMUTABLE_SAMPLER
 			{ VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 #else

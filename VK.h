@@ -483,10 +483,7 @@ protected:
 	std::vector<VkBuffer> IndexBuffers;
 	std::vector<VkBuffer> IndirectBuffers;
 
-	//!< Œ»ó1‚Â‚Ì‚ÝA”z—ñ‚É‚·‚é #VK_TODO
-	VkBuffer UniformBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory UniformDeviceMemory = VK_NULL_HANDLE;
-	VkDescriptorBufferInfo UniformDescriptorBufferInfo;
+	std::vector<VkBuffer> UniformBuffers;
 
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;

@@ -36,6 +36,7 @@
 //!< ルートコンスタント : VKのプッシュコンスタント相当
 //#define USE_ROOT_CONSTANTS
 
+#include <initguid.h>
 #include <d3d12.h>
 #include <d3dcompiler.h>
 #include <DXGI1_6.h>
@@ -160,8 +161,40 @@ protected:
 	virtual void GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format);
 	virtual void CheckFeatureLevel(ID3D12Device* Device);
 	virtual void CheckMultiSample(const DXGI_FORMAT Format);
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index) const;
-	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(ID3D12DescriptorHeap* DescriptorHeap, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index) const;
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(ID3D12DescriptorHeap* DH, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index) const {
+		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+		CDH.ptr += static_cast<SIZE_T>(Index)* Device->GetDescriptorHandleIncrementSize(Type);
+		return CDH;
+	}
+	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(ID3D12DescriptorHeap* DH, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index) const {
+		auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+		GDH.ptr += static_cast<SIZE_T>(Index)* Device->GetDescriptorHandleIncrementSize(Type);
+		return GDH;
+	}
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(ID3D12DescriptorHeap* DH, const UINT Index) const { return GetCPUDescriptorHandle(DH, DH->GetDesc().Type, Index); }
+	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(ID3D12DescriptorHeap* DH, const UINT Index) const { return GetGPUDescriptorHandle(DH, DH->GetDesc().Type, Index); }
+
+	//!< DescriptorHandleIndices で管理する版
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentCPUDescriptorHandle(ID3D12DescriptorHeap* DH, const D3D12_DESCRIPTOR_HEAP_TYPE Type) const { return GetCPUDescriptorHandle(DH, Type, DescriptorHandleIndices[Type]); }
+	D3D12_GPU_DESCRIPTOR_HANDLE GetCurrentGPUDescriptorHandle(ID3D12DescriptorHeap* DH, const D3D12_DESCRIPTOR_HEAP_TYPE Type) const { return GetGPUDescriptorHandle(DH, Type, DescriptorHandleIndices[Type]); }
+	//D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentCPUDescriptorHandle(ID3D12DescriptorHeap* DH) const {
+	//	const auto Type = DH->GetDesc().Type;
+	//	return DX::GetCPUDescriptorHandle(DH, Type, DescriptorHandleIndices[Type]);
+	//}
+	//D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentCPUDescriptorHandle(ID3D12DescriptorHeap* DH) const {
+	//	const auto Type = DH->GetDesc().Type;
+	//	return DX::GetCPUDescriptorHandle(DH, Type, DescriptorHandleIndices[Type]);
+	//}
+	void GetCurrentAndPushDescriptorHandles(D3D12_CPU_DESCRIPTOR_HANDLE& CDH, D3D12_GPU_DESCRIPTOR_HANDLE& GDH, ID3D12DescriptorHeap* DH) {
+		const auto Type = DH->GetDesc().Type;
+		CDH = GetCurrentCPUDescriptorHandle(DH, Type);
+		GDH = GetCurrentGPUDescriptorHandle(DH, Type);
+		PushDescriptorHandle(Type);
+	}
+	void PushDescriptorHandle(const D3D12_DESCRIPTOR_HEAP_TYPE Type) { DescriptorHandleIndices[Type]++; }
+	void PopDescriptorHandle(const D3D12_DESCRIPTOR_HEAP_TYPE Type) { assert(0 < DescriptorHandleIndices[Type] && ""); DescriptorHandleIndices[Type]--; }
+	void PushDescriptorHandle(ID3D12DescriptorHeap* DH) { PushDescriptorHandle(DH->GetDesc().Type); }
+	void PopDescriptorHandle(ID3D12DescriptorHeap* DH) { PopDescriptorHandle(DH->GetDesc().Type); }
 
 	virtual void CreateCommandQueue();
 
@@ -231,10 +264,10 @@ protected:
 			Res->GetGPUVirtualAddress(),
 			static_cast<UINT>(RoundUp(Size, 0xff)) //!< 256 byte align
 		};
-		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(COM_PTR_GET(DH), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(COM_PTR_GET(DH), 0));
 	}
 	virtual void CreateShaderResourceView(const COM_PTR<ID3D12Resource>& Res, const COM_PTR<ID3D12DescriptorHeap>& DH) {
-		Device->CreateShaderResourceView(COM_PTR_GET(Res), nullptr, GetCPUDescriptorHandle(COM_PTR_GET(DH), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+		Device->CreateShaderResourceView(COM_PTR_GET(Res), nullptr, GetCPUDescriptorHandle(COM_PTR_GET(DH), 0));
 	}
 	virtual void CreateUnorderedAccessView(const COM_PTR<ID3D12Resource>& Res, const COM_PTR<ID3D12DescriptorHeap>& DH) {
 		D3D12_UNORDERED_ACCESS_VIEW_DESC UAVD = {
@@ -243,7 +276,7 @@ protected:
 		};
 		UAVD.Texture2D.MipSlice = 0;
 		UAVD.Texture2D.PlaneSlice = 0;
-		Device->CreateUnorderedAccessView(COM_PTR_GET(Res), nullptr, &UAVD, GetCPUDescriptorHandle(COM_PTR_GET(DH), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+		Device->CreateUnorderedAccessView(COM_PTR_GET(Res), nullptr, &UAVD, GetCPUDescriptorHandle(COM_PTR_GET(DH), 0));
 	}
 	virtual void CreateDescriptorView() {}
 
@@ -321,8 +354,9 @@ protected:
 	//COM_PTR<ID3D12CommandSignature> IndirectCommandSignature;
 
 	//!< 現状1つのみ、配列にする #DX_TODO
-	COM_PTR<ID3D12Resource> ConstantBufferResource;
-	COM_PTR<ID3D12DescriptorHeap> ConstantBufferDescriptorHeap; 
+	//COM_PTR<ID3D12Resource> ConstantBufferResource;
+	std::vector<COM_PTR<ID3D12Resource>> ConstantBuffers;
+	COM_PTR<ID3D12DescriptorHeap> ConstantBufferDescriptorHeap;
 
 	COM_PTR<ID3D12Resource> UnorderedAccessTextureResource;
 	COM_PTR<ID3D12DescriptorHeap> UnorderedAccessTextureDescriptorHeap; 
@@ -334,6 +368,8 @@ protected:
 	std::vector<D3D12_RECT> ScissorRects;
 
 	std::vector<COM_PTR<ID3DBlob>> ShaderBlobs;
+
+	std::array<UINT, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> DescriptorHandleIndices{};
 
 protected:
 	const std::vector<D3D_FEATURE_LEVEL> FeatureLevels = {

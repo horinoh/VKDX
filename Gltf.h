@@ -2,7 +2,24 @@
 
 #include <fx/gltf.h>
 #include <cmath>
-class Gltf 
+
+//!< KHR_texture_transform 拡張
+//!< https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_texture_transform
+#define USE_GLTF_EXT_TEX_TRANS
+
+//!< MSFT_texture_dds 拡張
+//!< https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Vendor/MSFT_texture_dds
+#define USE_GLTF_EXT_TEX_DDS
+
+static std::array<float, 3> operator+(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs) { return std::array<float, 3>({ lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2] }); }
+static std::array<float, 3> operator*(const std::array<float, 3>& lhs, const float rhs) { return std::array<float, 3>({ lhs[0] * rhs, lhs[1] * rhs, lhs[2] * rhs }); }
+static std::array<float, 3> operator*(const float rhs, const std::array<float, 3>& lhs) { return lhs * rhs; }
+
+static std::array<float, 4> operator+(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs) { return std::array<float, 4>({ lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2], lhs[3] + rhs[3] }); }
+static std::array<float, 4> operator*(const std::array<float, 4>& lhs, const float rhs) { return std::array<float, 4>({ lhs[0] * rhs, lhs[1] * rhs, lhs[2] * rhs, lhs[3] * rhs }); }
+static std::array<float, 4> operator*(const float rhs, const std::array<float, 4>& lhs) { return lhs * rhs; }
+
+class Gltf
 {
 public:
 	static uint32_t GetTypeCount(const fx::gltf::Accessor::Type Type) {
@@ -519,6 +536,26 @@ public:
 			Process(Document.textures[Tex.index]);
 		}
 		PopTab();
+
+#ifdef USE_GLTF_EXT_TEX_TRANS
+		const auto ItExtensions = Tex.extensionsAndExtras.find("extensions");
+		if (ItExtensions != Tex.extensionsAndExtras.end()) {
+			const auto ItTexTransform = ItExtensions->find("KHR_texture_transform");
+			if (ItTexTransform != ItExtensions->end()) {
+				const auto ItOffset = ItTexTransform->find("offset");
+				if (ItOffset != ItTexTransform->end()) {
+					if (ItOffset->is_array() && 2 == ItOffset->size()) {
+						if (ItOffset->at(0).is_number_float()) {
+							std::cout << ItOffset->at(0).get<float>() << ", " << ItOffset->at(1).get<float>() << std::endl;
+						}
+					}
+				}
+			}
+		}
+
+		const auto ItExtras = Tex.extensionsAndExtras.find("extras");
+		if (ItExtras != Tex.extensionsAndExtras.end()) {}
+#endif
 	}
 	virtual void Process(const fx::gltf::Texture& Tex) {
 		Tabs(); std::cout << "Texture : " << Tex.name << std::endl;
@@ -531,6 +568,24 @@ public:
 			Process(Document.images[Tex.source]);
 		}
 		PopTab();
+
+#ifdef USE_GLTF_EXT_TEX_DDS
+		const auto ItExtensions = Tex.extensionsAndExtras.find("extensions");
+		if (ItExtensions != Tex.extensionsAndExtras.end()) {
+			const auto ItTexDDS = ItExtensions->find("MSFT_texture_dds");
+			if (ItTexDDS != ItExtensions->end()) {
+				const auto ItSrc = ItTexDDS->find("source");
+				if (ItSrc != ItTexDDS->end()) {
+					if (ItSrc->is_number_integer()) {
+						std::cout << ItSrc->get<int32_t>() << std::endl;
+					}
+				}
+			}
+		}
+
+		const auto ItExtras = Tex.extensionsAndExtras.find("extras");
+		if (ItExtras != Tex.extensionsAndExtras.end()) {}
+#endif
 	}
 
 	virtual void Process(const fx::gltf::Sampler& Smp) {
@@ -668,7 +723,7 @@ public:
 							const auto invt = 1.0f - t;
 							std::cout << "t = " << t << std::endl;
 
-							//!< 補完、解釈(path)方法による処理の分岐
+							//!< 補完(Animation::Sampler::Type)、解釈(path:translation, sacle, rotation...)方法による処理の分岐
 							const auto& OutAcc = Document.accessors[Smp.output];
 							std::cout << "\t" << j.target.path << " = ";
 							switch (Smp.interpolation)
@@ -711,34 +766,41 @@ public:
 								}
 								break;
 							case fx::gltf::Animation::Sampler::Type::CubicSpline:
+								//!< https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#appendix-c-spline-interpolation
+								//!< CubicSpline の場合、(InTangent, Value, OutTangent)の3つでセットになっているのでストライドは3になる
+								const auto Stride = 3; //!< 0:InTangent, 1:Value, 2:OutTangent
+								const auto PrevSet = PrevIndex * Stride;
+								const auto NextSet = NextIndex * Stride;
+								const auto t2 = t * t;
+								const auto t3 = t2 * t;
 								if ("translation" == j.target.path) {
-									//const auto Data = reinterpret_cast<const std::array<float, 3>*>(GetData(OutAcc));
-
-									////!< https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#appendix-c-spline-interpolation
-									////!< CubicSpline の場合、(InTangent, Value, OutTangent)の3つでセットになっているのでストライドは3になる
-									//const auto Stride = 3; //!< 0:InTangent, 1:Value, 2:OutTangent
-									//const auto PrevSet = PrevIndex * Stride;
-									//const auto NextSet = NextIndex * Stride;
-
-									//const auto& PrevValue = Data[PrevSet + 1];
-									//const auto& PrevOutTan = Data[PrevSet + 2] * Delta;
-									//const auto& NextInTan = Data[NextSet + 0] * Delta;
-									//const auto& NextValue = Data[NextSet + 1];
-
-									//const auto t2 = t * t;
-									//const auto t3 = t2 * t;
-
-									//std::cout << (2.0f * t3 - 3.0f * t2 + 1.0f) * PrevValue + (t3 - 2.0f * t2 + t) * PrevOutTan + (-2.0f * t3 + 3.0f * t2) * NextValue + (t3 - t2) * NextInTan << std::endl;
+									const auto Data = reinterpret_cast<const std::array<float, 3>*>(GetData(OutAcc));
+									const auto& p0 = Data[PrevSet + 1]; //!< Prev Value
+									const auto& m0 = Data[PrevSet + 2]; //!< Prev OutTangent
+									const auto& m1 = Data[NextSet + 0]; //!< Next InTangent
+									const auto& p1 = Data[NextSet + 1]; //!< Next Value
+									UpdateAnimTranslation((2.0f * t3 - 3.0f * t2 + 1.0f) * p0 + (t3 - 2.0f * t2 + t) * Delta * m0 + (-2.0f * t3 + 3.0f * t2) * p1 + (t3 - t2) * Delta * m1, j.target.node);
 								}
 								else if ("scale" == j.target.path) {
-									//const auto Data = reinterpret_cast<const std::array<float, 3>*>(GetData(OutAcc));
+									const auto Data = reinterpret_cast<const std::array<float, 3>*>(GetData(OutAcc));
+									const auto& p0 = Data[PrevSet + 1];
+									const auto& m0 = Data[PrevSet + 2];
+									const auto& m1 = Data[NextSet + 0];
+									const auto& p1 = Data[NextSet + 1];
+									UpdateAnimScale((2.0f * t3 - 3.0f * t2 + 1.0f) * p0 + (t3 - 2.0f * t2 + t) * Delta * m0 + (-2.0f * t3 + 3.0f * t2) * p1 + (t3 - t2) * Delta * m1, j.target.node);
 								}
 								else if ("rotation" == j.target.path) {
-									//const auto Data = reinterpret_cast<const std::array<float, 4>*>(GetData(OutAcc));
+									const auto Data = reinterpret_cast<const std::array<float, 4>*>(GetData(OutAcc));
+									const auto& p0 = Data[PrevSet + 1];
+									const auto& m0 = Data[PrevSet + 2];
+									const auto& m1 = Data[NextSet + 0];
+									const auto& p1 = Data[NextSet + 1];
+									UpdateAnimRotation((2.0f * t3 - 3.0f * t2 + 1.0f) * p0 + (t3 - 2.0f * t2 + t) * Delta * m0 + (-2.0f * t3 + 3.0f * t2) * p1 + (t3 - t2) * Delta * m1, j.target.node);
 								}
-								else if ("weights" == j.target.path) {
-									//const auto Data = reinterpret_cast<const float*>(GetData(OutAcc));
-								}
+								//else if ("weights" == j.target.path) {
+								//	const auto Data = reinterpret_cast<const float*>(GetData(OutAcc));
+								//	UpdateAnimWeights(Data, PrevIndex, NextIndex, t);
+								//}
 								break;
 							}
 

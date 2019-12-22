@@ -315,7 +315,7 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 {
 	Gltf::Process(Prim);
 
-	//!< シェーダ
+	//!< セマンティックの頭文字から読み込むシェーダを決定 (Select shader file by semantic initial)
 	std::string SemanticInitial;
 	for (const auto& i : Prim.attributes) {
 		SemanticInitial += i.first.substr(0, 1);
@@ -326,7 +326,7 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
 	const auto FS = ShaderModules.back();
 
-	//!< アトリビュート
+	//!< アトリビュート (Attributes)
 	std::vector<VkVertexInputBindingDescription> VIBDs;
 	std::vector<VkVertexInputAttributeDescription> VIADs;
 	uint32_t Binding = 0;
@@ -338,8 +338,7 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 		++Binding;
 		++Location;
 	}
-
-	//!< モーフターゲット
+	//!< モーフターゲット (Morph target)
 	for (const auto& i : Prim.targets) {
 		for (const auto& j : i) {
 			const auto& Acc = Document.accessors[j.second];
@@ -412,7 +411,7 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			const auto Stride = (0 == BufV.byteStride ? GetTypeSize(Acc) : BufV.byteStride);
 			const auto Size = Acc.count * Stride;
 
-			//!< BufferView.target はセットされてない事が多々あるので自前でやる…
+			//!< BufferView.target はセットされてない事が多々あるので自前でIdentifierを用意…
 			switch (BufV.target)
 			{
 			case fx::gltf::BufferView::TargetType::None: break;
@@ -471,195 +470,36 @@ void GltfVK::Process(const fx::gltf::Skin& Skn)
 	}
 }
 
-void GltfVK::Process(const fx::gltf::Material::Texture& Tex)
-{
-	Gltf::Process(Tex);
-
-#ifdef DEBUG_STDOUT
-	//!< KHR_texture_transform 拡張
-	const auto ItExtensions = Tex.extensionsAndExtras.find("extensions");
-	if (ItExtensions != Tex.extensionsAndExtras.end()) {
-		const auto ItTexTransform = ItExtensions->find("KHR_texture_transform");
-		if (ItTexTransform != ItExtensions->end()) {
-			const auto ItOffset = ItTexTransform->find("offset");
-			if (ItOffset != ItTexTransform->end()) {
-				if (ItOffset->is_array() && 2 == ItOffset->size()) {
-					if (ItOffset->at(0).is_number_float()) {
-						std::cout << ItOffset->at(0).get<float>() << ", " << ItOffset->at(1).get<float>() << std::endl;
-					}
-				}
-			}
-		}
-	}
-
-	const auto ItExtras = Tex.extensionsAndExtras.find("extras");
-	if (ItExtras != Tex.extensionsAndExtras.end()) {}
-#endif
-}
-void GltfVK::Process(const fx::gltf::Texture& Tex)
-{
-	Gltf::Process(Tex);
-
-#ifdef DEBUG_STDOUT
-	//!< MSFT_texture_dds 拡張
-	const auto ItExtensions = Tex.extensionsAndExtras.find("extensions");
-	if (ItExtensions != Tex.extensionsAndExtras.end()) {
-		const auto ItTexDDS = ItExtensions->find("MSFT_texture_dds");
-		if (ItTexDDS != ItExtensions->end()) {
-			const auto ItSrc = ItTexDDS->find("source");
-			if (ItSrc != ItTexDDS->end()) {
-				if (ItSrc->is_number_integer()) {
-					std::cout << ItSrc->get<int32_t>() << std::endl;
-				}
-			}
-		}
-	}
-
-	const auto ItExtras = Tex.extensionsAndExtras.find("extras");
-	if (ItExtras != Tex.extensionsAndExtras.end()) {}
-#endif
-}
-
 void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnTimer(hWnd, hInstance);
 
 	CurrentFrame += 0.1f; //static_cast<float>(Elapse) / 1000.0f;
 
-#if 1
 	UpdateAnimation(CurrentFrame);
-#else
-	for (const auto& i : Document.animations) {
-		for (const auto& j : i.channels) {
-			if (-1 != j.sampler) {
-				const auto& Smp = i.samplers[j.sampler];
-				if (-1 != Smp.input && -1 != Smp.output) {
-					const auto& InAcc = Document.accessors[Smp.input];
-					if (InAcc.type == fx::gltf::Accessor::Type::Scalar && InAcc.componentType == fx::gltf::Accessor::ComponentType::Float) {
-						const auto Keyframes = reinterpret_cast<const float*>(GetData(InAcc));
-						const auto MaxFrame = Keyframes[InAcc.count - 1];
+}
 
-						//!< アニメーションのクランプ or ループ
-						//CurrentFrame = std::min(CurrentFrame, MaxFrame); //!< Clamp
-						while (CurrentFrame > MaxFrame) { CurrentFrame -= MaxFrame; } //!< Loop
-
-						//!< 現在のフレームが含まれるキーフレーム範囲と、補完値tを求める
-						uint32_t PrevIndex = 0, NextIndex = 0;
-						for (uint32_t k = 0; k < InAcc.count; ++k) {
-							if (Keyframes[k] >= CurrentFrame) {
-								NextIndex = k;
-								PrevIndex = NextIndex - 1;
-								break;
-							}
-						}
-						const auto PrevFrame = Keyframes[PrevIndex];
-						const auto NextFrame = Keyframes[NextIndex];
-						std::cout << "Frame = " << CurrentFrame << " [" << PrevFrame << ", " << NextFrame << "] / " << MaxFrame << std::endl;
-						const auto Delta = NextFrame - PrevFrame;
-
-						const auto t = std::abs(Delta) <= std::numeric_limits<float>::epsilon() ? 0.0f : (CurrentFrame - PrevFrame) / Delta;
-						std::cout << "t = " << t << std::endl;
-
-						//!< 補完、解釈(path)方法による処理の分岐
-#ifdef DEBUG_STDOUT
-						const auto& OutAcc = Document.accessors[Smp.output];
-#endif
-						std::cout << "\t" << j.target.path << " = ";
-						switch (Smp.interpolation)
-						{
-						case fx::gltf::Animation::Sampler::Type::Linear:
-							if ("translation" == j.target.path || "scale" == j.target.path) {
-#ifdef DEBUG_STDOUT
-								const auto Data = reinterpret_cast<const glm::vec3*>(GetData(OutAcc));
-								std::cout << glm::mix(Data[PrevIndex], Data[NextIndex], t);
-#endif
-							}
-							else if("rotation" == j.target.path) {
-#ifdef DEBUG_STDOUT
-								const auto Data = reinterpret_cast<const glm::quat*>(GetData(OutAcc));
-								std::cout << glm::slerp(Data[PrevIndex], Data[NextIndex], t);
-#endif
-							} 
-							else if ("weights" == j.target.path) {
-#ifdef DEBUG_STDOUT
-								const auto Data = reinterpret_cast<const float*>(GetData(OutAcc));
-								const auto Stride = MorphWeights.size();
-								const auto PrevSet = PrevIndex * Stride;
-								const auto NextSet = NextIndex * Stride;
-								for (uint32_t k = 0; k < Stride; ++k) {
-									std::cout << glm::mix(Data[PrevSet + k], Data[NextSet + k], t) << ", ";
-								}
-								std::cout << std::endl;
-#endif
-							}
-							break;
-						case fx::gltf::Animation::Sampler::Type::Step:
-							if ("translation" == j.target.path || "scale" == j.target.path) {
-#ifdef DEBUG_STDOUT
-								const auto Data = reinterpret_cast<const glm::vec3*>(GetData(OutAcc));
-								std::cout << Data[PrevIndex];
-#endif
-							}
-							else if ("rotation" == j.target.path) {
-#ifdef DEBUG_STDOUT
-								const auto Data = reinterpret_cast<const glm::quat*>(GetData(OutAcc));
-								std::cout << Data[PrevIndex];
-#endif
-							}
-							else if ("weights" == j.target.path) {
-#ifdef DEBUG_STDOUT
-								const auto Data = reinterpret_cast<const float*>(GetData(OutAcc));
-								std::cout << Data[PrevIndex];
-#endif
-							}
-							break;
-						case fx::gltf::Animation::Sampler::Type::CubicSpline:
-							if ("translation" == j.target.path || "scale" == j.target.path) {
-#ifdef DEBUG_STDOUT
-								const auto Data = reinterpret_cast<const glm::vec3*>(GetData(OutAcc));
-
-								//!< https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#appendix-c-spline-interpolation
-								//!< CubicSpline の場合、(InTangent, Value, OutTangent)の3つでセットになっているのでストライドは3になる
-								const auto Stride = 3; //!< 0:InTangent, 1:Value, 2:OutTangent
-								const auto PrevSet = PrevIndex * Stride; 
-								const auto NextSet = NextIndex * Stride;
-								
-								const auto& PrevValue = Data[PrevSet + 1];
-								const auto& PrevOutTan = Data[PrevSet + 2] * Delta;
-								const auto& NextInTan = Data[NextSet + 0] * Delta;
-								const auto& NextValue = Data[NextSet + 1];
-
-								const auto t2 = t * t;
-								const auto t3 = t2 * t;
-
-								std::cout << (2.0f * t3 - 3.0f * t2 + 1.0f)* PrevValue + (t3 - 2.0f * t2 + t) * PrevOutTan + (-2.0f * t3 + 3.0f * t2) * NextValue + (t3 - t2) * NextInTan << std::endl;
-#endif
-							}
-							else if ("rotation" == j.target.path) {
-#ifdef DEBUG_STDOUT
-								//const auto Data = reinterpret_cast<const glm::quat*>(GetData(OutAcc));
-#endif
-							}
-							else if ("weights" == j.target.path) {
-#ifdef DEBUG_STDOUT
-								//const auto Data = reinterpret_cast<const float*>(GetData(OutAcc));
-#endif
-							}
-							break;
-						}						
-
-						if (-1 != j.target.node) {
-							auto& Nd = Document.nodes[j.target.node];
-							Nd.translation;
-							Nd.rotation;
-							Nd.scale;
-						}
-					}
-				}
-			}
-		}
+void GltfVK::UpdateAnimTranslation(const std::array<float, 3>& Value, const uint32_t NodeIndex)
+{
+	if (-1 != NodeIndex) {
+		glm::translate(NodeMatrices[NodeIndex], glm::make_vec3(Value.data()));
 	}
-#endif
+}
+void GltfVK::UpdateAnimScale(const std::array<float, 3>& Value, const uint32_t NodeIndex)
+{
+	if (-1 != NodeIndex) {
+		glm::scale(NodeMatrices[NodeIndex], glm::make_vec3(Value.data()));
+	}
+}
+void GltfVK::UpdateAnimRotation(const std::array<float, 4>& Value, const uint32_t NodeIndex)
+{
+	if (-1 != NodeIndex) {
+		NodeMatrices[NodeIndex] * glm::mat4_cast(glm::make_quat(Value.data()));
+	}
+}
+void GltfVK::UpdateAnimWeights(const float* /*Data*/, const uint32_t /*PrevIndex*/, const uint32_t /*NextIndex*/, const float /*t*/)
+{
+	//Lerp(Data[PrevIndex], Data[NextIndex], t);
 }
 
 void GltfVK::PopulateCommandBuffer(const size_t i)

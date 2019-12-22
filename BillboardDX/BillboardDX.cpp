@@ -241,9 +241,9 @@ void BillboardDX::PopulateCommandList(const size_t i)
 	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_RTV, static_cast<UINT>(i)); 
+	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), static_cast<UINT>(i)); 
 #ifdef USE_DEPTH_STENCIL
-	const auto  DSH = GetCPUDescriptorHandle(COM_PTR_GET(DepthStencilDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 0);
+	const auto  DSH = GetCPUDescriptorHandle(COM_PTR_GET(DepthStencilDescriptorHeap), 0);
 #endif
 
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
@@ -259,7 +259,7 @@ void BillboardDX::PopulateCommandList(const size_t i)
 		{
 			const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(ConstantBufferDescriptorHeap) };
 			BCL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
-			BCL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+			BCL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), 0));
 		}
 		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
@@ -296,7 +296,7 @@ void BillboardDX::PopulateCommandList(const size_t i)
 				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(ConstantBufferDescriptorHeap) };
 				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
 
-				CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 0));
+				CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), 0));
 			}
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
