@@ -132,7 +132,7 @@ public:
 	}
 
 protected:
-	virtual void CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source);
+	virtual void CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source, const D3D12_RANGE* Range = nullptr);
 	virtual void CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes);
 
 	virtual void ExecuteCopyBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SrcResource, ID3D12Resource* DstResource, const size_t Size);
@@ -177,14 +177,8 @@ protected:
 	//!< DescriptorHandleIndices ‚ÅŠÇ—‚·‚é”Å
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentCPUDescriptorHandle(ID3D12DescriptorHeap* DH, const D3D12_DESCRIPTOR_HEAP_TYPE Type) const { return GetCPUDescriptorHandle(DH, Type, DescriptorHandleIndices[Type]); }
 	D3D12_GPU_DESCRIPTOR_HANDLE GetCurrentGPUDescriptorHandle(ID3D12DescriptorHeap* DH, const D3D12_DESCRIPTOR_HEAP_TYPE Type) const { return GetGPUDescriptorHandle(DH, Type, DescriptorHandleIndices[Type]); }
-	//D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentCPUDescriptorHandle(ID3D12DescriptorHeap* DH) const {
-	//	const auto Type = DH->GetDesc().Type;
-	//	return DX::GetCPUDescriptorHandle(DH, Type, DescriptorHandleIndices[Type]);
-	//}
-	//D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentCPUDescriptorHandle(ID3D12DescriptorHeap* DH) const {
-	//	const auto Type = DH->GetDesc().Type;
-	//	return DX::GetCPUDescriptorHandle(DH, Type, DescriptorHandleIndices[Type]);
-	//}
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentCPUDescriptorHandle(ID3D12DescriptorHeap* DH) const { return DX::GetCPUDescriptorHandle(DH, DH->GetDesc().Type); }
+	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentGPUDescriptorHandle(ID3D12DescriptorHeap* DH) const { return DX::GetCPUDescriptorHandle(DH, DH->GetDesc().Type); }
 	void GetCurrentAndPushDescriptorHandles(D3D12_CPU_DESCRIPTOR_HANDLE& CDH, D3D12_GPU_DESCRIPTOR_HANDLE& GDH, ID3D12DescriptorHeap* DH) {
 		const auto Type = DH->GetDesc().Type;
 		CDH = GetCurrentCPUDescriptorHandle(DH, Type);

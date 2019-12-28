@@ -20,15 +20,10 @@ protected:
 
 		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
 		Degree += 1.0f;
-#if 1
-		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp(sizeof(Tr), 0xff), &Tr);
-#else
-		D3D12_RANGE Range = { offsetof(Transform, World), offsetof(Transform, World) + sizeof(Tr.World) };
-		BYTE* Data;
-		VERIFY_SUCCEEDED(ConstantBuffers[0]->Map(0, &Range, reinterpret_cast<void**>(&Data))); {
-			memcpy(Data, reinterpret_cast<const void*>(&Tr.World), sizeof(Tr.World));
-		} ConstantBuffers[0]->Unmap(0, nullptr);
-#endif
+
+		//CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp(sizeof(Tr), 0xff), &Tr);
+		const D3D12_RANGE Range = { offsetof(Transform, World), offsetof(Transform, World) + sizeof(Tr.World) };
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp(sizeof(Tr), 0xff), &Tr, &Range);
 	}
 
 #ifdef USE_BUNDLE

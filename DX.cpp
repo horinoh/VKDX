@@ -166,11 +166,11 @@ void DX::CreateUploadResource(ID3D12Resource** Resource, const size_t Size)
 		IID_PPV_ARGS(Resource)
 	));
 }
-void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source)
+void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source, const D3D12_RANGE* Range)
 {
 	if (nullptr != Resource && Size && nullptr != Source) {
 		BYTE* Data;
-		VERIFY_SUCCEEDED(Resource->Map(0, static_cast<const D3D12_RANGE*>(nullptr), reinterpret_cast<void**>(&Data))); {
+		VERIFY_SUCCEEDED(Resource->Map(0, Range, reinterpret_cast<void**>(&Data))); {
 			memcpy(Data, Source, Size);
 		} Resource->Unmap(0, nullptr);
 	}
