@@ -17,10 +17,14 @@ protected:
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
 		Super::OnTimer(hWnd, hInstance);
 
-		//!< #VK_TODO Tr.World ‚¾‚¯‚ðXV‚·‚é
 		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
 		Degree += 1.0f;
+#if 0
 		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
+#else
+		const std::array<VkDeviceSize, 2> Range = { offsetof(Transform, World), sizeof(Transform::World) };
+		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset, &Range);
+#endif
 	}
 
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }

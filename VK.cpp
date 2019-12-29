@@ -504,27 +504,43 @@ void VK::CreateImage(VkImage* Img, const VkImageCreateFlags /*CreateFlags*/, con
 	VERIFY_SUCCEEDED(vkCreateImage(Device, &ICI, GetAllocationCallbacks(), Img));
 }
 
-void VK::CopyToHostVisibleDeviceMemory(const VkDeviceMemory DM, const size_t Size, const void* Source, const VkDeviceSize Offset)
+void VK::CopyToHostVisibleDeviceMemory(const VkDeviceMemory DM, const size_t Size, const void* Source, const VkDeviceSize Offset, const std::array<VkDeviceSize, 2>* Range)
 {
 	if (Size && nullptr != Source) {
 		void *Data;
 		VERIFY_SUCCEEDED(vkMapMemory(Device, DM, Offset, Size, static_cast<VkMemoryMapFlags>(0), &Data)); {
 			memcpy(Data, Source, Size);
-#if 1
+
 			//!< メモリコンテンツが変更されたことをドライバへ知らせる(vkMapMemory()した状態でやること)
 			//!< デバスメモリ確保時に VK_MEMORY_PROPERTY_HOST_COHERENT_BIT を指定した場合は必要ない CreateDeviceMemory(..., VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-			const std::array<VkMappedMemoryRange, 1> MMRs = {
-					{
-						VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-						nullptr,
-						DM,
-						Offset,
-						VK_WHOLE_SIZE
-					}
-			};
-			VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
-			//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
-#endif
+			if (nullptr != Range) {
+				//!< 更新するレンジ(一部)が明示的に指定された場合、指定レンジのみを更新する
+				const std::array<VkMappedMemoryRange, 1> MMRs = {
+						{
+							VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+							nullptr,
+							DM,
+							Offset + (*Range)[0],
+							(*Range)[1]
+						}
+				};
+				VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
+				//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
+			}
+			else {
+				//!< レンジ指定が無い場合は全体を更新する
+				const std::array<VkMappedMemoryRange, 1> MMRs = {
+						{
+							VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+							nullptr,
+							DM,
+							Offset,
+							VK_WHOLE_SIZE
+						}
+				};
+				VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
+				//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
+			}
 		} vkUnmapMemory(Device, DM);
 	}
 }
@@ -2151,7 +2167,7 @@ void VK::SubmitStagingCopy(const VkQueue Queue, const VkCommandBuffer CB, const 
 	uint32_t StagingHeapIndex;
 	VkDeviceSize StagingOffset;
 	SuballocateBufferMemory(StagingHeapIndex, StagingOffset, StagingBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-	CopyToHostVisibleDeviceMemory(DeviceMemories[StagingHeapIndex], Size, Source);
+	CopyToHostVisibleDeviceMemory(DeviceMemories[StagingHeapIndex], Size, Source, 0);
 	const auto StagingSize = DeviceMemoryOffsets[StagingHeapIndex] - StagingOffset;
 #else
 	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
@@ -2159,7 +2175,7 @@ void VK::SubmitStagingCopy(const VkQueue Queue, const VkCommandBuffer CB, const 
 	//!< デバイスローカルメモリ(DLM)をアロケート (Allocate device local memory(DLM))
 	AllocateBufferMemory(&StagingDeviceMemory, StagingBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, StagingBuffer, StagingDeviceMemory, 0));
-	CopyToHostVisibleDeviceMemory(StagingDeviceMemory, Size, Source);
+	CopyToHostVisibleDeviceMemory(StagingDeviceMemory, Size, Source, 0);
 #endif
 
 	//!< HVBからDLBへのコピーコマンドを発行 (Submit HVB to DLB copy command)

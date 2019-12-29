@@ -379,7 +379,7 @@ void VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory *DeviceMemory, VkImageV
 			//!< ホストビジブルのバッファとメモリを作成、データをコピー( Create host visible buffer and memory, and copy data)
 			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
 			AllocateBufferMemory(&StagingDeviceMemory, StagingBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-			CopyToHostVisibleDeviceMemory(StagingDeviceMemory, Size, GLITexture.data());
+			CopyToHostVisibleDeviceMemory(StagingDeviceMemory, Size, GLITexture.data(), 0);
 			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, StagingBuffer, StagingDeviceMemory, 0));
 
 			//!< デバイスローカルのイメージとメモリを作成 (Create device local image and memory)

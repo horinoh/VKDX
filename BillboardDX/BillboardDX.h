@@ -21,9 +21,12 @@ protected:
 		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
 		Degree += 1.0f;
 
-		//CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp(sizeof(Tr), 0xff), &Tr);
+#if 0
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp(sizeof(Tr), 0xff), &Tr);
+#else
 		const D3D12_RANGE Range = { offsetof(Transform, World), offsetof(Transform, World) + sizeof(Tr.World) };
 		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp(sizeof(Tr), 0xff), &Tr, &Range);
+#endif
 	}
 
 #ifdef USE_BUNDLE
