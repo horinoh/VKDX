@@ -133,7 +133,7 @@ void VK::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 
 	Super::OnExitSizeMove(hWnd, hInstance);
 
-	//!< コマンドバッファの完了を待つ
+	//!< デバイスがアイドルになるまで待つ
 	if (VK_NULL_HANDLE != Device) {
 		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	}
@@ -154,16 +154,18 @@ void VK::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 	//DestroyFramebuffer();
 	//CreateFramebuffer();
 
-	LoadScene();
+	for (auto i : SecondaryCommandBuffers) {
+		VERIFY_SUCCEEDED(vkResetCommandBuffer(i, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
+	}
+	for (auto i : CommandBuffers) {
+		VERIFY_SUCCEEDED(vkResetCommandBuffer(i, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
+	}
 
+	//!< ビューポートサイズが決定してから
+	LoadScene();
 	for (auto i = 0; i < CommandBuffers.size(); ++i) {
 		PopulateCommandBuffer(i);
 	}
-	//for (auto i : CommandPools) {
-	//	for (auto j = 0; j < i.second.size(); ++j) {
-	//		PopulateCommandBuffer(j);
-	//	}
-	//}
 }
 
 void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
@@ -3085,12 +3087,8 @@ void VK::Draw()
 #endif
 
 	//!< サブミットしたコマンドの完了を待つ
-	std::vector<VkFence> Fences = { Fence };
-#if 1
+	const std::array<VkFence, 1> Fences = { Fence };
 	VERIFY_SUCCEEDED(vkWaitForFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data(), VK_TRUE, (std::numeric_limits<uint64_t>::max)()));
-#else
-	while (VK_TIMEOUT == vkWaitForFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data(), VK_TRUE, 0)) { Log("vkWaitForFences() == VK_TIMEOUT\n"); }
-#endif
 	vkResetFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data());
 
 	//!< 次のイメージが取得できるまでブロック(タイムアウトは指定可能)、取得できたからといってイメージは直ぐに目的に使用可能とは限らない
@@ -3131,7 +3129,7 @@ void VK::Draw()
 void VK::Dispatch()
 {
 	//!< (Fenceを指定して)サブミットしたコマンドが完了するまでブロッキングして待つ
-	std::vector<VkFence> Fences = { ComputeFence };
+	const std::array<VkFence, 1> Fences = { ComputeFence };
 	VERIFY_SUCCEEDED(vkWaitForFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data(), VK_TRUE, (std::numeric_limits<uint64_t>::max)()));
 	vkResetFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data());
 

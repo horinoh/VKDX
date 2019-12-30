@@ -75,22 +75,7 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 	Super::OnExitSizeMove(hWnd, hInstance);
 
 	//!< コマンドリストの完了を待つ
-	{
-		const UINT64 InitValue = 0;
-		const UINT64 ExpectValue = 1;
-		//!< 専用のフェンスを新規に作成
-		COM_PTR<ID3D12Fence> TmpFence;
-		VERIFY_SUCCEEDED(Device->CreateFence(InitValue, D3D12_FENCE_FLAG_NONE, COM_PTR_UUIDOF_PUTVOID(TmpFence)));
-		VERIFY_SUCCEEDED(CommandQueue->Signal(COM_PTR_GET(TmpFence), ExpectValue));
-		if (TmpFence->GetCompletedValue() != ExpectValue) {
-			auto hEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-			if (nullptr != hEvent) {
-				VERIFY_SUCCEEDED(TmpFence->SetEventOnCompletion(ExpectValue, hEvent));
-				WaitForSingleObject(hEvent, INFINITE);
-				CloseHandle(hEvent);
-			}
-		}
-	}
+	WaitForFence();
 
 	const auto W = GetClientRectWidth(), H = GetClientRectHeight();
 
@@ -110,8 +95,8 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 
 	CreateViewport(static_cast<const FLOAT>(W), static_cast<const FLOAT>(H));
 
+	//!< ビューポートサイズが決定してから
 	LoadScene();
-
 	for (auto i = 0; i < GraphicsCommandLists.size(); ++i) {
 		PopulateCommandList(i);
 	}
@@ -1394,7 +1379,7 @@ void DX::WaitForFence()
 	//!< CPU 側のフェンス値をインクリメント
 	++FenceValue;
 
-	//!< GPU コマンドが Signal() まで到達すれば GetCompletedValue() が FenceValue になり、CPUに追いついたことになる
+	//!< コマンドキューに Fencevalue を引数に Signal を追加する (GPU が到達すれば GetCompletedValue() が FenceValue になり、CPUに追いついたことになる)
 	VERIFY_SUCCEEDED(CommandQueue->Signal(COM_PTR_GET(Fence), FenceValue));
 	if (Fence->GetCompletedValue() < FenceValue) {
 		auto hEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);

@@ -356,12 +356,13 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		++MorphIndex;
 	}
 
+	const auto& Doc = GetDocument();
 	//!< アトリビュート (Attributes)
 	std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs;
 	UINT InputSlot = 0;
 	for (const auto& i : Prim.attributes) {
 		const auto& Sem = SemanticAndIndices[InputSlot];
-		const auto& Acc = Document.accessors[i.second];
+		const auto& Acc = Doc.accessors[i.second];
 		IEDs.push_back({ Sem.first.c_str(), Sem.second, ToDXFormat(Acc), InputSlot, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
 		++InputSlot;
 	}
@@ -369,7 +370,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	for (const auto& i : Prim.targets) {
 		for (const auto& j : i) {
 			const auto& Sem = SemanticAndIndices[InputSlot];
-			const auto& Acc = Document.accessors[j.second];
+			const auto& Acc = Doc.accessors[j.second];
 			IEDs.push_back({ Sem.first.c_str(), Sem.second, ToDXFormat(Acc), InputSlot, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
 			++InputSlot;
 		}
@@ -414,10 +415,12 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 	Gltf::Process(Identifier, Acc);
 
 	if (-1 != Acc.bufferView) {
-		const auto& BufV = Document.bufferViews[Acc.bufferView];
+		const auto& Doc = GetDocument();
+
+		const auto& BufV = Doc.bufferViews[Acc.bufferView];
 
 		if (-1 != BufV.buffer) {
-			const auto& Buf = Document.buffers[BufV.buffer];
+			const auto& Buf = Doc.buffers[BufV.buffer];
 
 			const auto Data = &Buf.data[BufV.byteOffset + Acc.byteOffset];
 			const auto Stride = BufV.byteStride;
@@ -473,7 +476,7 @@ void GltfDX::Process(const fx::gltf::Skin& Skn)
 		const auto& IBM = *InverseBindMatrices[i];
 
 		auto Wld = DirectX::XMMatrixIdentity();
-		const auto& Nd = Document.nodes[Skn.joints[i]];
+		const auto& Nd = GetDocument().nodes[Skn.joints[i]];
 		if (fx::gltf::defaults::NullVec3 != Nd.translation) {
 			const auto Local = DirectX::XMFLOAT3(Nd.translation.data());
 			Wld *= DirectX::XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&Local));

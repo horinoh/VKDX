@@ -51,9 +51,10 @@ public:
 
 	const uint8_t* GetData(const fx::gltf::Accessor& Acc) const {
 		if (-1 != Acc.bufferView) {
-			const auto& BufV = Document.bufferViews[Acc.bufferView];
+			const auto& Doc = GetDocument();
+			const auto& BufV = Doc.bufferViews[Acc.bufferView];
 			if (-1 != BufV.buffer) {
-				const auto& Buf = Document.buffers[BufV.buffer];
+				const auto& Buf = Doc.buffers[BufV.buffer];
 				return &Buf.data[BufV.byteOffset + Acc.byteOffset];
 			}
 		}
@@ -61,7 +62,7 @@ public:
 	}
 	const uint32_t GetStride(const fx::gltf::Accessor& Acc) const {
 		if (-1 != Acc.bufferView) {
-			const auto& BufV = Document.bufferViews[Acc.bufferView];
+			const auto& BufV = GetDocument().bufferViews[Acc.bufferView];
 			if (-1 != BufV.buffer) {
 				return 0 == BufV.byteStride ? GetTypeSize(Acc) : BufV.byteStride;
 			}
@@ -85,28 +86,29 @@ public:
 
 	virtual void Load(const std::string& Path) {
 		if (std::string::npos != Path.rfind(".glb")){
-			Document = fx::gltf::LoadFromBinary(Path, fx::gltf::ReadQuotas()); //!< .glb
-		} else {
-			Document = fx::gltf::LoadFromText(Path, fx::gltf::ReadQuotas()); //!< .gltf
+			Documents.push_back(fx::gltf::LoadFromBinary(Path, fx::gltf::ReadQuotas()));
+		} else /*if(std::string::npos != Path.rfind(".gltf"))*/{
+			Documents.push_back(fx::gltf::LoadFromText(Path, fx::gltf::ReadQuotas()));
 		}
 
-		if (!Document.extensionsUsed.empty()) {
+		const auto& Doc = GetDocument();
+		if (!Doc.extensionsUsed.empty()) {
 			std::cout << "extensionsUsed = ";
-			for (const auto& i : Document.extensionsUsed) {
+			for (const auto& i : Doc.extensionsUsed) {
 				std::cout << i << ", ";
 			}
 			std::cout << std::endl;
 		}
-		if (!Document.extensionsRequired.empty()) {
+		if (!Doc.extensionsRequired.empty()) {
 			std::cout << "extensionsRequired = ";
-			for (const auto& i : Document.extensionsRequired) {
+			for (const auto& i : Doc.extensionsRequired) {
 				std::cout << i << ", ";
 			}
 			std::cout << std::endl;
 		}
 
 		//std::cout << "Buffers" << std::endl;
-		//for (const auto& i : Document.buffers) {
+		//for (const auto& i : Doc.buffers) {
 		//	if (!i.name.empty()) {
 		//		std::cout << "\t" << "name = " << i.name << std::endl;
 		//	}
@@ -119,7 +121,7 @@ public:
 		//	//i.data;
 		//}
 
-		Process(Document);
+		Process(Doc);
 	}
 
 	virtual void Process(const fx::gltf::Document& Doc) {
@@ -146,7 +148,7 @@ public:
 
 		PushTab();
 		for (auto i : Scn.nodes) {
-			Process(Document.nodes[i]);	
+			Process(GetDocument().nodes[i]);	
 		}
 		PopTab();
 	}
@@ -197,17 +199,18 @@ public:
 		}
 		std::cout << std::endl;
 
+		const auto& Doc = GetDocument();
 		PushTab();
 		//!< キーフレーム時間
 		if (-1 != Smp.input) {
-			Process("input", Document.accessors[Smp.input]);
+			Process("input", Doc.accessors[Smp.input]);
 		}
 		PopTab();
 
 		PushTab();
 		//!< アニメーション値 (pathにより解釈、translation, rotation,...)
 		if (-1 != Smp.output) {
-			Process("output", Document.accessors[Smp.output]);
+			Process("output", Doc.accessors[Smp.output]);
 		}
 		PopTab();
 	}
@@ -244,28 +247,29 @@ public:
 			}
 		}
 
+		const auto& Doc = GetDocument();
 		PushTab();
 		if (-1 != Nd.mesh) {
-			Process(Document.meshes[Nd.mesh]);
+			Process(Doc.meshes[Nd.mesh]);
 		}
 		PopTab();
 
 		PushTab();
 		if (-1 != Nd.skin) {
-			Process(Document.skins[Nd.skin]);
+			Process(Doc.skins[Nd.skin]);
 		}
 		PopTab();
 
 		PushTab();
 		if (-1 != Nd.camera) {
-			Process(Document.cameras[Nd.camera]);
+			Process(Doc.cameras[Nd.camera]);
 		}
 		PopTab();
 
 		if (!Nd.children.empty()) {
 			PushNode();
 			for (auto i : Nd.children) {
-				Process(Document.nodes[i], i);
+				Process(Doc.nodes[i], i);
 			}
 			PopNode();
 		}
@@ -296,13 +300,13 @@ public:
 		if (-1 != Skn.inverseBindMatrices) {
 			//!< 各々のジョイントをローカルスペースへ変換するマトリクス
 			//!< JointMatrix[i] = Inverse(GlobalTransform) * GlobalJointTransform[i] * InverseBindMatrix[i]
-			Process("inverseBindMatrices", Document.accessors[Skn.inverseBindMatrices]);
+			Process("inverseBindMatrices", GetDocument().accessors[Skn.inverseBindMatrices]);
 		}
 		PopTab();
 
 		//Push();
 		//for (auto i : Skn.joints) {
-		//	//Process(Document.nodes[i]);
+		//	//Process(GetDocument().nodes[i]);
 		//}
 		//Pop();
 	}
@@ -342,21 +346,22 @@ public:
 		}
 		std::cout << std::endl;
 
+		const auto& Doc = GetDocument();
 		PushTab();
 		for (const auto& i : Prim.attributes) {
-			Process("attributes", Document.accessors[i.second]);
+			Process("attributes", Doc.accessors[i.second]);
 		}
 		PopTab();
 
 		PushTab();
 		if (-1 != Prim.indices) {
-			Process("indices", Document.accessors[Prim.indices]);
+			Process("indices", Doc.accessors[Prim.indices]);
 		}
 		PopTab();
 
 		PushTab();
 		if (-1 != Prim.material) {
-			Process(Document.materials[Prim.material]);
+			Process(Doc.materials[Prim.material]);
 		}
 		PopTab();
 
@@ -365,7 +370,7 @@ public:
 			for (const auto& j : Prim.attributes) {
 				const auto it = i.find(j.first);
 				if (i.end() != it) {
-					Process("targets", Document.accessors[it->second]);
+					Process("targets", Doc.accessors[it->second]);
 				}
 			}
 		}
@@ -417,9 +422,10 @@ public:
 
 		Tabs(); std::cout << "\t" << "normalized = " << Acc.normalized << std::endl;
 
+		const auto& Doc = GetDocument();
 		PushTab();
 		if (-1 != Acc.bufferView) {
-			const auto& BufV = Document.bufferViews[Acc.bufferView];
+			const auto& BufV = Doc.bufferViews[Acc.bufferView];
 			Tabs(); std::cout << "BufferView : " << BufV.name << std::endl;
 			Tabs(); std::cout << "\t" << "byteOffset = " << BufV.byteOffset << std::endl;
 			Tabs(); std::cout << "\t" << "byteLength = " << BufV.byteLength << std::endl;
@@ -435,7 +441,7 @@ public:
 
 			PushTab();
 			if (-1 != BufV.buffer) {
-				const auto& Buf = Document.buffers[BufV.buffer];
+				const auto& Buf = Doc.buffers[BufV.buffer];
 				Tabs(); std::cout << "Buffer : " << Buf.name << std::endl;
 				Tabs(); std::cout << "\t" << "ByteLength = " << Buf.byteLength << std::endl;
 				if (Buf.uri.empty()) {
@@ -533,7 +539,7 @@ public:
 
 		PushTab();
 		if (-1 != Tex.index) {
-			Process(Document.textures[Tex.index]);
+			Process(GetDocument().textures[Tex.index]);
 		}
 		PopTab();
 
@@ -560,12 +566,13 @@ public:
 	virtual void Process(const fx::gltf::Texture& Tex) {
 		Tabs(); std::cout << "Texture : " << Tex.name << std::endl;
 
+		const auto& Doc = GetDocument();
 		PushTab();
 		if (-1 != Tex.sampler) {
-			Process(Document.samplers[Tex.sampler]);
+			Process(Doc.samplers[Tex.sampler]);
 		}
 		if (-1 != Tex.source) {
-			Process(Document.images[Tex.source]);
+			Process(Doc.images[Tex.source]);
 		}
 		PopTab();
 
@@ -647,21 +654,23 @@ public:
 				//const auto DataSize = static_cast<uint32_t>(Data.size());
 			}
 			else {
+				const auto& Doc = GetDocument();
+
 				PushTab();
-				const auto& BufV = Document.bufferViews[Img.bufferView];
+				const auto& BufV = Doc.bufferViews[Img.bufferView];
 				Tabs(); std::cout << "BufferView : " << BufV.name << std::endl;
 				Tabs(); std::cout << "\t" << "byteOffset = " << BufV.byteOffset << std::endl;
 				Tabs(); std::cout << "\t" << "byteLength = " << BufV.byteLength << std::endl;
 
 				PushTab();
 				if (-1 != BufV.buffer) {
-					const auto& Buf = Document.buffers[BufV.buffer];
+					const auto& Buf = Doc.buffers[BufV.buffer];
 					Tabs(); std::cout << "Buffer : " << Buf.name << std::endl;
 					Tabs(); std::cout << "\t" << "ByteLength = " << Buf.byteLength << std::endl;
 				}
 				PopTab();
 
-				//const auto DataPtr = &Document.buffers[BufV.buffer].data[BufV.byteOffset + 0/*ここではアクセサは無い*/];
+				//const auto DataPtr = &Doc.buffers[BufV.buffer].data[BufV.byteOffset + 0/*ここではアクセサは無い*/];
 				//const auto DataSize = BufV.byteLength;
 				PopTab();
 			}
@@ -687,12 +696,13 @@ public:
 	virtual void UpdateAnimRotation(const std::array<float, 4>& /*Value*/, const uint32_t /*NodeIndex*/) {}
 	virtual void UpdateAnimWeights(const float* /*Data*/, const uint32_t /*PrevIndex*/, const uint32_t /*NextIndex*/, const float /*t*/) {}
 	virtual void UpdateAnimation(float CurrentFrame, bool bIsLoop = true) {
-		for (const auto& i : Document.animations) {
+		const auto& Doc = GetDocument();
+		for (const auto& i : Doc.animations) {
 			for (const auto& j : i.channels) {
 				if (-1 != j.sampler) {
 					const auto& Smp = i.samplers[j.sampler];
 					if (-1 != Smp.input && -1 != Smp.output) {
-						const auto& InAcc = Document.accessors[Smp.input];
+						const auto& InAcc = Doc.accessors[Smp.input];
 						if (InAcc.type == fx::gltf::Accessor::Type::Scalar && InAcc.componentType == fx::gltf::Accessor::ComponentType::Float) {
 							const auto Keyframes = reinterpret_cast<const float*>(GetData(InAcc));
 							const auto MaxFrame = Keyframes[InAcc.count - 1];
@@ -724,7 +734,7 @@ public:
 							std::cout << "t = " << t << std::endl;
 
 							//!< 補完(Animation::Sampler::Type)、解釈(path:translation, sacle, rotation...)方法による処理の分岐
-							const auto& OutAcc = Document.accessors[Smp.output];
+							const auto& OutAcc = Doc.accessors[Smp.output];
 							std::cout << "\t" << j.target.path << " = ";
 							switch (Smp.interpolation)
 							{
@@ -805,7 +815,7 @@ public:
 							}
 
 							if (-1 != j.target.node) {
-								auto& Nd = Document.nodes[j.target.node];
+								auto& Nd = Doc.nodes[j.target.node];
 								Nd.translation;
 								Nd.rotation;
 								Nd.scale;
@@ -827,8 +837,9 @@ public:
 	void PopTab() {}
 #endif
 
+	const fx::gltf::Document& GetDocument() const { return Documents.back(); }
 protected:
-	fx::gltf::Document Document;
+	std::vector<fx::gltf::Document> Documents;
 #ifdef _DEBUG
 	uint8_t TabDepth = 0;
 #endif

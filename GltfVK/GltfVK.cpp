@@ -331,8 +331,9 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	std::vector<VkVertexInputAttributeDescription> VIADs;
 	uint32_t Binding = 0;
 	uint32_t Location = 0;
+	const auto& Doc = GetDocument();
 	for (const auto& i : Prim.attributes) {
-		const auto& Acc = Document.accessors[i.second];
+		const auto& Acc = Doc.accessors[i.second];
 		VIBDs.push_back({ Binding, GetTypeSize(Acc),  VK_VERTEX_INPUT_RATE_VERTEX });
 		VIADs.push_back({ Location, Binding, ToVKFormat(Acc), 0 });
 		++Binding;
@@ -341,7 +342,7 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	//!< モーフターゲット (Morph target)
 	for (const auto& i : Prim.targets) {
 		for (const auto& j : i) {
-			const auto& Acc = Document.accessors[j.second];
+			const auto& Acc = Doc.accessors[j.second];
 			VIBDs.push_back({ Binding, GetTypeSize(Acc),  VK_VERTEX_INPUT_RATE_VERTEX });
 			VIADs.push_back({ Location, Binding, ToVKFormat(Acc), 0 });
 			++Binding;
@@ -391,7 +392,7 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 			//vkCmdPushConstants(SCB, PLL, VK_SHADER_STAGE_VERTEX_BIT, 0, static_cast<uint32_t>(sizeof(CurrentMatrix.back())), &CurrentMatrix.back());
 			vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 			vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets.data());
-			vkCmdBindIndexBuffer(SCB, IB, 0, ToVKIndexType(Document.accessors[Prim.indices].componentType));
+			vkCmdBindIndexBuffer(SCB, IB, 0, ToVKIndexType(GetDocument().accessors[Prim.indices].componentType));
 			vkCmdDrawIndexedIndirect(SCB, IndB, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 	}
@@ -402,10 +403,12 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 	Gltf::Process(Identifier, Acc);
 
 	if (-1 != Acc.bufferView) {
-		const auto& BufV = Document.bufferViews[Acc.bufferView];
+		const auto& Doc = GetDocument();
+
+		const auto& BufV = Doc.bufferViews[Acc.bufferView];
 
 		if (-1 != BufV.buffer) {
-			const auto& Buf = Document.buffers[BufV.buffer];
+			const auto& Buf = Doc.buffers[BufV.buffer];
 
 			const auto Data = &Buf.data[BufV.byteOffset + Acc.byteOffset];
 			const auto Stride = (0 == BufV.byteStride ? GetTypeSize(Acc) : BufV.byteStride);
@@ -455,7 +458,7 @@ void GltfVK::Process(const fx::gltf::Skin& Skn)
 	for (uint32_t i = 0; i < Skn.joints.size(); ++i) {
 		const auto& IBM = *InverseBindMatrices[i];
 
-		const auto& Nd = Document.nodes[Skn.joints[i]];
+		const auto& Nd = GetDocument().nodes[Skn.joints[i]];
 		auto Wld = glm::identity<glm::mat4>();
 		if (fx::gltf::defaults::NullVec3 != Nd.translation) {
 			glm::translate(Wld, glm::make_vec3(Nd.translation.data()));
