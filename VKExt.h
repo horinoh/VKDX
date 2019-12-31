@@ -9,7 +9,7 @@ private:
 public:
 	//using Vertex_Position = struct Vertex_Position { glm::vec3 Position; };
 	using Vertex_PositionColor = struct Vertex_PositionColor { glm::vec3 Position; glm::vec4 Color; };
-	using Vertex_PositionNormalTexcoord = struct Vertex_PositionNormalTexcoord { glm::vec3 Position; glm::vec3 Normal; glm::vec2 Texcoord; };
+	//using Vertex_PositionNormalTexcoord = struct Vertex_PositionNormalTexcoord { glm::vec3 Position; glm::vec3 Normal; glm::vec2 Texcoord; };
 	using Instance_OffsetXY = struct Instance_OffsetXY { glm::vec2 Offset; };
 
 	virtual void CreateBuffer_Vertex(const VkQueue /*Queue*/, const VkCommandBuffer /*CB*/, VkBuffer* Buffer, const VkDeviceSize Size, const void* Source) {

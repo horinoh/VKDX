@@ -154,12 +154,11 @@ void VK::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 	//DestroyFramebuffer();
 	//CreateFramebuffer();
 
-	for (auto i : SecondaryCommandBuffers) {
-		VERIFY_SUCCEEDED(vkResetCommandBuffer(i, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
-	}
-	for (auto i : CommandBuffers) {
-		VERIFY_SUCCEEDED(vkResetCommandBuffer(i, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
-	}
+#if 0
+	//!< コマンドバッファのリセット vkBeginCommandBuffer() で暗黙的にリセットされるので不要？
+	for (auto i : SecondaryCommandBuffers) { VERIFY_SUCCEEDED(vkResetCommandBuffer(i, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT)); }
+	for (auto i : CommandBuffers) { VERIFY_SUCCEEDED(vkResetCommandBuffer(i, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT)); }
+#endif
 
 	//!< ビューポートサイズが決定してから
 	LoadScene();

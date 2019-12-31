@@ -233,6 +233,8 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 
 void GltfVK::LoadScene()
 {
+	Unload();
+
 	//!< PN(POS, NRM)
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Box\\glTF-Binary\\Box.glb"); //!< Scale = 1.0f
 
