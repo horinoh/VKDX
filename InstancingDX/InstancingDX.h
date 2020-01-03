@@ -42,13 +42,12 @@ protected:
 		const auto RS = COM_PTR_GET(RootSignatures[0]);
 		const D3D12_SHADER_BYTECODE SBC_VS = { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() };
 		const D3D12_SHADER_BYTECODE SBC_PS = { ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() };
-		//!< ‹l‚Ü‚Á‚Ä‚¢‚éê‡‚Í offsetof() ‚Ì‘ã‚í‚è‚É D3D12_APPEND_ALIGNED_ELEMENT ‚Å—Ç‚¢ (When directly after the previous one, we can use D3D12_APPEND_ALIGNED_ELEMENT)
 		const std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs = { {
 			//!< Per Vertex
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex_PositionColor, Position)/*D3D12_APPEND_ALIGNED_ELEMENT*/, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(Vertex_PositionColor, Color)/*D3D12_APPEND_ALIGNED_ELEMENT*/, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex_PositionColor, Position), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(Vertex_PositionColor, Color), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 			//!< Per Instance
-			{ "OFFSET", 0, DXGI_FORMAT_R32G32_FLOAT, 1, offsetof(Instance_OffsetXY, Offset)/*D3D12_APPEND_ALIGNED_ELEMENT*/, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
+			{ "OFFSET", 0, DXGI_FORMAT_R32G32_FLOAT, 1, offsetof(Instance_OffsetXY, Offset), D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
 		} };
 
 		std::vector<std::thread> Threads;

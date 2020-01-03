@@ -40,7 +40,35 @@ protected:
 		LOG_OK();
 	}
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPs(); }
-	virtual void CreatePipelineState() override { CreatePipelineState_VsPs_Vertex<Vertex_PositionColor>(); }
+	virtual void CreatePipelineState() override { 
+		PipelineStates.resize(1);
+
+#ifdef USE_PIPELINE_SERIALIZE
+		const auto PCOPath = GetBasePath() + TEXT(".plo");
+		PipelineLibrarySerializer PLS(COM_PTR_GET(Device), PCOPath.c_str());
+#endif
+		const auto RS = COM_PTR_GET(RootSignatures[0]);
+		const D3D12_SHADER_BYTECODE SBC_VS = { ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() };
+		const D3D12_SHADER_BYTECODE SBC_PS = { ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() };
+		//!< ‹l‚Ü‚Á‚Ä‚¢‚éê‡‚Í offsetof() ‚Ì‘ã‚í‚è‚É D3D12_APPEND_ALIGNED_ELEMENT ‚Å—Ç‚¢ (When directly after the previous one, we can use D3D12_APPEND_ALIGNED_ELEMENT)
+		const std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs = { {
+				{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex_PositionColor, Position)/*D3D12_APPEND_ALIGNED_ELEMENT*/, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+				{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, offsetof(Vertex_PositionColor, Color)/*D3D12_APPEND_ALIGNED_ELEMENT*/, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			} };
+
+		std::vector<std::thread> Threads;
+		Threads.push_back(std::thread::thread([&](COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS)
+			{
+#ifdef USE_PIPELINE_SERIALIZE
+				DX::CreatePipelineState(PST, RS, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, &PLS, TEXT("0"));
+#else
+				DX::CreatePipelineState(PST, RS, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+#endif
+			},
+			std::ref(PipelineStates[0]), RS, SBC_VS, SBC_PS));
+
+		for (auto& i : Threads) { i.join(); }
+	}
 	virtual void PopulateCommandList(const size_t i) override;
 
 	UINT IndexCount = 0;

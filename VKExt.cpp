@@ -33,26 +33,22 @@ void VKExt::CreatePipeline_VsFs()
 #endif
 
 	std::vector<std::thread> Threads;
-
-	{
-		auto& PL = Pipelines[0];
-		const auto RP = RenderPasses[0];
-		const auto PLL = PipelineLayouts[0];
-		Threads.push_back(std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
-			const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS)
-			{
+		
+	auto& PL = Pipelines[0];
+	const auto RP = RenderPasses[0];
+	const auto PLL = PipelineLayouts[0];
+	Threads.push_back(std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
+		const VkShaderModule VS, const VkShaderModule FS)
+		{
 #ifdef USE_PIPELINE_SERIALIZE
-				CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PCS.GetPipelineCache(0));
+			CreatePipeline(PL, PLL, RP, VS, FS, NullShaderModule, NullShaderModule, NullShaderModule, {}, {}, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PCS.GetPipelineCache(0));
 #else
-				CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
+			CreatePipeline(PL, PLL, RP, VS, FS, NullShaderModule, NullShaderModule, NullShaderModule, {}, {}, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
 #endif
-			},
-			std::ref(PL), PLL, RP, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule));
-	}
+		},
+		std::ref(PL), PLL, RP, ShaderModules[0], ShaderModules[1]));
 
-	for (auto& i : Threads) {
-		i.join();
-	}
+	for (auto& i : Threads) { i.join(); }
 }
 void VKExt::CreatePipeline_VsFsTesTcsGs_Tesselation()
 {
@@ -64,25 +60,21 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Tesselation()
 
 	std::vector<std::thread> Threads;
 
-	{
-		auto& PL = Pipelines[0];
-		const auto RP = RenderPasses[0];
-		const auto PLL = PipelineLayouts[0];
-		Threads.push_back(std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
-			const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS)
-			{
+	auto& PL = Pipelines[0];
+	const auto RP = RenderPasses[0];
+	const auto PLL = PipelineLayouts[0];
+	Threads.push_back(std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
+		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS)
+		{
 #ifdef USE_PIPELINE_SERIALIZE
-				VK::CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PCS.GetPipelineCache(0));
+			VK::CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PCS.GetPipelineCache(0));
 #else
-				VK::CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1);
+			VK::CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1);
 #endif
-			},
-			std::ref(PL), PLL, RP, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4]));
-	}
+		},
+		std::ref(PL), PLL, RP, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4]));
 
-	for (auto& i : Threads) {
-		i.join();
-	}
+	for (auto& i : Threads) { i.join(); }
 }
 
 void VKExt::CreateRenderPass_ColorDepth(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth)

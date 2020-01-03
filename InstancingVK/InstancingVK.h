@@ -46,7 +46,6 @@ protected:
 			{ 0, sizeof(Vertex_PositionColor), VK_VERTEX_INPUT_RATE_VERTEX },
 			{ 1, sizeof(Instance_OffsetXY), VK_VERTEX_INPUT_RATE_INSTANCE },
 		} };
-		//!< ‹l‚Ü‚Á‚Ä‚¢‚Ä‚àADX ‚Ì D3D12_APPEND_ALIGNED_ELEMENT ‚Ì‚æ‚¤‚É offsetof() ‚ð‰ñ”ð‚·‚éŽè’i‚Í–³‚¢? (Is there no D3D12_APPEND_ALIGNED_ELEMENT equivalent?)
 		const std::vector<VkVertexInputAttributeDescription> VIADs = { {
 			//!< Per Vertex
 			{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_PositionColor, Position) },
