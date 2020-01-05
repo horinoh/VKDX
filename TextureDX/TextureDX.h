@@ -52,6 +52,8 @@ protected:
 		DX::CreateRootSignature(RootSignatures[0], Blob);
 		LOG_OK();
 	}
+
+#pragma region DESCRIPTOR
 	virtual void CreateDescriptorHeap() override {
 		DX::CreateDescriptorHeap(ImageDescriptorHeap,
 			{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
@@ -65,7 +67,6 @@ protected:
 	}
 	virtual void CreateDescriptorView() override {
 		DX::CreateShaderResourceView(ImageResource, ImageDescriptorHeap);
-
 #ifndef USE_STATIC_SAMPLER
 		const D3D12_SAMPLER_DESC SD = {
 			D3D12_FILTER_MIN_MAG_MIP_POINT, //!< 非スタティックサンプラの場合敢えて POINT にしている
@@ -79,6 +80,7 @@ protected:
 		Device->CreateSampler(&SD, SamplerDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart());
 #endif
 	}
+#pragma endregion //!< DESCRIPTOR
 
 	virtual void CreateTexture() override {
 #if 1

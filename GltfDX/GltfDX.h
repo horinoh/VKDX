@@ -131,15 +131,29 @@ protected:
 #ifdef USE_HLSL_ROOTSIGNATRUE
 		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
 #else
-		D3D12_ROOT_PARAMETER RP = { D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS };
-		RP.Constants = {};
-		RP.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-		DX::SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+		//const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Cbv = {
+		//	{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
+		//};
+		DX::SerializeRootSignature(Blob, {
+				//{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DRs_Cbv.size()), DRs_Cbv.data() }, D3D12_SHADER_VISIBILITY_VERTEX },
+			}, {}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 #endif
 		RootSignatures.resize(1);
 		DX::CreateRootSignature(RootSignatures[0], Blob);
 		LOG_OK();
 	}
+	//virtual void CreateDescriptorHeap() override {
+	//	DX::CreateDescriptorHeap(ConstantBufferDescriptorHeap,
+	//		{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
+	//	);
+	//}
+	//virtual void CreateDescriptorView() override {
+	//	DX::CreateConstantBufferView(ConstantBuffers[0], ConstantBufferDescriptorHeap, sizeof(Transform));
+	//}
+	//virtual void CreateConstantBuffer() override {
+	//	ConstantBuffers.push_back(COM_PTR<ID3D12Resource>());
+	//	CreateAndCopyToUploadResource(ConstantBuffers.back(), RoundUp(sizeof(XXXX), 0xff), &XXXX); //!< コンスタントバッファの場合、サイズは256バイトアラインにすること
+	//}
 	virtual void PopulateCommandList(const size_t i) override;
 
 	std::vector<DirectX::XMMATRIX> CurrentMatrix = { DirectX::XMMatrixIdentity() };

@@ -59,65 +59,12 @@ protected:
 			}, {});
 	}
 
-	virtual void CreateUniformBuffer() override {
-		UniformBuffers.resize(1);
-
-		const auto Fov = 0.16f * glm::pi<float>();
-		const auto Aspect = GetAspectRatioOfClientRect();
-		const auto ZFar = 100.0f;
-		const auto ZNear = ZFar * 0.0001f;
-		const auto CamPos = glm::vec3(0.0f, 0.0f, 6.0f);
-		const auto CamTag = glm::vec3(0.0f);
-		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
-		Tr = Transform({ /*GetVulkanClipSpace() * */ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
-
-		CreateBuffer(&UniformBuffers[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-
-		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
-	}
-
-#ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
-	virtual void CreateDescriptorUpdateTemplate() override {
-		const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
-			{
-				0/*binding*/, 0/*arrayElement*/,
-				_countof(DescriptorUpdateInfo::DescriptorBufferInfos), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				offsetof(DescriptorUpdateInfo, DescriptorBufferInfos), sizeof(DescriptorUpdateInfo)
-			}
-		};
-
-		assert(!DescriptorSetLayouts.empty() && "");
-#ifdef USE_PUSH_DESCRIPTOR
-		assert(!PipelineLayouts.empty() && "");
-#endif		
-		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
-			nullptr,
-			0,
-			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),	
-#ifdef USE_PUSH_DESCRIPTOR
-			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR,
-#else
-			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
-#endif
-			DescriptorSetLayouts[0],
-#ifdef USE_PUSH_DESCRIPTOR
-			VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[0], 0
-#else
-			VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
-#endif
-		};
-		DescriptorUpdateTemplates.resize(1);
-		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
-	}
-#endif
-
+#pragma region DESCRIPTOR
 #ifndef USE_PUSH_DESCRIPTOR
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
 		VKExt::CreateDescriptorPool(DescriptorPools[0], /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 } 
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }
 			});
 	}
 	virtual void AllocateDescriptorSet() override {
@@ -135,29 +82,66 @@ protected:
 			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &i));
 		}
 	}
+	virtual void CreateDescriptorUpdateTemplate() override {
+		const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
+			{
+				0/*binding*/, 0/*arrayElement*/,
+				_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				offsetof(DescriptorUpdateInfo, DBI), sizeof(DescriptorUpdateInfo)
+			}
+		};
+		assert(!DescriptorSetLayouts.empty() && "");
+#ifdef USE_PUSH_DESCRIPTOR
+		assert(!PipelineLayouts.empty() && "");
+#endif		
+		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
+			nullptr,
+			0,
+			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
+#ifdef USE_PUSH_DESCRIPTOR
+			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR,
+#else
+			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
+#endif
+			DescriptorSetLayouts[0],
+#ifdef USE_PUSH_DESCRIPTOR
+			VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[0], 0
+#else
+			VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
+#endif
+		};
+		DescriptorUpdateTemplates.resize(1);
+		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
+	}
 	virtual void UpdateDescriptorSet() override {
+		Super::UpdateDescriptorSet();
+
 		const DescriptorUpdateInfo DUI = {
 			{ UniformBuffers[0], Offset/*offset*/, VK_WHOLE_SIZE/*range*/ },
 		};
-
 		assert(!DescriptorSets.empty() && "");
-#ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
 		assert(!DescriptorUpdateTemplates.empty() && "");
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
-#else
-		VKExt::UpdateDescriptorSet(
-			{
-				{
-					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					nullptr,
-					DescriptorSets[0], 0/*binding*/, 0/*arrayElement*/,
-					_countof(DescriptorUpdateInfo::DescriptorBufferInfos), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr/*VkDescriptorImageInfo*/, DUI.DescriptorBufferInfos, nullptr/*VkBufferView*/
-				}
-			},
-			{});
-#endif
 	}
 #endif
+#pragma endregion //!< DESCRIPTOR
+	
+	virtual void CreateUniformBuffer() override {
+		UniformBuffers.resize(1);
+
+		const auto Fov = 0.16f * glm::pi<float>();
+		const auto Aspect = GetAspectRatioOfClientRect();
+		const auto ZFar = 100.0f;
+		const auto ZNear = ZFar * 0.0001f;
+		const auto CamPos = glm::vec3(0.0f, 0.0f, 6.0f);
+		const auto CamTag = glm::vec3(0.0f);
+		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
+		Tr = Transform({ /*GetVulkanClipSpace() * */ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
+
+		CreateBuffer(&UniformBuffers[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
+		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	}
 
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }
 	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs_Tesselation(); }
@@ -179,7 +163,9 @@ private:
 
 	struct DescriptorUpdateInfo 
 	{
-		VkDescriptorBufferInfo DescriptorBufferInfos[1];
+		VkDescriptorBufferInfo DBI[1];
+		//VkDescriptorImageInfo DII[1];
+		//VkBufferView BV[1];
 	};
 };
 #pragma endregion

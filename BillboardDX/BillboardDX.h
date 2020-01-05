@@ -56,6 +56,23 @@ protected:
 		DX::CreateRootSignature(RootSignatures[0], Blob);
 		LOG_OK();
 	}
+
+#pragma region DESCRIPTOR
+	virtual void CreateDescriptorHeap() override {
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(ConstantBufferDescriptorHeap)));
+	}
+	virtual void CreateDescriptorView() override {
+		assert(!ConstantBuffers.empty() && "");
+		const auto Res = COM_PTR_GET(ConstantBuffers[0]);
+		const auto Size = static_cast<UINT>(RoundUp(sizeof(Transform), 0xff)); //!< 256 byte align
+		const auto DH = COM_PTR_GET(ConstantBufferDescriptorHeap);
+
+		const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { Res->GetGPUVirtualAddress(), Size };
+		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(DH, 0));
+	}
+#pragma endregion //!< DESCRIPTOR
+	
 	virtual void CreateConstantBuffer() override {
 		const auto Fov = 0.16f * DirectX::XM_PI;
 		const auto Aspect = GetAspectRatioOfClientRect();
@@ -65,17 +82,11 @@ protected:
 		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		Tr = Transform({ DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar), DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp), DirectX::XMMatrixIdentity() });
-		Super::CreateConstantBufferT(Tr);
+
+		ConstantBuffers.push_back(COM_PTR<ID3D12Resource>());
+		CreateAndCopyToUploadResource(ConstantBuffers.back(), RoundUp(sizeof(Tr), 0xff), &Tr); //!< コンスタントバッファの場合、サイズは256バイトアラインにすること
 	}
 
-	virtual void CreateDescriptorHeap() override {
-		DX::CreateDescriptorHeap(ConstantBufferDescriptorHeap,
-			{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
-		);
-	}
-	virtual void CreateDescriptorView() override {
-		DX::CreateConstantBufferView(ConstantBuffers[0], ConstantBufferDescriptorHeap, sizeof(Transform));
-	}
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs_Tesselation(); }
 	virtual void PopulateCommandList(const size_t i) override;

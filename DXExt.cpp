@@ -7,7 +7,7 @@ void DXExt::CreateIndirectBuffer_Draw(const UINT IndexCount, const UINT Instance
 	const D3D12_DRAW_ARGUMENTS Source = { IndexCount, InstanceCount, 0, 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
-	CreateBuffer(COM_PTR_PUT(IndirectBufferResources.back()), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+	CreateAndCopyToDefaultResource(IndirectBufferResources.back(), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 
 	IndirectCommandSignatures.resize(1);
 	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
@@ -29,7 +29,7 @@ void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT IndexCount, const UINT I
 	const D3D12_DRAW_INDEXED_ARGUMENTS Source = { IndexCount, InstanceCount, 0, 0, 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
-	CreateBuffer(COM_PTR_PUT(IndirectBufferResources.back()), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+	CreateAndCopyToDefaultResource(IndirectBufferResources.back(), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 
 	IndirectCommandSignatures.resize(1);
 	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
@@ -50,7 +50,7 @@ void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT
 	const D3D12_DISPATCH_ARGUMENTS Source = { X, Y, Z };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
-	CreateBuffer(COM_PTR_PUT(IndirectBufferResources.back()), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+	CreateAndCopyToDefaultResource(IndirectBufferResources.back(), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 
 	IndirectCommandSignatures.resize(1);
 	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {

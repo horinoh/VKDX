@@ -19,6 +19,7 @@ protected:
 
 		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
 		Degree += 1.0f;
+
 		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp(sizeof(Tr), 0xff), &Tr);
 	}
 
@@ -71,7 +72,7 @@ protected:
 		LOG_OK();
 	}
 
-
+#pragma region DESCRIPTOR
 	virtual void CreateDescriptorHeap() override {
 		DX::CreateDescriptorHeap(ConstantBufferDescriptorHeap,
 			{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
@@ -79,7 +80,6 @@ protected:
 		DX::CreateDescriptorHeap(ImageDescriptorHeap,
 			{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
 		);
-
 #ifndef USE_STATIC_SAMPLER
 		SamplerDescriptorHeaps.resize(1);
 		DX::CreateDescriptorHeap(SamplerDescriptorHeaps[0],
@@ -91,7 +91,6 @@ protected:
 	virtual void CreateDescriptorView() override {
 		DX::CreateConstantBufferView(ConstantBuffers[0], ConstantBufferDescriptorHeap, sizeof(Transform));
 		DX::CreateShaderResourceView(ImageResource, ImageDescriptorHeap);
-
 #ifndef USE_STATIC_SAMPLER
 		const D3D12_SAMPLER_DESC SD = {
 			D3D12_FILTER_MIN_MAG_MIP_LINEAR,
@@ -115,8 +114,12 @@ protected:
 		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		Tr = Transform({ DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar), DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp), DirectX::XMMatrixIdentity() });
-		Super::CreateConstantBufferT(Tr);
+
+		ConstantBuffers.push_back(COM_PTR<ID3D12Resource>());
+		CreateAndCopyToUploadResource(ConstantBuffers.back(), RoundUp(sizeof(Tr), 0xff), &Tr); //!< コンスタントバッファの場合、サイズは256バイトアラインにすること
 	}
+#pragma endregion //!< DESCRIPTOR
+
 	virtual void CreateTexture() override {
 		LoadImage(COM_PTR_PUT(ImageResource), TEXT("NormalMap.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}

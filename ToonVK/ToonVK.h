@@ -19,6 +19,7 @@ protected:
 
 		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
 		Degree += 1.0f;
+
 		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
 	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
@@ -47,51 +48,11 @@ protected:
 			}, {});
 	}
 
-	virtual void CreateUniformBuffer() override {
-		UniformBuffers.resize(1);
-		const auto Fov = 0.16f * glm::pi<float>();
-		const auto Aspect = GetAspectRatioOfClientRect();
-		const auto ZFar = 100.0f;
-		const auto ZNear = ZFar * 0.0001f;
-		const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
-		const auto CamTag = glm::vec3(0.0f);
-		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
-		Tr = Transform({ GetVulkanClipSpace() * glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
-
-		CreateBuffer(&UniformBuffers[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-
-		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
-	}
-
-#ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
-	virtual void CreateDescriptorUpdateTemplate() override {
-		const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
-			{
-				0, 0,
-				_countof(DescriptorUpdateInfo::DescriptorBufferInfos), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				offsetof(DescriptorUpdateInfo, DescriptorBufferInfos), sizeof(DescriptorUpdateInfo)
-			}
-		};
-
-		assert(!DescriptorSetLayouts.empty() && "");
-		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
-			nullptr,
-			0,
-			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
-			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
-			DescriptorSetLayouts[0],
-			VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
-		};
-		DescriptorUpdateTemplates.resize(1);
-		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
-	}
-#endif
-	virtual void CreateDescriptorPool() override { 
+#pragma region DESCRIPTOR
+	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
-		VKExt::CreateDescriptorPool(DescriptorPools[0], 0,{
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 } 
+		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }
 			});
 	}
 	virtual void AllocateDescriptorSet() override {
@@ -109,28 +70,54 @@ protected:
 			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &i));
 		}
 	}
+	virtual void CreateDescriptorUpdateTemplate() override {
+		const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
+			{
+				0, 0,
+				_countof(DescriptorUpdateInfo::DescriptorBufferInfos), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				offsetof(DescriptorUpdateInfo, DescriptorBufferInfos), sizeof(DescriptorUpdateInfo)
+			}
+		};
+		assert(!DescriptorSetLayouts.empty() && "");
+		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
+			nullptr,
+			0,
+			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
+			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
+			DescriptorSetLayouts[0],
+			VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
+		};
+		DescriptorUpdateTemplates.resize(1);
+		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
+	}
 	virtual void UpdateDescriptorSet() override {
+		Super::UpdateDescriptorSet();
+
 		const DescriptorUpdateInfo DUI = {
 			{ UniformBuffers[0], Offset, VK_WHOLE_SIZE },
 		};
-
 		assert(!DescriptorSets.empty() && "");
-#ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
 		assert(!DescriptorUpdateTemplates.empty() && "");
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
-#else
-		VKExt::UpdateDescriptorSet(
-			{
-				{
-					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					nullptr,
-					DescriptorSets[0], 0, 0,
-					_countof(DescriptorUpdateInfo::DescriptorBufferInfos), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, DUI.DescriptorBufferInfos, nullptr
-				}
-			},
-			{});
-#endif
 	}
+#pragma endregion //!< DESCRIPTOR
+
+	virtual void CreateUniformBuffer() override {
+		const auto Fov = 0.16f * glm::pi<float>();
+		const auto Aspect = GetAspectRatioOfClientRect();
+		const auto ZFar = 100.0f;
+		const auto ZNear = ZFar * 0.0001f;
+		const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
+		const auto CamTag = glm::vec3(0.0f);
+		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
+		Tr = Transform({ GetVulkanClipSpace() * glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
+
+		UniformBuffers.resize(1);
+		CreateBuffer(&UniformBuffers[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
+		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	}
+
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }
 	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs_Tesselation(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;

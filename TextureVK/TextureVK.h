@@ -47,35 +47,11 @@ protected:
 			}, {});
 	}
 
-#ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
-	virtual void CreateDescriptorUpdateTemplate() override {
-		const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
-			{
-				0, 0,
-				_countof(DescriptorUpdateInfo::DescriptorImageInfos), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				offsetof(DescriptorUpdateInfo, DescriptorImageInfos), sizeof(DescriptorUpdateInfo)
-			}
-		};
-
-		assert(!DescriptorSetLayouts.empty() && "");
-		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
-			nullptr,
-			0,
-			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
-			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
-			DescriptorSetLayouts[0],
-			VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
-		};
-		DescriptorUpdateTemplates.resize(1);
-		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
-	}
-#endif
-
-	virtual void CreateDescriptorPool() override { 
+#pragma region DESCRIPTOR
+	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
 		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
-				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 } 
+				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }
 			});
 	}
 	virtual void AllocateDescriptorSet() override {
@@ -93,7 +69,30 @@ protected:
 			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &i));
 		}
 	}
+	virtual void CreateDescriptorUpdateTemplate() override {
+		const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
+			{
+				0, 0,
+				_countof(DescriptorUpdateInfo::DII), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				offsetof(DescriptorUpdateInfo, DII), sizeof(DescriptorUpdateInfo)
+			}
+		};
+		assert(!DescriptorSetLayouts.empty() && "");
+		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
+			nullptr,
+			0,
+			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
+			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
+			DescriptorSetLayouts[0],
+			VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
+		};
+		DescriptorUpdateTemplates.resize(1);
+		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
+	}
 	virtual void UpdateDescriptorSet() override {
+		Super::UpdateDescriptorSet();
+
 #ifdef USE_IMMUTABLE_SAMPLER
 		assert(!Samplers.empty() && "");
 #endif
@@ -105,24 +104,11 @@ protected:
 			{ Samplers[0], ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 #endif
 		};
-
 		assert(!DescriptorSets.empty() && "");
-#ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
 		assert(!DescriptorUpdateTemplates.empty() && "");
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
-#else
-		VKExt::UpdateDescriptorSet(
-			{
-				{
-					VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					nullptr,
-					DescriptorSets[0], 0, 0,
-					_countof(DescriptorUpdateInfo::DescriptorImageInfos), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, DUI.DescriptorImageInfos, nullptr, nullptr
-				}
-			},
-			{});
-#endif
 	}
+#pragma endregion //!< DESCRIPTOR
 
 	virtual void CreateTexture() override {
 #if 1
@@ -177,9 +163,9 @@ protected:
 	}
 
 	//!< VKの場合イミュータブルサンプラと通常のサンプラは基本的に同じもの、デスクリプタセットレイアウトの指定が異なるだけ
-	virtual void CreateSampler() override {
-		Samplers.resize(1);
 #ifdef USE_IMMUTABLE_SAMPLER
+	virtual void CreateImmutableSampler() override {
+		Samplers.resize(1);
 		const VkSamplerCreateInfo SCI = {
 			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			nullptr,
@@ -193,7 +179,11 @@ protected:
 			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE, // border
 			VK_FALSE // addressing VK_FALSE:正規化[0.0-1.0], VK_TRUE:画像のディメンション
 		};
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
+	}
 #else
+	virtual void CreateSampler() override {
+		Samplers.resize(1);
 		const VkSamplerCreateInfo SCI = {
 			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			nullptr,
@@ -207,9 +197,9 @@ protected:
 			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
 			VK_FALSE
 		};
-#endif
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
 	}
+#endif
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFs(); }
 	virtual void CreatePipeline() override { CreatePipeline_VsFs(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
@@ -217,7 +207,7 @@ protected:
 private:
 	struct DescriptorUpdateInfo
 	{
-		VkDescriptorImageInfo DescriptorImageInfos[1];
+		VkDescriptorImageInfo DII[1];
 	};
 };
 #pragma endregion

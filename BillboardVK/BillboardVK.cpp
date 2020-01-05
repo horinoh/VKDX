@@ -265,13 +265,13 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 #ifdef USE_PUSH_DESCRIPTOR
 		const DescriptorUpdateInfo DUI = { { UniformBuffers[0], Offset, VK_WHOLE_SIZE },};
 #ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
-		vkCmdPushDescriptorSetWithTemplateKHR(SCB, DescriptorUpdateTemplates[0], PLL, 0, DUI.DescriptorBufferInfos);
+		vkCmdPushDescriptorSetWithTemplateKHR(SCB, DescriptorUpdateTemplates[0], PLL, 0, DUI.DBI);
 #else
 		const std::array<VkWriteDescriptorSet, 1> WDSs = {
 			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			nullptr,
 			VK_NULL_HANDLE, 0, 0,
-			_countof(DescriptorUpdateInfo::DescriptorBufferInfos), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, DUI.DescriptorBufferInfos, nullptr
+			_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, DUI.DBI, nullptr
 		};
 		vkCmdPushDescriptorSetKHR(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(WDSs.size()), WDSs.data());
 #endif
@@ -328,13 +328,13 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 				{ UniformBuffers[0], Offset, VK_WHOLE_SIZE },
 			};
 #ifdef USE_DESCRIPTOR_UPDATE_TEMPLATE
-			vkCmdPushDescriptorSetWithTemplateKHR(CB, DescriptorUpdateTemplates[0], PLL, 0, DUI.DescriptorBufferInfos);
+			vkCmdPushDescriptorSetWithTemplateKHR(CB, DescriptorUpdateTemplates[0], PLL, 0, DUI.DBI);
 #else
 			const std::array<VkWriteDescriptorSet, 1> WDSs = {
 				VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				nullptr,
 				VK_NULL_HANDLE, 0, 0,
-				_countof(DescriptorUpdateInfo::DescriptorBufferInfos), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, DUI.DescriptorBufferInfos, nullptr
+				_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, DUI.DBI, nullptr
 			};
 			vkCmdPushDescriptorSetKHR(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(WDSs.size()), WDSs.data());
 #endif

@@ -116,13 +116,74 @@ protected:
 
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {});
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {
+				//{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr }
+			});
 	}
 	virtual void CreatePipelineLayout() override {
 		assert(!DescriptorSetLayouts.empty() && "");
 		PipelineLayouts.resize(1);
-		VKExt::CreatePipelineLayout(PipelineLayouts[0], {}, {});
+		VKExt::CreatePipelineLayout(PipelineLayouts[0], {
+			//DescriptorSetLayouts[0]
+			}, {});
 	}
+
+	//virtual void CreateDescriptorPool() override {
+	//	DescriptorPools.resize(1);
+	//	VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
+	//			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }
+	//		});
+	//}
+	//virtual void AllocateDescriptorSet() override {
+	//	assert(!DescriptorSetLayouts.empty() && "");
+	//	const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
+	//	assert(!DescriptorPools.empty() && "");
+	//	const VkDescriptorSetAllocateInfo DSAI = {
+	//		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+	//		nullptr,
+	//		DescriptorPools[0],
+	//		static_cast<uint32_t>(DSLs.size()), DSLs.data()
+	//	};
+	//	DescriptorSets.resize(1);
+	//	for (auto& i : DescriptorSets) {
+	//		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &i));
+	//	}
+	//}
+	//virtual void UpdateDescriptorSet() override {
+	//	const DescriptorUpdateInfo DUI = {
+	//		{ UniformBuffers[0], Offset, VK_WHOLE_SIZE },
+	//	};
+	//	assert(!DescriptorSets.empty() && "");
+	//	assert(!DescriptorUpdateTemplates.empty() && "");
+	//	vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+	//}
+	//virtual void CreateUniformBuffer() override {
+	//	UniformBuffers.resize(1);
+	//	CreateBuffer(&UniformBuffers[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(XXXX));
+	//	SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	//}
+	//virtual void CreateDescriptorUpdateTemplate() override {
+	//	const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
+	//		{
+	//			0, 0,
+	//			_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+	//			offsetof(DescriptorUpdateInfo, DBI), sizeof(DescriptorUpdateInfo)
+	//		}
+	//	};
+	//	assert(!DescriptorSetLayouts.empty() && "");
+	//	const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
+	//		VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
+	//		nullptr,
+	//		0,
+	//		static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
+	//		VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
+	//		DescriptorSetLayouts[0],
+	//		VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
+	//	};
+	//	DescriptorUpdateTemplates.resize(1);
+	//	VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
+	//}
+
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 	std::vector<glm::mat4> CurrentMatrix = { glm::identity<glm::mat4>() };
@@ -134,5 +195,12 @@ protected:
 	std::vector<glm::mat4> JointMatrices;
 
 	std::vector<float> MorphWeights;
+
+	uint32_t HeapIndex;
+	VkDeviceSize Offset;
+	struct DescriptorUpdateInfo
+	{
+		VkDescriptorBufferInfo DBI[1];
+	};
 };
 #pragma endregion

@@ -440,7 +440,7 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			if ("indices" == Identifier) {
 				IndexBufferResources.push_back(COM_PTR<ID3D12Resource>());
 
-				CreateBuffer(COM_PTR_PUT(IndexBufferResources.back()), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+				CreateAndCopyToDefaultResource(IndexBufferResources.back(), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 				IndexBufferViews.push_back({ IndexBufferResources.back()->GetGPUVirtualAddress(), Size, ToDXFormat(Acc.componentType) });
 
 				CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
@@ -448,7 +448,7 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			else if ("attributes" == Identifier || "targets" == Identifier) {
 				VertexBufferResources.push_back(COM_PTR<ID3D12Resource>());
 
-				CreateBuffer(COM_PTR_PUT(VertexBufferResources.back()), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+				CreateAndCopyToDefaultResource(VertexBufferResources.back(), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 				VertexBufferViews.push_back({ VertexBufferResources.back()->GetGPUVirtualAddress(), Size, Stride });
 			}
 			else if ("inverseBindMatrices" == Identifier) {

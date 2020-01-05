@@ -38,6 +38,8 @@ protected:
 				DescriptorSetLayouts[0]
 			}, {});
 	}
+
+#pragma region DESCRIPTOR
 	virtual void CreateDescriptorUpdateTemplate() override {
 		const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
 			{
@@ -60,6 +62,8 @@ protected:
 		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
 	}
 	virtual void UpdateDescriptorSet() override {
+		Super::UpdateDescriptorSet();
+
 		assert(!Samplers.empty() && "");
 		assert(VK_NULL_HANDLE != ImageView && "");
 		const DescriptorUpdateInfo DUI = {
@@ -69,6 +73,8 @@ protected:
 		assert(!DescriptorUpdateTemplates.empty() && "");
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 	}
+#pragma endregion //!< DESCRIPTOR
+
 	virtual void CreateSampler() override {
 		Samplers.resize(1);
 		const VkSamplerCreateInfo SCI = {

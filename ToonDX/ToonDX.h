@@ -19,6 +19,7 @@ protected:
 
 		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
 		Degree += 1.0f;
+
 		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp(sizeof(Tr), 0xff), &Tr);
 	}
 #ifdef USE_BUNDLE
@@ -47,6 +48,7 @@ protected:
 		LOG_OK();
 	}
 
+#pragma region DESCRIPTOR
 	virtual void CreateDescriptorHeap() override {
 		DX::CreateDescriptorHeap(ConstantBufferDescriptorHeap, 
 			 { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
@@ -57,6 +59,8 @@ protected:
 		DX::CreateConstantBufferView(ConstantBuffers[0], ConstantBufferDescriptorHeap, sizeof(Transform));
 		LOG_OK();
 	}
+#pragma endregion //!< DESCRIPTOR
+
 	virtual void CreateConstantBuffer() override {
 		const auto Fov = 0.16f * DirectX::XM_PI;
 		const auto Aspect = GetAspectRatioOfClientRect();
@@ -66,8 +70,11 @@ protected:
 		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		Tr = Transform({ DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar), DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp), DirectX::XMMatrixIdentity() });
-		Super::CreateConstantBufferT(Tr);
+
+		ConstantBuffers.push_back(COM_PTR<ID3D12Resource>());
+		CreateAndCopyToUploadResource(ConstantBuffers.back(), RoundUp(sizeof(Tr), 0xff), &Tr); //!< コンスタントバッファの場合、サイズは256バイトアラインにすること
 	}
+
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs_Tesselation(); }
 	virtual void PopulateCommandList(const size_t i) override;

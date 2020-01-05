@@ -21,15 +21,4 @@ public:
 	void CreatePipelineState_VsPs();
 	void CreatePipelineState_VsPsDsHsGs_Tesselation();
 	void CreatePipelineState_Cs(COM_PTR<ID3D12PipelineState>& /*PS*/) { assert(0 && "TODO"); }
-
-	template<typename T>
-	void CreateConstantBufferT(const T& Type) {
-		ConstantBuffers.push_back(COM_PTR<ID3D12Resource>());
-
-		const auto Size = RoundUp(sizeof(Type), 0xff); //!< 256バイトアライン
-		//!< #DX_TODO_PERF 本来はバッファ毎にメモリを確保するのではなく、予め大きなメモリを作成しておいてその一部を複数のバッファへ割り当てる方がよい
-		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back()), Size);
-		CopyToUploadResource(COM_PTR_GET(ConstantBuffers.back()), Size, &Type); 
-		LOG_OK();
-	}
 };

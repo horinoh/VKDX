@@ -85,10 +85,10 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateIndexBuffer();
 	CreateIndirectBuffer();
 
-	CreateTexture();
-	CreateSampler();
+	//!< イミュータブルなサンプラはこの時点(CreateDescriptorSetLayout()より前)で必要
+	CreateImmutableSampler();
 
-	CreateDescriptorSetLayout();
+	CreateDescriptorSetLayout(); 
 	//!< パイプラインレイアウト (ルートシグネチャ相当)
 	CreatePipelineLayout();
 	//!< レンダーパス
@@ -99,15 +99,17 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< フレームバッファ
 	CreateFramebuffer();
 
-	//!< ユニフォームバッファ (コンスタントバッファ相当)
-	CreateUniformBuffer();
-
-	//!< デスクリプタアップデートテンプレート
-	CreateDescriptorUpdateTemplate();
 	//!< デスクリプタプール (デスクリプタヒープ相当)
 	CreateDescriptorPool();
-	//!< デスクリプタセット (デスクリプタビュー相当)
 	AllocateDescriptorSet();
+	//!< DXではスタティックでないサンプラはスクリプタヒープとビューで構成される
+	CreateSampler();
+
+	//!< ユニフォームバッファ (コンスタントバッファ相当)
+	CreateUniformBuffer();
+	CreateTexture();
+
+	//!< デスクリプタセット更新 (デスクリプタビュー相当) ... この時点でユニフォームバッファ、イメージリソース、サンプラ等が必要
 	UpdateDescriptorSet();
 
 	SetTimer(hWnd, NULL, Elapse, nullptr);
@@ -2388,20 +2390,21 @@ void VK::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreate
 //	LOG_OK();
 //}
 
-void VK::UpdateDescriptorSet(const std::initializer_list <VkWriteDescriptorSet> il_WDSs, const std::initializer_list <VkCopyDescriptorSet> il_CDSs)
-{
-	//!< dstArrayElement ... バインディング内での配列の開始添字 (VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT指定の場合は開始バイトオフセット)
-	//!< descriptorCount ... 更新するデスクリプタセット個数 (VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT指定の場合は更新するバイト)
-	//!< 指定 descriptorType に従って、pImageInfo, pBufferInfo, pTexelBufferView の適切な箇所へ指定すること
-	const std::vector<VkWriteDescriptorSet> WDSs(il_WDSs.begin(), il_WDSs.end());
-	const std::vector<VkCopyDescriptorSet> CDSs(il_CDSs.begin(), il_CDSs.end());
-
-	vkUpdateDescriptorSets(Device,
-		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
-		static_cast<uint32_t>(CDSs.size()), CDSs.data());
-
-	LOG_OK();
-}
+//!< vkUpdateDescriptorSetWithTemplate() の使用を推奨
+//void VK::UpdateDescriptorSet(const std::initializer_list <VkWriteDescriptorSet> il_WDSs, const std::initializer_list <VkCopyDescriptorSet> il_CDSs)
+//{
+//	//!< dstArrayElement ... バインディング内での配列の開始添字 (VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT指定の場合は開始バイトオフセット)
+//	//!< descriptorCount ... 更新するデスクリプタセット個数 (VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT指定の場合は更新するバイト)
+//	//!< 指定 descriptorType に従って、pImageInfo, pBufferInfo, pTexelBufferView の適切な箇所へ指定すること
+//	const std::vector<VkWriteDescriptorSet> WDSs(il_WDSs.begin(), il_WDSs.end());
+//	const std::vector<VkCopyDescriptorSet> CDSs(il_CDSs.begin(), il_CDSs.end());
+//
+//	vkUpdateDescriptorSets(Device,
+//		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
+//		static_cast<uint32_t>(CDSs.size()), CDSs.data());
+//
+//	LOG_OK();
+//}
 
 //void VK::CreateDescriptorSet()
 //{

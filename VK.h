@@ -47,8 +47,7 @@
 
 #define USE_IMMUTABLE_SAMPLER
 
-#define USE_DESCRIPTOR_UPDATE_TEMPLATE
-//#define USE_PUSH_DESCRIPTOR
+//#define USE_PUSH_DESCRIPTOR //!< #VK_TODO
 
 //!< セカンダリコマンドバッファ : DXのバンドル相当
 //!< 基本的にセカンダリはプライマリのステートを継承しない
@@ -304,7 +303,6 @@ protected:
 		CreatePipelineLayout(PipelineLayouts[0], {}, {});
 	}
 
-	virtual void CreateDescriptorUpdateTemplate() {}
 
 	virtual void CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreateFlags Flags, const std::initializer_list<VkDescriptorPoolSize> il_DPSs);
 	virtual void CreateDescriptorPool() {}
@@ -312,10 +310,12 @@ protected:
 	//virtual void AllocateDescriptorSet(std::vector<VkDescriptorSet>& DSs, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSLs);
 	virtual void AllocateDescriptorSet() {}
 
-	virtual void UpdateDescriptorSet(const std::initializer_list <VkWriteDescriptorSet> il_WDSs, const std::initializer_list <VkCopyDescriptorSet> il_CDSs);
-	virtual void UpdateDescriptorSet() {}
+	//virtual void UpdateDescriptorSet(const std::initializer_list <VkWriteDescriptorSet> il_WDSs, const std::initializer_list <VkCopyDescriptorSet> il_CDSs);
+	virtual void CreateDescriptorUpdateTemplate() {}
+	virtual void UpdateDescriptorSet() { CreateDescriptorUpdateTemplate(); }
 
 	virtual void CreateTexture() {}
+	virtual void CreateImmutableSampler() {}
 	virtual void CreateSampler() {}
 
 	virtual void CreateRenderPass() { RenderPasses.resize(1); CreateRenderPass_Default(RenderPasses[0], ColorFormat); }
