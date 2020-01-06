@@ -85,7 +85,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateIndexBuffer();
 	CreateIndirectBuffer();
 
-	//!< イミュータブルなサンプラはこの時点(CreateDescriptorSetLayout()より前)で必要
+	//!< イミュータブルサンプラはこの時点(CreateDescriptorSetLayout()より前)で必要
 	CreateImmutableSampler();
 
 	CreateDescriptorSetLayout(); 
@@ -102,14 +102,13 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< デスクリプタプール (デスクリプタヒープ相当)
 	CreateDescriptorPool();
 	AllocateDescriptorSet();
-	//!< DXではスタティックでないサンプラはスクリプタヒープとビューで構成される
-	CreateSampler();
 
 	//!< ユニフォームバッファ (コンスタントバッファ相当)
 	CreateUniformBuffer();
 	CreateTexture();
+	CreateSampler();
 
-	//!< デスクリプタセット更新 (デスクリプタビュー相当) ... この時点でユニフォームバッファ、イメージリソース、サンプラ等が必要
+	//!< デスクリプタセット更新 (デスクリプタビュー相当) ... この時点でデスクリプタセット、ユニフォームバッファ、イメージビュー、サンプラ等が必要
 	UpdateDescriptorSet();
 
 	SetTimer(hWnd, NULL, Elapse, nullptr);

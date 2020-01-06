@@ -64,12 +64,8 @@ protected:
 	}
 	virtual void CreateDescriptorView() override {
 		assert(!ConstantBuffers.empty() && "");
-		const auto Res = COM_PTR_GET(ConstantBuffers[0]);
-		const auto Size = static_cast<UINT>(RoundUp(sizeof(Transform), 0xff)); //!< 256 byte align
-		const auto DH = COM_PTR_GET(ConstantBufferDescriptorHeap);
-
-		const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { Res->GetGPUVirtualAddress(), Size };
-		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(DH, 0));
+		const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0])->GetGPUVirtualAddress(), static_cast<UINT>(RoundUp(sizeof(Transform), 0xff)) };
+		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), 0));
 	}
 #pragma endregion //!< DESCRIPTOR
 	

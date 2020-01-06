@@ -55,30 +55,16 @@ protected:
 
 #pragma region DESCRIPTOR
 	virtual void CreateDescriptorHeap() override {
-		DX::CreateDescriptorHeap(ImageDescriptorHeap,
-			{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
-		);
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(ImageDescriptorHeap)));
 #ifndef USE_STATIC_SAMPLER
 		SamplerDescriptorHeaps.resize(1);
-		DX::CreateDescriptorHeap(SamplerDescriptorHeaps[0],
-			{ D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
-		);
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD_Smp = { D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD_Smp, COM_PTR_UUIDOF_PUTVOID(SamplerDescriptorHeaps[0])));
 #endif
 	}
 	virtual void CreateDescriptorView() override {
-		DX::CreateShaderResourceView(ImageResource, ImageDescriptorHeap);
-#ifndef USE_STATIC_SAMPLER
-		const D3D12_SAMPLER_DESC SD = {
-			D3D12_FILTER_MIN_MAG_MIP_POINT, //!< 非スタティックサンプラの場合敢えて POINT にしている
-			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-			0.0f,
-			0,
-			D3D12_COMPARISON_FUNC_NEVER,
-			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-			0.0f, 1.0f,
-		};
-		Device->CreateSampler(&SD, SamplerDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart());
-#endif
+		Device->CreateShaderResourceView(COM_PTR_GET(ImageResource), nullptr, GetCPUDescriptorHandle(COM_PTR_GET(ImageDescriptorHeap), 0));
 	}
 #pragma endregion //!< DESCRIPTOR
 
@@ -145,6 +131,19 @@ protected:
 			0.0f, 1.0f,
 			0, 0, D3D12_SHADER_VISIBILITY_PIXEL
 		});
+	}
+#else
+	virtual void CreateSampler() override {
+		const D3D12_SAMPLER_DESC SD = {
+			D3D12_FILTER_MIN_MAG_MIP_POINT, //!< ひと目でわかるように、非スタティックサンプラの場合敢えて POINT にしている
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+			0.0f,
+			0,
+			D3D12_COMPARISON_FUNC_NEVER,
+			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+			0.0f, 1.0f,
+		};
+		Device->CreateSampler(&SD, SamplerDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart());
 	}
 #endif
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPs(); }

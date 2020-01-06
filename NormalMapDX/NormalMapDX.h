@@ -74,36 +74,24 @@ protected:
 
 #pragma region DESCRIPTOR
 	virtual void CreateDescriptorHeap() override {
-		DX::CreateDescriptorHeap(ConstantBufferDescriptorHeap,
-			{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
-		);
-		DX::CreateDescriptorHeap(ImageDescriptorHeap,
-			{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
-		);
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD_CB = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD_CB, COM_PTR_UUIDOF_PUTVOID(ConstantBufferDescriptorHeap)));
+
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD_Img = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD_Img, COM_PTR_UUIDOF_PUTVOID(ImageDescriptorHeap)));
+
 #ifndef USE_STATIC_SAMPLER
 		SamplerDescriptorHeaps.resize(1);
-		DX::CreateDescriptorHeap(SamplerDescriptorHeaps[0],
-			{ D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
-		);
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD_Smp = { D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD_Smp, COM_PTR_UUIDOF_PUTVOID(SamplerDescriptorHeaps[0])));
 #endif
-		LOG_OK();
 	}
 	virtual void CreateDescriptorView() override {
-		DX::CreateConstantBufferView(ConstantBuffers[0], ConstantBufferDescriptorHeap, sizeof(Transform));
-		DX::CreateShaderResourceView(ImageResource, ImageDescriptorHeap);
-#ifndef USE_STATIC_SAMPLER
-		const D3D12_SAMPLER_DESC SD = {
-			D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-			0.0f,
-			0,
-			D3D12_COMPARISON_FUNC_NEVER,
-			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-			0.0f, 1.0f,
-		};
-		Device->CreateSampler(&SD, SamplerDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart());
-#endif
-		LOG_OK();
+		assert(!ConstantBuffers.empty() && "");
+		const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0])->GetGPUVirtualAddress(), static_cast<UINT>(RoundUp(sizeof(Transform), 0xff)) };
+		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), 0));
+
+		Device->CreateShaderResourceView(COM_PTR_GET(ImageResource), nullptr, GetCPUDescriptorHandle(COM_PTR_GET(ImageDescriptorHeap), 0));
 	}
 	virtual void CreateConstantBuffer() override {
 		const auto Fov = 0.16f * DirectX::XM_PI;
@@ -136,6 +124,20 @@ protected:
 				0, 0, D3D12_SHADER_VISIBILITY_PIXEL
 			});
 	}
+#else
+	virtual void CreateSampler() override {
+		const D3D12_SAMPLER_DESC SD = {
+			D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+			0.0f,
+			0,
+			D3D12_COMPARISON_FUNC_NEVER,
+			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+			0.0f, 1.0f,
+		};
+		Device->CreateSampler(&SD, SamplerDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart());
+	}
+
 #endif
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs_Tesselation(); }

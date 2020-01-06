@@ -36,14 +36,14 @@ protected:
 		LOG_OK();
 	}
 	virtual void CreateDescriptorHeap() override {
-		DX::CreateDescriptorHeap(UnorderedAccessTextureDescriptorHeap, 
-			{ D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
-		);
-		LOG_OK();
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(UnorderedAccessTextureDescriptorHeap)));
 	}
 	virtual void CreateDescriptorView() override {
-		DX::CreateUnorderedAccessView(UnorderedAccessTextureResource, UnorderedAccessTextureDescriptorHeap);
-		LOG_OK();
+		D3D12_UNORDERED_ACCESS_VIEW_DESC UAVD = { DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_UAV_DIMENSION_TEXTURE2D };
+		UAVD.Texture2D.MipSlice = 0;
+		UAVD.Texture2D.PlaneSlice = 0;
+		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextureResource), nullptr, &UAVD, GetCPUDescriptorHandle(COM_PTR_GET(UnorderedAccessTextureDescriptorHeap), 0));
 	}
 	virtual void CreateShader(std::vector<COM_PTR<ID3DBlob>>& SBs) const override {
 		//CreateShader_Cs(ShaderBlobs);

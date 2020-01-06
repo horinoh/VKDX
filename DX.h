@@ -249,30 +249,7 @@ protected:
 
 	virtual void CreateRootSignature();
 
-	virtual void CreateDescriptorHeap(COM_PTR<ID3D12DescriptorHeap>& DH, const D3D12_DESCRIPTOR_HEAP_DESC DHD) {
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DH)));
-	}
 	virtual void CreateDescriptorHeap() {}
-
-	virtual void CreateConstantBufferView(const COM_PTR<ID3D12Resource>& Res, const COM_PTR<ID3D12DescriptorHeap>& DH, const size_t Size) {
-		const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = {
-			Res->GetGPUVirtualAddress(),
-			static_cast<UINT>(RoundUp(Size, 0xff)) //!< 256 byte align
-		};
-		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(COM_PTR_GET(DH), 0));
-	}
-	virtual void CreateShaderResourceView(const COM_PTR<ID3D12Resource>& Res, const COM_PTR<ID3D12DescriptorHeap>& DH) {
-		Device->CreateShaderResourceView(COM_PTR_GET(Res), nullptr, GetCPUDescriptorHandle(COM_PTR_GET(DH), 0));
-	}
-	virtual void CreateUnorderedAccessView(const COM_PTR<ID3D12Resource>& Res, const COM_PTR<ID3D12DescriptorHeap>& DH) {
-		D3D12_UNORDERED_ACCESS_VIEW_DESC UAVD = {
-			DXGI_FORMAT_R8G8B8A8_UNORM,
-			D3D12_UAV_DIMENSION_TEXTURE2D,
-		};
-		UAVD.Texture2D.MipSlice = 0;
-		UAVD.Texture2D.PlaneSlice = 0;
-		Device->CreateUnorderedAccessView(COM_PTR_GET(Res), nullptr, &UAVD, GetCPUDescriptorHandle(COM_PTR_GET(DH), 0));
-	}
 	virtual void CreateDescriptorView() {}
 
 	virtual void CreateShader(std::vector<COM_PTR<ID3DBlob>>& ShaderBlobs) const;
@@ -289,6 +266,7 @@ protected:
 
 	virtual void CreateTexture() {}
 	virtual void CreateStaticSampler() {}
+	virtual void CreateSampler() {}
 
 	virtual void PopulateCommandList(const size_t i);
 

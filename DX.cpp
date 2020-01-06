@@ -38,7 +38,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateIndexBuffer();
 	CreateIndirectBuffer();
 
-	//!< スタティックなサンプラはこの時点(CreateRootSignature()より前)で必要
+	//!< スタティックサンプラはこの時点(CreateRootSignature()より前)で必要
 	CreateStaticSampler();
 
 	//!< ルートシグネチャ (パイプライントレイアウト相当)
@@ -47,14 +47,15 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< パイプライン
 	CreatePipelineState();
 
-	//!< デスクリプタヒープ (デスクリプタプール相当) ... スタティックでないサンプラもここ
+	//!< デスクリプタヒープ (デスクリプタプール相当)
 	CreateDescriptorHeap();
 
 	//!< コンスタントバッファ (ユニフォームバッファ相当)
 	CreateConstantBuffer();
 	CreateTexture();
+	CreateSampler();
 
-	//!< デスクリプタビュー (デスクリプタセット更新相当) ... この時点でコンスタントバッファ、イメージリソース等が必要
+	//!< デスクリプタビュー (デスクリプタセット更新相当) ... この時点でリソース、デスクリプタヒープ等が必要
 	CreateDescriptorView();
 
 	//CreateUnorderedAccessTexture();

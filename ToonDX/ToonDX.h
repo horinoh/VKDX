@@ -50,14 +50,13 @@ protected:
 
 #pragma region DESCRIPTOR
 	virtual void CreateDescriptorHeap() override {
-		DX::CreateDescriptorHeap(ConstantBufferDescriptorHeap, 
-			 { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }
-			);
-		LOG_OK();
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(ConstantBufferDescriptorHeap)));
 	}
 	virtual void CreateDescriptorView() override {
-		DX::CreateConstantBufferView(ConstantBuffers[0], ConstantBufferDescriptorHeap, sizeof(Transform));
-		LOG_OK();
+		assert(!ConstantBuffers.empty() && "");
+		const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0])->GetGPUVirtualAddress(), static_cast<UINT>(RoundUp(sizeof(Transform), 0xff)) };
+		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), 0));
 	}
 #pragma endregion //!< DESCRIPTOR
 
