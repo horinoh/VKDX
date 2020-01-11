@@ -66,9 +66,7 @@ protected:
 			static_cast<uint32_t>(DSLs.size()), DSLs.data()
 		};
 		DescriptorSets.resize(1);
-		for (auto& i : DescriptorSets) {
-			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &i));
-		}
+		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
 		const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
@@ -123,6 +121,8 @@ protected:
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 private:
+	float Degree = 0.0f;
+
 	struct Transform
 	{
 		glm::mat4 Projection;
@@ -130,15 +130,13 @@ private:
 		glm::mat4 World;
 	};
 	using Transform = struct Transform;
-
-	float Degree = 0.0f;
 	Transform Tr;
-	uint32_t HeapIndex;
-	VkDeviceSize Offset;
-
 	struct DescriptorUpdateInfo
 	{
 		VkDescriptorBufferInfo DescriptorBufferInfos[1];
 	};
+
+	uint32_t HeapIndex;
+	VkDeviceSize Offset;
 };
 #pragma endregion

@@ -80,7 +80,7 @@ protected:
 		Tr = Transform({ DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar), DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp), DirectX::XMMatrixIdentity() });
 
 		ConstantBuffers.push_back(COM_PTR<ID3D12Resource>());
-		CreateAndCopyToUploadResource(ConstantBuffers.back(), RoundUp(sizeof(Tr), 0xff), &Tr); //!< コンスタントバッファの場合、サイズは256バイトアラインにすること
+		CreateUploadResource(COM_PTR_PUT(ConstantBuffers[0]), RoundUp(sizeof(Tr), 0xff)); //!< コンスタントバッファの場合、サイズは256バイトアラインにすること
 	}
 
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }

@@ -34,13 +34,13 @@ xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)
 - Tools - Option - Debugging - General - Enable Edit and Continue
 
 ### GLTF
- * C++ローダー https://github.com/jessey-git/fx-gltf を同じ階層にクローンする
- * JSON を必要とするので https://github.com/nlohmann/json を同じ階層にクローンする
+ * C++ローダー https://github.com/jessey-git/fx-gltf ~~を同じ階層にクローンする~~サブモジュール化した
+ * JSON を必要とするので https://github.com/nlohmann/json ~~を同じ階層にクローンする~~サブモジュール化した
  * **..\\..\fx-gltf\include** にインクルードパスを通す
 ~~~
 #include <fx/gltf.h>
 ~~~
- * サンプルデータ https://github.com/KhronosGroup/glTF-Sample-Models を同じ階層にクローンする
+ * サンプルデータ https://github.com/KhronosGroup/glTF-Sample-Models ~~を同じ階層にクローンする~~サブモジュール化した
 
 ### プリコンパイルヘッダーを使う
  * (ここでは)framework.cpp を追加 - 右クリック - Properties - C/C++ - Precompiled Headers - Create(/Yc)
@@ -81,11 +81,11 @@ setx VK_INSTANCE_LAYERS VK_LAYER_LUNARG_standard_validation
 
 #### GLM
 * https://github.com/g-truc/glm
-* 同じ階層に GLM をクローンして **..\\..\glm** にインクルードパスを通した
+* ~~同じ階層に GLM をクローンして~~サブモジュール化してある **..\\..\glm** にインクルードパスを通した
 
 #### GLI
 * https://github.com/g-truc/gli
-* 同じ階層に GLI をクローンして **..\\..\gli** にインクルードパスを通した
+* ~~同じ階層に GLI をクローンして~~サブモジュール化してある **..\\..\gli** にインクルードパスを通した
 
 #### Vulkan-Hpp
 * ~~https://github.com/KhronosGroup/Vulkan-Hpp~~ 今は通常インストールに含まれるみたい
@@ -189,9 +189,9 @@ winrt::copy_to_abi(XXX, *YYY.put_void());
 
 ### DirectXTK (DDS読み込みに使用)
 * https://github.com/Microsoft/DirectXTK12
-* DirectXTK_Desktop_2017_Win10.sln を開いてビルド(Debug, Release)
+* ~~DirectXTK_Desktop_2017_Win10.sln~~DirectXTK_Desktop_2019_Win10.sln を開いてx64をビルド(Debug, Release)
 	* D3D12_DESCRIPTOR_RANGE1 がないと言われて、コンパイルが通らない場合は  Windows 10 Anniversary Update SDK が必要(VisualStudioを更新する)
-* 同じ階層に DirectXTK12 をクローンして **..\..\DirectXTK12** にパスを通した
+* ~~同じ階層に DirectXTK12 をクローンして **..\..\DirectXTK12** にパスを通した~~サブモジュール化したので再帰的にクローンする
 * 備考
 	* DirectXTex(https://github.com/Microsoft/DirectXTex/wiki/DirectXTex) もある、こちらでもよい
 

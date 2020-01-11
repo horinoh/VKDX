@@ -267,6 +267,77 @@ void GltfVK::LoadScene()
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb"); //!< Scale = 0.5f
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb"); //!< Scale = 0.02f
 }
+void GltfVK::PreProcess()
+{
+	const auto Fov = 0.16f * glm::pi<float>();
+	const auto Aspect = GetAspectRatioOfClientRect();
+	const auto ZFar = 100.0f;
+	const auto ZNear = ZFar * 0.0001f;
+	PV.Projection = glm::perspective(Fov, Aspect, ZNear, ZFar);
+
+	const auto CamPos = glm::vec3(0.0f, 0.0f, 6.0f);
+	const auto CamTag = glm::vec3(0.0f);
+	const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
+	PV.View = glm::lookAt(CamPos, CamTag, CamUp);
+
+#if 0
+	auto UBSize = sizeof(PV);
+
+	//!< デスクリプタプール
+	DescriptorPools.resize(1);
+	VKExt::CreateDescriptorPool(DescriptorPools[0], 0, { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 } });
+
+	//!< デスクリプタセット
+	assert(!DescriptorSetLayouts.empty() && "");
+	const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
+	assert(!DescriptorPools.empty() && "");
+	const VkDescriptorSetAllocateInfo DSAI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+		nullptr,
+		DescriptorPools[0],
+		static_cast<uint32_t>(DSLs.size()), DSLs.data()
+	};
+	DescriptorSets.resize(1);
+	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
+
+	//!< ユニフォームバッファ
+	UniformBuffers.resize(1);
+	CreateBuffer(&UniformBuffers[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(UBSize));
+	SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
+	//!< アップデートテンプレート
+	const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
+		{
+			0, 0,
+			_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			offsetof(DescriptorUpdateInfo, DBI), sizeof(DescriptorUpdateInfo)
+		}
+	};
+	assert(!DescriptorSetLayouts.empty() && "");
+	const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
+		VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
+		DescriptorSetLayouts[0],
+		VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
+	};
+	DescriptorUpdateTemplates.resize(1);
+	VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
+
+	//!< アップデート
+	const DescriptorUpdateInfo DUI = {
+		{ UniformBuffers[0], Offset, VK_WHOLE_SIZE },
+	};
+	assert(!DescriptorSets.empty() && "");
+	assert(!DescriptorUpdateTemplates.empty() && "");
+	vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+#endif
+}
+void GltfVK::PostProcess()
+{
+}
 void GltfVK::Process(const fx::gltf::Node& Nd, const uint32_t i)
 {
 	auto& Mtx = CurrentMatrix.back();
@@ -294,23 +365,31 @@ void GltfVK::Process(const fx::gltf::Camera& Cam)
 {
 	Gltf::Process(Cam);
 
-	glm::mat4 View = CurrentMatrix.back();
-	glm::mat4 Projection;
+	PV.View = CurrentMatrix.back();
+#if 1
+	PV.View[3][0] = 0.0f;
+	PV.View[3][1] = 0.0f;
+#endif
+
 	switch (Cam.type) {
 	case fx::gltf::Camera::Type::None: break;
 	case fx::gltf::Camera::Type::Orthographic:
-		Projection = glm::orthoRH(0.0f, Cam.orthographic.xmag, 0.0f, Cam.orthographic.ymag, Cam.orthographic.znear, Cam.orthographic.zfar);
+		PV.Projection = glm::orthoRH(0.0f, Cam.orthographic.xmag, 0.0f, Cam.orthographic.ymag, Cam.orthographic.znear, Cam.orthographic.zfar);
 		break;
 	case fx::gltf::Camera::Type::Perspective:
-		Projection = glm::perspective(Cam.perspective.yfov, Cam.perspective.aspectRatio, Cam.perspective.znear, Cam.perspective.zfar);
+		PV.Projection = glm::perspective(Cam.perspective.yfov, Cam.perspective.aspectRatio, Cam.perspective.znear, Cam.perspective.zfar);
 		break;
 	}
 
 #ifdef DEBUG_STDOUT
 	std::cout << "View =" << std::endl;
-	std::cout << View;
+	std::cout << PV.View;
 	std::cout << "Projection =" << std::endl;
-	std::cout << Projection;
+	std::cout << PV.Projection;
+#endif
+
+#if 0
+	CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(PV), &PV, Offset);
 #endif
 }
 void GltfVK::Process(const fx::gltf::Primitive& Prim)
@@ -367,6 +446,7 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	const auto IB = IndexBuffers.back();
 	const auto IndB = IndirectBuffers.back();
 	const auto PL = Pipelines.back();
+
 	const std::vector<VkDeviceSize> Offsets(VBs.size(), 0);
 	for (auto i = 0; i < static_cast<int>(Count); ++i) {
 		const auto SCB = SecondaryCommandBuffers[SecondaryCommandBuffers.size() - Count + i];
@@ -391,7 +471,13 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
 			vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 			vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+
+#if 0
 			//vkCmdPushConstants(SCB, PLL, VK_SHADER_STAGE_VERTEX_BIT, 0, static_cast<uint32_t>(sizeof(CurrentMatrix.back())), &CurrentMatrix.back());
+			const std::array<VkDescriptorSet, 1> DSs = { DescriptorSets.back() };
+			vkCmdBindDescriptorSets(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
+#endif
+
 			vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 			vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets.data());
 			vkCmdBindIndexBuffer(SCB, IB, 0, ToVKIndexType(GetDocument().accessors[Prim.indices].componentType));
@@ -474,7 +560,6 @@ void GltfVK::Process(const fx::gltf::Skin& Skn)
 		JointMatrices.push_back(Wld * IBM);
 	}
 }
-
 void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnTimer(hWnd, hInstance);
@@ -537,7 +622,12 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 			ScissorRects[0],
 			static_cast<uint32_t>(CVs.size()), CVs.data()
 		};
+
+		//const auto PLL = PipelineLayouts[0];
 		//vkCmdPushConstants(CB, PLL, VK_SHADER_STAGE_VERTEX_BIT, 0, static_cast<uint32_t>(sizeof(ViewProjection)), &ViewProjection);
+		//const std::array<VkDescriptorSet, 1> DSs = { DescriptorSets.back() };
+		//vkCmdBindDescriptorSets(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
+
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
 			vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
 		} vkCmdEndRenderPass(CB);

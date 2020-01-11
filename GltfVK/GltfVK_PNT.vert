@@ -13,8 +13,13 @@ const float Scale = 0.005f;
 //const float Scale = 0.5f;
 //const float Scale = 1.0f;
 
+//layout (set = 0, binding = 0) uniform ProjView { mat4 Projection; mat4 View; };
+
 void main()
 {
+	//const mat4 PV = Projection * View;
+
+	//gl_Position = PV * vec4(InPosition, 1.0f);
 	gl_Position = vec4(InPosition * Scale, 1.0f);
 	OutNormal = InNormal;
 	OutTexcoord = InTexcoord;

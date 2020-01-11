@@ -122,8 +122,12 @@ public:
 		//	//i.data;
 		//}
 
-		Process(Doc);
+		PreProcess(); {
+			Process(Doc);
+		} PostProcess();
 	}
+	virtual void PreProcess() {}
+	virtual void PostProcess() {}
 
 	virtual void Process(const fx::gltf::Document& Doc) {
 		std::cout << "copyright = " << Doc.asset.copyright << std::endl;
@@ -249,9 +253,10 @@ public:
 		}
 
 		const auto& Doc = GetDocument();
+	
 		PushTab();
-		if (-1 != Nd.mesh) {
-			Process(Doc.meshes[Nd.mesh]);
+		if (-1 != Nd.camera) {
+			Process(Doc.cameras[Nd.camera]);
 		}
 		PopTab();
 
@@ -260,10 +265,10 @@ public:
 			Process(Doc.skins[Nd.skin]);
 		}
 		PopTab();
-
+		
 		PushTab();
-		if (-1 != Nd.camera) {
-			Process(Doc.cameras[Nd.camera]);
+		if (-1 != Nd.mesh) {
+			Process(Doc.meshes[Nd.mesh]);
 		}
 		PopTab();
 

@@ -1,0 +1,15 @@
+[submodule "glm"]
+	path = glm
+	url = https://github.com/g-truc/glm.git
+[submodule "gli"]
+	path = gli
+	url = https://github.com/g-truc/gli.git
+[submodule "DirectXTK12"]
+	path = DirectXTK12
+	url = https://github.com/microsoft/DirectXTK12.git
+[submodule "fx-gltf"]
+	path = fx-gltf
+	url = https://github.com/jessey-git/fx-gltf.git
+[submodule "json"]
+	path = json
+	url = https://github.com/nlohmann/json.git

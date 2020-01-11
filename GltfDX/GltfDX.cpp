@@ -266,6 +266,38 @@ void GltfDX::LoadScene()
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb"); //!< Scale = 0.5f
 	//Load("..\\..\\glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb"); //!< Scale = 0.02f
 }
+void GltfDX::PreProcess()
+{
+	const auto Fov = 0.16f * DirectX::XM_PI;
+	const auto Aspect = GetAspectRatioOfClientRect();
+	const auto ZFar = 100.0f;
+	const auto ZNear = ZFar * 0.0001f;
+	PV.Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
+
+	const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 6.0f, 1.0f);
+	const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+	const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	PV.View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
+
+#if 1
+	auto CBSize = RoundUp(sizeof(PV), 0xff);
+
+	//!< デスクリプタヒープ
+	const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(ConstantBufferDescriptorHeap)));
+
+	//!< コンスタントバッファ
+	ConstantBuffers.push_back(COM_PTR<ID3D12Resource>());
+	CreateUploadResource(COM_PTR_PUT(ConstantBuffers[0]), CBSize);
+
+	//!< ビュー
+	const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0])->GetGPUVirtualAddress(), static_cast<UINT>(CBSize) };
+	Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), 0));
+#endif
+}
+void GltfDX::PostProcess()
+{
+}
 void GltfDX::Process(const fx::gltf::Node& Nd, const uint32_t i)
 {
 	auto& Mtx = CurrentMatrix.back();
@@ -297,23 +329,33 @@ void GltfDX::Process(const fx::gltf::Camera& Cam)
 {
 	Gltf::Process(Cam);
 
-	DirectX::XMMATRIX View = CurrentMatrix.back();
-	DirectX::XMMATRIX Projection;
+	PV.View = CurrentMatrix.back();
+#if 1
+	PV.View.r[3].m128_f32[0] = 0.0f;
+	PV.View.r[3].m128_f32[1] = 0.0f;
+#endif
+
+#if 1
 	switch (Cam.type) {
 	case fx::gltf::Camera::Type::None: break;
 	case fx::gltf::Camera::Type::Orthographic:
-		Projection = DirectX::XMMatrixOrthographicRH(Cam.orthographic.xmag, Cam.orthographic.ymag, Cam.orthographic.znear, Cam.orthographic.zfar);
+		PV.Projection = DirectX::XMMatrixOrthographicRH(Cam.orthographic.xmag, Cam.orthographic.ymag, Cam.orthographic.znear, Cam.orthographic.zfar);
 		break;
 	case fx::gltf::Camera::Type::Perspective:
-		Projection = DirectX::XMMatrixPerspectiveFovRH(Cam.perspective.yfov, Cam.perspective.aspectRatio, Cam.perspective.znear, Cam.perspective.zfar);
+		PV.Projection = DirectX::XMMatrixPerspectiveFovRH(Cam.perspective.yfov, Cam.perspective.aspectRatio, Cam.perspective.znear, Cam.perspective.zfar);
 		break;
 	}
+#endif
 
 #ifdef DEBUG_STDOUT
-	std::cout << "View =" << std::endl;
-	std::cout << View;
 	std::cout << "Projection =" << std::endl;
-	std::cout << Projection;
+	std::cout << PV.Projection; 
+	std::cout << "View =" << std::endl;
+	std::cout << PV.View;
+#endif
+
+#if 1
+	CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp(sizeof(PV), 0xff), &PV);
 #endif
 }
 void GltfDX::Process(const fx::gltf::Primitive& Prim)
@@ -402,7 +444,13 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 
 		VERIFY_SUCCEEDED(BCL->Reset(BCA, PST));
 		{
+#if 1
+			BCL->SetGraphicsRootSignature(RS);
 			//BCL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(sizeof(CurrentMatrix.back()) / 4), &CurrentMatrix.back(), 0);
+			const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(ConstantBufferDescriptorHeap) };
+			BCL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
+			BCL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), 0));
+#endif
 			BCL->IASetPrimitiveTopology(ToDXPrimitiveTopology(Prim.mode));
 			BCL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
 			BCL->IASetIndexBuffer(&IBV);
@@ -495,7 +543,6 @@ void GltfDX::Process(const fx::gltf::Skin& Skn)
 		JointMatrices.push_back(Wld * IBM);
 	}
 }
-
 void GltfDX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnTimer(hWnd, hInstance);
@@ -553,7 +600,11 @@ void GltfDX::PopulateCommandList(const size_t i)
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
 		CL->SetGraphicsRootSignature(RS);
+
 		//CL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(sizeof(ViewProjection) / 4), &ViewProjection, 0);
+		//const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(ConstantBufferDescriptorHeap) };
+		//CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
+		//CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), 0));
 
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{

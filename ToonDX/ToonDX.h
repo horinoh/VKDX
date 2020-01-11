@@ -71,7 +71,7 @@ protected:
 		Tr = Transform({ DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar), DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp), DirectX::XMMatrixIdentity() });
 
 		ConstantBuffers.push_back(COM_PTR<ID3D12Resource>());
-		CreateAndCopyToUploadResource(ConstantBuffers.back(), RoundUp(sizeof(Tr), 0xff), &Tr); //!< コンスタントバッファの場合、サイズは256バイトアラインにすること
+		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back()), RoundUp(sizeof(Tr), 0xff));
 	}
 
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
@@ -79,6 +79,8 @@ protected:
 	virtual void PopulateCommandList(const size_t i) override;
 
 private:
+	FLOAT Degree = 0.0f;
+
 	struct Transform
 	{
 		DirectX::XMMATRIX Projection;
@@ -86,8 +88,6 @@ private:
 		DirectX::XMMATRIX World;
 	};
 	using Transform = struct Transform;
-
-	FLOAT Degree = 0.0f;
 	Transform Tr;
 };
 #pragma endregion
