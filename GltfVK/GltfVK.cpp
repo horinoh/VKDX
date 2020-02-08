@@ -586,7 +586,7 @@ void GltfVK::UpdateAnimScale(const std::array<float, 3>& Value, const uint32_t N
 void GltfVK::UpdateAnimRotation(const std::array<float, 4>& Value, const uint32_t NodeIndex)
 {
 	if (-1 != NodeIndex) {
-		NodeMatrices[NodeIndex] * glm::mat4_cast(glm::make_quat(Value.data()));
+		glm::mat4_cast(glm::make_quat(Value.data())) * NodeMatrices[NodeIndex];
 	}
 }
 void GltfVK::UpdateAnimWeights(const float* /*Data*/, const uint32_t /*PrevIndex*/, const uint32_t /*NextIndex*/, const float /*t*/)

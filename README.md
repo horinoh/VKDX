@@ -82,6 +82,8 @@ setx VK_INSTANCE_LAYERS VK_LAYER_LUNARG_standard_validation
 #### GLM
 * https://github.com/g-truc/glm
 * ~~同じ階層に GLM をクローンして~~サブモジュール化してある **..\\..\glm** にインクルードパスを通した
+* マトリクスの乗算順序が glm と DirectXMath では異なるので注意
+	- B44 * A44(glm) == A44 * B44(DiirectXMath)
 
 #### GLI
 * https://github.com/g-truc/gli

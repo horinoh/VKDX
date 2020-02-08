@@ -31,6 +31,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/quaternion.hpp>
 #pragma warning(pop)
 
 #ifndef BREAK_ON_FAILED
@@ -502,12 +503,13 @@ protected:
 
 	//!< https://matthewwellings.com/blog/the-new-vulkan-coordinate-system/
 	//!< VKのクリップスペースはYが反転、Zが半分 (Vulkan clip space has inverted Y and half Z)
-	static glm::mat4 GetVulkanClipSpace() {
-		return glm::mat4(1.0f, 0.0f, 0.0f, 0.0f,
-				0.0f, -1.0f, 0.0f, 0.0f,
-				0.0f, 0.0f, 0.5f, 0.0f,
-				0.0f, 0.0f, 0.5f, 1.0f);
-	}
+	//!< → ビューポートの指定次第で回避できる (USE_VIEWPORT_Y_UP使用箇所参照)、Vulkan はTLが原点(DirectX、OpenGLはBLが原点)
+	//static glm::mat4 GetVulkanClipSpace() {
+	//	return glm::mat4(1.0f, 0.0f, 0.0f, 0.0f,
+	//			0.0f, -1.0f, 0.0f, 0.0f,
+	//			0.0f, 0.0f, 0.5f, 0.0f,
+	//			0.0f, 0.0f, 0.5f, 1.0f);
+	//}
 
 	/**
 	@note バーチャルフレームに持たせるもの #VK_TODO

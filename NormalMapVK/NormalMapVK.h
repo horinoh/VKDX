@@ -134,7 +134,7 @@ protected:
 		const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
 		const auto CamTag = glm::vec3(0.0f);
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
-		Tr = Transform({ GetVulkanClipSpace() * glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
+		Tr = Transform({ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
 
 		UniformBuffers.resize(1);
 		CreateBuffer(&UniformBuffers[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
@@ -144,6 +144,25 @@ protected:
 	virtual void CreateTexture() override {
 		LoadImage(&Image, &ImageDeviceMemory, &ImageView, "NormalMap.dds");
 	}
+#ifdef USE_IMMUTABLE_SAMPLER
+	virtual void CreateImmutableSampler() override {
+		Samplers.resize(1);
+		const VkSamplerCreateInfo SCI = {
+			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+			nullptr,
+			0,
+			VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, // min, mag, mip
+			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, // u, v, w
+			0.0f,
+			VK_FALSE, 1.0f, 
+			VK_FALSE, VK_COMPARE_OP_NEVER, 
+			0.0f, 1.0f, 
+			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+			VK_FALSE
+		};
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
+	}
+#else
 	virtual void CreateSampler() override {
 		Samplers.resize(1);
 		const VkSamplerCreateInfo SCI = {
@@ -161,6 +180,8 @@ protected:
 		};
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
 	}
+#endif
+	
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }
 	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs_Tesselation(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
