@@ -726,7 +726,7 @@ public:
 							for (uint32_t k = 0; k < InAcc.count; ++k) {
 								if (Keyframes[k] >= CurrentFrame) {
 									NextIndex = k;
-									PrevIndex = NextIndex - 1;
+									PrevIndex = NextIndex > 1 ? NextIndex - 1 : 0;
 									break;
 								}
 							}
@@ -735,7 +735,7 @@ public:
 							std::cout << "Frame = " << CurrentFrame << " [" << PrevFrame << ", " << NextFrame << "] / " << MaxFrame << std::endl;
 							const auto Delta = NextFrame - PrevFrame;
 
-							const auto t = std::abs(Delta) <= std::numeric_limits<float>::epsilon() ? 0.0f : (CurrentFrame - PrevFrame) / Delta;
+							const auto t = std::abs(Delta) <= (std::numeric_limits<float>::epsilon)() ? 0.0f : (CurrentFrame - PrevFrame) / Delta;
 							const auto invt = 1.0f - t;
 							std::cout << "t = " << t << std::endl;
 

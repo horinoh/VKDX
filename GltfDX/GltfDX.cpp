@@ -350,10 +350,12 @@ void GltfDX::Process(const fx::gltf::Camera& Cam)
 #endif
 
 #ifdef DEBUG_STDOUT
-	std::cout << "Projection =" << std::endl;
-	std::cout << PV.Projection; 
 	std::cout << "View =" << std::endl;
 	std::cout << PV.View;
+	std::cout << "Projection =" << std::endl;
+	std::cout << PV.Projection;
+	//!< VKとは順次が逆
+	std::cout << "View * Projection = " << PV.View * PV.Projection;
 #endif
 
 #if 1
@@ -475,9 +477,8 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			const auto& Buf = Doc.buffers[BufV.buffer];
 
 			const auto Data = &Buf.data[BufV.byteOffset + Acc.byteOffset];
-			const auto Stride = BufV.byteStride;
-			const auto TypeSize = GetTypeSize(Acc);
-			const auto Size = Acc.count * (0 == Stride ? TypeSize : Stride);
+			const auto Stride = (0 == BufV.byteStride ? GetTypeSize(Acc) : BufV.byteStride);
+			const auto Size = Acc.count * Stride;
 
 			//!< BufferView.target はセットされてない事が多々あるので自前でIdentifierを用意…
 			switch (BufV.target)
@@ -505,10 +506,15 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 				InverseBindMatrices.reserve(Acc.count);
 				for (uint32_t i = 0; i < Acc.count; ++i) {
 					InverseBindMatrices.push_back(reinterpret_cast<const DirectX::XMMATRIX*>(Data + Stride * i));
-#ifdef DEBUG_STDOUT
-					std::cout << *InverseBindMatrices.back();
-#endif
 				}
+#ifdef DEBUG_STDOUT
+				if (InverseBindMatrices.size()) {
+					std::cout << "InverseBindMatrices[" << InverseBindMatrices.size() << "]" << std::endl;
+					for (auto i : InverseBindMatrices) {
+						std::cout << *i;
+					}
+				}
+#endif
 			}
 		}
 	}
@@ -544,6 +550,14 @@ void GltfDX::Process(const fx::gltf::Skin& Skn)
 		
 		JointMatrices.push_back(Wld * IBM);
 	}
+#ifdef DEBUG_STDOUT
+	if (JointMatrices.size()) {
+		std::cout << "JointMatrices[" << JointMatrices.size() << "]" << std::endl;
+		for (auto i : JointMatrices) {
+			std::cout << i;
+		}
+	}
+#endif
 }
 void GltfDX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
@@ -551,7 +565,9 @@ void GltfDX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 
 	CurrentFrame += 0.1f; //static_cast<float>(Elapse) / 1000.0f;
 
-	UpdateAnimation(CurrentFrame);
+	const auto bLoop = true;
+	//const auto bLoop = false;
+	UpdateAnimation(CurrentFrame, bLoop);
 }
 
 void GltfDX::UpdateAnimTranslation(const std::array<float, 3>& Value, const uint32_t NodeIndex)

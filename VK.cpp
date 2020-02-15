@@ -1665,6 +1665,7 @@ VkSurfaceFormatKHR VK::SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Sfc
 			switch (SFs[i].colorSpace)
 			{
 			default: break;
+				//!< HDR対応のディスプレイの場合、以下が返ることが期待される
 			case VK_COLOR_SPACE_HDR10_HLG_EXT:
 			case VK_COLOR_SPACE_HDR10_ST2084_EXT:
 			case VK_COLOR_SPACE_DOLBYVISION_EXT:
@@ -1895,14 +1896,14 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 	const std::array<VkHdrMetadataEXT, 1> MDs = { {
 		VK_STRUCTURE_TYPE_HDR_METADATA_EXT,
 		nullptr,
-		{ 0.708f, 0.292f },
-		{ 0.17f, 0.797f },
-		{ 0.131f, 0.046f },
-		{ 0.3127f, 0.329f },
-		1000.0f,
-		0.001f,
-		2000.0f,
-		500.0f
+		{ 0.708f, 0.292f },		//!< Display Primary Red
+		{ 0.17f, 0.797f },		//!< Green
+		{ 0.131f, 0.046f },		//!< Blue
+		{ 0.3127f, 0.329f },	//!< White
+		1000.0f,				//!< Max Luminance
+		0.001f,					//!< Min Luminance
+		2000.0f,				//!< Max Content Light Level
+		500.0f					//!< Max Frame Average Light Level
 	} };
 	assert(SCs.size() == MDs.size() && "");
 	vkSetHdrMetadataEXT(Device, static_cast<uint32_t>(SCs.size()), SCs.data(), MDs.data());

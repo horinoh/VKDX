@@ -388,6 +388,8 @@ void GltfVK::Process(const fx::gltf::Camera& Cam)
 	std::cout << PV.View;
 	std::cout << "Projection =" << std::endl;
 	std::cout << PV.Projection;
+	//!< DX‚Æ‚Í‡ŽŸ‚ª‹t
+	std::cout << "Projection * View = " << PV.Projection * PV.View;
 #endif
 
 #if 0
@@ -526,10 +528,15 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 				InverseBindMatrices.reserve(Acc.count);
 				for (uint32_t i = 0; i < Acc.count; ++i) {
 					InverseBindMatrices.push_back(reinterpret_cast<const glm::mat4*>(Data + Stride * i));
-#ifdef DEBUG_STDOUT
-					std::cout << *InverseBindMatrices.back();
-#endif
 				}
+#ifdef DEBUG_STDOUT
+				if (InverseBindMatrices.size()) {
+					std::cout << "InverseBindMatrices[" << InverseBindMatrices.size() << "]" << std::endl;
+					for (auto i : InverseBindMatrices) {
+						std::cout << *i;
+					}
+				}
+#endif
 			}
 		}
 	}
@@ -559,8 +566,16 @@ void GltfVK::Process(const fx::gltf::Skin& Skn)
 		if (fx::gltf::defaults::IdentityVec3 != Nd.scale) {
 			glm::scale(Wld, glm::make_vec3(Nd.scale.data()));
 		}
-		JointMatrices.push_back(Wld * IBM);
+		JointMatrices.push_back(IBM * Wld);
 	}
+#ifdef DEBUG_STDOUT
+	if (JointMatrices.size()) {
+		std::cout << "JointMatrices[" << JointMatrices.size() << "]" << std::endl;
+		for (auto i : JointMatrices) {
+			std::cout << i;
+		}
+	}
+#endif
 }
 void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
@@ -568,7 +583,9 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 
 	CurrentFrame += 0.1f; //static_cast<float>(Elapse) / 1000.0f;
 
-	UpdateAnimation(CurrentFrame);
+	const auto bLoop = true;
+	//const auto bLoop = false;
+	UpdateAnimation(CurrentFrame, bLoop);
 }
 
 void GltfVK::UpdateAnimTranslation(const std::array<float, 3>& Value, const uint32_t NodeIndex)
