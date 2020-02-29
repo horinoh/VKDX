@@ -352,7 +352,7 @@ void GltfVK::Process(const fx::gltf::Node& Nd, const uint32_t i)
 			Mtx = glm::translate(Mtx, glm::make_vec3(Nd.translation.data()));
 		}
 		if (fx::gltf::defaults::IdentityRotation != Nd.rotation) {
-			Mtx *= glm::mat4_cast(glm::make_quat(Nd.rotation.data()));
+			Mtx = glm::mat4_cast(glm::make_quat(Nd.rotation.data())) * Mtx;
 		}
 		if (fx::gltf::defaults::IdentityVec3 != Nd.scale) {
 			Mtx = glm::scale(Mtx, glm::make_vec3(Nd.scale.data()));
@@ -516,13 +516,13 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 
 			if ("indices" == Identifier) {
 				IndexBuffers.push_back(VkBuffer());
-				CreateBuffer_Index(GraphicsQueue, CommandBuffers[0], &IndexBuffers.back(), Size, Data);
+				CreateBuffer_Index(&IndexBuffers.back(), GraphicsQueue, CommandBuffers[0], Size, Data);
 
 				CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
 			}
 			else if ("attributes" == Identifier || "targets" == Identifier) {
 				VertexBuffers.push_back(VkBuffer());
-				CreateBuffer_Vertex(GraphicsQueue, CommandBuffers[0], &VertexBuffers.back(), Size, Data);
+				CreateBuffer_Vertex(&VertexBuffers.back(), GraphicsQueue, CommandBuffers[0] , Size, Data);
 			}
 			else if ("inverseBindMatrices" == Identifier) {
 				InverseBindMatrices.reserve(Acc.count);
@@ -581,29 +581,43 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnTimer(hWnd, hInstance);
 
+	if (GetDocument().animations.empty()) { return; }
+
 	CurrentFrame += 0.1f; //static_cast<float>(Elapse) / 1000.0f;
+
+	AnimNodeMatrices.assign(NodeMatrices.begin(), NodeMatrices.end());
 
 	const auto bLoop = true;
 	//const auto bLoop = false;
 	UpdateAnimation(CurrentFrame, bLoop);
+
+#ifdef DEBUG_STDOUT
+	if (AnimNodeMatrices.size()) {
+		std::cout << "AnimNodeMatrices[" << AnimNodeMatrices.size() << "]" << std::endl;
+		for (auto i : AnimNodeMatrices) {
+			std::cout << i;
+		}
+	}
+#endif
 }
 
 void GltfVK::UpdateAnimTranslation(const std::array<float, 3>& Value, const uint32_t NodeIndex)
 {
 	if (-1 != NodeIndex) {
-		glm::translate(NodeMatrices[NodeIndex], glm::make_vec3(Value.data()));
+		//AnimNodeMatrices[NodeIndex] = glm::translate(AnimNodeMatrices[NodeIndex], glm::make_vec3(Value.data())); //!< «‚Æ“¯‚¶Œ‹‰Ê‚É‚È‚ç‚È‚¢
+		AnimNodeMatrices[NodeIndex] = glm::translate(glm::mat4(1.0f), glm::make_vec3(Value.data())) * AnimNodeMatrices[NodeIndex];
 	}
 }
 void GltfVK::UpdateAnimScale(const std::array<float, 3>& Value, const uint32_t NodeIndex)
 {
 	if (-1 != NodeIndex) {
-		glm::scale(NodeMatrices[NodeIndex], glm::make_vec3(Value.data()));
+		AnimNodeMatrices[NodeIndex] = glm::scale(AnimNodeMatrices[NodeIndex], glm::make_vec3(Value.data()));
 	}
 }
 void GltfVK::UpdateAnimRotation(const std::array<float, 4>& Value, const uint32_t NodeIndex)
 {
 	if (-1 != NodeIndex) {
-		glm::mat4_cast(glm::make_quat(Value.data())) * NodeMatrices[NodeIndex];
+		AnimNodeMatrices[NodeIndex] = glm::mat4_cast(glm::make_quat(Value.data())) * AnimNodeMatrices[NodeIndex];
 	}
 }
 void GltfVK::UpdateAnimWeights(const float* /*Data*/, const uint32_t /*PrevIndex*/, const uint32_t /*NextIndex*/, const float /*t*/)

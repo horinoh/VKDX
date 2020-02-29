@@ -23,6 +23,7 @@ OUT main(IN In)
 	OUT Out;
 
 	const float4x4 PV = mul(Projection, View);
+	//const float4x4 PV = mul(View, Projection);
 
 	Out.Position = mul(PV, float4(In.Position, 1.0f));
 	//Out.Position = float4(In.Position * Scale, 1.0f);

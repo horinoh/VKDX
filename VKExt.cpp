@@ -3,6 +3,25 @@
 
 #include "VKExt.h"
 
+void VKExt::CreateIndirectBuffer_Draw(const uint32_t IndexCount, const uint32_t InstanceCount)
+{
+	IndirectBuffers.push_back(VkBuffer());
+	const VkDrawIndirectCommand DIC = { IndexCount, InstanceCount, 0, 0 };
+	CreateBuffer_Indirect(&IndirectBuffers.back(), GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
+}
+void VKExt::CreateIndirectBuffer_DrawIndexed(const uint32_t IndexCount, const uint32_t InstanceCount)
+{
+	IndirectBuffers.push_back(VkBuffer());
+	const VkDrawIndexedIndirectCommand DIIC = { IndexCount, InstanceCount, 0, 0, 0 };
+	CreateBuffer_Indirect(&IndirectBuffers.back(), GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
+}
+void VKExt::CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z)
+{
+	IndirectBuffers.push_back(VkBuffer());
+	const VkDispatchIndirectCommand DIC = { X, Y, Z };
+	CreateBuffer_Indirect(&IndirectBuffers.back(), GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
+}
+
 void VKExt::CreateShaderModle_VsFs()
 {
 	const auto ShaderPath = GetBasePath();
@@ -24,7 +43,7 @@ void VKExt::CreateShaderModle_Cs()
 	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".comp.spv")).data()));
 }
 
-void VKExt::CreatePipeline_VsFs()
+void VKExt::CreatePipeline_VsFs(const VkPrimitiveTopology Topology)
 {
 	Pipelines.resize(1);
 
@@ -41,16 +60,16 @@ void VKExt::CreatePipeline_VsFs()
 		const VkShaderModule VS, const VkShaderModule FS)
 		{
 #ifdef USE_PIPELINE_SERIALIZE
-			CreatePipeline(PL, PLL, RP, VS, FS, NullShaderModule, NullShaderModule, NullShaderModule, {}, {}, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PCS.GetPipelineCache(0));
+			CreatePipeline(PL, PLL, RP, VS, FS, NullShaderModule, NullShaderModule, NullShaderModule, {}, {}, Topology, 0, PCS.GetPipelineCache(0));
 #else
-			CreatePipeline(PL, PLL, RP, VS, FS, NullShaderModule, NullShaderModule, NullShaderModule, {}, {}, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
+			CreatePipeline(PL, PLL, RP, VS, FS, NullShaderModule, NullShaderModule, NullShaderModule, {}, {}, Topology);
 #endif
 		},
 		std::ref(PL), PLL, RP, ShaderModules[0], ShaderModules[1]));
 
 	for (auto& i : Threads) { i.join(); }
 }
-void VKExt::CreatePipeline_VsFsTesTcsGs_Tesselation()
+void VKExt::CreatePipeline_VsFsTesTcsGs(const VkPrimitiveTopology Topology)
 {
 	Pipelines.resize(1);
 
@@ -67,9 +86,9 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Tesselation()
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS)
 		{
 #ifdef USE_PIPELINE_SERIALIZE
-			VK::CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PCS.GetPipelineCache(0));
+			VK::CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, Topology, 1, PCS.GetPipelineCache(0));
 #else
-			VK::CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1);
+			VK::CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, Topology, 1);
 #endif
 		},
 		std::ref(PL), PLL, RP, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4]));

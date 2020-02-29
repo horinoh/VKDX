@@ -7,7 +7,7 @@ void DXExt::CreateIndirectBuffer_Draw(const UINT IndexCount, const UINT Instance
 	const D3D12_DRAW_ARGUMENTS Source = { IndexCount, InstanceCount, 0, 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
-	CreateAndCopyToDefaultResource(IndirectBufferResources.back(), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+	CreateAndCopyToDefaultResource(IndirectBufferResources.back(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, &Source);
 
 	IndirectCommandSignatures.resize(1);
 	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
@@ -29,7 +29,7 @@ void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT IndexCount, const UINT I
 	const D3D12_DRAW_INDEXED_ARGUMENTS Source = { IndexCount, InstanceCount, 0, 0, 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
-	CreateAndCopyToDefaultResource(IndirectBufferResources.back(), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+	CreateAndCopyToDefaultResource(IndirectBufferResources.back(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, &Source);
 
 	IndirectCommandSignatures.resize(1);
 	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
@@ -50,7 +50,7 @@ void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT
 	const D3D12_DISPATCH_ARGUMENTS Source = { X, Y, Z };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
-	CreateAndCopyToDefaultResource(IndirectBufferResources.back(), Size, &Source, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+	CreateAndCopyToDefaultResource(IndirectBufferResources.back(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, &Source);
 
 	IndirectCommandSignatures.resize(1);
 	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
@@ -93,7 +93,7 @@ void DXExt::CreateShaderBlob_Cs()
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".cs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 }
 
-void DXExt::CreatePipelineState_VsPs()
+void DXExt::CreatePipelineState_VsPs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology)
 {
 	PipelineStates.resize(1);
 
@@ -111,16 +111,16 @@ void DXExt::CreatePipelineState_VsPs()
 	Threads.push_back(std::thread::thread([&](COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS)
 		{
 #ifdef USE_PIPELINE_SERIALIZE
-			CreatePipelineState(PST, RS, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, {}, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, &PLS, TEXT("0"));
+			CreatePipelineState(PST, RS, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, {}, Topology, &PLS, TEXT("0"));
 #else
-			CreatePipelineState(PST, RS, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, {}, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+			CreatePipelineState(PST, RS, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, {}, Topology);
 #endif
 		},
 		std::ref(PipelineStates[0]), COM_PTR_GET(RootSignatures[0]), SBCs[0], SBCs[1]));
 
 	for (auto& i : Threads) { i.join(); }
 }
-void DXExt::CreatePipelineState_VsPsDsHsGs_Tesselation()
+void DXExt::CreatePipelineState_VsPsDsHsGs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology)
 {
 	PipelineStates.resize(1);
 
@@ -142,9 +142,9 @@ void DXExt::CreatePipelineState_VsPsDsHsGs_Tesselation()
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
 		{
 #ifdef USE_PIPELINE_SERIALIZE
-			CreatePipelineState(PST, RS, VS, PS, DS, HS, GS, {}, D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, &PLS, TEXT("0"));
+			CreatePipelineState(PST, RS, VS, PS, DS, HS, GS, {}, Topology, &PLS, TEXT("0"));
 #else
-			CreatePipelineState(PST, RS, VS, PS, DS, HS, GS, {}, D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH);
+			CreatePipelineState(PST, RS, VS, PS, DS, HS, GS, {}, Topology);
 #endif
 		},
 		std::ref(PipelineStates[0]), COM_PTR_GET(RootSignatures[0]), SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4]));

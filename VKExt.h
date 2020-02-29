@@ -10,37 +10,11 @@ public:
 	using Vertex_PositionColor = struct Vertex_PositionColor { glm::vec3 Position; glm::vec4 Color; };
 	using Instance_OffsetXY = struct Instance_OffsetXY { glm::vec2 Offset; };
 
-	virtual void CreateBuffer_Vertex(const VkQueue Queue, const VkCommandBuffer CB, VkBuffer* Buffer, const VkDeviceSize Size, const void* Source) {
-		//!< デバイスローカルバッファ(DLB)を作成 (Create device local buffer(DLB))
-		CreateBuffer(Buffer, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-
-		//!< デバイスローカルメモリ(DLM)をサブアロケート (Suballocate device local memory(DLM))
-		uint32_t HeapIndex;
-		VkDeviceSize Offset;
-		SuballocateBufferMemory(HeapIndex, Offset, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-		//!< ステージングを用いてのDLBへのコピーコマンドを発行(ホストビジブルを作成してデータをコピーし、バッファ間のコピーによりデバイスローカルへ反映)
-		SubmitStagingCopy(Queue, CB, *Buffer, Size, Source, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
-	}
-	virtual void CreateBuffer_Index(const VkQueue Queue, const VkCommandBuffer CB, VkBuffer* Buffer, const VkDeviceSize Size, const void* Source) {
-		CreateBuffer(Buffer, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-
-		uint32_t HeapIndex;
-		VkDeviceSize Offset;
-		SuballocateBufferMemory(HeapIndex, Offset, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-		SubmitStagingCopy(Queue, CB, *Buffer, Size, Source, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
-	}
-	virtual void CreateBuffer_Indirect(const VkQueue Queue, const VkCommandBuffer CB, VkBuffer* Buffer, const VkDeviceSize Size, const void* Source) {
-		CreateBuffer(Buffer, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-
-		uint32_t HeapIndex;
-		VkDeviceSize Offset;
-		SuballocateBufferMemory(HeapIndex, Offset, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-		SubmitStagingCopy(Queue, CB, *Buffer, Size, Source, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
-	}
+	virtual void CreateBuffer_Vertex(VkBuffer* Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkDeviceSize Size, const void* Source) { CreateAndCopyToBuffer(Buf, Queue, CB, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size, Source); }
+	virtual void CreateBuffer_Index(VkBuffer* Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkDeviceSize Size, const void* Source) { CreateAndCopyToBuffer(Buf, Queue, CB, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size, Source); }
+	virtual void CreateBuffer_Indirect(VkBuffer* Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkDeviceSize Size, const void* Source) { CreateAndCopyToBuffer(Buf, Queue, CB, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size, Source); }
 	
+#if 0
 	//!< layout(set = 0, binding = 0) buffer MyBuffer { vec4 MyVec4; mat4 MyMat4; }
 	void CreateBuffer_Storage(VkBuffer *Buffer, const VkDeviceSize Size) {
 		CreateBuffer(Buffer, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, Size);
@@ -69,7 +43,8 @@ public:
 		SuballocateBufferMemory(HeapIndex, Offset, *Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, DeviceMemories[HeapIndex], Offset));
 	}
-	
+#endif
+
 	/** 
 	アプリ内ではサンプラとサンプルドイメージは別のオブジェクトとして扱うが、シェーダ内ではまとめた一つのオブジェクトとして扱うことができ、プラットフォームによっては効率が良い場合がある
 	(コンバインドイメージサンプラ == サンプラ + サンプルドイメージ)
@@ -111,28 +86,16 @@ public:
 		layout (input_attachment_index=0, set=0, binding=0) uniform subpassInput MySubpassInput;
 	*/
 
-	void CreateIndirectBuffer_Draw(const uint32_t IndexCount, const uint32_t InstanceCount) {
-		IndirectBuffers.push_back(VkBuffer());
-		const VkDrawIndirectCommand DIC = { IndexCount, InstanceCount, 0, 0 };
-		CreateBuffer_Indirect(GraphicsQueue, CommandBuffers[0], &IndirectBuffers.back(), static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
-	}
-	void CreateIndirectBuffer_DrawIndexed(const uint32_t IndexCount, const uint32_t InstanceCount) {
-		IndirectBuffers.push_back(VkBuffer());
-		const VkDrawIndexedIndirectCommand DIIC = { IndexCount, InstanceCount, 0, 0, 0 };
-		CreateBuffer_Indirect(GraphicsQueue, CommandBuffers[0], &IndirectBuffers.back(), static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
-	}
-	void CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z) {
-		IndirectBuffers.push_back(VkBuffer());
-		const VkDispatchIndirectCommand DIC = { X, Y, Z };
-		CreateBuffer_Indirect(GraphicsQueue, CommandBuffers[0], &IndirectBuffers.back(), static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
-	}
+	void CreateIndirectBuffer_Draw(const uint32_t IndexCount, const uint32_t InstanceCount);
+	void CreateIndirectBuffer_DrawIndexed(const uint32_t IndexCount, const uint32_t InstanceCount);
+	void CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z);
 	
 	void CreateShaderModle_VsFs();
 	void CreateShaderModle_VsFsTesTcsGs();
 	void CreateShaderModle_Cs();
 
-	void CreatePipeline_VsFs();
-	void CreatePipeline_VsFsTesTcsGs_Tesselation();
+	void CreatePipeline_VsFs(const VkPrimitiveTopology Topology);
+	void CreatePipeline_VsFsTesTcsGs(const VkPrimitiveTopology Topology);
 	void CreatePipeline_Cs(VkPipeline& /*PL*/) { assert(0 && "TODO"); }
 
 	void CreateRenderPass_ColorDepth(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth);

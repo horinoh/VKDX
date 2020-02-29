@@ -695,7 +695,7 @@ public:
 	}
 
 	virtual std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) = 0;
-	virtual std::array<float, 4> SLerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) = 0;
+	virtual std::array<float, 4> Lerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) = 0;
 
 	virtual void UpdateAnimTranslation(const std::array<float, 3>& /*Value*/, const uint32_t /*NodeIndex*/) {}
 	virtual void UpdateAnimScale(const std::array<float, 3>& /*Value*/, const uint32_t /*NodeIndex*/) {}
@@ -756,7 +756,7 @@ public:
 								}
 								else if ("rotation" == j.target.path) {
 									const auto Data = reinterpret_cast<const std::array<float, 4>*>(GetData(OutAcc));
-									UpdateAnimRotation(SLerp(Data[PrevIndex], Data[NextIndex], t), j.target.node);
+									UpdateAnimRotation(Lerp(Data[PrevIndex], Data[NextIndex], t), j.target.node);
 								}
 								else if ("weights" == j.target.path) {
 									const auto Data = reinterpret_cast<const float*>(GetData(OutAcc));

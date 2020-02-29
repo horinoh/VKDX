@@ -143,9 +143,9 @@ public:
 		const auto v = glm::mix(*reinterpret_cast<const glm::vec3*>(lhs.data()), *reinterpret_cast<const glm::vec3*>(rhs.data()), t);
 		return { v.x, v.y, v.z };
 	}
-	static std::array<float, 4> SLerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) {
-		const auto q = glm::slerp(*reinterpret_cast<const glm::quat*>(lhs.data()), *reinterpret_cast<const glm::quat*>(rhs.data()), t);
-		return { q.x, q.y, q.z, q.w };
+	static std::array<float, 4> Lerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) {
+		const auto v = glm::lerp(*reinterpret_cast<const glm::quat*>(lhs.data()), *reinterpret_cast<const glm::quat*>(rhs.data()), t);
+		return { v.x, v.y, v.z, v.w };
 	}
 
 protected:
@@ -286,7 +286,8 @@ protected:
 
 	virtual void LoadScene() {}
 
-	virtual void SubmitStagingCopy(const VkQueue Queue, const VkCommandBuffer CB, const VkBuffer Buffer, const VkDeviceSize Size, const void* Source, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF);
+	virtual void SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits Access, const VkPipelineStageFlagBits PipeStg, const VkDeviceSize Size, const void* Source);
+	virtual void CreateAndCopyToBuffer(VkBuffer* Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkBufferUsageFlagBits Usage, const VkAccessFlagBits Access, const VkPipelineStageFlagBits PipeStg, const VkDeviceSize Size, const void* Source);
 	virtual void CreateVertexBuffer() {}
 	virtual void CreateIndexBuffer() {}
 	virtual void CreateIndirectBuffer() {}

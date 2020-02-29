@@ -117,7 +117,7 @@ protected:
 	}
 
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }
-	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs_Tesselation(); }
+	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 private:

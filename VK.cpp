@@ -2158,7 +2158,7 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 	LOG_OK();
 }
 
-void VK::SubmitStagingCopy(const VkQueue Queue, const VkCommandBuffer CB, const VkBuffer Buffer, const VkDeviceSize Size, const void* Source, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF)
+void VK::SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits Access, const VkPipelineStageFlagBits PipeStg, const VkDeviceSize Size, const void* Source)
 {
 #define USE_SUBALLOC
 	VkBuffer StagingBuffer = VK_NULL_HANDLE;
@@ -2182,7 +2182,7 @@ void VK::SubmitStagingCopy(const VkQueue Queue, const VkCommandBuffer CB, const 
 #endif
 
 	//!< HVBからDLBへのコピーコマンドを発行 (Submit HVB to DLB copy command)
-	CmdCopyBufferToBuffer(CB, StagingBuffer, Buffer, AF, PSF, Size);
+	CmdCopyBufferToBuffer(CB, StagingBuffer, Buf, Access, PipeStg, Size);
 	const std::array<VkCommandBuffer, 1> CBs = { CB };
 	const std::array<VkSubmitInfo, 1> SIs = {
 		{
@@ -2209,6 +2209,20 @@ void VK::SubmitStagingCopy(const VkQueue Queue, const VkCommandBuffer CB, const 
 		vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
 	}
 #undef USE_SUBALLOC
+}
+
+void VK::CreateAndCopyToBuffer(VkBuffer* Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkBufferUsageFlagBits Usage, const VkAccessFlagBits Access, const VkPipelineStageFlagBits PipeStg, const VkDeviceSize Size, const void* Source)
+{
+	//!< デバイスローカルバッファ(DLB)を作成 (Create device local buffer(DLB))
+	CreateBuffer(Buf, Usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
+
+	//!< デバイスローカルメモリ(DLM)をサブアロケート (Suballocate device local memory(DLM))
+	uint32_t HeapIndex;
+	VkDeviceSize Offset;
+	SuballocateBufferMemory(HeapIndex, Offset, *Buf, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	//!< ステージングを用いてのDLBへのコピーコマンドを発行(ホストビジブルを作成してデータをコピーし、バッファ間のコピーによりデバイスローカルへ反映)
+	SubmitStagingCopy(*Buf, Queue, CB, Access, PipeStg, Size, Source);
 }
 
 //!< 適切なオフセットに配置する(ダイナミックではオフセット指定が変わる)

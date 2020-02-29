@@ -18,7 +18,7 @@ public:
 	void CreateShaderBlob_VsPsDsHsGs();
 	void CreateShaderBlob_Cs();
 
-	void CreatePipelineState_VsPs();
-	void CreatePipelineState_VsPsDsHsGs_Tesselation();
+	void CreatePipelineState_VsPs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology);
+	void CreatePipelineState_VsPsDsHsGs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology);
 	void CreatePipelineState_Cs(COM_PTR<ID3D12PipelineState>& /*PS*/) { assert(0 && "TODO"); }
 };

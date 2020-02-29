@@ -242,7 +242,7 @@ void InstancingDX::CreateVertexBuffer()
 		} };
 		const auto Stride = sizeof(Vertices[0]);
 		const auto Size = static_cast<UINT32>(Stride * Vertices.size());
-		CreateAndCopyToDefaultResource(VertexBufferResources[0], Size, Vertices.data(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+		CreateAndCopyToDefaultResource(VertexBufferResources[0], COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Vertices.data());
 		VertexBufferViews.push_back({ VertexBufferResources[0]->GetGPUVirtualAddress(), Size, Stride });
 	}
 
@@ -257,7 +257,7 @@ void InstancingDX::CreateVertexBuffer()
 		InstanceCount = static_cast<UINT>(Instances.size());
 		const auto Stride = sizeof(Instances[0]);
 		const auto Size = static_cast<UINT32>(Stride * InstanceCount);
-		CreateAndCopyToDefaultResource(VertexBufferResources[1], Size, Instances.data(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+		CreateAndCopyToDefaultResource(VertexBufferResources[1], COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Instances.data());
 		VertexBufferViews.push_back({ VertexBufferResources[1]->GetGPUVirtualAddress(), Size, Stride });
 	}
 
@@ -271,7 +271,7 @@ void InstancingDX::CreateIndexBuffer()
 	IndexCount = static_cast<UINT32>(Indices.size());
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<UINT32>(Stride * IndexCount);
-	CreateAndCopyToDefaultResource(IndexBufferResources[0], Size, Indices.data(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+	CreateAndCopyToDefaultResource(IndexBufferResources[0], COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Indices.data());
 	IndexBufferViews.push_back({ IndexBufferResources[0]->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT });
 
 	LOG_OK();

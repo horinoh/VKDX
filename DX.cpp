@@ -164,7 +164,7 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const
 		} Resource->Unmap(0, nullptr);
 	}
 }
-void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes)
+void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData)
 {
 	if (nullptr != Resource) {
 		assert(SubresourceData.size() == PlacedSubresourceFootprints.size() == NumRows.size() == RowSizes.size() && "Invalid size");
@@ -197,7 +197,7 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_
 	}
 }
 
-void DX::ExecuteCopyBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SrcResource, ID3D12Resource* DstResource, const size_t Size)
+void DX::ExecuteCopyBuffer(ID3D12Resource* DstResource, ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, const size_t Size, ID3D12Resource* SrcResource)
 {
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
 		PopulateCopyBufferCommand(CommandList, SrcResource, DstResource, Size, D3D12_RESOURCE_STATE_GENERIC_READ);
@@ -208,7 +208,7 @@ void DX::ExecuteCopyBuffer(ID3D12CommandAllocator* CommandAllocator, ID3D12Graph
 	WaitForFence();
 }
 
-void DX::ExecuteCopyTexture(ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, ID3D12Resource* SrcResource, ID3D12Resource* DstResource, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState)
+void DX::ExecuteCopyTexture(ID3D12Resource* DstResource, ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList ,const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState, ID3D12Resource* SrcResource)
 {
 	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
 		if (D3D12_RESOURCE_DIMENSION_BUFFER == DstResource->GetDesc().Dimension) {
@@ -978,7 +978,7 @@ void DX::CreateAndCopyToUploadResource(COM_PTR<ID3D12Resource>& Res, const size_
 	CreateUploadResource(COM_PTR_PUT(Res), Size);
 	CopyToUploadResource(COM_PTR_GET(Res), Size, Source);
 }
-void DX::CreateAndCopyToDefaultResource(COM_PTR<ID3D12Resource>& Res, const size_t Size, const void* Source, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL)
+void DX::CreateAndCopyToDefaultResource(COM_PTR<ID3D12Resource>& Res, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL, const size_t Size, const void* Source)
 {
 	//!< アップロード用のリソースを作成 (Create resource for upload)
 	COM_PTR<ID3D12Resource> UploadRes;
@@ -988,7 +988,7 @@ void DX::CreateAndCopyToDefaultResource(COM_PTR<ID3D12Resource>& Res, const size
 	CreateDefaultResource(COM_PTR_PUT(Res), Size);
 
 	//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 (Execute copy command upload resource to default resource)
-	ExecuteCopyBuffer(CA, CL, COM_PTR_GET(UploadRes), COM_PTR_GET(Res), Size);
+	ExecuteCopyBuffer(COM_PTR_GET(Res), CA, CL, Size, COM_PTR_GET(UploadRes));
 }
 
 void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth, const FLOAT MaxDepth)

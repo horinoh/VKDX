@@ -18,6 +18,7 @@ const float Scale = 0.005f;
 void main()
 {
 	//const mat4 PV = Projection * View;
+	//const mat4 PV =  View * Projection;
 
 	//gl_Position = PV * vec4(InPosition, 1.0f);
 	gl_Position = vec4(InPosition * Scale, 1.0f);

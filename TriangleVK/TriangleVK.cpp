@@ -241,7 +241,7 @@ void TriangleVK::CreateVertexBuffer()
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 	
-	CreateBuffer_Vertex(GraphicsQueue, CommandBuffers[0], &VertexBuffers[0], Size, Vertices.data());
+	CreateBuffer_Vertex(&VertexBuffers[0], GraphicsQueue, CommandBuffers[0], Size, Vertices.data());
 
 #ifdef _DEBUG
 	MarkerSetObjectName(Device, VertexBuffers[0], "MyVertexBuffer");
@@ -260,7 +260,7 @@ void TriangleVK::CreateIndexBuffer()
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 
-	CreateBuffer_Index(GraphicsQueue, CommandBuffers[0], &IndexBuffers[0], Size, Indices.data());
+	CreateBuffer_Index(&IndexBuffers[0], GraphicsQueue, CommandBuffers[0], Size, Indices.data());
 
 #ifdef _DEBUG
 	MarkerSetObjectName(Device, IndexBuffers[0], "MyIndexBuffer");

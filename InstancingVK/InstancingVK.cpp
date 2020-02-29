@@ -242,7 +242,7 @@ void InstancingVK::CreateVertexBuffer()
 		} };
 		const auto Stride = sizeof(Vertices[0]);
 		const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
-		CreateBuffer_Vertex(GraphicsQueue, CommandBuffers[0], &VertexBuffers[0], Size, Vertices.data());
+		CreateBuffer_Vertex(&VertexBuffers[0], GraphicsQueue, CommandBuffers[0], Size, Vertices.data());
 	}
 
 	{
@@ -256,7 +256,7 @@ void InstancingVK::CreateVertexBuffer()
 		InstanceCount = static_cast<uint32_t>(Instances.size());
 		const auto Stride = sizeof(Instances[0]);
 		const auto Size = static_cast<VkDeviceSize>(Stride * InstanceCount);
-		CreateBuffer_Vertex(GraphicsQueue, CommandBuffers[0], &VertexBuffers[1], Size, Instances.data());
+		CreateBuffer_Vertex(&VertexBuffers[1], GraphicsQueue, CommandBuffers[0], Size, Instances.data());
 	}
 
 	LOG_OK();
@@ -269,7 +269,7 @@ void InstancingVK::CreateIndexBuffer()
 	IndexCount = static_cast<uint32_t>(Indices.size());
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
-	CreateBuffer_Index(GraphicsQueue, CommandBuffers[0], &IndexBuffers[0], Size, Indices.data());
+	CreateBuffer_Index(&IndexBuffers[0], GraphicsQueue, CommandBuffers[0], Size, Indices.data());
 
 	LOG_OK();
 }

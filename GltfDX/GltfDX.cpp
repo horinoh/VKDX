@@ -337,7 +337,6 @@ void GltfDX::Process(const fx::gltf::Camera& Cam)
 	PV.View.r[3].m128_f32[1] = 0.0f;
 #endif
 
-#if 1
 	switch (Cam.type) {
 	case fx::gltf::Camera::Type::None: break;
 	case fx::gltf::Camera::Type::Orthographic:
@@ -347,7 +346,6 @@ void GltfDX::Process(const fx::gltf::Camera& Cam)
 		PV.Projection = DirectX::XMMatrixPerspectiveFovRH(Cam.perspective.yfov, Cam.perspective.aspectRatio, Cam.perspective.znear, Cam.perspective.zfar);
 		break;
 	}
-#endif
 
 #ifdef DEBUG_STDOUT
 	std::cout << "View =" << std::endl;
@@ -491,7 +489,7 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			if ("indices" == Identifier) {
 				IndexBufferResources.push_back(COM_PTR<ID3D12Resource>());
 
-				CreateAndCopyToDefaultResource(IndexBufferResources.back(), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+				CreateAndCopyToDefaultResource(IndexBufferResources.back(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Data);
 				IndexBufferViews.push_back({ IndexBufferResources.back()->GetGPUVirtualAddress(), Size, ToDXFormat(Acc.componentType) });
 
 				CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
@@ -499,7 +497,7 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			else if ("attributes" == Identifier || "targets" == Identifier) {
 				VertexBufferResources.push_back(COM_PTR<ID3D12Resource>());
 
-				CreateAndCopyToDefaultResource(VertexBufferResources.back(), Size, Data, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
+				CreateAndCopyToDefaultResource(VertexBufferResources.back(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Data);
 				VertexBufferViews.push_back({ VertexBufferResources.back()->GetGPUVirtualAddress(), Size, Stride });
 			}
 			else if ("inverseBindMatrices" == Identifier) {
@@ -563,32 +561,45 @@ void GltfDX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnTimer(hWnd, hInstance);
 
+	if (GetDocument().animations.empty()) { return; }
+
 	CurrentFrame += 0.1f; //static_cast<float>(Elapse) / 1000.0f;
+
+	AnimNodeMatrices.assign(NodeMatrices.begin(), NodeMatrices.end());
 
 	const auto bLoop = true;
 	//const auto bLoop = false;
 	UpdateAnimation(CurrentFrame, bLoop);
+
+#ifdef DEBUG_STDOUT
+	if (AnimNodeMatrices.size()) {
+		std::cout << "AnimNodeMatrices[" << AnimNodeMatrices.size() << "]" << std::endl;
+		for (auto i : AnimNodeMatrices) {
+			std::cout << i;
+		}
+	}
+#endif
 }
 
 void GltfDX::UpdateAnimTranslation(const std::array<float, 3>& Value, const uint32_t NodeIndex)
 {
 	if (-1 != NodeIndex) {
 		const auto Local = DirectX::XMFLOAT3(Value.data());
-		NodeMatrices[NodeIndex] * DirectX::XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&Local));
+		AnimNodeMatrices[NodeIndex] *= DirectX::XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&Local));
 	}
 }
 void GltfDX::UpdateAnimScale(const std::array<float, 3>& Value, const uint32_t NodeIndex)
 {
 	if (-1 != NodeIndex) {
 		const auto Local = DirectX::XMFLOAT3(Value.data());
-		NodeMatrices[NodeIndex] *= DirectX::XMMatrixScalingFromVector(DirectX::XMLoadFloat3(&Local));
+		AnimNodeMatrices[NodeIndex] *= DirectX::XMMatrixScalingFromVector(DirectX::XMLoadFloat3(&Local));
 	}
 }
 void GltfDX::UpdateAnimRotation(const std::array<float, 4>& Value, const uint32_t NodeIndex)
 {
 	if (-1 != NodeIndex) {
 		const auto Local = DirectX::XMFLOAT4(Value.data());
-		NodeMatrices[NodeIndex] * DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&Local));
+		AnimNodeMatrices[NodeIndex] *= DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&Local));
 	}
 }
 void GltfDX::UpdateAnimWeights(const float* /*Data*/, const uint32_t /*PrevIndex*/, const uint32_t /*NextIndex*/, const float /*t*/)

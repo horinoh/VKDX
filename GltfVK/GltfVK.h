@@ -94,6 +94,14 @@ protected:
 	virtual void Process(const fx::gltf::Document& Doc) override {
 		NodeMatrices.assign(Doc.nodes.size(), glm::identity<glm::mat4>());
 		Gltf::Process(Doc);
+#ifdef DEBUG_STDOUT
+		if (NodeMatrices.size()) {
+			std::cout << "NodeMatrices[" << NodeMatrices.size() << "]" << std::endl;
+			for (auto i : NodeMatrices) {
+				std::cout << i;
+			}
+		}
+#endif
 	}
 	virtual void PreProcess() override;
 	virtual void PostProcess() override;
@@ -108,7 +116,7 @@ protected:
 	virtual void Process(const fx::gltf::Skin& Skn) override;
 
 	virtual std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) override { return VK::Lerp(lhs, rhs, t); }
-	virtual std::array<float, 4> SLerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) override { return VK::SLerp(lhs, rhs, t); }
+	virtual std::array<float, 4> Lerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) override { return VK::Lerp(lhs, rhs, t); }
 
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override;
 
@@ -139,6 +147,7 @@ protected:
 
 	std::vector<glm::mat4> CurrentMatrix = { glm::identity<glm::mat4>() };
 	std::vector<glm::mat4> NodeMatrices;
+	std::vector<glm::mat4> AnimNodeMatrices;
 
 	float CurrentFrame = 0.0f;
 	

@@ -36,14 +36,14 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const std::wstring& Path,
 
 		COM_PTR<ID3D12Resource> UploadResource;
 		CreateUploadResource(COM_PTR_PUT(UploadResource), TotalBytes);
-		CopyToUploadResource(COM_PTR_GET(UploadResource), Subresource, Footprint, NumRows, RowBytes); 
+		CopyToUploadResource(COM_PTR_GET(UploadResource), Footprint, NumRows, RowBytes, Subresource);
 
 		//!< #DX_TODO ミップマップの生成 Mipmap
 		//if(ResourceDesc.MipLevels != static_cast<const UINT16>(SubresourceData.size())) {
 		//	UploadResource.GenerateMips(*Resource);
 		//}
 
-		ExecuteCopyTexture(CA, CL, COM_PTR_GET(UploadResource), *Resource, Footprint, ResourceState);
+		ExecuteCopyTexture(*Resource, CA, CL, Footprint, ResourceState, COM_PTR_GET(UploadResource));
 	}
 	(Resource, Path, ResourceState, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 }
