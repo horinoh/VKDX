@@ -1178,9 +1178,10 @@ void DX::CreateShader(std::vector<COM_PTR<ID3DBlob>>& Blobs) const
 #endif
 }
 
-void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, 
+void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,
+	const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology,
 	const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,
-	const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT,
+	const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs,
 	const PipelineLibrarySerializer* PLS, LPCWSTR Name)
 {
 	PERFORMANCE_COUNTER();
@@ -1265,7 +1266,7 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignat
 	const D3D12_CACHED_PIPELINE_STATE CPS = { nullptr, 0 };
 #endif
 
-	//!< DXでは「パッチコントロールポイント」個数の指定はIASetPrimitiveTopology()の引数としてコマンドリストへ指定する、VKとは結構異なるので注意
+	//!< DXでは「パッチコントロールポイント」個数の指定はIASetPrimitiveTopology()の引数として「コマンドリスト作成時」に指定する、VKとは結構異なるので注意
 //	//!< CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
 	const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {
@@ -1278,7 +1279,7 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignat
 		DSD,
 		ILD,
 		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
-		PTT,
+		Topology,
 		1, { DXGI_FORMAT_R8G8B8A8_UNORM }, DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
 		SD,
 		0,
@@ -1299,7 +1300,7 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignat
 		}
 	}
 
-	LOG_OK();
+	//LOG_OK();
 }
 
 #if 0

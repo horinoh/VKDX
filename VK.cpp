@@ -2571,16 +2571,17 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 	return ShaderModule;
 }
 
-void VK::CreatePipeline(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP, 
+void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP,
+	const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints,
 	const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS, 
-	const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs, const VkPrimitiveTopology PT, const uint32_t PatchControlPoints,
+	const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs, 
 	VkPipelineCache PC)
 {
 	PERFORMANCE_COUNTER();
 
 	//!< (バリデーションの為に)デバイスフィーチャーを取得
-	VkPhysicalDeviceFeatures PDF;
-	vkGetPhysicalDeviceFeatures(GetCurrentPhysicalDevice(), &PDF);
+	//VkPhysicalDeviceFeatures PDF;
+	//vkGetPhysicalDeviceFeatures(GetCurrentPhysicalDevice(), &PDF);
 
 	//!< パイプライン作成時にシェーダ内の定数値を上書き指定できる
 #if 0
@@ -2681,15 +2682,15 @@ void VK::CreatePipeline(VkPipeline& PL, const VkPipelineLayout PLL, const VkRend
 		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
 		nullptr,
 		0,
-		PT,
+		Topology,
 		VK_FALSE
 	};
 	//!< WITH_ADJACENCY 系使用時には デバイスフィーチャー geometryShader が有効であること
-	assert((
-		(PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_LINE_LIST_WITH_ADJACENCY || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_WITH_ADJACENCY || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_WITH_ADJACENCY)
-		|| PDF.geometryShader) /*&& ""*/);
+	//assert((
+	//	(PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_LINE_LIST_WITH_ADJACENCY || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_WITH_ADJACENCY || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY || PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_WITH_ADJACENCY)
+	//	|| PDF.geometryShader) /*&& ""*/);
 	//!< PATCH_LIST 使用時には デバイスフィーチャー tessellationShader が有効であること
-	assert((PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST || PDF.tessellationShader) && "");
+	//assert((PIASCI.topology != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST || PDF.tessellationShader) && "");
 	//!< インデックス 0xffffffff(VK_INDEX_TYPE_UINT32), 0xffff(VK_INDEX_TYPE_UINT16) をプリミティブのリスタートとする、インデックス系描画の場合(vkCmdDrawIndexed, vkCmdDrawIndexedIndirect)のみ有効
 	//!< LIST 系使用時 primitiveRestartEnable 無効であること
 	assert((
@@ -2697,12 +2698,12 @@ void VK::CreatePipeline(VkPipeline& PL, const VkPipelineLayout PLL, const VkRend
 		|| PIASCI.primitiveRestartEnable == VK_FALSE) /*&& ""*/);
 
 	//!< テセレーション (Tessellation)
-	assert((PT != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST || PatchControlPoints != 0) && "");
+	assert((Topology != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST || PatchControlPoints != 0) && "");
 	const VkPipelineTessellationStateCreateInfo PTSCI = {
 		VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,
 		nullptr,
 		0,
-		PatchControlPoints//!< パッチコントロールポイント
+		PatchControlPoints //!< パッチコントロールポイント
 	};
 
 	//!< ビューポート (Viewport)
@@ -2717,7 +2718,7 @@ void VK::CreatePipeline(VkPipeline& PL, const VkPipelineLayout PLL, const VkRend
 	};
 	//!< 2つ以上のビューポートを使用するにはデバイスフィーチャー multiViewport が有効であること (If use 2 or more viewport device feature multiViewport must be enabled)
 	//!< ビューポートのインデックスはジオメトリシェーダで指定する (Viewport index is specified in geometry shader)
-	assert((PVSCI.viewportCount <= 1 || PDF.multiViewport) && "");
+	//assert((PVSCI.viewportCount <= 1 || PDF.multiViewport) && "");
 
 	//!< ラスタライゼーション (Rasterization)
 	const VkPipelineRasterizationStateCreateInfo PRSCI = {
@@ -2733,11 +2734,11 @@ void VK::CreatePipeline(VkPipeline& PL, const VkPipelineLayout PLL, const VkRend
 		1.0f
 	};
 	//!< depthClampEnable にはデバイスフィーチャー depthClamp が有効であること
-	assert((!PRSCI.depthClampEnable || PDF.depthClamp) && "");
+	//assert((!PRSCI.depthClampEnable || PDF.depthClamp) && "");
 	//!< FILL 以外にはデバイスフィーチャー fillModeNonSolid が有効であること
-	assert((PRSCI.polygonMode != VK_POLYGON_MODE_FILL || PDF.fillModeNonSolid) && "");
+	//assert((PRSCI.polygonMode != VK_POLYGON_MODE_FILL || PDF.fillModeNonSolid) && "");
 	//!< 1.0f より大きな値にはデバイスフィーチャー widelines が有効であること
-	assert((PRSCI.lineWidth <= 1.0f || PDF.wideLines) && "");
+	//assert((PRSCI.lineWidth <= 1.0f || PDF.wideLines) && "");
 
 	//!< マルチサンプル (Multisample)
 	const VkSampleMask SM = 0xffffffff; //!< 0xffffffff 指定の場合は nullptr でもよい
@@ -2750,9 +2751,9 @@ void VK::CreatePipeline(VkPipeline& PL, const VkPipelineLayout PLL, const VkRend
 		&SM,
 		VK_FALSE, VK_FALSE
 	};
-	assert((PMSCI.sampleShadingEnable == VK_FALSE || PDF.sampleRateShading) && "");
+	//assert((PMSCI.sampleShadingEnable == VK_FALSE || PDF.sampleRateShading) && "");
 	assert((PMSCI.minSampleShading >= 0.0f && PMSCI.minSampleShading <= 1.0f) && "");
-	assert((PMSCI.alphaToOneEnable == VK_FALSE || PDF.alphaToOne) && "");
+	//assert((PMSCI.alphaToOneEnable == VK_FALSE || PDF.alphaToOne) && "");
 
 	//!< デプスステンシル (DepthStencil)
 	const VkPipelineDepthStencilStateCreateInfo PDSSCI = {
@@ -2781,11 +2782,11 @@ void VK::CreatePipeline(VkPipeline& PL, const VkPipelineLayout PLL, const VkRend
 		}
 	};
 	//!< デバイスフィーチャー independentBlend が有効で無い場合は、配列の各要素は「完全に同じ値」であること (If device feature independentBlend is not enabled, each array element must be exactly same)
-	if (!PDF.independentBlend) {
-		for (auto i : PCBASs) {
-			assert(memcmp(&i, &PCBASs[0], sizeof(PCBASs[0])) == 0 && ""); //!< 最初の要素は比べる必要無いがまあいいや
-		}
-	}
+	//if (!PDF.independentBlend) {
+	//	for (auto i : PCBASs) {
+	//		assert(memcmp(&i, &PCBASs[0], sizeof(PCBASs[0])) == 0 && ""); //!< 最初の要素は比べる必要無いがまあいいや
+	//	}
+	//}
 	const VkPipelineColorBlendStateCreateInfo PCBSCI = {
 		VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
 		nullptr,
@@ -2825,25 +2826,25 @@ void VK::CreatePipeline(VkPipeline& PL, const VkPipelineLayout PLL, const VkRend
 			0,
 #endif
 			static_cast<uint32_t>(PSSCI.size()), PSSCI.data(),
-			& PVISCI,
-			& PIASCI,
-			& PTSCI,
-			& PVSCI,
-			& PRSCI,
-			& PMSCI,
-			& PDSSCI,
-			& PCBSCI,
-			& PDSCI,
+			&PVISCI,
+			&PIASCI,
+			&PTSCI,
+			&PVSCI,
+			&PRSCI,
+			&PMSCI,
+			&PDSSCI,
+			&PCBSCI,
+			&PDSCI,
 			PLL,
 			RP, 0, //!< 指定したレンダーパス限定ではなく、互換性のある他のレンダーパスでも使用可能
 			VK_NULL_HANDLE, -1 //!< basePipelineHandle, basePipelineIndex
 		}
 	};
 	//!< VKでは1コールで複数のパイプラインを作成することもできるが、DXに合わせて1つしか作らないことにしておく
-	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device,
+	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Dev,
 		PC,
 		static_cast<uint32_t>(GPCIs.size()), GPCIs.data(),
-		GetAllocationCallbacks(),
+		nullptr,//GetAllocationCallbacks(),
 		&PL));
 
 	LOG_OK();

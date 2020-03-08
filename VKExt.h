@@ -94,8 +94,16 @@ public:
 	void CreateShaderModle_VsFsTesTcsGs();
 	void CreateShaderModle_Cs();
 
-	void CreatePipeline_VsFs(const VkPrimitiveTopology Topology);
-	void CreatePipeline_VsFsTesTcsGs(const VkPrimitiveTopology Topology);
+	//!< 引数のシェーダの順序は D3D12_GRAPHICS_PIPELINE_STATE_DESC内のVS, PS, DS, HS, GSに合わせておくことにする
+	static void CreatePipeline_G(VkPipeline&, const VkPipelineLayout, const VkRenderPass,
+		const VkPrimitiveTopology, const uint32_t,
+		const VkShaderModule, const VkShaderModule, const VkShaderModule, const VkShaderModule, const VkShaderModule) {}
+	void CreatePipeline_L(VkPipeline&, const VkPipelineLayout, const VkRenderPass,
+		const VkPrimitiveTopology, const uint32_t,
+		const VkShaderModule, const VkShaderModule, const VkShaderModule, const VkShaderModule, const VkShaderModule) {}
+	void CreatePipeline(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, const VkShaderModule Vs, const VkShaderModule Fs, const VkShaderModule Tes, const VkShaderModule Tcs, const VkShaderModule Gs);
+	void CreatePipeline_VsFs(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints = 0) { CreatePipeline(Topology, PatchControlPoints, ShaderModules[0], ShaderModules[1], VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE); }
+	void CreatePipeline_VsFsTesTcsGs(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints = 1) { CreatePipeline(Topology, PatchControlPoints, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4]); }
 	void CreatePipeline_Cs(VkPipeline& /*PL*/) { assert(0 && "TODO"); }
 
 	void CreateRenderPass_ColorDepth(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth);

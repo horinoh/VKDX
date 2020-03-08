@@ -424,7 +424,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 
 	const auto RS = COM_PTR_GET(RootSignatures[0]);
 	PipelineStates.push_back(COM_PTR<ID3D12PipelineState>());
-	DX::CreatePipelineState(std::ref(PipelineStates.back()), RS, { VS->GetBufferPointer(), VS->GetBufferSize() }, { PS->GetBufferPointer(), PS->GetBufferSize() }, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, ToDXPrimitiveTopologyType(Prim.mode));
+	DX::CreatePipelineState(std::ref(PipelineStates.back()), COM_PTR_GET(Device), RS, ToDXPrimitiveTopologyType(Prim.mode), { VS->GetBufferPointer(), VS->GetBufferSize() }, { PS->GetBufferPointer(), PS->GetBufferSize() }, NullShaderBC, NullShaderBC, NullShaderBC, IEDs);
 
 	const auto Count = AddBundleCommandList();
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators.back());

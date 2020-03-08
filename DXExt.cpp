@@ -93,7 +93,8 @@ void DXExt::CreateShaderBlob_Cs()
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".cs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 }
 
-void DXExt::CreatePipelineState_VsPs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology)
+void DXExt::CreatePipelineState(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, 
+	const COM_PTR<ID3DBlob> Vs, const COM_PTR<ID3DBlob> Ps, COM_PTR<ID3DBlob> Ds, COM_PTR<ID3DBlob> Hs, COM_PTR<ID3DBlob> Gs)
 {
 	PipelineStates.resize(1);
 
@@ -102,55 +103,39 @@ void DXExt::CreatePipelineState_VsPs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topolog
 #endif
 
 	std::vector<std::thread> Threads;
-
-	const std::array<D3D12_SHADER_BYTECODE, 2> SBCs = { {
-		{ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() },
-		{ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() },
-	} };
-
-	Threads.push_back(std::thread::thread([&](COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS)
-		{
-#ifdef USE_PIPELINE_SERIALIZE
-			CreatePipelineState(PST, RS, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, {}, Topology, &PLS, TEXT("0"));
-#else
-			CreatePipelineState(PST, RS, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, {}, Topology);
-#endif
-		},
-		std::ref(PipelineStates[0]), COM_PTR_GET(RootSignatures[0]), SBCs[0], SBCs[1]));
-
-	for (auto& i : Threads) { i.join(); }
-}
-void DXExt::CreatePipelineState_VsPsDsHsGs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology)
-{
-	PipelineStates.resize(1);
-
-#ifdef USE_PIPELINE_SERIALIZE
-	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
-#endif
-
-	std::vector<std::thread> Threads;
-
-	const std::array<D3D12_SHADER_BYTECODE, 5> SBCs = { {
-		{ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() },
-		{ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() },
-		{ ShaderBlobs[2]->GetBufferPointer(), ShaderBlobs[2]->GetBufferSize() },
-		{ ShaderBlobs[3]->GetBufferPointer(), ShaderBlobs[3]->GetBufferSize() },
-		{ ShaderBlobs[4]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() },
-	} };
 
 	Threads.push_back(std::thread::thread([&](COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS,
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
 		{
 #ifdef USE_PIPELINE_SERIALIZE
-			CreatePipelineState(PST, RS, VS, PS, DS, HS, GS, {}, Topology, &PLS, TEXT("0"));
+			DX::CreatePipelineState(PST, COM_PTR_GET(Device), RS, Topology, VS, PS, DS, HS, GS, {}, &PLS, TEXT("0"));
 #else
-			CreatePipelineState(PST, RS, VS, PS, DS, HS, GS, {}, Topology);
+			DX::CreatePipelineState(PST, COM_PTR_GET(Device), RS, , Topology, VS, PS, DS, HS, GS, {});
 #endif
 		},
-		std::ref(PipelineStates[0]), COM_PTR_GET(RootSignatures[0]), SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4]));
+		std::ref(PipelineStates[0]), COM_PTR_GET(RootSignatures[0]), 
+			D3D12_SHADER_BYTECODE({ Vs->GetBufferPointer(), Vs->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ Ps->GetBufferPointer(), Ps->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ nullptr == Ds ? nullptr : Ds->GetBufferPointer(), nullptr == Ds ? 0 : Ds->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ nullptr == Hs ? nullptr : Hs->GetBufferPointer(), nullptr == Hs ? 0 : Hs->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ nullptr == Gs ? nullptr : Gs->GetBufferPointer(), nullptr == Gs ? 0 : Gs->GetBufferSize() })));
+
+	//std::thread g(DXExt::CreatePipelineState_G, std::ref(PipelineStates[0]), COM_PTR_GET(RootSignatures[0]), Topology,
+	//	D3D12_SHADER_BYTECODE({ Vs->GetBufferPointer(), Vs->GetBufferSize() }),
+	//	D3D12_SHADER_BYTECODE({ Ps->GetBufferPointer(), Ps->GetBufferSize() }),
+	//	D3D12_SHADER_BYTECODE({ nullptr == Ds ? nullptr : Ds->GetBufferPointer(), nullptr == Ds ? 0 : Ds->GetBufferSize() }),
+	//	D3D12_SHADER_BYTECODE({ nullptr == Hs ? nullptr : Hs->GetBufferPointer(), nullptr == Hs ? 0 : Hs->GetBufferSize() }),
+	//	D3D12_SHADER_BYTECODE({ nullptr == Gs ? nullptr : Gs->GetBufferPointer(), nullptr == Gs ? 0 : Gs->GetBufferSize() }));
+	//std::thread l(&DXExt::CreatePipelineState_L, this, std::ref(PipelineStates[0]), COM_PTR_GET(RootSignatures[0]), Topology,
+	//	D3D12_SHADER_BYTECODE({ Vs->GetBufferPointer(), Vs->GetBufferSize() }),
+	//	D3D12_SHADER_BYTECODE({ Ps->GetBufferPointer(), Ps->GetBufferSize() }),
+	//	D3D12_SHADER_BYTECODE({ nullptr == Ds ? nullptr : Ds->GetBufferPointer(), nullptr == Ds ? 0 : Ds->GetBufferSize() }),
+	//	D3D12_SHADER_BYTECODE({ nullptr == Hs ? nullptr : Hs->GetBufferPointer(), nullptr == Hs ? 0 : Hs->GetBufferSize() }),
+	//	D3D12_SHADER_BYTECODE({ nullptr == Gs ? nullptr : Gs->GetBufferPointer(), nullptr == Gs ? 0 : Gs->GetBufferSize() }));
 
 	for (auto& i : Threads) { i.join(); }
 }
+
 //void DXExt::Clear_Color(ID3D12GraphicsCommandList* GraphicsCommandList)
 //{
 //	auto CPUDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());

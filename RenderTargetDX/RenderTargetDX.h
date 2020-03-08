@@ -94,9 +94,9 @@ protected:
 				const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
 				{
 #ifdef USE_PIPELINE_SERIALIZE
-					DX::CreatePipelineState(PST, RS, VS, PS, DS, HS, GS, {}, D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, &PLS, TEXT("0"));
+					DX::CreatePipelineState(PST, COM_PTR_GET(Device), RS, D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, VS, PS, DS, HS, GS, {}, &PLS, TEXT("0"));
 #else
-					DX::CreatePipelineState(PST, RS, VS, PS, DS, HS, GS, {}, D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH);
+					DX::CreatePipelineState(PST, COM_PTR_GET(Device), RS, D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, VS, PS, DS, HS, GS, {});
 #endif
 				},
 				std::ref(PipelineStates[0]), COM_PTR_GET(RootSignatures[0]), SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4]));
@@ -110,10 +110,9 @@ protected:
 				const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
 				{
 #ifdef USE_PIPELINE_SERIALIZE
-					//CreatePipelineState(PST, RS, VS, PS, DS, HS, GS, {}, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, PLS.GetPipelineLibrary(), TEXT("1"), PLS.IsLoadSucceeded());
-					DX::CreatePipelineState(PST, RS, VS, PS, DS, HS, GS, {}, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, &PLS, TEXT("1"));
+					DX::CreatePipelineState(PST, COM_PTR_GET(Device), RS, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, VS, PS, DS, HS, GS, {}, &PLS, TEXT("1"));
 #else
-					DX::CreatePipelineState(PST, RS, VS, PS, DS, HS, GS, {}, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+					DX::CreatePipelineState(PST, COM_PTR_GET(Device), RS, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, VS, PS, DS, HS, GS, {});
 #endif
 				},
 				std::ref(PipelineStates[1]), COM_PTR_GET(RootSignatures[1]), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC)); //!< 

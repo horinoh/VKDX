@@ -54,9 +54,9 @@ protected:
 		Threads.push_back(std::thread::thread([&](COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS, const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS)
 			{
 #ifdef USE_PIPELINE_SERIALIZE
-				DX::CreatePipelineState(PST, RS, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, &PLS, TEXT("0"));
+				DX::CreatePipelineState(PST, COM_PTR_GET(Device), RS, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, &PLS, TEXT("0"));
 #else
-				DX::CreatePipelineState(PST, RS, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+				DX::CreatePipelineState(PST, COM_PTR_GET(Device), RS, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, IEDs);
 #endif
 			},
 			std::ref(PipelineStates[0]), RS, SBC_VS, SBC_PS));

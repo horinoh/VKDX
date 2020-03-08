@@ -114,12 +114,12 @@ protected:
 			const auto RP = RenderPasses[0];
 			const auto PLL = PipelineLayouts[0];
 			Threads.push_back(std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
-				const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS)
+				const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TCS, const VkShaderModule TES, const VkShaderModule GS)
 				{
 #ifdef USE_PIPELINE_SERIALIZE
-					VK::CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PCS.GetPipelineCache(0));				
+					VK::CreatePipeline(PL, Device, PLL, RP, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VS, FS, TCS, TES, GS, {}, {}, PCS.GetPipelineCache(0));
 #else
-					VK::CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1);
+					VK::CreatePipeline(PL, Device, PLL, RP, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VS, FS, TCS, TES, GS, {}, {});
 #endif
 				},
 				std::ref(PL), PLL, RP, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4]));
@@ -129,12 +129,12 @@ protected:
 			const auto RP = RenderPasses[0];
 			const auto PLL = PipelineLayouts[0];
 			Threads.push_back(std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
-				const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS)
+				const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TCS, const VkShaderModule TES, const VkShaderModule GS)
 				{
 #ifdef USE_PIPELINE_SERIALIZE
-					VK::CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PCS.GetPipelineCache(1)); //!< 
+					VK::CreatePipeline(PL, Device, PLL, RP, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VS, FS, TCS, TES, GS, {}, {}, PCS.GetPipelineCache(1)); //!< 
 #else
-					VK::CreatePipeline(PL, PLL, RP, VS, FS, TES, TCS, GS, {}, {}, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
+					VK::CreatePipeline(PL, Device, PLL, RP, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VS, FS, TCS, TES, GS, {}, {});
 #endif
 				},
 				std::ref(PL), PLL, RP, ShaderModules[5], ShaderModules[6], NullShaderModule, NullShaderModule, NullShaderModule)); //!<

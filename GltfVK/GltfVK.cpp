@@ -438,7 +438,7 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	const auto RP = RenderPasses[0];
 	const auto PLL = PipelineLayouts[0];
 	Pipelines.push_back(VkPipeline());
-	CreatePipeline(Pipelines.back(), PLL, RP, VS, FS, NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs, ToVKPrimitiveTopology(Prim.mode));
+	VK::CreatePipeline(Pipelines.back(), Device, PLL, RP, ToVKPrimitiveTopology(Prim.mode), 0, VS, FS, NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "World =" << std::endl;

@@ -257,11 +257,11 @@ protected:
 
 #include "DXPipelineLibrary.inl"
 	virtual void CreatePipelineState() {}
-	virtual void CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS,
+	static void CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,
+		const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology,
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,
-		const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT,
+		const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, 
 		const PipelineLibrarySerializer* PLS = nullptr, LPCWSTR Name = nullptr);
-		//ID3D12PipelineLibrary* PL = nullptr, LPCWSTR Name = nullptr, bool IsLoad = false);
 	//virtual void CreatePipelineState_Compute();
 
 	virtual void CreateTexture() {}

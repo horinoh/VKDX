@@ -60,9 +60,9 @@ protected:
 		Threads.push_back(std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP, const VkShaderModule VS, const VkShaderModule FS)
 			{
 #ifdef USE_PIPELINE_SERIALIZE
-				VK::CreatePipeline(PL, PLL, RP, VS, FS, NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PCS.GetPipelineCache(0));
+				VK::CreatePipeline(PL, Device, PLL, RP, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VS, FS, NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs, PCS.GetPipelineCache(0));
 #else
-				VK::CreatePipeline(PL, PLL, RP, VS, FS, NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP);
+				VK::CreatePipeline(PL, Device, PLL, RP, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VS, FS, NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs);
 #endif
 			},
 			std::ref(PL), PLL, RP, VS, FS));

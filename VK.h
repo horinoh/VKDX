@@ -332,9 +332,10 @@ protected:
 
 #include "VKPipelineCache.inl"
 	virtual void CreatePipeline() {}
-	virtual void CreatePipeline(VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
+	static void CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP,
+		const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
-		const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs, const VkPrimitiveTopology PT, const uint32_t PatchControlPoints = 0,
+		const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs,
 		VkPipelineCache PC = VK_NULL_HANDLE); 
 	//virtual void CreatePipeline_Compute();
 
