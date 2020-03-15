@@ -406,9 +406,9 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 		SemanticInitial += i.first.substr(0, 1);
 	}
 	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(SemanticInitial.begin(), SemanticInitial.end());
-	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
+	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
 	const auto VS = ShaderModules.back();
-	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
+	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".frag.spv")).data()));
 	const auto FS = ShaderModules.back();
 
 	//!< アトリビュート (Attributes)

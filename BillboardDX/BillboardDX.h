@@ -83,8 +83,8 @@ protected:
 		CreateUploadResource(COM_PTR_PUT(ConstantBuffers[0]), RoundUp(sizeof(Tr), 0xff)); //!< コンスタントバッファの場合、サイズは256バイトアラインにすること
 	}
 
-	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
-	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH); }
+	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPsDsHsGs(); }
+	virtual void CreatePipelineStates() override { CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH); }
 	virtual void PopulateCommandList(const size_t i) override;
 
 private: 

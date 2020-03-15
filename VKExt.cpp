@@ -25,54 +25,57 @@ void VKExt::CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, co
 void VKExt::CreateShaderModle_VsFs()
 {
 	const auto ShaderPath = GetBasePath();
-	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
-	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
+	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
+	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".frag.spv")).data()));
 }
 void VKExt::CreateShaderModle_VsFsTesTcsGs()
 {
 	const auto ShaderPath = GetBasePath();
-	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
-	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
-	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".tese.spv")).data()));
-	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data()));
-	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".geom.spv")).data()));
+	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
+	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".frag.spv")).data()));
+	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tese.spv")).data()));
+	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tesc.spv")).data()));
+	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".geom.spv")).data()));
 }
 void VKExt::CreateShaderModle_Cs()
 {
 	const auto ShaderPath = GetBasePath();
-	ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".comp.spv")).data()));
+	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".comp.spv")).data()));
 }
 
-void VKExt::CreatePipeline(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, 
-	const VkShaderModule Vs, const VkShaderModule Fs, const VkShaderModule Tes, const VkShaderModule Tcs, const VkShaderModule Gs)
+void VKExt::CreatePipeline_VsFs(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints)
 {
 	Pipelines.resize(1);
-
-#ifdef USE_PIPELINE_SERIALIZE
-	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
-#endif
-
 	std::vector<std::thread> Threads;
-
 	auto& PL = Pipelines[0];
 	const auto RP = RenderPasses[0];
 	const auto PLL = PipelineLayouts[0];
-	Threads.push_back(std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
-		const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints,
-		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS)
-		{
+	const std::vector<VkVertexInputBindingDescription> VIBDs = {};
+	const std::vector<VkVertexInputAttributeDescription> VIADs = {};
 #ifdef USE_PIPELINE_SERIALIZE
-			VK::CreatePipeline(PL, Device, PLL, RP, Topology, PatchControlPoints, VS, FS, TES, TCS, GS, {}, {}, PCS.GetPipelineCache(0));
+	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
+	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs, PCS.GetPipelineCache(0)));
 #else
-			VK::CreatePipeline(PL, Device, PLL, RP, Topology, PatchControlPoints, VS, FS, TES, TCS, GS, {}, {});
+	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs, nullptr));
 #endif
-		},
-		std::ref(PL), PLL, RP, Topology, PatchControlPoints, Vs, Fs, Tes, Tcs, Gs));
+	for (auto& i : Threads) { i.join(); }
+}
 
-
-	//std::thread g(VKExt::CreatePipeline_G, std::ref(PL), PLL, RP, Topology, PatchControlPoints, Vs, Fs, Tes, Tcs, Gs);
-	//std::thread l(&VKExt::CreatePipeline_L, this, std::ref(PL), PLL, RP, Topology, PatchControlPoints, Vs, Fs, Tes, Tcs, Gs);
-
+void VKExt::CreatePipeline_VsFsTesTcsGs(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints)
+{
+	Pipelines.resize(1);
+	std::vector<std::thread> Threads;
+	auto& PL = Pipelines[0];
+	const auto RP = RenderPasses[0];
+	const auto PLL = PipelineLayouts[0];
+	const std::vector<VkVertexInputBindingDescription> VIBDs = {};
+	const std::vector<VkVertexInputAttributeDescription> VIADs = {};
+#ifdef USE_PIPELINE_SERIALIZE
+	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
+	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4], VIBDs, VIADs, PCS.GetPipelineCache(0)));
+#else
+	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4], VIBDs, VIADs, nullptr));
+#endif
 	for (auto& i : Threads) { i.join(); }
 }
 

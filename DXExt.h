@@ -18,15 +18,9 @@ public:
 	void CreateShaderBlob_VsPsDsHsGs();
 	void CreateShaderBlob_Cs();
 
-
-	static void CreatePipelineState_G(COM_PTR<ID3D12PipelineState>&, ID3D12RootSignature*,
-		const D3D12_PRIMITIVE_TOPOLOGY_TYPE,
-		const D3D12_SHADER_BYTECODE, const D3D12_SHADER_BYTECODE, const D3D12_SHADER_BYTECODE, const D3D12_SHADER_BYTECODE, const D3D12_SHADER_BYTECODE) {}
-	void CreatePipelineState_L(COM_PTR<ID3D12PipelineState>&, ID3D12RootSignature*,
-		const D3D12_PRIMITIVE_TOPOLOGY_TYPE,
-		const D3D12_SHADER_BYTECODE, const D3D12_SHADER_BYTECODE, const D3D12_SHADER_BYTECODE, const D3D12_SHADER_BYTECODE, const D3D12_SHADER_BYTECODE) {}
-	void CreatePipelineState(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const COM_PTR<ID3DBlob> Vs, const COM_PTR<ID3DBlob> Ps, COM_PTR<ID3DBlob> Ds, COM_PTR<ID3DBlob> Hs, COM_PTR<ID3DBlob> Gs);
-	void CreatePipelineState_VsPs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology) { CreatePipelineState(Topology, ShaderBlobs[0], ShaderBlobs[1], nullptr, nullptr, nullptr); }
-	void CreatePipelineState_VsPsDsHsGs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology) { CreatePipelineState(Topology, ShaderBlobs[0], ShaderBlobs[1], ShaderBlobs[2], ShaderBlobs[3], ShaderBlobs[4]); }
+	//void CreatePipelineState_L(COM_PTR<ID3D12PipelineState>&, ID3D12RootSignature*, const D3D12_PRIMITIVE_TOPOLOGY_TYPE, const D3D12_SHADER_BYTECODE, const D3D12_SHADER_BYTECODE, const D3D12_SHADER_BYTECODE, const D3D12_SHADER_BYTECODE, const D3D12_SHADER_BYTECODE) {}
+	//std::thread l(&DXExt::CreatePipelineState_L, this, std::ref(PipelineStates[0]), COM_PTR_GET(RootSignatures[0]), Topology, ToShaderBC(Vs), ToShaderBC(Ps), ToShaderBC(Ds), ToShaderBC(Hs), ToShaderBC(Gs));
+	void CreatePipelineState_VsPs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology);
+	void CreatePipelineState_VsPsDsHsGs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology);
 	void CreatePipelineState_Cs(COM_PTR<ID3D12PipelineState>& /*CS*/) { assert(0 && "TODO"); }
 };

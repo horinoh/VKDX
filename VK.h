@@ -327,11 +327,11 @@ protected:
 	virtual void CreateFramebuffer() {}
 	virtual void DestroyFramebuffer();
 
-	virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
-	virtual void CreateShaderModule() {}
+	virtual VkShaderModule CreateShaderModules(const std::wstring& Path) const;
+	virtual void CreateShaderModules() {}
 
 #include "VKPipelineCache.inl"
-	virtual void CreatePipeline() {}
+	virtual void CreatePipelines() {}
 	static void CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP,
 		const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints,
 		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,

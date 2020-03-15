@@ -93,9 +93,9 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreatePipelineLayout();
 	//!< レンダーパス
 	CreateRenderPass();
-	CreateShaderModule();
+	CreateShaderModules();
 	//!< パイプライン
-	CreatePipeline();
+	CreatePipelines();
 	//!< フレームバッファ
 	CreateFramebuffer();
 
@@ -2542,7 +2542,7 @@ void VK::DestroyFramebuffer()
 /**
 @brief シェーダコンパイル、リンクはパイプラインオブジェクト作成時に行われる Shader compilation and linkage is performed during the pipeline object creation
 */
-VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
+VkShaderModule VK::CreateShaderModules(const std::wstring& Path) const
 {
 	VkShaderModule ShaderModule = VK_NULL_HANDLE;
 

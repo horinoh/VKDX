@@ -141,8 +141,8 @@ protected:
 		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	}
 
-	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }
-	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST); }
+	virtual void CreateShaderModules() override { CreateShaderModle_VsFsTesTcsGs(); }
+	virtual void CreatePipelines() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 private:

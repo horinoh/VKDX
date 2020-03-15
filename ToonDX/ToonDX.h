@@ -74,8 +74,8 @@ protected:
 		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back()), RoundUp(sizeof(Tr), 0xff));
 	}
 
-	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
-	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH); }
+	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPsDsHsGs(); }
+	virtual void CreatePipelineStates() override { CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH); }
 	virtual void PopulateCommandList(const size_t i) override;
 
 private:

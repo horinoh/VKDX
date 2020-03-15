@@ -252,11 +252,12 @@ protected:
 	virtual void CreateDescriptorHeap() {}
 	virtual void CreateDescriptorView() {}
 
-	virtual void CreateShader(std::vector<COM_PTR<ID3DBlob>>& ShaderBlobs) const;
-	virtual void CreateShaderBlob() {}
+	D3D12_SHADER_BYTECODE ToShaderBC(const COM_PTR<ID3DBlob>& Blob) { return D3D12_SHADER_BYTECODE({ nullptr == Blob ? nullptr : Blob->GetBufferPointer(), nullptr == Blob ? 0 : Blob->GetBufferSize() }); }
+	//virtual void CreateShader(std::vector<COM_PTR<ID3DBlob>>& ShaderBlobs) const;
+	virtual void CreateShaderBlobs() {}
 
 #include "DXPipelineLibrary.inl"
-	virtual void CreatePipelineState() {}
+	virtual void CreatePipelineStates() {}
 	static void CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,
 		const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology,
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,

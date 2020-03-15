@@ -33,10 +33,9 @@ protected:
 	}
 	virtual void CreatePipelineLayout() override {
 		assert(!DescriptorSetLayouts.empty() && "");
-		PipelineLayouts.resize(1);
-		VKExt::CreatePipelineLayout(PipelineLayouts[0], {
-				DescriptorSetLayouts[0]
-			}, {});
+		PipelineLayouts.resize(2);
+		VKExt::CreatePipelineLayout(PipelineLayouts[0], {}, {});
+		VKExt::CreatePipelineLayout(PipelineLayouts[1], { DescriptorSetLayouts[0] }, {});
 	}
 
 #pragma region DESCRIPTOR
@@ -65,7 +64,7 @@ protected:
 		Super::UpdateDescriptorSet();
 
 		assert(!Samplers.empty() && "");
-		assert(VK_NULL_HANDLE != ImageView && "");
+		assert(VK_NULL_HANDLE != ImageView && ""); //!< #VK_TODO ImageView‚ðì‚é
 		const DescriptorUpdateInfo DUI = {
 			{ VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 		};
@@ -75,7 +74,7 @@ protected:
 	}
 #pragma endregion //!< DESCRIPTOR
 
-	virtual void CreateSampler() override {
+	virtual void CreateImmutableSampler() override {
 		Samplers.resize(1);
 		const VkSamplerCreateInfo SCI = {
 			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -88,60 +87,36 @@ protected:
 			VK_FALSE, VK_COMPARE_OP_NEVER,
 			0.0f, 1.0f,
 			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-			VK_FALSE 
+			VK_FALSE
 		};
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
 	}
-	virtual void CreateShaderModule() override {
+	
+	virtual void CreateShaderModules() override {
 		const auto ShaderPath = GetBasePath();
-		ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".tese.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT(".geom.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".frag.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tese.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tesc.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".geom.spv")).data()));
 
-		ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT("_1") + TEXT(".vert.spv")).data())); //!<
-		ShaderModules.push_back(VKExt::CreateShaderModule((ShaderPath + TEXT("_1") + TEXT(".frag.spv")).data())); //!<
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_1") + TEXT(".vert.spv")).data())); //!<
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_1") + TEXT(".frag.spv")).data())); //!<
 	}
-	virtual void CreatePipeline() override { 
+	virtual void CreatePipelines() override { 
 		Pipelines.resize(2); //!<
+		std::vector<std::thread> Threads;
+		const std::vector<VkVertexInputBindingDescription> VIBDs = {};
+		const std::vector<VkVertexInputAttributeDescription> VIADs = {};
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 2);
-#endif
-		std::vector<std::thread> Threads;
-		{
-			auto& PL = Pipelines[0];
-			const auto RP = RenderPasses[0];
-			const auto PLL = PipelineLayouts[0];
-			Threads.push_back(std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
-				const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TCS, const VkShaderModule TES, const VkShaderModule GS)
-				{
-#ifdef USE_PIPELINE_SERIALIZE
-					VK::CreatePipeline(PL, Device, PLL, RP, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VS, FS, TCS, TES, GS, {}, {}, PCS.GetPipelineCache(0));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4], VIBDs, VIADs, PCS.GetPipelineCache(0)));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, ShaderModules[5], ShaderModules[6], NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs, PCS.GetPipelineCache(1)));
 #else
-					VK::CreatePipeline(PL, Device, PLL, RP, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VS, FS, TCS, TES, GS, {}, {});
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4], VIBDs, VIADs, nullptr));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, ShaderModules[5], ShaderModules[6], NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs, nullptr));
 #endif
-				},
-				std::ref(PL), PLL, RP, ShaderModules[0], ShaderModules[1], ShaderModules[2], ShaderModules[3], ShaderModules[4]));
-		}
-		{
-			auto& PL = Pipelines[1]; //!< 
-			const auto RP = RenderPasses[0];
-			const auto PLL = PipelineLayouts[0];
-			Threads.push_back(std::thread::thread([&](VkPipeline& PL, const VkPipelineLayout PLL, const VkRenderPass RP,
-				const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TCS, const VkShaderModule TES, const VkShaderModule GS)
-				{
-#ifdef USE_PIPELINE_SERIALIZE
-					VK::CreatePipeline(PL, Device, PLL, RP, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VS, FS, TCS, TES, GS, {}, {}, PCS.GetPipelineCache(1)); //!< 
-#else
-					VK::CreatePipeline(PL, Device, PLL, RP, VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VS, FS, TCS, TES, GS, {}, {});
-#endif
-				},
-				std::ref(PL), PLL, RP, ShaderModules[5], ShaderModules[6], NullShaderModule, NullShaderModule, NullShaderModule)); //!<
-		}
-		for (auto& i : Threads) {
-			i.join();
-		}
+		for (auto& i : Threads) { i.join(); }
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override;
 

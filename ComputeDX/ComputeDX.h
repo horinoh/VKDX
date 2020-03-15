@@ -45,18 +45,18 @@ protected:
 		UAVD.Texture2D.PlaneSlice = 0;
 		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextureResource), nullptr, &UAVD, GetCPUDescriptorHandle(COM_PTR_GET(UnorderedAccessTextureDescriptorHeap), 0));
 	}
-	virtual void CreateShader(std::vector<COM_PTR<ID3DBlob>>& SBs) const override {
-		//CreateShader_Cs(ShaderBlobs);
-		Super::CreateShader(SBs);
-	}
+	//virtual void CreateShader(std::vector<COM_PTR<ID3DBlob>>& SBs) const override {
+	//	//CreateShader_Cs(ShaderBlobs);
+	//	Super::CreateShader(SBs);
+	//}
 
 	virtual void CreateTexture() override {
 		//!< #DX_TODO
 		//CreateDefaultResource();
 	}
 
-	virtual void CreateShaderBlob() override { CreateShaderBlob_Cs(); }
-	virtual void CreatePipelineState() override { PipelineStates.resize(1); CreatePipelineState_Cs(PipelineStates[0]); }
+	virtual void CreateShaderBlobs() override { CreateShaderBlob_Cs(); }
+	virtual void CreatePipelineStates() override { PipelineStates.resize(1); CreatePipelineState_Cs(PipelineStates[0]); }
 	virtual void PopulateCommandList(const size_t i) override;
 
 	virtual void Draw() override { Dispatch(); }

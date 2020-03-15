@@ -63,7 +63,7 @@ protected:
 			0, 0, D3D12_SHADER_VISIBILITY_PIXEL
 			});
 	}
-	virtual void CreateShaderBlob() override {
+	virtual void CreateShaderBlobs() override {
 		ShaderBlobs.resize(5 + 2);
 		const auto ShaderPath = GetBasePath();
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs[0])));
@@ -72,54 +72,22 @@ protected:
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), COM_PTR_PUT(ShaderBlobs[3])));
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), COM_PTR_PUT(ShaderBlobs[4])));
 
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_1") + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs[5]))); //!<
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_1") + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[6]))); //!< 
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_1") + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs[5])));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_1") + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[6])));
 	}
-	virtual void CreatePipelineState() override {
-		PipelineStates.resize(2); //!< 
+	virtual void CreatePipelineStates() override {
+		PipelineStates.resize(2);
+		std::vector<std::thread> Threads;
+		const std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs = {};
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
-#endif
-		std::vector<std::thread> Threads;
-		{
-			const std::array<D3D12_SHADER_BYTECODE, 5> SBCs = { {
-				{ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() },
-				{ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() },
-				{ ShaderBlobs[2]->GetBufferPointer(), ShaderBlobs[2]->GetBufferSize() },
-				{ ShaderBlobs[3]->GetBufferPointer(), ShaderBlobs[3]->GetBufferSize() },
-				{ ShaderBlobs[4]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() },
-			} };
-
-			Threads.push_back(std::thread::thread([&](COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS,
-				const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
-				{
-#ifdef USE_PIPELINE_SERIALIZE
-					DX::CreatePipelineState(PST, COM_PTR_GET(Device), RS, D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, VS, PS, DS, HS, GS, {}, &PLS, TEXT("0"));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, ToShaderBC(ShaderBlobs[0]), ToShaderBC(ShaderBlobs[1]), ToShaderBC(ShaderBlobs[2]), ToShaderBC(ShaderBlobs[3]), ToShaderBC(ShaderBlobs[4]), IEDs, &PLS, TEXT("0")));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, ToShaderBC(ShaderBlobs[5]), ToShaderBC(ShaderBlobs[6]), NullShaderBC, NullShaderBC, NullShaderBC, IEDs, &PLS, TEXT("1")));
 #else
-					DX::CreatePipelineState(PST, COM_PTR_GET(Device), RS, D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, VS, PS, DS, HS, GS, {});
-#endif
-				},
-				std::ref(PipelineStates[0]), COM_PTR_GET(RootSignatures[0]), SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4]));
-		}
-		{
-			const std::array<D3D12_SHADER_BYTECODE, 2> SBCs = { {
-				{ ShaderBlobs[5]->GetBufferPointer(), ShaderBlobs[5]->GetBufferSize() }, //!< 
-				{ ShaderBlobs[6]->GetBufferPointer(), ShaderBlobs[6]->GetBufferSize() }, //!< 
-			} };
-			Threads.push_back(std::thread::thread([&](COM_PTR<ID3D12PipelineState>& PST, ID3D12RootSignature* RS,
-				const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS)
-				{
-#ifdef USE_PIPELINE_SERIALIZE
-					DX::CreatePipelineState(PST, COM_PTR_GET(Device), RS, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, VS, PS, DS, HS, GS, {}, &PLS, TEXT("1"));
-#else
-					DX::CreatePipelineState(PST, COM_PTR_GET(Device), RS, D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, VS, PS, DS, HS, GS, {});
-#endif
-				},
-				std::ref(PipelineStates[1]), COM_PTR_GET(RootSignatures[1]), SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC)); //!< 
-		}
-		for (auto& i : Threads) {
-			i.join();
-		}
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, ToShaderBC(ShaderBlobs[0]), ToShaderBC(ShaderBlobs[1]), ToShaderBC(ShaderBlobs[2]), ToShaderBC(ShaderBlobs[3]), ToShaderBC(ShaderBlobs[4]), IEDs, nullptr, nullptr));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, ToShaderBC(ShaderBlobs[5]), ToShaderBC(ShaderBlobs[6]), NullShaderBC, NullShaderBC, NullShaderBC, IEDs, nullptr, nullptr));
+#endif	
+		for (auto& i : Threads) { i.join(); }
 	}
 	virtual void PopulateCommandList(const size_t i) override;
 };

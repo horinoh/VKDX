@@ -200,8 +200,8 @@ protected:
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
 	}
 #endif
-	virtual void CreateShaderModule() override { CreateShaderModle_VsFs(); }
-	virtual void CreatePipeline() override { CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP); }
+	virtual void CreateShaderModules() override { CreateShaderModle_VsFs(); }
+	virtual void CreatePipelines() override { CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 private:

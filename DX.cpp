@@ -43,9 +43,9 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< ルートシグネチャ (パイプライントレイアウト相当)
 	CreateRootSignature();
-	CreateShaderBlob();
+	CreateShaderBlobs();
 	//!< パイプライン
-	CreatePipelineState();
+	CreatePipelineStates();
 
 	//!< デスクリプタヒープ (デスクリプタプール相当)
 	CreateDescriptorHeap();
@@ -1137,46 +1137,46 @@ void DX::CreateRootSignature()
 	LOG_OK();
 }
 
-void DX::CreateShader(std::vector<COM_PTR<ID3DBlob>>& Blobs) const
-{
-	for (auto i : Blobs) {
-		//!< PDBパート、無い場合もあるので HRESULT は VERIFY しない
-		COM_PTR<ID3DBlob> PDBPart;
-		const auto HR = D3DGetBlobPart(i->GetBufferPointer(), i->GetBufferSize(), D3D_BLOB_PDB, 0, COM_PTR_PUT(PDBPart));
-
-#if 0
-		//!< 任意の(「デバッグ名」)データ
-		const char DebugName[] = "DebugName";
-
-		//!< 4バイトアラインされたストレージ
-		const auto Size = RoundUp(_countof(DebugName), 0x3);
-		auto Data = new BYTE [Size];
-		memcpy(Data, DebugName, _countof(DebugName));
-
-		//!< 「デバッグ名」の付いたブロブ
-		COM_PTR<ID3DBlob> WithDebugNamePart;
-		if (SUCCEEDED(D3DSetBlobPart(i->GetBufferPointer(), i->GetBufferSize(), D3D_BLOB_DEBUG_NAME, 0, Data, Size, COM_PTR_PUT(WithDebugNamePart)))) {
-			//!<「デバッグ名」パートを取得
-			COM_PTR<ID3DBlob> DebugNamePart;
-			if (SUCCEEDED(D3DGetBlobPart(WithDebugNamePart->GetBufferPointer(), WithDebugNamePart->GetBufferSize(), D3D_BLOB_DEBUG_NAME, 0, COM_PTR_PUT(DebugNamePart)))) {
-				std::cout << reinterpret_cast<const char*>(DebugNamePart->GetBufferPointer()) << std::endl;
-			}
-		}
-
-		delete[] Data;
-#endif
-	}
-
-	//!< デバッグ情報、ルートシグネチャを取り除く
-#ifndef _DEBUG
-	for (auto i : Blobs) {
-		if (nullptr != i) {
-			VERIFY_SUCCEEDED(D3DStripShader(i->GetBufferPointer(), i->GetBufferSize(), D3DCOMPILER_STRIP_DEBUG_INFO, COM_PTR_PUT(i)));
-			VERIFY_SUCCEEDED(D3DStripShader(i->GetBufferPointer(), i->GetBufferSize(), D3DCOMPILER_STRIP_ROOT_SIGNATURE, COM_PTR_PUT(i)));
-		}
-	}
-#endif
-}
+//void DX::CreateShader(std::vector<COM_PTR<ID3DBlob>>& Blobs) const
+//{
+//	for (auto i : Blobs) {
+//		//!< PDBパート、無い場合もあるので HRESULT は VERIFY しない
+//		COM_PTR<ID3DBlob> PDBPart;
+//		const auto HR = D3DGetBlobPart(i->GetBufferPointer(), i->GetBufferSize(), D3D_BLOB_PDB, 0, COM_PTR_PUT(PDBPart));
+//
+//#if 0
+//		//!< 任意の(「デバッグ名」)データ
+//		const char DebugName[] = "DebugName";
+//
+//		//!< 4バイトアラインされたストレージ
+//		const auto Size = RoundUp(_countof(DebugName), 0x3);
+//		auto Data = new BYTE [Size];
+//		memcpy(Data, DebugName, _countof(DebugName));
+//
+//		//!< 「デバッグ名」の付いたブロブ
+//		COM_PTR<ID3DBlob> WithDebugNamePart;
+//		if (SUCCEEDED(D3DSetBlobPart(i->GetBufferPointer(), i->GetBufferSize(), D3D_BLOB_DEBUG_NAME, 0, Data, Size, COM_PTR_PUT(WithDebugNamePart)))) {
+//			//!<「デバッグ名」パートを取得
+//			COM_PTR<ID3DBlob> DebugNamePart;
+//			if (SUCCEEDED(D3DGetBlobPart(WithDebugNamePart->GetBufferPointer(), WithDebugNamePart->GetBufferSize(), D3D_BLOB_DEBUG_NAME, 0, COM_PTR_PUT(DebugNamePart)))) {
+//				std::cout << reinterpret_cast<const char*>(DebugNamePart->GetBufferPointer()) << std::endl;
+//			}
+//		}
+//
+//		delete[] Data;
+//#endif
+//	}
+//
+//	//!< デバッグ情報、ルートシグネチャを取り除く
+//#ifndef _DEBUG
+//	for (auto i : Blobs) {
+//		if (nullptr != i) {
+//			VERIFY_SUCCEEDED(D3DStripShader(i->GetBufferPointer(), i->GetBufferSize(), D3DCOMPILER_STRIP_DEBUG_INFO, COM_PTR_PUT(i)));
+//			VERIFY_SUCCEEDED(D3DStripShader(i->GetBufferPointer(), i->GetBufferSize(), D3DCOMPILER_STRIP_ROOT_SIGNATURE, COM_PTR_PUT(i)));
+//		}
+//	}
+//#endif
+//}
 
 void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,
 	const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology,
