@@ -23,14 +23,11 @@ protected:
 		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
 	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
-#ifdef USE_SECONDARY_COMMAND_BUFFER
 	virtual void AllocateSecondaryCommandBuffer() override { AddSecondaryCommandBuffer(); }
-#endif
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);
-#ifdef USE_IMMUTABLE_SAMPLER
 		assert(!Samplers.empty() && "");
 		const std::array<VkSampler, 1> ISs = { 
 			Samplers[0] 
@@ -39,13 +36,6 @@ protected:
 				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
 				{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
 			});
-#else
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0],
-			{
-				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
-				{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-			});
-#endif
 	}
 	virtual void CreatePipelineLayout() override {
 		assert(!DescriptorSetLayouts.empty() && "");
@@ -108,17 +98,11 @@ protected:
 		Super::UpdateDescriptorSet();
 
 		assert(!UniformBuffers.empty() && "");
-#ifdef USE_IMMUTABLE_SAMPLER
 		assert(!Samplers.empty() && "");
-#endif
 		assert(VK_NULL_HANDLE != ImageView && "");
 		const DescriptorUpdateInfo DUI = {
 			{ UniformBuffers[0], Offset, VK_WHOLE_SIZE },
-#ifdef USE_IMMUTABLE_SAMPLER
 			{ VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
-#else
-			{ Samplers[0], ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
-#endif
 		};
 		assert(!DescriptorSets.empty() && "");
 		assert(!DescriptorUpdateTemplates.empty() && "");
@@ -144,7 +128,6 @@ protected:
 	virtual void CreateTexture() override {
 		LoadImage(&Image, &ImageDeviceMemory, &ImageView, "NormalMap.dds");
 	}
-#ifdef USE_IMMUTABLE_SAMPLER
 	virtual void CreateImmutableSampler() override {
 		Samplers.resize(1);
 		const VkSamplerCreateInfo SCI = {
@@ -162,25 +145,6 @@ protected:
 		};
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
 	}
-#else
-	virtual void CreateSampler() override {
-		Samplers.resize(1);
-		const VkSamplerCreateInfo SCI = {
-			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-			nullptr,
-			0,
-			VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR,
-			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
-			0.0f,
-			VK_FALSE, 1.0f,
-			VK_FALSE, VK_COMPARE_OP_NEVER,
-			0.0f, 1.0f,
-			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-			VK_FALSE
-		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
-	}
-#endif
 	
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFsTesTcsGs(); }
 	virtual void CreatePipelines() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST); }

@@ -24,9 +24,7 @@ protected:
 	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
-#ifdef USE_SECONDARY_COMMAND_BUFFER
 	virtual void AllocateSecondaryCommandBuffer() override { AddSecondaryCommandBuffer(); }
-#endif
 #ifdef USE_DEPTH_STENCIL
 	virtual void CreateDepthStencil() override { VK::CreateDepthStencil(VK_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
 	virtual void CreateFramebuffer() override { CreateFramebuffer_ColorDepth(); }

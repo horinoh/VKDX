@@ -14,9 +14,7 @@ public:
 	virtual ~TriangleVK() {}
 
 protected:
-#ifdef USE_SECONDARY_COMMAND_BUFFER
 	virtual void AllocateSecondaryCommandBuffer() override { AddSecondaryCommandBuffer(); }
-#endif
 	virtual void CreateVertexBuffer() override;
 	virtual void CreateIndexBuffer() override;
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(IndexCount, 1); }
@@ -34,10 +32,16 @@ protected:
 		VKExt::CreatePipelineLayout(PipelineLayouts[0], {}, {});
 #endif
 	}
-	virtual void CreateShaderModules() override { CreateShaderModle_VsFs(); }
+	virtual void CreateShaderModules() override { 
+		const auto ShaderPath = GetBasePath();
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
+#ifdef USE_PUSH_CONSTANTS
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("PushConstants.frag.spv")).data()));
+#else
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".frag.spv")).data()));
+#endif
+	}
 	virtual void CreatePipelines() override {
-		Pipelines.push_back(VkPipeline());
-		std::vector<std::thread> Threads;
 		const std::vector<VkVertexInputBindingDescription> VIBDs = { {
 			{ 0, sizeof(Vertex_PositionColor), VK_VERTEX_INPUT_RATE_VERTEX },
 		} };
@@ -46,13 +50,7 @@ protected:
 			{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_PositionColor, Position) },
 			{ 1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Vertex_PositionColor, Color) },
 		} };
-#ifdef USE_PIPELINE_SERIALIZE
-		PipelineCacheSerializer PCS(Device, (GetBasePath() + TEXT(".pco")).c_str(), 1);
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs, PCS.GetPipelineCache(0)));
-#else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, ShaderModules[0], ShaderModules[1], NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs, nullptr));
-#endif
-		for (auto& i : Threads) { i.join(); }
+		VKExt::CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VIBDs, VIADs);
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override;
 

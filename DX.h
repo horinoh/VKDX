@@ -34,7 +34,7 @@
 //!< バンドル : VKのセカンダリコマンドバッファ相当
 #define USE_BUNDLE
 //!< ルートコンスタント : VKのプッシュコンスタント相当
-//#define USE_ROOT_CONSTANTS
+//#define USE_ROOT_CONSTANTS //!< TriangleDX
 
 #include <initguid.h>
 #include <d3d12.h>

@@ -26,7 +26,7 @@
 #ifndef DEBUG_OUTPUT
 #define DEBUG_OUTPUT
 #endif
-#endif //!< _DEBUG
+#endif //!< _DEBUGObi
 
 //!< HDR環境が無いので保留…
 //!< DXの場合「HDRのゲームとアプリを使用する」設定が必要 (Need to enable "Play HDR game and apps" in windows settings )
@@ -37,6 +37,7 @@
 
 #define USE_DEPTH_STENCIL
 
+#define USE_DRAW_INDIRECT //!< FullscreenDX, FullscreenVK
 #define USE_PIPELINE_SERIALIZE
 #define ALWAYS_REBUILD_PIPELINE
 

@@ -97,8 +97,10 @@ public:
 	//void CreatePipeline_L(VkPipeline&, const VkPipelineLayout, const VkRenderPass, const VkPrimitiveTopology, const uint32_t, const VkShaderModule, const VkShaderModule, const VkShaderModule, const VkShaderModule, const VkShaderModule) {}
 	//std::thread l(&VKExt::CreatePipeline_L, this, std::ref(PL), PLL, RP, Topology, PatchControlPoints, Vs, Fs, Tes, Tcs, Gs);
 	//!< 引数のシェーダの順序は D3D12_GRAPHICS_PIPELINE_STATE_DESC内のVS, PS, DS, HS, GSに合わせておくことにする
-	void CreatePipeline_VsFs(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints = 0);
-	void CreatePipeline_VsFsTesTcsGs(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints = 1);
+	void CreatePipeline_VsFs(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints = 0) { CreatePipeline_VsFs_Input(Topology, PatchControlPoints, {}, {}); }
+	void CreatePipeline_VsFs_Input(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs);
+	void CreatePipeline_VsFsTesTcsGs(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints = 1) { CreatePipeline_VsFsTesTcsGs_Input(Topology, PatchControlPoints, {}, {}); }
+	void CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs);
 	void CreatePipeline_Cs(VkPipeline& /*PL*/) { assert(0 && "TODO"); }
 
 	void CreateRenderPass_ColorDepth(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth);

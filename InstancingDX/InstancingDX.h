@@ -14,9 +14,7 @@ public:
 	virtual ~InstancingDX() {}
 
 protected:
-#ifdef USE_BUNDLE
 	virtual void CreateBundleCommandList() override { AddBundleCommandList(); }
-#endif
 	virtual void CreateVertexBuffer() override;
 	virtual void CreateIndexBuffer() override;
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(IndexCount, InstanceCount); }
@@ -33,8 +31,6 @@ protected:
 	}
 	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPs(); }
 	virtual void CreatePipelineStates() override {
-		PipelineStates.resize(1);
-		std::vector<std::thread> Threads;
 		const std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs = { {
 			//!< Per Vertex
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, offsetof(Vertex_PositionColor, Position), D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
@@ -42,14 +38,7 @@ protected:
 			//!< Per Instance
 			{ "OFFSET", 0, DXGI_FORMAT_R32G32_FLOAT, 1, offsetof(Instance_OffsetXY, Offset), D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
 		} };
-#ifdef USE_PIPELINE_SERIALIZE
-		const auto PCOPath = GetBasePath() + TEXT(".plo");
-		PipelineLibrarySerializer PLS(COM_PTR_GET(Device), PCOPath.c_str());
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, ToShaderBC(ShaderBlobs[0]), ToShaderBC(ShaderBlobs[1]), NullShaderBC, NullShaderBC, NullShaderBC, IEDs, &PLS, TEXT("0")));
-#else
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, ToShaderBC(ShaderBlobs[0]), ToShaderBC(ShaderBlobs[1]), NullShaderBC, NullShaderBC, NullShaderBC, IEDs, nullptr, nullptr));
-#endif
-		for (auto& i : Threads) { i.join(); }
+		CreatePipelineState_VsPs_Input(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, IEDs);
 	}
 	virtual void PopulateCommandList(const size_t i) override;
 

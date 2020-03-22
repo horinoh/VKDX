@@ -280,10 +280,8 @@ void InstancingDX::PopulateCommandList(const size_t i)
 {
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-#ifdef USE_BUNDLE
 	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]); 
-#endif
 	const auto VBV0 = VertexBufferViews[0];
 	const auto VBV1 = VertexBufferViews[1];
 	const auto IBV = IndexBufferViews[0];
@@ -298,7 +296,6 @@ void InstancingDX::PopulateCommandList(const size_t i)
 
 	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
 
-#ifdef USE_BUNDLE
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 	{
 		BCL->SetGraphicsRootSignature(RS);
@@ -309,7 +306,6 @@ void InstancingDX::PopulateCommandList(const size_t i)
 		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BCL->Close());
-#endif
 
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
@@ -324,16 +320,7 @@ void InstancingDX::PopulateCommandList(const size_t i)
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 
-#ifdef USE_BUNDLE
 			CL->ExecuteBundle(BCL);
-#else
-			CL->SetGraphicsRootSignature(RS);
-			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-			const std::array<D3D12_VERTEX_BUFFER_VIEW, 2> VBVs = { VBV0, VBV1 };
-			CL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
-			CL->IASetIndexBuffer(&IBV);
-			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
-#endif
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}

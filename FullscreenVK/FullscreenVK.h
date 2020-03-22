@@ -5,8 +5,6 @@
 #pragma region Code
 #include "../VKExt.h"
 
-#define USE_DRAW_INDIRECT
-
 class FullscreenVK : public VKExt
 {
 private:
@@ -16,9 +14,7 @@ public:
 	virtual ~FullscreenVK() {}
 
 protected:
-#ifdef USE_SECONDARY_COMMAND_BUFFER
 	virtual void AllocateSecondaryCommandBuffer() override { AddSecondaryCommandBuffer(); }
-#endif
 #ifdef USE_DRAW_INDIRECT
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
 #endif

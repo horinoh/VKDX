@@ -247,6 +247,31 @@ fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
 ~~~
 -->
 
+#### 条件コンパイル対応
+- USE_HDR
+	- TODO
+- USE_FULL_SCREEN
+	- TODO
+- USE_DEPTH_STENCIL
+	- TODO
+- USE_DRAW_INDIRECT
+	- FullscreenDX, FullscreenVK
+- USE_PIPELINE_SERIALIZE
+	- ALL
+
+- USE_BUNDLE, USE_SECONDARY_COMMAND_BUFFER
+	- ParametricSurfaceDX, ParametricSurfaceVK
+- USE_STATIC_SAMPLER, USE_IMMUTABLE_SAMPLER
+	- TextureDX, TextureVK
+- USE_PUSH_DESCRIPTOR
+	- BillboardVK TODO
+- USE_RENDER_PASS_CLEAR
+	- TODO
+- USE_PUSH_DESCRIPTOR
+	- TODO
+- USE_PUSH_CONSTANTS, USE_ROOT_CONSTANTS
+	- TriangleDX, TriangleVK
+
 #### トラブルシューティング
 * 「このプロジェクトは、このコンピュータ上にないNugetパッケージを参照しています」と出る場合
 	* まず VS を最新にアップデートする、それでダメなら以下を試す

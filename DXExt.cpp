@@ -93,11 +93,10 @@ void DXExt::CreateShaderBlob_Cs()
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".cs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 }
 
-void DXExt::CreatePipelineState_VsPs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology)
+void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs)
 {
 	PipelineStates.resize(1);
 	std::vector<std::thread> Threads;
-	const std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs = {};
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
 	Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), Topology, ToShaderBC(ShaderBlobs[0]), ToShaderBC(ShaderBlobs[1]), NullShaderBC, NullShaderBC, NullShaderBC, IEDs, &PLS, TEXT("0")));
@@ -107,11 +106,10 @@ void DXExt::CreatePipelineState_VsPs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topolog
 	for (auto& i : Threads) { i.join(); }
 }
 
-void DXExt::CreatePipelineState_VsPsDsHsGs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology)
+void DXExt::CreatePipelineState_VsPsDsHsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs)
 {
 	PipelineStates.resize(1);
 	std::vector<std::thread> Threads;
-	const std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs = {};
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
 	Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), Topology, ToShaderBC(ShaderBlobs[0]), ToShaderBC(ShaderBlobs[1]), ToShaderBC(ShaderBlobs[2]), ToShaderBC(ShaderBlobs[3]), ToShaderBC(ShaderBlobs[4]), IEDs, &PLS, TEXT("0")));
