@@ -275,8 +275,8 @@ void ParametricSurfaceVK::PopulateCommandBuffer(const size_t i)
 #ifdef USE_RENDER_PASS_CLEAR
 		const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
 #else
+		ClearColor(CB, SwapchainImages[i], Colors::Blue);
 		const std::array<VkClearValue, 0> CVs = {};
-		ClearColor(CB, SwapchainImages[i], Colors::SkyBlue);
 #endif
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

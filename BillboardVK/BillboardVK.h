@@ -33,15 +33,9 @@ protected:
 	virtual void AllocateSecondaryCommandBuffer() override { AddSecondaryCommandBuffer(); }
 #endif
 
-	virtual void CreateDepthStencil() override {
-		//VK_FORMAT_D32_SFLOAT_S8_UINT,
-		//VK_FORMAT_D32_SFLOAT,
-		//VK_FORMAT_D24_UNORM_S8_UINT,
-		//VK_FORMAT_D16_UNORM_S8_UINT,
-		//VK_FORMAT_D16_UNORM
-
-		//Super::CreateDepthStencil(SurfaceExtent2D.width, SurfaceExtent2D.height, VK_FORMAT_D24_UNORM_S8_UINT);
-	}
+	virtual void CreateDepthStencil() override { VK::CreateDepthStencil(VK_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
+	virtual void CreateFramebuffer() override { CreateFramebuffer_ColorDepth(); }
+	virtual void CreateRenderPass() override { RenderPasses.resize(1); CreateRenderPass_ColorDepth(RenderPasses[0], ColorFormat, VK_FORMAT_D24_UNORM_S8_UINT); }
 
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 

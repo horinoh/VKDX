@@ -239,9 +239,7 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), static_cast<UINT>(i)); 
-#ifdef USE_DEPTH_STENCIL
 	const auto DSH = GetCPUDescriptorHandle(COM_PTR_GET(DepthStencilDescriptorHeap), 0);
-#endif
 
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 
@@ -276,16 +274,10 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 		{
 			const std::array<D3D12_RECT, 0> Rs = {};
 			CL->ClearRenderTargetView(SCH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
-#ifdef USE_DEPTH_STENCIL
 			CL->ClearDepthStencilView(DSH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-#endif
 
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
-#ifdef USE_DEPTH_STENCIL
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &DSH);
-#else
-			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
-#endif
 
 			CL->ExecuteBundle(BCL);
 		}

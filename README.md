@@ -4,10 +4,10 @@
 
 ### コンパイル
 * "warning C4005: '_malloca': macro redefinition" は framework.h 内 windows.h 前に _CRTDBG_MAP_ALLOC を定義すると出なくなる
-~~~
-#define _CRTDBG_MAP_ALLOC
-#include <windows.h>
-~~~
+	~~~
+	#define _CRTDBG_MAP_ALLOC
+	#include <windows.h>
+	~~~
 
 ### Visual Assist X
 * 検索対象に拡張子(inl)を追加する
@@ -17,18 +17,18 @@
 ### DDS ツール
 * DirectXTex https://github.com/Microsoft/DirectXTex
   * DirectXTex\DirectXTex_Desktop_2015.sln を開いて Release、x64 にしてビルドすると実行ファイルが作成される
-~~~
-DDSView\Bin\Desktop_2015\x64\Release\DDSView.exe
-Texassemble\Bin\Desktop_2015\x64\Release\texassemble.exe
-Texconv\Bin\Desktop_2015\x64\Release\texconv.exe
-Texdiag\Bin\Desktop_2015\x64\Release\texdiag.exe
-~~~
+	~~~
+	DDSView\Bin\Desktop_2015\x64\Release\DDSView.exe
+	Texassemble\Bin\Desktop_2015\x64\Release\texassemble.exe
+	Texconv\Bin\Desktop_2015\x64\Release\texconv.exe
+	Texdiag\Bin\Desktop_2015\x64\Release\texdiag.exe
+	~~~
 
 * 中間リソースを使用するもの(例えばDDSファイル)は PreBuildEvent で Intermediate から ProjectDir, TargetDir へコピーしている (VS 起動時と exe 直起動時用)
-~~~
-xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(ProjectDir)
-xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)
-~~~
+	~~~
+	xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(ProjectDir)
+	xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)
+	~~~
 
 ### エディット & コンティニュー
 - Tools - Option - Debugging - General - Enable Edit and Continue
@@ -55,9 +55,9 @@ xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)
 	* UE4 : 環境変数 **VULKAN_SDK** は UE4 のコンパイルが通らなくなるので消した `setx VULKAN_SDK ""`
 * C/C++ - Preprocessor - Preprocessor Definitions に **VK_USE_PLATFORM_WIN32_KHR** を定義した
 * 環境変数 **VK_INSTANCE_LAYERS** を作成しておくか、インスタンス作成持にプログラム中から指定してもよい。
-~~~
-setx VK_INSTANCE_LAYERS VK_LAYER_LUNARG_standard_validation
-~~~
+	~~~
+	setx VK_INSTANCE_LAYERS VK_LAYER_LUNARG_standard_validation
+	~~~
 * DLL
 	* C/C++ - Preprocessor - Preprocessor Definitions に **VK_NO_PROTOYYPES** を定義しておく
 	* %VK_SDK_PATH%\RunTimeInstaller\VulkanRT-XXX-Installer.exe を実行すると DLL がインストールされる
@@ -67,13 +67,13 @@ setx VK_INSTANCE_LAYERS VK_LAYER_LUNARG_standard_validation
 	* アプリ と VulkanAPI の間のレイヤ
 	* コード中からやらない場合は以下のようにする
 		* %VK_SDK_PATH%\Config\vk_layer_settings.txt をデバッグしたい exe と同じ場所へコピーし、環境変数 VK_INSTANCE_LAYER を定義しておく
-~~~
-xcopy /y %VK_SDK_PATH%\Config\vk_layer_settings.txt $(ProjectDir)
-xcopy /y %VK_SDK_PATH%\Config\vk_layer_settings.txt $(TargetDir)
-~~~
-~~~
-setx VK_INSTANCE_LAYERS VK_LAYER_LUNARG_standard_validation
-~~~
+			~~~
+			xcopy /y %VK_SDK_PATH%\Config\vk_layer_settings.txt $(ProjectDir)
+			xcopy /y %VK_SDK_PATH%\Config\vk_layer_settings.txt $(TargetDir)
+			~~~
+			~~~
+			setx VK_INSTANCE_LAYERS VK_LAYER_LUNARG_standard_validation
+			~~~
 
 #### ドライバ
 * https://www.khronos.org/vulkan/
@@ -102,16 +102,16 @@ setx VK_INSTANCE_LAYERS VK_LAYER_LUNARG_standard_validation
 	* Treat Output As Content : `Yes`
 	* Command Line :
 * Debug
-~~~
-glslangValidator -H %(Identity) -o %(Identity).spv > %(Identity).asm
-xcopy /y %(Identity).spv $(TargetDir) //!< TargetDir にもコピー
-~~~
+	~~~
+	glslangValidator -H %(Identity) -o %(Identity).spv > %(Identity).asm
+	xcopy /y %(Identity).spv $(TargetDir) //!< TargetDir にもコピー
+	~~~
 * Release
-~~~
-glslangValidator -V %(Identity) -o %(Identity).spv
-spirv-remap --map all --input %(Identity).spv --output .
-xcopy /y %(Identity).spv $(TargetDir)
-~~~
+	~~~
+	glslangValidator -V %(Identity) -o %(Identity).spv
+	spirv-remap --map all --input %(Identity).spv --output .
+	xcopy /y %(Identity).spv $(TargetDir)
+	~~~
 * その他オプション
   * -H SPIR-Vコードを標準出力へ
   * -e エントリポイント
@@ -153,41 +153,41 @@ xcopy /y %(Identity).spv $(TargetDir)
 	* プロジェクト右クリック - Property - All Configurations にする - C/C++ - Language - C++ Language Standard - ISO C++17 Standard を選択
 		* デフォルトでは C++14になっているみたい
 	* 以下のようなコード変更を行う
-~~~
-//#include <wrl.h>
-#include <winrt/base.h>
+		~~~
+		//#include <wrl.h>
+		#include <winrt/base.h>
 
-//Microsoft::WRL::ComPtr<ID3D12Device> Device;
-winrt::com_ptr<ID3D12Device> Dev;
+		//Microsoft::WRL::ComPtr<ID3D12Device> Device;
+		winrt::com_ptr<ID3D12Device> Dev;
 
-//IID_PPV_ARGS(&XXX)
-//IID_PPV_ARGS(XXX.GetAddressOf())
-__uuidof(XXX), XXX.put_void()
+		//IID_PPV_ARGS(&XXX)
+		//IID_PPV_ARGS(XXX.GetAddressOf())
+		__uuidof(XXX), XXX.put_void()
 
-//IID_PPV_ARGS(XXX.ReleaseAndGetAddressOf())
-XXX = nullptr;
-__uuidof(XXX), XXX.put_void()
+		//IID_PPV_ARGS(XXX.ReleaseAndGetAddressOf())
+		XXX = nullptr;
+		__uuidof(XXX), XXX.put_void()
 
-//XXX.Get()
-XXX.get()
+		//XXX.Get()
+		XXX.get()
 
-//&XXX
-//XXX.GetAddressOf()
-XXX.put()
-XXX.put_void()
+		//&XXX
+		//XXX.GetAddressOf()
+		XXX.put()
+		XXX.put_void()
 
-//XXX.ReleaseAndGetAddressOf()
-XXX = nullptr;
-XXX.put()
-XXX.put_void()
+		//XXX.ReleaseAndGetAddressOf()
+		XXX = nullptr;
+		XXX.put()
+		XXX.put_void()
 
-//XXX.Reset()
-XXX = nullptr
+		//XXX.Reset()
+		XXX = nullptr
 
-//XXX.As(&YYY)
-XXX->QueryInterface(__uuidof(YYY), YYY.put_void());
-winrt::copy_to_abi(XXX, *YYY.put_void());
-~~~
+		//XXX.As(&YYY)
+		XXX->QueryInterface(__uuidof(YYY), YYY.put_void());
+		winrt::copy_to_abi(XXX, *YYY.put_void());
+		~~~
 
 ### DirectXTK (DDS読み込みに使用)
 * https://github.com/Microsoft/DirectXTK12
@@ -203,9 +203,9 @@ winrt::copy_to_abi(XXX, *YYY.put_void());
 * HLSL Compiler - Output Files - $(OutDir)%(Filename).cso を $(ProjectDir)%(Filename).cso へ変更した
 * .exe 直起動もできるように TargetDir にもコピーしている
 	* Visual Studio で BuildEvent - Post-Build Event に以下のように指定した
-~~~
-for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
-~~~
+		~~~
+		for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
+		~~~
 
 #### デバッグ
 * WinPixEventRuntimeのインストール
@@ -222,22 +222,36 @@ for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir) //!< TargetDir にもコピー
 * 参考
 	* https://docs.microsoft.com/en-us/windows/desktop/direct3d12/specifying-root-signatures-in-hlsl
 * 以下のような define定義を書いたファイル RS.hlsl を準備する
-~~~
-#define RS "..."
-~~~
+	~~~
+	#define RS "..."
+	~~~
+	- 書式例
+		~~~
+		RootFlags(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT)
+		DescriptorTable(CBV(b0, space=0), visibility=SHADER_VISIBILITY_GEOMETRY)
+		DescriptorTable(SRV(t0, space=0), visibility=SHADER_VISIBILITY_PIXEL)
+		DescriptorTable(Sampler(s0, space=0), visibility=SHADER_VISIBILITY_PIXEL)
+		StaticSampler(s0,
+			space=0,
+			filter=FILTER_MIN_MAG_MIP_LINEAR, 
+			maxLOD=1.f, 
+			maxAnisotropy=0, 
+			comparisonFunc=COMPARISON_NEVER,
+			visibility=SHADER_VISIBILITY_PIXEL)
+		~~~
 * コンパイル 
 	* fxc.exe は C:\Program Files (x86)\Windows Kits\10\bin\10.0.17763.0\x64 以下などにあるはず
 	* fxc の代わりに dxc だとうまくいかなかった (コンパイルはできるが、読み込むと死ぬ)
 	* RS.fxo をBlobとして読み込んで使う
 	* ファイル名が RS.hlsl、define定義名が RS、出力ファイルが RS.cso の場合の例
-~~~
-fxc /T rootsig_1_1 RS.hlsl /E RS /Fo RS.cso
-~~~
+		~~~
+		fxc /T rootsig_1_1 RS.hlsl /E RS /Fo RS.cso
+		~~~
 * Visual Studio への追加
 	* Proerties - Build Events - Pre Build Event - Command Line に以下のように記述
-~~~
-fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
-~~~
+		~~~
+		fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
+		~~~
 <!--
 	* Properties - HLSLCompiler - General - Shader Type を Generate Root Signature Object にする (しなくても大丈夫だが一応しておく)
 	* Properties - HLSLCompiler - All Options - Entry Point Name に main とあるのを消す (しなくても大丈夫だが一応しておく)
@@ -248,29 +262,29 @@ fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
 -->
 
 #### 条件コンパイル対応
-- USE_HDR
-	- TODO
-- USE_FULL_SCREEN
-	- TODO
-- USE_DEPTH_STENCIL
-	- TODO
 - USE_DRAW_INDIRECT
 	- FullscreenDX, FullscreenVK
 - USE_PIPELINE_SERIALIZE
 	- ALL
-
+- USE_HLSL_ROOTSIGNATRUE
+	- XXXDX
+	- RenderTaragetDX, GltfDX ... TODO
 - USE_BUNDLE, USE_SECONDARY_COMMAND_BUFFER
 	- ParametricSurfaceDX, ParametricSurfaceVK
 - USE_STATIC_SAMPLER, USE_IMMUTABLE_SAMPLER
 	- TextureDX, TextureVK
-- USE_PUSH_DESCRIPTOR
-	- BillboardVK TODO
 - USE_RENDER_PASS_CLEAR
-	- TODO
-- USE_PUSH_DESCRIPTOR
-	- TODO
+	- 画面クリアの必用無いもの(FullscreenVK, TextureVK等)では無効で良い
 - USE_PUSH_CONSTANTS, USE_ROOT_CONSTANTS
 	- TriangleDX, TriangleVK
+- USE_DEPTH_STENCIL
+	- ToonVK, ToonDX
+- USE_PUSH_DESCRIPTOR
+	- BillboardVK ... TODO
+- USE_HDR
+	- ハードウェア入手後 ... TODO
+- USE_FULL_SCREEN
+	- TODO
 
 #### トラブルシューティング
 * 「このプロジェクトは、このコンピュータ上にないNugetパッケージを参照しています」と出る場合
@@ -377,7 +391,6 @@ TODO
 
 # VK
 - ウインドウサイズ変更時の処理 OnSize() スワップチェインのリサイズ
-- デプスステンシルを有効にして試してない(Billboard)
 - コンピュートの検証(テクスチャを準備する)
 - ストレージバッファ、ユニフォームテクセルバッファ、ストレージテクセルバッファの検証
 - テクスチャ読み込み現状ミップマップ１のみ

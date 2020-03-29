@@ -276,7 +276,7 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		//!< このケースの場合は全画面描画なのでクリアは必要無く、USE_RENDER_PASS_CLEAR は使用しない方が良い
+		//!< このケースの場合は全画面描画なのでクリアは必要無く、USE_RENDER_PASS_CLEARは無効で良い
 #ifdef USE_RENDER_PASS_CLEAR
 		const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
 #else

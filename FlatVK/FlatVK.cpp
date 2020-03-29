@@ -268,13 +268,10 @@ void FlatVK::PopulateCommandBuffer(const size_t i)
         nullptr
     };
     VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-#ifndef USE_RENDER_PASS_CLEAR
-        ClearColor(CB, SwapchainImages[i], Colors::SkyBlue);
-#endif
-
 #ifdef USE_RENDER_PASS_CLEAR
         std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
 #else
+		ClearColor(CB, SwapchainImages[i], Colors::Blue);
         const std::array<VkClearValue, 0> CVs = {};
 #endif
         const VkRenderPassBeginInfo RPBI = {

@@ -3058,7 +3058,7 @@ void VK::PopulateCommandBuffer(const size_t i)
 		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 #ifndef USE_RENDER_PASS_CLEAR
-		ClearColor(CB, SwapchainImages[i], Colors::SkyBlue);
+		ClearColor(CB, SwapchainImages[i], Colors::Blue);
 #endif
 
 		const auto RP = RenderPasses[0];
@@ -3069,7 +3069,7 @@ void VK::PopulateCommandBuffer(const size_t i)
 		//!<「自分の環境では」 Granularity = { 1, 1 } だったのでほぼなんでも大丈夫みたい、環境によっては注意が必要
 		assert(ScissorRects[0].extent.width >= Granularity.width && ScissorRects[0].extent.height >= Granularity.height && "ScissorRect is too small");
 #endif
-		//!< (ここでは)レンダーパス開始時にカラーはクリアせず、デプスはクリアしている (In this case, not clear color, but clear depth on begining of renderpas)
+		//!< USE_RENDER_PASS_CLEARでなければレンダーパス開始時にカラーはクリアせず、デプスはクリアしている (If not USE_RENDER_PASS_CLEAR, not clear color, but clear depth on begining of renderpas)
 		std::array<VkClearValue, 2> CVs = {};
 #ifdef USE_RENDER_PASS_CLEAR
 		CVs[0].color = Colors::SkyBlue;

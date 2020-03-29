@@ -324,7 +324,7 @@ void InstancingVK::PopulateCommandBuffer(const size_t i)
 #ifdef USE_RENDER_PASS_CLEAR
 		const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
 #else
-		ClearColor(CB, SwapchainImages[i], Colors::SkyBlue);
+		ClearColor(CB, SwapchainImages[i], Colors::Blue);
 		const std::array<VkClearValue, 0> CVs = {};
 #endif
 		const VkRenderPassBeginInfo RPBI = {
