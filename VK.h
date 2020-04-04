@@ -46,7 +46,7 @@
 
 #define USE_VIEWPORT_Y_UP
 
-#define USE_IMMUTABLE_SAMPLER
+#define USE_IMMUTABLE_SAMPLER //!< TextureVK
 
 //#define USE_PUSH_DESCRIPTOR //!< #VK_TODO
 
@@ -55,11 +55,14 @@
 //!< ただしプライマリがレンダーパス内からセカンダリを呼び出す場合には、プライマリのレンダーパス、サプバスステートは継承される
 //!< 全てのコマンドがプライマリ、セカンダリの両方で記録できるわけではない
 //!< セカンダリの場合は VK_SUBPASS_CONTENTS_INLINE の代わりに VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS を指定する 
-#define USE_SECONDARY_COMMAND_BUFFER
+#define USE_SECONDARY_COMMAND_BUFFER //!< ParametricSurfaceVK
 //!< プッシュコンスタント　: DXのルートコンスタント相当
 //#define  USE_PUSH_CONSTANTS //!< TriangleVK
 
 #define USE_RENDER_PASS_CLEAR
+
+//!< パイプライン作成時にシェーダ内の定数値を上書き指定できる(スカラ値のみ)
+//#define USE_SPECIALIZATION_INFO
 
 #ifdef _DEBUG
 #define USE_DEBUG_REPORT
@@ -334,7 +337,7 @@ protected:
 	virtual void CreatePipelines() {}
 	static void CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP,
 		const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints,
-		const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS,
+		const VkPipelineShaderStageCreateInfo* VS, const VkPipelineShaderStageCreateInfo* FS, const VkPipelineShaderStageCreateInfo* TES, const VkPipelineShaderStageCreateInfo* TCS, const VkPipelineShaderStageCreateInfo* GS,
 		const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs,
 		VkPipelineCache PC = VK_NULL_HANDLE); 
 	//virtual void CreatePipeline_Compute();
@@ -598,8 +601,6 @@ protected:
 		0, VK_REMAINING_ARRAY_LAYERS
 	};
 	const VkClearDepthStencilValue ClearDepthStencilValue = { 1.0f, 0 };
-
-	const VkShaderModule NullShaderModule = static_cast<const VkShaderModule>(VK_NULL_HANDLE);
 };
 
 #ifdef DEBUG_STDOUT

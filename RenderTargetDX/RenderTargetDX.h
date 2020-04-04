@@ -14,11 +14,9 @@ public:
 	virtual ~RenderTargetDX() {}
 
 protected:
-#ifdef USE_BUNDLE
 	virtual void CreateBundleCommandList() override { AddBundleCommandList(); }
-#endif
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
-	//virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
+	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); } //!< メッシュ描画用
+	//virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); } //!< フルスクリーン描画用 #DX_TODO
 	virtual void CreateRootSignature() override {
 		RootSignatures.resize(2);
 

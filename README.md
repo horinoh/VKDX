@@ -274,15 +274,18 @@
 - USE_STATIC_SAMPLER, USE_IMMUTABLE_SAMPLER
 	- TextureDX, TextureVK
 - USE_RENDER_PASS_CLEAR
+	- XXXXVK
 	- 画面クリアの必用無いもの(FullscreenVK, TextureVK等)では無効で良い
 - USE_PUSH_CONSTANTS, USE_ROOT_CONSTANTS
 	- TriangleDX, TriangleVK
 - USE_DEPTH_STENCIL
 	- ToonVK, ToonDX
+- USE_SPECIALIZATION_INFO
+	- ParametricSurfaceVK
 - USE_PUSH_DESCRIPTOR
 	- BillboardVK ... TODO
 - USE_HDR
-	- ハードウェア入手後 ... TODO
+	- TriangleDX... TODO(ハードウェア入手後)
 - USE_FULL_SCREEN
 	- TODO
 

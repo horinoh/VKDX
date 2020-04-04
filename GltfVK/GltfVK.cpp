@@ -407,9 +407,9 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	}
 	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(SemanticInitial.begin(), SemanticInitial.end());
 	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
-	const auto VS = ShaderModules.back();
+	const auto VS = VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, ShaderModules.back(), "main", nullptr });
 	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".frag.spv")).data()));
-	const auto FS = ShaderModules.back();
+	const auto FS = VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules.back(), "main", nullptr });
 
 	//!< アトリビュート (Attributes)
 	std::vector<VkVertexInputBindingDescription> VIBDs;
@@ -438,7 +438,7 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	const auto RP = RenderPasses[0];
 	const auto PLL = PipelineLayouts[0];
 	Pipelines.push_back(VkPipeline());
-	VK::CreatePipeline(Pipelines.back(), Device, PLL, RP, ToVKPrimitiveTopology(Prim.mode), 0, VS, FS, NullShaderModule, NullShaderModule, NullShaderModule, VIBDs, VIADs);
+	VK::CreatePipeline(Pipelines.back(), Device, PLL, RP, ToVKPrimitiveTopology(Prim.mode), 0, &VS, &FS, nullptr, nullptr, nullptr, VIBDs, VIADs);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "World =" << std::endl;

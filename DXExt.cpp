@@ -97,6 +97,10 @@ void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE T
 {
 	PipelineStates.resize(1);
 	std::vector<std::thread> Threads;
+
+	//!< メンバ関数をスレッドで使用したい場合、以下のようにthisを引数に取る形式を使用
+	//std::thread::thread(&DXExt::Func, this, Arg0, Arg1,...);
+
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
 	Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), Topology, ToShaderBC(ShaderBlobs[0]), ToShaderBC(ShaderBlobs[1]), NullShaderBC, NullShaderBC, NullShaderBC, IEDs, &PLS, TEXT("0")));

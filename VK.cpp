@@ -2571,97 +2571,20 @@ VkShaderModule VK::CreateShaderModules(const std::wstring& Path) const
 	return ShaderModule;
 }
 
-void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP,
-	const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints,
-	const VkShaderModule VS, const VkShaderModule FS, const VkShaderModule TES, const VkShaderModule TCS, const VkShaderModule GS, 
-	const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs, 
-	VkPipelineCache PC)
+void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP, 
+	const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, 
+	const VkPipelineShaderStageCreateInfo* VS, const VkPipelineShaderStageCreateInfo* FS, const VkPipelineShaderStageCreateInfo* TES, const VkPipelineShaderStageCreateInfo* TCS, const VkPipelineShaderStageCreateInfo* GS,
+	const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs, VkPipelineCache PC)
 {
 	PERFORMANCE_COUNTER();
 
-	//!< (バリデーションの為に)デバイスフィーチャーを取得
-	//VkPhysicalDeviceFeatures PDF;
-	//vkGetPhysicalDeviceFeatures(GetCurrentPhysicalDevice(), &PDF);
-
-	//!< パイプライン作成時にシェーダ内の定数値を上書き指定できる
-#if 0
-	//!< シェーダには以下のような記述(扱えるのはスカラ値のみ)
-	//layout(constant_id = 0) const int IntValue = 0;
-	//layout(constant_id = 1) const float FloatValue = 0.0f;
-	//layout(constant_id = 2) const bool BoolValue = false;
-	struct SpecializationData {
-		int IntValue;
-		float FloatValue;
-		bool BoolValue;
-	};
-	const SpecializationData SD = { 1, 1.0f, true };
-	const std::vector<VkSpecializationMapEntry> SMEs = {
-		{ 0, offsetof(SpecializationData, IntValue), sizeof(SD.IntValue) },
-		{ 1, offsetof(SpecializationData, FloatValue), sizeof(SD.FloatValue) },
-		{ 2, offsetof(SpecializationData, BoolValue), sizeof(SD.BoolValue) },
-	};
-	const VkSpecializationInfo SI = {
-		static_cast<uint32_t>(SMEs.size()), SMEs.data(),
-		sizeof(SD),& SD
-	};
-#endif
-
-	//!< シェーダ (Shader)
-	std::vector<VkPipelineShaderStageCreateInfo> PSSCI;
-	//!< シェーダ内のコンスタント変数をパイプライン作成時に変更したい場合に使用する
-	//const std::array<VkSpecializationMapEntry, 0> SMEs = { /*{ uint32_t constantID, uint32_t offset, size_t size },*/ };
-	//const VkSpecializationInfo SI = { static_cast<uint32_t>(SMEs.size()), SMEs.data() };
-	if (VK_NULL_HANDLE != VS) {
-		PSSCI.push_back({
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_VERTEX_BIT, VS,
-			"main",
-			nullptr //!< &SI
-			});
-	}
-	if (VK_NULL_HANDLE != FS) {
-		PSSCI.push_back({
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_FRAGMENT_BIT, FS,
-			"main",
-			nullptr //!< &SI
-			});
-	}
-	if (VK_NULL_HANDLE != TES) {
-		PSSCI.push_back({
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, TES,
-			"main",
-			nullptr //!< &SI
-			});
-	}
-	if (VK_NULL_HANDLE != TCS) {
-		PSSCI.push_back({
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, TCS,
-			"main",
-			nullptr //!< &SI
-			});
-	}
-	if (VK_NULL_HANDLE != GS) {
-		PSSCI.push_back({
-			VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_SHADER_STAGE_GEOMETRY_BIT, GS,
-			"main",
-			nullptr //!< &SI
-			});
-	}
-	assert(!PSSCI.empty() && "");
+	std::vector<VkPipelineShaderStageCreateInfo> PSSCIs;
+	if (nullptr != VS) { PSSCIs.push_back(*VS); }
+	if (nullptr != FS) { PSSCIs.push_back(*FS); }
+	if (nullptr != TES) { PSSCIs.push_back(*TES); }
+	if (nullptr != TCS) { PSSCIs.push_back(*TCS); }
+	if (nullptr != GS) { PSSCIs.push_back(*GS); }
+	assert(!PSSCIs.empty() && "");
 
 	//!< バーテックスインプット (VertexInput)
 	const VkPipelineVertexInputStateCreateInfo PVISCI = {
@@ -2825,7 +2748,7 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 #else
 			0,
 #endif
-			static_cast<uint32_t>(PSSCI.size()), PSSCI.data(),
+			static_cast<uint32_t>(PSSCIs.size()), PSSCIs.data(),
 			&PVISCI,
 			&PIASCI,
 			&PTSCI,

@@ -15,13 +15,14 @@ struct TESS_FACTOR
 TESS_FACTOR ConstantHS(/*const InputPatch<IN, 1> patch, const uint p : SV_PrimitiveID*/)
 {
 	TESS_FACTOR Out;
-	const float t = 15.0f;
-	Out.Edge[0] = t;
-	Out.Edge[1] = t;
-	Out.Edge[2] = t;
-	Out.Edge[3] = t;
-	Out.Inside[0] = t;
-	Out.Inside[1] = t;
+	const float Edge = 15.0f;
+	const float Inside = 15.0f;
+	Out.Edge[0] = Edge;
+	Out.Edge[1] = Edge;
+	Out.Edge[2] = Edge;
+	Out.Edge[3] = Edge;
+	Out.Inside[0] = Inside;
+	Out.Inside[1] = Inside;
 	return Out;
 }
 

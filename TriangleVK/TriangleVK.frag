@@ -4,14 +4,6 @@
 
 layout (early_fragment_tests) in;
 
-//#define USE_PUSH_CONSTANTS
-#ifdef USE_PUSH_CONSTANTS
-layout (push_constant) uniform PushConstant
-{
-	layout(offset = 0) vec4 Color;
-} InPushConstant;
-#endif
-
 layout (location = 0) in vec4 InColor;
 
 layout (location = 0) out vec4 OutColor;
@@ -23,9 +15,5 @@ layout (location = 0) out vec4 OutColor;
 
 void main()
 {
-#ifdef USE_PUSH_CONSTANTS
-	OutColor = InPushConstant.Color;
-#else
 	OutColor = InColor;
-#endif
 }

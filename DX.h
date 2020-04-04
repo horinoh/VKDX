@@ -26,13 +26,13 @@
 
 //#define USE_WARP
 
-#define USE_STATIC_SAMPLER
+#define USE_STATIC_SAMPLER //!< TextureDX
 
 //!< HLSLからルートシグネチャを作成する (Create root signature from HLSL)
 //#define USE_HLSL_ROOTSIGNATRUE
 
 //!< バンドル : VKのセカンダリコマンドバッファ相当
-#define USE_BUNDLE
+#define USE_BUNDLE //!< ParametricSurfaceDX
 //!< ルートコンスタント : VKのプッシュコンスタント相当
 //#define USE_ROOT_CONSTANTS //!< TriangleDX
 

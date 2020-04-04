@@ -4,15 +4,6 @@ struct IN
 	float4 Color : COLOR;
 };
 
-//#define USE_ROOT_CONSTANTS
-#ifdef USE_ROOT_CONSTANTS
-struct RootConstant
-{
-	float4 Color;
-};
-ConstantBuffer<RootConstant> RCInst : register(b0, space0);
-#endif
-
 #if 1
 //!< HDR使用(USE_HDR)かつ、スワップチェインのカラーフォーマット(DXGI_FORMAT_R10G10B10A2_UNORM) を使用した場合に必要になるガンマ補正
 float3 Rec709To2020(const float3 In) 
@@ -37,10 +28,6 @@ float3 ToHDR10(const float3 In)
 
 float4 main(IN In) : SV_TARGET
 {
-#ifdef USE_ROOT_CONSTANTS
-	return RCInst.Color;
-#else
 	return In.Color;
 	//return float4(ToHDR10(In.Color.rgb).rgb, In.Color.a);
-#endif
 }
