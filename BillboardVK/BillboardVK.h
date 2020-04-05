@@ -29,9 +29,7 @@ protected:
 
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
-#ifdef USE_SECONDARY_COMMAND_BUFFER
 	virtual void AllocateSecondaryCommandBuffer() override { AddSecondaryCommandBuffer(); }
-#endif
 
 	virtual void CreateDepthStencil() override { VK::CreateDepthStencil(VK_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
 	virtual void CreateFramebuffer() override { CreateFramebuffer_ColorDepth(); }
@@ -54,7 +52,6 @@ protected:
 	}
 
 #pragma region DESCRIPTOR
-#ifndef USE_PUSH_DESCRIPTOR
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
 		VKExt::CreateDescriptorPool(DescriptorPools[0], /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
@@ -116,7 +113,6 @@ protected:
 		assert(!DescriptorUpdateTemplates.empty() && "");
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 	}
-#endif
 #pragma endregion //!< DESCRIPTOR
 	
 	virtual void CreateUniformBuffer() override {
@@ -156,8 +152,6 @@ private:
 	struct DescriptorUpdateInfo 
 	{
 		VkDescriptorBufferInfo DBI[1];
-		//VkDescriptorImageInfo DII[1];
-		//VkBufferView BV[1];
 	};
 };
 #pragma endregion

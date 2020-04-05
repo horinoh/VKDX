@@ -48,7 +48,8 @@
 
 #define USE_IMMUTABLE_SAMPLER //!< TextureVK
 
-//#define USE_PUSH_DESCRIPTOR //!< #VK_TODO
+#define USE_PUSH_DESCRIPTOR //!< #VK_TODO
+//#define USE_DESCRIPTOR_UPDATE_TEMPLATE
 
 //!< セカンダリコマンドバッファ : DXのバンドル相当
 //!< 基本的にセカンダリはプライマリのステートを継承しない

@@ -267,14 +267,14 @@
 - USE_PIPELINE_SERIALIZE
 	- ALL
 - USE_HLSL_ROOTSIGNATRUE
-	- XXXDX
+	- *DX
 	- RenderTaragetDX, GltfDX ... TODO
 - USE_BUNDLE, USE_SECONDARY_COMMAND_BUFFER
 	- ParametricSurfaceDX, ParametricSurfaceVK
 - USE_STATIC_SAMPLER, USE_IMMUTABLE_SAMPLER
 	- TextureDX, TextureVK
 - USE_RENDER_PASS_CLEAR
-	- XXXXVK
+	- *VK
 	- 画面クリアの必用無いもの(FullscreenVK, TextureVK等)では無効で良い
 - USE_PUSH_CONSTANTS, USE_ROOT_CONSTANTS
 	- TriangleDX, TriangleVK
@@ -284,10 +284,11 @@
 	- ParametricSurfaceVK
 - USE_PUSH_DESCRIPTOR
 	- BillboardVK ... TODO
-- USE_HDR
-	- TriangleDX... TODO(ハードウェア入手後)
 - USE_FULL_SCREEN
 	- TODO
+- USE_HDR
+	- TriangleDX... TODO(ハードウェア入手後)
+
 
 #### トラブルシューティング
 * 「このプロジェクトは、このコンピュータ上にないNugetパッケージを参照しています」と出る場合
