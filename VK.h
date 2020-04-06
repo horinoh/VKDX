@@ -48,8 +48,8 @@
 
 #define USE_IMMUTABLE_SAMPLER //!< TextureVK
 
-#define USE_PUSH_DESCRIPTOR //!< #VK_TODO
-//#define USE_DESCRIPTOR_UPDATE_TEMPLATE
+//!< (デスクリプタセットを確保してからコマンドバッファにバインドするのではなく) デスクリプタの更新自体をコマンドバッファに記録してしまう
+#define USE_PUSH_DESCRIPTOR //!< BillboardVK
 
 //!< セカンダリコマンドバッファ : DXのバンドル相当
 //!< 基本的にセカンダリはプライマリのステートを継承しない

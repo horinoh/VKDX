@@ -283,7 +283,7 @@
 - USE_SPECIALIZATION_INFO
 	- ParametricSurfaceVK
 - USE_PUSH_DESCRIPTOR
-	- BillboardVK ... TODO
+	- BillboardVK
 - USE_FULL_SCREEN
 	- TODO
 - USE_HDR

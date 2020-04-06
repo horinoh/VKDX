@@ -52,6 +52,7 @@ protected:
 	}
 
 #pragma region DESCRIPTOR
+#ifndef USE_PUSH_DESCRIPTOR
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
 		VKExt::CreateDescriptorPool(DescriptorPools[0], /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
@@ -71,6 +72,17 @@ protected:
 		DescriptorSets.resize(1);
 		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
 	}
+	virtual void UpdateDescriptorSet() override {
+		Super::UpdateDescriptorSet();
+
+		const DescriptorUpdateInfo DUI = {
+			{ UniformBuffers[0], Offset/*offset*/, VK_WHOLE_SIZE/*range*/ },
+		};
+		assert(!DescriptorSets.empty() && "");
+		assert(!DescriptorUpdateTemplates.empty() && "");
+		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+	}
+#endif
 	virtual void CreateDescriptorUpdateTemplate() override {
 		const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
 			{
@@ -102,16 +114,6 @@ protected:
 		};
 		DescriptorUpdateTemplates.resize(1);
 		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
-	}
-	virtual void UpdateDescriptorSet() override {
-		Super::UpdateDescriptorSet();
-
-		const DescriptorUpdateInfo DUI = {
-			{ UniformBuffers[0], Offset/*offset*/, VK_WHOLE_SIZE/*range*/ },
-		};
-		assert(!DescriptorSets.empty() && "");
-		assert(!DescriptorUpdateTemplates.empty() && "");
-		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 	}
 #pragma endregion //!< DESCRIPTOR
 	

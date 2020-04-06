@@ -234,7 +234,6 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 	const auto CB = CommandBuffers[i];
 	const auto SCB = SecondaryCommandBuffers[i];
 	const auto FB = Framebuffers[i];
-	const auto DS = DescriptorSets[0];
 	const auto RP = RenderPasses[0];
 	const auto PLL = PipelineLayouts[0];
 	const auto IB = IndirectBuffers[0];
@@ -261,24 +260,15 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 #ifdef USE_PUSH_DESCRIPTOR
 		const DescriptorUpdateInfo DUI = { { UniformBuffers[0], Offset, VK_WHOLE_SIZE },};
-#if 1
 		vkCmdPushDescriptorSetWithTemplateKHR(SCB, DescriptorUpdateTemplates[0], PLL, 0, DUI.DBI);
 #else
-		const std::array<VkWriteDescriptorSet, 1> WDSs = {
-			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			nullptr,
-			VK_NULL_HANDLE, 0, 0,
-			_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, nullptr, DUI.DBI, nullptr
-		};
-		vkCmdPushDescriptorSetKHR(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(WDSs.size()), WDSs.data());
-#endif
-#endif
-		const std::array<VkDescriptorSet, 1> DSs = { DS };
+		const std::array<VkDescriptorSet, 1> DSs = { DescriptorSets[0] };
 		vkCmdBindDescriptorSets(SCB,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
 			PLL,
 			0, static_cast<uint32_t>(DSs.size()), DSs.data(),
 			0, nullptr);
+#endif
 		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 		vkCmdDrawIndirect(SCB, IB, 0, 1, 0);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
