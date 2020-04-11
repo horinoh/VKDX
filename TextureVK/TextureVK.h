@@ -26,7 +26,7 @@ protected:
 		const std::array<VkSampler, 1> ISs = { 
 			Samplers[0] 
 		};
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {
 				{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
 			});
 #else
@@ -200,6 +200,7 @@ protected:
 #endif
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFs(); }
 	virtual void CreatePipelines() override { CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP); }
+	virtual void CreateRenderPass() { RenderPasses.resize(1); CreateRenderPass_Default(RenderPasses[0], ColorFormat, false); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 private:

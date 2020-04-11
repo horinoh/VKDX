@@ -73,9 +73,9 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	AllocateCommandBuffer();
 	AllocateSecondaryCommandBuffer();
 
-#ifndef USE_RENDER_PASS_CLEAR
-	InitializeSwapchainImage(CommandBuffers[0], &Colors::Red);
-#endif
+//#ifndef USE_RENDER_PASS_CLEAR
+//	InitializeSwapchainImage(CommandBuffers[0], &Colors::Red);
+//#endif
 
 	CreateDepthStencil();
 	InitializeDepthStencilImage(CommandBuffers[0]);
@@ -1850,6 +1850,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 	uint32_t ImageArrayLayers = 1;
 
 #ifdef USE_RENDER_PASS_CLEAR
+	//!< 自前でクリアしない場合は余計なフラグは付けないでおく
 	const auto ImageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 #else
 	//!< 自前でクリアする場合は VK_IMAGE_USAGE_TRANSFER_DST_BIT フラグが必要
@@ -2322,18 +2323,14 @@ void VK::CreateStorageTexelBuffer()
 #endif
 }
 
-void VK::CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const std::initializer_list<VkDescriptorSetLayoutBinding> il_DSLBs)
+void VK::CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const VkDescriptorSetLayoutCreateFlags Flags, const std::initializer_list<VkDescriptorSetLayoutBinding> il_DSLBs)
 {
 	const std::vector<VkDescriptorSetLayoutBinding> DSLBs(il_DSLBs.begin(), il_DSLBs.end());
 
 	const VkDescriptorSetLayoutCreateInfo DSLCI = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 		nullptr,
-#ifdef USE_PUSH_DESCRIPTOR
-		VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR,
-#else
-		0,
-#endif
+		Flags,
 		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
 	};
 	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
@@ -2437,7 +2434,7 @@ void VK::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreate
 //	LOG_OK();
 //}
 
-void VK::CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color)
+void VK::CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color, bool ClearOnLoad)
 {
 	//!< アタッチメント ... レンダーパスでの描画先
 	const std::array<VkAttachmentDescription, 1> ADs = {
@@ -2445,14 +2442,15 @@ void VK::CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color)
 			0,
 			Color,
 			VK_SAMPLE_COUNT_1_BIT,
-			//!< アタッチメントのロードストア
-#ifdef USE_RENDER_PASS_CLEAR
-			//!<「開始時にクリア」「終了時に保存」
-			VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-#else
-			//!<「開始時に何もしない」「終了時に保存」
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
-#endif
+			//!<「開始時にクリア or 何もしない」,「終了時に保存」
+			ClearOnLoad ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
+//#ifdef USE_RENDER_PASS_CLEAR
+//			//!<「開始時にクリア」「終了時に保存」
+//			VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+//#else
+//			//!<「開始時に何もしない」「終了時に保存」
+//			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
+//#endif
 			//!< ステンシルのロードストア : (ここでは)開始時、終了時ともに「使用しない」
 			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
 			//!< レンダーパスのレイアウト : 「開始時未定義」「終了時プレゼンテーションソース」
@@ -2959,7 +2957,7 @@ void VK::ClearDepthStencilAttachment(const VkCommandBuffer CB, const VkClearDept
 
 void VK::PopulateCommandBuffer(const size_t i)
 {
-	const auto CB = CommandBuffers[i];//CommandPools[0].second[i];
+	const auto CB = CommandBuffers[i];
 	const auto FB = Framebuffers[i];
 
 	//!< vkBeginCommandBuffer() で暗黙的にリセットされるが、明示的にリセットする場合には「メモリをプールへリリースするかどうかを指定できる」
@@ -2980,10 +2978,6 @@ void VK::PopulateCommandBuffer(const size_t i)
 		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-#ifndef USE_RENDER_PASS_CLEAR
-		ClearColor(CB, SwapchainImages[i], Colors::Blue);
-#endif
-
 		const auto RP = RenderPasses[0];
 #ifdef _DEBUG
 		//!< レンダーエリアの最低粒度を確保
@@ -2992,12 +2986,15 @@ void VK::PopulateCommandBuffer(const size_t i)
 		//!<「自分の環境では」 Granularity = { 1, 1 } だったのでほぼなんでも大丈夫みたい、環境によっては注意が必要
 		assert(ScissorRects[0].extent.width >= Granularity.width && ScissorRects[0].extent.height >= Granularity.height && "ScissorRect is too small");
 #endif
-		//!< USE_RENDER_PASS_CLEARでなければレンダーパス開始時にカラーはクリアせず、デプスはクリアしている (If not USE_RENDER_PASS_CLEAR, not clear color, but clear depth on begining of renderpas)
-		std::array<VkClearValue, 2> CVs = {};
+
 #ifdef USE_RENDER_PASS_CLEAR
-		CVs[0].color = Colors::SkyBlue;
+		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
+#else
+		ClearColor(CB, SwapchainImages[i], Colors::Blue);
+		std::array<VkClearValue, 2> CVs = {};
 #endif
 		CVs[1].depthStencil = ClearDepthStencilValue;
+
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,

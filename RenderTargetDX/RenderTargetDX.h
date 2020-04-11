@@ -49,6 +49,10 @@ protected:
 		}
 		LOG_OK();
 	}
+	virtual void CreateTexture() 
+	{
+		//!< #DX_TODO
+	}
 	virtual void CreateStaticSampler() override {
 		StaticSamplerDescs.push_back({
 			D3D12_FILTER_MIN_MAG_MIP_LINEAR,

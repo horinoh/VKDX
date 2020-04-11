@@ -323,13 +323,7 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 		ScopedMarker(CB, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), "Command Begin");
 		//MarkerInsert(CB, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), "Command");
 #endif
-
-#ifdef USE_RENDER_PASS_CLEAR
 		const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
-#else
-		ClearColor(CB, SwapchainImages[i], Colors::Blue);
-		const std::array<VkClearValue, 0> CVs = {};
-#endif
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,

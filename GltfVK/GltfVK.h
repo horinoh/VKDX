@@ -127,7 +127,7 @@ protected:
 
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {
 #if 0
 				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr }
 #endif

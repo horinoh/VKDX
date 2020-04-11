@@ -273,12 +273,7 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
         nullptr
     };
     VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		//!< このケースの場合は全画面描画なのでクリアは必要無く、USE_RENDER_PASS_CLEARは無効で良い
-#ifdef USE_RENDER_PASS_CLEAR
-        const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
-#else
         const std::array<VkClearValue, 0> CVs = {};
-#endif
         const VkRenderPassBeginInfo RPBI = {
             VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
             nullptr,

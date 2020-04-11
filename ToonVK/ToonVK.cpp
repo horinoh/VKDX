@@ -277,20 +277,10 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 #ifdef USE_DEPTH_STENCIL
-#ifdef USE_RENDER_PASS_CLEAR
 		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
-#else
-		ClearColor(CB, SwapchainImages[i], Colors::Blue);
-		std::array<VkClearValue, 2> CVs = {};
-#endif
 		CVs[1].depthStencil = ClearDepthStencilValue;
 #else
-#ifdef USE_RENDER_PASS_CLEAR
 		std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
-#else
-		ClearColor(CB, SwapchainImages[i], Colors::Blue);
-		std::array<VkClearValue, 0> CVs = {};
-#endif
 #endif
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

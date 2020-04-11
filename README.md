@@ -274,8 +274,8 @@
 - USE_STATIC_SAMPLER, USE_IMMUTABLE_SAMPLER
 	- TextureDX, TextureVK
 - USE_RENDER_PASS_CLEAR
-	- *VK
-	- 画面クリアの必用無いもの(FullscreenVK, TextureVK等)では無効で良い
+	- ClearVK
+	- 全画面が描画されるものではクリアの必用が無く(FullscreenVK, TextureVK等)、使用していない
 - USE_PUSH_CONSTANTS, USE_ROOT_CONSTANTS
 	- TriangleDX, TriangleVK
 - USE_DEPTH_STENCIL

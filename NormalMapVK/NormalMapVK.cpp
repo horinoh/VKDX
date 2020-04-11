@@ -276,12 +276,7 @@ void NormalMapVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &BeginInfo)); {
-#ifdef USE_RENDER_PASS_CLEAR
 		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
-#else
-		ClearColor(CB, SwapchainImages[i], Colors::Blue);
-		std::array<VkClearValue, 2> CVs = {};
-#endif
 		CVs[1].depthStencil = ClearDepthStencilValue;
 
 		const VkRenderPassBeginInfo RPBI = {

@@ -33,6 +33,7 @@ protected:
 			{ 0, offsetof(TessLevel, Outer), sizeof(TL.Outer) },
 			{ 1, offsetof(TessLevel, Inner), sizeof(TL.Outer) },
 		};
+		//!< VkPipelineShaderStageCreateInfo.pSpecializationInfo‚ÖŽw’è‚·‚é
 		const VkSpecializationInfo SI = {
 			static_cast<uint32_t>(SMEs.size()), SMEs.data(),
 			sizeof(TL), &TL
@@ -47,7 +48,7 @@ protected:
 			{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0], "main", nullptr },
 			{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1], "main", nullptr },
 			{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, ShaderModules[2], "main", nullptr },
-			{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, ShaderModules[3], "main", &SI },
+			{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, ShaderModules[3], "main", &SI/*VkSpecializationInfo‚Í‚±‚±‚ÉŽw’è‚·‚é*/ }, 
 			{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_GEOMETRY_BIT, ShaderModules[4], "main", nullptr },
 		};
 		const std::vector<VkVertexInputBindingDescription>& VIBDs = {};

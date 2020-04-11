@@ -20,7 +20,7 @@ protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(IndexCount, 1); }
 	virtual void CreateDescriptorSetLayout() override { 
 		DescriptorSetLayouts.resize(1); 
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {});
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {});
 	}
 	virtual void CreatePipelineLayout() override {
 		assert(!DescriptorSetLayouts.empty() && "");

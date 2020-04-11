@@ -22,7 +22,7 @@ protected:
 
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {
 				{ 0, /*VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER*/VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr }
 			});
 	}

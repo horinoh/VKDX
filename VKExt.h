@@ -101,9 +101,9 @@ public:
 	void CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs);
 	void CreatePipeline_Cs(VkPipeline& /*PL*/) { assert(0 && "TODO"); }
 
-	void CreateRenderPass_ColorDepth(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth);
-	void CreateRenderPass_ColorDepth_PostProcess(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth);
-	void CreateRenderPass_Color_PostProcess(VkRenderPass& RP, const VkFormat Color);
+	void CreateRenderPass_ColorDepth(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth, bool ClearOnLoad);
+	void CreateRenderPass_ColorDepth_PostProcess(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth, bool ClearOnLoad);
+	void CreateRenderPass_Color_PostProcess(VkRenderPass& RP, const VkFormat Color, bool ClearOnLoad);
 
 	void CreateFramebuffer_Color();
 	void CreateFramebuffer_ColorDepth();

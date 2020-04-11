@@ -25,7 +25,7 @@ protected:
 		const std::array<VkSampler, 1> ISs = {
 			Samplers[0]
 		};
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], {
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {
 			{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
 		});
 	}
@@ -71,7 +71,22 @@ protected:
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 	}
 #pragma endregion //!< DESCRIPTOR
+	virtual void CreateTexture() override
+	{
+		const auto Format = VK_FORMAT_R8G8B8A8_UNORM;
 
+		const auto Faces = 1;
+		const auto Layers = 1 * Faces;
+		const auto Levels = 1;
+		CreateImage(&Image, 0, VK_IMAGE_TYPE_2D, Format, { 800, 600, 1 }, Levels, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+
+		AllocateImageMemory(&ImageDeviceMemory, Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		VERIFY_SUCCEEDED(vkBindImageMemory(Device, Image, ImageDeviceMemory, 0));
+
+		const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+		CreateImageView(&ImageView, Image, VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, ImageSubresourceRange_ColorAll);
+	}
 	virtual void CreateImmutableSampler() override {
 		Samplers.resize(1);
 		const VkSamplerCreateInfo SCI = {
@@ -89,7 +104,6 @@ protected:
 		};
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
 	}
-	
 	virtual void CreateShaderModules() override {
 		const auto ShaderPath = GetBasePath();
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));

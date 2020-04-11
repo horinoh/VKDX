@@ -48,22 +48,23 @@
 
 #define USE_IMMUTABLE_SAMPLER //!< TextureVK
 
-//!< (デスクリプタセットを確保してからコマンドバッファにバインドするのではなく) デスクリプタの更新自体をコマンドバッファに記録してしまう
-#define USE_PUSH_DESCRIPTOR //!< BillboardVK
-
 //!< セカンダリコマンドバッファ : DXのバンドル相当
 //!< 基本的にセカンダリはプライマリのステートを継承しない
 //!< ただしプライマリがレンダーパス内からセカンダリを呼び出す場合には、プライマリのレンダーパス、サプバスステートは継承される
 //!< 全てのコマンドがプライマリ、セカンダリの両方で記録できるわけではない
 //!< セカンダリの場合は VK_SUBPASS_CONTENTS_INLINE の代わりに VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS を指定する 
 #define USE_SECONDARY_COMMAND_BUFFER //!< ParametricSurfaceVK
-//!< プッシュコンスタント　: DXのルートコンスタント相当
-//#define  USE_PUSH_CONSTANTS //!< TriangleVK
 
-#define USE_RENDER_PASS_CLEAR
+//!< プッシュデスクリプタ : デスクリプタセットを確保してからコマンドバッファにバインドするのではなく、デスクリプタの更新自体をコマンドバッファに記録してしまう
+//#define USE_PUSH_DESCRIPTOR //!< BillboardVK
+
+//!< プッシュコンスタント : DXのルートコンスタント相当
+//#define USE_PUSH_CONSTANTS //!< TriangleVK
+
+#define USE_RENDER_PASS_CLEAR //!< ClearVK
 
 //!< パイプライン作成時にシェーダ内の定数値を上書き指定できる(スカラ値のみ)
-//#define USE_SPECIALIZATION_INFO
+//#define USE_SPECIALIZATION_INFO //!< ParametricSurfaceVK
 
 #ifdef _DEBUG
 #define USE_DEBUG_REPORT
@@ -300,7 +301,7 @@ protected:
 	virtual void CreateUniformTexelBuffer();
 	virtual void CreateStorageTexelBuffer();
 
-	virtual void CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const std::initializer_list<VkDescriptorSetLayoutBinding> il_DSLBs);
+	virtual void CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const VkDescriptorSetLayoutCreateFlags Flags, const std::initializer_list<VkDescriptorSetLayoutBinding> il_DSLBs);
 	virtual void CreateDescriptorSetLayout() {}
 
 	virtual void CreatePipelineLayout(VkPipelineLayout& PL, const std::initializer_list<VkDescriptorSetLayout> il_DSLs, const std::initializer_list<VkPushConstantRange> il_PCRs);
@@ -324,8 +325,8 @@ protected:
 	virtual void CreateImmutableSampler() {}
 	virtual void CreateSampler() {}
 
-	virtual void CreateRenderPass() { RenderPasses.resize(1); CreateRenderPass_Default(RenderPasses[0], ColorFormat); }
-	virtual void CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color);
+	virtual void CreateRenderPass() { RenderPasses.resize(1); CreateRenderPass_Default(RenderPasses[0], ColorFormat, true); }
+	virtual void CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color, bool ClearOnLoad);
 
 	virtual void CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::initializer_list<VkImageView> il_IVs);
 	virtual void CreateFramebuffer() {}
