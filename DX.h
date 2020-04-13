@@ -156,7 +156,9 @@ protected:
 #endif
 
 	virtual void CreateDevice(HWND hWnd);
+	virtual void LogAdapter(IDXGIAdapter* Adapter);
 	virtual void EnumAdapter(IDXGIFactory4* Factory);
+	virtual void LogOutput(IDXGIOutput* Output);
 	virtual void EnumOutput(IDXGIAdapter* Adapter);
 	virtual void GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format);
 	virtual void CheckFeatureLevel(ID3D12Device* Device);
@@ -168,7 +170,7 @@ protected:
 	}
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(ID3D12DescriptorHeap* DH, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index) const {
 		auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-		GDH.ptr += static_cast<SIZE_T>(Index)* Device->GetDescriptorHandleIncrementSize(Type);
+		GDH.ptr += static_cast<SIZE_T>(Index) * Device->GetDescriptorHandleIncrementSize(Type);
 		return GDH;
 	}
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(ID3D12DescriptorHeap* DH, const UINT Index) const { return GetCPUDescriptorHandle(DH, DH->GetDesc().Type, Index); }
@@ -195,16 +197,12 @@ protected:
 	virtual void CreateFence();
 
 	virtual void CreateCommandAllocator();
-	virtual UINT AddCommandList();
-	virtual UINT AddBundleCommandList();
-	virtual void CreateCommandList() { AddCommandList(); LOG_OK(); }
-	virtual void CreateBundleCommandList() {}
+	virtual void CreateCommandList();
 
 	virtual void CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat);
 	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height);
 	virtual void CreateSwapChainResource();
 	virtual void InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, const DirectX::XMVECTORF32* Color = nullptr);
-	virtual void InitializeSwapChain();
 	virtual void ResetSwapChainResource() {
 		for (auto& i : SwapChainResources) {
 			COM_PTR_RESET(i);

@@ -28,8 +28,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateCommandAllocator();
 	CreateCommandList();
-	CreateBundleCommandList();
-	InitializeSwapChain();
+	//InitializeSwapchainImage(COM_PTR_GET(CommandAllocators[0]), &DirectX::Colors::Red);
 
 	CreateDepthStencil();	
 	CreateRenderTarget();
@@ -341,6 +340,8 @@ void DX::CreateDevice(HWND /*hWnd*/)
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(COM_PTR_UUIDOF_PUTVOID(Factory)));
 
 #ifdef _DEBUG
+	//!< アダプター(GPU)の列挙
+	//!<	-> 各々のアダプターに接続されているアウトプット(ディスプレイ)の列挙
 	EnumAdapter(COM_PTR_GET(Factory));
 #endif
 
@@ -348,7 +349,7 @@ void DX::CreateDevice(HWND /*hWnd*/)
 	//!< WARP : Win7以下だと D3D_FEATURE_LEVEL_10_1 まで、Win8以上だと D3D_FEATURE_LEVEL_11_1 までサポート
 	VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(COM_PTR_UUIDOF_PUTVOID(Adapter)));
 #else
-	//!< VideoMemoryの最も大きなアダプター(GPU)を選択する
+	//!< アダプター(GPU)の選択 : (ここでは)最大メモリのアダプターを選択することにする
 	UINT Index = UINT_MAX;
 	SIZE_T VM = 0;
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, COM_PTR_PUT(Adapter)); ++i) {
@@ -363,23 +364,27 @@ void DX::CreateDevice(HWND /*hWnd*/)
 	assert(UINT_MAX != Index);
 	VERIFY_SUCCEEDED(Factory->EnumAdapters(Index, COM_PTR_PUT(Adapter)));
 #endif
+	Log("[ Selected Aadapter ]\n");
+	LogAdapter(COM_PTR_GET(Adapter));
 
-	//!< 最初に見つかったアウトプット(Monitor)を選択する
-	COM_PTR<IDXGIAdapter> A;
-	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, COM_PTR_PUT(A)); ++i) {
-		for (UINT j = 0; DXGI_ERROR_NOT_FOUND != A->EnumOutputs(j, COM_PTR_PUT(Output)); ++j) {
+	//!< アウトプット(ディスプレイ)の選択 : (ここでは)全てのアダプター、アウトプットを列挙して、最初に見つかったアウトプットを選択することにする
+	COM_PTR<IDXGIAdapter> Ad;
+	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, COM_PTR_PUT(Ad)); ++i) {
+		for (UINT j = 0; DXGI_ERROR_NOT_FOUND != Ad->EnumOutputs(j, COM_PTR_PUT(Output)); ++j) {
 			if (nullptr != Output) {
 				break;
 			}
 			COM_PTR_RESET(Output);
 		}
-		COM_PTR_RESET(A);
+		COM_PTR_RESET(Ad);
 		if (nullptr != Output) {
 			break;
 		}
 	}
+	Log("\t\t[ Selected Output ]\n");
+	LogOutput(COM_PTR_GET(Output));
 
-	//!< 選択したアウトプットのディスプレイモードを列挙
+	//!< フォーマット指定で、選択したアウトプットのディスプレイモードを列挙
 	GetDisplayModeList(COM_PTR_GET(Output), DXGI_FORMAT_R8G8B8A8_UNORM);
 
 #if 0
@@ -428,56 +433,62 @@ void DX::CreateDevice(HWND /*hWnd*/)
 }
 
 //!< アダプタ(GPU)の列挙
+void DX::LogAdapter(IDXGIAdapter* Ad)
+{
+	DXGI_ADAPTER_DESC AdapterDesc;
+	VERIFY_SUCCEEDED(Ad->GetDesc(&AdapterDesc));
+	Logf(TEXT("\t%s\n"), AdapterDesc.Description);
+	Logf(TEXT("\t\tDedicatedVideoMemory = %lld\n"), AdapterDesc.DedicatedVideoMemory);
+	Logf(TEXT("\t\tDedicatedSystemMemory = %lld\n"), AdapterDesc.DedicatedSystemMemory);
+	Logf(TEXT("\t\tSharedSystemMemory = %lld\n"), AdapterDesc.SharedSystemMemory);
+}
 void DX::EnumAdapter(IDXGIFactory4* Fact)
 {
+	Log("[ Aadapters ]\n");
 	COM_PTR<IDXGIAdapter> Ad;
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Fact->EnumAdapters(i, COM_PTR_PUT(Ad)); ++i) {
-		DXGI_ADAPTER_DESC AdapterDesc;
-		VERIFY_SUCCEEDED(Ad->GetDesc(&AdapterDesc));
-		if (0 == i) { Log("[ Aadapters ]\n"); }
-		Logf(TEXT("\t%s\n"), AdapterDesc.Description);
-		Logf(TEXT("\t\tDedicatedVideoMemory = %lld\n"), AdapterDesc.DedicatedVideoMemory);
-		Logf(TEXT("\t\tDedicatedSystemMemory = %lld\n"), AdapterDesc.DedicatedSystemMemory);
-		Logf(TEXT("\t\tSharedSystemMemory = %lld\n"), AdapterDesc.SharedSystemMemory);
-
+		LogAdapter(COM_PTR_GET(Ad));
 		EnumOutput(COM_PTR_GET(Ad));
 		COM_PTR_RESET(Ad);
 	}
 }
 
 //!< アダプター(GPU)に接続されている、アウトプット(ディスプレイ)の列挙
-void DX::EnumOutput(IDXGIAdapter* Ad)
+void DX::LogOutput(IDXGIOutput* Outp)
 {
-	COM_PTR<IDXGIOutput> Outp;
-	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Ad->EnumOutputs(i, COM_PTR_PUT(Outp)); ++i) {
 #ifdef USE_HDR
-		COM_PTR<IDXGIOutput6> Output6;
-		COM_PTR_AS(Outp, Output6);
+	COM_PTR<IDXGIOutput6> Output6;
+	COM_PTR_AS(Outp, Output6);
 
-		DXGI_OUTPUT_DESC1 OutputDesc;
-		VERIFY_SUCCEEDED(Output6->GetDesc1(&OutputDesc));
-		//!< Need to enable "Play HDR game and apps" in windows settings 
-		assert(DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020 == OutputDesc.ColorSpace && "HDR not supported");
+	DXGI_OUTPUT_DESC1 OutputDesc;
+	VERIFY_SUCCEEDED(Output6->GetDesc1(&OutputDesc));
+	//!< Need to enable "Play HDR game and apps" in windows settings 
+	assert(DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020 == OutputDesc.ColorSpace && "HDR not supported");
 #else
-		DXGI_OUTPUT_DESC OutputDesc;
-		VERIFY_SUCCEEDED(Outp->GetDesc(&OutputDesc));
+	DXGI_OUTPUT_DESC OutputDesc;
+	VERIFY_SUCCEEDED(Outp->GetDesc(&OutputDesc));
 #endif
 
-		const auto Width = OutputDesc.DesktopCoordinates.right - OutputDesc.DesktopCoordinates.left;
-		const auto Height = OutputDesc.DesktopCoordinates.bottom - OutputDesc.DesktopCoordinates.top;
-		if (0 == i) { Log("\t\t[ Output ]\n"); }
-		Logf(TEXT("\t\t\t%s\n"), OutputDesc.DeviceName);
-		Logf(TEXT("\t\t\t%d x %d\n"), Width, Height);
-		switch (OutputDesc.Rotation)
-		{
-		default: break;
-		case DXGI_MODE_ROTATION_UNSPECIFIED: Log("\t\t\tROTATION_UNSPECIFIED\n"); break;
-		case DXGI_MODE_ROTATION_IDENTITY: Log("\t\t\tROTATION_IDENTITY\n"); break;
-		case DXGI_MODE_ROTATION_ROTATE90: Log("\t\t\tROTATE90\n"); break;
-		case DXGI_MODE_ROTATION_ROTATE180: Log("\t\t\tROTATE180\n"); break;
-		case DXGI_MODE_ROTATION_ROTATE270: Log("\t\t\tROTATE270\n"); break;
-		}
-
+	const auto Width = OutputDesc.DesktopCoordinates.right - OutputDesc.DesktopCoordinates.left;
+	const auto Height = OutputDesc.DesktopCoordinates.bottom - OutputDesc.DesktopCoordinates.top;
+	Logf(TEXT("\t\t\t%s\n"), OutputDesc.DeviceName);
+	Logf(TEXT("\t\t\t%d x %d\n"), Width, Height);
+	switch (OutputDesc.Rotation)
+	{
+	default: break;
+	case DXGI_MODE_ROTATION_UNSPECIFIED: Log("\t\t\tROTATION_UNSPECIFIED\n"); break;
+	case DXGI_MODE_ROTATION_IDENTITY: Log("\t\t\tROTATION_IDENTITY\n"); break;
+	case DXGI_MODE_ROTATION_ROTATE90: Log("\t\t\tROTATE90\n"); break;
+	case DXGI_MODE_ROTATION_ROTATE180: Log("\t\t\tROTATE180\n"); break;
+	case DXGI_MODE_ROTATION_ROTATE270: Log("\t\t\tROTATE270\n"); break;
+	}
+}
+void DX::EnumOutput(IDXGIAdapter* Ad)
+{
+	Log("\t\t[ Outputs ]\n");
+	COM_PTR<IDXGIOutput> Outp;
+	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Ad->EnumOutputs(i, COM_PTR_PUT(Outp)); ++i) {
+		LogOutput(COM_PTR_GET(Outp));
 		COM_PTR_RESET(Outp);
 	}
 }
@@ -488,12 +499,12 @@ void DX::GetDisplayModeList(IDXGIOutput* Outp, const DXGI_FORMAT Format)
 	UINT Count = 0;
 	VERIFY_SUCCEEDED(Outp->GetDisplayModeList(Format, 0, &Count, nullptr));
 	if (Count) {
-		Log("[ DisplayModes ]\n");
+		Logf("\t\t\t[ DisplayModes ] : %s\n", GetFormatString(Format).c_str());
 
 		std::vector<DXGI_MODE_DESC> MDs(Count);
 		VERIFY_SUCCEEDED(Outp->GetDisplayModeList(Format, 0, &Count, MDs.data()));
 		for (const auto& i : MDs) {
-			Logf("\t%d x %d @ %d, ", i.Width, i.Height, i.RefreshRate.Numerator / i.RefreshRate.Denominator);
+			Logf("\t\t\t\t%d x %d @ %d, ", i.Width, i.Height, i.RefreshRate.Numerator / i.RefreshRate.Denominator);
 
 #define SCANLINE_ORDERING_ENTRY(slo) case DXGI_MODE_SCANLINE_ORDER_##slo: Logf("SCANLINE_ORDER_%s, ", #slo); break;
 			switch (i.ScanlineOrdering) {
@@ -590,10 +601,10 @@ void DX::CheckMultiSample(const DXGI_FORMAT Format)
 void DX::CreateCommandQueue()
 {
 	const D3D12_COMMAND_QUEUE_DESC CommandQueueDesc = {
-		D3D12_COMMAND_LIST_TYPE_DIRECT,
-		0,
+		D3D12_COMMAND_LIST_TYPE_DIRECT, //!< D3D12_COMMAND_LIST_TYPE_COMPUTE, D3D12_COMMAND_LIST_TYPE_COPY (D3D12_COMMAND_LIST_TYPE_BUNDLEが直接キューイングされることは無いと思う)
+		D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
 		D3D12_COMMAND_QUEUE_FLAG_NONE,
-		0 // NodeMask ... マルチGPUの場合
+		0 // NodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CommandQueueDesc, COM_PTR_UUIDOF_PUTVOID(CommandQueue)));
 
@@ -611,44 +622,33 @@ void DX::CreateFence()
 }
 
 //!< コマンド実行(CL->ExecuteCommandList())後、GPUがコマンドアロケータの参照を終えるまで、アロケータのリセット(CA->Reset())してはいけない、アロケータが覚えているのでコマンドのリセット(CL->Reset())はしても良い
+//!< (ここでは)ダイレクト用1つ、バンドル用1つのコマンドアロケータ作成をデフォルト実装とする
 void DX::CreateCommandAllocator()
 {
 	CommandAllocators.resize(1);
 	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(CommandAllocators[0])));
 
-#ifdef USE_BUNDLE
 	BundleCommandAllocators.resize(1);
 	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_UUIDOF_PUTVOID(BundleCommandAllocators[0])));
-#endif
 
 	LOG_OK();
 }
 
-UINT DX::AddCommandList()
+//!< (ここでは)ダイレクト用1つ、バンドル用1つのコマンドリスト作成をデフォルト実装とする
+void DX::CreateCommandList()
 {
-	//!< BufferCount を取得するため
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
-
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
 		GraphicsCommandLists.push_back(COM_PTR<ID3D12GraphicsCommandList>());
 		//!< 描画コマンドを発行するコマンドリストにはパイプラインステートの指定が必要だが、後からでも指定(CL->Reset(CA, COM_PTR_GET(PS)))できるので、ここでは使用しない(nullptr)
 		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(CommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandLists.back())));
 		VERIFY_SUCCEEDED(GraphicsCommandLists[i]->Close());
-	}
-	return SCD.BufferCount;
-}
-UINT DX::AddBundleCommandList()
-{
-	DXGI_SWAP_CHAIN_DESC1 SCD;
-	SwapChain->GetDesc1(&SCD);
 
-	for (UINT i = 0; i < SCD.BufferCount; ++i) {
 		BundleGraphicsCommandLists.push_back(COM_PTR<ID3D12GraphicsCommandList>());
 		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleGraphicsCommandLists.back())));
 		VERIFY_SUCCEEDED(BundleGraphicsCommandLists[i]->Close());
 	}
-	return SCD.BufferCount;
 }
 
 void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
@@ -695,9 +695,9 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	//	ColorFormat,
 	//	FALSE,
 	//	SampleDesc,
-	//	DXGI_USAGE_RENDER_TARGET_OUTPUT,
+	//	DXGI_USAGE_BACK_BUFFER/*DXGI_USAGE_RENDER_TARGET_OUTPUT*/, 
 	//	BufferCount,
-	//	DXGI_SCALING_NONE,
+	//	DXGI_SCALING_STRETCH/*DXGI_SCALING_NONE*/,
 	//	DXGI_SWAP_EFFECT_FLIP_DISCARD,
 	//	DXGI_ALPHA_MODE_UNSPECIFIED,
 	//	DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH,
@@ -773,7 +773,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 			D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
 			SCD.BufferCount,
 			D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-			0 // NodeMask ... マルチGPUの場合
+			0 // NodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(SwapChainDescriptorHeap)));
 
@@ -822,12 +822,6 @@ void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, cons
 	WaitForFence();
 
 	LOG_OK();
-}
-
-void DX::InitializeSwapChain()
-{
-	//!< イメージの初期化 (Initialize images)
-	InitializeSwapchainImage(COM_PTR_GET(CommandAllocators[0]), &DirectX::Colors::Red); 
 }
 
 void DX::ResizeSwapChain(const UINT Width, const UINT Height)
@@ -1051,7 +1045,7 @@ void DX::CreateUnorderedAccessTexture()
 		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
 		2, //!< SRV, UAV の 2 つ
 		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-		0 // NodeMask ... マルチGPUの場合
+		0 // NodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescritporHeapDesc, COM_PTR_UUIDOF_PUTVOID(UnorderedAccessTextureDescriptorHeap)));
 
@@ -1319,7 +1313,7 @@ void DX::CreatePipelineState_Compute()
 	const D3D12_COMPUTE_PIPELINE_STATE_DESC CPSD = {
 		COM_PTR_GET(RootSignature),
 		D3D12_SHADER_BYTECODE({ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }),
-		0, // NodeMask ... マルチGPUの場合
+		0, // NodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 		CPS,
 		D3D12_PIPELINE_STATE_FLAG_NONE
 	};

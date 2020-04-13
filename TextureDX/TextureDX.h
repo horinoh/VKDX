@@ -14,7 +14,6 @@ public:
 	virtual ~TextureDX() {}
 
 protected:
-	virtual void CreateBundleCommandList() override { AddBundleCommandList(); }
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
 
 	virtual void CreateRootSignature() override {

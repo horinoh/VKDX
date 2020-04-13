@@ -346,3 +346,21 @@ void VKExt::CreateFramebuffer_ColorDepth()
 			});
 	}
 }
+
+void VKExt::CreateRenderTexture(VkImage* Img, VkDeviceMemory* DM, VkImageView* IV)
+{
+	const auto Format = VK_FORMAT_R8G8B8A8_UNORM;
+
+	const VkExtent3D Extent = { 800, 600, 1 };
+	const auto Faces = 1;
+	const auto Layers = 1 * Faces;
+	const auto Levels = 1;
+	CreateImage(Img, 0, VK_IMAGE_TYPE_2D, Format, Extent, Levels, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+
+	AllocateImageMemory(DM, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Img, *DM, 0));
+
+	const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+	CreateImageView(IV, *Img, VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, ImageSubresourceRange_ColorAll);
+}

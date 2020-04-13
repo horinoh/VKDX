@@ -23,4 +23,6 @@ public:
 	void CreatePipelineState_VsPsDsHsGs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology) { CreatePipelineState_VsPsDsHsGs_Input(Topology, {}); }
 	void CreatePipelineState_VsPsDsHsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs);
 	void CreatePipelineState_Cs(COM_PTR<ID3D12PipelineState>& /*CS*/) { assert(0 && "TODO"); }
+
+	virtual void CreateRenderTexture();
 };

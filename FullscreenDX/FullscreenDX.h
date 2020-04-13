@@ -14,7 +14,6 @@ public:
 	virtual ~FullscreenDX() {}
 
 protected:
-	virtual void CreateBundleCommandList() override { AddBundleCommandList(); }
 #ifdef USE_DRAW_INDIRECT
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
 #endif

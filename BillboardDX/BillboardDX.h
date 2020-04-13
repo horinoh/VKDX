@@ -29,14 +29,8 @@ protected:
 #endif
 	}
 
-#ifdef USE_BUNDLE
-	virtual void CreateBundleCommandList() override { AddBundleCommandList(); }
-#endif
-
 	virtual void CreateDepthStencil() override { DX::CreateDepthStencil(DXGI_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
-
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
-
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 

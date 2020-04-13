@@ -39,6 +39,7 @@
 
 #define USE_DRAW_INDIRECT //!< FullscreenDX, FullscreenVK
 #define USE_PIPELINE_SERIALIZE
+#define USE_WIREFRAME //!< ToonDX, ToonVK
 #define ALWAYS_REBUILD_PIPELINE
 
 #include <iostream>

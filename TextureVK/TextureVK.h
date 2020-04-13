@@ -14,7 +14,6 @@ public:
 	virtual ~TextureVK() {}
 
 protected:
-	virtual void AllocateSecondaryCommandBuffer() override { AddSecondaryCommandBuffer(); }
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);

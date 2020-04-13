@@ -16,7 +16,6 @@ public:
 protected:
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
-	virtual void AllocateSecondaryCommandBuffer() override { AddSecondaryCommandBuffer(); }
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); } //!< メッシュ描画用
 //	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); } //!< フルスクリーン描画用 #VK_TODO
 	virtual void CreateDescriptorSetLayout() override {
@@ -62,7 +61,7 @@ protected:
 		Super::UpdateDescriptorSet();
 
 		assert(!Samplers.empty() && "");
-		assert(VK_NULL_HANDLE != ImageView && ""); //!< #VK_TODO ImageViewを作る
+		assert(VK_NULL_HANDLE != ImageView && "");
 		const DescriptorUpdateInfo DUI = {
 			{ VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 		};
@@ -71,21 +70,8 @@ protected:
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 	}
 #pragma endregion //!< DESCRIPTOR
-	virtual void CreateTexture() override
-	{
-		const auto Format = VK_FORMAT_R8G8B8A8_UNORM;
-
-		const auto Faces = 1;
-		const auto Layers = 1 * Faces;
-		const auto Levels = 1;
-		CreateImage(&Image, 0, VK_IMAGE_TYPE_2D, Format, { 800, 600, 1 }, Levels, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-
-		AllocateImageMemory(&ImageDeviceMemory, Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-		VERIFY_SUCCEEDED(vkBindImageMemory(Device, Image, ImageDeviceMemory, 0));
-
-		const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
-		CreateImageView(&ImageView, Image, VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, ImageSubresourceRange_ColorAll);
+	virtual void CreateTexture() override { 
+		CreateRenderTexture(&Image, &ImageDeviceMemory, &ImageView); 
 	}
 	virtual void CreateImmutableSampler() override {
 		Samplers.resize(1);

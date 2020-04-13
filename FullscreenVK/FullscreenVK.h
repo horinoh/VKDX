@@ -14,7 +14,6 @@ public:
 	virtual ~FullscreenVK() {}
 
 protected:
-	virtual void AllocateSecondaryCommandBuffer() override { AddSecondaryCommandBuffer(); }
 #ifdef USE_DRAW_INDIRECT
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
 #endif

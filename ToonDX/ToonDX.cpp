@@ -273,14 +273,13 @@ void ToonDX::PopulateCommandList(const size_t i)
 			CL->ClearRenderTargetView(SCH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
 #ifdef USE_DEPTH_STENCIL
 			CL->ClearDepthStencilView(DSH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-#endif
-			const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDHs = { SCH };
-#ifdef USE_DEPTH_STENCIL
+
+			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &DSH);
 #else
+			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 #endif
-
 			CL->ExecuteBundle(BCL);
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);

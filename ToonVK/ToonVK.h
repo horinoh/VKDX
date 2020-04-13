@@ -24,7 +24,6 @@ protected:
 	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
-	virtual void AllocateSecondaryCommandBuffer() override { AddSecondaryCommandBuffer(); }
 #ifdef USE_DEPTH_STENCIL
 	virtual void CreateDepthStencil() override { VK::CreateDepthStencil(VK_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
 	virtual void CreateFramebuffer() override { CreateFramebuffer_ColorDepth(); }
@@ -114,7 +113,18 @@ protected:
 		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	}
 
-	virtual void CreateShaderModules() override { CreateShaderModle_VsFsTesTcsGs(); }
+	virtual void CreateShaderModules() override {
+#ifdef USE_WIREFRAME
+		const auto ShaderPath = GetBasePath();
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("WireFrame.frag.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tese.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tesc.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("WireFrame.geom.spv")).data()));
+#else
+		CreateShaderModle_VsFsTesTcsGs();
+#endif
+	}
 	virtual void CreatePipelines() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 

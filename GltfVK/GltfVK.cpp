@@ -445,7 +445,18 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	std::cout << CurrentMatrix.back();
 #endif
 
-	const auto Count = AddSecondaryCommandBuffer();
+	assert(!SecondaryCommandPools.empty() && "");
+	const auto PrevCount = SecondaryCommandBuffers.size();
+	SecondaryCommandBuffers.resize(PrevCount + SwapchainImages.size());
+	const VkCommandBufferAllocateInfo SCBAI = {
+		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		nullptr,
+		SecondaryCommandPools[0],
+		VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+		static_cast<uint32_t>(SwapchainImages.size())
+	};
+	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &SCBAI, &SecondaryCommandBuffers[PrevCount]));
+	const auto Count = SCBAI.commandBufferCount;
 	const auto& VBs = VertexBuffers;
 	const auto IB = IndexBuffers.back();
 	const auto IndB = IndirectBuffers.back();
@@ -646,7 +657,8 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
+		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
+		CVs[1].depthStencil = ClearDepthStencilValue;
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,

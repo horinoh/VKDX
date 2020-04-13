@@ -14,7 +14,6 @@ public:
 	virtual ~TriangleDX() {}
 
 protected:
-	virtual void CreateBundleCommandList() override { AddBundleCommandList(); }
 	virtual void CreateVertexBuffer() override;
 	virtual void CreateIndexBuffer() override;
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(IndexCount, 1); }

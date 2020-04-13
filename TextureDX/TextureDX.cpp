@@ -277,8 +277,8 @@ void TextureDX::PopulateCommandList(const size_t i)
 
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
-			const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RTDescriptorHandles = { SCH };
-			CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr/*&DSDescriptorHandle*/);
+			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDescriptorHandles = { SCH };
+			CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
 
 			CL->ExecuteBundle(BCL);
 		}

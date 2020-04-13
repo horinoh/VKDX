@@ -16,8 +16,30 @@ public:
 protected:
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
-#ifdef USE_SECONDARY_COMMAND_BUFFER
-	virtual void AllocateSecondaryCommandBuffer() override { AddSecondaryCommandBuffer(); }
+#ifndef USE_SECONDARY_COMMAND_BUFFER
+	virtual void CreateCommandPool() override {
+		const VkCommandPoolCreateInfo CPCI = {
+			VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+			nullptr,
+			VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+			GraphicsQueueFamilyIndex
+		};
+		CommandPools.resize(1);
+		VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &CommandPools[0]));
+	}
+	virtual void AllocateCommandBuffer() override {
+		assert(!CommandPools.empty() && "");
+		const auto PrevCount = CommandBuffers.size();
+		CommandBuffers.resize(PrevCount + SwapchainImages.size());
+		const VkCommandBufferAllocateInfo CBAI = {
+			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			nullptr,
+			CommandPools[0],
+			VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+			static_cast<uint32_t>(SwapchainImages.size())
+		};
+		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &CommandBuffers[PrevCount]));
+	}
 #endif
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); } //!< 最低でもインデックス数1が必要 (At least index count must be 1)
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFsTesTcsGs(); }

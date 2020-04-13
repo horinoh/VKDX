@@ -14,7 +14,6 @@ public:
 	virtual ~InstancingVK() {}
 
 protected:
-	virtual void AllocateSecondaryCommandBuffer() override { AddSecondaryCommandBuffer(); }
 	virtual void CreateVertexBuffer() override;
 	virtual void CreateIndexBuffer() override;
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(IndexCount, InstanceCount); }

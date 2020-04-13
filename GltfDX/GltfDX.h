@@ -137,6 +137,7 @@ protected:
 	virtual void UpdateAnimRotation(const std::array<float, 4>& Value, const uint32_t NodeIndex);
 	virtual void UpdateAnimWeights(const float* Data, const uint32_t PrevIndex, const uint32_t NextIndex, const float t);
 
+	virtual void CreateDepthStencil() override { DX::CreateDepthStencil(DXGI_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
@@ -157,7 +158,16 @@ protected:
 		DX::CreateRootSignature(RootSignatures[0], Blob);
 		LOG_OK();
 	}
-
+	virtual void CreateCommandList() override {
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+		for (UINT i = 0; i < SCD.BufferCount; ++i) {
+			GraphicsCommandLists.push_back(COM_PTR<ID3D12GraphicsCommandList>());
+			VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(CommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandLists.back())));
+			VERIFY_SUCCEEDED(GraphicsCommandLists[i]->Close());
+		}
+		LOG_OK();
+	}
 	virtual void PopulateCommandList(const size_t i) override;
 
 	std::vector<DirectX::XMMATRIX> CurrentMatrix = { DirectX::XMMatrixIdentity() };

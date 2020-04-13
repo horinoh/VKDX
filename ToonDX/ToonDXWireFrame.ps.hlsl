@@ -3,6 +3,7 @@ struct IN
 	float4 Position : SV_POSITION;
 	float3 Normal : NORMAL;
 	float3 ViewDirection : TEXCOORD0;
+	noperspective float3 TriDistance : TEXCOORD1;
 };
 
 struct OUT
@@ -55,6 +56,12 @@ OUT main(const IN In)
 
 	Out.Color = float4((Amb + (Dif + Spc) * Atn) * Spt, 1.0f);
 	
+	const float3 lineColor = float3(0.0f, 0.0f, 0.0f);
+	const float lineWidth = 3.0f;
+	const float minDist = min(min(In.TriDistance.x, In.TriDistance.y), In.TriDistance.z);
+	const float factor = smoothstep(lineWidth - 1.0f, lineWidth + 1.0f, minDist);
+	Out.Color.rgb = lerp(lineColor, Out.Color.rgb, factor);
+
 	return Out;
 }
 

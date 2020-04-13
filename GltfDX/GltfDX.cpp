@@ -426,7 +426,14 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	PipelineStates.push_back(COM_PTR<ID3D12PipelineState>());
 	DX::CreatePipelineState(std::ref(PipelineStates.back()), COM_PTR_GET(Device), RS, ToDXPrimitiveTopologyType(Prim.mode), ToShaderBC(VS), ToShaderBC(PS), NullShaderBC, NullShaderBC, NullShaderBC, IEDs);
 
-	const auto Count = AddBundleCommandList();
+	DXGI_SWAP_CHAIN_DESC1 SCD;
+	SwapChain->GetDesc1(&SCD);
+	for (UINT i = 0; i < SCD.BufferCount; ++i) {
+		BundleGraphicsCommandLists.push_back(COM_PTR<ID3D12GraphicsCommandList>());
+		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleGraphicsCommandLists.back())));
+		VERIFY_SUCCEEDED(BundleGraphicsCommandLists[i]->Close());
+	}
+	const auto Count = SCD.BufferCount;
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators.back());
 	const auto PST = COM_PTR_GET(PipelineStates.back());
 
@@ -614,6 +621,7 @@ void GltfDX::PopulateCommandList(const size_t i)
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), static_cast<UINT>(i));
 	const auto RS = COM_PTR_GET(RootSignatures[0]);
+	const auto DSH = GetCPUDescriptorHandle(COM_PTR_GET(DepthStencilDescriptorHeap), 0);
 
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
@@ -639,9 +647,10 @@ void GltfDX::PopulateCommandList(const size_t i)
 		{
 			const std::array<D3D12_RECT, 0> Rs = {};
 			CL->ClearRenderTargetView(SCH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
+			CL->ClearDepthStencilView(DSH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
-			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
+			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &DSH);
 
 			for (auto j : BCLs) { 
 				CL->ExecuteBundle(j);

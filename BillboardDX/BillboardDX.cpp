@@ -233,10 +233,8 @@ void BillboardDX::PopulateCommandList(const size_t i)
 {
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-#ifdef USE_BUNDLE
 	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]); 
-#endif
 
 	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
@@ -250,7 +248,6 @@ void BillboardDX::PopulateCommandList(const size_t i)
 	
 	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
 
-#ifdef USE_BUNDLE
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 	{
 		BCL->SetGraphicsRootSignature(RS);
@@ -263,7 +260,6 @@ void BillboardDX::PopulateCommandList(const size_t i)
 		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BCL->Close());
-#endif
 
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
@@ -279,20 +275,7 @@ void BillboardDX::PopulateCommandList(const size_t i)
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &DSH);
 
-#ifdef USE_BUNDLE
 			CL->ExecuteBundle(BCL);
-#else
-			CL->SetGraphicsRootSignature(RS);
-			//!< コンスタントバッファ
-			{
-				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(ConstantBufferDescriptorHeap) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
-
-				CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), 0));
-			}
-			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
-#endif
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}

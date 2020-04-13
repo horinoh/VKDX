@@ -123,6 +123,11 @@ void DXExt::CreatePipelineState_VsPsDsHsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_
 	for (auto& i : Threads) { i.join(); }
 }
 
+void DXExt::CreateRenderTexture()
+{
+
+}
+
 //void DXExt::Clear_Color(ID3D12GraphicsCommandList* GraphicsCommandList)
 //{
 //	auto CPUDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());

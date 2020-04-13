@@ -22,7 +22,6 @@ protected:
 
 		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp(sizeof(Tr), 0xff), &Tr);
 	}
-	virtual void CreateBundleCommandList() override { AddBundleCommandList(); }
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
 #ifdef USE_DEPTH_STENCIL
@@ -72,7 +71,23 @@ protected:
 		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back()), RoundUp(sizeof(Tr), 0xff));
 	}
 
-	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPsDsHsGs(); }
+	virtual void CreateShaderBlobs() override {
+#ifdef USE_WIREFRAME
+		const auto ShaderPath = GetBasePath();
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("WireFrame.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("WireFrame.gs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back()))); 
+#else
+		CreateShaderBlob_VsPsDsHsGs(); 
+#endif
+	}
 	virtual void CreatePipelineStates() override { CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH); }
 	virtual void PopulateCommandList(const size_t i) override;
 

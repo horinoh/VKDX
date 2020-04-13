@@ -142,7 +142,22 @@ protected:
 #endif
 			}, {});
 	}
-
+	virtual void CreateDepthStencil() override { VK::CreateDepthStencil(VK_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
+	virtual void CreateFramebuffer() override { CreateFramebuffer_ColorDepth(); }
+	virtual void CreateRenderPass() override { RenderPasses.resize(1); CreateRenderPass_ColorDepth(RenderPasses[0], ColorFormat, VK_FORMAT_D24_UNORM_S8_UINT, true); }
+	virtual void AllocateCommandBuffer() override {
+		assert(!CommandPools.empty() && "");
+		const auto PrevCount = CommandBuffers.size();
+		CommandBuffers.resize(PrevCount + SwapchainImages.size());
+		const VkCommandBufferAllocateInfo CBAI = {
+			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			nullptr,
+			CommandPools[0],
+			VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+			static_cast<uint32_t>(SwapchainImages.size())
+		};
+		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &CommandBuffers[PrevCount]));
+	}
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 	std::vector<glm::mat4> CurrentMatrix = { glm::identity<glm::mat4>() };

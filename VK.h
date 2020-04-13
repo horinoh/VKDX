@@ -263,10 +263,7 @@ protected:
 	virtual void CreateSemaphore(VkDevice Device);
 
 	virtual void CreateCommandPool();
-	virtual uint32_t AddCommandBuffer();
-	virtual uint32_t AddSecondaryCommandBuffer();
-	virtual void AllocateCommandBuffer() { AddCommandBuffer(); LOG_OK(); }
-	virtual void AllocateSecondaryCommandBuffer() {}
+	virtual void AllocateCommandBuffer();
 
 	virtual VkSurfaceFormatKHR SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 	virtual VkExtent2D SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& Cap, const uint32_t Width, const uint32_t Height);

@@ -4,6 +4,7 @@
 
 layout (location = 0) in vec3 InNormal;
 layout (location = 1) in vec3 InViewDirection;
+layout (location = 2) in noperspective vec3 InTriDistance;
 
 layout (location = 0) out vec4 Color;
 
@@ -49,4 +50,10 @@ void main()
 	const float Spt = 1.0f;
 
 	Color = vec4((Amb + (Dif + Spc) * Atn) * Spt, 1.0f);
+
+	const vec3 lineColor = vec3(0.0f);
+	const float lineWidth = 3.0f;
+	const float minDist = min(min(InTriDistance.x, InTriDistance.y), InTriDistance.z);
+	const float factor = smoothstep(lineWidth - 1.0f, lineWidth + 1.0f, minDist);
+	Color.rgb = mix(lineColor, Color.rgb, factor);
 }
