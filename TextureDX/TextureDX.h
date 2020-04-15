@@ -22,7 +22,7 @@ protected:
 #ifdef USE_STATIC_SAMPLER
 		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
 #else
-		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT("-S.rs.cso")).data());
+		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT("_s.rs.cso")).data());
 #endif
 #else
 		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Srv = {
@@ -34,7 +34,13 @@ protected:
 				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(DRs_Srv.size()), DRs_Srv.data() }, D3D12_SHADER_VISIBILITY_PIXEL }
 			}, {
 				StaticSamplerDescs[0],
-			}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+			}, D3D12_ROOT_SIGNATURE_FLAG_NONE
+			| D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS
+			| D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS
+			| D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS
+			| D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS
+			//| D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS
+		);
 #else
 		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Smp = { 
 			{ D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
@@ -46,7 +52,7 @@ protected:
 #endif
 #endif
 		RootSignatures.resize(1);
-		DX::CreateRootSignature(RootSignatures[0], Blob);
+		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures[0])));
 		LOG_OK();
 	}
 

@@ -143,8 +143,8 @@ void DX::CreateUploadResource(ID3D12Resource** Resource, const size_t Size)
 		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること (Must be UPLOAD)
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
-		1,
-		1
+		0/*1*/,// CreationNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		0/*1*/ // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
@@ -241,8 +241,8 @@ void DX::CreateDefaultResource(ID3D12Resource** Resource, const size_t Size)
 		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること Must be DEFAULT
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
-		1,
-		1
+		0,// CreationNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
@@ -337,7 +337,11 @@ void DX::CreateDevice(HWND /*hWnd*/)
 #endif
 
 	//!< WARP アダプタを作成するのに IDXGIFactory4(のEnumWarpAdapter) が必要
+#ifdef _DEBUG
+	VERIFY_SUCCEEDED(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, COM_PTR_UUIDOF_PUTVOID(Factory)));
+#else
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(COM_PTR_UUIDOF_PUTVOID(Factory)));
+#endif
 
 #ifdef _DEBUG
 	//!< アダプター(GPU)の列挙
@@ -788,11 +792,9 @@ void DX::CreateSwapChainResource()
 	for (auto i = 0; i < SwapChainResources.size(); ++i) {
 		//!< スワップチェインのバッファリソースを SwapChainResources へ取得
 		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, COM_PTR_UUIDOF_PUTVOID(SwapChainResources[i])));
-		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
+		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数等に返るわけではない
 		//!< (リソースがタイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能)
-		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-		const auto CDH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), i);
-		Device->CreateRenderTargetView(SCR, nullptr, CDH);
+		Device->CreateRenderTargetView(COM_PTR_GET(SwapChainResources[i]), nullptr, GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), i));
 	}
 
 	LOG_OK();
@@ -844,8 +846,8 @@ void DX::CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UI
 		D3D12_HEAP_TYPE_DEFAULT, 
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
-		1,
-		1
+		0,// CreationNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	const DXGI_SAMPLE_DESC SD = { 1, 0 };
 	const D3D12_RESOURCE_DESC RD = {
@@ -926,8 +928,8 @@ void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Wi
 		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
-		1,
-		1
+		0,// CreationNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	const auto& SampleDesc = SampleDescs[0]; //!< レンダーターゲットのものと一致すること
 	const D3D12_RESOURCE_DESC ResourceDesc = {
@@ -1034,8 +1036,8 @@ void DX::CreateUnorderedAccessTexture()
 		D3D12_HEAP_TYPE_DEFAULT,
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
-		1,
-		1
+		0,// CreationNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, COM_PTR_UUIDOF_PUTVOID(UnorderedAccessTextureResource)));
 //
@@ -1081,7 +1083,7 @@ void DX::CreateUnorderedAccessTexture()
 }
 
 //!< ルートシグネチャをシリアライズしてブロブを作る
-void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS /*Flags*/)
+void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags)
 {
 	//!< RangeType ... D3D12_DESCRIPTOR_RANGE_TYPE_[SRV, UAV, CBV, SAMPLER]
 	//!< NumDescriptors
@@ -1090,15 +1092,21 @@ void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_
 	//!< OffsetInDescriptorsFromTableStart ... 通常は D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND でよい
 	const std::vector<D3D12_ROOT_PARAMETER> RPs(il_RPs.begin(), il_RPs.end());
 	const std::vector<D3D12_STATIC_SAMPLER_DESC> SSDs(il_SSDs.begin(), il_SSDs.end());
-
 	const D3D12_ROOT_SIGNATURE_DESC RSD = {
 			static_cast<UINT>(RPs.size()), RPs.data(),
 			static_cast<UINT>(SSDs.size()), SSDs.data(),
-			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+			Flags
 	};
-
 	COM_PTR<ID3DBlob> ErrorBlob;
-	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RSD, D3D_ROOT_SIGNATURE_VERSION_1, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RSD, D3D_ROOT_SIGNATURE_VERSION_1_0, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
+
+	//!< #DX_TODO RootSignature1.1を使用する場合はD3D12_ROOT_SIGNATURE_DESC1を使用し、D3D_ROOT_SIGNATURE_VERSION_1_1指定で作成すること
+	//D3D12_FEATURE_DATA_ROOT_SIGNATURE FDRS;
+	//VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, reinterpret_cast<void*>(&FDRS), sizeof(FDRS))); //!< ちゃんと取れない… #DX_TODO
+	//if (FDRS.HighestVersion >= D3D_ROOT_SIGNATURE_VERSION_1_1) {
+	//	const D3D12_ROOT_SIGNATURE_DESC1 RSD1 = {};
+	//	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RSD1, D3D_ROOT_SIGNATURE_VERSION_1_1, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
+	//}
 
 	LOG_OK();
 }
@@ -1122,11 +1130,17 @@ void DX::CreateRootSignature()
 #ifdef USE_HLSL_ROOTSIGNATRUE
 	GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
 #else
-	SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+	SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE
+		| D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS
+		| D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS
+		| D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS
+		| D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS
+		| D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS);
 #endif
 
 	RootSignatures.resize(1);
-	CreateRootSignature(RootSignatures[0], Blob);
+	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures[0])));
 
 	LOG_OK();
 }
@@ -1191,27 +1205,24 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 
 	//!< ブレンド (Blend)
 	const D3D12_RENDER_TARGET_BLEND_DESC RTBD = {
-		FALSE, FALSE,
-		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD,
-		D3D12_LOGIC_OP_NOOP,
-		D3D12_COLOR_WRITE_ENABLE_ALL,
+		FALSE, FALSE, //!< ブレンド有効かどうか、論理演算有効かどうか (同時にTRUEにはできない)
+		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD, //!< ブレンド Src, Dst, Op
+		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD, //!< アルファ Src, Dst, Op
+		D3D12_LOGIC_OP_NOOP, //!< 論理演算
+		D3D12_COLOR_WRITE_ENABLE_ALL, //!< 書き込み時のマスク値
 	};
 	const D3D12_BLEND_DESC BD = {
-		FALSE,
-		FALSE,
-		{ RTBD/*, ... x8*/ }
+		FALSE, //!< AlphaToCoverageEnable
+		FALSE, //!< IndependentBlendEnable
+		{ RTBD/*, ... x8*/ } //!< レンダーターゲットの分だけ #DX_TODO ... MRT
 	};
 
 	//!< ラスタライザ (Rasterizer)
 	const D3D12_RASTERIZER_DESC RD = {
-		D3D12_FILL_MODE_SOLID,
-		D3D12_CULL_MODE_BACK, TRUE,
-		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
-		TRUE,
-		FALSE,
-		FALSE,
-		0,
+		D3D12_FILL_MODE_SOLID, //!< フィルモード (D3D12_FILL_MODE_WIREFRAMEにするとワイヤーフレームになる)
+		D3D12_CULL_MODE_BACK, TRUE, //!< カリングモード、CCW
+		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, TRUE, //!< 深度バイアス、バイアスクランプ、SlopeScaledDepthBias、深度クリップ
+		FALSE, FALSE, 0, //!< マルチサンプル、アンチエイリアス、サンプルカウント
 		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 	};
 
@@ -1223,9 +1234,9 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 		D3D12_COMPARISON_FUNC_ALWAYS //!< 既存のステンシル値との比較方法
 	};
 	const D3D12_DEPTH_STENCIL_DESC DSD = {
-#if 1
+#if 1//def USE_DEPTH_STENCIL //!< デプスを使用しない場合に有効にしたままでも問題はなさそう #DX_TODO
 		//!< デプスを使用する
-		TRUE, //!< デプス
+		TRUE,
 		D3D12_DEPTH_WRITE_MASK_ALL, //!< デプスで書き換えられる部分
 		D3D12_COMPARISON_FUNC_LESS, //!< 既存のデプス値との比較方法
 #else
@@ -1261,24 +1272,24 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 #endif
 
 	//!< DXでは「パッチコントロールポイント」個数の指定はIASetPrimitiveTopology()の引数として「コマンドリスト作成時」に指定する、VKとは結構異なるので注意
-//	//!< CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+	//!< CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
 	const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {
 		RS,
 		VS, PS, DS, HS, GS,
 		SOD,
 		BD,
-		UINT_MAX,
+		D3D12_DEFAULT_SAMPLE_MASK,
 		RD,
 		DSD,
 		ILD,
 		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
 		Topology,
-		1, { DXGI_FORMAT_R8G8B8A8_UNORM }, DXGI_FORMAT_D32_FLOAT_S8X24_UINT,
+		1, { DXGI_FORMAT_R8G8B8A8_UNORM }, DXGI_FORMAT_D32_FLOAT_S8X24_UINT, //!< レンダーターゲットの分だけ #DX_TODO ... MRT
 		SD,
 		0,
 		CPS,
-		D3D12_PIPELINE_STATE_FLAG_NONE //!< D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG ... は Warp デバイスのみ
+		D3D12_PIPELINE_STATE_FLAG_NONE //!< D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG は Warp デバイスのみ
 	};
 	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
 	assert((0 == GPSD.DS.BytecodeLength || 0 == GPSD.HS.BytecodeLength || GPSD.PrimitiveTopologyType == D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH) && "");
@@ -1288,12 +1299,10 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 	}
 	else {
 		VERIFY_SUCCEEDED(Device->CreateGraphicsPipelineState(&GPSD, COM_PTR_UUIDOF_PUTVOID(PST)));
-
 		if (nullptr != PLS) {
 			VERIFY_SUCCEEDED(PLS->GetPipelineLibrary()->StorePipeline(Name, COM_PTR_GET(PST)));
 		}
 	}
-
 	//LOG_OK();
 }
 
@@ -1335,7 +1344,7 @@ void DX::PopulateCommandList(const size_t i)
 	//!< GPU が参照している間は、コマンドアロケータの Reset() はできない
 	//VERIFY_SUCCEEDED(CA->Reset());
 
-	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能 (コマンドキューはコマンドリストではなく、コマンドアロケータを参照している)
+	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能 (コマンドキュー(GPU)はコマンドリストではなく、コマンドアロケータを参照している)
 	//!< CommandList 作成時に PipelineState を指定していなくても、ここで指定すれば OK
 	VERIFY_SUCCEEDED(CL->Reset(CA, nullptr));
 	{
@@ -1363,9 +1372,7 @@ void DX::Draw()
 
 	WaitForFence();
 
-	CurrentBackBufferIndex = AcquireNextBackBufferIndex();
-
-	const std::vector<ID3D12CommandList*> CLs = { COM_PTR_GET(GraphicsCommandLists[CurrentBackBufferIndex]) };
+	const std::vector<ID3D12CommandList*> CLs = { COM_PTR_GET(GraphicsCommandLists[SwapChain->GetCurrentBackBufferIndex()]) };
 	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CLs.size()), CLs.data());
 	
 	Present();
@@ -1377,6 +1384,7 @@ void DX::Dispatch()
 }
 void DX::Present()
 {
+	//!< 垂直同期を待つ : 1
 	VERIFY_SUCCEEDED(SwapChain->Present(1, 0));
 }
 void DX::WaitForFence()

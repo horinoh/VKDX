@@ -2996,22 +2996,20 @@ void VK::Draw()
 	//UpdateDescriptorSet(SwapchainImageIndex);
 	
 	//!< コマンドは指定のパイプラインステージに到達するまで実行され、そこでセマフォがシグナルされるまで待つ
-	const std::vector<VkSemaphore> SemaphoresToWait = { NextImageAcquiredSemaphore };
-	const std::vector<VkPipelineStageFlags> PipelineStagesToWait = { VK_PIPELINE_STAGE_TRANSFER_BIT };
-	assert(SemaphoresToWait.size() == PipelineStagesToWait.size() && "Must be same size()");
+	const std::vector<VkSemaphore> WaitSem = { NextImageAcquiredSemaphore };
+	const std::vector<VkPipelineStageFlags> WaitPS = { VK_PIPELINE_STAGE_TRANSFER_BIT };
+	assert(WaitSem.size() == WaitPS.size() && "Must be same size()");
 	//!< 実行するコマンドバッファ
-	const std::vector<VkCommandBuffer> CBs = { 
-		CommandBuffers[SwapchainImageIndex],
-	};
+	const std::vector<VkCommandBuffer> CBs = { CommandBuffers[SwapchainImageIndex], };
 	//!< 完了時にシグナルされるセマフォ(RenderFinishedSemaphore)
-	const std::vector<VkSemaphore> SemaphoresToSignal = { RenderFinishedSemaphore };
+	const std::vector<VkSemaphore> SigSem = { RenderFinishedSemaphore };
 	const std::vector<VkSubmitInfo> SIs = {
 		{
 			VK_STRUCTURE_TYPE_SUBMIT_INFO,
 			nullptr,
-			static_cast<uint32_t>(SemaphoresToWait.size()), SemaphoresToWait.data(), PipelineStagesToWait.data(), //!< 次イメージが取得できる(プレゼント完了)までウエイト
+			static_cast<uint32_t>(WaitSem.size()), WaitSem.data(), WaitPS.data(), //!< 次イメージが取得できる(プレゼント完了)までウエイト
 			static_cast<uint32_t>(CBs.size()), CBs.data(),
-			static_cast<uint32_t>(SemaphoresToSignal.size()), SemaphoresToSignal.data() //!< 描画完了を通知する
+			static_cast<uint32_t>(SigSem.size()), SigSem.data() //!< 描画完了を通知する
 		},
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), Fence));

@@ -25,12 +25,9 @@
 #endif
 
 //#define USE_WARP
-
 #define USE_STATIC_SAMPLER //!< TextureDX
-
 //!< HLSLからルートシグネチャを作成する (Create root signature from HLSL)
 //#define USE_HLSL_ROOTSIGNATRUE
-
 //!< バンドル : VKのセカンダリコマンドバッファ相当
 #define USE_BUNDLE //!< ParametricSurfaceDX
 //!< ルートコンスタント : VKのプッシュコンスタント相当
@@ -210,9 +207,6 @@ protected:
 		SwapChainResources.clear();
 	}
 	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
-	UINT AcquireNextBackBufferIndex() const {
-		return 0xffffffff == CurrentBackBufferIndex ? SwapChain->GetCurrentBackBufferIndex() : (CurrentBackBufferIndex + 1) % static_cast<const UINT>(SwapChainResources.size());
-	}
 
 	virtual void CreateRenderTarget() {}
 	virtual void CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UINT Height);
@@ -241,10 +235,6 @@ protected:
 
 	virtual void SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags);
 	virtual void GetRootSignaturePartFromShader(COM_PTR<ID3DBlob>& Blob, LPCWSTR Path);
-	virtual void CreateRootSignature(COM_PTR<ID3D12RootSignature>& RS, COM_PTR<ID3DBlob> Blob) {
-		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RS)));
-	}
-
 	virtual void CreateRootSignature();
 
 	virtual void CreateDescriptorHeap() {}
@@ -298,7 +288,6 @@ protected:
 	COM_PTR<IDXGISwapChain4> SwapChain;
 	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap;
 	std::vector<COM_PTR<ID3D12Resource>> SwapChainResources;
-	UINT CurrentBackBufferIndex = 0xffffffff;
 
 	COM_PTR<ID3D12Resource> RenderTargetResource;
 	COM_PTR<ID3D12DescriptorHeap> RenderTargetDescriptorHeap;

@@ -102,6 +102,10 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
+fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName)_1.rs.cso /D RENDER_PATH_1=1</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -155,6 +159,10 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreBuildEvent>
+      <Command>fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
+fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName)_1.rs.cso /D RENDER_PATH_1=1</Command>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="..\DX.h" />

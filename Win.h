@@ -35,10 +35,9 @@
 
 //#define USE_FULL_SCREEN
 
-#define USE_DEPTH_STENCIL
-
+#define USE_DEPTH_STENCIL //!< ToonDX, ToonVK
 #define USE_DRAW_INDIRECT //!< FullscreenDX, FullscreenVK
-#define USE_PIPELINE_SERIALIZE
+#define USE_PIPELINE_SERIALIZE //!< *DX, *VK
 #define USE_WIREFRAME //!< ToonDX, ToonVK
 #define ALWAYS_REBUILD_PIPELINE
 

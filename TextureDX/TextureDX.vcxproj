@@ -122,7 +122,7 @@ xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)</Command>
     </PreLinkEvent>
     <PreBuildEvent>
       <Command>fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
-fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName)-S.rs.cso /D USE_SAMPLER=1</Command>
+fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName)_s.rs.cso /D USE_SAMPLER=1</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -166,7 +166,7 @@ xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)</Command>
     </PreLinkEvent>
     <PreBuildEvent>
       <Command>fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
-fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName)-S.rs.cso /D USE_SAMPLER=1</Command>
+fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName)_s.rs.cso /D USE_SAMPLER=1</Command>
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

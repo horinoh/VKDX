@@ -32,7 +32,7 @@ protected:
 			}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 #endif
 		RootSignatures.resize(1);
-		DX::CreateRootSignature(RootSignatures[0], Blob);
+		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures[0])));
 		LOG_OK();
 	}
 	virtual void CreateDescriptorHeap() override {
