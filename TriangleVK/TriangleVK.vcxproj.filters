@@ -86,7 +86,7 @@
     <CustomBuild Include="TriangleVK.vert">
       <Filter>Shader Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="TriangleVKPushConstants.frag">
+    <CustomBuild Include="TriangleVK_pc.frag">
       <Filter>Shader Files</Filter>
     </CustomBuild>
   </ItemGroup>

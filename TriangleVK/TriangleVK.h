@@ -35,7 +35,7 @@ protected:
 		const auto ShaderPath = GetBasePath();
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
 #ifdef USE_PUSH_CONSTANTS
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("PushConstants.frag.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_pc.frag.spv")).data()));
 #else
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".frag.spv")).data()));
 #endif

@@ -45,27 +45,20 @@
 #endif
 
 #define USE_VIEWPORT_Y_UP
-
 #define USE_IMMUTABLE_SAMPLER //!< TextureVK
-
 //!< セカンダリコマンドバッファ : DXのバンドル相当
 //!< 基本的にセカンダリはプライマリのステートを継承しない
 //!< ただしプライマリがレンダーパス内からセカンダリを呼び出す場合には、プライマリのレンダーパス、サプバスステートは継承される
 //!< 全てのコマンドがプライマリ、セカンダリの両方で記録できるわけではない
 //!< セカンダリの場合は VK_SUBPASS_CONTENTS_INLINE の代わりに VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS を指定する 
 #define USE_SECONDARY_COMMAND_BUFFER //!< ParametricSurfaceVK
-
 //!< プッシュデスクリプタ : デスクリプタセットを確保してからコマンドバッファにバインドするのではなく、デスクリプタの更新自体をコマンドバッファに記録してしまう
 //#define USE_PUSH_DESCRIPTOR //!< BillboardVK
-
 //!< プッシュコンスタント : DXのルートコンスタント相当
 //#define USE_PUSH_CONSTANTS //!< TriangleVK
-
 #define USE_RENDER_PASS_CLEAR //!< ClearVK
-
 //!< パイプライン作成時にシェーダ内の定数値を上書き指定できる(スカラ値のみ)
 //#define USE_SPECIALIZATION_INFO //!< ParametricSurfaceVK
-
 #ifdef _DEBUG
 #define USE_DEBUG_REPORT
 #define USE_RENDERDOC

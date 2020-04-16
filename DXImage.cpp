@@ -18,32 +18,32 @@ void DXImage::LoadImage(ID3D12Resource** Resource, const std::wstring& Path, con
 void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState)
 {
 	[&](ID3D12Resource** Resource, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL) {
-		//!< サブリソースデータを取得 Acquire sub resource data
-		std::unique_ptr<uint8_t[]> DDSData; //!< 未使用 Not used
+		//!< リソースの作成、サブリソースデータを取得 (Create resource, and acquire sub resource data)
+		std::unique_ptr<uint8_t[]> DDSData; //!< 未使用 (Not used)
 		std::vector<D3D12_SUBRESOURCE_DATA> Subresource;
 		VERIFY_SUCCEEDED(DirectX::LoadDDSTextureFromFile(COM_PTR_GET(Device), Path.c_str(), Resource, DDSData, Subresource));
 
-		//!< フットプリントの取得 Acquire footprint
+		//!< フットプリントの取得 (Acquire footprint)
 		UINT64 TotalBytes = 0;
-		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> Footprint(Subresource.size());
+		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSF(Subresource.size());
 		std::vector<UINT> NumRows(Subresource.size());
 		std::vector<UINT64> RowBytes(Subresource.size());
 		const auto RD = (*Resource)->GetDesc();
 		Device->GetCopyableFootprints(&RD, 
 			0, static_cast<const UINT>(Subresource.size()), 
-			0, Footprint.data(), 
+			0, PSF.data(), 
 			NumRows.data(), RowBytes.data(), &TotalBytes);
 
 		COM_PTR<ID3D12Resource> UploadResource;
 		CreateUploadResource(COM_PTR_PUT(UploadResource), TotalBytes);
-		CopyToUploadResource(COM_PTR_GET(UploadResource), Footprint, NumRows, RowBytes, Subresource);
+		CopyToUploadResource(COM_PTR_GET(UploadResource), PSF, NumRows, RowBytes, Subresource);
 
 		//!< #DX_TODO ミップマップの生成 Mipmap
 		//if(ResourceDesc.MipLevels != static_cast<const UINT16>(SubresourceData.size())) {
 		//	UploadResource.GenerateMips(*Resource);
 		//}
 
-		ExecuteCopyTexture(*Resource, CA, CL, Footprint, ResourceState, COM_PTR_GET(UploadResource));
+		ExecuteCopyTexture(*Resource, CA, CL, PSF, ResourceState, COM_PTR_GET(UploadResource));
 	}
 	(Resource, Path, ResourceState, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]));
 }

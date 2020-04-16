@@ -8,22 +8,19 @@ layout (location = 0) in vec2 InTexcoord;
 
 layout (location = 0) out vec4 OutColor;
 
-//!< アプリからは通常通りサンプラとサンプルドイメージを作成する、シェーダ内での解釈のみが異なる
+//!< アプリからは「コンバインドイメージサンプラ」(サンプラ + サンプルドイメージ)としてバインディング(0)で作成している為
+//!< 「コンバインドイメージサンプラ」として使う場合も、「サンプラ+サンプルドイメージ」として使う場合でも同じバインディング(0)にバインドされている
 #define USE_COMBINED_IMAGE_SAMPLER
 
 #ifdef USE_COMBINED_IMAGE_SAMPLER
-//!< コンバインドイメージサンプラ(サンプラ + サンプルドイメージ)
 layout (set=0, binding=0) uniform sampler2D Sampler2D;
 #else
-//!< サンプラ
 layout (set=0, binding=0) uniform sampler Sampler;
-//!< サンプルドイメージ
 layout (set=0, binding=0) uniform texture2D Texture;
 #endif
 
 void main()
 {
-	//OutColor = vec4(InTexcoord, 0.0f, 1.0f);
 #ifdef USE_COMBINED_IMAGE_SAMPLER
 	OutColor = texture(Sampler2D, InTexcoord);
 #else

@@ -84,7 +84,10 @@
 * ~~同じ階層に GLM をクローンして~~サブモジュール化してある **..\\..\glm** にインクルードパスを通した
 * マトリクスの乗算順序が glm と DirectXMath では異なるので注意
 	- B44 * A44(glm) == A44 * B44(DiirectXMath)
-
+		- GLSL : Colum Major (PVW)
+		- HLSL : Column Major
+		- glm : Column Major
+		- DirectXMath : Row Major (WVP)	
 #### GLI
 * https://github.com/g-truc/gli
 * ~~同じ階層に GLI をクローンして~~サブモジュール化してある **..\\..\gli** にインクルードパスを通した

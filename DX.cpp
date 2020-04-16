@@ -143,8 +143,8 @@ void DX::CreateUploadResource(ID3D12Resource** Resource, const size_t Size)
 		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること (Must be UPLOAD)
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
-		0/*1*/,// CreationNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-		0/*1*/ // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		0,// CreationNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
 		D3D12_HEAP_FLAG_NONE,
@@ -163,28 +163,25 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const
 		} Resource->Unmap(0, nullptr);
 	}
 }
-void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData)
+void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData)
 {
 	if (nullptr != Resource) {
-		assert(SubresourceData.size() == PlacedSubresourceFootprints.size() == NumRows.size() == RowSizes.size() && "Invalid size");
+		assert(SubresourceData.size() == PSF.size() == NumRows.size() == RowSizes.size() && "Invalid size");
 		const auto SubresourceCount = static_cast<const UINT>(SubresourceData.size());
 
 		BYTE* Data;
 		VERIFY_SUCCEEDED(Resource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
-			for (auto It = PlacedSubresourceFootprints.cbegin(); It != PlacedSubresourceFootprints.cend(); ++It) {
-				const auto Index = std::distance(PlacedSubresourceFootprints.cbegin(), It);
-
-				const auto& PSF = *It;
+			for (auto It = PSF.cbegin(); It != PSF.cend(); ++It) {
+				const auto Index = std::distance(PSF.cbegin(), It);
 				const auto& SD = SubresourceData[Index];
 				const auto RowCount = NumRows[Index];
 				const auto RowSize = RowSizes[Index];
-
 				const D3D12_MEMCPY_DEST MemcpyDest = {
-					Data + PSF.Offset,
-					PSF.Footprint.RowPitch,
-					static_cast<SIZE_T>(PSF.Footprint.RowPitch) * RowCount
+					Data + It->Offset,
+					It->Footprint.RowPitch,
+					static_cast<SIZE_T>(It->Footprint.RowPitch) * RowCount
 				};
-				for (UINT i = 0; i < PSF.Footprint.Depth; ++i) {
+				for (UINT i = 0; i < It->Footprint.Depth; ++i) {
 					auto Dst = reinterpret_cast<BYTE*>(MemcpyDest.pData) + MemcpyDest.SlicePitch * i;
 					const auto Src = reinterpret_cast<const BYTE*>(SD.pData) + SD.SlicePitch * i;
 					for (UINT j = 0; j < RowCount; ++j) {
@@ -196,30 +193,30 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_
 	}
 }
 
-void DX::ExecuteCopyBuffer(ID3D12Resource* DstResource, ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, const size_t Size, ID3D12Resource* SrcResource)
+void DX::ExecuteCopyBuffer(ID3D12Resource* DstResource, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL, const size_t Size, ID3D12Resource* SrcResource)
 {
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
-		PopulateCopyBufferCommand(CommandList, SrcResource, DstResource, Size, D3D12_RESOURCE_STATE_GENERIC_READ);
-	} VERIFY_SUCCEEDED(CommandList->Close());
+	VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+		PopulateCopyBufferCommand(CL, SrcResource, DstResource, Size, D3D12_RESOURCE_STATE_GENERIC_READ);
+	} VERIFY_SUCCEEDED(CL->Close());
 
-	const std::vector<ID3D12CommandList*> CommandLists = { CommandList };
-	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
+	const std::vector<ID3D12CommandList*> CLs = { CL };
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CLs.size()), CLs.data());
 	WaitForFence();
 }
 
-void DX::ExecuteCopyTexture(ID3D12Resource* DstResource, ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList ,const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState, ID3D12Resource* SrcResource)
+void DX::ExecuteCopyTexture(ID3D12Resource* DstResource, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL ,const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES ResourceState, ID3D12Resource* SrcResource)
 {
-	VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr)); {
+	VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
 		if (D3D12_RESOURCE_DIMENSION_BUFFER == DstResource->GetDesc().Dimension) {
-			PopulateCopyBufferCommand(CommandList, SrcResource, DstResource, PlacedSubresourceFootprints, ResourceState);
+			PopulateCopyBufferCommand(CL, SrcResource, DstResource, PSF, ResourceState);
 		}
 		else {
-			PopulateCopyTextureCommand(CommandList, SrcResource, DstResource, PlacedSubresourceFootprints, ResourceState);
+			PopulateCopyTextureCommand(CL, SrcResource, DstResource, PSF, ResourceState);
 		}
-	} VERIFY_SUCCEEDED(CommandList->Close());
+	} VERIFY_SUCCEEDED(CL->Close());
 
-	const std::vector<ID3D12CommandList*> CommandLists = { CommandList };
-	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
+	const std::vector<ID3D12CommandList*> CLs = { CL };
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CLs.size()), CLs.data());
 	WaitForFence();
 }
 
@@ -271,39 +268,36 @@ void DX::ResourceBarrier(ID3D12GraphicsCommandList* CL, ID3D12Resource* Resource
 }
 void DX::PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS)
 {
-	//!< Dst(LoadDDSTextureFromFile()で作成される)のステートは既にD3D12_RESOURCE_STATE_COPY_DESTで作成されている
-	//!< Dst(created from LoadDDSTextureFromFile())'s state is already D3D12_RESOURCE_STATE_COPY_DEST
+	//!< (LoadDDSTextureFromFile()で作成される)Dstのステートは既にD3D12_RESOURCE_STATE_COPY_DESTで作成されている (Dst(created from LoadDDSTextureFromFile())'s state is already D3D12_RESOURCE_STATE_COPY_DEST)
 	//ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
 	{
 		for (auto It = PSF.cbegin(); It != PSF.cend(); ++It) {
-			const D3D12_TEXTURE_COPY_LOCATION TextureCopyLocation_Dst = {
+			const D3D12_TEXTURE_COPY_LOCATION TCL_Dst = {
 				Dst,
 				D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
 				static_cast<const UINT>(std::distance(PSF.cbegin(), It))
 			};
-			const D3D12_TEXTURE_COPY_LOCATION TextureCopyLocation_Src = {
+			const D3D12_TEXTURE_COPY_LOCATION TCL_Src = {
 				Src,
 				D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
 				*It
 			};
-			CL->CopyTextureRegion(&TextureCopyLocation_Dst, 0, 0, 0, &TextureCopyLocation_Src, nullptr);
+			//const D3D12_BOX Box = {
+			//	static_cast<UINT>(It->Offset),	//!< LEFT
+			//	0,								//!< TOP
+			//	0,								//!< FRONT
+			//	static_cast<UINT>(It->Offset) + It->Footprint.Width, //!< RIGHT
+			//	1,								//!< BOTTOM
+			//	1								//!< BACK
+			//};
+			CL->CopyTextureRegion(&TCL_Dst, 0, 0, 0, &TCL_Src, nullptr);
 		}
 	} ResourceBarrier(CL, Dst, D3D12_RESOURCE_STATE_COPY_DEST, RS);
 }
 void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS)
-
 {
 	ResourceBarrier(CL, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
 		for (auto It = PSF.cbegin(); It != PSF.cend(); ++It) {
-			//!< 色々なサンプルを見るとことごとく D3D12_BOX を作っているがどれも使ってはいない
-			//const D3D12_BOX Box = {
-			//	static_cast<UINT>(It->Offset),
-			//	0,
-			//	0,
-			//	static_cast<UINT>(It->Offset) + It->Footprint.Width,
-			//	1,
-			//	1
-			//};
 			CL->CopyBufferRegion(Dst, 0, Src, It->Offset, It->Footprint.Width);
 		}
 	} ResourceBarrier(CL, Dst, D3D12_RESOURCE_STATE_COPY_DEST, RS);
@@ -788,13 +782,25 @@ void DX::CreateSwapChainResource()
 	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
 	SwapChain->GetDesc1(&SwapChainDesc);
 
+#ifdef USE_GAMMA_CORRECTION
+	D3D12_RENDER_TARGET_VIEW_DESC RTVD = {
+		DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, //!< ガンマ補正あり
+		D3D12_RTV_DIMENSION_TEXTURE2D,
+	};
+	RTVD.Texture2D.MipSlice = 0;
+	RTVD.Texture2D.PlaneSlice = 0;
+#endif
 	SwapChainResources.resize(SwapChainDesc.BufferCount);
 	for (auto i = 0; i < SwapChainResources.size(); ++i) {
 		//!< スワップチェインのバッファリソースを SwapChainResources へ取得
 		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, COM_PTR_UUIDOF_PUTVOID(SwapChainResources[i])));
 		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数等に返るわけではない
 		//!< (リソースがタイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能)
+#ifdef USE_GAMMA_CORRECTION
+		Device->CreateRenderTargetView(COM_PTR_GET(SwapChainResources[i]), &RTVD, GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), i));
+#else
 		Device->CreateRenderTargetView(COM_PTR_GET(SwapChainResources[i]), nullptr, GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), i));
+#endif
 	}
 
 	LOG_OK();
@@ -1101,12 +1107,22 @@ void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RSD, D3D_ROOT_SIGNATURE_VERSION_1_0, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
 
 	//!< #DX_TODO RootSignature1.1を使用する場合はD3D12_ROOT_SIGNATURE_DESC1を使用し、D3D_ROOT_SIGNATURE_VERSION_1_1指定で作成すること
-	//D3D12_FEATURE_DATA_ROOT_SIGNATURE FDRS;
-	//VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, reinterpret_cast<void*>(&FDRS), sizeof(FDRS))); //!< ちゃんと取れない… #DX_TODO
-	//if (FDRS.HighestVersion >= D3D_ROOT_SIGNATURE_VERSION_1_1) {
-	//	const D3D12_ROOT_SIGNATURE_DESC1 RSD1 = {};
-	//	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RSD1, D3D_ROOT_SIGNATURE_VERSION_1_1, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
-	//}
+#if 0
+	D3D12_FEATURE_DATA_ROOT_SIGNATURE FDRS;
+	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, reinterpret_cast<void*>(&FDRS), sizeof(FDRS))); //!< CheckFeatureSupport()でちゃんと取れない… #DX_TODO
+	if (FDRS.HighestVersion >= D3D_ROOT_SIGNATURE_VERSION_1_1) {
+		//!< D3D12_ROOT_SIGNATURE_DESC1 : D3D12_ROOT_PARAMETER が D3D12_ROOT_PARAMETER1 に変更されている
+		//!<	D3D12_ROOT_PARAMETER1 : D3D12_ROOT_DESCRIPTOR が D3D12_ROOT_DESCRIPTOR1 に変更されている
+		//!<		D3D12_ROOT_DESCRIPTOR1 : D3D12_ROOT_DESCRIPTOR_FLAGS Flags メンバが増えている
+		const std::vector<D3D12_ROOT_PARAMETER> RP1s = {};
+		const D3D12_ROOT_SIGNATURE_DESC1 RSD1 = {
+			static_cast<UINT>(RP1s.size()), RP1s.data(),
+			static_cast<UINT>(SSDs.size()), SSDs.data(),
+			Flags
+		};
+		VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RSD1, D3D_ROOT_SIGNATURE_VERSION_1_1, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
+	}
+#endif
 
 	LOG_OK();
 }

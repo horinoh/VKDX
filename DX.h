@@ -32,6 +32,7 @@
 #define USE_BUNDLE //!< ParametricSurfaceDX
 //!< ルートコンスタント : VKのプッシュコンスタント相当
 //#define USE_ROOT_CONSTANTS //!< TriangleDX
+//#define USE_GAMMA_CORRECTION
 
 #include <initguid.h>
 #include <d3d12.h>
