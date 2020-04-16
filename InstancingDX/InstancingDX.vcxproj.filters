@@ -71,14 +71,14 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <FxCompile Include="InstancingDX.ps.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
     <FxCompile Include="InstancingDX.vs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

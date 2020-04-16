@@ -89,10 +89,10 @@
     <CustomBuild Include="ToonVK.vert">
       <Filter>Shader Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="ToonVKWireFrame.frag">
+    <CustomBuild Include="ToonVK_wf.frag">
       <Filter>Shader Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="ToonVKWireFrame.geom">
+    <CustomBuild Include="ToonVK_wf.geom">
       <Filter>Shader Files</Filter>
     </CustomBuild>
   </ItemGroup>

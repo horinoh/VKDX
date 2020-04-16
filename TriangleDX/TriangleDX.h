@@ -47,7 +47,7 @@ protected:
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
 #ifdef USE_ROOT_CONSTANTS
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("RootConstants.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_rc.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 #else
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 #endif

@@ -89,10 +89,10 @@
     <FxCompile Include="ToonDX.vs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="ToonDXWireFrame.gs.hlsl">
+    <FxCompile Include="ToonDX_wf.gs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="ToonDXWireFrame.ps.hlsl">
+    <FxCompile Include="ToonDX_wf.ps.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
   </ItemGroup>
