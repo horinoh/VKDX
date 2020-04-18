@@ -231,21 +231,22 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void ComputeDX::PopulateCommandList(const size_t i)
 {
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
-	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
-
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 
-	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
-
+	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
-		if (nullptr != UnorderedAccessTextureDescriptorHeap) {
-			const std::vector<ID3D12DescriptorHeap*> DH = { COM_PTR_GET(UnorderedAccessTextureDescriptorHeap) };
-			CL->SetDescriptorHeaps(static_cast<UINT>(DH.size()), DH.data());
+		const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
+		const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
+		
+        {
+			const auto& DH = CbvSrvUavDescriptorHeaps[0];
+			const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
+			CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
 
-			CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(UnorderedAccessTextureDescriptorHeap), 0));
+			auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+			CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		}
 
 		CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);

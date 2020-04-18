@@ -36,14 +36,29 @@ protected:
 		LOG_OK();
 	}
 	virtual void CreateDescriptorHeap() override {
-		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(UnorderedAccessTextureDescriptorHeap)));
+		CbvSrvUavDescriptorHeaps.resize(1);
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps[0])));
 	}
 	virtual void CreateDescriptorView() override {
-		D3D12_UNORDERED_ACCESS_VIEW_DESC UAVD = { DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_UAV_DIMENSION_TEXTURE2D };
+		const auto& DH = CbvSrvUavDescriptorHeaps[0];
+		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+
+		D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
+				DXGI_FORMAT_R8G8B8A8_UNORM,
+				D3D12_SRV_DIMENSION_TEXTURE2D,
+				D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+		};
+		SRVD.Texture2D = { 0, 1, 0, 0.0f };
+		Device->CreateShaderResourceView(COM_PTR_GET(UnorderedAccessTextureResource), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+
+		D3D12_UNORDERED_ACCESS_VIEW_DESC UAVD = {
+			DXGI_FORMAT_R8G8B8A8_UNORM,
+			D3D12_UAV_DIMENSION_TEXTURE2D
+		};
 		UAVD.Texture2D.MipSlice = 0;
 		UAVD.Texture2D.PlaneSlice = 0;
-		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextureResource), nullptr, &UAVD, GetCPUDescriptorHandle(COM_PTR_GET(UnorderedAccessTextureDescriptorHeap), 0));
+		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextureResource), nullptr, &UAVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 	}
 	//virtual void CreateShader(std::vector<COM_PTR<ID3DBlob>>& SBs) const override {
 	//	//CreateShader_Cs(ShaderBlobs);

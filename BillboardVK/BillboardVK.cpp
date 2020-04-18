@@ -231,14 +231,10 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void BillboardVK::PopulateCommandBuffer(const size_t i)
 {
-	const auto CB = CommandBuffers[i];
-	const auto SCB = SecondaryCommandBuffers[i];
-	const auto FB = Framebuffers[i];
 	const auto RP = RenderPasses[0];
-	const auto PLL = PipelineLayouts[0];
-	const auto IB = IndirectBuffers[0];
-	const auto PL = Pipelines[0];
-
+	const auto FB = Framebuffers[i];
+	
+	const auto SCB = SecondaryCommandBuffers[i];
 	const VkCommandBufferInheritanceInfo CBII = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
 		nullptr,
@@ -256,6 +252,10 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 		&CBII
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
+		const auto PLL = PipelineLayouts[0];
+		const auto PL = Pipelines[0];
+		const auto IB = IndirectBuffers[0];
+
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 #ifdef USE_PUSH_DESCRIPTOR
@@ -273,6 +273,7 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 		vkCmdDrawIndirect(SCB, IB, 0, 1, 0);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 
+	const auto CB = CommandBuffers[i];
 	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,

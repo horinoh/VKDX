@@ -268,38 +268,6 @@ void GltfDX::LoadScene()
 	//Load(BasePath + "glTF-Sample-Models\\2.0\\CesiumMan\\glTF-Binary\\CesiumMan.glb"); //!< Scale = 0.5f
 	//Load(BasePath + "glTF-Sample-Models\\2.0\\Monster\\glTF-Binary\\Monster.glb"); //!< Scale = 0.02f
 }
-void GltfDX::PreProcess()
-{
-	const auto Fov = 0.16f * DirectX::XM_PI;
-	const auto Aspect = GetAspectRatioOfClientRect();
-	const auto ZFar = 100.0f;
-	const auto ZNear = ZFar * 0.0001f;
-	PV.Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
-
-	const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 6.0f, 1.0f);
-	const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-	const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-	PV.View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
-
-#if 1
-	auto CBSize = RoundUp(sizeof(PV), 0xff);
-
-	//!< デスクリプタヒープ
-	const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(ConstantBufferDescriptorHeap)));
-
-	//!< コンスタントバッファ
-	ConstantBuffers.push_back(COM_PTR<ID3D12Resource>());
-	CreateUploadResource(COM_PTR_PUT(ConstantBuffers[0]), CBSize);
-
-	//!< ビュー
-	const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0])->GetGPUVirtualAddress(), static_cast<UINT>(CBSize) };
-	Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), 0));
-#endif
-}
-void GltfDX::PostProcess()
-{
-}
 void GltfDX::Process(const fx::gltf::Node& Nd, const uint32_t i)
 {
 	auto& Mtx = CurrentMatrix.back();
@@ -357,7 +325,7 @@ void GltfDX::Process(const fx::gltf::Camera& Cam)
 #endif
 
 #if 1
-	CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp(sizeof(PV), 0xff), &PV);
+	CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp256(sizeof(PV)), &PV);
 #endif
 }
 void GltfDX::Process(const fx::gltf::Primitive& Prim)
@@ -434,31 +402,35 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		VERIFY_SUCCEEDED(BundleGraphicsCommandLists[i]->Close());
 	}
 	const auto Count = SCD.BufferCount;
-	const auto BCA = COM_PTR_GET(BundleCommandAllocators.back());
+	
 	const auto PST = COM_PTR_GET(PipelineStates.back());
-
-	const auto& VBVs = VertexBufferViews;
-	const auto& IBV = IndexBufferViews.back();
-	const auto IBR = COM_PTR_GET(IndirectBufferResources.back());
-	const auto ICS = COM_PTR_GET(IndirectCommandSignatures.back());
 
 #ifdef DEBUG_STDOUT
 	std::cout << "World =" << std::endl;
 	std::cout << CurrentMatrix.back();
 #endif
 
+	const auto BCA = COM_PTR_GET(BundleCommandAllocators.back());
 	for (auto i = 0; i < static_cast<int>(Count); ++i) {
 		const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[BundleGraphicsCommandLists.size() - Count + i]);
-		const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), static_cast<UINT>(i));
-
 		VERIFY_SUCCEEDED(BCL->Reset(BCA, PST));
 		{
-#if 1
+			const auto& VBVs = VertexBufferViews;
+			const auto& IBV = IndexBufferViews.back();
+			const auto ICS = COM_PTR_GET(IndirectCommandSignatures.back());
+			const auto IBR = COM_PTR_GET(IndirectBufferResources.back());
+
+#if 0
 			BCL->SetGraphicsRootSignature(RS);
 			//BCL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(sizeof(CurrentMatrix.back()) / 4), &CurrentMatrix.back(), 0);
-			const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(ConstantBufferDescriptorHeap) };
+
+			const auto& DH = CbvSrvUavDescriptorHeaps[0];
+
+			const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
 			BCL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
-			BCL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), 0));
+
+			auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+			BCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #endif
 			BCL->IASetPrimitiveTopology(ToDXPrimitiveTopology(Prim.mode));
 			BCL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
@@ -616,13 +588,6 @@ void GltfDX::UpdateAnimWeights(const float* /*Data*/, const uint32_t /*PrevIndex
 
 void GltfDX::PopulateCommandList(const size_t i)
 {
-	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
-	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), static_cast<UINT>(i));
-	const auto RS = COM_PTR_GET(RootSignatures[0]);
-	const auto DSH = GetCPUDescriptorHandle(COM_PTR_GET(DepthStencilDescriptorHeap), 0);
-
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
 	const auto PrimCount = BundleGraphicsCommandLists.size() / SCD.BufferCount;
@@ -631,30 +596,43 @@ void GltfDX::PopulateCommandList(const size_t i)
 		BCLs.push_back(COM_PTR_GET(BundleGraphicsCommandLists[j * SCD.BufferCount + i]));
 	}
 
+	const auto CA = COM_PTR_GET(CommandAllocators[0]);
+	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	VERIFY_SUCCEEDED(CL->Reset(CA, nullptr));
 	{
+		const auto RS = COM_PTR_GET(RootSignatures[0]);
+		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+		
+		CL->SetGraphicsRootSignature(RS);
+
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
-		CL->SetGraphicsRootSignature(RS);
-
 		//CL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(sizeof(ViewProjection) / 4), &ViewProjection, 0);
-		//const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(ConstantBufferDescriptorHeap) };
-		//CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
-		//CL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), 0));
 
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
+			auto SCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+			const auto DDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+
 			const std::array<D3D12_RECT, 0> Rs = {};
-			CL->ClearRenderTargetView(SCH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
-			CL->ClearDepthStencilView(DSH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+			CL->ClearRenderTargetView(SCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
+			CL->ClearDepthStencilView(DDH, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
-			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
-			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &DSH);
+			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCDH };
+			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &DDH);
 
-			for (auto j : BCLs) { 
-				CL->ExecuteBundle(j);
+			{
+				const auto& DH = CbvSrvUavDescriptorHeaps[0];
+
+				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
+				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
+
+				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+				CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
+
+			for (auto j : BCLs) { CL->ExecuteBundle(j); }
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}

@@ -231,49 +231,50 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void ParametricSurfaceDX::PopulateCommandList(const size_t i)
 {
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
-	const auto CA = COM_PTR_GET(CommandAllocators[0]);
+	const auto PS = COM_PTR_GET(PipelineStates[0]);
+	
 #ifdef USE_BUNDLE
 	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-#endif
-	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
-
-	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), static_cast<UINT>(i));
-	
-	const auto PS = COM_PTR_GET(PipelineStates[0]);
-
-	const auto RS = COM_PTR_GET(RootSignatures[0]);
-
-	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
-
-#ifdef USE_BUNDLE
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 	{
-		BCL->SetGraphicsRootSignature(RS);
+		const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
+		const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
+
 		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BCL->Close());
 #endif
 
+	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
+		const auto RS = COM_PTR_GET(RootSignatures[0]);
+		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+
+        CL->SetGraphicsRootSignature(RS);
+
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
-			const std::array<D3D12_RECT, 0> Rs = {};
-			CL->ClearRenderTargetView(SCH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
+            auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+            
+            const std::array<D3D12_RECT, 0> Rs = {};
+			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
 
-			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
+			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { CDH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 
 #ifdef USE_BUNDLE
 			CL->ExecuteBundle(BCL);
 #else
+			const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
+			const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
+
 			CL->SetGraphicsRootSignature(RS);
 			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);

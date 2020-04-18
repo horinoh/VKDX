@@ -99,17 +99,17 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< フレームバッファ
 	CreateFramebuffer();
 
-	//!< デスクリプタプール (デスクリプタヒープ相当)
-	CreateDescriptorPool();
-	AllocateDescriptorSet();
-
 	//!< ユニフォームバッファ (コンスタントバッファ相当)
 	CreateUniformBuffer();
 	CreateTexture();
-	CreateSampler();
 
+	//!< デスクリプタプール (デスクリプタヒープ相当)
+	CreateDescriptorPool();
+	AllocateDescriptorSet();
 	//!< デスクリプタセット更新 (デスクリプタビュー相当) ... この時点でデスクリプタセット、ユニフォームバッファ、イメージビュー、サンプラ等が必要
 	UpdateDescriptorSet();
+
+	CreateSampler();
 
 	SetTimer(hWnd, NULL, Elapse, nullptr);
 
@@ -2915,9 +2915,6 @@ void VK::ClearDepthStencilAttachment(const VkCommandBuffer CB, const VkClearDept
 
 void VK::PopulateCommandBuffer(const size_t i)
 {
-	const auto CB = CommandBuffers[i];
-	const auto FB = Framebuffers[i];
-
 	//!< vkBeginCommandBuffer() で暗黙的にリセットされるが、明示的にリセットする場合には「メモリをプールへリリースするかどうかを指定できる」
 	//VERIFY_SUCCEEDED(vkResetCommandBuffer(CB, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
 
@@ -2925,6 +2922,7 @@ void VK::PopulateCommandBuffer(const size_t i)
 	//!< * VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT		... 一度だけ使用する場合や毎回リセットする場合に指定、何度もサブミットするものには指定しない
 	//!< * VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT		... デバイスでまだ実行されている間に、コマンドバッファを再度サブミットする必要がある場合に指定 (パフォーマンスの観点からは避けるべき)
 	//!< * VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT	... セカンダリコマンドバッファでかつレンダーパス内の場合に指定する
+	const auto CB = CommandBuffers[i];
 	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
@@ -2932,11 +2930,13 @@ void VK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+		const auto RP = RenderPasses[0];
+		const auto FB = Framebuffers[i];
+
 		//!< ビューポート、シザー
 		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-		const auto RP = RenderPasses[0];
 #ifdef _DEBUG
 		//!< レンダーエリアの最低粒度を確保
 		VkExtent2D Granularity;

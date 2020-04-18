@@ -231,13 +231,10 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void FullscreenVK::PopulateCommandBuffer(const size_t i)
 {
-    const auto CB = CommandBuffers[i];
-    const auto SCB = SecondaryCommandBuffers[i];
+	const auto RP = RenderPasses[0];
     const auto FB = Framebuffers[i];
-    const auto RP = RenderPasses[0];
-    const auto IB = IndirectBuffers[0];
-    const auto PL = Pipelines[0];
-
+   
+	const auto SCB = SecondaryCommandBuffers[i];
     const VkCommandBufferInheritanceInfo CBII = {
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
         nullptr,
@@ -255,6 +252,9 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
         &CBII
     };
     VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
+		const auto PL = Pipelines[0];
+		const auto IB = IndirectBuffers[0];
+
         vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
         vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
@@ -266,6 +266,7 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
 #endif
     } VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 
+	const auto CB = CommandBuffers[i];
     const VkCommandBufferBeginInfo CBBI = {
         VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         nullptr,

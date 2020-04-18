@@ -161,6 +161,7 @@ protected:
 	virtual void GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format);
 	virtual void CheckFeatureLevel(ID3D12Device* Device);
 	virtual void CheckMultiSample(const DXGI_FORMAT Format);
+#if 0
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(ID3D12DescriptorHeap* DH, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index) const {
 		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 		CDH.ptr += static_cast<SIZE_T>(Index)* Device->GetDescriptorHandleIncrementSize(Type);
@@ -173,22 +174,7 @@ protected:
 	}
 	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(ID3D12DescriptorHeap* DH, const UINT Index) const { return GetCPUDescriptorHandle(DH, DH->GetDesc().Type, Index); }
 	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(ID3D12DescriptorHeap* DH, const UINT Index) const { return GetGPUDescriptorHandle(DH, DH->GetDesc().Type, Index); }
-
-	//!< DescriptorHandleIndices ‚ÅŠÇ—‚·‚é”Å
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentCPUDescriptorHandle(ID3D12DescriptorHeap* DH, const D3D12_DESCRIPTOR_HEAP_TYPE Type) const { return GetCPUDescriptorHandle(DH, Type, DescriptorHandleIndices[Type]); }
-	D3D12_GPU_DESCRIPTOR_HANDLE GetCurrentGPUDescriptorHandle(ID3D12DescriptorHeap* DH, const D3D12_DESCRIPTOR_HEAP_TYPE Type) const { return GetGPUDescriptorHandle(DH, Type, DescriptorHandleIndices[Type]); }
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentCPUDescriptorHandle(ID3D12DescriptorHeap* DH) const { return DX::GetCPUDescriptorHandle(DH, DH->GetDesc().Type); }
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCurrentGPUDescriptorHandle(ID3D12DescriptorHeap* DH) const { return DX::GetCPUDescriptorHandle(DH, DH->GetDesc().Type); }
-	void GetCurrentAndPushDescriptorHandles(D3D12_CPU_DESCRIPTOR_HANDLE& CDH, D3D12_GPU_DESCRIPTOR_HANDLE& GDH, ID3D12DescriptorHeap* DH) {
-		const auto Type = DH->GetDesc().Type;
-		CDH = GetCurrentCPUDescriptorHandle(DH, Type);
-		GDH = GetCurrentGPUDescriptorHandle(DH, Type);
-		PushDescriptorHandle(Type);
-	}
-	void PushDescriptorHandle(const D3D12_DESCRIPTOR_HEAP_TYPE Type) { DescriptorHandleIndices[Type]++; }
-	void PopDescriptorHandle(const D3D12_DESCRIPTOR_HEAP_TYPE Type) { assert(0 < DescriptorHandleIndices[Type] && ""); DescriptorHandleIndices[Type]--; }
-	void PushDescriptorHandle(ID3D12DescriptorHeap* DH) { PushDescriptorHandle(DH->GetDesc().Type); }
-	void PopDescriptorHandle(ID3D12DescriptorHeap* DH) { PopDescriptorHandle(DH->GetDesc().Type); }
+#endif
 
 	virtual void CreateCommandQueue();
 
@@ -213,7 +199,6 @@ protected:
 	virtual void CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UINT Height);
 
 	virtual void CreateDepthStencil() {}
-	virtual void CreateDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
 	virtual void CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
 	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
 
@@ -287,18 +272,20 @@ protected:
 	//std::vector<COM_PTR<ID3D12CommandList>> CommandLists;
 	
 	COM_PTR<IDXGISwapChain4> SwapChain;
-	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap;
 	std::vector<COM_PTR<ID3D12Resource>> SwapChainResources;
 
 	COM_PTR<ID3D12Resource> RenderTargetResource;
-	COM_PTR<ID3D12DescriptorHeap> RenderTargetDescriptorHeap;
-	COM_PTR<ID3D12DescriptorHeap> ShaderResourceDescriptorHeap;
-
 	COM_PTR<ID3D12Resource> DepthStencilResource;
-	COM_PTR<ID3D12DescriptorHeap> DepthStencilDescriptorHeap;
-
+	COM_PTR<ID3D12Resource> UnorderedAccessTextureResource;
 	COM_PTR<ID3D12Resource> ImageResource;
-	COM_PTR<ID3D12DescriptorHeap> ImageDescriptorHeap;
+	std::vector<COM_PTR<ID3D12Resource>> ConstantBuffers;
+	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
+
+	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap; //!< RTV
+	std::vector<COM_PTR<ID3D12DescriptorHeap>> SamplerDescriptorHeaps;
+	std::vector<COM_PTR<ID3D12DescriptorHeap>> RtvDescriptorHeaps;
+	std::vector<COM_PTR<ID3D12DescriptorHeap>> DsvDescriptorHeaps;
+	std::vector<COM_PTR<ID3D12DescriptorHeap>> CbvSrvUavDescriptorHeaps;
 
 	std::vector<COM_PTR<ID3D12RootSignature>> RootSignatures;
 
@@ -313,18 +300,6 @@ protected:
 
 	std::vector<COM_PTR<ID3D12Resource>> IndirectBufferResources;
 	std::vector<COM_PTR<ID3D12CommandSignature>> IndirectCommandSignatures;
-	//COM_PTR<ID3D12CommandSignature> IndirectCommandSignature;
-
-	//!< Œ»ó1‚Â‚Ì‚ÝA”z—ñ‚É‚·‚é #DX_TODO
-	//COM_PTR<ID3D12Resource> ConstantBufferResource;
-	std::vector<COM_PTR<ID3D12Resource>> ConstantBuffers;
-	COM_PTR<ID3D12DescriptorHeap> ConstantBufferDescriptorHeap;
-
-	COM_PTR<ID3D12Resource> UnorderedAccessTextureResource;
-	COM_PTR<ID3D12DescriptorHeap> UnorderedAccessTextureDescriptorHeap; 
-	
-	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
-	std::vector<COM_PTR<ID3D12DescriptorHeap>> SamplerDescriptorHeaps;
 
 	std::vector<D3D12_VIEWPORT> Viewports;
 	std::vector<D3D12_RECT> ScissorRects;

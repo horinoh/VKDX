@@ -16,6 +16,20 @@ public:
 protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
 
+#ifdef USE_STATIC_SAMPLER
+	virtual void CreateStaticSampler() override {
+		StaticSamplerDescs.push_back({
+			D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+			0.0f,
+			0,
+			D3D12_COMPARISON_FUNC_NEVER,
+			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+			0.0f, 1.0f,
+			0, 0, D3D12_SHADER_VISIBILITY_PIXEL
+		});
+	}
+#endif
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE 
@@ -63,19 +77,6 @@ protected:
 		RootSignatures.resize(1);
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures[0])));
 		LOG_OK();
-	}
-
-	virtual void CreateDescriptorHeap() override {
-		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(ImageDescriptorHeap)));
-#ifndef USE_STATIC_SAMPLER
-		SamplerDescriptorHeaps.resize(1);
-		const D3D12_DESCRIPTOR_HEAP_DESC DHD_Smp = { D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD_Smp, COM_PTR_UUIDOF_PUTVOID(SamplerDescriptorHeaps[0])));
-#endif
-	}
-	virtual void CreateDescriptorView() override {
-		Device->CreateShaderResourceView(COM_PTR_GET(ImageResource), nullptr, GetCPUDescriptorHandle(COM_PTR_GET(ImageDescriptorHeap), 0));
 	}
 
 	virtual void CreateTexture() override {
@@ -129,21 +130,30 @@ protected:
 		//LoadImage(COM_PTR_PUT(ImageResource), TEXT("..\\Intermediate\\Image\\kueken8_rgba8_srgb.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE); //!< #DX_TODO
 #endif
 	}
-#ifdef USE_STATIC_SAMPLER
-	virtual void CreateStaticSampler() override {
-		StaticSamplerDescs.push_back({
-			D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-			0.0f,
-			0,
-			D3D12_COMPARISON_FUNC_NEVER,
-			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-			0.0f, 1.0f,
-			0, 0, D3D12_SHADER_VISIBILITY_PIXEL
-		});
+
+	virtual void CreateDescriptorHeap() override {
+		{
+			CbvSrvUavDescriptorHeaps.resize(1);
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps[0])));
+		}
+#ifndef USE_STATIC_SAMPLER
+		{
+			SamplerDescriptorHeaps.resize(1);
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(SamplerDescriptorHeaps[0])));
+		}
+#endif
 	}
-#else
+	virtual void CreateDescriptorView() override {
+		const auto& DH = CbvSrvUavDescriptorHeaps[0];
+		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+		Device->CreateShaderResourceView(COM_PTR_GET(ImageResource), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+	}
+
+#ifndef USE_STATIC_SAMPLER
 	virtual void CreateSampler() override {
+		assert(!SamplerDescriptorHeaps.empty() && "");
 		const D3D12_SAMPLER_DESC SD = {
 			D3D12_FILTER_MIN_MAG_MIP_POINT, //!< ひと目でわかるように、非スタティックサンプラの場合敢えて POINT にしている
 			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
@@ -156,6 +166,7 @@ protected:
 		Device->CreateSampler(&SD, SamplerDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart());
 	}
 #endif
+
 	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPs(); }
 	virtual void CreatePipelineStates() override { CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE); }
 	virtual void PopulateCommandList(const size_t i) override;

@@ -127,20 +127,3 @@ void DXExt::CreateRenderTexture()
 {
 
 }
-
-//void DXExt::Clear_Color(ID3D12GraphicsCommandList* GraphicsCommandList)
-//{
-//	auto CPUDescriptorHandle(SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-//	const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-//	CPUDescriptorHandle.ptr += CurrentBackBufferIndex * IncrementSize;
-//	GraphicsCommandList->ClearRenderTargetView(CPUDescriptorHandle, DirectX::Colors::SkyBlue, 0, nullptr);
-//}
-//void DXExt::Clear_Depth(ID3D12GraphicsCommandList* GraphicsCommandList)
-//{
-//	if (nullptr != DepthStencilDescriptorHeap) {
-//		auto CPUDescriptorHandle(DepthStencilDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-//		const auto IncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-//		CPUDescriptorHandle.ptr += 0 * IncrementSize;
-//		GraphicsCommandList->ClearDepthStencilView(CPUDescriptorHandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-//	}
-//}

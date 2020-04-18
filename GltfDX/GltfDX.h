@@ -115,8 +115,8 @@ protected:
 		}
 #endif
 	}
-	virtual void PreProcess() override;
-	virtual void PostProcess() override;
+	//virtual void PreProcess() override{}
+	//virtual void PostProcess() override {}
 
 	virtual void PushNode() override { Gltf::PushNode(); CurrentMatrix.push_back(CurrentMatrix.back()); }
 	virtual void PopNode() override { Gltf::PopNode(); CurrentMatrix.pop_back(); }
@@ -137,7 +137,7 @@ protected:
 	virtual void UpdateAnimRotation(const std::array<float, 4>& Value, const uint32_t NodeIndex);
 	virtual void UpdateAnimWeights(const float* Data, const uint32_t PrevIndex, const uint32_t NextIndex, const float t);
 
-	virtual void CreateDepthStencil() override { DX::CreateDepthStencil(DXGI_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
+	virtual void CreateDepthStencil() override { CreateDepthStencilResource(DXGI_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
@@ -172,6 +172,48 @@ protected:
 			VERIFY_SUCCEEDED(GraphicsCommandLists[i]->Close());
 		}
 		LOG_OK();
+	}
+	virtual void CreateConstantBuffer() override {
+		const auto Fov = 0.16f * DirectX::XM_PI;
+		const auto Aspect = GetAspectRatioOfClientRect();
+		const auto ZFar = 100.0f;
+		const auto ZNear = ZFar * 0.0001f;
+		PV.Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
+
+		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 6.0f, 1.0f);
+		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		PV.View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
+
+		ConstantBuffers.push_back(COM_PTR<ID3D12Resource>());
+		CreateUploadResource(COM_PTR_PUT(ConstantBuffers[0]), RoundUp256(sizeof(PV)));
+	}
+	virtual void CreateDescriptorHeap() override {
+		{
+			CbvSrvUavDescriptorHeaps.resize(1);
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps[0])));
+		}
+		{
+			DsvDescriptorHeaps.resize(1);
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps[0])));
+		}
+	}
+	virtual void CreateDescriptorView() override {
+		{
+			const auto& DH = CbvSrvUavDescriptorHeaps[0];
+			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+			assert(!ConstantBuffers.empty() && "");
+			assert(ConstantBuffers[0]->GetDesc().Width == RoundUp256(sizeof(PV)) && "");
+			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0])->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[0]->GetDesc().Width) };
+			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		}
+		{
+			const auto& DH = DsvDescriptorHeaps[0];
+			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+			Device->CreateDepthStencilView(COM_PTR_GET(DepthStencilResource), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		}
 	}
 	virtual void PopulateCommandList(const size_t i) override;
 

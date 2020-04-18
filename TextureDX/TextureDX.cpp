@@ -231,55 +231,64 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void TextureDX::PopulateCommandList(const size_t i)
 {
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
-	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
-	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]); 
-	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
-
-	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), static_cast<UINT>(i)); 
-
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 
-	const auto RS = COM_PTR_GET(RootSignatures[0]);
-
-	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
-
+	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
-	{
-		BCL->SetGraphicsRootSignature(RS);
-		if (nullptr != ImageDescriptorHeap
-#ifndef USE_STATIC_SAMPLER
-			&& !SamplerDescriptorHeaps.empty()
-#endif
-			) {
-#ifdef USE_STATIC_SAMPLER
-			const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(ImageDescriptorHeap) };
-#else
-			const std::array<ID3D12DescriptorHeap*, 2> DHs = { { COM_PTR_GET(ImageDescriptorHeap), COM_PTR_GET(SamplerDescriptorHeaps[0]) } };
-#endif
-			BCL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
-			BCL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ImageDescriptorHeap), 0));
-#ifndef USE_STATIC_SAMPLER
-			BCL->SetGraphicsRootDescriptorTable(1, GetGPUDescriptorHandle(COM_PTR_GET(SamplerDescriptorHeaps[0]), 0));
-#endif				
-		}
-		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
-	}
+    {
+		const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
+		const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
+
+        BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+        BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+    }
 	VERIFY_SUCCEEDED(BCL->Close());
 
+	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
+		const auto RS = COM_PTR_GET(RootSignatures[0]);
+		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+
+        CL->SetGraphicsRootSignature(RS);
+
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
-			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDescriptorHandles = { SCH };
+            auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDescriptorHandles = { CDH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
 
+#ifdef USE_STATIC_SAMPLER
+            assert(!CbvSrvUavDescriptorHeaps.empty() && "");
+			const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
+			CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
+			
+            const auto& DH = CbvSrvUavDescriptorHeaps[0];
+			auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+			CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#else
+			assert(!CbvSrvUavDescriptorHeaps.empty() && "");
+			assert(!SamplerDescriptorHeaps.empty() && "");
+
+			const std::array<ID3D12DescriptorHeap*, 2> DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]), COM_PTR_GET(SamplerDescriptorHeaps[0]) };
+			CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
+
+			{
+				const auto& DH = CbvSrvUavDescriptorHeaps[0];
+				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+				CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+			}
+			{
+				const auto& DH = SamplerDescriptorHeaps[0];
+				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+				CL->SetGraphicsRootDescriptorTable(1, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+			}
+#endif
 			CL->ExecuteBundle(BCL);
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);

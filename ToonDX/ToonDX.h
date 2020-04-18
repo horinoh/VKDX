@@ -20,12 +20,12 @@ protected:
 		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
 		Degree += 1.0f;
 
-		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp(sizeof(Tr), 0xff), &Tr);
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp256(sizeof(Tr)), &Tr);
 	}
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
 #ifdef USE_DEPTH_STENCIL
-	virtual void CreateDepthStencil() override { DX::CreateDepthStencil(DXGI_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
+	virtual void CreateDepthStencil() override { CreateDepthStencilResource(DXGI_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
 #endif
 
 	virtual void CreateRootSignature() override {
@@ -50,17 +50,37 @@ protected:
 		LOG_OK();
 	}
 
-#pragma region DESCRIPTOR
 	virtual void CreateDescriptorHeap() override {
-		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(ConstantBufferDescriptorHeap)));
+		{
+			CbvSrvUavDescriptorHeaps.resize(1);
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps[0])));
+		}
+#ifdef USE_DEPTH_STENCIL
+		{
+			DsvDescriptorHeaps.resize(1);
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps[0])));
+		}
+#endif
 	}
 	virtual void CreateDescriptorView() override {
-		assert(!ConstantBuffers.empty() && "");
-		const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0])->GetGPUVirtualAddress(), static_cast<UINT>(RoundUp(sizeof(Transform), 0xff)) };
-		Device->CreateConstantBufferView(&CBVD, GetCPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), 0));
+		{
+			const auto& DH = CbvSrvUavDescriptorHeaps[0];
+			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+			assert(!ConstantBuffers.empty() && "");
+			assert(ConstantBuffers[0]->GetDesc().Width == RoundUp256(sizeof(Transform)) && "");
+			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0])->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[0]->GetDesc().Width) };
+			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		}
+#ifdef USE_DEPTH_STENCIL
+		{
+			const auto& DH = DsvDescriptorHeaps[0];
+			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+			Device->CreateDepthStencilView(COM_PTR_GET(DepthStencilResource), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		}
+#endif
 	}
-#pragma endregion //!< DESCRIPTOR
 
 	virtual void CreateConstantBuffer() override {
 		const auto Fov = 0.16f * DirectX::XM_PI;
@@ -73,7 +93,7 @@ protected:
 		Tr = Transform({ DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar), DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp), DirectX::XMMatrixIdentity() });
 
 		ConstantBuffers.push_back(COM_PTR<ID3D12Resource>());
-		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back()), RoundUp(sizeof(Tr), 0xff));
+		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back()), RoundUp256(sizeof(Tr)));
 	}
 
 	virtual void CreateShaderBlobs() override {

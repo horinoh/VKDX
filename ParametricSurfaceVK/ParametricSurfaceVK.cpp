@@ -231,16 +231,11 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void ParametricSurfaceVK::PopulateCommandBuffer(const size_t i)
 {
-	const auto CB = CommandBuffers[i];
-#ifdef USE_SECONDARY_COMMAND_BUFFER
-	const auto SCB = SecondaryCommandBuffers[i];
-#endif
-	const auto FB = Framebuffers[i];
 	const auto RP = RenderPasses[0];
-	const auto IB = IndirectBuffers[0];
-	const auto PL = Pipelines[0];
+	const auto FB = Framebuffers[i];
 
 #ifdef USE_SECONDARY_COMMAND_BUFFER
+	const auto SCB = SecondaryCommandBuffers[i];
 	const VkCommandBufferInheritanceInfo CBII = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
 		nullptr,
@@ -258,6 +253,9 @@ void ParametricSurfaceVK::PopulateCommandBuffer(const size_t i)
 		&CBII
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
+		const auto IB = IndirectBuffers[0];
+		const auto PL = Pipelines[0];
+
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
@@ -265,6 +263,7 @@ void ParametricSurfaceVK::PopulateCommandBuffer(const size_t i)
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 #endif
 
+	const auto CB = CommandBuffers[i];
 	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
@@ -288,6 +287,9 @@ void ParametricSurfaceVK::PopulateCommandBuffer(const size_t i)
 		} vkCmdEndRenderPass(CB);
 #else
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
+			const auto IB = IndirectBuffers[0];
+			const auto PL = Pipelines[0];
+
 			vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 			vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 

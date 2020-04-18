@@ -231,25 +231,16 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void FullscreenDX::PopulateCommandList(const size_t i)
 {
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
-	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
-	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]); 
-	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
-
-	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), static_cast<UINT>(i)); 
-
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
-
-	const auto RS = COM_PTR_GET(RootSignatures[0]);
-
-	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
-
+	
+	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+    const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 	{
-		BCL->SetGraphicsRootSignature(RS);
-		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
+		const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
+
+        BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 #ifdef USE_DRAW_INDIRECT
 		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 #else
@@ -258,17 +249,23 @@ void FullscreenDX::PopulateCommandList(const size_t i)
 	}
 	VERIFY_SUCCEEDED(BCL->Close());
 
+	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
-		//!< ビューポート、シザー
+		const auto RS = COM_PTR_GET(RootSignatures[0]);
+		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+
+        CL->SetGraphicsRootSignature(RS);
+
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
-		//!< バリア
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
-			//!< レンダーターゲット
-			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDescriptorHandles = { SCH };
+            auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+
+			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDescriptorHandles = { CDH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
 
 			CL->ExecuteBundle(BCL);

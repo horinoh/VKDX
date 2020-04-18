@@ -457,15 +457,9 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	};
 	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &SCBAI, &SecondaryCommandBuffers[PrevCount]));
 	const auto Count = SCBAI.commandBufferCount;
-	const auto& VBs = VertexBuffers;
-	const auto IB = IndexBuffers.back();
-	const auto IndB = IndirectBuffers.back();
-	const auto PL = Pipelines.back();
-
-	const std::vector<VkDeviceSize> Offsets(VBs.size(), 0);
 	for (auto i = 0; i < static_cast<int>(Count); ++i) {
-		const auto SCB = SecondaryCommandBuffers[SecondaryCommandBuffers.size() - Count + i];
 		const auto FB = Framebuffers[i];
+		const auto SCB = SecondaryCommandBuffers[SecondaryCommandBuffers.size() - Count + i];
 		const VkCommandBufferInheritanceInfo CBII = {
 			VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
 			nullptr,
@@ -484,6 +478,11 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 		};
 
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
+			const auto PL = Pipelines.back();
+			const auto& VBs = VertexBuffers;
+			const auto IB = IndexBuffers.back();
+			const auto IDB = IndirectBuffers.back();
+
 			vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 			vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
@@ -494,9 +493,10 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 #endif
 
 			vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
+			const std::vector<VkDeviceSize> Offsets(VBs.size(), 0);
 			vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets.data());
 			vkCmdBindIndexBuffer(SCB, IB, 0, ToVKIndexType(GetDocument().accessors[Prim.indices].componentType));
-			vkCmdDrawIndexedIndirect(SCB, IndB, 0, 1, 0);
+			vkCmdDrawIndexedIndirect(SCB, IDB, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 	}
 }
@@ -639,8 +639,6 @@ void GltfVK::UpdateAnimWeights(const float* /*Data*/, const uint32_t /*PrevIndex
 void GltfVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto RP = RenderPasses[0];
-
-	const auto CB = CommandBuffers[i];
 	const auto FB = Framebuffers[i];
 
 	const auto SCICount = SwapchainImages.size();
@@ -650,6 +648,7 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 		SCBs.push_back(SecondaryCommandBuffers[j * SCICount + i]);
 	}
 
+	const auto CB = CommandBuffers[i];
 	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,

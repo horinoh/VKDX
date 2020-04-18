@@ -46,18 +46,17 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< パイプライン
 	CreatePipelineStates();
 
-	//!< デスクリプタヒープ (デスクリプタプール相当)
-	CreateDescriptorHeap();
-
 	//!< コンスタントバッファ (ユニフォームバッファ相当)
 	CreateConstantBuffer();
 	CreateTexture();
-	CreateSampler();
+	//CreateUnorderedAccessTexture();
 
+	//!< デスクリプタヒープ (デスクリプタプール相当)
+	CreateDescriptorHeap();
 	//!< デスクリプタビュー (デスクリプタセット更新相当) ... この時点でリソース、デスクリプタヒープ等が必要
 	CreateDescriptorView();
 
-	//CreateUnorderedAccessTexture();
+	CreateSampler();
 
 	SetTimer(hWnd, NULL, Elapse, nullptr);
 
@@ -324,10 +323,12 @@ void DX::CreateDevice(HWND /*hWnd*/)
 	VERIFY_SUCCEEDED(D3D12GetDebugInterface(COM_PTR_UUIDOF_PUTVOID(Debug)));
 	Debug->EnableDebugLayer();
 
-	//!< GPU-Based Validation
+	//!< GPUバリデーション ... CPUバリデーションが効かなくなるので採用しない
+#if 0 
 	COM_PTR<ID3D12Debug1> Debug1;
 	VERIFY_SUCCEEDED(Debug->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Debug1)));
 	Debug1->SetEnableGPUBasedValidation(true);
+#endif
 #endif
 
 	//!< WARP アダプタを作成するのに IDXGIFactory4(のEnumWarpAdapter) が必要
@@ -768,10 +769,10 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 #endif
 
 	const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
-			D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-			SCD.BufferCount,
-			D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-			0 // NodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+		SCD.BufferCount,
+		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+		0 // NodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(SwapChainDescriptorHeap)));
 
@@ -790,6 +791,7 @@ void DX::CreateSwapChainResource()
 	RTVD.Texture2D.MipSlice = 0;
 	RTVD.Texture2D.PlaneSlice = 0;
 #endif
+	auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	SwapChainResources.resize(SwapChainDesc.BufferCount);
 	for (auto i = 0; i < SwapChainResources.size(); ++i) {
 		//!< スワップチェインのバッファリソースを SwapChainResources へ取得
@@ -797,10 +799,11 @@ void DX::CreateSwapChainResource()
 		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数等に返るわけではない
 		//!< (リソースがタイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能)
 #ifdef USE_GAMMA_CORRECTION
-		Device->CreateRenderTargetView(COM_PTR_GET(SwapChainResources[i]), &RTVD, GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), i));
+		Device->CreateRenderTargetView(COM_PTR_GET(SwapChainResources[i]), &RTVD, CDH);
 #else
-		Device->CreateRenderTargetView(COM_PTR_GET(SwapChainResources[i]), nullptr, GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), i));
+		Device->CreateRenderTargetView(COM_PTR_GET(SwapChainResources[i]), nullptr, CDH);
 #endif
+		CDH.ptr += Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 	}
 
 	LOG_OK();
@@ -808,19 +811,19 @@ void DX::CreateSwapChainResource()
 
 void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, const DirectX::XMVECTORF32* Color)
 {
+	assert(nullptr != Color && "");
+	auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	for (auto i = 0; i < SwapChainResources.size(); ++i) {
 		const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 		VERIFY_SUCCEEDED(CL->Reset(CommandAllocator, nullptr));
 		{
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-			const auto CDH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), i);
 			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET); {
-				if (nullptr != Color) {
-					CL->ClearRenderTargetView(CDH, *Color, 0, nullptr);
-				}
+				CL->ClearRenderTargetView(CDH, *Color, 0, nullptr);
 			} ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		}
 		VERIFY_SUCCEEDED(CL->Close());
+		CDH.ptr += Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 	}
 
 	//!< #DX_TODO : 0 番目しかクリアしていない
@@ -875,55 +878,6 @@ void DX::CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UI
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_COMMON, &CV, COM_PTR_UUIDOF_PUTVOID(RenderTargetResource)));
 
-	//!< レンダーターゲットビュー
-	{
-		const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
-			D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-			1,
-			D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-			0
-		};
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RenderTargetDescriptorHeap)));
-		Device->CreateRenderTargetView(COM_PTR_GET(RenderTargetResource), nullptr, GetCPUDescriptorHandle(COM_PTR_GET(RenderTargetDescriptorHeap), 0));
-	}
-
-	//!< シェーダリソースビュー
-	{
-		const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
-			D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-			1,
-			D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-			0
-		};
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(ShaderResourceDescriptorHeap)));
-
-		D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
-			Format,
-			D3D12_SRV_DIMENSION_TEXTURE2D,
-			D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-		};
-		SRVD.Texture2D.MostDetailedMip = 0;
-		SRVD.Texture2D.MipLevels = 1;
-		SRVD.Texture2D.PlaneSlice = 0;
-		SRVD.Texture2D.ResourceMinLODClamp = 0.0f;
-		Device->CreateShaderResourceView(COM_PTR_GET(RenderTargetResource), &SRVD, GetCPUDescriptorHandle(COM_PTR_GET(ShaderResourceDescriptorHeap), 0));
-	}
-
-	LOG_OK();
-}
-
-void DX::CreateDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height)
-{
-	const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
-		D3D12_DESCRIPTOR_HEAP_TYPE_DSV,
-		1,
-		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-		0
-	};
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DepthStencilDescriptorHeap)));
-
-	CreateDepthStencilResource(DepthFormat, Width, Height);
-
 	LOG_OK();
 }
 
@@ -956,9 +910,6 @@ void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Wi
 	};
 	COM_PTR_RESET(DepthStencilResource);
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COMMON/*COMMON にすること*/, &ClearValue, COM_PTR_UUIDOF_PUTVOID(DepthStencilResource)));
-	const auto CDH = GetCPUDescriptorHandle(COM_PTR_GET(DepthStencilDescriptorHeap), 0);
-	//!< (リソースがタイプドフォーマットなら D3D12_DEPTH_STENCIL_VIEW_DESC* へ nullptr 指定可能)
-	Device->CreateDepthStencilView(COM_PTR_GET(DepthStencilResource), nullptr, CDH); 
 
 	//!< リソースの状態を初期 → デプス書き込みへ変更
 	auto CL = GraphicsCommandLists[0];
@@ -1013,16 +964,6 @@ void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDe
 	LOG_OK();
 }
 
-/**
-std::vector<ID3D12DescriptorHeap*> DescriptorHeaps = { ConstantBufferDescriptorHeap.Get() };
-GraphicsCommandList->SetDescriptorHeaps(static_cast<UINT>(DescriptorHeaps.size()), DescriptorHeaps.data());
-
-auto CVDescriptorHandle(ConstantBufferDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-const auto CVIncrementSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-CVDescriptorHandle.ptr += 0 * CVIncrementSize;
-GraphicsCommandList->SetGraphicsRootDescriptorTable(0, CVDescriptorHandle);
-*/
-
 void DX::CreateUnorderedAccessTexture()
 {
 	const UINT64 Width = 256;
@@ -1046,44 +987,6 @@ void DX::CreateUnorderedAccessTexture()
 		0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, COM_PTR_UUIDOF_PUTVOID(UnorderedAccessTextureResource)));
-//
-	const auto Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-
-	const D3D12_DESCRIPTOR_HEAP_DESC DescritporHeapDesc = {
-		D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-		2, //!< SRV, UAV の 2 つ
-		D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
-		0 // NodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-	};
-	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DescritporHeapDesc, COM_PTR_UUIDOF_PUTVOID(UnorderedAccessTextureDescriptorHeap)));
-
-	//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
-	UINT Index = 0;
-	{
-		/*const*/D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {
-			Format,
-			D3D12_SRV_DIMENSION_TEXTURE2D,
-			D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-		};
-		SRVDesc.Texture2D = {
-			0, 1, 0, 0.0f
-		};
-		const auto CDH = GetCPUDescriptorHandle(COM_PTR_GET(UnorderedAccessTextureDescriptorHeap), Index++);
-		Device->CreateShaderResourceView(COM_PTR_GET(UnorderedAccessTextureResource), &SRVDesc, CDH); 
-	}
-
-	{
-		/*const*/D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {
-			Format,
-			D3D12_UAV_DIMENSION_TEXTURE2D,
-		};
-		UAVDesc.Texture2D = {
-			0, 0
-		};
-		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数に返るわけではない
-		const auto CDH = GetCPUDescriptorHandle(COM_PTR_GET(UnorderedAccessTextureDescriptorHeap), Index++);
-		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextureResource), nullptr, &UAVDesc, CDH);
-	}
 
 	LOG_OK();
 }
@@ -1301,7 +1204,7 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 		ILD,
 		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
 		Topology,
-		1, { DXGI_FORMAT_R8G8B8A8_UNORM }, DXGI_FORMAT_D32_FLOAT_S8X24_UINT, //!< レンダーターゲットの分だけ #DX_TODO ... MRT
+		1, { DXGI_FORMAT_R8G8B8A8_UNORM }, DSD.DepthEnable ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_UNKNOWN, //!< レンダーターゲットの分だけ #DX_TODO ... MRT
 		SD,
 		0,
 		CPS,
@@ -1351,30 +1254,24 @@ void DX::CreatePipelineState_Compute()
 
 void DX::PopulateCommandList(const size_t i)
 {
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
-	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), static_cast<UINT>(i));
-	//const auto PS = COM_PTR_GET(PipelineStates[0]);
-
-	//!< GPU が参照している間は、コマンドアロケータの Reset() はできない
+	//!< GPUが参照している間は、「コマンドアロケータ」のリセットはできない
 	//VERIFY_SUCCEEDED(CA->Reset());
 
-	//!< CommandQueue->ExecuteCommandLists() 後に CommandList->Reset() でリセットして再利用が可能 (コマンドキュー(GPU)はコマンドリストではなく、コマンドアロケータを参照している)
-	//!< CommandList 作成時に PipelineState を指定していなくても、ここで指定すれば OK
+	//!< コマンド実行後に、「コマンドリスト」はリセットして再利用が可能 (GPUは「コマンドアロケータ」を参照している)
+	//!< 「コマンドリスト」作成時に「パイプライン」を指定していなくても、Reset()の引数に「パイプライン」を指定すれば良い
+	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	VERIFY_SUCCEEDED(CL->Reset(CA, nullptr));
 	{
-		//!< ビューポート、シザー
+		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
-		//!< バリア
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET); {
-			
-		const std::array<D3D12_RECT, 0> Rs = {};
-		CL->ClearRenderTargetView(SCH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
-		//CL->ClearDepthStencilView(DSH, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, static_cast<UINT>(Rs.size()), Rs.data());
-
+			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+			const std::array<D3D12_RECT, 0> Rs = {};
+			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
 		} ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
 	VERIFY_SUCCEEDED(CL->Close());

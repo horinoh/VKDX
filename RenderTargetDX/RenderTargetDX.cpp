@@ -232,38 +232,35 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void RenderTargetDX::PopulateCommandList(const size_t i)
 {
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
-	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
-	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
-
-	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), static_cast<UINT>(i));
-
 	const auto PS0 = COM_PTR_GET(PipelineStates[0]);
-	//const auto PS1 = COM_PTR_GET(PipelineStates[1]);
-
-	const auto RS0 = COM_PTR_GET(RootSignatures[0]);
-	//const auto RS1 = COM_PTR_GET(RootSignatures[1]);
+	//const auto PS1 = COM_PTR_GET(PipelineStates[1]);	
 
 #if 0
 	const auto RTR = COM_PTR_GET(RenderTargetResource);
 	const auto RTH = GetCPUDescriptorHandle(COM_PTR_GET(RenderTargetDescriptorHeap)/*, D3D12_DESCRIPTOR_HEAP_TYPE_RTV*/, static_cast<UINT>(0));
 #endif
 
-	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
-
+	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS0));
 	{
-		BCL->SetGraphicsRootSignature(RS0);
+		const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
+		const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
+
 		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BCL->Close());
 
+	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS0));
 	{
+		const auto RS = COM_PTR_GET(RootSignatures[0]);
+		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+
+		CL->SetGraphicsRootSignature(RS);
+
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
@@ -287,11 +284,11 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 #else
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 #endif
-
+		auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 		{
 			const std::array<D3D12_RECT, 0> Rs = {};
-			CL->ClearRenderTargetView(SCH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
-			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
+			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
+			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { CDH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 			CL->ExecuteBundle(BCL);
 		}

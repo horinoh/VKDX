@@ -27,8 +27,25 @@ protected:
 	virtual void CreateDepthStencil() override { VK::CreateDepthStencil(VK_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
 	virtual void CreateFramebuffer() override { CreateFramebuffer_ColorDepth(); }
 	virtual void CreateRenderPass() override { RenderPasses.resize(1); CreateRenderPass_ColorDepth(RenderPasses[0], ColorFormat, VK_FORMAT_D24_UNORM_S8_UINT, true); }
-
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
+
+	virtual void CreateImmutableSampler() override {
+		Samplers.resize(1);
+		const VkSamplerCreateInfo SCI = {
+			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+			nullptr,
+			0,
+			VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, // min, mag, mip
+			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, // u, v, w
+			0.0f,
+			VK_FALSE, 1.0f,
+			VK_FALSE, VK_COMPARE_OP_NEVER,
+			0.0f, 1.0f,
+			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+			VK_FALSE
+		};
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
+	}
 
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);
@@ -49,13 +66,30 @@ protected:
 			}, {});
 	}
 
-#pragma region DESCRIPTOR
+	virtual void CreateUniformBuffer() override {
+		const auto Fov = 0.16f * glm::pi<float>();
+		const auto Aspect = GetAspectRatioOfClientRect();
+		const auto ZFar = 100.0f;
+		const auto ZNear = ZFar * 0.0001f;
+		const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
+		const auto CamTag = glm::vec3(0.0f);
+		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
+		Tr = Transform({ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
+
+		UniformBuffers.resize(1);
+		CreateBuffer(&UniformBuffers[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
+		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	}
+	virtual void CreateTexture() override {
+		LoadImage(&Image, &ImageDeviceMemory, &ImageView, "NormalMap.dds");
+	}
+
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
 		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,1 }
-			});
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,1 }
+		});
 	}
 	virtual void AllocateDescriptorSet() override {
 		assert(!DescriptorSetLayouts.empty() && "");
@@ -111,43 +145,6 @@ protected:
 		assert(!DescriptorSets.empty() && "");
 		assert(!DescriptorUpdateTemplates.empty() && "");
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
-	}
-#pragma endregion //!< DESCRIPTOR
-
-	virtual void CreateUniformBuffer() override {
-		const auto Fov = 0.16f * glm::pi<float>();
-		const auto Aspect = GetAspectRatioOfClientRect();
-		const auto ZFar = 100.0f;
-		const auto ZNear = ZFar * 0.0001f;
-		const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
-		const auto CamTag = glm::vec3(0.0f);
-		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
-		Tr = Transform({ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
-
-		UniformBuffers.resize(1);
-		CreateBuffer(&UniformBuffers[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-	}
-
-	virtual void CreateTexture() override {
-		LoadImage(&Image, &ImageDeviceMemory, &ImageView, "NormalMap.dds");
-	}
-	virtual void CreateImmutableSampler() override {
-		Samplers.resize(1);
-		const VkSamplerCreateInfo SCI = {
-			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-			nullptr,
-			0,
-			VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, // min, mag, mip
-			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, // u, v, w
-			0.0f,
-			VK_FALSE, 1.0f, 
-			VK_FALSE, VK_COMPARE_OP_NEVER, 
-			0.0f, 1.0f, 
-			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-			VK_FALSE
-		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
 	}
 	
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFsTesTcsGs(); }

@@ -16,6 +16,18 @@ public:
 protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); } //!< メッシュ描画用
 	//virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); } //!< フルスクリーン描画用 #DX_TODO
+	virtual void CreateStaticSampler() override {
+		StaticSamplerDescs.push_back({
+			D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+			0.0f,
+			0,
+			D3D12_COMPARISON_FUNC_NEVER,
+			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+			0.0f, 1.0f,
+			0, 0, D3D12_SHADER_VISIBILITY_PIXEL
+			});
+	}
 	virtual void CreateRootSignature() override {
 		RootSignatures.resize(2);
 
@@ -63,18 +75,48 @@ protected:
 	{
 		//!< #DX_TODO
 	}
-	virtual void CreateStaticSampler() override {
-		StaticSamplerDescs.push_back({
-			D3D12_FILTER_MIN_MAG_MIP_LINEAR,
-			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-			0.0f,
-			0,
-			D3D12_COMPARISON_FUNC_NEVER,
-			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-			0.0f, 1.0f,
-			0, 0, D3D12_SHADER_VISIBILITY_PIXEL
-			});
+
+	virtual void CreateDescriptorHeap() override {
+		{
+			RtvDescriptorHeaps.resize(1);
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps[0])));
+		}
+		{
+			CbvSrvUavDescriptorHeaps.resize(1);
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps[0])));
+		}
 	}
+	virtual void CreateDescriptorView() override {
+		//{
+		//	const auto& DH = RtvDescriptorHeaps[0];
+		//	auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+		//	const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
+		//		D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+		//		1,
+		//		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+		//		0
+		//	};
+		//	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps[0])));
+		//	Device->CreateRenderTargetView(COM_PTR_GET(RenderTargetResource), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		//}
+		{
+			const auto& DH = CbvSrvUavDescriptorHeaps[0];
+			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+			D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
+				DXGI_FORMAT_R8G8B8A8_UNORM,
+				D3D12_SRV_DIMENSION_TEXTURE2D,
+				D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+			};
+			SRVD.Texture2D.MostDetailedMip = 0;
+			SRVD.Texture2D.MipLevels = 1;
+			SRVD.Texture2D.PlaneSlice = 0;
+			SRVD.Texture2D.ResourceMinLODClamp = 0.0f;
+			Device->CreateShaderResourceView(COM_PTR_GET(RenderTargetResource), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		}
+	}
+	
 	virtual void CreateShaderBlobs() override {
 		ShaderBlobs.resize(5 + 2);
 		const auto ShaderPath = GetBasePath();

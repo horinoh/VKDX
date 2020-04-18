@@ -238,9 +238,7 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
 	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-	const auto SCH = GetCPUDescriptorHandle(COM_PTR_GET(SwapChainDescriptorHeap), static_cast<UINT>(i)); 
-	const auto DSH = GetCPUDescriptorHandle(COM_PTR_GET(DepthStencilDescriptorHeap), 0);
-
+	
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 
 	const auto RS = COM_PTR_GET(RootSignatures[0]);
@@ -250,15 +248,15 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 	{
 		BCL->SetGraphicsRootSignature(RS);
-		if (nullptr != ConstantBufferDescriptorHeap) {
-			const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(ConstantBufferDescriptorHeap) };
+		if (!CbvSrvUavDescriptorHeaps.empty()) {
+			const auto& DH = CbvSrvUavDescriptorHeaps[0];
+			
+            const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
 			BCL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
-			BCL->SetGraphicsRootDescriptorTable(0, GetGPUDescriptorHandle(COM_PTR_GET(ConstantBufferDescriptorHeap), 0));
-		}
-		if (nullptr != ImageDescriptorHeap) {
-			const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(ImageDescriptorHeap) };
-			BCL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
-			BCL->SetGraphicsRootDescriptorTable(1, GetGPUDescriptorHandle(COM_PTR_GET(ImageDescriptorHeap), 0));
+
+			auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+			BCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+			BCL->SetGraphicsRootDescriptorTable(1, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		}
 		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
@@ -272,12 +270,15 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
-			const std::array<D3D12_RECT, 0> Rs = {};
-			CL->ClearRenderTargetView(SCH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
-			CL->ClearDepthStencilView(DSH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 
-			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCH };
-			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &DSH);
+            const std::array<D3D12_RECT, 0> Rs = {};
+			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
+			const auto CDH_Depth = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+			CL->ClearDepthStencilView(CDH_Depth, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { CDH };
+			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &CDH_Depth);
 
 			CL->ExecuteBundle(BCL);
 		}
