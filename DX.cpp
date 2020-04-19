@@ -909,11 +909,7 @@ void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Wi
 		{ 1.0f, 0 }
 	};
 	COM_PTR_RESET(DepthStencilResource);
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COMMON/*COMMON にすること*/, &ClearValue, COM_PTR_UUIDOF_PUTVOID(DepthStencilResource)));
-
-	//!< リソースの状態を初期 → デプス書き込みへ変更
-	auto CL = GraphicsCommandLists[0];
-	ResourceBarrier(COM_PTR_GET(CL), COM_PTR_GET(DepthStencilResource), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &ClearValue, COM_PTR_UUIDOF_PUTVOID(DepthStencilResource)));
 
 	LOG_OK();
 }
