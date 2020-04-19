@@ -231,41 +231,30 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void NormalMapDX::PopulateCommandList(const size_t i)
 {
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
-	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
-	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-	const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
-
-	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-	
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 
-	const auto RS = COM_PTR_GET(RootSignatures[0]);
-
-	const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
-
+	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
-	{
-		BCL->SetGraphicsRootSignature(RS);
-		if (!CbvSrvUavDescriptorHeaps.empty()) {
-			const auto& DH = CbvSrvUavDescriptorHeaps[0];
-			
-            const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
-			BCL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
+    {
+        const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
+        const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
-			auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-			BCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-			BCL->SetGraphicsRootDescriptorTable(1, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-		}
-		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
-	}
+        BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+        BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+    }
 	VERIFY_SUCCEEDED(BCL->Close());
 
+	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
-		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+		const auto RS = COM_PTR_GET(RootSignatures[0]);
+		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+
+        CL->SetGraphicsRootSignature(RS);
+		
+        CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -279,6 +268,18 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { CDH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &CDH_Depth);
+
+            {
+                assert(!CbvSrvUavDescriptorHeaps.empty() && "");
+                const auto& DH = CbvSrvUavDescriptorHeaps[0];
+
+                const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
+                CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
+
+                auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+                CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+                CL->SetGraphicsRootDescriptorTable(1, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+            }
 
 			CL->ExecuteBundle(BCL);
 		}

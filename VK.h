@@ -329,6 +329,7 @@ protected:
 	virtual void CreatePipelines() {}
 	static void CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP,
 		const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints,
+		const VkPipelineDepthStencilStateCreateInfo& PDSSCI,
 		const VkPipelineShaderStageCreateInfo* VS, const VkPipelineShaderStageCreateInfo* FS, const VkPipelineShaderStageCreateInfo* TES, const VkPipelineShaderStageCreateInfo* TCS, const VkPipelineShaderStageCreateInfo* GS,
 		const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs,
 		VkPipelineCache PC = VK_NULL_HANDLE); 

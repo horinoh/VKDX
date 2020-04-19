@@ -113,7 +113,13 @@ protected:
 		CreateShaderBlob_VsPsDsHsGs(); 
 #endif
 	}
-	virtual void CreatePipelineStates() override { CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH); }
+	virtual void CreatePipelineStates() override { 
+#ifdef USE_DEPTH_STENCIL
+		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, TRUE);
+#else
+		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, FALSE);
+#endif
+	}
 	virtual void PopulateCommandList(const size_t i) override;
 
 private:

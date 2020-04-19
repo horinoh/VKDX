@@ -2529,6 +2529,7 @@ VkShaderModule VK::CreateShaderModules(const std::wstring& Path) const
 
 void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP, 
 	const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, 
+	const VkPipelineDepthStencilStateCreateInfo& PDSSCI,
 	const VkPipelineShaderStageCreateInfo* VS, const VkPipelineShaderStageCreateInfo* FS, const VkPipelineShaderStageCreateInfo* TES, const VkPipelineShaderStageCreateInfo* TCS, const VkPipelineShaderStageCreateInfo* GS,
 	const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs, VkPipelineCache PC)
 {
@@ -2633,21 +2634,6 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 	//assert((PMSCI.sampleShadingEnable == VK_FALSE || PDF.sampleRateShading) && "");
 	assert((PMSCI.minSampleShading >= 0.0f && PMSCI.minSampleShading <= 1.0f) && "");
 	//assert((PMSCI.alphaToOneEnable == VK_FALSE || PDF.alphaToOne) && "");
-
-	//!< デプスステンシル (DepthStencil)
-	const VkPipelineDepthStencilStateCreateInfo PDSSCI = {
-		VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_TRUE,
-		VK_TRUE,
-		VK_COMPARE_OP_LESS_OR_EQUAL,
-		VK_FALSE,
-		VK_FALSE,
-		{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_NEVER, 0, 0, 0 },
-		{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
-		0.0f, 1.0f
-	};
 
 	//!< カラーブレンド (ColorBlend)
 	//!< VK_BLEND_FACTOR_SRC1 系をを使用するには、デバイスフィーチャー dualSrcBlend が有効であること

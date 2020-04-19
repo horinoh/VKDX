@@ -95,10 +95,10 @@ public:
 	void CreateShaderModle_Cs();
 
 	//!< 引数のシェーダの順序は D3D12_GRAPHICS_PIPELINE_STATE_DESC内のVS, PS, DS, HS, GSに合わせておくことにする
-	void CreatePipeline_VsFs(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints = 0) { CreatePipeline_VsFs_Input(Topology, PatchControlPoints, {}, {}); }
-	void CreatePipeline_VsFs_Input(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs);
-	void CreatePipeline_VsFsTesTcsGs(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints = 1) { CreatePipeline_VsFsTesTcsGs_Input(Topology, PatchControlPoints, {}, {}); }
-	void CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs);
+	void CreatePipeline_VsFs(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, const VkBool32 DepthEnable) { CreatePipeline_VsFs_Input(Topology, PatchControlPoints, DepthEnable, {}, {}); }
+	void CreatePipeline_VsFs_Input(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, const VkBool32 DepthEnable, const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs);
+	void CreatePipeline_VsFsTesTcsGs(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, const VkBool32 DepthEnable) { CreatePipeline_VsFsTesTcsGs_Input(Topology, PatchControlPoints, DepthEnable, {}, {}); }
+	void CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, const VkBool32 DepthEnable, const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs);
 	void CreatePipeline_Cs(VkPipeline& /*PL*/) { assert(0 && "TODO"); }
 
 	void CreateRenderPass_ColorDepth(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth, bool ClearOnLoad);

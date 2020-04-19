@@ -161,20 +161,6 @@ protected:
 	virtual void GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format);
 	virtual void CheckFeatureLevel(ID3D12Device* Device);
 	virtual void CheckMultiSample(const DXGI_FORMAT Format);
-#if 0
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(ID3D12DescriptorHeap* DH, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index) const {
-		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-		CDH.ptr += static_cast<SIZE_T>(Index)* Device->GetDescriptorHandleIncrementSize(Type);
-		return CDH;
-	}
-	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(ID3D12DescriptorHeap* DH, const D3D12_DESCRIPTOR_HEAP_TYPE Type, const UINT Index) const {
-		auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-		GDH.ptr += static_cast<SIZE_T>(Index) * Device->GetDescriptorHandleIncrementSize(Type);
-		return GDH;
-	}
-	D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandle(ID3D12DescriptorHeap* DH, const UINT Index) const { return GetCPUDescriptorHandle(DH, DH->GetDesc().Type, Index); }
-	D3D12_GPU_DESCRIPTOR_HANDLE GetGPUDescriptorHandle(ID3D12DescriptorHeap* DH, const UINT Index) const { return GetGPUDescriptorHandle(DH, DH->GetDesc().Type, Index); }
-#endif
 
 	virtual void CreateCommandQueue();
 
@@ -234,6 +220,7 @@ protected:
 	virtual void CreatePipelineStates() {}
 	static void CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,
 		const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology,
+		const D3D12_DEPTH_STENCIL_DESC& DSD,
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,
 		const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, 
 		const PipelineLibrarySerializer* PLS = nullptr, LPCWSTR Name = nullptr);

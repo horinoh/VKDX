@@ -1107,6 +1107,7 @@ void DX::CreateRootSignature()
 
 void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,
 	const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology,
+	const D3D12_DEPTH_STENCIL_DESC& DSD,
 	const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,
 	const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs,
 	const PipelineLibrarySerializer* PLS, LPCWSTR Name)
@@ -1143,33 +1144,6 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, TRUE, //!< 深度バイアス、バイアスクランプ、SlopeScaledDepthBias、深度クリップ
 		FALSE, FALSE, 0, //!< マルチサンプル、アンチエイリアス、サンプルカウント
 		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
-	};
-
-	//!< デプスステンシル (DepthStencil)
-	const D3D12_DEPTH_STENCILOP_DESC DSOD = {
-		D3D12_STENCIL_OP_KEEP, //!< ステンシルテスト失敗時
-		D3D12_STENCIL_OP_KEEP, //!< ステンシルテスト成功、デプステスト失敗時
-		D3D12_STENCIL_OP_KEEP, //!< ステンシルテスト成功、デプステスト成功時
-		D3D12_COMPARISON_FUNC_ALWAYS //!< 既存のステンシル値との比較方法
-	};
-	const D3D12_DEPTH_STENCIL_DESC DSD = {
-#if 1//def USE_DEPTH_STENCIL //!< デプスを使用しない場合に有効にしたままでも問題はなさそう #DX_TODO
-		//!< デプスを使用する
-		TRUE,
-		D3D12_DEPTH_WRITE_MASK_ALL, //!< デプスで書き換えられる部分
-		D3D12_COMPARISON_FUNC_LESS, //!< 既存のデプス値との比較方法
-#else
-		//!< デプスを使用しない
-		FALSE,
-		D3D12_DEPTH_WRITE_MASK_ZERO,
-		D3D12_COMPARISON_FUNC_NEVER,
-#endif
-		//!< ステンシルを使用しない
-		FALSE, //!< ステンシル
-		D3D12_DEFAULT_STENCIL_READ_MASK, //!< ステンシル読み込みマスク
-		D3D12_DEFAULT_STENCIL_WRITE_MASK, //!< ステンシル書き込みマスク
-		DSOD, //!< 法線がカメラに向いている場合のデプス、ステンシル値の使用方法
-		DSOD  //!< 法線がカメラに向いていない場合のデプス、ステンシル値の使用方法
 	};
 
 	//!< インプットレイアウト (InputLayout)

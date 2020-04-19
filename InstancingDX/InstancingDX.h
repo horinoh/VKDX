@@ -42,7 +42,7 @@ protected:
 			//!< Per Instance
 			{ "OFFSET", 0, DXGI_FORMAT_R32G32_FLOAT, 1, /*offsetof(Instance_OffsetXY, Offset)*/D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA, 1 },
 		} };
-		CreatePipelineState_VsPs_Input(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, IEDs);
+		CreatePipelineState_VsPs_Input(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE, IEDs);
 	}
 	virtual void PopulateCommandList(const size_t i) override;
 

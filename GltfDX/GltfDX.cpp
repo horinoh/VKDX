@@ -392,7 +392,13 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 
 	const auto RS = COM_PTR_GET(RootSignatures[0]);
 	PipelineStates.push_back(COM_PTR<ID3D12PipelineState>());
-	DX::CreatePipelineState(std::ref(PipelineStates.back()), COM_PTR_GET(Device), RS, ToDXPrimitiveTopologyType(Prim.mode), ToShaderBC(VS), ToShaderBC(PS), NullShaderBC, NullShaderBC, NullShaderBC, IEDs);
+	const D3D12_DEPTH_STENCILOP_DESC DSOD = { D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS };
+	const D3D12_DEPTH_STENCIL_DESC DSD = {
+		TRUE, D3D12_DEPTH_WRITE_MASK_ALL, D3D12_COMPARISON_FUNC_LESS,
+		FALSE, D3D12_DEFAULT_STENCIL_READ_MASK, D3D12_DEFAULT_STENCIL_WRITE_MASK,
+		DSOD, DSOD
+	};
+	DX::CreatePipelineState(std::ref(PipelineStates.back()), COM_PTR_GET(Device), RS, ToDXPrimitiveTopologyType(Prim.mode), DSD, ToShaderBC(VS), ToShaderBC(PS), NullShaderBC, NullShaderBC, NullShaderBC, IEDs);
 
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);

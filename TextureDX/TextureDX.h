@@ -168,7 +168,7 @@ protected:
 #endif
 
 	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPs(); }
-	virtual void CreatePipelineStates() override { CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE); }
+	virtual void CreatePipelineStates() override { CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE); }
 	virtual void PopulateCommandList(const size_t i) override;
 };
 #pragma endregion

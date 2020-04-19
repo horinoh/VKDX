@@ -438,7 +438,20 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	const auto RP = RenderPasses[0];
 	const auto PLL = PipelineLayouts[0];
 	Pipelines.push_back(VkPipeline());
-	VK::CreatePipeline(Pipelines.back(), Device, PLL, RP, ToVKPrimitiveTopology(Prim.mode), 0, &VS, &FS, nullptr, nullptr, nullptr, VIBDs, VIADs);
+	const VkPipelineDepthStencilStateCreateInfo PDSSCI = {
+		VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		VK_TRUE,
+		VK_TRUE,
+		VK_COMPARE_OP_LESS_OR_EQUAL,
+		VK_FALSE,
+		VK_FALSE,
+		{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_NEVER, 0, 0, 0 },
+		{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
+		0.0f, 1.0f
+	}; 
+	VK::CreatePipeline(Pipelines.back(), Device, PLL, RP, ToVKPrimitiveTopology(Prim.mode), 0, PDSSCI, &VS, &FS, nullptr, nullptr, nullptr, VIBDs, VIADs);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "World =" << std::endl;

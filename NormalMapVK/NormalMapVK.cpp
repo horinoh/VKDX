@@ -231,15 +231,10 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void NormalMapVK::PopulateCommandBuffer(const size_t i)
 {
-	const auto CB = CommandBuffers[i];
-	const auto SCB = SecondaryCommandBuffers[i];
-	const auto FB = Framebuffers[i];
-	const auto DS = DescriptorSets[0];
 	const auto RP = RenderPasses[0];
-	const auto PLL = PipelineLayouts[0];
-	const auto IB = IndirectBuffers[0];
-	const auto PL = Pipelines[0];
-
+	const auto FB = Framebuffers[i];
+	
+	const auto SCB = SecondaryCommandBuffers[i];
 	const VkCommandBufferInheritanceInfo CBII = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
 		nullptr,
@@ -259,23 +254,30 @@ void NormalMapVK::PopulateCommandBuffer(const size_t i)
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+
+		const auto DS = DescriptorSets[0];
+		const auto PLL = PipelineLayouts[0];
 		const std::array<VkDescriptorSet, 1> DSs = { DS };
 		vkCmdBindDescriptorSets(SCB,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
 			PLL,
 			0, static_cast<uint32_t>(DSs.size()), DSs.data(),
 			0, nullptr);
+
+		const auto PL = Pipelines[0];
+		const auto IB = IndirectBuffers[0];
 		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 		vkCmdDrawIndirect(SCB, IB, 0, 1, 0);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 
-	const VkCommandBufferBeginInfo BeginInfo = {
+	const auto CB = CommandBuffers[i];
+	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		nullptr,
 		0,
 		nullptr
 	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &BeginInfo)); {
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
 		CVs[1].depthStencil = ClearDepthStencilValue;
 

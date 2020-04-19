@@ -125,7 +125,13 @@ protected:
 		CreateShaderModle_VsFsTesTcsGs();
 #endif
 	}
-	virtual void CreatePipelines() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST); }
+	virtual void CreatePipelines() override { 
+#ifdef USE_DEPTH_STENCIL
+		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE);
+#else
+		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_FALSE);
+#endif
+	}
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 private:

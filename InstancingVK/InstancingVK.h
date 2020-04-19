@@ -39,7 +39,7 @@ protected:
 			//!< Per Instance
 			{ 2, 1, VK_FORMAT_R32G32_SFLOAT, offsetof(Instance_OffsetXY, Offset) },
 		} };
-		CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VIBDs, VIADs);
+		CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE, VIBDs, VIADs);
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
