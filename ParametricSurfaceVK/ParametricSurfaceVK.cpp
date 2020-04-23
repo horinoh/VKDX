@@ -253,11 +253,11 @@ void ParametricSurfaceVK::PopulateCommandBuffer(const size_t i)
 		&CBII
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
-		const auto IB = IndirectBuffers[0];
-		const auto PL = Pipelines[0];
-
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+
+		const auto IB = IndirectBuffers[0];
+		const auto PL = Pipelines[0];
 		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 		vkCmdDrawIndirect(SCB, IB, 0, 1, 0);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));

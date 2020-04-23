@@ -17,7 +17,8 @@ protected:
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
 		Super::OnTimer(hWnd, hInstance);
 
-		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
+		//Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
+		Tr.World = glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(270.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 		Degree += 1.0f;
 
 		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
@@ -71,7 +72,7 @@ protected:
 		const auto Aspect = GetAspectRatioOfClientRect();
 		const auto ZFar = 100.0f;
 		const auto ZNear = ZFar * 0.0001f;
-		const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
+		const auto CamPos = glm::vec3(0.0f, 1.0f, 3.0f);
 		const auto CamTag = glm::vec3(0.0f);
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		Tr = Transform({ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
@@ -81,7 +82,18 @@ protected:
 		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	}
 	virtual void CreateTexture() override {
-		LoadImage(&Image, &ImageDeviceMemory, &ImageView, "NormalMap.dds");
+		Images.resize(1);
+		ImageViews.resize(1);
+#ifdef USE_PARALLAX_MAP
+		//LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], "WallNH.dds"); //!< ハイトマップ : アルファ成分
+		LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], "RocksNH.dds"); //!< ハイトマップ : アルファ成分
+#else
+		std::wstring Path;
+		if (FindDirectory("DDS", Path)) {
+			LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds")));
+			//LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Normal.dds")));
+		}
+#endif
 	}
 
 	virtual void CreateDescriptorPool() override {
@@ -137,17 +149,28 @@ protected:
 
 		assert(!UniformBuffers.empty() && "");
 		assert(!Samplers.empty() && "");
-		assert(VK_NULL_HANDLE != ImageView && "");
+		assert(!ImageViews.empty() && "");
 		const DescriptorUpdateInfo DUI = {
 			{ UniformBuffers[0], Offset, VK_WHOLE_SIZE },
-			{ VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+			{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 		};
 		assert(!DescriptorSets.empty() && "");
 		assert(!DescriptorUpdateTemplates.empty() && "");
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 	}
 	
-	virtual void CreateShaderModules() override { CreateShaderModle_VsFsTesTcsGs(); }
+	virtual void CreateShaderModules() override {
+#ifdef USE_PARALLAX_MAP
+		const auto ShaderPath = GetBasePath();
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_pm.frag.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tese.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tesc.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".geom.spv")).data()));
+#else
+		CreateShaderModle_VsFsTesTcsGs();
+#endif
+	}
 	virtual void CreatePipelines() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
@@ -159,7 +182,6 @@ private:
 		glm::mat4 World;
 	};
 	using Transform = struct Transform;
-
 	float Degree = 0.0f;
 	Transform Tr;
 	uint32_t HeapIndex;

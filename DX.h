@@ -265,7 +265,8 @@ protected:
 	COM_PTR<ID3D12Resource> DepthStencilResource;
 	COM_PTR<ID3D12Resource> UnorderedAccessTextureResource;
 	COM_PTR<ID3D12Resource> ImageResource;
-	std::vector<COM_PTR<ID3D12Resource>> ConstantBuffers;
+	std::vector<COM_PTR<ID3D12Resource>> ImageResources;
+	std::vector<COM_PTR<ID3D12Resource>> ConstantBufferResources;
 	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
 
 	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap; //!< RTV

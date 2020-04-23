@@ -45,7 +45,6 @@ protected:
 			}, {});
 	}
 
-#pragma region DESCRIPTOR
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
 		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
@@ -96,7 +95,6 @@ protected:
 		assert(!DescriptorUpdateTemplates.empty() && "");
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 	}
-#pragma endregion //!< DESCRIPTOR
 
 	virtual void CreateUniformBuffer() override {
 		const auto Fov = 0.16f * glm::pi<float>();

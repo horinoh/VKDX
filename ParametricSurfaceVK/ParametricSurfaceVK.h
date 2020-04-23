@@ -17,6 +17,7 @@ protected:
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
 #ifndef USE_SECONDARY_COMMAND_BUFFER
+	//!< デフォルトはセカンダリを作成する実装なのでオーバーライドする
 	virtual void CreateCommandPool() override {
 		const VkCommandPoolCreateInfo CPCI = {
 			VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,

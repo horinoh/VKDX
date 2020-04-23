@@ -20,7 +20,7 @@ protected:
 		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
 		Degree += 1.0f;
 
-		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp256(sizeof(Tr)), &Tr);
+		CopyToUploadResource(COM_PTR_GET(ConstantBufferResources[0]), RoundUp256(sizeof(Tr)), &Tr);
 	}
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
@@ -68,16 +68,23 @@ protected:
 		{
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-			assert(!ConstantBuffers.empty() && "");
-			assert(ConstantBuffers[0]->GetDesc().Width == RoundUp256(sizeof(Transform)) && "");
-			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0])->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[0]->GetDesc().Width) };
+			assert(!ConstantBufferResources.empty() && "");
+			assert(ConstantBufferResources[0]->GetDesc().Width == RoundUp256(sizeof(Transform)) && "");
+			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBufferResources[0])->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBufferResources[0]->GetDesc().Width) };
 			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		}
 #ifdef USE_DEPTH_STENCIL
 		{
 			const auto& DH = DsvDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+#if 1
+			//!< リソースと同じフォーマットとディメンション、最初のミップマップとスライスをターゲットする場合はnullptrを指定できる
 			Device->CreateDepthStencilView(COM_PTR_GET(DepthStencilResource), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#else
+			D3D12_DEPTH_STENCIL_VIEW_DESC DSVD = { DXGI_FORMAT_D24_UNORM_S8_UINT, D3D12_DSV_DIMENSION_TEXTURE2D, D3D12_DSV_FLAG_NONE, };
+			DSVD.Texture2D.MipSlice = 0;
+			Device->CreateDepthStencilView(COM_PTR_GET(DepthStencilResource), &DSVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#endif
 		}
 #endif
 	}
@@ -92,8 +99,8 @@ protected:
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		Tr = Transform({ DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar), DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp), DirectX::XMMatrixIdentity() });
 
-		ConstantBuffers.push_back(COM_PTR<ID3D12Resource>());
-		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back()), RoundUp256(sizeof(Tr)));
+		ConstantBufferResources.push_back(COM_PTR<ID3D12Resource>());
+		CreateUploadResource(COM_PTR_PUT(ConstantBufferResources.back()), RoundUp256(sizeof(Tr)));
 	}
 
 	virtual void CreateShaderBlobs() override {

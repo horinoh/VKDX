@@ -24,6 +24,9 @@ vec3 specular(const vec3 MC, const vec4 LC, const float LN, const vec3 L, const 
 layout (early_fragment_tests) in;
 void main()
 {
+	//!< V
+	const vec3 V = normalize(InViewDirection);
+	
 	//!< N
 	const vec3 n = normalize(InNormal);
 	const vec3 t = normalize(InTangent.xyz - dot(InTangent.xyz, n) * n);
@@ -33,14 +36,11 @@ void main()
 	const vec3 N = tbn * (texture(NormalMap, InTexcoord).xyz * 2.0f - 1.0f);
 
 	//!< L
-	const vec3 LightDirection = vec3(0.0f, 1.0f, 0.0f);
+	const vec3 LightDirection = vec3(0.0f, -1.0f, 0.0f);
 	const vec3 L = normalize(LightDirection);
 
 	//!< LN
 	const float LN = dot(L, N);
-
-	//!< V
-	const vec3 V = normalize(InViewDirection);
 
 	//!< Color
 	const vec3 MC = vec3(0.5f, 0.5f, 0.5f);

@@ -65,54 +65,60 @@ protected:
 	}
 
 	virtual void CreateTexture() override {
+		Images.resize(1);
+		ImageViews.resize(1);
+		std::wstring Path;
+		if (FindDirectory("DDS", Path)) {
+			LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")));
+		}
 #if 1
-		LoadImage(&Image, &ImageDeviceMemory, &ImageView, "UV.dds");
+		//LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], "UV.dds");
 #else
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_a8_unorm.dds"); //!< #VK_TODO
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_bgr8_srgb.dds"); //!< #VK_TODO ... gli“à‚Å‚±‚¯‚é
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_bgr8_unorm.dds"); //!< #VK_TODO
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_bgra8_srgb.dds"); //!< #VK_TODO
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_bgra8_unorm.dds"); //!< OK
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_bgrx8_srgb.dds"); //!< OK 
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_bgrx8_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_l8_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_r_ati1n_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_r5g6b5_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_r8_sint.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_r8_uint.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_r16_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rg_ati2n_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rg11b10_ufloat.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgb_atc_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgb_etc1_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgb_etc2_srgb.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgb_etc2_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgb_pvrtc_2bpp_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgb_pvrtc_4bpp_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgb5a1_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgb5a1_unorm_.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgb9e5_ufloat.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgb10a2_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgb10a2u.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgba_astc4x4_srgb.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgba_astc8x8_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgba_atc_explicit_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgba_atc_interpolate_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgba_dxt1_srgb.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgba_dxt1_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgba_dxt5_srgb.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgba_dxt5_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgba_dxt5_unorm1.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgba_dxt5_unorm2.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgba_pvrtc2_4bpp_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgba4_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgba8_snorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgba8_srgb.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgba8_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken7_rgba16_sfloat.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken8_bgr8_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken8_rgba_dxt1_unorm.dds");
-		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\Intermediate\\Image\\kueken8_rgba8_srgb.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_a8_unorm.dds"); //!< #VK_TODO
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_bgr8_srgb.dds"); //!< #VK_TODO ... gli“à‚Å‚±‚¯‚é
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_bgr8_unorm.dds"); //!< #VK_TODO
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_bgra8_srgb.dds"); //!< #VK_TODO
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_bgra8_unorm.dds"); //!< OK
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_bgrx8_srgb.dds"); //!< OK 
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_bgrx8_unorm.dds"); //!< OK
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_l8_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_r_ati1n_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_r5g6b5_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_r8_sint.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_r8_uint.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_r16_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rg_ati2n_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rg11b10_ufloat.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgb_atc_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgb_etc1_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgb_etc2_srgb.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgb_etc2_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgb_pvrtc_2bpp_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgb_pvrtc_4bpp_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgb5a1_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgb5a1_unorm_.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgb9e5_ufloat.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgb10a2_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgb10a2u.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgba_astc4x4_srgb.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgba_astc8x8_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgba_atc_explicit_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgba_atc_interpolate_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgba_dxt1_srgb.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgba_dxt1_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgba_dxt5_srgb.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgba_dxt5_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgba_dxt5_unorm1.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgba_dxt5_unorm2.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgba_pvrtc2_4bpp_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgba4_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgba8_snorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgba8_srgb.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgba8_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken7_rgba16_sfloat.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken8_bgr8_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken8_rgba_dxt1_unorm.dds");
+		//LoadImage(&Image, &ImageDeviceMemory, &ImageView, "..\\gli\\data\\kueken8_rgba8_srgb.dds");
 #endif
 	}
 
@@ -164,12 +170,12 @@ protected:
 #ifdef USE_IMMUTABLE_SAMPLER
 		assert(!Samplers.empty() && "");
 #endif
-		assert(VK_NULL_HANDLE != ImageView && "");
+		assert(!ImageViews.empty() && "");
 		const DescriptorUpdateInfo DUI = {
 #ifdef USE_IMMUTABLE_SAMPLER
-			{ VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+			{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 #else
-			{ Samplers[0], ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+			{ Samplers[0], ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 #endif
 		};
 		assert(!DescriptorSets.empty() && "");

@@ -14,8 +14,13 @@
 	* Tool - Options - Text Editor - File Extension - Editor で Microsoft Visual C++ を選択 - Extension に inl を記述 - Add
 	* Visual Assist X をリビルドする
 
-### DDS ツール
-* DirectXTex https://github.com/Microsoft/DirectXTex
+### テクスチャ
+#### 素材
+* [cc0textures](https://cc0textures.com/)
+	* 非dds テクスチャは DirectX Texture Tool で開いた後、Save As で dds として保存できる
+	* [cc0texture](https://cc0textures.com/)のテクスチャ素材を使わせてもらっています (Thanks to [cc0texture](https://cc0textures.com/)'s assets)
+#### DDS ツール
+* [DirectXTex](https://github.com/Microsoft/DirectXTex)
   * DirectXTex\DirectXTex_Desktop_2015.sln を開いて Release、x64 にしてビルドすると実行ファイルが作成される
 	~~~
 	DDSView\Bin\Desktop_2015\x64\Release\DDSView.exe
@@ -23,12 +28,7 @@
 	Texconv\Bin\Desktop_2015\x64\Release\texconv.exe
 	Texdiag\Bin\Desktop_2015\x64\Release\texdiag.exe
 	~~~
-
-* 中間リソースを使用するもの(例えばDDSファイル)は PreBuildEvent で Intermediate から ProjectDir, TargetDir へコピーしている (VS 起動時と exe 直起動時用)
-	~~~
-	xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(ProjectDir)
-	xcopy /y $(SolutionDir)\Intermediate\Image\UV.dds $(TargetDir)
-	~~~
+* [DDSサムネイル表示](https://sourceforge.net/projects/sagethumbs/)
 
 ### エディット & コンティニュー
 - Tools - Option - Debugging - General - Enable Edit and Continue
@@ -307,12 +307,14 @@
  * プロジェクトを右クリック - Retarget SDK Verson で 10以上にする
  * プロジェクト右クリック - Property - All Configurations にする - C/C++ - Language - C++ Language Standard - ISO C++17 Standard を選択しておく(vs2019のデフォルトはC++14)
  * プロジェクト右クリック - Property - All Configurations にする - C/C++ - General - Warning Level を Level4、Treat Warnings As Errors を Yes にする
-
+ * プロジェクト右クリック - Property - All Configurations にする - C/C++ - Precompiled headers - Precompiled Header を Use(/Yu) にする
+	
 #### DX
- * プロパティマネージャで Add Existing Property Sheet... - Props/NOPRECOMP.props, Props/HLSL.props、Props/RS.props. (Props/DXTK.prop, Props/GLFT.prop)
+ * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/HLSL.props、Props/RS.props. (Props/DXTK.prop, Props/GLTF.prop)
  * Header Files に Win.h、DX.h、DXExt.h、(DXImage.h) を追加 
- * Source Files に Win.cpp、DX.cpp、DXExt.cpp、(DXImage.cpp) を追加
- * framework.h(旧stdafx.h), XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
+ * Source Files に framework.cpp(内容空で作成)、Win.cpp、DX.cpp、DXExt.cpp、(DXImage.cpp) を追加
+ * framewordk.cpp に対してのみ C/C++ - Precompiled headers - Precompiled Header を Create(/Yc) にする
+ * framework.h(旧stdafx.h), framework.cpp、XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * Shader Files フォルダを作成し、シェーダを突っ込む
   * シェーダファイルを右クリック - プロパティ - Configuration Propeties - General
    * Excluded From Build を No
@@ -323,9 +325,9 @@
 * ルートシグネチャ用HLSL XxxDX.rs.hlsl を作成する
 
 #### VK
- * プロパティマネージャで Add Existing Property Sheet... - Props/NOPRECOMP.props, Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop、(Props/GLI.prop, Props/GLTF.prop)
+ * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop、(Props/GLI.prop, Props/GLTF.prop)
  * Header Files に Win.h、VK.h、VKExt.h、(VKImage.h) を追加
- * Source Files に Win.cpp、VK.cpp、VKExt.cpp、(VKImage.cpp) を追加
+ * Source Files に framework.cpp、Win.cpp、VK.cpp、VKExt.cpp、(VKImage.cpp) を追加
  * framework.h(旧stdafx.h)、XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * Shader Files フォルダを作成し、シェーダを突っ込む
   * 拡張子を glslangValidator に沿うようにタイプを選択しておく。(.vert、.frag、...)

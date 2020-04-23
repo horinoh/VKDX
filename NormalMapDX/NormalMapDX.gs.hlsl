@@ -17,7 +17,7 @@ struct OUT
 {
 	float4 Position : SV_POSITION;
 	float3 Normal : NORMAL;
-	float4 Tangent : TANGENT;
+	float3 Tangent : TANGENT;
 	float2 Texcoord : TEXCOORD0;
 	float3 ViewDirection : TEXCOORD1;
 };
@@ -35,8 +35,8 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 	const float3 CamPos = -float3(Tr.View[0][3], Tr.View[1][3], Tr.View[2][3]);
 	const float4x4 PVW = mul(mul(Tr.Projection, Tr.View), Tr.World);
 #endif
-	const float4x4 TexTransform = float4x4(2.0f, 0.0f, 0.0f, 0.0f,
-		0.0f, 2.0f, 0.0f, 0.0f,
+	const float4x4 TexTransform = float4x4(1.0f, 0.0f, 0.0f, 0.0f,
+		0.0f, 1.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f, 0.0f,
 		0.0f, 0.0f, 0.0f, 1.0f);
 
@@ -45,12 +45,12 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 		Out.Position = mul(PVW, float4(In[i].Position, 1.0f));
 #if 0
 		Out.Normal = mul((float3x3)World, In[i].Normal);
-		Out.Tangent = float4(mul((float3x3)World, In[i].Tangent), 1.0f);
+		Out.Tangent = mul((float3x3)World, In[i].Tangent);
 		Out.Texcoord = mul(TexTransform, float4(In[i].Texcoord, 0.0f, 1.0f)).xy;
 		Out.ViewDirection = CamPos - mul(World, Out.Position).xyz;
 #else
 		Out.Normal = mul((float3x3)Tr.World, In[i].Normal);
-		Out.Tangent = float4(mul((float3x3)Tr.World, In[i].Tangent), 1.0f);
+		Out.Tangent = mul((float3x3)Tr.World, In[i].Tangent);
 		Out.Texcoord = mul(TexTransform, float4(In[i].Texcoord, 0.0f, 1.0f)).xy;
 		Out.ViewDirection = CamPos - mul(Tr.World, Out.Position).xyz;
 #endif

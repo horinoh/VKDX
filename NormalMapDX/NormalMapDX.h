@@ -17,10 +17,11 @@ protected:
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
 		Super::OnTimer(hWnd, hInstance);
 
-		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
+		//Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
+		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(270.0f)) * DirectX::XMMatrixRotationY(DirectX::XMConvertToRadians(Degree));
 		Degree += 1.0f;
 
-		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp256(sizeof(Tr)), &Tr);
+		CopyToUploadResource(COM_PTR_GET(ConstantBufferResources[0]), RoundUp256(sizeof(Tr)), &Tr);
 	}
 
 	virtual void CreateDepthStencil() override { CreateDepthStencilResource(DXGI_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
@@ -73,16 +74,27 @@ protected:
 		const auto Aspect = GetAspectRatioOfClientRect();
 		const auto ZFar = 100.0f;
 		const auto ZNear = ZFar * 0.0001f;
-		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f);
+		const auto CamPos = DirectX::XMVectorSet(0.0f, 1.0f, 3.0f, 1.0f);
 		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		Tr = Transform({ DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar), DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp), DirectX::XMMatrixIdentity() });
 
-		ConstantBuffers.push_back(COM_PTR<ID3D12Resource>());
-		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back()), RoundUp256(sizeof(Tr)));
+		ConstantBufferResources.push_back(COM_PTR<ID3D12Resource>());
+		CreateUploadResource(COM_PTR_PUT(ConstantBufferResources.back()), RoundUp256(sizeof(Tr)));
 	}
 	virtual void CreateTexture() override {
-		LoadImage(COM_PTR_PUT(ImageResource), TEXT("NormalMap.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		ImageResources.resize(1);
+#ifdef USE_PARALLAX_MAP
+		LoadImage(COM_PTR_PUT(ImageResources[0]), TEXT("WallNH.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE); //!< ハイトマップ : アルファ成分
+		//LoadImage(COM_PTR_PUT(ImageResources[0]), TEXT("RocksNH.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE); //!< ハイトマップ : アルファ成分
+#else
+		std::wstring Path;
+		if (FindDirectory("DDS", Path)) {
+			LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			//LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		}
+		//LoadImage(COM_PTR_PUT(ImageResources[0]), TEXT("NormalMap.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+#endif
 	}
 
 	virtual void CreateDescriptorHeap() override {
@@ -101,19 +113,37 @@ protected:
 		{
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-			assert(!ConstantBuffers.empty() && "");
-			assert(ConstantBuffers[0]->GetDesc().Width == RoundUp256(sizeof(Transform)) && "");
-			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0])->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[0]->GetDesc().Width) };
+			assert(!ConstantBufferResources.empty() && "");
+			assert(ConstantBufferResources[0]->GetDesc().Width == RoundUp256(sizeof(Transform)) && "");
+			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBufferResources[0])->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBufferResources[0]->GetDesc().Width) };
 			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-			Device->CreateShaderResourceView(COM_PTR_GET(ImageResource), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+			assert(!ImageResources.empty() && "");
+			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		}
 		{
+			assert(!CbvSrvUavDescriptorHeaps.empty() && "");
 			const auto& DH = DsvDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 			Device->CreateDepthStencilView(COM_PTR_GET(DepthStencilResource), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		}
 	}
-	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPsDsHsGs(); }
+	virtual void CreateShaderBlobs() override {
+#ifdef USE_PARALLAX_MAP
+		const auto ShaderPath = GetBasePath();
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_pm.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back()))); 
+#else
+		CreateShaderBlob_VsPsDsHsGs();
+#endif
+	}
 	virtual void CreatePipelineStates() override { CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, TRUE); }
 	virtual void PopulateCommandList(const size_t i) override;
 
@@ -125,7 +155,6 @@ private:
 		DirectX::XMMATRIX World;
 	};
 	using Transform = struct Transform;
-	
 	FLOAT Degree = 0.0f;
 	Transform Tr;
 };

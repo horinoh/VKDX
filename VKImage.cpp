@@ -2,6 +2,14 @@
 
 VkFormat VKImage::ToVkFormat(const gli::format GLIFormat)
 {
+	//!< 圧縮テクスチャ
+	//!< DXT1	... BC1		bpp4	RGB,RGBA	A2諧調
+	//!< DXT2,3	...	BC2		bpp8	RGBA		A16諧調
+	//!< DXT4,5	... BC3		bpp8	RGBA
+	//!< ATI1N	... BC4		bpp4	R			ハイトマップ等
+	//!< ATI2N	... BC5		bpp8	RG			ノーマルマップ等
+	//!<			BC6H	bpp8	RGB			HDR
+	//!<			BC7		bpp8	RGB,RGBA
 #define GLI_FORMAT_TO_VK_FORMAT_ENTRY(glientry, vkentry) case gli::format::FORMAT_ ## glientry: return VK_FORMAT_ ## vkentry;
 	switch (GLIFormat)
 	{
@@ -312,20 +320,20 @@ void VKImage::CreateImageView(VkImageView* IV, const VkImage Img, const gli::tex
 
 void VKImage::LoadImage(VkImage* Img, VkDeviceMemory *DeviceMemory, VkImageView* IV, const std::string& Path)
 {
-	//!< DDS or KTX or KMG を読み込める DDS or KTX or KMG can be read
-	LoadImage_DDS(Img, DeviceMemory, IV, Path);
+	const auto GLITexture = LoadImage_DDS(Img, DeviceMemory, Path);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "\t" << "ImageFile = " << Path.c_str() << std::endl;
 #endif
 	
-#ifdef DEBUG_STDOUT
-		std::cout << "LoadImage" << COUT_OK << std::endl << std::endl;
-#endif
+	CreateImageView(IV, *Img, GLITexture);
+
+	LOG_OK();
 }
 
-void VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory *DeviceMemory, VkImageView* IV, const std::string& Path)
+gli::texture VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory* DeviceMemory, const std::string& Path)
 {
+	//!< DDS or KTX or KMG を読み込める (DDS or KTX or KMG can be read)
 	const auto GLITexture(gli::load(Path.c_str()));
 	assert(!GLITexture.empty() && "Load image failed");
 
@@ -356,68 +364,65 @@ void VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory *DeviceMemory, VkImageV
 	FORMAT_ENTRIES()
 #undef FORMAT_PROPERTY_ENTRY
 
-	std::cout << "\t" << "\t" << "optimalTilingFeatures = ";
+		std::cout << "\t" << "\t" << "optimalTilingFeatures = ";
 #define FORMAT_PROPERTY_ENTRY(entry) if(VK_FORMAT_FEATURE_##entry & FormatProperties.optimalTilingFeatures) { std::cout << #entry << " | "; }
 	FORMAT_ENTRIES()
 #undef FORMAT_PROPERTY_ENTRY
 
-	std::cout << "\t" << "\t" << "bufferFeatures = ";
+		std::cout << "\t" << "\t" << "bufferFeatures = ";
 #define FORMAT_PROPERTY_ENTRY(entry) if(VK_FORMAT_FEATURE_##entry & FormatProperties.bufferFeatures) { std::cout << #entry << " | "; }
 	FORMAT_ENTRIES()
 #undef FORMAT_PROPERTY_ENTRY
 
-	std::cout << std::endl;
+		std::cout << std::endl;
 #endif //!< DEBUG_STDOUT
-	
+
 	auto CB = CommandBuffers[0];//CommandPools[0].second[0];
-	[&](VkImage* Img, VkDeviceMemory* DeviceMemory, /*VkImageView* IV,*/ const gli::texture& GLITexture, const VkCommandBuffer CB) {
-		const auto Size = static_cast<VkDeviceSize>(GLITexture.size());
+	const auto Size = static_cast<VkDeviceSize>(GLITexture.size());
 
-		VkBuffer StagingBuffer = VK_NULL_HANDLE;
-		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
-		{
-			//!< ホストビジブルのバッファとメモリを作成、データをコピー( Create host visible buffer and memory, and copy data)
-			CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-			AllocateBufferMemory(&StagingDeviceMemory, StagingBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-			CopyToHostVisibleDeviceMemory(StagingDeviceMemory, Size, GLITexture.data(), 0);
-			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, StagingBuffer, StagingDeviceMemory, 0));
+	VkBuffer StagingBuffer = VK_NULL_HANDLE;
+	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
+	{
+		//!< ホストビジブルのバッファとメモリを作成、データをコピー( Create host visible buffer and memory, and copy data)
+		CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
+		AllocateBufferMemory(&StagingDeviceMemory, StagingBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		CopyToHostVisibleDeviceMemory(StagingDeviceMemory, Size, GLITexture.data(), 0);
+		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, StagingBuffer, StagingDeviceMemory, 0));
 
-			//!< デバイスローカルのイメージとメモリを作成 (Create device local image and memory)
-			//!< VK_IMAGE_USAGE_SAMPLED_BIT : サンプルドイメージ ... シェーダ内でサンプラとともに使われる為に指定する
-			//!< - 全てのテクスチャフォーマットとリニアフィルタをサポートするわけではない (ValidateFormatProoerties()でチェックしている)
-			//!< - プラットフォームによってはコンバインドイメージサンプラ(サンプラとサンプルドイメージを１つにまとめたもの)を使った方が効率が良い場合がある
-			CreateImage(Img, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, GLITexture);
-			AllocateImageMemory(DeviceMemory, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Img, *DeviceMemory, 0));
+		//!< デバイスローカルのイメージとメモリを作成 (Create device local image and memory)
+		//!< VK_IMAGE_USAGE_SAMPLED_BIT : サンプルドイメージ ... シェーダ内でサンプラとともに使われる為に指定する
+		//!< - 全てのテクスチャフォーマットとリニアフィルタをサポートするわけではない (ValidateFormatProoerties()でチェックしている)
+		//!< - プラットフォームによってはコンバインドイメージサンプラ(サンプラとサンプルドイメージを１つにまとめたもの)を使った方が効率が良い場合がある
+		CreateImage(Img, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, GLITexture);
+		AllocateImageMemory(DeviceMemory, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Img, *DeviceMemory, 0));
 
-			//!< #VK_TODO VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT に決め打ちしている
-			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit copy command from host visible to device local)
-			CopyBufferToImage(CB, StagingBuffer, *Img, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, GLITexture);
-			const std::vector<VkSubmitInfo> SIs = {
-				{
-					VK_STRUCTURE_TYPE_SUBMIT_INFO,
-					nullptr,
-					0, nullptr,
-					nullptr,
-					1, &CB,
-					0, nullptr
-				}
-			};
-			VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), VK_NULL_HANDLE));
-			VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
-		}
-		if (VK_NULL_HANDLE != StagingDeviceMemory) {
-			vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
-		}
-		if (VK_NULL_HANDLE != StagingBuffer) {
-			vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
-		}
-	}(Img, DeviceMemory, /*IV,*/ GLITexture, CB);
-
-	//!< ビューを作成
-	CreateImageView(IV, *Img, GLITexture);
+		//!< #VK_TODO VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT に決め打ちしている
+		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit copy command from host visible to device local)
+		CopyBufferToImage(CB, StagingBuffer, *Img, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, GLITexture);
+		const std::vector<VkSubmitInfo> SIs = {
+			{
+				VK_STRUCTURE_TYPE_SUBMIT_INFO,
+				nullptr,
+				0, nullptr,
+				nullptr,
+				1, &CB,
+				0, nullptr
+			}
+		};
+		VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), VK_NULL_HANDLE));
+		VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
+	}
+	if (VK_NULL_HANDLE != StagingDeviceMemory) {
+		vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
+	}
+	if (VK_NULL_HANDLE != StagingBuffer) {
+		vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
+	}
 
 	ValidateFormatProperties_SampledImage(GetCurrentPhysicalDevice(), ToVkFormat(GLITexture.format()), VK_SAMPLE_COUNT_1_BIT, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
+
+	return GLITexture;
 }
 
 #if 0

@@ -234,9 +234,15 @@ void TriangleVK::CreateVertexBuffer()
 	VertexBuffers.resize(1);
 
 	const std::array<Vertex_PositionColor, 3> Vertices = { {
+#ifdef USE_VIEWPORT_Y_UP
 		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
 		{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } }, //!< LB
 		{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }, //!< RB
+#else
+		{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }, //!< RB
+		{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } }, //!< LB
+		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
+#endif
 	} };
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());

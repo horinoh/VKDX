@@ -12,6 +12,7 @@ void main()
 {
 	const vec3 CamPos = -vec3(View[3][0], View[3][1], View[3][2]);
 	const vec3 Axis = vec3(0.0f, 1.0f, 0.0f);
+	//const vec3 Axis = vec3(View[1][0], View[1][1], View[1][2]);
 	const mat4 PVW = Projection * View * World;
 
 	const vec3 Center = (gl_in[0].gl_Position.xyz + gl_in[1].gl_Position.xyz + gl_in[2].gl_Position.xyz) / 3.0f;

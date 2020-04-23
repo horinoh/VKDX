@@ -29,6 +29,6 @@ protected:
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const gli::texture& GLITexture);
 
 	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path) override;
-	void LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path);
+	gli::texture LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, const std::string& Path);
 };
 

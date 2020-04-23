@@ -95,5 +95,8 @@
     <CustomBuild Include="NormalMapVK.vert">
       <Filter>Shader Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="NormalMapVK_pm.frag">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

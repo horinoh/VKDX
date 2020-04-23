@@ -95,6 +95,9 @@
     <FxCompile Include="NormalMapDX.ds.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+    <FxCompile Include="NormalMapDX_pm.ps.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

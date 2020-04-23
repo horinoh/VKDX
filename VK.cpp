@@ -266,6 +266,12 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyImage(Device, Image, GetAllocationCallbacks());
 		Image = VK_NULL_HANDLE;
 	}
+	for (auto i : ImageViews) {
+		vkDestroyImageView(Device, i, GetAllocationCallbacks());
+	}
+	for (auto i : Images) {
+		vkDestroyImage(Device, i, GetAllocationCallbacks());
+	}
 
 	if (VK_NULL_HANDLE != DepthStencilImageView) {
 		vkDestroyImageView(Device, DepthStencilImageView, GetAllocationCallbacks());
@@ -732,7 +738,6 @@ void VK::CreateImageView(VkImageView* IV, const VkImage Img, const VkImageViewTy
 		ImageSubresourceRange
 	};
 	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, GetAllocationCallbacks(), IV));
-
 	Logf("\t\tImageViewType = %s\n", GetImageViewTypeChar(ImageViewType));
 	Logf("\t\tFormat = %s\n", GetFormatChar(Format));
 	Logf("\t\tComponentMapping = (%s)\n", GetComponentMappingString(ComponentMapping).c_str());
@@ -877,9 +882,14 @@ void VK::CreateInstance()
 	//!< インスタンスレベルのレイヤー、エクステンションの列挙
 	EnumerateInstanceLayerProperties();
 
-	uint32_t APIVersion; //= VK_API_VERSION_1_1;
-	//!< ここでは、最新バージョンでのみ動くようにしておく Use latest version here
+#if 0
+	//!< vkEnumerateInstanceVersion()が1.2を返さないので明示的に1.2にしてみるテスト
+	const uint32_t APIVersion = VK_API_VERSION_1_2;
+#else
+	//!< ここでは、最新バージョンでのみ動くようにしておく (Use latest version here)
+	uint32_t APIVersion;
 	VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
+#endif
 	const auto MajorVersion = VK_VERSION_MAJOR(APIVersion);
 	const auto MinorVersion = VK_VERSION_MINOR(APIVersion);
 	const auto PatchVersion = VK_VERSION_PATCH(APIVersion);

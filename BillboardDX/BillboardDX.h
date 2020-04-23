@@ -20,12 +20,12 @@ protected:
 
 		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
 		Degree += 1.0f;
-
+		
 #if 0
 		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp256(sizeof(Tr)), &Tr);
 #else
 		const D3D12_RANGE Range = { offsetof(Transform, World), offsetof(Transform, World) + sizeof(Tr.World) };
-		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp256(sizeof(Tr)), &Tr, &Range);
+		CopyToUploadResource(COM_PTR_GET(ConstantBufferResources[0]), RoundUp256(sizeof(Tr)), &Tr, &Range);
 #endif
 	}
 
@@ -70,9 +70,9 @@ protected:
 		{
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-			assert(!ConstantBuffers.empty() && "");
-			assert(ConstantBuffers[0]->GetDesc().Width == RoundUp256(sizeof(Transform)) && "");
-			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0])->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[0]->GetDesc().Width) };
+			assert(!ConstantBufferResources.empty() && "");
+			assert(ConstantBufferResources[0]->GetDesc().Width == RoundUp256(sizeof(Transform)) && "");
+			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBufferResources[0])->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBufferResources[0]->GetDesc().Width) };
 			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		}
 		{
@@ -92,8 +92,8 @@ protected:
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		Tr = Transform({ DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar), DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp), DirectX::XMMatrixIdentity() });
 
-		ConstantBuffers.push_back(COM_PTR<ID3D12Resource>());
-		CreateUploadResource(COM_PTR_PUT(ConstantBuffers[0]), RoundUp256(sizeof(Tr))); //!< コンスタントバッファの場合、サイズは256バイトアラインにすること
+		ConstantBufferResources.push_back(COM_PTR<ID3D12Resource>());
+		CreateUploadResource(COM_PTR_PUT(ConstantBufferResources[0]), RoundUp256(sizeof(Tr))); //!< コンスタントバッファの場合、サイズは256バイトアラインにすること
 	}
 
 	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPsDsHsGs(); }

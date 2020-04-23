@@ -19,6 +19,7 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 	
 	const float3 CamPos = -float3(View[0][3], View[1][3], View[2][3]);
 	const float3 Axis = float3(0, 1, 0);
+	//const float3 Axis = float3(View[0][1], View[1][1], View[2][1]);
 	const float4x4 PVW = mul(mul(Projection, View), World);
 
 	const float3 Center = (In[0].Position + In[1].Position + In[2].Position) / 3.0f;

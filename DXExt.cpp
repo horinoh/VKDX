@@ -101,9 +101,11 @@ void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE T
 		D3D12_STENCIL_OP_KEEP,			//!< ステンシルテスト成功、デプステスト成功時
 		D3D12_COMPARISON_FUNC_ALWAYS	//!< 既存のステンシル値との比較方法
 	};
+	const auto StencilEnable = FALSE;
 	const D3D12_DEPTH_STENCIL_DESC DSD = {
+		//!< #DX_TODO (アルファブレンド等で)「テスト」は有効だが「ライト」は無効にする場合は D3D12_DEPTH_WRITE_MASK_ZERO にする
 		DepthEnable, D3D12_DEPTH_WRITE_MASK_ALL, D3D12_COMPARISON_FUNC_LESS,
-		FALSE, D3D12_DEFAULT_STENCIL_READ_MASK, D3D12_DEFAULT_STENCIL_WRITE_MASK, 
+		StencilEnable, D3D12_DEFAULT_STENCIL_READ_MASK, D3D12_DEFAULT_STENCIL_WRITE_MASK,
 		DSOD, DSOD //!< 法線がカメラに向いている場合と、向いていない場合
 	};
 

@@ -12,6 +12,7 @@
 #define _CRTDBG_MAP_ALLOC
 #include <cstdlib>
 #include <crtdbg.h>
+#include <filesystem>
 #ifdef _DEBUG
 #ifndef DEBUG_NEW 
 #define DEBUG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ ) 
@@ -38,6 +39,7 @@
 #define USE_PIPELINE_SERIALIZE //!< *DX, *VK
 #define USE_WIREFRAME //!< ToonDX, ToonVK
 #define ALWAYS_REBUILD_PIPELINE
+//#define USE_PARALLAX_MAP //!< NormalMapDX, NormalMapVK ハイトマップ : アルファ成分
 
 #include <iostream>
 #include <ostream>
@@ -158,6 +160,20 @@ public:
 	void SetTitleW(LPCWSTR Title) { TitleW = Title; }
 
 	std::wstring GetBasePath() const { return TEXT(".\\") + GetTitleW(); }
+
+	bool FindDirectory(const std::string& Target, std::wstring& Path) {
+		auto Cur = std::filesystem::current_path();
+		while (Cur.has_parent_path()) {
+			for (auto i : std::filesystem::recursive_directory_iterator(Cur)) {
+				if (i.is_directory() && std::equal(Target.rbegin(), Target.rend(), i.path().string().rbegin())) {
+					Path = i.path().native();
+					return true;
+				}
+			}
+			Cur = Cur.parent_path();
+		}
+		return false;
+	}
 
 	static void ShowMessageBox(HWND hWnd, const char* Str) { MessageBox(hWnd, ToWString(Str).c_str(), TEXT("CAPTION"), MB_OK); }
 #ifdef DEBUG_STDOUT

@@ -15,6 +15,7 @@ public:
 
 protected:
 #ifndef USE_BUNDLE
+	//!< デフォルトはバンドルを作成する実装なのでオーバーライドする
 	virtual void CreateCommandAllocator() override {
 		CommandAllocators.resize(1);
 		VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(CommandAllocators[0])));

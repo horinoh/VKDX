@@ -474,7 +474,9 @@ protected:
 	VkImage Image = VK_NULL_HANDLE;
 	VkDeviceMemory ImageDeviceMemory = VK_NULL_HANDLE;
 	VkImageView ImageView = VK_NULL_HANDLE;
-	
+	std::vector<VkImage> Images;
+	std::vector<VkImageView> ImageViews;
+
 	//!< VKの場合、通常サンプラ、イミュータブルサンプラとも同様に VkSampler を作成する、デスクリプタセットの指定が異なるだけ
 	std::vector<VkSampler> Samplers;
 

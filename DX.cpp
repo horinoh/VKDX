@@ -165,7 +165,7 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const
 void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData)
 {
 	if (nullptr != Resource) {
-		assert(SubresourceData.size() == PSF.size() == NumRows.size() == RowSizes.size() && "Invalid size");
+		//assert(SubresourceData.size() == PSF.size() == NumRows.size() == RowSizes.size() && "Invalid size");
 		const auto SubresourceCount = static_cast<const UINT>(SubresourceData.size());
 
 		BYTE* Data;
@@ -881,7 +881,7 @@ void DX::CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UI
 	LOG_OK();
 }
 
-void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height)
+void DX::CreateDepthStencilResource(const DXGI_FORMAT Format, const UINT Width, const UINT Height)
 {
 	//!< リソースの作成
 	const D3D12_HEAP_PROPERTIES HeapProperties = {
@@ -898,14 +898,14 @@ void DX::CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Wi
 		Width, Height,
 		1,
 		1,
-		DepthFormat,
+		Format,
 		SampleDesc,
 		D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
 	};
 	//!< 一致するクリア値なら最適化されるのでよく使うクリア値を指定しておく
 	const D3D12_CLEAR_VALUE ClearValue = {
-		DepthFormat,
+		Format,
 		{ 1.0f, 0 }
 	};
 	COM_PTR_RESET(DepthStencilResource);

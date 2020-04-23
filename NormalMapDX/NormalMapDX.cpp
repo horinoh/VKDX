@@ -264,7 +264,7 @@ void NormalMapDX::PopulateCommandList(const size_t i)
             const std::array<D3D12_RECT, 0> Rs = {};
 			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
 			const auto CDH_Depth = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			CL->ClearDepthStencilView(CDH_Depth, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+			CL->ClearDepthStencilView(CDH_Depth, D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, 0, nullptr);
 
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { CDH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &CDH_Depth);

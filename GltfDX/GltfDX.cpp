@@ -325,7 +325,7 @@ void GltfDX::Process(const fx::gltf::Camera& Cam)
 #endif
 
 #if 1
-	CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0]), RoundUp256(sizeof(PV)), &PV);
+	CopyToUploadResource(COM_PTR_GET(ConstantBufferResources[0]), RoundUp256(sizeof(PV)), &PV);
 #endif
 }
 void GltfDX::Process(const fx::gltf::Primitive& Prim)
@@ -623,7 +623,7 @@ void GltfDX::PopulateCommandList(const size_t i)
 
 			const std::array<D3D12_RECT, 0> Rs = {};
 			CL->ClearRenderTargetView(SCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
-			CL->ClearDepthStencilView(DDH, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+			CL->ClearDepthStencilView(DDH, D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, 0, nullptr);
 
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCDH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &DDH);
