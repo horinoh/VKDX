@@ -42,6 +42,7 @@ float3 GetTangent_Torus(const float2 uv, const float3 pos)
 OUT main(const TESS_FACTOR tess, const float2 uv : SV_DomainLocation, const OutputPatch<IN, 4> quad)
 {
 	OUT Out;
+
 	Out.Texcoord = float2(uv.x, 1.0f - uv.y);
 #if 1
 	Out.Position = GetPosition_Torus(uv) * 0.5f;

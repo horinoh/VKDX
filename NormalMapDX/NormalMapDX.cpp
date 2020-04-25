@@ -277,8 +277,8 @@ void NormalMapDX::PopulateCommandList(const size_t i)
                 CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
 
                 auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-                CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-                CL->SetGraphicsRootDescriptorTable(1, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+                CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+				CL->SetGraphicsRootDescriptorTable(1, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV, SRV
             }
 
 			CL->ExecuteBundle(BCL);

@@ -121,11 +121,7 @@
       <Command>
       </Command>
     </PreLinkEvent>
-    <PreBuildEvent>
-      <Command>fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
-fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName)-S.rs.cso /D USE_SAMPLER=1
-xcopy /y $(ProjectDir)*.dds $(TargetDir)</Command>
-    </PreBuildEvent>
+    <PreBuildEvent />
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -167,11 +163,7 @@ xcopy /y $(ProjectDir)*.dds $(TargetDir)</Command>
       <Command>
       </Command>
     </PreLinkEvent>
-    <PreBuildEvent>
-      <Command>fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
-fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName)-S.rs.cso /D USE_SAMPLER=1
-xcopy /y $(ProjectDir)*.dds $(TargetDir)</Command>
-    </PreBuildEvent>
+    <PreBuildEvent />
   </ItemDefinitionGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />

@@ -2,10 +2,9 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (location = 0) in vec3 InNormal;
-layout (location = 1) in vec4 InTangent;
-layout (location = 2) in vec2 InTexcoord;
-layout (location = 3) in vec3 InViewDirection;
+layout (location = 0) in vec2 InTexcoord;
+layout (location = 1) in vec3 InViewDirection;
+layout (location = 2) in vec3 InLightDirection;
 
 layout (set = 0, binding = 1) uniform sampler2D NormalMap;
 
@@ -28,17 +27,12 @@ void main()
 	const vec3 V = normalize(InViewDirection);
 	
 	//!< N
-	const vec3 n = normalize(InNormal);
-	const vec3 t = normalize(InTangent.xyz - dot(InTangent.xyz, n) * n);
-	const vec3 b = cross(n, t) * InTangent.w;
-	const mat3 tbn = mat3(t, b, n);
 	const float ParallaxHeight = 0.03f;
 	const vec2 tc = InTexcoord + ParallaxHeight * texture(NormalMap, InTexcoord).a * vec2(V.x, -V.y);
-	const vec3 N = tbn * (texture(NormalMap, tc).xyz * 2.0f - 1.0f);
+	const vec3 N = texture(NormalMap, tc).xyz * 2.0f - 1.0f;
 
 	//!< L
-	const vec3 LightDirection = vec3(0.0f, 1.0f, 0.0f);
-	const vec3 L = normalize(LightDirection);
+	const vec3 L = -normalize(InLightDirection);
 
 	//!< LN
 	const float LN = dot(L, N);
@@ -54,10 +48,4 @@ void main()
 	const float Spt = 1.0f;
 
 	Color = vec4((Amb + (Dif + Spc) * Atn) * Spt, 1.0f);
-
-	//Color = vec4(n * 0.5f + 0.5f, 1.0f);
-	//Color = vec4(t * 0.5f + 0.5f, 1.0f);
-	//Color = vec4(b * 0.5f + 0.5f, 1.0f);
-	//Color = vec4(InTexcoord, 0.0f, 1.0f);
-	//Color = vec4(texture(NormalMap, InTexcoord).xyz, 1.0f);
 }

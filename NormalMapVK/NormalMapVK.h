@@ -18,7 +18,14 @@ protected:
 		Super::OnTimer(hWnd, hInstance);
 
 		//Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
-		Tr.World = glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(270.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+		const auto VW = Tr.View * Tr.World;
+		Tr.LocalCameraPosition = glm::inverse(VW) * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+		const auto LightPos = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(10.0f, 0.0f, 0.0f, 0.0f);
+		//const auto LightPos = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::vec4(0.0f, 10.0f, 0.0f, 0.0f);
+		Tr.LocalLightDirection = glm::normalize(glm::inverse(Tr.World) * LightPos);
+
 		Degree += 1.0f;
 
 		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
@@ -55,9 +62,9 @@ protected:
 			Samplers[0] 
 		};
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {
-				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
-				{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
-			});
+			{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
+			{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
+		});
 	}
 	virtual void CreatePipelineLayout() override {
 		assert(!DescriptorSetLayouts.empty() && "");
@@ -72,10 +79,21 @@ protected:
 		const auto Aspect = GetAspectRatioOfClientRect();
 		const auto ZFar = 100.0f;
 		const auto ZNear = ZFar * 0.0001f;
-		const auto CamPos = glm::vec3(0.0f, 1.0f, 3.0f);
+		const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
 		const auto CamTag = glm::vec3(0.0f);
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
-		Tr = Transform({ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
+		const auto Projection = glm::perspective(Fov, Aspect, ZNear, ZFar);
+		const auto View = glm::lookAt(CamPos, CamTag, CamUp);
+
+		const auto World = glm::mat4(1.0f);
+
+		const auto VW = View * World;
+		const auto LocalCameraPosition = glm::inverse(VW)* glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		
+		const auto LightPos = glm::vec4(0.0f, 10.0f, 0.0f, 0.0f);
+		const auto LocalLightDirection = glm::normalize(glm::inverse(World) * LightPos);
+
+		Tr = Transform({ Projection, View, World, LocalCameraPosition, LocalLightDirection });
 
 		UniformBuffers.resize(1);
 		CreateBuffer(&UniformBuffers[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
@@ -90,8 +108,11 @@ protected:
 #else
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
-			LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds")));
+			LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Normal.dds")));
+
 			//LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Normal.dds")));
+
+			//LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds")));
 		}
 #endif
 	}
@@ -100,7 +121,7 @@ protected:
 		DescriptorPools.resize(1);
 		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
 			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,1 }
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }
 		});
 	}
 	virtual void AllocateDescriptorSet() override {
@@ -180,6 +201,8 @@ private:
 		glm::mat4 Projection;
 		glm::mat4 View;
 		glm::mat4 World;
+		glm::vec4 LocalCameraPosition;
+		glm::vec4 LocalLightDirection;
 	};
 	using Transform = struct Transform;
 	float Degree = 0.0f;

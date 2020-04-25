@@ -1,13 +1,13 @@
 struct IN
 {
 	float4 Position : SV_POSITION;
-	float3 Normal : NORMAL;
-	float3 Tangent : TANGENT;
 	float2 Texcoord : TEXCOORD0;
 	float3 ViewDirection : TEXCOORD1;
+	float3 LightDirection : TEXCOORD2;
 };
 
 Texture2D NormalMap : register(t0, space0);
+Texture2D ColorMap : register(t1, space0);
 SamplerState Sampler : register(s0, space0);
 
 struct OUT
@@ -29,27 +29,22 @@ float3 specular(const float3 MC, const float4 LC, const float LN, const float3 L
 OUT main(const IN In)
 {
 	OUT Out;
-	
+
 	//!< V
 	const float3 V = normalize(In.ViewDirection);
 
-	//!< N
-	const float3 n = normalize(In.Normal);
-	const float3 t = normalize(In.Tangent - dot(In.Tangent, n) * n);
-	const float3 b = cross(n, t);
-	const float3x3 tbn = transpose(float3x3(t, b, n));
-	//const float3 N = n;
-	const float3 N = mul(tbn, NormalMap.Sample(Sampler, In.Texcoord).xyz * 2.0f - 1.0f);
+	//!< N	
+	const float3 N = NormalMap.Sample(Sampler, In.Texcoord).xyz * 2.0f - 1.0f;
 
 	//!< L
-	const float3 LightDirection = float3(0.0f, -1.0f, 0.0f);
-	const float3 L = normalize(LightDirection);
+	const float3 L = normalize(In.LightDirection);
 
 	//!< LN
 	const float LN = dot(L, N);
 
 	//!< Color
-	const float3 MC = float3(0.5f, 0.5f, 0.5f);
+	//const float3 MC = float3(0.5f, 0.5f, 0.5f);
+	const float3 MC = ColorMap.Sample(Sampler, In.Texcoord).rgb;
 	const float4 LC = float4(1.0f, 1.0f, 1.0f, 32.0f);
 
 	const float3 Amb = float3(0.25f, 0.25f, 0.25f);

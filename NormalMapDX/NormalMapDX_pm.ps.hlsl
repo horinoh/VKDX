@@ -1,13 +1,13 @@
 struct IN
 {
 	float4 Position : SV_POSITION;
-	float3 Normal : NORMAL;
-	float3 Tangent : TANGENT;
 	float2 Texcoord : TEXCOORD0;
 	float3 ViewDirection : TEXCOORD1;
+	float3 LightDirection : TEXCOORD2;
 };
 
 Texture2D NormalMap : register(t0, space0);
+Texture2D DisplacementMap : register(t1, space0);
 SamplerState Sampler : register(s0, space0);
 
 struct OUT
@@ -34,17 +34,12 @@ OUT main(const IN In)
 	const float3 V = normalize(In.ViewDirection);
 
 	//!< N
-	const float3 n = normalize(In.Normal);
-	const float3 t = normalize(In.Tangent - dot(In.Tangent, n) * n);
-	const float3 b = cross(n, t);
-	const float3x3 tbn = transpose(float3x3(t, b, n));
 	const float ParallaxHeight = 0.03f;
-	const float2 tc = In.Texcoord + ParallaxHeight * NormalMap.Sample(Sampler, In.Texcoord).a * float2(V.x, -V.y);
-	const float3 N = mul(tbn, NormalMap.Sample(Sampler, tc).xyz * 2.0f - 1.0f);
+	const float2 tc = In.Texcoord + ParallaxHeight * DisplacementMap.Sample(Sampler, In.Texcoord).r * float2(V.x, -V.y);
+	const float3 N = NormalMap.Sample(Sampler, tc).xyz * 2.0f - 1.0f;
 
 	//!< L
-	const float3 LightDirection = float3(0.0f, 1.0f, 0.0f);
-	const float3 L = normalize(LightDirection);
+	const float3 L = normalize(In.LightDirection);
 
 	//!< LN
 	const float LN = dot(L, N);
@@ -61,12 +56,6 @@ OUT main(const IN In)
 
 	Out.Color = float4((Amb + (Dif + Spc) * Atn) * Spt, 1.0f);
 	
-	//Out.Color = float4(n * 0.5f + 0.5f, 1.0f);
-	//Out.Color = float4(t * 0.5f + 0.5f, 1.0f);
-	//Out.Color = float4(b * 0.5f + 0.5f, 1.0f); 
-	//Out.Color = float4(In.Texcoord, 0.0f, 1.0f);
-	//Out.Color = float4(NormalMap.Sample(Sampler, In.Texcoord).xyz, 1.0f);
-
 	return Out;
 }
 

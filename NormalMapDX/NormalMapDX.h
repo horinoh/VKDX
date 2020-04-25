@@ -18,7 +18,16 @@ protected:
 		Super::OnTimer(hWnd, hInstance);
 
 		//Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
-		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(270.0f)) * DirectX::XMMatrixRotationY(DirectX::XMConvertToRadians(Degree));
+
+		const auto WV = DirectX::XMMatrixMultiply(Tr.World, Tr.View);
+		auto DetWV = DirectX::XMMatrixDeterminant(WV);
+		Tr.LocalCameraPosition = DirectX::XMVector4Transform(DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), DirectX::XMMatrixInverse(&DetWV, WV));
+
+		const auto LightPos = DirectX::XMVector4Transform(DirectX::XMVectorSet(10.0f, 0.0f, 0.0f, 0.0f), DirectX::XMMatrixRotationY(DirectX::XMConvertToRadians(Degree)));
+		//const auto LightPos = DirectX::XMVector4Transform(DirectX::XMVectorSet(0.0f, 10.0f, 0.0f, 0.0f), DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree)));
+		auto DetWorld = DirectX::XMMatrixDeterminant(Tr.World);
+		Tr.LocalLightDirection = DirectX::XMVector3Normalize(DirectX::XMVector4Transform(LightPos, DirectX::XMMatrixInverse(&DetWorld, Tr.World)));
+
 		Degree += 1.0f;
 
 		CopyToUploadResource(COM_PTR_GET(ConstantBufferResources[0]), RoundUp256(sizeof(Tr)), &Tr);
@@ -45,10 +54,10 @@ protected:
 		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
 #else
 		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Cbv = {
-			{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
+			{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND } //!< CBV
 		};
 		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Srv = {
-			{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
+			{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND } //!< SRV, SRV
 		};
 		assert(!StaticSamplerDescs.empty() && "");
 		DX::SerializeRootSignature(Blob, {
@@ -74,24 +83,48 @@ protected:
 		const auto Aspect = GetAspectRatioOfClientRect();
 		const auto ZFar = 100.0f;
 		const auto ZNear = ZFar * 0.0001f;
-		const auto CamPos = DirectX::XMVectorSet(0.0f, 1.0f, 3.0f, 1.0f);
+		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f);
 		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		Tr = Transform({ DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar), DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp), DirectX::XMMatrixIdentity() });
+		const auto Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
+		const auto View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
+
+		const auto World = DirectX::XMMatrixIdentity();
+
+		const auto WV = DirectX::XMMatrixMultiply(World, View);
+		//const auto VW = DirectX::XMMatrixMultiply(View, World);
+		auto DetWV = DirectX::XMMatrixDeterminant(WV);
+		const auto LocalCameraPosition = DirectX::XMVector4Transform(DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), DirectX::XMMatrixInverse(&DetWV, WV));
+
+		const auto LightPos = DirectX::XMVectorSet(0.0f, 10.0f, 0.0f, 0.0f);
+		auto DetWorld = DirectX::XMMatrixDeterminant(World);
+		const auto LocalLightDirection = DirectX::XMVector3Normalize(DirectX::XMVector4Transform(LightPos, DirectX::XMMatrixInverse(&DetWorld, World)));
+
+		Tr = Transform({ Projection, View, World, LocalCameraPosition, LocalLightDirection });
 
 		ConstantBufferResources.push_back(COM_PTR<ID3D12Resource>());
 		CreateUploadResource(COM_PTR_PUT(ConstantBufferResources.back()), RoundUp256(sizeof(Tr)));
 	}
 	virtual void CreateTexture() override {
-		ImageResources.resize(1);
 #ifdef USE_PARALLAX_MAP
-		LoadImage(COM_PTR_PUT(ImageResources[0]), TEXT("WallNH.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE); //!< ハイトマップ : アルファ成分
-		//LoadImage(COM_PTR_PUT(ImageResources[0]), TEXT("RocksNH.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE); //!< ハイトマップ : アルファ成分
-#else
+		ImageResources.resize(2);
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
 			LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Displacement.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		}
+#else
+		ImageResources.resize(2);
+		std::wstring Path;
+		if (FindDirectory("DDS", Path)) {
+			LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
 			//LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			//LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+			//LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			//LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Color.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		}
 		//LoadImage(COM_PTR_PUT(ImageResources[0]), TEXT("NormalMap.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 #endif
@@ -100,7 +133,7 @@ protected:
 	virtual void CreateDescriptorHeap() override {
 		{
 			CbvSrvUavDescriptorHeaps.resize(1);
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 3, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< CBV, SRV, SRV
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps[0])));
 		}
 		{
@@ -116,9 +149,10 @@ protected:
 			assert(!ConstantBufferResources.empty() && "");
 			assert(ConstantBufferResources[0]->GetDesc().Width == RoundUp256(sizeof(Transform)) && "");
 			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBufferResources[0])->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBufferResources[0]->GetDesc().Width) };
-			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
 			assert(!ImageResources.empty() && "");
-			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
+			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
 		}
 		{
 			assert(!CbvSrvUavDescriptorHeaps.empty() && "");
@@ -153,6 +187,8 @@ private:
 		DirectX::XMMATRIX Projection;
 		DirectX::XMMATRIX View;
 		DirectX::XMMATRIX World;
+		DirectX::XMVECTOR LocalCameraPosition;
+		DirectX::XMVECTOR LocalLightDirection;
 	};
 	using Transform = struct Transform;
 	FLOAT Degree = 0.0f;
