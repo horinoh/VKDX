@@ -375,7 +375,7 @@ void VKExt::CreateFramebuffer_ColorDepth()
 	}
 }
 
-void VKExt::CreateRenderTexture(VkImage* Img, VkDeviceMemory* DM, VkImageView* IV)
+void VKExt::CreateRenderTexture(VkImage* Img, VkImageView* IV)
 {
 	const auto Format = VK_FORMAT_R8G8B8A8_UNORM;
 
@@ -385,9 +385,14 @@ void VKExt::CreateRenderTexture(VkImage* Img, VkDeviceMemory* DM, VkImageView* I
 	const auto Levels = 1;
 	CreateImage(Img, 0, VK_IMAGE_TYPE_2D, Format, Extent, Levels, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
+#if 0
 	AllocateImageMemory(DM, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
 	VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Img, *DM, 0));
+#else
+	uint32_t HeapIndex;
+	VkDeviceSize Offset;
+	SuballocateImageMemory(HeapIndex, Offset, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+#endif
 
 	const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
 	CreateImageView(IV, *Img, VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, ImageSubresourceRange_ColorAll);

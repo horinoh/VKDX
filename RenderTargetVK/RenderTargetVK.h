@@ -71,7 +71,7 @@ protected:
 	}
 #pragma endregion //!< DESCRIPTOR
 	virtual void CreateTexture() override { 
-		CreateRenderTexture(&Image, &ImageDeviceMemory, &ImageView); 
+		CreateRenderTexture(&Image, &ImageView); 
 	}
 	virtual void CreateImmutableSampler() override {
 		Samplers.resize(1);

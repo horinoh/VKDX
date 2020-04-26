@@ -28,7 +28,7 @@ protected:
 	virtual void CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL,	const VkPipelineStageFlagBits PSF, const gli::texture& GLITexture);
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const gli::texture& GLITexture);
 
-	virtual void LoadImage(VkImage* Image, VkDeviceMemory *DeviceMemory, VkImageView* ImageView, const std::string& Path) override;
-	gli::texture LoadImage_DDS(VkImage* Image, VkDeviceMemory *DeviceMemory, const std::string& Path);
+	virtual void LoadImage(VkImage* Image, VkImageView* ImageView, const std::string& Path) override;
+	gli::texture LoadImage_DDS(VkImage* Image, const std::string& Path);
 };
 

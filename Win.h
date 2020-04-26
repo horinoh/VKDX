@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <crtdbg.h>
 #include <filesystem>
+
 #ifdef _DEBUG
 #ifndef DEBUG_NEW 
 #define DEBUG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ ) 
@@ -37,7 +38,7 @@
 #define USE_DEPTH_STENCIL //!< ToonDX, ToonVK
 #define USE_DRAW_INDIRECT //!< FullscreenDX, FullscreenVK
 #define USE_PIPELINE_SERIALIZE //!< *DX, *VK
-#define USE_WIREFRAME //!< ToonDX, ToonVK
+#define USE_SCREENSPACE_WIREFRAME //!< ToonDX, ToonVK
 #define ALWAYS_REBUILD_PIPELINE
 //#define USE_PARALLAX_MAP //!< NormalMapDX, NormalMapVK ハイトマップ : アルファ成分
 

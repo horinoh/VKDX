@@ -839,9 +839,9 @@ void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 {
 	ResetSwapChainResource();
 
-	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
-	SwapChain->GetDesc1(&SwapChainDesc);
-	VERIFY_SUCCEEDED(SwapChain->ResizeBuffers(SwapChainDesc.BufferCount, Width, Height, SwapChainDesc.Format, SwapChainDesc.Flags));
+	DXGI_SWAP_CHAIN_DESC1 SCD;
+	SwapChain->GetDesc1(&SCD);
+	VERIFY_SUCCEEDED(SwapChain->ResizeBuffers(SCD.BufferCount, Width, Height, SCD.Format, SCD.Flags));
 	Log("\tResizeBuffers\n");
 
 	CreateSwapChainResource();

@@ -81,8 +81,8 @@ protected:
 		ImageViews.resize(1);
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
-			//LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds")));
-			LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Displacement.dds")));
+			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds")));
+			LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Displacement.dds")));
 		}
 	}
 	virtual void CreateDescriptorPool() override {

@@ -109,5 +109,5 @@ public:
 	void CreateFramebuffer_ColorDepth();
 	virtual void CreateFramebuffer() override { CreateFramebuffer_Color(); }
 
-	virtual void CreateRenderTexture(VkImage* Img, VkDeviceMemory* DM, VkImageView* IV);
+	virtual void CreateRenderTexture(VkImage* Img, VkImageView* IV);
 };

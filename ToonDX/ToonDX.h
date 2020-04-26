@@ -17,7 +17,7 @@ protected:
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
 		Super::OnTimer(hWnd, hInstance);
 
-		Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
+		DirectX::XMStoreFloat4x4(&Tr.World, DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree)));
 		Degree += 1.0f;
 
 		CopyToUploadResource(COM_PTR_GET(ConstantBufferResources[0]), RoundUp256(sizeof(Tr)), &Tr);
@@ -97,14 +97,20 @@ protected:
 		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f);
 		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		Tr = Transform({ DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar), DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp), DirectX::XMMatrixIdentity() });
+		const auto Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
+		const auto View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
+		const auto World = DirectX::XMMatrixIdentity();
+		DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
+		DirectX::XMStoreFloat4x4(&Tr.View, View);
+		DirectX::XMStoreFloat4x4(&Tr.World, World);
+		//Tr = Transform({ DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar), DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp), DirectX::XMMatrixIdentity() });
 
 		ConstantBufferResources.push_back(COM_PTR<ID3D12Resource>());
 		CreateUploadResource(COM_PTR_PUT(ConstantBufferResources.back()), RoundUp256(sizeof(Tr)));
 	}
 
 	virtual void CreateShaderBlobs() override {
-#ifdef USE_WIREFRAME
+#ifdef USE_SCREENSPACE_WIREFRAME
 		const auto ShaderPath = GetBasePath();
 		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
@@ -134,9 +140,9 @@ private:
 
 	struct Transform
 	{
-		DirectX::XMMATRIX Projection;
-		DirectX::XMMATRIX View;
-		DirectX::XMMATRIX World;
+		DirectX::XMFLOAT4X4 Projection;
+		DirectX::XMFLOAT4X4 View;
+		DirectX::XMFLOAT4X4 World;
 	};
 	using Transform = struct Transform;
 	Transform Tr;

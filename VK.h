@@ -274,8 +274,8 @@ protected:
 	virtual void CreateDepthStencil(const VkFormat DepthFormat, const uint32_t Width, const uint32_t Height);
 	virtual void InitializeDepthStencilImage(const VkCommandBuffer CB);
 	
-	virtual void LoadImage(VkImage* /*Image*/, VkDeviceMemory* /*DeviceMemory*/, VkImageView* /*ImageView*/, const std::string& /*Path*/) { assert(false && "Not implemanted"); }
-	virtual void LoadImage(VkImage* Img, VkDeviceMemory* DeviceMemory, VkImageView* IV, const std::wstring& Path) { LoadImage(Img, DeviceMemory, IV, ToString(Path)); }
+	virtual void LoadImage(VkImage* /*Image*/, VkImageView* /*ImageView*/, const std::string& /*Path*/) { assert(false && "Not implemanted"); }
+	virtual void LoadImage(VkImage* Img, VkImageView* IV, const std::wstring& Path) { LoadImage(Img, IV, ToString(Path)); }
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 	virtual void CreateViewportTopFront(const float Width, const float Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 
@@ -472,7 +472,6 @@ protected:
 	VkImageView DepthStencilImageView = VK_NULL_HANDLE;
 
 	VkImage Image = VK_NULL_HANDLE;
-	VkDeviceMemory ImageDeviceMemory = VK_NULL_HANDLE;
 	VkImageView ImageView = VK_NULL_HANDLE;
 	std::vector<VkImage> Images;
 	std::vector<VkImageView> ImageViews;

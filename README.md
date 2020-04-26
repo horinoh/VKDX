@@ -282,7 +282,7 @@
 	- TriangleDX, TriangleVK
 - USE_DEPTH_STENCIL
 	- ToonDX, ToonVK
-- USE_WIREFRAME
+- USE_SCREENSPACE_WIREFRAME
 	- ToonDX, ToonVK
 - USE_SPECIALIZATION_INFO
 	- ParametricSurfaceVK
@@ -411,11 +411,10 @@ TODO
 - テクスチャ読み込み現状ミップマップ１のみ
 
 # 共通
-* GSInstancing
+* GSインスタンシング
 * HDR対応 環境がないので保留
 * バッファ毎にデバイスメモリを確保している、大きなデバイスメモリを確保してバッファはその一部を使用するようにしたほうが良い
 * テクスチャ
-	* ディスプレースメント
 	* 圧縮テクスチャ
 	* キューブマップ(環境マップ)
 	* プロシージャルテクスチャ
@@ -423,4 +422,5 @@ TODO
 	* シャドウマップ
 	* SSAO
 	* ポストプロセス
+* ディスタンスファンクション
  --> 

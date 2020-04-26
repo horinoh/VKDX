@@ -69,7 +69,7 @@ protected:
 		ImageViews.resize(1);
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
-			LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")));
+			LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")));
 		}
 #if 1
 		//LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], "UV.dds");

@@ -112,7 +112,7 @@ protected:
 	}
 
 	virtual void CreateShaderModules() override {
-#ifdef USE_WIREFRAME
+#ifdef USE_SCREENSPACE_WIREFRAME
 		const auto ShaderPath = GetBasePath();
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("WireFrame.frag.spv")).data()));

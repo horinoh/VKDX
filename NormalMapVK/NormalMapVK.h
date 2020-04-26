@@ -84,16 +84,8 @@ protected:
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		const auto Projection = glm::perspective(Fov, Aspect, ZNear, ZFar);
 		const auto View = glm::lookAt(CamPos, CamTag, CamUp);
-
 		const auto World = glm::mat4(1.0f);
-
-		const auto VW = View * World;
-		const auto LocalCameraPosition = glm::inverse(VW)* glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-		
-		const auto LightPos = glm::vec4(0.0f, 10.0f, 0.0f, 0.0f);
-		const auto LocalLightDirection = glm::normalize(glm::inverse(World) * LightPos);
-
-		Tr = Transform({ Projection, View, World, LocalCameraPosition, LocalLightDirection });
+		Tr = Transform({ Projection, View, World, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(10.0f, 0.0f, 0.0f, 0.0f) });
 
 		UniformBuffers.resize(1);
 		CreateBuffer(&UniformBuffers[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
@@ -103,16 +95,16 @@ protected:
 		Images.resize(1);
 		ImageViews.resize(1);
 #ifdef USE_PARALLAX_MAP
-		//LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], "WallNH.dds"); //!< ハイトマップ : アルファ成分
-		LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], "RocksNH.dds"); //!< ハイトマップ : アルファ成分
+		//LoadImage(&Images[0], &ImageViews[0], "WallNH.dds"); //!< ハイトマップ : アルファ成分
+		LoadImage(&Images[0], &ImageViews[0], "RocksNH.dds"); //!< ハイトマップ : アルファ成分
 #else
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
-			LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Normal.dds")));
+			LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Normal.dds")));
 
-			//LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Normal.dds")));
+			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Normal.dds")));
 
-			//LoadImage(&Images[0], &ImageDeviceMemory, &ImageViews[0], ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds")));
+			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds")));
 		}
 #endif
 	}

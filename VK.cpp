@@ -258,10 +258,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyImageView(Device, ImageView, GetAllocationCallbacks());
 		ImageView = VK_NULL_HANDLE;
 	}
-	if (VK_NULL_HANDLE != ImageDeviceMemory) {
-		vkFreeMemory(Device, ImageDeviceMemory, GetAllocationCallbacks());
-		ImageDeviceMemory = VK_NULL_HANDLE;
-	}
 	if (VK_NULL_HANDLE != Image) {
 		vkDestroyImage(Device, Image, GetAllocationCallbacks());
 		Image = VK_NULL_HANDLE;
@@ -667,9 +663,9 @@ void VK::SuballocateBufferMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, cons
 	const auto TypeIndex = GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, MPF);
 	HeapIndex = PDMP.memoryTypes[TypeIndex].heapIndex;
 
-	Logf("\t\tSuballocateBufferMemory = %llu / %llu (HeapIndex = %d)\n", MR.size, PDMP.memoryHeaps[HeapIndex].size, HeapIndex);
+	Logf("\t\tSuballocateBufferMemory = %llu / %llu (HeapIndex = %d, Align = $llu)\n", MR.size, PDMP.memoryHeaps[HeapIndex].size, HeapIndex, MR.alignment);
 
-	Offset = DeviceMemoryOffsets[HeapIndex];
+	Offset = RoundUp(DeviceMemoryOffsets[HeapIndex], MR.alignment);
 	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemories[HeapIndex], Offset));
 
 	DeviceMemoryOffsets[HeapIndex] += MR.size;
@@ -684,7 +680,7 @@ void VK::AllocateImageMemory(VkDeviceMemory* DM, const VkImage Img, const VkMemo
 	const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 	const auto TypeIndex = GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, MPF);
 
-	Logf("\t\tAllocateImageMemory = %llu / %llu (HeapIndex = %d)\n", MR.size, PDMP.memoryHeaps[PDMP.memoryTypes[TypeIndex].heapIndex].size, PDMP.memoryTypes[TypeIndex].heapIndex);
+	Logf("\t\tAllocateImageMemory = %llu / %llu (HeapIndex = %d, Align = %llu)\n", MR.size, PDMP.memoryHeaps[PDMP.memoryTypes[TypeIndex].heapIndex].size, PDMP.memoryTypes[TypeIndex].heapIndex, MR.alignment);
 
 	const VkMemoryAllocateInfo MAI = {
 		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -703,9 +699,9 @@ void VK::SuballocateImageMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const
 	const auto TypeIndex = GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, MPF);
 	HeapIndex = PDMP.memoryTypes[TypeIndex].heapIndex;
 
-	Logf("\t\tSuballocateImageMemory = %llu / %llu (HeapIndex = %d)\n", MR.size, PDMP.memoryHeaps[HeapIndex].size, HeapIndex);
+	Logf("\t\tSuballocateImageMemory = %llu / %llu (HeapIndex = %d, Align = %llu)\n", MR.size, PDMP.memoryHeaps[HeapIndex].size, HeapIndex, MR.alignment);
 
-	Offset = DeviceMemoryOffsets[HeapIndex];
+	Offset = RoundUp(DeviceMemoryOffsets[HeapIndex], MR.alignment);
 	VERIFY_SUCCEEDED(vkBindImageMemory(Device, Img, DeviceMemories[HeapIndex], Offset));
 
 	DeviceMemoryOffsets[HeapIndex] += MR.size;
@@ -2040,8 +2036,14 @@ void VK::CreateRenderTarget(const VkFormat Format, const uint32_t Width, const u
 	const VkExtent3D Extent3D = { Width, Height, 1 };
 	CreateImage(&RenderTargetImage, 0, VK_IMAGE_TYPE_2D, Format, Extent3D, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
+#if 0
 	AllocateImageMemory(&RenderTargetDeviceMemory, RenderTargetImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	VERIFY_SUCCEEDED(vkBindImageMemory(Device, RenderTargetImage, RenderTargetDeviceMemory, 0));
+#else
+	uint32_t HeapIndex;
+	VkDeviceSize Offset;
+	SuballocateImageMemory(HeapIndex, Offset, RenderTargetImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+#endif
 
 	CreateImageView(&RenderTargetImageView, RenderTargetImage, VK_IMAGE_VIEW_TYPE_2D, Format, ComponentMapping_Identity, ImageSubresourceRange_Color);
 
@@ -2056,9 +2058,15 @@ void VK::CreateDepthStencil(const VkFormat DepthFormat, const uint32_t Width, co
 	//!< vkCmdClearDepthStencilImage を用いてクリアする場合には VK_IMAGE_USAGE_TRANSFER_DST_BIT を指定すること (ここではレンダーパスでクリアする想定で指定しない)
 	CreateImage(&DepthStencilImage, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT /*| VK_IMAGE_USAGE_TRANSFER_DST_BIT*/);
 
+#if 0
 	AllocateImageMemory(&DepthStencilDeviceMemory, DepthStencilImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	VERIFY_SUCCEEDED(vkBindImageMemory(Device, DepthStencilImage, DepthStencilDeviceMemory, 0));
-	
+#else
+	uint32_t HeapIndex;
+	VkDeviceSize Offset;
+	SuballocateImageMemory(HeapIndex, Offset, DepthStencilImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+#endif
+
 	CreateImageView(&DepthStencilImageView, DepthStencilImage, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, ComponentMapping_Identity, ImageSubresourceRange_DepthStencil);
 
 	LOG_OK();

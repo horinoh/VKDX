@@ -19,14 +19,15 @@ protected:
 
 		//Tr.World = DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree));
 
-		const auto WV = DirectX::XMMatrixMultiply(Tr.World, Tr.View);
+		const auto WV = DirectX::XMMatrixMultiply(DirectX::XMLoadFloat4x4(&Tr.World), DirectX::XMLoadFloat4x4(&Tr.View));
 		auto DetWV = DirectX::XMMatrixDeterminant(WV);
-		Tr.LocalCameraPosition = DirectX::XMVector4Transform(DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), DirectX::XMMatrixInverse(&DetWV, WV));
+		DirectX::XMStoreFloat4(&Tr.LocalCameraPosition, DirectX::XMVector4Transform(DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), DirectX::XMMatrixInverse(&DetWV, WV)));
 
 		const auto LightPos = DirectX::XMVector4Transform(DirectX::XMVectorSet(10.0f, 0.0f, 0.0f, 0.0f), DirectX::XMMatrixRotationY(DirectX::XMConvertToRadians(Degree)));
 		//const auto LightPos = DirectX::XMVector4Transform(DirectX::XMVectorSet(0.0f, 10.0f, 0.0f, 0.0f), DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree)));
-		auto DetWorld = DirectX::XMMatrixDeterminant(Tr.World);
-		Tr.LocalLightDirection = DirectX::XMVector3Normalize(DirectX::XMVector4Transform(LightPos, DirectX::XMMatrixInverse(&DetWorld, Tr.World)));
+		const auto World = DirectX::XMLoadFloat4x4(&Tr.World);
+		auto DetWorld = DirectX::XMMatrixDeterminant(DirectX::XMLoadFloat4x4(&Tr.World));
+		DirectX::XMStoreFloat4(&Tr.LocalLightDirection, DirectX::XMVector3Normalize(DirectX::XMVector4Transform(LightPos, DirectX::XMMatrixInverse(&DetWorld, World))));
 
 		Degree += 1.0f;
 
@@ -88,19 +89,13 @@ protected:
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		const auto Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
 		const auto View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
-
 		const auto World = DirectX::XMMatrixIdentity();
 
-		const auto WV = DirectX::XMMatrixMultiply(World, View);
-		//const auto VW = DirectX::XMMatrixMultiply(View, World);
-		auto DetWV = DirectX::XMMatrixDeterminant(WV);
-		const auto LocalCameraPosition = DirectX::XMVector4Transform(DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), DirectX::XMMatrixInverse(&DetWV, WV));
-
-		const auto LightPos = DirectX::XMVectorSet(0.0f, 10.0f, 0.0f, 0.0f);
-		auto DetWorld = DirectX::XMMatrixDeterminant(World);
-		const auto LocalLightDirection = DirectX::XMVector3Normalize(DirectX::XMVector4Transform(LightPos, DirectX::XMMatrixInverse(&DetWorld, World)));
-
-		Tr = Transform({ Projection, View, World, LocalCameraPosition, LocalLightDirection });
+		DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
+		DirectX::XMStoreFloat4x4(&Tr.View, View);
+		DirectX::XMStoreFloat4x4(&Tr.World, World);
+		DirectX::XMStoreFloat4(&Tr.LocalCameraPosition, DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f));
+		DirectX::XMStoreFloat4(&Tr.LocalLightDirection, DirectX::XMVectorSet(10.0f, 0.0f, 0.0f, 0.0f));
 
 		ConstantBufferResources.push_back(COM_PTR<ID3D12Resource>());
 		CreateUploadResource(COM_PTR_PUT(ConstantBufferResources.back()), RoundUp256(sizeof(Tr)));
@@ -184,11 +179,11 @@ protected:
 private:
 	struct Transform
 	{
-		DirectX::XMMATRIX Projection;
-		DirectX::XMMATRIX View;
-		DirectX::XMMATRIX World;
-		DirectX::XMVECTOR LocalCameraPosition;
-		DirectX::XMVECTOR LocalLightDirection;
+		DirectX::XMFLOAT4X4 Projection;
+		DirectX::XMFLOAT4X4 View;
+		DirectX::XMFLOAT4X4 World;
+		DirectX::XMFLOAT4 LocalCameraPosition;
+		DirectX::XMFLOAT4 LocalLightDirection;
 	};
 	using Transform = struct Transform;
 	FLOAT Degree = 0.0f;
