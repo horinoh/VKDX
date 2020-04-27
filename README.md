@@ -286,7 +286,6 @@
 	- ToonDX, ToonVK
 - USE_DISTANCE_FUNCTION
 	- FullscreenDX, FullscreenVK
-	- TODO
 - USE_SPECIALIZATION_INFO
 	- ParametricSurfaceVK
 - USE_PUSH_DESCRIPTOR

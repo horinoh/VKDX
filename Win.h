@@ -41,7 +41,7 @@
 #define USE_SCREENSPACE_WIREFRAME //!< ToonDX, ToonVK
 #define ALWAYS_REBUILD_PIPELINE
 //#define USE_PARALLAX_MAP //!< NormalMapDX, NormalMapVK
-#define USE_DISTANCE_FUNCTION //!< FullscreenDX, FullscreenVK
+//#define USE_DISTANCE_FUNCTION //!< FullscreenDX, FullscreenVK
 
 #include <iostream>
 #include <ostream>
