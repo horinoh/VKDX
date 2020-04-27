@@ -6,7 +6,9 @@ layout (location = 0) in vec2 InTexcoord;
 layout (location = 1) in vec3 InViewDirection;
 layout (location = 2) in vec3 InLightDirection;
 
-layout (set = 0, binding = 1) uniform sampler2D NormalMap;
+layout(set = 0, binding = 1) uniform sampler Sampler;
+layout(set = 0, binding = 2) uniform texture2D NormalMap;
+layout(set = 0, binding = 3) uniform texture2D DisplacementMap;
 
 layout (location = 0) out vec4 Color;
 
@@ -28,8 +30,8 @@ void main()
 	
 	//!< N
 	const float ParallaxHeight = 0.03f;
-	const vec2 tc = InTexcoord + ParallaxHeight * texture(NormalMap, InTexcoord).a * vec2(V.x, -V.y);
-	const vec3 N = texture(NormalMap, tc).xyz * 2.0f - 1.0f;
+	const vec2 tc = InTexcoord + ParallaxHeight * texture(sampler2D(DisplacementMap, Sampler), InTexcoord).r * vec2(V.x, -V.y);
+	const vec3 N = texture(sampler2D(NormalMap, Sampler), tc).xyz * 2.0f - 1.0f;
 
 	//!< L
 	const vec3 L = -normalize(InLightDirection);

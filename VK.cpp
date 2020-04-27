@@ -254,14 +254,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroySampler(Device, i, GetAllocationCallbacks());
 	}
 
-	if (VK_NULL_HANDLE != ImageView) {
-		vkDestroyImageView(Device, ImageView, GetAllocationCallbacks());
-		ImageView = VK_NULL_HANDLE;
-	}
-	if (VK_NULL_HANDLE != Image) {
-		vkDestroyImage(Device, Image, GetAllocationCallbacks());
-		Image = VK_NULL_HANDLE;
-	}
 	for (auto i : ImageViews) {
 		vkDestroyImageView(Device, i, GetAllocationCallbacks());
 	}

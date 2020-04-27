@@ -6,9 +6,8 @@ layout (location = 0) in vec2 InTexcoord;
 layout (location = 1) in vec3 InViewDirection;
 layout (location = 2) in vec3 InLightDirection;
 
-layout(set = 0, binding = 1) uniform sampler Sampler;
-layout(set = 0, binding = 2) uniform texture2D NormalMap;
-layout(set = 0, binding = 3) uniform texture2D ColorMap;
+layout (set = 0, binding = 1) uniform sampler2D NormalMap;
+layout (set = 0, binding = 2) uniform sampler2D ColorMap;
 
 layout (location = 0) out vec4 Color;
 
@@ -29,7 +28,7 @@ void main()
 	const vec3 V = normalize(InViewDirection);
 	
 	//!< N
-	const vec3 N = texture(sampler2D(NormalMap, Sampler), InTexcoord).xyz * 2.0f - 1.0f;
+	const vec3 N = texture(NormalMap, InTexcoord).xyz * 2.0f - 1.0f;
 
 	//!< L
 	const vec3 L = normalize(InLightDirection);
@@ -39,7 +38,7 @@ void main()
 
 	//!< Color
 	//const vec3 MC = vec3(0.5f, 0.5f, 0.5f);
-	const vec3 MC = texture(sampler2D(ColorMap, Sampler), InTexcoord).rgb;
+	const vec3 MC = texture(ColorMap, InTexcoord).rgb;
 	const vec4 LC = vec4(1.0f, 1.0f, 1.0f, 32.0f);
 
 	const vec3 Amb = vec3(0.25f, 0.25f, 0.25f);

@@ -59,6 +59,8 @@
 #define USE_RENDER_PASS_CLEAR //!< ClearVK
 //!< パイプライン作成時にシェーダ内の定数値を上書き指定できる(スカラ値のみ)
 //#define USE_SPECIALIZATION_INFO //!< ParametricSurfaceVK
+//#define USE_COMBINED_IMAGE_SAMPLER
+
 #ifdef _DEBUG
 #define USE_DEBUG_REPORT
 #define USE_RENDERDOC
@@ -471,8 +473,6 @@ protected:
 	VkDeviceMemory DepthStencilDeviceMemory = VK_NULL_HANDLE;
 	VkImageView DepthStencilImageView = VK_NULL_HANDLE;
 
-	VkImage Image = VK_NULL_HANDLE;
-	VkImageView ImageView = VK_NULL_HANDLE;
 	std::vector<VkImage> Images;
 	std::vector<VkImageView> ImageViews;
 

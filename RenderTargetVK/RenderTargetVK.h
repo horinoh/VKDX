@@ -61,9 +61,9 @@ protected:
 		Super::UpdateDescriptorSet();
 
 		assert(!Samplers.empty() && "");
-		assert(VK_NULL_HANDLE != ImageView && "");
+		assert(!ImageViews.empty() && "");
 		const DescriptorUpdateInfo DUI = {
-			{ VK_NULL_HANDLE, ImageView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+			{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 		};
 		assert(!DescriptorSets.empty() && "");
 		assert(!DescriptorUpdateTemplates.empty() && "");
@@ -71,7 +71,9 @@ protected:
 	}
 #pragma endregion //!< DESCRIPTOR
 	virtual void CreateTexture() override { 
-		CreateRenderTexture(&Image, &ImageView); 
+		Images.resize(1);
+		ImageViews.resize(1);
+		CreateRenderTexture(&Images[0], &ImageViews[0]); 
 	}
 	virtual void CreateImmutableSampler() override {
 		Samplers.resize(1);

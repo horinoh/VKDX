@@ -6,9 +6,8 @@ layout (location = 0) in vec2 InTexcoord;
 layout (location = 1) in vec3 InViewDirection;
 layout (location = 2) in vec3 InLightDirection;
 
-layout(set = 0, binding = 1) uniform sampler Sampler;
-layout(set = 0, binding = 2) uniform texture2D NormalMap;
-layout(set = 0, binding = 3) uniform texture2D ColorMap;
+layout (set = 0, binding = 1) uniform sampler2D NormalMap;
+layout (set = 0, binding = 2) uniform sampler2D DisplacementMap;
 
 layout (location = 0) out vec4 Color;
 
@@ -29,17 +28,18 @@ void main()
 	const vec3 V = normalize(InViewDirection);
 	
 	//!< N
-	const vec3 N = texture(sampler2D(NormalMap, Sampler), InTexcoord).xyz * 2.0f - 1.0f;
+	const float ParallaxHeight = 0.03f;
+	const vec2 tc = InTexcoord + ParallaxHeight * texture(DisplacementMap, InTexcoord).r * vec2(V.x, -V.y);
+	const vec3 N = texture(NormalMap, tc).xyz * 2.0f - 1.0f;
 
 	//!< L
-	const vec3 L = normalize(InLightDirection);
+	const vec3 L = -normalize(InLightDirection);
 
 	//!< LN
 	const float LN = dot(L, N);
 
 	//!< Color
-	//const vec3 MC = vec3(0.5f, 0.5f, 0.5f);
-	const vec3 MC = texture(sampler2D(ColorMap, Sampler), InTexcoord).rgb;
+	const vec3 MC = vec3(0.5f, 0.5f, 0.5f);
 	const vec4 LC = vec4(1.0f, 1.0f, 1.0f, 32.0f);
 
 	const vec3 Amb = vec3(0.25f, 0.25f, 0.25f);
@@ -49,10 +49,4 @@ void main()
 	const float Spt = 1.0f;
 
 	Color = vec4((Amb + (Dif + Spc) * Atn) * Spt, 1.0f);
-
-	//Color = vec4(n * 0.5f + 0.5f, 1.0f);
-	//Color = vec4(t * 0.5f + 0.5f, 1.0f);
-	//Color = vec4(b * 0.5f + 0.5f, 1.0f);
-	//Color = vec4(InTexcoord, 0.0f, 1.0f);
-	//Color = vec4(texture(NormalMap, InTexcoord).xyz, 1.0f);
 }

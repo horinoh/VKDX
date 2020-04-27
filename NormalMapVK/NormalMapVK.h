@@ -58,12 +58,17 @@ protected:
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);
 		assert(!Samplers.empty() && "");
-		const std::array<VkSampler, 1> ISs = { 
-			Samplers[0] 
-		};
+		const std::array<VkSampler, 1> ISs = { Samplers[0] };
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {
 			{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
-			{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
+#ifdef USE_COMBINED_IMAGE_SAMPLER
+			{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }, //!< Sampler + Image0
+			{ 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }, //!< Sampler + Image1
+#else
+			{ 1, VK_DESCRIPTOR_TYPE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }, //!< Sampler
+			{ 2, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }, //!< Image0
+			{ 3, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr }, //!< Image1
+#endif
 		});
 	}
 	virtual void CreatePipelineLayout() override {
@@ -92,28 +97,39 @@ protected:
 		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	}
 	virtual void CreateTexture() override {
-		Images.resize(1);
-		ImageViews.resize(1);
-#ifdef USE_PARALLAX_MAP
-		//LoadImage(&Images[0], &ImageViews[0], "WallNH.dds"); //!< ハイトマップ : アルファ成分
-		LoadImage(&Images[0], &ImageViews[0], "RocksNH.dds"); //!< ハイトマップ : アルファ成分
-#else
+		Images.resize(2);
+		ImageViews.resize(2);
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
+#ifdef USE_PARALLAX_MAP
+			LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds")));
+			LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Displacement.dds")));
+#else
+
 			LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Normal.dds")));
+			LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds")));
 
 			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Normal.dds")));
+			//LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")));
 
 			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds")));
-		}
+			//LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Color.dds")));
 #endif
+		}
 	}
 
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
 		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
 			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }
+#ifdef USE_COMBINED_IMAGE_SAMPLER
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }, //!< Sampler + Image0
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }, //!< Sampler + Image1
+#else
+			{ VK_DESCRIPTOR_TYPE_SAMPLER, 1 }, //!< Sampler
+			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1 }, //!< Image0
+			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1 }, //!< Image1
+#endif
 		});
 	}
 	virtual void AllocateDescriptorSet() override {
@@ -132,17 +148,35 @@ protected:
 		}
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
-		const std::array<VkDescriptorUpdateTemplateEntry, 2> DUTEs = { {
+		const std::array<VkDescriptorUpdateTemplateEntry, 3> DUTEs = { {
 			{
 				0, 0,
 				_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				offsetof(DescriptorUpdateInfo, DBI), sizeof(DescriptorUpdateInfo)
 			},
+#ifdef USE_COMBINED_IMAGE_SAMPLER
 			{
 				1, 0,
-				_countof(DescriptorUpdateInfo::DII), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				offsetof(DescriptorUpdateInfo, DII), sizeof(DescriptorUpdateInfo)
-			}
+				_countof(DescriptorUpdateInfo::DII_0), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< Sampler + Image0
+				offsetof(DescriptorUpdateInfo, DII_0), sizeof(DescriptorUpdateInfo)
+			},
+			{
+				2, 0,
+				_countof(DescriptorUpdateInfo::DII_1), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< Sampler + Image0
+				offsetof(DescriptorUpdateInfo, DII_1), sizeof(DescriptorUpdateInfo)
+			},
+#else
+			{
+				2, 0,
+				_countof(DescriptorUpdateInfo::DII_0), VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, //!< Image0
+				offsetof(DescriptorUpdateInfo, DII_0), sizeof(DescriptorUpdateInfo)
+			},
+			{
+				3, 0,
+				_countof(DescriptorUpdateInfo::DII_1), VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, //!M Image1
+				offsetof(DescriptorUpdateInfo, DII_1), sizeof(DescriptorUpdateInfo)
+			},
+#endif
 		} };
 		assert(!DescriptorSetLayouts.empty() && "");
 		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
@@ -165,7 +199,14 @@ protected:
 		assert(!ImageViews.empty() && "");
 		const DescriptorUpdateInfo DUI = {
 			{ UniformBuffers[0], Offset, VK_WHOLE_SIZE },
-			{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+#ifdef USE_COMBINED_IMAGE_SAMPLER
+			{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, //!< Sampler + Image0
+			{ VK_NULL_HANDLE, ImageViews[1], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, //!< Sampler + Image1
+#else
+			{ Samplers[0], VK_NULL_HANDLE, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, //!< Sampler
+			{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, //!< Image0
+			{ VK_NULL_HANDLE, ImageViews[1], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, //!< Image1
+#endif
 		};
 		assert(!DescriptorSets.empty() && "");
 		assert(!DescriptorUpdateTemplates.empty() && "");
@@ -173,16 +214,24 @@ protected:
 	}
 	
 	virtual void CreateShaderModules() override {
-#ifdef USE_PARALLAX_MAP
 		const auto ShaderPath = GetBasePath();
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
+#ifdef USE_COMBINED_IMAGE_SAMPLER
+#ifdef USE_PARALLAX_MAP
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_cis_pm.frag.spv")).data()));
+#else
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_cis.frag.spv")).data()));
+#endif
+#else
+#ifdef USE_PARALLAX_MAP
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_pm.frag.spv")).data()));
+#else
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".frag.spv")).data()));
+#endif
+#endif
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tese.spv")).data()));
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tesc.spv")).data()));
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".geom.spv")).data()));
-#else
-		CreateShaderModle_VsFsTesTcsGs();
-#endif
 	}
 	virtual void CreatePipelines() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
@@ -205,7 +254,11 @@ private:
 	struct DescriptorUpdateInfo
 	{
 		VkDescriptorBufferInfo DBI[1];
-		VkDescriptorImageInfo DII[1];
+#ifndef USE_COMBINED_IMAGE_SAMPLER
+		VkDescriptorImageInfo DII_S[1]; //!< Sampler
+#endif
+		VkDescriptorImageInfo DII_0[1]; //!< Image0
+		VkDescriptorImageInfo DII_1[1]; //!< Image1
 	};
 };
 #pragma endregion
