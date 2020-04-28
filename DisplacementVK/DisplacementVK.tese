@@ -2,7 +2,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (set = 0, binding = 1) uniform sampler2D NormalMap;
+layout (set = 0, binding = 1) uniform sampler2D DisplacementMap;
 
 const float PI = 4.0f * atan(1.0f);
 vec2 GetUV_Torus(const vec2 uv) 
@@ -42,9 +42,9 @@ void main()
 	OutNormal = GetNormal_Torus(gl_TessCoord.xy, gl_Position.xyz);
 	OutTangent = GetTangent_Torus(gl_TessCoord.xy, gl_Position.xyz);
 	//!< ª gl_Position ‚ðŽg—p‚µ‚Ä‚¢‚é‚Ì‚Å Normal, Tangent‚ÌŒã‚É‚â‚é‚±‚Æ
-	gl_Position.xyz += OutNormal * HeightScale * textureLod(NormalMap, OutTexcoord, 0.0f).r; 
+	gl_Position.xyz += OutNormal * HeightScale * textureLod(DisplacementMap, OutTexcoord, 0.0f).r; 
 #else
-	gl_Position = vec4(2.0f * gl_TessCoord.xy - 1.0f, HeightScale * textureLod(NormalMap, OutTexcoord, 0.0f).r, 1.0f);
+	gl_Position = vec4(2.0f * gl_TessCoord.xy - 1.0f, HeightScale * textureLod(DisplacementMap, OutTexcoord, 0.0f).r, 1.0f);
 	OutNormal = vec3(0.0f, 1.0f, 0.0f);
 	OutTangent = vec3(1.0f, 0.0f, 0.0f);
 #endif

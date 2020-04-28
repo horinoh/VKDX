@@ -51,8 +51,9 @@ protected:
 			Samplers[0]
 		};
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {
-				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
-				{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, ISs.data() }
+				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr }, //!< UniformBuffer
+				{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, ISs.data() }, //!< Sampler + Image0
+				{ 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data()  }, //!< Sampler + Image1
 			});
 	}
 	virtual void CreatePipelineLayout() override {
@@ -77,18 +78,34 @@ protected:
 		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 	}
 	virtual void CreateTexture() override {
-		Images.resize(1);
-		ImageViews.resize(1);
+		Images.resize(2);
+		ImageViews.resize(2);
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
 			LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Displacement.dds")));
+			LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds")));
+
+			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Displacement.dds")));
+			//LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")));
+
+			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Displacement.dds")));
+			//LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Color.dds")));
+
+			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\Cardboard001_2K-JPG\\Cardboard001_2K_Displacement.dds")));
+			//LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\Cardboard001_2K-JPG\\Cardboard001_2K_Color.dds")));
+
+			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\Ground027_2K-JPG\\Ground027_2K_Displacement.dds")));
+			//LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\Ground027_2K-JPG\\Ground027_2K_Color.dds")));
+
+			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\Wicker002_2K-JPG\\Wicker002_2K_Displacement.dds")));
+			//LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\Wicker002_2K-JPG\\Wicker002_2K_Color.dds")));
 		}
 	}
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
 		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,1 }
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }, //!< UniformBuffer
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 }, //!< Sampler + Image0, Sampler + Image1
 		});
 	}
 	virtual void AllocateDescriptorSet() override {
@@ -107,17 +124,22 @@ protected:
 		}
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
-		const std::array<VkDescriptorUpdateTemplateEntry, 2> DUTEs = { {
+		const std::array<VkDescriptorUpdateTemplateEntry, 3> DUTEs = { {
 			{
 				0, 0,
-				_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< UniformBuffer
 				offsetof(DescriptorUpdateInfo, DBI), sizeof(DescriptorUpdateInfo)
 			},
 			{
 				1, 0,
-				_countof(DescriptorUpdateInfo::DII), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				offsetof(DescriptorUpdateInfo, DII), sizeof(DescriptorUpdateInfo)
-			}
+				_countof(DescriptorUpdateInfo::DII_0), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< Sampler + Image0
+				offsetof(DescriptorUpdateInfo, DII_0), sizeof(DescriptorUpdateInfo)
+			},
+			{
+				2, 0,
+				_countof(DescriptorUpdateInfo::DII_1), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< Sampler + Image1
+				offsetof(DescriptorUpdateInfo, DII_1), sizeof(DescriptorUpdateInfo)
+			},
 		} };
 		assert(!DescriptorSetLayouts.empty() && "");
 		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
@@ -135,11 +157,11 @@ protected:
 	virtual void UpdateDescriptorSet() override {
 		Super::UpdateDescriptorSet();
 		assert(!UniformBuffers.empty() && "");
-		assert(!Samplers.empty() && "");
-		assert(!ImageViews.empty() && "");
+		assert(2 == ImageViews.size() && "");
 		const DescriptorUpdateInfo DUI = {
-			{ UniformBuffers[0], Offset, VK_WHOLE_SIZE },
-			{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+			{ UniformBuffers[0], Offset, VK_WHOLE_SIZE }, //!< UniformBuffer
+			{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, //!< Sampler + Image0
+			{ VK_NULL_HANDLE, ImageViews[1], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, //!< Sampler + Image1
 		};
 		assert(!DescriptorSets.empty() && "");
 		assert(!DescriptorUpdateTemplates.empty() && "");
@@ -166,7 +188,8 @@ private:
 	struct DescriptorUpdateInfo
 	{
 		VkDescriptorBufferInfo DBI[1];
-		VkDescriptorImageInfo DII[1];
+		VkDescriptorImageInfo DII_0[1];
+		VkDescriptorImageInfo DII_1[1];
 	};
 };
 #pragma endregion

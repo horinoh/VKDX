@@ -15,7 +15,7 @@ struct OUT
 	float2 Texcoord : TEXCOORD0;
 };
 
-Texture2D NormalMap : register(t0, space0);
+Texture2D DisplacementMap : register(t0, space0);
 SamplerState Sampler : register(s0, space0);
 
 static const float PI = 4.0f * atan(1.0f);
@@ -54,9 +54,9 @@ OUT main(const TESS_FACTOR tess, const float2 uv : SV_DomainLocation, const Outp
 	Out.Normal = GetNormal_Torus(uv, Out.Position);
 	Out.Tangent = GetTangent_Torus(uv, Out.Position);
 	//!< ª Out.Position ‚ðŽg—p‚µ‚Ä‚¢‚é‚Ì‚Å Normal, Tangent‚ÌŒã‚É‚â‚é‚±‚Æ
-	Out.Position += Out.Normal * HeightScale * NormalMap.SampleLevel(Sampler, Out.Texcoord, 0).r;
+	Out.Position += Out.Normal * HeightScale * DisplacementMap.SampleLevel(Sampler, Out.Texcoord, 0).r;
 #else
-	Out.Position = float3(2.0f * uv - 1.0f, HeightScale * NormalMap.SampleLevel(Sampler, Out.Texcoord, 0).r);
+	Out.Position = float3(2.0f * uv - 1.0f, HeightScale * DisplacementMap.SampleLevel(Sampler, Out.Texcoord, 0).r);
 	Out.Normal = float3(0.0f, 1.0f, 0.0f);
 	Out.Tangent = float3(1.0f, 0.0f, 0.0f);
 #endif

@@ -39,9 +39,10 @@
 #define USE_DRAW_INDIRECT //!< FullscreenDX, FullscreenVK
 #define USE_PIPELINE_SERIALIZE //!< *DX, *VK
 #define USE_SCREENSPACE_WIREFRAME //!< ToonDX, ToonVK
-#define ALWAYS_REBUILD_PIPELINE
 //#define USE_PARALLAX_MAP //!< NormalMapDX, NormalMapVK
 //#define USE_DISTANCE_FUNCTION //!< FullscreenDX, FullscreenVK
+
+#define ALWAYS_REBUILD_PIPELINE
 
 #include <iostream>
 #include <ostream>

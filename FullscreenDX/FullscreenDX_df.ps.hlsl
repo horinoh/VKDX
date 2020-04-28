@@ -125,7 +125,7 @@ float4 main(IN In) : SV_TARGET
 	const float3 Color = (Ambient + (Diffuse(MaterialColor, LightColor.rgb, LN) + Specular(MaterialColor, LightColor, LN, L, N, V)) * Attenuate) * Spot;
 
 	//!< BGカラー (BG color)
-	const float3 BackGroundColor = float3(0.5f, 0.5f, 1.0f);
+	const float3 BackGroundColor = float3(0.529411793f, 0.807843208f, 0.921568692f);
 
 	//!< サーフェスを表示するため、距離の絶対値がほぼ 0.0f なら 1 、それ以外なら 0 になるようなマスク値
 	const float Mask = max(sign(0.01f - abs(Distance)), 0.0f);

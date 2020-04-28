@@ -7,10 +7,12 @@ layout (location = 1) in vec4 InTangent;
 layout (location = 2) in vec2 InTexcoord;
 layout (location = 3) in vec3 InViewDirection;
 
+layout (set = 0, binding = 2) uniform sampler2D ColorMap;
+
 layout (location = 0) out vec4 Color;
 
 layout (early_fragment_tests) in;
 void main()
 {
-	Color = vec4(0.0f, 1.0f, 0.0f, 1.0f);
+	Color = texture(ColorMap, InTexcoord);
 }

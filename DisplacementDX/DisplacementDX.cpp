@@ -280,6 +280,7 @@ void DisplacementDX::PopulateCommandList(const size_t i)
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
 				CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 				CL->SetGraphicsRootDescriptorTable(1, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				CL->SetGraphicsRootDescriptorTable(2, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
 
 			CL->ExecuteBundle(BCL);

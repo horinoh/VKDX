@@ -11,14 +11,15 @@ struct OUT
 	float4 Color : SV_TARGET;
 };
 
-//Texture2D NormalMap : register(t0, space0);
-//SamplerState Sampler : register(s0, space0);
+Texture2D ColorMap : register(t1, space0);
+SamplerState Sampler : register(s1, space0);
 
 [earlydepthstencil]
 OUT main(const IN In)
 {
 	OUT Out;
-	Out.Color = float4(0.0f, 1.0f, 0.0f, 1.0f);
+	Out.Color = ColorMap.Sample(Sampler, In.Texcoord);
+	//Out.Color =float4(In.Texcoord, 0,1);
 	return Out;
 }
 

@@ -1192,7 +1192,8 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 			VERIFY_SUCCEEDED(PLS->GetPipelineLibrary()->StorePipeline(Name, COM_PTR_GET(PST)));
 		}
 	}
-	//LOG_OK();
+	
+	LOG_OK();
 }
 
 #if 0

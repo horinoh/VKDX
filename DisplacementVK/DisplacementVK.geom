@@ -14,8 +14,8 @@ layout (location = 2) out vec2 OutTexcoord;
 layout (location = 3) out vec3 OutViewDirection;
 
 layout (triangles, invocations = 1) in;
-layout (line_strip, max_vertices = 3) out;
-//layout (triangle_strip, max_vertices = 3) out;
+//layout (line_strip, max_vertices = 3) out;
+layout (triangle_strip, max_vertices = 3) out;
 void main()
 {
 	const vec3 CamPos = -vec3(View[3][0], View[3][1], View[3][2]);
