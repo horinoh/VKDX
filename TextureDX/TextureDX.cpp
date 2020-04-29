@@ -270,7 +270,7 @@ void TextureDX::PopulateCommandList(const size_t i)
 			
             const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-			CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+			CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
 #else
 			assert(!CbvSrvUavDescriptorHeaps.empty() && "");
 			assert(!SamplerDescriptorHeaps.empty() && "");
@@ -281,12 +281,12 @@ void TextureDX::PopulateCommandList(const size_t i)
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-				CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
 			}
 			{
 				const auto& DH = SamplerDescriptorHeaps[0];
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-				CL->SetGraphicsRootDescriptorTable(1, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				CL->SetGraphicsRootDescriptorTable(1, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< Sampler
 			}
 #endif
 			CL->ExecuteBundle(BCL);

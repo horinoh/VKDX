@@ -54,7 +54,7 @@ protected:
 		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Cbv = {
 			{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND } //!< register(b0, space0)
 		};
-		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Srv = {
+		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Srv0 = {
 			{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND } //!< register(t0, space0)
 		};
 		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Srv1 = {
@@ -63,7 +63,7 @@ protected:
 		assert(2 == StaticSamplerDescs.size() && "");
 		DX::SerializeRootSignature(Blob, {
 				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DRs_Cbv.size()), DRs_Cbv.data() }, D3D12_SHADER_VISIBILITY_GEOMETRY }, //!< CBV
-				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DRs_Srv.size()), DRs_Srv.data() }, D3D12_SHADER_VISIBILITY_DOMAIN }, //!< SRV0
+				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DRs_Srv0.size()), DRs_Srv0.data() }, D3D12_SHADER_VISIBILITY_DOMAIN }, //!< SRV0
 				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DRs_Srv1.size()), DRs_Srv1.data() }, D3D12_SHADER_VISIBILITY_PIXEL }, //!< SRV1
 			}, {
 				StaticSamplerDescs[0],

@@ -1,7 +1,8 @@
-// BillboardVK.cpp : Defines the entry point for the application.
+// GSInstancingVK.cpp : Defines the entry point for the application.
 //
 
-#include "BillboardVK.h"
+#include "framework.h"
+#include "GSInstancingVK.h"
 
 #pragma region Code
 VK* Inst = nullptr;
@@ -32,7 +33,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_BILLBOARDVK, szWindowClass, MAX_LOADSTRING);
+    LoadStringW(hInstance, IDC_GSINSTANCINGVK, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
@@ -41,7 +42,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_BILLBOARDVK));
+    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_GSINSTANCINGVK));
 
     MSG msg;
 
@@ -76,10 +77,10 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_BILLBOARDVK));
+    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_GSINSTANCINGVK));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_BILLBOARDVK);
+    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_GSINSTANCINGVK);
     wcex.lpszClassName  = szWindowClass;
     wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
@@ -117,7 +118,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
-//  PURPOSE:  Processes messages for the main window.
+//  PURPOSE: Processes messages for the main window.
 //
 //  WM_COMMAND  - process the application menu
 //  WM_PAINT    - Paint the main window
@@ -148,7 +149,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 	case WM_CREATE:
 		if (nullptr == Inst) {
-			Inst = new BillboardVK();
+			Inst = new GSInstancingVK();
 		}
 		if (nullptr != Inst) {
 			try {
@@ -229,11 +230,11 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void BillboardVK::PopulateCommandBuffer(const size_t i)
+void GSInstancingVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto RP = RenderPasses[0];
 	const auto FB = Framebuffers[i];
-	
+
 	const auto SCB = SecondaryCommandBuffers[i];
 	const VkCommandBufferInheritanceInfo CBII = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
@@ -252,23 +253,11 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 		&CBII
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
-		const auto PLL = PipelineLayouts[0];
-		const auto PL = Pipelines[0];
-		const auto IB = IndirectBuffers[0];
-
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
-#ifdef USE_PUSH_DESCRIPTOR
-		const DescriptorUpdateInfo DUI = { { UniformBuffers[0], Offset, VK_WHOLE_SIZE },};
-		vkCmdPushDescriptorSetWithTemplateKHR(SCB, DescriptorUpdateTemplates[0], PLL, 0, DUI.DBI);
-#else
-		const std::array<VkDescriptorSet, 1> DSs = { DescriptorSets[0] };
-		vkCmdBindDescriptorSets(SCB,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			PLL,
-			0, static_cast<uint32_t>(DSs.size()), DSs.data(),
-			0, nullptr);
-#endif
+
+		const auto IB = IndirectBuffers[0];
+		const auto PL = Pipelines[0];
 		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 		vkCmdDrawIndirect(SCB, IB, 0, 1, 0);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
@@ -281,15 +270,14 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
-		CVs[1].depthStencil = ClearDepthStencilValue;
+		const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
 		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RP,
 			FB,
-			RenderArea,
+            RenderArea,
 			static_cast<uint32_t>(CVs.size()), CVs.data()
 		};
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
@@ -298,4 +286,4 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 		} vkCmdEndRenderPass(CB);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
-#pragma endregion //!< Code
+#pragma endregion

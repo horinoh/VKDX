@@ -265,6 +265,8 @@
 -->
 
 #### 条件コンパイル対応
+- USE_VIEWPORT_Y_UP
+	- *VK
 - USE_DRAW_INDIRECT
 	- FullscreenDX, FullscreenVK
 - USE_PIPELINE_SERIALIZE
@@ -314,14 +316,16 @@
  * プロジェクトを右クリック - Retarget SDK Verson で 10以上にする
  * プロジェクト右クリック - Property - All Configurations にする - C/C++ - Language - C++ Language Standard - ISO C++17 Standard を選択しておく(vs2019のデフォルトはC++14)
  * プロジェクト右クリック - Property - All Configurations にする - C/C++ - General - Warning Level を Level4、Treat Warnings As Errors を Yes にする
- * プロジェクト右クリック - Property - All Configurations にする - C/C++ - Precompiled headers - Precompiled Header を Use(/Yu) にする
-	
+ * プロジェクト右クリック - Property - All Configurations にする - C/C++ - Precompiled headers - Precompiled Header を Use(/Yu) 、Precompiled Header Files を framework.h にする
+ * Source Files に framework.cpp(内容空で作成)を追加
+ 	* framewordk.cpp に対してのみ C/C++ - Precompiled headers - Precompiled Header を Create(/Yc) にする
+ * framework.h(旧stdafx.h)は既存のものを参考に編集
+
 #### DX
  * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/HLSL.props、Props/RS.props. (Props/DXTK.prop, Props/GLTF.prop)
  * Header Files に Win.h、DX.h、DXExt.h、(DXImage.h) を追加 
- * Source Files に framework.cpp(内容空で作成)、Win.cpp、DX.cpp、DXExt.cpp、(DXImage.cpp) を追加
- * framewordk.cpp に対してのみ C/C++ - Precompiled headers - Precompiled Header を Create(/Yc) にする
- * framework.h(旧stdafx.h), framework.cpp、XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
+ * Source Files に Win.cpp、DX.cpp、DXExt.cpp、(DXImage.cpp) を追加
+ * framework.h(旧stdafx.h), XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * Shader Files フォルダを作成し、シェーダを突っ込む
   * シェーダファイルを右クリック - プロパティ - Configuration Propeties - General
    * Excluded From Build を No
@@ -334,7 +338,7 @@
 #### VK
  * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop、(Props/GLI.prop, Props/GLTF.prop)
  * Header Files に Win.h、VK.h、VKExt.h、(VKImage.h) を追加
- * Source Files に framework.cpp、Win.cpp、VK.cpp、VKExt.cpp、(VKImage.cpp) を追加
+ * Source Files に Win.cpp、VK.cpp、VKExt.cpp、(VKImage.cpp) を追加
  * framework.h(旧stdafx.h)、XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * Shader Files フォルダを作成し、シェーダを突っ込む
   * 拡張子を glslangValidator に沿うようにタイプを選択しておく。(.vert、.frag、...)

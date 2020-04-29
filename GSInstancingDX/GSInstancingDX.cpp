@@ -1,10 +1,11 @@
-// BillboardVK.cpp : Defines the entry point for the application.
+// GSInstancingDX.cpp : Defines the entry point for the application.
 //
 
-#include "BillboardVK.h"
+#include "framework.h"
+#include "GSInstancingDX.h"
 
 #pragma region Code
-VK* Inst = nullptr;
+DX* Inst = nullptr;
 #pragma endregion
 
 #define MAX_LOADSTRING 100
@@ -32,7 +33,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_BILLBOARDVK, szWindowClass, MAX_LOADSTRING);
+    LoadStringW(hInstance, IDC_GSINSTANCINGDX, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
@@ -41,7 +42,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_BILLBOARDVK));
+    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_GSINSTANCINGDX));
 
     MSG msg;
 
@@ -76,10 +77,10 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_BILLBOARDVK));
+    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_GSINSTANCINGDX));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_BILLBOARDVK);
+    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_GSINSTANCINGDX);
     wcex.lpszClassName  = szWindowClass;
     wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
@@ -117,7 +118,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 //
 //  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
 //
-//  PURPOSE:  Processes messages for the main window.
+//  PURPOSE: Processes messages for the main window.
 //
 //  WM_COMMAND  - process the application menu
 //  WM_PAINT    - Paint the main window
@@ -148,7 +149,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 	case WM_CREATE:
 		if (nullptr == Inst) {
-			Inst = new BillboardVK();
+			Inst = new GSInstancingDX();
 		}
 		if (nullptr != Inst) {
 			try {
@@ -229,73 +230,48 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void BillboardVK::PopulateCommandBuffer(const size_t i)
+void GSInstancingDX::PopulateCommandList(const size_t i)
 {
-	const auto RP = RenderPasses[0];
-	const auto FB = Framebuffers[i];
-	
-	const auto SCB = SecondaryCommandBuffers[i];
-	const VkCommandBufferInheritanceInfo CBII = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-		nullptr,
-		RP,
-		0,
-		FB,
-		VK_FALSE,
-		0,
-		0,
-	};
-	const VkCommandBufferBeginInfo SCBBI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
-		&CBII
-	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
-		const auto PLL = PipelineLayouts[0];
-		const auto PL = Pipelines[0];
-		const auto IB = IndirectBuffers[0];
+	const auto PS = COM_PTR_GET(PipelineStates[0]);
 
-		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
-#ifdef USE_PUSH_DESCRIPTOR
-		const DescriptorUpdateInfo DUI = { { UniformBuffers[0], Offset, VK_WHOLE_SIZE },};
-		vkCmdPushDescriptorSetWithTemplateKHR(SCB, DescriptorUpdateTemplates[0], PLL, 0, DUI.DBI);
-#else
-		const std::array<VkDescriptorSet, 1> DSs = { DescriptorSets[0] };
-		vkCmdBindDescriptorSets(SCB,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			PLL,
-			0, static_cast<uint32_t>(DSs.size()), DSs.data(),
-			0, nullptr);
-#endif
-		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-		vkCmdDrawIndirect(SCB, IB, 0, 1, 0);
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
+	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
+	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
+	{
+		const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
+		const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
-	const auto CB = CommandBuffers[i];
-	const VkCommandBufferBeginInfo CBBI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		0,
-		nullptr
-	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
-		CVs[1].depthStencil = ClearDepthStencilValue;
-		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
-		const VkRenderPassBeginInfo RPBI = {
-			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-			nullptr,
-			RP,
-			FB,
-			RenderArea,
-			static_cast<uint32_t>(CVs.size()), CVs.data()
-		};
-		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
-			const std::array<VkCommandBuffer, 1> SCBs = { SCB };
-			vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
-		} vkCmdEndRenderPass(CB);
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+	}
+	VERIFY_SUCCEEDED(BCL->Close());
+
+	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto CA = COM_PTR_GET(CommandAllocators[0]);
+	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
+	{
+		const auto RS = COM_PTR_GET(RootSignatures[0]);
+		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+
+		CL->SetGraphicsRootSignature(RS);
+
+		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+
+		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		{
+			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+
+			const std::array<D3D12_RECT, 0> Rs = {};
+			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
+
+			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { CDH };
+			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
+
+			CL->ExecuteBundle(BCL);
+		}
+		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+	}
+	VERIFY_SUCCEEDED(CL->Close());
 }
-#pragma endregion //!< Code
+#pragma endregion

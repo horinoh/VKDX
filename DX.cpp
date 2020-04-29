@@ -942,21 +942,14 @@ void DX::CreateAndCopyToDefaultResource(COM_PTR<ID3D12Resource>& Res, ID3D12Comm
 
 void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth, const FLOAT MaxDepth)
 {
+	//!< DirectX、OpenGLはBLが原点(Vulkan はTLが原点)
 	Viewports = {
-		{ 
-			0.0f, 0.0f, 
-			Width, Height,
-			MinDepth, MaxDepth
-		}
+		{ 0.0f, 0.0f, Width, Height, MinDepth, MaxDepth },
 	};
-
+	//!< left, top, right, bottomで指定 (offset, extentで指定のVKとは異なるので注意)
 	ScissorRects = {
-		{ 
-			0, 0, 
-			static_cast<LONG>(Width), static_cast<LONG>(Height)
-		}
+		{ 0, 0, static_cast<LONG>(Width), static_cast<LONG>(Height) },
 	};
-
 	LOG_OK();
 }
 

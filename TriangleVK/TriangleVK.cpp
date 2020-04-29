@@ -330,12 +330,13 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 		//MarkerInsert(CB, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), "Command");
 #endif
 		const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
+		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RP,
 			FB,
-			ScissorRects[0],
+			RenderArea,
 			static_cast<uint32_t>(CVs.size()), CVs.data()
 		};
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {

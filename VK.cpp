@@ -2110,25 +2110,24 @@ void VK::InitializeDepthStencilImage(const VkCommandBuffer CB)
 
 void VK::CreateViewport(const float Width, const float Height, const float MinDepth, const float MaxDepth)
 {
+	//!< Vulkan はTLが原点(DirectX、OpenGLはBLが原点)
 	Viewports = {
 		{
 			//!< VKではデフォルトで「Yが下」を向くが、高さに負の値を指定すると「Yが上」を向きDXと同様になる (In VK, by specifying negative height, Y become up. same as DX)
 			//!< 通常基点は「左上」を指定するが、高さに負の値を指定する場合は「左下」を指定すること (When negative height, specify left bottom as base, otherwise left up)
 #ifdef USE_VIEWPORT_Y_UP
-			0, Height,
+			0.0f, Height,
 			Width, -Height,
 #else
-			0, 0,
+			0.0f, 0.0f,
 			Width, Height,
 #endif
 			MinDepth, MaxDepth
 		}
 	};
+	//!< offset, extentで指定 (left, top, right, bottomで指定のDXとは異なるので注意)
 	ScissorRects = {
-		{
-			{ 0, 0 },
-			{ static_cast<uint32_t>(Width), static_cast<uint32_t>(Height) }
-		}
+		{ { 0, 0 }, { static_cast<uint32_t>(Width), static_cast<uint32_t>(Height) } },
 	};
 
 	LOG_OK();
@@ -2898,9 +2897,10 @@ void VK::ClearDepthStencilAttachment(const VkCommandBuffer CB, const VkClearDept
 			ClearValue
 		},
 	};
+	const VkRect2D ClearArea = { { 0, 0 }, SurfaceExtent2D };
 	const std::vector<VkClearRect> ClearRects = {
 		{
-			ScissorRects[0],
+			ClearArea,
 			0, 1 //!< 開始レイヤとレイヤ数 #VK_TODO 現状決め打ち
 		},
 	};
@@ -2948,13 +2948,13 @@ void VK::PopulateCommandBuffer(const size_t i)
 		std::array<VkClearValue, 2> CVs = {};
 #endif
 		CVs[1].depthStencil = ClearDepthStencilValue;
-
+		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			nullptr,
 			RP,
 			FB,
-			ScissorRects[0], //!< フレームバッファのサイズ以下を指定できる
+			RenderArea, //!< フレームバッファのサイズ以下を指定できる
 			static_cast<uint32_t>(CVs.size()), CVs.data()
 		};
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
