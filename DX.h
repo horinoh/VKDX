@@ -269,7 +269,7 @@ protected:
 	std::vector<COM_PTR<ID3D12Resource>> ConstantBufferResources;
 	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
 
-	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap; //!< RTV
+	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap; //!< RTV‚¾‚¯‚ÇAŒ»ó•Ê‚É‚µ‚Ä‚¢‚é #DX_TODO
 	std::vector<COM_PTR<ID3D12DescriptorHeap>> SamplerDescriptorHeaps;
 	std::vector<COM_PTR<ID3D12DescriptorHeap>> RtvDescriptorHeaps;
 	std::vector<COM_PTR<ID3D12DescriptorHeap>> DsvDescriptorHeaps;

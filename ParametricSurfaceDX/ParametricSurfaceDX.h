@@ -5,6 +5,8 @@
 #pragma region Code
 #include "../DXExt.h"
 
+//!< パラメトリックサーフェス(ParametricSurface) http://www.3d-meier.de/tut3/Seite0.html
+
 class ParametricSurfaceDX : public DXExt
 {
 private:

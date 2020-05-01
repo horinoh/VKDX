@@ -265,10 +265,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyImageView(Device, DepthStencilImageView, GetAllocationCallbacks());
 		DepthStencilImageView = VK_NULL_HANDLE;
 	}
-	if (VK_NULL_HANDLE != DepthStencilDeviceMemory) {
-		vkFreeMemory(Device, DepthStencilDeviceMemory, GetAllocationCallbacks());
-		DepthStencilDeviceMemory = VK_NULL_HANDLE;
-	}
 	if (VK_NULL_HANDLE != DepthStencilImage) {
 		vkDestroyImage(Device, DepthStencilImage, GetAllocationCallbacks());
 		DepthStencilImage = VK_NULL_HANDLE;
@@ -277,10 +273,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	if (VK_NULL_HANDLE != RenderTargetImageView) {
 		vkDestroyImageView(Device, RenderTargetImageView, GetAllocationCallbacks());
 		RenderTargetImageView = VK_NULL_HANDLE;
-	}
-	if (VK_NULL_HANDLE != RenderTargetDeviceMemory) {
-		vkFreeMemory(Device, RenderTargetDeviceMemory, GetAllocationCallbacks());
-		RenderTargetDeviceMemory = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != RenderTargetImage) {
 		vkDestroyImage(Device, RenderTargetImage, GetAllocationCallbacks());
@@ -475,7 +467,7 @@ void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const si
 	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BCI, GetAllocationCallbacks(), Buffer));
 }
 
-void VK::CreateImage(VkImage* Img, const VkImageCreateFlags /*CreateFlags*/, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage) const
+void VK::CreateImage(VkImage* Img, const VkImageCreateFlags CreateFlags, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage) const
 {
 	//!< Usage に VK_IMAGE_USAGE_SAMPLED_BIT が指定されいる場合、フォーマットやフィルタが使用可能かチェック #VK_TODO ここではリニアフィルタ決め打ち
 	ValidateFormatProperties_SampledImage(GetCurrentPhysicalDevice(), Format, Usage, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
@@ -483,7 +475,7 @@ void VK::CreateImage(VkImage* Img, const VkImageCreateFlags /*CreateFlags*/, con
 	const VkImageCreateInfo ICI = {
 		VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		nullptr,
-		0,
+		CreateFlags,
 		ImageType,
 		Format,
 		Extent3D,
@@ -2042,13 +2034,13 @@ void VK::CreateRenderTarget(const VkFormat Format, const uint32_t Width, const u
 	LOG_OK();
 }
 
-void VK::CreateDepthStencil(const VkFormat DepthFormat, const uint32_t Width, const uint32_t Height)
+void VK::CreateDepthStencil(const VkFormat Format, const uint32_t Width, const uint32_t Height)
 {
-	assert(IsSupportedDepthFormat(GetCurrentPhysicalDevice(), DepthFormat) && "Not supported depth format");
+	assert(IsSupportedDepthFormat(GetCurrentPhysicalDevice(), Format) && "Not supported depth format");
 
 	const VkExtent3D Extent3D = { Width, Height, 1 };
 	//!< vkCmdClearDepthStencilImage を用いてクリアする場合には VK_IMAGE_USAGE_TRANSFER_DST_BIT を指定すること (ここではレンダーパスでクリアする想定で指定しない)
-	CreateImage(&DepthStencilImage, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT /*| VK_IMAGE_USAGE_TRANSFER_DST_BIT*/);
+	CreateImage(&DepthStencilImage, 0, VK_IMAGE_TYPE_2D, Format, Extent3D, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT /*| VK_IMAGE_USAGE_TRANSFER_DST_BIT*/);
 
 #if 0
 	AllocateImageMemory(&DepthStencilDeviceMemory, DepthStencilImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -2059,7 +2051,7 @@ void VK::CreateDepthStencil(const VkFormat DepthFormat, const uint32_t Width, co
 	SuballocateImageMemory(HeapIndex, Offset, DepthStencilImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 #endif
 
-	CreateImageView(&DepthStencilImageView, DepthStencilImage, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, ComponentMapping_Identity, ImageSubresourceRange_DepthStencil);
+	CreateImageView(&DepthStencilImageView, DepthStencilImage, VK_IMAGE_VIEW_TYPE_2D, Format, ComponentMapping_Identity, ImageSubresourceRange_DepthStencil);
 
 	LOG_OK();
 }

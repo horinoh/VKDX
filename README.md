@@ -322,6 +322,8 @@
  * framework.h(旧stdafx.h)は既存のものを参考に編集
 
 #### DX
+ * WinPixEventRuntimeのインストール
+	* 右クリック - Manage NuGet Packages - Browse - WinPixEventRuntimeで検索 - インストール
  * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/HLSL.props、Props/RS.props. (Props/DXTK.prop, Props/GLTF.prop)
  * Header Files に Win.h、DX.h、DXExt.h、(DXImage.h) を追加 
  * Source Files に Win.cpp、DX.cpp、DXExt.cpp、(DXImage.cpp) を追加
@@ -331,8 +333,6 @@
    * Excluded From Build を No
    * Content を Yes
   * 右クリック - プロパティ - HLSL Compiler - General - Shader Type でタイプを適切に選択しておく
-* WinPixEventRuntimeのインストール
-	* 右クリック - Manage NuGet Packages - Browse - WinPixEventRuntimeで検索 - インストール
 * ルートシグネチャ用HLSL XxxDX.rs.hlsl を作成する
 
 #### VK
@@ -356,6 +356,9 @@
  * C++ローダー https://github.com/jessey-git/fx-gltf
  * JSON https://github.com/nlohmann/json
  * DXローダー(使用していない) https://github.com/microsoft/glTF-SDK
+
+## ParametricSurface
+ * http://www.3d-meier.de/tut3/Seite0.html
 
 ## FBX
  * SDKをインストールする
@@ -410,28 +413,47 @@
 TODO
 
 # VK
-- ウインドウサイズ変更時の処理 OnSize() スワップチェインのリサイズ
-- コンピュートの検証(テクスチャを準備する)
-- ストレージバッファ、ユニフォームテクセルバッファ、ストレージテクセルバッファの検証
-- テクスチャ読み込み現状ミップマップ１のみ
-
+	* ウインドウサイズ変更時の処理 OnSize() スワップチェインのリサイズ
+	* コンピュートの検証(テクスチャを準備する)
+	* ストレージバッファ、ユニフォームテクセルバッファ、ストレージテクセルバッファの検証
+	* テクスチャ読み込み現状ミップマップ１のみ
 # DX
-- ウインドウサイズ変更時の処理 OnSize() スワップチェインのリサイズ
-- コンピュートの検証(テクスチャを準備する)
-- コマンドリスト、グラフィクスコマンドリストまわりをまとめる
-- テクスチャ読み込み現状ミップマップ１のみ
-
-# 共通
-* GSインスタンシング
-* HDR対応 環境がないので保留
-* バッファ毎にデバイスメモリを確保している、大きなデバイスメモリを確保してバッファはその一部を使用するようにしたほうが良い
-* テクスチャ
-	* 圧縮テクスチャ
-	* キューブマップ(環境マップ)
-	* プロシージャルテクスチャ
-* Gバッファ
-	* シャドウマップ
-	* SSAO
-	* ポストプロセス
-* ディスタンスファンクション
+	* ウインドウサイズ変更時の処理 OnSize() スワップチェインのリサイズ
+	* コンピュートの検証(テクスチャを準備する)
+	* コマンドリスト、グラフィクスコマンドリストまわりをまとめる
+	* テクスチャ読み込み現状ミップマップ１のみ
+# VK, DX
+	* テクスチャ
+		* 圧縮テクスチャ
+		* キューブマップ(環境マップ)
+		* プロシージャルテクスチャ
+	* Gバッファ
+		* シャドウマップ
+		* SSAO
+		* ポストプロセス
+# 保留(要HW)
+	* HDR対応
+	* メッシュシェーダ
+	* レイトレーシング
  --> 
+
+<!--
+圧縮テクスチャ
+	DXT1	... BC1		bpp4	RGB,RGBA	A2諧調
+	DXT2,3	...	BC2		bpp8	RGBA		A16諧調
+	DXT4,5	... BC3		bpp8	RGBA
+	ATI1N	... BC4		bpp4	R			ハイトマップ等
+	ATI2N	... BC5		bpp8	RG			ノーマルマップ等
+				BC6H	bpp8	RGB			HDR
+				BC7		bpp8	RGB,RGBA
+-->
+
+ <!--
+ ID3D12Resource				VkBuffer, VkImage
+ ID3D12DescriptorHeap		VkDeviceMemory
+
+ static const float3 Masks[] = { float3(1, 0, 0), float3(0, 1, 0), float3(0, 0, 1), }
+ Out.XXX += A * Masks[InstanceID].xxx;
+ Out.XXX += B * Masks[InstanceID].yyy;
+ Out.XXX += C * Masks[InstanceID].zzz;
+ -->

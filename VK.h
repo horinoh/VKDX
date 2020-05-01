@@ -465,12 +465,10 @@ protected:
 	std::vector<VkDeviceSize> DeviceMemoryOffsets;
 
 	VkImage RenderTargetImage = VK_NULL_HANDLE;
-	VkDeviceMemory RenderTargetDeviceMemory = VK_NULL_HANDLE;
 	VkImageView RenderTargetImageView = VK_NULL_HANDLE;
 
-	//VkFormat DepthFormat = VK_FORMAT_D24_UNORM_S8_UINT;
+	VkFormat DepthFormat = VK_FORMAT_D24_UNORM_S8_UINT;
 	VkImage DepthStencilImage = VK_NULL_HANDLE;
-	VkDeviceMemory DepthStencilDeviceMemory = VK_NULL_HANDLE;
 	VkImageView DepthStencilImageView = VK_NULL_HANDLE;
 
 	std::vector<VkImage> Images;

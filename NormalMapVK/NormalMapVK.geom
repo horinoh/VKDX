@@ -18,7 +18,6 @@ void main()
 {
 	const vec3 CamPos = -vec3(View[3][0], View[3][1], View[3][2]);
 	const mat4 PVW = Projection * View * World;
-	const vec3 LightPos = vec3(10.0f, 10.0f, 0.0f);
 	const mat4 TexTransform = mat4(1.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 1.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f, 0.0f,
