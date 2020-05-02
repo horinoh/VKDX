@@ -355,26 +355,6 @@ void VKExt::CreateRenderPass_Color_PostProcess(VkRenderPass& RP, const VkFormat 
 //	VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FCI, GetAllocationCallbacks(), &FB));
 //}
 
-void VKExt::CreateFramebuffer_Color()
-{
-	Framebuffers.resize(SwapchainImages.size());
-	for (uint32_t i = 0; i < Framebuffers.size(); ++i) {
-		VK::CreateFramebuffer(Framebuffers[i], RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
-			SwapchainImageViews[i]
-			});
-	}
-}
-void VKExt::CreateFramebuffer_ColorDepth()
-{
-	Framebuffers.resize(SwapchainImages.size());
-	for (uint32_t i = 0; i < Framebuffers.size(); ++i) {
-		VK::CreateFramebuffer(Framebuffers[i], RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
-			SwapchainImageViews[i],
-			DepthStencilImageView
-			});
-	}
-}
-
 void VKExt::CreateRenderTexture(VkImage* Img, VkImageView* IV)
 {
 	const auto Format = VK_FORMAT_R8G8B8A8_UNORM;

@@ -33,7 +33,14 @@ protected:
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
 	virtual void CreateDepthStencil() override { VK::CreateDepthStencil(DepthFormat, GetClientRectWidth(), GetClientRectHeight()); }
-	virtual void CreateFramebuffer() override { CreateFramebuffer_ColorDepth(); }
+	virtual void CreateFramebuffer() override { 
+		const auto RP = RenderPasses[0];
+		const auto DIV = DepthStencilImageView;
+		for (auto i : SwapchainImageViews) {
+			Framebuffers.push_back(VkFramebuffer());
+			VK::CreateFramebuffer(Framebuffers.back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DIV });
+		}
+	}
 	virtual void CreateRenderPass() override { RenderPasses.resize(1); CreateRenderPass_ColorDepth(RenderPasses[0], ColorFormat, DepthFormat, true); }
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 

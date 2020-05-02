@@ -105,9 +105,5 @@ public:
 	void CreateRenderPass_ColorDepth_PostProcess(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth, bool ClearOnLoad);
 	void CreateRenderPass_Color_PostProcess(VkRenderPass& RP, const VkFormat Color, bool ClearOnLoad);
 
-	void CreateFramebuffer_Color();
-	void CreateFramebuffer_ColorDepth();
-	virtual void CreateFramebuffer() override { CreateFramebuffer_Color(); }
-
 	virtual void CreateRenderTexture(VkImage* Img, VkImageView* IV);
 };

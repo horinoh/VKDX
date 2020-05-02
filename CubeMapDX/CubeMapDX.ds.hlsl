@@ -64,12 +64,11 @@ OUT main(const TESS_FACTOR tess, const float2 uv : SV_DomainLocation, const Outp
 {
 	OUT Out;
 
-	Out.Texcoord = float2(uv.x, 1.0f - uv.y);
 #if 1
 	Out.Position = GetPosition_Torus(uv) * 0.5f;
 	Out.Normal = GetNormal_Torus(uv, Out.Position);
 	Out.Tangent = GetTangent_Torus(uv, Out.Position);
-#elif 0
+#elif 1
 	Out.Position = GetPosition_Sphere(uv) * 0.5f;
 	Out.Normal = GetNormal_Sphere(uv, Out.Position);
 	Out.Tangent = GetTangent_Sphere(uv, Out.Position);
@@ -78,5 +77,7 @@ OUT main(const TESS_FACTOR tess, const float2 uv : SV_DomainLocation, const Outp
 	Out.Normal = float3(0.0f, 1.0f, 0.0f);
 	Out.Tangent = float3(1.0f, 0.0f, 0.0f);
 #endif
+	Out.Texcoord = float2(uv.x, 1.0f - uv.y);
+
 	return Out;
 }

@@ -13,7 +13,8 @@ void main()
 	for(int i=0;i<gl_in.length();++i) {
 		gl_Position = gl_in[i].gl_Position;
 		OutTexcoord = InTexcoord[i];
-		gl_ViewportIndex = gl_InvocationID;
+		gl_ViewportIndex = gl_InvocationID; //!< GSインスタンシング(ビューポート毎)
+		//gl_Layer = gl_InvocationID; //!< GSインスタンシング(レンダーターゲット毎)
 		EmitVertex();
 	}
 	EndPrimitive();	

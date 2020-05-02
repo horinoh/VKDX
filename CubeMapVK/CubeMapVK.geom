@@ -23,12 +23,13 @@ void main()
 		0.0f, 0.0f, 0.0f, 1.0f);
 
 	for(int i=0;i<gl_in.length();++i) {
-		const vec3 Binormal = cross(InNormal[i], InTangent[i]);
 		gl_Position = PVW * gl_in[i].gl_Position;
+		const vec3 Binormal = cross(InNormal[i], InTangent[i]);
 		OutTexcoord = (TexTransform * vec4(InTexcoord[i], 0.0f, 1.0f)).xy;
 		OutViewDirection = CamPos - (World * gl_Position).xyz;
 		const vec3 V = LocalCameraPosition - gl_in[i].gl_Position.xyz;
 		OutViewDirection = vec3(dot(V, InTangent[i]), dot(V, Binormal), dot(V, InNormal[i]));
+
 		EmitVertex();
 	}
 	EndPrimitive();	

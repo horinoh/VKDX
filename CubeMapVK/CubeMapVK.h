@@ -18,8 +18,13 @@ protected:
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
 		Super::OnTimer(hWnd, hInstance);
 
-		//Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
-		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(0.0f, 1.0f, 0.0f));
+		const auto CamPos = glm::vec3(glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(0.0f, 0.0f, 3.0f, 1.0f));
+#ifdef USE_SKY_DOME
+		Tr.View = glm::lookAt(CamPos, glm::vec3(0.0f, 2.0f * glm::sin(glm::radians(Degree)), 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		Tr.World = glm::translate(glm::mat4(1.0f), CamPos); //!< カメラ位置に球を配置
+#else
+		Tr.View = glm::lookAt(CamPos, glm::vec3(0.0f, 0.0f * glm::sin(glm::radians(Degree)), 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+#endif
 
 		const auto VW = Tr.View * Tr.World;
 		Tr.LocalCameraPosition = glm::inverse(VW) * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
@@ -29,9 +34,16 @@ protected:
 		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
 	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
-
+	//!< USE_SKY_DOME時はデプステスト、ライトはオフで良い
 	virtual void CreateDepthStencil() override { VK::CreateDepthStencil(DepthFormat, GetClientRectWidth(), GetClientRectHeight()); }
-	virtual void CreateFramebuffer() override { CreateFramebuffer_ColorDepth(); }
+	virtual void CreateFramebuffer() override { 
+		const auto RP = RenderPasses[0];
+		const auto DIV = DepthStencilImageView;
+		for (auto i : SwapchainImageViews) {
+			Framebuffers.push_back(VkFramebuffer());
+			VK::CreateFramebuffer(Framebuffers.back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DIV });
+		}
+	}
 	virtual void CreateRenderPass() override { RenderPasses.resize(1); CreateRenderPass_ColorDepth(RenderPasses[0], ColorFormat, DepthFormat, true); }
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
@@ -93,13 +105,14 @@ protected:
 		ImageViews.resize(2);
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
-			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds")));
-			LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds")));
+			//!< キューブマップ : PX, NX, PY, NY, PZ, NZ
+			LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\CubeMap\\DebugCube.dds")));
+			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\CubeMap\\DesertCube.dds"))); //!< #VK_TODO ちゃんと読めていない？
+			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\CubeMap\\GrassCube.dds"))); //!< #VK_TODO ちゃんと読めていない？
+			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\CubeMap\\SunsetCube.dds"))); //!< #VK_TODO ちゃんと読めていない？
 
-			LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\CubeMap\\DebugCube.dds")));
-			//LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\CubeMap\\DesertCube.dds")));
-			//LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\CubeMap\\GrassCube.dds")));
-			//LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\CubeMap\\SunsetCube.dds")));
+			//LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds")));
+			LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds")));
 		}
 	}
 
@@ -172,7 +185,18 @@ protected:
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 	}
 
-	virtual void CreateShaderModules() override { CreateShaderModle_VsFsTesTcsGs(); }
+	virtual void CreateShaderModules() override {
+#ifdef USE_SKY_DOME
+		const auto ShaderPath = GetBasePath();
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_sd.frag.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_sd.tese.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tesc.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_sd.geom.spv")).data())); 
+#else
+		CreateShaderModle_VsFsTesTcsGs(); 
+#endif
+	}
 	virtual void CreatePipelines() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 

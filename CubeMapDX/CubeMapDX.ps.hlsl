@@ -3,11 +3,12 @@ struct IN
 	float4 Position : SV_POSITION;
 	float2 Texcoord : TEXCOORD0;
 	float3 ViewDirection : TEXCOORD1;
+	float3 Position3D : TEXCOORD2;
 };
 
-Texture2D NormalMap : register(t0, space0);
-TextureCube CubeMap : register(t1, space0);
 SamplerState Sampler : register(s0, space0);
+TextureCube CubeMap : register(t0, space0);
+Texture2D NormalMap : register(t1, space0);
 
 struct OUT
 {

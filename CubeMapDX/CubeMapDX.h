@@ -17,9 +17,15 @@ protected:
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
 		Super::OnTimer(hWnd, hInstance);
 
-		//DirectX::XMStoreFloat4x4(&Tr.World, DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree)));
-		DirectX::XMStoreFloat4x4(&Tr.World, DirectX::XMMatrixRotationY(DirectX::XMConvertToRadians(Degree)));
-
+		const auto CamPos = DirectX::XMVector3Transform(DirectX::XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f), DirectX::XMMatrixRotationY(DirectX::XMConvertToRadians(Degree)));
+#ifdef USE_SKY_DOME
+		const auto View = DirectX::XMMatrixLookAtRH(CamPos, DirectX::XMVectorSet(0.0f, 2.0f * DirectX::XMScalarSin(DirectX::XMConvertToRadians(Degree)), 0.0f, 1.0f), DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
+		DirectX::XMStoreFloat4x4(&Tr.View, View);
+		DirectX::XMStoreFloat4x4(&Tr.World, DirectX::XMMatrixTranslationFromVector(CamPos)); //!< カメラ位置に球を配置
+#else
+		const auto View = DirectX::XMMatrixLookAtRH(CamPos, DirectX::XMVectorSet(0.0f, 0.0f * DirectX::XMScalarSin(DirectX::XMConvertToRadians(Degree)), 0.0f, 1.0f), DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
+		DirectX::XMStoreFloat4x4(&Tr.View, View);
+#endif
 		const auto WV = DirectX::XMMatrixMultiply(DirectX::XMLoadFloat4x4(&Tr.World), DirectX::XMLoadFloat4x4(&Tr.View));
 		auto DetWV = DirectX::XMMatrixDeterminant(WV);
 		DirectX::XMStoreFloat4(&Tr.LocalCameraPosition, DirectX::XMVector4Transform(DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), DirectX::XMMatrixInverse(&DetWV, WV)));
@@ -28,7 +34,7 @@ protected:
 
 		CopyToUploadResource(COM_PTR_GET(ConstantBufferResources[0]), RoundUp256(sizeof(Tr)), &Tr);
 	}
-
+	//!< USE_SKY_DOME時はデプステスト、ライトはオフで良い
 	virtual void CreateDepthStencil() override { CreateDepthStencilResource(DXGI_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
@@ -98,13 +104,14 @@ protected:
 		ImageResources.resize(2);
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
-			//LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-			LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\CubeMap\\DebugCube.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			//LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\CubeMap\\DesertCube.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			//LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\CubeMap\\GrassCube.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			//LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\CubeMap\\SunsetCube.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			//!< キューブマップ : PX, NX, PY, NY, PZ, NZ
+			LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\CubeMap\\DebugCube.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			//LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\CubeMap\\DesertCube.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			//LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\CubeMap\\GrassCube.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			//LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\CubeMap\\SunsetCube.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			
+			//LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		}
 	}
 
@@ -129,16 +136,16 @@ protected:
 			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBufferResources[0])->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBufferResources[0]->GetDesc().Width) };
 			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
 			assert(2 == ImageResources.size() && "");
-			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV0
 			//!< キューブマップでは明示的にSHADER_RESOURCE_VIEW_DESCを指定すること
-			const auto Desc = ImageResources[1]->GetDesc();
+			const auto Desc = ImageResources[0]->GetDesc();
 			D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
 				Desc.Format,
 				D3D12_SRV_DIMENSION_TEXTURECUBE,
 				D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
 			};
 			SRVD.TextureCube = { 0, Desc.MipLevels, 0.0f };
-			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV1
+			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV0
+			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV1
 		}
 		{
 			assert(!CbvSrvUavDescriptorHeaps.empty() && "");
@@ -148,7 +155,21 @@ protected:
 		}
 	}
 	virtual void CreateShaderBlobs() override {
+#ifdef USE_SKY_DOME
+		const auto ShaderPath = GetBasePath();
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_sd.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_sd.ds.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_sd.hs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_sd.gs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+#else
 		CreateShaderBlob_VsPsDsHsGs();
+#endif
 	}
 	virtual void CreatePipelineStates() override { CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, TRUE); }
 	virtual void PopulateCommandList(const size_t i) override;

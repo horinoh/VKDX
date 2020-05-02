@@ -71,10 +71,20 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="GSInstancingVK.frag" />
-    <CustomBuild Include="GSInstancingVK.geom" />
-    <CustomBuild Include="GSInstancingVK.tesc" />
-    <CustomBuild Include="GSInstancingVK.tese" />
-    <CustomBuild Include="GSInstancingVK.vert" />
+    <CustomBuild Include="GSInstancingVK.frag">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GSInstancingVK.geom">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GSInstancingVK.tesc">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GSInstancingVK.tese">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GSInstancingVK.vert">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

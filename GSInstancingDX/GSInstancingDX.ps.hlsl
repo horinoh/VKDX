@@ -3,6 +3,7 @@ struct IN
 	float4 Position : SV_POSITION;
 	float2 Texcoord : TEXCOORD0;
 	uint Viewport : SV_ViewportArrayIndex;
+	//uint RenderTarget : SV_RenderTargetArrayIndex;
 };
 struct OUT
 {
