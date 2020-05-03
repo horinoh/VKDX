@@ -279,8 +279,12 @@ void CubeMapVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+#if defined(USE_SKY_DOME) && !defined(USE_DEPTH_STENCIL)
+		const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
+#else
 		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
 		CVs[1].depthStencil = ClearDepthStencilValue;
+#endif
 		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

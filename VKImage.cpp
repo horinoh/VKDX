@@ -143,7 +143,6 @@ void VKImage::CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, co
 		BICs.reserve(Layers);
 		VkDeviceSize Offset = 0;
 
-#if 0
 		for (uint32_t i = 0; i < Layers; ++i) {
 			for (uint32_t j = 0; j < Levels; ++j) {
 				const VkImageSubresourceLayers ISL = {
@@ -159,21 +158,7 @@ void VKImage::CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, co
 				Offset += static_cast<const VkDeviceSize>(GLITexture.size(j));
 			}
 		}
-#else
-		for (uint32_t j = 0; j < Levels; ++j) {
-			const VkImageSubresourceLayers ISL = {
-				VK_IMAGE_ASPECT_COLOR_BIT,
-				j,
-				0, Layers
-			};
-			const VkExtent3D Extent3D = {
-				static_cast<const uint32_t>(GLITexture.extent(j).x), static_cast<const uint32_t>(GLITexture.extent(j).y), static_cast<const uint32_t>(GLITexture.extent(j).z)
-			};
 
-			BICs.push_back({ Offset, 0, 0, ISL, Offset3D, Extent3D });
-			Offset += static_cast<const VkDeviceSize>(GLITexture.size(j));
-		}
-#endif
 		assert(!BICs.empty() && "BufferImageCopy is empty");
 
 		const VkImageSubresourceRange ISR = {

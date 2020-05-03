@@ -34,7 +34,8 @@ protected:
 		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
 	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
-	//!< USE_SKY_DOME時はデプステスト、ライトはオフで良い
+
+#if !defined(USE_SKY_DOME) || defined(USE_DEPTH_STENCIL)
 	virtual void CreateDepthStencil() override { VK::CreateDepthStencil(DepthFormat, GetClientRectWidth(), GetClientRectHeight()); }
 	virtual void CreateFramebuffer() override { 
 		const auto RP = RenderPasses[0];
@@ -45,6 +46,7 @@ protected:
 		}
 	}
 	virtual void CreateRenderPass() override { RenderPasses.resize(1); CreateRenderPass_ColorDepth(RenderPasses[0], ColorFormat, DepthFormat, true); }
+#endif
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
 	virtual void CreateImmutableSampler() override {
@@ -197,7 +199,13 @@ protected:
 		CreateShaderModle_VsFsTesTcsGs(); 
 #endif
 	}
-	virtual void CreatePipelines() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE); }
+	virtual void CreatePipelines() override { 
+#if !defined(USE_SKY_DOME) || defined(USE_DEPTH_STENCIL)
+		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE);
+#else
+		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_FALSE);
+#endif
+	}
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 private:

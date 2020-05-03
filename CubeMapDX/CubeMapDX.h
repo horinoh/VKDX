@@ -34,8 +34,9 @@ protected:
 
 		CopyToUploadResource(COM_PTR_GET(ConstantBufferResources[0]), RoundUp256(sizeof(Tr)), &Tr);
 	}
-	//!< USE_SKY_DOME時はデプステスト、ライトはオフで良い
+#if !defined(USE_SKY_DOME) || defined(USE_DEPTH_STENCIL)
 	virtual void CreateDepthStencil() override { CreateDepthStencilResource(DXGI_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
+#endif
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
 	virtual void CreateStaticSampler() override {
@@ -121,11 +122,13 @@ protected:
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 3, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< CBV, SRV0, SRV1
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps[0])));
 		}
+#if !defined(USE_SKY_DOME) || defined(USE_DEPTH_STENCIL)
 		{
 			DsvDescriptorHeaps.resize(1);
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 }; //!< DSV
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps[0])));
 		}
+#endif
 	}
 	virtual void CreateDescriptorView() override {
 		{
@@ -147,12 +150,14 @@ protected:
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV0
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV1
 		}
+#if !defined(USE_SKY_DOME) || defined(USE_DEPTH_STENCIL)
 		{
 			assert(!CbvSrvUavDescriptorHeaps.empty() && "");
 			const auto& DH = DsvDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 			Device->CreateDepthStencilView(COM_PTR_GET(DepthStencilResource), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
 		}
+#endif
 	}
 	virtual void CreateShaderBlobs() override {
 #ifdef USE_SKY_DOME
@@ -171,7 +176,13 @@ protected:
 		CreateShaderBlob_VsPsDsHsGs();
 #endif
 	}
-	virtual void CreatePipelineStates() override { CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, TRUE); }
+	virtual void CreatePipelineStates() override { 
+#if !defined(USE_SKY_DOME) || defined(USE_DEPTH_STENCIL)
+		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, TRUE);
+#else
+		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, FALSE);
+#endif
+	}
 	virtual void PopulateCommandList(const size_t i) override;
 
 private:
