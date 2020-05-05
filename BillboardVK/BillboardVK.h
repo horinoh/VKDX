@@ -38,7 +38,42 @@ protected:
 			VK::CreateFramebuffer(Framebuffers.back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DIV });
 		}
 	}
-	virtual void CreateRenderPass() override { RenderPasses.resize(1); CreateRenderPass_ColorDepth(RenderPasses[0], ColorFormat, DepthFormat, true); }
+	virtual void CreateRenderPass() override { 
+		RenderPasses.resize(1);
+		const std::array<VkAttachmentReference, 1> ColorAttach = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
+		const VkAttachmentReference DepthAttach = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+		VK::CreateRenderPass(RenderPasses[0], {
+				//!< アタッチメント
+				{
+					0,
+					ColorFormat,
+					VK_SAMPLE_COUNT_1_BIT,
+					VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+				},
+				{
+					0,
+					DepthFormat,
+					VK_SAMPLE_COUNT_1_BIT,
+					VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+				},
+			}, {
+				//!< サブパス
+				{
+					0,
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					0, nullptr,
+					static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
+					&DepthAttach,
+					0, nullptr
+				},
+			}, {
+				//!< サブパス依存
+			});
+	}
 
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
@@ -62,13 +97,35 @@ protected:
 			}, {});
 	}
 
-#pragma region DESCRIPTOR
-#ifndef USE_PUSH_DESCRIPTOR
+#ifdef USE_PUSH_DESCRIPTOR
+	virtual void CreateDescriptorUpdateTemplate() override {
+		const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
+			{
+				0, 0,
+				_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				offsetof(DescriptorUpdateInfo, DBI), sizeof(DescriptorUpdateInfo)
+			}
+		};
+		assert(!DescriptorSetLayouts.empty() && "");
+		assert(!PipelineLayouts.empty() && "");
+		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
+			nullptr,
+			0,
+			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
+			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR, //!< PUSH_DESCRIPTORSを指定
+			DescriptorSetLayouts[0],
+			VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[0], 0 //!< パイプラインレイアウトを指定
+		};
+		DescriptorUpdateTemplates.resize(1);
+		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
+	}
+#else
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
 		VKExt::CreateDescriptorPool(DescriptorPools[0], /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }
-			});
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }
+		});
 	}
 	virtual void AllocateDescriptorSet() override {
 		assert(!DescriptorSetLayouts.empty() && "");
@@ -83,9 +140,18 @@ protected:
 		DescriptorSets.resize(1);
 		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
 	}
+	virtual void CreateDescriptorUpdateTemplate() override {
+		DescriptorUpdateTemplates.resize(1);
+		assert(!DescriptorSetLayouts.empty() && "");
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates[0], {
+			{
+				0/*binding*/, 0/*arrayElement*/,
+				_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				offsetof(DescriptorUpdateInfo, DBI), sizeof(DescriptorUpdateInfo)
+			},
+		}, DescriptorSetLayouts[0]);
+	}
 	virtual void UpdateDescriptorSet() override {
-		Super::UpdateDescriptorSet();
-
 		const DescriptorUpdateInfo DUI = {
 			{ UniformBuffers[0], Offset/*offset*/, VK_WHOLE_SIZE/*range*/ },
 		};
@@ -94,40 +160,7 @@ protected:
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 	}
 #endif
-	virtual void CreateDescriptorUpdateTemplate() override {
-		const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
-			{
-				0/*binding*/, 0/*arrayElement*/,
-				_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				offsetof(DescriptorUpdateInfo, DBI), sizeof(DescriptorUpdateInfo)
-			}
-		};
-		assert(!DescriptorSetLayouts.empty() && "");
-#ifdef USE_PUSH_DESCRIPTOR
-		assert(!PipelineLayouts.empty() && "");
-#endif		
-		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
-			nullptr,
-			0,
-			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
-#ifdef USE_PUSH_DESCRIPTOR
-			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR,
-#else
-			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
-#endif
-			DescriptorSetLayouts[0],
-#ifdef USE_PUSH_DESCRIPTOR
-			VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[0], 0
-#else
-			VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
-#endif
-		};
-		DescriptorUpdateTemplates.resize(1);
-		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
-	}
-#pragma endregion //!< DESCRIPTOR
-	
+
 	virtual void CreateUniformBuffer() override {
 		UniformBuffers.resize(1);
 

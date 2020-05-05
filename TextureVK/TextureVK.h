@@ -144,29 +144,17 @@ protected:
 		}
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
-		const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
+		DescriptorUpdateTemplates.resize(1);
+		assert(!DescriptorSetLayouts.empty() && "");
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates[0], {
 			{
 				0, 0,
 				_countof(DescriptorUpdateInfo::DII), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				offsetof(DescriptorUpdateInfo, DII), sizeof(DescriptorUpdateInfo)
-			}
-		};
-		assert(!DescriptorSetLayouts.empty() && "");
-		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
-			nullptr,
-			0,
-			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
-			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
-			DescriptorSetLayouts[0],
-			VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
-		};
-		DescriptorUpdateTemplates.resize(1);
-		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
+			},
+		}, DescriptorSetLayouts[0]);
 	}
 	virtual void UpdateDescriptorSet() override {
-		Super::UpdateDescriptorSet();
-
 #ifdef USE_IMMUTABLE_SAMPLER
 		assert(!Samplers.empty() && "");
 #endif
@@ -205,7 +193,33 @@ protected:
 #endif
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFs(); }
 	virtual void CreatePipelines() override { CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE); }
-	virtual void CreateRenderPass() { RenderPasses.resize(1); CreateRenderPass_Default(RenderPasses[0], ColorFormat, false); }
+	virtual void CreateRenderPass() { 
+		RenderPasses.resize(1);
+		const std::array<VkAttachmentReference, 1> ColorAttach = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
+		VK::CreateRenderPass(RenderPasses[0], {
+				//!< アタッチメント
+				{
+					0,
+					ColorFormat,
+					VK_SAMPLE_COUNT_1_BIT,
+					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE, //!<「開始時に何もしない(クリアしない)」,「終了時に保存」
+					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+				},
+			}, {
+				//!< サブパス
+				{
+					0,
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					0, nullptr,
+					static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
+					nullptr,
+					0, nullptr
+				},
+			}, {
+				//!< サブパス依存
+			});
+	}
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 private:

@@ -35,31 +35,39 @@ protected:
 		VKExt::CreatePipelineLayout(PipelineLayouts[1], { DescriptorSetLayouts[0] }, {});
 	}
 
-#pragma region DESCRIPTOR
+	virtual void CreateDescriptorPool() override {
+		DescriptorPools.resize(1);
+		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
+				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }
+			});
+	}
+	virtual void AllocateDescriptorSet() override {
+		assert(!DescriptorSetLayouts.empty() && "");
+		const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
+		assert(!DescriptorPools.empty() && "");
+		const VkDescriptorSetAllocateInfo DSAI = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			nullptr,
+			DescriptorPools[0],
+			static_cast<uint32_t>(DSLs.size()), DSLs.data()
+		};
+		DescriptorSets.resize(1);
+		for (auto& i : DescriptorSets) {
+			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &i));
+		}
+	}
 	virtual void CreateDescriptorUpdateTemplate() override {
-		const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
+		DescriptorUpdateTemplates.resize(1);
+		assert(!DescriptorSetLayouts.empty() && "");
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates[0], {
 			{
 				0, 0,
 				_countof(DescriptorUpdateInfo::DescriptorImageInfos), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				offsetof(DescriptorUpdateInfo, DescriptorImageInfos), sizeof(DescriptorUpdateInfo)
-			}
-		};
-		assert(!DescriptorSetLayouts.empty() && "");
-		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
-			nullptr,
-			0,
-			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
-			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
-			DescriptorSetLayouts[0],
-			VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
-		};
-		DescriptorUpdateTemplates.resize(1);
-		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
+			},
+		}, DescriptorSetLayouts[0]);
 	}
 	virtual void UpdateDescriptorSet() override {
-		Super::UpdateDescriptorSet();
-
 		assert(!Samplers.empty() && "");
 		assert(!ImageViews.empty() && "");
 		const DescriptorUpdateInfo DUI = {
@@ -69,7 +77,7 @@ protected:
 		assert(!DescriptorUpdateTemplates.empty() && "");
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 	}
-#pragma endregion //!< DESCRIPTOR
+
 	virtual void CreateTexture() override { 
 		Images.resize(1);
 		ImageViews.resize(1);

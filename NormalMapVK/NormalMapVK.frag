@@ -25,7 +25,7 @@ vec3 specular(const vec3 MC, const vec4 LC, const float LN, const vec3 L, const 
 layout (early_fragment_tests) in;
 void main()
 {
-	//!< V
+	//!< V : ピクセルからカメラへ向かう方向
 	const vec3 V = normalize(InViewDirection);
 	
 	//!< N

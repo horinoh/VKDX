@@ -45,7 +45,42 @@ protected:
 			VK::CreateFramebuffer(Framebuffers.back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DIV });
 		}
 	}
-	virtual void CreateRenderPass() override { RenderPasses.resize(1); CreateRenderPass_ColorDepth(RenderPasses[0], ColorFormat, DepthFormat, true); }
+	virtual void CreateRenderPass() override { 
+		RenderPasses.resize(1);
+		const std::array<VkAttachmentReference, 1> ColorAttach = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
+		const VkAttachmentReference DepthAttach = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+		VK::CreateRenderPass(RenderPasses[0], {
+				//!< アタッチメント
+				{
+					0,
+					ColorFormat,
+					VK_SAMPLE_COUNT_1_BIT,
+					VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+				},
+				{
+					0,
+					DepthFormat,
+					VK_SAMPLE_COUNT_1_BIT,
+					VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+				},
+			}, {
+				//!< サブパス
+				{
+					0,
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					0, nullptr,
+					static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
+					&DepthAttach,
+					0, nullptr
+				},
+			}, {
+				//!< サブパス依存
+			});
+	}
 #endif
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
@@ -109,10 +144,11 @@ protected:
 		if (FindDirectory("DDS", Path)) {
 			//!< キューブマップ : PX, NX, PY, NY, PZ, NZ
 			LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\CubeMap\\DebugCube.dds")));
-			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\CubeMap\\DesertCube.dds"))); //!< #VK_TODO ちゃんと読めていない？
-			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\CubeMap\\GrassCube.dds"))); //!< #VK_TODO ちゃんと読めていない？
-			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\CubeMap\\SunsetCube.dds"))); //!< #VK_TODO ちゃんと読めていない？
+			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\CubeMap\\DesertCube.dds")));
+			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\CubeMap\\GrassCube.dds")));
+			//LoadImage(&Images[0], &ImageViews[0], ToString(Path + TEXT("\\CubeMap\\SunsetCube.dds")));
 
+			//!< 法線マップ
 			//LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds")));
 			LoadImage(&Images[1], &ImageViews[1], ToString(Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds")));
 		}
@@ -142,7 +178,9 @@ protected:
 		}
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
-		const std::array<VkDescriptorUpdateTemplateEntry, 3> DUTEs = { {
+		DescriptorUpdateTemplates.resize(1);
+		assert(!DescriptorSetLayouts.empty() && "");
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates[0], {
 			{
 				0, 0,
 				_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< UniformBuffer
@@ -158,23 +196,9 @@ protected:
 				_countof(DescriptorUpdateInfo::DII_1), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< Sampler + Image1
 				offsetof(DescriptorUpdateInfo, DII_1), sizeof(DescriptorUpdateInfo)
 			},
-		} };
-		assert(!DescriptorSetLayouts.empty() && "");
-		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
-			nullptr,
-			0,
-			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
-			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
-			DescriptorSetLayouts[0],
-			VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
-		};
-		DescriptorUpdateTemplates.resize(1);
-		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
+		}, DescriptorSetLayouts[0]);
 	}
 	virtual void UpdateDescriptorSet() override {
-		Super::UpdateDescriptorSet();
-
 		assert(!UniformBuffers.empty() && "");
 		assert(2 == ImageViews.size() && "");
 		const DescriptorUpdateInfo DUI = {

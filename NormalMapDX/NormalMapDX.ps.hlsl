@@ -30,7 +30,7 @@ OUT main(const IN In)
 {
 	OUT Out;
 
-	//!< V
+	//!< V : ピクセルからカメラへ向かう方向
 	const float3 V = normalize(In.ViewDirection);
 
 	//!< N	

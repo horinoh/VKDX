@@ -57,29 +57,17 @@ protected:
 		}
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
-		const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
+		DescriptorUpdateTemplates.resize(1);
+		assert(!DescriptorSetLayouts.empty() && "");
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates[0], {
 			{
 				0, 0,
 				_countof(DescriptorUpdateInfo::DII), /*VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER*/VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
 				offsetof(DescriptorUpdateInfo, DII), sizeof(DescriptorUpdateInfo)
-			}
-		};
-		assert(!DescriptorSetLayouts.empty() && "");
-		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
-			nullptr,
-			0,
-			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
-			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
-			DescriptorSetLayouts[0],
-			VK_PIPELINE_BIND_POINT_COMPUTE, VK_NULL_HANDLE, 0
-		};
-		DescriptorUpdateTemplates.resize(1);
-		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
+			},
+		}, DescriptorSetLayouts[0]);
 	}
 	virtual void UpdateDescriptorSet() override {
-		Super::UpdateDescriptorSet();
-
 		assert(!ImageViews.empty() && "");
 		const DescriptorUpdateInfo DUI = {
 			{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_GENERAL }

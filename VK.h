@@ -44,7 +44,7 @@
 #define MESSAGEBOX_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Win::ShowMessageBoxW(nullptr, VK::GetVkResultStringW(vr)); }
 #endif
 
-#define USE_VIEWPORT_Y_UP
+#define USE_VIEWPORT_Y_UP //!< +VK
 #define USE_IMMUTABLE_SAMPLER //!< TextureVK
 //!< セカンダリコマンドバッファ : DXのバンドル相当
 //!< 基本的にセカンダリはプライマリのステートを継承しない
@@ -56,7 +56,7 @@
 //#define USE_PUSH_DESCRIPTOR //!< BillboardVK
 //!< プッシュコンスタント : DXのルートコンスタント相当
 //#define USE_PUSH_CONSTANTS //!< TriangleVK
-#define USE_RENDER_PASS_CLEAR //!< ClearVK
+#define USE_RENDER_PASS_CLEAR //!< ClearVK #VK_TODO
 //!< パイプライン作成時にシェーダ内の定数値を上書き指定できる(スカラ値のみ)
 //#define USE_SPECIALIZATION_INFO //!< ParametricSurfaceVK
 //#define USE_COMBINED_IMAGE_SAMPLER
@@ -311,14 +311,18 @@ protected:
 
 	//virtual void UpdateDescriptorSet(const std::initializer_list <VkWriteDescriptorSet> il_WDSs, const std::initializer_list <VkCopyDescriptorSet> il_CDSs);
 	virtual void CreateDescriptorUpdateTemplate() {}
-	virtual void UpdateDescriptorSet() { CreateDescriptorUpdateTemplate(); }
+	virtual void CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const std::initializer_list<VkDescriptorUpdateTemplateEntry> il_DUTEs, const VkDescriptorSetLayout DSL);
+	virtual void UpdateDescriptorSet() {}
 
 	virtual void CreateTexture() {}
 	virtual void CreateImmutableSampler() {}
 	virtual void CreateSampler() {}
 
-	virtual void CreateRenderPass() { RenderPasses.resize(1); CreateRenderPass_Default(RenderPasses[0], ColorFormat, true); }
-	virtual void CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color, bool ClearOnLoad);
+	virtual void CreateRenderPass(VkRenderPass& RP, const std::initializer_list<VkAttachmentDescription> il_ADs, const std::initializer_list<VkSubpassDescription> il_SDs, const std::initializer_list<VkSubpassDependency> il_Depends);
+	virtual void CreateRenderPass2();
+	virtual void CreateRenderPass3();
+	virtual void CreateRenderPass();
+	//virtual void CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color, bool ClearOnLoad);
 
 	virtual void CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::initializer_list<VkImageView> il_IVs);
 	virtual void CreateFramebuffer() {

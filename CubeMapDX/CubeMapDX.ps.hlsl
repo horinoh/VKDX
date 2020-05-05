@@ -20,18 +20,17 @@ OUT main(const IN In)
 {
 	OUT Out;
 
-	//!< V
-	const float3 V = normalize(In.ViewDirection);
+	//!< V : ピクセルからカメラへ向かう方向
+	const float3 V = normalize(In.ViewDirection); 
 
 	//!< N	
 	const float3 N = NormalMap.Sample(Sampler, In.Texcoord).xyz * 2.0f - 1.0f;
 
 	const float3 Reflection = CubeMap.Sample(Sampler, reflect(-V, N)).rgb;
-	
+
 	//!< 屈折率 (水:1.33f, グラス:1.52f, 空気:1.00029f, 真空:1.0f)
 	const float RefractionIndex = 1.00029f / 1.33f;
-	const float3 Refraction = CubeMap.Sample(Sampler, refract(V, N, RefractionIndex)).rgb;
-	//const float3 Refraction = CubeMap.Sample(Sampler, refract(-V, N, RefractionIndex)).rgb;
+	const float3 Refraction = CubeMap.Sample(Sampler, refract(-V, N, RefractionIndex)).rgb;
 
 	Out.Color = float4(lerp(Reflection, Refraction, saturate(dot(V, N))), 1.0f);
 	//Out.Color = float4(Reflection, 1.0f);

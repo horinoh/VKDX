@@ -106,6 +106,8 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< デスクリプタプール (デスクリプタヒープ相当)
 	CreateDescriptorPool();
 	AllocateDescriptorSet();
+
+	CreateDescriptorUpdateTemplate();
 	//!< デスクリプタセット更新 (デスクリプタビュー相当) ... この時点でデスクリプタセット、ユニフォームバッファ、イメージビュー、サンプラ等が必要
 	UpdateDescriptorSet();
 
@@ -2349,6 +2351,23 @@ void VK::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreate
 	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DP));
 }
 
+void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const std::initializer_list<VkDescriptorUpdateTemplateEntry> il_DUTEs, const VkDescriptorSetLayout DSL)
+{
+	const std::vector<VkDescriptorUpdateTemplateEntry> DUTEs(il_DUTEs.begin(), il_DUTEs.end());
+
+	const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
+		VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
+		VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
+		DSL,
+		VK_PIPELINE_BIND_POINT_GRAPHICS, 
+		VK_NULL_HANDLE, 0 //!< VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET(VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR以外)を指定しているので無視される
+	};
+	VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DUT));
+}
+
 //!< シェーダリソースを1つのコンテナオブジェクトにまとめる (型や数はセットレイアウトで定義され、ストレージはプールから確保される)
 //void VK::AllocateDescriptorSet(std::vector<VkDescriptorSet>& DSs, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSLs)
 //{
@@ -2400,6 +2419,143 @@ void VK::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreate
 //	LOG_OK();
 //}
 
+void VK::CreateRenderPass(VkRenderPass& RP, const std::initializer_list<VkAttachmentDescription> il_ADs, const std::initializer_list<VkSubpassDescription> il_SDs, const std::initializer_list<VkSubpassDependency> il_Depends)
+{
+	const std::vector<VkAttachmentDescription> ADs(il_ADs.begin(), il_ADs.end());
+	const std::vector<VkSubpassDescription> SDs(il_SDs.begin(), il_SDs.end());
+	const std::vector<VkSubpassDependency> Dependss(il_Depends.begin(), il_Depends.end());
+	const VkRenderPassCreateInfo RPCI = {
+		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+		nullptr,
+		0,
+		static_cast<uint32_t>(ADs.size()), ADs.data(),
+		static_cast<uint32_t>(SDs.size()), SDs.data(),
+		static_cast<uint32_t>(Dependss.size()), Dependss.data()
+	};
+	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
+}
+void VK::CreateRenderPass()
+{
+	RenderPasses.resize(1);
+
+	const std::array<VkAttachmentReference, 0> InputAttach = {};
+	const std::array<VkAttachmentReference, 1> ColorAttach = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
+	const std::array<VkAttachmentReference, 1> ResolveAttach = { { VK_ATTACHMENT_UNUSED }, }; 
+	assert(ColorAttach.size() == ResolveAttach.size() && "");
+	//const VkAttachmentReference DepthAttach = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+	const std::array<uint32_t, 0> PreserveAttach = {};
+
+	CreateRenderPass(RenderPasses[0], {
+			//!< アタッチメント
+			{
+				0,
+				ColorFormat,
+				VK_SAMPLE_COUNT_1_BIT,
+				VK_ATTACHMENT_LOAD_OP_CLEAR/*VK_ATTACHMENT_LOAD_OP_DONT_CARE*/, VK_ATTACHMENT_STORE_OP_STORE,	//!<「開始時にクリア」,「終了時に保存」
+				VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,								//!< ステンシルのロードストア : (ここでは)開始時、終了時ともに「使用しない」
+				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR										//!< レンダーパスのレイアウト : 「開始時未定義」「終了時プレゼンテーションソース」
+			},
+	 }, {
+			//!< サブパス
+			{
+				0,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				static_cast<uint32_t>(InputAttach.size()), InputAttach.data(), 							//!< インプットアタッチメント(読み取り用) シェーダ内で次のように使用 layout (input_attachment_index=0, set=0, binding=0) uniform XXX YYY;
+				static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), ResolveAttach.data(),	//!< カラーアタッチメント(書き込み用)、リゾルブアタッチメント(マルチサンプルのリゾルブ)
+				nullptr/*&DepthAttach*/,																//!< デプスアタッチメント(書き込み用)
+				static_cast<uint32_t>(PreserveAttach.size()), PreserveAttach.data()						//!< プリザーブアタッチメント(サブパス全体において保持するコンテンツのインデックス)
+			},
+	}, {
+			//!< サブパス依存 (ここでは、書かなくても良いが、敢えて書く場合)
+#if 1
+			{
+				VK_SUBPASS_EXTERNAL, 0,																	//!< サブパス外からサブパス0へ
+				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< パイプラインの最終ステージからカラー出力ステージへ
+				VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,						//!< 読み込みからカラー書き込みへ
+				VK_DEPENDENCY_BY_REGION_BIT,															//!< 同じメモリ領域に対する書き込みが完了してから読み込み (指定しない場合は自前で書き込み完了を管理)
+			},
+			{
+				0, VK_SUBPASS_EXTERNAL,																	//!< サブパス0からサブパス外へ
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,	//!< カラー出力ステージからパイプラインの最終ステージへ
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,						//!< カラー書き込みから読み込みへ
+				VK_DEPENDENCY_BY_REGION_BIT,
+			},
+#endif
+		});
+}
+
+void VK::CreateRenderPass2()
+{
+	RenderPasses.resize(1);
+	const auto ClearOnLoad = true;
+
+	const std::array<VkAttachmentReference, 1> ColorAttach = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
+	CreateRenderPass(RenderPasses[0], {
+		//!< アタッチメント
+		{
+			0,
+			ColorFormat,
+			VK_SAMPLE_COUNT_1_BIT,
+			ClearOnLoad ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+		},
+	}, {
+		//!< サブパス
+		{
+			0,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			0, nullptr,																						
+			static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
+			nullptr,																						
+			0, nullptr
+		},
+	}, {
+		//!< サブパス依存
+	});
+}
+
+void VK::CreateRenderPass3()
+{
+	RenderPasses.resize(1);
+	const auto ClearOnLoad = true;
+
+	const std::array<VkAttachmentReference, 1> ColorAttach = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
+	const VkAttachmentReference DepthAttach = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+	CreateRenderPass(RenderPasses[0], {
+		//!< アタッチメント
+		{
+			0,
+			ColorFormat,
+			VK_SAMPLE_COUNT_1_BIT,
+			ClearOnLoad ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+		},
+		{
+			0,
+			DepthFormat,
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, 
+			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+		},
+	}, {
+		//!< サブパス
+		{
+			0,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			0, nullptr,																						
+			static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
+			&DepthAttach,																				
+			0, nullptr
+		},
+	}, {
+		//!< サブパス依存
+	});
+}
+
+#if 0
 void VK::CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color, bool ClearOnLoad)
 {
 	//!< アタッチメント ... レンダーパスでの描画先
@@ -2424,10 +2580,9 @@ void VK::CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color, bool C
 	const std::array<VkAttachmentReference, 1> Color_Pass0 = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
 	//!< リゾルブアタッチメント : マルチサンプル → シングルサンプル
 	const std::array<VkAttachmentReference, 1> Resolve_Pass0 = { { VK_ATTACHMENT_UNUSED }, };
-	//assert(ColorARs.size() == ResolveARs.size() && "Size must be same");
 	//!< デプスアタッチメント : 深度用
 	const VkAttachmentReference* Depth_Pass0 = nullptr;
-	//!< プリザーブアタッチメント : サブパス全体において保持しなくてはならないコンテンツ(のインデックス)
+	//!< プリザーブアタッチメント : サブパス全体において保持しなくてはならないコンテンツのインデックス
 	const std::array<uint32_t, 0> Preserve_Pass0 = {};
 	const std::array<VkSubpassDescription, 1> SubpassDescs = {
 		{
@@ -2471,6 +2626,7 @@ void VK::CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color, bool C
 	};
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
 }
+#endif
 
 void VK::CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::initializer_list<VkImageView> il_IVs)
 {

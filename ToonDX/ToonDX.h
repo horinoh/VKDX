@@ -103,7 +103,6 @@ protected:
 		DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
 		DirectX::XMStoreFloat4x4(&Tr.View, View);
 		DirectX::XMStoreFloat4x4(&Tr.World, World);
-		//Tr = Transform({ DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar), DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp), DirectX::XMMatrixIdentity() });
 
 		ConstantBufferResources.push_back(COM_PTR<ID3D12Resource>());
 		CreateUploadResource(COM_PTR_PUT(ConstantBufferResources.back()), RoundUp256(sizeof(Tr)));

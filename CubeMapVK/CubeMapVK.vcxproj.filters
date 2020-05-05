@@ -77,11 +77,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="CubeMapVK.frag" />
-    <CustomBuild Include="CubeMapVK.geom" />
-    <CustomBuild Include="CubeMapVK.tesc" />
-    <CustomBuild Include="CubeMapVK.tese" />
-    <CustomBuild Include="CubeMapVK.vert" />
     <CustomBuild Include="CubeMapVK_sd.frag">
       <Filter>Shader Files</Filter>
     </CustomBuild>
@@ -89,6 +84,21 @@
       <Filter>Shader Files</Filter>
     </CustomBuild>
     <CustomBuild Include="CubeMapVK_sd.tese">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="CubeMapVK.frag">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="CubeMapVK.geom">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="CubeMapVK.tesc">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="CubeMapVK.tese">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="CubeMapVK.vert">
       <Filter>Shader Files</Filter>
     </CustomBuild>
   </ItemGroup>

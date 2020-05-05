@@ -119,59 +119,7 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology Topology
 	for (auto& i : Threads) { i.join(); }
 }
 
-void VKExt::CreateRenderPass_ColorDepth(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth, bool ClearOnLoad)
-{
-	const std::array<VkAttachmentDescription, 2> ADs = { {
-		{
-			0,
-			Color,
-			VK_SAMPLE_COUNT_1_BIT,
-			ClearOnLoad ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-		},
-		{
-			0,
-			Depth,
-			VK_SAMPLE_COUNT_1_BIT,
-			VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, //!< VK_ATTACHMENT_LOAD_OP_CLEAR を指定したら VkRenderPassBeginInfo.pClearValues 使用必須
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-		},
-	} };
-
-	const std::array<VkAttachmentReference, 0> InputARs = {};
-	const std::array<VkAttachmentReference, 1> ColorARs = {
-		{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
-	};
-	const VkAttachmentReference DepthAR = {
-		1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-	};
-	const std::array<uint32_t, 0> PreserveAttaches = {};
-	const std::array<VkSubpassDescription, 1> SubpassDescs = {
-		{
-			0,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			static_cast<uint32_t>(InputARs.size()), InputARs.data(),
-			static_cast<uint32_t>(ColorARs.size()), ColorARs.data(), nullptr,
-			&DepthAR,
-			static_cast<uint32_t>(PreserveAttaches.size()), PreserveAttaches.data()
-		}
-	};
-
-	const std::array<VkSubpassDependency, 0> SubpassDepends = {};
-
-	const VkRenderPassCreateInfo RPCI = {
-		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(ADs.size()), ADs.data(),
-		static_cast<uint32_t>(SubpassDescs.size()), SubpassDescs.data(),
-		static_cast<uint32_t>(SubpassDepends.size()), SubpassDepends.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
-}
-
+#if 0
 //!< ファーストパスで ColorDepth に書き込み、セカンドパスで PostProcess を行う場合の例 (In first pass ColorDepth, second pass PostProcess)
 void VKExt::CreateRenderPass_ColorDepth_PostProcess(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth, bool ClearOnLoad)
 {
@@ -338,6 +286,7 @@ void VKExt::CreateRenderPass_Color_PostProcess(VkRenderPass& RP, const VkFormat 
 	};
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
 }
+#endif
 
 //void VKExt::CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::initializer_list<VkImageView> il_IVs)
 //{

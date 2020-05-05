@@ -111,6 +111,7 @@ protected:
 			//LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\CubeMap\\GrassCube.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			//LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\CubeMap\\SunsetCube.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			
+			//!< 法線マップ
 			//LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		}
@@ -139,7 +140,7 @@ protected:
 			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBufferResources[0])->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBufferResources[0]->GetDesc().Width) };
 			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
 			assert(2 == ImageResources.size() && "");
-			//!< キューブマップでは明示的にSHADER_RESOURCE_VIEW_DESCを指定すること
+			//!< (ディメンションがD3D12_SRV_DIMENSION_TEXTURECUBEの為)明示的にSHADER_RESOURCE_VIEW_DESCを指定すること (リソースと同じフォーマットとディメンション、最初のミップマップとスライスをターゲットする場合はnullptrを指定できる)
 			const auto Desc = ImageResources[0]->GetDesc();
 			D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
 				Desc.Format,
