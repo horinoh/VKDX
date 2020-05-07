@@ -44,6 +44,7 @@ protected:
 		const auto& DH = CbvSrvUavDescriptorHeaps[0];
 		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 
+		//const auto RD = ImageResources[0]->GetDesc(); RD.Format; RD.MipLevels;
 		D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
 				DXGI_FORMAT_R8G8B8A8_UNORM,
 				D3D12_SRV_DIMENSION_TEXTURE2D,

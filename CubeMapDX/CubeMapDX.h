@@ -141,13 +141,13 @@ protected:
 			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
 			assert(2 == ImageResources.size() && "");
 			//!< (ディメンションがD3D12_SRV_DIMENSION_TEXTURECUBEの為)明示的にSHADER_RESOURCE_VIEW_DESCを指定すること (リソースと同じフォーマットとディメンション、最初のミップマップとスライスをターゲットする場合はnullptrを指定できる)
-			const auto Desc = ImageResources[0]->GetDesc();
+			const auto RD = ImageResources[0]->GetDesc(); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);
 			D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
-				Desc.Format,
+				RD.Format,
 				D3D12_SRV_DIMENSION_TEXTURECUBE,
 				D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
 			};
-			SRVD.TextureCube = { 0, Desc.MipLevels, 0.0f };
+			SRVD.TextureCube = { 0, RD.MipLevels, 0.0f };
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV0
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV1
 		}

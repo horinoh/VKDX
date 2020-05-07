@@ -233,24 +233,33 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 void RenderTargetDX::PopulateCommandList(const size_t i)
 {
 	const auto PS0 = COM_PTR_GET(PipelineStates[0]);
-	//const auto PS1 = COM_PTR_GET(PipelineStates[1]);	
+	const auto PS1 = COM_PTR_GET(PipelineStates[1]);	
 
 #if 0
 	const auto RTR = COM_PTR_GET(RenderTargetResource);
 	const auto RTH = GetCPUDescriptorHandle(COM_PTR_GET(RenderTargetDescriptorHeap)/*, D3D12_DESCRIPTOR_HEAP_TYPE_RTV*/, static_cast<UINT>(0));
 #endif
 
-	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS0));
+	const auto BCL0 = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	VERIFY_SUCCEEDED(BCL0->Reset(BCA, PS0));
 	{
 		const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
 		const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
-
-		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+		BCL0->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+		BCL0->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 	}
-	VERIFY_SUCCEEDED(BCL->Close());
+	VERIFY_SUCCEEDED(BCL0->Close());
+
+	const auto BCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + BundleGraphicsCommandLists.size() / 2]); //!< オフセットさせる
+	VERIFY_SUCCEEDED(BCL1->Reset(BCA, PS1));
+	{
+		const auto ICS = COM_PTR_GET(IndirectCommandSignatures[1]);
+		const auto IBR = COM_PTR_GET(IndirectBufferResources[1]);
+		BCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+		BCL1->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+	}
+	VERIFY_SUCCEEDED(BCL1->Close());
 
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
@@ -290,7 +299,7 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { CDH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
-			CL->ExecuteBundle(BCL);
+			CL->ExecuteBundle(BCL0);
 		}
 
 #if 0

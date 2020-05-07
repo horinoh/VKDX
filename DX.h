@@ -212,8 +212,7 @@ protected:
 	virtual void CreateDescriptorHeap() {}
 	virtual void CreateDescriptorView() {}
 
-	D3D12_SHADER_BYTECODE ToShaderBC(const COM_PTR<ID3DBlob>& Blob) { return D3D12_SHADER_BYTECODE({ nullptr == Blob ? nullptr : Blob->GetBufferPointer(), nullptr == Blob ? 0 : Blob->GetBufferSize() }); }
-	//virtual void CreateShader(std::vector<COM_PTR<ID3DBlob>>& ShaderBlobs) const;
+	//D3D12_SHADER_BYTECODE ToShaderBC(const COM_PTR<ID3DBlob>& Blob) { return D3D12_SHADER_BYTECODE({ nullptr == Blob ? nullptr : Blob->GetBufferPointer(), nullptr == Blob ? 0 : Blob->GetBufferSize() }); }
 	virtual void CreateShaderBlobs() {}
 
 #include "DXPipelineLibrary.inl"

@@ -341,10 +341,10 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(SemnticInitial.begin(), SemnticInitial.end());
 	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
-	const auto VS = ShaderBlobs.back();
+	const auto VS = D3D12_SHADER_BYTECODE({ ShaderBlobs.back()->GetBufferPointer(), ShaderBlobs.back()->GetBufferSize() });
 	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
-	const auto PS = ShaderBlobs.back();
+	const auto PS = D3D12_SHADER_BYTECODE({ ShaderBlobs.back()->GetBufferPointer(), ShaderBlobs.back()->GetBufferSize() });
 
 	//!< セマンティックとインデックスのリストを作る (Create semantic and index list)
 	for (const auto& i : Prim.attributes) {
@@ -398,7 +398,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		FALSE, D3D12_DEFAULT_STENCIL_READ_MASK, D3D12_DEFAULT_STENCIL_WRITE_MASK,
 		DSOD, DSOD
 	};
-	DX::CreatePipelineState(std::ref(PipelineStates.back()), COM_PTR_GET(Device), RS, ToDXPrimitiveTopologyType(Prim.mode), DSD, ToShaderBC(VS), ToShaderBC(PS), NullShaderBC, NullShaderBC, NullShaderBC, IEDs);
+	DX::CreatePipelineState(std::ref(PipelineStates.back()), COM_PTR_GET(Device), RS, ToDXPrimitiveTopologyType(Prim.mode), DSD, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, IEDs);
 
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);

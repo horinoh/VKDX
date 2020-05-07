@@ -29,7 +29,7 @@ protected:
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
 			GraphicsCommandLists.push_back(COM_PTR<ID3D12GraphicsCommandList>());
 			VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(CommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandLists.back())));
-			VERIFY_SUCCEEDED(GraphicsCommandLists[i]->Close());
+			VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
 		}
 		LOG_OK();
 	}

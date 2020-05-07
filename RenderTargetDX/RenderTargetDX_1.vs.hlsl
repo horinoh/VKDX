@@ -1,8 +1,3 @@
-//struct IN
-//{
-//	float3 Position : POSITION;
-//};
-
 struct OUT
 {
 	float4 Position : SV_POSITION;

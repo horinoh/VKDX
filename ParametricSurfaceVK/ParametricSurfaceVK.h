@@ -82,7 +82,7 @@ protected:
 		auto& PL = Pipelines[0];
 		const auto RP = RenderPasses[0];
 		const auto PLL = PipelineLayouts[0];
-		const std::vector<VkPipelineShaderStageCreateInfo> PSSCIs = {
+		const std::array<VkPipelineShaderStageCreateInfo, 5> PSSCIs = {
 			{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0], "main", nullptr },
 			{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1], "main", nullptr },
 			{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, ShaderModules[2], "main", nullptr },

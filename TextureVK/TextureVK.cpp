@@ -231,13 +231,8 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void TextureVK::PopulateCommandBuffer(const size_t i)
 {
-	const auto CB = CommandBuffers[i];
-	const auto SCB = SecondaryCommandBuffers[i];
-	const auto FB = Framebuffers[i];
 	const auto RP = RenderPasses[0];
-	const auto PLL = PipelineLayouts[0];
-	const auto IB = IndirectBuffers[0];
-	const auto PL = Pipelines[0];
+	const auto FB = Framebuffers[i];
 
 	const VkCommandBufferInheritanceInfo CBII = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
@@ -255,17 +250,21 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 		VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
 		&CBII
 	};
+	const auto SCB = SecondaryCommandBuffers[i];
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
+		const auto PL = Pipelines[0];
+		const auto IB = IndirectBuffers[0];
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-		if (!DescriptorSets.empty()) {
-			vkCmdBindDescriptorSets(SCB,
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				PLL,
-				0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(),
-				0, nullptr);
-		}
+        
+		const auto PLL = PipelineLayouts[0];
+        assert(!DescriptorSets.empty() && "");
+		vkCmdBindDescriptorSets(SCB, 
+            VK_PIPELINE_BIND_POINT_GRAPHICS, PLL,
+			0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(),
+			0, nullptr);
+
 		vkCmdDrawIndirect(SCB, IB, 0, 1, 0);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 
@@ -275,6 +274,7 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 		0,
 		nullptr
 	};
+	const auto CB = CommandBuffers[i];
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 		const std::array<VkClearValue, 0> CVs = {};
 		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };

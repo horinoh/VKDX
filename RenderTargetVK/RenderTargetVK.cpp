@@ -235,7 +235,6 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 	const auto RP = RenderPasses[0];
 	const auto FB = Framebuffers[i];	
 
-	const auto SCB = SecondaryCommandBuffers[i];
 	const VkCommandBufferInheritanceInfo CBII = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
 		nullptr,
@@ -252,15 +251,31 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 		VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
 		&CBII
 	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
+	const auto SCB0 = SecondaryCommandBuffers[i];
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB0, &SCBBI)); {
 		const auto PL = Pipelines[0];
 		const auto IB = IndirectBuffers[0];
+        vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+		vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+		vkCmdBindPipeline(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
+		vkCmdDrawIndirect(SCB0, IB, 0, 1, 0);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
 
-        vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
-		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-		vkCmdDrawIndirect(SCB, IB, 0, 1, 0);
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
+	const auto SCB1 = SecondaryCommandBuffers[i + SecondaryCommandBuffers.size() / 2];
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB1, &SCBBI)); {
+		//const auto PL = Pipelines[0];
+		const auto PL = Pipelines[1];
+		const auto IB = IndirectBuffers[1];
+		vkCmdSetViewport(SCB1, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+		vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+		vkCmdBindPipeline(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
+
+		assert(!DescriptorSets.empty() && "");
+		const auto PLL = PipelineLayouts[1];
+		vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
+
+		vkCmdDrawIndirect(SCB1, IB, 0, 1, 0);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
 
 	const auto CB = CommandBuffers[i];
 	const VkCommandBufferBeginInfo CBBI = {
@@ -281,7 +296,7 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 			static_cast<uint32_t>(CVs.size()), CVs.data()
 		};
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
-			const std::array<VkCommandBuffer, 1> SCBs = { SCB };
+			const std::array<VkCommandBuffer, 1> SCBs = { SCB0 };
 			vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
 		} vkCmdEndRenderPass(CB);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));

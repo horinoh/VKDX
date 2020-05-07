@@ -14,8 +14,22 @@ public:
 	virtual ~RenderTargetDX() {}
 
 protected:
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); } //!< メッシュ描画用
-	//virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); } //!< フルスクリーン描画用 #DX_TODO
+	virtual void CreateCommandList() override {
+		Super::CreateCommandList();
+
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+		for (UINT i = 0; i < SCD.BufferCount; ++i) {
+			BundleGraphicsCommandLists.push_back(COM_PTR<ID3D12GraphicsCommandList>());
+			VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleGraphicsCommandLists.back())));
+			VERIFY_SUCCEEDED(BundleGraphicsCommandLists.back()->Close());
+		}
+	}
+
+	virtual void CreateIndirectBuffer() override {
+		CreateIndirectBuffer_DrawIndexed(1, 1); //!< メッシュ描画用 Pass0
+		CreateIndirectBuffer_Draw(4, 1); //!< フルスクリーン描画用 Pass1
+	}
 	virtual void CreateStaticSampler() override {
 		StaticSamplerDescs.push_back({
 			D3D12_FILTER_MIN_MAG_MIP_LINEAR,
@@ -89,30 +103,27 @@ protected:
 		}
 	}
 	virtual void CreateDescriptorView() override {
-		//{
-		//	const auto& DH = RtvDescriptorHeaps[0];
-		//	auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-		//	const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
-		//		D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-		//		1,
-		//		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-		//		0
-		//	};
-		//	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps[0])));
-		//	Device->CreateRenderTargetView(COM_PTR_GET(RenderTargetResource), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-		//}
+		{
+			const auto& DH = RtvDescriptorHeaps[0];
+			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+			//const auto RD = ImageResources[0]->GetDesc(); assert(RD.MipLevels > 0 && ""); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);
+			D3D12_RENDER_TARGET_VIEW_DESC RTVD = {
+				DXGI_FORMAT_R8G8B8A8_UNORM/*RD.Format*/,
+				D3D12_RTV_DIMENSION_TEXTURE2D,
+			};
+			RTVD.Texture2D = { 0, 0 };
+			Device->CreateRenderTargetView(COM_PTR_GET(RenderTargetResource), &RTVD/*nullptr*/, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		}
 		{
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+			//const auto RD = ImageResources[0]->GetDesc(); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);
 			D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
-				DXGI_FORMAT_R8G8B8A8_UNORM,
+				DXGI_FORMAT_R8G8B8A8_UNORM/*RD.Format*/,
 				D3D12_SRV_DIMENSION_TEXTURE2D,
 				D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
 			};
-			SRVD.Texture2D.MostDetailedMip = 0;
-			SRVD.Texture2D.MipLevels = 1;
-			SRVD.Texture2D.PlaneSlice = 0;
-			SRVD.Texture2D.ResourceMinLODClamp = 0.0f;
+			SRVD.Texture2D = { 0, 1/*RD.MipLevels*/, 0, 0.0f };
 			Device->CreateShaderResourceView(COM_PTR_GET(RenderTargetResource), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		}
 	}
@@ -138,14 +149,25 @@ protected:
 			FALSE, D3D12_DEFAULT_STENCIL_READ_MASK, D3D12_DEFAULT_STENCIL_WRITE_MASK,
 			DSOD, DSOD
 		};
+		const std::array<D3D12_SHADER_BYTECODE, 5> SBCs_0 = {
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[2]->GetBufferPointer(), ShaderBlobs[2]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[3]->GetBufferPointer(), ShaderBlobs[3]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[4]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() }),
+		};
+		const std::array<D3D12_SHADER_BYTECODE, 2> SBCs_1 = {
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[5]->GetBufferPointer(), ShaderBlobs[5]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[6]->GetBufferPointer(), ShaderBlobs[6]->GetBufferSize() }),
+		};
 		const std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs = {};
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, DSD, ToShaderBC(ShaderBlobs[0]), ToShaderBC(ShaderBlobs[1]), ToShaderBC(ShaderBlobs[2]), ToShaderBC(ShaderBlobs[3]), ToShaderBC(ShaderBlobs[4]), IEDs, &PLS, TEXT("0")));
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, DSD, ToShaderBC(ShaderBlobs[5]), ToShaderBC(ShaderBlobs[6]), NullShaderBC, NullShaderBC, NullShaderBC, IEDs, &PLS, TEXT("1")));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, DSD, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, &PLS, TEXT("0")));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, DSD, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, &PLS, TEXT("1")));
 #else
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, DSD, ToShaderBC(ShaderBlobs[0]), ToShaderBC(ShaderBlobs[1]), ToShaderBC(ShaderBlobs[2]), ToShaderBC(ShaderBlobs[3]), ToShaderBC(ShaderBlobs[4]), IEDs, nullptr, nullptr));
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, DSD, ToShaderBC(ShaderBlobs[5]), ToShaderBC(ShaderBlobs[6]), NullShaderBC, NullShaderBC, NullShaderBC, IEDs, nullptr, nullptr));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, DSD, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, nullptr, nullptr));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, DSD, SBCs_1[0], SBCs_1[1],, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, nullptr, nullptr));
 #endif	
 		for (auto& i : Threads) { i.join(); }
 	}
