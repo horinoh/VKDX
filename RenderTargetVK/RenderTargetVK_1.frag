@@ -12,5 +12,20 @@ layout (set=0, binding=0) uniform sampler2D Sampler2D;
 
 void main()
 {
-	OutColor = texture(Sampler2D, InTexcoord);
+	//OutColor = texture(Sampler2D, InTexcoord);
+
+#if 0
+	const vec2 UV = InTexcoord;	
+#elif 0
+	//!< ラスター
+	const float PI = 4.0f * atan(1.0f);
+	const vec2 UV = InTexcoord + vec2(0.05f * cos(InTexcoord.y * PI * 10.0f), 0.0f);
+#else
+	//!< モザイク
+	const vec2 Resolution = vec2(800.0f, 600.0f);
+	const float Block = 10.0f;
+	const vec2 UV = floor(InTexcoord * Resolution / Block) * Block / Resolution;
+#endif
+
+	OutColor = texture(Sampler2D, UV);
 }

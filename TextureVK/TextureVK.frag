@@ -26,4 +26,5 @@ void main()
 #else
 	OutColor = texture(sampler2D(Texture, Sampler), InTexcoord);
 #endif
+	//OutColor = vec4(InTexcoord, 0, 1);
 }
