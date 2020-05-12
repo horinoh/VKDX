@@ -718,7 +718,7 @@ public:
 								while (CurrentFrame > MaxFrame) { CurrentFrame -= MaxFrame; } //!< Loop
 							}
 							else {
-								CurrentFrame = std::min(CurrentFrame, MaxFrame); //!< Clamp
+								CurrentFrame = (std::min)(CurrentFrame, MaxFrame); //!< Clamp
 							}
 
 							//!< 現在のフレームが含まれるキーフレーム範囲と、補完値tを求める

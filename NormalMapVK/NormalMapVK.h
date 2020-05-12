@@ -185,9 +185,7 @@ protected:
 			static_cast<uint32_t>(DSLs.size()), DSLs.data()
 		};
 		DescriptorSets.resize(1);
-		for (auto& i : DescriptorSets) {
-			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &i));
-		}
+		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
 #if 0

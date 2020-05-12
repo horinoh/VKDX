@@ -235,12 +235,8 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 	const auto PS0 = COM_PTR_GET(PipelineStates[0]);
 	const auto PS1 = COM_PTR_GET(PipelineStates[1]);	
 
-#if 0
-	const auto RTR = COM_PTR_GET(RenderTargetResource);
-	const auto RTH = GetCPUDescriptorHandle(COM_PTR_GET(RenderTargetDescriptorHeap)/*, D3D12_DESCRIPTOR_HEAP_TYPE_RTV*/, static_cast<UINT>(0));
-#endif
-
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
+	//!< パス0 : バンドルコマンドリスト(メッシュ描画用)
 	const auto BCL0 = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	VERIFY_SUCCEEDED(BCL0->Reset(BCA, PS0));
 	{
@@ -251,7 +247,8 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 	}
 	VERIFY_SUCCEEDED(BCL0->Close());
 
-	const auto BCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + BundleGraphicsCommandLists.size() / 2]); //!< オフセットさせる
+	//!< パス1 : バンドルコマンドリスト(レンダーテクスチャ描画用)
+	const auto BCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + BundleGraphicsCommandLists.size() / 2]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
 	VERIFY_SUCCEEDED(BCL1->Reset(BCA, PS1));
 	{
 		const auto ICS = COM_PTR_GET(IndirectCommandSignatures[1]);
@@ -267,20 +264,38 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 	{
 		const auto RS = COM_PTR_GET(RootSignatures[0]);
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+		//const auto RTR = COM_PTR_GET(RenderTargetResource);
 
 		CL->SetGraphicsRootSignature(RS);
 
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
+		//!< パス0 : (メッシュ描画用)
 #if 0
 		{
+			const auto RTH = RtvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart(); //RTH.ptr += 0 * Device->GetDescriptorHandleIncrementSize(RtvDescriptorHeaps[0]->GetDesc().Type);
+
+			const std::array<D3D12_RECT, 0> Rs = {};
+			CL->ClearRenderTargetView(RTH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
+#ifdef USE_DEPTH_STENCIL
+			const auto DH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart(); //DH.ptr += 0 * Device->GetDescriptorHandleIncrementSize(DsvDescriptorHeaps[0]->GetDesc().Type);
+			CL->ClearDepthStencilView(DH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
+			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { RTH };
+			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &DH);
+#else			
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { RTH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
+#endif
 
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+			CL->ExecuteBundle(BCL0);
 		}
+#endif
+
+		//!< リソースバリア : D3D12_RESOURCE_STATE_RENDER_TARGET -> D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+#if 0
 		{
 			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SC = { SCR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET };
 			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_RT = { RTR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE };
@@ -293,15 +308,30 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 #else
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 #endif
-		auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+
+		//!< パス1 : (レンダーテクスチャ描画用)
 		{
+			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+
 			const std::array<D3D12_RECT, 0> Rs = {};
 			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
+
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { CDH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
-			CL->ExecuteBundle(BCL0);
+
+#if 0
+			const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
+			CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
+
+			const auto& DH = CbvSrvUavDescriptorHeaps[0];
+			auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+			CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
+#endif
+
+			CL->ExecuteBundle(BCL0/*BCL1*/);
 		}
 
+		//!< リソースバリア : D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE -> D3D12_RESOURCE_STATE_RENDER_TARGET
 #if 0
 		{
 			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SC = { SCR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT };

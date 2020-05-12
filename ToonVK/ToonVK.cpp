@@ -252,7 +252,11 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 		&CBII
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
+#ifdef USE_FRAME_DESCRIPTOR_SETS
+		const auto DS = DescriptorSets[i];
+#else
 		const auto DS = DescriptorSets[0];
+#endif
 		const auto PLL = PipelineLayouts[0];
 		const auto PL = Pipelines[0];
 		const auto IB = IndirectBuffers[0];

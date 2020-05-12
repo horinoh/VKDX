@@ -31,7 +31,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//InitializeSwapchainImage(COM_PTR_GET(CommandAllocators[0]), &DirectX::Colors::Red);
 
 	CreateDepthStencil();	
-	CreateRenderTarget();
+	//CreateRenderTarget();
 
 	CreateVertexBuffer();
 	CreateIndexBuffer();
@@ -46,10 +46,10 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< パイプライン
 	CreatePipelineStates();
 
+	CreateTexture();
+
 	//!< コンスタントバッファ (ユニフォームバッファ相当)
 	CreateConstantBuffer();
-	CreateTexture();
-	//CreateUnorderedAccessTexture();
 
 	//!< デスクリプタヒープ (デスクリプタプール相当)
 	CreateDescriptorHeap();
@@ -849,8 +849,11 @@ void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 	LOG_OK();
 }
 
+#if 0
 void DX::CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UINT Height)
 {
+	ImageResources.resize(1);
+
 	const D3D12_HEAP_PROPERTIES HP = {
 		D3D12_HEAP_TYPE_DEFAULT, 
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
@@ -870,16 +873,15 @@ void DX::CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UI
 		D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
 	};
-	D3D12_CLEAR_VALUE CV = {
+	const D3D12_CLEAR_VALUE CV = {
 		Format,
-		{
-			{ DirectX::Colors::SkyBlue[0], DirectX::Colors::SkyBlue[1], DirectX::Colors::SkyBlue[2], DirectX::Colors::SkyBlue[3] }
-		},
+		*static_cast<const FLOAT*>(DirectX::Colors::SkyBlue),
 	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_COMMON, &CV, COM_PTR_UUIDOF_PUTVOID(RenderTargetResource)));
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(/*RenderTargetResource*/ImageResources[0])));
 
 	LOG_OK();
 }
+#endif
 
 void DX::CreateDepthStencilResource(const DXGI_FORMAT Format, const UINT Width, const UINT Height)
 {

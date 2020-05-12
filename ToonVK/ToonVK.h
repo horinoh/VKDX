@@ -5,6 +5,8 @@
 #pragma region Code
 #include "../VKExt.h"
 
+#define USE_FRAME_DESCRIPTOR_SETS
+
 class ToonVK : public VKExt
 {
 private:
@@ -88,7 +90,11 @@ protected:
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.resize(1);
 		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
+#ifdef USE_FRAME_DESCRIPTOR_SETS
+				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(SwapchainImages.size()) }
+#else
 				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }
+#endif
 			});
 	}
 	virtual void AllocateDescriptorSet() override {
@@ -101,8 +107,15 @@ protected:
 			DescriptorPools[0],
 			static_cast<uint32_t>(DSLs.size()), DSLs.data()
 		};
+#ifdef USE_FRAME_DESCRIPTOR_SETS
+		DescriptorSets.resize(SwapchainImages.size());
+		for (auto& i : DescriptorSets) {
+			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &i));
+		}
+#else
 		DescriptorSets.resize(1);
 		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
+#endif
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
 		DescriptorUpdateTemplates.resize(1);
@@ -121,7 +134,13 @@ protected:
 		};
 		assert(!DescriptorSets.empty() && "");
 		assert(!DescriptorUpdateTemplates.empty() && "");
+#ifdef USE_FRAME_DESCRIPTOR_SETS
+		for (auto i : DescriptorSets) {
+			vkUpdateDescriptorSetWithTemplate(Device, i, DescriptorUpdateTemplates[0], &DUI);
+		}
+#else
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+#endif
 	}
 
 	virtual void CreateUniformBuffer() override {

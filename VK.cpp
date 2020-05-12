@@ -79,7 +79,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateDepthStencil();
 	InitializeDepthStencilImage(CommandBuffers[0]);
-	CreateRenderTarget();
+	//CreateRenderTarget();
 
 	CreateVertexBuffer();
 	CreateIndexBuffer();
@@ -96,12 +96,14 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateShaderModules();
 	//!< パイプライン
 	CreatePipelines();
+	//!< レンダーターゲットテクスチャの場合フレームバッファよりも前に必要になる
+	CreateTexture();
 	//!< フレームバッファ
 	CreateFramebuffer();
 
 	//!< ユニフォームバッファ (コンスタントバッファ相当)
 	CreateUniformBuffer();
-	CreateTexture();
+	//CreateTexture();
 
 	//!< デスクリプタプール (デスクリプタヒープ相当)
 	CreateDescriptorPool();
@@ -1669,7 +1671,7 @@ VkExtent2D VK::SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& Cap, const ui
 	if (0xffffffff == Cap.currentExtent.width) {
 		//!< 0xffffffff の場合はスワップチェインイメージサイズがウインドウサイズを決定することになる (If 0xffffffff, size of swapchain image determines the size of the window)
 		//!< (クランプした)引数のWidth, Heightを使用する (In this case, use argument (clamped) Width and Heigt) 
-		return VkExtent2D({ std::max(std::min(Width, Cap.maxImageExtent.width), Cap.minImageExtent.width), std::max(std::min(Height, Cap.minImageExtent.height), Cap.minImageExtent.height) });
+		return VkExtent2D({ (std::max)((std::min)(Width, Cap.maxImageExtent.width), Cap.minImageExtent.width), (std::max)((std::min)(Height, Cap.minImageExtent.height), Cap.minImageExtent.height) });
 	}
 	else {
 		//!< そうでない場合はcurrentExtentを使用する (Otherwise, use currentExtent)
@@ -2017,6 +2019,7 @@ void VK::CreateSwapchainImageView()
 	LOG_OK();
 }
 
+#if 0
 void VK::CreateRenderTarget(const VkFormat Format, const uint32_t Width, const uint32_t Height)
 {
 	const VkExtent3D Extent3D = { Width, Height, 1 };
@@ -2035,6 +2038,7 @@ void VK::CreateRenderTarget(const VkFormat Format, const uint32_t Width, const u
 
 	LOG_OK();
 }
+#endif
 
 void VK::CreateDepthStencil(const VkFormat Format, const uint32_t Width, const uint32_t Height)
 {
@@ -2338,7 +2342,7 @@ void VK::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreate
 
 	uint32_t MaxSets = 0;
 	for (const auto& i : DPSs) {
-		MaxSets = std::max(MaxSets, i.descriptorCount);
+		MaxSets = (std::max)(MaxSets, i.descriptorCount);
 	}
 
 	const VkDescriptorPoolCreateInfo DPCI = {
@@ -2484,6 +2488,7 @@ void VK::CreateRenderPass()
 		});
 }
 
+#if 0
 void VK::CreateRenderPass2()
 {
 	RenderPasses.resize(1);
@@ -2554,7 +2559,7 @@ void VK::CreateRenderPass3()
 		//!< サブパス依存
 	});
 }
-
+#endif
 #if 0
 void VK::CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color, bool ClearOnLoad)
 {

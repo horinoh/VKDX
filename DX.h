@@ -182,7 +182,7 @@ protected:
 	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
 
 	virtual void CreateRenderTarget() {}
-	virtual void CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UINT Height);
+	//virtual void CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UINT Height);
 
 	virtual void CreateDepthStencil() {}
 	virtual void CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
@@ -212,7 +212,6 @@ protected:
 	virtual void CreateDescriptorHeap() {}
 	virtual void CreateDescriptorView() {}
 
-	//D3D12_SHADER_BYTECODE ToShaderBC(const COM_PTR<ID3DBlob>& Blob) { return D3D12_SHADER_BYTECODE({ nullptr == Blob ? nullptr : Blob->GetBufferPointer(), nullptr == Blob ? 0 : Blob->GetBufferSize() }); }
 	virtual void CreateShaderBlobs() {}
 
 #include "DXPipelineLibrary.inl"
@@ -260,15 +259,13 @@ protected:
 	COM_PTR<IDXGISwapChain4> SwapChain;
 	std::vector<COM_PTR<ID3D12Resource>> SwapChainResources;
 
-	COM_PTR<ID3D12Resource> RenderTargetResource;
-	COM_PTR<ID3D12Resource> DepthStencilResource;
+	COM_PTR<ID3D12Resource> DepthStencilResource; 
 	COM_PTR<ID3D12Resource> UnorderedAccessTextureResource;
-	COM_PTR<ID3D12Resource> ImageResource;
 	std::vector<COM_PTR<ID3D12Resource>> ImageResources;
 	std::vector<COM_PTR<ID3D12Resource>> ConstantBufferResources;
 	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
 
-	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap; //!< RTVだけど、現状別にしている #DX_TODO
+	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap; //!< RTVだけど、現状スワップチェインだけ別扱いにしている #DX_TODO
 	std::vector<COM_PTR<ID3D12DescriptorHeap>> SamplerDescriptorHeaps;
 	std::vector<COM_PTR<ID3D12DescriptorHeap>> RtvDescriptorHeaps;
 	std::vector<COM_PTR<ID3D12DescriptorHeap>> DsvDescriptorHeaps;

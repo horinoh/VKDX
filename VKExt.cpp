@@ -313,6 +313,8 @@ void VKExt::CreateRenderTexture(VkImage* Img, VkImageView* IV)
 	const auto Layers = 1 * Faces;
 	const auto Levels = 1;
 	CreateImage(Img, 0, VK_IMAGE_TYPE_2D, Format, Extent, Levels, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+	//!< ƒfƒvƒX‚Ìê‡
+	//CreateImage(Img, 0, VK_IMAGE_TYPE_2D, Format, Extent, Levels, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
 #if 0
 	AllocateImageMemory(DM, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);

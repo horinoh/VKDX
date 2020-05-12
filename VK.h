@@ -269,8 +269,8 @@ protected:
 	virtual void CreateSwapchainImageView();
 	virtual void InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorValue* CCV = nullptr);
 	
-	virtual void CreateRenderTarget() {}
-	virtual void CreateRenderTarget(const VkFormat Format, const uint32_t Width, const uint32_t Height);
+	//virtual void CreateRenderTarget() {}
+	//virtual void CreateRenderTarget(const VkFormat Format, const uint32_t Width, const uint32_t Height);
 
 	virtual void CreateDepthStencil() {}
 	virtual void CreateDepthStencil(const VkFormat DepthFormat, const uint32_t Width, const uint32_t Height);
@@ -319,8 +319,8 @@ protected:
 	virtual void CreateSampler() {}
 
 	virtual void CreateRenderPass(VkRenderPass& RP, const std::initializer_list<VkAttachmentDescription> il_ADs, const std::initializer_list<VkSubpassDescription> il_SDs, const std::initializer_list<VkSubpassDependency> il_Depends);
-	virtual void CreateRenderPass2();
-	virtual void CreateRenderPass3();
+	//virtual void CreateRenderPass2();
+	//virtual void CreateRenderPass3();
 	virtual void CreateRenderPass();
 	//virtual void CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color, bool ClearOnLoad);
 
@@ -498,7 +498,7 @@ protected:
 
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
 	std::vector<VkDescriptorPool> DescriptorPools;
-	std::vector<VkDescriptorSet> DescriptorSets;
+	std::vector<VkDescriptorSet> DescriptorSets; //!< スワップチェインイメージ数分用意する #VK_TODO
 	std::vector<VkDescriptorUpdateTemplate> DescriptorUpdateTemplates;
 	std::vector<VkPipelineLayout> PipelineLayouts;
 

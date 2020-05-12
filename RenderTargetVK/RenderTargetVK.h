@@ -18,7 +18,8 @@ protected:
 
 	virtual void AllocateCommandBuffer() override {
 		Super::AllocateCommandBuffer();
-	
+
+		//!< パス1 : セカンダリコマンドバッファ
 		assert(!SecondaryCommandPools.empty() && "");
 		const auto PrevCount = SecondaryCommandBuffers.size();
 		SecondaryCommandBuffers.resize(PrevCount + SwapchainImages.size());
@@ -31,17 +32,107 @@ protected:
 		};
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &SCBAI, &SecondaryCommandBuffers[PrevCount]));
 	}
+	virtual void CreateFramebuffer() override {
+		//!< パス0 : フレームバッファ
+		Framebuffers.push_back(VkFramebuffer());
+		VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
+			ImageViews[0],
+#ifdef USE_DEPTH_STENCIL
+			ImageViews[1],
+#endif
+		});
 
-	virtual void CreateIndirectBuffer() override { 
-		CreateIndirectBuffer_DrawIndexed(1, 1); //!< メッシュ描画用 Pass0
-		CreateIndirectBuffer_Draw(4, 1); //!< フルスクリーン描画用 Passs1
+		//!< パス1 : フレームバッファ
+		for (auto i : SwapchainImageViews) {
+			Framebuffers.push_back(VkFramebuffer());
+			VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
+		}
+	}
+	virtual void CreateRenderPass() override {
+		RenderPasses.resize(2);
+		//!< パス0 : レンダーパス
+		{
+			const std::array<VkAttachmentReference, 1> ColorAttach = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
+#ifdef USE_DEPTH_STENCIL
+			const VkAttachmentReference DepthAttach = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+#endif
+			VK::CreateRenderPass(RenderPasses[0], {
+					//!< アタッチメント
+					{
+						0,
+						ColorFormat,
+						VK_SAMPLE_COUNT_1_BIT,
+						VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+						VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+						VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+					},
+#ifdef USE_DEPTH_STENCIL
+					{
+						0,
+						DepthFormat,
+						VK_SAMPLE_COUNT_1_BIT,
+						VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+						VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+						VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+					},
+#endif
+				}, {
+					//!< サブパス
+					{
+						0,
+						VK_PIPELINE_BIND_POINT_GRAPHICS,
+						0, nullptr,
+						static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
+#ifdef USE_DEPTH_STENCIL
+						&DepthAttach,
+#else
+						nullptr,
+#endif
+						0, nullptr
+					},
+				}, {
+					//!< サブパス依存
+				});
+		}
+		//!< パス1 : レンダーパス
+		{
+			const std::array<VkAttachmentReference, 1> ColorAttach = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
+			VK::CreateRenderPass(RenderPasses[1], {
+					//!< アタッチメント
+					{
+						0,
+						ColorFormat,
+						VK_SAMPLE_COUNT_1_BIT,
+						VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
+						VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+						VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+					},
+				}, {
+					//!< サブパス
+					{
+						0,
+						VK_PIPELINE_BIND_POINT_GRAPHICS,
+						0, nullptr,
+						static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
+						nullptr,
+						0, nullptr
+					},
+				}, {
+					//!< サブパス依存
+				});
+		}
+	}
+	virtual void CreateIndirectBuffer() override {
+		//!< パス0 : インダイレクトバッファ(メッシュ描画用)
+		CreateIndirectBuffer_DrawIndexed(1, 1); 
+		//!< パス1 : インダイレクトバッファ(レンダーテクスチャ描画用)
+		CreateIndirectBuffer_Draw(4, 1); 
 	} 
 	virtual void CreateDescriptorSetLayout() override {
+		//!< パス1 : デスクリプタセットレイアウト
 		DescriptorSetLayouts.resize(1);
 		assert(!Samplers.empty() && "");
-		const std::array<VkSampler, 1> ISs = {
-			Samplers[0]
-		};
+		const std::array<VkSampler, 1> ISs = { Samplers[0] };
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {
 			{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
 		});
@@ -49,17 +140,21 @@ protected:
 	virtual void CreatePipelineLayout() override {
 		assert(!DescriptorSetLayouts.empty() && "");
 		PipelineLayouts.resize(2);
+		//!< パス0 : パイプラインレイアウト
 		VKExt::CreatePipelineLayout(PipelineLayouts[0], {}, {});
+		//!< パス1 : パイプラインレイアウト
 		VKExt::CreatePipelineLayout(PipelineLayouts[1], { DescriptorSetLayouts[0] }, {});
 	}
 
 	virtual void CreateDescriptorPool() override {
+		//!< パス1 : デスクリプタプール
 		DescriptorPools.resize(1);
 		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
-				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }
-			});
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }
+		});
 	}
 	virtual void AllocateDescriptorSet() override {
+		//!< パス1 : デスクリプタセット
 		assert(!DescriptorSetLayouts.empty() && "");
 		const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
 		assert(!DescriptorPools.empty() && "");
@@ -70,11 +165,10 @@ protected:
 			static_cast<uint32_t>(DSLs.size()), DSLs.data()
 		};
 		DescriptorSets.resize(1);
-		for (auto& i : DescriptorSets) {
-			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &i));
-		}
+		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
+		//!< パス1 : デスクリプタアップデートテンプレート
 		DescriptorUpdateTemplates.resize(1);
 		assert(!DescriptorSetLayouts.empty() && "");
 		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates[0], {
@@ -96,12 +190,36 @@ protected:
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 	}
 
-	virtual void CreateTexture() override { 
-		Images.resize(1);
-		ImageViews.resize(1);
-		CreateRenderTexture(&Images[0], &ImageViews[0]); 
+	virtual void CreateTexture() override {
+		const VkExtent3D Extent = { SurfaceExtent2D.width, SurfaceExtent2D.height, 1 };
+		const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+		{
+			Images.push_back(VkImage());
+			CreateImage(&Images.back(), 0, VK_IMAGE_TYPE_2D, ColorFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+
+			uint32_t HeapIndex;
+			VkDeviceSize Offset;
+			SuballocateImageMemory(HeapIndex, Offset, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+			ImageViews.push_back(VkImageView());
+			CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, ColorFormat, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+		}
+#ifdef USE_DEPTH_STENCIL
+		{
+			Images.push_back(VkImage());
+			CreateImage(&Images.back(), 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+
+			uint32_t HeapIndex;
+			VkDeviceSize Offset;
+			SuballocateImageMemory(HeapIndex, Offset, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+			ImageViews.push_back(VkImageView());
+			CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 });
+		}
+#endif
 	}
 	virtual void CreateImmutableSampler() override {
+		//!< パス1 : イミュータブルサンプラ
 		Samplers.resize(1);
 		const VkSamplerCreateInfo SCI = {
 			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -120,17 +238,18 @@ protected:
 	}
 	virtual void CreateShaderModules() override {
 		const auto ShaderPath = GetBasePath();
+		//!< パス0 : シェーダモジュール
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".frag.spv")).data()));
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tese.spv")).data()));
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tesc.spv")).data()));
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".geom.spv")).data()));
-
+		//!< パス1 : シェーダモジュール
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_1") + TEXT(".vert.spv")).data())); //!<
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_1") + TEXT(".frag.spv")).data())); //!<
 	}
 	virtual void CreatePipelines() override { 
-		Pipelines.resize(2); //!<
+		Pipelines.resize(2);
 		std::vector<std::thread> Threads;
 		const VkPipelineDepthStencilStateCreateInfo PDSSCI = {
 			VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
@@ -160,11 +279,13 @@ protected:
 		const std::vector<VkVertexInputAttributeDescription> VIADs = {};
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 2);
+		//!< パス0 : パイプライン
 		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PDSSCI, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCS.GetPipelineCache(0)));
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCS.GetPipelineCache(1)));
+		//!< パス1 : パイプライン
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCS.GetPipelineCache(1)));
 #else
 		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PDSSCI, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, nullptr));
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, nullptr));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, nullptr));
 #endif
 		for (auto& i : Threads) { i.join(); }
 	}

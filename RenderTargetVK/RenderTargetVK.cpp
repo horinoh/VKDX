@@ -232,50 +232,76 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 {
-	const auto RP = RenderPasses[0];
-	const auto FB = Framebuffers[i];	
+	//!< パス0
+	const auto RP0 = RenderPasses[0];
+	const auto FB0 = Framebuffers[0];
 
-	const VkCommandBufferInheritanceInfo CBII = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-		nullptr,
-		RP,
-		0,
-		FB,
-		VK_FALSE,
-		0,
-		0,
-	};
-	const VkCommandBufferBeginInfo SCBBI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
-		&CBII
-	};
+	//!< パス1 
+	const auto RP1 = RenderPasses[1];
+	const auto FB1 = Framebuffers[i + 1];
+
+	//!< パス0 : セカンダリコマンドバッファ(メッシュ描画用)
 	const auto SCB0 = SecondaryCommandBuffers[i];
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB0, &SCBBI)); {
-		const auto PL = Pipelines[0];
-		const auto IB = IndirectBuffers[0];
-        vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
-		vkCmdBindPipeline(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-		vkCmdDrawIndirect(SCB0, IB, 0, 1, 0);
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
+	{
+		const VkCommandBufferInheritanceInfo CBII = {
+			VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+			nullptr,
+			RP0,
+			0,
+			FB0,
+			VK_FALSE,
+			0,
+			0,
+		};
+		const VkCommandBufferBeginInfo CBBI = {
+			VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			nullptr,
+			VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+			&CBII
+		};
+		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB0, &CBBI)); {
+			const auto PL = Pipelines[0];
+			const auto IB = IndirectBuffers[0];
+			vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+			vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+			vkCmdBindPipeline(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
+			vkCmdDrawIndirect(SCB0, IB, 0, 1, 0);
+		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
+	}
 
-	const auto SCB1 = SecondaryCommandBuffers[i + SecondaryCommandBuffers.size() / 2];
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB1, &SCBBI)); {
-		//const auto PL = Pipelines[0];
-		const auto PL = Pipelines[1];
-		const auto IB = IndirectBuffers[1];
-		vkCmdSetViewport(SCB1, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
-		vkCmdBindPipeline(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
+	//!< パス1 : セカンダリコマンドバッファ(レンダーテクスチャ描画用)
+	const auto SCB1 = SecondaryCommandBuffers[i + SecondaryCommandBuffers.size() / 2]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
+	{
+		const VkCommandBufferInheritanceInfo CBII = {
+			VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+			nullptr,
+			RP1,
+			0,
+			FB1,
+			VK_FALSE,
+			0,
+			0,
+		};
+		const VkCommandBufferBeginInfo CBBI = {
+			VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			nullptr,
+			VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+			&CBII
+		};
+		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB1, &CBBI)); {
+			const auto PL = Pipelines[1];
+			const auto IB = IndirectBuffers[1];
+			vkCmdSetViewport(SCB1, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
+			vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+			vkCmdBindPipeline(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
-		assert(!DescriptorSets.empty() && "");
-		const auto PLL = PipelineLayouts[1];
-		vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
+			assert(!DescriptorSets.empty() && "");
+			const auto PLL = PipelineLayouts[1];
+			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
 
-		vkCmdDrawIndirect(SCB1, IB, 0, 1, 0);
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
+			vkCmdDrawIndirect(SCB1, IB, 0, 1, 0);
+		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
+	}
 
 	const auto CB = CommandBuffers[i];
 	const VkCommandBufferBeginInfo CBBI = {
@@ -284,21 +310,69 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 		0,
 		nullptr
 	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {	
-		const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
-		const VkRenderPassBeginInfo RPBI = {
-			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-			nullptr,
-			RP,
-			FB,
-			RenderArea,
-			static_cast<uint32_t>(CVs.size()), CVs.data()
-		};
-		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
-			const std::array<VkCommandBuffer, 1> SCBs = { SCB0 };
-			vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
-		} vkCmdEndRenderPass(CB);
+
+		//!< パス0 : レンダーパス(メッシュ描画用)
+		{
+#ifdef USE_DEPTH_STENCIL
+			std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
+			CVs[1].depthStencil = ClearDepthStencilValue;
+#else
+			const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
+#endif
+			const VkRenderPassBeginInfo RPBI = {
+				VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+				nullptr,
+				RP0,
+				FB0,
+				RenderArea,
+				static_cast<uint32_t>(CVs.size()), CVs.data()
+			};
+			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
+				const std::array<VkCommandBuffer, 1> SCBs = { SCB0 };
+				vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
+			} vkCmdEndRenderPass(CB);
+		}
+
+		//!< リソースバリア : VK_ACCESS_COLOR_ATTACHMENT_READ_BIT -> VK_ACCESS_SHADER_READ_BIT
+		{
+			const std::array<VkImageMemoryBarrier, 1> IMBs = {
+				{
+					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					nullptr,
+					VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+					Images[0],
+					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+				},
+			};
+			vkCmdPipelineBarrier(CB,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT,
+				0, nullptr,
+				0, nullptr,
+				static_cast<uint32_t>(IMBs.size()), IMBs.data());
+		}
+
+		//!< パス1 : レンダーパス(レンダーテクスチャ描画用)
+		{
+			const std::array<VkClearValue, 0> CVs = {};
+			const VkRenderPassBeginInfo RPBI = {
+				VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+				nullptr,
+				RP1,
+				FB1,
+				RenderArea,
+				static_cast<uint32_t>(CVs.size()), CVs.data()
+			};
+			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
+				const std::array<VkCommandBuffer, 1> SCBs = { SCB1 };
+				vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
+			} vkCmdEndRenderPass(CB);
+		}
+
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
 #pragma endregion
