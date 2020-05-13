@@ -262,24 +262,21 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS1));
 	{
-		const auto RS = COM_PTR_GET(RootSignatures[0]);
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 		const auto IR = COM_PTR_GET(ImageResources[0]);
-
-		CL->SetGraphicsRootSignature(RS);
 
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
 		//!< パス0 : (メッシュ描画用)
-#if 1
 		{
-			const auto RTH = RtvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart(); //RTH.ptr += 0 * Device->GetDescriptorHandleIncrementSize(RtvDescriptorHeaps[0]->GetDesc().Type);
+			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
+			const auto RTH = RtvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart(); 
 			const std::array<D3D12_RECT, 0> Rs = {};
-			CL->ClearRenderTargetView(RTH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
+			CL->ClearRenderTargetView(RTH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data()); 
 #ifdef USE_DEPTH_STENCIL
-			const auto DH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart(); //DH.ptr += 0 * Device->GetDescriptorHandleIncrementSize(DsvDescriptorHeaps[0]->GetDesc().Type);
+			const auto DH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart(); 
 			CL->ClearDepthStencilView(DH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { RTH };
@@ -288,63 +285,50 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { RTH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 #endif
+
 			CL->ExecuteBundle(BCL0);
 		}
-#endif
 
 		//!< リソースバリア : D3D12_RESOURCE_STATE_RENDER_TARGET -> D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
-#if 1
 		{
-			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SC = { SCR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET };
-			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_RT = { IR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE };
+			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SCR = { SCR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET };
+			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_IR = { IR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE };
 			const std::array<D3D12_RESOURCE_BARRIER, 2> RBs = { {
-				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_SC },
-				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_RT },
+				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_SCR },
+				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_IR },
 			} };
 			CL->ResourceBarrier(static_cast<UINT>(RBs.size()), RBs.data());
 		}
-#else
-		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-#endif
-
-		CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
 		//!< パス1 : (レンダーテクスチャ描画用)
 		{
-			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
-			//const std::array<D3D12_RECT, 0> Rs = {};
-			//CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
+			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { CDH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 
-#if 1
 			const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
 			CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
-
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
 			CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
-#endif
+
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 			CL->ExecuteBundle(BCL1);
 		}
 
 		//!< リソースバリア : D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE -> D3D12_RESOURCE_STATE_RENDER_TARGET
-#if 1
 		{
-			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SC = { SCR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT };
-			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_RT = { IR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET };
+			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SCR = { SCR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT };
+			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_IR = { IR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET };
 			const std::array<D3D12_RESOURCE_BARRIER, 2> RBs = { {
-				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_SC },
-				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_RT },
+				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_SCR },
+				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_IR },
 			} };
 			CL->ResourceBarrier(static_cast<UINT>(RBs.size()), RBs.data());
 		}
-#else
-		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-#endif
 	}
 	VERIFY_SUCCEEDED(CL->Close());
 }
