@@ -5,13 +5,13 @@
 #pragma region Code
 #include "../DXExt.h"
 
-class RenderTargetDX : public DXExt
+class DeferredDX : public DXExt
 {
 private:
 	using Super = DXExt;
 public:
-	RenderTargetDX() : Super() {}
-	virtual ~RenderTargetDX() {}
+	DeferredDX() : Super() {}
+	virtual ~DeferredDX() {}
 
 protected:
 	virtual void CreateCommandList() override {
@@ -88,7 +88,7 @@ protected:
 		}
 		LOG_OK();
 	}
-	virtual void CreateTexture() 
+	virtual void CreateTexture()
 	{
 		const D3D12_HEAP_PROPERTIES HP = {
 			D3D12_HEAP_TYPE_DEFAULT,
@@ -98,7 +98,7 @@ protected:
 			0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 		};
 		const DXGI_SAMPLE_DESC SD = { 1, 0 };
-		
+
 		{
 			ImageResources.push_back(COM_PTR<ID3D12Resource>());
 			const D3D12_RESOURCE_DESC RD = {
@@ -118,8 +118,6 @@ protected:
 			};
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
 		}
-
-#ifdef USE_DEPTH_STENCIL
 		{
 			ImageResources.push_back(COM_PTR<ID3D12Resource>());
 			const D3D12_RESOURCE_DESC RD = {
@@ -137,7 +135,6 @@ protected:
 			CV.DepthStencil = { 1.0f, 0 };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
 		}
-#endif
 	}
 
 	virtual void CreateDescriptorHeap() override {
@@ -148,82 +145,40 @@ protected:
 				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
 				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps[0])));
 			}
-#ifdef USE_DEPTH_STENCIL
 			{
 				DsvDescriptorHeaps.resize(1);
 				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
 				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps[0])));
 			}
-#endif
 		}
 		//!< パス1 : シェーダリソース
 		{
 			CbvSrvUavDescriptorHeaps.resize(1);
-#ifdef USE_DEPTH_STENCIL
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
-#else
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
-#endif
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps[0])));
 		}
 	}
 	virtual void CreateDescriptorView() override {
-		assert(2 == ImageResources.size() && "");
 		//!< パス0 : レンダーターゲットビュー
 		{
 			{
 				const auto& DH = RtvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-#if 0
-				const auto RD = ImageResources[0]->GetDesc(); assert(RD.MipLevels > 0 && ""); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);
-				D3D12_RENDER_TARGET_VIEW_DESC RTVD = {
-					RD.Format,
-					D3D12_RTV_DIMENSION_TEXTURE2D,
-				};
-				RTVD.Texture2D = { 0, 0 };
-				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), &RTVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#else
 				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#endif
 			}
-#ifdef USE_DEPTH_STENCIL
 			{
 				const auto& DH = DsvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-#if 0
-				const auto RD = ImageResources[1]->GetDesc(); assert(RD.MipLevels > 0 && ""); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);
-				D3D12_DEPTH_STENCIL_VIEW_DESC DSVD = {
-					RD.Format,
-					D3D12_DSV_DIMENSION_TEXTURE2D,
-					D3D12_DSV_FLAG_NONE
-				};
-				DSVD.Texture2D = { 0 };
-				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[1]), &DSVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#else
 				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#endif
 			}
-#endif
 		}
 		//!< パス1 : シェーダリソースビュー
 		{
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 			{
-#if 0
-				const auto RD = ImageResources[0]->GetDesc(); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);
-				D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
-					RD.Format,
-					D3D12_SRV_DIMENSION_TEXTURE2D,
-					D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				};
-				SRVD.Texture2D = { 0, RD.MipLevels, 0, 0.0f };
-				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#else
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#endif
 			}
-#ifdef USE_DEPTH_STENCIL
 			{
 				const auto RD = ImageResources[1]->GetDesc(); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);
 				D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
@@ -234,10 +189,9 @@ protected:
 				SRVD.Texture2D = { 0, RD.MipLevels, 0, 0.0f };
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
-#endif
 		}
 	}
-	
+
 	virtual void CreateShaderBlobs() override {
 		ShaderBlobs.resize(5 + 2);
 		const auto ShaderPath = GetBasePath();
@@ -280,7 +234,7 @@ protected:
 		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, DSD, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, &PLS, TEXT("1")));
 #else
 		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, DSD, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, nullptr, nullptr));
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, DSD, SBCs_1[0], SBCs_1[1],, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, nullptr, nullptr));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, DSD, SBCs_1[0], SBCs_1[1], , NullShaderBC, NullShaderBC, NullShaderBC, IEDs, nullptr, nullptr));
 #endif	
 		for (auto& i : Threads) { i.join(); }
 	}

@@ -12,8 +12,6 @@ layout (set=0, binding=0) uniform sampler2D Sampler2D;
 
 void main()
 {
-	//OutColor = texture(Sampler2D, InTexcoord);
-
 #if 0
 	const vec2 UV = InTexcoord;	
 #elif 0
