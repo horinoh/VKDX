@@ -299,6 +299,8 @@
 	- NormalMapVK
 - USE_SKY_DOME
 	- CubeMapDX, CubeMapVK
+- USE_GBUFFER_VISUALIZE
+	- DeferredDX, DeferredVK
 - USE_FULL_SCREEN
 	- TODO
 - USE_HDR

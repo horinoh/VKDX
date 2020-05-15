@@ -15,6 +15,42 @@ public:
 
 protected:
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
+	
+#ifdef USE_GBUFFER_VISUALIZE
+	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f) override {
+		const auto W = Width * 0.5f, H = Height * 0.5f;
+		Viewports = {
+	#ifdef USE_VIEWPORT_Y_UP
+			//!< 全画面用
+			{ 0.0f, Height, Width, -Height },
+			//!< 分割画面用
+			{ 0.0f, H, W, -H, MinDepth, MaxDepth },
+			{ W, H, W, -H, MinDepth, MaxDepth },
+			{ 0.0f, Height, W, -H, MinDepth, MaxDepth },
+			{ W, Height, W, -H, MinDepth, MaxDepth },
+	#else
+			//!< 全画面用
+			{ 0.0f, 0.0f, Width, Height },
+			//!< 分割画面用
+			{ 0.0f, 0.0f, W, H,MinDepth, MaxDepth },
+			{ W, 0.0f, W, H, MinDepth, MaxDepth },
+			{ 0.0f, H, W, H, MinDepth, MaxDepth },
+			{ W, H, W, H, MinDepth, MaxDepth },
+	#endif
+		};
+		//!< offset, extentで指定 (left, top, right, bottomで指定のDXとは異なるので注意)
+		ScissorRects = {
+			//!< 全画面用
+			{ { 0, 0 }, { static_cast<uint32_t>(Width), static_cast<uint32_t>(Height) } },
+			//!< 分割画面用
+			{ { 0, 0 }, { static_cast<uint32_t>(W), static_cast<uint32_t>(H) } },
+			{ { static_cast<int32_t>(W), 0 }, { static_cast<uint32_t>(W), static_cast<uint32_t>(H) } },
+			{ { 0, static_cast<int32_t>(H) }, { static_cast<uint32_t>(W), static_cast<uint32_t>(H) } },
+			{ { static_cast<int32_t>(W), static_cast<int32_t>(H) }, { static_cast<uint32_t>(W), static_cast<uint32_t>(H) } },
+		};
+		LOG_OK();
+	}
+#endif
 
 	virtual void AllocateCommandBuffer() override {
 		Super::AllocateCommandBuffer();
@@ -233,8 +269,13 @@ protected:
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tesc.spv")).data()));
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".geom.spv")).data()));
 		//!< パス1 : シェーダモジュール
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_1") + TEXT(".vert.spv")).data())); //!<
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_1") + TEXT(".frag.spv")).data())); //!<
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_1") + TEXT(".vert.spv")).data()));
+#ifdef USE_GBUFFER_VISUALIZE
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_gb_1") + TEXT(".frag.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_gb_1") + TEXT(".geom.spv")).data()));
+#else
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_1") + TEXT(".frag.spv")).data()));
+#endif
 	}
 	virtual void CreatePipelines() override {
 		Pipelines.resize(2);
@@ -259,10 +300,18 @@ protected:
 			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, ShaderModules[3], "main", nullptr }),
 			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_GEOMETRY_BIT, ShaderModules[4], "main", nullptr }),
 		};
+#ifdef USE_GBUFFER_VISUALIZE
+		const std::array<VkPipelineShaderStageCreateInfo, 3> PSSCIs_1 = {
+			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[5], "main", nullptr }),
+			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[6], "main", nullptr }),
+			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_GEOMETRY_BIT, ShaderModules[7], "main", nullptr }),
+		};
+#else
 		const std::array<VkPipelineShaderStageCreateInfo, 2> PSSCIs_1 = {
 			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[5], "main", nullptr }),
 			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[6], "main", nullptr }),
 		};
+#endif
 		const std::vector<VkVertexInputBindingDescription> VIBDs = {};
 		const std::vector<VkVertexInputAttributeDescription> VIADs = {};
 #ifdef USE_PIPELINE_SERIALIZE
@@ -270,10 +319,18 @@ protected:
 		//!< パス0 : パイプライン
 		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PDSSCI, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCS.GetPipelineCache(0)));
 		//!< パス1 : パイプライン
+#ifdef USE_GBUFFER_VISUALIZE
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, &PSSCIs_1[2], VIBDs, VIADs, PCS.GetPipelineCache(1)));
+#else
 		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCS.GetPipelineCache(1)));
+#endif
 #else
 		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PDSSCI, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, nullptr));
+#ifdef USE_GBUFFER_VISUALIZE
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, &PSSCIs_1[2], VIBDs, VIADs, nullptr));
+#else
 		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, nullptr));
+#endif
 #endif
 		for (auto& i : Threads) { i.join(); }
 	}

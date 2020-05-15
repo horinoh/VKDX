@@ -92,5 +92,11 @@
     <CustomBuild Include="DeferredVK_1.vert">
       <Filter>Shader Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="DeferredVK_gb_1.frag">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="DeferredVK_gb_1.geom">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

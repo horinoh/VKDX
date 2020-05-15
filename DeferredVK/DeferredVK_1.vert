@@ -8,12 +8,4 @@ void main()
 {
 	OutTexcoord = vec2(gl_VertexIndex / 2, gl_VertexIndex % 2);
 	gl_Position = vec4(OutTexcoord.x * 2.0f - 1.0f, -(OutTexcoord.y * 2.0f - 1.0f), 0.0f, 1.0f);
-
-#if 0
-	const mat4 TexTransform = mat4(2.0f, 0.0f, 0.0f, 0.0f,
-	0.0f, 2.0f, 0.0f, 0.0f,
-	0.0f, 0.0f, 1.0f, 0.0f,
-	0.0f, 0.0f, 0.0f, 1.0f);
-	OutTexcoord = (TexTransform * vec4(OutTexcoord, 0.0f, 1.0f)).xy;
-#endif
 }

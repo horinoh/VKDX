@@ -14,6 +14,35 @@ public:
 	virtual ~DeferredDX() {}
 
 protected:
+#ifdef USE_GBUFFER_VISUALIZE
+	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f) override {
+		D3D12_FEATURE_DATA_D3D12_OPTIONS3 FDO3;
+		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS3, reinterpret_cast<void*>(&FDO3), sizeof(FDO3)));
+		assert(D3D12_VIEW_INSTANCING_TIER_1 < FDO3.ViewInstancingTier && "");
+
+		const auto W = Width * 0.5f, H = Height * 0.5f;
+		Viewports = {
+			//!< 全画面用
+			{ 0.0f, 0.0f, Width, Height, MinDepth, MaxDepth },
+			//!< 分割画面用
+			{ 0.0f, 0.0f, W, H, MinDepth, MaxDepth },
+			{ W, 0.0f, W, H, MinDepth, MaxDepth },
+			{ 0.0f, H, W, H, MinDepth, MaxDepth },
+			{ W, H, W, H, MinDepth, MaxDepth },
+		};
+		//!< left, top, right, bottomで指定 (offset, extentで指定のVKとは異なるので注意)
+		ScissorRects = {
+			//!< 全画面用
+			{ 0, 0, static_cast<LONG>(Width), static_cast<LONG>(Height) },
+			//!< 分割画面用
+			{ 0, 0, static_cast<LONG>(W), static_cast<LONG>(H) },
+			{ static_cast<LONG>(W), 0, static_cast<LONG>(Width), static_cast<LONG>(H) },
+			{ 0, static_cast<LONG>(H), static_cast<LONG>(W), static_cast<LONG>(Height) },
+			{ static_cast<LONG>(W), static_cast<LONG>(H), static_cast<LONG>(Width), static_cast<LONG>(Height) },
+		};
+		LOG_OK();
+	}
+#endif
 	virtual void CreateCommandList() override {
 		Super::CreateCommandList();
 		//!< パス1 : バンドルコマンドリスト
@@ -193,7 +222,11 @@ protected:
 	}
 
 	virtual void CreateShaderBlobs() override {
+#ifdef USE_GBUFFER_VISUALIZE
+		ShaderBlobs.resize(5 + 3);
+#else
 		ShaderBlobs.resize(5 + 2);
+#endif
 		const auto ShaderPath = GetBasePath();
 		//!< パス0 : シェーダブロブ
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs[0])));
@@ -203,7 +236,12 @@ protected:
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), COM_PTR_PUT(ShaderBlobs[4])));
 		//!< パス1 : シェーダブロブ
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_1.vs.cso")).data(), COM_PTR_PUT(ShaderBlobs[5])));
+#ifdef USE_GBUFFER_VISUALIZE
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_gb_1.gs.cso")).data(), COM_PTR_PUT(ShaderBlobs[7])));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_gb_1.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[6])));
+#else
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_1.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[6])));
+#endif
 	}
 	virtual void CreatePipelineStates() override {
 		PipelineStates.resize(2);
@@ -221,20 +259,36 @@ protected:
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[3]->GetBufferPointer(), ShaderBlobs[3]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[4]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() }),
 		};
+#ifdef USE_GBUFFER_VISUALIZE
+		const std::array<D3D12_SHADER_BYTECODE, 3> SBCs_1 = {
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[5]->GetBufferPointer(), ShaderBlobs[5]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[6]->GetBufferPointer(), ShaderBlobs[6]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[7]->GetBufferPointer(), ShaderBlobs[7]->GetBufferSize() }),
+		};
+#else
 		const std::array<D3D12_SHADER_BYTECODE, 2> SBCs_1 = {
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[5]->GetBufferPointer(), ShaderBlobs[5]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[6]->GetBufferPointer(), ShaderBlobs[6]->GetBufferSize() }),
 		};
+#endif
 		const std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs = {};
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
 		//!< パス0 : パイプラインステート
 		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, DSD, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, &PLS, TEXT("0")));
 		//!< パス1 : パイプラインステート
+#ifdef USE_GBUFFER_VISUALIZE
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, DSD, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, SBCs_1[2], IEDs, &PLS, TEXT("1")));
+#else
 		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, DSD, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, &PLS, TEXT("1")));
+#endif
 #else
 		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, DSD, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, nullptr, nullptr));
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, DSD, SBCs_1[0], SBCs_1[1], , NullShaderBC, NullShaderBC, NullShaderBC, IEDs, nullptr, nullptr));
+#ifdef USE_GBUFFER_VISUALIZE
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, DSD, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, SBCs_1[2], IEDs, nullptr, nullptr));
+#else
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, DSD, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, nullptr, nullptr));
+#endif
 #endif	
 		for (auto& i : Threads) { i.join(); }
 	}

@@ -42,6 +42,7 @@
 //#define USE_PARALLAX_MAP //!< NormalMapDX, NormalMapVK
 #define USE_DISTANCE_FUNCTION //!< FullscreenDX, FullscreenVK
 //#define USE_SKY_DOME //!< CubeMapDX, CubeMapVK
+#define USE_GBUFFER_VISUALIZE //!< DeferredDX, DeferredVK
 
 #define ALWAYS_REBUILD_PIPELINE
 

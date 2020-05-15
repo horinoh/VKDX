@@ -92,6 +92,12 @@
     <FxCompile Include="DeferredDX.ds.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+    <FxCompile Include="DeferredDX_gb_1.gs.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="DeferredDX_gb_1.ps.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
