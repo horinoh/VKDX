@@ -272,14 +272,27 @@ void DeferredDX::PopulateCommandList(const size_t i)
 		{
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-			const auto RTH = RtvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			const std::array<D3D12_RECT, 0> Rs = {};
-			CL->ClearRenderTargetView(RTH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
-			const auto DH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			CL->ClearDepthStencilView(DH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+			const auto RtvDH = RtvDescriptorHeaps[0];
+			auto RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart();
+			const std::array<D3D12_RECT, 0> Rects = {};
+			CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+#pragma region MRT
+			CL->ClearRenderTargetView(RtvCDH, std::array<FLOAT, 4>({ 0.5f, 0.5f, 1.0f, 1.0f }).data(), static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+			CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::Black, static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+			CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+#pragma endregion
 
-			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { RTH };
-			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &DH);
+			const auto DsvDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+			CL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
+			RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart();
+			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 4> RtvDHs = {
+				RtvCDH,
+				RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
+				RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
+				RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
+			};
+			CL->OMSetRenderTargets(static_cast<UINT>(RtvDHs.size()), RtvDHs.data(), FALSE, &DsvDH);
 
 			CL->ExecuteBundle(BCL0);
 		}
@@ -299,16 +312,16 @@ void DeferredDX::PopulateCommandList(const size_t i)
 		{
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
-			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+			auto ScCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); ScCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 
-			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { CDH };
-			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
+			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RtvDHs = { ScCDH };
+			CL->OMSetRenderTargets(static_cast<UINT>(RtvDHs.size()), RtvDHs.data(), FALSE, nullptr);
 
-			const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
-			CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
-			const auto& DH = CbvSrvUavDescriptorHeaps[0];
-			auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-			CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
+			const auto& SrvDH = CbvSrvUavDescriptorHeaps[0];
+			const std::array<ID3D12DescriptorHeap*, 1> SrvDHs = { COM_PTR_GET(SrvDH) };
+			CL->SetDescriptorHeaps(static_cast<UINT>(SrvDHs.size()), SrvDHs.data());
+			auto SrvGDH = SrvDH->GetGPUDescriptorHandleForHeapStart();
+			CL->SetGraphicsRootDescriptorTable(0, SrvGDH); SrvGDH.ptr += Device->GetDescriptorHandleIncrementSize(SrvDH->GetDesc().Type); //!< SRV
 
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 			CL->ExecuteBundle(BCL1);

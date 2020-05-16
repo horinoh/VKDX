@@ -98,7 +98,10 @@ protected:
 			GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT("_1.rs.cso")).data());
 #else
 			const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Srv = {
-				{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
+#pragma region MRT
+				//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
+				{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
+#pragma endregion
 			};
 			assert(!StaticSamplerDescs.empty() && "");
 			DX::SerializeRootSignature(Blob, {
@@ -127,7 +130,7 @@ protected:
 			0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 		};
 		const DXGI_SAMPLE_DESC SD = { 1, 0 };
-
+		//!< レンダーターゲット : カラー(RenderTarget : Color)
 		{
 			ImageResources.push_back(COM_PTR<ID3D12Resource>());
 			const D3D12_RESOURCE_DESC RD = {
@@ -147,6 +150,68 @@ protected:
 			};
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
 		}
+#pragma region MRT
+		//!< レンダーターゲット : 法線(RenderTarget : Normal)
+		{
+			ImageResources.push_back(COM_PTR<ID3D12Resource>());
+			const D3D12_RESOURCE_DESC RD = {
+				D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				0,
+				static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
+				1,
+				1,
+				DXGI_FORMAT_R10G10B10A2_UNORM,
+				SD,
+				D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
+			};
+			const D3D12_CLEAR_VALUE CV = {
+				RD.Format,
+				*std::array<FLOAT, 4>({ 0.5f, 0.5f, 1.0f, 1.0f }).data()
+			};
+			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+		}
+		//!< レンダーターゲット : 深度(RenderTarget : Depth)
+		{
+			ImageResources.push_back(COM_PTR<ID3D12Resource>());
+			const D3D12_RESOURCE_DESC RD = {
+				D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				0,
+				static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
+				1,
+				1,
+				DXGI_FORMAT_R32_FLOAT,
+				SD,
+				D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
+			};
+			const D3D12_CLEAR_VALUE CV = {
+				RD.Format,
+				*static_cast<const FLOAT*>(DirectX::Colors::Black),
+			};
+			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+		}
+		//!< レンダーターゲット : 未定
+		{
+			ImageResources.push_back(COM_PTR<ID3D12Resource>());
+			const D3D12_RESOURCE_DESC RD = {
+				D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				0,
+				static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
+				1,
+				1,
+				DXGI_FORMAT_R8G8B8A8_UNORM,
+				SD,
+				D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
+			};
+			const D3D12_CLEAR_VALUE CV = {
+				RD.Format,
+				*static_cast<const FLOAT*>(DirectX::Colors::SkyBlue),
+			};
+			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+		}
+#pragma endregion
 		{
 			ImageResources.push_back(COM_PTR<ID3D12Resource>());
 			const D3D12_RESOURCE_DESC RD = {
@@ -169,22 +234,28 @@ protected:
 	virtual void CreateDescriptorHeap() override {
 		//!< パス0 : レンダーターゲット
 		{
+#pragma region MRT
 			{
-				RtvDescriptorHeaps.resize(1);
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps[0])));
+				//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
+				RtvDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 4, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
+				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps.back())));
 			}
+#pragma endregion
 			{
-				DsvDescriptorHeaps.resize(1);
+				DsvDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
 				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps[0])));
+				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.back())));
 			}
 		}
 		//!< パス1 : シェーダリソース
 		{
-			CbvSrvUavDescriptorHeaps.resize(1);
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps[0])));
+#pragma region MRT
+			//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
+			CbvSrvUavDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
+#pragma endregion
 		}
 	}
 	virtual void CreateDescriptorView() override {
@@ -193,12 +264,21 @@ protected:
 			{
 				const auto& DH = RtvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma region MRT
+				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[2]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				//!< レンダーターゲット : 未定
+				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[3]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma endregion
 			}
 			{
 				const auto& DH = DsvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[4]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
 		}
 		//!< パス1 : シェーダリソースビュー
@@ -206,17 +286,16 @@ protected:
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 			{
+				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-			}
-			{
-				const auto RD = ImageResources[1]->GetDesc(); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);
-				D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
-					DXGI_FORMAT_R24_UNORM_X8_TYPELESS, //!< DXGI_FORMAT_D24_UNORM_S8_UINT==RD.Format の場合 (基本的に D?? -> R?? のように読み替えたものにすれば良さそう)
-					D3D12_SRV_DIMENSION_TEXTURE2D,
-					D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				};
-				SRVD.Texture2D = { 0, RD.MipLevels, 0, 0.0f };
-				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma region MRT
+				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[2]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				//!< レンダーターゲット : 未定
+				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[3]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma	endregion
 			}
 		}
 	}

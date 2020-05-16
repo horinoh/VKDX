@@ -6,8 +6,9 @@ struct IN
 
 SamplerState Sampler : register(s0, space0);
 Texture2D Texture : register(t0, space0);
-//Texture2D Texture1 : register(t1, space0);
-//Texture2D Texture2 : register(t2, space0);
+Texture2D Texture1 : register(t1, space0);
+Texture2D Texture2 : register(t2, space0);
+Texture2D Texture3 : register(t3, space0);
 
 float4 main(IN In) : SV_TARGET
 {

@@ -144,31 +144,31 @@ protected:
 		//!< パス0 : レンダーターゲット
 		{
 			{
-				RtvDescriptorHeaps.resize(1);
+				RtvDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
 				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps[0])));
+				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps.back())));
 			}
 #ifdef USE_DEPTH_STENCIL
 			{
-				DsvDescriptorHeaps.resize(1);
+				DsvDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
 				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps[0])));
+				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.back())));
 			}
 #endif
 		}
 		//!< パス1 : シェーダリソース
 		{
-			CbvSrvUavDescriptorHeaps.resize(1);
-#ifdef USE_DEPTH_STENCIL
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
-#else
+			CbvSrvUavDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
-#endif
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps[0])));
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
 		}
 	}
 	virtual void CreateDescriptorView() override {
+#ifdef USE_DEPTH_STENCIL
 		assert(2 == ImageResources.size() && "");
+#else
+		assert(!ImageResources.empty() && "");
+#endif
 		//!< パス0 : レンダーターゲットビュー
 		{
 			{
@@ -223,18 +223,6 @@ protected:
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #endif
 			}
-#ifdef USE_DEPTH_STENCIL
-			{
-				const auto RD = ImageResources[1]->GetDesc(); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);
-				D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
-					DXGI_FORMAT_R24_UNORM_X8_TYPELESS, //!< DXGI_FORMAT_D24_UNORM_S8_UINT==RD.Format の場合 (基本的に D?? -> R?? のように読み替えたものにすれば良さそう)
-					D3D12_SRV_DIMENSION_TEXTURE2D,
-					D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				};
-				SRVD.Texture2D = { 0, RD.MipLevels, 0, 0.0f };
-				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-			}
-#endif
 		}
 	}
 	
