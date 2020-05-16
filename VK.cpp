@@ -2693,7 +2693,9 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 	const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, 
 	const VkPipelineDepthStencilStateCreateInfo& PDSSCI,
 	const VkPipelineShaderStageCreateInfo* VS, const VkPipelineShaderStageCreateInfo* FS, const VkPipelineShaderStageCreateInfo* TES, const VkPipelineShaderStageCreateInfo* TCS, const VkPipelineShaderStageCreateInfo* GS,
-	const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs, VkPipelineCache PC)
+	const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs,
+	const std::vector<VkPipelineColorBlendAttachmentState>& PCBASs,
+	VkPipelineCache PC)
 {
 	PERFORMANCE_COUNTER();
 
@@ -2798,6 +2800,7 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 	//assert((PMSCI.alphaToOneEnable == VK_FALSE || PDF.alphaToOne) && "");
 
 	//!< カラーブレンド (ColorBlend)
+#if 0
 	//!< VK_BLEND_FACTOR_SRC1 系をを使用するには、デバイスフィーチャー dualSrcBlend が有効であること
 	///!< SRCコンポーネント * SRCファクタ OP DSTコンポーネント * DSTファクタ
 	const std::array<VkPipelineColorBlendAttachmentState, 1> PCBASs = {
@@ -2808,6 +2811,7 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
 		}
 	};
+#endif
 	//!< デバイスフィーチャー independentBlend が有効で無い場合は、配列の各要素は「完全に同じ値」であること (If device feature independentBlend is not enabled, each array element must be exactly same)
 	//if (!PDF.independentBlend) {
 	//	for (auto i : PCBASs) {

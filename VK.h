@@ -344,7 +344,8 @@ protected:
 		const VkPipelineDepthStencilStateCreateInfo& PDSSCI,
 		const VkPipelineShaderStageCreateInfo* VS, const VkPipelineShaderStageCreateInfo* FS, const VkPipelineShaderStageCreateInfo* TES, const VkPipelineShaderStageCreateInfo* TCS, const VkPipelineShaderStageCreateInfo* GS,
 		const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs,
-		VkPipelineCache PC = VK_NULL_HANDLE); 
+		const std::vector<VkPipelineColorBlendAttachmentState>& PCBASs,
+		VkPipelineCache PC = VK_NULL_HANDLE);
 	//virtual void CreatePipeline_Compute();
 
 	virtual void ClearColor(const VkCommandBuffer CommandBuffer, const VkImage Image, const VkClearColorValue& Color);

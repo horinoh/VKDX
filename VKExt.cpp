@@ -72,11 +72,20 @@ void VKExt::CreatePipeline_VsFs_Input(const VkPrimitiveTopology Topology, const 
 	//!< メンバ関数をスレッドで使用したい場合、以下のようにthisを引数に取る形式を使用
 	//std::thread::thread(&VKExt::Func, this, Arg0, Arg1,...);
 
+	const std::vector< VkPipelineColorBlendAttachmentState> PCBASs = {
+		{
+			VK_FALSE, VK_BLEND_FACTOR_ONE,
+			VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
+			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
+			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+		},
+	};
+
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
-	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCS.GetPipelineCache(0)));
+	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
 #else
-	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, nullptr));
+	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs));
 #endif
 
 	for (auto& i : Threads) { i.join(); }
@@ -110,11 +119,19 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology Topology
 		VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, ShaderModules[3], "main", nullptr }),
 		VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_GEOMETRY_BIT, ShaderModules[4], "main", nullptr }),
 	};
+	const std::vector< VkPipelineColorBlendAttachmentState> PCBASs = {
+		{
+			VK_FALSE, VK_BLEND_FACTOR_ONE,
+			VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
+			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
+			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+		},
+	};
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
-	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCS.GetPipelineCache(0)));
+	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
 #else
-	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, nullptr));
+	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs));
 #endif
 	for (auto& i : Threads) { i.join(); }
 }

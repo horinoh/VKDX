@@ -26,14 +26,14 @@ float4 main(IN In) : SV_TARGET
 
 	OutColor.rgb += Texture.Sample(Sampler, In.Texcoord).rgb * Mask[VPIndex].xxx;
 
-	OutColor.rgb += (1 - Texture.Sample(Sampler, In.Texcoord).rgb) * Mask[VPIndex].yyy;
-	//OutColor.rgb += Texture1.Sample(Sampler, In.Texcoord).rgb * Mask[VPIndex].yyy;
-	
-	OutColor.rgb += Texture.Sample(Sampler, In.Texcoord).bgr * Mask[VPIndex].zzz;
-	//OutColor.rgb += Texture2.Sample(Sampler, In.Texcoord).rgb * Mask[VPIndex].zzz;
+	OutColor.rgb += (Texture/*1*/.Sample(Sampler, In.Texcoord).rgb * 2.0f - 1.0f) * Mask[VPIndex].yyy;
 
-	OutColor.rgb += (1 - Texture.Sample(Sampler, In.Texcoord).bgr) * Mask[VPIndex].www;
-	//OutColor.rgb += Texture3.Sample(Sampler, In.Texcoord).rgb * Mask[VPIndex].www;
+	OutColor.rgb += Texture/*2*/.Sample(Sampler, In.Texcoord).rrr * Mask[VPIndex].zzz;
+	//!< UVと深度からワールド位置を求める
+	//const float4 Tmp = mul(InvViewProjection, float4(InTexcoord * 2.0f - 1.0f, Texture/*2*/.Sample(Sampler, In.Texcoord).r, 1.0f));
+	//const float3 WorldPos = Tmp.xyz / Tmp.w;
+
+	OutColor.rgb += Texture/*3*/.Sample(Sampler, In.Texcoord).rgb * Mask[VPIndex].www;
 
 	//OutColor.rgb = float3(In.Texcoord, 0);
 

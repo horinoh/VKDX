@@ -451,7 +451,15 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 		{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
 		0.0f, 1.0f
 	}; 
-	VK::CreatePipeline(Pipelines.back(), Device, PLL, RP, ToVKPrimitiveTopology(Prim.mode), 0, PDSSCI, &VS, &FS, nullptr, nullptr, nullptr, VIBDs, VIADs);
+	const std::vector< VkPipelineColorBlendAttachmentState> PCBASs = {
+		{
+			VK_FALSE, VK_BLEND_FACTOR_ONE,
+			VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
+			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
+			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+		},
+	};
+	VK::CreatePipeline(Pipelines.back(), Device, PLL, RP, ToVKPrimitiveTopology(Prim.mode), 0, PDSSCI, &VS, &FS, nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "World =" << std::endl;

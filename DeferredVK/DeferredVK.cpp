@@ -317,8 +317,19 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 
 		//!< パス0 : レンダーパス(メッシュ描画用)
 		{
-			std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
-			CVs[1].depthStencil = ClearDepthStencilValue;
+			std::array<VkClearValue, 4 + 1> CVs = { 
+				//!< レンダーターゲット : カラー(RenderTarget : Color)
+				Colors::SkyBlue, 
+#pragma region MRT
+				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				{ 0.5f, 0.5f, 1.0f, 1.0f },
+				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				Colors::Black,
+				//!< レンダーターゲット : 未定
+				Colors::SkyBlue,
+#pragma endregion
+			};
+			CVs[4].depthStencil = ClearDepthStencilValue;
 			const VkRenderPassBeginInfo RPBI = {
 				VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 				nullptr,
@@ -335,7 +346,8 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 
 		//!< リソースバリア : VK_ACCESS_COLOR_ATTACHMENT_READ_BIT -> VK_ACCESS_SHADER_READ_BIT
 		{
-			const std::array<VkImageMemoryBarrier, 1> IMBs = {
+			const std::array<VkImageMemoryBarrier, 4> IMBs = { {
+				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				{
 					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 					nullptr,
@@ -345,7 +357,39 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 					Images[0],
 					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
 				},
-			};
+#pragma region MRT
+				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				{
+					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					nullptr,
+					VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+					Images[1],
+					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+				},
+				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				{
+					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					nullptr,
+					VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+					Images[2],
+					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+				},
+				//!< レンダーターゲット : 未定
+				{
+					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					nullptr,
+					VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
+					Images[3],
+					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+				},
+#pragma endregion
+			} };
 			vkCmdPipelineBarrier(CB,
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 				VK_DEPENDENCY_BY_REGION_BIT,

@@ -9,9 +9,9 @@ layout (location = 0) in vec2 InTexcoord;
 layout (location = 0) out vec4 OutColor;
 
 layout (set=0, binding=0) uniform sampler2D Sampler2D;
-//layout (set=0, binding=1) uniform sampler2D Sampler2D1;
-//layout (set=0, binding=2) uniform sampler2D Sampler2D2;
-//layout (set=0, binding=3) uniform sampler2D Sampler2D3;
+layout (set=0, binding=1) uniform sampler2D Sampler2D1;
+layout (set=0, binding=2) uniform sampler2D Sampler2D2;
+layout (set=0, binding=3) uniform sampler2D Sampler2D3;
 
 void main()
 {
@@ -28,14 +28,14 @@ void main()
 	
 	OutColor.rgb += texture(Sampler2D, InTexcoord).rgb * Mask[VPIndex].xxx;
 
-	OutColor.rgb += (1 - texture(Sampler2D, InTexcoord).rgb) * Mask[VPIndex].yyy;
-	//OutColor.rgb += texture(Sampler2D1, InTexcoord).rgb * Mask[VPIndex].yyy;
+	OutColor.rgb += texture(Sampler2D1, InTexcoord).rgb * Mask[VPIndex].yyy;
 
-	OutColor.rgb += texture(Sampler2D, InTexcoord).bgr * Mask[VPIndex].zzz;	
-	//OutColor.rgb += texture(Sampler2D2, InTexcoord).rgb * Mask[VPIndex].zzz;
+	OutColor.rgb += texture(Sampler2D2, InTexcoord).rrr * Mask[VPIndex].zzz;	
+	//!< UVと深度からワールド位置を求める
+	//const vec4 Tmp = InvViewProjection * vec4(InTexcoord * 2.0f - 1.0f, texture(Sampler2D2, InTexcoord).r, 1.0f);
+	//const vec3 WorldPos = Tmp.xyz / Tmp.w;
 
-	OutColor.rgb += (1 - texture(Sampler2D, InTexcoord).bgr) * Mask[VPIndex].www;	
-	//OutColor.rgb += texture(Sampler2D3, InTexcoord).rgb * Mask[VPIndex].www;
+	OutColor.rgb += texture(Sampler2D3, InTexcoord).rgb * Mask[VPIndex].www;	
 
 	//OutColor.rgb = vec3(InTexcoord, 0);
 }

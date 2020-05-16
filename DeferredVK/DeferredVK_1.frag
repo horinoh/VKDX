@@ -9,8 +9,9 @@ layout (location = 0) in vec2 InTexcoord;
 layout (location = 0) out vec4 OutColor;
 
 layout (set=0, binding=0) uniform sampler2D Sampler2D;
-//layout (set=0, binding=1) uniform sampler2D Sampler2D1;
-//layout (set=0, binding=2) uniform sampler2D Sampler2D2;
+layout (set=0, binding=1) uniform sampler2D Sampler2D1;
+layout (set=0, binding=2) uniform sampler2D Sampler2D2;
+layout (set=0, binding=3) uniform sampler2D Sampler2D3;
 
 void main()
 {
