@@ -184,8 +184,6 @@ protected:
 	virtual void CreateRenderTarget() {}
 	//virtual void CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UINT Height);
 
-	virtual void CreateDepthStencil() {}
-	virtual void CreateDepthStencilResource(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
 	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
 
 	virtual void LoadImage(ID3D12Resource** /*Resource*/, const std::wstring& /*Path*/, const D3D12_RESOURCE_STATES /*ResourceState*/) { assert(false && "Not implemanted"); }
@@ -260,7 +258,6 @@ protected:
 	COM_PTR<IDXGISwapChain4> SwapChain;
 	std::vector<COM_PTR<ID3D12Resource>> SwapChainResources;
 
-	COM_PTR<ID3D12Resource> DepthStencilResource; 
 	COM_PTR<ID3D12Resource> UnorderedAccessTextureResource;
 	std::vector<COM_PTR<ID3D12Resource>> ImageResources;
 	std::vector<COM_PTR<ID3D12Resource>> ConstantBufferResources;

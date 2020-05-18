@@ -324,7 +324,7 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 				//!< レンダーターゲット : 法線(RenderTarget : Normal)
 				{ 0.5f, 0.5f, 1.0f, 1.0f },
 				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				Colors::Black,
+				Colors::White,
 				//!< レンダーターゲット : 未定
 				Colors::SkyBlue,
 #pragma endregion

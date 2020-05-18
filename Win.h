@@ -35,7 +35,7 @@
 //!< https://support.microsoft.com/ja-jp/help/4040263/windows-10-hdr-advanced-color-settings
 //#define USE_HDR
 //#define USE_FULL_SCREEN
-#define USE_DEPTH_STENCIL //!< ToonDX, ToonVK
+#define USE_DEPTH //!< ToonDX, ToonVK
 #define USE_DRAW_INDIRECT //!< FullscreenDX, FullscreenVK
 #define USE_PIPELINE_SERIALIZE //!< *DX, *VK
 //#define USE_SCREENSPACE_WIREFRAME //!< ToonDX, ToonVK

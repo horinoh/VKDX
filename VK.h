@@ -268,14 +268,7 @@ protected:
 	virtual void GetSwapchainImage(VkDevice Device, VkSwapchainKHR Swapchain);
 	virtual void CreateSwapchainImageView();
 	virtual void InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorValue* CCV = nullptr);
-	
-	//virtual void CreateRenderTarget() {}
-	//virtual void CreateRenderTarget(const VkFormat Format, const uint32_t Width, const uint32_t Height);
-
-	virtual void CreateDepthStencil() {}
-	virtual void CreateDepthStencil(const VkFormat DepthFormat, const uint32_t Width, const uint32_t Height);
-	virtual void InitializeDepthStencilImage(const VkCommandBuffer CB);
-	
+		
 	virtual void LoadImage(VkImage* /*Image*/, VkImageView* /*ImageView*/, const std::string& /*Path*/) { assert(false && "Not implemanted"); }
 	virtual void LoadImage(VkImage* Img, VkImageView* IV, const std::wstring& Path) { LoadImage(Img, IV, ToString(Path)); }
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
@@ -479,8 +472,6 @@ protected:
 	VkImageView RenderTargetImageView = VK_NULL_HANDLE;
 
 	VkFormat DepthFormat = VK_FORMAT_D24_UNORM_S8_UINT;
-	VkImage DepthStencilImage = VK_NULL_HANDLE;
-	VkImageView DepthStencilImageView = VK_NULL_HANDLE;
 
 	std::vector<VkImage> Images;
 	std::vector<VkImageView> ImageViews;

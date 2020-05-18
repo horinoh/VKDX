@@ -137,7 +137,32 @@ protected:
 	virtual void UpdateAnimRotation(const std::array<float, 4>& Value, const uint32_t NodeIndex);
 	virtual void UpdateAnimWeights(const float* Data, const uint32_t PrevIndex, const uint32_t NextIndex, const float t);
 
-	virtual void CreateDepthStencil() override { CreateDepthStencilResource(DXGI_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
+	virtual void CreateTexture() override {
+		{
+			ImageResources.push_back(COM_PTR<ID3D12Resource>());
+			const D3D12_HEAP_PROPERTIES HeapProperties = {
+				D3D12_HEAP_TYPE_DEFAULT,
+				D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+				D3D12_MEMORY_POOL_UNKNOWN,
+				0,
+				0
+			};
+			const DXGI_SAMPLE_DESC SD = { 1, 0 };
+			const D3D12_RESOURCE_DESC RD = {
+				D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				0,
+				static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
+				1,
+				1,
+				DXGI_FORMAT_D24_UNORM_S8_UINT,
+				SD,
+				D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
+			};
+			const D3D12_CLEAR_VALUE CV = { RD.Format, { 1.0f, 0 } };
+			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+		}
+	}
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
@@ -210,9 +235,10 @@ protected:
 			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		}
 		{
+			assert(!ImageResources.empty() && "");
 			const auto& DH = DsvDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-			Device->CreateDepthStencilView(COM_PTR_GET(DepthStencilResource), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		}
 	}
 	virtual void PopulateCommandList(const size_t i) override;

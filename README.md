@@ -282,7 +282,7 @@
 	- 全画面が描画されるものではクリアの必用が無く(FullscreenVK, TextureVK等)、使用していない
 - USE_PUSH_CONSTANTS, USE_ROOT_CONSTANTS
 	- TriangleDX, TriangleVK
-- USE_DEPTH_STENCIL
+- USE_DEPTH
 	- ToonDX, ToonVK, RenderTargetDX, RenderTargetVK
 - USE_SCREENSPACE_WIREFRAME
 	- ToonDX, ToonVK

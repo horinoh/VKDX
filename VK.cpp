@@ -77,10 +77,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	InitializeSwapchainImage(CommandBuffers[0], &Colors::Red);
 #endif
 
-	CreateDepthStencil();
-	InitializeDepthStencilImage(CommandBuffers[0]);
-	//CreateRenderTarget();
-
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 	CreateIndirectBuffer();
@@ -265,14 +261,14 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyImage(Device, i, GetAllocationCallbacks());
 	}
 
-	if (VK_NULL_HANDLE != DepthStencilImageView) {
+	/*if (VK_NULL_HANDLE != DepthStencilImageView) {
 		vkDestroyImageView(Device, DepthStencilImageView, GetAllocationCallbacks());
 		DepthStencilImageView = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != DepthStencilImage) {
 		vkDestroyImage(Device, DepthStencilImage, GetAllocationCallbacks());
 		DepthStencilImage = VK_NULL_HANDLE;
-	}
+	}*/
 
 	if (VK_NULL_HANDLE != RenderTargetImageView) {
 		vkDestroyImageView(Device, RenderTargetImageView, GetAllocationCallbacks());
@@ -2020,26 +2016,6 @@ void VK::CreateSwapchainImageView()
 }
 
 #if 0
-void VK::CreateRenderTarget(const VkFormat Format, const uint32_t Width, const uint32_t Height)
-{
-	const VkExtent3D Extent3D = { Width, Height, 1 };
-	CreateImage(&RenderTargetImage, 0, VK_IMAGE_TYPE_2D, Format, Extent3D, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-
-#if 0
-	AllocateImageMemory(&RenderTargetDeviceMemory, RenderTargetImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VERIFY_SUCCEEDED(vkBindImageMemory(Device, RenderTargetImage, RenderTargetDeviceMemory, 0));
-#else
-	uint32_t HeapIndex;
-	VkDeviceSize Offset;
-	SuballocateImageMemory(HeapIndex, Offset, RenderTargetImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-#endif
-
-	CreateImageView(&RenderTargetImageView, RenderTargetImage, VK_IMAGE_VIEW_TYPE_2D, Format, ComponentMapping_Identity, ImageSubresourceRange_Color);
-
-	LOG_OK();
-}
-#endif
-
 void VK::CreateDepthStencil(const VkFormat Format, const uint32_t Width, const uint32_t Height)
 {
 	assert(IsSupportedDepthFormat(GetCurrentPhysicalDevice(), Format) && "Not supported depth format");
@@ -2061,7 +2037,8 @@ void VK::CreateDepthStencil(const VkFormat Format, const uint32_t Width, const u
 
 	LOG_OK();
 }
-
+#endif
+#if 0
 void VK::InitializeDepthStencilImage(const VkCommandBuffer CB)
 {
 	if (VK_NULL_HANDLE == DepthStencilImage) return;
@@ -2105,6 +2082,7 @@ void VK::InitializeDepthStencilImage(const VkCommandBuffer CB)
 	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), VK_NULL_HANDLE));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 }
+#endif
 
 void VK::CreateViewport(const float Width, const float Height, const float MinDepth, const float MaxDepth)
 {

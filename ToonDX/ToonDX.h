@@ -25,7 +25,31 @@ protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
 #ifdef USE_DEPTH_STENCIL
-	virtual void CreateDepthStencil() override { CreateDepthStencilResource(DXGI_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
+	virtual void CreateTexture() override {
+		ImageResources.push_back(COM_PTR<ID3D12Resource>());
+		const D3D12_HEAP_PROPERTIES HeapProperties = {
+			D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること
+			D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+			D3D12_MEMORY_POOL_UNKNOWN,
+			0,// CreationNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+			0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		};
+		const DXGI_SAMPLE_DESC SD = { 1, 0 }; //!< レンダーターゲットのものと一致すること
+		const D3D12_RESOURCE_DESC RD = {
+			D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+			0,
+			static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
+			1,
+			1,
+			DXGI_FORMAT_D24_UNORM_S8_UINT,
+			SD,
+			D3D12_TEXTURE_LAYOUT_UNKNOWN,
+			D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
+		};
+		//!< 一致するクリア値なら最適化されるのでよく使うクリア値を指定しておく
+		const D3D12_CLEAR_VALUE CV = { RD.Format, { 1.0f, 0 } };
+		VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+	}
 #endif
 
 	virtual void CreateRootSignature() override {
@@ -75,15 +99,16 @@ protected:
 		}
 #ifdef USE_DEPTH_STENCIL
 		{
+			assert(!ImageResources.empty() && "");
 			const auto& DH = DsvDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 #if 1
 			//!< リソースと同じフォーマットとディメンション、最初のミップマップとスライスをターゲットする場合はnullptrを指定できる
-			Device->CreateDepthStencilView(COM_PTR_GET(DepthStencilResource), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #else
 			D3D12_DEPTH_STENCIL_VIEW_DESC DSVD = { DXGI_FORMAT_D24_UNORM_S8_UINT, D3D12_DSV_DIMENSION_TEXTURE2D, D3D12_DSV_FLAG_NONE, };
 			DSVD.Texture2D.MipSlice = 0;
-			Device->CreateDepthStencilView(COM_PTR_GET(DepthStencilResource), &DSVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[0]), &DSVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #endif
 		}
 #endif

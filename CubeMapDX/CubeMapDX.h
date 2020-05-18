@@ -34,9 +34,6 @@ protected:
 
 		CopyToUploadResource(COM_PTR_GET(ConstantBufferResources[0]), RoundUp256(sizeof(Tr)), &Tr);
 	}
-#if !defined(USE_SKY_DOME) || defined(USE_DEPTH_STENCIL)
-	virtual void CreateDepthStencil() override { CreateDepthStencilResource(DXGI_FORMAT_D24_UNORM_S8_UINT, GetClientRectWidth(), GetClientRectHeight()); }
-#endif
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
 	virtual void CreateStaticSampler() override {
@@ -115,6 +112,32 @@ protected:
 			//LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		}
+#if !defined(USE_SKY_DOME) || defined(USE_DEPTH_STENCIL)
+		{
+			ImageResources.push_back(COM_PTR<ID3D12Resource>());
+			const D3D12_HEAP_PROPERTIES HeapProperties = {
+				D3D12_HEAP_TYPE_DEFAULT,
+				D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+				D3D12_MEMORY_POOL_UNKNOWN,
+				0,
+				0
+			};
+			const DXGI_SAMPLE_DESC SD = { 1, 0 };
+			const D3D12_RESOURCE_DESC RD = {
+				D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				0,
+				static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
+				1,
+				1,
+				DXGI_FORMAT_D24_UNORM_S8_UINT,
+				SD,
+				D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
+			};
+			const D3D12_CLEAR_VALUE CV = { RD.Format, { 1.0f, 0 } };
+			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+		}
+#endif
 	}
 
 	virtual void CreateDescriptorHeap() override {
@@ -139,7 +162,7 @@ protected:
 			assert(ConstantBufferResources[0]->GetDesc().Width == RoundUp256(sizeof(Transform)) && "");
 			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBufferResources[0])->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBufferResources[0]->GetDesc().Width) };
 			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
-			assert(2 == ImageResources.size() && "");
+			assert(2 <= ImageResources.size() && "");
 			//!< (ディメンションがD3D12_SRV_DIMENSION_TEXTURECUBEの為)明示的にSHADER_RESOURCE_VIEW_DESCを指定すること (リソースと同じフォーマットとディメンション、最初のミップマップとスライスをターゲットする場合はnullptrを指定できる)
 			const auto RD = ImageResources[0]->GetDesc(); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);
 			D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
@@ -153,10 +176,11 @@ protected:
 		}
 #if !defined(USE_SKY_DOME) || defined(USE_DEPTH_STENCIL)
 		{
+			assert(3 == ImageResources.size() && "");
 			assert(!CbvSrvUavDescriptorHeaps.empty() && "");
 			const auto& DH = DsvDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-			Device->CreateDepthStencilView(COM_PTR_GET(DepthStencilResource), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
+			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[2]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
 		}
 #endif
 	}

@@ -30,9 +30,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateCommandList();
 	//InitializeSwapchainImage(COM_PTR_GET(CommandAllocators[0]), &DirectX::Colors::Red);
 
-	CreateDepthStencil();	
-	//CreateRenderTarget();
-
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 	CreateIndirectBuffer();
@@ -402,8 +399,9 @@ void DX::CreateDevice(HWND /*hWnd*/)
 #if 0
 	COM_PTR<ID3D12InfoQueue> InfoQueue;
 	COM_PTR_AS(Device, InfoQueue);
-
-	VERIFY_SUCCEEDED(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
+	//VERIFY_SUCCEEDED(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
+	VERIFY_SUCCEEDED(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE));
+	
 	std::array<D3D12_MESSAGE_CATEGORY, 0> AMCs = {};
 	std::array<D3D12_MESSAGE_SEVERITY, 0> AMSs = {};
 	std::array<D3D12_MESSAGE_ID, 0> AMIs = {};
@@ -882,43 +880,10 @@ void DX::CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UI
 }
 #endif
 
-void DX::CreateDepthStencilResource(const DXGI_FORMAT Format, const UINT Width, const UINT Height)
+void DX::ResizeDepthStencil(const DXGI_FORMAT /*DepthFormat*/, const UINT /*Width*/, const UINT /*Height*/)
 {
-	//!< リソースの作成
-	const D3D12_HEAP_PROPERTIES HeapProperties = {
-		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること
-		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		D3D12_MEMORY_POOL_UNKNOWN,
-		0,// CreationNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-		0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-	};
-	const auto& SampleDesc = SampleDescs[0]; //!< レンダーターゲットのものと一致すること
-	const D3D12_RESOURCE_DESC ResourceDesc = {
-		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-		0,
-		Width, Height,
-		1,
-		1,
-		Format,
-		SampleDesc,
-		D3D12_TEXTURE_LAYOUT_UNKNOWN,
-		D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
-	};
-	//!< 一致するクリア値なら最適化されるのでよく使うクリア値を指定しておく
-	const D3D12_CLEAR_VALUE ClearValue = {
-		Format,
-		{ 1.0f, 0 }
-	};
-	COM_PTR_RESET(DepthStencilResource);
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_DEPTH_WRITE, &ClearValue, COM_PTR_UUIDOF_PUTVOID(DepthStencilResource)));
-
-	LOG_OK();
-}
-void DX::ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height)
-{
-	COM_PTR_RESET(DepthStencilResource);
-
-	CreateDepthStencilResource(DepthFormat, Width, Height);
+	//COM_PTR_RESET(DepthStencilResource);
+	//CreateDepthStencilResource(DepthFormat, Width, Height);
 
 	LOG_OK();
 }

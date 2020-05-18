@@ -267,7 +267,7 @@ void CubeMapDX::PopulateCommandList(const size_t i)
 
 #if !defined(USE_SKY_DOME) || defined(USE_DEPTH_STENCIL)
 			const auto CDH_Depth = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			CL->ClearDepthStencilView(CDH_Depth, D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, static_cast<UINT>(Rects.size()), Rects.data());
+			CL->ClearDepthStencilView(CDH_Depth, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(Rects.size()), Rects.data());
 #endif
 
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { CDH };
