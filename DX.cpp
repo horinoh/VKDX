@@ -399,12 +399,11 @@ void DX::CreateDevice(HWND /*hWnd*/)
 	}
 	CheckFeatureLevel(COM_PTR_GET(Device));
 
-#if 0//def _DEBUG
+#if 0
 	COM_PTR<ID3D12InfoQueue> InfoQueue;
 	COM_PTR_AS(Device, InfoQueue);
 
 	VERIFY_SUCCEEDED(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
-
 	std::array<D3D12_MESSAGE_CATEGORY, 0> AMCs = {};
 	std::array<D3D12_MESSAGE_SEVERITY, 0> AMSs = {};
 	std::array<D3D12_MESSAGE_ID, 0> AMIs = {};
@@ -1060,6 +1059,7 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 	const D3D12_DEPTH_STENCIL_DESC& DSD,
 	const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,
 	const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs,
+	const std::vector<DXGI_FORMAT>& RtvFormats,
 	const PipelineLibrarySerializer* PLS, LPCWSTR Name)
 {
 	PERFORMANCE_COUNTER();
@@ -1117,7 +1117,7 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 	//!< DXでは「パッチコントロールポイント」個数の指定はIASetPrimitiveTopology()の引数として「コマンドリスト作成時」に指定する、VKとは結構異なるので注意
 	//!< CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
-	const D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {
 		RS,
 		VS, PS, DS, HS, GS,
 		SOD,
@@ -1128,13 +1128,14 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 		ILD,
 		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
 		Topology,
-		1, { DXGI_FORMAT_R8G8B8A8_UNORM }, DSD.DepthEnable ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_UNKNOWN, //!< レンダーターゲットの分だけ #DX_TODO ... MRT
+		static_cast<UINT>(RtvFormats.size()), {}, DSD.DepthEnable ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_UNKNOWN,
 		SD,
 		0,
 		CPS,
 		D3D12_PIPELINE_STATE_FLAG_NONE //!< D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG は Warp デバイスのみ
 	};
 	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
+	std::copy(RtvFormats.begin(), RtvFormats.end(), GPSD.RTVFormats);
 	assert((0 == GPSD.DS.BytecodeLength || 0 == GPSD.HS.BytecodeLength || GPSD.PrimitiveTopologyType == D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH) && "");
 
 	if (nullptr != PLS && PLS->IsLoadSucceeded()) {

@@ -389,6 +389,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 			++InputSlot;
 		}
 	}
+	const std::vector<DXGI_FORMAT> RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
 
 	const auto RS = COM_PTR_GET(RootSignatures[0]);
 	PipelineStates.push_back(COM_PTR<ID3D12PipelineState>());
@@ -398,7 +399,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		FALSE, D3D12_DEFAULT_STENCIL_READ_MASK, D3D12_DEFAULT_STENCIL_WRITE_MASK,
 		DSOD, DSOD
 	};
-	DX::CreatePipelineState(std::ref(PipelineStates.back()), COM_PTR_GET(Device), RS, ToDXPrimitiveTopologyType(Prim.mode), DSD, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, IEDs);
+	DX::CreatePipelineState(std::ref(PipelineStates.back()), COM_PTR_GET(Device), RS, ToDXPrimitiveTopologyType(Prim.mode), DSD, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs);
 
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
@@ -621,9 +622,9 @@ void GltfDX::PopulateCommandList(const size_t i)
 			auto SCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 			const auto DDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 
-			const std::array<D3D12_RECT, 0> Rs = {};
-			CL->ClearRenderTargetView(SCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
-			CL->ClearDepthStencilView(DDH, D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, 0, nullptr);
+			const std::array<D3D12_RECT, 0> Rects = {};
+			CL->ClearRenderTargetView(SCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rects.size()), Rects.data());
+			CL->ClearDepthStencilView(DDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(Rects.size()), Rects.data());
 
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCDH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &DDH);

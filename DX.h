@@ -221,6 +221,7 @@ protected:
 		const D3D12_DEPTH_STENCIL_DESC& DSD,
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,
 		const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, 
+		const std::vector<DXGI_FORMAT>& RtvFormats,
 		const PipelineLibrarySerializer* PLS = nullptr, LPCWSTR Name = nullptr);
 	//virtual void CreatePipelineState_Compute();
 
