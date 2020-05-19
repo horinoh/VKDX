@@ -15,6 +15,7 @@ layout (early_fragment_tests) in;
 void main()
 {
 	Color = vec4(0.0f, 1.0f, 0.0f, 1.0f);
+	Color = vec4(InTexcoord, 0, 1);
 	Color1 = vec4(normalize(InNormal) * 0.5f + 0.5f, 1.0f);
 	Color2 = vec4(InDepth.x / InDepth.y, 0.0f, 0.0f, 1.0f);
 	Color3 = vec4(0.0f, 1.0f, 0.0f, 1.0f);

@@ -315,9 +315,9 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 
 		//!< パス0 : レンダーパス(メッシュ描画用)
 		{
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 			std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
-			CVs[1].depthStencil = ClearDepthStencilValue;
+			CVs[1].depthStencil = { 1.0f, 0 };
 #else
 			const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
 #endif

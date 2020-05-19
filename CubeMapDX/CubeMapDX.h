@@ -112,7 +112,7 @@ protected:
 			//LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		}
-#if !defined(USE_SKY_DOME) || defined(USE_DEPTH_STENCIL)
+#if !defined(USE_SKY_DOME) || defined(USE_DEPTH)
 		{
 			ImageResources.push_back(COM_PTR<ID3D12Resource>());
 			const D3D12_HEAP_PROPERTIES HeapProperties = {
@@ -146,7 +146,7 @@ protected:
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 3, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< CBV, SRV0, SRV1
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps[0])));
 		}
-#if !defined(USE_SKY_DOME) || defined(USE_DEPTH_STENCIL)
+#if !defined(USE_SKY_DOME) || defined(USE_DEPTH)
 		{
 			DsvDescriptorHeaps.resize(1);
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 }; //!< DSV
@@ -174,7 +174,7 @@ protected:
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV0
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV1
 		}
-#if !defined(USE_SKY_DOME) || defined(USE_DEPTH_STENCIL)
+#if !defined(USE_SKY_DOME) || defined(USE_DEPTH)
 		{
 			assert(3 == ImageResources.size() && "");
 			assert(!CbvSrvUavDescriptorHeaps.empty() && "");
@@ -202,7 +202,7 @@ protected:
 #endif
 	}
 	virtual void CreatePipelineStates() override { 
-#if !defined(USE_SKY_DOME) || defined(USE_DEPTH_STENCIL)
+#if !defined(USE_SKY_DOME) || defined(USE_DEPTH)
 		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, TRUE);
 #else
 		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, FALSE);

@@ -266,6 +266,12 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 			vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 			vkCmdBindPipeline(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
+			
+			assert(!DescriptorSets.empty() && "");
+			assert(!PipelineLayouts.empty() && "");
+			const std::array<VkDescriptorSet, 1> DSs = { DescriptorSets[0] };
+			vkCmdBindDescriptorSets(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[0], 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
+
 			vkCmdDrawIndirect(SCB0, IB, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
 	}
@@ -297,9 +303,10 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 
 			vkCmdBindPipeline(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
-			assert(!DescriptorSets.empty() && "");
-			const auto PLL = PipelineLayouts[1];
-			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(), 0, nullptr);
+			assert(2 == DescriptorSets.size() && "");
+			assert(2 == PipelineLayouts.size() && "");
+			const std::array<VkDescriptorSet, 1> DSs = { DescriptorSets[1] };
+			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[1], 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
 
 			vkCmdDrawIndirect(SCB1, IB, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
@@ -329,7 +336,7 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 				Colors::SkyBlue,
 #pragma endregion
 			};
-			CVs[4].depthStencil = ClearDepthStencilValue;
+			CVs[4].depthStencil = { 1.0f, 0 };
 			const VkRenderPassBeginInfo RPBI = {
 				VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 				nullptr,

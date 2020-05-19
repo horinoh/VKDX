@@ -282,7 +282,7 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
-		CVs[1].depthStencil = ClearDepthStencilValue;
+		CVs[1].depthStencil = { 1.0f, 0 };
 		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

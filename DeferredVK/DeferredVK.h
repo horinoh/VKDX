@@ -14,6 +14,14 @@ public:
 	virtual ~DeferredVK() {}
 
 protected:
+	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
+		Super::OnTimer(hWnd, hInstance);
+
+		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
+		Degree += 1.0f;
+
+		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
+	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 	
 #ifdef USE_GBUFFER_VISUALIZE
@@ -68,34 +76,38 @@ protected:
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &SCBAI, &SecondaryCommandBuffers[PrevCount]));
 	}
 	virtual void CreateFramebuffer() override {
-		assert(4 + 1 == ImageViews.size() && "");
 		//!< パス0 : フレームバッファ
-		Framebuffers.push_back(VkFramebuffer());
-		VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
-			//!< レンダーターゲット : カラー(RenderTarget : Color)
-			ImageViews[0], 
-#pragma region MRT 
-			//!< レンダーターゲット : 法線(RenderTarget : Normal)
-			ImageViews[1], 
-			//!< レンダーターゲット : 深度(RenderTarget : Depth)
-			ImageViews[2],
-			//!< レンダーターゲット : 未定
-			ImageViews[3],
-#pragma endregion
-			//!< 深度バッファ(Depth Buffer)
-			ImageViews[4], 
-		});
+		{
+			assert(4 + 1 == ImageViews.size() && "");
+			Framebuffers.push_back(VkFramebuffer());
+			VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
+				//!< レンダーターゲット : カラー(RenderTarget : Color)
+				ImageViews[0],
+	#pragma region MRT 
+				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				ImageViews[1],
+				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				ImageViews[2],
+				//!< レンダーターゲット : 未定
+				ImageViews[3],
+	#pragma endregion
+				//!< 深度バッファ(Depth Buffer)
+				ImageViews[4],
+			});
+		}
 
 		//!< パス1 : フレームバッファ
-		for (auto i : SwapchainImageViews) {
-			Framebuffers.push_back(VkFramebuffer());
-			VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
+		{
+			for (auto i : SwapchainImageViews) {
+				Framebuffers.push_back(VkFramebuffer());
+				VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
+			}
 		}
 	}
 	virtual void CreateRenderPass() override {
-		RenderPasses.resize(2);
 		//!< パス0 : レンダーパス
 		{
+			RenderPasses.push_back(VkRenderPass());
 			const std::array<VkAttachmentReference, 4> ColorAttach = { {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, 
@@ -108,7 +120,7 @@ protected:
 				{ 3, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
 #pragma endregion
 			} };
-			const VkAttachmentReference DepthAttach = { static_cast<uint32_t>(ColorAttach.size()), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+			const VkAttachmentReference DepthAttach = { /*static_cast<uint32_t>(ColorAttach.size())*/4, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 			VK::CreateRenderPass(RenderPasses[0], {
 					//!< アタッチメント(Attachment)
 					//!< レンダーターゲット : カラー(RenderTarget : Color)
@@ -165,7 +177,7 @@ protected:
 						VK_PIPELINE_BIND_POINT_GRAPHICS,
 						0, nullptr,
 						static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
-						& DepthAttach,
+						&DepthAttach,
 						0, nullptr
 					},
 				}, {
@@ -174,6 +186,7 @@ protected:
 		}
 		//!< パス1 : レンダーパス
 		{
+			RenderPasses.push_back(VkRenderPass());
 			const std::array<VkAttachmentReference, 1> ColorAttach = { { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, } };
 			VK::CreateRenderPass(RenderPasses[1], {
 				//!< アタッチメント
@@ -207,106 +220,163 @@ protected:
 		CreateIndirectBuffer_Draw(4, 1);
 	}
 	virtual void CreateDescriptorSetLayout() override {
-		//!< パス1 : デスクリプタセットレイアウト
-		DescriptorSetLayouts.resize(1);
 		assert(!Samplers.empty() && "");
 		const std::array<VkSampler, 1> ISs = { Samplers[0] };
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {
-			//!< レンダーターゲット : カラー(RenderTarget : Color)
-			{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() },
-#pragma region MRT 
-			//!< レンダーターゲット : 法線(RenderTarget : Normal)
-			{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() },
-			//!< レンダーターゲット : 深度(RenderTarget : Depth)
-			{ 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() },
-			//!< レンダーターゲット : 未定
-			{ 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() },
-#pragma endregion
-		});
+
+		//!< パス0 : デスクリプタセットレイアウト
+		{
+			DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
+			VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
+				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
+			});
+		}
+
+		//!< パス1 : デスクリプタセットレイアウト
+		{
+			DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
+			VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
+				//!< レンダーターゲット : カラー(RenderTarget : Color)
+				{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() },
+	#pragma region MRT 
+				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() },
+				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				{ 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() },
+				//!< レンダーターゲット : 未定
+				{ 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() },
+	#pragma endregion
+			});
+		}
 	}
 	virtual void CreatePipelineLayout() override {
-		assert(!DescriptorSetLayouts.empty() && "");
-		PipelineLayouts.resize(2);
+		assert(2 == DescriptorSetLayouts.size() && "");
+
 		//!< パス0 : パイプラインレイアウト
-		VKExt::CreatePipelineLayout(PipelineLayouts[0], {}, {});
+		PipelineLayouts.push_back(VkPipelineLayout());
+		VKExt::CreatePipelineLayout(PipelineLayouts.back(), { DescriptorSetLayouts[0] }, {});
 		//!< パス1 : パイプラインレイアウト
-		VKExt::CreatePipelineLayout(PipelineLayouts[1], { DescriptorSetLayouts[0] }, {});
+		PipelineLayouts.push_back(VkPipelineLayout());
+		VKExt::CreatePipelineLayout(PipelineLayouts.back(), { DescriptorSetLayouts[1] }, {});
 	}
 
 	virtual void CreateDescriptorPool() override {
-		//!< パス1 : デスクリプタプール
-		DescriptorPools.resize(1);
-		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
+		//!< パス0,1 : デスクリプタプール
+		DescriptorPools.push_back(VkDescriptorPool());
+		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 },
 #pragma region MRT 
 			//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 }
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 },
 #pragma endregion
 		});
 	}
 	virtual void AllocateDescriptorSet() override {
-		//!< パス1 : デスクリプタセット
-		assert(!DescriptorSetLayouts.empty() && "");
-		const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
+		assert(2 == DescriptorSetLayouts.size() && "");
 		assert(!DescriptorPools.empty() && "");
-		const VkDescriptorSetAllocateInfo DSAI = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-			nullptr,
-			DescriptorPools[0],
-			static_cast<uint32_t>(DSLs.size()), DSLs.data()
-		};
-		DescriptorSets.resize(1);
-		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
+
+		//!< パス0 : デスクリプタセット
+		{
+			DescriptorSets.push_back(VkDescriptorSet());
+			const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
+			const VkDescriptorSetAllocateInfo DSAI = {
+				VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+				nullptr,
+				DescriptorPools[0],
+				static_cast<uint32_t>(DSLs.size()), DSLs.data()
+			};
+			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+		}
+
+		//!< パス1 : デスクリプタセット
+		{
+			DescriptorSets.push_back(VkDescriptorSet());
+			const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[1] };
+			const VkDescriptorSetAllocateInfo DSAI = {
+				VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+				nullptr,
+				DescriptorPools[0],
+				static_cast<uint32_t>(DSLs.size()), DSLs.data()
+			};
+			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+		}
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
-		//!< パス1 : デスクリプタアップデートテンプレート
-		DescriptorUpdateTemplates.resize(1);
-		assert(!DescriptorSetLayouts.empty() && "");
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates[0], {
-			//!< レンダーターゲット : カラー(RenderTarget : Color)
-			{
-				0, 0,
-				_countof(DescriptorUpdateInfo::DescriptorImageInfos), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				offsetof(DescriptorUpdateInfo, DescriptorImageInfos), sizeof(DescriptorUpdateInfo)
-			},
-#pragma region MRT 
-			//!< レンダーターゲット : 法線(RenderTarget : Normal)
-			{
-				1, 0,
-				_countof(DescriptorUpdateInfo::DescriptorImageInfos1), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				offsetof(DescriptorUpdateInfo, DescriptorImageInfos1), sizeof(DescriptorUpdateInfo)
-			},
-			//!< レンダーターゲット : 深度(RenderTarget : Depth)
-			{
-				2, 0,
-				_countof(DescriptorUpdateInfo::DescriptorImageInfos2), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				offsetof(DescriptorUpdateInfo, DescriptorImageInfos2), sizeof(DescriptorUpdateInfo)
-			},
-			//!< レンダーターゲット : 未定
-			{
-				3, 0,
-				_countof(DescriptorUpdateInfo::DescriptorImageInfos3), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				offsetof(DescriptorUpdateInfo, DescriptorImageInfos3), sizeof(DescriptorUpdateInfo)
-			},
-#pragma endregion
+		assert(2 == DescriptorSetLayouts.size() && "");
+
+		//!< パス0 : デスクリプタアップデートテンプレート
+		{
+			DescriptorUpdateTemplates.push_back(VkDescriptorUpdateTemplate());
+			VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
+				{
+					0, 0,
+					_countof(DescriptorUpdateInfo_0::DescriptorBufferInfos), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+					offsetof(DescriptorUpdateInfo_0, DescriptorBufferInfos), sizeof(DescriptorUpdateInfo_0)
+				},
 			}, DescriptorSetLayouts[0]);
+		}
+
+		//!< パス1 : デスクリプタアップデートテンプレート
+		{
+			DescriptorUpdateTemplates.push_back(VkDescriptorUpdateTemplate());
+			VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
+				//!< レンダーターゲット : カラー(RenderTarget : Color)
+				{
+					0, 0,
+					_countof(DescriptorUpdateInfo_1::DescriptorImageInfos), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					offsetof(DescriptorUpdateInfo_1, DescriptorImageInfos), sizeof(DescriptorUpdateInfo_1)
+				},
+#pragma region MRT 
+				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				{
+					1, 0,
+					_countof(DescriptorUpdateInfo_1::DescriptorImageInfos1), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					offsetof(DescriptorUpdateInfo_1, DescriptorImageInfos1), sizeof(DescriptorUpdateInfo_1)
+				},
+				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				{
+					2, 0,
+					_countof(DescriptorUpdateInfo_1::DescriptorImageInfos2), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					offsetof(DescriptorUpdateInfo_1, DescriptorImageInfos2), sizeof(DescriptorUpdateInfo_1)
+				},
+				//!< レンダーターゲット : 未定
+				{
+					3, 0,
+					_countof(DescriptorUpdateInfo_1::DescriptorImageInfos3), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					offsetof(DescriptorUpdateInfo_1, DescriptorImageInfos3), sizeof(DescriptorUpdateInfo_1)
+				},
+#pragma endregion
+			}, DescriptorSetLayouts[1]);
+		}
 	}
 	virtual void UpdateDescriptorSet() override {
-		assert(4 + 1 == ImageViews.size() && "");
-		const DescriptorUpdateInfo DUI = {
-			//!< レンダーターゲット : カラー(RenderTarget : Color)
-			{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
-#pragma region MRT 
-			//!< レンダーターゲット : 法線(RenderTarget : Normal)
-			{ VK_NULL_HANDLE, ImageViews[1], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
-			//!< レンダーターゲット : 深度(RenderTarget : Depth)
-			{ VK_NULL_HANDLE, ImageViews[2], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
-			//!< レンダーターゲット : 未定
-			{ VK_NULL_HANDLE, ImageViews[3], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
-#pragma endregion
-		};
-		assert(!DescriptorSets.empty() && "");
-		assert(!DescriptorUpdateTemplates.empty() && "");
-		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+		assert(2 == DescriptorSets.size() && "");
+		assert(2 == DescriptorUpdateTemplates.size() && "");
+
+		//!< パス0 :
+		{
+			assert(!UniformBuffers.empty() && "");
+			const DescriptorUpdateInfo_0 DUI = {
+				{ UniformBuffers[0], Offset, VK_WHOLE_SIZE },
+			};
+			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+		}
+		//!< パス1 :
+		{
+			assert(4 <= ImageViews.size() && "");
+			const DescriptorUpdateInfo_1 DUI = {
+				//!< レンダーターゲット : カラー(RenderTarget : Color)
+				{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+	#pragma region MRT 
+				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				{ VK_NULL_HANDLE, ImageViews[1], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				{ VK_NULL_HANDLE, ImageViews[2], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				//!< レンダーターゲット : 未定
+				{ VK_NULL_HANDLE, ImageViews[3], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+	#pragma endregion
+			};
+			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[1], DescriptorUpdateTemplates[1], &DUI);
+		}
 	}
 
 	virtual void CreateTexture() override {
@@ -317,9 +387,9 @@ protected:
 			Images.push_back(VkImage());
 			CreateImage(&Images.back(), 0, VK_IMAGE_TYPE_2D, ColorFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
-			uint32_t HeapIndex;
-			VkDeviceSize Offset;
-			SuballocateImageMemory(HeapIndex, Offset, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			uint32_t Idx;
+			VkDeviceSize Ofs;
+			SuballocateImageMemory(Idx, Ofs, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 			ImageViews.push_back(VkImageView());
 			CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, ColorFormat, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
@@ -331,9 +401,9 @@ protected:
 			Images.push_back(VkImage());
 			CreateImage(&Images.back(), 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
-			uint32_t HeapIndex;
-			VkDeviceSize Offset;
-			SuballocateImageMemory(HeapIndex, Offset, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			uint32_t Idx;
+			VkDeviceSize Ofs;
+			SuballocateImageMemory(Idx, Ofs, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 			ImageViews.push_back(VkImageView());
 			CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
@@ -344,9 +414,9 @@ protected:
 			Images.push_back(VkImage());
 			CreateImage(&Images.back(), 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
-			uint32_t HeapIndex;
-			VkDeviceSize Offset;
-			SuballocateImageMemory(HeapIndex, Offset, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			uint32_t Idx;
+			VkDeviceSize Ofs;
+			SuballocateImageMemory(Idx, Ofs, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 			ImageViews.push_back(VkImageView());
 			CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
@@ -357,9 +427,9 @@ protected:
 			Images.push_back(VkImage());
 			CreateImage(&Images.back(), 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
-			uint32_t HeapIndex;
-			VkDeviceSize Offset;
-			SuballocateImageMemory(HeapIndex, Offset, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			uint32_t Idx;
+			VkDeviceSize Ofs;
+			SuballocateImageMemory(Idx, Ofs, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 			ImageViews.push_back(VkImageView());
 			CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
@@ -370,9 +440,9 @@ protected:
 			Images.push_back(VkImage());
 			CreateImage(&Images.back(), 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
-			uint32_t HeapIndex;
-			VkDeviceSize Offset;
-			SuballocateImageMemory(HeapIndex, Offset, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			uint32_t Idx;
+			VkDeviceSize Ofs;
+			SuballocateImageMemory(Idx, Ofs, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 			ImageViews.push_back(VkImageView());
 			CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 });
@@ -396,6 +466,19 @@ protected:
 		};
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
 	}
+	virtual void CreateUniformBuffer() override {
+		UniformBuffers.push_back(VkBuffer());
+		const auto Fov = 0.16f * glm::pi<float>();
+		const auto Aspect = GetAspectRatioOfClientRect();
+		const auto ZFar = 4.0f;
+		const auto ZNear = 2.0f;
+		const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
+		const auto CamTag = glm::vec3(0.0f);
+		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
+		Tr = Transform({ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
+		CreateBuffer(&UniformBuffers.back(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
+		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers.back(), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	}
 	virtual void CreateShaderModules() override {
 		const auto ShaderPath = GetBasePath();
 		//!< パス0 : シェーダモジュール
@@ -416,7 +499,20 @@ protected:
 	virtual void CreatePipelines() override {
 		Pipelines.resize(2);
 		std::vector<std::thread> Threads;
-		const VkPipelineDepthStencilStateCreateInfo PDSSCI = {
+		const VkPipelineDepthStencilStateCreateInfo PDSSCI_0 = {
+			VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_TRUE,
+			VK_TRUE,
+			VK_COMPARE_OP_LESS_OR_EQUAL,
+			VK_FALSE,
+			VK_FALSE,
+			{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_NEVER, 0, 0, 0 },
+			{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
+			0.0f, 1.0f
+		};
+		const VkPipelineDepthStencilStateCreateInfo PDSSCI_1 = {
 			VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 			nullptr,
 			0,
@@ -493,19 +589,19 @@ protected:
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 2);
 		//!< パス0 : パイプライン
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PDSSCI, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0, PCS.GetPipelineCache(0)));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PDSSCI_0, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0, PCS.GetPipelineCache(0)));
 		//!< パス1 : パイプライン
 #ifdef USE_GBUFFER_VISUALIZE
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, &PSSCIs_1[2], VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, &PSSCIs_1[2], VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
 #else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
 #endif
 #else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PDSSCI, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PDSSCI_0, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0));
 #ifdef USE_GBUFFER_VISUALIZE
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, &PSSCIs_1[2], VIBDs, VIADs, PCBASs_1));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, &PSSCIs_1[2], VIBDs, VIADs, PCBASs_1));
 #else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1));
 #endif
 #endif
 		for (auto& i : Threads) { i.join(); }
@@ -513,7 +609,11 @@ protected:
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 private:
-	struct DescriptorUpdateInfo
+	struct DescriptorUpdateInfo_0
+	{
+		VkDescriptorBufferInfo DescriptorBufferInfos[1];
+	};
+	struct DescriptorUpdateInfo_1
 	{
 		//!< レンダーターゲット : カラー(RenderTarget : Color)
 		VkDescriptorImageInfo DescriptorImageInfos[1];
@@ -526,5 +626,17 @@ private:
 		VkDescriptorImageInfo DescriptorImageInfos3[1];
 #pragma endregion
 	};
+private:
+		float Degree = 0.0f;
+		struct Transform
+		{
+			glm::mat4 Projection;
+			glm::mat4 View;
+			glm::mat4 World;
+		};
+		using Transform = struct Transform;
+		Transform Tr;
+		uint32_t HeapIndex;
+		VkDeviceSize Offset;
 };
 #pragma endregion

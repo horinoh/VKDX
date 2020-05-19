@@ -37,7 +37,7 @@ protected:
 		Framebuffers.push_back(VkFramebuffer());
 		VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
 			ImageViews[0],
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 			ImageViews[1],
 #endif
 		});
@@ -53,7 +53,7 @@ protected:
 		//!< パス0 : レンダーパス
 		{
 			const std::array<VkAttachmentReference, 1> ColorAttach = { { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, } };
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 			const VkAttachmentReference DepthAttach = { static_cast<uint32_t>(ColorAttach.size()), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 #endif
 			VK::CreateRenderPass(RenderPasses[0], {
@@ -66,7 +66,7 @@ protected:
 						VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
 						VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
 					},
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 					{
 						0,
 						DepthFormat,
@@ -83,7 +83,7 @@ protected:
 						VK_PIPELINE_BIND_POINT_GRAPHICS,
 						0, nullptr,
 						static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 						&DepthAttach,
 #else
 						nullptr,
@@ -203,7 +203,7 @@ protected:
 			ImageViews.push_back(VkImageView());
 			CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, ColorFormat, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 		}
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 		{
 			Images.push_back(VkImage());
 			CreateImage(&Images.back(), 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
@@ -254,8 +254,13 @@ protected:
 			VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 			nullptr,
 			0,
+#ifdef USE_DEPTH
+			VK_TRUE,
+			VK_TRUE,
+#else
 			VK_FALSE,
 			VK_FALSE,
+#endif
 			VK_COMPARE_OP_LESS_OR_EQUAL,
 			VK_FALSE,
 			VK_FALSE,

@@ -207,50 +207,6 @@ protected:
 		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
-#if 0
-		const std::array<VkDescriptorUpdateTemplateEntry, 3> DUTEs = { {
-			{
-				0, 0,
-				_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< UniformBuffer
-				offsetof(DescriptorUpdateInfo, DBI), sizeof(DescriptorUpdateInfo)
-			},
-#ifdef USE_COMBINED_IMAGE_SAMPLER
-			{
-				1, 0,
-				_countof(DescriptorUpdateInfo::DII_0), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< Sampler + Image0
-				offsetof(DescriptorUpdateInfo, DII_0), sizeof(DescriptorUpdateInfo)
-			},
-			{
-				2, 0,
-				_countof(DescriptorUpdateInfo::DII_1), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< Sampler + Image1
-				offsetof(DescriptorUpdateInfo, DII_1), sizeof(DescriptorUpdateInfo)
-			},
-#else
-			{
-				2, 0,
-				_countof(DescriptorUpdateInfo::DII_0), VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, //!< Image0
-				offsetof(DescriptorUpdateInfo, DII_0), sizeof(DescriptorUpdateInfo)
-			},
-			{
-				3, 0,
-				_countof(DescriptorUpdateInfo::DII_1), VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, //!< Image1
-				offsetof(DescriptorUpdateInfo, DII_1), sizeof(DescriptorUpdateInfo)
-			},
-#endif
-		} };
-		assert(!DescriptorSetLayouts.empty() && "");
-		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
-			nullptr,
-			0,
-			static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
-			VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
-			DescriptorSetLayouts[0],
-			VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
-		};
-		DescriptorUpdateTemplates.resize(1);
-		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
-#else
 		DescriptorUpdateTemplates.resize(1);
 		assert(!DescriptorSetLayouts.empty() && "");
 		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates[0], {
@@ -283,7 +239,6 @@ protected:
 			},
 #endif
 		}, DescriptorSetLayouts[0]);
-#endif
 	}
 	virtual void UpdateDescriptorSet() override {
 		assert(!UniformBuffers.empty() && "");

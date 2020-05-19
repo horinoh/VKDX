@@ -26,11 +26,25 @@ protected:
 	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
-#ifdef USE_DEPTH_STENCIL
-	virtual void CreateDepthStencil() override { VK::CreateDepthStencil(DepthFormat, GetClientRectWidth(), GetClientRectHeight()); }
+#ifdef USE_DEPTH
+	virtual void CreateTexture() override {
+		const VkExtent3D Extent = { SurfaceExtent2D.width, SurfaceExtent2D.height, 1 };
+		const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+		{
+			Images.push_back(VkImage());
+			VK::CreateImage(&Images.back(), 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+
+			uint32_t Idx;
+			VkDeviceSize Ofs;
+			SuballocateImageMemory(Idx, Ofs, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+			ImageViews.push_back(VkImageView());
+			VK::CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 });
+		}
+	}
 	virtual void CreateFramebuffer() override { 
 		const auto RP = RenderPasses[0];
-		const auto DIV = DepthStencilImageView;
+		const auto DIV = ImageViews[0];
 		for (auto i : SwapchainImageViews) {
 			Framebuffers.push_back(VkFramebuffer());
 			VK::CreateFramebuffer(Framebuffers.back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DIV });
@@ -76,7 +90,7 @@ protected:
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {
-				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr } 
+				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
 			});
 	}
 	virtual void CreatePipelineLayout() override {
@@ -171,7 +185,7 @@ protected:
 #endif
 	}
 	virtual void CreatePipelines() override { 
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE);
 #else
 		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_FALSE);

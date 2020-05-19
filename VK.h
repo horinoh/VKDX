@@ -594,7 +594,6 @@ protected:
 		0, VK_REMAINING_MIP_LEVELS,
 		0, VK_REMAINING_ARRAY_LAYERS
 	};
-	const VkClearDepthStencilValue ClearDepthStencilValue = { 1.0f, 0 };
 };
 
 #ifdef DEBUG_STDOUT

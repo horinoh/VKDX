@@ -13,7 +13,7 @@ void main()
 	for(int i=0;i<gl_in.length();++i) {
 		gl_Position = gl_in[i].gl_Position;
 		OutTexcoord = InTexcoord[i];
-		//!< 分割画面ではビューポート1以降を使用する
+		//!< 分割画面ではビューポート1以降を使用する (Devided screen use viewport [1, 4])
 		gl_ViewportIndex = gl_InvocationID + 1;
 		EmitVertex();
 	}

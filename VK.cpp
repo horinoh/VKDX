@@ -3082,7 +3082,7 @@ void VK::PopulateCommandBuffer(const size_t i)
 		ClearColor(CB, SwapchainImages[i], Colors::Blue);
 		std::array<VkClearValue, 2> CVs = {};
 #endif
-		CVs[1].depthStencil = ClearDepthStencilValue;
+		CVs[1].depthStencil = { 1.0f, 0 };
 		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
 		const VkRenderPassBeginInfo RPBI = {
 			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

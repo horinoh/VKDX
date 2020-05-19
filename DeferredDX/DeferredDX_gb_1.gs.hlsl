@@ -20,7 +20,7 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 	for (int i = 0; i<3; ++i) {
 		Out.Position = In[i].Position;
 		Out.Texcoord = In[i].Texcoord;
-		//!< 分割画面ではビューポート1以降を使用する
+		//!< 分割画面ではビューポート1以降を使用する (Devided screen use viewport [1, 4])
 		Out.Viewport = instanceID + 1;
 		stream.Append(Out);
 	}

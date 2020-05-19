@@ -276,7 +276,7 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 			auto RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart(); 
 			const std::array<D3D12_RECT, 0> Rects = {};
 			CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rects.size()), Rects.data()); //RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 			const auto DsvDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart(); 
 			CL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(Rects.size()), Rects.data());
 

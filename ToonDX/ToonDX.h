@@ -24,7 +24,7 @@ protected:
 	}
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 	virtual void CreateTexture() override {
 		ImageResources.push_back(COM_PTR<ID3D12Resource>());
 		const D3D12_HEAP_PROPERTIES HeapProperties = {
@@ -80,7 +80,7 @@ protected:
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps[0])));
 		}
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 		{
 			DsvDescriptorHeaps.resize(1);
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
@@ -97,7 +97,7 @@ protected:
 			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBufferResources[0])->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBufferResources[0]->GetDesc().Width) };
 			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		}
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 		{
 			assert(!ImageResources.empty() && "");
 			const auto& DH = DsvDescriptorHeaps[0];
@@ -151,7 +151,7 @@ protected:
 #endif
 	}
 	virtual void CreatePipelineStates() override { 
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, TRUE);
 #else
 		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, FALSE);

@@ -8,10 +8,10 @@ layout (location = 0) in vec2 InTexcoord;
 
 layout (location = 0) out vec4 OutColor;
 
-layout (set=0, binding=0) uniform sampler2D Sampler2D;
-layout (set=0, binding=1) uniform sampler2D Sampler2D1;
-layout (set=0, binding=2) uniform sampler2D Sampler2D2;
-layout (set=0, binding=3) uniform sampler2D Sampler2D3;
+layout (set=0, binding=0) uniform sampler2D Sampler2D;	//!< カラー(Color)
+layout (set=0, binding=1) uniform sampler2D Sampler2D1;	//!< 法線(Normal)
+layout (set=0, binding=2) uniform sampler2D Sampler2D2;	//!< 深度(Depth)
+layout (set=0, binding=3) uniform sampler2D Sampler2D3; //!< 未定
 
 void main()
 {
@@ -23,7 +23,7 @@ void main()
 		vec4(0.0f, 0.0f, 1.0f, 0.0f),
 		vec4(0.0f, 0.0f, 0.0f, 1.0f),
 	};
-	//!< 分割画面ではビューポート1以降を使用しているのでMask[]の添え字と合わせるために-1
+	//!< 分割画面ではビューポート1以降を使用しているのでMask[]の添え字と合わせるために-1 (Devided screen use viewport [1, 4])
 	const int VPIndex = gl_ViewportIndex - 1;
 	
 	OutColor.rgb += texture(Sampler2D, InTexcoord).rgb * Mask[VPIndex].xxx;
@@ -31,11 +31,7 @@ void main()
 	OutColor.rgb += texture(Sampler2D1, InTexcoord).rgb * Mask[VPIndex].yyy;
 
 	OutColor.rgb += texture(Sampler2D2, InTexcoord).rrr * Mask[VPIndex].zzz;	
-	//!< UVと深度からワールド位置を求める
-	//const vec4 Tmp = InvViewProjection * vec4(InTexcoord * 2.0f - 1.0f, texture(Sampler2D2, InTexcoord).r, 1.0f);
-	//const vec3 WorldPos = Tmp.xyz / Tmp.w;
-
+	
 	OutColor.rgb += texture(Sampler2D3, InTexcoord).rgb * Mask[VPIndex].www;	
-
 	//OutColor.rgb = vec3(InTexcoord, 0);
 }

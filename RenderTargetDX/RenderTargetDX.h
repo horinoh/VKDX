@@ -119,7 +119,7 @@ protected:
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
 		}
 
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 		{
 			ImageResources.push_back(COM_PTR<ID3D12Resource>());
 			const D3D12_RESOURCE_DESC RD = {
@@ -148,7 +148,7 @@ protected:
 				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
 				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps.back())));
 			}
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 			{
 				DsvDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
 				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
@@ -164,7 +164,7 @@ protected:
 		}
 	}
 	virtual void CreateDescriptorView() override {
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 		assert(2 == ImageResources.size() && "");
 #else
 		assert(!ImageResources.empty() && "");
@@ -186,7 +186,7 @@ protected:
 				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #endif
 			}
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 			{
 				const auto& DH = DsvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
@@ -244,7 +244,7 @@ protected:
 		std::vector<std::thread> Threads;
 		const D3D12_DEPTH_STENCILOP_DESC DSOD = { D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS };
 		const D3D12_DEPTH_STENCIL_DESC DSD = {
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 			TRUE, D3D12_DEPTH_WRITE_MASK_ALL, D3D12_COMPARISON_FUNC_LESS,
 #else
 			FALSE, D3D12_DEPTH_WRITE_MASK_ALL, D3D12_COMPARISON_FUNC_LESS,

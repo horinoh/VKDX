@@ -35,7 +35,7 @@ protected:
 	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
-#if !defined(USE_SKY_DOME) || defined(USE_DEPTH_STENCIL)
+#if !defined(USE_SKY_DOME) || defined(USE_DEPTH)
 	virtual void CreateFramebuffer() override {
 		assert(!RenderPasses.empty() && "");
 		assert(3 == ImageViews.size() && "");
@@ -153,7 +153,7 @@ protected:
 			//LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds")));
 			LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds")));
 		}
-#if !defined(USE_SKY_DOME) || defined(USE_DEPTH_STENCIL)
+#if !defined(USE_SKY_DOME) || defined(USE_DEPTH)
 		const VkExtent3D Extent = { SurfaceExtent2D.width, SurfaceExtent2D.height, 1 };
 		const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
 		{
@@ -238,7 +238,7 @@ protected:
 #endif
 	}
 	virtual void CreatePipelines() override { 
-#if !defined(USE_SKY_DOME) || defined(USE_DEPTH_STENCIL)
+#if !defined(USE_SKY_DOME) || defined(USE_DEPTH)
 		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE);
 #else
 		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_FALSE);

@@ -283,9 +283,9 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-#ifdef USE_DEPTH_STENCIL
+#ifdef USE_DEPTH
 		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
-		CVs[1].depthStencil = ClearDepthStencilValue;
+		CVs[1].depthStencil = { 1.0f, 0 };
 #else
 		std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
 #endif

@@ -17,21 +17,21 @@ float4 main(IN In) : SV_TARGET
 #if 0
 	return Texture.Sample(Sampler, In.Texcoord);
 #elif 0
-	//!< セピア
+	//!< セピア (Sepia)
 	float3x3 YCbCr2RGB = { {1.0f, 0.0f, 1.402f}, {1.0f, -0.34414f, -0.71414f}, {1.0f, 1.772f, 0.0f} };
 	float3 YCbCr = float3(dot(float3(0.299f, 0.587f, 0.114f), Texture.Sample(Sampler, In.Texcoord).rgb), -0.2f, 0.1f);
 	return float4(mul(YCbCr2RGB, YCbCr), 1.0f);
 #elif 0
-	//!< モノトーン
+	//!< モノトーン (Monotone)
 	float Mono = dot(float3(0.299f, 0.587f, 0.114f), Texture.Sample(Sampler, In.Texcoord).rgb);
 	return float4(Mono, Mono, Mono, 1.0f);
 #elif 0
-	//!< ラスター
+	//!< ラスター (Raster)
 	const float PI = 4.0f * atan(1.0f);
 	const float2 UV = In.Texcoord + float2(0.05f * cos(In.Texcoord.y * PI * 10.0f), 0.0f);
 	return Texture.Sample(Sampler, UV);
 #elif 0
-	//!< 輪郭検出
+	//!< 輪郭検出 (Edge detection)
 	const float2 Center = ToHue(Texture.Sample(Sampler, In.Texcoord).rgb);
 	const float2 Ndx = ToHue(Texture.Sample(Sampler, In.Texcoord + 0.001f * float2(-1.0f, 0.0f)).rgb) - Center;
 	const float2 Pdx = ToHue(Texture.Sample(Sampler, In.Texcoord + 0.001f * float2(1.0f, 0.0f)).rgb) - Center;
@@ -40,7 +40,7 @@ float4 main(IN In) : SV_TARGET
 	float C = dot(Ndx, Ndx) + dot(Pdx, Pdx) + dot(Ndy, Ndy) + dot(Pdy, Pdy);
 	return 1.0f - float4(C, C, C, 1.0f);
 #else
-	//!< モザイク
+	//!< モザイク (Mosaic)
 	const float2 Resolution = float2(800.0f, 600.0f);
 	const float Block = 10.0f;
 	const float2 UV = floor(In.Texcoord * Resolution / Block) * Block / Resolution;
