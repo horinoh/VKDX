@@ -158,7 +158,7 @@ protected:
 				D3D12_TEXTURE_LAYOUT_UNKNOWN,
 				D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
 			};
-			const D3D12_CLEAR_VALUE CV = { RD.Format, *static_cast<const FLOAT*>(DirectX::Colors::SkyBlue), };
+			const D3D12_CLEAR_VALUE CV = { RD.Format, { DirectX::Colors::SkyBlue.f[0],DirectX::Colors::SkyBlue.f[1],DirectX::Colors::SkyBlue.f[2],DirectX::Colors::SkyBlue.f[3] } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
 		}
 #pragma region MRT
@@ -176,7 +176,8 @@ protected:
 				D3D12_TEXTURE_LAYOUT_UNKNOWN,
 				D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
 			};
-			const D3D12_CLEAR_VALUE CV = { RD.Format, *std::array<FLOAT, 4>({ 0.5f, 0.5f, 1.0f, 1.0f }).data(), };
+			//const D3D12_CLEAR_VALUE CV = { RD.Format, *std::array<FLOAT, 4>({ 0.5f, 0.5f, 1.0f, 1.0f }).data(), };
+			const D3D12_CLEAR_VALUE CV = { RD.Format, { 0.5f, 0.5f, 1.0f, 1.0f } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
 		}
 		//!< レンダーターゲット : 深度(RenderTarget : Depth)
@@ -193,7 +194,7 @@ protected:
 				D3D12_TEXTURE_LAYOUT_UNKNOWN,
 				D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
 			};
-			const D3D12_CLEAR_VALUE CV = { RD.Format, *static_cast<const FLOAT*>(DirectX::Colors::White), };
+			const D3D12_CLEAR_VALUE CV = { RD.Format, { DirectX::Colors::White.f[0], DirectX::Colors::White.f[1], DirectX::Colors::White.f[2], DirectX::Colors::White.f[3] } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
 		}
 		//!< レンダーターゲット : 未定
@@ -210,10 +211,7 @@ protected:
 				D3D12_TEXTURE_LAYOUT_UNKNOWN,
 				D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
 			};
-			const D3D12_CLEAR_VALUE CV = {
-				RD.Format,
-				*static_cast<const FLOAT*>(DirectX::Colors::SkyBlue),
-			};
+			const D3D12_CLEAR_VALUE CV = { RD.Format, { DirectX::Colors::SkyBlue.f[0],  DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
 		}
 #pragma endregion
@@ -230,8 +228,7 @@ protected:
 				D3D12_TEXTURE_LAYOUT_UNKNOWN,
 				D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
 			};
-			D3D12_CLEAR_VALUE CV = { RD.Format, };
-			CV.DepthStencil = { 1.0f, 0 };
+			D3D12_CLEAR_VALUE CV = { RD.Format, { 1.0f, 0 } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
 		}
 	}

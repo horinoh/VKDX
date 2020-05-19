@@ -870,10 +870,7 @@ void DX::CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UI
 		D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
 	};
-	const D3D12_CLEAR_VALUE CV = {
-		Format,
-		*static_cast<const FLOAT*>(DirectX::Colors::SkyBlue),
-	};
+	const D3D12_CLEAR_VALUE CV = { Format, { DirectX::Colors::SkyBlue.f[0], DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] } };
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(/*RenderTargetResource*/ImageResources[0])));
 
 	LOG_OK();

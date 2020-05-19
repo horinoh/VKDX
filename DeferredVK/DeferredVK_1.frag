@@ -20,4 +20,6 @@ void main()
 	//const vec3 WorldPos = Tmp.xyz / Tmp.w;
 
 	OutColor = texture(Sampler2D, InTexcoord);
+	//OutColor = texture(Sampler2D1, InTexcoord);
+	//OutColor = vec4(texture(Sampler2D2, InTexcoord).rrr, 1.0f);
 }

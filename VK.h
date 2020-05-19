@@ -272,7 +272,6 @@ protected:
 	virtual void LoadImage(VkImage* /*Image*/, VkImageView* /*ImageView*/, const std::string& /*Path*/) { assert(false && "Not implemanted"); }
 	virtual void LoadImage(VkImage* Img, VkImageView* IV, const std::wstring& Path) { LoadImage(Img, IV, ToString(Path)); }
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
-	//virtual void CreateViewportTopFront(const float Width, const float Height) { CreateViewport(Width, Height, 0.0f, 0.0f); }
 
 	virtual void LoadScene() {}
 

@@ -30,7 +30,7 @@ protected:
 		Viewports = {
 	#ifdef USE_VIEWPORT_Y_UP
 			//!< 全画面用(Fullscreen)
-			{ 0.0f, Height, Width, -Height },
+			{ 0.0f, Height, Width, -Height, MinDepth, MaxDepth },
 			//!< 分割画面用(DividedScreens)
 			{ 0.0f, H, W, -H, MinDepth, MaxDepth },
 			{ W, H, W, -H, MinDepth, MaxDepth },
@@ -38,7 +38,7 @@ protected:
 			{ W, Height, W, -H, MinDepth, MaxDepth },
 	#else
 			//!< 全画面用
-			{ 0.0f, 0.0f, Width, Height },
+			{ 0.0f, 0.0f, Width, Height, MinDepth, MaxDepth },
 			//!< 分割画面用
 			{ 0.0f, 0.0f, W, H,MinDepth, MaxDepth },
 			{ W, 0.0f, W, H, MinDepth, MaxDepth },
@@ -503,26 +503,18 @@ protected:
 			VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 			nullptr,
 			0,
-			VK_TRUE,
-			VK_TRUE,
-			VK_COMPARE_OP_LESS_OR_EQUAL,
+			VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS_OR_EQUAL,
 			VK_FALSE,
-			VK_FALSE,
-			{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_NEVER, 0, 0, 0 },
-			{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
+			VK_FALSE, { VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_NEVER, 0, 0, 0 }, { VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
 			0.0f, 1.0f
 		};
 		const VkPipelineDepthStencilStateCreateInfo PDSSCI_1 = {
 			VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 			nullptr,
 			0,
+			VK_FALSE, VK_FALSE, VK_COMPARE_OP_LESS_OR_EQUAL,
 			VK_FALSE,
-			VK_FALSE,
-			VK_COMPARE_OP_LESS_OR_EQUAL,
-			VK_FALSE,
-			VK_FALSE,
-			{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_NEVER, 0, 0, 0 },
-			{ VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
+			VK_FALSE, { VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_NEVER, 0, 0, 0 }, { VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
 			0.0f, 1.0f
 		};
 		const std::array<VkPipelineShaderStageCreateInfo, 5> PSSCIs_0 = {
