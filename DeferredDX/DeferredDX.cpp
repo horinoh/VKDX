@@ -274,25 +274,28 @@ void DeferredDX::PopulateCommandList(const size_t i)
 
 			const auto RtvDH = RtvDescriptorHeaps[0];
 			auto RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart();
-			const std::array<D3D12_RECT, 0> Rects = {};
-			CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
-#pragma region MRT
-			CL->ClearRenderTargetView(RtvCDH, std::array<FLOAT, 4>({ 0.5f, 0.5f, 1.0f, 1.0f }).data(), static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
-			CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::White, static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
-			CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
-#pragma endregion
-
 			const auto DsvDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			CL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(Rects.size()), Rects.data());
+			{
+				const std::array<D3D12_RECT, 0> Rects = {};
+				CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+#pragma region MRT
+				CL->ClearRenderTargetView(RtvCDH, std::array<FLOAT, 4>({ 0.5f, 0.5f, 1.0f, 1.0f }).data(), static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+				CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::Red, static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+				CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+#pragma endregion
+				CL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(Rects.size()), Rects.data());
+			}
 
-			RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart();
-			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 4> RtvDHs = {
-				RtvCDH,
-				RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
-				RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
-				RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
-			};
-			CL->OMSetRenderTargets(static_cast<UINT>(RtvDHs.size()), RtvDHs.data(), FALSE, &DsvDH);
+			{
+				RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart();
+				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 4> RtvDHs = {
+					RtvCDH,
+					RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
+					RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
+					RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
+				};
+				CL->OMSetRenderTargets(static_cast<UINT>(RtvDHs.size()), RtvDHs.data(), FALSE, &DsvDH);
+			}
 
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
@@ -320,17 +323,19 @@ void DeferredDX::PopulateCommandList(const size_t i)
 		//!< パス1 : (レンダーテクスチャ描画用)
 		{
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
+			{
+				auto ScCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); ScCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RtvDHs = { ScCDH };
+				CL->OMSetRenderTargets(static_cast<UINT>(RtvDHs.size()), RtvDHs.data(), FALSE, nullptr);
+			}
 
-			auto ScCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); ScCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
-
-			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RtvDHs = { ScCDH };
-			CL->OMSetRenderTargets(static_cast<UINT>(RtvDHs.size()), RtvDHs.data(), FALSE, nullptr);
-
-			const auto& SrvDH = CbvSrvUavDescriptorHeaps[1];
-			const std::array<ID3D12DescriptorHeap*, 1> SrvDHs = { COM_PTR_GET(SrvDH) };
-			CL->SetDescriptorHeaps(static_cast<UINT>(SrvDHs.size()), SrvDHs.data());
-			auto SrvGDH = SrvDH->GetGPUDescriptorHandleForHeapStart();
-			CL->SetGraphicsRootDescriptorTable(0, SrvGDH); SrvGDH.ptr += Device->GetDescriptorHandleIncrementSize(SrvDH->GetDesc().Type); //!< SRV
+			{
+				const auto& SrvDH = CbvSrvUavDescriptorHeaps[1];
+				const std::array<ID3D12DescriptorHeap*, 1> SrvDHs = { COM_PTR_GET(SrvDH) };
+				CL->SetDescriptorHeaps(static_cast<UINT>(SrvDHs.size()), SrvDHs.data());
+				auto SrvGDH = SrvDH->GetGPUDescriptorHandleForHeapStart();
+				CL->SetGraphicsRootDescriptorTable(0, SrvGDH); SrvGDH.ptr += Device->GetDescriptorHandleIncrementSize(SrvDH->GetDesc().Type); //!< SRV
+			}
 
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 			CL->ExecuteBundle(BCL1);

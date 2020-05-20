@@ -91,9 +91,9 @@ protected:
 #ifdef USE_HLSL_ROOTSIGNATRUE
 			GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
 #else
-			const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs = {
-				{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
-			};
+			const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs = { {
+				{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND },
+			} };
 			SerializeRootSignature(Blob, {
 					{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DRs.size()), DRs.data() }, D3D12_SHADER_VISIBILITY_GEOMETRY }
 				}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE
@@ -111,15 +111,16 @@ protected:
 #ifdef USE_HLSL_ROOTSIGNATRUE 
 			GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT("_1.rs.cso")).data());
 #else
-			const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Srv = {
+			const std::array<D3D12_DESCRIPTOR_RANGE, 2> DRs = { {
 #pragma region MRT
 				//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
-				{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
+				{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND },
 #pragma endregion
-			};
+				{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND },
+			} };
 			assert(!StaticSamplerDescs.empty() && "");
 			DX::SerializeRootSignature(Blob, {
-					{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(DRs_Srv.size()), DRs_Srv.data() }, D3D12_SHADER_VISIBILITY_PIXEL }
+					{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(DRs.size()), DRs.data() }, D3D12_SHADER_VISIBILITY_PIXEL },
 				}, {
 					StaticSamplerDescs[0],
 				}, D3D12_ROOT_SIGNATURE_FLAG_NONE
@@ -176,7 +177,6 @@ protected:
 				D3D12_TEXTURE_LAYOUT_UNKNOWN,
 				D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
 			};
-			//const D3D12_CLEAR_VALUE CV = { RD.Format, *std::array<FLOAT, 4>({ 0.5f, 0.5f, 1.0f, 1.0f }).data(), };
 			const D3D12_CLEAR_VALUE CV = { RD.Format, { 0.5f, 0.5f, 1.0f, 1.0f } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
 		}
@@ -194,7 +194,7 @@ protected:
 				D3D12_TEXTURE_LAYOUT_UNKNOWN,
 				D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
 			};
-			const D3D12_CLEAR_VALUE CV = { RD.Format, { DirectX::Colors::White.f[0], DirectX::Colors::White.f[1], DirectX::Colors::White.f[2], DirectX::Colors::White.f[3] } };
+			const D3D12_CLEAR_VALUE CV = { RD.Format, { DirectX::Colors::Red.f[0], DirectX::Colors::Red.f[1], DirectX::Colors::Red.f[2], DirectX::Colors::Red.f[3] } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
 		}
 		//!< レンダーターゲット : 未定
@@ -258,10 +258,12 @@ protected:
 		//!< パス1 : シェーダリソース
 		{
 #pragma region MRT
-			//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
-			CbvSrvUavDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
+			{
+				//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
+				CbvSrvUavDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4 + 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
+			}
 #pragma endregion
 		}
 	}
@@ -273,7 +275,7 @@ protected:
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 				assert(!ConstantBufferResources.empty() && "");
 				const auto CBR = ConstantBufferResources[0];
-				assert(CBR->GetDesc().Width == RoundUp256(sizeof(Transform)) && "");
+				assert(CBR->GetDesc().Width == RoundUp256(sizeof(Tr)) && "");
 				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(CBR)->GetGPUVirtualAddress(), static_cast<UINT>(CBR->GetDesc().Width) };
 				Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
@@ -313,6 +315,12 @@ protected:
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[3]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #pragma	endregion
 			}
+			{
+				const auto CBR = ConstantBufferResources[0];
+				assert(CBR->GetDesc().Width == RoundUp256(sizeof(Tr)) && "");
+				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(CBR)->GetGPUVirtualAddress(), static_cast<UINT>(CBR->GetDesc().Width) };
+				Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+			}
 		}
 	}
 
@@ -327,12 +335,20 @@ protected:
 		const auto Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
 		const auto View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
 		const auto World = DirectX::XMMatrixIdentity();
+
+		const auto ViewProjection = DirectX::XMMatrixMultiply(View, Projection);
+		auto Det = DirectX::XMMatrixDeterminant(ViewProjection);
+		const auto InverseViewProjection = DirectX::XMMatrixInverse(&Det, ViewProjection);
+		
 		DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
 		DirectX::XMStoreFloat4x4(&Tr.View, View);
 		DirectX::XMStoreFloat4x4(&Tr.World, World);
+		DirectX::XMStoreFloat4x4(&Tr.InverseViewProjection, InverseViewProjection);
 
-		ConstantBufferResources.push_back(COM_PTR<ID3D12Resource>());
-		CreateUploadResource(COM_PTR_PUT(ConstantBufferResources.back()), RoundUp256(sizeof(Tr)));
+		{
+			ConstantBufferResources.push_back(COM_PTR<ID3D12Resource>());
+			CreateUploadResource(COM_PTR_PUT(ConstantBufferResources.back()), RoundUp256(sizeof(Tr)));
+		}
 	}
 
 	virtual void CreateShaderBlobs() override {
@@ -429,6 +445,7 @@ private:
 		DirectX::XMFLOAT4X4 Projection;
 		DirectX::XMFLOAT4X4 View;
 		DirectX::XMFLOAT4X4 World;
+		DirectX::XMFLOAT4X4 InverseViewProjection;
 	};
 	using Transform = struct Transform;
 	Transform Tr;

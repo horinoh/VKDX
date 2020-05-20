@@ -32,7 +32,5 @@ float4 main(IN In) : SV_TARGET
 
 	OutColor.rgb += Texture3.Sample(Sampler, In.Texcoord).rgb * Mask[VPIndex].www;
 
-	//OutColor.rgb = float3(In.Texcoord, 0);
-
 	return OutColor;
 }

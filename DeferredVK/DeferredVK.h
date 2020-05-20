@@ -245,6 +245,7 @@ protected:
 				//!< レンダーターゲット : 未定
 				{ 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() },
 	#pragma endregion
+				{ 4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
 			});
 		}
 	}
@@ -252,11 +253,16 @@ protected:
 		assert(2 == DescriptorSetLayouts.size() && "");
 
 		//!< パス0 : パイプラインレイアウト
-		PipelineLayouts.push_back(VkPipelineLayout());
-		VKExt::CreatePipelineLayout(PipelineLayouts.back(), { DescriptorSetLayouts[0] }, {});
+		{
+			PipelineLayouts.push_back(VkPipelineLayout());
+			VKExt::CreatePipelineLayout(PipelineLayouts.back(), { DescriptorSetLayouts[0] }, {});
+		}
+
 		//!< パス1 : パイプラインレイアウト
-		PipelineLayouts.push_back(VkPipelineLayout());
-		VKExt::CreatePipelineLayout(PipelineLayouts.back(), { DescriptorSetLayouts[1] }, {});
+		{
+			PipelineLayouts.push_back(VkPipelineLayout());
+			VKExt::CreatePipelineLayout(PipelineLayouts.back(), { DescriptorSetLayouts[1] }, {});
+		}
 	}
 
 	virtual void CreateDescriptorPool() override {
@@ -309,8 +315,8 @@ protected:
 			VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
 				{
 					0, 0,
-					_countof(DescriptorUpdateInfo_0::DescriptorBufferInfos), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-					offsetof(DescriptorUpdateInfo_0, DescriptorBufferInfos), sizeof(DescriptorUpdateInfo_0)
+					_countof(DescriptorUpdateInfo_0::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+					offsetof(DescriptorUpdateInfo_0, DBI), sizeof(DescriptorUpdateInfo_0)
 				},
 			}, DescriptorSetLayouts[0]);
 		}
@@ -322,29 +328,34 @@ protected:
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				{
 					0, 0,
-					_countof(DescriptorUpdateInfo_1::DescriptorImageInfos), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					offsetof(DescriptorUpdateInfo_1, DescriptorImageInfos), sizeof(DescriptorUpdateInfo_1)
+					_countof(DescriptorUpdateInfo_1::DII), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					offsetof(DescriptorUpdateInfo_1, DII), sizeof(DescriptorUpdateInfo_1)
 				},
 #pragma region MRT 
 				//!< レンダーターゲット : 法線(RenderTarget : Normal)
 				{
 					1, 0,
-					_countof(DescriptorUpdateInfo_1::DescriptorImageInfos1), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					offsetof(DescriptorUpdateInfo_1, DescriptorImageInfos1), sizeof(DescriptorUpdateInfo_1)
+					_countof(DescriptorUpdateInfo_1::DII1), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					offsetof(DescriptorUpdateInfo_1, DII1), sizeof(DescriptorUpdateInfo_1)
 				},
 				//!< レンダーターゲット : 深度(RenderTarget : Depth)
 				{
 					2, 0,
-					_countof(DescriptorUpdateInfo_1::DescriptorImageInfos2), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					offsetof(DescriptorUpdateInfo_1, DescriptorImageInfos2), sizeof(DescriptorUpdateInfo_1)
+					_countof(DescriptorUpdateInfo_1::DII2), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					offsetof(DescriptorUpdateInfo_1, DII2), sizeof(DescriptorUpdateInfo_1)
 				},
 				//!< レンダーターゲット : 未定
 				{
 					3, 0,
-					_countof(DescriptorUpdateInfo_1::DescriptorImageInfos3), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					offsetof(DescriptorUpdateInfo_1, DescriptorImageInfos3), sizeof(DescriptorUpdateInfo_1)
+					_countof(DescriptorUpdateInfo_1::DII3), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					offsetof(DescriptorUpdateInfo_1, DII3), sizeof(DescriptorUpdateInfo_1)
 				},
 #pragma endregion
+				{
+					4, 0,
+					_countof(DescriptorUpdateInfo_1::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+					offsetof(DescriptorUpdateInfo_1, DBI), sizeof(DescriptorUpdateInfo_1)
+				},
 			}, DescriptorSetLayouts[1]);
 		}
 	}
@@ -374,6 +385,7 @@ protected:
 				//!< レンダーターゲット : 未定
 				{ VK_NULL_HANDLE, ImageViews[3], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 	#pragma endregion
+				{ UniformBuffers[0], Offset, VK_WHOLE_SIZE },
 			};
 			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[1], DescriptorUpdateTemplates[1], &DUI);
 		}
@@ -467,17 +479,27 @@ protected:
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
 	}
 	virtual void CreateUniformBuffer() override {
-		UniformBuffers.push_back(VkBuffer());
-		const auto Fov = 0.16f * glm::pi<float>();
-		const auto Aspect = GetAspectRatioOfClientRect();
-		const auto ZFar = 4.0f;
-		const auto ZNear = 2.0f;
-		const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
-		const auto CamTag = glm::vec3(0.0f);
-		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
-		Tr = Transform({ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
-		CreateBuffer(&UniformBuffers.back(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers.back(), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		{
+			const auto Fov = 0.16f * glm::pi<float>();
+			const auto Aspect = GetAspectRatioOfClientRect();
+			const auto ZFar = 4.0f;
+			const auto ZNear = 2.0f;
+			const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
+			const auto CamTag = glm::vec3(0.0f);
+			const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
+			const auto Projection = glm::perspective(Fov, Aspect, ZNear, ZFar);
+			const auto View = glm::lookAt(CamPos, CamTag, CamUp);
+			const auto World = glm::mat4(1.0f);
+
+			const auto ViewProjection = Projection * View;
+			const auto InverseViewProjection = glm::inverse(ViewProjection);
+
+			Tr = Transform({ Projection, View, World, InverseViewProjection });
+
+			UniformBuffers.push_back(VkBuffer());
+			CreateBuffer(&UniformBuffers.back(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
+			SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers.back(), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		}
 	}
 	virtual void CreateShaderModules() override {
 		const auto ShaderPath = GetBasePath();
@@ -603,20 +625,21 @@ protected:
 private:
 	struct DescriptorUpdateInfo_0
 	{
-		VkDescriptorBufferInfo DescriptorBufferInfos[1];
+		VkDescriptorBufferInfo DBI[1];
 	};
 	struct DescriptorUpdateInfo_1
 	{
 		//!< レンダーターゲット : カラー(RenderTarget : Color)
-		VkDescriptorImageInfo DescriptorImageInfos[1];
+		VkDescriptorImageInfo DII[1];
 #pragma region MRT 
 		//!< レンダーターゲット : 法線(RenderTarget : Normal)
-		VkDescriptorImageInfo DescriptorImageInfos1[1];
+		VkDescriptorImageInfo DII1[1];
 		//!< レンダーターゲット : 深度(RenderTarget : Depth)
-		VkDescriptorImageInfo DescriptorImageInfos2[1];
+		VkDescriptorImageInfo DII2[1];
 		//!< レンダーターゲット : 未定
-		VkDescriptorImageInfo DescriptorImageInfos3[1];
+		VkDescriptorImageInfo DII3[1];
 #pragma endregion
+		VkDescriptorBufferInfo DBI[1];
 	};
 private:
 		float Degree = 0.0f;
@@ -625,6 +648,7 @@ private:
 			glm::mat4 Projection;
 			glm::mat4 View;
 			glm::mat4 World;
+			glm::mat4 InverseViewProjection;
 		};
 		using Transform = struct Transform;
 		Transform Tr;

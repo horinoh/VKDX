@@ -5,7 +5,7 @@
 layout (location = 0) in vec3 InNormal[];
 layout (location = 1) in vec2 InTexcoord[];
 
-layout (set = 0, binding = 0) uniform Transform { mat4 Projection; mat4 View; mat4 World; };
+layout (set = 0, binding = 0) uniform Transform { mat4 Projection; mat4 View; mat4 World; mat4 InverseViewProjection; };
 
 layout (location = 0) out vec3 OutNormal;
 layout (location = 1) out vec2 OutTexcoord;

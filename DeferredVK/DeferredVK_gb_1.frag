@@ -33,5 +33,4 @@ void main()
 	OutColor.rgb += texture(Sampler2D2, InTexcoord).rrr * Mask[VPIndex].zzz;
 	
 	OutColor.rgb += texture(Sampler2D3, InTexcoord).rgb * Mask[VPIndex].www;	
-	//OutColor.rgb = vec3(InTexcoord, 0);
 }
