@@ -43,6 +43,7 @@
 #define USE_DISTANCE_FUNCTION //!< FullscreenDX, FullscreenVK
 //#define USE_SKY_DOME //!< CubeMapDX, CubeMapVK
 #define USE_GBUFFER_VISUALIZE //!< DeferredDX, DeferredVK
+//#define USE_SHADOWMAP_VISUALIZE //!< ShadowMapDX, ShadowMapVK
 
 #define ALWAYS_REBUILD_PIPELINE
 

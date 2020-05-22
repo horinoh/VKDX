@@ -18,7 +18,6 @@ OUT main(const IN In)
 {
 	OUT Out;
 
-	Out.Color = float4(0.0f, 1.0f, 0.0f, 1.0f);
 	Out.Color = float4(In.Texcoord, 0, 1);
 	Out.Color1 = float4(normalize(In.Normal) * 0.5f + 0.5f, 1.0f);
 	Out.Color2 = float4(In.Depth.x / In.Depth.y, 0.0f, 0.0f, 1.0f);

@@ -301,6 +301,9 @@
 	- CubeMapDX, CubeMapVK
 - USE_GBUFFER_VISUALIZE
 	- DeferredDX, DeferredVK
+- USE_SHADOWMAP_VISUALIZE
+	- ShadowMapDX, ShadowMapVK
+	- TODO
 - USE_FULL_SCREEN
 	- TODO
 - USE_HDR
@@ -331,7 +334,7 @@
  * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/HLSL.props、Props/RS.props. (Props/DXTK.prop, Props/GLTF.prop)
  * Header Files に Win.h、DX.h、DXExt.h、(DXImage.h) を追加 
  * Source Files に Win.cpp、DX.cpp、DXExt.cpp、(DXImage.cpp) を追加
- * framework.h(旧stdafx.h), XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
+ * XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * Shader Files フォルダを作成し、シェーダを突っ込む
   * シェーダファイルを右クリック - プロパティ - Configuration Propeties - General
    * Excluded From Build を No
@@ -343,7 +346,7 @@
  * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop、(Props/GLI.prop, Props/GLTF.prop)
  * Header Files に Win.h、VK.h、VKExt.h、(VKImage.h) を追加
  * Source Files に Win.cpp、VK.cpp、VKExt.cpp、(VKImage.cpp) を追加
- * framework.h(旧stdafx.h)、XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
+ * XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * Shader Files フォルダを作成し、シェーダを突っ込む
   * 拡張子を glslangValidator に沿うようにしておく(.vert、.frag、...)
   * 右クリック - プロパティ - Configuration Propeties - General
