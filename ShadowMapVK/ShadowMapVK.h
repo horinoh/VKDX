@@ -134,10 +134,15 @@ protected:
 		}
 	}
 	virtual void CreateIndirectBuffer() override {
-		//!< パス0 : インダイレクトバッファ(メッシュ描画用)
-		CreateIndirectBuffer_DrawIndexed(1, 2);
-		//!< パス1 : インダイレクトバッファ(レンダーテクスチャ描画用)
+		//!< パス0 : インダイレクトバッファ(シャドウキャスタ描画用)
+		CreateIndirectBuffer_DrawIndexed(1, 1);
+#ifdef USE_SHADOWMAP_VISUALIZE
+		//!< パス1 : インダイレクトバッファ(シャドウマップ描画用)
 		CreateIndirectBuffer_Draw(4, 1);
+#else
+		//!< パス1 : インダイレクトバッファ(シャドウレシーバ描画用)
+		CreateIndirectBuffer_DrawIndexed(1, 2);
+#endif
 	}
 	virtual void CreateDescriptorSetLayout() override {
 		assert(!Samplers.empty() && "");
@@ -362,6 +367,38 @@ protected:
 	virtual void CreatePipelines() override {
 		Pipelines.resize(2);
 		std::vector<std::thread> Threads;
+		const VkPipelineRasterizationStateCreateInfo PRSCI_0 = {
+			VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_FALSE,
+			VK_FALSE,
+			VK_POLYGON_MODE_FILL,
+			VK_CULL_MODE_BACK_BIT,
+			VK_FRONT_FACE_COUNTER_CLOCKWISE,
+			//!< シャドウキャスタの描画でデプスバイアスを有効にする
+			//!< depthBiasEnable, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor
+			VK_TRUE, 1.25f, 0.0f, 1.75f, 
+			1.0f
+		};
+#ifdef _DEBUG
+		//!< depthClampEnable にはデバイスフィーチャー depthClamp が有効であること
+		VkPhysicalDeviceFeatures PDF;
+		vkGetPhysicalDeviceFeatures(GetCurrentPhysicalDevice(), &PDF);
+		assert((!PRSCI_0.depthClampEnable || PDF.depthClamp) && "");
+#endif
+		const VkPipelineRasterizationStateCreateInfo PRSCI_1 = {
+			VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_FALSE,
+			VK_FALSE,
+			VK_POLYGON_MODE_FILL,
+			VK_CULL_MODE_BACK_BIT,
+			VK_FRONT_FACE_COUNTER_CLOCKWISE,
+			VK_FALSE, 0.0f, 0.0f, 0.0f,
+			1.0f
+		};
 		const VkPipelineDepthStencilStateCreateInfo PDSSCI_0 = {
 			VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 			nullptr,
@@ -387,17 +424,10 @@ protected:
 			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, ShaderModules[3], "main", nullptr }),
 			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_GEOMETRY_BIT, ShaderModules[4], "main", nullptr }),
 		};
-#ifdef USE_SHADOWMAP_VISUALIZE
-		const std::array<VkPipelineShaderStageCreateInfo, 3> PSSCIs_1 = {
-			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[5], "main", nullptr }),
-			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[6], "main", nullptr }),
-		};
-#else
 		const std::array<VkPipelineShaderStageCreateInfo, 2> PSSCIs_1 = {
 			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[5], "main", nullptr }),
 			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[6], "main", nullptr }),
 		};
-#endif
 		const std::vector<VkVertexInputBindingDescription> VIBDs = {};
 		const std::vector<VkVertexInputAttributeDescription> VIADs = {};
 		const std::vector< VkPipelineColorBlendAttachmentState> PCBASs_0 = {
@@ -420,19 +450,19 @@ protected:
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 2);
 		//!< パス0 : パイプライン
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PDSSCI_0, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0, PCS.GetPipelineCache(0)));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_0, PDSSCI_0, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0, PCS.GetPipelineCache(0)));
 		//!< パス1 : パイプライン
 #ifdef USE_SHADOWMAP_VISUALIZE
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI_1, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
 #else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_1, PDSSCI_0, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0, PCS.GetPipelineCache(0)));
 #endif
 #else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PDSSCI_0, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_0, PDSSCI_0, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0));
 #ifdef USE_SHADOWMAP_VISUALIZE
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI_1, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1));
 #else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_1, PDSSCI_0, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0));
 #endif
 #endif
 		for (auto& i : Threads) { i.join(); }

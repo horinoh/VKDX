@@ -393,13 +393,20 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 
 	const auto RS = COM_PTR_GET(RootSignatures[0]);
 	PipelineStates.push_back(COM_PTR<ID3D12PipelineState>());
+	const D3D12_RASTERIZER_DESC RD = {
+		D3D12_FILL_MODE_SOLID,
+		D3D12_CULL_MODE_BACK, TRUE,
+		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, TRUE,
+		FALSE, FALSE, 0,
+		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
+	};
 	const D3D12_DEPTH_STENCILOP_DESC DSOD = { D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS };
 	const D3D12_DEPTH_STENCIL_DESC DSD = {
 		TRUE, D3D12_DEPTH_WRITE_MASK_ALL, D3D12_COMPARISON_FUNC_LESS,
 		FALSE, D3D12_DEFAULT_STENCIL_READ_MASK, D3D12_DEFAULT_STENCIL_WRITE_MASK,
 		DSOD, DSOD
 	};
-	DX::CreatePipelineState(std::ref(PipelineStates.back()), COM_PTR_GET(Device), RS, ToDXPrimitiveTopologyType(Prim.mode), DSD, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs);
+	DX::CreatePipelineState(std::ref(PipelineStates.back()), COM_PTR_GET(Device), RS, ToDXPrimitiveTopologyType(Prim.mode), RD, DSD, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs);
 
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);

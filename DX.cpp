@@ -1018,6 +1018,7 @@ void DX::CreateRootSignature()
 
 void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,
 	const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology,
+	const D3D12_RASTERIZER_DESC& RD,
 	const D3D12_DEPTH_STENCIL_DESC& DSD,
 	const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,
 	const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs,
@@ -1050,6 +1051,7 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 	};
 
 	//!< ラスタライザ (Rasterizer)
+#if 0
 	const D3D12_RASTERIZER_DESC RD = {
 		D3D12_FILL_MODE_SOLID, //!< フィルモード (D3D12_FILL_MODE_WIREFRAMEにするとワイヤーフレームになる)
 		D3D12_CULL_MODE_BACK, TRUE, //!< カリングモード、CCW
@@ -1057,6 +1059,7 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 		FALSE, FALSE, 0, //!< マルチサンプル、アンチエイリアス、サンプルカウント
 		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 	};
+#endif
 
 	//!< インプットレイアウト (InputLayout)
 	const D3D12_INPUT_LAYOUT_DESC ILD = {

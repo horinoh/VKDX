@@ -438,6 +438,18 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	const auto RP = RenderPasses[0];
 	const auto PLL = PipelineLayouts[0];
 	Pipelines.push_back(VkPipeline());
+	const VkPipelineRasterizationStateCreateInfo PRSCI = {
+		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		VK_FALSE,
+		VK_FALSE,
+		VK_POLYGON_MODE_FILL,
+		VK_CULL_MODE_BACK_BIT,
+		VK_FRONT_FACE_COUNTER_CLOCKWISE,
+		VK_FALSE, 0.0f, 0.0f, 0.0f,
+		1.0f
+	};
 	const VkPipelineDepthStencilStateCreateInfo PDSSCI = {
 		VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 		nullptr,
@@ -455,7 +467,7 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
 		},
 	};
-	VK::CreatePipeline(Pipelines.back(), Device, PLL, RP, ToVKPrimitiveTopology(Prim.mode), 0, PDSSCI, &VS, &FS, nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs);
+	VK::CreatePipeline(Pipelines.back(), Device, PLL, RP, ToVKPrimitiveTopology(Prim.mode), 0, PRSCI, PDSSCI, &VS, &FS, nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "World =" << std::endl;

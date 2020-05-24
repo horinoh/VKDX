@@ -36,10 +36,15 @@ protected:
 	}
 
 	virtual void CreateIndirectBuffer() override {
-		//!< パス0 : インダイレクトバッファ(メッシュ描画用)
-		CreateIndirectBuffer_DrawIndexed(1, 2);
-		//!< パス1 : インダイレクトバッファ(フルスクリーン描画用)
+		//!< パス0 : インダイレクトバッファ(シャドウキャスタ描画用)
+		CreateIndirectBuffer_DrawIndexed(1, 1);
+#ifdef USE_SHADOWMAP_VISUALIZE
+		//!< パス1 : インダイレクトバッファ(シャドウマップ描画用)
 		CreateIndirectBuffer_Draw(4, 1);
+#else
+		//!< パス1 : インダイレクトバッファ(シャドウレシーバ描画用)
+		CreateIndirectBuffer_DrawIndexed(1, 2);
+#endif
 	}
 	virtual void CreateStaticSampler() override {
 		//!< パス1 : スタティックサンプラ
@@ -267,6 +272,23 @@ protected:
 	virtual void CreatePipelineStates() override {
 		PipelineStates.resize(2);
 		std::vector<std::thread> Threads;
+		const D3D12_RASTERIZER_DESC RD_0 = {
+			D3D12_FILL_MODE_SOLID, 
+			D3D12_CULL_MODE_BACK, TRUE,
+			//!< シャドウキャスタの描画でデプスバイアスを有効にする
+			//!< DepthBias, DepthBiasClamp, SlopeScaledDepthBias, DepthClipEnable
+			//!< DepthBias * r + SlopeScaledDepthBias * MaxDepthSlope　
+			1, 0.0f, 1.75f, TRUE,
+			FALSE, FALSE, 0,
+			D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
+		};
+		const D3D12_RASTERIZER_DESC RD_1 = {
+			D3D12_FILL_MODE_SOLID, 
+			D3D12_CULL_MODE_BACK, TRUE, 
+			D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, TRUE,
+			FALSE, FALSE, 0,
+			D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
+		};
 		const D3D12_DEPTH_STENCILOP_DESC DSOD = { D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS };
 		const D3D12_DEPTH_STENCIL_DESC DSD_0 = {
 			TRUE, D3D12_DEPTH_WRITE_MASK_ALL, D3D12_COMPARISON_FUNC_LESS,
@@ -285,17 +307,10 @@ protected:
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[3]->GetBufferPointer(), ShaderBlobs[3]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[4]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() }),
 		};
-#ifdef USE_SHADOWMAP_VISUALIZE
-		const std::array<D3D12_SHADER_BYTECODE, 3> SBCs_1 = {
-			D3D12_SHADER_BYTECODE({ ShaderBlobs[5]->GetBufferPointer(), ShaderBlobs[5]->GetBufferSize() }),
-			D3D12_SHADER_BYTECODE({ ShaderBlobs[6]->GetBufferPointer(), ShaderBlobs[6]->GetBufferSize() }),
-		};
-#else
 		const std::array<D3D12_SHADER_BYTECODE, 2> SBCs_1 = {
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[5]->GetBufferPointer(), ShaderBlobs[5]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[6]->GetBufferPointer(), ShaderBlobs[6]->GetBufferSize() }),
 		};
-#endif
 		const std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs = {};
 		const std::vector<DXGI_FORMAT> RTVs_0 = {
 			DXGI_FORMAT_R32_FLOAT,
@@ -304,19 +319,19 @@ protected:
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
 		//!< パス0 : パイプラインステート
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, DSD_0, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, RTVs_0, &PLS, TEXT("0")));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD_0, DSD_0, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, RTVs_0, &PLS, TEXT("0")));
 		//!< パス1 : パイプラインステート
 #ifdef USE_SHADOWMAP_VISUALIZE
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, DSD_1, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs_1, &PLS, TEXT("1")));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD_1, DSD_1, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs_1, &PLS, TEXT("1")));
 #else
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, DSD_1, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs_1, &PLS, TEXT("1")));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD_1, DSD_0, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, RTVs_0, &PLS, TEXT("0")));
 #endif
 #else
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, DSD_0, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, RTVs_0, nullptr, nullptr));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD_0, DSD_0, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, RTVs_0, nullptr, nullptr));
 #ifdef USE_SHADOWMAP_VISUALIZE
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, DSD_1, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs_1, nullptr, nullptr));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD_1, DSD_1, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs_1, nullptr, nullptr));
 #else
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, DSD_1, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs_1, nullptr, nullptr));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD_1, DSD_0, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, RTVs_0, nullptr, nullptr));
 #endif
 #endif	
 		for (auto& i : Threads) { i.join(); }

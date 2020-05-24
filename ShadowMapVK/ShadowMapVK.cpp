@@ -338,7 +338,10 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 				static_cast<uint32_t>(CVs.size()), CVs.data()
 			};
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
-				//vkCmdSetDepthBias();
+				//!< パイプライン作成時に指定しておくこと
+				//!< VkPipelineRasterizationStateCreateInfo.depthBiasEnable, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor 
+				//!< また、pDynamicState に VK_DYNAMIC_STATE_DEPTH_BIAS を追加しておくと、ランライムに vkCmdSetDepthBias(CB, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor) 変更できる  
+				//vkCmdSetDepthBias(CB, 1.25f, 0.0f, 1.75f);
 
 				const std::array<VkCommandBuffer, 1> SCBs = { SCB0 };
 				vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());

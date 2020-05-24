@@ -1808,8 +1808,9 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 	//!< 自前でクリアしない場合は余計なフラグは付けないでおく
 	const auto ImageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 #else
-	//!< 自前でクリアする場合は VK_IMAGE_USAGE_TRANSFER_DST_BIT フラグが必要
-	const auto ImageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | (VK_IMAGE_USAGE_TRANSFER_DST_BIT & SurfaceCap.supportedUsageFlags);
+	//!< 自前でクリアする場合(vkCmdClearColorImage(), vkCmdClearDepthStencilImage())は VK_IMAGE_USAGE_TRANSFER_DST_BIT フラグが必要
+	assert(VK_IMAGE_USAGE_TRANSFER_DST_BIT & SurfaceCap.supportedUsageFlags && "");
+	const auto ImageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 #endif
 
 	//!< グラフィックとプレゼントのキューファミリが異なる場合はキューファミリインデックスの配列が必要、また VK_SHARING_MODE_CONCURRENT を指定すること
@@ -2015,29 +2016,6 @@ void VK::CreateSwapchainImageView()
 	LOG_OK();
 }
 
-#if 0
-void VK::CreateDepthStencil(const VkFormat Format, const uint32_t Width, const uint32_t Height)
-{
-	assert(IsSupportedDepthFormat(GetCurrentPhysicalDevice(), Format) && "Not supported depth format");
-
-	const VkExtent3D Extent3D = { Width, Height, 1 };
-	//!< vkCmdClearDepthStencilImage を用いてクリアする場合には VK_IMAGE_USAGE_TRANSFER_DST_BIT を指定すること (ここではレンダーパスでクリアする想定で指定しない)
-	CreateImage(&DepthStencilImage, 0, VK_IMAGE_TYPE_2D, Format, Extent3D, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT /*| VK_IMAGE_USAGE_TRANSFER_DST_BIT*/);
-
-#if 0
-	AllocateImageMemory(&DepthStencilDeviceMemory, DepthStencilImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VERIFY_SUCCEEDED(vkBindImageMemory(Device, DepthStencilImage, DepthStencilDeviceMemory, 0));
-#else
-	uint32_t HeapIndex;
-	VkDeviceSize Offset;
-	SuballocateImageMemory(HeapIndex, Offset, DepthStencilImage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-#endif
-
-	CreateImageView(&DepthStencilImageView, DepthStencilImage, VK_IMAGE_VIEW_TYPE_2D, Format, ComponentMapping_Identity, ImageSubresourceRange_DepthStencil);
-
-	LOG_OK();
-}
-#endif
 #if 0
 void VK::InitializeDepthStencilImage(const VkCommandBuffer CB)
 {
@@ -2669,6 +2647,7 @@ VkShaderModule VK::CreateShaderModules(const std::wstring& Path) const
 
 void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP, 
 	const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, 
+	const VkPipelineRasterizationStateCreateInfo& PRSCI,
 	const VkPipelineDepthStencilStateCreateInfo& PDSSCI,
 	const VkPipelineShaderStageCreateInfo* VS, const VkPipelineShaderStageCreateInfo* FS, const VkPipelineShaderStageCreateInfo* TES, const VkPipelineShaderStageCreateInfo* TCS, const VkPipelineShaderStageCreateInfo* GS,
 	const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs,
@@ -2742,6 +2721,7 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 	//!< ビューポートのインデックスはジオメトリシェーダで指定する (Viewport index is specified in geometry shader)
 	//assert((PVSCI.viewportCount <= 1 || PDF.multiViewport) && "");
 
+#if 0
 	//!< ラスタライゼーション (Rasterization)
 	const VkPipelineRasterizationStateCreateInfo PRSCI = {
 		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -2755,8 +2735,7 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 		VK_FALSE, 0.0f, 0.0f, 0.0f,
 		1.0f
 	};
-	//!< depthClampEnable にはデバイスフィーチャー depthClamp が有効であること
-	//assert((!PRSCI.depthClampEnable || PDF.depthClamp) && "");
+#endif
 	//!< FILL 以外にはデバイスフィーチャー fillModeNonSolid が有効であること
 	//assert((PRSCI.polygonMode != VK_POLYGON_MODE_FILL || PDF.fillModeNonSolid) && "");
 	//!< 1.0f より大きな値にはデバイスフィーチャー widelines が有効であること
@@ -2808,7 +2787,8 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 	//!< ダイナミックステート (DynamicState)
 	const std::array<VkDynamicState, 2> DSs = {
 		VK_DYNAMIC_STATE_VIEWPORT,
-		VK_DYNAMIC_STATE_SCISSOR
+		VK_DYNAMIC_STATE_SCISSOR,
+		//VK_DYNAMIC_STATE_DEPTH_BIAS,
 	};
 	const VkPipelineDynamicStateCreateInfo PDSCI = {
 		VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,

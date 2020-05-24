@@ -101,5 +101,5 @@ public:
 	void CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, const VkBool32 DepthEnable, const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs);
 	void CreatePipeline_Cs(VkPipeline& /*PL*/) { assert(0 && "TODO"); }
 
-	virtual void CreateRenderTexture(VkImage* Img, VkImageView* IV);
+	//virtual void CreateRenderTexture(VkImage* Img, VkImageView* IV);
 };

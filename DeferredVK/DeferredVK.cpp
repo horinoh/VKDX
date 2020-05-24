@@ -351,7 +351,7 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 			} vkCmdEndRenderPass(CB);
 		}
 
-		//!< リソースバリア : VK_ACCESS_COLOR_ATTACHMENT_READ_BIT -> VK_ACCESS_SHADER_READ_BIT
+		//!< リソースバリア : VK_ACCESS_COLOR_ATTACHMENT_READ_BIT -> VK_ACCESS_SHADER_READ_BIT -> SubpassDependencyで代用可能かも？
 		{
 			const std::array<VkImageMemoryBarrier, 4> IMBs = { {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)

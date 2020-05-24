@@ -45,6 +45,18 @@ void VKExt::CreateShaderModle_Cs()
 
 void VKExt::CreatePipeline_VsFs_Input(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, const VkBool32 DepthEnable, const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs)
 {
+	const VkPipelineRasterizationStateCreateInfo PRSCI = {
+		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		VK_FALSE,
+		VK_FALSE,
+		VK_POLYGON_MODE_FILL,
+		VK_CULL_MODE_BACK_BIT,
+		VK_FRONT_FACE_COUNTER_CLOCKWISE,
+		VK_FALSE, 0.0f, 0.0f, 0.0f,
+		1.0f
+	};
 	const VkPipelineDepthStencilStateCreateInfo PDSSCI = {
 		VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 		nullptr,
@@ -79,9 +91,9 @@ void VKExt::CreatePipeline_VsFs_Input(const VkPrimitiveTopology Topology, const 
 
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
-	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
+	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
 #else
-	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs));
+	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs));
 #endif
 
 	for (auto& i : Threads) { i.join(); }
@@ -89,6 +101,18 @@ void VKExt::CreatePipeline_VsFs_Input(const VkPrimitiveTopology Topology, const 
 
 void VKExt::CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, const VkBool32 DepthEnable, const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs)
 {
+	const VkPipelineRasterizationStateCreateInfo PRSCI = {
+		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+		nullptr,
+		0,
+		VK_FALSE,
+		VK_FALSE,
+		VK_POLYGON_MODE_FILL,
+		VK_CULL_MODE_BACK_BIT,
+		VK_FRONT_FACE_COUNTER_CLOCKWISE,
+		VK_FALSE, 0.0f, 0.0f, 0.0f,
+		1.0f
+	};
 	const VkPipelineDepthStencilStateCreateInfo PDSSCI = {
 		VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 		nullptr,
@@ -121,9 +145,9 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology Topology
 	};
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
-	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
+	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
 #else
-	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs));
+	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs));
 #endif
 	for (auto& i : Threads) { i.join(); }
 }
@@ -313,27 +337,27 @@ void VKExt::CreateRenderPass_Color_PostProcess(VkRenderPass& RP, const VkFormat 
 //	VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FCI, GetAllocationCallbacks(), &FB));
 //}
 
-void VKExt::CreateRenderTexture(VkImage* Img, VkImageView* IV)
-{
-	const auto Format = VK_FORMAT_R8G8B8A8_UNORM;
-
-	const VkExtent3D Extent = { 800, 600, 1 };
-	const auto Faces = 1;
-	const auto Layers = 1 * Faces;
-	const auto Levels = 1;
-	CreateImage(Img, 0, VK_IMAGE_TYPE_2D, Format, Extent, Levels, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-	//!< デプスの場合
-	//CreateImage(Img, 0, VK_IMAGE_TYPE_2D, Format, Extent, Levels, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-
-#if 0
-	AllocateImageMemory(DM, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Img, *DM, 0));
-#else
-	uint32_t HeapIndex;
-	VkDeviceSize Offset;
-	SuballocateImageMemory(HeapIndex, Offset, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-#endif
-
-	const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
-	CreateImageView(IV, *Img, VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, ImageSubresourceRange_ColorAll);
-}
+//void VKExt::CreateRenderTexture(VkImage* Img, VkImageView* IV)
+//{
+//	const auto Format = VK_FORMAT_R8G8B8A8_UNORM;
+//
+//	const VkExtent3D Extent = { 800, 600, 1 };
+//	const auto Faces = 1;
+//	const auto Layers = 1 * Faces;
+//	const auto Levels = 1;
+//	CreateImage(Img, 0, VK_IMAGE_TYPE_2D, Format, Extent, Levels, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+//	//!< デプスの場合
+//	//CreateImage(Img, 0, VK_IMAGE_TYPE_2D, Format, Extent, Levels, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+//
+//#if 0
+//	AllocateImageMemory(DM, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+//	VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Img, *DM, 0));
+//#else
+//	uint32_t HeapIndex;
+//	VkDeviceSize Offset;
+//	SuballocateImageMemory(HeapIndex, Offset, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+//#endif
+//
+//	const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+//	CreateImageView(IV, *Img, VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, ImageSubresourceRange_ColorAll);
+//}

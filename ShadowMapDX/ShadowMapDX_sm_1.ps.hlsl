@@ -2,7 +2,6 @@ struct IN
 {
 	float4 Position : SV_POSITION;
 	float2 Texcoord : TEXCOORD0;
-	uint Viewport : SV_ViewportArrayIndex;
 };
 
 SamplerState Sampler : register(s0, space0);
