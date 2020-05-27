@@ -2721,25 +2721,11 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 	//!< ビューポートのインデックスはジオメトリシェーダで指定する (Viewport index is specified in geometry shader)
 	//assert((PVSCI.viewportCount <= 1 || PDF.multiViewport) && "");
 
-#if 0
-	//!< ラスタライゼーション (Rasterization)
-	const VkPipelineRasterizationStateCreateInfo PRSCI = {
-		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_FALSE,
-		VK_FALSE,
-		VK_POLYGON_MODE_FILL,
-		VK_CULL_MODE_BACK_BIT,
-		VK_FRONT_FACE_COUNTER_CLOCKWISE,
-		VK_FALSE, 0.0f, 0.0f, 0.0f,
-		1.0f
-	};
-#endif
-	//!< FILL 以外にはデバイスフィーチャー fillModeNonSolid が有効であること
-	//assert((PRSCI.polygonMode != VK_POLYGON_MODE_FILL || PDF.fillModeNonSolid) && "");
-	//!< 1.0f より大きな値にはデバイスフィーチャー widelines が有効であること
-	//assert((PRSCI.lineWidth <= 1.0f || PDF.wideLines) && "");
+	//!< PRSCI
+	//!< FILL以外使用時には、デバイスフィーチャーfillModeNonSolidが有効であること
+	assert(PRSCI.polygonMode == VK_POLYGON_MODE_FILL && "");
+	//!< 1.0f より大きな値には、デバイスフィーチャーwidelines が有効であること
+	assert(PRSCI.lineWidth <= 1.0f&& "");
 
 	//!< マルチサンプル (Multisample)
 	const VkSampleMask SM = 0xffffffff; //!< 0xffffffff 指定の場合は nullptr でもよい
@@ -2756,19 +2742,9 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 	assert((PMSCI.minSampleShading >= 0.0f && PMSCI.minSampleShading <= 1.0f) && "");
 	//assert((PMSCI.alphaToOneEnable == VK_FALSE || PDF.alphaToOne) && "");
 
-	//!< カラーブレンド (ColorBlend)
-#if 0
 	//!< VK_BLEND_FACTOR_SRC1 系をを使用するには、デバイスフィーチャー dualSrcBlend が有効であること
 	///!< SRCコンポーネント * SRCファクタ OP DSTコンポーネント * DSTファクタ
-	const std::array<VkPipelineColorBlendAttachmentState, 1> PCBASs = {
-		{
-			VK_FALSE,
-			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-		}
-	};
-#endif
+
 	//!< デバイスフィーチャー independentBlend が有効で無い場合は、配列の各要素は「完全に同じ値」であること (If device feature independentBlend is not enabled, each array element must be exactly same)
 	//if (!PDF.independentBlend) {
 	//	for (auto i : PCBASs) {

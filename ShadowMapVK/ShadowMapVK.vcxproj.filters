@@ -89,10 +89,13 @@
     <CustomBuild Include="ShadowMapVK_1.frag">
       <Filter>Shader Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="ShadowMapVK_1.vert">
+    <CustomBuild Include="ShadowMapVK_sm_1.frag">
       <Filter>Shader Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="ShadowMapVK_sm_1.frag">
+    <CustomBuild Include="ShadowMapVK_1.geom">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="ShadowMapVK_sm_1.vert">
       <Filter>Shader Files</Filter>
     </CustomBuild>
   </ItemGroup>

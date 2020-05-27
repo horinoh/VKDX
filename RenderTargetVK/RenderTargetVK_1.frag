@@ -15,6 +15,101 @@ vec2 ToHue(const vec3 Color)
 	return vec2(dot(vec3(-0.1687f, -0.3312f, 0.5f), Color), dot(vec3(0.5f, -0.4183f, -0.0816f), Color));
 }
 
+const float PI = 4.0f * atan(1.0f);
+float Gauss(const float x, const float sigma2)
+{
+	const float coeff = 1.0f / sqrt(2.0f * PI * sigma2);
+	const float expon = -(x * x) / (2.0f * sigma2);
+    return coeff * exp(expon);
+}
+#if 0
+vec3 GaussianFilter(const sampler2D textureMap, const ivec2 coord, const ivec2 hv)
+{
+	float weights[8];
+	const float sigma2 = 8.0f;
+	float sum = 0.0f;
+	for(int i=0;i<weights.length();++i) {
+		weights[i] = Gauss(i, sigma2);
+		sum += sign(i) * 2.0f * weights[i];
+	}
+	sum = 1.0f / sum;
+	for(int i=0;i<weights.length();++i) {
+		weights[i] *= sum;
+	}
+	vec3 color = texelFetch(textureMap, coord, 0).rgb * weights[0];
+	for(int i=1;i<weights.length();++i) {
+		const ivec2 offset = ivec2(i) * hv; //!< 怒られる
+		color += texelFetchOffset(textureMap, coord, 0,  offset).rgb * weights[i];
+		color += texelFetchOffset(textureMap, coord, 0, -offset).rgb * weights[i];
+	}	
+	return color;
+}
+vec3 GaussianFilterH(const sampler2D textureMap, const ivec2 xy) { return GaussianFilter(textureMap, xy, ivec2(1, 0)); }
+vec3 GaussianFilterV(const sampler2D textureMap, const ivec2 xy) { return GaussianFilter(textureMap, xy, ivec2(0, 1)); }
+#else
+vec3 GaussianFilterH(const sampler2D textureMap, const ivec2 xy) 
+{
+	//!< ウエイトを毎回求めているので効率は悪い
+	float weights[8];
+	const float sigma2 = 8.0f; //!< 分散
+	float sum = 0.0f;
+	for(int i=0;i<weights.length();++i) {
+		weights[i] = Gauss(i, sigma2);
+		sum += sign(i) * 2.0f * weights[i];
+	}
+	sum = 1.0f / sum;
+	for(int i=0;i<weights.length();++i) {
+		weights[i] *= sum;
+	}
+	vec3 color = texelFetch(textureMap, xy, 0).rgb * weights[0];
+	color += texelFetchOffset(textureMap, xy, 0,  ivec2(1, 0)).rgb * weights[1];
+	color += texelFetchOffset(textureMap, xy, 0, -ivec2(1, 0)).rgb * weights[1];
+	color += texelFetchOffset(textureMap, xy, 0,  ivec2(2, 0)).rgb * weights[2];
+	color += texelFetchOffset(textureMap, xy, 0, -ivec2(2, 0)).rgb * weights[2];
+	color += texelFetchOffset(textureMap, xy, 0,  ivec2(3, 0)).rgb * weights[3];
+	color += texelFetchOffset(textureMap, xy, 0, -ivec2(3, 0)).rgb * weights[3];
+	color += texelFetchOffset(textureMap, xy, 0,  ivec2(4, 0)).rgb * weights[4];
+	color += texelFetchOffset(textureMap, xy, 0, -ivec2(4, 0)).rgb * weights[4];
+	color += texelFetchOffset(textureMap, xy, 0,  ivec2(5, 0)).rgb * weights[5];
+	color += texelFetchOffset(textureMap, xy, 0, -ivec2(5, 0)).rgb * weights[5];
+	color += texelFetchOffset(textureMap, xy, 0,  ivec2(6, 0)).rgb * weights[6];
+	color += texelFetchOffset(textureMap, xy, 0, -ivec2(6, 0)).rgb * weights[6];
+	color += texelFetchOffset(textureMap, xy, 0,  ivec2(7, 0)).rgb * weights[7];
+	color += texelFetchOffset(textureMap, xy, 0, -ivec2(7, 0)).rgb * weights[7];
+	return color;
+}
+vec3 GaussianFilterV(const sampler2D textureMap, const ivec2 xy)
+{
+	float weights[8];
+	const float sigma2 = 8.0f;
+	float sum = 0.0f;
+	for(int i=0;i<weights.length();++i) {
+		weights[i] = Gauss(i, sigma2);
+		sum += sign(i) * 2.0f * weights[i];
+	}
+	sum = 1.0f / sum;
+	for(int i=0;i<weights.length();++i) {
+		weights[i] *= sum;
+	}
+	vec3 color = texelFetch(textureMap, xy, 0).rgb * weights[0];
+	color += texelFetchOffset(textureMap, xy, 0,  ivec2(0, 1)).rgb * weights[1];
+	color += texelFetchOffset(textureMap, xy, 0, -ivec2(0, 1)).rgb * weights[1];
+	color += texelFetchOffset(textureMap, xy, 0,  ivec2(0, 2)).rgb * weights[2];
+	color += texelFetchOffset(textureMap, xy, 0, -ivec2(0, 2)).rgb * weights[2];
+	color += texelFetchOffset(textureMap, xy, 0,  ivec2(0, 3)).rgb * weights[3];
+	color += texelFetchOffset(textureMap, xy, 0, -ivec2(0, 3)).rgb * weights[3];
+	color += texelFetchOffset(textureMap, xy, 0,  ivec2(0, 4)).rgb * weights[4];
+	color += texelFetchOffset(textureMap, xy, 0, -ivec2(0, 4)).rgb * weights[4];
+	color += texelFetchOffset(textureMap, xy, 0,  ivec2(0, 5)).rgb * weights[5];
+	color += texelFetchOffset(textureMap, xy, 0, -ivec2(0, 5)).rgb * weights[5];
+	color += texelFetchOffset(textureMap, xy, 0,  ivec2(0, 6)).rgb * weights[6];
+	color += texelFetchOffset(textureMap, xy, 0, -ivec2(0, 6)).rgb * weights[6];
+	color += texelFetchOffset(textureMap, xy, 0,  ivec2(0, 7)).rgb * weights[7];
+	color += texelFetchOffset(textureMap, xy, 0, -ivec2(0, 7)).rgb * weights[7];
+	return color;
+}
+#endif
+
 void main()
 {
 #if 0
@@ -36,12 +131,17 @@ void main()
 #elif 0
 	//!< 輪郭検出 (Edge detection)
 	const vec2 Center = ToHue(texture(Sampler2D, InTexcoord).rgb);
-	const vec2 Ndx = ToHue(texture(Sampler2D, InTexcoord + 0.001f * vec2(-1.0f,  0.0f)).rgb) - Center;
-	const vec2 Pdx = ToHue(texture(Sampler2D, InTexcoord + 0.001f * vec2( 1.0f,  0.0f)).rgb) - Center;
-	const vec2 Ndy = ToHue(texture(Sampler2D, InTexcoord + 0.001f * vec2( 0.0f, -1.0f)).rgb) - Center;
-	const vec2 Pdy = ToHue(texture(Sampler2D, InTexcoord + 0.001f * vec2( 0.0f,  1.0f)).rgb) - Center;
+	const vec2 d = InTexcoord / max(gl_FragCoord.xy, vec2(1.0f, 1.0f)); //!< スクリーンサイズ(gl_FragCoord.xy / InTexcoord)の逆数
+	const vec2 Ndx = ToHue(texture(Sampler2D, InTexcoord + d.x * vec2(-1.0f,  0.0f)).rgb) - Center;
+	const vec2 Pdx = ToHue(texture(Sampler2D, InTexcoord + d.x * vec2( 1.0f,  0.0f)).rgb) - Center;
+	const vec2 Ndy = ToHue(texture(Sampler2D, InTexcoord + d.y * vec2( 0.0f, -1.0f)).rgb) - Center;
+	const vec2 Pdy = ToHue(texture(Sampler2D, InTexcoord + d.y * vec2( 0.0f,  1.0f)).rgb) - Center;
 	float C = dot(Ndx, Ndx) + dot(Pdx, Pdx) + dot(Ndy, Ndy) + dot(Pdy, Pdy);	
 	OutColor = 1.0f - vec4(C, C, C, 1.0f);
+#elif 0
+	//!< ガウスフィルタ (GaussianFilter) ... 本来は2パス必要
+	OutColor = vec4(GaussianFilterH(Sampler2D, ivec2(gl_FragCoord.xy)), 1.0f);
+	//OutColor = vec4(GaussianFilterV(Sampler2D, ivec2(gl_FragCoord.xy)), 1.0f);
 #else
 	//!< モザイク (Mosaic)
 	const vec2 Resolution = vec2(800.0f, 600.0f);

@@ -226,25 +226,82 @@ protected:
 	}
 
 	virtual void CreateConstantBuffer() override {
-		const auto Fov = 0.16f * DirectX::XM_PI;
-		const auto Aspect = GetAspectRatioOfClientRect();
-		const auto ZFar = 4.0f;
-		const auto ZNear = 2.0f;
-		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f);
-		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		const auto Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
-		const auto View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
+		{
+			const auto Direction = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+			const auto Z = DirectX::XMVector3Normalize(DirectX::XMVectorNegate(Direction));
+			const auto X = DirectX::XMVector3Normalize(DirectX::XMVector3Cross(Z, DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f)));
+			const auto Y = DirectX::XMVector3Cross(X, Z);
+			//!< シャドウキャスタのAABB
+			const auto Center = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+			const auto Radius = DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f);
+			const std::array<DirectX::XMVECTOR, 8> Points = {
+				DirectX::XMVectorAdd(Center, DirectX::XMVectorSet( Radius.m128_f32[0],  Radius.m128_f32[1],  Radius.m128_f32[2], 0.0f)),
+				DirectX::XMVectorAdd(Center, DirectX::XMVectorSet( Radius.m128_f32[0],  Radius.m128_f32[1], -Radius.m128_f32[2], 0.0f)),
+				DirectX::XMVectorAdd(Center, DirectX::XMVectorSet( Radius.m128_f32[0], -Radius.m128_f32[1],  Radius.m128_f32[2], 0.0f)),
+				DirectX::XMVectorAdd(Center, DirectX::XMVectorSet( Radius.m128_f32[0], -Radius.m128_f32[1], -Radius.m128_f32[2], 0.0f)),
+				DirectX::XMVectorAdd(Center, DirectX::XMVectorSet(-Radius.m128_f32[0],  Radius.m128_f32[1],  Radius.m128_f32[2], 0.0f)),
+				DirectX::XMVectorAdd(Center, DirectX::XMVectorSet(-Radius.m128_f32[0],  Radius.m128_f32[1], -Radius.m128_f32[2], 0.0f)),
+				DirectX::XMVectorAdd(Center, DirectX::XMVectorSet(-Radius.m128_f32[0], -Radius.m128_f32[1],  Radius.m128_f32[2], 0.0f)),
+				DirectX::XMVectorAdd(Center, DirectX::XMVectorSet(-Radius.m128_f32[0], -Radius.m128_f32[1], -Radius.m128_f32[2], 0.0f)),
+			};
+
+			auto Mn = (std::numeric_limits<FLOAT>::max)();
+			auto Mx = (std::numeric_limits<FLOAT>::min)();
+			for (auto i : Points) {
+				const auto t = DirectX::XMVector3Dot(i, Z).m128_f32[0];
+				Mn = std::min(Mn, t);
+				Mx = std::max(Mx, t);
+			}
+			const auto ZRadius = (Mx - Mn) * 0.5f;
+
+			Mn = (std::numeric_limits<FLOAT>::max)();
+			Mx = (std::numeric_limits<FLOAT>::min)();
+			for (auto i : Points) {
+				const auto t = DirectX::XMVector3Dot(i, X).m128_f32[0];
+				Mn = std::min(Mn, t);
+				Mx = std::max(Mx, t);
+			}
+			const auto XRadius = (Mx - Mn) * 0.5f;
+
+			Mn = (std::numeric_limits<FLOAT>::max)();
+			Mx = (std::numeric_limits<FLOAT>::min)();
+			for (auto i : Points) {
+				const auto t = DirectX::XMVector3Dot(i, Y).m128_f32[0];
+				Mn = std::min(Mn, t);
+				Mx = std::max(Mx, t);
+			}
+			const auto YRadius = (Mx - Mn) * 0.5f;
+
+			const auto Projection = DirectX::XMMatrixOrthographicRH(XRadius * 2.0f, YRadius * 2.0f, 1.0f, 1.0f + ZRadius * 2.0f);
+			const auto View = DirectX::XMMatrixLookAtRH(DirectX::XMVectorSubtract(Center, DirectX::XMVectorScale(Z, (1.0f + ZRadius))), Center, Y);
+			DirectX::XMStoreFloat4x4(&Tr.LightProjection, Projection);
+			DirectX::XMStoreFloat4x4(&Tr.LightView, View);
+#ifdef USE_SHADOWMAP_VISUALIZE
+			DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
+			DirectX::XMStoreFloat4x4(&Tr.View, View);
+#endif
+			const auto ViewProjection = DirectX::XMMatrixMultiply(View, Projection);
+			auto Det = DirectX::XMMatrixDeterminant(ViewProjection);
+		}
+#ifndef USE_SHADOWMAP_VISUALIZE
+		{
+			const auto Fov = 0.16f * DirectX::XM_PI;
+			const auto Aspect = GetAspectRatioOfClientRect();
+			const auto ZFar = 4.0f;
+			const auto ZNear = 2.0f;
+			const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f);
+			const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+			const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+			const auto Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
+			const auto View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
+			DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
+			DirectX::XMStoreFloat4x4(&Tr.View, View);
+			const auto ViewProjection = DirectX::XMMatrixMultiply(View, Projection);
+			auto Det = DirectX::XMMatrixDeterminant(ViewProjection);
+		}
+#endif
 		const auto World = DirectX::XMMatrixIdentity();
-
-		const auto ViewProjection = DirectX::XMMatrixMultiply(View, Projection);
-		auto Det = DirectX::XMMatrixDeterminant(ViewProjection);
-		const auto InverseViewProjection = DirectX::XMMatrixInverse(&Det, ViewProjection);
-
-		DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
-		DirectX::XMStoreFloat4x4(&Tr.View, View);
 		DirectX::XMStoreFloat4x4(&Tr.World, World);
-		DirectX::XMStoreFloat4x4(&Tr.InverseViewProjection, InverseViewProjection);
 
 		{
 			ConstantBufferResources.push_back(COM_PTR<ID3D12Resource>());
@@ -262,10 +319,11 @@ protected:
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), COM_PTR_PUT(ShaderBlobs[3])));
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), COM_PTR_PUT(ShaderBlobs[4])));
 		//!< パス1 : シェーダブロブ
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_1.vs.cso")).data(), COM_PTR_PUT(ShaderBlobs[5])));
 #ifdef USE_SHADOWMAP_VISUALIZE
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_sm_1.vs.cso")).data(), COM_PTR_PUT(ShaderBlobs[5])));
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_sm_1.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[6])));
 #else
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_1.gs.cso")).data(), COM_PTR_PUT(ShaderBlobs[5])));
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_1.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[6])));
 #endif
 	}
@@ -276,16 +334,19 @@ protected:
 			D3D12_FILL_MODE_SOLID, 
 			D3D12_CULL_MODE_BACK, TRUE,
 			//!< シャドウキャスタの描画でデプスバイアスを有効にする
-			//!< DepthBias, DepthBiasClamp, SlopeScaledDepthBias, DepthClipEnable
-			//!< DepthBias * r + SlopeScaledDepthBias * MaxDepthSlope　
-			1, 0.0f, 1.75f, TRUE,
+			//!< DepthBias, DepthBiasClamp, SlopeScaledDepthBias
+			//!< r * DepthBias + m * SlopeScaledDepthBias
+			//!< DepthBiasClamp : 非0.0fを指定の場合クランプが有効になる(絶対値がDepthBiasClamp以下になるようにクランプされる)
+			1, 0.0f, 1.75f, 
+			TRUE,
 			FALSE, FALSE, 0,
 			D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 		};
 		const D3D12_RASTERIZER_DESC RD_1 = {
 			D3D12_FILL_MODE_SOLID, 
 			D3D12_CULL_MODE_BACK, TRUE, 
-			D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, TRUE,
+			D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, 
+			TRUE,
 			FALSE, FALSE, 0,
 			D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 		};
@@ -307,10 +368,20 @@ protected:
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[3]->GetBufferPointer(), ShaderBlobs[3]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[4]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() }),
 		};
+#ifdef USE_PIPELINE_SERIALIZE
 		const std::array<D3D12_SHADER_BYTECODE, 2> SBCs_1 = {
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[5]->GetBufferPointer(), ShaderBlobs[5]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[6]->GetBufferPointer(), ShaderBlobs[6]->GetBufferSize() }),
 		};
+#else
+		const std::array<D3D12_SHADER_BYTECODE, 5> SBCs_1 = {
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[6]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() }), //!< 
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[2]->GetBufferPointer(), ShaderBlobs[2]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[3]->GetBufferPointer(), ShaderBlobs[3]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[5]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() }), //!< 
+		};
+#endif
 		const std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs = {};
 		const std::vector<DXGI_FORMAT> RTVs_0 = {
 			DXGI_FORMAT_R32_FLOAT,
@@ -345,7 +416,8 @@ private:
 		DirectX::XMFLOAT4X4 Projection;
 		DirectX::XMFLOAT4X4 View;
 		DirectX::XMFLOAT4X4 World;
-		DirectX::XMFLOAT4X4 InverseViewProjection;
+		DirectX::XMFLOAT4X4 LightProjection;
+		DirectX::XMFLOAT4X4 LightView;
 	};
 	using Transform = struct Transform;
 	Transform Tr;

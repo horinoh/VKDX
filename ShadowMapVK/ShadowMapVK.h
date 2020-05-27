@@ -327,21 +327,76 @@ protected:
 	}
 	virtual void CreateUniformBuffer() override {
 		{
-			const auto Fov = 0.16f * glm::pi<float>();
-			const auto Aspect = GetAspectRatioOfClientRect();
-			const auto ZFar = 4.0f;
-			const auto ZNear = 2.0f;
-			const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
-			const auto CamTag = glm::vec3(0.0f);
-			const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
-			const auto Projection = glm::perspective(Fov, Aspect, ZNear, ZFar);
-			const auto View = glm::lookAt(CamPos, CamTag, CamUp);
+			{
+				const auto Direction = glm::vec3(0.0f, 0.0f, 1.0f);
+				const auto Z = glm::normalize(-Direction);
+				const auto X = glm::normalize(glm::cross(Z, glm::vec3(0.0f, 1.0f, 0.0f)));
+				const auto Y = glm::cross(X, Z);
+				//!< シャドウキャスタのAABB
+				const auto Center = glm::vec3(0.0f, 0.0f, 0.0f);
+				const auto Radius = glm::vec3(1.0f, 1.0f, 1.0f);
+				const std::array<glm::vec3, 8> Points = {
+					Center + glm::vec3( Radius.x,  Radius.y,  Radius.z),
+					Center + glm::vec3( Radius.x,  Radius.y, -Radius.z),
+					Center + glm::vec3( Radius.x, -Radius.y,  Radius.z),
+					Center + glm::vec3( Radius.x, -Radius.y, -Radius.z),
+					Center + glm::vec3(-Radius.x,  Radius.y,  Radius.z),
+					Center + glm::vec3(-Radius.x,  Radius.y, -Radius.z),
+					Center + glm::vec3(-Radius.x, -Radius.y,  Radius.z),
+					Center + glm::vec3(-Radius.x, -Radius.y, -Radius.z),
+				};
+
+				auto Mn = (std::numeric_limits<float>::max)();
+				auto Mx = (std::numeric_limits<float>::min)();
+				for (auto i : Points) {
+					const auto t = glm::dot(i, Z);
+					Mn = std::min(Mn, t);
+					Mx = std::max(Mx, t);
+				}
+				const auto ZRadius = (Mx - Mn) * 0.5f;
+
+				Mn = (std::numeric_limits<float>::max)();
+				Mx = (std::numeric_limits<float>::min)();
+				for (auto i : Points) {
+					const auto t = glm::dot(i, X);
+					Mn = std::min(Mn, t);
+					Mx = std::max(Mx, t);
+				}
+				const auto XRadius = (Mx - Mn) * 0.5f;
+
+				Mn = (std::numeric_limits<float>::max)();
+				Mx = (std::numeric_limits<float>::min)();
+				for (auto i : Points) {
+					const auto t = glm::dot(i, Y);
+					Mn = std::min(Mn, t);
+					Mx = std::max(Mx, t);
+				}
+				const auto YRadius = (Mx - Mn) * 0.5f;
+
+				const auto Projection = glm::ortho(-XRadius, XRadius, -YRadius, YRadius, 1.0f, 1.0f + ZRadius * 2.0f);
+				const auto View = glm::lookAt(Center - Z * (1.0f + ZRadius), Center, Y);
+#ifdef USE_SHADOWMAP_VISUALIZE
+				Tr.Projection = Projection;
+				Tr.View = View;
+#endif
+			}
+#ifndef USE_SHADOWMAP_VISUALIZE
+			{
+				const auto Fov = 0.16f * glm::pi<float>();
+				const auto Aspect = GetAspectRatioOfClientRect();
+				const auto ZFar = 4.0f;
+				const auto ZNear = 2.0f;
+				const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
+				const auto CamTag = glm::vec3(0.0f);
+				const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
+				const auto Projection = glm::perspective(Fov, Aspect, ZNear, ZFar);
+				const auto View = glm::lookAt(CamPos, CamTag, CamUp);
+				Tr.Projection = Projection;
+				Tr.View = View;
+			}
+#endif
 			const auto World = glm::mat4(1.0f);
-
-			const auto ViewProjection = Projection * View;
-			const auto InverseViewProjection = glm::inverse(ViewProjection);
-
-			Tr = Transform({ Projection, View, World, InverseViewProjection });
+			Tr.World = World;
 
 			UniformBuffers.push_back(VkBuffer());
 			CreateBuffer(&UniformBuffers.back(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
@@ -357,10 +412,11 @@ protected:
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tesc.spv")).data()));
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".geom.spv")).data()));
 		//!< パス1 : シェーダモジュール
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_1") + TEXT(".vert.spv")).data()));
 #ifdef USE_SHADOWMAP_VISUALIZE
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_sm_1") + TEXT(".vert.spv")).data()));
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_sm_1") + TEXT(".frag.spv")).data()));
 #else
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_1") + TEXT(".geom.spv")).data()));
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_1") + TEXT(".frag.spv")).data()));
 #endif
 	}
@@ -378,7 +434,9 @@ protected:
 			VK_FRONT_FACE_COUNTER_CLOCKWISE,
 			//!< シャドウキャスタの描画でデプスバイアスを有効にする
 			//!< depthBiasEnable, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor
-			VK_TRUE, 1.25f, 0.0f, 1.75f, 
+			//!< r * depthBiasConstantFactor + m * depthBiasSlopeFactor
+			//!< depthBiasClamp : 非0.0fを指定の場合クランプが有効になる(絶対値がdepthBiasClamp以下になるようにクランプされる)
+			VK_TRUE, 1.0f, 0.0f, 1.75f,
 			1.0f
 		};
 #ifdef _DEBUG
@@ -424,10 +482,20 @@ protected:
 			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, ShaderModules[3], "main", nullptr }),
 			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_GEOMETRY_BIT, ShaderModules[4], "main", nullptr }),
 		};
+#ifdef USE_SHADOWMAP_VISUALIZE
 		const std::array<VkPipelineShaderStageCreateInfo, 2> PSSCIs_1 = {
 			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[5], "main", nullptr }),
 			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[6], "main", nullptr }),
 		};
+#else
+		const std::array<VkPipelineShaderStageCreateInfo, 5> PSSCIs_1 = {
+			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0], "main", nullptr }),
+			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[6], "main", nullptr }), //!< 
+			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, ShaderModules[2], "main", nullptr }),
+			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, ShaderModules[3], "main", nullptr }),
+			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_GEOMETRY_BIT, ShaderModules[5], "main", nullptr }), //!< 
+		};
+#endif
 		const std::vector<VkVertexInputBindingDescription> VIBDs = {};
 		const std::vector<VkVertexInputAttributeDescription> VIADs = {};
 		const std::vector< VkPipelineColorBlendAttachmentState> PCBASs_0 = {
@@ -487,7 +555,8 @@ private:
 		glm::mat4 Projection;
 		glm::mat4 View;
 		glm::mat4 World;
-		glm::mat4 InverseViewProjection;
+		glm::mat4 LightProjection;
+		glm::mat4 LightView;
 	};
 	using Transform = struct Transform;
 	Transform Tr;

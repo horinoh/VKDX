@@ -11,7 +11,7 @@ struct OUT
 {
 	float4 Position : SV_POSITION;
 	float3 Normal : NORMAL;
-	float2 Texcoord : TEXCOORD0;
+	float4 Texcoord : TEXCOORD0;
 	float2 Depth : TEXCOORD1;
 };
 
@@ -22,12 +22,13 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 	OUT Out;
 	
 	const float4x4 PVW = mul(mul(Projection, View), World);
+	const float4x4 LPVW = mul(mul(LightProjection, LightView), World);
 
 	[unroll]
 	for (int i = 0; i<3; ++i) {
 		Out.Position = mul(PVW, float4(In[i].Position, 1.0f));
 		Out.Normal = mul((float3x3)World, In[i].Normal);
-		Out.Texcoord = In[i].Texcoord;
+		Out.Texcoord = mul(LPVW, float4(In[i].Position, 1.0f));
 		Out.Depth = Out.Position.zw;
 		stream.Append(Out);
 	}

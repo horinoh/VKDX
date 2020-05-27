@@ -89,13 +89,16 @@
     <FxCompile Include="ShadowMapDX_1.ps.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="ShadowMapDX_1.vs.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
     <FxCompile Include="ShadowMapDX_sm_1.ps.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
     <FxCompile Include="ShadowMapDX.ds.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="ShadowMapDX_1.gs.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="ShadowMapDX_sm_1.vs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
   </ItemGroup>

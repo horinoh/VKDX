@@ -12,6 +12,44 @@ float2 ToHue(const float3 Color)
 	return float2(dot(float3(-0.1687f, -0.3312f, 0.5f), Color), dot(float3(0.5f, -0.4183f, -0.0816f), Color));
 }
 
+static const float PI = 4.0f * atan(1.0f);
+float Gauss(const float x, const float sigma2)
+{
+	const float coeff = 1.0f / sqrt(2.0f * PI * sigma2);
+	const float expon = -(x * x) / (2.0f * sigma2);
+	return coeff * exp(expon);
+}
+float3 GaussianFilter(const Texture2D textureMap, const int2 coord, const int2 hv)
+{
+	//!< ウエイトを毎回求めているので効率は悪い
+	const int n = 8;
+	float weights[n];
+	const float sigma2 = 8.0f; //!< 分散
+	float sum = 0.0f;
+	[unroll]
+	for (int k = 0; k < n; ++k) {
+		weights[k] = Gauss(k, sigma2);
+		sum += sign(k) * 2.0f * weights[k];
+	}
+	sum = 1.0f / sum;
+	[unroll]
+	for (int j = 0; j < n; ++j) {
+		weights[j] *= sum;
+	}
+
+	const int3 coord3 = int3(coord, 0);
+	float3 color = textureMap.Load(coord3).rgb * weights[0];
+	[unroll]
+	for (int i = 1; i < n; ++i) {
+		const int2 offset = int2(i, i) * hv;
+		color += textureMap.Load(coord3, offset).rgb * weights[i];
+		color += textureMap.Load(coord3, -offset).rgb * weights[i];
+	}
+	return color;
+}
+float3 GaussianFilterH(const Texture2D textureMap, const int2 coord) { return GaussianFilter(textureMap, coord, int2(1, 0)); }
+float3 GaussianFilterV(const Texture2D textureMap, const int2 coord) { return GaussianFilter(textureMap, coord, int2(0, 1)); }
+
 float4 main(IN In) : SV_TARGET
 {
 #if 0
@@ -33,12 +71,17 @@ float4 main(IN In) : SV_TARGET
 #elif 0
 	//!< 輪郭検出 (Edge detection)
 	const float2 Center = ToHue(Texture.Sample(Sampler, In.Texcoord).rgb);
-	const float2 Ndx = ToHue(Texture.Sample(Sampler, In.Texcoord + 0.001f * float2(-1.0f, 0.0f)).rgb) - Center;
-	const float2 Pdx = ToHue(Texture.Sample(Sampler, In.Texcoord + 0.001f * float2(1.0f, 0.0f)).rgb) - Center;
-	const float2 Ndy = ToHue(Texture.Sample(Sampler, In.Texcoord + 0.001f * float2(0.0f, -1.0f)).rgb) - Center;
-	const float2 Pdy = ToHue(Texture.Sample(Sampler, In.Texcoord + 0.001f * float2(0.0f, 1.0f)).rgb) - Center;
+	const float2 d = In.Texcoord / max(In.Position.xy, float2(1.0f, 1.0f)); //!< //!< スクリーンサイズ(In.Position.xy / In.Texcoord)の逆数
+	const float2 Ndx = ToHue(Texture.Sample(Sampler, In.Texcoord + d.x * float2(-1.0f, 0.0f)).rgb) - Center;
+	const float2 Pdx = ToHue(Texture.Sample(Sampler, In.Texcoord + d.x * float2(1.0f, 0.0f)).rgb) - Center;
+	const float2 Ndy = ToHue(Texture.Sample(Sampler, In.Texcoord + d.y * float2(0.0f, -1.0f)).rgb) - Center;
+	const float2 Pdy = ToHue(Texture.Sample(Sampler, In.Texcoord + d.y * float2(0.0f, 1.0f)).rgb) - Center;
 	float C = dot(Ndx, Ndx) + dot(Pdx, Pdx) + dot(Ndy, Ndy) + dot(Pdy, Pdy);
 	return 1.0f - float4(C, C, C, 1.0f);
+#elif 0
+	//!< ガウスフィルタ (GaussianFilter) ... 本来は2パス必要
+	return float4(GaussianFilterH(Texture, int2(In.Position.xy)), 1.0f);
+	//return float4(GaussianFilterV(Texture, int2(In.Position.xy)), 1.0f);
 #else
 	//!< モザイク (Mosaic)
 	const float2 Resolution = float2(800.0f, 600.0f);

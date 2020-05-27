@@ -1050,17 +1050,6 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 		{ RTBD/*, ... x8*/ } //!< レンダーターゲットの分だけ #DX_TODO ... MRT
 	};
 
-	//!< ラスタライザ (Rasterizer)
-#if 0
-	const D3D12_RASTERIZER_DESC RD = {
-		D3D12_FILL_MODE_SOLID, //!< フィルモード (D3D12_FILL_MODE_WIREFRAMEにするとワイヤーフレームになる)
-		D3D12_CULL_MODE_BACK, TRUE, //!< カリングモード、CCW
-		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, TRUE, //!< 深度バイアス、バイアスクランプ、SlopeScaledDepthBias、深度クリップ
-		FALSE, FALSE, 0, //!< マルチサンプル、アンチエイリアス、サンプルカウント
-		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
-	};
-#endif
-
 	//!< インプットレイアウト (InputLayout)
 	const D3D12_INPUT_LAYOUT_DESC ILD = {
 		IEDs.data(), static_cast<UINT>(IEDs.size())
