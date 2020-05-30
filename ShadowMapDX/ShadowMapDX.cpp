@@ -236,7 +236,7 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 	const auto PS1 = COM_PTR_GET(PipelineStates[1]);
 
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-	//!< パス0 : バンドルコマンドリスト(メッシュ描画用)
+	//!< パス0 : バンドルコマンドリスト(シャドウキャスタ描画用)
 	const auto BCL0 = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	VERIFY_SUCCEEDED(BCL0->Reset(BCA, PS0));
 	{
@@ -247,13 +247,17 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 	}
 	VERIFY_SUCCEEDED(BCL0->Close());
 
-	//!< パス1 : バンドルコマンドリスト(レンダーテクスチャ描画用)
+	//!< パス1 : バンドルコマンドリスト(レンダーテクスチャ描画用、シャドウレシーバ描画用)
 	const auto BCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + BundleGraphicsCommandLists.size() / 2]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
 	VERIFY_SUCCEEDED(BCL1->Reset(BCA, PS1));
 	{
 		const auto ICS = COM_PTR_GET(IndirectCommandSignatures[1]);
 		const auto IBR = COM_PTR_GET(IndirectBufferResources[1]);
+#ifdef USE_SHADOWMAP_VISUALIZE
 		BCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+#else
+		BCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+#endif
 		BCL1->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BCL1->Close());
@@ -268,7 +272,7 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 
-		//!< パス0 : (メッシュ描画用)
+		//!< パス0 : (シャドウキャスタ描画用)
 		{
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
@@ -280,12 +284,10 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 				CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::Red, static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
 				CL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(Rects.size()), Rects.data());
 			}
-
 			{
 				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RtvDHs = { RtvDH->GetCPUDescriptorHandleForHeapStart() };
 				CL->OMSetRenderTargets(static_cast<UINT>(RtvDHs.size()), RtvDHs.data(), FALSE, &DsvDH);
 			}
-
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
@@ -294,7 +296,6 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
 				CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
-
 			CL->ExecuteBundle(BCL0);
 		}
 
@@ -309,24 +310,30 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 			CL->ResourceBarrier(static_cast<UINT>(RBs.size()), RBs.data());
 		}
 
-		//!< パス1 : (レンダーテクスチャ描画用)
+		//!< パス1 : (レンダーテクスチャ描画用、シャドウレシーバ描画用)
 		{
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
+
+			auto ScCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); ScCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+#ifndef USE_SHADOWMAP_VISUALIZE
 			{
-				auto ScCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); ScCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+				const std::array<D3D12_RECT, 0> Rects = {};
+				CL->ClearRenderTargetView(ScCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rects.size()), Rects.data());
+				const auto DsvDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+				CL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(Rects.size()), Rects.data());
+			}
+#endif
+			{
 				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RtvDHs = { ScCDH };
 				CL->OMSetRenderTargets(static_cast<UINT>(RtvDHs.size()), RtvDHs.data(), FALSE, nullptr);
 			}
-
 			{
-				const auto& SrvDH = CbvSrvUavDescriptorHeaps[1];
-				const std::array<ID3D12DescriptorHeap*, 1> SrvDHs = { COM_PTR_GET(SrvDH) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(SrvDHs.size()), SrvDHs.data());
-				auto SrvGDH = SrvDH->GetGPUDescriptorHandleForHeapStart();
-				CL->SetGraphicsRootDescriptorTable(0, SrvGDH); SrvGDH.ptr += Device->GetDescriptorHandleIncrementSize(SrvDH->GetDesc().Type); //!< SRV
+				const auto& DH = CbvSrvUavDescriptorHeaps[1];
+				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
+				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
+				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+				CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
-
-			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 			CL->ExecuteBundle(BCL1);
 		}
 

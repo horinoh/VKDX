@@ -240,7 +240,7 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 	const auto RP1 = RenderPasses[1];
 	const auto FB1 = Framebuffers[i + 1];
 
-	//!< パス0 : セカンダリコマンドバッファ(メッシュ描画用)
+	//!< パス0 : セカンダリコマンドバッファ(シャドウキャスタ描画用)
 	const auto SCB0 = SecondaryCommandBuffers[i];
 	{
 		const VkCommandBufferInheritanceInfo CBII = {
@@ -261,7 +261,10 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB0, &CBBI)); {
 			const auto PL = Pipelines[0];
+			const auto DS = DescriptorSets[0];
+			const auto PLL = PipelineLayouts[0];
 			const auto IB = IndirectBuffers[0];
+
 			vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 			vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
@@ -269,14 +272,14 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 
 			assert(!DescriptorSets.empty() && "");
 			assert(!PipelineLayouts.empty() && "");
-			const std::array<VkDescriptorSet, 1> DSs = { DescriptorSets[0] };
-			vkCmdBindDescriptorSets(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[0], 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
+			const std::array<VkDescriptorSet, 1> DSs = { DS };
+			vkCmdBindDescriptorSets(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
 
 			vkCmdDrawIndirect(SCB0, IB, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
 	}
 
-	//!< パス1 : セカンダリコマンドバッファ(レンダーテクスチャ描画用)
+	//!< パス1 : セカンダリコマンドバッファ(レンダーテクスチャ描画用、シャドウレシーバ描画用)
 	const auto SCB1 = SecondaryCommandBuffers[i + SecondaryCommandBuffers.size() / 2]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
 	{
 		const VkCommandBufferInheritanceInfo CBII = {
@@ -297,7 +300,10 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB1, &CBBI)); {
 			const auto PL = Pipelines[1];
+			const auto DS = DescriptorSets[1];
+			const auto PLL = PipelineLayouts[1];
 			const auto IB = IndirectBuffers[1];
+
 			vkCmdSetViewport(SCB1, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 			vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
@@ -305,8 +311,8 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 
 			assert(2 == DescriptorSets.size() && "");
 			assert(2 == PipelineLayouts.size() && "");
-			const std::array<VkDescriptorSet, 1> DSs = { DescriptorSets[1] };
-			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[1], 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
+			const std::array<VkDescriptorSet, 1> DSs = { DS };
+			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
 
 			vkCmdDrawIndirect(SCB1, IB, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
@@ -322,12 +328,9 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
 
-		//!< パス0 : レンダーパス(メッシュ描画用)
+		//!< パス0 : レンダーパス (シャドウキャスタ描画用)
 		{
-			std::array<VkClearValue, 1 + 1> CVs = {
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				Colors::Red,
-			};
+			std::array<VkClearValue, 1 + 1> CVs = { Colors::Red, };
 			CVs[1].depthStencil = { 1.0f, 0 };
 			const VkRenderPassBeginInfo RPBI = {
 				VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -372,7 +375,12 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 
 		//!< パス1 : レンダーパス(レンダーテクスチャ描画用)
 		{
+#ifdef USE_SHADOWMAP_VISUALIZE
 			const std::array<VkClearValue, 0> CVs = {};
+#else
+			std::array<VkClearValue, 1 + 1> CVs = { Colors::SkyBlue, };
+			CVs[1].depthStencil = { 1.0f, 0 };
+#endif
 			const VkRenderPassBeginInfo RPBI = {
 				VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 				nullptr,
@@ -386,7 +394,6 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 				vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
 			} vkCmdEndRenderPass(CB);
 		}
-
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
 #pragma endregion

@@ -11,7 +11,6 @@ struct TESS_FACTOR
 struct OUT
 {
 	float3 Position : POSITION;
-	float3 Normal : NORMAL;
 	float2 Texcoord : TEXCOORD0;
 };
 
@@ -26,12 +25,6 @@ float3 GetPosition_Torus(const float2 uv)
 	const float2 R = float2(0.5f, 1.0f);
 	return float3((R.y + R.x * cos(UV.y)) * cos(UV.x), (R.y + R.x * cos(UV.y)) * sin(UV.x), R.x * sin(UV.y));
 }
-float3 GetNormal_Torus(const float2 uv, const float3 pos)
-{
-	const float2 du = float2(0.01f, 0.0f);
-	const float2 dv = float2(0.0f, 0.01f);
-	return normalize(cross(GetPosition_Torus(uv + du) - pos, GetPosition_Torus(uv + dv) - pos));
-}
 
 float2 GetUV_Plane(const float2 uv) { return uv * 2.0f - 1.0f; }
 float3 GetPosition_PlaneXZ(const float2 uv)
@@ -39,8 +32,6 @@ float3 GetPosition_PlaneXZ(const float2 uv)
 	const float2 UV = GetUV_Plane(uv);
 	return float3(UV.y, 0.0f, UV.x);
 }
-float3 GetNormal_PlaneXZ(const float2 uv, const float3 pos) { return float3(0.0f, 1.0f, 0.0f); }
-
 
 [domain("quad")]
 OUT main(const TESS_FACTOR tess, const float2 uv : SV_DomainLocation, const OutputPatch<IN, 4> quad)
@@ -49,13 +40,9 @@ OUT main(const TESS_FACTOR tess, const float2 uv : SV_DomainLocation, const Outp
 
 	static const float2 Mask[] = { float2(1.0f, 0.0f), float2(0.0f, 1.0f) };
 	Out.Position = float3(0.0f, 0.0f, 0.0f);
-	Out.Normal = float3(0.0f, 0.0f, 0.0f);
 	
-	Out.Position += GetPosition_Torus(uv) * 0.5f * Mask[quad[0].InstanceID].xxx;
-	Out.Normal += GetNormal_Torus(uv, Out.Position) * Mask[quad[0].InstanceID].xxx;
-	
+	Out.Position += GetPosition_Torus(uv) * 0.5f * Mask[quad[0].InstanceID].xxx;	
 	Out.Position += (GetPosition_PlaneXZ(uv) - float3(0.0f, 0.75f, 0.0f)) * Mask[quad[0].InstanceID].yyy;
-	Out.Normal += GetNormal_PlaneXZ(uv, Out.Position) * Mask[quad[0].InstanceID].yyy;
 	
 	Out.Texcoord = float2(uv.x, 1.0f - uv.y);
 

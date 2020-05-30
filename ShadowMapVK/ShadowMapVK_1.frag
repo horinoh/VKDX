@@ -4,7 +4,6 @@
 
 layout (early_fragment_tests) in;
 
-//layout (location = 0) in vec2 InTexcoord;
 layout (location = 0) in vec4 InTexcoord;
 
 layout (location = 0) out vec4 OutColor;

@@ -49,14 +49,14 @@ protected:
 		}
 	}
 	virtual void CreateRenderPass() override {
-		RenderPasses.resize(2);
 		//!< パス0 : レンダーパス
 		{
+			RenderPasses.push_back(VkRenderPass());
 			const std::array<VkAttachmentReference, 1> ColorAttach = { { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, } };
 #ifdef USE_DEPTH
 			const VkAttachmentReference DepthAttach = { static_cast<uint32_t>(ColorAttach.size()), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 #endif
-			VK::CreateRenderPass(RenderPasses[0], {
+			VK::CreateRenderPass(RenderPasses.back(), {
 					//!< アタッチメント
 					{
 						0,
@@ -96,8 +96,9 @@ protected:
 		}
 		//!< パス1 : レンダーパス
 		{
+			RenderPasses.push_back(VkRenderPass());
 			const std::array<VkAttachmentReference, 1> ColorAttach = { { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, }  };
-			VK::CreateRenderPass(RenderPasses[1], {
+			VK::CreateRenderPass(RenderPasses.back(), {
 					//!< アタッチメント
 					{
 						0,

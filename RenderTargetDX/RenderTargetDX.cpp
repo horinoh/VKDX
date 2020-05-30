@@ -316,7 +316,6 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 			auto SrvGDH = SrvDH->GetGPUDescriptorHandleForHeapStart();
 			CL->SetGraphicsRootDescriptorTable(0, SrvGDH); SrvGDH.ptr += Device->GetDescriptorHandleIncrementSize(SrvDH->GetDesc().Type); //!< SRV
 
-			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 			CL->ExecuteBundle(BCL1);
 		}
 

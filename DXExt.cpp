@@ -3,7 +3,6 @@
 void DXExt::CreateIndirectBuffer_Draw(const UINT IndexCount, const UINT InstanceCount)
 {
 	IndirectBufferResources.push_back(COM_PTR<ID3D12Resource>());
-
 	const D3D12_DRAW_ARGUMENTS Source = { IndexCount, InstanceCount, 0, 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
@@ -25,13 +24,12 @@ void DXExt::CreateIndirectBuffer_Draw(const UINT IndexCount, const UINT Instance
 void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT IndexCount, const UINT InstanceCount)
 {
 	IndirectBufferResources.push_back(COM_PTR<ID3D12Resource>());
-
 	const D3D12_DRAW_INDEXED_ARGUMENTS Source = { IndexCount, InstanceCount, 0, 0, 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 	CreateAndCopyToDefaultResource(IndirectBufferResources.back(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, &Source);
 
-	IndirectCommandSignatures.resize(1);
+	IndirectCommandSignatures.push_back(COM_PTR<ID3D12CommandSignature>());
 	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
 		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED },
 	};
@@ -40,7 +38,7 @@ void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT IndexCount, const UINT I
 		static_cast<const UINT>(IADs.size()), IADs.data(),
 		0
 	};
-	Device->CreateCommandSignature(&CSD, /*COM_PTR_GET(RootSignatures[0])*/nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectCommandSignatures[0]));
+	Device->CreateCommandSignature(&CSD, /*COM_PTR_GET(RootSignatures[0])*/nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectCommandSignatures.back()));
 }
 
 void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT Z)
