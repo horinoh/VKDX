@@ -71,13 +71,13 @@ float4 main(IN In) : SV_TARGET
 #elif 0
 	//!< 輪郭検出 (Edge detection)
 	const float2 Center = ToHue(Texture.Sample(Sampler, In.Texcoord).rgb);
-	const float2 d = In.Texcoord / max(In.Position.xy, float2(1.0f, 1.0f)); //!< //!< スクリーンサイズ(In.Position.xy / In.Texcoord)の逆数
-	const float2 Ndx = ToHue(Texture.Sample(Sampler, In.Texcoord + d.x * float2(-1.0f, 0.0f)).rgb) - Center;
-	const float2 Pdx = ToHue(Texture.Sample(Sampler, In.Texcoord + d.x * float2(1.0f, 0.0f)).rgb) - Center;
-	const float2 Ndy = ToHue(Texture.Sample(Sampler, In.Texcoord + d.y * float2(0.0f, -1.0f)).rgb) - Center;
-	const float2 Pdy = ToHue(Texture.Sample(Sampler, In.Texcoord + d.y * float2(0.0f, 1.0f)).rgb) - Center;
+	const float2 Inv = In.Texcoord / max(In.Position.xy, float2(1.0f, 1.0f)); //!< //!< スクリーンサイズ(In.Position.xy / In.Texcoord)の逆数
+	const float2 Ndx = ToHue(Texture.Sample(Sampler, In.Texcoord + Inv.x * float2(-1.0f, 0.0f)).rgb) - Center;
+	const float2 Pdx = ToHue(Texture.Sample(Sampler, In.Texcoord + Inv.x * float2(1.0f, 0.0f)).rgb) - Center;
+	const float2 Ndy = ToHue(Texture.Sample(Sampler, In.Texcoord + Inv.y * float2(0.0f, -1.0f)).rgb) - Center;
+	const float2 Pdy = ToHue(Texture.Sample(Sampler, In.Texcoord + Inv.y * float2(0.0f, 1.0f)).rgb) - Center;
 	float C = dot(Ndx, Ndx) + dot(Pdx, Pdx) + dot(Ndy, Ndy) + dot(Pdy, Pdy);
-	return 1.0f - float4(C, C, C, 1.0f);
+	return 1.0f - float4(C, C, C, 0.0f);
 #elif 0
 	//!< ガウスフィルタ (GaussianFilter) ... 本来は2パス必要
 	return float4(GaussianFilterH(Texture, int2(In.Position.xy)), 1.0f);

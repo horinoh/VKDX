@@ -92,6 +92,20 @@ protected:
 					},
 				}, {
 					//!< サブパス依存
+#if 0
+					{
+						VK_SUBPASS_EXTERNAL, 0,
+						VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+						VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+						VK_DEPENDENCY_BY_REGION_BIT,
+					},
+					{
+						0, VK_SUBPASS_EXTERNAL,
+						VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+						VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
+						VK_DEPENDENCY_BY_REGION_BIT,
+					},
+#endif
 				});
 		}
 		//!< パス1 : レンダーパス
@@ -291,10 +305,10 @@ protected:
 		};
 		const std::vector<VkVertexInputBindingDescription> VIBDs = {};
 		const std::vector<VkVertexInputAttributeDescription> VIADs = {};
-		const std::vector< VkPipelineColorBlendAttachmentState> PCBASs = {
+		const std::vector<VkPipelineColorBlendAttachmentState> PCBASs = {
 			{
-				VK_FALSE, VK_BLEND_FACTOR_ONE,
-				VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
+				VK_FALSE, 
+				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
 				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
 				VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
 			},

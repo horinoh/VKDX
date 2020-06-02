@@ -139,13 +139,13 @@ protected:
 		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("WireFrame.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_wf.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("WireFrame.gs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back()))); 
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_wf.gs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back()))); 
 #else
 		CreateShaderBlob_VsPsDsHsGs(); 
 #endif

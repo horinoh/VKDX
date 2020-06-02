@@ -80,7 +80,7 @@
     <FxCompile Include="TriangleDX.vs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="TriangleDXRoot_rs.ps.hlsl">
+    <FxCompile Include="TriangleDX_rc.ps.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
   </ItemGroup>

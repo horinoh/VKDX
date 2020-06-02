@@ -355,7 +355,7 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 				0, nullptr,
 				static_cast<uint32_t>(IMBs.size()), IMBs.data());
 		}
-
+		
 		//!< パス1 : レンダーパス(レンダーテクスチャ描画用)
 		{
 			const std::array<VkClearValue, 0> CVs = {};

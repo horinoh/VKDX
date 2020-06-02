@@ -77,18 +77,22 @@ void VKExt::CreatePipeline_VsFs_Input(const VkPrimitiveTopology Topology, const 
 		VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1], "main", nullptr }),
 	};
 
-	//!< メンバ関数をスレッドで使用したい場合、以下のようにthisを引数に取る形式を使用
-	//std::thread::thread(&VKExt::Func, this, Arg0, Arg1,...);
-
-	const std::vector< VkPipelineColorBlendAttachmentState> PCBASs = {
+	//!< ブレンド (Blend)
+	//!< 例) 
+	//!< ブレンド	: Src * A + Dst * (1 - A)	= Src:VK_BLEND_FACTOR_SRC_ALPHA, Dst:VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA, Op:VK_BLEND_OP_ADD
+	//!< 加算		: Src * 1 + Dst * 1			= Src:VK_BLEND_FACTOR_ONE, Dst:VK_BLEND_FACTOR_ONE, Op:VK_BLEND_OP_ADD
+	//!< 乗算		: Src * 0 + Dst * Src		= Src:VK_BLEND_FACTOR_ZERO, Dst:VK_BLEND_FACTOR_SRC_COLOR, Op:VK_BLEND_OP_ADD
+	const std::vector<VkPipelineColorBlendAttachmentState> PCBASs = {
 		{
-			VK_FALSE, VK_BLEND_FACTOR_ONE,
-			VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
+			VK_FALSE, 
+			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD, //!< ブレンド 
+			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD, //!< アルファ
 			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
 		},
 	};
 
+	//!< メンバ関数をスレッドで使用したい場合、以下のようにthisを引数に取る形式を使用
+	//std::thread::thread(&VKExt::Func, this, Arg0, Arg1,...);
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
 	Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
@@ -135,10 +139,10 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology Topology
 		VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, ShaderModules[3], "main", nullptr }),
 		VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_GEOMETRY_BIT, ShaderModules[4], "main", nullptr }),
 	};
-	const std::vector< VkPipelineColorBlendAttachmentState> PCBASs = {
+	const std::vector<VkPipelineColorBlendAttachmentState> PCBASs = {
 		{
-			VK_FALSE, VK_BLEND_FACTOR_ONE,
-			VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
+			VK_FALSE, 
+			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
 			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
 			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
 		},

@@ -123,28 +123,27 @@ std::string DX::GetFormatString(const DXGI_FORMAT Format)
 
 void DX::CreateUploadResource(ID3D12Resource** Resource, const size_t Size)
 {
-	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
-	const D3D12_RESOURCE_DESC ResourceDesc = {
+	const DXGI_SAMPLE_DESC SD = { 1, 0 };
+	const D3D12_RESOURCE_DESC RD = {
 		D3D12_RESOURCE_DIMENSION_BUFFER,
 		0,
-		Size, 1,
-		1,
-		1,
+		Size, 1, //!< Widthに「バッファサイズ」を指定して、Heightは1にしておく
+		1, 1,
 		DXGI_FORMAT_UNKNOWN,
-		SampleDesc,
-		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+		SD,
+		D3D12_TEXTURE_LAYOUT_ROW_MAJOR, //!< ROW_MAJORにすること
 		D3D12_RESOURCE_FLAG_NONE
 	};
-	const D3D12_HEAP_PROPERTIES HeapProperties = {
+	const D3D12_HEAP_PROPERTIES HP = {
 		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること (Must be UPLOAD)
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
 		0,// CreationNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 		0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP,
 		D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc,
+		&RD,
 		D3D12_RESOURCE_STATE_GENERIC_READ, //!< GENERIC_READ にすること (Must be GENERIC_READ)
 		nullptr,
 		IID_PPV_ARGS(Resource)
@@ -218,29 +217,28 @@ void DX::ExecuteCopyTexture(ID3D12Resource* DstResource, ID3D12CommandAllocator*
 
 void DX::CreateDefaultResource(ID3D12Resource** Resource, const size_t Size)
 {
-	const DXGI_SAMPLE_DESC SampleDesc = { 1, 0 };
-	const D3D12_RESOURCE_DESC ResourceDesc = {
+	const DXGI_SAMPLE_DESC SD = { 1, 0 };
+	const D3D12_RESOURCE_DESC RD = {
 		D3D12_RESOURCE_DIMENSION_BUFFER,
 		0,
-		Size, 1,
-		1,
-		1,
+		Size, 1, //!< Widthに「バッファサイズ」を指定して、Heightは1にしておく
+		1, 1,
 		DXGI_FORMAT_UNKNOWN,
-		SampleDesc,
-		D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+		SD,
+		D3D12_TEXTURE_LAYOUT_ROW_MAJOR, //!< ROW_MAJORにすること
 		D3D12_RESOURCE_FLAG_NONE
 	};
-	const D3D12_HEAP_PROPERTIES HeapProperties = {
-		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること Must be DEFAULT
+	const D3D12_HEAP_PROPERTIES HP = {
+		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること (Must be DEFAULT)
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
 		0,// CreationNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 		0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties,
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP,
 		D3D12_HEAP_FLAG_NONE,
-		&ResourceDesc,
-		D3D12_RESOURCE_STATE_COMMON, //!< COMMON にすること Must be COMMON
+		&RD,
+		D3D12_RESOURCE_STATE_COMMON, //!< COMMON にすること (Must be COMMON)
 		nullptr,
 		IID_PPV_ARGS(Resource)
 	));
@@ -961,7 +959,7 @@ void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_
 	COM_PTR<ID3DBlob> ErrorBlob;
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RSD, D3D_ROOT_SIGNATURE_VERSION_1_0, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
 
-	//!< #DX_TODO RootSignature1.1を使用する場合はD3D12_ROOT_SIGNATURE_DESC1を使用し、D3D_ROOT_SIGNATURE_VERSION_1_1指定で作成すること
+	//!< #DX_TODO RootSignature1.1を使用する場合は、CheckFeatureSupport()で利用可能かチェックした上でD3D12_ROOT_SIGNATURE_DESC1を使用し、D3D_ROOT_SIGNATURE_VERSION_1_1指定で作成すること
 #if 0
 	D3D12_FEATURE_DATA_ROOT_SIGNATURE FDRS;
 	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, reinterpret_cast<void*>(&FDRS), sizeof(FDRS))); //!< CheckFeatureSupport()でちゃんと取れない… #DX_TODO
@@ -1037,17 +1035,21 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 	};
 
 	//!< ブレンド (Blend)
+	//!< 例) 
+	//!< ブレンド	: Src * A + Dst * (1 - A)	= Src:D3D12_BLEND_SRC_ALPHA, Dst:D3D12_BLEND_INV_SRC_ALPHA, Op:D3D12_BLEND_OP_ADD
+	//!< 加算		: Src * 1 + Dst * 1			= Src:D3D12_BLEND_ONE, Dst:D3D12_BLEND_ONE, Op:D3D12_BLEND_OP_ADD
+	//!< 乗算		: Src * 0 + Dst * Src		= Src:D3D12_BLEND_ZERO, Dst:D3D12_BLEND_SRC_COLOR, Op:D3D12_BLEND_OP_ADD
 	const D3D12_RENDER_TARGET_BLEND_DESC RTBD = {
 		FALSE, FALSE, //!< ブレンド有効かどうか、論理演算有効かどうか (同時にTRUEにはできない)
-		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD, //!< ブレンド Src, Dst, Op
-		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD, //!< アルファ Src, Dst, Op
+		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD, //!< ブレンド Src(新規), Dst(既存), Op
+		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD, //!< アルファ Src(新規), Dst(既存), Op
 		D3D12_LOGIC_OP_NOOP, //!< 論理演算
 		D3D12_COLOR_WRITE_ENABLE_ALL, //!< 書き込み時のマスク値
 	};
 	const D3D12_BLEND_DESC BD = {
-		FALSE, //!< AlphaToCoverageEnable
-		FALSE, //!< IndependentBlendEnable
-		{ RTBD/*, ... x8*/ } //!< レンダーターゲットの分だけ #DX_TODO ... MRT
+		TRUE, //!< マルチサンプルを考慮したアルファテスト(AlphaToCoverageEnable)、アルファが0の箇所には無駄に書き込まない
+		FALSE, //!< マルチレンダーターゲットにそれぞれ別のブレンドステートを割り当てる(IndependentBlendEnable)
+		{ RTBD, } //!< TRUE==IndependentBlendEnableの場合、レンダーターゲットの分だけ用意すること #DX_TODO
 	};
 
 	//!< インプットレイアウト (InputLayout)

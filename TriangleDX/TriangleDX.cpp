@@ -233,11 +233,21 @@ void TriangleDX::CreateVertexBuffer()
 {
 	VertexBufferResources.resize(1);
 
+#if 1
 	const std::array<Vertex_PositionColor, 3> Vertices = { {
 		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
 		{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } }, //!< LB
 		{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }, //!< RB
 	} };
+#else
+	//!< ピクセル指定
+	const FLOAT W = 1280.0f, H = 720.0f;
+	const std::array<Vertex_PositionColor, 3> Vertices = { {
+		{ { W * 0.5f, 100.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
+		{ { W * 0.5f - 200.0f, H - 100.0f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } }, //!< LB
+		{ { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }, //!< RB
+	} };
+#endif
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
 
@@ -284,9 +294,6 @@ void TriangleDX::PopulateCommandList(const size_t i)
 		const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
 		const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
 
-#ifdef USE_ROOT_CONSTANTS
-		BCL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(Color.size()), Color.data(), 0);
-#endif
 		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 		assert(!VertexBufferViews.empty() && "");
@@ -313,7 +320,9 @@ void TriangleDX::PopulateCommandList(const size_t i)
 
 
 		CL->SetGraphicsRootSignature(RS);
-
+#ifdef USE_ROOT_CONSTANTS
+		CL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(Color.size()), Color.data(), 0);
+#endif
 		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
 		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
 

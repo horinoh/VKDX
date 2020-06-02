@@ -131,13 +131,13 @@ void main()
 #elif 0
 	//!< 輪郭検出 (Edge detection)
 	const vec2 Center = ToHue(texture(Sampler2D, InTexcoord).rgb);
-	const vec2 d = InTexcoord / max(gl_FragCoord.xy, vec2(1.0f, 1.0f)); //!< スクリーンサイズ(gl_FragCoord.xy / InTexcoord)の逆数
-	const vec2 Ndx = ToHue(texture(Sampler2D, InTexcoord + d.x * vec2(-1.0f,  0.0f)).rgb) - Center;
-	const vec2 Pdx = ToHue(texture(Sampler2D, InTexcoord + d.x * vec2( 1.0f,  0.0f)).rgb) - Center;
-	const vec2 Ndy = ToHue(texture(Sampler2D, InTexcoord + d.y * vec2( 0.0f, -1.0f)).rgb) - Center;
-	const vec2 Pdy = ToHue(texture(Sampler2D, InTexcoord + d.y * vec2( 0.0f,  1.0f)).rgb) - Center;
+	const vec2 Inv = InTexcoord / max(gl_FragCoord.xy, vec2(1.0f, 1.0f)); //!< スクリーンサイズ(gl_FragCoord.xy / InTexcoord)の逆数
+	const vec2 Ndx = ToHue(texture(Sampler2D, InTexcoord + Inv.x * vec2(-1.0f,  0.0f)).rgb) - Center;
+	const vec2 Pdx = ToHue(texture(Sampler2D, InTexcoord + Inv.x * vec2( 1.0f,  0.0f)).rgb) - Center;
+	const vec2 Ndy = ToHue(texture(Sampler2D, InTexcoord + Inv.y * vec2( 0.0f, -1.0f)).rgb) - Center;
+	const vec2 Pdy = ToHue(texture(Sampler2D, InTexcoord + Inv.y * vec2( 0.0f,  1.0f)).rgb) - Center;
 	float C = dot(Ndx, Ndx) + dot(Pdx, Pdx) + dot(Ndy, Ndy) + dot(Pdy, Pdy);	
-	OutColor = 1.0f - vec4(C, C, C, 1.0f);
+	OutColor = 1.0f - vec4(C, C, C, 0.0f);
 #elif 0
 	//!< ガウスフィルタ (GaussianFilter) ... 本来は2パス必要
 	OutColor = vec4(GaussianFilterH(Sampler2D, ivec2(gl_FragCoord.xy)), 1.0f);

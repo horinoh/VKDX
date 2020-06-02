@@ -28,16 +28,19 @@ protected:
 	}
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFs(); }
 	virtual void CreatePipelines() override {
+		const uint32_t Binding0 = 0, Binding1 = 1;
 		const std::vector<VkVertexInputBindingDescription> VIBDs = { {
-			{ 0, sizeof(Vertex_PositionColor), VK_VERTEX_INPUT_RATE_VERTEX },
-			{ 1, sizeof(Instance_OffsetXY), VK_VERTEX_INPUT_RATE_INSTANCE },
+			//!< 頂点毎 (Per Vertex)
+			{ Binding0, sizeof(Vertex_PositionColor), VK_VERTEX_INPUT_RATE_VERTEX },
+			//!< インスタンス毎 (Per Instance)
+			{ Binding1, sizeof(Instance_OffsetXY), VK_VERTEX_INPUT_RATE_INSTANCE },
 		} };
 		const std::vector<VkVertexInputAttributeDescription> VIADs = { {
-			//!< Per Vertex
-			{ 0, 0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_PositionColor, Position) },
-			{ 1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Vertex_PositionColor, Color) },
-			//!< Per Instance
-			{ 2, 1, VK_FORMAT_R32G32_SFLOAT, offsetof(Instance_OffsetXY, Offset) },
+			//!< 頂点毎 (Per Vertex)
+			{ 0, Binding0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_PositionColor, Position) },
+			{ 1, Binding0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Vertex_PositionColor, Color) },
+			//!< インスタンス毎 (Per Instance)
+			{ 2, Binding1, VK_FORMAT_R32G32_SFLOAT, offsetof(Instance_OffsetXY, Offset) },
 		} };
 		CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE, VIBDs, VIADs);
 	}

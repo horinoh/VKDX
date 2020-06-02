@@ -82,12 +82,13 @@
 #### GLM
 * https://github.com/g-truc/glm
 * ~~同じ階層に GLM をクローンして~~サブモジュール化してある **..\\..\glm** にインクルードパスを通した
-* マトリクスの乗算順序が glm と DirectXMath では異なるので注意
-	- B44 * A44(glm) == A44 * B44(DiirectXMath)
-		- GLSL : Colum Major (PVW)
-		- HLSL : Column Major
-		- glm : Column Major
-		- DirectXMath : Row Major (WVP)	
+* マトリクスの乗算順序が DirectXMath では異なるので注意
+	- GLSL : 列優先 (Row Major)
+	- HLSL : 列優先 (Row Major)
+	- glm : 列優先 (Row Major)
+		- Projection * View * World
+	- DirectXMath : 行優先 (Column Major)
+		- World * View * Projection
 #### GLI
 * https://github.com/g-truc/gli
 * ~~同じ階層に GLI をクローンして~~サブモジュール化してある **..\\..\gli** にインクルードパスを通した
@@ -255,6 +256,11 @@
 		~~~
 		fxc /T rootsig_1_1 /E RS $(ProjectName).rs.hlsl /Fo $(ProjectName).rs.cso
 		~~~
+* D3D12_SHADER_VISIBILITY_ALLについて
+	* ハードウェアによってはコストがかかる
+	* バインド名を様々なステージで使えなくなる
+		- ALLにしなければ、t0:SHADER_VISIBILITY_VERTEX と t0:SHADER_VISIBILITY_PIXEL が使える
+
 <!--
 	* Properties - HLSLCompiler - General - Shader Type を Generate Root Signature Object にする (しなくても大丈夫だが一応しておく)
 	* Properties - HLSLCompiler - All Options - Entry Point Name に main とあるのを消す (しなくても大丈夫だが一応しておく)
@@ -437,6 +443,7 @@ TODO
 	* HDR対応
 	* メッシュシェーダ
 	* レイトレーシング
+	* マルチGPUの場合の処理
  --> 
 
 <!--

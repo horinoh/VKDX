@@ -176,10 +176,10 @@ protected:
 #ifdef USE_SCREENSPACE_WIREFRAME
 		const auto ShaderPath = GetBasePath();
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("WireFrame.frag.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_wf.frag.spv")).data()));
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tese.spv")).data()));
 		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tesc.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("WireFrame.geom.spv")).data()));
+		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_wf.geom.spv")).data()));
 #else
 		CreateShaderModle_VsFsTesTcsGs();
 #endif

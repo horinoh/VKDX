@@ -285,9 +285,9 @@ void DeferredDX::PopulateCommandList(const size_t i)
 #pragma endregion
 				CL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(Rects.size()), Rects.data());
 			}
-
 			{
 				RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart();
+#if 1
 				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 4> RtvDHs = {
 					RtvCDH,
 					RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
@@ -295,8 +295,12 @@ void DeferredDX::PopulateCommandList(const size_t i)
 					RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
 				};
 				CL->OMSetRenderTargets(static_cast<UINT>(RtvDHs.size()), RtvDHs.data(), FALSE, &DsvDH);
+#else
+				//!< 「連続している」場合は、「個数」と「先頭アドレス」を指定して「RTsSingleHandleToDescriptorRange==TRUE」でも良い
+				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RtvDHs = { RtvCDH, };
+				CL->OMSetRenderTargets(4, RtvDHs.data(), TRUE, &DsvDH);
+#endif
 			}
-
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };

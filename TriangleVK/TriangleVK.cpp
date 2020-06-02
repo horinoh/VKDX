@@ -233,6 +233,7 @@ void TriangleVK::CreateVertexBuffer()
 {
 	VertexBuffers.resize(1);
 
+#if 1
 	const std::array<Vertex_PositionColor, 3> Vertices = { {
 #ifdef USE_VIEWPORT_Y_UP
 		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
@@ -244,6 +245,15 @@ void TriangleVK::CreateVertexBuffer()
 		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
 #endif
 	} };
+#else
+	//!< ピクセル指定
+	const float W = 1280.0f, H = 720.0f;
+	const std::array<Vertex_PositionColor, 3> Vertices = { {
+		{ { W * 0.5f, 100.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
+		{ { W * 0.5f - 200.0f, H - 100.0f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } }, //!< LB
+		{ { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }, //!< RB
+	} };
+#endif
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 	

@@ -26,7 +26,7 @@ float3 ToHDR10(const float3 In)
 }
 #endif
 
-float4 main(IN In) : SV_TARGET
+float4 main(IN In) : SV_TARGET //!< ここでの出力はラスタライザが使用する情報(システム情報)なので"SV_"を付ける
 {
 	return In.Color;
 	//return float4(ToHDR10(In.Color.rgb).rgb, In.Color.a);
