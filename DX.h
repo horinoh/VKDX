@@ -37,6 +37,9 @@
 #include <initguid.h>
 #include <d3d12.h>
 #include <d3dcompiler.h>
+#include <dxcapi.h>
+//!< DirectXShaderCompiler\include\dxc\DxilContainer\DxilContainer.h ‚É’è‹`‚ª‘¶Ý‚·‚é‚Ì‚ð‚±‚±‚ÖˆÚA
+#define DXIL_FOURCC(ch0, ch1, ch2, ch3) ((uint32_t)(uint8_t)(ch0) | (uint32_t)(uint8_t)(ch1) << 8  | (uint32_t)(uint8_t)(ch2) << 16  | (uint32_t)(uint8_t)(ch3) << 24)
 #include <DXGI1_6.h>
 
 #include <DirectXMath.h>

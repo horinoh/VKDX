@@ -14,6 +14,9 @@ public:
 	void CreateIndirectBuffer_DrawIndexed(const UINT IndexCount, const UINT InstanceCount);
 	void CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT Z);
 
+#ifdef USE_SHADER_REFLECTION
+	void PrintShaderReflection(ID3DBlob* Blob);
+#endif
 	void CreateShaderBlob_VsPs();
 	void CreateShaderBlob_VsPsDsHsGs();
 	void CreateShaderBlob_Cs();

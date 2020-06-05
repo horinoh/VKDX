@@ -44,6 +44,7 @@
 //#define USE_SKY_DOME //!< CubeMapDX, CubeMapVK
 #define USE_GBUFFER_VISUALIZE //!< DeferredDX, DeferredVK
 #define USE_SHADOWMAP_VISUALIZE //!< ShadowMapDX, ShadowMapVK
+#define USE_SHADER_REFLECTION
 
 #define ALWAYS_REBUILD_PIPELINE
 
