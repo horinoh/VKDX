@@ -91,7 +91,6 @@ protected:
 			assert(!StaticSamplerDescs.empty() && "");
 #ifdef USE_SHADOWMAP_VISUALIZE
 			const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs = { {
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
 				{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND },
 			} };
 			DX::SerializeRootSignature(Blob, {
@@ -136,120 +135,92 @@ protected:
 			0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 		};
 		const DXGI_SAMPLE_DESC SD = { 1, 0 };
-		//!< レンダーターゲット : 深度(RenderTarget : Depth)
-		{
-			ImageResources.push_back(COM_PTR<ID3D12Resource>());
-			const D3D12_RESOURCE_DESC RD = {
-				D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				0,
-				static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
-				1,
-				1,
-				DXGI_FORMAT_R32_FLOAT,
-				SD,
-				D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
-			};
-			const D3D12_CLEAR_VALUE CV = { RD.Format, { DirectX::Colors::Red.f[0], DirectX::Colors::Red.f[1], DirectX::Colors::Red.f[2], DirectX::Colors::Red.f[3] } };
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
-		}
-		{
-			ImageResources.push_back(COM_PTR<ID3D12Resource>());
-			const D3D12_RESOURCE_DESC RD = {
-				D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				0,
-				static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
-				1,
-				1,
-				DXGI_FORMAT_D24_UNORM_S8_UINT,
-				SD,
-				D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
-			};
-			D3D12_CLEAR_VALUE CV = { RD.Format, { 1.0f, 0 } };
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
-		}
+		const D3D12_RESOURCE_DESC RD = {
+			D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+			0,
+			static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), // 2048, 2048,
+			1,
+			1,
+			DXGI_FORMAT_D24_UNORM_S8_UINT,
+			SD,
+			D3D12_TEXTURE_LAYOUT_UNKNOWN,
+			D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
+		};
+		D3D12_CLEAR_VALUE CV = { RD.Format, { 1.0f, 0 } };
+		//!< パス0
+		ImageResources.push_back(COM_PTR<ID3D12Resource>());
+		VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+		//!< パス1
+#ifndef USE_SHADOWMAP_VISUALIZE
+		ImageResources.push_back(COM_PTR<ID3D12Resource>());
+		VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+#endif
 	}
 
 	virtual void CreateDescriptorHeap() override {
-		//!< パス0 : レンダーターゲット
 		{
-			{
-				CbvSrvUavDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
-			}
-			{
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				RtvDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps.back())));
-			}
-			{
-				DsvDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.back())));
-			}
-		}
-		//!< パス1
-		{
-			{
-				CbvSrvUavDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
+			CbvSrvUavDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
+			//!< パス0 + パス1
 #ifdef USE_SHADOWMAP_VISUALIZE
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1 + 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< CBV + SRV
 #else
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1 + 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
-#endif					
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
-			}
-#ifndef USE_SHADOWMAP_VISUALIZE
-			{
-				DsvDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.back())));
-			}
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1 + 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< CBV + SRV, CBV
 #endif
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
+		}
+		{
+			DsvDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
+			//!< パス0 + パス1
+#ifdef USE_SHADOWMAP_VISUALIZE
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1 + 0, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 }; //!< DSV + 
+#else
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1 + 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 }; //!< DSV + DSV
+#endif
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.back())));
 		}
 	}
 	virtual void CreateDescriptorView() override {
-		//!< パス0 : レンダーターゲットビュー
 		{
-			{
-				const auto& DH = CbvSrvUavDescriptorHeaps[0];
-				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-				assert(!ConstantBufferResources.empty() && "");
-				const auto CBR = ConstantBufferResources[0];
-				assert(CBR->GetDesc().Width == RoundUp256(sizeof(Tr)) && "");
-				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(CBR)->GetGPUVirtualAddress(), static_cast<UINT>(CBR->GetDesc().Width) };
-				Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-			}
-			{
-				const auto& DH = RtvDescriptorHeaps[0];
-				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-			}
-			{
-				const auto& DH = DsvDescriptorHeaps[0];
-				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-			}
-		}
-		//!< パス1 : シェーダリソースビュー
-		{
-			const auto& DH = CbvSrvUavDescriptorHeaps[1];
+			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-			{
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-			}
+
+			assert(!ConstantBufferResources.empty() && "");
+			const auto CBR = ConstantBufferResources[0];
+			assert(CBR->GetDesc().Width == RoundUp256(sizeof(Tr)) && "");
+			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = {
+				COM_PTR_GET(CBR)->GetGPUVirtualAddress(),
+				static_cast<UINT>(CBR->GetDesc().Width)
+			};
+
+			//!< パス0
+			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+
+			//!< パス1
+			const auto RD = ImageResources[0]->GetDesc();
+			assert(DXGI_FORMAT_D24_UNORM_S8_UINT == RD.Format && "");
+			assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension && "");
+			D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
+				DXGI_FORMAT_R24_UNORM_X8_TYPELESS,
+				D3D12_SRV_DIMENSION_TEXTURE2D,
+				D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+			};
+			SRVD.Texture2D = { 0, RD.MipLevels, 0, 0.0f };
+			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
+
 #ifndef USE_SHADOWMAP_VISUALIZE
-			{
-				const auto CBR = ConstantBufferResources[0];
-				assert(CBR->GetDesc().Width == RoundUp256(sizeof(Tr)) && "");
-				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(CBR)->GetGPUVirtualAddress(), static_cast<UINT>(CBR->GetDesc().Width) };
-				Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-			}
+			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+#endif
+		}
+		{
+			const auto& DH = DsvDescriptorHeaps[0];
+			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+
+			//!< パス0
+			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
+
+			//!< パス1
+#ifndef USE_SHADOWMAP_VISUALIZE
+			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
 #endif
 		}
 	}
@@ -416,9 +387,7 @@ protected:
 		};
 #endif
 		const std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs = {};
-		const std::vector<DXGI_FORMAT> RTVs_0 = {
-			DXGI_FORMAT_R32_FLOAT,
-		};
+		const std::vector<DXGI_FORMAT> RTVs_0 = {};
 		const std::vector<DXGI_FORMAT> RTVs_1 = { DXGI_FORMAT_R8G8B8A8_UNORM };
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
@@ -428,14 +397,14 @@ protected:
 #ifdef USE_SHADOWMAP_VISUALIZE
 		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD_0, DSD_1, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs_1, &PLS, TEXT("1")));
 #else
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD_1, DSD_0, SBCs_1[0], SBCs_1[1], SBCs_1[2], SBCs_1[3], SBCs_1[4], IEDs, RTVs_0, &PLS, TEXT("1")));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD_1, DSD_0, SBCs_1[0], SBCs_1[1], SBCs_1[2], SBCs_1[3], SBCs_1[4], IEDs, RTVs_1, &PLS, TEXT("1")));
 #endif
 #else
 		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD_0, DSD_0, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, RTVs_0, nullptr, nullptr));
 #ifdef USE_SHADOWMAP_VISUALIZE
 		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD_0, DSD_1, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs_1, nullptr, nullptr));
 #else
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD_1, DSD_0, SBCs_1[0], SBCs_1[1], SBCs_1[2], SBCs_1[3], SBCs_1[4], IEDs, RTVs_0, nullptr, nullptr));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD_1, DSD_0, SBCs_1[0], SBCs_1[1], SBCs_1[2], SBCs_1[3], SBCs_1[4], IEDs, RTVs_1, nullptr, nullptr));
 #endif
 #endif	
 		for (auto& i : Threads) { i.join(); }

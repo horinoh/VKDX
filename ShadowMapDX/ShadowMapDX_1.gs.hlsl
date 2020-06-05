@@ -1,7 +1,6 @@
 struct IN
 {
 	float3 Position : POSITION;
-	float2 Texcoord : TEXCOORD0;
 };
 
 cbuffer Transform : register(b0, space0) { float4x4 Projection; float4x4 View; float4x4 World; float4x4 LightProjection; float4x4 LightView; };

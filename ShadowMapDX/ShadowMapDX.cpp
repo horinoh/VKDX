@@ -276,33 +276,31 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 		{
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-			const auto RtvDH = RtvDescriptorHeaps[0];
-			auto RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart();
-			const auto DsvDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+			const auto& DsvDH = DsvDescriptorHeaps[0];
+			const auto DsvCDH = DsvDH->GetCPUDescriptorHandleForHeapStart();
 			{
 				const std::array<D3D12_RECT, 0> Rects = {};
-				CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::Red, static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
-				CL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(Rects.size()), Rects.data());
+				CL->ClearDepthStencilView(DsvCDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(Rects.size()), Rects.data()); //!< DSV(0)
 			}
 			{
-				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RtvDHs = { RtvDH->GetCPUDescriptorHandleForHeapStart() };
-				CL->OMSetRenderTargets(static_cast<UINT>(RtvDHs.size()), RtvDHs.data(), FALSE, &DsvDH);
+				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 0> RtvDHs = {};
+				CL->OMSetRenderTargets(static_cast<UINT>(RtvDHs.size()), RtvDHs.data(), FALSE, &DsvCDH); //!< DSV(0)
 			}
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
 				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
 
-				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-				CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				auto GDH = DH->GetGPUDescriptorHandleForHeapStart(); 
+				CL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV(0)
 			}
 			CL->ExecuteBundle(BCL0);
 		}
 
-		//!< リソースバリア : D3D12_RESOURCE_STATE_RENDER_TARGET -> D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+		//!< リソースバリア
 		{
 			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SCR = { SCR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET };
-			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_IR = { IR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE };
+			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_IR = { IR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE };
 			const std::array<D3D12_RESOURCE_BARRIER, 2> RBs = { {
 				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_SCR },
 				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_IR },
@@ -314,33 +312,45 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 		{
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
-			auto ScCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); ScCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+			auto ScCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); ScCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);			
 #ifndef USE_SHADOWMAP_VISUALIZE
+			const auto& DsvDH = DsvDescriptorHeaps[0];
+			auto DsvCDH = DsvDH->GetCPUDescriptorHandleForHeapStart();
+			DsvCDH.ptr += Device->GetDescriptorHandleIncrementSize(DsvDH->GetDesc().Type); 
 			{
 				const std::array<D3D12_RECT, 0> Rects = {};
 				CL->ClearRenderTargetView(ScCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rects.size()), Rects.data());
-				const auto DsvDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-				CL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(Rects.size()), Rects.data());
+				CL->ClearDepthStencilView(DsvCDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(Rects.size()), Rects.data()); //!< DSV(1)
 			}
 #endif
 			{
 				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RtvDHs = { ScCDH };
+#ifdef USE_SHADOWMAP_VISUALIZE
 				CL->OMSetRenderTargets(static_cast<UINT>(RtvDHs.size()), RtvDHs.data(), FALSE, nullptr);
+#else
+				CL->OMSetRenderTargets(static_cast<UINT>(RtvDHs.size()), RtvDHs.data(), FALSE, &DsvCDH); //!< DSV(1)
+#endif
 			}
 			{
-				const auto& DH = CbvSrvUavDescriptorHeaps[1];
+				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
 				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
-				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-				CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+
+				auto GDH = DH->GetGPUDescriptorHandleForHeapStart(); 
+				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				CL->SetGraphicsRootDescriptorTable(0, GDH); //!< SRV(1)
+				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#ifndef USE_SHADOWMAP_VISUALIZE
+				CL->SetGraphicsRootDescriptorTable(1, GDH); //!< CBV(2)
+#endif
 			}
 			CL->ExecuteBundle(BCL1);
 		}
 
-		//!< リソースバリア : D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE -> D3D12_RESOURCE_STATE_RENDER_TARGET
+		//!< リソースバリア
 		{
 			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SCR = { SCR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT };
-			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_IR = { IR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET };
+			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_IR = { IR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_DEPTH_WRITE };
 			const std::array<D3D12_RESOURCE_BARRIER, 2> RBs = { {
 				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_SCR },
 				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_IR },
