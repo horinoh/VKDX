@@ -40,56 +40,23 @@ protected:
 		};
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &SCBAI, &SecondaryCommandBuffers[PrevCount]));
 	}
-	virtual void CreateFramebuffer() override {
-		//!< パス0 : フレームバッファ
-		{
-			assert(1 + 1 == ImageViews.size() && "");
-			Framebuffers.push_back(VkFramebuffer());
-			VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				ImageViews[0],
-				//!< 深度バッファ(Depth Buffer)
-				ImageViews[1],
-			});
-		}
-
-		//!< パス1 : フレームバッファ
-		{
-			for (auto i : SwapchainImageViews) {
-				Framebuffers.push_back(VkFramebuffer());
-				VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
-			}
-		}
-	}
 	virtual void CreateRenderPass() override {
 		//!< パス0 : レンダーパス
 		{
 			RenderPasses.push_back(VkRenderPass());
-			const std::array<VkAttachmentReference, 1> ColorAttach = { {
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
-			} };
+			const std::array<VkAttachmentReference, 0> ColorAttach = { { } };
 			const VkAttachmentReference DepthAttach = { static_cast<uint32_t>(ColorAttach.size()), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 			VK::CreateRenderPass(RenderPasses.back(), {
-				//!< アタッチメント(Attachment)
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				{
-					0,
-					VK_FORMAT_R32_SFLOAT,
-					VK_SAMPLE_COUNT_1_BIT,
-					VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-				},
-				//!< 深度バッファ(Depth Buffer)
-				{
-					0,
-					DepthFormat,
-					VK_SAMPLE_COUNT_1_BIT,
-					VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-				},
+					//!< アタッチメント(Attachment)
+					//!< 深度バッファ(Depth Buffer)
+					{
+						0,
+						DepthFormat,
+						VK_SAMPLE_COUNT_1_BIT,
+						VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+						VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+						VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+					},
 				}, {
 					//!< サブパス(SubPass)
 					{
@@ -102,6 +69,23 @@ protected:
 					},
 				}, {
 					//!< サブパス依存
+#if 0
+						dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+		dependencies[0].dstSubpass = 0;
+		dependencies[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		dependencies[0].dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+		dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		dependencies[0].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+		dependencies[1].srcSubpass = 0;
+		dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+		dependencies[1].srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+		dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		dependencies[1].srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+		dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+#endif
 				});
 		}
 		//!< パス1 : レンダーパス
@@ -109,15 +93,19 @@ protected:
 			RenderPasses.push_back(VkRenderPass());
 			const std::array<VkAttachmentReference, 1> ColorAttach = { { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, } };
 			VK::CreateRenderPass(RenderPasses.back(), {
-				//!< アタッチメント
-				{
-					0,
-					ColorFormat,
-					VK_SAMPLE_COUNT_1_BIT,
-					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
-					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-				},
+					//!< アタッチメント
+					{
+						0,
+						ColorFormat,
+						VK_SAMPLE_COUNT_1_BIT,
+#ifdef USE_SHADOWMAP_VISUALIZE
+						VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
+#else
+						VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+#endif
+						VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+						VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+					},
 				}, {
 					//!< サブパス
 					{
@@ -133,6 +121,25 @@ protected:
 				});
 		}
 	}
+	virtual void CreateFramebuffer() override {
+		//!< パス0 : フレームバッファ
+		{
+			assert(1 == ImageViews.size() && "");
+			Framebuffers.push_back(VkFramebuffer());
+			VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
+				//!< 深度バッファ(Depth Buffer)
+				ImageViews[0],
+			});
+		}
+
+		//!< パス1 : フレームバッファ
+		{
+			for (auto i : SwapchainImageViews) {
+				Framebuffers.push_back(VkFramebuffer());
+				VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
+			}
+		}
+	}
 	virtual void CreateIndirectBuffer() override {
 		//!< パス0 : インダイレクトバッファ(シャドウキャスタ描画用)
 		CreateIndirectBuffer_DrawIndexed(1, 1);
@@ -144,10 +151,7 @@ protected:
 		CreateIndirectBuffer_DrawIndexed(1, 2);
 #endif
 	}
-	virtual void CreateDescriptorSetLayout() override {
-		assert(!Samplers.empty() && "");
-		const std::array<VkSampler, 1> ISs = { Samplers[0] };
-
+	virtual void CreateDescriptorSetLayout() override {		
 		//!< パス0 : デスクリプタセットレイアウト
 		{
 			DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
@@ -158,6 +162,9 @@ protected:
 
 		//!< パス1 : デスクリプタセットレイアウト
 		{
+			assert(!Samplers.empty() && "");
+			const std::array<VkSampler, 1> ISs = { Samplers[0] };
+
 			DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
 			VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
 				//!< レンダーターゲット : 深度(RenderTarget : Depth)
@@ -185,11 +192,10 @@ protected:
 	}
 
 	virtual void CreateDescriptorPool() override {
-		//!< パス0,1 : デスクリプタプール
+		//!< パス0, 1 : デスクリプタプール
 		DescriptorPools.push_back(VkDescriptorPool());
 		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
 			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 + 1 },
-			//!< レンダーターゲット : 深度(RenderTarget : Depth)
 			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
 		});
 	}
@@ -242,7 +248,6 @@ protected:
 		{
 			DescriptorUpdateTemplates.push_back(VkDescriptorUpdateTemplate());
 			VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
 				{
 					0, 0,
 					_countof(DescriptorUpdateInfo_1::DII), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -274,8 +279,7 @@ protected:
 		{
 			assert(1 <= ImageViews.size() && "");
 			const DescriptorUpdateInfo_1 DUI = {
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL },
 				{ UniformBuffers[0], Offset, VK_WHOLE_SIZE },
 			};
 			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[1], DescriptorUpdateTemplates[1], &DUI);
@@ -283,21 +287,8 @@ protected:
 	}
 
 	virtual void CreateTexture() override {
-		const VkExtent3D Extent = { SurfaceExtent2D.width, SurfaceExtent2D.height, 1 };
+		const VkExtent3D Extent = { SurfaceExtent2D.width, SurfaceExtent2D.height, 1 }; //!< 2048, 2048, 1
 		const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
-		//!< レンダーターゲット : 深度(RenderTarget : Depth)
-		{
-			const auto Format = VK_FORMAT_R32_SFLOAT;
-			Images.push_back(VkImage());
-			CreateImage(&Images.back(), 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-
-			uint32_t Idx;
-			VkDeviceSize Ofs;
-			SuballocateImageMemory(Idx, Ofs, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-			ImageViews.push_back(VkImageView());
-			CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
-		}
 		//!< 深度バッファ(Depth Buffer)
 		{
 			Images.push_back(VkImage());
@@ -308,7 +299,7 @@ protected:
 			SuballocateImageMemory(Idx, Ofs, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 			ImageViews.push_back(VkImageView());
-			CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 });
+			CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, { VK_IMAGE_ASPECT_DEPTH_BIT /*| VK_IMAGE_ASPECT_STENCIL_BIT*/, 0, 1, 0, 1 });
 		}
 	}
 	virtual void CreateImmutableSampler() override {
@@ -506,15 +497,8 @@ protected:
 #endif
 		const std::vector<VkVertexInputBindingDescription> VIBDs = {};
 		const std::vector<VkVertexInputAttributeDescription> VIADs = {};
-		const std::vector<VkPipelineColorBlendAttachmentState> PCBASs_0 = {
-			//!< レンダーターゲット : 深度(RenderTarget : Depth)
-			{
-				VK_FALSE, 
-				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-				VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-			},
-		};
+
+		const std::vector<VkPipelineColorBlendAttachmentState> PCBASs_0 = {};
 		const std::vector<VkPipelineColorBlendAttachmentState> PCBASs_1 = {
 			{
 				VK_FALSE, 
@@ -531,14 +515,14 @@ protected:
 #ifdef USE_SHADOWMAP_VISUALIZE
 		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI_0, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
 #else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_1, PDSSCI_0, &PSSCIs_1[0], &PSSCIs_1[1], &PSSCIs_1[2], &PSSCIs_1[3], &PSSCIs_1[4], VIBDs, VIADs, PCBASs_0, PCS.GetPipelineCache(0)));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_1, PDSSCI_0, &PSSCIs_1[0], &PSSCIs_1[1], &PSSCIs_1[2], &PSSCIs_1[3], &PSSCIs_1[4], VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(0)));
 #endif
 #else
 		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_0, PDSSCI_0, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0));
 #ifdef USE_SHADOWMAP_VISUALIZE
 		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI_0, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1));
 #else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_1, PDSSCI_0, &PSSCIs_1[0], &PSSCIs_1[1], &PSSCIs_1[2], &PSSCIs_1[3], &PSSCIs_1[4], VIBDs, VIADs, PCBASs_0));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_1, PDSSCI_0, &PSSCIs_1[0], &PSSCIs_1[1], &PSSCIs_1[2], &PSSCIs_1[3], &PSSCIs_1[4], VIBDs, VIADs, PCBASs_1));
 #endif
 #endif
 		for (auto& i : Threads) { i.join(); }
@@ -552,7 +536,6 @@ private:
 	};
 	struct DescriptorUpdateInfo_1
 	{
-		//!< レンダーターゲット : 深度(RenderTarget : Depth)
 		VkDescriptorImageInfo DII[1];
 		VkDescriptorBufferInfo DBI[1];
 	};

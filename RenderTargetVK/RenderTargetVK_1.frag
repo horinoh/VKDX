@@ -131,7 +131,8 @@ void main()
 #elif 0
 	//!< 輪郭検出 (Edge detection)
 	const vec2 Center = ToHue(texture(Sampler2D, InTexcoord).rgb);
-	const vec2 Inv = InTexcoord / max(gl_FragCoord.xy, vec2(1.0f, 1.0f)); //!< スクリーンサイズ(gl_FragCoord.xy / InTexcoord)の逆数
+	//const vec2 Inv = InTexcoord / max(gl_FragCoord.xy, vec2(1.0f, 1.0f)); //!< スクリーンサイズ(gl_FragCoord.xy / InTexcoord)の逆数
+	const vec2 Inv = 1.0f / textureSize(Sampler2D, 0);
 	const vec2 Ndx = ToHue(texture(Sampler2D, InTexcoord + Inv.x * vec2(-1.0f,  0.0f)).rgb) - Center;
 	const vec2 Pdx = ToHue(texture(Sampler2D, InTexcoord + Inv.x * vec2( 1.0f,  0.0f)).rgb) - Center;
 	const vec2 Ndy = ToHue(texture(Sampler2D, InTexcoord + Inv.y * vec2( 0.0f, -1.0f)).rgb) - Center;

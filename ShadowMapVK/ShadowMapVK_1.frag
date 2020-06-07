@@ -14,7 +14,7 @@ layout (set=0, binding=0) uniform sampler2DShadow Sampler2D;
 void main()
 {
 	//OutColor = vec4(texture(Sampler2D, InTexcoord).rrr, 1.0f);
-#if 0
+#if 1
 	const float ShadowFactor = textureProj(Sampler2D, InTexcoord);
 #else
 	const float ShadowFactor = (textureProjOffset(Sampler2D, InTexcoord, ivec2(-1, -1)) + textureProjOffset(Sampler2D, InTexcoord, ivec2(-1,  1)) + textureProjOffset(Sampler2D, InTexcoord, ivec2( 1,  1)) + textureProjOffset(Sampler2D, InTexcoord, ivec2( 1, -1))) * 0.25f;

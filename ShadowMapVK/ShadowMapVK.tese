@@ -23,7 +23,7 @@ vec3 GetPosition_PlaneXZ(const vec2 uv)
 
 layout (location = 0) in int [] InInstanceIndex;
 
-layout (location = 0) out vec2 OutTexcoord;
+//layout (location = 0) out vec2 OutTexcoord;
 
 layout (quads, equal_spacing, cw) in;
 void main()
@@ -34,6 +34,6 @@ void main()
 	gl_Position.xyz += GetPosition_Torus(gl_TessCoord.xy) * 0.5f * Mask[InInstanceIndex[gl_PrimitiveID]].xxx;
 	gl_Position.xyz += (GetPosition_PlaneXZ(gl_TessCoord.xy) - vec3(0.0f, 0.75f, 0.0f)) * Mask[InInstanceIndex[gl_PrimitiveID]].yyy;
 
-	OutTexcoord = vec2(gl_TessCoord.x, 1.0f - gl_TessCoord.y);
+	//OutTexcoord = vec2(gl_TessCoord.x, 1.0f - gl_TessCoord.y);
 }
 

@@ -183,6 +183,7 @@ protected:
 				RTVD.Texture2D = { 0, 0 };
 				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), &RTVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #else
+				//!< リソースのフォーマットやディメンジョンを引き継ぎ、ミップマップやスライスの最初の要素を使用するような場合は XXX_VIEW_DESC に nullptr を指定できる
 				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #endif
 			}
@@ -200,6 +201,7 @@ protected:
 				DSVD.Texture2D = { 0 };
 				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[1]), &DSVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #else
+				//!< リソースのフォーマットやディメンジョンを引き継ぎ、ミップマップやスライスの最初の要素を使用するような場合は XXX_VIEW_DESC に nullptr を指定できる
 				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #endif
 			}
@@ -220,6 +222,7 @@ protected:
 				SRVD.Texture2D = { 0, RD.MipLevels, 0, 0.0f };
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #else
+				//!< リソースのフォーマットやディメンジョンを引き継ぎ、ミップマップやスライスの最初の要素を使用するような場合は XXX_VIEW_DESC に nullptr を指定できる
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #endif
 			}

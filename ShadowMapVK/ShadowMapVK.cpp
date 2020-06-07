@@ -309,8 +309,6 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 
 			vkCmdBindPipeline(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
-			assert(2 == DescriptorSets.size() && "");
-			assert(2 == PipelineLayouts.size() && "");
 			const std::array<VkDescriptorSet, 1> DSs = { DS };
 			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
 
@@ -330,8 +328,8 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 
 		//!< パス0 : レンダーパス (シャドウキャスタ描画用)
 		{
-			std::array<VkClearValue, 1 + 1> CVs = { Colors::Red, };
-			CVs[1].depthStencil = { 1.0f, 0 };
+			std::array<VkClearValue, 1> CVs = {};
+			CVs[0].depthStencil = { 1.0f, 0 };
 			const VkRenderPassBeginInfo RPBI = {
 				VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 				nullptr,
@@ -351,22 +349,21 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 			} vkCmdEndRenderPass(CB);
 		}
 
-		//!< リソースバリア : VK_ACCESS_COLOR_ATTACHMENT_READ_BIT -> VK_ACCESS_SHADER_READ_BIT
+		//!< リソースバリア
 		{
 			const std::array<VkImageMemoryBarrier, 1> IMBs = { {
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
 				{
 					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 					nullptr,
-					VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
-					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
+					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
 					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
 					Images[0],
-					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+					{ VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 }
 				},
 			} };
 			vkCmdPipelineBarrier(CB,
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 				VK_DEPENDENCY_BY_REGION_BIT,
 				0, nullptr,
 				0, nullptr,
@@ -378,7 +375,7 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 #ifdef USE_SHADOWMAP_VISUALIZE
 			const std::array<VkClearValue, 0> CVs = {};
 #else
-			std::array<VkClearValue, 1 + 1> CVs = { Colors::SkyBlue, };
+			std::array<VkClearValue, 1 + 1> CVs = { Colors::SkyBlue };
 			CVs[1].depthStencil = { 1.0f, 0 };
 #endif
 			const VkRenderPassBeginInfo RPBI = {
