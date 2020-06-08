@@ -9,6 +9,7 @@ Texture2D Texture : register(t0, space0);
 
 float4 main(IN In) : SV_TARGET
 {
+	In.Texcoord.xyz /= In.Texcoord.w;
 #if 1
 	const float ShadowFactor = Texture.SampleCmpLevelZero(Sampler, In.Texcoord.xy, In.Texcoord.z);
 #else

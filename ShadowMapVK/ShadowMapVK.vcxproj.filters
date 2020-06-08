@@ -71,9 +71,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="ShadowMapVK.frag">
-      <Filter>Shader Files</Filter>
-    </CustomBuild>
     <CustomBuild Include="ShadowMapVK.geom">
       <Filter>Shader Files</Filter>
     </CustomBuild>

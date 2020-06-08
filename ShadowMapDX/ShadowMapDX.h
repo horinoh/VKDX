@@ -49,11 +49,11 @@ protected:
 	virtual void CreateStaticSampler() override {
 		//!< パス1 : スタティックサンプラ
 		StaticSamplerDescs.push_back({
-			D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+			D3D12_FILTER_COMPARISON_MIN_MAG_MIP_LINEAR, //!< FILTER_COMPARISON_... にすること
 			D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP, D3D12_TEXTURE_ADDRESS_MODE_WRAP,
 			0.0f,
 			0,
-			D3D12_COMPARISON_FUNC_NEVER,
+			D3D12_COMPARISON_FUNC_LESS_EQUAL, //!< 比較オペレーションを指定すること
 			D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
 			0.0f, 1.0f,
 			0, 0, D3D12_SHADER_VISIBILITY_PIXEL
@@ -314,17 +314,16 @@ protected:
 		const auto ShaderPath = GetBasePath();
 		//!< パス0 : シェーダブロブ
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs[0])));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[1])));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), COM_PTR_PUT(ShaderBlobs[2])));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), COM_PTR_PUT(ShaderBlobs[3])));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), COM_PTR_PUT(ShaderBlobs[4])));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), COM_PTR_PUT(ShaderBlobs[1])));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), COM_PTR_PUT(ShaderBlobs[2])));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), COM_PTR_PUT(ShaderBlobs[3])));
 		//!< パス1 : シェーダブロブ
 #ifdef USE_SHADOWMAP_VISUALIZE
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_sm_1.vs.cso")).data(), COM_PTR_PUT(ShaderBlobs[5])));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_sm_1.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[6])));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_sm_1.vs.cso")).data(), COM_PTR_PUT(ShaderBlobs[4])));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_sm_1.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[5])));
 #else
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_1.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[5])));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_1.gs.cso")).data(), COM_PTR_PUT(ShaderBlobs[6])));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_1.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[4])));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_1.gs.cso")).data(), COM_PTR_PUT(ShaderBlobs[5])));
 #endif
 	}
 	virtual void CreatePipelineStates() override {
@@ -365,25 +364,24 @@ protected:
 			FALSE, D3D12_DEFAULT_STENCIL_READ_MASK, D3D12_DEFAULT_STENCIL_WRITE_MASK,
 			DSOD, DSOD
 		};
-		const std::array<D3D12_SHADER_BYTECODE, 5> SBCs_0 = {
+		const std::array<D3D12_SHADER_BYTECODE, 4> SBCs_0 = {
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[2]->GetBufferPointer(), ShaderBlobs[2]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[3]->GetBufferPointer(), ShaderBlobs[3]->GetBufferSize() }),
-			D3D12_SHADER_BYTECODE({ ShaderBlobs[4]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() }),
 		};
 #ifdef USE_SHADOWMAP_VISUALIZE
 		const std::array<D3D12_SHADER_BYTECODE, 2> SBCs_1 = {
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[4]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[5]->GetBufferPointer(), ShaderBlobs[5]->GetBufferSize() }),
-			D3D12_SHADER_BYTECODE({ ShaderBlobs[6]->GetBufferPointer(), ShaderBlobs[6]->GetBufferSize() }),
 		};
 #else
 		const std::array<D3D12_SHADER_BYTECODE, 5> SBCs_1 = {
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }),
-			D3D12_SHADER_BYTECODE({ ShaderBlobs[5]->GetBufferPointer(), ShaderBlobs[5]->GetBufferSize() }), //!< 
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[4]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() }), //!< 
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[2]->GetBufferPointer(), ShaderBlobs[2]->GetBufferSize() }),
-			D3D12_SHADER_BYTECODE({ ShaderBlobs[3]->GetBufferPointer(), ShaderBlobs[3]->GetBufferSize() }),
-			D3D12_SHADER_BYTECODE({ ShaderBlobs[6]->GetBufferPointer(), ShaderBlobs[6]->GetBufferSize() }), //!< 
+			D3D12_SHADER_BYTECODE({ ShaderBlobs[5]->GetBufferPointer(), ShaderBlobs[5]->GetBufferSize() }), //!< 
 		};
 #endif
 		const std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs = {};
@@ -392,7 +390,7 @@ protected:
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
 		//!< パス0 : パイプラインステート
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD_0, DSD_0, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, RTVs_0, &PLS, TEXT("0")));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD_0, DSD_0, SBCs_0[0], NullShaderBC, SBCs_0[1], SBCs_0[2], SBCs_0[3], IEDs, RTVs_0, &PLS, TEXT("0")));
 		//!< パス1 : パイプラインステート
 #ifdef USE_SHADOWMAP_VISUALIZE
 		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD_0, DSD_1, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs_1, &PLS, TEXT("1")));
@@ -400,7 +398,7 @@ protected:
 		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD_1, DSD_0, SBCs_1[0], SBCs_1[1], SBCs_1[2], SBCs_1[3], SBCs_1[4], IEDs, RTVs_1, &PLS, TEXT("1")));
 #endif
 #else
-		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD_0, DSD_0, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, RTVs_0, nullptr, nullptr));
+		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD_0, DSD_0, SBCs_0[0], NullShaderBC, SBCs_0[1], SBCs_0[2], SBCs_0[3], IEDs, RTVs_0, nullptr, nullptr));
 #ifdef USE_SHADOWMAP_VISUALIZE
 		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD_0, DSD_1, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs_1, nullptr, nullptr));
 #else

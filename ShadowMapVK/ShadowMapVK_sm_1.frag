@@ -8,7 +8,7 @@ layout (location = 0) in vec2 InTexcoord;
 
 layout (location = 0) out vec4 OutColor;
 
-layout (set=0, binding=0) uniform sampler2D Sampler2D;	//!< [“x(Depth)
+layout (set=0, binding=0) uniform sampler2D Sampler2D;
 
 void main()
 {

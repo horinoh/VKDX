@@ -80,9 +80,6 @@
     <FxCompile Include="ShadowMapDX.hs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="ShadowMapDX.ps.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
     <FxCompile Include="ShadowMapDX.vs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
