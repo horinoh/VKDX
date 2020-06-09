@@ -69,23 +69,6 @@ protected:
 					},
 				}, {
 					//!< サブパス依存
-#if 0
-						dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependencies[0].dstSubpass = 0;
-		dependencies[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		dependencies[0].dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		dependencies[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		dependencies[0].dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		dependencies[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-
-		dependencies[1].srcSubpass = 0;
-		dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
-		dependencies[1].srcStageMask = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-		dependencies[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		dependencies[1].srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-		dependencies[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-		dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-#endif
 				});
 		}
 		//!< パス1 : レンダーパス
@@ -106,6 +89,16 @@ protected:
 						VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
 						VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 					},
+#ifndef USE_SHADOWMAP_VISUALIZE
+					{
+						0,
+						DepthFormat,
+						VK_SAMPLE_COUNT_1_BIT,
+						VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+						VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+						VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+					},
+#endif
 				}, {
 					//!< サブパス
 					{
@@ -124,10 +117,8 @@ protected:
 	virtual void CreateFramebuffer() override {
 		//!< パス0 : フレームバッファ
 		{
-			assert(1 == ImageViews.size() && "");
 			Framebuffers.push_back(VkFramebuffer());
 			VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
-				//!< 深度バッファ(Depth Buffer)
 				ImageViews[0],
 			});
 		}
@@ -136,7 +127,12 @@ protected:
 		{
 			for (auto i : SwapchainImageViews) {
 				Framebuffers.push_back(VkFramebuffer());
-				VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
+				VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { 
+					i,
+#ifndef USE_SHADOWMAP_VISUALIZE
+					ImageViews[1],
+#endif
+				});
 			}
 		}
 	}
@@ -289,7 +285,6 @@ protected:
 	virtual void CreateTexture() override {
 		const VkExtent3D Extent = { SurfaceExtent2D.width, SurfaceExtent2D.height, 1 }; //!< 2048, 2048, 1
 		const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
-		//!< 深度バッファ(Depth Buffer)
 		{
 			Images.push_back(VkImage());
 			CreateImage(&Images.back(), 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
@@ -299,11 +294,25 @@ protected:
 			SuballocateImageMemory(Idx, Ofs, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 			ImageViews.push_back(VkImageView());
-			CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, { VK_IMAGE_ASPECT_DEPTH_BIT /*| VK_IMAGE_ASPECT_STENCIL_BIT*/, 0, 1, 0, 1 });
+			CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 });
 		}
+#ifndef USE_SHADOWMAP_VISUALIZE
+		{
+			Images.push_back(VkImage());
+			CreateImage(&Images.back(), 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+
+			uint32_t Idx;
+			VkDeviceSize Ofs;
+			SuballocateImageMemory(Idx, Ofs, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+			ImageViews.push_back(VkImageView());
+			CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1 });
+		}
+#endif
 	}
 	virtual void CreateImmutableSampler() override {
 		//!< パス1 : イミュータブルサンプラ
+		//!< シェーダ内で sampler2DShadow を使用する場合は、比較方法(compareEnable=VK_TRUE, VK_COMPARE_OP_...)を指定すること
 		Samplers.resize(1);
 		const VkSamplerCreateInfo SCI = {
 			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -313,7 +322,7 @@ protected:
 			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
 			0.0f,
 			VK_FALSE, 1.0f,
-			VK_TRUE, VK_COMPARE_OP_LESS_OR_EQUAL, //!< 比較オペレーションを有効にし、指定すること
+			VK_TRUE, VK_COMPARE_OP_LESS_OR_EQUAL,
 			0.0f, 1.0f,
 			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
 			VK_FALSE
@@ -417,21 +426,8 @@ protected:
 	virtual void CreatePipelines() override {
 		Pipelines.resize(2);
 		std::vector<std::thread> Threads;
-		//!< PRSCI_0 : デプスバイアス無し (No depth bias)
+		//!< PRSCI_0 : デプスバイアス有り (With depth bias)
 		const VkPipelineRasterizationStateCreateInfo PRSCI_0 = {
-			VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_FALSE,
-			VK_FALSE,
-			VK_POLYGON_MODE_FILL,
-			VK_CULL_MODE_BACK_BIT,
-			VK_FRONT_FACE_COUNTER_CLOCKWISE,
-			VK_FALSE, 0.0f, 0.0f, 0.0f,
-			1.0f
-		};
-		//!< PRSCI_1 : デプスバイアス有り (With depth bias)
-		const VkPipelineRasterizationStateCreateInfo PRSCI_1 = {
 			VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 			nullptr,
 			0,
@@ -445,6 +441,19 @@ protected:
 			//!< r * depthBiasConstantFactor + m * depthBiasSlopeFactor
 			//!< depthBiasClamp : 非0.0fを指定の場合クランプが有効になる(絶対値がdepthBiasClamp以下になるようにクランプされる)
 			VK_TRUE, 1.0f, 0.0f, 1.75f,
+			1.0f
+		};
+		//!< PRSCI_1 : デプスバイアス無し (No depth bias)
+		const VkPipelineRasterizationStateCreateInfo PRSCI_1 = {
+			VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_FALSE,
+			VK_FALSE,
+			VK_POLYGON_MODE_FILL,
+			VK_CULL_MODE_BACK_BIT,
+			VK_FRONT_FACE_COUNTER_CLOCKWISE,
+			VK_FALSE, 0.0f, 0.0f, 0.0f,
 			1.0f
 		};
 #ifdef _DEBUG
@@ -511,14 +520,14 @@ protected:
 		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_0, PDSSCI_0, &PSSCIs_0[0], nullptr, &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], VIBDs, VIADs, PCBASs_0, PCS.GetPipelineCache(0)));
 		//!< パス1 : パイプライン
 #ifdef USE_SHADOWMAP_VISUALIZE
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI_0, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI_1, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
 #else
 		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_1, PDSSCI_0, &PSSCIs_1[0], &PSSCIs_1[1], &PSSCIs_1[2], &PSSCIs_1[3], &PSSCIs_1[4], VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(0)));
 #endif
 #else
 		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_0, PDSSCI_0, &PSSCIs_0[0], nullptr, &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], VIBDs, VIADs, PCBASs_0));
 #ifdef USE_SHADOWMAP_VISUALIZE
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI_0, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI_1, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1));
 #else
 		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_1, PDSSCI_0, &PSSCIs_1[0], &PSSCIs_1[1], &PSSCIs_1[2], &PSSCIs_1[3], &PSSCIs_1[4], VIBDs, VIADs, PCBASs_1));
 #endif
