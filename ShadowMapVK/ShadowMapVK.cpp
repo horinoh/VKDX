@@ -265,9 +265,15 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 			const auto PLL = PipelineLayouts[0];
 			const auto IB = IndirectBuffers[0];
 
+#if 0
 			vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 			vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
-
+#else
+			const std::array<VkViewport, 1> VPs = { { 0.0f, static_cast<float>(ShadowMapExtent.height), static_cast<float>(ShadowMapExtent.width), -static_cast<float>(ShadowMapExtent.height) } };
+			const std::array<VkRect2D, 1> SCs = { VkOffset2D({ 0, 0 }), VkExtent2D({ ShadowMapExtent.width, ShadowMapExtent.height }) };
+			vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(VPs.size()), VPs.data());
+			vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(SCs.size()), SCs.data());
+#endif
 			vkCmdBindPipeline(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
 			assert(!DescriptorSets.empty() && "");
@@ -324,10 +330,10 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
-
 		//!< パス0 : レンダーパス (シャドウキャスタ描画用)
 		{
+			const VkRect2D RenderArea = { { 0, 0 }, ShadowMapExtent };
+
 			std::array<VkClearValue, 1> CVs = {};
 			CVs[0].depthStencil = { 1.0f, 0 };
 			const VkRenderPassBeginInfo RPBI = {
@@ -372,6 +378,8 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 
 		//!< パス1 : レンダーパス(レンダーテクスチャ描画用)
 		{
+			const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
+
 #ifdef USE_SHADOWMAP_VISUALIZE
 			const std::array<VkClearValue, 0> CVs = {};
 #else

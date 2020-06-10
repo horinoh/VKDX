@@ -17,8 +17,8 @@ protected:
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
 		Super::OnTimer(hWnd, hInstance);
 
-		//Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
-		//Degree += 1.0f;
+		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(0.0f, 1.0f, 0.0f));
+		Degree += 1.0f;
 
 		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
 	}
@@ -118,7 +118,7 @@ protected:
 		//!< パス0 : フレームバッファ
 		{
 			Framebuffers.push_back(VkFramebuffer());
-			VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
+			VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[0], ShadowMapExtent.width, ShadowMapExtent.height, 1, {
 				ImageViews[0],
 			});
 		}
@@ -160,7 +160,6 @@ protected:
 		{
 			assert(!Samplers.empty() && "");
 			const std::array<VkSampler, 1> ISs = { Samplers[0] };
-
 			DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
 			VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
 				//!< レンダーターゲット : 深度(RenderTarget : Depth)
@@ -283,9 +282,10 @@ protected:
 	}
 
 	virtual void CreateTexture() override {
-		const VkExtent3D Extent = { SurfaceExtent2D.width, SurfaceExtent2D.height, 1 }; //!< 2048, 2048, 1
 		const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
 		{
+			const VkExtent3D Extent = { ShadowMapExtent.width, ShadowMapExtent.height, 1 };
+
 			Images.push_back(VkImage());
 			CreateImage(&Images.back(), 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
@@ -298,6 +298,8 @@ protected:
 		}
 #ifndef USE_SHADOWMAP_VISUALIZE
 		{
+			const VkExtent3D Extent = { SurfaceExtent2D.width, SurfaceExtent2D.height, 1 };
+
 			Images.push_back(VkImage());
 			CreateImage(&Images.back(), 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
@@ -319,7 +321,7 @@ protected:
 			nullptr,
 			0,
 			VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR,
-			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
+			VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
 			0.0f,
 			VK_FALSE, 1.0f,
 			VK_TRUE, VK_COMPARE_OP_LESS_OR_EQUAL,
@@ -379,6 +381,8 @@ protected:
 
 				const auto Projection = glm::ortho(-XRadius, XRadius, -YRadius, YRadius, 1.0f, 1.0f + ZRadius * 2.0f);
 				const auto View = glm::lookAt(Center - Z * (1.0f + ZRadius), Center, Y);
+				Tr.LightProjection = Projection;
+				Tr.LightView = View;
 #ifdef USE_SHADOWMAP_VISUALIZE
 				Tr.Projection = Projection;
 				Tr.View = View;
@@ -462,7 +466,6 @@ protected:
 		vkGetPhysicalDeviceFeatures(GetCurrentPhysicalDevice(), &PDF);
 		assert((!PRSCI_0.depthClampEnable || PDF.depthClamp) && "");
 #endif
-		//!< PDSSCI_0 : デプステスト有り (With depth test)
 		const VkPipelineDepthStencilStateCreateInfo PDSSCI_0 = {
 			VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 			nullptr,
@@ -472,12 +475,15 @@ protected:
 			VK_FALSE, { VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_NEVER, 0, 0, 0 }, { VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
 			0.0f, 1.0f
 		};
-		//!< PDSSCI_1 : デプステスト無し (No depth test)
 		const VkPipelineDepthStencilStateCreateInfo PDSSCI_1 = {
 			VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 			nullptr,
 			0,
+#ifdef USE_SHADOWMAP_VISUALIZE
 			VK_FALSE, VK_FALSE, VK_COMPARE_OP_LESS_OR_EQUAL,
+#else
+			VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS_OR_EQUAL,
+#endif
 			VK_FALSE,
 			VK_FALSE, { VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_NEVER, 0, 0, 0 }, { VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
 			0.0f, 1.0f
@@ -504,7 +510,6 @@ protected:
 #endif
 		const std::vector<VkVertexInputBindingDescription> VIBDs = {};
 		const std::vector<VkVertexInputAttributeDescription> VIADs = {};
-
 		const std::vector<VkPipelineColorBlendAttachmentState> PCBASs_0 = {};
 		const std::vector<VkPipelineColorBlendAttachmentState> PCBASs_1 = {
 			{
@@ -522,14 +527,14 @@ protected:
 #ifdef USE_SHADOWMAP_VISUALIZE
 		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI_1, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
 #else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_1, PDSSCI_0, &PSSCIs_1[0], &PSSCIs_1[1], &PSSCIs_1[2], &PSSCIs_1[3], &PSSCIs_1[4], VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(0)));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_1, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], &PSSCIs_1[2], &PSSCIs_1[3], &PSSCIs_1[4], VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(0)));
 #endif
 #else
 		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_0, PDSSCI_0, &PSSCIs_0[0], nullptr, &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], VIBDs, VIADs, PCBASs_0));
 #ifdef USE_SHADOWMAP_VISUALIZE
 		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI_1, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1));
 #else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_1, PDSSCI_0, &PSSCIs_1[0], &PSSCIs_1[1], &PSSCIs_1[2], &PSSCIs_1[3], &PSSCIs_1[4], VIBDs, VIADs, PCBASs_1));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_1, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], &PSSCIs_1[2], &PSSCIs_1[3], &PSSCIs_1[4], VIBDs, VIADs, PCBASs_1));
 #endif
 #endif
 		for (auto& i : Threads) { i.join(); }
@@ -560,5 +565,7 @@ private:
 	Transform Tr;
 	uint32_t HeapIndex;
 	VkDeviceSize Offset;
+
+	VkExtent2D ShadowMapExtent = { 2048, 2048 };
 };
 #pragma endregion

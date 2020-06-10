@@ -269,11 +269,13 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 		const auto IR = COM_PTR_GET(ImageResources[0]);
 
-		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
-
 		//!< パス0 : (シャドウキャスタ描画用)
 		{
+			const std::array<D3D12_VIEWPORT, 1> VPs = { 0.0f, 0.0f, static_cast<FLOAT>(ShadowMapExtentW), static_cast<FLOAT>(ShadowMapExtentH), 0.0f, 1.0f };
+			const std::array<D3D12_RECT, 1> SCs = { 0, 0, static_cast<LONG>(ShadowMapExtentW), static_cast<LONG>(ShadowMapExtentH) };
+			CL->RSSetViewports(static_cast<UINT>(VPs.size()), VPs.data());
+			CL->RSSetScissorRects(static_cast<UINT>(SCs.size()), SCs.data());
+
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 			const auto& DsvDH = DsvDescriptorHeaps[0];
@@ -310,6 +312,9 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 
 		//!< パス1 : (レンダーテクスチャ描画用、シャドウレシーバ描画用)
 		{
+			CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
+			CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
 			auto ScCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); ScCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);			
