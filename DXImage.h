@@ -12,4 +12,6 @@ private:
 protected:
 	virtual void LoadImage(ID3D12Resource** Resource, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) override;
 	void LoadImage_DDS(ID3D12Resource** Resource, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState);
+
+	virtual void CreateColorImage(ID3D12Resource** Resource, const D3D12_RESOURCE_STATES RS, const UINT32 Color = 0xffffffff);
 };

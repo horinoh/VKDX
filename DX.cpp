@@ -845,37 +845,6 @@ void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 	LOG_OK();
 }
 
-#if 0
-void DX::CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UINT Height)
-{
-	ImageResources.resize(1);
-
-	const D3D12_HEAP_PROPERTIES HP = {
-		D3D12_HEAP_TYPE_DEFAULT, 
-		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		D3D12_MEMORY_POOL_UNKNOWN,
-		0,// CreationNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-		0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-	};
-	const DXGI_SAMPLE_DESC SD = { 1, 0 };
-	const D3D12_RESOURCE_DESC RD = {
-		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-		0,
-		Width, Height,
-		1,
-		1,
-		Format,
-		SD,
-		D3D12_TEXTURE_LAYOUT_UNKNOWN,
-		D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
-	};
-	const D3D12_CLEAR_VALUE CV = { Format, { DirectX::Colors::SkyBlue.f[0], DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] } };
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(/*RenderTargetResource*/ImageResources[0])));
-
-	LOG_OK();
-}
-#endif
-
 void DX::ResizeDepthStencil(const DXGI_FORMAT /*DepthFormat*/, const UINT /*Width*/, const UINT /*Height*/)
 {
 	//COM_PTR_RESET(DepthStencilResource);
@@ -915,6 +884,7 @@ void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDe
 	LOG_OK();
 }
 
+#if 0
 void DX::CreateUnorderedAccessTexture()
 {
 	const UINT64 Width = 256;
@@ -941,6 +911,7 @@ void DX::CreateUnorderedAccessTexture()
 
 	LOG_OK();
 }
+#endif
 
 //!< ルートシグネチャをシリアライズしてブロブを作る
 void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags)

@@ -231,15 +231,9 @@ protected:
 #ifdef USE_DEBUG_REPORT
 	virtual void CreateDebugReportCallback();
 #endif
-	virtual void CreateSurface(
 #ifdef VK_USE_PLATFORM_WIN32_KHR
-		HWND hWnd, HINSTANCE hInstance
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-		Display* Dsp, Window Wnd
-#else
-		xcb_connection_t* Cnt, xcb_window_t Wnd
+	virtual void CreateSurface(HWND hWnd, HINSTANCE hInstance);
 #endif
-	);
 
 	virtual void EnumeratePhysicalDeviceProperties(const VkPhysicalDeviceProperties& PDP);
 	virtual void EnumeratePhysicalDeviceFeatures(const VkPhysicalDeviceFeatures& PDF);
@@ -247,9 +241,11 @@ protected:
 	virtual void EnumeratePhysicalDevice(VkInstance Instance);
 	virtual void EnumeratePhysicalDeviceLayerProperties(VkPhysicalDevice PD);
 	virtual void EnumeratePhysicalDeviceExtensionProperties(VkPhysicalDevice PD, const char* LayerName);
-	virtual void EnumerateQueueFamilyProperties(VkPhysicalDevice PD, VkSurfaceKHR Surface, std::vector<VkQueueFamilyProperties>& QFPs);
+	//virtual void EnumerateQueueFamilyProperties(VkPhysicalDevice PD, VkSurfaceKHR Surface, std::vector<VkQueueFamilyProperties>& QFPs);
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const;
-	virtual void CreateQueueFamilyPriorities(VkPhysicalDevice PD, VkSurfaceKHR Surface, const std::vector<VkQueueFamilyProperties>& QFPs, std::vector<std::vector<float>>& QueueFamilyPriorites);
+	static uint32_t FindQueueFamilyPropertyIndex(const VkQueueFlags QF, const std::vector<VkQueueFamilyProperties>& QFPs);
+	static uint32_t FindQueueFamilyPropertyIndex(const VkPhysicalDevice PD, const VkSurfaceKHR Sfc, const std::vector<VkQueueFamilyProperties>& QFPs);
+	//virtual void CreateQueueFamilyPriorities(VkPhysicalDevice PD, VkSurfaceKHR Surface, const std::vector<VkQueueFamilyProperties>& QFPs, std::vector<std::vector<float>>& QueueFamilyPriorites);
 	virtual void CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 
 	virtual void AllocateDeviceMemory();
@@ -363,7 +359,6 @@ protected:
 	};
 	const VkAllocationCallbacks* GetAllocationCallbacks() const { return nullptr/*&AllocationCallbacks*/; }
 	
-	void SetCurrentPhysicalDevice(VkPhysicalDevice PD) { CurrentPhysicalDevice = PD; vkGetPhysicalDeviceMemoryProperties(CurrentPhysicalDevice, &CurrentPhysicalDeviceMemoryProperties); }
 	virtual VkPhysicalDevice GetCurrentPhysicalDevice() const { return CurrentPhysicalDevice; }; 
 	virtual VkPhysicalDeviceMemoryProperties GetCurrentPhysicalDeviceMemoryProperties() const { return CurrentPhysicalDeviceMemoryProperties; }
 
@@ -423,6 +418,7 @@ protected:
 #endif
 	VkSurfaceKHR Surface = VK_NULL_HANDLE;
 	std::vector<VkPhysicalDevice> PhysicalDevices;
+	std::vector<VkPhysicalDeviceMemoryProperties> PhysicalDeviceProperties;
 	VkPhysicalDevice CurrentPhysicalDevice = VK_NULL_HANDLE;
 	VkPhysicalDeviceMemoryProperties CurrentPhysicalDeviceMemoryProperties;
 	VkDevice Device = VK_NULL_HANDLE;
@@ -432,11 +428,11 @@ protected:
 	//VkQueue TransferQueue = VK_NULL_HANDLE;
 	//VkQueue SparceBindingQueue = VK_NULL_HANDLE;
 	uint32_t GraphicsQueueFamilyIndex = UINT32_MAX;
-	uint32_t GraphicsQueueIndex = UINT32_MAX; //!< ファミリ内でのインデックス (必ずしも覚えておく必要は無いが一応覚えておく)
+	//uint32_t GraphicsQueueIndexInFamily = UINT32_MAX; //!< ファミリ内でのインデックス (必ずしも覚えておく必要は無いが一応覚えておく)
 	uint32_t PresentQueueFamilyIndex = UINT32_MAX;
-	uint32_t PresentQueueIndex = UINT32_MAX;
+	//uint32_t PresentQueueIndexInFamily = UINT32_MAX;
 	uint32_t ComputeQueueFamilyIndex = UINT32_MAX;
-	uint32_t ComputeQueueIndex = UINT32_MAX;
+	//uint32_t ComputeQueueIndexInFamily = UINT32_MAX;
 	//uint32_t TransferQueueFamilyIndex = UINT32_MAX;
 	//uint32_t TransferQueueIndex = UINT32_MAX;;
 	//uint32_t SparceBindingQueueFamilyIndex = UINT32_MAX;
@@ -529,7 +525,7 @@ protected:
 		"VK_LAYER_LUNARG_monitor", //!< タイトルバーにFPSを表示
 	};
 	const std::vector<const char*> InstanceExtensions = {
-#ifndef _DEBUG
+#ifdef _DEBUG
 		VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME,
 #endif
 		VK_KHR_SURFACE_EXTENSION_NAME,

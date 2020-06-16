@@ -184,9 +184,6 @@ protected:
 	}
 	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
 
-	virtual void CreateRenderTarget() {}
-	//virtual void CreateRenderTarget(const DXGI_FORMAT Format, const UINT Width, const UINT Height);
-
 	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
 
 	virtual void LoadImage(ID3D12Resource** /*Resource*/, const std::wstring& /*Path*/, const D3D12_RESOURCE_STATES /*ResourceState*/) { assert(false && "Not implemanted"); }
@@ -200,8 +197,6 @@ protected:
 	virtual void CreateIndexBuffer() {}
 	virtual void CreateIndirectBuffer() {}
 	virtual void CreateConstantBuffer() {}
-
-	virtual void CreateUnorderedAccessTexture();
 
 	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f);
 

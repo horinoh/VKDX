@@ -44,3 +44,33 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const std::wstring& Path,
 
 	ExecuteCopyTexture(*Resource, CA, CL, PSF, ResourceState, COM_PTR_GET(UploadResource));
 }
+
+void DXImage::CreateColorImage(ID3D12Resource** Resource, const D3D12_RESOURCE_STATES RS, const UINT32 Color)
+{
+	static const UINT64 Width = 4;
+	static const UINT Height = 4;
+
+	const D3D12_HEAP_PROPERTIES HP = {
+		D3D12_HEAP_TYPE_CUSTOM,
+		D3D12_CPU_PAGE_PROPERTY_WRITE_BACK,
+		D3D12_MEMORY_POOL_L0, //D3D12_MEMORY_POOL_UNKNOWN
+		0, 0
+	};
+	const D3D12_RESOURCE_DESC RD = {
+		D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+		0,
+		Width, Height, 1,
+		1, 
+		DXGI_FORMAT_R8G8B8A8_UNORM,
+		{ 1, 0 },
+		D3D12_TEXTURE_LAYOUT_UNKNOWN,
+		D3D12_RESOURCE_FLAG_NONE
+	};
+
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, RS, nullptr, IID_PPV_ARGS(Resource)));
+
+	std::array<UINT32, Width * Height> Whites;
+	std::fill(Whites.begin(), Whites.end(), Color);
+
+	VERIFY_SUCCEEDED((*Resource)->WriteToSubresource(0, nullptr, Whites.data(), Width * Height, static_cast<UINT>(Whites.size())));
+}
