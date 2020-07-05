@@ -59,6 +59,7 @@
 #include <functional>
 #include <thread>
 #include <bitset>
+#include <numeric>
 //#include <cinttypes>
 
 #ifndef SAFE_DELETE

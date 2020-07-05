@@ -237,8 +237,8 @@ void ComputeDX::PopulateCommandList(const size_t i)
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
-		const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
-		const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
+		const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
+		const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
 		
         {
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
@@ -249,7 +249,7 @@ void ComputeDX::PopulateCommandList(const size_t i)
 			CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		}
 
-		CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+		CL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(CL->Close());
 }

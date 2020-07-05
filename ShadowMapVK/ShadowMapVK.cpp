@@ -263,7 +263,7 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 			const auto PL = Pipelines[0];
 			const auto DS = DescriptorSets[0];
 			const auto PLL = PipelineLayouts[0];
-			const auto IB = IndirectBuffers[0];
+			const auto IDB = IndirectBuffers[0];
 
 #if 0
 			vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
@@ -281,7 +281,7 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 			const std::array<VkDescriptorSet, 1> DSs = { DS };
 			vkCmdBindDescriptorSets(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
 
-			vkCmdDrawIndirect(SCB0, IB, 0, 1, 0);
+			vkCmdDrawIndirect(SCB0, IDB.Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
 	}
 
@@ -308,7 +308,7 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 			const auto PL = Pipelines[1];
 			const auto DS = DescriptorSets[1];
 			const auto PLL = PipelineLayouts[1];
-			const auto IB = IndirectBuffers[1];
+			const auto IDB = IndirectBuffers[1];
 
 			vkCmdSetViewport(SCB1, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 			vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
@@ -318,7 +318,7 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 			const std::array<VkDescriptorSet, 1> DSs = { DS };
 			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
 
-			vkCmdDrawIndirect(SCB1, IB, 0, 1, 0);
+			vkCmdDrawIndirect(SCB1, IDB.Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
 	}
 

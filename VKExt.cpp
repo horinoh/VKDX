@@ -5,21 +5,21 @@
 
 void VKExt::CreateIndirectBuffer_Draw(const uint32_t IndexCount, const uint32_t InstanceCount)
 {
-	IndirectBuffers.push_back(VkBuffer());
+	IndirectBuffers.push_back(IndirectBuffer());
 	const VkDrawIndirectCommand DIC = { IndexCount, InstanceCount, 0, 0 };
-	CreateBuffer_Indirect(&IndirectBuffers.back(), GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
+	CreateBuffer_Indirect(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
 }
 void VKExt::CreateIndirectBuffer_DrawIndexed(const uint32_t IndexCount, const uint32_t InstanceCount)
 {
-	IndirectBuffers.push_back(VkBuffer());
+	IndirectBuffers.push_back(IndirectBuffer());
 	const VkDrawIndexedIndirectCommand DIIC = { IndexCount, InstanceCount, 0, 0, 0 };
-	CreateBuffer_Indirect(&IndirectBuffers.back(), GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
+	CreateBuffer_Indirect(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
 }
 void VKExt::CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z)
 {
-	IndirectBuffers.push_back(VkBuffer());
+	IndirectBuffers.push_back(IndirectBuffer());
 	const VkDispatchIndirectCommand DIC = { X, Y, Z };
-	CreateBuffer_Indirect(&IndirectBuffers.back(), GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
+	CreateBuffer_Indirect(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
 }
 
 void VKExt::CreateShaderModle_VsFs()

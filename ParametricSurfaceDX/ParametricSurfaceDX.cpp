@@ -238,11 +238,11 @@ void ParametricSurfaceDX::PopulateCommandList(const size_t i)
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 	{
-		const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
-		const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
+		const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
+		const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
 
 		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+		BCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BCL->Close());
 #endif
@@ -272,8 +272,8 @@ void ParametricSurfaceDX::PopulateCommandList(const size_t i)
 #ifdef USE_BUNDLE
 			CL->ExecuteBundle(BCL);
 #else
-			const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
-			const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
+			const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
+			const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
 
 			CL->SetGraphicsRootSignature(RS);
 			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)

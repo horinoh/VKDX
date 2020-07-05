@@ -231,7 +231,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void TriangleVK::CreateVertexBuffer()
 {
-	VertexBuffers.resize(1);
+	VertexBuffers.push_back(VertexBuffer());
 
 #if 1
 	const std::array<Vertex_PositionColor, 3> Vertices = { {
@@ -257,29 +257,42 @@ void TriangleVK::CreateVertexBuffer()
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
 	
-	CreateBuffer_Vertex(&VertexBuffers[0], GraphicsQueue, CommandBuffers[0], Size, Vertices.data());
+	CreateBuffer_Vertex(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, Vertices.data());
 
 #ifdef _DEBUG
-	MarkerSetObjectName(Device, VertexBuffers[0], "MyVertexBuffer");
+	MarkerSetObjectName(Device, VertexBuffers.back().Buffer, "MyVertexBuffer");
 #endif
 
 	LOG_OK();
 }
 void TriangleVK::CreateIndexBuffer()
 {
-	IndexBuffers.resize(1);
+	IndexBuffers.push_back(IndexBuffer());
 
 	const std::array<uint32_t, 3> Indices = { 0, 1, 2 };
 
-	//!< vkCmdDrawIndexed() が引数に取るので覚えておく必要がある (Save this value because vkCmdDrawIndexed() will use it)
+	//!< vkCmdDrawIndexed()使用時やインダイレクトバッファ作成時に必要となるのでIndexCountを覚えておく (IndexCount is needed when use vkCmdDrawIndexed() or creation of indirect buffer)
 	IndexCount = static_cast<uint32_t>(Indices.size());
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 
-	CreateBuffer_Index(&IndexBuffers[0], GraphicsQueue, CommandBuffers[0], Size, Indices.data());
+	CreateBuffer_Index(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, Indices.data());
 
 #ifdef _DEBUG
-	MarkerSetObjectName(Device, IndexBuffers[0], "MyIndexBuffer");
+	MarkerSetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
+#endif
+
+	LOG_OK();
+}
+
+void TriangleVK::CreateIndirectBuffer()
+{
+	IndirectBuffers.push_back(IndirectBuffer());
+	const VkDrawIndexedIndirectCommand DIIC = { IndexCount, 1, 0, 0, 0 };
+	CreateBuffer_Indirect(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
+
+#ifdef _DEBUG
+	MarkerSetObjectName(Device, IndirectBuffers.back().Buffer, "MyIndirectBuffer");
 #endif
 
 	LOG_OK();
@@ -308,9 +321,10 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
 		const auto PL = Pipelines[0];
-		const auto VB = VertexBuffers[0];
-		const auto IB = IndexBuffers[0];
-		const auto IDB = IndirectBuffers[0];
+		const auto VB = VertexBuffers[0].Buffer;
+		const auto IB = IndexBuffers[0].Buffer;
+		//const auto IDB = _IndirectBuffers[0];
+		const auto IDB = IndirectBuffers[0].Buffer;
 
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());

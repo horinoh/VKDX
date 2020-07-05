@@ -272,14 +272,13 @@ protected:
 	COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
 	std::vector<COM_PTR<ID3D12PipelineState>> PipelineStates;
 
-	std::vector<COM_PTR<ID3D12Resource>> VertexBufferResources;
-	std::vector<D3D12_VERTEX_BUFFER_VIEW> VertexBufferViews;
+	using VertexBuffer = struct VertexBuffer { D3D12_VERTEX_BUFFER_VIEW View; COM_PTR<ID3D12Resource> Resource; };
+	using IndexBuffer = struct IndexBuffer { D3D12_INDEX_BUFFER_VIEW View; COM_PTR<ID3D12Resource> Resource; };
+	using IndirectBuffer = struct IndirectBuffer { COM_PTR<ID3D12CommandSignature> CommandSignature; COM_PTR<ID3D12Resource> Resource; };
 
-	std::vector <COM_PTR<ID3D12Resource>> IndexBufferResources;
-	std::vector<D3D12_INDEX_BUFFER_VIEW> IndexBufferViews;
-
-	std::vector<COM_PTR<ID3D12Resource>> IndirectBufferResources;
-	std::vector<COM_PTR<ID3D12CommandSignature>> IndirectCommandSignatures;
+	std::vector<VertexBuffer> VertexBuffers;
+	std::vector<IndexBuffer> IndexBuffers;
+	std::vector<IndirectBuffer> IndirectBuffers;
 
 	std::vector<D3D12_VIEWPORT> Viewports;
 	std::vector<D3D12_RECT> ScissorRects;

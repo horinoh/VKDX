@@ -237,12 +237,12 @@ void FullscreenDX::PopulateCommandList(const size_t i)
     const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 	{
-		const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
-		const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
+		const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
+		const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
 
         BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 #ifdef USE_DRAW_INDIRECT
-		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+		BCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 #else
 		BCL->DrawInstanced(4, 1, 0, 0);
 #endif

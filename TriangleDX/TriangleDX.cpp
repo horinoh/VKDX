@@ -231,8 +231,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void TriangleDX::CreateVertexBuffer()
 {
-	VertexBufferResources.resize(1);
-
+	VertexBuffers.push_back(VertexBuffer());
 #if 1
 	const std::array<Vertex_PositionColor, 3> Vertices = { {
 		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
@@ -250,39 +249,62 @@ void TriangleDX::CreateVertexBuffer()
 #endif
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<UINT32>(Stride * Vertices.size());
-
-	CreateAndCopyToDefaultResource(VertexBufferResources[0], COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Vertices.data());
+	CreateAndCopyToDefaultResource(VertexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Vertices.data());
 
 	//!< DXではビューが必要 Need view
-	VertexBufferViews.push_back({ VertexBufferResources[0]->GetGPUVirtualAddress(), Size, Stride });
+	VertexBuffers.back().View = { VertexBuffers.back().Resource->GetGPUVirtualAddress(), Size, Stride };
 
 #ifdef _DEBUG
-	SetName(COM_PTR_GET(VertexBufferResources[0]), TEXT("MyVertexBuffer"));
+	SetName(COM_PTR_GET(VertexBuffers.back().Resource), TEXT("MyVertexBuffer"));
 #endif
 
 	LOG_OK();
 }
 void TriangleDX::CreateIndexBuffer()
 {
-	IndexBufferResources.resize(1);
-
+	IndexBuffers.push_back(IndexBuffer());
 	const std::array<UINT32, 3> Indices = { 0, 1, 2 };
-	//!< DrawInstanced() が引数に取るので覚えておく必要がある Save this value because DrawInstanced() will use it
+	//!< DrawInstanced()使用時やインダイレクトバッファ作成時に必要となるのでIndexCountを覚えておく (IndexCount is needed when use DrawInstanced() or creation of indirect buffer)
 	IndexCount = static_cast<UINT32>(Indices.size());
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<UINT32>(Stride * IndexCount);
-
-	CreateAndCopyToDefaultResource(IndexBufferResources[0], COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Indices.data());
+	CreateAndCopyToDefaultResource(IndexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Indices.data());
 
 	//!< DXではビューが必要 Need view
-	IndexBufferViews.push_back({ IndexBufferResources[0]->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT });
+	IndexBuffers.back().View = { IndexBuffers.back().Resource->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT };
 
 #ifdef _DEBUG
-	SetName(COM_PTR_GET(IndexBufferResources[0]), TEXT("MyIndexBuffer"));
+	SetName(COM_PTR_GET(IndexBuffers.back().Resource), TEXT("MyIndexBuffer"));
 #endif
 
 	LOG_OK();
 }
+
+void TriangleDX::CreateIndirectBuffer()
+{
+	IndirectBuffers.push_back(IndirectBuffer());
+	const D3D12_DRAW_INDEXED_ARGUMENTS Source = { IndexCount, 1, 0, 0, 0 };
+	const auto Stride = sizeof(Source);
+	const auto Size = static_cast<UINT32>(Stride * 1);
+	CreateAndCopyToDefaultResource(IndirectBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, &Source);
+
+	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
+		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED },
+	};
+	const D3D12_COMMAND_SIGNATURE_DESC CSD = {
+		Stride,
+		static_cast<const UINT>(IADs.size()), IADs.data(),
+		0
+	};
+	Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectBuffers.back().CommandSignature));
+
+#ifdef _DEBUG
+	SetName(COM_PTR_GET(IndirectBuffers.back().Resource), TEXT("MyIndexBuffer"));
+#endif
+
+	LOG_OK();
+}
+
 void TriangleDX::PopulateCommandList(const size_t i)
 {
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
@@ -291,17 +313,16 @@ void TriangleDX::PopulateCommandList(const size_t i)
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 	{
-		const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
-		const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
+		const auto& VB = VertexBuffers[0];
+		const auto& IB = IndexBuffers[0];
+		const auto& IDB = IndirectBuffers[0];
 
 		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
-		assert(!VertexBufferViews.empty() && "");
-		const std::array<D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VertexBufferViews[0] };
+		const std::array<D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VB.View };
 		BCL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
-		assert(!IndexBufferViews.empty() && "");
-		BCL->IASetIndexBuffer(&IndexBufferViews[0]);
-		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+		BCL->IASetIndexBuffer(&IB.View);
+		BCL->ExecuteIndirect(COM_PTR_GET(IDB.CommandSignature), 1, COM_PTR_GET(IDB.Resource), 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BCL->Close());
 

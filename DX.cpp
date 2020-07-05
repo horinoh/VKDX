@@ -34,6 +34,9 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateVertexBuffer();
 	CreateIndexBuffer();
 	CreateIndirectBuffer();
+	//!< コンスタントバッファ (ユニフォームバッファ相当)
+	CreateConstantBuffer();
+	CreateTexture();
 
 	//!< スタティックサンプラはこの時点(CreateRootSignature()より前)で必要
 	CreateStaticSampler();
@@ -43,11 +46,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateShaderBlobs();
 	//!< パイプライン
 	CreatePipelineStates();
-
-	CreateTexture();
-
-	//!< コンスタントバッファ (ユニフォームバッファ相当)
-	CreateConstantBuffer();
 
 	//!< デスクリプタヒープ (デスクリプタプール相当)
 	CreateDescriptorHeap();

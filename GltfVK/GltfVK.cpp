@@ -508,9 +508,9 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
 			const auto PL = Pipelines.back();
-			const auto& VBs = VertexBuffers;
-			const auto IB = IndexBuffers.back();
-			const auto IDB = IndirectBuffers.back();
+			std::vector<VkBuffer> VBs; for (auto j : VertexBuffers) { VBs.push_back(j.Buffer); }
+			const auto& IB = IndexBuffers.back();
+			const auto& IDB = IndirectBuffers.back();
 
 			vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 			vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
@@ -524,8 +524,8 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 			vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 			const std::vector<VkDeviceSize> Offsets(VBs.size(), 0);
 			vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets.data());
-			vkCmdBindIndexBuffer(SCB, IB, 0, ToVKIndexType(GetDocument().accessors[Prim.indices].componentType));
-			vkCmdDrawIndexedIndirect(SCB, IDB, 0, 1, 0);
+			vkCmdBindIndexBuffer(SCB, IB.Buffer, 0, ToVKIndexType(GetDocument().accessors[Prim.indices].componentType));
+			vkCmdDrawIndexedIndirect(SCB, IDB.Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 	}
 }
@@ -555,14 +555,14 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			}
 
 			if ("indices" == Identifier) {
-				IndexBuffers.push_back(VkBuffer());
-				CreateBuffer_Index(&IndexBuffers.back(), GraphicsQueue, CommandBuffers[0], Size, Data);
+				IndexBuffers.push_back(IndexBuffer());
+				CreateBuffer_Index(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, Data);
 
 				CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
 			}
 			else if ("attributes" == Identifier || "targets" == Identifier) {
-				VertexBuffers.push_back(VkBuffer());
-				CreateBuffer_Vertex(&VertexBuffers.back(), GraphicsQueue, CommandBuffers[0] , Size, Data);
+				VertexBuffers.push_back(VertexBuffer());
+				CreateBuffer_Vertex(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0] , Size, Data);
 			}
 			else if ("inverseBindMatrices" == Identifier) {
 				InverseBindMatrices.reserve(Acc.count);

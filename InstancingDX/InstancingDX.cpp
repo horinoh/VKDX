@@ -232,8 +232,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void InstancingDX::CreateVertexBuffer()
 {
-	VertexBufferResources.resize(2);
-
+	VertexBuffers.push_back(VertexBuffer());
 	{
 		const std::array<Vertex_PositionColor, 3> Vertices = { {
 			{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
@@ -242,10 +241,11 @@ void InstancingDX::CreateVertexBuffer()
 		} };
 		const auto Stride = sizeof(Vertices[0]);
 		const auto Size = static_cast<UINT32>(Stride * Vertices.size());
-		CreateAndCopyToDefaultResource(VertexBufferResources[0], COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Vertices.data());
-		VertexBufferViews.push_back({ VertexBufferResources[0]->GetGPUVirtualAddress(), Size, Stride });
+		CreateAndCopyToDefaultResource(VertexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Vertices.data());
+		VertexBuffers.back().View = { VertexBuffers.back().Resource->GetGPUVirtualAddress(), Size, Stride };
 	}
 
+	VertexBuffers.push_back(VertexBuffer());
 	{
 		const std::array<Instance_OffsetXY, 5> Instances = { {
 			{ { -0.5f, -0.5f } },
@@ -257,25 +257,47 @@ void InstancingDX::CreateVertexBuffer()
 		InstanceCount = static_cast<UINT>(Instances.size());
 		const auto Stride = sizeof(Instances[0]);
 		const auto Size = static_cast<UINT32>(Stride * InstanceCount);
-		CreateAndCopyToDefaultResource(VertexBufferResources[1], COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Instances.data());
-		VertexBufferViews.push_back({ VertexBufferResources[1]->GetGPUVirtualAddress(), Size, Stride });
+		CreateAndCopyToDefaultResource(VertexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Instances.data());
+		VertexBuffers.back().View = { VertexBuffers.back().Resource->GetGPUVirtualAddress(), Size, Stride };
+	;
 	}
 
 	LOG_OK();
 }
 void InstancingDX::CreateIndexBuffer()
 {
-	IndexBufferResources.resize(1);
+	IndexBuffers.push_back(IndexBuffer());
 
 	const std::array<UINT32, 3> Indices = { 0, 1, 2 };
 	IndexCount = static_cast<UINT32>(Indices.size());
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<UINT32>(Stride * IndexCount);
-	CreateAndCopyToDefaultResource(IndexBufferResources[0], COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Indices.data());
-	IndexBufferViews.push_back({ IndexBufferResources[0]->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT });
+	CreateAndCopyToDefaultResource(IndexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Indices.data());
+	IndexBuffers.back().View = { IndexBuffers.back().Resource->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT };
 
 	LOG_OK();
 }
+
+void InstancingDX::CreateIndirectBuffer()
+{
+	IndirectBuffers.push_back(IndirectBuffer());
+
+	const D3D12_DRAW_INDEXED_ARGUMENTS Source = { IndexCount, InstanceCount, 0, 0, 0 };
+	const auto Stride = sizeof(Source);
+	const auto Size = static_cast<UINT32>(Stride * 1);
+	CreateAndCopyToDefaultResource(IndirectBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, &Source);
+
+	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
+		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED },
+	};
+	const D3D12_COMMAND_SIGNATURE_DESC CSD = {
+		Stride,
+		static_cast<const UINT>(IADs.size()), IADs.data(),
+		0
+	};
+	Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectBuffers.back().CommandSignature));
+}
+
 void InstancingDX::PopulateCommandList(const size_t i)
 {
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
@@ -284,11 +306,11 @@ void InstancingDX::PopulateCommandList(const size_t i)
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 	{
-		const auto VBV0 = VertexBufferViews[0];
-		const auto VBV1 = VertexBufferViews[1];
-		const auto IBV = IndexBufferViews[0];
-		const auto ICS = COM_PTR_GET(IndirectCommandSignatures[0]);
-		const auto IBR = COM_PTR_GET(IndirectBufferResources[0]);
+		const auto VBV0 = VertexBuffers[0].View;
+		const auto VBV1 = VertexBuffers[1].View;
+		const auto IBV = IndexBuffers[0].View;
+		const auto ICS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
+		const auto IBR = COM_PTR_GET(IndirectBuffers[0].Resource);
 
 		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 		const std::array<D3D12_VERTEX_BUFFER_VIEW, 2> VBVs = { VBV0, VBV1 };

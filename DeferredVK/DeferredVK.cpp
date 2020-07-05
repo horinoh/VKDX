@@ -261,7 +261,7 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB0, &CBBI)); {
 			const auto PL = Pipelines[0];
-			const auto IB = IndirectBuffers[0];
+			const auto& IDB = IndirectBuffers[0];
 			vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 			vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
@@ -272,7 +272,7 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 			const std::array<VkDescriptorSet, 1> DSs = { DescriptorSets[0] };
 			vkCmdBindDescriptorSets(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[0], 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
 
-			vkCmdDrawIndirect(SCB0, IB, 0, 1, 0);
+			vkCmdDrawIndirect(SCB0, IDB.Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
 	}
 
@@ -297,7 +297,7 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB1, &CBBI)); {
 			const auto PL = Pipelines[1];
-			const auto IB = IndirectBuffers[1];
+			const auto IDB = IndirectBuffers[1];
 			vkCmdSetViewport(SCB1, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 			vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
@@ -308,7 +308,7 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 			const std::array<VkDescriptorSet, 1> DSs = { DescriptorSets[1] };
 			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[1], 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
 
-			vkCmdDrawIndirect(SCB1, IB, 0, 1, 0);
+			vkCmdDrawIndirect(SCB1, IDB.Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
 	}
 

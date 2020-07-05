@@ -259,7 +259,7 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 #endif
 		const auto PLL = PipelineLayouts[0];
 		const auto PL = Pipelines[0];
-		const auto IB = IndirectBuffers[0];
+		const auto IDB = IndirectBuffers[0];
 
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
@@ -272,7 +272,7 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 			0, nullptr);
 		
 		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-		vkCmdDrawIndirect(SCB, IB, 0, 1, 0);
+		vkCmdDrawIndirect(SCB, IDB.Buffer, 0, 1, 0);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 
 	const auto CB = CommandBuffers[i];

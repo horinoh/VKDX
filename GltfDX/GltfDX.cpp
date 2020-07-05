@@ -430,10 +430,11 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[BundleGraphicsCommandLists.size() - Count + i]);
 		VERIFY_SUCCEEDED(BCL->Reset(BCA, PST));
 		{
-			const auto& VBVs = VertexBufferViews;
-			const auto& IBV = IndexBufferViews.back();
-			const auto ICS = COM_PTR_GET(IndirectCommandSignatures.back());
-			const auto IBR = COM_PTR_GET(IndirectBufferResources.back());
+			//const std::array<D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VertexBuffers.back().View };
+			std::vector<D3D12_VERTEX_BUFFER_VIEW> VBVs; for (auto j : VertexBuffers) { VBVs.push_back(j.View); }
+			const auto IBV = IndexBuffers.back().View;
+			const auto IDBCS = COM_PTR_GET(IndirectBuffers.back().CommandSignature);
+			const auto IDBR = COM_PTR_GET(IndirectBuffers.back().Resource);
 
 #if 0
 			BCL->SetGraphicsRootSignature(RS);
@@ -450,7 +451,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 			BCL->IASetPrimitiveTopology(ToDXPrimitiveTopology(Prim.mode));
 			BCL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
 			BCL->IASetIndexBuffer(&IBV);
-			BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+			BCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 		}
 		VERIFY_SUCCEEDED(BCL->Close());
 	}
@@ -481,18 +482,18 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			}
 
 			if ("indices" == Identifier) {
-				IndexBufferResources.push_back(COM_PTR<ID3D12Resource>());
+				IndexBuffers.push_back(IndexBuffer());
 
-				CreateAndCopyToDefaultResource(IndexBufferResources.back(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Data);
-				IndexBufferViews.push_back({ IndexBufferResources.back()->GetGPUVirtualAddress(), Size, ToDXFormat(Acc.componentType) });
+				CreateAndCopyToDefaultResource(IndexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Data);
+				IndexBuffers.back().View = { IndexBuffers.back().Resource->GetGPUVirtualAddress(), Size, ToDXFormat(Acc.componentType) };
 
 				CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
 			}
 			else if ("attributes" == Identifier || "targets" == Identifier) {
-				VertexBufferResources.push_back(COM_PTR<ID3D12Resource>());
+				VertexBuffers.push_back(VertexBuffer());
 
-				CreateAndCopyToDefaultResource(VertexBufferResources.back(), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Data);
-				VertexBufferViews.push_back({ VertexBufferResources.back()->GetGPUVirtualAddress(), Size, Stride });
+				CreateAndCopyToDefaultResource(VertexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Data);
+				VertexBuffers.back().View = { VertexBuffers.back().Resource->GetGPUVirtualAddress(), Size, Stride };
 			}
 			else if ("inverseBindMatrices" == Identifier) {
 				InverseBindMatrices.reserve(Acc.count);
