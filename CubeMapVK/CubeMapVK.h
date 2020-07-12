@@ -31,7 +31,7 @@ protected:
 
 		Degree += 1.0f;
 
-		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
+		CopyToHostVisibleDeviceMemory(UniformBuffers[0].DeviceMemory, sizeof(Tr), &Tr, 0);
 	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
@@ -134,9 +134,10 @@ protected:
 		const auto World = glm::mat4(1.0f);
 		Tr = Transform({ Projection, View, World, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f) });
 
-		UniformBuffers.resize(1);
-		CreateBuffer(&UniformBuffers[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		UniformBuffers.push_back(UniformBuffer());
+		CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
+		AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
 	}
 	virtual void CreateTexture() override {
 		std::wstring Path;
@@ -213,10 +214,9 @@ protected:
 		}, DescriptorSetLayouts[0]);
 	}
 	virtual void UpdateDescriptorSet() override {
-		assert(!UniformBuffers.empty() && "");
 		assert(2 <= ImageViews.size() && "");
 		const DescriptorUpdateInfo DUI = {
-			{ UniformBuffers[0], Offset, VK_WHOLE_SIZE }, //!< UniformBuffer
+			{ UniformBuffers[0].Buffer, 0, VK_WHOLE_SIZE }, //!< UniformBuffer
 			{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, //!< Sampler + Image0
 			{ VK_NULL_HANDLE, ImageViews[1], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, //!< Sampler + Image1
 		};
@@ -257,8 +257,6 @@ private:
 	using Transform = struct Transform;
 	float Degree = 0.0f;
 	Transform Tr;
-	uint32_t HeapIndex;
-	VkDeviceSize Offset;
 
 	struct DescriptorUpdateInfo
 	{

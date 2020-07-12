@@ -237,8 +237,6 @@ protected:
 	std::vector<glm::mat4> JointMatrices;
 	std::vector<float> MorphWeights;
 
-	uint32_t HeapIndex;
-	VkDeviceSize Offset;
 	struct DescriptorUpdateInfo
 	{
 		VkDescriptorBufferInfo DBI[1];

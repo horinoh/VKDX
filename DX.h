@@ -258,7 +258,6 @@ protected:
 
 	COM_PTR<ID3D12Resource> UnorderedAccessTextureResource;
 	std::vector<COM_PTR<ID3D12Resource>> ImageResources;
-	std::vector<COM_PTR<ID3D12Resource>> ConstantBufferResources;
 	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
 
 	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap; //!< RTVだけど、現状スワップチェインだけ別扱いにしている #DX_TODO
@@ -275,10 +274,12 @@ protected:
 	using VertexBuffer = struct VertexBuffer { D3D12_VERTEX_BUFFER_VIEW View; COM_PTR<ID3D12Resource> Resource; };
 	using IndexBuffer = struct IndexBuffer { D3D12_INDEX_BUFFER_VIEW View; COM_PTR<ID3D12Resource> Resource; };
 	using IndirectBuffer = struct IndirectBuffer { COM_PTR<ID3D12CommandSignature> CommandSignature; COM_PTR<ID3D12Resource> Resource; };
+	using ConstantBuffer = struct ConstantBuffer { D3D12_CONSTANT_BUFFER_VIEW_DESC ViewDesc; COM_PTR<ID3D12Resource> Resource; void CreateViewDesc() { ViewDesc = { COM_PTR_GET(Resource)->GetGPUVirtualAddress(), static_cast<UINT>(Resource->GetDesc().Width) };} };
 
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;
 	std::vector<IndirectBuffer> IndirectBuffers;
+	std::vector<ConstantBuffer> ConstantBuffers;
 
 	std::vector<D3D12_VIEWPORT> Viewports;
 	std::vector<D3D12_RECT> ScissorRects;

@@ -33,6 +33,10 @@ protected:
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &SCBAI, &SecondaryCommandBuffers[PrevCount]));
 	}
 	virtual void CreateFramebuffer() override {
+#ifdef USE_SUBPASS
+		//!< #VK_TODO
+		//!< フレームバッファは VkRenderPassBeginInfo に渡す必要があるので単一パス(サブパス)で行う場合は、フレームバッファは1つにする
+#endif
 		//!< パス0 : フレームバッファ
 		Framebuffers.push_back(VkFramebuffer());
 		VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
@@ -49,6 +53,42 @@ protected:
 		}
 	}
 	virtual void CreateRenderPass() override {
+#ifdef USE_SUBPASS
+		//!< #VK_TODO
+		RenderPasses.push_back(VkRenderPass());
+		const std::array<VkAttachmentReference, 1> ColorAttach = { { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, } };
+		const std::array<VkAttachmentReference, 1> InputAttach = { { { 1, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, } };
+		const std::array<VkAttachmentReference, 1> ColorAttach1 = { { { 2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, } };
+		VK::CreateRenderPass(RenderPasses.back(), {
+			{
+				0,
+				ColorFormat,
+				VK_SAMPLE_COUNT_1_BIT,
+				VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+				VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+			},
+		}, {
+			{
+				0,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				0, nullptr,
+				static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
+				nullptr,
+				0, nullptr
+			},
+			{
+				0,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				static_cast<uint32_t>(InputAttach.size()), InputAttach.data(),
+				static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
+				nullptr,
+				0, nullptr
+			},
+			
+		}, {});
+#endif
+
 		//!< パス0 : レンダーパス
 		{
 			RenderPasses.push_back(VkRenderPass());

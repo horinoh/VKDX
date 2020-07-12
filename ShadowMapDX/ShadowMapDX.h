@@ -20,7 +20,7 @@ protected:
 		DirectX::XMStoreFloat4x4(&Tr.World, DirectX::XMMatrixRotationY(DirectX::XMConvertToRadians(Degree)));
 		Degree += 1.0f;
 
-		CopyToUploadResource(COM_PTR_GET(ConstantBufferResources[0]), RoundUp256(sizeof(Tr)), &Tr);
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0].Resource), RoundUp256(sizeof(Tr)), &Tr);
 	}
 
 	virtual void CreateCommandList() override {
@@ -201,16 +201,8 @@ protected:
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 
-			assert(!ConstantBufferResources.empty() && "");
-			const auto CBR = ConstantBufferResources[0];
-			assert(CBR->GetDesc().Width == RoundUp256(sizeof(Tr)) && "");
-			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = {
-				COM_PTR_GET(CBR)->GetGPUVirtualAddress(),
-				static_cast<UINT>(CBR->GetDesc().Width)
-			};
-
 			//!< パス0
-			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+			Device->CreateConstantBufferView(&ConstantBuffers[0].ViewDesc, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
 
 			//!< パス1
 			const auto RD = ImageResources[0]->GetDesc();
@@ -225,7 +217,7 @@ protected:
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
 
 #ifndef USE_SHADOWMAP_VISUALIZE
-			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+			Device->CreateConstantBufferView(&ConstantBuffers[0].ViewDesc, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
 #endif
 		}
 		{
@@ -316,10 +308,10 @@ protected:
 		const auto World = DirectX::XMMatrixIdentity();
 		DirectX::XMStoreFloat4x4(&Tr.World, World);
 
-		{
-			ConstantBufferResources.push_back(COM_PTR<ID3D12Resource>());
-			CreateUploadResource(COM_PTR_PUT(ConstantBufferResources.back()), RoundUp256(sizeof(Tr)));
-		}
+		ConstantBuffers.push_back(ConstantBuffer());
+		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)));
+		ConstantBuffers.back().ViewDesc = { COM_PTR_GET(ConstantBuffers.back().Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers.back().Resource->GetDesc().Width) };
+		//ConstantBuffers.back().CreateViewDesc();
 	}
 
 	virtual void CreateShaderBlobs() override {

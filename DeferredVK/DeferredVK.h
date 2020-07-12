@@ -20,7 +20,7 @@ protected:
 		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
 		Degree += 1.0f;
 
-		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
+		CopyToHostVisibleDeviceMemory(UniformBuffers[0].DeviceMemory, sizeof(Tr), &Tr, 0);
 	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 	
@@ -365,9 +365,8 @@ protected:
 
 		//!< パス0 :
 		{
-			assert(!UniformBuffers.empty() && "");
 			const DescriptorUpdateInfo_0 DUI = {
-				{ UniformBuffers[0], Offset, VK_WHOLE_SIZE },
+				{ UniformBuffers.back().Buffer, 0, VK_WHOLE_SIZE },
 			};
 			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 		}
@@ -385,7 +384,7 @@ protected:
 				//!< レンダーターゲット : 未定
 				{ VK_NULL_HANDLE, ImageViews[3], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 	#pragma endregion
-				{ UniformBuffers[0], Offset, VK_WHOLE_SIZE },
+				{ UniformBuffers[0].Buffer, 0, VK_WHOLE_SIZE },
 			};
 			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[1], DescriptorUpdateTemplates[1], &DUI);
 		}
@@ -496,9 +495,10 @@ protected:
 
 			Tr = Transform({ Projection, View, World, InverseViewProjection });
 
-			UniformBuffers.push_back(VkBuffer());
-			CreateBuffer(&UniformBuffers.back(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-			SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers.back(), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+			UniformBuffers.push_back(UniformBuffer());
+			CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
+			AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
 		}
 	}
 	virtual void CreateShaderModules() override {
@@ -664,7 +664,5 @@ private:
 		};
 		using Transform = struct Transform;
 		Transform Tr;
-		uint32_t HeapIndex;
-		VkDeviceSize Offset;
 };
 #pragma endregion

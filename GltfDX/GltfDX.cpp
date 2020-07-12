@@ -325,7 +325,7 @@ void GltfDX::Process(const fx::gltf::Camera& Cam)
 #endif
 
 #if 1
-	CopyToUploadResource(COM_PTR_GET(ConstantBufferResources[0]), RoundUp256(sizeof(PV)), &PV);
+	CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0].Resource), RoundUp256(sizeof(PV)), &PV);
 #endif
 }
 void GltfDX::Process(const fx::gltf::Primitive& Prim)

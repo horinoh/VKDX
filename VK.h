@@ -60,6 +60,7 @@
 //!< パイプライン作成時にシェーダ内の定数値を上書き指定できる(スカラ値のみ)
 //#define USE_SPECIALIZATION_INFO //!< ParametricSurfaceVK
 //#define USE_COMBINED_IMAGE_SAMPLER
+//#define USE_SUBPASS
 
 #ifdef _DEBUG
 #define USE_DEBUG_REPORT
@@ -180,7 +181,9 @@ protected:
 	virtual void CmdCopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, const VkBuffer Dst, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF, const size_t Size);
 
 	void EnumerateMemoryRequirements(const VkMemoryRequirements& MR);
+#ifdef USE_SUBALLOC
 	void SuballocateBufferMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF);
+#endif
 	void SuballocateImageMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const VkImage Image, const VkMemoryPropertyFlags MPF);
 
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
@@ -482,11 +485,12 @@ protected:
 	using VertexBuffer = struct Buffer;
 	using IndexBuffer = struct Buffer;
 	using IndirectBuffer = struct Buffer;
+	using UniformBuffer = struct Buffer;
 
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;
 	std::vector<IndirectBuffer> IndirectBuffers;
-	std::vector<VkBuffer> UniformBuffers;
+	std::vector<UniformBuffer> UniformBuffers;
 
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;

@@ -303,9 +303,10 @@ void GltfVK::PreProcess()
 	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
 
 	//!< ユニフォームバッファ
-	UniformBuffers.resize(1);
-	CreateBuffer(&UniformBuffers[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(UBSize));
-	SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	UniformBuffers.oush_back(UniformBuffer());
+	CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(UBSize));
+	AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
 
 	//!< アップデートテンプレート
 	const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
@@ -330,7 +331,7 @@ void GltfVK::PreProcess()
 
 	//!< アップデート
 	const DescriptorUpdateInfo DUI = {
-		{ UniformBuffers[0], Offset, VK_WHOLE_SIZE },
+		{ UniformBuffers[0].Buffer, 0, VK_WHOLE_SIZE },
 	};
 	assert(!DescriptorSets.empty() && "");
 	assert(!DescriptorUpdateTemplates.empty() && "");
@@ -393,7 +394,7 @@ void GltfVK::Process(const fx::gltf::Camera& Cam)
 #endif
 
 #if 0
-	CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(PV), &PV, Offset);
+	CopyToHostVisibleDeviceMemory(UniformBuffers[0].DeviceMemory, sizeof(PV), &PV, 0);
 #endif
 }
 void GltfVK::Process(const fx::gltf::Primitive& Prim)

@@ -32,7 +32,7 @@ protected:
 
 		Degree += 1.0f;
 
-		CopyToUploadResource(COM_PTR_GET(ConstantBufferResources[0]), RoundUp256(sizeof(Tr)), &Tr);
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0].Resource), RoundUp256(sizeof(Tr)), &Tr);
 	}
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
@@ -95,8 +95,10 @@ protected:
 		DirectX::XMStoreFloat4x4(&Tr.World, World);
 		DirectX::XMStoreFloat4(&Tr.LocalCameraPosition, DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f));
 
-		ConstantBufferResources.push_back(COM_PTR<ID3D12Resource>());
-		CreateUploadResource(COM_PTR_PUT(ConstantBufferResources.back()), RoundUp256(sizeof(Tr)));
+		ConstantBuffers.push_back(ConstantBuffer());
+		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)));
+		ConstantBuffers.back().ViewDesc = { COM_PTR_GET(ConstantBuffers.back().Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers.back().Resource->GetDesc().Width) };
+		//ConstantBuffers.back().CreateViewDesc();
 	}
 	virtual void CreateTexture() override {
 		ImageResources.resize(2);
@@ -158,10 +160,9 @@ protected:
 		{
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-			assert(!ConstantBufferResources.empty() && "");
-			assert(ConstantBufferResources[0]->GetDesc().Width == RoundUp256(sizeof(Transform)) && "");
-			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBufferResources[0])->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBufferResources[0]->GetDesc().Width) };
-			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+			
+			Device->CreateConstantBufferView(&ConstantBuffers[0].ViewDesc, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+
 			assert(2 <= ImageResources.size() && "");
 			//!< (ディメンションがD3D12_SRV_DIMENSION_TEXTURECUBEの為)明示的にSHADER_RESOURCE_VIEW_DESCを指定すること (リソースと同じフォーマットとディメンション、最初のミップマップとスライスをターゲットする場合はnullptrを指定できる)
 			const auto RD = ImageResources[0]->GetDesc(); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);

@@ -20,7 +20,7 @@ protected:
 		DirectX::XMStoreFloat4x4(&Tr.World, DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree)));
 		Degree += 1.0f;
 
-		CopyToUploadResource(COM_PTR_GET(ConstantBufferResources[0]), RoundUp256(sizeof(Tr)), &Tr);
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0].Resource), RoundUp256(sizeof(Tr)), &Tr);
 	}
 
 #ifdef USE_GBUFFER_VISUALIZE
@@ -274,15 +274,13 @@ protected:
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-				assert(!ConstantBufferResources.empty() && "");
-				const auto CBR = ConstantBufferResources[0];
-				assert(CBR->GetDesc().Width == RoundUp256(sizeof(Tr)) && "");
-				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(CBR)->GetGPUVirtualAddress(), static_cast<UINT>(CBR->GetDesc().Width) };
-				Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+
+				Device->CreateConstantBufferView(&ConstantBuffers[0].ViewDesc, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
 			{
 				const auto& DH = RtvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #pragma region MRT
@@ -297,6 +295,7 @@ protected:
 			{
 				const auto& DH = DsvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+
 				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[4]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
 		}
@@ -304,6 +303,7 @@ protected:
 		{
 			const auto& DH = CbvSrvUavDescriptorHeaps[1];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+
 			{
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
@@ -317,10 +317,7 @@ protected:
 #pragma	endregion
 			}
 			{
-				const auto CBR = ConstantBufferResources[0];
-				assert(CBR->GetDesc().Width == RoundUp256(sizeof(Tr)) && "");
-				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(CBR)->GetGPUVirtualAddress(), static_cast<UINT>(CBR->GetDesc().Width) };
-				Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				Device->CreateConstantBufferView(&ConstantBuffers[0].ViewDesc, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
 		}
 	}
@@ -346,10 +343,10 @@ protected:
 		DirectX::XMStoreFloat4x4(&Tr.World, World);
 		DirectX::XMStoreFloat4x4(&Tr.InverseViewProjection, InverseViewProjection);
 
-		{
-			ConstantBufferResources.push_back(COM_PTR<ID3D12Resource>());
-			CreateUploadResource(COM_PTR_PUT(ConstantBufferResources.back()), RoundUp256(sizeof(Tr)));
-		}
+		ConstantBuffers.push_back(ConstantBuffer());
+		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)));
+		ConstantBuffers.back().ViewDesc = { COM_PTR_GET(ConstantBuffers.back().Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers.back().Resource->GetDesc().Width) };
+		//ConstantBuffers.back().CreateViewDesc();
 	}
 
 	virtual void CreateShaderBlobs() override {

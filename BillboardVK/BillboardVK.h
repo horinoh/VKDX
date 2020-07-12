@@ -19,11 +19,12 @@ protected:
 
 		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
 		Degree += 1.0f;
+
 #if 0
-		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
+		CopyToHostVisibleDeviceMemory(UniformBuffers[0].DeviceMemory, sizeof(Tr), &Tr, 0);
 #else
 		const std::array<VkDeviceSize, 2> Range = { offsetof(Transform, World), sizeof(Transform::World) };
-		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset, &Range);
+		CopyToHostVisibleDeviceMemory(UniformBuffers[0].DeviceMemory, sizeof(Tr), &Tr, 0, &Range);
 #endif
 	}
 
@@ -167,7 +168,7 @@ protected:
 	}
 	virtual void UpdateDescriptorSet() override {
 		const DescriptorUpdateInfo DUI = {
-			{ UniformBuffers[0], Offset/*offset*/, VK_WHOLE_SIZE/*range*/ },
+			{ UniformBuffers[0].Buffer, 0/*offset*/, VK_WHOLE_SIZE/*range*/ },
 		};
 		assert(!DescriptorSets.empty() && "");
 		assert(!DescriptorUpdateTemplates.empty() && "");
@@ -176,7 +177,6 @@ protected:
 #endif
 
 	virtual void CreateUniformBuffer() override {
-		UniformBuffers.resize(1);
 
 		const auto Fov = 0.16f * glm::pi<float>();
 		const auto Aspect = GetAspectRatioOfClientRect();
@@ -187,8 +187,10 @@ protected:
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		Tr = Transform({ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
 
-		CreateBuffer(&UniformBuffers[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		UniformBuffers.push_back(UniformBuffer());
+		CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
+		AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
 	}
 
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFsTesTcsGs(); }
@@ -206,8 +208,6 @@ private:
 
 	float Degree = 0.0f;
 	Transform Tr;
-	uint32_t HeapIndex;
-	VkDeviceSize Offset;
 
 	struct DescriptorUpdateInfo 
 	{

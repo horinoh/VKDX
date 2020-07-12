@@ -210,8 +210,10 @@ protected:
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		PV.View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
 
-		ConstantBufferResources.push_back(COM_PTR<ID3D12Resource>());
-		CreateUploadResource(COM_PTR_PUT(ConstantBufferResources[0]), RoundUp256(sizeof(PV)));
+		ConstantBuffers.push_back(ConstantBuffer());
+		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(PV)));
+		ConstantBuffers.back().ViewDesc = { COM_PTR_GET(ConstantBuffers.back().Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers.back().Resource->GetDesc().Width) };
+		//ConstantBuffers.back().CreateViewDesc();
 	}
 	virtual void CreateDescriptorHeap() override {
 		{
@@ -229,10 +231,8 @@ protected:
 		{
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-			assert(!ConstantBufferResources.empty() && "");
-			assert(ConstantBufferResources[0]->GetDesc().Width == RoundUp256(sizeof(PV)) && "");
-			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBufferResources[0])->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBufferResources[0]->GetDesc().Width) };
-			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+
+			Device->CreateConstantBufferView(&ConstantBuffers[0].ViewDesc, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		}
 		{
 			assert(!ImageResources.empty() && "");

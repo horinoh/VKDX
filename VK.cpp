@@ -226,8 +226,9 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 	DescriptorSetLayouts.clear();
 
-	for (auto i : UniformBuffers) {
-		vkDestroyBuffer(Device, i, GetAllocationCallbacks());
+	for (auto& i : UniformBuffers) {
+		vkDestroyBuffer(Device, i.Buffer, GetAllocationCallbacks());
+		vkFreeMemory(Device, i.DeviceMemory, GetAllocationCallbacks());
 	}
 	UniformBuffers.clear();
 
@@ -641,6 +642,7 @@ void VK::EnumerateMemoryRequirements(const VkMemoryRequirements& MR)
 	}
 }
 
+#ifdef USE_SUBALLOC
 void VK::SuballocateBufferMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF)
 {
 	VkMemoryRequirements MR;
@@ -657,6 +659,7 @@ void VK::SuballocateBufferMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, cons
 
 	DeviceMemoryOffsets[HeapIndex] += MR.size;
 }
+#endif
 
 void VK::SuballocateImageMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const VkImage Img, const VkMemoryPropertyFlags MPF)
 {

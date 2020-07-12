@@ -5,7 +5,7 @@
 #pragma region Code
 #include "../VKExt.h"
 
-#define USE_FRAME_DESCRIPTOR_SETS
+//#define USE_FRAME_DESCRIPTOR_SETS
 
 class ToonVK : public VKExt
 {
@@ -22,7 +22,7 @@ protected:
 		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
 		Degree += 1.0f;
 
-		CopyToHostVisibleDeviceMemory(DeviceMemories[HeapIndex], sizeof(Tr), &Tr, Offset);
+		CopyToHostVisibleDeviceMemory(UniformBuffers[0].DeviceMemory, sizeof(Tr), &Tr, 0);
 	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
@@ -144,7 +144,7 @@ protected:
 	}
 	virtual void UpdateDescriptorSet() override {
 		const DescriptorUpdateInfo DUI = {
-			{ UniformBuffers[0], Offset, VK_WHOLE_SIZE },
+			{ UniformBuffers[0].Buffer, 0, VK_WHOLE_SIZE },
 		};
 		assert(!DescriptorSets.empty() && "");
 		assert(!DescriptorUpdateTemplates.empty() && "");
@@ -167,9 +167,10 @@ protected:
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		Tr = Transform({ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
 
-		UniformBuffers.resize(1);
-		CreateBuffer(&UniformBuffers[0], VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-		SuballocateBufferMemory(HeapIndex, Offset, UniformBuffers[0], VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		UniformBuffers.push_back(UniformBuffer());
+		CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
+		AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
 	}
 
 	virtual void CreateShaderModules() override {
@@ -208,8 +209,5 @@ private:
 	{
 		VkDescriptorBufferInfo DescriptorBufferInfos[1];
 	};
-
-	uint32_t HeapIndex;
-	VkDeviceSize Offset;
 };
 #pragma endregion
