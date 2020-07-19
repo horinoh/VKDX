@@ -183,8 +183,8 @@ protected:
 	void EnumerateMemoryRequirements(const VkMemoryRequirements& MR);
 #ifdef USE_SUBALLOC
 	void SuballocateBufferMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF);
-#endif
 	void SuballocateImageMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const VkImage Image, const VkMemoryPropertyFlags MPF);
+#endif
 
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
 
@@ -473,21 +473,27 @@ protected:
 
 	VkFormat DepthFormat = VK_FORMAT_D24_UNORM_S8_UINT;
 
-	std::vector<VkImage> _Images;
-	std::vector<VkImageView> _ImageViews;
-
 	//!< VKの場合、通常サンプラ、イミュータブルサンプラとも同様に VkSampler を作成する、デスクリプタセットの指定が異なるだけ
 	std::vector<VkSampler> Samplers;
 
 	struct Buffer { VkBuffer Buffer; VkDeviceMemory DeviceMemory; };
+	struct TexelBuffer { VkBuffer Buffer; VkDeviceMemory DeviceMemory; };
 	using VertexBuffer = struct Buffer;
 	using IndexBuffer = struct Buffer;
 	using IndirectBuffer = struct Buffer;
 	using UniformBuffer = struct Buffer;
+	using StorageBuffer = struct Buffer;
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;
 	std::vector<IndirectBuffer> IndirectBuffers;
 	std::vector<UniformBuffer> UniformBuffers;
+	std::vector<StorageBuffer> StorageBuffers;
+
+	using UniformTexelBuffer = struct Buffer;
+	using StorageTexelBuffer = struct Buffer;
+	std::vector<UniformTexelBuffer> UniformTexelBuffers;
+	std::vector<StorageTexelBuffer> StorageTexelBuffers;
+	std::vector<VkBufferView> BufferViews;
 
 	struct Image { VkImage Image; VkDeviceMemory DeviceMemory; };
 	using Image = struct Image;
@@ -499,7 +505,7 @@ protected:
 
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
 	std::vector<VkDescriptorPool> DescriptorPools;
-	std::vector<VkDescriptorSet> DescriptorSets; //!< スワップチェインイメージ数分用意する #VK_TODO
+	std::vector<VkDescriptorSet> DescriptorSets;
 	std::vector<VkDescriptorUpdateTemplate> DescriptorUpdateTemplates;
 	std::vector<VkPipelineLayout> PipelineLayouts;
 

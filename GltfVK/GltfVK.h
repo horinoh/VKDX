@@ -146,7 +146,6 @@ protected:
 		const VkExtent3D Extent = { SurfaceExtent2D.width, SurfaceExtent2D.height, 1 };
 		const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
 		{
-
 			Images.push_back(Image());
 			VK::CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
@@ -159,7 +158,7 @@ protected:
 	}
 	virtual void CreateFramebuffer() override { 
 		const auto RP = RenderPasses[0];
-		const auto DIV = _ImageViews[0];
+		const auto DIV = ImageViews[0];
 		for (auto i : SwapchainImageViews) {
 			Framebuffers.push_back(VkFramebuffer());
 			VK::CreateFramebuffer(Framebuffers.back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DIV });

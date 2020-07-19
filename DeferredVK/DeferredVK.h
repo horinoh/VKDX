@@ -78,21 +78,21 @@ protected:
 	virtual void CreateFramebuffer() override {
 		//!< パス0 : フレームバッファ
 		{
-			assert(4 + 1 == _ImageViews.size() && "");
+			assert(4 + 1 == ImageViews.size() && "");
 			Framebuffers.push_back(VkFramebuffer());
 			VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
-				_ImageViews[0],
+				ImageViews[0],
 	#pragma region MRT 
 				//!< レンダーターゲット : 法線(RenderTarget : Normal)
-				_ImageViews[1],
+				ImageViews[1],
 				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				_ImageViews[2],
+				ImageViews[2],
 				//!< レンダーターゲット : 未定
-				_ImageViews[3],
+				ImageViews[3],
 	#pragma endregion
 				//!< 深度バッファ(Depth Buffer)
-				_ImageViews[4],
+				ImageViews[4],
 			});
 		}
 
@@ -372,17 +372,17 @@ protected:
 		}
 		//!< パス1 :
 		{
-			assert(4 <= _ImageViews.size() && "");
+			assert(4 <= ImageViews.size() && "");
 			const DescriptorUpdateInfo_1 DUI = {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
-				{ VK_NULL_HANDLE, _ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 	#pragma region MRT 
 				//!< レンダーターゲット : 法線(RenderTarget : Normal)
-				{ VK_NULL_HANDLE, _ImageViews[1], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				{ VK_NULL_HANDLE, ImageViews[1], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				{ VK_NULL_HANDLE, _ImageViews[2], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				{ VK_NULL_HANDLE, ImageViews[2], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 				//!< レンダーターゲット : 未定
-				{ VK_NULL_HANDLE, _ImageViews[3], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				{ VK_NULL_HANDLE, ImageViews[3], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 	#pragma endregion
 				{ UniformBuffers[0].Buffer, 0, VK_WHOLE_SIZE },
 			};
@@ -395,68 +395,63 @@ protected:
 		const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
 		//!< レンダーターゲット : カラー(RenderTarget : Color)
 		{
-			_Images.push_back(VkImage());
-			CreateImage(&_Images.back(), 0, VK_IMAGE_TYPE_2D, ColorFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			Images.push_back(Image());
+			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, ColorFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
-			uint32_t Idx;
-			VkDeviceSize Ofs;
-			SuballocateImageMemory(Idx, Ofs, _Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
-			_ImageViews.push_back(VkImageView());
-			CreateImageView(&_ImageViews.back(), _Images.back(), VK_IMAGE_VIEW_TYPE_2D, ColorFormat, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+			ImageViews.push_back(VkImageView());
+			CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, ColorFormat, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 		}
 #pragma region MRT 
 		//!< レンダーターゲット : 法線(RenderTarget : Normal)
 		{
 			const auto Format = VK_FORMAT_A2B10G10R10_UNORM_PACK32;
-			_Images.push_back(VkImage());
-			CreateImage(&_Images.back(), 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			Images.push_back(Image());
+			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
-			uint32_t Idx;
-			VkDeviceSize Ofs;
-			SuballocateImageMemory(Idx, Ofs, _Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
-			_ImageViews.push_back(VkImageView());
-			CreateImageView(&_ImageViews.back(), _Images.back(), VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+			ImageViews.push_back(VkImageView());
+			CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 		}
 		//!< レンダーターゲット : 深度(RenderTarget : Depth)
 		{
 			const auto Format = VK_FORMAT_R32_SFLOAT;
-			_Images.push_back(VkImage());
-			CreateImage(&_Images.back(), 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			Images.push_back(Image());
+			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
-			uint32_t Idx;
-			VkDeviceSize Ofs;
-			SuballocateImageMemory(Idx, Ofs, _Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
-			_ImageViews.push_back(VkImageView());
-			CreateImageView(&_ImageViews.back(), _Images.back(), VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+			ImageViews.push_back(VkImageView());
+			CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 		}
 		//!< レンダーターゲット : 未定
 		{
 			const auto Format = VK_FORMAT_B8G8R8A8_UNORM;
-			_Images.push_back(VkImage());
-			CreateImage(&_Images.back(), 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+			Images.push_back(Image());
+			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
-			uint32_t Idx;
-			VkDeviceSize Ofs;
-			SuballocateImageMemory(Idx, Ofs, _Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
-			_ImageViews.push_back(VkImageView());
-			CreateImageView(&_ImageViews.back(), _Images.back(), VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+			ImageViews.push_back(VkImageView());
+			CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
 		}
 #pragma endregion
 		//!< 深度バッファ(Depth Buffer)
 		{
-			_Images.push_back(VkImage());
-			CreateImage(&_Images.back(), 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT/* | VK_IMAGE_USAGE_SAMPLED_BIT*/);
+			Images.push_back(Image());
+			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT/* | VK_IMAGE_USAGE_SAMPLED_BIT*/);
 
-			uint32_t Idx;
-			VkDeviceSize Ofs;
-			SuballocateImageMemory(Idx, Ofs, _Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
-			_ImageViews.push_back(VkImageView());
-			CreateImageView(&_ImageViews.back(), _Images.back(), VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 });
+			ImageViews.push_back(VkImageView());
+			CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 });
 		}
 	}
 	virtual void CreateImmutableSampler() override {

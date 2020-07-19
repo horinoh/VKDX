@@ -59,8 +59,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	EnumeratePhysicalDevice(Instance);
 	CreateDevice(GetCurrentPhysicalDevice(), Surface);
 	
-#if 1//def USE_SUBALLOC
-	//!< デバイスメモリをまとめて確保
+#ifdef USE_SUBALLOC
 	AllocateDeviceMemory();
 #endif
 
@@ -237,6 +236,29 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 	Images.clear();
 
+	for (auto& i : BufferViews) {
+		vkDestroyBufferView(Device, i, GetAllocationCallbacks());
+	}
+	BufferViews.clear();
+
+	for (auto& i : StorageTexelBuffers) {
+		vkDestroyBuffer(Device, i.Buffer, GetAllocationCallbacks());
+		vkFreeMemory(Device, i.DeviceMemory, GetAllocationCallbacks());
+	}
+	StorageTexelBuffers.clear();
+
+	for (auto& i : UniformTexelBuffers) {
+		vkDestroyBuffer(Device, i.Buffer, GetAllocationCallbacks());
+		vkFreeMemory(Device, i.DeviceMemory, GetAllocationCallbacks());
+	}
+	UniformTexelBuffers.clear();
+
+	for (auto& i : StorageBuffers) {
+		vkDestroyBuffer(Device, i.Buffer, GetAllocationCallbacks());
+		vkFreeMemory(Device, i.DeviceMemory, GetAllocationCallbacks());
+	}
+	StorageBuffers.clear();
+
 	for (auto& i : UniformBuffers) {
 		vkDestroyBuffer(Device, i.Buffer, GetAllocationCallbacks());
 		vkFreeMemory(Device, i.DeviceMemory, GetAllocationCallbacks());
@@ -270,22 +292,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	for (auto i : Samplers) {
 		vkDestroySampler(Device, i, GetAllocationCallbacks());
 	}
-
-	for (auto i : _ImageViews) {
-		vkDestroyImageView(Device, i, GetAllocationCallbacks());
-	}
-	for (auto i : _Images) {
-		vkDestroyImage(Device, i, GetAllocationCallbacks());
-	}
-
-	/*if (VK_NULL_HANDLE != DepthStencilImageView) {
-		vkDestroyImageView(Device, DepthStencilImageView, GetAllocationCallbacks());
-		DepthStencilImageView = VK_NULL_HANDLE;
-	}
-	if (VK_NULL_HANDLE != DepthStencilImage) {
-		vkDestroyImage(Device, DepthStencilImage, GetAllocationCallbacks());
-		DepthStencilImage = VK_NULL_HANDLE;
-	}*/
 
 	for (auto i : SwapchainImageViews) {
 		vkDestroyImageView(Device, i, GetAllocationCallbacks());
@@ -661,8 +667,6 @@ void VK::SuballocateBufferMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, cons
 
 	DeviceMemoryOffsets[HeapIndex] += MR.size;
 }
-#endif
-
 void VK::SuballocateImageMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const VkImage Img, const VkMemoryPropertyFlags MPF)
 {
 	VkMemoryRequirements MR;
@@ -679,6 +683,7 @@ void VK::SuballocateImageMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const
 
 	DeviceMemoryOffsets[HeapIndex] += MR.size;
 }
+#endif
 
 //void VK::CreateBufferView(VkBufferView* BufferView, const VkBuffer Buffer, const VkFormat Format, const VkDeviceSize Offset, const VkDeviceSize Range)
 //{
