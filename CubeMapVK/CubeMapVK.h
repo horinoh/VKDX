@@ -35,10 +35,9 @@ protected:
 	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
-#if !defined(USE_SKY_DOME) || defined(USE_DEPTH)
+#if !defined(USE_SKY_DOME)
 	virtual void CreateFramebuffer() override {
 		assert(!RenderPasses.empty() && "");
-		assert(3 == ImageViews.size() && "");
 		const auto RP = RenderPasses[0];
 		const auto DIV = ImageViews[2];
 		for (auto i : SwapchainImageViews) {
@@ -142,31 +141,33 @@ protected:
 	virtual void CreateTexture() override {
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
-			//!< キューブマップ : PX, NX, PY, NY, PZ, NZ
-			Images.push_back(VkImage()); ImageViews.push_back(VkImageView());
-			LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\CubeMap\\DebugCube.dds")));
-			//LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\CubeMap\\DesertCube.dds")));
-			//LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\CubeMap\\GrassCube.dds")));
-			//LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\CubeMap\\SunsetCube.dds")));
+			//!< [0] キューブ(Cube) : PX, NX, PY, NY, PZ, NZ
+			Images.push_back(Image());
+			auto GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, ToString(Path + TEXT("\\CubeMap\\DebugCube.dds")));
+			ImageViews.push_back(VkImageView());
+			CreateImageView(&ImageViews.back(), Images.back().Image, GLITexture);
 
-			//!< 法線マップ
-			Images.push_back(VkImage()); ImageViews.push_back(VkImageView());
-			//LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds")));
-			LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds")));
+			//!< [1] 法線(Normal)
+			Images.push_back(Image());
+			GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, ToString(Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds")));
+			ImageViews.push_back(VkImageView());
+			CreateImageView(&ImageViews.back(), Images.back().Image, GLITexture);
 		}
-#if !defined(USE_SKY_DOME) || defined(USE_DEPTH)
-		const VkExtent3D Extent = { SurfaceExtent2D.width, SurfaceExtent2D.height, 1 };
-		const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+#if !defined(USE_SKY_DOME)
+		//!< [2] 深度(DepthMap)
 		{
-			Images.push_back(VkImage());
-			VK::CreateImage(&Images.back(), 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+			Images.push_back(Image());
 
-			uint32_t Idx;
-			VkDeviceSize Ofs;
-			SuballocateImageMemory(Idx, Ofs, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			const VkExtent3D Extent = { SurfaceExtent2D.width, SurfaceExtent2D.height, 1 };
+			const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+
+			VK::CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
 			ImageViews.push_back(VkImageView());
-			VK::CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 });
+			VK::CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 });
 		}
 #endif
 	}
@@ -214,7 +215,6 @@ protected:
 		}, DescriptorSetLayouts[0]);
 	}
 	virtual void UpdateDescriptorSet() override {
-		assert(2 <= ImageViews.size() && "");
 		const DescriptorUpdateInfo DUI = {
 			{ UniformBuffers[0].Buffer, 0, VK_WHOLE_SIZE }, //!< UniformBuffer
 			{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, //!< Sampler + Image0
@@ -238,7 +238,7 @@ protected:
 #endif
 	}
 	virtual void CreatePipelines() override { 
-#if !defined(USE_SKY_DOME) || defined(USE_DEPTH)
+#if !defined(USE_SKY_DOME)
 		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE);
 #else
 		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_FALSE);

@@ -271,8 +271,8 @@ protected:
 	virtual void CreateSwapchainImageView();
 	virtual void InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorValue* CCV = nullptr);
 		
-	virtual void LoadImage(VkImage* /*Image*/, VkImageView* /*ImageView*/, const std::string& /*Path*/) { assert(false && "Not implemanted"); }
-	virtual void LoadImage(VkImage* Img, VkImageView* IV, const std::wstring& Path) { LoadImage(Img, IV, ToString(Path)); }
+	//virtual void LoadImage(VkImage* /*Img*/, VkDeviceMemory* /*DM*/, const std::string& /*Path*/) { assert(false && "Not implemanted"); }
+	//virtual void LoadImage(VkImage* Img, VkDeviceMemory* DM, const std::wstring& Path) { LoadImage(Img, DM, ToString(Path)); }
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 
 	virtual void LoadScene() {}
@@ -351,6 +351,7 @@ protected:
 	virtual void ClearDepthStencilAttachment(const VkCommandBuffer CommandBuffer, const VkClearDepthStencilValue& DepthStencil);
 	virtual void PopulateCommandBuffer(const size_t i);
 
+	virtual void DrawFrame(const uint32_t /*i*/) {}
 	virtual void Draw();
 	virtual void Dispatch();
 	virtual void Present();
@@ -470,13 +471,10 @@ protected:
 	std::vector<VkDeviceMemory> DeviceMemories;
 	std::vector<VkDeviceSize> DeviceMemoryOffsets;
 
-	VkImage RenderTargetImage = VK_NULL_HANDLE;
-	VkImageView RenderTargetImageView = VK_NULL_HANDLE;
-
 	VkFormat DepthFormat = VK_FORMAT_D24_UNORM_S8_UINT;
 
-	std::vector<VkImage> Images;
-	std::vector<VkImageView> ImageViews;
+	std::vector<VkImage> _Images;
+	std::vector<VkImageView> _ImageViews;
 
 	//!< VKの場合、通常サンプラ、イミュータブルサンプラとも同様に VkSampler を作成する、デスクリプタセットの指定が異なるだけ
 	std::vector<VkSampler> Samplers;
@@ -486,11 +484,15 @@ protected:
 	using IndexBuffer = struct Buffer;
 	using IndirectBuffer = struct Buffer;
 	using UniformBuffer = struct Buffer;
-
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;
 	std::vector<IndirectBuffer> IndirectBuffers;
 	std::vector<UniformBuffer> UniformBuffers;
+
+	struct Image { VkImage Image; VkDeviceMemory DeviceMemory; };
+	using Image = struct Image;
+	std::vector<Image> Images;
+	std::vector<VkImageView> ImageViews;
 
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;

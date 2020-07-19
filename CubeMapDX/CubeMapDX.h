@@ -97,24 +97,19 @@ protected:
 
 		ConstantBuffers.push_back(ConstantBuffer());
 		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)));
-		ConstantBuffers.back().ViewDesc = { COM_PTR_GET(ConstantBuffers.back().Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers.back().Resource->GetDesc().Width) };
-		//ConstantBuffers.back().CreateViewDesc();
 	}
 	virtual void CreateTexture() override {
 		ImageResources.resize(2);
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
-			//!< キューブマップ : PX, NX, PY, NY, PZ, NZ
+			//!< [0] キューブ(Cube) : PX, NX, PY, NY, PZ, NZ
 			LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\CubeMap\\DebugCube.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			//LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\CubeMap\\DesertCube.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			//LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\CubeMap\\GrassCube.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			//LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\CubeMap\\SunsetCube.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			
-			//!< 法線マップ
-			//LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			//!< [1] 法線(Normal)
 			LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		}
-#if !defined(USE_SKY_DOME) || defined(USE_DEPTH)
+#if !defined(USE_SKY_DOME)
+		//!< [2] 深度(Depth)
 		{
 			ImageResources.push_back(COM_PTR<ID3D12Resource>());
 			const D3D12_HEAP_PROPERTIES HeapProperties = {
@@ -148,7 +143,7 @@ protected:
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 3, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< CBV, SRV0, SRV1
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps[0])));
 		}
-#if !defined(USE_SKY_DOME) || defined(USE_DEPTH)
+#if !defined(USE_SKY_DOME)
 		{
 			DsvDescriptorHeaps.resize(1);
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 }; //!< DSV
@@ -161,10 +156,12 @@ protected:
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 			
-			Device->CreateConstantBufferView(&ConstantBuffers[0].ViewDesc, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[0].Resource->GetDesc().Width) };
+			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
 
 			assert(2 <= ImageResources.size() && "");
-			//!< (ディメンションがD3D12_SRV_DIMENSION_TEXTURECUBEの為)明示的にSHADER_RESOURCE_VIEW_DESCを指定すること (リソースと同じフォーマットとディメンション、最初のミップマップとスライスをターゲットする場合はnullptrを指定できる)
+			//!< D3D12_SRV_DIMENSION_TEXTURECUBEを指定する必要がある為、(nullptrではなく)明示的にSHADER_RESOURCE_VIEW_DESCを使用すること
+			//!< (nullptrを指定できるのは、リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合のみ)
 			const auto RD = ImageResources[0]->GetDesc(); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);
 			D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
 				RD.Format,
@@ -175,13 +172,24 @@ protected:
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV0
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV1
 		}
-#if !defined(USE_SKY_DOME) || defined(USE_DEPTH)
+#if !defined(USE_SKY_DOME)
 		{
 			assert(3 == ImageResources.size() && "");
 			assert(!CbvSrvUavDescriptorHeaps.empty() && "");
 			const auto& DH = DsvDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+#if 0
+			const auto RD = ImageResources[2]->GetDesc(); assert(RD.MipLevels > 0 && ""); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);
+			D3D12_DEPTH_STENCIL_VIEW_DESC DSVD = {
+				RD.Format,
+				D3D12_DSV_DIMENSION_TEXTURE2D,
+				D3D12_DSV_FLAG_NONE
+			};
+			DSVD.Texture2D = { 0 };
+			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[2]), &DSVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
+#else
 			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[2]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
+#endif
 		}
 #endif
 	}
@@ -203,7 +211,7 @@ protected:
 #endif
 	}
 	virtual void CreatePipelineStates() override { 
-#if !defined(USE_SKY_DOME) || defined(USE_DEPTH)
+#if !defined(USE_SKY_DOME)
 		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, TRUE);
 #else
 		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, FALSE);

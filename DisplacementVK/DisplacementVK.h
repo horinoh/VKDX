@@ -26,7 +26,6 @@ protected:
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 	virtual void CreateFramebuffer() override {
 		assert(!RenderPasses.empty() && "");
-		assert(3 == ImageViews.size() && "");
 		const auto RP = RenderPasses[0];
 		const auto DIV = ImageViews[2];
 		for (auto i : SwapchainImageViews) {
@@ -124,48 +123,31 @@ protected:
 	virtual void CreateTexture() override {
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
-			Images.push_back(VkImage()); ImageViews.push_back(VkImageView());
-			LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Displacement.dds")));
-			Images.push_back(VkImage()); ImageViews.push_back(VkImageView()); 
-			LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds")));
+			//!< [0] ディスプレースメント(Displacement)
+			Images.push_back(Image());
+			auto GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Displacement.dds")));
+			ImageViews.push_back(VkImageView());
+			CreateImageView(&ImageViews.back(), Images.back().Image, GLITexture);
 
-			//Images.push_back(VkImage()); ImageViews.push_back(VkImageView());
-			//LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Displacement.dds")));
-			//Images.push_back(VkImage()); ImageViews.push_back(VkImageView());
-			//LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")));
-
-			//Images.push_back(VkImage()); ImageViews.push_back(VkImageView());
-			//LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Displacement.dds")));
-			//Images.push_back(VkImage()); ImageViews.push_back(VkImageView());
-			//LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Color.dds")));
-
-			//Images.push_back(VkImage()); ImageViews.push_back(VkImageView());
-			//LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\Cardboard001_2K-JPG\\Cardboard001_2K_Displacement.dds")));
-			//Images.push_back(VkImage()); ImageViews.push_back(VkImageView());
-			//LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\Cardboard001_2K-JPG\\Cardboard001_2K_Color.dds")));
-
-			//Images.push_back(VkImage()); ImageViews.push_back(VkImageView());
-			//LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\Ground027_2K-JPG\\Ground027_2K_Displacement.dds")));
-			//Images.push_back(VkImage()); ImageViews.push_back(VkImageView());
-			//LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\Ground027_2K-JPG\\Ground027_2K_Color.dds")));
-
-			//Images.push_back(VkImage()); ImageViews.push_back(VkImageView());
-			//LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\Wicker002_2K-JPG\\Wicker002_2K_Displacement.dds")));
-			//Images.push_back(VkImage()); ImageViews.push_back(VkImageView());
-			//LoadImage(&Images.back(), &ImageViews.back(), ToString(Path + TEXT("\\Wicker002_2K-JPG\\Wicker002_2K_Color.dds")));
+			//!< [1] カラー(Color)
+			Images.push_back(Image());
+			GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds")));
+			ImageViews.push_back(VkImageView());
+			CreateImageView(&ImageViews.back(), Images.back().Image, GLITexture);
 		}
-		const VkExtent3D Extent = { SurfaceExtent2D.width, SurfaceExtent2D.height, 1 };
-		const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+		//!< [2] 深度(Depth)
 		{
-			Images.push_back(VkImage());
-			VK::CreateImage(&Images.back(), 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+			Images.push_back(Image());
 
-			uint32_t Idx;
-			VkDeviceSize Ofs;
-			SuballocateImageMemory(Idx, Ofs, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			const VkExtent3D Extent = { SurfaceExtent2D.width, SurfaceExtent2D.height, 1 };
+			const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+			VK::CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
 			ImageViews.push_back(VkImageView());
-			VK::CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 });
+			VK::CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 });
 		}
 	}
 	virtual void CreateDescriptorPool() override {
@@ -211,7 +193,6 @@ protected:
 	}
 	virtual void UpdateDescriptorSet() override {
 		//assert(!_UniformBuffers.empty() && "");
-		assert(2 <= ImageViews.size() && "");
 		const DescriptorUpdateInfo DUI = {
 			{ UniformBuffers[0].Buffer, 0, VK_WHOLE_SIZE }, //!< UniformBuffer
 			{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, //!< Sampler + Image0

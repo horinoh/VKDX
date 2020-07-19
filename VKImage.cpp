@@ -303,20 +303,17 @@ void VKImage::CreateImageView(VkImageView* IV, const VkImage Img, const gli::tex
 	Super::CreateImageView(IV, Img, Type, Format, CompMap, ImageSubresourceRange_ColorAll);
 }
 
-void VKImage::LoadImage(VkImage* Img, VkImageView* IV, const std::string& Path)
-{
-	const auto GLITexture = LoadImage_DDS(Img, Path);
+//gli::texture VKImage::LoadImage(VkImage* Img, VkDeviceMemory* DM, const std::string& Path)
+//{
+//	const auto GLITexture = LoadImage_DDS(Img, DM, Path);
+//
+//#ifdef DEBUG_STDOUT
+//	std::cout << "\t" << "ImageFile = " << Path.c_str() << std::endl;
+//#endif
+//	return GLITexture;
+//}
 
-#ifdef DEBUG_STDOUT
-	std::cout << "\t" << "ImageFile = " << Path.c_str() << std::endl;
-#endif
-	
-	CreateImageView(IV, *Img, GLITexture);
-
-	LOG_OK();
-}
-
-gli::texture VKImage::LoadImage_DDS(VkImage* Img, const std::string& Path)
+gli::texture VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory* DM, const std::string& Path)
 {
 	//!< DDS or KTX or KMG を読み込める (DDS or KTX or KMG can be read)
 	const auto GLITexture(gli::load(Path.c_str()));
@@ -379,9 +376,14 @@ gli::texture VKImage::LoadImage_DDS(VkImage* Img, const std::string& Path)
 		//!< - 全てのテクスチャフォーマットとリニアフィルタをサポートするわけではない (ValidateFormatProoerties()でチェックしている)
 		//!< - プラットフォームによってはコンバインドイメージサンプラ(サンプラとサンプルドイメージを１つにまとめたもの)を使った方が効率が良い場合がある
 		CreateImage(Img, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, GLITexture);
+#if 0
 		uint32_t HeapIndex;
 		VkDeviceSize Offset;
 		SuballocateImageMemory(HeapIndex, Offset, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+#else
+		AllocateDeviceMemory(DM, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Img, *DM, 0));
+#endif
 
 		//!< #VK_TODO VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT に決め打ちしている
 		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit copy command from host visible to device local)

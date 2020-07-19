@@ -191,19 +191,7 @@ protected:
 			{
 				const auto& DH = DsvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-#if 0
-				const auto RD = ImageResources[1]->GetDesc(); assert(RD.MipLevels > 0 && ""); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);
-				D3D12_DEPTH_STENCIL_VIEW_DESC DSVD = {
-					RD.Format,
-					D3D12_DSV_DIMENSION_TEXTURE2D,
-					D3D12_DSV_FLAG_NONE
-				};
-				DSVD.Texture2D = { 0 };
-				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[1]), &DSVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#else
-				//!< リソースのフォーマットやディメンジョンを引き継ぎ、ミップマップやスライスの最初の要素を使用するような場合は XXX_VIEW_DESC に nullptr を指定できる
 				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#endif
 			}
 #endif
 		}
@@ -212,19 +200,7 @@ protected:
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 			{
-#if 0
-				const auto RD = ImageResources[0]->GetDesc(); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);
-				D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
-					RD.Format,
-					D3D12_SRV_DIMENSION_TEXTURE2D,
-					D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				};
-				SRVD.Texture2D = { 0, RD.MipLevels, 0, 0.0f };
-				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#else
-				//!< リソースのフォーマットやディメンジョンを引き継ぎ、ミップマップやスライスの最初の要素を使用するような場合は XXX_VIEW_DESC に nullptr を指定できる
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#endif
 			}
 		}
 	}

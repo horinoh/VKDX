@@ -279,7 +279,7 @@ void CubeMapVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-#if defined(USE_SKY_DOME) && !defined(USE_DEPTH)
+#if defined(USE_SKY_DOME)
 		const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
 #else
 		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };

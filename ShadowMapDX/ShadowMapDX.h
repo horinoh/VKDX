@@ -202,14 +202,15 @@ protected:
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 
 			//!< パス0
-			Device->CreateConstantBufferView(&ConstantBuffers[0].ViewDesc, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[0].Resource->GetDesc().Width) };
+			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
 
 			//!< パス1
 			const auto RD = ImageResources[0]->GetDesc();
 			assert(DXGI_FORMAT_D24_UNORM_S8_UINT == RD.Format && "");
 			assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension && "");
 			D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
-				DXGI_FORMAT_R24_UNORM_X8_TYPELESS,
+				DXGI_FORMAT_R24_UNORM_X8_TYPELESS, //!< DXGI_FORMAT_D24_UNORM_S8_UINT -> DXGI_FORMAT_R24_UNORM_X8_TYPELESS : 基本的に D->R, UINT->TYPELESS のように置換したフォーマットを指定すれば良さそう？
 				D3D12_SRV_DIMENSION_TEXTURE2D,
 				D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
 			};
@@ -217,7 +218,8 @@ protected:
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
 
 #ifndef USE_SHADOWMAP_VISUALIZE
-			Device->CreateConstantBufferView(&ConstantBuffers[0].ViewDesc, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[0].Resource->GetDesc().Width) };
+			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
 #endif
 		}
 		{
@@ -310,8 +312,6 @@ protected:
 
 		ConstantBuffers.push_back(ConstantBuffer());
 		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)));
-		ConstantBuffers.back().ViewDesc = { COM_PTR_GET(ConstantBuffers.back().Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers.back().Resource->GetDesc().Width) };
-		//ConstantBuffers.back().CreateViewDesc();
 	}
 
 	virtual void CreateShaderBlobs() override {

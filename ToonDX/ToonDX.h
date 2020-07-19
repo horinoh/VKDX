@@ -16,11 +16,13 @@ public:
 protected:
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
 		Super::OnTimer(hWnd, hInstance);
-
+		
 		DirectX::XMStoreFloat4x4(&Tr.World, DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree)));
 		Degree += 1.0f;
 
-		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0].Resource), RoundUp256(sizeof(Tr)), &Tr);
+#pragma region FRAME_OBJECT
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[SwapChain->GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tr)), &Tr);
+#pragma endregion
 	}
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
@@ -76,14 +78,16 @@ protected:
 
 	virtual void CreateDescriptorHeap() override {
 		{
+#pragma region FRAME_OBJECT
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, static_cast<UINT>(SwapChainResources.size()), D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
+#pragma endregion
 			CbvSrvUavDescriptorHeaps.resize(1);
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps[0])));
 		}
 #ifdef USE_DEPTH
 		{
-			DsvDescriptorHeaps.resize(1);
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
+			DsvDescriptorHeaps.resize(1);
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps[0])));
 		}
 #endif
@@ -92,21 +96,31 @@ protected:
 		{
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-
-			Device->CreateConstantBufferView(&ConstantBuffers[0].ViewDesc, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma region FRAME_OBJECT
+			for (auto i = 0; i < SwapChainResources.size(); ++i) {
+				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
+				Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+			}
+#pragma endregion
 		}
 #ifdef USE_DEPTH
 		{
 			assert(!ImageResources.empty() && "");
 			const auto& DH = DsvDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-#if 1
-			//!< リソースと同じフォーマットとディメンション、最初のミップマップとスライスをターゲットする場合はnullptrを指定できる
-			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#else
-			D3D12_DEPTH_STENCIL_VIEW_DESC DSVD = { DXGI_FORMAT_D24_UNORM_S8_UINT, D3D12_DSV_DIMENSION_TEXTURE2D, D3D12_DSV_FLAG_NONE, };
-			DSVD.Texture2D.MipSlice = 0;
+
+			//!< nullptrを指定できるのは、リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合のみ
+#if 0
+			const auto RD = ImageResources[0]->GetDesc(); assert(RD.MipLevels > 0 && ""); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);
+			D3D12_DEPTH_STENCIL_VIEW_DESC DSVD = {
+				RD.Format,
+				D3D12_DSV_DIMENSION_TEXTURE2D,
+				D3D12_DSV_FLAG_NONE,
+			};
+			DSVD.Texture2D = { 0 };
 			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[0]), &DSVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#else
+			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #endif
 		}
 #endif
@@ -126,11 +140,12 @@ protected:
 		DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
 		DirectX::XMStoreFloat4x4(&Tr.View, View);
 		DirectX::XMStoreFloat4x4(&Tr.World, World);
-
-		ConstantBuffers.push_back(ConstantBuffer());
-		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)));
-		ConstantBuffers.back().ViewDesc = { COM_PTR_GET(ConstantBuffers.back().Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers.back().Resource->GetDesc().Width) };
-		//ConstantBuffers.back().CreateViewDesc();
+#pragma region FRAME_OBJECT
+		for (auto i = 0; i < SwapChainResources.size(); ++i) {
+			ConstantBuffers.push_back(ConstantBuffer());
+			CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)));
+		}
+#pragma endregion
 	}
 
 	virtual void CreateShaderBlobs() override {

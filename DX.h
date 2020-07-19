@@ -227,6 +227,7 @@ protected:
 
 	virtual void PopulateCommandList(const size_t i);
 
+	virtual void DrawFrame(const UINT /*i*/) {}
 	virtual void Draw();
 	virtual void Dispatch();
 	virtual void Present();
@@ -274,12 +275,15 @@ protected:
 	using VertexBuffer = struct VertexBuffer { D3D12_VERTEX_BUFFER_VIEW View; COM_PTR<ID3D12Resource> Resource; };
 	using IndexBuffer = struct IndexBuffer { D3D12_INDEX_BUFFER_VIEW View; COM_PTR<ID3D12Resource> Resource; };
 	using IndirectBuffer = struct IndirectBuffer { COM_PTR<ID3D12CommandSignature> CommandSignature; COM_PTR<ID3D12Resource> Resource; };
-	using ConstantBuffer = struct ConstantBuffer { D3D12_CONSTANT_BUFFER_VIEW_DESC ViewDesc; COM_PTR<ID3D12Resource> Resource; void CreateViewDesc() { ViewDesc = { COM_PTR_GET(Resource)->GetGPUVirtualAddress(), static_cast<UINT>(Resource->GetDesc().Width) };} };
+	using ConstantBuffer = struct ConstantBuffer { COM_PTR<ID3D12Resource> Resource; };
 
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;
 	std::vector<IndirectBuffer> IndirectBuffers;
 	std::vector<ConstantBuffer> ConstantBuffers;
+
+	using Image = struct Image { COM_PTR<ID3D12Resource> Resource; };
+	std::vector<Image> Images;
 
 	std::vector<D3D12_VIEWPORT> Viewports;
 	std::vector<D3D12_RECT> ScissorRects;

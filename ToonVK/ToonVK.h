@@ -22,7 +22,9 @@ protected:
 		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
 		Degree += 1.0f;
 
-		CopyToHostVisibleDeviceMemory(UniformBuffers[0].DeviceMemory, sizeof(Tr), &Tr, 0);
+#pragma region FRAME_OBJECT
+		CopyToHostVisibleDeviceMemory(UniformBuffers[SwapchainImageIndex].DeviceMemory, sizeof(Tr), &Tr, 0);
+#pragma endregion
 	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
@@ -30,17 +32,15 @@ protected:
 	virtual void CreateTexture() override {
 		const VkExtent3D Extent = { SurfaceExtent2D.width, SurfaceExtent2D.height, 1 };
 		const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
-		{
-			Images.push_back(VkImage());
-			VK::CreateImage(&Images.back(), 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
-			uint32_t Idx;
-			VkDeviceSize Ofs;
-			SuballocateImageMemory(Idx, Ofs, Images.back(), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		Images.push_back(Image());
+		VK::CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
+		
+		AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
-			ImageViews.push_back(VkImageView());
-			VK::CreateImageView(&ImageViews.back(), Images.back(), VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 });
-		}
+		ImageViews.push_back(VkImageView());
+		VK::CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 });
 	}
 	virtual void CreateFramebuffer() override { 
 		const auto RP = RenderPasses[0];
@@ -51,12 +51,11 @@ protected:
 		}
 	}
 	virtual void CreateRenderPass() override { 
-		RenderPasses.resize(1);
-		auto& RP = RenderPasses[0];
+		RenderPasses.push_back(VkRenderPass());
 		const auto ClearOnLoad = true;
 		const std::array<VkAttachmentReference, 1> ColorAttach = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
 		const VkAttachmentReference DepthAttach = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-		VK::CreateRenderPass(RP, {
+		VK::CreateRenderPass(RenderPasses.back(), {
 			{
 				0,
 				ColorFormat,
@@ -88,28 +87,26 @@ protected:
 
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 	virtual void CreateDescriptorSetLayout() override {
-		DescriptorSetLayouts.resize(1);
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {
-				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
-			});
+		DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
+			{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
+		});
 	}
 	virtual void CreatePipelineLayout() override {
 		assert(!DescriptorSetLayouts.empty() && "");
-		PipelineLayouts.resize(1);
-		VKExt::CreatePipelineLayout(PipelineLayouts[0], {
+		PipelineLayouts.push_back(VkPipelineLayout());
+		VKExt::CreatePipelineLayout(PipelineLayouts.back(), {
 				DescriptorSetLayouts[0] 
 			}, {});
 	}
 
 	virtual void CreateDescriptorPool() override {
-		DescriptorPools.resize(1);
-		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
-#ifdef USE_FRAME_DESCRIPTOR_SETS
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(SwapchainImages.size()) }
-#else
-				{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }
-#endif
-			});
+		DescriptorPools.push_back(VkDescriptorPool());
+		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
+#pragma region FRAME_OBJECT
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(SwapchainImages.size()) }
+#pragma endregion
+		});
 	}
 	virtual void AllocateDescriptorSet() override {
 		assert(!DescriptorSetLayouts.empty() && "");
@@ -121,15 +118,12 @@ protected:
 			DescriptorPools[0],
 			static_cast<uint32_t>(DSLs.size()), DSLs.data()
 		};
-#ifdef USE_FRAME_DESCRIPTOR_SETS
-		DescriptorSets.resize(SwapchainImages.size());
-		for (auto& i : DescriptorSets) {
-			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &i));
+#pragma region FRAME_OBJECT
+		for (auto i = 0; i < SwapchainImages.size(); ++i) {
+			DescriptorSets.push_back(VkDescriptorSet());
+			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
 		}
-#else
-		DescriptorSets.resize(1);
-		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
-#endif
+#pragma endregion
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
 		DescriptorUpdateTemplates.resize(1);
@@ -143,18 +137,14 @@ protected:
 		}, DescriptorSetLayouts[0]);
 	}
 	virtual void UpdateDescriptorSet() override {
-		const DescriptorUpdateInfo DUI = {
-			{ UniformBuffers[0].Buffer, 0, VK_WHOLE_SIZE },
-		};
-		assert(!DescriptorSets.empty() && "");
-		assert(!DescriptorUpdateTemplates.empty() && "");
-#ifdef USE_FRAME_DESCRIPTOR_SETS
-		for (auto i : DescriptorSets) {
-			vkUpdateDescriptorSetWithTemplate(Device, i, DescriptorUpdateTemplates[0], &DUI);
+#pragma region FRAME_OBJECT
+		for (auto i = 0; i < SwapchainImages.size(); ++i) {
+			const DescriptorUpdateInfo DUI = {
+				{ UniformBuffers[i].Buffer, 0, VK_WHOLE_SIZE },
+			};
+			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DescriptorUpdateTemplates[0], &DUI);
 		}
-#else
-		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
-#endif
+#pragma endregion
 	}
 
 	virtual void CreateUniformBuffer() override {
@@ -166,11 +156,14 @@ protected:
 		const auto CamTag = glm::vec3(0.0f);
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		Tr = Transform({ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
-
-		UniformBuffers.push_back(UniformBuffer());
-		CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-		AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
+#pragma region FRAME_OBJECT
+		for (auto i = 0; i < SwapchainImages.size(); ++i) {
+			UniformBuffers.push_back(UniformBuffer());
+			CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
+			AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
+		}
+#pragma endregion
 	}
 
 	virtual void CreateShaderModules() override {

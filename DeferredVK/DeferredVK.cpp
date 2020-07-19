@@ -361,7 +361,7 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 					VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
 					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-					Images[0],
+					_Images[0],
 					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
 				},
 #pragma region MRT
@@ -372,7 +372,7 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 					VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
 					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-					Images[1],
+					_Images[1],
 					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
 				},
 				//!< レンダーターゲット : 深度(RenderTarget : Depth)
@@ -382,7 +382,7 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 					VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
 					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-					Images[2],
+					_Images[2],
 					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
 				},
 				//!< レンダーターゲット : 未定
@@ -392,7 +392,7 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 					VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
 					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-					Images[3],
+					_Images[3],
 					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
 				},
 #pragma endregion

@@ -226,6 +226,17 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 	DescriptorSetLayouts.clear();
 
+	for (auto& i : ImageViews) {
+		vkDestroyImageView(Device, i, GetAllocationCallbacks());
+	}
+	ImageViews.clear();
+
+	for (auto& i : Images) {
+		vkDestroyImage(Device, i.Image, GetAllocationCallbacks());
+		vkFreeMemory(Device, i.DeviceMemory, GetAllocationCallbacks());
+	}
+	Images.clear();
+
 	for (auto& i : UniformBuffers) {
 		vkDestroyBuffer(Device, i.Buffer, GetAllocationCallbacks());
 		vkFreeMemory(Device, i.DeviceMemory, GetAllocationCallbacks());
@@ -260,10 +271,10 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroySampler(Device, i, GetAllocationCallbacks());
 	}
 
-	for (auto i : ImageViews) {
+	for (auto i : _ImageViews) {
 		vkDestroyImageView(Device, i, GetAllocationCallbacks());
 	}
-	for (auto i : Images) {
+	for (auto i : _Images) {
 		vkDestroyImage(Device, i, GetAllocationCallbacks());
 	}
 
@@ -275,15 +286,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroyImage(Device, DepthStencilImage, GetAllocationCallbacks());
 		DepthStencilImage = VK_NULL_HANDLE;
 	}*/
-
-	if (VK_NULL_HANDLE != RenderTargetImageView) {
-		vkDestroyImageView(Device, RenderTargetImageView, GetAllocationCallbacks());
-		RenderTargetImageView = VK_NULL_HANDLE;
-	}
-	if (VK_NULL_HANDLE != RenderTargetImage) {
-		vkDestroyImage(Device, RenderTargetImage, GetAllocationCallbacks());
-		RenderTargetImage = VK_NULL_HANDLE;
-	}
 
 	for (auto i : SwapchainImageViews) {
 		vkDestroyImageView(Device, i, GetAllocationCallbacks());
@@ -3136,9 +3138,7 @@ void VK::Draw()
 	//!< vkAcquireNextImageKHR が VK_SUBOPTIMAL_KHR を返した場合、イメージは使用可能ではあるがプレゼンテーションエンジンにとってベストではない状態
 	//!< vkAcquireNextImageKHR が VK_ERROR_OUT_OF_DATE_KHR を返した場合、イメージは使用不可で再作成が必要
 
-	//!< デスクリプタセットを更新したら、コマンドバッファを記録し直さないとダメ？
-	//UpdateDescriptorSet();
-	//UpdateDescriptorSet(SwapchainImageIndex);
+	DrawFrame(SwapchainImageIndex);
 	
 	//!< コマンドは指定のパイプラインステージに到達するまで実行され、そこでセマフォがシグナルされるまで待つ
 	const std::vector<VkSemaphore> WaitSem = { NextImageAcquiredSemaphore };

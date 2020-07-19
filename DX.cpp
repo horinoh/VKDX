@@ -1137,6 +1137,8 @@ void DX::Draw()
 
 	WaitForFence();
 
+	DrawFrame(SwapChain->GetCurrentBackBufferIndex());
+
 	const std::vector<ID3D12CommandList*> CLs = { COM_PTR_GET(GraphicsCommandLists[SwapChain->GetCurrentBackBufferIndex()]) };
 	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CLs.size()), CLs.data());
 	
