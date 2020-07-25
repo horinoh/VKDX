@@ -186,9 +186,6 @@ protected:
 
 	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
 
-	virtual void LoadImage(ID3D12Resource** /*Resource*/, const std::wstring& /*Path*/, const D3D12_RESOURCE_STATES /*ResourceState*/) { assert(false && "Not implemanted"); }
-	virtual void LoadImage(ID3D12Resource** Resource, const std::string& Path, const D3D12_RESOURCE_STATES ResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) { LoadImage(Resource/*, DescriptorHeap*/, ToWString(Path), ResourceState); }
-
 	virtual void LoadScene() {}
 
 	virtual void CreateAndCopyToUploadResource(COM_PTR<ID3D12Resource>& Res, const size_t Size, const void* Source);
@@ -257,7 +254,7 @@ protected:
 	COM_PTR<IDXGISwapChain4> SwapChain;
 	std::vector<COM_PTR<ID3D12Resource>> SwapChainResources;
 
-	COM_PTR<ID3D12Resource> UnorderedAccessTextureResource;
+	//COM_PTR<ID3D12Resource> UnorderedAccessTextureResource;
 	std::vector<COM_PTR<ID3D12Resource>> ImageResources;
 	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
 
@@ -281,9 +278,14 @@ protected:
 	std::vector<IndexBuffer> IndexBuffers;
 	std::vector<IndirectBuffer> IndirectBuffers;
 	std::vector<ConstantBuffer> ConstantBuffers;
+	//std::vector<D3D12_CONSTANT_BUFFER_VIEW_DESC> ConstantBufferViewDescs;
 
 	using Image = struct Image { COM_PTR<ID3D12Resource> Resource; };
-	std::vector<Image> Images;
+	std::vector<Image> Images; 
+	std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> ShaderResourceViewDescs; 
+	std::vector<D3D12_DEPTH_STENCIL_VIEW_DESC> DepthStencilViewDescs;
+	std::vector<D3D12_RENDER_TARGET_VIEW_DESC> RenderTargetViewDescs;
+	std::vector<D3D12_UNORDERED_ACCESS_VIEW_DESC> UnorderedAccessViewDescs;
 
 	std::vector<D3D12_VIEWPORT> Viewports;
 	std::vector<D3D12_RECT> ScissorRects;

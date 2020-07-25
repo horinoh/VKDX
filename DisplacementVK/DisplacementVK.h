@@ -125,13 +125,13 @@ protected:
 		if (FindDirectory("DDS", Path)) {
 			//!< [0] ディスプレースメント(Displacement)
 			Images.push_back(Image());
-			auto GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Displacement.dds")));
+			auto GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Displacement.dds")));
 			ImageViews.push_back(VkImageView());
 			CreateImageView(&ImageViews.back(), Images.back().Image, GLITexture);
 
 			//!< [1] カラー(Color)
 			Images.push_back(Image());
-			GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds")));
+			GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds")));
 			ImageViews.push_back(VkImageView());
 			CreateImageView(&ImageViews.back(), Images.back().Image, GLITexture);
 		}

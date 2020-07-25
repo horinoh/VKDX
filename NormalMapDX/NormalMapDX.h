@@ -99,19 +99,34 @@ protected:
 		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)));
 	}
 	virtual void CreateTexture() override {
-#ifdef USE_PARALLAX_MAP
-		ImageResources.resize(2);
 		std::wstring Path;
+#ifdef USE_PARALLAX_MAP
 		if (FindDirectory("DDS", Path)) {
-			LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Displacement.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			ImageResources.push_back(COM_PTR<ID3D12Resource>());
+			LoadImage(COM_PTR_PUT(ImageResources.back()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Normal.dds"));
+
+			ShaderResourceViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING });
+			ShaderResourceViewDescs.back().Texture2D = { 0, ImageResources.back()->GetDesc().MipLevels, 0, 0.0f };
+
+			ImageResources.push_back(COM_PTR<ID3D12Resource>());
+			LoadImage(COM_PTR_PUT(ImageResources.back()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, Path + TEXT("\\Leather009_2K-JPG\\Leather009_2K_Displacement.dds"));
+
+			ShaderResourceViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING });
+			ShaderResourceViewDescs.back().Texture2D = { 0, ImageResources.back()->GetDesc().MipLevels, 0, 0.0f };
 		}
 #else
-		ImageResources.resize(2);
-		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
-			LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Normal.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			ImageResources.push_back(COM_PTR<ID3D12Resource>());
+			LoadImage(COM_PTR_PUT(ImageResources.back()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Normal.dds"));
+
+			ShaderResourceViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING });
+			ShaderResourceViewDescs.back().Texture2D = { 0, ImageResources.back()->GetDesc().MipLevels, 0, 0.0f };
+
+			ImageResources.push_back(COM_PTR<ID3D12Resource>());
+			LoadImage(COM_PTR_PUT(ImageResources.back()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds"));
+
+			ShaderResourceViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING });
+			ShaderResourceViewDescs.back().Texture2D = { 0, ImageResources.back()->GetDesc().MipLevels, 0, 0.0f };
 		}
 #endif
 		{
@@ -137,6 +152,9 @@ protected:
 			};
 			const D3D12_CLEAR_VALUE CV = { RD.Format, { 1.0f, 0 } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+
+			DepthStencilViewDescs.push_back({ ImageResources.back()->GetDesc().Format,  D3D12_DSV_DIMENSION_TEXTURE2D,  D3D12_DSV_FLAG_NONE });
+			DepthStencilViewDescs.back().Texture2D = { 0 };
 		}
 	}
 
@@ -161,15 +179,26 @@ protected:
 			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
 
 			assert(2 <= ImageResources.size() && "");
+#if 1
+			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV0
+			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), &ShaderResourceViewDescs[1], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV1
+#else
+			//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合にはnullptrを指定できる
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV0
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV1
+#endif
 		}
 		{
 			assert(3 == ImageResources.size() && "");
 			assert(!CbvSrvUavDescriptorHeaps.empty() && "");
 			const auto& DH = DsvDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+#if 1
+			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[2]), &DepthStencilViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
+#else
+			//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合にはnullptrを指定できる
 			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[2]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
+#endif
 		}
 	}
 	virtual void CreateShaderBlobs() override {

@@ -184,11 +184,19 @@ protected:
 		CreateIndirectBuffer_Draw(4, 1); 
 	} 
 	virtual void CreateDescriptorSetLayout() override {
+		DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
+
+#ifdef USE_SUBPASS
+		const std::array<VkSampler, 0> ISs = {};
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
+			{ 0, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
+		});
+#endif
+
 		//!< パス1 : デスクリプタセットレイアウト
-		DescriptorSetLayouts.resize(1);
 		assert(!Samplers.empty() && "");
 		const std::array<VkSampler, 1> ISs = { Samplers[0] };
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
 			{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
 		});
 	}
@@ -201,10 +209,17 @@ protected:
 		VKExt::CreatePipelineLayout(PipelineLayouts[1], { DescriptorSetLayouts[0] }, {});
 	}
 
-	virtual void CreateDescriptorPool() override {
+	virtual void CreateDescriptorPool() override {	
+		DescriptorPools.push_back(VkDescriptorPool());
+
+#ifdef USE_SUBPASS
+		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
+			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1 }
+		});
+#endif
+
 		//!< パス1 : デスクリプタプール
-		DescriptorPools.resize(1);
-		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
+		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
 			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }
 		});
 	}
@@ -223,10 +238,21 @@ protected:
 		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
-		//!< パス1 : デスクリプタアップデートテンプレート
-		DescriptorUpdateTemplates.resize(1);
+		DescriptorUpdateTemplates.push_back(VkDescriptorUpdateTemplate());
 		assert(!DescriptorSetLayouts.empty() && "");
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates[0], {
+
+#ifdef USE_SUBPASS
+		K::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
+			{
+				0, 0,
+				_countof(DescriptorUpdateInfo::DescriptorImageInfos), VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
+				offsetof(DescriptorUpdateInfo, DescriptorImageInfos), sizeof(DescriptorUpdateInfo)
+			},
+			}, DescriptorSetLayouts[0]);
+#endif
+
+		//!< パス1 : デスクリプタアップデートテンプレート
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
 			{
 				0, 0,
 				_countof(DescriptorUpdateInfo::DescriptorImageInfos), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,

@@ -493,12 +493,12 @@ protected:
 	using StorageTexelBuffer = struct Buffer;
 	std::vector<UniformTexelBuffer> UniformTexelBuffers;
 	std::vector<StorageTexelBuffer> StorageTexelBuffers;
-	std::vector<VkBufferView> BufferViews;
+	std::vector<VkBufferView> BufferViews; //!< XXXTexelBufferはビューを使用する
 
 	struct Image { VkImage Image; VkDeviceMemory DeviceMemory; };
 	using Image = struct Image;
 	std::vector<Image> Images;
-	std::vector<VkImageView> ImageViews;
+	std::vector<VkImageView> ImageViews; //!< Imageはビューを使用する
 
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;

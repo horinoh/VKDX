@@ -73,10 +73,13 @@ protected:
 	}
 
 	virtual void CreateTexture() override {
-		ImageResources.resize(1);
+		ImageResources.push_back(COM_PTR<ID3D12Resource>());
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
-			LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			LoadImage(COM_PTR_PUT(ImageResources.back()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds"));
+
+			ShaderResourceViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING });
+			ShaderResourceViewDescs.back().Texture2D = { 0, ImageResources.back()->GetDesc().MipLevels, 0, 0.0f };
 		}
 	}
 
@@ -98,7 +101,12 @@ protected:
 		assert(!ImageResources.empty() && "");
 		const auto& DH = CbvSrvUavDescriptorHeaps[0];
 		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+#if 1
+		Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#else
+		//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合にはnullptrを指定できる
 		Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#endif
 	}
 
 #ifndef USE_STATIC_SAMPLER

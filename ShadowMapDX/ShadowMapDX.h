@@ -152,6 +152,14 @@ protected:
 			ImageResources.push_back(COM_PTR<ID3D12Resource>());
 			D3D12_CLEAR_VALUE CV = { RD.Format, { 1.0f, 0 } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+
+			//!< フォーマットを_TYPELESSにしなくてはならない為、必須
+			//!< DXGI_FORMAT_D24_UNORM_S8_UINT -> DXGI_FORMAT_R24_UNORM_X8_TYPELESS : 基本的に D->R, UINT->TYPELESS のように置換したフォーマットを指定すれば良さそう？
+			ShaderResourceViewDescs.push_back({ DXGI_FORMAT_R24_UNORM_X8_TYPELESS, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING });
+			ShaderResourceViewDescs.back().Texture2D = { 0, ImageResources.back()->GetDesc().MipLevels, 0, 0.0f };
+
+			DepthStencilViewDescs.push_back({ ImageResources.back()->GetDesc().Format,  D3D12_DSV_DIMENSION_TEXTURE2D,  D3D12_DSV_FLAG_NONE });
+			DepthStencilViewDescs.back().Texture2D = { 0 };
 		}
 		//!< パス1
 #ifndef USE_SHADOWMAP_VISUALIZE
@@ -170,6 +178,8 @@ protected:
 			ImageResources.push_back(COM_PTR<ID3D12Resource>());
 			D3D12_CLEAR_VALUE CV = { RD.Format, { 1.0f, 0 } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+
+			//!< D3D12_DEPTH_STENCIL_VIEW_DESCは流用で良い
 		}
 #endif
 	}
@@ -206,16 +216,19 @@ protected:
 			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
 
 			//!< パス1
-			const auto RD = ImageResources[0]->GetDesc();
-			assert(DXGI_FORMAT_D24_UNORM_S8_UINT == RD.Format && "");
-			assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension && "");
+#if 1		
+			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
+#else
+			//!< フォーマットを_TYPELESSにしなくてはならない為、必須
+			//!< DXGI_FORMAT_D24_UNORM_S8_UINT -> DXGI_FORMAT_R24_UNORM_X8_TYPELESS : 基本的に D->R, UINT->TYPELESS のように置換したフォーマットを指定すれば良さそう？
 			D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
-				DXGI_FORMAT_R24_UNORM_X8_TYPELESS, //!< DXGI_FORMAT_D24_UNORM_S8_UINT -> DXGI_FORMAT_R24_UNORM_X8_TYPELESS : 基本的に D->R, UINT->TYPELESS のように置換したフォーマットを指定すれば良さそう？
+				DXGI_FORMAT_R24_UNORM_X8_TYPELESS,
 				D3D12_SRV_DIMENSION_TEXTURE2D,
 				D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
 			};
 			SRVD.Texture2D = { 0, RD.MipLevels, 0, 0.0f };
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
+#endif
 
 #ifndef USE_SHADOWMAP_VISUALIZE
 			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[0].Resource->GetDesc().Width) };
@@ -227,11 +240,22 @@ protected:
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 
 			//!< パス0
+#if 1
+			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[0]), &DepthStencilViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
+#else
+			//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合にはnullptrを指定できる
 			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
+#endif
 
 			//!< パス1
 #ifndef USE_SHADOWMAP_VISUALIZE
+#if 1
+			//!< D3D12_DEPTH_STENCIL_VIEW_DESCは流用で良い
+			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[1]), &DepthStencilViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
+#else
+			//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合にはnullptrを指定できる
 			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
+#endif
 #endif
 		}
 	}

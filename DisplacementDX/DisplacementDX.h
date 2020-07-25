@@ -98,13 +98,21 @@ protected:
 		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)));
 	}
 	virtual void CreateTexture() override {
-		ImageResources.resize(2);
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
 			//!< [0] Displacemnt
-			LoadImage(COM_PTR_PUT(ImageResources[0]), Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Displacement.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			ImageResources.push_back(COM_PTR<ID3D12Resource>());
+			LoadImage(COM_PTR_PUT(ImageResources.back()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Displacement.dds"));
+
+			ShaderResourceViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING });
+			ShaderResourceViewDescs.back().Texture2D = { 0, ImageResources.back()->GetDesc().MipLevels, 0, 0.0f };
+
 			//!< [1] Color
-			LoadImage(COM_PTR_PUT(ImageResources[1]), Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds"), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			ImageResources.push_back(COM_PTR<ID3D12Resource>());
+			LoadImage(COM_PTR_PUT(ImageResources.back()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds"));
+
+			ShaderResourceViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING });
+			ShaderResourceViewDescs.back().Texture2D = { 0, ImageResources.back()->GetDesc().MipLevels, 0, 0.0f };
 		}
 		//!< [2] Depth
 		{
@@ -153,8 +161,14 @@ protected:
 			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
 
 			assert(2 <= ImageResources.size() && "");
+#if 1
+			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV0
+			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), &ShaderResourceViewDescs[1], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV1
+#else
+			//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合にはnullptrを指定できる
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV0
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV1
+#endif
 		}
 		{
 			assert(3 == ImageResources.size() && "");

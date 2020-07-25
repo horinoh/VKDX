@@ -44,22 +44,14 @@ protected:
 		const auto& DH = CbvSrvUavDescriptorHeaps[0];
 		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 
-		//const auto RD = ImageResources[0]->GetDesc(); RD.Format; RD.MipLevels;
-		D3D12_SHADER_RESOURCE_VIEW_DESC SRVD = {
-				DXGI_FORMAT_R8G8B8A8_UNORM,
-				D3D12_SRV_DIMENSION_TEXTURE2D,
-				D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-		};
-		SRVD.Texture2D = { 0, 1, 0, 0.0f };
-		Device->CreateShaderResourceView(COM_PTR_GET(UnorderedAccessTextureResource), &SRVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-
-		D3D12_UNORDERED_ACCESS_VIEW_DESC UAVD = {
-			DXGI_FORMAT_R8G8B8A8_UNORM,
-			D3D12_UAV_DIMENSION_TEXTURE2D
-		};
-		UAVD.Texture2D.MipSlice = 0;
-		UAVD.Texture2D.PlaneSlice = 0;
-		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextureResource), nullptr, &UAVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#if 0
+		Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		Device->CreateUnorderedAccessView(COM_PTR_GET(ImageResources[0]), nullptr, &ShaderResourceViewDescs[1], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#else
+		//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合にはnullptrを指定できる
+		Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		Device->CreateUnorderedAccessView(COM_PTR_GET(ImageResources[0]), nullptr, nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#endif
 	}
 	//virtual void CreateShader(std::vector<COM_PTR<ID3DBlob>>& SBs) const override {
 	//	//CreateShader_Cs(ShaderBlobs);
@@ -68,7 +60,13 @@ protected:
 
 	virtual void CreateTexture() override {
 		//!< #DX_TODO
-		//CreateDefaultResource();
+		//CreateUnorderedAccessTexture();
+		
+		//ShaderResourceViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING });
+		//ShaderResourceViewDescs.back().Texture2D = { 0, ImageResources.back()->GetDesc().MipLevels, 0, 0.0f };
+
+		//UnorderedAccessViewDescs.push_back({ /*ImageResources.back()->GetDesc().Format*/DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_UAV_DIMENSION_TEXTURE2D });
+		//UnorderedAccessViewDescs.back().Texture2D = { 0, 0 };
 	}
 
 	virtual void CreateShaderBlobs() override { CreateShaderBlob_Cs(); }

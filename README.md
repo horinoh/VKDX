@@ -317,17 +317,29 @@
 - USE_SHADER_REFLECTION
 	- *DX
 		- dxc 使用時、dxcompiler.dll が無いと怒られる場合は C:\Program Files (x86)\Windows Kits\10\bin\10.0.18362.0\x64 とかに存在するので、環境変数 Path に通しておく必要がある
-	- *VK TODO
+	- *VK 
+		- TODO
 - USE_SUBPASS
 	- RenderTargetVk
+		- 参考) https://www.saschawillems.de/blog/2018/07/19/vulkan-input-attachments-and-sub-passes/
+		- あるサブパスで書き込まれたフレームバッファアタッチメントに対して、別のサブパスで「同一のピクセル」を読み込むことができる (ただし「周辺のピクセル」は読めないので用途は要考慮)
+		- 各サブパスのアタッチメントは１つのフレームバッファにまとめてエントリする
+			- VkRenderPassBeginInfoの引数として渡すため、同一パス(サブパス)で完結するにはまとめる必要がある
+		- VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENTを指定する
+		- vkCmdNextSubpass(でコマンドを次のサブパスへ進める
+		- シェーダ内での使用例
+			~~~
+			layout (input_attachment_index = 0, set = 0, binding = 0) uniform subpassInput XXX;
+			vec3 Color = subpassLoad(XXX).rgb;
+			~~~
 
 #### トラブルシューティング
 * 「このプロジェクトは、このコンピュータ上にないNugetパッケージを参照しています」と出る場合
 	* まず VS を最新にアップデートする、それでダメなら以下を試す
 	* .vcproj の <Target>...</Target> を消す
 	* WinPixEventRuntimeのアンインストール、インストールを行う
-* VK.prop を指定してるのに vulkan.h が無いと言われるとき
-	* VK.prop を一旦Removeして、再度Addするとうまく行ったりする
+* *.prop を指定してるのに ～が無いとか言われるとき
+	* *.prop を一旦Removeして、再度Addするとうまく行ったりする
 
 <!-- 
 ## プロジェクトの追加方法 (自分用覚書)
@@ -432,14 +444,14 @@
 TODO
 
 # VK
-	* ウインドウサイズ変更時の処理 OnSize() スワップチェインのリサイズ
-	* コンピュートの検証(テクスチャを準備する)
 	* ストレージバッファ、ユニフォームテクセルバッファ、ストレージテクセルバッファの検証
+	* サブパスの検証
 # DX
-	* ウインドウサイズ変更時の処理 OnSize() スワップチェインのリサイズ
-	* コンピュートの検証(テクスチャを準備する)
 	* コマンドリスト、グラフィクスコマンドリストまわりをまとめる
 # VK, DX
+	* コンスタント(ユニフォーム)バッファをフレーム分用意する
+	* ウインドウサイズ変更時の処理 OnSize() スワップチェインのリサイズ
+	* コンピュートの検証(テクスチャを準備する)
 	* テクスチャ
 		* プロシージャルテクスチャ
 	* Gバッファ
@@ -462,13 +474,3 @@ TODO
 				BC6H	bpp8	RGB			HDR
 				BC7		bpp8	RGB,RGBA
 -->
-
- <!--
- ID3D12Resource				VkBuffer, VkImage
- ID3D12DescriptorHeap		VkDeviceMemory
-
- static const float3 Masks[] = { float3(1, 0, 0), float3(0, 1, 0), float3(0, 0, 1), }
- Out.XXX += A * Masks[InstanceID].xxx;
- Out.XXX += B * Masks[InstanceID].yyy;
- Out.XXX += C * Masks[InstanceID].zzz;
- -->

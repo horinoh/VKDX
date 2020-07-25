@@ -24,11 +24,11 @@ private:
 
 protected:
 	virtual void CreateImage(VkImage* Image, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage, const gli::texture& GLITexture) const;
-	virtual void CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlagBits PSF, const gli::texture& GLITexture);
-	virtual void CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL,	const VkPipelineStageFlagBits PSF, const gli::texture& GLITexture);
+	virtual void CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const gli::texture& GLITexture);
+	virtual void CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL,	const VkPipelineStageFlags PSF, const gli::texture& GLITexture);
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const gli::texture& GLITexture);
 
-	gli::texture LoadImage(VkImage* Img, VkDeviceMemory* DM, const std::string& Path) { return LoadImage_DDS(Img, DM, Path); }
-	gli::texture LoadImage_DDS(VkImage* Image, VkDeviceMemory* DM, const std::string& Path);
+	virtual gli::texture LoadImage(VkImage* Img, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, const std::string& Path) { return LoadImage_DDS(Img, DM, PSF, Path); }
+	gli::texture LoadImage_DDS(VkImage* Image, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, const std::string& Path);
 };
 

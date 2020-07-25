@@ -303,6 +303,10 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
 	}
 
+#ifdef USE_SUBPASS
+	//vkCmdNextSubpass() ‚ðŽg—p‚·‚é
+#endif
+
 	const auto CB = CommandBuffers[i];
 	const VkCommandBufferBeginInfo CBBI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,

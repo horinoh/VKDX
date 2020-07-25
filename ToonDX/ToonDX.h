@@ -51,6 +51,10 @@ protected:
 		//!< 一致するクリア値なら最適化されるのでよく使うクリア値を指定しておく
 		const D3D12_CLEAR_VALUE CV = { RD.Format, { 1.0f, 0 } };
 		VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+
+		//!< ビュー
+		DepthStencilViewDescs.push_back({ ImageResources.back()->GetDesc().Format,  D3D12_DSV_DIMENSION_TEXTURE2D,  D3D12_DSV_FLAG_NONE });
+		DepthStencilViewDescs.back().Texture2D = { 0 };
 	}
 #endif
 
@@ -108,18 +112,10 @@ protected:
 			assert(!ImageResources.empty() && "");
 			const auto& DH = DsvDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-
-			//!< nullptrを指定できるのは、リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合のみ
-#if 0
-			const auto RD = ImageResources[0]->GetDesc(); assert(RD.MipLevels > 0 && ""); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);
-			D3D12_DEPTH_STENCIL_VIEW_DESC DSVD = {
-				RD.Format,
-				D3D12_DSV_DIMENSION_TEXTURE2D,
-				D3D12_DSV_FLAG_NONE,
-			};
-			DSVD.Texture2D = { 0 };
-			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[0]), &DSVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#if 1
+			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[0]), &DepthStencilViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #else
+			//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合にはnullptrを指定できる
 			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #endif
 		}

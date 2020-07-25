@@ -118,6 +118,12 @@ protected:
 				{ DirectX::Colors::SkyBlue.f[0], DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] },
 			};
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+
+			RenderTargetViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_RTV_DIMENSION_TEXTURE2D });
+			RenderTargetViewDescs.back().Texture2D = { 0, 0 };
+
+			ShaderResourceViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING });
+			ShaderResourceViewDescs.back().Texture2D = { 0, ImageResources.back()->GetDesc().MipLevels, 0, 0.0f };
 		}
 
 #ifdef USE_DEPTH
@@ -136,6 +142,9 @@ protected:
 			};
 			D3D12_CLEAR_VALUE CV = { RD.Format, { 1.0f, 0 } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+
+			DepthStencilViewDescs.push_back({ ImageResources.back()->GetDesc().Format,  D3D12_DSV_DIMENSION_TEXTURE2D,  D3D12_DSV_FLAG_NONE });
+			DepthStencilViewDescs.back().Texture2D = { 0 };
 		}
 #endif
 	}
@@ -174,14 +183,8 @@ protected:
 			{
 				const auto& DH = RtvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-#if 0
-				const auto RD = ImageResources[0]->GetDesc(); assert(RD.MipLevels > 0 && ""); assert(D3D12_RESOURCE_DIMENSION_TEXTURE2D == RD.Dimension);
-				D3D12_RENDER_TARGET_VIEW_DESC RTVD = {
-					RD.Format,
-					D3D12_RTV_DIMENSION_TEXTURE2D,
-				};
-				RTVD.Texture2D = { 0, 0 };
-				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), &RTVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#if 1			
+				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), &RenderTargetViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #else
 				//!< リソースのフォーマットやディメンジョンを引き継ぎ、ミップマップやスライスの最初の要素を使用するような場合は XXX_VIEW_DESC に nullptr を指定できる
 				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
@@ -191,7 +194,12 @@ protected:
 			{
 				const auto& DH = DsvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+#if 1
+				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[1]), &DepthStencilViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#else
+				//!< リソースのフォーマットやディメンジョンを引き継ぎ、ミップマップやスライスの最初の要素を使用するような場合は XXX_VIEW_DESC に nullptr を指定できる
 				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#endif
 			}
 #endif
 		}
@@ -200,7 +208,12 @@ protected:
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 			{
+#if 1
+				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#else
+				//!< リソースのフォーマットやディメンジョンを引き継ぎ、ミップマップやスライスの最初の要素を使用するような場合は XXX_VIEW_DESC に nullptr を指定できる
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#endif
 			}
 		}
 	}

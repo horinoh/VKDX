@@ -68,7 +68,7 @@ protected:
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
 			Images.push_back(Image());
-			const auto GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")));
+			const auto GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")));
 
 			ImageViews.push_back(VkImageView());
 			CreateImageView(&ImageViews.back(), Images.back().Image, GLITexture);

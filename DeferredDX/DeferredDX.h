@@ -162,6 +162,12 @@ protected:
 			};
 			const D3D12_CLEAR_VALUE CV = { RD.Format, { DirectX::Colors::SkyBlue.f[0],DirectX::Colors::SkyBlue.f[1],DirectX::Colors::SkyBlue.f[2],DirectX::Colors::SkyBlue.f[3] } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+
+			RenderTargetViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_RTV_DIMENSION_TEXTURE2D });
+			RenderTargetViewDescs.back().Texture2D = { 0, 0 };
+
+			ShaderResourceViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING });
+			ShaderResourceViewDescs.back().Texture2D = { 0, ImageResources.back()->GetDesc().MipLevels, 0, 0.0f };
 		}
 #pragma region MRT
 		//!< レンダーターゲット : 法線(RenderTarget : Normal)
@@ -180,6 +186,12 @@ protected:
 			};
 			const D3D12_CLEAR_VALUE CV = { RD.Format, { 0.5f, 0.5f, 1.0f, 1.0f } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+
+			RenderTargetViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_RTV_DIMENSION_TEXTURE2D });
+			RenderTargetViewDescs.back().Texture2D = { 0, 0 };
+
+			ShaderResourceViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING });
+			ShaderResourceViewDescs.back().Texture2D = { 0, ImageResources.back()->GetDesc().MipLevels, 0, 0.0f };
 		}
 		//!< レンダーターゲット : 深度(RenderTarget : Depth)
 		{
@@ -197,6 +209,12 @@ protected:
 			};
 			const D3D12_CLEAR_VALUE CV = { RD.Format, { DirectX::Colors::Red.f[0], DirectX::Colors::Red.f[1], DirectX::Colors::Red.f[2], DirectX::Colors::Red.f[3] } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+
+			RenderTargetViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_RTV_DIMENSION_TEXTURE2D });
+			RenderTargetViewDescs.back().Texture2D = { 0, 0 };
+
+			ShaderResourceViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING });
+			ShaderResourceViewDescs.back().Texture2D = { 0, ImageResources.back()->GetDesc().MipLevels, 0, 0.0f };
 		}
 		//!< レンダーターゲット : 未定
 		{
@@ -214,6 +232,12 @@ protected:
 			};
 			const D3D12_CLEAR_VALUE CV = { RD.Format, { DirectX::Colors::SkyBlue.f[0],  DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+
+			RenderTargetViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_RTV_DIMENSION_TEXTURE2D });
+			RenderTargetViewDescs.back().Texture2D = { 0, 0 };
+
+			ShaderResourceViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING });
+			ShaderResourceViewDescs.back().Texture2D = { 0, ImageResources.back()->GetDesc().MipLevels, 0, 0.0f };
 		}
 #pragma endregion
 		{
@@ -231,6 +255,9 @@ protected:
 			};
 			D3D12_CLEAR_VALUE CV = { RD.Format, { 1.0f, 0 } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+
+			DepthStencilViewDescs.push_back({ ImageResources.back()->GetDesc().Format,  D3D12_DSV_DIMENSION_TEXTURE2D,  D3D12_DSV_FLAG_NONE });
+			DepthStencilViewDescs.back().Texture2D = { 0 };
 		}
 	}
 
@@ -282,6 +309,19 @@ protected:
 				const auto& DH = RtvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 
+#if 1
+				//!< レンダーターゲット : カラー(RenderTarget : Color)
+				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), &RenderTargetViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma region MRT
+				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[1]), &RenderTargetViewDescs[1], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[2]), &RenderTargetViewDescs[2], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				//!< レンダーターゲット : 未定
+				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[3]), &RenderTargetViewDescs[3], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma endregion
+#else
+				//!< リソースのフォーマットやディメンジョンを引き継ぎ、ミップマップやスライスの最初の要素を使用するような場合は XXX_VIEW_DESC に nullptr を指定できる
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #pragma region MRT
@@ -292,12 +332,18 @@ protected:
 				//!< レンダーターゲット : 未定
 				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[3]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #pragma endregion
+#endif
 			}
 			{
 				const auto& DH = DsvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 
+#if 1
+				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[4]), &DepthStencilViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#else
+				//!< リソースのフォーマットやディメンジョンを引き継ぎ、ミップマップやスライスの最初の要素を使用するような場合は XXX_VIEW_DESC に nullptr を指定できる
 				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[4]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#endif
 			}
 		}
 		//!< パス1 : シェーダリソースビュー
@@ -306,6 +352,19 @@ protected:
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 
 			{
+#if 1
+				//!< レンダーターゲット : カラー(RenderTarget : Color)
+				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma region MRT
+				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), &ShaderResourceViewDescs[1], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[2]), &ShaderResourceViewDescs[2], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				//!< レンダーターゲット : 未定
+				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[3]), &ShaderResourceViewDescs[3], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma	endregion
+#else
+				//!< リソースのフォーマットやディメンジョンを引き継ぎ、ミップマップやスライスの最初の要素を使用するような場合は XXX_VIEW_DESC に nullptr を指定できる
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #pragma region MRT
@@ -316,6 +375,7 @@ protected:
 				//!< レンダーターゲット : 未定
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[3]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #pragma	endregion
+#endif
 			}
 			{
 				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[0].Resource->GetDesc().Width) };

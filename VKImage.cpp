@@ -117,7 +117,7 @@ void VKImage::CreateImage(VkImage* Img, const VkSampleCountFlagBits SampleCount,
 //!< @param (コピー後の)イメージのアクセスフラグ ex) VK_ACCESS_SHADER_READ_BIT,...等
 //!< @param (コピー後の)イメージのレイアウト ex) VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,...等
 //!< @param (コピー後に)イメージが使われるパイプラインステージ ex) VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,...等
-void VKImage::CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlagBits PSF, const gli::texture& GLITexture)
+void VKImage::CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const gli::texture& GLITexture)
 {
 	//!< キューブマップの場合は、複数レイヤのイメージとして作成する。When cubemap, create as layered image.
 	//!< イメージビューを介して、レイヤをフェイスとして扱うようハードウエアへ伝える。Tell the hardware that it should interpret its layers as faces
@@ -215,7 +215,7 @@ void VKImage::CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, co
 //!< @param (コピー後の)イメージのアクセスフラグ ex) VK_ACCESS_SHADER_READ_BIT,...等
 //!< @param (コピー後の)イメージのレイアウト ex) VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,...等
 //!< @param (コピー後に)イメージが使われるパイプラインステージ ex) VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,...等
-void VKImage::CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlagBits PSF, const gli::texture& GLITexture)
+void VKImage::CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const gli::texture& GLITexture)
 {
 	const auto Faces = static_cast<const uint32_t>(GLITexture.faces());
 	const auto Layers = static_cast<const uint32_t>(GLITexture.layers()) * Faces;
@@ -303,17 +303,7 @@ void VKImage::CreateImageView(VkImageView* IV, const VkImage Img, const gli::tex
 	Super::CreateImageView(IV, Img, Type, Format, CompMap, ImageSubresourceRange_ColorAll);
 }
 
-//gli::texture VKImage::LoadImage(VkImage* Img, VkDeviceMemory* DM, const std::string& Path)
-//{
-//	const auto GLITexture = LoadImage_DDS(Img, DM, Path);
-//
-//#ifdef DEBUG_STDOUT
-//	std::cout << "\t" << "ImageFile = " << Path.c_str() << std::endl;
-//#endif
-//	return GLITexture;
-//}
-
-gli::texture VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory* DM, const std::string& Path)
+gli::texture VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, const std::string& Path)
 {
 	//!< DDS or KTX or KMG を読み込める (DDS or KTX or KMG can be read)
 	const auto GLITexture(gli::load(Path.c_str()));
@@ -376,7 +366,8 @@ gli::texture VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory* DM, const std:
 		//!< - 全てのテクスチャフォーマットとリニアフィルタをサポートするわけではない (ValidateFormatProoerties()でチェックしている)
 		//!< - プラットフォームによってはコンバインドイメージサンプラ(サンプラとサンプルドイメージを１つにまとめたもの)を使った方が効率が良い場合がある
 		CreateImage(Img, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, GLITexture);
-#if 0
+
+#ifdef USE_SUBALLOC
 		uint32_t HeapIndex;
 		VkDeviceSize Offset;
 		SuballocateImageMemory(HeapIndex, Offset, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -385,9 +376,8 @@ gli::texture VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory* DM, const std:
 		VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Img, *DM, 0));
 #endif
 
-		//!< #VK_TODO VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT に決め打ちしている
 		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit copy command from host visible to device local)
-		CopyBufferToImage(CB, StagingBuffer, *Img, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, GLITexture);
+		CopyBufferToImage(CB, StagingBuffer, *Img, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, GLITexture);
 		const std::vector<VkSubmitInfo> SIs = {
 			{
 				VK_STRUCTURE_TYPE_SUBMIT_INFO,

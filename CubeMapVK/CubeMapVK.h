@@ -143,13 +143,13 @@ protected:
 		if (FindDirectory("DDS", Path)) {
 			//!< [0] キューブ(Cube) : PX, NX, PY, NY, PZ, NZ
 			Images.push_back(Image());
-			auto GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, ToString(Path + TEXT("\\CubeMap\\DebugCube.dds")));
+			auto GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, ToString(Path + TEXT("\\CubeMap\\DebugCube.dds")));
 			ImageViews.push_back(VkImageView());
 			CreateImageView(&ImageViews.back(), Images.back().Image, GLITexture);
 
 			//!< [1] 法線(Normal)
 			Images.push_back(Image());
-			GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, ToString(Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds")));
+			GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, ToString(Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds")));
 			ImageViews.push_back(VkImageView());
 			CreateImageView(&ImageViews.back(), Images.back().Image, GLITexture);
 		}
