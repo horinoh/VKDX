@@ -256,7 +256,9 @@ void DisplacementVK::PopulateCommandBuffer(const size_t i)
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-		const auto DS = DescriptorSets[0];
+#pragma region FRAME_OBJECT
+		const auto DS = DescriptorSets[i];
+#pragma endregion
 		const auto PLL = PipelineLayouts[0];
 		const std::array<VkDescriptorSet, 1> DSs = { DS };
 		vkCmdBindDescriptorSets(SCB,

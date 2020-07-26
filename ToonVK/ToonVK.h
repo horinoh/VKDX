@@ -126,9 +126,9 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
-		DescriptorUpdateTemplates.resize(1);
+		DescriptorUpdateTemplates.push_back(VkDescriptorUpdateTemplate());
 		assert(!DescriptorSetLayouts.empty() && "");
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates[0], {
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
 			{
 				0, 0,
 				_countof(DescriptorUpdateInfo::DescriptorBufferInfos), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,

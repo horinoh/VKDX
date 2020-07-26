@@ -20,7 +20,9 @@ protected:
 		Tr.World = glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(270.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 		Degree += 1.0f;
 
-		CopyToHostVisibleDeviceMemory(UniformBuffers[0].DeviceMemory, sizeof(Tr), &Tr, 0);
+#pragma region FRAME_OBJECT
+		CopyToHostVisibleDeviceMemory(UniformBuffers[SwapchainImageIndex].DeviceMemory, sizeof(Tr), &Tr, 0);
+#pragma endregion
 	}
 
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
@@ -34,10 +36,10 @@ protected:
 		}
 	}
 	virtual void CreateRenderPass() override { 
-		RenderPasses.resize(1);
+		RenderPasses.push_back(VkRenderPass());
 		const std::array<VkAttachmentReference, 1> ColorAttach = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
 		const VkAttachmentReference DepthAttach = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-		VK::CreateRenderPass(RenderPasses[0], {
+		VK::CreateRenderPass(RenderPasses.back(), {
 				//!< アタッチメント
 				{
 					0,
@@ -70,7 +72,7 @@ protected:
 			});
 	}
 	virtual void CreateImmutableSampler() override {
-		Samplers.resize(1);
+		Samplers.push_back(VkSampler());
 		const VkSamplerCreateInfo SCI = {
 			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			nullptr,
@@ -84,15 +86,15 @@ protected:
 			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
 			VK_FALSE
 		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.back()));
 	}
 	virtual void CreateDescriptorSetLayout() override {
-		DescriptorSetLayouts.resize(1);
+		DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
 		assert(!Samplers.empty() && "");
 		const std::array<VkSampler, 1> ISs = {
 			Samplers[0]
 		};
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
 				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr }, //!< UniformBuffer
 				{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, ISs.data() }, //!< Sampler + Image0
 				{ 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data()  }, //!< Sampler + Image1
@@ -100,8 +102,8 @@ protected:
 	}
 	virtual void CreatePipelineLayout() override {
 		assert(!DescriptorSetLayouts.empty() && "");
-		PipelineLayouts.resize(1);
-		VKExt::CreatePipelineLayout(PipelineLayouts[0], {
+		PipelineLayouts.push_back(VkPipelineLayout());
+		VKExt::CreatePipelineLayout(PipelineLayouts.back(), {
 				DescriptorSetLayouts[0]
 			}, {});
 	}
@@ -115,10 +117,14 @@ protected:
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		Tr = Transform({ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
 
-		UniformBuffers.push_back(UniformBuffer());
-		CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-		AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
+#pragma region FRAME_OBJECT
+		for (auto i = 0; i < SwapchainImages.size(); ++i) {
+			UniformBuffers.push_back(UniformBuffer());
+			CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
+			AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
+		}
+#pragma endregion
 	}
 	virtual void CreateTexture() override {
 		std::wstring Path;
@@ -151,9 +157,11 @@ protected:
 		}
 	}
 	virtual void CreateDescriptorPool() override {
-		DescriptorPools.resize(1);
-		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }, //!< UniformBuffer
+		DescriptorPools.push_back(VkDescriptorPool());
+		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
+#pragma region FRAME_OBJECT
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(SwapchainImages.size()) }, //!< UniformBuffer
+#pragma endregion
 			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 }, //!< Sampler + Image0, Sampler + Image1
 		});
 	}
@@ -167,13 +175,17 @@ protected:
 			DescriptorPools[0],
 			static_cast<uint32_t>(DSLs.size()), DSLs.data()
 		};
-		DescriptorSets.resize(1);
-		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
+#pragma region FRAME_OBJECT
+		for (auto i = 0; i < SwapchainImages.size(); ++i) {
+			DescriptorSets.push_back(VkDescriptorSet());
+			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+		}
+#pragma endregion
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
-		DescriptorUpdateTemplates.resize(1);
+		DescriptorUpdateTemplates.push_back(VkDescriptorUpdateTemplate());
 		assert(!DescriptorSetLayouts.empty() && "");
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates[0], {
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
 			{
 				0, 0,
 				_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< UniformBuffer
@@ -192,15 +204,16 @@ protected:
 		}, DescriptorSetLayouts[0]);
 	}
 	virtual void UpdateDescriptorSet() override {
-		//assert(!_UniformBuffers.empty() && "");
-		const DescriptorUpdateInfo DUI = {
-			{ UniformBuffers[0].Buffer, 0, VK_WHOLE_SIZE }, //!< UniformBuffer
-			{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, //!< Sampler + Image0
-			{ VK_NULL_HANDLE, ImageViews[1], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, //!< Sampler + Image1
-		};
-		assert(!DescriptorSets.empty() && "");
-		assert(!DescriptorUpdateTemplates.empty() && "");
-		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+#pragma region FRAME_OBJECT
+		for (auto i = 0; i < SwapchainImages.size(); ++i) {
+			const DescriptorUpdateInfo DUI = {
+				{ UniformBuffers[i].Buffer, 0, VK_WHOLE_SIZE },
+				{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, //!< Sampler + Image0
+				{ VK_NULL_HANDLE, ImageViews[1], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, //!< Sampler + Image1
+			};
+			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DescriptorUpdateTemplates[0], &DUI);
+		}
+#pragma endregion
 	}
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFsTesTcsGs(); }

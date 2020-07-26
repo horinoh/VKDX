@@ -278,9 +278,17 @@ void DisplacementDX::PopulateCommandList(const size_t i)
 				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
 
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-				CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
-				CL->SetGraphicsRootDescriptorTable(1, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV0
-				CL->SetGraphicsRootDescriptorTable(2, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV1
+#pragma region FRAME_OBJECT
+				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
+#pragma endregion
+				CL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV
+
+				GDH = DH->GetGPUDescriptorHandleForHeapStart();
+                GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * SwapChainResources.size();
+				CL->SetGraphicsRootDescriptorTable(1, GDH); //!< SRV0
+                
+                GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				CL->SetGraphicsRootDescriptorTable(2, GDH); //!< SRV1
 			}
 
 			CL->ExecuteBundle(BCL);

@@ -322,16 +322,10 @@ protected:
 #pragma endregion
 #else
 				//!< リソースのフォーマットやディメンジョンを引き継ぎ、ミップマップやスライスの最初の要素を使用するような場合は XXX_VIEW_DESC に nullptr を指定できる
-				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#pragma region MRT
-				//!< レンダーターゲット : 法線(RenderTarget : Normal)
 				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
 				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[2]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				//!< レンダーターゲット : 未定
 				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[3]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#pragma endregion
 #endif
 			}
 			{
@@ -365,16 +359,10 @@ protected:
 #pragma	endregion
 #else
 				//!< リソースのフォーマットやディメンジョンを引き継ぎ、ミップマップやスライスの最初の要素を使用するような場合は XXX_VIEW_DESC に nullptr を指定できる
-				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#pragma region MRT
-				//!< レンダーターゲット : 法線(RenderTarget : Normal)
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[2]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				//!< レンダーターゲット : 未定
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[3]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#pragma	endregion
 #endif
 			}
 			{
