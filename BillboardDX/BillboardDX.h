@@ -22,12 +22,10 @@ protected:
 		DirectX::XMStoreFloat4x4(&Tr.World, DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree)));
 		Degree += 1.0f;
 		
-#if 0
-		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0].Resource), RoundUp256(sizeof(Tr)), &Tr);
-#else
+#pragma region FRAME_OBJECT
 		const D3D12_RANGE Range = { offsetof(Transform, World), offsetof(Transform, World) + sizeof(Tr.World) };
-		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0].Resource), RoundUp256(sizeof(Tr)), &Tr, &Range);
-#endif
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[SwapChain->GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tr)), &Tr/*, &Range*/);
+#pragma endregion
 	}
 	virtual void CreateTexture() override {
 		{
@@ -74,21 +72,23 @@ protected:
 			//| D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS
 			| D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS);
 #endif
-		RootSignatures.resize(1);
-		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures[0])));
+		RootSignatures.push_back(COM_PTR<ID3D12RootSignature>());
+		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.back())));
 		LOG_OK();
 	}
 
 	virtual void CreateDescriptorHeap() override {
 		{
-			CbvSrvUavDescriptorHeaps.resize(1);
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps[0])));
+			CbvSrvUavDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
+#pragma region FRAME_OBJECT
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, static_cast<UINT>(SwapChainResources.size()) + 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< CBV * N, SRV0, SRV1
+#pragma endregion
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
 		}
 		{
-			DsvDescriptorHeaps.resize(1);
+			DsvDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 };
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps[0])));
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.back())));
 		}
 	}
 	virtual void CreateDescriptorView() override {
@@ -96,8 +96,12 @@ protected:
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 
-			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[0].Resource->GetDesc().Width) };
-			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma region FRAME_OBJECT
+			for (auto i = 0; i < SwapChainResources.size(); ++i) {
+				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
+				Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+			}
+#pragma endregion
 		}
 		{
 			assert(!ImageResources.empty() && "");
@@ -123,8 +127,12 @@ protected:
 		DirectX::XMStoreFloat4x4(&Tr.View, View);
 		DirectX::XMStoreFloat4x4(&Tr.World, World);
 
-		ConstantBuffers.push_back(ConstantBuffer());
-		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr))); //!< コンスタントバッファの場合、サイズは256バイトアラインにすること
+#pragma region FRAME_OBJECT
+		for (auto i = 0; i < SwapChainResources.size(); ++i) {
+			ConstantBuffers.push_back(ConstantBuffer());
+			CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)));
+		}
+#pragma endregion
 	}
 
 	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPsDsHsGs(); }

@@ -381,6 +381,8 @@
  -->
 
 <!-- 
+# 外部ライブラリ
+
 ## GLTF
  * チュートリアル https://github.com/KhronosGroup/glTF-Tutorials/blob/master/gltfTutorial/README.md
  * サンプルデータ https://github.com/KhronosGroup/glTF-Sample-Models/tree/master/2.0
@@ -441,17 +443,17 @@
  -->
 
 <!--
-TODO
+# TODO
 
-# VK
+## VK
 	* ストレージバッファ、ユニフォームテクセルバッファ、ストレージテクセルバッファの検証
 	* サブパスの検証
-# DX
+## DX
 	* コマンドリスト、グラフィクスコマンドリストまわりをまとめる
-# VK, DX
-	* コンスタント(ユニフォーム)バッファをフレーム分用意する(FRAME_OBJECT)
-		* 済 Displacement, Toon
-		* 未 Billboard, CubeMap, Deferred, NormalMap, ShadowMap, 
+## VK, DX
+	* コンスタント(ユニフォーム)バッファをフレーム分用意する(#pragma region FRAME_OBJECT)
+		* 済 Billboard, CubeMap, Displacement, NormalMap, Toon
+		* 未 Deferred, ShadowMap, 
 	* ウインドウサイズ変更時の処理 OnSize() スワップチェインのリサイズ
 	* コンピュートの検証(テクスチャを準備する)
 	* テクスチャ
@@ -460,7 +462,7 @@ TODO
 		* シャドウマップ
 		* SSAO
 
-# 保留(要ハードウェア)
+## 保留(要ハードウェア)
 	* HDR
 	* メッシュシェーダ
 	* レイトレーシング
@@ -468,7 +470,7 @@ TODO
  --> 
 
 <!--
-# 圧縮テクスチャ
+# 圧縮テクスチャメモ
 	DXT1	... BC1		bpp4	RGB,RGBA	A2諧調
 	DXT2,3	...	BC2		bpp8	RGBA		A16諧調
 	DXT4,5	... BC3		bpp8	RGBA

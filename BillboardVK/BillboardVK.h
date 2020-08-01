@@ -20,12 +20,10 @@ protected:
 		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
 		Degree += 1.0f;
 
-#if 0
-		CopyToHostVisibleDeviceMemory(UniformBuffers[0].DeviceMemory, sizeof(Tr), &Tr, 0);
-#else
+#pragma region FRAME_OBJECT
 		const std::array<VkDeviceSize, 2> Range = { offsetof(Transform, World), sizeof(Transform::World) };
-		CopyToHostVisibleDeviceMemory(UniformBuffers[0].DeviceMemory, sizeof(Tr), &Tr, 0, &Range);
-#endif
+		CopyToHostVisibleDeviceMemory(UniformBuffers[SwapchainImageIndex].DeviceMemory, sizeof(Tr), &Tr, 0/*, &Range*/);
+#pragma endregion
 	}
 
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
@@ -91,8 +89,8 @@ protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
 	virtual void CreateDescriptorSetLayout() override {
-		DescriptorSetLayouts.resize(1);
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 
+		DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 
 #ifdef USE_PUSH_DESCRIPTOR
 			VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR,
 #else
@@ -104,11 +102,39 @@ protected:
 	}
 	virtual void CreatePipelineLayout() override {
 		assert(!DescriptorSetLayouts.empty() && "");
-		PipelineLayouts.resize(1);
-		VKExt::CreatePipelineLayout(PipelineLayouts[0], {
+		PipelineLayouts.push_back(VkPipelineLayout());
+		VKExt::CreatePipelineLayout(PipelineLayouts.back(), {
 				DescriptorSetLayouts[0] 
 			}, {});
 	}
+
+#ifndef USE_PUSH_DESCRIPTOR
+	virtual void CreateDescriptorPool() override {
+		DescriptorPools.push_back(VkDescriptorPool());
+		VKExt::CreateDescriptorPool(DescriptorPools.back(), /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
+#pragma region FRAME_OBJECT
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(SwapchainImages.size()) }, //!< UniformBuffer
+#pragma endregion
+		});
+	}
+	virtual void AllocateDescriptorSet() override {
+		assert(!DescriptorSetLayouts.empty() && "");
+		const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
+		assert(!DescriptorPools.empty() && "");
+		const VkDescriptorSetAllocateInfo DSAI = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			nullptr,
+			DescriptorPools[0],
+			static_cast<uint32_t>(DSLs.size()), DSLs.data()
+		};
+#pragma region FRAME_OBJECT
+		for (auto i = 0; i < SwapchainImages.size(); ++i) {
+			DescriptorSets.push_back(VkDescriptorSet());
+			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+		}
+#pragma endregion
+	}
+#endif
 
 #ifdef USE_PUSH_DESCRIPTOR
 	virtual void CreateDescriptorUpdateTemplate() override {
@@ -130,33 +156,14 @@ protected:
 			DescriptorSetLayouts[0],
 			VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[0], 0 //!< パイプラインレイアウトを指定
 		};
-		DescriptorUpdateTemplates.resize(1);
-		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
+		DescriptorUpdateTemplates.push_back(VkDescriptorUpdateTemplate());
+		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates.back()));
 	}
 #else
-	virtual void CreateDescriptorPool() override {
-		DescriptorPools.resize(1);
-		VKExt::CreateDescriptorPool(DescriptorPools[0], /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 }
-		});
-	}
-	virtual void AllocateDescriptorSet() override {
-		assert(!DescriptorSetLayouts.empty() && "");
-		const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
-		assert(!DescriptorPools.empty() && "");
-		const VkDescriptorSetAllocateInfo DSAI = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-			nullptr,
-			DescriptorPools[0],
-			static_cast<uint32_t>(DSLs.size()), DSLs.data()
-		};
-		DescriptorSets.resize(1);
-		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
-	}
 	virtual void CreateDescriptorUpdateTemplate() override {
-		DescriptorUpdateTemplates.resize(1);
+		DescriptorUpdateTemplates.push_back(VkDescriptorUpdateTemplate());
 		assert(!DescriptorSetLayouts.empty() && "");
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates[0], {
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
 			{
 				0/*binding*/, 0/*arrayElement*/,
 				_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -165,12 +172,14 @@ protected:
 		}, DescriptorSetLayouts[0]);
 	}
 	virtual void UpdateDescriptorSet() override {
-		const DescriptorUpdateInfo DUI = {
-			{ UniformBuffers[0].Buffer, 0/*offset*/, VK_WHOLE_SIZE/*range*/ },
-		};
-		assert(!DescriptorSets.empty() && "");
-		assert(!DescriptorUpdateTemplates.empty() && "");
-		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+#pragma region FRAME_OBJECT
+		for (auto i = 0; i < SwapchainImages.size(); ++i) {
+			const DescriptorUpdateInfo DUI = {
+				{ UniformBuffers[i].Buffer, 0, VK_WHOLE_SIZE },
+			};
+			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DescriptorUpdateTemplates[0], &DUI);
+		}
+#pragma endregion
 	}
 #endif
 
@@ -185,10 +194,14 @@ protected:
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		Tr = Transform({ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
 
-		UniformBuffers.push_back(UniformBuffer());
-		CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-		AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
+#pragma region FRAME_OBJECT
+		for (auto i = 0; i < SwapchainImages.size(); ++i) {
+			UniformBuffers.push_back(UniformBuffer());
+			CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
+			AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
+		}
+#pragma endregion
 	}
 
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFsTesTcsGs(); }

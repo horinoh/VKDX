@@ -32,7 +32,9 @@ protected:
 
 		Degree += 1.0f;
 
-		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0].Resource), RoundUp256(sizeof(Tr)), &Tr);
+#pragma region FRAME_OBJECT
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[SwapChain->GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tr)), &Tr);
+#pragma endregion
 	}
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
@@ -73,8 +75,8 @@ protected:
 			//| D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS
 		);
 #endif
-		RootSignatures.resize(1);
-		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures[0])));
+		RootSignatures.push_back(COM_PTR<ID3D12RootSignature>());
+		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.back())));
 		LOG_OK();
 	}
 
@@ -95,8 +97,12 @@ protected:
 		DirectX::XMStoreFloat4x4(&Tr.World, World);
 		DirectX::XMStoreFloat4(&Tr.LocalCameraPosition, DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f));
 
-		ConstantBuffers.push_back(ConstantBuffer());
-		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)));
+#pragma region FRAME_OBJECT
+		for (auto i = 0; i < SwapChainResources.size(); ++i) {
+			ConstantBuffers.push_back(ConstantBuffer());
+			CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)));
+		}
+#pragma endregion
 	}
 	virtual void CreateTexture() override {
 		std::wstring Path;
@@ -150,15 +156,17 @@ protected:
 
 	virtual void CreateDescriptorHeap() override {
 		{
-			CbvSrvUavDescriptorHeaps.resize(1);
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 3, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< CBV, SRV0, SRV1
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps[0])));
+			CbvSrvUavDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
+#pragma region FRAME_OBJECT
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, static_cast<UINT>(SwapChainResources.size()) + 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< CBV * N, SRV0, SRV1
+#pragma endregion
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
 		}
 #if !defined(USE_SKY_DOME)
 		{
-			DsvDescriptorHeaps.resize(1);
+			DsvDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 }; //!< DSV
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps[0])));
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.back())));
 		}
 #endif
 	}
@@ -167,8 +175,12 @@ protected:
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 			
-			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[0].Resource->GetDesc().Width) };
-			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+#pragma region FRAME_OBJECT
+			for (auto i = 0; i < SwapChainResources.size(); ++i) {
+				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
+				Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+			}
+#pragma endregion
 
 			assert(2 <= ImageResources.size() && "");
 			//!< D3D12_SRV_DIMENSION_TEXTURECUBEを指定する必要がある為、(nullptrではなく)明示的にSHADER_RESOURCE_VIEW_DESCを使用すること

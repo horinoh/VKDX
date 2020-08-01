@@ -275,7 +275,11 @@ void BillboardDX::PopulateCommandList(const size_t i)
 				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
 
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-				CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma region FRAME_OBJECT
+                GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
+				CL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV
+				//GDH = DH->GetGPUDescriptorHandleForHeapStart(); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * SwapChainResources.size();
+#pragma endregion
 			}
 
 			CL->ExecuteBundle(BCL);
