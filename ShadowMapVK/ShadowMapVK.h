@@ -20,7 +20,9 @@ protected:
 		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(0.0f, 1.0f, 0.0f));
 		Degree += 1.0f;
 
-		CopyToHostVisibleDeviceMemory(UniformBuffers[0].DeviceMemory, sizeof(Tr), &Tr, 0);
+#pragma region FRAME_OBJECT
+		CopyToHostVisibleDeviceMemory(UniformBuffers[SwapchainImageIndex].DeviceMemory, sizeof(Tr), &Tr, 0);
+#pragma endregion
 	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
@@ -190,7 +192,9 @@ protected:
 		//!< パス0, 1 : デスクリプタプール
 		DescriptorPools.push_back(VkDescriptorPool());
 		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 + 1 },
+#pragma region FRAME_OBJECT
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(SwapchainImages.size()) + static_cast<uint32_t>(SwapchainImages.size()) }, //!< UniformBuffer
+#pragma endregion
 			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
 		});
 	}
@@ -198,9 +202,9 @@ protected:
 		assert(2 == DescriptorSetLayouts.size() && "");
 		assert(!DescriptorPools.empty() && "");
 
+#pragma region FRAME_OBJECT
 		//!< パス0 : デスクリプタセット
 		{
-			DescriptorSets.push_back(VkDescriptorSet());
 			const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
 			const VkDescriptorSetAllocateInfo DSAI = {
 				VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -208,12 +212,13 @@ protected:
 				DescriptorPools[0],
 				static_cast<uint32_t>(DSLs.size()), DSLs.data()
 			};
-			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+			for (auto i = 0; i < SwapchainImages.size(); ++i) {
+				DescriptorSets.push_back(VkDescriptorSet());
+				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+			}
 		}
-
 		//!< パス1 : デスクリプタセット
 		{
-			DescriptorSets.push_back(VkDescriptorSet());
 			const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[1] };
 			const VkDescriptorSetAllocateInfo DSAI = {
 				VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -221,8 +226,12 @@ protected:
 				DescriptorPools[0],
 				static_cast<uint32_t>(DSLs.size()), DSLs.data()
 			};
-			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+			for (auto i = 0; i < SwapchainImages.size(); ++i) {
+				DescriptorSets.push_back(VkDescriptorSet());
+				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+			}
 		}
+#pragma endregion
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
 		assert(2 == DescriptorSetLayouts.size() && "");
@@ -259,24 +268,23 @@ protected:
 		}
 	}
 	virtual void UpdateDescriptorSet() override {
-		assert(2 == DescriptorSets.size() && "");
-		assert(2 == DescriptorUpdateTemplates.size() && "");
-
+#pragma region FRAME_OBJECT
 		//!< パス0 :
-		{
+		for (auto i = 0; i < SwapchainImages.size(); ++i) {
 			const DescriptorUpdateInfo_0 DUI = {
-				{ UniformBuffers[0].Buffer, 0, VK_WHOLE_SIZE },
+				{ UniformBuffers[i].Buffer, 0, VK_WHOLE_SIZE },
 			};
-			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DescriptorUpdateTemplates[0], &DUI);
 		}
 		//!< パス1 :
-		{
+		for (auto i = 0; i < SwapchainImages.size(); ++i) {
 			const DescriptorUpdateInfo_1 DUI = {
 				{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL },
-				{ UniformBuffers[0].Buffer, 0, VK_WHOLE_SIZE },
+				{ UniformBuffers[i].Buffer, 0, VK_WHOLE_SIZE },
 			};
-			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[1], DescriptorUpdateTemplates[1], &DUI);
+			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i + static_cast<uint32_t>(SwapchainImages.size())], DescriptorUpdateTemplates[1], &DUI);
 		}
+#pragma endregion
 	}
 
 	virtual void CreateTexture() override {
@@ -311,7 +319,7 @@ protected:
 	virtual void CreateImmutableSampler() override {
 		//!< パス1 : イミュータブルサンプラ
 		//!< シェーダ内で sampler2DShadow を使用する場合は、比較方法(compareEnable=VK_TRUE, VK_COMPARE_OP_...)を指定すること
-		Samplers.resize(1);
+		Samplers.push_back(VkSampler());
 		const VkSamplerCreateInfo SCI = {
 			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			nullptr,
@@ -325,7 +333,7 @@ protected:
 			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
 			VK_FALSE
 		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.back()));
 	}
 	virtual void CreateUniformBuffer() override {
 		{
@@ -402,10 +410,14 @@ protected:
 			const auto World = glm::mat4(1.0f);
 			Tr.World = World;
 
-			UniformBuffers.push_back(UniformBuffer());
-			CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-			AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
+#pragma region FRAME_OBJECT
+			for (auto i = 0; i < SwapchainImages.size(); ++i) {
+				UniformBuffers.push_back(UniformBuffer());
+				CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
+				AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+				VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
+			}
+#pragma endregion
 		}
 	}
 	virtual void CreateShaderModules() override {

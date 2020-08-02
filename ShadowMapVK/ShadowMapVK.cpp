@@ -261,7 +261,10 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB0, &CBBI)); {
 			const auto PL = Pipelines[0];
-			const auto DS = DescriptorSets[0];
+#pragma region FRAME_OBJECT
+			const auto DS = DescriptorSets[i];
+#pragma endregion
+			//const auto DS = DescriptorSets[0];
 			const auto PLL = PipelineLayouts[0];
 			const auto IDB = IndirectBuffers[0];
 
@@ -306,7 +309,10 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB1, &CBBI)); {
 			const auto PL = Pipelines[1];
-			const auto DS = DescriptorSets[1];
+#pragma region FRAME_OBJECT
+			const auto DS = DescriptorSets[i + static_cast<uint32_t>(SwapchainImages.size())];
+#pragma endregion
+			//const auto DS = DescriptorSets[1];
 			const auto PLL = PipelineLayouts[1];
 			const auto IDB = IndirectBuffers[1];
 
