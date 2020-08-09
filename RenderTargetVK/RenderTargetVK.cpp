@@ -270,7 +270,8 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 	}
 
 	//!< パス1 : セカンダリコマンドバッファ(レンダーテクスチャ描画用)
-	const auto SCB1 = SecondaryCommandBuffers[i + SecondaryCommandBuffers.size() / 2]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
+	const auto SCCount = SwapchainImages.size();
+	const auto SCB1 = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
 	{
 		const VkCommandBufferInheritanceInfo CBII = {
 			VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,

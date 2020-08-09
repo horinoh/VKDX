@@ -341,13 +341,15 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
 				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
 
+				DXGI_SWAP_CHAIN_DESC1 SCD;
+				SwapChain->GetDesc1(&SCD);
+
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart(); 
 #pragma region FRAME_OBJECT
 				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
 				CL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV
-				GDH = DH->GetGPUDescriptorHandleForHeapStart(); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * SwapChainResources.size();
+				GDH = DH->GetGPUDescriptorHandleForHeapStart(); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * SCD.BufferCount;
 #pragma endregion
-				//GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 				CL->SetGraphicsRootDescriptorTable(0, GDH); //!< SRV(1)
 				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 

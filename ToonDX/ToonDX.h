@@ -82,8 +82,11 @@ protected:
 
 	virtual void CreateDescriptorHeap() override {
 		{
+			DXGI_SWAP_CHAIN_DESC1 SCD;
+			SwapChain->GetDesc1(&SCD);
+
 #pragma region FRAME_OBJECT
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, static_cast<UINT>(SwapChainResources.size()), D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< CBV * N
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, SCD.BufferCount, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< CBV * N
 #pragma endregion
 			CbvSrvUavDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
@@ -98,10 +101,13 @@ protected:
 	}
 	virtual void CreateDescriptorView() override {
 		{
+			DXGI_SWAP_CHAIN_DESC1 SCD;
+			SwapChain->GetDesc1(&SCD);
+
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 #pragma region FRAME_OBJECT
-			for (auto i = 0; i < SwapChainResources.size(); ++i) {
+			for (UINT i = 0; i < SCD.BufferCount; ++i) {
 				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
 				Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
@@ -137,7 +143,9 @@ protected:
 		DirectX::XMStoreFloat4x4(&Tr.View, View);
 		DirectX::XMStoreFloat4x4(&Tr.World, World);
 #pragma region FRAME_OBJECT
-		for (auto i = 0; i < SwapChainResources.size(); ++i) {
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+		for (UINT i = 0; i < SCD.BufferCount; ++i) {
 			ConstantBuffers.push_back(ConstantBuffer());
 			CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)));
 		}

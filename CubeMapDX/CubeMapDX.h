@@ -98,7 +98,9 @@ protected:
 		DirectX::XMStoreFloat4(&Tr.LocalCameraPosition, DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f));
 
 #pragma region FRAME_OBJECT
-		for (auto i = 0; i < SwapChainResources.size(); ++i) {
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+		for (UINT i = 0; i < SCD.BufferCount; ++i) {
 			ConstantBuffers.push_back(ConstantBuffer());
 			CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)));
 		}
@@ -158,7 +160,9 @@ protected:
 		{
 			CbvSrvUavDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
 #pragma region FRAME_OBJECT
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, static_cast<UINT>(SwapChainResources.size()) + 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< CBV * N, SRV0, SRV1
+			DXGI_SWAP_CHAIN_DESC1 SCD;
+			SwapChain->GetDesc1(&SCD);
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, SCD.BufferCount + 2, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< CBV * N, SRV0, SRV1
 #pragma endregion
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
 		}
@@ -176,7 +180,9 @@ protected:
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 			
 #pragma region FRAME_OBJECT
-			for (auto i = 0; i < SwapChainResources.size(); ++i) {
+			DXGI_SWAP_CHAIN_DESC1 SCD;
+			SwapChain->GetDesc1(&SCD);
+			for (UINT i = 0; i < SCD.BufferCount; ++i) {
 				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
 				Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
 			}

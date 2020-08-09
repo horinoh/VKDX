@@ -248,7 +248,9 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 	VERIFY_SUCCEEDED(BCL0->Close());
 
 	//!< パス1 : バンドルコマンドリスト(レンダーテクスチャ描画用)
-	const auto BCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + BundleGraphicsCommandLists.size() / 2]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
+	DXGI_SWAP_CHAIN_DESC1 SCD;
+	SwapChain->GetDesc1(&SCD);
+	const auto BCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + SCD.BufferCount]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
 	VERIFY_SUCCEEDED(BCL1->Reset(BCA, PS1));
 	{
 		const auto IDBCS = COM_PTR_GET(IndirectBuffers[1].CommandSignature);

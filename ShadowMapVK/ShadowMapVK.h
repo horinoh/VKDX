@@ -30,17 +30,18 @@ protected:
 		Super::AllocateCommandBuffer();
 
 		//!< パス1 : セカンダリコマンドバッファ
+		const auto SCCount = static_cast<uint32_t>(SwapchainImages.size());
 		assert(!SecondaryCommandPools.empty() && "");
 		const auto PrevCount = SecondaryCommandBuffers.size();
-		SecondaryCommandBuffers.resize(PrevCount + SwapchainImages.size());
-		const VkCommandBufferAllocateInfo SCBAI = {
+		SecondaryCommandBuffers.resize(PrevCount + SCCount);
+		const VkCommandBufferAllocateInfo CBAI = {
 			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 			nullptr,
 			SecondaryCommandPools[0],
 			VK_COMMAND_BUFFER_LEVEL_SECONDARY,
-			static_cast<uint32_t>(SwapchainImages.size())
+			SCCount
 		};
-		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &SCBAI, &SecondaryCommandBuffers[PrevCount]));
+		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &SecondaryCommandBuffers[PrevCount]));
 	}
 	virtual void CreateRenderPass() override {
 		//!< パス0 : レンダーパス
@@ -189,11 +190,13 @@ protected:
 	}
 
 	virtual void CreateDescriptorPool() override {
+		const auto SCCount = static_cast<uint32_t>(SwapchainImages.size());
+
 		//!< パス0, 1 : デスクリプタプール
 		DescriptorPools.push_back(VkDescriptorPool());
 		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
 #pragma region FRAME_OBJECT
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(SwapchainImages.size()) + static_cast<uint32_t>(SwapchainImages.size()) }, //!< UniformBuffer
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SCCount * 2 }, //!< UniformBuffer
 #pragma endregion
 			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
 		});
@@ -202,7 +205,8 @@ protected:
 		assert(2 == DescriptorSetLayouts.size() && "");
 		assert(!DescriptorPools.empty() && "");
 
-#pragma region FRAME_OBJECT
+		const auto SCCount = SwapchainImages.size();
+
 		//!< パス0 : デスクリプタセット
 		{
 			const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
@@ -212,10 +216,12 @@ protected:
 				DescriptorPools[0],
 				static_cast<uint32_t>(DSLs.size()), DSLs.data()
 			};
-			for (auto i = 0; i < SwapchainImages.size(); ++i) {
+#pragma region FRAME_OBJECT
+			for (size_t i = 0; i < SCCount; ++i) {
 				DescriptorSets.push_back(VkDescriptorSet());
 				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
 			}
+#pragma endregion
 		}
 		//!< パス1 : デスクリプタセット
 		{
@@ -226,12 +232,13 @@ protected:
 				DescriptorPools[0],
 				static_cast<uint32_t>(DSLs.size()), DSLs.data()
 			};
-			for (auto i = 0; i < SwapchainImages.size(); ++i) {
+#pragma region FRAME_OBJECT
+			for (size_t i = 0; i < SCCount; ++i) {
 				DescriptorSets.push_back(VkDescriptorSet());
 				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
 			}
-		}
 #pragma endregion
+		}
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
 		assert(2 == DescriptorSetLayouts.size() && "");
@@ -268,21 +275,23 @@ protected:
 		}
 	}
 	virtual void UpdateDescriptorSet() override {
+		const auto SCCount = SwapchainImages.size();
+
 #pragma region FRAME_OBJECT
 		//!< パス0 :
-		for (auto i = 0; i < SwapchainImages.size(); ++i) {
+		for (size_t i = 0; i < SCCount; ++i) {
 			const DescriptorUpdateInfo_0 DUI = {
 				{ UniformBuffers[i].Buffer, 0, VK_WHOLE_SIZE },
 			};
 			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DescriptorUpdateTemplates[0], &DUI);
 		}
 		//!< パス1 :
-		for (auto i = 0; i < SwapchainImages.size(); ++i) {
+		for (size_t i = 0; i < SCCount; ++i) {
 			const DescriptorUpdateInfo_1 DUI = {
 				{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL },
 				{ UniformBuffers[i].Buffer, 0, VK_WHOLE_SIZE },
 			};
-			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i + static_cast<uint32_t>(SwapchainImages.size())], DescriptorUpdateTemplates[1], &DUI);
+			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i + SCCount], DescriptorUpdateTemplates[1], &DUI);
 		}
 #pragma endregion
 	}
@@ -411,7 +420,8 @@ protected:
 			Tr.World = World;
 
 #pragma region FRAME_OBJECT
-			for (auto i = 0; i < SwapchainImages.size(); ++i) {
+			const auto SCCount = SwapchainImages.size();
+			for (size_t i = 0; i < SCCount; ++i) {
 				UniformBuffers.push_back(UniformBuffer());
 				CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
 				AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);

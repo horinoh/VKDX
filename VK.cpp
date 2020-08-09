@@ -1629,35 +1629,36 @@ void VK::CreateCommandPool()
 
 //!< VK_COMMAND_BUFFER_LEVEL_PRIMARY	: 直接キューにサブミットできる、セカンダリをコールできる (Can be submit, can execute secondary)
 //!< VK_COMMAND_BUFFER_LEVEL_SECONDARY	: サブミットできない、プライマリから実行されるのみ (Cannot submit, only executed from primary)
-//!< (ここでは)プライマリ用1つ、セカンダリ用1つのコマンドバッファ作成をデフォルト実装とする
+//!< ここではデフォルト実装として、プライマリ、セカンダリ共にスワップチェイン数分用意することとする
 void VK::AllocateCommandBuffer()
 {
+	const auto SCCount = static_cast<uint32_t>(SwapchainImages.size());
 	{
 		assert(!CommandPools.empty() && "");
+
 		const auto PrevCount = CommandBuffers.size();
-		CommandBuffers.resize(PrevCount + SwapchainImages.size());
+		CommandBuffers.resize(PrevCount + SCCount);
 		const VkCommandBufferAllocateInfo CBAI = {
 			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 			nullptr,
 			CommandPools[0],
 			VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-			static_cast<uint32_t>(SwapchainImages.size())
+			SCCount
 		};
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &CommandBuffers[PrevCount]));
 	}
 	{
-		const uint32_t Count = static_cast<uint32_t>(SwapchainImages.size());
 		assert(!SecondaryCommandPools.empty() && "");
 		const auto PrevCount = SecondaryCommandBuffers.size();
-		SecondaryCommandBuffers.resize(PrevCount + Count);
-		const VkCommandBufferAllocateInfo SCBAI = {
+		SecondaryCommandBuffers.resize(PrevCount + SCCount);
+		const VkCommandBufferAllocateInfo CBAI = {
 			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 			nullptr,
 			SecondaryCommandPools[0],
 			VK_COMMAND_BUFFER_LEVEL_SECONDARY,
-			Count
+			SCCount
 		};
-		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &SCBAI, &SecondaryCommandBuffers[PrevCount]));
+		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &SecondaryCommandBuffers[PrevCount]));
 	}
 	LOG_OK();
 }

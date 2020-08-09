@@ -118,7 +118,8 @@ protected:
 		Tr = Transform({ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
 
 #pragma region FRAME_OBJECT
-		for (auto i = 0; i < SwapchainImages.size(); ++i) {
+		const auto SCCount = SwapchainImages.size();
+		for (size_t i = 0; i < SCCount; ++i) {
 			UniformBuffers.push_back(UniformBuffer());
 			CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
 			AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
@@ -157,10 +158,12 @@ protected:
 		}
 	}
 	virtual void CreateDescriptorPool() override {
+		const auto SCCount = static_cast<uint32_t>(SwapchainImages.size());
+
 		DescriptorPools.push_back(VkDescriptorPool());
 		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
 #pragma region FRAME_OBJECT
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(SwapchainImages.size()) }, //!< UniformBuffer
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SCCount }, //!< UniformBuffer
 #pragma endregion
 			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 2 }, //!< Sampler + Image0, Sampler + Image1
 		});
@@ -176,7 +179,8 @@ protected:
 			static_cast<uint32_t>(DSLs.size()), DSLs.data()
 		};
 #pragma region FRAME_OBJECT
-		for (auto i = 0; i < SwapchainImages.size(); ++i) {
+		const auto SCCount = SwapchainImages.size();
+		for (size_t i = 0; i < SCCount; ++i) {
 			DescriptorSets.push_back(VkDescriptorSet());
 			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
 		}
@@ -205,7 +209,8 @@ protected:
 	}
 	virtual void UpdateDescriptorSet() override {
 #pragma region FRAME_OBJECT
-		for (auto i = 0; i < SwapchainImages.size(); ++i) {
+		const auto SCCount = SwapchainImages.size();
+		for (size_t i = 0; i < SCCount; ++i) {
 			const DescriptorUpdateInfo DUI = {
 				{ UniformBuffers[i].Buffer, 0, VK_WHOLE_SIZE },
 				{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }, //!< Sampler + Image0

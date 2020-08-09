@@ -627,14 +627,14 @@ void DX::CreateCommandAllocator()
 	LOG_OK();
 }
 
-//!< (ここでは)ダイレクト用1つ、バンドル用1つのコマンドリスト作成をデフォルト実装とする
+//!< ここではデフォルト実装として、ダイレクト、バンドル共にスワップチェイン数分用意することとする
 void DX::CreateCommandList()
 {
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
 		GraphicsCommandLists.push_back(COM_PTR<ID3D12GraphicsCommandList>());
-		//!< 描画コマンドを発行するコマンドリストにはパイプラインステートの指定が必要だが、後からでも指定(CL->Reset(CA, COM_PTR_GET(PS)))できるので、ここでは使用しない(nullptr)
+		//!< 描画コマンドを発行するコマンドリストにはパイプラインステートの指定が必要だが、後からでも指定(CL->Reset(CA, COM_PTR_GET(PS)))できるので、ここではnullptrを指定
 		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(CommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandLists.back())));
 		VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
 
@@ -774,8 +774,8 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 }
 void DX::CreateSwapChainResource()
 {
-	DXGI_SWAP_CHAIN_DESC1 SwapChainDesc;
-	SwapChain->GetDesc1(&SwapChainDesc);
+	DXGI_SWAP_CHAIN_DESC1 SCD;
+	SwapChain->GetDesc1(&SCD);
 
 #ifdef USE_GAMMA_CORRECTION
 	D3D12_RENDER_TARGET_VIEW_DESC RTVD = {
@@ -786,16 +786,16 @@ void DX::CreateSwapChainResource()
 	RTVD.Texture2D.PlaneSlice = 0;
 #endif
 	auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	SwapChainResources.resize(SwapChainDesc.BufferCount);
-	for (auto i = 0; i < SwapChainResources.size(); ++i) {
+	for (UINT i = 0; i < SCD.BufferCount; ++i) {
+		SwapChainResources.push_back(COM_PTR<ID3D12Resource>());
 		//!< スワップチェインのバッファリソースを SwapChainResources へ取得
-		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, COM_PTR_UUIDOF_PUTVOID(SwapChainResources[i])));
+		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, COM_PTR_UUIDOF_PUTVOID(SwapChainResources.back())));
 		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数等に返るわけではない
 		//!< (リソースがタイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能)
 #ifdef USE_GAMMA_CORRECTION
-		Device->CreateRenderTargetView(COM_PTR_GET(SwapChainResources[i]), &RTVD, CDH);
+		Device->CreateRenderTargetView(COM_PTR_GET(SwapChainResources.back()), &RTVD, CDH);
 #else
-		Device->CreateRenderTargetView(COM_PTR_GET(SwapChainResources[i]), nullptr, CDH);
+		Device->CreateRenderTargetView(COM_PTR_GET(SwapChainResources.back()), nullptr, CDH);
 #endif
 		CDH.ptr += Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 	}
@@ -806,8 +806,12 @@ void DX::CreateSwapChainResource()
 void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, const DirectX::XMVECTORF32* Color)
 {
 	assert(nullptr != Color && "");
+
+	DXGI_SWAP_CHAIN_DESC1 SCD;
+	SwapChain->GetDesc1(&SCD);
+
 	auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	for (auto i = 0; i < SwapChainResources.size(); ++i) {
+	for (UINT i = 0; i < SCD.BufferCount; ++i) {
 		const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 		VERIFY_SUCCEEDED(CL->Reset(CommandAllocator, nullptr));
 		{

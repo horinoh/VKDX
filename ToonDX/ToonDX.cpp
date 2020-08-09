@@ -284,7 +284,6 @@ void ToonDX::PopulateCommandList(const size_t i)
 #pragma region FRAME_OBJECT
                 GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
 				CL->SetGraphicsRootDescriptorTable(0, GDH);
-				//GDH = DH->GetGPUDescriptorHandleForHeapStart(); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * SwapChainResources.size();
 #pragma endregion
 			}
 

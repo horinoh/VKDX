@@ -475,21 +475,22 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	std::cout << CurrentMatrix.back();
 #endif
 
+	const auto SCCount = static_cast<uint32_t>(SwapchainImages.size());
 	assert(!SecondaryCommandPools.empty() && "");
 	const auto PrevCount = SecondaryCommandBuffers.size();
-	SecondaryCommandBuffers.resize(PrevCount + SwapchainImages.size());
-	const VkCommandBufferAllocateInfo SCBAI = {
+	SecondaryCommandBuffers.resize(PrevCount + SCCount);
+	const VkCommandBufferAllocateInfo CBAI = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 		nullptr,
 		SecondaryCommandPools[0],
 		VK_COMMAND_BUFFER_LEVEL_SECONDARY,
-		static_cast<uint32_t>(SwapchainImages.size())
+		SCCount
 	};
-	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &SCBAI, &SecondaryCommandBuffers[PrevCount]));
-	const auto Count = SCBAI.commandBufferCount;
-	for (auto i = 0; i < static_cast<int>(Count); ++i) {
+	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &SecondaryCommandBuffers[PrevCount]));
+
+	for (auto i = 0; i < static_cast<int>(SCCount); ++i) {
 		const auto FB = Framebuffers[i];
-		const auto SCB = SecondaryCommandBuffers[SecondaryCommandBuffers.size() - Count + i];
+		const auto SCB = SecondaryCommandBuffers[SecondaryCommandBuffers.size() - SCCount + i];
 		const VkCommandBufferInheritanceInfo CBII = {
 			VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
 			nullptr,
@@ -671,11 +672,11 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 	const auto RP = RenderPasses[0];
 	const auto FB = Framebuffers[i];
 
-	const auto SCICount = SwapchainImages.size();
-	const auto PrimCount = SecondaryCommandBuffers.size() / SwapchainImages.size();
+	const auto SCCount = SwapchainImages.size();
+	const auto PrimCount = SecondaryCommandBuffers.size() / SCCount;
 	std::vector<VkCommandBuffer> SCBs;
 	for (auto j = 0; j < PrimCount; ++j) {
-		SCBs.push_back(SecondaryCommandBuffers[j * SCICount + i]);
+		SCBs.push_back(SecondaryCommandBuffers[j * SCCount + i]);
 	}
 
 	const auto CB = CommandBuffers[i];
