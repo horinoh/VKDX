@@ -577,10 +577,10 @@ void VK::CmdCopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, con
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		const std::vector<VkBufferCopy> BCs = {
+		const std::array<VkBufferCopy, 1> BCs = {
 			{ 0, 0, Size },
 		};
-		const std::vector<VkBufferMemoryBarrier> BMBs_Pre = {
+		const std::array<VkBufferMemoryBarrier, 1> BMBs_Pre = {
 			{
 				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
 				nullptr,
@@ -603,7 +603,7 @@ void VK::CmdCopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, con
 		{
 			vkCmdCopyBuffer(CB, Src, Dst, static_cast<uint32_t>(BCs.size()), BCs.data());
 		}
-		const std::vector<VkBufferMemoryBarrier> BMBs_Post = {
+		const std::array<VkBufferMemoryBarrier, 1> BMBs_Post = {
 			{
 				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
 				nullptr,
@@ -2050,7 +2050,7 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorVa
 		}
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 
-	const std::vector<VkSubmitInfo> SIs = {
+	const std::array<VkSubmitInfo, 1> SIs = {
 		{
 			VK_STRUCTURE_TYPE_SUBMIT_INFO,
 			nullptr,
@@ -2111,7 +2111,7 @@ void VK::InitializeDepthStencilImage(const VkCommandBuffer CB)
 			0, nullptr,
 			1, &IMB);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-	const std::vector<VkSubmitInfo> SIs = {
+	const std::array<VkSubmitInfo, 1> SIs = {
 		{
 			VK_STRUCTURE_TYPE_SUBMIT_INFO,
 			nullptr,
@@ -2892,7 +2892,7 @@ void VK::CreatePipeline_Compute()
 	
 	const auto PL = PipelineLayouts[0];
 
-	const std::vector<VkComputePipelineCreateInfo> ComputePipelineCreateInfos = {
+	const std::array<VkComputePipelineCreateInfo, 1> ComputePipelineCreateInfos = {
 		{
 			VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 			VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
@@ -3026,14 +3026,14 @@ void VK::ClearDepthStencil(const VkCommandBuffer CB, const VkImage Img, const Vk
 void VK::ClearColorAttachment(const VkCommandBuffer CB, const VkClearColorValue& Color)
 {
 	const VkClearValue ClearValue = { Color };
-	const std::vector<VkClearAttachment> ClearAttachments = {
+	const std::array<VkClearAttachment, 1> ClearAttachments = {
 		{
 			VK_IMAGE_ASPECT_COLOR_BIT,
 			0, //!< カラーアタッチメントのインデックス #VK_TODO 現状決め打ち
 			ClearValue
 		},
 	};
-	const std::vector<VkClearRect> ClearRects = {
+	const std::array<VkClearRect, 1> ClearRects = {
 		{
 			ScissorRects[0],
 			0, 1 //!< 開始レイヤとレイヤ数 #VK_TODO 現状決め打ち
@@ -3047,7 +3047,7 @@ void VK::ClearDepthStencilAttachment(const VkCommandBuffer CB, const VkClearDept
 {
 	VkClearValue ClearValue;
 	ClearValue.depthStencil = DepthStencil;
-	const std::vector<VkClearAttachment> ClearAttachments = {
+	const std::array<VkClearAttachment, 1> ClearAttachments = {
 		{
 			VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
 			0, //!< ここでは無視される
@@ -3055,7 +3055,7 @@ void VK::ClearDepthStencilAttachment(const VkCommandBuffer CB, const VkClearDept
 		},
 	};
 	const VkRect2D ClearArea = { { 0, 0 }, SurfaceExtent2D };
-	const std::vector<VkClearRect> ClearRects = {
+	const std::array<VkClearRect, 1> ClearRects = {
 		{
 			ClearArea,
 			0, 1 //!< 開始レイヤとレイヤ数 #VK_TODO 現状決め打ち
@@ -3147,14 +3147,14 @@ void VK::Draw()
 	DrawFrame(SwapchainImageIndex);
 	
 	//!< コマンドは指定のパイプラインステージに到達するまで実行され、そこでセマフォがシグナルされるまで待つ
-	const std::vector<VkSemaphore> WaitSem = { NextImageAcquiredSemaphore };
-	const std::vector<VkPipelineStageFlags> WaitPS = { VK_PIPELINE_STAGE_TRANSFER_BIT };
+	const std::array<VkSemaphore, 1> WaitSem = { NextImageAcquiredSemaphore };
+	const std::array<VkPipelineStageFlags, 1> WaitPS = { VK_PIPELINE_STAGE_TRANSFER_BIT };
 	assert(WaitSem.size() == WaitPS.size() && "Must be same size()");
 	//!< 実行するコマンドバッファ
-	const std::vector<VkCommandBuffer> CBs = { CommandBuffers[SwapchainImageIndex], };
+	const std::array<VkCommandBuffer, 1> CBs = { CommandBuffers[SwapchainImageIndex], };
 	//!< 完了時にシグナルされるセマフォ(RenderFinishedSemaphore)
-	const std::vector<VkSemaphore> SigSem = { RenderFinishedSemaphore };
-	const std::vector<VkSubmitInfo> SIs = {
+	const std::array<VkSemaphore, 1> SigSem = { RenderFinishedSemaphore };
+	const std::array<VkSubmitInfo, 1> SIs = {
 		{
 			VK_STRUCTURE_TYPE_SUBMIT_INFO,
 			nullptr,
@@ -3175,7 +3175,7 @@ void VK::Dispatch()
 	vkResetFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data());
 
 	const auto& CB = CommandBuffers[0];
-	const std::vector<VkSubmitInfo> SIs = {
+	const std::array<VkSubmitInfo, 1> SIs = {
 		{
 			VK_STRUCTURE_TYPE_SUBMIT_INFO,
 			nullptr,
@@ -3189,8 +3189,8 @@ void VK::Dispatch()
 void VK::Present()
 {
 	//!< 同時に複数のプレゼントが可能だが、1つのスワップチェインからは1つのみ
-	const std::vector<VkSwapchainKHR> Swapchains = { Swapchain };
-	const std::vector<uint32_t> ImageIndices = { SwapchainImageIndex };
+	const std::array<VkSwapchainKHR, 1> Swapchains = { Swapchain };
+	const std::array<uint32_t, 1> ImageIndices = { SwapchainImageIndex };
 	assert(Swapchains.size() == ImageIndices.size() && "Must be same");
 
 	//!< サブミット時に指定したセマフォ(RenderFinishedSemaphore)を待ってからプレゼントが行なわれる

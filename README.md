@@ -452,7 +452,6 @@
 	* コマンドリスト、グラフィクスコマンドリストまわりをまとめる
 ## VK, DX
 	* コンスタント(ユニフォーム)バッファをフレーム分用意する(#pragma region FRAME_OBJECT)
-		* 済 Billboard, CubeMap, Displacement, NormalMap, ShadowMap, Toon
 		* 未 Deferred
 	* ウインドウサイズ変更時の処理 OnSize() スワップチェインのリサイズ
 	* コンピュートの検証(テクスチャを準備する)

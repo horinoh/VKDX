@@ -80,6 +80,11 @@ float4 main(IN In) : SV_TARGET
 	float C = dot(Ndx, Ndx) + dot(Pdx, Pdx) + dot(Ndy, Ndy) + dot(Pdy, Pdy);
 	return 1.0f - float4(C, C, C, 0.0f);
 #elif 0
+	//!< 輪郭検出 (Edge detection) ... ddx, ddt
+	const float2 Center = ToHue(Texture.Sample(Sampler, In.Texcoord).rgb);
+	float C = length(ddx(Center) + ddy(Center));
+	return 1.0f - float4(C, C, C, 0.0f);
+#elif 0
 	//!< ガウスフィルタ (GaussianFilter) ... 本来は2パス必要
 	return float4(GaussianFilterH(Texture, int2(In.Position.xy)), 1.0f);
 	//return float4(GaussianFilterV(Texture, int2(In.Position.xy)), 1.0f);

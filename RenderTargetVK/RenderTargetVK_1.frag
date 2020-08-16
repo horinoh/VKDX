@@ -137,7 +137,12 @@ void main()
 	const vec2 Pdx = ToHue(texture(Sampler2D, InTexcoord + Inv.x * vec2( 1.0f,  0.0f)).rgb) - Center;
 	const vec2 Ndy = ToHue(texture(Sampler2D, InTexcoord + Inv.y * vec2( 0.0f, -1.0f)).rgb) - Center;
 	const vec2 Pdy = ToHue(texture(Sampler2D, InTexcoord + Inv.y * vec2( 0.0f,  1.0f)).rgb) - Center;
-	float C = dot(Ndx, Ndx) + dot(Pdx, Pdx) + dot(Ndy, Ndy) + dot(Pdy, Pdy);	
+	float C = dot(Ndx, Ndx) + dot(Pdx, Pdx) + dot(Ndy, Ndy) + dot(Pdy, Pdy);
+	OutColor = 1.0f - vec4(C, C, C, 0.0f);
+#elif 0
+	//!< 間輪郭検出 (Edge detection) ... dFdx, dFdy
+	const vec2 Center = ToHue(texture(Sampler2D, InTexcoord).rgb);
+	float C = length(dFdx(Center) + dFdy(Center));
 	OutColor = 1.0f - vec4(C, C, C, 0.0f);
 #elif 0
 	//!< ガウスフィルタ (GaussianFilter) ... 本来は2パス必要

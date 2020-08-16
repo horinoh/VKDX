@@ -16,12 +16,17 @@ float DistanceFunction_Sphere(const vec3 Ray, const vec3 Center, const float Rad
 }
 vec3 DistanceFunction_SphereNormal(const vec3 Ray, const vec3 Center, const float Radius)
 {
+#if 1
 	const vec3 DeltaX = vec3(0.001f, 0.0f, 0.0f);
 	const vec3 DeltaY = vec3(0.0f, 0.001f, 0.0f);
 	const vec3 DeltaZ = vec3(0.0f, 0.0f, 0.001f);
 	return normalize(vec3(DistanceFunction_Sphere(Ray + DeltaX, Center, Radius) - DistanceFunction_Sphere(Ray - DeltaX, Center, Radius),
 		                    DistanceFunction_Sphere(Ray + DeltaY, Center, Radius) - DistanceFunction_Sphere(Ray - DeltaY, Center, Radius),
 		                    DistanceFunction_Sphere(Ray + DeltaZ, Center, Radius) - DistanceFunction_Sphere(Ray - DeltaZ, Center, Radius)));
+#else
+	//!< スクリーン空間の差分xyの外積
+	return normalize(cross(dFdx(Ray), dFdy(Ray)));
+#endif
 }
 
 float DistanceFunction_Torus(const vec3 Ray, const vec3 Center, const vec2 Radius)
@@ -31,12 +36,16 @@ float DistanceFunction_Torus(const vec3 Ray, const vec3 Center, const vec2 Radiu
 }
 vec3 DistanceFunction_TorusNormal(const vec3 Ray, const vec3 Center, const vec2 Radius)
 {
+#if 1
 	const vec3 DeltaX = vec3(0.001f, 0.0f, 0.0f);
 	const vec3 DeltaY = vec3(0.0f, 0.001f, 0.0f);
 	const vec3 DeltaZ = vec3(0.0f, 0.0f, 0.001f);
 	return normalize(vec3(DistanceFunction_Torus(Ray + DeltaX, Center, Radius) - DistanceFunction_Torus(Ray - DeltaX, Center, Radius),
 		                    DistanceFunction_Torus(Ray + DeltaY, Center, Radius) - DistanceFunction_Torus(Ray - DeltaY, Center, Radius),
 		                    DistanceFunction_Torus(Ray + DeltaZ, Center, Radius) - DistanceFunction_Torus(Ray - DeltaZ, Center, Radius)));
+#else
+	return normalize(cross(dFdx(Ray), dFdy(Ray)));
+#endif
 }
 
 vec3 Diffuse(const vec3 MaterialColor, const vec3 LightColor, const float LN)

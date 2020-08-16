@@ -288,7 +288,10 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 	}
 
 	//!< パス1 : セカンダリコマンドバッファ(レンダーテクスチャ描画用、シャドウレシーバ描画用)
-	const auto SCB1 = SecondaryCommandBuffers[i + SecondaryCommandBuffers.size() / 2]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
+#pragma region FRAME_OBJECT
+	const auto SCCount = static_cast<uint32_t>(SwapchainImages.size());
+#pragma endregion
+	const auto SCB1 = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
 	{
 		const VkCommandBufferInheritanceInfo CBII = {
 			VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
@@ -307,8 +310,6 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 			&CBII
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB1, &CBBI)); {
-			const auto SCCount = static_cast<uint32_t>(SwapchainImages.size());
-
 			const auto PL = Pipelines[1];
 #pragma region FRAME_OBJECT
 			const auto DS = DescriptorSets[i + SCCount];

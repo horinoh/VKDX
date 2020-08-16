@@ -190,13 +190,15 @@ protected:
 	}
 
 	virtual void CreateDescriptorPool() override {
+#pragma region FRAME_OBJECT
 		const auto SCCount = static_cast<uint32_t>(SwapchainImages.size());
+#pragma endregion
 
 		//!< パス0, 1 : デスクリプタプール
 		DescriptorPools.push_back(VkDescriptorPool());
 		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
 #pragma region FRAME_OBJECT
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SCCount * 2 }, //!< UniformBuffer
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SCCount * 2 }, //!< UB * N * 2
 #pragma endregion
 			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 },
 		});
@@ -275,9 +277,8 @@ protected:
 		}
 	}
 	virtual void UpdateDescriptorSet() override {
-		const auto SCCount = SwapchainImages.size();
-
 #pragma region FRAME_OBJECT
+		const auto SCCount = SwapchainImages.size();
 		//!< パス0 :
 		for (size_t i = 0; i < SCCount; ++i) {
 			const DescriptorUpdateInfo_0 DUI = {

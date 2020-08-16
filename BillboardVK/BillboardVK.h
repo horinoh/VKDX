@@ -110,12 +110,14 @@ protected:
 
 #ifndef USE_PUSH_DESCRIPTOR
 	virtual void CreateDescriptorPool() override {
+#pragma region FRAME_OBJECT
 		const auto SCCount = static_cast<uint32_t>(SwapchainImages.size());
+#pragma endregion
 
 		DescriptorPools.push_back(VkDescriptorPool());
 		VKExt::CreateDescriptorPool(DescriptorPools.back(), /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
 #pragma region FRAME_OBJECT
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SCCount }, //!< UniformBuffer
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SCCount }, //!< UB * N
 #pragma endregion
 		});
 	}

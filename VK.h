@@ -44,7 +44,7 @@
 #define MESSAGEBOX_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Win::ShowMessageBoxW(nullptr, VK::GetVkResultStringW(vr)); }
 #endif
 
-#define USE_VIEWPORT_Y_UP //!< +VK
+#define USE_VIEWPORT_Y_UP //!< *VK
 #define USE_IMMUTABLE_SAMPLER //!< TextureVK
 //!< セカンダリコマンドバッファ : DXのバンドル相当
 //!< 基本的にセカンダリはプライマリのステートを継承しない
@@ -60,6 +60,16 @@
 //!< パイプライン作成時にシェーダ内の定数値を上書き指定できる(スカラ値のみ)
 //#define USE_SPECIALIZATION_INFO //!< ParametricSurfaceVK
 //#define USE_COMBINED_IMAGE_SAMPLER
+
+//!< 参考)https://www.saschawillems.de/blog/2018/07/19/vulkan-input-attachments-and-sub-passes/
+//!< あるサブパスで書き込まれたフレームバッファアタッチメントに対して、別のサブパスで「同一のピクセル」を読み込むことができる(ただし「周辺のピクセル」は読めないので用途は要考慮)
+//!< 各サブパスのアタッチメントは１つのフレームバッファにまとめてエントリする
+//!< VkRenderPassBeginInfoの引数として渡すため、同一パス(サブパス)で完結するにはまとめる必要がある
+//!< VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENTを指定する
+//!< vkCmdNextSubpass(でコマンドを次のサブパスへ進める
+//!< シェーダ内での使用例
+//!<	layout(input_attachment_index = 0, set = 0, binding = 0) uniform subpassInput XXX;
+//!<	vec3 Color = subpassLoad(XXX).rgb;
 //#define USE_SUBPASS
 
 #ifdef _DEBUG

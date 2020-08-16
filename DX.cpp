@@ -308,7 +308,7 @@ void DX::CreateDevice(HWND /*hWnd*/)
 	if (SUCCEEDED(DXGIGetDebugInterface1(0, COM_PTR_UUIDOF_PUTVOID(GraphicsAnalysis)))) {
 		//!< グラフィックス診断は Alt + F5 で起動した場合のみ成功する (Enabled only if executed with Alt + F5)
 		Log("Graphics Analysis is enabled\n");
-		//!< GraphicsAnalysis->BeginCapture(), GraphicsAnalysis->EndCapture() でキャプチャ開始、終了する
+		//!< プログラムからは GraphicsAnalysis->BeginCapture(), GraphicsAnalysis->EndCapture() でキャプチャ開始、終了する
 	}
 #endif
 
