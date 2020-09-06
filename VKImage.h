@@ -6,6 +6,7 @@
 #pragma warning(disable : 4100)
 #pragma warning(disable : 4201)
 #pragma warning(disable : 4458)
+#pragma warning(disable : 5054) //!< std:c++latest
 #include <gli/gli.hpp>
 #pragma warning(pop)
 

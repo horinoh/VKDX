@@ -36,6 +36,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateIndirectBuffer();
 	//!< コンスタントバッファ (ユニフォームバッファ相当)
 	CreateConstantBuffer();
+
 	CreateTexture();
 
 	//!< スタティックサンプラはこの時点(CreateRootSignature()より前)で必要
@@ -43,6 +44,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< ルートシグネチャ (パイプライントレイアウト相当)
 	CreateRootSignature();
+	//!< シェーダ
 	CreateShaderBlobs();
 	//!< パイプライン
 	CreatePipelineStates();
@@ -52,7 +54,10 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< デスクリプタビュー (デスクリプタセット更新相当) ... この時点でリソース、デスクリプタヒープ等が必要
 	CreateDescriptorView();
 
+	//!< サンプラ
 	CreateSampler();
+
+	//!< (参考) VKの場合は、ここでデスクリプタセット更新
 
 	SetTimer(hWnd, NULL, Elapse, nullptr);
 
@@ -165,8 +170,8 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_
 
 		BYTE* Data;
 		VERIFY_SUCCEEDED(Resource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
-			for (auto It = PSF.cbegin(); It != PSF.cend(); ++It) {
-				const auto Index = std::distance(PSF.cbegin(), It);
+			for (auto It = cbegin(PSF); It != cend(PSF); ++It) {
+				const auto Index = std::distance(cbegin(PSF), It);
 				const auto& SD = SubresourceData[Index];
 				const auto RowCount = NumRows[Index];
 				const auto RowSize = RowSizes[Index];
@@ -264,11 +269,11 @@ void DX::PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CL, ID3D12Resourc
 	//!< (LoadDDSTextureFromFile()で作成される)Dstのステートは既にD3D12_RESOURCE_STATE_COPY_DESTで作成されている (Dst(created from LoadDDSTextureFromFile())'s state is already D3D12_RESOURCE_STATE_COPY_DEST)
 	//ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
 	{
-		for (auto It = PSF.cbegin(); It != PSF.cend(); ++It) {
+		for (auto It = cbegin(PSF); It != cend(PSF); ++It) {
 			const D3D12_TEXTURE_COPY_LOCATION TCL_Dst = {
 				Dst,
 				D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
-				static_cast<const UINT>(std::distance(PSF.cbegin(), It))
+				static_cast<const UINT>(std::distance(cbegin(PSF), It))
 			};
 			const D3D12_TEXTURE_COPY_LOCATION TCL_Src = {
 				Src,
@@ -290,7 +295,7 @@ void DX::PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CL, ID3D12Resourc
 void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS)
 {
 	ResourceBarrier(CL, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
-		for (auto It = PSF.cbegin(); It != PSF.cend(); ++It) {
+		for (auto It = cbegin(PSF); It != cend(PSF); ++It) {
 			CL->CopyBufferRegion(Dst, 0, Src, It->Offset, It->Footprint.Width);
 		}
 	} ResourceBarrier(CL, Dst, D3D12_RESOURCE_STATE_COPY_DEST, RS);
@@ -923,11 +928,11 @@ void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_
 	//!< BaseShaderRegister ... register(b0)なら 0、register(t3) なら 3
 	//!< RegisterSpace ... 通常は 0 でよい register(t3, space5) なら 5
 	//!< OffsetInDescriptorsFromTableStart ... 通常は D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND でよい
-	const std::vector<D3D12_ROOT_PARAMETER> RPs(il_RPs.begin(), il_RPs.end());
-	const std::vector<D3D12_STATIC_SAMPLER_DESC> SSDs(il_SSDs.begin(), il_SSDs.end());
+	const std::vector<D3D12_ROOT_PARAMETER> RPs(cbegin(il_RPs), cend(il_RPs));
+	const std::vector<D3D12_STATIC_SAMPLER_DESC> SSDs(cbegin(il_SSDs), cend(il_SSDs));
 	const D3D12_ROOT_SIGNATURE_DESC RSD = {
-			static_cast<UINT>(RPs.size()), RPs.data(),
-			static_cast<UINT>(SSDs.size()), SSDs.data(),
+			static_cast<UINT>(size(RPs)), data(RPs),
+			static_cast<UINT>(size(SSDs)), data(SSDs),
 			Flags
 	};
 	COM_PTR<ID3DBlob> ErrorBlob;
@@ -1065,7 +1070,7 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 		D3D12_PIPELINE_STATE_FLAG_NONE //!< D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG は Warp デバイスのみ
 	};
 	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
-	std::copy(RtvFormats.begin(), RtvFormats.end(), GPSD.RTVFormats);
+	std::copy(begin(RtvFormats), end(RtvFormats), GPSD.RTVFormats);
 	assert((0 == GPSD.DS.BytecodeLength || 0 == GPSD.HS.BytecodeLength || GPSD.PrimitiveTopologyType == D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH) && "");
 
 	if (nullptr != PLS && PLS->IsLoadSucceeded()) {
@@ -1135,9 +1140,7 @@ void DX::PopulateCommandList(const size_t i)
 
 void DX::Draw()
 {
-#ifdef _DEBUG
-	//PerformanceCounter PC(__func__);
-#endif
+	//PERFORMANCE_COUNTER();
 
 	WaitForFence();
 

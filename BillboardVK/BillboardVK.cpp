@@ -256,8 +256,8 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 		const auto PL = Pipelines[0];
 		const auto& IDB = IndirectBuffers[0];
 
-		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
+		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 #ifdef USE_PUSH_DESCRIPTOR
 #pragma region FRAME_OBJECT
 		const DescriptorUpdateInfo DUI = { { UniformBuffers[i].Buffer, 0, VK_WHOLE_SIZE }, };
@@ -267,11 +267,11 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 #pragma region FRAME_OBJECT
 		const auto DS = DescriptorSets[i];
 #pragma endregion
-		const std::array<VkDescriptorSet, 1> DSs = { DS };
+		const std::array DSs = { DS };
 		vkCmdBindDescriptorSets(SCB,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
 			PLL,
-			0, static_cast<uint32_t>(DSs.size()), DSs.data(),
+			0, static_cast<uint32_t>(size(DSs)), data(DSs),
 			0, nullptr);
 #endif
 		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
@@ -295,11 +295,11 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 			RP,
 			FB,
 			RenderArea,
-			static_cast<uint32_t>(CVs.size()), CVs.data()
+			static_cast<uint32_t>(size(CVs)), data(CVs)
 		};
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
-			const std::array<VkCommandBuffer, 1> SCBs = { SCB };
-			vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
+			const std::array SCBs = { SCB };
+			vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
 		} vkCmdEndRenderPass(CB);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }

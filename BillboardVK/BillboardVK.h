@@ -123,7 +123,7 @@ protected:
 	}
 	virtual void AllocateDescriptorSet() override {
 		assert(!DescriptorSetLayouts.empty() && "");
-		const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
+		const std::array DSLs = { DescriptorSetLayouts[0] };
 		assert(!DescriptorPools.empty() && "");
 		const VkDescriptorSetAllocateInfo DSAI = {
 			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -190,8 +190,8 @@ protected:
 #endif
 
 	virtual void CreateUniformBuffer() override {
-
-		const auto Fov = 0.16f * glm::pi<float>();
+		//const auto Fov = 0.16f * glm::pi<float>();
+		const auto Fov = 0.16f * std::numbers::pi_v<float>;
 		const auto Aspect = GetAspectRatioOfClientRect();
 		const auto ZFar = 100.0f;
 		const auto ZNear = ZFar * 0.0001f;

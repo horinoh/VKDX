@@ -271,7 +271,8 @@ void GltfVK::LoadScene()
 }
 void GltfVK::PreProcess()
 {
-	const auto Fov = 0.16f * glm::pi<float>();
+	//const auto Fov = 0.16f * glm::pi<float>();
+	const auto Fov = 0.16f * std::numbers::pi_v<float>;
 	const auto Aspect = GetAspectRatioOfClientRect();
 	const auto ZFar = 100.0f;
 	const auto ZNear = ZFar * 0.0001f;
@@ -375,11 +376,12 @@ void GltfVK::Process(const fx::gltf::Camera& Cam)
 #endif
 
 	switch (Cam.type) {
-	case fx::gltf::Camera::Type::None: break;
-	case fx::gltf::Camera::Type::Orthographic:
+		using enum fx::gltf::Camera::Type;
+	case None: break;
+	case Orthographic:
 		PV.Projection = glm::orthoRH(0.0f, Cam.orthographic.xmag, 0.0f, Cam.orthographic.ymag, Cam.orthographic.znear, Cam.orthographic.zfar);
 		break;
-	case fx::gltf::Camera::Type::Perspective:
+	case Perspective:
 		PV.Projection = glm::perspective(Cam.perspective.yfov, Cam.perspective.aspectRatio, Cam.perspective.znear, Cam.perspective.zfar);
 		break;
 	}
@@ -406,10 +408,10 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	for (const auto& i : Prim.attributes) {
 		SemanticInitial += i.first.substr(0, 1);
 	}
-	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(SemanticInitial.begin(), SemanticInitial.end());
-	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
+	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(cbegin(SemanticInitial), cend(SemanticInitial));
+	ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
 	const auto VS = VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, ShaderModules.back(), "main", nullptr });
-	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".frag.spv")).data()));
+	ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
 	const auto FS = VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules.back(), "main", nullptr });
 
 	//!< アトリビュート (Attributes)
@@ -551,9 +553,10 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			//!< BufferView.target はセットされてない事が多々あるので自前でIdentifierを用意…
 			switch (BufV.target)
 			{
-			case fx::gltf::BufferView::TargetType::None: break;
-			case fx::gltf::BufferView::TargetType::ArrayBuffer: break;
-			case fx::gltf::BufferView::TargetType::ElementArrayBuffer: break;
+				using enum fx::gltf::BufferView::TargetType;
+			case None: break;
+			case ArrayBuffer: break;
+			case ElementArrayBuffer: break;
 			}
 
 			if ("indices" == Identifier) {
@@ -625,13 +628,12 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 
 	if (GetDocument().animations.empty()) { return; }
 
-	CurrentFrame += 0.1f; //static_cast<float>(Elapse) / 1000.0f;
+	const auto SlowFactor = 1.0f;
+	CurrentFrame += static_cast<float>(Elapse) / 1000.0f * SlowFactor;
 
-	AnimNodeMatrices.assign(NodeMatrices.begin(), NodeMatrices.end());
+	AnimNodeMatrices.assign(cbegin(NodeMatrices), cend(NodeMatrices));
 
-	const auto bLoop = true;
-	//const auto bLoop = false;
-	UpdateAnimation(CurrentFrame, bLoop);
+	UpdateAnimation(CurrentFrame, true);
 
 #ifdef DEBUG_STDOUT
 	if (AnimNodeMatrices.size()) {
@@ -659,7 +661,8 @@ void GltfVK::UpdateAnimScale(const std::array<float, 3>& Value, const uint32_t N
 void GltfVK::UpdateAnimRotation(const std::array<float, 4>& Value, const uint32_t NodeIndex)
 {
 	if (-1 != NodeIndex) {
-		AnimNodeMatrices[NodeIndex] = glm::mat4_cast(glm::make_quat(Value.data())) * AnimNodeMatrices[NodeIndex];
+		//!< クォータニオンは要正規化
+		AnimNodeMatrices[NodeIndex] = glm::mat4_cast(glm::normalize(glm::make_quat(Value.data()))) * AnimNodeMatrices[NodeIndex];
 	}
 }
 void GltfVK::UpdateAnimWeights(const float* /*Data*/, const uint32_t /*PrevIndex*/, const uint32_t /*NextIndex*/, const float /*t*/)

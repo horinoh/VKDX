@@ -16,6 +16,16 @@ public:
 protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
 
+	virtual void CreateTexture() override {
+		ImageResources.emplace_back(COM_PTR<ID3D12Resource>());
+		std::wstring Path;
+		if (FindDirectory("DDS", Path)) {
+			LoadImage(COM_PTR_PUT(ImageResources.back()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds"));
+			ShaderResourceViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING });
+			ShaderResourceViewDescs.back().Texture2D = { 0, ImageResources.back()->GetDesc().MipLevels, 0, 0.0f };
+		}
+	}
+
 #ifdef USE_STATIC_SAMPLER
 	virtual void CreateStaticSampler() override {
 		StaticSamplerDescs.push_back({
@@ -30,6 +40,7 @@ protected:
 		});
 	}
 #endif
+
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE 
@@ -67,33 +78,24 @@ protected:
 			//| D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS
 		);
 #endif
-		RootSignatures.resize(1);
-		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures[0])));
+		RootSignatures.emplace_back(COM_PTR<ID3D12RootSignature>());
+		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.back())));
 		LOG_OK();
 	}
-
-	virtual void CreateTexture() override {
-		ImageResources.push_back(COM_PTR<ID3D12Resource>());
-		std::wstring Path;
-		if (FindDirectory("DDS", Path)) {
-			LoadImage(COM_PTR_PUT(ImageResources.back()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds"));
-
-			ShaderResourceViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING });
-			ShaderResourceViewDescs.back().Texture2D = { 0, ImageResources.back()->GetDesc().MipLevels, 0, 0.0f };
-		}
-	}
+	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPs(); }
+	virtual void CreatePipelineStates() override { CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE); }
 
 	virtual void CreateDescriptorHeap() override {
 		{
-			CbvSrvUavDescriptorHeaps.resize(1);
+			CbvSrvUavDescriptorHeaps.emplace_back(COM_PTR<ID3D12DescriptorHeap>());
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< SRV
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps[0])));
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
 		}
 #ifndef USE_STATIC_SAMPLER
 		{
-			SamplerDescriptorHeaps.resize(1);
+			SamplerDescriptorHeaps.emplace_back(COM_PTR<ID3D12DescriptorHeap>());
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< Sampler
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(SamplerDescriptorHeaps[0])));
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(SamplerDescriptorHeaps.back())));
 		}
 #endif
 	}
@@ -125,8 +127,6 @@ protected:
 	}
 #endif
 
-	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPs(); }
-	virtual void CreatePipelineStates() override { CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE); }
 	virtual void PopulateCommandList(const size_t i) override;
 };
 #pragma endregion

@@ -123,7 +123,8 @@ protected:
 	}
 
 	virtual void CreateUniformBuffer() override {
-		const auto Fov = 0.16f * glm::pi<float>();
+		//const auto Fov = 0.16f * glm::pi<float>();
+		const auto Fov = 0.16f * std::numbers::pi_v<float>;
 		const auto Aspect = GetAspectRatioOfClientRect();
 		const auto ZFar = 100.0f;
 		const auto ZNear = ZFar * 0.0001f;
@@ -249,11 +250,11 @@ protected:
 	virtual void CreateShaderModules() override {
 #ifdef USE_SKY_DOME
 		const auto ShaderPath = GetBasePath();
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_sd.frag.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_sd.tese.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tesc.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_sd.geom.spv")).data())); 
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT("_sd.frag.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT("_sd.tese.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT("_sd.geom.spv")).data())); 
 #else
 		CreateShaderModle_VsFsTesTcsGs(); 
 #endif

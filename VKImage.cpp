@@ -42,16 +42,17 @@ VkImageType VKImage::ToVkImageType(const gli::target GLITarget)
 {
 	switch (GLITarget)
 	{
+		using enum gli::target;
 	default: assert(false && "Not supported"); break;
-	case gli::target::TARGET_1D: 
-	case gli::target::TARGET_1D_ARRAY:
+	case TARGET_1D: 
+	case TARGET_1D_ARRAY:
 		return VK_IMAGE_TYPE_1D;
-	case gli::target::TARGET_2D: 
-	case gli::target::TARGET_2D_ARRAY: 
-	case gli::target::TARGET_CUBE:
-	case gli::target::TARGET_CUBE_ARRAY:
+	case TARGET_2D: 
+	case TARGET_2D_ARRAY: 
+	case TARGET_CUBE:
+	case TARGET_CUBE_ARRAY:
 		return VK_IMAGE_TYPE_2D;
-	case gli::target::TARGET_3D:
+	case TARGET_3D:
 		return VK_IMAGE_TYPE_3D;
 	}
 	return VK_IMAGE_TYPE_MAX_ENUM;
@@ -61,9 +62,10 @@ bool VKImage::IsCube(const gli::target GLITarget)
 {
 	switch (GLITarget)
 	{
+		using enum gli::target;
 	default: break;
-	case gli::target::TARGET_CUBE:
-	case gli::target::TARGET_CUBE_ARRAY:
+	case TARGET_CUBE:
+	case TARGET_CUBE_ARRAY:
 		return true;
 	}
 	return false;

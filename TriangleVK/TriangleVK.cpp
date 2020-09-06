@@ -323,8 +323,7 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 		const auto PL = Pipelines[0];
 		const auto VB = VertexBuffers[0].Buffer;
 		const auto IB = IndexBuffers[0].Buffer;
-		//const auto IDB = _IndirectBuffers[0];
-		const auto IDB = IndirectBuffers[0].Buffer;
+		const auto& IDB = IndirectBuffers[0].Buffer;
 
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());

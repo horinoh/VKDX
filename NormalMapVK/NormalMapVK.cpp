@@ -266,7 +266,7 @@ void NormalMapVK::PopulateCommandBuffer(const size_t i)
 			0, nullptr);
 
 		const auto PL = Pipelines[0];
-		const auto IDB = IndirectBuffers[0];
+		const auto& IDB = IndirectBuffers[0];
 		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 		vkCmdDrawIndirect(SCB, IDB.Buffer, 0, 1, 0);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));

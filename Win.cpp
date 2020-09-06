@@ -1,7 +1,37 @@
 #include "Win.h"
 
+#if 0
+//!< pair, tuple
+std::pair<int, float> getTwo() { return { 1, 1.0f }; }
+std::tuple<int, float, double> getThree() { return{ 1, 1.0f, 1.0 }; }
+auto [x, y] = getTwo();
+auto [a, b, c] = getThree();
+#endif
+
+#if 0
+//!< optional : 無効値 (別途bool値管理しているケース等で有効)
+std::optional<int> a;		//!< 未設定
+std::optional<int> b = 1;	//!< 設定済
+-1 == a.value_or(-1);		//!< 未設定なので-1
+1 == b.value_or(-1);		//!< 設定済なので1
+if (b) { b.reset(); }		//!< 設定済なら未設定へ
+-1 == b.value_or(-1);		//!< 未設定なので-1
+#endif
+
+#if 0
+//!< variant : union代替
+std::variant<int, float, bool> a = 1, b = 3.14f, c = true;
+0 == a.index();
+1 == b.index();
+2 == c.index();
+3.14f == get<1>(b)
+if (std::holds_alternative<bool>(c)) { true == get<bool>(c); }
+#endif
+
 Win::Win()
 {
+	
+
 #ifdef DEBUG_STDOUT
 	//!< ロケールを規定にする
 	setlocale(LC_ALL, "");
@@ -62,14 +92,15 @@ template<> void Win::_Log(
 	//!< 標準出力、エラー出力へ
 	switch (Type)
 	{
+		using enum LogType;
 	default: break;
-	case LogType::Log:
+	case Log:
 		std::cout << Str;
 		break;
-	case LogType::Warning:
+	case Warning:
 		std::cout << Yellow << Str << White;
 		break;
-	case LogType::Error:
+	case Error:
 		std::cerr << Red << Str << White;
 		break;
 	}

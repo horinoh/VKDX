@@ -319,14 +319,14 @@ protected:
 	virtual void CreateShaderModules() override {
 		const auto ShaderPath = GetBasePath();
 		//!< パス0 : シェーダモジュール
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".frag.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tese.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tesc.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".geom.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT(".tese.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT(".geom.spv")).data()));
 		//!< パス1 : シェーダモジュール
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_1") + TEXT(".vert.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_1") + TEXT(".frag.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT("_1") + TEXT(".vert.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT("_1") + TEXT(".frag.spv")).data()));
 	}
 	virtual void CreatePipelines() override { 
 		Pipelines.resize(2);

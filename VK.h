@@ -45,20 +45,23 @@
 #endif
 
 #define USE_VIEWPORT_Y_UP //!< *VK
-#define USE_IMMUTABLE_SAMPLER //!< TextureVK
+#define USE_IMMUTABLE_SAMPLER //!< [ TextureVK ] DX:USE_STATIC_SAMPLER相当
+
 //!< セカンダリコマンドバッファ : DXのバンドル相当
 //!< 基本的にセカンダリはプライマリのステートを継承しない
 //!< ただしプライマリがレンダーパス内からセカンダリを呼び出す場合には、プライマリのレンダーパス、サプバスステートは継承される
 //!< 全てのコマンドがプライマリ、セカンダリの両方で記録できるわけではない
 //!< セカンダリの場合は VK_SUBPASS_CONTENTS_INLINE の代わりに VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS を指定する 
-#define USE_SECONDARY_COMMAND_BUFFER //!< ParametricSurfaceVK
+//#define USE_NO_SECONDARY_COMMAND_BUFFER //!< [ ParametricSurfaceVK ] DX::USE_NO_BUNDLE相当
+
+//!< パイプライン作成時にシェーダ内の定数値を上書き指定できる(スカラ値のみ)
+//#define USE_SPECIALIZATION_INFO //!< [ ParametricSurfaceVK ]
+
 //!< プッシュデスクリプタ : デスクリプタセットを確保してからコマンドバッファにバインドするのではなく、デスクリプタの更新自体をコマンドバッファに記録してしまう
 //#define USE_PUSH_DESCRIPTOR //!< BillboardVK
-//!< プッシュコンスタント : DXのルートコンスタント相当
-//#define USE_PUSH_CONSTANTS //!< TriangleVK
-#define USE_RENDER_PASS_CLEAR //!< ClearVK #VK_TODO
-//!< パイプライン作成時にシェーダ内の定数値を上書き指定できる(スカラ値のみ)
-//#define USE_SPECIALIZATION_INFO //!< ParametricSurfaceVK
+//#define USE_PUSH_CONSTANTS //!< [ TriangleVK ] DX:USE_ROOT_CONSTANTS相当
+//#define USE_MANUAL_CLEAR //!< [ ClearVK ] #VK_TODO
+
 //#define USE_COMBINED_IMAGE_SAMPLER
 
 //!< 参考)https://www.saschawillems.de/blog/2018/07/19/vulkan-input-attachments-and-sub-passes/
@@ -150,11 +153,11 @@ public:
 	}
 	static std::wstring GetComponentMappingWstring(const VkComponentMapping& ComponentMapping) { return ToWString(GetComponentMappingString(ComponentMapping)); }
 
-	static std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) {
+	static [[nodiscard]] std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) {
 		const auto v = glm::mix(*reinterpret_cast<const glm::vec3*>(lhs.data()), *reinterpret_cast<const glm::vec3*>(rhs.data()), t);
 		return { v.x, v.y, v.z };
 	}
-	static std::array<float, 4> Lerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) {
+	static [[nodiscard]] std::array<float, 4> Lerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) {
 		const auto v = glm::lerp(*reinterpret_cast<const glm::quat*>(lhs.data()), *reinterpret_cast<const glm::quat*>(rhs.data()), t);
 		return { v.x, v.y, v.z, v.w };
 	}
@@ -275,7 +278,9 @@ protected:
 	virtual VkSurfaceFormatKHR SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 	virtual VkExtent2D SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& Cap, const uint32_t Width, const uint32_t Height);
 	virtual VkPresentModeKHR SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface);
-	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height);
+
+	virtual void CreateSwapchain() { CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight()); }
+	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags IUF = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
 	virtual void ResizeSwapchain(const uint32_t Width, const uint32_t Height);
 	virtual void GetSwapchainImage(VkDevice Device, VkSwapchainKHR Swapchain);
 	virtual void CreateSwapchainImageView();
@@ -323,10 +328,8 @@ protected:
 	virtual void CreateSampler() {}
 
 	virtual void CreateRenderPass(VkRenderPass& RP, const std::initializer_list<VkAttachmentDescription> il_ADs, const std::initializer_list<VkSubpassDescription> il_SDs, const std::initializer_list<VkSubpassDependency> il_Depends);
-	//virtual void CreateRenderPass2();
-	//virtual void CreateRenderPass3();
-	virtual void CreateRenderPass();
-	//virtual void CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color, bool ClearOnLoad);
+	virtual void CreateRenderPass(const VkAttachmentLoadOp LoadOp, const bool UseDepth);
+	virtual void CreateRenderPass() { CreateRenderPass(VK_ATTACHMENT_LOAD_OP_CLEAR, false); }
 
 	virtual void CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::initializer_list<VkImageView> il_IVs);
 	virtual void CreateFramebuffer() {
@@ -338,7 +341,7 @@ protected:
 	}
 	virtual void DestroyFramebuffer();
 
-	virtual VkShaderModule CreateShaderModules(const std::wstring& Path) const;
+	virtual [[nodiscard]] VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 	virtual void CreateShaderModules() {}
 
 #include "VKPipelineCache.inl"

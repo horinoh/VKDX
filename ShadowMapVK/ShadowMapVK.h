@@ -370,8 +370,8 @@ protected:
 				auto Mx = (std::numeric_limits<float>::min)();
 				for (auto i : Points) {
 					const auto t = glm::dot(i, Z);
-					Mn = std::min(Mn, t);
-					Mx = std::max(Mx, t);
+					Mn = (std::min)(Mn, t);
+					Mx = (std::max)(Mx, t);
 				}
 				const auto ZRadius = (Mx - Mn) * 0.5f;
 
@@ -379,8 +379,8 @@ protected:
 				Mx = (std::numeric_limits<float>::min)();
 				for (auto i : Points) {
 					const auto t = glm::dot(i, X);
-					Mn = std::min(Mn, t);
-					Mx = std::max(Mx, t);
+					Mn = (std::min)(Mn, t);
+					Mx = (std::max)(Mx, t);
 				}
 				const auto XRadius = (Mx - Mn) * 0.5f;
 
@@ -388,8 +388,8 @@ protected:
 				Mx = (std::numeric_limits<float>::min)();
 				for (auto i : Points) {
 					const auto t = glm::dot(i, Y);
-					Mn = std::min(Mn, t);
-					Mx = std::max(Mx, t);
+					Mn = (std::min)(Mn, t);
+					Mx = (std::max)(Mx, t);
 				}
 				const auto YRadius = (Mx - Mn) * 0.5f;
 
@@ -404,7 +404,8 @@ protected:
 			}
 #ifndef USE_SHADOWMAP_VISUALIZE
 			{
-				const auto Fov = 0.16f * glm::pi<float>();
+				//const auto Fov = 0.16f * glm::pi<float>();
+				const auto Fov = 0.16f * std::numbers::pi_v<float>;
 				const auto Aspect = GetAspectRatioOfClientRect();
 				const auto ZFar = 4.0f;
 				const auto ZNear = 2.0f;
@@ -434,17 +435,17 @@ protected:
 	virtual void CreateShaderModules() override {
 		const auto ShaderPath = GetBasePath();
 		//!< パス0 : シェーダモジュール
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tese.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tesc.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".geom.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT(".tese.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT(".geom.spv")).data()));
 		//!< パス1 : シェーダモジュール
 #ifdef USE_SHADOWMAP_VISUALIZE
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_sm_1") + TEXT(".vert.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_sm_1") + TEXT(".frag.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT("_sm_1") + TEXT(".vert.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT("_sm_1") + TEXT(".frag.spv")).data()));
 #else
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_1") + TEXT(".frag.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_1") + TEXT(".geom.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT("_1") + TEXT(".frag.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT("_1") + TEXT(".geom.spv")).data()));
 #endif
 	}
 	virtual void CreatePipelines() override {

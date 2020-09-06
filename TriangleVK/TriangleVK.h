@@ -17,31 +17,32 @@ protected:
 	virtual void CreateVertexBuffer() override;
 	virtual void CreateIndexBuffer() override;
 	virtual void CreateIndirectBuffer() override;
+
 	virtual void CreateDescriptorSetLayout() override { 
-		DescriptorSetLayouts.resize(1); 
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {});
+		DescriptorSetLayouts.emplace_back(VkDescriptorSetLayout());
+		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {});
 	}
 	virtual void CreatePipelineLayout() override {
 		assert(!DescriptorSetLayouts.empty() && "");
-		PipelineLayouts.resize(1);
+		PipelineLayouts.emplace_back(VkPipelineLayout());
 #ifdef USE_PUSH_CONSTANTS
 		const VkPushConstantRange PCR = { VK_SHADER_STAGE_FRAGMENT_BIT, 0, static_cast<uint32_t>(Color.size() * sizeof(Color[0])) };
-		VKExt::CreatePipelineLayout(PipelineLayouts[0], {}, { PCR });
+		VKExt::CreatePipelineLayout(PipelineLayouts.back(), {}, { PCR });
 #else
-		VKExt::CreatePipelineLayout(PipelineLayouts[0], {}, {});
+		VKExt::CreatePipelineLayout(PipelineLayouts.back(), {}, {});
 #endif
 	}
 	virtual void CreateShaderModules() override { 
 		const auto ShaderPath = GetBasePath();
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
+		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
 #ifdef USE_PUSH_CONSTANTS
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_pc.frag.spv")).data()));
+		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT("_pc.frag.spv")).data()));
 #else
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".frag.spv")).data()));
+		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
 #endif
 	}
 	virtual void CreatePipelines() override {
-		//!< バインディング0にまとめて入れるインターリーブ、セマンティックス毎にバインディングを分けると非インターリーブ
+		//!< バインディング0にまとめて入れるインターリーブ、セマンティックス毎にバインディングを分けると非インターリーブとなる
 		const uint32_t Binding = 0;
 		const std::vector<VkVertexInputBindingDescription> VIBDs = { {
 			{ Binding, sizeof(Vertex_PositionColor), VK_VERTEX_INPUT_RATE_VERTEX },
@@ -53,6 +54,7 @@ protected:
 		} };
 		VKExt::CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE, VIBDs, VIADs);
 	}
+
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 	uint32_t IndexCount = 0;

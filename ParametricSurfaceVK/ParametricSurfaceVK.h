@@ -18,8 +18,8 @@ public:
 protected:
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
-#ifndef USE_SECONDARY_COMMAND_BUFFER
-	//!< デフォルトはセカンダリを作成する実装なのでオーバーライドする
+#ifdef USE_NO_SECONDARY_COMMAND_BUFFER
+	//!< デフォルト実装はセカンダリを作成する実装なのでオーバーライドして作成しない
 	virtual void CreateCommandPool() override {
 		const VkCommandPoolCreateInfo CPCI = {
 			VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -27,8 +27,8 @@ protected:
 			VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 			GraphicsQueueFamilyIndex
 		};
-		CommandPools.resize(1);
-		VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &CommandPools[0]));
+		CommandPools.emplace_back(VkCommandPool());
+		VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &CommandPools.back()));
 	}
 	virtual void AllocateCommandBuffer() override {
 		const auto SCCount = static_cast<uint32_t>(SwapchainImages.size());
@@ -46,7 +46,9 @@ protected:
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &CommandBuffers[PrevCount]));
 	}
 #endif
+
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); } //!< 最低でもインデックス数1が必要 (At least index count must be 1)
+	
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFsTesTcsGs(); }
 	virtual void CreatePipelines() override { 
 #ifdef USE_SPECIALIZATION_INFO
@@ -67,6 +69,18 @@ protected:
 		};
 
 		Pipelines.resize(1);
+		const VkPipelineRasterizationStateCreateInfo PRSCI = {
+			VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+			nullptr,
+			0,
+			VK_FALSE,
+			VK_FALSE,
+			VK_POLYGON_MODE_FILL,
+			VK_CULL_MODE_BACK_BIT,
+			VK_FRONT_FACE_COUNTER_CLOCKWISE,
+			VK_FALSE, 0.0f, 0.0f, 0.0f,
+			1.0f
+		}; 
 		const VkPipelineDepthStencilStateCreateInfo PDSSCI = {
 			VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 			nullptr,
@@ -80,13 +94,13 @@ protected:
 		auto& PL = Pipelines[0];
 		const auto RP = RenderPasses[0];
 		const auto PLL = PipelineLayouts[0];
-		const std::array<VkPipelineShaderStageCreateInfo, 5> PSSCIs = {
+		const std::array<VkPipelineShaderStageCreateInfo, 5> PSSCIs = { {
 			{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0], "main", nullptr },
 			{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1], "main", nullptr },
 			{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, ShaderModules[2], "main", nullptr },
-			{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, ShaderModules[3], "main", &SI/*VkSpecializationInfoはここに指定する*/ }, 
+			{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, ShaderModules[3], "main", &SI/*VkSpecializationInfoはここに指定する*/ },
 			{ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_GEOMETRY_BIT, ShaderModules[4], "main", nullptr },
-		};
+		} };
 		const std::vector<VkVertexInputBindingDescription> VIBDs = {};
 		const std::vector<VkVertexInputAttributeDescription> VIADs = {};
 		const std::vector<VkPipelineColorBlendAttachmentState> PCBASs = {
@@ -99,15 +113,16 @@ protected:
 		};
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
 #else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs));
 #endif
 		for (auto& i : Threads) { i.join(); }
 #else
 		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1 , VK_FALSE);
 #endif
 	}
+
 	virtual void PopulateCommandBuffer(const size_t i) override;
 };
 #pragma endregion

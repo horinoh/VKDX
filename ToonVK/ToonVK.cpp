@@ -257,7 +257,7 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 #pragma endregion
 		const auto PLL = PipelineLayouts[0];
 		const auto PL = Pipelines[0];
-		const auto IDB = IndirectBuffers[0];
+		const auto& IDB = IndirectBuffers[0];
 
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
@@ -282,6 +282,7 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 #ifdef USE_DEPTH
+		//!< [“x‚àƒNƒŠƒA
 		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
 		CVs[1].depthStencil = { 1.0f, 0 };
 #else

@@ -58,13 +58,13 @@ protected:
 		COM_PTR<ID3DBlob> Blob;
 
 #ifdef USE_HLSL_ROOTSIGNATRUE
-		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
+		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
 		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs = {
 			{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
 		};
 		DX::SerializeRootSignature(Blob, {
-				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DRs.size()), DRs.data() }, D3D12_SHADER_VISIBILITY_GEOMETRY }
+				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(size(DRs)), data(DRs) }, D3D12_SHADER_VISIBILITY_GEOMETRY }
 			}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE
 			| D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS
 			| D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS
@@ -117,7 +117,8 @@ protected:
 	}
 	
 	virtual void CreateConstantBuffer() override {
-		const auto Fov = 0.16f * DirectX::XM_PI;
+		//const auto Fov = 0.16f * DirectX::XM_PI;
+		const auto Fov = 0.16f * std::numbers::pi_v<float>;
 		const auto Aspect = GetAspectRatioOfClientRect();
 		const auto ZFar = 100.0f;
 		const auto ZNear = ZFar * 0.0001f;

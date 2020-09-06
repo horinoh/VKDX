@@ -154,7 +154,7 @@
 
 #### WinRt
 * Microsoft::WRL::ComPtr -> winrt::com_ptr への移行 (参考 https://docs.microsoft.com/ja-jp/windows/uwp/cpp-and-winrt-apis/move-to-winrt-from-wrl)
-	* プロジェクト右クリック - Property - All Configurations にする - C/C++ - Language - C++ Language Standard - ISO C++17 Standard を選択
+	* プロジェクト右クリック - Property - All Configurations にする - C/C++ - Language - C++ Language Standard - ~~std:c++17~~std:c++latest を選択
 		* デフォルトでは C++14になっているみたい
 	* 以下のようなコード変更を行う
 		~~~
@@ -279,13 +279,12 @@
 	- ALL
 - USE_HLSL_ROOTSIGNATRUE
 	- *DX
-- USE_BUNDLE, USE_SECONDARY_COMMAND_BUFFER
+- USE_NO_BUNDLE, USE_NO_SECONDARY_COMMAND_BUFFER
 	- ParametricSurfaceDX, ParametricSurfaceVK
 - USE_STATIC_SAMPLER, USE_IMMUTABLE_SAMPLER
 	- TextureDX, TextureVK
-- USE_RENDER_PASS_CLEAR
+- USE_MANUAL_CLEAR
 	- ClearVK
-	- 全画面が描画されるものではクリアの必用が無く(FullscreenVK, TextureVK等)、使用していない
 - USE_PUSH_CONSTANTS, USE_ROOT_CONSTANTS
 	- TriangleDX, TriangleVK
 - USE_DEPTH
@@ -451,6 +450,7 @@
 ## DX
 	* コマンドリスト、グラフィクスコマンドリストまわりをまとめる
 ## VK, DX
+	* 深度を使うパターン良く出てくるので共通処理を関数化する？
 	* コンスタント(ユニフォーム)バッファをフレーム分用意する(#pragma region FRAME_OBJECT)
 		* 未 Deferred
 	* ウインドウサイズ変更時の処理 OnSize() スワップチェインのリサイズ

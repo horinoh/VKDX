@@ -16,8 +16,9 @@ public:
 
 	static DXGI_FORMAT ToDXFormat(const fx::gltf::Accessor::ComponentType CT) {
 		switch (CT) {
-		case fx::gltf::Accessor::ComponentType::UnsignedShort: return DXGI_FORMAT_R16_UINT;
-		case fx::gltf::Accessor::ComponentType::UnsignedInt: return DXGI_FORMAT_R32_UINT;
+			using enum fx::gltf::Accessor::ComponentType;
+		case UnsignedShort: return DXGI_FORMAT_R16_UINT;
+		case UnsignedInt: return DXGI_FORMAT_R32_UINT;
 		}
 		DEBUG_BREAK();
 		return DXGI_FORMAT_UNKNOWN;
@@ -25,13 +26,14 @@ public:
 	static D3D12_PRIMITIVE_TOPOLOGY_TYPE ToDXPrimitiveTopologyType(const fx::gltf::Primitive::Mode MD) {
 		switch (MD)
 		{
-		case fx::gltf::Primitive::Mode::Points: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
-		case fx::gltf::Primitive::Mode::Lines: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-		case fx::gltf::Primitive::Mode::LineLoop:
-		case fx::gltf::Primitive::Mode::LineStrip: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
-		case fx::gltf::Primitive::Mode::Triangles:
-		case fx::gltf::Primitive::Mode::TriangleStrip:
-		case fx::gltf::Primitive::Mode::TriangleFan: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+			using enum fx::gltf::Primitive::Mode;
+		case Points: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+		case Lines: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+		case LineLoop:
+		case LineStrip: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+		case Triangles:
+		case TriangleStrip:
+		case TriangleFan: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		}
 		DEBUG_BREAK();
 		return D3D12_PRIMITIVE_TOPOLOGY_TYPE_UNDEFINED;
@@ -39,63 +41,69 @@ public:
 	static D3D12_PRIMITIVE_TOPOLOGY ToDXPrimitiveTopology(const fx::gltf::Primitive::Mode MD) {
 		switch (MD)
 		{
-		case fx::gltf::Primitive::Mode::Points: return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
-		case fx::gltf::Primitive::Mode::Lines: return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
-		//case fx::gltf::Primitive::Mode::LineLoop:
-		case fx::gltf::Primitive::Mode::LineStrip: return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
-		case fx::gltf::Primitive::Mode::Triangles: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		case fx::gltf::Primitive::Mode::TriangleStrip: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
-		//case fx::gltf::Primitive::Mode::TriangleFan:
+			using enum fx::gltf::Primitive::Mode;
+		case Points: return D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+		case Lines: return D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+		//case LineLoop:
+		case LineStrip: return D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+		case Triangles: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+		case TriangleStrip: return D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+		//case TriangleFan:
 		}
 		DEBUG_BREAK();
 		return D3D_PRIMITIVE_TOPOLOGY_UNDEFINED;
 	}
 	static DXGI_FORMAT ToDXFormat(const fx::gltf::Accessor& Acc) {
 		switch (Acc.type) {
-			//case fx::gltf::Accessor::Type::None:
-		case fx::gltf::Accessor::Type::Scalar:
+			using enum fx::gltf::Accessor::Type;
+			//case None:
+		case Scalar:
 			switch (Acc.componentType) {
-			//case fx::gltf::Accessor::ComponentType::None:
-			case fx::gltf::Accessor::ComponentType::Byte: return DXGI_FORMAT_R8_SINT;
-			case fx::gltf::Accessor::ComponentType::UnsignedByte: return DXGI_FORMAT_R8_UINT;
-			case fx::gltf::Accessor::ComponentType::Short: return DXGI_FORMAT_R16_SINT;
-			case fx::gltf::Accessor::ComponentType::UnsignedShort: return DXGI_FORMAT_R16_UINT;
-			case fx::gltf::Accessor::ComponentType::UnsignedInt: return DXGI_FORMAT_R32_UINT;
-			case fx::gltf::Accessor::ComponentType::Float: return DXGI_FORMAT_R32_FLOAT;
+				using enum fx::gltf::Accessor::ComponentType;
+				//case None:
+			case Byte: return DXGI_FORMAT_R8_SINT;
+			case UnsignedByte: return DXGI_FORMAT_R8_UINT;
+			case Short: return DXGI_FORMAT_R16_SINT;
+			case UnsignedShort: return DXGI_FORMAT_R16_UINT;
+			case UnsignedInt: return DXGI_FORMAT_R32_UINT;
+			case Float: return DXGI_FORMAT_R32_FLOAT;
 			}
-		case fx::gltf::Accessor::Type::Vec2:
+		case Vec2:
 			switch (Acc.componentType) {
-			//case fx::gltf::Accessor::ComponentType::None:
-			case fx::gltf::Accessor::ComponentType::Byte: return DXGI_FORMAT_R8G8_SINT;
-			case fx::gltf::Accessor::ComponentType::UnsignedByte: return DXGI_FORMAT_R8G8_UINT;
-			case fx::gltf::Accessor::ComponentType::Short: return DXGI_FORMAT_R16G16_SINT;
-			case fx::gltf::Accessor::ComponentType::UnsignedShort: return DXGI_FORMAT_R16G16_UINT;
-			case fx::gltf::Accessor::ComponentType::UnsignedInt: return DXGI_FORMAT_R32G32_UINT;
-			case fx::gltf::Accessor::ComponentType::Float: return DXGI_FORMAT_R32G32_FLOAT;
+				using enum fx::gltf::Accessor::ComponentType;
+				//case None:
+			case Byte: return DXGI_FORMAT_R8G8_SINT;
+			case UnsignedByte: return DXGI_FORMAT_R8G8_UINT;
+			case Short: return DXGI_FORMAT_R16G16_SINT;
+			case UnsignedShort: return DXGI_FORMAT_R16G16_UINT;
+			case UnsignedInt: return DXGI_FORMAT_R32G32_UINT;
+			case Float: return DXGI_FORMAT_R32G32_FLOAT;
 			}
-		case fx::gltf::Accessor::Type::Vec3:
+		case Vec3:
 			switch (Acc.componentType) {
-			//case fx::gltf::Accessor::ComponentType::None:
-			//case fx::gltf::Accessor::ComponentType::Byte: return DXGI_FORMAT_R8G8B8_SINT;
-			//case fx::gltf::Accessor::ComponentType::UnsignedByte: return DXGI_FORMAT_R8G8B8_UINT;
-			//case fx::gltf::Accessor::ComponentType::Short: return DXGI_FORMAT_R16G16B16_SINT;
-			//case fx::gltf::Accessor::ComponentType::UnsignedShort: return DXGI_FORMAT_R16G16B16_UINT;
-			case fx::gltf::Accessor::ComponentType::UnsignedInt: return DXGI_FORMAT_R32G32B32_UINT;
-			case fx::gltf::Accessor::ComponentType::Float: return DXGI_FORMAT_R32G32B32_FLOAT;
+				using enum fx::gltf::Accessor::ComponentType;
+				//case None:
+			//case Byte: return DXGI_FORMAT_R8G8B8_SINT;
+			//case UnsignedByte: return DXGI_FORMAT_R8G8B8_UINT;
+			//case Short: return DXGI_FORMAT_R16G16B16_SINT;
+			//case UnsignedShort: return DXGI_FORMAT_R16G16B16_UINT;
+			case UnsignedInt: return DXGI_FORMAT_R32G32B32_UINT;
+			case Float: return DXGI_FORMAT_R32G32B32_FLOAT;
 			}
-		case fx::gltf::Accessor::Type::Vec4:
+		case Vec4:
 			switch (Acc.componentType) {
-			//case fx::gltf::Accessor::ComponentType::None:
-			case fx::gltf::Accessor::ComponentType::Byte: return DXGI_FORMAT_R8G8B8A8_SINT;
-			case fx::gltf::Accessor::ComponentType::UnsignedByte: return DXGI_FORMAT_R8G8B8A8_UINT;
-			case fx::gltf::Accessor::ComponentType::Short: return DXGI_FORMAT_R16G16B16A16_SINT;
-			case fx::gltf::Accessor::ComponentType::UnsignedShort: return DXGI_FORMAT_R16G16B16A16_UINT;
-			case fx::gltf::Accessor::ComponentType::UnsignedInt: return DXGI_FORMAT_R32G32B32A32_UINT;
-			case fx::gltf::Accessor::ComponentType::Float: return DXGI_FORMAT_R32G32B32A32_FLOAT;
+				using enum fx::gltf::Accessor::ComponentType;
+				//case None:
+			case Byte: return DXGI_FORMAT_R8G8B8A8_SINT;
+			case UnsignedByte: return DXGI_FORMAT_R8G8B8A8_UINT;
+			case Short: return DXGI_FORMAT_R16G16B16A16_SINT;
+			case UnsignedShort: return DXGI_FORMAT_R16G16B16A16_UINT;
+			case UnsignedInt: return DXGI_FORMAT_R32G32B32A32_UINT;
+			case Float: return DXGI_FORMAT_R32G32B32A32_FLOAT;
 			}
-			//case fx::gltf::Accessor::Type::Mat2:
-			//case fx::gltf::Accessor::Type::Mat3:
-			//case fx::gltf::Accessor::Type::Mat4:
+			//case Mat2:
+			//case Mat3:
+			//case Mat4:
 		}
 		DEBUG_BREAK();
 		return DXGI_FORMAT_UNKNOWN;
@@ -199,7 +207,8 @@ protected:
 		LOG_OK();
 	}
 	virtual void CreateConstantBuffer() override {
-		const auto Fov = 0.16f * DirectX::XM_PI;
+		//const auto Fov = 0.16f * DirectX::XM_PI;
+		const auto Fov = 0.16f * std::numbers::pi_v<float>;
 		const auto Aspect = GetAspectRatioOfClientRect();
 		const auto ZFar = 100.0f;
 		const auto ZNear = ZFar * 0.0001f;

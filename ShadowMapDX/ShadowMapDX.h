@@ -301,8 +301,8 @@ protected:
 			auto Mx = (std::numeric_limits<FLOAT>::min)();
 			for (auto i : Points) {
 				const auto t = DirectX::XMVector3Dot(i, Z).m128_f32[0];
-				Mn = std::min(Mn, t);
-				Mx = std::max(Mx, t);
+				Mn = (std::min)(Mn, t);
+				Mx = (std::max)(Mx, t);
 			}
 			const auto ZRadius = (Mx - Mn) * 0.5f;
 
@@ -310,8 +310,8 @@ protected:
 			Mx = (std::numeric_limits<FLOAT>::min)();
 			for (auto i : Points) {
 				const auto t = DirectX::XMVector3Dot(i, X).m128_f32[0];
-				Mn = std::min(Mn, t);
-				Mx = std::max(Mx, t);
+				Mn = (std::min)(Mn, t);
+				Mx = (std::max)(Mx, t);
 			}
 			const auto XRadius = (Mx - Mn) * 0.5f;
 
@@ -319,8 +319,8 @@ protected:
 			Mx = (std::numeric_limits<FLOAT>::min)();
 			for (auto i : Points) {
 				const auto t = DirectX::XMVector3Dot(i, Y).m128_f32[0];
-				Mn = std::min(Mn, t);
-				Mx = std::max(Mx, t);
+				Mn = (std::min)(Mn, t);
+				Mx = (std::max)(Mx, t);
 			}
 			const auto YRadius = (Mx - Mn) * 0.5f;
 
@@ -335,7 +335,8 @@ protected:
 		}
 #ifndef USE_SHADOWMAP_VISUALIZE
 		{
-			const auto Fov = 0.16f * DirectX::XM_PI;
+			//const auto Fov = 0.16f * DirectX::XM_PI;
+			const auto Fov = 0.16f * std::numbers::pi_v<float>;
 			const auto Aspect = GetAspectRatioOfClientRect();
 			const auto ZFar = 4.0f;
 			const auto ZNear = 2.0f;

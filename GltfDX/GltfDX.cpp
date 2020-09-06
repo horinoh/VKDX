@@ -306,11 +306,12 @@ void GltfDX::Process(const fx::gltf::Camera& Cam)
 #endif
 
 	switch (Cam.type) {
-	case fx::gltf::Camera::Type::None: break;
-	case fx::gltf::Camera::Type::Orthographic:
+		using enum fx::gltf::Camera::Type;
+	case None: break;
+	case Orthographic:
 		PV.Projection = DirectX::XMMatrixOrthographicRH(Cam.orthographic.xmag, Cam.orthographic.ymag, Cam.orthographic.znear, Cam.orthographic.zfar);
 		break;
-	case fx::gltf::Camera::Type::Perspective:
+	case Perspective:
 		PV.Projection = DirectX::XMMatrixPerspectiveFovRH(Cam.perspective.yfov, Cam.perspective.aspectRatio, Cam.perspective.znear, Cam.perspective.zfar);
 		break;
 	}
@@ -338,7 +339,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	for (const auto& i : Prim.attributes) {
 		SemnticInitial += i.first.substr(0, 1);
 	}
-	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(SemnticInitial.begin(), SemnticInitial.end());
+	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(cbegin(SemnticInitial), cend(SemnticInitial));
 	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 	const auto VS = D3D12_SHADER_BYTECODE({ ShaderBlobs.back()->GetBufferPointer(), ShaderBlobs.back()->GetBufferSize() });
@@ -476,9 +477,10 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			//!< BufferView.target はセットされてない事が多々あるので自前でIdentifierを用意…
 			switch (BufV.target)
 			{
-			case fx::gltf::BufferView::TargetType::None: break;
-			case fx::gltf::BufferView::TargetType::ArrayBuffer: break;
-			case fx::gltf::BufferView::TargetType::ElementArrayBuffer: break;
+				using enum fx::gltf::BufferView::TargetType;
+			case None: break;
+			case ArrayBuffer: break;
+			case ElementArrayBuffer: break;
 			}
 
 			if ("indices" == Identifier) {
@@ -558,13 +560,12 @@ void GltfDX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 
 	if (GetDocument().animations.empty()) { return; }
 
-	CurrentFrame += 0.1f; //static_cast<float>(Elapse) / 1000.0f;
+	const auto SlowFactor = 1.0f;
+	CurrentFrame += static_cast<float>(Elapse) / 1000.0f * SlowFactor;
 
-	AnimNodeMatrices.assign(NodeMatrices.begin(), NodeMatrices.end());
+	AnimNodeMatrices.assign(cbegin(NodeMatrices), cend(NodeMatrices));
 
-	const auto bLoop = true;
-	//const auto bLoop = false;
-	UpdateAnimation(CurrentFrame, bLoop);
+	UpdateAnimation(CurrentFrame, true);
 
 #ifdef DEBUG_STDOUT
 	if (AnimNodeMatrices.size()) {
@@ -594,7 +595,8 @@ void GltfDX::UpdateAnimRotation(const std::array<float, 4>& Value, const uint32_
 {
 	if (-1 != NodeIndex) {
 		const auto Local = DirectX::XMFLOAT4(Value.data());
-		AnimNodeMatrices[NodeIndex] *= DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&Local));
+		//!< クォータニオンは要正規化
+		AnimNodeMatrices[NodeIndex] *= DirectX::XMMatrixRotationQuaternion(DirectX::XMQuaternionNormalize(DirectX::XMLoadFloat4(&Local)));
 	}
 }
 void GltfDX::UpdateAnimWeights(const float* /*Data*/, const uint32_t /*PrevIndex*/, const uint32_t /*NextIndex*/, const float /*t*/)

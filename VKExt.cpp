@@ -25,22 +25,22 @@ void VKExt::CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, co
 void VKExt::CreateShaderModle_VsFs()
 {
 	const auto ShaderPath = GetBasePath();
-	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
-	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".frag.spv")).data()));
+	ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
+	ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
 }
 void VKExt::CreateShaderModle_VsFsTesTcsGs()
 {
 	const auto ShaderPath = GetBasePath();
-	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
-	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".frag.spv")).data()));
-	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tese.spv")).data()));
-	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tesc.spv")).data()));
-	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".geom.spv")).data()));
+	ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
+	ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
+	ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".tese.spv")).data()));
+	ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data()));
+	ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".geom.spv")).data()));
 }
 void VKExt::CreateShaderModle_Cs()
 {
 	const auto ShaderPath = GetBasePath();
-	ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".comp.spv")).data()));
+	ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".comp.spv")).data()));
 }
 
 void VKExt::CreatePipeline_VsFs_Input(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, const VkBool32 DepthEnable, const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs)
@@ -327,14 +327,14 @@ void VKExt::CreateRenderPass_Color_PostProcess(VkRenderPass& RP, const VkFormat 
 
 //void VKExt::CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::initializer_list<VkImageView> il_IVs)
 //{
-//	const std::vector<VkImageView> IVs(il_IVs.begin(), il_IVs.end());
+//	const std::vector<VkImageView> IVs(cbegin(il_IVs), cend(il_IVs));
 //
 //	const VkFramebufferCreateInfo FCI = {
 //		VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
 //		nullptr,
 //		0,
 //		RP, //!< ここで作成するフレームバッファは RenderPass と「コンパチ」な別のレンダーパスでも使用可能
-//		static_cast<uint32_t>(IVs.size()), IVs.data(),
+//		static_cast<uint32_t>(size(IVs)), data(IVs),
 //		Width, Height,
 //		Layers
 //	};

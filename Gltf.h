@@ -24,27 +24,29 @@ class Gltf
 public:
 	static uint32_t GetTypeCount(const fx::gltf::Accessor::Type Type) {
 		switch (Type) {
+			using enum fx::gltf::Accessor::Type;
 		default:
-		case fx::gltf::Accessor::Type::None: return 0;
-		case fx::gltf::Accessor::Type::Scalar: return 1;
-		case fx::gltf::Accessor::Type::Vec2: return 2;
-		case fx::gltf::Accessor::Type::Vec3: return 3;
-		case fx::gltf::Accessor::Type::Vec4:
-		case fx::gltf::Accessor::Type::Mat2: return 4;
-		case fx::gltf::Accessor::Type::Mat3: return 9;
-		case fx::gltf::Accessor::Type::Mat4: return 16;
+		case None: return 0;
+		case Scalar: return 1;
+		case Vec2: return 2;
+		case Vec3: return 3;
+		case Vec4:
+		case Mat2: return 4;
+		case Mat3: return 9;
+		case Mat4: return 16;
 		}		
 	}
 	static uint32_t GetComponentTypeSize(const fx::gltf::Accessor::ComponentType CompType) {
 		switch (CompType) {
+			using enum fx::gltf::Accessor::ComponentType;
 		default:
-		case fx::gltf::Accessor::ComponentType::None: return 0;
-		case fx::gltf::Accessor::ComponentType::Byte:
-		case fx::gltf::Accessor::ComponentType::UnsignedByte: return 1;
-		case fx::gltf::Accessor::ComponentType::Short:
-		case fx::gltf::Accessor::ComponentType::UnsignedShort: return 2;
-		case fx::gltf::Accessor::ComponentType::UnsignedInt:
-		case fx::gltf::Accessor::ComponentType::Float: return 4;
+		case None: return 0;
+		case Byte:
+		case UnsignedByte: return 1;
+		case Short:
+		case UnsignedShort: return 2;
+		case UnsignedInt:
+		case Float: return 4;
 		}
 	}
 	static uint32_t GetTypeSize(const fx::gltf::Accessor& Acc) { return GetTypeCount(Acc.type) * GetComponentTypeSize(Acc.componentType); }
@@ -198,9 +200,10 @@ public:
 		Tabs(); std::cout << "\t" << "interpolation = ";
 		switch (Smp.interpolation)
 		{
-		case fx::gltf::Animation::Sampler::Type::Linear: std::cout << "Linear"; break;
-		case fx::gltf::Animation::Sampler::Type::Step: std::cout << "Step"; break;
-		case fx::gltf::Animation::Sampler::Type::CubicSpline: std::cout << "CubicSpline"; break;
+			using enum fx::gltf::Animation::Sampler::Type;
+		case Linear: std::cout << "Linear"; break;
+		case Step: std::cout << "Step"; break;
+		case CubicSpline: std::cout << "CubicSpline"; break;
 		}
 		std::cout << std::endl;
 
@@ -322,14 +325,15 @@ public:
 
 		switch (Cam.type)
 		{
-		case fx::gltf::Camera::Type::None:
+			using enum fx::gltf::Camera::Type;
+		case None:
 			break;
-		case fx::gltf::Camera::Type::Orthographic:
+		case Orthographic:
 			Tabs(); std::cout << "\t" << "type = Orthographic" << std::endl;
 			Tabs(); std::cout << "\t" << "\t" << "xmag, ymag = " << Cam.orthographic.xmag << ", " << Cam.orthographic.ymag << std::endl;
 			Tabs(); std::cout << "\t" << "\t" << "znear, zfar = " << Cam.orthographic.znear << ", " << Cam.orthographic.zfar << std::endl;
 			break;
-		case fx::gltf::Camera::Type::Perspective:
+		case Perspective:
 			Tabs(); std::cout << "\t" << "type = Perspective" << std::endl;
 			Tabs(); std::cout << "\t" << "\t" << "yfov = " << Cam.perspective.yfov << std::endl;
 			Tabs(); std::cout << "\t" << "\t" << "aspectRatio = " << Cam.perspective.aspectRatio << std::endl;
@@ -342,13 +346,14 @@ public:
 		Tabs(); std::cout << "mode = ";
 		switch (Prim.mode)
 		{
-		case fx::gltf::Primitive::Mode::Points: std::cout << "Points"; break;
-		case fx::gltf::Primitive::Mode::Lines: std::cout << "Lines"; break;
-		case fx::gltf::Primitive::Mode::LineLoop: std::cout << "LineLoop"; break;
-		case fx::gltf::Primitive::Mode::LineStrip: std::cout << "LineStrip"; break;
-		case fx::gltf::Primitive::Mode::Triangles: std::cout << "Triangles"; break;
-		case fx::gltf::Primitive::Mode::TriangleStrip: std::cout << "TriangleStrip"; break;
-		case fx::gltf::Primitive::Mode::TriangleFan: std::cout << "TriangleFan"; break;
+			using enum fx::gltf::Primitive::Mode;
+		case Points: std::cout << "Points"; break;
+		case Lines: std::cout << "Lines"; break;
+		case LineLoop: std::cout << "LineLoop"; break;
+		case LineStrip: std::cout << "LineStrip"; break;
+		case Triangles: std::cout << "Triangles"; break;
+		case TriangleStrip: std::cout << "TriangleStrip"; break;
+		case TriangleFan: std::cout << "TriangleFan"; break;
 		}
 		std::cout << std::endl;
 
@@ -394,26 +399,28 @@ public:
 		Tabs(); std::cout << "\t" << "type = ";
 		switch (Acc.type)
 		{
-		case fx::gltf::Accessor::Type::None: std::cout << "None"; break;
-		case fx::gltf::Accessor::Type::Scalar: std::cout << "Scalar"; break;
-		case fx::gltf::Accessor::Type::Vec2: std::cout << "Vec2"; break;
-		case fx::gltf::Accessor::Type::Vec3: std::cout << "Vec3"; break;
-		case fx::gltf::Accessor::Type::Vec4: std::cout << "Vec4"; break;
-		case fx::gltf::Accessor::Type::Mat2: std::cout << "Mat2"; break;
-		case fx::gltf::Accessor::Type::Mat3: std::cout << "Mat3"; break;
-		case fx::gltf::Accessor::Type::Mat4: std::cout << "Mat4"; break;
+			using enum fx::gltf::Accessor::Type;
+		case None: std::cout << "None"; break;
+		case Scalar: std::cout << "Scalar"; break;
+		case Vec2: std::cout << "Vec2"; break;
+		case Vec3: std::cout << "Vec3"; break;
+		case Vec4: std::cout << "Vec4"; break;
+		case Mat2: std::cout << "Mat2"; break;
+		case Mat3: std::cout << "Mat3"; break;
+		case Mat4: std::cout << "Mat4"; break;
 		}
 		std::cout << std::endl;
 
 		Tabs(); std::cout << "\t" << "componentType = ";
 		switch (Acc.componentType) {
-		case fx::gltf::Accessor::ComponentType::None: std::cout << "None"; break;
-		case fx::gltf::Accessor::ComponentType::Byte: std::cout << "Byte"; break;
-		case fx::gltf::Accessor::ComponentType::UnsignedByte: std::cout << "UnsignedByte"; break;
-		case fx::gltf::Accessor::ComponentType::Short: std::cout << "Short"; break;
-		case fx::gltf::Accessor::ComponentType::UnsignedShort: std::cout << "UnsignedShort"; break;
-		case fx::gltf::Accessor::ComponentType::UnsignedInt: std::cout << "UnsignedInt"; break;
-		case fx::gltf::Accessor::ComponentType::Float: std::cout << "Float"; break;
+			using enum fx::gltf::Accessor::ComponentType;
+		case None: std::cout << "None"; break;
+		case Byte: std::cout << "Byte"; break;
+		case UnsignedByte: std::cout << "UnsignedByte"; break;
+		case Short: std::cout << "Short"; break;
+		case UnsignedShort: std::cout << "UnsignedShort"; break;
+		case UnsignedInt: std::cout << "UnsignedInt"; break;
+		case Float: std::cout << "Float"; break;
 		}
 		std::cout << std::endl;
 
@@ -439,9 +446,10 @@ public:
 
 			Tabs(); std::cout << "\t" << "target = ";
 			switch (BufV.target) {
-			case fx::gltf::BufferView::TargetType::None: std::cout << "None"; break;
-			case fx::gltf::BufferView::TargetType::ArrayBuffer: std::cout << "ArrayBuffer"; break;
-			case fx::gltf::BufferView::TargetType::ElementArrayBuffer: std::cout << "ElementArrayBuffer"; break;
+				using enum fx::gltf::BufferView::TargetType;
+			case None: std::cout << "None"; break;
+			case ArrayBuffer: std::cout << "ArrayBuffer"; break;
+			case ElementArrayBuffer: std::cout << "ElementArrayBuffer"; break;
 			}
 			std::cout << std::endl;
 
@@ -492,9 +500,10 @@ public:
 
 		Tabs(); std::cout << "\t" << "alphaMode = ";
 		switch (Mtl.alphaMode) {
-		case fx::gltf::Material::AlphaMode::Opaque: std::cout << "Opaque"; break;
-		case fx::gltf::Material::AlphaMode::Mask: std::cout << "Mask"; break;
-		case fx::gltf::Material::AlphaMode::Blend: std::cout << "Blend"; break;
+			using enum fx::gltf::Material::AlphaMode;
+		case Opaque: std::cout << "Opaque"; break;
+		case Mask: std::cout << "Mask"; break;
+		case Blend: std::cout << "Blend"; break;
 		}
 		std::cout << std::endl;
 
@@ -607,40 +616,44 @@ public:
 		Tabs(); std::cout << "\t" << "magFilter = ";
 		switch (Smp.magFilter)
 		{
-		case fx::gltf::Sampler::MagFilter::None: std::cout << "None"; break;
-		case fx::gltf::Sampler::MagFilter::Nearest: std::cout << "Nearest"; break;
-		case fx::gltf::Sampler::MagFilter::Linear: std::cout << "Linear"; break;
+			using enum fx::gltf::Sampler::MagFilter;
+		case None: std::cout << "None"; break;
+		case Nearest: std::cout << "Nearest"; break;
+		case Linear: std::cout << "Linear"; break;
 		}
 		std::cout << std::endl;
 
 		Tabs(); std::cout << "\t" << "minFilter = ";
 		switch (Smp.minFilter)
 		{
-		case fx::gltf::Sampler::MinFilter::None: std::cout << "None"; break;
-		case fx::gltf::Sampler::MinFilter::Nearest: std::cout << "Nearest"; break;
-		case fx::gltf::Sampler::MinFilter::Linear: std::cout << "Linear"; break;
-		case fx::gltf::Sampler::MinFilter::NearestMipMapNearest: std::cout << "NearestMipMapNearest"; break;
-		case fx::gltf::Sampler::MinFilter::LinearMipMapNearest: std::cout << "LinearMipMapNearest"; break;
-		case fx::gltf::Sampler::MinFilter::NearestMipMapLinear: std::cout << "NearestMipMapLinear"; break;
-		case fx::gltf::Sampler::MinFilter::LinearMipMapLinear: std::cout << "LinearMipMapLinear"; break;
+			using enum fx::gltf::Sampler::MinFilter;
+		case None: std::cout << "None"; break;
+		case Nearest: std::cout << "Nearest"; break;
+		case Linear: std::cout << "Linear"; break;
+		case NearestMipMapNearest: std::cout << "NearestMipMapNearest"; break;
+		case LinearMipMapNearest: std::cout << "LinearMipMapNearest"; break;
+		case NearestMipMapLinear: std::cout << "NearestMipMapLinear"; break;
+		case LinearMipMapLinear: std::cout << "LinearMipMapLinear"; break;
 		}
 		std::cout << std::endl;
 
 		Tabs(); std::cout << "\t" << "wrapS = ";
 		switch (Smp.wrapS)
 		{
-		case fx::gltf::Sampler::WrappingMode::ClampToEdge: std::cout << "ClampToEdge"; break;
-		case fx::gltf::Sampler::WrappingMode::MirroredRepeat: std::cout << "MirroredRepeat"; break;
-		case fx::gltf::Sampler::WrappingMode::Repeat: std::cout << "Repeat"; break;
+			using enum fx::gltf::Sampler::WrappingMode;
+		case ClampToEdge: std::cout << "ClampToEdge"; break;
+		case MirroredRepeat: std::cout << "MirroredRepeat"; break;
+		case Repeat: std::cout << "Repeat"; break;
 		}
 		std::cout << std::endl;
 
 		Tabs(); std::cout << "\t" << "wrapT = ";
 		switch (Smp.wrapT)
 		{
-		case fx::gltf::Sampler::WrappingMode::ClampToEdge: std::cout << "ClampToEdge"; break;
-		case fx::gltf::Sampler::WrappingMode::MirroredRepeat: std::cout << "MirroredRepeat"; break;
-		case fx::gltf::Sampler::WrappingMode::Repeat: std::cout << "Repeat"; break;
+			using enum fx::gltf::Sampler::WrappingMode;
+		case ClampToEdge: std::cout << "ClampToEdge"; break;
+		case MirroredRepeat: std::cout << "MirroredRepeat"; break;
+		case Repeat: std::cout << "Repeat"; break;
 		}
 		std::cout << std::endl;
 	}
@@ -744,7 +757,8 @@ public:
 							std::cout << "\t" << j.target.path << " = ";
 							switch (Smp.interpolation)
 							{
-							case fx::gltf::Animation::Sampler::Type::Linear:
+								using enum fx::gltf::Animation::Sampler::Type;
+							case Linear:
 								if ("translation" == j.target.path) {
 									const auto Data = reinterpret_cast<const std::array<float, 3>*>(GetData(OutAcc));
 									//!< std::lerp() は C++20以降
@@ -763,7 +777,7 @@ public:
 									UpdateAnimWeights(Data, PrevIndex, NextIndex, t);
 								}
 								break;
-							case fx::gltf::Animation::Sampler::Type::Step:
+							case Step:
 								if ("translation" == j.target.path || "scale" == j.target.path) {
 									const auto Data = reinterpret_cast<const std::array<float, 3>*>(GetData(OutAcc));
 									UpdateAnimTranslation(Data[PrevIndex], j.target.node);
@@ -781,8 +795,10 @@ public:
 									UpdateAnimWeights(Data, PrevIndex, (std::numeric_limits<uint32_t>::max)(), 0.0f);
 								}
 								break;
-							case fx::gltf::Animation::Sampler::Type::CubicSpline:
+							case CubicSpline:
 								//!< https://github.com/KhronosGroup/glTF/tree/master/specification/2.0#appendix-c-spline-interpolation
+								//!< p(t) = (2 * t^3 - 3 * t^2 + 1) * p0 + (t^3 - 2 * t^2 + t) * m0 + (-2 * t^3 + 3 * t^2) * p1 + (t^3 - t^2) * m1
+								//!< ここで 0<t<1、p0は開始位置(t=0)、m0は開始接線(t=0)、p1は終了位置(t=1)、m1は終了接線(t=1)
 								//!< CubicSpline の場合、(InTangent, Value, OutTangent)の3つでセットになっているのでストライドは3になる
 								const auto Stride = 3; //!< 0:InTangent, 1:Value, 2:OutTangent
 								const auto PrevSet = PrevIndex * Stride;
@@ -791,10 +807,12 @@ public:
 								const auto t3 = t2 * t;
 								if ("translation" == j.target.path) {
 									const auto Data = reinterpret_cast<const std::array<float, 3>*>(GetData(OutAcc));
+									//!< Prev InTanget は使用しない
 									const auto& p0 = Data[PrevSet + 1]; //!< Prev Value
 									const auto& m0 = Data[PrevSet + 2]; //!< Prev OutTangent
 									const auto& m1 = Data[NextSet + 0]; //!< Next InTangent
 									const auto& p1 = Data[NextSet + 1]; //!< Next Value
+									//!< Next OutTangent は使用しない
 									UpdateAnimTranslation((2.0f * t3 - 3.0f * t2 + 1.0f) * p0 + (t3 - 2.0f * t2 + t) * Delta * m0 + (-2.0f * t3 + 3.0f * t2) * p1 + (t3 - t2) * Delta * m1, j.target.node);
 								}
 								else if ("scale" == j.target.path) {
@@ -811,6 +829,7 @@ public:
 									const auto& m0 = Data[PrevSet + 2];
 									const auto& m1 = Data[NextSet + 0];
 									const auto& p1 = Data[NextSet + 1];
+									//!< クォータニオンは使用前に正規化すること
 									UpdateAnimRotation((2.0f * t3 - 3.0f * t2 + 1.0f) * p0 + (t3 - 2.0f * t2 + t) * Delta * m0 + (-2.0f * t3 + 3.0f * t2) * p1 + (t3 - t2) * Delta * m1, j.target.node);
 								}
 								//else if ("weights" == j.target.path) {

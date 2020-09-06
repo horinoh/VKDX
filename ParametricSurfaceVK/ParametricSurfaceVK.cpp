@@ -234,7 +234,7 @@ void ParametricSurfaceVK::PopulateCommandBuffer(const size_t i)
 	const auto RP = RenderPasses[0];
 	const auto FB = Framebuffers[i];
 
-#ifdef USE_SECONDARY_COMMAND_BUFFER
+#ifndef USE_NO_SECONDARY_COMMAND_BUFFER
 	const auto SCB = SecondaryCommandBuffers[i];
 	const VkCommandBufferInheritanceInfo CBII = {
 		VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
@@ -256,7 +256,7 @@ void ParametricSurfaceVK::PopulateCommandBuffer(const size_t i)
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
-		const auto IDB = IndirectBuffers[0];
+		const auto& IDB = IndirectBuffers[0];
 		const auto PL = Pipelines[0];
 		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 		vkCmdDrawIndirect(SCB, IDB.Buffer, 0, 1, 0);
@@ -281,21 +281,21 @@ void ParametricSurfaceVK::PopulateCommandBuffer(const size_t i)
 			RenderArea,
 			static_cast<uint32_t>(CVs.size()), CVs.data()
 		};
-#ifdef USE_SECONDARY_COMMAND_BUFFER
-		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
-			const std::array<VkCommandBuffer, 1> SCBs = { SCB };
-			vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
-		} vkCmdEndRenderPass(CB);
-#else
+#ifdef USE_NO_SECONDARY_COMMAND_BUFFER
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
-			const auto IB = _IndirectBuffers[0];
+			const auto& IDB = IndirectBuffers[0];
 			const auto PL = Pipelines[0];
 
 			vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 			vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-			vkCmdDrawIndirect(CB, IB, 0, 1, 0);
+			vkCmdDrawIndirect(CB, IDB.Buffer, 0, 1, 0);
+		} vkCmdEndRenderPass(CB);
+#else	
+		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
+			const std::array<VkCommandBuffer, 1> SCBs = { SCB };
+			vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
 		} vkCmdEndRenderPass(CB);
 #endif
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));

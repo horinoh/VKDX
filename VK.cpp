@@ -43,9 +43,7 @@
 #ifdef _WINDOWS
 void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 {
-#ifdef _DEBUG
-	PerformanceCounter PC(__func__);
-#endif
+	PERFORMANCE_COUNTER();
 
 	Super::OnCreate(hWnd, hInstance, Title);
 
@@ -66,7 +64,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateFence(Device);
 	CreateSemaphore(Device);
 
-	CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight());
+	CreateSwapchain();
 	GetSwapchainImage(Device, Swapchain);
 	CreateSwapchainImageView();
 
@@ -74,7 +72,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	AllocateCommandBuffer();
 	//AllocateSecondaryCommandBuffer();
 
-#ifndef USE_RENDER_PASS_CLEAR
+#ifdef USE_MANUAL_CLEAR
 	InitializeSwapchainImage(CommandBuffers[0], &Colors::Red);
 #endif
 
@@ -83,20 +81,24 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateIndirectBuffer();
 	//!< ユニフォームバッファ (コンスタントバッファ相当)
 	CreateUniformBuffer();
+
 	//!< レンダーターゲットテクスチャの場合フレームバッファよりも前に必要になる
 	CreateTexture();
 
 	//!< イミュータブルサンプラはこの時点(CreateDescriptorSetLayout()より前)で必要
 	CreateImmutableSampler();
 
+	//!< デスクリプタセットレイアウト
 	CreateDescriptorSetLayout(); 
 	//!< パイプラインレイアウト (ルートシグネチャ相当)
 	CreatePipelineLayout();
 	//!< レンダーパス
 	CreateRenderPass();
+	//!< シェーダ
 	CreateShaderModules();
 	//!< パイプライン
 	CreatePipelines();	
+
 	//!< フレームバッファ
 	CreateFramebuffer();
 
@@ -104,11 +106,12 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateDescriptorPool();
 	AllocateDescriptorSet();
 
-	CreateDescriptorUpdateTemplate();
-	//!< デスクリプタセット更新 (デスクリプタビュー相当) ... この時点でデスクリプタセット、ユニフォームバッファ、イメージビュー、サンプラ等が必要
-	UpdateDescriptorSet();
-
+	//!< サンプラ
 	CreateSampler();
+
+	//!< デスクリプタセット更新 (デスクリプタビュー相当) ... この時点でデスクリプタセット、ユニフォームバッファ、イメージビュー、サンプラ等が必要
+	CreateDescriptorUpdateTemplate();
+	UpdateDescriptorSet();
 
 	SetTimer(hWnd, NULL, Elapse, nullptr);
 
@@ -127,9 +130,7 @@ buffer, and so on.
 */
 void VK::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 {
-#ifdef _DEBUG
-	PerformanceCounter PC(__func__);
-#endif
+	PERFORMANCE_COUNTER();
 
 	Super::OnExitSizeMove(hWnd, hInstance);
 
@@ -473,7 +474,7 @@ void VK::CreateDeviceMemories(std::vector<VkDeviceMemory>& DMs, const VkDevice D
 			const VkMemoryAllocateInfo MAI = {
 				VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 				nullptr,
-				std::accumulate(MRs[i].cbegin(), MRs[i].cend(), static_cast<VkDeviceSize>(0), [](const VkDeviceSize lhs, const VkMemoryRequirements& rhs) { return RoundUp(lhs, rhs.alignment) + rhs.size; }),
+				std::accumulate(cbegin(MRs[i]), cend(MRs[i]), static_cast<VkDeviceSize>(0), [](const VkDeviceSize lhs, const VkMemoryRequirements& rhs) { return RoundUp(lhs, rhs.alignment) + rhs.size; }),
 				static_cast<uint32_t>(i)
 			};
 			VERIFY_SUCCEEDED(vkAllocateMemory(Dev, &MAI, /*GetAllocationCallbacks()*/nullptr, &DMs[i]));
@@ -1730,7 +1731,7 @@ VkExtent2D VK::SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& Cap, const ui
 	if (0xffffffff == Cap.currentExtent.width) {
 		//!< 0xffffffff の場合はスワップチェインイメージサイズがウインドウサイズを決定することになる (If 0xffffffff, size of swapchain image determines the size of the window)
 		//!< (クランプした)引数のWidth, Heightを使用する (In this case, use argument (clamped) Width and Heigt) 
-		return VkExtent2D({ (std::max)((std::min)(Width, Cap.maxImageExtent.width), Cap.minImageExtent.width), (std::max)((std::min)(Height, Cap.minImageExtent.height), Cap.minImageExtent.height) });
+		return VkExtent2D({ (std::clamp)(Width, Cap.maxImageExtent.width, Cap.minImageExtent.width), (std::clamp)(Height, Cap.minImageExtent.height, Cap.minImageExtent.height) });
 	}
 	else {
 		//!< そうでない場合はcurrentExtentを使用する (Otherwise, use currentExtent)
@@ -1792,7 +1793,9 @@ VkPresentModeKHR VK::SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR 
 //	GetSwapchainImage(Device, Swapchain);
 //	CreateSwapchainImageView();
 //}
-void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height)
+
+//!< 手動でクリアする場合には VkImageUsageFlags に追加で VK_IMAGE_USAGE_TRANSFER_DST_BIT の指定が必要
+void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags IUF)
 {
 	VkSurfaceCapabilitiesKHR SurfaceCap;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PD, Sfc, &SurfaceCap));
@@ -1867,14 +1870,8 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 	//!< レイヤー、ステレオレンダリング等をしたい場合は1以上になるが、ここでは1
 	uint32_t ImageArrayLayers = 1;
 
-#ifdef USE_RENDER_PASS_CLEAR
-	//!< 自前でクリアしない場合は余計なフラグは付けないでおく
-	const auto ImageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-#else
-	//!< 自前でクリアする場合(vkCmdClearColorImage(), vkCmdClearDepthStencilImage())は VK_IMAGE_USAGE_TRANSFER_DST_BIT フラグが必要
-	assert(VK_IMAGE_USAGE_TRANSFER_DST_BIT & SurfaceCap.supportedUsageFlags && "");
-	const auto ImageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-#endif
+	//!< サポートされないImageUsageFlagが指定された
+	assert((IUF & SurfaceCap.supportedUsageFlags) && "Specified ImageUsageFlag is not supoorted");
 
 	//!< グラフィックとプレゼントのキューファミリが異なる場合はキューファミリインデックスの配列が必要、また VK_SHARING_MODE_CONCURRENT を指定すること
 	//!< (ただし VK_SHARING_MODE_CONCURRENT にするとパフォーマンスが落ちる場合がある)
@@ -1892,7 +1889,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 
 	//!< 既存のは後で開放するので OldSwapchain に覚えておく (セッティングを変更してスワップチェインを再作成する場合等に備える)
 	auto OldSwapchain = Swapchain;
-	const VkSwapchainCreateInfoKHR SwapchainCreateInfo = {
+	const VkSwapchainCreateInfoKHR SCI = {
 		VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
 		nullptr,
 		0,
@@ -1901,7 +1898,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 		SurfaceFormat.format, SurfaceFormat.colorSpace,
 		SurfaceExtent2D,
 		ImageArrayLayers,
-		ImageUsage,
+		IUF,
 		QueueFamilyIndices.empty() ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT, static_cast<uint32_t>(QueueFamilyIndices.size()), QueueFamilyIndices.data(),
 		SurfaceTransform,
 		VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
@@ -1909,7 +1906,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 		VK_TRUE,
 		OldSwapchain
 	};
-	VERIFY_SUCCEEDED(vkCreateSwapchainKHR(Device, &SwapchainCreateInfo, GetAllocationCallbacks(), &Swapchain));
+	VERIFY_SUCCEEDED(vkCreateSwapchainKHR(Device, &SCI, GetAllocationCallbacks(), &Swapchain));
 
 #ifdef USE_HDR
 	const std::array<VkSwapchainKHR, 1> SCs = { Swapchain };
@@ -2319,13 +2316,13 @@ void VK::CreateStorageTexelBuffer()
 
 void VK::CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const VkDescriptorSetLayoutCreateFlags Flags, const std::initializer_list<VkDescriptorSetLayoutBinding> il_DSLBs)
 {
-	const std::vector<VkDescriptorSetLayoutBinding> DSLBs(il_DSLBs.begin(), il_DSLBs.end());
+	const std::vector<VkDescriptorSetLayoutBinding> DSLBs(cbegin(il_DSLBs), cend(il_DSLBs));
 
 	const VkDescriptorSetLayoutCreateInfo DSLCI = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 		nullptr,
 		Flags,
-		static_cast<uint32_t>(DSLBs.size()), DSLBs.data()
+		static_cast<uint32_t>(size(DSLBs)), data(DSLBs)
 	};
 	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
 
@@ -2334,21 +2331,21 @@ void VK::CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const VkDescripto
 
 void VK::CreatePipelineLayout(VkPipelineLayout& PL, const std::initializer_list<VkDescriptorSetLayout> il_DSLs, const std::initializer_list<VkPushConstantRange> il_PCRs)
 {
-	const std::vector<VkDescriptorSetLayout> DSLs(il_DSLs.begin(), il_DSLs.end());
+	const std::vector<VkDescriptorSetLayout> DSLs(cbegin(il_DSLs), cend(il_DSLs));
 
 	//!< プッシュコンスタントレンジ : デスクリプタセットよりも高速
 	//!< パイプラインレイアウト全体で128byte (ハードによりこれ以上使える場合もある GTX970M : 256byte)
 	//!< 各シェーダステージは1つのプッシュコンスタントレンジにしかアクセスできない
 	//!< 各シェーダステージが「共通のレンジを持たない」ような「ワーストケース」では 128/5==25.6、1シェーダステージで25byte程度となる
 	//const std::array<VkPushConstantRange, 0> PCRs = { { VK_SHADER_STAGE_VERTEX_BIT, 0, 64 }, { VK_SHADER_STAGE_FRAGMENT_BIT, 64, 64 }, };
-	const std::vector<VkPushConstantRange> PCRs(il_PCRs.begin(), il_PCRs.end());
+	const std::vector<VkPushConstantRange> PCRs(cbegin(il_PCRs), cend(il_PCRs));
 
 	const VkPipelineLayoutCreateInfo PLCI = {
 		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		nullptr,
 		0,
-		static_cast<uint32_t>(DSLs.size()), DSLs.data(),
-		static_cast<uint32_t>(PCRs.size()), PCRs.data()
+		static_cast<uint32_t>(size(DSLs)), data(DSLs),
+		static_cast<uint32_t>(size(PCRs)), data(PCRs)
 	};
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PL));
 
@@ -2360,7 +2357,7 @@ void VK::CreatePipelineLayout(VkPipelineLayout& PL, const std::initializer_list<
 //!< 1つのブールに対して、複数スレッドで同時にデスクリプタセットを確保することはできない (スレッド毎に別プールにすること)
 void VK::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreateFlags Flags, const std::initializer_list<VkDescriptorPoolSize> il_DPSs)
 {
-	const std::vector<VkDescriptorPoolSize> DPSs(il_DPSs.begin(), il_DPSs.end());
+	const std::vector<VkDescriptorPoolSize> DPSs(cbegin(il_DPSs), cend(il_DPSs));
 
 	uint32_t MaxSets = 0;
 	for (const auto& i : DPSs) {
@@ -2372,20 +2369,20 @@ void VK::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreate
 		nullptr,
 		Flags,
 		MaxSets,
-		static_cast<uint32_t>(DPSs.size()), DPSs.data()
+		static_cast<uint32_t>(size(DPSs)), data(DPSs)
 	};
 	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DP));
 }
 
 void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const std::initializer_list<VkDescriptorUpdateTemplateEntry> il_DUTEs, const VkDescriptorSetLayout DSL)
 {
-	const std::vector<VkDescriptorUpdateTemplateEntry> DUTEs(il_DUTEs.begin(), il_DUTEs.end());
+	const std::vector<VkDescriptorUpdateTemplateEntry> DUTEs(cbegin(il_DUTEs), cend(il_DUTEs));
 
 	const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
 		nullptr,
 		0,
-		static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
+		static_cast<uint32_t>(size(DUTEs)), data(DUTEs),
 		VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
 		DSL,
 		VK_PIPELINE_BIND_POINT_GRAPHICS, 
@@ -2397,15 +2394,15 @@ void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const s
 //!< シェーダリソースを1つのコンテナオブジェクトにまとめる (型や数はセットレイアウトで定義され、ストレージはプールから確保される)
 //void VK::AllocateDescriptorSet(std::vector<VkDescriptorSet>& DSs, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSLs)
 //{
-//	const std::vector<VkDescriptorSetLayout> DSLs(il_DSLs.begin(), il_DSLs.end());
+//	const std::vector<VkDescriptorSetLayout> DSLs(cbegin(il_DSLs), cend(il_DSLs));
 //	DSs.resize(DSLs.size());
 //	const VkDescriptorSetAllocateInfo DSAI = {
 //		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 //		nullptr,
 //		DP,
-//		static_cast<uint32_t>(DSLs.size()), DSLs.data()
+//		static_cast<uint32_t>(size(DSLs)), data(DSLs.data)
 //	};
-//	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, DSs.data()));
+//	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, data(DSs)));
 //
 //	LOG_OK();
 //}
@@ -2416,12 +2413,12 @@ void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const s
 //	//!< dstArrayElement ... バインディング内での配列の開始添字 (VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT指定の場合は開始バイトオフセット)
 //	//!< descriptorCount ... 更新するデスクリプタセット個数 (VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT指定の場合は更新するバイト)
 //	//!< 指定 descriptorType に従って、pImageInfo, pBufferInfo, pTexelBufferView の適切な箇所へ指定すること
-//	const std::vector<VkWriteDescriptorSet> WDSs(il_WDSs.begin(), il_WDSs.end());
-//	const std::vector<VkCopyDescriptorSet> CDSs(il_CDSs.begin(), il_CDSs.end());
+//	const std::vector<VkWriteDescriptorSet> WDSs(cbegin(il_WDSs), cend(il_WDSs));
+//	const std::vector<VkCopyDescriptorSet> CDSs(cbegin(il_CDSs), cend(il_CDSs));
 //
 //	vkUpdateDescriptorSets(Device,
-//		static_cast<uint32_t>(WDSs.size()), WDSs.data(),
-//		static_cast<uint32_t>(CDSs.size()), CDSs.data());
+//		static_cast<uint32_t>(size(WDSs)), data(WDSs),
+//		static_cast<uint32_t>(size(CDSs)), data(CDSs));
 //
 //	LOG_OK();
 //}
@@ -2447,224 +2444,167 @@ void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const s
 
 void VK::CreateRenderPass(VkRenderPass& RP, const std::initializer_list<VkAttachmentDescription> il_ADs, const std::initializer_list<VkSubpassDescription> il_SDs, const std::initializer_list<VkSubpassDependency> il_Depends)
 {
-	const std::vector<VkAttachmentDescription> ADs(il_ADs.begin(), il_ADs.end());
-	const std::vector<VkSubpassDescription> SDs(il_SDs.begin(), il_SDs.end());
-	const std::vector<VkSubpassDependency> SDeps(il_Depends.begin(), il_Depends.end());
+	const std::vector<VkAttachmentDescription> ADs(cbegin(il_ADs), cend(il_ADs));
+	const std::vector<VkSubpassDescription> SDs(cbegin(il_SDs), cend(il_SDs));
+	const std::vector<VkSubpassDependency> SDeps(cbegin(il_Depends), cend(il_Depends));
 	const VkRenderPassCreateInfo RPCI = {
 		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 		nullptr,
 		0,
-		static_cast<uint32_t>(ADs.size()), ADs.data(),
-		static_cast<uint32_t>(SDs.size()), SDs.data(),
-		static_cast<uint32_t>(SDeps.size()), SDeps.data()
+		static_cast<uint32_t>(size(ADs)), data(ADs),
+		static_cast<uint32_t>(size(SDs)), data(SDs),
+		static_cast<uint32_t>(size(SDeps)), data(SDeps)
 	};
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
 }
-void VK::CreateRenderPass()
-{
-	RenderPasses.resize(1);
+//void VK::CreateRenderPass()
+//{
+//	RenderPasses.emplace_back(VkRenderPass());
+//
+//	const std::array<VkAttachmentReference, 0> InputARs = {};
+//	const std::array<VkAttachmentReference, 1> ColorARs = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
+//	const std::array<VkAttachmentReference, 1> ResolveARs = { { VK_ATTACHMENT_UNUSED, VK_IMAGE_LAYOUT_UNDEFINED }, };
+//	assert(ColorARs.size() == ResolveARs.size() && "");
+//	//const VkAttachmentReference DepthAttach = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+//	const std::array<uint32_t, 0> Preserve = {};
+//
+//	CreateRenderPass(RenderPasses.back(), {
+//			//!< アタッチメント
+//			{
+//				0,
+//				ColorFormat,
+//				VK_SAMPLE_COUNT_1_BIT,
+//				VK_ATTACHMENT_LOAD_OP_CLEAR/*VK_ATTACHMENT_LOAD_OP_DONT_CARE*/, VK_ATTACHMENT_STORE_OP_STORE,	//!<「開始時にクリア」,「終了時に保存」
+//				VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,								//!< ステンシルのロードストア : (ここでは)開始時、終了時ともに「使用しない」
+//				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR										//!< レンダーパスのレイアウト : 「開始時未定義」「終了時プレゼンテーションソース」
+//			},
+//	 }, {
+//			//!< サブパス
+//			{
+//				0,
+//				VK_PIPELINE_BIND_POINT_GRAPHICS,
+//				static_cast<uint32_t>(InputARs.size()), InputARs.data(), 						//!< インプットアタッチメント(読み取り用) シェーダ内で次のように使用 layout (input_attachment_index=0, set=0, binding=0) uniform XXX YYY;
+//				static_cast<uint32_t>(ColorARs.size()), ColorARs.data(), ResolveARs.data(),		//!< カラーアタッチメント(書き込み用)、リゾルブアタッチメント(マルチサンプルのリゾルブ)
+//				nullptr,																		//!< デプスアタッチメント(書き込み用)
+//				static_cast<uint32_t>(Preserve.size()), Preserve.data()							//!< プリザーブアタッチメント(サブパス全体において保持するコンテンツのインデックス)
+//			},
+//	}, {
+//			//!< サブパス依存 (ここでは、書かなくても良いが、敢えて書く場合)
+//#if 1
+//			{
+//				VK_SUBPASS_EXTERNAL, 0,																	//!< サブパス外からサブパス0へ
+//				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< パイプラインの最終ステージからカラー出力ステージへ
+//				VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,						//!< 読み込みからカラー書き込みへ
+//				VK_DEPENDENCY_BY_REGION_BIT,															//!< 同じメモリ領域に対する書き込みが完了してから読み込み (指定しない場合は自前で書き込み完了を管理)
+//			},
+//			{
+//				0, VK_SUBPASS_EXTERNAL,																	//!< サブパス0からサブパス外へ
+//				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,	//!< カラー出力ステージからパイプラインの最終ステージへ
+//				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,						//!< カラー書き込みから読み込みへ
+//				VK_DEPENDENCY_BY_REGION_BIT,
+//			},
+//#endif
+//		});
+//}
 
+//!< @brief 「レンダーパスでのカラークリア」、「深度の有無」はよく使うので用意しておく (それ以上の事がしたい場合はオーバーライド実装すること)
+//!< @param レンダーパスでのカラークリア
+//!< @param 深度の有無
+void VK::CreateRenderPass(const VkAttachmentLoadOp LoadOp, const bool UseDepth)
+{
+	RenderPasses.emplace_back(VkRenderPass());
+
+	//!< インプットアタッチメント : 読み取り用
 	const std::array<VkAttachmentReference, 0> InputARs = {};
 	const std::array<VkAttachmentReference, 1> ColorARs = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
+	//!< リゾルブアタッチメント : マルチサンプル → シングルサンプルへリゾルブするような場合
 	const std::array<VkAttachmentReference, 1> ResolveARs = { { VK_ATTACHMENT_UNUSED, VK_IMAGE_LAYOUT_UNDEFINED }, };
 	assert(ColorARs.size() == ResolveARs.size() && "");
-	//const VkAttachmentReference DepthAttach = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+	//!< プリザーブアタッチメント : サブパス全体において保持しなくてはならないコンテンツのインデックス
 	const std::array<uint32_t, 0> Preserve = {};
 
-	CreateRenderPass(RenderPasses[0], {
+	if (false == UseDepth) {
+		CreateRenderPass(RenderPasses.back(), {
 			//!< アタッチメント
 			{
 				0,
 				ColorFormat,
 				VK_SAMPLE_COUNT_1_BIT,
-				VK_ATTACHMENT_LOAD_OP_CLEAR/*VK_ATTACHMENT_LOAD_OP_DONT_CARE*/, VK_ATTACHMENT_STORE_OP_STORE,	//!<「開始時にクリア」,「終了時に保存」
-				VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,								//!< ステンシルのロードストア : (ここでは)開始時、終了時ともに「使用しない」
-				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR										//!< レンダーパスのレイアウト : 「開始時未定義」「終了時プレゼンテーションソース」
+				LoadOp, VK_ATTACHMENT_STORE_OP_STORE,								//!< 「開始時にLoadOp」「終了時に保存」
+				VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,	//!< ステンシルのロードストア : (ここでは)開始時、終了時ともに「使用しない」
+				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR			//!< レンダーパスのレイアウト : 「開始時未定義」「終了時プレゼンテーションソース」
 			},
-	 }, {
-			//!< サブパス
-			{
-				0,
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				static_cast<uint32_t>(InputARs.size()), InputARs.data(), 						//!< インプットアタッチメント(読み取り用) シェーダ内で次のように使用 layout (input_attachment_index=0, set=0, binding=0) uniform XXX YYY;
-				static_cast<uint32_t>(ColorARs.size()), ColorARs.data(), ResolveARs.data(),		//!< カラーアタッチメント(書き込み用)、リゾルブアタッチメント(マルチサンプルのリゾルブ)
-				nullptr,																		//!< デプスアタッチメント(書き込み用)
-				static_cast<uint32_t>(Preserve.size()), Preserve.data()							//!< プリザーブアタッチメント(サブパス全体において保持するコンテンツのインデックス)
-			},
-	}, {
-			//!< サブパス依存 (ここでは、書かなくても良いが、敢えて書く場合)
-#if 1
-			{
-				VK_SUBPASS_EXTERNAL, 0,																	//!< サブパス外からサブパス0へ
-				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< パイプラインの最終ステージからカラー出力ステージへ
-				VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,						//!< 読み込みからカラー書き込みへ
-				VK_DEPENDENCY_BY_REGION_BIT,															//!< 同じメモリ領域に対する書き込みが完了してから読み込み (指定しない場合は自前で書き込み完了を管理)
-			},
-			{
-				0, VK_SUBPASS_EXTERNAL,																	//!< サブパス0からサブパス外へ
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,	//!< カラー出力ステージからパイプラインの最終ステージへ
-				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,						//!< カラー書き込みから読み込みへ
-				VK_DEPENDENCY_BY_REGION_BIT,
-			},
-#endif
-		});
+			}, {
+				//!< サブパス
+				{
+					0,
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					static_cast<uint32_t>(InputARs.size()), InputARs.data(), 						//!< インプットアタッチメント(読み取り用) シェーダ内で次のように使用 layout (input_attachment_index=0, set=0, binding=0) uniform XXX YYY;
+					static_cast<uint32_t>(ColorARs.size()), ColorARs.data(), ResolveARs.data(),		//!< カラーアタッチメント(書き込み用)、リゾルブアタッチメント(マルチサンプルのリゾルブ)
+					nullptr,																		//!< デプスアタッチメント(書き込み用)
+					static_cast<uint32_t>(Preserve.size()), Preserve.data()							//!< プリザーブアタッチメント(サブパス全体において保持するコンテンツのインデックス)
+				},
+			}, {
+	#if 1
+				//!< サブパス依存 (ここでは、書かなくても良いが、敢えて書く場合)
+				{
+					VK_SUBPASS_EXTERNAL, 0,																	//!< サブパス外からサブパス0へ
+					VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< パイプラインの最終ステージからカラー出力ステージへ
+					VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,						//!< 読み込みからカラー書き込みへ
+					VK_DEPENDENCY_BY_REGION_BIT,															//!< 同じメモリ領域に対する書き込みが完了してから読み込み (指定しない場合は自前で書き込み完了を管理)
+				},
+				{
+					0, VK_SUBPASS_EXTERNAL,																	//!< サブパス0からサブパス外へ
+					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,	//!< カラー出力ステージからパイプラインの最終ステージへ
+					VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,						//!< カラー書き込みから読み込みへ
+					VK_DEPENDENCY_BY_REGION_BIT,
+				},
+	#endif
+			});
+	}
+	else {
+		const VkAttachmentReference DepthAttach = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+		CreateRenderPass(RenderPasses.back(), {
+				{
+					0,
+					ColorFormat,
+					VK_SAMPLE_COUNT_1_BIT,
+					LoadOp, VK_ATTACHMENT_STORE_OP_STORE,								
+					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,	
+					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR			
+				},
+				{
+					0,
+					DepthFormat,
+					VK_SAMPLE_COUNT_1_BIT,
+					VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
+					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
+					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+				},
+			}, {
+				{
+					0,
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					static_cast<uint32_t>(InputARs.size()), InputARs.data(), 						
+					static_cast<uint32_t>(ColorARs.size()), ColorARs.data(), ResolveARs.data(),		
+					&DepthAttach,																	//!< デプスアタッチメント(書き込み用)
+					static_cast<uint32_t>(Preserve.size()), Preserve.data()							
+				},
+			}, {
+			});
+	}
 }
-
-#if 0
-void VK::CreateRenderPass2()
-{
-	RenderPasses.resize(1);
-	const auto ClearOnLoad = true;
-
-	const std::array<VkAttachmentReference, 1> ColorAttach = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
-	CreateRenderPass(RenderPasses[0], {
-		//!< アタッチメント
-		{
-			0,
-			ColorFormat,
-			VK_SAMPLE_COUNT_1_BIT,
-			ClearOnLoad ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-		},
-	}, {
-		//!< サブパス
-		{
-			0,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			0, nullptr,																						
-			static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
-			nullptr,																						
-			0, nullptr
-		},
-	}, {
-		//!< サブパス依存
-	});
-}
-
-void VK::CreateRenderPass3()
-{
-	RenderPasses.resize(1);
-	const auto ClearOnLoad = true;
-
-	const std::array<VkAttachmentReference, 1> ColorAttach = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
-	const VkAttachmentReference DepthAttach = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-	CreateRenderPass(RenderPasses[0], {
-		//!< アタッチメント
-		{
-			0,
-			ColorFormat,
-			VK_SAMPLE_COUNT_1_BIT,
-			ClearOnLoad ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-		},
-		{
-			0,
-			DepthFormat,
-			VK_SAMPLE_COUNT_1_BIT,
-			VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, 
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-		},
-	}, {
-		//!< サブパス
-		{
-			0,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			0, nullptr,																						
-			static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
-			&DepthAttach,																				
-			0, nullptr
-		},
-	}, {
-		//!< サブパス依存
-	});
-}
-#endif
-#if 0
-void VK::CreateRenderPass_Default(VkRenderPass& RP, const VkFormat Color, bool ClearOnLoad)
-{
-	//!< アタッチメント ... レンダーパスでの描画先
-	const std::array<VkAttachmentDescription, 1> ADs = {
-		{
-			0,
-			Color,
-			VK_SAMPLE_COUNT_1_BIT,
-			//!<「開始時にクリア or 何もしない」,「終了時に保存」
-			ClearOnLoad ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
-			//!< ステンシルのロードストア : (ここでは)開始時、終了時ともに「使用しない」
-			VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-			//!< レンダーパスのレイアウト : 「開始時未定義」「終了時プレゼンテーションソース」
-			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-		}
-	};
-
-	//!< layout (input_attachment_index=0, set=0, binding=0) uniform SubpassInput XXX;
-	//!< インプットアタッチメント : 読み取り用
-	const std::array<VkAttachmentReference, 0> Input_Pass0 = {};
-	//!< カラーアタッチメント : 書き込み用
-	const std::array<VkAttachmentReference, 1> Color_Pass0 = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
-	//!< リゾルブアタッチメント : マルチサンプル → シングルサンプル
-	const std::array<VkAttachmentReference, 1> Resolve_Pass0 = { { VK_ATTACHMENT_UNUSED }, };
-	//!< デプスアタッチメント : 深度用
-	const VkAttachmentReference* Depth_Pass0 = nullptr;
-	//!< プリザーブアタッチメント : サブパス全体において保持しなくてはならないコンテンツのインデックス
-	const std::array<uint32_t, 0> Preserve_Pass0 = {};
-	const std::array<VkSubpassDescription, 1> SubpassDescs = {
-		{
-			0,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			static_cast<uint32_t>(Input_Pass0.size()), Input_Pass0.data(),
-			static_cast<uint32_t>(Color_Pass0.size()), Color_Pass0.data(), Resolve_Pass0.data(),
-			Depth_Pass0,
-			static_cast<uint32_t>(Preserve_Pass0.size()), Preserve_Pass0.data()
-		}
-	};
-
-	//!< サブパス
-#if 0
-	const std::array<VkSubpassDependency, 0> SubpassDepends = {};
-#else
-	const std::array<VkSubpassDependency, 2> SubpassDepends = { {
-			//!< 必要無いが、あえて書くならこんな感じ (No need this code, but if dare to write like this)
-			{
-				VK_SUBPASS_EXTERNAL, 0,																	//!< サブパス外からサブパス0へ
-				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< パイプラインの最終ステージからカラー出力ステージへ
-				VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,						//!< 読み込みからカラー書き込みへ
-				VK_DEPENDENCY_BY_REGION_BIT,															//!< 同じメモリ領域に対する書き込みが完了してから読み込み (指定しない場合は自前で書き込み完了を管理)
-			},
-			{
-				0, VK_SUBPASS_EXTERNAL,																	//!< サブパス0からサブパス外へ
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,	//!< カラー出力ステージからパイプラインの最終ステージへ
-				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,						//!< カラー書き込みから読み込みへ
-				VK_DEPENDENCY_BY_REGION_BIT,
-			}
-		} };
-#endif
-
-	const VkRenderPassCreateInfo RPCI = {
-		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(ADs.size()), ADs.data(),
-		static_cast<uint32_t>(SubpassDescs.size()), SubpassDescs.data(),
-		static_cast<uint32_t>(SubpassDepends.size()), SubpassDepends.data()
-	};
-	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
-}
-#endif
 
 void VK::CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::initializer_list<VkImageView> il_IVs)
 {
-	const std::vector<VkImageView> IVs(il_IVs.begin(), il_IVs.end());
+	const std::vector<VkImageView> IVs(cbegin(il_IVs), cend(il_IVs));
 
 	const VkFramebufferCreateInfo FCI = {
 		VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
 		nullptr,
 		0,
 		RP, //!< ここで指定するレンダーパスは互換性のあるものなら可
-		static_cast<uint32_t>(IVs.size()), IVs.data(),
+		static_cast<uint32_t>(size(IVs)), data(IVs),
 		Width, Height,
 		Layers
 	};
@@ -2682,7 +2622,7 @@ void VK::DestroyFramebuffer()
 /**
 @brief シェーダコンパイル、リンクはパイプラインオブジェクト作成時に行われる Shader compilation and linkage is performed during the pipeline object creation
 */
-VkShaderModule VK::CreateShaderModules(const std::wstring& Path) const
+VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 {
 	VkShaderModule ShaderModule = VK_NULL_HANDLE;
 
@@ -3098,11 +3038,11 @@ void VK::PopulateCommandBuffer(const size_t i)
 		assert(ScissorRects[0].extent.width >= Granularity.width && ScissorRects[0].extent.height >= Granularity.height && "ScissorRect is too small");
 #endif
 
-#ifdef USE_RENDER_PASS_CLEAR
-		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
-#else
+#ifdef USE_MANUAL_CLEAR
 		ClearColor(CB, SwapchainImages[i], Colors::Blue);
-		std::array<VkClearValue, 2> CVs = {};
+		std::array<VkClearValue, 2> CVs = {}; 
+#else
+		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
 #endif
 		CVs[1].depthStencil = { 1.0f, 0 };
 		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
@@ -3127,9 +3067,7 @@ void VK::PopulateCommandBuffer(const size_t i)
 
 void VK::Draw()
 {
-#ifdef _DEBUG
-	//PerformanceCounter PC(__func__);
-#endif
+	PERFORMANCE_COUNTER();
 
 	//!< サブミットしたコマンドの完了を待つ
 	const std::array<VkFence, 1> Fences = { Fence };

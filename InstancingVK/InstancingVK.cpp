@@ -305,10 +305,10 @@ void InstancingVK::PopulateCommandBuffer(const size_t i)
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
 		const auto PL = Pipelines[0];
-		const auto VB0 = VertexBuffers[0];
-		const auto VB1 = VertexBuffers[1];
-		const auto IB = IndexBuffers[0];
-		const auto IDB = IndirectBuffers[0];
+		const auto& VB0 = VertexBuffers[0];
+		const auto& VB1 = VertexBuffers[1];
+		const auto& IB = IndexBuffers[0];
+		const auto& IDB = IndirectBuffers[0];
 
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());

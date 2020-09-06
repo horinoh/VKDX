@@ -175,13 +175,13 @@ void DXExt::PrintShaderReflection(ID3DBlob* Blob)
 void DXExt::CreateShaderBlob_VsPs()
 {
 	const auto ShaderPath = GetBasePath();
-	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 #ifdef USE_SHADER_REFLECTION
 	std::wcout << (ShaderPath + TEXT(".vs.cso")) << std::endl;
 	PrintShaderReflection(COM_PTR_GET(ShaderBlobs.back()));
 #endif
-	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 #ifdef USE_SHADER_REFLECTION
 	std::wcout << (ShaderPath + TEXT(".ps.cso")) << std::endl;
@@ -229,31 +229,31 @@ void DXExt::CreateShaderBlob_VsPs()
 void DXExt::CreateShaderBlob_VsPsDsHsGs()
 {
 	const auto ShaderPath = GetBasePath();
-	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 #ifdef USE_SHADER_REFLECTION
 	std::wcout << (ShaderPath + TEXT(".vs.cso")) << std::endl;
 	PrintShaderReflection(COM_PTR_GET(ShaderBlobs.back()));
 #endif
-	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 #ifdef USE_SHADER_REFLECTION
 	std::wcout << (ShaderPath + TEXT(".ps.cso")) << std::endl;
 	PrintShaderReflection(COM_PTR_GET(ShaderBlobs.back()));
 #endif
-	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 #ifdef USE_SHADER_REFLECTION
 	std::wcout << (ShaderPath + TEXT(".ds.cso")) << std::endl;
 	PrintShaderReflection(COM_PTR_GET(ShaderBlobs.back()));
 #endif
-	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 #ifdef USE_SHADER_REFLECTION
 	std::wcout << (ShaderPath + TEXT(".hs.cso")) << std::endl;
 	PrintShaderReflection(COM_PTR_GET(ShaderBlobs.back()));
 #endif
-	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 #ifdef USE_SHADER_REFLECTION
 	std::wcout << (ShaderPath + TEXT(".gs.cso")) << std::endl;
@@ -263,7 +263,7 @@ void DXExt::CreateShaderBlob_VsPsDsHsGs()
 void DXExt::CreateShaderBlob_Cs()
 {
 	const auto ShaderPath = GetBasePath();
-	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
 	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".cs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 }
 

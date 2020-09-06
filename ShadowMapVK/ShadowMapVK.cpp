@@ -265,7 +265,7 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 			const auto DS = DescriptorSets[i];
 #pragma endregion
 			const auto PLL = PipelineLayouts[0];
-			const auto IDB = IndirectBuffers[0];
+			const auto& IDB = IndirectBuffers[0];
 
 #if 0
 			vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
@@ -315,7 +315,7 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 			const auto DS = DescriptorSets[i + SCCount];
 #pragma endregion
 			const auto PLL = PipelineLayouts[1];
-			const auto IDB = IndirectBuffers[1];
+			const auto& IDB = IndirectBuffers[1];
 
 			vkCmdSetViewport(SCB1, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 			vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());

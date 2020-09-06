@@ -261,7 +261,7 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB0, &CBBI)); {
 			const auto PL = Pipelines[0];
-			const auto IDB = IndirectBuffers[0];
+			const auto& IDB = IndirectBuffers[0];
 			vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 			vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 			vkCmdBindPipeline(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
@@ -291,7 +291,7 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB1, &CBBI)); {
 			const auto PL = Pipelines[1];
-			const auto IDB = IndirectBuffers[1];
+			const auto& IDB = IndirectBuffers[1];
 			vkCmdSetViewport(SCB1, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
 			vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
 			vkCmdBindPipeline(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);

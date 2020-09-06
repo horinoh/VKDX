@@ -17,18 +17,20 @@ protected:
 #ifdef USE_DRAW_INDIRECT
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
 #endif
+	
 	virtual void CreateShaderBlobs() override {
 #ifdef USE_DISTANCE_FUNCTION
 		const auto ShaderPath = GetBasePath();
-		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
-		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
 		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_df.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
 #else
 		CreateShaderBlob_VsPs(); 
 #endif
 	}
 	virtual void CreatePipelineStates() override { CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE); }
+
 	virtual void PopulateCommandList(const size_t i) override;
 };
 #pragma endregion

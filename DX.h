@@ -25,13 +25,14 @@
 #endif
 
 //#define USE_WARP
-#define USE_STATIC_SAMPLER //!< TextureDX
+#define USE_STATIC_SAMPLER //!< [ TextureDX ] VK:USE_IMMUTABLE_SAMPLER相当
+
 //!< HLSLからルートシグネチャを作成する (Create root signature from HLSL)
-//#define USE_HLSL_ROOTSIGNATRUE
-//!< バンドル : VKのセカンダリコマンドバッファ相当
-#define USE_BUNDLE //!< ParametricSurfaceDX
-//!< ルートコンスタント : VKのプッシュコンスタント相当
-//#define USE_ROOT_CONSTANTS //!< TriangleDX
+//#define USE_HLSL_ROOTSIGNATRUE //!< [ TriangleDX ]
+
+//#define USE_NO_BUNDLE //!< [ ParametricSurfaceDX ] VK:USE_NO_SECONDARY_COMMAND_BUFFER相当
+
+//#define USE_ROOT_CONSTANTS //!< [ TriangleDX ] VK:USE_PUSH_CONSTANTS相当
 //#define USE_GAMMA_CORRECTION
 
 #include <initguid.h>
@@ -119,13 +120,13 @@ public:
 	static std::wstring GetHRESULTWString(const HRESULT Result) { return std::wstring(_com_error(Result).ErrorMessage()); }
 	static std::string GetFormatString(const DXGI_FORMAT Format);
 
-	static std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) {
+	static [[nodiscard]] std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) {
 		const auto l = DirectX::XMFLOAT3(lhs.data());
 		const auto r = DirectX::XMFLOAT3(rhs.data());
 		const auto v = DirectX::XMVectorLerp(DirectX::XMLoadFloat3(&l), DirectX::XMLoadFloat3(&r), t);
 		return { v.m128_f32[0], v.m128_f32[1], v.m128_f32[2] };
 	}
-	static std::array<float, 4> Lerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) {
+	static [[nodiscard]] std::array<float, 4> Lerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) {
 		const auto l = DirectX::XMFLOAT4(lhs.data());
 		const auto r = DirectX::XMFLOAT4(rhs.data());
 		const auto v = DirectX::XMVectorLerp(DirectX::XMLoadFloat4(&l), DirectX::XMLoadFloat4(&r), t);

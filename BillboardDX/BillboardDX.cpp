@@ -254,25 +254,25 @@ void BillboardDX::PopulateCommandList(const size_t i)
 
         CL->SetGraphicsRootSignature(RS);
 
-		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+		CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+		CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
 			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 			const std::array<D3D12_RECT, 0> Rs = {};
-			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
+			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rs)), data(Rs));
 			const auto CDH_Depth = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			CL->ClearDepthStencilView(CDH_Depth, D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, 0, nullptr);
 
-			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { CDH };
-			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &CDH_Depth);
+			const std::array RTDHs = { CDH };
+			CL->OMSetRenderTargets(static_cast<UINT>(size(RTDHs)), data(RTDHs), FALSE, &CDH_Depth);
 
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 
-				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
+				const std::array DHs = { COM_PTR_GET(DH) };
+				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
 #pragma region FRAME_OBJECT

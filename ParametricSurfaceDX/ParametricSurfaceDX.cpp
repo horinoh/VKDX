@@ -233,7 +233,7 @@ void ParametricSurfaceDX::PopulateCommandList(const size_t i)
 {
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 	
-#ifdef USE_BUNDLE
+#ifndef USE_NO_BUNDLE
 	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
@@ -269,16 +269,15 @@ void ParametricSurfaceDX::PopulateCommandList(const size_t i)
 			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { CDH };
 			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
 
-#ifdef USE_BUNDLE
-			CL->ExecuteBundle(BCL);
-#else
+#ifdef USE_NO_BUNDLE
 			const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
 			const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
-
 			CL->SetGraphicsRootSignature(RS);
 			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
 			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-			CL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+			CL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+#else
+			CL->ExecuteBundle(BCL);
 #endif
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);

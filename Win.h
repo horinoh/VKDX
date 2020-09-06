@@ -35,12 +35,12 @@
 //!< https://support.microsoft.com/ja-jp/help/4040263/windows-10-hdr-advanced-color-settings
 //#define USE_HDR
 //#define USE_FULL_SCREEN
-#define USE_DEPTH //!< ToonDX, ToonVK
-#define USE_DRAW_INDIRECT //!< FullscreenDX, FullscreenVK
+#define USE_DEPTH //!< [ ToonDX, ToonVK ]
+#define USE_SCREENSPACE_WIREFRAME //!< [ ToonDX, ToonVK ]
+#define USE_DRAW_INDIRECT //!< [ FullscreenDX, FullscreenVK ]
+#define USE_DISTANCE_FUNCTION //!< [ FullscreenDX, FullscreenVK ]
 #define USE_PIPELINE_SERIALIZE //!< *DX, *VK
-#define USE_SCREENSPACE_WIREFRAME //!< ToonDX, ToonVK
 //#define USE_PARALLAX_MAP //!< NormalMapDX, NormalMapVK
-#define USE_DISTANCE_FUNCTION //!< FullscreenDX, FullscreenVK
 //#define USE_SKY_DOME //!< CubeMapDX, CubeMapVK
 #define USE_GBUFFER_VISUALIZE //!< DeferredDX, DeferredVK
 #define USE_SHADOWMAP_VISUALIZE //!< ShadowMapDX, ShadowMapVK
@@ -60,6 +60,11 @@
 #include <thread>
 #include <bitset>
 #include <numeric>
+#include <numbers>
+#include <ranges>
+#include <optional>
+#include <variant>
+//#include <source_location>
 //#include <cinttypes>
 
 #ifndef SAFE_DELETE
@@ -91,11 +96,11 @@
 #endif
 
 #ifndef LOG_OK
-#define LOG_OK() LogOK(__func__)
+#define LOG_OK() LogOK(__func__/*std::source_location::current().function_name()*/)
 #endif
 
 #ifndef PERFORMANCE_COUNTER
-#define PERFORMANCE_COUNTER() PerformanceCounter __PC(__func__)
+#define PERFORMANCE_COUNTER() PerformanceCounter __PC(__func__/*std::source_location::current().function_name()*/)
 #endif
 
 class Win
@@ -138,7 +143,7 @@ public:
 		return Str;
 #else
 		//!< VS2019 : C4244
-		return std::string(WStr.begin(), WStr.end());
+		return std::string(cbegin(WStr), cend(WStr));
 #endif
 	}
 	static std::wstring ToWString(const std::string& Str) {
@@ -158,7 +163,7 @@ public:
 		delete[] Buffer;
 		return WStr;
 #else
-		return std::wstring(Str.begin(), Str.end());
+		return std::wstring(cbegin(Str), cend(Str));
 #endif
 	}
 	static std::wstring ToWString(const char* Str) { return std::wstring(&Str[0], &Str[strlen(Str)]); }
@@ -173,7 +178,7 @@ public:
 		auto Cur = std::filesystem::current_path();
 		while (Cur.has_parent_path()) {
 			for (auto i : std::filesystem::recursive_directory_iterator(Cur)) {
-				if (i.is_directory() && std::equal(Target.rbegin(), Target.rend(), i.path().string().rbegin())) {
+				if (i.is_directory() && std::equal(crbegin(Target), crend(Target), crbegin(i.path().string()))) {
 					Path = i.path().native();
 					return true;
 				}

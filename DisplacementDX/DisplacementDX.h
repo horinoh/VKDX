@@ -82,7 +82,8 @@ protected:
 		LOG_OK();
 	}
 	virtual void CreateConstantBuffer() override {
-		const auto Fov = 0.16f * DirectX::XM_PI;
+		//const auto Fov = 0.16f * DirectX::XM_PI;
+		const auto Fov = 0.16f * std::numbers::pi_v<float>;
 		const auto Aspect = GetAspectRatioOfClientRect();
 		const auto ZFar = 100.0f;
 		const auto ZNear = ZFar * 0.0001f;
