@@ -3067,7 +3067,7 @@ void VK::PopulateCommandBuffer(const size_t i)
 
 void VK::Draw()
 {
-	PERFORMANCE_COUNTER();
+	//PERFORMANCE_COUNTER();
 
 	//!< サブミットしたコマンドの完了を待つ
 	const std::array<VkFence, 1> Fences = { Fence };

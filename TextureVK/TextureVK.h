@@ -31,17 +31,17 @@ protected:
 	virtual void CreateImmutableSampler() override {
 		Samplers.emplace_back(VkSampler());
 		const VkSamplerCreateInfo SCI = {
-			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-			nullptr,
-			0,
-			VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR, // min, mag, mip
-			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, // u, v, w
-			0.0f, // lod bias
-			VK_FALSE, 1.0f, // anisotropy
-			VK_FALSE, VK_COMPARE_OP_NEVER, // compare
-			0.0f, 1.0f, // min, maxlod
-			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE, // border
-			VK_FALSE // addressing VK_FALSE:正規化[0.0-1.0], VK_TRUE:画像のディメンション
+			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = 0,
+			.magFilter = VK_FILTER_LINEAR, .minFilter = VK_FILTER_LINEAR, .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+			.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+			.mipLodBias = 0.0f,
+			.anisotropyEnable = VK_FALSE, .maxAnisotropy = 1.0f,
+			.compareEnable = VK_FALSE, .compareOp = VK_COMPARE_OP_NEVER,
+			.minLod = 0.0f, .maxLod = 1.0f,
+			.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+			.unnormalizedCoordinates = VK_FALSE // addressing VK_FALSE:正規化[0.0-1.0], VK_TRUE:画像のディメンション
 		};
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.back()));
 	}
@@ -54,7 +54,7 @@ protected:
 		//!< 「セットレイアウトに永続的にバインドされ変更できない」
 		//!< (コンバインドイメージサンプラーを変更する場合は、イメージビューへの変更は反映されるがサンプラへの変更は無視されることになる)
 		assert(!Samplers.empty() && "");
-		const std::array<VkSampler, 1> ISs = { Samplers[0] };
+		const std::array ISs = { Samplers[0] };
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
 			{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
 		});
@@ -80,17 +80,17 @@ protected:
 		DescriptorPools.emplace_back(VkDescriptorPool());
 		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
 				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }
-			});
+		});
 	}
 	virtual void AllocateDescriptorSet() override {
 		assert(!DescriptorSetLayouts.empty() && "");
-		const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
+		const std::array DSLs = { DescriptorSetLayouts[0] };
 		assert(!DescriptorPools.empty() && "");
 		const VkDescriptorSetAllocateInfo DSAI = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-			nullptr,
-			DescriptorPools[0],
-			static_cast<uint32_t>(DSLs.size()), DSLs.data()
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			.pNext = nullptr,
+			.descriptorPool = DescriptorPools[0],
+			.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 		};
 		DescriptorSets.emplace_back(VkDescriptorSet());
 		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
@@ -101,17 +101,17 @@ protected:
 	virtual void CreateSampler() override {
 		Samplers.emplace_back(VkSampler());
 		const VkSamplerCreateInfo SCI = {
-			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-			nullptr,
-			0,
-			VK_FILTER_NEAREST, VK_FILTER_NEAREST, VK_SAMPLER_MIPMAP_MODE_NEAREST, //!< 非イミュータブルサンプラの場合敢えて NEAREST にしている
-			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
-			0.0f,
-			VK_FALSE, 1.0f,
-			VK_FALSE, VK_COMPARE_OP_NEVER,
-			0.0f, 1.0f,
-			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-			VK_FALSE
+			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = 0,
+			.magFilter = VK_FILTER_NEAREST, .minFilter = VK_FILTER_NEAREST, .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST, //!< 非イミュータブルサンプラの場合敢えて NEAREST にしている
+			.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+			.mipLodBias = 0.0f,
+			.anisotropyEnable = VK_FALSE, .maxAnisotropy = 1.0f,
+			.compareEnable = VK_FALSE, .compareOp = VK_COMPARE_OP_NEVER,
+			.minLod = 0.0f, .maxLod = 1.0f,
+			.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+			.unnormalizedCoordinates = VK_FALSE
 		};
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.back()));
 	}

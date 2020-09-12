@@ -61,7 +61,6 @@ protected:
 			.CreationNodeMask = 0, //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 			.VisibleNodeMask = 0  //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 		};
-		//const DXGI_SAMPLE_DESC SD = 
 		const D3D12_RESOURCE_DESC RD = {
 			.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
 			.Alignment = 0,
