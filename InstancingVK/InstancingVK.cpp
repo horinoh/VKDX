@@ -234,29 +234,29 @@ void InstancingVK::CreateVertexBuffer()
 {
 	VertexBuffers.push_back(VertexBuffer());
 	{
-		const std::array<Vertex_PositionColor, 3> Vertices = { {
-			{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-			{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-			{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
-		} };
+		const std::array Vertices = {
+			Vertex_PositionColor({ .Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }),
+			Vertex_PositionColor({ .Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }),
+			Vertex_PositionColor({ .Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }),
+		};
 		const auto Stride = sizeof(Vertices[0]);
-		const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
-		CreateBuffer_Vertex(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, Vertices.data());
+		const auto Size = static_cast<VkDeviceSize>(Stride * size(Vertices));
+		CreateBuffer_Vertex(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, data(Vertices));
 	}
 
 	VertexBuffers.push_back(VertexBuffer());
 	{
-		const std::array<Instance_OffsetXY, 5> Instances = { {
-			{ { -0.5f, -0.5f } },
-			{ { -0.25f, -0.25f } },
-			{ { 0.0f, 0.0f } },
-			{ { 0.25f, 0.25f } },
-			{ { 0.5f, 0.5f } },
-		} };
-		InstanceCount = static_cast<uint32_t>(Instances.size());
+		const std::array Instances = { 
+			Instance_OffsetXY({ { -0.5f, -0.5f } }),
+			Instance_OffsetXY({ { -0.25f, -0.25f } }),
+			Instance_OffsetXY({ { 0.0f, 0.0f } }),
+			Instance_OffsetXY({ { 0.25f, 0.25f } }),
+			Instance_OffsetXY({ { 0.5f, 0.5f } }),
+		};
+		InstanceCount = static_cast<uint32_t>(size(Instances));
 		const auto Stride = sizeof(Instances[0]);
 		const auto Size = static_cast<VkDeviceSize>(Stride * InstanceCount);
-		CreateBuffer_Vertex(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, Instances.data());
+		CreateBuffer_Vertex(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, data(Instances));
 	}
 
 	LOG_OK();
@@ -266,10 +266,10 @@ void InstancingVK::CreateIndexBuffer()
 	IndexBuffers.push_back(IndexBuffer());
 
 	const std::array<uint32_t, 3> Indices = { 0, 1, 2 };
-	IndexCount = static_cast<uint32_t>(Indices.size());
+	IndexCount = static_cast<uint32_t>(size(Indices));
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
-	CreateBuffer_Index(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, Indices.data());
+	CreateBuffer_Index(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, data(Indices));
 
 	LOG_OK();
 }
@@ -277,7 +277,7 @@ void InstancingVK::CreateIndexBuffer()
 void InstancingVK::CreateIndirectBuffer()
 {
 	IndirectBuffers.push_back(IndirectBuffer());
-	const VkDrawIndexedIndirectCommand DIIC = { IndexCount, InstanceCount, 0, 0, 0 };
+	const VkDrawIndexedIndirectCommand DIIC = { .indexCount = IndexCount, .instanceCount = InstanceCount, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 	CreateBuffer_Indirect(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
 }
 
@@ -288,20 +288,19 @@ void InstancingVK::PopulateCommandBuffer(const size_t i)
 
 	const auto SCB = SecondaryCommandBuffers[i];
 	const VkCommandBufferInheritanceInfo CBII = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-		nullptr,
-		RP,
-		0,
-		FB,
-		VK_FALSE,
-		0,
-		0,
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+		.pNext = nullptr,
+		.renderPass = RP,
+		.subpass = 0,
+		.framebuffer = FB,
+		.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
+		.pipelineStatistics = 0,
 	};
 	const VkCommandBufferBeginInfo SCBBI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
-		&CBII
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+		.pInheritanceInfo = &CBII
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
 		const auto PL = Pipelines[0];
@@ -310,38 +309,37 @@ void InstancingVK::PopulateCommandBuffer(const size_t i)
 		const auto& IB = IndexBuffers[0];
 		const auto& IDB = IndirectBuffers[0];
 
-		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
+		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-		const std::array<VkBuffer, 2> VBs = { VB0.Buffer, VB1.Buffer };
+		const std::array VBs = { VB0.Buffer, VB1.Buffer };
 		const std::array<VkDeviceSize, 2> Offsets = { 0, 0 };
-		assert(VBs.size() == Offsets.size() && "");
-		vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets.data());
+		assert(size(VBs) == size(Offsets) && "");
+		vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(size(VBs)), data(VBs), data(Offsets));
 		vkCmdBindIndexBuffer(SCB, IB.Buffer, 0, VK_INDEX_TYPE_UINT32);
 		vkCmdDrawIndexedIndirect(SCB, IDB.Buffer, 0, 1, 0);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 
 	const auto CB = CommandBuffers[i];
 	const VkCommandBufferBeginInfo CBBI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		0,
-		nullptr
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.pInheritanceInfo = nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
-		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
+		const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
 		const VkRenderPassBeginInfo RPBI = {
-			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-			nullptr,
-			RP,
-			FB,
-			RenderArea,
-			static_cast<uint32_t>(CVs.size()), CVs.data()
+			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			.pNext = nullptr,
+			.renderPass = RP,
+			.framebuffer = FB,
+			.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
+			.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
 		};
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
-			const std::array<VkCommandBuffer, 1> SCBs = { SCB };
-			vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
+			const std::array SCBs = { SCB };
+			vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
 		} vkCmdEndRenderPass(CB);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }

@@ -236,52 +236,50 @@ void FlatVK::PopulateCommandBuffer(const size_t i)
 
 	const auto SCB = SecondaryCommandBuffers[i];
     const VkCommandBufferInheritanceInfo CBII = {
-        VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-        nullptr,
-        RP,
-        0,
-        FB,
-        VK_FALSE,
-        0,
-        0,
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+        .pNext = nullptr,
+        .renderPass = RP,
+        .subpass = 0,
+        .framebuffer = FB,
+        .occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
+        .pipelineStatistics = 0,
     };
     const VkCommandBufferBeginInfo SCBBI = {
-        VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        nullptr,
-        VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
-        &CBII
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .pNext = nullptr,
+        .flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+        .pInheritanceInfo = &CBII
     };
     VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
 		const auto PL = Pipelines[0];
 		const auto& IDB = IndirectBuffers[0];
 
-        vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-        vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+        vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
+        vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
         vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
         vkCmdDrawIndirect(SCB, IDB.Buffer, 0, 1, 0);
     } VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 
 	const auto CB = CommandBuffers[i];
     const VkCommandBufferBeginInfo CBBI = {
-        VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        nullptr,
-        0,
-        nullptr
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+        .pNext = nullptr,
+        .flags = 0,
+        .pInheritanceInfo = nullptr
     };
     VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-        std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
-		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
+		const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
         const VkRenderPassBeginInfo RPBI = {
-            VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-            nullptr,
-            RP,
-            FB,
-            RenderArea,
-            static_cast<uint32_t>(CVs.size()), CVs.data()
+            .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+            .pNext = nullptr,
+            .renderPass = RP,
+            .framebuffer = FB,
+			.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
+            .clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
         };
         vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
-            const std::array<VkCommandBuffer, 1> SCBs = { SCB };
-            vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
+            const std::array SCBs = { SCB };
+            vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
         } vkCmdEndRenderPass(CB);
     } VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }

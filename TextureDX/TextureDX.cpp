@@ -254,27 +254,29 @@ void TextureDX::PopulateCommandList(const size_t i)
 
         CL->SetGraphicsRootSignature(RS);
 
-		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+		CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+		CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
             auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
-			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDescriptorHandles = { CDH };
-			CL->OMSetRenderTargets(static_cast<UINT>(RTDescriptorHandles.size()), RTDescriptorHandles.data(), FALSE, nullptr);
+			const std::array RTDescriptorHandles = { CDH };
+			CL->OMSetRenderTargets(static_cast<UINT>(size(RTDescriptorHandles)), data(RTDescriptorHandles), FALSE, nullptr);
 
 			assert(!CbvSrvUavDescriptorHeaps.empty() && "");
 #ifdef USE_STATIC_SAMPLER
-			const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
-			CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
+			const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
+			CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 			
-            const auto& DH = CbvSrvUavDescriptorHeaps[0];
-			auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-			CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
+            {
+                const auto& DH = CbvSrvUavDescriptorHeaps[0];
+                auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+                CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
+            }
 #else
 			assert(!SamplerDescriptorHeaps.empty() && "");
 
-			const std::array<ID3D12DescriptorHeap*, 2> DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]), COM_PTR_GET(SamplerDescriptorHeaps[0]) };
+			const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]), COM_PTR_GET(SamplerDescriptorHeaps[0]) };
 			CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
 
 			{

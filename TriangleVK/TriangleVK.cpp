@@ -232,32 +232,31 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 void TriangleVK::CreateVertexBuffer()
 {
 	VertexBuffers.push_back(VertexBuffer());
-
 #if 1
-	const std::array<Vertex_PositionColor, 3> Vertices = { {
+	const std::array Vertices = { 
 #ifdef USE_VIEWPORT_Y_UP
-		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
-		{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } }, //!< LB
-		{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }, //!< RB
+		Vertex_PositionColor({ .Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
+		Vertex_PositionColor({ .Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
+		Vertex_PositionColor({ .Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
 #else
-		{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }, //!< RB
-		{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } }, //!< LB
-		{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
+		Vertex_PositionColor({ .Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
+		Vertex_PositionColor({ .Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
+		Vertex_PositionColor({ .Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
 #endif
-	} };
+	};
 #else
 	//!< ピクセル指定
 	const float W = 1280.0f, H = 720.0f;
-	const std::array<Vertex_PositionColor, 3> Vertices = { {
-		{ { W * 0.5f, 100.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } }, //!< CT
-		{ { W * 0.5f - 200.0f, H - 100.0f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } }, //!< LB
-		{ { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } }, //!< RB
-	} };
+	const std::array Vertices = { 
+		Vertex_PositionColor({ .Position = { W * 0.5f, 100.0f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
+		Vertex_PositionColor({ .Position = { W * 0.5f - 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
+		Vertex_PositionColor({ .Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
+	};
 #endif
 	const auto Stride = sizeof(Vertices[0]);
-	const auto Size = static_cast<VkDeviceSize>(Stride * Vertices.size());
+	const auto Size = static_cast<VkDeviceSize>(Stride * size(Vertices));
 	
-	CreateBuffer_Vertex(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, Vertices.data());
+	CreateBuffer_Vertex(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, data(Vertices));
 
 #ifdef _DEBUG
 	MarkerSetObjectName(Device, VertexBuffers.back().Buffer, "MyVertexBuffer");
@@ -272,11 +271,11 @@ void TriangleVK::CreateIndexBuffer()
 	const std::array<uint32_t, 3> Indices = { 0, 1, 2 };
 
 	//!< vkCmdDrawIndexed()使用時やインダイレクトバッファ作成時に必要となるのでIndexCountを覚えておく (IndexCount is needed when use vkCmdDrawIndexed() or creation of indirect buffer)
-	IndexCount = static_cast<uint32_t>(Indices.size());
+	IndexCount = static_cast<uint32_t>(size(Indices));
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 
-	CreateBuffer_Index(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, Indices.data());
+	CreateBuffer_Index(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, data(Indices));
 
 #ifdef _DEBUG
 	MarkerSetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
@@ -304,20 +303,19 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 	const auto FB = Framebuffers[i];
 	const auto SCB = SecondaryCommandBuffers[i];
 	const VkCommandBufferInheritanceInfo CBII = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-		nullptr,
-		RP,
-		0,
-		FB,
-		VK_FALSE,
-		0,
-		0,
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+		.pNext = nullptr,
+		.renderPass = RP,
+		.subpass = 0,
+		.framebuffer = FB,
+		.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
+		.pipelineStatistics = 0,
 	};
 	const VkCommandBufferBeginInfo SCBBI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
-		&CBII
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+		.pInheritanceInfo = &CBII
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
 		const auto PL = Pipelines[0];
@@ -325,26 +323,26 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 		const auto IB = IndexBuffers[0].Buffer;
 		const auto& IDB = IndirectBuffers[0].Buffer;
 
-		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
+		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 #ifdef USE_PUSH_CONSTANTS
-		vkCmdPushConstants(SCB, PipelineLayouts[0], VK_SHADER_STAGE_FRAGMENT_BIT, 0, static_cast<uint32_t>(Color.size() * sizeof(Color[0])), Color.data());
+		vkCmdPushConstants(SCB, PipelineLayouts[0], VK_SHADER_STAGE_FRAGMENT_BIT, 0, static_cast<uint32_t>(size(Color) * sizeof(Color[0])), data(Color));
 #endif
 		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-		const std::array<VkBuffer, 1> VBs = { VB };
-		const std::array<VkDeviceSize, 1> Offsets = { 0 };
-		assert(VBs.size() == Offsets.size() && "");
-		vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets.data());
+		const std::array VBs = { VB };
+		const std::array Offsets = { VkDeviceSize(0) };
+		assert(size(VBs) == size(Offsets) && "");
+		vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(size(VBs)), data(VBs), data(Offsets));
 		vkCmdBindIndexBuffer(SCB, IB, 0, VK_INDEX_TYPE_UINT32);
 		vkCmdDrawIndexedIndirect(SCB, IDB, 0, 1, 0);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 
 	const auto CB = CommandBuffers[i];
 	const VkCommandBufferBeginInfo CBBI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		0,
-		nullptr
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.pInheritanceInfo = nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 #ifdef _DEBUG
@@ -352,19 +350,18 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 		ScopedMarker(CB, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), "Command Begin");
 		//MarkerInsert(CB, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), "Command");
 #endif
-		const std::array<VkClearValue, 1> CVs = { Colors::SkyBlue };
-		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
+		const std::array CVs = { VkClearValue({ .color = Colors::SkyBlue }) };
 		const VkRenderPassBeginInfo RPBI = {
-			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-			nullptr,
-			RP,
-			FB,
-			RenderArea,
-			static_cast<uint32_t>(CVs.size()), CVs.data()
+			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			.pNext = nullptr,
+			.renderPass = RP,
+			.framebuffer = FB,
+			.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
+			.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
 		};
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
-			const std::array<VkCommandBuffer, 1> SCBs = { SCB };
-			vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
+			const std::array SCBs = { SCB };
+			vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
 		} vkCmdEndRenderPass(CB);
 
 #ifdef _DEBUG

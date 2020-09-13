@@ -23,25 +23,24 @@ protected:
 	}
 	virtual void CreatePipelineLayout() override {
 		assert(!DescriptorSetLayouts.empty() && "");
-		PipelineLayouts.resize(1);
-		VKExt::CreatePipelineLayout(PipelineLayouts[0], {}, {});
+		PipelineLayouts.emplace_back(VkPipelineLayout());
+		VKExt::CreatePipelineLayout(PipelineLayouts.back(), {}, {});
 	}
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFs(); }
 	virtual void CreatePipelines() override {
-		const uint32_t Binding0 = 0, Binding1 = 1;
-		const std::vector<VkVertexInputBindingDescription> VIBDs = { {
+		const std::vector VIBDs = { 
 			//!< 頂点毎 (Per Vertex)
-			{ Binding0, sizeof(Vertex_PositionColor), VK_VERTEX_INPUT_RATE_VERTEX },
+			VkVertexInputBindingDescription({ .binding = 0, .stride = sizeof(Vertex_PositionColor), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
 			//!< インスタンス毎 (Per Instance)
-			{ Binding1, sizeof(Instance_OffsetXY), VK_VERTEX_INPUT_RATE_INSTANCE },
-		} };
-		const std::vector<VkVertexInputAttributeDescription> VIADs = { {
+			VkVertexInputBindingDescription({ .binding = 1, .stride = sizeof(Instance_OffsetXY), .inputRate = VK_VERTEX_INPUT_RATE_INSTANCE }),
+		};
+		const std::vector VIADs = { 
 			//!< 頂点毎 (Per Vertex)
-			{ 0, Binding0, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_PositionColor, Position) },
-			{ 1, Binding0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Vertex_PositionColor, Color) },
+			VkVertexInputAttributeDescription({ .location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = offsetof(Vertex_PositionColor, Position) }),
+			VkVertexInputAttributeDescription({ .location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32A32_SFLOAT, .offset = offsetof(Vertex_PositionColor, Color) }),
 			//!< インスタンス毎 (Per Instance)
-			{ 2, Binding1, VK_FORMAT_R32G32_SFLOAT, offsetof(Instance_OffsetXY, Offset) },
-		} };
+			VkVertexInputAttributeDescription({ .location = 2, .binding = 1, .format = VK_FORMAT_R32G32_SFLOAT, .offset = offsetof(Instance_OffsetXY, Offset) }),
+		};
 		CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE, VIBDs, VIADs);
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override;

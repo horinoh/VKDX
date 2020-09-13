@@ -56,12 +56,12 @@ protected:
 		assert(!Samplers.empty() && "");
 		const std::array ISs = { Samplers[0] };
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
-			{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() }
+			VkDescriptorSetLayoutBinding({ .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(ISs.size()), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = ISs.data() })
 		});
 #else
 		//!< ’Êí‚ÌƒTƒ“ƒvƒ‰‚ðŽg‚¤ê‡
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
-				{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+				VkDescriptorSetLayoutBinding({ .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr }),
 			});
 #endif
 	}
@@ -79,7 +79,7 @@ protected:
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.emplace_back(VkDescriptorPool());
 		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
-				{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1 }
+			VkDescriptorPoolSize({ .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 })
 		});
 	}
 	virtual void AllocateDescriptorSet() override {
@@ -121,11 +121,11 @@ protected:
 		DescriptorUpdateTemplates.emplace_back(VkDescriptorUpdateTemplate());
 		assert(!DescriptorSetLayouts.empty() && "");
 		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
-			{
-				0, 0,
-				_countof(DescriptorUpdateInfo::DII), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				offsetof(DescriptorUpdateInfo, DII), sizeof(DescriptorUpdateInfo)
-			},
+			VkDescriptorUpdateTemplateEntry({
+				.dstBinding = 0, .dstArrayElement = 0,
+				.descriptorCount = _countof(DescriptorUpdateInfo::DII), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.offset = offsetof(DescriptorUpdateInfo, DII), .stride = sizeof(DescriptorUpdateInfo)
+			}),
 		}, DescriptorSetLayouts[0]);
 	}
 	virtual void UpdateDescriptorSet() override {
@@ -134,9 +134,9 @@ protected:
 #endif
 		const DescriptorUpdateInfo DUI = {
 #ifdef USE_IMMUTABLE_SAMPLER
-			{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+			VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 #else
-			{ Samplers[0], ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+			VkDescriptorImageInfo({ .sampler = Samplers[0], .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 #endif
 		};
 		assert(!DescriptorSets.empty() && "");

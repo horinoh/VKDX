@@ -17,10 +17,10 @@ public:
 
 protected:
 #ifdef USE_NO_BUNDLE
-	//!< デフォルト実装はバンドルを作成する実装なのでオーバーライドして作成しない
+	//!< デフォルト実装はバンドルを作成する実装なので、オーバーライドして作成しないようにしている
 	virtual void CreateCommandAllocator() override {
-		CommandAllocators.resize(1);
-		VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(CommandAllocators[0])));
+		CommandAllocators.emplace_back(COM_PTR<ID3D12CommandAllocator>());
+		VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(CommandAllocators.back())));
 		LOG_OK();
 	}
 	virtual void CreateCommandList() override {

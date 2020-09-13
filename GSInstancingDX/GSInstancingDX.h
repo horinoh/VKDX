@@ -21,17 +21,17 @@ protected:
 
 		const auto W = Width * 0.5f, H = Height * 0.5f;
 		Viewports = {
-			{ 0.0f, 0.0f, W, H, MinDepth, MaxDepth },
-			{ W, 0.0f, W, H, MinDepth, MaxDepth },
-			{ 0.0f, H, W, H, MinDepth, MaxDepth },
-			{ W, H, W, H, MinDepth, MaxDepth },
+			D3D12_VIEWPORT({ .TopLeftX = 0.0f, .TopLeftY = 0.0f, .Width = W, .Height = H, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
+			D3D12_VIEWPORT({ .TopLeftX = W, .TopLeftY = 0.0f, .Width = W, .Height = H, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
+			D3D12_VIEWPORT({ .TopLeftX = 0.0f, .TopLeftY = H, .Width = W, .Height = H, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
+			D3D12_VIEWPORT({ .TopLeftX = W, .TopLeftY = H, .Width = W, .Height = H, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
 		};
 		//!< left, top, right, bottom‚ÅŽw’è (offset, extent‚ÅŽw’è‚ÌVK‚Æ‚ÍˆÙ‚È‚é‚Ì‚Å’ˆÓ)
 		ScissorRects = {
-			{ 0, 0, static_cast<LONG>(W), static_cast<LONG>(H) },
-			{ static_cast<LONG>(W), 0, static_cast<LONG>(Width), static_cast<LONG>(H) },
-			{ 0, static_cast<LONG>(H), static_cast<LONG>(W), static_cast<LONG>(Height) },
-			{ static_cast<LONG>(W), static_cast<LONG>(H), static_cast<LONG>(Width), static_cast<LONG>(Height) },
+			D3D12_RECT({ .left = 0, .top = 0, .right = static_cast<LONG>(W), .bottom = static_cast<LONG>(H) }),
+			D3D12_RECT({ .left = static_cast<LONG>(W), .top = 0, .right = static_cast<LONG>(Width), .bottom = static_cast<LONG>(H) }),
+			D3D12_RECT({ .left = 0, .top = static_cast<LONG>(H), .right = static_cast<LONG>(W), .bottom = static_cast<LONG>(Height) }),
+			D3D12_RECT({ .left = static_cast<LONG>(W), .top = static_cast<LONG>(H), .right = static_cast<LONG>(Width), .bottom = static_cast<LONG>(Height) }),
 		};
 		LOG_OK();
 	}

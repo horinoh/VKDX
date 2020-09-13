@@ -26,7 +26,7 @@ protected:
 		assert(!DescriptorSetLayouts.empty() && "");
 		PipelineLayouts.emplace_back(VkPipelineLayout());
 #ifdef USE_PUSH_CONSTANTS
-		const VkPushConstantRange PCR = { VK_SHADER_STAGE_FRAGMENT_BIT, 0, static_cast<uint32_t>(Color.size() * sizeof(Color[0])) };
+		const VkPushConstantRange PCR = { .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .offset = 0, .size = static_cast<uint32_t>(size(Color) * sizeof(Color[0])) };
 		VKExt::CreatePipelineLayout(PipelineLayouts.back(), {}, { PCR });
 #else
 		VKExt::CreatePipelineLayout(PipelineLayouts.back(), {}, {});
@@ -43,15 +43,14 @@ protected:
 	}
 	virtual void CreatePipelines() override {
 		//!< バインディング0にまとめて入れるインターリーブ、セマンティックス毎にバインディングを分けると非インターリーブとなる
-		const uint32_t Binding = 0;
-		const std::vector<VkVertexInputBindingDescription> VIBDs = { {
-			{ Binding, sizeof(Vertex_PositionColor), VK_VERTEX_INPUT_RATE_VERTEX },
-		} };
+		const std::vector VIBDs = { 
+			VkVertexInputBindingDescription({ .binding = 0, .stride = sizeof(Vertex_PositionColor), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
+		};
 		//!< 詰まっていても、DX の D3D12_APPEND_ALIGNED_ELEMENT のように offsetof() を回避する手段は無い? (Is there no D3D12_APPEND_ALIGNED_ELEMENT equivalent?)
-		const std::vector<VkVertexInputAttributeDescription> VIADs = { {
-			{ 0, Binding, VK_FORMAT_R32G32B32_SFLOAT, offsetof(Vertex_PositionColor, Position) },
-			{ 1, Binding, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Vertex_PositionColor, Color) },
-		} };
+		const std::vector VIADs = { 
+			VkVertexInputAttributeDescription({ .location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = offsetof(Vertex_PositionColor, Position) }),
+			VkVertexInputAttributeDescription({ .location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32A32_SFLOAT, .offset = offsetof(Vertex_PositionColor, Color) }),
+		};
 		VKExt::CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE, VIBDs, VIADs);
 	}
 

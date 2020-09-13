@@ -234,32 +234,31 @@ void InstancingDX::CreateVertexBuffer()
 {
 	VertexBuffers.push_back(VertexBuffer());
 	{
-		const std::array<Vertex_PositionColor, 3> Vertices = { {
-			{ { 0.0f, 0.5f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f } },
-			{ { -0.5f, -0.5f, 0.0f }, { 0.0f, 1.0f, 0.0f, 1.0f } },
-			{ { 0.5f, -0.5f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f } },
-		} };
+		const std::array Vertices = { 
+			Vertex_PositionColor({ .Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }),
+			Vertex_PositionColor({ .Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }),
+			Vertex_PositionColor({ .Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }),
+		};
 		const auto Stride = sizeof(Vertices[0]);
-		const auto Size = static_cast<UINT32>(Stride * Vertices.size());
-		CreateAndCopyToDefaultResource(VertexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Vertices.data());
+		const auto Size = static_cast<UINT32>(Stride * size(Vertices));
+		CreateAndCopyToDefaultResource(VertexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, data(Vertices));
 		VertexBuffers.back().View = { VertexBuffers.back().Resource->GetGPUVirtualAddress(), Size, Stride };
 	}
 
 	VertexBuffers.push_back(VertexBuffer());
 	{
-		const std::array<Instance_OffsetXY, 5> Instances = { {
-			{ { -0.5f, -0.5f } },
-			{ { -0.25f, -0.25f } },
-			{ { 0.0f, 0.0f } },
-			{ { 0.25f, 0.25f } },
-			{ { 0.5f, 0.5f } },
-		} };
-		InstanceCount = static_cast<UINT>(Instances.size());
+		const std::array Instances = { 
+			Instance_OffsetXY({ { -0.5f, -0.5f } }),
+			Instance_OffsetXY({ { -0.25f, -0.25f } }),
+			Instance_OffsetXY({ { 0.0f, 0.0f } }),
+			Instance_OffsetXY({ { 0.25f, 0.25f } }),
+			Instance_OffsetXY({ { 0.5f, 0.5f } }),
+		};
+		InstanceCount = static_cast<UINT>(size(Instances));
 		const auto Stride = sizeof(Instances[0]);
 		const auto Size = static_cast<UINT32>(Stride * InstanceCount);
-		CreateAndCopyToDefaultResource(VertexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Instances.data());
+		CreateAndCopyToDefaultResource(VertexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, data(Instances));
 		VertexBuffers.back().View = { VertexBuffers.back().Resource->GetGPUVirtualAddress(), Size, Stride };
-	;
 	}
 
 	LOG_OK();
@@ -269,10 +268,10 @@ void InstancingDX::CreateIndexBuffer()
 	IndexBuffers.push_back(IndexBuffer());
 
 	const std::array<UINT32, 3> Indices = { 0, 1, 2 };
-	IndexCount = static_cast<UINT32>(Indices.size());
+	IndexCount = static_cast<UINT32>(size(Indices));
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<UINT32>(Stride * IndexCount);
-	CreateAndCopyToDefaultResource(IndexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Indices.data());
+	CreateAndCopyToDefaultResource(IndexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, data(Indices));
 	IndexBuffers.back().View = { IndexBuffers.back().Resource->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT };
 
 	LOG_OK();
@@ -282,18 +281,18 @@ void InstancingDX::CreateIndirectBuffer()
 {
 	IndirectBuffers.push_back(IndirectBuffer());
 
-	const D3D12_DRAW_INDEXED_ARGUMENTS Source = { IndexCount, InstanceCount, 0, 0, 0 };
+	const D3D12_DRAW_INDEXED_ARGUMENTS Source = { .IndexCountPerInstance = IndexCount, .InstanceCount = InstanceCount,.StartIndexLocation =  0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 	CreateAndCopyToDefaultResource(IndirectBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, &Source);
 
-	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
-		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED },
+	const std::array IADs = {
+		D3D12_INDIRECT_ARGUMENT_DESC({ .Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED }),
 	};
 	const D3D12_COMMAND_SIGNATURE_DESC CSD = {
-		Stride,
-		static_cast<const UINT>(IADs.size()), IADs.data(),
-		0
+		.ByteStride = Stride,
+		.NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs),
+		.NodeMask = 0
 	};
 	Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectBuffers.back().CommandSignature));
 }
@@ -313,8 +312,8 @@ void InstancingDX::PopulateCommandList(const size_t i)
 		const auto IBR = COM_PTR_GET(IndirectBuffers[0].Resource);
 
 		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-		const std::array<D3D12_VERTEX_BUFFER_VIEW, 2> VBVs = { VBV0, VBV1 };
-		BCL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
+		const std::array VBVs = { VBV0, VBV1 };
+		BCL->IASetVertexBuffers(0, static_cast<UINT>(size(VBVs)), data(VBVs));
 		BCL->IASetIndexBuffer(&IBV);
 		BCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
 	}
@@ -329,8 +328,8 @@ void InstancingDX::PopulateCommandList(const size_t i)
 
 		CL->SetGraphicsRootSignature(RS);
 
-		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+		CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+		CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
@@ -339,8 +338,8 @@ void InstancingDX::PopulateCommandList(const size_t i)
 			const std::array<D3D12_RECT, 0> Rs = {};
 			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
 
-			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { CDH };
-			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, nullptr);
+			const std::array RTDHs = { CDH };
+			CL->OMSetRenderTargets(static_cast<UINT>(size(RTDHs)), data(RTDHs), FALSE, nullptr);
 
 			CL->ExecuteBundle(BCL);
 		}

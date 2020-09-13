@@ -21,8 +21,17 @@ protected:
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
 			LoadImage(COM_PTR_PUT(ImageResources.back()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds"));
-			ShaderResourceViewDescs.push_back({ ImageResources.back()->GetDesc().Format, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING });
-			ShaderResourceViewDescs.back().Texture2D = { 0, ImageResources.back()->GetDesc().MipLevels, 0, 0.0f };
+			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({ 
+				.Format = ImageResources.back()->GetDesc().Format, 
+				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.Texture2D = D3D12_TEX2D_SRV({
+					.MostDetailedMip = 0, 
+					.MipLevels = ImageResources.back()->GetDesc().MipLevels, 
+					.PlaneSlice = 0,
+					.ResourceMinLODClamp = 0.0f 
+					})
+				}));
 		}
 	}
 
@@ -50,20 +59,40 @@ protected:
 		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT("_s.rs.cso")).data());
 #endif
 #else
-		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Srv = {
-			{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND } //!< register(t0, space0)
+		const std::array DRs_Srv = {
+			D3D12_DESCRIPTOR_RANGE({
+				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
+				.NumDescriptors = 1, 
+				.BaseShaderRegister = 0, .RegisterSpace = 0,
+				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
+				})
 		};
 #ifdef USE_STATIC_SAMPLER
 		assert(!StaticSamplerDescs.empty() && "");
 #else
-		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Smp = {
-			{ D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND } //!< register(s0, space0)
+		const std::array DRs_Smp = {
+			D3D12_DESCRIPTOR_RANGE({ 
+				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,
+				.NumDescriptors = 1, 
+				.BaseShaderRegister = 0, .RegisterSpace = 0,
+				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND 
+				}) 
 		};
 #endif
 		DX::SerializeRootSignature(Blob, {
-				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(size(DRs_Srv)), data(DRs_Srv) }, D3D12_SHADER_VISIBILITY_PIXEL }, //!< SRV
+			//!< SRV
+			D3D12_ROOT_PARAMETER({ 
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, 
+				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ .NumDescriptorRanges = static_cast<uint32_t>(size(DRs_Srv)), .pDescriptorRanges = data(DRs_Srv) }),
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL 
+					}), 
 #ifndef USE_STATIC_SAMPLER
-				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(size(DRs_Smp)), data(DRs_Smp) }, D3D12_SHADER_VISIBILITY_PIXEL } //!< Sampler
+			//!< Sampler
+			D3D12_ROOT_PARAMETER({ 
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, 
+				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ .NumDescriptorRanges = static_cast<uint32_t>(size(DRs_Smp)), .pDescriptorRanges = data(DRs_Smp) }),
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL 
+				}) 
 #endif
 			}, {
 #ifdef USE_STATIC_SAMPLER

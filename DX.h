@@ -1,10 +1,9 @@
 #pragma once
 
 //!< 少なくとも USE_WINRT, USE_WRL のいずれかは定義すること、両方定義された場合は USE_WINRT が優先される (At least define USE_WINRT or USE_WRL, if both defined USE_WINRT will be used)
-#define USE_WINRT
+#define USE_WINRT //!< 要C++17 (Need C++17 or later)
 #define USE_WRL
 #ifdef USE_WINRT
-//!< Property - All Configurations, C/C++ - Language - C++ Language Standard - Select ISO C++17 Standard (Default is C++14)
 #include <winrt/base.h>
 #define COM_PTR winrt::com_ptr
 #define COM_PTR_GET(_x) _x.get()
@@ -24,7 +23,7 @@
 #define COM_PTR_AS(_x, _y) VERIFY_SUCCEEDED(_x.As(&_y));
 #endif
 
-//#define USE_WARP
+//#define USE_WARP //!< #DX_TODO
 #define USE_STATIC_SAMPLER //!< [ TextureDX ] VK:USE_IMMUTABLE_SAMPLER相当
 
 //!< HLSLからルートシグネチャを作成する (Create root signature from HLSL)
