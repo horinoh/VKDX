@@ -68,7 +68,7 @@ protected:
 				})
 		};
 #ifdef USE_STATIC_SAMPLER
-		assert(!StaticSamplerDescs.empty() && "");
+		assert(!empty(StaticSamplerDescs) && "");
 #else
 		const std::array DRs_Smp = {
 			D3D12_DESCRIPTOR_RANGE({ 
@@ -129,7 +129,7 @@ protected:
 #endif
 	}
 	virtual void CreateDescriptorView() override {
-		assert(!ImageResources.empty() && "");
+		assert(!empty(ImageResources) && "");
 		const auto& DH = CbvSrvUavDescriptorHeaps[0];
 		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 #if 1
@@ -142,7 +142,7 @@ protected:
 
 #ifndef USE_STATIC_SAMPLER
 	virtual void CreateSampler() override {
-		assert(!SamplerDescriptorHeaps.empty() && "");
+		assert(!empty(SamplerDescriptorHeaps) && "");
 		const D3D12_SAMPLER_DESC SD = {
 			.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT, //!< ひと目でわかるように、非スタティックサンプラの場合敢えて POINT にしている
 			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,

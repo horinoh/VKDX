@@ -281,7 +281,7 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 #ifdef USE_DEPTH
-		const std::array CVs = { VkClearValue({ .color = Colors::SkyBlue }), VkClearValue({ .depthStencil = { .depth = 1.0f, .stencil = 0 } }) };
+		const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 #else
 		const std::array CVs = { VkClearValue({ .color = Colors::SkyBlue }) };
 #endif
@@ -290,7 +290,7 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 			.pNext = nullptr,
 			.renderPass = RP,
 			.framebuffer = FB,
-			.renderArea = VkRect2D({ .offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
+			.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
 			.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs),
 		};
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {

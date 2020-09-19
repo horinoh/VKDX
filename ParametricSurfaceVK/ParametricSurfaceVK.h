@@ -32,7 +32,7 @@ protected:
 	}
 	virtual void AllocateCommandBuffer() override {
 		const auto SCCount = static_cast<uint32_t>(SwapchainImages.size());
-		assert(!CommandPools.empty() && "");
+		assert(!empty(CommandPools) && "");
 		const auto PrevCount = CommandBuffers.size();
 		CommandBuffers.resize(PrevCount + SCCount);
 		const VkCommandBufferAllocateInfo CBAI = {

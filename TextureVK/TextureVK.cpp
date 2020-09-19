@@ -258,7 +258,7 @@ void TextureVK::PopulateCommandBuffer(const size_t i)
 		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
         
 		const auto PLL = PipelineLayouts[0];
-        assert(!DescriptorSets.empty() && "");
+        assert(!empty(DescriptorSets) && "");
 		vkCmdBindDescriptorSets(SCB, 
             VK_PIPELINE_BIND_POINT_GRAPHICS, PLL,
 			0, static_cast<uint32_t>(size(DescriptorSets)), data(DescriptorSets),

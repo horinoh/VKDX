@@ -1096,7 +1096,7 @@ void DX::CreatePipelineState_Compute()
 	//!< シェーダ
 	std::vector<COM_PTR<ID3DBlob>> ShaderBlobs;
 	CreateShader(ShaderBlobs);
-	assert(!ShaderBlobs.empty() && "");
+	assert(!empty(ShaderBlobs) && "");
 
 	const D3D12_CACHED_PIPELINE_STATE CPS = { nullptr, 0 };
 	const D3D12_COMPUTE_PIPELINE_STATE_DESC CPSD = {

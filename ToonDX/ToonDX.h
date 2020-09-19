@@ -169,7 +169,7 @@ protected:
 #ifdef USE_DEPTH
 		//!< [“xƒrƒ…[
 		{
-			assert(!ImageResources.empty() && "");
+			assert(!empty(ImageResources) && "");
 			const auto& DH = DsvDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 #if 1

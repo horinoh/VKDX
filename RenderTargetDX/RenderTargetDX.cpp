@@ -267,8 +267,8 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 		const auto IR = COM_PTR_GET(ImageResources[0]);
 
-		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+		CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+		CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
 		//!< パス0 : (メッシュ描画用)
 		{
@@ -277,16 +277,16 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 			const auto RtvDH = RtvDescriptorHeaps[0];
 			auto RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart(); 
 			const std::array<D3D12_RECT, 0> Rects = {};
-			CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rects.size()), Rects.data()); //RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+			CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects)); //RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
 #ifdef USE_DEPTH
 			const auto DsvDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart(); 
-			CL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(Rects.size()), Rects.data());
+			CL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 
-			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RtvCDHs = { RtvCDH };
-			CL->OMSetRenderTargets(static_cast<UINT>(RtvCDHs.size()), RtvCDHs.data(), FALSE, &DsvDH);
+			const std::array RtvCDHs = { RtvCDH };
+			CL->OMSetRenderTargets(static_cast<UINT>(size(RtvCDHs)), data(RtvCDHs), FALSE, &DsvDH);
 #else			
-			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RtvCDHs = { RtvCDH };
-			CL->OMSetRenderTargets(static_cast<UINT>(RtvCDHs.size()), RtvCDHs.data(), FALSE, nullptr);
+			const std::array RtvCDHs = { RtvCDH };
+			CL->OMSetRenderTargets(static_cast<UINT>(size(RtvCDHs)), data(RtvCDHs), FALSE, nullptr);
 #endif
 
 			CL->ExecuteBundle(BCL0);
@@ -294,13 +294,13 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 
 		//!< リソースバリア : D3D12_RESOURCE_STATE_RENDER_TARGET -> D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
 		{
-			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SCR = { SCR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET };
-			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_IR = { IR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE };
-			const std::array<D3D12_RESOURCE_BARRIER, 2> RBs = { {
-				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_SCR },
-				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_IR },
-			} };
-			CL->ResourceBarrier(static_cast<UINT>(RBs.size()), RBs.data());
+			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SCR = { .pResource = SCR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PRESENT, .StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET };
+			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_IR = { .pResource = IR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET, .StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE };
+			const std::array RBs = { 
+				D3D12_RESOURCE_BARRIER({ .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, .Transition = RTB_SCR }),
+				D3D12_RESOURCE_BARRIER({ .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, .Transition = RTB_IR }),
+			};
+			CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 		}
 
 		//!< パス1 : (レンダーテクスチャ描画用)
@@ -309,12 +309,12 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 
 			auto ScCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); ScCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 
-			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RtvCDHs = { ScCDH };
-			CL->OMSetRenderTargets(static_cast<UINT>(RtvCDHs.size()), RtvCDHs.data(), FALSE, nullptr);
+			const std::array RtvCDHs = { ScCDH };
+			CL->OMSetRenderTargets(static_cast<UINT>(size(RtvCDHs)), data(RtvCDHs), FALSE, nullptr);
 
 			const auto& SrvDH = CbvSrvUavDescriptorHeaps[0];
-			const std::array<ID3D12DescriptorHeap*, 1> SrvDHs = { COM_PTR_GET(SrvDH) };
-			CL->SetDescriptorHeaps(static_cast<UINT>(SrvDHs.size()), SrvDHs.data());
+			const std::array SrvDHs = { COM_PTR_GET(SrvDH) };
+			CL->SetDescriptorHeaps(static_cast<UINT>(size(SrvDHs)), data(SrvDHs));
 			auto SrvGDH = SrvDH->GetGPUDescriptorHandleForHeapStart();
 			CL->SetGraphicsRootDescriptorTable(0, SrvGDH); SrvGDH.ptr += Device->GetDescriptorHandleIncrementSize(SrvDH->GetDesc().Type); //!< SRV
 
@@ -323,13 +323,13 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 
 		//!< リソースバリア : D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE -> D3D12_RESOURCE_STATE_RENDER_TARGET
 		{
-			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SCR = { SCR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT };
-			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_IR = { IR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET };
-			const std::array<D3D12_RESOURCE_BARRIER, 2> RBs = { {
-				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_SCR },
-				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_IR },
-			} };
-			CL->ResourceBarrier(static_cast<UINT>(RBs.size()), RBs.data());
+			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SCR = { .pResource = SCR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET, .StateAfter = D3D12_RESOURCE_STATE_PRESENT };
+			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_IR = { .pResource = IR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, .StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET };
+			const std::array RBs = { 
+				D3D12_RESOURCE_BARRIER({ .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, .Transition = RTB_SCR }),
+				D3D12_RESOURCE_BARRIER({ .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, .Transition = RTB_IR }),
+			};
+			CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 		}
 	}
 	VERIFY_SUCCEEDED(CL->Close());

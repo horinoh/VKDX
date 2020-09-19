@@ -71,7 +71,7 @@ protected:
 		});
 	}
 	virtual void CreatePipelineLayout() override {
-		assert(!DescriptorSetLayouts.empty() && "");
+		assert(!empty(DescriptorSetLayouts) && "");
 		PipelineLayouts.emplace_back(VkPipelineLayout());
 		VKExt::CreatePipelineLayout(PipelineLayouts.back(), {
 				DescriptorSetLayouts[0]
@@ -122,9 +122,9 @@ protected:
 		});
 	}
 	virtual void AllocateDescriptorSet() override {
-		assert(!DescriptorSetLayouts.empty() && "");
+		assert(!empty(DescriptorSetLayouts) && "");
 		const std::array DSLs = { DescriptorSetLayouts[0] };
-		assert(!DescriptorPools.empty() && "");
+		assert(!empty(DescriptorPools) && "");
 		const VkDescriptorSetAllocateInfo DSAI = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			.pNext = nullptr,
@@ -142,7 +142,7 @@ protected:
 
 	virtual void CreateDescriptorUpdateTemplate() override {
 		DescriptorUpdateTemplates.emplace_back(VkDescriptorUpdateTemplate());
-		assert(!DescriptorSetLayouts.empty() && "");
+		assert(!empty(DescriptorSetLayouts) && "");
 		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,

@@ -53,7 +53,7 @@ protected:
 		//!< イミュータブルサンプラを使う場合
 		//!< 「セットレイアウトに永続的にバインドされ変更できない」
 		//!< (コンバインドイメージサンプラーを変更する場合は、イメージビューへの変更は反映されるがサンプラへの変更は無視されることになる)
-		assert(!Samplers.empty() && "");
+		assert(!empty(Samplers) && "");
 		const std::array ISs = { Samplers[0] };
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
 			VkDescriptorSetLayoutBinding({ .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(ISs.size()), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = ISs.data() })
@@ -66,7 +66,7 @@ protected:
 #endif
 	}
 	virtual void CreatePipelineLayout() override {
-		assert(!DescriptorSetLayouts.empty() && "");
+		assert(!empty(DescriptorSetLayouts) && "");
 		PipelineLayouts.emplace_back(VkPipelineLayout());
 		VKExt::CreatePipelineLayout(PipelineLayouts.back(), {
 				DescriptorSetLayouts[0] 
@@ -83,9 +83,9 @@ protected:
 		});
 	}
 	virtual void AllocateDescriptorSet() override {
-		assert(!DescriptorSetLayouts.empty() && "");
+		assert(!empty(DescriptorSetLayouts) && "");
 		const std::array DSLs = { DescriptorSetLayouts[0] };
-		assert(!DescriptorPools.empty() && "");
+		assert(!empty(DescriptorPools) && "");
 		const VkDescriptorSetAllocateInfo DSAI = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			.pNext = nullptr,
@@ -119,7 +119,7 @@ protected:
 
 	virtual void CreateDescriptorUpdateTemplate() override {
 		DescriptorUpdateTemplates.emplace_back(VkDescriptorUpdateTemplate());
-		assert(!DescriptorSetLayouts.empty() && "");
+		assert(!empty(DescriptorSetLayouts) && "");
 		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
@@ -130,7 +130,7 @@ protected:
 	}
 	virtual void UpdateDescriptorSet() override {
 #ifdef USE_IMMUTABLE_SAMPLER
-		assert(!Samplers.empty() && "");
+		assert(!empty(Samplers) && "");
 #endif
 		const DescriptorUpdateInfo DUI = {
 #ifdef USE_IMMUTABLE_SAMPLER
@@ -139,8 +139,8 @@ protected:
 			VkDescriptorImageInfo({ .sampler = Samplers[0], .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 #endif
 		};
-		assert(!DescriptorSets.empty() && "");
-		assert(!DescriptorUpdateTemplates.empty() && "");
+		assert(!empty(DescriptorSets) && "");
+		assert(!empty(DescriptorUpdateTemplates) && "");
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 	}
 

@@ -23,7 +23,7 @@ protected:
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {});
 	}
 	virtual void CreatePipelineLayout() override {
-		assert(!DescriptorSetLayouts.empty() && "");
+		assert(!empty(DescriptorSetLayouts) && "");
 		PipelineLayouts.emplace_back(VkPipelineLayout());
 #ifdef USE_PUSH_CONSTANTS
 		const VkPushConstantRange PCR = { .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .offset = 0, .size = static_cast<uint32_t>(size(Color) * sizeof(Color[0])) };

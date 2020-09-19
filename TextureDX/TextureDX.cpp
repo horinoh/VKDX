@@ -263,7 +263,7 @@ void TextureDX::PopulateCommandList(const size_t i)
 			const std::array RTDescriptorHandles = { CDH };
 			CL->OMSetRenderTargets(static_cast<UINT>(size(RTDescriptorHandles)), data(RTDescriptorHandles), FALSE, nullptr);
 
-			assert(!CbvSrvUavDescriptorHeaps.empty() && "");
+			assert(!empty(CbvSrvUavDescriptorHeaps) && "");
 #ifdef USE_STATIC_SAMPLER
 			const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
 			CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
@@ -274,7 +274,7 @@ void TextureDX::PopulateCommandList(const size_t i)
                 CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
             }
 #else
-			assert(!SamplerDescriptorHeaps.empty() && "");
+			assert(!empty(SamplerDescriptorHeaps) && "");
 
 			const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]), COM_PTR_GET(SamplerDescriptorHeaps[0]) };
 			CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());

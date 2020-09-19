@@ -160,7 +160,7 @@ void VKImage::CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, co
 			}
 		}
 
-		assert(!BICs.empty() && "BufferImageCopy is empty");
+		assert(!empty(BICs) && "BufferImageCopy is empty");
 
 		const VkImageSubresourceRange ISR = {
 			VK_IMAGE_ASPECT_COLOR_BIT,
@@ -249,7 +249,7 @@ void VKImage::CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, con
 				Offset += static_cast<const VkDeviceSize>(GLITexture.size(j));
 			}
 		}
-		assert(!BICs.empty() && "BufferImageCopy is empty");
+		assert(!empty(BICs) && "BufferImageCopy is empty");
 
 		const VkImageSubresourceRange ISR = {
 			VK_IMAGE_ASPECT_COLOR_BIT,

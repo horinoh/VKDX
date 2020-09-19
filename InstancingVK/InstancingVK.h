@@ -22,7 +22,7 @@ protected:
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {});
 	}
 	virtual void CreatePipelineLayout() override {
-		assert(!DescriptorSetLayouts.empty() && "");
+		assert(!empty(DescriptorSetLayouts) && "");
 		PipelineLayouts.emplace_back(VkPipelineLayout());
 		VKExt::CreatePipelineLayout(PipelineLayouts.back(), {}, {});
 	}
