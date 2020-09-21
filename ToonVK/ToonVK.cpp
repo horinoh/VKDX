@@ -283,7 +283,7 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 #ifdef USE_DEPTH
 		const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 #else
-		const std::array CVs = { VkClearValue({ .color = Colors::SkyBlue }) };
+		const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
 #endif
 		const VkRenderPassBeginInfo RPBI = {
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

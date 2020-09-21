@@ -236,20 +236,19 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 	
 	const auto SCB = SecondaryCommandBuffers[i];
 	const VkCommandBufferInheritanceInfo CBII = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-		nullptr,
-		RP,
-		0,
-		FB,
-		VK_FALSE,
-		0,
-		0,
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+		.pNext = nullptr,
+		.renderPass = RP,
+		.subpass = 0,
+		.framebuffer = FB,
+		.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
+		.pipelineStatistics = 0,
 	};
 	const VkCommandBufferBeginInfo SCBBI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
-		&CBII
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+		.pInheritanceInfo = &CBII
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
 		const auto PLL = PipelineLayouts[0];
@@ -260,7 +259,7 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 #ifdef USE_PUSH_DESCRIPTOR
 #pragma region FRAME_OBJECT
-		const DescriptorUpdateInfo DUI = { { UniformBuffers[i].Buffer, 0, VK_WHOLE_SIZE }, };
+		const DescriptorUpdateInfo DUI = { VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }), };
 #pragma endregion
 		vkCmdPushDescriptorSetWithTemplateKHR(SCB, DescriptorUpdateTemplates[0], PLL, 0, DUI.DBI);
 #else
@@ -280,22 +279,20 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 
 	const auto CB = CommandBuffers[i];
 	const VkCommandBufferBeginInfo CBBI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		0,
-		nullptr
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.pInheritanceInfo = nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
-		CVs[1].depthStencil = { 1.0f, 0 };
-		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
+		const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 		const VkRenderPassBeginInfo RPBI = {
-			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-			nullptr,
-			RP,
-			FB,
-			RenderArea,
-			static_cast<uint32_t>(size(CVs)), data(CVs)
+			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			.pNext = nullptr,
+			.renderPass = RP,
+			.framebuffer = FB,
+			.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
+			.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
 		};
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
 			const std::array SCBs = { SCB };
