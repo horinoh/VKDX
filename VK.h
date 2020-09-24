@@ -231,16 +231,6 @@ protected:
 
 	virtual void EnumerateInstanceLayerProperties();
 	virtual void EnumerateInstanceExtensionProperties(const char* LayerName);
-	//const VkCommandBufferInheritanceInfo CommandBufferInheritanceInfo_None = {
-	//	VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-	//	nullptr,
-	//	VK_NULL_HANDLE,
-	//	0,
-	//	VK_NULL_HANDLE,
-	//	VK_FALSE,
-	//	0,
-	//	0
-	//};
 
 #ifdef VK_NO_PROTOYYPES
 	void LoadVulkanLibrary();
@@ -335,7 +325,7 @@ protected:
 	virtual void CreateFramebuffer() {
 		const auto RP = RenderPasses[0];
 		for (auto i : SwapchainImageViews) {
-			Framebuffers.push_back(VkFramebuffer());
+			Framebuffers.emplace_back(VkFramebuffer());
 			VK::CreateFramebuffer(Framebuffers.back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
 		}
 	}

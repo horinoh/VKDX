@@ -244,20 +244,19 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 	const auto SCB0 = SecondaryCommandBuffers[i];
 	{
 		const VkCommandBufferInheritanceInfo CBII = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-			nullptr,
-			RP0,
-			0,
-			FB0,
-			VK_FALSE,
-			0,
-			0,
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+			.pNext = nullptr,
+			.renderPass = RP0,
+			.subpass = 0,
+			.framebuffer = FB0,
+			.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
+			.pipelineStatistics = 0,
 		};
 		const VkCommandBufferBeginInfo CBBI = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			nullptr,
-			VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
-			&CBII
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+			.pInheritanceInfo = &CBII
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB0, &CBBI)); {
 			const auto PL = Pipelines[0];
@@ -266,22 +265,21 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 #pragma endregion
 			const auto PLL = PipelineLayouts[0];
 			const auto& IDB = IndirectBuffers[0];
-
 #if 0
-			vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-			vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+			vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
+			vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 #else
-			const std::array<VkViewport, 1> VPs = { { 0.0f, static_cast<float>(ShadowMapExtent.height), static_cast<float>(ShadowMapExtent.width), -static_cast<float>(ShadowMapExtent.height) } };
-			const std::array<VkRect2D, 1> SCs = { VkOffset2D({ 0, 0 }), VkExtent2D({ ShadowMapExtent.width, ShadowMapExtent.height }) };
-			vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(VPs.size()), VPs.data());
-			vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(SCs.size()), SCs.data());
+			const std::array VPs = { VkViewport({ .x = 0.0f, .y = static_cast<float>(ShadowMapExtent.height), .width = static_cast<float>(ShadowMapExtent.width), .height = -static_cast<float>(ShadowMapExtent.height), .minDepth = 0.0f, .maxDepth = 1.0f  }) };
+			const std::array SCs = { VkRect2D({ VkOffset2D({ .x = 0, .y = 0 }), VkExtent2D({ .width = ShadowMapExtent.width, .height = ShadowMapExtent.height }) }) };
+			vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(size(VPs)), data(VPs));
+			vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(size(SCs)), data(SCs));
 #endif
 			vkCmdBindPipeline(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
-			assert(!DescriptorSets.empty() && "");
-			assert(!PipelineLayouts.empty() && "");
-			const std::array<VkDescriptorSet, 1> DSs = { DS };
-			vkCmdBindDescriptorSets(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
+			assert(!empty(DescriptorSets) && "");
+			assert(!empty(PipelineLayouts) && "");
+			const std::array DSs = { DS };
+			vkCmdBindDescriptorSets(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(size(DSs)), data(DSs), 0, nullptr);
 
 			vkCmdDrawIndirect(SCB0, IDB.Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
@@ -289,25 +287,24 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 
 	//!< パス1 : セカンダリコマンドバッファ(レンダーテクスチャ描画用、シャドウレシーバ描画用)
 #pragma region FRAME_OBJECT
-	const auto SCCount = static_cast<uint32_t>(SwapchainImages.size());
+	const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
 #pragma endregion
 	const auto SCB1 = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
 	{
 		const VkCommandBufferInheritanceInfo CBII = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-			nullptr,
-			RP1,
-			0,
-			FB1,
-			VK_FALSE,
-			0,
-			0,
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+			.pNext = nullptr,
+			.renderPass = RP1,
+			.subpass = 0,
+			.framebuffer = FB1,
+			.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
+			.pipelineStatistics = 0,
 		};
 		const VkCommandBufferBeginInfo CBBI = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			nullptr,
-			VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
-			&CBII
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+			.pInheritanceInfo = &CBII
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB1, &CBBI)); {
 			const auto PL = Pipelines[1];
@@ -317,12 +314,12 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 			const auto PLL = PipelineLayouts[1];
 			const auto& IDB = IndirectBuffers[1];
 
-			vkCmdSetViewport(SCB1, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-			vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+			vkCmdSetViewport(SCB1, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
+			vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 
 			vkCmdBindPipeline(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
-			const std::array<VkDescriptorSet, 1> DSs = { DS };
+			const std::array DSs = { DS };
 			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
 
 			vkCmdDrawIndirect(SCB1, IDB.Buffer, 0, 1, 0);
@@ -331,25 +328,22 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 
 	const auto CB = CommandBuffers[i];
 	const VkCommandBufferBeginInfo CBBI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		0,
-		nullptr
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.pInheritanceInfo = nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 		//!< パス0 : レンダーパス (シャドウキャスタ描画用)
 		{
-			const VkRect2D RenderArea = { { 0, 0 }, ShadowMapExtent };
-
-			std::array<VkClearValue, 1> CVs = {};
-			CVs[0].depthStencil = { 1.0f, 0 };
+			const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 			const VkRenderPassBeginInfo RPBI = {
-				VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-				nullptr,
-				RP0,
-				FB0,
-				RenderArea,
-				static_cast<uint32_t>(CVs.size()), CVs.data()
+				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+				.pNext = nullptr,
+				.renderPass = RP0,
+				.framebuffer = FB0,
+				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = ShadowMapExtent }),
+				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
 			};
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
 				//!< パイプライン作成時に指定しておくこと
@@ -357,53 +351,50 @@ void ShadowMapVK::PopulateCommandBuffer(const size_t i)
 				//!< また、pDynamicState に VK_DYNAMIC_STATE_DEPTH_BIAS を追加しておくと、ランライムに vkCmdSetDepthBias(CB, depthBiasConstantFactor, depthBiasClamp, depthBiasSlopeFactor) 変更できる  
 				//vkCmdSetDepthBias(CB, 1.25f, 0.0f, 1.75f);
 
-				const std::array<VkCommandBuffer, 1> SCBs = { SCB0 };
-				vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
+				const std::array SCBs = { SCB0 };
+				vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
 			} vkCmdEndRenderPass(CB);
 		}
 
 		//!< リソースバリア
 		{
-			const std::array<VkImageMemoryBarrier, 1> IMBs = { {
-				{
-					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-					nullptr,
-					VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
-					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
-					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-					Images[0].Image,
-					{ VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 }
-				},
-			} };
+			const std::array IMBs = { 
+				VkImageMemoryBarrier({
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT, .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+					.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.image = Images[0].Image,
+					.subresourceRange = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
+				}),
+			};
 			vkCmdPipelineBarrier(CB,
 				VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 				VK_DEPENDENCY_BY_REGION_BIT,
 				0, nullptr,
 				0, nullptr,
-				static_cast<uint32_t>(IMBs.size()), IMBs.data());
+				static_cast<uint32_t>(size(IMBs)), data(IMBs));
 		}
 
 		//!< パス1 : レンダーパス(レンダーテクスチャ描画用)
 		{
-			const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
-
 #ifdef USE_SHADOWMAP_VISUALIZE
 			const std::array<VkClearValue, 0> CVs = {};
 #else
-			std::array<VkClearValue, 1 + 1> CVs = { Colors::SkyBlue };
-			CVs[1].depthStencil = { 1.0f, 0 };
+			const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 #endif
 			const VkRenderPassBeginInfo RPBI = {
-				VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-				nullptr,
-				RP1,
-				FB1,
-				RenderArea,
-				static_cast<uint32_t>(CVs.size()), CVs.data()
+				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+				.pNext = nullptr,
+				.renderPass = RP1,
+				.framebuffer = FB1,
+				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
+				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
 			};
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
-				const std::array<VkCommandBuffer, 1> SCBs = { SCB1 };
-				vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
+				const std::array SCBs = { SCB1 };
+				vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
 			} vkCmdEndRenderPass(CB);
 		}
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));

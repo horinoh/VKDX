@@ -307,20 +307,14 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 
 	//!< コマンドプール破棄時にコマンドバッファは暗黙的に解放されるので無くても良い (Command buffers will be released implicitly, when command pool released)
-	//if(!empty(SecondaryCommandBuffers)) {
-	//	vkFreeCommandBuffers(Device, SecondaryCommandPools[0], static_cast<uint32_t>(SecondaryCommandBuffers.size()), SecondaryCommandBuffers.data());
-	//	SecondaryCommandBuffers.clear();
-	//}	
+	//if(!empty(SecondaryCommandBuffers)) { vkFreeCommandBuffers(Device, SecondaryCommandPools[0], static_cast<uint32_t>(SecondaryCommandBuffers.size()), SecondaryCommandBuffers.data()); SecondaryCommandBuffers.clear(); }	
 	for (auto i : SecondaryCommandPools) {
 		vkDestroyCommandPool(Device, i, GetAllocationCallbacks());
 	}
 	SecondaryCommandPools.clear();
 
 	//!< コマンドプール破棄時にコマンドバッファは暗黙的に解放されるので無くても良い (Command buffers will be released implicitly, when command pool released)
-	//if(!empty(CommandBuffers)) {
-	//	vkFreeCommandBuffers(Device, CommandPool[0], static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data());
-	//	CommandBuffers.clear();
-	//}
+	//if(!empty(CommandBuffers)) { vkFreeCommandBuffers(Device, CommandPool[0], static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data()); CommandBuffers.clear(); }
 	for (auto i : CommandPools) {
 		vkDestroyCommandPool(Device, i, GetAllocationCallbacks());
 	}
@@ -440,9 +434,9 @@ const char* VK::GetComponentSwizzleChar(const VkComponentSwizzle ComponentSwizzl
 
 bool VK::IsSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, const VkFormat DepthFormat)
 {
-	VkFormatProperties FormatProperties;
-	vkGetPhysicalDeviceFormatProperties(PhysicalDevice, DepthFormat, &FormatProperties);
-	if (FormatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+	VkFormatProperties FP;
+	vkGetPhysicalDeviceFormatProperties(PhysicalDevice, DepthFormat, &FP);
+	if (FP.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
 		return true;
 	}
 	return false;
@@ -459,7 +453,7 @@ uint32_t VK::GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& PDMP, co
 		if (TypeBits & (1 << i)) {
 			if ((PDMP.memoryTypes[i].propertyFlags & MPF) == MPF) { //!< 指定フラグが「全て」立っていないとダメ
 			//if (PDMP.memoryTypes[i].propertyFlags & MPF) {		//!< 指定フラグが「一つでも」立っていれば良い
-					return i;
+				return i;
 			}
 		}
 	}
@@ -469,14 +463,14 @@ uint32_t VK::GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& PDMP, co
 
 void VK::CreateDeviceMemories(std::vector<VkDeviceMemory>& DMs, const VkDevice Dev, const std::vector<std::vector<VkMemoryRequirements>>& MRs)
 {
-	DMs.resize(MRs.size(), VK_NULL_HANDLE);
-	for (size_t i = 0; i < MRs.size(); ++i) {
+	DMs.resize(size(MRs), VK_NULL_HANDLE);
+	for (size_t i = 0; i < size(MRs); ++i) {
 		if (!empty(MRs[i])) {
 			const VkMemoryAllocateInfo MAI = {
-				VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-				nullptr,
-				std::accumulate(cbegin(MRs[i]), cend(MRs[i]), static_cast<VkDeviceSize>(0), [](const VkDeviceSize lhs, const VkMemoryRequirements& rhs) { return RoundUp(lhs, rhs.alignment) + rhs.size; }),
-				static_cast<uint32_t>(i)
+				.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+				.pNext = nullptr,
+				.allocationSize = std::accumulate(cbegin(MRs[i]), cend(MRs[i]), static_cast<VkDeviceSize>(0), [](const VkDeviceSize lhs, const VkMemoryRequirements& rhs) { return RoundUp(lhs, rhs.alignment) + rhs.size; }),
+				.memoryTypeIndex = static_cast<uint32_t>(i)
 			};
 			VERIFY_SUCCEEDED(vkAllocateMemory(Dev, &MAI, /*GetAllocationCallbacks()*/nullptr, &DMs[i]));
 		}
@@ -488,14 +482,15 @@ void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const si
 	//!< バッファは作成時に指定した使用法でしか使用できない、ここでは VK_SHARING_MODE_EXCLUSIVE 決め打ちにしている #VK_TODO (Using VK_SHARING_MODE_EXCLUSIVE here)
 	//!< VK_SHARING_MODE_EXCLUSIVE	: 複数ファミリのキューが同時アクセスできない、他のファミリからアクセスしたい場合はオーナーシップの移譲が必要
 	//!< VK_SHARING_MODE_CONCURRENT	: 複数ファミリのキューが同時アクセス可能、オーナーシップの移譲も必要無し、パフォーマンスは悪い
+	const std::array<uint32_t, 0> QueueFamilyIndices = {};
 	const VkBufferCreateInfo BCI = {
-		VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-		nullptr,
-		0,
-		Size,
-		Usage,
-		VK_SHARING_MODE_EXCLUSIVE,
-		0, nullptr
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.size = Size,
+		.usage = Usage,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+		.queueFamilyIndexCount = static_cast<uint32_t>(size(QueueFamilyIndices)), .pQueueFamilyIndices = data(QueueFamilyIndices)
 	};
 	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BCI, GetAllocationCallbacks(), Buffer));
 }
@@ -505,21 +500,22 @@ void VK::CreateImage(VkImage* Img, const VkImageCreateFlags CreateFlags, const V
 	//!< Usage に VK_IMAGE_USAGE_SAMPLED_BIT が指定されいる場合、フォーマットやフィルタが使用可能かチェック #VK_TODO ここではリニアフィルタ決め打ち
 	ValidateFormatProperties_SampledImage(GetCurrentPhysicalDevice(), Format, Usage, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
 
+	const std::array<uint32_t, 0> QueueFamilyIndices = {};
 	const VkImageCreateInfo ICI = {
-		VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-		nullptr,
-		CreateFlags,
-		ImageType,
-		Format,
-		Extent3D,
-		MipLevels,
-		ArrayLayers,
-		SampleCount,
-		VK_IMAGE_TILING_OPTIMAL, //!< リニアはパフォーマンスが悪いので、ここでは OPTIMAL に決め打ちしている
-		Usage,
-		VK_SHARING_MODE_EXCLUSIVE,
-		0, nullptr,
-		VK_IMAGE_LAYOUT_UNDEFINED //!< 作成時に指定できるのは UNDEFINED, PREINITIALIZED のみ、実際に使用する前にレイアウトを変更する必要がある
+		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = CreateFlags,
+		.imageType = ImageType,
+		.format = Format,
+		.extent = Extent3D,
+		.mipLevels = MipLevels,
+		.arrayLayers = ArrayLayers,
+		.samples = SampleCount,
+		.tiling = VK_IMAGE_TILING_OPTIMAL, //!< リニアはパフォーマンスが悪いので、ここでは OPTIMAL に決め打ちしている
+		.usage = Usage,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+		.queueFamilyIndexCount = static_cast<uint32_t>(size(QueueFamilyIndices)), .pQueueFamilyIndices = data(QueueFamilyIndices),
+		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED //!< 作成時に指定できるのは UNDEFINED, PREINITIALIZED のみ、実際に使用する前にレイアウトを変更する必要がある
 	};
 	ValidateImageCreateInfo(ICI);
 	VERIFY_SUCCEEDED(vkCreateImage(Device, &ICI, GetAllocationCallbacks(), Img));
@@ -536,31 +532,31 @@ void VK::CopyToHostVisibleDeviceMemory(const VkDeviceMemory DM, const size_t Siz
 			//!< デバスメモリ確保時に VK_MEMORY_PROPERTY_HOST_COHERENT_BIT を指定した場合は必要ない CreateDeviceMemory(..., VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 			if (nullptr != Range) {
 				//!< 更新するレンジ(一部)が明示的に指定された場合、指定レンジのみを更新する
-				const std::array<VkMappedMemoryRange, 1> MMRs = {
-						{
-							VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-							nullptr,
-							DM,
-							Offset + (*Range)[0],
-							(*Range)[1]
-						}
+				const std::array MMRs = {
+						VkMappedMemoryRange({
+							.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+							.pNext = nullptr,
+							.memory = DM,
+							.offset = Offset + (*Range)[0],
+							.size = (*Range)[1]
+						})
 				};
-				VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
-				//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
+				VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(size(MMRs)), data(MMRs)));
+				//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(size(MMRs)), data(MMRs)));
 			}
 			else {
 				//!< レンジ指定が無い場合は全体を更新する
-				const std::array<VkMappedMemoryRange, 1> MMRs = {
-						{
-							VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-							nullptr,
-							DM,
-							Offset,
-							VK_WHOLE_SIZE
-						}
+				const std::array MMRs = {
+						VkMappedMemoryRange({
+							.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+							.pNext = nullptr,
+							.memory = DM,
+							.offset = Offset,
+							.size = VK_WHOLE_SIZE
+						})
 				};
-				VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
-				//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(MMRs.size()), MMRs.data()));
+				VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(size(MMRs)), data(MMRs)));
+				//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(size(MMRs)), data(MMRs)));
 			}
 		} vkUnmapMemory(Device, DM);
 	}
@@ -573,49 +569,43 @@ void VK::CopyToHostVisibleDeviceMemory(const VkDeviceMemory DM, const size_t Siz
 void VK::CmdCopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, const VkBuffer Dst, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF, const size_t Size)
 {
 	const VkCommandBufferBeginInfo CBBI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-		nullptr
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+		.pInheritanceInfo = nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		const std::array<VkBufferCopy, 1> BCs = {
-			{ 0, 0, Size },
-		};
-		const std::array<VkBufferMemoryBarrier, 1> BMBs_Pre = {
-			{
-				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-				nullptr,
+		const std::array BCs = { VkBufferCopy({ .srcOffset = 0, .dstOffset = 0, .size = Size }), };
+		const std::array BMBs_Pre = {
+			VkBufferMemoryBarrier({
+				.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+				.pNext = nullptr,
 				//!< バッファがどう扱われるかのフラグ「これまで」と「これから」、0から書き込み(VK_ACCESS_MEMORY_WRITE_BIT)へ
-				0, VK_ACCESS_MEMORY_WRITE_BIT,
+				.srcAccessMask = 0, .dstAccessMask = VK_ACCESS_MEMORY_WRITE_BIT,
 				//!< (VK_SHARING_MODE_EXCLUSIVEで作成されたバッファを)参照しているキューファミリを変更「これまで」と「これから」、ここでは変更しないのでVK_QUEUE_FAMILY_IGNORED
-				VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-				Dst,
-				0,
-				VK_WHOLE_SIZE
-			},
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.buffer = Dst, .offset = 0, .size = VK_WHOLE_SIZE
+			}),
 		};
 		vkCmdPipelineBarrier(CB,
 			//!< バッファが使われるパイプラインステージ「これまで」と「これから」、VK_PIPELINE_STAGE_TOP_OF_PIPE_BITから転送(VK_PIPELINE_STAGE_TRANSFER_BIT)へ
 			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
 			0,
 			0, nullptr,
-			static_cast<uint32_t>(BMBs_Pre.size()), BMBs_Pre.data(),
+			static_cast<uint32_t>(size(BMBs_Pre)), data(BMBs_Pre),
 			0, nullptr);
 		{
-			vkCmdCopyBuffer(CB, Src, Dst, static_cast<uint32_t>(BCs.size()), BCs.data());
+			vkCmdCopyBuffer(CB, Src, Dst, static_cast<uint32_t>(size(BCs)), data(BCs));
 		}
-		const std::array<VkBufferMemoryBarrier, 1> BMBs_Post = {
-			{
-				VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-				nullptr,
+		const std::array BMBs_Post = {
+			VkBufferMemoryBarrier({
+				.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+				.pNext = nullptr,
 				//!< バッファがどう扱われるかのフラグ「これまで」と「これから」、例えば(VK_ACCESS_MEMORY_WRITE_BIT)から頂点(VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT)へ等
-				VK_ACCESS_MEMORY_WRITE_BIT, AF,
-				VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-				Dst,
-				0,
-				VK_WHOLE_SIZE
-			},
+				.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT, .dstAccessMask = AF,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.buffer = Dst, .offset = 0, .size = VK_WHOLE_SIZE
+			}),
 		};
 		assert(BMBs_Pre[0].dstAccessMask == BMBs_Post[0].srcAccessMask);
 		vkCmdPipelineBarrier(CB, 
@@ -623,7 +613,7 @@ void VK::CmdCopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, con
 			VK_PIPELINE_STAGE_TRANSFER_BIT, PSF,
 			0, 
 			0, nullptr,
-			static_cast<uint32_t>(BMBs_Post.size()), BMBs_Post.data(), 
+			static_cast<uint32_t>(size(BMBs_Post)), data(BMBs_Post), 
 			0, nullptr);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
@@ -631,7 +621,6 @@ void VK::CmdCopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, con
 void VK::EnumerateMemoryRequirements(const VkMemoryRequirements& MR)
 {
 	const auto& PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-
 	Logf("\t\tsize=%d\n", MR.size);
 	Logf("\t\talignment=%d\n", MR.alignment);
 	for (uint32_t i = 0; i < PDMP.memoryTypeCount; ++i) {
@@ -646,7 +635,6 @@ void VK::EnumerateMemoryRequirements(const VkMemoryRequirements& MR)
 			MEMORY_PROPERTY_ENTRY(PROTECTED);
 #undef MEMORY_PROPERTY_ENTRY
 			Log("\n");
-
 			Logf("\t\t\tHeapIndex = %d, HeapSize = %llu\n", PDMP.memoryTypes[i].heapIndex, PDMP.memoryHeaps[PDMP.memoryTypes[i].heapIndex].size);
 		}
 	}
@@ -704,14 +692,14 @@ void VK::SuballocateImageMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const
 void VK::CreateImageView(VkImageView* IV, const VkImage Img, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange)
 {
 	const VkImageViewCreateInfo ImageViewCreateInfo = {
-		VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-		nullptr,
-		0,
-		Img,
-		ImageViewType,
-		Format,
-		ComponentMapping,
-		ImageSubresourceRange
+		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.image = Img,
+		.viewType = ImageViewType,
+		.format = Format,
+		.components = ComponentMapping,
+		.subresourceRange = ImageSubresourceRange
 	};
 	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, GetAllocationCallbacks(), IV));
 	Logf("\t\tImageViewType = %s\n", GetImageViewTypeChar(ImageViewType));
@@ -810,7 +798,7 @@ void VK::EnumerateInstanceLayerProperties()
 	VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&Count, nullptr));
 	if (Count) {
 		std::vector<VkLayerProperties> LayerProp(Count);
-		VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&Count, LayerProp.data()));
+		VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&Count, data(LayerProp)));
 		for (const auto& i : LayerProp) {
 			Logf("\t\"%s\" (%s)\n", i.layerName, i.description);
 			EnumerateInstanceExtensionProperties(i.layerName);
@@ -823,7 +811,7 @@ void VK::EnumerateInstanceExtensionProperties(const char* LayerName)
 	VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(LayerName, &Count, nullptr));
 	if (Count) {
 		std::vector<VkExtensionProperties> ExtensionProp(Count);
-		VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(LayerName, &Count, ExtensionProp.data()));
+		VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(LayerName, &Count, data(ExtensionProp)));
 		for (const auto& i : ExtensionProp) {
 			Logf("\t\t\"%s\"\n", i.extensionName);
 		}
@@ -873,22 +861,22 @@ void VK::CreateInstance()
 
 	const auto ApplicationName = GetTitle();
 	const VkApplicationInfo AI = {
-		VK_STRUCTURE_TYPE_APPLICATION_INFO,
-		nullptr,
-		ApplicationName.data(), APIVersion,
-		"VKDX Engine Name", APIVersion,
-		APIVersion
+		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+		.pNext = nullptr,
+		.pApplicationName = data(ApplicationName), .applicationVersion = APIVersion,
+		.pEngineName = "VKDX Engine Name", .engineVersion = APIVersion,
+		.apiVersion = APIVersion
 	};
 	
 	//!< #VK_TODO 有効にしているものが、InstanceLayerProperties に含まれているかチェックする
 
 	const VkInstanceCreateInfo ICI = {
-		VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-		nullptr,
-		0,
-		&AI,
-		static_cast<uint32_t>(InstanceLayers.size()), InstanceLayers.data(),
-		static_cast<uint32_t>(InstanceExtensions.size()), InstanceExtensions.data()
+	 	.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.pApplicationInfo = &AI,
+		.enabledLayerCount = static_cast<uint32_t>(size(InstanceLayers)), .ppEnabledLayerNames = data(InstanceLayers),
+		.enabledExtensionCount = static_cast<uint32_t>(size(InstanceExtensions)), .ppEnabledExtensionNames = data(InstanceExtensions)
 	};
 	VERIFY_SUCCEEDED(vkCreateInstance(&ICI, GetAllocationCallbacks(), &Instance));
 
@@ -921,10 +909,10 @@ void VK::CreateDebugReportCallback()
 
 	if (VK_NULL_HANDLE != vkCreateDebugReportCallback) {
 		const VkDebugReportCallbackCreateInfoEXT DebugReportCallbackCreateInfo = {
-			VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
-			nullptr,
-			Flags,
-			[](VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT /*objectType*/, uint64_t /*object*/, size_t /*location*/, int32_t /*messageCode*/, const char* /*pLayerPrefix*/, const char* pMessage, void* /*pUserData*/) -> VkBool32 {
+			.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
+			.pNext = nullptr,
+			.flags = Flags,
+			.pfnCallback = [](VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT /*objectType*/, uint64_t /*object*/, size_t /*location*/, int32_t /*messageCode*/, const char* /*pLayerPrefix*/, const char* pMessage, void* /*pUserData*/) -> VkBool32 {
 					using namespace std;
 					if (VK_DEBUG_REPORT_ERROR_BIT_EXT & flags) {
 						DEBUG_BREAK();
@@ -949,7 +937,7 @@ void VK::CreateDebugReportCallback()
 					}
 					return VK_FALSE;
 			},
-			nullptr
+			.pUserData = nullptr
 		};
 		vkCreateDebugReportCallback(Instance, &DebugReportCallbackCreateInfo, nullptr, &DebugReportCallback);
 	}
@@ -960,13 +948,13 @@ void VK::CreateDebugReportCallback()
 void VK::MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name)
 {
 	if (VK_NULL_HANDLE != vkCmdDebugMarkerInsert) {
-		VkDebugMarkerMarkerInfoEXT DebugMarkerMarkerInfo = {
-			VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
-			nullptr,
-			Name,
+		VkDebugMarkerMarkerInfoEXT DMMI = {
+			.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
+			.pNext = nullptr,
+			.pMarkerName = Name,
+			.color = { Color.r, Color.g, Color.b, Color.a }
 		};
-		memcpy(DebugMarkerMarkerInfo.color, &Color, sizeof(DebugMarkerMarkerInfo.color));
-		vkCmdDebugMarkerInsert(CB, &DebugMarkerMarkerInfo);
+		vkCmdDebugMarkerInsert(CB, &DMMI);
 	}
 }
 #else
@@ -977,13 +965,13 @@ void VK::MarkerInsert(VkCommandBuffer /*CB*/, const glm::vec4& /*Color*/, const 
 void VK::MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const char* Name)
 {
 	if (VK_NULL_HANDLE != vkCmdDebugMarkerBegin) {
-		VkDebugMarkerMarkerInfoEXT DebugMarkerMarkerInfo = {
-			VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
-			nullptr,
-			Name,
+		VkDebugMarkerMarkerInfoEXT DMMI = {
+			.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
+			.pNext = nullptr,
+			.pMarkerName = Name,
+			.color = { Color.r, Color.g, Color.b, Color.a }
 		};
-		memcpy(DebugMarkerMarkerInfo.color, &Color, sizeof(DebugMarkerMarkerInfo.color));
-		vkCmdDebugMarkerBegin(CB, &DebugMarkerMarkerInfo);
+		vkCmdDebugMarkerBegin(CB, &DMMI);
 	}
 }
 #else
@@ -1005,14 +993,12 @@ void VK::MarkerEnd(VkCommandBuffer /*CB*/) {}
 void VK::MarkerSetName(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const char* Name)
 {
 	if (VK_NULL_HANDLE != vkDebugMarkerSetObjectName) {
-		VkDebugMarkerObjectNameInfoEXT DebugMarkerObjectNameInfo = {
-			VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
-			nullptr,
-			Type,
-			Object,
-			Name
+		VkDebugMarkerObjectNameInfoEXT DMONI = {
+			.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
+			.pNext = nullptr,
+			.objectType = Type, .object = Object, .pObjectName = Name
 		};
-		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectName(Device, &DebugMarkerObjectNameInfo));
+		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectName(Device, &DMONI));
 	}
 }
 #else
@@ -1023,16 +1009,13 @@ void VK::MarkerSetName(VkDevice /*Device*/, const VkDebugReportObjectTypeEXT /*T
 void VK::MarkerSetTag(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const uint64_t TagName, const size_t TagSize, const void* TagData)
 {
 	if (VK_NULL_HANDLE != vkDebugMarkerSetObjectTag) {
-		VkDebugMarkerObjectTagInfoEXT DebugMarkerObjectTagInfo = {
-			VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_TAG_INFO_EXT,
-			nullptr,
-			Type,
-			Object,
-			TagName,
-			TagSize,
-			TagData
+		VkDebugMarkerObjectTagInfoEXT DMOTI = {
+			.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_TAG_INFO_EXT,
+			.pNext = nullptr,
+			.objectType = Type, .object = Object,
+			.tagName = TagName, .tagSize = TagSize, .pTag = TagData
 		};
-		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectTag(Device, &DebugMarkerObjectTagInfo));
+		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectTag(Device, &DMOTI));
 	}
 }
 #else
@@ -1044,11 +1027,11 @@ void VK::MarkerSetTag(VkDevice /*Device*/, const VkDebugReportObjectTypeEXT /*Ty
 void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
 {
 	const VkWin32SurfaceCreateInfoKHR SCI = {
-		VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
-		nullptr,
-		0,
-		hInstance,
-		hWnd
+		.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
+		.pNext = nullptr,
+		.flags = 0,
+		.hinstance = hInstance,
+		.hwnd = hWnd
 	};
 	VERIFY_SUCCEEDED(vkCreateWin32SurfaceKHR(Instance, &SCI, GetAllocationCallbacks(), &Surface));
 
@@ -1141,7 +1124,7 @@ void VK::EnumeratePhysicalDevice(VkInstance Inst)
 	VERIFY_SUCCEEDED(vkEnumeratePhysicalDevices(Inst, &Count, nullptr));
 	assert(Count && "Physical device not found");
 	PhysicalDevices.resize(Count);
-	VERIFY_SUCCEEDED(vkEnumeratePhysicalDevices(Inst, &Count, PhysicalDevices.data()));
+	VERIFY_SUCCEEDED(vkEnumeratePhysicalDevices(Inst, &Count, data(PhysicalDevices)));
 
 	Log("\tPhysicalDevices\n");
 	for (const auto& i : PhysicalDevices) {
@@ -1166,8 +1149,8 @@ void VK::EnumeratePhysicalDevice(VkInstance Inst)
 		Log("\n");
 	}
 
-	PhysicalDeviceProperties.resize(PhysicalDevices.size());
-	for (size_t i = 0; i < PhysicalDevices.size(); ++i) {
+	PhysicalDeviceProperties.resize(size(PhysicalDevices));
+	for (size_t i = 0; i < size(PhysicalDevices); ++i) {
 		vkGetPhysicalDeviceMemoryProperties(PhysicalDevices[i], &PhysicalDeviceProperties[i]);
 	}
 
@@ -1183,7 +1166,7 @@ void VK::EnumeratePhysicalDeviceLayerProperties(VkPhysicalDevice PD)
 	VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PD, &Count, nullptr));
 	if (Count) {
 		std::vector<VkLayerProperties> LayerProp(Count);
-		VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PD, &Count, LayerProp.data()));
+		VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PD, &Count, data(LayerProp)));
 		for (const auto& i : LayerProp) {
 			Logf("\t\"%s\" (%s)\n", i.layerName, i.description);
 			EnumeratePhysicalDeviceExtensionProperties(PD, i.layerName);
@@ -1196,7 +1179,7 @@ void VK::EnumeratePhysicalDeviceExtensionProperties(VkPhysicalDevice PD, const c
 	VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PD, LayerName, &Count, nullptr));
 	if (Count) {
 		std::vector<VkExtensionProperties> ExtensionProp(Count);
-		VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PD, LayerName, &Count, ExtensionProp.data()));
+		VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PD, LayerName, &Count, data(ExtensionProp)));
 		for (const auto& i : ExtensionProp) {
 			Logf("\t\t\"%s\"\n", i.extensionName);
 		}
@@ -1413,10 +1396,10 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 	vkGetPhysicalDeviceQueueFamilyProperties(PD, &Count, nullptr);
 	assert(Count && "QueueFamilyProperty not found");
 	QFPs.resize(Count);
-	vkGetPhysicalDeviceQueueFamilyProperties(PD, &Count, QFPs.data());
+	vkGetPhysicalDeviceQueueFamilyProperties(PD, &Count, data(QFPs));
 	Log("\tQueueFamilyProperties\n");
 #define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & QFPs[i].queueFlags) { Logf("%s | ", #entry); }
-	for (uint32_t i = 0; i < QFPs.size(); ++i) {
+	for (uint32_t i = 0; i < size(QFPs); ++i) {
 		Logf("\t\t[%d] QueueCount = %d, ", i, QFPs[i].queueCount);
 		Log("QueueFlags = ");
 		QUEUE_FLAG_ENTRY(GRAPHICS);
@@ -1442,10 +1425,10 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 
 	//!< キューファミリ内でのインデックス及びプライオリティ
 	std::vector<std::vector<float>> Priorites;
-	Priorites.resize(QFPs.size());
-	const uint32_t GraphicsQueueIndexInFamily = static_cast<uint32_t>(Priorites[GraphicsQueueFamilyIndex].size()); Priorites[GraphicsQueueFamilyIndex].push_back(0.5f);
-	const uint32_t PresentQueueIndexInFamily = static_cast<uint32_t>(Priorites[PresentQueueFamilyIndex].size()); Priorites[PresentQueueFamilyIndex].push_back(0.5f);
-	const uint32_t ComputeQueueIndexInFamily = static_cast<uint32_t>(Priorites[ComputeQueueFamilyIndex].size()); Priorites[ComputeQueueFamilyIndex].push_back(0.5f);
+	Priorites.resize(size(QFPs));
+	const uint32_t GraphicsQueueIndexInFamily = static_cast<uint32_t>(size(Priorites[GraphicsQueueFamilyIndex])); Priorites[GraphicsQueueFamilyIndex].emplace_back(0.5f);
+	const uint32_t PresentQueueIndexInFamily = static_cast<uint32_t>(size(Priorites[PresentQueueFamilyIndex])); Priorites[PresentQueueFamilyIndex].emplace_back(0.5f);
+	const uint32_t ComputeQueueIndexInFamily = static_cast<uint32_t>(size(Priorites[ComputeQueueFamilyIndex])); Priorites[ComputeQueueFamilyIndex].emplace_back(0.5f);
 
 	Log("\n");
 	Logf("\t\tGraphics QueueFamilyIndex = %d, QueueIndex = %d\n", GraphicsQueueFamilyIndex, GraphicsQueueIndexInFamily);
@@ -1455,16 +1438,16 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 
 	//!< キュー作成情報 Queue create information
 	std::vector<VkDeviceQueueCreateInfo> DQCIs;
-	for (size_t i = 0; i < Priorites.size();++i) {
+	for (size_t i = 0; i < size(Priorites);++i) {
 		if (!empty(Priorites[i])) {
-			DQCIs.push_back(
-				{
-					VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-					nullptr,
-					0,
-					static_cast<uint32_t>(i),
-					static_cast<uint32_t>(Priorites[i].size()), Priorites[i].data()
-				}
+			DQCIs.emplace_back(
+				VkDeviceQueueCreateInfo({
+					.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+					.pNext = nullptr,
+					.flags = 0,
+					.queueFamilyIndex = static_cast<uint32_t>(i),
+					.queueCount = static_cast<uint32_t>(size(Priorites[i])), .pQueuePriorities = data(Priorites[i])
+				})
 			);
 		}
 	}	
@@ -1477,13 +1460,13 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 	//!< 必要に応じて OverridePhysicalDeviceFeatures() をオーバーライドし、不要な項目を無効にする(パフォーマンスを考える場合)
 	OverridePhysicalDeviceFeatures(PDF);
 	const VkDeviceCreateInfo DCI = {
-		VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DQCIs.size()), DQCIs.data(),
-		0, nullptr, //!< デバイスでレイヤーの有効化は非推奨 (Device layer is deprecated)
-		static_cast<uint32_t>(DeviceExtensions.size()), DeviceExtensions.data(),
-		&PDF
+		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.queueCreateInfoCount = static_cast<uint32_t>(size(DQCIs)), .pQueueCreateInfos = data(DQCIs),
+		.enabledLayerCount = 0, .ppEnabledLayerNames = nullptr, //!< デバイスでレイヤーの有効化は非推奨 (Device layer is deprecated)
+		.enabledExtensionCount = static_cast<uint32_t>(size(DeviceExtensions)), .ppEnabledExtensionNames = data(DeviceExtensions),
+		.pEnabledFeatures = &PDF
 	};
 	VERIFY_SUCCEEDED(vkCreateDevice(PD, &DCI, GetAllocationCallbacks(), &Device));
 
@@ -1532,10 +1515,10 @@ void VK::AllocateDeviceMemory()
 				assert(HeapSize < PDMP.memoryHeaps[HeapIndex].size && "");
 				if (VK_NULL_HANDLE == DeviceMemories[HeapIndex]) {
 					const VkMemoryAllocateInfo MAI = {
-						VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-						nullptr,
-						HeapSize,
-						i
+						.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+						.pNext = nullptr,
+						.allocationSize = HeapSize,
+						.memoryTypeIndex = i
 					};
 					Logf("\t\tAllocateDeviceMemory = %llu / %llu (HeapIndex = %d)\n", HeapSize, PDMP.memoryHeaps[HeapIndex].size, PDMP.memoryTypes[i].heapIndex);
 					VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, GetAllocationCallbacks(), &DeviceMemories[HeapIndex]));
@@ -1555,10 +1538,10 @@ void VK::AllocateDeviceMemory(VkDeviceMemory* DM, const VkMemoryRequirements& MR
 #endif
 
 	const VkMemoryAllocateInfo MAI = {
-		VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-		nullptr,
-		MR.size,
-		GetMemoryTypeIndex(GetCurrentPhysicalDeviceMemoryProperties(), MR.memoryTypeBits, MPF)
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		.pNext = nullptr,
+		.allocationSize = MR.size,
+		.memoryTypeIndex = GetMemoryTypeIndex(GetCurrentPhysicalDeviceMemoryProperties(), MR.memoryTypeBits, MPF)
 	};
 	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, GetAllocationCallbacks(), DM));
 }
@@ -1569,9 +1552,9 @@ void VK::AllocateDeviceMemory(VkDeviceMemory* DM, const VkMemoryRequirements& MR
 void VK::CreateFence(VkDevice Dev)
 {
 	const VkFenceCreateInfo FenceCreateInfo = {
-		VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-		nullptr,
-		VK_FENCE_CREATE_SIGNALED_BIT
+		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = VK_FENCE_CREATE_SIGNALED_BIT
 	};
 	VERIFY_SUCCEEDED(vkCreateFence(Dev, &FenceCreateInfo, GetAllocationCallbacks(), &Fence));
 	VERIFY_SUCCEEDED(vkCreateFence(Dev, &FenceCreateInfo, GetAllocationCallbacks(), &ComputeFence));
@@ -1584,9 +1567,9 @@ void VK::CreateFence(VkDevice Dev)
 void VK::CreateSemaphore(VkDevice Dev)
 {
 	const VkSemaphoreCreateInfo SemaphoreCreateInfo = {
-		VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-		nullptr,
-		0
+		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0
 	};
 
 	//!< プレゼント完了同期用 (Wait for presentation finish)
@@ -1606,17 +1589,17 @@ void VK::CreateSemaphore(VkDevice Dev)
 void VK::CreateCommandPool()
 {
 	const VkCommandPoolCreateInfo CPCI = {
-		VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-		nullptr,
-		VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-		GraphicsQueueFamilyIndex
+		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		.queueFamilyIndex = GraphicsQueueFamilyIndex
 	};
-	CommandPools.resize(1);
-	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), CommandPools.data()));
+	CommandPools.emplace_back(VkCommandPool());
+	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), data(CommandPools)));
 
 	//!< セカンダリ用に必ずしも別プールにする必要は無いが、ここでは別プールとしておく
 	SecondaryCommandPools.resize(1);
-	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), SecondaryCommandPools.data()));
+	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), data(SecondaryCommandPools)));
 
 	//!< コンピュート用 : キューファミリが異なる場合は、別のコマンドプールとして用意する必要がある		
 	//	const VkCommandPoolCreateInfo CPCI = {
@@ -1634,31 +1617,31 @@ void VK::CreateCommandPool()
 //!< ここではデフォルト実装として、プライマリ、セカンダリ共にスワップチェイン数分用意することとする
 void VK::AllocateCommandBuffer()
 {
-	const auto SCCount = static_cast<uint32_t>(SwapchainImages.size());
+	const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
 	{
 		assert(!empty(CommandPools) && "");
 
-		const auto PrevCount = CommandBuffers.size();
+		const auto PrevCount = size(CommandBuffers);
 		CommandBuffers.resize(PrevCount + SCCount);
 		const VkCommandBufferAllocateInfo CBAI = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			nullptr,
-			CommandPools[0],
-			VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-			SCCount
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			.pNext = nullptr,
+			.commandPool = CommandPools[0],
+			.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+			.commandBufferCount = SCCount
 		};
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &CommandBuffers[PrevCount]));
 	}
 	{
 		assert(!empty(SecondaryCommandPools) && "");
-		const auto PrevCount = SecondaryCommandBuffers.size();
+		const auto PrevCount = size(SecondaryCommandBuffers);
 		SecondaryCommandBuffers.resize(PrevCount + SCCount);
 		const VkCommandBufferAllocateInfo CBAI = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			nullptr,
-			SecondaryCommandPools[0],
-			VK_COMMAND_BUFFER_LEVEL_SECONDARY,
-			SCCount
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			.pNext = nullptr,
+			.commandPool = SecondaryCommandPools[0],
+			.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+			.commandBufferCount = SCCount
 		};
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &SecondaryCommandBuffers[PrevCount]));
 	}
@@ -1671,16 +1654,16 @@ VkSurfaceFormatKHR VK::SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Sfc
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PD, Sfc, &Count, nullptr));
 	assert(Count && "Surface format count is zero");
 	std::vector<VkSurfaceFormatKHR> SFs(Count);
-	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PD, Sfc, &Count, SFs.data()));
+	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceFormatsKHR(PD, Sfc, &Count, data(SFs)));
 
 	//!< ここでは最初に見つかった UNDEFINED でないものを選択している (Select first format but UNDEFINED here)
 	const auto SelectedIndex = [&]() {
 		//!< 要素が 1 つのみで UNDEFINED の場合、制限は無く好きなものを選択できる (If there is only 1 element and which is UNDEFINED, we can choose any)
-		if (1 == SFs.size() && VK_FORMAT_UNDEFINED == SFs[0].format) {
+		if (1 == size(SFs) && VK_FORMAT_UNDEFINED == SFs[0].format) {
 			return -1;
 		}
 
-		for (auto i = 0; i < SFs.size(); ++i) {
+		for (auto i = 0; i < size(SFs); ++i) {
 #ifdef USE_HDR
 			switch (SFs[i].colorSpace)
 			{
@@ -1713,7 +1696,7 @@ VkSurfaceFormatKHR VK::SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Sfc
 
 	//!< ColorSpace はハードウェア上でのカラーコンポーネントの表現(リニア、ノンリニア、エンコード、デコード等)
 	Log("\t\tFormats\n");
-	for (auto i = 0; i < SFs.size(); ++i) {
+	for (auto i = 0; i < size(SFs); ++i) {
 		Log("\t\t\t");
 		if (i == SelectedIndex) {
 			Log("->");
@@ -1732,7 +1715,7 @@ VkExtent2D VK::SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& Cap, const ui
 	if (0xffffffff == Cap.currentExtent.width) {
 		//!< 0xffffffff の場合はスワップチェインイメージサイズがウインドウサイズを決定することになる (If 0xffffffff, size of swapchain image determines the size of the window)
 		//!< (クランプした)引数のWidth, Heightを使用する (In this case, use argument (clamped) Width and Heigt) 
-		return VkExtent2D({ (std::clamp)(Width, Cap.maxImageExtent.width, Cap.minImageExtent.width), (std::clamp)(Height, Cap.minImageExtent.height, Cap.minImageExtent.height) });
+		return VkExtent2D({ .width = (std::clamp)(Width, Cap.maxImageExtent.width, Cap.minImageExtent.width), .height = (std::clamp)(Height, Cap.minImageExtent.height, Cap.minImageExtent.height) });
 	}
 	else {
 		//!< そうでない場合はcurrentExtentを使用する (Otherwise, use currentExtent)
@@ -1745,7 +1728,7 @@ VkPresentModeKHR VK::SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR 
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PD, Sfc, &Count, nullptr));
 	assert(Count && "Present mode count is zero");
 	std::vector<VkPresentModeKHR> PMs(Count);
-	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PD, Sfc, &Count, PMs.data()));
+	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfacePresentModesKHR(PD, Sfc, &Count, data(PMs)));
 
 	//!< 可能なら VK_PRESENT_MODE_MAILBOX_KHR を選択、そうでなければ VK_PRESENT_MODE_FIFO_KHR を選択
 	/**
@@ -1878,8 +1861,8 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 	//!< (ただし VK_SHARING_MODE_CONCURRENT にするとパフォーマンスが落ちる場合がある)
 	std::vector<uint32_t> QueueFamilyIndices;
 	if (GraphicsQueueFamilyIndex != PresentQueueFamilyIndex) {
-		QueueFamilyIndices.push_back(GraphicsQueueFamilyIndex);
-		QueueFamilyIndices.push_back(PresentQueueFamilyIndex);
+		QueueFamilyIndices.emplace_back(GraphicsQueueFamilyIndex);
+		QueueFamilyIndices.emplace_back(PresentQueueFamilyIndex);
 	}
 
 	//!< サーフェスを回転、反転等させるかどうか (Rotate, mirror surface or not)
@@ -1891,40 +1874,42 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 	//!< 既存のは後で開放するので OldSwapchain に覚えておく (セッティングを変更してスワップチェインを再作成する場合等に備える)
 	auto OldSwapchain = Swapchain;
 	const VkSwapchainCreateInfoKHR SCI = {
-		VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-		nullptr,
-		0,
-		Sfc,
-		ImageCount,
-		SurfaceFormat.format, SurfaceFormat.colorSpace,
-		SurfaceExtent2D,
-		ImageArrayLayers,
-		IUF,
-		empty(QueueFamilyIndices) ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT, static_cast<uint32_t>(size(QueueFamilyIndices)), data(QueueFamilyIndices),
-		SurfaceTransform,
-		VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-		SurfacePresentMode,
-		VK_TRUE,
-		OldSwapchain
+		.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+		.pNext = nullptr,
+		.flags = 0,
+		.surface = Sfc,
+		.minImageCount = ImageCount,
+		.imageFormat = SurfaceFormat.format, .imageColorSpace = SurfaceFormat.colorSpace,
+		.imageExtent = SurfaceExtent2D,
+		.imageArrayLayers = ImageArrayLayers,
+		.imageUsage = IUF,
+		.imageSharingMode = empty(QueueFamilyIndices) ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT, 
+		.queueFamilyIndexCount = static_cast<uint32_t>(size(QueueFamilyIndices)), .pQueueFamilyIndices = data(QueueFamilyIndices),
+		.preTransform = SurfaceTransform,
+		.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+		.presentMode = SurfacePresentMode,
+		.clipped = VK_TRUE,
+		.oldSwapchain = OldSwapchain
 	};
 	VERIFY_SUCCEEDED(vkCreateSwapchainKHR(Device, &SCI, GetAllocationCallbacks(), &Swapchain));
 
 #ifdef USE_HDR
-	const std::array<VkSwapchainKHR, 1> SCs = { Swapchain };
-	const std::array<VkHdrMetadataEXT, 1> MDs = { {
-		VK_STRUCTURE_TYPE_HDR_METADATA_EXT,
-		nullptr,
-		{ 0.708f, 0.292f },		//!< Display Primary Red
-		{ 0.17f, 0.797f },		//!< Green
-		{ 0.131f, 0.046f },		//!< Blue
-		{ 0.3127f, 0.329f },	//!< White
-		1000.0f,				//!< Max Luminance
-		0.001f,					//!< Min Luminance
-		2000.0f,				//!< Max Content Light Level
-		500.0f					//!< Max Frame Average Light Level
-	} };
-	assert(SCs.size() == MDs.size() && "");
-	vkSetHdrMetadataEXT(Device, static_cast<uint32_t>(SCs.size()), SCs.data(), MDs.data());
+	const std::array SCs = { Swapchain };
+	const std::array MDs = { 
+		VkHdrMetadataEXT({
+			.sType = VK_STRUCTURE_TYPE_HDR_METADATA_EXT,
+			.pNext = nullptr,
+			.displayPrimaryRed = VkXYColorEXT({ .x = 0.708f, .y = 0.292f }), 
+			.displayPrimaryGreen = VkXYColorEXT({ .x = 0.17f, .y = 0.797f }),
+			.displayPrimaryBlue = VkXYColorEXT({ .x = 0.131f, .y = 0.046f }),
+			.whitePoint = VkXYColorEXT({ .x = 0.3127f, .y = 0.329f }),	
+			.maxLuminance = 1000.0f, .minLuminance = 0.001f,
+			.maxContentLightLevel = 2000.0f,
+			.maxFrameAverageLightLevel = 500.0f
+		})
+	};
+	assert(size(SCs) == size(MDs) && "");
+	vkSetHdrMetadataEXT(Device, static_cast<uint32_t>(size(SCs)), data(SCs), data(MDs));
 #endif
 
 	//!< (あれば)前のやつは破棄
@@ -1966,7 +1951,7 @@ void VK::GetSwapchainImage(VkDevice Dev, VkSwapchainKHR SC)
 	assert(Count && "Swapchain image count is zero");
 	SwapchainImages.clear();
 	SwapchainImages.resize(Count);
-	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Dev, SC, &Count, SwapchainImages.data()));
+	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Dev, SC, &Count, data(SwapchainImages)));
 
 	LOG_OK();
 }
@@ -1976,25 +1961,23 @@ void VK::GetSwapchainImage(VkDevice Dev, VkSwapchainKHR SC)
 void VK::InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorValue* CCV)
 {
 	const VkCommandBufferBeginInfo CBBI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-		nullptr
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+		.pInheritanceInfo = nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 		for (auto& i : SwapchainImages) {
 			if (nullptr == CCV) {
 				const VkImageMemoryBarrier ImageMemoryBarrier_UndefinedToPresent = {
-					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-					nullptr,
-					0,
-					VK_ACCESS_MEMORY_READ_BIT,
-					VK_IMAGE_LAYOUT_UNDEFINED, //!<「現在のレイアウト」または「UNDEFINED」を指定すること、イメージコンテンツを保持したい場合は「UNDEFINED」はダメ         
-					VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, //!< プレゼンテーション可能な VK_IMAGE_LAYOUT_PRESENT_SRC_KHR へ
-					PresentQueueFamilyIndex,
-					PresentQueueFamilyIndex,
-					i,
-					ImageSubresourceRange_Color
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = 0, .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+					//!<「現在のレイアウト」または「UNDEFINED」を指定すること、イメージコンテンツを保持したい場合は「UNDEFINED」はダメ、プレゼンテーション可能な VK_IMAGE_LAYOUT_PRESENT_SRC_KHR へ    
+					.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+					.srcQueueFamilyIndex = PresentQueueFamilyIndex, .dstQueueFamilyIndex = PresentQueueFamilyIndex,
+					.image = i,
+					.subresourceRange = ImageSubresourceRange_Color
 				};
 				vkCmdPipelineBarrier(CB,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT/*VK_PIPELINE_STAGE_TRANSFER_BIT*/,
@@ -2006,16 +1989,14 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorVa
 			else {
 				//!< クリアカラーが指定されている場合 (If clear color is specified)
 				const VkImageMemoryBarrier ImageMemoryBarrier_UndefinedToTransfer = {
-					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-					nullptr,
-					0,
-					VK_ACCESS_TRANSFER_WRITE_BIT,
-					VK_IMAGE_LAYOUT_UNDEFINED, //!<「現在のレイアウト」または「UNDEFINED」を指定すること        
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, //!< デスティネーションへ
-					PresentQueueFamilyIndex,
-					PresentQueueFamilyIndex,
-					i,
-					ImageSubresourceRange_Color
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = 0, .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+					//!<「現在のレイアウト」または「UNDEFINED」を指定すること、デスティネーションへ
+					.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					.srcQueueFamilyIndex = PresentQueueFamilyIndex, .dstQueueFamilyIndex = PresentQueueFamilyIndex,
+					.image = i,
+					.subresourceRange = ImageSubresourceRange_Color
 				};
 				vkCmdPipelineBarrier(CB,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -2027,16 +2008,14 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorVa
 					vkCmdClearColorImage(CB, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, CCV, 1, &ImageSubresourceRange_Color);
 				}
 				const VkImageMemoryBarrier ImageMemoryBarrier_TransferToPresent = {
-					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-					nullptr,
-					VK_ACCESS_TRANSFER_WRITE_BIT,
-					VK_ACCESS_MEMORY_READ_BIT,
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, //!< デスティネーションから
-					VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, //!< プレゼンテーション可能な VK_IMAGE_LAYOUT_PRESENT_SRC_KHR へ
-					PresentQueueFamilyIndex,
-					PresentQueueFamilyIndex,
-					i,
-					ImageSubresourceRange_Color
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT, .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+					//!< デスティネーションから、プレゼンテーション可能な VK_IMAGE_LAYOUT_PRESENT_SRC_KHR へ
+					.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+					.srcQueueFamilyIndex = PresentQueueFamilyIndex, .dstQueueFamilyIndex = PresentQueueFamilyIndex,
+					.image = i,
+					.subresourceRange = ImageSubresourceRange_Color
 				};
 				vkCmdPipelineBarrier(CB,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
@@ -2048,16 +2027,21 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorVa
 		}
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 
-	const std::array<VkSubmitInfo, 1> SIs = {
-		{
-			VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			nullptr,
-			0, nullptr, nullptr,
-			1,  &CB,
-			0, nullptr
-		}
+	const std::array<VkSemaphore, 0> WaitSems = {};
+	const std::array<VkPipelineStageFlags, 0> StageFlags = {};
+	assert(size(WaitSems) == size(StageFlags) && "");
+	const std::array CBs = { CB };
+	const std::array<VkSemaphore, 0> SignalSems = {};
+	const std::array SIs = {
+		VkSubmitInfo({
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.pNext = nullptr,
+			.waitSemaphoreCount = static_cast<uint32_t>(size(WaitSems)), .pWaitSemaphores = data(WaitSems), .pWaitDstStageMask = data(StageFlags),
+			.commandBufferCount = static_cast<uint32_t>(size(CBs)), .pCommandBuffers = data(CBs),
+			.signalSemaphoreCount = static_cast<uint32_t>(size(SignalSems)), .pSignalSemaphores = data(SignalSems)
+		})
 	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), VK_NULL_HANDLE));
+	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(size(SIs)), data(SIs), VK_NULL_HANDLE));
 
 	//!< キューにサブミットされたコマンドが完了するまでブロッキング (フェンスを用いないブロッキング方法)
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
@@ -2071,7 +2055,7 @@ void VK::CreateSwapchainImageView()
 		VkImageView IV;
 		CreateImageView(&IV, i, VK_IMAGE_VIEW_TYPE_2D, ColorFormat, ComponentMapping_Identity, ImageSubresourceRange_Color);
 		
-		SwapchainImageViews.push_back(IV);
+		SwapchainImageViews.emplace_back(IV);
 	}
 
 	LOG_OK();
@@ -2127,22 +2111,22 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 {
 	//!< Vulkan はTLが原点(DirectX、OpenGLはBLが原点)
 	Viewports = {
-		{
+		VkViewport({
 			//!< VKではデフォルトで「Yが下」を向くが、高さに負の値を指定すると「Yが上」を向きDXと同様になる (In VK, by specifying negative height, Y become up. same as DX)
 			//!< 通常基点は「左上」を指定するが、高さに負の値を指定する場合は「左下」を指定すること (When negative height, specify left bottom as base, otherwise left up)
 #ifdef USE_VIEWPORT_Y_UP
-			0.0f, Height,
-			Width, -Height,
+			.x = 0.0f, .y = Height,
+			.width = Width, .height = -Height,
 #else
-			0.0f, 0.0f,
-			Width, Height,
+			.x = 0.0f, .y = 0.0f,
+			.width = Width, .height = Height,
 #endif
-			MinDepth, MaxDepth
-		}
+			.minDepth = MinDepth, .maxDepth = MaxDepth
+		})
 	};
 	//!< offset, extentで指定 (left, top, right, bottomで指定のDXとは異なるので注意)
 	ScissorRects = {
-		{ { 0, 0 }, { static_cast<uint32_t>(Width), static_cast<uint32_t>(Height) } },
+		VkRect2D({ .offset = VkOffset2D({ .x = 0, .y = 0 }), .extent = VkExtent2D({ .width = static_cast<uint32_t>(Width), .height = static_cast<uint32_t>(Height) }) }),
 	};
 
 	LOG_OK();
@@ -2172,18 +2156,17 @@ void VK::SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkComm
 
 	//!< HVBからDLBへのコピーコマンドを発行 (Submit HVB to DLB copy command)
 	CmdCopyBufferToBuffer(CB, StagingBuffer, Buf, Access, PipeStg, Size);
-	const std::array<VkCommandBuffer, 1> CBs = { CB };
-	const std::array<VkSubmitInfo, 1> SIs = {
-		{
-			VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			nullptr,
-			0, nullptr,
-			nullptr,
-			static_cast<uint32_t>(CBs.size()), CBs.data(),
-			0, nullptr
-		}
+	const std::array CBs = { CB };
+	const std::array SIs = {
+		VkSubmitInfo({
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.pNext = nullptr,
+			.waitSemaphoreCount = 0, .pWaitSemaphores = nullptr, .pWaitDstStageMask = nullptr,
+			.commandBufferCount = static_cast<uint32_t>(size(CBs)), .pCommandBuffers = data(CBs),
+			.signalSemaphoreCount = 0, .pSignalSemaphores = nullptr
+		})
 	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(Queue, static_cast<uint32_t>(SIs.size()), SIs.data(), VK_NULL_HANDLE));
+	VERIFY_SUCCEEDED(vkQueueSubmit(Queue, static_cast<uint32_t>(size(SIs)), data(SIs), VK_NULL_HANDLE));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
 #ifdef USE_SUBALLOC
 	//!< サブアロケートしたオフセット分戻す (Revert suballocated memory offset)
@@ -2257,13 +2240,13 @@ void VK::CreateUniformTexelBuffer()
 	VkBufferView View;
 	const VkFormat Format = VK_FORMAT_R8G8B8A8_UINT;
 	const VkBufferViewCreateInfo BVCI = {
-			VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
-			nullptr,
-			0,
-			Buffer,
-			Format,
-			0,
-			VK_WHOLE_SIZE
+		VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
+		nullptr,
+		0,
+		Buffer,
+		Format,
+		0,
+		VK_WHOLE_SIZE
 	};
 	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BVCI, GetAllocationCallbacks(), &View)); 
 
@@ -2320,10 +2303,10 @@ void VK::CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const VkDescripto
 	const std::vector<VkDescriptorSetLayoutBinding> DSLBs(cbegin(il_DSLBs), cend(il_DSLBs));
 
 	const VkDescriptorSetLayoutCreateInfo DSLCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		nullptr,
-		Flags,
-		static_cast<uint32_t>(size(DSLBs)), data(DSLBs)
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = Flags,
+		.bindingCount = static_cast<uint32_t>(size(DSLBs)), .pBindings = data(DSLBs)
 	};
 	VERIFY_SUCCEEDED(vkCreateDescriptorSetLayout(Device, &DSLCI, GetAllocationCallbacks(), &DSL));
 
@@ -2342,11 +2325,11 @@ void VK::CreatePipelineLayout(VkPipelineLayout& PL, const std::initializer_list<
 	const std::vector<VkPushConstantRange> PCRs(cbegin(il_PCRs), cend(il_PCRs));
 
 	const VkPipelineLayoutCreateInfo PLCI = {
-		VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(size(DSLs)), data(DSLs),
-		static_cast<uint32_t>(size(PCRs)), data(PCRs)
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.setLayoutCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs),
+		.pushConstantRangeCount = static_cast<uint32_t>(size(PCRs)), .pPushConstantRanges = data(PCRs)
 	};
 	VERIFY_SUCCEEDED(vkCreatePipelineLayout(Device, &PLCI, GetAllocationCallbacks(), &PL));
 
@@ -2366,11 +2349,11 @@ void VK::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreate
 	}
 
 	const VkDescriptorPoolCreateInfo DPCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-		nullptr,
-		Flags,
-		MaxSets,
-		static_cast<uint32_t>(size(DPSs)), data(DPSs)
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = Flags,
+		.maxSets = MaxSets,
+		.poolSizeCount = static_cast<uint32_t>(size(DPSs)), .pPoolSizes = data(DPSs)
 	};
 	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DP));
 }
@@ -2380,14 +2363,14 @@ void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const s
 	const std::vector<VkDescriptorUpdateTemplateEntry> DUTEs(cbegin(il_DUTEs), cend(il_DUTEs));
 
 	const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
-		VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(size(DUTEs)), data(DUTEs),
-		VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
-		DSL,
-		VK_PIPELINE_BIND_POINT_GRAPHICS, 
-		VK_NULL_HANDLE, 0 //!< VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET(VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR以外)を指定しているので無視される
+		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.descriptorUpdateEntryCount = static_cast<uint32_t>(size(DUTEs)), .pDescriptorUpdateEntries = data(DUTEs),
+		.templateType = VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
+		.descriptorSetLayout = DSL,
+		.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS, 
+		.pipelineLayout = VK_NULL_HANDLE, .set = 0 //!< VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET(VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR以外)を指定しているので無視される
 	};
 	VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DUT));
 }
@@ -2449,12 +2432,12 @@ void VK::CreateRenderPass(VkRenderPass& RP, const std::initializer_list<VkAttach
 	const std::vector<VkSubpassDescription> SDs(cbegin(il_SDs), cend(il_SDs));
 	const std::vector<VkSubpassDependency> SDeps(cbegin(il_Depends), cend(il_Depends));
 	const VkRenderPassCreateInfo RPCI = {
-		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(size(ADs)), data(ADs),
-		static_cast<uint32_t>(size(SDs)), data(SDs),
-		static_cast<uint32_t>(size(SDeps)), data(SDeps)
+		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.attachmentCount = static_cast<uint32_t>(size(ADs)), .pAttachments = data(ADs),
+		.subpassCount = static_cast<uint32_t>(size(SDs)), .pSubpasses = data(SDs),
+		.dependencyCount = static_cast<uint32_t>(size(SDeps)), .pDependencies = data(SDeps)
 	};
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
 }
@@ -2468,80 +2451,78 @@ void VK::CreateRenderPass(const VkAttachmentLoadOp LoadOp, const bool UseDepth)
 
 	//!< インプットアタッチメント : 読み取り用
 	const std::array<VkAttachmentReference, 0> InputARs = {};
-	const std::array<VkAttachmentReference, 1> ColorARs = { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, };
+	const std::array ColorARs = { VkAttachmentReference({ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
 	//!< リゾルブアタッチメント : マルチサンプル → シングルサンプルへリゾルブするような場合
-	const std::array<VkAttachmentReference, 1> ResolveARs = { { VK_ATTACHMENT_UNUSED, VK_IMAGE_LAYOUT_UNDEFINED }, };
-	assert(ColorARs.size() == ResolveARs.size() && "");
+	const std::array ResolveARs = { VkAttachmentReference({ .attachment = VK_ATTACHMENT_UNUSED, .layout = VK_IMAGE_LAYOUT_UNDEFINED }), };
+	assert(size(ColorARs) == size(ResolveARs) && "");
 	//!< プリザーブアタッチメント : サブパス全体において保持しなくてはならないコンテンツのインデックス
 	const std::array<uint32_t, 0> Preserve = {};
 
 	if (false == UseDepth) {
 		CreateRenderPass(RenderPasses.back(), {
-			//!< アタッチメント
-			{
-				0,
-				ColorFormat,
-				VK_SAMPLE_COUNT_1_BIT,
-				LoadOp, VK_ATTACHMENT_STORE_OP_STORE,								//!< 「開始時にLoadOp」「終了時に保存」
-				VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,	//!< ステンシルのロードストア : (ここでは)開始時、終了時ともに「使用しない」
-				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR			//!< レンダーパスのレイアウト : 「開始時未定義」「終了時プレゼンテーションソース」
-			},
+			VkAttachmentDescription({
+				.flags = 0,
+				.format = ColorFormat,
+				.samples = VK_SAMPLE_COUNT_1_BIT,
+				.loadOp = LoadOp, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,												//!< 「開始時にLoadOp」「終了時に保存」
+				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,	//!< ステンシルのロードストア : (ここでは)開始時、終了時ともに「使用しない」
+				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR				//!< レンダーパスのレイアウト : 「開始時未定義」「終了時プレゼンテーションソース」
+			}),
 			}, {
-				//!< サブパス
-				{
-					0,
-					VK_PIPELINE_BIND_POINT_GRAPHICS,
-					static_cast<uint32_t>(InputARs.size()), InputARs.data(), 						//!< インプットアタッチメント(読み取り用) シェーダ内で次のように使用 layout (input_attachment_index=0, set=0, binding=0) uniform XXX YYY;
-					static_cast<uint32_t>(ColorARs.size()), ColorARs.data(), ResolveARs.data(),		//!< カラーアタッチメント(書き込み用)、リゾルブアタッチメント(マルチサンプルのリゾルブ)
-					nullptr,																		//!< デプスアタッチメント(書き込み用)
-					static_cast<uint32_t>(Preserve.size()), Preserve.data()							//!< プリザーブアタッチメント(サブパス全体において保持するコンテンツのインデックス)
-				},
+				VkSubpassDescription({
+					.flags = 0,
+					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+					.inputAttachmentCount = static_cast<uint32_t>(size(InputARs)), .pInputAttachments = data(InputARs), 										//!< インプットアタッチメント(読み取り用) シェーダ内で次のように使用 layout (input_attachment_index=0, set=0, binding=0) uniform XXX YYY;
+					.colorAttachmentCount = static_cast<uint32_t>(size(ColorARs)), .pColorAttachments= data(ColorARs), .pResolveAttachments = data(ResolveARs),	//!< カラーアタッチメント(書き込み用)、リゾルブアタッチメント(マルチサンプルのリゾルブ)
+					.pDepthStencilAttachment = nullptr,																											//!< デプスアタッチメント(書き込み用)
+					.preserveAttachmentCount = static_cast<uint32_t>(size(Preserve)), .pPreserveAttachments = data(Preserve)									//!< プリザーブアタッチメント(サブパス全体において保持するコンテンツのインデックス)
+				}),
 			}, {
 	#if 1
 				//!< サブパス依存 (ここでは、書かなくても良いが、敢えて書く場合)
-				{
-					VK_SUBPASS_EXTERNAL, 0,																	//!< サブパス外からサブパス0へ
-					VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< パイプラインの最終ステージからカラー出力ステージへ
-					VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,						//!< 読み込みからカラー書き込みへ
-					VK_DEPENDENCY_BY_REGION_BIT,															//!< 同じメモリ領域に対する書き込みが完了してから読み込み (指定しない場合は自前で書き込み完了を管理)
-				},
-				{
-					0, VK_SUBPASS_EXTERNAL,																	//!< サブパス0からサブパス外へ
-					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,	//!< カラー出力ステージからパイプラインの最終ステージへ
-					VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,						//!< カラー書き込みから読み込みへ
-					VK_DEPENDENCY_BY_REGION_BIT,
-				},
+				VkSubpassDependency({
+					.srcSubpass = VK_SUBPASS_EXTERNAL, .dstSubpass = 0,																		//!< サブパス外からサブパス0へ
+					.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< パイプラインの最終ステージからカラー出力ステージへ
+					.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT, .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,						//!< 読み込みからカラー書き込みへ
+					.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,																			//!< 同じメモリ領域に対する書き込みが完了してから読み込み (指定しない場合は自前で書き込み完了を管理)
+				}),
+				VkSubpassDependency({
+					.srcSubpass = 0, .dstSubpass = VK_SUBPASS_EXTERNAL,																		//!< サブパス0からサブパス外へ
+					.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, .dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,	//!< カラー出力ステージからパイプラインの最終ステージへ
+					.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,						//!< カラー書き込みから読み込みへ
+					.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+				}),
 	#endif
 			});
 	}
 	else {
-		const VkAttachmentReference DepthAttach = { 1, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+		const VkAttachmentReference DepthAttach = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 		CreateRenderPass(RenderPasses.back(), {
-				{
-					0,
-					ColorFormat,
-					VK_SAMPLE_COUNT_1_BIT,
-					LoadOp, VK_ATTACHMENT_STORE_OP_STORE,								
-					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,	
-					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR			
-				},
-				{
-					0,
-					DepthFormat,
-					VK_SAMPLE_COUNT_1_BIT,
-					VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-				},
+				VkAttachmentDescription({
+					.flags = 0,
+					.format = ColorFormat,
+				 	.samples =  VK_SAMPLE_COUNT_1_BIT,
+					.loadOp = LoadOp, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+				}),
+				VkAttachmentDescription({
+					.flags = 0,
+					.format = DepthFormat,
+					.samples = VK_SAMPLE_COUNT_1_BIT,
+					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+				}),
 			}, {
-				{
-					0,
-					VK_PIPELINE_BIND_POINT_GRAPHICS,
-					static_cast<uint32_t>(InputARs.size()), InputARs.data(), 						
-					static_cast<uint32_t>(ColorARs.size()), ColorARs.data(), ResolveARs.data(),		
-					&DepthAttach,																	//!< デプスアタッチメント(書き込み用)
-					static_cast<uint32_t>(Preserve.size()), Preserve.data()							
-				},
+				VkSubpassDescription({
+					.flags = 0,
+					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+					.inputAttachmentCount = static_cast<uint32_t>(size(InputARs)), .pInputAttachments = data(InputARs),
+					.colorAttachmentCount = static_cast<uint32_t>(size(ColorARs)), .pColorAttachments = data(ColorARs), .pResolveAttachments = data(ResolveARs),
+					.pDepthStencilAttachment = &DepthAttach,																	//!< デプスアタッチメント(書き込み用)
+					.preserveAttachmentCount = static_cast<uint32_t>(size(Preserve)), .pPreserveAttachments = data(Preserve)
+				}),
 			}, {
 			});
 	}
@@ -2552,13 +2533,13 @@ void VK::CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint3
 	const std::vector<VkImageView> IVs(cbegin(il_IVs), cend(il_IVs));
 
 	const VkFramebufferCreateInfo FCI = {
-		VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-		nullptr,
-		0,
-		RP, //!< ここで指定するレンダーパスは互換性のあるものなら可
-		static_cast<uint32_t>(size(IVs)), data(IVs),
-		Width, Height,
-		Layers
+		.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.renderPass = RP, //!< ここで指定するレンダーパスは互換性のあるものなら可
+		.attachmentCount = static_cast<uint32_t>(size(IVs)), .pAttachments = data(IVs),
+		.width = Width, .height = Height,
+		.layers = Layers
 	};
 	VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FCI, GetAllocationCallbacks(), &FB));
 }
@@ -2581,22 +2562,31 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 	std::ifstream In(Path.c_str(), std::ios::in | std::ios::binary);
 	if (!In.fail()) {
 		In.seekg(0, std::ios_base::end);
-		const auto Size = In.tellg();
-		In.seekg(0, std::ios_base::beg);
-
-		if (Size) {
-			auto Data = new char[Size];
-			In.read(Data, Size);
-
+		const auto CodeSize = In.tellg();
+		if (CodeSize) {
+			In.seekg(0, std::ios_base::beg);
+#if 0
+			auto Code = new char[CodeSize];
+			In.read(Code, CodeSize);
 			const VkShaderModuleCreateInfo SMCI = {
-				VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-				nullptr,
-				0,
-				static_cast<size_t>(Size), reinterpret_cast<uint32_t*>(Data)
+				.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.codeSize = static_cast<size_t>(CodeSize), .pCode = reinterpret_cast<uint32_t*>(Code)
 			};
 			VERIFY_SUCCEEDED(vkCreateShaderModule(Device, &SMCI, GetAllocationCallbacks(), &ShaderModule));
-
-			delete[] Data;
+			delete[] Code;
+#else
+			std::vector<std::byte> Code(CodeSize);
+			In.read(reinterpret_cast<char*>(data(Code)), CodeSize);
+			const VkShaderModuleCreateInfo SMCI = {
+				.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.codeSize = static_cast<size_t>(CodeSize), .pCode = reinterpret_cast<uint32_t*>(data(Code))
+			};
+			VERIFY_SUCCEEDED(vkCreateShaderModule(Device, &SMCI, GetAllocationCallbacks(), &ShaderModule));
+#endif
 		}
 		In.close();
 	}
@@ -2615,20 +2605,20 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 	PERFORMANCE_COUNTER();
 
 	std::vector<VkPipelineShaderStageCreateInfo> PSSCIs;
-	if (nullptr != VS) { PSSCIs.push_back(*VS); }
-	if (nullptr != FS) { PSSCIs.push_back(*FS); }
-	if (nullptr != TES) { PSSCIs.push_back(*TES); }
-	if (nullptr != TCS) { PSSCIs.push_back(*TCS); }
-	if (nullptr != GS) { PSSCIs.push_back(*GS); }
+	if (nullptr != VS) { PSSCIs.emplace_back(*VS); }
+	if (nullptr != FS) { PSSCIs.emplace_back(*FS); }
+	if (nullptr != TES) { PSSCIs.emplace_back(*TES); }
+	if (nullptr != TCS) { PSSCIs.emplace_back(*TCS); }
+	if (nullptr != GS) { PSSCIs.emplace_back(*GS); }
 	assert(!empty(PSSCIs) && "");
 
 	//!< バーテックスインプット (VertexInput)
 	const VkPipelineVertexInputStateCreateInfo PVISCI = {
-		VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(VIBDs.size()), VIBDs.data(),
-		static_cast<uint32_t>(VIADs.size()), VIADs.data()
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.vertexBindingDescriptionCount = static_cast<uint32_t>(size(VIBDs)), .pVertexBindingDescriptions = data(VIBDs),
+		.vertexAttributeDescriptionCount = static_cast<uint32_t>(size(VIADs)), .pVertexAttributeDescriptions = data(VIADs)
 	};
 
 	//!< DXでは「トポロジ」と「パッチコントロールポイント」の指定はIASetPrimitiveTopology()の引数としてコマンドリストへ指定する、VKとは結構異なるので注意
@@ -2638,11 +2628,11 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 
 	//!< インプットアセンブリ (InputAssembly)
 	const VkPipelineInputAssemblyStateCreateInfo PIASCI = {
-		VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		Topology,
-		VK_FALSE
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.topology = Topology,
+		.primitiveRestartEnable = VK_FALSE
 	};
 	//!< WITH_ADJACENCY 系使用時には デバイスフィーチャー geometryShader が有効であること
 	//assert((
@@ -2659,21 +2649,21 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 	//!< テセレーション (Tessellation)
 	assert((Topology != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST || PatchControlPoints != 0) && "");
 	const VkPipelineTessellationStateCreateInfo PTSCI = {
-		VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		PatchControlPoints //!< パッチコントロールポイント
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.patchControlPoints = PatchControlPoints //!< パッチコントロールポイント
 	};
 
 	//!< ビューポート (Viewport)
 	//!< VkDynamicState を使用するため、ここではビューポート(シザー)の個数のみ指定している (To use VkDynamicState, specify only count of viewport(scissor) here)
 	//!< 後に vkCmdSetViewport(), vkCmdSetScissor() で指定する (Use vkCmdSetViewport(), vkCmdSetScissor() later)
 	const VkPipelineViewportStateCreateInfo PVSCI = {
-		VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		1, nullptr, //!< Viewport
-		1, nullptr	//!< Scissor
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.viewportCount = 1, .pViewports = nullptr,
+		.scissorCount = 1, .pScissors = nullptr
 	};
 	//!< 2つ以上のビューポートを使用するにはデバイスフィーチャー multiViewport が有効であること (If use 2 or more viewport device feature multiViewport must be enabled)
 	//!< ビューポートのインデックスはジオメトリシェーダで指定する (Viewport index is specified in geometry shader)
@@ -2686,15 +2676,15 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 	assert(PRSCI.lineWidth <= 1.0f&& "");
 
 	//!< マルチサンプル (Multisample)
-	const VkSampleMask SM = 0xffffffff; //!< 0xffffffff 指定の場合は nullptr でもよい
+	const VkSampleMask SM = 0xffffffff; //!< 0xffffffff を指定する場合は nullptr でもよい
 	const VkPipelineMultisampleStateCreateInfo PMSCI = {
-		VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_SAMPLE_COUNT_1_BIT,
-		VK_FALSE, 0.0f,
-		&SM,
-		VK_FALSE, VK_FALSE
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+		.sampleShadingEnable = VK_FALSE, .minSampleShading = 0.0f,
+		.pSampleMask = &SM,
+		.alphaToCoverageEnable = VK_FALSE, .alphaToOneEnable = VK_FALSE
 	};
 	//assert((PMSCI.sampleShadingEnable == VK_FALSE || PDF.sampleRateShading) && "");
 	assert((PMSCI.minSampleShading >= 0.0f && PMSCI.minSampleShading <= 1.0f) && "");
@@ -2710,25 +2700,25 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 	//	}
 	//}
 	const VkPipelineColorBlendStateCreateInfo PCBSCI = {
-		VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_FALSE, VK_LOGIC_OP_COPY, //!< ブレンド時に論理オペレーションを行う (ブレンドは無効になる) (整数型アタッチメントに対してのみ)
-		static_cast<uint32_t>(PCBASs.size()), PCBASs.data(),
-		{ 1.0f, 1.0f, 1.0f, 1.0f }
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.logicOpEnable = VK_FALSE, .logicOp = VK_LOGIC_OP_COPY, //!< ブレンド時に論理オペレーションを行う (ブレンドは無効になる) (整数型アタッチメントに対してのみ)
+		.attachmentCount = static_cast<uint32_t>(size(PCBASs)), .pAttachments = data(PCBASs),
+		.blendConstants = { 1.0f, 1.0f, 1.0f, 1.0f }
 	};
 
 	//!< ダイナミックステート (DynamicState)
-	const std::array<VkDynamicState, 2> DSs = {
+	const std::array DSs = {
 		VK_DYNAMIC_STATE_VIEWPORT,
 		VK_DYNAMIC_STATE_SCISSOR,
 		//VK_DYNAMIC_STATE_DEPTH_BIAS,
 	};
 	const VkPipelineDynamicStateCreateInfo PDSCI = {
-		VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		static_cast<uint32_t>(DSs.size()), DSs.data()
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.dynamicStateCount = static_cast<uint32_t>(size(DSs)), .pDynamicStates = data(DSs)
 	};
 
 	/**
@@ -2739,34 +2729,34 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 	・basePipelineHandle ... 既に親とするパイプライン(ハンドル)が存在する場合に指定
 	・basePipelineIndex ... 同配列内で親パイプラインも同時に作成する場合、配列内での親パイプラインの添字(親の添字の方が若い値であること)
 	*/
-	const std::array<VkGraphicsPipelineCreateInfo, 1> GPCIs = {
-		{
-			VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-			nullptr,
+	const std::array GPCIs = {
+		VkGraphicsPipelineCreateInfo({
+			.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+			.pNext = nullptr,
 #ifdef _DEBUG
-			VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+			.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
 #else
-			0,
+			.flags = 0,
 #endif
-			static_cast<uint32_t>(PSSCIs.size()), PSSCIs.data(),
-			&PVISCI,
-			&PIASCI,
-			&PTSCI,
-			&PVSCI,
-			&PRSCI,
-			&PMSCI,
-			&PDSSCI,
-			&PCBSCI,
-			&PDSCI,
-			PLL,
-			RP, 0, //!< 指定したレンダーパス限定ではなく、互換性のある他のレンダーパスでも使用可能
-			VK_NULL_HANDLE, -1 //!< basePipelineHandle, basePipelineIndex
-		}
+			.stageCount = static_cast<uint32_t>(size(PSSCIs)), .pStages = data(PSSCIs),
+			.pVertexInputState = &PVISCI,
+			.pInputAssemblyState = &PIASCI,
+			.pTessellationState = &PTSCI,
+			.pViewportState = &PVSCI,
+			.pRasterizationState = &PRSCI,
+			.pMultisampleState = &PMSCI,
+			.pDepthStencilState = &PDSSCI,
+			.pColorBlendState = &PCBSCI,
+			.pDynamicState = &PDSCI,
+			.layout = PLL,
+			.renderPass = RP, .subpass = 0, //!< 指定したレンダーパス限定ではなく、互換性のある他のレンダーパスでも使用可能
+			.basePipelineHandle = VK_NULL_HANDLE, .basePipelineIndex = -1
+		})
 	};
 	//!< VKでは1コールで複数のパイプラインを作成することもできるが、DXに合わせて1つしか作らないことにしておく
 	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Dev,
 		PC,
-		static_cast<uint32_t>(GPCIs.size()), GPCIs.data(),
+		static_cast<uint32_t>(size(GPCIs)), data(GPCIs),
 		nullptr,//GetAllocationCallbacks(),
 		&PL));
 
@@ -2917,23 +2907,23 @@ void VK::ClearDepthStencil(const VkCommandBuffer CB, const VkImage Img, const Vk
 //!< Drawコール前に使用すると、「それなら VkAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR を使え」と Warnning が出るので注意
 void VK::ClearColorAttachment(const VkCommandBuffer CB, const VkClearColorValue& Color)
 {
-	const VkClearValue ClearValue = { Color };
-	const std::array<VkClearAttachment, 1> ClearAttachments = {
-		{
+	const VkClearValue ClearValue = { .color = Color };
+	const std::array ClearAttachments = {
+		VkClearAttachment({
 			VK_IMAGE_ASPECT_COLOR_BIT,
 			0, //!< カラーアタッチメントのインデックス #VK_TODO 現状決め打ち
 			ClearValue
-		},
+		}),
 	};
-	const std::array<VkClearRect, 1> ClearRects = {
-		{
+	const std::array ClearRects = {
+		VkClearRect({
 			ScissorRects[0],
 			0, 1 //!< 開始レイヤとレイヤ数 #VK_TODO 現状決め打ち
-		},
+		}),
 	};
 	vkCmdClearAttachments(CB,
-		static_cast<uint32_t>(ClearAttachments.size()), ClearAttachments.data(),
-		static_cast<uint32_t>(ClearRects.size()), ClearRects.data());
+		static_cast<uint32_t>(size(ClearAttachments)), data(ClearAttachments),
+		static_cast<uint32_t>(size(ClearRects)), data(ClearRects));
 }
 void VK::ClearDepthStencilAttachment(const VkCommandBuffer CB, const VkClearDepthStencilValue& DepthStencil)
 {
@@ -2954,8 +2944,8 @@ void VK::ClearDepthStencilAttachment(const VkCommandBuffer CB, const VkClearDept
 		},
 	};
 	vkCmdClearAttachments(CB,
-		static_cast<uint32_t>(ClearAttachments.size()), ClearAttachments.data(),
-		static_cast<uint32_t>(ClearRects.size()), ClearRects.data());
+		static_cast<uint32_t>(size(ClearAttachments)), data(ClearAttachments),
+		static_cast<uint32_t>(size(ClearRects)), data(ClearRects));
 }
 
 void VK::PopulateCommandBuffer(const size_t i)
@@ -2969,18 +2959,18 @@ void VK::PopulateCommandBuffer(const size_t i)
 	//!< * VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT	... セカンダリコマンドバッファでかつレンダーパス内の場合に指定する
 	const auto CB = CommandBuffers[i];
 	const VkCommandBufferBeginInfo CBBI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		0,
-		nullptr
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.pInheritanceInfo = nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 		const auto RP = RenderPasses[0];
 		const auto FB = Framebuffers[i];
 
 		//!< ビューポート、シザー
-		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
+		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 
 #ifdef _DEBUG
 		//!< レンダーエリアの最低粒度を確保
@@ -2992,27 +2982,19 @@ void VK::PopulateCommandBuffer(const size_t i)
 
 #ifdef USE_MANUAL_CLEAR
 		ClearColor(CB, SwapchainImages[i], Colors::Blue);
-		std::array<VkClearValue, 2> CVs = {}; 
+		const std::array CVs = { VkClearValue({}), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 #else
-		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
+		const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 #endif
-		CVs[1].depthStencil = { 1.0f, 0 };
-		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
 		const VkRenderPassBeginInfo RPBI = {
-			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-			nullptr,
-			RP,
-			FB,
-			RenderArea, //!< フレームバッファのサイズ以下を指定できる
-			static_cast<uint32_t>(CVs.size()), CVs.data()
+			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			.pNext = nullptr,
+			.renderPass = RP,
+			.framebuffer = FB,
+			.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }), //!< フレームバッファのサイズ以下を指定できる
+			.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
 		};
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
-			//vkCmdBindPipeline();
-			//vkCmdBindDescriptorSets();
-			//vkCmdBindVertexBuffers();
-			//vkCmdBindIndexBuffer();
-			//vkCmdDrawIndirect();
-			//vkCmdNextSubpass(CB, VK_SUBPASS_CONTENTS_INLINE);
 		} vkCmdEndRenderPass(CB);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
@@ -3022,9 +3004,9 @@ void VK::Draw()
 	//PERFORMANCE_COUNTER();
 
 	//!< サブミットしたコマンドの完了を待つ
-	const std::array<VkFence, 1> Fences = { Fence };
-	VERIFY_SUCCEEDED(vkWaitForFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data(), VK_TRUE, (std::numeric_limits<uint64_t>::max)()));
-	vkResetFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data());
+	const std::array Fences = { Fence };
+	VERIFY_SUCCEEDED(vkWaitForFences(Device, static_cast<uint32_t>(size(Fences)), data(Fences), VK_TRUE, (std::numeric_limits<uint64_t>::max)()));
+	vkResetFences(Device, static_cast<uint32_t>(size(Fences)), data(Fences));
 
 	//!< 次のイメージが取得できるまでブロック(タイムアウトは指定可能)、取得できたからといってイメージは直ぐに目的に使用可能とは限らない
 	//!< (引数で指定した場合)使用可能になるとフェンスやセマフォがシグナルされる
@@ -3037,23 +3019,23 @@ void VK::Draw()
 	DrawFrame(SwapchainImageIndex);
 	
 	//!< コマンドは指定のパイプラインステージに到達するまで実行され、そこでセマフォがシグナルされるまで待つ
-	const std::array<VkSemaphore, 1> WaitSem = { NextImageAcquiredSemaphore };
-	const std::array<VkPipelineStageFlags, 1> WaitPS = { VK_PIPELINE_STAGE_TRANSFER_BIT };
-	assert(WaitSem.size() == WaitPS.size() && "Must be same size()");
+	const std::array WaitSems = { NextImageAcquiredSemaphore };
+	const std::array WaitStages = { VkPipelineStageFlags(VK_PIPELINE_STAGE_TRANSFER_BIT) };
+	assert(size(WaitSems) == size(WaitStages) && "Must be same size()");
 	//!< 実行するコマンドバッファ
-	const std::array<VkCommandBuffer, 1> CBs = { CommandBuffers[SwapchainImageIndex], };
+	const std::array CBs = { CommandBuffers[SwapchainImageIndex], };
 	//!< 完了時にシグナルされるセマフォ(RenderFinishedSemaphore)
-	const std::array<VkSemaphore, 1> SigSem = { RenderFinishedSemaphore };
-	const std::array<VkSubmitInfo, 1> SIs = {
-		{
-			VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			nullptr,
-			static_cast<uint32_t>(WaitSem.size()), WaitSem.data(), WaitPS.data(), //!< 次イメージが取得できる(プレゼント完了)までウエイト
-			static_cast<uint32_t>(CBs.size()), CBs.data(),
-			static_cast<uint32_t>(SigSem.size()), SigSem.data() //!< 描画完了を通知する
-		},
+	const std::array SigSems = { RenderFinishedSemaphore };
+	const std::array SIs = {
+		VkSubmitInfo({
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.pNext = nullptr,
+			.waitSemaphoreCount = static_cast<uint32_t>(size(WaitSems)), .pWaitSemaphores = data(WaitSems), .pWaitDstStageMask = data(WaitStages), //!< 次イメージが取得できる(プレゼント完了)までウエイト
+			.commandBufferCount = static_cast<uint32_t>(size(CBs)), .pCommandBuffers = data(CBs),
+			.signalSemaphoreCount = static_cast<uint32_t>(size(SigSems)), .pSignalSemaphores = data(SigSems) //!< 描画完了を通知する
+		}),
 	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), Fence));
+	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(size(SIs)), data(SIs), Fence));
 
 	Present();
 }
