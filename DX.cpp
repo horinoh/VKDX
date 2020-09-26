@@ -100,7 +100,7 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 
 	//!< ビューポートサイズが決定してから
 	LoadScene();
-	for (auto i = 0; i < GraphicsCommandLists.size(); ++i) {
+	for (auto i = 0; i < size(GraphicsCommandLists); ++i) {
 		PopulateCommandList(i);
 	}
 }
@@ -127,23 +127,22 @@ std::string DX::GetFormatString(const DXGI_FORMAT Format)
 
 void DX::CreateUploadResource(ID3D12Resource** Resource, const size_t Size)
 {
-	const DXGI_SAMPLE_DESC SD = { 1, 0 };
+	const DXGI_SAMPLE_DESC SD = { .Count = 1, .Quality = 0 };
 	const D3D12_RESOURCE_DESC RD = {
-		D3D12_RESOURCE_DIMENSION_BUFFER,
-		0,
-		Size, 1, //!< Widthに「バッファサイズ」を指定して、Heightは1にしておく
-		1, 1,
-		DXGI_FORMAT_UNKNOWN,
-		SD,
-		D3D12_TEXTURE_LAYOUT_ROW_MAJOR, //!< ROW_MAJORにすること
-		D3D12_RESOURCE_FLAG_NONE
+		.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
+		.Alignment = 0,
+		.Width = Size, .Height = 1, //!< Widthに「バッファサイズ」を指定して、Heightは1にしておく
+		.DepthOrArraySize = 1, .MipLevels = 1,
+		.Format = DXGI_FORMAT_UNKNOWN,
+		.SampleDesc = SD,
+		.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR, //!< ROW_MAJORにすること
+		.Flags = D3D12_RESOURCE_FLAG_NONE
 	};
 	const D3D12_HEAP_PROPERTIES HP = {
-		D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること (Must be UPLOAD)
-		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		D3D12_MEMORY_POOL_UNKNOWN,
-		0,// CreationNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-		0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		.Type = D3D12_HEAP_TYPE_UPLOAD, //!< UPLOAD にすること (Must be UPLOAD)
+		.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
+		.CreationNodeMask = 0, .VisibleNodeMask = 0 // マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP,
 		D3D12_HEAP_FLAG_NONE,
@@ -166,7 +165,7 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_
 {
 	if (nullptr != Resource) {
 		//assert(SubresourceData.size() == PSF.size() == NumRows.size() == RowSizes.size() && "Invalid size");
-		const auto SubresourceCount = static_cast<const UINT>(SubresourceData.size());
+		const auto SubresourceCount = static_cast<const UINT>(size(SubresourceData));
 
 		BYTE* Data;
 		VERIFY_SUCCEEDED(Resource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
@@ -176,9 +175,9 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_
 				const auto RowCount = NumRows[Index];
 				const auto RowSize = RowSizes[Index];
 				const D3D12_MEMCPY_DEST MemcpyDest = {
-					Data + It->Offset,
-					It->Footprint.RowPitch,
-					static_cast<SIZE_T>(It->Footprint.RowPitch) * RowCount
+					.pData = Data + It->Offset,
+					.RowPitch = It->Footprint.RowPitch,
+					.SlicePitch = static_cast<SIZE_T>(It->Footprint.RowPitch) * RowCount
 				};
 				for (UINT i = 0; i < It->Footprint.Depth; ++i) {
 					auto Dst = reinterpret_cast<BYTE*>(MemcpyDest.pData) + MemcpyDest.SlicePitch * i;
@@ -199,7 +198,7 @@ void DX::ExecuteCopyBuffer(ID3D12Resource* DstResource, ID3D12CommandAllocator* 
 	} VERIFY_SUCCEEDED(CL->Close());
 
 	const std::vector<ID3D12CommandList*> CLs = { CL };
-	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CLs.size()), CLs.data());
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
 	WaitForFence();
 }
 
@@ -215,29 +214,28 @@ void DX::ExecuteCopyTexture(ID3D12Resource* DstResource, ID3D12CommandAllocator*
 	} VERIFY_SUCCEEDED(CL->Close());
 
 	const std::vector<ID3D12CommandList*> CLs = { CL };
-	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CLs.size()), CLs.data());
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
 	WaitForFence();
 }
 
 void DX::CreateDefaultResource(ID3D12Resource** Resource, const size_t Size)
 {
-	const DXGI_SAMPLE_DESC SD = { 1, 0 };
+	const DXGI_SAMPLE_DESC SD = { .Count = 1, .Quality = 0 };
 	const D3D12_RESOURCE_DESC RD = {
-		D3D12_RESOURCE_DIMENSION_BUFFER,
-		0,
-		Size, 1, //!< Widthに「バッファサイズ」を指定して、Heightは1にしておく
-		1, 1,
-		DXGI_FORMAT_UNKNOWN,
-		SD,
-		D3D12_TEXTURE_LAYOUT_ROW_MAJOR, //!< ROW_MAJORにすること
-		D3D12_RESOURCE_FLAG_NONE
+		.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
+		.Alignment = 0,
+		.Width = Size, .Height = 1, //!< Widthに「バッファサイズ」を指定して、Heightは1にしておく
+		.DepthOrArraySize = 1, .MipLevels = 1,
+		.Format = DXGI_FORMAT_UNKNOWN,
+		.SampleDesc = SD,
+		.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR, //!< ROW_MAJORにすること
+		.Flags = D3D12_RESOURCE_FLAG_NONE
 	};
 	const D3D12_HEAP_PROPERTIES HP = {
-		D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること (Must be DEFAULT)
-		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		D3D12_MEMORY_POOL_UNKNOWN,
-		0,// CreationNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-		0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		.Type = D3D12_HEAP_TYPE_DEFAULT, //!< DEFAULT にすること (Must be DEFAULT)
+		.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
+		.CreationNodeMask = 0, .VisibleNodeMask = 0 // マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP,
 		D3D12_HEAP_FLAG_NONE,
@@ -249,20 +247,19 @@ void DX::CreateDefaultResource(ID3D12Resource** Resource, const size_t Size)
 }
 void DX::ResourceBarrier(ID3D12GraphicsCommandList* CL, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After)
 {
-	const D3D12_RESOURCE_TRANSITION_BARRIER RTB = {
-		Resource,
-		D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-		Before,
-		After
+	const std::array RBs = {
+		D3D12_RESOURCE_BARRIER({
+			.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+			.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+			.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
+				.pResource = Resource,
+				.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+				.StateBefore = Before,
+				.StateAfter = After
+			})
+		})
 	};
-	const std::array<D3D12_RESOURCE_BARRIER, 1> RBs = {
-		{
-			D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-			D3D12_RESOURCE_BARRIER_FLAG_NONE,
-			RTB
-		}
-	};
-	CL->ResourceBarrier(static_cast<UINT>(RBs.size()), RBs.data());
+	CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 }
 void DX::PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS)
 {
@@ -271,14 +268,14 @@ void DX::PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CL, ID3D12Resourc
 	{
 		for (auto It = cbegin(PSF); It != cend(PSF); ++It) {
 			const D3D12_TEXTURE_COPY_LOCATION TCL_Dst = {
-				Dst,
-				D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
-				static_cast<const UINT>(std::distance(cbegin(PSF), It))
+				.pResource = Dst,
+				.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
+				.SubresourceIndex = static_cast<const UINT>(std::distance(cbegin(PSF), It))
 			};
 			const D3D12_TEXTURE_COPY_LOCATION TCL_Src = {
-				Src,
-				D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
-				*It
+				.pResource = Src,
+				.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
+				.PlacedFootprint = *It
 			};
 			//const D3D12_BOX Box = {
 			//	static_cast<UINT>(It->Offset),	//!< LEFT
@@ -530,10 +527,11 @@ void DX::GetDisplayModeList(IDXGIOutput* Outp, const DXGI_FORMAT Format)
 
 void DX::CheckFeatureLevel(ID3D12Device* Dev)
 {
-	D3D12_FEATURE_DATA_FEATURE_LEVELS DataFeatureLevels = {
-		static_cast<UINT>(FeatureLevels.size()), FeatureLevels.data()
-	};
 	//!< NumFeatureLevels, pFeatureLevelsRequested は CheckFeatureSupport() への入力、MaxSupportedFeatureLevel には出力が返る
+	D3D12_FEATURE_DATA_FEATURE_LEVELS DataFeatureLevels = {
+		.NumFeatureLevels = static_cast<UINT>(size(FeatureLevels)), .pFeatureLevelsRequested = data(FeatureLevels) //!< 入力(In)
+		//.MaxSupportedFeatureLevel //!< 出力(Out)
+	};
 	VERIFY_SUCCEEDED(Dev->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, reinterpret_cast<void*>(&DataFeatureLevels), sizeof(DataFeatureLevels)));
 
 	Log("MaxSupportedFeatureLevel\n");
@@ -561,19 +559,19 @@ void DX::CheckMultiSample(const DXGI_FORMAT Format)
 	for (UINT i = 1; i < D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT; ++i) {
 		//!< Format, SampleCount, Flags は CheckFeatureSupport() への入力、NumQualityLevels には CheckFeatureSupport() からの出力が返る
 		D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS DataMultiSampleQaualityLevels = {
-			Format,
-			i,
-			D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE,
-			0
+			.Format = Format, //!< 入力(In)
+			.SampleCount = i, //!< 入力(In)
+			.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE, //!< 入力(In)
+			.NumQualityLevels = 0 //!< 出力(Out)
 		};
 		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, reinterpret_cast<void*>(&DataMultiSampleQaualityLevels), sizeof(DataMultiSampleQaualityLevels)));
 		//!< 0 == NumQualityLevels の場合はサポートされていないということ
 		if (DataMultiSampleQaualityLevels.NumQualityLevels) {
 			const DXGI_SAMPLE_DESC SampleDesc = {
-				DataMultiSampleQaualityLevels.SampleCount,
-				DataMultiSampleQaualityLevels.NumQualityLevels - 1
+				.Count = DataMultiSampleQaualityLevels.SampleCount,
+				.Quality = DataMultiSampleQaualityLevels.NumQualityLevels - 1
 			}; 
-			SampleDescs.push_back(SampleDesc);
+			SampleDescs.emplace_back(SampleDesc);
 
 			Logf("\tCount = %d, Quality = %d\n", SampleDesc.Count, SampleDesc.Quality);
 		}
@@ -599,10 +597,10 @@ void DX::CheckMultiSample(const DXGI_FORMAT Format)
 void DX::CreateCommandQueue()
 {
 	const D3D12_COMMAND_QUEUE_DESC CommandQueueDesc = {
-		D3D12_COMMAND_LIST_TYPE_DIRECT, //!< D3D12_COMMAND_LIST_TYPE_COMPUTE, D3D12_COMMAND_LIST_TYPE_COPY (D3D12_COMMAND_LIST_TYPE_BUNDLEが直接キューイングされることは無いと思う)
-		D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
-		D3D12_COMMAND_QUEUE_FLAG_NONE,
-		0 // NodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		.Type = D3D12_COMMAND_LIST_TYPE_DIRECT, //!< D3D12_COMMAND_LIST_TYPE_COMPUTE, D3D12_COMMAND_LIST_TYPE_COPY (D3D12_COMMAND_LIST_TYPE_BUNDLEが直接キューイングされることは無いと思う)
+		.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
+		.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
+		.NodeMask = 0 //マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CommandQueueDesc, COM_PTR_UUIDOF_PUTVOID(CommandQueue)));
 
@@ -623,11 +621,11 @@ void DX::CreateFence()
 //!< (ここでは)ダイレクト用1つ、バンドル用1つのコマンドアロケータ作成をデフォルト実装とする
 void DX::CreateCommandAllocator()
 {
-	CommandAllocators.resize(1);
-	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(CommandAllocators[0])));
+	CommandAllocators.emplace_back(COM_PTR<ID3D12CommandAllocator>());
+	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(CommandAllocators.back())));
 
-	BundleCommandAllocators.resize(1);
-	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_UUIDOF_PUTVOID(BundleCommandAllocators[0])));
+	BundleCommandAllocators.emplace_back(COM_PTR<ID3D12CommandAllocator>());
+	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_UUIDOF_PUTVOID(BundleCommandAllocators.back())));
 
 	LOG_OK();
 }
@@ -638,12 +636,12 @@ void DX::CreateCommandList()
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
-		GraphicsCommandLists.push_back(COM_PTR<ID3D12GraphicsCommandList>());
+		GraphicsCommandLists.emplace_back(COM_PTR<ID3D12GraphicsCommandList>());
 		//!< 描画コマンドを発行するコマンドリストにはパイプラインステートの指定が必要だが、後からでも指定(CL->Reset(CA, COM_PTR_GET(PS)))できるので、ここではnullptrを指定
 		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(CommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandLists.back())));
 		VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
 
-		BundleGraphicsCommandLists.push_back(COM_PTR<ID3D12GraphicsCommandList>());
+		BundleGraphicsCommandLists.emplace_back(COM_PTR<ID3D12GraphicsCommandList>());
 		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleGraphicsCommandLists.back())));
 		VERIFY_SUCCEEDED(BundleGraphicsCommandLists.back()->Close());
 	}
@@ -661,25 +659,25 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	const UINT BufferCount = 3;
 
 	//!< 最適なフルスクリーンのパフォーマンスを得るには、IDXGIOutput->GetDisplayModeList() で取得する(ディスプレイのサポートする)DXGI_MODE_DESC でないとダメなので注意  #DX_TODO
-	const DXGI_RATIONAL Rational = { 60, 1 };
+	const DXGI_RATIONAL Rational = { .Numerator = 60, .Denominator = 1 };
 	const DXGI_MODE_DESC ModeDesc = {
-		Width, Height,
-		Rational,
-		ColorFormat,
-		DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
-		DXGI_MODE_SCALING_UNSPECIFIED
+		.Width = Width, .Height = Height,
+		.RefreshRate = Rational,
+		.Format = ColorFormat,
+		.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
+		.Scaling = DXGI_MODE_SCALING_UNSPECIFIED
 	};
 	const auto& SampleDesc = SampleDescs[0];
 
 	DXGI_SWAP_CHAIN_DESC SCD = {
-		ModeDesc,
-		SampleDesc,
-		DXGI_USAGE_RENDER_TARGET_OUTPUT,
-		BufferCount,
-		hWnd,
-		TRUE,
-		DXGI_SWAP_EFFECT_FLIP_DISCARD,
-		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH //!< フルスクリーンにした時、最適なディスプレイモードが選択されるのを許可
+		.BufferDesc = ModeDesc,
+		.SampleDesc = SampleDesc,
+		.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
+		.BufferCount = BufferCount,
+		.OutputWindow = hWnd,
+		.Windowed = TRUE,
+		.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
+		.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH //!< フルスクリーンにした時、最適なディスプレイモードが選択されるのを許可
 	};
 	//!< セッティングを変更してスワップチェインを再作成できるように、既存のを開放している
 	COM_PTR_RESET(SwapChain);
@@ -768,10 +766,10 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 #endif
 
 	const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
-		D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-		SCD.BufferCount,
-		D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-		0 // NodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
+		.NumDescriptors = SCD.BufferCount,
+		.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
+		.NodeMask = 0 // マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(SwapChainDescriptorHeap)));
 
@@ -783,16 +781,15 @@ void DX::CreateSwapChainResource()
 	SwapChain->GetDesc1(&SCD);
 
 #ifdef USE_GAMMA_CORRECTION
-	D3D12_RENDER_TARGET_VIEW_DESC RTVD = {
-		DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, //!< ガンマ補正あり
-		D3D12_RTV_DIMENSION_TEXTURE2D,
+	const D3D12_RENDER_TARGET_VIEW_DESC RTVD = {
+		.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, //!< ガンマ補正あり
+		.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
+		.Texture2D = D3D12_TEX2D_RTV({ .MipSlice = 0, .PlaneSlice = 0 })
 	};
-	RTVD.Texture2D.MipSlice = 0;
-	RTVD.Texture2D.PlaneSlice = 0;
 #endif
 	auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
-		SwapChainResources.push_back(COM_PTR<ID3D12Resource>());
+		SwapChainResources.emplace_back(COM_PTR<ID3D12Resource>());
 		//!< スワップチェインのバッファリソースを SwapChainResources へ取得
 		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, COM_PTR_UUIDOF_PUTVOID(SwapChainResources.back())));
 		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数等に返るわけではない
@@ -830,8 +827,8 @@ void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, cons
 	}
 
 	//!< #DX_TODO : 0 番目しかクリアしていない
-	const std::vector<ID3D12CommandList*> CommandLists = { COM_PTR_GET(GraphicsCommandLists[0]) };
-	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CommandLists.size()), CommandLists.data());
+	const std::vector<ID3D12CommandList*> CLs = { COM_PTR_GET(GraphicsCommandLists[0]) };
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
 
 	WaitForFence();
 
@@ -882,11 +879,11 @@ void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDe
 {
 	//!< DirectX、OpenGLはBLが原点(Vulkan はTLが原点)
 	Viewports = {
-		{ 0.0f, 0.0f, Width, Height, MinDepth, MaxDepth },
+		D3D12_VIEWPORT({ .TopLeftX = 0.0f, .TopLeftY = 0.0f, .Width = Width, .Height = Height, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
 	};
 	//!< left, top, right, bottomで指定 (offset, extentで指定のVKとは異なるので注意)
 	ScissorRects = {
-		{ 0, 0, static_cast<LONG>(Width), static_cast<LONG>(Height) },
+		D3D12_RECT({ .left = 0, .top = 0, .right = static_cast<LONG>(Width), .bottom = static_cast<LONG>(Height) }),
 	};
 	LOG_OK();
 }
@@ -931,9 +928,9 @@ void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_
 	const std::vector<D3D12_ROOT_PARAMETER> RPs(cbegin(il_RPs), cend(il_RPs));
 	const std::vector<D3D12_STATIC_SAMPLER_DESC> SSDs(cbegin(il_SSDs), cend(il_SSDs));
 	const D3D12_ROOT_SIGNATURE_DESC RSD = {
-			static_cast<UINT>(size(RPs)), data(RPs),
-			static_cast<UINT>(size(SSDs)), data(SSDs),
-			Flags
+		.NumParameters = static_cast<UINT>(size(RPs)), .pParameters = data(RPs),
+	 	.NumStaticSamplers = static_cast<UINT>(size(SSDs)), .pStaticSamplers = data(SSDs),
+		.Flags = Flags
 	};
 	COM_PTR<ID3DBlob> ErrorBlob;
 	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RSD, D3D_ROOT_SIGNATURE_VERSION_1_0, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
@@ -946,11 +943,11 @@ void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_
 		//!< D3D12_ROOT_SIGNATURE_DESC1 : D3D12_ROOT_PARAMETER が D3D12_ROOT_PARAMETER1 に変更されている
 		//!<	D3D12_ROOT_PARAMETER1 : D3D12_ROOT_DESCRIPTOR が D3D12_ROOT_DESCRIPTOR1 に変更されている
 		//!<		D3D12_ROOT_DESCRIPTOR1 : D3D12_ROOT_DESCRIPTOR_FLAGS Flags メンバが増えている
-		const std::vector<D3D12_ROOT_PARAMETER> RP1s = {};
+		const std::vector<D3D12_ROOT_PARAMETER1> RP1s = {};
 		const D3D12_ROOT_SIGNATURE_DESC1 RSD1 = {
-			static_cast<UINT>(RP1s.size()), RP1s.data(),
-			static_cast<UINT>(SSDs.size()), SSDs.data(),
-			Flags
+			.NumParameters = static_cast<UINT>(RP1s.size()), .pParameters = RP1s.data(),
+			.NumStaticSamplers = static_cast<UINT>(SSDs.size()), .pStaticSamplers = SSDs.data(),
+			.Flags = Flags
 		};
 		VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RSD1, D3D_ROOT_SIGNATURE_VERSION_1_1, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
 	}
@@ -976,7 +973,7 @@ void DX::CreateRootSignature()
 	COM_PTR<ID3DBlob> Blob;
 
 #ifdef USE_HLSL_ROOTSIGNATRUE
-	GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
+	GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
 	SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE
 		| D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS
@@ -1008,9 +1005,9 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 
 	//!< ストリームアウトプット (StreamOutput)
 	const D3D12_STREAM_OUTPUT_DESC SOD = {
-		nullptr, 0,
-		nullptr, 0,
-		0
+		.pSODeclaration = nullptr, .NumEntries = 0,
+		.pBufferStrides = nullptr, .NumStrides = 0,
+		.RasterizedStream = 0
 	};
 
 	//!< ブレンド (Blend)
@@ -1019,55 +1016,55 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 	//!< 加算		: Src * 1 + Dst * 1			= Src:D3D12_BLEND_ONE, Dst:D3D12_BLEND_ONE, Op:D3D12_BLEND_OP_ADD
 	//!< 乗算		: Src * 0 + Dst * Src		= Src:D3D12_BLEND_ZERO, Dst:D3D12_BLEND_SRC_COLOR, Op:D3D12_BLEND_OP_ADD
 	const D3D12_RENDER_TARGET_BLEND_DESC RTBD = {
-		FALSE, FALSE, //!< ブレンド有効かどうか、論理演算有効かどうか (同時にTRUEにはできない)
-		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD, //!< ブレンド Src(新規), Dst(既存), Op
-		D3D12_BLEND_ONE, D3D12_BLEND_ZERO, D3D12_BLEND_OP_ADD, //!< アルファ Src(新規), Dst(既存), Op
-		D3D12_LOGIC_OP_NOOP, //!< 論理演算
-		D3D12_COLOR_WRITE_ENABLE_ALL, //!< 書き込み時のマスク値
+		.BlendEnable = FALSE, .LogicOpEnable = FALSE, //!< ブレンド有効かどうか、論理演算有効かどうか (同時にTRUEにはできない)
+		.SrcBlend = D3D12_BLEND_ONE, .DestBlend = D3D12_BLEND_ZERO, .BlendOp = D3D12_BLEND_OP_ADD, //!< ブレンド Src(新規), Dst(既存), Op
+		.SrcBlendAlpha = D3D12_BLEND_ONE, .DestBlendAlpha = D3D12_BLEND_ZERO, .BlendOpAlpha = D3D12_BLEND_OP_ADD, //!< アルファ Src(新規), Dst(既存), Op
+		.LogicOp = D3D12_LOGIC_OP_NOOP, //!< 論理演算
+		.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL, //!< 書き込み時のマスク値
 	};
 	const D3D12_BLEND_DESC BD = {
-		TRUE, //!< マルチサンプルを考慮したアルファテスト(AlphaToCoverageEnable)、アルファが0の箇所には無駄に書き込まない
-		FALSE, //!< マルチレンダーターゲットにそれぞれ別のブレンドステートを割り当てる(IndependentBlendEnable)
-		{ RTBD, } //!< TRUE==IndependentBlendEnableの場合、レンダーターゲットの分だけ用意すること #DX_TODO
+		.AlphaToCoverageEnable = TRUE, //!< マルチサンプルを考慮したアルファテスト(AlphaToCoverageEnable)、アルファが0の箇所には無駄に書き込まない
+		.IndependentBlendEnable = FALSE, //!< マルチレンダーターゲットにそれぞれ別のブレンドステートを割り当てる(IndependentBlendEnable)
+		.RenderTarget = { RTBD, } //!< TRUE==IndependentBlendEnableの場合、レンダーターゲットの分だけ用意すること 8個まで
 	};
 
 	//!< インプットレイアウト (InputLayout)
 	const D3D12_INPUT_LAYOUT_DESC ILD = {
-		IEDs.data(), static_cast<UINT>(IEDs.size())
+		.pInputElementDescs = data(IEDs), .NumElements = static_cast<UINT>(size(IEDs))
 	};
 
 	//!< サンプル (Sample)
-	const DXGI_SAMPLE_DESC SD = { 1, 0 };
+	const DXGI_SAMPLE_DESC SD = { .Count = 1, .Quality = 0 };
 
 	//!< キャッシュドパイプラインステート (CachedPipelineState)
 	//!< (VK の VkGraphicsPipelineCreateInfo.basePipelineHandle, basePipelineIndex 相当?)
 #if 0
 	COM_PTR<ID3DBlob> PipelineBlob;
 	VERIFY_SUCCEEDED(BasePipelineState->GetCachedBlob(COM_PTR_PUT(PipelineBlob)));
-	const D3D12_CACHED_PIPELINE_STATE CPS = { PipelineBlob->GetBufferPointer(), PipelineBlob->GetBufferSize() };
+	const D3D12_CACHED_PIPELINE_STATE CPS = { .pCachedBlob = PipelineBlob->GetBufferPointer(), .CachedBlobSizeInBytes = PipelineBlob->GetBufferSize() };
 #else
-	const D3D12_CACHED_PIPELINE_STATE CPS = { nullptr, 0 };
+	const D3D12_CACHED_PIPELINE_STATE CPS = { .pCachedBlob = nullptr, .CachedBlobSizeInBytes = 0 };
 #endif
 
 	//!< DXでは「パッチコントロールポイント」個数の指定はIASetPrimitiveTopology()の引数として「コマンドリスト作成時」に指定する、VKとは結構異なるので注意
 	//!< CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {
-		RS,
-		VS, PS, DS, HS, GS,
-		SOD,
-		BD,
-		D3D12_DEFAULT_SAMPLE_MASK,
-		RD,
-		DSD,
-		ILD,
-		D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
-		Topology,
-		static_cast<UINT>(RtvFormats.size()), {}, DSD.DepthEnable ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_UNKNOWN,
-		SD,
-		0,
-		CPS,
-		D3D12_PIPELINE_STATE_FLAG_NONE //!< D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG は Warp デバイスのみ
+		.pRootSignature = RS,
+		.VS = VS, .PS = PS, .DS = DS, .HS = HS, .GS = GS,
+		.StreamOutput = SOD,
+		.BlendState = BD,
+		.SampleMask = D3D12_DEFAULT_SAMPLE_MASK,
+	 	.RasterizerState = RD,
+		.DepthStencilState = DSD,
+		.InputLayout = ILD,
+		.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
+		.PrimitiveTopologyType = Topology,
+		.NumRenderTargets = static_cast<UINT>(size(RtvFormats)), .RTVFormats = {}, .DSVFormat = DSD.DepthEnable ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_UNKNOWN,
+		.SampleDesc = SD,
+		.NodeMask = 0,
+		.CachedPSO = CPS,
+		.Flags = D3D12_PIPELINE_STATE_FLAG_NONE //!< D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG は Warp デバイスのみ
 	};
 	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
 	std::copy(begin(RtvFormats), end(RtvFormats), GPSD.RTVFormats);
@@ -1126,13 +1123,13 @@ void DX::PopulateCommandList(const size_t i)
 	{
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 
-		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+		CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+		CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET); {
 			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 			const std::array<D3D12_RECT, 0> Rs = {};
-			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rs.size()), Rs.data());
+			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rs)), data(Rs));
 		} ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
 	VERIFY_SUCCEEDED(CL->Close());
@@ -1146,8 +1143,8 @@ void DX::Draw()
 
 	DrawFrame(SwapChain->GetCurrentBackBufferIndex());
 
-	const std::vector<ID3D12CommandList*> CLs = { COM_PTR_GET(GraphicsCommandLists[SwapChain->GetCurrentBackBufferIndex()]) };
-	CommandQueue->ExecuteCommandLists(static_cast<UINT>(CLs.size()), CLs.data());
+	const std::array<ID3D12CommandList*, 1> CLs = { COM_PTR_GET(GraphicsCommandLists[SwapChain->GetCurrentBackBufferIndex()]) };
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
 	
 	Present();
 }

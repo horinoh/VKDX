@@ -3042,36 +3042,36 @@ void VK::Draw()
 void VK::Dispatch()
 {
 	//!< (Fenceを指定して)サブミットしたコマンドが完了するまでブロッキングして待つ
-	const std::array<VkFence, 1> Fences = { ComputeFence };
-	VERIFY_SUCCEEDED(vkWaitForFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data(), VK_TRUE, (std::numeric_limits<uint64_t>::max)()));
-	vkResetFences(Device, static_cast<uint32_t>(Fences.size()), Fences.data());
+	const std::array Fences = { ComputeFence };
+	VERIFY_SUCCEEDED(vkWaitForFences(Device, static_cast<uint32_t>(size(Fences)), data(Fences), VK_TRUE, (std::numeric_limits<uint64_t>::max)()));
+	vkResetFences(Device, static_cast<uint32_t>(size(Fences)), data(Fences));
 
 	const auto& CB = CommandBuffers[0];
-	const std::array<VkSubmitInfo, 1> SIs = {
-		{
-			VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			nullptr,
-			0, nullptr, nullptr,
-			1, &CB/*ComputeCommandBuffers[0]*/,
-			0, nullptr,
-		},
+	const std::array SIs = {
+		VkSubmitInfo({
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.pNext = nullptr,
+			.waitSemaphoreCount = 0, .pWaitSemaphores = nullptr, .pWaitDstStageMask = nullptr,
+			.commandBufferCount = 1, .pCommandBuffers = &CB/*ComputeCommandBuffers[0]*/,
+			.signalSemaphoreCount = 0, .pSignalSemaphores = nullptr,
+		}),
 	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(ComputeQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), ComputeFence));
+	VERIFY_SUCCEEDED(vkQueueSubmit(ComputeQueue, static_cast<uint32_t>(size(SIs)), data(SIs), ComputeFence));
 }
 void VK::Present()
 {
 	//!< 同時に複数のプレゼントが可能だが、1つのスワップチェインからは1つのみ
-	const std::array<VkSwapchainKHR, 1> Swapchains = { Swapchain };
-	const std::array<uint32_t, 1> ImageIndices = { SwapchainImageIndex };
-	assert(Swapchains.size() == ImageIndices.size() && "Must be same");
+	const std::array Swapchains = { Swapchain };
+	const std::array ImageIndices = { SwapchainImageIndex };
+	assert(size(Swapchains) == size(ImageIndices) && "Must be same");
 
 	//!< サブミット時に指定したセマフォ(RenderFinishedSemaphore)を待ってからプレゼントが行なわれる
 	const VkPresentInfoKHR PresentInfo = {
-		VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-		nullptr,
-		1, &RenderFinishedSemaphore,
-		static_cast<uint32_t>(Swapchains.size()), Swapchains.data(), ImageIndices.data(),
-		nullptr
+		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+		.pNext = nullptr,
+		.waitSemaphoreCount = 1, .pWaitSemaphores = &RenderFinishedSemaphore,
+		.swapchainCount = static_cast<uint32_t>(size(Swapchains)), .pSwapchains = data(Swapchains), .pImageIndices = data(ImageIndices),
+		.pResults = nullptr
 	};
 	VERIFY_SUCCEEDED(vkQueuePresentKHR(PresentQueue, &PresentInfo));
 }
