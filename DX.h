@@ -295,7 +295,7 @@ protected:
 	std::array<UINT, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> DescriptorHandleIndices{};
 
 protected:
-	const std::vector<D3D_FEATURE_LEVEL> FeatureLevels = {
+	const std::array<D3D_FEATURE_LEVEL, 9> FeatureLevels = {
 		D3D_FEATURE_LEVEL_12_1,
 		D3D_FEATURE_LEVEL_12_0,
 		D3D_FEATURE_LEVEL_11_1,
@@ -306,7 +306,7 @@ protected:
 		D3D_FEATURE_LEVEL_9_2,
 		D3D_FEATURE_LEVEL_9_1,
 	};
-	const D3D12_SHADER_BYTECODE NullShaderBC = { nullptr, 0 };
+	const D3D12_SHADER_BYTECODE NullShaderBC = { .pShaderBytecode = nullptr, .BytecodeLength = 0 };
 };
 
 #ifdef DEBUG_STDOUT

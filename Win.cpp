@@ -30,8 +30,6 @@ if (std::holds_alternative<bool>(c)) { true == get<bool>(c); }
 
 Win::Win()
 {
-	
-
 #ifdef DEBUG_STDOUT
 	//!< ロケールを規定にする
 	setlocale(LC_ALL, "");
@@ -55,38 +53,28 @@ Win::~Win()
 #endif
 }
 
-void Win::OnCreate(HWND hWnd, HINSTANCE /*hInstance*/, LPCWSTR Title)
+void Win::OnCreate(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance, LPCWSTR Title)
 {
 	SetTitleW(Title);
 
 	GetClientRect(hWnd, &Rect);
 }
-void Win::OnExitSizeMove(HWND hWnd, HINSTANCE /*hInstance*/)
+void Win::OnExitSizeMove(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance)
 {
 	GetClientRect(hWnd, &Rect);
 }
-void Win::OnTimer(HWND hWnd, HINSTANCE /*hInstance*/)
+void Win::OnTimer(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance)
 {
 	SendMessage(hWnd, WM_PAINT, 0, 0);
 }
-void Win::OnPaint(HWND /*hWnd*/, HINSTANCE /*hInstance*/)
+void Win::OnPaint([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance)
 {
 }
-void Win::OnDestroy(HWND /*hWnd*/, HINSTANCE /*hInstance*/)
+void Win::OnDestroy([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance)
 {
 }
 
-template<> void Win::_Log(
-#ifdef DEBUG_STDOUT
-	const LogType Type,
-#else
-	const LogType /*Type*/,
-#endif
-#if defined(DEBUG_STDOUT) || defined(DEBUG_OUTPUT)
-	const char* Str)
-#else
-	const char* /*Str*/)
-#endif
+template<> void Win::_Log([[maybe_unused]] const LogType Type, [[maybe_unused]] const char* Str)
 {
 #ifdef DEBUG_STDOUT
 	//!< 標準出力、エラー出力へ
@@ -110,17 +98,7 @@ template<> void Win::_Log(
 	OutputDebugString(ToWString(Str).c_str());
 #endif	
 }
-template<> void Win::_Log(
-#ifdef DEBUG_STDOUT
-	const LogType Type,
-#else
-	const LogType /*Type*/,
-#endif
-#if defined(DEBUG_STDOUT) || defined(DEBUG_OUTPUT)
-	const WCHAR* Str)
-#else
-	const WCHAR* /*Str*/)
-#endif
+template<> void Win::_Log([[maybe_unused]] const LogType Type, [[maybe_unused]] const WCHAR* Str)
 {
 #ifdef DEBUG_STDOUT
 	switch (Type)
@@ -163,11 +141,7 @@ template<> void Win::_Logf(const LogType Type, const WCHAR* Format, ...)
 	}
 	va_end(List);
 }
-#if defined(DEBUG_STDOUT) || defined(DEBUG_OUTPUT)
-template<> static void Win::LogOK(const char* Str)
-#else
-template<> static void Win::LogOK(const char* /*Str*/)
-#endif
+template<> static void Win::LogOK([[maybe_unused]] const char* Str)
 {
 #ifdef DEBUG_STDOUT
 	std::cout << Str << COUT_OK << std::endl;
@@ -178,24 +152,17 @@ template<> static void Win::LogOK(const char* /*Str*/)
 #endif	
 }
 
-#if defined(DEBUG_STDOUT) || defined(DEBUG_OUTPUT)
-template<> static void Win::LogOK(const WCHAR* Str)
-#else
-template<> static void Win::LogOK(const WCHAR* /*Str*/)
-#endif
+template<> static void Win::LogOK([[maybe_unused]] const WCHAR* Str)
 {
 #ifdef DEBUG_STDOUT
 	std::wcout << Str << COUT_OK << std::endl;
 #endif
 #ifdef DEBUG_OUTPUT
-	OutputDebugString(Str); OutputDebugString(TEXT("[ OK ]\n"));
+	OutputDebugString(Str); 
+	OutputDebugString(TEXT("[ OK ]\n"));
 #endif	
 }
-#if defined(DEBUG_STDOUT) || defined(DEBUG_OUTPUT)
-template<> static void Win::LogNG(const char* Str)
-#else
-template<> static void Win::LogNG(const char* /*Str*/)
-#endif
+template<> static void Win::LogNG([[maybe_unused]] const char* Str)
 {
 #ifdef DEBUG_STDOUT
 	std::cerr << Str << COUT_NG << std::endl;
@@ -205,17 +172,14 @@ template<> static void Win::LogNG(const char* /*Str*/)
 	OutputDebugString(TEXT("[ NG ]\n"));
 #endif
 }
-#if defined(DEBUG_STDOUT) || defined(DEBUG_OUTPUT)
-template<> static void Win::LogNG(const WCHAR* Str)
-#else
-template<> static void Win::LogNG(const WCHAR* /*Str*/)
-#endif
+template<> static void Win::LogNG([[maybe_unused]] const WCHAR* Str)
 {
 #ifdef DEBUG_STDOUT
 	std::wcerr << Str << COUT_NG << std::endl;
 #endif
 #ifdef DEBUG_OUTPUT
-	OutputDebugString(Str); OutputDebugString(TEXT("[ NG ]\n"));
+	OutputDebugString(Str); 
+	OutputDebugString(TEXT("[ NG ]\n"));
 #endif
 }
 

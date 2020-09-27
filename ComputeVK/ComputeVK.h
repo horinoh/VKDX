@@ -94,7 +94,12 @@ protected:
 
 			ImageViews.push_back(VkImageView());
 			const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
-			CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, ImageSubresourceRange_ColorAll);
+			const VkImageSubresourceRange ISR = {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS,
+				.baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS
+			};
+			CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, ISR);
 		}
 	}
 	

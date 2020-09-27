@@ -145,32 +145,29 @@ public:
 	static std::string GetComponentSwizzleString(const VkComponentSwizzle ComponentSwizzle) { return std::string(GetComponentSwizzleChar(ComponentSwizzle)); }
 	static std::wstring GetComponentSwizzleWstring(const VkComponentSwizzle ComponentSwizzle) { return ToWString(GetComponentSwizzleString(ComponentSwizzle)); }
 	//static char* GetComponentMappingChar(const VkComponentMapping& ComponentMapping);
-	static std::string GetComponentMappingString(const VkComponentMapping& ComponentMapping) {
-		return GetComponentSwizzleString(ComponentMapping.r)
-			+ ", " + GetComponentSwizzleString(ComponentMapping.g)
-			+ ", " + GetComponentSwizzleString(ComponentMapping.b)
-			+ ", " + GetComponentSwizzleString(ComponentMapping.a);
+	static std::string GetComponentMappingString(const VkComponentMapping& CM) {
+		return GetComponentSwizzleString(CM.r) + ", " + GetComponentSwizzleString(CM.g) + ", " + GetComponentSwizzleString(CM.b) + ", " + GetComponentSwizzleString(CM.a);
 	}
 	static std::wstring GetComponentMappingWstring(const VkComponentMapping& ComponentMapping) { return ToWString(GetComponentMappingString(ComponentMapping)); }
 
 	static [[nodiscard]] std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) {
-		const auto v = glm::mix(*reinterpret_cast<const glm::vec3*>(lhs.data()), *reinterpret_cast<const glm::vec3*>(rhs.data()), t);
+		const auto v = glm::mix(*reinterpret_cast<const glm::vec3*>(data(lhs)), *reinterpret_cast<const glm::vec3*>(data(rhs)), t);
 		return { v.x, v.y, v.z };
 	}
 	static [[nodiscard]] std::array<float, 4> Lerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) {
-		const auto v = glm::lerp(*reinterpret_cast<const glm::quat*>(lhs.data()), *reinterpret_cast<const glm::quat*>(rhs.data()), t);
+		const auto v = glm::lerp(*reinterpret_cast<const glm::quat*>(data(lhs)), *reinterpret_cast<const glm::quat*>(data(rhs)), t);
 		return { v.x, v.y, v.z, v.w };
 	}
 
 protected:
-	static FORCEINLINE void* AlignedMalloc(void* /*pUserData*/, size_t size, size_t alignment, VkSystemAllocationScope /*allocationScope*/) { return _aligned_malloc(size, alignment); }
-	static FORCEINLINE void* AlignedRealloc(void* /*pUserData*/, void* pOriginal, size_t size, size_t alignment, VkSystemAllocationScope /*allocationScope*/) { return _aligned_realloc(pOriginal, size, alignment); }
-	static FORCEINLINE void AlignedFree(void* /*pUserData*/, void* pMemory) { _aligned_free(pMemory); }
-	static void AlignedAllocNotify(void* /*pUserData*/, size_t /*size*/, VkInternalAllocationType /*allocationType*/, VkSystemAllocationScope /*allocationScope*/) {}
-	static void AligendFreeNotify(void* /*pUserData*/, size_t /*size*/, VkInternalAllocationType /*allocationType*/, VkSystemAllocationScope /*allocationScope*/) {}
+	static FORCEINLINE [[nodiscard]] void* AlignedMalloc([[maybe_unused]] void* pUserData, size_t size, size_t alignment, [[maybe_unused]] VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
+	static FORCEINLINE [[nodiscard]] void* AlignedRealloc([[maybe_unused]] void* pUserData, void* pOriginal, size_t size, size_t alignment, [[maybe_unused]] VkSystemAllocationScope allocationScope) { return _aligned_realloc(pOriginal, size, alignment); }
+	static FORCEINLINE [[nodiscard]] void AlignedFree([[maybe_unused]] void* pUserData, void* pMemory) { _aligned_free(pMemory); }
+	static void AlignedAllocNotify([[maybe_unused]] void* pUserData, [[maybe_unused]] size_t size, [[maybe_unused]] VkInternalAllocationType allocationType, [[maybe_unused]] VkSystemAllocationScope allocationScope) {}
+	static void AligendFreeNotify([[maybe_unused]] void* pUserData, [[maybe_unused]] size_t size, [[maybe_unused]] VkInternalAllocationType allocationType, [[maybe_unused]] VkSystemAllocationScope allocationScope) {}
 
-	static bool IsSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, const VkFormat DepthFormat);
-	static uint32_t GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& PDMP, const uint32_t TypeBits, const VkMemoryPropertyFlags MPF);
+	static [[nodiscard]] bool IsSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, const VkFormat DepthFormat);
+	static [[nodiscard]] uint32_t GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& PDMP, const uint32_t TypeBits, const VkMemoryPropertyFlags MPF);
 	static void CreateDeviceMemories(std::vector<VkDeviceMemory>& DMs, const VkDevice Dev, const std::vector<std::vector<VkMemoryRequirements>>& MRs);
 
 	void AllocateDeviceMemory(VkDeviceMemory* DM, const VkMemoryRequirements& MR, const VkMemoryPropertyFlags MPF);
@@ -265,9 +262,9 @@ protected:
 	virtual void CreateCommandPool();
 	virtual void AllocateCommandBuffer();
 
-	virtual VkSurfaceFormatKHR SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface);
-	virtual VkExtent2D SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& Cap, const uint32_t Width, const uint32_t Height);
-	virtual VkPresentModeKHR SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface);
+	virtual [[nodiscard]] VkSurfaceFormatKHR SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface);
+	virtual [[nodiscard]] VkExtent2D SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& Cap, const uint32_t Width, const uint32_t Height);
+	virtual [[nodiscard]] VkPresentModeKHR SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 
 	virtual void CreateSwapchain() { CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight()); }
 	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags IUF = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
@@ -296,11 +293,7 @@ protected:
 	virtual void CreateDescriptorSetLayout() {}
 
 	virtual void CreatePipelineLayout(VkPipelineLayout& PL, const std::initializer_list<VkDescriptorSetLayout> il_DSLs, const std::initializer_list<VkPushConstantRange> il_PCRs);
-	virtual void CreatePipelineLayout() {
-		PipelineLayouts.resize(1);
-		CreatePipelineLayout(PipelineLayouts[0], {}, {});
-	}
-
+	virtual void CreatePipelineLayout() { PipelineLayouts.emplace_back(VkPipelineLayout()); CreatePipelineLayout(PipelineLayouts.back(), {}, {}); }
 
 	virtual void CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreateFlags Flags, const std::initializer_list<VkDescriptorPoolSize> il_DPSs);
 	virtual void CreateDescriptorPool() {}
@@ -360,17 +353,17 @@ protected:
 	virtual void Present();
 
 	const VkAllocationCallbacks AllocationCallbacks = {
-		nullptr,
-		AlignedMalloc,
-		AlignedRealloc,
-		AlignedFree,
-		AlignedAllocNotify,
-		AligendFreeNotify
+		.pUserData = nullptr,
+		.pfnAllocation = AlignedMalloc,
+		.pfnReallocation = AlignedRealloc,
+		.pfnFree = AlignedFree,
+		.pfnInternalAllocation = AlignedAllocNotify,
+		.pfnInternalFree = AligendFreeNotify
 	};
-	const VkAllocationCallbacks* GetAllocationCallbacks() const { return nullptr/*&AllocationCallbacks*/; }
+	const [[nodiscard]] VkAllocationCallbacks* GetAllocationCallbacks() const { return nullptr/*&AllocationCallbacks*/; }
 	
-	virtual VkPhysicalDevice GetCurrentPhysicalDevice() const { return CurrentPhysicalDevice; }; 
-	virtual VkPhysicalDeviceMemoryProperties GetCurrentPhysicalDeviceMemoryProperties() const { return CurrentPhysicalDeviceMemoryProperties; }
+	virtual [[nodiscard]] VkPhysicalDevice GetCurrentPhysicalDevice() const { return CurrentPhysicalDevice; };
+	virtual [[nodiscard]] VkPhysicalDeviceMemoryProperties GetCurrentPhysicalDeviceMemoryProperties() const { return CurrentPhysicalDeviceMemoryProperties; }
 
 #ifdef VK_NO_PROTOYYPES
 protected:
@@ -528,14 +521,6 @@ protected:
 	//			0.0f, 0.0f, 0.5f, 1.0f);
 	//}
 
-	/**
-	@note バーチャルフレームに持たせるもの #VK_TODO
-	1 コマンドバッファ
-	2 プレゼント完了セマフォ
-	3 描画完了セマフォ
-	4 フェンス
-	5 フレームバッファ
-	*/
 
 	const std::vector<const char*> InstanceLayers = {
 		//!< "VK_LAYER_LUNARG_standard_validation", is deprecated
@@ -581,37 +566,11 @@ protected:
 		VK_EXT_VALIDATION_CACHE_EXTENSION_NAME,
 	};
 
-	//!< よく使うやつ
-	const VkComponentMapping ComponentMapping_Identity = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, };
-	const VkComponentMapping ComponentMapping_RGBA = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A, };
-	const VkComponentMapping ComponentMapping_BGRA = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_A, };
-	const VkImageSubresourceRange ImageSubresourceRange_Color = {
-		VK_IMAGE_ASPECT_COLOR_BIT,
-		0, 1,
-		0, 1
-	};
-	const VkImageSubresourceRange ImageSubresourceRange_Depth = {
-		VK_IMAGE_ASPECT_DEPTH_BIT,
-		0, 1,
-		0, 1
-	};
-	const VkImageSubresourceRange ImageSubresourceRange_DepthStencil = {
-		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
-		0, 1,
-		0, 1
-	};
-	//!< 全てのミップマップ(レイヤー)を使用したい場合は、正確な値を知らなくても VK_REMAINING_MIP_LEVELS(VK_REMAINING_ARRAY_LAYERS) を指定すれば良い
-	//!< If want to use all miplevels(layer), we can use VK_REMAINING_MIP_LEVELS(VK_REMAINING_ARRAY_LAYERS) without knowing the exact number
-	const VkImageSubresourceRange ImageSubresourceRange_ColorAll = {
-		VK_IMAGE_ASPECT_COLOR_BIT,
-		0, VK_REMAINING_MIP_LEVELS,
-		0, VK_REMAINING_ARRAY_LAYERS
-	};
-	const VkImageSubresourceRange ImageSubresourceRange_DepthStencilAll = {
-		VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
-		0, VK_REMAINING_MIP_LEVELS,
-		0, VK_REMAINING_ARRAY_LAYERS
-	};
+	//const VkImageSubresourceRange ImageSubresourceRange_Color = {
+	//	.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+	//	.baseMipLevel = 0, .levelCount = 1,
+	//	.baseArrayLayer = 0, .layerCount = 1
+	//};
 };
 
 #ifdef DEBUG_STDOUT

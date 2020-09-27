@@ -10,7 +10,7 @@ public:
 	using Vertex_PositionColor = struct Vertex_PositionColor { DirectX::XMFLOAT3 Position; DirectX::XMFLOAT4 Color; };
 	using Instance_OffsetXY = struct Instance_OffsetXY { DirectX::XMFLOAT2 Offset; };
 
-	void CreateIndirectBuffer_Draw(const UINT IndexCount, const UINT InstanceCount);
+	void CreateIndirectBuffer_Draw(const UINT VertexCount, const UINT InstanceCount);
 	void CreateIndirectBuffer_DrawIndexed(const UINT IndexCount, const UINT InstanceCount);
 	void CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT Z);
 

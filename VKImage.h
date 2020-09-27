@@ -16,12 +16,12 @@ class VKImage : public VKExt
 private:
 	using Super = VKExt;
 
-	static VkFormat ToVkFormat(const gli::format GLIFormat);
-	static VkImageViewType ToVkImageViewType(const gli::target GLITarget);
-	static VkImageType ToVkImageType(const gli::target GLITarget);
-	static bool IsCube(const gli::target GLITarget);
-	static VkComponentSwizzle ToVkComponentSwizzle(const gli::swizzle GLISwizzle);
-	static VkComponentMapping ToVkComponentMapping(const gli::texture::swizzles_type GLISwizzlesType);
+	static [[nodiscard]] VkFormat ToVkFormat(const gli::format GLIFormat);
+	static [[nodiscard]] VkImageViewType ToVkImageViewType(const gli::target GLITarget);
+	static [[nodiscard]] VkImageType ToVkImageType(const gli::target GLITarget);
+	static [[nodiscard]] bool IsCube(const gli::target GLITarget);
+	static [[nodiscard]] VkComponentSwizzle ToVkComponentSwizzle(const gli::swizzle GLISwizzle);
+	static [[nodiscard]] VkComponentMapping ToVkComponentMapping(const gli::texture::swizzles_type GLISwizzlesType);
 
 protected:
 	virtual void CreateImage(VkImage* Image, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage, const gli::texture& GLITexture) const;
@@ -29,7 +29,7 @@ protected:
 	virtual void CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL,	const VkPipelineStageFlags PSF, const gli::texture& GLITexture);
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const gli::texture& GLITexture);
 
-	virtual gli::texture LoadImage(VkImage* Img, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, const std::string& Path) { return LoadImage_DDS(Img, DM, PSF, Path); }
-	gli::texture LoadImage_DDS(VkImage* Image, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, const std::string& Path);
+	virtual [[nodiscard]] gli::texture LoadImage(VkImage* Img, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, const std::string& Path) { return LoadImage_DDS(Img, DM, PSF, Path); }
+	[[nodiscard]] gli::texture LoadImage_DDS(VkImage* Image, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, const std::string& Path);
 };
 

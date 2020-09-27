@@ -1967,6 +1967,11 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorVa
 		.pInheritanceInfo = nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+		const VkImageSubresourceRange ISR = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0, .levelCount = 1,
+			.baseArrayLayer = 0, .layerCount = 1
+		};
 		for (auto& i : SwapchainImages) {
 			if (nullptr == CCV) {
 				const VkImageMemoryBarrier ImageMemoryBarrier_UndefinedToPresent = {
@@ -1977,7 +1982,7 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorVa
 					.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 					.srcQueueFamilyIndex = PresentQueueFamilyIndex, .dstQueueFamilyIndex = PresentQueueFamilyIndex,
 					.image = i,
-					.subresourceRange = ImageSubresourceRange_Color
+					.subresourceRange = ISR
 				};
 				vkCmdPipelineBarrier(CB,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT/*VK_PIPELINE_STAGE_TRANSFER_BIT*/,
@@ -1996,7 +2001,7 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorVa
 					.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					.srcQueueFamilyIndex = PresentQueueFamilyIndex, .dstQueueFamilyIndex = PresentQueueFamilyIndex,
 					.image = i,
-					.subresourceRange = ImageSubresourceRange_Color
+					.subresourceRange = ISR
 				};
 				vkCmdPipelineBarrier(CB,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -2005,7 +2010,7 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorVa
 					0, nullptr,
 					1, &ImageMemoryBarrier_UndefinedToTransfer);
 				{
-					vkCmdClearColorImage(CB, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, CCV, 1, &ImageSubresourceRange_Color);
+					vkCmdClearColorImage(CB, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, CCV, 1, &ISR);
 				}
 				const VkImageMemoryBarrier ImageMemoryBarrier_TransferToPresent = {
 					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -2015,7 +2020,7 @@ void VK::InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorVa
 					.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 					.srcQueueFamilyIndex = PresentQueueFamilyIndex, .dstQueueFamilyIndex = PresentQueueFamilyIndex,
 					.image = i,
-					.subresourceRange = ImageSubresourceRange_Color
+					.subresourceRange = ISR
 				};
 				vkCmdPipelineBarrier(CB,
 					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
@@ -2053,7 +2058,13 @@ void VK::CreateSwapchainImageView()
 {
 	for(auto i : SwapchainImages) {
 		VkImageView IV;
-		CreateImageView(&IV, i, VK_IMAGE_VIEW_TYPE_2D, ColorFormat, ComponentMapping_Identity, ImageSubresourceRange_Color);
+		const VkComponentMapping CM = { .r = VK_COMPONENT_SWIZZLE_IDENTITY, .g = VK_COMPONENT_SWIZZLE_IDENTITY, .b = VK_COMPONENT_SWIZZLE_IDENTITY, .a = VK_COMPONENT_SWIZZLE_IDENTITY, };
+		const VkImageSubresourceRange ISR = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0, .levelCount = 1,
+			.baseArrayLayer = 0, .layerCount = 1
+		};
+		CreateImageView(&IV, i, VK_IMAGE_VIEW_TYPE_2D, ColorFormat, CM, ISR);
 		
 		SwapchainImageViews.emplace_back(IV);
 	}
@@ -2814,6 +2825,11 @@ void VK::CreatePipeline_Compute()
 //!< 「レンダーパス外」にてクリアを行う
 void VK::ClearColor(const VkCommandBuffer CB, const VkImage Img, const VkClearColorValue& Color)
 {
+	const VkImageSubresourceRange ISR = {
+		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+		.baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS,
+		.baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS
+	};
 	const VkImageMemoryBarrier ImageMemoryBarrier_PresentToTransfer = {
 		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 		nullptr,
@@ -2824,7 +2840,7 @@ void VK::ClearColor(const VkCommandBuffer CB, const VkImage Img, const VkClearCo
 		PresentQueueFamilyIndex,
 		PresentQueueFamilyIndex,
 		Img,
-		ImageSubresourceRange_Color
+		ISR
 	};
 	vkCmdPipelineBarrier(CB,
 		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -2834,7 +2850,7 @@ void VK::ClearColor(const VkCommandBuffer CB, const VkImage Img, const VkClearCo
 		1, &ImageMemoryBarrier_PresentToTransfer);
 	{
 		//!< vkCmdClearColorImage() はレンダーパス内では使用できない
-		vkCmdClearColorImage(CB, Img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Color, 1, &ImageSubresourceRange_Color);
+		vkCmdClearColorImage(CB, Img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Color, 1, &ISR);
 	}
 	const VkImageMemoryBarrier ImageMemoryBarrier_TransferToPresent = {
 		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -2846,7 +2862,7 @@ void VK::ClearColor(const VkCommandBuffer CB, const VkImage Img, const VkClearCo
 		PresentQueueFamilyIndex,
 		PresentQueueFamilyIndex,
 		Img,
-		ImageSubresourceRange_Color
+		ISR
 	};
 	vkCmdPipelineBarrier(CB,
 		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,

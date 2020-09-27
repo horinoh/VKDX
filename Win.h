@@ -117,15 +117,15 @@ public:
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance);
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance);
 
-	static LONG GetWidth(const RECT& R) { return R.right - R.left; }
-	static LONG GetHeight(const RECT& R) { return R.bottom - R.top; }
-	static FLOAT GetAspectRatio(const FLOAT Width, const FLOAT Height) { return Width / Height; }
-	const RECT& GetRect() const { return Rect; }
-	LONG GetClientRectWidth() const { return GetWidth(GetRect()); }
-	LONG GetClientRectHeight() const { return GetHeight(GetRect()); }
-	FLOAT GetAspectRatioOfClientRect() const { return GetAspectRatio(static_cast<const FLOAT>(GetClientRectWidth()), static_cast<const FLOAT>(GetClientRectHeight())); }
+	static [[nodiscard]] LONG GetWidth(const RECT& R) { return R.right - R.left; }
+	static [[nodiscard]] LONG GetHeight(const RECT& R) { return R.bottom - R.top; }
+	static [[nodiscard]] FLOAT GetAspectRatio(const FLOAT Width, const FLOAT Height) { return Width / Height; }
+	[[nodiscard]] const RECT& GetRect() const { return Rect; }
+	[[nodiscard]] LONG GetClientRectWidth() const { return GetWidth(GetRect()); }
+	[[nodiscard]] LONG GetClientRectHeight() const { return GetHeight(GetRect()); }
+	[[nodiscard]] FLOAT GetAspectRatioOfClientRect() const { return GetAspectRatio(static_cast<const FLOAT>(GetClientRectWidth()), static_cast<const FLOAT>(GetClientRectHeight())); }
 
-	static std::string ToString(const std::wstring& WStr) {
+	static [[nodiscard]] std::string ToString(const std::wstring& WStr) {
 #if 1
 		const auto Size = WideCharToMultiByte(CP_UTF8, 0, WStr.c_str(), -1, nullptr, 0, nullptr, nullptr);
 		auto Buffer = new CHAR[Size];
@@ -146,7 +146,7 @@ public:
 		return std::string(cbegin(WStr), cend(WStr));
 #endif
 	}
-	static std::wstring ToWString(const std::string& Str) {
+	static [[nodiscard]] std::wstring ToWString(const std::string& Str) {
 #if 0
 		const auto Size = MultiByteToWideChar(CP_UTF8, 0, Str.c_str(), -1, nullptr, 0);
 		auto Buffer = new wchar_t[Size];
@@ -166,15 +166,15 @@ public:
 		return std::wstring(cbegin(Str), cend(Str));
 #endif
 	}
-	static std::wstring ToWString(const char* Str) { return std::wstring(&Str[0], &Str[strlen(Str)]); }
+	static [[nodiscard]] std::wstring ToWString(const char* Str) { return std::wstring(&Str[0], &Str[strlen(Str)]); }
 
-	virtual const std::wstring& GetTitleW() const { return TitleW; }
-	virtual std::string GetTitle() const { return ToString(TitleW); }
+	virtual [[nodiscard]] const std::wstring& GetTitleW() const { return TitleW; }
+	virtual [[nodiscard]] std::string GetTitle() const { return ToString(TitleW); }
 	void SetTitleW(LPCWSTR Title) { TitleW = Title; }
 
-	std::wstring GetBasePath() const { return TEXT(".\\") + GetTitleW(); }
+	[[nodiscard]] std::wstring GetBasePath() const { return TEXT(".\\") + GetTitleW(); }
 
-	bool FindDirectory(const std::string& Target, std::wstring& Path) {
+	[[nodiscard]] bool FindDirectory(const std::string& Target, std::wstring& Path) {
 		auto Cur = std::filesystem::current_path();
 		while (Cur.has_parent_path()) {
 			for (auto i : std::filesystem::recursive_directory_iterator(Cur)) {

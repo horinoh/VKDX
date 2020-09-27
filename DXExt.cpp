@@ -1,20 +1,20 @@
 #include "DXExt.h"
 
-void DXExt::CreateIndirectBuffer_Draw(const UINT IndexCount, const UINT InstanceCount)
+void DXExt::CreateIndirectBuffer_Draw(const UINT VertexCount, const UINT InstanceCount)
 {
-	IndirectBuffers.push_back(IndirectBuffer());
-	const D3D12_DRAW_ARGUMENTS Source = { IndexCount, InstanceCount, 0, 0 };
+	IndirectBuffers.emplace_back(IndirectBuffer());
+	const D3D12_DRAW_ARGUMENTS Source = { .VertexCountPerInstance = VertexCount, .InstanceCount = InstanceCount, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 	CreateAndCopyToDefaultResource(IndirectBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, &Source);
 
-	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
-		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW },
+	const std::array IADs = {
+		D3D12_INDIRECT_ARGUMENT_DESC({ .Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW }),
 	};
 	const D3D12_COMMAND_SIGNATURE_DESC CSD = {
-		Stride,
-		static_cast<const UINT>(IADs.size()), IADs.data(),
-		0
+		.ByteStride = Stride,
+		.NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs),
+		.NodeMask = 0
 	};
 	//!< パイプラインのバインディングを更新するような場合はルートシグネチャが必要、Draw や Dispatch のみの場合はnullptrを指定できる
 	Device->CreateCommandSignature(&CSD, /*COM_PTR_GET(RootSignatures[0])*/nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectBuffers.back().CommandSignature));
@@ -22,39 +22,39 @@ void DXExt::CreateIndirectBuffer_Draw(const UINT IndexCount, const UINT Instance
 
 void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT IndexCount, const UINT InstanceCount)
 {
-	IndirectBuffers.push_back(IndirectBuffer());
-	const D3D12_DRAW_INDEXED_ARGUMENTS Source = { IndexCount, InstanceCount, 0, 0, 0 };
+	IndirectBuffers.emplace_back(IndirectBuffer());
+	const D3D12_DRAW_INDEXED_ARGUMENTS Source = { .IndexCountPerInstance = IndexCount, .InstanceCount = InstanceCount, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 	CreateAndCopyToDefaultResource(IndirectBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, &Source);
 
-	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
-		{ D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED },
+	const std::array IADs = {
+		D3D12_INDIRECT_ARGUMENT_DESC({ .Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED }),
 	};
 	const D3D12_COMMAND_SIGNATURE_DESC CSD = {
-		Stride,
-		static_cast<const UINT>(IADs.size()), IADs.data(),
-		0
+		.ByteStride = Stride,
+		.NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs),
+		.NodeMask = 0
 	};
 	Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectBuffers.back().CommandSignature));
 }
 
 void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT Z)
 {
-	IndirectBuffers.push_back(IndirectBuffer());
+	IndirectBuffers.emplace_back(IndirectBuffer());
 
-	const D3D12_DISPATCH_ARGUMENTS Source = { X, Y, Z };
+	const D3D12_DISPATCH_ARGUMENTS Source = { .ThreadGroupCountX = X, .ThreadGroupCountY = Y, .ThreadGroupCountZ = Z };
 	const auto Stride = sizeof(Source);
 	const auto Size = static_cast<UINT32>(Stride * 1);
 	CreateAndCopyToDefaultResource(IndirectBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, &Source);
 
-	const std::array<D3D12_INDIRECT_ARGUMENT_DESC, 1> IADs = {
-		{ D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH },
+	const std::array IADs = {
+		D3D12_INDIRECT_ARGUMENT_DESC({ .Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH }),
 	};
 	const D3D12_COMMAND_SIGNATURE_DESC CSD = {
-		Stride,
-		static_cast<const UINT>(IADs.size()), IADs.data(),
-		0
+		.ByteStride = Stride,
+		.NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = IADs.data(),
+		.NodeMask = 0
 	};
 	Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectBuffers.back().CommandSignature));
 }
@@ -176,13 +176,13 @@ void DXExt::CreateShaderBlob_VsPs()
 {
 	const auto ShaderPath = GetBasePath();
 	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 #ifdef USE_SHADER_REFLECTION
 	std::wcout << (ShaderPath + TEXT(".vs.cso")) << std::endl;
 	PrintShaderReflection(COM_PTR_GET(ShaderBlobs.back()));
 #endif
 	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 #ifdef USE_SHADER_REFLECTION
 	std::wcout << (ShaderPath + TEXT(".ps.cso")) << std::endl;
 	PrintShaderReflection(COM_PTR_GET(ShaderBlobs.back()));
@@ -230,31 +230,31 @@ void DXExt::CreateShaderBlob_VsPsDsHsGs()
 {
 	const auto ShaderPath = GetBasePath();
 	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 #ifdef USE_SHADER_REFLECTION
 	std::wcout << (ShaderPath + TEXT(".vs.cso")) << std::endl;
 	PrintShaderReflection(COM_PTR_GET(ShaderBlobs.back()));
 #endif
 	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 #ifdef USE_SHADER_REFLECTION
 	std::wcout << (ShaderPath + TEXT(".ps.cso")) << std::endl;
 	PrintShaderReflection(COM_PTR_GET(ShaderBlobs.back()));
 #endif
 	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ds.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 #ifdef USE_SHADER_REFLECTION
 	std::wcout << (ShaderPath + TEXT(".ds.cso")) << std::endl;
 	PrintShaderReflection(COM_PTR_GET(ShaderBlobs.back()));
 #endif
 	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".hs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 #ifdef USE_SHADER_REFLECTION
 	std::wcout << (ShaderPath + TEXT(".hs.cso")) << std::endl;
 	PrintShaderReflection(COM_PTR_GET(ShaderBlobs.back()));
 #endif
 	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".gs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 #ifdef USE_SHADER_REFLECTION
 	std::wcout << (ShaderPath + TEXT(".gs.cso")) << std::endl;
 	PrintShaderReflection(COM_PTR_GET(ShaderBlobs.back()));
@@ -264,39 +264,39 @@ void DXExt::CreateShaderBlob_Cs()
 {
 	const auto ShaderPath = GetBasePath();
 	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".cs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".cs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 }
 
 void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs)
 {
 	const D3D12_RASTERIZER_DESC RD = {
-		D3D12_FILL_MODE_SOLID,
-		D3D12_CULL_MODE_BACK, TRUE,
-		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, 
-		TRUE,
-		FALSE, FALSE, 0,
-		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
+		.FillMode = D3D12_FILL_MODE_SOLID,
+		.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
+		.DepthBias = D3D12_DEFAULT_DEPTH_BIAS, .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP, .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, 
+		.DepthClipEnable = TRUE,
+		.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
+		.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 	};
 	const D3D12_DEPTH_STENCILOP_DESC DSOD = {
-		D3D12_STENCIL_OP_KEEP,			//!< ステンシルテスト失敗時
-		D3D12_STENCIL_OP_KEEP,			//!< ステンシルテスト成功、デプステスト失敗時
-		D3D12_STENCIL_OP_KEEP,			//!< ステンシルテスト成功、デプステスト成功時
-		D3D12_COMPARISON_FUNC_ALWAYS	//!< 既存のステンシル値との比較方法
+		.StencilFailOp = D3D12_STENCIL_OP_KEEP,	//!< ステンシルテスト失敗時
+		.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP,	//!< ステンシルテスト成功、デプステスト失敗時
+		.StencilPassOp = D3D12_STENCIL_OP_KEEP,			//!< ステンシルテスト成功、デプステスト成功時
+		.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS		//!< 既存のステンシル値との比較方法
 	};
 	const auto StencilEnable = FALSE;
 	const D3D12_DEPTH_STENCIL_DESC DSD = {
 		//!< #DX_TODO (アルファブレンド等で)「テスト」は有効だが「ライト」は無効にする場合は D3D12_DEPTH_WRITE_MASK_ZERO にする
-		DepthEnable, D3D12_DEPTH_WRITE_MASK_ALL, D3D12_COMPARISON_FUNC_LESS,
-		StencilEnable, D3D12_DEFAULT_STENCIL_READ_MASK, D3D12_DEFAULT_STENCIL_WRITE_MASK,
-		DSOD, DSOD //!< 法線がカメラに向いている場合と、向いていない場合
+		.DepthEnable = DepthEnable, .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D12_COMPARISON_FUNC_LESS,
+		.StencilEnable = StencilEnable, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
+		.FrontFace = DSOD, .BackFace = DSOD //!< 法線がカメラに向いている場合と、向いていない場合
 	};
-	const std::array<D3D12_SHADER_BYTECODE, 5> SBCs = {
-		D3D12_SHADER_BYTECODE({ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }),
-		D3D12_SHADER_BYTECODE({ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() }),
+	const std::array SBCs = {
+		D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[0]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[0]->GetBufferSize() }),
+		D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[1]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[1]->GetBufferSize() }),
 	};
-	const std::vector<DXGI_FORMAT> RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
+	const std::vector RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
 
-	PipelineStates.resize(1);
+	PipelineStates.emplace_back(COM_PTR<ID3D12PipelineState>());
 	std::vector<std::thread> Threads;
 
 	//!< メンバ関数をスレッドで使用したい場合、以下のようにthisを引数に取る形式を使用
@@ -314,29 +314,29 @@ void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE T
 void DXExt::CreatePipelineState_VsPsDsHsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs)
 {
 	const D3D12_RASTERIZER_DESC RD = {
-		D3D12_FILL_MODE_SOLID,
-		D3D12_CULL_MODE_BACK, TRUE,
-		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, 
-		TRUE,
-		FALSE, FALSE, 0,
-		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
+		.FillMode = D3D12_FILL_MODE_SOLID,
+		.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
+		.DepthBias = D3D12_DEFAULT_DEPTH_BIAS, .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP, .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, 
+		.DepthClipEnable = TRUE,
+		.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
+		.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 	};
-	const D3D12_DEPTH_STENCILOP_DESC DSOD = { D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS };
+	const D3D12_DEPTH_STENCILOP_DESC DSOD = { .StencilFailOp = D3D12_STENCIL_OP_KEEP, .StencilDepthFailOp = D3D12_STENCIL_OP_KEEP, .StencilPassOp = D3D12_STENCIL_OP_KEEP, .StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS };
 	const D3D12_DEPTH_STENCIL_DESC DSD = {
-		DepthEnable, D3D12_DEPTH_WRITE_MASK_ALL, D3D12_COMPARISON_FUNC_LESS,
-		FALSE, D3D12_DEFAULT_STENCIL_READ_MASK, D3D12_DEFAULT_STENCIL_WRITE_MASK, 
-		DSOD, DSOD 
+		.DepthEnable = DepthEnable, .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D12_COMPARISON_FUNC_LESS,
+		.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK, 
+		.FrontFace = DSOD, .BackFace = DSOD 
 	};
-	const std::array<D3D12_SHADER_BYTECODE, 5> SBCs = {
-			D3D12_SHADER_BYTECODE({ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }),
-			D3D12_SHADER_BYTECODE({ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() }),
-			D3D12_SHADER_BYTECODE({ ShaderBlobs[2]->GetBufferPointer(), ShaderBlobs[2]->GetBufferSize() }),
-			D3D12_SHADER_BYTECODE({ ShaderBlobs[3]->GetBufferPointer(), ShaderBlobs[3]->GetBufferSize() }),
-			D3D12_SHADER_BYTECODE({ ShaderBlobs[4]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() }),
+	const std::array SBCs = {
+		D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[0]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[0]->GetBufferSize() }),
+		D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[1]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[1]->GetBufferSize() }),
+		D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[2]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[2]->GetBufferSize() }),
+		D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[3]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[3]->GetBufferSize() }),
+		D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[4]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[4]->GetBufferSize() }),
 	};
-	const std::vector<DXGI_FORMAT> RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
+	const std::vector RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
 
-	PipelineStates.resize(1);
+	PipelineStates.emplace_back(COM_PTR<ID3D12PipelineState>());
 	std::vector<std::thread> Threads;
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
