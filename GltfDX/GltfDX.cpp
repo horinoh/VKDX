@@ -273,20 +273,20 @@ void GltfDX::Process(const fx::gltf::Node& Nd, const uint32_t i)
 	auto& Mtx = CurrentMatrix.back();
 
 	if (fx::gltf::defaults::IdentityMatrix != Nd.matrix) {
-		const auto Local = DirectX::XMFLOAT4X4(Nd.matrix.data());
+		const auto Local = DirectX::XMFLOAT4X4(data(Nd.matrix));
 		Mtx *= DirectX::XMLoadFloat4x4(&Local);
 	}
 	else {
 		if (fx::gltf::defaults::NullVec3 != Nd.translation) {
-			const auto Local = DirectX::XMFLOAT3(Nd.translation.data());
+			const auto Local = DirectX::XMFLOAT3(data(Nd.translation));
 			Mtx *= DirectX::XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&Local));
 		}
 		if (fx::gltf::defaults::IdentityRotation != Nd.rotation) {
-			const auto Local = DirectX::XMFLOAT4(Nd.rotation.data());
+			const auto Local = DirectX::XMFLOAT4(data(Nd.rotation));
 			Mtx *= DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&Local));
 		}
 		if (fx::gltf::defaults::IdentityVec3 != Nd.scale) {
-			const auto Local = DirectX::XMFLOAT3(Nd.scale.data());
+			const auto Local = DirectX::XMFLOAT3(data(Nd.scale));
 			Mtx *= DirectX::XMMatrixScalingFromVector(DirectX::XMLoadFloat3(&Local));
 		}
 	}
@@ -340,21 +340,21 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		SemnticInitial += i.first.substr(0, 1);
 	}
 	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(cbegin(SemnticInitial), cend(SemnticInitial));
-	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 	const auto VS = D3D12_SHADER_BYTECODE({ ShaderBlobs.back()->GetBufferPointer(), ShaderBlobs.back()->GetBufferSize() });
-	ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
-	VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 	const auto PS = D3D12_SHADER_BYTECODE({ ShaderBlobs.back()->GetBufferPointer(), ShaderBlobs.back()->GetBufferSize() });
 
 	//!< セマンティックとインデックスのリストを作る (Create semantic and index list)
 	for (const auto& i : Prim.attributes) {
 		std::string Name, Index;
 		if (DecomposeSemantic(i.first, Name, Index)) {
-			SemanticAndIndices.push_back({ Name.c_str(), std::stoi(Index) });
+			SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ Name.c_str(), std::stoi(Index) }));
 		}
 		else {
-			SemanticAndIndices.push_back({ i.first.c_str(), 0 });
+			SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ i.first.c_str(), 0 }));
 		}
 	}
 	auto MorphIndex = 1;
@@ -362,10 +362,10 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		for (const auto& j : i) {
 			std::string Name, Index;
 			if (DecomposeSemantic(j.first, Name, Index)) {
-				SemanticAndIndices.push_back({ Name.c_str(), std::stoi(Index) });
+				SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ Name.c_str(), std::stoi(Index) }));
 			}
 			else {
-				SemanticAndIndices.push_back({ j.first.c_str(), MorphIndex });
+				SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ j.first.c_str(), MorphIndex }));
 			}
 		}
 		++MorphIndex;
@@ -378,7 +378,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	for (const auto& i : Prim.attributes) {
 		const auto& Sem = SemanticAndIndices[InputSlot];
 		const auto& Acc = Doc.accessors[i.second];
-		IEDs.push_back({ Sem.first.c_str(), Sem.second, ToDXFormat(Acc), InputSlot, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+		IEDs.emplace_back(D3D12_INPUT_ELEMENT_DESC({ .SemanticName = Sem.first.c_str(), .SemanticIndex = Sem.second, .Format = ToDXFormat(Acc), .InputSlot = InputSlot, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }));
 		++InputSlot;
 	}
 	//!< モーフターゲット (Morph target)
@@ -386,14 +386,14 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		for (const auto& j : i) {
 			const auto& Sem = SemanticAndIndices[InputSlot];
 			const auto& Acc = Doc.accessors[j.second];
-			IEDs.push_back({ Sem.first.c_str(), Sem.second, ToDXFormat(Acc), InputSlot, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 });
+			IEDs.emplace_back(D3D12_INPUT_ELEMENT_DESC({ .SemanticName = Sem.first.c_str(), .SemanticIndex = Sem.second, .Format = ToDXFormat(Acc), .InputSlot = InputSlot, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }));
 			++InputSlot;
 		}
 	}
-	const std::vector<DXGI_FORMAT> RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
+	const std::vector RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
 
 	const auto RS = COM_PTR_GET(RootSignatures[0]);
-	PipelineStates.push_back(COM_PTR<ID3D12PipelineState>());
+	PipelineStates.emplace_back(COM_PTR<ID3D12PipelineState>());
 	const D3D12_RASTERIZER_DESC RD = {
 		D3D12_FILL_MODE_SOLID,
 		D3D12_CULL_MODE_BACK, TRUE,
@@ -428,7 +428,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators.back());
 	for (auto i = 0; i < static_cast<int>(Count); ++i) {
-		const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[BundleGraphicsCommandLists.size() - Count + i]);
+		const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[size(BundleGraphicsCommandLists) - Count + i]);
 		VERIFY_SUCCEEDED(BCL->Reset(BCA, PST));
 		{
 			//const std::array<D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VertexBuffers.back().View };
@@ -443,14 +443,14 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 
-			const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
-			BCL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
+			const std::array DHs = { COM_PTR_GET(DH) };
+			BCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 			auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
 			BCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #endif
 			BCL->IASetPrimitiveTopology(ToDXPrimitiveTopology(Prim.mode));
-			BCL->IASetVertexBuffers(0, static_cast<UINT>(VBVs.size()), VBVs.data());
+			BCL->IASetVertexBuffers(0, static_cast<UINT>(size(VBVs)), data(VBVs));
 			BCL->IASetIndexBuffer(&IBV);
 			BCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 		}
@@ -484,7 +484,7 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			}
 
 			if ("indices" == Identifier) {
-				IndexBuffers.push_back(IndexBuffer());
+				IndexBuffers.emplace_back(IndexBuffer());
 
 				CreateAndCopyToDefaultResource(IndexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Data);
 				IndexBuffers.back().View = { IndexBuffers.back().Resource->GetGPUVirtualAddress(), Size, ToDXFormat(Acc.componentType) };
@@ -492,7 +492,7 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 				CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
 			}
 			else if ("attributes" == Identifier || "targets" == Identifier) {
-				VertexBuffers.push_back(VertexBuffer());
+				VertexBuffers.emplace_back(VertexBuffer());
 
 				CreateAndCopyToDefaultResource(VertexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Data);
 				VertexBuffers.back().View = { VertexBuffers.back().Resource->GetGPUVirtualAddress(), Size, Stride };
@@ -500,11 +500,11 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			else if ("inverseBindMatrices" == Identifier) {
 				InverseBindMatrices.reserve(Acc.count);
 				for (uint32_t i = 0; i < Acc.count; ++i) {
-					InverseBindMatrices.push_back(reinterpret_cast<const DirectX::XMMATRIX*>(Data + Stride * i));
+					InverseBindMatrices.emplace_back(reinterpret_cast<const DirectX::XMMATRIX*>(Data + Stride * i));
 				}
 #ifdef DEBUG_STDOUT
-				if (InverseBindMatrices.size()) {
-					std::cout << "InverseBindMatrices[" << InverseBindMatrices.size() << "]" << std::endl;
+				if (size(InverseBindMatrices)) {
+					std::cout << "InverseBindMatrices[" << size(InverseBindMatrices) << "]" << std::endl;
 					for (auto i : InverseBindMatrices) {
 						std::cout << *i;
 					}
@@ -524,30 +524,30 @@ void GltfDX::Process(const fx::gltf::Skin& Skn)
 {
 	Gltf::Process(Skn);
 
-	JointMatrices.reserve(Skn.joints.size());
-	for (uint32_t i = 0; i < Skn.joints.size(); ++i) {
+	JointMatrices.reserve(size(Skn.joints));
+	for (uint32_t i = 0; i < size(Skn.joints); ++i) {
 		const auto& IBM = *InverseBindMatrices[i];
 
 		auto Wld = DirectX::XMMatrixIdentity();
 		const auto& Nd = GetDocument().nodes[Skn.joints[i]];
 		if (fx::gltf::defaults::NullVec3 != Nd.translation) {
-			const auto Local = DirectX::XMFLOAT3(Nd.translation.data());
+			const auto Local = DirectX::XMFLOAT3(data(Nd.translation));
 			Wld *= DirectX::XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&Local));
 		}
 		if (fx::gltf::defaults::IdentityRotation != Nd.rotation) {
-			const auto Local = DirectX::XMFLOAT4(Nd.rotation.data());
+			const auto Local = DirectX::XMFLOAT4(data(Nd.rotation));
 			Wld *= DirectX::XMMatrixRotationQuaternion(DirectX::XMLoadFloat4(&Local));
 		}
 		if (fx::gltf::defaults::IdentityVec3 != Nd.scale) {
-			const auto Local = DirectX::XMFLOAT3(Nd.scale.data());
+			const auto Local = DirectX::XMFLOAT3(data(Nd.scale));
 			Wld *= DirectX::XMMatrixScalingFromVector(DirectX::XMLoadFloat3(&Local));
 		}
 		
-		JointMatrices.push_back(Wld * IBM);
+		JointMatrices.emplace_back(Wld * IBM);
 	}
 #ifdef DEBUG_STDOUT
-	if (JointMatrices.size()) {
-		std::cout << "JointMatrices[" << JointMatrices.size() << "]" << std::endl;
+	if (size(JointMatrices)) {
+		std::cout << "JointMatrices[" << size(JointMatrices) << "]" << std::endl;
 		for (auto i : JointMatrices) {
 			std::cout << i;
 		}
@@ -558,7 +558,7 @@ void GltfDX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnTimer(hWnd, hInstance);
 
-	if (GetDocument().animations.empty()) { return; }
+	if (empty(GetDocument().animations)) { return; }
 
 	const auto SlowFactor = 1.0f;
 	CurrentFrame += static_cast<float>(Elapse) / 1000.0f * SlowFactor;
@@ -568,8 +568,8 @@ void GltfDX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 	UpdateAnimation(CurrentFrame, true);
 
 #ifdef DEBUG_STDOUT
-	if (AnimNodeMatrices.size()) {
-		std::cout << "AnimNodeMatrices[" << AnimNodeMatrices.size() << "]" << std::endl;
+	if (size(AnimNodeMatrices)) {
+		std::cout << "AnimNodeMatrices[" << size(AnimNodeMatrices) << "]" << std::endl;
 		for (auto i : AnimNodeMatrices) {
 			std::cout << i;
 		}
@@ -580,38 +580,37 @@ void GltfDX::OnTimer(HWND hWnd, HINSTANCE hInstance)
 void GltfDX::UpdateAnimTranslation(const std::array<float, 3>& Value, const uint32_t NodeIndex)
 {
 	if (-1 != NodeIndex) {
-		const auto Local = DirectX::XMFLOAT3(Value.data());
+		const auto Local = DirectX::XMFLOAT3(data(Value));
 		AnimNodeMatrices[NodeIndex] *= DirectX::XMMatrixTranslationFromVector(DirectX::XMLoadFloat3(&Local));
 	}
 }
 void GltfDX::UpdateAnimScale(const std::array<float, 3>& Value, const uint32_t NodeIndex)
 {
 	if (-1 != NodeIndex) {
-		const auto Local = DirectX::XMFLOAT3(Value.data());
+		const auto Local = DirectX::XMFLOAT3(data(Value));
 		AnimNodeMatrices[NodeIndex] *= DirectX::XMMatrixScalingFromVector(DirectX::XMLoadFloat3(&Local));
 	}
 }
 void GltfDX::UpdateAnimRotation(const std::array<float, 4>& Value, const uint32_t NodeIndex)
 {
 	if (-1 != NodeIndex) {
-		const auto Local = DirectX::XMFLOAT4(Value.data());
+		const auto Local = DirectX::XMFLOAT4(data(Value));
 		//!< クォータニオンは要正規化
 		AnimNodeMatrices[NodeIndex] *= DirectX::XMMatrixRotationQuaternion(DirectX::XMQuaternionNormalize(DirectX::XMLoadFloat4(&Local)));
 	}
 }
-void GltfDX::UpdateAnimWeights(const float* /*Data*/, const uint32_t /*PrevIndex*/, const uint32_t /*NextIndex*/, const float /*t*/)
+void GltfDX::UpdateAnimWeights([[maybe_unused]] const float* Data, [[maybe_unused]] const uint32_t PrevIndex, [[maybe_unused]] const uint32_t NextIndex, [[maybe_unused]] const float t)
 {
-
 }
 
 void GltfDX::PopulateCommandList(const size_t i)
 {
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
-	const auto PrimCount = BundleGraphicsCommandLists.size() / SCD.BufferCount;
+	const auto PrimCount = size(BundleGraphicsCommandLists) / SCD.BufferCount;
 	std::vector<ID3D12GraphicsCommandList*> BCLs;
 	for (auto j = 0; j < PrimCount; ++j) {
-		BCLs.push_back(COM_PTR_GET(BundleGraphicsCommandLists[j * SCD.BufferCount + i]));
+		BCLs.emplace_back(COM_PTR_GET(BundleGraphicsCommandLists[j * SCD.BufferCount + i]));
 	}
 
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
@@ -623,8 +622,8 @@ void GltfDX::PopulateCommandList(const size_t i)
 		
 		CL->SetGraphicsRootSignature(RS);
 
-		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+		CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+		CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
 		//CL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(sizeof(ViewProjection) / 4), &ViewProjection, 0);
 
@@ -634,17 +633,17 @@ void GltfDX::PopulateCommandList(const size_t i)
 			const auto DDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 
 			const std::array<D3D12_RECT, 0> Rects = {};
-			CL->ClearRenderTargetView(SCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rects.size()), Rects.data());
-			CL->ClearDepthStencilView(DDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(Rects.size()), Rects.data());
+			CL->ClearRenderTargetView(SCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+			CL->ClearDepthStencilView(DDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 
-			const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RTDHs = { SCDH };
-			CL->OMSetRenderTargets(static_cast<UINT>(RTDHs.size()), RTDHs.data(), FALSE, &DDH);
+			const std::array RTDHs = { SCDH };
+			CL->OMSetRenderTargets(static_cast<UINT>(size(RTDHs)), data(RTDHs), FALSE, &DDH);
 
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 
-				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
+				const std::array DHs = { COM_PTR_GET(DH) };
+				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
 				CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);

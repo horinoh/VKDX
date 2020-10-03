@@ -73,8 +73,7 @@ public:
 	}
 
 	static bool DecomposeSemantic(const std::string& Semantic, std::string& Name, std::string& Index) {
-		const auto pos = Semantic.find("_");
-		if (std::string::npos != pos) {
+		if (const auto pos = Semantic.find("_");std::string::npos != pos) {
 			Name = Semantic.substr(0, pos);
 			Index = Semantic.substr(pos + 1);
 			//SemanticIndices.push_back({ i.first.substr(0, pos).c_str(), std::stoi(i.first.substr(pos + 1)) });
@@ -88,7 +87,7 @@ public:
 
 	virtual void Unload() { Documents.clear(); }
 	virtual void Load(const std::string& Path) {
-		if (std::string::npos != Path.rfind(".glb")){
+		if (std::string::npos != Path.rfind(".glb")) {
 			Documents.push_back(fx::gltf::LoadFromBinary(Path, fx::gltf::ReadQuotas()));
 		} else /*if(std::string::npos != Path.rfind(".gltf"))*/{
 			Documents.push_back(fx::gltf::LoadFromText(Path, fx::gltf::ReadQuotas()));
@@ -379,8 +378,7 @@ public:
 		PushTab();
 		for (const auto& i : Prim.targets) {
 			for (const auto& j : Prim.attributes) {
-				const auto it = i.find(j.first);
-				if (i.end() != it) {
+				if (const auto it = i.find(j.first); i.end() != it) {
 					Process("targets", Doc.accessors[it->second]);
 				}
 			}
@@ -559,12 +557,9 @@ public:
 		PopTab();
 
 #ifdef USE_GLTF_EXT_TEX_TRANS
-		const auto ItExtensions = Tex.extensionsAndExtras.find("extensions");
-		if (ItExtensions != Tex.extensionsAndExtras.end()) {
-			const auto ItTexTransform = ItExtensions->find("KHR_texture_transform");
-			if (ItTexTransform != ItExtensions->end()) {
-				const auto ItOffset = ItTexTransform->find("offset");
-				if (ItOffset != ItTexTransform->end()) {
+		if (const auto ItExtensions = Tex.extensionsAndExtras.find("extensions"); ItExtensions != Tex.extensionsAndExtras.end()) {
+			if (const auto ItTexTransform = ItExtensions->find("KHR_texture_transform"); ItTexTransform != ItExtensions->end()) {
+				if (const auto ItOffset = ItTexTransform->find("offset"); ItOffset != ItTexTransform->end()) {
 					if (ItOffset->is_array() && 2 == ItOffset->size()) {
 						if (ItOffset->at(0).is_number_float()) {
 							std::cout << ItOffset->at(0).get<float>() << ", " << ItOffset->at(1).get<float>() << std::endl;
@@ -573,9 +568,7 @@ public:
 				}
 			}
 		}
-
-		const auto ItExtras = Tex.extensionsAndExtras.find("extras");
-		if (ItExtras != Tex.extensionsAndExtras.end()) {}
+		if (const auto ItExtras = Tex.extensionsAndExtras.find("extras"); ItExtras != Tex.extensionsAndExtras.end()) {}
 #endif
 	}
 	virtual void Process(const fx::gltf::Texture& Tex) {
@@ -592,21 +585,16 @@ public:
 		PopTab();
 
 #ifdef USE_GLTF_EXT_TEX_DDS
-		const auto ItExtensions = Tex.extensionsAndExtras.find("extensions");
-		if (ItExtensions != Tex.extensionsAndExtras.end()) {
-			const auto ItTexDDS = ItExtensions->find("MSFT_texture_dds");
-			if (ItTexDDS != ItExtensions->end()) {
-				const auto ItSrc = ItTexDDS->find("source");
-				if (ItSrc != ItTexDDS->end()) {
+		if (const auto ItExtensions = Tex.extensionsAndExtras.find("extensions"); ItExtensions != Tex.extensionsAndExtras.end()) {
+			if (const auto ItTexDDS = ItExtensions->find("MSFT_texture_dds"); ItTexDDS != ItExtensions->end()) {
+				if (const auto ItSrc = ItTexDDS->find("source"); ItSrc != ItTexDDS->end()) {
 					if (ItSrc->is_number_integer()) {
 						std::cout << ItSrc->get<int32_t>() << std::endl;
 					}
 				}
 			}
 		}
-
-		const auto ItExtras = Tex.extensionsAndExtras.find("extras");
-		if (ItExtras != Tex.extensionsAndExtras.end()) {}
+		if (const auto ItExtras = Tex.extensionsAndExtras.find("extras"); ItExtras != Tex.extensionsAndExtras.end()) {}
 #endif
 	}
 

@@ -90,20 +90,20 @@
 
 namespace Colors
 {
-	const VkClearColorValue Black = { 0.0f, 0.0f, 0.0f, 1.0f };
-	const VkClearColorValue Blue = { 0.0f, 0.0f, 1.0f, 1.0f };
-	const VkClearColorValue Brown = { 0.647058845f, 0.164705887f, 0.164705887f, 1.0f };
-	const VkClearColorValue Gray = { 0.501960814f, 0.501960814f, 0.501960814f, 1.0f };
-	const VkClearColorValue Green = { 0.0f, 0.501960814f, 0.0f, 1.0f };
-	const VkClearColorValue Magenta = { 1.0f, 0.0f, 1.0f, 1.0f };
-	const VkClearColorValue Orange = { 1.0f, 0.647058845f, 0.0f, 1.0f };
-	const VkClearColorValue Pink = { 1.0f, 0.752941251f, 0.796078503f, 1.0f };
-	const VkClearColorValue Purple = { 0.501960814f, 0.0f, 0.501960814f, 1.0f };
-	const VkClearColorValue Red = { 1.0f, 0.0f, 0.0f, 1.0f };
-	const VkClearColorValue SkyBlue = { 0.529411793f, 0.807843208f, 0.921568692f, 1.0f };
-	const VkClearColorValue Transparent = { 0.0f, 0.0f, 0.0f, 0.0f };
-	const VkClearColorValue White = { 1.0f, 1.0f, 1.0f, 1.0f };
-	const VkClearColorValue Yellow = { 1.0f, 1.0f, 0.0f, 1.0f };
+	constexpr VkClearColorValue Black = { 0.0f, 0.0f, 0.0f, 1.0f };
+	constexpr VkClearColorValue Blue = { 0.0f, 0.0f, 1.0f, 1.0f };
+	constexpr VkClearColorValue Brown = { 0.647058845f, 0.164705887f, 0.164705887f, 1.0f };
+	constexpr VkClearColorValue Gray = { 0.501960814f, 0.501960814f, 0.501960814f, 1.0f };
+	constexpr VkClearColorValue Green = { 0.0f, 0.501960814f, 0.0f, 1.0f };
+	constexpr VkClearColorValue Magenta = { 1.0f, 0.0f, 1.0f, 1.0f };
+	constexpr VkClearColorValue Orange = { 1.0f, 0.647058845f, 0.0f, 1.0f };
+	constexpr VkClearColorValue Pink = { 1.0f, 0.752941251f, 0.796078503f, 1.0f };
+	constexpr VkClearColorValue Purple = { 0.501960814f, 0.0f, 0.501960814f, 1.0f };
+	constexpr VkClearColorValue Red = { 1.0f, 0.0f, 0.0f, 1.0f };
+	constexpr VkClearColorValue SkyBlue = { 0.529411793f, 0.807843208f, 0.921568692f, 1.0f };
+	constexpr VkClearColorValue Transparent = { 0.0f, 0.0f, 0.0f, 0.0f };
+	constexpr VkClearColorValue White = { 1.0f, 1.0f, 1.0f, 1.0f };
+	constexpr VkClearColorValue Yellow = { 1.0f, 1.0f, 0.0f, 1.0f };
 }
 
 class VK : public Cmn
@@ -203,7 +203,7 @@ protected:
 	virtual void ValidateFormatProperties_StorageImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const bool Atomic) const;
 
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
-	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerInsert(CB, Color, Name.c_str()); }
+	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerInsert(CB, Color, Name/*.c_str()*/); }
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::wstring& Name) { MarkerInsert(CB, Color, ToString(Name)); }
 	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
 	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerBegin(CB, Color, Name.c_str()); }
@@ -565,12 +565,6 @@ protected:
 #endif
 		VK_EXT_VALIDATION_CACHE_EXTENSION_NAME,
 	};
-
-	//const VkImageSubresourceRange ImageSubresourceRange_Color = {
-	//	.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-	//	.baseMipLevel = 0, .levelCount = 1,
-	//	.baseArrayLayer = 0, .layerCount = 1
-	//};
 };
 
 #ifdef DEBUG_STDOUT

@@ -120,14 +120,14 @@ public:
 	static std::string GetFormatString(const DXGI_FORMAT Format);
 
 	static [[nodiscard]] std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) {
-		const auto l = DirectX::XMFLOAT3(lhs.data());
-		const auto r = DirectX::XMFLOAT3(rhs.data());
+		const auto l = DirectX::XMFLOAT3(data(lhs));
+		const auto r = DirectX::XMFLOAT3(data(rhs));
 		const auto v = DirectX::XMVectorLerp(DirectX::XMLoadFloat3(&l), DirectX::XMLoadFloat3(&r), t);
 		return { v.m128_f32[0], v.m128_f32[1], v.m128_f32[2] };
 	}
 	static [[nodiscard]] std::array<float, 4> Lerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) {
-		const auto l = DirectX::XMFLOAT4(lhs.data());
-		const auto r = DirectX::XMFLOAT4(rhs.data());
+		const auto l = DirectX::XMFLOAT4(data(lhs));
+		const auto r = DirectX::XMFLOAT4(data(rhs));
 		const auto v = DirectX::XMVectorLerp(DirectX::XMLoadFloat4(&l), DirectX::XMLoadFloat4(&r), t);
 		return { v.m128_f32[0], v.m128_f32[1], v.m128_f32[2], v.m128_f32[3] };
 	}
@@ -224,7 +224,7 @@ protected:
 
 	virtual void PopulateCommandList(const size_t i);
 
-	virtual void DrawFrame(const UINT /*i*/) {}
+	virtual void DrawFrame([[maybe_unused]] const UINT i) {}
 	virtual void Draw();
 	virtual void Dispatch();
 	virtual void Present();

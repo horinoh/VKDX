@@ -271,8 +271,8 @@ void GltfVK::LoadScene()
 }
 void GltfVK::PreProcess()
 {
-	//const auto Fov = 0.16f * glm::pi<float>();
-	const auto Fov = 0.16f * std::numbers::pi_v<float>;
+	const auto Fov = 0.16f * glm::pi<float>();
+	//const auto Fov = 0.16f * std::numbers::pi_v<float>;
 	const auto Aspect = GetAspectRatioOfClientRect();
 	const auto ZFar = 100.0f;
 	const auto ZNear = ZFar * 0.0001f;
@@ -291,14 +291,14 @@ void GltfVK::PreProcess()
 	VKExt::CreateDescriptorPool(DescriptorPools[0], 0, { { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 } });
 
 	//!< デスクリプタセット
-	assert(!DescriptorSetLayouts.empty() && "");
-	const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
-	assert(!DescriptorPools.empty() && "");
+	assert(!empty(DescriptorSetLayouts) && "");
+	const std::array DSLs = { DescriptorSetLayouts[0] };
+	assert(!empty(DescriptorPools) && "");
 	const VkDescriptorSetAllocateInfo DSAI = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 		nullptr,
 		DescriptorPools[0],
-		static_cast<uint32_t>(DSLs.size()), DSLs.data()
+		static_cast<uint32_t>(size(DSLs)), data(DSLs)
 	};
 	DescriptorSets.resize(1);
 	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
@@ -322,7 +322,7 @@ void GltfVK::PreProcess()
 		VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
 		nullptr,
 		0,
-		static_cast<uint32_t>(DUTEs.size()), DUTEs.data(),
+		static_cast<uint32_t>(size(DUTEs)), data(DUTEs),
 		VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
 		DescriptorSetLayouts[0],
 		VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
@@ -347,17 +347,17 @@ void GltfVK::Process(const fx::gltf::Node& Nd, const uint32_t i)
 	auto& Mtx = CurrentMatrix.back();
 
 	if (fx::gltf::defaults::IdentityMatrix != Nd.matrix) {
-		Mtx = glm::make_mat4(Nd.matrix.data()) * Mtx;
+		Mtx = glm::make_mat4(data(Nd.matrix)) * Mtx;
 	}
 	else {
 		if (fx::gltf::defaults::NullVec3 != Nd.translation) {
-			Mtx = glm::translate(Mtx, glm::make_vec3(Nd.translation.data()));
+			Mtx = glm::translate(Mtx, glm::make_vec3(data(Nd.translation)));
 		}
 		if (fx::gltf::defaults::IdentityRotation != Nd.rotation) {
-			Mtx = glm::mat4_cast(glm::make_quat(Nd.rotation.data())) * Mtx;
+			Mtx = glm::mat4_cast(glm::make_quat(data(Nd.rotation))) * Mtx;
 		}
 		if (fx::gltf::defaults::IdentityVec3 != Nd.scale) {
-			Mtx = glm::scale(Mtx, glm::make_vec3(Nd.scale.data()));
+			Mtx = glm::scale(Mtx, glm::make_vec3(data(Nd.scale)));
 		}
 	}
 
@@ -409,10 +409,10 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 		SemanticInitial += i.first.substr(0, 1);
 	}
 	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(cbegin(SemanticInitial), cend(SemanticInitial));
-	ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
-	const auto VS = VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, ShaderModules.back(), "main", nullptr });
-	ShaderModules.push_back(VK::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
-	const auto FS = VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules.back(), "main", nullptr });
+	ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));
+	const auto VS = VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = ShaderModules.back(), .pName = "main", .pSpecializationInfo = nullptr });
+	ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))));
+	const auto FS = VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = ShaderModules.back(), .pName = "main", .pSpecializationInfo = nullptr });
 
 	//!< アトリビュート (Attributes)
 	std::vector<VkVertexInputBindingDescription> VIBDs;
@@ -422,8 +422,8 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	const auto& Doc = GetDocument();
 	for (const auto& i : Prim.attributes) {
 		const auto& Acc = Doc.accessors[i.second];
-		VIBDs.push_back({ Binding, GetTypeSize(Acc),  VK_VERTEX_INPUT_RATE_VERTEX });
-		VIADs.push_back({ Location, Binding, ToVKFormat(Acc), 0 });
+		VIBDs.emplace_back(VkVertexInputBindingDescription({ .binding = Binding, .stride = GetTypeSize(Acc), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }));
+		VIADs.emplace_back(VkVertexInputAttributeDescription({ .location = Location, .binding = Binding, .format = ToVKFormat(Acc), .offset = 0 }));
 		++Binding;
 		++Location;
 	}
@@ -431,8 +431,8 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	for (const auto& i : Prim.targets) {
 		for (const auto& j : i) {
 			const auto& Acc = Doc.accessors[j.second];
-			VIBDs.push_back({ Binding, GetTypeSize(Acc),  VK_VERTEX_INPUT_RATE_VERTEX });
-			VIADs.push_back({ Location, Binding, ToVKFormat(Acc), 0 });
+			VIBDs.emplace_back(VkVertexInputBindingDescription({ .binding = Binding, .stride = GetTypeSize(Acc), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }));
+			VIADs.emplace_back(VkVertexInputAttributeDescription({ .location = Location, .binding = Binding, .format = ToVKFormat(Acc), .offset = 0 }));
 			++Binding;
 			++Location;
 		}
@@ -440,35 +440,37 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 
 	const auto RP = RenderPasses[0];
 	const auto PLL = PipelineLayouts[0];
-	Pipelines.push_back(VkPipeline());
+	Pipelines.emplace_back(VkPipeline());
 	const VkPipelineRasterizationStateCreateInfo PRSCI = {
-		VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_FALSE,
-		VK_FALSE,
-		VK_POLYGON_MODE_FILL,
-		VK_CULL_MODE_BACK_BIT,
-		VK_FRONT_FACE_COUNTER_CLOCKWISE,
-		VK_FALSE, 0.0f, 0.0f, 0.0f,
-		1.0f
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.depthClampEnable = VK_FALSE,
+		.rasterizerDiscardEnable = VK_FALSE,
+		.polygonMode = VK_POLYGON_MODE_FILL,
+		.cullMode = VK_CULL_MODE_BACK_BIT,
+		.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+		.depthBiasEnable = VK_FALSE, .depthBiasConstantFactor = 0.0f, .depthBiasClamp = 0.0f, .depthBiasSlopeFactor = 0.0f,
+		.lineWidth = 1.0f
 	};
 	const VkPipelineDepthStencilStateCreateInfo PDSSCI = {
-		VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-		nullptr,
-		0,
-		VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS_OR_EQUAL,
-		VK_FALSE,
-		VK_FALSE, { VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_NEVER, 0, 0, 0 }, { VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
-		0.0f, 1.0f
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.depthTestEnable = VK_TRUE, .depthWriteEnable = VK_TRUE, .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
+		.depthBoundsTestEnable = VK_FALSE,
+		.stencilTestEnable = VK_FALSE, 
+		.front = VkStencilOpState({ .failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP, .compareOp = VK_COMPARE_OP_NEVER, .compareMask = 0, .writeMask = 0, .reference = 0 }),
+		.back = VkStencilOpState({ .failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP, .compareOp = VK_COMPARE_OP_ALWAYS, .compareMask = 0, .writeMask = 0, .reference = 0 }),
+		.minDepthBounds = 0.0f, .maxDepthBounds = 1.0f
 	}; 
-	const std::vector<VkPipelineColorBlendAttachmentState> PCBASs = {
-		{
-			VK_FALSE, 
-			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-			VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-			VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-		},
+	const std::vector PCBASs = {
+		VkPipelineColorBlendAttachmentState({
+			.blendEnable = VK_FALSE,
+			.srcColorBlendFactor = VK_BLEND_FACTOR_ONE, .dstColorBlendFactor = VK_BLEND_FACTOR_ONE, .colorBlendOp = VK_BLEND_OP_ADD,
+			.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .alphaBlendOp = VK_BLEND_OP_ADD,
+			.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+		}),
 	};
 	VK::CreatePipeline(Pipelines.back(), Device, PLL, RP, ToVKPrimitiveTopology(Prim.mode), 0, PRSCI, PDSSCI, &VS, &FS, nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs);
 
@@ -477,57 +479,56 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	std::cout << CurrentMatrix.back();
 #endif
 
-	const auto SCCount = static_cast<uint32_t>(SwapchainImages.size());
-	assert(!SecondaryCommandPools.empty() && "");
-	const auto PrevCount = SecondaryCommandBuffers.size();
+	const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
+	assert(!empty(SecondaryCommandPools) && "");
+	const auto PrevCount = size(SecondaryCommandBuffers);
 	SecondaryCommandBuffers.resize(PrevCount + SCCount);
 	const VkCommandBufferAllocateInfo CBAI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-		nullptr,
-		SecondaryCommandPools[0],
-		VK_COMMAND_BUFFER_LEVEL_SECONDARY,
-		SCCount
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		.pNext = nullptr,
+		.commandPool = SecondaryCommandPools[0],
+		.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+		.commandBufferCount = SCCount
 	};
 	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &SecondaryCommandBuffers[PrevCount]));
 
 	for (auto i = 0; i < static_cast<int>(SCCount); ++i) {
 		const auto FB = Framebuffers[i];
-		const auto SCB = SecondaryCommandBuffers[SecondaryCommandBuffers.size() - SCCount + i];
+		const auto SCB = SecondaryCommandBuffers[size(SecondaryCommandBuffers) - SCCount + i];
 		const VkCommandBufferInheritanceInfo CBII = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-			nullptr,
-			RP,
-			0,
-			FB,
-			VK_FALSE,
-			0,
-			0,
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+			.pNext = nullptr,
+			.renderPass = RP,
+			.subpass = 0,
+			.framebuffer = FB,
+			.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
+			.pipelineStatistics = 0,
 		};
 		const VkCommandBufferBeginInfo SCBBI = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			nullptr,
-			VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
-			&CBII
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+			.pInheritanceInfo = &CBII
 		};
 
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
 			const auto PL = Pipelines.back();
-			std::vector<VkBuffer> VBs; for (auto j : VertexBuffers) { VBs.push_back(j.Buffer); }
+			std::vector<VkBuffer> VBs; for (auto j : VertexBuffers) { VBs.emplace_back(j.Buffer); }
 			const auto& IB = IndexBuffers.back();
 			const auto& IDB = IndirectBuffers.back();
 
-			vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-			vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+			vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
+			vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 
 #if 0
 			//vkCmdPushConstants(SCB, PLL, VK_SHADER_STAGE_VERTEX_BIT, 0, static_cast<uint32_t>(sizeof(CurrentMatrix.back())), &CurrentMatrix.back());
 			const std::array<VkDescriptorSet, 1> DSs = { DescriptorSets.back() };
-			vkCmdBindDescriptorSets(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
+			vkCmdBindDescriptorSets(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(size(DSs)), data(DSs), 0, nullptr);
 #endif
 
 			vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-			const std::vector<VkDeviceSize> Offsets(VBs.size(), 0);
-			vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(VBs.size()), VBs.data(), Offsets.data());
+			const std::vector<VkDeviceSize> Offsets(size(VBs), 0);
+			vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(size(VBs)), data(VBs), data(Offsets));
 			vkCmdBindIndexBuffer(SCB, IB.Buffer, 0, ToVKIndexType(GetDocument().accessors[Prim.indices].componentType));
 			vkCmdDrawIndexedIndirect(SCB, IDB.Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
@@ -560,23 +561,23 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			}
 
 			if ("indices" == Identifier) {
-				IndexBuffers.push_back(IndexBuffer());
+				IndexBuffers.emplace_back(IndexBuffer());
 				CreateBuffer_Index(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, Data);
 
 				CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
 			}
 			else if ("attributes" == Identifier || "targets" == Identifier) {
-				VertexBuffers.push_back(VertexBuffer());
+				VertexBuffers.emplace_back(VertexBuffer());
 				CreateBuffer_Vertex(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0] , Size, Data);
 			}
 			else if ("inverseBindMatrices" == Identifier) {
 				InverseBindMatrices.reserve(Acc.count);
 				for (uint32_t i = 0; i < Acc.count; ++i) {
-					InverseBindMatrices.push_back(reinterpret_cast<const glm::mat4*>(Data + Stride * i));
+					InverseBindMatrices.emplace_back(reinterpret_cast<const glm::mat4*>(Data + Stride * i));
 				}
 #ifdef DEBUG_STDOUT
-				if (InverseBindMatrices.size()) {
-					std::cout << "InverseBindMatrices[" << InverseBindMatrices.size() << "]" << std::endl;
+				if (size(InverseBindMatrices)) {
+					std::cout << "InverseBindMatrices[" << size(InverseBindMatrices) << "]" << std::endl;
 					for (auto i : InverseBindMatrices) {
 						std::cout << *i;
 					}
@@ -596,26 +597,26 @@ void GltfVK::Process(const fx::gltf::Skin& Skn)
 {
 	Gltf::Process(Skn);
 
-	JointMatrices.reserve(Skn.joints.size());
-	for (uint32_t i = 0; i < Skn.joints.size(); ++i) {
+	JointMatrices.reserve(size(Skn.joints));
+	for (uint32_t i = 0; i < size(Skn.joints); ++i) {
 		const auto& IBM = *InverseBindMatrices[i];
 
 		const auto& Nd = GetDocument().nodes[Skn.joints[i]];
 		auto Wld = glm::identity<glm::mat4>();
 		if (fx::gltf::defaults::NullVec3 != Nd.translation) {
-			glm::translate(Wld, glm::make_vec3(Nd.translation.data()));
+			glm::translate(Wld, glm::make_vec3(data(Nd.translation)));
 		}
 		if (fx::gltf::defaults::IdentityRotation != Nd.rotation) {
-			Wld *= glm::mat4_cast(glm::make_quat(Nd.rotation.data()));
+			Wld *= glm::mat4_cast(glm::make_quat(data(Nd.rotation)));
 		}
 		if (fx::gltf::defaults::IdentityVec3 != Nd.scale) {
-			glm::scale(Wld, glm::make_vec3(Nd.scale.data()));
+			glm::scale(Wld, glm::make_vec3(data(Nd.scale)));
 		}
 		JointMatrices.push_back(IBM * Wld);
 	}
 #ifdef DEBUG_STDOUT
-	if (JointMatrices.size()) {
-		std::cout << "JointMatrices[" << JointMatrices.size() << "]" << std::endl;
+	if (size(JointMatrices)) {
+		std::cout << "JointMatrices[" << size(JointMatrices) << "]" << std::endl;
 		for (auto i : JointMatrices) {
 			std::cout << i;
 		}
@@ -626,7 +627,7 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnTimer(hWnd, hInstance);
 
-	if (GetDocument().animations.empty()) { return; }
+	if (empty(GetDocument().animations)) { return; }
 
 	const auto SlowFactor = 1.0f;
 	CurrentFrame += static_cast<float>(Elapse) / 1000.0f * SlowFactor;
@@ -636,8 +637,8 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 	UpdateAnimation(CurrentFrame, true);
 
 #ifdef DEBUG_STDOUT
-	if (AnimNodeMatrices.size()) {
-		std::cout << "AnimNodeMatrices[" << AnimNodeMatrices.size() << "]" << std::endl;
+	if (size(AnimNodeMatrices)) {
+		std::cout << "AnimNodeMatrices[" << size(AnimNodeMatrices) << "]" << std::endl;
 		for (auto i : AnimNodeMatrices) {
 			std::cout << i;
 		}
@@ -649,23 +650,23 @@ void GltfVK::UpdateAnimTranslation(const std::array<float, 3>& Value, const uint
 {
 	if (-1 != NodeIndex) {
 		//AnimNodeMatrices[NodeIndex] = glm::translate(AnimNodeMatrices[NodeIndex], glm::make_vec3(Value.data())); //!< ↓と同じ結果にならない
-		AnimNodeMatrices[NodeIndex] = glm::translate(glm::mat4(1.0f), glm::make_vec3(Value.data())) * AnimNodeMatrices[NodeIndex];
+		AnimNodeMatrices[NodeIndex] = glm::translate(glm::mat4(1.0f), glm::make_vec3(data(Value))) * AnimNodeMatrices[NodeIndex];
 	}
 }
 void GltfVK::UpdateAnimScale(const std::array<float, 3>& Value, const uint32_t NodeIndex)
 {
 	if (-1 != NodeIndex) {
-		AnimNodeMatrices[NodeIndex] = glm::scale(AnimNodeMatrices[NodeIndex], glm::make_vec3(Value.data()));
+		AnimNodeMatrices[NodeIndex] = glm::scale(AnimNodeMatrices[NodeIndex], glm::make_vec3(data(Value)));
 	}
 }
 void GltfVK::UpdateAnimRotation(const std::array<float, 4>& Value, const uint32_t NodeIndex)
 {
 	if (-1 != NodeIndex) {
 		//!< クォータニオンは要正規化
-		AnimNodeMatrices[NodeIndex] = glm::mat4_cast(glm::normalize(glm::make_quat(Value.data()))) * AnimNodeMatrices[NodeIndex];
+		AnimNodeMatrices[NodeIndex] = glm::mat4_cast(glm::normalize(glm::make_quat(data(Value)))) * AnimNodeMatrices[NodeIndex];
 	}
 }
-void GltfVK::UpdateAnimWeights(const float* /*Data*/, const uint32_t /*PrevIndex*/, const uint32_t /*NextIndex*/, const float /*t*/)
+void GltfVK::UpdateAnimWeights([[maybe_unused]] const float* Data, [[maybe_unused]] const uint32_t PrevIndex, [[maybe_unused]] const uint32_t NextIndex, [[maybe_unused]] const float t)
 {
 	//Lerp(Data[PrevIndex], Data[NextIndex], t);
 }
@@ -675,40 +676,38 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 	const auto RP = RenderPasses[0];
 	const auto FB = Framebuffers[i];
 
-	const auto SCCount = SwapchainImages.size();
-	const auto PrimCount = SecondaryCommandBuffers.size() / SCCount;
+	const auto SCCount = size(SwapchainImages);
+	const auto PrimCount = size(SecondaryCommandBuffers) / SCCount;
 	std::vector<VkCommandBuffer> SCBs;
 	for (auto j = 0; j < PrimCount; ++j) {
-		SCBs.push_back(SecondaryCommandBuffers[j * SCCount + i]);
+		SCBs.emplace_back(SecondaryCommandBuffers[j * SCCount + i]);
 	}
 
 	const auto CB = CommandBuffers[i];
 	const VkCommandBufferBeginInfo CBBI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		0,
-		nullptr
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.pInheritanceInfo = nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		std::array<VkClearValue, 2> CVs = { Colors::SkyBlue };
-		CVs[1].depthStencil = { 1.0f, 0 };
-		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
+		const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 		const VkRenderPassBeginInfo RPBI = {
-			VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-			nullptr,
-			RP,
-			FB,
-			RenderArea,
-			static_cast<uint32_t>(CVs.size()), CVs.data()
+			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			.pNext = nullptr,
+			.renderPass = RP,
+			.framebuffer = FB,
+			.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
+			.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
 		};
 
 		//const auto PLL = PipelineLayouts[0];
 		//vkCmdPushConstants(CB, PLL, VK_SHADER_STAGE_VERTEX_BIT, 0, static_cast<uint32_t>(sizeof(ViewProjection)), &ViewProjection);
 		//const std::array<VkDescriptorSet, 1> DSs = { DescriptorSets.back() };
-		//vkCmdBindDescriptorSets(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
+		//vkCmdBindDescriptorSets(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(size(DSs)), data(DSs), 0, nullptr);
 
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
-			vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
+			vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
 		} vkCmdEndRenderPass(CB);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }

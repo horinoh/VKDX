@@ -135,7 +135,7 @@ void VK::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 	Super::OnExitSizeMove(hWnd, hInstance);
 
 	//!< デバイスがアイドルになるまで待つ
-	if (VK_NULL_HANDLE != Device) {
+	if (VK_NULL_HANDLE != Device) [[likely]] {
 		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	}
 
@@ -172,7 +172,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnDestroy(hWnd, hInstance);
 
-	if (VK_NULL_HANDLE != Device) {
+	if (VK_NULL_HANDLE != Device) [[likely]] {
 		//!< デバイスのキューにサブミットされた全コマンドが完了するまでブロッキング、主に終了処理に使う (Wait for all command submitted to queue, usually used on finalize)
 		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	}
@@ -301,14 +301,14 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 
 	//!< SwapchainImages は取得したもの、破棄しない
 	
-	if (VK_NULL_HANDLE != Swapchain) {
+	if (VK_NULL_HANDLE != Swapchain) [[likely]] {
 		vkDestroySwapchainKHR(Device, Swapchain, GetAllocationCallbacks());
 		Swapchain = VK_NULL_HANDLE;
 	}
 
 	//!< コマンドプール破棄時にコマンドバッファは暗黙的に解放されるので無くても良い (Command buffers will be released implicitly, when command pool released)
 	//if(!empty(SecondaryCommandBuffers)) { vkFreeCommandBuffers(Device, SecondaryCommandPools[0], static_cast<uint32_t>(SecondaryCommandBuffers.size()), SecondaryCommandBuffers.data()); SecondaryCommandBuffers.clear(); }	
-	for (auto i : SecondaryCommandPools) {
+	for (auto i : SecondaryCommandPools) [[likely]] {
 		vkDestroyCommandPool(Device, i, GetAllocationCallbacks());
 	}
 	SecondaryCommandPools.clear();
@@ -320,44 +320,44 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 	CommandPools.clear();
 
-	if (VK_NULL_HANDLE != RenderFinishedSemaphore) {
+	if (VK_NULL_HANDLE != RenderFinishedSemaphore) [[likely]] {
 		vkDestroySemaphore(Device, RenderFinishedSemaphore, GetAllocationCallbacks());
 		RenderFinishedSemaphore = VK_NULL_HANDLE;
 	}
-	if (VK_NULL_HANDLE != NextImageAcquiredSemaphore) {
+	if (VK_NULL_HANDLE != NextImageAcquiredSemaphore) [[likely]] {
 		vkDestroySemaphore(Device, NextImageAcquiredSemaphore, GetAllocationCallbacks());
 		NextImageAcquiredSemaphore = VK_NULL_HANDLE;
 	}
-	if (VK_NULL_HANDLE != Fence) {
+	if (VK_NULL_HANDLE != Fence) [[likely]] {
 		vkDestroyFence(Device, Fence, GetAllocationCallbacks());
 		Fence = VK_NULL_HANDLE;
 	}
-	if (VK_NULL_HANDLE != ComputeFence) {
+	if (VK_NULL_HANDLE != ComputeFence) [[likely]] {
 		vkDestroyFence(Device, ComputeFence, GetAllocationCallbacks());
 		ComputeFence = VK_NULL_HANDLE;
 	}
 
 	//!< キューは論理デバイスと共に破棄される
-	if (VK_NULL_HANDLE != Device) {
+	if (VK_NULL_HANDLE != Device) [[likely]] {
 		vkDestroyDevice(Device, GetAllocationCallbacks());
 		Device = VK_NULL_HANDLE;
 	}
 	
 	//!< PhysicalDevice は vkEnumeratePhysicalDevices() で取得したもの、破棄しない
 
-	if (VK_NULL_HANDLE != Surface) {
+	if (VK_NULL_HANDLE != Surface) [[likely]] {
 		vkDestroySurfaceKHR(Instance, Surface, GetAllocationCallbacks());
 		Surface = VK_NULL_HANDLE;
 	}
 
 #ifdef USE_DEBUG_REPORT
-	if (VK_NULL_HANDLE != DebugReportCallback) {
+	if (VK_NULL_HANDLE != DebugReportCallback) [[likely]] {
 		vkDestroyDebugReportCallback(Instance, DebugReportCallback, nullptr);
 		DebugReportCallback = VK_NULL_HANDLE;
 	}
 #endif
 
-	if (VK_NULL_HANDLE != Instance) {
+	if (VK_NULL_HANDLE != Instance) [[likely]] {
 		vkDestroyInstance(Instance, GetAllocationCallbacks());
 		Instance = VK_NULL_HANDLE;
 	}
@@ -369,7 +369,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 #else
 		!dlclose(VulkanLibrary)
 #endif
-		) {
+		) [[likely]] {
 		assert(false && "FreeLibrary failed");
 		VulkanLibrary = nullptr;
 	}
@@ -523,14 +523,14 @@ void VK::CreateImage(VkImage* Img, const VkImageCreateFlags CreateFlags, const V
 
 void VK::CopyToHostVisibleDeviceMemory(const VkDeviceMemory DM, const size_t Size, const void* Source, const VkDeviceSize Offset, const std::array<VkDeviceSize, 2>* Range)
 {
-	if (Size && nullptr != Source) {
+	if (Size && nullptr != Source) [[likely]] {
 		void *Data;
 		VERIFY_SUCCEEDED(vkMapMemory(Device, DM, Offset, Size, static_cast<VkMemoryMapFlags>(0), &Data)); {
 			memcpy(Data, Source, Size);
 
 			//!< メモリコンテンツが変更されたことをドライバへ知らせる(vkMapMemory()した状態でやること)
 			//!< デバスメモリ確保時に VK_MEMORY_PROPERTY_HOST_COHERENT_BIT を指定した場合は必要ない CreateDeviceMemory(..., VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-			if (nullptr != Range) {
+			if (nullptr != Range) [[likely]] {
 				//!< 更新するレンジ(一部)が明示的に指定された場合、指定レンジのみを更新する
 				const std::array MMRs = {
 						VkMappedMemoryRange({
@@ -796,7 +796,7 @@ void VK::EnumerateInstanceLayerProperties()
 
 	uint32_t Count = 0;
 	VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&Count, nullptr));
-	if (Count) {
+	if (Count) [[likely]] {
 		std::vector<VkLayerProperties> LayerProp(Count);
 		VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&Count, data(LayerProp)));
 		for (const auto& i : LayerProp) {
@@ -809,7 +809,7 @@ void VK::EnumerateInstanceExtensionProperties(const char* LayerName)
 {
 	uint32_t Count = 0;
 	VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(LayerName, &Count, nullptr));
-	if (Count) {
+	if (Count) [[likely]] {
 		std::vector<VkExtensionProperties> ExtensionProp(Count);
 		VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(LayerName, &Count, data(ExtensionProp)));
 		for (const auto& i : ExtensionProp) {
@@ -907,7 +907,7 @@ void VK::CreateDebugReportCallback()
 		| VK_DEBUG_REPORT_ERROR_BIT_EXT
 		| VK_DEBUG_REPORT_DEBUG_BIT_EXT;
 
-	if (VK_NULL_HANDLE != vkCreateDebugReportCallback) {
+	if (VK_NULL_HANDLE != vkCreateDebugReportCallback) [[likely]] {
 		const VkDebugReportCallbackCreateInfoEXT DebugReportCallbackCreateInfo = {
 			.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
 			.pNext = nullptr,

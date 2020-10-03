@@ -154,7 +154,7 @@ void DX::CreateUploadResource(ID3D12Resource** Resource, const size_t Size)
 }
 void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source, const D3D12_RANGE* Range)
 {
-	if (nullptr != Resource && Size && nullptr != Source) {
+	if (nullptr != Resource && Size && nullptr != Source) [[likely]] {
 		BYTE* Data;
 		VERIFY_SUCCEEDED(Resource->Map(0, Range, reinterpret_cast<void**>(&Data))); {
 			memcpy(Data, Source, Size);
@@ -163,7 +163,7 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const
 }
 void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData)
 {
-	if (nullptr != Resource) {
+	if (nullptr != Resource) [[likely]] {
 		//assert(SubresourceData.size() == PSF.size() == NumRows.size() == RowSizes.size() && "Invalid size");
 		const auto SubresourceCount = static_cast<const UINT>(size(SubresourceData));
 
@@ -493,7 +493,7 @@ void DX::GetDisplayModeList(IDXGIOutput* Outp, const DXGI_FORMAT Format)
 {
 	UINT Count = 0;
 	VERIFY_SUCCEEDED(Outp->GetDisplayModeList(Format, 0, &Count, nullptr));
-	if (Count) {
+	if (Count) [[likely]] {
 		Logf("\t\t\t[ DisplayModes ] : %s\n", GetFormatString(Format).c_str());
 
 		std::vector<DXGI_MODE_DESC> MDs(Count);
@@ -1167,7 +1167,7 @@ void DX::WaitForFence()
 	VERIFY_SUCCEEDED(CommandQueue->Signal(COM_PTR_GET(Fence), FenceValue));
 	if (Fence->GetCompletedValue() < FenceValue) {
 		auto hEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-		if (nullptr != hEvent) {
+		if (nullptr != hEvent) [[likely]] {
 			//!< GetCompletedValue() が FenceValue になったらイベントが発行される
 			VERIFY_SUCCEEDED(Fence->SetEventOnCompletion(FenceValue, hEvent));
 
