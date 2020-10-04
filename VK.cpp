@@ -944,9 +944,9 @@ void VK::CreateDebugReportCallback()
 }
 #endif
 
-#ifdef USE_DEBUG_MARKER
-void VK::MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name)
+void VK::MarkerInsert([[maybe_unused]] VkCommandBuffer CB, [[maybe_unused]] const glm::vec4& Color, [[maybe_unused]] const char* Name) 
 {
+#ifdef USE_DEBUG_MARKER
 	if (VK_NULL_HANDLE != vkCmdDebugMarkerInsert) {
 		VkDebugMarkerMarkerInfoEXT DMMI = {
 			.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
@@ -956,14 +956,12 @@ void VK::MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Na
 		};
 		vkCmdDebugMarkerInsert(CB, &DMMI);
 	}
-}
-#else
-void VK::MarkerInsert(VkCommandBuffer /*CB*/, const glm::vec4& /*Color*/, const char* /*Name*/) {}
 #endif
+}
 
-#ifdef USE_DEBUG_MARKER
-void VK::MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const char* Name)
+void VK::MarkerBegin([[maybe_unused]] VkCommandBuffer CB, [[maybe_unused]] const glm::vec4& Color, [[maybe_unused]] const char* Name)
 {
+#ifdef USE_DEBUG_MARKER
 	if (VK_NULL_HANDLE != vkCmdDebugMarkerBegin) {
 		VkDebugMarkerMarkerInfoEXT DMMI = {
 			.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
@@ -973,25 +971,19 @@ void VK::MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const char* Nam
 		};
 		vkCmdDebugMarkerBegin(CB, &DMMI);
 	}
-}
-#else
-void VK::MarkerBegin(VkCommandBuffer /*CB*/, const glm::vec4& /*Color*/, const char* /*Name*/) {}
 #endif
-
-#ifdef USE_DEBUG_MARKER
-void VK::MarkerEnd(VkCommandBuffer CB)
+}
+void VK::MarkerEnd([[maybe_unused]] VkCommandBuffer CB)
 {
+#ifdef USE_DEBUG_MARKER
 	if (VK_NULL_HANDLE != vkCmdDebugMarkerEnd) {
 		vkCmdDebugMarkerEnd(CB);
 	}
-}
-#else
-void VK::MarkerEnd(VkCommandBuffer /*CB*/) {}
 #endif
-
-#ifdef USE_DEBUG_MARKER
-void VK::MarkerSetName(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const char* Name)
+}
+void VK::MarkerSetName([[maybe_unused]] VkDevice Device, [[maybe_unused]] const VkDebugReportObjectTypeEXT Type, [[maybe_unused]] const uint64_t Object, [[maybe_unused]] const char* Name)
 {
+#ifdef USE_DEBUG_MARKER
 	if (VK_NULL_HANDLE != vkDebugMarkerSetObjectName) {
 		VkDebugMarkerObjectNameInfoEXT DMONI = {
 			.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
@@ -1000,14 +992,11 @@ void VK::MarkerSetName(VkDevice Device, const VkDebugReportObjectTypeEXT Type, c
 		};
 		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectName(Device, &DMONI));
 	}
-}
-#else
-void VK::MarkerSetName(VkDevice /*Device*/, const VkDebugReportObjectTypeEXT /*Type*/, const uint64_t /*Object*/, const char* /*Name*/) {}
 #endif
-
-#ifdef USE_DEBUG_MARKER
-void VK::MarkerSetTag(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const uint64_t TagName, const size_t TagSize, const void* TagData)
+}
+void VK::MarkerSetTag([[maybe_unused]] VkDevice Device, [[maybe_unused]] const VkDebugReportObjectTypeEXT Type, [[maybe_unused]] const uint64_t Object, [[maybe_unused]] const uint64_t TagName, [[maybe_unused]] const size_t TagSize, [[maybe_unused]] const void* TagData)
 {
+#ifdef USE_DEBUG_MARKER
 	if (VK_NULL_HANDLE != vkDebugMarkerSetObjectTag) {
 		VkDebugMarkerObjectTagInfoEXT DMOTI = {
 			.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_TAG_INFO_EXT,
@@ -1017,11 +1006,8 @@ void VK::MarkerSetTag(VkDevice Device, const VkDebugReportObjectTypeEXT Type, co
 		};
 		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectTag(Device, &DMOTI));
 	}
-}
-#else
-void VK::MarkerSetTag(VkDevice /*Device*/, const VkDebugReportObjectTypeEXT /*Type*/, const uint64_t /*Object*/, const uint64_t /*TagName*/, const size_t /*TagSize*/, const void* /*TagData*/){}
 #endif
-
+}
 
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)

@@ -152,8 +152,9 @@ protected:
 	//PIXReportCounter(PCWSTR, float);
 	//PIXNotifyWakeFromFenceSignal(HANDLE);
 	static void SetName(ID3D12DeviceChild * Resource, LPCWSTR Name) { Resource->SetName(Name); }
-	static void SetName(ID3D12DeviceChild* Resource, const std::wstring& Name) { SetName(Resource, Name.c_str()); }
-	static void SetName(ID3D12DeviceChild* Resource, const std::string& Name) { SetName(Resource, ToWString(Name)); }
+	static void SetName(ID3D12DeviceChild* Resource, const std::wstring_view Name) { Resource->SetName(data(Name));}
+	[[deprecated("")]]
+	static void SetName(ID3D12DeviceChild* Resource, const std::wstring& Name) { Resource->SetName(Name.c_str()); }
 #endif
 
 	virtual void CreateDevice(HWND hWnd);
