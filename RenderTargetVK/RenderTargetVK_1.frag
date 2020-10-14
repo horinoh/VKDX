@@ -116,12 +116,12 @@ void main()
 	OutColor = texture(Sampler2D, InTexcoord);
 #elif 0
 	//!< セピア (Sepia)
-	mat3 YCbCr2RGB = { {1.0f, 0.0f, 1.402f}, {1.0f, -0.34414f, -0.71414f}, {1.0f, 1.772f, 0.0f} };
-	vec3 YCbCr = vec3(dot(vec3(0.299f, 0.587f, 0.114f), texture(Sampler2D, InTexcoord).rgb), -0.2f, 0.1f);
+	const mat3 YCbCr2RGB = { {1.0f, 0.0f, 1.402f}, {1.0f, -0.34414f, -0.71414f}, {1.0f, 1.772f, 0.0f} };
+	const vec3 YCbCr = vec3(dot(vec3(0.299f, 0.587f, 0.114f), texture(Sampler2D, InTexcoord).rgb), -0.2f, 0.1f);
 	OutColor = vec4(YCbCr * YCbCr2RGB, 1.0f);
 #elif 0
 	//!< モノトーン (Monotone)
-	float Mono = dot(vec3(0.299f, 0.587f, 0.114f), texture(Sampler2D, InTexcoord).rgb);
+	const float Mono = dot(vec3(0.299f, 0.587f, 0.114f), texture(Sampler2D, InTexcoord).rgb);
 	OutColor = vec4(Mono, Mono, Mono, 1.0f);
 #elif 0
 	//!< ラスター (Raster)
@@ -142,12 +142,26 @@ void main()
 #elif 0
 	//!< 間輪郭検出 (Edge detection) ... dFdx, dFdy
 	const vec2 Center = ToHue(texture(Sampler2D, InTexcoord).rgb);
-	float C = length(dFdx(Center) + dFdy(Center));
+	const float C = length(dFdx(Center) + dFdy(Center));
 	OutColor = 1.0f - vec4(C, C, C, 0.0f);
 #elif 0
 	//!< ガウスフィルタ (GaussianFilter) ... 本来は2パス必要
 	OutColor = vec4(GaussianFilterH(Sampler2D, ivec2(gl_FragCoord.xy)), 1.0f);
 	//OutColor = vec4(GaussianFilterV(Sampler2D, ivec2(gl_FragCoord.xy)), 1.0f);
+#elif 0
+	//!< ディザ (Dither)	
+	const float N = 4.0f;
+	const mat4 Bayer = mat4( 0.0f,  8.0f,  2.0f, 10.0f,
+							12.0f,  4.0f, 14.0f,  6.0f,
+							 3.0f, 11.0f,  1.0f,  9.0f,
+							15.0f,  7.0f, 13.0f,  5.0f);
+	const vec2 TexSize = textureSize(Sampler2D, 0);
+	const ivec2 BayerUV = ivec2(mod(floor(InTexcoord.x * TexSize.x), N), mod(floor(InTexcoord.y * TexSize.y), N));
+	const float Threshold = Bayer[BayerUV.x][BayerUV.y] / (N * N);
+
+	const float Mono = dot(vec3(0.299f, 0.587f, 0.114f), texture(Sampler2D, InTexcoord).rgb);
+	
+	OutColor = vec4(vec3(Threshold > Mono), 1.0f);
 #else
 	//!< モザイク (Mosaic)
 	const vec2 Resolution = vec2(800.0f, 600.0f);

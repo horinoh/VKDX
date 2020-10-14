@@ -56,12 +56,12 @@ float4 main(IN In) : SV_TARGET
 	return Texture.Sample(Sampler, In.Texcoord);
 #elif 0
 	//!< セピア (Sepia)
-	float3x3 YCbCr2RGB = { {1.0f, 0.0f, 1.402f}, {1.0f, -0.34414f, -0.71414f}, {1.0f, 1.772f, 0.0f} };
-	float3 YCbCr = float3(dot(float3(0.299f, 0.587f, 0.114f), Texture.Sample(Sampler, In.Texcoord).rgb), -0.2f, 0.1f);
+	const float3x3 YCbCr2RGB = { {1.0f, 0.0f, 1.402f}, {1.0f, -0.34414f, -0.71414f}, {1.0f, 1.772f, 0.0f} };
+	const float3 YCbCr = float3(dot(float3(0.299f, 0.587f, 0.114f), Texture.Sample(Sampler, In.Texcoord).rgb), -0.2f, 0.1f);
 	return float4(mul(YCbCr2RGB, YCbCr), 1.0f);
 #elif 0
 	//!< モノトーン (Monotone)
-	float Mono = dot(float3(0.299f, 0.587f, 0.114f), Texture.Sample(Sampler, In.Texcoord).rgb);
+	const float Mono = dot(float3(0.299f, 0.587f, 0.114f), Texture.Sample(Sampler, In.Texcoord).rgb);
 	return float4(Mono, Mono, Mono, 1.0f);
 #elif 0
 	//!< ラスター (Raster)
@@ -82,12 +82,27 @@ float4 main(IN In) : SV_TARGET
 #elif 0
 	//!< 輪郭検出 (Edge detection) ... ddx, ddt
 	const float2 Center = ToHue(Texture.Sample(Sampler, In.Texcoord).rgb);
-	float C = length(ddx(Center) + ddy(Center));
+	const float C = length(ddx(Center) + ddy(Center));
 	return 1.0f - float4(C, C, C, 0.0f);
 #elif 0
 	//!< ガウスフィルタ (GaussianFilter) ... 本来は2パス必要
 	return float4(GaussianFilterH(Texture, int2(In.Position.xy)), 1.0f);
 	//return float4(GaussianFilterV(Texture, int2(In.Position.xy)), 1.0f);
+#elif 0
+	//!< ディザ (Dither)	
+	const float N = 4.0f;
+	const float4x4 Bayer = float4x4( 0.0f, 8.0f, 2.0f, 10.0f,
+									12.0f, 4.0f, 14.0f, 6.0f,
+									 3.0f, 11.0f, 1.0f, 9.0f,
+									15.0f, 7.0f, 13.0f, 5.0f);
+	int2 TexSize; Texture.GetDimensions(TexSize.x, TexSize.y);
+	const int2 BayerUV = int2(fmod(floor(In.Texcoord.x * TexSize.x), N), fmod(floor(In.Texcoord.y * TexSize.y), N));
+	const float Threshold = Bayer[BayerUV.x][BayerUV.y] / (N * N);
+
+	const float Mono = dot(float3(0.299f, 0.587f, 0.114f), Texture.Sample(Sampler, In.Texcoord).rgb);
+	
+	const bool b = Threshold > Mono;
+	return float4(b, b, b, 1.0f);
 #else
 	//!< モザイク (Mosaic)
 	const float2 Resolution = float2(800.0f, 600.0f);

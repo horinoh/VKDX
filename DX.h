@@ -153,7 +153,7 @@ protected:
 	//PIXNotifyWakeFromFenceSignal(HANDLE);
 	static void SetName(ID3D12DeviceChild * Resource, LPCWSTR Name) { Resource->SetName(Name); }
 	static void SetName(ID3D12DeviceChild* Resource, const std::wstring_view Name) { Resource->SetName(data(Name));}
-	[[deprecated("")]]
+	[[deprecated("use wstring_view version")]]
 	static void SetName(ID3D12DeviceChild* Resource, const std::wstring& Name) { Resource->SetName(Name.c_str()); }
 #endif
 
