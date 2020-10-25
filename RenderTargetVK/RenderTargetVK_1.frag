@@ -149,7 +149,7 @@ void main()
 	OutColor = vec4(GaussianFilterH(Sampler2D, ivec2(gl_FragCoord.xy)), 1.0f);
 	//OutColor = vec4(GaussianFilterV(Sampler2D, ivec2(gl_FragCoord.xy)), 1.0f);
 #elif 0
-	//!< ディザ (Dither)	
+	//!< ディザ (Dither)	... シェーダでは関数の再帰呼び出しができないので、計算で求めるのではなく、予めBayerを生成しておく
 	const float N = 4.0f;
 	const mat4 Bayer = mat4( 0.0f,  8.0f,  2.0f, 10.0f,
 							12.0f,  4.0f, 14.0f,  6.0f,
