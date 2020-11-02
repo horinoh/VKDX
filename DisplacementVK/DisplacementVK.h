@@ -117,7 +117,7 @@ protected:
 		Tr = Transform({ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
 
 #pragma region FRAME_OBJECT
-		const auto SCCount = SwapchainImages.size();
+		const auto SCCount = size(SwapchainImages);
 		for (size_t i = 0; i < SCCount; ++i) {
 			UniformBuffers.emplace_back(UniformBuffer());
 			CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));

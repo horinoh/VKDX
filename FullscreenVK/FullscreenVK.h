@@ -21,8 +21,8 @@ protected:
 	virtual void CreateShaderModules() override {
 #ifdef USE_DISTANCE_FUNCTION
 		const auto ShaderPath = GetBasePath();
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT("_df.frag.spv")).data())); 
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_df.frag.spv")))); 
 #else
 		CreateShaderModle_VsFs();
 #endif

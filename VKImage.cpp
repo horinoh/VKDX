@@ -275,7 +275,7 @@ void VKImage::CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, con
 			1, &IMB_Pre);
 		{
 			assert(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL == IMB_Pre.newLayout);
-			vkCmdCopyImageToBuffer(CB, Src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Dst, static_cast<uint32_t>(BICs.size()), BICs.data());
+			vkCmdCopyImageToBuffer(CB, Src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Dst, static_cast<uint32_t>(size(BICs)), data(BICs));
 		}
 		const VkImageMemoryBarrier IMB_Post = {
 			VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -442,7 +442,7 @@ void VKImage::XXX(VkBuffer* Buf, VkDeviceMemory* DM, const gli::texture& GLIText
 				0, nullptr
 			}
 		};
-		VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), VK_NULL_HANDLE));
+		VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(size(SIs)), data(SIs), VK_NULL_HANDLE));
 		VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 
 		vkFreeMemory(Device, IDM, GetAllocationCallbacks());

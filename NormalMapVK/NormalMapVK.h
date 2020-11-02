@@ -69,7 +69,7 @@ protected:
 					.flags = 0,
 					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
 					.inputAttachmentCount = 0, .pInputAttachments = nullptr,
-					.colorAttachmentCount = static_cast<uint32_t>(size(ColorAttach)), .pColorAttachments = ColorAttach.data(), .pResolveAttachments = nullptr,
+					.colorAttachmentCount = static_cast<uint32_t>(size(ColorAttach)), .pColorAttachments = data(ColorAttach), .pResolveAttachments = nullptr,
 					.pDepthStencilAttachment = &DepthAttach,
 					.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
 				}),
@@ -283,23 +283,23 @@ protected:
 	
 	virtual void CreateShaderModules() override {
 		const auto ShaderPath = GetBasePath();
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));
 #ifdef USE_COMBINED_IMAGE_SAMPLER
 #ifdef USE_PARALLAX_MAP
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT("_cis_pm.frag.spv")).data()));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_cis_pm.frag.spv"))));
 #else
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT("_cis.frag.spv")).data()));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_cis.frag.spv"))));
 #endif
 #else
 #ifdef USE_PARALLAX_MAP
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT("_pm.frag.spv")).data()));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_pm.frag.spv"))));
 #else
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))));
 #endif
 #endif
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".tese.spv")).data()));
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data()));
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".geom.spv")).data()));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".geom.spv"))));
 	}
 	virtual void CreatePipelines() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE); }
 	virtual void PopulateCommandBuffer(const size_t i) override;

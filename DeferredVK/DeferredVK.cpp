@@ -260,24 +260,31 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 			&CBII
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB0, &CBBI)); {
+#pragma region FRAME_OBJECT
+			const auto DS = DescriptorSets[/*i*/0];
+#pragma endregion
 			const auto PL = Pipelines[0];
 			const auto& IDB = IndirectBuffers[0];
-			vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-			vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+
+			vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
+			vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 
 			vkCmdBindPipeline(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 			
-			assert(!DescriptorSets.empty() && "");
-			assert(!PipelineLayouts.empty() && "");
-			const std::array<VkDescriptorSet, 1> DSs = { DescriptorSets[0] };
-			vkCmdBindDescriptorSets(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[0], 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
+			assert(!empty(DescriptorSets) && "");
+			assert(!empty(PipelineLayouts) && "");
+			const std::array<VkDescriptorSet, 1> DSs = { DS };
+			vkCmdBindDescriptorSets(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[0], 0, static_cast<uint32_t>(size(DSs)), data(DSs), 0, nullptr);
 
 			vkCmdDrawIndirect(SCB0, IDB.Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
 	}
 
 	//!< パス1 : セカンダリコマンドバッファ(レンダーテクスチャ描画用)
-	const auto SCB1 = SecondaryCommandBuffers[i + SecondaryCommandBuffers.size() / 2]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
+#pragma region FRAME_OBJECT
+	const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
+#pragma endregion
+	const auto SCB1 = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
 	{
 		const VkCommandBufferInheritanceInfo CBII = {
 			VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
@@ -296,17 +303,20 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 			&CBII
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB1, &CBBI)); {
+#pragma region FRAME_OBJECT
+			const auto DS = DescriptorSets[i + SCCount];
+#pragma endregion
 			const auto PL = Pipelines[1];
-			const auto IDB = IndirectBuffers[1];
-			vkCmdSetViewport(SCB1, 0, static_cast<uint32_t>(Viewports.size()), Viewports.data());
-			vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(ScissorRects.size()), ScissorRects.data());
+			const auto& IDB = IndirectBuffers[1];
+			vkCmdSetViewport(SCB1, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
+			vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 
 			vkCmdBindPipeline(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
-			assert(2 == DescriptorSets.size() && "");
-			assert(2 == PipelineLayouts.size() && "");
-			const std::array<VkDescriptorSet, 1> DSs = { DescriptorSets[1] };
-			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[1], 0, static_cast<uint32_t>(DSs.size()), DSs.data(), 0, nullptr);
+			assert(2 == size(DescriptorSets) && "");
+			assert(2 == size(PipelineLayouts) && "");
+			const std::array<VkDescriptorSet, 1> DSs = { DS };
+			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[1], 0, static_cast<uint32_t>(size(DSs)), data(DSs), 0, nullptr);
 
 			vkCmdDrawIndirect(SCB1, IDB.Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
@@ -343,11 +353,11 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 				RP0,
 				FB0,
 				RenderArea,
-				static_cast<uint32_t>(CVs.size()), CVs.data()
+				static_cast<uint32_t>(size(CVs)), data(CVs)
 			};
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
 				const std::array<VkCommandBuffer, 1> SCBs = { SCB0 };
-				vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
+				vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
 			} vkCmdEndRenderPass(CB);
 		}
 
@@ -402,7 +412,7 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 				VK_DEPENDENCY_BY_REGION_BIT,
 				0, nullptr,
 				0, nullptr,
-				static_cast<uint32_t>(IMBs.size()), IMBs.data());
+				static_cast<uint32_t>(size(IMBs)), data(IMBs));
 		}
 
 		//!< パス1 : レンダーパス(レンダーテクスチャ描画用)
@@ -414,11 +424,11 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 				RP1,
 				FB1,
 				RenderArea,
-				static_cast<uint32_t>(CVs.size()), CVs.data()
+				static_cast<uint32_t>(size(CVs)), data(CVs)
 			};
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
 				const std::array<VkCommandBuffer, 1> SCBs = { SCB1 };
-				vkCmdExecuteCommands(CB, static_cast<uint32_t>(SCBs.size()), SCBs.data());
+				vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
 			} vkCmdEndRenderPass(CB);
 		}
 

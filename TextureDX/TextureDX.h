@@ -54,9 +54,9 @@ protected:
 		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE 
 #ifdef USE_STATIC_SAMPLER
-		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
+		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
-		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT("_s.rs.cso")).data());
+		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT("_s.rs.cso")));
 #endif
 #else
 		const std::array DRs_Srv = {

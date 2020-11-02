@@ -249,7 +249,7 @@ void DeferredDX::PopulateCommandList(const size_t i)
 	VERIFY_SUCCEEDED(BCL0->Close());
 
 	//!< パス1 : バンドルコマンドリスト(レンダーテクスチャ描画用)
-	const auto BCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + BundleGraphicsCommandLists.size() / 2]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
+	const auto BCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + size(BundleGraphicsCommandLists) / 2]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
 	VERIFY_SUCCEEDED(BCL1->Reset(BCA, PS1));
 	{
 		const auto IDBCS = COM_PTR_GET(IndirectBuffers[1].CommandSignature);
@@ -267,8 +267,8 @@ void DeferredDX::PopulateCommandList(const size_t i)
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 		const auto IR = COM_PTR_GET(ImageResources[0]);
 
-		CL->RSSetViewports(static_cast<UINT>(Viewports.size()), Viewports.data());
-		CL->RSSetScissorRects(static_cast<UINT>(ScissorRects.size()), ScissorRects.data());
+		CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+		CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
 		//!< パス0 : (メッシュ描画用)
 		{
@@ -276,40 +276,43 @@ void DeferredDX::PopulateCommandList(const size_t i)
 
 			const auto RtvDH = RtvDescriptorHeaps[0];
 			auto RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart();
-			const auto DsvDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+			const auto DsvCDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			{
 				const std::array<D3D12_RECT, 0> Rects = {};
-				CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+				CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects)); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
 #pragma region MRT
-				CL->ClearRenderTargetView(RtvCDH, std::array<FLOAT, 4>({ 0.5f, 0.5f, 1.0f, 1.0f }).data(), static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
-				CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::Red, static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
-				CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(Rects.size()), Rects.data()); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+				CL->ClearRenderTargetView(RtvCDH, data(std::array<FLOAT, 4>({ 0.5f, 0.5f, 1.0f, 1.0f })), static_cast<UINT>(size(Rects)), data(Rects)); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+				CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::Red, static_cast<UINT>(size(Rects)), data(Rects)); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+				CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects)); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
 #pragma endregion
-				CL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(Rects.size()), Rects.data());
+				CL->ClearDepthStencilView(DsvCDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 			}
 			{
 				RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart();
-#if 1
+#if 0
 				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 4> RtvDHs = {
 					RtvCDH,
 					RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
 					RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
 					RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
 				};
-				CL->OMSetRenderTargets(static_cast<UINT>(RtvDHs.size()), RtvDHs.data(), FALSE, &DsvDH);
+				CL->OMSetRenderTargets(static_cast<UINT>(size(RtvDHs)), data(RtvDHs), FALSE, &DsvDH); //!< RTV, DSV
 #else
-				//!< 「連続している」場合は、「個数」と「先頭アドレス」を指定して「RTsSingleHandleToDescriptorRange==TRUE」でも良い
+				//!< 「連続している」場合は、「個数」と「先頭アドレス」を指定して「RTsSingleHandleToDescriptorRange==TRUE」で良い
 				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RtvDHs = { RtvCDH, };
-				CL->OMSetRenderTargets(4, RtvDHs.data(), TRUE, &DsvDH);
+				CL->OMSetRenderTargets(4, data(RtvDHs), TRUE, &DsvCDH);
 #endif
 			}
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
+				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-				CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma region FRAME_OBJECT
+				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
+				CL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV
+#pragma endregion
 			}
 
 			CL->ExecuteBundle(BCL0);
@@ -323,24 +326,30 @@ void DeferredDX::PopulateCommandList(const size_t i)
 				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_SCR },
 				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_IR },
 			} };
-			CL->ResourceBarrier(static_cast<UINT>(RBs.size()), RBs.data());
+			CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 		}
 
 		//!< パス1 : (レンダーテクスチャ描画用)
 		{
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 			{
-				auto ScCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); ScCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
-				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RtvDHs = { ScCDH };
-				CL->OMSetRenderTargets(static_cast<UINT>(RtvDHs.size()), RtvDHs.data(), FALSE, nullptr);
+				auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> CDHs = { CDH };
+				CL->OMSetRenderTargets(static_cast<UINT>(size(CDHs)), data(CDHs), FALSE, nullptr); //!< RTV
 			}
-
+				
 			{
-				const auto& SrvDH = CbvSrvUavDescriptorHeaps[1];
-				const std::array<ID3D12DescriptorHeap*, 1> SrvDHs = { COM_PTR_GET(SrvDH) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(SrvDHs.size()), SrvDHs.data());
-				auto SrvGDH = SrvDH->GetGPUDescriptorHandleForHeapStart();
-				CL->SetGraphicsRootDescriptorTable(0, SrvGDH); SrvGDH.ptr += Device->GetDescriptorHandleIncrementSize(SrvDH->GetDesc().Type); //!< SRV
+				const auto& DH = CbvSrvUavDescriptorHeaps[1];
+				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
+				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+				CL->SetGraphicsRootDescriptorTable(0, GDH); //!< SRV
+#pragma region FRAME_OBJECT
+				//!< #DX_TODO
+				//GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * 4;
+				//GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
+				//CL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV
+#pragma endregion
 			}
 
 			CL->ExecuteBundle(BCL1);
@@ -354,7 +363,7 @@ void DeferredDX::PopulateCommandList(const size_t i)
 				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_SCR },
 				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_IR },
 			} };
-			CL->ResourceBarrier(static_cast<UINT>(RBs.size()), RBs.data());
+			CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 		}
 	}
 	VERIFY_SUCCEEDED(CL->Close());

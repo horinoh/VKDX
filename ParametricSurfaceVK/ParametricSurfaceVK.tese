@@ -15,7 +15,7 @@ vec3 GetPosition_Torus(const vec2 uv)
 }
 vec2 GetUV_Sphere(const vec2 uv) 
 {
-	return (fract(uv) * vec2(1.0f, -1.0f) + vec2(0.0f, 0.5f)) * 2.0f * PI;
+	return fract(uv) * vec2(2.0f, 1.0f) * PI;
 }
 vec3 GetPosition_Sphere(const vec2 uv)
 {

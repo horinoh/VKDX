@@ -34,11 +34,11 @@ protected:
 	}
 	virtual void CreateShaderModules() override { 
 		const auto ShaderPath = GetBasePath();
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));
 #ifdef USE_PUSH_CONSTANTS
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT("_pc.frag.spv")).data()));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_pc.frag.spv"))));
 #else
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".frag.spv")).data()));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))));
 #endif
 	}
 	virtual void CreatePipelines() override {

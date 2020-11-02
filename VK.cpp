@@ -163,7 +163,7 @@ void VK::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 
 	//!< ビューポートサイズが決定してから
 	LoadScene();
-	for (auto i = 0; i < CommandBuffers.size(); ++i) {
+	for (auto i = 0; i < size(CommandBuffers); ++i) {
 		PopulateCommandBuffer(i);
 	}
 }
@@ -205,7 +205,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 #if 0
 	//!< VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT の場合のみ個別に開放できる (Only if VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT is used, can be release individually)
 	if (!empty(DescriptorSets)) {
-		vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data());
+		vkFreeDescriptorSets(Device, DescriptorPool, static_cast<uint32_t>(size(DescriptorSets)), data(DescriptorSets));
 	}
 #else
 	//!< このプールから確保された全てのデスクリプタセットを解放する (ここでは次のステップでプール自体を破棄しているのでやらなくても良い)
@@ -307,14 +307,14 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 
 	//!< コマンドプール破棄時にコマンドバッファは暗黙的に解放されるので無くても良い (Command buffers will be released implicitly, when command pool released)
-	//if(!empty(SecondaryCommandBuffers)) { vkFreeCommandBuffers(Device, SecondaryCommandPools[0], static_cast<uint32_t>(SecondaryCommandBuffers.size()), SecondaryCommandBuffers.data()); SecondaryCommandBuffers.clear(); }	
+	//if(!empty(SecondaryCommandBuffers)) { vkFreeCommandBuffers(Device, SecondaryCommandPools[0], static_cast<uint32_t>(size(SecondaryCommandBuffers)), data(SecondaryCommandBuffers)); SecondaryCommandBuffers.clear(); }	
 	for (auto i : SecondaryCommandPools) [[likely]] {
 		vkDestroyCommandPool(Device, i, GetAllocationCallbacks());
 	}
 	SecondaryCommandPools.clear();
 
 	//!< コマンドプール破棄時にコマンドバッファは暗黙的に解放されるので無くても良い (Command buffers will be released implicitly, when command pool released)
-	//if(!empty(CommandBuffers)) { vkFreeCommandBuffers(Device, CommandPool[0], static_cast<uint32_t>(CommandBuffers.size()), CommandBuffers.data()); CommandBuffers.clear(); }
+	//if(!empty(CommandBuffers)) { vkFreeCommandBuffers(Device, CommandPool[0], static_cast<uint32_t>(size(CommandBuffers)), data(CommandBuffers)); CommandBuffers.clear(); }
 	for (auto i : CommandPools) {
 		vkDestroyCommandPool(Device, i, GetAllocationCallbacks());
 	}
@@ -1179,14 +1179,14 @@ void VK::EnumeratePhysicalDeviceExtensionProperties(VkPhysicalDevice PD, const c
 //	vkGetPhysicalDeviceQueueFamilyProperties(PD, &Count, nullptr);
 //	assert(Count && "QueueFamilyProperty not found");
 //	QFPs.resize(Count);
-//	vkGetPhysicalDeviceQueueFamilyProperties(PD, &Count, QFPs.data());
+//	vkGetPhysicalDeviceQueueFamilyProperties(PD, &Count, data(QFPs));
 //
 //	//!< Geforce970Mだと以下のような状態だった (In case of Geforce970M)
 //	//!< QueueFamilyIndex == 0 : Grahics | Compute | Transfer | SparceBinding and Present
 //	//!< QueueFamilyIndex == 1 : Transfer
 //	Log("\tQueueFamilyProperties\n");
 //#define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & QFPs[i].queueFlags) { Logf("%s | ", #entry); }
-//	for (uint32_t i = 0; i < QFPs.size(); ++i) {
+//	for (uint32_t i = 0; i < size(QFPs); ++i) {
 //		Logf("\t\t[%d] QueueCount = %d, ", i, QFPs[i].queueCount);
 //		Log("QueueFlags = ");
 //		QUEUE_FLAG_ENTRY(GRAPHICS);
@@ -1213,7 +1213,7 @@ void VK::EnumeratePhysicalDeviceExtensionProperties(VkPhysicalDevice PD, const c
 //	std::bitset<8> ComputeQueueFamilyBits;
 //	std::bitset<8> TransferQueueFamilyBits;
 //	std::bitset<8> SparceBindingQueueFamilyBits;
-//	for (uint32_t i = 0; i < QFPs.size(); ++i) {
+//	for (uint32_t i = 0; i < size(QFPs); ++i) {
 //		const auto& QP = QFPs[i];
 //
 //		if (VK_QUEUE_GRAPHICS_BIT & QP.queueFlags) {
@@ -1275,7 +1275,7 @@ void VK::OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const
 
 uint32_t VK::FindQueueFamilyPropertyIndex(const VkQueueFlags QF, const std::vector<VkQueueFamilyProperties>& QFPs)
 {
-	for (auto i = 0; i < QFPs.size(); ++i) {
+	for (auto i = 0; i < size(QFPs); ++i) {
 		if (QF & QFPs[i].queueFlags) {
 			return i;
 		}
@@ -1285,7 +1285,7 @@ uint32_t VK::FindQueueFamilyPropertyIndex(const VkQueueFlags QF, const std::vect
 }
 uint32_t VK::FindQueueFamilyPropertyIndex(const VkPhysicalDevice PD, const VkSurfaceKHR Sfc, const std::vector<VkQueueFamilyProperties>& QFPs)
 {
-	for (auto i = 0; i < QFPs.size(); ++i) {
+	for (auto i = 0; i < size(QFPs); ++i) {
 		VkBool32 b = VK_FALSE;
 		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PD, i, Sfc, &b));
 		if (b) {
@@ -1298,65 +1298,65 @@ uint32_t VK::FindQueueFamilyPropertyIndex(const VkPhysicalDevice PD, const VkSur
 
 //void VK::CreateQueueFamilyPriorities(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const std::vector<VkQueueFamilyProperties>& QFPs, std::vector<std::vector<float>>& Priorites)
 //{
-//	for (auto i = 0; i < QFPs.size(); ++i) {
+//	for (auto i = 0; i < size(QFPs); ++i) {
 //		const auto& QFP = QFPs[i];
 //		auto& Pri = Priorites[i];
 //		if (VK_QUEUE_GRAPHICS_BIT & QFP.queueFlags) {
 //			GraphicsQueueFamilyIndex = i;
-//			if (Pri.size() < QFP.queueCount) {
+//			if (size(Pri) < QFP.queueCount) {
 //				Pri.push_back(0.5f);
 //			}
-//			GraphicsQueueIndexInFamily = static_cast<uint32_t>(Pri.size()) - 1;
+//			GraphicsQueueIndexInFamily = static_cast<uint32_t>(size(Pri)) - 1;
 //			break;
 //		}
 //	}
-//	for (auto i = 0; i < QFPs.size(); ++i) {
+//	for (auto i = 0; i < size(QFPs); ++i) {
 //		const auto& QFP = QFPs[i];
 //		auto& Pri = Priorites[i];
 //		VkBool32 Supported = VK_FALSE;
 //		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PD, i, Sfc, &Supported));
 //		if (Supported) {
 //			PresentQueueFamilyIndex = i;
-//			if (Pri.size() < QFP.queueCount) {
+//			if (size(Pri) < QFP.queueCount) {
 //				Pri.push_back(0.5f);
 //			}
-//			PresentQueueIndexInFamily = static_cast<uint32_t>(Pri.size()) - 1;
+//			PresentQueueIndexInFamily = static_cast<uint32_t>(size(Pri)) - 1;
 //			break;
 //		}
 //	}
-//	for (auto i = 0; i < QFPs.size(); ++i) {
+//	for (auto i = 0; i < size(QFPs); ++i) {
 //		const auto& QFP = QFPs[i];
 //		auto& Pri = Priorites[i];
 //		if (VK_QUEUE_COMPUTE_BIT & QFP.queueFlags) {
 //			ComputeQueueFamilyIndex = i;
-//			if (Pri.size() < QFP.queueCount) {
+//			if (size(Pri) < QFP.queueCount) {
 //				Pri.push_back(0.5f);
 //			}
-//			ComputeQueueIndexInFamily = static_cast<uint32_t>(Pri.size()) - 1;
+//			ComputeQueueIndexInFamily = static_cast<uint32_t>(size(Pri)) - 1;
 //			break;
 //		}
 //	}
-//	//for (auto i = 0; i < QFPs.size(); ++i) {
+//	//for (auto i = 0; i < size(QFPs); ++i) {
 //	//	const auto& QFP = QFPs[i];
 //	//	auto& Pri = Priorites[i];
 //	//	if (VK_QUEUE_TRANSFER_BIT & QFP.queueFlags) {
 //	//		TransferQueueFamilyIndex = i;
-//	//		if (Pri.size() < QFP.queueCount) {
+//	//		if (size(Pri) < QFP.queueCount) {
 //	//			Pri.push_back(0.5f);
 //	//		}
-//	//		TransferQueueIndex = static_cast<uint32_t>(Pri.size()) - 1;
+//	//		TransferQueueIndex = static_cast<uint32_t>(size(Pri)) - 1;
 //	//		break;
 //	//	}
 //	//}
-//	//for (auto i = 0; i < QFPs.size(); ++i) {
+//	//for (auto i = 0; i < size(QFPs); ++i) {
 //	//	const auto& QFP = QFPs[i];
 //	//	auto& Pri = Priorites[i];
 //	//	if (VK_QUEUE_SPARSE_BINDING_BIT & QFP.queueFlags) {
 //	//		SparceBindingQueueFamilyIndex = i;
-//	//		if (Pri.size() < QFP.queueCount) {
+//	//		if (size(Pri) < QFP.queueCount) {
 //	//			Pri.push_back(0.5f);
 //	//		}
-//	//		SparceBindingQueueIndex = static_cast<uint32_t>(Pri.size()) - 1;
+//	//		SparceBindingQueueIndex = static_cast<uint32_t>(size(Pri)) - 1;
 //	//		break;
 //	//	}
 //	//}
@@ -1918,7 +1918,7 @@ void VK::ResizeSwapchain(const uint32_t Width, const uint32_t Height)
 
 	//for (auto i : CommandPools) {
 	//	//if (!empty(i.second)) {
-	//	//	vkFreeCommandBuffers(Device, i.first, static_cast<uint32_t>(i.second.size()), i.second.data());
+	//	//	vkFreeCommandBuffers(Device, i.first, static_cast<uint32_t>(size(i.second)), data(i.second));
 	//	//	i.second.clear();
 	//	//}
 	//	vkDestroyCommandPool(Device, i.first, GetAllocationCallbacks());
@@ -2099,7 +2099,7 @@ void VK::InitializeDepthStencilImage(const VkCommandBuffer CB)
 			0, nullptr
 		}
 	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(SIs.size()), SIs.data(), VK_NULL_HANDLE));
+	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(size(SIs)), data(SIs), VK_NULL_HANDLE));
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 }
 #endif
@@ -2376,7 +2376,7 @@ void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const s
 //void VK::AllocateDescriptorSet(std::vector<VkDescriptorSet>& DSs, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSLs)
 //{
 //	const std::vector<VkDescriptorSetLayout> DSLs(cbegin(il_DSLs), cend(il_DSLs));
-//	DSs.resize(DSLs.size());
+//	DSs.resize(size(DSLs));
 //	const VkDescriptorSetAllocateInfo DSAI = {
 //		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 //		nullptr,
@@ -2414,10 +2414,10 @@ void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const s
 //			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 //			nullptr,
 //			DP,
-//			static_cast<uint32_t>(DescriptorSetLayouts.size()), DescriptorSetLayouts.data()
+//			static_cast<uint32_t>(size(DescriptorSetLayouts)), data(DescriptorSetLayouts)
 //		};
-//		DescriptorSets.resize(DescriptorSetLayouts.size());
-//		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, DescriptorSets.data()));
+//		DescriptorSets.resize(size(DescriptorSetLayouts));
+//		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, data(DescriptorSets)));
 //	}
 //
 //	LOG_OK();
@@ -2789,7 +2789,7 @@ void VK::CreatePipeline_Compute()
 
 	VERIFY_SUCCEEDED(vkCreateComputePipelines(Device,
 		PipelineCache,
-		static_cast<uint32_t>(ComputePipelineCreateInfos.size()), ComputePipelineCreateInfos.data(),
+		static_cast<uint32_t>(size(ComputePipelineCreateInfos)), data(ComputePipelineCreateInfos),
 		GetAllocationCallbacks(),
 		&Pipeline));
 
@@ -3023,7 +3023,7 @@ void VK::Draw()
 	//!< コマンドは指定のパイプラインステージに到達するまで実行され、そこでセマフォがシグナルされるまで待つ
 	const std::array WaitSems = { NextImageAcquiredSemaphore };
 	const std::array WaitStages = { VkPipelineStageFlags(VK_PIPELINE_STAGE_TRANSFER_BIT) };
-	assert(size(WaitSems) == size(WaitStages) && "Must be same size()");
+	assert(size(WaitSems) == size(WaitStages) && "Must be same size");
 	//!< 実行するコマンドバッファ
 	const std::array CBs = { CommandBuffers[SwapchainImageIndex], };
 	//!< 完了時にシグナルされるセマフォ(RenderFinishedSemaphore)

@@ -10,7 +10,11 @@ private:
 	using Super = DXExt;
 
 protected:
-	virtual void LoadImage(ID3D12Resource** Resource, const D3D12_RESOURCE_STATES ResourceState, const std::wstring& Path) { LoadImage_DDS(Resource, ResourceState, Path); }
+	virtual void LoadImage(ID3D12Resource** Resource, const D3D12_RESOURCE_STATES ResourceState, const std::wstring& Path) {
+		assert(std::filesystem::exists(Path) && "");
+		assert(Path.ends_with(TEXT(".dds")) && "");
+		LoadImage_DDS(Resource, ResourceState, Path);
+	}
 	void LoadImage_DDS(ID3D12Resource** Resource, const D3D12_RESOURCE_STATES ResourceState, const std::wstring& Path);
 
 	virtual void CreateColorImage(ID3D12Resource** Resource, const D3D12_RESOURCE_STATES RS, const UINT32 Color = 0xffffffff);

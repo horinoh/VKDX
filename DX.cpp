@@ -164,7 +164,7 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const
 void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData)
 {
 	if (nullptr != Resource) [[likely]] {
-		//assert(SubresourceData.size() == PSF.size() == NumRows.size() == RowSizes.size() && "Invalid size");
+		//assert(size(SubresourceData) == size(PSF) == size(NumRows) == size(RowSizes) && "Invalid size");
 		const auto SubresourceCount = static_cast<const UINT>(size(SubresourceData));
 
 		BYTE* Data;
@@ -384,7 +384,7 @@ void DX::CreateDevice(HWND /*hWnd*/)
 
 #if 0
 	const std::vector<UUID> Experimental = { D3D12ExperimentalShaderModels, /*D3D12RaytracingPrototype*/ };
-	VERIFY_SUCCEEDED(D3D12EnableExperimentalFeatures(static_cast<UINT>(Experimental.size()), Experimental.data(), nullptr, nullptr));
+	VERIFY_SUCCEEDED(D3D12EnableExperimentalFeatures(static_cast<UINT>(size(Experimental)), data(Experimental), nullptr, nullptr));
 #endif
 
 	//!< 高いフィーチャーレベル優先でデバイスを作成
@@ -410,15 +410,15 @@ void DX::CreateDevice(HWND /*hWnd*/)
 	D3D12_INFO_QUEUE_FILTER IQF = {
 		//!< Allow List
 		{
-			static_cast<UINT>(AMCs.size()), AMCs.data(),
-			static_cast<UINT>(AMSs.size()), AMSs.data(),
-			static_cast<UINT>(AMIs.size()), AMIs.data(),
+			static_cast<UINT>(size(AMCs)), data(AMCs),
+			static_cast<UINT>(size(AMSs)), data(AMSs),
+			static_cast<UINT>(size(AMIs)), data(AMIs),
 		},
 		//!< Deny List
 		{
-			static_cast<UINT>(DMCs.size()), DMCs.data(),
-			static_cast<UINT>(DMSs.size()), DMSs.data(),
-			static_cast<UINT>(DMIs.size()), DMIs.data(),
+			static_cast<UINT>(size(DMCs)), data(DMCs),
+			static_cast<UINT>(size(DMSs)), data(DMSs),
+			static_cast<UINT>(size(DMIs)), data(DMIs),
 		},
 	};
 	VERIFY_SUCCEEDED(InfoQueue->PushStorageFilter(&IQF));
@@ -497,7 +497,7 @@ void DX::GetDisplayModeList(IDXGIOutput* Outp, const DXGI_FORMAT Format)
 		Logf("\t\t\t[ DisplayModes ] : %s\n", GetFormatString(Format).c_str());
 
 		std::vector<DXGI_MODE_DESC> MDs(Count);
-		VERIFY_SUCCEEDED(Outp->GetDisplayModeList(Format, 0, &Count, MDs.data()));
+		VERIFY_SUCCEEDED(Outp->GetDisplayModeList(Format, 0, &Count, data(MDs)));
 		for (const auto& i : MDs) {
 			Logf("\t\t\t\t%d x %d @ %d, ", i.Width, i.Height, i.RefreshRate.Numerator / i.RefreshRate.Denominator);
 
@@ -945,8 +945,8 @@ void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_
 		//!<		D3D12_ROOT_DESCRIPTOR1 : D3D12_ROOT_DESCRIPTOR_FLAGS Flags メンバが増えている
 		const std::vector<D3D12_ROOT_PARAMETER1> RP1s = {};
 		const D3D12_ROOT_SIGNATURE_DESC1 RSD1 = {
-			.NumParameters = static_cast<UINT>(RP1s.size()), .pParameters = RP1s.data(),
-			.NumStaticSamplers = static_cast<UINT>(SSDs.size()), .pStaticSamplers = SSDs.data(),
+			.NumParameters = static_cast<UINT>(size(RP1s)), .pParameters = data(RP1s),
+			.NumStaticSamplers = static_cast<UINT>(size(SSDs)), .pStaticSamplers = data(SSDs),
 			.Flags = Flags
 		};
 		VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RSD1, D3D_ROOT_SIGNATURE_VERSION_1_1, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));

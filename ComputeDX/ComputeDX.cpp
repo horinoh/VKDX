@@ -243,7 +243,7 @@ void ComputeDX::PopulateCommandList(const size_t i)
         {
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
-			CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
+			CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 			auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
 			CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);

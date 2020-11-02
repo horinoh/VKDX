@@ -53,7 +53,7 @@ void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT
 	};
 	const D3D12_COMMAND_SIGNATURE_DESC CSD = {
 		.ByteStride = Stride,
-		.NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = IADs.data(),
+		.NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs),
 		.NodeMask = 0
 	};
 	Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectBuffers.back().CommandSignature));

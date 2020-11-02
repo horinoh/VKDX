@@ -16,7 +16,7 @@
 
 #ifdef _DEBUG
 #ifndef DEBUG_NEW 
-#define DEBUG_NEW new ( _NORMAL_BLOCK , __FILE__ , __LINE__ ) 
+#define DEBUG_NEW new ( _NORMAL_BLOCK , __FILE__/*std::source_location::current().file_name()*/, __LINE__/*std::source_location::current().line()*/) 
 #define new DEBUG_NEW 
 #endif 
 #endif
@@ -65,7 +65,7 @@
 #include <optional>
 #include <variant>
 #include <charconv>
-//#include <source_location>
+//#include <source_location> //!< #TODO インクルードできない
 //#include <cinttypes>
 
 #ifndef SAFE_DELETE

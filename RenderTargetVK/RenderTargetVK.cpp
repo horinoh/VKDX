@@ -329,7 +329,7 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 				.renderPass = RP0,
 				.framebuffer = FB0,
 				.renderArea = RenderArea,
-				.clearValueCount = static_cast<uint32_t>(CVs.size()), .pClearValues = CVs.data()
+				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
 			};
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
 				const std::array SCBs = { SCB0 };

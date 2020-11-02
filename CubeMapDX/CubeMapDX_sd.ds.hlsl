@@ -16,7 +16,7 @@ static const float PI = 4.0f * atan(1.0f);
 
 float2 GetUV_Sphere(const float2 uv)
 {
-	return (frac(uv) * float2(1.0f, -1.0f) + float2(0.0f, 0.5f)) * 2.0f * PI;
+	return frac(uv) * float2(2.0f, 1.0f) * PI;
 }
 float3 GetPosition_Sphere(const float2 uv)
 {

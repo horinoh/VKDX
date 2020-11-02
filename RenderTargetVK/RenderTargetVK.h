@@ -20,7 +20,7 @@ protected:
 		Super::AllocateCommandBuffer();
 
 		//!< パス1 : セカンダリコマンドバッファ
-		const auto SCCount = static_cast<uint32_t>(SwapchainImages.size());
+		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
 		assert(!empty(SecondaryCommandPools) && "");
 		const auto PrevCount = size(SecondaryCommandBuffers);
 		SecondaryCommandBuffers.resize(PrevCount + SCCount);
@@ -74,15 +74,15 @@ protected:
 				0,
 				VK_PIPELINE_BIND_POINT_GRAPHICS,
 				0, nullptr,
-				static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
+				static_cast<uint32_t>(size(ColorAttach)), data(ColorAttach), nullptr,
 				nullptr,
 				0, nullptr
 			},
 			{
 				0,
 				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				static_cast<uint32_t>(InputAttach.size()), InputAttach.data(),
-				static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
+				static_cast<uint32_t>(size(InputAttach)), data(InputAttach),
+				static_cast<uint32_t>(size(ColorAttach)), data(ColorAttach), nullptr,
 				nullptr,
 				0, nullptr
 			},

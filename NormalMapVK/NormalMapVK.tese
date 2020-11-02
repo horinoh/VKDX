@@ -27,7 +27,7 @@ vec3 GetTangent_Torus(const vec2 uv, const vec3 pos)
 
 vec2 GetUV_Sphere(const vec2 uv) 
 {
-	return (fract(uv) * vec2(1.0f, -1.0f) + vec2(0.0f, 0.5f)) * 2.0f * PI;
+	return fract(uv) * vec2(2.0f, 1.0f) * PI;
 }
 vec3 GetPosition_Sphere(const vec2 uv)
 {
@@ -59,7 +59,7 @@ void main()
 	gl_Position = vec4(GetPosition_Torus(gl_TessCoord.xy) * 0.5f, 1.0f);
 	OutNormal = GetNormal_Torus(gl_TessCoord.xy, gl_Position.xyz);
 	OutTangent = GetTangent_Torus(gl_TessCoord.xy, gl_Position.xyz);
-#elif 0
+#elif 1
 	gl_Position = vec4(GetPosition_Sphere(gl_TessCoord.xy) * 0.5f, 1.0f);
 	OutNormal = GetNormal_Sphere(gl_TessCoord.xy, gl_Position.xyz);
 	OutTangent = GetTangent_Sphere(gl_TessCoord.xy, gl_Position.xyz);

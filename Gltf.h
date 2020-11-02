@@ -94,14 +94,14 @@ public:
 		}
 
 		const auto& Doc = GetDocument();
-		if (!Doc.extensionsUsed.empty()) {
+		if (!empty(Doc.extensionsUsed)) {
 			std::cout << "extensionsUsed = ";
 			for (const auto& i : Doc.extensionsUsed) {
 				std::cout << i << ", ";
 			}
 			std::cout << std::endl;
 		}
-		if (!Doc.extensionsRequired.empty()) {
+		if (!empty(Doc.extensionsRequired)) {
 			std::cout << "extensionsRequired = ";
 			for (const auto& i : Doc.extensionsRequired) {
 				std::cout << i << ", ";
@@ -111,10 +111,10 @@ public:
 
 		//std::cout << "Buffers" << std::endl;
 		//for (const auto& i : Doc.buffers) {
-		//	if (!i.name.empty()) {
+		//	if (!empty(i.name)) {
 		//		std::cout << "\t" << "name = " << i.name << std::endl;
 		//	}
-		//	if (!i.uri.empty()) {
+		//	if (!empty(i.uri)) {
 		//		std::cout << "\t" << "uri = " << i.uri << std::endl;
 		//	}
 		//	std::cout << "\t" << "IsEmbeddedResource = " << i.IsEmbeddedResource() << std::endl;
@@ -274,7 +274,7 @@ public:
 		}
 		PopTab();
 
-		if (!Nd.children.empty()) {
+		if (!empty(Nd.children)) {
 			PushNode();
 			for (auto i : Nd.children) {
 				Process(Doc.nodes[i], i);
@@ -286,7 +286,7 @@ public:
 	virtual void Process(const fx::gltf::Mesh& Msh) {
 		Tabs(); std::cout << "Mesh : " << Msh.name << std::endl;
 		
-		if (!Msh.weights.empty()) {
+		if (!empty(Msh.weights)) {
 			Tabs(); std::cout << "\t" << "Weights = ";
 			for (auto i : Msh.weights) {
 				std::cout << i << ", ";
@@ -378,7 +378,7 @@ public:
 		PushTab();
 		for (const auto& i : Prim.targets) {
 			for (const auto& j : Prim.attributes) {
-				if (const auto it = i.find(j.first); i.end() != it) {
+				if (const auto it = i.find(j.first); end(i) != it) {
 					Process("targets", Doc.accessors[it->second]);
 				}
 			}
@@ -456,7 +456,7 @@ public:
 				const auto& Buf = Doc.buffers[BufV.buffer];
 				Tabs(); std::cout << "Buffer : " << Buf.name << std::endl;
 				Tabs(); std::cout << "\t" << "ByteLength = " << Buf.byteLength << std::endl;
-				if (Buf.uri.empty()) {
+				if (empty(Buf.uri)) {
 					if (Buf.IsEmbeddedResource()) {
 						Tabs(); std::cout << "\t" << "IsEmbeddedResource = " << Buf.IsEmbeddedResource() << std::endl;
 					} else {
@@ -557,10 +557,10 @@ public:
 		PopTab();
 
 #ifdef USE_GLTF_EXT_TEX_TRANS
-		if (const auto ItExtensions = Tex.extensionsAndExtras.find("extensions"); ItExtensions != Tex.extensionsAndExtras.end()) {
-			if (const auto ItTexTransform = ItExtensions->find("KHR_texture_transform"); ItTexTransform != ItExtensions->end()) {
-				if (const auto ItOffset = ItTexTransform->find("offset"); ItOffset != ItTexTransform->end()) {
-					if (ItOffset->is_array() && 2 == ItOffset->size()) {
+		if (const auto ItExtensions = Tex.extensionsAndExtras.find("extensions"); ItExtensions != end(Tex.extensionsAndExtras)) {
+			if (const auto ItTexTransform = ItExtensions->find("KHR_texture_transform"); ItTexTransform != end(*ItExtensions)) {
+				if (const auto ItOffset = ItTexTransform->find("offset"); ItOffset != end(*ItTexTransform)) {
+					if (ItOffset->is_array() && 2 == size(*ItOffset)) {
 						if (ItOffset->at(0).is_number_float()) {
 							std::cout << ItOffset->at(0).get<float>() << ", " << ItOffset->at(1).get<float>() << std::endl;
 						}
@@ -568,7 +568,7 @@ public:
 				}
 			}
 		}
-		if (const auto ItExtras = Tex.extensionsAndExtras.find("extras"); ItExtras != Tex.extensionsAndExtras.end()) {}
+		if (const auto ItExtras = Tex.extensionsAndExtras.find("extras"); ItExtras != end(Tex.extensionsAndExtras)) {}
 #endif
 	}
 	virtual void Process(const fx::gltf::Texture& Tex) {
@@ -585,16 +585,16 @@ public:
 		PopTab();
 
 #ifdef USE_GLTF_EXT_TEX_DDS
-		if (const auto ItExtensions = Tex.extensionsAndExtras.find("extensions"); ItExtensions != Tex.extensionsAndExtras.end()) {
-			if (const auto ItTexDDS = ItExtensions->find("MSFT_texture_dds"); ItTexDDS != ItExtensions->end()) {
-				if (const auto ItSrc = ItTexDDS->find("source"); ItSrc != ItTexDDS->end()) {
+		if (const auto ItExtensions = Tex.extensionsAndExtras.find("extensions"); ItExtensions != end(Tex.extensionsAndExtras)) {
+			if (const auto ItTexDDS = ItExtensions->find("MSFT_texture_dds"); ItTexDDS != end(*ItExtensions)) {
+				if (const auto ItSrc = ItTexDDS->find("source"); ItSrc != end(*ItTexDDS)) {
 					if (ItSrc->is_number_integer()) {
 						std::cout << ItSrc->get<int32_t>() << std::endl;
 					}
 				}
 			}
 		}
-		if (const auto ItExtras = Tex.extensionsAndExtras.find("extras"); ItExtras != Tex.extensionsAndExtras.end()) {}
+		if (const auto ItExtras = Tex.extensionsAndExtras.find("extras"); ItExtras != end(Tex.extensionsAndExtras)) {}
 #endif
 	}
 
@@ -649,7 +649,7 @@ public:
 		Tabs(); std::cout << "Image : " << Img.name << std::endl;
 
 		Tabs(); std::cout << "\t" << "mimeType = " << Img.mimeType << std::endl;
-		if (Img.uri.empty()) {
+		if (empty(Img.uri)) {
 			if (Img.IsEmbeddedResource()) {
 				Tabs(); std::cout << "\t" << "IsEmbeddedResource = " << Img.IsEmbeddedResource() << std::endl;
 
@@ -657,8 +657,8 @@ public:
 				std::vector<uint8_t> Data;
 				Img.MaterializeData(Data);
 
-				//const auto DataPtr = Data.data();
-				//const auto DataSize = static_cast<uint32_t>(Data.size());
+				//const auto DataPtr = data(Data);
+				//const auto DataSize = static_cast<uint32_t>(size(Data));
 			}
 			else {
 				const auto& Doc = GetDocument();

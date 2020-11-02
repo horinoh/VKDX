@@ -88,8 +88,8 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 アプリから明示的にこれを行いたい場合は以下のようにする
 ID3D12Resource* Resource;
 const std::vector<ID3D12Pageable*> Pageables = { Resource };
-Device->MakeResident(static_cast<UINT>(Pageables.size()), Pageables.data());
-Device->Evict(static_cast<UINT>(Pageables.size()), Pageables.data());
+Device->MakeResident(static_cast<UINT>(size(Pageables)), data(Pageables));
+Device->Evict(static_cast<UINT>(size(Pageables)), data(Pageables));
 */
 
 /**

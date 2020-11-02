@@ -243,11 +243,11 @@ void ComputeVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &BeginInfo)); {
-		if (!DescriptorSets.empty()) {
+		if (!empty(DescriptorSets)) {
 			vkCmdBindDescriptorSets(CB,
 				VK_PIPELINE_BIND_POINT_COMPUTE,
 				PLL,
-				0, static_cast<uint32_t>(DescriptorSets.size()), DescriptorSets.data(),
+				0, static_cast<uint32_t>(size(DescriptorSets)), data(DescriptorSets),
 				0, nullptr);
 		}
 		

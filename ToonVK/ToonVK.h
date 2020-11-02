@@ -27,8 +27,8 @@ protected:
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 	virtual void CreateUniformBuffer() override {
-		//const auto Fov = 0.16f * std::numbers::pi_v<float>;
-		const auto Fov = 0.16f * glm::pi<float>();
+		//const auto Fov = 0.16f * glm::pi<float>();
+		const auto Fov = 0.16f * std::numbers::pi_v<float>;
 		const auto Aspect = GetAspectRatioOfClientRect();
 		const auto ZFar = 100.0f;
 		const auto ZNear = ZFar * 0.0001f;
@@ -37,7 +37,7 @@ protected:
 		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		Tr = Transform({ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
 #pragma region FRAME_OBJECT
-		const auto SCCount = SwapchainImages.size();
+		const auto SCCount = size(SwapchainImages);
 		for (size_t i = 0; i < SCCount; ++i) {
 			UniformBuffers.emplace_back(UniformBuffer());
 			CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
@@ -83,11 +83,11 @@ protected:
 	virtual void CreateShaderModules() override {
 #ifdef USE_SCREENSPACE_WIREFRAME
 		const auto ShaderPath = GetBasePath();
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT("_wf.frag.spv")).data()));
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".tese.spv")).data()));
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data()));
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT("_wf.geom.spv")).data()));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_wf.frag.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_wf.geom.spv"))));
 #else
 		CreateShaderModle_VsFsTesTcsGs();
 #endif
@@ -111,7 +111,7 @@ protected:
 
 	virtual void CreateDescriptorPool() override {
 #pragma region FRAME_OBJECT
-		const auto SCCount = static_cast<uint32_t>(SwapchainImages.size());
+		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
 #pragma endregion
 
 		DescriptorPools.emplace_back(VkDescriptorPool());
@@ -132,7 +132,7 @@ protected:
 			.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 		};
 #pragma region FRAME_OBJECT
-		const auto SCCount = SwapchainImages.size();
+		const auto SCCount = size(SwapchainImages);
 		for (size_t i = 0; i < SCCount; ++i) {
 			DescriptorSets.emplace_back(VkDescriptorSet());
 			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
@@ -153,7 +153,7 @@ protected:
 	}
 	virtual void UpdateDescriptorSet() override {
 #pragma region FRAME_OBJECT
-		const auto SCCount = SwapchainImages.size();
+		const auto SCCount = size(SwapchainImages);
 		for (size_t i = 0; i < SCCount; ++i) {
 			const DescriptorUpdateInfo DUI = {
 				VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),

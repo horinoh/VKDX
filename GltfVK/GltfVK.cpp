@@ -271,8 +271,8 @@ void GltfVK::LoadScene()
 }
 void GltfVK::PreProcess()
 {
-	const auto Fov = 0.16f * glm::pi<float>();
-	//const auto Fov = 0.16f * std::numbers::pi_v<float>;
+	//const auto Fov = 0.16f * glm::pi<float>();
+	const auto Fov = 0.16f * std::numbers::pi_v<float>;
 	const auto Aspect = GetAspectRatioOfClientRect();
 	const auto ZFar = 100.0f;
 	const auto ZNear = ZFar * 0.0001f;
@@ -317,7 +317,7 @@ void GltfVK::PreProcess()
 			offsetof(DescriptorUpdateInfo, DBI), sizeof(DescriptorUpdateInfo)
 		}
 	};
-	assert(!DescriptorSetLayouts.empty() && "");
+	assert(!empty(DescriptorSetLayouts) && "");
 	const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
 		VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
 		nullptr,
@@ -334,8 +334,8 @@ void GltfVK::PreProcess()
 	const DescriptorUpdateInfo DUI = {
 		{ UniformBuffers[0].Buffer, 0, VK_WHOLE_SIZE },
 	};
-	assert(!DescriptorSets.empty() && "");
-	assert(!DescriptorUpdateTemplates.empty() && "");
+	assert(!empty(DescriptorSets) && "");
+	assert(!empty(DescriptorUpdateTemplates) && "");
 	vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 #endif
 }
@@ -649,7 +649,7 @@ void GltfVK::OnTimer(HWND hWnd, HINSTANCE hInstance)
 void GltfVK::UpdateAnimTranslation(const std::array<float, 3>& Value, const uint32_t NodeIndex)
 {
 	if (-1 != NodeIndex) {
-		//AnimNodeMatrices[NodeIndex] = glm::translate(AnimNodeMatrices[NodeIndex], glm::make_vec3(Value.data())); //!< «‚Æ“¯‚¶Œ‹‰Ê‚É‚È‚ç‚È‚¢
+		//AnimNodeMatrices[NodeIndex] = glm::translate(AnimNodeMatrices[NodeIndex], glm::make_vec3(data(Value))); //!< «‚Æ“¯‚¶Œ‹‰Ê‚É‚È‚ç‚È‚¢
 		AnimNodeMatrices[NodeIndex] = glm::translate(glm::mat4(1.0f), glm::make_vec3(data(Value))) * AnimNodeMatrices[NodeIndex];
 	}
 }

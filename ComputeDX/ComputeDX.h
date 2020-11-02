@@ -22,13 +22,13 @@ protected:
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
-		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
+		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
 		const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs = {
 			{ D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }
 		};
 		DX::SerializeRootSignature(Blob, {
-				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DRs.size()), DRs.data() }, D3D12_SHADER_VISIBILITY_PIXEL }
+				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(size(DRs)), data(DRs) }, D3D12_SHADER_VISIBILITY_PIXEL }
 			}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 #endif
 		RootSignatures.resize(1);

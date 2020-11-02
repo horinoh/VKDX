@@ -248,11 +248,11 @@ protected:
 	virtual void CreateShaderModules() override {
 #ifdef USE_SKY_DOME
 		const auto ShaderPath = GetBasePath();
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".vert.spv")).data()));
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT("_sd.frag.spv")).data()));
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT("_sd.tese.spv")).data()));
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT(".tesc.spv")).data()));
-		ShaderModules.emplace_back(VK::CreateShaderModule((ShaderPath + TEXT("_sd.geom.spv")).data())); 
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_sd.frag.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_sd.tese.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv")))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_sd.geom.spv"))))); 
 #else
 		CreateShaderModle_VsFsTesTcsGs(); 
 #endif

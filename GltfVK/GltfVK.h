@@ -102,7 +102,7 @@ protected:
 		NodeMatrices.assign(size(Doc.nodes), glm::identity<glm::mat4>());
 		Gltf::Process(Doc);
 #ifdef DEBUG_STDOUT
-		if (NodeMatrices.size()) {
+		if (size(NodeMatrices)) {
 			std::cout << "NodeMatrices[" << size(NodeMatrices) << "]" << std::endl;
 			for (auto i : NodeMatrices) {
 				std::cout << i;

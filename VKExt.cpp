@@ -211,18 +211,18 @@ void VKExt::CreateRenderPass_ColorDepth_PostProcess(VkRenderPass& RP, const VkFo
 		{
 			0,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			static_cast<uint32_t>(InputARs_Pass0.size()), InputARs_Pass0.data(),
-			static_cast<uint32_t>(ColorARs_Pass0.size()), ColorARs_Pass0.data(), nullptr,
+			static_cast<uint32_t>(size(InputARs_Pass0)), data(InputARs_Pass0),
+			static_cast<uint32_t>(size(ColorARs_Pass0)), data(ColorARs_Pass0), nullptr,
 			&DepthARs_Pass0,
-			static_cast<uint32_t>(PreserveAttaches.size()), PreserveAttaches.data()
+			static_cast<uint32_t>(size(PreserveAttaches)), data(PreserveAttaches)
 		},
 		{
 			0,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			static_cast<uint32_t>(InputARs_Pass1.size()), InputARs_Pass1.data(),
-			static_cast<uint32_t>(ColorARs_Pass1.size()), ColorARs_Pass1.data(), nullptr,
+			static_cast<uint32_t>(size(InputARs_Pass1)), data(InputARs_Pass1),
+			static_cast<uint32_t>(size(ColorARs_Pass1)), data(ColorARs_Pass1), nullptr,
 			nullptr,
-			static_cast<uint32_t>(PreserveAttaches.size()), PreserveAttaches.data()
+			static_cast<uint32_t>(size(PreserveAttaches)), data(PreserveAttaches)
 		}
 	} };
 
@@ -242,9 +242,9 @@ void VKExt::CreateRenderPass_ColorDepth_PostProcess(VkRenderPass& RP, const VkFo
 		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 		nullptr,
 		0,
-		static_cast<uint32_t>(ADs.size()), ADs.data(),
-		static_cast<uint32_t>(SubpassDescs.size()), SubpassDescs.data(),
-		static_cast<uint32_t>(SubpassDepends.size()), SubpassDepends.data()
+		static_cast<uint32_t>(size(ADs)), data(ADs),
+		static_cast<uint32_t>(size(SubpassDescs)), data(SubpassDescs),
+		static_cast<uint32_t>(size(SubpassDepends)), data(SubpassDepends)
 	};
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
 }
@@ -281,18 +281,18 @@ void VKExt::CreateRenderPass_Color_PostProcess(VkRenderPass& RP, const VkFormat 
 		{
 			0,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			static_cast<uint32_t>(Input_Pass0.size()), Input_Pass0.data(),
-			static_cast<uint32_t>(Color_Pass0.size()), Color_Pass0.data(), nullptr,
+			static_cast<uint32_t>(size(Input_Pass0)), data(Input_Pass0),
+			static_cast<uint32_t>(size(Color_Pass0)), data(Color_Pass0), nullptr,
 			nullptr,
-			static_cast<uint32_t>(Preserve.size()), Preserve.data()
+			static_cast<uint32_t>(size(Preserve)), data(Preserve)
 		},
 		{
 			0,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			static_cast<uint32_t>(Input_Pass1.size()), Input_Pass1.data(),
-			static_cast<uint32_t>(Color_Pass1.size()), Color_Pass1.data(), nullptr,
+			static_cast<uint32_t>(size(Input_Pass1)), data(Input_Pass1),
+			static_cast<uint32_t>(size(Color_Pass1)), data(Color_Pass1), nullptr,
 			nullptr,
-			static_cast<uint32_t>(Preserve.size()), Preserve.data()
+			static_cast<uint32_t>(size(Preserve)), data(Preserve)
 		}
 	} };
 
@@ -321,9 +321,9 @@ void VKExt::CreateRenderPass_Color_PostProcess(VkRenderPass& RP, const VkFormat 
 		VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 		nullptr,
 		0,
-		static_cast<uint32_t>(ADs.size()), ADs.data(),
-		static_cast<uint32_t>(SubpassDescs.size()), SubpassDescs.data(),
-		static_cast<uint32_t>(SubpassDepends.size()), SubpassDepends.data()
+		static_cast<uint32_t>(size(ADs)), data(ADs),
+		static_cast<uint32_t>(size(SubpassDescs)), data(SubpassDescs),
+		static_cast<uint32_t>(size(SubpassDepends)), data(SubpassDepends)
 	};
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
 }

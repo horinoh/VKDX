@@ -53,7 +53,7 @@ protected:
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
-		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
+		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
 		const std::array DRs_Cbv = {
 			D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }) //!< register(b0, space0)
@@ -230,15 +230,15 @@ protected:
 #ifdef USE_SKY_DOME
 		const auto ShaderPath = GetBasePath();
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_sd.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sd.ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_sd.ds.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sd.ds.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_sd.hs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sd.hs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_sd.gs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sd.gs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 #else
 		CreateShaderBlob_VsPsDsHsGs();
 #endif

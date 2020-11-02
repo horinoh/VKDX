@@ -20,7 +20,9 @@ protected:
 		DirectX::XMStoreFloat4x4(&Tr.World, DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree)));
 		Degree += 1.0f;
 
-		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0].Resource), RoundUp256(sizeof(Tr)), &Tr);
+#pragma region FRAME_OBJECT
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[SwapChain->GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tr)), &Tr);
+#pragma endregion
 	}
 
 #ifdef USE_GBUFFER_VISUALIZE
@@ -89,13 +91,13 @@ protected:
 			RootSignatures.push_back(COM_PTR<ID3D12RootSignature>());
 			COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
-			GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
+			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
 			const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs = { {
 				{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND },
 			} };
 			SerializeRootSignature(Blob, {
-					{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(DRs.size()), DRs.data() }, D3D12_SHADER_VISIBILITY_GEOMETRY }
+					{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(size(DRs)), data(DRs) }, D3D12_SHADER_VISIBILITY_GEOMETRY }
 				}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE
 				| D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS
 				| D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS
@@ -110,7 +112,7 @@ protected:
 			RootSignatures.push_back(COM_PTR<ID3D12RootSignature>());
 			COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE 
-			GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT("_1.rs.cso")).data());
+			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT("_1.rs.cso")));
 #else
 			const std::array<D3D12_DESCRIPTOR_RANGE, 2> DRs = { {
 #pragma region MRT
@@ -119,9 +121,9 @@ protected:
 #pragma endregion
 				{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND },
 			} };
-			assert(!StaticSamplerDescs.empty() && "");
+			assert(!empty(StaticSamplerDescs) && "");
 			DX::SerializeRootSignature(Blob, {
-					{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(DRs.size()), DRs.data() }, D3D12_SHADER_VISIBILITY_PIXEL },
+					{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(size(DRs)), data(DRs) }, D3D12_SHADER_VISIBILITY_PIXEL },
 				}, {
 					StaticSamplerDescs[0],
 				}, D3D12_ROOT_SIGNATURE_FLAG_NONE
@@ -262,11 +264,17 @@ protected:
 	}
 
 	virtual void CreateDescriptorHeap() override {
+#pragma region FRAME_OBJECT
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+#pragma endregion
 		//!< パス0 : レンダーターゲット
 		{
 			{
 				CbvSrvUavDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< CBV
+#pragma region FRAME_OBJECT
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, SCD.BufferCount, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< CBV * N
+#pragma endregion
 				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
 			}
 #pragma region MRT
@@ -289,21 +297,32 @@ protected:
 			{
 				//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
 				CbvSrvUavDescriptorHeaps.push_back(COM_PTR<ID3D12DescriptorHeap>());
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4 + 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< 4SRV + CBV
+#pragma region FRAME_OBJECT
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4 + SCD.BufferCount, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< 4SRV + CBV * N
+#pragma endregion
 				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
 			}
 #pragma endregion
 		}
 	}
 	virtual void CreateDescriptorView() override {
+#pragma region FRAME_OBJECT
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+#pragma endregion
+
 		//!< パス0 : レンダーターゲットビュー
 		{
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 
-				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[0].Resource->GetDesc().Width) };
-				Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma region FRAME_OBJECT
+				for (UINT i = 0; i < SCD.BufferCount; ++i) {
+					const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
+					Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+				}
+#pragma endregion
 			}
 			{
 				const auto& DH = RtvDescriptorHeaps[0];
@@ -366,14 +385,19 @@ protected:
 #endif
 			}
 			{
-				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[0].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[0].Resource->GetDesc().Width) };
-				Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma region FRAME_OBJECT
+				for (UINT i = 0; i < SCD.BufferCount; ++i) {
+					const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
+					Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+				}
+#pragma endregion
 			}
 		}
 	}
 
 	virtual void CreateConstantBuffer() override {
-		const auto Fov = 0.16f * DirectX::XM_PI;
+		//const auto Fov = 0.16f * DirectX::XM_PI;
+		const auto Fov = 0.16f * std::numbers::pi_v<float>;
 		const auto Aspect = GetAspectRatioOfClientRect();
 		const auto ZFar = 4.0f;
 		const auto ZNear = 2.0f;
@@ -393,30 +417,40 @@ protected:
 		DirectX::XMStoreFloat4x4(&Tr.World, World);
 		DirectX::XMStoreFloat4x4(&Tr.InverseViewProjection, InverseViewProjection);
 
-		ConstantBuffers.push_back(ConstantBuffer());
-		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)));
+#pragma region FRAME_OBJECT
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+		for (UINT i = 0; i < SCD.BufferCount; ++i) {
+			ConstantBuffers.push_back(ConstantBuffer());
+			CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)));
+		}
+#pragma endregion
 	}
 
 	virtual void CreateShaderBlobs() override {
-#ifdef USE_GBUFFER_VISUALIZE
-		ShaderBlobs.resize(5 + 3);
-#else
-		ShaderBlobs.resize(5 + 2);
-#endif
 		const auto ShaderPath = GetBasePath();
 		//!< パス0 : シェーダブロブ
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs[0])));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[1])));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), COM_PTR_PUT(ShaderBlobs[2])));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), COM_PTR_PUT(ShaderBlobs[3])));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), COM_PTR_PUT(ShaderBlobs[4])));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ds.cso")), COM_PTR_PUT(ShaderBlobs.back())));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".hs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".gs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		//!< パス1 : シェーダブロブ
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_1.vs.cso")).data(), COM_PTR_PUT(ShaderBlobs[5])));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 #ifdef USE_GBUFFER_VISUALIZE
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_gb_1.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[6])));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_gb_1.gs.cso")).data(), COM_PTR_PUT(ShaderBlobs[7])));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_gb_1.ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_gb_1.gs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 #else
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_1.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs[6])));
+		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 #endif
 	}
 	virtual void CreatePipelineStates() override {

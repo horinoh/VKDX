@@ -216,7 +216,7 @@ protected:
 			}
 #pragma endregion
 
-			assert(2 <= ImageResources.size() && "");
+			assert(2 <= size(ImageResources) && "");
 #if 1
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV0
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), &ShaderResourceViewDescs[1], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV1
@@ -227,8 +227,8 @@ protected:
 #endif
 		}
 		{
-			assert(3 == ImageResources.size() && "");
-			assert(!CbvSrvUavDescriptorHeaps.empty() && "");
+			assert(3 == size(ImageResources) && "");
+			assert(!empty(CbvSrvUavDescriptorHeaps) && "");
 			const auto& DH = DsvDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 #if 1
@@ -243,15 +243,15 @@ protected:
 #ifdef USE_PARALLAX_MAP
 		const auto ShaderPath = GetBasePath();
 		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_pm.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_pm.ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ds.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".hs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".gs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back()))); 
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".gs.cso")), COM_PTR_PUT(ShaderBlobs.back()))); 
 #else
 		CreateShaderBlob_VsPsDsHsGs();
 #endif

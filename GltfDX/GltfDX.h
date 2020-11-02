@@ -116,7 +116,7 @@ protected:
 		Gltf::Process(Doc);
 #ifdef DEBUG_STDOUT
 		if (size(NodeMatrices)) {
-			std::cout << "NodeMatrices[" << NodeMatrices.size() << "]" << std::endl;
+			std::cout << "NodeMatrices[" << size(NodeMatrices) << "]" << std::endl;
 			for (auto i : NodeMatrices) {
 				std::cout << i;
 			}
@@ -173,7 +173,7 @@ protected:
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
-		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
+		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
 #if 1
 		const std::array DRs = { 

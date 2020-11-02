@@ -39,7 +39,7 @@ float3 GetTangent_Torus(const float2 uv, const float3 pos)
 }
 float2 GetUV_Sphere(const float2 uv)
 {
-	return (frac(uv) * float2(1.0f, -1.0f) + float2(0.0f, 0.5f)) * 2.0f * PI;
+	return frac(uv) * float2(2.0f, 1.0f) * PI;
 }
 float3 GetPosition_Sphere(const float2 uv)
 {
@@ -69,7 +69,7 @@ OUT main(const TESS_FACTOR tess, const float2 uv : SV_DomainLocation, const Outp
 	Out.Position = GetPosition_Torus(uv) * 0.5f;
 	Out.Normal = GetNormal_Torus(uv, Out.Position);
 	Out.Tangent = GetTangent_Torus(uv, Out.Position);
-#elif 0
+#elif 1
 	Out.Position = GetPosition_Sphere(uv) * 0.5f;
 	Out.Normal = GetNormal_Sphere(uv, Out.Position);
 	Out.Tangent = GetTangent_Sphere(uv, Out.Position);

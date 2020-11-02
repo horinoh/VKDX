@@ -75,7 +75,7 @@ protected:
 					0,
 					VK_PIPELINE_BIND_POINT_GRAPHICS,
 					0, nullptr,
-					static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
+					static_cast<uint32_t>(size(ColorAttach)), data(ColorAttach), nullptr,
 					&DepthAttach,
 					0, nullptr
 				}),

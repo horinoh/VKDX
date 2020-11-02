@@ -38,7 +38,7 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const D3D12_RESOURCE_STAT
 	CopyToUploadResource(COM_PTR_GET(UploadResource), PSF, NumRows, RowBytes, Subresource);
 
 	//!< #DX_TODO ミップマップの生成 Mipmap
-	//if(ResourceDesc.MipLevels != static_cast<const UINT16>(SubresourceData.size())) {
+	//if(ResourceDesc.MipLevels != static_cast<const UINT16>(size(SubresourceData))) {
 	//	UploadResource.GenerateMips(*Resource);
 	//}
 

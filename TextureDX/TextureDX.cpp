@@ -277,7 +277,7 @@ void TextureDX::PopulateCommandList(const size_t i)
 			assert(!empty(SamplerDescriptorHeaps) && "");
 
 			const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]), COM_PTR_GET(SamplerDescriptorHeaps[0]) };
-			CL->SetDescriptorHeaps(static_cast<UINT>(DHs.size()), DHs.data());
+			CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];

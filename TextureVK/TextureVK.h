@@ -56,7 +56,7 @@ protected:
 		assert(!empty(Samplers) && "");
 		const std::array ISs = { Samplers[0] };
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
-			VkDescriptorSetLayoutBinding({ .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(ISs.size()), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = ISs.data() })
+			VkDescriptorSetLayoutBinding({ .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) })
 		});
 #else
 		//!< ’Êí‚ÌƒTƒ“ƒvƒ‰‚ðŽg‚¤ê‡

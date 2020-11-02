@@ -31,9 +31,9 @@ protected:
 		VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &CommandPools.back()));
 	}
 	virtual void AllocateCommandBuffer() override {
-		const auto SCCount = static_cast<uint32_t>(SwapchainImages.size());
+		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
 		assert(!empty(CommandPools) && "");
-		const auto PrevCount = CommandBuffers.size();
+		const auto PrevCount = size(CommandBuffers);
 		CommandBuffers.resize(PrevCount + SCCount);
 		const VkCommandBufferAllocateInfo CBAI = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,

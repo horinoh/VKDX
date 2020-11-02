@@ -20,7 +20,9 @@ protected:
 		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
 		Degree += 1.0f;
 
-		CopyToHostVisibleDeviceMemory(UniformBuffers[0].DeviceMemory, sizeof(Tr), &Tr, 0);
+#pragma region FRAME_OBJECT
+		CopyToHostVisibleDeviceMemory(UniformBuffers[SwapchainImageIndex].DeviceMemory, sizeof(Tr), &Tr, 0);
+#pragma endregion
 	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 	
@@ -62,23 +64,26 @@ protected:
 	virtual void AllocateCommandBuffer() override {
 		Super::AllocateCommandBuffer();
 
+#pragma region FRAME_OBJECT
+		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
 		//!< パス1 : セカンダリコマンドバッファ
-		assert(!SecondaryCommandPools.empty() && "");
-		const auto PrevCount = SecondaryCommandBuffers.size();
-		SecondaryCommandBuffers.resize(PrevCount + SwapchainImages.size());
+		assert(!empty(SecondaryCommandPools) && "");
+		const auto PrevCount = size(SecondaryCommandBuffers);
+		SecondaryCommandBuffers.resize(PrevCount + SCCount);
 		const VkCommandBufferAllocateInfo SCBAI = {
 			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
 			nullptr,
 			SecondaryCommandPools[0],
 			VK_COMMAND_BUFFER_LEVEL_SECONDARY,
-			static_cast<uint32_t>(SwapchainImages.size())
+			SCCount
 		};
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &SCBAI, &SecondaryCommandBuffers[PrevCount]));
+#pragma endregion
 	}
 	virtual void CreateFramebuffer() override {
 		//!< パス0 : フレームバッファ
 		{
-			assert(4 + 1 == ImageViews.size() && "");
+			assert(4 + 1 == size(ImageViews) && "");
 			Framebuffers.push_back(VkFramebuffer());
 			VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
@@ -120,7 +125,7 @@ protected:
 				{ 3, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
 #pragma endregion
 			} };
-			const VkAttachmentReference DepthAttach = { static_cast<uint32_t>(ColorAttach.size()), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+			const VkAttachmentReference DepthAttach = { static_cast<uint32_t>(size(ColorAttach)), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 			VK::CreateRenderPass(RenderPasses.back(), {
 					//!< アタッチメント(Attachment)
 					//!< レンダーターゲット : カラー(RenderTarget : Color)
@@ -176,7 +181,7 @@ protected:
 						0,
 						VK_PIPELINE_BIND_POINT_GRAPHICS,
 						0, nullptr,
-						static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
+						static_cast<uint32_t>(size(ColorAttach)), data(ColorAttach), nullptr,
 						&DepthAttach,
 						0, nullptr
 					},
@@ -204,7 +209,7 @@ protected:
 						0,
 						VK_PIPELINE_BIND_POINT_GRAPHICS,
 						0, nullptr,
-						static_cast<uint32_t>(ColorAttach.size()), ColorAttach.data(), nullptr,
+						static_cast<uint32_t>(size(ColorAttach)), data(ColorAttach), nullptr,
 						nullptr,
 						0, nullptr
 					},
@@ -220,8 +225,7 @@ protected:
 		CreateIndirectBuffer_Draw(4, 1);
 	}
 	virtual void CreateDescriptorSetLayout() override {
-		assert(!Samplers.empty() && "");
-		const std::array<VkSampler, 1> ISs = { Samplers[0] };
+		assert(!empty(Samplers) && "");
 
 		//!< パス0 : デスクリプタセットレイアウト
 		{
@@ -233,24 +237,26 @@ protected:
 
 		//!< パス1 : デスクリプタセットレイアウト
 		{
+			const std::array<VkSampler, 1> ISs = { Samplers[0] };
+
 			DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
 			VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
-				{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() },
+				{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(size(ISs)), VK_SHADER_STAGE_FRAGMENT_BIT, data(ISs) },
 	#pragma region MRT 
 				//!< レンダーターゲット : 法線(RenderTarget : Normal)
-				{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() },
+				{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(size(ISs)), VK_SHADER_STAGE_FRAGMENT_BIT, data(ISs) },
 				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				{ 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() },
+				{ 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(size(ISs)), VK_SHADER_STAGE_FRAGMENT_BIT, data(ISs) },
 				//!< レンダーターゲット : 未定
-				{ 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(ISs.size()), VK_SHADER_STAGE_FRAGMENT_BIT, ISs.data() },
+				{ 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(size(ISs)), VK_SHADER_STAGE_FRAGMENT_BIT, data(ISs) },
 	#pragma endregion
 				{ 4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
 			});
 		}
 	}
 	virtual void CreatePipelineLayout() override {
-		assert(2 == DescriptorSetLayouts.size() && "");
+		assert(2 == size(DescriptorSetLayouts) && "");
 
 		//!< パス0 : パイプラインレイアウト
 		{
@@ -266,48 +272,64 @@ protected:
 	}
 
 	virtual void CreateDescriptorPool() override {
+#pragma region FRAME_OBJECT
+		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
+#pragma endregion
+
 		//!< パス0,1 : デスクリプタプール
 		DescriptorPools.push_back(VkDescriptorPool());
 		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1 + 1 },
+#pragma region FRAME_OBJECT
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SCCount * 2 }, //!< UB * N * 2
+#pragma endregion
 #pragma region MRT 
 			//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 }, //!< CIS * 4
 #pragma endregion
 		});
 	}
 	virtual void AllocateDescriptorSet() override {
-		assert(2 == DescriptorSetLayouts.size() && "");
-		assert(!DescriptorPools.empty() && "");
+		assert(2 == size(DescriptorSetLayouts) && "");
+		assert(!empty(DescriptorPools) && "");
+
+		const auto SCCount = size(SwapchainImages);
 
 		//!< パス0 : デスクリプタセット
 		{
-			DescriptorSets.push_back(VkDescriptorSet());
 			const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
 			const VkDescriptorSetAllocateInfo DSAI = {
 				VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 				nullptr,
 				DescriptorPools[0],
-				static_cast<uint32_t>(DSLs.size()), DSLs.data()
+				static_cast<uint32_t>(size(DSLs)), data(DSLs)
 			};
-			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+#pragma region FRAME_OBJECT
+			for (size_t i = 0; i < SCCount; ++i) {
+				DescriptorSets.push_back(VkDescriptorSet());
+				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+			}
+#pragma endregion
 		}
 
 		//!< パス1 : デスクリプタセット
 		{
-			DescriptorSets.push_back(VkDescriptorSet());
 			const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[1] };
 			const VkDescriptorSetAllocateInfo DSAI = {
 				VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 				nullptr,
 				DescriptorPools[0],
-				static_cast<uint32_t>(DSLs.size()), DSLs.data()
+				static_cast<uint32_t>(size(DSLs)), data(DSLs)
 			};
-			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+#pragma region FRAME_OBJECT
+			for (size_t i = 0; i < SCCount; ++i) {
+				DescriptorSets.push_back(VkDescriptorSet());
+				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+			}
+#pragma endregion
 		}
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
-		assert(2 == DescriptorSetLayouts.size() && "");
+		assert(2 == size(DescriptorSetLayouts) && "");
 
 		//!< パス0 : デスクリプタアップデートテンプレート
 		{
@@ -360,19 +382,17 @@ protected:
 		}
 	}
 	virtual void UpdateDescriptorSet() override {
-		assert(2 == DescriptorSets.size() && "");
-		assert(2 == DescriptorUpdateTemplates.size() && "");
-
+#pragma region FRAME_OBJECT
+		const auto SCCount = size(SwapchainImages);
 		//!< パス0 :
-		{
+		for (size_t i = 0; i < SCCount; ++i) {
 			const DescriptorUpdateInfo_0 DUI = {
-				{ UniformBuffers.back().Buffer, 0, VK_WHOLE_SIZE },
+				{ UniformBuffers[i].Buffer, 0, VK_WHOLE_SIZE },
 			};
-			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DescriptorUpdateTemplates[0], &DUI);
 		}
 		//!< パス1 :
-		{
-			assert(4 <= ImageViews.size() && "");
+		for (size_t i = 0; i < SCCount; ++i) {
 			const DescriptorUpdateInfo_1 DUI = {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
@@ -384,10 +404,11 @@ protected:
 				//!< レンダーターゲット : 未定
 				{ VK_NULL_HANDLE, ImageViews[3], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
 	#pragma endregion
-				{ UniformBuffers[0].Buffer, 0, VK_WHOLE_SIZE },
+				{ UniformBuffers[i].Buffer, 0, VK_WHOLE_SIZE },
 			};
-			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[1], DescriptorUpdateTemplates[1], &DUI);
+			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i + SCCount], DescriptorUpdateTemplates[1], &DUI);
 		}
+#pragma endregion
 	}
 
 	virtual void CreateTexture() override {
@@ -474,7 +495,8 @@ protected:
 	}
 	virtual void CreateUniformBuffer() override {
 		{
-			const auto Fov = 0.16f * glm::pi<float>();
+			//const auto Fov = 0.16f * glm::pi<float>();
+			const auto Fov = 0.16f * std::numbers::pi_v<float>;
 			const auto Aspect = GetAspectRatioOfClientRect();
 			const auto ZFar = 4.0f;
 			const auto ZNear = 2.0f;
@@ -490,27 +512,32 @@ protected:
 
 			Tr = Transform({ Projection, View, World, InverseViewProjection });
 
-			UniformBuffers.push_back(UniformBuffer());
-			CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-			AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
+#pragma region FRAME_OBJECT
+			const auto SCCount = size(SwapchainImages);
+			for (size_t i = 0; i < SCCount; ++i) {
+				UniformBuffers.push_back(UniformBuffer());
+				CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
+				AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+				VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
+			}
+#pragma endregion
 		}
 	}
 	virtual void CreateShaderModules() override {
 		const auto ShaderPath = GetBasePath();
 		//!< パス0 : シェーダモジュール
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".vert.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".frag.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tese.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".tesc.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT(".geom.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));
+		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))));
+		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))));
+		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))));
+		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".geom.spv"))));
 		//!< パス1 : シェーダモジュール
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_1") + TEXT(".vert.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".vert.spv"))));
 #ifdef USE_GBUFFER_VISUALIZE
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_gb_1") + TEXT(".frag.spv")).data()));
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_gb_1") + TEXT(".geom.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_gb_1") + TEXT(".frag.spv"))));
+		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_gb_1") + TEXT(".geom.spv"))));
 #else
-		ShaderModules.push_back(VKExt::CreateShaderModules((ShaderPath + TEXT("_1") + TEXT(".frag.spv")).data()));
+		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".frag.spv"))));
 #endif
 	}
 	virtual void CreatePipelines() override {

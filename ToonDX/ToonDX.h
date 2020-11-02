@@ -26,8 +26,8 @@ protected:
 	}
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 	virtual void CreateConstantBuffer() override {
-		//const auto Fov = 0.16f * std::numbers::pi_v<float>;
-		const auto Fov = 0.16f * DirectX::XM_PI;
+		//const auto Fov = 0.16f * DirectX::XM_PI;
+		const auto Fov = 0.16f * std::numbers::pi_v<float>;
 		const auto Aspect = GetAspectRatioOfClientRect();
 		const auto ZFar = 100.0f;
 		const auto ZNear = ZFar * 0.0001f;
@@ -89,7 +89,7 @@ protected:
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
-		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
+		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
 		const std::array DRs = {
 			D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
@@ -111,15 +111,15 @@ protected:
 #ifdef USE_SCREENSPACE_WIREFRAME
 		const auto ShaderPath = GetBasePath();
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_wf.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_wf.ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ds.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ds.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".hs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".hs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_wf.gs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_wf.gs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 #else
 		CreateShaderBlob_VsPsDsHsGs();
 #endif

@@ -21,7 +21,7 @@ protected:
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
-		GetRootSignaturePartFromShader(Blob, (GetBasePath() + TEXT(".rs.cso")).data());
+		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
 #ifdef USE_ROOT_CONSTANTS
 		const D3D12_ROOT_PARAMETER RP = {
@@ -46,12 +46,12 @@ protected:
 	virtual void CreateShaderBlobs() override { 
 		const auto ShaderPath = GetBasePath();
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".vs.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
 #ifdef USE_ROOT_CONSTANTS
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT("_rc.ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_rc.ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 #else
-		VERIFY_SUCCEEDED(D3DReadFileToBlob((ShaderPath + TEXT(".ps.cso")).data(), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 #endif
 	}
 	virtual void CreatePipelineStates() override {
