@@ -41,12 +41,33 @@ float3 GetTangent_Torus(const float2 uv, const float3 pos)
 	return normalize(GetPosition_Torus(uv + du) - pos);
 }
 
+float2 GetUV_Sphere(const float2 uv)
+{
+	return (frac(uv) * float2(1.0f, -1.0f) + float2(0.0f, 0.5f)) * 2.0f * PI;
+}
+float3 GetPosition_Sphere(const float2 uv)
+{
+	const float2 UV = GetUV_Sphere(uv);
+	const float3 R = float3(1.0f, 1.0f, 1.0f);
+	return R * float3(cos(UV.x) * sin(UV.y), sin(UV.x) * sin(UV.y), cos(UV.y));
+}
+float3 GetNormal_Sphere(const float2 uv, const float3 pos)
+{
+	const float2 du = float2(0.01f, 0.0f);
+	const float2 dv = float2(0.0f, 0.01f);
+	return normalize(cross(GetPosition_Sphere(uv + du) - pos, GetPosition_Sphere(uv + dv) - pos));
+}
+float3 GetTangent_Sphere(const float2 uv, const float3 pos)
+{
+	const float2 du = float2(0.01f, 0.0f);
+	return normalize(GetPosition_Sphere(uv + du) - pos);
+}
 [domain("quad")]
 OUT main(const TESS_FACTOR tess, const float2 uv : SV_DomainLocation, const OutputPatch<IN, 4> quad)
 {
 	OUT Out;
 
-	const float HeightScale = 0.1f;
+	const float HeightScale = 0.2f;
 
 	Out.Texcoord = float2(uv.x, 1.0f - uv.y);
 #if 0
@@ -54,6 +75,11 @@ OUT main(const TESS_FACTOR tess, const float2 uv : SV_DomainLocation, const Outp
 	Out.Normal = GetNormal_Torus(uv, Out.Position);
 	Out.Tangent = GetTangent_Torus(uv, Out.Position);
 	//!< ª Out.Position ‚ðŽg—p‚µ‚Ä‚¢‚é‚Ì‚Å Normal, Tangent‚ÌŒã‚É‚â‚é‚±‚Æ
+	Out.Position += Out.Normal * HeightScale * DisplacementMap.SampleLevel(Sampler, Out.Texcoord, 0).r;
+#elif 0
+	Out.Position = GetPosition_Sphere(uv) * 0.5f;
+	Out.Normal = GetNormal_Sphere(uv, Out.Position);
+	Out.Tangent = GetTangent_Sphere(uv, Out.Position);
 	Out.Position += Out.Normal * HeightScale * DisplacementMap.SampleLevel(Sampler, Out.Texcoord, 0).r;
 #else
 	Out.Position = float3(2.0f * uv - 1.0f, HeightScale * DisplacementMap.SampleLevel(Sampler, Out.Texcoord, 0).r);

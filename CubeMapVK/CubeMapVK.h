@@ -251,8 +251,8 @@ protected:
 		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));
 		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_sd.frag.spv"))));
 		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_sd.tese.spv"))));
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv")))));
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_sd.geom.spv"))))); 
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_sd.geom.spv")))); 
 #else
 		CreateShaderModle_VsFsTesTcsGs(); 
 #endif

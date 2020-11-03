@@ -16,7 +16,7 @@
 #endif
 #pragma warning(push)
 //#pragma warning(disable : 26812)
-#pragma warning(disable : 4820)
+//#pragma warning(disable : 4820)
 #include <vulkan/vulkan.h>
 #pragma warning(pop)
 
@@ -25,8 +25,8 @@
 
 #pragma warning(push)
 #pragma warning(disable : 4201)
-#pragma warning(disable : 4464)
-#pragma warning(disable : 4127)
+//#pragma warning(disable : 4464)
+//#pragma warning(disable : 4127)
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -521,51 +521,6 @@ protected:
 	//			0.0f, 0.0f, 0.5f, 0.0f,
 	//			0.0f, 0.0f, 0.5f, 1.0f);
 	//}
-
-
-	const std::vector<const char*> InstanceLayers = {
-		//!< "VK_LAYER_LUNARG_standard_validation", is deprecated
-		"VK_LAYER_KHRONOS_validation",
-		//"VK_LAYER_LUNARG_api_dump",
-#ifdef USE_RENDERDOC
-		"VK_LAYER_RENDERDOC_Capture",
-#endif
-		"VK_LAYER_LUNARG_monitor", //!< タイトルバーにFPSを表示
-	};
-	const std::vector<const char*> InstanceExtensions = {
-#ifdef _DEBUG
-		VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME,
-#endif
-		VK_KHR_SURFACE_EXTENSION_NAME,
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-		VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
-#else
-		VK_KHR_XCB_SURFACE_EXTENSION_NAME,
-#endif
-#ifdef USE_DEBUG_REPORT
-		//!< デバッグレポート用
-		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-#endif
-#ifdef USE_RENDERDOC
-		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-#endif
-	};
-	const std::vector<const char*> DeviceExtensions = {
-		//!< スワップチェインはプラットフォームに特有の機能なのでデバイス作製時に VK_KHR_SWAPCHAIN_EXTENSION_NAME エクステンションを有効にして作成しておく
-		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-#ifdef USE_PUSH_DESCRIPTOR
-		VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
-#endif
-#ifdef USE_RENDERDOC
-		VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
-#endif
-#ifdef USE_HDR
-		VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME,
-#endif
-		VK_EXT_VALIDATION_CACHE_EXTENSION_NAME,
-	};
 };
 
 #ifdef DEBUG_STDOUT

@@ -5,6 +5,7 @@
 const float PI = 4.0f * atan(1.0f);
 vec2 GetUV_Torus(const vec2 uv) 
 {
+	//!< [0, 2PI] [0, 2PI]
 	return fract(uv) * 2.0f * PI;
 }
 vec3 GetPosition_Torus(const vec2 uv)
@@ -15,7 +16,8 @@ vec3 GetPosition_Torus(const vec2 uv)
 }
 vec2 GetUV_Sphere(const vec2 uv) 
 {
-	return fract(uv) * vec2(2.0f, 1.0f) * PI;
+	//!< [0, 2PI] [PI, -PI]
+	return (fract(uv) * vec2(1.0f, -1.0f) + vec2(0.0f, 0.5f)) * 2.0f * PI;
 }
 vec3 GetPosition_Sphere(const vec2 uv)
 {

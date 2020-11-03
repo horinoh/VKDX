@@ -16,6 +16,7 @@ struct OUT
 static const float PI = 4.0f * atan(1.0f);
 float2 GetUV_Torus(const float2 uv)
 {
+	//!< [0, 2PI] [0, 2PI]
 	return frac(uv) * 2.0f * PI;
 }
 float3 GetPosition_Torus(const float2 uv)
@@ -26,7 +27,8 @@ float3 GetPosition_Torus(const float2 uv)
 }
 float2 GetUV_Sphere(const float2 uv)
 {
-	return frac(uv) * float2(2.0f, 1.0f) * PI;
+	//!< [0, 2PI] [PI, -PI]
+	return (frac(uv) * float2(1.0f, -1.0f) + float2(0.0f, 0.5f)) * 2.0f * PI;
 }
 float3 GetPosition_Sphere(const float2 uv)
 {

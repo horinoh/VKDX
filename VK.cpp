@@ -870,13 +870,42 @@ void VK::CreateInstance()
 	
 	//!< #VK_TODO 有効にしているものが、InstanceLayerProperties に含まれているかチェックする
 
+	const std::array Layers = {
+		//!< "VK_LAYER_LUNARG_standard_validation", is deprecated
+		"VK_LAYER_KHRONOS_validation",
+		//"VK_LAYER_LUNARG_api_dump",
+#ifdef USE_RENDERDOC
+		"VK_LAYER_RENDERDOC_Capture",
+#endif
+		"VK_LAYER_LUNARG_monitor", //!< タイトルバーにFPSを表示
+	};
+	const std::array Extensions = {
+#ifdef _DEBUG
+		VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME,
+#endif
+		VK_KHR_SURFACE_EXTENSION_NAME,
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
+		VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
+#else
+		VK_KHR_XCB_SURFACE_EXTENSION_NAME,
+#endif
+#ifdef USE_DEBUG_REPORT
+		//!< デバッグレポート用
+		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+#endif
+#ifdef USE_RENDERDOC
+		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+#endif
+	};
 	const VkInstanceCreateInfo ICI = {
 	 	.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 		.pNext = nullptr,
 		.flags = 0,
 		.pApplicationInfo = &AI,
-		.enabledLayerCount = static_cast<uint32_t>(size(InstanceLayers)), .ppEnabledLayerNames = data(InstanceLayers),
-		.enabledExtensionCount = static_cast<uint32_t>(size(InstanceExtensions)), .ppEnabledExtensionNames = data(InstanceExtensions)
+		.enabledLayerCount = static_cast<uint32_t>(size(Layers)), .ppEnabledLayerNames = data(Layers),
+		.enabledExtensionCount = static_cast<uint32_t>(size(Extensions)), .ppEnabledExtensionNames = data(Extensions)
 	};
 	VERIFY_SUCCEEDED(vkCreateInstance(&ICI, GetAllocationCallbacks(), &Instance));
 
@@ -1172,95 +1201,6 @@ void VK::EnumeratePhysicalDeviceExtensionProperties(VkPhysicalDevice PD, const c
 	}
 }
 
-//void VK::EnumerateQueueFamilyProperties(VkPhysicalDevice PD, VkSurfaceKHR Sfc, std::vector<VkQueueFamilyProperties>& QFPs)
-//{
-//	//!< 同じ能力を持つキューはファミリにグループ化される
-//	uint32_t Count = 0;
-//	vkGetPhysicalDeviceQueueFamilyProperties(PD, &Count, nullptr);
-//	assert(Count && "QueueFamilyProperty not found");
-//	QFPs.resize(Count);
-//	vkGetPhysicalDeviceQueueFamilyProperties(PD, &Count, data(QFPs));
-//
-//	//!< Geforce970Mだと以下のような状態だった (In case of Geforce970M)
-//	//!< QueueFamilyIndex == 0 : Grahics | Compute | Transfer | SparceBinding and Present
-//	//!< QueueFamilyIndex == 1 : Transfer
-//	Log("\tQueueFamilyProperties\n");
-//#define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & QFPs[i].queueFlags) { Logf("%s | ", #entry); }
-//	for (uint32_t i = 0; i < size(QFPs); ++i) {
-//		Logf("\t\t[%d] QueueCount = %d, ", i, QFPs[i].queueCount);
-//		Log("QueueFlags = ");
-//		QUEUE_FLAG_ENTRY(GRAPHICS);
-//		QUEUE_FLAG_ENTRY(COMPUTE);
-//		QUEUE_FLAG_ENTRY(TRANSFER);
-//		QUEUE_FLAG_ENTRY(SPARSE_BINDING);
-//		QUEUE_FLAG_ENTRY(PROTECTED);
-//		Log("\n");
-//
-//		QFPs[i].timestampValidBits;
-//		QFPs[i].minImageTransferGranularity;
-//
-//		VkBool32 Supported = VK_FALSE;
-//		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PD, i, Sfc, &Supported));
-//		if (Supported) {
-//			Logf("\t\t\t\tSurface(Present) Supported\n");
-//		}
-//	}
-//#undef QUEUE_FLAG_ENTRY
-//
-//	//!< 専用キューが存在する場合は専用キューを使用したほうが良い
-//	std::bitset<8> GraphicsQueueFamilyBits;
-//	std::bitset<8> PresentQueueFamilyBits;
-//	std::bitset<8> ComputeQueueFamilyBits;
-//	std::bitset<8> TransferQueueFamilyBits;
-//	std::bitset<8> SparceBindingQueueFamilyBits;
-//	for (uint32_t i = 0; i < size(QFPs); ++i) {
-//		const auto& QP = QFPs[i];
-//
-//		if (VK_QUEUE_GRAPHICS_BIT & QP.queueFlags) {
-//			GraphicsQueueFamilyBits.set(i);
-//		}
-//		if (VK_QUEUE_COMPUTE_BIT & QP.queueFlags) {
-//			ComputeQueueFamilyBits.set(i);
-//		}
-//		if (VK_QUEUE_TRANSFER_BIT & QP.queueFlags) {
-//			TransferQueueFamilyBits.set(i);
-//		}
-//		if (VK_QUEUE_SPARSE_BINDING_BIT & QP.queueFlags) {
-//			SparceBindingQueueFamilyBits.set(i);
-//		}
-//
-//		VkBool32 Supported = VK_FALSE;
-//		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PD, i, Sfc, &Supported));
-//		if (Supported) {
-//			PresentQueueFamilyBits.set(i);
-//		}
-//	}
-//
-//	//!< グラフィックとプレゼンテーションを「同時に」サポートするキューがあるか Prioritize queue which support both of graphics and presentation
-//	//for (uint32_t i = 0; i < Count; ++i) {
-//	//	if (VK_QUEUE_GRAPHICS_BIT & QFPs[i].queueFlags) {
-//	//		VkBool32 Supported = VK_FALSE;
-//	//		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PD, i, Surface, &Supported));
-//	//		if (Supported) {
-//	//			Logf("\t\t\tFound Graphics and Presentation support queue [%d]\n", i);
-//	//			break;
-//	//		}
-//	//	}
-//	//}
-//
-//	assert(GraphicsQueueFamilyBits.any() && "GraphicsQueue not found");
-//	assert(PresentQueueFamilyBits.any() && "PresentQueue not found");
-//	assert(ComputeQueueFamilyBits.any() && "ComputeQueue not found");
-//	//assert(TransferQueueFamilyBits.any() && "TansferQueue not found");
-//	//assert(SparceBindingQueueFamilyBits.any() && "SparceBindingQueue not found");
-//
-//	Log("\n");
-//	Logf("\t\tGraphicsQueueFamilyBits = %s\n", GraphicsQueueFamilyBits.to_string().c_str());
-//	Logf("\t\tPresentQueueFamilyBits = %s\n", PresentQueueFamilyBits.to_string().c_str());
-//	Logf("\t\tComputeQueueFamilyBits = %s\n", ComputeQueueFamilyBits.to_string().c_str());
-//	Logf("\t\tTansferQueueFamilyBits = %s\n", TransferQueueFamilyBits.to_string().c_str());
-//	Logf("\t\tSparceBindingQueueFamilyBits = %s\n", SparceBindingQueueFamilyBits.to_string().c_str());
-//}
 void VK::OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const
 {
 	//!< VkPhysicalDeviceFeatures には可能なフィーチャーが全て true になったものが渡されてくる
@@ -1296,95 +1236,20 @@ uint32_t VK::FindQueueFamilyPropertyIndex(const VkPhysicalDevice PD, const VkSur
 	return 0xffff;
 }
 
-//void VK::CreateQueueFamilyPriorities(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const std::vector<VkQueueFamilyProperties>& QFPs, std::vector<std::vector<float>>& Priorites)
-//{
-//	for (auto i = 0; i < size(QFPs); ++i) {
-//		const auto& QFP = QFPs[i];
-//		auto& Pri = Priorites[i];
-//		if (VK_QUEUE_GRAPHICS_BIT & QFP.queueFlags) {
-//			GraphicsQueueFamilyIndex = i;
-//			if (size(Pri) < QFP.queueCount) {
-//				Pri.push_back(0.5f);
-//			}
-//			GraphicsQueueIndexInFamily = static_cast<uint32_t>(size(Pri)) - 1;
-//			break;
-//		}
-//	}
-//	for (auto i = 0; i < size(QFPs); ++i) {
-//		const auto& QFP = QFPs[i];
-//		auto& Pri = Priorites[i];
-//		VkBool32 Supported = VK_FALSE;
-//		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PD, i, Sfc, &Supported));
-//		if (Supported) {
-//			PresentQueueFamilyIndex = i;
-//			if (size(Pri) < QFP.queueCount) {
-//				Pri.push_back(0.5f);
-//			}
-//			PresentQueueIndexInFamily = static_cast<uint32_t>(size(Pri)) - 1;
-//			break;
-//		}
-//	}
-//	for (auto i = 0; i < size(QFPs); ++i) {
-//		const auto& QFP = QFPs[i];
-//		auto& Pri = Priorites[i];
-//		if (VK_QUEUE_COMPUTE_BIT & QFP.queueFlags) {
-//			ComputeQueueFamilyIndex = i;
-//			if (size(Pri) < QFP.queueCount) {
-//				Pri.push_back(0.5f);
-//			}
-//			ComputeQueueIndexInFamily = static_cast<uint32_t>(size(Pri)) - 1;
-//			break;
-//		}
-//	}
-//	//for (auto i = 0; i < size(QFPs); ++i) {
-//	//	const auto& QFP = QFPs[i];
-//	//	auto& Pri = Priorites[i];
-//	//	if (VK_QUEUE_TRANSFER_BIT & QFP.queueFlags) {
-//	//		TransferQueueFamilyIndex = i;
-//	//		if (size(Pri) < QFP.queueCount) {
-//	//			Pri.push_back(0.5f);
-//	//		}
-//	//		TransferQueueIndex = static_cast<uint32_t>(size(Pri)) - 1;
-//	//		break;
-//	//	}
-//	//}
-//	//for (auto i = 0; i < size(QFPs); ++i) {
-//	//	const auto& QFP = QFPs[i];
-//	//	auto& Pri = Priorites[i];
-//	//	if (VK_QUEUE_SPARSE_BINDING_BIT & QFP.queueFlags) {
-//	//		SparceBindingQueueFamilyIndex = i;
-//	//		if (size(Pri) < QFP.queueCount) {
-//	//			Pri.push_back(0.5f);
-//	//		}
-//	//		SparceBindingQueueIndex = static_cast<uint32_t>(size(Pri)) - 1;
-//	//		break;
-//	//	}
-//	//}
-//
-//	Log("\n");
-//	Logf("\t\tGraphics QueueFamilyIndex = %d, QueueIndex = %d\n", GraphicsQueueFamilyIndex, GraphicsQueueIndexInFamily);
-//	Logf("\t\tPresent QueueFamilyIndex = %d, QueueIndex = %d\n", PresentQueueFamilyIndex, PresentQueueIndexInFamily);
-//	Logf("\t\tCompute QueueFamilyIndex = %d, QueueIndex = %d\n", ComputeQueueFamilyIndex, ComputeQueueIndexInFamily);
-//	//Logf("\t\tTransfer\tQueueFamilyIndex = %d, QueueIndex = %d\n", TransferQueueFamilyIndex, TransferQueueIndex);
-//	//Logf("\t\tSparceBinding\tQueueFamilyIndex = %d, QueueIndex = %d\n", SparceBindingQueueFamilyIndex, SparceBindingQueueIndex);
-//}
 void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 {
 	std::vector<VkQueueFamilyProperties> QFPs;
-#if 0
-	EnumerateQueueFamilyProperties(PD, Sfc, QFPs);
 
-	std::vector<std::vector<float>> Priorites(8);
-	CreateQueueFamilyPriorities(PD, Sfc, QFPs, Priorites);
-#else
 	//!< キューファミリプロパティの列挙
 	uint32_t Count = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(PD, &Count, nullptr);
 	assert(Count && "QueueFamilyProperty not found");
 	QFPs.resize(Count);
 	vkGetPhysicalDeviceQueueFamilyProperties(PD, &Count, data(QFPs));
+
 	Log("\tQueueFamilyProperties\n");
 #define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & QFPs[i].queueFlags) { Logf("%s | ", #entry); }
+	//!< インデックスを使うので範囲ベースforにはしない
 	for (uint32_t i = 0; i < size(QFPs); ++i) {
 		Logf("\t\t[%d] QueueCount = %d, ", i, QFPs[i].queueCount);
 		Log("QueueFlags = ");
@@ -1396,34 +1261,39 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 		Log("\n");
 		//QFPs[i].timestampValidBits;
 		//QFPs[i].minImageTransferGranularity;
+
 		VkBool32 b = VK_FALSE;
 		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PD, i, Sfc, &b));
-		if (b) {
-			Logf("\t\t\t\tSurface(Present) Supported\n");
-		}
+		if (b) { Logf("\t\t\t\tSurface(Present) Supported\n"); }
 	}
 #undef QUEUE_FLAG_ENTRY
 
-	//!< 機能を持つキューファミリインデックスを見つける
+	//!< 機能を持つキューファミリインデックスを見つける (Find queue family index for each functions)
 	GraphicsQueueFamilyIndex = FindQueueFamilyPropertyIndex(VK_QUEUE_GRAPHICS_BIT, QFPs);
 	PresentQueueFamilyIndex = FindQueueFamilyPropertyIndex(PD, Sfc, QFPs);
 	ComputeQueueFamilyIndex = FindQueueFamilyPropertyIndex(VK_QUEUE_COMPUTE_BIT, QFPs);
 
-	//!< キューファミリ内でのインデックス及びプライオリティ
-	std::vector<std::vector<float>> Priorites;
-	Priorites.resize(size(QFPs));
+	//!< キューファミリ内でのインデックス及びプライオリティ、ここではグラフィック、プレゼント、コンピュートの分をプライオリティ0.5fで追加している
+	std::vector<std::vector<float>> Priorites(size(QFPs));
 	const uint32_t GraphicsQueueIndexInFamily = static_cast<uint32_t>(size(Priorites[GraphicsQueueFamilyIndex])); Priorites[GraphicsQueueFamilyIndex].emplace_back(0.5f);
 	const uint32_t PresentQueueIndexInFamily = static_cast<uint32_t>(size(Priorites[PresentQueueFamilyIndex])); Priorites[PresentQueueFamilyIndex].emplace_back(0.5f);
 	const uint32_t ComputeQueueIndexInFamily = static_cast<uint32_t>(size(Priorites[ComputeQueueFamilyIndex])); Priorites[ComputeQueueFamilyIndex].emplace_back(0.5f);
-
 	Log("\n");
 	Logf("\t\tGraphics QueueFamilyIndex = %d, QueueIndex = %d\n", GraphicsQueueFamilyIndex, GraphicsQueueIndexInFamily);
 	Logf("\t\tPresent QueueFamilyIndex = %d, QueueIndex = %d\n", PresentQueueFamilyIndex, PresentQueueIndexInFamily);
 	Logf("\t\tCompute QueueFamilyIndex = %d, QueueIndex = %d\n", ComputeQueueFamilyIndex, ComputeQueueIndexInFamily);
-#endif
+	Log("\t\tPriorites = \n");
+	for (const auto& i : Priorites) {
+		Log("\t\t\t");
+		for (const auto j : i) {
+			Logf("%f, ", j);
+		}
+		Log("\n");
+	}
 
-	//!< キュー作成情報 Queue create information
+	//!< キュー作成情報 (Queue create information)
 	std::vector<VkDeviceQueueCreateInfo> DQCIs;
+	//!< インデックスを使うので範囲ベースforにはしない
 	for (size_t i = 0; i < size(Priorites);++i) {
 		if (!empty(Priorites[i])) {
 			DQCIs.emplace_back(
@@ -1438,12 +1308,26 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 		}
 	}	
 
+	const std::array Extensions = {
+		//!< スワップチェインはプラットフォームに特有の機能なのでデバイス作製時に VK_KHR_SWAPCHAIN_EXTENSION_NAME エクステンションを有効にして作成しておく
+		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+#ifdef USE_PUSH_DESCRIPTOR
+		VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
+#endif
+#ifdef USE_RENDERDOC
+		VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
+#endif
+#ifdef USE_HDR
+		VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME,
+#endif
+		VK_EXT_VALIDATION_CACHE_EXTENSION_NAME,
+	};
 	//!< vkGetPhysicalDeviceFeatures() で可能なフィーチャーが全て有効になった VkPhysicalDeviceFeatures が返る
 	//!< このままでは可能なだけ有効になってしまうのでパフォーマンス的には良くない(必要な項目だけ true にし、それ以外は false にするのが本来は良い)
-	//!< デバイスフィーチャーを「有効にしないと」と使用できない機能が多々あり面倒なので、ここでは返った値をそのまま使ってしまっている (パフォーマンス的には良くない)
+	//!< デバイスフィーチャーを「有効にしないと」と使用できない機能が多々あり面倒なので、(パフォーマンス的には良くないが)ここでは返った値をそのまま使うことにする #PERFORMANCE_TODO 
 	VkPhysicalDeviceFeatures PDF;
 	vkGetPhysicalDeviceFeatures(PD, &PDF);
-	//!< 必要に応じて OverridePhysicalDeviceFeatures() をオーバーライドし、不要な項目を無効にする(パフォーマンスを考える場合)
+	//!< (パフォーマンスを考える場合は)継承先で OverridePhysicalDeviceFeatures() をオーバーライドし、不要な項目を無効にする
 	OverridePhysicalDeviceFeatures(PDF);
 	const VkDeviceCreateInfo DCI = {
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -1451,17 +1335,23 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 		.flags = 0,
 		.queueCreateInfoCount = static_cast<uint32_t>(size(DQCIs)), .pQueueCreateInfos = data(DQCIs),
 		.enabledLayerCount = 0, .ppEnabledLayerNames = nullptr, //!< デバイスでレイヤーの有効化は非推奨 (Device layer is deprecated)
-		.enabledExtensionCount = static_cast<uint32_t>(size(DeviceExtensions)), .ppEnabledExtensionNames = data(DeviceExtensions),
+		.enabledExtensionCount = static_cast<uint32_t>(size(Extensions)), .ppEnabledExtensionNames = data(Extensions),
 		.pEnabledFeatures = &PDF
 	};
 	VERIFY_SUCCEEDED(vkCreateDevice(PD, &DCI, GetAllocationCallbacks(), &Device));
 
-	//!< デバイスレベルの関数をロードする Load device level functions
+	//!< デバイスレベルの関数をロードする (Load device level functions)
 #ifdef VK_NO_PROTOYYPES
 #define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc)); assert(nullptr != vk ## proc && #proc && #proc);
 #include "VKDeviceProcAddr.h"
 #undef VK_DEVICE_PROC_ADDR
 #endif //!< VK_NO_PROTOYYPES
+
+#ifdef USE_DEBUG_MARKER
+#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetDeviceProcAddr(Device, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
+#include "VKDebugMarker.h"
+#undef VK_DEVICE_PROC_ADDR
+#endif
 
 	//!< キューの取得 (グラフィック、プレゼントキューは同じインデックスの場合もあるが別の変数に取得しておく) (Graphics and presentation index may be same, but save to individual variables)
 	vkGetDeviceQueue(Device, GraphicsQueueFamilyIndex, GraphicsQueueIndexInFamily, &GraphicsQueue);
@@ -1469,14 +1359,6 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 	//vkGetDeviceQueue(Device, ComputeQueueFamilyIndex, ComputeQueueIndex, &ComputeQueue);
 	//vkGetDeviceQueue(Device, TransferQueueFamilyIndex, TransferQueueIndex, &TransferQueue);
 	//vkGetDeviceQueue(Device, SparceBindingQueueFamilyIndex, SparceBindingQueueIndex, &SparceBindingQueue);
-
-#ifdef USE_DEBUG_MARKER
-	//if (HasDebugMarkerExt) {
-#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetDeviceProcAddr(Device, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
-#include "VKDebugMarker.h"
-#undef VK_DEVICE_PROC_ADDR
-	//}
-#endif
 
 	LOG_OK();
 }
