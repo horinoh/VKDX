@@ -48,23 +48,28 @@
 
 #define ALWAYS_REBUILD_PIPELINE
 
-#include <iostream>
-#include <ostream>
 #include <vector>
 #include <array>
-#include <cassert>
+#include <ranges>
 #include <algorithm>
-#include <sstream>
-#include <codecvt>
+#include <bitset>
+#include <variant>
+#include <cassert>
 #include <functional>
 #include <thread>
-#include <bitset>
 #include <numeric>
 #include <numbers>
-#include <ranges>
 #include <optional>
-#include <variant>
+
+#include <iostream>
+#include <ostream>
+#include <sstream>
+
+#include <codecvt>
 #include <charconv>
+#include <locale>
+#include <string>
+
 //#include <source_location> //!< #TODO インクルードできない
 //#include <cinttypes>
 
@@ -126,48 +131,41 @@ public:
 	[[nodiscard]] LONG GetClientRectHeight() const { return GetHeight(GetRect()); }
 	[[nodiscard]] FLOAT GetAspectRatioOfClientRect() const { return GetAspectRatio(static_cast<const FLOAT>(GetClientRectWidth()), static_cast<const FLOAT>(GetClientRectHeight())); }
 
-	static [[nodiscard]] std::string ToString(const std::wstring& WStr) {
+	static [[nodiscard]] std::string ToString(std::wstring_view WStr) {
 #if 1
-		const auto Size = WideCharToMultiByte(CP_UTF8, 0, WStr.c_str(), -1, nullptr, 0, nullptr, nullptr);
-		auto Buffer = new CHAR[Size];
-		WideCharToMultiByte(CP_UTF8, 0, WStr.c_str(), -1, Buffer, Size, nullptr, nullptr);
-		const auto Str = std::string(Buffer, Buffer + Size - 1);
-		delete[] Buffer;
-		return Str;
+		std::vector<CHAR> Buffer(WideCharToMultiByte(CP_UTF8, 0, data(WStr), -1, nullptr, 0, nullptr, nullptr));
+		WideCharToMultiByte(CP_UTF8, 0, data(WStr), -1, data(Buffer), static_cast<int>(size(Buffer)), nullptr, nullptr);
+		return std::string(cbegin(Buffer), --cend(Buffer));
 #elif 0
-		const auto Size = lstrlen(WStr.c_str()) + 1;
-		auto Buffer = new char[Size];
-		size_t i;
-		wcstombs_s(&i, Buffer, Size, WStr.c_str(), _TRUNCATE);
-		const auto Str = std::string(Buffer, Buffer + Size - 1);
-		delete[] Buffer;
-		return Str;
+		std::vector<CHAR> Buffer(WStr.length() + 1);
+		size_t i; wcstombs_s(&i, data(Buffer), size(Buffer), data(WStr), _TRUNCATE);
+		return std::string(cbegin(Buffer), --cend(Buffer));
+#elif 0
+		//!< NG
+		std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> Converter;
+		return Converter.to_bytes(WStr);
 #else
-		//!< VS2019 : C4244
+		//!< NG : C4244
 		return std::string(cbegin(WStr), cend(WStr));
 #endif
 	}
-	static [[nodiscard]] std::wstring ToWString(const std::string& Str) {
+	static [[nodiscard]] std::wstring ToWString(std::string_view Str) {
 #if 0
-		const auto Size = MultiByteToWideChar(CP_UTF8, 0, Str.c_str(), -1, nullptr, 0);
-		auto Buffer = new wchar_t[Size];
-		MultiByteToWideChar(CP_UTF8, 0, Str.c_str(), -1, Buffer, Size);
-		const auto WStr = std::wstring(Buffer, Buffer + Size - 1);
-		delete[] Buffer;
-		return WStr;
+		std::vector<wchar_t> Buffer(MultiByteToWideChar(CP_UTF8, 0, data(Str), -1, nullptr, 0));
+		MultiByteToWideChar(CP_UTF8, 0, data(Str), -1, data(Buffer), static_cast<int>(size(Buffer)));
+		return std::wstring(cbegin(Buffer), cend(Buffer));
 #elif 0
-		const auto Size = strlen(Str.c_str()) + 1;
-		auto Buffer = new wchar_t[Size];
-		size_t i;
-		mbstowcs_s(&i, Buffer, Size, Str.c_str(), _TRUNCATE);
-		const auto WStr = std::wstring(Buffer, Buffer + Size - 1);
-		delete[] Buffer;
-		return WStr;
+		std::vector<wchar_t> Buffer(Str.length() + 1);
+		size_t i; mbstowcs_s(&i, data(Buffer), size(Buffer), data(Str), _TRUNCATE);
+		return std::wstring(cbegin(Buffer), cend(Buffer));
+#elif 0
+		//!< NG
+		std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> Converter;
+		return Converter.from_bytes(Str);
 #else
 		return std::wstring(cbegin(Str), cend(Str));
 #endif
 	}
-	static [[nodiscard]] std::wstring ToWString(const char* Str) { return std::wstring(&Str[0], &Str[strlen(Str)]); }
 
 	virtual [[nodiscard]] const std::wstring& GetTitleW() const { return TitleW; }
 	virtual [[nodiscard]] std::string GetTitle() const { return ToString(TitleW); }

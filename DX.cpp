@@ -29,6 +29,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateCommandAllocator();
 	CreateCommandList();
+
 	//InitializeSwapchainImage(COM_PTR_GET(CommandAllocators[0]), &DirectX::Colors::Red);
 
 	CreateVertexBuffer();
@@ -109,8 +110,7 @@ void DX::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnDestroy(hWnd, hInstance);
 
-	//!< GPUが完了するまでここで待機 
-	//!< Wait GPU
+	//!< GPUが完了するまでここで待機 (Wait GPU)
 	WaitForFence();
 }
 
@@ -164,26 +164,22 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const
 void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData)
 {
 	if (nullptr != Resource) [[likely]] {
-		//assert(size(SubresourceData) == size(PSF) == size(NumRows) == size(RowSizes) && "Invalid size");
-		const auto SubresourceCount = static_cast<const UINT>(size(SubresourceData));
-
 		BYTE* Data;
 		VERIFY_SUCCEEDED(Resource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
-			for (auto It = cbegin(PSF); It != cend(PSF); ++It) {
-				const auto Index = std::distance(cbegin(PSF), It);
-				const auto& SD = SubresourceData[Index];
-				const auto RowCount = NumRows[Index];
-				const auto RowSize = RowSizes[Index];
+			for (auto i = 0; i < size(PSF); ++i) {
+				const auto& SD = SubresourceData[i];
+				const auto RowCount = NumRows[i];
+				const auto RowSize = RowSizes[i];
 				const D3D12_MEMCPY_DEST MemcpyDest = {
-					.pData = Data + It->Offset,
-					.RowPitch = It->Footprint.RowPitch,
-					.SlicePitch = static_cast<SIZE_T>(It->Footprint.RowPitch) * RowCount
+					.pData = Data + PSF[i].Offset,
+					.RowPitch = PSF[i].Footprint.RowPitch,
+					.SlicePitch = static_cast<SIZE_T>(PSF[i].Footprint.RowPitch) * RowCount
 				};
-				for (UINT i = 0; i < It->Footprint.Depth; ++i) {
-					auto Dst = reinterpret_cast<BYTE*>(MemcpyDest.pData) + MemcpyDest.SlicePitch * i;
-					const auto Src = reinterpret_cast<const BYTE*>(SD.pData) + SD.SlicePitch * i;
-					for (UINT j = 0; j < RowCount; ++j) {
-						memcpy(Dst + MemcpyDest.RowPitch * j, Src + SD.RowPitch * j, RowSize);
+				for (UINT j = 0; j < PSF[i].Footprint.Depth; ++j) {
+					auto Dst = reinterpret_cast<BYTE*>(MemcpyDest.pData) + MemcpyDest.SlicePitch * j;
+					const auto Src = reinterpret_cast<const BYTE*>(SD.pData) + SD.SlicePitch * j;
+					for (UINT k = 0; k < RowCount; ++k) {
+						memcpy(Dst + MemcpyDest.RowPitch * k, Src + SD.RowPitch * k, RowSize);
 					}
 				}
 			}
@@ -197,7 +193,7 @@ void DX::ExecuteCopyBuffer(ID3D12Resource* DstResource, ID3D12CommandAllocator* 
 		PopulateCopyBufferCommand(CL, SrcResource, DstResource, Size, D3D12_RESOURCE_STATE_GENERIC_READ);
 	} VERIFY_SUCCEEDED(CL->Close());
 
-	const std::vector<ID3D12CommandList*> CLs = { CL };
+	const std::array CLs = { static_cast<ID3D12CommandList*>(CL) };
 	CommandQueue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
 	WaitForFence();
 }
@@ -213,7 +209,7 @@ void DX::ExecuteCopyTexture(ID3D12Resource* DstResource, ID3D12CommandAllocator*
 		}
 	} VERIFY_SUCCEEDED(CL->Close());
 
-	const std::vector<ID3D12CommandList*> CLs = { CL };
+	const std::array CLs = { static_cast<ID3D12CommandList*>(CL) };
 	CommandQueue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
 	WaitForFence();
 }
@@ -266,25 +262,18 @@ void DX::PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CL, ID3D12Resourc
 	//!< (LoadDDSTextureFromFile()で作成される)Dstのステートは既にD3D12_RESOURCE_STATE_COPY_DESTで作成されている (Dst(created from LoadDDSTextureFromFile())'s state is already D3D12_RESOURCE_STATE_COPY_DEST)
 	//ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
 	{
-		for (auto It = cbegin(PSF); It != cend(PSF); ++It) {
+		for (UINT i = 0; i < size(PSF); ++i) {
 			const D3D12_TEXTURE_COPY_LOCATION TCL_Dst = {
 				.pResource = Dst,
 				.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
-				.SubresourceIndex = static_cast<const UINT>(std::distance(cbegin(PSF), It))
+				.SubresourceIndex = i
 			};
 			const D3D12_TEXTURE_COPY_LOCATION TCL_Src = {
 				.pResource = Src,
 				.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
-				.PlacedFootprint = *It
+				.PlacedFootprint = PSF[i]
 			};
-			//const D3D12_BOX Box = {
-			//	static_cast<UINT>(It->Offset),	//!< LEFT
-			//	0,								//!< TOP
-			//	0,								//!< FRONT
-			//	static_cast<UINT>(It->Offset) + It->Footprint.Width, //!< RIGHT
-			//	1,								//!< BOTTOM
-			//	1								//!< BACK
-			//};
+			//const D3D12_BOX Box = { .left = static_cast<UINT>(PSF[i].Offset), .top = 0, .front = 0, .right = static_cast<UINT>(PSF[i].Offset) + PSF[i].Footprint.Width, .bottom = 1, .back = 1, };
 			CL->CopyTextureRegion(&TCL_Dst, 0, 0, 0, &TCL_Src, nullptr);
 		}
 	} ResourceBarrier(CL, Dst, D3D12_RESOURCE_STATE_COPY_DEST, RS);
@@ -292,8 +281,8 @@ void DX::PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CL, ID3D12Resourc
 void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS)
 {
 	ResourceBarrier(CL, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
-		for (auto It = cbegin(PSF); It != cend(PSF); ++It) {
-			CL->CopyBufferRegion(Dst, 0, Src, It->Offset, It->Footprint.Width);
+		for(auto i : PSF) {
+			CL->CopyBufferRegion(Dst, 0, Src, i.Offset, i.Footprint.Width);
 		}
 	} ResourceBarrier(CL, Dst, D3D12_RESOURCE_STATE_COPY_DEST, RS);
 }

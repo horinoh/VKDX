@@ -310,12 +310,12 @@ void GltfVK::PreProcess()
 	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
 
 	//!< アップデートテンプレート
-	const std::array<VkDescriptorUpdateTemplateEntry, 1> DUTEs = {
-		{
+	const std::array DUTEs = {
+		VkDescriptorUpdateTemplateEntry({
 			0, 0,
 			_countof(DescriptorUpdateInfo::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 			offsetof(DescriptorUpdateInfo, DBI), sizeof(DescriptorUpdateInfo)
-		}
+		})
 	};
 	assert(!empty(DescriptorSetLayouts) && "");
 	const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
@@ -325,10 +325,11 @@ void GltfVK::PreProcess()
 		static_cast<uint32_t>(size(DUTEs)), data(DUTEs),
 		VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
 		DescriptorSetLayouts[0],
-		VK_PIPELINE_BIND_POINT_GRAPHICS, VK_NULL_HANDLE, 0
+		VK_PIPELINE_BIND_POINT_GRAPHICS, 
+		VK_NULL_HANDLE, 0
 	};
-	DescriptorUpdateTemplates.resize(1);
-	VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates[0]));
+	DescriptorUpdateTemplates.emplace_back(VkDescriptorUpdateTemplate());
+	VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates.back()));
 
 	//!< アップデート
 	const DescriptorUpdateInfo DUI = {
@@ -396,7 +397,7 @@ void GltfVK::Process(const fx::gltf::Camera& Cam)
 #endif
 
 #if 0
-	CopyToHostVisibleDeviceMemory(UniformBuffers[0].DeviceMemory, sizeof(PV), &PV, 0);
+	CopyToHostVisibleDeviceMemory(UniformBuffers[0].DeviceMemory, 0, sizeof(PV), &PV);
 #endif
 }
 void GltfVK::Process(const fx::gltf::Primitive& Prim)

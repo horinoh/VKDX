@@ -25,8 +25,17 @@ protected:
 	virtual void CreatePipelineLayout() override {
 		assert(!empty(DescriptorSetLayouts) && "");
 		PipelineLayouts.emplace_back(VkPipelineLayout());
+
+		//!< プッシュコンスタント : デスクリプタセットよりも高速
+		//!< パイプラインレイアウト全体で128byte (ハードによりこれ以上使える場合もある、GTX970Mの場合は256byteだった)
+		//!< 各シェーダステージは1つのプッシュコンスタントレンジにしかアクセスできない
+		//!< 各シェーダステージが「共通のレンジを持たない」ような「ワーストケース」では 128/5==25.6、1シェーダステージで25byte程度となる
+		//const std::array PCRs = {
+		//	VkPushConstantRange({ .stageFlags = VK_SHADER_STAGE_VERTEX_BIT, .offset = 0, .size = 64 }), 
+		//	VkPushConstantRange({ .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .offset = 64, .size = 64 }),
+		//};
 #ifdef USE_PUSH_CONSTANTS
-		const VkPushConstantRange PCR = { .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .offset = 0, .size = static_cast<uint32_t>(size(Color) * sizeof(Color[0])) };
+		const auto PCR = VkPushConstantRange({ .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .offset = 0, .size = static_cast<uint32_t>(size(Color) * sizeof(Color[0])) });
 		VKExt::CreatePipelineLayout(PipelineLayouts.back(), {}, { PCR });
 #else
 		VKExt::CreatePipelineLayout(PipelineLayouts.back(), {}, {});

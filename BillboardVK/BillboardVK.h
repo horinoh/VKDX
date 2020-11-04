@@ -21,8 +21,9 @@ protected:
 		Degree += 1.0f;
 
 #pragma region FRAME_OBJECT
-		const std::array Range = { VkDeviceSize(offsetof(Transform, World)), VkDeviceSize(sizeof(Transform::World)) };
-		CopyToHostVisibleDeviceMemory(UniformBuffers[SwapchainImageIndex].DeviceMemory, sizeof(Tr), &Tr, 0/*, &Range*/);
+		//!< Worldだけ更新
+		CopyToHostVisibleDeviceMemory(UniformBuffers[SwapchainImageIndex].DeviceMemory, 0, sizeof(Tr), &Tr, offsetof(Transform, World), sizeof(Transform::World));
+		//CopyToHostVisibleDeviceMemory(UniformBuffers[SwapchainImageIndex].DeviceMemory, 0, sizeof(Tr), &Tr);
 #pragma endregion
 	}
 
@@ -155,9 +156,10 @@ protected:
 			.pNext = nullptr,
 			.flags = 0,
 			.descriptorUpdateEntryCount = static_cast<uint32_t>(size(DUTEs)), .pDescriptorUpdateEntries = data(DUTEs),
-			.templateType = VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR, //!< PUSH_DESCRIPTORSを指定
+			.templateType = VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR, //!< VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR を指定
 			.descriptorSetLayout = DescriptorSetLayouts[0],
-			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS, .pipelineLayout = PipelineLayouts[0], .set = 0 //!< パイプラインレイアウトを指定
+			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+			.pipelineLayout = PipelineLayouts[0], .set = 0 //!< (VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR使用時は)パイプラインレイアウトを指定
 		};
 		DescriptorUpdateTemplates.emplace_back(VkDescriptorUpdateTemplate());
 		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates.back()));

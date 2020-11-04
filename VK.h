@@ -175,19 +175,9 @@ protected:
 	void AllocateDeviceMemory(VkDeviceMemory* DM, const VkImage Image, const VkMemoryPropertyFlags MPF) { VkMemoryRequirements MR; vkGetImageMemoryRequirements(Device, Image, &MR); AllocateDeviceMemory(DM, MR, MPF); }
 
 	virtual void CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size) const;
-	virtual void ValidateImageCreateInfo(const VkImageCreateInfo& ICI) const {
-		if (ICI.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) {
-			assert(ICI.samples == VK_SAMPLE_COUNT_1_BIT && "Must be VK_SAMPLE_COUNT_1_BIT");
-			assert(ICI.extent.width == ICI.extent.height && "Must be square");
-			assert(ICI.arrayLayers >= 6 && "Invalid ArrayLayers");
-		}
-		else {
-			assert(ICI.arrayLayers >= 1 && "Invalid ArrayLayers");
-		}
-	}
 	virtual void CreateImage(VkImage* Image, const VkImageCreateFlags CreateFlags, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage) const;
 
-	virtual void CopyToHostVisibleDeviceMemory(const VkDeviceMemory DeviceMemory, const size_t Size, const void* Source, const VkDeviceSize Offset, const std::array<VkDeviceSize, 2>* Range = nullptr);
+	virtual void CopyToHostVisibleDeviceMemory(const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset, const VkDeviceSize Size, const void* Source, const VkDeviceSize MappedRangeOffset = 0, const VkDeviceSize MappedRangeSize = VK_WHOLE_SIZE);
 	virtual void CmdCopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, const VkBuffer Dst, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF, const size_t Size);
 
 	void EnumerateMemoryRequirements(const VkMemoryRequirements& MR);
@@ -257,8 +247,6 @@ protected:
 	//virtual void CreateQueueFamilyPriorities(VkPhysicalDevice PD, VkSurfaceKHR Surface, const std::vector<VkQueueFamilyProperties>& QFPs, std::vector<std::vector<float>>& QueueFamilyPriorites);
 	virtual void CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 
-	virtual void AllocateDeviceMemory();
-
 	virtual void CreateFence(VkDevice Device);
 	virtual void CreateSemaphore(VkDevice Device);
 
@@ -323,7 +311,6 @@ protected:
 			VK::CreateFramebuffer(Framebuffers.back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
 		}
 	}
-	virtual void DestroyFramebuffer();
 
 	virtual [[nodiscard]] VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 	virtual void CreateShaderModules() {}
@@ -348,12 +335,12 @@ protected:
 	virtual void ClearDepthStencilAttachment(const VkCommandBuffer CommandBuffer, const VkClearDepthStencilValue& DepthStencil);
 	virtual void PopulateCommandBuffer(const size_t i);
 
-	virtual void DrawFrame(const uint32_t /*i*/) {}
+	virtual void DrawFrame([[maybe_unused]] const uint32_t i) {}
 	virtual void Draw();
 	virtual void Dispatch();
 	virtual void Present();
 
-	const VkAllocationCallbacks AllocationCallbacks = {
+	static inline const VkAllocationCallbacks AllocationCallbacks = {
 		.pUserData = nullptr,
 		.pfnAllocation = AlignedMalloc,
 		.pfnReallocation = AlignedRealloc,
@@ -361,7 +348,7 @@ protected:
 		.pfnInternalAllocation = AlignedAllocNotify,
 		.pfnInternalFree = AligendFreeNotify
 	};
-	const [[nodiscard]] VkAllocationCallbacks* GetAllocationCallbacks() const { return nullptr/*&AllocationCallbacks*/; }
+	static const [[nodiscard]] VkAllocationCallbacks* GetAllocationCallbacks() { return nullptr/*&AllocationCallbacks*/; }
 	
 	virtual [[nodiscard]] VkPhysicalDevice GetCurrentPhysicalDevice() const { return CurrentPhysicalDevice; };
 	virtual [[nodiscard]] VkPhysicalDeviceMemoryProperties GetCurrentPhysicalDeviceMemoryProperties() const { return CurrentPhysicalDeviceMemoryProperties; }
@@ -466,7 +453,6 @@ protected:
 	std::vector<VkImageView> SwapchainImageViews;
 
 	std::vector<VkDeviceMemory> DeviceMemories;
-	std::vector<VkDeviceSize> DeviceMemoryOffsets;
 
 	VkFormat DepthFormat = VK_FORMAT_D24_UNORM_S8_UINT;
 
