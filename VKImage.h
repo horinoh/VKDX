@@ -29,11 +29,11 @@ protected:
 	virtual void CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL,	const VkPipelineStageFlags PSF, const gli::texture& GLITexture);
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const gli::texture& GLITexture);
 
-	virtual [[nodiscard]] gli::texture LoadImage(VkImage* Img, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, const std::string& Path) {
+	virtual [[nodiscard]] gli::texture LoadImage(VkImage* Img, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, std::string_view Path) {
 		assert(std::filesystem::exists(Path) && "");
 		assert(Path.ends_with(".dds") && "");
 		return LoadImage_DDS(Img, DM, PSF, Path);
 	}
-	[[nodiscard]] gli::texture LoadImage_DDS(VkImage* Image, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, const std::string& Path);
+	[[nodiscard]] gli::texture LoadImage_DDS(VkImage* Image, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, std::string_view Path);
 };
 

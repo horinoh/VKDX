@@ -35,7 +35,7 @@
 #pragma warning(pop)
 
 #ifndef BREAK_ON_FAILED
-#define BREAK_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Log(VK::GetVkResultString(vr).c_str()); DEBUG_BREAK(); }
+#define BREAK_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Log(data(VK::GetVkResultString(vr))); DEBUG_BREAK(); }
 #endif
 #ifndef THROW_ON_FAILED
 #define THROW_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + VK::GetVkResultString(vr)); }
@@ -195,11 +195,11 @@ protected:
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::string_view Name) { MarkerInsert(CB, Color, data(Name)); }
 	[[deprecated("use string_view version")]]
-	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerInsert(CB, Color, Name.c_str()); }
+	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerInsert(CB, Color, data(Name)); }
 	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
 	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const std::string_view Name) { MarkerBegin(CB, Color, data(Name)); }
 	[[deprecated("use string_view version")]]
-	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerBegin(CB, Color, Name.c_str()); }
+	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerBegin(CB, Color, data(Name)); }
 	static void MarkerEnd(VkCommandBuffer CB);
 	class ScopedMarker
 	{
@@ -214,7 +214,7 @@ protected:
 	static void MarkerSetTag(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const uint64_t TagName, const std::vector<std::byte>& TagData) { MarkerSetTag(Device, Type, Object, TagName, size(TagData), data(TagData)); }
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const char* Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::string_view Name) { MarkerSetObjectName(Device, data(Name)); }
-	template<typename T> [[deprecated("use string_view version")]] static void MarkerSetObjectName(VkDevice Device, T Object, const std::string& Name) { MarkerSetObjectName(Device, Name.c_str()); }
+	template<typename T> [[deprecated("use string_view version")]] static void MarkerSetObjectName(VkDevice Device, T Object, const std::string& Name) { MarkerSetObjectName(Device, data(Name)); }
 	template<typename T> static void MarkerSetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* TagData) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
 	//!< ↓ここでテンプレート特殊化している (Template specialization here)
 #include "VKDebugMarker.inl"

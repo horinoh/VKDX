@@ -351,10 +351,10 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	for (const auto& i : Prim.attributes) {
 		std::string Name, Index;
 		if (DecomposeSemantic(i.first, Name, Index)) {
-			SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ Name.c_str(), std::stoi(Index) }));
+			SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ data(Name), std::stoi(Index) }));
 		}
 		else {
-			SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ i.first.c_str(), 0 }));
+			SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ data(i.first), 0 }));
 		}
 	}
 	auto MorphIndex = 1;
@@ -362,10 +362,10 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		for (const auto& j : i) {
 			std::string Name, Index;
 			if (DecomposeSemantic(j.first, Name, Index)) {
-				SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ Name.c_str(), std::stoi(Index) }));
+				SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ data(Name), std::stoi(Index) }));
 			}
 			else {
-				SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ j.first.c_str(), MorphIndex }));
+				SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ data(j.first), MorphIndex }));
 			}
 		}
 		++MorphIndex;
@@ -378,7 +378,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	for (const auto& i : Prim.attributes) {
 		const auto& Sem = SemanticAndIndices[InputSlot];
 		const auto& Acc = Doc.accessors[i.second];
-		IEDs.emplace_back(D3D12_INPUT_ELEMENT_DESC({ .SemanticName = Sem.first.c_str(), .SemanticIndex = Sem.second, .Format = ToDXFormat(Acc), .InputSlot = InputSlot, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }));
+		IEDs.emplace_back(D3D12_INPUT_ELEMENT_DESC({ .SemanticName = data(Sem.first), .SemanticIndex = Sem.second, .Format = ToDXFormat(Acc), .InputSlot = InputSlot, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }));
 		++InputSlot;
 	}
 	//!< モーフターゲット (Morph target)
@@ -386,7 +386,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		for (const auto& j : i) {
 			const auto& Sem = SemanticAndIndices[InputSlot];
 			const auto& Acc = Doc.accessors[j.second];
-			IEDs.emplace_back(D3D12_INPUT_ELEMENT_DESC({ .SemanticName = Sem.first.c_str(), .SemanticIndex = Sem.second, .Format = ToDXFormat(Acc), .InputSlot = InputSlot, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }));
+			IEDs.emplace_back(D3D12_INPUT_ELEMENT_DESC({ .SemanticName = data(Sem.first), .SemanticIndex = Sem.second, .Format = ToDXFormat(Acc), .InputSlot = InputSlot, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }));
 			++InputSlot;
 		}
 	}
@@ -395,18 +395,18 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	const auto RS = COM_PTR_GET(RootSignatures[0]);
 	PipelineStates.emplace_back(COM_PTR<ID3D12PipelineState>());
 	const D3D12_RASTERIZER_DESC RD = {
-		D3D12_FILL_MODE_SOLID,
-		D3D12_CULL_MODE_BACK, TRUE,
-		D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
-		TRUE,
-		FALSE, FALSE, 0,
-		D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
+		.FillMode = D3D12_FILL_MODE_SOLID,
+		.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
+		.DepthBias = D3D12_DEFAULT_DEPTH_BIAS, .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP, .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
+		.DepthClipEnable = TRUE,
+		.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
+		.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 	};
-	const D3D12_DEPTH_STENCILOP_DESC DSOD = { D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS };
+	const D3D12_DEPTH_STENCILOP_DESC DSOD = { .StencilFailOp = D3D12_STENCIL_OP_KEEP, .StencilDepthFailOp = D3D12_STENCIL_OP_KEEP, .StencilPassOp = D3D12_STENCIL_OP_KEEP, .StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS };
 	const D3D12_DEPTH_STENCIL_DESC DSD = {
-		TRUE, D3D12_DEPTH_WRITE_MASK_ALL, D3D12_COMPARISON_FUNC_LESS,
-		FALSE, D3D12_DEFAULT_STENCIL_READ_MASK, D3D12_DEFAULT_STENCIL_WRITE_MASK,
-		DSOD, DSOD
+		.DepthEnable = TRUE, .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D12_COMPARISON_FUNC_LESS,
+		.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
+		.FrontFace = DSOD, .BackFace = DSOD
 	};
 	DX::CreatePipelineState(std::ref(PipelineStates.back()), COM_PTR_GET(Device), RS, ToDXPrimitiveTopologyType(Prim.mode), RD, DSD, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs);
 

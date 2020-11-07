@@ -173,7 +173,7 @@ public:
 
 	[[nodiscard]] std::wstring GetBasePath() const { return TEXT(".\\") + GetTitleW(); }
 
-	[[nodiscard]] bool FindDirectory(const std::string& Target, std::wstring& Path) {
+	[[nodiscard]] bool FindDirectory(std::string_view Target, std::wstring& Path) {
 		auto Cur = std::filesystem::current_path();
 		while (Cur.has_parent_path()) {
 			for (auto i : std::filesystem::recursive_directory_iterator(Cur)) {
@@ -187,7 +187,7 @@ public:
 		return false;
 	}
 
-	static void ShowMessageBox(HWND hWnd, const char* Str) { MessageBox(hWnd, ToWString(Str).c_str(), TEXT("CAPTION"), MB_OK); }
+	static void ShowMessageBox(HWND hWnd, const char* Str) { MessageBox(hWnd, data(ToWString(Str)), TEXT("CAPTION"), MB_OK); }
 #ifdef DEBUG_STDOUT
 	static void SetColor(const WORD Color = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE) { 
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), Color | FOREGROUND_INTENSITY);
@@ -230,7 +230,7 @@ private:
 class PerformanceCounter
 {
 public:
-	PerformanceCounter(const std::string& Label = "");
+	PerformanceCounter(std::string_view Label = "");
 	~PerformanceCounter();
 private:
 	double SecondsPerCount = 0.0;

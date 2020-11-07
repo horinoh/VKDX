@@ -95,7 +95,7 @@ template<> void Win::_Log([[maybe_unused]] const LogType Type, [[maybe_unused]] 
 #endif
 #ifdef DEBUG_OUTPUT
 	//!< Outputウインドウへ
-	OutputDebugString(ToWString(Str).c_str());
+	OutputDebugString(data(ToWString(Str)));
 #endif	
 }
 template<> void Win::_Log([[maybe_unused]] const LogType Type, [[maybe_unused]] const WCHAR* Str)
@@ -147,7 +147,7 @@ template<> static void Win::LogOK([[maybe_unused]] const char* Str)
 	std::cout << Str << COUT_OK << std::endl;
 #endif
 #ifdef DEBUG_OUTPUT
-	OutputDebugString(ToWString(Str).c_str());
+	OutputDebugString(data(ToWString(Str)));
 	OutputDebugString(TEXT("[ OK ]\n"));
 #endif	
 }
@@ -168,7 +168,7 @@ template<> static void Win::LogNG([[maybe_unused]] const char* Str)
 	std::cerr << Str << COUT_NG << std::endl;
 #endif
 #ifdef DEBUG_OUTPUT
-	OutputDebugString(ToWString(Str).c_str());
+	OutputDebugString(data(ToWString(Str)));
 	OutputDebugString(TEXT("[ NG ]\n"));
 #endif
 }
@@ -183,7 +183,7 @@ template<> static void Win::LogNG([[maybe_unused]] const WCHAR* Str)
 #endif
 }
 
-PerformanceCounter::PerformanceCounter(const std::string& Label)
+PerformanceCounter::PerformanceCounter(std::string_view Label)
 	: Label(Label)
 {
 	__int64 Frequency;

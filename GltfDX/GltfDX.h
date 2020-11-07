@@ -222,7 +222,7 @@ protected:
 		PV.View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
 
 		ConstantBuffers.emplace_back(ConstantBuffer());
-		CreateUploadResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(PV)));
+		CreateResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(PV)), D3D12_HEAP_TYPE_UPLOAD);
 	}
 	virtual void CreateDescriptorHeap() override {
 		{

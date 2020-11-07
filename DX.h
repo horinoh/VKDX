@@ -71,7 +71,7 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 #endif
 
 #ifndef BREAK_ON_FAILED
-#define BREAK_ON_FAILED(vr) if(FAILED(vr)) { Log(DX::GetHRESULTString(vr).c_str()); DEBUG_BREAK(); }
+#define BREAK_ON_FAILED(vr) if(FAILED(vr)) { Log(data(DX::GetHRESULTString(vr))); DEBUG_BREAK(); }
 #endif
 #ifndef THROW_ON_FAILED
 #define THROW_ON_FAILED(hr) if(FAILED(hr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + DX::GetHRESULTString(hr)); }
@@ -133,19 +133,33 @@ public:
 	}
 
 protected:
+	virtual void CreateResource(ID3D12Resource** Resource, const size_t Size, const D3D12_HEAP_TYPE HeapType);
+
 	virtual void CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source, const D3D12_RANGE* Range = nullptr);
 	virtual void CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData);
+	
+	virtual void ResourceBarrier(ID3D12GraphicsCommandList* CL, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After);
+
+	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES RS);
+	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
+	virtual void PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
 
 	virtual void ExecuteCopyBuffer(ID3D12Resource* DstResource, ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, const size_t Size, ID3D12Resource* SrcResource);
 	virtual void ExecuteCopyTexture(ID3D12Resource* DstResource, ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState, ID3D12Resource* SrcResource);
 
-	virtual void CreateUploadResource(ID3D12Resource** Resource, const size_t Size);
-	virtual void CreateDefaultResource(ID3D12Resource** Resource, const size_t Size);
-
-	virtual void ResourceBarrier(ID3D12GraphicsCommandList* CL, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After);
-	virtual void PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
-	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
-	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES RS);
+	virtual void CreateAndCopyToUploadResource(COM_PTR<ID3D12Resource>& Res, const size_t Size, const void* Source) {
+		CreateResource(COM_PTR_PUT(Res), Size, D3D12_HEAP_TYPE_UPLOAD);
+		CopyToUploadResource(COM_PTR_GET(Res), Size, Source);
+	}
+	virtual void CreateAndCopyToDefaultResource(COM_PTR<ID3D12Resource>& Res, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL, const size_t Size, const void* Source) {
+		//!< アップロード用のリソースを作成 (Create resource for upload)
+		COM_PTR<ID3D12Resource> UploadRes;
+		CreateAndCopyToUploadResource(UploadRes, Size, Source);
+		//!< デフォルトのリソースを作成 (Create default resource)
+		CreateResource(COM_PTR_PUT(Res), Size, D3D12_HEAP_TYPE_DEFAULT);
+		//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 (Execute copy buffer command upload resource to default resource)
+		ExecuteCopyBuffer(COM_PTR_GET(Res), CA, CL, Size, COM_PTR_GET(UploadRes));
+	}
 
 #if defined(_DEBUG) || defined(USE_PIX)
 	//!< #DX_TODO PIX 関連
@@ -154,7 +168,7 @@ protected:
 	static void SetName(ID3D12DeviceChild * Resource, LPCWSTR Name) { Resource->SetName(Name); }
 	static void SetName(ID3D12DeviceChild* Resource, const std::wstring_view Name) { Resource->SetName(data(Name));}
 	[[deprecated("use wstring_view version")]]
-	static void SetName(ID3D12DeviceChild* Resource, const std::wstring& Name) { Resource->SetName(Name.c_str()); }
+	static void SetName(ID3D12DeviceChild* Resource, const std::wstring& Name) { Resource->SetName(data(Name)); }
 #endif
 
 	virtual void CreateDevice(HWND hWnd);
@@ -189,8 +203,6 @@ protected:
 
 	virtual void LoadScene() {}
 
-	virtual void CreateAndCopyToUploadResource(COM_PTR<ID3D12Resource>& Res, const size_t Size, const void* Source);
-	virtual void CreateAndCopyToDefaultResource(COM_PTR<ID3D12Resource>& Res, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL, const size_t Size, const void* Source);
 	virtual void CreateVertexBuffer() {}
 	virtual void CreateIndexBuffer() {}
 	virtual void CreateIndirectBuffer() {}

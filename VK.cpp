@@ -654,7 +654,7 @@ void VK::CreateImageView(VkImageView* IV, const VkImage Img, const VkImageViewTy
 	VERIFY_SUCCEEDED(vkCreateImageView(Device, &ImageViewCreateInfo, GetAllocationCallbacks(), IV));
 	Logf("\t\tImageViewType = %s\n", GetImageViewTypeChar(ImageViewType));
 	Logf("\t\tFormat = %s\n", GetFormatChar(Format));
-	Logf("\t\tComponentMapping = (%s)\n", GetComponentMappingString(ComponentMapping).c_str());
+	Logf("\t\tComponentMapping = (%s)\n", data(GetComponentMappingString(ComponentMapping)));
 
 	LOG_OK();
 }
@@ -2335,7 +2335,7 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 {
 	VkShaderModule ShaderModule = VK_NULL_HANDLE;
 
-	std::ifstream In(Path.c_str(), std::ios::in | std::ios::binary);
+	std::ifstream In(data(Path), std::ios::in | std::ios::binary);
 	if (!In.fail()) {
 		In.seekg(0, std::ios_base::end);
 		const auto CodeSize = In.tellg();

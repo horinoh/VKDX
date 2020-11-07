@@ -312,10 +312,10 @@ void VKImage::CreateImageView(VkImageView* IV, const VkImage Img, const gli::tex
 	Super::CreateImageView(IV, Img, Type, Format, CompMap, ISR);
 }
 
-gli::texture VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, const std::string& Path)
+gli::texture VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, std::string_view Path)
 {
 	//!< DDS or KTX or KMG ‚ð“Ç‚Ýž‚ß‚é (DDS or KTX or KMG can be read)
-	const auto GLITexture(gli::load(Path.c_str()));
+	const auto GLITexture(gli::load(data(Path)));
 	assert(!GLITexture.empty() && "Load image failed");
 
 #ifdef DEBUG_STDOUT

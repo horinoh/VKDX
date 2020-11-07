@@ -72,15 +72,13 @@ public:
 		return 0;
 	}
 
-	static bool DecomposeSemantic(const std::string& Semantic, std::string& Name, std::string& Index) {
+	static bool DecomposeSemantic(const std::string_view Semantic, std::string& Name, std::string& Index) {
 		if (const auto pos = Semantic.find("_");std::string::npos != pos) {
 			Name = Semantic.substr(0, pos);
 			Index = Semantic.substr(pos + 1);
-			//SemanticIndices.push_back({ i.first.substr(0, pos).c_str(), std::stoi(i.first.substr(pos + 1)) });
 			return true;
 		}
 		else {
-			//SemanticIndices.push_back({ i.first.c_str(), 0 });
 			return false;
 		}
 	}
