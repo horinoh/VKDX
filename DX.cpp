@@ -141,7 +141,7 @@ void DX::CreateResource(ID3D12Resource** Resource, const size_t Size, const D3D1
 		.Type = HeapType,
 		.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
-		.CreationNodeMask = 0, .VisibleNodeMask = 0 // マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		.CreationNodeMask = 0, .VisibleNodeMask = 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP,
 		D3D12_HEAP_FLAG_NONE,
@@ -206,13 +206,13 @@ void DX::ResourceBarrier(ID3D12GraphicsCommandList* CL, ID3D12Resource* Resource
 
 void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES RS)
 {
-	ResourceBarrier(CL, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
+	ResourceBarrier(CL, Dst, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST); {
 		CL->CopyBufferRegion(Dst, 0, Src, 0, Size);
 	} ResourceBarrier(CL, Dst, D3D12_RESOURCE_STATE_COPY_DEST, RS);
 }
 void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS)
 {
-	ResourceBarrier(CL, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
+	ResourceBarrier(CL, Dst, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST); {
 		for (auto i : PSF) {
 			CL->CopyBufferRegion(Dst, 0, Src, i.Offset, i.Footprint.Width);
 		}
@@ -220,9 +220,8 @@ void DX::PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource
 }
 void DX::PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS)
 {
-	//!< (LoadDDSTextureFromFile()で作成される)Dstのステートは既にD3D12_RESOURCE_STATE_COPY_DESTで作成されているのでこのバリアは必要無い (Dst's state(created from LoadDDSTextureFromFile()) is already D3D12_RESOURCE_STATE_COPY_DEST, no need barrier)
-	//ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST); {
-	{
+	//!< LoadDDSTextureFromFile() で作成されるリソースのステートは既に D3D12_RESOURCE_STATE_COPY_DESTで 作成されている (Resource created by LoadDDSTextureFromFile()'s state is already D3D12_RESOURCE_STATE_COPY_DEST)
+	/*ResourceBarrier(CommandList, Dst, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST);*/ {
 		for (UINT i = 0; i < size(PSF); ++i) {
 			const D3D12_TEXTURE_COPY_LOCATION TCL_Dst = {
 				.pResource = Dst,
@@ -272,7 +271,7 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	if (SUCCEEDED(DXGIGetDebugInterface1(0, COM_PTR_UUIDOF_PUTVOID(GraphicsAnalysis)))) {
 		//!< グラフィックス診断は Alt + F5 で起動した場合のみ成功する (Enabled only if executed with Alt + F5)
 		Log("Graphics Analysis is enabled\n");
-		//!< プログラムからは GraphicsAnalysis->BeginCapture(), GraphicsAnalysis->EndCapture() でキャプチャ開始、終了する
+		//!< プログラムからキャプチャする場合は GraphicsAnalysis->BeginCapture(), GraphicsAnalysis->EndCapture() を使用する
 	}
 #endif
 
@@ -281,32 +280,29 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	VERIFY_SUCCEEDED(D3D12GetDebugInterface(COM_PTR_UUIDOF_PUTVOID(Debug)));
 	Debug->EnableDebugLayer();
 
-	//!< GPUバリデーション ... CPUバリデーションが効かなくなるので採用しない
-#if 0 
-	COM_PTR<ID3D12Debug1> Debug1;
-	VERIFY_SUCCEEDED(Debug->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Debug1)));
-	Debug1->SetEnableGPUBasedValidation(true);
-#endif
+	//!< GPUバリデーション ... CPUバリデーションが効かなくなるので採用しない…
+	//COM_PTR<ID3D12Debug1> Debug1;
+	//VERIFY_SUCCEEDED(Debug->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Debug1)));
+	//Debug1->SetEnableGPUBasedValidation(true);
 #endif
 
-	//!< WARP アダプタを作成するのに IDXGIFactory4(のEnumWarpAdapter) が必要
 #ifdef _DEBUG
+	//!< CreateDXGIFactory2()では引数にフラグを取ることができるので DXGI_CREATE_FACTORY_DEBUG フラグを指定 (CreateDXGIFactory2() can specify flag argument, here use DXGI_CREATE_FACTORY_DEBUG)
 	VERIFY_SUCCEEDED(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, COM_PTR_UUIDOF_PUTVOID(Factory)));
 #else
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(COM_PTR_UUIDOF_PUTVOID(Factory)));
 #endif
 
 #ifdef _DEBUG
-	//!< アダプター(GPU)の列挙
-	//!<	-> 各々のアダプターに接続されているアウトプット(ディスプレイ)の列挙
+	//!< アダプター(GPU)の列挙 (Enumerate adapter(GPU))
 	EnumAdapter(COM_PTR_GET(Factory));
 #endif
 
 #ifdef USE_WARP
-	//!< WARP : Win7以下だと D3D_FEATURE_LEVEL_10_1 まで、Win8以上だと D3D_FEATURE_LEVEL_11_1 までサポート
+	//!< ソフトウエアラスタライザ (Software rasterizer)
 	VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(COM_PTR_UUIDOF_PUTVOID(Adapter)));
 #else
-	//!< アダプター(GPU)の選択 : (ここでは)最大メモリのアダプターを選択することにする
+	//!< アダプター(GPU)の選択、ここでは最大メモリのアダプターを選択することにする (Select Adapter(GPU), here select max memory size adapter)
 	UINT Index = UINT_MAX;
 	SIZE_T VM = 0;
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, COM_PTR_PUT(Adapter)); ++i) {
@@ -321,10 +317,11 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	assert(UINT_MAX != Index);
 	VERIFY_SUCCEEDED(Factory->EnumAdapters(Index, COM_PTR_PUT(Adapter)));
 #endif
+	assert(nullptr != Adapter && "");
 	Log("[ Selected Aadapter ]\n");
 	LogAdapter(COM_PTR_GET(Adapter));
 
-	//!< アウトプット(ディスプレイ)の選択 : (ここでは)全てのアダプター、アウトプットを列挙して、最初に見つかったアウトプットを選択することにする
+	//!< アウトプット(ディスプレイ)の選択、ここでは全てのアダプター、アウトプットを列挙して、最初に見つかったアウトプットを選択することにする
 	COM_PTR<IDXGIAdapter> Ad;
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, COM_PTR_PUT(Ad)); ++i) {
 		for (UINT j = 0; DXGI_ERROR_NOT_FOUND != Ad->EnumOutputs(j, COM_PTR_PUT(Output)); ++j) {
@@ -338,18 +335,20 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 			break;
 		}
 	}
+	assert(nullptr != Output && "");
 	Log("\t\t[ Selected Output ]\n");
 	LogOutput(COM_PTR_GET(Output));
 
-	//!< フォーマット指定で、選択したアウトプットのディスプレイモードを列挙
+	//!< (フォーマット指定で)選択したアウトプットのディスプレイモードを列挙
 	GetDisplayModeList(COM_PTR_GET(Output), DXGI_FORMAT_R8G8B8A8_UNORM);
 
-#if 0
-	const std::vector<UUID> Experimental = { D3D12ExperimentalShaderModels, /*D3D12RaytracingPrototype*/ };
-	VERIFY_SUCCEEDED(D3D12EnableExperimentalFeatures(static_cast<UINT>(size(Experimental)), data(Experimental), nullptr, nullptr));
-#endif
+	//!< 実験的機能、OS が Developer Mode でないとダメみたい
+	const std::array Experimental = { D3D12ExperimentalShaderModels, /*D3D12RaytracingPrototype*/ };
+	if (FAILED(D3D12EnableExperimentalFeatures(static_cast<UINT>(size(Experimental)), data(Experimental), nullptr, nullptr))) {
+		Warning("D3D12EnableExperimentalFeatures() failed");
+	}
 
-	//!< 高いフィーチャーレベル優先でデバイスを作成
+	//!< 高フィーチャーレベル優先でデバイスを作成 (Create device with higher feature level possible)
 	for (const auto i : FeatureLevels) {
 		if (SUCCEEDED(D3D12CreateDevice(COM_PTR_GET(Adapter), i, COM_PTR_UUIDOF_PUTVOID(Device)))) {
 			break;
@@ -357,34 +356,42 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	}
 	CheckFeatureLevel(COM_PTR_GET(Device));
 
-#if 0
-	COM_PTR<ID3D12InfoQueue> InfoQueue;
-	COM_PTR_AS(Device, InfoQueue);
-	//VERIFY_SUCCEEDED(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
-	VERIFY_SUCCEEDED(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE));
-	
-	std::array<D3D12_MESSAGE_CATEGORY, 0> AMCs = {};
-	std::array<D3D12_MESSAGE_SEVERITY, 0> AMSs = {};
-	std::array<D3D12_MESSAGE_ID, 0> AMIs = {};
-	std::array<D3D12_MESSAGE_CATEGORY, 0> DMCs = {};
-	std::array<D3D12_MESSAGE_SEVERITY, 0> DMSs = { /*D3D12_MESSAGE_SEVERITY_INFO,*/ };
-	std::array<D3D12_MESSAGE_ID, 0> DMIs = { /*D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE,*/ };
-	D3D12_INFO_QUEUE_FILTER IQF = {
-		//!< Allow List
-		{
-			static_cast<UINT>(size(AMCs)), data(AMCs),
-			static_cast<UINT>(size(AMSs)), data(AMSs),
-			static_cast<UINT>(size(AMIs)), data(AMIs),
-		},
-		//!< Deny List
-		{
-			static_cast<UINT>(size(DMCs)), data(DMCs),
-			static_cast<UINT>(size(DMSs)), data(DMSs),
-			static_cast<UINT>(size(DMIs)), data(DMIs),
-		},
-	};
-	VERIFY_SUCCEEDED(InfoQueue->PushStorageFilter(&IQF));
+	//!< ID3D12InfoQueue 関連はデバイス作成後 (ID3D12InfoQueue after device creation)
+	{
+		COM_PTR<ID3D12InfoQueue> InfoQueue;
+		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(InfoQueue)));
+		if (nullptr != InfoQueue) {
+			//!< エラー等でブレークする設定 (Break with error)
+#ifdef _DEBUG
+			VERIFY_SUCCEEDED(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
+			VERIFY_SUCCEEDED(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE));
 #endif
+
+			//!< ワーニング等をフィルタリングしたい場合等に使用
+			//!< 適切に設定しないと出力がうるさいのでここでは無効にしている
+#if 0
+			std::array<D3D12_MESSAGE_CATEGORY, 0> AllowMCs = {};
+			std::array<D3D12_MESSAGE_SEVERITY, 0> AllowMSs = {};
+			std::array<D3D12_MESSAGE_ID, 0> AllowMIs = {};
+			std::array<D3D12_MESSAGE_CATEGORY, 0> DenyMCs = {};
+			std::array<D3D12_MESSAGE_SEVERITY, 0> DenyMSs = { /*D3D12_MESSAGE_SEVERITY_INFO,*/ };
+			std::array<D3D12_MESSAGE_ID, 0> DenyMIs = { /*D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARVALUE, */ /*D3D12_MESSAGE_ID_INVALID_DESCRIPTOR_HANDLE,*/ };
+			D3D12_INFO_QUEUE_FILTER IQF = {
+				.AllowList = D3D12_INFO_QUEUE_FILTER_DESC({
+					.NumCategories = static_cast<UINT>(size(AllowMCs)), .pCategoryList = data(AllowMCs),
+					.NumSeverities = static_cast<UINT>(size(AllowMSs)), .pSeverityList = data(AllowMSs),
+					.NumIDs = static_cast<UINT>(size(AllowMIs)), .pIDList = data(AllowMIs),
+				}),
+				.DenyList = D3D12_INFO_QUEUE_FILTER_DESC({
+					.NumCategories = static_cast<UINT>(size(DenyMCs)), .pCategoryList = data(DenyMCs),
+					.NumSeverities = static_cast<UINT>(size(DenyMSs)), .pSeverityList = data(DenyMSs),
+					.NumIDs = static_cast<UINT>(size(DenyMIs)), .pIDList = data(DenyMIs),
+				}),
+			};
+			VERIFY_SUCCEEDED(InfoQueue->PushStorageFilter(&IQF));
+#endif
+		}
+	}
 
 	LOG_OK();
 }
@@ -449,7 +456,6 @@ void DX::EnumOutput(IDXGIAdapter* Ad)
 		COM_PTR_RESET(Outp);
 	}
 }
-
 //!< アウトプット(ディスプレイ)の描画モードの列挙
 void DX::GetDisplayModeList(IDXGIOutput* Outp, const DXGI_FORMAT Format)
 {
@@ -489,16 +495,16 @@ void DX::GetDisplayModeList(IDXGIOutput* Outp, const DXGI_FORMAT Format)
 
 void DX::CheckFeatureLevel(ID3D12Device* Dev)
 {
-	//!< NumFeatureLevels, pFeatureLevelsRequested は CheckFeatureSupport() への入力、MaxSupportedFeatureLevel には出力が返る
-	D3D12_FEATURE_DATA_FEATURE_LEVELS DataFeatureLevels = {
-		.NumFeatureLevels = static_cast<UINT>(size(FeatureLevels)), .pFeatureLevelsRequested = data(FeatureLevels) //!< 入力(In)
-		//.MaxSupportedFeatureLevel //!< 出力(Out)
+	//!< NumFeatureLevels, pFeatureLevelsRequested は CheckFeatureSupport() への入力、MaxSupportedFeatureLevel は CheckFeatureSupport() からの出力となる (NumFeatureLevels, pFeatureLevelsRequested is input to CheckFeatureSupport(), MaxSupportedFeatureLevel is output from CheckFeatureSupport())
+	D3D12_FEATURE_DATA_FEATURE_LEVELS FDFL = {
+		.NumFeatureLevels = static_cast<UINT>(size(FeatureLevels)), .pFeatureLevelsRequested = data(FeatureLevels) //!< 入力 (Input)
+		//.MaxSupportedFeatureLevel //!< 出力 (Output)
 	};
-	VERIFY_SUCCEEDED(Dev->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, reinterpret_cast<void*>(&DataFeatureLevels), sizeof(DataFeatureLevels)));
+	VERIFY_SUCCEEDED(Dev->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, reinterpret_cast<void*>(&FDFL), sizeof(FDFL)));
 
 	Log("MaxSupportedFeatureLevel\n");
 #define D3D_FEATURE_LEVEL_ENTRY(fl) case D3D_FEATURE_LEVEL_##fl: Logf("\tD3D_FEATURE_LEVEL_%s\n", #fl); break;
-	switch (DataFeatureLevels.MaxSupportedFeatureLevel) {
+	switch (FDFL.MaxSupportedFeatureLevel) {
 	default: assert(0 && "Unknown FeatureLevel"); break;
 	D3D_FEATURE_LEVEL_ENTRY(12_1)
 	D3D_FEATURE_LEVEL_ENTRY(12_0)
@@ -519,16 +525,16 @@ void DX::CheckMultiSample(const DXGI_FORMAT Format)
 
 	SampleDescs.clear();
 	for (UINT i = 1; i < D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT; ++i) {
-		//!< Format, SampleCount, Flags は CheckFeatureSupport() への入力、NumQualityLevels には CheckFeatureSupport() からの出力が返る
+		//!< Format, SampleCount, Flags は CheckFeatureSupport() への入力、NumQualityLevels は CheckFeatureSupport() からの出力となる
 		D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS DataMultiSampleQaualityLevels = {
-			.Format = Format, //!< 入力(In)
-			.SampleCount = i, //!< 入力(In)
-			.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE, //!< 入力(In)
-			.NumQualityLevels = 0 //!< 出力(Out)
+			.Format = Format, //!< 入力 (Input)
+			.SampleCount = i, //!< 入力 (Input)
+			.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE, //!< 入力 (Input)
+			.NumQualityLevels = 0 //!< 出力 (Output)
 		};
 		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, reinterpret_cast<void*>(&DataMultiSampleQaualityLevels), sizeof(DataMultiSampleQaualityLevels)));
 		//!< 0 == NumQualityLevels の場合はサポートされていないということ
-		if (DataMultiSampleQaualityLevels.NumQualityLevels) {
+		if (DataMultiSampleQaualityLevels.NumQualityLevels) [[likely]] {
 			const DXGI_SAMPLE_DESC SampleDesc = {
 				.Count = DataMultiSampleQaualityLevels.SampleCount,
 				.Quality = DataMultiSampleQaualityLevels.NumQualityLevels - 1
@@ -540,18 +546,6 @@ void DX::CheckMultiSample(const DXGI_FORMAT Format)
 	}
 }
 
-//D3D12_CPU_DESCRIPTOR_HANDLE DX::GetCPUDescriptorHandle(ID3D12DescriptorHeap* DH, const UINT Index) const
-//{
-//	auto CDH(DH->GetCPUDescriptorHandleForHeapStart());
-//	CDH.ptr += static_cast<SIZE_T>(Index) * Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-//	return CDH;
-//}
-//D3D12_GPU_DESCRIPTOR_HANDLE DX::GetGPUDescriptorHandle(ID3D12DescriptorHeap* DH, const UINT Index) const
-//{
-//	auto GDH(DH->GetGPUDescriptorHandleForHeapStart());
-//	GDH.ptr += static_cast<SIZE_T>(Index) * Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-//	return GDH;
-//}
 /**
 @brief マルチスレッドで「同じ」キューへサブミットできる
 @note Vulkan ではマルチスレッドで「異なる」キューへのみサブミットできるので注意
@@ -562,7 +556,7 @@ void DX::CreateCommandQueue()
 		.Type = D3D12_COMMAND_LIST_TYPE_DIRECT, //!< D3D12_COMMAND_LIST_TYPE_COMPUTE, D3D12_COMMAND_LIST_TYPE_COPY (D3D12_COMMAND_LIST_TYPE_BUNDLEが直接キューイングされることは無いと思う)
 		.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
 		.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
-		.NodeMask = 0 //マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		.NodeMask = 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CommandQueueDesc, COM_PTR_UUIDOF_PUTVOID(CommandQueue)));
 
@@ -731,7 +725,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 		.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
 		.NumDescriptors = SCD.BufferCount,
 		.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
-		.NodeMask = 0 // マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		.NodeMask = 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(SwapChainDescriptorHeap)));
 
@@ -852,8 +846,7 @@ void DX::CreateUnorderedAccessTexture()
 		D3D12_HEAP_TYPE_DEFAULT,
 		D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		D3D12_MEMORY_POOL_UNKNOWN,
-		0,// CreationNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-		0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		0, 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &ResourceDesc, D3D12_RESOURCE_STATE_COMMON, nullptr, COM_PTR_UUIDOF_PUTVOID(UnorderedAccessTextureResource)));
 
@@ -1006,7 +999,7 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 		.PrimitiveTopologyType = Topology,
 		.NumRenderTargets = static_cast<UINT>(size(RtvFormats)), .RTVFormats = {}, .DSVFormat = DSD.DepthEnable ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_UNKNOWN,
 		.SampleDesc = SD,
-		.NodeMask = 0,
+		.NodeMask = 0, //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 		.CachedPSO = CPS,
 		.Flags = D3D12_PIPELINE_STATE_FLAG_NONE //!< D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG は Warp デバイスのみ
 	};
@@ -1043,7 +1036,7 @@ void DX::CreatePipelineState_Compute()
 	const D3D12_COMPUTE_PIPELINE_STATE_DESC CPSD = {
 		COM_PTR_GET(RootSignature),
 		D3D12_SHADER_BYTECODE({ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }),
-		0, // NodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		0, //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 		CPS,
 		D3D12_PIPELINE_STATE_FLAG_NONE
 	};

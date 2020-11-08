@@ -23,7 +23,7 @@
 #define COM_PTR_AS(_x, _y) VERIFY_SUCCEEDED(_x.As(&_y));
 #endif
 
-//#define USE_WARP //!< #DX_TODO
+//#define USE_WARP //!< ソフトウエアラスタライザ
 #define USE_STATIC_SAMPLER //!< [ TextureDX ] VK:USE_IMMUTABLE_SAMPLER相当
 
 //!< HLSLからルートシグネチャを作成する (Create root signature from HLSL)
