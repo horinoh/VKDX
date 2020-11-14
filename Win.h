@@ -46,6 +46,9 @@
 #define USE_SHADOWMAP_VISUALIZE //!< ShadowMapDX, ShadowMapVK
 #define USE_SHADER_REFLECTION
 
+//!< Property - C/C++ - Command Line - Additional Options に "/await" と記述する必要がある (Need to write "/await" to Property - C/C++ - Command Line - Additional Options)
+//#define USE_EXPERIMENTAL
+
 #define ALWAYS_REBUILD_PIPELINE
 
 #include <vector>
@@ -69,6 +72,12 @@
 #include <charconv>
 #include <locale>
 #include <string>
+
+#ifdef USE_EXPERIMENTAL
+#include <experimental/coroutine>
+#else
+//#include <coroutine>
+#endif
 
 //#include <source_location> //!< #TODO インクルードできない
 //#include <cinttypes>
@@ -257,4 +266,14 @@ static std::wostream& White(std::wostream& rhs) { Win::SetColor(FOREGROUND_RED |
 
 #define COUT_OK White << " [ " << Green << "OK" << White << " ]"
 #define COUT_NG White << " [ " << Red << "NG" << White << " ]"
+#endif
+
+#ifdef USE_EXPERIMENTAL
+namespace Util {
+	template <typename T> concept HasSize = requires (T lhs) { lhs.size(); };
+	template <HasSize T> size_t size(const T& lhs) { return lhs.size(); }
+
+	template <typename T> concept HasData = requires (T lhs) { lhs.data(); };
+	template <HasData T> const void* data(const T& lhs) { return lhs.data(); }
+}
 #endif

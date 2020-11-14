@@ -461,8 +461,30 @@
 		* シャドウマップ
 		* SSAO
 	* C++20
+		* constexprの積極的使用
+			* コンパイル時に決定するもの
 		* string_viewの積極的使用
 		* 初期化付if, forの積極的使用
+		* std::optional
+			~~~
+			std::optional<int> a = 1;
+			if(a.has_value()) { a.value(); }
+			else { a.reset(); }
+			std::cout << a.value_or(-1) << std::endl;
+			~~~
+		* std::variant
+			* union代用
+		*
+			~~~
+			//template<typename T> requires is_integral_v<T> 
+			//T mod(T lhs, T rhs){ return lhs % rhs; }
+			template<integral T>
+			T mod(T lhs, T rhs){ return lhs % rhs; }
+			//template<typename T> requires is_floating_point_v<T> 
+			//T mod(T lhs, T rhs){ return fmod(lhs, rhs); }
+			template<floating_point T>
+			T mod(T lhs, T rhs){ return fmod(lhs, rhs); }
+			~~~
 
 ## 保留(要ハードウェア)
 	* HDR

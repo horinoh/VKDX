@@ -1919,7 +1919,6 @@ void VK::InitializeDepthStencilImage(const VkCommandBuffer CB)
 void VK::CreateViewport(const float Width, const float Height, const float MinDepth, const float MaxDepth)
 {
 	//!< Vulkan はデフォルトで「左上」が原点 (DirectX、OpenGLは「左下」が原点)
-
 	Viewports = {
 		VkViewport({
 			//!< USE_VIEWPORT_Y_UP
