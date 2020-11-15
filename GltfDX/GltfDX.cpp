@@ -394,6 +394,15 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 
 	const auto RS = COM_PTR_GET(RootSignatures[0]);
 	PipelineStates.emplace_back(COM_PTR<ID3D12PipelineState>());
+	const std::vector RTBDs = {
+		D3D12_RENDER_TARGET_BLEND_DESC({
+			.BlendEnable = FALSE, .LogicOpEnable = FALSE,
+			.SrcBlend = D3D12_BLEND_ONE, .DestBlend = D3D12_BLEND_ZERO, .BlendOp = D3D12_BLEND_OP_ADD,
+			.SrcBlendAlpha = D3D12_BLEND_ONE, .DestBlendAlpha = D3D12_BLEND_ZERO, .BlendOpAlpha = D3D12_BLEND_OP_ADD,
+			.LogicOp = D3D12_LOGIC_OP_NOOP,
+			.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,
+		}),
+	};
 	const D3D12_RASTERIZER_DESC RD = {
 		.FillMode = D3D12_FILL_MODE_SOLID,
 		.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
@@ -408,7 +417,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
 		.FrontFace = DSOD, .BackFace = DSOD
 	};
-	DX::CreatePipelineState(std::ref(PipelineStates.back()), COM_PTR_GET(Device), RS, ToDXPrimitiveTopologyType(Prim.mode), RD, DSD, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs);
+	DX::CreatePipelineState(std::ref(PipelineStates.back()), COM_PTR_GET(Device), RS, ToDXPrimitiveTopologyType(Prim.mode), RTBDs, RD, DSD, VS, PS, NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs);
 
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);

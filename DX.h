@@ -222,6 +222,7 @@ protected:
 	virtual void CreatePipelineStates() {}
 	static void CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,
 		const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology,
+		const std::vector<D3D12_RENDER_TARGET_BLEND_DESC>& RTBDs,
 		const D3D12_RASTERIZER_DESC& RD,
 		const D3D12_DEPTH_STENCIL_DESC& DSD,
 		const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,

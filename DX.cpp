@@ -934,6 +934,7 @@ void DX::CreateRootSignature()
 
 void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,
 	const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology,
+	const std::vector<D3D12_RENDER_TARGET_BLEND_DESC>& RTBDs,
 	const D3D12_RASTERIZER_DESC& RD,
 	const D3D12_DEPTH_STENCIL_DESC& DSD,
 	const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,
@@ -945,19 +946,6 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 
 	assert((VS.pShaderBytecode != nullptr && VS.BytecodeLength) && "");
 
-	//!< ブレンド (Blend)
-	//!< 例) 
-	//!< ブレンド	: Src * A + Dst * (1 - A)	= Src:D3D12_BLEND_SRC_ALPHA, Dst:D3D12_BLEND_INV_SRC_ALPHA, Op:D3D12_BLEND_OP_ADD
-	//!< 加算		: Src * 1 + Dst * 1			= Src:D3D12_BLEND_ONE, Dst:D3D12_BLEND_ONE, Op:D3D12_BLEND_OP_ADD
-	//!< 乗算		: Src * 0 + Dst * Src		= Src:D3D12_BLEND_ZERO, Dst:D3D12_BLEND_SRC_COLOR, Op:D3D12_BLEND_OP_ADD
-	const D3D12_RENDER_TARGET_BLEND_DESC RTBD = {
-		.BlendEnable = FALSE, .LogicOpEnable = FALSE, //!< ブレンド有効かどうか、論理演算有効かどうか (同時にTRUEにはできない)
-		.SrcBlend = D3D12_BLEND_ONE, .DestBlend = D3D12_BLEND_ZERO, .BlendOp = D3D12_BLEND_OP_ADD, //!< ブレンド Src(新規), Dst(既存), Op
-		.SrcBlendAlpha = D3D12_BLEND_ONE, .DestBlendAlpha = D3D12_BLEND_ZERO, .BlendOpAlpha = D3D12_BLEND_OP_ADD, //!< アルファ Src(新規), Dst(既存), Op
-		.LogicOp = D3D12_LOGIC_OP_NOOP, //!< 論理演算
-		.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL, //!< 書き込み時のマスク値
-	};
-
 	//!< キャッシュドパイプラインステート (CachedPipelineState)
 	//!< (VK の VkGraphicsPipelineCreateInfo.basePipelineHandle, basePipelineIndex 相当?)
 	COM_PTR<ID3DBlob> CachedBlob;
@@ -966,7 +954,7 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 	}
 
 	//!< DXでは「パッチコントロールポイント」個数の指定はIASetPrimitiveTopology()の引数として「コマンドリスト作成時」に指定する、VKとは結構異なるので注意
-	//!< CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+	//!< CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);	
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {
 		.pRootSignature = RS,
@@ -977,9 +965,9 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 			.RasterizedStream = 0 
 			}),
 		.BlendState = D3D12_BLEND_DESC({
-			.AlphaToCoverageEnable = TRUE, //!< マルチサンプルを考慮したアルファテスト(AlphaToCoverageEnable)、アルファが0の箇所には無駄に書き込まない
-			.IndependentBlendEnable = FALSE, //!< マルチレンダーターゲットにそれぞれ別のブレンドステートを割り当てる(IndependentBlendEnable)
-			.RenderTarget = { RTBD, } //!< TRUE==IndependentBlendEnableの場合、レンダーターゲットの分だけ用意すること 8個まで
+			.AlphaToCoverageEnable = TRUE,		//!< マルチサンプルを考慮したアルファテスト(AlphaToCoverageEnable)、アルファが0の箇所には無駄に書き込まない
+			.IndependentBlendEnable = FALSE,	//!< マルチレンダーターゲットにそれぞれ別のブレンドステートを割り当てる(IndependentBlendEnable)
+			.RenderTarget = {} 
 			}),
 		.SampleMask = D3D12_DEFAULT_SAMPLE_MASK,
 	 	.RasterizerState = RD,
@@ -987,14 +975,22 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 		.InputLayout = D3D12_INPUT_LAYOUT_DESC({ .pInputElementDescs = data(IEDs), .NumElements = static_cast<UINT>(size(IEDs)) }),
 		.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
 		.PrimitiveTopologyType = Topology,
-		.NumRenderTargets = static_cast<UINT>(size(RtvFormats)), .RTVFormats = {}, .DSVFormat = DSD.DepthEnable ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_UNKNOWN,
+		.NumRenderTargets = static_cast<UINT>(size(RtvFormats)), .RTVFormats = {}, 
+		.DSVFormat = DSD.DepthEnable ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_UNKNOWN,
 		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
 		.NodeMask = 0, //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 		.CachedPSO = D3D12_CACHED_PIPELINE_STATE({.pCachedBlob = nullptr != CachedBlob ? CachedBlob->GetBufferPointer() : nullptr, .CachedBlobSizeInBytes = nullptr != CachedBlob ? CachedBlob->GetBufferSize() : 0 }),
 		.Flags = D3D12_PIPELINE_STATE_FLAG_NONE //!< D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG は Warp デバイスのみ
 	};
+
+	//!< レンダーターゲット数分だけ必要なもの
+	assert(size(RTBDs) <= _countof(GPSD.BlendState.RenderTarget) && "");
+	std::copy(cbegin(RTBDs), cend(RTBDs), GPSD.BlendState.RenderTarget);
+	//!< TRUE == IndependentBlendEnable の場合はレンダーターゲットの分だけ用意すること (If TRUE == IndependentBlendEnable, need NumRenderTarget elements)
+	assert((false == GPSD.BlendState.IndependentBlendEnable || size(RTBDs) == GPSD.NumRenderTargets) && "");
 	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
-	std::copy(begin(RtvFormats), end(RtvFormats), GPSD.RTVFormats);
+	std::copy(cbegin(RtvFormats), cend(RtvFormats), GPSD.RTVFormats);
+	
 	assert((0 == GPSD.DS.BytecodeLength || 0 == GPSD.HS.BytecodeLength || GPSD.PrimitiveTopologyType == D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH) && "");
 
 	if (nullptr != PLS && PLS->IsLoadSucceeded()) {

@@ -79,8 +79,20 @@ void VKExt::CreatePipeline_VsFs_Input(const VkPrimitiveTopology Topology, const 
 		.depthTestEnable = DepthEnable, .depthWriteEnable = DepthEnable, .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
 		.depthBoundsTestEnable = VK_FALSE,
 		.stencilTestEnable = VK_FALSE, 
-		.front = VkStencilOpState({ .failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP, .compareOp = VK_COMPARE_OP_NEVER, .compareMask = 0, .writeMask = 0, .reference = 0 }),
-		.back = VkStencilOpState({ .failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP, .compareOp = VK_COMPARE_OP_ALWAYS, .compareMask = 0, .writeMask = 0, .reference = 0 }),
+		.front = VkStencilOpState({ 
+			.failOp = VK_STENCIL_OP_KEEP,		//!< ステンシルテスト失敗時
+			.passOp = VK_STENCIL_OP_KEEP,		//!< ステンシルテスト成功、デプステスト失敗時
+			.depthFailOp = VK_STENCIL_OP_KEEP,	//!< ステンシルテスト成功、デプステスト成功時
+			.compareOp = VK_COMPARE_OP_NEVER,	//!< 既存のステンシル値との比較方法
+			.compareMask = 0, .writeMask = 0, .reference = 0
+			}),
+		.back = VkStencilOpState({ 
+			.failOp = VK_STENCIL_OP_KEEP,
+			.passOp = VK_STENCIL_OP_KEEP, 
+			.depthFailOp = VK_STENCIL_OP_KEEP, 
+			.compareOp = VK_COMPARE_OP_ALWAYS, 
+			.compareMask = 0, .writeMask = 0, .reference = 0
+			}),
 		.minDepthBounds = 0.0f, .maxDepthBounds = 1.0f
 	};
 
@@ -138,8 +150,20 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology Topology
 		.depthTestEnable = DepthEnable, .depthWriteEnable = DepthEnable, .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
 		.depthBoundsTestEnable = VK_FALSE,
 		.stencilTestEnable = VK_FALSE, 
-		.front = VkStencilOpState({ .failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP, .compareOp = VK_COMPARE_OP_NEVER, .compareMask = 0, .writeMask = 0, .reference = 0 }),
-		.back = VkStencilOpState({ .failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP, .compareOp = VK_COMPARE_OP_ALWAYS, .compareMask = 0, .writeMask = 0, .reference = 0 }),
+		.front = VkStencilOpState({ 
+			.failOp = VK_STENCIL_OP_KEEP, 
+			.passOp = VK_STENCIL_OP_KEEP, 
+			.depthFailOp = VK_STENCIL_OP_KEEP, 
+			.compareOp = VK_COMPARE_OP_NEVER,
+			.compareMask = 0, .writeMask = 0, .reference = 0
+			}),
+		.back = VkStencilOpState({ 
+			.failOp = VK_STENCIL_OP_KEEP, 
+			.passOp = VK_STENCIL_OP_KEEP, 
+			.depthFailOp = VK_STENCIL_OP_KEEP, 
+			.compareOp = VK_COMPARE_OP_ALWAYS,
+			.compareMask = 0, .writeMask = 0, .reference = 0 
+			}),
 		.minDepthBounds = 0.0f, .maxDepthBounds = 1.0f
 	};
 
