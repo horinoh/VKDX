@@ -338,7 +338,7 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	assert(nullptr != Output && "");
 	Log("\t\t[ Selected Output ]\n");
 	LogOutput(COM_PTR_GET(Output));
-
+	
 	//!< (フォーマット指定で)選択したアウトプットのディスプレイモードを列挙
 	GetDisplayModeList(COM_PTR_GET(Output), DXGI_FORMAT_R8G8B8A8_UNORM);
 

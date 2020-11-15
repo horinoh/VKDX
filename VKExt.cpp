@@ -6,19 +6,34 @@
 void VKExt::CreateIndirectBuffer_Draw(const uint32_t VertexCount, const uint32_t InstanceCount)
 {
 	IndirectBuffers.emplace_back(IndirectBuffer());
-	const VkDrawIndirectCommand DIC = { .vertexCount = VertexCount, .instanceCount = InstanceCount, .firstVertex = 0, .firstInstance = 0 };
+	const VkDrawIndirectCommand DIC = {
+		.vertexCount = VertexCount,
+		.instanceCount = InstanceCount, 
+		.firstVertex = 0, 
+		.firstInstance = 0 
+	};
 	CreateBuffer_Indirect(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
 }
 void VKExt::CreateIndirectBuffer_DrawIndexed(const uint32_t IndexCount, const uint32_t InstanceCount)
 {
 	IndirectBuffers.emplace_back(IndirectBuffer());
-	const VkDrawIndexedIndirectCommand DIIC = { .indexCount = IndexCount, .instanceCount = InstanceCount, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
+	const VkDrawIndexedIndirectCommand DIIC = {
+		.indexCount = IndexCount,
+		.instanceCount = InstanceCount, 
+		.firstIndex = 0, 
+		.vertexOffset = 0, 
+		.firstInstance = 0 
+	};
 	CreateBuffer_Indirect(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
 }
 void VKExt::CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z)
 {
 	IndirectBuffers.emplace_back(IndirectBuffer());
-	const VkDispatchIndirectCommand DIC = { .x = X, .y = Y, .z = Z };
+	const VkDispatchIndirectCommand DIC = {
+		.x = X, 
+		.y = Y, 
+		.z = Z
+	};
 	CreateBuffer_Indirect(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIC)), &DIC);
 }
 
@@ -69,11 +84,6 @@ void VKExt::CreatePipeline_VsFs_Input(const VkPrimitiveTopology Topology, const 
 		.minDepthBounds = 0.0f, .maxDepthBounds = 1.0f
 	};
 
-	Pipelines.emplace_back(VkPipeline());
-	std::vector<std::thread> Threads;
-	auto& PL = Pipelines[0];
-	const auto RP = RenderPasses[0];
-	const auto PLL = PipelineLayouts[0];
 	const std::array PSSCIs = {
 		VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = ShaderModules[0], .pName = "main", .pSpecializationInfo = nullptr }),
 		VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = ShaderModules[1], .pName = "main", .pSpecializationInfo = nullptr }),
@@ -93,13 +103,15 @@ void VKExt::CreatePipeline_VsFs_Input(const VkPrimitiveTopology Topology, const 
 		}),
 	};
 
-	//!< メンバ関数をスレッドで使用したい場合、以下のようにthisを引数に取る形式を使用
+	Pipelines.emplace_back(VkPipeline());
+	std::vector<std::thread> Threads;
+	//!< メンバ関数をスレッドで使用したい場合は、以下のようにthisを引数に取る形式を使用すればよい
 	//std::thread::thread(&VKExt::Func, this, Arg0, Arg1,...);
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
-	Threads.emplace_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
+	Threads.emplace_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines.back()), Device, PipelineLayouts[0], RenderPasses[0], Topology, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
 #else
-	Threads.emplace_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs));
+	Threads.emplace_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines.back()), Device, PipelineLayouts[0], RenderPasses[0], Topology, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs));
 #endif
 
 	for (auto& i : Threads) { i.join(); }
@@ -131,11 +143,6 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology Topology
 		.minDepthBounds = 0.0f, .maxDepthBounds = 1.0f
 	};
 
-	Pipelines.emplace_back(VkPipeline());
-	std::vector<std::thread> Threads;
-	auto& PL = Pipelines[0];
-	const auto RP = RenderPasses[0];
-	const auto PLL = PipelineLayouts[0];
 	const std::array PSSCIs = {
 		VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = ShaderModules[0], .pName = "main", .pSpecializationInfo = nullptr }),
 		VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = ShaderModules[1], .pName = "main", .pSpecializationInfo = nullptr }),
@@ -151,11 +158,14 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology Topology
 			.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
 		}),
 	};
+
+	Pipelines.emplace_back(VkPipeline());
+	std::vector<std::thread> Threads;
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
-	Threads.emplace_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
+	Threads.emplace_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines.back()), Device, PipelineLayouts[0], RenderPasses[0], Topology, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
 #else
-	Threads.emplace_back(std::thread::thread(VK::CreatePipeline, std::ref(PL), Device, PLL, RP, Topology, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs));
+	Threads.emplace_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines.back()), Device, PipelineLayouts[0], RenderPasses[0], Topology, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs));
 #endif
 	for (auto& i : Threads) { i.join(); }
 }
@@ -328,44 +338,3 @@ void VKExt::CreateRenderPass_Color_PostProcess(VkRenderPass& RP, const VkFormat 
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
 }
 #endif
-
-//void VKExt::CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::initializer_list<VkImageView> il_IVs)
-//{
-//	const std::vector<VkImageView> IVs(cbegin(il_IVs), cend(il_IVs));
-//
-//	const VkFramebufferCreateInfo FCI = {
-//		VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-//		nullptr,
-//		0,
-//		RP, //!< ここで作成するフレームバッファは RenderPass と「コンパチ」な別のレンダーパスでも使用可能
-//		static_cast<uint32_t>(size(IVs)), data(IVs),
-//		Width, Height,
-//		Layers
-//	};
-//	VERIFY_SUCCEEDED(vkCreateFramebuffer(Device, &FCI, GetAllocationCallbacks(), &FB));
-//}
-
-//void VKExt::CreateRenderTexture(VkImage* Img, VkImageView* IV)
-//{
-//	const auto Format = VK_FORMAT_R8G8B8A8_UNORM;
-//
-//	const VkExtent3D Extent = { 800, 600, 1 };
-//	const auto Faces = 1;
-//	const auto Layers = 1 * Faces;
-//	const auto Levels = 1;
-//	CreateImage(Img, 0, VK_IMAGE_TYPE_2D, Format, Extent, Levels, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-//	//!< デプスの場合
-//	//CreateImage(Img, 0, VK_IMAGE_TYPE_2D, Format, Extent, Levels, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-//
-//#if 0
-//	AllocateImageMemory(DM, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-//	VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Img, *DM, 0));
-//#else
-//	uint32_t HeapIndex;
-//	VkDeviceSize Offset;
-//	SuballocateImageMemory(HeapIndex, Offset, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-//#endif
-//
-//	const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
-//	CreateImageView(IV, *Img, VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, ImageSubresourceRange_ColorAll);
-//}

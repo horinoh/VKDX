@@ -1,8 +1,7 @@
 #pragma once
 
-//!< 少なくとも USE_WINRT, USE_WRL のいずれかは定義すること、両方定義された場合は USE_WINRT が優先される (At least define USE_WINRT or USE_WRL, if both defined USE_WINRT will be used)
-#define USE_WINRT //!< 要C++17 (Need C++17 or later)
-#define USE_WRL
+//!< USE_WINRT が定義されない場合は WRL が使用される、WINRT では 要C++17以降 (If USE_WINRT is not defined, WRL will be used, WINRT require C++17 or later)
+#define USE_WINRT
 #ifdef USE_WINRT
 #include <winrt/base.h>
 #define COM_PTR winrt::com_ptr
@@ -12,7 +11,7 @@
 #define COM_PTR_UUIDOF_PUTVOID(_x) __uuidof(_x), COM_PTR_PUTVOID(_x)
 #define COM_PTR_RESET(_x) _x = nullptr
 #define COM_PTR_AS(_x, _y) winrt::copy_to_abi(_x, *_y.put_void());
-#elif defined(USE_WRL)
+#else
 #include <wrl.h>
 #define COM_PTR Microsoft::WRL::ComPtr
 #define COM_PTR_GET(_x) _x.Get()

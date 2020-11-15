@@ -349,9 +349,9 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 
 	//!< セマンティックとインデックスのリストを作る (Create semantic and index list)
 	for (const auto& i : Prim.attributes) {
-		std::string Name, Index;
-		if (DecomposeSemantic(i.first, Name, Index)) {
-			SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ data(Name), std::stoi(Index) }));
+		std::string Name, IndexStr;
+		if (DecomposeSemantic(i.first, Name, IndexStr)) {
+			SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ data(Name), std::stoi(IndexStr) }));
 		}
 		else {
 			SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ data(i.first), 0 }));
@@ -360,9 +360,9 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	auto MorphIndex = 1;
 	for (const auto& i : Prim.targets) {
 		for (const auto& j : i) {
-			std::string Name, Index;
-			if (DecomposeSemantic(j.first, Name, Index)) {
-				SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ data(Name), std::stoi(Index) }));
+			std::string Name, IndexStr;
+			if (DecomposeSemantic(j.first, Name, IndexStr)) {
+				SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ data(Name), std::stoi(IndexStr) }));
 			}
 			else {
 				SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ data(j.first), MorphIndex }));

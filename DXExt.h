@@ -25,7 +25,5 @@ public:
 	void CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs);
 	void CreatePipelineState_VsPsDsHsGs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const BOOL DepthEnable) { CreatePipelineState_VsPsDsHsGs_Input(Topology, DepthEnable, {}); }
 	void CreatePipelineState_VsPsDsHsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs);
-	void CreatePipelineState_Cs(COM_PTR<ID3D12PipelineState>& /*CS*/) { assert(0 && "TODO"); }
-
-	virtual void CreateRenderTexture();
+	void CreatePipelineState_Cs() { /*PipelineStates.emplace_back(COM_PTR<ID3D12PipelineState>());*/ assert(0 && "TODO"); }
 };

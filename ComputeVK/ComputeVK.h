@@ -104,7 +104,7 @@ protected:
 	}
 	
 	virtual void CreateShaderModules() override { CreateShaderModle_Cs(); }
-	virtual void CreatePipelines() override { Pipelines.resize(1); CreatePipeline_Cs(Pipelines[0]); }
+	virtual void CreatePipelines() override { CreatePipeline_Cs(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 	virtual void Draw() override { Dispatch(); }
 
