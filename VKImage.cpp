@@ -60,22 +60,22 @@ VkImageType VKImage::ToVkImageType(const gli::target GLITarget)
 	return VK_IMAGE_TYPE_MAX_ENUM;
 }
 
-bool VKImage::IsCube(const gli::target GLITarget)
-{
-	switch (GLITarget)
-	{
-		using enum gli::target;
-	default: break;
-	case TARGET_CUBE:
-	case TARGET_CUBE_ARRAY:
-		return true;
-	}
-	return false;
-}
+//bool VKImage::IsCube(const gli::target GLITarget)
+//{
+//	switch (GLITarget)
+//	{
+//		using enum gli::target;
+//	default: break;
+//	case TARGET_CUBE:
+//	case TARGET_CUBE_ARRAY:
+//		return true;
+//	}
+//	return false;
+//}
 
-VkComponentSwizzle VKImage::ToVkComponentSwizzle(const gli::swizzle GLISwizzle)
+VkComponentSwizzle VKImage::ToVkComponentSwizzle(const gli::swizzle Swizzle)
 {
-	switch (GLISwizzle)
+	switch (Swizzle)
 	{
 	case gli::SWIZZLE_ZERO: return VK_COMPONENT_SWIZZLE_ZERO;
 	case gli::SWIZZLE_ONE: return VK_COMPONENT_SWIZZLE_ONE;
@@ -85,16 +85,6 @@ VkComponentSwizzle VKImage::ToVkComponentSwizzle(const gli::swizzle GLISwizzle)
 	case gli::SWIZZLE_ALPHA: return VK_COMPONENT_SWIZZLE_A;
 	}
 	return VK_COMPONENT_SWIZZLE_IDENTITY;
-}
-
-VkComponentMapping VKImage::ToVkComponentMapping(const gli::texture::swizzles_type GLISwizzlesType)
-{
-	return { 
-		ToVkComponentSwizzle(GLISwizzlesType.r), 
-		ToVkComponentSwizzle(GLISwizzlesType.g), 
-		ToVkComponentSwizzle(GLISwizzlesType.b), 
-		ToVkComponentSwizzle(GLISwizzlesType.a)
-	};
 }
 
 void VKImage::CreateImage(VkImage* Img, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage, const gli::texture& GLITexture) const
@@ -384,14 +374,8 @@ gli::texture VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory* DM, const VkPi
 		//!< - プラットフォームによってはコンバインドイメージサンプラ(サンプラとサンプルドイメージを１つにまとめたもの)を使った方が効率が良い場合がある
 		CreateImage(Img, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, GLITexture);
 
-#ifdef USE_SUBALLOC
-		uint32_t HeapIndex;
-		VkDeviceSize Offset;
-		SuballocateImageMemory(HeapIndex, Offset, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-#else
 		AllocateDeviceMemory(DM, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 		VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Img, *DM, 0));
-#endif
 
 		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit copy command from host visible to device local)
 		CopyBufferToImage(CB, StagingBuffer, *Img, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, GLITexture);

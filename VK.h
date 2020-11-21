@@ -35,13 +35,13 @@
 #pragma warning(pop)
 
 #ifndef BREAK_ON_FAILED
-#define BREAK_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Log(data(VK::GetVkResultString(vr))); DEBUG_BREAK(); }
+#define BREAK_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Log(VK::GetVkResultChar(vr)); DEBUG_BREAK(); }
 #endif
 #ifndef THROW_ON_FAILED
-#define THROW_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + VK::GetVkResultString(vr)); }
+#define THROW_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + std::string(VK::GetVkResultChar(vr));; }
 #endif
 #ifndef MESSAGEBOX_ON_FAILED
-#define MESSAGEBOX_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Win::ShowMessageBoxW(nullptr, VK::GetVkResultStringW(vr)); }
+#define MESSAGEBOX_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Win::ShowMessageBox(nullptr, VK::GetVkResultChar(vr)); }
 #endif
 
 #define USE_VIEWPORT_Y_UP //!< *VK
@@ -58,7 +58,7 @@
 //#define USE_SPECIALIZATION_INFO //!< [ ParametricSurfaceVK ]
 
 //!< プッシュデスクリプタ : デスクリプタセットを確保してからコマンドバッファにバインドするのではなく、デスクリプタの更新自体をコマンドバッファに記録してしまう
-//#define USE_PUSH_DESCRIPTOR //!< BillboardVK
+//#define USE_PUSH_DESCRIPTOR //!< [ BillboardVK ]
 //#define USE_PUSH_CONSTANTS //!< [ TriangleVK ] DX:USE_ROOT_CONSTANTS相当
 //#define USE_MANUAL_CLEAR //!< [ ClearVK ] #VK_TODO
 
@@ -117,38 +117,20 @@ private:
 public:
 #ifdef _WINDOWS
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
-	//virtual void OnSize(HWND hWnd, HINSTANCE hInstance) override {}
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
-	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
-		Super::OnTimer(hWnd, hInstance);
-	}
-	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { 
-		Super::OnPaint(hWnd, hInstance);
-		Draw(); 
-	}
+	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { Super::OnPaint(hWnd, hInstance); Draw(); }
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 #endif
 
-	static const char* GetVkResultChar(const VkResult Result);
-	static std::string GetVkResultString(const VkResult Result) { return std::string(GetVkResultChar(Result)); }
-	static std::wstring GetVkResultWstring(const VkResult Result) { return ToWString(GetVkResultString(Result)); }
-	static const char* GetFormatChar(const VkFormat Format);
-	static std::string GetFormatString(const VkFormat Format) { return std::string(GetFormatChar(Format)); }
-	static std::wstring GetFormatWstring(const VkFormat Format) { return ToWString(GetFormatString(Format)); }
-	static const char* GetColorSpaceChar(const VkColorSpaceKHR ColorSpace);
-	static std::string GetColorSpaceString(const VkColorSpaceKHR ColorSpace) { return std::string(GetColorSpaceChar(ColorSpace)); }
-	static std::wstring GetColorSpaceWstring(const VkColorSpaceKHR ColorSpace) { return ToWString(GetColorSpaceString(ColorSpace)); }
-	static const char* GetImageViewTypeChar(const VkImageViewType ImageViewType);
-	static std::string GetImageViewTypeString(const VkImageViewType ImageViewType) { return std::string(GetImageViewTypeChar(ImageViewType)); }
-	static std::wstring GetImageViewTypeWstring(const VkImageViewType ImageViewType) { return ToWString(GetImageViewTypeString(ImageViewType)); }
-	static const char* GetComponentSwizzleChar(const VkComponentSwizzle ComponentSwizzle);
-	static std::string GetComponentSwizzleString(const VkComponentSwizzle ComponentSwizzle) { return std::string(GetComponentSwizzleChar(ComponentSwizzle)); }
-	static std::wstring GetComponentSwizzleWstring(const VkComponentSwizzle ComponentSwizzle) { return ToWString(GetComponentSwizzleString(ComponentSwizzle)); }
-	//static char* GetComponentMappingChar(const VkComponentMapping& ComponentMapping);
-	static std::string GetComponentMappingString(const VkComponentMapping& CM) {
-		return GetComponentSwizzleString(CM.r) + ", " + GetComponentSwizzleString(CM.g) + ", " + GetComponentSwizzleString(CM.b) + ", " + GetComponentSwizzleString(CM.a);
+	static [[nodiscard]] const char* GetVkResultChar(const VkResult Result);
+	static [[nodiscard]] const char* GetFormatChar(const VkFormat Format);
+	static [[nodiscard]] const char* GetColorSpaceChar(const VkColorSpaceKHR ColorSpace);
+	static [[nodiscard]] const char* GetImageViewTypeChar(const VkImageViewType ImageViewType);
+	static [[nodiscard]] const char* GetComponentSwizzleChar(const VkComponentSwizzle ComponentSwizzle);
+	static [[nodiscard]] std::string GetComponentMappingString(const VkComponentMapping& CM) {
+		return std::string(GetComponentSwizzleChar(CM.r)) + ", " + GetComponentSwizzleChar(CM.g) + ", " + GetComponentSwizzleChar(CM.b) + ", " + GetComponentSwizzleChar(CM.a);
 	}
-	static std::wstring GetComponentMappingWstring(const VkComponentMapping& ComponentMapping) { return ToWString(GetComponentMappingString(ComponentMapping)); }
+	static [[nodiscard]] const char* GetSystemAllocationScopeChar(const VkSystemAllocationScope SAS);
 
 	static [[nodiscard]] std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) {
 		const auto v = glm::mix(*reinterpret_cast<const glm::vec3*>(data(lhs)), *reinterpret_cast<const glm::vec3*>(data(rhs)), t);
@@ -160,12 +142,6 @@ public:
 	}
 
 protected:
-	static FORCEINLINE [[nodiscard]] void* AlignedMalloc([[maybe_unused]] void* pUserData, size_t size, size_t alignment, [[maybe_unused]] VkSystemAllocationScope allocationScope) { return _aligned_malloc(size, alignment); }
-	static FORCEINLINE [[nodiscard]] void* AlignedRealloc([[maybe_unused]] void* pUserData, void* pOriginal, size_t size, size_t alignment, [[maybe_unused]] VkSystemAllocationScope allocationScope) { return _aligned_realloc(pOriginal, size, alignment); }
-	static FORCEINLINE [[nodiscard]] void AlignedFree([[maybe_unused]] void* pUserData, void* pMemory) { _aligned_free(pMemory); }
-	static void AlignedAllocNotify([[maybe_unused]] void* pUserData, [[maybe_unused]] size_t size, [[maybe_unused]] VkInternalAllocationType allocationType, [[maybe_unused]] VkSystemAllocationScope allocationScope) {}
-	static void AligendFreeNotify([[maybe_unused]] void* pUserData, [[maybe_unused]] size_t size, [[maybe_unused]] VkInternalAllocationType allocationType, [[maybe_unused]] VkSystemAllocationScope allocationScope) {}
-
 	static [[nodiscard]] bool IsSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, const VkFormat DepthFormat);
 	static [[nodiscard]] uint32_t GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& PDMP, const uint32_t TypeBits, const VkMemoryPropertyFlags MPF);
 	static void CreateDeviceMemories(std::vector<VkDeviceMemory>& DMs, const VkDevice Dev, const std::vector<std::vector<VkMemoryRequirements>>& MRs);
@@ -181,10 +157,6 @@ protected:
 	virtual void CmdCopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, const VkBuffer Dst, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF, const size_t Size);
 
 	void EnumerateMemoryRequirements(const VkMemoryRequirements& MR);
-#ifdef USE_SUBALLOC
-	void SuballocateBufferMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF);
-	void SuballocateImageMemory(uint32_t& HeapIndex, VkDeviceSize& Offset, const VkImage Image, const VkMemoryPropertyFlags MPF);
-#endif
 
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
 
@@ -194,12 +166,12 @@ protected:
 
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::string_view Name) { MarkerInsert(CB, Color, data(Name)); }
-	[[deprecated("use string_view version")]]
-	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerInsert(CB, Color, data(Name)); }
+	//[[deprecated("use string_view version")]]
+	//static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerInsert(CB, Color, data(Name)); }
 	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
 	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const std::string_view Name) { MarkerBegin(CB, Color, data(Name)); }
-	[[deprecated("use string_view version")]]
-	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerBegin(CB, Color, data(Name)); }
+	//[[deprecated("use string_view version")]]
+	//static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerBegin(CB, Color, data(Name)); }
 	static void MarkerEnd(VkCommandBuffer CB);
 	class ScopedMarker
 	{
@@ -214,7 +186,7 @@ protected:
 	static void MarkerSetTag(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const uint64_t TagName, const std::vector<std::byte>& TagData) { MarkerSetTag(Device, Type, Object, TagName, size(TagData), data(TagData)); }
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const char* Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::string_view Name) { MarkerSetObjectName(Device, data(Name)); }
-	template<typename T> [[deprecated("use string_view version")]] static void MarkerSetObjectName(VkDevice Device, T Object, const std::string& Name) { MarkerSetObjectName(Device, data(Name)); }
+	//template<typename T> [[deprecated("use string_view version")]] static void MarkerSetObjectName(VkDevice Device, T Object, const std::string& Name) { MarkerSetObjectName(Device, data(Name)); }
 	template<typename T> static void MarkerSetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* TagData) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
 	//!< ↓ここでテンプレート特殊化している (Template specialization here)
 #include "VKDebugMarker.inl"
@@ -224,7 +196,7 @@ protected:
 
 #ifdef VK_NO_PROTOYYPES
 	void LoadVulkanLibrary();
-#endif //!< VK_NO_PROTOYYPES
+#endif
 
 	virtual void CreateInstance();
 #ifdef USE_DEBUG_REPORT
@@ -242,8 +214,8 @@ protected:
 	virtual void EnumeratePhysicalDeviceExtensionProperties(VkPhysicalDevice PD, const char* LayerName);
 	//virtual void EnumerateQueueFamilyProperties(VkPhysicalDevice PD, VkSurfaceKHR Surface, std::vector<VkQueueFamilyProperties>& QFPs);
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const;
-	static uint32_t FindQueueFamilyPropertyIndex(const VkQueueFlags QF, const std::vector<VkQueueFamilyProperties>& QFPs);
-	static uint32_t FindQueueFamilyPropertyIndex(const VkPhysicalDevice PD, const VkSurfaceKHR Sfc, const std::vector<VkQueueFamilyProperties>& QFPs);
+	static [[nodiscard]] uint32_t FindQueueFamilyPropertyIndex(const VkQueueFlags QF, const std::vector<VkQueueFamilyProperties>& QFPs);
+	static [[nodiscard]] uint32_t FindQueueFamilyPropertyIndex(const VkPhysicalDevice PD, const VkSurfaceKHR Sfc, const std::vector<VkQueueFamilyProperties>& QFPs);
 	//virtual void CreateQueueFamilyPriorities(VkPhysicalDevice PD, VkSurfaceKHR Surface, const std::vector<VkQueueFamilyProperties>& QFPs, std::vector<std::vector<float>>& QueueFamilyPriorites);
 	virtual void CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 
@@ -340,20 +312,37 @@ protected:
 	virtual void Dispatch();
 	virtual void Present();
 
+#pragma region Allocation
 	static inline const VkAllocationCallbacks AllocationCallbacks = {
 		.pUserData = nullptr,
-		.pfnAllocation = AlignedMalloc,
-		.pfnReallocation = AlignedRealloc,
-		.pfnFree = AlignedFree,
-		.pfnInternalAllocation = AlignedAllocNotify,
-		.pfnInternalFree = AligendFreeNotify
+		.pfnAllocation = []([[maybe_unused]] void* pUserData, size_t size, size_t alignment, [[maybe_unused]] VkSystemAllocationScope allocationScope) {
+			Logf("_aligned_malloc(size = %d, align = %d) Scope = %s\n", size, alignment, GetSystemAllocationScopeChar(allocationScope));
+			return _aligned_malloc(size, alignment);
+		},
+		.pfnReallocation = []([[maybe_unused]] void* pUserData, void* pOriginal, size_t size, size_t alignment, [[maybe_unused]] VkSystemAllocationScope allocationScope) {
+			Logf("_aligned_realloc(size = %d, align = %d) Scope = %s\n", size, alignment, GetSystemAllocationScopeChar(allocationScope));
+			return _aligned_realloc(pOriginal, size, alignment);
+		},
+		.pfnFree = []([[maybe_unused]] void* pUserData, void* pMemory) {
+			Log("_aligned_free()\n");
+			_aligned_free(pMemory); 
+		},
+		.pfnInternalAllocation = []([[maybe_unused]] void* pUserData, [[maybe_unused]] size_t size, [[maybe_unused]] VkInternalAllocationType allocationType, [[maybe_unused]] VkSystemAllocationScope allocationScope) {
+		},
+		.pfnInternalFree = []([[maybe_unused]] void* pUserData, [[maybe_unused]] size_t size, [[maybe_unused]] VkInternalAllocationType allocationType, [[maybe_unused]] VkSystemAllocationScope allocationScope) {
+		},
 	};
-	static const [[nodiscard]] VkAllocationCallbacks* GetAllocationCallbacks() { return nullptr/*&AllocationCallbacks*/; }
-	
+	static const [[nodiscard]] VkAllocationCallbacks* GetAllocationCallbacks() { 
+		return nullptr;
+		//return &AllocationCallbacks;
+	}
+#pragma endregion
+
 	virtual [[nodiscard]] VkPhysicalDevice GetCurrentPhysicalDevice() const { return CurrentPhysicalDevice; };
 	virtual [[nodiscard]] VkPhysicalDeviceMemoryProperties GetCurrentPhysicalDeviceMemoryProperties() const { return CurrentPhysicalDeviceMemoryProperties; }
 
 #ifdef VK_NO_PROTOYYPES
+
 protected:
 #ifdef _WINDOWS
 	HMODULE VulkanLibrary = nullptr;
@@ -362,47 +351,39 @@ protected:
 #endif
 
 public:
-	//static PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
-
-	//!< グローバルレベル関数 Global level functions
+	//!< グローバルレベル関数 (Global level functions)
 #define VK_GLOBAL_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #include "VKGlobalProcAddr.h"
 #undef VK_GLOBAL_PROC_ADDR
 
-	//!< インスタンスレベル関数 Instance level functions
+	//!< インスタンスレベル関数 (Instance level functions)
 #define VK_INSTANCE_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #include "VKInstanceProcAddr.h"
 #undef VK_INSTANCE_PROC_ADDR
 
-	//!< デバイスレベル関数 Device level functions
+	//!< デバイスレベル関数 (Device level functions)
 #define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #include "VKDeviceProcAddr.h"
 #undef VK_DEVICE_PROC_ADDR
+
 #endif //!< VK_NO_PROTOYYPES
 
 public:
 #ifdef USE_DEBUG_REPORT
-	//!< インスタンスレベル関数(Debug) Instance level functions(Debug)
+	//!< インスタンスレベル関数、デバッグ用 (Instance level functions for debug)
 #define VK_INSTANCE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
 #include "VKDebugReport.h"
 #undef VK_INSTANCE_PROC_ADDR
 #endif
 
 #ifdef USE_DEBUG_MARKER
-	//!< デバイスレベル関数(Debug) Device level functions(Debug)
+	//!< デバイスレベル関数、デバッグ用 (Device level functions for debug)
 #define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
 #include "VKDebugMarker.h"
 #undef VK_DEVICE_PROC_ADDR
 #endif
 
 protected:
-	//using LAYER_PROPERTY = std::pair<VkLayerProperties, std::vector<VkExtensionProperties>>;
-	//using LAYER_PROPERTIES = std::vector<LAYER_PROPERTY>;
-	//using PHYSICAL_DEVICE_LAYER_PROPERTY = std::pair<VkPhysicalDevice, LAYER_PROPERTIES>;
-	//using PHYSICAL_DEVICE_LAYER_PROPERTIES = std::vector<PHYSICAL_DEVICE_LAYER_PROPERTY>;
-	//LAYER_PROPERTIES InstanceLayerProperties;
-	//PHYSICAL_DEVICE_LAYER_PROPERTIES PhysicalDeviceLayerProperties;
-
 	VkInstance Instance = VK_NULL_HANDLE;
 #ifdef USE_DEBUG_REPORT
 	VkDebugReportCallbackEXT DebugReportCallback = VK_NULL_HANDLE;

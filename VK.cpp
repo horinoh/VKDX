@@ -402,26 +402,53 @@ const char* VK::GetColorSpaceChar(const VkColorSpaceKHR ColorSpace)
 #undef VK_COLOR_SPACE_ENTRY
 }
 
-const char* VK::GetImageViewTypeChar(const VkImageViewType ImageViewType)
+const char* VK::GetImageViewTypeChar(const VkImageViewType IVT)
 {
-#define VK_IMAGE_VIEW_TYPE_ENTRY(vivt) case VK_IMAGE_VIEW_TYPE_##vivt: return #vivt;
-	switch (ImageViewType)
+#define VK_IMAGE_VIEW_TYPE_ENTRY(ivt) case VK_IMAGE_VIEW_TYPE_##ivt: return #ivt;
+	switch (IVT)
 	{
 	default: DEBUG_BREAK(); return "Not found";
-#include "VKImageViewType.h"
+		VK_IMAGE_VIEW_TYPE_ENTRY(1D)
+		VK_IMAGE_VIEW_TYPE_ENTRY(2D)
+		VK_IMAGE_VIEW_TYPE_ENTRY(3D)
+		VK_IMAGE_VIEW_TYPE_ENTRY(CUBE)
+		VK_IMAGE_VIEW_TYPE_ENTRY(1D_ARRAY)
+		VK_IMAGE_VIEW_TYPE_ENTRY(2D_ARRAY)
+		VK_IMAGE_VIEW_TYPE_ENTRY(CUBE_ARRAY)
 	}
 #undef VK_IMAGE_VIEW_TYPE_ENTRY
 }
 
-const char* VK::GetComponentSwizzleChar(const VkComponentSwizzle ComponentSwizzle)
+const char* VK::GetComponentSwizzleChar(const VkComponentSwizzle CS)
 {
-#define VK_COMPONENT_SWIZZLE_ENTRY(vcs) case VK_COMPONENT_SWIZZLE_##vcs: return #vcs;
-	switch (ComponentSwizzle)
+#define VK_COMPONENT_SWIZZLE_ENTRY(cs) case VK_COMPONENT_SWIZZLE_##cs: return #cs;
+	switch (CS)
 	{
 	default: DEBUG_BREAK(); return "Not found";
-#include "VKComponentSwizzle.h"
+		VK_COMPONENT_SWIZZLE_ENTRY(IDENTITY)
+		VK_COMPONENT_SWIZZLE_ENTRY(ZERO)
+		VK_COMPONENT_SWIZZLE_ENTRY(ONE)
+		VK_COMPONENT_SWIZZLE_ENTRY(R)
+		VK_COMPONENT_SWIZZLE_ENTRY(G)
+		VK_COMPONENT_SWIZZLE_ENTRY(B)
+		VK_COMPONENT_SWIZZLE_ENTRY(A)
 	}
 #undef VK_COMPONENT_SWIZZLE_ENTRY
+}
+
+const char* VK::GetSystemAllocationScopeChar(const VkSystemAllocationScope SAS)
+{
+#define VK_SYSTEM_ALLOCATION_SCOPE_ENTRY(sas) case VK_SYSTEM_ALLOCATION_SCOPE_##sas: return #sas;
+	switch (SAS)
+	{
+	default: DEBUG_BREAK(); return "Not found";
+		VK_SYSTEM_ALLOCATION_SCOPE_ENTRY(COMMAND)
+		VK_SYSTEM_ALLOCATION_SCOPE_ENTRY(OBJECT)
+		VK_SYSTEM_ALLOCATION_SCOPE_ENTRY(CACHE)
+		VK_SYSTEM_ALLOCATION_SCOPE_ENTRY(DEVICE)
+		VK_SYSTEM_ALLOCATION_SCOPE_ENTRY(INSTANCE)
+	}
+#undef VK_SYSTEM_ALLOCATION_SCOPE_ENTRY
 }
 
 bool VK::IsSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, const VkFormat DepthFormat)
@@ -625,19 +652,6 @@ void VK::EnumerateMemoryRequirements(const VkMemoryRequirements& MR)
 	}
 }
 
-//void VK::CreateBufferView(VkBufferView* BufferView, const VkBuffer Buffer, const VkFormat Format, const VkDeviceSize Offset, const VkDeviceSize Range)
-//{
-//	const VkBufferViewCreateInfo BufferViewCreateInfo = {
-//		VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
-//		nullptr,
-//		0,
-//		Buffer,
-//		Format,
-//		Offset,
-//		Range
-//	};
-//	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BufferViewCreateInfo, GetAllocationCallbacks(), BufferView));
-//}
 //!< Cubemapを作る場合、まずレイヤ化されたイメージを作成し、(イメージビューを用いて)レイヤをフェイスとして扱うようハードウエアに伝える
 void VK::CreateImageView(VkImageView* IV, const VkImage Img, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange)
 {
@@ -1997,17 +2011,16 @@ void VK::CreateAndCopyToBuffer(VkBuffer* Buf, VkDeviceMemory* DM, const VkQueue 
 //!< シェーダ例 layout (set=0, binding=0) buffer MyBuffer { vec4 MyVec4; mat4 MyMat4; }
 void VK::CreateStorageBuffer()
 {
-#if 0
-	VkBuffer Buffer;
-	VkDeviceSize Size = 0;
+	//!< これはサンプルコード
+
+	VkBuffer Buffer; //!< #VK_TODO
+	VkDeviceSize Size = 0; //!< #VK_TODO
 	CreateBuffer(&Buffer, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, Size);
 	//CreateBuffer(&Buffer, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, Size);
 
-	uint32_t HeapIndex;
-	VkDeviceSize Offset;
-	SuballocateBufferMemory(HeapIndex, Offset, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemories[HeapIndex], Offset));
-#endif
+	VkDeviceMemory DM; //!< #VK_TODO
+	AllocateDeviceMemory(&DM, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DM, 0));
 }
 
 //!< イメージよりも大きなデータへアクセス可能(1Dイメージは最低限4096テクセルだが、ユニフォームテクセルバッファは最低限65536テクセル)
@@ -2016,34 +2029,32 @@ void VK::CreateStorageBuffer()
 //!< シェーダ例 layout (set=0, binding=0) uniform samplerBuffer MySamplerBuffer;
 void VK::CreateUniformTexelBuffer()
 {
-#if 0
-	VkBuffer Buffer;
-	const VkDeviceSize Size = 0;
+	//!< これはサンプルコード
+
+	VkBuffer Buffer; //!< #VK_TODO
+	const VkDeviceSize Size = 0; //!< #VK_TODO
 	CreateBuffer(&Buffer, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, Size);
 
-	uint32_t HeapIndex;
-	VkDeviceSize Offset;
-	SuballocateBufferMemory(HeapIndex, Offset, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemories[HeapIndex], Offset));
+	VkDeviceMemory DM; //!< #VK_TODO
+	AllocateDeviceMemory(&DM, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DM, 0));
 
-	VkBufferView View;
-	const VkFormat Format = VK_FORMAT_R8G8B8A8_UINT;
+	VkBufferView View; //!< #VK_TODO
 	const VkBufferViewCreateInfo BVCI = {
-		VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
-		nullptr,
-		0,
-		Buffer,
-		Format,
-		0,
-		VK_WHOLE_SIZE
+		.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.buffer = Buffer,
+		.format = VK_FORMAT_R8G8B8A8_UINT,
+		.offset = 0,
+		.range = VK_WHOLE_SIZE
 	};
 	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BVCI, GetAllocationCallbacks(), &View)); 
 
 	//!< サポートされているかのチェック
 	VkFormatProperties FP;
-	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), Format, &FP);
+	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), BVCI.format, &FP);
 	assert((FP.bufferFeatures & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT) && "");
-#endif
 }
 
 //!< シェーダから書き込み可能
@@ -2053,38 +2064,36 @@ void VK::CreateUniformTexelBuffer()
 //!< シェーダ例 layout (set=0, binding=0, r32f) uniform imageBuffer MyImageBuffer;
 void VK::CreateStorageTexelBuffer()
 {
-#if 0
-	VkBuffer Buffer;
-	const VkDeviceSize Size = 0;
+	//!< これはサンプルコード
+
+	VkBuffer Buffer; //!< #VK_TODO
+	const VkDeviceSize Size = 0; //!< #VK_TODO
 	CreateBuffer(&Buffer, VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, Size);
 
-	uint32_t HeapIndex;
-	VkDeviceSize Offset;
-	SuballocateBufferMemory(HeapIndex, Offset, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemories[HeapIndex], Offset));
+	VkDeviceMemory DM; //!< #VK_TODO
+	AllocateDeviceMemory(&DM, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DM, 0));
 
-	VkBufferView View;
-	const VkFormat Format = VK_FORMAT_R8G8B8A8_UINT;
+	VkBufferView View; //!< #VK_TODO
 	const VkBufferViewCreateInfo BVCI = {
-		VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
-		nullptr,
-		0,
-		Buffer,
-		Format,
-		0,
-		VK_WHOLE_SIZE
+		.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.buffer = Buffer,
+		.format = VK_FORMAT_R8G8B8A8_UINT,
+		.offset = 0,
+		.range = VK_WHOLE_SIZE
 	};
 	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BVCI, GetAllocationCallbacks(), &View));
 
 	//!< サポートされているかのチェック
 	VkFormatProperties FP;
-	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), Format, &FP);
+	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), BVCI.format, &FP);
 	assert((FP.bufferFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT) && "");
 	//!< #VK_TODO アトミック操作をする場合
 	if (false/*bUseAtomic*/) {
 		assert((FP.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT) && "");
 	}
-#endif
 }
 
 void VK::CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const VkDescriptorSetLayoutCreateFlags Flags, const std::initializer_list<VkDescriptorSetLayoutBinding> il_DSLBs)

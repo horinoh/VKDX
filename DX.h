@@ -22,7 +22,9 @@
 #define COM_PTR_AS(_x, _y) VERIFY_SUCCEEDED(_x.As(&_y));
 #endif
 
-//#define USE_WARP //!< ソフトウエアラスタライザ
+//!< ソフトウエアラスタライザ (Software rasterizer)
+//#define USE_WARP 
+
 #define USE_STATIC_SAMPLER //!< [ TextureDX ] VK:USE_IMMUTABLE_SAMPLER相当
 
 //!< HLSLからルートシグネチャを作成する (Create root signature from HLSL)
@@ -33,12 +35,13 @@
 //#define USE_ROOT_CONSTANTS //!< [ TriangleDX ] VK:USE_PUSH_CONSTANTS相当
 //#define USE_GAMMA_CORRECTION
 
+//!< DirectXShaderCompiler\include\dxc\DxilContainer\DxilContainer.h のものをここへ移植 (Same as defined in DirectXShaderCompiler\include\dxc\DxilContainer\DxilContainer.h)
+#define DXIL_FOURCC(ch0, ch1, ch2, ch3) ((uint32_t)(uint8_t)(ch0) | (uint32_t)(uint8_t)(ch1) << 8  | (uint32_t)(uint8_t)(ch2) << 16  | (uint32_t)(uint8_t)(ch3) << 24)
+
 #include <initguid.h>
 #include <d3d12.h>
 #include <d3dcompiler.h>
 #include <dxcapi.h>
-//!< DirectXShaderCompiler\include\dxc\DxilContainer\DxilContainer.h に定義が存在するのをここへ移植
-#define DXIL_FOURCC(ch0, ch1, ch2, ch3) ((uint32_t)(uint8_t)(ch0) | (uint32_t)(uint8_t)(ch1) << 8  | (uint32_t)(uint8_t)(ch2) << 16  | (uint32_t)(uint8_t)(ch3) << 24)
 #include <DXGI1_6.h>
 
 #include <DirectXMath.h>
@@ -60,8 +63,8 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 
 #include <comdef.h>
 
-//!< _DEBUG であれば何もしなくても PIX 使用可能、Release で PIX を使用したいような場合は USE_PIX を定義する (When want to use pix in Release build, define USE_PIX)
-//!< ソリューション右クリック - ソリューションのNuGetパッケージの管理 - 参照タブ - WinPixEventRuntimeで検索 - プロジェクトを選択してインストールしておくこと
+//!< _DEBUG であれば何もしなくても PIX 使用可能、Release で PIX を使用したいような場合は USE_PIX を定義する (In case want to use pix in Release build, define USE_PIX)
+//!< ソリューション右クリック - ソリューションのNuGetパッケージの管理 - 参照タブ - WinPixEventRuntimeで検索 - プロジェクトを選択してPIXをインストールしておくこと
 //#define USE_PIX
 #include <pix3.h>
 //!< プログラムからキャプチャを行いたい場合 (Capture in program code)
@@ -76,7 +79,7 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 #define THROW_ON_FAILED(hr) if(FAILED(hr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + DX::GetHRESULTString(hr)); }
 #endif
 #ifndef MESSAGEBOX_ON_FAILED
-#define MESSAGEBOX_ON_FAILED(hr) if(FAILED(hr)) { Win::ShowMessageBoxW(nullptr, DX::GetHRESULTStringW(hr)); }
+#define MESSAGEBOX_ON_FAILED(hr) if(FAILED(hr)) { Win::ShowMessageBox(nullptr, data(DX::GetHRESULTString(hr))); }
 #endif
 
 #include "Cmn.h"
@@ -103,20 +106,13 @@ private:
 
 public:
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
-	//virtual void OnSize(HWND hWnd, HINSTANCE hInstance) override {}
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
-	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override { 
-		Super::OnTimer(hWnd, hInstance); 
-	}
-	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { 
-		Super::OnPaint(hWnd, hInstance); 
-		Draw();
-	}
+	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { Super::OnPaint(hWnd, hInstance); Draw(); }
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 
-	static std::string GetHRESULTString(const HRESULT Result) { return ToString(GetHRESULTWString(Result)); }
-	static std::wstring GetHRESULTWString(const HRESULT Result) { return std::wstring(_com_error(Result).ErrorMessage()); }
-	static std::string GetFormatString(const DXGI_FORMAT Format);
+	static [[nodiscard]] std::string GetHRESULTString(const HRESULT Result) { return ToString(GetHRESULTWString(Result)); }
+	static [[nodiscard]] std::wstring GetHRESULTWString(const HRESULT Result) { return std::wstring(_com_error(Result).ErrorMessage()); }
+	static [[nodiscard]] const char* GetFormatChar(const DXGI_FORMAT Format);
 
 	static [[nodiscard]] std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) {
 		const auto l = DirectX::XMFLOAT3(data(lhs));
@@ -166,8 +162,8 @@ protected:
 	//PIXNotifyWakeFromFenceSignal(HANDLE);
 	static void SetName(ID3D12DeviceChild * Resource, LPCWSTR Name) { Resource->SetName(Name); }
 	static void SetName(ID3D12DeviceChild* Resource, const std::wstring_view Name) { Resource->SetName(data(Name));}
-	[[deprecated("use wstring_view version")]]
-	static void SetName(ID3D12DeviceChild* Resource, const std::wstring& Name) { Resource->SetName(data(Name)); }
+	//[[deprecated("use wstring_view version")]]
+	//static void SetName(ID3D12DeviceChild* Resource, const std::wstring& Name) { Resource->SetName(data(Name)); }
 #endif
 
 	virtual void CreateDevice(HWND hWnd);
@@ -271,7 +267,7 @@ protected:
 	std::vector<COM_PTR<ID3D12Resource>> ImageResources;
 	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
 
-	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap; //!< RTVだけど、現状スワップチェインだけ別扱いにしている #DX_TODO
+	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap; //!< RTVだけど、現状スワップチェインだけは別扱いにしている #DX_TODO
 	std::vector<COM_PTR<ID3D12DescriptorHeap>> SamplerDescriptorHeaps;
 	std::vector<COM_PTR<ID3D12DescriptorHeap>> RtvDescriptorHeaps;
 	std::vector<COM_PTR<ID3D12DescriptorHeap>> DsvDescriptorHeaps;
@@ -308,17 +304,6 @@ protected:
 	std::array<UINT, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> DescriptorHandleIndices{};
 
 protected:
-	const std::array<D3D_FEATURE_LEVEL, 9> FeatureLevels = {
-		D3D_FEATURE_LEVEL_12_1,
-		D3D_FEATURE_LEVEL_12_0,
-		D3D_FEATURE_LEVEL_11_1,
-		D3D_FEATURE_LEVEL_11_0,
-		D3D_FEATURE_LEVEL_10_1,
-		D3D_FEATURE_LEVEL_10_0,
-		D3D_FEATURE_LEVEL_9_3,
-		D3D_FEATURE_LEVEL_9_2,
-		D3D_FEATURE_LEVEL_9_1,
-	};
 	const D3D12_SHADER_BYTECODE NullShaderBC = { .pShaderBytecode = nullptr, .BytecodeLength = 0 };
 };
 

@@ -42,7 +42,23 @@ Win::Win()
 	freopen_s(&StdOut, "CON", "w", stdout);
 	freopen_s(&StdErr, "CON", "w", stderr);
 	std::cout << White;
+
+//#ifdef __cplusplus
+//	std::cout << "__cplusplus = " << __cplusplus << std::endl;
+//#endif
+
+#ifdef _MSVC_LANG
+	std::cout << "_MSVC_LANG = " << _MSVC_LANG;
+#if 201703L < _MSVC_LANG
+	std::cout << ", Latest" << std::endl; 
+#elif 201402L < _MSVC_LANG
+	std::cout << ", C++17" << std::endl;
+#else
+	std::cout << ", C++14" << std::endl;
 #endif
+#endif
+
+#endif //!< DEBUG_STDOUT
 }
 Win::~Win()
 {

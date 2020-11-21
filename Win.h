@@ -3,9 +3,9 @@
 #pragma warning(disable: 4505) //!< unreferenced function has been removed
 
 #ifndef VERIFY_SUCCEEDED
-#define VERIFY_SUCCEEDED(vr) BREAK_ON_FAILED(vr)
+//#define VERIFY_SUCCEEDED(vr) BREAK_ON_FAILED(vr)
 //#define VERIFY_SUCCEEDED(vr) THROW_ON_FAILED(vr)
-//#define VERIFY_SUCCEEDED(vr) MESSAGEBOX_ON_FAILED(vr)
+#define VERIFY_SUCCEEDED(vr) MESSAGEBOX_ON_FAILED(vr)
 #endif
 
 //!< メモリリーク検出用

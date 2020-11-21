@@ -2,16 +2,6 @@
 
 #pragma comment(lib, "DirectXTK12.lib")
 
-//void DXImage::LoadImage(ID3D12Resource** Resource, const std::wstring& Path, const D3D12_RESOURCE_STATES ResourceState)
-//{
-//	LoadImage_DDS(Resource, Path, ResourceState);
-//
-//#ifdef DEBUG_STDOUT
-//	std::wcout << "\t" << "ImageFile = " << data(Path) << std::endl;
-//#endif
-//	LOG_OK();
-//}
-
 void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const D3D12_RESOURCE_STATES ResourceState, std::wstring_view Path)
 {
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);

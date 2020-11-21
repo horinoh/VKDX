@@ -5,6 +5,18 @@
 #pragma comment(lib, "dxcompiler")
 #pragma comment(lib, "dxgi.lib")
 
+const std::array FeatureLevels = {
+	D3D_FEATURE_LEVEL_12_1,
+	D3D_FEATURE_LEVEL_12_0,
+	D3D_FEATURE_LEVEL_11_1,
+	D3D_FEATURE_LEVEL_11_0,
+	D3D_FEATURE_LEVEL_10_1,
+	D3D_FEATURE_LEVEL_10_0,
+	D3D_FEATURE_LEVEL_9_3,
+	D3D_FEATURE_LEVEL_9_2,
+	D3D_FEATURE_LEVEL_9_1,
+};
+
 void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 {
 	PERFORMANCE_COUNTER();
@@ -114,7 +126,7 @@ void DX::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	WaitForFence();
 }
 
-std::string DX::GetFormatString(const DXGI_FORMAT Format)
+const char* DX::GetFormatChar(const DXGI_FORMAT Format)
 {
 #define DXGI_FORMAT_ENTRY(df) case DXGI_FORMAT_##df: return #df;
 	switch (Format)
@@ -462,7 +474,7 @@ void DX::GetDisplayModeList(IDXGIOutput* Outp, const DXGI_FORMAT Format)
 	UINT Count = 0;
 	VERIFY_SUCCEEDED(Outp->GetDisplayModeList(Format, 0, &Count, nullptr));
 	if (Count) [[likely]] {
-		Logf("\t\t\t[ DisplayModes ] : %s\n", data(GetFormatString(Format)));
+		Logf("\t\t\t[ DisplayModes ] : %s\n", GetFormatChar(Format));
 
 		std::vector<DXGI_MODE_DESC> MDs(Count);
 		VERIFY_SUCCEEDED(Outp->GetDisplayModeList(Format, 0, &Count, data(MDs)));
@@ -521,7 +533,7 @@ void DX::CheckFeatureLevel(ID3D12Device* Dev)
 
 void DX::CheckMultiSample(const DXGI_FORMAT Format)
 {
-	Logf("MultiSample for %s\n", data(GetFormatString(Format)));
+	Logf("MultiSample for %s\n", GetFormatChar(Format));
 
 	SampleDescs.clear();
 	for (UINT i = 1; i < D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT; ++i) {
