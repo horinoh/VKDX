@@ -166,12 +166,8 @@ protected:
 
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::string_view Name) { MarkerInsert(CB, Color, data(Name)); }
-	//[[deprecated("use string_view version")]]
-	//static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerInsert(CB, Color, data(Name)); }
 	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
 	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const std::string_view Name) { MarkerBegin(CB, Color, data(Name)); }
-	//[[deprecated("use string_view version")]]
-	//static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const std::string& Name) { MarkerBegin(CB, Color, data(Name)); }
 	static void MarkerEnd(VkCommandBuffer CB);
 	class ScopedMarker
 	{
@@ -186,7 +182,6 @@ protected:
 	static void MarkerSetTag(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const uint64_t TagName, const std::vector<std::byte>& TagData) { MarkerSetTag(Device, Type, Object, TagName, size(TagData), data(TagData)); }
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const char* Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::string_view Name) { MarkerSetObjectName(Device, data(Name)); }
-	//template<typename T> [[deprecated("use string_view version")]] static void MarkerSetObjectName(VkDevice Device, T Object, const std::string& Name) { MarkerSetObjectName(Device, data(Name)); }
 	template<typename T> static void MarkerSetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* TagData) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
 	//!< ↓ここでテンプレート特殊化している (Template specialization here)
 #include "VKDebugMarker.inl"
@@ -245,10 +240,71 @@ protected:
 	virtual void CreateVertexBuffer() {}
 	virtual void CreateIndexBuffer() {}
 	virtual void CreateIndirectBuffer() {}
+
 	virtual void CreateUniformBuffer() {}
-	virtual void CreateStorageBuffer();
-	virtual void CreateUniformTexelBuffer();
-	virtual void CreateStorageTexelBuffer();
+	virtual void CreateStorageBuffer() {}
+	virtual void CreateUniformTexelBuffer() {}
+	virtual void CreateStorageTexelBuffer() {}
+
+	/**
+	アプリ内ではサンプラとサンプルドイメージは別のオブジェクトとして扱うが、シェーダ内ではまとめた一つのオブジェクトとして扱うことができ、プラットフォームによっては効率が良い場合がある
+	(コンバインドイメージサンプラ == サンプラ + サンプルドイメージ)
+	デスクリプタタイプに VK_DESCRIPTOR_TYPE_SAMPLER や VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE を指定するか、VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER を指定するかの違い
+	IMAGE	... VkImage
+	BUFFER	... VkBuffer
+		TEXEL の付いているものは BufferView が必要
+		STORAGE の付いているものはシェーダから書き込み可能
+
+	サンプラ (VkSampler)
+		VK_DESCRIPTOR_TYPE_SAMPLER
+		layout (set=0, binding=0) uniform sampler MySampler;
+	サンプルドイメージ (VkImage)
+		VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
+		layout (set=0, binding=0) uniform texture2D MyTexture2D;
+	コンバインドイメージサンプラ (VkSampler + VkImage)
+		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+		layout (set=0, binding=0) uniform sampler2D MySampler2D;
+
+	ストレージイメージ (VkImage)
+		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
+		シェーダから書き込み可能、アトミックな操作が可能
+		レイアウトは VK_IMAGE_LAYOUT_GENERAL にしておくこと
+		layout (set=0, binding=0, r32f) uniform image2D MyImage2D;
+
+	ユニフォームテクセルバッファ (VkBuffer)
+		VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER
+		1Dのイメージのように扱われる
+		1Dイメージは最低限4096テクセルだが、ユニフォームテクセルバッファは最低限65536テクセル(イメージよりも大きなデータへアクセス可能)
+		layout (set=0, binding=0) uniform samplerBuffer MySamplerBuffer;
+
+	ストレージテクセルバッファ (vkBuffer)
+		VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER
+		シェーダから書き込み可能、アトミックな操作が可能
+		layout (set=0, binding=0, r32f) uniform imageBuffer MyImageBuffer;
+
+	ユニフォームバッファ (VkBuffer)
+		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC
+		ダイナミックユニフォームバッファの場合は、コマンドバッファにオフセットを一緒に積むことができる
+		layout (set=0, binding=0) uniform MyUniform { vec4 MyVec4; mat4 MyMat4; }
+
+	ストレージバッファ (VkBuffer)
+		VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC
+		シェーダから書き込み可能、アトミックな操作が可能
+		ダイナミックストレージバッファの場合は、コマンドバッファにオフセットを一緒に積むことができる
+		layout (set=0, binding=0) buffer MyBuffer { vec4 MyVec4; mat4 MyMat4; }
+
+	VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT ... (前レンダーパスで)レンダーターゲット(アタッチメント)として使われたものを(レンダーパス中で)入力として取る場合
+		layout (input_attachment_index=0, set=0, binding=0) uniform subpassInput MySubpassInput;
+	*/
+
+	[[deprecated("this is example code")]]
+	virtual void CreateUniformBuffer_Example();
+	[[deprecated("this is example code")]]
+	virtual void CreateStorageBuffer_Example();
+	[[deprecated("this is example code")]]
+	virtual void CreateUniformTexelBuffer_Example();
+	[[deprecated("this is example code")]]
+	virtual void CreateStorageTexelBuffer_Example();
 
 	virtual void CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const VkDescriptorSetLayoutCreateFlags Flags, const std::initializer_list<VkDescriptorSetLayoutBinding> il_DSLBs);
 	virtual void CreateDescriptorSetLayout() {}

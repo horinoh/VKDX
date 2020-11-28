@@ -944,6 +944,216 @@ void DX::CreateRootSignature()
 	LOG_OK();
 }
 
+void DX::ProcessShaderReflection(ID3DBlob* Blob)
+{
+#if 0
+	//!< FXC
+	COM_PTR<ID3D12ShaderReflection> SR;
+	VERIFY_SUCCEEDED(D3DReflect(Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(SR)));
+#else
+	//!< DXC (dxcompiler.dll が無いと怒られる場合は C:\Program Files (x86)\Windows Kits\10\bin\10.0.18362.0\x64 とかに存在するので、環境変数 Path に通しておく必要がある)
+	COM_PTR<IDxcLibrary> DL;
+	VERIFY_SUCCEEDED(DxcCreateInstance(CLSID_DxcLibrary, COM_PTR_UUIDOF_PUTVOID(DL)));
+
+	COM_PTR<IDxcBlobEncoding> DBE;
+	VERIFY_SUCCEEDED(DL->CreateBlobWithEncodingOnHeapCopy(Blob->GetBufferPointer(), static_cast<UINT32>(Blob->GetBufferSize()), CP_ACP, COM_PTR_PUT(DBE)));
+
+	COM_PTR<IDxcContainerReflection> DCR;
+	VERIFY_SUCCEEDED(DxcCreateInstance(CLSID_DxcContainerReflection, COM_PTR_UUIDOF_PUTVOID(DCR)));
+
+	UINT Index = 0;
+	VERIFY_SUCCEEDED(DCR->Load(COM_PTR_GET(DBE)));
+	VERIFY_SUCCEEDED(DCR->FindFirstPartKind(DXIL_FOURCC('D', 'X', 'I', 'L'), &Index));
+
+	COM_PTR<ID3D12ShaderReflection> SR;
+	VERIFY_SUCCEEDED(DCR->GetPartReflection(Index, COM_PTR_UUIDOF_PUTVOID(SR)));
+#endif
+
+	D3D12_SHADER_DESC SD;
+	VERIFY_SUCCEEDED(SR->GetDesc(&SD));
+
+	if (0 < SD.ConstantBuffers) { std::cout << "\tConstantBuffers" << std::endl; }
+	for (UINT i = 0; i < SD.ConstantBuffers; ++i) {
+		const auto CB = SR->GetConstantBufferByIndex(i);
+		D3D12_SHADER_BUFFER_DESC SBD;
+		VERIFY_SUCCEEDED(CB->GetDesc(&SBD));
+		std::cout << "\t\t" << SBD.Name << std::endl;
+		for (UINT j = 0; j < SBD.Variables; ++j) {
+			const auto SRV = CB->GetVariableByIndex(j);
+			D3D12_SHADER_VARIABLE_DESC SVD;
+			VERIFY_SUCCEEDED(SRV->GetDesc(&SVD));
+			D3D12_SHADER_TYPE_DESC STD;
+			VERIFY_SUCCEEDED(SRV->GetType()->GetDesc(&STD));
+			std::cout << "\t\t\t" << SVD.Name << "\t" << STD.Name << std::endl;
+		}
+	}
+
+	if (0 < SD.BoundResources) { std::cout << "\tBoundResources" << std::endl; }
+	for (UINT i = 0; i < SD.BoundResources; ++i) {
+		D3D12_SHADER_INPUT_BIND_DESC SIBD;
+		VERIFY_SUCCEEDED(SR->GetResourceBindingDesc(i, &SIBD));
+		std::cout << "\t\t" << SIBD.Name << "\t";
+		switch (SIBD.Type) {
+		case D3D_SIT_CBUFFER: std::cout << "CBUFFER"; break;
+		case D3D_SIT_TBUFFER: break;
+		case D3D_SIT_TEXTURE: std::cout << "TEXTURE"; break;
+		case D3D_SIT_SAMPLER: std::cout << "SAMPLER"; break;
+		case D3D_SIT_UAV_RWTYPED: break;
+		case D3D_SIT_STRUCTURED: break;
+		case D3D_SIT_UAV_RWSTRUCTURED: break;
+		case D3D_SIT_BYTEADDRESS: break;
+		case D3D_SIT_UAV_RWBYTEADDRESS: break;
+		case D3D_SIT_UAV_APPEND_STRUCTURED: break;
+		case D3D_SIT_UAV_CONSUME_STRUCTURED: break;
+		case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER: break;
+		default: break;
+		}
+		std::cout << "(" << SIBD.BindPoint;
+		if (0 < SIBD.BindCount) { std::cout << "-" << SIBD.BindPoint + SIBD.BindCount; }
+		std::cout << ")";
+
+		if (D3D_SIT_TEXTURE == SIBD.Type) {
+			std::cout << SIBD.ReturnType;
+			std::cout << SIBD.Dimension;
+		}
+		std::cout << std::endl;
+	}
+
+	if (0 < SD.InputParameters) { std::cout << "\tInputParameters" << std::endl; }
+	for (UINT i = 0; i < SD.InputParameters; ++i) {
+		D3D12_SIGNATURE_PARAMETER_DESC SPD;
+		VERIFY_SUCCEEDED(SR->GetInputParameterDesc(i, &SPD));
+		std::cout << "\t\t" << SPD.SemanticName << SPD.SemanticIndex << "\t";
+		switch (SPD.ComponentType)
+		{
+		default:
+		case D3D_REGISTER_COMPONENT_UNKNOWN: std::cout << "UNKNOWN"; break;
+		case D3D_REGISTER_COMPONENT_UINT32: std::cout << "UINT32"; break;
+		case D3D_REGISTER_COMPONENT_SINT32: std::cout << "SINT32"; break;
+		case D3D_REGISTER_COMPONENT_FLOAT32: std::cout << "FLOAT32"; break;
+		}
+		std::cout << "(" << ((SPD.Mask & 1) ? "x" : "-") << ((SPD.Mask & 2) ? "y" : "-") << ((SPD.Mask & 4) ? "z" : "-") << ((SPD.Mask & 8) ? "w" : "-") << ")" << std::endl;
+	}
+
+	if (0 < SD.OutputParameters) { std::cout << "\tOutputParameters" << std::endl; }
+	for (UINT i = 0; i < SD.OutputParameters; ++i) {
+		D3D12_SIGNATURE_PARAMETER_DESC SPD;
+		VERIFY_SUCCEEDED(SR->GetOutputParameterDesc(i, &SPD));
+		std::cout << "\t\t" << SPD.SemanticName << SPD.SemanticIndex << "\t";
+		switch (SPD.ComponentType)
+		{
+		default:
+		case D3D_REGISTER_COMPONENT_UNKNOWN: std::cout << "UNKNOWN"; break;
+		case D3D_REGISTER_COMPONENT_UINT32: std::cout << "UINT32"; break;
+		case D3D_REGISTER_COMPONENT_SINT32: std::cout << "SINT32"; break;
+		case D3D_REGISTER_COMPONENT_FLOAT32: std::cout << "FLOAT32"; break;
+		}
+		std::cout << "(" << ((SPD.Mask & 1) ? "x" : "-") << ((SPD.Mask & 2) ? "y" : "-") << ((SPD.Mask & 4) ? "z" : "-") << ((SPD.Mask & 8) ? "w" : "-") << ")" << std::endl;
+	}
+}
+
+void DX::SetBlobPart(COM_PTR<ID3DBlob>& Blob)
+{
+	//!< #DX_TODO セット後のBlobを一時変数に取得しているだけ、このままでは元へは反映されない 
+
+	//!< D3D_BLOB_DEBUG_NAME
+	{
+		//!< 付ける名前
+		std::string_view Name = "Hoge";
+
+		//!< 4 バイトアラインされたバッファ std::byte はゼロクリアしてくれる？
+		std::vector<std::byte> Buf(RoundUp(Name.length() + 1, 4));
+		memcpy(data(Buf), data(Name), Name.length());
+
+		COM_PTR<ID3DBlob> NewBlob;
+		if (SUCCEEDED(D3DSetBlobPart(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3D_BLOB_DEBUG_NAME, 0, data(Buf), size(Buf), COM_PTR_PUT(NewBlob)))) {
+			Blob.copy_from(COM_PTR_GET(NewBlob));
+		}
+	}
+}
+void DX::GetBlobPart(ID3DBlob* Blob)
+{
+	//!< D3D_BLOB_DEBUG_INFO
+	{
+		COM_PTR<ID3DBlob> Part;
+		if (SUCCEEDED(D3DGetBlobPart(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3D_BLOB_DEBUG_INFO, 0, COM_PTR_PUT(Part)))) {
+			Log("\tD3D_BLOB_DEBUG_INFO\n");
+		}
+	}
+	//!< D3D_BLOB_PDB
+	{
+		COM_PTR<ID3DBlob> Part;
+		if (SUCCEEDED(D3DGetBlobPart(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3D_BLOB_PDB, 0, COM_PTR_PUT(Part)))) {
+			Log("\tD3D_BLOB_PDB\n");
+		}
+	}
+	//!< D3D_BLOB_PRIVATE_DATA
+	{
+		COM_PTR<ID3DBlob> Part;
+		if (SUCCEEDED(D3DGetBlobPart(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3D_BLOB_PRIVATE_DATA, 0, COM_PTR_PUT(Part)))) {
+			Log("\tD3D_BLOB_PRIVATE_DATA\n");
+		}
+	}
+	//!< D3D_BLOB_ROOT_SIGNATURE
+	{
+		COM_PTR<ID3DBlob> Part;
+		if (SUCCEEDED(D3DGetBlobPart(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, COM_PTR_PUT(Part)))) {
+			Log("\tD3D_BLOB_ROOT_SIGNATURE\n");
+		}
+	}
+	//!< D3D_BLOB_DEBUG_NAME
+	{
+		COM_PTR<ID3DBlob> Part;
+		if (SUCCEEDED(D3DGetBlobPart(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3D_BLOB_DEBUG_NAME, 0, COM_PTR_PUT(Part)))) {
+			Log("\tD3D_BLOB_DEBUG_NAME\n");
+			std::cout << "\t\t" << reinterpret_cast<const char*>(Part->GetBufferPointer()) << std::endl;
+		}
+	}
+}
+void DX::StripShader(COM_PTR<ID3DBlob>& Blob)
+{	 
+	//!< D3DCOMPILER_STRIP_REFLECTION_DATA
+	{
+		COM_PTR<ID3DBlob> NewBlob;
+		if (SUCCEEDED(D3DStripShader(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3DCOMPILER_STRIP_REFLECTION_DATA, COM_PTR_PUT(NewBlob)))) {
+			Log("\tD3DCOMPILER_STRIP_REFLECTION_DATA\n");
+			Blob.copy_from(COM_PTR_GET(NewBlob));
+		}
+	}
+	//!< D3DCOMPILER_STRIP_DEBUG_INFO
+	{
+		COM_PTR<ID3DBlob> NewBlob;
+		if (SUCCEEDED(D3DStripShader(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3DCOMPILER_STRIP_DEBUG_INFO, COM_PTR_PUT(NewBlob)))) {
+			Log("\tD3DCOMPILER_STRIP_DEBUG_INFO\n");
+			Blob.copy_from(COM_PTR_GET(NewBlob));
+		}
+	}
+	//!< D3DCOMPILER_STRIP_TEST_BLOBS
+	{
+		COM_PTR<ID3DBlob> NewBlob;
+		if (SUCCEEDED(D3DStripShader(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3DCOMPILER_STRIP_TEST_BLOBS, COM_PTR_PUT(NewBlob)))) {
+			Log("\tD3DCOMPILER_STRIP_TEST_BLOBS\n");
+			Blob.copy_from(COM_PTR_GET(NewBlob));
+		}
+	}
+	//!< D3DCOMPILER_STRIP_PRIVATE_DATA
+	{
+		COM_PTR<ID3DBlob> NewBlob;
+		if (SUCCEEDED(D3DStripShader(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3DCOMPILER_STRIP_PRIVATE_DATA, COM_PTR_PUT(NewBlob)))) {
+			Log("\tD3DCOMPILER_STRIP_PRIVATE_DATA\n");
+			Blob.copy_from(COM_PTR_GET(NewBlob));
+		}
+	}
+	//!< D3DCOMPILER_STRIP_ROOT_SIGNATURE
+	{
+		COM_PTR<ID3DBlob> NewBlob;
+		if (SUCCEEDED(D3DStripShader(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3DCOMPILER_STRIP_ROOT_SIGNATURE, COM_PTR_PUT(NewBlob)))) {
+			Log("\tD3DCOMPILER_STRIP_ROOT_SIGNATURE\n");
+			Blob.copy_from(COM_PTR_GET(NewBlob));
+		}
+	}
+}
+
 void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,
 	const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology,
 	const std::vector<D3D12_RENDER_TARGET_BLEND_DESC>& RTBDs,

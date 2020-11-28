@@ -35,6 +35,8 @@
 //#define USE_ROOT_CONSTANTS //!< [ TriangleDX ] VK:USE_PUSH_CONSTANTS‘Š“–
 //#define USE_GAMMA_CORRECTION
 
+#define USE_SHADER_BLOB_PART
+
 //!< DirectXShaderCompiler\include\dxc\DxilContainer\DxilContainer.h ‚Ì‚à‚Ì‚ð‚±‚±‚ÖˆÚA (Same as defined in DirectXShaderCompiler\include\dxc\DxilContainer\DxilContainer.h)
 #define DXIL_FOURCC(ch0, ch1, ch2, ch3) ((uint32_t)(uint8_t)(ch0) | (uint32_t)(uint8_t)(ch1) << 8  | (uint32_t)(uint8_t)(ch2) << 16  | (uint32_t)(uint8_t)(ch3) << 24)
 
@@ -162,8 +164,6 @@ protected:
 	//PIXNotifyWakeFromFenceSignal(HANDLE);
 	static void SetName(ID3D12DeviceChild * Resource, LPCWSTR Name) { Resource->SetName(Name); }
 	static void SetName(ID3D12DeviceChild* Resource, const std::wstring_view Name) { Resource->SetName(data(Name));}
-	//[[deprecated("use wstring_view version")]]
-	//static void SetName(ID3D12DeviceChild* Resource, const std::wstring& Name) { Resource->SetName(data(Name)); }
 #endif
 
 	virtual void CreateDevice(HWND hWnd);
@@ -212,6 +212,10 @@ protected:
 	virtual void CreateDescriptorHeap() {}
 	virtual void CreateDescriptorView() {}
 
+	virtual void ProcessShaderReflection(ID3DBlob* Blob);
+	virtual void SetBlobPart(COM_PTR<ID3DBlob>& Blob);
+	virtual void GetBlobPart(ID3DBlob* Blob);
+	virtual void StripShader(COM_PTR<ID3DBlob>& Blob);
 	virtual void CreateShaderBlobs() {}
 
 #include "DXPipelineLibrary.inl"

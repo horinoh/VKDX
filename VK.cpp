@@ -2004,12 +2004,19 @@ void VK::CreateAndCopyToBuffer(VkBuffer* Buf, VkDeviceMemory* DM, const VkQueue 
 	SubmitStagingCopy(*Buf, Queue, CB, Access, PipeStg, Size, Source);
 }
 
-//!< 適切なオフセットに配置する(ダイナミックではオフセット指定が変わる)
-//!< デスクリプタタイプは VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC
-//!< シェーダから読み書き可能
-//!< アトミックな操作が可能
-//!< シェーダ例 layout (set=0, binding=0) buffer MyBuffer { vec4 MyVec4; mat4 MyMat4; }
-void VK::CreateStorageBuffer()
+void VK::CreateUniformBuffer_Example()
+{
+	//!< これはサンプルコード
+
+	VkBuffer Buffer; //!< #VK_TODO
+	VkDeviceSize Size = 0; //!< #VK_TODO
+	CreateBuffer(&Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, Size);
+
+	VkDeviceMemory DM; //!< #VK_TODO
+	AllocateDeviceMemory(&DM, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DM, 0));
+}
+void VK::CreateStorageBuffer_Example()
 {
 	//!< これはサンプルコード
 
@@ -2022,12 +2029,7 @@ void VK::CreateStorageBuffer()
 	AllocateDeviceMemory(&DM, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DM, 0));
 }
-
-//!< イメージよりも大きなデータへアクセス可能(1Dイメージは最低限4096テクセルだが、ユニフォームテクセルバッファは最低限65536テクセル)
-//!< デスクリプタタイプは VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER
-//!< (TexelBuffer系は)ビューが必要
-//!< シェーダ例 layout (set=0, binding=0) uniform samplerBuffer MySamplerBuffer;
-void VK::CreateUniformTexelBuffer()
+void VK::CreateUniformTexelBuffer_Example()
 {
 	//!< これはサンプルコード
 
@@ -2056,13 +2058,7 @@ void VK::CreateUniformTexelBuffer()
 	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), BVCI.format, &FP);
 	assert((FP.bufferFeatures & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT) && "");
 }
-
-//!< シェーダから書き込み可能
-//!< デスクリプタタイプは VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER
-//!< (TexelBuffer系は)ビューが必要
-//!< アトミックな操作が可能
-//!< シェーダ例 layout (set=0, binding=0, r32f) uniform imageBuffer MyImageBuffer;
-void VK::CreateStorageTexelBuffer()
+void VK::CreateStorageTexelBuffer_Example()
 {
 	//!< これはサンプルコード
 
@@ -2356,7 +2352,7 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 				.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
 				.pNext = nullptr,
 				.flags = 0,
-				.codeSize = static_cast<size_t>(CodeSize), .pCode = reinterpret_cast<uint32_t*>(data(Code))
+				.codeSize = static_cast<size_t>(size(Code)), .pCode = reinterpret_cast<uint32_t*>(data(Code))
 			};
 			VERIFY_SUCCEEDED(vkCreateShaderModule(Device, &SMCI, GetAllocationCallbacks(), &ShaderModule));
 		}

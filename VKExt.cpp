@@ -60,7 +60,7 @@ void VKExt::CreateShaderModle_Cs()
 
 void VKExt::CreatePipeline_VsFs_Input(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, const VkBool32 DepthEnable, const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs)
 {
-	const VkPipelineRasterizationStateCreateInfo PRSCI = {
+	constexpr VkPipelineRasterizationStateCreateInfo PRSCI = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 		.pNext = nullptr,
 		.flags = 0,
@@ -131,7 +131,7 @@ void VKExt::CreatePipeline_VsFs_Input(const VkPrimitiveTopology Topology, const 
 
 void VKExt::CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, const VkBool32 DepthEnable, const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs)
 {
-	const VkPipelineRasterizationStateCreateInfo PRSCI = {
+	constexpr VkPipelineRasterizationStateCreateInfo PRSCI = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 		.pNext = nullptr,
 		.flags = 0,

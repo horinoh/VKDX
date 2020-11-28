@@ -474,6 +474,8 @@
 			~~~
 		* std::variant
 			* union代用
+		* std::format
+			* まだコンパイラが対応してない
 		*
 			~~~
 			//template<typename T> requires is_integral_v<T> 
