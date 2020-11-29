@@ -11,6 +11,7 @@
 #define COM_PTR_UUIDOF_PUTVOID(_x) __uuidof(_x), COM_PTR_PUTVOID(_x)
 #define COM_PTR_RESET(_x) _x = nullptr
 #define COM_PTR_AS(_x, _y) winrt::copy_to_abi(_x, *_y.put_void());
+#define COM_PTR_COPY(_x, _y) _x.copy_from(COM_PTR_GET(_y))
 #else
 #include <wrl.h>
 #define COM_PTR Microsoft::WRL::ComPtr
@@ -19,7 +20,8 @@
 #define COM_PTR_PUTVOID(_x) _x.GetAddressOf()
 #define COM_PTR_UUIDOF_PUTVOID(_x) IID_PPV_ARGS(COM_PTR_PUTVOID(_x))
 #define COM_PTR_RESET(_x) _x.Reset()
-#define COM_PTR_AS(_x, _y) VERIFY_SUCCEEDED(_x.As(&_y));
+#define COM_PTR_AS(_x, _y) VERIFY_SUCCEEDED(_x.As(&_y))
+#define COM_PTR_COPY(_x, _y) (_x = _y)
 #endif
 
 //!< ソフトウエアラスタライザ (Software rasterizer)
@@ -37,16 +39,20 @@
 
 #define USE_SHADER_BLOB_PART
 
-//!< DirectXShaderCompiler\include\dxc\DxilContainer\DxilContainer.h のものをここへ移植 (Same as defined in DirectXShaderCompiler\include\dxc\DxilContainer\DxilContainer.h)
-#define DXIL_FOURCC(ch0, ch1, ch2, ch3) ((uint32_t)(uint8_t)(ch0) | (uint32_t)(uint8_t)(ch1) << 8  | (uint32_t)(uint8_t)(ch2) << 16  | (uint32_t)(uint8_t)(ch3) << 24)
+#define USE_DXC
 
 #include <initguid.h>
 #include <d3d12.h>
 #include <d3dcompiler.h>
-#include <dxcapi.h>
 #include <DXGI1_6.h>
-
 #include <DirectXMath.h>
+
+#ifdef USE_DXC
+#include <dxcapi.h>
+//!< DirectXShaderCompiler\include\dxc\DxilContainer\DxilContainer.h のものをここへ移植 (Same as defined in DirectXShaderCompiler\include\dxc\DxilContainer\DxilContainer.h)
+#define DXIL_FOURCC(ch0, ch1, ch2, ch3) ((uint32_t)(uint8_t)(ch0) | (uint32_t)(uint8_t)(ch1) << 8  | (uint32_t)(uint8_t)(ch2) << 16  | (uint32_t)(uint8_t)(ch3) << 24)
+#endif
+
 /**
 @brief 32 bit カラー DirectX::PackedVector::XMCOLOR
 @note ARGBレイアウト

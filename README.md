@@ -132,10 +132,10 @@
 * SPIRV.lib, glslang.lib, OGLCompiler.lib, OSDependent.lib
 	* ここでは未使用
 
-#### Visual Studio で GLSL シンタックスハイライトさせる場合
-* ~~ShaderHighlights\XXX_vs2015.reg を実行して Visual Studio を再起動~~
-* ~~ShaderHighlights\XXX_vs2017.reg を実行して Visual Studio を再起動~~
-* GLSL language integration拡張をインストールする
+#### Visual Studio で GLSL, HLSL シンタックスハイライトさせる場合
+* Visual Studio - Extensions - Manage Extensions
+	* GLSL language integration 拡張を検索してインストールする
+	* HLSL Tools for Visual Studio 拡張を検索してインストールする
 
 #### デバッグ
 * RenderDoc https://renderdoc.org/builds
@@ -492,6 +492,29 @@
 	* HDR
 	* メッシュシェーダ
 	* レイトレーシング
+		* 拡張
+			VK_KHR_acceleration_structure
+			VK_KHR_ray_tracing_pipeline
+			VK_KHR_ray_query
+			VK_KHR_pipeline_library
+			VK_KHR_deferred_host_operations
+		* Acceleration Structure (AS) ... VK_KHR_acceleration_structure
+			* vkCmdBuildAccelerationStructuresKHR(), VkAccelerationStructureBuildGeometryInfoKHR で作成 
+			* 更新が必要な場合 .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR、srcAccelerationStructure, dstAccelerationStructure で指定
+			* Bottom Level AS (BLAS)
+			* Top Level AS (TLAS)
+		* シェーダステージ ... VK_KHR_ray_tracing_pipeline
+			* Ray Generation Shader (RGS)
+			* Closest Hit Shader (CHS)
+			* Miss Shader
+			* Intersection Shader
+			* Any-hit Shader
+
+			* RGS, CHS はマテリアル、テクスチャデータ等の参照を必要とする
+			* ペイロード 
+				* 5つのシェーダステージ間のコミュニケーションに使われる、どのようにヒット、ミスを扱うか
+				* rayPayloadEXT 
+
 	* マルチGPUの場合の処理
  --> 
 

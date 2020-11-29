@@ -2,8 +2,12 @@
 
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "d3dcompiler.lib")
-#pragma comment(lib, "dxcompiler")
 #pragma comment(lib, "dxgi.lib")
+
+#ifdef USE_DXC
+//!< DXC (dxcompiler.dll が無いと怒られる場合は C:\Program Files (x86)\Windows Kits\10\bin\10.0.18362.0\x64 とかに存在するので、環境変数 Path に通しておく必要がある)
+#pragma comment(lib, "dxcompiler")
+#endif
 
 const std::array FeatureLevels = {
 	D3D_FEATURE_LEVEL_12_1,
@@ -946,12 +950,7 @@ void DX::CreateRootSignature()
 
 void DX::ProcessShaderReflection(ID3DBlob* Blob)
 {
-#if 0
-	//!< FXC
-	COM_PTR<ID3D12ShaderReflection> SR;
-	VERIFY_SUCCEEDED(D3DReflect(Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(SR)));
-#else
-	//!< DXC (dxcompiler.dll が無いと怒られる場合は C:\Program Files (x86)\Windows Kits\10\bin\10.0.18362.0\x64 とかに存在するので、環境変数 Path に通しておく必要がある)
+#ifdef USE_DXC
 	COM_PTR<IDxcLibrary> DL;
 	VERIFY_SUCCEEDED(DxcCreateInstance(CLSID_DxcLibrary, COM_PTR_UUIDOF_PUTVOID(DL)));
 
@@ -966,7 +965,10 @@ void DX::ProcessShaderReflection(ID3DBlob* Blob)
 	VERIFY_SUCCEEDED(DCR->FindFirstPartKind(DXIL_FOURCC('D', 'X', 'I', 'L'), &Index));
 
 	COM_PTR<ID3D12ShaderReflection> SR;
-	VERIFY_SUCCEEDED(DCR->GetPartReflection(Index, COM_PTR_UUIDOF_PUTVOID(SR)));
+	VERIFY_SUCCEEDED(DCR->GetPartReflection(Index, COM_PTR_UUIDOF_PUTVOID(SR)));	
+#else
+	COM_PTR<ID3D12ShaderReflection> SR;
+	VERIFY_SUCCEEDED(D3DReflect(Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(SR)));
 #endif
 
 	D3D12_SHADER_DESC SD;
@@ -1054,20 +1056,19 @@ void DX::ProcessShaderReflection(ID3DBlob* Blob)
 
 void DX::SetBlobPart(COM_PTR<ID3DBlob>& Blob)
 {
-	//!< #DX_TODO セット後のBlobを一時変数に取得しているだけ、このままでは元へは反映されない 
-
 	//!< D3D_BLOB_DEBUG_NAME
 	{
 		//!< 付ける名前
-		std::string_view Name = "Hoge";
+		std::string_view Name = "Debug Name";
 
-		//!< 4 バイトアラインされたバッファ std::byte はゼロクリアしてくれる？
-		std::vector<std::byte> Buf(RoundUp(Name.length() + 1, 4));
-		memcpy(data(Buf), data(Name), Name.length());
+		//!< 4 バイトアラインされたバッファ
+		std::vector<char> Buf(RoundUp(Name.length() + 1, 4));
+		Buf[Name.length()] = '\0'; //!< std::ranges::fill(Buf, '\0');
+		std::ranges::copy(Name, begin(Buf));
 
 		COM_PTR<ID3DBlob> NewBlob;
 		if (SUCCEEDED(D3DSetBlobPart(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3D_BLOB_DEBUG_NAME, 0, data(Buf), size(Buf), COM_PTR_PUT(NewBlob)))) {
-			Blob.copy_from(COM_PTR_GET(NewBlob));
+			COM_PTR_COPY(Blob, NewBlob);
 		}
 	}
 }
@@ -1105,8 +1106,7 @@ void DX::GetBlobPart(ID3DBlob* Blob)
 	{
 		COM_PTR<ID3DBlob> Part;
 		if (SUCCEEDED(D3DGetBlobPart(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3D_BLOB_DEBUG_NAME, 0, COM_PTR_PUT(Part)))) {
-			Log("\tD3D_BLOB_DEBUG_NAME\n");
-			std::cout << "\t\t" << reinterpret_cast<const char*>(Part->GetBufferPointer()) << std::endl;
+			Logf("\tD3D_BLOB_DEBUG_NAME = %s\n", reinterpret_cast<const char*>(Part->GetBufferPointer()));
 		}
 	}
 }
@@ -1117,7 +1117,7 @@ void DX::StripShader(COM_PTR<ID3DBlob>& Blob)
 		COM_PTR<ID3DBlob> NewBlob;
 		if (SUCCEEDED(D3DStripShader(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3DCOMPILER_STRIP_REFLECTION_DATA, COM_PTR_PUT(NewBlob)))) {
 			Log("\tD3DCOMPILER_STRIP_REFLECTION_DATA\n");
-			Blob.copy_from(COM_PTR_GET(NewBlob));
+			COM_PTR_COPY(Blob, NewBlob);
 		}
 	}
 	//!< D3DCOMPILER_STRIP_DEBUG_INFO
@@ -1125,7 +1125,7 @@ void DX::StripShader(COM_PTR<ID3DBlob>& Blob)
 		COM_PTR<ID3DBlob> NewBlob;
 		if (SUCCEEDED(D3DStripShader(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3DCOMPILER_STRIP_DEBUG_INFO, COM_PTR_PUT(NewBlob)))) {
 			Log("\tD3DCOMPILER_STRIP_DEBUG_INFO\n");
-			Blob.copy_from(COM_PTR_GET(NewBlob));
+			COM_PTR_COPY(Blob, NewBlob);
 		}
 	}
 	//!< D3DCOMPILER_STRIP_TEST_BLOBS
@@ -1133,7 +1133,7 @@ void DX::StripShader(COM_PTR<ID3DBlob>& Blob)
 		COM_PTR<ID3DBlob> NewBlob;
 		if (SUCCEEDED(D3DStripShader(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3DCOMPILER_STRIP_TEST_BLOBS, COM_PTR_PUT(NewBlob)))) {
 			Log("\tD3DCOMPILER_STRIP_TEST_BLOBS\n");
-			Blob.copy_from(COM_PTR_GET(NewBlob));
+			COM_PTR_COPY(Blob, NewBlob);
 		}
 	}
 	//!< D3DCOMPILER_STRIP_PRIVATE_DATA
@@ -1141,7 +1141,7 @@ void DX::StripShader(COM_PTR<ID3DBlob>& Blob)
 		COM_PTR<ID3DBlob> NewBlob;
 		if (SUCCEEDED(D3DStripShader(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3DCOMPILER_STRIP_PRIVATE_DATA, COM_PTR_PUT(NewBlob)))) {
 			Log("\tD3DCOMPILER_STRIP_PRIVATE_DATA\n");
-			Blob.copy_from(COM_PTR_GET(NewBlob));
+			COM_PTR_COPY(Blob, NewBlob);
 		}
 	}
 	//!< D3DCOMPILER_STRIP_ROOT_SIGNATURE
@@ -1149,7 +1149,7 @@ void DX::StripShader(COM_PTR<ID3DBlob>& Blob)
 		COM_PTR<ID3DBlob> NewBlob;
 		if (SUCCEEDED(D3DStripShader(Blob->GetBufferPointer(), Blob->GetBufferSize(), D3DCOMPILER_STRIP_ROOT_SIGNATURE, COM_PTR_PUT(NewBlob)))) {
 			Log("\tD3DCOMPILER_STRIP_ROOT_SIGNATURE\n");
-			Blob.copy_from(COM_PTR_GET(NewBlob));
+			COM_PTR_COPY(Blob, NewBlob);
 		}
 	}
 }
@@ -1207,12 +1207,12 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 
 	//!< レンダーターゲット数分だけ必要なもの
 	assert(size(RTBDs) <= _countof(GPSD.BlendState.RenderTarget) && "");
-	std::copy(cbegin(RTBDs), cend(RTBDs), GPSD.BlendState.RenderTarget);
+	std::ranges::copy(RTBDs, GPSD.BlendState.RenderTarget);
 	//!< TRUE == IndependentBlendEnable の場合はレンダーターゲットの分だけ用意すること (If TRUE == IndependentBlendEnable, need NumRenderTarget elements)
 	assert((false == GPSD.BlendState.IndependentBlendEnable || size(RTBDs) == GPSD.NumRenderTargets) && "");
 	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
-	std::copy(cbegin(RtvFormats), cend(RtvFormats), GPSD.RTVFormats);
-	
+	std::ranges::copy(RtvFormats, GPSD.RTVFormats);
+
 	assert((0 == GPSD.DS.BytecodeLength || 0 == GPSD.HS.BytecodeLength || GPSD.PrimitiveTopologyType == D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH) && "");
 
 	if (nullptr != PLS && PLS->IsLoadSucceeded()) {

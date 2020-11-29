@@ -1306,7 +1306,7 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 #undef VK_DEVICE_PROC_ADDR
 #endif
 
-	//!< キューの取得 (グラフィック、プレゼントキューは同じインデックスの場合もあるが別の変数に取得しておく) (Graphics and presentation index may be same, but save to individual variables)
+	//!< グラフィック、プレゼントキューは同じインデックスの場合もあるが別の変数に取得しておく (Graphics and presentation index may be same, but save to individual variables)
 	vkGetDeviceQueue(Device, GraphicsQueueFamilyIndex, GraphicsQueueIndexInFamily, &GraphicsQueue);
 	vkGetDeviceQueue(Device, PresentQueueFamilyIndex, PresentQueueIndexInFamily, &PresentQueue);
 	//vkGetDeviceQueue(Device, ComputeQueueFamilyIndex, ComputeQueueIndex, &ComputeQueue);
@@ -1373,13 +1373,13 @@ void VK::AllocateDeviceMemory(VkDeviceMemory* DM, const VkMemoryRequirements& MR
 //!< 初回と２回目以降を同じに扱う為に、シグナル済み状態(VK_FENCE_CREATE_SIGNALED_BIT)で作成している (Create with signaled state, to do same operation on first time and second time)
 void VK::CreateFence(VkDevice Dev)
 {
-	const VkFenceCreateInfo FenceCreateInfo = {
+	const VkFenceCreateInfo FCI = {
 		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
 		.pNext = nullptr,
 		.flags = VK_FENCE_CREATE_SIGNALED_BIT
 	};
-	VERIFY_SUCCEEDED(vkCreateFence(Dev, &FenceCreateInfo, GetAllocationCallbacks(), &Fence));
-	VERIFY_SUCCEEDED(vkCreateFence(Dev, &FenceCreateInfo, GetAllocationCallbacks(), &ComputeFence));
+	VERIFY_SUCCEEDED(vkCreateFence(Dev, &FCI, GetAllocationCallbacks(), &Fence));
+	VERIFY_SUCCEEDED(vkCreateFence(Dev, &FCI, GetAllocationCallbacks(), &ComputeFence));
 
 	LOG_OK();
 }
@@ -1388,17 +1388,17 @@ void VK::CreateFence(VkDevice Dev)
 //!< イメージ取得(vkAcquireNextImageKHR)、サブミット(VkSubmitInfo)、プレゼンテーション(VkPresentInfoKHR)に使用する (Use when image acquire, submit, presentation) 
 void VK::CreateSemaphore(VkDevice Dev)
 {
-	const VkSemaphoreCreateInfo SemaphoreCreateInfo = {
+	const VkSemaphoreCreateInfo SCI = {
 		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
 		.pNext = nullptr,
 		.flags = 0
 	};
 
 	//!< プレゼント完了同期用 (Wait for presentation finish)
-	VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SemaphoreCreateInfo, GetAllocationCallbacks(), &NextImageAcquiredSemaphore));
+	VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SCI, GetAllocationCallbacks(), &NextImageAcquiredSemaphore));
 
 	//!< 描画完了同期用 (Wait for render finish)
-	VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SemaphoreCreateInfo, GetAllocationCallbacks(), &RenderFinishedSemaphore));
+	VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SCI, GetAllocationCallbacks(), &RenderFinishedSemaphore));
 
 	LOG_OK();
 }
@@ -1530,16 +1530,16 @@ VkSurfaceFormatKHR VK::SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Sfc
 
 	return -1 == SelectedIndex ? VkSurfaceFormatKHR({ VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR }) : SFs[SelectedIndex];
 }
-VkExtent2D VK::SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& Cap, const uint32_t Width, const uint32_t Height)
+VkExtent2D VK::SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& SC, const uint32_t Width, const uint32_t Height)
 {
-	if (0xffffffff == Cap.currentExtent.width) {
+	if (0xffffffff == SC.currentExtent.width) {
 		//!< 0xffffffff の場合はスワップチェインイメージサイズがウインドウサイズを決定することになる (If 0xffffffff, size of swapchain image determines the size of the window)
-		//!< (クランプした)引数のWidth, Heightを使用する (In this case, use argument (clamped) Width and Heigt) 
-		return VkExtent2D({ .width = (std::clamp)(Width, Cap.maxImageExtent.width, Cap.minImageExtent.width), .height = (std::clamp)(Height, Cap.minImageExtent.height, Cap.minImageExtent.height) });
+		//!< 引数の Width, Height を使用する (In this case, use argument Width and Height) 
+		return VkExtent2D({ .width = (std::clamp)(Width, SC.maxImageExtent.width, SC.minImageExtent.width), .height = (std::clamp)(Height, SC.minImageExtent.height, SC.minImageExtent.height) });
 	}
 	else {
-		//!< そうでない場合はcurrentExtentを使用する (Otherwise, use currentExtent)
-		return Cap.currentExtent;
+		//!< そうでない場合は currentExtent を使用する (Otherwise, use currentExtent)
+		return SC.currentExtent;
 	}
 }
 VkPresentModeKHR VK::SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
@@ -1595,18 +1595,18 @@ VkPresentModeKHR VK::SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR 
 //!< 手動でクリアする場合には VkImageUsageFlags に追加で VK_IMAGE_USAGE_TRANSFER_DST_BIT の指定が必要
 void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags IUF)
 {
-	VkSurfaceCapabilitiesKHR SurfaceCap;
-	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PD, Sfc, &SurfaceCap));
+	VkSurfaceCapabilitiesKHR SC;
+	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PD, Sfc, &SC));
 
 	Log("\tSurfaceCapabilities\n");
-	Logf("\t\tminImageCount = %d\n", SurfaceCap.minImageCount);
-	Logf("\t\tmaxImageCount = %d\n", SurfaceCap.maxImageCount);
-	Logf("\t\tcurrentExtent = %d x %d\n", SurfaceCap.minImageExtent.width, SurfaceCap.currentExtent.height);
-	Logf("\t\tminImageExtent = %d x %d\n", SurfaceCap.currentExtent.width, SurfaceCap.minImageExtent.height);
-	Logf("\t\tmaxImageExtent = %d x %d\n", SurfaceCap.maxImageExtent.width, SurfaceCap.maxImageExtent.height);
-	Logf("\t\tmaxImageArrayLayers = %d\n", SurfaceCap.maxImageArrayLayers);
+	Logf("\t\tminImageCount = %d\n", SC.minImageCount);
+	Logf("\t\tmaxImageCount = %d\n", SC.maxImageCount);
+	Logf("\t\tcurrentExtent = %d x %d\n", SC.minImageExtent.width, SC.currentExtent.height);
+	Logf("\t\tminImageExtent = %d x %d\n", SC.currentExtent.width, SC.minImageExtent.height);
+	Logf("\t\tmaxImageExtent = %d x %d\n", SC.maxImageExtent.width, SC.maxImageExtent.height);
+	Logf("\t\tmaxImageArrayLayers = %d\n", SC.maxImageArrayLayers);
 	Log("\t\tsupportedTransforms = ");
-#define VK_SURFACE_TRANSFORM_ENTRY(entry) if(SurfaceCap.supportedTransforms & VK_SURFACE_TRANSFORM_##entry##_BIT_KHR) { Logf("%s | ", #entry); }
+#define VK_SURFACE_TRANSFORM_ENTRY(entry) if(SC.supportedTransforms & VK_SURFACE_TRANSFORM_##entry##_BIT_KHR) { Logf("%s | ", #entry); }
 	VK_SURFACE_TRANSFORM_ENTRY(IDENTITY);
 	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_90);
 	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_180);
@@ -1619,7 +1619,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 #undef VK_SURFACE_TRANSFORM_ENTRY
 	Log("\n");
 	Log("\t\tcurrentTransform = ");
-#define VK_SURFACE_TRANSFORM_ENTRY(entry) if(SurfaceCap.currentTransform == VK_SURFACE_TRANSFORM_##entry##_BIT_KHR) { Logf("%s\n", #entry); }
+#define VK_SURFACE_TRANSFORM_ENTRY(entry) if(SC.currentTransform == VK_SURFACE_TRANSFORM_##entry##_BIT_KHR) { Logf("%s\n", #entry); }
 	VK_SURFACE_TRANSFORM_ENTRY(IDENTITY);
 	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_90);
 	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_180);
@@ -1631,7 +1631,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 	VK_SURFACE_TRANSFORM_ENTRY(INHERIT);
 #undef VK_SURFACE_TRANSFORM_ENTRY
 	Log("\t\tsupportedCompositeAlpha = ");
-#define VK_COMPOSITE_ALPHA_ENTRY(entry) if(SurfaceCap.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_##entry##_BIT_KHR) { Logf("%s | ", #entry); }
+#define VK_COMPOSITE_ALPHA_ENTRY(entry) if(SC.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_##entry##_BIT_KHR) { Logf("%s | ", #entry); }
 	VK_COMPOSITE_ALPHA_ENTRY(OPAQUE);
 	VK_COMPOSITE_ALPHA_ENTRY(PRE_MULTIPLIED);
 	VK_COMPOSITE_ALPHA_ENTRY(POST_MULTIPLIED);
@@ -1639,7 +1639,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 #undef VK_COMPOSITE_ALPHA_ENTRY
 	Log("\n");
 	Log("\t\tsupportedUsageFlags = ");
-#define VK_IMAGE_USAGE_ENTRY(entry) if(SurfaceCap.supportedUsageFlags & VK_IMAGE_USAGE_##entry) { Logf("%s | ", #entry); }
+#define VK_IMAGE_USAGE_ENTRY(entry) if(SC.supportedUsageFlags & VK_IMAGE_USAGE_##entry) { Logf("%s | ", #entry); }
 	VK_IMAGE_USAGE_ENTRY(TRANSFER_SRC_BIT);
 	VK_IMAGE_USAGE_ENTRY(TRANSFER_DST_BIT);
 	VK_IMAGE_USAGE_ENTRY(SAMPLED_BIT);
@@ -1654,7 +1654,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 	Log("\n");
 
 	//!< 最低よりも1枚多く取りたい、ただし最大値でクランプする(maxImageCount が0の場合は上限無し)
-	const auto ImageCount = (std::min)(SurfaceCap.minImageCount + 1, 0 == SurfaceCap.maxImageCount ? UINT32_MAX : SurfaceCap.maxImageCount);
+	const auto ImageCount = (std::min)(SC.minImageCount + 1, 0 == SC.maxImageCount ? UINT32_MAX : SC.maxImageCount);
 	Logf("\t\t\tImagCount = %d\n", ImageCount);
 
 	//!< サーフェスのフォーマットを選択
@@ -1662,14 +1662,14 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 	ColorFormat = SurfaceFormat.format; //!< カラーファーマットは覚えておく
 
 	//!< サーフェスのサイズを選択
-	SurfaceExtent2D = SelectSurfaceExtent(SurfaceCap, Width, Height);
+	SurfaceExtent2D = SelectSurfaceExtent(SC, Width, Height);
 	Logf("\t\t\tSurfaceExtent = %d x %d\n", SurfaceExtent2D.width, SurfaceExtent2D.height);
 
 	//!< レイヤー、ステレオレンダリング等をしたい場合は1以上になるが、ここでは1
 	uint32_t ImageArrayLayers = 1;
 
 	//!< サポートされないImageUsageFlagが指定された
-	assert((IUF & SurfaceCap.supportedUsageFlags) && "Specified ImageUsageFlag is not supoorted");
+	assert((IUF & SC.supportedUsageFlags) && "Specified ImageUsageFlag is not supported");
 
 	//!< グラフィックとプレゼントのキューファミリが異なる場合はキューファミリインデックスの配列が必要、また VK_SHARING_MODE_CONCURRENT を指定すること
 	//!< (ただし VK_SHARING_MODE_CONCURRENT にするとパフォーマンスが落ちる場合がある)
@@ -1680,7 +1680,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 	}
 
 	//!< サーフェスを回転、反転等させるかどうか (Rotate, mirror surface or not)
-	const auto SurfaceTransform = (VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR & SurfaceCap.supportedTransforms) ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : SurfaceCap.currentTransform;
+	const auto SurfaceTransform = (VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR & SC.supportedTransforms) ? VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR : SC.currentTransform;
 
 	//!< サーフェスのプレゼントモードを選択
 	const auto SurfacePresentMode = SelectSurfacePresentMode(PD, Sfc);
@@ -1948,7 +1948,7 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 			.minDepth = MinDepth, .maxDepth = MaxDepth
 		})
 	};
-	//!< offset, extentで指定 (left, top, right, bottomで指定のDXとは異なるので注意)
+	//!< offset, extent で指定 (left, top, right, bottomで指定のDXとは異なるので注意)
 	ScissorRects = {
 		VkRect2D({ .offset = VkOffset2D({ .x = 0, .y = 0 }), .extent = VkExtent2D({ .width = static_cast<uint32_t>(Width), .height = static_cast<uint32_t>(Height) }) }),
 	};

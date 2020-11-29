@@ -60,7 +60,7 @@ void DXImage::CreateColorImage(ID3D12Resource** Resource, const D3D12_RESOURCE_S
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, RS, nullptr, IID_PPV_ARGS(Resource)));
 
 	std::array<UINT32, Width * Height> Whites;
-	std::fill(begin(Whites), end(Whites), Color);
+	std::ranges::fill(Whites, Color);
 
 	VERIFY_SUCCEEDED((*Resource)->WriteToSubresource(0, nullptr, data(Whites), Width * Height, static_cast<UINT>(size(Whites))));
 }
