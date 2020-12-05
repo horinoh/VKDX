@@ -312,7 +312,8 @@
 - USE_FULL_SCREEN
 	- TODO
 - USE_HDR
-	- TriangleDX... TODO(ハードウェア入手後)
+	- TriangleDX
+	- TODO(ハードウェア入手後)
 - USE_SHADER_REFLECTION
 	- *DX
 		- dxc 使用時、dxcompiler.dll が無いと怒られる場合は C:\Program Files (x86)\Windows Kits\10\bin\10.0.18362.0\x64 とかに存在するので、環境変数 Path に通しておく必要がある
@@ -476,7 +477,7 @@
 			* union代用
 		* std::format
 			* まだコンパイラが対応してない
-		*
+		* 
 			~~~
 			//template<typename T> requires is_integral_v<T> 
 			//T mod(T lhs, T rhs){ return lhs % rhs; }

@@ -2092,10 +2092,8 @@ void VK::CreateStorageTexelBuffer_Example()
 	}
 }
 
-void VK::CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const VkDescriptorSetLayoutCreateFlags Flags, const std::initializer_list<VkDescriptorSetLayoutBinding> il_DSLBs)
+void VK::CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const VkDescriptorSetLayoutCreateFlags Flags, const std::vector<VkDescriptorSetLayoutBinding>& DSLBs)
 {
-	const std::vector<VkDescriptorSetLayoutBinding> DSLBs(cbegin(il_DSLBs), cend(il_DSLBs));
-
 	const VkDescriptorSetLayoutCreateInfo DSLCI = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
 		.pNext = nullptr,
@@ -2107,11 +2105,8 @@ void VK::CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const VkDescripto
 	LOG_OK();
 }
 
-void VK::CreatePipelineLayout(VkPipelineLayout& PL, const std::initializer_list<VkDescriptorSetLayout> il_DSLs, const std::initializer_list<VkPushConstantRange> il_PCRs)
+void VK::CreatePipelineLayout(VkPipelineLayout& PL, const std::vector<VkDescriptorSetLayout>& DSLs, const std::vector<VkPushConstantRange>& PCRs)
 {
-	const std::vector<VkDescriptorSetLayout> DSLs(cbegin(il_DSLs), cend(il_DSLs));
-	const std::vector<VkPushConstantRange> PCRs(cbegin(il_PCRs), cend(il_PCRs));
-
 	const VkPipelineLayoutCreateInfo PLCI = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		.pNext = nullptr,
@@ -2127,10 +2122,8 @@ void VK::CreatePipelineLayout(VkPipelineLayout& PL, const std::initializer_list<
 //!< デスクリプタセットを個々に解放したい場合には .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT を指定する、
 //!< その場合断片化は自分で管理しなくてはならない (指定しない場合はプール毎にまとめて解放しかできない)
 //!< 1つのブールに対して、複数スレッドで同時にデスクリプタセットを確保することはできない (スレッド毎に別プールにすること)
-void VK::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreateFlags Flags, const std::initializer_list<VkDescriptorPoolSize> il_DPSs)
+void VK::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreateFlags Flags, const std::vector<VkDescriptorPoolSize>& DPSs)
 {
-	const std::vector<VkDescriptorPoolSize> DPSs(cbegin(il_DPSs), cend(il_DPSs));
-
 	uint32_t MaxSets = 0;
 	for (const auto& i : DPSs) {
 		MaxSets = (std::max)(MaxSets, i.descriptorCount);
@@ -2146,10 +2139,8 @@ void VK::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreate
 	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DP));
 }
 
-void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const std::initializer_list<VkDescriptorUpdateTemplateEntry> il_DUTEs, const VkDescriptorSetLayout DSL)
+void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const std::vector<VkDescriptorUpdateTemplateEntry>& DUTEs, const VkDescriptorSetLayout DSL)
 {
-	const std::vector<VkDescriptorUpdateTemplateEntry> DUTEs(cbegin(il_DUTEs), cend(il_DUTEs));
-
 	const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
 		.pNext = nullptr,
@@ -2164,9 +2155,8 @@ void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const s
 }
 
 //!< シェーダリソースを1つのコンテナオブジェクトにまとめる (型や数はセットレイアウトで定義され、ストレージはプールから確保される)
-//void VK::AllocateDescriptorSet(std::vector<VkDescriptorSet>& DSs, const VkDescriptorPool DP, const std::initializer_list <VkDescriptorSetLayout> il_DSLs)
+//void VK::AllocateDescriptorSet(std::vector<VkDescriptorSet>& DSs, const VkDescriptorPool DP, const std::vector <VkDescriptorSetLayout>& DSLs)
 //{
-//	const std::vector<VkDescriptorSetLayout> DSLs(cbegin(il_DSLs), cend(il_DSLs));
 //	DSs.resize(size(DSLs));
 //	const VkDescriptorSetAllocateInfo DSAI = {
 //		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -2180,14 +2170,11 @@ void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const s
 //}
 
 //!< vkUpdateDescriptorSetWithTemplate() の使用を推奨
-//void VK::UpdateDescriptorSet(const std::initializer_list <VkWriteDescriptorSet> il_WDSs, const std::initializer_list <VkCopyDescriptorSet> il_CDSs)
+//void VK::UpdateDescriptorSet(const std::vector<VkWriteDescriptorSet>& WDSs, const std::vector<VkCopyDescriptorSet>& CDSs)
 //{
 //	//!< dstArrayElement ... バインディング内での配列の開始添字 (VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT指定の場合は開始バイトオフセット)
 //	//!< descriptorCount ... 更新するデスクリプタセット個数 (VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT指定の場合は更新するバイト)
 //	//!< 指定 descriptorType に従って、pImageInfo, pBufferInfo, pTexelBufferView の適切な箇所へ指定すること
-//	const std::vector<VkWriteDescriptorSet> WDSs(cbegin(il_WDSs), cend(il_WDSs));
-//	const std::vector<VkCopyDescriptorSet> CDSs(cbegin(il_CDSs), cend(il_CDSs));
-//
 //	vkUpdateDescriptorSets(Device,
 //		static_cast<uint32_t>(size(WDSs)), data(WDSs),
 //		static_cast<uint32_t>(size(CDSs)), data(CDSs));
@@ -2214,18 +2201,15 @@ void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const s
 //	LOG_OK();
 //}
 
-void VK::CreateRenderPass(VkRenderPass& RP, const std::initializer_list<VkAttachmentDescription> il_ADs, const std::initializer_list<VkSubpassDescription> il_SDs, const std::initializer_list<VkSubpassDependency> il_Depends)
+void VK::CreateRenderPass(VkRenderPass& RP, const std::vector<VkAttachmentDescription>& ADs, const std::vector<VkSubpassDescription>& SDs, const std::vector<VkSubpassDependency>& Deps)
 {
-	const std::vector<VkAttachmentDescription> ADs(cbegin(il_ADs), cend(il_ADs));
-	const std::vector<VkSubpassDescription> SDs(cbegin(il_SDs), cend(il_SDs));
-	const std::vector<VkSubpassDependency> SDeps(cbegin(il_Depends), cend(il_Depends));
 	const VkRenderPassCreateInfo RPCI = {
 		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
 		.pNext = nullptr,
 		.flags = 0,
 		.attachmentCount = static_cast<uint32_t>(size(ADs)), .pAttachments = data(ADs),
 		.subpassCount = static_cast<uint32_t>(size(SDs)), .pSubpasses = data(SDs),
-		.dependencyCount = static_cast<uint32_t>(size(SDeps)), .pDependencies = data(SDeps)
+		.dependencyCount = static_cast<uint32_t>(size(Deps)), .pDependencies = data(Deps)
 	};
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
 }
@@ -2316,10 +2300,8 @@ void VK::CreateRenderPass(const VkAttachmentLoadOp LoadOp, const bool UseDepth)
 	}
 }
 
-void VK::CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::initializer_list<VkImageView> il_IVs)
+void VK::CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::vector<VkImageView>& IVs)
 {
-	const std::vector<VkImageView> IVs(cbegin(il_IVs), cend(il_IVs));
-
 	const VkFramebufferCreateInfo FCI = {
 		.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
 		.pNext = nullptr,

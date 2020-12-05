@@ -869,14 +869,13 @@ void DX::CreateUnorderedAccessTexture()
 }
 #endif
 
-template<> void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_list<D3D12_ROOT_PARAMETER> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags)
+template<> void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::vector<D3D12_ROOT_PARAMETER>& RPs, const std::vector<D3D12_STATIC_SAMPLER_DESC>& SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags)
 {
 	D3D12_FEATURE_DATA_ROOT_SIGNATURE FDRS = { .HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0 };
 	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, reinterpret_cast<void*>(&FDRS), sizeof(FDRS)));
 	assert(FDRS.HighestVersion >= D3D_ROOT_SIGNATURE_VERSION_1_0 && "");
 
-	const std::vector<D3D12_ROOT_PARAMETER> RPs(cbegin(il_RPs), cend(il_RPs));
-	const std::vector<D3D12_STATIC_SAMPLER_DESC> SSDs(cbegin(il_SSDs), cend(il_SSDs));
+#if 1
 	const D3D12_VERSIONED_ROOT_SIGNATURE_DESC VRSD = {
 		.Version = D3D_ROOT_SIGNATURE_VERSION_1_0,
 		.Desc_1_0 = D3D12_ROOT_SIGNATURE_DESC({
@@ -887,20 +886,28 @@ template<> void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::i
 	};
 	COM_PTR<ID3DBlob> ErrorBlob;
 	VERIFY_SUCCEEDED(D3D12SerializeVersionedRootSignature(&VRSD, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
-	//VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&VRSD.Desc_1_0, D3D_ROOT_SIGNATURE_VERSION_1_0, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
+#else
+	const D3D12_ROOT_SIGNATURE_DESC RSD = {
+		.NumParameters = static_cast<UINT>(size(RPs)), .pParameters = data(RPs),
+		.NumStaticSamplers = static_cast<UINT>(size(SSDs)), .pStaticSamplers = data(SSDs),
+		.Flags = Flags
+	};
+	COM_PTR<ID3DBlob> ErrorBlob;
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&VRSD.Desc_1_0, D3D_ROOT_SIGNATURE_VERSION_1_0, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
+#endif
 	LOG_OK();
 }
-template<> void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::initializer_list<D3D12_ROOT_PARAMETER1> il_RPs, const std::initializer_list<D3D12_STATIC_SAMPLER_DESC> il_SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags)
+
+//!< [ D3D12_ROOT_SIGNATURE_DESC と D3D12_ROOT_SIGNATURE_DESC1 の違い ]
+//!< D3D12_ROOT_SIGNATURE_DESC1 では D3D12_ROOT_PARAMETER -> D3D12_ROOT_PARAMETER1 に変更されている
+//!< D3D12_ROOT_PARAMETER1 では D3D12_ROOT_DESCRIPTOR -> D3D12_ROOT_DESCRIPTOR1 に変更されている
+//!< D3D12_ROOT_DESCRIPTOR1 では D3D12_ROOT_DESCRIPTOR_FLAGS Flags メンバが増えている
+template<> void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::vector<D3D12_ROOT_PARAMETER1>& RPs, const std::vector<D3D12_STATIC_SAMPLER_DESC>& SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags)
 {
 	D3D12_FEATURE_DATA_ROOT_SIGNATURE FDRS = { .HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1 };
 	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, reinterpret_cast<void*>(&FDRS), sizeof(FDRS)));
 	assert(FDRS.HighestVersion >= D3D_ROOT_SIGNATURE_VERSION_1_1 && "");
-
-	//!< D3D12_ROOT_SIGNATURE_DESC1 : D3D12_ROOT_PARAMETER が D3D12_ROOT_PARAMETER1 に変更されている
-	//!<	D3D12_ROOT_PARAMETER1 : D3D12_ROOT_DESCRIPTOR が D3D12_ROOT_DESCRIPTOR1 に変更されている
-	//!<		D3D12_ROOT_DESCRIPTOR1 : D3D12_ROOT_DESCRIPTOR_FLAGS Flags メンバが増えている
-	const std::vector<D3D12_ROOT_PARAMETER1> RPs(cbegin(il_RPs), cend(il_RPs));
-	const std::vector<D3D12_STATIC_SAMPLER_DESC> SSDs(cbegin(il_SSDs), cend(il_SSDs));
+	
 	const D3D12_VERSIONED_ROOT_SIGNATURE_DESC VRSD = {
 		.Version = D3D_ROOT_SIGNATURE_VERSION_1_1,
 		.Desc_1_1 = D3D12_ROOT_SIGNATURE_DESC1({
@@ -974,84 +981,117 @@ void DX::ProcessShaderReflection(ID3DBlob* Blob)
 	D3D12_SHADER_DESC SD;
 	VERIFY_SUCCEEDED(SR->GetDesc(&SD));
 
-	if (0 < SD.ConstantBuffers) { std::cout << "\tConstantBuffers" << std::endl; }
+	if (0 < SD.ConstantBuffers) { Log("\tConstantBuffers\n"); }
 	for (UINT i = 0; i < SD.ConstantBuffers; ++i) {
 		const auto CB = SR->GetConstantBufferByIndex(i);
 		D3D12_SHADER_BUFFER_DESC SBD;
 		VERIFY_SUCCEEDED(CB->GetDesc(&SBD));
-		std::cout << "\t\t" << SBD.Name << std::endl;
+		Logf("\t\t%s\n", SBD.Name);
 		for (UINT j = 0; j < SBD.Variables; ++j) {
 			const auto SRV = CB->GetVariableByIndex(j);
 			D3D12_SHADER_VARIABLE_DESC SVD;
 			VERIFY_SUCCEEDED(SRV->GetDesc(&SVD));
 			D3D12_SHADER_TYPE_DESC STD;
 			VERIFY_SUCCEEDED(SRV->GetType()->GetDesc(&STD));
-			std::cout << "\t\t\t" << SVD.Name << "\t" << STD.Name << std::endl;
+			Logf("\t\t\t%s\t%s\n", SVD.Name, STD.Name);
 		}
 	}
 
-	if (0 < SD.BoundResources) { std::cout << "\tBoundResources" << std::endl; }
+	if (0 < SD.BoundResources) { Log("\tBoundResources\n"); }
 	for (UINT i = 0; i < SD.BoundResources; ++i) {
 		D3D12_SHADER_INPUT_BIND_DESC SIBD;
 		VERIFY_SUCCEEDED(SR->GetResourceBindingDesc(i, &SIBD));
-		std::cout << "\t\t" << SIBD.Name << "\t";
-		switch (SIBD.Type) {
-		case D3D_SIT_CBUFFER: std::cout << "CBUFFER"; break;
-		case D3D_SIT_TBUFFER: break;
-		case D3D_SIT_TEXTURE: std::cout << "TEXTURE"; break;
-		case D3D_SIT_SAMPLER: std::cout << "SAMPLER"; break;
-		case D3D_SIT_UAV_RWTYPED: break;
-		case D3D_SIT_STRUCTURED: break;
-		case D3D_SIT_UAV_RWSTRUCTURED: break;
-		case D3D_SIT_BYTEADDRESS: break;
-		case D3D_SIT_UAV_RWBYTEADDRESS: break;
-		case D3D_SIT_UAV_APPEND_STRUCTURED: break;
-		case D3D_SIT_UAV_CONSUME_STRUCTURED: break;
-		case D3D_SIT_UAV_RWSTRUCTURED_WITH_COUNTER: break;
-		default: break;
-		}
-		std::cout << "(" << SIBD.BindPoint;
-		if (0 < SIBD.BindCount) { std::cout << "-" << SIBD.BindPoint + SIBD.BindCount; }
-		std::cout << ")";
+		Logf("\t\t%s\n", SIBD.Name);
 
-		if (D3D_SIT_TEXTURE == SIBD.Type) {
-			std::cout << SIBD.ReturnType;
-			std::cout << SIBD.Dimension;
+		Log("\t\t\tInput = ");
+#define SHADER_INPUT_TYPE_ENTRY(X) case D3D_SIT_##X: Log(#X); break;
+		switch (SIBD.Type) {
+			SHADER_INPUT_TYPE_ENTRY(CBUFFER)
+			SHADER_INPUT_TYPE_ENTRY(TBUFFER)
+			SHADER_INPUT_TYPE_ENTRY(TEXTURE)
+			SHADER_INPUT_TYPE_ENTRY(SAMPLER)
+			SHADER_INPUT_TYPE_ENTRY(UAV_RWTYPED)
+			SHADER_INPUT_TYPE_ENTRY(STRUCTURED)
+			SHADER_INPUT_TYPE_ENTRY(UAV_RWSTRUCTURED)
+			SHADER_INPUT_TYPE_ENTRY(BYTEADDRESS)
+			SHADER_INPUT_TYPE_ENTRY(UAV_RWBYTEADDRESS)
+			SHADER_INPUT_TYPE_ENTRY(UAV_APPEND_STRUCTURED)
+			SHADER_INPUT_TYPE_ENTRY(UAV_CONSUME_STRUCTURED)
+			SHADER_INPUT_TYPE_ENTRY(UAV_RWSTRUCTURED_WITH_COUNTER)
+			default: break;
 		}
-		std::cout << std::endl;
+#undef SIT_ENTRY
+	 	0 < SIBD.BindCount ? Logf("(%d-%d)", SIBD.BindPoint, SIBD.BindCount + SIBD.BindCount) : Logf("(%d)", SIBD.BindPoint);
+		Log("\n");
+
+		//!< ReturnType, Dimension はテクスチャの場合のみ
+		if (D3D_SIT_TEXTURE == SIBD.Type) {
+			Log("\t\t\tReturn = ");
+#define RETURN_TYPE_ENTRY(X) case D3D_RETURN_TYPE_##X: Log(#X); break;
+			switch (SIBD.ReturnType)
+			{
+				RETURN_TYPE_ENTRY(UNORM)
+				RETURN_TYPE_ENTRY(SNORM)
+				RETURN_TYPE_ENTRY(SINT)
+				RETURN_TYPE_ENTRY(UINT)
+				RETURN_TYPE_ENTRY(FLOAT)
+				RETURN_TYPE_ENTRY(MIXED)
+				RETURN_TYPE_ENTRY(DOUBLE)
+				RETURN_TYPE_ENTRY(CONTINUED)
+				default: break;
+			}
+#undef TYPE_ENTRY
+			Log("\n");
+
+			Log("\t\t\tDimension = ");
+#define DIMENSION_ENTRY(X) case D3D_SRV_DIMENSION_##X: Log(#X); break;
+			switch (SIBD.Dimension)
+			{
+				DIMENSION_ENTRY(UNKNOWN)
+				DIMENSION_ENTRY(BUFFER)
+				DIMENSION_ENTRY(TEXTURE1D)
+				DIMENSION_ENTRY(TEXTURE1DARRAY)
+				DIMENSION_ENTRY(TEXTURE2D)
+				DIMENSION_ENTRY(TEXTURE2DARRAY)
+				DIMENSION_ENTRY(TEXTURE2DMS)
+				DIMENSION_ENTRY(TEXTURE2DMSARRAY)
+				DIMENSION_ENTRY(TEXTURE3D)
+				DIMENSION_ENTRY(TEXTURECUBE)
+				DIMENSION_ENTRY(TEXTURECUBEARRAY)
+				DIMENSION_ENTRY(BUFFEREX)
+				default: break;
+			}
+#undef DIMENSION_ENTRY
+			Log("\n");
+		}
 	}
 
-	if (0 < SD.InputParameters) { std::cout << "\tInputParameters" << std::endl; }
+#define COMPONENT_TYPE_ENTRY(X) case D3D_REGISTER_COMPONENT_##X: Log(#X); break;
+#define LOG_SIGNATURE_PARAMETER_DESC(X)	Logf("\t\t%s%d\t", X.SemanticName, X.SemanticIndex);\
+	switch (X.ComponentType)\
+	{\
+		COMPONENT_TYPE_ENTRY(UNKNOWN)\
+		COMPONENT_TYPE_ENTRY(UINT32)\
+		COMPONENT_TYPE_ENTRY(SINT32)\
+		COMPONENT_TYPE_ENTRY(FLOAT32)\
+		default: break;\
+	}\
+	Logf("(%s%s%s%s)\n", (X.Mask & 1) ? "X" : "-", (X.Mask & 2) ? "Y" : "-", (X.Mask & 4) ? "Z" : "-", (X.Mask & 8) ? "W" : "-");
+
+	if (0 < SD.InputParameters) { Logf("\tInputParameters\n"); }
 	for (UINT i = 0; i < SD.InputParameters; ++i) {
 		D3D12_SIGNATURE_PARAMETER_DESC SPD;
 		VERIFY_SUCCEEDED(SR->GetInputParameterDesc(i, &SPD));
-		std::cout << "\t\t" << SPD.SemanticName << SPD.SemanticIndex << "\t";
-		switch (SPD.ComponentType)
-		{
-		default:
-		case D3D_REGISTER_COMPONENT_UNKNOWN: std::cout << "UNKNOWN"; break;
-		case D3D_REGISTER_COMPONENT_UINT32: std::cout << "UINT32"; break;
-		case D3D_REGISTER_COMPONENT_SINT32: std::cout << "SINT32"; break;
-		case D3D_REGISTER_COMPONENT_FLOAT32: std::cout << "FLOAT32"; break;
-		}
-		std::cout << "(" << ((SPD.Mask & 1) ? "x" : "-") << ((SPD.Mask & 2) ? "y" : "-") << ((SPD.Mask & 4) ? "z" : "-") << ((SPD.Mask & 8) ? "w" : "-") << ")" << std::endl;
+		LOG_SIGNATURE_PARAMETER_DESC(SPD);
 	}
-
-	if (0 < SD.OutputParameters) { std::cout << "\tOutputParameters" << std::endl; }
+	if (0 < SD.OutputParameters) { Logf("\tOutputParameters\n"); }
 	for (UINT i = 0; i < SD.OutputParameters; ++i) {
 		D3D12_SIGNATURE_PARAMETER_DESC SPD;
 		VERIFY_SUCCEEDED(SR->GetOutputParameterDesc(i, &SPD));
-		std::cout << "\t\t" << SPD.SemanticName << SPD.SemanticIndex << "\t";
-		switch (SPD.ComponentType)
-		{
-		default:
-		case D3D_REGISTER_COMPONENT_UNKNOWN: std::cout << "UNKNOWN"; break;
-		case D3D_REGISTER_COMPONENT_UINT32: std::cout << "UINT32"; break;
-		case D3D_REGISTER_COMPONENT_SINT32: std::cout << "SINT32"; break;
-		case D3D_REGISTER_COMPONENT_FLOAT32: std::cout << "FLOAT32"; break;
-		}
-		std::cout << "(" << ((SPD.Mask & 1) ? "x" : "-") << ((SPD.Mask & 2) ? "y" : "-") << ((SPD.Mask & 4) ? "z" : "-") << ((SPD.Mask & 8) ? "w" : "-") << ")" << std::endl;
+		LOG_SIGNATURE_PARAMETER_DESC(SPD);
 	}
+#undef LOG_SIGNATURE_PARAMETER_DESC
+#undef COMPONENT_TYPE_ENTRY
 }
 
 void DX::SetBlobPart(COM_PTR<ID3DBlob>& Blob)
