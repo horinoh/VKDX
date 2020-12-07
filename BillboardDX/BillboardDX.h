@@ -24,7 +24,7 @@ protected:
 		
 #pragma region FRAME_OBJECT
 		const D3D12_RANGE Range = { .Begin = offsetof(Transform, World), .End = offsetof(Transform, World) + sizeof(Tr.World) };
-		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[SwapChain->GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tr)), &Tr/*, &Range*/);
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tr)), &Tr/*, &Range*/);
 #pragma endregion
 	}
 	virtual void CreateTexture() override {

@@ -262,7 +262,7 @@ void CubeMapDX::PopulateCommandList(const size_t i)
 		{
 			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 
-			const std::array<D3D12_RECT, 0> Rects = {};
+			constexpr std::array<D3D12_RECT, 0> Rects = {};
 			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 
 #if !defined(USE_SKY_DOME)

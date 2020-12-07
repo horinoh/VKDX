@@ -262,7 +262,7 @@ void DisplacementDX::PopulateCommandList(const size_t i)
 		{
 			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 
-			const std::array<D3D12_RECT, 0> Rects = {};
+			constexpr std::array<D3D12_RECT, 0> Rects = {};
 			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 			const auto CDH_Depth = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			CL->ClearDepthStencilView(CDH_Depth, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));

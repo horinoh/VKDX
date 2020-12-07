@@ -1242,7 +1242,12 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
 		.NodeMask = 0, //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 		.CachedPSO = D3D12_CACHED_PIPELINE_STATE({.pCachedBlob = nullptr != CachedBlob ? CachedBlob->GetBufferPointer() : nullptr, .CachedBlobSizeInBytes = nullptr != CachedBlob ? CachedBlob->GetBufferSize() : 0 }),
-		.Flags = D3D12_PIPELINE_STATE_FLAG_NONE //!< D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG は Warp デバイスのみ
+#if defined(_DEBUG) && defined(USE_WARP)
+		//!< パイプラインがデバッグ用付加情報ありでコンパイルされる、WARP時のみ使用可能
+		.Flags = D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG 
+#else
+		.Flags = D3D12_PIPELINE_STATE_FLAG_NONE
+#endif
 	};
 
 	//!< レンダーターゲット数分だけ必要なもの
@@ -1313,8 +1318,8 @@ void DX::PopulateCommandList(const size_t i)
 
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET); {
 			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
-			const std::array<D3D12_RECT, 0> Rs = {};
-			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rs)), data(Rs));
+			constexpr std::array<D3D12_RECT, 0> Rects = {};
+			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 		} ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
 	VERIFY_SUCCEEDED(CL->Close());
@@ -1322,14 +1327,11 @@ void DX::PopulateCommandList(const size_t i)
 
 void DX::Draw()
 {
-	//PERFORMANCE_COUNTER();
-
 	WaitForFence();
 
-	DrawFrame(SwapChain->GetCurrentBackBufferIndex());
+	DrawFrame(GetCurrentBackBufferIndex());
 
-	const std::array CLs = { static_cast<ID3D12CommandList*>(COM_PTR_GET(GraphicsCommandLists[SwapChain->GetCurrentBackBufferIndex()])) };
-	CommandQueue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
+	Submit();
 	
 	Present();
 }
@@ -1337,11 +1339,6 @@ void DX::Dispatch()
 {
 	//!< #DX_TODO Dispatch実装
 	DEBUG_BREAK();
-}
-void DX::Present()
-{
-	//!< 垂直同期を待つ : 1
-	VERIFY_SUCCEEDED(SwapChain->Present(1, 0));
 }
 void DX::WaitForFence()
 {
@@ -1362,3 +1359,14 @@ void DX::WaitForFence()
 		}
 	}
 }
+void DX::Submit()
+{
+	const std::array CLs = { static_cast<ID3D12CommandList*>(COM_PTR_GET(GraphicsCommandLists[GetCurrentBackBufferIndex()])) };
+	CommandQueue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
+}
+void DX::Present()
+{
+	//!< 垂直同期を待つ : 1
+	VERIFY_SUCCEEDED(SwapChain->Present(1, 0));
+}
+

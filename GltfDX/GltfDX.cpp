@@ -641,7 +641,7 @@ void GltfDX::PopulateCommandList(const size_t i)
 			auto SCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 			const auto DDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 
-			const std::array<D3D12_RECT, 0> Rects = {};
+			constexpr std::array<D3D12_RECT, 0> Rects = {};
 			CL->ClearRenderTargetView(SCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 			CL->ClearDepthStencilView(DDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 

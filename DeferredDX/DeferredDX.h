@@ -21,7 +21,7 @@ protected:
 		Degree += 1.0f;
 
 #pragma region FRAME_OBJECT
-		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[SwapChain->GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tr)), &Tr);
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tr)), &Tr);
 #pragma endregion
 	}
 

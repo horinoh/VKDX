@@ -25,7 +25,7 @@
 #endif
 
 //!< ソフトウエアラスタライザ (Software rasterizer)
-//#define USE_WARP 
+//#define USE_WARP
 
 #define USE_STATIC_SAMPLER //!< [ TextureDX ] VK:USE_IMMUTABLE_SAMPLER相当
 
@@ -243,11 +243,13 @@ protected:
 
 	virtual void PopulateCommandList(const size_t i);
 
+	virtual UINT GetCurrentBackBufferIndex() const { return SwapChain->GetCurrentBackBufferIndex(); }
 	virtual void DrawFrame([[maybe_unused]] const UINT i) {}
 	virtual void Draw();
 	virtual void Dispatch();
-	virtual void Present();
 	virtual void WaitForFence();
+	virtual void Submit();
+	virtual void Present();
 
 protected:
 #if defined(_DEBUG) || defined(USE_PIX)

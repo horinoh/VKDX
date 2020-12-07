@@ -278,7 +278,7 @@ void DeferredDX::PopulateCommandList(const size_t i)
 			auto RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart();
 			const auto DsvCDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			{
-				const std::array<D3D12_RECT, 0> Rects = {};
+				constexpr std::array<D3D12_RECT, 0> Rects = {};
 				CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects)); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
 #pragma region MRT
 				CL->ClearRenderTargetView(RtvCDH, data(std::array<FLOAT, 4>({ 0.5f, 0.5f, 1.0f, 1.0f })), static_cast<UINT>(size(Rects)), data(Rects)); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);

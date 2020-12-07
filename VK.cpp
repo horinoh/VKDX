@@ -2408,7 +2408,7 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 	//!< ビューポート (Viewport)
 	//!< VkDynamicState を使用するため、ここではビューポート(シザー)の個数のみ指定している (To use VkDynamicState, specify only count of viewport(scissor) here)
 	//!< 後に vkCmdSetViewport(), vkCmdSetScissor() で指定する (Use vkCmdSetViewport(), vkCmdSetScissor() later)
-	const VkPipelineViewportStateCreateInfo PVSCI = {
+	constexpr VkPipelineViewportStateCreateInfo PVSCI = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
 		.pNext = nullptr,
 		.flags = 0,
@@ -2426,8 +2426,8 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 	assert(PRSCI.lineWidth <= 1.0f&& "");
 
 	//!< マルチサンプル (Multisample)
-	const VkSampleMask SM = 0xffffffff; //!< 0xffffffff を指定する場合は、代わりに nullptr でもよい
-	const VkPipelineMultisampleStateCreateInfo PMSCI = {
+	constexpr VkSampleMask SM = 0xffffffff; //!< 0xffffffff を指定する場合は、代わりに nullptr でもよい
+	constexpr VkPipelineMultisampleStateCreateInfo PMSCI = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
 		.pNext = nullptr,
 		.flags = 0,
@@ -2459,12 +2459,12 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 	};
 
 	//!< ダイナミックステート (DynamicState)
-	const std::array DSs = {
+	constexpr std::array DSs = {
 		VK_DYNAMIC_STATE_VIEWPORT,
 		VK_DYNAMIC_STATE_SCISSOR,
 		//VK_DYNAMIC_STATE_DEPTH_BIAS,
 	};
-	const VkPipelineDynamicStateCreateInfo PDSCI = {
+	constexpr VkPipelineDynamicStateCreateInfo PDSCI = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
 		.pNext = nullptr,
 		.flags = 0,
@@ -2504,11 +2504,7 @@ void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayo
 		})
 	};
 	//!< VKでは1コールで複数のパイプラインを作成することもできるが、DXに合わせて1つしか作らないことにしておく
-	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Dev,
-		PC,
-		static_cast<uint32_t>(size(GPCIs)), data(GPCIs),
-		GetAllocationCallbacks(),
-		&PL));
+	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Dev, PC, static_cast<uint32_t>(size(GPCIs)), data(GPCIs), GetAllocationCallbacks(), &PL));
 
 	LOG_OK();
 }
@@ -2713,7 +2709,7 @@ void VK::PopulateCommandBuffer(const size_t i)
 	//!< * VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT		... デバイスでまだ実行されている間に、コマンドバッファを再度サブミットする必要がある場合に指定 (パフォーマンスの観点からは避けるべき)
 	//!< * VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT	... セカンダリコマンドバッファでかつレンダーパス内の場合に指定する
 	const auto CB = CommandBuffers[i];
-	const VkCommandBufferBeginInfo CBBI = {
+	constexpr VkCommandBufferBeginInfo CBBI = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		.pNext = nullptr,
 		.flags = 0,
@@ -2737,9 +2733,9 @@ void VK::PopulateCommandBuffer(const size_t i)
 
 #ifdef USE_MANUAL_CLEAR
 		ClearColor(CB, SwapchainImages[i], Colors::Blue);
-		const std::array CVs = { VkClearValue({}), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
+		constexpr std::array CVs = { VkClearValue({}), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 #else
-		const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
+		constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 #endif
 		const VkRenderPassBeginInfo RPBI = {
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -2756,42 +2752,19 @@ void VK::PopulateCommandBuffer(const size_t i)
 
 void VK::Draw()
 {
-	//PERFORMANCE_COUNTER();
-
-	//!< サブミットしたコマンドの完了を待つ
-	const std::array Fences = { Fence };
-	VERIFY_SUCCEEDED(vkWaitForFences(Device, static_cast<uint32_t>(size(Fences)), data(Fences), VK_TRUE, (std::numeric_limits<uint64_t>::max)()));
-	vkResetFences(Device, static_cast<uint32_t>(size(Fences)), data(Fences));
+	WaitForFence();
 
 	//!< 次のイメージが取得できるまでブロック(タイムアウトは指定可能)、取得できたからといってイメージは直ぐに目的に使用可能とは限らない
 	//!< (引数で指定した場合)使用可能になるとフェンスやセマフォがシグナルされる
 	//!< ここではセマフォを指定し、このセマフォはサブミット時に使用する(サブミットしたコマンドがプレゼンテーションを待つように指示している)
-	//!< (ハンドルではなく)SwapchainImages のインデックスが　SwapchainImageIndex に返る (Index(not handle) of SwapchainImages will return to SwapchainImageIndex)
+	//!<	VK_SUBOPTIMAL_KHR : イメージは使用可能ではあるがプレゼンテーションエンジンにとってベストではない状態
+	//!<	VK_ERROR_OUT_OF_DATE_KHR : イメージは使用不可で再作成が必要
 	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, NextImageAcquiredSemaphore, VK_NULL_HANDLE, &SwapchainImageIndex));
-	//!< vkAcquireNextImageKHR が VK_SUBOPTIMAL_KHR を返した場合、イメージは使用可能ではあるがプレゼンテーションエンジンにとってベストではない状態
-	//!< vkAcquireNextImageKHR が VK_ERROR_OUT_OF_DATE_KHR を返した場合、イメージは使用不可で再作成が必要
 
-	DrawFrame(SwapchainImageIndex);
+	DrawFrame(GetCurrentBackBufferIndex());
 	
-	//!< コマンドは指定のパイプラインステージに到達するまで実行され、そこでセマフォがシグナルされるまで待つ
-	const std::array WaitSems = { NextImageAcquiredSemaphore };
-	const std::array WaitStages = { VkPipelineStageFlags(VK_PIPELINE_STAGE_TRANSFER_BIT) };
-	assert(size(WaitSems) == size(WaitStages) && "Must be same size");
-	//!< 実行するコマンドバッファ
-	const std::array CBs = { CommandBuffers[SwapchainImageIndex], };
-	//!< 完了時にシグナルされるセマフォ(RenderFinishedSemaphore)
-	const std::array SigSems = { RenderFinishedSemaphore };
-	const std::array SIs = {
-		VkSubmitInfo({
-			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			.pNext = nullptr,
-			.waitSemaphoreCount = static_cast<uint32_t>(size(WaitSems)), .pWaitSemaphores = data(WaitSems), .pWaitDstStageMask = data(WaitStages), //!< 次イメージが取得できる(プレゼント完了)までウエイト
-			.commandBufferCount = static_cast<uint32_t>(size(CBs)), .pCommandBuffers = data(CBs),
-			.signalSemaphoreCount = static_cast<uint32_t>(size(SigSems)), .pSignalSemaphores = data(SigSems) //!< 描画完了を通知する
-		}),
-	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(size(SIs)), data(SIs), Fence));
-
+	Submit();
+	
 	Present();
 }
 void VK::Dispatch()
@@ -2813,11 +2786,39 @@ void VK::Dispatch()
 	};
 	VERIFY_SUCCEEDED(vkQueueSubmit(ComputeQueue, static_cast<uint32_t>(size(SIs)), data(SIs), ComputeFence));
 }
+void VK::WaitForFence()
+{
+	//!< サブミットしたコマンドの完了を待つ
+	const std::array Fences = { Fence };
+	VERIFY_SUCCEEDED(vkWaitForFences(Device, static_cast<uint32_t>(size(Fences)), data(Fences), VK_TRUE, (std::numeric_limits<uint64_t>::max)()));
+	vkResetFences(Device, static_cast<uint32_t>(size(Fences)), data(Fences));
+}
+void VK::Submit()
+{
+	//!< コマンドは指定のパイプラインステージに到達するまで実行され、そこでセマフォがシグナルされるまで待つ
+	const std::array WaitSems = { NextImageAcquiredSemaphore };
+	const std::array WaitStages = { VkPipelineStageFlags(VK_PIPELINE_STAGE_TRANSFER_BIT) };
+	assert(size(WaitSems) == size(WaitStages) && "Must be same size");
+	//!< 実行するコマンドバッファ
+	const std::array CBs = { CommandBuffers[GetCurrentBackBufferIndex()], };
+	//!< 完了時にシグナルされるセマフォ(RenderFinishedSemaphore)
+	const std::array SigSems = { RenderFinishedSemaphore };
+	const std::array SIs = {
+		VkSubmitInfo({
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.pNext = nullptr,
+			.waitSemaphoreCount = static_cast<uint32_t>(size(WaitSems)), .pWaitSemaphores = data(WaitSems), .pWaitDstStageMask = data(WaitStages), //!< 次イメージが取得できる(プレゼント完了)までウエイト
+			.commandBufferCount = static_cast<uint32_t>(size(CBs)), .pCommandBuffers = data(CBs),
+			.signalSemaphoreCount = static_cast<uint32_t>(size(SigSems)), .pSignalSemaphores = data(SigSems) //!< 描画完了を通知する
+		}),
+	};
+	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(size(SIs)), data(SIs), Fence));
+}
 void VK::Present()
 {
 	//!< 同時に複数のプレゼントが可能だが、1つのスワップチェインからは1つのみ
 	const std::array Swapchains = { Swapchain };
-	const std::array ImageIndices = { SwapchainImageIndex };
+	const std::array ImageIndices = { GetCurrentBackBufferIndex() };
 	assert(size(Swapchains) == size(ImageIndices) && "Must be same");
 
 	//!< サブミット時に指定したセマフォ(RenderFinishedSemaphore)を待ってからプレゼントが行なわれる

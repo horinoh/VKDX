@@ -276,7 +276,7 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 
 			const auto RtvDH = RtvDescriptorHeaps[0];
 			auto RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart(); 
-			const std::array<D3D12_RECT, 0> Rects = {};
+			constexpr std::array<D3D12_RECT, 0> Rects = {};
 			CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects)); //RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
 #ifdef USE_DEPTH
 			const auto DsvDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart(); 

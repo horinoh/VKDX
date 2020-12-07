@@ -363,9 +363,12 @@ protected:
 	virtual void ClearDepthStencilAttachment(const VkCommandBuffer CommandBuffer, const VkClearDepthStencilValue& DepthStencil);
 	virtual void PopulateCommandBuffer(const size_t i);
 
+	virtual uint32_t GetCurrentBackBufferIndex() const { return SwapchainImageIndex; }
 	virtual void DrawFrame([[maybe_unused]] const uint32_t i) {}
 	virtual void Draw();
 	virtual void Dispatch();
+	virtual void WaitForFence();
+	virtual void Submit();
 	virtual void Present();
 
 #pragma region Allocation

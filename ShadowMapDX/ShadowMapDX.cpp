@@ -281,7 +281,7 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 			const auto& DsvDH = DsvDescriptorHeaps[0];
 			const auto DsvCDH = DsvDH->GetCPUDescriptorHandleForHeapStart();
 			{
-				const std::array<D3D12_RECT, 0> Rects = {};
+				constexpr std::array<D3D12_RECT, 0> Rects = {};
 				CL->ClearDepthStencilView(DsvCDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects)); //!< DSV(0)
 			}
 			{
@@ -323,7 +323,7 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 			auto DsvCDH = DsvDH->GetCPUDescriptorHandleForHeapStart();
 			DsvCDH.ptr += Device->GetDescriptorHandleIncrementSize(DsvDH->GetDesc().Type); 
 			{
-				const std::array<D3D12_RECT, 0> Rects = {};
+				constexpr std::array<D3D12_RECT, 0> Rects = {};
 				CL->ClearRenderTargetView(ScCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 				CL->ClearDepthStencilView(DsvCDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects)); //!< DSV(1)
 			}
