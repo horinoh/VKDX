@@ -77,9 +77,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <FxCompile Include="CubeMapDX.ds.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
@@ -107,5 +104,8 @@
     <FxCompile Include="CubeMapDX_sd.ds.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

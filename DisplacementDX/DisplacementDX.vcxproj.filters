@@ -77,9 +77,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <FxCompile Include="DisplacementDX.hs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
@@ -95,5 +92,8 @@
     <FxCompile Include="DisplacementDX.gs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

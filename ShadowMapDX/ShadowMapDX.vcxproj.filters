@@ -71,9 +71,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <FxCompile Include="ShadowMapDX.gs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
@@ -98,5 +95,8 @@
     <FxCompile Include="ShadowMapDX_sm_1.vs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>
