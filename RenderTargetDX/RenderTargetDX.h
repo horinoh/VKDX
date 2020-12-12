@@ -156,7 +156,6 @@ protected:
 				.Flags = D3D12_DSV_FLAG_NONE,
 				.Texture2D = D3D12_TEX2D_DSV({ .MipSlice = 0 })
 				}));
-			//DepthStencilViewDescs.back().Texture2D = { 0 };
 		}
 #endif
 	}

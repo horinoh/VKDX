@@ -184,7 +184,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
-            /*HDC hdc =*/BeginPaint(hWnd, &ps);
+			[[maybe_unused]] HDC hdc = BeginPaint(hWnd, &ps);
 #pragma region Code
 			if (nullptr != Inst) {
 				Inst->OnPaint(hWnd, hInst);

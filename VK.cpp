@@ -1042,6 +1042,7 @@ void VK::EnumeratePhysicalDeviceProperties(const VkPhysicalDeviceProperties& PDP
 	PROPERTY_LIMITS_ENTRY(maxPushConstantsSize);
 	PROPERTY_LIMITS_ENTRY(maxFragmentOutputAttachments);
 	PROPERTY_LIMITS_ENTRY(maxColorAttachments);
+	PROPERTY_LIMITS_ENTRY(maxViewports);
 #undef PROPERTY_LIMITS_ENTRY
 }
 void VK::EnumeratePhysicalDeviceFeatures(const VkPhysicalDeviceFeatures& PDF)

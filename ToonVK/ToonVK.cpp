@@ -183,7 +183,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
-            /*HDC hdc =*/BeginPaint(hWnd, &ps);
+			[[maybe_unused]] HDC hdc = BeginPaint(hWnd, &ps);
             // TODO: Add any drawing code that uses hdc here...
 #pragma region Code
 			if (nullptr != Inst) {

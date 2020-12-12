@@ -345,9 +345,10 @@
 ## プロジェクトの追加方法 (自分用覚書)
  * ソリューションを右クリック - Add - New Project で Windows Desktop Application
  * プロジェクトを右クリック - Retarget SDK Verson で 10以上にする
- * プロジェクト右クリック - Property - All Configurations にする - C/C++ - Language - C++ Language Standard - ISO C++17 Standard を選択しておく(vs2019のデフォルトはC++14)
+ * プロジェクト右クリック - Property - All Configurations にする - C/C++ - Language - C++ Language Standard - Preview - Features from the Latest... を選択しておく(vs2019のデフォルトはC++14)
  * プロジェクト右クリック - Property - All Configurations にする - C/C++ - General - Warning Level を Level4、Treat Warnings As Errors を Yes にする
  * プロジェクト右クリック - Property - All Configurations にする - C/C++ - Precompiled headers - Precompiled Header を Use(/Yu) 、Precompiled Header Files を framework.h にする
+ * プロジェクト右クリック - Property - All Configurations にする - C/C++ - Command Line - Additional Options に /await と記述
  * Source Files に framework.cpp(内容空で作成)を追加
  	* framewordk.cpp に対してのみ C/C++ - Precompiled headers - Precompiled Header を Create(/Yc) にする
  * framework.h(旧stdafx.h)は既存のものを参考に編集
@@ -355,7 +356,7 @@
 #### DX
  * WinPixEventRuntimeのインストール
 	* 右クリック - Manage NuGet Packages - Browse - WinPixEventRuntimeで検索 - インストール
- * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/HLSL.props、Props/RS.props. (Props/DXTK.prop, Props/GLTF.prop)
+ * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/HLSL.props、Props/RS.props. (Props/DXTK.prop, Props/GLTF.prop, Props/HOLO.prop)
  * Header Files に Win.h、DX.h、DXExt.h、(DXImage.h) を追加 
  * Source Files に Win.cpp、DX.cpp、DXExt.cpp、(DXImage.cpp) を追加
  * XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
@@ -367,7 +368,7 @@
 * ルートシグネチャ用HLSL XxxDX.rs.hlsl を作成する
 
 #### VK
- * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop、(Props/GLI.prop, Props/GLTF.prop)
+ * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop、(Props/GLI.prop, Props/GLTF.prop, Props/HOLO.prop)
  * Header Files に Win.h、VK.h、VKExt.h、(VKImage.h) を追加
  * Source Files に Win.cpp、VK.cpp、VKExt.cpp、(VKImage.cpp) を追加
  * XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
@@ -440,6 +441,11 @@
  #include <SDL.h>
  #pragma comment(lib, "SDL2.lib")
  ~~~
+
+ ## HoloPlay
+ * [HoloPlayService](https://lookingglassfactory.com/software) をインストールしておく
+ * HoloPlayCoreSDK\HoloPlayCore\dylib\Win64 を環境変数にPATHに通しておく
+
  -->
 
 <!--
