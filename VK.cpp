@@ -1951,7 +1951,7 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 	};
 	//!< offset, extent ‚ÅŽw’è (left, top, right, bottom‚ÅŽw’è‚ÌDX‚Æ‚ÍˆÙ‚È‚é‚Ì‚Å’ˆÓ)
 	ScissorRects = {
-		VkRect2D({ .offset = VkOffset2D({ .x = 0, .y = 0 }), .extent = VkExtent2D({ .width = static_cast<uint32_t>(Width), .height = static_cast<uint32_t>(Height) }) }),
+		VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = VkExtent2D({.width = static_cast<uint32_t>(Width), .height = static_cast<uint32_t>(Height) }) }),
 	};
 
 	LOG_OK();

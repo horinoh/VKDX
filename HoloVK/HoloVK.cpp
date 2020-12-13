@@ -244,8 +244,8 @@ void HoloVK::CreateViewport(const float Width, const float Height, const float M
 		const auto W = QS.GetViewWidth(), H = QS.GetViewHeight();
 		for (auto i = 0; i < QS.GetViewRow(); ++i) {
 			for (auto j = 0; j < QS.GetViewColumn(); ++j) {
-				const auto X = j * W, Y = QS.GetHeight() - (i + 1) * H;
-				QuiltViewports.emplace_back(VkViewport({ .x = static_cast<float>(X), .y = static_cast<float>(Y), .width = static_cast<float>(W), .height = static_cast<float>(H), .minDepth = MinDepth, .maxDepth = MaxDepth }));
+				const auto X = j * W, Y = QS.GetHeight() - (i + 1) * H, BottomY = QS.GetHeight() - i * H;
+				QuiltViewports.emplace_back(VkViewport({ .x = static_cast<float>(X), .y = static_cast<float>(BottomY), .width = static_cast<float>(W), .height = -static_cast<float>(H), .minDepth = MinDepth, .maxDepth = MaxDepth }));
 				QuiltScissorRects.emplace_back(VkRect2D({ VkOffset2D({.x = X, .y = Y }), VkExtent2D({.width = static_cast<uint32_t>(W), .height = static_cast<uint32_t>(H) }) }));
 			}
 		}
