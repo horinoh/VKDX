@@ -24,7 +24,7 @@ INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+                     [[maybe_unused]] _In_ int       nCmdShow)
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
@@ -37,7 +37,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
-    if (!InitInstance (hInstance, nCmdShow))
+    if (!InitInstance (hInstance, nCmdShow/*SW_SHOWMAXIMIZED*/))
     {
         return FALSE;
     }
@@ -101,7 +101,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
 
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW/*WS_POPUPWINDOW*/,
       CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
 
    if (!hWnd)
@@ -230,17 +230,43 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
+void HoloVK::CreateViewport(const float Width, const float Height, const float MinDepth, const float MaxDepth)
+{
+	//!< Pass0
+	{
+		//!< キルトの構造
+		//!< ------------> RightMost
+		//!< ---------------------->
+		//!< ---------------------->
+		//!< ---------------------->
+		//!< LeftMost ------------->
+		const auto& QS = GetQuiltSetting();
+		const auto W = QS.GetViewWidth(), H = QS.GetViewHeight();
+		for (auto i = 0; i < QS.GetViewRow(); ++i) {
+			for (auto j = 0; j < QS.GetViewColumn(); ++j) {
+				const auto X = j * W, Y = QS.GetHeight() - (i + 1) * H;
+				QuiltViewports.emplace_back(VkViewport({ .x = static_cast<float>(X), .y = static_cast<float>(Y), .width = static_cast<float>(W), .height = static_cast<float>(H), .minDepth = MinDepth, .maxDepth = MaxDepth }));
+				QuiltScissorRects.emplace_back(VkRect2D({ VkOffset2D({.x = X, .y = Y }), VkExtent2D({.width = static_cast<uint32_t>(W), .height = static_cast<uint32_t>(H) }) }));
+			}
+		}
+	}
+
+	//!< Pass1
+	{
+		Super::CreateViewport(Width, Height, MinDepth, MaxDepth);
+	}
+}
 void HoloVK::PopulateCommandBuffer(const size_t i)
 {
-	//!< パス0
+	//!< Pass0
 	const auto RP0 = RenderPasses[0];
 	const auto FB0 = Framebuffers[0];
 
-	//!< パス1 
+	//!< Pass1
 	const auto RP1 = RenderPasses[1];
 	const auto FB1 = Framebuffers[i + 1];
 
-	//!< パス0 : セカンダリコマンドバッファ(メッシュ描画用)
+	//!< Pass0 : セカンダリコマンドバッファ(メッシュ描画用)
 	const auto SCB0 = SecondaryCommandBuffers[i];
 	{
 		const VkCommandBufferInheritanceInfo CBII = {
@@ -261,14 +287,22 @@ void HoloVK::PopulateCommandBuffer(const size_t i)
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB0, &CBBI)); {
 			const auto PL = Pipelines[0];
 			const auto& IDB = IndirectBuffers[0];
-			vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
-			vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 			vkCmdBindPipeline(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-			vkCmdDrawIndirect(SCB0, IDB.Buffer, 0, 1, 0);
+
+			const auto ViewTotal = GetQuiltSetting().GetViewTotal();
+			const auto ViewportMax = GetViewportMax();
+			const auto Repeat = ViewTotal / ViewportMax + (std::min)(ViewTotal % ViewportMax, 1);
+			for (auto j = 0; j < Repeat; ++j) {
+				const auto Start = j * ViewportMax;
+				const auto Count = (std::min)(ViewTotal - j * ViewportMax, ViewportMax);
+				vkCmdSetViewport(SCB0, 0, Count, &QuiltViewports[Start]);
+				vkCmdSetScissor(SCB0, 0, Count, &QuiltScissorRects[Start]);
+				vkCmdDrawIndirect(SCB0, IDB.Buffer, 0, 1, 0);
+			}
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
 	}
 
-	//!< パス1 : セカンダリコマンドバッファ(レンダーテクスチャ描画用)
+	//!< Pass1 : セカンダリコマンドバッファ(レンダーテクスチャ描画用)
 	const auto SCCount = size(SwapchainImages);
 	const auto SCB1 = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
 	{
@@ -310,10 +344,11 @@ void HoloVK::PopulateCommandBuffer(const size_t i)
 		.pInheritanceInfo = nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		const auto RenderArea = VkRect2D({ .offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D });
 
-		//!< パス0 : レンダーパス(メッシュ描画用)
+		//!< Pass0 : レンダーパス(メッシュ描画用)
 		{
+			const auto RenderArea = VkRect2D({ .offset = VkOffset2D({.x = 0, .y = 0 }), .extent = QuiltExtent2D });
+
 			const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 			const VkRenderPassBeginInfo RPBI = {
 				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -350,8 +385,10 @@ void HoloVK::PopulateCommandBuffer(const size_t i)
 				static_cast<uint32_t>(size(IMBs)), data(IMBs));
 		}
 
-		//!< パス1 : レンダーパス(レンダーテクスチャ描画用)
+		//!< Pass1 : レンダーパス(レンダーテクスチャ描画用)
 		{
+			const auto RenderArea = VkRect2D({ .offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D });
+
 			const std::array<VkClearValue, 0> CVs = {};
 			const VkRenderPassBeginInfo RPBI = {
 				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

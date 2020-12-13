@@ -332,7 +332,9 @@
 			layout (input_attachment_index = 0, set = 0, binding = 0) uniform subpassInput XXX;
 			vec3 Color = subpassLoad(XXX).rgb;
 			~~~
-
+- USE_HOLO
+	- HoloDX, HoloVK
+	
 #### トラブルシューティング
 * 「このプロジェクトは、このコンピュータ上にないNugetパッケージを参照しています」と出る場合
 	* まず VS を最新にアップデートする、それでダメなら以下を試す

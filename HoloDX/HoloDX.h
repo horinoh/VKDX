@@ -4,19 +4,24 @@
 
 #pragma region Code
 #include "../DXExt.h"
+#include "../Holo.h"
 
-class HoloDX : public DXExt
+class HoloDX : public DXExt, public Holo
 {
 private:
 	using Super = DXExt;
 public:
-	HoloDX() : Super() {}
+	HoloDX() : Super(), Holo() {
+		const auto& QS = GetQuiltSetting();
+		QuiltWidth = static_cast<UINT64>(QS.GetWidth());
+		QuiltHeight = static_cast<UINT>(QS.GetHeight());
+	}
 	virtual ~HoloDX() {}
 
 protected:
 	virtual void CreateCommandList() override {
 		Super::CreateCommandList();
-		//!< パス1 : バンドルコマンドリスト
+		//!< Pass1 : バンドルコマンドリスト
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
@@ -27,13 +32,13 @@ protected:
 	}
 
 	virtual void CreateIndirectBuffer() override {
-		//!< パス0 : インダイレクトバッファ(メッシュ描画用)
+		//!< Pass0 : インダイレクトバッファ(メッシュ描画用)
 		CreateIndirectBuffer_DrawIndexed(1, 1);
-		//!< パス1 : インダイレクトバッファ(フルスクリーン描画用)
+		//!< Pass1 : インダイレクトバッファ(フルスクリーン描画用)
 		CreateIndirectBuffer_Draw(4, 1);
 	}
 	virtual void CreateStaticSampler() override {
-		//!< パス1 : スタティックサンプラ
+		//!< Pass1 : スタティックサンプラ
 		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
 			.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR,
 			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
@@ -46,7 +51,7 @@ protected:
 			}));
 	}
 	virtual void CreateRootSignature() override {
-		//!< パス0 : ルートシグネチャ
+		//!< Pass0 : ルートシグネチャ
 		{
 			RootSignatures.emplace_back(COM_PTR<ID3D12RootSignature>());
 			COM_PTR<ID3DBlob> Blob;
@@ -62,7 +67,7 @@ protected:
 #endif
 			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.back())));
 		}
-		//!< パス1 : ルートシグネチャ
+		//!< Pass1 : ルートシグネチャ
 		{
 			RootSignatures.emplace_back(COM_PTR<ID3D12RootSignature>());
 			COM_PTR<ID3DBlob> Blob;
@@ -104,7 +109,7 @@ protected:
 			const D3D12_RESOURCE_DESC RD = {
 				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
 				.Alignment = 0,
-				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
+				.Width = QuiltWidth, .Height = QuiltHeight,
 				.DepthOrArraySize = 1,
 				.MipLevels = 1,
 				.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
@@ -136,7 +141,7 @@ protected:
 			const D3D12_RESOURCE_DESC RD = {
 				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
 				.Alignment = 0,
-				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
+				.Width = QuiltWidth, .Height = QuiltHeight,
 				.DepthOrArraySize = 1,
 				.MipLevels = 1,
 				.Format = DXGI_FORMAT_D24_UNORM_S8_UINT,
@@ -157,7 +162,7 @@ protected:
 	}
 
 	virtual void CreateDescriptorHeap() override {
-		//!< パス0 : レンダーターゲット
+		//!< Pass0 : レンダーターゲット
 		{
 			{
 				RtvDescriptorHeaps.emplace_back(COM_PTR<ID3D12DescriptorHeap>());
@@ -170,7 +175,7 @@ protected:
 				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.back())));
 			}
 		}
-		//!< パス1 : シェーダリソース
+		//!< Pass1 : シェーダリソース
 		{
 			CbvSrvUavDescriptorHeaps.emplace_back(COM_PTR<ID3D12DescriptorHeap>());
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
@@ -179,7 +184,7 @@ protected:
 	}
 	virtual void CreateDescriptorView() override {
 		assert(2 == size(ImageResources) && "");
-		//!< パス0 : レンダーターゲットビュー
+		//!< Pass0 : レンダーターゲットビュー
 		{
 			{
 				const auto& DH = RtvDescriptorHeaps[0];
@@ -192,7 +197,7 @@ protected:
 				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[1]), &DepthStencilViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
 		}
-		//!< パス1 : シェーダリソースビュー
+		//!< Pass1 : シェーダリソースビュー
 		{
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
@@ -204,7 +209,7 @@ protected:
 
 	virtual void CreateShaderBlobs() override {
 		const auto ShaderPath = GetBasePath();
-		//!< パス0 : シェーダブロブ
+		//!< Pass0 : シェーダブロブ
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
@@ -215,7 +220,7 @@ protected:
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".hs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".gs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
-		//!< パス1 : シェーダブロブ
+		//!< Pass1 : シェーダブロブ
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
@@ -267,9 +272,9 @@ protected:
 		const std::vector RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
-		//!< パス0 : パイプラインステート
+		//!< Pass0 : パイプラインステート
 		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RTBDs, RD, DSD_0, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, RTVs, &PLS, TEXT("0")));
-		//!< パス1 : パイプラインステート
+		//!< Pass1 : パイプラインステート
 		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RTBDs, RD, DSD_1, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs, &PLS, TEXT("1")));
 #else
 		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RTBDs, RD, DSD_0, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, RTVs, nullptr, nullptr));
@@ -277,6 +282,17 @@ protected:
 #endif	
 		for (auto& i : Threads) { i.join(); }
 	}
+
+	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f) override;
+
 	virtual void PopulateCommandList(const size_t i) override;
+
+	virtual int GetViewportMax() const override { return D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE; }
+
+protected:
+	UINT64 QuiltWidth;
+	UINT QuiltHeight;
+	std::vector<D3D12_VIEWPORT> QuiltViewports;
+	std::vector<D3D12_RECT> QuiltScissorRects;
 };
 #pragma endregion

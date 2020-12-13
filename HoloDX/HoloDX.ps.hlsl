@@ -1,6 +1,7 @@
 struct IN
 {
 	float4 Position : SV_POSITION;
+    uint Viewport : SV_ViewportArrayIndex;
 };
 struct OUT
 {

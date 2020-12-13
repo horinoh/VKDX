@@ -2,12 +2,13 @@
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
 
-layout (triangles, invocations = 1) in;
+layout (triangles, invocations = 16) in;
 layout (triangle_strip, max_vertices = 3) out;
 void main()
 {
 	for(int i=0;i<gl_in.length();++i) {
 		gl_Position = gl_in[i].gl_Position;
+		gl_ViewportIndex = gl_InvocationID; //!< GSインスタンシング(ビューポート毎)
 		EmitVertex();
 	}
 	EndPrimitive();	

@@ -24,7 +24,7 @@ INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
                      _In_opt_ HINSTANCE hPrevInstance,
                      _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+                     [[maybe_unused]] _In_ int       nCmdShow)
 {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
@@ -37,7 +37,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
-    if (!InitInstance (hInstance, nCmdShow))
+    if (!InitInstance (hInstance, nCmdShow/*SW_SHOWMAXIMIZED*/))
     {
         return FALSE;
     }
@@ -101,7 +101,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance; // Store instance handle in our global variable
 
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW/*WS_POPUPWINDOW*/,
       CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
 
    if (!hWnd)
@@ -230,13 +230,41 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
+
+void HoloDX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth, const FLOAT MaxDepth)
+{
+	//!< Pass0
+	{
+		//!< キルトの構造
+		//!< ------------> RightMost
+		//!< ---------------------->
+		//!< ---------------------->
+		//!< ---------------------->
+		//!< LeftMost ------------->
+		const auto& QS = GetQuiltSetting();
+		const auto W = QS.GetViewWidth(), H = QS.GetViewHeight();
+		for (auto i = 0; i < QS.GetViewRow(); ++i) {
+			for (auto j = 0; j < QS.GetViewColumn(); ++j) {
+				const auto X = j * W, Y = QS.GetHeight() - (i + 1) * H;
+				QuiltViewports.emplace_back(D3D12_VIEWPORT({ .TopLeftX = static_cast<FLOAT>(X), .TopLeftY = static_cast<FLOAT>(Y), .Width = static_cast<FLOAT>(W), .Height = static_cast<FLOAT>(H), .MinDepth = MinDepth, .MaxDepth = MaxDepth }));
+				QuiltScissorRects.emplace_back(D3D12_RECT({ .left = X, .top = Y, .right = static_cast<LONG>(X + W), .bottom = static_cast<LONG>(Y + H) }));
+			}
+		}
+	}
+
+	//!< Pass1
+	{
+		Super::CreateViewport(Width, Height, MinDepth, MaxDepth);
+	}
+}
+
 void HoloDX::PopulateCommandList(const size_t i)
 {
 	const auto PS0 = COM_PTR_GET(PipelineStates[0]);
 	const auto PS1 = COM_PTR_GET(PipelineStates[1]);
 
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-	//!< パス0 : バンドルコマンドリスト(メッシュ描画用)
+	//!< Pass0 : バンドルコマンドリスト(メッシュ描画用)
 	const auto BCL0 = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	VERIFY_SUCCEEDED(BCL0->Reset(BCA, PS0));
 	{
@@ -247,7 +275,7 @@ void HoloDX::PopulateCommandList(const size_t i)
 	}
 	VERIFY_SUCCEEDED(BCL0->Close());
 
-	//!< パス1 : バンドルコマンドリスト(レンダーテクスチャ描画用)
+	//!< Pass1 : バンドルコマンドリスト(レンダーテクスチャ描画用)
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
 	const auto BCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + SCD.BufferCount]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
@@ -267,17 +295,14 @@ void HoloDX::PopulateCommandList(const size_t i)
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 		const auto IR = COM_PTR_GET(ImageResources[0]);
 
-		CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-		CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
-
-		//!< パス0 : (メッシュ描画用)
+		//!< Pass0 : (メッシュ描画用)
 		{
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 			const auto RtvDH = RtvDescriptorHeaps[0];
 			auto RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart();
 			constexpr std::array<D3D12_RECT, 0> Rects = {};
-			CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects)); //RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+			CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 #ifdef USE_DEPTH
 			const auto DsvDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			CL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
@@ -289,7 +314,16 @@ void HoloDX::PopulateCommandList(const size_t i)
 			CL->OMSetRenderTargets(static_cast<UINT>(size(RtvCDHs)), data(RtvCDHs), FALSE, nullptr);
 #endif
 
-			CL->ExecuteBundle(BCL0);
+			const auto ViewTotal = GetQuiltSetting().GetViewTotal();
+			const auto ViewportMax = GetViewportMax();
+			const auto Repeat = ViewTotal / ViewportMax + (std::min)(ViewTotal % ViewportMax, 1);
+			for (auto j = 0; j < Repeat; ++j) {
+				const auto Start = j * ViewportMax;
+				const auto Count = (std::min)(ViewTotal - j * ViewportMax, ViewportMax);
+				CL->RSSetViewports(Count, &QuiltViewports[Start]);
+				CL->RSSetScissorRects(Count, &QuiltScissorRects[Start]);
+				CL->ExecuteBundle(BCL0);
+			}
 		}
 
 		//!< リソースバリア : D3D12_RESOURCE_STATE_RENDER_TARGET -> D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
@@ -303,8 +337,11 @@ void HoloDX::PopulateCommandList(const size_t i)
 			CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 		}
 
-		//!< パス1 : (レンダーテクスチャ描画用)
+		//!< Pass1 : (レンダーテクスチャ描画用)
 		{
+			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
 			auto ScCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); ScCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);

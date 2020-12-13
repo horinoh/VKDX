@@ -5,9 +5,10 @@ struct IN
 struct OUT
 {
 	float4 Position : SV_POSITION;
+    uint Viewport : SV_ViewportArrayIndex;
 };
 
-[instance(1)]
+[instance(16)]
 [maxvertexcount(3)]
 void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instanceID : SV_GSInstanceID)
 {
@@ -16,6 +17,7 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 	[unroll]
 	for (int i = 0; i<3; ++i) {
 		Out.Position = float4(In[i].Position, 1.0f);
+        Out.Viewport = instanceID; //!< GSインスタンシング(ビューポート毎)
 		stream.Append(Out);
 	}
 	stream.RestartStrip();

@@ -3,13 +3,29 @@
 #include <iostream>
 #include <vector>
 
+#ifdef USE_HOLO
 #include <HoloPlayCore.h>
 #include <HoloPlayShaders.h>
+#endif
 
 class Holo
 {
 public:
+	struct QUILT_SETTING {
+		int GetSize() const { return Size; }
+		int GetWidth() const { return GetSize(); }
+		int GetHeight() const { return GetSize(); }
+		int GetViewColumn() const { return Column; }
+		int GetViewRow() const { return Row; }
+		int GetViewWidth() const { return GetWidth() / GetViewColumn(); }
+		int GetViewHeight() const { return GetHeight() / GetViewRow(); }
+		int GetViewTotal() const { return GetViewColumn() * GetViewRow(); }
+		int Size = 4096;
+		int Column = 5, Row = 9;
+	};
+
 	Holo() {
+#ifdef USE_HOLO
 		if (hpc_CLIERR_NOERROR == hpc_InitializeApp("TriangleDX.cpp", hpc_LICENSE_NONCOMMERCIAL)) {
 			{
 				std::vector<char> Buf(hpc_GetStateAsJSON(nullptr, 0));
@@ -27,11 +43,11 @@ public:
 				std::cout << "hpc_GetHoloPlayServiceVersion = " << data(Buf) << std::endl;
 			}
 
-			std::cout << "----------------------------------------------" << std::endl;
-			std::cout << hpc_LightfieldVertShaderGLSL << std::endl;
-			std::cout << "----------------------------------------------" << std::endl;
-			std::cout << hpc_LightfieldFragShaderGLSL << std::endl;
-			std::cout << "----------------------------------------------" << std::endl;
+			//std::cout << "----------------------------------------------" << std::endl;
+			//std::cout << hpc_LightfieldVertShaderGLSL << std::endl;
+			//std::cout << "----------------------------------------------" << std::endl;
+			//std::cout << hpc_LightfieldFragShaderGLSL << std::endl;
+			//std::cout << "----------------------------------------------" << std::endl;
 
 			std::cout << "hpc_GetNumDevices = " << hpc_GetNumDevices() << std::endl;
 			for (auto i = 0; i < hpc_GetNumDevices(); ++i) {
@@ -86,6 +102,44 @@ public:
 				//!< 8192 x 8192, column x row = 5 x 9 = 45views,
 			}
 		}
+
+		//!< ここでは最初のデバイスを選択 (Select 1st device here)
+		if(0 < hpc_GetNumDevices()) {
+			DeviceIndex = 0;
+
+			{
+				std::vector<char> Buf(hpc_GetDeviceType(GetDeviceIndex(), nullptr, 0));
+				hpc_GetDeviceType(GetDeviceIndex(), data(Buf), size(Buf));
+				std::string_view TypeStr(data(Buf));
+
+				if ("standard" == TypeStr) {
+					QuiltSetting = QUILT_SETTING({ .Size = 2048, .Column = 4, .Row = 8 });
+				}
+				else if ("8k" == TypeStr) {
+					QuiltSetting = QUILT_SETTING({ .Size = 8192, .Column = 5, .Row = 9 });
+				}
+				else {
+					QuiltSetting = QUILT_SETTING({ .Size = 4096, .Column = 5, .Row = 9 });
+				}
+			}
+		}
+
+		std::cout << "DeviceIndex = " << GetDeviceIndex() << std::endl;
+		std::cout << "QuiltSettings = " << GetQuiltSetting().GetWidth() << " x " << GetQuiltSetting().GetHeight() << " (" << GetQuiltSetting().GetViewColumn() << " x " << GetQuiltSetting().GetViewRow() << " = " << GetQuiltSetting().GetViewTotal() << ")" << std::endl;
+#endif
 	}
-	virtual ~Holo() { hpc_CloseApp(); }
+	virtual ~Holo() {
+#ifdef USE_HOLO
+		hpc_CloseApp(); 
+#endif
+	}
+
+	int GetDeviceIndex() const { return DeviceIndex; }
+	const QUILT_SETTING& GetQuiltSetting() const { return QuiltSetting; }
+
+	virtual int GetViewportMax() const = 0;
+
+protected:
+	int DeviceIndex = -1;
+	QUILT_SETTING QuiltSetting;
 };

@@ -49,6 +49,8 @@
 //!< Property - C/C++ - Command Line - Additional Options に "/await" と記述する必要がある (Need to write "/await" to Property - C/C++ - Command Line - Additional Options)
 #define USE_EXPERIMENTAL
 
+//#define USE_HOLO //!< HoloDX, HoloVK
+
 #define ALWAYS_REBUILD_PIPELINE
 
 #include <vector>
