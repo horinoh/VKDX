@@ -285,8 +285,16 @@ void HoloVK::PopulateCommandBuffer(const size_t i)
 			.pInheritanceInfo = &CBII
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB0, &CBBI)); {
+#pragma region FRAME_OBJECT
+			const auto DS = DescriptorSets[i];
+#pragma endregion
+			const auto PLL = PipelineLayouts[0];
 			const auto PL = Pipelines[0];
 			const auto& IDB = IndirectBuffers[0];
+
+			const std::array DSs = { DS };
+			vkCmdBindDescriptorSets(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(size(DSs)), data(DSs), 0, nullptr);
+
 			vkCmdBindPipeline(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
 			const auto ViewTotal = GetQuiltSetting().GetViewTotal();
@@ -328,9 +336,9 @@ void HoloVK::PopulateCommandBuffer(const size_t i)
 			vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 			vkCmdBindPipeline(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
-			assert(!empty(DescriptorSets) && "");
+			const std::array DSs = { DescriptorSets[size(SwapchainImages)] };
 			const auto PLL = PipelineLayouts[1];
-			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(size(DescriptorSets)), data(DescriptorSets), 0, nullptr);
+			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(size(DSs)), data(DSs), 0, nullptr);
 
 			vkCmdDrawIndirect(SCB1, IDB.Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));

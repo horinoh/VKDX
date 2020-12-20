@@ -35,6 +35,7 @@ float3 GetNormal_Torus(const float2 uv, const float3 pos)
 OUT main(const TESS_FACTOR tess, const float2 uv : SV_DomainLocation, const OutputPatch<IN, 4> quad)
 {
 	OUT Out;
+
 	Out.Position = GetPosition_Torus(uv) * 0.5f;
 	Out.Normal = GetNormal_Torus(uv, Out.Position);
 

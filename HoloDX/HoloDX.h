@@ -19,6 +19,13 @@ public:
 	virtual ~HoloDX() {}
 
 protected:
+	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override { 
+		Super::OnTimer(hWnd, hInstance); 
+#pragma region FRAME_OBJECT
+		//CopyToUploadResource(COM_PTR_GET(ConstantBuffers[GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tr)), &Tr);
+#pragma endregion
+	}
+
 	virtual void CreateCommandList() override {
 		Super::CreateCommandList();
 		//!< Pass1 : バンドルコマンドリスト
@@ -32,13 +39,58 @@ protected:
 	}
 
 	virtual void CreateIndirectBuffer() override {
-		//!< Pass0 : インダイレクトバッファ(メッシュ描画用)
+		//!< Pass0 : メッシュ描画用
 		CreateIndirectBuffer_DrawIndexed(1, 1);
-		//!< Pass1 : インダイレクトバッファ(フルスクリーン描画用)
+		//!< Pass1 : フルスクリーン描画用
 		CreateIndirectBuffer_Draw(4, 1);
 	}
+	virtual void CreateConstantBuffer() override {
+		constexpr auto Fov = DirectX::XMConvertToRadians(14.0f);
+		const auto Aspect = GetRatio(GetDeviceIndex());
+		constexpr auto ZFar = 100.0f;
+		constexpr auto ZNear = 0.1f;
+
+		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 7.0f, 1.0f);
+		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+
+		const auto Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
+		const auto View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
+		const auto World = DirectX::XMMatrixIdentity();
+
+		DirectX::XMStoreFloat4x4(&Tr.World, World);
+		DirectX::XMStoreFloat4x4(&Tr.View, View);
+		DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
+
+		Tr.Aspect = Aspect;
+		Tr.ViewCone = DirectX::XMConvertToRadians(GetViewCone(GetDeviceIndex()));
+		Tr.ViewTotal = GetQuiltSetting().GetViewTotal();
+
+		//const auto QS = GetQuiltSetting();
+		//constexpr auto CameraSize = 5.0f;
+		//const auto CameraDistance = -CameraSize / tan(Fov * 0.5f);
+		//const auto ViewCone = DirectX::XMConvertToRadians(GetViewCone(GetDeviceIndex()));
+		//for (auto i = 0; i < QS.GetViewTotal(); ++i) {
+		//	const auto OffsetRadian = (static_cast<float>(i) / (QS.GetViewTotal() - 1) - 0.5f) * ViewCone;
+		//	const auto OffsetX = CameraDistance * tan(OffsetRadian);
+
+		//	DirectX::XMStoreFloat4x4(&Tr.View, View * DirectX::XMMatrixTranslationFromVector(DirectX::XMVector4Transform(DirectX::XMVectorSet(OffsetX, 0.0f, CameraDistance, 1.0f), View)));
+
+		//	DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
+		//	Tr.Projection.m[2][0] += OffsetX / (CameraSize * Aspect);
+		//}
+
+#pragma region FRAME_OBJECT
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+		for (UINT i = 0; i < SCD.BufferCount; ++i) {
+			ConstantBuffers.emplace_back(ConstantBuffer());
+			CreateResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)), D3D12_HEAP_TYPE_UPLOAD);
+		}
+#pragma endregion
+	}
 	virtual void CreateStaticSampler() override {
-		//!< Pass1 : スタティックサンプラ
+		//!< Pass1 
 		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
 			.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR,
 			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
@@ -51,23 +103,27 @@ protected:
 			}));
 	}
 	virtual void CreateRootSignature() override {
-		//!< Pass0 : ルートシグネチャ
+		//!< Pass0 
 		{
 			RootSignatures.emplace_back(COM_PTR<ID3D12RootSignature>());
 			COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
 			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
-			SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE
+			const std::array DRs = {
+				D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
+			};
+			SerializeRootSignature(Blob, {
+					D3D12_ROOT_PARAMETER({.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs)), .pDescriptorRanges = data(DRs) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY }),
+				}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE
 				| D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS
 				| D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS
 				| D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS
-				| D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS
 				| D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS);
 #endif
 			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.back())));
 		}
-		//!< Pass1 : ルートシグネチャ
+		//!< Pass1 
 		{
 			RootSignatures.emplace_back(COM_PTR<ID3D12RootSignature>());
 			COM_PTR<ID3DBlob> Blob;
@@ -162,8 +218,17 @@ protected:
 	}
 
 	virtual void CreateDescriptorHeap() override {
-		//!< Pass0 : レンダーターゲット
+		//!< Pass0 
 		{
+			{
+				DXGI_SWAP_CHAIN_DESC1 SCD;
+				SwapChain->GetDesc1(&SCD);
+#pragma region FRAME_OBJECT
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< CBV * N
+#pragma endregion
+				CbvSrvUavDescriptorHeaps.emplace_back(COM_PTR<ID3D12DescriptorHeap>());
+				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
+			}
 			{
 				RtvDescriptorHeaps.emplace_back(COM_PTR<ID3D12DescriptorHeap>());
 				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
@@ -175,7 +240,7 @@ protected:
 				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.back())));
 			}
 		}
-		//!< Pass1 : シェーダリソース
+		//!< Pass1
 		{
 			CbvSrvUavDescriptorHeaps.emplace_back(COM_PTR<ID3D12DescriptorHeap>());
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
@@ -184,8 +249,20 @@ protected:
 	}
 	virtual void CreateDescriptorView() override {
 		assert(2 == size(ImageResources) && "");
-		//!< Pass0 : レンダーターゲットビュー
+		//!< Pass0 
 		{
+			{
+				DXGI_SWAP_CHAIN_DESC1 SCD;
+				SwapChain->GetDesc1(&SCD);
+				const auto& DH = CbvSrvUavDescriptorHeaps[0];
+				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+#pragma region FRAME_OBJECT
+				for (UINT i = 0; i < SCD.BufferCount; ++i) {
+					const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
+					Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				}
+#pragma endregion
+			}
 			{
 				const auto& DH = RtvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
@@ -197,19 +274,27 @@ protected:
 				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[1]), &DepthStencilViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
 		}
-		//!< Pass1 : シェーダリソースビュー
+		//!< Pass1
 		{
-			const auto& DH = CbvSrvUavDescriptorHeaps[0];
+			const auto& DH = CbvSrvUavDescriptorHeaps[1];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 			{
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
 		}
+
+#pragma region FRAME_OBJECT
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+		for (UINT i = 0; i < SCD.BufferCount; ++i) {
+			CopyToUploadResource(COM_PTR_GET(ConstantBuffers[i].Resource), RoundUp256(sizeof(Tr)), &Tr);
+		}
+#pragma endregion
 	}
 
 	virtual void CreateShaderBlobs() override {
 		const auto ShaderPath = GetBasePath();
-		//!< Pass0 : シェーダブロブ
+		//!< Pass0 
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
@@ -220,7 +305,7 @@ protected:
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".hs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".gs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
-		//!< Pass1 : シェーダブロブ
+		//!< Pass1 
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
@@ -272,9 +357,9 @@ protected:
 		const std::vector RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
-		//!< Pass0 : パイプラインステート
+		//!< Pass0 
 		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RTBDs, RD, DSD_0, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, RTVs, &PLS, TEXT("0")));
-		//!< Pass1 : パイプラインステート
+		//!< Pass1 
 		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RTBDs, RD, DSD_1, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs, &PLS, TEXT("1")));
 #else
 		Threads.push_back(std::thread::thread(DX::CreatePipelineState, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RTBDs, RD, DSD_0, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, RTVs, nullptr, nullptr));
@@ -290,6 +375,18 @@ protected:
 	virtual int GetViewportMax() const override { return D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE; }
 
 protected:
+	struct Transform
+	{
+		DirectX::XMFLOAT4X4 Projection;
+		DirectX::XMFLOAT4X4 View;
+		DirectX::XMFLOAT4X4 World;
+		float Aspect;
+		float ViewCone;
+		int ViewTotal;
+	};
+	using Transform = struct Transform;
+	Transform Tr; 
+	
 	UINT64 QuiltWidth;
 	UINT QuiltHeight;
 	std::vector<D3D12_VIEWPORT> QuiltViewports;

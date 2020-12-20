@@ -68,11 +68,12 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< デスクリプタヒープ (デスクリプタプール相当)
 	CreateDescriptorHeap();
-	//!< デスクリプタビュー (デスクリプタセット更新相当) ... この時点でリソース、デスクリプタヒープ等が必要
-	CreateDescriptorView();
-
+	
 	//!< サンプラ
 	CreateSampler();
+
+	//!< デスクリプタビュー (デスクリプタセット更新相当) ... この時点でリソース、デスクリプタヒープ等が必要
+	CreateDescriptorView();
 
 	//!< (参考) VKの場合は、ここでデスクリプタセット更新
 

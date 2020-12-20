@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <vector>
+#include <numbers>
 
 #ifdef USE_HOLO
 #include <HoloPlayCore.h>
@@ -21,7 +22,8 @@ public:
 		int GetViewHeight() const { return GetHeight() / GetViewRow(); }
 		int GetViewTotal() const { return GetViewColumn() * GetViewRow(); }
 		int Size = 4096;
-		int Column = 5, Row = 9;
+		//int Column = 5, Row = 9;
+		int Column = 4, Row = 4;
 	};
 
 	Holo() {
@@ -137,6 +139,18 @@ public:
 	int GetDeviceIndex() const { return DeviceIndex; }
 	const QUILT_SETTING& GetQuiltSetting() const { return QuiltSetting; }
 
+	float GetViewCone([[maybe_unused]] const int i) const {
+#ifdef USE_HOLO
+		if (-1 != i) { return hpc_GetDevicePropertyFloat(i, "/calibration/viewCone/value"); }
+#endif
+		return 40.0f;
+	}
+	float GetRatio([[maybe_unused]] const int i) const {
+#ifdef USE_HOLO
+		if (-1 != i) { return static_cast<float>(hpc_GetDevicePropertyScreenW(i)) / hpc_GetDevicePropertyScreenH(i); }
+#endif
+		return 16.0f / 9.0f;
+	}
 	virtual int GetViewportMax() const = 0;
 
 protected:

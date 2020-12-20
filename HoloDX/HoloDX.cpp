@@ -303,16 +303,23 @@ void HoloDX::PopulateCommandList(const size_t i)
 			auto RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart();
 			constexpr std::array<D3D12_RECT, 0> Rects = {};
 			CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
-#ifdef USE_DEPTH
+
 			const auto DsvDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			CL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 
 			const std::array RtvCDHs = { RtvCDH };
 			CL->OMSetRenderTargets(static_cast<UINT>(size(RtvCDHs)), data(RtvCDHs), FALSE, &DsvDH);
-#else			
-			const std::array RtvCDHs = { RtvCDH };
-			CL->OMSetRenderTargets(static_cast<UINT>(size(RtvCDHs)), data(RtvCDHs), FALSE, nullptr);
-#endif
+
+			{
+				const auto& DH = CbvSrvUavDescriptorHeaps[0];
+				const std::array DHs = { COM_PTR_GET(DH) };
+				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+#pragma region FRAME_OBJECT
+				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
+				CL->SetGraphicsRootDescriptorTable(0, GDH);
+#pragma endregion
+			}
 
 			const auto ViewTotal = GetQuiltSetting().GetViewTotal();
 			const auto ViewportMax = GetViewportMax();
@@ -349,7 +356,7 @@ void HoloDX::PopulateCommandList(const size_t i)
 			const std::array RtvCDHs = { ScCDH };
 			CL->OMSetRenderTargets(static_cast<UINT>(size(RtvCDHs)), data(RtvCDHs), FALSE, nullptr);
 
-			const auto& SrvDH = CbvSrvUavDescriptorHeaps[0];
+			const auto& SrvDH = CbvSrvUavDescriptorHeaps[1];
 			const std::array SrvDHs = { COM_PTR_GET(SrvDH) };
 			CL->SetDescriptorHeaps(static_cast<UINT>(size(SrvDHs)), data(SrvDHs));
 			auto SrvGDH = SrvDH->GetGPUDescriptorHandleForHeapStart();
