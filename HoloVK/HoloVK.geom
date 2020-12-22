@@ -41,10 +41,11 @@ void main()
 	const float OffsetX = CameraDistance * tan(OffsetRadian);
 
 	vec4 T = View * vec4(OffsetX, 0.0f, CameraDistance, 1.0f);
-	mat4 V = View * mat4(1, 0, 0, 0,
-	0, 1, 0, 0,
-	0, 0, 1, 0,
-	0, 0, 0, 1);
+	mat4 V = View;
+//	V = View * mat4(1, 0, 0, T.x,
+//	0, 1, 0, T.y,
+//	0, 0, 1, T.z,
+//	0, 0, 0, 1);
 
 	mat4 P = Projection;
 	//P[0][2] += OffsetX / (CameraSize * Aspect);

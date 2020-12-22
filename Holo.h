@@ -4,6 +4,8 @@
 #include <vector>
 #include <numbers>
 
+#define USE_HOLO //!< HoloDX, HoloVK
+
 #ifdef USE_HOLO
 #include <HoloPlayCore.h>
 #include <HoloPlayShaders.h>

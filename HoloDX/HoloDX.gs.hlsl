@@ -49,10 +49,11 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
     const float OffsetX = CameraDistance * tan(OffsetRadian);
     
     float4 T = mul(View, float4(OffsetX, 0.0f, CameraDistance, 1.0f));
-    float4x4 V = mul(View, float4x4(1, 0, 0, 0,
-    0, 1, 0, 0,
-    0, 0, 1, 0,
-    0, 0, 0, 1));
+    float4x4 V = View;
+    //V = mul(View, float4x4(1, 0, 0, 0,
+    //0, 1, 0, 0,
+    //0, 0, 1, 0,
+    //T.x, T.y, T.z, 1));
    
     float4x4 P = Projection;
     //P[2][0] += OffsetX / (CameraSize * Aspect);

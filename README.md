@@ -358,7 +358,7 @@
 #### DX
  * WinPixEventRuntimeのインストール
 	* 右クリック - Manage NuGet Packages - Browse - WinPixEventRuntimeで検索 - インストール
- * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/HLSL.props、Props/RS.props. (Props/DXTK.prop, Props/GLTF.prop, Props/HOLO.prop)
+ * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/HLSL.props、Props/RS.props. (Props/DXTK.prop, Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop)
  * Header Files に Win.h、DX.h、DXExt.h、(DXImage.h) を追加 
  * Source Files に Win.cpp、DX.cpp、DXExt.cpp、(DXImage.cpp) を追加
  * XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
@@ -370,7 +370,7 @@
 * ルートシグネチャ用HLSL XxxDX.rs.hlsl を作成する
 
 #### VK
- * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop、(Props/GLI.prop, Props/GLTF.prop, Props/HOLO.prop)
+ * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop、(Props/GLI.prop, Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop)
  * Header Files に Win.h、VK.h、VKExt.h、(VKImage.h) を追加
  * Source Files に Win.cpp、VK.cpp、VKExt.cpp、(VKImage.cpp) を追加
  * XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
@@ -448,6 +448,11 @@
  * [HoloPlayService](https://lookingglassfactory.com/software) をインストールしておく
  * HoloPlayCoreSDK\HoloPlayCore\dylib\Win64 を環境変数にPATHに通しておく
 
+ ## LeapMotion
+ * [SDK](https://developer.leapmotion.com/sdk-leap-motion-controller/) をダウンロードし解凍、ドライバをインストールしておく
+ * LeapSDKを適当な場所へ配置
+ 	* LeapSDK\lib\x64 を環境変数にPATHに通しておく
+ * [ドキュメント](https://developer.leapmotion.com/documentation/v4/index.html)
  -->
 
 <!--
