@@ -18,6 +18,9 @@ layout (set = 0, binding = 0) uniform Transform {
 //! +------------------------|
 //!   CameraDistance
 const float CameraSize = 5.0f;
+// radian(14) = 0.244346097
+// tan(0.244346097 * 0.5f) = tan(0.122) = 0.12260891 
+// CameraDistance = -40.78
 const float CameraDistance = -CameraSize / tan(radians(14.0f) * 0.5f);
 
 layout (location = 0) out vec3 OutNormal;
@@ -37,18 +40,22 @@ void main()
 	//!            /  |
 	//!		     +----| 
 	//!           OffsetX
-	const float OffsetRadian = (ViewIndex / (ViewTotal - 1) - 0.5f) * ViewCone;
-	const float OffsetX = CameraDistance * tan(OffsetRadian);
+	const float OffsetRadian = (ViewIndex / (ViewTotal - 1) - 0.5f) * ViewCone; // ViewCone = 0.698131680, OffsetRadian [-0.349, 0.349]
+	const float OffsetX = CameraDistance * tan(OffsetRadian); // tan(OffsetRadian) = [-0.36389566, 0.36389566], OffsetX = [14.8, -14,8]
 
 	vec4 T = View * vec4(OffsetX, 0.0f, CameraDistance, 1.0f);
 	mat4 V = View;
-//	V = View * mat4(1, 0, 0, T.x,
-//	0, 1, 0, T.y,
-//	0, 0, 1, T.z,
-//	0, 0, 0, 1);
+#if 1
+	//V[3] = View[0] * T.x + View[1] * T.y + View[2] * T.z + View[3];
+#else
+//	V = View * mat4(1, 0, 0, 0,
+//	0, 1, 0, 0,
+//	0, 0, 1, 0,
+//	T.x, T.y, T.z, 1);
+#endif
 
 	mat4 P = Projection;
-	//P[0][2] += OffsetX / (CameraSize * Aspect);
+	P[2][0] += OffsetX / (CameraSize * Aspect);
 
 	const vec3 CamPos = vec3(View[3][0], View[3][1], View[3][2]);
 	const mat4 PVW = P * V * World;
@@ -57,7 +64,8 @@ void main()
 		gl_Position = PVW * gl_in[i].gl_Position;
 		OutNormal = mat3(World) * InNormal[i];
 		OutViewDirection = CamPos - (World * gl_Position).xyz;
-		OutViewIndex = ViewIndex / (ViewTotal-1);
+		//OutViewIndex = (OffsetX + 14.8)/(14.8*2);
+		OutViewIndex = ViewIndex / (ViewTotal - 1);
 		gl_ViewportIndex = gl_InvocationID;
 		EmitVertex();
 	}

@@ -243,8 +243,7 @@ public:
 	PerformanceCounter(std::string_view Label = "");
 	~PerformanceCounter();
 private:
-	double SecondsPerCount = 0.0;
-	__int64 Start;
+	LARGE_INTEGER Start;
 	std::string Label;
 };
 

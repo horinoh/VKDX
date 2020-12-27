@@ -466,7 +466,7 @@ bool VK::IsSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, const VkFormat 
 //!< @param バッファやイメージの要求するメモリタイプ
 //!< @param 希望のメモリプロパティフラグ
 //!< @return メモリタイプ
-uint32_t VK::GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& PDMP, const uint32_t TypeBits, const VkMemoryPropertyFlags  MPF)
+uint32_t VK::GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& PDMP, const uint32_t TypeBits, const VkMemoryPropertyFlags MPF)
 {
 	for (uint32_t i = 0; i < PDMP.memoryTypeCount; ++i) {
 		if (TypeBits & (1 << i)) {
@@ -627,6 +627,68 @@ void VK::CmdCopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, con
 			0, nullptr,
 			static_cast<uint32_t>(size(BMBs_Post)), data(BMBs_Post), 
 			0, nullptr);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+}
+void VK::CmdCopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Layers, const uint32_t Levels)
+{
+	//!< コマンド開始 (Begin command)
+	const VkCommandBufferBeginInfo CBBI = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+		.pInheritanceInfo = nullptr
+	};
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {		
+		assert(!empty(BICs) && "BufferImageCopy is empty");
+		const VkImageSubresourceRange ISR = {
+			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+			.baseMipLevel = 0, .levelCount = Levels,
+			.baseArrayLayer = 0, .layerCount = Layers
+		};
+		//!< イメージバリア (Pre image barrier)
+		{
+			const std::array IMBs = {
+				VkImageMemoryBarrier({
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = 0, .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+					.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.image = Dst,
+					.subresourceRange = ISR
+				})
+			};
+			vkCmdPipelineBarrier(CB,
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				0,
+				0, nullptr,
+				0, nullptr,
+				static_cast<uint32_t>(size(IMBs)), data(IMBs));
+		}
+		{
+			//!< バッファイメージ間コピーコマンド (Buffer to image copy command)
+			vkCmdCopyBufferToImage(CB, Src, Dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(size(BICs)), data(BICs));
+		}
+		//!< イメージバリア (Post image barrier)
+		{
+			const std::array IMBs = {
+				VkImageMemoryBarrier({
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT, .dstAccessMask = AF,
+					.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, .newLayout = IL,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.image = Dst,
+					.subresourceRange = ISR
+				})
+			};
+			vkCmdPipelineBarrier(CB,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, PSF,
+				0,
+				0, nullptr,
+				0, nullptr,
+				static_cast<uint32_t>(size(IMBs)), data(IMBs));
+		}
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
 
@@ -1957,52 +2019,50 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 	LOG_OK();
 }
 
-void VK::SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits Access, const VkPipelineStageFlagBits PipeStg, const VkDeviceSize Size, const void* Source)
+void VK::SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source)
 {
-	//!< ホストビジブルバッファ(HVB)を作成 (Create host visible buffer(HVB))
-	VkBuffer StagingBuffer = VK_NULL_HANDLE;
-	CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size); {
-		//!< デバイスローカルメモリ(DLM)をアロケート (Allocate device local memory(DLM))
-		VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
-		AllocateDeviceMemory(&StagingDeviceMemory, StagingBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT); {
+	VkBuffer Buffer;
+	VkDeviceMemory DeviceMemory;
+	{
+		//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
+		CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
+		AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
 
-			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, StagingBuffer, StagingDeviceMemory, 0));
-			CopyToHostVisibleDeviceMemory(StagingDeviceMemory, 0, Size, Source);
+		CopyToHostVisibleDeviceMemory(DeviceMemory, 0, Size, Source);
 
-			//!< HVBからDLBへのコピーコマンドを発行 (Submit HVB to DLB copy command)
-			CmdCopyBufferToBuffer(CB, StagingBuffer, Buf, Access, PipeStg, Size);
-			const std::array CBs = { CB };
-			const std::array SIs = {
-				VkSubmitInfo({
-					.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-					.pNext = nullptr,
-					.waitSemaphoreCount = 0, .pWaitSemaphores = nullptr, .pWaitDstStageMask = nullptr,
-					.commandBufferCount = static_cast<uint32_t>(size(CBs)), .pCommandBuffers = data(CBs),
-					.signalSemaphoreCount = 0, .pSignalSemaphores = nullptr
-				})
-			};
-			VERIFY_SUCCEEDED(vkQueueSubmit(Queue, static_cast<uint32_t>(size(SIs)), data(SIs), VK_NULL_HANDLE));
-			VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
-		}
-		if (VK_NULL_HANDLE != StagingDeviceMemory) {
-			vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
-		}
+		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit host visible to device local copy command)
+		CmdCopyBufferToBuffer(CB, Buffer, Buf, AF, PSF, Size);
+		const std::array<VkSemaphore, 0> WaitSems = {};
+		const std::array<VkPipelineStageFlags, 0> WaitStages = {};
+		assert(size(WaitSems) == size(WaitStages) && ""); 
+		const std::array CBs = { CB };
+		const std::array<VkSemaphore, 0> SigSems = {}; 
+		const std::array SIs = {
+			VkSubmitInfo({
+				.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+				.pNext = nullptr,
+				.waitSemaphoreCount = static_cast<uint32_t>(size(WaitSems)), .pWaitSemaphores = data(WaitSems), .pWaitDstStageMask = data(WaitStages),
+				.commandBufferCount = static_cast<uint32_t>(size(CBs)), .pCommandBuffers = data(CBs),
+				.signalSemaphoreCount = static_cast<uint32_t>(size(SigSems)), .pSignalSemaphores = data(SigSems)
+			})
+		};
+		VERIFY_SUCCEEDED(vkQueueSubmit(Queue, static_cast<uint32_t>(size(SIs)), data(SIs), VK_NULL_HANDLE));
+		VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
 	}
-	if (VK_NULL_HANDLE != StagingBuffer) {
-		vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
-	}
+	vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
+	vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
 }
 
-void VK::CreateAndCopyToBuffer(VkBuffer* Buf, VkDeviceMemory* DM, const VkQueue Queue, const VkCommandBuffer CB, const VkBufferUsageFlagBits Usage, const VkAccessFlagBits Access, const VkPipelineStageFlagBits PipeStg, const VkDeviceSize Size, const void* Source)
+void VK::CreateAndCopyToBuffer(VkBuffer* Buf, VkDeviceMemory* DM, const VkQueue Queue, const VkCommandBuffer CB, const VkBufferUsageFlagBits Usage, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source)
 {
-	//!< デバイスローカルバッファ(DLB)を作成 (Create device local buffer(DLB))
+	//!< デバイスローカルバッファ、デバイスメモリを作成 (Create device local buffer, device memory)
 	CreateBuffer(Buf, Usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-
 	AllocateDeviceMemory(DM, *Buf, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buf, *DM, 0));
 
-	//!< ステージングを用いてのDLBへのコピーコマンドを発行(ホストビジブルを作成してデータをコピーし、バッファ間のコピーによりデバイスローカルへ反映)
-	SubmitStagingCopy(*Buf, Queue, CB, Access, PipeStg, Size, Source);
+	//!< ホストビジブルを作成しデータをコピー、バッファ間コピーコマンドによりデバイスローカルへ転送 (Create host visible and copy data, submit copy command to device local)
+	SubmitStagingCopy(*Buf, Queue, CB, AF, PSF, Size, Source);
 }
 
 void VK::CreateUniformBuffer_Example()

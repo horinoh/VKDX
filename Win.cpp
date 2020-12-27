@@ -202,17 +202,18 @@ template<> static void Win::LogNG([[maybe_unused]] const WCHAR* Str)
 PerformanceCounter::PerformanceCounter(std::string_view Label)
 	: Label(Label)
 {
-	__int64 Frequency;
-	QueryPerformanceFrequency(reinterpret_cast<LARGE_INTEGER*>(&Frequency));
-	SecondsPerCount = 1.0 / static_cast<double>(Frequency);
-
-	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&Start));
+	if (QueryPerformanceCounter(&Start)) {
+	}
 }
 PerformanceCounter::~PerformanceCounter() 
 {
-	__int64 End;
-	QueryPerformanceCounter(reinterpret_cast<LARGE_INTEGER*>(&End));
+	LARGE_INTEGER End;
+	if (QueryPerformanceCounter(&End)) {
+		LARGE_INTEGER Frequency;
+		if (QueryPerformanceFrequency(&Frequency)) {
 #ifdef DEBUG_STDOUT
-	std::cout << Label << " : " << (End - Start) * SecondsPerCount * 1000.0 << " msec" << std::endl << std::endl;
+			std::cout << Label << " : " << (End.QuadPart - Start.QuadPart) * 1000 / Frequency.QuadPart << " msec" << std::endl << std::endl;
 #endif
+		}
+	}
 }

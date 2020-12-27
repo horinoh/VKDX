@@ -124,6 +124,7 @@ void VKImage::CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, co
 	//GLITexture.base_level();
 	const auto Levels = static_cast<const uint32_t>(GLITexture.levels());
 
+	//!< コマンド開始 (Begin command)
 	const VkCommandBufferBeginInfo CBBI = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		.pNext = nullptr,
@@ -131,27 +132,15 @@ void VKImage::CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, co
 		.pInheritanceInfo = nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		//!< バッファの内容をイメージにコピーするための情報
-		const VkOffset3D Offset3D = { .x = 0, .y = 0, .z = 0 };
-		std::vector<VkBufferImageCopy> BICs;
-		BICs.reserve(Layers);
+		//!< コピー情報の作成 (Create copy information)
+		std::vector<VkBufferImageCopy> BICs; BICs.reserve(Layers * Levels);
 		VkDeviceSize Offset = 0;
-
 		for (uint32_t i = 0; i < Layers; ++i) {
 			for (uint32_t j = 0; j < Levels; ++j) {
-				const VkImageSubresourceLayers ISL = {
-					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-					.mipLevel = j,
-					.baseArrayLayer = i, .layerCount = 1
-				};
-				const VkExtent3D Extent3D = { 
-					.width = static_cast<const uint32_t>(GLITexture.extent(j).x), .height = static_cast<const uint32_t>(GLITexture.extent(j).y), .depth = static_cast<const uint32_t>(GLITexture.extent(j).z)
-				};
-				BICs.emplace_back(VkBufferImageCopy({ .bufferOffset = Offset, .bufferRowLength = 0, .bufferImageHeight = 0, .imageSubresource = ISL, .imageOffset = Offset3D, .imageExtent = Extent3D }));
+				BICs.emplace_back(VkBufferImageCopy({ .bufferOffset = Offset, .bufferRowLength = 0, .bufferImageHeight = 0, .imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = j, .baseArrayLayer = i, .layerCount = 1 }), .imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }), .imageExtent = VkExtent3D({.width = static_cast<const uint32_t>(GLITexture.extent(j).x), .height = static_cast<const uint32_t>(GLITexture.extent(j).y), .depth = static_cast<const uint32_t>(GLITexture.extent(j).z) }) }));
 				Offset += static_cast<const VkDeviceSize>(GLITexture.size(j));
 			}
 		}
-
 		assert(!empty(BICs) && "BufferImageCopy is empty");
 
 		const VkImageSubresourceRange ISR = {
@@ -159,47 +148,51 @@ void VKImage::CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, co
 			.baseMipLevel = 0, .levelCount = Levels,
 			.baseArrayLayer = 0, .layerCount = Layers
 		};
-		const std::vector IMBs_Pre = {
-			VkImageMemoryBarrier({
-				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-				.pNext = nullptr,
-				.srcAccessMask = 0, .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-				.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, //!< イメージ作成直後は UNDEFINED なので TRANSFER_DST へ
-				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.image = Dst,
-				.subresourceRange = ISR
-			})
-		};
-		vkCmdPipelineBarrier(CB,
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-			0,
-			0, nullptr,
-			0, nullptr,
-			static_cast<uint32_t>(size(IMBs_Pre)), data(IMBs_Pre));
+		//!< イメージバリア (Image barrier)
 		{
-			assert(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL == IMBs_Pre[0].newLayout);
+			const std::array IMBs = {
+				VkImageMemoryBarrier({
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = 0, .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+					.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, //!< イメージ作成直後は UNDEFINED なので TRANSFER_DST へ
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.image = Dst,
+					.subresourceRange = ISR
+				})
+			};
+			vkCmdPipelineBarrier(CB,
+				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				0,
+				0, nullptr,
+				0, nullptr,
+				static_cast<uint32_t>(size(IMBs)), data(IMBs));
+			assert(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL == IMBs[0].newLayout);
+		}
+		{
+			//!< バッファイメージ間コピーコマンド (Buffer to image copy command)
 			vkCmdCopyBufferToImage(CB, Src, Dst, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(size(BICs)), data(BICs));
 		}
-		const std::vector IMBs_Post = {
-			VkImageMemoryBarrier({
-				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-				.pNext = nullptr,
-				.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT, .dstAccessMask = AF,
-				.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, .newLayout = IL,
-				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.image = Dst,
-				.subresourceRange = ISR
-			})
-		};
-		assert(IMBs_Pre[0].dstAccessMask == IMBs_Post[0].srcAccessMask);
-		assert(IMBs_Pre[0].newLayout == IMBs_Post[0].oldLayout);
-		vkCmdPipelineBarrier(CB,
-			VK_PIPELINE_STAGE_TRANSFER_BIT, PSF,
-			0,
-			0, nullptr,
-			0, nullptr,
-			static_cast<uint32_t>(size(IMBs_Post)), data(IMBs_Post));
-
+		//!< イメージバリア (Image barrier)
+		{
+			const std::array IMBs = {
+				VkImageMemoryBarrier({
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT, .dstAccessMask = AF,
+					.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, .newLayout = IL,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.image = Dst,
+					.subresourceRange = ISR
+				})
+			};
+			vkCmdPipelineBarrier(CB,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, PSF,
+				0,
+				0, nullptr,
+				0, nullptr,
+				static_cast<uint32_t>(size(IMBs)), data(IMBs));
+		}
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
 
@@ -355,36 +348,35 @@ gli::texture VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory* DM, const VkPi
 	const auto Size = static_cast<VkDeviceSize>(GLITexture.size());
 #endif
 
-	VkBuffer StagingBuffer = VK_NULL_HANDLE;
-	VkDeviceMemory StagingDeviceMemory = VK_NULL_HANDLE;
+	//!< デバイスローカルのイメージとメモリを作成 (Create device local image and memory)
+	//!< VK_IMAGE_USAGE_SAMPLED_BIT : サンプルドイメージ ... シェーダ内でサンプラとともに使われる為に指定する
+	//!< - 全てのテクスチャフォーマットとリニアフィルタをサポートするわけではない (ValidateFormatProoerties()でチェックしている)
+	//!< - プラットフォームによってはコンバインドイメージサンプラ(サンプラとサンプルドイメージを１つにまとめたもの)を使った方が効率が良い場合がある
+	CreateImage(Img, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, GLITexture);
+	AllocateDeviceMemory(DM, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Img, *DM, 0));
+
+	VkBuffer Buffer;
+	VkDeviceMemory DeviceMemory;
 	{
 		//!< ホストビジブルのバッファとメモリを作成、データをコピー( Create host visible buffer and memory, and copy data)
-		CreateBuffer(&StagingBuffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-		AllocateDeviceMemory(&StagingDeviceMemory, StagingBuffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
+		AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 #ifdef USE_EXPERIMENTAL
-		CopyToHostVisibleDeviceMemory(StagingDeviceMemory, 0, Size, Util::data(GLITexture));
+		CopyToHostVisibleDeviceMemory(DeviceMemory, 0, Size, Util::data(GLITexture));
 #else
-		CopyToHostVisibleDeviceMemory(StagingDeviceMemory, 0, Size, GLITexture.data());
+		CopyToHostVisibleDeviceMemory(DeviceMemory, 0, Size, GLITexture.data());
 #endif
-		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, StagingBuffer, StagingDeviceMemory, 0));
-
-		//!< デバイスローカルのイメージとメモリを作成 (Create device local image and memory)
-		//!< VK_IMAGE_USAGE_SAMPLED_BIT : サンプルドイメージ ... シェーダ内でサンプラとともに使われる為に指定する
-		//!< - 全てのテクスチャフォーマットとリニアフィルタをサポートするわけではない (ValidateFormatProoerties()でチェックしている)
-		//!< - プラットフォームによってはコンバインドイメージサンプラ(サンプラとサンプルドイメージを１つにまとめたもの)を使った方が効率が良い場合がある
-		CreateImage(Img, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, GLITexture);
-
-		AllocateDeviceMemory(DM, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-		VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Img, *DM, 0));
+		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
 
 		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit copy command from host visible to device local)
-		CopyBufferToImage(CB, StagingBuffer, *Img, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, GLITexture);
+		CopyBufferToImage(CB, Buffer, *Img, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, GLITexture);
 		const std::array<VkSemaphore, 0> WaitSems = {};
 		const std::array<VkPipelineStageFlags, 0> WaitStages = {};
 		assert(size(WaitSems) == size(WaitStages) && "");
 		const std::array CBs = { CB };
 		const std::array<VkSemaphore, 0> SigSems = {};
-		const std::vector SIs = {
+		const std::array SIs = {
 			VkSubmitInfo({
 				.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
 				.pNext = nullptr,
@@ -396,12 +388,8 @@ gli::texture VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory* DM, const VkPi
 		VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(size(SIs)), data(SIs), VK_NULL_HANDLE));
 		VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
 	}
-	if (VK_NULL_HANDLE != StagingDeviceMemory) {
-		vkFreeMemory(Device, StagingDeviceMemory, GetAllocationCallbacks());
-	}
-	if (VK_NULL_HANDLE != StagingBuffer) {
-		vkDestroyBuffer(Device, StagingBuffer, GetAllocationCallbacks());
-	}
+	vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
+	vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
 
 	ValidateFormatProperties_SampledImage(GetCurrentPhysicalDevice(), ToVkFormat(GLITexture.format()), VK_SAMPLE_COUNT_1_BIT, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
 
