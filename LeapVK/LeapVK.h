@@ -63,7 +63,11 @@ protected:
 		//!< ディストーションマップ
 		{
 			Images.emplace_back(Image());
+#ifdef USE_LEAP
 			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, VK_FORMAT_R32G32_SFLOAT, VkExtent3D({ .width = LEAP_DISTORTION_MATRIX_N, .height = LEAP_DISTORTION_MATRIX_N, .depth = 1 }), 1, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+#else
+			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, VK_FORMAT_R32G32_SFLOAT, VkExtent3D({ .width = 64, .height = 64, .depth = 1 }), 1, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+#endif
 			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
@@ -73,8 +77,11 @@ protected:
 			{
 				//LEAP_IMAGE_EVENT ImageEvent;//TODO
 
+#ifdef USE_LEAP
 				constexpr auto Size = sizeof(LEAP_DISTORTION_MATRIX);
-
+#else
+				constexpr auto Size = sizeof(64*64*sizeof(float)*2);
+#endif
 				CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Layers * Size);
 				AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 				VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
@@ -87,7 +94,11 @@ protected:
 				std::vector<VkBufferImageCopy> BICs;
 				for (uint32_t i = 0; i < Layers; ++i) {
 					for (uint32_t j = 0; j < Levels; ++j) {
+#ifdef USE_LEAP
 						BICs.emplace_back(VkBufferImageCopy({ .bufferOffset = i * Size, .bufferRowLength = 0, .bufferImageHeight = 0, .imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = j, .baseArrayLayer = i, .layerCount = 1 }), .imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }), .imageExtent = VkExtent3D({.width = LEAP_DISTORTION_MATRIX_N, .height = LEAP_DISTORTION_MATRIX_N, .depth = 1 }) }));
+#else
+						BICs.emplace_back(VkBufferImageCopy({ .bufferOffset = i * Size, .bufferRowLength = 0, .bufferImageHeight = 0, .imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = j, .baseArrayLayer = i, .layerCount = 1 }), .imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }), .imageExtent = VkExtent3D({.width = 64, .height = 64, .depth = 1 }) }));
+#endif
 					}
 				}
 				//auto CB = CommandBuffers[0];
