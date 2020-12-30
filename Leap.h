@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <vector>
+#include <array>
 #include <thread>
 
 //#define USE_LEAP //!< LeapDX. LeapVK
@@ -47,9 +48,6 @@ public:
 			PollThread.join();
 			LeapDestroyConnection(LeapConnection);
 		}
-		//if (nullptr != LeapDevice) {
-		//	LeapCloseDevice(LeapDevice);
-		//}
 #endif
 	}
 
@@ -70,13 +68,6 @@ protected:
 					//!< コネクションが切れたらループを抜ける (Exit loop on connection lost)
 					return;
 				case eLeapEventType_Device:
-					//if (eLeapRS_Success == LeapOpenDevice(Msg.device_event->device, &LeapDevice)) {
-					//	std::cout << "[ LEAP ] Device" << std::endl;
-					//	//LEAP_DEVICE_INFO LDI;
-					//	//if (eLeapRS_Success == LeapGetDeviceInfo(LeapDevice, &LDI)) {
-					//	//	std::cout << LDI.size << std::endl;
-					//	//}
-					//}
 					break;
 				case eLeapEventType_DeviceFailure:
 					break;
@@ -139,6 +130,7 @@ protected:
 				}
 			}
 			else {
+				//!< 正常に処理できなかったらループを抜ける (Exit loop on fail)
 				return;
 			}
 		}
@@ -210,7 +202,13 @@ protected:
 			}
 		}
 	}
-	virtual void OnImageEvent(const LEAP_IMAGE_EVENT * IE) {
+	virtual void OnImageEvent(const LEAP_IMAGE_EVENT* IE) {
+		//!< (回転等により)ディストーションマップが変化したときにこの値が変わる
+		const auto MatrixVersion = IE->image[0].matrix_version;
+		if (CurrentMatrixVersion != MatrixVersion) {
+			CurrentMatrixVersion = MatrixVersion;
+			OnMatrixVersionChanged(IE);
+		}
 		for (uint32_t i = 0; i < _countof(IE->image); ++i) {
 			//std::cout << "[" << i << "]" << std::endl;
 
@@ -227,15 +225,20 @@ protected:
 			////std::cout << "\tProp.scale = " << Prop.x_scale << ", " << Prop.y_scale << std::endl; //1, 2
 
 			//!< ディストーションマップ
-			//!< (回転等により)ディストーションマップが変化したときにこの値が変わる、本来は検出してディストーションマップを更新する、ここでは簡単のため固定扱いとする
 			//Image.matrix_version;
 			//std::cout << sizeof(*Image.distortion_matrix) << std::endl; //!< LEAP_DISTORTION_MATRIX_N * LEAP_DISTORTION_MATRIX_N * 2 * sizeof(float)
 		}
 	}
+	virtual void OnMatrixVersionChanged(const LEAP_IMAGE_EVENT* IE) {
+		for (auto i = 0; i < _countof(IE->image); ++i) {
+			DistortionMatrices[i] = *IE->image[i].distortion_matrix;
+		}
+	}
 
 	LEAP_CONNECTION LeapConnection = nullptr;
-	//LEAP_DEVICE LeapDevice = nullptr;
 	LEAP_CLOCK_REBASER ClockRebaser  = nullptr;
 	std::thread PollThread;
+	uint64_t CurrentMatrixVersion = (std::numeric_limits<uint64_t>::max)();
+	std::array<LEAP_DISTORTION_MATRIX, 2> DistortionMatrices;
 #endif
 };

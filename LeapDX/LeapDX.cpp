@@ -228,3 +228,56 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return (INT_PTR)FALSE;
 }
+
+#pragma region Code
+void LeapDX::PopulateCommandList(const size_t i)
+{
+	const auto PS = COM_PTR_GET(PipelineStates[0]);
+
+	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
+	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
+	{
+		const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
+		const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
+
+		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		BCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+	}
+	VERIFY_SUCCEEDED(BCL->Close());
+
+	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto CA = COM_PTR_GET(CommandAllocators[0]);
+	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
+	{
+		const auto RS = COM_PTR_GET(RootSignatures[0]);
+		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+
+		CL->SetGraphicsRootSignature(RS);
+
+		CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+		CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+
+		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		{
+			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+			const std::array RTDescriptorHandles = { CDH };
+			CL->OMSetRenderTargets(static_cast<UINT>(size(RTDescriptorHandles)), data(RTDescriptorHandles), FALSE, nullptr);
+
+			assert(!empty(CbvSrvUavDescriptorHeaps) && "");
+			const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
+			CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+
+			{
+				const auto& DH = CbvSrvUavDescriptorHeaps[0];
+				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+				CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+			}
+
+			CL->ExecuteBundle(BCL);
+		}
+		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+	}
+	VERIFY_SUCCEEDED(CL->Close());
+}
+#pragma endregion

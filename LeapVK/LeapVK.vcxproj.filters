@@ -76,4 +76,12 @@
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="LeapVK.frag">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="LeapVK.vert">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+  </ItemGroup>
 </Project>

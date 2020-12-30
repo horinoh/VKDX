@@ -228,3 +228,67 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return (INT_PTR)FALSE;
 }
+
+#pragma region Code
+void LeapVK::PopulateCommandBuffer(const size_t i)
+{
+	const auto RP = RenderPasses[0];
+	const auto FB = Framebuffers[i];
+
+	const VkCommandBufferInheritanceInfo CBII = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+		.pNext = nullptr,
+		.renderPass = RP,
+		.subpass = 0,
+		.framebuffer = FB,
+		.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
+		.pipelineStatistics = 0,
+	};
+	const VkCommandBufferBeginInfo SCBBI = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+		.pInheritanceInfo = &CBII
+	};
+	const auto SCB = SecondaryCommandBuffers[i];
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
+		const auto PL = Pipelines[0];
+		const auto& IDB = IndirectBuffers[0];
+		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
+		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
+		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
+
+		const auto PLL = PipelineLayouts[0];
+		assert(!empty(DescriptorSets) && "");
+		vkCmdBindDescriptorSets(SCB,
+			VK_PIPELINE_BIND_POINT_GRAPHICS, PLL,
+			0, static_cast<uint32_t>(size(DescriptorSets)), data(DescriptorSets),
+			0, nullptr);
+
+		vkCmdDrawIndirect(SCB, IDB.Buffer, 0, 1, 0);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
+
+	const VkCommandBufferBeginInfo CBBI = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.pInheritanceInfo = nullptr
+	};
+	const auto CB = CommandBuffers[i];
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+		const std::array<VkClearValue, 0> CVs = {};
+		const VkRenderPassBeginInfo RPBI = {
+			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+			.pNext = nullptr,
+			.renderPass = RP,
+			.framebuffer = FB,
+			.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
+			.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
+		};
+		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
+			const std::array SCBs = { SCB };
+			vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
+		} vkCmdEndRenderPass(CB);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+}
+#pragma endregion

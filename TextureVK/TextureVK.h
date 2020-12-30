@@ -73,7 +73,9 @@ protected:
 			}, {});
 	}
 	virtual void CreateRenderPass() { VK::CreateRenderPass(VK_ATTACHMENT_LOAD_OP_DONT_CARE, false); }
+
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFs(); }
+
 	virtual void CreatePipelines() override { CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE); }
 
 	virtual void CreateDescriptorPool() override {
@@ -95,7 +97,6 @@ protected:
 		DescriptorSets.emplace_back(VkDescriptorSet());
 		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
 	}
-
 	//!< VKの場合イミュータブルサンプラと通常のサンプラは基本的に同じもの、デスクリプタセットレイアウトの指定が異なるだけ
 #ifndef USE_IMMUTABLE_SAMPLER
 	virtual void CreateSampler() override {
@@ -116,7 +117,6 @@ protected:
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.back()));
 	}
 #endif
-
 	virtual void CreateDescriptorUpdateTemplate() override {
 		DescriptorUpdateTemplates.emplace_back(VkDescriptorUpdateTemplate());
 		assert(!empty(DescriptorSetLayouts) && "");

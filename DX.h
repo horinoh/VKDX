@@ -136,22 +136,36 @@ public:
 	}
 
 protected:
-	virtual void CreateResource(ID3D12Resource** Resource, const size_t Size, const D3D12_HEAP_TYPE HeapType);
+	virtual void ResourceBarrier(ID3D12GraphicsCommandList* CL, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After) {
+		const std::array RBs = {
+		D3D12_RESOURCE_BARRIER({
+			.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+			.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+			.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
+				.pResource = Resource,
+				.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+				.StateBefore = Before,
+				.StateAfter = After
+			})
+		})
+		};
+		CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+	}
+
+	virtual void CreateBufferResource(ID3D12Resource** Resource, const size_t Size, const D3D12_HEAP_TYPE HeapType);
+	virtual void CreateTextureResource(ID3D12Resource** Resource, const DXGI_FORMAT Format, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize = 1, const UINT16 MipLevels = 1);
 
 	virtual void CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source, const D3D12_RANGE* Range = nullptr);
 	virtual void CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData);
 	
-	virtual void ResourceBarrier(ID3D12GraphicsCommandList* CL, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After);
-
-	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES RS);
-	virtual void PopulateCopyBufferCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
-	virtual void PopulateCopyTextureCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
-
-	virtual void ExecuteCopyBuffer(ID3D12Resource* DstResource, ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, const size_t Size, ID3D12Resource* SrcResource);
-	virtual void ExecuteCopyTexture(ID3D12Resource* DstResource, ID3D12CommandAllocator* CommandAllocator, ID3D12GraphicsCommandList* CommandList, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const D3D12_RESOURCE_STATES ResourceState, ID3D12Resource* SrcResource);
+	virtual void PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES RS);
+	virtual void PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
+	virtual void PopulateCommandList_CopyTextureRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
+	
+	virtual void ExecuteAndWait(ID3D12CommandQueue* Queue, ID3D12CommandList* CL);
 
 	virtual void CreateAndCopyToUploadResource(COM_PTR<ID3D12Resource>& Res, const size_t Size, const void* Source) {
-		CreateResource(COM_PTR_PUT(Res), Size, D3D12_HEAP_TYPE_UPLOAD);
+		CreateBufferResource(COM_PTR_PUT(Res), Size, D3D12_HEAP_TYPE_UPLOAD);
 		CopyToUploadResource(COM_PTR_GET(Res), Size, Source);
 	}
 	virtual void CreateAndCopyToDefaultResource(COM_PTR<ID3D12Resource>& Res, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL, const size_t Size, const void* Source) {
@@ -159,9 +173,14 @@ protected:
 		COM_PTR<ID3D12Resource> UploadRes;
 		CreateAndCopyToUploadResource(UploadRes, Size, Source);
 		//!< デフォルトのリソースを作成 (Create default resource)
-		CreateResource(COM_PTR_PUT(Res), Size, D3D12_HEAP_TYPE_DEFAULT);
+		CreateBufferResource(COM_PTR_PUT(Res), Size, D3D12_HEAP_TYPE_DEFAULT);
+		
 		//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 (Execute copy buffer command upload resource to default resource)
-		ExecuteCopyBuffer(COM_PTR_GET(Res), CA, CL, Size, COM_PTR_GET(UploadRes));
+		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+			PopulateCommandList_CopyBufferRegion(CL, COM_PTR_GET(UploadRes), COM_PTR_GET(Res), Size, D3D12_RESOURCE_STATE_GENERIC_READ);
+		} VERIFY_SUCCEEDED(CL->Close());
+
+		ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL));
 	}
 
 #if defined(_DEBUG) || defined(USE_PIX)
@@ -238,6 +257,7 @@ protected:
 	//virtual void CreatePipelineState_Compute();
 
 	virtual void CreateTexture() {}
+	virtual void CreateTexture1x1(const UINT32 Color, const D3D12_RESOURCE_STATES RS = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	virtual void CreateStaticSampler() {}
 	virtual void CreateSampler() {}
 

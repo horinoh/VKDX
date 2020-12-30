@@ -111,7 +111,9 @@ protected:
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.back())));
 		LOG_OK();
 	}
+
 	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPs(); }
+
 	virtual void CreatePipelineStates() override { CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE); }
 
 	virtual void CreateDescriptorHeap() override {
@@ -128,18 +130,6 @@ protected:
 		}
 #endif
 	}
-	virtual void CreateDescriptorView() override {
-		assert(!empty(ImageResources) && "");
-		const auto& DH = CbvSrvUavDescriptorHeaps[0];
-		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-#if 1
-		Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#else
-		//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合にはnullptrを指定できる
-		Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#endif
-	}
-
 #ifndef USE_STATIC_SAMPLER
 	virtual void CreateSampler() override {
 		assert(!empty(SamplerDescriptorHeaps) && "");
@@ -155,6 +145,17 @@ protected:
 		Device->CreateSampler(&SD, SamplerDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart());
 	}
 #endif
+	virtual void CreateDescriptorView() override {
+		assert(!empty(ImageResources) && "");
+		const auto& DH = CbvSrvUavDescriptorHeaps[0];
+		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+#if 1
+		Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#else
+		//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合にはnullptrを指定できる
+		Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#endif
+	}
 
 	virtual void PopulateCommandList(const size_t i) override;
 };
