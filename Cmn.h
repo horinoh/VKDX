@@ -3,7 +3,7 @@
 class Cmn
 {
 public:
-	static bool IsAligned(const size_t Size, const size_t Align) { return !(Size & ~Align); }
+	static bool IsAligned(const size_t Size, const size_t Align) { return !(Size % Align); }
 	static size_t RoundDown(const size_t Size, const size_t Align) {
 		if (IsAligned(Size, Align)) { return Size; }
 		return (Size / Align) * Align;

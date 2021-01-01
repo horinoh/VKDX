@@ -480,22 +480,6 @@ uint32_t VK::GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& PDMP, co
 	return 0xffff;
 }
 
-void VK::CreateDeviceMemories(std::vector<VkDeviceMemory>& DMs, const VkDevice Dev, const std::vector<std::vector<VkMemoryRequirements>>& MRs)
-{
-	DMs.resize(size(MRs), VK_NULL_HANDLE);
-	for (size_t i = 0; i < size(MRs); ++i) {
-		if (!empty(MRs[i])) {
-			const VkMemoryAllocateInfo MAI = {
-				.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-				.pNext = nullptr,
-				.allocationSize = std::accumulate(cbegin(MRs[i]), cend(MRs[i]), static_cast<VkDeviceSize>(0), [](const VkDeviceSize lhs, const VkMemoryRequirements& rhs) { return RoundUp(lhs, rhs.alignment) + rhs.size; }),
-				.memoryTypeIndex = static_cast<uint32_t>(i)
-			};
-			VERIFY_SUCCEEDED(vkAllocateMemory(Dev, &MAI, GetAllocationCallbacks(), &DMs[i]));
-		}
-	}
-}
-
 void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size) const
 {
 	//!< バッファは作成時に指定した使用法でしか使用できない、ここでは VK_SHARING_MODE_EXCLUSIVE 決め打ちにしている #VK_TODO (Using VK_SHARING_MODE_EXCLUSIVE here)
@@ -636,7 +620,7 @@ void VK::PopulateCommandBuffer_CopyBufferToBuffer(const VkCommandBuffer CB, cons
 		}
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
-void VK::PopulateCommandBuffer_CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Layers, const uint32_t Levels)
+void VK::PopulateCommandBuffer_CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers)
 {
 	//!< コマンド開始 (Begin command)
 	const VkCommandBufferBeginInfo CBBI = {
@@ -699,7 +683,7 @@ void VK::PopulateCommandBuffer_CopyBufferToImage(const VkCommandBuffer CB, const
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
 
-void VK::PopulateCommandBuffer_CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Layers, const uint32_t Levels)
+void VK::PopulateCommandBuffer_CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers)
 {
 	//!< コマンド開始 (Begin command)
 	const VkCommandBufferBeginInfo CBBI = {
@@ -2274,7 +2258,7 @@ void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const s
 void VK::CreateTexture1x1(const uint32_t Color, const VkPipelineStageFlags PSF)
 {
 	const std::array Colors = { Color };
-	constexpr auto ColorsSize = size(Colors) * sizeof(Colors[0]);
+	constexpr auto LayerSize = sizeof(Colors[0]);
 	constexpr auto Format = VK_FORMAT_R8G8B8A8_UNORM;
 	constexpr auto Extent = VkExtent3D({ .width = 1, .height = 1, .depth = 1 });
 
@@ -2288,10 +2272,10 @@ void VK::CreateTexture1x1(const uint32_t Color, const VkPipelineStageFlags PSF)
 		VkDeviceMemory DeviceMemory;
 		{
 			//!< アップロード用バッファ (Buffer for upload)
-			CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, ColorsSize);
+			CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, LayerSize);
 			AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
-			CopyToHostVisibleDeviceMemory(DeviceMemory, 0, ColorsSize, data(Colors));
+			CopyToHostVisibleDeviceMemory(DeviceMemory, 0, LayerSize, data(Colors));
 
 			//!< バッファ->テクスチャ転送コマンド (Buffer to image copy command)
 			const std::vector BICs = {
@@ -2326,52 +2310,58 @@ void VK::CreateTexture1x1(const uint32_t Color, const VkPipelineStageFlags PSF)
 	VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.back()));
 }
 
-//!< シェーダリソースを1つのコンテナオブジェクトにまとめる (型や数はセットレイアウトで定義され、ストレージはプールから確保される)
-//void VK::AllocateDescriptorSet(std::vector<VkDescriptorSet>& DSs, const VkDescriptorPool DP, const std::vector <VkDescriptorSetLayout>& DSLs)
-//{
-//	DSs.resize(size(DSLs));
-//	const VkDescriptorSetAllocateInfo DSAI = {
-//		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-//		nullptr,
-//		DP,
-//		static_cast<uint32_t>(size(DSLs)), data(DSLs.data)
-//	};
-//	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, data(DSs)));
-//
-//	LOG_OK();
-//}
+void VK::CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipelineStageFlags PSF)
+{
+	const auto Layers = static_cast<uint32_t>(size(Colors));
+	constexpr auto LayerSize = static_cast<uint32_t>(sizeof(Colors[0]));
+	const auto TotalSize = Layers * LayerSize;
+	constexpr auto Format = VK_FORMAT_R8G8B8A8_UNORM;
+	constexpr auto Extent = VkExtent3D({ .width = 1, .height = 1, .depth = 1 });
 
-//!< vkUpdateDescriptorSetWithTemplate() の使用を推奨
-//void VK::UpdateDescriptorSet(const std::vector<VkWriteDescriptorSet>& WDSs, const std::vector<VkCopyDescriptorSet>& CDSs)
-//{
-//	//!< dstArrayElement ... バインディング内での配列の開始添字 (VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT指定の場合は開始バイトオフセット)
-//	//!< descriptorCount ... 更新するデスクリプタセット個数 (VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT指定の場合は更新するバイト)
-//	//!< 指定 descriptorType に従って、pImageInfo, pBufferInfo, pTexelBufferView の適切な箇所へ指定すること
-//	vkUpdateDescriptorSets(Device,
-//		static_cast<uint32_t>(size(WDSs)), data(WDSs),
-//		static_cast<uint32_t>(size(CDSs)), data(CDSs));
-//
-//	LOG_OK();
-//}
+	Images.emplace_back(Image());
+	CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+	AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
-//void VK::CreateDescriptorSet()
-//{
-//	assert(!empty(DescriptorPools) && "");
-//
-//	const auto DP = DescriptorPools[0];
-//	if (!empty(DescriptorSetLayouts)) {
-//		const VkDescriptorSetAllocateInfo DSAI = {
-//			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-//			nullptr,
-//			DP,
-//			static_cast<uint32_t>(size(DescriptorSetLayouts)), data(DescriptorSetLayouts)
-//		};
-//		DescriptorSets.resize(size(DescriptorSetLayouts));
-//		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, data(DescriptorSets)));
-//	}
-//
-//	LOG_OK();
-//}
+	{
+		VkBuffer Buffer;
+		VkDeviceMemory DeviceMemory;
+		{
+			CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TotalSize);
+			AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
+			CopyToHostVisibleDeviceMemory(DeviceMemory, 0, TotalSize, data(Colors));
+
+			std::vector<VkBufferImageCopy> BICs;
+			for (uint32_t i = 0; i < Layers; ++i) {
+				BICs.emplace_back(VkBufferImageCopy({
+					.bufferOffset = i * LayerSize, .bufferRowLength = 0, .bufferImageHeight = 0,
+					.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = static_cast<uint32_t>(i), .layerCount = 1 }),
+					.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),.imageExtent = Extent }));
+			}
+			const auto& CB = CommandBuffers[0];
+			PopulateCommandBuffer_CopyBufferToImage(CB, Buffer, Images.back().Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, BICs, 1, Layers);
+
+			SubmitAndWait(GraphicsQueue, CB);
+		}
+		vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
+		vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
+	}
+
+	ImageViews.emplace_back(VkImageView());
+	const VkImageViewCreateInfo IVCI = {
+		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.image = Images.back().Image,
+		//.viewType = 1 < Layers ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D,
+		.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+		.format = Format,
+		.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
+		.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS }),
+	};
+	VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.back()));
+}
 
 void VK::CreateRenderPass(VkRenderPass& RP, const std::vector<VkAttachmentDescription>& ADs, const std::vector<VkSubpassDescription>& SDs, const std::vector<VkSubpassDependency>& Deps)
 {

@@ -126,7 +126,7 @@ void VKImage::PopulateCommandBuffer_CopyBufferToImage(const VkCommandBuffer CB, 
 			Offset += static_cast<const VkDeviceSize>(GLITexture.size(j));
 		}
 	}
-	VK::PopulateCommandBuffer_CopyBufferToImage(CB, Src, Dst, AF, IL, PSF, BICs, Layers, Levels);
+	VK::PopulateCommandBuffer_CopyBufferToImage(CB, Src, Dst, AF, IL, PSF, BICs, Levels, Layers);
 }
 
 //!< @param コマンドバッファ
@@ -153,7 +153,7 @@ void VKImage::PopulateCommandBuffer_CopyImageToBuffer(const VkCommandBuffer CB, 
 			Offset += static_cast<const VkDeviceSize>(GLITexture.size(j));
 		}
 	}
-	VK::PopulateCommandBuffer_CopyImageToBuffer(CB, Src, Dst, AF, IL, PSF, BICs, Layers, Levels);
+	VK::PopulateCommandBuffer_CopyImageToBuffer(CB, Src, Dst, AF, IL, PSF, BICs, Levels, Layers);
 }
 
 void VKImage::CreateImageView(VkImageView* IV, const VkImage Img, const gli::texture& GLITexture)

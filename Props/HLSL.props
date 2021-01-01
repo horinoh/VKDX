@@ -5,7 +5,7 @@
   <PropertyGroup />
   <ItemDefinitionGroup>
     <FxCompile>
-      <ShaderModel>6.1</ShaderModel>
+      <ShaderModel>6.3</ShaderModel>
       <ObjectFileOutput>$(ProjectDir)%(Filename).cso</ObjectFileOutput>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AssemblerOutput>AssemblyCode</AssemblerOutput>

@@ -258,6 +258,7 @@ protected:
 
 	virtual void CreateTexture() {}
 	virtual void CreateTexture1x1(const UINT32 Color, const D3D12_RESOURCE_STATES RS = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+	virtual void CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RESOURCE_STATES RS = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	virtual void CreateStaticSampler() {}
 	virtual void CreateSampler() {}
 
