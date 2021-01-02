@@ -33,6 +33,14 @@ protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
 	virtual void CreateTexture() override {
 #ifdef USE_LEAP
+#if false
+		//!< Leapイメージ
+		{
+		}
+#else
+		CreateTextureArray1x1({ 0xff0000ff, 0xff00ff00 });
+#endif
+
 		//!< ディストーションマップ
 		{
 			const auto Layers = static_cast<UINT32>(size(DistortionMatrices));
@@ -102,7 +110,11 @@ protected:
 				}));
 		}
 #else
+		//!< ABRG
 		CreateTextureArray1x1({ 0xff0000ff, 0xff00ff00 });
+#pragma region SecondTexture
+		CreateTextureArray1x1({ 0xffff0000, 0xff00ffff });
+#pragma endregion
 #endif
 	}
 	virtual void CreateStaticSampler() override {
@@ -116,7 +128,7 @@ protected:
 			.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,
 			.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
 			.MinLOD = 0.0f, .MaxLOD = 1.0f,
-			.ShaderRegister = 0, .RegisterSpace = 0, .ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL //!< register(t0, space0)
+			.ShaderRegister = 0, .RegisterSpace = 0, .ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL
 			}));
 	}
 
@@ -128,7 +140,9 @@ protected:
 		const std::array DRs = {
 			D3D12_DESCRIPTOR_RANGE({
 				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-				.NumDescriptors = 1,
+#pragma region SecondTexture
+				.NumDescriptors = 2,
+#pragma endregion
 				.BaseShaderRegister = 0, .RegisterSpace = 0,
 				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
 				})
@@ -162,7 +176,12 @@ protected:
 	virtual void CreateDescriptorHeap() override {
 		{
 			CbvSrvUavDescriptorHeaps.emplace_back(COM_PTR<ID3D12DescriptorHeap>());
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { 
+				.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+#pragma region SecondTexture
+				.NumDescriptors = 2,
+#pragma endregion
+				.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
 		}
 	}
@@ -171,6 +190,9 @@ protected:
 		const auto& DH = CbvSrvUavDescriptorHeaps[0];
 		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 		Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma region SecondTexture
+		Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), &ShaderResourceViewDescs[1], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); 
+#pragma endregion
 	}
 
 	virtual void PopulateCommandList(const size_t i) override;

@@ -33,11 +33,10 @@ protected:
 
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
 	virtual void CreateTexture() override {
-#ifdef USE_LEAP
-		//!< 配列テクスチャを作る場合、VK_IMAGE_TYPE_2D のままでレイヤー数を指定する
-		//!< ビューには VK_IMAGE_VIEW_TYPE_2D_ARRAY を使用する	
-
-		if(false){
+#ifdef USE_LEAP		
+#if false
+		//!< Leapイメージ
+		{
 			constexpr auto Layers = 2;// _countof(LEAP_IMAGE_EVENT::image); // TODO
 
 			Images.emplace_back(Image());
@@ -52,6 +51,9 @@ protected:
 				VkComponentMapping({ .r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
 				VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS }));
 		}
+#else
+		CreateTextureArray1x1({ 0xff0000ff, 0xff00ff00 });
+#endif
 
 		//!< ディストーションマップ
 		{
@@ -106,7 +108,11 @@ protected:
 			VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.back()));
 		}
 #else
-		CreateTextureArray1x1({0xff0000ff, 0xff00ff00});
+		//!< ABRG
+		CreateTextureArray1x1({ 0xff0000ff, 0xff00ff00 });
+#pragma region SecondTexture
+		CreateTextureArray1x1({ 0xffff0000, 0xff00ffff });
+#pragma endregion
 #endif
 	}
 	virtual void CreateImmutableSampler() override {
@@ -134,7 +140,10 @@ protected:
 		assert(!empty(Samplers) && "");
 		const std::array ISs = { Samplers[0] };
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
-			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) })
+			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }),
+#pragma region SecondTexture
+			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }), 
+#pragma endregion
 			});
 	}
 	virtual void CreatePipelineLayout() override {
@@ -151,7 +160,11 @@ protected:
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.emplace_back(VkDescriptorPool());
 		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 })
+			VkDescriptorPoolSize({
+				.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
+#pragma region SecondTexture
+				.descriptorCount = 2 })
+#pragma endregion
 			});
 	}
 	virtual void AllocateDescriptorSet() override {
@@ -173,11 +186,21 @@ protected:
 				.descriptorCount = _countof(DescriptorUpdateInfo::DII), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				.offset = offsetof(DescriptorUpdateInfo, DII), .stride = sizeof(DescriptorUpdateInfo)
 			}),
+#pragma region SecondTexture
+			VkDescriptorUpdateTemplateEntry({
+				.dstBinding = 1, .dstArrayElement = 0,
+				.descriptorCount = _countof(DescriptorUpdateInfo::DII_1), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.offset = offsetof(DescriptorUpdateInfo, DII_1), .stride = sizeof(DescriptorUpdateInfo)
+			}), 
+#pragma endregion
 			}, DescriptorSetLayouts[0]);
 	}
 	virtual void UpdateDescriptorSet() override {
 		const DescriptorUpdateInfo DUI = {
 			VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
+#pragma region SecondTexture
+			VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = ImageViews[1], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }), 
+#pragma endregion
 		};
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 	}
@@ -188,6 +211,9 @@ private:
 	struct DescriptorUpdateInfo
 	{
 		VkDescriptorImageInfo DII[1];
+#pragma region SecondTexture
+		VkDescriptorImageInfo DII_1[1]; 
+#pragma endregion
 	};
 };
 #pragma endregion

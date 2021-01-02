@@ -132,10 +132,10 @@ void main()
 	//!< BGカラー (BG color)
 	const vec3 BackGroundColor = vec3(0.529411793f, 0.807843208f, 0.921568692f);
 
-	//!< サーフェスを表示するため、距離の絶対値がほぼ 0.0f なら 1 、それ以外なら 0 になるようなマスク値
+	//!< サーフェスを表示するため、距離の絶対値がほぼ 0.0f なら 1 、それ以外なら 0 になるようなマスク値 (Mask value which is 1 when distance nearly equal 0, otherwise 0)
 	const float Mask = max(sign(0.01f - abs(Distance)), 0.0f);
 	const float InvMask = 1.0f - Mask;
 
-	//!< サーフェスカラーとBGカラーをマスク値を使用して排他的に描画
+	//!< サーフェスカラーとBGカラーをマスク値を使用して排他的に描画 (Exclusively draw surface and BG color, using mask value)
 	OutColor = vec4(Color * Mask + BackGroundColor * InvMask, 1.0f);
 }
