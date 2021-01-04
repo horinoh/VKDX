@@ -86,9 +86,9 @@ public:
 	virtual void Unload() { Documents.clear(); }
 	virtual void Load(const std::string& Path) {
 		if (std::string::npos != Path.rfind(".glb")) {
-			Documents.push_back(fx::gltf::LoadFromBinary(Path, fx::gltf::ReadQuotas()));
+			Documents.emplace_back(fx::gltf::LoadFromBinary(Path, fx::gltf::ReadQuotas()));
 		} else /*if(std::string::npos != Path.rfind(".gltf"))*/{
-			Documents.push_back(fx::gltf::LoadFromText(Path, fx::gltf::ReadQuotas()));
+			Documents.emplace_back(fx::gltf::LoadFromText(Path, fx::gltf::ReadQuotas()));
 		}
 
 		const auto& Doc = GetDocument();

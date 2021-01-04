@@ -8,19 +8,20 @@ layout (location = 0) in vec2 InTexcoord;
 
 layout (location = 0) out vec4 OutColor;
 
-layout (set=0, binding=0) uniform sampler2DArray Sampler2D;
+layout (set=0, binding=0) uniform sampler2DArray LeapMap;
 layout (set=0, binding=1) uniform sampler2DArray DistortionMap;
 
 void main()
 {
-    const vec2 DistortionIndex = texture(DistortionMap, vec3(InTexcoord, 0.0f)).xy;
-    if (DistortionIndex.x < 0.0f || DistortionIndex.x > 1.0f || DistortionIndex.y < 0.0f || DistortionIndex.y > 1.0f)
-    {
-        OutColor = vec4(0.5f, 0.5f, 0.5f, 1);
-        return;
-    }
-    //OutColor = vec4(texture(Sampler2D, vec3(DistortionIndex, 0.0f)).rrr, 1.0f);
-
-	//OutColor = texture(Sampler2D, vec3(fract(InTexcoord.x * 2.0f), InTexcoord.y, 1.0f - step(InTexcoord.x, 0.5f)));
-	OutColor = texture(DistortionMap, vec3(fract(InTexcoord.x * 2.0f), InTexcoord.y, 1.0f - step(InTexcoord.x, 0.5f)));
+    const float ArrayIndex = 1.0f - step(InTexcoord.x, 0.5f);
+    const vec2 UV = vec2(fract(InTexcoord.x * 2.0f), InTexcoord.y);
+#if 1
+    const vec2 DistortionIndex = texture(DistortionMap, vec3(UV, ArrayIndex)).xy;
+    if(any(lessThan(DistortionIndex, vec2(0.0f)))){ discard; }
+    if(any(greaterThan(DistortionIndex, vec2(1.0f)))){ discard; }
+    OutColor = vec4(texture(LeapMap, vec3(DistortionIndex, ArrayIndex)).rrr, 1.0f);
+#else
+	//OutColor = texture(LeapMap, vec3(UV, ArrayIndex));
+	OutColor = texture(DistortionMap, vec3(UV, ArrayIndex));
+#endif
 }

@@ -334,6 +334,8 @@
 			~~~
 - USE_HOLO
 	- HoloDX, HoloVK
+- USE_LEAP
+	- LeapDX, LeapVK
 	
 #### トラブルシューティング
 * 「このプロジェクトは、このコンピュータ上にないNugetパッケージを参照しています」と出る場合
@@ -382,6 +384,28 @@
     * Item Type を Custom Build Tool
    * 適用 - Custom Build Tool 項目が追加されるので GLSL Compiler になっていることを確認 (↑のプロパティを先に設定しておくこと)
  -->
+
+<!--
+# テクスチャを増やした場合に変更する箇所の例
+## DX
+- CreateRootSingnature()
+	- D3D12_DESCRIPTOR_RANGE.NumDescriptors を増やす
+- CreateDescriptorHeap()
+	- D3D12_DESCRIPTOR_HEAP_DESC.NumDescriptors を増やす
+- CreateDescriptorView()
+	- CreateShaderResourceView() 呼び出しを増やす
+## VK
+- CreateDescriptorSetLayout()
+	- VkDescriptorSetLayoutBinding エントリを増やす
+- CreateDescriptorPool()
+	- VkDescriptorPoolSize.descriptorCount を増やす
+- CreateDescriptorUpdateTemplate()
+	- VkDescriptorUpdateTemplateEntry エントリを増やす
+- UpdateDescriptorSet()
+	- VkDescriptorImageInfo エントリを増やす
+- DescriptorUpdateInfo 構造体
+	- VkDescriptorImageInfo エントリを増やす
+-->
 
 <!-- 
 # 外部ライブラリ

@@ -210,35 +210,48 @@ protected:
 			OnMatrixVersionChanged(IE);
 		}
 		for (uint32_t i = 0; i < _countof(IE->image); ++i) {
+			//if (!empty(ImageData[i])) {
+			//	std::copy(reinterpret_cast<std::byte*>(IE->image[i].data) + IE->image[i].offset, reinterpret_cast<std::byte*>(IE->image[i].data) + IE->image[i].offset + size(ImageData[i]), data(ImageData[i]));
+			//}
+
 			//std::cout << "[" << i << "]" << std::endl;
 
 			//const auto& Image = IE->image[i];
-			//std::cout << "\toffset = " << Image.offset << std::endl; // [0]0, [1]153600
+			//std::cout << "\toffset = " << Image.offset << std::endl; // [0]0, [1]153600(=640x240x1)
 
 			//const auto& Prop = Image.properties;
-			//std::cout << "\tProp.bpp = " << Prop.bpp << std::endl; //1(Byte Per Pixel)
+			//std::cout << "\tProp.bpp = " << Prop.bpp << std::endl; // 1 (Byte Per Pixel)
 			//std::cout << "\tProp.width x height = " << Prop.width << " x " << Prop.height << std::endl; //640x240
 			//std::cout << "\tProp.format = " << std::hex << Prop.format << std::dec << std::endl; //eLeapImageFormat_IR
 			//std::cout << "\tProp.type = " << Prop.type << std::endl; //eLeapImageType_Default
 			////!< 将来用 (Reserved for future use)
 			////std::cout << "\tProp.offset = " << Prop.x_offset << ", " << Prop.y_offset << std::endl; //-320, -238
 			////std::cout << "\tProp.scale = " << Prop.x_scale << ", " << Prop.y_scale << std::endl; //1, 2
-
-			//!< ディストーションマップ
-			//Image.matrix_version;
-			//std::cout << sizeof(*Image.distortion_matrix) << std::endl; //!< LEAP_DISTORTION_MATRIX_N * LEAP_DISTORTION_MATRIX_N * 2 * sizeof(float)
 		}
 	}
 	virtual void OnMatrixVersionChanged(const LEAP_IMAGE_EVENT* IE) {
 		for (auto i = 0; i < _countof(IE->image); ++i) {
+			ImageProperties[i] = IE->image[i].properties;
+
+			if (empty(ImageData[i])) {
+				ImageData[i].resize(ImageProperties[i].width * ImageProperties[i].height * ImageProperties[i].bpp);
+			}
+			std::copy(reinterpret_cast<std::byte*>(IE->image[i].data) + IE->image[i].offset, reinterpret_cast<std::byte*>(IE->image[i].data) + IE->image[i].offset + size(ImageData[i]), data(ImageData[i]));
+
 			DistortionMatrices[i] = *IE->image[i].distortion_matrix;
 		}
 	}
+	virtual void UpdateLeapImage() {}
+	virtual void UpdateDistortionImage() {}
 
 	LEAP_CONNECTION LeapConnection = nullptr;
 	LEAP_CLOCK_REBASER ClockRebaser  = nullptr;
 	std::thread PollThread;
 	uint64_t CurrentMatrixVersion = (std::numeric_limits<uint64_t>::max)();
+
+	std::array<LEAP_IMAGE_PROPERTIES, 2> ImageProperties;
+	std::array<std::vector<std::byte>, 2> ImageData;
+
 	std::array<LEAP_DISTORTION_MATRIX, 2> DistortionMatrices;
 #endif
 };
