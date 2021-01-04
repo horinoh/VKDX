@@ -210,9 +210,9 @@ protected:
 			OnMatrixVersionChanged(IE);
 		}
 		for (uint32_t i = 0; i < _countof(IE->image); ++i) {
-			//if (!empty(ImageData[i])) {
-			//	std::copy(reinterpret_cast<std::byte*>(IE->image[i].data) + IE->image[i].offset, reinterpret_cast<std::byte*>(IE->image[i].data) + IE->image[i].offset + size(ImageData[i]), data(ImageData[i]));
-			//}
+			if (!empty(ImageData[i])) {
+				std::copy(reinterpret_cast<std::byte*>(IE->image[i].data) + IE->image[i].offset, reinterpret_cast<std::byte*>(IE->image[i].data) + IE->image[i].offset + size(ImageData[i]), data(ImageData[i]));
+			}
 
 			//std::cout << "[" << i << "]" << std::endl;
 

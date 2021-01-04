@@ -21,7 +21,7 @@ void main()
     if(any(greaterThan(DistortionIndex, vec2(1.0f)))){ discard; }
     OutColor = vec4(texture(LeapMap, vec3(DistortionIndex, ArrayIndex)).rrr, 1.0f);
 #else
-	//OutColor = texture(LeapMap, vec3(UV, ArrayIndex));
-	OutColor = texture(DistortionMap, vec3(UV, ArrayIndex));
+	OutColor = texture(LeapMap, vec3(UV, ArrayIndex));
+	//OutColor = texture(DistortionMap, vec3(UV, ArrayIndex));
 #endif
 }

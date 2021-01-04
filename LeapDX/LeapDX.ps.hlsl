@@ -18,7 +18,7 @@ float4 main(IN In) : SV_TARGET
     clip(1.0f - DistortionIndex);
     return float4(LeapMap.Sample(Sampler, float3(DistortionIndex, ArrayIndex)).rrr, 1.0f);
 #else
-    //return LeapMap.Sample(Sampler, float3(UV, ArrayIndex));
-    return DistortionMap.Sample(Sampler, float3(UV, ArrayIndex));
+    return LeapMap.Sample(Sampler, float3(UV, ArrayIndex));
+    //return DistortionMap.Sample(Sampler, float3(UV, ArrayIndex));
 #endif
 }

@@ -100,7 +100,7 @@ protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
 	virtual void CreateTexture() override {
 #ifdef USE_LEAP		
-		//!< Leapイメージ
+		//!< Leap イメージ
 		{
 			const auto Layers = static_cast<uint32_t>(size(ImageData));
 			const auto Extent = VkExtent3D({ .width = ImageProperties[0].width, .height = ImageProperties[0].height, .depth = 1 });
@@ -108,7 +108,7 @@ protected:
 
 			Images.emplace_back(Image());
 			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); //!< (更新するのでホストビジブルにしたかったが)イメージの場合、ホストビジブルなデバイスメモリは作れなかった
+			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
 			UpdateLeapImage();

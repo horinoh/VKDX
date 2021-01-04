@@ -36,18 +36,17 @@ protected:
 			const auto PitchSize = Desc.Width * ImageProperties[0].bpp;
 			const auto AlignedPitchSize = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
 			const auto AlignedLayerSize = Desc.Height * AlignedPitchSize;
+			const std::array AlignedTop = { RoundUp(0, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT), RoundUp(AlignedLayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT) };
+			const size_t AlignedTotalSize = AlignedTop.back() + AlignedLayerSize;
 
 			const auto CA = COM_PTR_GET(CommandAllocators[0]);
 			const auto CL = COM_PTR_GET(GraphicsCommandLists[0]);
 
-			size_t AlignedSize = 0;
+			std::vector<std::byte> AlignedData(AlignedTotalSize, std::byte());
 			for (UINT32 i = 0; i < Layers; ++i) {
-				AlignedSize = RoundUp(AlignedSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
-				AlignedSize += AlignedLayerSize;
-			}
-			std::vector<std::byte> AlignedData(AlignedSize, std::byte());
-			for (UINT32 i = 0; i < Layers; ++i) {
-				std::copy(begin(ImageData[i]), end(ImageData[i]), &AlignedData[i * AlignedLayerSize]);
+				for (UINT j = 0; j < Desc.Height; ++j) {
+					std::copy(&ImageData[i][j * PitchSize], &ImageData[i][(j + 1) * PitchSize - 1], &AlignedData[AlignedTop[i] + j * AlignedPitchSize]);
+				}
 			}
 
 			COM_PTR<ID3D12Resource> UploadResource;
@@ -57,7 +56,7 @@ protected:
 			std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs;
 			for (UINT32 i = 0; i < Layers; ++i) {
 				PSFs.emplace_back(D3D12_PLACED_SUBRESOURCE_FOOTPRINT({
-					.Offset = RoundUp(i * LayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT),
+					.Offset = AlignedTop[i],
 					.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = Desc.Format, .Width = static_cast<UINT>(Desc.Width), .Height = Desc.Height, .Depth = 1, .RowPitch = AlignedPitchSize })
 					}));
 			}
@@ -76,18 +75,15 @@ protected:
 			constexpr auto PitchSize = sizeof(DistortionMatrices[0].matrix[0]);
 			const auto AlignedPitchSize = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
 			const auto AlignedLayerSize = Desc.Height * AlignedPitchSize;
+			const std::array AlignedTop = { RoundUp(0, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT), RoundUp(AlignedLayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT) };
+			const size_t AlignedTotalSize = AlignedTop.back() + AlignedLayerSize;
 
 			const auto CA = COM_PTR_GET(CommandAllocators[0]);
 			const auto CL = COM_PTR_GET(GraphicsCommandLists[0]);
 
-			size_t AlignedSize = 0;
+			std::vector<std::byte> AlignedData(AlignedTotalSize, std::byte());
 			for (UINT32 i = 0; i < Layers; ++i) {
-				AlignedSize = RoundUp(AlignedSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
-				AlignedSize += AlignedLayerSize;
-			}
-			std::vector<std::byte> AlignedData(AlignedSize, std::byte());
-			for (UINT32 i = 0; i < Layers; ++i) {
-				*reinterpret_cast<LEAP_DISTORTION_MATRIX*>(&AlignedData[i * AlignedLayerSize]) = DistortionMatrices[i];
+				*reinterpret_cast<LEAP_DISTORTION_MATRIX*>(&AlignedData[AlignedTop[i]]) = DistortionMatrices[i];
 			}			
 
 			COM_PTR<ID3D12Resource> UploadResource;
@@ -97,7 +93,7 @@ protected:
 			std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs;
 			for (UINT32 i = 0; i < Layers; ++i) {
 				PSFs.emplace_back(D3D12_PLACED_SUBRESOURCE_FOOTPRINT({
-					.Offset = RoundUp(i * LayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT),
+					.Offset = AlignedTop[i],
 					.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = Desc.Format, .Width = static_cast<UINT>(Desc.Width), .Height = Desc.Height, .Depth = 1, .RowPitch = static_cast<UINT>(AlignedPitchSize) })
 					}));
 			}
@@ -113,7 +109,7 @@ protected:
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
 	virtual void CreateTexture() override {
 #ifdef USE_LEAP
-		//!< Leapイメージ
+		//!< Leap イメージ
 		{
 			const auto Layers = static_cast<uint32_t>(size(ImageData));
 
