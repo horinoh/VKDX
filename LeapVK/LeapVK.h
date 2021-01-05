@@ -43,7 +43,7 @@ protected:
 				AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 				VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
 
-				CopyToHostVisibleDeviceMemory(DeviceMemory, 0, TotalSize, data(ImageData));
+				CopyToHostVisibleDeviceMemory(DeviceMemory, 0, TotalSize, data(ImageData[0]));
 
 				std::vector<VkBufferImageCopy> BICs;
 				for (uint32_t i = 0; i < Layers; ++i) {
