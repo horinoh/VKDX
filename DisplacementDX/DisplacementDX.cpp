@@ -281,7 +281,6 @@ void DisplacementDX::PopulateCommandList(const size_t i)
 #pragma region FRAME_OBJECT
 				DXGI_SWAP_CHAIN_DESC1 SCD;
 				SwapChain->GetDesc1(&SCD);
-
 				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
 				CL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV
 				GDH = DH->GetGPUDescriptorHandleForHeapStart(); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * SCD.BufferCount;

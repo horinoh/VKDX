@@ -14,6 +14,16 @@
 #pragma warning(pop)
 #endif
 
+/*        +Y
+*          |  -Z
+*          |  /
+*          | /
+* +X ------+------ -X
+*         /| 
+*        / |
+*       /  | 
+*     +Z  -Y
+*/
 class Leap
 {
 public:
@@ -162,44 +172,47 @@ protected:
 			}
 		}
 	}
+	virtual void OnHand(const LEAP_HAND& Hand) {
+		//std::cout << "grab_angle = " << Hand.grab_angle << std::endl;
+		//std::cout << "grab_strength = " << Hand.grab_strength << std::endl;
+
+		//std::cout << "pinch_distance = " << Hand.pinch_distance << std::endl;
+		//std::cout << "pinch_strength = " << Hand.pinch_strength << std::endl;
+
+		if (eLeapHandType_Right == Hand.type) {
+		}
+		else { //!< eLeapHandType_Left
+		}
+
+		//!< Žè‚Ì‚Ð‚ç
+		const auto& Palm = Hand.palm;
+		Palm.direction; //LEAP_VECTOR
+		Palm.normal; //LEAP_VECTOR
+		Palm.orientation; //LEAP_QUATERNION
+		//std::cout << "Palm.position = " << Palm.position.x << ", " << Palm.position.y << ", " << Palm.position.z << std::endl;
+		Palm.stabilized_position; //LEAP_VECTOR
+		Palm.velocity; //LEAP_VECTOR
+		Palm.width; //float
+
+		//!< Žw[5] (thumb, index, middle, ring, pinky)
+		for (auto i = 0; i < _countof(Hand.digits); ++i) {
+			const auto& Digit = Hand.digits[i];
+			//std::cout << "Digit[" << i << "]" << std::endl;
+			//!< ŠÖß[4] (metacarpal, proximal, intermediate, distal)
+			for (auto j = 0; j < _countof(Digit.bones); ++j) {
+				const auto & Bone = Digit.bones[j];
+				//std::cout << "\tBone[" << j << "] = " << Bone.next_joint.x << ", " << Bone.next_joint.y << ", " << Bone.next_joint.z << std::endl;
+				Bone.prev_joint; //LEAP_VECTOR
+				Bone.next_joint;
+				Bone.width; //float
+				Bone.rotation; //LEAP_QUATERNION
+			}
+		}
+	}
 	virtual void OnTrackingEvent(const LEAP_TRACKING_EVENT* TE) {
 		//!< Žè (eLeapHandType_Left, eLeapHandType_Right)
-		for (uint32_t i = 0; i < TE->nHands; ++i) {
-			const auto& Hand = TE->pHands[i];
-			std::cout << "grab_angle = " << Hand.grab_angle << std::endl;
-			std::cout << "grab_strength = " << Hand.grab_strength << std::endl;
-			std::cout << "pinch_distance = " << Hand.pinch_distance << std::endl;
-			std::cout << "pinch_strength = " << Hand.pinch_strength << std::endl;
-
-			switch (Hand.type) {
-			case eLeapHandType_Left:
-			{
-				//!< Žè‚Ì‚Ð‚ç
-				const auto& Palm = Hand.palm;
-				Palm.direction;
-				Palm.normal;
-				Palm.orientation;
-				Palm.position;
-				Palm.stabilized_position;
-				Palm.velocity;
-				Palm.width;
-
-				//!< Žw (thumb, index, middle, ring, pinky)
-				for (auto j = 0; j < _countof(Hand.digits); ++j) {
-					const auto& Digit = Hand.digits[j];
-					//!< ŠÖß (metacarpal, proximal, intermediate, distal)
-					for (auto k = 0; k < _countof(Digit.bones); ++k) {
-						const auto& Bone = Digit.bones[k];
-						Bone.prev_joint;
-						Bone.next_joint;
-						Bone.width;
-						Bone.rotation;
-					}
-				}
-			}
-			break;
-			case eLeapHandType_Right: break;
-			}
+		for (uint32_t i = 0; i < TE->nHands; ++i) {			
+			OnHand(TE->pHands[i]);
 		}
 	}
 	virtual void OnImageEvent(const LEAP_IMAGE_EVENT* IE) {

@@ -11,7 +11,7 @@ class LeapVK : public VKExt, public Leap
 private:
 	using Super = VKExt;
 public:
-	LeapVK() : Super() {}
+	LeapVK() : Super(), Leap() {}
 	virtual ~LeapVK() {}
 
 protected:
@@ -20,14 +20,37 @@ protected:
 		Super::OnTimer(hWnd, hInstance);
 #ifdef USE_LEAP
 		InterpolatedTrackingEvent();
+#else
+		for (auto i = 0; i < 5; ++i) {
+			for (auto j = 0; j < 4; ++j) {
+				Tracking.Hands[0][i][j] = glm::vec4(0.55f + i * 0.1f, 0.5f, (j + 1) * 0.2f, 1.0f);
+			}
+		}
+		for (auto i = 0; i < 5; ++i) {
+			for (auto j = 0; j < 4; ++j) {
+				Tracking.Hands[1][i][j] = glm::vec4(0.45f - i * 0.1f, 0.5f, (j + 1) * 0.2f, 1.0f);
+			}
+		}
 #endif
+#pragma region UB
+		CopyToHostVisibleDeviceMemory(UniformBuffers[GetCurrentBackBufferIndex()].DeviceMemory, 0, sizeof(Tracking), &Tracking);
+#pragma endregion
 	}
 #ifdef USE_LEAP
-	virtual void OnTrackingEvent(const LEAP_TRACKING_EVENT* TE) override {
-		Leap::OnTrackingEvent(TE);
-	}
-	virtual void OnImageEvent(const LEAP_IMAGE_EVENT* IE) override {
-		Leap::OnImageEvent(IE);
+	virtual void OnHand(const LEAP_HAND& Hand) override {
+		Leap::OnHand(Hand);
+		
+		const auto Index = eLeapHandType_Right == Hand.type ? 0 : 1;
+		for (auto i = 0; i < _countof(Hand.digits); ++i) {
+			const auto& Digit = Hand.digits[i];
+			for (auto j = 0; j < _countof(Digit.bones); ++j) {
+				const auto& Bone = Digit.bones[j];
+				const auto x = std::clamp(Bone.next_joint.x, -100.0f, 100.0f) / 100.0f;
+				const auto y = std::clamp(Bone.next_joint.y, 0.0f, 200.0f) / 200.0f;
+				const auto z = std::clamp(Bone.next_joint.z, -100.0f, 100.0f) / 100.0f;
+				Tracking.Hands[Index][i][j] = glm::vec4(x, y, z, 1.0f);
+			}
+		}
 	}
 	virtual void UpdateLeapImage() override {
 		if (!empty(Images)) {
@@ -98,6 +121,16 @@ protected:
 #endif
 
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
+#pragma region UB
+	virtual void CreateUniformBuffer() override {
+		for (size_t i = 0; i < size(SwapchainImages); ++i) {
+			UniformBuffers.emplace_back(UniformBuffer());
+			CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tracking));
+			AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
+		}
+	}
+#pragma endregion
 	virtual void CreateTexture() override {
 #ifdef USE_LEAP		
 		//!< Leap ƒCƒ[ƒW
@@ -184,8 +217,11 @@ protected:
 		const std::array ISs = { Samplers[0] };
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
 			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }),
-#pragma region SecondTexture
+#pragma region SECOND_TEXTURE
 			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }), 
+#pragma endregion
+#pragma region UB
+			VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr }),
 #pragma endregion
 			});
 	}
@@ -203,10 +239,11 @@ protected:
 	virtual void CreateDescriptorPool() override {
 		DescriptorPools.emplace_back(VkDescriptorPool());
 		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
-			VkDescriptorPoolSize({
-				.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 
-#pragma region SecondTexture
-				.descriptorCount = 2 })
+#pragma region SECOND_TEXTURE
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 2 }),
+#pragma endregion
+#pragma region UB
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }),
 #pragma endregion
 			});
 	}
@@ -218,8 +255,14 @@ protected:
 			.descriptorPool = DescriptorPools[0],
 			.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 		};
-		DescriptorSets.emplace_back(VkDescriptorSet());
-		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+		//DescriptorSets.emplace_back(VkDescriptorSet());
+		//VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+#pragma region UB
+		for (size_t i = 0; i < size(SwapchainImages); ++i) {
+			DescriptorSets.emplace_back(VkDescriptorSet());
+			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+		}
+#pragma endregion
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
 		DescriptorUpdateTemplates.emplace_back(VkDescriptorUpdateTemplate());
@@ -229,23 +272,35 @@ protected:
 				.descriptorCount = _countof(DescriptorUpdateInfo::DII), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				.offset = offsetof(DescriptorUpdateInfo, DII), .stride = sizeof(DescriptorUpdateInfo)
 			}),
-#pragma region SecondTexture
+#pragma region SECOND_TEXTURE
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 1, .dstArrayElement = 0,
 				.descriptorCount = _countof(DescriptorUpdateInfo::DII_1), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				.offset = offsetof(DescriptorUpdateInfo, DII_1), .stride = sizeof(DescriptorUpdateInfo)
 			}), 
 #pragma endregion
+#pragma region UB
+			VkDescriptorUpdateTemplateEntry({
+				.dstBinding = 2, .dstArrayElement = 0,
+				.descriptorCount = _countof(DescriptorUpdateInfo::DBI), .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				.offset = offsetof(DescriptorUpdateInfo, DBI), .stride = sizeof(DescriptorUpdateInfo)
+			}),
+#pragma endregion
 			}, DescriptorSetLayouts[0]);
 	}
 	virtual void UpdateDescriptorSet() override {
-		const DescriptorUpdateInfo DUI = {
-			VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
-#pragma region SecondTexture
-			VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = ImageViews[1], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }), 
+#pragma region UB
+		for (size_t i = 0; i < size(SwapchainImages); ++i) {
+			const DescriptorUpdateInfo DUI = {
+				VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
+#pragma region SECOND_TEXTURE
+				VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = ImageViews[1], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 #pragma endregion
-		};
-		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+				VkDescriptorBufferInfo({.buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
+			};
+			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DescriptorUpdateTemplates[0], &DUI);
+		}
+#pragma endregion
 	}
 
 	virtual void PopulateCommandBuffer(const size_t i) override;
@@ -254,9 +309,23 @@ private:
 	struct DescriptorUpdateInfo
 	{
 		VkDescriptorImageInfo DII[1];
-#pragma region SecondTexture
+#pragma region SECOND_TEXTURE
 		VkDescriptorImageInfo DII_1[1]; 
 #pragma endregion
+#pragma region UB
+		VkDescriptorBufferInfo DBI[1];
+#pragma endregion
 	};
+
+	struct HandTracking
+	{
+#ifdef USE_LEAP
+		glm::vec4 Hands[2][_countof(LEAP_HAND::digits)][_countof(LEAP_DIGIT::bones)];
+#else
+		glm::vec4 Hands[2][5][4];
+#endif
+	};
+	using HandTracking = struct HandTracking;
+	HandTracking Tracking;
 };
 #pragma endregion

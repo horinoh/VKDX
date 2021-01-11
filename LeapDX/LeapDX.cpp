@@ -271,7 +271,14 @@ void LeapDX::PopulateCommandList(const size_t i)
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-				CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * 2;
+
+#pragma region CB
+				DXGI_SWAP_CHAIN_DESC1 SCD;
+				SwapChain->GetDesc1(&SCD);
+				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
+				CL->SetGraphicsRootDescriptorTable(1, GDH);
+#pragma endregion
 			}
 
 			CL->ExecuteBundle(BCL);

@@ -535,23 +535,23 @@ void VK::CreateImage(VkImage* Img, const VkImageCreateFlags CreateFlags, const V
 	VERIFY_SUCCEEDED(vkCreateImage(Device, &ICI, GetAllocationCallbacks(), Img));
 }
 
-void VK::CopyToHostVisibleDeviceMemory(const VkDeviceMemory DM, const VkDeviceSize Offset, const VkDeviceSize Size, const void* Source, const VkDeviceSize MappedRangeOffset, const VkDeviceSize MappedRangeSize)
+void VK::CopyToHostVisibleDeviceMemory(const VkDeviceMemory DM, const VkDeviceSize Offset, const VkDeviceSize Size, const void* Source, [[maybe_unused]]const VkDeviceSize MappedRangeOffset, [[maybe_unused]]const VkDeviceSize MappedRangeSize)
 {
 	if (Size && nullptr != Source) [[likely]] {
+		const std::array MMRs = {
+			VkMappedMemoryRange({
+				.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
+				.pNext = nullptr,
+				.memory = DM,
+				.offset = MappedRangeOffset,
+				.size = MappedRangeSize
+			})
+		};
 		void* Data;
 		VERIFY_SUCCEEDED(vkMapMemory(Device, DM, Offset, Size, static_cast<VkMemoryMapFlags>(0), &Data)); {
 			memcpy(Data, Source, Size);
 			//!< メモリコンテンツが変更されたことをドライバへ知らせる(vkMapMemory()した状態でやること)
 			//!< デバイスメモリ確保時に VK_MEMORY_PROPERTY_HOST_COHERENT_BIT を指定した場合は必要ない CreateDeviceMemory(..., VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-			const std::array MMRs = {
-				VkMappedMemoryRange({
-					.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-					.pNext = nullptr,
-					.memory = DM,
-					.offset = MappedRangeOffset,
-					.size = MappedRangeSize
-				})
-			};
 			VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(size(MMRs)), data(MMRs)));
 			//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(size(MMRs)), data(MMRs)));
 		} vkUnmapMemory(Device, DM);

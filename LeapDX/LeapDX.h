@@ -11,7 +11,7 @@ class LeapDX : public DXExt, public Leap
 private:
 	using Super = DXExt;
 public:
-	LeapDX() : Super() {}
+	LeapDX() : Super(), Leap() {}
 	virtual ~LeapDX() {}
 
 protected:
@@ -19,14 +19,37 @@ protected:
 		Super::OnTimer(hWnd, hInstance);
 #ifdef USE_LEAP
 		InterpolatedTrackingEvent();
+#else
+		for (auto i = 0; i < 5; ++i) {
+			for (auto j = 0; j < 4; ++j) {
+				DirectX::XMStoreFloat4(&Tracking.Hands[0][i][j], DirectX::XMVectorSet(0.55f + i * 0.1f, 0.5f, (j + 1) * 0.2f, 1.0f));
+			}
+		}
+		for (auto i = 0; i < 5; ++i) {
+			for (auto j = 0; j < 4; ++j) {
+				DirectX::XMStoreFloat4(&Tracking.Hands[1][i][j], DirectX::XMVectorSet(0.45f - i * 0.1f, 0.5f, (j + 1) * 0.2f, 1.0f));
+			}
+		}
 #endif
+#pragma region CB
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tracking)), &Tracking);
+#pragma endregion
 	}
 #ifdef USE_LEAP
-	virtual void OnTrackingEvent(const LEAP_TRACKING_EVENT* TE) override {
-		Leap::OnTrackingEvent(TE);
-	}
-	virtual void OnImageEvent(const LEAP_IMAGE_EVENT* IE) override {
-		Leap::OnImageEvent(IE);
+	virtual void OnHand(const LEAP_HAND& Hand) override {
+		Leap::OnHand(Hand);
+
+		const auto Index = eLeapHandType_Right == Hand.type ? 0 : 1;
+		for (auto i = 0; i < _countof(Hand.digits); ++i) {
+			const auto& Digit = Hand.digits[i];
+			for (auto j = 0; j < _countof(Digit.bones); ++j) {
+				const auto& Bone = Digit.bones[j];
+				const auto x = std::clamp(Bone.next_joint.x, -100.0f, 100.0f) / 100.0f;
+				const auto y = std::clamp(Bone.next_joint.y, 0.0f, 200.0f) / 200.0f;
+				const auto z = std::clamp(Bone.next_joint.z, -100.0f, 100.0f) / 100.0f;
+				DirectX::XMStoreFloat4(&Tracking.Hands[Index][i][j], DirectX::XMVectorSet(x, y, z, 1.0f));
+			}
+		}
 	}
 	virtual void UpdateLeapImage() override {
 		if (!empty(ImageResources)) {
@@ -107,6 +130,16 @@ protected:
 #endif
 
 	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
+#pragma region CB
+	virtual void CreateConstantBuffer() override {
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+		for (UINT i = 0; i < SCD.BufferCount; ++i) {
+			ConstantBuffers.emplace_back(ConstantBuffer());
+			CreateBufferResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tracking)), D3D12_HEAP_TYPE_UPLOAD);
+		}
+	}
+#pragma endregion
 	virtual void CreateTexture() override {
 #ifdef USE_LEAP
 		//!< Leap ƒCƒ[ƒW
@@ -200,20 +233,35 @@ protected:
 		const std::array DRs = {
 			D3D12_DESCRIPTOR_RANGE({
 				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
-#pragma region SecondTexture
+#pragma region SECOND_TEXTURE
 				.NumDescriptors = 2,
 #pragma endregion
 				.BaseShaderRegister = 0, .RegisterSpace = 0,
 				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
 				})
 		};
+#pragma region CB
+		const std::array DRs_Cbv = {
+			D3D12_DESCRIPTOR_RANGE({
+				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
+				.NumDescriptors = 1,
+				.BaseShaderRegister = 0, .RegisterSpace = 0,
+				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
+				})
+		};
+#pragma endregion
 		assert(!empty(StaticSamplerDescs) && "");
 		DX::SerializeRootSignature(Blob, {
 			D3D12_ROOT_PARAMETER({
 				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
 				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<uint32_t>(size(DRs)), .pDescriptorRanges = data(DRs) }),
-				.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL
-					}),
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL }),
+#pragma region CB
+			D3D12_ROOT_PARAMETER({
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, 
+				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Cbv)), .pDescriptorRanges = data(DRs_Cbv) }), 
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL }),
+#pragma endregion
 			}, {
 				StaticSamplerDescs[0],
 			},
@@ -235,11 +283,15 @@ protected:
 
 	virtual void CreateDescriptorHeap() override {
 		{
+#pragma region CB
+			DXGI_SWAP_CHAIN_DESC1 SCD;
+			SwapChain->GetDesc1(&SCD);
+#pragma endregion
 			CbvSrvUavDescriptorHeaps.emplace_back(COM_PTR<ID3D12DescriptorHeap>());
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { 
 				.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
-#pragma region SecondTexture
-				.NumDescriptors = 2,
+#pragma region SECOND_TEXTURE, CB
+				.NumDescriptors = 2 + SCD.BufferCount,
 #pragma endregion
 				.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
@@ -250,11 +302,31 @@ protected:
 		const auto& DH = CbvSrvUavDescriptorHeaps[0];
 		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 		Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#pragma region SecondTexture
+#pragma region SECOND_TEXTURE
 		Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), &ShaderResourceViewDescs[1], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); 
+#pragma endregion
+#pragma region CB
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+		for (UINT i = 0; i < SCD.BufferCount; ++i) {
+			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
+			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		}
 #pragma endregion
 	}
 
 	virtual void PopulateCommandList(const size_t i) override;
+
+private:
+		struct HandTracking
+		{
+#ifdef USE_LEAP
+			DirectX::XMFLOAT4 Hands[2][_countof(LEAP_HAND::digits)][_countof(LEAP_DIGIT::bones)];
+#else
+			DirectX::XMFLOAT4 Hands[2][5][4];
+#endif
+		};
+		using HandTracking = struct HandTracking;
+		HandTracking Tracking;
 };
 #pragma endregion

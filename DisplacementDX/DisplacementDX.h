@@ -55,6 +55,7 @@ protected:
 		const std::array DRs_Cbv = {
 			D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }) //!< register(b0, space0)
 		};
+		//!< SHADER_VISIBILITY ‚ªˆÙ‚È‚é‚Ì‚Å SRV0, SRV1 ‚Í‚Ü‚Æ‚ß‚é‚±‚Æ‚Í‚Å‚«‚È‚¢
 		const std::array DRs_Srv0 = {
 			D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }) //!< register(t0, space0)
 		};
@@ -63,9 +64,9 @@ protected:
 		};
 		assert(2 == size(StaticSamplerDescs) && "");
 		DX::SerializeRootSignature(Blob, {
-				D3D12_ROOT_PARAMETER({ .ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ .NumDescriptorRanges = static_cast<UINT>(size(DRs_Cbv)), .pDescriptorRanges = data(DRs_Cbv) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY }), //!< CBV
-				D3D12_ROOT_PARAMETER({ .ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ .NumDescriptorRanges = static_cast<UINT>(size(DRs_Srv0)), .pDescriptorRanges = data(DRs_Srv0) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_DOMAIN }), //!< SRV0
-				D3D12_ROOT_PARAMETER({ .ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ .NumDescriptorRanges = static_cast<UINT>(size(DRs_Srv1)), .pDescriptorRanges = data(DRs_Srv1) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL }), //!< SRV1
+				D3D12_ROOT_PARAMETER({.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Cbv)), .pDescriptorRanges = data(DRs_Cbv) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY }), //!< CBV
+				D3D12_ROOT_PARAMETER({.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Srv0)), .pDescriptorRanges = data(DRs_Srv0) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_DOMAIN }), //!< SRV0
+				D3D12_ROOT_PARAMETER({.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Srv1)), .pDescriptorRanges = data(DRs_Srv1) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL }), //!< SRV1
 			}, {
 				StaticSamplerDescs[0],
 				StaticSamplerDescs[1],

@@ -63,6 +63,7 @@
 #include <numeric>
 #include <numbers>
 #include <optional>
+#include <random>
 
 #include <iostream>
 #include <ostream>
