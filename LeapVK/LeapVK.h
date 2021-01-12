@@ -23,12 +23,12 @@ protected:
 #else
 		for (auto i = 0; i < 5; ++i) {
 			for (auto j = 0; j < 4; ++j) {
-				Tracking.Hands[0][i][j] = glm::vec4(0.55f + i * 0.1f, 0.5f, (j + 1) * 0.2f, 1.0f);
+				Tracking.Hands[0][i][j] = glm::vec4(i * 0.2f + 0.1f, 0.5f, (j + 1) * 0.2f - 0.5f, 1.0f);
 			}
 		}
 		for (auto i = 0; i < 5; ++i) {
 			for (auto j = 0; j < 4; ++j) {
-				Tracking.Hands[1][i][j] = glm::vec4(0.45f - i * 0.1f, 0.5f, (j + 1) * 0.2f, 1.0f);
+				Tracking.Hands[1][i][j] = glm::vec4(-i * 0.2f - 0.1f, 0.5f, (j + 1) * 0.2f - 0.5f, 1.0f);
 			}
 		}
 #endif
@@ -46,7 +46,7 @@ protected:
 			for (auto j = 0; j < _countof(Digit.bones); ++j) {
 				const auto& Bone = Digit.bones[j];
 				const auto x = std::clamp(Bone.next_joint.x, -100.0f, 100.0f) / 100.0f;
-				const auto y = std::clamp(Bone.next_joint.y, 0.0f, 200.0f) / 200.0f;
+				const auto y = std::clamp(Bone.next_joint.y, 0.0f, 300.0f) / 300.0f;
 				const auto z = std::clamp(Bone.next_joint.z, -100.0f, 100.0f) / 100.0f;
 				Tracking.Hands[Index][i][j] = glm::vec4(x, y, z, 1.0f);
 			}
@@ -319,10 +319,11 @@ private:
 
 	struct HandTracking
 	{
+		//!< 16バイトアライン境界をまたいではいけないので vec3 ではなく、vec4 を使用する
 #ifdef USE_LEAP
-		glm::vec4 Hands[2][_countof(LEAP_HAND::digits)][_countof(LEAP_DIGIT::bones)];
+		std::array<std::array<std::array<glm::vec4, _countof(LEAP_DIGIT::bones)>, _countof(LEAP_HAND::digits)>, 2> Hands;
 #else
-		glm::vec4 Hands[2][5][4];
+		std::array<std::array<std::array<glm::vec4, 4>, 5>, 2> Hands;
 #endif
 	};
 	using HandTracking = struct HandTracking;

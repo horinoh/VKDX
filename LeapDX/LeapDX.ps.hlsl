@@ -48,7 +48,7 @@ float4 main(IN In) : SV_TARGET
         {
             for (int k = 0; k < 4; ++k)
             {
-                OutColor.rgb += lerp(BGColor, Colors[i], IsInCircle(Tr.Hands[i][j][k].xz - (In.Texcoord - 0.5f) * 2.0f, Tr.Hands[i][j][k].y * 0.1f)).rgb;
+                OutColor.rgb += lerp(BGColor, Colors[i] * (1.0f - Tr.Hands[i][j][k].y), IsInCircle(Tr.Hands[i][j][k].xz - (In.Texcoord - 0.5f) * 2.0f, 0.05f)).rgb;
             }
         }
     }

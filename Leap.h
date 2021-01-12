@@ -184,12 +184,11 @@ protected:
 		else { //!< eLeapHandType_Left
 		}
 
-		//!< Žè‚Ì‚Ð‚ç
+		//!< Žè‚Ì‚Ð‚ç (Plam)
 		const auto& Palm = Hand.palm;
 		Palm.direction; //LEAP_VECTOR
 		Palm.normal; //LEAP_VECTOR
 		Palm.orientation; //LEAP_QUATERNION
-		//std::cout << "Palm.position = " << Palm.position.x << ", " << Palm.position.y << ", " << Palm.position.z << std::endl;
 		Palm.stabilized_position; //LEAP_VECTOR
 		Palm.velocity; //LEAP_VECTOR
 		Palm.width; //float
@@ -197,13 +196,11 @@ protected:
 		//!< Žw[5] (thumb, index, middle, ring, pinky)
 		for (auto i = 0; i < _countof(Hand.digits); ++i) {
 			const auto& Digit = Hand.digits[i];
-			//std::cout << "Digit[" << i << "]" << std::endl;
 			//!< ŠÖß[4] (metacarpal, proximal, intermediate, distal)
 			for (auto j = 0; j < _countof(Digit.bones); ++j) {
 				const auto & Bone = Digit.bones[j];
-				//std::cout << "\tBone[" << j << "] = " << Bone.next_joint.x << ", " << Bone.next_joint.y << ", " << Bone.next_joint.z << std::endl;
 				Bone.prev_joint; //LEAP_VECTOR
-				Bone.next_joint;
+				Bone.next_joint; //LEAP_VECTOR
 				Bone.width; //float
 				Bone.rotation; //LEAP_QUATERNION
 			}

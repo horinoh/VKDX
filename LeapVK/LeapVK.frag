@@ -50,7 +50,7 @@ void main()
         {
             for (int k = 0; k < 4; ++k)
             {
-                OutColor.rgb += mix(BGColor, Colors[i], IsInCircle(Hands[i][j][k].xz - (InTexcoord - 0.5f) * 2.0f, Hands[i][j][k].y * 0.1f)).rgb;
+                OutColor.rgb += mix(BGColor, Colors[i] * (1.0f - Hands[i][j][k].y), IsInCircle(Hands[i][j][k].xz - (InTexcoord - 0.5f) * 2.0f, 0.05f)).rgb;
             }
         }
     }

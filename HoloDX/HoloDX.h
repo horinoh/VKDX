@@ -66,19 +66,21 @@ protected:
 		Tr.ViewCone = DirectX::XMConvertToRadians(GetViewCone(GetDeviceIndex()));
 		Tr.ViewTotal = GetQuiltSetting().GetViewTotal();
 
-		//const auto QS = GetQuiltSetting();
-		//constexpr auto CameraSize = 5.0f;
-		//const auto CameraDistance = -CameraSize / tan(Fov * 0.5f);
-		//const auto ViewCone = DirectX::XMConvertToRadians(GetViewCone(GetDeviceIndex()));
-		//for (auto i = 0; i < QS.GetViewTotal(); ++i) {
-		//	const auto OffsetRadian = (static_cast<float>(i) / (QS.GetViewTotal() - 1) - 0.5f) * ViewCone;
-		//	const auto OffsetX = CameraDistance * tan(OffsetRadian);
+#if 1
+		const auto QS = GetQuiltSetting();
+		constexpr auto CameraSize = 5.0f;
+		const auto CameraDistance = -CameraSize / tan(Fov * 0.5f);
+		const auto ViewCone = DirectX::XMConvertToRadians(GetViewCone(GetDeviceIndex()));
+		for (auto i = 0; i < QS.GetViewTotal(); ++i) {
+			const auto OffsetRadian = (static_cast<float>(i) / (QS.GetViewTotal() - 1) - 0.5f) * ViewCone;
+			const auto OffsetX = CameraDistance * tan(OffsetRadian);
 
-		//	DirectX::XMStoreFloat4x4(&Tr.View, View * DirectX::XMMatrixTranslationFromVector(DirectX::XMVector4Transform(DirectX::XMVectorSet(OffsetX, 0.0f, CameraDistance, 1.0f), View)));
+			DirectX::XMStoreFloat4x4(&Tr.Views[i], View * DirectX::XMMatrixTranslationFromVector(DirectX::XMVector4Transform(DirectX::XMVectorSet(OffsetX, 0.0f, CameraDistance, 1.0f), View)));
 
-		//	DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
-		//	Tr.Projection.m[2][0] += OffsetX / (CameraSize * Aspect);
-		//}
+			DirectX::XMStoreFloat4x4(&Tr.Projections[i], Projection);
+			Tr.Projections[i].m[2][0] += OffsetX / (CameraSize * Aspect);
+		}
+#endif
 
 #pragma region FRAME_OBJECT
 		DXGI_SWAP_CHAIN_DESC1 SCD;
@@ -383,6 +385,11 @@ protected:
 		float Aspect;
 		float ViewCone;
 		int ViewTotal;
+		int Dummy;
+#if 1
+		std::array<DirectX::XMFLOAT4X4, 16> Projections;
+		std::array<DirectX::XMFLOAT4X4, 16> Views;
+#endif
 	};
 	using Transform = struct Transform;
 	Transform Tr; 

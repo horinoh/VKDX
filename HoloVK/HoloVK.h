@@ -145,19 +145,21 @@ protected:
 		Tr.ViewCone = glm::radians(GetViewCone(GetDeviceIndex()));
 		Tr.ViewTotal = GetQuiltSetting().GetViewTotal();
 
-		//const auto QS = GetQuiltSetting();
-		//constexpr auto CameraSize = 5.0f;
-		//const auto CameraDistance = -CameraSize / tan(Fov * 0.5f); 
-		//const auto ViewCone = glm::radians(GetViewCone(GetDeviceIndex()));
-		//for (auto i = 0; i < QS.GetViewTotal(); ++i) {
-		//	const auto OffsetRadian = (static_cast<float>(i) / (QS.GetViewTotal() - 1) - 0.5f) * ViewCone;
-		//	const auto OffsetX = CameraDistance * tan(OffsetRadian);
+#if 1
+		const auto QS = GetQuiltSetting();
+		constexpr auto CameraSize = 5.0f;
+		const auto CameraDistance = -CameraSize / tan(Fov * 0.5f);
+		const auto ViewCone = glm::radians(GetViewCone(GetDeviceIndex()));
+		for (auto i = 0; i < QS.GetViewTotal(); ++i) {
+			const auto OffsetRadian = (static_cast<float>(i) / (QS.GetViewTotal() - 1) - 0.5f) * ViewCone;
+			const auto OffsetX = CameraDistance * tan(OffsetRadian);
 
-		//	Tr.View = glm::translate(View, glm::vec3(View * glm::vec4(OffsetX, 0.0f, CameraDistance, 1.0f)));
+			Tr.Views[i] = glm::translate(View, glm::vec3(View * glm::vec4(OffsetX, 0.0f, CameraDistance, 1.0f)));
 
-		//	Tr.Projection = Projection;
-		//	Tr.Projection[2][0] += OffsetX / (CameraSize * Aspect);
-		//}
+			Tr.Projections[i] = Projection;
+			Tr.Projections[i][2][0] += OffsetX / (CameraSize * Aspect);
+		}
+#endif
 
 #pragma region FRAME_OBJECT
 		const auto SCCount = size(SwapchainImages);
@@ -412,10 +414,15 @@ private:
 	{
 		glm::mat4 Projection;
 		glm::mat4 View;
-		glm::mat4 World;
+		glm::mat4 World;		
 		float Aspect;
 		float ViewCone;
 		int ViewTotal;
+		int Dummy;
+#if 1
+		std::array<glm::mat4, 16> Projections;
+		std::array<glm::mat4, 16> Views;
+#endif
 	};
 	using Transform = struct Transform;
 	Transform Tr;

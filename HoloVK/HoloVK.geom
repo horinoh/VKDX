@@ -8,10 +8,14 @@ layout (set = 0, binding = 0) uniform Transform {
 	mat4 Projection;
 	mat4 View; 
 	mat4 World;
-
 	float Aspect;
 	float ViewCone;
 	int ViewTotal;
+	int Dummy;
+#if 1
+	mat4 Projections[16];
+	mat4 Views[16]; 
+#endif
 };
 //! [ ë§ñ ê} ]
 //!  / Fov(=rad(14.0)) * 0.5 | CameraSize
@@ -43,19 +47,18 @@ void main()
 	const float OffsetRadian = (ViewIndex / (ViewTotal - 1) - 0.5f) * ViewCone; // ViewCone = 0.698131680, OffsetRadian [-0.349, 0.349]
 	const float OffsetX = CameraDistance * tan(OffsetRadian); // tan(OffsetRadian) = [-0.36389566, 0.36389566], OffsetX = [14.8, -14,8]
 
-	vec4 T = View * vec4(OffsetX, 0.0f, CameraDistance, 1.0f);
+	vec4 Trans = View * vec4(OffsetX, 0.0f, CameraDistance, 1.0f);
 	mat4 V = View;
+	V[3] = View[0] * Trans.x + View[1] * Trans.y + View[2] * Trans.z + View[3];
 #if 1
-	//V[3] = View[0] * T.x + View[1] * T.y + View[2] * T.z + View[3];
-#else
-//	V = View * mat4(1, 0, 0, 0,
-//	0, 1, 0, 0,
-//	0, 0, 1, 0,
-//	T.x, T.y, T.z, 1);
+	V = Views[gl_InvocationID];
 #endif
 
 	mat4 P = Projection;
 	P[2][0] += OffsetX / (CameraSize * Aspect);
+#if 1
+	P = Projections[gl_InvocationID];
+#endif
 
 	const vec3 CamPos = vec3(View[3][0], View[3][1], View[3][2]);
 	const mat4 PVW = P * V * World;
