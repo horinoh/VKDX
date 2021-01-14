@@ -125,7 +125,7 @@ protected:
 	}
 	virtual void CreateUniformBuffer() override {
 		constexpr auto Fov = glm::radians(14.0f);
-		const auto Aspect = GetRatio(GetDeviceIndex());
+		const auto Aspect = Holo::GetAspectRatio(GetDeviceIndex());
 		constexpr auto ZFar = 100.0f;
 		constexpr auto ZNear = 0.1f;
 
@@ -137,35 +137,26 @@ protected:
 		const auto View = glm::lookAt(CamPos, CamTag, CamUp);
 		const auto World = glm::mat4(1.0f);
 
-		Tr.World = World;
-		Tr.View = View;
-		Tr.Projection = Projection;
+		Transform.World = World;
+		Transform.View = View;
+		Transform.Projection = Projection;
 
-		Tr.Aspect = Aspect;
-		Tr.ViewCone = glm::radians(GetViewCone(GetDeviceIndex()));
-		Tr.ViewTotal = GetQuiltSetting().GetViewTotal();
+		//Tr.Aspect = Aspect;
+		//Tr.ViewCone = glm::radians(GetViewCone(GetDeviceIndex()));
+		//Tr.ViewTotal = GetQuiltSetting().GetViewTotal();
 
-#if 1
-		const auto QS = GetQuiltSetting();
-		constexpr auto CameraSize = 5.0f;
-		const auto CameraDistance = -CameraSize / tan(Fov * 0.5f);
-		const auto ViewCone = glm::radians(GetViewCone(GetDeviceIndex()));
-		for (auto i = 0; i < QS.GetViewTotal(); ++i) {
-			const auto OffsetRadian = (static_cast<float>(i) / (QS.GetViewTotal() - 1) - 0.5f) * ViewCone;
-			const auto OffsetX = CameraDistance * tan(OffsetRadian);
-
-			Tr.Views[i] = glm::translate(View, glm::vec3(View * glm::vec4(OffsetX, 0.0f, CameraDistance, 1.0f)));
-
-			Tr.Projections[i] = Projection;
-			Tr.Projections[i][2][0] += OffsetX / (CameraSize * Aspect);
-		}
-#endif
+#pragma region PUSH_CONSTANT
+		QuiltDraw.ViewIndexOffset = 0;
+		QuiltDraw.ViewTotal = GetQuiltSetting().GetViewTotal();
+		QuiltDraw.Aspect = Aspect;
+		QuiltDraw.ViewCone = glm::radians(GetViewCone(GetDeviceIndex()));
+#pragma endregion
 
 #pragma region FRAME_OBJECT
 		const auto SCCount = size(SwapchainImages);
 		for (size_t i = 0; i < SCCount; ++i) {
 			UniformBuffers.emplace_back(UniformBuffer());
-			CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
+			CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Transform));
 			AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
 		}
@@ -189,7 +180,11 @@ protected:
 	virtual void CreatePipelineLayout() override {
 		//!< Pass0
 		PipelineLayouts.emplace_back(VkPipelineLayout());
-		VKExt::CreatePipelineLayout(PipelineLayouts.back(), { DescriptorSetLayouts[0] }, {});
+		VKExt::CreatePipelineLayout(PipelineLayouts.back(), { DescriptorSetLayouts[0] }, {
+#pragma region PUSH_CONSTANT
+			VkPushConstantRange({.stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .offset = 0, .size = static_cast<uint32_t>(sizeof(QuiltDraw)) })
+#pragma endregion
+			});
 		//!< Pass1 
 		PipelineLayouts.emplace_back(VkPipelineLayout());
 		VKExt::CreatePipelineLayout(PipelineLayouts.back(), { DescriptorSetLayouts[1] }, {});
@@ -281,7 +276,7 @@ protected:
 
 #pragma region FRAME_OBJECT
 		for (size_t i = 0; i < SCCount; ++i) {
-			CopyToHostVisibleDeviceMemory(UniformBuffers[i].DeviceMemory, 0, sizeof(Tr), &Tr);
+			CopyToHostVisibleDeviceMemory(UniformBuffers[i].DeviceMemory, 0, sizeof(Transform), &Transform);
 		}
 #pragma endregion
 	}
@@ -410,35 +405,36 @@ protected:
 		return PDP.limits.maxViewports;
 	}
 private:
-	struct Transform
+	struct TRANSFORM
 	{
 		glm::mat4 Projection;
 		glm::mat4 View;
-		glm::mat4 World;		
+		glm::mat4 World;	
+	};
+	using TRANSFORM = struct TRANSFORM;
+	TRANSFORM Transform;
+	
+#pragma region PUSH_CONSTANT
+	struct QUILT_DRAW {
+		int ViewIndexOffset;
+		int ViewTotal;
 		float Aspect;
 		float ViewCone;
-		int ViewTotal;
-		int Dummy;
-#if 1
-		std::array<glm::mat4, 16> Projections;
-		std::array<glm::mat4, 16> Views;
-#endif
 	};
-	using Transform = struct Transform;
-	Transform Tr;
+	QUILT_DRAW QuiltDraw;
+#pragma endregion
+
 	struct DescriptorUpdateInfo_0
 	{
 		VkDescriptorBufferInfo DescriptorBufferInfos[1];
 	}; 
-	
 	struct DescriptorUpdateInfo_1
 	{
 		VkDescriptorImageInfo DescriptorImageInfos[1];
 	};
+
 	VkExtent2D QuiltExtent2D;
 	std::vector<VkViewport> QuiltViewports;
 	std::vector<VkRect2D> QuiltScissorRects;
-
-	
 };
 #pragma endregion

@@ -4,20 +4,21 @@ struct IN
     float3 Normal : NORMAL;
 };
 
-cbuffer Transform : register(b0, space0)
+cbuffer TRANSFORM : register(b0, space0)
 {
     float4x4 Projection;
     float4x4 View;
     float4x4 World; 
+};
+struct QUILT_DRAW
+{
+    int ViewIndexOffset;
+    int ViewTotal;
     float Aspect;
     float ViewCone;
-    int ViewTotal;
-    int Dummy;
-#if 1
-    float4x4 Projections[16];
-    float4x4 Views[16];
-#endif
 };
+ConstantBuffer<QUILT_DRAW> QuiltDraw : register(b1, space0);
+
 //! [ ë§ñ ê} ]
 //!  / Fov(=rad(14.0)) * 0.5 | CameraSize
 //! +------------------------|
@@ -31,7 +32,9 @@ struct OUT
     float3 Normal : NORMAL;
     float3 ViewDirection : TEXCOORD0;
     uint Viewport : SV_ViewportArrayIndex;
+#if 1
     float ViewIndex : TEXCOORD1;
+#endif
 };
 
 [instance(16)]
@@ -40,7 +43,7 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 {
 	OUT Out;
 
-    const float ViewIndex = float(instanceID); //!< TODO [0, 15]Ç»ÇÃÇ≈ÅAÇQé¸ñ⁄à»ç~ÇÃï`âÊÇ≈ÇÕâ∫ë ÇóöÇ©ÇπÇ»Ç¢Ç∆Ç¢ÇØÇ»Ç¢
+    const float ViewIndex = float(instanceID + QuiltDraw.ViewIndexOffset); //!< ÇQé¸ñ⁄à»ç~ÇÃï`âÊÇ≈ÇÕÅ@ViewIndexOffset ï™ÇÃâ∫ë ÇóöÇ©ÇπÇƒÇ¢ÇÈ
     
 	//!< [ è„ñ ê} ]
 	//!             --|--
@@ -49,22 +52,16 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 	//!            /  |
 	//!		     +----| 
 	//!           OffsetX
-    const float OffsetRadian = (ViewIndex / (ViewTotal - 1) - 0.5f) * ViewCone; // ViewCone = 0.698131680, OffsetRadian [-0.349, 0.349]
-    const float OffsetX = CameraDistance * tan(OffsetRadian); // tan(OffsetRadian) = [-0.36389566, 0.36389566], OffsetX = [14.8, -14,8]
+    const float OffsetRadian = (ViewIndex / (QuiltDraw.ViewTotal - 1) - 0.5f) * QuiltDraw.ViewCone; 
+    const float OffsetX = CameraDistance * tan(OffsetRadian);
     
     float4 Trans = mul(View, float4(OffsetX, 0.0f, CameraDistance, 1.0f));
 	float4 Tmp = View[0] * Trans.x + View[1] * Trans.y + View[2] * Trans.z + View[3];
     float4x4 V = View;
     V[0][3] = Tmp.x; V[1][3] = Tmp.y; V[2][3] = Tmp.z;
-#if 1
-    V = Views[instanceID];
-#endif
     
     float4x4 P = Projection;
-    P[0][2] += OffsetX / (CameraSize * Aspect);
-#if 1
-    P = Projections[instanceID];
-#endif
+    P[0][2] += OffsetX / (CameraSize * QuiltDraw.Aspect);
     
     const float3 CamPos = float3(View[0][3], View[1][3], View[2][3]);
     const float4x4 PVW = mul(mul(P, V), World);
@@ -75,9 +72,10 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
         Out.Normal = mul((float3x3) World, In[i].Normal);
         Out.ViewDirection = CamPos - mul(World, Out.Position).xyz;
         Out.Viewport = instanceID;
-		//Out.ViewIndex = (OffsetX + 14.8)/(14.8*2);
-        Out.ViewIndex = ViewIndex / (ViewTotal - 1);
+#if 1
+        Out.ViewIndex = ViewIndex / (QuiltDraw.ViewTotal - 1);
+#endif
 		stream.Append(Out);
-	}
+    }
 	stream.RestartStrip();
 }

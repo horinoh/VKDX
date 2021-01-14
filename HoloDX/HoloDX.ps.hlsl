@@ -4,7 +4,9 @@ struct IN
     float3 Normal : NORMAL;
     float3 ViewDirection : TEXCOORD0;
     uint Viewport : SV_ViewportArrayIndex;
+#if 1
     float ViewIndex : TEXCOORD1;
+#endif
 };
 struct OUT
 {
@@ -50,7 +52,9 @@ OUT main(const IN In)
 
     Out.Color = float4((Amb + (Dif + Spc) * Atn) * Spt, 1.0f);
 
+#if 0
     Out.Color.rgb = In.ViewIndex;
+#endif
     
 	return Out;
 }

@@ -24,13 +24,12 @@ public:
 		int GetViewHeight() const { return GetHeight() / GetViewRow(); }
 		int GetViewTotal() const { return GetViewColumn() * GetViewRow(); }
 		int Size = 4096;
-		//int Column = 5, Row = 9;
-		int Column = 4, Row = 4;
+		int Column = 5, Row = 9;
 	};
 
 	Holo() {
 #ifdef USE_HOLO
-		if (hpc_CLIERR_NOERROR == hpc_InitializeApp("TriangleDX.cpp", hpc_LICENSE_NONCOMMERCIAL)) {
+		if (hpc_CLIERR_NOERROR == hpc_InitializeApp("HoloPlay", hpc_LICENSE_NONCOMMERCIAL)) {
 			{
 				std::vector<char> Buf(hpc_GetStateAsJSON(nullptr, 0));
 				hpc_GetStateAsJSON(data(Buf), size(Buf));
@@ -127,6 +126,9 @@ public:
 				}
 			}
 		}
+		else {
+			std::cerr << "[ HoloPlay ] Device not found" << std::endl;
+		}
 
 		std::cout << "DeviceIndex = " << GetDeviceIndex() << std::endl;
 		std::cout << "QuiltSettings = " << GetQuiltSetting().GetWidth() << " x " << GetQuiltSetting().GetHeight() << " (" << GetQuiltSetting().GetViewColumn() << " x " << GetQuiltSetting().GetViewRow() << " = " << GetQuiltSetting().GetViewTotal() << ")" << std::endl;
@@ -147,11 +149,11 @@ public:
 #endif
 		return 40.0f;
 	}
-	float GetRatio([[maybe_unused]] const int i) const {
+	float GetAspectRatio([[maybe_unused]] const int i) const {
 #ifdef USE_HOLO
-		if (-1 != i) { return static_cast<float>(hpc_GetDevicePropertyScreenW(i)) / hpc_GetDevicePropertyScreenH(i); }
+		if (-1 != i) { return hpc_GetDevicePropertyDisplayAspect(i); }
 #endif
-		return 16.0f / 9.0f;
+		return 1.0f;
 	}
 	virtual int GetViewportMax() const = 0;
 

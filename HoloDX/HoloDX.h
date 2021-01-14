@@ -46,7 +46,7 @@ protected:
 	}
 	virtual void CreateConstantBuffer() override {
 		constexpr auto Fov = DirectX::XMConvertToRadians(14.0f);
-		const auto Aspect = GetRatio(GetDeviceIndex());
+		const auto Aspect = Holo::GetAspectRatio(GetDeviceIndex());
 		constexpr auto ZFar = 100.0f;
 		constexpr auto ZNear = 0.1f;
 
@@ -58,36 +58,23 @@ protected:
 		const auto View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
 		const auto World = DirectX::XMMatrixIdentity();
 
-		DirectX::XMStoreFloat4x4(&Tr.World, World);
-		DirectX::XMStoreFloat4x4(&Tr.View, View);
-		DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
+		DirectX::XMStoreFloat4x4(&Transform.World, World);
+		DirectX::XMStoreFloat4x4(&Transform.View, View);
+		DirectX::XMStoreFloat4x4(&Transform.Projection, Projection);
 
-		Tr.Aspect = Aspect;
-		Tr.ViewCone = DirectX::XMConvertToRadians(GetViewCone(GetDeviceIndex()));
-		Tr.ViewTotal = GetQuiltSetting().GetViewTotal();
-
-#if 1
-		const auto QS = GetQuiltSetting();
-		constexpr auto CameraSize = 5.0f;
-		const auto CameraDistance = -CameraSize / tan(Fov * 0.5f);
-		const auto ViewCone = DirectX::XMConvertToRadians(GetViewCone(GetDeviceIndex()));
-		for (auto i = 0; i < QS.GetViewTotal(); ++i) {
-			const auto OffsetRadian = (static_cast<float>(i) / (QS.GetViewTotal() - 1) - 0.5f) * ViewCone;
-			const auto OffsetX = CameraDistance * tan(OffsetRadian);
-
-			DirectX::XMStoreFloat4x4(&Tr.Views[i], View * DirectX::XMMatrixTranslationFromVector(DirectX::XMVector4Transform(DirectX::XMVectorSet(OffsetX, 0.0f, CameraDistance, 1.0f), View)));
-
-			DirectX::XMStoreFloat4x4(&Tr.Projections[i], Projection);
-			Tr.Projections[i].m[2][0] += OffsetX / (CameraSize * Aspect);
-		}
-#endif
+#pragma region ROOT_CONSTANT
+		QuiltDraw.ViewIndexOffset = 0;
+		QuiltDraw.ViewTotal = GetQuiltSetting().GetViewTotal();
+		QuiltDraw.Aspect = Aspect;
+		QuiltDraw.ViewCone = DirectX::XMConvertToRadians(GetViewCone(GetDeviceIndex()));
+#pragma endregion
 
 #pragma region FRAME_OBJECT
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
 			ConstantBuffers.emplace_back(ConstantBuffer());
-			CreateBufferResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tr)), D3D12_HEAP_TYPE_UPLOAD);
+			CreateBufferResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Transform)), D3D12_HEAP_TYPE_UPLOAD);
 		}
 #pragma endregion
 	}
@@ -117,11 +104,10 @@ protected:
 			};
 			SerializeRootSignature(Blob, {
 					D3D12_ROOT_PARAMETER({.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs)), .pDescriptorRanges = data(DRs) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY }),
-				}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE
-				| D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS
-				| D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS
-				| D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS
-				| D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS);
+#pragma region ROOT_CONSTANT
+					D3D12_ROOT_PARAMETER({.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS, .Constants = {.ShaderRegister = 1, .RegisterSpace = 0, .Num32BitValues = static_cast<UINT>(sizeof(QuiltDraw)) }, .ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY }),
+#pragma endregion
+				}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE | SHADER_ROOT_ACCESS_GS);
 #endif
 			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.back())));
 		}
@@ -140,12 +126,7 @@ protected:
 					D3D12_ROOT_PARAMETER({.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<uint32_t>(size(DRs_Srv)), .pDescriptorRanges = data(DRs_Srv) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL })
 				}, {
 					StaticSamplerDescs[0],
-				}, D3D12_ROOT_SIGNATURE_FLAG_NONE
-				| D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS
-				| D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS
-				| D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS
-				| D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS
-			);
+				}, D3D12_ROOT_SIGNATURE_FLAG_NONE | SHADER_ROOT_ACCESS_PS);
 #endif
 			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.back())));
 		}
@@ -289,7 +270,7 @@ protected:
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
-			CopyToUploadResource(COM_PTR_GET(ConstantBuffers[i].Resource), RoundUp256(sizeof(Tr)), &Tr);
+			CopyToUploadResource(COM_PTR_GET(ConstantBuffers[i].Resource), RoundUp256(sizeof(Transform)), &Transform);
 		}
 #pragma endregion
 	}
@@ -377,23 +358,25 @@ protected:
 	virtual int GetViewportMax() const override { return D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE; }
 
 protected:
-	struct Transform
+	struct TRANSFORM
 	{
 		DirectX::XMFLOAT4X4 Projection;
 		DirectX::XMFLOAT4X4 View;
 		DirectX::XMFLOAT4X4 World;
+	};
+	using TRANSFORM = struct TRANSFORM;
+	TRANSFORM Transform;
+
+#pragma region ROOT_CONSTANT
+	struct QUILT_DRAW {
+		int ViewIndexOffset;
+		int ViewTotal;
 		float Aspect;
 		float ViewCone;
-		int ViewTotal;
-		int Dummy;
-#if 1
-		std::array<DirectX::XMFLOAT4X4, 16> Projections;
-		std::array<DirectX::XMFLOAT4X4, 16> Views;
-#endif
 	};
-	using Transform = struct Transform;
-	Transform Tr; 
-	
+	QUILT_DRAW QuiltDraw;
+#pragma endregion
+
 	UINT64 QuiltWidth;
 	UINT QuiltHeight;
 	std::vector<D3D12_VIEWPORT> QuiltViewports;

@@ -4,19 +4,21 @@
 
 layout (location = 0) in vec3 InNormal[];
 
-layout (set = 0, binding = 0) uniform Transform {
+layout (set = 0, binding = 0) uniform TRANSFORM {
 	mat4 Projection;
 	mat4 View; 
 	mat4 World;
+};
+
+layout (push_constant) uniform QUILT_DRAW
+{
+	int ViewIndexOffset;
+	int ViewTotal;
 	float Aspect;
 	float ViewCone;
-	int ViewTotal;
-	int Dummy;
-#if 1
-	mat4 Projections[16];
-	mat4 Views[16]; 
-#endif
-};
+} QuiltDraw;
+
+
 //! [ ë§ñ ê} ]
 //!  / Fov(=rad(14.0)) * 0.5 | CameraSize
 //! +------------------------|
@@ -29,13 +31,15 @@ const float CameraDistance = -CameraSize / tan(radians(14.0f) * 0.5f);
 
 layout (location = 0) out vec3 OutNormal;
 layout (location = 1) out vec3 OutViewDirection;
+#if 1
 layout (location = 2) out float OutViewIndex;
+#endif
 
 layout (triangles, invocations = 16) in;
 layout (triangle_strip, max_vertices = 3) out;
 void main()
 {
-    const float ViewIndex = float(gl_InvocationID); //!< TODO [0, 15]Ç»ÇÃÇ≈ÅAÇQé¸ñ⁄à»ç~ÇÃï`âÊÇ≈ÇÕâ∫ë ÇóöÇ©ÇπÇ»Ç¢Ç∆Ç¢ÇØÇ»Ç¢
+    const float ViewIndex = float(gl_InvocationID + QuiltDraw.ViewIndexOffset); //!< ÇQé¸ñ⁄à»ç~ÇÃï`âÊÇ≈ÇÕÅ@ViewIndexOffset ï™ÇÃâ∫ë ÇóöÇ©ÇπÇƒÇ¢ÇÈ
 
 	//!< [ è„ñ ê} ]
 	//!             --|--
@@ -44,21 +48,15 @@ void main()
 	//!            /  |
 	//!		     +----| 
 	//!           OffsetX
-	const float OffsetRadian = (ViewIndex / (ViewTotal - 1) - 0.5f) * ViewCone; // ViewCone = 0.698131680, OffsetRadian [-0.349, 0.349]
-	const float OffsetX = CameraDistance * tan(OffsetRadian); // tan(OffsetRadian) = [-0.36389566, 0.36389566], OffsetX = [14.8, -14,8]
+	const float OffsetRadian = (ViewIndex / (QuiltDraw.ViewTotal - 1) - 0.5f) * QuiltDraw.ViewCone;
+	const float OffsetX = CameraDistance * tan(OffsetRadian);
 
 	vec4 Trans = View * vec4(OffsetX, 0.0f, CameraDistance, 1.0f);
 	mat4 V = View;
 	V[3] = View[0] * Trans.x + View[1] * Trans.y + View[2] * Trans.z + View[3];
-#if 1
-	V = Views[gl_InvocationID];
-#endif
 
 	mat4 P = Projection;
-	P[2][0] += OffsetX / (CameraSize * Aspect);
-#if 1
-	P = Projections[gl_InvocationID];
-#endif
+	P[2][0] += OffsetX / (CameraSize * QuiltDraw.Aspect);
 
 	const vec3 CamPos = vec3(View[3][0], View[3][1], View[3][2]);
 	const mat4 PVW = P * V * World;
@@ -67,8 +65,9 @@ void main()
 		gl_Position = PVW * gl_in[i].gl_Position;
 		OutNormal = mat3(World) * InNormal[i];
 		OutViewDirection = CamPos - (World * gl_Position).xyz;
-		//OutViewIndex = (OffsetX + 14.8)/(14.8*2);
-		OutViewIndex = ViewIndex / (ViewTotal - 1);
+#if 1
+		OutViewIndex = ViewIndex / (QuiltDraw.ViewTotal - 1);
+#endif
 		gl_ViewportIndex = gl_InvocationID;
 		EmitVertex();
 	}

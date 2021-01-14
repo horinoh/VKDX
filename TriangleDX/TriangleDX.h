@@ -23,21 +23,21 @@ protected:
 #ifdef USE_HLSL_ROOTSIGNATRUE
 		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
+		DX::SerializeRootSignature(Blob, {
 #ifdef USE_ROOT_CONSTANTS
-		const D3D12_ROOT_PARAMETER RP = {
-			.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS, 
-			.Constants = { .ShaderRegister = 0, .RegisterSpace = 0, .Num32BitValues = static_cast<UINT>(size(Color)) },
-			.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL
-		};
-		DX::SerializeRootSignature(Blob, { RP }, {}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-#else
-		DX::SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
-			| D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS
-			| D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS
-			| D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS
-			| D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS
-			| D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS);
+			D3D12_ROOT_PARAMETER({
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS, 
+				.Constants = {.ShaderRegister = 0, .RegisterSpace = 0, .Num32BitValues = static_cast<UINT>(size(Color)) },
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL
+			}),
 #endif
+			}, {}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
+#ifdef USE_ROOT_CONSTANTS
+			| SHADER_ROOT_ACCESS_PS
+#else
+			| SHADER_ROOT_ACCESS_DENY_ALL
+#endif
+		); 
 #endif
 		RootSignatures.emplace_back(COM_PTR<ID3D12RootSignature>());
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.back())));

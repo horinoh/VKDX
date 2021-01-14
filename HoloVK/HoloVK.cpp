@@ -303,6 +303,10 @@ void HoloVK::PopulateCommandBuffer(const size_t i)
 			for (auto j = 0; j < Repeat; ++j) {
 				const auto Start = j * ViewportMax;
 				const auto Count = (std::min)(ViewTotal - j * ViewportMax, ViewportMax);
+#pragma region PUSH_CONSTANT
+				QuiltDraw.ViewIndexOffset = Start;
+				vkCmdPushConstants(SCB0, PLL, VK_SHADER_STAGE_GEOMETRY_BIT, 0, static_cast<uint32_t>(sizeof(QuiltDraw)), &QuiltDraw);
+#pragma endregion
 				vkCmdSetViewport(SCB0, 0, Count, &QuiltViewports[Start]);
 				vkCmdSetScissor(SCB0, 0, Count, &QuiltScissorRects[Start]);
 				vkCmdDrawIndirect(SCB0, IDB.Buffer, 0, 1, 0);

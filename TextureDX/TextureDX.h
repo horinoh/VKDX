@@ -81,31 +81,25 @@ protected:
 #endif
 		DX::SerializeRootSignature(Blob, {
 			//!< SRV
-			D3D12_ROOT_PARAMETER({ 
-				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, 
-				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ .NumDescriptorRanges = static_cast<uint32_t>(size(DRs_Srv)), .pDescriptorRanges = data(DRs_Srv) }),
-				.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL 
-					}), 
+			D3D12_ROOT_PARAMETER({
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<uint32_t>(size(DRs_Srv)), .pDescriptorRanges = data(DRs_Srv) }),
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL
+					}),
 #ifndef USE_STATIC_SAMPLER
 			//!< Sampler
-			D3D12_ROOT_PARAMETER({ 
-				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, 
-				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ .NumDescriptorRanges = static_cast<uint32_t>(size(DRs_Smp)), .pDescriptorRanges = data(DRs_Smp) }),
-				.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL 
-				}) 
+			D3D12_ROOT_PARAMETER({
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<uint32_t>(size(DRs_Smp)), .pDescriptorRanges = data(DRs_Smp) }),
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL
+				})
 #endif
 			}, {
 #ifdef USE_STATIC_SAMPLER
 				StaticSamplerDescs[0], //!< StaticSampler
 #endif
-			}, 
-			D3D12_ROOT_SIGNATURE_FLAG_NONE
-			| D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS
-			| D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS
-			| D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS
-			| D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS
-			//| D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS
-		);
+			},
+			D3D12_ROOT_SIGNATURE_FLAG_NONE | SHADER_ROOT_ACCESS_PS);
 #endif
 		RootSignatures.emplace_back(COM_PTR<ID3D12RootSignature>());
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.back())));

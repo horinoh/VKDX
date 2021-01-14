@@ -327,6 +327,10 @@ void HoloDX::PopulateCommandList(const size_t i)
 			for (auto j = 0; j < Repeat; ++j) {
 				const auto Start = j * ViewportMax;
 				const auto Count = (std::min)(ViewTotal - j * ViewportMax, ViewportMax);
+#pragma region ROOT_CONSTANT
+				QuiltDraw.ViewIndexOffset = Start;
+				CL->SetGraphicsRoot32BitConstants(1, static_cast<UINT>(sizeof(QuiltDraw)), &QuiltDraw, 0);
+#pragma endregion
 				CL->RSSetViewports(Count, &QuiltViewports[Start]);
 				CL->RSSetScissorRects(Count, &QuiltScissorRects[Start]);
 				CL->ExecuteBundle(BCL0);
