@@ -2,6 +2,10 @@
 
 VkFormat VKImage::ToVkFormat(const gli::format GLIFormat)
 {
+	//gli::is_compressed(GLIFormat);
+	//gli::is_s3tc_compressed(GLIFormat);
+	//const auto FI = gli::detail::get_format_info(GLIFormat);
+
 	//!< ˆ³kƒeƒNƒXƒ`ƒƒ
 	//!< DXT1	... BC1		bpp4	RGB,RGBA	A2æ~’²
 	//!< DXT2,3	...	BC2		bpp8	RGBA		A16æ~’²
@@ -14,10 +18,10 @@ VkFormat VKImage::ToVkFormat(const gli::format GLIFormat)
 	switch (GLIFormat)
 	{
 		using enum gli::format;
-	default: assert(false && "Not supported"); break;
 #include "VKGLIFormat.h"
 	}
 #undef GLI_FORMAT_TO_VK_FORMAT_ENTRY
+	assert(false && "Not supported");
 	return VK_FORMAT_UNDEFINED;
 }
 VkImageViewType VKImage::ToVkImageViewType(const gli::target GLITarget)
@@ -26,7 +30,6 @@ VkImageViewType VKImage::ToVkImageViewType(const gli::target GLITarget)
 	switch (GLITarget)
 	{
 		using enum gli::target;
-	default: assert(false && "Not supported"); break;
 		GLI_TARGET_TO_VK_IMAGE_VIEW_TYPE_ENTRY(1D);
 		GLI_TARGET_TO_VK_IMAGE_VIEW_TYPE_ENTRY(1D_ARRAY);
 		GLI_TARGET_TO_VK_IMAGE_VIEW_TYPE_ENTRY(2D);
@@ -36,16 +39,14 @@ VkImageViewType VKImage::ToVkImageViewType(const gli::target GLITarget)
 		GLI_TARGET_TO_VK_IMAGE_VIEW_TYPE_ENTRY(CUBE_ARRAY);
 	}
 #undef GLI_TARGET_TO_VK_IMAGE_VIEW_TYPE_ENTRY
-
+	assert(false && "Not supported");
 	return VK_IMAGE_VIEW_TYPE_MAX_ENUM;
 }
-
 VkImageType VKImage::ToVkImageType(const gli::target GLITarget)
 {
 	switch (GLITarget)
 	{
 		using enum gli::target;
-	default: assert(false && "Not supported"); break;
 	case TARGET_1D: 
 	case TARGET_1D_ARRAY:
 		return VK_IMAGE_TYPE_1D;
@@ -57,22 +58,9 @@ VkImageType VKImage::ToVkImageType(const gli::target GLITarget)
 	case TARGET_3D:
 		return VK_IMAGE_TYPE_3D;
 	}
+	assert(false && "Not supported");
 	return VK_IMAGE_TYPE_MAX_ENUM;
 }
-
-//bool VKImage::IsCube(const gli::target GLITarget)
-//{
-//	switch (GLITarget)
-//	{
-//		using enum gli::target;
-//	default: break;
-//	case TARGET_CUBE:
-//	case TARGET_CUBE_ARRAY:
-//		return true;
-//	}
-//	return false;
-//}
-
 VkComponentSwizzle VKImage::ToVkComponentSwizzle(const gli::swizzle Swizzle)
 {
 	switch (Swizzle)
@@ -89,7 +77,7 @@ VkComponentSwizzle VKImage::ToVkComponentSwizzle(const gli::swizzle Swizzle)
 
 void VKImage::CreateImage(VkImage* Img, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage, const gli::texture& GLITexture) const
 {
-	const auto CreateFlag = IsCube(GLITexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
+	const auto CreateFlag = gli::is_target_cube(GLITexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
 	const auto Type = ToVkImageType(GLITexture.target());
 	const auto Format = ToVkFormat(GLITexture.format());
 	const auto Faces = static_cast<const uint32_t>(GLITexture.faces());

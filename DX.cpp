@@ -1262,14 +1262,17 @@ void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* De
 
 void DX::CreateTexture1x1(const UINT32 Color, const D3D12_RESOURCE_STATES RS)
 {
-	const std::array Colors = { Color };
-	constexpr auto LayerSize = sizeof(Colors[0]);
+	//const std::array Colors = { Color };
+	constexpr auto PitchSize = 1 * static_cast<UINT32>(sizeof(Color));
+	constexpr auto LayerSize = 1 * PitchSize;
 
 	ImageResources.emplace_back(COM_PTR<ID3D12Resource>());
 	constexpr auto RD = D3D12_RESOURCE_DESC({
 		.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
 		.Alignment = 0,
-		.Width = 1, .Height = 1, .DepthOrArraySize = 1, .MipLevels = 1,
+		.Width = 1, .Height = 1, 
+		.DepthOrArraySize = 1,
+		.MipLevels = 1,
 		.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
 		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
 		.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
@@ -1291,13 +1294,13 @@ void DX::CreateTexture1x1(const UINT32 Color, const D3D12_RESOURCE_STATES RS)
 		//!< アップロード用バッファ (Buffer for upload)
 		COM_PTR<ID3D12Resource> UploadResource;
 		CreateBufferResource(COM_PTR_PUT(UploadResource), LayerSize, D3D12_HEAP_TYPE_UPLOAD);
-		CopyToUploadResource(COM_PTR_GET(UploadResource), LayerSize, data(Colors));
+		CopyToUploadResource(COM_PTR_GET(UploadResource), LayerSize, &Color);
 
 		//!< バッファテクスチャ間転送コマンド (Buffer to image copy command)
 		const std::vector PSFs = {
 			D3D12_PLACED_SUBRESOURCE_FOOTPRINT({
 				.Offset = 0, 
-				.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = RD.Format, .Width = static_cast<UINT>(RD.Width), .Height = RD.Height, .Depth = 1, .RowPitch = static_cast<UINT>(RoundUp(RD.Width * LayerSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)) })
+				.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = RD.Format, .Width = static_cast<UINT>(RD.Width), .Height = RD.Height, .Depth = 1, .RowPitch = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)) })
 				}),
 		};
 		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
@@ -1313,27 +1316,27 @@ void DX::CreateTexture1x1(const UINT32 Color, const D3D12_RESOURCE_STATES RS)
 		.Format = ImageResources.back()->GetDesc().Format,
 		.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
 		.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-		.Texture2D = D3D12_TEX2D_SRV({
-			.MostDetailedMip = 0,
-			.MipLevels = ImageResources.back()->GetDesc().MipLevels,
-			.PlaneSlice = 0,
-			.ResourceMinLODClamp = 0.0f
-			})
+		.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
 		}));
 }
 
 void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RESOURCE_STATES RS)
 {
+#pragma region TEX_ARRAY
 	const auto Layers = static_cast<UINT32>(size(Colors));
-	constexpr auto LayerSize = static_cast<UINT32>(sizeof(Colors[0]));
+#pragma endregion
 	constexpr auto PitchSize = 1 * static_cast<UINT32>(sizeof(Colors[0]));
-	const auto TotalSize = Layers * LayerSize;
+	constexpr auto LayerSize = 1 * PitchSize;
 
 	ImageResources.emplace_back(COM_PTR<ID3D12Resource>());
 	const auto RD = D3D12_RESOURCE_DESC({
 		.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
 		.Alignment = 0,
-		.Width = 1, .Height = 1, .DepthOrArraySize = static_cast<UINT16>(Layers), .MipLevels = 1,
+		.Width = 1, .Height = 1, 
+#pragma region TEX_ARRAY
+		.DepthOrArraySize = static_cast<UINT16>(Layers),
+#pragma endregion
+		.MipLevels = 1,
 		.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
 		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
 		.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
@@ -1351,22 +1354,23 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 		const auto CA = COM_PTR_GET(CommandAllocators[0]);
 		const auto CL = COM_PTR_GET(GraphicsCommandLists[0]);
 
-		//!< Colors をアラインされたメモリへコピー (Copy Colors to aligned memory)
+		//!< アラインされたサイズを計算 (Calculate aligned size)
 		size_t AlignedSize = 0;
-		for (auto i = 0; i < size(Colors); ++i) {
+		for (UINT32 i = 0; i < Layers; ++i) {
 			AlignedSize = RoundUp(i * LayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
 			AlignedSize += LayerSize;
 		}
+		//!< Colors をアラインされたメモリへコピー (Copy Colors to aligned memory)
 		std::vector<std::byte> AlignedData(AlignedSize, std::byte());
-		for (auto i = 0; i < size(Colors); ++i) {
+		for (UINT32 i = 0; i < Layers; ++i) {
 			*reinterpret_cast<UINT32*>(&AlignedData[RoundUp(i * LayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)]) = Colors[i];
 		}
-
-		//!< (アラインされた)アップロード用バッファを作成
+		//!< (アラインされた)アップロード用バッファを作成 (Aligned buffer for upload)
 		COM_PTR<ID3D12Resource> UploadResource;
 		CreateBufferResource(COM_PTR_PUT(UploadResource), size(AlignedData), D3D12_HEAP_TYPE_UPLOAD);
 		CopyToUploadResource(COM_PTR_GET(UploadResource), size(AlignedData), data(AlignedData));
 
+#pragma region TEX_ARRAY
 		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs;
 		for (UINT32 i = 0; i < Layers; ++i) {
 			PSFs.emplace_back(D3D12_PLACED_SUBRESOURCE_FOOTPRINT({ 
@@ -1374,6 +1378,8 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 				.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = RD.Format, .Width = static_cast<UINT>(RD.Width), .Height = RD.Height, .Depth = 1, .RowPitch = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)) }) 
 				}));
 		}
+#pragma endregion
+
 		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
 			PopulateCommandList_CopyTextureRegion(CL, COM_PTR_GET(UploadResource), COM_PTR_GET(ImageResources.back()), PSFs, RS);
 		} VERIFY_SUCCEEDED(CL->Close());
@@ -1383,7 +1389,9 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 
 	ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
 		.Format = ImageResources.back()->GetDesc().Format,
+#pragma region TEX_ARRAY
 		.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY,
+#pragma endregion
 		.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
 		.Texture2DArray = D3D12_TEX2D_ARRAY_SRV({ .MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .FirstArraySlice = 0, .ArraySize = Layers, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
 		}));

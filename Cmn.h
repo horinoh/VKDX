@@ -3,14 +3,7 @@
 class Cmn
 {
 public:
-	static bool IsAligned(const size_t Size, const size_t Align) { return !(Size % Align); }
-	static size_t RoundDown(const size_t Size, const size_t Align) {
-		if (IsAligned(Size, Align)) { return Size; }
-		return (Size / Align) * Align;
-	}
-	static size_t RoundUp(const size_t Size, const size_t Align) {
-		if (IsAligned(Size, Align)) { return Size; }
-		return RoundDown(Size, Align) + Align;
-	}
-	static size_t RoundUp256(const size_t Size) { return RoundUp(Size, 0x100); }
+	static size_t RoundUpMask(const size_t Size, const size_t Mask) { return (Size + Mask) & ~Mask; }
+	static size_t RoundUp(const size_t Size, const size_t Align) { return RoundUpMask(Size, Align - 1); }
+	static size_t RoundUp256(const size_t Size) { return RoundUpMask(Size, 0xff); }
 };

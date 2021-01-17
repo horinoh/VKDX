@@ -27,18 +27,9 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const D3D12_RESOURCE_STAT
 	CreateBufferResource(COM_PTR_PUT(UploadResource), TotalBytes, D3D12_HEAP_TYPE_UPLOAD);
 	CopyToUploadResource(COM_PTR_GET(UploadResource), PSF, NumRows, RowBytes, SRDs);
 
-	//!< #DX_TODO ミップマップの生成 Mipmap
-	//if(ResourceDesc.MipLevels != static_cast<const UINT16>(size(SubresourceData))) {
-	//	UploadResource.GenerateMips(*Resource);
-	//}
-
 	VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
-		if (D3D12_RESOURCE_DIMENSION_BUFFER == (*Resource)->GetDesc().Dimension) [[unlikely]] {
-			PopulateCommandList_CopyBufferRegion(CL, COM_PTR_GET(UploadResource), *Resource, PSF, RS);
-		}
-		else {
-			PopulateCommandList_CopyTextureRegion(CL, COM_PTR_GET(UploadResource), *Resource, PSF, RS);
-		}
+		assert(D3D12_RESOURCE_DIMENSION_BUFFER != (*Resource)->GetDesc().Dimension && "");
+		PopulateCommandList_CopyTextureRegion(CL, COM_PTR_GET(UploadResource), *Resource, PSF, RS);
 	} VERIFY_SUCCEEDED(CL->Close());
 
 	ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL));

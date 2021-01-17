@@ -2259,6 +2259,7 @@ void VK::CreateTexture1x1(const uint32_t Color, const VkPipelineStageFlags PSF)
 {
 	const std::array Colors = { Color };
 	constexpr auto LayerSize = sizeof(Colors[0]);
+	constexpr auto TotalSize = 1 * LayerSize;
 	constexpr auto Format = VK_FORMAT_R8G8B8A8_UNORM;
 	constexpr auto Extent = VkExtent3D({ .width = 1, .height = 1, .depth = 1 });
 
@@ -2272,10 +2273,10 @@ void VK::CreateTexture1x1(const uint32_t Color, const VkPipelineStageFlags PSF)
 		VkDeviceMemory DeviceMemory;
 		{
 			//!< アップロード用バッファ (Buffer for upload)
-			CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, LayerSize);
+			CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TotalSize);
 			AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
-			CopyToHostVisibleDeviceMemory(DeviceMemory, 0, LayerSize, data(Colors));
+			CopyToHostVisibleDeviceMemory(DeviceMemory, 0, TotalSize, data(Colors));
 
 			//!< バッファ->テクスチャ転送コマンド (Buffer to image copy command)
 			const std::vector BICs = {
@@ -2312,14 +2313,18 @@ void VK::CreateTexture1x1(const uint32_t Color, const VkPipelineStageFlags PSF)
 
 void VK::CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipelineStageFlags PSF)
 {
+#pragma region TEX_ARRAY
 	const auto Layers = static_cast<uint32_t>(size(Colors));
+#pragma endregion
 	constexpr auto LayerSize = static_cast<uint32_t>(sizeof(Colors[0]));
 	const auto TotalSize = Layers * LayerSize;
 	constexpr auto Format = VK_FORMAT_R8G8B8A8_UNORM;
 	constexpr auto Extent = VkExtent3D({ .width = 1, .height = 1, .depth = 1 });
 
 	Images.emplace_back(Image());
+#pragma region TEX_ARRAY
 	CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+#pragma endregion
 	AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
@@ -2332,6 +2337,7 @@ void VK::CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipe
 			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
 			CopyToHostVisibleDeviceMemory(DeviceMemory, 0, TotalSize, data(Colors));
 
+#pragma region TEX_ARRAY
 			std::vector<VkBufferImageCopy> BICs;
 			for (uint32_t i = 0; i < Layers; ++i) {
 				BICs.emplace_back(VkBufferImageCopy({
@@ -2339,6 +2345,8 @@ void VK::CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipe
 					.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = static_cast<uint32_t>(i), .layerCount = 1 }),
 					.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),.imageExtent = Extent }));
 			}
+#pragma endregion
+
 			const auto& CB = CommandBuffers[0];
 			PopulateCommandBuffer_CopyBufferToImage(CB, Buffer, Images.back().Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, BICs, 1, Layers);
 
@@ -2354,8 +2362,9 @@ void VK::CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipe
 		.pNext = nullptr,
 		.flags = 0,
 		.image = Images.back().Image,
-		//.viewType = 1 < Layers ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D,
+#pragma region TEX_ARRAY
 		.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+#pragma endregion
 		.format = Format,
 		.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
 		.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS }),

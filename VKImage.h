@@ -20,7 +20,6 @@ private:
 	static [[nodiscard]] VkFormat ToVkFormat(const gli::format GLIFormat);
 	static [[nodiscard]] VkImageViewType ToVkImageViewType(const gli::target GLITarget);
 	static [[nodiscard]] VkImageType ToVkImageType(const gli::target GLITarget);
-	static [[nodiscard]] bool IsCube(const gli::target Target) { return gli::target::TARGET_CUBE == Target || gli::target::TARGET_CUBE_ARRAY == Target; }
 	static [[nodiscard]] VkComponentSwizzle ToVkComponentSwizzle(const gli::swizzle GLISwizzle);
 	static [[nodiscard]] VkComponentMapping ToVkComponentMapping(const gli::texture::swizzles_type ST) { return { ToVkComponentSwizzle(ST.r), ToVkComponentSwizzle(ST.g), ToVkComponentSwizzle(ST.b), ToVkComponentSwizzle(ST.a) }; }
 
