@@ -24,7 +24,7 @@ protected:
 		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tr)), &Tr);
 #pragma endregion
 	}
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
+	virtual void CreateBottomLevel() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 	virtual void CreateConstantBuffer() override {
 		//constexpr auto Fov = 0.16f * DirectX::XM_PI;
 		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;

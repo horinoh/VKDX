@@ -14,10 +14,7 @@ public:
 	virtual ~TriangleVK() {}
 
 protected:
-	virtual void CreateVertexBuffer() override;
-	virtual void CreateIndexBuffer() override;
-	virtual void CreateIndirectBuffer() override;
-
+	virtual void CreateBottomLevel() override;
 	virtual void CreateDescriptorSetLayout() override { 
 		DescriptorSetLayouts.emplace_back(VkDescriptorSetLayout());
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {});
@@ -60,7 +57,6 @@ protected:
 
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
-	uint32_t IndexCount = 0;
 #ifdef USE_PUSH_CONSTANTS
 	const std::array<float, 4> Color = { 1.0f, 0.0f, 0.0f, 1.0f };
 #endif

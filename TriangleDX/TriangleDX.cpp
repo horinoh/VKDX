@@ -229,82 +229,61 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void TriangleDX::CreateVertexBuffer()
+void TriangleDX::CreateBottomLevel()
 {
-	VertexBuffers.push_back(VertexBuffer());
+	const auto CA = COM_PTR_GET(CommandAllocators[0]);
+	const auto CL = COM_PTR_GET(GraphicsCommandLists[0]);
+	{
+		VertexBuffers.push_back(VertexBuffer());
 #if 1
-	const std::array Vertices = { 
-		Vertex_PositionColor({ .Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
-		Vertex_PositionColor({ .Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
-		Vertex_PositionColor({ .Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
-	};
+		const std::array Vertices = {
+			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
+			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
+			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
+		};
 #else
-	//!< ピクセル指定
-	const FLOAT W = 1280.0f, H = 720.0f;
-	const std::array Vertices = { 
-		Vertex_PositionColor({ .Position = { W * 0.5f, 100.0f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
-		Vertex_PositionColor({ .Position = { W * 0.5f - 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
-		Vertex_PositionColor({ .Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
-	};
+		//!< ピクセル指定
+		const FLOAT W = 1280.0f, H = 720.0f;
+		const std::array Vertices = {
+			Vertex_PositionColor({.Position = { W * 0.5f, 100.0f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
+			Vertex_PositionColor({.Position = { W * 0.5f - 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
+			Vertex_PositionColor({.Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
+		};
 #endif
-	const auto Stride = sizeof(Vertices[0]);
-	const auto Size = static_cast<UINT32>(Stride * size(Vertices));
-	CreateAndCopyToDefaultResource(VertexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, data(Vertices));
-
-	//!< DXではビューが必要 Need view
-	VertexBuffers.back().View = { VertexBuffers.back().Resource->GetGPUVirtualAddress(), Size, Stride };
+		CreateAndCopyToDefaultResource(VertexBuffers.back().Resource, CA, CL, sizeof(Vertices), data(Vertices));
+		//!< DXではビューが必要 (Need view on DX)
+		VertexBuffers.back().View = { .BufferLocation = VertexBuffers.back().Resource->GetGPUVirtualAddress(), .SizeInBytes = sizeof(Vertices), .StrideInBytes = sizeof(Vertices[0]) };
 
 #ifdef _DEBUG
-	SetName(COM_PTR_GET(VertexBuffers.back().Resource), TEXT("MyVertexBuffer"));
+		SetName(COM_PTR_GET(VertexBuffers.back().Resource), TEXT("MyVertexBuffer"));
 #endif
-
-	LOG_OK();
-}
-void TriangleDX::CreateIndexBuffer()
-{
-	IndexBuffers.push_back(IndexBuffer());
-	const std::array<UINT32, 3> Indices = { 0, 1, 2 };
-	//!< DrawInstanced()使用時やインダイレクトバッファ作成時に必要となるのでIndexCountを覚えておく (IndexCount is needed when use DrawInstanced() or creation of indirect buffer)
-	IndexCount = static_cast<UINT32>(size(Indices));
-	const auto Stride = sizeof(Indices[0]);
-	const auto Size = static_cast<UINT32>(Stride * IndexCount);
-	CreateAndCopyToDefaultResource(IndexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, data(Indices));
-
-	//!< DXではビューが必要 Need view
-	IndexBuffers.back().View = { IndexBuffers.back().Resource->GetGPUVirtualAddress(), Size, DXGI_FORMAT_R32_UINT };
-
+	}
+	{
+		IndexBuffers.push_back(IndexBuffer());
+		const std::array<UINT32, 3> Indices = { 0, 1, 2 };
+		CreateAndCopyToDefaultResource(IndexBuffers.back().Resource, CA, CL, sizeof(Indices), data(Indices));
+		IndexBuffers.back().View = { .BufferLocation = IndexBuffers.back().Resource->GetGPUVirtualAddress(), .SizeInBytes = sizeof(Indices), .Format = DXGI_FORMAT_R32_UINT };
 #ifdef _DEBUG
-	SetName(COM_PTR_GET(IndexBuffers.back().Resource), TEXT("MyIndexBuffer"));
+		SetName(COM_PTR_GET(IndexBuffers.back().Resource), TEXT("MyIndexBuffer"));
 #endif
-
-	LOG_OK();
-}
-
-void TriangleDX::CreateIndirectBuffer()
-{
-	IndirectBuffers.push_back(IndirectBuffer());
-	const D3D12_DRAW_INDEXED_ARGUMENTS Source = { IndexCount, 1, 0, 0, 0 };
-	const auto Stride = sizeof(Source);
-	const auto Size = static_cast<UINT32>(Stride * 1);
-	CreateAndCopyToDefaultResource(IndirectBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, &Source);
-
-	const std::array IADs = {
-		D3D12_INDIRECT_ARGUMENT_DESC({ .Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED }),
-	};
-	const D3D12_COMMAND_SIGNATURE_DESC CSD = {
-		Stride,
-		static_cast<const UINT>(size(IADs)), data(IADs),
-		0
-	};
-	Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectBuffers.back().CommandSignature));
-
+		{
+			IndirectBuffers.push_back(IndirectBuffer());
+			const D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
+			CreateAndCopyToDefaultResource(IndirectBuffers.back().Resource, CA, CL, sizeof(DIA), &DIA);
+			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED }), };
+			const D3D12_COMMAND_SIGNATURE_DESC CSD = {
+				.ByteStride = sizeof(DIA),
+				.NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs),
+				.NodeMask = 0
+			};
+			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectBuffers.back().CommandSignature));
 #ifdef _DEBUG
-	SetName(COM_PTR_GET(IndirectBuffers.back().Resource), TEXT("MyIndexBuffer"));
+			SetName(COM_PTR_GET(IndirectBuffers.back().Resource), TEXT("MyIndexBuffer"));
 #endif
-
+		}
+	}
 	LOG_OK();
 }
-
 void TriangleDX::PopulateCommandList(const size_t i)
 {
 	const auto PS = COM_PTR_GET(PipelineStates[0]);

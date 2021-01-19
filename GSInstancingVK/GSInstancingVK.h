@@ -16,7 +16,7 @@ public:
 protected:
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
+	virtual void CreateBottomLevel() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFsTesTcsGs(); }
 	virtual void CreatePipelines() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_FALSE); }
 

@@ -38,7 +38,7 @@ protected:
 		}
 	}
 
-	virtual void CreateIndirectBuffer() override {
+	virtual void CreateBottomLevel() override {
 		//!< Pass0 : メッシュ描画用
 		CreateIndirectBuffer_DrawIndexed(1, 1);
 		//!< Pass1 : フルスクリーン描画用

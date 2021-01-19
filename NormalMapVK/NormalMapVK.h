@@ -77,7 +77,7 @@ protected:
 				//!< サブパス依存
 			});
 	}
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
+	virtual void CreateBottomLevel() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
 	virtual void CreateImmutableSampler() override {
 		Samplers.emplace_back(VkSampler());

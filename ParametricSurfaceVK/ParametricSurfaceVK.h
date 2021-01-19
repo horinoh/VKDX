@@ -46,7 +46,7 @@ protected:
 	}
 #endif
 
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); } //!< 最低でもインデックス数1が必要 (At least index count must be 1)
+	virtual void CreateBottomLevel() override { CreateIndirectBuffer_DrawIndexed(1, 1); } //!< 最低でもインデックス数1が必要 (At least index count must be 1)
 	
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFsTesTcsGs(); }
 	virtual void CreatePipelines() override { 

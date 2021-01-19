@@ -37,7 +37,7 @@ protected:
 		}
 	}
 
-	virtual void CreateIndirectBuffer() override {
+	virtual void CreateBottomLevel() override {
 		//!< パス0 : インダイレクトバッファ(シャドウキャスタ描画用)
 		CreateIndirectBuffer_DrawIndexed(1, 1);
 #ifdef USE_SHADOWMAP_VISUALIZE

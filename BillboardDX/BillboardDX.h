@@ -53,7 +53,7 @@ protected:
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
 		}
 	}
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
+	virtual void CreateBottomLevel() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 

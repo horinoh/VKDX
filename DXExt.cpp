@@ -3,64 +3,41 @@
 void DXExt::CreateIndirectBuffer_Draw(const UINT VertexCount, const UINT InstanceCount)
 {
 	IndirectBuffers.emplace_back(IndirectBuffer());
-	const D3D12_DRAW_ARGUMENTS Source = { 
-		.VertexCountPerInstance = VertexCount,
-		.InstanceCount = InstanceCount, 
-		.StartVertexLocation = 0, 
-		.StartInstanceLocation = 0 
-	};
-	constexpr auto Stride = sizeof(Source);
-	constexpr auto Size = static_cast<UINT32>(Stride * 1);
-	CreateAndCopyToDefaultResource(IndirectBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, &Source);
+	const D3D12_DRAW_ARGUMENTS DA = {.VertexCountPerInstance = VertexCount, .InstanceCount = InstanceCount, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
+	CreateAndCopyToDefaultResource(IndirectBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), sizeof(DA), &DA);
 
 	constexpr std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({ .Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW }), };
 	constexpr D3D12_COMMAND_SIGNATURE_DESC CSD = {
-		.ByteStride = Stride,
+		.ByteStride = sizeof(DA),
 		.NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs),
 		.NodeMask = 0
 	};
 	//!< パイプラインのバインディングを更新するような場合はルートシグネチャが必要、Draw や Dispatch のみの場合はnullptrを指定できる
 	Device->CreateCommandSignature(&CSD, /*COM_PTR_GET(RootSignatures[0])*/nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectBuffers.back().CommandSignature));
 }
-
 void DXExt::CreateIndirectBuffer_DrawIndexed(const UINT IndexCount, const UINT InstanceCount)
 {
 	IndirectBuffers.emplace_back(IndirectBuffer());
-	const D3D12_DRAW_INDEXED_ARGUMENTS Source = { 
-		.IndexCountPerInstance = IndexCount, 
-		.InstanceCount = InstanceCount, 
-		.StartIndexLocation = 0, 
-		.BaseVertexLocation = 0, 
-		.StartInstanceLocation = 0
-	};
-	constexpr auto Stride = sizeof(Source);
-	constexpr auto Size = static_cast<UINT32>(Stride * 1);
-	CreateAndCopyToDefaultResource(IndirectBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, &Source);
+	const D3D12_DRAW_INDEXED_ARGUMENTS DIA = {.IndexCountPerInstance = IndexCount, .InstanceCount = InstanceCount, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
+	CreateAndCopyToDefaultResource(IndirectBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), sizeof(DIA), &DIA);
 
 	constexpr std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({ .Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED }), };
 	constexpr D3D12_COMMAND_SIGNATURE_DESC CSD = {
-		.ByteStride = Stride,
+		.ByteStride = sizeof(DIA),
 		.NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs),
 		.NodeMask = 0
 	};
 	Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectBuffers.back().CommandSignature));
 }
-
 void DXExt::CreateIndirectBuffer_Dispatch(const UINT X, const UINT Y, const UINT Z)
 {
 	IndirectBuffers.emplace_back(IndirectBuffer());
-	const D3D12_DISPATCH_ARGUMENTS Source = { 
-		.ThreadGroupCountX = X, 
-		.ThreadGroupCountY = Y,
-		.ThreadGroupCountZ = Z 
-	};
-	constexpr auto Stride = sizeof(Source);
-	constexpr auto Size = static_cast<UINT32>(Stride * 1);
-	CreateAndCopyToDefaultResource(IndirectBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, &Source);
+	const D3D12_DISPATCH_ARGUMENTS DA = {.ThreadGroupCountX = X, .ThreadGroupCountY = Y, .ThreadGroupCountZ = Z };
+	CreateAndCopyToDefaultResource(IndirectBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), sizeof(DA), &DA);
 
 	constexpr std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({ .Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH }), };
 	constexpr D3D12_COMMAND_SIGNATURE_DESC CSD = {
-		.ByteStride = Stride,
+		.ByteStride = sizeof(DA),
 		.NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs),
 		.NodeMask = 0
 	};

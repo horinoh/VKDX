@@ -15,7 +15,7 @@ public:
 
 protected:
 #ifdef USE_DRAW_INDIRECT
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
+	virtual void CreateBottomLevel() override { CreateIndirectBuffer_Draw(4, 1); }
 #endif
 
 	virtual void CreateShaderModules() override {

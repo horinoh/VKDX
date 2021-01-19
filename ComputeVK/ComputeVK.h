@@ -18,7 +18,7 @@ protected:
 	//!< #VK_TODO コマンドバッファを作成
 	//!< #VK_TODO 出力テクスチャ用のimage2Dを用意しないとならない
 
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
+	virtual void CreateBottomLevel() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
 
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);

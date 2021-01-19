@@ -241,10 +241,10 @@ protected:
 
 	virtual void SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source);
 	virtual void CreateAndCopyToBuffer(VkBuffer* Buf, VkDeviceMemory* DM, const VkQueue Queue, const VkCommandBuffer CB, const VkBufferUsageFlagBits Usage, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source);
-	virtual void CreateVertexBuffer() {}
-	virtual void CreateIndexBuffer() {}
-	virtual void CreateIndirectBuffer() {}
-
+	
+	virtual void CreateBottomLevel() {}
+	virtual void CreateTopLevel() {}
+	
 	virtual void CreateUniformBuffer() {}
 	virtual void CreateStorageBuffer() {}
 	virtual void CreateUniformTexelBuffer() {}
@@ -505,21 +505,22 @@ protected:
 	//!< VKの場合、通常サンプラ、イミュータブルサンプラとも同様に VkSampler を作成する、デスクリプタセットの指定が異なるだけ
 	std::vector<VkSampler> Samplers;
 
-	struct Buffer { VkBuffer Buffer; VkDeviceMemory DeviceMemory; };
+	struct BufferMemory { VkBuffer Buffer; VkDeviceMemory DeviceMemory; };
+	struct BufferMemoryAddress { VkBuffer Buffer; VkDeviceMemory DeviceMemory; VkDeviceAddress DeviceAddress; };
 	struct TexelBuffer { VkBuffer Buffer; VkDeviceMemory DeviceMemory; };
-	using VertexBuffer = struct Buffer;
-	using IndexBuffer = struct Buffer;
-	using IndirectBuffer = struct Buffer;
-	using UniformBuffer = struct Buffer;
-	using StorageBuffer = struct Buffer;
+	using VertexBuffer = struct BufferMemory;
+	using IndexBuffer = struct BufferMemory;
+	using IndirectBuffer = struct BufferMemory;
+	using UniformBuffer = struct BufferMemory;
+	using StorageBuffer = struct BufferMemory;
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;
 	std::vector<IndirectBuffer> IndirectBuffers;
 	std::vector<UniformBuffer> UniformBuffers;
 	std::vector<StorageBuffer> StorageBuffers;
 
-	using UniformTexelBuffer = struct Buffer;
-	using StorageTexelBuffer = struct Buffer;
+	using UniformTexelBuffer = struct BufferMemory;
+	using StorageTexelBuffer = struct BufferMemory;
 	std::vector<UniformTexelBuffer> UniformTexelBuffers;
 	std::vector<StorageTexelBuffer> StorageTexelBuffers;
 	std::vector<VkBufferView> BufferViews; //!< XXXTexelBufferはビューを使用する

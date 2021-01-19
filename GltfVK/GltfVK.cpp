@@ -563,13 +563,15 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 
 			if ("indices" == Identifier) {
 				IndexBuffers.emplace_back(IndexBuffer());
-				CreateBuffer_Index(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, Data);
+				//CreateBuffer_Index(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, Data);
+				CreateAndCopyToBuffer(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size, Data);
 
 				CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
 			}
 			else if ("attributes" == Identifier || "targets" == Identifier) {
 				VertexBuffers.emplace_back(VertexBuffer());
-				CreateBuffer_Vertex(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0] , Size, Data);
+				//CreateBuffer_Vertex(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0] , Size, Data);
+				CreateAndCopyToBuffer(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size, Data);
 			}
 			else if ("inverseBindMatrices" == Identifier) {
 				InverseBindMatrices.reserve(Acc.count);

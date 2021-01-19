@@ -230,9 +230,9 @@ protected:
 
 	virtual void LoadScene() {}
 
-	virtual void CreateVertexBuffer() {}
-	virtual void CreateIndexBuffer() {}
-	virtual void CreateIndirectBuffer() {}
+	virtual void CreateBottomLevel() {}
+	virtual void CreateTopLevel() {}
+	
 	virtual void CreateConstantBuffer() {}
 
 	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f);

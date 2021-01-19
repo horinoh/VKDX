@@ -129,7 +129,7 @@ protected:
 	}
 #endif
 
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
+	virtual void CreateBottomLevel() override { CreateIndirectBuffer_Draw(4, 1); }
 #pragma region CB
 	virtual void CreateConstantBuffer() override {
 		DXGI_SWAP_CHAIN_DESC1 SCD;

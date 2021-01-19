@@ -230,57 +230,42 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void InstancingVK::CreateVertexBuffer()
+void InstancingVK::CreateBottomLevel()
 {
-	VertexBuffers.push_back(VertexBuffer());
-	{
-		const std::array Vertices = {
-			Vertex_PositionColor({ .Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }),
-			Vertex_PositionColor({ .Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }),
-			Vertex_PositionColor({ .Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }),
-		};
-		const auto Stride = sizeof(Vertices[0]);
-		const auto Size = static_cast<VkDeviceSize>(Stride * size(Vertices));
-		CreateBuffer_Vertex(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, data(Vertices));
-	}
+	const auto& CB = CommandBuffers[0];
 
-	VertexBuffers.push_back(VertexBuffer());
 	{
-		const std::array Instances = { 
+		VertexBuffers.push_back(VertexBuffer());
+		const std::array Vertices = {
+			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }),
+			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }),
+			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }),
+		};
+		CreateAndCopyToBuffer(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CB, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, sizeof(Vertices), data(Vertices));
+	}
+	{
+		VertexBuffers.push_back(VertexBuffer());
+		const std::array Instances = {
 			Instance_OffsetXY({ { -0.5f, -0.5f } }),
 			Instance_OffsetXY({ { -0.25f, -0.25f } }),
 			Instance_OffsetXY({ { 0.0f, 0.0f } }),
 			Instance_OffsetXY({ { 0.25f, 0.25f } }),
 			Instance_OffsetXY({ { 0.5f, 0.5f } }),
 		};
-		InstanceCount = static_cast<uint32_t>(size(Instances));
-		const auto Stride = sizeof(Instances[0]);
-		const auto Size = static_cast<VkDeviceSize>(Stride * InstanceCount);
-		CreateBuffer_Vertex(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, data(Instances));
+		CreateAndCopyToBuffer(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CB, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, sizeof(Instances), data(Instances));
+
+		IndexBuffers.push_back(IndexBuffer());
+		const std::array<uint32_t, 3> Indices = { 0, 1, 2 };
+		CreateAndCopyToBuffer(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CB, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, sizeof(Indices), data(Indices));
+	
+		{
+			IndirectBuffers.push_back(IndirectBuffer());
+			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = static_cast<uint32_t>(size(Instances)), .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
+			CreateAndCopyToBuffer(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory, GraphicsQueue, CB, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
+		}
 	}
-
 	LOG_OK();
 }
-void InstancingVK::CreateIndexBuffer()
-{
-	IndexBuffers.push_back(IndexBuffer());
-
-	const std::array<uint32_t, 3> Indices = { 0, 1, 2 };
-	IndexCount = static_cast<uint32_t>(size(Indices));
-	const auto Stride = sizeof(Indices[0]);
-	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
-	CreateBuffer_Index(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, data(Indices));
-
-	LOG_OK();
-}
-
-void InstancingVK::CreateIndirectBuffer()
-{
-	IndirectBuffers.push_back(IndirectBuffer());
-	const VkDrawIndexedIndirectCommand DIIC = { .indexCount = IndexCount, .instanceCount = InstanceCount, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-	CreateBuffer_Indirect(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
-}
-
 void InstancingVK::PopulateCommandBuffer(const size_t i)
 {
 	const auto RP = RenderPasses[0];

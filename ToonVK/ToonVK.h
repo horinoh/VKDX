@@ -25,7 +25,7 @@ protected:
 #pragma endregion
 	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
+	virtual void CreateBottomLevel() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 	virtual void CreateUniformBuffer() override {
 		//constexpr auto Fov = 0.16f * glm::pi<float>();
 		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;

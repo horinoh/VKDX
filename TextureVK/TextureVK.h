@@ -14,7 +14,7 @@ public:
 	virtual ~TextureVK() {}
 
 protected:
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
+	virtual void CreateBottomLevel() override { CreateIndirectBuffer_Draw(4, 1); }
 
 	virtual void CreateTexture() override {
 		std::wstring Path;

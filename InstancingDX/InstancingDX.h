@@ -14,9 +14,7 @@ public:
 	virtual ~InstancingDX() {}
 
 protected:
-	virtual void CreateVertexBuffer() override;
-	virtual void CreateIndexBuffer() override;
-	virtual void CreateIndirectBuffer() override;
+	virtual void CreateBottomLevel() override;
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
@@ -40,8 +38,5 @@ protected:
 		CreatePipelineState_VsPs_Input(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE, IEDs);
 	}
 	virtual void PopulateCommandList(const size_t i) override;
-
-	UINT IndexCount = 0;
-	UINT InstanceCount = 0;
 };
 #pragma endregion

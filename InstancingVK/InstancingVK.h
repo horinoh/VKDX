@@ -14,9 +14,7 @@ public:
 	virtual ~InstancingVK() {}
 
 protected:
-	virtual void CreateVertexBuffer() override;
-	virtual void CreateIndexBuffer() override;
-	virtual void CreateIndirectBuffer() override;
+	virtual void CreateBottomLevel() override;
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.resize(1);
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {});
@@ -44,8 +42,5 @@ protected:
 		CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE, VIBDs, VIADs);
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override;
-
-	uint32_t IndexCount = 0;
-	uint32_t InstanceCount = 0;
 };
 #pragma endregion

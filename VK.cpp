@@ -68,9 +68,12 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	InitializeSwapchainImage(CommandBuffers[0], &Colors::Red);
 #endif
 
-	CreateVertexBuffer();
-	CreateIndexBuffer();
-	CreateIndirectBuffer();
+	CreateBottomLevel();
+	CreateTopLevel();
+	//CreateVertexBuffer();
+	//CreateIndexBuffer();
+	//CreateIndirectBuffer();
+
 	//!< ユニフォームバッファ (コンスタントバッファ相当)
 	CreateUniformBuffer();
 

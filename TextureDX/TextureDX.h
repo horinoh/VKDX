@@ -14,7 +14,7 @@ public:
 	virtual ~TextureDX() {}
 
 protected:
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
+	virtual void CreateBottomLevel() override { CreateIndirectBuffer_Draw(4, 1); }
 
 	virtual void CreateTexture() override {
 		ImageResources.emplace_back(COM_PTR<ID3D12Resource>());

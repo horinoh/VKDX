@@ -120,7 +120,7 @@ protected:
 	}
 #endif
 
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Draw(4, 1); }
+	virtual void CreateBottomLevel() override { CreateIndirectBuffer_Draw(4, 1); }
 #pragma region UB
 	virtual void CreateUniformBuffer() override {
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {

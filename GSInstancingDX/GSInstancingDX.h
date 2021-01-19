@@ -14,7 +14,7 @@ public:
 	virtual ~GSInstancingDX() {}
 
 protected:
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
+	virtual void CreateBottomLevel() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPsDsHsGs(); }
 	virtual void CreatePipelineStates() override { CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, FALSE); }
 

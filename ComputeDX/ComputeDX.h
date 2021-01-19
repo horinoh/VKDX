@@ -17,7 +17,7 @@ protected:
 	
 	//!< #DX_TODO コマンドリストを作成
 
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
+	virtual void CreateBottomLevel() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
 
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;

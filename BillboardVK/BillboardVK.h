@@ -85,7 +85,7 @@ protected:
 			});
 	}
 
-	virtual void CreateIndirectBuffer() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
+	virtual void CreateBottomLevel() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
 	virtual void CreateDescriptorSetLayout() override {
 		DescriptorSetLayouts.emplace_back(VkDescriptorSetLayout());

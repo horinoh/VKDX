@@ -48,9 +48,12 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//InitializeSwapchainImage(COM_PTR_GET(CommandAllocators[0]), &DirectX::Colors::Red);
 
-	CreateVertexBuffer();
-	CreateIndexBuffer();
-	CreateIndirectBuffer();
+	CreateBottomLevel();
+	CreateTopLevel();
+	//CreateVertexBuffer();
+	//CreateIndexBuffer();
+	//CreateIndirectBuffer();
+
 	//!< コンスタントバッファ (ユニフォームバッファ相当)
 	CreateConstantBuffer();
 

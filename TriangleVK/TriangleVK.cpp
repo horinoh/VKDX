@@ -229,6 +229,56 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
+void TriangleVK::CreateBottomLevel()
+{
+	const auto& CB = CommandBuffers[0];
+	{
+		VertexBuffers.push_back(VertexBuffer());
+#if 1
+		const std::array Vertices = {
+	#ifdef USE_VIEWPORT_Y_UP
+			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
+			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
+			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
+	#else
+			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
+			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
+			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
+	#endif
+		};
+#else
+		//!< ピクセル指定
+		const float W = 1280.0f, H = 720.0f;
+		const std::array Vertices = {
+			Vertex_PositionColor({.Position = { W * 0.5f, 100.0f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
+			Vertex_PositionColor({.Position = { W * 0.5f - 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
+			Vertex_PositionColor({.Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
+		};
+#endif
+		CreateAndCopyToBuffer(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CB, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, sizeof(Vertices), data(Vertices));
+#ifdef _DEBUG
+		MarkerSetObjectName(Device, VertexBuffers.back().Buffer, "MyVertexBuffer");
+#endif
+	}
+	{
+		IndexBuffers.push_back(IndexBuffer());
+		const std::array<uint32_t, 3> Indices = { 0, 1, 2 };
+		CreateAndCopyToBuffer(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CB, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, sizeof(Indices), data(Indices));	
+#ifdef _DEBUG
+		MarkerSetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
+#endif
+		{
+			IndirectBuffers.push_back(IndirectBuffer());
+			const VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
+			CreateAndCopyToBuffer(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory, GraphicsQueue, CB, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
+#ifdef _DEBUG
+			MarkerSetObjectName(Device, IndirectBuffers.back().Buffer, "MyIndirectBuffer");
+#endif
+		}
+	}
+	LOG_OK();
+}
+#if 0
 void TriangleVK::CreateVertexBuffer()
 {
 	VertexBuffers.push_back(VertexBuffer());
@@ -255,8 +305,9 @@ void TriangleVK::CreateVertexBuffer()
 #endif
 	const auto Stride = sizeof(Vertices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * size(Vertices));
-	
-	CreateBuffer_Vertex(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, data(Vertices));
+
+	//CreateBuffer_Vertex(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, data(Vertices));
+	CreateAndCopyToBuffer(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size, data(Vertices));
 
 #ifdef _DEBUG
 	MarkerSetObjectName(Device, VertexBuffers.back().Buffer, "MyVertexBuffer");
@@ -275,7 +326,8 @@ void TriangleVK::CreateIndexBuffer()
 	const auto Stride = sizeof(Indices[0]);
 	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
 
-	CreateBuffer_Index(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, data(Indices));
+	//CreateBuffer_Index(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, data(Indices));
+	CreateAndCopyToBuffer(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size, data(Indices));
 
 #ifdef _DEBUG
 	MarkerSetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
@@ -288,7 +340,8 @@ void TriangleVK::CreateIndirectBuffer()
 {
 	IndirectBuffers.push_back(IndirectBuffer());
 	const VkDrawIndexedIndirectCommand DIIC = { IndexCount, 1, 0, 0, 0 };
-	CreateBuffer_Indirect(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
+	//CreateBuffer_Indirect(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
+	CreateAndCopyToBuffer(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
 
 #ifdef _DEBUG
 	MarkerSetObjectName(Device, IndirectBuffers.back().Buffer, "MyIndirectBuffer");
@@ -296,6 +349,7 @@ void TriangleVK::CreateIndirectBuffer()
 
 	LOG_OK();
 }
+#endif
 
 void TriangleVK::PopulateCommandBuffer(const size_t i)
 {
