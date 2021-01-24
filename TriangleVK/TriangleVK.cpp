@@ -263,7 +263,7 @@ void TriangleVK::CreateBottomLevel()
 	{
 		IndexBuffers.push_back(IndexBuffer());
 		const std::array<uint32_t, 3> Indices = { 0, 1, 2 };
-		CreateAndCopyToBuffer(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CB, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, sizeof(Indices), data(Indices));	
+		CreateAndCopyToBuffer(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CB, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, sizeof(Indices), data(Indices));
 #ifdef _DEBUG
 		MarkerSetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
 #endif
@@ -277,79 +277,105 @@ void TriangleVK::CreateBottomLevel()
 		}
 	}
 	LOG_OK();
+
+#ifdef USE_RAYTRACING
+	//!< BLAS
+	{
+		//!< バーテックスバッファ
+		constexpr std::array Vertices = { glm::vec3({ 0.0f, 0.5f, 0.0f }), glm::vec3({ -0.5f, -0.5f, 0.0f }), glm::vec3({ 0.5f, -0.5f, 0.0f }), };
+		BufferMemory VB;
+		VB.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(Vertices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Vertices));
+
+		//!< インデックスバッファ
+		constexpr std::array Indices = { uint32_t(0), uint32_t(1), uint32_t(2) };
+		BufferMemory IB;
+		IB.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(Indices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Indices));
+
+		//!< バーテックス、インデックスジオメトリ
+		const std::vector ASGs = {
+			VkAccelerationStructureGeometryKHR({
+				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+				.pNext = nullptr,
+				.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+				.geometry = VkAccelerationStructureGeometryDataKHR({
+					.triangles = VkAccelerationStructureGeometryTrianglesDataKHR({
+						.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
+						.pNext = nullptr,
+						.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
+						.vertexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(VB.Buffer)}), .vertexStride = sizeof(Vertices[0]), .maxVertex = static_cast<uint32_t>(size(Vertices)),
+						.indexType = VK_INDEX_TYPE_UINT32, .indexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(IB.Buffer)}),
+						.transformData = VkDeviceOrHostAddressConstKHR(),
+					}),
+				}),
+				.flags = VK_GEOMETRY_OPAQUE_BIT_KHR
+			}),
+		};
+
+		//!< サイズを取得
+		VkAccelerationStructureBuildSizesInfoKHR ASBSI;
+		GetAccelerationStructureBuildSizes(ASBSI, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, ASGs, 1);
+
+		//!< BLASの作成
+		BLASs.emplace_back(BufferMemoryAccelerationStructure());
+		BLASs.back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, ASBSI.accelerationStructureSize);
+
+		//!< BLASのビルド
+		BuildAccelerationStructure(CB, BLASs.back().AccelerationStructure, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, ASBSI.buildScratchSize, ASGs);
+
+		IB.Destroy(Device);
+		VB.Destroy(Device);
+	}
+
+	//!< TLAS
+	{
+		//!< インスタンスバッファ
+		const VkAccelerationStructureInstanceKHR ASI = {
+			.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, 0.0f,
+												0.0f, 1.0f, 0.0f, 0.0f,
+												0.0f, 0.0f, 1.0f, 0.0f}),
+			.instanceCustomIndex = 0,
+			.mask = 0xff,
+			.instanceShaderBindingTableRecordOffset = 0,
+			.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR,
+			.accelerationStructureReference = GetDeviceAddress(BLASs.back().Buffer)
+		};
+		BufferMemory IB;
+		CreateBuffer(&IB.Buffer, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(ASI));
+		AllocateDeviceMemory(&IB.DeviceMemory, IB.Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, IB.Buffer, IB.DeviceMemory, 0));
+
+		//!< インスタンスジオメトリ
+		const std::vector ASGs = {
+			VkAccelerationStructureGeometryKHR({
+				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+				.pNext = nullptr,
+				.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
+				.geometry = VkAccelerationStructureGeometryDataKHR({
+					.instances = VkAccelerationStructureGeometryInstancesDataKHR({
+						.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
+						.pNext = nullptr,
+						.arrayOfPointers = VK_FALSE,
+						.data = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(IB.Buffer)})
+					})
+				}),
+				.flags = VK_GEOMETRY_OPAQUE_BIT_KHR
+			}),
+		};
+
+		//!< サイズを取得
+		VkAccelerationStructureBuildSizesInfoKHR ASBSI;
+		GetAccelerationStructureBuildSizes(ASBSI, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, ASGs, 1);
+
+		//!< TLASの作成
+		TLASs.emplace_back(BufferMemoryAccelerationStructure());
+		TLASs.back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, ASBSI.accelerationStructureSize);
+		//CreateAccelerationStructure(&TLASs.back().Buffer, &TLASs.back().DeviceMemory, &TLASs.back().AccelerationStructure, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, ASBSI.accelerationStructureSize);
+
+		//!< TLASのビルド
+		BuildAccelerationStructure(CB, TLASs.back().AccelerationStructure, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, ASBSI.buildScratchSize, ASGs);
+	}
+#endif
 }
-#if 0
-void TriangleVK::CreateVertexBuffer()
-{
-	VertexBuffers.push_back(VertexBuffer());
-#if 1
-	const std::array Vertices = { 
-#ifdef USE_VIEWPORT_Y_UP
-		Vertex_PositionColor({ .Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
-		Vertex_PositionColor({ .Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
-		Vertex_PositionColor({ .Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
-#else
-		Vertex_PositionColor({ .Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
-		Vertex_PositionColor({ .Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
-		Vertex_PositionColor({ .Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
-#endif
-	};
-#else
-	//!< ピクセル指定
-	const float W = 1280.0f, H = 720.0f;
-	const std::array Vertices = { 
-		Vertex_PositionColor({ .Position = { W * 0.5f, 100.0f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
-		Vertex_PositionColor({ .Position = { W * 0.5f - 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
-		Vertex_PositionColor({ .Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
-	};
-#endif
-	const auto Stride = sizeof(Vertices[0]);
-	const auto Size = static_cast<VkDeviceSize>(Stride * size(Vertices));
-
-	//CreateBuffer_Vertex(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, data(Vertices));
-	CreateAndCopyToBuffer(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size, data(Vertices));
-
-#ifdef _DEBUG
-	MarkerSetObjectName(Device, VertexBuffers.back().Buffer, "MyVertexBuffer");
-#endif
-
-	LOG_OK();
-}
-void TriangleVK::CreateIndexBuffer()
-{
-	IndexBuffers.push_back(IndexBuffer());
-
-	const std::array<uint32_t, 3> Indices = { 0, 1, 2 };
-
-	//!< vkCmdDrawIndexed()使用時やインダイレクトバッファ作成時に必要となるのでIndexCountを覚えておく (IndexCount is needed when use vkCmdDrawIndexed() or creation of indirect buffer)
-	IndexCount = static_cast<uint32_t>(size(Indices));
-	const auto Stride = sizeof(Indices[0]);
-	const auto Size = static_cast<VkDeviceSize>(Stride * IndexCount);
-
-	//CreateBuffer_Index(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, data(Indices));
-	CreateAndCopyToBuffer(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size, data(Indices));
-
-#ifdef _DEBUG
-	MarkerSetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
-#endif
-
-	LOG_OK();
-}
-
-void TriangleVK::CreateIndirectBuffer()
-{
-	IndirectBuffers.push_back(IndirectBuffer());
-	const VkDrawIndexedIndirectCommand DIIC = { IndexCount, 1, 0, 0, 0 };
-	//CreateBuffer_Indirect(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
-	CreateAndCopyToBuffer(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
-
-#ifdef _DEBUG
-	MarkerSetObjectName(Device, IndirectBuffers.back().Buffer, "MyIndirectBuffer");
-#endif
-
-	LOG_OK();
-}
-#endif
 
 void TriangleVK::PopulateCommandBuffer(const size_t i)
 {

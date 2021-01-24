@@ -115,6 +115,75 @@ private:
 	using Super = Win;
 
 public:
+	class BufferMemory 
+	{
+	public:
+		VkBuffer Buffer = VK_NULL_HANDLE;
+		VkDeviceMemory DeviceMemory = VK_NULL_HANDLE;
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr) {
+			const std::array<uint32_t, 0> QFI = {};
+			const VkBufferCreateInfo BCI = {
+				.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.size = Size,
+				.usage = BUF,
+				.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+				.queueFamilyIndexCount = static_cast<uint32_t>(size(QFI)), .pQueueFamilyIndices = data(QFI)
+			};
+			VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BCI, GetAllocationCallbacks(), &Buffer));
+
+			VkMemoryRequirements MR;
+			vkGetBufferMemoryRequirements(Device, Buffer, &MR);
+			const VkMemoryAllocateInfo MAI = {
+				.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+				.pNext = nullptr,
+				.allocationSize = MR.size,
+				.memoryTypeIndex = GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, MPF)
+			};
+			VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, GetAllocationCallbacks(), &DeviceMemory));
+
+			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
+
+			if (nullptr != Source) {
+				void* Data;
+				VERIFY_SUCCEEDED(vkMapMemory(Device, DeviceMemory, 0, Size, static_cast<VkMemoryMapFlags>(0), &Data)); {
+					memcpy(Data, Source, Size);
+				} vkUnmapMemory(Device, DeviceMemory);
+			}
+		}
+		void Destroy(const VkDevice Device) 
+		{
+			if (VK_NULL_HANDLE != DeviceMemory) { vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks()); }
+			if (VK_NULL_HANDLE != Buffer) { vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks()); }
+		}
+	};
+#ifdef USE_RAYTRACING
+	class BufferMemoryAccelerationStructure : public BufferMemory 
+	{
+	public:
+		VkAccelerationStructureKHR AccelerationStructure;
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkAccelerationStructureTypeKHR Type, const size_t Size) {
+			BufferMemory::Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			const VkAccelerationStructureCreateInfoKHR ASCI = {
+				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
+				.pNext = nullptr,
+				.createFlags = 0,
+				.buffer = Buffer,
+				.offset = 0,
+				.size = Size,
+				.type = Type,
+				.deviceAddress = 0
+			};
+			vkCreateAccelerationStructureKHR(Device, &ASCI, GetAllocationCallbacks(), &AccelerationStructure);
+		}
+		void Destroy(const VkDevice Device)
+		{
+			if (VK_NULL_HANDLE != AccelerationStructure) { vkDestroyAccelerationStructureKHR(Device, AccelerationStructure, GetAllocationCallbacks()); }
+			BufferMemory::Destroy(Device);
+		}
+	};
+#endif
 #ifdef _WINDOWS
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
@@ -239,9 +308,22 @@ protected:
 
 	virtual void LoadScene() {}
 
+	virtual void CreateBufferMemory(BufferMemory& BM, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF) { BM.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), BUF, Size, MPF); }
 	virtual void SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source);
 	virtual void CreateAndCopyToBuffer(VkBuffer* Buf, VkDeviceMemory* DM, const VkQueue Queue, const VkCommandBuffer CB, const VkBufferUsageFlagBits Usage, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source);
-	
+
+	static VkDeviceAddress GetDeviceAddress(const VkDevice Device, const VkBuffer Buffer) {
+		const VkBufferDeviceAddressInfo BDAI = { .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, .pNext = nullptr, .buffer = Buffer };
+		return vkGetBufferDeviceAddress(Device, &BDAI);
+	}
+	VkDeviceAddress GetDeviceAddress(const VkBuffer Buffer) const { return GetDeviceAddress(Device, Buffer); }
+
+#ifdef USE_RAYTRACING
+	virtual void GetAccelerationStructureBuildSizes(VkAccelerationStructureBuildSizesInfoKHR& ASBSI, const VkAccelerationStructureTypeKHR Type, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs, const uint32_t MaxPrimCount);
+	virtual void CreateAccelerationStructure(VkBuffer* Buffer, VkDeviceMemory* DM, VkAccelerationStructureKHR* AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size);
+	virtual void BuildAccelerationStructure(const VkCommandBuffer CB, const VkAccelerationStructureKHR AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs);
+#endif
+
 	virtual void CreateBottomLevel() {}
 	virtual void CreateTopLevel() {}
 	
@@ -505,17 +587,19 @@ protected:
 	//!< VKの場合、通常サンプラ、イミュータブルサンプラとも同様に VkSampler を作成する、デスクリプタセットの指定が異なるだけ
 	std::vector<VkSampler> Samplers;
 
-	struct BufferMemory { VkBuffer Buffer; VkDeviceMemory DeviceMemory; };
-	struct BufferMemoryAddress { VkBuffer Buffer; VkDeviceMemory DeviceMemory; VkDeviceAddress DeviceAddress; };
-	struct TexelBuffer { VkBuffer Buffer; VkDeviceMemory DeviceMemory; };
-	using VertexBuffer = struct BufferMemory;
-	using IndexBuffer = struct BufferMemory;
-	using IndirectBuffer = struct BufferMemory;
-	using UniformBuffer = struct BufferMemory;
-	using StorageBuffer = struct BufferMemory;
+	using VertexBuffer = BufferMemory;
+	using IndexBuffer = BufferMemory;
+	using IndirectBuffer = BufferMemory;
+	using AccelerationStructureBuffer = struct BufferMemoryAccelerationStructure;
+	using UniformBuffer = BufferMemory;
+	using StorageBuffer = BufferMemory;
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;
 	std::vector<IndirectBuffer> IndirectBuffers;
+#ifdef USE_RAYTRACING
+	std::vector<AccelerationStructureBuffer> BLASs, TLASs;
+#endif
+
 	std::vector<UniformBuffer> UniformBuffers;
 	std::vector<StorageBuffer> StorageBuffers;
 
