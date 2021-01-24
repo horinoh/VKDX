@@ -120,6 +120,27 @@ private:
 	using Super = Win;
 
 public:
+	class Buffer
+	{
+	public:
+		COM_PTR<ID3D12Resource> Resource;
+	};
+	class VertexBuffer : public Buffer 
+	{
+	public:
+		D3D12_VERTEX_BUFFER_VIEW View;
+	};
+	class IndexBuffer : public Buffer
+	{
+	public:
+		D3D12_INDEX_BUFFER_VIEW View;
+	};
+	class IndirectBuffer : public Buffer
+	{
+	public:
+		COM_PTR<ID3D12CommandSignature> CommandSignature;
+	};
+
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { Super::OnPaint(hWnd, hInstance); Draw(); }
@@ -318,10 +339,10 @@ protected:
 	COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
 	std::vector<COM_PTR<ID3D12PipelineState>> PipelineStates;
 
-	using VertexBuffer = struct VertexBuffer { D3D12_VERTEX_BUFFER_VIEW View; COM_PTR<ID3D12Resource> Resource; };
-	using IndexBuffer = struct IndexBuffer { D3D12_INDEX_BUFFER_VIEW View; COM_PTR<ID3D12Resource> Resource; };
-	using IndirectBuffer = struct IndirectBuffer { COM_PTR<ID3D12CommandSignature> CommandSignature; COM_PTR<ID3D12Resource> Resource; };
-	using ConstantBuffer = struct ConstantBuffer { COM_PTR<ID3D12Resource> Resource; };
+	//using VertexBuffer = struct VertexBuffer { D3D12_VERTEX_BUFFER_VIEW View; COM_PTR<ID3D12Resource> Resource; };
+	//using IndexBuffer = struct IndexBuffer { D3D12_INDEX_BUFFER_VIEW View; COM_PTR<ID3D12Resource> Resource; };
+	//using IndirectBuffer = struct IndirectBuffer { COM_PTR<ID3D12CommandSignature> CommandSignature; COM_PTR<ID3D12Resource> Resource; };
+	using ConstantBuffer = Buffer;//struct ConstantBuffer { COM_PTR<ID3D12Resource> Resource; };
 
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;

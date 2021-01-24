@@ -767,9 +767,9 @@ void VK::SubmitAndWait(const VkQueue Queue, const VkCommandBuffer CB)
 	VERIFY_SUCCEEDED(vkQueueWaitIdle(Queue));
 }
 
-void VK::EnumerateMemoryRequirements(const VkMemoryRequirements& MR)
+void VK::EnumerateMemoryRequirements(const VkMemoryRequirements& MR, const VkPhysicalDeviceMemoryProperties& PDMP)
 {
-	const auto& PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+//	const auto& PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 	Logf("\t\tsize=%d\n", MR.size);
 	Logf("\t\talignment=%d\n", MR.alignment);
 	for (uint32_t i = 0; i < PDMP.memoryTypeCount; ++i) {
@@ -1412,6 +1412,10 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 		VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME,
 #endif
 		VK_EXT_VALIDATION_CACHE_EXTENSION_NAME,
+#ifdef USE_RAYTRACING
+		VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+		VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+#endif
 	};
 	//!< vkGetPhysicalDeviceFeatures() で可能なフィーチャーが全て有効になった VkPhysicalDeviceFeatures が返る
 	//!< このままでは可能なだけ有効になってしまうのでパフォーマンス的には良くない(必要な項目だけ true にし、それ以外は false にするのが本来は良い)
@@ -1491,7 +1495,7 @@ void VK::AllocateDeviceMemory()
 void VK::AllocateDeviceMemory(VkDeviceMemory* DM, const VkMemoryRequirements& MR, const VkMemoryPropertyFlags MPF)
 {
 #ifdef _DEBUG
-	EnumerateMemoryRequirements(MR);
+	EnumerateMemoryRequirements(MR, GetCurrentPhysicalDeviceMemoryProperties());
 	const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 	const auto TypeIndex = GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, MPF);
 	Logf("\t\tAllocateDeviceMemory = %llu / %llu (HeapIndex = %d, Align = %llu)\n", MR.size, PDMP.memoryHeaps[PDMP.memoryTypes[TypeIndex].heapIndex].size, PDMP.memoryTypes[TypeIndex].heapIndex, MR.alignment);
@@ -2075,47 +2079,87 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 
 	LOG_OK();
 }
+void VK::CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source)
+{
+	//!< バッファは作成時に指定した使用法でしか使用できない、ここでは VK_SHARING_MODE_EXCLUSIVE 決め打ちにしている #VK_TODO (Using VK_SHARING_MODE_EXCLUSIVE here)
+	//!< VK_SHARING_MODE_EXCLUSIVE	: 複数ファミリのキューが同時アクセスできない、他のファミリからアクセスしたい場合はオーナーシップの移譲が必要
+	//!< VK_SHARING_MODE_CONCURRENT	: 複数ファミリのキューが同時アクセス可能、オーナーシップの移譲も必要無し、パフォーマンスは悪い
+	const std::array<uint32_t, 0> QFI = {};
+	const VkBufferCreateInfo BCI = {
+		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.size = Size,
+		.usage = BUF,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+		.queueFamilyIndexCount = static_cast<uint32_t>(size(QFI)), .pQueueFamilyIndices = data(QFI)
+	};
+	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BCI, GetAllocationCallbacks(), Buffer));
 
+	VkMemoryRequirements MR; 
+	vkGetBufferMemoryRequirements(Device, *Buffer, &MR);
+#ifdef _DEBUG
+	EnumerateMemoryRequirements(MR, PDMP);
+	const auto TypeIndex = GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, MPF);
+	Logf("\t\tAllocateDeviceMemory = %llu / %llu (HeapIndex = %d, Align = %llu)\n", MR.size, PDMP.memoryHeaps[PDMP.memoryTypes[TypeIndex].heapIndex].size, PDMP.memoryTypes[TypeIndex].heapIndex, MR.alignment);
+#endif
+	const VkMemoryAllocateInfo MAI = {
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		.pNext = nullptr,
+		.allocationSize = MR.size,
+		.memoryTypeIndex = GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, MPF)
+	};
+	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, GetAllocationCallbacks(), DeviceMemory));
+
+	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DeviceMemory, 0));
+
+	if (Size && nullptr != Source) {
+		const std::array MMRs = { VkMappedMemoryRange({.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, .pNext = nullptr, .memory = *DeviceMemory, .offset = 0, .size = VK_WHOLE_SIZE }) };
+		void* Data;
+		VERIFY_SUCCEEDED(vkMapMemory(Device, *DeviceMemory, 0, Size, static_cast<VkMemoryMapFlags>(0), &Data)); {
+			memcpy(Data, Source, Size);
+			//!< メモリコンテンツが変更されたことをドライバへ知らせる(vkMapMemory()した状態でやること)
+			//!< デバイスメモリ確保時に VK_MEMORY_PROPERTY_HOST_COHERENT_BIT を指定した場合は必要ない CreateDeviceMemory(..., VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(size(MMRs)), data(MMRs)));
+			//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(size(MMRs)), data(MMRs)));
+		} vkUnmapMemory(Device, *DeviceMemory);
+	}
+}
 void VK::SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source)
 {
-#if 0
-	VkBuffer Buffer;
-	VkDeviceMemory DeviceMemory;
-	{
-		//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
-		CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-		AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
-
-		CopyToHostVisibleDeviceMemory(DeviceMemory, 0, Size, Source);
-
-		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit host visible to device local copy command)
-		PopulateCommandBuffer_CopyBufferToBuffer(CB, Buffer, Buf, AF, PSF, Size);
-
-		SubmitAndWait(Queue, CB);
-	}
-	vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
-	vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
-#else
 	BufferMemory StagingBuffer;
+	//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
 	StagingBuffer.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);
 	
+	//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit host visible to device local copy command)
 	PopulateCommandBuffer_CopyBufferToBuffer(CB, StagingBuffer.Buffer, Buf, AF, PSF, Size);
 	SubmitAndWait(Queue, CB);
 
 	StagingBuffer.Destroy(Device);
-#endif
 }
-
-void VK::CreateAndCopyToBuffer(VkBuffer* Buf, VkDeviceMemory* DM, const VkQueue Queue, const VkCommandBuffer CB, const VkBufferUsageFlagBits Usage, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source)
+void VK::CreateAndCopyToBuffer(VkBuffer* Buf, VkDeviceMemory* DM, const VkQueue Queue, const VkCommandBuffer CB, const VkBufferUsageFlagBits BUF, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source)
 {
 	//!< デバイスローカルバッファ、デバイスメモリを作成 (Create device local buffer, device memory)
-	CreateBuffer(Buf, Usage | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
-	AllocateDeviceMemory(DM, *Buf, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buf, *DM, 0));
+	CreateBufferMemory(Buf, DM, Device, GetCurrentPhysicalDeviceMemoryProperties(), BUF | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	//!< ホストビジブルを作成しデータをコピー、バッファ間コピーコマンドによりデバイスローカルへ転送 (Create host visible and copy data, submit copy command to device local)
 	SubmitStagingCopy(*Buf, Queue, CB, AF, PSF, Size, Source);
+}
+void VK::CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const void* Source, 
+	const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue)
+{
+	//!< デバイスローカルバッファ、デバイスメモリを作成 (Create device local buffer, device memory)
+	CreateBufferMemory(Buffer, DeviceMemory, Device, PDMP, BUF | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	BufferMemory StagingBuffer;
+	//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
+	StagingBuffer.Create(Device, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);
+	{
+		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit host visible to device local copy command)
+		PopulateCommandBuffer_CopyBufferToBuffer(CB, StagingBuffer.Buffer, *Buffer, AF, PSF, Size);
+		SubmitAndWait(Queue, CB);
+	}
+	StagingBuffer.Destroy(Device);
 }
 
 #ifdef USE_RAYTRACING
