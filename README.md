@@ -357,7 +357,7 @@
  * プロジェクト右クリック - Property - All Configurations にする - C/C++ - Command Line - Additional Options に /await と記述
  * Source Files に framework.cpp(内容空で作成)を追加
  	* framewordk.cpp に対してのみ C/C++ - Precompiled headers - Precompiled Header を Create(/Yc) にする
- * framework.h(旧stdafx.h)は既存のものを参考に編集
+ * framework.h(旧stdafx.h)は既存のものを参考に編集 (#pragma region Code でマークしてある)
 
 #### DX
  * WinPixEventRuntimeのインストール
