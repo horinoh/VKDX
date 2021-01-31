@@ -70,9 +70,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateBottomLevel();
 	CreateTopLevel();
-	//CreateVertexBuffer();
-	//CreateIndexBuffer();
-	//CreateIndirectBuffer();
 
 	//!< ユニフォームバッファ (コンスタントバッファ相当)
 	CreateUniformBuffer();
@@ -83,30 +80,32 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< イミュータブルサンプラはこの時点(CreateDescriptorSetLayout()より前)で必要
 	CreateImmutableSampler();
 
-	//!< デスクリプタセットレイアウト
-	CreateDescriptorSetLayout(); 
 	//!< パイプラインレイアウト (ルートシグネチャ相当)
 	CreatePipelineLayout();
-	//!< レンダーパス
+
+	//!< レンダーパス (DXには存在しない)
 	CreateRenderPass();
-	//!< シェーダ
-	CreateShaderModules();
+
 	//!< パイプライン
-	CreatePipelines();	
+	{
+		CreateShaderModules();
+		CreatePipelines();
+	}
 
 	//!< フレームバッファ
 	CreateFramebuffer();
 
-	//!< デスクリプタプール (デスクリプタヒープ相当)
-	CreateDescriptorPool();
-	AllocateDescriptorSet();
+	//!< デスクリプタセット
+	CreateDescriptorSet();
 
-	//!< サンプラ
+	//!< サンプラ ... DXがデスクリプタを必要とするのでここにする
 	CreateSampler();
 
-	//!< デスクリプタセット更新 (デスクリプタビュー相当) ... この時点でデスクリプタセット、ユニフォームバッファ、イメージビュー、サンプラ等が必要
-	CreateDescriptorUpdateTemplate();
-	UpdateDescriptorSet();
+	{
+		//!< デスクリプタセット更新 ... この時点でデスクリプタセット、ユニフォームバッファ、イメージビュー、サンプラ等が必要
+		CreateDescriptorUpdateTemplate();
+		UpdateDescriptorSet();
+	}
 
 	SetTimer(hWnd, NULL, Elapse, nullptr);
 
@@ -1417,6 +1416,11 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 		VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
 #endif
 	};
+#if 0//def USE_RAYTRACING
+	VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr, .bufferDeviceAddress = VK_TRUE };
+	VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF, .rayTracingPipeline = VK_TRUE };
+	VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF, .accelerationStructure = VK_TRUE };
+#endif
 	//!< vkGetPhysicalDeviceFeatures() で可能なフィーチャーが全て有効になった VkPhysicalDeviceFeatures が返る
 	//!< このままでは可能なだけ有効になってしまうのでパフォーマンス的には良くない(必要な項目だけ true にし、それ以外は false にするのが本来は良い)
 	//!< デバイスフィーチャーを「有効にしないと」と使用できない機能が多々あり面倒なので、(パフォーマンス的には良くないが)ここでは返った値をそのまま使うことにする #PERFORMANCE_TODO 
@@ -2081,6 +2085,8 @@ void VK::CreateViewport(const float Width, const float Height, const float MinDe
 }
 void VK::CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source)
 {
+	assert(Size && "");
+#pragma region BUFFER
 	//!< バッファは作成時に指定した使用法でしか使用できない、ここでは VK_SHARING_MODE_EXCLUSIVE 決め打ちにしている #VK_TODO (Using VK_SHARING_MODE_EXCLUSIVE here)
 	//!< VK_SHARING_MODE_EXCLUSIVE	: 複数ファミリのキューが同時アクセスできない、他のファミリからアクセスしたい場合はオーナーシップの移譲が必要
 	//!< VK_SHARING_MODE_CONCURRENT	: 複数ファミリのキューが同時アクセス可能、オーナーシップの移譲も必要無し、パフォーマンスは悪い
@@ -2095,7 +2101,9 @@ void VK::CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, cons
 		.queueFamilyIndexCount = static_cast<uint32_t>(size(QFI)), .pQueueFamilyIndices = data(QFI)
 	};
 	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BCI, GetAllocationCallbacks(), Buffer));
+#pragma endregion
 
+#pragma  region MEMORY
 	VkMemoryRequirements MR; 
 	vkGetBufferMemoryRequirements(Device, *Buffer, &MR);
 #ifdef _DEBUG
@@ -2103,31 +2111,40 @@ void VK::CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, cons
 	const auto TypeIndex = GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, MPF);
 	Logf("\t\tAllocateDeviceMemory = %llu / %llu (HeapIndex = %d, Align = %llu)\n", MR.size, PDMP.memoryHeaps[PDMP.memoryTypes[TypeIndex].heapIndex].size, PDMP.memoryTypes[TypeIndex].heapIndex, MR.alignment);
 #endif
+	//!< VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT が指定された場合に pNext へ指定する
+	const VkMemoryAllocateFlagsInfo MAFI = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO, .pNext = nullptr, .flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT, .deviceMask = 0 };
 	const VkMemoryAllocateInfo MAI = {
 		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-		.pNext = nullptr,
+		.pNext = (VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT & BUF) ? &MAFI : nullptr,
 		.allocationSize = MR.size,
 		.memoryTypeIndex = GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, MPF)
 	};
 	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, GetAllocationCallbacks(), DeviceMemory));
+#pragma endregion
 
 	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DeviceMemory, 0));
 
-	if (Size && nullptr != Source) {
-		const std::array MMRs = { VkMappedMemoryRange({.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, .pNext = nullptr, .memory = *DeviceMemory, .offset = 0, .size = VK_WHOLE_SIZE }) };
+#pragma region COPY
+	if (nullptr != Source) {
 		void* Data;
 		VERIFY_SUCCEEDED(vkMapMemory(Device, *DeviceMemory, 0, Size, static_cast<VkMemoryMapFlags>(0), &Data)); {
 			memcpy(Data, Source, Size);
-			//!< メモリコンテンツが変更されたことをドライバへ知らせる(vkMapMemory()した状態でやること)
-			//!< デバイスメモリ確保時に VK_MEMORY_PROPERTY_HOST_COHERENT_BIT を指定した場合は必要ない CreateDeviceMemory(..., VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-			VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(size(MMRs)), data(MMRs)));
-			//VERIFY_SUCCEEDED(vkInvalidateMappedMemoryRanges(Device, static_cast<uint32_t>(size(MMRs)), data(MMRs)));
+
+			//!< メモリコンテンツが変更されたことを明示的にドライバへ知らせる(vkMapMemory()した状態でやること)
+			if (!(VK_MEMORY_PROPERTY_HOST_COHERENT_BIT & BUF)) {
+				const std::array MMRs = { 
+					VkMappedMemoryRange({.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE, .pNext = nullptr, .memory = *DeviceMemory, .offset = 0, .size = VK_WHOLE_SIZE }),
+				};
+				VERIFY_SUCCEEDED(vkFlushMappedMemoryRanges(Device, static_cast<uint32_t>(size(MMRs)), data(MMRs)));
+			}
+
 		} vkUnmapMemory(Device, *DeviceMemory);
 	}
+#pragma endregion
 }
 void VK::SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source)
 {
-	BufferMemory StagingBuffer;
+	BufferAndDeviceMemory StagingBuffer;
 	//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
 	StagingBuffer.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);
 	
@@ -2135,6 +2152,22 @@ void VK::SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkComm
 	PopulateCommandBuffer_CopyBufferToBuffer(CB, StagingBuffer.Buffer, Buf, AF, PSF, Size);
 	SubmitAndWait(Queue, CB);
 
+	StagingBuffer.Destroy(Device);
+}
+void VK::CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const void* Source, 
+	const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue)
+{
+	//!< デバイスローカルバッファ、デバイスメモリを作成 (Create device local buffer, device memory)
+	CreateBufferMemory(Buffer, DeviceMemory, Device, PDMP, BUF | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	BufferAndDeviceMemory StagingBuffer;
+	//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
+	StagingBuffer.Create(Device, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);
+	{
+		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit host visible to device local copy command)
+		PopulateCommandBuffer_CopyBufferToBuffer(CB, StagingBuffer.Buffer, *Buffer, AF, PSF, Size);
+		SubmitAndWait(Queue, CB);
+	}
 	StagingBuffer.Destroy(Device);
 }
 void VK::CreateAndCopyToBuffer(VkBuffer* Buf, VkDeviceMemory* DM, const VkQueue Queue, const VkCommandBuffer CB, const VkBufferUsageFlagBits BUF, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source)
@@ -2145,23 +2178,6 @@ void VK::CreateAndCopyToBuffer(VkBuffer* Buf, VkDeviceMemory* DM, const VkQueue 
 	//!< ホストビジブルを作成しデータをコピー、バッファ間コピーコマンドによりデバイスローカルへ転送 (Create host visible and copy data, submit copy command to device local)
 	SubmitStagingCopy(*Buf, Queue, CB, AF, PSF, Size, Source);
 }
-void VK::CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const void* Source, 
-	const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue)
-{
-	//!< デバイスローカルバッファ、デバイスメモリを作成 (Create device local buffer, device memory)
-	CreateBufferMemory(Buffer, DeviceMemory, Device, PDMP, BUF | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-	BufferMemory StagingBuffer;
-	//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
-	StagingBuffer.Create(Device, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);
-	{
-		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit host visible to device local copy command)
-		PopulateCommandBuffer_CopyBufferToBuffer(CB, StagingBuffer.Buffer, *Buffer, AF, PSF, Size);
-		SubmitAndWait(Queue, CB);
-	}
-	StagingBuffer.Destroy(Device);
-}
-
 #ifdef USE_RAYTRACING
 void VK::GetAccelerationStructureBuildSizes(VkAccelerationStructureBuildSizesInfoKHR& ASBSI, const VkAccelerationStructureTypeKHR Type, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs, const uint32_t MaxPrimitiveCounts)
 {
@@ -2197,7 +2213,7 @@ void VK::CreateAccelerationStructure(VkBuffer* Buffer, VkDeviceMemory* DM, VkAcc
 }
 void VK::BuildAccelerationStructure(const VkCommandBuffer CB, const VkAccelerationStructureKHR AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs)
 {
-	BufferMemory SB;
+	BufferAndDeviceMemory SB;
 	SB.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	{
@@ -2210,7 +2226,7 @@ void VK::BuildAccelerationStructure(const VkCommandBuffer CB, const VkAccelerati
 				.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
 				.srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = AS,
 				.geometryCount = static_cast<uint32_t>(size(ASGs)),.pGeometries = data(ASGs), .ppGeometries = nullptr,
-				.scratchData = VkDeviceOrHostAddressKHR({.deviceAddress = GetDeviceAddress(SB.Buffer)})
+				.scratchData = VkDeviceOrHostAddressKHR({.deviceAddress = GetDeviceAddress(Device, SB.Buffer)})
 			}),
 		};
 		const std::array ASBRIs = { VkAccelerationStructureBuildRangeInfoKHR({.primitiveCount = 1, .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0 }), };

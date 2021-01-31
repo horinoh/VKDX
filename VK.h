@@ -115,25 +115,35 @@ private:
 	using Super = Win;
 
 public:
-	class BufferMemory 
+	class BufferAndDeviceMemory 
 	{
 	public:
 		VkBuffer Buffer = VK_NULL_HANDLE;
 		VkDeviceMemory DeviceMemory = VK_NULL_HANDLE;
-		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr) { VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, BUF, Size, MPF, Source); }
-		void Destroy(const VkDevice Device) 
-		{
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr) { 
+			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, BUF, Size, MPF, Source); 
+		}
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, 
+			const void* Source, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue) {
+			VK::CreateBufferMemoryAndSubmitTransferCommand(&Buffer, &DeviceMemory, Device, PDMP, BUF, Size, Source, CB, AF, PSF, Queue);
+		}
+		void Destroy(const VkDevice Device) {
 			if (VK_NULL_HANDLE != DeviceMemory) { vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks()); }
 			if (VK_NULL_HANDLE != Buffer) { vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks()); }
 		}
 	};
+	using VertexBuffer = BufferAndDeviceMemory;
+	using IndexBuffer = BufferAndDeviceMemory;
+	using IndirectBuffer = BufferAndDeviceMemory;
+	using UniformBuffer = BufferAndDeviceMemory;
+	using StorageBuffer = BufferAndDeviceMemory;
 #ifdef USE_RAYTRACING
-	class BufferMemoryAccelerationStructure : public BufferMemory 
+	class AccelerationStructureBuffer : public BufferAndDeviceMemory 
 	{
 	public:
 		VkAccelerationStructureKHR AccelerationStructure;
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkAccelerationStructureTypeKHR Type, const size_t Size) {
-			BufferMemory::Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			BufferAndDeviceMemory::Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 			const VkAccelerationStructureCreateInfoKHR ASCI = {
 				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
 				.pNext = nullptr,
@@ -146,10 +156,9 @@ public:
 			};
 			vkCreateAccelerationStructureKHR(Device, &ASCI, GetAllocationCallbacks(), &AccelerationStructure);
 		}
-		void Destroy(const VkDevice Device)
-		{
+		void Destroy(const VkDevice Device) {
 			if (VK_NULL_HANDLE != AccelerationStructure) { vkDestroyAccelerationStructureKHR(Device, AccelerationStructure, GetAllocationCallbacks()); }
-			BufferMemory::Destroy(Device);
+			BufferAndDeviceMemory::Destroy(Device);
 		}
 	};
 #endif
@@ -199,7 +208,6 @@ protected:
 	static void SubmitAndWait(const VkQueue Queue, const VkCommandBuffer CB);
 
 	static void EnumerateMemoryRequirements(const VkMemoryRequirements& MR, const VkPhysicalDeviceMemoryProperties& PDMP);
-	//void EnumerateMemoryRequirements(const VkMemoryRequirements& MR) { EnumerateMemoryRequirements(MR, GetCurrentPhysicalDeviceMemoryProperties()); }
 
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
 
@@ -279,17 +287,18 @@ protected:
 	virtual void LoadScene() {}
 
 	static void CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr);
+
 	virtual void SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source);
-	virtual void CreateAndCopyToBuffer(VkBuffer* Buf, VkDeviceMemory* DM, const VkQueue Queue, const VkCommandBuffer CB, const VkBufferUsageFlagBits BUF, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source);
 	static void CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, 
 		const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, 
 		const void* Source, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue);
+
+	virtual void CreateAndCopyToBuffer(VkBuffer* Buf, VkDeviceMemory* DM, const VkQueue Queue, const VkCommandBuffer CB, const VkBufferUsageFlagBits BUF, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source);
 
 	static VkDeviceAddress GetDeviceAddress(const VkDevice Device, const VkBuffer Buffer) {
 		const VkBufferDeviceAddressInfo BDAI = { .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, .pNext = nullptr, .buffer = Buffer };
 		return vkGetBufferDeviceAddress(Device, &BDAI);
 	}
-	VkDeviceAddress GetDeviceAddress(const VkBuffer Buffer) const { return GetDeviceAddress(Device, Buffer); }
 
 #ifdef USE_RAYTRACING
 	virtual void GetAccelerationStructureBuildSizes(VkAccelerationStructureBuildSizesInfoKHR& ASBSI, const VkAccelerationStructureTypeKHR Type, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs, const uint32_t MaxPrimCount);
@@ -366,16 +375,11 @@ protected:
 	virtual void CreateStorageTexelBuffer_Example();
 
 	virtual void CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const VkDescriptorSetLayoutCreateFlags Flags, const std::vector<VkDescriptorSetLayoutBinding>& DSLBs);
-	virtual void CreateDescriptorSetLayout() {}
-
 	virtual void CreatePipelineLayout(VkPipelineLayout& PL, const std::vector<VkDescriptorSetLayout>& DSLs, const std::vector<VkPushConstantRange>& PCRs);
 	virtual void CreatePipelineLayout() { PipelineLayouts.emplace_back(VkPipelineLayout()); CreatePipelineLayout(PipelineLayouts.back(), {}, {}); }
 
+	virtual void CreateDescriptorSet() {}
 	virtual void CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreateFlags Flags, const std::vector<VkDescriptorPoolSize>& DPSs);
-	virtual void CreateDescriptorPool() {}
-
-	//virtual void AllocateDescriptorSet(std::vector<VkDescriptorSet>& DSs, const VkDescriptorPool DP, const std::vector<VkDescriptorSetLayout>& DSLs);
-	virtual void AllocateDescriptorSet() {}
 
 	//virtual void UpdateDescriptorSet(const std::vector<VkWriteDescriptorSet>& WDSs, const std::vector<VkCopyDescriptorSet>& CDSs);
 	virtual void CreateDescriptorUpdateTemplate() {}
@@ -560,24 +564,20 @@ protected:
 	//!< VKの場合、通常サンプラ、イミュータブルサンプラとも同様に VkSampler を作成する、デスクリプタセットの指定が異なるだけ
 	std::vector<VkSampler> Samplers;
 
-	using VertexBuffer = BufferMemory;
-	using IndexBuffer = BufferMemory;
-	using IndirectBuffer = BufferMemory;
-	using AccelerationStructureBuffer = struct BufferMemoryAccelerationStructure;
-	using UniformBuffer = BufferMemory;
-	using StorageBuffer = BufferMemory;
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;
 	std::vector<IndirectBuffer> IndirectBuffers;
 #ifdef USE_RAYTRACING
 	std::vector<AccelerationStructureBuffer> BLASs, TLASs;
+	using ShaderBindingTable = BufferAndDeviceMemory;
+	std::vector<ShaderBindingTable> ShaderBindingTables;
 #endif
 
 	std::vector<UniformBuffer> UniformBuffers;
 	std::vector<StorageBuffer> StorageBuffers;
 
-	using UniformTexelBuffer = struct BufferMemory;
-	using StorageTexelBuffer = struct BufferMemory;
+	using UniformTexelBuffer = struct BufferAndDeviceMemory;
+	using StorageTexelBuffer = struct BufferAndDeviceMemory;
 	std::vector<UniformTexelBuffer> UniformTexelBuffers;
 	std::vector<StorageTexelBuffer> StorageTexelBuffers;
 	std::vector<VkBufferView> BufferViews; //!< XXXTexelBufferはビューを使用する

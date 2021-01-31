@@ -124,10 +124,7 @@ protected:
 #pragma region UB
 	virtual void CreateUniformBuffer() override {
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
-			UniformBuffers.emplace_back(UniformBuffer());
-			CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tracking));
-			AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
+			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tracking), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		}
 	}
 #pragma endregion
@@ -210,25 +207,18 @@ protected:
 		};
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.back()));
 	}
-
-	virtual void CreateDescriptorSetLayout() override {
-		DescriptorSetLayouts.emplace_back(VkDescriptorSetLayout());
-		assert(!empty(Samplers) && "");
+	virtual void CreatePipelineLayout() override {
 		const std::array ISs = { Samplers[0] };
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
+		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
 			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }),
 #pragma region SECOND_TEXTURE
-			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }), 
+			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }),
 #pragma endregion
 #pragma region UB
 			VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr }),
 #pragma endregion
-			});
-	}
-	virtual void CreatePipelineLayout() override {
-		assert(!empty(DescriptorSetLayouts) && "");
-		PipelineLayouts.emplace_back(VkPipelineLayout());
-		VKExt::CreatePipelineLayout(PipelineLayouts.back(), { DescriptorSetLayouts[0] }, {});
+		}); 
+		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 	virtual void CreateRenderPass() { VK::CreateRenderPass(VK_ATTACHMENT_LOAD_OP_DONT_CARE, false); }
 
@@ -236,18 +226,16 @@ protected:
 
 	virtual void CreatePipelines() override { CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE); }
 
-	virtual void CreateDescriptorPool() override {
-		DescriptorPools.emplace_back(VkDescriptorPool());
-		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
+	virtual void CreateDescriptorSet() override {
+		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region SECOND_TEXTURE
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 2 }),
 #pragma endregion
 #pragma region UB
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }),
 #pragma endregion
-			});
-	}
-	virtual void AllocateDescriptorSet() override {
+		});
+
 		const std::array DSLs = { DescriptorSetLayouts[0] };
 		const VkDescriptorSetAllocateInfo DSAI = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -255,18 +243,15 @@ protected:
 			.descriptorPool = DescriptorPools[0],
 			.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 		};
-		//DescriptorSets.emplace_back(VkDescriptorSet());
-		//VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
 #pragma region UB
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
-			DescriptorSets.emplace_back(VkDescriptorSet());
-			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 		}
 #pragma endregion
 	}
+
 	virtual void CreateDescriptorUpdateTemplate() override {
-		DescriptorUpdateTemplates.emplace_back(VkDescriptorUpdateTemplate());
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
 				.descriptorCount = _countof(DescriptorUpdateInfo::DII), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,

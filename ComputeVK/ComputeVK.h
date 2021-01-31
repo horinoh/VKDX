@@ -20,40 +20,48 @@ protected:
 
 	virtual void CreateBottomLevel() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
 
-	virtual void CreateDescriptorSetLayout() override {
-		DescriptorSetLayouts.resize(1);
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {
-				{ 0, /*VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER*/VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr }
-			});
-	}
 	virtual void CreatePipelineLayout() override {
-		assert(!empty(DescriptorSetLayouts) && "");
-		PipelineLayouts.resize(1);
-		VKExt::CreatePipelineLayout(PipelineLayouts[0], {
-				DescriptorSetLayouts[0] 
-			}, {});
+		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
+				{ 0, /*VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER*/VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr }
+		});
+
+		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 
 #pragma region DESCRIPTOR
-	virtual void CreateDescriptorPool() override {
-		DescriptorPools.resize(1);
-		VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
-				{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 } 
-			});
-	}
-	virtual void AllocateDescriptorSet() override {
-		assert(!empty(DescriptorSetLayouts) && "");
-		const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
-		assert(!empty(DescriptorPools) && "");
+	virtual void CreateDescriptorSet() override {
+		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 }
+		});
+
+		const std::array DSLs = { DescriptorSetLayouts[0] };
 		const VkDescriptorSetAllocateInfo DSAI = {
 			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			nullptr,
 			DescriptorPools[0],
 			static_cast<uint32_t>(size(DSLs)), data(DSLs)
 		};
-		DescriptorSets.resize(1);
-		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
+		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 	}
+	//virtual void CreateDescriptorPool() override {
+	//	DescriptorPools.resize(1);
+	//	VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
+	//			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 } 
+	//	});
+	//}
+	//virtual void AllocateDescriptorSet() override {
+	//	assert(!empty(DescriptorSetLayouts) && "");
+	//	const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
+	//	assert(!empty(DescriptorPools) && "");
+	//	const VkDescriptorSetAllocateInfo DSAI = {
+	//		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+	//		nullptr,
+	//		DescriptorPools[0],
+	//		static_cast<uint32_t>(size(DSLs)), data(DSLs)
+	//	};
+	//	DescriptorSets.resize(1);
+	//	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
+	//}
 	virtual void CreateDescriptorUpdateTemplate() override {
 		DescriptorUpdateTemplates.resize(1);
 		assert(!empty(DescriptorSetLayouts) && "");

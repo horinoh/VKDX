@@ -336,6 +336,8 @@
 	- HoloDX, HoloVK
 - USE_LEAP
 	- LeapDX, LeapVK
+- USE_RAYTRACING
+	- RayTracingDX, RayTracingVK
 	
 #### トラブルシューティング
 * 「このプロジェクトは、このコンピュータ上にないNugetパッケージを参照しています」と出る場合

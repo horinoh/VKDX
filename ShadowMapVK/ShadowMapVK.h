@@ -146,82 +146,74 @@ protected:
 		CreateIndirectBuffer_DrawIndexed(1, 2);
 #endif
 	}
-	virtual void CreateDescriptorSetLayout() override {		
-		//!< パス0 : デスクリプタセットレイアウト
-		{
-			DescriptorSetLayouts.emplace_back(VkDescriptorSetLayout());
-			VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
-				VkDescriptorSetLayoutBinding({ .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }),
-			});
-		}
-
-		//!< パス1 : デスクリプタセットレイアウト
-		{
-			assert(!empty(Samplers) && "");
-			const std::array ISs = { Samplers[0] };
-			DescriptorSetLayouts.emplace_back(VkDescriptorSetLayout());
-			VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				VkDescriptorSetLayoutBinding({ .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }),
-#ifndef USE_SHADOWMAP_VISUALIZE
-				VkDescriptorSetLayoutBinding({ .binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }),
-#endif
-			});
-		}
-	}
+//	virtual void CreateDescriptorSetLayout() override {		
+//		//!< パス0 : デスクリプタセットレイアウト
+//		{
+//			CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
+//				VkDescriptorSetLayoutBinding({ .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }),
+//			});
+//		}
+//
+//		//!< パス1 : デスクリプタセットレイアウト
+//		{
+//			const std::array ISs = { Samplers[0] };
+//			CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
+//				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+//				VkDescriptorSetLayoutBinding({ .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }),
+//#ifndef USE_SHADOWMAP_VISUALIZE
+//				VkDescriptorSetLayoutBinding({ .binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }),
+//#endif
+//			});
+//		}
+//	}
 	virtual void CreatePipelineLayout() override {
-		assert(2 == size(DescriptorSetLayouts) && "");
-
 		//!< パス0 : パイプラインレイアウト
 		{
-			PipelineLayouts.emplace_back(VkPipelineLayout());
-			VKExt::CreatePipelineLayout(PipelineLayouts.back(), { DescriptorSetLayouts[0] }, {});
+			CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
+				VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }),
+			});
+			VKExt::CreatePipelineLayout(PipelineLayouts.emplace_back(), { DescriptorSetLayouts.back() }, {});
 		}
 
 		//!< パス1 : パイプラインレイアウト
 		{
-			PipelineLayouts.emplace_back(VkPipelineLayout());
-			VKExt::CreatePipelineLayout(PipelineLayouts.back(), { DescriptorSetLayouts[1] }, {});
+			const std::array ISs = { Samplers[0] };
+			CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
+				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }),
+#ifndef USE_SHADOWMAP_VISUALIZE
+				VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }),
+#endif
+			});
+			VKExt::CreatePipelineLayout(PipelineLayouts.emplace_back(), { DescriptorSetLayouts.back() }, {});
 		}
 	}
 
-	virtual void CreateDescriptorPool() override {
+	virtual void CreateDescriptorSet() override {
+		//!< Pass0, 1 : デスクリプタプール
+		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
-		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) * 2 }), //!< UB * N * 2
 #pragma endregion
-
-		//!< パス0, 1 : デスクリプタプール
-		DescriptorPools.emplace_back(VkDescriptorPool());
-		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
-#pragma region FRAME_OBJECT
-			VkDescriptorPoolSize({ .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = SCCount * 2 }), //!< UB * N * 2
-#pragma endregion
-			VkDescriptorPoolSize({ .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 }),
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 }),
 		});
-	}
-	virtual void AllocateDescriptorSet() override {
-		assert(2 == size(DescriptorSetLayouts) && "");
-		assert(!empty(DescriptorPools) && "");
 
-		const auto SCCount = size(SwapchainImages);
-
-		//!< パス0 : デスクリプタセット
+		//!< Pass0 : デスクリプタセット
 		{
 			const std::array DSLs = { DescriptorSetLayouts[0] };
 			const VkDescriptorSetAllocateInfo DSAI = {
 				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 				.pNext = nullptr,
 				.descriptorPool = DescriptorPools[0],
-			 	.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
+				.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 			};
 #pragma region FRAME_OBJECT
-			for (size_t i = 0; i < SCCount; ++i) {
-				DescriptorSets.emplace_back(VkDescriptorSet());
-				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+			for (size_t i = 0; i < size(SwapchainImages); ++i) {
+				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 			}
 #pragma endregion
 		}
-		//!< パス1 : デスクリプタセット
+		//!< Pass1 : デスクリプタセット
 		{
 			const std::array DSLs = { DescriptorSetLayouts[1] };
 			const VkDescriptorSetAllocateInfo DSAI = {
@@ -231,13 +223,65 @@ protected:
 				.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 			};
 #pragma region FRAME_OBJECT
-			for (size_t i = 0; i < SCCount; ++i) {
-				DescriptorSets.emplace_back(VkDescriptorSet());
-				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+			for (size_t i = 0; i < size(SwapchainImages); ++i) {
+				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 			}
 #pragma endregion
 		}
 	}
+//	virtual void CreateDescriptorPool() override {
+//#pragma region FRAME_OBJECT
+//		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
+//#pragma endregion
+//
+//		//!< パス0, 1 : デスクリプタプール
+//		DescriptorPools.emplace_back(VkDescriptorPool());
+//		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
+//#pragma region FRAME_OBJECT
+//			VkDescriptorPoolSize({ .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = SCCount * 2 }), //!< UB * N * 2
+//#pragma endregion
+//			VkDescriptorPoolSize({ .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 }),
+//		});
+//	}
+//	virtual void AllocateDescriptorSet() override {
+//		assert(2 == size(DescriptorSetLayouts) && "");
+//		assert(!empty(DescriptorPools) && "");
+//
+//		const auto SCCount = size(SwapchainImages);
+//
+//		//!< パス0 : デスクリプタセット
+//		{
+//			const std::array DSLs = { DescriptorSetLayouts[0] };
+//			const VkDescriptorSetAllocateInfo DSAI = {
+//				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+//				.pNext = nullptr,
+//				.descriptorPool = DescriptorPools[0],
+//			 	.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
+//			};
+//#pragma region FRAME_OBJECT
+//			for (size_t i = 0; i < SCCount; ++i) {
+//				DescriptorSets.emplace_back(VkDescriptorSet());
+//				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+//			}
+//#pragma endregion
+//		}
+//		//!< パス1 : デスクリプタセット
+//		{
+//			const std::array DSLs = { DescriptorSetLayouts[1] };
+//			const VkDescriptorSetAllocateInfo DSAI = {
+//				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+//				.pNext = nullptr,
+//				.descriptorPool = DescriptorPools[0],
+//				.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
+//			};
+//#pragma region FRAME_OBJECT
+//			for (size_t i = 0; i < SCCount; ++i) {
+//				DescriptorSets.emplace_back(VkDescriptorSet());
+//				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+//			}
+//#pragma endregion
+//		}
+//	}
 	virtual void CreateDescriptorUpdateTemplate() override {
 		assert(2 == size(DescriptorSetLayouts) && "");
 

@@ -15,14 +15,8 @@ public:
 
 protected:
 	virtual void CreateBottomLevel() override;
-	virtual void CreateDescriptorSetLayout() override {
-		DescriptorSetLayouts.resize(1);
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {});
-	}
 	virtual void CreatePipelineLayout() override {
-		assert(!empty(DescriptorSetLayouts) && "");
-		PipelineLayouts.emplace_back(VkPipelineLayout());
-		VKExt::CreatePipelineLayout(PipelineLayouts.back(), {}, {});
+		VKExt::CreatePipelineLayout(PipelineLayouts.emplace_back(), {}, {});
 	}
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFs(); }
 	virtual void CreatePipelines() override {

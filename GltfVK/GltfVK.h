@@ -132,20 +132,24 @@ protected:
 	virtual void UpdateAnimRotation(const std::array<float, 4>& Value, const uint32_t NodeIndex);
 	virtual void UpdateAnimWeights(const float* Data, const uint32_t PrevIndex, const uint32_t NextIndex, const float t);
 
-	virtual void CreateDescriptorSetLayout() override {
-		DescriptorSetLayouts.emplace_back(VkDescriptorSetLayout());
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {
-#if 0
-				VkDescriptorSetLayoutBinding({ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr })
-#endif
-			});
-	}
+//	virtual void CreateDescriptorSetLayout() override {
+//		DescriptorSetLayouts.emplace_back(VkDescriptorSetLayout());
+//		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {
+//#if 0
+//				VkDescriptorSetLayoutBinding({ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr })
+//#endif
+//			});
+//	}
 	virtual void CreatePipelineLayout() override {
-		assert(!empty(DescriptorSetLayouts) && "");
-		PipelineLayouts.emplace_back(VkPipelineLayout());
-		VKExt::CreatePipelineLayout(PipelineLayouts[0], {
+		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
 #if 0
-				DescriptorSetLayouts[0]
+			VkDescriptorSetLayoutBinding({ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr })
+#endif
+		});
+
+		VKExt::CreatePipelineLayout(PipelineLayouts.emplace_back(), {
+#if 0
+			DescriptorSetLayouts[0]
 #endif
 			}, {});
 	}

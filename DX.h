@@ -140,6 +140,13 @@ public:
 	public:
 		COM_PTR<ID3D12CommandSignature> CommandSignature;
 	};
+	using ConstantBuffer = Buffer;
+#ifdef USE_RAYTRACING
+	class AccelerationStructureBuffer : public Buffer
+	{
+	public:
+	};
+#endif
 
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
@@ -263,6 +270,7 @@ protected:
 	virtual void CreateRootSignature();
 
 	virtual void CreateDescriptorHeap() {}
+
 	virtual void CreateDescriptorView() {}
 
 	virtual void ProcessShaderReflection(ID3DBlob* Blob);
@@ -270,7 +278,6 @@ protected:
 	virtual void GetBlobPart(ID3DBlob* Blob);
 	virtual void StripShader(COM_PTR<ID3DBlob>& Blob);
 	virtual void CreateShaderBlobs() {}
-
 #include "DXPipelineLibrary.inl"
 	virtual void CreatePipelineStates() {}
 	static void CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,
@@ -338,11 +345,6 @@ protected:
 
 	COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
 	std::vector<COM_PTR<ID3D12PipelineState>> PipelineStates;
-
-	//using VertexBuffer = struct VertexBuffer { D3D12_VERTEX_BUFFER_VIEW View; COM_PTR<ID3D12Resource> Resource; };
-	//using IndexBuffer = struct IndexBuffer { D3D12_INDEX_BUFFER_VIEW View; COM_PTR<ID3D12Resource> Resource; };
-	//using IndirectBuffer = struct IndirectBuffer { COM_PTR<ID3D12CommandSignature> CommandSignature; COM_PTR<ID3D12Resource> Resource; };
-	using ConstantBuffer = Buffer;//struct ConstantBuffer { COM_PTR<ID3D12Resource> Resource; };
 
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;

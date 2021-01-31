@@ -162,50 +162,54 @@ protected:
 		}
 #pragma endregion
 	}
-	virtual void CreateDescriptorSetLayout() override {
-		//!< Pass0 
-		DescriptorSetLayouts.emplace_back(VkDescriptorSetLayout());
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
-			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }),
-			});
+	//virtual void CreateDescriptorSetLayout() override {
+	//	//!< Pass0 
+	//	DescriptorSetLayouts.emplace_back(VkDescriptorSetLayout());
+	//	VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
+	//		VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }),
+	//		});
 
-		//!< Pass1
-		DescriptorSetLayouts.emplace_back(VkDescriptorSetLayout());
-		assert(!empty(Samplers) && "");
-		const std::array ISs = { Samplers[0] };
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
-			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) })
-			});
-	}
+	//	//!< Pass1
+	//	DescriptorSetLayouts.emplace_back(VkDescriptorSetLayout());
+	//	assert(!empty(Samplers) && "");
+	//	const std::array ISs = { Samplers[0] };
+	//	VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
+	//		VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) })
+	//		});
+	//}
 	virtual void CreatePipelineLayout() override {
 		//!< Pass0
-		PipelineLayouts.emplace_back(VkPipelineLayout());
-		VKExt::CreatePipelineLayout(PipelineLayouts.back(), { DescriptorSetLayouts[0] }, {
-#pragma region PUSH_CONSTANT
-			VkPushConstantRange({.stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .offset = 0, .size = static_cast<uint32_t>(sizeof(QuiltDraw)) })
-#pragma endregion
+		{
+			CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
+				VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }),
 			});
+			VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), { DescriptorSetLayouts.back() }, {
+	#pragma region PUSH_CONSTANT
+				VkPushConstantRange({.stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .offset = 0, .size = static_cast<uint32_t>(sizeof(QuiltDraw)) })
+	#pragma endregion
+				});
+		}
 		//!< Pass1 
-		PipelineLayouts.emplace_back(VkPipelineLayout());
-		VKExt::CreatePipelineLayout(PipelineLayouts.back(), { DescriptorSetLayouts[1] }, {});
+		{
+			const std::array ISs = { Samplers[0] };
+			CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
+				VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) })
+			});
+			VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), { DescriptorSetLayouts.back() }, {});
+		}
 	}
-
-	virtual void CreateDescriptorPool() override {
+	virtual void CreateDescriptorSet() override {
 		//!< Pass0 
-		DescriptorPools.emplace_back(VkDescriptorPool());
-		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
+		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }) //!< UB * N
 #pragma endregion
-			});
-
+		});
 		//!< Pass1 
-		DescriptorPools.emplace_back(VkDescriptorPool());
-		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
+		VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 })
-			});
-	}
-	virtual void AllocateDescriptorSet() override {
+		});
+
 		//!< Pass0
 		{
 			const std::array DSLs = { DescriptorSetLayouts[0] };
@@ -216,10 +220,8 @@ protected:
 				.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 			};
 #pragma region FRAME_OBJECT
-			const auto SCCount = size(SwapchainImages);
-			for (size_t i = 0; i < SCCount; ++i) {
-				DescriptorSets.emplace_back(VkDescriptorSet());
-				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+			for (size_t i = 0; i < size(SwapchainImages); ++i) {
+				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 			}
 #pragma endregion
 		}
@@ -232,8 +234,7 @@ protected:
 				.descriptorPool = DescriptorPools[1],
 				.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 			};
-			DescriptorSets.emplace_back(VkDescriptorSet());
-			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 		}
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {

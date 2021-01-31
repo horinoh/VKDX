@@ -174,65 +174,49 @@ protected:
 		}
 	}
 	virtual void CreateBottomLevel() override {
-		//!< パス0 : インダイレクトバッファ(メッシュ描画用)
+		//!< Pass0 : インダイレクトバッファ(メッシュ描画用)
 		CreateIndirectBuffer_DrawIndexed(1, 1); 
-		//!< パス1 : インダイレクトバッファ(レンダーテクスチャ描画用)
+		//!< Pass1 : インダイレクトバッファ(レンダーテクスチャ描画用)
 		CreateIndirectBuffer_Draw(4, 1); 
 	} 
-	virtual void CreateDescriptorSetLayout() override {
-		DescriptorSetLayouts.emplace_back(VkDescriptorSetLayout());
+	virtual void CreatePipelineLayout() override {
+		//!< Pass0 : パイプラインレイアウト
+		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), {}, {});
 
+		//!< Pass1 : パイプラインレイアウト
 #ifdef USE_SUBPASS
 		const std::array<VkSampler, 0> ISs = {};
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
-			VkDescriptorSetLayoutBinding({ .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) })
+		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
+			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) })
 		});
 #endif
-
-		//!< パス1 : デスクリプタセットレイアウト
-		assert(!empty(Samplers) && "");
 		const std::array ISs = { Samplers[0] };
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
-			VkDescriptorSetLayoutBinding({ .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) })
+		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
+			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) })
 		});
-	}
-	virtual void CreatePipelineLayout() override {
-		assert(!empty(DescriptorSetLayouts) && "");
-		//!< パス0 : パイプラインレイアウト
-		PipelineLayouts.emplace_back(VkPipelineLayout());
-		VKExt::CreatePipelineLayout(PipelineLayouts.back(), {}, {});
-		//!< パス1 : パイプラインレイアウト
-		PipelineLayouts.emplace_back(VkPipelineLayout());
-		VKExt::CreatePipelineLayout(PipelineLayouts.back(), { DescriptorSetLayouts[0] }, {});
+		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 
-	virtual void CreateDescriptorPool() override {	
-		DescriptorPools.emplace_back(VkDescriptorPool());
-
+	virtual void CreateDescriptorSet() override {
 #ifdef USE_SUBPASS
-		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
-			VkDescriptorPoolSize({ .type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, .descriptorCount = 1 })
-		});
+		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, .descriptorCount = 1 })
+			});
 #endif
-
-		//!< パス1 : デスクリプタプール
-		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
-			VkDescriptorPoolSize({ .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 })
+		//!< Pass1 : デスクリプタプール
+		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 })
 		});
-	}
-	virtual void AllocateDescriptorSet() override {
-		//!< パス1 : デスクリプタセット
-		assert(!empty(DescriptorSetLayouts) && "");
+
+		//!< Pass1 : デスクリプタセット
 		const std::array DSLs = { DescriptorSetLayouts[0] };
-		assert(!empty(DescriptorPools) && "");
 		const VkDescriptorSetAllocateInfo DSAI = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			.pNext = nullptr,
 			.descriptorPool = DescriptorPools[0],
 			.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 		};
-		DescriptorSets.emplace_back(VkDescriptorSet());
-		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 	}
 	virtual void CreateDescriptorUpdateTemplate() override {
 		DescriptorUpdateTemplates.emplace_back(VkDescriptorUpdateTemplate());

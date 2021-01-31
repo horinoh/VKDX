@@ -87,43 +87,29 @@ protected:
 
 	virtual void CreateBottomLevel() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
-	virtual void CreateDescriptorSetLayout() override {
-		DescriptorSetLayouts.emplace_back(VkDescriptorSetLayout());
-		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 
+	virtual void CreatePipelineLayout() override {
+		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(),
 #ifdef USE_PUSH_DESCRIPTOR
 			VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR,
 #else
 			0,
 #endif
 			{
-				VkDescriptorSetLayoutBinding({ .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr })
+				VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr })
 			});
-	}
-	virtual void CreatePipelineLayout() override {
-		assert(!empty(DescriptorSetLayouts) && "");
-		PipelineLayouts.emplace_back(VkPipelineLayout());
-		VKExt::CreatePipelineLayout(PipelineLayouts.back(), {
-				DescriptorSetLayouts[0] 
-			}, {});
+
+		VKExt::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts , {});
 	}
 
 #ifndef USE_PUSH_DESCRIPTOR
-	virtual void CreateDescriptorPool() override {
+	virtual void CreateDescriptorSet() override {
+		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
 #pragma region FRAME_OBJECT
-		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
-#pragma endregion
-
-		DescriptorPools.emplace_back(VkDescriptorPool());
-		VKExt::CreateDescriptorPool(DescriptorPools.back(), /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
-#pragma region FRAME_OBJECT
-			VkDescriptorPoolSize({ .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = SCCount }), //!< UB * N
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }), //!< UB * N
 #pragma endregion
 		});
-	}
-	virtual void AllocateDescriptorSet() override {
-		assert(!empty(DescriptorSetLayouts) && "");
+
 		const std::array DSLs = { DescriptorSetLayouts[0] };
-		assert(!empty(DescriptorPools) && "");
 		const VkDescriptorSetAllocateInfo DSAI = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 			.pNext = nullptr,
@@ -131,10 +117,8 @@ protected:
 			.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 		};
 #pragma region FRAME_OBJECT
-		const auto SCCount = size(SwapchainImages);
-		for (size_t i = 0; i < SCCount; ++i) {
-			DescriptorSets.emplace_back(VkDescriptorSet());
-			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+		for (size_t i = 0; i < size(SwapchainImages); ++i) {
+			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 		}
 #pragma endregion
 	}
@@ -167,7 +151,6 @@ protected:
 #else
 	virtual void CreateDescriptorUpdateTemplate() override {
 		DescriptorUpdateTemplates.emplace_back(VkDescriptorUpdateTemplate());
-		assert(!empty(DescriptorSetLayouts) && "");
 		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,

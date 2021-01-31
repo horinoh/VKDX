@@ -224,79 +224,84 @@ protected:
 		//!< パス1 : インダイレクトバッファ(レンダーテクスチャ描画用)
 		CreateIndirectBuffer_Draw(4, 1);
 	}
-	virtual void CreateDescriptorSetLayout() override {
-		assert(!empty(Samplers) && "");
+	//virtual void CreateDescriptorSetLayout() override {
+	//	assert(!empty(Samplers) && "");
 
-		//!< パス0 : デスクリプタセットレイアウト
-		{
-			DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
-			VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
-				{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
-			});
-		}
+	//	//!< パス0 : デスクリプタセットレイアウト
+	//	{
+	//		DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
+	//		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
+	//			{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
+	//		});
+	//	}
 
-		//!< パス1 : デスクリプタセットレイアウト
-		{
-			const std::array<VkSampler, 1> ISs = { Samplers[0] };
+	//	//!< パス1 : デスクリプタセットレイアウト
+	//	{
+	//		const std::array<VkSampler, 1> ISs = { Samplers[0] };
 
-			DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
-			VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
-				//!< レンダーターゲット : カラー(RenderTarget : Color)
-				{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(size(ISs)), VK_SHADER_STAGE_FRAGMENT_BIT, data(ISs) },
-	#pragma region MRT 
-				//!< レンダーターゲット : 法線(RenderTarget : Normal)
-				{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(size(ISs)), VK_SHADER_STAGE_FRAGMENT_BIT, data(ISs) },
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				{ 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(size(ISs)), VK_SHADER_STAGE_FRAGMENT_BIT, data(ISs) },
-				//!< レンダーターゲット : 未定
-				{ 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(size(ISs)), VK_SHADER_STAGE_FRAGMENT_BIT, data(ISs) },
-	#pragma endregion
-				{ 4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-			});
-		}
-	}
+	//		DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
+	//		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
+	//			//!< レンダーターゲット : カラー(RenderTarget : Color)
+	//			{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(size(ISs)), VK_SHADER_STAGE_FRAGMENT_BIT, data(ISs) },
+	//#pragma region MRT 
+	//			//!< レンダーターゲット : 法線(RenderTarget : Normal)
+	//			{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(size(ISs)), VK_SHADER_STAGE_FRAGMENT_BIT, data(ISs) },
+	//			//!< レンダーターゲット : 深度(RenderTarget : Depth)
+	//			{ 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(size(ISs)), VK_SHADER_STAGE_FRAGMENT_BIT, data(ISs) },
+	//			//!< レンダーターゲット : 未定
+	//			{ 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(size(ISs)), VK_SHADER_STAGE_FRAGMENT_BIT, data(ISs) },
+	//#pragma endregion
+	//			{ 4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
+	//		});
+	//	}
+	//}
 	virtual void CreatePipelineLayout() override {
-		assert(2 == size(DescriptorSetLayouts) && "");
-
 		//!< パス0 : パイプラインレイアウト
 		{
-			PipelineLayouts.push_back(VkPipelineLayout());
-			VKExt::CreatePipelineLayout(PipelineLayouts.back(), { DescriptorSetLayouts[0] }, {});
+			CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
+				VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }),
+			});
+			VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), { DescriptorSetLayouts.back() }, {});
 		}
 
 		//!< パス1 : パイプラインレイアウト
 		{
-			PipelineLayouts.push_back(VkPipelineLayout());
-			VKExt::CreatePipelineLayout(PipelineLayouts.back(), { DescriptorSetLayouts[1] }, {});
+			//VkDescriptorSetLayoutBinding({ .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }), //!< UniformBuffer
+
+			const std::array ISs = { Samplers[0] };
+			CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
+				//!< レンダーターゲット : カラー(RenderTarget : Color)
+				VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }),
+	#pragma region MRT 
+				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }),
+				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				VkDescriptorSetLayoutBinding({.binding =  2, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }),
+				//!< レンダーターゲット : 未定
+				VkDescriptorSetLayoutBinding({.binding = 3, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }),
+	#pragma endregion
+				VkDescriptorSetLayoutBinding({.binding = 4, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr }),
+			});
+
+			VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), { DescriptorSetLayouts.back() }, {});
 		}
 	}
 
-	virtual void CreateDescriptorPool() override {
+	virtual void CreateDescriptorSet() override {
+		//!< Pass0,1 : デスクリプタプール
+		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
-		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
-#pragma endregion
-
-		//!< パス0,1 : デスクリプタプール
-		DescriptorPools.push_back(VkDescriptorPool());
-		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
-#pragma region FRAME_OBJECT
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SCCount * 2 }, //!< UB * N * 2
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(size(SwapchainImages)) * 2 }, //!< UB * N * 2
 #pragma endregion
 #pragma region MRT 
 			//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
 			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 }, //!< CIS * 4
 #pragma endregion
 		});
-	}
-	virtual void AllocateDescriptorSet() override {
-		assert(2 == size(DescriptorSetLayouts) && "");
-		assert(!empty(DescriptorPools) && "");
 
-		const auto SCCount = size(SwapchainImages);
-
-		//!< パス0 : デスクリプタセット
+		//!< Pass0 : デスクリプタセット
 		{
-			const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
+			const std::array DSLs = { DescriptorSetLayouts[0] };
 			const VkDescriptorSetAllocateInfo DSAI = {
 				VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 				nullptr,
@@ -304,16 +309,14 @@ protected:
 				static_cast<uint32_t>(size(DSLs)), data(DSLs)
 			};
 #pragma region FRAME_OBJECT
-			for (size_t i = 0; i < SCCount; ++i) {
-				DescriptorSets.push_back(VkDescriptorSet());
-				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+			for (size_t i = 0; i < size(SwapchainImages); ++i) {
+				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 			}
 #pragma endregion
 		}
-
-		//!< パス1 : デスクリプタセット
+		//!< Pass1 : デスクリプタセット
 		{
-			const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[1] };
+			const std::array DSLs = { DescriptorSetLayouts[1] };
 			const VkDescriptorSetAllocateInfo DSAI = {
 				VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 				nullptr,
@@ -321,13 +324,69 @@ protected:
 				static_cast<uint32_t>(size(DSLs)), data(DSLs)
 			};
 #pragma region FRAME_OBJECT
-			for (size_t i = 0; i < SCCount; ++i) {
-				DescriptorSets.push_back(VkDescriptorSet());
-				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+			for (size_t i = 0; i < size(SwapchainImages); ++i) {
+				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 			}
 #pragma endregion
 		}
 	}
+//	virtual void CreateDescriptorPool() override {
+//#pragma region FRAME_OBJECT
+//		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
+//#pragma endregion
+//
+//		//!< Pass0,1 : デスクリプタプール
+//		DescriptorPools.push_back(VkDescriptorPool());
+//		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
+//#pragma region FRAME_OBJECT
+//			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SCCount * 2 }, //!< UB * N * 2
+//#pragma endregion
+//#pragma region MRT 
+//			//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
+//			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 }, //!< CIS * 4
+//#pragma endregion
+//		});
+//	}
+//	virtual void AllocateDescriptorSet() override {
+//		assert(2 == size(DescriptorSetLayouts) && "");
+//		assert(!empty(DescriptorPools) && "");
+//
+//		const auto SCCount = size(SwapchainImages);
+//
+//		//!< パス0 : デスクリプタセット
+//		{
+//			const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
+//			const VkDescriptorSetAllocateInfo DSAI = {
+//				VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+//				nullptr,
+//				DescriptorPools[0],
+//				static_cast<uint32_t>(size(DSLs)), data(DSLs)
+//			};
+//#pragma region FRAME_OBJECT
+//			for (size_t i = 0; i < SCCount; ++i) {
+//				DescriptorSets.push_back(VkDescriptorSet());
+//				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+//			}
+//#pragma endregion
+//		}
+//
+//		//!< パス1 : デスクリプタセット
+//		{
+//			const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[1] };
+//			const VkDescriptorSetAllocateInfo DSAI = {
+//				VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+//				nullptr,
+//				DescriptorPools[0],
+//				static_cast<uint32_t>(size(DSLs)), data(DSLs)
+//			};
+//#pragma region FRAME_OBJECT
+//			for (size_t i = 0; i < SCCount; ++i) {
+//				DescriptorSets.push_back(VkDescriptorSet());
+//				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
+//			}
+//#pragma endregion
+//		}
+//	}
 	virtual void CreateDescriptorUpdateTemplate() override {
 		assert(2 == size(DescriptorSetLayouts) && "");
 

@@ -50,9 +50,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateBottomLevel();
 	CreateTopLevel();
-	//CreateVertexBuffer();
-	//CreateIndexBuffer();
-	//CreateIndirectBuffer();
 
 	//!< コンスタントバッファ (ユニフォームバッファ相当)
 	CreateConstantBuffer();
@@ -64,21 +61,23 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< ルートシグネチャ (パイプライントレイアウト相当)
 	CreateRootSignature();
-	//!< シェーダ
-	CreateShaderBlobs();
-	//!< パイプライン
-	CreatePipelineStates();
 
-	//!< デスクリプタヒープ (デスクリプタプール相当)
+	//!< (レンダーパス相当は存在しない)
+
+	//!< パイプライン
+	{
+		CreateShaderBlobs();
+		CreatePipelineStates();
+	}
+
+	//!< デスクリプタヒープ
 	CreateDescriptorHeap();
 	
-	//!< サンプラ
+	//!< サンプラ ... デスクリプタが必要
 	CreateSampler();
 
-	//!< デスクリプタビュー (デスクリプタセット更新相当) ... この時点でリソース、デスクリプタヒープ等が必要
+	//!< デスクリプタビュー ... この時点でリソース、デスクリプタヒープ等が必要
 	CreateDescriptorView();
-
-	//!< (参考) VKの場合は、ここでデスクリプタセット更新
 
 	SetTimer(hWnd, NULL, Elapse, nullptr);
 

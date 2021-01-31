@@ -111,4 +111,6 @@ VK_DEVICE_PROC_ADDR(SetHdrMetadataEXT)
 VK_DEVICE_PROC_ADDR(GetAccelerationStructureBuildSizesKHR)
 VK_DEVICE_PROC_ADDR(CreateAccelerationStructureKHR)
 VK_DEVICE_PROC_ADDR(CmdBuildAccelerationStructuresKHR)
+VK_DEVICE_PROC_ADDR(GetRayTracingShaderGroupHandlesKHR)
+VK_DEVICE_PROC_ADDR(CreateRayTracingPipelinesKHR)
 #endif
