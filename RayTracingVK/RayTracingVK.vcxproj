@@ -66,16 +66,16 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\Props\PRECOMP.props" />
-    <Import Project="..\Props\VK.props" />
     <Import Project="..\Props\GLSL.props" />
     <Import Project="..\Props\GLM.props" />
+    <Import Project="..\Props\VK.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\Props\PRECOMP.props" />
-    <Import Project="..\Props\VK.props" />
     <Import Project="..\Props\GLSLREMAP.props" />
     <Import Project="..\Props\GLM.props" />
+    <Import Project="..\Props\VK.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

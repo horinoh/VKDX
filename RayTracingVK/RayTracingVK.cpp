@@ -4,6 +4,10 @@
 #include "framework.h"
 #include "RayTracingVK.h"
 
+#pragma region Code
+VK* Inst = nullptr;
+#pragma endregion
+
 #define MAX_LOADSTRING 100
 
 // Global Variables:
@@ -142,15 +146,61 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             }
         }
         break;
+#pragma region Code
+	case WM_CREATE:
+		if (nullptr == Inst) {
+			Inst = new RayTracingVK();
+		}
+		if (nullptr != Inst) {
+			try {
+				Inst->OnCreate(hWnd, hInst, szTitle);
+			}
+			catch (std::exception& e) {
+				std::cerr << e.what() << std::endl;
+			}
+		}
+		break;
+	case WM_TIMER:
+		if (nullptr != Inst) {
+			Inst->OnTimer(hWnd, hInst);
+		}
+		break;
+	case WM_SIZE:
+		if (nullptr != Inst) {
+			Inst->OnSize(hWnd, hInst);
+		}
+		break;
+	case WM_EXITSIZEMOVE:
+		if (nullptr != Inst) {
+			Inst->OnExitSizeMove(hWnd, hInst);
+		}
+		break;
+	case WM_KEYDOWN:
+		if (VK_ESCAPE == wParam) {
+			SendMessage(hWnd, WM_DESTROY, 0, 0);
+		}
+		break;
+#pragma endregion
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
+            [[maybe_unused]] HDC hdc = BeginPaint(hWnd, &ps);
             // TODO: Add any drawing code that uses hdc here...
+#pragma region Code
+			if (nullptr != Inst) {
+				Inst->OnPaint(hWnd, hInst);
+			}
+#pragma endregion
             EndPaint(hWnd, &ps);
         }
         break;
     case WM_DESTROY:
+#pragma region Code
+		if (nullptr != Inst) {
+			Inst->OnDestroy(hWnd, hInst);
+		}
+		SAFE_DELETE(Inst);
+#pragma endregion
         PostQuitMessage(0);
         break;
     default:
