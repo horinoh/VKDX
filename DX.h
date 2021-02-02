@@ -124,21 +124,45 @@ public:
 	{
 	public:
 		COM_PTR<ID3D12Resource> Resource;
+		void Create(ID3D12Device* Device, const size_t Size, const D3D12_HEAP_TYPE HT, const void* Source = nullptr) {
+			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, HT, Source);
+		}
+		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source) {
+			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, Size, CA, GCL, CQ, Fence, Source);
+		}
 	};
 	class VertexBuffer : public Buffer 
 	{
 	public:
 		D3D12_VERTEX_BUFFER_VIEW View;
+		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source, const UINT Stride) {
+			Buffer::Create(Device, Size, CA, GCL, CQ, Fence, Source);
+			View = D3D12_VERTEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .StrideInBytes = Stride });
+		}
 	};
 	class IndexBuffer : public Buffer
 	{
 	public:
 		D3D12_INDEX_BUFFER_VIEW View;
+		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source, const DXGI_FORMAT Format) {
+			Buffer::Create(Device, Size, CA, GCL, CQ, Fence, Source);
+			View = D3D12_INDEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .Format = Format });
+		}
 	};
 	class IndirectBuffer : public Buffer
 	{
 	public:
 		COM_PTR<ID3D12CommandSignature> CommandSignature;
+		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source, const D3D12_INDIRECT_ARGUMENT_TYPE Type) {
+			Buffer::Create(Device, Size, CA, GCL, CQ, Fence, Source);
+			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = Type }), };
+			const D3D12_COMMAND_SIGNATURE_DESC CSD = {
+				.ByteStride = static_cast<UINT>(Size),
+				.NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs),
+				.NodeMask = 0
+			};
+			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
+		}
 	};
 	using ConstantBuffer = Buffer;
 #ifdef USE_RAYTRACING
@@ -171,51 +195,55 @@ public:
 	}
 
 protected:
-	virtual void ResourceBarrier(ID3D12GraphicsCommandList* CL, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After) {
+	static void ResourceBarrier(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After) {
 		const std::array RBs = {
-		D3D12_RESOURCE_BARRIER({
-			.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-			.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-			.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
-				.pResource = Resource,
-				.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-				.StateBefore = Before,
-				.StateAfter = After
+			D3D12_RESOURCE_BARRIER({
+				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+				.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
+					.pResource = Resource,
+					.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+					.StateBefore = Before,
+					.StateAfter = After
+				})
 			})
-		})
 		};
-		CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 	}
 
+	static void CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, const D3D12_HEAP_TYPE HT, const void* Source = nullptr);
 	virtual void CreateBufferResource(ID3D12Resource** Resource, const size_t Size, const D3D12_HEAP_TYPE HeapType);
 	virtual void CreateTextureResource(ID3D12Resource** Resource, const DXGI_FORMAT Format, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize = 1, const UINT16 MipLevels = 1);
 
 	virtual void CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source, const D3D12_RANGE* Range = nullptr);
 	virtual void CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData);
-	
+	static void CreateBufferResourceAndExecuteCopyCommand(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, 
+		ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* Queue, ID3D12Fence* Fence, const void* Source);
+
 	virtual void PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES RS);
 	virtual void PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
 	virtual void PopulateCommandList_CopyTextureRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
 	
-	virtual void ExecuteAndWait(ID3D12CommandQueue* Queue, ID3D12CommandList* CL);
+	static void ExecuteAndWait(ID3D12CommandQueue* CQ, ID3D12CommandList* CL, ID3D12Fence* Fence);
 
 	virtual void CreateAndCopyToUploadResource(COM_PTR<ID3D12Resource>& Res, const size_t Size, const void* Source) {
 		CreateBufferResource(COM_PTR_PUT(Res), Size, D3D12_HEAP_TYPE_UPLOAD);
 		CopyToUploadResource(COM_PTR_GET(Res), Size, Source);
 	}
 	virtual void CreateAndCopyToDefaultResource(COM_PTR<ID3D12Resource>& Res, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL, const size_t Size, const void* Source) {
-		//!< アップロード用のリソースを作成 (Create resource for upload)
-		COM_PTR<ID3D12Resource> UploadRes;
-		CreateAndCopyToUploadResource(UploadRes, Size, Source);
 		//!< デフォルトのリソースを作成 (Create default resource)
 		CreateBufferResource(COM_PTR_PUT(Res), Size, D3D12_HEAP_TYPE_DEFAULT);
 		
+		//!< アップロード用のリソースを作成 (Create resource for upload)
+		COM_PTR<ID3D12Resource> UploadRes;
+		CreateAndCopyToUploadResource(UploadRes, Size, Source);
+	
 		//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 (Execute copy buffer command upload resource to default resource)
 		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
 			PopulateCommandList_CopyBufferRegion(CL, COM_PTR_GET(UploadRes), COM_PTR_GET(Res), Size, D3D12_RESOURCE_STATE_GENERIC_READ);
 		} VERIFY_SUCCEEDED(CL->Close());
 
-		ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL));
+		ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
 	}
 
 #if defined(_DEBUG) || defined(USE_PIX)
@@ -304,6 +332,7 @@ protected:
 	virtual void Draw();
 	virtual void Dispatch();
 	virtual void WaitForFence();
+	static void WaitForFence(ID3D12CommandQueue* CQ, ID3D12Fence* Fence);
 	virtual void Submit();
 	virtual void Present();
 

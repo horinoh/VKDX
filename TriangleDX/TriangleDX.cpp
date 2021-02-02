@@ -232,9 +232,9 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 void TriangleDX::CreateBottomLevel()
 {
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[0]);
+	const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+	const auto CQ = COM_PTR_GET(CommandQueue);
 	{
-		VertexBuffers.push_back(VertexBuffer());
 #if 1
 		const std::array Vertices = {
 			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
@@ -250,33 +250,20 @@ void TriangleDX::CreateBottomLevel()
 			Vertex_PositionColor({.Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
 		};
 #endif
-		CreateAndCopyToDefaultResource(VertexBuffers.back().Resource, CA, CL, sizeof(Vertices), data(Vertices));
-		//!< DXではビューが必要 (Need view on DX)
-		VertexBuffers.back().View = { .BufferLocation = VertexBuffers.back().Resource->GetGPUVirtualAddress(), .SizeInBytes = sizeof(Vertices), .StrideInBytes = sizeof(Vertices[0]) };
-
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), CA, GCL, CQ, COM_PTR_GET(Fence), data(Vertices), sizeof(Vertices[0]));
 #ifdef _DEBUG
 		SetName(COM_PTR_GET(VertexBuffers.back().Resource), TEXT("MyVertexBuffer"));
 #endif
 	}
 	{
-		IndexBuffers.push_back(IndexBuffer());
 		const std::array<UINT32, 3> Indices = { 0, 1, 2 };
-		CreateAndCopyToDefaultResource(IndexBuffers.back().Resource, CA, CL, sizeof(Indices), data(Indices));
-		IndexBuffers.back().View = { .BufferLocation = IndexBuffers.back().Resource->GetGPUVirtualAddress(), .SizeInBytes = sizeof(Indices), .Format = DXGI_FORMAT_R32_UINT };
+		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), CA, GCL, CQ, COM_PTR_GET(Fence), data(Indices), DXGI_FORMAT_R32_UINT);
 #ifdef _DEBUG
 		SetName(COM_PTR_GET(IndexBuffers.back().Resource), TEXT("MyIndexBuffer"));
 #endif
 		{
-			IndirectBuffers.push_back(IndirectBuffer());
 			const D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-			CreateAndCopyToDefaultResource(IndirectBuffers.back().Resource, CA, CL, sizeof(DIA), &DIA);
-			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED }), };
-			const D3D12_COMMAND_SIGNATURE_DESC CSD = {
-				.ByteStride = sizeof(DIA),
-				.NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs),
-				.NodeMask = 0
-			};
-			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectBuffers.back().CommandSignature));
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(DIA), CA, GCL, CQ, COM_PTR_GET(Fence), &DIA, D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED);			
 #ifdef _DEBUG
 			SetName(COM_PTR_GET(IndirectBuffers.back().Resource), TEXT("MyIndexBuffer"));
 #endif

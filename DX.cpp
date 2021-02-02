@@ -144,6 +144,41 @@ const char* DX::GetFormatChar(const DXGI_FORMAT Format)
 #undef DXGI_FORMAT_CASE
 }
 
+void DX::CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, const D3D12_HEAP_TYPE HT, const void* Source)
+{
+	const D3D12_RESOURCE_DESC RD = {
+		.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
+		.Alignment = 0,
+		.Width = Size, .Height = 1, //!< Widthに「バッファサイズ」を指定して、Heightは1にしておく (Set buffer size to Width, set Height to 1)
+		.DepthOrArraySize = 1, .MipLevels = 1,
+		.Format = DXGI_FORMAT_UNKNOWN,
+		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+		.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR, //!< Widthに「バッファサイズ」を指定しているので ROW_MAJOR
+		.Flags = D3D12_RESOURCE_FLAG_NONE
+	};
+	const D3D12_HEAP_PROPERTIES HP = {
+		.Type = HT,
+		.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
+		.CreationNodeMask = 0, .VisibleNodeMask = 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP,
+		D3D12_HEAP_FLAG_NONE,
+		&RD,
+		D3D12_RESOURCE_STATE_GENERIC_READ, //!< GENERIC_READ にすること (Must be GENERIC_READ)
+		nullptr,
+		IID_PPV_ARGS(Resource)
+	));
+
+	if (nullptr != Source) {
+		//const D3D12_RANGE Range = {.Begin = 0, .End = 0};
+		BYTE * Data;
+		VERIFY_SUCCEEDED((*Resource)->Map(0, /*&Range*/nullptr, reinterpret_cast<void**>(&Data))); {
+			memcpy(Data, Source, Size);
+		} (*Resource)->Unmap(0, nullptr);
+	}
+}
+
 void DX::CreateBufferResource(ID3D12Resource** Resource, const size_t Size, const D3D12_HEAP_TYPE HeapType)
 {
 	const D3D12_RESOURCE_DESC RD = {
@@ -233,6 +268,21 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_
 	}
 }
 
+void DX::CreateBufferResourceAndExecuteCopyCommand(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source)
+{
+	CreateBufferResource(Resource, Device, Size, D3D12_HEAP_TYPE_DEFAULT);
+
+	COM_PTR<ID3D12Resource> Upload;
+	CreateBufferResource(COM_PTR_PUT(Upload), Device, Size, D3D12_HEAP_TYPE_UPLOAD, Source);
+	VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
+		ResourceBarrier(GCL, *Resource, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST); {
+			GCL->CopyBufferRegion(*Resource, 0, COM_PTR_GET(Upload), 0, Size);
+		} ResourceBarrier(GCL, *Resource, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+	} VERIFY_SUCCEEDED(GCL->Close());
+
+	ExecuteAndWait(CQ, GCL, Fence);
+}
+
 void DX::PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES RS)
 {
 	ResourceBarrier(CL, Dst, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST); {
@@ -268,11 +318,13 @@ void DX::PopulateCommandList_CopyTextureRegion(ID3D12GraphicsCommandList* CL, ID
 	} ResourceBarrier(CL, Dst, D3D12_RESOURCE_STATE_COPY_DEST, RS);
 }
 
-void DX::ExecuteAndWait(ID3D12CommandQueue* Queue, ID3D12CommandList* CL)
+void DX::ExecuteAndWait(ID3D12CommandQueue* CQ, ID3D12CommandList* CL, ID3D12Fence* Fence)
 {
 	const std::array CLs = { CL };
-	Queue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
-	WaitForFence();
+	CQ->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
+
+	WaitForFence(CQ, Fence);
+	//WaitForFence();
 }
 
 void DX::CreateDevice([[maybe_unused]] HWND hWnd)
@@ -1310,7 +1362,7 @@ void DX::CreateTexture1x1(const UINT32 Color, const D3D12_RESOURCE_STATES RS)
 		} VERIFY_SUCCEEDED(CL->Close());
 
 		//!< コマンドの実行 (Execute command)
-		ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL));
+		ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
 	}
 
 	//!< ビューの作成 (Create view)
@@ -1386,7 +1438,7 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 			PopulateCommandList_CopyTextureRegion(CL, COM_PTR_GET(UploadResource), COM_PTR_GET(ImageResources.back()), PSFs, RS);
 		} VERIFY_SUCCEEDED(CL->Close());
 
-		ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL));
+		ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
 	}
 
 	ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
@@ -1485,6 +1537,25 @@ void DX::WaitForFence()
 		}
 	}
 }
+
+void DX::WaitForFence(ID3D12CommandQueue* CQ, ID3D12Fence* Fence)
+{
+	auto Value = Fence->GetCompletedValue();
+	++Value;
+	//!< GPUが到達すれば Value になる
+	VERIFY_SUCCEEDED(CQ->Signal(Fence, Value));
+	if (Fence->GetCompletedValue() < Value) {
+		auto hEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+		if (nullptr != hEvent) [[likely]] {
+			//!< GetCompletedValue() が FenceValue になったらイベントが発行されるようにする
+			VERIFY_SUCCEEDED(Fence->SetEventOnCompletion(Value, hEvent));
+			//!< イベント発行まで待つ
+			WaitForSingleObject(hEvent, INFINITE);
+			CloseHandle(hEvent);
+		}
+	}
+}
+
 void DX::Submit()
 {
 	const std::array CLs = { static_cast<ID3D12CommandList*>(COM_PTR_GET(GraphicsCommandLists[GetCurrentBackBufferIndex()])) };

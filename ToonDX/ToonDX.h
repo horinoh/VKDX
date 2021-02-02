@@ -44,7 +44,7 @@ protected:
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
-			CreateBufferResource(COM_PTR_PUT(ConstantBuffers.emplace_back().Resource), RoundUp256(sizeof(Tr)), D3D12_HEAP_TYPE_UPLOAD);
+			ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), RoundUp256(sizeof(Tr)), D3D12_HEAP_TYPE_UPLOAD);
 		}
 #pragma endregion
 	}
