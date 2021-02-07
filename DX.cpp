@@ -48,8 +48,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//InitializeSwapchainImage(COM_PTR_GET(CommandAllocators[0]), &DirectX::Colors::Red);
 
-	CreateBottomLevel();
-	CreateTopLevel();
+	CreateGeometry();
 
 	//!< コンスタントバッファ (ユニフォームバッファ相当)
 	CreateConstantBuffer();
@@ -67,7 +66,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< パイプライン
 	{
 		CreateShaderBlobs();
-		CreatePipelineStates();
+		CreatePipelineState();
 	}
 
 	//!< デスクリプタヒープ
@@ -144,7 +143,7 @@ const char* DX::GetFormatChar(const DXGI_FORMAT Format)
 #undef DXGI_FORMAT_CASE
 }
 
-void DX::CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, const D3D12_HEAP_TYPE HT, const void* Source)
+void DX::CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, const D3D12_RESOURCE_FLAGS RF, const D3D12_HEAP_TYPE HT, const D3D12_RESOURCE_STATES RS, const void* Source)
 {
 	const D3D12_RESOURCE_DESC RD = {
 		.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
@@ -154,7 +153,7 @@ void DX::CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, c
 		.Format = DXGI_FORMAT_UNKNOWN,
 		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
 		.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR, //!< Widthに「バッファサイズ」を指定しているので ROW_MAJOR
-		.Flags = D3D12_RESOURCE_FLAG_NONE
+		.Flags = RF/*D3D12_RESOURCE_FLAG_NONE*/
 	};
 	const D3D12_HEAP_PROPERTIES HP = {
 		.Type = HT,
@@ -162,13 +161,7 @@ void DX::CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, c
 		.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
 		.CreationNodeMask = 0, .VisibleNodeMask = 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP,
-		D3D12_HEAP_FLAG_NONE,
-		&RD,
-		D3D12_RESOURCE_STATE_GENERIC_READ, //!< GENERIC_READ にすること (Must be GENERIC_READ)
-		nullptr,
-		IID_PPV_ARGS(Resource)
-	));
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, RS/*D3D12_RESOURCE_STATE_GENERIC_READ*/, nullptr, IID_PPV_ARGS(Resource)));
 
 	if (nullptr != Source) {
 		//const D3D12_RANGE Range = {.Begin = 0, .End = 0};
@@ -179,7 +172,7 @@ void DX::CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, c
 	}
 }
 
-void DX::CreateBufferResource(ID3D12Resource** Resource, const size_t Size, const D3D12_HEAP_TYPE HeapType)
+void DX::CreateBufferResource(ID3D12Resource** Resource, const size_t Size, const D3D12_HEAP_TYPE HT)
 {
 	const D3D12_RESOURCE_DESC RD = {
 		.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
@@ -192,18 +185,12 @@ void DX::CreateBufferResource(ID3D12Resource** Resource, const size_t Size, cons
 		.Flags = D3D12_RESOURCE_FLAG_NONE
 	};
 	const D3D12_HEAP_PROPERTIES HP = {
-		.Type = HeapType,
+		.Type = HT,
 		.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 		.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
 		.CreationNodeMask = 0, .VisibleNodeMask = 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP,
-		D3D12_HEAP_FLAG_NONE,
-		&RD,
-		D3D12_RESOURCE_STATE_GENERIC_READ, //!< GENERIC_READ にすること (Must be GENERIC_READ)
-		nullptr,
-		IID_PPV_ARGS(Resource)
-	));
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(Resource)));
 }
 
 void DX::CreateTextureResource(ID3D12Resource** Resource, const DXGI_FORMAT Format, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize, const UINT16 MipLevels)
@@ -270,10 +257,10 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_
 
 void DX::CreateBufferResourceAndExecuteCopyCommand(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source)
 {
-	CreateBufferResource(Resource, Device, Size, D3D12_HEAP_TYPE_DEFAULT);
+	CreateBufferResource(Resource, Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
 
 	COM_PTR<ID3D12Resource> Upload;
-	CreateBufferResource(COM_PTR_PUT(Upload), Device, Size, D3D12_HEAP_TYPE_UPLOAD, Source);
+	CreateBufferResource(COM_PTR_PUT(Upload), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
 	VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 		ResourceBarrier(GCL, *Resource, D3D12_RESOURCE_STATE_GENERIC_READ, D3D12_RESOURCE_STATE_COPY_DEST); {
 			GCL->CopyBufferRegion(*Resource, 0, COM_PTR_GET(Upload), 0, Size);
@@ -1235,7 +1222,7 @@ void DX::StripShader(COM_PTR<ID3DBlob>& Blob)
 	}
 }
 
-void DX::CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,
+void DX::CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,
 	const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology,
 	const std::vector<D3D12_RENDER_TARGET_BLEND_DESC>& RTBDs,
 	const D3D12_RASTERIZER_DESC& RD,

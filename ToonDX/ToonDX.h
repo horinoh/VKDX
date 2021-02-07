@@ -24,7 +24,7 @@ protected:
 		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tr)), &Tr);
 #pragma endregion
 	}
-	virtual void CreateBottomLevel() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
+	virtual void CreateGeometry() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 	virtual void CreateConstantBuffer() override {
 		//constexpr auto Fov = 0.16f * DirectX::XM_PI;
 		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
@@ -101,7 +101,7 @@ protected:
 		LOG_OK();
 	}
 
-	virtual void CreatePipelineStates() override {
+	virtual void CreatePipelineState() override {
 #ifdef USE_SCREENSPACE_WIREFRAME
 		const auto ShaderPath = GetBasePath();
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());

@@ -120,7 +120,7 @@ protected:
 	}
 #endif
 
-	virtual void CreateBottomLevel() override { CreateIndirectBuffer_Draw(4, 1); }
+	virtual void CreateGeometry() override { CreateIndirectBuffer_Draw(4, 1); }
 #pragma region UB
 	virtual void CreateUniformBuffer() override {
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
@@ -136,14 +136,13 @@ protected:
 			const auto Extent = VkExtent3D({ .width = ImageProperties[0].width, .height = ImageProperties[0].height, .depth = 1 });
 			const auto Format = VK_FORMAT_R8_UNORM;
 
-			Images.emplace_back(Image());
+			Images.emplace_back();
 			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
 			UpdateLeapImage();
 
-			ImageViews.emplace_back(VkImageView());
 			const VkImageViewCreateInfo IVCI = {
 				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 				.pNext = nullptr,
@@ -154,7 +153,7 @@ protected:
 				.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
 				.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS }),
 			};
-			VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.back()));
+			VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.emplace_back()));
 		}
 		//!< ディストーションマップ
 		{
@@ -162,14 +161,13 @@ protected:
 			constexpr auto Extent = VkExtent3D({ .width = LEAP_DISTORTION_MATRIX_N, .height = LEAP_DISTORTION_MATRIX_N, .depth = 1 });
 			const auto Format = VK_FORMAT_R32G32_SFLOAT;
 
-			Images.emplace_back(Image());
+			Images.emplace_back();
 			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
 			UpdateDistortionImage();
 
-			ImageViews.emplace_back(VkImageView());
 			const VkImageViewCreateInfo IVCI = {
 				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 				.pNext = nullptr,
@@ -180,7 +178,7 @@ protected:
 				.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
 				.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS }),
 			};
-			VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.back()));
+			VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.emplace_back()));
 		}
 #else
 		//!< ABRG
@@ -191,7 +189,6 @@ protected:
 	virtual void CreateImmutableSampler() override {
 		//!< https://developer.leapmotion.com/documentation/v4/images.html
 		//!< フィルタを LINEAR、ラップモードを CLAMP
-		Samplers.emplace_back(VkSampler());
 		const VkSamplerCreateInfo SCI = {
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			.pNext = nullptr,
@@ -205,7 +202,7 @@ protected:
 			.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
 			.unnormalizedCoordinates = VK_FALSE
 		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.back()));
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.emplace_back()));
 	}
 	virtual void CreatePipelineLayout() override {
 		const std::array ISs = { Samplers[0] };
@@ -224,7 +221,7 @@ protected:
 
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFs(); }
 
-	virtual void CreatePipelines() override { CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE); }
+	virtual void CreatePipeline() override { CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE); }
 
 	virtual void CreateDescriptorSet() override {
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
@@ -250,7 +247,7 @@ protected:
 #pragma endregion
 	}
 
-	virtual void CreateDescriptorUpdateTemplate() override {
+	virtual void UpdateDescriptorSet() override {
 		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
@@ -262,7 +259,7 @@ protected:
 				.dstBinding = 1, .dstArrayElement = 0,
 				.descriptorCount = _countof(DescriptorUpdateInfo::DII_1), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				.offset = offsetof(DescriptorUpdateInfo, DII_1), .stride = sizeof(DescriptorUpdateInfo)
-			}), 
+			}),
 #pragma endregion
 #pragma region UB
 			VkDescriptorUpdateTemplateEntry({
@@ -271,9 +268,8 @@ protected:
 				.offset = offsetof(DescriptorUpdateInfo, DBI), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 #pragma endregion
-			}, DescriptorSetLayouts[0]);
-	}
-	virtual void UpdateDescriptorSet() override {
+		}, DescriptorSetLayouts[0]);
+
 #pragma region UB
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			const DescriptorUpdateInfo DUI = {

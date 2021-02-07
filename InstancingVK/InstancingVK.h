@@ -14,12 +14,12 @@ public:
 	virtual ~InstancingVK() {}
 
 protected:
-	virtual void CreateBottomLevel() override;
+	virtual void CreateGeometry() override;
 	virtual void CreatePipelineLayout() override {
 		VKExt::CreatePipelineLayout(PipelineLayouts.emplace_back(), {}, {});
 	}
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFs(); }
-	virtual void CreatePipelines() override {
+	virtual void CreatePipeline() override {
 		const std::vector VIBDs = { 
 			//!< ’¸“_–ˆ (Per Vertex)
 			VkVertexInputBindingDescription({ .binding = 0, .stride = sizeof(Vertex_PositionColor), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),

@@ -85,7 +85,7 @@ protected:
 			});
 	}
 
-	virtual void CreateBottomLevel() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
+	virtual void CreateGeometry() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
 	virtual void CreatePipelineLayout() override {
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(),
@@ -124,8 +124,8 @@ protected:
 	}
 #endif
 
+	virtual void UpdateDescriptorSet() override {
 #ifdef USE_PUSH_DESCRIPTOR
-	virtual void CreateDescriptorUpdateTemplate() override {
 		const std::array DUTEs = {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
@@ -145,21 +145,15 @@ protected:
 			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
 			.pipelineLayout = PipelineLayouts[0], .set = 0 //!< (VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR使用時は)パイプラインレイアウトを指定
 		};
-		DescriptorUpdateTemplates.emplace_back(VkDescriptorUpdateTemplate());
-		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates.back()));
-	}
+		VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DescriptorUpdateTemplates.emplace_back()));
 #else
-	virtual void CreateDescriptorUpdateTemplate() override {
-		DescriptorUpdateTemplates.emplace_back(VkDescriptorUpdateTemplate());
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
 				.descriptorCount = _countof(DescriptorUpdateInfo::DBI), .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				.offset = offsetof(DescriptorUpdateInfo, DBI), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 		}, DescriptorSetLayouts[0]);
-	}
-	virtual void UpdateDescriptorSet() override {
 #pragma region FRAME_OBJECT
 		const auto SCCount = size(SwapchainImages);
 		for (size_t i = 0; i < SCCount; ++i) {
@@ -169,8 +163,8 @@ protected:
 			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DescriptorUpdateTemplates[0], &DUI);
 		}
 #pragma endregion
-	}
 #endif
+	}
 
 	virtual void CreateUniformBuffer() override {
 		//const auto Fov = 0.16f * glm::pi<float>();
@@ -195,7 +189,7 @@ protected:
 	}
 
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFsTesTcsGs(); }
-	virtual void CreatePipelines() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE); }
+	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 private:

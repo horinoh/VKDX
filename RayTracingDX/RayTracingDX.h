@@ -12,5 +12,10 @@ private:
 public:
 	RayTracingDX() : Super() {}
 	virtual ~RayTracingDX() {}
+
+#ifdef USE_RAYTRACING
+	virtual void CreateGeometry() override;
+	virtual void CreatePipelineState() override;
+#endif
 };
 #pragma endregion

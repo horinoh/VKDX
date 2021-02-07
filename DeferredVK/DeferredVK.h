@@ -218,7 +218,7 @@ protected:
 				});
 		}
 	}
-	virtual void CreateBottomLevel() override {
+	virtual void CreateGeometry() override {
 		//!< パス0 : インダイレクトバッファ(メッシュ描画用)
 		CreateIndirectBuffer_DrawIndexed(1, 1);
 		//!< パス1 : インダイレクトバッファ(レンダーテクスチャ描画用)
@@ -387,70 +387,58 @@ protected:
 //#pragma endregion
 //		}
 //	}
-	virtual void CreateDescriptorUpdateTemplate() override {
-		assert(2 == size(DescriptorSetLayouts) && "");
-
-		//!< パス0 : デスクリプタアップデートテンプレート
-		{
-			DescriptorUpdateTemplates.push_back(VkDescriptorUpdateTemplate());
-			VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
-				{
-					0, 0,
-					_countof(DescriptorUpdateInfo_0::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-					offsetof(DescriptorUpdateInfo_0, DBI), sizeof(DescriptorUpdateInfo_0)
-				},
-			}, DescriptorSetLayouts[0]);
-		}
-
-		//!< パス1 : デスクリプタアップデートテンプレート
-		{
-			DescriptorUpdateTemplates.push_back(VkDescriptorUpdateTemplate());
-			VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
-				//!< レンダーターゲット : カラー(RenderTarget : Color)
-				{
-					0, 0,
-					_countof(DescriptorUpdateInfo_1::DII), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					offsetof(DescriptorUpdateInfo_1, DII), sizeof(DescriptorUpdateInfo_1)
-				},
-#pragma region MRT 
-				//!< レンダーターゲット : 法線(RenderTarget : Normal)
-				{
-					1, 0,
-					_countof(DescriptorUpdateInfo_1::DII1), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					offsetof(DescriptorUpdateInfo_1, DII1), sizeof(DescriptorUpdateInfo_1)
-				},
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				{
-					2, 0,
-					_countof(DescriptorUpdateInfo_1::DII2), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					offsetof(DescriptorUpdateInfo_1, DII2), sizeof(DescriptorUpdateInfo_1)
-				},
-				//!< レンダーターゲット : 未定
-				{
-					3, 0,
-					_countof(DescriptorUpdateInfo_1::DII3), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					offsetof(DescriptorUpdateInfo_1, DII3), sizeof(DescriptorUpdateInfo_1)
-				},
-#pragma endregion
-				{
-					4, 0,
-					_countof(DescriptorUpdateInfo_1::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-					offsetof(DescriptorUpdateInfo_1, DBI), sizeof(DescriptorUpdateInfo_1)
-				},
-			}, DescriptorSetLayouts[1]);
-		}
-	}
 	virtual void UpdateDescriptorSet() override {
 #pragma region FRAME_OBJECT
 		const auto SCCount = size(SwapchainImages);
-		//!< パス0 :
+		//!< Pass0 :
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
+			{
+				0, 0,
+				_countof(DescriptorUpdateInfo_0::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				offsetof(DescriptorUpdateInfo_0, DBI), sizeof(DescriptorUpdateInfo_0)
+			},
+		}, DescriptorSetLayouts[0]);
 		for (size_t i = 0; i < SCCount; ++i) {
 			const DescriptorUpdateInfo_0 DUI = {
 				{ UniformBuffers[i].Buffer, 0, VK_WHOLE_SIZE },
 			};
-			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DescriptorUpdateTemplates[0], &DUI);
+			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DescriptorUpdateTemplates.back(), &DUI);
 		}
-		//!< パス1 :
+
+		//!< Pass1 :
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
+			//!< レンダーターゲット : カラー(RenderTarget : Color)
+			{
+				0, 0,
+				_countof(DescriptorUpdateInfo_1::DII), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				offsetof(DescriptorUpdateInfo_1, DII), sizeof(DescriptorUpdateInfo_1)
+			},
+#pragma region MRT 
+			//!< レンダーターゲット : 法線(RenderTarget : Normal)
+			{
+				1, 0,
+				_countof(DescriptorUpdateInfo_1::DII1), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				offsetof(DescriptorUpdateInfo_1, DII1), sizeof(DescriptorUpdateInfo_1)
+			},
+			//!< レンダーターゲット : 深度(RenderTarget : Depth)
+			{
+				2, 0,
+				_countof(DescriptorUpdateInfo_1::DII2), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				offsetof(DescriptorUpdateInfo_1, DII2), sizeof(DescriptorUpdateInfo_1)
+			},
+			//!< レンダーターゲット : 未定
+			{
+				3, 0,
+				_countof(DescriptorUpdateInfo_1::DII3), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				offsetof(DescriptorUpdateInfo_1, DII3), sizeof(DescriptorUpdateInfo_1)
+			},
+#pragma endregion
+			{
+				4, 0,
+				_countof(DescriptorUpdateInfo_1::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				offsetof(DescriptorUpdateInfo_1, DBI), sizeof(DescriptorUpdateInfo_1)
+			},
+		}, DescriptorSetLayouts[1]);
 		for (size_t i = 0; i < SCCount; ++i) {
 			const DescriptorUpdateInfo_1 DUI = {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
@@ -465,7 +453,7 @@ protected:
 	#pragma endregion
 				{ UniformBuffers[i].Buffer, 0, VK_WHOLE_SIZE },
 			};
-			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i + SCCount], DescriptorUpdateTemplates[1], &DUI);
+			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i + SCCount], DescriptorUpdateTemplates.back(), &DUI);
 		}
 #pragma endregion
 	}
@@ -599,7 +587,7 @@ protected:
 		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".frag.spv"))));
 #endif
 	}
-	virtual void CreatePipelines() override {
+	virtual void CreatePipeline() override {
 		Pipelines.resize(2);
 		std::vector<std::thread> Threads;
 		const VkPipelineRasterizationStateCreateInfo PRSCI = {
@@ -696,19 +684,19 @@ protected:
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 2);
 		//!< パス0 : パイプライン
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, PDSSCI_0, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0, PCS.GetPipelineCache(0)));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, PDSSCI_0, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0, PCS.GetPipelineCache(0)));
 		//!< パス1 : パイプライン
 #ifdef USE_GBUFFER_VISUALIZE
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, &PSSCIs_1[2], VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, &PSSCIs_1[2], VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
 #else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0,  PRSCI, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0,  PRSCI, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
 #endif
 #else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, PDSSCI_0, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, PDSSCI_0, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0));
 #ifdef USE_GBUFFER_VISUALIZE
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, &PSSCIs_1[2], VIBDs, VIADs, PCBASs_1));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, &PSSCIs_1[2], VIBDs, VIADs, PCBASs_1));
 #else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1));
+		Threads.push_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1));
 #endif
 #endif
 		for (auto& i : Threads) { i.join(); }

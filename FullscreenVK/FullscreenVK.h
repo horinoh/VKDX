@@ -15,7 +15,7 @@ public:
 
 protected:
 #ifdef USE_DRAW_INDIRECT
-	virtual void CreateBottomLevel() override { CreateIndirectBuffer_Draw(4, 1); }
+	virtual void CreateGeometry() override { CreateIndirectBuffer_Draw(4, 1); }
 #endif
 
 	virtual void CreateShaderModules() override {
@@ -27,7 +27,7 @@ protected:
 		CreateShaderModle_VsFs();
 #endif
 	}
-	virtual void CreatePipelines() override { CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE); }
+	virtual void CreatePipeline() override { CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE); }
 	virtual void CreateRenderPass() { VK::CreateRenderPass(VK_ATTACHMENT_LOAD_OP_DONT_CARE, false); }
 	
 	virtual void PopulateCommandBuffer(const size_t i) override;

@@ -14,7 +14,7 @@ public:
 	virtual ~TriangleDX() {}
 
 protected:
-	virtual void CreateBottomLevel() override;
+	virtual void CreateGeometry() override;
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
@@ -51,7 +51,7 @@ protected:
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
 #endif
 	}
-	virtual void CreatePipelineStates() override {
+	virtual void CreatePipelineState() override {
 		//!< スロット0にまとめて入れるインターリーブ、セマンティックス毎にスロットを分けると非インターリーブとなる
 		//!< 詰まっている場合は offsetof() の代わりに D3D12_APPEND_ALIGNED_ELEMENT で良い (When directly after the previous one, we can use D3D12_APPEND_ALIGNED_ELEMENT)
 		const std::vector IEDs = { 

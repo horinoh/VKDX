@@ -82,7 +82,7 @@ protected:
 			});
 	}
 #endif
-	virtual void CreateBottomLevel() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
+	virtual void CreateGeometry() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
 
 	virtual void CreateImmutableSampler() override {
 		Samplers.emplace_back(VkSampler());
@@ -202,10 +202,8 @@ protected:
 		}
 #pragma endregion
 	}
-	virtual void CreateDescriptorUpdateTemplate() override {
-		DescriptorUpdateTemplates.emplace_back(VkDescriptorUpdateTemplate());
-		assert(!empty(DescriptorSetLayouts) && "");
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
+	virtual void UpdateDescriptorSet() override {
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
 				.descriptorCount = _countof(DescriptorUpdateInfo::DBI), .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< UniformBuffer
@@ -222,8 +220,7 @@ protected:
 				.offset = offsetof(DescriptorUpdateInfo, DII_1), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 		}, DescriptorSetLayouts[0]);
-	}
-	virtual void UpdateDescriptorSet() override {
+
 #pragma region FRAME_OBJECT
 		const auto SCCount = size(SwapchainImages);
 		for (size_t i = 0; i < SCCount; ++i) {
@@ -249,7 +246,7 @@ protected:
 		CreateShaderModle_VsFsTesTcsGs(); 
 #endif
 	}
-	virtual void CreatePipelines() override { 
+	virtual void CreatePipeline() override { 
 #if !defined(USE_SKY_DOME)
 		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE);
 #else

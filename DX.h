@@ -125,7 +125,8 @@ public:
 	public:
 		COM_PTR<ID3D12Resource> Resource;
 		void Create(ID3D12Device* Device, const size_t Size, const D3D12_HEAP_TYPE HT, const void* Source = nullptr) {
-			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, HT, Source);
+			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, HT, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
+			//DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, HT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, Source); // UAV
 		}
 		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source) {
 			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, Size, CA, GCL, CQ, Fence, Source);
@@ -166,10 +167,7 @@ public:
 	};
 	using ConstantBuffer = Buffer;
 #ifdef USE_RAYTRACING
-	class AccelerationStructureBuffer : public Buffer
-	{
-	public:
-	};
+	using AccelerationStructureBuffer = Buffer;
 #endif
 
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
@@ -211,8 +209,8 @@ protected:
 		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 	}
 
-	static void CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, const D3D12_HEAP_TYPE HT, const void* Source = nullptr);
-	virtual void CreateBufferResource(ID3D12Resource** Resource, const size_t Size, const D3D12_HEAP_TYPE HeapType);
+	static void CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, const D3D12_RESOURCE_FLAGS RF, const D3D12_HEAP_TYPE HT, const D3D12_RESOURCE_STATES RS, const void* Source = nullptr);
+	virtual void CreateBufferResource(ID3D12Resource** Resource, const size_t Size, const D3D12_HEAP_TYPE HT);
 	virtual void CreateTextureResource(ID3D12Resource** Resource, const DXGI_FORMAT Format, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize = 1, const UINT16 MipLevels = 1);
 
 	virtual void CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source, const D3D12_RANGE* Range = nullptr);
@@ -286,8 +284,7 @@ protected:
 
 	virtual void LoadScene() {}
 
-	virtual void CreateBottomLevel() {}
-	virtual void CreateTopLevel() {}
+	virtual void CreateGeometry() {}
 	
 	virtual void CreateConstantBuffer() {}
 
@@ -307,8 +304,8 @@ protected:
 	virtual void StripShader(COM_PTR<ID3DBlob>& Blob);
 	virtual void CreateShaderBlobs() {}
 #include "DXPipelineLibrary.inl"
-	virtual void CreatePipelineStates() {}
-	static void CreatePipelineState(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,
+	virtual void CreatePipelineState() {}
+	static void CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,
 		const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology,
 		const std::vector<D3D12_RENDER_TARGET_BLEND_DESC>& RTBDs,
 		const D3D12_RASTERIZER_DESC& RD,
@@ -378,6 +375,9 @@ protected:
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;
 	std::vector<IndirectBuffer> IndirectBuffers;
+#ifdef USE_RAYTRACING
+	std::vector<AccelerationStructureBuffer> BLASs, TLASs;
+#endif
 	std::vector<ConstantBuffer> ConstantBuffers;
 	//std::vector<D3D12_CONSTANT_BUFFER_VIEW_DESC> ConstantBufferViewDescs;
 

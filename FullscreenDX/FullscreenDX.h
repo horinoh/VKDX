@@ -15,7 +15,7 @@ public:
 
 protected:
 #ifdef USE_DRAW_INDIRECT
-	virtual void CreateBottomLevel() override { CreateIndirectBuffer_Draw(4, 1); }
+	virtual void CreateGeometry() override { CreateIndirectBuffer_Draw(4, 1); }
 #endif
 	
 	virtual void CreateShaderBlobs() override {
@@ -29,7 +29,7 @@ protected:
 		CreateShaderBlob_VsPs(); 
 #endif
 	}
-	virtual void CreatePipelineStates() override { CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE); }
+	virtual void CreatePipelineState() override { CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE); }
 
 	virtual void PopulateCommandList(const size_t i) override;
 };

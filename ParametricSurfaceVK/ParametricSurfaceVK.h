@@ -46,10 +46,10 @@ protected:
 	}
 #endif
 
-	virtual void CreateBottomLevel() override { CreateIndirectBuffer_DrawIndexed(1, 1); } //!< 最低でもインデックス数1が必要 (At least index count must be 1)
+	virtual void CreateGeometry() override { CreateIndirectBuffer_DrawIndexed(1, 1); } //!< 最低でもインデックス数1が必要 (At least index count must be 1)
 	
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFsTesTcsGs(); }
-	virtual void CreatePipelines() override { 
+	virtual void CreatePipeline() override { 
 #ifdef USE_SPECIALIZATION_INFO
 		//!< パイプライン作成時に上書きするシェーダ内定数値の設定
 		struct TessLevel { float Outer; float Inner; };

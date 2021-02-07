@@ -14,14 +14,14 @@ public:
 	virtual ~TextureVK() {}
 
 protected:
-	virtual void CreateBottomLevel() override { CreateIndirectBuffer_Draw(4, 1); }
+	virtual void CreateGeometry() override { CreateIndirectBuffer_Draw(4, 1); }
 
 	virtual void CreateTexture() override {
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
-			Images.emplace_back(Image());
+			Images.emplace_back();
 			const auto GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")));
-			ImageViews.emplace_back(VkImageView());
+			ImageViews.emplace_back();
 			CreateImageView(&ImageViews.back(), Images.back().Image, GLITexture);
 		}
 	}
@@ -29,8 +29,7 @@ protected:
 	//!< VKの場合イミュータブルサンプラと通常のサンプラは基本的に同じもの、デスクリプタセットレイアウトの指定が異なるだけ
 #ifdef USE_IMMUTABLE_SAMPLER
 	virtual void CreateImmutableSampler() override {
-		Samplers.emplace_back(VkSampler());
-		const VkSamplerCreateInfo SCI = {
+		constexpr VkSamplerCreateInfo SCI = {
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
@@ -43,7 +42,7 @@ protected:
 			.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
 			.unnormalizedCoordinates = VK_FALSE // addressing VK_FALSE:正規化[0.0-1.0], VK_TRUE:画像のディメンション
 		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.back()));
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.emplace_back()));
 	}
 #endif
 	virtual void CreatePipelineLayout() override {
@@ -68,7 +67,7 @@ protected:
 
 	virtual void CreateShaderModules() override { CreateShaderModle_VsFs(); }
 
-	virtual void CreatePipelines() override { CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE); }
+	virtual void CreatePipeline() override { CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE); }
 
 	virtual void CreateDescriptorSet() override {
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
@@ -86,8 +85,7 @@ protected:
 	}
 #ifndef USE_IMMUTABLE_SAMPLER
 	virtual void CreateSampler() override {
-		Samplers.emplace_back(VkSampler());
-		const VkSamplerCreateInfo SCI = {
+		constexpr VkSamplerCreateInfo SCI = {
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
@@ -100,21 +98,18 @@ protected:
 			.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
 			.unnormalizedCoordinates = VK_FALSE
 		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.back()));
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.emplace_back()));
 	}
 #endif
-	virtual void CreateDescriptorUpdateTemplate() override {
-		DescriptorUpdateTemplates.emplace_back(VkDescriptorUpdateTemplate());
-		assert(!empty(DescriptorSetLayouts) && "");
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.back(), {
+	virtual void UpdateDescriptorSet() override {
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
 				.descriptorCount = _countof(DescriptorUpdateInfo::DII), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				.offset = offsetof(DescriptorUpdateInfo, DII), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 		}, DescriptorSetLayouts[0]);
-	}
-	virtual void UpdateDescriptorSet() override {
+
 #ifdef USE_IMMUTABLE_SAMPLER
 		assert(!empty(Samplers) && "");
 #endif

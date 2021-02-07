@@ -14,7 +14,7 @@ public:
 	virtual ~TextureDX() {}
 
 protected:
-	virtual void CreateBottomLevel() override { CreateIndirectBuffer_Draw(4, 1); }
+	virtual void CreateGeometry() override { CreateIndirectBuffer_Draw(4, 1); }
 
 	virtual void CreateTexture() override {
 		ImageResources.emplace_back(COM_PTR<ID3D12Resource>());
@@ -108,7 +108,7 @@ protected:
 
 	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPs(); }
 
-	virtual void CreatePipelineStates() override { CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE); }
+	virtual void CreatePipelineState() override { CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE); }
 
 	virtual void CreateDescriptorHeap() override {
 		{

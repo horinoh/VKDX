@@ -68,8 +68,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	InitializeSwapchainImage(CommandBuffers[0], &Colors::Red);
 #endif
 
-	CreateBottomLevel();
-	CreateTopLevel();
+	CreateGeometry();
 
 	//!< ユニフォームバッファ (コンスタントバッファ相当)
 	CreateUniformBuffer();
@@ -89,7 +88,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< パイプライン
 	{
 		CreateShaderModules();
-		CreatePipelines();
+		CreatePipeline();
 	}
 
 	//!< フレームバッファ
@@ -101,11 +100,8 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< サンプラ ... DXがデスクリプタを必要とするのでここにする
 	CreateSampler();
 
-	{
-		//!< デスクリプタセット更新 ... この時点でデスクリプタセット、ユニフォームバッファ、イメージビュー、サンプラ等が必要
-		CreateDescriptorUpdateTemplate();
-		UpdateDescriptorSet();
-	}
+	//!< デスクリプタセット更新 ... この時点でデスクリプタセット、ユニフォームバッファ、イメージビュー、サンプラ等が必要
+	UpdateDescriptorSet();
 
 	SetTimer(hWnd, NULL, Elapse, nullptr);
 
@@ -236,52 +232,18 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 	BufferViews.clear();
 
-	for (auto& i : StorageTexelBuffers) {
-		vkDestroyBuffer(Device, i.Buffer, GetAllocationCallbacks());
-		vkFreeMemory(Device, i.DeviceMemory, GetAllocationCallbacks());
-	}
-	StorageTexelBuffers.clear();
-
-	for (auto& i : UniformTexelBuffers) {
-		vkDestroyBuffer(Device, i.Buffer, GetAllocationCallbacks());
-		vkFreeMemory(Device, i.DeviceMemory, GetAllocationCallbacks());
-	}
-	UniformTexelBuffers.clear();
-
-	for (auto& i : StorageBuffers) {
-		vkDestroyBuffer(Device, i.Buffer, GetAllocationCallbacks());
-		vkFreeMemory(Device, i.DeviceMemory, GetAllocationCallbacks());
-	}
-	StorageBuffers.clear();
-
-	for (auto& i : UniformBuffers) {
-		vkDestroyBuffer(Device, i.Buffer, GetAllocationCallbacks());
-		vkFreeMemory(Device, i.DeviceMemory, GetAllocationCallbacks());
-	}
-	UniformBuffers.clear();
-
-	for (auto& i : IndirectBuffers) {
-		vkDestroyBuffer(Device, i.Buffer, GetAllocationCallbacks());
-		vkFreeMemory(Device, i.DeviceMemory, GetAllocationCallbacks());
-	}
-	IndirectBuffers.clear();
-
-	for (auto& i : IndexBuffers) {
-		vkDestroyBuffer(Device, i.Buffer, GetAllocationCallbacks());
-		vkFreeMemory(Device, i.DeviceMemory, GetAllocationCallbacks());
-	}
-	IndexBuffers.clear();
-	
-	for (auto& i : VertexBuffers) {
-		vkDestroyBuffer(Device, i.Buffer, GetAllocationCallbacks());
-		vkFreeMemory(Device, i.DeviceMemory, GetAllocationCallbacks());
-	}
-	VertexBuffers.clear();
-
-	for (auto i : DeviceMemories) {
-		vkFreeMemory(Device, i, GetAllocationCallbacks());
-	}
-	DeviceMemories.clear();
+	for (auto i : StorageTexelBuffers) { i.Destroy(Device); } StorageTexelBuffers.clear();
+	for (auto i : UniformTexelBuffers) { i.Destroy(Device); } UniformTexelBuffers.clear();
+	for (auto i : StorageBuffers) { i.Destroy(Device); } StorageBuffers.clear();
+	for (auto i : UniformBuffers) { i.Destroy(Device); } UniformBuffers.clear();
+#ifdef USE_RAYTRACING
+	for (auto i : ShaderBindingTables) { i.Destroy(Device); } ShaderBindingTables.clear();
+	for (auto i : BLASs) { i.Destroy(Device); } BLASs.clear();
+	for (auto i : TLASs) { i.Destroy(Device); } TLASs.clear();
+#endif
+	for (auto i : IndirectBuffers) { i.Destroy(Device); } IndirectBuffers.clear();
+	for (auto i : IndexBuffers) { i.Destroy(Device); } IndexBuffers.clear();
+	for (auto i : VertexBuffers) { i.Destroy(Device); } VertexBuffers.clear();
 
 	for (auto i : Samplers) {
 		vkDestroySampler(Device, i, GetAllocationCallbacks());
@@ -2144,15 +2106,14 @@ void VK::CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, cons
 }
 void VK::SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source)
 {
-	BufferAndDeviceMemory StagingBuffer;
+	ScopedBufferAndDeviceMemory StagingBuffer(Device);
 	//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
-	StagingBuffer.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);
-	
-	//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit host visible to device local copy command)
-	PopulateCommandBuffer_CopyBufferToBuffer(CB, StagingBuffer.Buffer, Buf, AF, PSF, Size);
-	SubmitAndWait(Queue, CB);
-
-	StagingBuffer.Destroy(Device);
+	StagingBuffer.Create(GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);	
+	{
+		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit host visible to device local copy command)
+		PopulateCommandBuffer_CopyBufferToBuffer(CB, StagingBuffer.Buffer, Buf, AF, PSF, Size);
+		SubmitAndWait(Queue, CB);
+	}
 }
 void VK::CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const void* Source, 
 	const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue)
@@ -2160,15 +2121,14 @@ void VK::CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMe
 	//!< デバイスローカルバッファ、デバイスメモリを作成 (Create device local buffer, device memory)
 	CreateBufferMemory(Buffer, DeviceMemory, Device, PDMP, BUF | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-	BufferAndDeviceMemory StagingBuffer;
+	ScopedBufferAndDeviceMemory StagingBuffer(Device);
 	//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
-	StagingBuffer.Create(Device, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);
+	StagingBuffer.Create(PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);
 	{
 		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit host visible to device local copy command)
 		PopulateCommandBuffer_CopyBufferToBuffer(CB, StagingBuffer.Buffer, *Buffer, AF, PSF, Size);
 		SubmitAndWait(Queue, CB);
 	}
-	StagingBuffer.Destroy(Device);
 }
 void VK::CreateAndCopyToBuffer(VkBuffer* Buf, VkDeviceMemory* DM, const VkQueue Queue, const VkCommandBuffer CB, const VkBufferUsageFlagBits BUF, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source)
 {
@@ -2179,42 +2139,42 @@ void VK::CreateAndCopyToBuffer(VkBuffer* Buf, VkDeviceMemory* DM, const VkQueue 
 	SubmitStagingCopy(*Buf, Queue, CB, AF, PSF, Size, Source);
 }
 #ifdef USE_RAYTRACING
-void VK::GetAccelerationStructureBuildSizes(VkAccelerationStructureBuildSizesInfoKHR& ASBSI, const VkAccelerationStructureTypeKHR Type, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs, const uint32_t MaxPrimitiveCounts)
+//void VK::GetAccelerationStructureBuildSizes(VkAccelerationStructureBuildSizesInfoKHR& ASBSI, const VkAccelerationStructureTypeKHR Type, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs, const uint32_t MaxPrimitiveCounts)
+//{
+//	const VkAccelerationStructureBuildGeometryInfoKHR ASBGI = {
+//		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+//		.pNext = nullptr,
+//		.type = Type,
+//		.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
+//		.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+//		.srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = VK_NULL_HANDLE,
+//		.geometryCount = static_cast<uint32_t>(size(ASGs)),.pGeometries = data(ASGs), .ppGeometries = nullptr,
+//		.scratchData = VkDeviceOrHostAddressKHR()
+//	};
+//	vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI, &MaxPrimitiveCounts, &ASBSI);
+//}
+//void VK::CreateAccelerationStructure(VkBuffer* Buffer, VkDeviceMemory* DM, VkAccelerationStructureKHR* AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size)
+//{
+//	CreateBuffer(Buffer, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size);
+//	AllocateDeviceMemory(DM, *Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+//	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DM, 0));
+//
+//	const VkAccelerationStructureCreateInfoKHR ASCI = {
+//		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
+//		.pNext = nullptr,
+//		.createFlags = 0,
+//		.buffer = *Buffer,
+//		.offset = 0,
+//		.size = Size,
+//		.type = Type,
+//		.deviceAddress = 0
+//	};
+//	vkCreateAccelerationStructureKHR(Device, &ASCI, GetAllocationCallbacks(), AS);
+//}
+void VK::BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkQueue Queue, const VkCommandBuffer CB, const VkAccelerationStructureKHR AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs)
 {
-	const VkAccelerationStructureBuildGeometryInfoKHR ASBGI = {
-		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
-		.pNext = nullptr,
-		.type = Type,
-		.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
-		.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
-		.srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = VK_NULL_HANDLE,
-		.geometryCount = static_cast<uint32_t>(size(ASGs)),.pGeometries = data(ASGs), .ppGeometries = nullptr,
-		.scratchData = VkDeviceOrHostAddressKHR()
-	};
-	vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI, &MaxPrimitiveCounts, &ASBSI);
-}
-void VK::CreateAccelerationStructure(VkBuffer* Buffer, VkDeviceMemory* DM, VkAccelerationStructureKHR* AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size)
-{
-	CreateBuffer(Buffer, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size);
-	AllocateDeviceMemory(DM, *Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DM, 0));
-
-	const VkAccelerationStructureCreateInfoKHR ASCI = {
-		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
-		.pNext = nullptr,
-		.createFlags = 0,
-		.buffer = *Buffer,
-		.offset = 0,
-		.size = Size,
-		.type = Type,
-		.deviceAddress = 0
-	};
-	vkCreateAccelerationStructureKHR(Device, &ASCI, GetAllocationCallbacks(), AS);
-}
-void VK::BuildAccelerationStructure(const VkCommandBuffer CB, const VkAccelerationStructureKHR AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs)
-{
-	BufferAndDeviceMemory SB;
-	SB.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+	ScopedBufferAndDeviceMemory SB(Device);
+	SB.Create(PDMP, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 	{
 		const std::array ASBGIs = {
@@ -2233,10 +2193,8 @@ void VK::BuildAccelerationStructure(const VkCommandBuffer CB, const VkAccelerati
 		const std::array ASBRIss = { data(ASBRIs) };
 		vkCmdBuildAccelerationStructuresKHR(CB, static_cast<uint32_t>(size(ASBGIs)), data(ASBGIs), data(ASBRIss));
 
-		SubmitAndWait(GraphicsQueue, CB);
+		SubmitAndWait(Queue, CB);
 	}
-
-	SB.Destroy(Device);
 }
 #endif
 
@@ -2649,7 +2607,7 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 	return ShaderModule;
 }
 
-void VK::CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP, 
+void VK::CreatePipeline_(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP, 
 	const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, 
 	const VkPipelineRasterizationStateCreateInfo& PRSCI,
 	const VkPipelineDepthStencilStateCreateInfo& PDSSCI,

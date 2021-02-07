@@ -129,7 +129,7 @@ protected:
 	}
 #endif
 
-	virtual void CreateBottomLevel() override { CreateIndirectBuffer_Draw(4, 1); }
+	virtual void CreateGeometry() override { CreateIndirectBuffer_Draw(4, 1); }
 #pragma region CB
 	virtual void CreateConstantBuffer() override {
 		DXGI_SWAP_CHAIN_DESC1 SCD;
@@ -274,7 +274,7 @@ protected:
 
 	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPs(); }
 
-	virtual void CreatePipelineStates() override { CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE); }
+	virtual void CreatePipelineState() override { CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE); }
 
 	virtual void CreateDescriptorHeap() override {
 		{

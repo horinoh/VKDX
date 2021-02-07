@@ -14,7 +14,7 @@ public:
 	virtual ~TriangleVK() {}
 
 protected:
-	virtual void CreateBottomLevel() override;
+	virtual void CreateGeometry() override;
 	virtual void CreatePipelineLayout() override {
 		//CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {});
 
@@ -37,7 +37,7 @@ protected:
 		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))));
 #endif
 	}
-	virtual void CreatePipelines() override {
+	virtual void CreatePipeline() override {
 		//!< バインディング0にまとめて入れるインターリーブ、セマンティックス毎にバインディングを分けると非インターリーブとなる
 		const std::vector VIBDs = { 
 			VkVertexInputBindingDescription({ .binding = 0, .stride = sizeof(Vertex_PositionColor), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),

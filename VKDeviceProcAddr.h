@@ -113,4 +113,5 @@ VK_DEVICE_PROC_ADDR(CreateAccelerationStructureKHR)
 VK_DEVICE_PROC_ADDR(CmdBuildAccelerationStructuresKHR)
 VK_DEVICE_PROC_ADDR(GetRayTracingShaderGroupHandlesKHR)
 VK_DEVICE_PROC_ADDR(CreateRayTracingPipelinesKHR)
+VK_DEVICE_PROC_ADDR(DestroyAccelerationStructureKHR)
 #endif

@@ -14,7 +14,7 @@ public:
 	virtual ~InstancingDX() {}
 
 protected:
-	virtual void CreateBottomLevel() override;
+	virtual void CreateGeometry() override;
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
@@ -27,7 +27,7 @@ protected:
 		LOG_OK();
 	}
 	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPs(); }
-	virtual void CreatePipelineStates() override {
+	virtual void CreatePipelineState() override {
 		const std::vector IEDs = {
 			//!< ’¸“_–ˆ (Per Vertex)
 			D3D12_INPUT_ELEMENT_DESC({ .SemanticName = "POSITION", .SemanticIndex = 0, .Format = DXGI_FORMAT_R32G32B32_FLOAT, .InputSlot = 0, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }),

@@ -132,6 +132,16 @@ public:
 			if (VK_NULL_HANDLE != Buffer) { vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks()); }
 		}
 	};
+	class ScopedBufferAndDeviceMemory : public BufferAndDeviceMemory 
+	{
+	public:
+		ScopedBufferAndDeviceMemory(VkDevice Dev) : BufferAndDeviceMemory(), Device(Dev) {}
+		virtual ~ScopedBufferAndDeviceMemory() { if (VK_NULL_HANDLE != Device) { Destroy(Device); } }
+		void Create(const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr) { BufferAndDeviceMemory::Create(Device, PDMP, BUF, Size, MPF, Source); }
+		void Create(const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const void* Source, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue) { BufferAndDeviceMemory::Create(Device, PDMP, BUF, Size, Source, CB, AF, PSF, Queue); }
+	private:
+		VkDevice Device = VK_NULL_HANDLE;
+	};
 	using VertexBuffer = BufferAndDeviceMemory;
 	using IndexBuffer = BufferAndDeviceMemory;
 	using IndirectBuffer = BufferAndDeviceMemory;
@@ -161,7 +171,9 @@ public:
 			BufferAndDeviceMemory::Destroy(Device);
 		}
 	};
+	using ShaderBindingTable = BufferAndDeviceMemory;
 #endif
+
 #ifdef _WINDOWS
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
@@ -301,14 +313,13 @@ protected:
 	}
 
 #ifdef USE_RAYTRACING
-	virtual void GetAccelerationStructureBuildSizes(VkAccelerationStructureBuildSizesInfoKHR& ASBSI, const VkAccelerationStructureTypeKHR Type, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs, const uint32_t MaxPrimCount);
-	virtual void CreateAccelerationStructure(VkBuffer* Buffer, VkDeviceMemory* DM, VkAccelerationStructureKHR* AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size);
-	virtual void BuildAccelerationStructure(const VkCommandBuffer CB, const VkAccelerationStructureKHR AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs);
+	//virtual void GetAccelerationStructureBuildSizes(VkAccelerationStructureBuildSizesInfoKHR& ASBSI, const VkAccelerationStructureTypeKHR Type, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs, const uint32_t MaxPrimCount);
+	//virtual void CreateAccelerationStructure(VkBuffer* Buffer, VkDeviceMemory* DM, VkAccelerationStructureKHR* AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size);
+	static void BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, VkQueue Queue, const VkCommandBuffer CB, const VkAccelerationStructureKHR AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs);
 #endif
 
-	virtual void CreateBottomLevel() {}
-	virtual void CreateTopLevel() {}
-	
+	virtual void CreateGeometry() {}
+
 	virtual void CreateUniformBuffer() {}
 	virtual void CreateStorageBuffer() {}
 	virtual void CreateUniformTexelBuffer() {}
@@ -381,8 +392,6 @@ protected:
 	virtual void CreateDescriptorSet() {}
 	virtual void CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreateFlags Flags, const std::vector<VkDescriptorPoolSize>& DPSs);
 
-	//virtual void UpdateDescriptorSet(const std::vector<VkWriteDescriptorSet>& WDSs, const std::vector<VkCopyDescriptorSet>& CDSs);
-	virtual void CreateDescriptorUpdateTemplate() {}
 	virtual void CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const std::vector<VkDescriptorUpdateTemplateEntry>& DUTEs, const VkDescriptorSetLayout DSL);
 	virtual void UpdateDescriptorSet() {}
 
@@ -409,8 +418,8 @@ protected:
 	virtual void CreateShaderModules() {}
 
 #include "VKPipelineCache.inl"
-	virtual void CreatePipelines() {}
-	static void CreatePipeline(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP,
+	virtual void CreatePipeline() {}
+	static void CreatePipeline_(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP,
 		const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints,
 		const VkPipelineRasterizationStateCreateInfo& PRSCI,
 		const VkPipelineDepthStencilStateCreateInfo& PDSSCI,
@@ -557,8 +566,6 @@ protected:
 	uint32_t SwapchainImageIndex = 0;
 	std::vector<VkImageView> SwapchainImageViews;
 
-	std::vector<VkDeviceMemory> DeviceMemories;
-
 	VkFormat DepthFormat = VK_FORMAT_D24_UNORM_S8_UINT;
 
 	//!< VKの場合、通常サンプラ、イミュータブルサンプラとも同様に VkSampler を作成する、デスクリプタセットの指定が異なるだけ
@@ -569,7 +576,6 @@ protected:
 	std::vector<IndirectBuffer> IndirectBuffers;
 #ifdef USE_RAYTRACING
 	std::vector<AccelerationStructureBuffer> BLASs, TLASs;
-	using ShaderBindingTable = BufferAndDeviceMemory;
 	std::vector<ShaderBindingTable> ShaderBindingTables;
 #endif
 

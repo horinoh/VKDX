@@ -17,7 +17,7 @@ protected:
 	
 	//!< #DX_TODO コマンドリストを作成
 
-	virtual void CreateBottomLevel() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
+	virtual void CreateGeometry() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
 
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
@@ -70,7 +70,7 @@ protected:
 	}
 
 	virtual void CreateShaderBlobs() override { CreateShaderBlob_Cs(); }
-	virtual void CreatePipelineStates() override { CreatePipelineState_Cs(); }
+	virtual void CreatePipelineState() override { CreatePipelineState_Cs(); }
 	virtual void PopulateCommandList(const size_t i) override;
 
 	virtual void Draw() override { Dispatch(); }

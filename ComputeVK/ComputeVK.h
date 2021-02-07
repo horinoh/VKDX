@@ -18,7 +18,7 @@ protected:
 	//!< #VK_TODO コマンドバッファを作成
 	//!< #VK_TODO 出力テクスチャ用のimage2Dを用意しないとならない
 
-	virtual void CreateBottomLevel() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
+	virtual void CreateGeometry() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
 
 	virtual void CreatePipelineLayout() override {
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
@@ -62,24 +62,18 @@ protected:
 	//	DescriptorSets.resize(1);
 	//	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
 	//}
-	virtual void CreateDescriptorUpdateTemplate() override {
-		DescriptorUpdateTemplates.resize(1);
-		assert(!empty(DescriptorSetLayouts) && "");
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates[0], {
-			{
-				0, 0,
-				_countof(DescriptorUpdateInfo::DII), /*VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER*/VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-				offsetof(DescriptorUpdateInfo, DII), sizeof(DescriptorUpdateInfo)
-			},
-		}, DescriptorSetLayouts[0]);
-	}
 	virtual void UpdateDescriptorSet() override {
-		assert(!empty(ImageViews) && "");
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
+			VkDescriptorUpdateTemplateEntry({
+				.dstBinding = 0, .dstArrayElement = 0,
+				.descriptorCount = _countof(DescriptorUpdateInfo::DII), .descriptorType = /*VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER*/VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+				.offset = offsetof(DescriptorUpdateInfo, DII), .stride = sizeof(DescriptorUpdateInfo)
+			}),
+		}, DescriptorSetLayouts[0]);
+
 		const DescriptorUpdateInfo DUI = {
-			{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_GENERAL }
+			VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_GENERAL })
 		};
-		assert(!empty(DescriptorSets) && "");
-		assert(!empty(DescriptorUpdateTemplates) && "");
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 	}
 #pragma endregion //!< DESCRIPTOR
@@ -112,7 +106,7 @@ protected:
 	}
 	
 	virtual void CreateShaderModules() override { CreateShaderModle_Cs(); }
-	virtual void CreatePipelines() override { CreatePipeline_Cs(); }
+	virtual void CreatePipeline() override { CreatePipeline_Cs(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 	virtual void Draw() override { Dispatch(); }
 

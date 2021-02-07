@@ -230,7 +230,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void InstancingDX::CreateBottomLevel()
+void InstancingDX::CreateGeometry()
 {
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[0]);
