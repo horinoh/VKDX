@@ -234,6 +234,8 @@ void TriangleDX::CreateGeometry()
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 	const auto CQ = COM_PTR_GET(CommandQueue);
+
+	//!< バーテックスバッファ (VertexBuffer)
 	{
 #if 1
 		const std::array Vertices = {
@@ -255,17 +257,19 @@ void TriangleDX::CreateGeometry()
 		SetName(COM_PTR_GET(VertexBuffers.back().Resource), TEXT("MyVertexBuffer"));
 #endif
 	}
+	//!< インデックスバッファ (IndexBuffer)
 	{
 		const std::array<UINT32, 3> Indices = { 0, 1, 2 };
 		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), CA, GCL, CQ, COM_PTR_GET(Fence), data(Indices), DXGI_FORMAT_R32_UINT);
 #ifdef _DEBUG
 		SetName(COM_PTR_GET(IndexBuffers.back().Resource), TEXT("MyIndexBuffer"));
 #endif
+		//!< インダイレクトバッファ (IndirectBuffer)
 		{
 			const D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
 			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(DIA), CA, GCL, CQ, COM_PTR_GET(Fence), &DIA, D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED);			
 #ifdef _DEBUG
-			SetName(COM_PTR_GET(IndirectBuffers.back().Resource), TEXT("MyIndexBuffer"));
+			SetName(COM_PTR_GET(IndirectBuffers.back().Resource), TEXT("MyIndirectBuffer"));
 #endif
 		}
 	}

@@ -126,10 +126,6 @@ public:
 		COM_PTR<ID3D12Resource> Resource;
 		void Create(ID3D12Device* Device, const size_t Size, const D3D12_HEAP_TYPE HT, const void* Source = nullptr) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, HT, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
-			//DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, HT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, Source); // UAV
-		}
-		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source) {
-			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, Size, CA, GCL, CQ, Fence, Source);
 		}
 	};
 	class VertexBuffer : public Buffer 
@@ -137,7 +133,7 @@ public:
 	public:
 		D3D12_VERTEX_BUFFER_VIEW View;
 		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source, const UINT Stride) {
-			Buffer::Create(Device, Size, CA, GCL, CQ, Fence, Source);
+			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, Size, CA, GCL, CQ, Fence, Source);
 			View = D3D12_VERTEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .StrideInBytes = Stride });
 		}
 	};
@@ -146,7 +142,7 @@ public:
 	public:
 		D3D12_INDEX_BUFFER_VIEW View;
 		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source, const DXGI_FORMAT Format) {
-			Buffer::Create(Device, Size, CA, GCL, CQ, Fence, Source);
+			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, Size, CA, GCL, CQ, Fence, Source);
 			View = D3D12_INDEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .Format = Format });
 		}
 	};
@@ -155,7 +151,7 @@ public:
 	public:
 		COM_PTR<ID3D12CommandSignature> CommandSignature;
 		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source, const D3D12_INDIRECT_ARGUMENT_TYPE Type) {
-			Buffer::Create(Device, Size, CA, GCL, CQ, Fence, Source);
+			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, Size, CA, GCL, CQ, Fence, Source);
 			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = Type }), };
 			const D3D12_COMMAND_SIGNATURE_DESC CSD = {
 				.ByteStride = static_cast<UINT>(Size),
@@ -166,8 +162,21 @@ public:
 		}
 	};
 	using ConstantBuffer = Buffer;
+	class UAVBuffer : public Buffer 
+	{
+	public:
+		void Create(ID3D12Device* Device, const size_t Size) {
+			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		}
+	};
 #ifdef USE_RAYTRACING
-	using AccelerationStructureBuffer = Buffer;
+	class AccelerationStructureBuffer : public Buffer
+	{
+	public:
+		void Create(ID3D12Device* Device, const size_t Size) {
+			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
+		}
+	};
 #endif
 
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;

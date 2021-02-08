@@ -115,7 +115,7 @@ private:
 	using Super = Win;
 
 public:
-	class BufferAndDeviceMemory 
+	class BufferMemory 
 	{
 	public:
 		VkBuffer Buffer = VK_NULL_HANDLE;
@@ -132,28 +132,28 @@ public:
 			if (VK_NULL_HANDLE != Buffer) { vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks()); }
 		}
 	};
-	class ScopedBufferAndDeviceMemory : public BufferAndDeviceMemory 
+	class ScopedBufferMemory : public BufferMemory 
 	{
 	public:
-		ScopedBufferAndDeviceMemory(VkDevice Dev) : BufferAndDeviceMemory(), Device(Dev) {}
-		virtual ~ScopedBufferAndDeviceMemory() { if (VK_NULL_HANDLE != Device) { Destroy(Device); } }
-		void Create(const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr) { BufferAndDeviceMemory::Create(Device, PDMP, BUF, Size, MPF, Source); }
-		void Create(const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const void* Source, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue) { BufferAndDeviceMemory::Create(Device, PDMP, BUF, Size, Source, CB, AF, PSF, Queue); }
+		ScopedBufferMemory(VkDevice Dev) : BufferMemory(), Device(Dev) {}
+		virtual ~ScopedBufferMemory() { if (VK_NULL_HANDLE != Device) { Destroy(Device); } }
+		void Create(const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr) { BufferMemory::Create(Device, PDMP, BUF, Size, MPF, Source); }
+		void Create(const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const void* Source, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue) { BufferMemory::Create(Device, PDMP, BUF, Size, Source, CB, AF, PSF, Queue); }
 	private:
 		VkDevice Device = VK_NULL_HANDLE;
 	};
-	using VertexBuffer = BufferAndDeviceMemory;
-	using IndexBuffer = BufferAndDeviceMemory;
-	using IndirectBuffer = BufferAndDeviceMemory;
-	using UniformBuffer = BufferAndDeviceMemory;
-	using StorageBuffer = BufferAndDeviceMemory;
+	using VertexBuffer = BufferMemory;
+	using IndexBuffer = BufferMemory;
+	using IndirectBuffer = BufferMemory;
+	using UniformBuffer = BufferMemory;
+	using StorageBuffer = BufferMemory;
 #ifdef USE_RAYTRACING
-	class AccelerationStructureBuffer : public BufferAndDeviceMemory 
+	class AccelerationStructureBuffer : public BufferMemory 
 	{
 	public:
 		VkAccelerationStructureKHR AccelerationStructure;
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkAccelerationStructureTypeKHR Type, const size_t Size) {
-			BufferAndDeviceMemory::Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			BufferMemory::Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 			const VkAccelerationStructureCreateInfoKHR ASCI = {
 				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
 				.pNext = nullptr,
@@ -168,10 +168,10 @@ public:
 		}
 		void Destroy(const VkDevice Device) {
 			if (VK_NULL_HANDLE != AccelerationStructure) { vkDestroyAccelerationStructureKHR(Device, AccelerationStructure, GetAllocationCallbacks()); }
-			BufferAndDeviceMemory::Destroy(Device);
+			BufferMemory::Destroy(Device);
 		}
 	};
-	using ShaderBindingTable = BufferAndDeviceMemory;
+	using ShaderBindingTable = BufferMemory;
 #endif
 
 #ifdef _WINDOWS
@@ -582,8 +582,8 @@ protected:
 	std::vector<UniformBuffer> UniformBuffers;
 	std::vector<StorageBuffer> StorageBuffers;
 
-	using UniformTexelBuffer = struct BufferAndDeviceMemory;
-	using StorageTexelBuffer = struct BufferAndDeviceMemory;
+	using UniformTexelBuffer = struct BufferMemory;
+	using StorageTexelBuffer = struct BufferMemory;
 	std::vector<UniformTexelBuffer> UniformTexelBuffers;
 	std::vector<StorageTexelBuffer> StorageTexelBuffers;
 	std::vector<VkBufferView> BufferViews; //!< XXXTexelBufferはビューを使用する

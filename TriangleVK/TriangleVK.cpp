@@ -233,6 +233,8 @@ void TriangleVK::CreateGeometry()
 {
 	const auto& CB = CommandBuffers[0];
 	const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+
+	//!< バーテックスバッファ (VertexBuffer)
 	{
 #if 1
 		const std::array Vertices = {
@@ -260,12 +262,14 @@ void TriangleVK::CreateGeometry()
 		MarkerSetObjectName(Device, VertexBuffers.back().Buffer, "MyVertexBuffer");
 #endif
 	}
+	//!< インデックスバッファ (IndexBuffer)
 	{
 		const std::array<uint32_t, 3> Indices = { 0, 1, 2 };
 		IndexBuffers.emplace_back().Create(Device, PDMP, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(Indices), data(Indices), CB, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, GraphicsQueue);
 #ifdef _DEBUG
 		MarkerSetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
 #endif
+		//!< インダイレクトバッファ (IndirectBuffer)
 		{
 			const VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 			IndirectBuffers.emplace_back().Create(Device, PDMP, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, sizeof(DIIC), &DIIC, CB, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, GraphicsQueue);
@@ -275,13 +279,6 @@ void TriangleVK::CreateGeometry()
 		}
 	}
 	LOG_OK();
-
-#ifdef USE_RAYTRACING
-	//!< シェーダバインディングテーブル (パイプラインより後)
-	{
-	
-	}
-#endif
 }
 
 void TriangleVK::PopulateCommandBuffer(const size_t i)

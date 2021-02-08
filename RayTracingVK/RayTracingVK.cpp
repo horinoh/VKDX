@@ -237,17 +237,17 @@ void RayTracingVK::CreateGeometry()
 
 #pragma region BLAS
     {
-        //!< バーテックスバッファ
+        //!< バーテックスバッファ (VertexBuffer)
         constexpr std::array Vertices = { glm::vec3({ 0.0f, 0.5f, 0.0f }), glm::vec3({ -0.5f, -0.5f, 0.0f }), glm::vec3({ 0.5f, -0.5f, 0.0f }), };
-        ScopedBufferAndDeviceMemory VB(Device);
+        ScopedBufferMemory VB(Device);
         VB.Create(PDMP, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(Vertices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Vertices));
 
-        //!< インデックスバッファ
+        //!< インデックスバッファ (IndexBuffer)
         constexpr std::array Indices = { uint32_t(0), uint32_t(1), uint32_t(2) };
-        ScopedBufferAndDeviceMemory IB(Device);
+        ScopedBufferMemory IB(Device);
         IB.Create(PDMP, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(Indices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Indices));
 
-        //!< ジオメトリ
+        //!< ジオメトリ (Geometry)
         const std::vector ASGs = {
             VkAccelerationStructureGeometryKHR({
                 .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
@@ -267,7 +267,7 @@ void RayTracingVK::CreateGeometry()
             }),
         };
 
-        //!< サイズ取得
+        //!< サイズ取得 (Get sizes)
         const VkAccelerationStructureBuildGeometryInfoKHR ASBGI = {
             .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
             .pNext = nullptr,
@@ -282,16 +282,16 @@ void RayTracingVK::CreateGeometry()
         VkAccelerationStructureBuildSizesInfoKHR ASBSI;
         vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI, &MaxPrimitiveCounts, &ASBSI);
 
-        //!< AS作成
+        //!< AS作成 (Create AS)
 		BLASs.emplace_back().Create(Device, PDMP, ASBGI.type, ASBSI.accelerationStructureSize);
-        //!< ASビルド
+        //!< ASビルド (Build AS)
         BuildAccelerationStructure(Device, PDMP, GraphicsQueue, CB, BLASs.back().AccelerationStructure, ASBGI.type, ASBSI.buildScratchSize, ASGs);
     }
 #pragma endregion
 
 #pragma region TLAS
 	{
-		//!< インスタンスバッファ
+		//!< インスタンスバッファ (InstanceBuffer)
 		const VkAccelerationStructureInstanceKHR ASI = {
 			.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, 0.0f,
 												0.0f, 1.0f, 0.0f, 0.0f,
@@ -302,10 +302,10 @@ void RayTracingVK::CreateGeometry()
 			.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR,
 			.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().Buffer)
 		};
-        ScopedBufferAndDeviceMemory IB(Device);
+        ScopedBufferMemory IB(Device);
         IB.Create(PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(ASI), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &ASI);
 
-		//!< ジオメトリ
+		//!< ジオメトリ (Geometry)
 		const std::vector ASGs = {
 			VkAccelerationStructureGeometryKHR({
 				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
@@ -323,7 +323,7 @@ void RayTracingVK::CreateGeometry()
 			}),
 		};
 
-		//!< サイズ取得
+		//!< サイズ取得 (Get sizes)
 		const VkAccelerationStructureBuildGeometryInfoKHR ASBGI = {
 			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
 			.pNext = nullptr,
@@ -338,9 +338,9 @@ void RayTracingVK::CreateGeometry()
 		VkAccelerationStructureBuildSizesInfoKHR ASBSI;
 		vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI, &MaxPrimitiveCounts, &ASBSI);
 
-		//!< AS作成
+		//!< AS作成 (Create AS)
 		TLASs.emplace_back().Create(Device, PDMP, ASBGI.type, ASBSI.accelerationStructureSize);
-		//!< ASビルド
+		//!< ASビルド (Build AS)
 		BuildAccelerationStructure(Device, PDMP, GraphicsQueue, CB, TLASs.back().AccelerationStructure, ASBGI.type, ASBSI.buildScratchSize, ASGs);
     }
 #pragma endregion

@@ -240,17 +240,17 @@ void RayTracingDX::CreateGeometry()
 
 #pragma region BLAS
     {
-        //!< バーテックスバッファ
+        //!< バーテックスバッファ (VertexBuffer)
         constexpr std::array Vertices = { DirectX::XMFLOAT3({ 0.0f, 0.5f, 0.0f }), DirectX::XMFLOAT3({ -0.5f, -0.5f, 0.0f }), DirectX::XMFLOAT3({ 0.5f, -0.5f, 0.0f }), };
 		Buffer VB;
         VB.Create(COM_PTR_GET(Device), sizeof(Vertices), D3D12_HEAP_TYPE_UPLOAD, data(Vertices));
 
-        //!< インデックスバッファ
+        //!< インデックスバッファ (IndexBuffer)
         constexpr std::array Indices = { UINT32(0), UINT32(1), UINT32(2) };
         Buffer IB;
 		IB.Create(COM_PTR_GET(Device), sizeof(Indices), D3D12_HEAP_TYPE_UPLOAD, data(Indices));
 
-        //!< ジオメトリ
+        //!< ジオメトリ (Geometry)
         const std::array RGDs = {
             D3D12_RAYTRACING_GEOMETRY_DESC({
                 .Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES,
@@ -266,7 +266,7 @@ void RayTracingDX::CreateGeometry()
                 })
             }),
         };
-        //!< インプット
+        //!< インプット (Input)
         const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BRASI = {
             .Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL,
             .Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE,
@@ -275,18 +275,20 @@ void RayTracingDX::CreateGeometry()
             .pGeometryDescs = data(RGDs),
         };
 
-        //!< サイズ取得
+        //!< サイズ取得 (Get sizes)
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO RASPI;
 		Device5->GetRaytracingAccelerationStructurePrebuildInfo(&BRASI, &RASPI);
 
-		//!< AS作成 (RASPI.ResultDataMaxSizeInBytes:D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE)
-		BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes, D3D12_HEAP_TYPE_UPLOAD);
-        //!< ASビルド (RASPI.ScratchDataSizeInBytes:D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+		//!< AS作成 (Create AS)
+		BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
+        //!< ASビルド (Build AS)
+        UAVBuffer SB;
+		SB.Create(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes);
         const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
-            .DestAccelerationStructureData = COM_PTR_GET( BLASs.back().Resource)->GetGPUVirtualAddress(),
+            .DestAccelerationStructureData = COM_PTR_GET(BLASs.back().Resource)->GetGPUVirtualAddress(),
 	        .Inputs = BRASI,
 	        .SourceAccelerationStructureData = 0,
-	        //.ScratchAccelerationStructureData = COM_PTR_GET(SB.Resource)->GetGPUVirtualAddress()
+	        .ScratchAccelerationStructureData = COM_PTR_GET(SB.Resource)->GetGPUVirtualAddress()
         };
 		GCL4->BuildRaytracingAccelerationStructure(&BRASD, 0, nullptr);
     }
@@ -294,7 +296,7 @@ void RayTracingDX::CreateGeometry()
 
 #pragma region TLAS
     {
-        //!< インスタンスバッファ
+        //!< インスタンスバッファ (InstanceBuffer)
         const std::array RIDs = {
             D3D12_RAYTRACING_INSTANCE_DESC({
                 .Transform = {{ 1.0f, 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f, 0.0f }, {0.0f, 0.0f, 1.0f, 0.0f}},
@@ -308,7 +310,7 @@ void RayTracingDX::CreateGeometry()
         Buffer IB;
 		IB.Create(COM_PTR_GET(Device), sizeof(RIDs), D3D12_HEAP_TYPE_UPLOAD, data(RIDs));
 
-        //!< インプット
+        //!< インプット (Input)
 		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BRASI = {
 			.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL,
 			.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE,
@@ -317,18 +319,20 @@ void RayTracingDX::CreateGeometry()
             .InstanceDescs = COM_PTR_GET(IB.Resource)->GetGPUVirtualAddress()
 		};
 
-        //!< サイズ取得
+        //!< サイズ取得 (Get sizes)
 		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO RASPI;
 		Device5->GetRaytracingAccelerationStructurePrebuildInfo(&BRASI, &RASPI);
 
-		//!< AS作成 (RASPI.ResultDataMaxSizeInBytes:D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE)
-		//TLASs.emplace_back().Create();
-		//!< ASビルド (RASPI.ScratchDataSizeInBytes:D3D12_RESOURCE_STATE_UNORDERED_ACCESS)
+		//!< AS作成 (Create AS)
+		TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
+		//!< ASビルド (Build AS)
+	    UAVBuffer SB;
+		SB.Create(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes);
 		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
 			.DestAccelerationStructureData = COM_PTR_GET(TLASs.back().Resource)->GetGPUVirtualAddress(),
 			.Inputs = BRASI,
 			.SourceAccelerationStructureData = 0,
-			//.ScratchAccelerationStructureData = COM_PTR_GET(SB.Resource)->GetGPUVirtualAddress()
+			.ScratchAccelerationStructureData = COM_PTR_GET(SB.Resource)->GetGPUVirtualAddress()
 		};
 		GCL4->BuildRaytracingAccelerationStructure(&BRASD, 0, nullptr);
     }
