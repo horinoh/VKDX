@@ -257,7 +257,8 @@ void TriangleVK::CreateGeometry()
 			Vertex_PositionColor({.Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
 		};
 #endif
-		VertexBuffers.emplace_back().Create(Device, PDMP, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(Vertices), data(Vertices), CB, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, GraphicsQueue);
+		//VertexBuffers.emplace_back().Create(Device, PDMP, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(Vertices), data(Vertices), CB, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, GraphicsQueue);
+		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices), data(Vertices), CB, GraphicsQueue);
 #ifdef _DEBUG
 		MarkerSetObjectName(Device, VertexBuffers.back().Buffer, "MyVertexBuffer");
 #endif
@@ -265,14 +266,16 @@ void TriangleVK::CreateGeometry()
 	//!< インデックスバッファ (IndexBuffer)
 	{
 		const std::array<uint32_t, 3> Indices = { 0, 1, 2 };
-		IndexBuffers.emplace_back().Create(Device, PDMP, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(Indices), data(Indices), CB, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, GraphicsQueue);
+		//IndexBuffers.emplace_back().Create(Device, PDMP, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(Indices), data(Indices), CB, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, GraphicsQueue);
+		IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices), data(Indices), CB, GraphicsQueue);
 #ifdef _DEBUG
 		MarkerSetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
 #endif
 		//!< インダイレクトバッファ (IndirectBuffer)
 		{
 			const VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, sizeof(DIIC), &DIIC, CB, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, GraphicsQueue);
+			//IndirectBuffers.emplace_back().Create(Device, PDMP, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, sizeof(DIIC), &DIIC, CB, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, GraphicsQueue);
+			IndirectBuffers.emplace_back().Create(Device, PDMP, sizeof(DIIC), &DIIC, CB, GraphicsQueue);
 #ifdef _DEBUG
 			MarkerSetObjectName(Device, IndirectBuffers.back().Buffer, "MyIndirectBuffer");
 #endif

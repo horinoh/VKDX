@@ -120,7 +120,7 @@ private:
 	using Super = Win;
 
 public:
-	class Buffer
+	class BufferResource
 	{
 	public:
 		COM_PTR<ID3D12Resource> Resource;
@@ -128,7 +128,7 @@ public:
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, HT, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
 		}
 	};
-	class VertexBuffer : public Buffer 
+	class VertexBuffer : public BufferResource 
 	{
 	public:
 		D3D12_VERTEX_BUFFER_VIEW View;
@@ -137,7 +137,7 @@ public:
 			View = D3D12_VERTEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .StrideInBytes = Stride });
 		}
 	};
-	class IndexBuffer : public Buffer
+	class IndexBuffer : public BufferResource
 	{
 	public:
 		D3D12_INDEX_BUFFER_VIEW View;
@@ -146,7 +146,7 @@ public:
 			View = D3D12_INDEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .Format = Format });
 		}
 	};
-	class IndirectBuffer : public Buffer
+	class IndirectBuffer : public BufferResource
 	{
 	public:
 		COM_PTR<ID3D12CommandSignature> CommandSignature;
@@ -161,22 +161,23 @@ public:
 			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
 		}
 	};
-	using ConstantBuffer = Buffer;
-	class UAVBuffer : public Buffer 
-	{
-	public:
-		void Create(ID3D12Device* Device, const size_t Size) {
-			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-		}
-	};
+	using ConstantBuffer = BufferResource;
+
 #ifdef USE_RAYTRACING
-	class AccelerationStructureBuffer : public Buffer
+	class AccelerationStructureBuffer : public BufferResource
 	{
 	public:
 		void Create(ID3D12Device* Device, const size_t Size) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
 		}
 	};
+	class ScratchBuffer : public BufferResource
+	{
+	public:
+		void Create(ID3D12Device* Device, const size_t Size) {
+			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		}
+	}; 
 #endif
 
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;

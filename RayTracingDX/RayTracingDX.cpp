@@ -242,12 +242,12 @@ void RayTracingDX::CreateGeometry()
     {
         //!< バーテックスバッファ (VertexBuffer)
         constexpr std::array Vertices = { DirectX::XMFLOAT3({ 0.0f, 0.5f, 0.0f }), DirectX::XMFLOAT3({ -0.5f, -0.5f, 0.0f }), DirectX::XMFLOAT3({ 0.5f, -0.5f, 0.0f }), };
-		Buffer VB;
+		BufferResource VB;
         VB.Create(COM_PTR_GET(Device), sizeof(Vertices), D3D12_HEAP_TYPE_UPLOAD, data(Vertices));
 
         //!< インデックスバッファ (IndexBuffer)
         constexpr std::array Indices = { UINT32(0), UINT32(1), UINT32(2) };
-        Buffer IB;
+        BufferResource IB;
 		IB.Create(COM_PTR_GET(Device), sizeof(Indices), D3D12_HEAP_TYPE_UPLOAD, data(Indices));
 
         //!< ジオメトリ (Geometry)
@@ -282,7 +282,7 @@ void RayTracingDX::CreateGeometry()
 		//!< AS作成 (Create AS)
 		BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
         //!< ASビルド (Build AS)
-        UAVBuffer SB;
+        ScratchBuffer SB;
 		SB.Create(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes);
         const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
             .DestAccelerationStructureData = COM_PTR_GET(BLASs.back().Resource)->GetGPUVirtualAddress(),
@@ -307,7 +307,7 @@ void RayTracingDX::CreateGeometry()
                 .AccelerationStructure = COM_PTR_GET(BLASs.back().Resource)->GetGPUVirtualAddress()
             })
         };
-        Buffer IB;
+        BufferResource IB;
 		IB.Create(COM_PTR_GET(Device), sizeof(RIDs), D3D12_HEAP_TYPE_UPLOAD, data(RIDs));
 
         //!< インプット (Input)
@@ -326,7 +326,7 @@ void RayTracingDX::CreateGeometry()
 		//!< AS作成 (Create AS)
 		TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
 		//!< ASビルド (Build AS)
-	    UAVBuffer SB;
+	    ScratchBuffer SB;
 		SB.Create(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes);
 		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
 			.DestAccelerationStructureData = COM_PTR_GET(TLASs.back().Resource)->GetGPUVirtualAddress(),

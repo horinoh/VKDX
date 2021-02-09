@@ -2173,10 +2173,8 @@ void VK::CreateAndCopyToBuffer(VkBuffer* Buf, VkDeviceMemory* DM, const VkQueue 
 //}
 void VK::BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkQueue Queue, const VkCommandBuffer CB, const VkAccelerationStructureKHR AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs)
 {
-	ScopedBufferMemory SB(Device);
-	SB.Create(PDMP, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-	{
+	ScratchBuffer SB;
+	SB.Create(PDMP, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); {
 		const std::array ASBGIs = {
 			VkAccelerationStructureBuildGeometryInfoKHR({
 				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
@@ -2194,7 +2192,7 @@ void VK::BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDevic
 		vkCmdBuildAccelerationStructuresKHR(CB, static_cast<uint32_t>(size(ASBGIs)), data(ASBGIs), data(ASBRIss));
 
 		SubmitAndWait(Queue, CB);
-	}
+	} SB.Destroy(Device);
 }
 #endif
 

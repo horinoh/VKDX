@@ -121,11 +121,7 @@ public:
 		VkBuffer Buffer = VK_NULL_HANDLE;
 		VkDeviceMemory DeviceMemory = VK_NULL_HANDLE;
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr) { 
-			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, BUF, Size, MPF, Source); 
-		}
-		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, 
-			const void* Source, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue) {
-			VK::CreateBufferMemoryAndSubmitTransferCommand(&Buffer, &DeviceMemory, Device, PDMP, BUF, Size, Source, CB, AF, PSF, Queue);
+			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, BUF, Size, MPF, Source);
 		}
 		void Destroy(const VkDevice Device) {
 			if (VK_NULL_HANDLE != DeviceMemory) { vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks()); }
@@ -138,13 +134,30 @@ public:
 		ScopedBufferMemory(VkDevice Dev) : BufferMemory(), Device(Dev) {}
 		virtual ~ScopedBufferMemory() { if (VK_NULL_HANDLE != Device) { Destroy(Device); } }
 		void Create(const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr) { BufferMemory::Create(Device, PDMP, BUF, Size, MPF, Source); }
-		void Create(const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const void* Source, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue) { BufferMemory::Create(Device, PDMP, BUF, Size, Source, CB, AF, PSF, Queue); }
 	private:
 		VkDevice Device = VK_NULL_HANDLE;
 	};
-	using VertexBuffer = BufferMemory;
-	using IndexBuffer = BufferMemory;
-	using IndirectBuffer = BufferMemory;
+	class VertexBuffer : public BufferMemory
+	{
+	public:
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const void* Source, const VkCommandBuffer CB, const VkQueue Queue) {
+			VK::CreateBufferMemoryAndSubmitTransferCommand(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, Size, Source, CB, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Queue);
+		}
+	};
+	class IndexBuffer : public BufferMemory
+	{
+	public:
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const void* Source, const VkCommandBuffer CB, const VkQueue Queue) {
+			VK::CreateBufferMemoryAndSubmitTransferCommand(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, Size, Source, CB, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Queue);
+		}
+	};
+	class IndirectBuffer : public BufferMemory
+	{
+	public:
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const void* Source, const VkCommandBuffer CB, const VkQueue Queue) {
+			VK::CreateBufferMemoryAndSubmitTransferCommand(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, Size, Source, CB, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Queue);
+		}
+	};
 	using UniformBuffer = BufferMemory;
 	using StorageBuffer = BufferMemory;
 #ifdef USE_RAYTRACING
@@ -153,7 +166,8 @@ public:
 	public:
 		VkAccelerationStructureKHR AccelerationStructure;
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkAccelerationStructureTypeKHR Type, const size_t Size) {
-			BufferMemory::Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			//BufferMemory::Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 			const VkAccelerationStructureCreateInfoKHR ASCI = {
 				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
 				.pNext = nullptr,
@@ -169,6 +183,13 @@ public:
 		void Destroy(const VkDevice Device) {
 			if (VK_NULL_HANDLE != AccelerationStructure) { vkDestroyAccelerationStructureKHR(Device, AccelerationStructure, GetAllocationCallbacks()); }
 			BufferMemory::Destroy(Device);
+		}
+	};
+	class ScratchBuffer : public BufferMemory 
+	{
+	public:
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
+			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 		}
 	};
 	using ShaderBindingTable = BufferMemory;

@@ -232,6 +232,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void InstancingVK::CreateGeometry()
 {
+	const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 	const auto& CB = CommandBuffers[0];
 
 	{
@@ -241,8 +242,7 @@ void InstancingVK::CreateGeometry()
 			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }),
 			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }),
 		};
-		//CreateAndCopyToBuffer(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CB, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, sizeof(Vertices), data(Vertices));
-		VertexBuffers.back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(Vertices), data(Vertices), CB, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, GraphicsQueue);
+		VertexBuffers.back().Create(Device, PDMP, sizeof(Vertices), data(Vertices), CB, GraphicsQueue);
 	}
 	{
 		VertexBuffers.push_back(VertexBuffer());
@@ -253,19 +253,16 @@ void InstancingVK::CreateGeometry()
 			Instance_OffsetXY({ { 0.25f, 0.25f } }),
 			Instance_OffsetXY({ { 0.5f, 0.5f } }),
 		};
-		//CreateAndCopyToBuffer(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CB, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, sizeof(Instances), data(Instances));
-		VertexBuffers.back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, sizeof(Instances), data(Instances), CB, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, GraphicsQueue);
+		VertexBuffers.back().Create(Device, PDMP, sizeof(Instances), data(Instances), CB, GraphicsQueue);
 
 		IndexBuffers.push_back(IndexBuffer());
 		const std::array<uint32_t, 3> Indices = { 0, 1, 2 };
-		//CreateAndCopyToBuffer(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CB, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, sizeof(Indices), data(Indices));
-		IndexBuffers.back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, sizeof(Indices), data(Indices), CB, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, GraphicsQueue);
+		IndexBuffers.back().Create(Device, PDMP, sizeof(Indices), data(Indices), CB, GraphicsQueue);
 
 		{
 			IndirectBuffers.push_back(IndirectBuffer());
 			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = static_cast<uint32_t>(size(Instances)), .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-			//CreateAndCopyToBuffer(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory, GraphicsQueue, CB, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, static_cast<VkDeviceSize>(sizeof(DIIC)), &DIIC);
-			IndirectBuffers.back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, sizeof(DIIC), &DIIC, CB, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, GraphicsQueue);
+			IndirectBuffers.back().Create(Device, PDMP, sizeof(DIIC), &DIIC, CB, GraphicsQueue);
 		}
 	}
 	LOG_OK();
