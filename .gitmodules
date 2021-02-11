@@ -1,18 +1,24 @@
 [submodule "glm"]
 	path = glm
 	url = https://github.com/g-truc/glm.git
+	ignore = dirty
 [submodule "gli"]
 	path = gli
 	url = https://github.com/g-truc/gli.git
+	ignore = dirty
 [submodule "DirectXTK12"]
 	path = DirectXTK12
 	url = https://github.com/microsoft/DirectXTK12.git
+	ignore = dirty
 [submodule "fx-gltf"]
 	path = fx-gltf
 	url = https://github.com/jessey-git/fx-gltf.git
+	ignore = dirty
 [submodule "json"]
 	path = json
 	url = https://github.com/nlohmann/json.git
+	ignore = dirty
 [submodule "HoloPlayCoreSDK"]
 	path = HoloPlayCoreSDK
 	url = https://github.com/Looking-Glass/HoloPlayCoreSDK.git
+	ignore = dirty
