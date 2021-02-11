@@ -340,6 +340,54 @@ void RayTracingDX::CreateGeometry()
 }
 void RayTracingDX::CreatePipelineState()
 {
+	COM_PTR<ID3D12Device5> Device5;
+	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
 
+    const D3D12_GLOBAL_ROOT_SIGNATURE GRS = {.pGlobalRootSignature = COM_PTR_GET(RootSignatures.back()) };
+
+	const D3D12_LOCAL_ROOT_SIGNATURE LRS = { .pLocalRootSignature = nullptr };
+	//std::array<LPCWSTR, 0> Exports = { /*TEXT("MyRayGen")*/ };
+	//const D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION STEA = { .pSubobjectToAssociate = &LRS, .NumExports = static_cast<UINT>(size(Exports)), .pExports = data(Exports) };
+
+    std::array EDs = { 
+		D3D12_EXPORT_DESC({.Name = TEXT("MyRayGen"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }),
+		D3D12_EXPORT_DESC({.Name = TEXT("MyClosestHit"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }),
+		D3D12_EXPORT_DESC({.Name = TEXT("MyMiss"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }),
+    };
+    const D3D12_DXIL_LIBRARY_DESC DLD = { 
+        .DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = ShaderBlobs.back()->GetBufferPointer(), .BytecodeLength = ShaderBlobs.back()->GetBufferSize() }),
+        .NumExports = static_cast<UINT>(size(EDs)), .pExports = data(EDs) 
+    };
+
+    //!< ここでは D3D12_HIT_GROUP_TYPE_TRIANGLES なので、ClosestHitShaderImport のみセットする
+    const D3D12_HIT_GROUP_DESC HGD = {
+        .HitGroupExport = TEXT("MyHitGroup"),
+        .Type = D3D12_HIT_GROUP_TYPE_TRIANGLES,
+	    .AnyHitShaderImport = nullptr, .ClosestHitShaderImport = TEXT("MyClosestHit"), .IntersectionShaderImport = nullptr
+    };
+
+    const D3D12_RAYTRACING_SHADER_CONFIG RSC = {
+	    .MaxPayloadSizeInBytes = 0,
+	    .MaxAttributeSizeInBytes = 0
+    };
+
+    const D3D12_RAYTRACING_PIPELINE_CONFIG RPC = { .MaxTraceRecursionDepth = 1 };
+
+    const std::array SSs = {
+		D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, .pDesc = &GRS }),
+		D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, .pDesc = &LRS }),
+		//D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION, .pDesc = &STEA }),
+		D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD }),
+		D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, .pDesc = &HGD }),
+		D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, .pDesc = &RSC }),
+		D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, .pDesc = &RPC }),
+    };
+
+    const D3D12_STATE_OBJECT_DESC SOD = {
+        .Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE,
+	    .NumSubobjects = static_cast<UINT>(size(SSs)), .pSubobjects = data(SSs)
+    };
+    COM_PTR<ID3D12StateObject> StateObject;
+    VERIFY_SUCCEEDED(Device5->CreateStateObject(&SOD, COM_PTR_UUIDOF_PUTVOID(StateObject)));
 }
 #endif

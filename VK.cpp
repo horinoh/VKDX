@@ -2106,9 +2106,10 @@ void VK::CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, cons
 }
 void VK::SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source)
 {
-	ScopedBufferMemory StagingBuffer(Device);
+	//ScopedBufferMemory StagingBuffer(Device);
+	Scoped<BufferMemory> StagingBuffer(Device);
 	//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
-	StagingBuffer.Create(GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);	
+	StagingBuffer.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);	
 	{
 		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit host visible to device local copy command)
 		PopulateCommandBuffer_CopyBufferToBuffer(CB, StagingBuffer.Buffer, Buf, AF, PSF, Size);
@@ -2121,9 +2122,10 @@ void VK::CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMe
 	//!< デバイスローカルバッファ、デバイスメモリを作成 (Create device local buffer, device memory)
 	CreateBufferMemory(Buffer, DeviceMemory, Device, PDMP, BUF | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-	ScopedBufferMemory StagingBuffer(Device);
+	//ScopedBufferMemory StagingBuffer(Device);
+	Scoped<BufferMemory> StagingBuffer(Device);
 	//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
-	StagingBuffer.Create(PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);
+	StagingBuffer.Create(Device, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);
 	{
 		//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit host visible to device local copy command)
 		PopulateCommandBuffer_CopyBufferToBuffer(CB, StagingBuffer.Buffer, *Buffer, AF, PSF, Size);
@@ -2139,42 +2141,11 @@ void VK::CreateAndCopyToBuffer(VkBuffer* Buf, VkDeviceMemory* DM, const VkQueue 
 	SubmitStagingCopy(*Buf, Queue, CB, AF, PSF, Size, Source);
 }
 #ifdef USE_RAYTRACING
-//void VK::GetAccelerationStructureBuildSizes(VkAccelerationStructureBuildSizesInfoKHR& ASBSI, const VkAccelerationStructureTypeKHR Type, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs, const uint32_t MaxPrimitiveCounts)
-//{
-//	const VkAccelerationStructureBuildGeometryInfoKHR ASBGI = {
-//		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
-//		.pNext = nullptr,
-//		.type = Type,
-//		.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
-//		.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
-//		.srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = VK_NULL_HANDLE,
-//		.geometryCount = static_cast<uint32_t>(size(ASGs)),.pGeometries = data(ASGs), .ppGeometries = nullptr,
-//		.scratchData = VkDeviceOrHostAddressKHR()
-//	};
-//	vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI, &MaxPrimitiveCounts, &ASBSI);
-//}
-//void VK::CreateAccelerationStructure(VkBuffer* Buffer, VkDeviceMemory* DM, VkAccelerationStructureKHR* AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size)
-//{
-//	CreateBuffer(Buffer, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size);
-//	AllocateDeviceMemory(DM, *Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-//	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, *Buffer, *DM, 0));
-//
-//	const VkAccelerationStructureCreateInfoKHR ASCI = {
-//		.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
-//		.pNext = nullptr,
-//		.createFlags = 0,
-//		.buffer = *Buffer,
-//		.offset = 0,
-//		.size = Size,
-//		.type = Type,
-//		.deviceAddress = 0
-//	};
-//	vkCreateAccelerationStructureKHR(Device, &ASCI, GetAllocationCallbacks(), AS);
-//}
 void VK::BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkQueue Queue, const VkCommandBuffer CB, const VkAccelerationStructureKHR AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs)
 {
+	Scoped<ScratchBuffer> SB1(Device);
 	ScratchBuffer SB;
-	SB.Create(PDMP, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); {
+	SB.Create(Device, PDMP, Size); {
 		const std::array ASBGIs = {
 			VkAccelerationStructureBuildGeometryInfoKHR({
 				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,

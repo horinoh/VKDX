@@ -115,6 +115,14 @@ private:
 	using Super = Win;
 
 public:
+	template<typename T> class Scoped : public T
+	{
+	public:
+		Scoped(VkDevice Dev) : T(), Device(Dev) {}
+		virtual ~Scoped() { if (VK_NULL_HANDLE != Device) { T::Destroy(Device); } }
+	private:
+		VkDevice Device = VK_NULL_HANDLE;
+	};
 	class BufferMemory 
 	{
 	public:
@@ -128,15 +136,15 @@ public:
 			if (VK_NULL_HANDLE != Buffer) { vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks()); }
 		}
 	};
-	class ScopedBufferMemory : public BufferMemory 
-	{
-	public:
-		ScopedBufferMemory(VkDevice Dev) : BufferMemory(), Device(Dev) {}
-		virtual ~ScopedBufferMemory() { if (VK_NULL_HANDLE != Device) { Destroy(Device); } }
-		void Create(const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr) { BufferMemory::Create(Device, PDMP, BUF, Size, MPF, Source); }
-	private:
-		VkDevice Device = VK_NULL_HANDLE;
-	};
+	//class ScopedBufferMemory : public BufferMemory 
+	//{
+	//public:
+	//	ScopedBufferMemory(VkDevice Dev) : BufferMemory(), Device(Dev) {}
+	//	virtual ~ScopedBufferMemory() { if (VK_NULL_HANDLE != Device) { Destroy(Device); } }
+	//	void Create(const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr) { BufferMemory::Create(Device, PDMP, BUF, Size, MPF, Source); }
+	//private:
+	//	VkDevice Device = VK_NULL_HANDLE;
+	//};
 	class VertexBuffer : public BufferMemory
 	{
 	public:
