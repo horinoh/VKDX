@@ -35,9 +35,13 @@ protected:
 	}
 #endif
 
-	virtual void CreateGeometry() override { CreateIndirectBuffer_DrawIndexed(1, 1); } //!< 最低でもインデックス数1が必要 (At least index count must be 1)
+	virtual void CreateGeometry() override { 
+		//!< 最低でもインデックス数1が必要 (At least index count must be 1)
+		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DIA);
+	}
 	
-	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPsDsHsGs(); }
+	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, FALSE); }
 
 	virtual void PopulateCommandList(const size_t i) override;

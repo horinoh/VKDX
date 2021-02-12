@@ -262,7 +262,7 @@ void InstancingVK::CreateGeometry()
 		{
 			IndirectBuffers.push_back(IndirectBuffer());
 			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = static_cast<uint32_t>(size(Instances)), .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-			IndirectBuffers.back().Create(Device, PDMP, sizeof(DIIC), &DIIC, CB, GraphicsQueue);
+			IndirectBuffers.back().Create(Device, PDMP, DIIC, CB, GraphicsQueue);
 		}
 	}
 	LOG_OK();

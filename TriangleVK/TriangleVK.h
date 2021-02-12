@@ -28,7 +28,7 @@ protected:
 #endif
 			});
 	}
-	virtual void CreateShaderModules() override { 
+	virtual void CreateShaderModule() override { 
 		const auto ShaderPath = GetBasePath();
 		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));
 #ifdef USE_PUSH_CONSTANTS

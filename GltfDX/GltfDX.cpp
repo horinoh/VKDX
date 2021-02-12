@@ -492,19 +492,16 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			case ElementArrayBuffer: break;
 			}
 
+			const auto CA = COM_PTR_GET(CommandAllocators[0]);
+			const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 			if ("indices" == Identifier) {
-				IndexBuffers.emplace_back(IndexBuffer());
+				IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), Size, CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), Data, ToDXFormat(Acc.componentType));
 
-				CreateAndCopyToDefaultResource(IndexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Data);
-				IndexBuffers.back().View = { IndexBuffers.back().Resource->GetGPUVirtualAddress(), Size, ToDXFormat(Acc.componentType) };
-
-				CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
+				const D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = Acc.count, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
+				IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DIA);
 			}
 			else if ("attributes" == Identifier || "targets" == Identifier) {
-				VertexBuffers.emplace_back(VertexBuffer());
-
-				CreateAndCopyToDefaultResource(VertexBuffers.back().Resource, COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), Size, Data);
-				VertexBuffers.back().View = { VertexBuffers.back().Resource->GetGPUVirtualAddress(), Size, Stride };
+				VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), Size, CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), Data, Stride);
 			}
 			else if ("inverseBindMatrices" == Identifier) {
 				InverseBindMatrices.reserve(Acc.count);

@@ -15,10 +15,13 @@ public:
 
 protected:
 #ifdef USE_DRAW_INDIRECT
-	virtual void CreateGeometry() override { CreateIndirectBuffer_Draw(4, 1); }
+	virtual void CreateGeometry() override { 
+		constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DA);
+	}
 #endif
 	
-	virtual void CreateShaderBlobs() override {
+	virtual void CreateShaderBlob() override {
 #ifdef USE_DISTANCE_FUNCTION
 		const auto ShaderPath = GetBasePath();
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());

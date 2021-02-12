@@ -133,7 +133,7 @@ public:
 	public:
 		D3D12_VERTEX_BUFFER_VIEW View;
 		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source, const UINT Stride) {
-			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, Size, CA, GCL, CQ, Fence, Source);
+			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, Size, GCL, CA, CQ, Fence, Source);
 			View = D3D12_VERTEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .StrideInBytes = Stride });
 		}
 	};
@@ -142,7 +142,7 @@ public:
 	public:
 		D3D12_INDEX_BUFFER_VIEW View;
 		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source, const DXGI_FORMAT Format) {
-			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, Size, CA, GCL, CQ, Fence, Source);
+			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, Size, GCL, CA, CQ, Fence, Source);
 			View = D3D12_INDEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .Format = Format });
 		}
 	};
@@ -150,14 +150,22 @@ public:
 	{
 	public:
 		COM_PTR<ID3D12CommandSignature> CommandSignature;
-		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source, const D3D12_INDIRECT_ARGUMENT_TYPE Type) {
-			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, Size, CA, GCL, CQ, Fence, Source);
-			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = Type }), };
-			const D3D12_COMMAND_SIGNATURE_DESC CSD = {
-				.ByteStride = static_cast<UINT>(Size),
-				.NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs),
-				.NodeMask = 0
-			};
+		void Create(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const D3D12_DRAW_INDEXED_ARGUMENTS& DIA) {
+			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, sizeof(DIA), GCL, CA, CQ, Fence, &DIA);
+			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED }), };
+			const D3D12_COMMAND_SIGNATURE_DESC CSD = {.ByteStride = static_cast<UINT>(sizeof(DIA)), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
+			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
+		}
+		void Create(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const D3D12_DRAW_ARGUMENTS& DA) {
+			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, sizeof(DA), GCL, CA, CQ, Fence, &DA);
+			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW }), };
+			const D3D12_COMMAND_SIGNATURE_DESC CSD = {.ByteStride = static_cast<UINT>(sizeof(DA)), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
+			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
+		}
+		void Create(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const D3D12_DISPATCH_ARGUMENTS& DA) {
+			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, sizeof(DA), GCL, CA, CQ, Fence, &DA);
+			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH }), };
+			const D3D12_COMMAND_SIGNATURE_DESC CSD = {.ByteStride = static_cast<UINT>(sizeof(DA)), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
 			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
 		}
 	};
@@ -226,7 +234,7 @@ protected:
 	virtual void CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source, const D3D12_RANGE* Range = nullptr);
 	virtual void CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData);
 	static void CreateBufferResourceAndExecuteCopyCommand(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, 
-		ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* Queue, ID3D12Fence* Fence, const void* Source);
+		ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* Queue, ID3D12Fence* Fence, const void* Source);
 
 	virtual void PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES RS);
 	virtual void PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
@@ -294,6 +302,9 @@ protected:
 
 	virtual void LoadScene() {}
 
+#ifdef USE_RAYTRACING
+	static void BuildAccelerationStructure(ID3D12Device* Device, const UINT64 SBSize, const D3D12_GPU_VIRTUAL_ADDRESS GVA, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence);
+#endif
 	virtual void CreateGeometry() {}
 	
 	virtual void CreateConstantBuffer() {}
@@ -312,7 +323,7 @@ protected:
 	virtual void SetBlobPart(COM_PTR<ID3DBlob>& Blob);
 	virtual void GetBlobPart(ID3DBlob* Blob);
 	virtual void StripShader(COM_PTR<ID3DBlob>& Blob);
-	virtual void CreateShaderBlobs() {}
+	virtual void CreateShaderBlob() {}
 #include "DXPipelineLibrary.inl"
 	virtual void CreatePipelineState() {}
 	static void CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,

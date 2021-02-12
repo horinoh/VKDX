@@ -14,7 +14,10 @@ public:
 	virtual ~TextureVK() {}
 
 protected:
-	virtual void CreateGeometry() override { CreateIndirectBuffer_Draw(4, 1); }
+	virtual void CreateGeometry() override { 
+		constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
+		IndirectBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DIC, CommandBuffers[0], GraphicsQueue);
+	}
 
 	virtual void CreateTexture() override {
 		std::wstring Path;
@@ -65,7 +68,7 @@ protected:
 	}
 	virtual void CreateRenderPass() { VK::CreateRenderPass(VK_ATTACHMENT_LOAD_OP_DONT_CARE, false); }
 
-	virtual void CreateShaderModules() override { CreateShaderModle_VsFs(); }
+	virtual void CreateShaderModule() override { CreateShaderModle_VsFs(); }
 
 	virtual void CreatePipeline() override { CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE); }
 

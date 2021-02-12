@@ -68,36 +68,34 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	InitializeSwapchainImage(CommandBuffers[0], &Colors::Red);
 #endif
 
+	//!< ジオメトリ (バーテックスバッファ、インデックスバッファ、アクセラレーションストラクチャ等)
 	CreateGeometry();
 
 	//!< ユニフォームバッファ (コンスタントバッファ相当)
 	CreateUniformBuffer();
 
-	//!< レンダーターゲットテクスチャの場合フレームバッファよりも前に必要になる
+	//!< テクスチャ(レンダーターゲットテクスチャの場合フレームバッファよりも前に必要になる)
 	CreateTexture();
 
 	//!< イミュータブルサンプラはこの時点(CreateDescriptorSetLayout()より前)で必要
 	CreateImmutableSampler();
-
 	//!< パイプラインレイアウト (ルートシグネチャ相当)
 	CreatePipelineLayout();
 
 	//!< レンダーパス (DXには存在しない)
 	CreateRenderPass();
 
+	//!< シェーダ
+	CreateShaderModule();
 	//!< パイプライン
-	{
-		CreateShaderModules();
-		CreatePipeline();
-	}
+	CreatePipeline();
 
-	//!< フレームバッファ
+	//!< フレームバッファ (DXには存在しない)
 	CreateFramebuffer();
 
 	//!< デスクリプタセット
 	CreateDescriptorSet();
-
-	//!< サンプラ ... DXがデスクリプタを必要とするのでここにする
+	//!< サンプラ ... DXがデスクリプタを必要とするので付き合いでここにする
 	CreateSampler();
 
 	//!< デスクリプタセット更新 ... この時点でデスクリプタセット、ユニフォームバッファ、イメージビュー、サンプラ等が必要
@@ -1406,7 +1404,7 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 #define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc)); assert(nullptr != vk ## proc && #proc && #proc);
 #include "VKDeviceProcAddr.h"
 #undef VK_DEVICE_PROC_ADDR
-#endif //!< VK_NO_PROTOYYPES
+#endif
 
 #ifdef USE_DEBUG_MARKER
 #define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetDeviceProcAddr(Device, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
@@ -2106,7 +2104,6 @@ void VK::CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, cons
 }
 void VK::SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source)
 {
-	//ScopedBufferMemory StagingBuffer(Device);
 	Scoped<BufferMemory> StagingBuffer(Device);
 	//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
 	StagingBuffer.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);	
@@ -2122,7 +2119,6 @@ void VK::CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMe
 	//!< デバイスローカルバッファ、デバイスメモリを作成 (Create device local buffer, device memory)
 	CreateBufferMemory(Buffer, DeviceMemory, Device, PDMP, BUF | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-	//ScopedBufferMemory StagingBuffer(Device);
 	Scoped<BufferMemory> StagingBuffer(Device);
 	//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
 	StagingBuffer.Create(Device, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);

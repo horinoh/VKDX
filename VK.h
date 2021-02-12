@@ -136,15 +136,6 @@ public:
 			if (VK_NULL_HANDLE != Buffer) { vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks()); }
 		}
 	};
-	//class ScopedBufferMemory : public BufferMemory 
-	//{
-	//public:
-	//	ScopedBufferMemory(VkDevice Dev) : BufferMemory(), Device(Dev) {}
-	//	virtual ~ScopedBufferMemory() { if (VK_NULL_HANDLE != Device) { Destroy(Device); } }
-	//	void Create(const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr) { BufferMemory::Create(Device, PDMP, BUF, Size, MPF, Source); }
-	//private:
-	//	VkDevice Device = VK_NULL_HANDLE;
-	//};
 	class VertexBuffer : public BufferMemory
 	{
 	public:
@@ -162,8 +153,14 @@ public:
 	class IndirectBuffer : public BufferMemory
 	{
 	public:
-		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const void* Source, const VkCommandBuffer CB, const VkQueue Queue) {
-			VK::CreateBufferMemoryAndSubmitTransferCommand(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, Size, Source, CB, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Queue);
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDrawIndexedIndirectCommand& DIIC, const VkCommandBuffer CB, const VkQueue Queue) {
+			VK::CreateBufferMemoryAndSubmitTransferCommand(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, sizeof(DIIC), &DIIC, CB, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Queue);
+		}
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDrawIndirectCommand& DIC, const VkCommandBuffer CB, const VkQueue Queue) {
+			VK::CreateBufferMemoryAndSubmitTransferCommand(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, sizeof(DIC), &DIC, CB, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Queue);
+		}
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDispatchIndirectCommand& DIC, const VkCommandBuffer CB, const VkQueue Queue) {
+			VK::CreateBufferMemoryAndSubmitTransferCommand(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, sizeof(DIC), &DIC, CB, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Queue);
 		}
 	};
 	using UniformBuffer = BufferMemory;
@@ -175,7 +172,6 @@ public:
 		VkAccelerationStructureKHR AccelerationStructure;
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkAccelerationStructureTypeKHR Type, const size_t Size) {
 			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-			//BufferMemory::Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 			const VkAccelerationStructureCreateInfoKHR ASCI = {
 				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
 				.pNext = nullptr,
@@ -342,11 +338,8 @@ protected:
 	}
 
 #ifdef USE_RAYTRACING
-	//virtual void GetAccelerationStructureBuildSizes(VkAccelerationStructureBuildSizesInfoKHR& ASBSI, const VkAccelerationStructureTypeKHR Type, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs, const uint32_t MaxPrimCount);
-	//virtual void CreateAccelerationStructure(VkBuffer* Buffer, VkDeviceMemory* DM, VkAccelerationStructureKHR* AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size);
 	static void BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, VkQueue Queue, const VkCommandBuffer CB, const VkAccelerationStructureKHR AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs);
 #endif
-
 	virtual void CreateGeometry() {}
 
 	virtual void CreateUniformBuffer() {}
@@ -444,7 +437,7 @@ protected:
 	}
 
 	virtual [[nodiscard]] VkShaderModule CreateShaderModule(const std::wstring& Path) const;
-	virtual void CreateShaderModules() {}
+	virtual void CreateShaderModule() {}
 
 #include "VKPipelineCache.inl"
 	virtual void CreatePipeline() {}

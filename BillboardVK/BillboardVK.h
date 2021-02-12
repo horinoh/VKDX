@@ -85,7 +85,10 @@ protected:
 			});
 	}
 
-	virtual void CreateGeometry() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
+	virtual void CreateGeometry() override { 
+		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
+		IndirectBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DIIC, CommandBuffers[0], GraphicsQueue);
+	}
 
 	virtual void CreatePipelineLayout() override {
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(),
@@ -188,7 +191,7 @@ protected:
 #pragma endregion
 	}
 
-	virtual void CreateShaderModules() override { CreateShaderModle_VsFsTesTcsGs(); }
+	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }
 	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 

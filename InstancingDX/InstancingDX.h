@@ -26,7 +26,7 @@ protected:
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.back())));
 		LOG_OK();
 	}
-	virtual void CreateShaderBlobs() override { CreateShaderBlob_VsPs(); }
+	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPs(); }
 	virtual void CreatePipelineState() override {
 		const std::vector IEDs = {
 			//!< ’¸“_–ˆ (Per Vertex)

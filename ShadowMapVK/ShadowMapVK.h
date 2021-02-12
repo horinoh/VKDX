@@ -136,15 +136,26 @@ protected:
 		}
 	}
 	virtual void CreateGeometry() override {
-		//!< パス0 : インダイレクトバッファ(シャドウキャスタ描画用)
-		CreateIndirectBuffer_DrawIndexed(1, 1);
+		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto CB = CommandBuffers[0];
+		//!< Pass0 : インダイレクトバッファ(シャドウキャスタ描画用)
+		{
+			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC, CB, GraphicsQueue);
+		}
 #ifdef USE_SHADOWMAP_VISUALIZE
-		//!< パス1 : インダイレクトバッファ(シャドウマップ描画用)
-		CreateIndirectBuffer_Draw(4, 1);
+		//!< Pass1 : インダイレクトバッファ(シャドウマップ描画用)
+		{
+			constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIC, CB, GraphicsQueue);
+		}
 #else
-		//!< パス1 : インダイレクトバッファ(シャドウレシーバ描画用)
-		CreateIndirectBuffer_DrawIndexed(1, 2);
-#endif
+		//!< Pass1 : インダイレクトバッファ(シャドウレシーバ描画用)
+		{
+			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 2, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC, CB, GraphicsQueue);
+		}
+#endif		
 	}
 //	virtual void CreateDescriptorSetLayout() override {		
 //		//!< パス0 : デスクリプタセットレイアウト
@@ -406,7 +417,7 @@ protected:
 		}
 #pragma endregion
 	}
-	virtual void CreateShaderModules() override {
+	virtual void CreateShaderModule() override {
 		const auto ShaderPath = GetBasePath();
 		//!< パス0 : シェーダモジュール
 		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));

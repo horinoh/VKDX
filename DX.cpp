@@ -48,30 +48,31 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//InitializeSwapchainImage(COM_PTR_GET(CommandAllocators[0]), &DirectX::Colors::Red);
 
+	//!< ジオメトリ (バーテックスバッファ、インデックスバッファ、アクセラレーションストラクチャ等)
 	CreateGeometry();
 
 	//!< コンスタントバッファ (ユニフォームバッファ相当)
 	CreateConstantBuffer();
 
+	//!< テクスチャ
 	CreateTexture();
 
 	//!< スタティックサンプラはこの時点(CreateRootSignature()より前)で必要
 	CreateStaticSampler();
-
 	//!< ルートシグネチャ (パイプライントレイアウト相当)
 	CreateRootSignature();
 
-	//!< (レンダーパス相当は存在しない)
+	//!< レンダーパス相当は存在しない
 
+	//!< シェーダ
+	CreateShaderBlob();
 	//!< パイプライン
-	{
-		CreateShaderBlobs();
-		CreatePipelineState();
-	}
+	CreatePipelineState();
+
+	//!< フレームバッファ相当は存在しない
 
 	//!< デスクリプタヒープ
 	CreateDescriptorHeap();
-	
 	//!< サンプラ ... デスクリプタが必要
 	CreateSampler();
 
@@ -255,7 +256,7 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_
 	}
 }
 
-void DX::CreateBufferResourceAndExecuteCopyCommand(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source)
+void DX::CreateBufferResourceAndExecuteCopyCommand(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source)
 {
 	CreateBufferResource(Resource, Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
 
@@ -860,6 +861,26 @@ void DX::ResizeDepthStencil(const DXGI_FORMAT /*DepthFormat*/, const UINT /*Widt
 
 	LOG_OK();
 }
+
+#ifdef USE_RAYTRACING
+void DX::BuildAccelerationStructure(ID3D12Device* Device, const UINT64 SBSize, const D3D12_GPU_VIRTUAL_ADDRESS GVA, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence)
+{
+	ScratchBuffer SB;
+	SB.Create(Device, SBSize);
+	COM_PTR<ID3D12GraphicsCommandList4> GCL4;
+	VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
+	VERIFY_SUCCEEDED(GCL4->Reset(CA, nullptr)); {
+		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
+		.DestAccelerationStructureData = GVA,
+		.Inputs = BRASI,
+		.SourceAccelerationStructureData = 0,
+		.ScratchAccelerationStructureData = COM_PTR_GET(SB.Resource)->GetGPUVirtualAddress()
+		};
+		GCL4->BuildRaytracingAccelerationStructure(&BRASD, 0, nullptr);
+	} VERIFY_SUCCEEDED(GCL4->Close());
+	ExecuteAndWait(CQ, static_cast<ID3D12CommandList*>(GCL), Fence);
+}
+#endif
 
 void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth, const FLOAT MaxDepth)
 {

@@ -35,7 +35,10 @@ protected:
 		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tr)), &Tr);
 #pragma endregion
 	}
-	virtual void CreateGeometry() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
+	virtual void CreateGeometry() override { 
+		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DIA);
+	}
 
 	virtual void CreateStaticSampler() override {
 		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
@@ -233,7 +236,7 @@ protected:
 #endif
 		}
 	}
-	virtual void CreateShaderBlobs() override {
+	virtual void CreateShaderBlob() override {
 #ifdef USE_PARALLAX_MAP
 		const auto ShaderPath = GetBasePath();
 		ShaderBlobs.push_back(COM_PTR<ID3DBlob>());

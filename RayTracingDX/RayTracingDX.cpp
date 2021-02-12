@@ -235,8 +235,12 @@ void RayTracingDX::CreateGeometry()
 	COM_PTR<ID3D12Device5> Device5;
 	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
 
-    COM_PTR<ID3D12GraphicsCommandList4> GCL4;
-	VERIFY_SUCCEEDED(COM_PTR_GET(GraphicsCommandLists[0])->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
+	//COM_PTR<ID3D12GraphicsCommandList4> GCL4;
+	//VERIFY_SUCCEEDED(COM_PTR_GET(GraphicsCommandLists[0])->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
+	const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+    const auto CA = COM_PTR_GET(CommandAllocators[0]);
+    const auto CQ = COM_PTR_GET(CommandQueue);
+    const auto F = COM_PTR_GET(Fence);
 
 #pragma region BLAS
     {
@@ -282,6 +286,7 @@ void RayTracingDX::CreateGeometry()
 		//!< AS作成 (Create AS)
 		BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
         //!< ASビルド (Build AS)
+#if 0
         ScratchBuffer SB;
 		SB.Create(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes);
         const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
@@ -291,6 +296,9 @@ void RayTracingDX::CreateGeometry()
 	        .ScratchAccelerationStructureData = COM_PTR_GET(SB.Resource)->GetGPUVirtualAddress()
         };
 		GCL4->BuildRaytracingAccelerationStructure(&BRASD, 0, nullptr);
+#else
+		BuildAccelerationStructure(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, COM_PTR_GET(BLASs.back().Resource)->GetGPUVirtualAddress(), BRASI, GCL, CA, CQ, F);
+#endif
     }
 #pragma endregion
 
@@ -326,6 +334,7 @@ void RayTracingDX::CreateGeometry()
 		//!< AS作成 (Create AS)
 		TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
 		//!< ASビルド (Build AS)
+#if 0
 	    ScratchBuffer SB;
 		SB.Create(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes);
 		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
@@ -335,17 +344,54 @@ void RayTracingDX::CreateGeometry()
 			.ScratchAccelerationStructureData = COM_PTR_GET(SB.Resource)->GetGPUVirtualAddress()
 		};
 		GCL4->BuildRaytracingAccelerationStructure(&BRASD, 0, nullptr);
+#else
+		BuildAccelerationStructure(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, COM_PTR_GET(TLASs.back().Resource)->GetGPUVirtualAddress(), BRASI, GCL, CA, CQ, F);
+#endif
     }
 #pragma endregion
+}
+void RayTracingDX::CreateTexture()
+{
+
+}
+void RayTracingDX::CreateRootSignature()
+{
+	//!< グローバルルートシグネチャ (Global root signature)
+    {
+        COM_PTR<ID3DBlob> Blob;
+#ifdef USE_HLSL_ROOTSIGNATRUE
+        GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".grs.cso")));
+#else
+        DX::SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+#endif
+        VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
+    }
+	//!< ローカルルートシグネチャ (Local root signature)
+	{
+		COM_PTR<ID3DBlob> Blob;
+#ifdef USE_HLSL_ROOTSIGNATRUE
+		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".lrs.cso")));
+#else
+		DX::SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE);
+#endif
+		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
+	}
+}
+void RayTracingDX::CreateShaderBlob()
+{
+	const auto ShaderPath = GetBasePath();
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rts.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
 }
 void RayTracingDX::CreatePipelineState()
 {
 	COM_PTR<ID3D12Device5> Device5;
 	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
 
-    const D3D12_GLOBAL_ROOT_SIGNATURE GRS = {.pGlobalRootSignature = COM_PTR_GET(RootSignatures.back()) };
+	//!< グローバルルートシグネチャ (Global root signature)
+    const D3D12_GLOBAL_ROOT_SIGNATURE GRS = {.pGlobalRootSignature = COM_PTR_GET(RootSignatures[0]) };
 
-	const D3D12_LOCAL_ROOT_SIGNATURE LRS = { .pLocalRootSignature = nullptr };
+	//!< ローカルルートシグネチャ (Local root signature)
+	const D3D12_LOCAL_ROOT_SIGNATURE LRS = { .pLocalRootSignature = COM_PTR_GET(RootSignatures[1]) };
 	//std::array<LPCWSTR, 0> Exports = { /*TEXT("MyRayGen")*/ };
 	//const D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION STEA = { .pSubobjectToAssociate = &LRS, .NumExports = static_cast<UINT>(size(Exports)), .pExports = data(Exports) };
 
@@ -367,8 +413,8 @@ void RayTracingDX::CreatePipelineState()
     };
 
     const D3D12_RAYTRACING_SHADER_CONFIG RSC = {
-	    .MaxPayloadSizeInBytes = 0,
-	    .MaxAttributeSizeInBytes = 0
+	    .MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT4),
+	    .MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2)
     };
 
     const D3D12_RAYTRACING_PIPELINE_CONFIG RPC = { .MaxTraceRecursionDepth = 1 };

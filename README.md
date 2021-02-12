@@ -34,13 +34,18 @@
 - Tools - Option - Debugging - General - Enable Edit and Continue
 
 ### GLTF
- * C++ローダー https://github.com/jessey-git/fx-gltf ~~を同じ階層にクローンする~~サブモジュール化した
- * JSON を必要とするので https://github.com/nlohmann/json ~~を同じ階層にクローンする~~サブモジュール化した
+ * C++ローダー https://github.com/jessey-git/fx-gltf をサブモジュール化した
+	* .gitmoudles に以下を追加
+		~~~
+		ignore = dirty
+		~~~
+ * JSON を必要とするので https://github.com/nlohmann/json をサブモジュール化した
  * **..\\..\fx-gltf\include** にインクルードパスを通す
 ~~~
 #include <fx/gltf.h>
 ~~~
- * サンプルデータ ~~https://github.com/KhronosGroup/glTF-Sample-Models を同じ階層にクローンする~~ fx-gltfのサブモジュールに含まれるのを使用する
+ * サンプルデータ 
+ 	* fx-gltfのサブモジュールに含まれるのを使用する
 
 ### プリコンパイルヘッダーを使う
  * (ここでは)framework.cpp を追加 - 右クリック - Properties - C/C++ - Precompiled Headers - Create(/Yc)
@@ -81,7 +86,11 @@
 
 #### GLM
 * https://github.com/g-truc/glm
-* ~~同じ階層に GLM をクローンして~~サブモジュール化してある **..\\..\glm** にインクルードパスを通した
+* サブモジュール化した **..\\..\glm** にインクルードパスを通した
+	* .gitmoudles に以下を追加
+		~~~
+		ignore = dirty
+		~~~
 * マトリクスの乗算順序が DirectXMath では異なるので注意
 	- GLSL : 列優先 (Row Major)
 	- HLSL : 列優先 (Row Major)
@@ -91,7 +100,11 @@
 		- World * View * Projection
 #### GLI
 * https://github.com/g-truc/gli
-* ~~同じ階層に GLI をクローンして~~サブモジュール化してある **..\\..\gli** にインクルードパスを通した
+* サブモジュール化した **..\\..\gli** にインクルードパスを通した
+	* .gitmoudles に以下を追加
+		~~~
+		ignore = dirty
+		~~~
 
 #### Vulkan-Hpp
 * ~~https://github.com/KhronosGroup/Vulkan-Hpp~~ 今は通常インストールに含まれるみたい
@@ -197,7 +210,11 @@
 * https://github.com/Microsoft/DirectXTK12
 * ~~DirectXTK_Desktop_2017_Win10.sln~~DirectXTK_Desktop_2019_Win10.sln を開いてx64をビルド(Debug, Release)
 	* D3D12_DESCRIPTOR_RANGE1 がないと言われて、コンパイルが通らない場合は  Windows 10 Anniversary Update SDK が必要(VisualStudioを更新する)
-* ~~同じ階層に DirectXTK12 をクローンして **..\..\DirectXTK12** にパスを通した~~サブモジュール化したので再帰的にクローンする
+* サブモジュール化したので再帰的にクローンする
+	* .gitmoudles に以下を追加
+		~~~
+		ignore = dirty
+		~~~
 * 備考
 	* DirectXTex(https://github.com/Microsoft/DirectXTex/wiki/DirectXTex) もある、こちらでもよい
 
@@ -338,6 +355,37 @@
 	- LeapDX, LeapVK
 - USE_RAYTRACING
 	- RayTracingDX, RayTracingVK
+	
+#### レイトレーシング
+- シェーダ
+	- DX
+		- HLSLCompiler - Shader Type には Library を選択する
+		~~~
+		[shader("raygeneration")]
+		void MyRayGen(){}
+		[shader("closesthit")]
+		void MyClosestHit(){}
+		[shader("miss")]
+		void MyMiss(){}
+		~~~
+	- VK 
+		~~~
+		.rgen 
+		.rint
+		.rahit
+		.rchit
+		.rmiss
+		.rcall
+		//.mesh
+		//.task
+		~~~
+	- RayGeneration
+	- ClosestHit
+	- Miss
+	
+	- Intersection
+	- AnyHit
+	- Callable
 	
 #### トラブルシューティング
 * 「このプロジェクトは、このコンピュータ上にないNugetパッケージを参照しています」と出る場合

@@ -18,7 +18,7 @@ protected:
 	virtual void CreatePipelineLayout() override {
 		VKExt::CreatePipelineLayout(PipelineLayouts.emplace_back(), {}, {});
 	}
-	virtual void CreateShaderModules() override { CreateShaderModle_VsFs(); }
+	virtual void CreateShaderModule() override { CreateShaderModle_VsFs(); }
 	virtual void CreatePipeline() override {
 		const std::vector VIBDs = { 
 			//!< ’¸“_–ˆ (Per Vertex)

@@ -114,10 +114,18 @@ protected:
 		}
 	}
 	virtual void CreateGeometry() override {
-		//!< Pass0 : メッシュ描画用
-		CreateIndirectBuffer_DrawIndexed(1, 1);
-		//!< Pass1 : レンダーテクスチャ描画用
-		CreateIndirectBuffer_Draw(4, 1);
+		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto CB = CommandBuffers[0];
+		//!< Pass0 : インダイレクトバッファ(メッシュ描画用)
+		{
+			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC, CB, GraphicsQueue);
+		}
+		//!< Pass1 : インダイレクトバッファ(レンダーテクスチャ描画用)
+		{
+			constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIC, CB, GraphicsQueue);
+		}
 	}
 	virtual void CreateUniformBuffer() override {
 		constexpr auto Fov = glm::radians(14.0f);
@@ -294,7 +302,7 @@ protected:
 		};
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.emplace_back()));
 	}
-	virtual void CreateShaderModules() override {
+	virtual void CreateShaderModule() override {
 		const auto ShaderPath = GetBasePath();
 		//!< Pass0
 		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));

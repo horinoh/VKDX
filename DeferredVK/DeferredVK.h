@@ -219,10 +219,18 @@ protected:
 		}
 	}
 	virtual void CreateGeometry() override {
-		//!< パス0 : インダイレクトバッファ(メッシュ描画用)
-		CreateIndirectBuffer_DrawIndexed(1, 1);
-		//!< パス1 : インダイレクトバッファ(レンダーテクスチャ描画用)
-		CreateIndirectBuffer_Draw(4, 1);
+		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto CB = CommandBuffers[0];
+		//!< Pass0 : インダイレクトバッファ(メッシュ描画用)
+		{
+			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC, CB, GraphicsQueue);
+		}
+		//!< Pass1 : インダイレクトバッファ(レンダーテクスチャ描画用)
+		{
+			constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIC, CB, GraphicsQueue);
+		}
 	}
 	//virtual void CreateDescriptorSetLayout() override {
 	//	assert(!empty(Samplers) && "");
@@ -570,7 +578,7 @@ protected:
 #pragma endregion
 		}
 	}
-	virtual void CreateShaderModules() override {
+	virtual void CreateShaderModule() override {
 		const auto ShaderPath = GetBasePath();
 		//!< パス0 : シェーダモジュール
 		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));

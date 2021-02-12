@@ -1,30 +1,5 @@
 #include "VKExt.h"
 
-void VKExt::CreateIndirectBuffer_Draw(const uint32_t VertexCount, const uint32_t InstanceCount)
-{
-	IndirectBuffers.emplace_back(IndirectBuffer());
-	const VkDrawIndirectCommand DIC = {.vertexCount = VertexCount, .instanceCount = InstanceCount, .firstVertex = 0, .firstInstance = 0 };
-	CreateBufferMemoryAndSubmitTransferCommand(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory,
-		Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, sizeof(DIC),
-		&DIC, CommandBuffers[0], VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, GraphicsQueue);
-}
-void VKExt::CreateIndirectBuffer_DrawIndexed(const uint32_t IndexCount, const uint32_t InstanceCount)
-{
-	IndirectBuffers.emplace_back(IndirectBuffer());
-	const VkDrawIndexedIndirectCommand DIIC = {.indexCount = IndexCount, .instanceCount = InstanceCount, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-	CreateBufferMemoryAndSubmitTransferCommand(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory,
-		Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, sizeof(DIIC),
-		&DIIC, CommandBuffers[0], VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, GraphicsQueue);
-}
-void VKExt::CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z)
-{
-	IndirectBuffers.emplace_back(IndirectBuffer());
-	const VkDispatchIndirectCommand DIC = {.x = X, .y = Y, .z = Z };
-	CreateBufferMemoryAndSubmitTransferCommand(&IndirectBuffers.back().Buffer, &IndirectBuffers.back().DeviceMemory,
-		Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, sizeof(DIC),
-		&DIC, CommandBuffers[0], VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, GraphicsQueue);
-}
-
 void VKExt::CreateShaderModle_VsFs()
 {
 	const auto ShaderPath = GetBasePath();

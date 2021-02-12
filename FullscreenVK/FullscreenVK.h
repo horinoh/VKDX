@@ -15,10 +15,13 @@ public:
 
 protected:
 #ifdef USE_DRAW_INDIRECT
-	virtual void CreateGeometry() override { CreateIndirectBuffer_Draw(4, 1); }
+	virtual void CreateGeometry() override { 
+		constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
+		IndirectBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DIC, CommandBuffers[0], GraphicsQueue);
+	}
 #endif
 
-	virtual void CreateShaderModules() override {
+	virtual void CreateShaderModule() override {
 #ifdef USE_DISTANCE_FUNCTION
 		const auto ShaderPath = GetBasePath();
 		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));

@@ -10,10 +10,6 @@ public:
 	using Vertex_PositionColor = struct Vertex_PositionColor { glm::vec3 Position; glm::vec4 Color; };
 	using Instance_OffsetXY = struct Instance_OffsetXY { glm::vec2 Offset; };
 
-	void CreateIndirectBuffer_Draw(const uint32_t VertexCount, const uint32_t InstanceCount);
-	void CreateIndirectBuffer_DrawIndexed(const uint32_t IndexCount, const uint32_t InstanceCount);
-	void CreateIndirectBuffer_Dispatch(const uint32_t X, const uint32_t Y, const uint32_t Z);
-	
 	void CreateShaderModle_VsFs();
 	void CreateShaderModle_VsFsTesTcsGs();
 	void CreateShaderModle_Cs();

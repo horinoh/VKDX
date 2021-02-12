@@ -82,7 +82,10 @@ protected:
 			});
 	}
 #endif
-	virtual void CreateGeometry() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
+	virtual void CreateGeometry() override { 
+		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
+		IndirectBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DIIC, CommandBuffers[0], GraphicsQueue);
+	}
 
 	virtual void CreateImmutableSampler() override {
 		Samplers.emplace_back(VkSampler());
@@ -234,7 +237,7 @@ protected:
 #pragma endregion
 	}
 
-	virtual void CreateShaderModules() override {
+	virtual void CreateShaderModule() override {
 #ifdef USE_SKY_DOME
 		const auto ShaderPath = GetBasePath();
 		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));

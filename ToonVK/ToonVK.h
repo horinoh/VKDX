@@ -25,7 +25,10 @@ protected:
 #pragma endregion
 	}
 	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
-	virtual void CreateGeometry() override { CreateIndirectBuffer_DrawIndexed(1, 1); }
+	virtual void CreateGeometry() override { 
+		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
+		IndirectBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DIIC, CommandBuffers[0], GraphicsQueue);
+	}
 	virtual void CreateUniformBuffer() override {
 		//constexpr auto Fov = 0.16f * glm::pi<float>();
 		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;

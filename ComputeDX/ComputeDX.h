@@ -17,7 +17,10 @@ protected:
 	
 	//!< #DX_TODO コマンドリストを作成
 
-	virtual void CreateGeometry() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
+	virtual void CreateGeometry() override { 
+		constexpr D3D12_DISPATCH_ARGUMENTS DA = { .ThreadGroupCountX = 32, .ThreadGroupCountY = 1, .ThreadGroupCountZ = 1 };
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DA);
+	}
 
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
@@ -69,7 +72,7 @@ protected:
 		//UnorderedAccessViewDescs.back().Texture2D = { 0, 0 };
 	}
 
-	virtual void CreateShaderBlobs() override { CreateShaderBlob_Cs(); }
+	virtual void CreateShaderBlob() override { CreateShaderBlob_Cs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_Cs(); }
 	virtual void PopulateCommandList(const size_t i) override;
 

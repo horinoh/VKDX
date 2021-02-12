@@ -561,17 +561,16 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			case ElementArrayBuffer: break;
 			}
 
+			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+			const auto CB = CommandBuffers[0];
 			if ("indices" == Identifier) {
-				IndexBuffers.emplace_back(IndexBuffer());
-				//CreateBuffer_Index(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], Size, Data);
-				CreateAndCopyToBuffer(&IndexBuffers.back().Buffer, &IndexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size, Data);
+				IndexBuffers.emplace_back().Create(Device, PDMP, Size, Data, CB, GraphicsQueue);
 
-				CreateIndirectBuffer_DrawIndexed(Acc.count, 1);
+				const VkDrawIndexedIndirectCommand DIIC = { .indexCount = Acc.count, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
+				IndirectBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DIIC, CommandBuffers[0], GraphicsQueue);
 			}
 			else if ("attributes" == Identifier || "targets" == Identifier) {
-				VertexBuffers.emplace_back(VertexBuffer());
-				//CreateBuffer_Vertex(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0] , Size, Data);
-				CreateAndCopyToBuffer(&VertexBuffers.back().Buffer, &VertexBuffers.back().DeviceMemory, GraphicsQueue, CommandBuffers[0], VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size, Data);
+				VertexBuffers.emplace_back().Create(Device, PDMP, Size, Data, CB, GraphicsQueue);
 			}
 			else if ("inverseBindMatrices" == Identifier) {
 				InverseBindMatrices.reserve(Acc.count);

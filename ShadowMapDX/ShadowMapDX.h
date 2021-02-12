@@ -38,14 +38,25 @@ protected:
 	}
 
 	virtual void CreateGeometry() override {
-		//!< パス0 : インダイレクトバッファ(シャドウキャスタ描画用)
-		CreateIndirectBuffer_DrawIndexed(1, 1);
+		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+		//!< Pass0 : インダイレクトバッファ(シャドウキャスタ描画用)
+		{
+			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DIA);
+		}
 #ifdef USE_SHADOWMAP_VISUALIZE
-		//!< パス1 : インダイレクトバッファ(シャドウマップ描画用)
-		CreateIndirectBuffer_Draw(4, 1);
+		//!< Pass1 : インダイレクトバッファ(シャドウマップ描画用)
+		{
+			constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DA);
+		}
 #else
-		//!< パス1 : インダイレクトバッファ(シャドウレシーバ描画用)
-		CreateIndirectBuffer_DrawIndexed(1, 2);
+		//!< Pass1 : インダイレクトバッファ(シャドウレシーバ描画用)
+		{
+			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 2, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DIA);
+		}
 #endif
 	}
 	virtual void CreateStaticSampler() override {
@@ -352,7 +363,7 @@ protected:
 #pragma endregion
 	}
 
-	virtual void CreateShaderBlobs() override {
+	virtual void CreateShaderBlob() override {
 		const auto ShaderPath = GetBasePath();
 		//!< パス0 : シェーダブロブ
 		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());

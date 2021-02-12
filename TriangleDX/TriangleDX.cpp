@@ -238,15 +238,15 @@ void TriangleDX::CreateGeometry()
 	//!< バーテックスバッファ (VertexBuffer)
 	{
 #if 1
-		const std::array Vertices = {
+		constexpr std::array Vertices = {
 			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
 			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
 			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
 		};
 #else
 		//!< ピクセル指定
-		const FLOAT W = 1280.0f, H = 720.0f;
-		const std::array Vertices = {
+		constexpr FLOAT W = 1280.0f, H = 720.0f;
+		constexpr std::array Vertices = {
 			Vertex_PositionColor({.Position = { W * 0.5f, 100.0f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
 			Vertex_PositionColor({.Position = { W * 0.5f - 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
 			Vertex_PositionColor({.Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
@@ -259,15 +259,15 @@ void TriangleDX::CreateGeometry()
 	}
 	//!< インデックスバッファ (IndexBuffer)
 	{
-		const std::array<UINT32, 3> Indices = { 0, 1, 2 };
+		constexpr std::array<UINT32, 3> Indices = { 0, 1, 2 };
 		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), CA, GCL, CQ, COM_PTR_GET(Fence), data(Indices), DXGI_FORMAT_R32_UINT);
 #ifdef _DEBUG
 		SetName(COM_PTR_GET(IndexBuffers.back().Resource), TEXT("MyIndexBuffer"));
 #endif
 		//!< インダイレクトバッファ (IndirectBuffer)
 		{
-			const D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(DIA), CA, GCL, CQ, COM_PTR_GET(Fence), &DIA, D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED);			
+			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), DIA);			
 #ifdef _DEBUG
 			SetName(COM_PTR_GET(IndirectBuffers.back().Resource), TEXT("MyIndirectBuffer"));
 #endif

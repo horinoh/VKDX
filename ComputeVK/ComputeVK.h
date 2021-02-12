@@ -18,11 +18,14 @@ protected:
 	//!< #VK_TODO コマンドバッファを作成
 	//!< #VK_TODO 出力テクスチャ用のimage2Dを用意しないとならない
 
-	virtual void CreateGeometry() override { CreateIndirectBuffer_Dispatch(32, 1, 1); }
+	virtual void CreateGeometry() override { 
+		constexpr VkDispatchIndirectCommand DIC = { .x = 32, .y = 1, .z = 1 };
+		IndirectBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DIC, CommandBuffers[0], GraphicsQueue);
+	}
 
 	virtual void CreatePipelineLayout() override {
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
-				{ 0, /*VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER*/VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr }
+			{ 0, /*VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER*/VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr }
 		});
 
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
@@ -105,7 +108,7 @@ protected:
 		}
 	}
 	
-	virtual void CreateShaderModules() override { CreateShaderModle_Cs(); }
+	virtual void CreateShaderModule() override { CreateShaderModle_Cs(); }
 	virtual void CreatePipeline() override { CreatePipeline_Cs(); }
 	virtual void PopulateCommandBuffer(const size_t i) override;
 	virtual void Draw() override { Dispatch(); }
