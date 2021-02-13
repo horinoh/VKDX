@@ -106,3 +106,12 @@ VK_DEVICE_PROC_ADDR(CmdPushDescriptorSetKHR)
 #ifdef USE_HDR
 VK_DEVICE_PROC_ADDR(SetHdrMetadataEXT)
 #endif
+
+#ifdef USE_RAYTRACING
+VK_DEVICE_PROC_ADDR(GetAccelerationStructureBuildSizesKHR)
+VK_DEVICE_PROC_ADDR(CreateAccelerationStructureKHR)
+VK_DEVICE_PROC_ADDR(CmdBuildAccelerationStructuresKHR)
+VK_DEVICE_PROC_ADDR(GetRayTracingShaderGroupHandlesKHR)
+VK_DEVICE_PROC_ADDR(CreateRayTracingPipelinesKHR)
+VK_DEVICE_PROC_ADDR(DestroyAccelerationStructureKHR)
+#endif

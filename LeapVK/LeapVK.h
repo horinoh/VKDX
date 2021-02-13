@@ -127,7 +127,7 @@ protected:
 #pragma region UB
 	virtual void CreateUniformBuffer() override {
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
-			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tracking), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tracking));
 		}
 	}
 #pragma endregion

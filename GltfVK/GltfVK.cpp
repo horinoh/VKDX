@@ -304,10 +304,11 @@ void GltfVK::PreProcess()
 	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
 
 	//!< ユニフォームバッファ
-	UniformBuffers.oush_back(UniformBuffer());
-	CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(UBSize));
-	AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
+	//UniformBuffers.oush_back(UniformBuffer());
+	//CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(UBSize));
+	//AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+	//VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
+	UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(UBSize));
 
 	//!< アップデートテンプレート
 	const std::array DUTEs = {
@@ -410,9 +411,9 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 		SemanticInitial += i.first.substr(0, 1);
 	}
 	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(cbegin(SemanticInitial), cend(SemanticInitial));
-	ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));
+	ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));
 	const auto VS = VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = ShaderModules.back(), .pName = "main", .pSpecializationInfo = nullptr });
-	ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))));
+	ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))));
 	const auto FS = VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = ShaderModules.back(), .pName = "main", .pSpecializationInfo = nullptr });
 
 	//!< アトリビュート (Attributes)
@@ -614,7 +615,7 @@ void GltfVK::Process(const fx::gltf::Skin& Skn)
 		if (fx::gltf::defaults::IdentityVec3 != Nd.scale) {
 			glm::scale(Wld, glm::make_vec3(data(Nd.scale)));
 		}
-		JointMatrices.push_back(IBM * Wld);
+		JointMatrices.emplace_back(IBM * Wld);
 	}
 #ifdef DEBUG_STDOUT
 	if (size(JointMatrices)) {

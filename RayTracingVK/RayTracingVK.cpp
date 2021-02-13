@@ -230,6 +230,14 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #ifdef USE_RAYTRACING
+//#define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc RayTracingVK::vk ## proc = VK_NULL_HANDLE;
+//VK_DEVICE_PROC_ADDR(GetAccelerationStructureBuildSizesKHR)
+//VK_DEVICE_PROC_ADDR(CreateAccelerationStructureKHR)
+//VK_DEVICE_PROC_ADDR(CmdBuildAccelerationStructuresKHR)
+//VK_DEVICE_PROC_ADDR(GetRayTracingShaderGroupHandlesKHR)
+//VK_DEVICE_PROC_ADDR(CreateRayTracingPipelinesKHR)
+//VK_DEVICE_PROC_ADDR(DestroyAccelerationStructureKHR)
+//#undef VK_DEVICE_PROC_ADDR
 void RayTracingVK::CreateGeometry()
 {
 	const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();

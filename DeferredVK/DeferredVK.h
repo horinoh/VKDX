@@ -66,7 +66,7 @@ protected:
 
 #pragma region FRAME_OBJECT
 		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
-		//!< パス1 : セカンダリコマンドバッファ
+		//!< Pass1 : セカンダリコマンドバッファ
 		assert(!empty(SecondaryCommandPools) && "");
 		const auto PrevCount = size(SecondaryCommandBuffers);
 		SecondaryCommandBuffers.resize(PrevCount + SCCount);
@@ -81,11 +81,10 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateFramebuffer() override {
-		//!< パス0 : フレームバッファ
+		//!< Pass0 : フレームバッファ
 		{
 			assert(4 + 1 == size(ImageViews) && "");
-			Framebuffers.push_back(VkFramebuffer());
-			VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				ImageViews[0],
 	#pragma region MRT 
@@ -101,18 +100,16 @@ protected:
 			});
 		}
 
-		//!< パス1 : フレームバッファ
+		//!< Pass1 : フレームバッファ
 		{
 			for (auto i : SwapchainImageViews) {
-				Framebuffers.push_back(VkFramebuffer());
-				VK::CreateFramebuffer(Framebuffers.back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
+				VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
 			}
 		}
 	}
 	virtual void CreateRenderPass() override {
-		//!< パス0 : レンダーパス
+		//!< Pass0 : レンダーパス
 		{
-			RenderPasses.push_back(VkRenderPass());
 			const std::array<VkAttachmentReference, 4> ColorAttach = { {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, 
@@ -126,7 +123,7 @@ protected:
 #pragma endregion
 			} };
 			const VkAttachmentReference DepthAttach = { static_cast<uint32_t>(size(ColorAttach)), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-			VK::CreateRenderPass(RenderPasses.back(), {
+			VK::CreateRenderPass(RenderPasses.emplace_back(), {
 					//!< アタッチメント(Attachment)
 					//!< レンダーターゲット : カラー(RenderTarget : Color)
 					{
@@ -189,11 +186,10 @@ protected:
 					//!< サブパス依存
 				});
 		}
-		//!< パス1 : レンダーパス
+		//!< Pass1 : レンダーパス
 		{
-			RenderPasses.push_back(VkRenderPass());
 			const std::array<VkAttachmentReference, 1> ColorAttach = { { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, } };
-			VK::CreateRenderPass(RenderPasses.back(), {
+			VK::CreateRenderPass(RenderPasses.emplace_back(), {
 				//!< アタッチメント
 				{
 					0,
@@ -235,7 +231,7 @@ protected:
 	//virtual void CreateDescriptorSetLayout() override {
 	//	assert(!empty(Samplers) && "");
 
-	//	//!< パス0 : デスクリプタセットレイアウト
+	//	//!< Pass0 : デスクリプタセットレイアウト
 	//	{
 	//		DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
 	//		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
@@ -243,7 +239,7 @@ protected:
 	//		});
 	//	}
 
-	//	//!< パス1 : デスクリプタセットレイアウト
+	//	//!< Pass1 : デスクリプタセットレイアウト
 	//	{
 	//		const std::array<VkSampler, 1> ISs = { Samplers[0] };
 
@@ -264,7 +260,7 @@ protected:
 	//	}
 	//}
 	virtual void CreatePipelineLayout() override {
-		//!< パス0 : パイプラインレイアウト
+		//!< Pass0 : パイプラインレイアウト
 		{
 			CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
 				VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }),
@@ -272,7 +268,7 @@ protected:
 			VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), { DescriptorSetLayouts.back() }, {});
 		}
 
-		//!< パス1 : パイプラインレイアウト
+		//!< Pass1 : パイプラインレイアウト
 		{
 			//VkDescriptorSetLayoutBinding({ .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }), //!< UniformBuffer
 
@@ -531,7 +527,7 @@ protected:
 		}
 	}
 	virtual void CreateImmutableSampler() override {
-		//!< パス1 : イミュータブルサンプラ
+		//!< Pass1 : イミュータブルサンプラ
 		Samplers.resize(1);
 		const VkSamplerCreateInfo SCI = {
 			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -570,29 +566,26 @@ protected:
 #pragma region FRAME_OBJECT
 			const auto SCCount = size(SwapchainImages);
 			for (size_t i = 0; i < SCCount; ++i) {
-				UniformBuffers.push_back(UniformBuffer());
-				CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-				AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-				VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
+				UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
 			}
 #pragma endregion
 		}
 	}
 	virtual void CreateShaderModule() override {
 		const auto ShaderPath = GetBasePath();
-		//!< パス0 : シェーダモジュール
-		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));
-		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))));
-		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))));
-		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))));
-		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".geom.spv"))));
-		//!< パス1 : シェーダモジュール
-		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".vert.spv"))));
+		//!< Pass0 : シェーダモジュール
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".geom.spv"))));
+		//!< Pass1 : シェーダモジュール
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".vert.spv"))));
 #ifdef USE_GBUFFER_VISUALIZE
-		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_gb_1") + TEXT(".frag.spv"))));
-		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_gb_1") + TEXT(".geom.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_gb_1") + TEXT(".frag.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_gb_1") + TEXT(".geom.spv"))));
 #else
-		ShaderModules.push_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".frag.spv"))));
+		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".frag.spv"))));
 #endif
 	}
 	virtual void CreatePipeline() override {
@@ -691,20 +684,20 @@ protected:
 		};
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 2);
-		//!< パス0 : パイプライン
-		Threads.push_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, PDSSCI_0, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0, PCS.GetPipelineCache(0)));
-		//!< パス1 : パイプライン
+		//!< Pass0 : パイプライン
+		Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, PDSSCI_0, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0, PCS.GetPipelineCache(0)));
+		//!< Pass1 : パイプライン
 #ifdef USE_GBUFFER_VISUALIZE
-		Threads.push_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, &PSSCIs_1[2], VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
+		Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, &PSSCIs_1[2], VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
 #else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0,  PRSCI, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
+		Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0,  PRSCI, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1, PCS.GetPipelineCache(1)));
 #endif
 #else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, PDSSCI_0, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0));
+		Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, PDSSCI_0, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs_0));
 #ifdef USE_GBUFFER_VISUALIZE
-		Threads.push_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, &PSSCIs_1[2], VIBDs, VIADs, PCBASs_1));
+		Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, &PSSCIs_1[2], VIBDs, VIADs, PCBASs_1));
 #else
-		Threads.push_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1));
+		Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI, PDSSCI_1, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs_1));
 #endif
 #endif
 		for (auto& i : Threads) { i.join(); }

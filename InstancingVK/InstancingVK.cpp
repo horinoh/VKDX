@@ -236,33 +236,29 @@ void InstancingVK::CreateGeometry()
 	const auto& CB = CommandBuffers[0];
 
 	{
-		VertexBuffers.push_back(VertexBuffer());
-		const std::array Vertices = {
+		constexpr std::array Vertices = {
 			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }),
 			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }),
 			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }),
 		};
-		VertexBuffers.back().Create(Device, PDMP, sizeof(Vertices), data(Vertices), CB, GraphicsQueue);
+		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices), data(Vertices), CB, GraphicsQueue);
 	}
 	{
-		VertexBuffers.push_back(VertexBuffer());
-		const std::array Instances = {
+		constexpr std::array Instances = {
 			Instance_OffsetXY({ { -0.5f, -0.5f } }),
 			Instance_OffsetXY({ { -0.25f, -0.25f } }),
 			Instance_OffsetXY({ { 0.0f, 0.0f } }),
 			Instance_OffsetXY({ { 0.25f, 0.25f } }),
 			Instance_OffsetXY({ { 0.5f, 0.5f } }),
 		};
-		VertexBuffers.back().Create(Device, PDMP, sizeof(Instances), data(Instances), CB, GraphicsQueue);
+		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Instances), data(Instances), CB, GraphicsQueue);
 
-		IndexBuffers.push_back(IndexBuffer());
-		const std::array<uint32_t, 3> Indices = { 0, 1, 2 };
-		IndexBuffers.back().Create(Device, PDMP, sizeof(Indices), data(Indices), CB, GraphicsQueue);
+		constexpr std::array<uint32_t, 3> Indices = { 0, 1, 2 };
+		IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices), data(Indices), CB, GraphicsQueue);
 
 		{
-			IndirectBuffers.push_back(IndirectBuffer());
 			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = static_cast<uint32_t>(size(Instances)), .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-			IndirectBuffers.back().Create(Device, PDMP, DIIC, CB, GraphicsQueue);
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC, CB, GraphicsQueue);
 		}
 	}
 	LOG_OK();

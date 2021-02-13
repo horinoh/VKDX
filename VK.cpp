@@ -2128,14 +2128,6 @@ void VK::CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMe
 		SubmitAndWait(Queue, CB);
 	}
 }
-void VK::CreateAndCopyToBuffer(VkBuffer* Buf, VkDeviceMemory* DM, const VkQueue Queue, const VkCommandBuffer CB, const VkBufferUsageFlagBits BUF, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source)
-{
-	//!< デバイスローカルバッファ、デバイスメモリを作成 (Create device local buffer, device memory)
-	CreateBufferMemory(Buf, DM, Device, GetCurrentPhysicalDeviceMemoryProperties(), BUF | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-	//!< ホストビジブルを作成しデータをコピー、バッファ間コピーコマンドによりデバイスローカルへ転送 (Create host visible and copy data, submit copy command to device local)
-	SubmitStagingCopy(*Buf, Queue, CB, AF, PSF, Size, Source);
-}
 #ifdef USE_RAYTRACING
 void VK::BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkQueue Queue, const VkCommandBuffer CB, const VkAccelerationStructureKHR AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs)
 {

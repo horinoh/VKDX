@@ -85,7 +85,7 @@ protected:
 		const auto Format = VK_FORMAT_R8G8B8A8_UINT;
 
 		{
-			Images.push_back(Image());
+			Images.emplace_back();
 			const auto Type = VK_IMAGE_TYPE_2D;
 			const VkExtent3D Extent3D = { 800, 600, 1 };
 			const auto Faces = 1;
@@ -97,7 +97,7 @@ protected:
 			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
-			ImageViews.push_back(VkImageView());
+			ImageViews.emplace_back();
 			const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
 			const VkImageSubresourceRange ISR = {
 				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,

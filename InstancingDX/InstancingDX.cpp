@@ -233,45 +233,30 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 void InstancingDX::CreateGeometry()
 {
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[0]);
+	const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 	{
-		VertexBuffers.push_back(VertexBuffer());
-		const std::array Vertices = {
+		constexpr std::array Vertices = {
 			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }),
 			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }),
 			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }),
 		};
-		CreateAndCopyToDefaultResource(VertexBuffers.back().Resource, CA, CL, sizeof(Vertices), data(Vertices));
-		VertexBuffers.back().View = { VertexBuffers.back().Resource->GetGPUVirtualAddress(), sizeof(Vertices), sizeof(Vertices[0]) };
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), data(Vertices), sizeof(Vertices[0]));
 	}
 	{
-		VertexBuffers.push_back(VertexBuffer());
-		const std::array Instances = {
+		constexpr std::array Instances = {
 			Instance_OffsetXY({ { -0.5f, -0.5f } }),
 			Instance_OffsetXY({ { -0.25f, -0.25f } }),
 			Instance_OffsetXY({ { 0.0f, 0.0f } }),
 			Instance_OffsetXY({ { 0.25f, 0.25f } }),
 			Instance_OffsetXY({ { 0.5f, 0.5f } }),
 		};
-		CreateAndCopyToDefaultResource(VertexBuffers.back().Resource, CA, CL, sizeof(Instances), data(Instances));
-		VertexBuffers.back().View = { .BufferLocation = VertexBuffers.back().Resource->GetGPUVirtualAddress(), .SizeInBytes = sizeof(Instances), .StrideInBytes = sizeof(Instances[0]) };
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Instances), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), data(Instances), sizeof(Instances[0]));
 
-		IndexBuffers.push_back(IndexBuffer());
-		const std::array<UINT32, 3> Indices = { 0, 1, 2 };
-		CreateAndCopyToDefaultResource(IndexBuffers.back().Resource, CA, CL, sizeof(Indices), data(Indices));
-		IndexBuffers.back().View = { .BufferLocation = IndexBuffers.back().Resource->GetGPUVirtualAddress(), .SizeInBytes = sizeof(Indices), .Format = DXGI_FORMAT_R32_UINT };
-
+		constexpr std::array<UINT32, 3> Indices = { 0, 1, 2 };
+		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), data(Indices), DXGI_FORMAT_R32_UINT);
 		{
-			IndirectBuffers.push_back(IndirectBuffer());
-			const D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = static_cast<UINT>(size(Instances)), .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-			CreateAndCopyToDefaultResource(IndirectBuffers.back().Resource, CA, CL, sizeof(DIA), &DIA);
-			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED }), };
-			const D3D12_COMMAND_SIGNATURE_DESC CSD = {
-				.ByteStride = sizeof(DIA),
-				.NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs),
-				.NodeMask = 0
-			};
-			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(IndirectBuffers.back().CommandSignature));
+			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = static_cast<UINT>(size(Instances)), .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DIA);
 		}
 	}
 

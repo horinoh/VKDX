@@ -422,8 +422,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
-		BundleGraphicsCommandLists.push_back(COM_PTR<ID3D12GraphicsCommandList>());
-		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleGraphicsCommandLists.back())));
+		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleGraphicsCommandLists.emplace_back())));
 		VERIFY_SUCCEEDED(BundleGraphicsCommandLists[i]->Close());
 	}
 	const auto Count = SCD.BufferCount;
@@ -441,7 +440,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		VERIFY_SUCCEEDED(BCL->Reset(BCA, PST));
 		{
 			//const std::array<D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VertexBuffers.back().View };
-			std::vector<D3D12_VERTEX_BUFFER_VIEW> VBVs; for (auto j : VertexBuffers) { VBVs.push_back(j.View); }
+			std::vector<D3D12_VERTEX_BUFFER_VIEW> VBVs; for (auto j : VertexBuffers) { VBVs.emplace_back(j.View); }
 			const auto IBV = IndexBuffers.back().View;
 			const auto IDBCS = COM_PTR_GET(IndirectBuffers.back().CommandSignature);
 			const auto IDBR = COM_PTR_GET(IndirectBuffers.back().Resource);

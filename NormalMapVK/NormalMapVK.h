@@ -127,7 +127,7 @@ protected:
 		Tr = Transform({ Projection, View, World, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), glm::vec4(10.0f, 0.0f, 0.0f, 0.0f) });
 #pragma region FRAME_OBJECT
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
-			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
 		}
 #pragma endregion
 	}
@@ -150,13 +150,13 @@ protected:
 			//!< [0] –@ü(Normal)
 			Images.emplace_back();
 			auto GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Normal.dds")));
-			ImageViews.push_back(VkImageView());
+			ImageViews.emplace_back();
 			CreateImageView(&ImageViews.back(), Images.back().Image, GLITexture);
 
 			//!< [1] ƒJƒ‰[(Color)
 			Images.emplace_back();
 			GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds")));
-			ImageViews.emplace_back(VkImageView());
+			ImageViews.emplace_back();
 			CreateImageView(&ImageViews.back(), Images.back().Image, GLITexture);
 #endif
 		}

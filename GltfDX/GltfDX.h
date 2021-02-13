@@ -216,8 +216,7 @@ protected:
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		PV.View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
 
-		ConstantBuffers.emplace_back(ConstantBuffer());
-		CreateBufferResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(PV)), D3D12_HEAP_TYPE_UPLOAD);
+		ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(PV));
 	}
 	virtual void CreateDescriptorHeap() override {
 		{

@@ -169,7 +169,13 @@ public:
 			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
 		}
 	};
-	using ConstantBuffer = BufferResource;
+	class ConstantBuffer : public BufferResource
+	{
+	public:
+		void Create(ID3D12Device* Device, const size_t Size, const void* Source = nullptr) {
+			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, RoundUp256(Size), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
+		}
+	};
 
 #ifdef USE_RAYTRACING
 	class AccelerationStructureBuffer : public BufferResource
@@ -241,26 +247,6 @@ protected:
 	virtual void PopulateCommandList_CopyTextureRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
 	
 	static void ExecuteAndWait(ID3D12CommandQueue* CQ, ID3D12CommandList* CL, ID3D12Fence* Fence);
-
-	virtual void CreateAndCopyToUploadResource(COM_PTR<ID3D12Resource>& Res, const size_t Size, const void* Source) {
-		CreateBufferResource(COM_PTR_PUT(Res), Size, D3D12_HEAP_TYPE_UPLOAD);
-		CopyToUploadResource(COM_PTR_GET(Res), Size, Source);
-	}
-	virtual void CreateAndCopyToDefaultResource(COM_PTR<ID3D12Resource>& Res, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* CL, const size_t Size, const void* Source) {
-		//!< デフォルトのリソースを作成 (Create default resource)
-		CreateBufferResource(COM_PTR_PUT(Res), Size, D3D12_HEAP_TYPE_DEFAULT);
-		
-		//!< アップロード用のリソースを作成 (Create resource for upload)
-		COM_PTR<ID3D12Resource> UploadRes;
-		CreateAndCopyToUploadResource(UploadRes, Size, Source);
-	
-		//!< アップロードリソースからデフォルトリソースへのコピーコマンドを発行 (Execute copy buffer command upload resource to default resource)
-		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
-			PopulateCommandList_CopyBufferRegion(CL, COM_PTR_GET(UploadRes), COM_PTR_GET(Res), Size, D3D12_RESOURCE_STATE_GENERIC_READ);
-		} VERIFY_SUCCEEDED(CL->Close());
-
-		ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
-	}
 
 #if defined(_DEBUG) || defined(USE_PIX)
 	//!< #DX_TODO PIX 関連

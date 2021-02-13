@@ -87,7 +87,7 @@ protected:
 				PopulateCommandList_CopyTextureRegion(CL, COM_PTR_GET(UploadResource), COM_PTR_GET(ImageResources[0]), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			} VERIFY_SUCCEEDED(CL->Close());
 
-			ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL));
+			ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
 		}
 	}
 	virtual void UpdateDistortionImage() override {
@@ -124,7 +124,7 @@ protected:
 				PopulateCommandList_CopyTextureRegion(CL, COM_PTR_GET(UploadResource), COM_PTR_GET(ImageResources[1]), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			} VERIFY_SUCCEEDED(CL->Close());
 
-			ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL));
+			ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
 		}
 	}
 #endif
@@ -138,8 +138,7 @@ protected:
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
-			ConstantBuffers.emplace_back(ConstantBuffer());
-			CreateBufferResource(COM_PTR_PUT(ConstantBuffers.back().Resource), RoundUp256(sizeof(Tracking)), D3D12_HEAP_TYPE_UPLOAD);
+			ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tracking));
 		}
 	}
 #pragma endregion
@@ -270,8 +269,7 @@ protected:
 			},
 			D3D12_ROOT_SIGNATURE_FLAG_NONE | SHADER_ROOT_ACCESS_PS);
 #endif
-		RootSignatures.emplace_back(COM_PTR<ID3D12RootSignature>());
-		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.back())));
+		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		LOG_OK();
 	}
 
@@ -285,14 +283,13 @@ protected:
 			DXGI_SWAP_CHAIN_DESC1 SCD;
 			SwapChain->GetDesc1(&SCD);
 #pragma endregion
-			CbvSrvUavDescriptorHeaps.emplace_back(COM_PTR<ID3D12DescriptorHeap>());
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { 
 				.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
 #pragma region SECOND_TEXTURE, CB
 				.NumDescriptors = 2 + SCD.BufferCount,
 #pragma endregion
 				.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 		}
 	}
 	virtual void CreateDescriptorView() override {
