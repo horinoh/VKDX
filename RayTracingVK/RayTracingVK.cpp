@@ -378,7 +378,6 @@ void RayTracingVK::CreatePipeline()
     const auto PLL = PipelineLayouts.back();
     
 	//!< 0:RayGen, 1:ClosestHit, 2:Miss, 
-    //!< #VK_TODO .moudle‚ðƒZƒbƒg‚·‚é
     const std::array PSSCIs = {
 		VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .module = ShaderModules[0], .pName = "main", .pSpecializationInfo = nullptr }),
 		VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .module = ShaderModules[1], .pName = "main", .pSpecializationInfo = nullptr }),

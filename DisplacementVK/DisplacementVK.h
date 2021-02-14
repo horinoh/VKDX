@@ -34,8 +34,8 @@ protected:
 		}
 	}
 	virtual void CreateRenderPass() override { 
-		const std::array ColorAttach = { VkAttachmentReference({ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
-		const VkAttachmentReference DepthAttach = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+		constexpr std::array ColorAttach = { VkAttachmentReference({ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
+		constexpr VkAttachmentReference DepthAttach = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 		VK::CreateRenderPass(RenderPasses.emplace_back(), {
 				VkAttachmentDescription({
 					.flags = 0,
@@ -67,7 +67,7 @@ protected:
 			});
 	}
 	virtual void CreateImmutableSampler() override {
-		const VkSamplerCreateInfo SCI = {
+		constexpr VkSamplerCreateInfo SCI = {
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
@@ -85,22 +85,22 @@ protected:
 	virtual void CreatePipelineLayout() override {
 		const std::array ISs = { Samplers[0] };
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
-				VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }), //!< UniformBuffer
-				VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, .pImmutableSamplers = data(ISs) }), //!< Sampler + Image0
-				VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }), //!< Sampler + Image1
+			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }), //!< UniformBuffer
+			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, .pImmutableSamplers = data(ISs) }), //!< Sampler + Image0
+			VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }), //!< Sampler + Image1
 		});
 
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 	virtual void CreateUniformBuffer() override {
 		//const auto Fov = 0.16f * glm::pi<float>();
-		const auto Fov = 0.16f * std::numbers::pi_v<float>;
+		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
 		const auto Aspect = GetAspectRatioOfClientRect();
-		const auto ZFar = 100.0f;
-		const auto ZNear = ZFar * 0.0001f;
-		const auto CamPos = glm::vec3(0.0f, 1.0f, 3.0f);
-		const auto CamTag = glm::vec3(0.0f);
-		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
+		constexpr auto ZFar = 100.0f;
+		constexpr auto ZNear = ZFar * 0.0001f;
+		constexpr auto CamPos = glm::vec3(0.0f, 1.0f, 3.0f);
+		constexpr auto CamTag = glm::vec3(0.0f);
+		constexpr auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		Tr = Transform({ .Projection = glm::perspective(Fov, Aspect, ZNear, ZFar), .View = glm::lookAt(CamPos, CamTag, CamUp), .World = glm::mat4(1.0f) });
 #pragma region FRAME_OBJECT
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
@@ -114,27 +114,24 @@ protected:
 			//!< [0] ディスプレースメント(Displacement)
 			Images.emplace_back();
 			auto GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Displacement.dds")));
-			ImageViews.emplace_back(VkImageView());
-			CreateImageView(&ImageViews.back(), Images.back().Image, GLITexture);
+			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, GLITexture);
 
 			//!< [1] カラー(Color)
 			Images.emplace_back();
 			GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds")));
-			ImageViews.emplace_back(VkImageView());
-			CreateImageView(&ImageViews.back(), Images.back().Image, GLITexture);
+			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, GLITexture);
 		}
 		//!< [2] 深度(Depth)
 		{
 			Images.emplace_back();
 			const VkExtent3D Extent = { .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 };
-			const VkComponentMapping CompMap = { .r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A };
+			constexpr VkComponentMapping CompMap = { .r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A };
 			VK::CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
 			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
-			ImageViews.emplace_back();
-			VK::CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }));
+			VK::CreateImageView(&ImageViews.emplace_back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }));
 		}
 	}
 	virtual void CreateDescriptorSet() override {

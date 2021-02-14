@@ -110,108 +110,108 @@ protected:
 	virtual void CreateRenderPass() override {
 		//!< Pass0 : レンダーパス
 		{
-			const std::array<VkAttachmentReference, 4> ColorAttach = { {
+			constexpr std::array ColorAttach = {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
-				{ 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, 
+				VkAttachmentReference({ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }),
 #pragma region MRT 
 				//!< レンダーターゲット : 法線(RenderTarget : Normal)
-				{ 1, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, 
+				VkAttachmentReference({ .attachment = 1, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }),
 				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				{ 2, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, 
+				VkAttachmentReference({ .attachment = 2, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }),
 				//!< レンダーターゲット : 未定
-				{ 3, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL },
+				VkAttachmentReference({ .attachment = 3, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }),
 #pragma endregion
-			} };
+			};
 			const VkAttachmentReference DepthAttach = { static_cast<uint32_t>(size(ColorAttach)), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 			VK::CreateRenderPass(RenderPasses.emplace_back(), {
-					//!< アタッチメント(Attachment)
-					//!< レンダーターゲット : カラー(RenderTarget : Color)
-					{
-						0,
-						ColorFormat,
-						VK_SAMPLE_COUNT_1_BIT,
-						VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-						VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-						VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-					},
+				//!< アタッチメント(Attachment)
+				//!< レンダーターゲット : カラー(RenderTarget : Color)
+				VkAttachmentDescription({
+					.flags = 0,
+					.format = ColorFormat,
+					.samples = VK_SAMPLE_COUNT_1_BIT,
+					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+				}),
 #pragma region MRT 
-					//!< レンダーターゲット : 法線(RenderTarget : Normal)
-					{
-						0,
-						VK_FORMAT_A2B10G10R10_UNORM_PACK32, 
-						VK_SAMPLE_COUNT_1_BIT,
-						VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-						VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-						VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-					},
-					//!< レンダーターゲット : 深度(RenderTarget : Depth)
-					{
-						0,
-						VK_FORMAT_R32_SFLOAT,
-						VK_SAMPLE_COUNT_1_BIT,
-						VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-						VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-						VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-					},
-					//!< レンダーターゲット : 未定
-					{
-						0,
-						VK_FORMAT_B8G8R8A8_UNORM,
-						VK_SAMPLE_COUNT_1_BIT,
-						VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-						VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-						VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-					},
+				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				VkAttachmentDescription({
+					.flags = 0,
+					.format = VK_FORMAT_A2B10G10R10_UNORM_PACK32,
+					.samples = VK_SAMPLE_COUNT_1_BIT,
+					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+				}),
+				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				VkAttachmentDescription({
+					.flags = 0,
+					.format = VK_FORMAT_R32_SFLOAT,
+					.samples = VK_SAMPLE_COUNT_1_BIT,
+					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+				}),
+				//!< レンダーターゲット : 未定
+				VkAttachmentDescription({
+					.flags = 0,
+					.format = VK_FORMAT_B8G8R8A8_UNORM,
+					.samples = VK_SAMPLE_COUNT_1_BIT,
+					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+				}),
 #pragma endregion
-					//!< 深度バッファ(Depth Buffer)
-					{
-						0,
-						DepthFormat,
-						VK_SAMPLE_COUNT_1_BIT,
-						VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-						VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-						VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-					},
-				}, {
-					//!< サブパス(SubPass)
-					{
-						0,
-						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						0, nullptr,
-						static_cast<uint32_t>(size(ColorAttach)), data(ColorAttach), nullptr,
-						&DepthAttach,
-						0, nullptr
-					},
-				}, {
-					//!< サブパス依存
-				});
+				//!< 深度バッファ(Depth Buffer)
+				VkAttachmentDescription({
+					.flags = 0,
+					.format = DepthFormat,
+					.samples = VK_SAMPLE_COUNT_1_BIT,
+					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+				}),
+			}, {
+				//!< サブパス(SubPass)
+				VkSubpassDescription({
+					.flags = 0,
+					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+					.inputAttachmentCount = 0, .pInputAttachments = nullptr,
+					.colorAttachmentCount = static_cast<uint32_t>(size(ColorAttach)), .pColorAttachments = data(ColorAttach), .pResolveAttachments = nullptr,
+					.pDepthStencilAttachment = &DepthAttach,
+					.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
+				}),
+			}, {
+				//!< サブパス依存
+			});
 		}
 		//!< Pass1 : レンダーパス
 		{
-			const std::array<VkAttachmentReference, 1> ColorAttach = { { { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }, } };
+			constexpr std::array ColorAttach = { VkAttachmentReference({ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
 			VK::CreateRenderPass(RenderPasses.emplace_back(), {
 				//!< アタッチメント
-				{
-					0,
-					ColorFormat,
-					VK_SAMPLE_COUNT_1_BIT,
-					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
-					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-				},
-				}, {
-					//!< サブパス
-					{
-						0,
-						VK_PIPELINE_BIND_POINT_GRAPHICS,
-						0, nullptr,
-						static_cast<uint32_t>(size(ColorAttach)), data(ColorAttach), nullptr,
-						nullptr,
-						0, nullptr
-					},
-				}, {
-					//!< サブパス依存
-				});
+				VkAttachmentDescription({
+					.flags = 0,
+					.format = ColorFormat,
+					.samples = VK_SAMPLE_COUNT_1_BIT,
+					.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+				}),
+			}, {
+				//!< サブパス
+				VkSubpassDescription({
+					.flags = 0,
+					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+					.inputAttachmentCount = 0, .pInputAttachments = nullptr,
+					.colorAttachmentCount = static_cast<uint32_t>(size(ColorAttach)), .pColorAttachments = data(ColorAttach), .pResolveAttachments = nullptr,
+					.pDepthStencilAttachment = nullptr,
+					.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
+				}),
+			}, {
+				//!< サブパス依存
+			});
 		}
 	}
 	virtual void CreateGeometry() override {
@@ -295,11 +295,11 @@ protected:
 		//!< Pass0,1 : デスクリプタプール
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
-			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, static_cast<uint32_t>(size(SwapchainImages)) * 2 }, //!< UB * N * 2
+			VkDescriptorPoolSize({ .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) * 2 }), //!< UB * N * 2
 #pragma endregion
 #pragma region MRT 
 			//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
-			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 }, //!< CIS * 4
+			VkDescriptorPoolSize({ .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 4 }), //!< CIS * 4
 #pragma endregion
 		});
 
@@ -307,10 +307,10 @@ protected:
 		{
 			const std::array DSLs = { DescriptorSetLayouts[0] };
 			const VkDescriptorSetAllocateInfo DSAI = {
-				VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-				nullptr,
-				DescriptorPools[0],
-				static_cast<uint32_t>(size(DSLs)), data(DSLs)
+				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+				.pNext = nullptr,
+				.descriptorPool = DescriptorPools[0],
+				.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 			};
 #pragma region FRAME_OBJECT
 			for (size_t i = 0; i < size(SwapchainImages); ++i) {
@@ -322,10 +322,10 @@ protected:
 		{
 			const std::array DSLs = { DescriptorSetLayouts[1] };
 			const VkDescriptorSetAllocateInfo DSAI = {
-				VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-				nullptr,
-				DescriptorPools[0],
-				static_cast<uint32_t>(size(DSLs)), data(DSLs)
+				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+				.pNext = nullptr,
+				.descriptorPool = DescriptorPools[0],
+				.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
 			};
 #pragma region FRAME_OBJECT
 			for (size_t i = 0; i < size(SwapchainImages); ++i) {
@@ -396,11 +396,11 @@ protected:
 		const auto SCCount = size(SwapchainImages);
 		//!< Pass0 :
 		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
-			{
+			VkDescriptorUpdateTemplateEntry({
 				0, 0,
 				_countof(DescriptorUpdateInfo_0::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				offsetof(DescriptorUpdateInfo_0, DBI), sizeof(DescriptorUpdateInfo_0)
-			},
+			}),
 		}, DescriptorSetLayouts[0]);
 		for (size_t i = 0; i < SCCount; ++i) {
 			const DescriptorUpdateInfo_0 DUI = {
@@ -412,36 +412,36 @@ protected:
 		//!< Pass1 :
 		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
 			//!< レンダーターゲット : カラー(RenderTarget : Color)
-			{
-				0, 0,
-				_countof(DescriptorUpdateInfo_1::DII), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				offsetof(DescriptorUpdateInfo_1, DII), sizeof(DescriptorUpdateInfo_1)
-			},
+			VkDescriptorUpdateTemplateEntry({
+				.dstBinding = 0, .dstArrayElement = 0,
+				.descriptorCount = _countof(DescriptorUpdateInfo_1::DII), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.offset = offsetof(DescriptorUpdateInfo_1, DII), .stride = sizeof(DescriptorUpdateInfo_1)
+			}),
 #pragma region MRT 
 			//!< レンダーターゲット : 法線(RenderTarget : Normal)
-			{
-				1, 0,
-				_countof(DescriptorUpdateInfo_1::DII1), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				offsetof(DescriptorUpdateInfo_1, DII1), sizeof(DescriptorUpdateInfo_1)
-			},
+			VkDescriptorUpdateTemplateEntry({
+				.dstBinding = 1, .dstArrayElement = 0,
+				.descriptorCount = _countof(DescriptorUpdateInfo_1::DII1), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.offset = offsetof(DescriptorUpdateInfo_1, DII1), .stride = sizeof(DescriptorUpdateInfo_1)
+			}),
 			//!< レンダーターゲット : 深度(RenderTarget : Depth)
-			{
-				2, 0,
-				_countof(DescriptorUpdateInfo_1::DII2), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				offsetof(DescriptorUpdateInfo_1, DII2), sizeof(DescriptorUpdateInfo_1)
-			},
+			VkDescriptorUpdateTemplateEntry({
+				.dstBinding = 2, .dstArrayElement = 0,
+				.descriptorCount = _countof(DescriptorUpdateInfo_1::DII2), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.offset = offsetof(DescriptorUpdateInfo_1, DII2), .stride = sizeof(DescriptorUpdateInfo_1)
+			}),
 			//!< レンダーターゲット : 未定
-			{
-				3, 0,
-				_countof(DescriptorUpdateInfo_1::DII3), VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				offsetof(DescriptorUpdateInfo_1, DII3), sizeof(DescriptorUpdateInfo_1)
-			},
+			VkDescriptorUpdateTemplateEntry({
+				.dstBinding = 3, .dstArrayElement = 0,
+				.descriptorCount = _countof(DescriptorUpdateInfo_1::DII3), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.offset = offsetof(DescriptorUpdateInfo_1, DII3), .stride = sizeof(DescriptorUpdateInfo_1)
+			}),
 #pragma endregion
-			{
-				4, 0,
-				_countof(DescriptorUpdateInfo_1::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				offsetof(DescriptorUpdateInfo_1, DBI), sizeof(DescriptorUpdateInfo_1)
-			},
+			VkDescriptorUpdateTemplateEntry({
+				.dstBinding = 4, .dstArrayElement = 0,
+				.descriptorCount = _countof(DescriptorUpdateInfo_1::DBI), .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				.offset = offsetof(DescriptorUpdateInfo_1, DBI), .stride = sizeof(DescriptorUpdateInfo_1)
+			}),
 		}, DescriptorSetLayouts[1]);
 		for (size_t i = 0; i < SCCount; ++i) {
 			const DescriptorUpdateInfo_1 DUI = {
@@ -463,100 +463,95 @@ protected:
 	}
 
 	virtual void CreateTexture() override {
-		const VkExtent3D Extent = { SurfaceExtent2D.width, SurfaceExtent2D.height, 1 };
-		const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+		const VkExtent3D Extent = { .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 };
+		const VkComponentMapping CM = { .r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A };
+		const VkImageSubresourceRange ISR = { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 };
 		//!< レンダーターゲット : カラー(RenderTarget : Color)
 		{
-			Images.push_back(Image());
+			Images.emplace_back();
 			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, ColorFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
 			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
-			ImageViews.push_back(VkImageView());
-			CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, ColorFormat, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, ColorFormat, CM, ISR);
 		}
 #pragma region MRT 
 		//!< レンダーターゲット : 法線(RenderTarget : Normal)
 		{
 			const auto Format = VK_FORMAT_A2B10G10R10_UNORM_PACK32;
-			Images.push_back(Image());
+			Images.emplace_back();
 			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
 			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
-			ImageViews.push_back(VkImageView());
-			CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, Format, CM, ISR);
 		}
 		//!< レンダーターゲット : 深度(RenderTarget : Depth)
 		{
 			const auto Format = VK_FORMAT_R32_SFLOAT;
-			Images.push_back(Image());
+			Images.emplace_back();
 			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
 			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
-			ImageViews.push_back(VkImageView());
-			CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, Format, CM, ISR);
 		}
 		//!< レンダーターゲット : 未定
 		{
 			const auto Format = VK_FORMAT_B8G8R8A8_UNORM;
-			Images.push_back(Image());
+			Images.emplace_back();
 			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
 			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
-			ImageViews.push_back(VkImageView());
-			CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 });
+			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, Format, CM, ISR);
 		}
 #pragma endregion
 		//!< 深度バッファ(Depth Buffer)
 		{
-			Images.push_back(Image());
+			Images.emplace_back();
 			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT/* | VK_IMAGE_USAGE_SAMPLED_BIT*/);
 
 			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
-			ImageViews.push_back(VkImageView());
-			CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, { VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, 0, 1, 0, 1 });
+			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CM, VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }));
 		}
 	}
 	virtual void CreateImmutableSampler() override {
 		//!< Pass1 : イミュータブルサンプラ
-		Samplers.resize(1);
 		const VkSamplerCreateInfo SCI = {
-			VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-			nullptr,
-			0,
-			VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR,
-			VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT, VK_SAMPLER_ADDRESS_MODE_REPEAT,
-			0.0f,
-			VK_FALSE, 1.0f,
-			VK_FALSE, VK_COMPARE_OP_NEVER,
-			0.0f, 1.0f,
-			VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
-			VK_FALSE
+			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = 0,
+			.magFilter = VK_FILTER_LINEAR, .minFilter = VK_FILTER_LINEAR, .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+			.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
+			.mipLodBias = 0.0f,
+			.anisotropyEnable = VK_FALSE, .maxAnisotropy = 1.0f,
+			.compareEnable = VK_FALSE, .compareOp = VK_COMPARE_OP_NEVER,
+			.minLod = 0.0f, .maxLod = 1.0f,
+			.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+			.unnormalizedCoordinates = VK_FALSE
 		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers[0]));
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.emplace_back()));
 	}
 	virtual void CreateUniformBuffer() override {
 		{
 			//const auto Fov = 0.16f * glm::pi<float>();
-			const auto Fov = 0.16f * std::numbers::pi_v<float>;
+			constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
 			const auto Aspect = GetAspectRatioOfClientRect();
-			const auto ZFar = 4.0f;
-			const auto ZNear = 2.0f;
-			const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
-			const auto CamTag = glm::vec3(0.0f);
-			const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
+			constexpr auto ZFar = 4.0f;
+			constexpr auto ZNear = 2.0f;
+			constexpr auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
+			constexpr auto CamTag = glm::vec3(0.0f);
+			constexpr auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 			const auto Projection = glm::perspective(Fov, Aspect, ZNear, ZFar);
 			const auto View = glm::lookAt(CamPos, CamTag, CamUp);
-			const auto World = glm::mat4(1.0f);
+			constexpr auto World = glm::mat4(1.0f);
 
 			const auto ViewProjection = Projection * View;
 			const auto InverseViewProjection = glm::inverse(ViewProjection);
@@ -564,8 +559,7 @@ protected:
 			Tr = Transform({ Projection, View, World, InverseViewProjection });
 
 #pragma region FRAME_OBJECT
-			const auto SCCount = size(SwapchainImages);
-			for (size_t i = 0; i < SCCount; ++i) {
+			for (size_t i = 0; i < size(SwapchainImages); ++i) {
 				UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
 			}
 #pragma endregion
@@ -592,95 +586,99 @@ protected:
 		Pipelines.resize(2);
 		std::vector<std::thread> Threads;
 		const VkPipelineRasterizationStateCreateInfo PRSCI = {
-			VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_FALSE,
-			VK_FALSE,
-			VK_POLYGON_MODE_FILL,
-			VK_CULL_MODE_BACK_BIT,
-			VK_FRONT_FACE_COUNTER_CLOCKWISE,
-			VK_FALSE, 0.0f, 0.0f, 0.0f,
-			1.0f
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = 0,
+			.depthClampEnable = VK_FALSE,
+			.rasterizerDiscardEnable = VK_FALSE,
+			.polygonMode = VK_POLYGON_MODE_FILL,
+			.cullMode = VK_CULL_MODE_BACK_BIT,
+			.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+			.depthBiasEnable = VK_FALSE, .depthBiasConstantFactor = 0.0f, .depthBiasClamp = 0.0f, .depthBiasSlopeFactor = 0.0f,
+			.lineWidth = 1.0f
 		};
 		const VkPipelineDepthStencilStateCreateInfo PDSSCI_0 = {
-			VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_TRUE, VK_TRUE, VK_COMPARE_OP_LESS_OR_EQUAL,
-			VK_FALSE,
-			VK_FALSE, { VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_NEVER, 0, 0, 0 }, { VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
-			0.0f, 1.0f
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = 0,
+			.depthTestEnable = VK_TRUE, .depthWriteEnable = VK_TRUE, .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
+			.depthBoundsTestEnable = VK_FALSE,
+			.stencilTestEnable = VK_FALSE, 
+			.front = VkStencilOpState({ .failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP, .compareOp = VK_COMPARE_OP_NEVER, .compareMask = 0, .writeMask = 0, .reference = 0 }),
+			.back = VkStencilOpState({ .failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP, .compareOp = VK_COMPARE_OP_ALWAYS, .compareMask = 0, .writeMask = 0, .reference = 0 }),
+			.minDepthBounds = 0.0f, .maxDepthBounds = 1.0f
 		};
 		const VkPipelineDepthStencilStateCreateInfo PDSSCI_1 = {
-			VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-			nullptr,
-			0,
-			VK_FALSE, VK_FALSE, VK_COMPARE_OP_LESS_OR_EQUAL,
-			VK_FALSE,
-			VK_FALSE, { VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_NEVER, 0, 0, 0 }, { VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_STENCIL_OP_KEEP, VK_COMPARE_OP_ALWAYS, 0, 0, 0 },
-			0.0f, 1.0f
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = 0,
+			.depthTestEnable = VK_FALSE, .depthWriteEnable = VK_FALSE, .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
+			.depthBoundsTestEnable = VK_FALSE,
+			.stencilTestEnable = VK_FALSE, 
+			.front = VkStencilOpState({ .failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP, .compareOp = VK_COMPARE_OP_NEVER, .compareMask = 0, .writeMask = 0, .reference = 0 }),
+			.back = VkStencilOpState({ .failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP, .compareOp = VK_COMPARE_OP_ALWAYS, .compareMask = 0, .writeMask = 0, .reference = 0 }),
+			.minDepthBounds = 0.0f, .maxDepthBounds = 1.0f
 		};
-		const std::array<VkPipelineShaderStageCreateInfo, 5> PSSCIs_0 = {
-			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[0], "main", nullptr }),
-			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[1], "main", nullptr }),
-			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, ShaderModules[2], "main", nullptr }),
-			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, ShaderModules[3], "main", nullptr }),
-			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_GEOMETRY_BIT, ShaderModules[4], "main", nullptr }),
+		const std::array PSSCIs_0 = {
+			VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = ShaderModules[0], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = ShaderModules[1], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, .module = ShaderModules[2], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, .module = ShaderModules[3], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_GEOMETRY_BIT, .module = ShaderModules[4], .pName = "main", .pSpecializationInfo = nullptr }),
 		};
 #ifdef USE_GBUFFER_VISUALIZE
-		const std::array<VkPipelineShaderStageCreateInfo, 3> PSSCIs_1 = {
-			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[5], "main", nullptr }),
-			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[6], "main", nullptr }),
-			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_GEOMETRY_BIT, ShaderModules[7], "main", nullptr }),
+		const std::array PSSCIs_1 = {
+			VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = ShaderModules[5], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = ShaderModules[6], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_GEOMETRY_BIT, .module = ShaderModules[7], .pName = "main", .pSpecializationInfo = nullptr }),
 		};
 #else
-		const std::array<VkPipelineShaderStageCreateInfo, 2> PSSCIs_1 = {
-			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_VERTEX_BIT, ShaderModules[5], "main", nullptr }),
-			VkPipelineShaderStageCreateInfo({ VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, nullptr, 0, VK_SHADER_STAGE_FRAGMENT_BIT, ShaderModules[6], "main", nullptr }),
+		const std::array PSSCIs_1 = {
+			VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = ShaderModules[5], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = ShaderModules[6], .pName = "main", .pSpecializationInfo = nullptr }),
 		};
 #endif
 		const std::vector<VkVertexInputBindingDescription> VIBDs = {};
 		const std::vector<VkVertexInputAttributeDescription> VIADs = {};
-		const std::vector<VkPipelineColorBlendAttachmentState> PCBASs_0 = {
+		const std::vector PCBASs_0 = {
 			//!< レンダーターゲット : カラー(RenderTarget : Color)
-			{ 
-				VK_FALSE, 
-				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD, 
-				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-				VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-			},
+			VkPipelineColorBlendAttachmentState({
+				.blendEnable = VK_FALSE,
+				.srcColorBlendFactor = VK_BLEND_FACTOR_ONE, .dstColorBlendFactor = VK_BLEND_FACTOR_ONE, .colorBlendOp = VK_BLEND_OP_ADD,
+				.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .alphaBlendOp = VK_BLEND_OP_ADD,
+				.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+			}),
 #pragma region MRT 
 			//!< レンダーターゲット : 法線(RenderTarget : Normal)
-			{
-				VK_FALSE, 
-				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-				VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-			},
+			VkPipelineColorBlendAttachmentState({
+				.blendEnable = VK_FALSE,
+				.srcColorBlendFactor = VK_BLEND_FACTOR_ONE, .dstColorBlendFactor = VK_BLEND_FACTOR_ONE, .colorBlendOp = VK_BLEND_OP_ADD,
+				.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .alphaBlendOp = VK_BLEND_OP_ADD,
+				.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+			}),
 			//!< レンダーターゲット : 深度(RenderTarget : Depth)
-			{
-				VK_FALSE,
-				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-				VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-			},
+			VkPipelineColorBlendAttachmentState({
+				.blendEnable = VK_FALSE,
+				.srcColorBlendFactor = VK_BLEND_FACTOR_ONE, .dstColorBlendFactor = VK_BLEND_FACTOR_ONE, .colorBlendOp = VK_BLEND_OP_ADD,
+				.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .alphaBlendOp = VK_BLEND_OP_ADD,
+				.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+			}),
 			//!< レンダーターゲット : 未定
-			{
-				VK_FALSE, 
-				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-				VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-			},
+			VkPipelineColorBlendAttachmentState({
+				.blendEnable = VK_FALSE,
+				.srcColorBlendFactor = VK_BLEND_FACTOR_ONE, .dstColorBlendFactor = VK_BLEND_FACTOR_ONE, .colorBlendOp = VK_BLEND_OP_ADD,
+				.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .alphaBlendOp = VK_BLEND_OP_ADD,
+				.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+			}),
 #pragma endregion
 		};
-		const std::vector<VkPipelineColorBlendAttachmentState> PCBASs_1 = {
-			{
-				VK_FALSE, 
-				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-				VK_BLEND_FACTOR_ONE, VK_BLEND_FACTOR_ONE, VK_BLEND_OP_ADD,
-				VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
-			},
+		const std::vector PCBASs_1 = {
+			VkPipelineColorBlendAttachmentState({
+				.blendEnable = VK_FALSE,
+				.srcColorBlendFactor = VK_BLEND_FACTOR_ONE, .dstColorBlendFactor = VK_BLEND_FACTOR_ONE, .colorBlendOp = VK_BLEND_OP_ADD,
+				.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .alphaBlendOp = VK_BLEND_OP_ADD,
+				. colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
+			}),
 		};
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 2);

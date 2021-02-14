@@ -286,19 +286,7 @@ void RayTracingDX::CreateGeometry()
 		//!< AS作成 (Create AS)
 		BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
         //!< ASビルド (Build AS)
-#if 0
-        ScratchBuffer SB;
-		SB.Create(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes);
-        const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
-            .DestAccelerationStructureData = COM_PTR_GET(BLASs.back().Resource)->GetGPUVirtualAddress(),
-	        .Inputs = BRASI,
-	        .SourceAccelerationStructureData = 0,
-	        .ScratchAccelerationStructureData = COM_PTR_GET(SB.Resource)->GetGPUVirtualAddress()
-        };
-		GCL4->BuildRaytracingAccelerationStructure(&BRASD, 0, nullptr);
-#else
 		BuildAccelerationStructure(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, COM_PTR_GET(BLASs.back().Resource)->GetGPUVirtualAddress(), BRASI, GCL, CA, CQ, F);
-#endif
     }
 #pragma endregion
 
@@ -334,19 +322,7 @@ void RayTracingDX::CreateGeometry()
 		//!< AS作成 (Create AS)
 		TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
 		//!< ASビルド (Build AS)
-#if 0
-	    ScratchBuffer SB;
-		SB.Create(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes);
-		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
-			.DestAccelerationStructureData = COM_PTR_GET(TLASs.back().Resource)->GetGPUVirtualAddress(),
-			.Inputs = BRASI,
-			.SourceAccelerationStructureData = 0,
-			.ScratchAccelerationStructureData = COM_PTR_GET(SB.Resource)->GetGPUVirtualAddress()
-		};
-		GCL4->BuildRaytracingAccelerationStructure(&BRASD, 0, nullptr);
-#else
 		BuildAccelerationStructure(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, COM_PTR_GET(TLASs.back().Resource)->GetGPUVirtualAddress(), BRASI, GCL, CA, CQ, F);
-#endif
     }
 #pragma endregion
 }
@@ -395,6 +371,7 @@ void RayTracingDX::CreatePipelineState()
 	//std::array<LPCWSTR, 0> Exports = { /*TEXT("MyRayGen")*/ };
 	//const D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION STEA = { .pSubobjectToAssociate = &LRS, .NumExports = static_cast<UINT>(size(Exports)), .pExports = data(Exports) };
 
+    //!< ライブラリ
     std::array EDs = { 
 		D3D12_EXPORT_DESC({.Name = TEXT("MyRayGen"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }),
 		D3D12_EXPORT_DESC({.Name = TEXT("MyClosestHit"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }),
@@ -405,13 +382,14 @@ void RayTracingDX::CreatePipelineState()
         .NumExports = static_cast<UINT>(size(EDs)), .pExports = data(EDs) 
     };
 
-    //!< ここでは D3D12_HIT_GROUP_TYPE_TRIANGLES なので、ClosestHitShaderImport のみセットする
+    //!< ヒットグループ ここでは D3D12_HIT_GROUP_TYPE_TRIANGLES なので、ClosestHitShaderImport のみセットする
     const D3D12_HIT_GROUP_DESC HGD = {
         .HitGroupExport = TEXT("MyHitGroup"),
         .Type = D3D12_HIT_GROUP_TYPE_TRIANGLES,
 	    .AnyHitShaderImport = nullptr, .ClosestHitShaderImport = TEXT("MyClosestHit"), .IntersectionShaderImport = nullptr
     };
 
+    //!< #DX_TODO
     const D3D12_RAYTRACING_SHADER_CONFIG RSC = {
 	    .MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT4),
 	    .MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2)
@@ -433,7 +411,22 @@ void RayTracingDX::CreatePipelineState()
         .Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE,
 	    .NumSubobjects = static_cast<UINT>(size(SSs)), .pSubobjects = data(SSs)
     };
-    COM_PTR<ID3D12StateObject> StateObject;
+    COM_PTR<ID3D12StateObject> StateObject; //#DX_TODO メンバにする
     VERIFY_SUCCEEDED(Device5->CreateStateObject(&SOD, COM_PTR_UUIDOF_PUTVOID(StateObject)));
+
+#pragma region SHADER_TABLE
+	COM_PTR<ID3D12StateObjectProperties> SOP;
+	VERIFY_SUCCEEDED(StateObject->QueryInterface(COM_PTR_UUIDOF_PUTVOID(SOP)));
+
+	const auto SI_RayGen = SOP->GetShaderIdentifier(TEXT("MyRayGen"));
+	const auto SI_Miss = SOP->GetShaderIdentifier(TEXT("MyMiss"));
+	const auto SI_HitGroup = SOP->GetShaderIdentifier(TEXT("MyHitGroup"));
+
+	BufferResource ST; //#DX_TODO メンバにする
+	//#DX_TODO
+    D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+    D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT;
+	ST.Create(COM_PTR_GET(Device), 0, D3D12_HEAP_TYPE_UPLOAD, nullptr);
+#pragma endregion
 }
 #endif
