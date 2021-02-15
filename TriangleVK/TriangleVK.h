@@ -18,7 +18,7 @@ protected:
 	virtual void CreatePipelineLayout() override {
 		//CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {});
 
-		//!< プッシュコンスタント : デスクリプタセットよりも高速
+		//!< 【プッシュコンスタント】 : デスクリプタセットよりも高速
 		//!< パイプラインレイアウト全体で128byte (ハードによりこれ以上使える場合もある、GTX970Mの場合は256byteだった)
 		//!< 各シェーダステージは1つのプッシュコンスタントレンジにしかアクセスできない
 		//!< 各シェーダステージが「共通のレンジを持たない」ような「ワーストケース」では 128/5==25.6、1シェーダステージで25byte程度となる
@@ -26,7 +26,7 @@ protected:
 #ifdef USE_PUSH_CONSTANTS
 			VkPushConstantRange({.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .offset = 0, .size = static_cast<uint32_t>(size(Color) * sizeof(Color[0])) })
 #endif
-			});
+		});
 	}
 	virtual void CreateShaderModule() override { 
 		const auto ShaderPath = GetBasePath();

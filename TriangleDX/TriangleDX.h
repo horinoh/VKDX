@@ -24,7 +24,7 @@ protected:
 #ifdef USE_ROOT_CONSTANTS
 			D3D12_ROOT_PARAMETER({
 				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS, 
-				.Constants = {.ShaderRegister = 0, .RegisterSpace = 0, .Num32BitValues = static_cast<UINT>(size(Color)) },
+				.Constants = D3D12_ROOT_CONSTANTS({.ShaderRegister = 0, .RegisterSpace = 0, .Num32BitValues = static_cast<UINT>(size(Color)) }),
 				.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL
 			}),
 #endif
@@ -36,19 +36,16 @@ protected:
 #endif
 		); 
 #endif
-		RootSignatures.emplace_back(COM_PTR<ID3D12RootSignature>());
-		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.back())));
+		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		LOG_OK();
 	}
 	virtual void CreateShaderBlob() override { 
 		const auto ShaderPath = GetBasePath();
-		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
-		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
 #ifdef USE_ROOT_CONSTANTS
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_rc.ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_rc.ps.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
 #else
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
 #endif
 	}
 	virtual void CreatePipelineState() override {

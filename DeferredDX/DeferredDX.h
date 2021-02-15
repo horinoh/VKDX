@@ -34,22 +34,22 @@ protected:
 		const auto W = Width * 0.5f, H = Height * 0.5f;
 		Viewports = {
 			//!< 全画面用
-			{ 0.0f, 0.0f, Width, Height, MinDepth, MaxDepth },
+			D3D12_VIEWPORT({ .TopLeftX = 0.0f, .TopLeftY = 0.0f, .Width = Width, .Height = Height, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
 			//!< 分割画面用
-			{ 0.0f, 0.0f, W, H, MinDepth, MaxDepth },
-			{ W, 0.0f, W, H, MinDepth, MaxDepth },
-			{ 0.0f, H, W, H, MinDepth, MaxDepth },
-			{ W, H, W, H, MinDepth, MaxDepth },
+			D3D12_VIEWPORT({ .TopLeftX = 0.0f, .TopLeftY = 0.0f, .Width = W, .Height = H, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
+			D3D12_VIEWPORT({ .TopLeftX = W, .TopLeftY = 0.0f, .Width = W, .Height = H, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
+			D3D12_VIEWPORT({ .TopLeftX = 0.0f, .TopLeftY = H, .Width = W, .Height = H, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
+			D3D12_VIEWPORT({ .TopLeftX = W, .TopLeftY = H, .Width = W, .Height = H, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
 		};
 		//!< left, top, right, bottomで指定 (offset, extentで指定のVKとは異なるので注意)
 		ScissorRects = {
 			//!< 全画面用
-			{ 0, 0, static_cast<LONG>(Width), static_cast<LONG>(Height) },
+			D3D12_RECT({ .left = 0, .top = 0, .right = static_cast<LONG>(Width), .bottom = static_cast<LONG>(Height) }),
 			//!< 分割画面用
-			{ 0, 0, static_cast<LONG>(W), static_cast<LONG>(H) },
-			{ static_cast<LONG>(W), 0, static_cast<LONG>(Width), static_cast<LONG>(H) },
-			{ 0, static_cast<LONG>(H), static_cast<LONG>(W), static_cast<LONG>(Height) },
-			{ static_cast<LONG>(W), static_cast<LONG>(H), static_cast<LONG>(Width), static_cast<LONG>(Height) },
+			D3D12_RECT({ .left = 0, .top = 0, .right = static_cast<LONG>(W), .bottom = static_cast<LONG>(H) }),
+			D3D12_RECT({ .left = static_cast<LONG>(W), .top = 0, .right = static_cast<LONG>(Width), .bottom = static_cast<LONG>(H) }),
+			D3D12_RECT({ .left = 0, .top = static_cast<LONG>(H), .right = static_cast<LONG>(W), .bottom = static_cast<LONG>(Height) }),
+			D3D12_RECT({ .left = static_cast<LONG>(W), .top = static_cast<LONG>(H), .right = static_cast<LONG>(Width), .bottom = static_cast<LONG>(Height) }),
 		};
 		LOG_OK();
 	}
@@ -90,7 +90,7 @@ protected:
 			.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
 			.MinLOD = 0.0f, .MaxLOD = 1.0f,
 			.ShaderRegister = 0, .RegisterSpace = 0, .ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL
-			}));
+		}));
 	}
 	virtual void CreateRootSignature() override {
 		//!< Pass0 : ルートシグネチャ
@@ -99,12 +99,12 @@ protected:
 #ifdef USE_HLSL_ROOTSIGNATRUE
 			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
-			const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs = { {
-				{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND },
-			} };
+			const std::array DRs = { 
+				D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }),
+			};
 			SerializeRootSignature(Blob, {
-					{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<UINT>(size(DRs)), data(DRs) }, D3D12_SHADER_VISIBILITY_GEOMETRY }
-				}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE | SHADER_ROOT_ACCESS_GS);
+				D3D12_ROOT_PARAMETER({ .ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ .NumDescriptorRanges = static_cast<UINT>(size(DRs)), .pDescriptorRanges = data(DRs) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY }),
+			}, {}, SHADER_ROOT_ACCESS_GS);
 #endif
 			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		}
@@ -114,19 +114,18 @@ protected:
 #ifdef USE_HLSL_ROOTSIGNATRUE 
 			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT("_1.rs.cso")));
 #else
-			const std::array<D3D12_DESCRIPTOR_RANGE, 2> DRs = { {
+			const std::array DRs = { 
 #pragma region MRT
 				//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
-				{ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND },
+				D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 4, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }),
 #pragma endregion
-				{ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND },
-			} };
-			assert(!empty(StaticSamplerDescs) && "");
+				D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }),
+			};
 			DX::SerializeRootSignature(Blob, {
-					{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(size(DRs)), data(DRs) }, D3D12_SHADER_VISIBILITY_PIXEL },
-				}, {
-					StaticSamplerDescs[0],
-				}, D3D12_ROOT_SIGNATURE_FLAG_NONE | SHADER_ROOT_ACCESS_PS);
+				D3D12_ROOT_PARAMETER({ .ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ .NumDescriptorRanges = static_cast<uint32_t>(size(DRs)), .pDescriptorRanges = data(DRs) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL }),
+			}, {
+				StaticSamplerDescs[0],
+			}, SHADER_ROOT_ACCESS_PS);
 #endif
 			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		}
@@ -134,28 +133,26 @@ protected:
 	}
 	virtual void CreateTexture()
 	{
-		const D3D12_HEAP_PROPERTIES HP = {
-			D3D12_HEAP_TYPE_DEFAULT,
-			D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-			D3D12_MEMORY_POOL_UNKNOWN,
-			0,// CreationNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-			0 // VisibleNodeMask ... マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		constexpr D3D12_HEAP_PROPERTIES HP = {
+			.Type = D3D12_HEAP_TYPE_DEFAULT,
+			.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+			.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
+			.CreationNodeMask = 0, .VisibleNodeMask = 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 		};
-		const DXGI_SAMPLE_DESC SD = { 1, 0 };
 		//!< レンダーターゲット : カラー(RenderTarget : Color)
 		{
 			const D3D12_RESOURCE_DESC RD = {
-				D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				0,
-				static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
-				1,
-				1,
-				DXGI_FORMAT_R8G8B8A8_UNORM,
-				SD,
-				D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
+				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				.Alignment = 0,
+				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
+				.DepthOrArraySize = 1,
+				.MipLevels = 1,
+				.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
 			};
-			const D3D12_CLEAR_VALUE CV = { RD.Format, { DirectX::Colors::SkyBlue.f[0],DirectX::Colors::SkyBlue.f[1],DirectX::Colors::SkyBlue.f[2],DirectX::Colors::SkyBlue.f[3] } };
+			const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .Color = { DirectX::Colors::SkyBlue.f[0],DirectX::Colors::SkyBlue.f[1],DirectX::Colors::SkyBlue.f[2],DirectX::Colors::SkyBlue.f[3] } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
 
 			RenderTargetViewDescs.emplace_back(D3D12_RENDER_TARGET_VIEW_DESC({ 
@@ -174,17 +171,17 @@ protected:
 		//!< レンダーターゲット : 法線(RenderTarget : Normal)
 		{
 			const D3D12_RESOURCE_DESC RD = {
-				D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				0,
-				static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
-				1,
-				1,
-				DXGI_FORMAT_R10G10B10A2_UNORM,
-				SD,
-				D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
+				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				.Alignment = 0,
+				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
+				.DepthOrArraySize = 1,
+				.MipLevels = 1,
+				.Format = DXGI_FORMAT_R10G10B10A2_UNORM,
+				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
 			};
-			const D3D12_CLEAR_VALUE CV = { RD.Format, { 0.5f, 0.5f, 1.0f, 1.0f } };
+			const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .Color = { 0.5f, 0.5f, 1.0f, 1.0f } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
 
 			RenderTargetViewDescs.emplace_back(D3D12_RENDER_TARGET_VIEW_DESC({ 
@@ -202,17 +199,17 @@ protected:
 		//!< レンダーターゲット : 深度(RenderTarget : Depth)
 		{
 			const D3D12_RESOURCE_DESC RD = {
-				D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				0,
-				static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
-				1,
-				1,
-				DXGI_FORMAT_R32_FLOAT,
-				SD,
-				D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
+				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				.Alignment = 0,
+				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
+				.DepthOrArraySize = 1,
+				.MipLevels = 1,
+				.Format = DXGI_FORMAT_R32_FLOAT,
+				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
 			};
-			const D3D12_CLEAR_VALUE CV = { RD.Format, { DirectX::Colors::Red.f[0], DirectX::Colors::Red.f[1], DirectX::Colors::Red.f[2], DirectX::Colors::Red.f[3] } };
+			const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .Color = { DirectX::Colors::Red.f[0], DirectX::Colors::Red.f[1], DirectX::Colors::Red.f[2], DirectX::Colors::Red.f[3] } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
 
 			RenderTargetViewDescs.emplace_back(D3D12_RENDER_TARGET_VIEW_DESC({
@@ -230,15 +227,15 @@ protected:
 		//!< レンダーターゲット : 未定
 		{
 			const D3D12_RESOURCE_DESC RD = {
-				D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				0,
-				static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
-				1,
-				1,
-				DXGI_FORMAT_R8G8B8A8_UNORM,
-				SD,
-				D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
+				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				.Alignment = 0,
+				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
+				.DepthOrArraySize = 1,
+				.MipLevels = 1,
+				.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
 			};
 			const D3D12_CLEAR_VALUE CV = { RD.Format, { DirectX::Colors::SkyBlue.f[0],  DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
@@ -258,15 +255,15 @@ protected:
 #pragma endregion
 		{
 			const D3D12_RESOURCE_DESC RD = {
-				D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				0,
-				static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()),
-				1,
-				1,
-				DXGI_FORMAT_D24_UNORM_S8_UINT,
-				SD,
-				D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
+				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				.Alignment = 0,
+				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
+				.DepthOrArraySize = 1,
+				.MipLevels = 1,
+				.Format = DXGI_FORMAT_D24_UNORM_S8_UINT,
+				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
 			};
 			D3D12_CLEAR_VALUE CV = { RD.Format, { 1.0f, 0 } };
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
@@ -289,19 +286,19 @@ protected:
 		{
 			{
 #pragma region FRAME_OBJECT
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, SCD.BufferCount, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< CBV * N
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< CBV * N
 #pragma endregion
 				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 			}
 #pragma region MRT
 			{
 				//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 4, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 }; //!< 4RTV
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV, .NumDescriptors = 4, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 }; //!< 4RTV
 				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps.emplace_back())));
 			}
 #pragma endregion
 			{
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 }; //!< DSV
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 }; //!< DSV
 				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
 			}
 		}
@@ -311,7 +308,7 @@ protected:
 			{
 				//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
 #pragma region FRAME_OBJECT
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 4 + SCD.BufferCount, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 }; //!< 4SRV + CBV * N
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 4 + SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< 4SRV + CBV * N
 #pragma endregion
 				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 			}
@@ -329,10 +326,9 @@ protected:
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-
 #pragma region FRAME_OBJECT
 				for (UINT i = 0; i < SCD.BufferCount; ++i) {
-					const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
+					const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
 					Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
 				}
 #pragma endregion
@@ -340,8 +336,6 @@ protected:
 			{
 				const auto& DH = RtvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-
-#if 1
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), &RenderTargetViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #pragma region MRT
@@ -352,33 +346,18 @@ protected:
 				//!< レンダーターゲット : 未定
 				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[3]), &RenderTargetViewDescs[3], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #pragma endregion
-#else
-				//!< リソースのフォーマットやディメンジョンを引き継ぎ、ミップマップやスライスの最初の要素を使用するような場合は XXX_VIEW_DESC に nullptr を指定できる
-				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[2]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[3]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#endif
 			}
 			{
 				const auto& DH = DsvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-
-#if 1
 				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[4]), &DepthStencilViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#else
-				//!< リソースのフォーマットやディメンジョンを引き継ぎ、ミップマップやスライスの最初の要素を使用するような場合は XXX_VIEW_DESC に nullptr を指定できる
-				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[4]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#endif
 			}
 		}
 		//!< Pass1 : シェーダリソースビュー
 		{
 			const auto& DH = CbvSrvUavDescriptorHeaps[1];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-
 			{
-#if 1
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #pragma region MRT
@@ -389,18 +368,11 @@ protected:
 				//!< レンダーターゲット : 未定
 				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[3]), &ShaderResourceViewDescs[3], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #pragma	endregion
-#else
-				//!< リソースのフォーマットやディメンジョンを引き継ぎ、ミップマップやスライスの最初の要素を使用するような場合は XXX_VIEW_DESC に nullptr を指定できる
-				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[2]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[3]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#endif
 			}
 			{
 #pragma region FRAME_OBJECT
 				for (UINT i = 0; i < SCD.BufferCount; ++i) {
-					const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
+					const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
 					Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
 				}
 #pragma endregion
@@ -410,10 +382,10 @@ protected:
 
 	virtual void CreateConstantBuffer() override {
 		//const auto Fov = 0.16f * DirectX::XM_PI;
-		const auto Fov = 0.16f * std::numbers::pi_v<float>;
+		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
 		const auto Aspect = GetAspectRatioOfClientRect();
-		const auto ZFar = 4.0f;
-		const auto ZNear = 2.0f;
+		constexpr auto ZFar = 4.0f;
+		constexpr auto ZNear = 2.0f;
 		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f);
 		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
@@ -441,13 +413,13 @@ protected:
 
 	virtual void CreateShaderBlob() override {
 		const auto ShaderPath = GetBasePath();
-		//!< パス0 : シェーダブロブ
+		//!< Pass0 : シェーダブロブ
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ds.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".hs.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".gs.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
-		//!< パス1 : シェーダブロブ
+		//!< Pass1 : シェーダブロブ
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.vs.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
 #ifdef USE_GBUFFER_VISUALIZE
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_gb_1.ps.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
@@ -468,26 +440,26 @@ protected:
 			}),
 		};
 		std::vector<std::thread> Threads;
-		const D3D12_RASTERIZER_DESC RD = {
-			D3D12_FILL_MODE_SOLID,
-			D3D12_CULL_MODE_BACK, TRUE,
-			D3D12_DEFAULT_DEPTH_BIAS, D3D12_DEFAULT_DEPTH_BIAS_CLAMP, D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, 
-			TRUE,
-			FALSE, FALSE, 0,
-			D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
+		constexpr D3D12_RASTERIZER_DESC RD = {
+			.FillMode = D3D12_FILL_MODE_SOLID,
+			.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
+			.DepthBias = D3D12_DEFAULT_DEPTH_BIAS, .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP, .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
+			.DepthClipEnable = TRUE,
+			.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
+			.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 		};
-		const D3D12_DEPTH_STENCILOP_DESC DSOD = { D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_STENCIL_OP_KEEP, D3D12_COMPARISON_FUNC_ALWAYS };
+		const D3D12_DEPTH_STENCILOP_DESC DSOD = { .StencilFailOp = D3D12_STENCIL_OP_KEEP, .StencilDepthFailOp = D3D12_STENCIL_OP_KEEP, .StencilPassOp = D3D12_STENCIL_OP_KEEP, .StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS };
 		const D3D12_DEPTH_STENCIL_DESC DSD_0 = {
-			TRUE, D3D12_DEPTH_WRITE_MASK_ALL, D3D12_COMPARISON_FUNC_LESS,
-			FALSE, D3D12_DEFAULT_STENCIL_READ_MASK, D3D12_DEFAULT_STENCIL_WRITE_MASK,
-			DSOD, DSOD
+			.DepthEnable = TRUE, .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D12_COMPARISON_FUNC_LESS,
+			.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
+			.FrontFace = DSOD, .BackFace = DSOD
 		};
 		const D3D12_DEPTH_STENCIL_DESC DSD_1 = {
-			FALSE, D3D12_DEPTH_WRITE_MASK_ALL, D3D12_COMPARISON_FUNC_LESS,
-			FALSE, D3D12_DEFAULT_STENCIL_READ_MASK, D3D12_DEFAULT_STENCIL_WRITE_MASK,
-			DSOD, DSOD
+			.DepthEnable = FALSE, .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D12_COMPARISON_FUNC_LESS,
+			.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
+			.FrontFace = DSOD, .BackFace = DSOD
 		};
-		const std::array<D3D12_SHADER_BYTECODE, 5> SBCs_0 = {
+		const std::array SBCs_0 = {
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[1]->GetBufferPointer(), ShaderBlobs[1]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[2]->GetBufferPointer(), ShaderBlobs[2]->GetBufferSize() }),
@@ -495,19 +467,19 @@ protected:
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[4]->GetBufferPointer(), ShaderBlobs[4]->GetBufferSize() }),
 		};
 #ifdef USE_GBUFFER_VISUALIZE
-		const std::array<D3D12_SHADER_BYTECODE, 3> SBCs_1 = {
+		const std::array SBCs_1 = {
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[5]->GetBufferPointer(), ShaderBlobs[5]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[6]->GetBufferPointer(), ShaderBlobs[6]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[7]->GetBufferPointer(), ShaderBlobs[7]->GetBufferSize() }),
 		};
 #else
-		const std::array<D3D12_SHADER_BYTECODE, 2> SBCs_1 = {
+		const std::array SBCs_1 = {
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[5]->GetBufferPointer(), ShaderBlobs[5]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({ ShaderBlobs[6]->GetBufferPointer(), ShaderBlobs[6]->GetBufferSize() }),
 		};
 #endif
 		const std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs = {};
-		const std::vector<DXGI_FORMAT> RTVs_0 = { 
+		const std::vector RTVs_0 = { 
 			DXGI_FORMAT_R8G8B8A8_UNORM, 
 #pragma region MRT
 			DXGI_FORMAT_R10G10B10A2_UNORM,
@@ -515,12 +487,12 @@ protected:
 			DXGI_FORMAT_R8G8B8A8_UNORM
 #pragma endregion
 		};
-		const std::vector<DXGI_FORMAT> RTVs_1 = { DXGI_FORMAT_R8G8B8A8_UNORM };
+		const std::vector RTVs_1 = { DXGI_FORMAT_R8G8B8A8_UNORM };
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
-		//!< パス0 : パイプラインステート
+		//!< Pass0 : パイプラインステート
 		Threads.emplace_back(std::thread::thread(DX::CreatePipelineState_, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RTBDs, RD, DSD_0, SBCs_0[0], SBCs_0[1], SBCs_0[2], SBCs_0[3], SBCs_0[4], IEDs, RTVs_0, &PLS, TEXT("0")));
-		//!< パス1 : パイプラインステート
+		//!< Pass1 : パイプラインステート
 #ifdef USE_GBUFFER_VISUALIZE
 		Threads.emplace_back(std::thread::thread(DX::CreatePipelineState_, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RTBDs, RD, DSD_1, SBCs_1[0], SBCs_1[1], NullShaderBC, NullShaderBC, SBCs_1[2], IEDs, RTVs_1, &PLS, TEXT("1")));
 #else

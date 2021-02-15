@@ -277,7 +277,6 @@ void CubeMapDX::PopulateCommandList(const size_t i)
 			CL->OMSetRenderTargets(static_cast<UINT>(size(RTDHs)), data(RTDHs), FALSE, nullptr);
 #endif
 			{
-				assert(!empty(CbvSrvUavDescriptorHeaps) && "");
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 
 				const std::array DHs = { COM_PTR_GET(DH) };

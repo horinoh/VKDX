@@ -24,8 +24,7 @@ protected:
 		if (FindDirectory("DDS", Path)) {
 			Images.emplace_back();
 			const auto GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")));
-			ImageViews.emplace_back();
-			CreateImageView(&ImageViews.back(), Images.back().Image, GLITexture);
+			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, GLITexture);
 		}
 	}
 
@@ -60,10 +59,9 @@ protected:
 #else
 		//!< ’Êí‚ÌƒTƒ“ƒvƒ‰‚ðŽg‚¤ê‡
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
-				VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr }),
+			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr }),
 		});
 #endif
-
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 	virtual void CreateRenderPass() { VK::CreateRenderPass(VK_ATTACHMENT_LOAD_OP_DONT_CARE, false); }
@@ -123,8 +121,6 @@ protected:
 			VkDescriptorImageInfo({ .sampler = Samplers[0], .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 #endif
 		};
-		assert(!empty(DescriptorSets) && "");
-		assert(!empty(DescriptorUpdateTemplates) && "");
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 	}
 

@@ -39,47 +39,44 @@ protected:
 
 #if !defined(USE_SKY_DOME)
 	virtual void CreateFramebuffer() override {
-		assert(!empty(RenderPasses) && "");
 		const auto RP = RenderPasses[0];
 		const auto DIV = ImageViews[2];
 		for (auto i : SwapchainImageViews) {
-			Framebuffers.emplace_back(VkFramebuffer());
-			VK::CreateFramebuffer(Framebuffers.back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DIV });
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DIV });
 		}
 	}
 	virtual void CreateRenderPass() override { 
-		RenderPasses.emplace_back(VkRenderPass());
-		const std::array ColorAttach = { VkAttachmentReference({ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
-		const VkAttachmentReference DepthAttach = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-		VK::CreateRenderPass(RenderPasses.back(), {
-				VkAttachmentDescription({
-					.flags = 0,
-					.format = ColorFormat,
-					.samples = VK_SAMPLE_COUNT_1_BIT,
-					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-				}),
-				VkAttachmentDescription({
-					.flags = 0,
-					.format = DepthFormat,
-					.samples = VK_SAMPLE_COUNT_1_BIT,
-					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-				}),
-			}, {
-				VkSubpassDescription({
-					.flags = 0,
-					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-					.inputAttachmentCount = 0, .pInputAttachments = nullptr,
-					.colorAttachmentCount = static_cast<uint32_t>(size(ColorAttach)), .pColorAttachments = data(ColorAttach), .pResolveAttachments = nullptr,
-					.pDepthStencilAttachment = &DepthAttach,
-					.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
-				}),
-			}, {
-				//!< サブパス依存
-			});
+		constexpr std::array ColorAttach = { VkAttachmentReference({ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
+		constexpr VkAttachmentReference DepthAttach = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+		VK::CreateRenderPass(RenderPasses.emplace_back(), {
+			VkAttachmentDescription({
+				.flags = 0,
+				.format = ColorFormat,
+				.samples = VK_SAMPLE_COUNT_1_BIT,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+			}),
+			VkAttachmentDescription({
+				.flags = 0,
+				.format = DepthFormat,
+				.samples = VK_SAMPLE_COUNT_1_BIT,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+			}),
+		}, {
+			VkSubpassDescription({
+				.flags = 0,
+				.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+				.inputAttachmentCount = 0, .pInputAttachments = nullptr,
+				.colorAttachmentCount = static_cast<uint32_t>(size(ColorAttach)), .pColorAttachments = data(ColorAttach), .pResolveAttachments = nullptr,
+				.pDepthStencilAttachment = &DepthAttach,
+				.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
+			}),
+		}, {
+			//!< サブパス依存
+		});
 	}
 #endif
 	virtual void CreateGeometry() override { 
@@ -88,8 +85,7 @@ protected:
 	}
 
 	virtual void CreateImmutableSampler() override {
-		Samplers.emplace_back(VkSampler());
-		const VkSamplerCreateInfo SCI = {
+		constexpr VkSamplerCreateInfo SCI = {
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
@@ -102,19 +98,9 @@ protected:
 			.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
 			.unnormalizedCoordinates = VK_FALSE
 		};
-		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.back()));
+		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.emplace_back()));
 	}
 
-	//virtual void CreateDescriptorSetLayout() override {
-	//	DescriptorSetLayouts.emplace_back(VkDescriptorSetLayout());
-	//	assert(!empty(Samplers) && "");
-	//	const std::array ISs = { Samplers[0] };
-	//	VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
-	//		VkDescriptorSetLayoutBinding({ .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }), //!< UniformBuffer
-	//		VkDescriptorSetLayoutBinding({ .binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }), //!< Sampler + Image0
-	//		VkDescriptorSetLayoutBinding({ .binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }), //!< Sampler + Image1
-	//	});
-	//}
 	virtual void CreatePipelineLayout() override {
 		const std::array ISs = { Samplers[0] };
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
@@ -122,31 +108,25 @@ protected:
 			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }), //!< Sampler + Image0
 			VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }), //!< Sampler + Image1
 		});
-
 		VKExt::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 
 	virtual void CreateUniformBuffer() override {
 		//const auto Fov = 0.16f * glm::pi<float>();
-		const auto Fov = 0.16f * std::numbers::pi_v<float>;
+		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
 		const auto Aspect = GetAspectRatioOfClientRect();
-		const auto ZFar = 100.0f;
-		const auto ZNear = ZFar * 0.0001f;
-		const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
-		const auto CamTag = glm::vec3(0.0f);
-		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
+		constexpr auto ZFar = 100.0f;
+		constexpr auto ZNear = ZFar * 0.0001f;
+		constexpr auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
+		constexpr auto CamTag = glm::vec3(0.0f);
+		constexpr auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		const auto Projection = glm::perspective(Fov, Aspect, ZNear, ZFar);
 		const auto View = glm::lookAt(CamPos, CamTag, CamUp);
-		const auto World = glm::mat4(1.0f);
+		constexpr auto World = glm::mat4(1.0f);
 		Tr = Transform({ Projection, View, World, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f) });
 
 #pragma region FRAME_OBJECT
-		const auto SCCount = size(SwapchainImages);
-		for (size_t i = 0; i < SCCount; ++i) {
-			//UniformBuffers.emplace_back(UniformBuffer());
-			//CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-			//AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-			//VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
+		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
 		}
 #pragma endregion
@@ -155,32 +135,29 @@ protected:
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
 			//!< [0] キューブ(Cube) : PX, NX, PY, NY, PZ, NZ
-			Images.emplace_back(Image());
+			Images.emplace_back();
 			auto GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, ToString(Path + TEXT("\\CubeMap\\DebugCube.dds")));
-			ImageViews.emplace_back(VkImageView());
-			CreateImageView(&ImageViews.back(), Images.back().Image, GLITexture);
+			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, GLITexture);
 
 			//!< [1] 法線(Normal)
-			Images.emplace_back(Image());
+			Images.emplace_back();
 			GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, ToString(Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds")));
-			ImageViews.emplace_back(VkImageView());
-			CreateImageView(&ImageViews.back(), Images.back().Image, GLITexture);
+			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, GLITexture);
 		}
 #if !defined(USE_SKY_DOME)
 		//!< [2] 深度(DepthMap)
 		{
-			Images.emplace_back(Image());
+			Images.emplace_back();
 
 			const VkExtent3D Extent = { .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 };
-			const VkComponentMapping CompMap = { .r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A };
+			constexpr VkComponentMapping CM = { .r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A };
 
 			VK::CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
 			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
-			ImageViews.emplace_back(VkImageView());
-			VK::CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }));
+			VK::CreateImageView(&ImageViews.emplace_back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CM, VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }));
 		}
 #endif
 	}
@@ -226,8 +203,7 @@ protected:
 		}, DescriptorSetLayouts[0]);
 
 #pragma region FRAME_OBJECT
-		const auto SCCount = size(SwapchainImages);
-		for (size_t i = 0; i < SCCount; ++i) {
+		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			const DescriptorUpdateInfo DUI = {
 				VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
 				VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }), //!< Sampler + Image0

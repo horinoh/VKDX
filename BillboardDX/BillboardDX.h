@@ -29,15 +29,14 @@ protected:
 	}
 	virtual void CreateTexture() override {
 		{
-			ImageResources.emplace_back(COM_PTR<ID3D12Resource>());
-			const D3D12_HEAP_PROPERTIES HeapProperties = {
+			constexpr D3D12_HEAP_PROPERTIES HeapProperties = {
 				.Type = D3D12_HEAP_TYPE_DEFAULT,
 				.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 				.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
 				.CreationNodeMask = 0,
 				.VisibleNodeMask = 0
 			};
-			const DXGI_SAMPLE_DESC SD = { .Count = 1, .Quality = 0 };
+			constexpr DXGI_SAMPLE_DESC SD = { .Count = 1, .Quality = 0 };
 			const D3D12_RESOURCE_DESC RD = {
 				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
 				.Alignment = 0,
@@ -50,7 +49,7 @@ protected:
 				.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
 			};
 			const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({ .Depth = 1.0f, .Stencil = 0 }) };
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
 		}
 	}
 	virtual void CreateGeometry() override { 
@@ -59,11 +58,10 @@ protected:
 	}
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
-
 #ifdef USE_HLSL_ROOTSIGNATRUE
 		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
-		const std::array DRs = {
+		constexpr std::array DRs = {
 			D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 		};
 		DX::SerializeRootSignature(Blob, {
@@ -76,25 +74,22 @@ protected:
 
 	virtual void CreateDescriptorHeap() override {
 		{
-			CbvSrvUavDescriptorHeaps.emplace_back(COM_PTR<ID3D12DescriptorHeap>());
 #pragma region FRAME_OBJECT
 			DXGI_SWAP_CHAIN_DESC1 SCD;
 			SwapChain->GetDesc1(&SCD);
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount + 2, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< CBV * N, SRV0, SRV1
 #pragma endregion
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.back())));
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 		}
 		{
-			DsvDescriptorHeaps.emplace_back(COM_PTR<ID3D12DescriptorHeap>());
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.back())));
+			constexpr D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
+			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
 		}
 	}
 	virtual void CreateDescriptorView() override {
 		{
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-
 #pragma region FRAME_OBJECT
 			DXGI_SWAP_CHAIN_DESC1 SCD;
 			SwapChain->GetDesc1(&SCD);
@@ -105,20 +100,18 @@ protected:
 #pragma endregion
 		}
 		{
-			assert(!empty(ImageResources) && "");
 			const auto& DH = DsvDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-
 			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		}
 	}
 	
 	virtual void CreateConstantBuffer() override {
 		//const auto Fov = 0.16f * DirectX::XM_PI;
-		const auto Fov = 0.16f * std::numbers::pi_v<float>;
+		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
 		const auto Aspect = GetAspectRatioOfClientRect();
-		const auto ZFar = 100.0f;
-		const auto ZNear = ZFar * 0.0001f;
+		constexpr auto ZFar = 100.0f;
+		constexpr auto ZNear = ZFar * 0.0001f;
 		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 6.0f, 1.0f);
 		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);

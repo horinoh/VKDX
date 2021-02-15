@@ -32,30 +32,30 @@ protected:
 		Viewports = {
 	#ifdef USE_VIEWPORT_Y_UP
 			//!< 全画面用(Fullscreen)
-			{ 0.0f, Height, Width, -Height, MinDepth, MaxDepth },
+			VkViewport({ .x = 0.0f, .y = Height, .width = Width, .height = -Height, .minDepth = MinDepth, .maxDepth = MaxDepth }),
 			//!< 分割画面用(DividedScreens)
-			{ 0.0f, H, W, -H, MinDepth, MaxDepth },
-			{ W, H, W, -H, MinDepth, MaxDepth },
-			{ 0.0f, Height, W, -H, MinDepth, MaxDepth },
-			{ W, Height, W, -H, MinDepth, MaxDepth },
+			VkViewport({ .x = 0.0f, .y = H, .width = W, .height = -H, .minDepth = MinDepth, .maxDepth = MaxDepth }),
+			VkViewport({ .x = W, .y = H, .width = W, .height = -H, .minDepth = MinDepth, .maxDepth = MaxDepth }),
+			VkViewport({ .x = 0.0f, .y = Height, .width = W, .height = -H, .minDepth = MinDepth, .maxDepth = MaxDepth }),
+			VkViewport({ .x = W, .y = Height, .width = W, .height = -H, .minDepth = MinDepth, .maxDepth = MaxDepth }),
 	#else
 			//!< 全画面用
-			{ 0.0f, 0.0f, Width, Height, MinDepth, MaxDepth },
+			VkViewport({ .x = 0.0f, .y = 0.0f, .width = Width, .height = Height, .minDepth = MinDepth, .maxDepth = MaxDepth }),
 			//!< 分割画面用
-			{ 0.0f, 0.0f, W, H,MinDepth, MaxDepth },
-			{ W, 0.0f, W, H, MinDepth, MaxDepth },
-			{ 0.0f, H, W, H, MinDepth, MaxDepth },
-			{ W, H, W, H, MinDepth, MaxDepth },
+			VkViewport({ .x = 0.0f, .y = 0.0f, .width = W, .height = H, .minDepth = MinDepth, .maxDepth = MaxDepth }),
+			VkViewport({ .x = W, .y = 0.0f, .width = W, .height = H, .minDepth = MinDepth, .maxDepth = MaxDepth }),
+			VkViewport({ .x = 0.0f, .y = H, .width = W, .height = H, .minDepth = MinDepth, .maxDepth = MaxDepth }),
+			VkViewport({ .x = W, .y = H, .width = W, .height = H, .minDepth = MinDepth, .maxDepth = MaxDepth }),
 	#endif
 		};
 		ScissorRects = {
 			//!< 全画面用(Fullscreen)
-			{ { 0, 0 }, { static_cast<uint32_t>(Width), static_cast<uint32_t>(Height) } },
+			VkRect2D({ .offset = VkOffset2D({ .x = 0, .y = 0 }), .extent = VkExtent2D({ .width = static_cast<uint32_t>(Width), .height = static_cast<uint32_t>(Height) }) }),
 			//!< 分割画面用(DividedScreens)
-			{ { 0, 0 }, { static_cast<uint32_t>(W), static_cast<uint32_t>(H) } },
-			{ { static_cast<int32_t>(W), 0 }, { static_cast<uint32_t>(W), static_cast<uint32_t>(H) } },
-			{ { 0, static_cast<int32_t>(H) }, { static_cast<uint32_t>(W), static_cast<uint32_t>(H) } },
-			{ { static_cast<int32_t>(W), static_cast<int32_t>(H) }, { static_cast<uint32_t>(W), static_cast<uint32_t>(H) } },
+			VkRect2D({ .offset = VkOffset2D({ .x = 0, .y = 0 }), .extent = VkExtent2D({ .width = static_cast<uint32_t>(W), .height = static_cast<uint32_t>(H) }) }),
+			VkRect2D({ .offset = VkOffset2D({ .x = static_cast<int32_t>(W), .y = 0 }), .extent = VkExtent2D({ .width = static_cast<uint32_t>(W), .height = static_cast<uint32_t>(H) }) }),
+			VkRect2D({ .offset = VkOffset2D({ .x = 0, .y = static_cast<int32_t>(H) }), .extent = VkExtent2D({ .width = static_cast<uint32_t>(W), .height = static_cast<uint32_t>(H) }) }),
+			VkRect2D({ .offset = VkOffset2D({ .x = static_cast<int32_t>(W), .y = static_cast<int32_t>(H) }), .extent = VkExtent2D({ .width = static_cast<uint32_t>(W), .height = static_cast<uint32_t>(H) }) }),
 		};
 		LOG_OK();
 	}
@@ -63,7 +63,6 @@ protected:
 
 	virtual void AllocateCommandBuffer() override {
 		Super::AllocateCommandBuffer();
-
 #pragma region FRAME_OBJECT
 		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
 		//!< Pass1 : セカンダリコマンドバッファ
@@ -71,11 +70,11 @@ protected:
 		const auto PrevCount = size(SecondaryCommandBuffers);
 		SecondaryCommandBuffers.resize(PrevCount + SCCount);
 		const VkCommandBufferAllocateInfo SCBAI = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			nullptr,
-			SecondaryCommandPools[0],
-			VK_COMMAND_BUFFER_LEVEL_SECONDARY,
-			SCCount
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			.pNext = nullptr,
+			.commandPool = SecondaryCommandPools[0],
+			.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+			.commandBufferCount = SCCount
 		};
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &SCBAI, &SecondaryCommandBuffers[PrevCount]));
 #pragma endregion
@@ -83,7 +82,6 @@ protected:
 	virtual void CreateFramebuffer() override {
 		//!< Pass0 : フレームバッファ
 		{
-			assert(4 + 1 == size(ImageViews) && "");
 			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				ImageViews[0],
@@ -99,7 +97,6 @@ protected:
 				ImageViews[4],
 			});
 		}
-
 		//!< Pass1 : フレームバッファ
 		{
 			for (auto i : SwapchainImageViews) {
@@ -122,7 +119,7 @@ protected:
 				VkAttachmentReference({ .attachment = 3, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }),
 #pragma endregion
 			};
-			const VkAttachmentReference DepthAttach = { static_cast<uint32_t>(size(ColorAttach)), VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+			constexpr VkAttachmentReference DepthAttach = { .attachment = static_cast<uint32_t>(size(ColorAttach)), .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 			VK::CreateRenderPass(RenderPasses.emplace_back(), {
 				//!< アタッチメント(Attachment)
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
@@ -228,37 +225,6 @@ protected:
 			IndirectBuffers.emplace_back().Create(Device, PDMP, DIC, CB, GraphicsQueue);
 		}
 	}
-	//virtual void CreateDescriptorSetLayout() override {
-	//	assert(!empty(Samplers) && "");
-
-	//	//!< Pass0 : デスクリプタセットレイアウト
-	//	{
-	//		DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
-	//		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
-	//			{ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_GEOMETRY_BIT, nullptr },
-	//		});
-	//	}
-
-	//	//!< Pass1 : デスクリプタセットレイアウト
-	//	{
-	//		const std::array<VkSampler, 1> ISs = { Samplers[0] };
-
-	//		DescriptorSetLayouts.push_back(VkDescriptorSetLayout());
-	//		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.back(), 0, {
-	//			//!< レンダーターゲット : カラー(RenderTarget : Color)
-	//			{ 0, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(size(ISs)), VK_SHADER_STAGE_FRAGMENT_BIT, data(ISs) },
-	//#pragma region MRT 
-	//			//!< レンダーターゲット : 法線(RenderTarget : Normal)
-	//			{ 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(size(ISs)), VK_SHADER_STAGE_FRAGMENT_BIT, data(ISs) },
-	//			//!< レンダーターゲット : 深度(RenderTarget : Depth)
-	//			{ 2, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(size(ISs)), VK_SHADER_STAGE_FRAGMENT_BIT, data(ISs) },
-	//			//!< レンダーターゲット : 未定
-	//			{ 3, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, static_cast<uint32_t>(size(ISs)), VK_SHADER_STAGE_FRAGMENT_BIT, data(ISs) },
-	//#pragma endregion
-	//			{ 4, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_FRAGMENT_BIT, nullptr },
-	//		});
-	//	}
-	//}
 	virtual void CreatePipelineLayout() override {
 		//!< Pass0 : パイプラインレイアウト
 		{
@@ -267,11 +233,8 @@ protected:
 			});
 			VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), { DescriptorSetLayouts.back() }, {});
 		}
-
 		//!< Pass1 : パイプラインレイアウト
 		{
-			//VkDescriptorSetLayoutBinding({ .binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }), //!< UniformBuffer
-
 			const std::array ISs = { Samplers[0] };
 			CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
@@ -286,7 +249,6 @@ protected:
 	#pragma endregion
 				VkDescriptorSetLayoutBinding({.binding = 4, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr }),
 			});
-
 			VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), { DescriptorSetLayouts.back() }, {});
 		}
 	}
@@ -302,7 +264,6 @@ protected:
 			VkDescriptorPoolSize({ .type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 4 }), //!< CIS * 4
 #pragma endregion
 		});
-
 		//!< Pass0 : デスクリプタセット
 		{
 			const std::array DSLs = { DescriptorSetLayouts[0] };
@@ -334,81 +295,23 @@ protected:
 #pragma endregion
 		}
 	}
-//	virtual void CreateDescriptorPool() override {
-//#pragma region FRAME_OBJECT
-//		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
-//#pragma endregion
-//
-//		//!< Pass0,1 : デスクリプタプール
-//		DescriptorPools.push_back(VkDescriptorPool());
-//		VKExt::CreateDescriptorPool(DescriptorPools.back(), 0, {
-//#pragma region FRAME_OBJECT
-//			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, SCCount * 2 }, //!< UB * N * 2
-//#pragma endregion
-//#pragma region MRT 
-//			//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
-//			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 4 }, //!< CIS * 4
-//#pragma endregion
-//		});
-//	}
-//	virtual void AllocateDescriptorSet() override {
-//		assert(2 == size(DescriptorSetLayouts) && "");
-//		assert(!empty(DescriptorPools) && "");
-//
-//		const auto SCCount = size(SwapchainImages);
-//
-//		//!< パス0 : デスクリプタセット
-//		{
-//			const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
-//			const VkDescriptorSetAllocateInfo DSAI = {
-//				VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-//				nullptr,
-//				DescriptorPools[0],
-//				static_cast<uint32_t>(size(DSLs)), data(DSLs)
-//			};
-//#pragma region FRAME_OBJECT
-//			for (size_t i = 0; i < SCCount; ++i) {
-//				DescriptorSets.push_back(VkDescriptorSet());
-//				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
-//			}
-//#pragma endregion
-//		}
-//
-//		//!< パス1 : デスクリプタセット
-//		{
-//			const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[1] };
-//			const VkDescriptorSetAllocateInfo DSAI = {
-//				VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-//				nullptr,
-//				DescriptorPools[0],
-//				static_cast<uint32_t>(size(DSLs)), data(DSLs)
-//			};
-//#pragma region FRAME_OBJECT
-//			for (size_t i = 0; i < SCCount; ++i) {
-//				DescriptorSets.push_back(VkDescriptorSet());
-//				VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.back()));
-//			}
-//#pragma endregion
-//		}
-//	}
 	virtual void UpdateDescriptorSet() override {
 #pragma region FRAME_OBJECT
 		const auto SCCount = size(SwapchainImages);
 		//!< Pass0 :
 		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
 			VkDescriptorUpdateTemplateEntry({
-				0, 0,
-				_countof(DescriptorUpdateInfo_0::DBI), VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				offsetof(DescriptorUpdateInfo_0, DBI), sizeof(DescriptorUpdateInfo_0)
+				.dstBinding = 0, .dstArrayElement = 0,
+				.descriptorCount = _countof(DescriptorUpdateInfo_0::DBI), .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				.offset = offsetof(DescriptorUpdateInfo_0, DBI), .stride = sizeof(DescriptorUpdateInfo_0)
 			}),
 		}, DescriptorSetLayouts[0]);
 		for (size_t i = 0; i < SCCount; ++i) {
 			const DescriptorUpdateInfo_0 DUI = {
-				{ UniformBuffers[i].Buffer, 0, VK_WHOLE_SIZE },
+				VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
 			};
 			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DescriptorUpdateTemplates.back(), &DUI);
 		}
-
 		//!< Pass1 :
 		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
 			//!< レンダーターゲット : カラー(RenderTarget : Color)
@@ -446,16 +349,16 @@ protected:
 		for (size_t i = 0; i < SCCount; ++i) {
 			const DescriptorUpdateInfo_1 DUI = {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
-				{ VK_NULL_HANDLE, ImageViews[0], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 	#pragma region MRT 
 				//!< レンダーターゲット : 法線(RenderTarget : Normal)
-				{ VK_NULL_HANDLE, ImageViews[1], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = ImageViews[1], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				{ VK_NULL_HANDLE, ImageViews[2], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = ImageViews[2], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 				//!< レンダーターゲット : 未定
-				{ VK_NULL_HANDLE, ImageViews[3], VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL },
+				VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = ImageViews[3], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 	#pragma endregion
-				{ UniformBuffers[i].Buffer, 0, VK_WHOLE_SIZE },
+				VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
 			};
 			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i + SCCount], DescriptorUpdateTemplates.back(), &DUI);
 		}
@@ -464,8 +367,8 @@ protected:
 
 	virtual void CreateTexture() override {
 		const VkExtent3D Extent = { .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 };
-		const VkComponentMapping CM = { .r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A };
-		const VkImageSubresourceRange ISR = { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 };
+		constexpr VkComponentMapping CM = { .r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A };
+		constexpr VkImageSubresourceRange ISR = { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 };
 		//!< レンダーターゲット : カラー(RenderTarget : Color)
 		{
 			Images.emplace_back();
@@ -524,7 +427,7 @@ protected:
 	}
 	virtual void CreateImmutableSampler() override {
 		//!< Pass1 : イミュータブルサンプラ
-		const VkSamplerCreateInfo SCI = {
+		constexpr VkSamplerCreateInfo SCI = {
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
@@ -585,7 +488,7 @@ protected:
 	virtual void CreatePipeline() override {
 		Pipelines.resize(2);
 		std::vector<std::thread> Threads;
-		const VkPipelineRasterizationStateCreateInfo PRSCI = {
+		constexpr VkPipelineRasterizationStateCreateInfo PRSCI = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
@@ -597,7 +500,7 @@ protected:
 			.depthBiasEnable = VK_FALSE, .depthBiasConstantFactor = 0.0f, .depthBiasClamp = 0.0f, .depthBiasSlopeFactor = 0.0f,
 			.lineWidth = 1.0f
 		};
-		const VkPipelineDepthStencilStateCreateInfo PDSSCI_0 = {
+		constexpr VkPipelineDepthStencilStateCreateInfo PDSSCI_0 = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
@@ -608,7 +511,7 @@ protected:
 			.back = VkStencilOpState({ .failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP, .compareOp = VK_COMPARE_OP_ALWAYS, .compareMask = 0, .writeMask = 0, .reference = 0 }),
 			.minDepthBounds = 0.0f, .maxDepthBounds = 1.0f
 		};
-		const VkPipelineDepthStencilStateCreateInfo PDSSCI_1 = {
+		constexpr VkPipelineDepthStencilStateCreateInfo PDSSCI_1 = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,

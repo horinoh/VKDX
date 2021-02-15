@@ -31,58 +31,55 @@ protected:
 
 	virtual void CreateTexture() override {
 		const VkExtent3D Extent = { .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 };
-		const VkComponentMapping CompMap = { .r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A };
+		constexpr VkComponentMapping CM = { .r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A };
 
-		Images.emplace_back(Image());
+		Images.emplace_back();
 		VK::CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
 
 		AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 		VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
-		ImageViews.emplace_back(VkImageView());
-		VK::CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CompMap, VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }));
+		VK::CreateImageView(&ImageViews.emplace_back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CM, VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }));
 	}
 	virtual void CreateFramebuffer() override { 
 		const auto RP = RenderPasses[0];
 		const auto DIV = ImageViews[0];
 		for (auto i : SwapchainImageViews) {
-			Framebuffers.emplace_back(VkFramebuffer());
-			VK::CreateFramebuffer(Framebuffers.back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DIV });
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DIV });
 		}
 	}
 	virtual void CreateRenderPass() override { 
-		RenderPasses.emplace_back(VkRenderPass());
-		const std::array ColorAttach = { VkAttachmentReference({ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
-		const VkAttachmentReference DepthAttach = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-		VK::CreateRenderPass(RenderPasses.back(), {
-				VkAttachmentDescription({
-					0,
-					ColorFormat,
-					VK_SAMPLE_COUNT_1_BIT,
-					VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-				}),
-				VkAttachmentDescription({
-					0,
-					DepthFormat,
-					VK_SAMPLE_COUNT_1_BIT,
-					VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE,
-					VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-				}),
-			}, {
-				VkSubpassDescription({
-					0,
-					VK_PIPELINE_BIND_POINT_GRAPHICS,
-					0, nullptr,
-					static_cast<uint32_t>(size(ColorAttach)), data(ColorAttach), nullptr,
-					&DepthAttach,
-					0, nullptr
-				}),
-			}, {
-				//!< サブパス依存
-			});
+		constexpr std::array ColorAttach = { VkAttachmentReference({ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
+		constexpr VkAttachmentReference DepthAttach = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+		VK::CreateRenderPass(RenderPasses.emplace_back(), {
+			VkAttachmentDescription({
+				.flags = 0,
+				.format = ColorFormat,
+				.samples = VK_SAMPLE_COUNT_1_BIT,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+			}),
+			VkAttachmentDescription({
+				.flags = 0,
+				.format = DepthFormat,
+				.samples = VK_SAMPLE_COUNT_1_BIT,
+				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
+				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
+				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+			}),
+		}, {
+			VkSubpassDescription({
+				.flags = 0,
+				.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+				.inputAttachmentCount = 0, .pInputAttachments = nullptr,
+				.colorAttachmentCount = static_cast<uint32_t>(size(ColorAttach)), .pColorAttachments = data(ColorAttach), .pResolveAttachments = nullptr,
+				.pDepthStencilAttachment = &DepthAttach,
+				.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
+			}),
+		}, {
+			//!< サブパス依存
+		});
 	}
 
 	virtual void CreateGeometry() override { 
@@ -100,7 +97,6 @@ protected:
 			{
 				VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr })
 			});
-
 		VKExt::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts , {});
 	}
 
@@ -111,7 +107,6 @@ protected:
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }), //!< UB * N
 #pragma endregion
 		});
-
 		const std::array DSLs = { DescriptorSetLayouts[0] };
 		const VkDescriptorSetAllocateInfo DSAI = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -136,8 +131,6 @@ protected:
 				.offset = offsetof(DescriptorUpdateInfo, DBI), .stride = sizeof(DescriptorUpdateInfo)
 			})
 		};
-		assert(!empty(DescriptorSetLayouts) && "");
-		assert(!empty(PipelineLayouts) && "");
 		const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
 			.pNext = nullptr,
@@ -158,8 +151,7 @@ protected:
 			}),
 		}, DescriptorSetLayouts[0]);
 #pragma region FRAME_OBJECT
-		const auto SCCount = size(SwapchainImages);
-		for (size_t i = 0; i < SCCount; ++i) {
+		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			const DescriptorUpdateInfo DUI = {
 				VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
 			};
@@ -171,22 +163,17 @@ protected:
 
 	virtual void CreateUniformBuffer() override {
 		//const auto Fov = 0.16f * glm::pi<float>();
-		const auto Fov = 0.16f * std::numbers::pi_v<float>;
+		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
 		const auto Aspect = GetAspectRatioOfClientRect();
-		const auto ZFar = 100.0f;
-		const auto ZNear = ZFar * 0.0001f;
-		const auto CamPos = glm::vec3(0.0f, 0.0f, 6.0f);
-		const auto CamTag = glm::vec3(0.0f);
-		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
+		constexpr auto ZFar = 100.0f;
+		constexpr auto ZNear = ZFar * 0.0001f;
+		constexpr auto CamPos = glm::vec3(0.0f, 0.0f, 6.0f);
+		constexpr auto CamTag = glm::vec3(0.0f);
+		constexpr auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		Tr = Transform({ glm::perspective(Fov, Aspect, ZNear, ZFar), glm::lookAt(CamPos, CamTag, CamUp), glm::mat4(1.0f) });
 
 #pragma region FRAME_OBJECT
-		const auto SCCount = size(SwapchainImages);
-		for (size_t i = 0; i < SCCount; ++i) {
-			//UniformBuffers.emplace_back(UniformBuffer());
-			//CreateBuffer(&UniformBuffers.back().Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, sizeof(Tr));
-			//AllocateDeviceMemory(&UniformBuffers.back().DeviceMemory, UniformBuffers.back().Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-			//VERIFY_SUCCEEDED(vkBindBufferMemory(Device, UniformBuffers.back().Buffer, UniformBuffers.back().DeviceMemory, 0));
+		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
 		}
 #pragma endregion

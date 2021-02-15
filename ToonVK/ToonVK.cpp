@@ -273,7 +273,7 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 
 	const auto CB = CommandBuffers[i];
-	const VkCommandBufferBeginInfo CBBI = {
+	constexpr VkCommandBufferBeginInfo CBBI = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		.pNext = nullptr,
 		.flags = 0,
@@ -281,9 +281,9 @@ void ToonVK::PopulateCommandBuffer(const size_t i)
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 #ifdef USE_DEPTH
-		const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
+		constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 #else
-		const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
+		constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
 #endif
 		const VkRenderPassBeginInfo RPBI = {
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

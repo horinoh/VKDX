@@ -301,14 +301,10 @@ void TriangleDX::PopulateCommandList(const size_t i)
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 	{
 #if defined(_DEBUG) || defined(USE_PIX)
-		//PIXBeginEvent(CL, PIX_COLOR(0, 255, 0), TEXT("Command Begin"));
 		PIXScopedEvent(CL, PIX_COLOR(0, 255, 0), TEXT("Command Begin"));
-
-		//PIXSetMarker(CL, PIX_COLOR(255, 0, 0), TEXT("Command"));
 #endif
 		const auto RS = COM_PTR_GET(RootSignatures[0]);
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-
 
 		CL->SetGraphicsRootSignature(RS);
 #ifdef USE_ROOT_CONSTANTS

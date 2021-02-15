@@ -55,12 +55,11 @@ protected:
 #ifdef USE_DEPTH
 	//!< 深度テクスチャ
 	virtual void CreateTexture() override {
-		const D3D12_HEAP_PROPERTIES HeapProperties = {
+		constexpr D3D12_HEAP_PROPERTIES HeapProperties = {
 			.Type = D3D12_HEAP_TYPE_DEFAULT,
 			.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 			.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
-			.CreationNodeMask = 0, //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-			.VisibleNodeMask = 0  //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+			.CreationNodeMask = 0, .VisibleNodeMask = 0  //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 		};
 		const D3D12_RESOURCE_DESC RD = {
 			.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
@@ -82,7 +81,7 @@ protected:
 			.Format = ImageResources.back()->GetDesc().Format, 
 			.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D, 
 			.Flags = D3D12_DSV_FLAG_NONE, 
-			.Texture2D = { .MipSlice = 0 }
+			.Texture2D = D3D12_TEX2D_DSV({ .MipSlice = 0 })
 		}));
 	}
 #endif
@@ -92,7 +91,7 @@ protected:
 #ifdef USE_HLSL_ROOTSIGNATRUE
 		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
-		const std::array DRs = {
+		constexpr std::array DRs = {
 			D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 		};
 		DX::SerializeRootSignature(Blob, {
@@ -159,12 +158,7 @@ protected:
 			assert(!empty(ImageResources) && "");
 			const auto& DH = DsvDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-#if 1
 			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[0]), &DepthStencilViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#else
-			//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合にはnullptrを指定できる
-			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#endif
 		}
 #endif
 	}

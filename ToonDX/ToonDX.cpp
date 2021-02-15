@@ -276,7 +276,6 @@ void ToonDX::PopulateCommandList(const size_t i)
 #else
 			CL->OMSetRenderTargets(static_cast<UINT>(size(RTDHs)), data(RTDHs), FALSE, nullptr);
 #endif
-
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 				const std::array DHs = { COM_PTR_GET(DH) };
@@ -288,7 +287,6 @@ void ToonDX::PopulateCommandList(const size_t i)
 				CL->SetGraphicsRootDescriptorTable(0, GDH);
 #pragma endregion
 			}
-
 			CL->ExecuteBundle(BCL);
 		}
 		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);

@@ -322,7 +322,7 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 
 	const auto CB = CommandBuffers[i];
-	const VkCommandBufferBeginInfo CBBI = {
+	constexpr VkCommandBufferBeginInfo CBBI = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		.pNext = nullptr,
 		.flags = 0,
@@ -330,9 +330,7 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 #ifdef _DEBUG
-		//MarkerBegin(CB, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), "Command Begin");
 		ScopedMarker(CB, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), "Command Begin");
-		//MarkerInsert(CB, glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), "Command");
 #endif
 		const std::array CVs = { VkClearValue({ .color = Colors::SkyBlue }) };
 		const VkRenderPassBeginInfo RPBI = {
