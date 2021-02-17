@@ -336,7 +336,6 @@ protected:
 		}
 #ifndef USE_SHADOWMAP_VISUALIZE
 		{
-			//const auto Fov = 0.16f * DirectX::XM_PI;
 			const auto Fov = 0.16f * std::numbers::pi_v<float>;
 			const auto Aspect = GetAspectRatioOfClientRect();
 			const auto ZFar = 4.0f;

@@ -113,7 +113,6 @@ protected:
 	}
 
 	virtual void CreateUniformBuffer() override {
-		//const auto Fov = 0.16f * glm::pi<float>();
 		const auto Fov = 0.16f * std::numbers::pi_v<float>;
 		const auto Aspect = GetAspectRatioOfClientRect();
 		const auto ZFar = 100.0f;

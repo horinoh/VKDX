@@ -45,13 +45,11 @@ protected:
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &CommandBuffers[PrevCount]));
 	}
 #endif
-
 	virtual void CreateGeometry() override { 
 		//!< 最低でもインデックス数1が必要 (At least index count must be 1)
 		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 		IndirectBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DIIC, CommandBuffers[0], GraphicsQueue);
 	} 
-	
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }
 	virtual void CreatePipeline() override { 
 #ifdef USE_SPECIALIZATION_INFO
@@ -68,7 +66,7 @@ protected:
 			.dataSize = sizeof(TL), .pData = &TL
 		};
 
-		Pipelines.emplace_back(VkPipeline());
+		Pipelines.emplace_back();
 		const VkPipelineRasterizationStateCreateInfo PRSCI = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 			.pNext = nullptr,

@@ -20,7 +20,6 @@ protected:
 		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DA);
 	}
 #endif
-	
 	virtual void CreateShaderBlob() override {
 #ifdef USE_DISTANCE_FUNCTION
 		const auto ShaderPath = GetBasePath();

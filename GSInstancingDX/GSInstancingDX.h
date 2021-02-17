@@ -21,6 +21,8 @@ protected:
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, FALSE); }
 
+	virtual void PopulateCommandList(const size_t i) override;
+
 	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f) override {
 		D3D12_FEATURE_DATA_D3D12_OPTIONS3 FDO3;
 		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS3, reinterpret_cast<void*>(&FDO3), sizeof(FDO3)));
@@ -42,7 +44,5 @@ protected:
 		};
 		LOG_OK();
 	}
-
-	virtual void PopulateCommandList(const size_t i) override;
 };
 #pragma endregion

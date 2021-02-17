@@ -30,7 +30,6 @@ protected:
 		IndirectBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DIIC, CommandBuffers[0], GraphicsQueue);
 	}
 	virtual void CreateUniformBuffer() override {
-		//constexpr auto Fov = 0.16f * glm::pi<float>();
 		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
 		const auto Aspect = GetAspectRatioOfClientRect();
 		constexpr auto ZFar = 100.0f;

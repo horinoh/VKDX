@@ -20,6 +20,7 @@ protected:
 	}
 	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
 	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, FALSE); }
+
 	virtual void PopulateCommandList(const size_t i) override;
 };
 #pragma endregion

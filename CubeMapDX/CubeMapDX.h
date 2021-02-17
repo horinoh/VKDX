@@ -36,11 +36,93 @@ protected:
 		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tr)), &Tr);
 #pragma endregion
 	}
-	virtual void CreateGeometry() override { 
+
+	virtual void CreateGeometry() override {
 		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
 		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DIA);
 	}
+	virtual void CreateConstantBuffer() override {
+		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
+		const auto Aspect = GetAspectRatioOfClientRect();
+		constexpr auto ZFar = 100.0f;
+		constexpr auto ZNear = ZFar * 0.0001f;
+		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f);
+		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		const auto Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
+		const auto View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
+		const auto World = DirectX::XMMatrixIdentity();
 
+		DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
+		DirectX::XMStoreFloat4x4(&Tr.View, View);
+		DirectX::XMStoreFloat4x4(&Tr.World, World);
+		DirectX::XMStoreFloat4(&Tr.LocalCameraPosition, DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f));
+
+#pragma region FRAME_OBJECT
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+		for (UINT i = 0; i < SCD.BufferCount; ++i) {
+			ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tr));
+		}
+#pragma endregion
+	}
+	virtual void CreateTexture() override {
+		std::wstring Path;
+		if (FindDirectory("DDS", Path)) {
+			//!< [0] キューブ(Cube) : PX, NX, PY, NY, PZ, NZ
+			LoadImage(COM_PTR_PUT(ImageResources.emplace_back()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, Path + TEXT("\\CubeMap\\DebugCube.dds"));
+
+			//!< ビューでD3D12_SRV_DIMENSION_TEXTURECUBEを指定するため明示的なD3D12_SHADER_RESOURCE_VIEW_DESCの使用が必須 (To use D3D12_SRV_DIMENSION_TEXTURECUBE, D3D12_SHADER_RESOURCE_VIEW_DESC must be used explicitly)
+			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
+				.Format = ImageResources.back()->GetDesc().Format,
+				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.TextureCube = D3D12_TEXCUBE_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .ResourceMinLODClamp = 0.0f }),
+				}));
+
+			//!< [1] 法線(Normal)
+			LoadImage(COM_PTR_PUT(ImageResources.emplace_back()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds"));
+
+			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
+				.Format = ImageResources.back()->GetDesc().Format,
+				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f }),
+				}));
+		}
+#if !defined(USE_SKY_DOME)
+		//!< [2] 深度(Depth)
+		{
+			constexpr D3D12_HEAP_PROPERTIES HeapProperties = {
+				.Type = D3D12_HEAP_TYPE_DEFAULT,
+				.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+				.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
+				.CreationNodeMask = 0, .VisibleNodeMask = 0
+			};
+			constexpr DXGI_SAMPLE_DESC SD = { .Count = 1, .Quality = 0 };
+			const D3D12_RESOURCE_DESC RD = {
+				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				.Alignment = 0,
+				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
+				.DepthOrArraySize = 1,
+				.MipLevels = 1,
+				.Format = DXGI_FORMAT_D24_UNORM_S8_UINT,
+				.SampleDesc = SD,
+				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
+			};
+			const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) };
+			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
+
+			DepthStencilViewDescs.emplace_back(D3D12_DEPTH_STENCIL_VIEW_DESC({
+				.Format = ImageResources.back()->GetDesc().Format,
+				.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D,
+				.Flags = D3D12_DSV_FLAG_NONE,
+				.Texture2D = D3D12_TEX2D_DSV({.MipSlice = 0}),
+				}));
+		}
+#endif
+	}
 	virtual void CreateStaticSampler() override {
 		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
 			.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR,
@@ -74,91 +156,25 @@ protected:
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		LOG_OK();
 	}
-
-	virtual void CreateConstantBuffer() override {
-		//const auto Fov = 0.16f * DirectX::XM_PI;
-		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
-		const auto Aspect = GetAspectRatioOfClientRect();
-		constexpr auto ZFar = 100.0f;
-		constexpr auto ZNear = ZFar * 0.0001f;
-		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f);
-		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		const auto Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
-		const auto View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
-		const auto World = DirectX::XMMatrixIdentity();
-
-		DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
-		DirectX::XMStoreFloat4x4(&Tr.View, View);
-		DirectX::XMStoreFloat4x4(&Tr.World, World);
-		DirectX::XMStoreFloat4(&Tr.LocalCameraPosition, DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f));
-
-#pragma region FRAME_OBJECT
-		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
-		for (UINT i = 0; i < SCD.BufferCount; ++i) {
-			ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tr));
-		}
-#pragma endregion
-	}
-	virtual void CreateTexture() override {
-		std::wstring Path;
-		if (FindDirectory("DDS", Path)) {
-			//!< [0] キューブ(Cube) : PX, NX, PY, NY, PZ, NZ
-			LoadImage(COM_PTR_PUT(ImageResources.emplace_back()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, Path + TEXT("\\CubeMap\\DebugCube.dds"));
-
-			//!< ビューでD3D12_SRV_DIMENSION_TEXTURECUBEを指定するため明示的なD3D12_SHADER_RESOURCE_VIEW_DESCの使用が必須 (To use D3D12_SRV_DIMENSION_TEXTURECUBE, D3D12_SHADER_RESOURCE_VIEW_DESC must be used explicitly)
-			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({ 
-				.Format = ImageResources.back()->GetDesc().Format, 
-				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE, 
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.TextureCube = D3D12_TEXCUBE_SRV({ .MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .ResourceMinLODClamp = 0.0f }),
-			}));
-
-			//!< [1] 法線(Normal)
-			LoadImage(COM_PTR_PUT(ImageResources.emplace_back()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds"));
-
-			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({ 
-				.Format = ImageResources.back()->GetDesc().Format, 
-				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D, 
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.Texture2D = D3D12_TEX2D_SRV({ .MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f }),
-			}));
-		}
-#if !defined(USE_SKY_DOME)
-		//!< [2] 深度(Depth)
-		{
-			constexpr D3D12_HEAP_PROPERTIES HeapProperties = {
-				.Type = D3D12_HEAP_TYPE_DEFAULT,
-				.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-				.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
-				.CreationNodeMask = 0, .VisibleNodeMask = 0
-			};
-			constexpr DXGI_SAMPLE_DESC SD = { .Count = 1, .Quality = 0 };
-			const D3D12_RESOURCE_DESC RD = {
-				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				.Alignment = 0,
-				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
-				.DepthOrArraySize = 1,
-				.MipLevels = 1,
-				.Format = DXGI_FORMAT_D24_UNORM_S8_UINT,
-				.SampleDesc = SD,
-				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
-			};
-			const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({ .Depth = 1.0f, .Stencil = 0 }) };
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
-
-			DepthStencilViewDescs.emplace_back(D3D12_DEPTH_STENCIL_VIEW_DESC({ 
-				.Format = ImageResources.back()->GetDesc().Format, 
-				.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D,
-				.Flags = D3D12_DSV_FLAG_NONE,
-				.Texture2D = D3D12_TEX2D_DSV({ .MipSlice = 0}),
-			}));
-		}
+	virtual void CreateShaderBlob() override {
+#ifdef USE_SKY_DOME
+		const auto ShaderPath = GetBasePath();
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sd.ps.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sd.ds.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sd.hs.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sd.gs.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
+#else
+		CreateShaderBlob_VsPsDsHsGs();
 #endif
 	}
-
+	virtual void CreatePipelineState() override {
+#if !defined(USE_SKY_DOME)
+		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, TRUE);
+#else
+		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, FALSE);
+#endif
+	}
 	virtual void CreateDescriptorHeap() override {
 		{
 #pragma region FRAME_OBJECT
@@ -200,25 +216,7 @@ protected:
 		}
 #endif
 	}
-	virtual void CreateShaderBlob() override {
-#ifdef USE_SKY_DOME
-		const auto ShaderPath = GetBasePath();
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sd.ps.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sd.ds.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sd.hs.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sd.gs.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
-#else
-		CreateShaderBlob_VsPsDsHsGs();
-#endif
-	}
-	virtual void CreatePipelineState() override { 
-#if !defined(USE_SKY_DOME)
-		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, TRUE);
-#else
-		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, FALSE);
-#endif
-	}
+
 	virtual void PopulateCommandList(const size_t i) override;
 
 private:

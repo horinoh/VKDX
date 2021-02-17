@@ -35,6 +35,7 @@ protected:
 		};
 		CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE, VIBDs, VIADs);
 	}
+
 	virtual void PopulateCommandBuffer(const size_t i) override;
 };
 #pragma endregion

@@ -233,45 +233,45 @@ void FullscreenDX::PopulateCommandList(const size_t i)
 {
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 	
-	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	const auto BGCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
     const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
+	VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
 	{
-        BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+        BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 #ifdef USE_DRAW_INDIRECT
 		const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
 		const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
-		BCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+		BGCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 #else
-		BCL->DrawInstanced(4, 1, 0, 0);
+		BGCL->DrawInstanced(4, 1, 0, 0);
 #endif
 	}
-	VERIFY_SUCCEEDED(BCL->Close());
+	VERIFY_SUCCEEDED(BGCL->Close());
 
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
+	VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
 	{
 		const auto RS = COM_PTR_GET(RootSignatures[0]);
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 
-        CL->SetGraphicsRootSignature(RS);
+        GCL->SetGraphicsRootSignature(RS);
 
-		CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-		CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+		GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+		GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
             auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 
 			const std::array RTDescriptorHandles = { CDH };
-			CL->OMSetRenderTargets(static_cast<UINT>(size(RTDescriptorHandles)), data(RTDescriptorHandles), FALSE, nullptr);
+			GCL->OMSetRenderTargets(static_cast<UINT>(size(RTDescriptorHandles)), data(RTDescriptorHandles), FALSE, nullptr);
 
-			CL->ExecuteBundle(BCL);
+			GCL->ExecuteBundle(BGCL);
 		}
-		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
-	VERIFY_SUCCEEDED(CL->Close());
+	VERIFY_SUCCEEDED(GCL->Close());
 }
 #pragma endregion

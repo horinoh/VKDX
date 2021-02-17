@@ -23,6 +23,8 @@ protected:
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }
 	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_FALSE); }
 
+	virtual void PopulateCommandBuffer(const size_t i) override;
+
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f) override {
 		const auto W = Width * 0.5f, H = Height * 0.5f;
 		Viewports = {
@@ -47,7 +49,5 @@ protected:
 		};
 		LOG_OK();
 	}
-
-	virtual void PopulateCommandBuffer(const size_t i) override;
 };
 #pragma endregion

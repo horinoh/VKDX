@@ -27,14 +27,41 @@ protected:
 		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tr)), &Tr/*, &Range*/);
 #pragma endregion
 	}
+
+	virtual void CreateGeometry() override {
+		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DIA);
+	}
+	virtual void CreateConstantBuffer() override {
+		//const auto Fov = 0.16f * DirectX::XM_PI;
+		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
+		const auto Aspect = GetAspectRatioOfClientRect();
+		constexpr auto ZFar = 100.0f;
+		constexpr auto ZNear = ZFar * 0.0001f;
+		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 6.0f, 1.0f);
+		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		const auto Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
+		const auto View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
+		const auto World = DirectX::XMMatrixIdentity();
+		DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
+		DirectX::XMStoreFloat4x4(&Tr.View, View);
+		DirectX::XMStoreFloat4x4(&Tr.World, World);
+#pragma region FRAME_OBJECT
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+		for (UINT i = 0; i < SCD.BufferCount; ++i) {
+			ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tr));
+		}
+#pragma endregion
+	}
 	virtual void CreateTexture() override {
 		{
-			constexpr D3D12_HEAP_PROPERTIES HeapProperties = {
+			constexpr D3D12_HEAP_PROPERTIES HP = {
 				.Type = D3D12_HEAP_TYPE_DEFAULT,
 				.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 				.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
-				.CreationNodeMask = 0,
-				.VisibleNodeMask = 0
+				.CreationNodeMask = 0, .VisibleNodeMask = 0
 			};
 			constexpr DXGI_SAMPLE_DESC SD = { .Count = 1, .Quality = 0 };
 			const D3D12_RESOURCE_DESC RD = {
@@ -49,12 +76,8 @@ protected:
 				.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
 			};
 			const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({ .Depth = 1.0f, .Stencil = 0 }) };
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
+			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
 		}
-	}
-	virtual void CreateGeometry() override { 
-		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DIA);
 	}
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
@@ -71,7 +94,8 @@ protected:
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		LOG_OK();
 	}
-
+	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
+	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, TRUE); }
 	virtual void CreateDescriptorHeap() override {
 		{
 #pragma region FRAME_OBJECT
@@ -105,34 +129,7 @@ protected:
 			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[0]), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		}
 	}
-	
-	virtual void CreateConstantBuffer() override {
-		//const auto Fov = 0.16f * DirectX::XM_PI;
-		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
-		const auto Aspect = GetAspectRatioOfClientRect();
-		constexpr auto ZFar = 100.0f;
-		constexpr auto ZNear = ZFar * 0.0001f;
-		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 6.0f, 1.0f);
-		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		const auto Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
-		const auto View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
-		const auto World = DirectX::XMMatrixIdentity();
-		DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
-		DirectX::XMStoreFloat4x4(&Tr.View, View);
-		DirectX::XMStoreFloat4x4(&Tr.World, World);
 
-#pragma region FRAME_OBJECT
-		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
-		for (UINT i = 0; i < SCD.BufferCount; ++i) {
-			ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tr));
-		}
-#pragma endregion
-	}
-
-	virtual void CreateShaderBlob() override { CreateShaderBlob_VsPsDsHsGs(); }
-	virtual void CreatePipelineState() override { CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, TRUE); }
 	virtual void PopulateCommandList(const size_t i) override;
 
 private: 

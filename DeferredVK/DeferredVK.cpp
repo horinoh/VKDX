@@ -232,36 +232,35 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void DeferredVK::PopulateCommandBuffer(const size_t i)
 {
-	//!< パス0
+	//!< Pass0
 	const auto RP0 = RenderPasses[0];
 	const auto FB0 = Framebuffers[0];
-
-	//!< パス1 
+	//!< Pass1 
 	const auto RP1 = RenderPasses[1];
 	const auto FB1 = Framebuffers[i + 1];
 
-	//!< パス0 : セカンダリコマンドバッファ(メッシュ描画用)
+	//!< Pass0 : セカンダリコマンドバッファ(メッシュ描画用)
 	const auto SCB0 = SecondaryCommandBuffers[i];
 	{
 		const VkCommandBufferInheritanceInfo CBII = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-			nullptr,
-			RP0,
-			0,
-			FB0,
-			VK_FALSE,
-			0,
-			0,
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+			.pNext = nullptr,
+			.renderPass = RP0,
+			.subpass = 0,
+			.framebuffer = FB0,
+			.occlusionQueryEnable = VK_FALSE,
+			.queryFlags = 0,
+			.pipelineStatistics = 0,
 		};
 		const VkCommandBufferBeginInfo CBBI = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			nullptr,
-			VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
-			&CBII
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+			.pInheritanceInfo = &CBII
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB0, &CBBI)); {
 #pragma region FRAME_OBJECT
-			const auto DS = DescriptorSets[/*i*/0];
+			const auto DS = DescriptorSets[i];
 #pragma endregion
 			const auto PL = Pipelines[0];
 			const auto& IDB = IndirectBuffers[0];
@@ -280,27 +279,27 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
 	}
 
-	//!< パス1 : セカンダリコマンドバッファ(レンダーテクスチャ描画用)
+	//!< Pass1 : セカンダリコマンドバッファ(レンダーテクスチャ描画用)
 #pragma region FRAME_OBJECT
 	const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
 #pragma endregion
 	const auto SCB1 = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
 	{
 		const VkCommandBufferInheritanceInfo CBII = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-			nullptr,
-			RP1,
-			0,
-			FB1,
-			VK_FALSE,
-			0,
-			0,
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+			.pNext = nullptr,
+			.renderPass = RP1,
+			.subpass = 0,
+			.framebuffer = FB1,
+			.occlusionQueryEnable = VK_FALSE,
+			.queryFlags = 0,
+			.pipelineStatistics = 0,
 		};
 		const VkCommandBufferBeginInfo CBBI = {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			nullptr,
-			VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
-			&CBII
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+			.pInheritanceInfo = &CBII
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB1, &CBBI)); {
 #pragma region FRAME_OBJECT
@@ -323,90 +322,89 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 	}
 
 	const auto CB = CommandBuffers[i];
-	const VkCommandBufferBeginInfo CBBI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		0,
-		nullptr
+	constexpr VkCommandBufferBeginInfo CBBI = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.pInheritanceInfo = nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		const VkRect2D RenderArea = { { 0, 0 }, SurfaceExtent2D };
+		const VkRect2D RenderArea = { .offset = VkOffset2D({ .x = 0, .y = 0 }), .extent = SurfaceExtent2D };
 
-		//!< パス0 : レンダーパス(メッシュ描画用)
+		//!< Pass0 : レンダーパス(メッシュ描画用)
 		{
-			std::array<VkClearValue, 4 + 1> CVs = { 
+			constexpr std::array CVs = {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
-				Colors::SkyBlue, 
+				VkClearValue({.color = Colors::SkyBlue}),
 #pragma region MRT
 				//!< レンダーターゲット : 法線(RenderTarget : Normal)
-				{ 0.5f, 0.5f, 1.0f, 1.0f },
+				VkClearValue({.color = VkClearColorValue({0.5f, 0.5f, 1.0f, 1.0f})}),
 				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				Colors::Red,
+				VkClearValue({.color = Colors::Red}),
 				//!< レンダーターゲット : 未定
-				Colors::SkyBlue,
+				VkClearValue({.depthStencil = VkClearDepthStencilValue({.depth = 1.0f, .stencil = 0 })}),
 #pragma endregion
 			};
-			CVs[4].depthStencil = { 1.0f, 0 };
 			const VkRenderPassBeginInfo RPBI = {
-				VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-				nullptr,
-				RP0,
-				FB0,
-				RenderArea,
-				static_cast<uint32_t>(size(CVs)), data(CVs)
+				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+				.pNext = nullptr,
+				.renderPass = RP0,
+				.framebuffer = FB0,
+				.renderArea = RenderArea,
+				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
 			};
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
-				const std::array<VkCommandBuffer, 1> SCBs = { SCB0 };
+				const std::array SCBs = { SCB0 };
 				vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
 			} vkCmdEndRenderPass(CB);
 		}
 
 		//!< リソースバリア : VK_ACCESS_COLOR_ATTACHMENT_READ_BIT -> VK_ACCESS_SHADER_READ_BIT -> SubpassDependencyで代用可能かも？
 		{
-			const std::array<VkImageMemoryBarrier, 4> IMBs = { {
+			const std::array IMBs = {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
-				{
-					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-					nullptr,
-					VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
-					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-					Images[0].Image,
-					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
-				},
+				VkImageMemoryBarrier({
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+					.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.image = Images[0].Image,
+					.subresourceRange = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
+				}),
 #pragma region MRT
 				//!< レンダーターゲット : 法線(RenderTarget : Normal)
-				{
-					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-					nullptr,
-					VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
-					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-					Images[1].Image,
-					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
-				},
+				VkImageMemoryBarrier({
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+					.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.image = Images[1].Image,
+					.subresourceRange = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
+				}),
 				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				{
-					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-					nullptr,
-					VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
-					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-					Images[2].Image,
-					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
-				},
+				VkImageMemoryBarrier({
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+					.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.image = Images[2].Image,
+					.subresourceRange = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
+				}),
 				//!< レンダーターゲット : 未定
-				{
-					VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-					nullptr,
-					VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, VK_ACCESS_SHADER_READ_BIT,
-					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-					VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED,
-					Images[3].Image,
-					{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
-				},
+				VkImageMemoryBarrier({
+					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+					.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.image = Images[3].Image,
+					.subresourceRange = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
+				}),
 #pragma endregion
-			} };
+			};
 			vkCmdPipelineBarrier(CB,
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 				VK_DEPENDENCY_BY_REGION_BIT,
@@ -419,15 +417,15 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 		{
 			const std::array<VkClearValue, 0> CVs = {};
 			const VkRenderPassBeginInfo RPBI = {
-				VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-				nullptr,
-				RP1,
-				FB1,
-				RenderArea,
-				static_cast<uint32_t>(size(CVs)), data(CVs)
+				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+				.pNext = nullptr,
+				.renderPass = RP1,
+				.framebuffer = FB1,
+				.renderArea = RenderArea,
+				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
 			};
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
-				const std::array<VkCommandBuffer, 1> SCBs = { SCB1 };
+				const std::array SCBs = { SCB1 };
 				vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
 			} vkCmdEndRenderPass(CB);
 		}

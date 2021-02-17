@@ -16,8 +16,6 @@ public:
 protected:
 	virtual void CreateGeometry() override;
 	virtual void CreatePipelineLayout() override {
-		//CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {});
-
 		//!< 【プッシュコンスタント】 : デスクリプタセットよりも高速
 		//!< パイプラインレイアウト全体で128byte (ハードによりこれ以上使える場合もある、GTX970Mの場合は256byteだった)
 		//!< 各シェーダステージは1つのプッシュコンスタントレンジにしかアクセスできない

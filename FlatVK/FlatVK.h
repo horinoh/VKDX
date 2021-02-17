@@ -21,6 +21,7 @@ protected:
 	}
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }
 	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_FALSE); }
+
 	virtual void PopulateCommandBuffer(const size_t i) override;
 };
 #pragma endregion

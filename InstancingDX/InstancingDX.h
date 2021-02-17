@@ -37,6 +37,7 @@ protected:
 		};
 		CreatePipelineState_VsPs_Input(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE, IEDs);
 	}
+
 	virtual void PopulateCommandList(const size_t i) override;
 };
 #pragma endregion

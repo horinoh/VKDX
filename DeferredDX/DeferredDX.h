@@ -25,35 +25,6 @@ protected:
 #pragma endregion
 	}
 
-#ifdef USE_GBUFFER_VISUALIZE
-	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f) override {
-		D3D12_FEATURE_DATA_D3D12_OPTIONS3 FDO3;
-		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS3, reinterpret_cast<void*>(&FDO3), sizeof(FDO3)));
-		assert(D3D12_VIEW_INSTANCING_TIER_1 < FDO3.ViewInstancingTier && "");
-
-		const auto W = Width * 0.5f, H = Height * 0.5f;
-		Viewports = {
-			//!< 全画面用
-			D3D12_VIEWPORT({ .TopLeftX = 0.0f, .TopLeftY = 0.0f, .Width = Width, .Height = Height, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
-			//!< 分割画面用
-			D3D12_VIEWPORT({ .TopLeftX = 0.0f, .TopLeftY = 0.0f, .Width = W, .Height = H, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
-			D3D12_VIEWPORT({ .TopLeftX = W, .TopLeftY = 0.0f, .Width = W, .Height = H, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
-			D3D12_VIEWPORT({ .TopLeftX = 0.0f, .TopLeftY = H, .Width = W, .Height = H, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
-			D3D12_VIEWPORT({ .TopLeftX = W, .TopLeftY = H, .Width = W, .Height = H, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
-		};
-		//!< left, top, right, bottomで指定 (offset, extentで指定のVKとは異なるので注意)
-		ScissorRects = {
-			//!< 全画面用
-			D3D12_RECT({ .left = 0, .top = 0, .right = static_cast<LONG>(Width), .bottom = static_cast<LONG>(Height) }),
-			//!< 分割画面用
-			D3D12_RECT({ .left = 0, .top = 0, .right = static_cast<LONG>(W), .bottom = static_cast<LONG>(H) }),
-			D3D12_RECT({ .left = static_cast<LONG>(W), .top = 0, .right = static_cast<LONG>(Width), .bottom = static_cast<LONG>(H) }),
-			D3D12_RECT({ .left = 0, .top = static_cast<LONG>(H), .right = static_cast<LONG>(W), .bottom = static_cast<LONG>(Height) }),
-			D3D12_RECT({ .left = static_cast<LONG>(W), .top = static_cast<LONG>(H), .right = static_cast<LONG>(Width), .bottom = static_cast<LONG>(Height) }),
-		};
-		LOG_OK();
-	}
-#endif
 	virtual void CreateCommandList() override {
 		Super::CreateCommandList();
 		//!< パス1 : バンドルコマンドリスト
@@ -64,7 +35,6 @@ protected:
 			VERIFY_SUCCEEDED(BundleGraphicsCommandLists.back()->Close());
 		}
 	}
-
 	virtual void CreateGeometry() override {
 		const auto CA = COM_PTR_GET(CommandAllocators[0]);
 		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
@@ -77,6 +47,180 @@ protected:
 		{
 			constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
 			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DA);
+		}
+	}
+	virtual void CreateConstantBuffer() override {
+		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
+		const auto Aspect = GetAspectRatioOfClientRect();
+		constexpr auto ZFar = 4.0f;
+		constexpr auto ZNear = 2.0f;
+		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f);
+		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+		const auto Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
+		const auto View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
+		const auto World = DirectX::XMMatrixIdentity();
+
+		const auto ViewProjection = DirectX::XMMatrixMultiply(View, Projection);
+		auto Det = DirectX::XMMatrixDeterminant(ViewProjection);
+		const auto InverseViewProjection = DirectX::XMMatrixInverse(&Det, ViewProjection);
+
+		DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
+		DirectX::XMStoreFloat4x4(&Tr.View, View);
+		DirectX::XMStoreFloat4x4(&Tr.World, World);
+		DirectX::XMStoreFloat4x4(&Tr.InverseViewProjection, InverseViewProjection);
+
+#pragma region FRAME_OBJECT
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+		for (UINT i = 0; i < SCD.BufferCount; ++i) {
+			ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tr));
+		}
+#pragma endregion
+	}
+	virtual void CreateTexture()
+	{
+		constexpr D3D12_HEAP_PROPERTIES HP = {
+			.Type = D3D12_HEAP_TYPE_DEFAULT,
+			.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+			.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
+			.CreationNodeMask = 0, .VisibleNodeMask = 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		};
+		//!< レンダーターゲット : カラー(RenderTarget : Color)
+		{
+			const D3D12_RESOURCE_DESC RD = {
+				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				.Alignment = 0,
+				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
+				.DepthOrArraySize = 1,
+				.MipLevels = 1,
+				.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
+			};
+			const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .Color = { DirectX::Colors::SkyBlue.f[0],DirectX::Colors::SkyBlue.f[1],DirectX::Colors::SkyBlue.f[2],DirectX::Colors::SkyBlue.f[3] } };
+			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
+
+			RenderTargetViewDescs.emplace_back(D3D12_RENDER_TARGET_VIEW_DESC({
+				.Format = ImageResources.back()->GetDesc().Format,
+				.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
+				.Texture2D = D3D12_TEX2D_RTV({.MipSlice = 0, .PlaneSlice = 0})
+				}));
+			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
+				.Format = ImageResources.back()->GetDesc().Format,
+				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f})
+				}));
+		}
+#pragma region MRT
+		//!< レンダーターゲット : 法線(RenderTarget : Normal)
+		{
+			const D3D12_RESOURCE_DESC RD = {
+				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				.Alignment = 0,
+				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
+				.DepthOrArraySize = 1,
+				.MipLevels = 1,
+				.Format = DXGI_FORMAT_R10G10B10A2_UNORM,
+				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
+			};
+			const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .Color = { 0.5f, 0.5f, 1.0f, 1.0f } };
+			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
+
+			RenderTargetViewDescs.emplace_back(D3D12_RENDER_TARGET_VIEW_DESC({
+				.Format = ImageResources.back()->GetDesc().Format,
+				.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
+				.Texture2D = D3D12_TEX2D_RTV({.MipSlice = 0, .PlaneSlice = 0 })
+				}));
+			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
+				.Format = ImageResources.back()->GetDesc().Format,
+				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
+				}));
+		}
+		//!< レンダーターゲット : 深度(RenderTarget : Depth)
+		{
+			const D3D12_RESOURCE_DESC RD = {
+				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				.Alignment = 0,
+				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
+				.DepthOrArraySize = 1,
+				.MipLevels = 1,
+				.Format = DXGI_FORMAT_R32_FLOAT,
+				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
+			};
+			const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .Color = { DirectX::Colors::Red.f[0], DirectX::Colors::Red.f[1], DirectX::Colors::Red.f[2], DirectX::Colors::Red.f[3] } };
+			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
+
+			RenderTargetViewDescs.emplace_back(D3D12_RENDER_TARGET_VIEW_DESC({
+				.Format = ImageResources.back()->GetDesc().Format,
+				.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
+				.Texture2D = D3D12_TEX2D_RTV({.MipSlice = 0, .PlaneSlice = 0 })
+				}));
+			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
+				.Format = ImageResources.back()->GetDesc().Format,
+				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
+				}));
+		}
+		//!< レンダーターゲット : 未定
+		{
+			const D3D12_RESOURCE_DESC RD = {
+				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				.Alignment = 0,
+				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
+				.DepthOrArraySize = 1,
+				.MipLevels = 1,
+				.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
+			};
+			const D3D12_CLEAR_VALUE CV = { RD.Format, { DirectX::Colors::SkyBlue.f[0],  DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] } };
+			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
+
+			RenderTargetViewDescs.emplace_back(D3D12_RENDER_TARGET_VIEW_DESC({
+				.Format = ImageResources.back()->GetDesc().Format,
+				.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
+				.Texture2D = D3D12_TEX2D_RTV({.MipSlice = 0, .PlaneSlice = 0 })
+				}));
+			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
+				.Format = ImageResources.back()->GetDesc().Format,
+				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
+				}));
+		}
+#pragma endregion
+		{
+			const D3D12_RESOURCE_DESC RD = {
+				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				.Alignment = 0,
+				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
+				.DepthOrArraySize = 1,
+				.MipLevels = 1,
+				.Format = DXGI_FORMAT_D24_UNORM_S8_UINT,
+				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
+			};
+			D3D12_CLEAR_VALUE CV = { RD.Format, { 1.0f, 0 } };
+			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
+
+			DepthStencilViewDescs.emplace_back(D3D12_DEPTH_STENCIL_VIEW_DESC({
+				.Format = ImageResources.back()->GetDesc().Format,
+				.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D,
+				.Flags = D3D12_DSV_FLAG_NONE,
+				.Texture2D = D3D12_TEX2D_DSV({.MipSlice = 0 })
+				}));
 		}
 	}
 	virtual void CreateStaticSampler() override {
@@ -131,286 +275,6 @@ protected:
 		}
 		LOG_OK();
 	}
-	virtual void CreateTexture()
-	{
-		constexpr D3D12_HEAP_PROPERTIES HP = {
-			.Type = D3D12_HEAP_TYPE_DEFAULT,
-			.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-			.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
-			.CreationNodeMask = 0, .VisibleNodeMask = 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-		};
-		//!< レンダーターゲット : カラー(RenderTarget : Color)
-		{
-			const D3D12_RESOURCE_DESC RD = {
-				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				.Alignment = 0,
-				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
-				.DepthOrArraySize = 1,
-				.MipLevels = 1,
-				.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
-				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
-				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
-			};
-			const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .Color = { DirectX::Colors::SkyBlue.f[0],DirectX::Colors::SkyBlue.f[1],DirectX::Colors::SkyBlue.f[2],DirectX::Colors::SkyBlue.f[3] } };
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
-
-			RenderTargetViewDescs.emplace_back(D3D12_RENDER_TARGET_VIEW_DESC({ 
-				.Format = ImageResources.back()->GetDesc().Format, 
-				.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
-				.Texture2D = D3D12_TEX2D_RTV({.MipSlice = 0, .PlaneSlice = 0}) 
-			}));
-			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
-				.Format = ImageResources.back()->GetDesc().Format,
-				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D, 
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f})
-			}));
-		}
-#pragma region MRT
-		//!< レンダーターゲット : 法線(RenderTarget : Normal)
-		{
-			const D3D12_RESOURCE_DESC RD = {
-				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				.Alignment = 0,
-				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
-				.DepthOrArraySize = 1,
-				.MipLevels = 1,
-				.Format = DXGI_FORMAT_R10G10B10A2_UNORM,
-				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
-				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
-			};
-			const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .Color = { 0.5f, 0.5f, 1.0f, 1.0f } };
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
-
-			RenderTargetViewDescs.emplace_back(D3D12_RENDER_TARGET_VIEW_DESC({ 
-				.Format = ImageResources.back()->GetDesc().Format,
-				.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
-				.Texture2D = D3D12_TEX2D_RTV({.MipSlice = 0, .PlaneSlice = 0 })
-			}));
-			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({ 
-				.Format = ImageResources.back()->GetDesc().Format,
-				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D, 
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
-			}));
-		}
-		//!< レンダーターゲット : 深度(RenderTarget : Depth)
-		{
-			const D3D12_RESOURCE_DESC RD = {
-				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				.Alignment = 0,
-				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
-				.DepthOrArraySize = 1,
-				.MipLevels = 1,
-				.Format = DXGI_FORMAT_R32_FLOAT,
-				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
-				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
-			};
-			const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .Color = { DirectX::Colors::Red.f[0], DirectX::Colors::Red.f[1], DirectX::Colors::Red.f[2], DirectX::Colors::Red.f[3] } };
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
-
-			RenderTargetViewDescs.emplace_back(D3D12_RENDER_TARGET_VIEW_DESC({
-				.Format = ImageResources.back()->GetDesc().Format, 
-				.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
-				.Texture2D = D3D12_TEX2D_RTV({.MipSlice = 0, .PlaneSlice = 0 })
-			}));
-			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({ 
-				.Format = ImageResources.back()->GetDesc().Format,
-				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
-			}));
-		}
-		//!< レンダーターゲット : 未定
-		{
-			const D3D12_RESOURCE_DESC RD = {
-				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				.Alignment = 0,
-				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
-				.DepthOrArraySize = 1,
-				.MipLevels = 1,
-				.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
-				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
-				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
-			};
-			const D3D12_CLEAR_VALUE CV = { RD.Format, { DirectX::Colors::SkyBlue.f[0],  DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] } };
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
-
-			RenderTargetViewDescs.emplace_back(D3D12_RENDER_TARGET_VIEW_DESC({
-				.Format = ImageResources.back()->GetDesc().Format, 
-				.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
-				.Texture2D = D3D12_TEX2D_RTV({.MipSlice = 0, .PlaneSlice = 0 })
-			}));
-			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
-				.Format = ImageResources.back()->GetDesc().Format, 
-				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
-			}));
-		}
-#pragma endregion
-		{
-			const D3D12_RESOURCE_DESC RD = {
-				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				.Alignment = 0,
-				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
-				.DepthOrArraySize = 1,
-				.MipLevels = 1,
-				.Format = DXGI_FORMAT_D24_UNORM_S8_UINT,
-				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
-				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
-			};
-			D3D12_CLEAR_VALUE CV = { RD.Format, { 1.0f, 0 } };
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
-
-			DepthStencilViewDescs.emplace_back(D3D12_DEPTH_STENCIL_VIEW_DESC({ 
-				.Format = ImageResources.back()->GetDesc().Format, 
-				.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D,  
-				.Flags = D3D12_DSV_FLAG_NONE,
-				.Texture2D = D3D12_TEX2D_DSV({.MipSlice = 0 })
-			}));
-		}
-	}
-
-	virtual void CreateDescriptorHeap() override {
-#pragma region FRAME_OBJECT
-		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
-#pragma endregion
-		//!< Pass0 : レンダーターゲット
-		{
-			{
-#pragma region FRAME_OBJECT
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< CBV * N
-#pragma endregion
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
-			}
-#pragma region MRT
-			{
-				//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV, .NumDescriptors = 4, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 }; //!< 4RTV
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps.emplace_back())));
-			}
-#pragma endregion
-			{
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 }; //!< DSV
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
-			}
-		}
-		//!< Pass1 : シェーダリソース
-		{
-#pragma region MRT
-			{
-				//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
-#pragma region FRAME_OBJECT
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 4 + SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< 4SRV + CBV * N
-#pragma endregion
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
-			}
-#pragma endregion
-		}
-	}
-	virtual void CreateDescriptorView() override {
-#pragma region FRAME_OBJECT
-		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
-#pragma endregion
-
-		//!< Pass0 : レンダーターゲットビュー
-		{
-			{
-				const auto& DH = CbvSrvUavDescriptorHeaps[0];
-				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-#pragma region FRAME_OBJECT
-				for (UINT i = 0; i < SCD.BufferCount; ++i) {
-					const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
-					Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
-				}
-#pragma endregion
-			}
-			{
-				const auto& DH = RtvDescriptorHeaps[0];
-				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-				//!< レンダーターゲット : カラー(RenderTarget : Color)
-				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), &RenderTargetViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#pragma region MRT
-				//!< レンダーターゲット : 法線(RenderTarget : Normal)
-				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[1]), &RenderTargetViewDescs[1], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[2]), &RenderTargetViewDescs[2], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				//!< レンダーターゲット : 未定
-				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[3]), &RenderTargetViewDescs[3], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#pragma endregion
-			}
-			{
-				const auto& DH = DsvDescriptorHeaps[0];
-				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[4]), &DepthStencilViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-			}
-		}
-		//!< Pass1 : シェーダリソースビュー
-		{
-			const auto& DH = CbvSrvUavDescriptorHeaps[1];
-			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-			{
-				//!< レンダーターゲット : カラー(RenderTarget : Color)
-				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#pragma region MRT
-				//!< レンダーターゲット : 法線(RenderTarget : Normal)
-				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), &ShaderResourceViewDescs[1], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[2]), &ShaderResourceViewDescs[2], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				//!< レンダーターゲット : 未定
-				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[3]), &ShaderResourceViewDescs[3], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#pragma	endregion
-			}
-			{
-#pragma region FRAME_OBJECT
-				for (UINT i = 0; i < SCD.BufferCount; ++i) {
-					const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
-					Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
-				}
-#pragma endregion
-			}
-		}
-	}
-
-	virtual void CreateConstantBuffer() override {
-		//const auto Fov = 0.16f * DirectX::XM_PI;
-		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
-		const auto Aspect = GetAspectRatioOfClientRect();
-		constexpr auto ZFar = 4.0f;
-		constexpr auto ZNear = 2.0f;
-		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f);
-		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		const auto Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
-		const auto View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
-		const auto World = DirectX::XMMatrixIdentity();
-
-		const auto ViewProjection = DirectX::XMMatrixMultiply(View, Projection);
-		auto Det = DirectX::XMMatrixDeterminant(ViewProjection);
-		const auto InverseViewProjection = DirectX::XMMatrixInverse(&Det, ViewProjection);
-		
-		DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
-		DirectX::XMStoreFloat4x4(&Tr.View, View);
-		DirectX::XMStoreFloat4x4(&Tr.World, World);
-		DirectX::XMStoreFloat4x4(&Tr.InverseViewProjection, InverseViewProjection);
-
-#pragma region FRAME_OBJECT
-		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
-		for (UINT i = 0; i < SCD.BufferCount; ++i) {
-			ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tr));
-		}
-#pragma endregion
-	}
-
 	virtual void CreateShaderBlob() override {
 		const auto ShaderPath = GetBasePath();
 		//!< Pass0 : シェーダブロブ
@@ -479,11 +343,11 @@ protected:
 		};
 #endif
 		const std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs = {};
-		const std::vector RTVs_0 = { 
-			DXGI_FORMAT_R8G8B8A8_UNORM, 
+		const std::vector RTVs_0 = {
+			DXGI_FORMAT_R8G8B8A8_UNORM,
 #pragma region MRT
 			DXGI_FORMAT_R10G10B10A2_UNORM,
-			DXGI_FORMAT_R32_FLOAT, 
+			DXGI_FORMAT_R32_FLOAT,
 			DXGI_FORMAT_R8G8B8A8_UNORM
 #pragma endregion
 		};
@@ -508,7 +372,139 @@ protected:
 #endif	
 		for (auto& i : Threads) { i.join(); }
 	}
+	virtual void CreateDescriptorHeap() override {
+#pragma region FRAME_OBJECT
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+#pragma endregion
+		//!< Pass0 : レンダーターゲット
+		{
+			{
+#pragma region FRAME_OBJECT
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< CBV * N
+#pragma endregion
+				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
+			}
+#pragma region MRT
+			{
+				//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV, .NumDescriptors = 4, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 }; //!< 4RTV
+				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps.emplace_back())));
+			}
+#pragma endregion
+			{
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 }; //!< DSV
+				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
+			}
+		}
+		//!< Pass1 : シェーダリソース
+		{
+#pragma region MRT
+			{
+				//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
+#pragma region FRAME_OBJECT
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 4 + SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< 4SRV + CBV * N
+#pragma endregion
+				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
+			}
+#pragma endregion
+		}
+	}
+	virtual void CreateDescriptorView() override {
+#pragma region FRAME_OBJECT
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+#pragma endregion
+		//!< Pass0 : レンダーターゲットビュー
+		{
+			{
+				const auto& DH = CbvSrvUavDescriptorHeaps[0];
+				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+#pragma region FRAME_OBJECT
+				for (UINT i = 0; i < SCD.BufferCount; ++i) {
+					const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
+					Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+				}
+#pragma endregion
+			}
+			{
+				const auto& DH = RtvDescriptorHeaps[0];
+				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+				//!< レンダーターゲット : カラー(RenderTarget : Color)
+				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), &RenderTargetViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma region MRT
+				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[1]), &RenderTargetViewDescs[1], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[2]), &RenderTargetViewDescs[2], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				//!< レンダーターゲット : 未定
+				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[3]), &RenderTargetViewDescs[3], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma endregion
+			}
+			{
+				const auto& DH = DsvDescriptorHeaps[0];
+				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[4]), &DepthStencilViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+			}
+		}
+		//!< Pass1 : シェーダリソースビュー
+		{
+			const auto& DH = CbvSrvUavDescriptorHeaps[1];
+			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+			{
+				//!< レンダーターゲット : カラー(RenderTarget : Color)
+				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma region MRT
+				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), &ShaderResourceViewDescs[1], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[2]), &ShaderResourceViewDescs[2], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				//!< レンダーターゲット : 未定
+				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[3]), &ShaderResourceViewDescs[3], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma	endregion
+			}
+			{
+#pragma region FRAME_OBJECT
+				for (UINT i = 0; i < SCD.BufferCount; ++i) {
+					const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
+					Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+				}
+#pragma endregion
+			}
+		}
+	}
+
 	virtual void PopulateCommandList(const size_t i) override;
+
+#ifdef USE_GBUFFER_VISUALIZE
+	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f) override {
+		D3D12_FEATURE_DATA_D3D12_OPTIONS3 FDO3;
+		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS3, reinterpret_cast<void*>(&FDO3), sizeof(FDO3)));
+		assert(D3D12_VIEW_INSTANCING_TIER_1 < FDO3.ViewInstancingTier && "");
+
+		const auto W = Width * 0.5f, H = Height * 0.5f;
+		Viewports = {
+			//!< 全画面用
+			D3D12_VIEWPORT({.TopLeftX = 0.0f, .TopLeftY = 0.0f, .Width = Width, .Height = Height, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
+			//!< 分割画面用
+			D3D12_VIEWPORT({.TopLeftX = 0.0f, .TopLeftY = 0.0f, .Width = W, .Height = H, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
+			D3D12_VIEWPORT({.TopLeftX = W, .TopLeftY = 0.0f, .Width = W, .Height = H, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
+			D3D12_VIEWPORT({.TopLeftX = 0.0f, .TopLeftY = H, .Width = W, .Height = H, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
+			D3D12_VIEWPORT({.TopLeftX = W, .TopLeftY = H, .Width = W, .Height = H, .MinDepth = MinDepth, .MaxDepth = MaxDepth }),
+		};
+		//!< left, top, right, bottomで指定 (offset, extentで指定のVKとは異なるので注意)
+		ScissorRects = {
+			//!< 全画面用
+			D3D12_RECT({.left = 0, .top = 0, .right = static_cast<LONG>(Width), .bottom = static_cast<LONG>(Height) }),
+			//!< 分割画面用
+			D3D12_RECT({.left = 0, .top = 0, .right = static_cast<LONG>(W), .bottom = static_cast<LONG>(H) }),
+			D3D12_RECT({.left = static_cast<LONG>(W), .top = 0, .right = static_cast<LONG>(Width), .bottom = static_cast<LONG>(H) }),
+			D3D12_RECT({.left = 0, .top = static_cast<LONG>(H), .right = static_cast<LONG>(W), .bottom = static_cast<LONG>(Height) }),
+			D3D12_RECT({.left = static_cast<LONG>(W), .top = static_cast<LONG>(H), .right = static_cast<LONG>(Width), .bottom = static_cast<LONG>(Height) }),
+		};
+		LOG_OK();
+	}
+#endif
 
 private:
 	FLOAT Degree = 0.0f;

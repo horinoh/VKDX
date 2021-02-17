@@ -236,61 +236,61 @@ void DeferredDX::PopulateCommandList(const size_t i)
 	const auto PS1 = COM_PTR_GET(PipelineStates[1]);
 
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-	//!< パス0 : バンドルコマンドリスト(メッシュ描画用)
-	const auto BCL0 = COM_PTR_GET(BundleGraphicsCommandLists[i]);
-	VERIFY_SUCCEEDED(BCL0->Reset(BCA, PS0));
+	//!< Pass0 : バンドルコマンドリスト(メッシュ描画用)
+	const auto BGCL0 = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	VERIFY_SUCCEEDED(BGCL0->Reset(BCA, PS0));
 	{
 		const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
 		const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
 	
-		BCL0->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-		BCL0->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+		BGCL0->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+		BGCL0->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 	}
-	VERIFY_SUCCEEDED(BCL0->Close());
+	VERIFY_SUCCEEDED(BGCL0->Close());
 
-	//!< パス1 : バンドルコマンドリスト(レンダーテクスチャ描画用)
-	const auto BCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + size(BundleGraphicsCommandLists) / 2]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
-	VERIFY_SUCCEEDED(BCL1->Reset(BCA, PS1));
+	//!< Pass1 : バンドルコマンドリスト(レンダーテクスチャ描画用)
+	const auto BGCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + size(BundleGraphicsCommandLists) / 2]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
+	VERIFY_SUCCEEDED(BGCL1->Reset(BCA, PS1));
 	{
 		const auto IDBCS = COM_PTR_GET(IndirectBuffers[1].CommandSignature);
 		const auto IDBR = COM_PTR_GET(IndirectBuffers[1].Resource);
 	
-		BCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-		BCL1->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+		BGCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		BGCL1->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 	}
-	VERIFY_SUCCEEDED(BCL1->Close());
+	VERIFY_SUCCEEDED(BGCL1->Close());
 
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	VERIFY_SUCCEEDED(CL->Reset(CA, PS1));
+	VERIFY_SUCCEEDED(GCL->Reset(CA, PS1));
 	{
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 		const auto IR = COM_PTR_GET(ImageResources[0]);
 
-		CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-		CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+		GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+		GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
 		//!< パス0 : (メッシュ描画用)
 		{
-			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
+			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 			const auto RtvDH = RtvDescriptorHeaps[0];
 			auto RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart();
 			const auto DsvCDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			{
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects)); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+				GCL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects)); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
 #pragma region MRT
-				CL->ClearRenderTargetView(RtvCDH, data(std::array<FLOAT, 4>({ 0.5f, 0.5f, 1.0f, 1.0f })), static_cast<UINT>(size(Rects)), data(Rects)); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
-				CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::Red, static_cast<UINT>(size(Rects)), data(Rects)); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
-				CL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects)); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+				GCL->ClearRenderTargetView(RtvCDH, data(std::array<FLOAT, 4>({ 0.5f, 0.5f, 1.0f, 1.0f })), static_cast<UINT>(size(Rects)), data(Rects)); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+				GCL->ClearRenderTargetView(RtvCDH, DirectX::Colors::Red, static_cast<UINT>(size(Rects)), data(Rects)); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
+				GCL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects)); RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type);
 #pragma endregion
-				CL->ClearDepthStencilView(DsvCDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+				GCL->ClearDepthStencilView(DsvCDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 			}
 			{
 				RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart();
 #if 0
-				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 4> RtvDHs = {
+				const std::array RtvDHs = {
 					RtvCDH,
 					RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
 					RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
@@ -299,51 +299,59 @@ void DeferredDX::PopulateCommandList(const size_t i)
 				CL->OMSetRenderTargets(static_cast<UINT>(size(RtvDHs)), data(RtvDHs), FALSE, &DsvDH); //!< RTV, DSV
 #else
 				//!< 「連続している」場合は、「個数」と「先頭アドレス」を指定して「RTsSingleHandleToDescriptorRange==TRUE」で良い
-				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> RtvDHs = { RtvCDH, };
-				CL->OMSetRenderTargets(4, data(RtvDHs), TRUE, &DsvCDH);
+				const std::array RtvDHs = { RtvCDH, };
+				GCL->OMSetRenderTargets(4, data(RtvDHs), TRUE, &DsvCDH); //!< RTV, DSV
 #endif
 			}
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
-				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				const std::array DHs = { COM_PTR_GET(DH) };
+				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
 #pragma region FRAME_OBJECT
 				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
-				CL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV
+				GCL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV
 #pragma endregion
 			}
 
-			CL->ExecuteBundle(BCL0);
+			GCL->ExecuteBundle(BGCL0);
 		}
 
-		//!< リソースバリア : D3D12_RESOURCE_STATE_RENDER_TARGET -> D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
+		//!< リソースバリア
 		{
-			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SCR = { SCR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET };
-			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_IR = { IR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE };
-			const std::array<D3D12_RESOURCE_BARRIER, 2> RBs = { {
-				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_SCR },
-				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_IR },
-			} };
-			CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+			const std::array RBs = { 
+				//!< スワップチェイン PRESENT -> RENDER_TARGET
+				D3D12_RESOURCE_BARRIER({
+					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, 
+					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = SCR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PRESENT, .StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET })
+				}),
+				//!< イメージ RENDER_TARGET -> PIXEL_SHADER_RESOURCE
+				D3D12_RESOURCE_BARRIER({
+					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = IR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET, .StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE })
+				}),
+			};
+			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 		}
 
 		//!< パス1 : (レンダーテクスチャ描画用)
 		{
-			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
+			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 			{
 				auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> CDHs = { CDH };
-				CL->OMSetRenderTargets(static_cast<UINT>(size(CDHs)), data(CDHs), FALSE, nullptr); //!< RTV
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(CDHs)), data(CDHs), FALSE, nullptr); //!< RTV
 			}
 				
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[1];
 				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-				CL->SetGraphicsRootDescriptorTable(0, GDH); //!< SRV
+				GCL->SetGraphicsRootDescriptorTable(0, GDH); //!< SRV
 #pragma region FRAME_OBJECT
 				//!< #DX_TODO
 				//GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * 4;
@@ -352,20 +360,28 @@ void DeferredDX::PopulateCommandList(const size_t i)
 #pragma endregion
 			}
 
-			CL->ExecuteBundle(BCL1);
+			GCL->ExecuteBundle(BGCL1);
 		}
 
 		//!< リソースバリア : D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE -> D3D12_RESOURCE_STATE_RENDER_TARGET
 		{
-			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_SCR = { SCR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT };
-			const D3D12_RESOURCE_TRANSITION_BARRIER RTB_IR = { IR, D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, D3D12_RESOURCE_STATE_RENDER_TARGET };
-			const std::array<D3D12_RESOURCE_BARRIER, 2> RBs = { {
-				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_SCR },
-				{ D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, D3D12_RESOURCE_BARRIER_FLAG_NONE, RTB_IR },
-			} };
-			CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+			const std::array RBs = {
+				//!< スワップチェイン RENDER_TARGET -> PRESENT
+				D3D12_RESOURCE_BARRIER({
+					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, 
+					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({ .pResource = SCR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET, .StateAfter = D3D12_RESOURCE_STATE_PRESENT })
+				}),
+				//!< イメージ PIXEL_SHADER_RESOURCE -> RENDER_TARGET
+				D3D12_RESOURCE_BARRIER({ 
+					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, 
+					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({ .pResource = IR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, .StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET })
+				}),
+			};
+			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 		}
 	}
-	VERIFY_SUCCEEDED(CL->Close());
+	VERIFY_SUCCEEDED(GCL->Close());
 }
 #pragma endregion

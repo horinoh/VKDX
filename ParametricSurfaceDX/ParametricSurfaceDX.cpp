@@ -234,55 +234,55 @@ void ParametricSurfaceDX::PopulateCommandList(const size_t i)
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 	
 #ifndef USE_NO_BUNDLE
-	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	const auto BGCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
+	VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
 	{
 		const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
 		const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
 
-		BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-		BCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+		BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+		BGCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 	}
-	VERIFY_SUCCEEDED(BCL->Close());
+	VERIFY_SUCCEEDED(BGCL->Close());
 #endif
 
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
+	VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
 	{
 		const auto RS = COM_PTR_GET(RootSignatures[0]);
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 
-        CL->SetGraphicsRootSignature(RS);
+        GCL->SetGraphicsRootSignature(RS);
 
-		CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-		CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+		GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+		GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
             auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
             
             constexpr std::array<D3D12_RECT, 0> Rects = {};
-			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+			GCL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 
 			const std::array RTDHs = { CDH };
-			CL->OMSetRenderTargets(static_cast<UINT>(size(RTDHs)), data(RTDHs), FALSE, nullptr);
+			GCL->OMSetRenderTargets(static_cast<UINT>(size(RTDHs)), data(RTDHs), FALSE, nullptr);
 
 #ifdef USE_NO_BUNDLE
 			const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
 			const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
-			CL->SetGraphicsRootSignature(RS);
+			GCL->SetGraphicsRootSignature(RS);
 			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
-			CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-			CL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+			GCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+			GCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 #else
-			CL->ExecuteBundle(BCL);
+			GCL->ExecuteBundle(BGCL);
 #endif
 		}
-		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
-	VERIFY_SUCCEEDED(CL->Close());
+	VERIFY_SUCCEEDED(GCL->Close());
 }
 #pragma endregion
 
