@@ -230,32 +230,6 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void HoloVK::CreateViewport(const float Width, const float Height, const float MinDepth, const float MaxDepth)
-{
-	//!< Pass0
-	{
-		//!< キルトの構造
-		//!< ------------> RightMost
-		//!< ---------------------->
-		//!< ---------------------->
-		//!< ---------------------->
-		//!< LeftMost ------------->
-		const auto& QS = GetQuiltSetting();
-		const auto W = QS.GetViewWidth(), H = QS.GetViewHeight();
-		for (auto i = 0; i < QS.GetViewRow(); ++i) {
-			for (auto j = 0; j < QS.GetViewColumn(); ++j) {
-				const auto X = j * W, Y = QS.GetHeight() - (i + 1) * H, BottomY = QS.GetHeight() - i * H;
-				QuiltViewports.emplace_back(VkViewport({ .x = static_cast<float>(X), .y = static_cast<float>(BottomY), .width = static_cast<float>(W), .height = -static_cast<float>(H), .minDepth = MinDepth, .maxDepth = MaxDepth }));
-				QuiltScissorRects.emplace_back(VkRect2D({ VkOffset2D({.x = X, .y = Y }), VkExtent2D({.width = static_cast<uint32_t>(W), .height = static_cast<uint32_t>(H) }) }));
-			}
-		}
-	}
-
-	//!< Pass1
-	{
-		Super::CreateViewport(Width, Height, MinDepth, MaxDepth);
-	}
-}
 void HoloVK::PopulateCommandBuffer(const size_t i)
 {
 	//!< Pass0
@@ -417,5 +391,31 @@ void HoloVK::PopulateCommandBuffer(const size_t i)
 		}
 
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+}
+void HoloVK::CreateViewport(const float Width, const float Height, const float MinDepth, const float MaxDepth)
+{
+	//!< Pass0
+	{
+		//!< キルトの構造
+		//!< ------------> RightMost
+		//!< ---------------------->
+		//!< ---------------------->
+		//!< ---------------------->
+		//!< LeftMost ------------->
+		const auto& QS = GetQuiltSetting();
+		const auto W = QS.GetViewWidth(), H = QS.GetViewHeight();
+		for (auto i = 0; i < QS.GetViewRow(); ++i) {
+			for (auto j = 0; j < QS.GetViewColumn(); ++j) {
+				const auto X = j * W, Y = QS.GetHeight() - (i + 1) * H, BottomY = QS.GetHeight() - i * H;
+				QuiltViewports.emplace_back(VkViewport({ .x = static_cast<float>(X), .y = static_cast<float>(BottomY), .width = static_cast<float>(W), .height = -static_cast<float>(H), .minDepth = MinDepth, .maxDepth = MaxDepth }));
+				QuiltScissorRects.emplace_back(VkRect2D({ VkOffset2D({.x = X, .y = Y }), VkExtent2D({.width = static_cast<uint32_t>(W), .height = static_cast<uint32_t>(H) }) }));
+			}
+		}
+	}
+
+	//!< Pass1
+	{
+		Super::CreateViewport(Width, Height, MinDepth, MaxDepth);
+	}
 }
 #pragma endregion
