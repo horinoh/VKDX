@@ -1,8 +1,8 @@
-// LeapDX.cpp : Defines the entry point for the application.
+// MeshShaderDX.cpp : Defines the entry point for the application.
 //
 
 #include "framework.h"
-#include "LeapDX.h"
+#include "MeshShaderDX.h"
 
 #pragma region Code
 DX* Inst = nullptr;
@@ -33,7 +33,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_LEAPDX, szWindowClass, MAX_LOADSTRING);
+    LoadStringW(hInstance, IDC_MESHSHADERDX, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
@@ -42,7 +42,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_LEAPDX));
+    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_MESHSHADERDX));
 
     MSG msg;
 
@@ -77,10 +77,10 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_LEAPDX));
+    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MESHSHADERDX));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_LEAPDX);
+    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_MESHSHADERDX);
     wcex.lpszClassName  = szWindowClass;
     wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
@@ -149,7 +149,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 	case WM_CREATE:
 		if (nullptr == Inst) {
-			Inst = new LeapDX();
+			Inst = new MeshShaderDX();
 		}
 		if (nullptr != Inst) {
 			try {
@@ -228,63 +228,3 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return (INT_PTR)FALSE;
 }
-
-#pragma region Code
-void LeapDX::PopulateCommandList(const size_t i)
-{
-	const auto PS = COM_PTR_GET(PipelineStates[0]);
-
-	const auto BGCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
-	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-	VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
-	{
-		const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
-		const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
-
-		BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-		BGCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
-	}
-	VERIFY_SUCCEEDED(BGCL->Close());
-
-	const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
-	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
-	{
-		const auto RS = COM_PTR_GET(RootSignatures[0]);
-		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-
-		GCL->SetGraphicsRootSignature(RS);
-
-		GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-		GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
-
-		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
-		{
-			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
-			const std::array RTDescriptorHandles = { CDH };
-			GCL->OMSetRenderTargets(static_cast<UINT>(size(RTDescriptorHandles)), data(RTDescriptorHandles), FALSE, nullptr);
-
-			assert(!empty(CbvSrvUavDescriptorHeaps) && "");
-			const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
-			GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-
-			{
-				const auto& DH = CbvSrvUavDescriptorHeaps[0];
-				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-				GCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * 2;
-
-#pragma region CB
-				DXGI_SWAP_CHAIN_DESC1 SCD;
-				SwapChain->GetDesc1(&SCD);
-				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
-				GCL->SetGraphicsRootDescriptorTable(1, GDH);
-#pragma endregion
-			}
-
-			GCL->ExecuteBundle(BGCL);
-		}
-		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-	}
-	VERIFY_SUCCEEDED(GCL->Close());
-}
-#pragma endregion

@@ -427,7 +427,8 @@
  * Source Files に Win.cpp、VK.cpp、VKExt.cpp、(VKImage.cpp) を追加
  * XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * Shader Files フォルダを作成し、シェーダを突っ込む
-  * 拡張子を glslangValidator に沿うようにしておく(.vert、.frag、...)
+  * 拡張子を glslangValidator に沿うようにしておく
+	* .vert, .tesc. .tese, .geom, .frag, .comp, .mesh, .task, .rgen, .rhit, .rahit, .rchit, .rmiss, .rcall,...
   * 右クリック - プロパティ - Configuration Propeties - General
     * Excluded From Build を No
     * Content を Yes

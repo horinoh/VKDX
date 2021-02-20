@@ -375,6 +375,7 @@ protected:
 	}
 
 	virtual void PopulateCommandBuffer(const size_t i) override;
+
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f) override;
 	virtual int GetViewportMax() const override {
 		VkPhysicalDeviceProperties PDP;

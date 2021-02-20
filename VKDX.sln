@@ -87,6 +87,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RayTracingDX", "RayTracingD
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RayTracingVK", "RayTracingVK\RayTracingVK.vcxproj", "{F6EF92F5-224A-4120-A95F-93528F1E52D7}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MeshShaderDX", "MeshShaderDX\MeshShaderDX.vcxproj", "{FC74A987-3024-4E7D-9A82-969FAA5D2627}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MeshShaderVK", "MeshShaderVK\MeshShaderVK.vcxproj", "{109DB7E9-F65D-40E3-826D-5AACC4BAC875}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -431,6 +435,22 @@ Global
 		{F6EF92F5-224A-4120-A95F-93528F1E52D7}.Release|x64.Build.0 = Release|x64
 		{F6EF92F5-224A-4120-A95F-93528F1E52D7}.Release|x86.ActiveCfg = Release|Win32
 		{F6EF92F5-224A-4120-A95F-93528F1E52D7}.Release|x86.Build.0 = Release|Win32
+		{FC74A987-3024-4E7D-9A82-969FAA5D2627}.Debug|x64.ActiveCfg = Debug|x64
+		{FC74A987-3024-4E7D-9A82-969FAA5D2627}.Debug|x64.Build.0 = Debug|x64
+		{FC74A987-3024-4E7D-9A82-969FAA5D2627}.Debug|x86.ActiveCfg = Debug|Win32
+		{FC74A987-3024-4E7D-9A82-969FAA5D2627}.Debug|x86.Build.0 = Debug|Win32
+		{FC74A987-3024-4E7D-9A82-969FAA5D2627}.Release|x64.ActiveCfg = Release|x64
+		{FC74A987-3024-4E7D-9A82-969FAA5D2627}.Release|x64.Build.0 = Release|x64
+		{FC74A987-3024-4E7D-9A82-969FAA5D2627}.Release|x86.ActiveCfg = Release|Win32
+		{FC74A987-3024-4E7D-9A82-969FAA5D2627}.Release|x86.Build.0 = Release|Win32
+		{109DB7E9-F65D-40E3-826D-5AACC4BAC875}.Debug|x64.ActiveCfg = Debug|x64
+		{109DB7E9-F65D-40E3-826D-5AACC4BAC875}.Debug|x64.Build.0 = Debug|x64
+		{109DB7E9-F65D-40E3-826D-5AACC4BAC875}.Debug|x86.ActiveCfg = Debug|Win32
+		{109DB7E9-F65D-40E3-826D-5AACC4BAC875}.Debug|x86.Build.0 = Debug|Win32
+		{109DB7E9-F65D-40E3-826D-5AACC4BAC875}.Release|x64.ActiveCfg = Release|x64
+		{109DB7E9-F65D-40E3-826D-5AACC4BAC875}.Release|x64.Build.0 = Release|x64
+		{109DB7E9-F65D-40E3-826D-5AACC4BAC875}.Release|x86.ActiveCfg = Release|Win32
+		{109DB7E9-F65D-40E3-826D-5AACC4BAC875}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

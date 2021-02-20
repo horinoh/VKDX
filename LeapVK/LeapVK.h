@@ -36,91 +36,8 @@ protected:
 		CopyToHostVisibleDeviceMemory(UniformBuffers[GetCurrentBackBufferIndex()].DeviceMemory, 0, sizeof(Tracking), &Tracking);
 #pragma endregion
 	}
-#ifdef USE_LEAP
-	virtual void OnHand(const LEAP_HAND& Hand) override {
-		Leap::OnHand(Hand);
-		
-		const auto Index = eLeapHandType_Right == Hand.type ? 0 : 1;
-		for (auto i = 0; i < _countof(Hand.digits); ++i) {
-			const auto& Digit = Hand.digits[i];
-			for (auto j = 0; j < _countof(Digit.bones); ++j) {
-				const auto& Bone = Digit.bones[j];
-				const auto x = std::clamp(Bone.next_joint.x, -100.0f, 100.0f) / 100.0f;
-				const auto y = std::clamp(Bone.next_joint.y, 0.0f, 300.0f) / 300.0f;
-				const auto z = std::clamp(Bone.next_joint.z, -100.0f, 100.0f) / 100.0f;
-				Tracking.Hands[Index][i][j] = glm::vec4(x, y, z, 1.0f);
-			}
-		}
-	}
-	virtual void UpdateLeapImage() override {
-		if (!empty(Images)) {
-			const auto Layers = static_cast<uint32_t>(size(ImageData));
-			const auto LayerSize = size(ImageData[0]);
-			const auto TotalSize = Layers * LayerSize;
-			const auto Extent = VkExtent3D({ .width = ImageProperties[0].width, .height = ImageProperties[0].height, .depth = 1 });
 
-			VkBuffer Buffer;
-			VkDeviceMemory DeviceMemory;
-			{
-				CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TotalSize);
-				AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-				VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
-
-				CopyToHostVisibleDeviceMemory(DeviceMemory, 0, TotalSize, data(ImageData[0]));
-
-				std::vector<VkBufferImageCopy> BICs;
-				for (uint32_t i = 0; i < Layers; ++i) {
-					BICs.emplace_back(VkBufferImageCopy({
-						.bufferOffset = i * LayerSize, .bufferRowLength = 0, .bufferImageHeight = 0,
-						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = i, .layerCount = 1 }),
-						.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),
-						.imageExtent = Extent }));
-				}
-				const auto& CB = CommandBuffers[0];
-				PopulateCommandBuffer_CopyBufferToImage(CB, Buffer, Images[0].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, Layers);
-
-				SubmitAndWait(GraphicsQueue, CB);
-			}
-			vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
-			vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
-		}
-	}
-	virtual void UpdateDistortionImage() override {
-		if (!empty(Images)) {
-			const auto Layers = static_cast<uint32_t>(size(ImageData));
-			constexpr auto LayerSize = sizeof(DistortionMatrices[0]);
-			const auto TotalSize = Layers * LayerSize;
-			constexpr auto Extent = VkExtent3D({ .width = LEAP_DISTORTION_MATRIX_N, .height = LEAP_DISTORTION_MATRIX_N, .depth = 1 });
-
-			VkBuffer Buffer;
-			VkDeviceMemory DeviceMemory;
-			{
-				CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TotalSize);
-				AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-				VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
-
-				CopyToHostVisibleDeviceMemory(DeviceMemory, 0, TotalSize, data(DistortionMatrices));
-
-				std::vector<VkBufferImageCopy> BICs;
-				for (uint32_t i = 0; i < Layers; ++i) {
-					BICs.emplace_back(VkBufferImageCopy({
-						.bufferOffset = i * LayerSize, .bufferRowLength = 0, .bufferImageHeight = 0,
-						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = i, .layerCount = 1 }),
-						.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),
-						.imageExtent = Extent }));
-				}
-				const auto& CB = CommandBuffers[0];
-				PopulateCommandBuffer_CopyBufferToImage(CB, Buffer, Images[1].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, Layers);
-
-				SubmitAndWait(GraphicsQueue, CB);
-			}
-			vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
-			vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
-		}
-	}
-#endif
-
-	virtual void CreateGeometry() override { 
+	virtual void CreateGeometry() override {
 		constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
 		IndirectBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DIC, CommandBuffers[0], GraphicsQueue);
 	}
@@ -217,13 +134,12 @@ protected:
 #pragma region UB
 			VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr }),
 #pragma endregion
-		}); 
+			});
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 	virtual void CreateRenderPass() { VK::CreateRenderPass(VK_ATTACHMENT_LOAD_OP_DONT_CARE, false); }
 
 	virtual void CreateShaderModule() override { CreateShaderModle_VsFs(); }
-
 	virtual void CreatePipeline() override { CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE); }
 
 	virtual void CreateDescriptorSet() override {
@@ -234,7 +150,7 @@ protected:
 #pragma region UB
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }),
 #pragma endregion
-		});
+			});
 
 		const std::array DSLs = { DescriptorSetLayouts[0] };
 		const VkDescriptorSetAllocateInfo DSAI = {
@@ -249,7 +165,6 @@ protected:
 		}
 #pragma endregion
 	}
-
 	virtual void UpdateDescriptorSet() override {
 		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
 			VkDescriptorUpdateTemplateEntry({
@@ -272,7 +187,6 @@ protected:
 			}),
 #pragma endregion
 		}, DescriptorSetLayouts[0]);
-
 #pragma region UB
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			const DescriptorUpdateInfo DUI = {
@@ -288,6 +202,90 @@ protected:
 	}
 
 	virtual void PopulateCommandBuffer(const size_t i) override;
+
+#ifdef USE_LEAP
+	virtual void OnHand(const LEAP_HAND& Hand) override {
+		Leap::OnHand(Hand);
+		
+		const auto Index = eLeapHandType_Right == Hand.type ? 0 : 1;
+		for (auto i = 0; i < _countof(Hand.digits); ++i) {
+			const auto& Digit = Hand.digits[i];
+			for (auto j = 0; j < _countof(Digit.bones); ++j) {
+				const auto& Bone = Digit.bones[j];
+				const auto x = std::clamp(Bone.next_joint.x, -100.0f, 100.0f) / 100.0f;
+				const auto y = std::clamp(Bone.next_joint.y, 0.0f, 300.0f) / 300.0f;
+				const auto z = std::clamp(Bone.next_joint.z, -100.0f, 100.0f) / 100.0f;
+				Tracking.Hands[Index][i][j] = glm::vec4(x, y, z, 1.0f);
+			}
+		}
+	}
+	virtual void UpdateLeapImage() override {
+		if (!empty(Images)) {
+			const auto Layers = static_cast<uint32_t>(size(ImageData));
+			const auto LayerSize = size(ImageData[0]);
+			const auto TotalSize = Layers * LayerSize;
+			const auto Extent = VkExtent3D({ .width = ImageProperties[0].width, .height = ImageProperties[0].height, .depth = 1 });
+
+			VkBuffer Buffer;
+			VkDeviceMemory DeviceMemory;
+			{
+				CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TotalSize);
+				AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+				VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
+
+				CopyToHostVisibleDeviceMemory(DeviceMemory, 0, TotalSize, data(ImageData[0]));
+
+				std::vector<VkBufferImageCopy> BICs;
+				for (uint32_t i = 0; i < Layers; ++i) {
+					BICs.emplace_back(VkBufferImageCopy({
+						.bufferOffset = i * LayerSize, .bufferRowLength = 0, .bufferImageHeight = 0,
+						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = i, .layerCount = 1 }),
+						.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),
+						.imageExtent = Extent }));
+				}
+				const auto& CB = CommandBuffers[0];
+				PopulateCommandBuffer_CopyBufferToImage(CB, Buffer, Images[0].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, Layers);
+
+				SubmitAndWait(GraphicsQueue, CB);
+			}
+			vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
+			vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
+		}
+	}
+	virtual void UpdateDistortionImage() override {
+		if (!empty(Images)) {
+			const auto Layers = static_cast<uint32_t>(size(ImageData));
+			constexpr auto LayerSize = sizeof(DistortionMatrices[0]);
+			const auto TotalSize = Layers * LayerSize;
+			constexpr auto Extent = VkExtent3D({ .width = LEAP_DISTORTION_MATRIX_N, .height = LEAP_DISTORTION_MATRIX_N, .depth = 1 });
+
+			VkBuffer Buffer;
+			VkDeviceMemory DeviceMemory;
+			{
+				CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TotalSize);
+				AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+				VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
+
+				CopyToHostVisibleDeviceMemory(DeviceMemory, 0, TotalSize, data(DistortionMatrices));
+
+				std::vector<VkBufferImageCopy> BICs;
+				for (uint32_t i = 0; i < Layers; ++i) {
+					BICs.emplace_back(VkBufferImageCopy({
+						.bufferOffset = i * LayerSize, .bufferRowLength = 0, .bufferImageHeight = 0,
+						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = i, .layerCount = 1 }),
+						.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),
+						.imageExtent = Extent }));
+				}
+				const auto& CB = CommandBuffers[0];
+				PopulateCommandBuffer_CopyBufferToImage(CB, Buffer, Images[1].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, Layers);
+
+				SubmitAndWait(GraphicsQueue, CB);
+			}
+			vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
+			vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
+		}
+	}
+#endif
 
 private:
 	struct DescriptorUpdateInfo

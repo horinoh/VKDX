@@ -258,7 +258,6 @@ void LeapVK::PopulateCommandBuffer(const size_t i)
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
 
-		//const auto DS = DescriptorSets[0];
 #pragma region UB
 		const auto DS = DescriptorSets[i];
 #pragma endregion
