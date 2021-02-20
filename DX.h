@@ -177,7 +177,7 @@ public:
 		}
 	};
 
-#ifdef USE_RAYTRACING
+#pragma region RAYTRACING
 	class AccelerationStructureBuffer : public BufferResource
 	{
 	public:
@@ -192,7 +192,7 @@ public:
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 		}
 	}; 
-#endif
+#pragma endregion
 
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
@@ -288,9 +288,14 @@ protected:
 
 	virtual void LoadScene() {}
 
-#ifdef USE_RAYTRACING
+#pragma region RAYTRACING
+	static bool HasRaytracingSupport(ID3D12Device* Device) {
+		D3D12_FEATURE_DATA_D3D12_OPTIONS5 FDO5;
+		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, reinterpret_cast<void*>(&FDO5), sizeof(FDO5)));
+		return D3D12_RAYTRACING_TIER_NOT_SUPPORTED != FDO5.RaytracingTier;
+	}
 	static void BuildAccelerationStructure(ID3D12Device* Device, const UINT64 SBSize, const D3D12_GPU_VIRTUAL_ADDRESS GVA, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence);
-#endif
+#pragma endregion
 	virtual void CreateGeometry() {}
 	
 	virtual void CreateConstantBuffer() {}
@@ -382,9 +387,9 @@ protected:
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;
 	std::vector<IndirectBuffer> IndirectBuffers;
-#ifdef USE_RAYTRACING
+#pragma region RAYTRACING
 	std::vector<AccelerationStructureBuffer> BLASs, TLASs;
-#endif
+#pragma endregion
 	std::vector<ConstantBuffer> ConstantBuffers;
 	//std::vector<D3D12_CONSTANT_BUFFER_VIEW_DESC> ConstantBufferViewDescs;
 

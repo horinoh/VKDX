@@ -862,7 +862,7 @@ void DX::ResizeDepthStencil(const DXGI_FORMAT /*DepthFormat*/, const UINT /*Widt
 	LOG_OK();
 }
 
-#ifdef USE_RAYTRACING
+#pragma region RAYTRACING
 void DX::BuildAccelerationStructure(ID3D12Device* Device, const UINT64 SBSize, const D3D12_GPU_VIRTUAL_ADDRESS GVA, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence)
 {
 	ScratchBuffer SB;
@@ -880,7 +880,7 @@ void DX::BuildAccelerationStructure(ID3D12Device* Device, const UINT64 SBSize, c
 	} VERIFY_SUCCEEDED(GCL4->Close());
 	ExecuteAndWait(CQ, static_cast<ID3D12CommandList*>(GCL), Fence);
 }
-#endif
+#pragma endregion
 
 void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth, const FLOAT MaxDepth)
 {

@@ -229,9 +229,11 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     return (INT_PTR)FALSE;
 }
 
-#ifdef USE_RAYTRACING
+#pragma region RAYTRACING
 void RayTracingDX::CreateGeometry()
 {
+	if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
+
 	COM_PTR<ID3D12Device5> Device5;
 	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
 
@@ -328,10 +330,12 @@ void RayTracingDX::CreateGeometry()
 }
 void RayTracingDX::CreateTexture()
 {
-
+	if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 }
 void RayTracingDX::CreateRootSignature()
 {
+	if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
+
 	//!< グローバルルートシグネチャ (Global root signature)
     {
         COM_PTR<ID3DBlob> Blob;
@@ -355,11 +359,15 @@ void RayTracingDX::CreateRootSignature()
 }
 void RayTracingDX::CreateShaderBlob()
 {
+	if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
+
 	const auto ShaderPath = GetBasePath();
 	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rts.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
 }
 void RayTracingDX::CreatePipelineState()
 {
+	if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
+
 	COM_PTR<ID3D12Device5> Device5;
 	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
 
@@ -418,9 +426,9 @@ void RayTracingDX::CreatePipelineState()
 	COM_PTR<ID3D12StateObjectProperties> SOP;
 	VERIFY_SUCCEEDED(StateObject->QueryInterface(COM_PTR_UUIDOF_PUTVOID(SOP)));
 
-	const auto SI_RayGen = SOP->GetShaderIdentifier(TEXT("MyRayGen"));
-	const auto SI_Miss = SOP->GetShaderIdentifier(TEXT("MyMiss"));
-	const auto SI_HitGroup = SOP->GetShaderIdentifier(TEXT("MyHitGroup"));
+	[[maybe_unused]] const auto SI_RayGen = SOP->GetShaderIdentifier(TEXT("MyRayGen"));
+    [[maybe_unused]] const auto SI_Miss = SOP->GetShaderIdentifier(TEXT("MyMiss"));
+    [[maybe_unused]] const auto SI_HitGroup = SOP->GetShaderIdentifier(TEXT("MyHitGroup"));
 
 	BufferResource ST; //#DX_TODO メンバにする
 	//#DX_TODO
@@ -429,4 +437,4 @@ void RayTracingDX::CreatePipelineState()
 	ST.Create(COM_PTR_GET(Device), 0, D3D12_HEAP_TYPE_UPLOAD, nullptr);
 #pragma endregion
 }
-#endif
+#pragma endregion
