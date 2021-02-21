@@ -171,7 +171,7 @@ public:
 		}
 	};
 	using StorageBuffer = BufferMemory;
-#ifdef USE_RAYTRACING
+#pragma region RAYTRACING
 	class AccelerationStructureBuffer : public BufferMemory 
 	{
 	public:
@@ -203,7 +203,7 @@ public:
 		}
 	};
 	using ShaderBindingTable = BufferMemory;
-#endif
+#pragma endregion
 
 #ifdef _WINDOWS
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
@@ -302,7 +302,7 @@ protected:
 	virtual void EnumeratePhysicalDeviceLayerProperties(VkPhysicalDevice PD);
 	virtual void EnumeratePhysicalDeviceExtensionProperties(VkPhysicalDevice PD, const char* LayerName);
 	//virtual void EnumerateQueueFamilyProperties(VkPhysicalDevice PD, VkSurfaceKHR Surface, std::vector<VkQueueFamilyProperties>& QFPs);
-	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const;
+	//virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const;
 	static [[nodiscard]] uint32_t FindQueueFamilyPropertyIndex(const VkQueueFlags QF, const std::vector<VkQueueFamilyProperties>& QFPs);
 	static [[nodiscard]] uint32_t FindQueueFamilyPropertyIndex(const VkPhysicalDevice PD, const VkSurfaceKHR Sfc, const std::vector<VkQueueFamilyProperties>& QFPs);
 	//virtual void CreateQueueFamilyPriorities(VkPhysicalDevice PD, VkSurfaceKHR Surface, const std::vector<VkQueueFamilyProperties>& QFPs, std::vector<std::vector<float>>& QueueFamilyPriorites);
@@ -341,9 +341,10 @@ protected:
 		return vkGetBufferDeviceAddress(Device, &BDAI);
 	}
 
-#ifdef USE_RAYTRACING
+#pragma region RAYTRACING
+	static bool HasRayTracingSupport(const VkPhysicalDevice PD);
 	static void BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, VkQueue Queue, const VkCommandBuffer CB, const VkAccelerationStructureKHR AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs);
-#endif
+#pragma endregion
 	virtual void CreateGeometry() {}
 
 	virtual void CreateUniformBuffer() {}
@@ -525,20 +526,24 @@ public:
 #include "VKDeviceProcAddr.h"
 #undef VK_DEVICE_PROC_ADDR
 
+#define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
+#include "VKDeviceProcAddr_RayTracing.h"
+#undef VK_DEVICE_PROC_ADDR
+
 #endif //!< VK_NO_PROTOYYPES
 
 public:
 #ifdef USE_DEBUG_REPORT
 	//!< インスタンスレベル関数、デバッグ用 (Instance level functions for debug)
 #define VK_INSTANCE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
-#include "VKDebugReport.h"
+#include "VKInstanceProcAddr_DebugReport.h"
 #undef VK_INSTANCE_PROC_ADDR
 #endif
 
 #ifdef USE_DEBUG_MARKER
 	//!< デバイスレベル関数、デバッグ用 (Device level functions for debug)
 #define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
-#include "VKDebugMarker.h"
+#include "VKDeviceProcAddr_DebugMarker.h"
 #undef VK_DEVICE_PROC_ADDR
 #endif
 
@@ -600,10 +605,10 @@ protected:
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;
 	std::vector<IndirectBuffer> IndirectBuffers;
-#ifdef USE_RAYTRACING
+#pragma region RAYTRACING
 	std::vector<AccelerationStructureBuffer> BLASs, TLASs;
 	std::vector<ShaderBindingTable> ShaderBindingTables;
-#endif
+#pragma endregion
 
 	std::vector<UniformBuffer> UniformBuffers;
 	std::vector<StorageBuffer> StorageBuffers;

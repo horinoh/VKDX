@@ -24,7 +24,6 @@ protected:
 		CopyToHostVisibleDeviceMemory(UniformBuffers[GetCurrentBackBufferIndex()].DeviceMemory, 0, sizeof(Tr), &Tr);
 #pragma endregion
 	}
-	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
 	
 	virtual void AllocateCommandBuffer() override {
 		Super::AllocateCommandBuffer();

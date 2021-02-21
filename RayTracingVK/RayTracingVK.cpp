@@ -229,17 +229,11 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     return (INT_PTR)FALSE;
 }
 
-#ifdef USE_RAYTRACING
-//#define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc RayTracingVK::vk ## proc = VK_NULL_HANDLE;
-//VK_DEVICE_PROC_ADDR(GetAccelerationStructureBuildSizesKHR)
-//VK_DEVICE_PROC_ADDR(CreateAccelerationStructureKHR)
-//VK_DEVICE_PROC_ADDR(CmdBuildAccelerationStructuresKHR)
-//VK_DEVICE_PROC_ADDR(GetRayTracingShaderGroupHandlesKHR)
-//VK_DEVICE_PROC_ADDR(CreateRayTracingPipelinesKHR)
-//VK_DEVICE_PROC_ADDR(DestroyAccelerationStructureKHR)
-//#undef VK_DEVICE_PROC_ADDR
+#pragma region RAYTRACING
 void RayTracingVK::CreateGeometry()
 {
+	if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
+
 	const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
     const auto& CB = CommandBuffers[0];
 
@@ -355,10 +349,12 @@ void RayTracingVK::CreateGeometry()
 }
 void RayTracingVK::CreateTexture()
 {
-
+	if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 }
 void RayTracingVK::CreatePipelineLayout()
 {
+	if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
+
 	CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
 		//VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
 		//VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
@@ -367,6 +363,8 @@ void RayTracingVK::CreatePipelineLayout()
 }
 void RayTracingVK::CreateShaderModule()
 {
+	if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
+
 	const auto ShaderPath = GetBasePath();
 	ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".rgeb.spv"))));
 	ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".rchit.spv"))));
@@ -374,6 +372,8 @@ void RayTracingVK::CreateShaderModule()
 }
 void RayTracingVK::CreatePipeline()
 {
+	if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
+
 #pragma region PIPELINE
     const auto PLL = PipelineLayouts.back();
     
@@ -434,4 +434,4 @@ void RayTracingVK::CreatePipeline()
 	ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(Data) + 2 * AlignedSize); //!< 2:ClosestHit
 #pragma endregion
 }
-#endif
+#pragma endregion

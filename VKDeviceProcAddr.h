@@ -90,7 +90,7 @@ VK_DEVICE_PROC_ADDR(UnmapMemory)
 VK_DEVICE_PROC_ADDR(UpdateDescriptorSets)
 VK_DEVICE_PROC_ADDR(WaitForFences)
 
-//!< VK_KHR_SWAPCHAIN_EXTENSION_NAME
+//!< •K—v‚ÈŠg’£(Needed extensions) : VK_KHR_SWAPCHAIN_EXTENSION_NAME
 VK_DEVICE_PROC_ADDR(AcquireNextImageKHR)
 VK_DEVICE_PROC_ADDR(CreateSwapchainKHR)
 VK_DEVICE_PROC_ADDR(DestroySwapchainKHR)
@@ -98,20 +98,12 @@ VK_DEVICE_PROC_ADDR(GetSwapchainImagesKHR)
 VK_DEVICE_PROC_ADDR(QueuePresentKHR)
 
 #ifdef USE_PUSH_DESCRIPTOR
-//!< VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
+//!< •K—v‚ÈŠg’£(Needed extensions) : VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME
 VK_DEVICE_PROC_ADDR(CmdPushDescriptorSetWithTemplateKHR)
 VK_DEVICE_PROC_ADDR(CmdPushDescriptorSetKHR)
 #endif
 
 #ifdef USE_HDR
+//!< •K—v‚ÈŠg’£(Needed extensions) : VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME
 VK_DEVICE_PROC_ADDR(SetHdrMetadataEXT)
-#endif
-
-#ifdef USE_RAYTRACING
-VK_DEVICE_PROC_ADDR(GetAccelerationStructureBuildSizesKHR)
-VK_DEVICE_PROC_ADDR(CreateAccelerationStructureKHR)
-VK_DEVICE_PROC_ADDR(CmdBuildAccelerationStructuresKHR)
-VK_DEVICE_PROC_ADDR(GetRayTracingShaderGroupHandlesKHR)
-VK_DEVICE_PROC_ADDR(CreateRayTracingPipelinesKHR)
-VK_DEVICE_PROC_ADDR(DestroyAccelerationStructureKHR)
 #endif

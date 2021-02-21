@@ -16,8 +16,6 @@ public:
 	virtual ~ParametricSurfaceVK() {}
 
 protected:
-	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
-
 #ifdef USE_NO_SECONDARY_COMMAND_BUFFER
 	//!< デフォルト実装はセカンダリを作成する実装なので、オーバーライドして作成しないようにしている
 	virtual void CreateCommandPool() override {

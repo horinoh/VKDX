@@ -26,8 +26,6 @@ protected:
 #pragma endregion
 	}
 
-	virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const { assert(PDF.tessellationShader && "tessellationShader not enabled"); Super::OverridePhysicalDeviceFeatures(PDF); }
-
 	virtual void AllocateCommandBuffer() override {
 		Super::AllocateCommandBuffer();
 		//!< Pass1 : セカンダリコマンドバッファ

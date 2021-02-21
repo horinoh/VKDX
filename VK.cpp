@@ -21,19 +21,22 @@
 #define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKDeviceProcAddr.h"
 #undef VK_DEVICE_PROC_ADDR
+#define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc VK::vk ## proc = VK_NULL_HANDLE;
+#include "VKDeviceProcAddr_RayTracing.h"
+#undef VK_DEVICE_PROC_ADDR
 #endif //!< VK_NO_PROTOYYPES
 
 #ifdef USE_DEBUG_REPORT
 	//!< インスタンスレベル関数(Debug) (Instance level functions(Debug))
 #define VK_INSTANCE_PROC_ADDR(proc) PFN_vk ## proc ## EXT VK::vk ## proc = VK_NULL_HANDLE;
-#include "VKDebugReport.h"
+#include "VKInstanceProcAddr_DebugReport.h"
 #undef VK_INSTANCE_PROC_ADDR
 #endif
 
 	//!< デバイスレベル関数(Debug) (Device level functions(Debug))
 #ifdef USE_DEBUG_MARKER
 #define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc ## EXT VK::vk ## proc = VK_NULL_HANDLE;
-#include "VKDebugMarker.h"
+#include "VKDeviceProcAddr_DebugMarker.h"
 #undef VK_DEVICE_PROC_ADDR
 #endif
 
@@ -234,11 +237,11 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	for (auto i : UniformTexelBuffers) { i.Destroy(Device); } UniformTexelBuffers.clear();
 	for (auto i : StorageBuffers) { i.Destroy(Device); } StorageBuffers.clear();
 	for (auto i : UniformBuffers) { i.Destroy(Device); } UniformBuffers.clear();
-#ifdef USE_RAYTRACING
+#pragma region RAYTRACING
 	for (auto i : ShaderBindingTables) { i.Destroy(Device); } ShaderBindingTables.clear();
 	for (auto i : BLASs) { i.Destroy(Device); } BLASs.clear();
 	for (auto i : TLASs) { i.Destroy(Device); } TLASs.clear();
-#endif
+#pragma endregion
 	for (auto i : IndirectBuffers) { i.Destroy(Device); } IndirectBuffers.clear();
 	for (auto i : IndexBuffers) { i.Destroy(Device); } IndexBuffers.clear();
 	for (auto i : VertexBuffers) { i.Destroy(Device); } VertexBuffers.clear();
@@ -899,7 +902,7 @@ void VK::LoadVulkanLibrary()
 #include "VKGlobalProcAddr.h"
 #undef VK_GLOBAL_PROC_ADDR
 }
-#endif //!< VK_NO_PROTOYYPES
+#endif
 
 void VK::CreateInstance()
 {
@@ -963,7 +966,14 @@ void VK::CreateInstance()
 #define VK_INSTANCE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(Instance, "vk" #proc)); assert(nullptr != vk ## proc && #proc);
 #include "VKInstanceProcAddr.h"
 #undef VK_INSTANCE_PROC_ADDR
-#endif
+
+#ifdef USE_DEBUG_REPORT
+#define VK_INSTANCE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetInstanceProcAddr(Instance, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
+#include "VKInstanceProcAddr_DebugReport.h"
+#undef VK_INSTANCE_PROC_ADDR
+#endif //!< USE_DEBUG_REPORT
+
+#endif //!< VK_NO_PROTOYYPES
 
 #ifdef USE_DEBUG_REPORT
 	CreateDebugReportCallback();
@@ -975,10 +985,6 @@ void VK::CreateInstance()
 #ifdef USE_DEBUG_REPORT
 void VK::CreateDebugReportCallback()
 {
-#define VK_INSTANCE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetInstanceProcAddr(Instance, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
-#include "VKDebugReport.h"
-#undef VK_INSTANCE_PROC_ADDR
-
 	const auto Flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT
 		| VK_DEBUG_REPORT_WARNING_BIT_EXT
 		| VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT
@@ -1143,6 +1149,8 @@ void VK::EnumeratePhysicalDeviceProperties(const VkPhysicalDeviceProperties& PDP
 }
 void VK::EnumeratePhysicalDeviceFeatures(const VkPhysicalDeviceFeatures& PDF)
 {
+	assert(PDF.tessellationShader && "tessellationShader is not supported");
+
 	Log("\t\t\tPhysicalDeviceFeatures\n");
 #define VK_DEVICEFEATURE_ENTRY(entry) if (PDF.##entry) { Log("\t\t\t\t" #entry "\n"); }
 #include "VKDeviceFeature.h"
@@ -1193,17 +1201,48 @@ void VK::EnumeratePhysicalDevice(VkInstance Inst)
 
 	Log("\tPhysicalDevices\n");
 	for (const auto& i : PhysicalDevices) {
-		//!< プロパティ
+		//!< プロパティ (Property)
 		VkPhysicalDeviceProperties PDP;
 		vkGetPhysicalDeviceProperties(i, &PDP);
 		EnumeratePhysicalDeviceProperties(PDP);
 
-		//!< フィーチャー
+#if 0
+		//!< フィーチャー (Feature)
 		VkPhysicalDeviceFeatures PDF;
 		vkGetPhysicalDeviceFeatures(i, &PDF);
 		EnumeratePhysicalDeviceFeatures(PDF);
+#else
+		//!< フィーチャー2 (Feature2)
+		{
+			//!< 取得したい全てのフィーチャーを VkPhysicalDeviceFeatures2.pNext へチェイン指定する
+			VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr };
+			VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF };
+			VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF };
+			VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDASF };
+			vkGetPhysicalDeviceFeatures2(i, &PDF2);
+			EnumeratePhysicalDeviceFeatures(PDF2.features);
+			Log("\t\t\tVkPhysicalDeviceBufferDeviceAddressFeatures\n");
+			if (PDBDAF.bufferDeviceAddress) { Log("\t\t\t\tbufferDeviceAddress\n"); }
+			if (PDBDAF.bufferDeviceAddressCaptureReplay) { Log("\t\t\t\tbufferDeviceAddressCaptureReplay\n"); }
+			if (PDBDAF.bufferDeviceAddressMultiDevice) { Log("\t\t\t\tbufferDeviceAddressMultiDevice\n"); }
+			
+			Log("\t\t\tVkPhysicalDeviceRayTracingPipelineFeaturesKHR\n");
+			if (PDRTPF.rayTracingPipeline) { Log("\t\t\t\trayTracingPipeline\n"); }
+			if (PDRTPF.rayTracingPipelineShaderGroupHandleCaptureReplay) { Log("\t\t\t\trayTracingPipelineShaderGroupHandleCaptureReplay\n"); }
+			if (PDRTPF.rayTracingPipelineShaderGroupHandleCaptureReplayMixed) { Log("\t\t\t\trayTracingPipelineShaderGroupHandleCaptureReplayMixed\n"); }
+			if (PDRTPF.rayTracingPipelineTraceRaysIndirect) { Log("\t\t\t\trayTracingPipelineTraceRaysIndirect\n"); }
+			if (PDRTPF.rayTraversalPrimitiveCulling) { Log("\t\t\t\trayTraversalPrimitiveCulling\n"); }
+			
+			Log("\t\t\tVkPhysicalDeviceAccelerationStructureFeaturesKHR\n");
+			if (PDASF.accelerationStructure) { Log("\t\t\t\taccelerationStructure\n"); }
+			if (PDASF.accelerationStructureCaptureReplay) { Log("\t\t\t\taccelerationStructureCaptureReplay\n"); }
+			if (PDASF.accelerationStructureIndirectBuild) { Log("\t\t\t\taccelerationStructureIndirectBuild\n"); }
+			if (PDASF.accelerationStructureHostCommands) { Log("\t\t\t\taccelerationStructureHostCommands\n"); }
+			if (PDASF.descriptorBindingAccelerationStructureUpdateAfterBind) { Log("\t\t\t\tdescriptorBindingAccelerationStructureUpdateAfterBind\n"); }
+		}
+#endif
 
-		//!< メモリプロパティ
+		//!< メモリプロパティ (MemoryProperty)
 		VkPhysicalDeviceMemoryProperties PDMP;
 		vkGetPhysicalDeviceMemoryProperties(i, &PDMP);
 		EnumeratePhysicalDeviceMemoryProperties(PDMP);
@@ -1251,17 +1290,17 @@ void VK::EnumeratePhysicalDeviceExtensionProperties(VkPhysicalDevice PD, const c
 	}
 }
 
-void VK::OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const
-{
-	//!< VkPhysicalDeviceFeatures には可能なフィーチャーが全て true になったものが渡されてくる
-	//!< 不要な項目を false にオーバーライドするとパフォーマンスの改善が期待できるかもしれない
-	//!< false で渡されてくる項目は使えないフィーチャーなので true に変えても使えない
-
-	Log("\tPhysicalDeviceFeatures (Override)\n");
-#define VK_DEVICEFEATURE_ENTRY(entry) if(PDF.entry) { Logf("\t\t%s\n", #entry); }
-#include "VKDeviceFeature.h"
-#undef VK_DEVICEFEATURE_ENTRY
-}
+//void VK::OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const
+//{
+//	//!< VkPhysicalDeviceFeatures には可能なフィーチャーが全て true になったものが渡されてくる
+//	//!< 不要な項目を false にオーバーライドするとパフォーマンスの改善が期待できるかもしれない
+//	//!< false で渡されてくる項目は使えないフィーチャーなので true に変えても使えない
+//
+//	Log("\tPhysicalDeviceFeatures (Override)\n");
+//#define VK_DEVICEFEATURE_ENTRY(entry) if(PDF.entry) { Logf("\t\t%s\n", #entry); }
+//#include "VKDeviceFeature.h"
+//#undef VK_DEVICEFEATURE_ENTRY
+//}
 
 uint32_t VK::FindQueueFamilyPropertyIndex(const VkQueueFlags QF, const std::vector<VkQueueFamilyProperties>& QFPs)
 {
@@ -1358,7 +1397,7 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 		}
 	}	
 
-	const std::array Extensions = {
+	std::vector Extensions = {
 		//!< スワップチェインはプラットフォームに特有の機能なのでデバイス作製時に VK_KHR_SWAPCHAIN_EXTENSION_NAME エクステンションを有効にして作成しておく
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 #ifdef USE_PUSH_DESCRIPTOR
@@ -1371,23 +1410,20 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 		VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME,
 #endif
 		VK_EXT_VALIDATION_CACHE_EXTENSION_NAME,
-#ifdef USE_RAYTRACING
-		VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
-		VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
-#endif
 	};
-#if 0//def USE_RAYTRACING
-	VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr, .bufferDeviceAddress = VK_TRUE };
-	VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF, .rayTracingPipeline = VK_TRUE };
-	VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF, .accelerationStructure = VK_TRUE };
-#endif
-	//!< vkGetPhysicalDeviceFeatures() で可能なフィーチャーが全て有効になった VkPhysicalDeviceFeatures が返る
-	//!< このままでは可能なだけ有効になってしまうのでパフォーマンス的には良くない(必要な項目だけ true にし、それ以外は false にするのが本来は良い)
-	//!< デバイスフィーチャーを「有効にしないと」と使用できない機能が多々あり面倒なので、(パフォーマンス的には良くないが)ここでは返った値をそのまま使うことにする #PERFORMANCE_TODO 
-	VkPhysicalDeviceFeatures PDF;
-	vkGetPhysicalDeviceFeatures(PD, &PDF);
-	//!< (パフォーマンスを考える場合は)継承先で OverridePhysicalDeviceFeatures() をオーバーライドし、不要な項目を無効にする
-	OverridePhysicalDeviceFeatures(PDF);
+
+#pragma region RAYTRACING
+	//!< レイトレーシング拡張は動的に判断する(サポートしないGPUがまだ多く存在するため)、他の拡張はコンパイルディレクティブ対応でまあいいか(大抵のGPUでサポートされるだろう)
+	if (HasRayTracingSupport(PD)) {
+		Extensions.emplace_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+		Extensions.emplace_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+		Extensions.emplace_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+	}
+#pragma endregion
+
+	//!< サポートされるフィーチャーを全て有効にしている、パフォーマンス的には不必要なものはオフにした方が良い #PERFORMANCE_TODO
+	VkPhysicalDeviceFeatures PDF; vkGetPhysicalDeviceFeatures(PD, &PDF);
+	//constexpr VkPhysicalDeviceFeatures PDF = { .geometryShader = VK_TRUE, .tessellationShader = VK_TRUE };
 	const VkDeviceCreateInfo DCI = {
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
 		.pNext = nullptr,
@@ -1401,16 +1437,22 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 
 	//!< デバイスレベルの関数をロードする (Load device level functions)
 #ifdef VK_NO_PROTOYYPES
+
 #define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc)); assert(nullptr != vk ## proc && #proc && #proc);
 #include "VKDeviceProcAddr.h"
 #undef VK_DEVICE_PROC_ADDR
-#endif
+
+#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc));
+#include "VKDeviceProcAddr_RayTracing.h"
+#undef VK_DEVICE_PROC_ADDR
 
 #ifdef USE_DEBUG_MARKER
 #define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetDeviceProcAddr(Device, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
-#include "VKDebugMarker.h"
+#include "VKDeviceProcAddr_DebugMarker.h"
 #undef VK_DEVICE_PROC_ADDR
-#endif
+#endif //!< USE_DEBUG_MARKER
+
+#endif //!< VK_NO_PROTOYYPES
 
 	//!< グラフィック、プレゼントキューは同じインデックスの場合もあるが別の変数に取得しておく (Graphics and presentation index may be same, but save to individual variables)
 	vkGetDeviceQueue(Device, GraphicsQueueFamilyIndex, GraphicsQueueIndexInFamily, &GraphicsQueue);
@@ -2128,7 +2170,16 @@ void VK::CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMe
 		SubmitAndWait(Queue, CB);
 	}
 }
-#ifdef USE_RAYTRACING
+#pragma region RAYTRACING
+bool VK::HasRayTracingSupport(const VkPhysicalDevice PD)
+{
+	VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr };
+	VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF };
+	VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF };
+	VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDASF };
+	vkGetPhysicalDeviceFeatures2(PD, &PDF2);
+	return PDBDAF.bufferDeviceAddress && PDRTPF.rayTracingPipeline && PDASF.accelerationStructure;
+}
 void VK::BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkQueue Queue, const VkCommandBuffer CB, const VkAccelerationStructureKHR AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs)
 {
 	Scoped<ScratchBuffer> SB1(Device);
@@ -2153,7 +2204,7 @@ void VK::BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDevic
 		SubmitAndWait(Queue, CB);
 	} SB.Destroy(Device);
 }
-#endif
+#pragma endregion
 
 void VK::CreateUniformBuffer_Example()
 {
