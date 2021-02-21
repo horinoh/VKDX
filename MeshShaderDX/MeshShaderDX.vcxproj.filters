@@ -73,4 +73,15 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="MeshShaderDX.as.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="MeshShaderDX.ms.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="MeshShaderDX.ps.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+  </ItemGroup>
 </Project>

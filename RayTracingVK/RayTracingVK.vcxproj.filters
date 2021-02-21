@@ -70,4 +70,24 @@
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="RayTracingVK.rahit">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="RayTracingVK.rcall">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="RayTracingVK.rchit">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="RayTracingVK.rgen">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="RayTracingVK.rint">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="RayTracingVK.rmiss">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+  </ItemGroup>
 </Project>

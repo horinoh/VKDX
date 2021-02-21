@@ -368,14 +368,12 @@
 		~~~
 	- VK 
 		~~~
-		.rgen 
+		.rgen
 		.rint
 		.rahit
 		.rchit
 		.rmiss
 		.rcall
-		//.mesh
-		//.task
 		~~~
 	- RayGeneration
 	- ClosestHit

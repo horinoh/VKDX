@@ -12,5 +12,8 @@ private:
 public:
 	MeshShaderVK() : Super() {}
 	virtual ~MeshShaderVK() {}
+
+	virtual void CreateShaderModule() override;
+	virtual void CreatePipeline() override;
 };
 #pragma endregion

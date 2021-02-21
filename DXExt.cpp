@@ -60,7 +60,7 @@ void DXExt::CreateShaderBlob_Cs()
 	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".cs.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
 }
 
-void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs)
+void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs)
 {
 	//!< ƒuƒŒƒ“ƒh (Blend)
 	//!< —á) 
@@ -98,8 +98,8 @@ void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE T
 		.FrontFace = DSOD, .BackFace = DSOD
 	};
 	const std::array SBCs = {
-		D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[0]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[0]->GetBufferSize() }),
-		D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[1]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[1]->GetBufferSize() }),
+		D3D12_SHADER_BYTECODE({.pShaderBytecode = ShaderBlobs[0]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[0]->GetBufferSize() }),
+		D3D12_SHADER_BYTECODE({.pShaderBytecode = ShaderBlobs[1]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[1]->GetBufferSize() }),
 	};
 	const std::vector RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
 
@@ -109,9 +109,9 @@ void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE T
 	//std::thread::thread(&DXExt::Func, this, Arg0, Arg1,...);
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
-	Threads.emplace_back(std::thread::thread(DX::CreatePipelineState_, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), Topology, RTBDs, RD, DSD, SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs, &PLS, TEXT("0")));
+	Threads.emplace_back(std::thread::thread(DX::CreatePipelineState_, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), PTT, RTBDs, RD, DSD, SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs, &PLS, TEXT("0")));
 #else
-	Threads.emplace_back(std::thread::thread(DX::CreatePipelineState_, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), Topology, RTBDs, RD, DSD, SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs, nullptr, nullptr));
+	Threads.emplace_back(std::thread::thread(DX::CreatePipelineState_, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), PTT, RTBDs, RD, DSD, SBCs[0], SBCs[1], NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs, nullptr, nullptr));
 #endif	
 	for (auto& i : Threads) { i.join(); }
 }

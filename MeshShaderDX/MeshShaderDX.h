@@ -12,5 +12,8 @@ private:
 public:
 	MeshShaderDX() : Super() {}
 	virtual ~MeshShaderDX() {}
+
+	virtual void CreateShaderBlob() override;
+	virtual void CreatePipelineState() override;
 };
 #pragma endregion

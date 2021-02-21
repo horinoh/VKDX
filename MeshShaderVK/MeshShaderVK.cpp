@@ -228,3 +228,15 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return (INT_PTR)FALSE;
 }
+
+#pragma region Code
+void MeshShaderVK::CreateShaderModule()
+{
+	const auto ShaderPath = GetBasePath();
+	ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".mesh.spv"))));
+	ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))));
+}
+void MeshShaderVK::CreatePipeline()
+{
+}
+#pragma endregion

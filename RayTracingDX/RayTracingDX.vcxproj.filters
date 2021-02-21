@@ -73,4 +73,9 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="RayTracingDX.rts.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+  </ItemGroup>
 </Project>

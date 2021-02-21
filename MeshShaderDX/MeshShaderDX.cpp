@@ -228,3 +228,84 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return (INT_PTR)FALSE;
 }
+
+#pragma region Code
+void MeshShaderDX::CreateShaderBlob()
+{
+	const auto ShaderPath = GetBasePath();
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ms.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
+#ifdef USE_SHADER_REFLECTION
+	std::wcout << (ShaderPath + TEXT(".ms.cso")) << std::endl;
+	ProcessShaderReflection(COM_PTR_GET(ShaderBlobs.back()));
+#endif
+#ifdef USE_SHADER_BLOB_PART
+	SetBlobPart(ShaderBlobs.back());
+	GetBlobPart(COM_PTR_GET(ShaderBlobs.back()));
+#endif
+	StripShader(ShaderBlobs.back());
+
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
+#ifdef USE_SHADER_REFLECTION
+	std::wcout << (ShaderPath + TEXT(".ps.cso")) << std::endl;
+	ProcessShaderReflection(COM_PTR_GET(ShaderBlobs.back()));
+#endif
+#ifdef USE_SHADER_BLOB_PART
+	SetBlobPart(ShaderBlobs.back());
+	GetBlobPart(COM_PTR_GET(ShaderBlobs.back()));
+#endif
+	StripShader(ShaderBlobs.back());
+}
+void MeshShaderDX::CreatePipelineState()
+{
+	constexpr D3D12_RASTERIZER_DESC RD = {
+		.FillMode = D3D12_FILL_MODE_SOLID,
+		.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
+		.DepthBias = D3D12_DEFAULT_DEPTH_BIAS, .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP, .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
+		.DepthClipEnable = TRUE,
+		.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
+		.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
+	};
+	constexpr D3D12_DEPTH_STENCILOP_DESC DSOD = {
+		.StencilFailOp = D3D12_STENCIL_OP_KEEP,		
+		.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP,
+		.StencilPassOp = D3D12_STENCIL_OP_KEEP,		
+		.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS	
+	};
+	constexpr D3D12_DEPTH_STENCIL_DESC DSD = {
+		.DepthEnable = TRUE, .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D12_COMPARISON_FUNC_LESS,
+		.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
+		.FrontFace = DSOD, .BackFace = DSOD
+	};
+    const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	const std::array RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
+    const DXGI_FORMAT DSV = DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+    MESH_SHADER_PIPELINE_STATE_DESC MSPSD = {
+        .pRootSignature = COM_PTR_GET(RootSignatures[0]),
+        .AS = D3D12_SHADER_BYTECODE({.pShaderBytecode = nullptr, .BytecodeLength = 0 }),
+		.MS = D3D12_SHADER_BYTECODE({.pShaderBytecode = ShaderBlobs[0]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[0]->GetBufferSize() }),
+		.PS = D3D12_SHADER_BYTECODE({.pShaderBytecode = ShaderBlobs[1]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[1]->GetBufferSize() }),
+		.BlendState = D3D12_BLEND_DESC({ .AlphaToCoverageEnable = TRUE, .IndependentBlendEnable = FALSE, .RenderTarget = {}}),
+        .SampleMask = D3D12_DEFAULT_SAMPLE_MASK,
+        .RasterizerState = RD,
+        .DepthStencilState = DSD,
+        .PrimitiveTopologyType = PTT,
+        .NumRenderTargets = static_cast<UINT>(size(RTVs)), .RTVFormats = {},
+        .DSVFormat = DSV,
+        .SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+        .NodeMask = 0,
+		.CachedPSO = D3D12_CACHED_PIPELINE_STATE({.pCachedBlob = nullptr, .CachedBlobSizeInBytes =  0 }),
+#if defined(_DEBUG) && defined(USE_WARP)
+		.Flags = D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG
+#else
+		.Flags = D3D12_PIPELINE_STATE_FLAG_NONE
+#endif
+    };
+    std::ranges::copy(RTVs, MSPSD.RTVFormats);
+
+    const D3D12_PIPELINE_STATE_STREAM_DESC PSSD = { .SizeInBytes = sizeof(MSPSD), .pPipelineStateSubobjectStream = &MSPSD };
+	COM_PTR<ID3D12Device2> Device2;
+	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device2)));
+    VERIFY_SUCCEEDED(Device2->CreatePipelineState(&PSSD, COM_PTR_UUIDOF_PUTVOID(PipelineStates.emplace_back())));
+}
+#pragma endregion
