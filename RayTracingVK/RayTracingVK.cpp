@@ -361,27 +361,25 @@ void RayTracingVK::CreatePipelineLayout()
     });
 	VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 }
-void RayTracingVK::CreateShaderModule()
+void RayTracingVK::CreatePipeline()
 {
 	if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 
 	const auto ShaderPath = GetBasePath();
-	ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".rgeb.spv"))));
-	ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".rchit.spv"))));
-	ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".rmiss.spv"))));
-}
-void RayTracingVK::CreatePipeline()
-{
-	if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
+    const std::array SMs = {
+        VK::CreateShaderModule(data(ShaderPath + TEXT(".rgeb.spv"))),
+        VK::CreateShaderModule(data(ShaderPath + TEXT(".rchit.spv"))),
+        VK::CreateShaderModule(data(ShaderPath + TEXT(".rmiss.spv"))),
+    };
 
 #pragma region PIPELINE
     const auto PLL = PipelineLayouts.back();
     
 	//!< 0:RayGen, 1:ClosestHit, 2:Miss, 
     const std::array PSSCIs = {
-		VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .module = ShaderModules[0], .pName = "main", .pSpecializationInfo = nullptr }),
-		VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .module = ShaderModules[1], .pName = "main", .pSpecializationInfo = nullptr }),
-		VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_MISS_BIT_KHR, .module = ShaderModules[2], .pName = "main", .pSpecializationInfo = nullptr }),
+		VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
+		VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),
+		VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_MISS_BIT_KHR, .module = SMs[2], .pName = "main", .pSpecializationInfo = nullptr }),
     };
 	const std::array RTSGCIs = {
 		VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, .generalShader = 0, .closestHitShader = VK_SHADER_UNUSED_KHR, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),

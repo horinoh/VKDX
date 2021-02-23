@@ -134,13 +134,20 @@ protected:
 #pragma region UB
 			VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr }),
 #pragma endregion
-			});
+		});
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 	virtual void CreateRenderPass() { VK::CreateRenderPass(VK_ATTACHMENT_LOAD_OP_DONT_CARE, false); }
 
-	virtual void CreateShaderModule() override { CreateShaderModle_VsFs(); }
-	virtual void CreatePipeline() override { CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE); }
+	virtual void CreatePipeline() override { 
+		const auto ShaderPath = GetBasePath();
+		const std::array SMs = {
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
+		};
+		CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE, SMs); 
+		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
+	}
 
 	virtual void CreateDescriptorSet() override {
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
@@ -150,7 +157,7 @@ protected:
 #pragma region UB
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }),
 #pragma endregion
-			});
+		});
 
 		const std::array DSLs = { DescriptorSetLayouts[0] };
 		const VkDescriptorSetAllocateInfo DSAI = {

@@ -19,7 +19,6 @@ public:
 	virtual void CreateGeometry() override;
 	virtual void CreateTexture() override;
 	virtual void CreateRootSignature() override;
-	virtual void CreateShaderBlob() override;
 	virtual void CreatePipelineState() override;
 #pragma endregion
 };

@@ -26,16 +26,17 @@ protected:
 #endif
 		});
 	}
-	virtual void CreateShaderModule() override { 
-		const auto ShaderPath = GetBasePath();
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));
-#ifdef USE_PUSH_CONSTANTS
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_pc.frag.spv"))));
-#else
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))));
-#endif
-	}
 	virtual void CreatePipeline() override {
+		const auto ShaderPath = GetBasePath();
+		const std::array SMs = {
+#ifdef USE_PUSH_CONSTANTS
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT("_pc.frag.spv"))) 
+#else
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))) 
+#endif
+		};
 		//!< バインディング0にまとめて入れるインターリーブ、セマンティックス毎にバインディングを分けると非インターリーブとなる
 		const std::vector VIBDs = { 
 			VkVertexInputBindingDescription({ .binding = 0, .stride = sizeof(Vertex_PositionColor), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
@@ -45,7 +46,9 @@ protected:
 			VkVertexInputAttributeDescription({ .location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = offsetof(Vertex_PositionColor, Position) }),
 			VkVertexInputAttributeDescription({ .location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32A32_SFLOAT, .offset = offsetof(Vertex_PositionColor, Color) }),
 		};
-		VKExt::CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE, VIBDs, VIADs);
+		VKExt::CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE, VIBDs, VIADs, SMs);
+		
+		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
 
 	virtual void PopulateCommandBuffer(const size_t i) override;

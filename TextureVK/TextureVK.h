@@ -63,8 +63,15 @@ protected:
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 	virtual void CreateRenderPass() { VK::CreateRenderPass(VK_ATTACHMENT_LOAD_OP_DONT_CARE, false); }
-	virtual void CreateShaderModule() override { CreateShaderModle_VsFs(); }
-	virtual void CreatePipeline() override { CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE); }
+	virtual void CreatePipeline() override {
+		const auto ShaderPath = GetBasePath();
+		const std::array SMs = {
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
+		};
+		CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE, SMs); 
+		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
+	}
 	virtual void CreateDescriptorSet() override {
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 })

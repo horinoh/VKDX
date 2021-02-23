@@ -37,7 +37,7 @@
 //#define USE_ROOT_CONSTANTS //!< [ TriangleDX ] VK:USE_PUSH_CONSTANTS‘Š“–
 //#define USE_GAMMA_CORRECTION
 
-#define USE_SHADER_BLOB_PART
+#define USE_SHADER_BLOB_PART //!< [ TriangleDX ]
 
 #define USE_DXC
 
@@ -335,7 +335,6 @@ protected:
 	virtual void SetBlobPart(COM_PTR<ID3DBlob>& Blob);
 	virtual void GetBlobPart(ID3DBlob* Blob);
 	virtual void StripShader(COM_PTR<ID3DBlob>& Blob);
-	virtual void CreateShaderBlob() {}
 #include "DXPipelineLibrary.inl"
 	virtual void CreatePipelineState() {}
 	static void CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,
@@ -423,8 +422,6 @@ protected:
 
 	std::vector<D3D12_VIEWPORT> Viewports;
 	std::vector<D3D12_RECT> ScissorRects;
-
-	std::vector<COM_PTR<ID3DBlob>> ShaderBlobs;
 
 	std::array<UINT, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> DescriptorHandleIndices{};
 

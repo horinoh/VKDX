@@ -20,18 +20,22 @@ protected:
 		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DA);
 	}
 #endif
-	virtual void CreateShaderBlob() override {
-#ifdef USE_DISTANCE_FUNCTION
+	virtual void CreatePipelineState() override {
 		const auto ShaderPath = GetBasePath();
-		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
-		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_df.ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
+		std::vector<COM_PTR<ID3DBlob>> SBs;
+#ifdef USE_DISTANCE_FUNCTION
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_df.ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
 #else
-		CreateShaderBlob_VsPs(); 
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
 #endif
+		const std::array SBCs = {
+			D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[0]->GetBufferPointer(), .BytecodeLength = SBs[0]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
+		};	
+		CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE, SBCs); 
 	}
-	virtual void CreatePipelineState() override { CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE); }
 
 	virtual void PopulateCommandList(const size_t i) override;
 };

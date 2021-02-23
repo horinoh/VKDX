@@ -44,7 +44,6 @@ protected:
 		}
 #pragma endregion
 	}
-
 #ifdef USE_DEPTH
 	//!< 深度テクスチャ
 	virtual void CreateTexture() override {		
@@ -59,7 +58,6 @@ protected:
 		VK::CreateImageView(&ImageViews.emplace_back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CM, ISR);
 	}
 #endif
-
 	virtual void CreatePipelineLayout() override {
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
 			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }),
@@ -69,26 +67,32 @@ protected:
 #ifdef USE_DEPTH
 	virtual void CreateRenderPass() override { VK::CreateRenderPass(VK_ATTACHMENT_LOAD_OP_CLEAR, true); }
 #endif
-
 	virtual void CreatePipeline() override { 
-#ifdef USE_SCREENSPACE_WIREFRAME
 		const auto ShaderPath = GetBasePath();
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_wf.frag.spv"))));
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))));
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))));
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_wf.geom.spv"))));
+#ifdef USE_SCREENSPACE_WIREFRAME
+		const std::array SMs = {
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT("_wf.frag.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT("_wf.geom.spv"))),
+		};
 #else
-		CreateShaderModle_VsFsTesTcsGs();
+		const std::array SMs = {
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".geom.spv"))),
+		};
 #endif
-
 #ifdef USE_DEPTH
-		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE);
+		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE, SMs);
 #else
-		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_FALSE);
+		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_FALSE, SMs);
 #endif
+		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
-
 #ifdef USE_DEPTH
 	virtual void CreateFramebuffer() override {
 		const auto RP = RenderPasses[0];
@@ -98,7 +102,6 @@ protected:
 		}
 	}
 #endif
-
 	virtual void CreateDescriptorSet() override {
 		VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
@@ -118,7 +121,6 @@ protected:
 		}
 #pragma endregion
 	}
-
 	virtual void UpdateDescriptorSet() override {
 		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
 			VkDescriptorUpdateTemplateEntry({
@@ -127,7 +129,6 @@ protected:
 				.offset = offsetof(DescriptorUpdateInfo, DescriptorBufferInfos), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 		}, DescriptorSetLayouts[0]);
-
 #pragma region FRAME_OBJECT
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			const DescriptorUpdateInfo DUI = {

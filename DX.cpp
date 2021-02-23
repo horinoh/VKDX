@@ -64,8 +64,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< レンダーパス相当は存在しない
 
-	//!< シェーダ
-	CreateShaderBlob();
 	//!< パイプライン
 	CreatePipelineState();
 

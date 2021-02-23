@@ -13,7 +13,7 @@ public:
 	MeshShaderDX() : Super() {}
 	virtual ~MeshShaderDX() {}
 
-	virtual void CreateShaderBlob() override;
+	virtual void CreateRootSignature() override;
 	virtual void CreatePipelineState() override;
 };
 #pragma endregion

@@ -361,31 +361,23 @@ protected:
 #pragma endregion
 	}
 
-	virtual void CreateShaderBlob() override {
-		const auto ShaderPath = GetBasePath();
-		//!< パス0 : シェーダブロブ
-		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
-		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ds.cso")), COM_PTR_PUT(ShaderBlobs.back())));
-		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".hs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
-		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".gs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
-		//!< パス1 : シェーダブロブ
-#ifdef USE_SHADOWMAP_VISUALIZE
-		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sm_1.vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
-		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sm_1.ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
-#else
-		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
-		ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.gs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
-#endif
-	}
 	virtual void CreatePipelineState() override {
+		const auto ShaderPath = GetBasePath();
+		std::vector<COM_PTR<ID3DBlob>> SBs;
+		//!< Pass0 : シェーダブロブ
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ds.cso")), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".hs.cso")), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".gs.cso")), COM_PTR_PUT(SBs.emplace_back())));
+		//!< Pass1 : シェーダブロブ
+#ifdef USE_SHADOWMAP_VISUALIZE
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sm_1.vs.cso")), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sm_1.ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
+#else
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.gs.cso")), COM_PTR_PUT(SBs.emplace_back())));
+#endif
+
 		PipelineStates.resize(2);
 		std::vector<std::thread> Threads;
 		const std::vector RTBDs = {
@@ -435,23 +427,23 @@ protected:
 			.FrontFace = DSOD, .BackFace = DSOD
 		};
 		const std::array SBCs_0 = {
-			D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[0]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[0]->GetBufferSize() }),
-			D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[1]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[1]->GetBufferSize() }),
-			D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[2]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[2]->GetBufferSize() }),
-			D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[3]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[3]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[0]->GetBufferPointer(), .BytecodeLength = SBs[0]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[2]->GetBufferPointer(), .BytecodeLength = SBs[2]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[3]->GetBufferPointer(), .BytecodeLength = SBs[3]->GetBufferSize() }),
 		};
 #ifdef USE_SHADOWMAP_VISUALIZE
 		const std::array SBCs_1 = {
-			D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[4]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[4]->GetBufferSize() }),
-			D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[5]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[5]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[4]->GetBufferPointer(), .BytecodeLength = SBs[4]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[5]->GetBufferPointer(), .BytecodeLength = SBs[5]->GetBufferSize() }),
 		};
 #else
 		const std::array SBCs_1 = {
-			D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[0]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[0]->GetBufferSize() }),
-			D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[4]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[4]->GetBufferSize() }), //!< 
-			D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[1]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[1]->GetBufferSize() }),
-			D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[2]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[2]->GetBufferSize() }),
-			D3D12_SHADER_BYTECODE({ .pShaderBytecode = ShaderBlobs[5]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[5]->GetBufferSize() }), //!< 
+			D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[0]->GetBufferPointer(), .BytecodeLength = SBs[0]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[4]->GetBufferPointer(), .BytecodeLength = SBs[4]->GetBufferSize() }), //!< 
+			D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[2]->GetBufferPointer(), .BytecodeLength = SBs[2]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[5]->GetBufferPointer(), .BytecodeLength = SBs[5]->GetBufferSize() }), //!< 
 		};
 #endif
 		const std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs = {};

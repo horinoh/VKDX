@@ -18,8 +18,12 @@ protected:
 	virtual void CreatePipelineLayout() override {
 		VKExt::CreatePipelineLayout(PipelineLayouts.emplace_back(), {}, {});
 	}
-	virtual void CreateShaderModule() override { CreateShaderModle_VsFs(); }
 	virtual void CreatePipeline() override {
+		const auto ShaderPath = GetBasePath();
+		const std::array SMs = {
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv")))
+		};
 		const std::vector VIBDs = { 
 			//!< 頂点毎 (Per Vertex)
 			VkVertexInputBindingDescription({ .binding = 0, .stride = sizeof(Vertex_PositionColor), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
@@ -33,7 +37,8 @@ protected:
 			//!< インスタンス毎 (Per Instance)
 			VkVertexInputAttributeDescription({ .location = 2, .binding = 1, .format = VK_FORMAT_R32G32_SFLOAT, .offset = offsetof(Instance_OffsetXY, Offset) }),
 		};
-		CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE, VIBDs, VIADs);
+		CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE, VIBDs, VIADs, SMs);
+		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
 
 	virtual void PopulateCommandBuffer(const size_t i) override;

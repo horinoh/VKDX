@@ -48,22 +48,28 @@ protected:
 		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 		IndirectBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DIIC, CommandBuffers[0], GraphicsQueue);
 	} 
-	virtual void CreateShaderModule() override { CreateShaderModle_VsFsTesTcsGs(); }
 	virtual void CreatePipeline() override { 
+		const auto ShaderPath = GetBasePath();
+		const std::array SMs = {
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".geom.spv"))),
+		};
 #ifdef USE_SPECIALIZATION_INFO
-		//!< パイプライン作成時に上書きするシェーダ内定数値の設定
+		//!< パイプライン作成時に上書きするシェーダ内定数値の設定 (Overwritten in shader variable, on pipeline creation time)
 		struct TessLevel { float Outer; float Inner; };
 		const auto TL = TessLevel({ .Outer = 30.0f, .Inner = 30.0f });
 		const std::vector SMEs = {
 			VkSpecializationMapEntry({ .constantID = 0, .offset = offsetof(TessLevel, Outer), .size = sizeof(TL.Outer) }),
 			VkSpecializationMapEntry({ .constantID = 1, .offset = offsetof(TessLevel, Inner), .size = sizeof(TL.Outer) }),
 		};
-		//!< VkPipelineShaderStageCreateInfo.pSpecializationInfoへ指定する
+		//!< VkPipelineShaderStageCreateInfo.pSpecializationInfo へ指定する (Set to VkPipelineShaderStageCreateInfo.pSpecializationInfo)
 		const VkSpecializationInfo SI = {
 			.mapEntryCount = static_cast<uint32_t>(size(SMEs)), .pMapEntries = data(SMEs),
 			.dataSize = sizeof(TL), .pData = &TL
 		};
-
 		Pipelines.emplace_back();
 		const VkPipelineRasterizationStateCreateInfo PRSCI = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -117,8 +123,9 @@ protected:
 #endif
 		for (auto& i : Threads) { i.join(); }
 #else
-		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1 , VK_FALSE);
+		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1 , VK_FALSE, SMs);
 #endif
+		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
 
 	virtual void PopulateCommandBuffer(const size_t i) override;

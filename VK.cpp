@@ -88,8 +88,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	//!< レンダーパス (DXには存在しない)
 	CreateRenderPass();
 
-	//!< シェーダ
-	CreateShaderModule();
 	//!< パイプライン
 	CreatePipeline();
 
@@ -180,12 +178,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	for (auto i : Pipelines) {
 		vkDestroyPipeline(Device, i, GetAllocationCallbacks());
 	}
-
-	for (auto i : ShaderModules) {
-		vkDestroyShaderModule(Device, i, GetAllocationCallbacks());
-	}
-	ShaderModules.clear();
-
 	for (auto i : PipelineLayouts) {
 		vkDestroyPipelineLayout(Device, i, GetAllocationCallbacks());
 	}

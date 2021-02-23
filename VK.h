@@ -442,7 +442,6 @@ protected:
 	}
 
 	virtual [[nodiscard]] VkShaderModule CreateShaderModule(const std::wstring& Path) const;
-	virtual void CreateShaderModule() {}
 
 #include "VKPipelineCache.inl"
 	virtual void CreatePipeline() {}
@@ -636,8 +635,6 @@ protected:
 	std::vector<VkPipeline> Pipelines;
 	std::vector<VkRenderPass> RenderPasses;
 	std::vector<VkFramebuffer> Framebuffers;
-
-	std::vector<VkShaderModule> ShaderModules;
 
 	//!< https://matthewwellings.com/blog/the-new-vulkan-coordinate-system/
 	//!< VKのクリップスペースはYが反転、Zが半分 (Vulkan clip space has inverted Y and half Z)

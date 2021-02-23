@@ -17,13 +17,10 @@ protected:
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
 		Super::OnTimer(hWnd, hInstance);
 
-		//Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
-
 		const auto VW = Tr.View * Tr.World;
 		Tr.LocalCameraPosition = glm::inverse(VW) * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
 		const auto LightPos = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(10.0f, 0.0f, 0.0f, 0.0f);
-		//const auto LightPos = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f)) * glm::vec4(0.0f, 10.0f, 0.0f, 0.0f);
 		Tr.LocalLightDirection = glm::normalize(glm::inverse(Tr.World) * LightPos);
 
 		Degree += 1.0f;
@@ -55,7 +52,6 @@ protected:
 		}
 #pragma endregion
 	}
-
 	virtual void CreateTexture() override {
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
@@ -127,7 +123,7 @@ protected:
 			VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr }), //!< Image0
 			VkDescriptorSetLayoutBinding({.binding = 3, .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr }), //!< Image1
 #endif
-			});
+		});
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 	virtual void CreateRenderPass() override {
@@ -163,27 +159,30 @@ protected:
 			//!< サブパス依存
 		});
 	}
-	virtual void CreateShaderModule() override {
+	virtual void CreatePipeline() override {
 		const auto ShaderPath = GetBasePath();
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));
+		const std::array SMs = {
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
 #ifdef USE_COMBINED_IMAGE_SAMPLER
 #ifdef USE_PARALLAX_MAP
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_cis_pm.frag.spv"))));
+			VK::CreateShaderModule(data(ShaderPath + TEXT("_cis_pm.frag.spv"))),
 #else
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_cis.frag.spv"))));
+			VK::CreateShaderModule(data(ShaderPath + TEXT("_cis.frag.spv"))),
 #endif
 #else
 #ifdef USE_PARALLAX_MAP
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT("_pm.frag.spv"))));
+			VK::CreateShaderModule(data(ShaderPath + TEXT("_pm.frag.spv"))),
 #else
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))));
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
 #endif
 #endif
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))));
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))));
-		ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".geom.spv"))));
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".geom.spv"))),
+		};
+		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE, SMs); 
+		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
-	virtual void CreatePipeline() override { CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE); }
 	virtual void CreateFramebuffer() override { 
 		assert(!empty(RenderPasses) && "");
 		const auto RP = RenderPasses[0];
@@ -206,7 +205,6 @@ protected:
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, .descriptorCount = 1 }), //!< Image1
 #endif
 		});
-
 		const std::array DSLs = { DescriptorSetLayouts[0] };
 		const VkDescriptorSetAllocateInfo DSAI = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -290,11 +288,14 @@ private:
 	struct DescriptorUpdateInfo
 	{
 		VkDescriptorBufferInfo DBI[1];
-#ifndef USE_COMBINED_IMAGE_SAMPLER
+#ifdef USE_COMBINED_IMAGE_SAMPLER
+		VkDescriptorImageInfo DII_0[1]; //!< Sampelr + Image0
+		VkDescriptorImageInfo DII_1[1]; //!< Sampler + Image1
+#else
 		VkDescriptorImageInfo DII_S[1]; //!< Sampler
-#endif
 		VkDescriptorImageInfo DII_0[1]; //!< Image0
 		VkDescriptorImageInfo DII_1[1]; //!< Image1
+#endif
 	};
 };
 #pragma endregion

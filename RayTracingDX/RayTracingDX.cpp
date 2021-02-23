@@ -357,16 +357,13 @@ void RayTracingDX::CreateRootSignature()
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 	}
 }
-void RayTracingDX::CreateShaderBlob()
+void RayTracingDX::CreatePipelineState()
 {
 	if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
 	const auto ShaderPath = GetBasePath();
-	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rts.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
-}
-void RayTracingDX::CreatePipelineState()
-{
-	if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
+	COM_PTR<ID3DBlob> SB;
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rts.cso")), COM_PTR_PUT(SB)));
 
 	COM_PTR<ID3D12Device5> Device5;
 	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
@@ -386,7 +383,7 @@ void RayTracingDX::CreatePipelineState()
 		D3D12_EXPORT_DESC({.Name = TEXT("MyMiss"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }),
     };
     const D3D12_DXIL_LIBRARY_DESC DLD = { 
-        .DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = ShaderBlobs.back()->GetBufferPointer(), .BytecodeLength = ShaderBlobs.back()->GetBufferSize() }),
+        .DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB->GetBufferPointer(), .BytecodeLength = SB->GetBufferSize() }),
         .NumExports = static_cast<UINT>(size(EDs)), .pExports = data(EDs) 
     };
 

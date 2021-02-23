@@ -108,8 +108,13 @@ protected:
 		}
 	}
 	
-	virtual void CreateShaderModule() override { CreateShaderModle_Cs(); }
-	virtual void CreatePipeline() override { CreatePipeline_Cs(); }
+	virtual void CreatePipeline() override { 
+		const auto ShaderPath = GetBasePath();
+		const std::array SMs = {
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".comp.spv"))),
+		};
+		CreatePipeline_Cs();
+	}
 	virtual void PopulateCommandBuffer(const size_t i) override;
 	virtual void Draw() override { Dispatch(); }
 

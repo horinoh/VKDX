@@ -20,7 +20,6 @@ public:
 	virtual void CreateGeometry() override;
 	virtual void CreateTexture() override;
 	virtual void CreatePipelineLayout() override;
-	virtual void CreateShaderModule() override;
 	virtual void CreatePipeline() override;
 #pragma endregion
 };

@@ -71,9 +71,13 @@ protected:
 		//UnorderedAccessViewDescs.push_back({ /*ImageResources.back()->GetDesc().Format*/DXGI_FORMAT_R8G8B8A8_UNORM, D3D12_UAV_DIMENSION_TEXTURE2D });
 		//UnorderedAccessViewDescs.back().Texture2D = { 0, 0 };
 	}
+	virtual void CreatePipelineState() override { 
+		const auto ShaderPath = GetBasePath();
+		std::vector<COM_PTR<ID3DBlob>> SBs;
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".cs.cso")), COM_PTR_PUT(SBs.emplace_back())));
 
-	virtual void CreateShaderBlob() override { CreateShaderBlob_Cs(); }
-	virtual void CreatePipelineState() override { CreatePipelineState_Cs(); }
+		CreatePipelineState_Cs(); 
+	}
 	virtual void PopulateCommandList(const size_t i) override;
 
 	virtual void Draw() override { Dispatch(); }

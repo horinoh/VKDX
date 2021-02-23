@@ -230,33 +230,17 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-void MeshShaderDX::CreateShaderBlob()
+void MeshShaderDX::CreateRootSignature()
 {
-	const auto ShaderPath = GetBasePath();
-	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ms.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
-#ifdef USE_SHADER_REFLECTION
-	std::wcout << (ShaderPath + TEXT(".ms.cso")) << std::endl;
-	ProcessShaderReflection(COM_PTR_GET(ShaderBlobs.back()));
-#endif
-#ifdef USE_SHADER_BLOB_PART
-	SetBlobPart(ShaderBlobs.back());
-	GetBlobPart(COM_PTR_GET(ShaderBlobs.back()));
-#endif
-	StripShader(ShaderBlobs.back());
 
-	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(ShaderBlobs.emplace_back())));
-#ifdef USE_SHADER_REFLECTION
-	std::wcout << (ShaderPath + TEXT(".ps.cso")) << std::endl;
-	ProcessShaderReflection(COM_PTR_GET(ShaderBlobs.back()));
-#endif
-#ifdef USE_SHADER_BLOB_PART
-	SetBlobPart(ShaderBlobs.back());
-	GetBlobPart(COM_PTR_GET(ShaderBlobs.back()));
-#endif
-	StripShader(ShaderBlobs.back());
 }
 void MeshShaderDX::CreatePipelineState()
 {
+	const auto ShaderPath = GetBasePath();
+	std::vector<COM_PTR<ID3DBlob>> SBs;
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ms.cso")), COM_PTR_PUT(SBs.emplace_back())));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
+
 	constexpr D3D12_RASTERIZER_DESC RD = {
 		.FillMode = D3D12_FILL_MODE_SOLID,
 		.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
@@ -283,8 +267,8 @@ void MeshShaderDX::CreatePipelineState()
     MESH_SHADER_PIPELINE_STATE_DESC MSPSD = {
         .pRootSignature = COM_PTR_GET(RootSignatures[0]),
         .AS = D3D12_SHADER_BYTECODE({.pShaderBytecode = nullptr, .BytecodeLength = 0 }),
-		.MS = D3D12_SHADER_BYTECODE({.pShaderBytecode = ShaderBlobs[0]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[0]->GetBufferSize() }),
-		.PS = D3D12_SHADER_BYTECODE({.pShaderBytecode = ShaderBlobs[1]->GetBufferPointer(), .BytecodeLength = ShaderBlobs[1]->GetBufferSize() }),
+		.MS = D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[0]->GetBufferPointer(), .BytecodeLength = SBs[0]->GetBufferSize() }),
+		.PS = D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
 		.BlendState = D3D12_BLEND_DESC({ .AlphaToCoverageEnable = TRUE, .IndependentBlendEnable = FALSE, .RenderTarget = {}}),
         .SampleMask = D3D12_DEFAULT_SAMPLE_MASK,
         .RasterizerState = RD,
