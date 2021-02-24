@@ -232,11 +232,11 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void RenderTargetDX::PopulateCommandList(const size_t i)
 {
-	const auto PS0 = COM_PTR_GET(PipelineStates[0]);
-	const auto PS1 = COM_PTR_GET(PipelineStates[1]);	
-
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-	//!< パス0 : バンドルコマンドリスト(メッシュ描画用)
+
+#pragma region PASS0
+	//!< バンドルコマンドリスト(メッシュ描画用
+	const auto PS0 = COM_PTR_GET(PipelineStates[0]);
 	const auto BCL0 = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	VERIFY_SUCCEEDED(BCL0->Reset(BCA, PS0));
 	{
@@ -246,8 +246,11 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 		BCL0->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BCL0->Close());
+#pragma endregion
 
-	//!< パス1 : バンドルコマンドリスト(レンダーテクスチャ描画用)
+#pragma region PASS1
+	//!< レンダーテクスチャ描画用
+	const auto PS1 = COM_PTR_GET(PipelineStates[1]);
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
 	const auto BCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + SCD.BufferCount]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
@@ -259,6 +262,7 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 		BCL1->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BCL1->Close());
+#pragma endregion
 
 	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
@@ -270,7 +274,8 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 		CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 		CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-		//!< パス0 : (メッシュ描画用)
+#pragma region PASS0
+		//!< メッシュ描画用
 		{
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
@@ -291,6 +296,7 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 
 			CL->ExecuteBundle(BCL0);
 		}
+#pragma endregion
 
 		//!< リソースバリア : D3D12_RESOURCE_STATE_RENDER_TARGET -> D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE
 		{
@@ -303,7 +309,8 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 			CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 		}
 
-		//!< パス1 : (レンダーテクスチャ描画用)
+#pragma region PASS1
+		//!< レンダーテクスチャ描画用
 		{
 			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
@@ -331,6 +338,7 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 			};
 			CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 		}
+#pragma endregion
 	}
 	VERIFY_SUCCEEDED(CL->Close());
 }

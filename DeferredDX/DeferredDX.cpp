@@ -232,11 +232,11 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void DeferredDX::PopulateCommandList(const size_t i)
 {
-	const auto PS0 = COM_PTR_GET(PipelineStates[0]);
-	const auto PS1 = COM_PTR_GET(PipelineStates[1]);
-
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-	//!< Pass0 : バンドルコマンドリスト(メッシュ描画用)
+
+#pragma region PASS0
+	//!< メッシュ描画用
+	const auto PS0 = COM_PTR_GET(PipelineStates[0]);
 	const auto BGCL0 = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	VERIFY_SUCCEEDED(BGCL0->Reset(BCA, PS0));
 	{
@@ -247,8 +247,11 @@ void DeferredDX::PopulateCommandList(const size_t i)
 		BGCL0->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BGCL0->Close());
+#pragma endregion
 
-	//!< Pass1 : バンドルコマンドリスト(レンダーテクスチャ描画用)
+#pragma region PASS1
+	//!< レンダーテクスチャ描画用
+	const auto PS1 = COM_PTR_GET(PipelineStates[1]);
 	const auto BGCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + size(BundleGraphicsCommandLists) / 2]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
 	VERIFY_SUCCEEDED(BGCL1->Reset(BCA, PS1));
 	{
@@ -259,6 +262,7 @@ void DeferredDX::PopulateCommandList(const size_t i)
 		BGCL1->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BGCL1->Close());
+#pragma endregion
 
 	const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
@@ -270,7 +274,8 @@ void DeferredDX::PopulateCommandList(const size_t i)
 		GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 		GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-		//!< パス0 : (メッシュ描画用)
+#pragma region PASS0
+		//!< メッシュ描画用
 		{
 			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
@@ -317,6 +322,7 @@ void DeferredDX::PopulateCommandList(const size_t i)
 
 			GCL->ExecuteBundle(BGCL0);
 		}
+#pragma endregion
 
 		//!< リソースバリア
 		{
@@ -337,7 +343,8 @@ void DeferredDX::PopulateCommandList(const size_t i)
 			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 		}
 
-		//!< パス1 : (レンダーテクスチャ描画用)
+#pragma region PASS1
+		//!< レンダーテクスチャ描画用
 		{
 			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 			{
@@ -362,6 +369,7 @@ void DeferredDX::PopulateCommandList(const size_t i)
 
 			GCL->ExecuteBundle(BGCL1);
 		}
+#pragma endregion
 
 		//!< リソースバリア : D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE -> D3D12_RESOURCE_STATE_RENDER_TARGET
 		{

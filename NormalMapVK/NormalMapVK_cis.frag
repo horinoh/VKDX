@@ -6,6 +6,7 @@ layout (location = 0) in vec2 InTexcoord;
 layout (location = 1) in vec3 InViewDirection;
 layout (location = 2) in vec3 InLightDirection;
 
+//!< コンバインドイメージサンプラ : texture(sampler2D, TexCoord)
 layout (set = 0, binding = 1) uniform sampler2D NormalMap;
 layout (set = 0, binding = 2) uniform sampler2D ColorMap;
 

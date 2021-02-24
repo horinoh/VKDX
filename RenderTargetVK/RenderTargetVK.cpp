@@ -232,15 +232,10 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 {
-	//!< パス0
+#pragma region PASS0
+	//!< メッシュ描画用
 	const auto RP0 = RenderPasses[0];
-	const auto FB0 = Framebuffers[0];
-
-	//!< パス1 
-	const auto RP1 = RenderPasses[1];
-	const auto FB1 = Framebuffers[i + 1];
-
-	//!< パス0 : セカンダリコマンドバッファ(メッシュ描画用)
+	const auto FB0 = Framebuffers[0]; 
 	const auto SCB0 = SecondaryCommandBuffers[i];
 	{
 		const VkCommandBufferInheritanceInfo CBII = {
@@ -267,8 +262,12 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 			vkCmdDrawIndirect(SCB0, IDB.Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
 	}
+#pragma endregion
 
-	//!< パス1 : セカンダリコマンドバッファ(レンダーテクスチャ描画用)
+#pragma region PASS1
+	//!< レンダーテクスチャ描画用
+	const auto RP1 = RenderPasses[1];
+	const auto FB1 = Framebuffers[i + 1]; 
 	const auto SCCount = size(SwapchainImages);
 	const auto SCB1 = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
 	{
@@ -301,6 +300,7 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 			vkCmdDrawIndirect(SCB1, IDB.Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
 	}
+#pragma endregion
 
 #ifdef USE_SUBPASS
 	//vkCmdNextSubpass() を使用する
@@ -316,7 +316,8 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 		const auto RenderArea = VkRect2D({ .offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D });
 
-		//!< パス0 : レンダーパス(メッシュ描画用)
+#pragma region PASS0
+		//!< メッシュ描画用
 		{
 #ifdef USE_DEPTH
 			const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
@@ -336,6 +337,7 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 				vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
 			} vkCmdEndRenderPass(CB);
 		}
+#pragma endregion
 
 		//!< リソースバリア : VK_ACCESS_COLOR_ATTACHMENT_READ_BIT -> VK_ACCESS_SHADER_READ_BIT
 		{
@@ -358,7 +360,8 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 				static_cast<uint32_t>(size(IMBs)), data(IMBs));
 		}
 		
-		//!< パス1 : レンダーパス(レンダーテクスチャ描画用)
+#pragma region PASS1
+		//!< レンダーテクスチャ描画用
 		{
 			const std::array<VkClearValue, 0> CVs = {};
 			const VkRenderPassBeginInfo RPBI = {
@@ -374,7 +377,7 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 				vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
 			} vkCmdEndRenderPass(CB);
 		}
-
+#pragma endregion
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
 #pragma endregion

@@ -232,14 +232,10 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void DeferredVK::PopulateCommandBuffer(const size_t i)
 {
-	//!< Pass0
+#pragma region PASS0
+	//!< メッシュ描画用
 	const auto RP0 = RenderPasses[0];
 	const auto FB0 = Framebuffers[0];
-	//!< Pass1 
-	const auto RP1 = RenderPasses[1];
-	const auto FB1 = Framebuffers[i + 1];
-
-	//!< Pass0 : セカンダリコマンドバッファ(メッシュ描画用)
 	const auto SCB0 = SecondaryCommandBuffers[i];
 	{
 		const VkCommandBufferInheritanceInfo CBII = {
@@ -278,8 +274,12 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 			vkCmdDrawIndirect(SCB0, IDB.Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
 	}
+#pragma endregion
 
-	//!< Pass1 : セカンダリコマンドバッファ(レンダーテクスチャ描画用)
+#pragma region PASS1
+	//!< レンダーテクスチャ描画用
+	const auto RP1 = RenderPasses[1];
+	const auto FB1 = Framebuffers[i + 1];
 #pragma region FRAME_OBJECT
 	const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
 #pragma endregion
@@ -320,6 +320,7 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 			vkCmdDrawIndirect(SCB1, IDB.Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
 	}
+#pragma endregion
 
 	const auto CB = CommandBuffers[i];
 	constexpr VkCommandBufferBeginInfo CBBI = {
