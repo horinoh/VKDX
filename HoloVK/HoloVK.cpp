@@ -232,15 +232,10 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void HoloVK::PopulateCommandBuffer(const size_t i)
 {
-	//!< Pass0
+#pragma region PASS0
+	//!< メッシュ描画用
 	const auto RP0 = RenderPasses[0];
 	const auto FB0 = Framebuffers[0];
-
-	//!< Pass1
-	const auto RP1 = RenderPasses[1];
-	const auto FB1 = Framebuffers[i + 1];
-
-	//!< Pass0 : セカンダリコマンドバッファ(メッシュ描画用)
 	const auto SCB0 = SecondaryCommandBuffers[i];
 	{
 		const VkCommandBufferInheritanceInfo CBII = {
@@ -287,8 +282,12 @@ void HoloVK::PopulateCommandBuffer(const size_t i)
 			}
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
 	}
+#pragma endregion
 
-	//!< Pass1 : セカンダリコマンドバッファ(レンダーテクスチャ描画用)
+#pragma region PASS1
+	//!< レンダーテクスチャ描画用
+	const auto RP1 = RenderPasses[1];
+	const auto FB1 = Framebuffers[i + 1];
 	const auto SCCount = size(SwapchainImages);
 	const auto SCB1 = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
 	{
@@ -308,19 +307,19 @@ void HoloVK::PopulateCommandBuffer(const size_t i)
 			.pInheritanceInfo = &CBII
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB1, &CBBI)); {
-			const auto PL = Pipelines[1];
-			const auto& IDB = IndirectBuffers[1];
 			vkCmdSetViewport(SCB1, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
 			vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
-			vkCmdBindPipeline(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
+
+			vkCmdBindPipeline(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[1]);
 
 			const std::array DSs = { DescriptorSets[size(SwapchainImages)] };
 			const auto PLL = PipelineLayouts[1];
 			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(size(DSs)), data(DSs), 0, nullptr);
 
-			vkCmdDrawIndirect(SCB1, IDB.Buffer, 0, 1, 0);
+			vkCmdDrawIndirect(SCB1, IndirectBuffers[1].Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
 	}
+#pragma endregion
 
 	const auto CB = CommandBuffers[i];
 	const VkCommandBufferBeginInfo CBBI = {
@@ -331,7 +330,8 @@ void HoloVK::PopulateCommandBuffer(const size_t i)
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 
-		//!< Pass0 : レンダーパス(メッシュ描画用)
+#pragma region PASS0
+		//!< メッシュ描画用
 		{
 			const auto RenderArea = VkRect2D({ .offset = VkOffset2D({.x = 0, .y = 0 }), .extent = QuiltExtent2D });
 
@@ -349,6 +349,7 @@ void HoloVK::PopulateCommandBuffer(const size_t i)
 				vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
 			} vkCmdEndRenderPass(CB);
 		}
+#pragma endregion
 
 		//!< リソースバリア : VK_ACCESS_COLOR_ATTACHMENT_READ_BIT -> VK_ACCESS_SHADER_READ_BIT
 		{
@@ -371,7 +372,8 @@ void HoloVK::PopulateCommandBuffer(const size_t i)
 				static_cast<uint32_t>(size(IMBs)), data(IMBs));
 		}
 
-		//!< Pass1 : レンダーパス(レンダーテクスチャ描画用)
+#pragma region PASS1
+		//!< レンダーテクスチャ描画用
 		{
 			const auto RenderArea = VkRect2D({ .offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D });
 
@@ -389,12 +391,13 @@ void HoloVK::PopulateCommandBuffer(const size_t i)
 				vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
 			} vkCmdEndRenderPass(CB);
 		}
+#pragma endregion
 
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
 void HoloVK::CreateViewport(const float Width, const float Height, const float MinDepth, const float MaxDepth)
 {
-	//!< Pass0
+#pragma region PASS0
 	{
 		//!< キルトの構造
 		//!< ------------> RightMost
@@ -412,10 +415,12 @@ void HoloVK::CreateViewport(const float Width, const float Height, const float M
 			}
 		}
 	}
+#pragma endregion
 
-	//!< Pass1
+#pragma region PASS1
 	{
 		Super::CreateViewport(Width, Height, MinDepth, MaxDepth);
 	}
+#pragma endregion
 }
 #pragma endregion

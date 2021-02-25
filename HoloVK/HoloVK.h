@@ -28,7 +28,7 @@ protected:
 
 	virtual void AllocateCommandBuffer() override {
 		Super::AllocateCommandBuffer();
-		//!< Pass1 : セカンダリコマンドバッファ
+#pragma region PASS	1
 		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
 		assert(!empty(SecondaryCommandPools) && "");
 		const auto PrevCount = size(SecondaryCommandBuffers);
@@ -41,20 +41,26 @@ protected:
 			.commandBufferCount = SCCount
 		};
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &SecondaryCommandBuffers[PrevCount]));
+#pragma endregion
 	}
 	virtual void CreateGeometry() override {
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		const auto CB = CommandBuffers[0];
-		//!< Pass0 : インダイレクトバッファ(メッシュ描画用)
+#pragma region PASS0
+		//!< メッシュ描画用
 		{
 			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC, CB, GraphicsQueue);
 		}
-		//!< Pass1 : インダイレクトバッファ(レンダーテクスチャ描画用)
+#pragma endregion
+
+#pragma region PASS1
+		//!< レンダーテクスチャ描画用
 		{
 			constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
 			IndirectBuffers.emplace_back().Create(Device, PDMP, DIC, CB, GraphicsQueue);
 		}
+#pragma endregion
 	}
 	virtual void CreateUniformBuffer() override {
 		constexpr auto Fov = glm::radians(14.0f);
@@ -116,7 +122,7 @@ protected:
 		}
 	}
 	virtual void CreateImmutableSampler() override {
-		//!< Pass1
+#pragma region PASS1
 		constexpr VkSamplerCreateInfo SCI = {
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			.pNext = nullptr,
@@ -131,32 +137,35 @@ protected:
 			.unnormalizedCoordinates = VK_FALSE
 		};
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.emplace_back()));
+#pragma endregion
 	}
 
 	virtual void CreatePipelineLayout() override {
-		//!< Pass0
+#pragma region PASS0
 		{
 			CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
 				VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }),
-				});
+			});
 			VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), { DescriptorSetLayouts.back() }, {
 	#pragma region PUSH_CONSTANT
 				VkPushConstantRange({.stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .offset = 0, .size = static_cast<uint32_t>(sizeof(QuiltDraw)) })
 	#pragma endregion
-				});
+			});
 		}
+#pragma endregion
 
-		//!< Pass1 
+#pragma region PASS1
 		{
 			const std::array ISs = { Samplers[0] };
 			CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
 				VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) })
-				});
+			});
 			VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), { DescriptorSetLayouts.back() }, {});
 		}
+#pragma endregion
 	}
 	virtual void CreateRenderPass() override {
-		//!< Pass0
+#pragma region PASS0
 		{
 			const std::array ColorAttach = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
 			const VkAttachmentReference DepthAttach = { .attachment = static_cast<uint32_t>(size(ColorAttach)), .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
@@ -188,7 +197,9 @@ protected:
 				}),
 			}, { });
 		}
-		//!< Pass1
+#pragma endregion
+
+#pragma region PASS1
 		{
 			const std::array ColorAttach = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
 			VK::CreateRenderPass(RenderPasses.emplace_back(), {
@@ -211,23 +222,16 @@ protected:
 				}),
 			}, {});
 		}
+#pragma endregion
 	}
 	virtual void CreatePipeline() override {
-		const auto ShaderPath = GetBasePath();
-		const std::array SMs = {
-			//!< Pass0
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".geom.spv"))),
-			//!< Pass1
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".vert.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".frag.spv"))),
-		};
-
-		Pipelines.resize(2);
 		std::vector<std::thread> Threads;
+		Pipelines.resize(2);
+		const auto ShaderPath = GetBasePath();
+#ifdef USE_PIPELINE_SERIALIZE
+		PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 2);
+#endif
+
 		const VkPipelineRasterizationStateCreateInfo PRSCI = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 			.pNext = nullptr,
@@ -251,17 +255,6 @@ protected:
 			.back = {.failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP, .compareOp = VK_COMPARE_OP_ALWAYS, .compareMask = 0, .writeMask = 0, .reference = 0 },
 			.minDepthBounds = 0.0f, .maxDepthBounds = 1.0f
 		};
-		const std::array PSSCIs_0 = {
-			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
-			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),
-			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, .module = SMs[2], .pName = "main", .pSpecializationInfo = nullptr }),
-			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, .module = SMs[3], .pName = "main", .pSpecializationInfo = nullptr }),
-			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_GEOMETRY_BIT, .module = SMs[4], .pName = "main", .pSpecializationInfo = nullptr }),
-		};
-		const std::array PSSCIs_1 = {
-			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs[5], .pName = "main", .pSpecializationInfo = nullptr }),
-			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = SMs[6], .pName = "main", .pSpecializationInfo = nullptr }),
-		};
 		const std::vector<VkVertexInputBindingDescription> VIBDs = {};
 		const std::vector<VkVertexInputAttributeDescription> VIADs = {};
 		const std::vector PCBASs = {
@@ -272,34 +265,66 @@ protected:
 				.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
 			}),
 		};
+
+#pragma region PASS0
+		const std::array SMs0 = {
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".geom.spv"))),
+		};
+		const std::array PSSCIs0 = {
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs0[0], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = SMs0[1], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, .module = SMs0[2], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, .module = SMs0[3], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_GEOMETRY_BIT, .module = SMs0[4], .pName = "main", .pSpecializationInfo = nullptr }),
+		};
 #ifdef USE_PIPELINE_SERIALIZE
-		PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 2);
-		//!< Pass0
-		Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, PDSSCI, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
-		//!< Pass1
-		Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI, PDSSCI, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(1)));
+		Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, PDSSCI, &PSSCIs0[0], &PSSCIs0[1], &PSSCIs0[2], &PSSCIs0[3], &PSSCIs0[4], VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
 #else
-		Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, PDSSCI, &PSSCIs_0[0], &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], &PSSCIs_0[4], VIBDs, VIADs, PCBASs));
-		Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI, PDSSCI, &PSSCIs_1[0], &PSSCIs_1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs));
+		Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, PDSSCI, &PSSCIs0[0], &PSSCIs0[1], &PSSCIs0[2], &PSSCIs0[3], &PSSCIs0[4], VIBDs, VIADs, PCBASs));
 #endif
+#pragma endregion
+
+#pragma region PASS1
+		const std::array SMs1 = {
+			VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".vert.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".frag.spv"))),
+		};
+		const std::array PSSCIs1 = {
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs1[0], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = SMs1[1], .pName = "main", .pSpecializationInfo = nullptr }),
+		};
+#ifdef USE_PIPELINE_SERIALIZE
+		Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI, PDSSCI, &PSSCIs1[0], &PSSCIs1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(1)));
+#else
+		Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[1]), Device, PipelineLayouts[1], RenderPasses[1], VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, PRSCI, PDSSCI, &PSSCIs1[0], &PSSCIs1[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs));
+#endif
+#pragma endregion
+
 		for (auto& i : Threads) { i.join(); }
 
-		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
+		for (auto i : SMs0) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
+		for (auto i : SMs1) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
 	virtual void CreateFramebuffer() override {
-		//!< Pass0
+#pragma region PASS0
 		VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], QuiltExtent2D.width, QuiltExtent2D.height, 1, {
 			ImageViews[0],
 			ImageViews[1],
 		});
+#pragma endregion
 
-		//!< Pass1
+#pragma region PASS1
 		for (auto i : SwapchainImageViews) {
 			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
 		}
+#pragma endregion
 	}
 	virtual void CreateDescriptorSet() override {
-		//!< Pass0
+#pragma region PASS0
 		{
 			VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
@@ -320,8 +345,9 @@ protected:
 			}
 #pragma endregion
 		}
+#pragma endregion
 
-		//!< Pass1
+#pragma region PASS1
 		{
 			VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 				VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 })
@@ -336,9 +362,10 @@ protected:
 			};
 			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 		}
+#pragma endregion
 	}
 	virtual void UpdateDescriptorSet() override {
-		//!< Pass0
+#pragma region PASS0
 		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
@@ -354,8 +381,9 @@ protected:
 			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DescriptorUpdateTemplates.back(), &DUI);
 		}
 #pragma endregion
+#pragma endregion
 
-		//!< Pass1
+#pragma region PASS1
 		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
@@ -367,6 +395,7 @@ protected:
 			VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 		};
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[size(SwapchainImages)], DescriptorUpdateTemplates.back(), &DUI);
+#pragma endregion
 
 #pragma region FRAME_OBJECT
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {

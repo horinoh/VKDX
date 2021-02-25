@@ -229,7 +229,7 @@ protected:
 		}
 	}
 	virtual void CreateStaticSampler() override {
-		//!< Pass1 : スタティックサンプラ
+#pragma region PASS1
 		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
 			.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR,
 			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
@@ -240,6 +240,7 @@ protected:
 			.MinLOD = 0.0f, .MaxLOD = 1.0f,
 			.ShaderRegister = 0, .RegisterSpace = 0, .ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL
 		}));
+#pragma endregion
 	}
 	virtual void CreateRootSignature() override {
 #pragma region PASS0

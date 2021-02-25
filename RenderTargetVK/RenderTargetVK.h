@@ -79,7 +79,7 @@ protected:
 #endif
 	}
 	virtual void CreateImmutableSampler() override {
-		//!< Pass1 : イミュータブルサンプラ
+#pragma region PASS1
 		constexpr VkSamplerCreateInfo SCI = {
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			.pNext = nullptr,
@@ -94,6 +94,7 @@ protected:
 			.unnormalizedCoordinates = VK_FALSE
 		};
 		VERIFY_SUCCEEDED(vkCreateSampler(Device, &SCI, GetAllocationCallbacks(), &Samplers.emplace_back()));
+#pragma endregion
 	}
 	virtual void CreatePipelineLayout() override {
 #pragma region PASS0

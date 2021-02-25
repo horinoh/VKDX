@@ -255,23 +255,17 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 			.pInheritanceInfo = &CBII
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB0, &CBBI)); {
-#pragma region FRAME_OBJECT
-			const auto DS = DescriptorSets[i];
-#pragma endregion
-			const auto PL = Pipelines[0];
-			const auto& IDB = IndirectBuffers[0];
-
 			vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
 			vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 
-			vkCmdBindPipeline(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
+			vkCmdBindPipeline(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
 			
-			assert(!empty(DescriptorSets) && "");
-			assert(!empty(PipelineLayouts) && "");
-			const std::array<VkDescriptorSet, 1> DSs = { DS };
+#pragma region FRAME_OBJECT
+			const std::array DSs = { DescriptorSets[i] };
+#pragma endregion
 			vkCmdBindDescriptorSets(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[0], 0, static_cast<uint32_t>(size(DSs)), data(DSs), 0, nullptr);
 
-			vkCmdDrawIndirect(SCB0, IDB.Buffer, 0, 1, 0);
+			vkCmdDrawIndirect(SCB0, IndirectBuffers[0].Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
 	}
 #pragma endregion
@@ -302,22 +296,17 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 			.pInheritanceInfo = &CBII
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB1, &CBBI)); {
-#pragma region FRAME_OBJECT
-			const auto DS = DescriptorSets[i + SCCount];
-#pragma endregion
-			const auto PL = Pipelines[1];
-			const auto& IDB = IndirectBuffers[1];
 			vkCmdSetViewport(SCB1, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
 			vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 
-			vkCmdBindPipeline(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
+			vkCmdBindPipeline(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[1]);
 
-			assert(2 == size(DescriptorSets) && "");
-			assert(2 == size(PipelineLayouts) && "");
-			const std::array<VkDescriptorSet, 1> DSs = { DS };
+#pragma region FRAME_OBJECT
+			const std::array DSs = { DescriptorSets[i + SCCount] };
+#pragma endregion
 			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[1], 0, static_cast<uint32_t>(size(DSs)), data(DSs), 0, nullptr);
 
-			vkCmdDrawIndirect(SCB1, IDB.Buffer, 0, 1, 0);
+			vkCmdDrawIndirect(SCB1, IndirectBuffers[1].Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
 	}
 #pragma endregion
@@ -332,7 +321,8 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 		const VkRect2D RenderArea = { .offset = VkOffset2D({ .x = 0, .y = 0 }), .extent = SurfaceExtent2D };
 
-		//!< Pass0 : レンダーパス(メッシュ描画用)
+#pragma region PASS0
+		//!< メッシュ描画用
 		{
 			constexpr std::array CVs = {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
@@ -343,8 +333,9 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 				//!< レンダーターゲット : 深度(RenderTarget : Depth)
 				VkClearValue({.color = Colors::Red}),
 				//!< レンダーターゲット : 未定
-				VkClearValue({.depthStencil = VkClearDepthStencilValue({.depth = 1.0f, .stencil = 0 })}),
+				VkClearValue({.color = Colors::SkyBlue}),
 #pragma endregion
+				VkClearValue({.depthStencil = VkClearDepthStencilValue({.depth = 1.0f, .stencil = 0 })}),
 			};
 			const VkRenderPassBeginInfo RPBI = {
 				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -359,6 +350,7 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 				vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
 			} vkCmdEndRenderPass(CB);
 		}
+#pragma endregion
 
 		//!< リソースバリア : VK_ACCESS_COLOR_ATTACHMENT_READ_BIT -> VK_ACCESS_SHADER_READ_BIT -> SubpassDependencyで代用可能かも？
 		{
@@ -414,7 +406,8 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 				static_cast<uint32_t>(size(IMBs)), data(IMBs));
 		}
 
-		//!< パス1 : レンダーパス(レンダーテクスチャ描画用)
+#pragma region PASS1
+		//!< レンダーテクスチャ描画用
 		{
 			const std::array<VkClearValue, 0> CVs = {};
 			const VkRenderPassBeginInfo RPBI = {
@@ -430,6 +423,7 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 				vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
 			} vkCmdEndRenderPass(CB);
 		}
+#pragma endregion
 
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }

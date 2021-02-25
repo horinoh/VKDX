@@ -210,7 +210,6 @@ protected:
 			};
 			constexpr VkAttachmentReference DepthAttach = { .attachment = static_cast<uint32_t>(size(ColorAttach)), .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 			VK::CreateRenderPass(RenderPasses.emplace_back(), {
-				//!< アタッチメント(Attachment)
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				VkAttachmentDescription({
 					.flags = 0,
@@ -259,7 +258,6 @@ protected:
 					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
 				}),
 			}, {
-				//!< サブパス(SubPass)
 				VkSubpassDescription({
 					.flags = 0,
 					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -276,7 +274,6 @@ protected:
 		{
 			constexpr std::array ColorAttach = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
 			VK::CreateRenderPass(RenderPasses.emplace_back(), {
-				//!< アタッチメント
 				VkAttachmentDescription({
 					.flags = 0,
 					.format = ColorFormat,
@@ -286,7 +283,6 @@ protected:
 					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 				}),
 			}, {
-				//!< サブパス
 				VkSubpassDescription({
 					.flags = 0,
 					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,

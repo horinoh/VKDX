@@ -240,10 +240,8 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 	const auto BCL0 = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	VERIFY_SUCCEEDED(BCL0->Reset(BCA, PS0));
 	{
-		const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
-		const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
 		BCL0->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-		BCL0->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+		BCL0->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BCL0->Close());
 #pragma endregion
@@ -256,10 +254,8 @@ void RenderTargetDX::PopulateCommandList(const size_t i)
 	const auto BCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + SCD.BufferCount]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
 	VERIFY_SUCCEEDED(BCL1->Reset(BCA, PS1));
 	{
-		const auto IDBCS = COM_PTR_GET(IndirectBuffers[1].CommandSignature);
-		const auto IDBR = COM_PTR_GET(IndirectBuffers[1].Resource);
 		BCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-		BCL1->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+		BCL1->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[1].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[1].Resource), 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BCL1->Close());
 #pragma endregion

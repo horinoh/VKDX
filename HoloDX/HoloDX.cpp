@@ -232,11 +232,10 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void HoloDX::PopulateCommandList(const size_t i)
 {
-	const auto PS0 = COM_PTR_GET(PipelineStates[0]);
-	const auto PS1 = COM_PTR_GET(PipelineStates[1]);
-
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-	//!< Pass0 : バンドルコマンドリスト(メッシュ描画用)
+#pragma region PASS0
+	//!< メッシュ描画用
+	const auto PS0 = COM_PTR_GET(PipelineStates[0]);
 	const auto BGCL0 = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	VERIFY_SUCCEEDED(BGCL0->Reset(BCA, PS0));
 	{
@@ -246,8 +245,11 @@ void HoloDX::PopulateCommandList(const size_t i)
 		BGCL0->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BGCL0->Close());
+#pragma endregion
 
-	//!< Pass1 : バンドルコマンドリスト(レンダーテクスチャ描画用)
+#pragma region PASS1
+	//!< レンダーテクスチャ描画用
+	const auto PS1 = COM_PTR_GET(PipelineStates[1]);
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
 	const auto BGCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + SCD.BufferCount]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
@@ -259,6 +261,7 @@ void HoloDX::PopulateCommandList(const size_t i)
 		BGCL1->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BGCL1->Close());
+#pragma endregion
 
 	const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
@@ -267,7 +270,8 @@ void HoloDX::PopulateCommandList(const size_t i)
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 		const auto IR = COM_PTR_GET(ImageResources[0]);
 
-		//!< Pass0 : (メッシュ描画用)
+#pragma region PASS0
+		//!< メッシュ描画用
 		{
 			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
@@ -308,6 +312,7 @@ void HoloDX::PopulateCommandList(const size_t i)
 				GCL->ExecuteBundle(BGCL0);
 			}
 		}
+#pragma endregion
 
 		//!< リソースバリア
 		{
@@ -328,7 +333,8 @@ void HoloDX::PopulateCommandList(const size_t i)
 			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 		}
 
-		//!< Pass1 : (レンダーテクスチャ描画用)
+#pragma region PASS1
+		//!< レンダーテクスチャ描画用
 		{
 			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
@@ -348,6 +354,7 @@ void HoloDX::PopulateCommandList(const size_t i)
 
 			GCL->ExecuteBundle(BGCL1);
 		}
+#pragma endregion
 
 		//!< リソースバリア
 		{
@@ -372,7 +379,7 @@ void HoloDX::PopulateCommandList(const size_t i)
 }
 void HoloDX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth, const FLOAT MaxDepth)
 {
-	//!< Pass0
+#pragma region PASS0
 	{
 		//!< キルトの構造
 		//!< ------------> RightMost
@@ -390,10 +397,12 @@ void HoloDX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT M
 			}
 		}
 	}
+#pragma endregion
 
-	//!< Pass1
+#pragma region PASS1
 	{
 		Super::CreateViewport(Width, Height, MinDepth, MaxDepth);
 	}
+#pragma endregion
 }
 #pragma endregion
