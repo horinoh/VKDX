@@ -249,7 +249,7 @@ protected:
 #ifdef USE_HLSL_ROOTSIGNATRUE
 			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
-			const std::array DRs = { 
+			constexpr std::array DRs = { 
 				D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }),
 			};
 			SerializeRootSignature(Blob, {
@@ -266,7 +266,7 @@ protected:
 #ifdef USE_HLSL_ROOTSIGNATRUE 
 			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT("_1.rs.cso")));
 #else
-			const std::array DRs = { 
+			constexpr std::array DRs = { 
 #pragma region MRT
 				//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
 				D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 4, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }),

@@ -2404,6 +2404,7 @@ void VK::CreateTexture1x1(const uint32_t Color, const VkPipelineStageFlags PSF)
 	VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.back()));
 }
 
+//!< ABRG
 void VK::CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipelineStageFlags PSF)
 {
 #pragma region TEX_ARRAY

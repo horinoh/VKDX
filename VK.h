@@ -52,7 +52,7 @@
 //!< ただしプライマリがレンダーパス内からセカンダリを呼び出す場合には、プライマリのレンダーパス、サプバスステートは継承される
 //!< 全てのコマンドがプライマリ、セカンダリの両方で記録できるわけではない
 //!< セカンダリの場合は VK_SUBPASS_CONTENTS_INLINE の代わりに VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS を指定する 
-//#define USE_NO_SECONDARY_COMMAND_BUFFER //!< [ ParametricSurfaceVK ] DX::USE_NO_BUNDLE相当
+//#define USE_SECONDARY_COMMAND_BUFFER //!< [ ParametricSurfaceVK ] DX::USE_BUNDLE相当
 
 //!< パイプライン作成時にシェーダ内の定数値を上書き指定できる(スカラ値のみ)
 //#define USE_SPECIALIZATION_INFO //!< [ ParametricSurfaceVK ]
@@ -60,6 +60,7 @@
 //!< プッシュデスクリプタ : デスクリプタセットを確保してからコマンドバッファにバインドするのではなく、デスクリプタの更新自体をコマンドバッファに記録してしまう
 //#define USE_PUSH_DESCRIPTOR //!< [ BillboardVK ]
 //#define USE_PUSH_CONSTANTS //!< [ TriangleVK ] DX:USE_ROOT_CONSTANTS相当
+//#define USE_UPDATE_DESCRIPTOR_SET_WITH_TEMPLATE //!< [ DisplacementVK ]
 //#define USE_MANUAL_CLEAR //!< [ ClearVK ] #VK_TODO
 
 #define USE_SEPARATE_SAMPLER //!< [ NormalMapVK ] コンバインドイメージサンプラを使用しない

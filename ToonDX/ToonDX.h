@@ -75,7 +75,6 @@ protected:
 		const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .DepthStencil = { .Depth = 1.0f, .Stencil = 0 } };
 		VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
 
-		//!< ビュー
 		DepthStencilViewDescs.emplace_back(D3D12_DEPTH_STENCIL_VIEW_DESC({ 
 			.Format = ImageResources.back()->GetDesc().Format, 
 			.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D, 
@@ -90,10 +89,14 @@ protected:
 		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
 		constexpr std::array DRs = {
-			D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
+			D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 		};
 		DX::SerializeRootSignature(Blob, {
-			D3D12_ROOT_PARAMETER({.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs)), .pDescriptorRanges = data(DRs) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY }),
+			D3D12_ROOT_PARAMETER({
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs)), .pDescriptorRanges = data(DRs) }), 
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY 
+			}),
 		}, {}, SHADER_ROOT_ACCESS_GS);
 #endif
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
@@ -133,14 +136,13 @@ protected:
 			DXGI_SWAP_CHAIN_DESC1 SCD;
 			SwapChain->GetDesc1(&SCD);
 #pragma region FRAME_OBJECT
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< CBV * N
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< CBV * N
 #pragma endregion
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 		}
 #ifdef USE_DEPTH
-		//!< 深度デスクリプタヒープ
 		{
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
 		}
 #endif
@@ -149,7 +151,6 @@ protected:
 		{
 			DXGI_SWAP_CHAIN_DESC1 SCD;
 			SwapChain->GetDesc1(&SCD);
-
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 #pragma region FRAME_OBJECT
@@ -160,9 +161,7 @@ protected:
 #pragma endregion
 		}
 #ifdef USE_DEPTH
-		//!< 深度ビュー
 		{
-			assert(!empty(ImageResources) && "");
 			const auto& DH = DsvDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[0]), &DepthStencilViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);

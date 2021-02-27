@@ -1380,6 +1380,7 @@ void DX::CreateTexture1x1(const UINT32 Color, const D3D12_RESOURCE_STATES RS)
 		}));
 }
 
+//!< ABRG
 void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RESOURCE_STATES RS)
 {
 #pragma region TEX_ARRAY

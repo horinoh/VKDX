@@ -231,7 +231,6 @@ protected:
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 2);
 #endif
-
 		const VkPipelineRasterizationStateCreateInfo PRSCI = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 			.pNext = nullptr,

@@ -95,10 +95,8 @@ protected:
 	}
 #ifdef USE_DEPTH
 	virtual void CreateFramebuffer() override {
-		const auto RP = RenderPasses[0];
-		const auto DIV = ImageViews[0];
 		for (auto i : SwapchainImageViews) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DIV });
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, ImageViews[0] });
 		}
 	}
 #endif

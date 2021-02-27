@@ -238,11 +238,8 @@ void GSInstancingDX::PopulateCommandList(const size_t i)
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
 	{
-		const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
-		const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
-
 		BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-		BGCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+		BGCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BGCL->Close());
 

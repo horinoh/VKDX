@@ -251,16 +251,13 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
         .pInheritanceInfo = &CBII
     };
     VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
-		const auto PL = Pipelines[0];
-
         vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
         vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 
-        vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
+        vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
 
 #ifdef USE_DRAW_INDIRECT
-		const auto& IDB = IndirectBuffers[0];
-        vkCmdDrawIndirect(SCB, IDB.Buffer, 0, 1, 0);
+        vkCmdDrawIndirect(SCB, IndirectBuffers[0].Buffer, 0, 1, 0);
 #else
         vkCmdDraw(SCB, 4, 1, 0, 0);
 #endif
@@ -283,7 +280,6 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
 			.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
             .clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
         };
-
         vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
             const std::array SCBs = { SCB };
             vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));

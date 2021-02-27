@@ -524,7 +524,8 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 #if 0
 			//vkCmdPushConstants(SCB, PLL, VK_SHADER_STAGE_VERTEX_BIT, 0, static_cast<uint32_t>(sizeof(CurrentMatrix.back())), &CurrentMatrix.back());
 			const std::array<VkDescriptorSet, 1> DSs = { DescriptorSets.back() };
-			vkCmdBindDescriptorSets(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(size(DSs)), data(DSs), 0, nullptr);
+			constexpr std::array<uint32_t, 0> DynamicOffsets = {};
+			vkCmdBindDescriptorSets(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
 #endif
 
 			vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
@@ -706,7 +707,8 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 		//const auto PLL = PipelineLayouts[0];
 		//vkCmdPushConstants(CB, PLL, VK_SHADER_STAGE_VERTEX_BIT, 0, static_cast<uint32_t>(sizeof(ViewProjection)), &ViewProjection);
 		//const std::array<VkDescriptorSet, 1> DSs = { DescriptorSets.back() };
-		//vkCmdBindDescriptorSets(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(size(DSs)), data(DSs), 0, nullptr);
+		//constexpr std::array<uint32_t, 0> DynamicOffsets = {};
+		//vkCmdBindDescriptorSets(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
 
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
 			vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));

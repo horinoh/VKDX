@@ -16,13 +16,14 @@ public:
 protected:
 	virtual void CreateCommandList() override {
 		Super::CreateCommandList();
-		//!< パス1 : バンドルコマンドリスト
+#pragma region PASS1
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
 			VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleGraphicsCommandLists.emplace_back())));
 			VERIFY_SUCCEEDED(BundleGraphicsCommandLists.back()->Close());
 		}
+#pragma endregion
 	}
 
 	virtual void CreateGeometry() override {
@@ -145,15 +146,18 @@ protected:
 #ifdef USE_HLSL_ROOTSIGNATRUE 
 			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT("_1.rs.cso")));
 #else
-			const std::array DRs_Srv = {
-				D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
+			constexpr std::array DRs_Srv = {
+				D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 			};
-			assert(!empty(StaticSamplerDescs) && "");
 			DX::SerializeRootSignature(Blob, {
-					D3D12_ROOT_PARAMETER({.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<uint32_t>(size(DRs_Srv)), .pDescriptorRanges = data(DRs_Srv) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL })
-				}, {
-					StaticSamplerDescs[0],
-				}, D3D12_ROOT_SIGNATURE_FLAG_NONE | SHADER_ROOT_ACCESS_PS);
+				D3D12_ROOT_PARAMETER({
+					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, 
+					.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<uint32_t>(size(DRs_Srv)), .pDescriptorRanges = data(DRs_Srv) }), 
+					.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL 
+				})
+			}, {
+				StaticSamplerDescs[0],
+			}, SHADER_ROOT_ACCESS_PS);
 #endif
 			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.back())));
 		}

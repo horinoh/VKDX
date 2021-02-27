@@ -237,11 +237,8 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
     {
-        const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
-        const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
-
         BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-        BGCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+        BGCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
     }
 	VERIFY_SUCCEEDED(BGCL->Close());
 
@@ -271,13 +268,11 @@ void NormalMapDX::PopulateCommandList(const size_t i)
 
             {
                 const auto& DH = CbvSrvUavDescriptorHeaps[0];
-
                 const std::array DHs = { COM_PTR_GET(DH) };
                 GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 				DXGI_SWAP_CHAIN_DESC1 SCD;
 				SwapChain->GetDesc1(&SCD);
-
                 auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
 #pragma region FRAME_OBJECT
 				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;

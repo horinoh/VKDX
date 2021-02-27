@@ -237,11 +237,8 @@ void ToonDX::PopulateCommandList(const size_t i)
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
     {
-        const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
-        const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
-
         BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-        BCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+        BCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
     }
 	VERIFY_SUCCEEDED(BCL->Close());
 
@@ -264,14 +261,12 @@ void ToonDX::PopulateCommandList(const size_t i)
 			constexpr std::array<D3D12_RECT, 0> Rects = {};
 			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 #ifdef USE_DEPTH
-            //!< 深度ビューの指定
 			const auto CDH_Depth = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			CL->ClearDepthStencilView(CDH_Depth, D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 #endif
 
 			const std::array RTDHs = { CDH };
 #ifdef USE_DEPTH
-            //!< 深度レンダーターゲットを指定
 			CL->OMSetRenderTargets(static_cast<UINT>(size(RTDHs)), data(RTDHs), FALSE, &CDH_Depth);
 #else
 			CL->OMSetRenderTargets(static_cast<UINT>(size(RTDHs)), data(RTDHs), FALSE, nullptr);
@@ -280,7 +275,6 @@ void ToonDX::PopulateCommandList(const size_t i)
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 				const std::array DHs = { COM_PTR_GET(DH) };
 				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
 #pragma region FRAME_OBJECT
                 GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;

@@ -110,15 +110,23 @@ protected:
 #ifdef USE_HLSL_ROOTSIGNATRUE
 			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
-			const std::array DRs = {
+			constexpr std::array DRs = {
 				D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 			};
 			SerializeRootSignature(Blob, {
-					D3D12_ROOT_PARAMETER({.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs)), .pDescriptorRanges = data(DRs) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY }),
+				D3D12_ROOT_PARAMETER({
+					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+					.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs)), .pDescriptorRanges = data(DRs) }),
+					.ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY 
+				}),
 #pragma region ROOT_CONSTANT
-					D3D12_ROOT_PARAMETER({.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS, .Constants = {.ShaderRegister = 1, .RegisterSpace = 0, .Num32BitValues = static_cast<UINT>(sizeof(QuiltDraw)) }, .ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY }),
+				D3D12_ROOT_PARAMETER({
+					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS,
+					.Constants = {.ShaderRegister = 1, .RegisterSpace = 0, .Num32BitValues = static_cast<UINT>(sizeof(QuiltDraw)) }, 
+					.ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY 
+				}),
 #pragma endregion
-				}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE | SHADER_ROOT_ACCESS_GS);
+			}, {}, SHADER_ROOT_ACCESS_GS);
 #endif
 			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		}
@@ -130,15 +138,19 @@ protected:
 #ifdef USE_HLSL_ROOTSIGNATRUE 
 			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT("_1.rs.cso")));
 #else
-			const std::array DRs_Srv = {
+			constexpr std::array DRs_Srv = {
 				D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 			};
 			assert(!empty(StaticSamplerDescs) && "");
 			DX::SerializeRootSignature(Blob, {
-					D3D12_ROOT_PARAMETER({.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<uint32_t>(size(DRs_Srv)), .pDescriptorRanges = data(DRs_Srv) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL })
-				}, {
-					StaticSamplerDescs[0],
-				}, D3D12_ROOT_SIGNATURE_FLAG_NONE | SHADER_ROOT_ACCESS_PS);
+				D3D12_ROOT_PARAMETER({
+					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+					.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<uint32_t>(size(DRs_Srv)), .pDescriptorRanges = data(DRs_Srv) }), 
+					.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL 
+				})
+			}, {
+				StaticSamplerDescs[0],
+			}, SHADER_ROOT_ACCESS_PS);
 #endif
 			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		}
@@ -207,7 +219,7 @@ protected:
 				.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D,
 				.Flags = D3D12_DSV_FLAG_NONE,
 				.Texture2D = D3D12_TEX2D_DSV({.MipSlice = 0 })
-				}));
+			}));
 		}
 	}
 	virtual void CreatePipelineState() override {
@@ -217,7 +229,6 @@ protected:
 #ifdef USE_PIPELINE_SERIALIZE
 		PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
 #endif
-
 		const std::vector RTBDs = {
 			D3D12_RENDER_TARGET_BLEND_DESC({
 				.BlendEnable = FALSE, .LogicOpEnable = FALSE,
@@ -227,7 +238,7 @@ protected:
 				.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,
 			}),
 		};
-		const D3D12_RASTERIZER_DESC RD = {
+		constexpr D3D12_RASTERIZER_DESC RD = {
 			.FillMode = D3D12_FILL_MODE_SOLID,
 			.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
 			.DepthBias = D3D12_DEFAULT_DEPTH_BIAS, .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP, .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
@@ -235,12 +246,12 @@ protected:
 			.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
 			.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 		};
-		const D3D12_DEPTH_STENCILOP_DESC DSOD = { .StencilFailOp = D3D12_STENCIL_OP_KEEP, .StencilDepthFailOp = D3D12_STENCIL_OP_KEEP, .StencilPassOp = D3D12_STENCIL_OP_KEEP, .StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS };
+		constexpr D3D12_DEPTH_STENCILOP_DESC DSOD = { .StencilFailOp = D3D12_STENCIL_OP_KEEP, .StencilDepthFailOp = D3D12_STENCIL_OP_KEEP, .StencilPassOp = D3D12_STENCIL_OP_KEEP, .StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS };
 		const std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs = {};
 		const std::vector RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
 
 #pragma region PASS0
-		const D3D12_DEPTH_STENCIL_DESC DSD0 = {
+		constexpr D3D12_DEPTH_STENCIL_DESC DSD0 = {
 			.DepthEnable = TRUE, .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D12_COMPARISON_FUNC_LESS,
 			.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
 			.FrontFace = DSOD, .BackFace = DSOD
@@ -266,7 +277,7 @@ protected:
 #pragma endregion
 
 #pragma region PASS1
-		const D3D12_DEPTH_STENCIL_DESC DSD1 = {
+		constexpr D3D12_DEPTH_STENCIL_DESC DSD1 = {
 			.DepthEnable = FALSE, .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D12_COMPARISON_FUNC_LESS,
 			.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
 			.FrontFace = DSOD, .BackFace = DSOD
@@ -284,7 +295,6 @@ protected:
 		Threads.emplace_back(std::thread::thread(DX::CreatePipelineState_, std::ref(PipelineStates[1]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[1]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RTBDs, RD, DSD1, SBCs1[0], SBCs1[1], , NullShaderBC, NullShaderBC, NullShaderBC, IEDs, RTVs, nullptr, nullptr));
 #endif	
 #pragma endregion
-
 		for (auto& i : Threads) { i.join(); }
 	}
 	virtual void CreateDescriptorHeap() override {
@@ -294,16 +304,16 @@ protected:
 				DXGI_SWAP_CHAIN_DESC1 SCD;
 				SwapChain->GetDesc1(&SCD);
 #pragma region FRAME_OBJECT
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< CBV * N
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< CBV * N
 #pragma endregion
 				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 			}
 			{
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
 				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps.emplace_back())));
 			}
 			{
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
 				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
 			}
 		}
@@ -311,7 +321,7 @@ protected:
 
 #pragma region PASS1
 		{
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 		}
 #pragma endregion

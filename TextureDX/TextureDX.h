@@ -38,7 +38,7 @@ protected:
 #ifdef USE_STATIC_SAMPLER
 	virtual void CreateStaticSampler() override {
 		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
-			.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+			.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR, //!< ここではスタティックサンプラは LINEAR、非スタティックサンプラは　POINT にしている
 			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
 			.MipLODBias = 0.0f,
 			.MaxAnisotropy = 0,
@@ -59,23 +59,11 @@ protected:
 #endif
 #else
 		constexpr std::array DRs_Srv = {
-			D3D12_DESCRIPTOR_RANGE({
-				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 
-				.NumDescriptors = 1, 
-				.BaseShaderRegister = 0, .RegisterSpace = 0,
-				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
-			})
+			D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 		};
-#ifdef USE_STATIC_SAMPLER
-		assert(!empty(StaticSamplerDescs) && "");
-#else
+#ifndef USE_STATIC_SAMPLER
 		constexpr std::array DRs_Smp = {
-			D3D12_DESCRIPTOR_RANGE({ 
-				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER,
-				.NumDescriptors = 1, 
-				.BaseShaderRegister = 0, .RegisterSpace = 0,
-				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND 
-			}) 
+			D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }) 
 		};
 #endif
 		DX::SerializeRootSignature(Blob, {
@@ -95,7 +83,7 @@ protected:
 #endif
 		}, {
 #ifdef USE_STATIC_SAMPLER
-			StaticSamplerDescs[0], //!< StaticSampler
+			StaticSamplerDescs[0],
 #endif
 		}, SHADER_ROOT_ACCESS_PS);
 #endif
@@ -115,21 +103,20 @@ protected:
 	}
 	virtual void CreateDescriptorHeap() override {
 		{
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< SRV
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< SRV
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 		}
 #ifndef USE_STATIC_SAMPLER
 		{
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< Sampler
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< Sampler
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(SamplerDescriptorHeaps.emplace_back())));
 		}
 #endif
 	}
 #ifndef USE_STATIC_SAMPLER
 	virtual void CreateSampler() override {
-		assert(!empty(SamplerDescriptorHeaps) && "");
 		constexpr D3D12_SAMPLER_DESC SD = {
-			.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT, //!< ひと目でわかるように、非スタティックサンプラの場合敢えて POINT にしている
+			.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT, //!< ここではスタティックサンプラは LINEAR、非スタティックサンプラは　POINT にしている
 			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
 			.MipLODBias = 0.0f,
 			.MaxAnisotropy = 0,
@@ -141,7 +128,6 @@ protected:
 	}
 #endif
 	virtual void CreateDescriptorView() override {
-		assert(!empty(ImageResources) && "");
 		const auto& DH = CbvSrvUavDescriptorHeaps[0];
 		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 		Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);

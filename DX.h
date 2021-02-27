@@ -32,7 +32,7 @@
 //!< HLSLからルートシグネチャを作成する (Create root signature from HLSL)
 //#define USE_HLSL_ROOTSIGNATRUE //!< [ TriangleDX ]
 
-//#define USE_NO_BUNDLE //!< [ ParametricSurfaceDX ] VK:USE_NO_SECONDARY_COMMAND_BUFFER相当
+//#define USE_BUNDLE //!< [ ParametricSurfaceDX ] VK:USE_SECONDARY_COMMAND_BUFFER相当
 
 //#define USE_ROOT_CONSTANTS //!< [ TriangleDX ] VK:USE_PUSH_CONSTANTS相当
 //#define USE_GAMMA_CORRECTION
@@ -246,8 +246,7 @@ protected:
 				.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
 					.pResource = Resource,
 					.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-					.StateBefore = Before,
-					.StateAfter = After
+					.StateBefore = Before, .StateAfter = After
 				})
 			})
 		};

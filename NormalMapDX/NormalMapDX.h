@@ -34,7 +34,7 @@ protected:
 	}
 
 	virtual void CreateGeometry() override { 
-		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
+		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = {.IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
 		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DIA);
 	}
 	virtual void CreateConstantBuffer() override {
@@ -103,13 +103,13 @@ protected:
 		}
 #endif
 		{
-			const D3D12_HEAP_PROPERTIES HeapProperties = {
+			constexpr D3D12_HEAP_PROPERTIES HeapProperties = {
 				.Type = D3D12_HEAP_TYPE_DEFAULT,
 				.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
 				.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
 				.CreationNodeMask = 0, .VisibleNodeMask = 0
 			};
-			const DXGI_SAMPLE_DESC SD = { .Count = 1, .Quality = 0 };
+			constexpr DXGI_SAMPLE_DESC SD = { .Count = 1, .Quality = 0 };
 			const D3D12_RESOURCE_DESC RD = {
 				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
 				.Alignment = 0,
@@ -149,16 +149,28 @@ protected:
 #ifdef USE_HLSL_ROOTSIGNATRUE
 		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
-		const std::array DRs_Cbv = {
-			D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }) //!< register(b0, space0)
+		constexpr std::array DRs_Cbv = {
+			//!< register(b0, space0)
+			D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }) 
 		};
-		const std::array DRs_Srv = {
-			D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 2, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }) //!< register(t0, space0), register(t1, space0)
+		constexpr std::array DRs_Srv = {
+			//!< register(t0, space0), register(t1, space0)
+			D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 2, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }) 
 		};
 		assert(!empty(StaticSamplerDescs) && "");
 		DX::SerializeRootSignature(Blob, {
-			D3D12_ROOT_PARAMETER({ .ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ .NumDescriptorRanges = static_cast<UINT>(size(DRs_Cbv)), .pDescriptorRanges = data(DRs_Cbv) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY }), //!< CBV
-			D3D12_ROOT_PARAMETER({ .ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ .NumDescriptorRanges = static_cast<UINT>(size(DRs_Srv)), .pDescriptorRanges = data(DRs_Srv) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL }), //!< SRV0, SRV1
+			//!< CBV
+			D3D12_ROOT_PARAMETER({ 
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, 
+				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ .NumDescriptorRanges = static_cast<UINT>(size(DRs_Cbv)), .pDescriptorRanges = data(DRs_Cbv) }), 
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY 
+			}), 
+			//!< SRV0, SRV1
+			D3D12_ROOT_PARAMETER({ 
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, 
+				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ .NumDescriptorRanges = static_cast<UINT>(size(DRs_Srv)), .pDescriptorRanges = data(DRs_Srv) }),
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL 
+			}),
 		}, {
 			StaticSamplerDescs[0],
 		}, SHADER_ROOT_ACCESS_GS_PS);
@@ -201,7 +213,7 @@ protected:
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 		}
 		{
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 }; //!< DSV
+			constexpr D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 }; //!< DSV
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
 		}
 	}
@@ -221,8 +233,6 @@ protected:
 			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), &ShaderResourceViewDescs[1], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV1
 		}
 		{
-			assert(3 == size(ImageResources) && "");
-			assert(!empty(CbvSrvUavDescriptorHeaps) && "");
 			const auto& DH = DsvDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[2]), &DepthStencilViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV

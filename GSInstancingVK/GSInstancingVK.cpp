@@ -255,10 +255,9 @@ void GSInstancingVK::PopulateCommandBuffer(const size_t i)
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 
-		const auto& IDB = IndirectBuffers[0];
-		const auto PL = Pipelines[0];
-		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-		vkCmdDrawIndirect(SCB, IDB.Buffer, 0, 1, 0);
+		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
+
+		vkCmdDrawIndirect(SCB, IndirectBuffers[0].Buffer, 0, 1, 0);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 
 	const auto CB = CommandBuffers[i];

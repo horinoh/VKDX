@@ -285,21 +285,18 @@ void InstancingVK::PopulateCommandBuffer(const size_t i)
 		.pInheritanceInfo = &CBII
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
-		const auto PL = Pipelines[0];
-		const auto& VB0 = VertexBuffers[0];
-		const auto& VB1 = VertexBuffers[1];
-		const auto& IB = IndexBuffers[0];
-		const auto& IDB = IndirectBuffers[0];
-
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
-		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-		const std::array VBs = { VB0.Buffer, VB1.Buffer };
+
+		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
+		
+		const std::array VBs = { VertexBuffers[0].Buffer, VertexBuffers[1].Buffer };
 		const std::array<VkDeviceSize, 2> Offsets = { 0, 0 };
-		assert(size(VBs) == size(Offsets) && "");
 		vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(size(VBs)), data(VBs), data(Offsets));
-		vkCmdBindIndexBuffer(SCB, IB.Buffer, 0, VK_INDEX_TYPE_UINT32);
-		vkCmdDrawIndexedIndirect(SCB, IDB.Buffer, 0, 1, 0);
+
+		vkCmdBindIndexBuffer(SCB, IndexBuffers[0].Buffer, 0, VK_INDEX_TYPE_UINT32);
+		
+		vkCmdDrawIndexedIndirect(SCB, IndirectBuffers[0].Buffer, 0, 1, 0);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 
 	const auto CB = CommandBuffers[i];

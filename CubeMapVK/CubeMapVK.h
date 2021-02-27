@@ -107,9 +107,12 @@ protected:
 	virtual void CreatePipelineLayout() override {
 		const std::array ISs = { Samplers[0] };
 		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
-			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }), //!< UniformBuffer
-			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }), //!< Sampler + Image0
-			VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }), //!< Sampler + Image1
+			//!< UniformBuffer
+			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }),
+			//!< Sampler + Image0
+			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }),
+			//!< Sampler + Image1
+			VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }),
 		});
 		VKExt::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
@@ -143,9 +146,7 @@ protected:
 				.pDepthStencilAttachment = &DepthAttach,
 				.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
 			}),
-		}, {
-			//!< サブパス依存
-		});
+		}, {});
 	}
 #endif
 	virtual void CreatePipeline() override {
@@ -247,7 +248,7 @@ private:
 
 	struct DescriptorUpdateInfo
 	{
-		VkDescriptorBufferInfo DBI[1];
+		VkDescriptorBufferInfo DBI[1]; //!< UniformBuffer
 		VkDescriptorImageInfo DII_0[1]; //!< Image0
 		VkDescriptorImageInfo DII_1[1]; //!< Image1
 	};

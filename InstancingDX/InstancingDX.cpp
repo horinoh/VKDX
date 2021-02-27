@@ -259,7 +259,6 @@ void InstancingDX::CreateGeometry()
 			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DIA);
 		}
 	}
-
 	LOG_OK();
 }
 void InstancingDX::PopulateCommandList(const size_t i)
@@ -270,17 +269,14 @@ void InstancingDX::PopulateCommandList(const size_t i)
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
 	{
-		const auto VBV0 = VertexBuffers[0].View;
-		const auto VBV1 = VertexBuffers[1].View;
-		const auto IBV = IndexBuffers[0].View;
-		const auto ICS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
-		const auto IBR = COM_PTR_GET(IndirectBuffers[0].Resource);
-
 		BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-		const std::array VBVs = { VBV0, VBV1 };
+
+		const std::array VBVs = { VertexBuffers[0].View, VertexBuffers[1].View };
 		BGCL->IASetVertexBuffers(0, static_cast<UINT>(size(VBVs)), data(VBVs));
-		BGCL->IASetIndexBuffer(&IBV);
-		BGCL->ExecuteIndirect(ICS, 1, IBR, 0, nullptr, 0);
+
+		BGCL->IASetIndexBuffer(&IndexBuffers[0].View);
+
+		BGCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BGCL->Close());
 

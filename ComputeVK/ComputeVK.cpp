@@ -243,13 +243,8 @@ void ComputeVK::PopulateCommandBuffer(const size_t i)
 		nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &BeginInfo)); {
-		if (!empty(DescriptorSets)) {
-			vkCmdBindDescriptorSets(CB,
-				VK_PIPELINE_BIND_POINT_COMPUTE,
-				PLL,
-				0, static_cast<uint32_t>(size(DescriptorSets)), data(DescriptorSets),
-				0, nullptr);
-		}
+		constexpr std::array<uint32_t, 0> DynamicOffsets = {};
+		vkCmdBindDescriptorSets(CB, VK_PIPELINE_BIND_POINT_COMPUTE, PLL, 0, static_cast<uint32_t>(size(DescriptorSets)), data(DescriptorSets), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
 		
 		vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_COMPUTE, PL);
 

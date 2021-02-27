@@ -110,7 +110,6 @@ protected:
 			}));
 		}
 #else
-		//!< ABRG
 		CreateTextureArray1x1({ 0xff0000ff, 0xff00ff00 });
 		CreateTextureArray1x1({ 0xffff0000, 0xff00ffff });
 #endif
@@ -134,7 +133,7 @@ protected:
 #ifdef USE_HLSL_ROOTSIGNATRUE 
 		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
-		const std::array DRs = {
+		constexpr std::array DRs = {
 			D3D12_DESCRIPTOR_RANGE({
 				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV,
 #pragma region SECOND_TEXTURE
@@ -145,16 +144,10 @@ protected:
 			})
 		};
 #pragma region CB
-		const std::array DRs_Cbv = {
-			D3D12_DESCRIPTOR_RANGE({
-				.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV,
-				.NumDescriptors = 1,
-				.BaseShaderRegister = 0, .RegisterSpace = 0,
-				.OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND
-			})
+		constexpr std::array DRs_Cbv = {
+			D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 		};
 #pragma endregion
-		assert(!empty(StaticSamplerDescs) && "");
 		DX::SerializeRootSignature(Blob, {
 			D3D12_ROOT_PARAMETER({
 				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
@@ -173,7 +166,6 @@ protected:
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		LOG_OK();
 	}
-
 	virtual void CreatePipelineState() override {
 		const auto ShaderPath = GetBasePath();
 		std::vector<COM_PTR<ID3DBlob>> SBs = {};
@@ -197,7 +189,8 @@ protected:
 #pragma region SECOND_TEXTURE, CB
 				.NumDescriptors = 2 + SCD.BufferCount,
 #pragma endregion
-				.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
+				.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 
+			};
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 		}
 	}
@@ -213,7 +206,7 @@ protected:
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
-			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
+			const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = {.BufferLocation = COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
 			Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		}
 #pragma endregion

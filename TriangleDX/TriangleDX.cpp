@@ -283,16 +283,13 @@ void TriangleDX::PopulateCommandList(const size_t i)
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
 	{
-		const auto& VB = VertexBuffers[0];
-		const auto& IB = IndexBuffers[0];
-		const auto& IDB = IndirectBuffers[0];
-
 		BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
-		const std::array VBVs = { VB.View };
+		const std::array VBVs = { VertexBuffers[0].View };
 		BGCL->IASetVertexBuffers(0, static_cast<UINT>(size(VBVs)), data(VBVs));
-		BGCL->IASetIndexBuffer(&IB.View);
-		BGCL->ExecuteIndirect(COM_PTR_GET(IDB.CommandSignature), 1, COM_PTR_GET(IDB.Resource), 0, nullptr, 0);
+		BGCL->IASetIndexBuffer(&IndexBuffers[0].View);
+
+		BGCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BGCL->Close());
 
@@ -310,6 +307,7 @@ void TriangleDX::PopulateCommandList(const size_t i)
 #ifdef USE_ROOT_CONSTANTS
 		GCL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(size(Color)), data(Color), 0);
 #endif
+
 		GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 		GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 

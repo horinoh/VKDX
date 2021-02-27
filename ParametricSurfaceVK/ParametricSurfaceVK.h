@@ -16,8 +16,8 @@ public:
 	virtual ~ParametricSurfaceVK() {}
 
 protected:
-#ifdef USE_NO_SECONDARY_COMMAND_BUFFER
-	//!< デフォルト実装はセカンダリを作成する実装なので、オーバーライドして作成しないようにしている
+#ifndef USE_SECONDARY_COMMAND_BUFFER
+	//!< デフォルト実装をセカンダリを作成する実装にしているので、オーバーライドしてセカンダリを作成しないようにしている
 	virtual void CreateCommandPool() override {
 		const VkCommandPoolCreateInfo CPCI = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,

@@ -22,7 +22,6 @@ protected:
 
 #pragma region FRAME_OBJECT
 		CopyToHostVisibleDeviceMemory(UniformBuffers[GetCurrentBackBufferIndex()].DeviceMemory, 0, sizeof(Tr), &Tr, offsetof(Transform, World), sizeof(Transform::World));
-		//CopyToHostVisibleDeviceMemory(UniformBuffers[GetCurrentBackBufferIndex()].DeviceMemory, 0, sizeof(Tr), &Tr);
 #pragma endregion
 	}
 
@@ -99,9 +98,7 @@ protected:
 				.pDepthStencilAttachment = &DepthAttach,
 				.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
 			}),
-		}, {
-				//!< サブパス依存
-		});
+		}, {});
 	}
 	virtual void CreatePipeline() override {
 		const auto ShaderPath = GetBasePath();

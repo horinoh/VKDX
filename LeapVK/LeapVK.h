@@ -101,7 +101,6 @@ protected:
 			VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.emplace_back()));
 		}
 #else
-		//!< ABRG
 		CreateTextureArray1x1({ 0xff0000ff, 0xff00ff00 });
 		CreateTextureArray1x1({ 0xffff0000, 0xff00ffff });
 #endif
@@ -138,7 +137,6 @@ protected:
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 	virtual void CreateRenderPass() { VK::CreateRenderPass(VK_ATTACHMENT_LOAD_OP_DONT_CARE, false); }
-
 	virtual void CreatePipeline() override { 
 		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
@@ -148,7 +146,6 @@ protected:
 		CreatePipeline_VsFs(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE, SMs); 
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
-
 	virtual void CreateDescriptorSet() override {
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region SECOND_TEXTURE
@@ -158,7 +155,6 @@ protected:
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }),
 #pragma endregion
 		});
-
 		const std::array DSLs = { DescriptorSetLayouts[0] };
 		const VkDescriptorSetAllocateInfo DSAI = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,

@@ -31,7 +31,7 @@ protected:
 	}
 
 	virtual void CreateGeometry() override {
-		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
+		constexpr VkDrawIndexedIndirectCommand DIIC = {.indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 		IndirectBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DIIC, CommandBuffers[0], GraphicsQueue);
 	}
 	virtual void CreateUniformBuffer() override {
@@ -96,7 +96,7 @@ protected:
 		}
 	}
 	virtual void CreateImmutableSampler() override {
-		const VkSamplerCreateInfo SCI = {
+		constexpr VkSamplerCreateInfo SCI = {
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
@@ -155,9 +155,7 @@ protected:
 				.pDepthStencilAttachment = &DepthAttach,
 				.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
 			}),
-		}, {
-			//!< サブパス依存
-		});
+		}, {});
 	}
 	virtual void CreatePipeline() override {
 		const auto ShaderPath = GetBasePath();
@@ -184,11 +182,8 @@ protected:
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
 	virtual void CreateFramebuffer() override { 
-		assert(!empty(RenderPasses) && "");
-		const auto RP = RenderPasses[0];
-		const auto DIV = ImageViews[2];
 		for (auto i : SwapchainImageViews) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DIV });
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, ImageViews[2] });
 		}
 	}
 	virtual void CreateDescriptorSet() override {
@@ -253,7 +248,7 @@ protected:
 #pragma region FRAME_OBJECT
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			const DescriptorUpdateInfo DUI = {
-				VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }), //!< UniformBuffer
+				VkDescriptorBufferInfo({.buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }), //!< UniformBuffer
 #ifdef USE_SEPARATE_SAMPLER
 				VkDescriptorImageInfo({.sampler = Samplers[0], .imageView = VK_NULL_HANDLE, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }), //!< Sampler
 				VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }), //!< Image0

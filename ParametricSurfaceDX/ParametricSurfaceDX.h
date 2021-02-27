@@ -16,8 +16,8 @@ public:
 	virtual ~ParametricSurfaceDX() {}
 
 protected:
-#ifdef USE_NO_BUNDLE
-	//!< デフォルト実装はバンドルを作成する実装なので、オーバーライドして作成しないようにしている
+#ifndef USE_BUNDLE
+	//!< デフォルト実装をバンドルを作成する実装にしているので、オーバーライドしてバンドルを作成しないようにしている
 	virtual void CreateCommandAllocator() override {
 		CommandAllocators.emplace_back(COM_PTR<ID3D12CommandAllocator>());
 		VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(CommandAllocators.back())));

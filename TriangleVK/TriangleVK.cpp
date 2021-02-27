@@ -302,23 +302,20 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 		.pInheritanceInfo = &CBII
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
-		const auto PL = Pipelines[0];
-		const auto VB = VertexBuffers[0].Buffer;
-		const auto IB = IndexBuffers[0].Buffer;
-		const auto& IDB = IndirectBuffers[0].Buffer;
-
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
+
 #ifdef USE_PUSH_CONSTANTS
 		vkCmdPushConstants(SCB, PipelineLayouts[0], VK_SHADER_STAGE_FRAGMENT_BIT, 0, static_cast<uint32_t>(size(Color) * sizeof(Color[0])), data(Color));
 #endif
-		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-		const std::array VBs = { VB };
+		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
+
+		const std::array VBs = { VertexBuffers[0].Buffer };
 		const std::array Offsets = { VkDeviceSize(0) };
-		assert(size(VBs) == size(Offsets) && "");
 		vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(size(VBs)), data(VBs), data(Offsets));
-		vkCmdBindIndexBuffer(SCB, IB, 0, VK_INDEX_TYPE_UINT32);
-		vkCmdDrawIndexedIndirect(SCB, IDB, 0, 1, 0);
+		vkCmdBindIndexBuffer(SCB, IndexBuffers[0].Buffer, 0, VK_INDEX_TYPE_UINT32);
+
+		vkCmdDrawIndexedIndirect(SCB, IndirectBuffers[0].Buffer, 0, 1, 0);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 
 	const auto CB = CommandBuffers[i];
@@ -332,7 +329,7 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 #ifdef _DEBUG
 		ScopedMarker(CB, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), "Command Begin");
 #endif
-		const std::array CVs = { VkClearValue({ .color = Colors::SkyBlue }) };
+		constexpr std::array CVs = { VkClearValue({ .color = Colors::SkyBlue }) };
 		const VkRenderPassBeginInfo RPBI = {
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			.pNext = nullptr,

@@ -252,11 +252,10 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
 		const auto PLL = PipelineLayouts[0];
-		const auto PL = Pipelines[0];
-		const auto& IDB = IndirectBuffers[0];
 
 		vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
 		vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
+
 #ifdef USE_PUSH_DESCRIPTOR
 #pragma region FRAME_OBJECT
 		const DescriptorUpdateInfo DUI = { VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }), };
@@ -264,28 +263,25 @@ void BillboardVK::PopulateCommandBuffer(const size_t i)
 		vkCmdPushDescriptorSetWithTemplateKHR(SCB, DescriptorUpdateTemplates[0], PLL, 0, DUI.DBI);
 #else
 #pragma region FRAME_OBJECT
-		const auto DS = DescriptorSets[i];
+		const std::array DSs = { DescriptorSets[i] };
 #pragma endregion
-		const std::array DSs = { DS };
-		vkCmdBindDescriptorSets(SCB,
-			VK_PIPELINE_BIND_POINT_GRAPHICS,
-			PLL,
-			0, static_cast<uint32_t>(size(DSs)), data(DSs),
-			0, nullptr);
+		constexpr std::array<uint32_t, 0> DynamicOffsets = {};
+		vkCmdBindDescriptorSets(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
 #endif
-		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PL);
-		vkCmdDrawIndirect(SCB, IDB.Buffer, 0, 1, 0);
+		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
+		
+		vkCmdDrawIndirect(SCB, IndirectBuffers[0].Buffer, 0, 1, 0);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 
 	const auto CB = CommandBuffers[i];
-	const VkCommandBufferBeginInfo CBBI = {
+	constexpr VkCommandBufferBeginInfo CBBI = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		.pNext = nullptr,
 		.flags = 0,
 		.pInheritanceInfo = nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
+		constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 		const VkRenderPassBeginInfo RPBI = {
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			.pNext = nullptr,

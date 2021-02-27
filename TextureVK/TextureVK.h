@@ -26,14 +26,14 @@ protected:
 			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, GLITexture);
 		}
 	}
-	//!< VKの場合イミュータブルサンプラと通常のサンプラは基本的に同じもの、デスクリプタセットレイアウトの指定が異なるだけ
 #ifdef USE_IMMUTABLE_SAMPLER
+	//!< VKの場合イミュータブルサンプラと通常のサンプラは基本的に同じもの、デスクリプタセットレイアウトの指定が異なるだけ
 	virtual void CreateImmutableSampler() override {
 		constexpr VkSamplerCreateInfo SCI = {
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
-			.magFilter = VK_FILTER_LINEAR, .minFilter = VK_FILTER_LINEAR, .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
+			.magFilter = VK_FILTER_LINEAR, .minFilter = VK_FILTER_LINEAR, .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR, //!< ここではイミュータブルサンプラは LINEAR、非イミュータブルサンプラは　NEAREST にしている
 			.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
 			.mipLodBias = 0.0f,
 			.anisotropyEnable = VK_FALSE, .maxAnisotropy = 1.0f,
@@ -55,7 +55,6 @@ protected:
 			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) })
 		});
 #else
-		//!< 通常のサンプラを使う場合
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
 			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr }),
 		});
@@ -91,7 +90,7 @@ protected:
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
-			.magFilter = VK_FILTER_NEAREST, .minFilter = VK_FILTER_NEAREST, .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST, //!< 非イミュータブルサンプラの場合敢えて NEAREST にしている
+			.magFilter = VK_FILTER_NEAREST, .minFilter = VK_FILTER_NEAREST, .mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST, //!< ここではイミュータブルサンプラは LINEAR、非イミュータブルサンプラは　NEAREST にしている
 			.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT, .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
 			.mipLodBias = 0.0f,
 			.anisotropyEnable = VK_FALSE, .maxAnisotropy = 1.0f,
@@ -111,10 +110,6 @@ protected:
 				.offset = offsetof(DescriptorUpdateInfo, DII), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 		}, DescriptorSetLayouts[0]);
-
-#ifdef USE_IMMUTABLE_SAMPLER
-		assert(!empty(Samplers) && "");
-#endif
 		const DescriptorUpdateInfo DUI = {
 #ifdef USE_IMMUTABLE_SAMPLER
 			VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),

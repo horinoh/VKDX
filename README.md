@@ -296,7 +296,7 @@
 	- ALL
 - USE_HLSL_ROOTSIGNATRUE
 	- *DX
-- USE_NO_BUNDLE, USE_NO_SECONDARY_COMMAND_BUFFER
+- USE_BUNDLE, USE_SECONDARY_COMMAND_BUFFER
 	- ParametricSurfaceDX, ParametricSurfaceVK
 - USE_STATIC_SAMPLER, USE_IMMUTABLE_SAMPLER
 	- TextureDX, TextureVK
@@ -332,10 +332,12 @@
 	- TriangleDX
 	- TODO(ハードウェア入手後)
 - USE_SHADER_REFLECTION
-	- *DX
+	- TriangleDX
 		- dxc 使用時、dxcompiler.dll が無いと怒られる場合は C:\Program Files (x86)\Windows Kits\10\bin\10.0.18362.0\x64 とかに存在するので、環境変数 Path に通しておく必要がある
 	- *VK 
 		- TODO
+- USE_SHADER_BLOB_PART
+	- TriangleDX
 - USE_SUBPASS
 	- RenderTargetVk
 		- 参考) https://www.saschawillems.de/blog/2018/07/19/vulkan-input-attachments-and-sub-passes/
@@ -349,6 +351,8 @@
 			layout (input_attachment_index = 0, set = 0, binding = 0) uniform subpassInput XXX;
 			vec3 Color = subpassLoad(XXX).rgb;
 			~~~
+- USE_UPDATE_DESCRIPTOR_SET_WITH_TEMPLATE
+	- DisplacementVK
 - USE_HOLO
 	- HoloDX, HoloVK
 - USE_LEAP

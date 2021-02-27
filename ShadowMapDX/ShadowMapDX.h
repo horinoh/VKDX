@@ -81,7 +81,7 @@ protected:
 #ifdef USE_HLSL_ROOTSIGNATRUE
 			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
-			const std::array DRs = { 
+			constexpr std::array DRs = { 
 				D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }),
 			};
 			SerializeRootSignature(Blob, {
@@ -99,7 +99,7 @@ protected:
 #else
 			assert(!empty(StaticSamplerDescs) && "");
 #ifdef USE_SHADOWMAP_VISUALIZE
-			const std::array DRs = { 
+			constexpr std::array DRs = { 
 				D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }),
 			};
 			DX::SerializeRootSignature(Blob, {
@@ -108,8 +108,8 @@ protected:
 				StaticSamplerDescs[0],
 			}, SHADER_ROOT_ACCESS_PS);
 #else
-			const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Srv = { { { D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }, } };
-			const std::array<D3D12_DESCRIPTOR_RANGE, 1> DRs_Cbv = { { { D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }, } };
+			constexpr std::array DRs_Srv = { D3D12_DESCRIPTOR_RANGE({ D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }) };
+			constexpr std::array DRs_Cbv = { D3D12_DESCRIPTOR_RANGE({ D3D12_DESCRIPTOR_RANGE_TYPE_CBV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }) };
 			DX::SerializeRootSignature(Blob, {
 				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(size(DRs_Srv)), data(DRs_Srv) }, D3D12_SHADER_VISIBILITY_PIXEL },
 				{ D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, { static_cast<uint32_t>(size(DRs_Cbv)), data(DRs_Cbv) }, D3D12_SHADER_VISIBILITY_GEOMETRY },

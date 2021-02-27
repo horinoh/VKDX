@@ -233,16 +233,13 @@ void ParametricSurfaceDX::PopulateCommandList(const size_t i)
 {
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 	
-#ifndef USE_NO_BUNDLE
+#ifdef USE_BUNDLE
 	const auto BGCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
 	{
-		const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
-		const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
-
 		BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-		BGCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+		BGCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BGCL->Close());
 #endif
@@ -269,15 +266,12 @@ void ParametricSurfaceDX::PopulateCommandList(const size_t i)
 			const std::array RTDHs = { CDH };
 			GCL->OMSetRenderTargets(static_cast<UINT>(size(RTDHs)), data(RTDHs), FALSE, nullptr);
 
-#ifdef USE_NO_BUNDLE
-			const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
-			const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
-			GCL->SetGraphicsRootSignature(RS);
+#ifdef USE_BUNDLE
+			GCL->ExecuteBundle(BGCL);
+#else
 			//!< トポロジ (VK では Pipline 作成時に InputAssembly で指定している)
 			GCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-			GCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
-#else
-			GCL->ExecuteBundle(BGCL);
+			GCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 #endif
 		}
 		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);

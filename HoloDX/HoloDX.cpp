@@ -239,10 +239,8 @@ void HoloDX::PopulateCommandList(const size_t i)
 	const auto BGCL0 = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	VERIFY_SUCCEEDED(BGCL0->Reset(BCA, PS0));
 	{
-		const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
-		const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
 		BGCL0->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-		BGCL0->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+		BGCL0->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BGCL0->Close());
 #pragma endregion
@@ -255,10 +253,8 @@ void HoloDX::PopulateCommandList(const size_t i)
 	const auto BGCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + SCD.BufferCount]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
 	VERIFY_SUCCEEDED(BGCL1->Reset(BCA, PS1));
 	{
-		const auto IDBCS = COM_PTR_GET(IndirectBuffers[1].CommandSignature);
-		const auto IDBR = COM_PTR_GET(IndirectBuffers[1].Resource);
 		BGCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-		BGCL1->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+		BGCL1->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[1].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[1].Resource), 0, nullptr, 0);
 	}
 	VERIFY_SUCCEEDED(BGCL1->Close());
 #pragma endregion

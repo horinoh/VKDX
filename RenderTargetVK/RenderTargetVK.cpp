@@ -292,7 +292,8 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 
 			vkCmdBindPipeline(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[1]);
 
-			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[1], 0, static_cast<uint32_t>(size(DescriptorSets)), data(DescriptorSets), 0, nullptr);
+			constexpr std::array<uint32_t, 0> DynamicOffsets = {};
+			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[1], 0, static_cast<uint32_t>(size(DescriptorSets)), data(DescriptorSets), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
 
 			vkCmdDrawIndirect(SCB1, IndirectBuffers[1].Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
@@ -336,9 +337,10 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 		}
 #pragma endregion
 
-		//!< リソースバリア : VK_ACCESS_COLOR_ATTACHMENT_READ_BIT -> VK_ACCESS_SHADER_READ_BIT
+		//!< リソースバリア
 		{
 			const std::array IMBs = {
+				//!< COLOR_ATTACHMENT_READ_BIT -> SHADER_READ_BIT
 				VkImageMemoryBarrier({
 					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 					.pNext = nullptr,
@@ -349,6 +351,7 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 					.subresourceRange = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
 				}),
 			};
+			//!< COLOR_ATTACHMENT_OUTPUT_BIT -> FRAGMENT_SHADER_BIT
 			vkCmdPipelineBarrier(CB,
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
 				VK_DEPENDENCY_BY_REGION_BIT,

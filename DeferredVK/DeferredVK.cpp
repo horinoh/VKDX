@@ -263,7 +263,8 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 #pragma region FRAME_OBJECT
 			const std::array DSs = { DescriptorSets[i] };
 #pragma endregion
-			vkCmdBindDescriptorSets(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[0], 0, static_cast<uint32_t>(size(DSs)), data(DSs), 0, nullptr);
+			constexpr std::array<uint32_t, 0> DynamicOffsets = {};
+			vkCmdBindDescriptorSets(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[0], 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
 
 			vkCmdDrawIndirect(SCB0, IndirectBuffers[0].Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
@@ -304,7 +305,8 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 #pragma region FRAME_OBJECT
 			const std::array DSs = { DescriptorSets[i + SCCount] };
 #pragma endregion
-			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[1], 0, static_cast<uint32_t>(size(DSs)), data(DSs), 0, nullptr);
+			constexpr std::array<uint32_t, 0> DynamicOffsets = {};
+			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[1], 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
 
 			vkCmdDrawIndirect(SCB1, IndirectBuffers[1].Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
