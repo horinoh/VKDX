@@ -151,24 +151,32 @@ protected:
 #endif
 	virtual void CreatePipeline() override {
 		const auto ShaderPath = GetBasePath();
-#ifdef USE_SKY_DOME
 		const std::array SMs = {
+#ifdef USE_SKY_DOME
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT("_sd.frag.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT("_sd.tese.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT("_sd.geom.spv"))),
-		};
-		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_FALSE, SMs);
 #else
-		const std::array SMs = {
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".geom.spv"))),
+#endif
 		};
-		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE, SMs);
+		const std::array PSSCIs = {
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, .module = SMs[2], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, .module = SMs[3], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_GEOMETRY_BIT, .module = SMs[4], .pName = "main", .pSpecializationInfo = nullptr }),
+		};
+#ifdef USE_SKY_DOME
+		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_FALSE, PSSCIs);
+#else
+		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, VK_TRUE, PSSCIs);
 #endif
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}

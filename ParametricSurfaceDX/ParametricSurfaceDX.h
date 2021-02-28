@@ -18,12 +18,10 @@ public:
 protected:
 #ifndef USE_BUNDLE
 	//!< デフォルト実装をバンドルを作成する実装にしているので、オーバーライドしてバンドルを作成しないようにしている
-	virtual void CreateCommandAllocator() override {
+	virtual void CreateCommandList() override {
 		CommandAllocators.emplace_back(COM_PTR<ID3D12CommandAllocator>());
 		VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(CommandAllocators.back())));
-		LOG_OK();
-	}
-	virtual void CreateCommandList() override {
+
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {

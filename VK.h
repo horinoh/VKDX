@@ -312,7 +312,6 @@ protected:
 	virtual void CreateFence(VkDevice Device);
 	virtual void CreateSemaphore(VkDevice Device);
 
-	virtual void CreateCommandPool();
 	virtual void AllocateCommandBuffer();
 
 	virtual [[nodiscard]] VkSurfaceFormatKHR SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface);

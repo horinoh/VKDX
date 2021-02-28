@@ -2,30 +2,6 @@
 
 void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 2>& SBCs)
 {
-//	std::vector<COM_PTR<ID3DBlob>> SBs;
-//	const auto ShaderPath = GetBasePath();
-//	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(SBs.emplace_back())));
-//#ifdef USE_SHADER_REFLECTION
-//	std::wcout << (ShaderPath + TEXT(".vs.cso")) << std::endl;
-//	ProcessShaderReflection(COM_PTR_GET(SBs.back()));
-//#endif
-//#ifdef USE_SHADER_BLOB_PART
-//	SetBlobPart(SBs.back());
-//	GetBlobPart(COM_PTR_GET(SBs.back()));
-//#endif
-//	StripShader(SBs.back());
-//
-//	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
-//#ifdef USE_SHADER_REFLECTION
-//	std::wcout << (ShaderPath + TEXT(".ps.cso")) << std::endl;
-//	ProcessShaderReflection(COM_PTR_GET(SBs.back()));
-//#endif
-//#ifdef USE_SHADER_BLOB_PART
-//	SetBlobPart(SBs.back());
-//	GetBlobPart(COM_PTR_GET(SBs.back()));
-//#endif
-//	StripShader(SBs.back());
-
 	//!< ブレンド (Blend)
 	//!< 例) 
 	//!< ブレンド	: Src * A + Dst * (1 - A)	= Src:D3D12_BLEND_SRC_ALPHA, Dst:D3D12_BLEND_INV_SRC_ALPHA, Op:D3D12_BLEND_OP_ADD
@@ -61,10 +37,6 @@ void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE P
 		.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
 		.FrontFace = DSOD, .BackFace = DSOD
 	};
-	/*const std::array SBCs = {
-		D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[0]->GetBufferPointer(), .BytecodeLength = SBs[0]->GetBufferSize() }),
-		D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
-	};*/
 	const std::vector RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
 
 	PipelineStates.emplace_back();
@@ -82,14 +54,6 @@ void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE P
 
 void DXExt::CreatePipelineState_VsPsDsHsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 5>& SBCs)
 {
-	//std::vector<COM_PTR<ID3DBlob>> SBs;
-	//const auto ShaderPath = GetBasePath();
-	//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(SBs.emplace_back())));
-	//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
-	//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ds.cso")), COM_PTR_PUT(SBs.emplace_back())));
-	//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".hs.cso")), COM_PTR_PUT(SBs.emplace_back())));
-	//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".gs.cso")), COM_PTR_PUT(SBs.emplace_back())));
-
 	const std::vector RTBDs = {
 		D3D12_RENDER_TARGET_BLEND_DESC({
 			.BlendEnable = FALSE, .LogicOpEnable = FALSE, 
@@ -119,13 +83,6 @@ void DXExt::CreatePipelineState_VsPsDsHsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_
 		.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK, 
 		.FrontFace = DSOD, .BackFace = DSOD 
 	};
-	//const std::array SBCs = {
-	//	D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[0]->GetBufferPointer(), .BytecodeLength = SBs[0]->GetBufferSize() }),
-	//	D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
-	//	D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[2]->GetBufferPointer(), .BytecodeLength = SBs[2]->GetBufferSize() }),
-	//	D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[3]->GetBufferPointer(), .BytecodeLength = SBs[3]->GetBufferSize() }),
-	//	D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[4]->GetBufferPointer(), .BytecodeLength = SBs[4]->GetBufferSize() }),
-	//};
 	const std::vector RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
 
 	PipelineStates.emplace_back();

@@ -13,7 +13,38 @@ public:
 	MeshShaderDX() : Super() {}
 	virtual ~MeshShaderDX() {}
 
-	virtual void CreateRootSignature() override;
+	virtual void CreateGeometry() override {
+		constexpr std::array Vertices = {
+			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }),
+			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }),
+			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }),
+		};
+		ShaderResourceBuffer VB;
+		VB.Create(COM_PTR_GET(Device), sizeof(Vertices), data(Vertices), sizeof(Vertices[0]));
+
+		constexpr std::array<UINT32, 3> Indices = { 0, 1, 2 };
+		ShaderResourceBuffer IB;
+		IB.Create(COM_PTR_GET(Device), sizeof(Indices), data(Indices), sizeof(Indices[0]));
+	}
+	virtual void CreateRootSignature() override {
+		COM_PTR<ID3DBlob> Blob;
+#ifdef USE_HLSL_ROOTSIGNATRUE 
+		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
+#else
+		constexpr std::array DRs = {
+			//!< バーテックスリソース、インデックスリソース
+			D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 2, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
+		};
+		DX::SerializeRootSignature(Blob, {
+			D3D12_ROOT_PARAMETER({
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<uint32_t>(size(DRs)), .pDescriptorRanges = data(DRs) }),
+				//.ShaderVisibility = D3D12_SHADER_VISIBILITY_MESH
+			}),
+		}, {}, SHADER_ROOT_ACCESS_PS);
+#endif
+		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
+	}
 	virtual void CreatePipelineState() override;
 };
 #pragma endregion

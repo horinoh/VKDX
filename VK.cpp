@@ -64,7 +64,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	GetSwapchainImage(Device, Swapchain);
 	CreateSwapchainImageView();
 
-	CreateCommandPool();
 	AllocateCommandBuffer();
 
 #ifdef USE_MANUAL_CLEAR
@@ -1542,46 +1541,28 @@ void VK::CreateSemaphore(VkDevice Dev)
 	LOG_OK();
 }
 
-//!< キューファミリが異なる場合は別のコマンドプールを用意する必要がある、そのキューにのみサブミットできる
-//!< 複数スレッドで同時にレコーディングするには、別のコマンドプールからアロケートされたコマンドバッファである必要がある (コマンドプールは複数スレッドからアクセス不可)
-//!< VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT	: コマンドバッファ毎にリセットが可能、指定しない場合はプール毎にまとめてリセット (コマンドバッファのレコーディング開始時に暗黙的にリセットされるので注意)
-//!< VK_COMMAND_POOL_CREATE_TRANSIENT_BIT				: 短命で、何度もサブミットしない、すぐにリセットやリリースされる場合に指定
-//!< (ここでは)プライマリ用1つ、セカンダリ用1つのコマンドプール作成をデフォルト実装とする
-void VK::CreateCommandPool()
+void VK::AllocateCommandBuffer()
 {
+	//!< キューファミリが異なる場合は別のコマンドプールを用意する必要がある、そのキューにのみサブミットできる
+	//!< 複数スレッドで同時にレコーディングするには、別のコマンドプールからアロケートされたコマンドバッファである必要がある (コマンドプールは複数スレッドからアクセス不可)
+	//!< VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT	: コマンドバッファ毎にリセットが可能、指定しない場合はプール毎にまとめてリセット (コマンドバッファのレコーディング開始時に暗黙的にリセットされるので注意)
+	//!< VK_COMMAND_POOL_CREATE_TRANSIENT_BIT				: 短命で、何度もサブミットしない、すぐにリセットやリリースされる場合に指定
+	//!< (ここでは)プライマリ用1つ、セカンダリ用1つのコマンドプール作成をデフォルト実装とする
 	const VkCommandPoolCreateInfo CPCI = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
 		.pNext = nullptr,
 		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 		.queueFamilyIndex = GraphicsQueueFamilyIndex
 	};
-	CommandPools.emplace_back(VkCommandPool());
-	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), data(CommandPools)));
-
+	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &CommandPools.emplace_back()));
 	//!< セカンダリ用 : 必ずしも別プールにする必要は無いがここでは別プールとしておく
-	SecondaryCommandPools.emplace_back(VkCommandPool());
-	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), data(SecondaryCommandPools)));
+	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &SecondaryCommandPools.emplace_back()));
 
-	//!< コンピュート用 : キューファミリが異なる場合は、別のコマンドプールとして用意する必要がある #VK_TODO
-	//	const VkCommandPoolCreateInfo CPCI = {
-	//			VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-	//			nullptr,
-	//			VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-	//			ComputeQueueFamilyIndex
-	//	};
-	//	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &CommandPools[1]));
-	LOG_OK();
-}
-
-//!< VK_COMMAND_BUFFER_LEVEL_PRIMARY	: 直接キューにサブミットできる、セカンダリをコールできる (Can be submit, can execute secondary)
-//!< VK_COMMAND_BUFFER_LEVEL_SECONDARY	: サブミットできない、プライマリから実行されるのみ (Cannot submit, only executed from primary)
-//!< ここではデフォルト実装として、プライマリ、セカンダリ共にスワップチェイン数分用意することとする
-void VK::AllocateCommandBuffer()
-{
+	//!< VK_COMMAND_BUFFER_LEVEL_PRIMARY	: 直接キューにサブミットできる、セカンダリをコールできる (Can be submit, can execute secondary)
+	//!< VK_COMMAND_BUFFER_LEVEL_SECONDARY	: サブミットできない、プライマリから実行されるのみ (Cannot submit, only executed from primary)
+	//!< ここではデフォルト実装として、プライマリ、セカンダリ共にスワップチェイン数分用意することとする
 	const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
 	{
-		assert(!empty(CommandPools) && "");
-
 		const auto PrevCount = size(CommandBuffers);
 		CommandBuffers.resize(PrevCount + SCCount);
 		const VkCommandBufferAllocateInfo CBAI = {
@@ -1594,7 +1575,6 @@ void VK::AllocateCommandBuffer()
 		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &CommandBuffers[PrevCount]));
 	}
 	{
-		assert(!empty(SecondaryCommandPools) && "");
 		const auto PrevCount = size(SecondaryCommandBuffers);
 		SecondaryCommandBuffers.resize(PrevCount + SCCount);
 		const VkCommandBufferAllocateInfo CBAI = {

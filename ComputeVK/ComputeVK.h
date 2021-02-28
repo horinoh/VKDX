@@ -15,72 +15,31 @@ public:
 
 protected:
 
-	//!< #VK_TODO コマンドバッファを作成
 	//!< #VK_TODO 出力テクスチャ用のimage2Dを用意しないとならない
+
+	virtual void AllocateCommandBuffer() override {
+		const VkCommandPoolCreateInfo CPCI = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+			.queueFamilyIndex = ComputeQueueFamilyIndex
+		};
+		VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &CommandPools.emplace_back()));
+
+		const VkCommandBufferAllocateInfo CBAI = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+			.pNext = nullptr,
+			.commandPool = CommandPools.back(),
+			.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+			.commandBufferCount = 1
+		};
+		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &CommandBuffers.emplace_back()));
+	}
 
 	virtual void CreateGeometry() override { 
 		constexpr VkDispatchIndirectCommand DIC = { .x = 32, .y = 1, .z = 1 };
 		IndirectBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DIC, CommandBuffers[0], GraphicsQueue);
 	}
-
-	virtual void CreatePipelineLayout() override {
-		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
-			{ 0, /*VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER*/VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr }
-		});
-
-		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
-	}
-
-#pragma region DESCRIPTOR
-	virtual void CreateDescriptorSet() override {
-		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
-			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 }
-		});
-
-		const std::array DSLs = { DescriptorSetLayouts[0] };
-		const VkDescriptorSetAllocateInfo DSAI = {
-			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-			nullptr,
-			DescriptorPools[0],
-			static_cast<uint32_t>(size(DSLs)), data(DSLs)
-		};
-		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
-	}
-	//virtual void CreateDescriptorPool() override {
-	//	DescriptorPools.resize(1);
-	//	VKExt::CreateDescriptorPool(DescriptorPools[0], 0, {
-	//			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 } 
-	//	});
-	//}
-	//virtual void AllocateDescriptorSet() override {
-	//	assert(!empty(DescriptorSetLayouts) && "");
-	//	const std::array<VkDescriptorSetLayout, 1> DSLs = { DescriptorSetLayouts[0] };
-	//	assert(!empty(DescriptorPools) && "");
-	//	const VkDescriptorSetAllocateInfo DSAI = {
-	//		VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-	//		nullptr,
-	//		DescriptorPools[0],
-	//		static_cast<uint32_t>(size(DSLs)), data(DSLs)
-	//	};
-	//	DescriptorSets.resize(1);
-	//	VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets[0]));
-	//}
-	virtual void UpdateDescriptorSet() override {
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
-			VkDescriptorUpdateTemplateEntry({
-				.dstBinding = 0, .dstArrayElement = 0,
-				.descriptorCount = _countof(DescriptorUpdateInfo::DII), .descriptorType = /*VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER*/VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-				.offset = offsetof(DescriptorUpdateInfo, DII), .stride = sizeof(DescriptorUpdateInfo)
-			}),
-		}, DescriptorSetLayouts[0]);
-
-		const DescriptorUpdateInfo DUI = {
-			VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_GENERAL })
-		};
-		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
-	}
-#pragma endregion //!< DESCRIPTOR
-
 	virtual void CreateTexture() override {
 		const auto Format = VK_FORMAT_R8G8B8A8_UINT;
 
@@ -107,15 +66,50 @@ protected:
 			CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, ISR);
 		}
 	}
-	
-	virtual void CreatePipeline() override { 
+	virtual void CreatePipelineLayout() override {
+		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
+			{ 0, /*VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER*/VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT, nullptr }
+		});
+
+		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
+	}
+	virtual void CreatePipeline() override {
 		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".comp.spv"))),
 		};
-		CreatePipeline_Cs();
 	}
+	virtual void CreateDescriptorSet() override {
+		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 }
+		});
+
+		const std::array DSLs = { DescriptorSetLayouts[0] };
+		const VkDescriptorSetAllocateInfo DSAI = {
+			VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			nullptr,
+			DescriptorPools[0],
+			static_cast<uint32_t>(size(DSLs)), data(DSLs)
+		};
+		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
+	}
+	virtual void UpdateDescriptorSet() override {
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
+			VkDescriptorUpdateTemplateEntry({
+				.dstBinding = 0, .dstArrayElement = 0,
+				.descriptorCount = _countof(DescriptorUpdateInfo::DII), .descriptorType = /*VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER*/VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+				.offset = offsetof(DescriptorUpdateInfo, DII), .stride = sizeof(DescriptorUpdateInfo)
+			}),
+		}, DescriptorSetLayouts[0]);
+
+		const DescriptorUpdateInfo DUI = {
+			VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_GENERAL })
+		};
+		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+	}
+	
 	virtual void PopulateCommandBuffer(const size_t i) override;
+
 	virtual void Draw() override { Dispatch(); }
 
 private:

@@ -13,7 +13,7 @@ public:
 	MeshShaderVK() : Super() {}
 	virtual ~MeshShaderVK() {}
 
-	virtual void CreatePipelineLayout() override;
+	virtual void CreatePipelineLayout() override {}
 	virtual void CreatePipeline() override;
 };
 #pragma endregion

@@ -177,6 +177,20 @@ public:
 		}
 	};
 
+	class ShaderResourceBuffer : public BufferResource
+	{
+	public:
+		D3D12_SHADER_RESOURCE_VIEW_DESC View;
+		void Create(ID3D12Device* Device, const size_t Size, const void* Source, const size_t Stride) {
+			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
+			View = D3D12_SHADER_RESOURCE_VIEW_DESC({ 
+				.Format = DXGI_FORMAT_UNKNOWN,
+				.ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.Buffer = D3D12_BUFFER_SRV({.FirstElement = 0, .NumElements = static_cast<UINT>(Size / Stride), .StructureByteStride = static_cast<UINT>(Stride), .Flags = D3D12_BUFFER_SRV_FLAG_NONE })
+			});
+		}
+	};
 #pragma region RAYTRACING
 	class AccelerationStructureBuffer : public BufferResource
 	{
@@ -289,7 +303,6 @@ protected:
 
 	virtual void CreateFence();
 
-	virtual void CreateCommandAllocator();
 	virtual void CreateCommandList();
 
 	virtual void CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat);
@@ -380,11 +393,11 @@ protected:
 	UINT64 FenceValue = 0;
 
 	std::vector<COM_PTR<ID3D12CommandAllocator>> CommandAllocators;
-	std::vector<COM_PTR<ID3D12GraphicsCommandList>> GraphicsCommandLists;
 	std::vector<COM_PTR<ID3D12CommandAllocator>> BundleCommandAllocators;
+
+	std::vector<COM_PTR<ID3D12GraphicsCommandList>> GraphicsCommandLists;
 	std::vector<COM_PTR<ID3D12GraphicsCommandList>> BundleGraphicsCommandLists;
-	//std::vector<COM_PTR<ID3D12CommandList>> CommandLists;
-	
+
 	COM_PTR<IDXGISwapChain4> SwapChain;
 	std::vector<COM_PTR<ID3D12Resource>> SwapChainResources;
 
