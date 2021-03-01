@@ -599,14 +599,24 @@ void DX::CheckMultiSample(const DXGI_FORMAT Format)
 */
 void DX::CreateCommandQueue()
 {
-	const D3D12_COMMAND_QUEUE_DESC CQD = {
-		.Type = D3D12_COMMAND_LIST_TYPE_DIRECT, //!< D3D12_COMMAND_LIST_TYPE_COMPUTE, D3D12_COMMAND_LIST_TYPE_COPY (D3D12_COMMAND_LIST_TYPE_BUNDLEが直接キューイングされることは無いと思う)
-		.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
-		.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
-		.NodeMask = 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-	};
-	VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CQD, COM_PTR_UUIDOF_PUTVOID(CommandQueue)));
-
+	{
+		constexpr D3D12_COMMAND_QUEUE_DESC CQD = {
+			.Type = D3D12_COMMAND_LIST_TYPE_DIRECT,
+			.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
+			.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
+			.NodeMask = 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
+		};
+		VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CQD, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandQueue)));
+	}
+	{
+		constexpr D3D12_COMMAND_QUEUE_DESC CQD = {
+			.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE,
+			.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL,
+			.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE,
+			.NodeMask = 0
+		};
+		VERIFY_SUCCEEDED(Device->CreateCommandQueue(&CQD, COM_PTR_UUIDOF_PUTVOID(ComputeCommandQueue)));
+	}
 	LOG_OK();
 }
 
@@ -671,7 +681,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	//!< セッティングを変更してスワップチェインを再作成できるように、既存のを開放している
 	COM_PTR_RESET(SwapChain);
 	COM_PTR<IDXGISwapChain> NewSwapChain;
-	VERIFY_SUCCEEDED(Factory->CreateSwapChain(COM_PTR_GET(CommandQueue), &SCD, COM_PTR_PUT(NewSwapChain)));
+	VERIFY_SUCCEEDED(Factory->CreateSwapChain(COM_PTR_GET(GraphicsCommandQueue), &SCD, COM_PTR_PUT(NewSwapChain)));
 	COM_PTR_AS(NewSwapChain, SwapChain);
 
 	//!< 起動時にフルスクリーンにする場合
@@ -1357,7 +1367,7 @@ void DX::CreateTexture1x1(const UINT32 Color, const D3D12_RESOURCE_STATES RS)
 		} VERIFY_SUCCEEDED(CL->Close());
 
 		//!< コマンドの実行 (Execute command)
-		ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
+		ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
 	}
 
 	//!< ビューの作成 (Create view)
@@ -1434,7 +1444,7 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 			PopulateCommandList_CopyTextureRegion(CL, COM_PTR_GET(UploadResource), COM_PTR_GET(ImageResources.back()), PSFs, RS);
 		} VERIFY_SUCCEEDED(CL->Close());
 
-		ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
+		ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
 	}
 
 	ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
@@ -1520,7 +1530,7 @@ void DX::WaitForFence()
 	++FenceValue;
 
 	//!< コマンドキューに Fencevalue を引数に Signal を追加する (GPU が到達すれば GetCompletedValue() が FenceValue になり、CPUに追いついたことになる)
-	VERIFY_SUCCEEDED(CommandQueue->Signal(COM_PTR_GET(Fence), FenceValue));
+	VERIFY_SUCCEEDED(GraphicsCommandQueue->Signal(COM_PTR_GET(Fence), FenceValue));
 	if (Fence->GetCompletedValue() < FenceValue) {
 		auto hEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
 		if (nullptr != hEvent) [[likely]] {
@@ -1555,7 +1565,7 @@ void DX::WaitForFence(ID3D12CommandQueue* CQ, ID3D12Fence* Fence)
 void DX::Submit()
 {
 	const std::array CLs = { static_cast<ID3D12CommandList*>(COM_PTR_GET(GraphicsCommandLists[GetCurrentBackBufferIndex()])) };
-	CommandQueue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
+	GraphicsCommandQueue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
 }
 void DX::Present()
 {

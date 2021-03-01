@@ -22,7 +22,7 @@ protected:
 	}
 	virtual void CreateGeometry() override { 
 		constexpr D3D12_DISPATCH_ARGUMENTS DA = { .ThreadGroupCountX = 32, .ThreadGroupCountY = 1, .ThreadGroupCountZ = 1 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), DA);
 	}
 	virtual void CreateTexture() override {
 		constexpr std::array Data = { 0.0f, 0.0f, 0.0f };

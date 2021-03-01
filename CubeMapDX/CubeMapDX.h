@@ -39,7 +39,7 @@ protected:
 
 	virtual void CreateGeometry() override {
 		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DIA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), DIA);
 	}
 	virtual void CreateConstantBuffer() override {
 		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
@@ -92,35 +92,7 @@ protected:
 		}
 #if !defined(USE_SKY_DOME)
 		//!< [2] [“x(Depth)
-		{
-			constexpr D3D12_HEAP_PROPERTIES HeapProperties = {
-				.Type = D3D12_HEAP_TYPE_DEFAULT,
-				.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-				.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
-				.CreationNodeMask = 0, .VisibleNodeMask = 0
-			};
-			constexpr DXGI_SAMPLE_DESC SD = { .Count = 1, .Quality = 0 };
-			const D3D12_RESOURCE_DESC RD = {
-				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				.Alignment = 0,
-				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
-				.DepthOrArraySize = 1,
-				.MipLevels = 1,
-				.Format = DXGI_FORMAT_D24_UNORM_S8_UINT,
-				.SampleDesc = SD,
-				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
-			};
-			const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) };
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HeapProperties, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
-
-			DepthStencilViewDescs.emplace_back(D3D12_DEPTH_STENCIL_VIEW_DESC({
-				.Format = ImageResources.back()->GetDesc().Format,
-				.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D,
-				.Flags = D3D12_DSV_FLAG_NONE,
-				.Texture2D = D3D12_TEX2D_DSV({.MipSlice = 0}),
-			}));
-		}
+		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), DXGI_FORMAT_D24_UNORM_S8_UINT);
 #endif
 	}
 	virtual void CreateStaticSampler() override {
@@ -234,7 +206,7 @@ protected:
 		{
 			const auto& DH = DsvDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-			Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[2]), &DepthStencilViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
+			Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().View, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
 		}
 #endif
 	}

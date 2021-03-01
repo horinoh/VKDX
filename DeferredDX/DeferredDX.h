@@ -43,14 +43,14 @@ protected:
 		//!< メッシュ描画用
 		{
 			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DIA);
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), DIA);
 		}
 #pragma endregion
 #pragma region PASS1
 		//!< フルスクリーン描画用
 		{
 			constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DA);
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), DA);
 		}
 #pragma endregion
 	}
@@ -205,28 +205,7 @@ protected:
 			}));
 		}
 #pragma endregion
-		{
-			const D3D12_RESOURCE_DESC RD = {
-				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				.Alignment = 0,
-				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
-				.DepthOrArraySize = 1,
-				.MipLevels = 1,
-				.Format = DXGI_FORMAT_D24_UNORM_S8_UINT,
-				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
-				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
-			};
-			D3D12_CLEAR_VALUE CV = { RD.Format, { 1.0f, 0 } };
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
-
-			DepthStencilViewDescs.emplace_back(D3D12_DEPTH_STENCIL_VIEW_DESC({
-				.Format = ImageResources.back()->GetDesc().Format,
-				.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D,
-				.Flags = D3D12_DSV_FLAG_NONE,
-				.Texture2D = D3D12_TEX2D_DSV({.MipSlice = 0 })
-			}));
-		}
+		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), DXGI_FORMAT_D24_UNORM_S8_UINT);
 	}
 	virtual void CreateStaticSampler() override {
 #pragma region PASS1
@@ -463,7 +442,7 @@ protected:
 			{
 				const auto& DH = DsvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[4]), &DepthStencilViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().View, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
 		}
 #pragma endregion

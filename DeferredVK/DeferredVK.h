@@ -135,15 +135,7 @@ protected:
 		}
 #pragma endregion
 		//!< 深度バッファ(Depth Buffer)
-		{
-			Images.emplace_back();
-			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT/* | VK_IMAGE_USAGE_SAMPLED_BIT*/);
-
-			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
-
-			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CM, VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }));
-		}
+		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, SurfaceExtent2D.width, SurfaceExtent2D.height);
 	}
 	virtual void CreateImmutableSampler() override {
 #pragma region PASS1
@@ -458,7 +450,7 @@ protected:
 				ImageViews[3],
 	#pragma endregion
 				//!< 深度バッファ(Depth Buffer)
-				ImageViews[4],
+				DepthTextures.back().View,
 			});
 		}
 #pragma endregion

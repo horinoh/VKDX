@@ -32,5 +32,5 @@ void DXImage::LoadImage_DDS(ID3D12Resource** Resource, const D3D12_RESOURCE_STAT
 		PopulateCommandList_CopyTextureRegion(CL, COM_PTR_GET(UploadResource), *Resource, PSF, RS);
 	} VERIFY_SUCCEEDED(CL->Close());
 
-	ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
+	ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
 }

@@ -241,7 +241,7 @@ void RayTracingDX::CreateGeometry()
 	//VERIFY_SUCCEEDED(COM_PTR_GET(GraphicsCommandLists[0])->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
 	const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
     const auto CA = COM_PTR_GET(CommandAllocators[0]);
-    const auto CQ = COM_PTR_GET(CommandQueue);
+    const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
     const auto F = COM_PTR_GET(Fence);
 
 #pragma region BLAS

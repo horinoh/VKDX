@@ -206,6 +206,69 @@ public:
 	using ShaderBindingTable = BufferMemory;
 #pragma endregion
 
+	class ImageMemory
+	{
+	public:
+		VkImage Image = VK_NULL_HANDLE;
+		VkDeviceMemory DeviceMemory = VK_NULL_HANDLE;
+		void Destroy(const VkDevice Device) {
+			if (VK_NULL_HANDLE != DeviceMemory) { vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks()); }
+			if (VK_NULL_HANDLE != Image) { vkDestroyImage(Device, Image, GetAllocationCallbacks()); }
+		}
+	};
+	class DepthTexture : public ImageMemory
+	{
+	public:
+		VkImageView View = VK_NULL_HANDLE;
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const uint32_t Width, const uint32_t Height) {
+			constexpr std::array<uint32_t, 0> QueueFamilyIndices = {};
+			const VkImageCreateInfo ICI = {
+				.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.imageType = VK_IMAGE_TYPE_2D,
+				.format = Format,
+				.extent = VkExtent3D({.width = Width, .height = Height, .depth = 1}),
+				.mipLevels = 1,
+				.arrayLayers = 1,
+				.samples = VK_SAMPLE_COUNT_1_BIT,
+				.tiling = VK_IMAGE_TILING_OPTIMAL,
+				.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+				.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+				.queueFamilyIndexCount = static_cast<uint32_t>(size(QueueFamilyIndices)), .pQueueFamilyIndices = data(QueueFamilyIndices),
+				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
+			};
+			VERIFY_SUCCEEDED(vkCreateImage(Device, &ICI, GetAllocationCallbacks(), &Image));
+
+			VkMemoryRequirements MR;
+			vkGetImageMemoryRequirements(Device, Image, &MR);
+			const VkMemoryAllocateInfo MAI = {
+				.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+				.pNext = nullptr,
+				.allocationSize = MR.size,
+				.memoryTypeIndex = VK::GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+			};
+			VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, GetAllocationCallbacks(), &DeviceMemory));
+			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Image, DeviceMemory, 0));
+
+			const VkImageViewCreateInfo IVCI = {
+				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.image = Image,
+				.viewType = VK_IMAGE_VIEW_TYPE_2D,
+				.format = ICI.format,
+				.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
+				.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
+			};
+			VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &View));
+		}
+		void Destroy(const VkDevice Device) {
+			if (VK_NULL_HANDLE != View) { vkDestroyImageView(Device, View, GetAllocationCallbacks()); }
+			ImageMemory::Destroy(Device);
+		}
+	};
+
 #ifdef _WINDOWS
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
@@ -622,6 +685,7 @@ protected:
 	using Image = struct Image;
 	std::vector<Image> Images;
 	std::vector<VkImageView> ImageViews; //!< Imageはビューを使用する
+	std::vector<DepthTexture> DepthTextures;
 
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;

@@ -38,7 +38,7 @@ protected:
 
 	virtual void CreateGeometry() override {
 		constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), DA);
 	}
 #pragma region CB
 	virtual void CreateConstantBuffer() override {
@@ -266,7 +266,7 @@ protected:
 				PopulateCommandList_CopyTextureRegion(CL, COM_PTR_GET(UploadResource), COM_PTR_GET(ImageResources[0]), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			} VERIFY_SUCCEEDED(CL->Close());
 
-			ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
+			ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
 		}
 	}
 	virtual void UpdateDistortionImage() override {
@@ -303,7 +303,7 @@ protected:
 				PopulateCommandList_CopyTextureRegion(CL, COM_PTR_GET(UploadResource), COM_PTR_GET(ImageResources[1]), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			} VERIFY_SUCCEEDED(CL->Close());
 
-			ExecuteAndWait(COM_PTR_GET(CommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
+			ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
 		}
 	}
 #endif

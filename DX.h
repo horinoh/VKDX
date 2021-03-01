@@ -176,7 +176,6 @@ public:
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, RoundUp256(Size), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
 		}
 	};
-
 	class ShaderResourceBuffer : public BufferResource
 	{
 	public:
@@ -228,6 +227,35 @@ public:
 		D3D12_PIPELINE_STATE_FLAGS    Flags;
 	};
 #pragma endregion
+
+	class DepthTexture : public BufferResource
+	{
+	public:
+		D3D12_DEPTH_STENCIL_VIEW_DESC View;
+		void Create(ID3D12Device* Device, const UINT64 Width, const UINT Height, const DXGI_FORMAT Format) {
+			constexpr D3D12_HEAP_PROPERTIES HP = {
+				.Type = D3D12_HEAP_TYPE_DEFAULT,
+				.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+				.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
+				.CreationNodeMask = 0, .VisibleNodeMask = 0
+			};
+			const D3D12_RESOURCE_DESC RD = {
+				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				.Alignment = 0,
+				.Width = Width, .Height = Height,
+				.DepthOrArraySize = 1,
+				.MipLevels = 1,
+				.Format = Format,
+				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
+			};
+			const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) };
+			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(Resource)));
+
+			View = D3D12_DEPTH_STENCIL_VIEW_DESC({.Format = Resource->GetDesc().Format, .ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D, .Flags = D3D12_DSV_FLAG_NONE, .Texture2D = D3D12_TEX2D_DSV({.MipSlice = 0 }) });
+		}
+	};
 
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
@@ -388,7 +416,8 @@ protected:
 
 	COM_PTR<ID3D12Device> Device;
 	std::vector<DXGI_SAMPLE_DESC> SampleDescs;
-	COM_PTR<ID3D12CommandQueue> CommandQueue;
+	COM_PTR<ID3D12CommandQueue> GraphicsCommandQueue;
+	COM_PTR<ID3D12CommandQueue> ComputeCommandQueue;
 	COM_PTR<ID3D12Fence> Fence;
 	UINT64 FenceValue = 0;
 
@@ -431,6 +460,7 @@ protected:
 	std::vector<D3D12_DEPTH_STENCIL_VIEW_DESC> DepthStencilViewDescs;
 	std::vector<D3D12_RENDER_TARGET_VIEW_DESC> RenderTargetViewDescs;
 	std::vector<D3D12_UNORDERED_ACCESS_VIEW_DESC> UnorderedAccessViewDescs;
+	std::vector<DepthTexture> DepthTextures;
 
 	std::vector<D3D12_VIEWPORT> Viewports;
 	std::vector<D3D12_RECT> ScissorRects;

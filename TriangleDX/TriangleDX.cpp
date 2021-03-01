@@ -233,7 +233,7 @@ void TriangleDX::CreateGeometry()
 {
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
-	const auto CQ = COM_PTR_GET(CommandQueue);
+	const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
 
 	//!< バーテックスバッファ (VertexBuffer)
 	{

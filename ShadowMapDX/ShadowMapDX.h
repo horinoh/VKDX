@@ -43,19 +43,19 @@ protected:
 		//!< Pass0 : インダイレクトバッファ(シャドウキャスタ描画用)
 		{
 			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DIA);
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), DIA);
 		}
 #ifdef USE_SHADOWMAP_VISUALIZE
 		//!< Pass1 : インダイレクトバッファ(シャドウマップ描画用)
 		{
 			constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DA);
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), DA);
 		}
 #else
 		//!< Pass1 : インダイレクトバッファ(シャドウレシーバ描画用)
 		{
 			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 2, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DIA);
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), DIA);
 		}
 #endif
 	}
@@ -155,14 +155,14 @@ protected:
 				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
 				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
 				.Texture2D = D3D12_TEX2D_SRV({ .MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
-				}));
+			}));
 
 			DepthStencilViewDescs.emplace_back(D3D12_DEPTH_STENCIL_VIEW_DESC({
 				.Format = ImageResources.back()->GetDesc().Format, 
 				.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D, 
 				.Flags = D3D12_DSV_FLAG_NONE,
 				.Texture2D = D3D12_TEX2D_DSV({ .MipSlice = 0 })
-				}));
+			}));
 		}
 		//!< パス1
 #ifndef USE_SHADOWMAP_VISUALIZE

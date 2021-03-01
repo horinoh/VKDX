@@ -33,7 +33,7 @@ protected:
 		//!< メッシュ描画用
 		{
 			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DIA);
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), DIA);
 		}
 #pragma endregion
 
@@ -41,7 +41,7 @@ protected:
 		//!< フルスクリーン描画用
 		{
 			constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DA);
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), DA);
 		}
 #pragma endregion
 	}
@@ -87,28 +87,7 @@ protected:
 		}
 
 #ifdef USE_DEPTH
-		{
-			const D3D12_RESOURCE_DESC RD = {
-				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				.Alignment = 0,
-				.Width = static_cast<UINT64>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()),
-				.DepthOrArraySize = 1,
-				.MipLevels = 1,
-				.Format = DXGI_FORMAT_D24_UNORM_S8_UINT,
-				.SampleDesc = SD,
-				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
-			};
-			const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) };
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
-
-			DepthStencilViewDescs.emplace_back(D3D12_DEPTH_STENCIL_VIEW_DESC({
-				.Format = ImageResources.back()->GetDesc().Format,
-				.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D,
-				.Flags = D3D12_DSV_FLAG_NONE,
-				.Texture2D = D3D12_TEX2D_DSV({.MipSlice = 0 })
-			}));
-		}
+		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), DXGI_FORMAT_D24_UNORM_S8_UINT);
 #endif
 	}
 	virtual void CreateStaticSampler() override {
@@ -128,20 +107,18 @@ protected:
 	virtual void CreateRootSignature() override {
 #pragma region PASS0
 		{
-			RootSignatures.emplace_back(COM_PTR<ID3D12RootSignature>());
 			COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
 			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
 			SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE | SHADER_ROOT_ACCESS_DENY_ALL);
 #endif
-			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.back())));
+			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		}
 #pragma endregion
 
 #pragma region PASS1
 		{
-			RootSignatures.emplace_back(COM_PTR<ID3D12RootSignature>());
 			COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE 
 			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT("_1.rs.cso")));
@@ -159,7 +136,7 @@ protected:
 				StaticSamplerDescs[0],
 			}, SHADER_ROOT_ACCESS_PS);
 #endif
-			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.back())));
+			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		}
 #pragma endregion
 		LOG_OK();
@@ -267,12 +244,6 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateDescriptorView() override {
-#ifdef USE_DEPTH
-		assert(2 == size(ImageResources) && "");
-#else
-		assert(!empty(ImageResources) && "");
-#endif
-
 #pragma region PASS0
 		{
 			{
@@ -284,7 +255,7 @@ protected:
 			{
 				const auto& DH = DsvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-				Device->CreateDepthStencilView(COM_PTR_GET(ImageResources[1]), &DepthStencilViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().View, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
 #endif
 		}

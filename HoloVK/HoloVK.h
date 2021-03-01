@@ -110,16 +110,7 @@ protected:
 			ImageViews.emplace_back();
 			VK::CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, ColorFormat, CM, VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }));
 		}
-		{
-			Images.emplace_back();
-			VK::CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, DepthFormat, Extent3D, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT);
-
-			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
-
-			ImageViews.emplace_back();
-			VK::CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, DepthFormat, CM, VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }));
-		}
+		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, QuiltExtent2D.width, QuiltExtent2D.height);
 	}
 	virtual void CreateImmutableSampler() override {
 #pragma region PASS1
@@ -312,7 +303,7 @@ protected:
 #pragma region PASS0
 		VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], QuiltExtent2D.width, QuiltExtent2D.height, 1, {
 			ImageViews[0],
-			ImageViews[1],
+			DepthTextures.back().View
 		});
 #pragma endregion
 

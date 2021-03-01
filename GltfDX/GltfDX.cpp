@@ -494,13 +494,13 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			const auto CA = COM_PTR_GET(CommandAllocators[0]);
 			const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 			if ("indices" == Identifier) {
-				IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), Size, CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), Data, ToDXFormat(Acc.componentType));
+				IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), Size, CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), Data, ToDXFormat(Acc.componentType));
 
 				const D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = Acc.count, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-				IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), DIA);
+				IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), DIA);
 			}
 			else if ("attributes" == Identifier || "targets" == Identifier) {
-				VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), Size, CA, GCL, COM_PTR_GET(CommandQueue), COM_PTR_GET(Fence), Data, Stride);
+				VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), Size, CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), Data, Stride);
 			}
 			else if ("inverseBindMatrices" == Identifier) {
 				InverseBindMatrices.reserve(Acc.count);
