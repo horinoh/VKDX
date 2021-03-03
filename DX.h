@@ -130,15 +130,19 @@ public:
 	};
 	class VertexBuffer : public BufferResource 
 	{
+	private:
+		using Super = BufferResource;
 	public:
 		D3D12_VERTEX_BUFFER_VIEW View;
 		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source, const UINT Stride) {
 			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, Size, GCL, CA, CQ, Fence, Source);
-			View = D3D12_VERTEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .StrideInBytes = Stride });
+			View = D3D12_VERTEX_BUFFER_VIEW({.BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .StrideInBytes = Stride });
 		}
 	};
 	class IndexBuffer : public BufferResource
 	{
+	private:
+		using Super = BufferResource;
 	public:
 		D3D12_INDEX_BUFFER_VIEW View;
 		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source, const DXGI_FORMAT Format) {
@@ -148,6 +152,8 @@ public:
 	};
 	class IndirectBuffer : public BufferResource
 	{
+	private:
+		using Super = BufferResource;
 	public:
 		COM_PTR<ID3D12CommandSignature> CommandSignature;
 		void Create(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const D3D12_DRAW_INDEXED_ARGUMENTS& DIA) {
@@ -171,6 +177,8 @@ public:
 	};
 	class ConstantBuffer : public BufferResource
 	{
+	private:
+		using Super = BufferResource;
 	public:
 		void Create(ID3D12Device* Device, const size_t Size, const void* Source = nullptr) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, RoundUp256(Size), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
@@ -190,6 +198,57 @@ public:
 			});
 		}
 	};
+	class Texture : public BufferResource
+	{
+	private:
+		using Super = BufferResource;
+	public:
+		void Create(ID3D12Device* Device, const UINT64 Width, const UINT Height, const DXGI_FORMAT Format, const D3D12_RESOURCE_FLAGS RF, const D3D12_RESOURCE_STATES RS, const D3D12_CLEAR_VALUE& CV) {
+			constexpr D3D12_HEAP_PROPERTIES HP = {
+				.Type = D3D12_HEAP_TYPE_DEFAULT,
+				.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+				.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
+				.CreationNodeMask = 0, .VisibleNodeMask = 0
+			};
+			const D3D12_RESOURCE_DESC RD = {
+				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+				.Alignment = 0,
+				.Width = Width, .Height = Height,
+				.DepthOrArraySize = 1,
+				.MipLevels = 1,
+				.Format = Format,
+				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+				.Flags = RF
+			};
+			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, RS, &CV, COM_PTR_UUIDOF_PUTVOID(Resource)));
+		}
+	};
+	class DepthTexture : public Texture
+	{
+	private:
+		using Super = Texture;
+	public:
+		D3D12_DEPTH_STENCIL_VIEW_DESC DSV;
+		void Create(ID3D12Device* Device, const UINT64 Width, const UINT Height, const DXGI_FORMAT Format) {
+			Super::Create(Device, Width, Height, Format, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL, D3D12_RESOURCE_STATE_DEPTH_WRITE, D3D12_CLEAR_VALUE({.Format = Format, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
+			DSV = D3D12_DEPTH_STENCIL_VIEW_DESC({.Format = Format, .ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D, .Flags = D3D12_DSV_FLAG_NONE, .Texture2D = D3D12_TEX2D_DSV({.MipSlice = 0 }) });
+		}
+	};
+	class RenderTexture : public Texture
+	{
+	private:
+		using Super = Texture;
+	public:
+		D3D12_RENDER_TARGET_VIEW_DESC RTV;
+		D3D12_SHADER_RESOURCE_VIEW_DESC SRV;
+		void Create(ID3D12Device* Device, const UINT64 Width, const UINT Height, const DXGI_FORMAT Format, const FLOAT Color[4]) {
+			Super::Create(Device, Width, Height, Format, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_CLEAR_VALUE({ .Format = Format, .Color = { Color[0], Color[1], Color[2], Color[3] } }));
+			RTV = D3D12_RENDER_TARGET_VIEW_DESC({.Format = Format, .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D, .Texture2D = D3D12_TEX2D_RTV({.MipSlice = 0, .PlaneSlice = 0 }) });
+			SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({.Format = Format, .ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D, .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, .Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = Resource->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f }) });
+		}
+	};
+
 #pragma region RAYTRACING
 	class AccelerationStructureBuffer : public BufferResource
 	{
@@ -227,35 +286,6 @@ public:
 		D3D12_PIPELINE_STATE_FLAGS    Flags;
 	};
 #pragma endregion
-
-	class DepthTexture : public BufferResource
-	{
-	public:
-		D3D12_DEPTH_STENCIL_VIEW_DESC View;
-		void Create(ID3D12Device* Device, const UINT64 Width, const UINT Height, const DXGI_FORMAT Format) {
-			constexpr D3D12_HEAP_PROPERTIES HP = {
-				.Type = D3D12_HEAP_TYPE_DEFAULT,
-				.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-				.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
-				.CreationNodeMask = 0, .VisibleNodeMask = 0
-			};
-			const D3D12_RESOURCE_DESC RD = {
-				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				.Alignment = 0,
-				.Width = Width, .Height = Height,
-				.DepthOrArraySize = 1,
-				.MipLevels = 1,
-				.Format = Format,
-				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
-				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				.Flags = D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL
-			};
-			const D3D12_CLEAR_VALUE CV = { .Format = RD.Format, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) };
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_DEPTH_WRITE, &CV, COM_PTR_UUIDOF_PUTVOID(Resource)));
-
-			View = D3D12_DEPTH_STENCIL_VIEW_DESC({.Format = Resource->GetDesc().Format, .ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D, .Flags = D3D12_DSV_FLAG_NONE, .Texture2D = D3D12_TEX2D_DSV({.MipSlice = 0 }) });
-		}
-	};
 
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
@@ -461,6 +491,7 @@ protected:
 	std::vector<D3D12_RENDER_TARGET_VIEW_DESC> RenderTargetViewDescs;
 	std::vector<D3D12_UNORDERED_ACCESS_VIEW_DESC> UnorderedAccessViewDescs;
 	std::vector<DepthTexture> DepthTextures;
+	std::vector<RenderTexture> RenderTextures;
 
 	std::vector<D3D12_VIEWPORT> Viewports;
 	std::vector<D3D12_RECT> ScissorRects;

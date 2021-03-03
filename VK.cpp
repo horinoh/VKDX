@@ -208,6 +208,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 	DescriptorSetLayouts.clear();
 
+	for (auto& i : RenderTextures) { i.Destroy(Device); } RenderTextures.clear();
 	for (auto& i : DepthTextures) { i.Destroy(Device); } DepthTextures.clear();
 	for (auto& i : ImageViews) {
 		vkDestroyImageView(Device, i, GetAllocationCallbacks());

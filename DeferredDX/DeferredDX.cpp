@@ -269,7 +269,7 @@ void DeferredDX::PopulateCommandList(const size_t i)
 	VERIFY_SUCCEEDED(GCL->Reset(CA, PS1));
 	{
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-		const auto IR = COM_PTR_GET(ImageResources[0]);
+		const auto RT = COM_PTR_GET(RenderTextures[0].Resource);
 
 		GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 		GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
@@ -337,7 +337,7 @@ void DeferredDX::PopulateCommandList(const size_t i)
 				D3D12_RESOURCE_BARRIER({
 					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = IR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET, .StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE })
+					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = RT, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET, .StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE })
 				}),
 			};
 			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
@@ -349,13 +349,13 @@ void DeferredDX::PopulateCommandList(const size_t i)
 			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 			{
 				auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
-				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 1> CDHs = { CDH };
+				const std::array CDHs = { CDH };
 				GCL->OMSetRenderTargets(static_cast<UINT>(size(CDHs)), data(CDHs), FALSE, nullptr); //!< RTV
 			}
 				
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[1];
-				const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
+				const std::array DHs = { COM_PTR_GET(DH) };
 				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
 				GCL->SetGraphicsRootDescriptorTable(0, GDH); //!< SRV
@@ -384,7 +384,7 @@ void DeferredDX::PopulateCommandList(const size_t i)
 				D3D12_RESOURCE_BARRIER({ 
 					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, 
 					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({ .pResource = IR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, .StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET })
+					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({ .pResource = RT, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, .StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET })
 				}),
 			};
 			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));

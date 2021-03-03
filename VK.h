@@ -124,21 +124,32 @@ public:
 	private:
 		VkDevice Device = VK_NULL_HANDLE;
 	};
-	class BufferMemory 
+	class Memory
 	{
 	public:
-		VkBuffer Buffer = VK_NULL_HANDLE;
 		VkDeviceMemory DeviceMemory = VK_NULL_HANDLE;
+		virtual void Destroy(const VkDevice Device) {
+			if (VK_NULL_HANDLE != DeviceMemory) { vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks()); }
+		}
+	};
+	class BufferMemory : public Memory
+	{
+	private:
+		using Super = Memory;
+	public:
+		VkBuffer Buffer = VK_NULL_HANDLE;
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr) { 
 			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, BUF, Size, MPF, Source);
 		}
-		void Destroy(const VkDevice Device) {
-			if (VK_NULL_HANDLE != DeviceMemory) { vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks()); }
+		virtual void Destroy(const VkDevice Device) override {
+			Super::Destroy(Device);
 			if (VK_NULL_HANDLE != Buffer) { vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks()); }
 		}
 	};
 	class VertexBuffer : public BufferMemory
 	{
+	private:
+		using Super = BufferMemory;
 	public:
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const void* Source, const VkCommandBuffer CB, const VkQueue Queue) {
 			VK::CreateBufferMemoryAndSubmitTransferCommand(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, Size, Source, CB, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Queue);
@@ -146,6 +157,8 @@ public:
 	};
 	class IndexBuffer : public BufferMemory
 	{
+	private:
+		using Super = BufferMemory;
 	public:
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const void* Source, const VkCommandBuffer CB, const VkQueue Queue) {
 			VK::CreateBufferMemoryAndSubmitTransferCommand(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_INDEX_BUFFER_BIT, Size, Source, CB, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Queue);
@@ -153,6 +166,8 @@ public:
 	};
 	class IndirectBuffer : public BufferMemory
 	{
+	private:
+		using Super = BufferMemory;
 	public:
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDrawIndexedIndirectCommand& DIIC, const VkCommandBuffer CB, const VkQueue Queue) {
 			VK::CreateBufferMemoryAndSubmitTransferCommand(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT, sizeof(DIIC), &DIIC, CB, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Queue);
@@ -166,12 +181,90 @@ public:
 	};
 	class UniformBuffer : public BufferMemory
 	{
+	private:
+		using Super = BufferMemory;
 	public:
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const void* Source = nullptr) {
 			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, Source);
 		}
 	};
 	using StorageBuffer = BufferMemory;
+
+	class Texture : public Memory
+	{
+	private:
+		using Super = Memory;
+	public:
+		VkImage Image = VK_NULL_HANDLE;
+		VkImageView View = VK_NULL_HANDLE;
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags IUF, const VkImageAspectFlags IAF) {
+			constexpr std::array<uint32_t, 0> QueueFamilyIndices = {};
+			const VkImageCreateInfo ICI = {
+				.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.imageType = VK_IMAGE_TYPE_2D,
+				.format = Format,
+				.extent = VkExtent3D({.width = Width, .height = Height, .depth = 1}),
+				.mipLevels = 1,
+				.arrayLayers = 1,
+				.samples = VK_SAMPLE_COUNT_1_BIT,
+				.tiling = VK_IMAGE_TILING_OPTIMAL,
+				.usage = IUF,
+				.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+				.queueFamilyIndexCount = static_cast<uint32_t>(size(QueueFamilyIndices)), .pQueueFamilyIndices = data(QueueFamilyIndices),
+				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
+			};
+			VERIFY_SUCCEEDED(vkCreateImage(Device, &ICI, GetAllocationCallbacks(), &Image));
+
+			VkMemoryRequirements MR;
+			vkGetImageMemoryRequirements(Device, Image, &MR);
+			const VkMemoryAllocateInfo MAI = {
+				.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+				.pNext = nullptr,
+				.allocationSize = MR.size,
+				.memoryTypeIndex = VK::GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+			};
+			VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, GetAllocationCallbacks(), &DeviceMemory));
+			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Image, DeviceMemory, 0));
+
+			const VkImageViewCreateInfo IVCI = {
+				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.image = Image,
+				.viewType = VK_IMAGE_VIEW_TYPE_2D,
+				.format = ICI.format,
+				.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
+				.subresourceRange = VkImageSubresourceRange({.aspectMask = IAF, .baseMipLevel = 0, .levelCount = ICI.mipLevels, .baseArrayLayer = 0, .layerCount = ICI.arrayLayers })
+			};
+			VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &View));
+		}
+		virtual void Destroy(const VkDevice Device) override {
+			Super::Destroy(Device);
+			if (VK_NULL_HANDLE != Image) { vkDestroyImage(Device, Image, GetAllocationCallbacks()); }
+			if (VK_NULL_HANDLE != View) { vkDestroyImageView(Device, View, GetAllocationCallbacks()); }
+		}
+	};
+	class DepthTexture : public Texture
+	{
+	private:
+		using Super = Texture;
+	public:
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const uint32_t Width, const uint32_t Height) {
+			Super::Create(Device, PDMP, Format, Width, Height, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+		}
+	};
+	class RenderTexture : public Texture
+	{
+	private:
+		using Super = Texture;
+	public:
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const uint32_t Width, const uint32_t Height) {
+			Super::Create(Device, PDMP, Format, Width, Height, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
+		}
+	};
+
 #pragma region RAYTRACING
 	class AccelerationStructureBuffer : public BufferMemory 
 	{
@@ -205,69 +298,6 @@ public:
 	};
 	using ShaderBindingTable = BufferMemory;
 #pragma endregion
-
-	class ImageMemory
-	{
-	public:
-		VkImage Image = VK_NULL_HANDLE;
-		VkDeviceMemory DeviceMemory = VK_NULL_HANDLE;
-		void Destroy(const VkDevice Device) {
-			if (VK_NULL_HANDLE != DeviceMemory) { vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks()); }
-			if (VK_NULL_HANDLE != Image) { vkDestroyImage(Device, Image, GetAllocationCallbacks()); }
-		}
-	};
-	class DepthTexture : public ImageMemory
-	{
-	public:
-		VkImageView View = VK_NULL_HANDLE;
-		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const uint32_t Width, const uint32_t Height) {
-			constexpr std::array<uint32_t, 0> QueueFamilyIndices = {};
-			const VkImageCreateInfo ICI = {
-				.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-				.pNext = nullptr,
-				.flags = 0,
-				.imageType = VK_IMAGE_TYPE_2D,
-				.format = Format,
-				.extent = VkExtent3D({.width = Width, .height = Height, .depth = 1}),
-				.mipLevels = 1,
-				.arrayLayers = 1,
-				.samples = VK_SAMPLE_COUNT_1_BIT,
-				.tiling = VK_IMAGE_TILING_OPTIMAL,
-				.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-				.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-				.queueFamilyIndexCount = static_cast<uint32_t>(size(QueueFamilyIndices)), .pQueueFamilyIndices = data(QueueFamilyIndices),
-				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
-			};
-			VERIFY_SUCCEEDED(vkCreateImage(Device, &ICI, GetAllocationCallbacks(), &Image));
-
-			VkMemoryRequirements MR;
-			vkGetImageMemoryRequirements(Device, Image, &MR);
-			const VkMemoryAllocateInfo MAI = {
-				.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-				.pNext = nullptr,
-				.allocationSize = MR.size,
-				.memoryTypeIndex = VK::GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-			};
-			VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, GetAllocationCallbacks(), &DeviceMemory));
-			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Image, DeviceMemory, 0));
-
-			const VkImageViewCreateInfo IVCI = {
-				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-				.pNext = nullptr,
-				.flags = 0,
-				.image = Image,
-				.viewType = VK_IMAGE_VIEW_TYPE_2D,
-				.format = ICI.format,
-				.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
-				.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
-			};
-			VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &View));
-		}
-		void Destroy(const VkDevice Device) {
-			if (VK_NULL_HANDLE != View) { vkDestroyImageView(Device, View, GetAllocationCallbacks()); }
-			ImageMemory::Destroy(Device);
-		}
-	};
 
 #ifdef _WINDOWS
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
@@ -686,6 +716,7 @@ protected:
 	std::vector<Image> Images;
 	std::vector<VkImageView> ImageViews; //!< Imageはビューを使用する
 	std::vector<DepthTexture> DepthTextures;
+	std::vector<RenderTexture> RenderTextures;
 
 	std::vector<VkViewport> Viewports;
 	std::vector<VkRect2D> ScissorRects;
