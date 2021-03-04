@@ -120,7 +120,7 @@ private:
 	using Super = Win;
 
 public:
-	class BufferResource
+	class ResourceBase
 	{
 	public:
 		COM_PTR<ID3D12Resource> Resource;
@@ -128,10 +128,10 @@ public:
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, HT, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
 		}
 	};
-	class VertexBuffer : public BufferResource 
+	class VertexBuffer : public ResourceBase 
 	{
 	private:
-		using Super = BufferResource;
+		using Super = ResourceBase;
 	public:
 		D3D12_VERTEX_BUFFER_VIEW View;
 		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source, const UINT Stride) {
@@ -139,10 +139,10 @@ public:
 			View = D3D12_VERTEX_BUFFER_VIEW({.BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .StrideInBytes = Stride });
 		}
 	};
-	class IndexBuffer : public BufferResource
+	class IndexBuffer : public ResourceBase
 	{
 	private:
-		using Super = BufferResource;
+		using Super = ResourceBase;
 	public:
 		D3D12_INDEX_BUFFER_VIEW View;
 		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source, const DXGI_FORMAT Format) {
@@ -150,10 +150,10 @@ public:
 			View = D3D12_INDEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .Format = Format });
 		}
 	};
-	class IndirectBuffer : public BufferResource
+	class IndirectBuffer : public ResourceBase
 	{
 	private:
-		using Super = BufferResource;
+		using Super = ResourceBase;
 	public:
 		COM_PTR<ID3D12CommandSignature> CommandSignature;
 		void Create(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const D3D12_DRAW_INDEXED_ARGUMENTS& DIA) {
@@ -175,16 +175,16 @@ public:
 			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
 		}
 	};
-	class ConstantBuffer : public BufferResource
+	class ConstantBuffer : public ResourceBase
 	{
 	private:
-		using Super = BufferResource;
+		using Super = ResourceBase;
 	public:
 		void Create(ID3D12Device* Device, const size_t Size, const void* Source = nullptr) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, RoundUp256(Size), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
 		}
 	};
-	class ShaderResourceBuffer : public BufferResource
+	class ShaderResourceBuffer : public ResourceBase
 	{
 	public:
 		D3D12_SHADER_RESOURCE_VIEW_DESC View;
@@ -198,30 +198,13 @@ public:
 			});
 		}
 	};
-	class Texture : public BufferResource
+	class Texture : public ResourceBase
 	{
 	private:
-		using Super = BufferResource;
+		using Super = ResourceBase;
 	public:
 		void Create(ID3D12Device* Device, const UINT64 Width, const UINT Height, const DXGI_FORMAT Format, const D3D12_RESOURCE_FLAGS RF, const D3D12_RESOURCE_STATES RS, const D3D12_CLEAR_VALUE& CV) {
-			constexpr D3D12_HEAP_PROPERTIES HP = {
-				.Type = D3D12_HEAP_TYPE_DEFAULT,
-				.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-				.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
-				.CreationNodeMask = 0, .VisibleNodeMask = 0
-			};
-			const D3D12_RESOURCE_DESC RD = {
-				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				.Alignment = 0,
-				.Width = Width, .Height = Height,
-				.DepthOrArraySize = 1,
-				.MipLevels = 1,
-				.Format = Format,
-				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
-				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				.Flags = RF
-			};
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, RS, &CV, COM_PTR_UUIDOF_PUTVOID(Resource)));
+			DX::CreateTextureResource(COM_PTR_PUT(Resource), Device, Width, Height, Format, RF, RS, CV);
 		}
 	};
 	class DepthTexture : public Texture
@@ -250,14 +233,14 @@ public:
 	};
 
 #pragma region RAYTRACING
-	class AccelerationStructureBuffer : public BufferResource
+	class AccelerationStructureBuffer : public ResourceBase
 	{
 	public:
 		void Create(ID3D12Device* Device, const size_t Size) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
 		}
 	};
-	class ScratchBuffer : public BufferResource
+	class ScratchBuffer : public ResourceBase
 	{
 	public:
 		void Create(ID3D12Device* Device, const size_t Size) {
@@ -326,6 +309,8 @@ protected:
 	}
 
 	static void CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, const D3D12_RESOURCE_FLAGS RF, const D3D12_HEAP_TYPE HT, const D3D12_RESOURCE_STATES RS, const void* Source = nullptr);
+	static void CreateTextureResource(ID3D12Resource** Resource, ID3D12Device* Device, const UINT64 Width, const UINT Height, const DXGI_FORMAT Format, const D3D12_RESOURCE_FLAGS RF, const D3D12_RESOURCE_STATES RS, const D3D12_CLEAR_VALUE& CV);
+
 	virtual void CreateBufferResource(ID3D12Resource** Resource, const size_t Size, const D3D12_HEAP_TYPE HT);
 	virtual void CreateTextureResource(ID3D12Resource** Resource, const DXGI_FORMAT Format, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize = 1, const UINT16 MipLevels = 1);
 

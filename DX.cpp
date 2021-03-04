@@ -218,6 +218,28 @@ void DX::CreateTextureResource(ID3D12Resource** Resource, const DXGI_FORMAT Form
 	));
 }
 
+void DX::CreateTextureResource(ID3D12Resource** Resource, ID3D12Device* Device, const UINT64 Width, const UINT Height, const DXGI_FORMAT Format, const D3D12_RESOURCE_FLAGS RF, const D3D12_RESOURCE_STATES RS, const D3D12_CLEAR_VALUE& CV)
+{
+	constexpr D3D12_HEAP_PROPERTIES HP = {
+		.Type = D3D12_HEAP_TYPE_DEFAULT,
+		.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
+		.CreationNodeMask = 0, .VisibleNodeMask = 0
+	};
+	const D3D12_RESOURCE_DESC RD = {
+		.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+		.Alignment = 0,
+		.Width = Width, .Height = Height,
+		.DepthOrArraySize = 1,
+		.MipLevels = 1,
+		.Format = Format,
+		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+		.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+		.Flags = RF
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, RS, &CV, IID_PPV_ARGS(Resource)));
+}
+
 void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source, const D3D12_RANGE* Range)
 {
 	if (nullptr != Resource && Size && nullptr != Source) [[likely]] {

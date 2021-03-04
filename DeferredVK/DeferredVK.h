@@ -86,56 +86,19 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateTexture() override {
-		const VkExtent3D Extent = { .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 };
-		constexpr VkComponentMapping CM = { .r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A };
-		constexpr VkImageSubresourceRange ISR = { .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 };
-		//!< レンダーターゲット : カラー(RenderTarget : Color)
-		{
-			Images.emplace_back();
-			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, ColorFormat, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-
-			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
-
-			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, ColorFormat, CM, ISR);
-		}
+		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		//!< カラー(Color)
+		RenderTextures.emplace_back().Create(Device, PDMP, ColorFormat, SurfaceExtent2D.width, SurfaceExtent2D.height);
 #pragma region MRT 
-		//!< レンダーターゲット : 法線(RenderTarget : Normal)
-		{
-			const auto Format = VK_FORMAT_A2B10G10R10_UNORM_PACK32;
-			Images.emplace_back();
-			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-
-			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
-
-			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, Format, CM, ISR);
-		}
-		//!< レンダーターゲット : 深度(RenderTarget : Depth)
-		{
-			const auto Format = VK_FORMAT_R32_SFLOAT;
-			Images.emplace_back();
-			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-
-			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
-
-			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, Format, CM, ISR);
-		}
-		//!< レンダーターゲット : 未定
-		{
-			const auto Format = VK_FORMAT_B8G8R8A8_UNORM;
-			Images.emplace_back();
-			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-
-			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
-
-			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, Format, CM, ISR);
-		}
+		//!< 法線(Normal)
+		RenderTextures.emplace_back().Create(Device, PDMP, VK_FORMAT_A2B10G10R10_UNORM_PACK32, SurfaceExtent2D.width, SurfaceExtent2D.height);
+		//!< 深度(Depth)
+		RenderTextures.emplace_back().Create(Device, PDMP, VK_FORMAT_R32_SFLOAT, SurfaceExtent2D.width, SurfaceExtent2D.height);
+		//!< 未定
+		RenderTextures.emplace_back().Create(Device, PDMP, VK_FORMAT_B8G8R8A8_UNORM, SurfaceExtent2D.width, SurfaceExtent2D.height);
 #pragma endregion
 		//!< 深度バッファ(Depth Buffer)
-		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, SurfaceExtent2D.width, SurfaceExtent2D.height);
+		DepthTextures.emplace_back().Create(Device, PDMP, DepthFormat, SurfaceExtent2D.width, SurfaceExtent2D.height);
 	}
 	virtual void CreateImmutableSampler() override {
 #pragma region PASS1
@@ -169,14 +132,14 @@ protected:
 		{
 			const std::array ISs = { Samplers[0] };
 			CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
-				//!< レンダーターゲット : カラー(RenderTarget : Color)
+				//!< カラー(Color)
 				VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }),
 #pragma region MRT 
-				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				//!< 法線(Normal)
 				VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }),
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				//!< 深度(Depth)
 				VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }),
-				//!< レンダーターゲット : 未定
+				//!< 未定
 				VkDescriptorSetLayoutBinding({.binding = 3, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) }),
 #pragma endregion
 				VkDescriptorSetLayoutBinding({.binding = 4, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = nullptr }),
@@ -189,20 +152,20 @@ protected:
 #pragma region PASS0
 		{
 			constexpr std::array ColorAttach = {
-				//!< レンダーターゲット : カラー(RenderTarget : Color)
+				//!< カラー(Color)
 				VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }),
 #pragma region MRT 
-				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				//!< 法線(Normal)
 				VkAttachmentReference({.attachment = 1, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }),
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				//!< 深度(Depth)
 				VkAttachmentReference({.attachment = 2, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }),
-				//!< レンダーターゲット : 未定
+				//!< 未定
 				VkAttachmentReference({.attachment = 3, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }),
 #pragma endregion
 			};
 			constexpr VkAttachmentReference DepthAttach = { .attachment = static_cast<uint32_t>(size(ColorAttach)), .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 			VK::CreateRenderPass(RenderPasses.emplace_back(), {
-				//!< レンダーターゲット : カラー(RenderTarget : Color)
+				//!< カラー(Color)
 				VkAttachmentDescription({
 					.flags = 0,
 					.format = ColorFormat,
@@ -212,7 +175,7 @@ protected:
 					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
 				}),
 #pragma region MRT 
-				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				//!< 法線(Normal)
 				VkAttachmentDescription({
 					.flags = 0,
 					.format = VK_FORMAT_A2B10G10R10_UNORM_PACK32,
@@ -221,7 +184,7 @@ protected:
 					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
 				}),
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				//!< 深度(Depth)
 				VkAttachmentDescription({
 					.flags = 0,
 					.format = VK_FORMAT_R32_SFLOAT,
@@ -230,7 +193,7 @@ protected:
 					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
 					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
 				}),
-				//!< レンダーターゲット : 未定
+				//!< 未定
 				VkAttachmentDescription({
 					.flags = 0,
 					.format = VK_FORMAT_B8G8R8A8_UNORM,
@@ -336,7 +299,7 @@ protected:
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_GEOMETRY_BIT, .module = SMs0[4], .pName = "main", .pSpecializationInfo = nullptr }),
 		};
 		const std::vector PCBASs0 = {
-			//!< レンダーターゲット : カラー(RenderTarget : Color)
+			//!< カラー(Color)
 			VkPipelineColorBlendAttachmentState({
 				.blendEnable = VK_FALSE,
 				.srcColorBlendFactor = VK_BLEND_FACTOR_ONE, .dstColorBlendFactor = VK_BLEND_FACTOR_ONE, .colorBlendOp = VK_BLEND_OP_ADD,
@@ -344,21 +307,21 @@ protected:
 				.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
 			}),
 #pragma region MRT 
-			//!< レンダーターゲット : 法線(RenderTarget : Normal)
+			//!< 法線(Normal)
 			VkPipelineColorBlendAttachmentState({
 				.blendEnable = VK_FALSE,
 				.srcColorBlendFactor = VK_BLEND_FACTOR_ONE, .dstColorBlendFactor = VK_BLEND_FACTOR_ONE, .colorBlendOp = VK_BLEND_OP_ADD,
 				.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .alphaBlendOp = VK_BLEND_OP_ADD,
 				.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
 			}),
-			//!< レンダーターゲット : 深度(RenderTarget : Depth)
+			//!< 深度(Depth)
 			VkPipelineColorBlendAttachmentState({
 				.blendEnable = VK_FALSE,
 				.srcColorBlendFactor = VK_BLEND_FACTOR_ONE, .dstColorBlendFactor = VK_BLEND_FACTOR_ONE, .colorBlendOp = VK_BLEND_OP_ADD,
 				.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .alphaBlendOp = VK_BLEND_OP_ADD,
 				.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
 			}),
-			//!< レンダーターゲット : 未定
+			//!< 未定
 			VkPipelineColorBlendAttachmentState({
 				.blendEnable = VK_FALSE,
 				.srcColorBlendFactor = VK_BLEND_FACTOR_ONE, .dstColorBlendFactor = VK_BLEND_FACTOR_ONE, .colorBlendOp = VK_BLEND_OP_ADD,
@@ -395,18 +358,16 @@ protected:
 			VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".frag.spv"))),
 #endif
 		};
-#ifdef USE_GBUFFER_VISUALIZE
 		const std::array PSSCIs1 = {
+#ifdef USE_GBUFFER_VISUALIZE
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs1[0], .pName = "main", .pSpecializationInfo = nullptr }),
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = SMs1[1], .pName = "main", .pSpecializationInfo = nullptr }),
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_GEOMETRY_BIT, .module = SMs1[2], .pName = "main", .pSpecializationInfo = nullptr }),
-		};
 #else
-		const std::array PSSCIs1 = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs1[0], .pName = "main", .pSpecializationInfo = nullptr }),
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = SMs1[1], .pName = "main", .pSpecializationInfo = nullptr }),
-		};
 #endif
+		};
 		const std::vector PCBASs1 = {
 			VkPipelineColorBlendAttachmentState({
 				.blendEnable = VK_FALSE,
@@ -439,16 +400,16 @@ protected:
 #pragma region PASS0
 		{
 			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
-				//!< レンダーターゲット : カラー(RenderTarget : Color)
-				ImageViews[0],
-	#pragma region MRT 
-				//!< レンダーターゲット : 法線(RenderTarget : Normal)
-				ImageViews[1],
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				ImageViews[2],
-				//!< レンダーターゲット : 未定
-				ImageViews[3],
-	#pragma endregion
+				//!< カラー(Color)
+				RenderTextures[0].View,
+#pragma region MRT 
+				//!< 法線(Normal)
+				RenderTextures[1].View,
+				//!< 深度(Depth)
+				RenderTextures[2].View,
+				//!< 未定
+				RenderTextures[3].View,
+#pragma endregion
 				//!< 深度バッファ(Depth Buffer)
 				DepthTextures.back().View,
 			});
@@ -564,16 +525,16 @@ protected:
 		for (size_t i = 0; i < SCCount; ++i) {
 			const DescriptorUpdateInfo_1 DUI = {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
-				VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
+				VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = RenderTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 #pragma region MRT 
 				//!< レンダーターゲット : 法線(RenderTarget : Normal)
-				VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = ImageViews[1], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
+				VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = RenderTextures[1].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = ImageViews[2], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
+				VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = RenderTextures[2].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 				//!< レンダーターゲット : 未定
-				VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = ImageViews[3], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
+				VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = RenderTextures[3].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 #pragma endregion
-				VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
+				VkDescriptorBufferInfo({.buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
 			};
 			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i + SCCount], DescriptorUpdateTemplates.back(), &DUI);
 		}

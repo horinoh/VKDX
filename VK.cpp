@@ -2118,6 +2118,40 @@ void VK::CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, cons
 	}
 #pragma endregion
 }
+
+void VK::CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags IUF)
+{
+	constexpr std::array<uint32_t, 0> QueueFamilyIndices = {};
+	const VkImageCreateInfo ICI = {
+		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.imageType = VK_IMAGE_TYPE_2D,
+		.format = Format,
+		.extent = VkExtent3D({.width = Width, .height = Height, .depth = 1}),
+		.mipLevels = 1,
+		.arrayLayers = 1,
+		.samples = VK_SAMPLE_COUNT_1_BIT,
+		.tiling = VK_IMAGE_TILING_OPTIMAL,
+		.usage = IUF,
+		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+		.queueFamilyIndexCount = static_cast<uint32_t>(size(QueueFamilyIndices)), .pQueueFamilyIndices = data(QueueFamilyIndices),
+		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
+	};
+	VERIFY_SUCCEEDED(vkCreateImage(Device, &ICI, GetAllocationCallbacks(), Image));
+
+	VkMemoryRequirements MR;
+	vkGetImageMemoryRequirements(Device, *Image, &MR);
+	const VkMemoryAllocateInfo MAI = {
+		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
+		.pNext = nullptr,
+		.allocationSize = MR.size,
+		.memoryTypeIndex = VK::GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
+	};
+	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, GetAllocationCallbacks(), DM));
+	VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Image, *DM, 0));
+}
+
 void VK::SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source)
 {
 	Scoped<BufferMemory> StagingBuffer(Device);

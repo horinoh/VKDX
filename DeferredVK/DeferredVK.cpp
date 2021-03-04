@@ -327,14 +327,14 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 		//!< メッシュ描画用
 		{
 			constexpr std::array CVs = {
-				//!< レンダーターゲット : カラー(RenderTarget : Color)
+				//!< カラー(Color)
 				VkClearValue({.color = Colors::SkyBlue}),
 #pragma region MRT
-				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				//!< 法線(Normal)
 				VkClearValue({.color = VkClearColorValue({0.5f, 0.5f, 1.0f, 1.0f})}),
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				//!< 深度(Depth)
 				VkClearValue({.color = Colors::Red}),
-				//!< レンダーターゲット : 未定
+				//!< 未定
 				VkClearValue({.color = Colors::SkyBlue}),
 #pragma endregion
 				VkClearValue({.depthStencil = VkClearDepthStencilValue({.depth = 1.0f, .stencil = 0 })}),
@@ -357,45 +357,45 @@ void DeferredVK::PopulateCommandBuffer(const size_t i)
 		//!< リソースバリア : VK_ACCESS_COLOR_ATTACHMENT_READ_BIT -> VK_ACCESS_SHADER_READ_BIT -> SubpassDependencyで代用可能かも？
 		{
 			const std::array IMBs = {
-				//!< レンダーターゲット : カラー(RenderTarget : Color)
+				//!< カラー(Color)
 				VkImageMemoryBarrier({
 					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 					.pNext = nullptr,
 					.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
 					.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.image = Images[0].Image,
+					.image = RenderTextures[0].Image,
 					.subresourceRange = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
 				}),
 #pragma region MRT
-				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				//!< 法線(Normal)
 				VkImageMemoryBarrier({
 					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 					.pNext = nullptr,
 					.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
 					.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.image = Images[1].Image,
+					.image = RenderTextures[1].Image,
 					.subresourceRange = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
 				}),
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				//!< 深度(Depth)
 				VkImageMemoryBarrier({
 					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 					.pNext = nullptr,
 					.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
 					.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.image = Images[2].Image,
+					.image = RenderTextures[2].Image,
 					.subresourceRange = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
 				}),
-				//!< レンダーターゲット : 未定
+				//!< 未定
 				VkImageMemoryBarrier({
 					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 					.pNext = nullptr,
 					.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
 					.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.image = Images[3].Image,
+					.image = RenderTextures[3].Image,
 					.subresourceRange = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
 				}),
 #pragma endregion

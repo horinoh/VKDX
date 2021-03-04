@@ -248,12 +248,12 @@ void RayTracingDX::CreateGeometry()
     {
         //!< バーテックスバッファ (VertexBuffer)
         constexpr std::array Vertices = { DirectX::XMFLOAT3({ 0.0f, 0.5f, 0.0f }), DirectX::XMFLOAT3({ -0.5f, -0.5f, 0.0f }), DirectX::XMFLOAT3({ 0.5f, -0.5f, 0.0f }), };
-		BufferResource VB;
+		ResourceBase VB;
         VB.Create(COM_PTR_GET(Device), sizeof(Vertices), D3D12_HEAP_TYPE_UPLOAD, data(Vertices));
 
         //!< インデックスバッファ (IndexBuffer)
         constexpr std::array Indices = { UINT32(0), UINT32(1), UINT32(2) };
-        BufferResource IB;
+        ResourceBase IB;
 		IB.Create(COM_PTR_GET(Device), sizeof(Indices), D3D12_HEAP_TYPE_UPLOAD, data(Indices));
 
         //!< ジオメトリ (Geometry)
@@ -305,7 +305,7 @@ void RayTracingDX::CreateGeometry()
                 .AccelerationStructure = COM_PTR_GET(BLASs.back().Resource)->GetGPUVirtualAddress()
             })
         };
-        BufferResource IB;
+        ResourceBase IB;
 		IB.Create(COM_PTR_GET(Device), sizeof(RIDs), D3D12_HEAP_TYPE_UPLOAD, data(RIDs));
 
         //!< インプット (Input)
@@ -427,7 +427,7 @@ void RayTracingDX::CreatePipelineState()
     [[maybe_unused]] const auto SI_Miss = SOP->GetShaderIdentifier(TEXT("MyMiss"));
     [[maybe_unused]] const auto SI_HitGroup = SOP->GetShaderIdentifier(TEXT("MyHitGroup"));
 
-	BufferResource ST; //#DX_TODO メンバにする
+	ResourceBase ST; //#DX_TODO メンバにする
 	//#DX_TODO
     D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
     D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT;

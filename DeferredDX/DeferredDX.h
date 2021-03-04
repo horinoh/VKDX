@@ -88,15 +88,15 @@ protected:
 		const auto W = static_cast<UINT64>(GetClientRectWidth());
 		const auto H = static_cast<UINT>(GetClientRectHeight());
 
-		//!< レンダーターゲット : カラー(RenderTarget : Color)
+		//!< カラー(Color)
 		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, DXGI_FORMAT_R8G8B8A8_UNORM, DirectX::Colors::SkyBlue.f);
 #pragma region MRT
-		//!< レンダーターゲット : 法線(RenderTarget : Normal)
+		//!< 法線(Normal)
 		constexpr FLOAT Color[] = { 0.5f, 0.5f, 1.0f, 1.0f };
 		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, DXGI_FORMAT_R10G10B10A2_UNORM, Color);
-		//!< レンダーターゲット : 深度(RenderTarget : Depth)
+		//!< 深度(Depth)
 		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, DXGI_FORMAT_R32_FLOAT, DirectX::Colors::Red.f);
-		//!< レンダーターゲット : 未定
+		//!< 未定
 		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, DXGI_FORMAT_R8G8B8A8_UNORM, DirectX::Colors::SkyBlue.f);
 #pragma endregion
 		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, DXGI_FORMAT_D24_UNORM_S8_UINT);
@@ -141,7 +141,7 @@ protected:
 #else
 			constexpr std::array DRs = { 
 #pragma region MRT
-				//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
+				//!< レンダーターゲット : カラー(Color), 法線(Normal), 深度(Depth), 未定
 				D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 4, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }),
 #pragma endregion
 				D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }),
@@ -275,7 +275,7 @@ protected:
 			}
 #pragma region MRT
 			{
-				//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
+				//!< レンダーターゲット : カラー(Color), 法線(Normal), 深度(Depth), 未定
 				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV, .NumDescriptors = 4, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 }; //!< 4RTV
 				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps.emplace_back())));
 			}
@@ -291,7 +291,7 @@ protected:
 		{
 #pragma region MRT
 			{
-				//!< レンダーターゲット : カラー(RenderTarget : Color), 法線(RenderTarget : Normal), 深度(RenderTarget : Depth), 未定
+				//!< レンダーターゲット : カラー(Color), 法線(Normal), 深度(Depth), 未定
 #pragma region FRAME_OBJECT
 				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 4 + SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< 4SRV + CBV * N
 #pragma endregion
@@ -322,14 +322,14 @@ protected:
 			{
 				const auto& DH = RtvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-				//!< レンダーターゲット : カラー(RenderTarget : Color)
+				//!< カラー(Color)
 				Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures[0].Resource), &RenderTextures[0].RTV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #pragma region MRT
-				//!< レンダーターゲット : 法線(RenderTarget : Normal)
+				//!< 法線(Normal)
 				Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures[1].Resource), &RenderTextures[1].RTV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				//!< レンダーターゲット : 深度(RenderTarget : Depth)
+				//!< 深度(Depth)
 				Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures[2].Resource), &RenderTextures[2].RTV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				//!< レンダーターゲット : 未定
+				//!< 未定
 				Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures[3].Resource), &RenderTextures[3].RTV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #pragma endregion
 			}

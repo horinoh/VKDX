@@ -124,7 +124,7 @@ public:
 	private:
 		VkDevice Device = VK_NULL_HANDLE;
 	};
-	class Memory
+	class DeviceMemoryBase
 	{
 	public:
 		VkDeviceMemory DeviceMemory = VK_NULL_HANDLE;
@@ -132,10 +132,10 @@ public:
 			if (VK_NULL_HANDLE != DeviceMemory) { vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks()); }
 		}
 	};
-	class BufferMemory : public Memory
+	class BufferMemory : public DeviceMemoryBase
 	{
 	private:
-		using Super = Memory;
+		using Super = DeviceMemoryBase;
 	public:
 		VkBuffer Buffer = VK_NULL_HANDLE;
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr) { 
@@ -190,43 +190,15 @@ public:
 	};
 	using StorageBuffer = BufferMemory;
 
-	class Texture : public Memory
+	class Texture : public DeviceMemoryBase
 	{
 	private:
-		using Super = Memory;
+		using Super = DeviceMemoryBase;
 	public:
 		VkImage Image = VK_NULL_HANDLE;
 		VkImageView View = VK_NULL_HANDLE;
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags IUF, const VkImageAspectFlags IAF) {
-			constexpr std::array<uint32_t, 0> QueueFamilyIndices = {};
-			const VkImageCreateInfo ICI = {
-				.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-				.pNext = nullptr,
-				.flags = 0,
-				.imageType = VK_IMAGE_TYPE_2D,
-				.format = Format,
-				.extent = VkExtent3D({.width = Width, .height = Height, .depth = 1}),
-				.mipLevels = 1,
-				.arrayLayers = 1,
-				.samples = VK_SAMPLE_COUNT_1_BIT,
-				.tiling = VK_IMAGE_TILING_OPTIMAL,
-				.usage = IUF,
-				.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-				.queueFamilyIndexCount = static_cast<uint32_t>(size(QueueFamilyIndices)), .pQueueFamilyIndices = data(QueueFamilyIndices),
-				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED
-			};
-			VERIFY_SUCCEEDED(vkCreateImage(Device, &ICI, GetAllocationCallbacks(), &Image));
-
-			VkMemoryRequirements MR;
-			vkGetImageMemoryRequirements(Device, Image, &MR);
-			const VkMemoryAllocateInfo MAI = {
-				.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-				.pNext = nullptr,
-				.allocationSize = MR.size,
-				.memoryTypeIndex = VK::GetMemoryTypeIndex(PDMP, MR.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-			};
-			VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, GetAllocationCallbacks(), &DeviceMemory));
-			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Image, DeviceMemory, 0));
+			VK::CreateImageMemory(&Image, &DeviceMemory, Device, PDMP, Format, Width, Height, IUF);
 
 			const VkImageViewCreateInfo IVCI = {
 				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -234,9 +206,9 @@ public:
 				.flags = 0,
 				.image = Image,
 				.viewType = VK_IMAGE_VIEW_TYPE_2D,
-				.format = ICI.format,
+				.format = Format,
 				.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
-				.subresourceRange = VkImageSubresourceRange({.aspectMask = IAF, .baseMipLevel = 0, .levelCount = ICI.mipLevels, .baseArrayLayer = 0, .layerCount = ICI.arrayLayers })
+				.subresourceRange = VkImageSubresourceRange({.aspectMask = IAF, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS })
 			};
 			VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &View));
 		}
@@ -423,6 +395,7 @@ protected:
 	virtual void LoadScene() {}
 
 	static void CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr);
+	static void CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags IUF);
 
 	virtual void SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source);
 	static void CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, 

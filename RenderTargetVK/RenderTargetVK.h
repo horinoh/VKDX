@@ -53,19 +53,7 @@ protected:
 	}
 	virtual void CreateTexture() override {
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-
-		//RenderTextures.emplace_back().Create(Device, PDMP, ColorFormat, SurfaceExtent2D.width, SurfaceExtent2D.height);
-		{
-			Images.emplace_back();
-			VK::CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, ColorFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }), 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-
-			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
-
-			ImageViews.emplace_back();
-			VK::CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, ColorFormat, VkComponentMapping({ .r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }), VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }));
-		}
-
+		RenderTextures.emplace_back().Create(Device, PDMP, ColorFormat, SurfaceExtent2D.width, SurfaceExtent2D.height);
 #ifdef USE_DEPTH
 		DepthTextures.emplace_back().Create(Device, PDMP, DepthFormat, SurfaceExtent2D.width, SurfaceExtent2D.height);
 #endif
@@ -306,8 +294,7 @@ protected:
 
 #pragma region PASS0
 		VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
-			ImageViews[0],
-			//RenderTextures.back().View,
+			RenderTextures.back().View,
 #ifdef USE_DEPTH
 			DepthTextures.back().View,
 #endif
@@ -362,8 +349,7 @@ protected:
 			}),
 		}, DescriptorSetLayouts[0]);
 		const DescriptorUpdateInfo DUI = {
-			VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
-			//VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = RenderTextures.back().View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
+			VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = RenderTextures.back().View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 		};
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 #pragma endregion
