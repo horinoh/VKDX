@@ -20,7 +20,6 @@ protected:
 		IndirectBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DIC, CommandBuffers[0], GraphicsQueue);
 	}
 #endif
-	virtual void CreateRenderPass() { VK::CreateRenderPass(VK_ATTACHMENT_LOAD_OP_DONT_CARE, false); }
 	virtual void CreatePipeline() override {
 		const auto ShaderPath = GetBasePath();
 #ifdef USE_DISTANCE_FUNCTION

@@ -176,6 +176,9 @@ protected:
 		}
 	}
 	virtual void CreateRenderPass() override { 
+#if 1
+		VKExt::CreateRenderPass_Depth();
+#else
 		RenderPasses.emplace_back(VkRenderPass());
 		const std::array ColorAttach = { VkAttachmentReference({ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
 		const VkAttachmentReference DepthAttach = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
@@ -210,6 +213,7 @@ protected:
 			}, {
 				//!< サブパス依存
 			});
+#endif
 	}
 	virtual void AllocateCommandBuffer() override {
 		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));

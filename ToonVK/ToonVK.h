@@ -47,7 +47,7 @@ protected:
 #ifdef USE_DEPTH
 	//!< 深度テクスチャ
 	virtual void CreateTexture() override {		
-		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, SurfaceExtent2D.width, SurfaceExtent2D.height);
+		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
 	}
 #endif
 	virtual void CreatePipelineLayout() override {
@@ -57,7 +57,7 @@ protected:
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 #ifdef USE_DEPTH
-	virtual void CreateRenderPass() override { VK::CreateRenderPass(VK_ATTACHMENT_LOAD_OP_CLEAR, true); }
+	virtual void CreateRenderPass() override { VKExt::CreateRenderPass_Depth(); }
 #endif
 	virtual void CreatePipeline() override { 
 		const auto ShaderPath = GetBasePath();

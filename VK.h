@@ -197,15 +197,15 @@ public:
 	public:
 		VkImage Image = VK_NULL_HANDLE;
 		VkImageView View = VK_NULL_HANDLE;
-		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags IUF, const VkImageAspectFlags IAF) {
-			VK::CreateImageMemory(&Image, &DeviceMemory, Device, PDMP, Format, Width, Height, IUF);
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent, const VkImageUsageFlags IUF, const VkImageAspectFlags IAF) {
+			VK::CreateImageMemory(&Image, &DeviceMemory, Device, PDMP, Format, Extent, IUF);
 
 			const VkImageViewCreateInfo IVCI = {
 				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 				.pNext = nullptr,
 				.flags = 0,
 				.image = Image,
-				.viewType = VK_IMAGE_VIEW_TYPE_2D,
+				.viewType = Extent.depth == 1 ? VK_IMAGE_VIEW_TYPE_2D : VK_IMAGE_VIEW_TYPE_2D_ARRAY,
 				.format = Format,
 				.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
 				.subresourceRange = VkImageSubresourceRange({.aspectMask = IAF, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS })
@@ -223,8 +223,8 @@ public:
 	private:
 		using Super = Texture;
 	public:
-		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const uint32_t Width, const uint32_t Height) {
-			Super::Create(Device, PDMP, Format, Width, Height, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent) {
+			Super::Create(Device, PDMP, Format, Extent, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT);
 		}
 	};
 	class RenderTexture : public Texture
@@ -232,8 +232,8 @@ public:
 	private:
 		using Super = Texture;
 	public:
-		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const uint32_t Width, const uint32_t Height) {
-			Super::Create(Device, PDMP, Format, Width, Height, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent) {
+			Super::Create(Device, PDMP, Format, Extent, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
 		}
 	};
 
@@ -395,7 +395,7 @@ protected:
 	virtual void LoadScene() {}
 
 	static void CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr);
-	static void CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags IUF);
+	static void CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent, const VkImageUsageFlags IUF);
 
 	virtual void SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source);
 	static void CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, 
@@ -495,8 +495,7 @@ protected:
 	virtual void CreateSampler() {}
 
 	virtual void CreateRenderPass(VkRenderPass& RP, const std::vector<VkAttachmentDescription>& ADs, const std::vector<VkSubpassDescription> &SDs, const std::vector<VkSubpassDependency>& Deps);
-	virtual void CreateRenderPass(const VkAttachmentLoadOp LoadOp, const bool UseDepth);
-	virtual void CreateRenderPass() { CreateRenderPass(VK_ATTACHMENT_LOAD_OP_CLEAR, false); }
+	virtual void CreateRenderPass();
 
 	virtual void CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::vector<VkImageView>& IVs);
 	virtual void CreateFramebuffer() {
@@ -688,6 +687,7 @@ protected:
 	using Image = struct Image;
 	std::vector<Image> Images;
 	std::vector<VkImageView> ImageViews; //!< Imageはビューを使用する
+	std::vector<Texture> Textures;
 	std::vector<DepthTexture> DepthTextures;
 	std::vector<RenderTexture> RenderTextures;
 

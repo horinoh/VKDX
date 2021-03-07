@@ -26,6 +26,7 @@ protected:
 #endif
 		});
 	}
+	virtual void CreateRenderPass() override { VKExt::CreateRenderPass_Clear(); }
 	virtual void CreatePipeline() override {
 		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {

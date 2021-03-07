@@ -87,18 +87,19 @@ protected:
 	}
 	virtual void CreateTexture() override {
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto Extent = VkExtent3D({.width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 });
 		//!< カラー(Color)
-		RenderTextures.emplace_back().Create(Device, PDMP, ColorFormat, SurfaceExtent2D.width, SurfaceExtent2D.height);
+		RenderTextures.emplace_back().Create(Device, PDMP, ColorFormat, Extent);
 #pragma region MRT 
 		//!< 法線(Normal)
-		RenderTextures.emplace_back().Create(Device, PDMP, VK_FORMAT_A2B10G10R10_UNORM_PACK32, SurfaceExtent2D.width, SurfaceExtent2D.height);
+		RenderTextures.emplace_back().Create(Device, PDMP, VK_FORMAT_A2B10G10R10_UNORM_PACK32, Extent);
 		//!< 深度(Depth)
-		RenderTextures.emplace_back().Create(Device, PDMP, VK_FORMAT_R32_SFLOAT, SurfaceExtent2D.width, SurfaceExtent2D.height);
+		RenderTextures.emplace_back().Create(Device, PDMP, VK_FORMAT_R32_SFLOAT, Extent);
 		//!< 未定
-		RenderTextures.emplace_back().Create(Device, PDMP, VK_FORMAT_B8G8R8A8_UNORM, SurfaceExtent2D.width, SurfaceExtent2D.height);
+		RenderTextures.emplace_back().Create(Device, PDMP, VK_FORMAT_B8G8R8A8_UNORM, Extent);
 #pragma endregion
 		//!< 深度バッファ(Depth Buffer)
-		DepthTextures.emplace_back().Create(Device, PDMP, DepthFormat, SurfaceExtent2D.width, SurfaceExtent2D.height);
+		DepthTextures.emplace_back().Create(Device, PDMP, DepthFormat, Extent);
 	}
 	virtual void CreateImmutableSampler() override {
 #pragma region PASS1
@@ -151,7 +152,7 @@ protected:
 	virtual void CreateRenderPass() override {
 #pragma region PASS0
 		{
-			constexpr std::array ColorAttach = {
+			constexpr std::array CAs = {
 				//!< カラー(Color)
 				VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }),
 #pragma region MRT 
@@ -163,7 +164,7 @@ protected:
 				VkAttachmentReference({.attachment = 3, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }),
 #pragma endregion
 			};
-			constexpr VkAttachmentReference DepthAttach = { .attachment = static_cast<uint32_t>(size(ColorAttach)), .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+			constexpr VkAttachmentReference DA = { .attachment = static_cast<uint32_t>(size(CAs)), .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 			VK::CreateRenderPass(RenderPasses.emplace_back(), {
 				//!< カラー(Color)
 				VkAttachmentDescription({
@@ -217,8 +218,8 @@ protected:
 					.flags = 0,
 					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
 					.inputAttachmentCount = 0, .pInputAttachments = nullptr,
-					.colorAttachmentCount = static_cast<uint32_t>(size(ColorAttach)), .pColorAttachments = data(ColorAttach), .pResolveAttachments = nullptr,
-					.pDepthStencilAttachment = &DepthAttach,
+					.colorAttachmentCount = static_cast<uint32_t>(size(CAs)), .pColorAttachments = data(CAs), .pResolveAttachments = nullptr,
+					.pDepthStencilAttachment = &DA,
 					.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
 				}),
 			}, {});
@@ -226,28 +227,7 @@ protected:
 #pragma endregion
 
 #pragma region PASS1
-		{
-			constexpr std::array ColorAttach = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
-			VK::CreateRenderPass(RenderPasses.emplace_back(), {
-				VkAttachmentDescription({
-					.flags = 0,
-					.format = ColorFormat,
-					.samples = VK_SAMPLE_COUNT_1_BIT,
-					.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-				}),
-			}, {
-				VkSubpassDescription({
-					.flags = 0,
-					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-					.inputAttachmentCount = 0, .pInputAttachments = nullptr,
-					.colorAttachmentCount = static_cast<uint32_t>(size(ColorAttach)), .pColorAttachments = data(ColorAttach), .pResolveAttachments = nullptr,
-					.pDepthStencilAttachment = nullptr,
-					.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
-				}),
-			}, {});
-		}
+		VK::CreateRenderPass();
 #pragma endregion
 	}
 	virtual void CreatePipeline() override {

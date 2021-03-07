@@ -98,19 +98,10 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateTexture() override {
-		const VkExtent3D Extent3D = { .width = QuiltExtent2D.width, .height = QuiltExtent2D.height, .depth = 1 };
-		const VkComponentMapping CM = { .r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A };
-		{
-			Images.emplace_back();
-			VK::CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, ColorFormat, Extent3D, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-
-			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
-
-			ImageViews.emplace_back();
-			VK::CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, ColorFormat, CM, VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 }));
-		}
-		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, QuiltExtent2D.width, QuiltExtent2D.height);
+		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto Extent = VkExtent3D({ .width = QuiltExtent2D.width, .height = QuiltExtent2D.height, .depth = 1 });
+		RenderTextures.emplace_back().Create(Device, PDMP, ColorFormat, Extent);
+		DepthTextures.emplace_back().Create(Device, PDMP, DepthFormat, Extent);
 	}
 	virtual void CreateImmutableSampler() override {
 #pragma region PASS1
@@ -158,8 +149,8 @@ protected:
 	virtual void CreateRenderPass() override {
 #pragma region PASS0
 		{
-			const std::array ColorAttach = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
-			const VkAttachmentReference DepthAttach = { .attachment = static_cast<uint32_t>(size(ColorAttach)), .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+			const std::array CAs = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
+			const auto DA = VkAttachmentReference({ .attachment = static_cast<uint32_t>(size(CAs)), .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL });
 			VK::CreateRenderPass(RenderPasses.emplace_back(), {
 				VkAttachmentDescription({
 					.flags = 0,
@@ -182,8 +173,8 @@ protected:
 					.flags = 0,
 					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
 					.inputAttachmentCount = 0, .pInputAttachments = nullptr,
-					.colorAttachmentCount = static_cast<uint32_t>(size(ColorAttach)), .pColorAttachments = data(ColorAttach), .pResolveAttachments = nullptr,
-					.pDepthStencilAttachment = &DepthAttach,
+					.colorAttachmentCount = static_cast<uint32_t>(size(CAs)), .pColorAttachments = data(CAs), .pResolveAttachments = nullptr,
+					.pDepthStencilAttachment = &DA,
 					.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
 				}),
 			}, { });
@@ -192,7 +183,7 @@ protected:
 
 #pragma region PASS1
 		{
-			const std::array ColorAttach = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
+			const std::array CAs = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
 			VK::CreateRenderPass(RenderPasses.emplace_back(), {
 				VkAttachmentDescription({
 					.flags = 0,
@@ -207,7 +198,7 @@ protected:
 					.flags = 0,
 					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
 					.inputAttachmentCount = 0, .pInputAttachments = nullptr,
-					.colorAttachmentCount = static_cast<uint32_t>(size(ColorAttach)), .pColorAttachments = data(ColorAttach), .pResolveAttachments = nullptr,
+					.colorAttachmentCount = static_cast<uint32_t>(size(CAs)), .pColorAttachments = data(CAs), .pResolveAttachments = nullptr,
 					.pDepthStencilAttachment = nullptr,
 					.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
 				}),
@@ -241,8 +232,8 @@ protected:
 			.depthTestEnable = VK_TRUE, .depthWriteEnable = VK_TRUE, .depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
 			.depthBoundsTestEnable = VK_FALSE,
 			.stencilTestEnable = VK_FALSE,
-			.front = {.failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP, .compareOp = VK_COMPARE_OP_NEVER, .compareMask = 0, .writeMask = 0, .reference = 0 },
-			.back = {.failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP, .compareOp = VK_COMPARE_OP_ALWAYS, .compareMask = 0, .writeMask = 0, .reference = 0 },
+			.front = VkStencilOpState({.failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP, .compareOp = VK_COMPARE_OP_NEVER, .compareMask = 0, .writeMask = 0, .reference = 0 }),
+			.back = VkStencilOpState({.failOp = VK_STENCIL_OP_KEEP, .passOp = VK_STENCIL_OP_KEEP, .depthFailOp = VK_STENCIL_OP_KEEP, .compareOp = VK_COMPARE_OP_ALWAYS, .compareMask = 0, .writeMask = 0, .reference = 0 }),
 			.minDepthBounds = 0.0f, .maxDepthBounds = 1.0f
 		};
 		const std::vector<VkVertexInputBindingDescription> VIBDs = {};
@@ -302,7 +293,7 @@ protected:
 	virtual void CreateFramebuffer() override {
 #pragma region PASS0
 		VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], QuiltExtent2D.width, QuiltExtent2D.height, 1, {
-			ImageViews[0],
+			RenderTextures[0].View,
 			DepthTextures.back().View
 		});
 #pragma endregion
@@ -382,7 +373,7 @@ protected:
 			}),
 		}, DescriptorSetLayouts[1]);
 		const DescriptorUpdateInfo_1 DUI = {
-			VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
+			VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = RenderTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 		};
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[size(SwapchainImages)], DescriptorUpdateTemplates.back(), &DUI);
 #pragma endregion

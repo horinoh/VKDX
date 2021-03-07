@@ -53,9 +53,9 @@ protected:
 	}
 	virtual void CreateTexture() override {
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-		RenderTextures.emplace_back().Create(Device, PDMP, ColorFormat, SurfaceExtent2D.width, SurfaceExtent2D.height);
+		RenderTextures.emplace_back().Create(Device, PDMP, ColorFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
 #ifdef USE_DEPTH
-		DepthTextures.emplace_back().Create(Device, PDMP, DepthFormat, SurfaceExtent2D.width, SurfaceExtent2D.height);
+		DepthTextures.emplace_back().Create(Device, PDMP, DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
 #endif
 	}
 	virtual void CreateImmutableSampler() override {
@@ -133,9 +133,16 @@ protected:
 	
 #pragma region PASS0
 		{
-			constexpr std::array ColorAttach = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
+#if 0
 #ifdef USE_DEPTH
-			const VkAttachmentReference DepthAttach = { .attachment = static_cast<uint32_t>(size(ColorAttach)), .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
+			VKExt::CreateRenderPass_Depth();
+#else
+			VKExt::CreateRenderPass_Clear();
+#endif
+#else
+			constexpr std::array CAs = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
+#ifdef USE_DEPTH
+			constexpr auto DA = VkAttachmentReference({ .attachment = static_cast<uint32_t>(size(CAs)), .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL });
 #endif
 			VK::CreateRenderPass(RenderPasses.emplace_back(), {
 				VkAttachmentDescription({
@@ -161,41 +168,21 @@ protected:
 					.flags = 0,
 					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
 					.inputAttachmentCount = 0, .pInputAttachments = nullptr,
-					.colorAttachmentCount = static_cast<uint32_t>(size(ColorAttach)), .pColorAttachments = data(ColorAttach), .pResolveAttachments = nullptr,
+					.colorAttachmentCount = static_cast<uint32_t>(size(CAs)), .pColorAttachments = data(CAs), .pResolveAttachments = nullptr,
 #ifdef USE_DEPTH
-					.pDepthStencilAttachment = &DepthAttach,
+					.pDepthStencilAttachment = &DA,
 #else
 					.pDepthStencilAttachment = nullptr,
 #endif
 					.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
 				}),
 			}, {});
+#endif
 		}
 #pragma endregion
 
 #pragma region PASS1
-		{
-			constexpr std::array ColorAttach = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
-			VK::CreateRenderPass(RenderPasses.emplace_back(), {
-				VkAttachmentDescription({
-					.flags = 0,
-					.format = ColorFormat,
-					.samples = VK_SAMPLE_COUNT_1_BIT,
-					.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-				}),
-			}, {
-				VkSubpassDescription({
-					.flags = 0,
-					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-					.inputAttachmentCount = 0, .pInputAttachments = nullptr,
-					.colorAttachmentCount = static_cast<uint32_t>(size(ColorAttach)), .pColorAttachments = data(ColorAttach), .pResolveAttachments = nullptr,
-					.pDepthStencilAttachment = nullptr,
-					.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
-				}),
-			}, {});
-		}
+		VK::CreateRenderPass();
 #pragma endregion
 	}
 	virtual void CreatePipeline() override {

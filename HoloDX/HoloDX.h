@@ -89,6 +89,11 @@ protected:
 		}
 #pragma endregion
 	}
+	virtual void CreateTexture()
+	{
+		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), QuiltWidth, QuiltHeight, 1, D3D12_CLEAR_VALUE({.Format = DXGI_FORMAT_R8G8B8A8_UNORM, .Color = { DirectX::Colors::SkyBlue.f[0], DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] } }));
+		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), QuiltWidth, QuiltHeight, 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
+	}
 	virtual void CreateStaticSampler() override {
 #pragma region PASS1
 		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
@@ -156,50 +161,6 @@ protected:
 		}
 #pragma endregion
 		LOG_OK();
-	}
-	virtual void CreateTexture()
-	{
-		const D3D12_HEAP_PROPERTIES HP = {
-			.Type = D3D12_HEAP_TYPE_DEFAULT,
-			.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-			.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
-			.CreationNodeMask = 0,
-			.VisibleNodeMask = 0
-		};
-		const DXGI_SAMPLE_DESC SD = { .Count = 1, .Quality = 0 };
-
-		{
-			const D3D12_RESOURCE_DESC RD = {
-				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				.Alignment = 0,
-				.Width = QuiltWidth, .Height = QuiltHeight,
-				.DepthOrArraySize = 1,
-				.MipLevels = 1,
-				.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
-				.SampleDesc = SD,
-				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				.Flags = D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
-			};
-			const D3D12_CLEAR_VALUE CV = {
-				.Format = RD.Format,
-				.Color = { DirectX::Colors::SkyBlue.f[0], DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] },
-			};
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_RENDER_TARGET, &CV, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
-
-			RenderTargetViewDescs.emplace_back(D3D12_RENDER_TARGET_VIEW_DESC({
-				.Format = ImageResources.back()->GetDesc().Format,
-				.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
-				.Texture2D = D3D12_TEX2D_RTV({.MipSlice = 0, .PlaneSlice = 0 })
-			}));
-
-			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
-				.Format = ImageResources.back()->GetDesc().Format,
-				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
-			}));
-		}
-		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), QuiltWidth, QuiltHeight, DXGI_FORMAT_D24_UNORM_S8_UINT);
 	}
 	virtual void CreatePipelineState() override {
 		std::vector<std::thread> Threads;
@@ -323,7 +284,7 @@ protected:
 			{
 				const auto& DH = RtvDescriptorHeaps[0];
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-				Device->CreateRenderTargetView(COM_PTR_GET(ImageResources[0]), &RenderTargetViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures[0].Resource), &RenderTextures[0].RTV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
 			{
 				const auto& DH = DsvDescriptorHeaps[0];
@@ -338,7 +299,7 @@ protected:
 			const auto& DH = CbvSrvUavDescriptorHeaps[1];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 			{
-				Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				Device->CreateShaderResourceView(COM_PTR_GET(RenderTextures[0].Resource), &RenderTextures[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
 		}
 #pragma endregion

@@ -73,7 +73,7 @@ protected:
 		}
 #if !defined(USE_SKY_DOME)
 		//!< [2] [“x(DepthMap)
-		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, SurfaceExtent2D.width, SurfaceExtent2D.height);
+		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
 #endif
 	}
 	virtual void CreateImmutableSampler() override {
@@ -106,6 +106,9 @@ protected:
 	}
 #if !defined(USE_SKY_DOME)
 	virtual void CreateRenderPass() override {
+#if 1
+		VKExt::CreateRenderPass_Depth();
+#else
 		constexpr std::array ColorAttach = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
 		constexpr VkAttachmentReference DepthAttach = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 		VK::CreateRenderPass(RenderPasses.emplace_back(), {
@@ -135,6 +138,7 @@ protected:
 				.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
 			}),
 		}, {});
+#endif
 	}
 #endif
 	virtual void CreatePipeline() override {

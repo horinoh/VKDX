@@ -89,17 +89,16 @@ protected:
 		const auto H = static_cast<UINT>(GetClientRectHeight());
 
 		//!< カラー(Color)
-		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, DXGI_FORMAT_R8G8B8A8_UNORM, DirectX::Colors::SkyBlue.f);
+		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_R8G8B8A8_UNORM, .Color = { DirectX::Colors::SkyBlue.f[0], DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] } }));
 #pragma region MRT
 		//!< 法線(Normal)
-		constexpr FLOAT Color[] = { 0.5f, 0.5f, 1.0f, 1.0f };
-		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, DXGI_FORMAT_R10G10B10A2_UNORM, Color);
+		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, 1, D3D12_CLEAR_VALUE({.Format = DXGI_FORMAT_R10G10B10A2_UNORM, .Color = { 0.5f, 0.5f, 1.0f, 1.0f} }));
 		//!< 深度(Depth)
-		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, DXGI_FORMAT_R32_FLOAT, DirectX::Colors::Red.f);
+		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_R32_FLOAT, .Color = { DirectX::Colors::Red.f[0], DirectX::Colors::Red.f[1], DirectX::Colors::Red.f[2], DirectX::Colors::Red.f[3] } }));
 		//!< 未定
-		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, DXGI_FORMAT_R8G8B8A8_UNORM, DirectX::Colors::SkyBlue.f);
+		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_R8G8B8A8_UNORM, .Color = { DirectX::Colors::SkyBlue.f[0], DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] } }));
 #pragma endregion
-		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, DXGI_FORMAT_D24_UNORM_S8_UINT);
+		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
 	}
 	virtual void CreateStaticSampler() override {
 #pragma region PASS1

@@ -218,7 +218,7 @@ void DX::CreateTextureResource(ID3D12Resource** Resource, const DXGI_FORMAT Form
 	));
 }
 
-void DX::CreateTextureResource(ID3D12Resource** Resource, ID3D12Device* Device, const UINT64 Width, const UINT Height, const DXGI_FORMAT Format, const D3D12_RESOURCE_FLAGS RF, const D3D12_RESOURCE_STATES RS, const D3D12_CLEAR_VALUE& CV)
+void DX::CreateTextureResource(ID3D12Resource** Resource, ID3D12Device* Device, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize, const UINT16 MipLevels, const DXGI_FORMAT Format, const D3D12_RESOURCE_FLAGS RF, const D3D12_RESOURCE_STATES RS)
 {
 	constexpr D3D12_HEAP_PROPERTIES HP = {
 		.Type = D3D12_HEAP_TYPE_DEFAULT,
@@ -230,13 +230,36 @@ void DX::CreateTextureResource(ID3D12Resource** Resource, ID3D12Device* Device, 
 		.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
 		.Alignment = 0,
 		.Width = Width, .Height = Height,
-		.DepthOrArraySize = 1,
-		.MipLevels = 1,
+		.DepthOrArraySize = DepthOrArraySize,
+		.MipLevels = MipLevels,
 		.Format = Format,
 		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
 		.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		.Flags = RF
 	};
+	assert(!(RD.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) && "pOptimizedClearValue を使用しない");
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, RS, nullptr, IID_PPV_ARGS(Resource)));
+}
+void DX::CreateRenderTextureResource(ID3D12Resource** Resource, ID3D12Device* Device, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize, const UINT16 MipLevels, const D3D12_CLEAR_VALUE& CV, const D3D12_RESOURCE_FLAGS RF, const D3D12_RESOURCE_STATES RS)
+{
+	constexpr D3D12_HEAP_PROPERTIES HP = {
+		.Type = D3D12_HEAP_TYPE_DEFAULT,
+		.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
+		.CreationNodeMask = 0, .VisibleNodeMask = 0
+	};
+	const D3D12_RESOURCE_DESC RD = {
+		.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
+		.Alignment = 0,
+		.Width = Width, .Height = Height,
+		.DepthOrArraySize = DepthOrArraySize,
+		.MipLevels = MipLevels,
+		.Format = CV.Format,
+		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+		.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
+		.Flags = RF
+	};
+	assert(RD.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) && "RENDER_TARGET, DEPTH_STENCIL の場合 pOptimizedClearValue を使用する");
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, RS, &CV, IID_PPV_ARGS(Resource)));
 }
 
@@ -1343,10 +1366,6 @@ void DX::CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* D
 
 void DX::CreateTexture1x1(const UINT32 Color, const D3D12_RESOURCE_STATES RS)
 {
-	//const std::array Colors = { Color };
-	constexpr auto PitchSize = 1 * static_cast<UINT32>(sizeof(Color));
-	constexpr auto LayerSize = 1 * PitchSize;
-
 	ImageResources.emplace_back(COM_PTR<ID3D12Resource>());
 	constexpr auto RD = D3D12_RESOURCE_DESC({
 		.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
@@ -1368,7 +1387,18 @@ void DX::CreateTexture1x1(const UINT32 Color, const D3D12_RESOURCE_STATES RS)
 	//!< D3D12_RESOURCE_STATE_COPY_DEST にすること
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, COM_PTR_UUIDOF_PUTVOID(ImageResources.back()))); 
 
+	//!< ビューの作成 (Create view)
+	ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
+		.Format = ImageResources.back()->GetDesc().Format,
+		.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+		.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+		.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
+		}));
+
 	{
+		constexpr auto PitchSize = 1 * static_cast<UINT32>(sizeof(Color));
+		constexpr auto LayerSize = 1 * PitchSize;
+
 		const auto CA = COM_PTR_GET(CommandAllocators[0]);
 		const auto CL = COM_PTR_GET(GraphicsCommandLists[0]);
 
@@ -1391,14 +1421,6 @@ void DX::CreateTexture1x1(const UINT32 Color, const D3D12_RESOURCE_STATES RS)
 		//!< コマンドの実行 (Execute command)
 		ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
 	}
-
-	//!< ビューの作成 (Create view)
-	ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
-		.Format = ImageResources.back()->GetDesc().Format,
-		.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
-		.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-		.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
-		}));
 }
 
 //!< ABRG
@@ -1407,10 +1429,7 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 #pragma region TEX_ARRAY
 	const auto Layers = static_cast<UINT32>(size(Colors));
 #pragma endregion
-	constexpr auto PitchSize = 1 * static_cast<UINT32>(sizeof(Colors[0]));
-	constexpr auto LayerSize = 1 * PitchSize;
 
-	ImageResources.emplace_back(COM_PTR<ID3D12Resource>());
 	const auto RD = D3D12_RESOURCE_DESC({
 		.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
 		.Alignment = 0,
@@ -1430,9 +1449,23 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 		.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
 		.CreationNodeMask = 0, .VisibleNodeMask = 0
 	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, COM_PTR_UUIDOF_PUTVOID(ImageResources.back())));
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
+
+	ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
+		.Format = ImageResources.back()->GetDesc().Format,
+#pragma region TEX_ARRAY
+		.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY,
+#pragma endregion
+		.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+		.Texture2DArray = D3D12_TEX2D_ARRAY_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .FirstArraySlice = 0, .ArraySize = Layers, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
+	}));
+
+	//Textures.emplace_back().Create(COM_PTR_GET(Device), 1, 1, static_cast<UINT16>(Layers), DXGI_FORMAT_R8G8B8A8_UNORM);
 
 	{
+		constexpr auto PitchSize = 1 * static_cast<UINT32>(sizeof(Colors[0]));
+		constexpr auto LayerSize = 1 * PitchSize;
+
 		const auto CA = COM_PTR_GET(CommandAllocators[0]);
 		const auto CL = COM_PTR_GET(GraphicsCommandLists[0]);
 
@@ -1468,15 +1501,6 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 
 		ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
 	}
-
-	ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
-		.Format = ImageResources.back()->GetDesc().Format,
-#pragma region TEX_ARRAY
-		.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY,
-#pragma endregion
-		.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-		.Texture2DArray = D3D12_TEX2D_ARRAY_SRV({ .MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .FirstArraySlice = 0, .ArraySize = Layers, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
-		}));
 }
 
 #if 0

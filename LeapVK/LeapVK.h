@@ -136,7 +136,6 @@ protected:
 		});
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
-	virtual void CreateRenderPass() { VK::CreateRenderPass(VK_ATTACHMENT_LOAD_OP_DONT_CARE, false); }
 	virtual void CreatePipeline() override { 
 		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {

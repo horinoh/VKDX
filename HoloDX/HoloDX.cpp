@@ -264,7 +264,7 @@ void HoloDX::PopulateCommandList(const size_t i)
 	VERIFY_SUCCEEDED(GCL->Reset(CA, PS1));
 	{
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-		const auto IR = COM_PTR_GET(ImageResources[0]);
+		const auto RT = COM_PTR_GET(RenderTextures[0].Resource);
 
 #pragma region PASS0
 		//!< ƒƒbƒVƒ…•`‰æ—p
@@ -323,7 +323,7 @@ void HoloDX::PopulateCommandList(const size_t i)
 				D3D12_RESOURCE_BARRIER({
 					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = IR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET, .StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE })
+					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = RT, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET, .StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE })
 				}),
 			};
 			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
@@ -365,7 +365,7 @@ void HoloDX::PopulateCommandList(const size_t i)
 				D3D12_RESOURCE_BARRIER({
 					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, 
 					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = IR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, .StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET })
+					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = RT, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, .StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET })
 				}),
 			};
 			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));

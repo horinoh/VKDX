@@ -210,6 +210,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 
 	for (auto& i : RenderTextures) { i.Destroy(Device); } RenderTextures.clear();
 	for (auto& i : DepthTextures) { i.Destroy(Device); } DepthTextures.clear();
+	for (auto& i : Textures) { i.Destroy(Device); } Textures.clear();
 	for (auto& i : ImageViews) {
 		vkDestroyImageView(Device, i, GetAllocationCallbacks());
 	}
@@ -2119,7 +2120,7 @@ void VK::CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, cons
 #pragma endregion
 }
 
-void VK::CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags IUF)
+void VK::CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent, const VkImageUsageFlags IUF)
 {
 	constexpr std::array<uint32_t, 0> QueueFamilyIndices = {};
 	const VkImageCreateInfo ICI = {
@@ -2128,7 +2129,7 @@ void VK::CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice De
 		.flags = 0,
 		.imageType = VK_IMAGE_TYPE_2D,
 		.format = Format,
-		.extent = VkExtent3D({.width = Width, .height = Height, .depth = 1}),
+		.extent = Extent,
 		.mipLevels = 1,
 		.arrayLayers = 1,
 		.samples = VK_SAMPLE_COUNT_1_BIT,
@@ -2366,9 +2367,6 @@ void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const s
 
 void VK::CreateTexture1x1(const uint32_t Color, const VkPipelineStageFlags PSF)
 {
-	const std::array Colors = { Color };
-	constexpr auto LayerSize = sizeof(Colors[0]);
-	constexpr auto TotalSize = 1 * LayerSize;
 	constexpr auto Format = VK_FORMAT_R8G8B8A8_UNORM;
 	constexpr auto Extent = VkExtent3D({ .width = 1, .height = 1, .depth = 1 });
 
@@ -2377,7 +2375,25 @@ void VK::CreateTexture1x1(const uint32_t Color, const VkPipelineStageFlags PSF)
 	AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
+	//!< ビューの作成 (Create view)
+	ImageViews.emplace_back(VkImageView());
+	const VkImageViewCreateInfo IVCI = {
+		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.image = Images.back().Image,
+		.viewType = VK_IMAGE_VIEW_TYPE_2D,
+		.format = Format,
+		.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
+		.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS }),
+	};
+	VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.back()));
+
 	{
+		const std::array Colors = { Color };
+		constexpr auto LayerSize = sizeof(Colors[0]);
+		constexpr auto TotalSize = 1 * LayerSize;
+
 		VkBuffer Buffer;
 		VkDeviceMemory DeviceMemory;
 		{
@@ -2404,20 +2420,6 @@ void VK::CreateTexture1x1(const uint32_t Color, const VkPipelineStageFlags PSF)
 		vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
 		vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
 	}
-
-	//!< ビューの作成 (Create view)
-	ImageViews.emplace_back(VkImageView());
-	const VkImageViewCreateInfo IVCI = {
-		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = 0,
-		.image = Images.back().Image,
-		.viewType = VK_IMAGE_VIEW_TYPE_2D,
-		.format = Format,
-		.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
-		.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS }),
-	};
-	VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.back()));
 }
 
 //!< ABRG
@@ -2426,19 +2428,36 @@ void VK::CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipe
 #pragma region TEX_ARRAY
 	const auto Layers = static_cast<uint32_t>(size(Colors));
 #pragma endregion
-	constexpr auto LayerSize = static_cast<uint32_t>(sizeof(Colors[0]));
-	const auto TotalSize = Layers * LayerSize;
 	constexpr auto Format = VK_FORMAT_R8G8B8A8_UNORM;
 	constexpr auto Extent = VkExtent3D({ .width = 1, .height = 1, .depth = 1 });
 
-	Images.emplace_back(Image());
+	Images.emplace_back();
 #pragma region TEX_ARRAY
 	CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 #pragma endregion
 	AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 	VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
 
+	const VkImageViewCreateInfo IVCI = {
+		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.image = Images.back().Image,
+#pragma region TEX_ARRAY
+		.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+#pragma endregion
+		.format = Format,
+		.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
+		.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS }),
+	};
+	VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.emplace_back()));
+
+	//Textures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_FORMAT_R8G8B8A8_UNORM, VkExtent3D({.width = 1, .height = 1, .depth = 1}), VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
+
 	{
+		constexpr auto LayerSize = static_cast<uint32_t>(sizeof(Colors[0]));
+		const auto TotalSize = Layers * LayerSize;
+
 		VkBuffer Buffer;
 		VkDeviceMemory DeviceMemory;
 		{
@@ -2465,21 +2484,6 @@ void VK::CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipe
 		vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
 		vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
 	}
-
-	ImageViews.emplace_back(VkImageView());
-	const VkImageViewCreateInfo IVCI = {
-		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = 0,
-		.image = Images.back().Image,
-#pragma region TEX_ARRAY
-		.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-#pragma endregion
-		.format = Format,
-		.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
-		.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS }),
-	};
-	VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.back()));
 }
 
 void VK::CreateRenderPass(VkRenderPass& RP, const std::vector<VkAttachmentDescription>& ADs, const std::vector<VkSubpassDescription>& SDs, const std::vector<VkSubpassDependency>& Deps)
@@ -2494,91 +2498,53 @@ void VK::CreateRenderPass(VkRenderPass& RP, const std::vector<VkAttachmentDescri
 	};
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
 }
-
-//!< @brief 「レンダーパスでのカラークリア」、「深度の有無」はよく使うので、便利関数を用意しておく (それ以上の事がしたい場合はオーバーライド実装すること)
-//!< @param レンダーパスでのカラークリア
-//!< @param 深度の有無
-void VK::CreateRenderPass(const VkAttachmentLoadOp LoadOp, const bool UseDepth)
+void VK::CreateRenderPass()
 {
-	RenderPasses.emplace_back(VkRenderPass());
+	//!< インプットアタッチメント (InputAttachment)
+	constexpr std::array<VkAttachmentReference, 0> IAs = {};
+	//!< カラーアタッチメント (ColorAttachment)
+	constexpr std::array CAs = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
+	//!< リゾルブアタッチメント (ResolveAttachment) : マルチサンプル → シングルサンプルへリゾルブするような場合
+	constexpr std::array RAs = { VkAttachmentReference({.attachment = VK_ATTACHMENT_UNUSED, .layout = VK_IMAGE_LAYOUT_UNDEFINED }), };
+	assert(size(CAs) == size(RAs) && "");
+	//!< プリザーブアタッチメント (PreserveAttachment) : サブパス全体において保持しなくてはならないコンテンツのインデックス
+	constexpr std::array<uint32_t, 0> PAs = {};
 
-	//!< インプットアタッチメント : 読み取り用
-	const std::array<VkAttachmentReference, 0> InputARs = {};
-	const std::array ColorARs = { VkAttachmentReference({ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
-	//!< リゾルブアタッチメント : マルチサンプル → シングルサンプルへリゾルブするような場合
-	const std::array ResolveARs = { VkAttachmentReference({ .attachment = VK_ATTACHMENT_UNUSED, .layout = VK_IMAGE_LAYOUT_UNDEFINED }), };
-	assert(size(ColorARs) == size(ResolveARs) && "");
-	//!< プリザーブアタッチメント : サブパス全体において保持しなくてはならないコンテンツのインデックス
-	const std::array<uint32_t, 0> Preserve = {};
-
-	if (false == UseDepth) {
-		CreateRenderPass(RenderPasses.back(), {
-				VkAttachmentDescription({
-					.flags = 0,
-					.format = ColorFormat,
-					.samples = VK_SAMPLE_COUNT_1_BIT,
-					.loadOp = LoadOp, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,												//!< 「開始時にLoadOp」「終了時に保存」
-					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,	//!< ステンシルのロードストア : (ここでは)開始時、終了時ともに「使用しない」
-					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR				//!< レンダーパスのレイアウト : 「開始時未定義」「終了時プレゼンテーションソース」
-				}),
-			}, {
-				VkSubpassDescription({
-					.flags = 0,
-					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-					.inputAttachmentCount = static_cast<uint32_t>(size(InputARs)), .pInputAttachments = data(InputARs), 										//!< インプットアタッチメント(読み取り用) シェーダ内で次のように使用 layout (input_attachment_index=0, set=0, binding=0) uniform XXX YYY;
-					.colorAttachmentCount = static_cast<uint32_t>(size(ColorARs)), .pColorAttachments= data(ColorARs), .pResolveAttachments = data(ResolveARs),	//!< カラーアタッチメント(書き込み用)、リゾルブアタッチメント(マルチサンプルのリゾルブ)
-					.pDepthStencilAttachment = nullptr,																											//!< デプスアタッチメント(書き込み用)
-					.preserveAttachmentCount = static_cast<uint32_t>(size(Preserve)), .pPreserveAttachments = data(Preserve)									//!< プリザーブアタッチメント(サブパス全体において保持するコンテンツのインデックス)
-				}),
-			}, {
-	#if 1
-				//!< サブパス依存 (ここでは、書かなくても良いが、敢えて書く場合)
-				VkSubpassDependency({
-					.srcSubpass = VK_SUBPASS_EXTERNAL, .dstSubpass = 0,																		//!< サブパス外からサブパス0へ
-					.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< パイプラインの最終ステージからカラー出力ステージへ
-					.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT, .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,						//!< 読み込みからカラー書き込みへ
-					.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,																			//!< 同じメモリ領域に対する書き込みが完了してから読み込み (指定しない場合は自前で書き込み完了を管理)
-				}),
-				VkSubpassDependency({
-					.srcSubpass = 0, .dstSubpass = VK_SUBPASS_EXTERNAL,																		//!< サブパス0からサブパス外へ
-					.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, .dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,	//!< カラー出力ステージからパイプラインの最終ステージへ
-					.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,						//!< カラー書き込みから読み込みへ
-					.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
-				}),
-	#endif
-			});
-	}
-	else {
-		const VkAttachmentReference DepthAttach = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-		CreateRenderPass(RenderPasses.back(), {
-				VkAttachmentDescription({
-					.flags = 0,
-					.format = ColorFormat,
-					.samples =  VK_SAMPLE_COUNT_1_BIT,
-					.loadOp = LoadOp, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-				}),
-				VkAttachmentDescription({
-					.flags = 0,
-					.format = DepthFormat,
-					.samples = VK_SAMPLE_COUNT_1_BIT,
-					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-				}),
-			}, {
-				VkSubpassDescription({
-					.flags = 0,
-					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-					.inputAttachmentCount = static_cast<uint32_t>(size(InputARs)), .pInputAttachments = data(InputARs),
-					.colorAttachmentCount = static_cast<uint32_t>(size(ColorARs)), .pColorAttachments = data(ColorARs), .pResolveAttachments = data(ResolveARs),
-					.pDepthStencilAttachment = &DepthAttach,																	//!< デプスアタッチメント(書き込み用)
-					.preserveAttachmentCount = static_cast<uint32_t>(size(Preserve)), .pPreserveAttachments = data(Preserve)
-				}),
-			}, {
-			});
-	}
+	CreateRenderPass(RenderPasses.emplace_back(), {
+		VkAttachmentDescription({
+			.flags = 0,
+			.format = ColorFormat,
+			.samples = VK_SAMPLE_COUNT_1_BIT,
+			.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,						//!< 「開始時に何もしない」「終了時に保存」
+			.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,	//!< ステンシルのロードストア : (ここでは)開始時、終了時ともに「使用しない」
+			.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR				//!< レンダーパスのレイアウト : 「開始時未定義」「終了時プレゼンテーションソース」
+		}),
+	}, {
+		VkSubpassDescription({
+			.flags = 0,
+			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+			.inputAttachmentCount = static_cast<uint32_t>(size(IAs)), .pInputAttachments = data(IAs), 									//!< インプットアタッチメント(読み取り用) シェーダ内で次のように使用 layout (input_attachment_index=0, set=0, binding=0) uniform XXX YYY;
+			.colorAttachmentCount = static_cast<uint32_t>(size(CAs)), .pColorAttachments = data(CAs), .pResolveAttachments = data(RAs),	//!< カラーアタッチメント(書き込み用)、リゾルブアタッチメント(マルチサンプルのリゾルブ)
+			.pDepthStencilAttachment = nullptr,																							//!< デプスアタッチメント(書き込み用)
+			.preserveAttachmentCount = static_cast<uint32_t>(size(PAs)), .pPreserveAttachments = data(PAs)								//!< プリザーブアタッチメント(サブパス全体において保持するコンテンツのインデックス)
+		}),
+	}, {
+#if 1
+		//!< サブパス依存 (敢えて書く場合)
+		VkSubpassDependency({
+			.srcSubpass = VK_SUBPASS_EXTERNAL, .dstSubpass = 0,																		//!< サブパス外からサブパス0へ
+			.srcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, .dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,	//!< パイプラインの最終ステージからカラー出力ステージへ
+			.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT, .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,						//!< 読み込みからカラー書き込みへ
+			.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,																			//!< 同じメモリ領域に対する書き込みが完了してから読み込み (指定しない場合は自前で書き込み完了を管理)
+		}),
+		VkSubpassDependency({
+			.srcSubpass = 0, .dstSubpass = VK_SUBPASS_EXTERNAL,																		//!< サブパス0からサブパス外へ
+			.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, .dstStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,	//!< カラー出力ステージからパイプラインの最終ステージへ
+			.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,						//!< カラー書き込みから読み込みへ
+			.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+		}),
+#endif
+	});
 }
 
 void VK::CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::vector<VkImageView>& IVs)
@@ -2841,7 +2807,7 @@ void VK::CreatePipeline_Compute()
 //!< 「レンダーパス外」にてクリアを行う
 void VK::ClearColor(const VkCommandBuffer CB, const VkImage Img, const VkClearColorValue& Color)
 {
-	const VkImageSubresourceRange ISR = {
+	constexpr VkImageSubresourceRange ISR = {
 		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
 		.baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS,
 		.baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS
@@ -3013,7 +2979,6 @@ void VK::PopulateCommandBuffer(const size_t i)
 #endif
 
 #ifdef USE_MANUAL_CLEAR
-		ClearColor(CB, SwapchainImages[i], Colors::Blue);
 		constexpr std::array CVs = { VkClearValue({}), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 #else
 		constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
@@ -3028,6 +2993,10 @@ void VK::PopulateCommandBuffer(const size_t i)
 		};
 		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
 		} vkCmdEndRenderPass(CB);
+
+#ifdef USE_MANUAL_CLEAR
+		ClearColor(CB, SwapchainImages[i], Colors::Blue);
+#endif
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
 

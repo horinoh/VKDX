@@ -46,7 +46,7 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateTexture() override {
-		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, SurfaceExtent2D.width, SurfaceExtent2D.height);
+		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
 	}
 	virtual void CreatePipelineLayout() override {
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(),
@@ -61,6 +61,9 @@ protected:
 		VKExt::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 	virtual void CreateRenderPass() override {
+#if 1
+		VKExt::CreateRenderPass_Depth();
+#else
 		constexpr std::array ColorAttach = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
 		constexpr VkAttachmentReference DepthAttach = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 		VK::CreateRenderPass(RenderPasses.emplace_back(), {
@@ -90,6 +93,7 @@ protected:
 				.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
 			}),
 		}, {});
+#endif
 	}
 	virtual void CreatePipeline() override {
 		const auto ShaderPath = GetBasePath();
