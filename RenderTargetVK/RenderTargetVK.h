@@ -133,14 +133,9 @@ protected:
 	
 #pragma region PASS0
 		{
-#if 0
-#ifdef USE_DEPTH
-			VKExt::CreateRenderPass_Depth();
-#else
-			VKExt::CreateRenderPass_Clear();
-#endif
-#else
 			constexpr std::array CAs = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
+			constexpr std::array RAs = { VkAttachmentReference({.attachment = VK_ATTACHMENT_UNUSED, .layout = VK_IMAGE_LAYOUT_UNDEFINED }), };
+			constexpr std::array<uint32_t, 0> PAs = {};
 #ifdef USE_DEPTH
 			constexpr auto DA = VkAttachmentReference({ .attachment = static_cast<uint32_t>(size(CAs)), .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL });
 #endif
@@ -151,7 +146,7 @@ protected:
 					.samples = VK_SAMPLE_COUNT_1_BIT,
 					.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
 					.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+					.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL //!< PRESENT_SRC_KHR ‚Å‚Í‚È‚­ACOLOR_ATTACHMENT_OPTIMAL
 				}),
 #ifdef USE_DEPTH
 				VkAttachmentDescription({
@@ -168,16 +163,15 @@ protected:
 					.flags = 0,
 					.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
 					.inputAttachmentCount = 0, .pInputAttachments = nullptr,
-					.colorAttachmentCount = static_cast<uint32_t>(size(CAs)), .pColorAttachments = data(CAs), .pResolveAttachments = nullptr,
+					.colorAttachmentCount = static_cast<uint32_t>(size(CAs)), .pColorAttachments = data(CAs), .pResolveAttachments = data(RAs),
 #ifdef USE_DEPTH
 					.pDepthStencilAttachment = &DA,
 #else
 					.pDepthStencilAttachment = nullptr,
 #endif
-					.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
+					.preserveAttachmentCount = static_cast<uint32_t>(size(PAs)), .pPreserveAttachments = data(PAs)
 				}),
 			}, {});
-#endif
 		}
 #pragma endregion
 

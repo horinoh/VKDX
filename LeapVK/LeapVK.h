@@ -250,7 +250,16 @@ protected:
 						.imageExtent = Extent }));
 				}
 				const auto& CB = CommandBuffers[0];
-				PopulateCommandBuffer_CopyBufferToImage(CB, Buffer, Images[0].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, Layers);
+
+				constexpr VkCommandBufferBeginInfo CBBI = {
+					.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+					.pNext = nullptr,
+					.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+					.pInheritanceInfo = nullptr
+				};
+				VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+					PopulateCommandBuffer_CopyBufferToImage(CB, Buffer, Images[0].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, Layers);
+				} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 
 				SubmitAndWait(GraphicsQueue, CB);
 			}
@@ -283,8 +292,16 @@ protected:
 						.imageExtent = Extent }));
 				}
 				const auto& CB = CommandBuffers[0];
-				PopulateCommandBuffer_CopyBufferToImage(CB, Buffer, Images[1].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, Layers);
 
+				constexpr VkCommandBufferBeginInfo CBBI = {
+					.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+					.pNext = nullptr,
+					.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+					.pInheritanceInfo = nullptr
+				};
+				VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+					PopulateCommandBuffer_CopyBufferToImage(CB, Buffer, Images[1].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, Layers);
+				} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 				SubmitAndWait(GraphicsQueue, CB);
 			}
 			vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());

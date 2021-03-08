@@ -105,41 +105,7 @@ protected:
 		VKExt::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 #if !defined(USE_SKY_DOME)
-	virtual void CreateRenderPass() override {
-#if 1
-		VKExt::CreateRenderPass_Depth();
-#else
-		constexpr std::array ColorAttach = { VkAttachmentReference({.attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
-		constexpr VkAttachmentReference DepthAttach = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-		VK::CreateRenderPass(RenderPasses.emplace_back(), {
-			VkAttachmentDescription({
-				.flags = 0,
-				.format = ColorFormat,
-				.samples = VK_SAMPLE_COUNT_1_BIT,
-				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-			}),
-			VkAttachmentDescription({
-				.flags = 0,
-				.format = DepthFormat,
-				.samples = VK_SAMPLE_COUNT_1_BIT,
-				.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, .storeOp = VK_ATTACHMENT_STORE_OP_STORE,
-				.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE, .stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE,
-				.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED, .finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-			}),
-		}, {
-			VkSubpassDescription({
-				.flags = 0,
-				.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
-				.inputAttachmentCount = 0, .pInputAttachments = nullptr,
-				.colorAttachmentCount = static_cast<uint32_t>(size(ColorAttach)), .pColorAttachments = data(ColorAttach), .pResolveAttachments = nullptr,
-				.pDepthStencilAttachment = &DepthAttach,
-				.preserveAttachmentCount = 0, .pPreserveAttachments = nullptr
-			}),
-		}, {});
-#endif
-	}
+	virtual void CreateRenderPass() override { VKExt::CreateRenderPass_Depth(); }
 #endif
 	virtual void CreatePipeline() override {
 		const auto ShaderPath = GetBasePath();

@@ -416,7 +416,7 @@ protected:
 	virtual void CreateStaticSampler() {}
 	virtual void CreateSampler() {}
 
-	virtual void PopulateCommandList(const size_t i);
+	virtual void PopulateCommandList([[maybe_unused]] const size_t i) {}
 
 	virtual UINT GetCurrentBackBufferIndex() const { return SwapChain->GetCurrentBackBufferIndex(); }
 	virtual void DrawFrame([[maybe_unused]] const UINT i) {}

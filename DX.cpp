@@ -1529,7 +1529,7 @@ void DX::CreatePipelineState_Compute()
 }
 #endif
 
-
+#if 0
 void DX::PopulateCommandList(const size_t i)
 {
 	//!< GPUが参照している間は、「コマンドアロケータ」のリセットはできない
@@ -1554,6 +1554,7 @@ void DX::PopulateCommandList(const size_t i)
 	}
 	VERIFY_SUCCEEDED(CL->Close());
 }
+#endif
 
 void DX::Draw()
 {
