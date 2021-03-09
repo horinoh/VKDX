@@ -252,7 +252,8 @@ void TriangleDX::CreateGeometry()
 			Vertex_PositionColor({.Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
 		};
 #endif
-		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), CA, GCL, CQ, COM_PTR_GET(Fence), data(Vertices), sizeof(Vertices[0]));
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), sizeof(Vertices[0]));
+		VertexBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), sizeof(Vertices), data(Vertices), CA, GCL, CQ, COM_PTR_GET(Fence));
 #ifdef _DEBUG
 		SetName(COM_PTR_GET(VertexBuffers.back().Resource), TEXT("MyVertexBuffer"));
 #endif

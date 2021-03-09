@@ -257,7 +257,8 @@ void TriangleVK::CreateGeometry()
 			Vertex_PositionColor({.Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
 		};
 #endif
-		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices), data(Vertices), CB, GraphicsQueue);
+		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices));
+		VertexBuffers.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Vertices), data(Vertices));
 #ifdef _DEBUG
 		MarkerSetObjectName(Device, VertexBuffers.back().Buffer, "MyVertexBuffer");
 #endif
