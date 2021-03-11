@@ -40,22 +40,26 @@ protected:
 	virtual void CreateGeometry() override {
 		const auto CA = COM_PTR_GET(CommandAllocators[0]);
 		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 		//!< Pass0 : インダイレクトバッファ(シャドウキャスタ描画用)
 		{
 			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), DIA);
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA);
+			IndirectBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
 		}
 #ifdef USE_SHADOWMAP_VISUALIZE
 		//!< Pass1 : インダイレクトバッファ(シャドウマップ描画用)
 		{
 			constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), DA);
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA);
+			IndirectBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DA), &DA);
 		}
 #else
 		//!< Pass1 : インダイレクトバッファ(シャドウレシーバ描画用)
 		{
 			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 2, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), DIA);
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA);
+			IndirectBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
 		}
 #endif
 	}

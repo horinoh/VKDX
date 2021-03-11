@@ -43,9 +43,11 @@ protected:
 	}
 #endif
 	virtual void CreateGeometry() override { 
+		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		//!< 最低でもインデックス数1が必要 (At least index count must be 1)
 		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-		IndirectBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DIIC, CommandBuffers[0], GraphicsQueue);
+		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
+		IndirectBuffers.back().SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIIC), &DIIC);
 	} 
 	virtual void CreateRenderPass() override { VKExt::CreateRenderPass_Clear(); }
 	virtual void CreatePipeline() override { 

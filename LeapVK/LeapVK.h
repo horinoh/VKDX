@@ -38,8 +38,10 @@ protected:
 	}
 
 	virtual void CreateGeometry() override {
+		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
-		IndirectBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DIC, CommandBuffers[0], GraphicsQueue);
+		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC);
+		IndirectBuffers.back().SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
 	}
 #pragma region UB
 	virtual void CreateUniformBuffer() override {

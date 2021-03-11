@@ -234,13 +234,15 @@ void InstancingDX::CreateGeometry()
 {
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+	const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 	{
 		constexpr std::array Vertices = {
 			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }),
 			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }),
 			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }),
 		};
-		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), data(Vertices), sizeof(Vertices[0]));
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), sizeof(Vertices[0]));
+		VertexBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(Vertices), data(Vertices));
 	}
 	{
 		constexpr std::array Instances = {
@@ -250,13 +252,16 @@ void InstancingDX::CreateGeometry()
 			Instance_OffsetXY({ { 0.25f, 0.25f } }),
 			Instance_OffsetXY({ { 0.5f, 0.5f } }),
 		};
-		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Instances), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), data(Instances), sizeof(Instances[0]));
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Instances), sizeof(Instances[0]));
+		VertexBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(Instances), data(Instances));
 
 		constexpr std::array<UINT32, 3> Indices = { 0, 1, 2 };
-		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), data(Indices), DXGI_FORMAT_R32_UINT);
+		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), DXGI_FORMAT_R32_UINT);
+		IndexBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(Indices), data(Indices)); 
 		{
 			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = static_cast<UINT>(size(Instances)), .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), DIA);
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA);
+			IndirectBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
 		}
 	}
 	LOG_OK();

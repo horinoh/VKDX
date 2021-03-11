@@ -266,14 +266,16 @@ void TriangleVK::CreateGeometry()
 	//!< インデックスバッファ (IndexBuffer)
 	{
 		constexpr std::array<uint32_t, 3> Indices = { 0, 1, 2 };
-		IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices), data(Indices), CB, GraphicsQueue);
+		IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices));
+		IndexBuffers.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Indices), data(Indices));
 #ifdef _DEBUG
 		MarkerSetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
 #endif
 		//!< インダイレクトバッファ (IndirectBuffer)
 		{
 			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC, CB, GraphicsQueue);
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
+			IndirectBuffers.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
 #ifdef _DEBUG
 			MarkerSetObjectName(Device, IndirectBuffers.back().Buffer, "MyIndirectBuffer");
 #endif

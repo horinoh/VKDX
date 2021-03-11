@@ -241,7 +241,8 @@ void InstancingVK::CreateGeometry()
 			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }),
 			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }),
 		};
-		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices), data(Vertices), CB, GraphicsQueue);
+		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices));
+		VertexBuffers.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Vertices), data(Vertices));
 	}
 	{
 		constexpr std::array Instances = {
@@ -251,14 +252,16 @@ void InstancingVK::CreateGeometry()
 			Instance_OffsetXY({ { 0.25f, 0.25f } }),
 			Instance_OffsetXY({ { 0.5f, 0.5f } }),
 		};
-		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Instances), data(Instances), CB, GraphicsQueue);
+		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Instances));
+		VertexBuffers.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Instances), data(Instances));
 
 		constexpr std::array<uint32_t, 3> Indices = { 0, 1, 2 };
-		IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices), data(Indices), CB, GraphicsQueue);
-
+		IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices));
+		IndexBuffers.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Indices), data(Indices));
 		{
 			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = static_cast<uint32_t>(size(Instances)), .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC, CB, GraphicsQueue);
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
+			IndirectBuffers.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
 		}
 	}
 	LOG_OK();

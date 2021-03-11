@@ -140,19 +140,22 @@ protected:
 		//!< Pass0 : インダイレクトバッファ(シャドウキャスタ描画用)
 		{
 			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC, CB, GraphicsQueue);
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
+			IndirectBuffers.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
 		}
 #ifdef USE_SHADOWMAP_VISUALIZE
 		//!< Pass1 : インダイレクトバッファ(シャドウマップ描画用)
 		{
 			constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, DIC, CB, GraphicsQueue);
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIC);
+			IndirectBuffers.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIC), &DIC);
 		}
 #else
 		//!< Pass1 : インダイレクトバッファ(シャドウレシーバ描画用)
 		{
 			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 2, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC, CB, GraphicsQueue);
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
+			IndirectBuffers.back().SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIIC), &DIIC);
 		}
 #endif		
 	}

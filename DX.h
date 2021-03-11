@@ -134,10 +134,6 @@ public:
 		using Super = ResourceBase;
 	public:
 		D3D12_VERTEX_BUFFER_VIEW View;
-		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source, const UINT Stride) {
-			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, Size, GCL, CA, CQ, Fence, Source);
-			View = D3D12_VERTEX_BUFFER_VIEW({.BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .StrideInBytes = Stride });
-		}
 		void Create(ID3D12Device* Device, const size_t Size, const UINT Stride) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
 			View = D3D12_VERTEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .StrideInBytes = Stride });
@@ -145,7 +141,7 @@ public:
 		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const size_t Size, ID3D12Resource* Upload) {
 			DX::PopulateCommandList_CopyBufferRegion(GCL, Upload, COM_PTR_GET(Resource), Size, D3D12_RESOURCE_STATE_GENERIC_READ);
 		}
-		void ExecuteCopyCommand(ID3D12Device* Device, const size_t Size, const void* Source, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence) {
+		void ExecuteCopyCommand(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const size_t Size, const void* Source) {
 			COM_PTR<ID3D12Resource> Upload;
 			DX::CreateBufferResource(COM_PTR_PUT(Upload), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
 			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
@@ -160,9 +156,20 @@ public:
 		using Super = ResourceBase;
 	public:
 		D3D12_INDEX_BUFFER_VIEW View;
-		void Create(ID3D12Device* Device, const size_t Size, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source, const DXGI_FORMAT Format) {
-			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, Size, GCL, CA, CQ, Fence, Source);
+		void Create(ID3D12Device* Device, const size_t Size, const DXGI_FORMAT Format) {
+			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
 			View = D3D12_INDEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .Format = Format });
+		}
+		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const size_t Size, ID3D12Resource* Upload) {
+			DX::PopulateCommandList_CopyBufferRegion(GCL, Upload, COM_PTR_GET(Resource), Size, D3D12_RESOURCE_STATE_GENERIC_READ);
+		}
+		void ExecuteCopyCommand(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const size_t Size, const void* Source) {
+			COM_PTR<ID3D12Resource> Upload;
+			DX::CreateBufferResource(COM_PTR_PUT(Upload), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
+			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
+				PopulateCopyCommand(GCL, Size, COM_PTR_GET(Upload));
+			} VERIFY_SUCCEEDED(GCL->Close());
+			DX::ExecuteAndWait(CQ, GCL, Fence);
 		}
 	};
 	class IndirectBuffer : public ResourceBase
@@ -171,23 +178,34 @@ public:
 		using Super = ResourceBase;
 	public:
 		COM_PTR<ID3D12CommandSignature> CommandSignature;
-		void Create(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const D3D12_DRAW_INDEXED_ARGUMENTS& DIA) {
-			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, sizeof(DIA), GCL, CA, CQ, Fence, &DIA);
+		void Create(ID3D12Device* Device, const D3D12_DRAW_INDEXED_ARGUMENTS& DIA) {
+			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, sizeof(DIA), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
 			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED }), };
-			const D3D12_COMMAND_SIGNATURE_DESC CSD = {.ByteStride = static_cast<UINT>(sizeof(DIA)), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
+			const D3D12_COMMAND_SIGNATURE_DESC CSD = { .ByteStride = static_cast<UINT>(sizeof(DIA)), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
 			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
 		}
-		void Create(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const D3D12_DRAW_ARGUMENTS& DA) {
-			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, sizeof(DA), GCL, CA, CQ, Fence, &DA);
+		void Create(ID3D12Device* Device, const D3D12_DRAW_ARGUMENTS& DA) {
+			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, sizeof(DA), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
 			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW }), };
-			const D3D12_COMMAND_SIGNATURE_DESC CSD = {.ByteStride = static_cast<UINT>(sizeof(DA)), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
+			const D3D12_COMMAND_SIGNATURE_DESC CSD = { .ByteStride = static_cast<UINT>(sizeof(DA)), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
 			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
 		}
-		void Create(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const D3D12_DISPATCH_ARGUMENTS& DA) {
-			DX::CreateBufferResourceAndExecuteCopyCommand(COM_PTR_PUT(Resource), Device, sizeof(DA), GCL, CA, CQ, Fence, &DA);
+		void Create(ID3D12Device* Device, const D3D12_DISPATCH_ARGUMENTS& DA) {
+			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, sizeof(DA), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
 			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH }), };
-			const D3D12_COMMAND_SIGNATURE_DESC CSD = {.ByteStride = static_cast<UINT>(sizeof(DA)), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
+			const D3D12_COMMAND_SIGNATURE_DESC CSD = { .ByteStride = static_cast<UINT>(sizeof(DA)), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
 			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
+		}
+		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const size_t Size, ID3D12Resource* Upload) {
+			DX::PopulateCommandList_CopyBufferRegion(GCL, Upload, COM_PTR_GET(Resource), Size, D3D12_RESOURCE_STATE_GENERIC_READ);
+		}
+		void ExecuteCopyCommand(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const size_t Size, const void* Source) {
+			COM_PTR<ID3D12Resource> Upload;
+			DX::CreateBufferResource(COM_PTR_PUT(Upload), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
+			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
+				PopulateCopyCommand(GCL, Size, COM_PTR_GET(Upload));
+			} VERIFY_SUCCEEDED(GCL->Close());
+			DX::ExecuteAndWait(CQ, GCL, Fence);
 		}
 	};
 	class ConstantBuffer : public ResourceBase
