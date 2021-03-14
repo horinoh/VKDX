@@ -191,6 +191,56 @@ void DX::CreateBufferResource(ID3D12Resource** Resource, const size_t Size, cons
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(Resource)));
 }
 
+void DX::CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs, const std::vector<D3D12_SUBRESOURCE_DATA>& SRDs, const D3D12_RESOURCE_DESC& RD0)
+{
+	//!< フットプリントの取得 (Acquire footprint)
+	PSFs.resize(size(SRDs));
+	std::vector<UINT> NumRows(size(SRDs));
+	std::vector<UINT64> RowSizeInBytes(size(SRDs));
+	UINT64 Size = 0;
+	Device->GetCopyableFootprints(&RD0, 0, static_cast<const UINT>(size(SRDs)), 0, data(PSFs), data(NumRows), data(RowSizeInBytes), &Size);
+
+	const D3D12_RESOURCE_DESC RD = {
+		.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
+		.Alignment = 0,
+		.Width = Size, .Height = 1,
+		.DepthOrArraySize = 1, .MipLevels = 1,
+		.Format = DXGI_FORMAT_UNKNOWN,
+		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+		.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR,
+		.Flags = D3D12_RESOURCE_FLAG_NONE
+	};
+	constexpr D3D12_HEAP_PROPERTIES HP = {
+		.Type = D3D12_HEAP_TYPE_UPLOAD,
+		.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
+		.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
+		.CreationNodeMask = 0, .VisibleNodeMask = 0
+	};
+	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(Resource)));
+	if (nullptr != *Resource) [[likely]] {
+		BYTE * Data;
+		VERIFY_SUCCEEDED((*Resource)->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
+			for (auto i = 0; i < size(PSFs); ++i) {
+				const auto& SRD = SRDs[i];
+				const auto NR = NumRows[i];
+				const auto RSIB = RowSizeInBytes[i];
+				const D3D12_MEMCPY_DEST MCD = {
+					.pData = Data + PSFs[i].Offset,
+					.RowPitch = PSFs[i].Footprint.RowPitch,
+					.SlicePitch = static_cast<SIZE_T>(PSFs[i].Footprint.RowPitch) * NR
+				};
+				for (UINT j = 0; j < PSFs[i].Footprint.Depth; ++j) {
+					auto Dst = reinterpret_cast<BYTE*>(MCD.pData) + MCD.SlicePitch * j;
+					const auto Src = reinterpret_cast<const BYTE*>(SRD.pData) + SRD.SlicePitch * j;
+					for (UINT k = 0; k < NR; ++k) {
+						memcpy(Dst + MCD.RowPitch * k, Src + SRD.RowPitch * k, RSIB);
+					}
+				}
+			}
+		} (*Resource)->Unmap(0, nullptr);
+	}
+}
+
 void DX::CreateTextureResource(ID3D12Resource** Resource, const DXGI_FORMAT Format, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize, const UINT16 MipLevels)
 {
 	const D3D12_RESOURCE_DESC RD = {
@@ -377,10 +427,10 @@ void DX::PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* GCL, ID
 		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 	}
 }
-void DX::PopulateCommandList_CopyTextureRegion(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS)
+void DX::PopulateCommandList_CopyTextureRegion(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs, const D3D12_RESOURCE_STATES RS)
 {
 	//!< LoadDDSTextureFromFile() で作成されるリソースのステートは既に D3D12_RESOURCE_STATE_COPY_DESTで 作成されている (Resource created by LoadDDSTextureFromFile()'s state is already D3D12_RESOURCE_STATE_COPY_DEST)
-	for (UINT i = 0; i < size(PSF); ++i) {
+	for (UINT i = 0; i < size(PSFs); ++i) {
 		const D3D12_TEXTURE_COPY_LOCATION TCL_Dst = {
 			.pResource = Dst,
 			.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX,
@@ -389,9 +439,9 @@ void DX::PopulateCommandList_CopyTextureRegion(ID3D12GraphicsCommandList* GCL, I
 		const D3D12_TEXTURE_COPY_LOCATION TCL_Src = {
 			.pResource = Src,
 			.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT,
-			.PlacedFootprint = PSF[i]
+			.PlacedFootprint = PSFs[i]
 		};
-		//const D3D12_BOX Box = { .left = static_cast<UINT>(PSF[i].Offset), .top = 0, .front = 0, .right = static_cast<UINT>(PSF[i].Offset) + PSF[i].Footprint.Width, .bottom = 1, .back = 1, };
+		//const D3D12_BOX Box = { .left = static_cast<UINT>(PSFs[i].Offset), .top = 0, .front = 0, .right = static_cast<UINT>(PSFs[i].Offset) + PSFs[i].Footprint.Width, .bottom = 1, .back = 1, };
 		GCL->CopyTextureRegion(&TCL_Dst, 0, 0, 0, &TCL_Src, nullptr);
 	}
 	{

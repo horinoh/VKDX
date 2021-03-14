@@ -22,6 +22,10 @@ protected:
 	virtual void CreateTexture() override {
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
+#if 0
+			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds"));
+			DDSTextures.back().ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+#else
 			LoadImage(COM_PTR_PUT(ImageResources.emplace_back()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds"));
 			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({ 
 				.Format = ImageResources.back()->GetDesc().Format, 
@@ -34,6 +38,7 @@ protected:
 					.ResourceMinLODClamp = 0.0f 
 				})
 			}));
+#endif
 		}
 	}
 #ifdef USE_STATIC_SAMPLER
@@ -131,7 +136,11 @@ protected:
 	virtual void CreateDescriptorView() override {
 		const auto& DH = CbvSrvUavDescriptorHeaps[0];
 		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+#if 0
+		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#else
 		Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#endif
 	}
 
 	virtual void PopulateCommandList(const size_t i) override;

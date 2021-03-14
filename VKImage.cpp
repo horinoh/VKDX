@@ -98,10 +98,8 @@ void VKImage::PopulateCommandBuffer_CopyBufferToImage(const VkCommandBuffer CB, 
 	//!< イメージビューを介して、レイヤをフェイスとして扱うようハードウエアへ伝える (Tell the hardware that it should interpret its layers as faces)
 	//!< キューブマップの場合フェイスの順序は +X-X+Y-Y+Z-Z (When cubemap, faces order is +X-X+Y-Y+Z-Z)
 
-	const auto Faces = static_cast<const uint32_t>(GLITexture.faces());
-	const auto Layers = static_cast<const uint32_t>(GLITexture.layers()) * Faces;
+	const auto Layers = static_cast<const uint32_t>(GLITexture.layers()) * static_cast<const uint32_t>(GLITexture.faces());
 	const auto Levels = static_cast<const uint32_t>(GLITexture.levels());
-
 	std::vector<VkBufferImageCopy> BICs; BICs.reserve(Layers * Levels);
 	VkDeviceSize Offset = 0;
 	for (uint32_t i = 0; i < Layers; ++i) {
@@ -125,10 +123,8 @@ void VKImage::PopulateCommandBuffer_CopyBufferToImage(const VkCommandBuffer CB, 
 //!< @param (コピー後に)イメージが使われるパイプラインステージ ex) VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,...等
 void VKImage::PopulateCommandBuffer_CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const gli::texture& GLITexture)
 {
-	const auto Faces = static_cast<const uint32_t>(GLITexture.faces());
-	const auto Layers = static_cast<const uint32_t>(GLITexture.layers()) * Faces;
+	const auto Layers = static_cast<const uint32_t>(GLITexture.layers()) * static_cast<const uint32_t>(GLITexture.faces());
 	const auto Levels = static_cast<const uint32_t>(GLITexture.levels());
-
 	std::vector<VkBufferImageCopy> BICs; BICs.reserve(Layers);
 	VkDeviceSize Offset = 0;
 	for (uint32_t i = 0; i < Layers; ++i) {
@@ -200,11 +196,7 @@ gli::texture VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory* DM, const VkPi
 #endif //!< DEBUG_STDOUT
 
 	auto CB = CommandBuffers[0];
-#ifdef USE_EXPERIMENTAL
-	const auto Size = static_cast<VkDeviceSize>(Util::size(GLITexture));
-#else
 	const auto Size = static_cast<VkDeviceSize>(GLITexture.size());
-#endif
 
 	//!< デバイスローカルのイメージとメモリを作成 (Create device local image and memory)
 	//!< VK_IMAGE_USAGE_SAMPLED_BIT : サンプルドイメージ ... シェーダ内でサンプラとともに使われる為に指定する
@@ -222,11 +214,7 @@ gli::texture VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory* DM, const VkPi
 		AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
 
-#ifdef USE_EXPERIMENTAL
-		CopyToHostVisibleDeviceMemory(DeviceMemory, 0, Size, Util::data(GLITexture));
-#else
 		CopyToHostVisibleDeviceMemory(DeviceMemory, 0, Size, GLITexture.data());
-#endif
 
 		constexpr VkCommandBufferBeginInfo CBBI = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,

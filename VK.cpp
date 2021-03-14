@@ -2132,7 +2132,7 @@ void VK::CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, cons
 #pragma endregion
 }
 
-void VK::CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent, const VkImageUsageFlags IUF)
+void VK::CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, /*const VkImageCreateFlags ICF=0, const VkImageType IT=VK_IMAGE_TYPE_2D, */const VkFormat Format, const VkExtent3D& Extent, /*const uint32_t Levels=1, const uint32_t Layers = 1,*/const VkImageUsageFlags IUF)
 {
 	constexpr std::array<uint32_t, 0> QueueFamilyIndices = {};
 	const VkImageCreateInfo ICI = {
@@ -2171,7 +2171,6 @@ void VK::SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkComm
 	//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
 	StagingBuffer.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);	
 
-	
 	{
 		constexpr VkCommandBufferBeginInfo CBBI = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,

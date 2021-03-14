@@ -24,9 +24,65 @@ private:
 	static [[nodiscard]] VkComponentMapping ToVkComponentMapping(const gli::texture::swizzles_type ST) { return { ToVkComponentSwizzle(ST.r), ToVkComponentSwizzle(ST.g), ToVkComponentSwizzle(ST.b), ToVkComponentSwizzle(ST.a) }; }
 
 protected:
+	class DDSTexture : public Texture
+	{
+	private:
+		using Super = Texture;
+		gli::texture GLITexture;
+
+	public:
+		void Create(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, std::string_view Path) {
+			GLITexture = gli::load(data(Path));
+			assert(!GLITexture.empty() && "Load image failed");
+
+			// TODO CreateImageMemory()ÇÃà¯êîÇëùÇ‚Ç∑
+			const auto CreateFlag = gli::is_target_cube(GLITexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
+			const auto Type = ToVkImageType(GLITexture.target());
+			const auto Layers = static_cast<const uint32_t>(GLITexture.layers()) * static_cast<const uint32_t>(GLITexture.faces());
+			const auto Levels = static_cast<const uint32_t>(GLITexture.levels());
+			//
+			const auto Format = ToVkFormat(GLITexture.format());
+			const auto Ext = VkExtent3D({ .width = static_cast<const uint32_t>(GLITexture.extent(0).x), .height = static_cast<const uint32_t>(GLITexture.extent(0).y), .depth = static_cast<const uint32_t>(GLITexture.extent(0).z) });
+			VK::CreateImageMemory(&Image, &DeviceMemory, Dev, PDMP, Format, Ext, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+
+			const VkImageViewCreateInfo IVCI = {
+				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.image = Image,
+				.viewType = ToVkImageViewType(GLITexture.target()),
+				.format = Format,
+				.components = ToVkComponentMapping(GLITexture.swizzles()),
+				.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS })
+			};
+			VERIFY_SUCCEEDED(vkCreateImageView(Dev, &IVCI, GetAllocationCallbacks(), &View));
+		}
+		void PopulateCopyCommand(const VkCommandBuffer CB, const VkPipelineStageFlags PSF, const VkBuffer Staging) {
+			PopulateCommandBuffer_CopyBufferToImage(CB, Staging, Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, GLITexture);
+		}
+		void SubmitCopyCommand(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const VkPipelineStageFlags PSF) {
+			VK::Scoped<BufferMemory> StagingBuffer(Dev);
+#ifdef USE_EXPERIMENTAL
+			StagingBuffer.Create(Dev, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, static_cast<VkDeviceSize>(Util::size(GLITexture)), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Util::data(GLITexture));
+#else
+			StagingBuffer.Create(Dev, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, static_cast<VkDeviceSize>(GLITexture.size()), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, GLITexture.data());
+#endif
+			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
+			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+				PopulateCopyCommand(CB, PSF, StagingBuffer.Buffer);
+			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+			VK::SubmitAndWait(Queue, CB);
+		}
+	};
+
+	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
+		for (auto& i : DDSTextures) { i.Destroy(Device); } DDSTextures.clear();
+		Super::OnDestroy(hWnd, hInstance);
+	}
+
 	virtual void CreateImage(VkImage* Image, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage, const gli::texture& GLITexture) const;
-	virtual void PopulateCommandBuffer_CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const gli::texture& GLITexture);
-	virtual void PopulateCommandBuffer_CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL,	const VkPipelineStageFlags PSF, const gli::texture& GLITexture);
+	static void PopulateCommandBuffer_CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const gli::texture& GLITexture);
+	static void PopulateCommandBuffer_CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const gli::texture& GLITexture);
 	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const gli::texture& GLITexture);
 
 	virtual [[nodiscard]] gli::texture LoadImage(VkImage* Img, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, std::string_view Path) {
@@ -35,5 +91,7 @@ protected:
 		return LoadImage_DDS(Img, DM, PSF, Path);
 	}
 	[[nodiscard]] gli::texture LoadImage_DDS(VkImage* Image, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, std::string_view Path);
+
+	std::vector<DDSTexture> DDSTextures;
 };
 
