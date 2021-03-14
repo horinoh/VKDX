@@ -2132,18 +2132,18 @@ void VK::CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, cons
 #pragma endregion
 }
 
-void VK::CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, /*const VkImageCreateFlags ICF=0, const VkImageType IT=VK_IMAGE_TYPE_2D, */const VkFormat Format, const VkExtent3D& Extent, /*const uint32_t Levels=1, const uint32_t Layers = 1,*/const VkImageUsageFlags IUF)
+void VK::CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkImageCreateFlags ICF, const VkImageType IT, const VkFormat Format, const VkExtent3D& Extent, const uint32_t Levels, const uint32_t Layers, const VkImageUsageFlags IUF)
 {
 	constexpr std::array<uint32_t, 0> QueueFamilyIndices = {};
 	const VkImageCreateInfo ICI = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		.pNext = nullptr,
-		.flags = 0,
-		.imageType = VK_IMAGE_TYPE_2D,
+		.flags = ICF,
+		.imageType = IT,
 		.format = Format,
 		.extent = Extent,
-		.mipLevels = 1,
-		.arrayLayers = 1,
+		.mipLevels = Levels,
+		.arrayLayers = Layers,
 		.samples = VK_SAMPLE_COUNT_1_BIT,
 		.tiling = VK_IMAGE_TILING_OPTIMAL,
 		.usage = IUF,

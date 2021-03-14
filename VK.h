@@ -234,7 +234,7 @@ public:
 		VkImage Image = VK_NULL_HANDLE;
 		VkImageView View = VK_NULL_HANDLE;
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent, const VkImageUsageFlags IUF, const VkImageAspectFlags IAF) {
-			VK::CreateImageMemory(&Image, &DeviceMemory, Device, PDMP, Format, Extent, IUF);
+			VK::CreateImageMemory(&Image, &DeviceMemory, Device, PDMP, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, IUF);
 
 			const VkImageViewCreateInfo IVCI = {
 				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -432,7 +432,7 @@ protected:
 	virtual void LoadScene() {}
 
 	static void CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr);
-	static void CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, /*const VkImageCreateFlags ICF=0, const VkImageType IT=VK_IMAGE_TYPE_2D, */const VkFormat Format, const VkExtent3D& Extent, /*const uint32_t Levels=1, const uint32_t Layers = 1,*/const VkImageUsageFlags IUF);
+	static void CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkImageCreateFlags ICF, const VkImageType IT, const VkFormat Format, const VkExtent3D& Extent, const uint32_t Levels, const uint32_t Layers, const VkImageUsageFlags IUF);
 
 	virtual void SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source);
 	static void CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, 

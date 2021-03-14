@@ -35,15 +35,15 @@ protected:
 			GLITexture = gli::load(data(Path));
 			assert(!GLITexture.empty() && "Load image failed");
 
-			// TODO CreateImageMemory()ÇÃà¯êîÇëùÇ‚Ç∑
-			const auto CreateFlag = gli::is_target_cube(GLITexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
-			const auto Type = ToVkImageType(GLITexture.target());
-			const auto Layers = static_cast<const uint32_t>(GLITexture.layers()) * static_cast<const uint32_t>(GLITexture.faces());
-			const auto Levels = static_cast<const uint32_t>(GLITexture.levels());
-			//
 			const auto Format = ToVkFormat(GLITexture.format());
-			const auto Ext = VkExtent3D({ .width = static_cast<const uint32_t>(GLITexture.extent(0).x), .height = static_cast<const uint32_t>(GLITexture.extent(0).y), .depth = static_cast<const uint32_t>(GLITexture.extent(0).z) });
-			VK::CreateImageMemory(&Image, &DeviceMemory, Dev, PDMP, Format, Ext, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+			VK::CreateImageMemory(&Image, &DeviceMemory, Dev, PDMP, 
+				gli::is_target_cube(GLITexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0, 
+				ToVkImageType(GLITexture.target()), 
+				Format, 
+				VkExtent3D({ .width = static_cast<const uint32_t>(GLITexture.extent(0).x), .height = static_cast<const uint32_t>(GLITexture.extent(0).y), .depth = static_cast<const uint32_t>(GLITexture.extent(0).z) }),
+				static_cast<const uint32_t>(GLITexture.levels()), 
+				static_cast<const uint32_t>(GLITexture.layers()) * static_cast<const uint32_t>(GLITexture.faces()), 
+				VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 
 			const VkImageViewCreateInfo IVCI = {
 				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
