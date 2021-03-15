@@ -169,41 +169,12 @@ void DX::CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, c
 		} (*Resource)->Unmap(0, nullptr);
 	}
 }
-
-void DX::CreateBufferResource(ID3D12Resource** Resource, const size_t Size, const D3D12_HEAP_TYPE HT)
+void DX::CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, const std::vector<D3D12_SUBRESOURCE_DATA>& SRDs, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizeInBytes, const UINT64 TotalBytes)
 {
 	const D3D12_RESOURCE_DESC RD = {
 		.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
 		.Alignment = 0,
-		.Width = Size, .Height = 1, //!< Widthに「バッファサイズ」を指定して、Heightは1にしておく (Set buffer size to Width, set Height to 1)
-		.DepthOrArraySize = 1, .MipLevels = 1,
-		.Format = DXGI_FORMAT_UNKNOWN,
-		.SampleDesc = DXGI_SAMPLE_DESC({ .Count = 1, .Quality = 0 }),
-		.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR, //!< Widthに「バッファサイズ」を指定しているので ROW_MAJOR
-		.Flags = D3D12_RESOURCE_FLAG_NONE
-	};
-	const D3D12_HEAP_PROPERTIES HP = {
-		.Type = HT,
-		.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
-		.CreationNodeMask = 0, .VisibleNodeMask = 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(Resource)));
-}
-
-void DX::CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs, const std::vector<D3D12_SUBRESOURCE_DATA>& SRDs, const D3D12_RESOURCE_DESC& RD0)
-{
-	//!< フットプリントの取得 (Acquire footprint)
-	PSFs.resize(size(SRDs));
-	std::vector<UINT> NumRows(size(SRDs));
-	std::vector<UINT64> RowSizeInBytes(size(SRDs));
-	UINT64 Size = 0;
-	Device->GetCopyableFootprints(&RD0, 0, static_cast<const UINT>(size(SRDs)), 0, data(PSFs), data(NumRows), data(RowSizeInBytes), &Size);
-
-	const D3D12_RESOURCE_DESC RD = {
-		.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER,
-		.Alignment = 0,
-		.Width = Size, .Height = 1,
+		.Width = TotalBytes, .Height = 1,
 		.DepthOrArraySize = 1, .MipLevels = 1,
 		.Format = DXGI_FORMAT_UNKNOWN,
 		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
@@ -217,57 +188,28 @@ void DX::CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, s
 		.CreationNodeMask = 0, .VisibleNodeMask = 0
 	};
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(Resource)));
-	if (nullptr != *Resource) [[likely]] {
-		BYTE * Data;
-		VERIFY_SUCCEEDED((*Resource)->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
-			for (auto i = 0; i < size(PSFs); ++i) {
-				const auto& SRD = SRDs[i];
-				const auto NR = NumRows[i];
-				const auto RSIB = RowSizeInBytes[i];
-				const D3D12_MEMCPY_DEST MCD = {
-					.pData = Data + PSFs[i].Offset,
-					.RowPitch = PSFs[i].Footprint.RowPitch,
-					.SlicePitch = static_cast<SIZE_T>(PSFs[i].Footprint.RowPitch) * NR
-				};
-				for (UINT j = 0; j < PSFs[i].Footprint.Depth; ++j) {
-					auto Dst = reinterpret_cast<BYTE*>(MCD.pData) + MCD.SlicePitch * j;
-					const auto Src = reinterpret_cast<const BYTE*>(SRD.pData) + SRD.SlicePitch * j;
-					for (UINT k = 0; k < NR; ++k) {
-						memcpy(Dst + MCD.RowPitch * k, Src + SRD.RowPitch * k, RSIB);
-					}
+
+	BYTE* Data;
+	VERIFY_SUCCEEDED((*Resource)->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
+		for (auto i = 0; i < size(PSFs); ++i) {
+			const auto NR = NumRows[i];
+			const auto RSIB = RowSizeInBytes[i];
+			const D3D12_MEMCPY_DEST MCD = {
+				.pData = Data + PSFs[i].Offset,
+				.RowPitch = PSFs[i].Footprint.RowPitch,
+				.SlicePitch = static_cast<SIZE_T>(PSFs[i].Footprint.RowPitch) * NR
+			};
+			const auto& SRD = SRDs[i];
+			for (UINT j = 0; j < PSFs[i].Footprint.Depth; ++j) {
+				auto Dst = reinterpret_cast<BYTE*>(MCD.pData) + MCD.SlicePitch * j;
+				const auto Src = reinterpret_cast<const BYTE*>(SRD.pData) + SRD.SlicePitch * j;
+				for (UINT k = 0; k < NR; ++k) {
+					memcpy(Dst + MCD.RowPitch * k, Src + SRD.RowPitch * k, RSIB);
 				}
 			}
-		} (*Resource)->Unmap(0, nullptr);
-	}
+		}
+	} (*Resource)->Unmap(0, nullptr);
 }
-
-void DX::CreateTextureResource(ID3D12Resource** Resource, const DXGI_FORMAT Format, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize, const UINT16 MipLevels)
-{
-	const D3D12_RESOURCE_DESC RD = {
-		.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D, //!< TEXTURE3Dが使いたい場合は要考慮 #DX_TODO
-		.Alignment = 0,
-		.Width = Width, .Height = Height,
-		.DepthOrArraySize = DepthOrArraySize, .MipLevels = MipLevels,
-		.Format = Format,
-		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
-		.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-		.Flags = D3D12_RESOURCE_FLAG_NONE
-	};
-	const D3D12_HEAP_PROPERTIES HP = {
-		.Type = D3D12_HEAP_TYPE_DEFAULT,
-		.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
-		.CreationNodeMask = 0, .VisibleNodeMask = 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP,
-		D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES,
-		&RD,
-		D3D12_RESOURCE_STATE_GENERIC_READ, //!< GENERIC_READ にすること (Must be GENERIC_READ)
-		nullptr,
-		IID_PPV_ARGS(Resource)
-	));
-}
-
 void DX::CreateTextureResource(ID3D12Resource** Resource, ID3D12Device* Device, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize, const UINT16 MipLevels, const DXGI_FORMAT Format, const D3D12_RESOURCE_FLAGS RF, const D3D12_RESOURCE_STATES RS)
 {
 	constexpr D3D12_HEAP_PROPERTIES HP = {
@@ -1512,26 +1454,25 @@ void DX::CreateTexture1x1(const UINT32 Color, const D3D12_RESOURCE_STATES RS)
 		constexpr auto LayerSize = 1 * PitchSize;
 
 		const auto CA = COM_PTR_GET(CommandAllocators[0]);
-		const auto CL = COM_PTR_GET(GraphicsCommandLists[0]);
+		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 
 		//!< アップロード用バッファ (Buffer for upload)
 		COM_PTR<ID3D12Resource> UploadResource;
-		CreateBufferResource(COM_PTR_PUT(UploadResource), LayerSize, D3D12_HEAP_TYPE_UPLOAD);
-		CopyToUploadResource(COM_PTR_GET(UploadResource), LayerSize, &Color);
+		CreateBufferResource(COM_PTR_PUT(UploadResource), COM_PTR_GET(Device), LayerSize, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, &Color);
 
 		//!< バッファテクスチャ間転送コマンド (Buffer to image copy command)
 		const std::vector PSFs = {
 			D3D12_PLACED_SUBRESOURCE_FOOTPRINT({
 				.Offset = 0, 
 				.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = RD.Format, .Width = static_cast<UINT>(RD.Width), .Height = RD.Height, .Depth = 1, .RowPitch = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)) })
-				}),
+			}),
 		};
-		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
-			PopulateCommandList_CopyTextureRegion(CL, COM_PTR_GET(UploadResource), COM_PTR_GET(ImageResources.back()), PSFs, RS);
-		} VERIFY_SUCCEEDED(CL->Close());
+		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
+			PopulateCommandList_CopyTextureRegion(GCL, COM_PTR_GET(UploadResource), COM_PTR_GET(ImageResources.back()), PSFs, RS);
+		} VERIFY_SUCCEEDED(GCL->Close());
 
 		//!< コマンドの実行 (Execute command)
-		ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
+		ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), static_cast<ID3D12CommandList*>(GCL), COM_PTR_GET(Fence));
 	}
 }
 
@@ -1579,7 +1520,7 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 		constexpr auto LayerSize = 1 * PitchSize;
 
 		const auto CA = COM_PTR_GET(CommandAllocators[0]);
-		const auto CL = COM_PTR_GET(GraphicsCommandLists[0]);
+		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 
 		//!< アラインされたサイズを計算 (Calculate aligned size)
 		size_t AlignedSize = 0;
@@ -1594,8 +1535,7 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 		}
 		//!< (アラインされた)アップロード用バッファを作成 (Aligned buffer for upload)
 		COM_PTR<ID3D12Resource> UploadResource;
-		CreateBufferResource(COM_PTR_PUT(UploadResource), size(AlignedData), D3D12_HEAP_TYPE_UPLOAD);
-		CopyToUploadResource(COM_PTR_GET(UploadResource), size(AlignedData), data(AlignedData));
+		CreateBufferResource(COM_PTR_PUT(UploadResource), COM_PTR_GET(Device), size(AlignedData), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, data(AlignedData));
 
 #pragma region TEX_ARRAY
 		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs;
@@ -1603,15 +1543,15 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 			PSFs.emplace_back(D3D12_PLACED_SUBRESOURCE_FOOTPRINT({ 
 				.Offset = RoundUp(i * LayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT),
 				.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = RD.Format, .Width = static_cast<UINT>(RD.Width), .Height = RD.Height, .Depth = 1, .RowPitch = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)) }) 
-				}));
+			}));
 		}
 #pragma endregion
 
-		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
-			PopulateCommandList_CopyTextureRegion(CL, COM_PTR_GET(UploadResource), COM_PTR_GET(ImageResources.back()), PSFs, RS);
-		} VERIFY_SUCCEEDED(CL->Close());
+		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
+			PopulateCommandList_CopyTextureRegion(GCL, COM_PTR_GET(UploadResource), COM_PTR_GET(ImageResources.back()), PSFs, RS);
+		} VERIFY_SUCCEEDED(GCL->Close());
 
-		ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
+		ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), static_cast<ID3D12CommandList*>(GCL), COM_PTR_GET(Fence));
 	}
 }
 

@@ -32,6 +32,8 @@ protected:
 
 	public:
 		void Create(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, std::string_view Path) {
+			assert(std::filesystem::exists(Path) && "");
+			assert(Path.ends_with(".dds") && "");
 			GLITexture = gli::load(data(Path));
 			assert(!GLITexture.empty() && "Load image failed");
 
@@ -76,7 +78,10 @@ protected:
 	};
 
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
+		//!< #VK_TODO コマンド終了を待つ (基底でもやっているので2重チェックになっている…)
+		if (VK_NULL_HANDLE != Device) [[likely]] { VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device)); }
 		for (auto& i : DDSTextures) { i.Destroy(Device); } DDSTextures.clear();
+
 		Super::OnDestroy(hWnd, hInstance);
 	}
 
@@ -94,4 +99,3 @@ protected:
 
 	std::vector<DDSTexture> DDSTextures;
 };
-

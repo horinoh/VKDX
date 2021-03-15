@@ -49,15 +49,15 @@ protected:
 	virtual void CreateTexture() override {
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
+			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+			const auto CB = CommandBuffers[0];
 			//!< [0] ディスプレースメント(Displacement)
-			Images.emplace_back();
-			auto GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Displacement.dds")));
-			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, GLITexture);
-
+			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Displacement.dds")));
+			DDSTextures.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+			
 			//!< [1] カラー(Color)
-			Images.emplace_back();
-			GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds")));
-			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, GLITexture);
+			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds")));
+			DDSTextures.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		}
 		//!< [2] 深度(Depth)
 		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
@@ -158,16 +158,16 @@ protected:
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			const DescriptorUpdateInfo DUI = {
 				VkDescriptorBufferInfo({.buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }), //!< UniformBuffer
-				VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }), //!< Sampler + Image0
-				VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = ImageViews[1], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }), //!< Sampler + Image1
+				VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = DDSTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }), //!< Sampler + Image0
+				VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = DDSTextures[1].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }), //!< Sampler + Image1
 			};
 			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DescriptorUpdateTemplates[0], &DUI);
 		}
 #pragma endregion
 #else
 #pragma region FRAME_OBJECT
-		const auto DII0 = VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }); //!< Sampler + Image0
-		const auto DII1 = VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = ImageViews[1], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }); //!< Sampler + Image1
+		const auto DII0 = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = DDSTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }); //!< Sampler + Image0
+		const auto DII1 = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = DDSTextures[1].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }); //!< Sampler + Image1
 		constexpr std::array<VkCopyDescriptorSet, 0> CDSs = {};
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			const auto DBI = VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }); //!< UniformBuffer

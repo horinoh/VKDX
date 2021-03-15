@@ -23,15 +23,9 @@ protected:
 	virtual void CreateTexture() override {
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
-#if 0
 			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")));
 			DDSTextures.back().SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-#else
-			Images.emplace_back();
-			const auto GLITexture = LoadImage(&Images.back().Image, &Images.back().DeviceMemory, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")));
-			CreateImageView(&ImageViews.emplace_back(), Images.back().Image, GLITexture);
-#endif
 		}
 	}
 #ifdef USE_IMMUTABLE_SAMPLER
@@ -122,18 +116,10 @@ protected:
 			}),
 		}, DescriptorSetLayouts[0]);
 		const DescriptorUpdateInfo DUI = {
-#if 0
 #ifdef USE_IMMUTABLE_SAMPLER
 			VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = DDSTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
 #else
 			VkDescriptorImageInfo({.sampler = Samplers[0], .imageView = DDSTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
-#endif
-#else
-#ifdef USE_IMMUTABLE_SAMPLER
-			VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
-#else
-			VkDescriptorImageInfo({ .sampler = Samplers[0], .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
-#endif
 #endif
 		};
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);

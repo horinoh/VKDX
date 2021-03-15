@@ -953,7 +953,7 @@ void VK::CreateInstance()
 		//!< デバッグレポート用
 		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
 #endif
-#ifdef USE_RENDERDOC
+#ifdef _DEBUG
 		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 #endif
 	};
@@ -1409,7 +1409,7 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 #ifdef USE_PUSH_DESCRIPTOR
 		VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
 #endif
-#ifdef USE_RENDERDOC
+#ifdef USE_DEBUG_MARKER
 		VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
 #endif
 #ifdef USE_HDR
