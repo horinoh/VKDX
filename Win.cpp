@@ -83,12 +83,6 @@ void Win::OnTimer(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance)
 {
 	SendMessage(hWnd, WM_PAINT, 0, 0);
 }
-void Win::OnPaint([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance)
-{
-}
-void Win::OnDestroy([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance)
-{
-}
 
 template<> void Win::_Log([[maybe_unused]] const LogType Type, [[maybe_unused]] const char* Str)
 {

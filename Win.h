@@ -131,8 +131,9 @@ public:
 	virtual void OnSize(HWND /*hWnd*/, HINSTANCE /*hInstance*/) {} //!< WM_SIZE はドラッグ中に繰り返しコールされてしまうので↓
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance); //!< ウインドウサイズ確定時にコールされる WM_EXITSIZEMOVE を使用する
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance);
-	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance);
-	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance);
+	virtual void OnPaint([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
+	virtual void OnPreDestroy([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
+	virtual void OnDestroy([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
 
 	static [[nodiscard]] LONG GetWidth(const RECT& R) { return R.right - R.left; }
 	static [[nodiscard]] LONG GetHeight(const RECT& R) { return R.bottom - R.top; }

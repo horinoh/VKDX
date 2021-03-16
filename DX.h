@@ -312,7 +312,8 @@ public:
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override;
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance) override;
 	virtual void OnPaint(HWND hWnd, HINSTANCE hInstance) override { Super::OnPaint(hWnd, hInstance); Draw(); }
-	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
+	virtual void OnPreDestroy(HWND hWnd, HINSTANCE hInstance) override;
+	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override { Super::OnDestroy(hWnd, hInstance); }
 
 	static [[nodiscard]] std::string GetHRESULTString(const HRESULT Result) { return ToString(GetHRESULTWString(Result)); }
 	static [[nodiscard]] std::wstring GetHRESULTWString(const HRESULT Result) { return std::wstring(_com_error(Result).ErrorMessage()); }

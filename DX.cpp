@@ -121,10 +121,9 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 		PopulateCommandList(i);
 	}
 }
-
-void DX::OnDestroy(HWND hWnd, HINSTANCE hInstance)
+void DX::OnPreDestroy(HWND hWnd, HINSTANCE hInstance)
 {
-	Super::OnDestroy(hWnd, hInstance);
+	Super::OnPreDestroy(hWnd, hInstance);
 
 	//!< GPU‚ªŠ®—¹‚·‚é‚Ü‚Å‚±‚±‚Å‘Ò‹@ (Wait GPU)
 	WaitForFence();

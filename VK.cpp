@@ -155,15 +155,18 @@ void VK::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 		PopulateCommandBuffer(i);
 	}
 }
-
-void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
+void VK::OnPreDestroy(HWND hWnd, HINSTANCE hInstance)
 {
-	Super::OnDestroy(hWnd, hInstance);
+	Super::OnPreDestroy(hWnd, hInstance);
 
 	if (VK_NULL_HANDLE != Device) [[likely]] {
 		//!< デバイスのキューにサブミットされた全コマンドが完了するまでブロッキング、主に終了処理に使う (Wait for all command submitted to queue, usually used on finalize)
 		VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device));
 	}
+}
+void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
+{
+	Super::OnDestroy(hWnd, hInstance);
 
 	for (auto i : Framebuffers) {
 		vkDestroyFramebuffer(Device, i, GetAllocationCallbacks());

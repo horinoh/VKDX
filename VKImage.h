@@ -59,16 +59,19 @@ protected:
 			};
 			VERIFY_SUCCEEDED(vkCreateImageView(Dev, &IVCI, GetAllocationCallbacks(), &View));
 		}
+		void CreateStagingBuffer(const VkDevice Dev, VkPhysicalDeviceMemoryProperties PDMP, BufferMemory& BM) {
+#ifdef USE_EXPERIMENTAL
+			BM.Create(Dev, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, static_cast<VkDeviceSize>(Util::size(GLITexture)), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Util::data(GLITexture));
+#else
+			BM.Create(Dev, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, static_cast<VkDeviceSize>(GLITexture.size()), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, GLITexture.data());
+#endif
+		}
 		void PopulateCopyCommand(const VkCommandBuffer CB, const VkPipelineStageFlags PSF, const VkBuffer Staging) {
 			PopulateCommandBuffer_CopyBufferToImage(CB, Staging, Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, GLITexture);
 		}
 		void SubmitCopyCommand(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const VkPipelineStageFlags PSF) {
 			VK::Scoped<BufferMemory> StagingBuffer(Dev);
-#ifdef USE_EXPERIMENTAL
-			StagingBuffer.Create(Dev, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, static_cast<VkDeviceSize>(Util::size(GLITexture)), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Util::data(GLITexture));
-#else
-			StagingBuffer.Create(Dev, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, static_cast<VkDeviceSize>(GLITexture.size()), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, GLITexture.data());
-#endif
+			CreateStagingBuffer(Dev, PDMP, StagingBuffer);
 			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 				PopulateCopyCommand(CB, PSF, StagingBuffer.Buffer);
@@ -79,7 +82,7 @@ protected:
 
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
 		//!< #VK_TODO コマンド終了を待つ (基底でもやっているので2重チェックになっている…)
-		if (VK_NULL_HANDLE != Device) [[likely]] { VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device)); }
+		//if (VK_NULL_HANDLE != Device) [[likely]] { VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device)); }
 		for (auto& i : DDSTextures) { i.Destroy(Device); } DDSTextures.clear();
 
 		Super::OnDestroy(hWnd, hInstance);
