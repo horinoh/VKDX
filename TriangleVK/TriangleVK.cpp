@@ -258,8 +258,7 @@ void TriangleVK::CreateGeometry()
 			Vertex_PositionColor({.Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
 		};
 #endif
-		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices));
-		VertexBuffers.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Vertices), data(Vertices));
+		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Vertices), data(Vertices));
 #ifdef _DEBUG
 		MarkerSetObjectName(Device, VertexBuffers.back().Buffer, "MyVertexBuffer");
 #endif
@@ -267,16 +266,14 @@ void TriangleVK::CreateGeometry()
 	//!< インデックスバッファ (IndexBuffer)
 	{
 		constexpr std::array<uint32_t, 3> Indices = { 0, 1, 2 };
-		IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices));
-		IndexBuffers.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Indices), data(Indices));
+		IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Indices), data(Indices));
 #ifdef _DEBUG
 		MarkerSetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
 #endif
 		//!< インダイレクトバッファ (IndirectBuffer)
 		{
 			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
-			IndirectBuffers.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
 #ifdef _DEBUG
 			MarkerSetObjectName(Device, IndirectBuffers.back().Buffer, "MyIndirectBuffer");
 #endif

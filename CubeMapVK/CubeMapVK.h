@@ -39,8 +39,7 @@ protected:
 	virtual void CreateGeometry() override {
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
-		IndirectBuffers.back().SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIIC), &DIIC);
+		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIIC), &DIIC);
 	}
 	virtual void CreateUniformBuffer() override {
 		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
@@ -66,11 +65,9 @@ protected:
 		if (FindDirectory("DDS", Path)) {
 			const auto CB = CommandBuffers[0];
 			//!< [0] キューブ(Cube) : PX, NX, PY, NY, PZ, NZ
-			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\CubeMap\\DebugCube.dds")));
-			DDSTextures.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\CubeMap\\DebugCube.dds"))).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 			//!< [1] 法線(Normal)
-			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds")));
-			DDSTextures.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds"))).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		}
 #if !defined(USE_SKY_DOME)
 		//!< [2] 深度(DepthMap)

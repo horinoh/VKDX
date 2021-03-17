@@ -45,8 +45,7 @@ protected:
 		//!< メッシュ描画用
 		{
 			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA);
-			IndirectBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
 		}
 #pragma endregion
 
@@ -54,8 +53,7 @@ protected:
 		//!< フルスクリーン描画用
 		{
 			constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA);
-			IndirectBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DA), &DA);
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DA), &DA);
 		}
 #pragma endregion
 	}

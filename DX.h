@@ -134,9 +134,10 @@ public:
 		using Super = ResourceBase;
 	public:
 		D3D12_VERTEX_BUFFER_VIEW View;
-		void Create(ID3D12Device* Device, const size_t Size, const UINT Stride) {
+		VertexBuffer& Create(ID3D12Device* Device, const size_t Size, const UINT Stride) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
 			View = D3D12_VERTEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .StrideInBytes = Stride });
+			return *this;
 		}
 		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const size_t Size, ID3D12Resource* Upload) {
 			DX::PopulateCommandList_CopyBufferRegion(GCL, Upload, COM_PTR_GET(Resource), Size, D3D12_RESOURCE_STATE_GENERIC_READ);
@@ -156,9 +157,10 @@ public:
 		using Super = ResourceBase;
 	public:
 		D3D12_INDEX_BUFFER_VIEW View;
-		void Create(ID3D12Device* Device, const size_t Size, const DXGI_FORMAT Format) {
+		IndexBuffer& Create(ID3D12Device* Device, const size_t Size, const DXGI_FORMAT Format) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
 			View = D3D12_INDEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .Format = Format });
+			return *this;
 		}
 		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const size_t Size, ID3D12Resource* Upload) {
 			DX::PopulateCommandList_CopyBufferRegion(GCL, Upload, COM_PTR_GET(Resource), Size, D3D12_RESOURCE_STATE_GENERIC_READ);
@@ -178,23 +180,26 @@ public:
 		using Super = ResourceBase;
 	public:
 		COM_PTR<ID3D12CommandSignature> CommandSignature;
-		void Create(ID3D12Device* Device, const D3D12_DRAW_INDEXED_ARGUMENTS& DIA) {
+		IndirectBuffer& Create(ID3D12Device* Device, const D3D12_DRAW_INDEXED_ARGUMENTS& DIA) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, sizeof(DIA), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
 			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED }), };
 			const D3D12_COMMAND_SIGNATURE_DESC CSD = { .ByteStride = static_cast<UINT>(sizeof(DIA)), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
 			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
+			return *this;
 		}
-		void Create(ID3D12Device* Device, const D3D12_DRAW_ARGUMENTS& DA) {
+		IndirectBuffer& Create(ID3D12Device* Device, const D3D12_DRAW_ARGUMENTS& DA) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, sizeof(DA), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
 			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW }), };
 			const D3D12_COMMAND_SIGNATURE_DESC CSD = { .ByteStride = static_cast<UINT>(sizeof(DA)), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
 			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
+			return *this;
 		}
-		void Create(ID3D12Device* Device, const D3D12_DISPATCH_ARGUMENTS& DA) {
+		IndirectBuffer& Create(ID3D12Device* Device, const D3D12_DISPATCH_ARGUMENTS& DA) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, sizeof(DA), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
 			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH }), };
 			const D3D12_COMMAND_SIGNATURE_DESC CSD = { .ByteStride = static_cast<UINT>(sizeof(DA)), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
 			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
+			return *this;
 		}
 		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const size_t Size, ID3D12Resource* Upload) {
 			DX::PopulateCommandList_CopyBufferRegion(GCL, Upload, COM_PTR_GET(Resource), Size, D3D12_RESOURCE_STATE_GENERIC_READ);

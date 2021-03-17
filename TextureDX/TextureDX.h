@@ -16,14 +16,12 @@ public:
 protected:
 	virtual void CreateGeometry() override {
 		constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA);
-		IndirectBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DA), &DA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DA), &DA);
 	}
 	virtual void CreateTexture() override {
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
-			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds"));
-			DDSTextures.back().ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		}
 	}
 #ifdef USE_STATIC_SAMPLER

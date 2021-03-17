@@ -31,7 +31,7 @@ protected:
 		gli::texture GLITexture;
 
 	public:
-		void Create(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, std::string_view Path) {
+		DDSTexture& Create(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, std::string_view Path) {
 			assert(std::filesystem::exists(Path) && "");
 			assert(Path.ends_with(".dds") && "");
 			GLITexture = gli::load(data(Path));
@@ -58,6 +58,7 @@ protected:
 				.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS })
 			};
 			VERIFY_SUCCEEDED(vkCreateImageView(Dev, &IVCI, GetAllocationCallbacks(), &View));
+			return *this;
 		}
 		void CreateStagingBuffer(const VkDevice Dev, VkPhysicalDeviceMemoryProperties PDMP, BufferMemory& BM) {
 #ifdef USE_EXPERIMENTAL

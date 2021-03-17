@@ -18,7 +18,7 @@ protected:
 		std::vector<D3D12_SUBRESOURCE_DATA> SRDs;
 	public:
 		D3D12_SHADER_RESOURCE_VIEW_DESC SRV;
-		void Create(ID3D12Device* Dev, std::wstring_view Path) {
+		DDSTexture& Create(ID3D12Device* Dev, std::wstring_view Path) {
 			assert(std::filesystem::exists(Path) && "");
 			assert(Path.ends_with(TEXT(".dds")) && "");
 			VERIFY_SUCCEEDED(DirectX::LoadDDSTextureFromFile(Dev, data(Path), COM_PTR_PUT(Resource), DDSData, SRDs));
@@ -27,6 +27,7 @@ protected:
 			SRV = RD.DepthOrArraySize == 1 ?
 				D3D12_SHADER_RESOURCE_VIEW_DESC({ .Format = RD.Format, .ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D, .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, .Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = RD.MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f }) }) :
 				D3D12_SHADER_RESOURCE_VIEW_DESC({ .Format = RD.Format, .ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY, .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, .Texture2DArray = D3D12_TEX2D_ARRAY_SRV({.MostDetailedMip = 0, .MipLevels = RD.MipLevels, .FirstArraySlice = 0, .ArraySize = RD.DepthOrArraySize, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f }) });
+			return *this;
 		}
 		void CreateUploadResourceAndFootprint(ID3D12Device* Dev, ID3D12Resource** Upload, std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs) {
 			PSFs.resize(size(SRDs));

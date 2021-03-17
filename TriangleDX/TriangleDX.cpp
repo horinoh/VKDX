@@ -253,8 +253,7 @@ void TriangleDX::CreateGeometry()
 			Vertex_PositionColor({.Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
 		};
 #endif
-		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), sizeof(Vertices[0]));
-		VertexBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(Vertices), data(Vertices));
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), sizeof(Vertices[0])).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(Vertices), data(Vertices));
 #ifdef _DEBUG
 		SetName(COM_PTR_GET(VertexBuffers.back().Resource), TEXT("MyVertexBuffer"));
 #endif
@@ -262,16 +261,14 @@ void TriangleDX::CreateGeometry()
 	//!< インデックスバッファ (IndexBuffer)
 	{
 		constexpr std::array<UINT32, 3> Indices = { 0, 1, 2 };
-		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), DXGI_FORMAT_R32_UINT);
-		IndexBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(Indices), data(Indices));
+		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), DXGI_FORMAT_R32_UINT).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(Indices), data(Indices));
 #ifdef _DEBUG
 		SetName(COM_PTR_GET(IndexBuffers.back().Resource), TEXT("MyIndexBuffer"));
 #endif
 		//!< インダイレクトバッファ (IndirectBuffer)
 		{
 			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA);			
-			IndirectBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
 #ifdef _DEBUG
 			SetName(COM_PTR_GET(IndirectBuffers.back().Resource), TEXT("MyIndirectBuffer"));
 #endif

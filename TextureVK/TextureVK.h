@@ -17,15 +17,13 @@ protected:
 	virtual void CreateGeometry() override { 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
-		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC);
-		IndirectBuffers.back().SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
+		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
 	}
 	virtual void CreateTexture() override {
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
 			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")));
-			DDSTextures.back().SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds"))).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		}
 	}
 #ifdef USE_IMMUTABLE_SAMPLER

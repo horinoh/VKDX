@@ -28,8 +28,7 @@ protected:
 	virtual void CreateGeometry() override { 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
-		IndirectBuffers.back().SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIIC), &DIIC);
+		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIIC), &DIIC);
 	}
 	virtual void CreateUniformBuffer() override {
 		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
@@ -63,23 +62,21 @@ protected:
 #endif
 	virtual void CreatePipeline() override { 
 		const auto ShaderPath = GetBasePath();
-#ifdef USE_SCREENSPACE_WIREFRAME
 		const std::array SMs = {
+#ifdef USE_SCREENSPACE_WIREFRAME
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT("_wf.frag.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT("_wf.geom.spv"))),
-		};
 #else
-		const std::array SMs = {
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".geom.spv"))),
-		};
 #endif
+		};
 		const std::array PSSCIs = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),

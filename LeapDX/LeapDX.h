@@ -38,8 +38,7 @@ protected:
 
 	virtual void CreateGeometry() override {
 		constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA);
-		IndirectBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DA), &DA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DA), &DA);
 	}
 #pragma region CB
 	virtual void CreateConstantBuffer() override {
@@ -71,15 +70,14 @@ protected:
 				.CreationNodeMask = 0, .VisibleNodeMask = 0
 			};
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
-
-			UpdateLeapImage();
-
 			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
 				.Format = ImageResources.back()->GetDesc().Format,
 				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY,
 				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
 				.Texture2DArray = D3D12_TEX2D_ARRAY_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .FirstArraySlice = 0, .ArraySize = Layers, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
 			}));
+
+			UpdateLeapImage();
 		}
 		//!< ディストーションマップ
 		{
@@ -100,15 +98,14 @@ protected:
 				.CreationNodeMask = 0, .VisibleNodeMask = 0
 			};
 			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
-
-			UpdateDistortionImage();
-
 			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
 				.Format = ImageResources.back()->GetDesc().Format,
 				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY,
 				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
 				.Texture2DArray = D3D12_TEX2D_ARRAY_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .FirstArraySlice = 0, .ArraySize = Layers, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
 			}));
+
+			UpdateDistortionImage();
 		}
 #else
 		CreateTextureArray1x1({ 0xff0000ff, 0xff00ff00 });

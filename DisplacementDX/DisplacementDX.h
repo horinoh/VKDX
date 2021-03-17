@@ -27,8 +27,7 @@ protected:
 
 	virtual void CreateGeometry() override {
 		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA);
-		IndirectBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DIA), &DIA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DIA), &DIA);
 	}
 	virtual void CreateConstantBuffer() override {
 		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
@@ -55,23 +54,12 @@ protected:
 	virtual void CreateTexture() override {
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
+			const auto CA = COM_PTR_GET(CommandAllocators[0]);
+			const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 			//!< [0] Displacemnt
-			LoadImage(COM_PTR_PUT(ImageResources.emplace_back()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Displacement.dds"));
-			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
-				.Format = ImageResources.back()->GetDesc().Format,
-				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f }),
-			}));
-
+			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Displacement.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			//!< [1] Color
-			LoadImage(COM_PTR_PUT(ImageResources.emplace_back()), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds"));
-			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
-				.Format = ImageResources.back()->GetDesc().Format,
-				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f }),
-			}));
+			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		}
 		//!< [2] Depth
 		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
@@ -189,8 +177,8 @@ protected:
 				Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
 			}
 #pragma endregion
-			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV0
-			Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), &ShaderResourceViewDescs[1], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV1
+			Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV0
+			Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[1].Resource), &DDSTextures[1].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV1
 		}
 		{
 			const auto& DH = DsvDescriptorHeaps[0];
