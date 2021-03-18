@@ -242,8 +242,7 @@ void InstancingDX::CreateGeometry()
 			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }),
 			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }),
 		};
-		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), sizeof(Vertices[0]));
-		VertexBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(Vertices), data(Vertices));
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), sizeof(Vertices[0])).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(Vertices), data(Vertices));
 	}
 	{
 		constexpr std::array Instances = {
@@ -253,16 +252,13 @@ void InstancingDX::CreateGeometry()
 			Instance_OffsetXY({ { 0.25f, 0.25f } }),
 			Instance_OffsetXY({ { 0.5f, 0.5f } }),
 		};
-		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Instances), sizeof(Instances[0]));
-		VertexBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(Instances), data(Instances));
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Instances), sizeof(Instances[0])).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(Instances), data(Instances));
 
 		constexpr std::array<UINT32, 3> Indices = { 0, 1, 2 };
-		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), DXGI_FORMAT_R32_UINT);
-		IndexBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(Indices), data(Indices)); 
+		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), DXGI_FORMAT_R32_UINT).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(Indices), data(Indices)); 
 		{
 			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = static_cast<UINT>(size(Instances)), .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA);
-			IndirectBuffers.back().ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
 		}
 	}
 	LOG_OK();
@@ -290,22 +286,20 @@ void InstancingDX::PopulateCommandList(const size_t i)
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
 	{
-		const auto RS = COM_PTR_GET(RootSignatures[0]);
-		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-
-		GCL->SetGraphicsRootSignature(RS);
+		GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 		GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 		GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
+		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
-			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+			auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 
 			constexpr std::array<D3D12_RECT, 0> Rects = {};
-			GCL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+			GCL->ClearRenderTargetView(SCCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 
-			const std::array RTDHs = { CDH };
+			const std::array RTDHs = { SCCDH };
 			GCL->OMSetRenderTargets(static_cast<UINT>(size(RTDHs)), data(RTDHs), FALSE, nullptr);
 
 			GCL->ExecuteBundle(BGCL);

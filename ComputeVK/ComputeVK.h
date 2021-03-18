@@ -39,8 +39,7 @@ protected:
 	virtual void CreateGeometry() override { 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		constexpr VkDispatchIndirectCommand DIC = { .x = 32, .y = 1, .z = 1 };
-		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC);
-		IndirectBuffers.back().SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
+		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
 	}
 	virtual void CreateTexture() override {
 		const auto Format = VK_FORMAT_R8G8B8A8_UINT;

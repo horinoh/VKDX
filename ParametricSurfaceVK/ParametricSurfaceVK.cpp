@@ -270,7 +270,7 @@ void ParametricSurfaceVK::PopulateCommandBuffer(const size_t i)
 		.pInheritanceInfo = nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
+		constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
 		const VkRenderPassBeginInfo RPBI = {
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			.pNext = nullptr,

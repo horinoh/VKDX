@@ -247,24 +247,22 @@ void BillboardDX::PopulateCommandList(const size_t i)
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
 	{
-        const auto RS = COM_PTR_GET(RootSignatures[0]);
-		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-
-        GCL->SetGraphicsRootSignature(RS);
+        GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 		GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 		GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
+		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
-			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+			auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 			constexpr std::array<D3D12_RECT, 0> Rects = {};
-			GCL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
-			const auto CDH_Depth = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			GCL->ClearDepthStencilView(CDH_Depth, D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, 0, nullptr);
+			GCL->ClearRenderTargetView(SCCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+			const auto DCDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+			GCL->ClearDepthStencilView(DCDH, D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, 0, nullptr);
 
-			const std::array RTDHs = { CDH };
-			GCL->OMSetRenderTargets(static_cast<UINT>(size(RTDHs)), data(RTDHs), FALSE, &CDH_Depth);
+			const std::array RTCDHs = { SCCDH };
+			GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, &DCDH);
 
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];

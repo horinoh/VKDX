@@ -242,8 +242,7 @@ void InstancingVK::CreateGeometry()
 			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }),
 			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }),
 		};
-		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices));
-		VertexBuffers.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Vertices), data(Vertices));
+		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Vertices), data(Vertices));
 	}
 	{
 		constexpr std::array Instances = {
@@ -253,16 +252,13 @@ void InstancingVK::CreateGeometry()
 			Instance_OffsetXY({ { 0.25f, 0.25f } }),
 			Instance_OffsetXY({ { 0.5f, 0.5f } }),
 		};
-		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Instances));
-		VertexBuffers.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Instances), data(Instances));
+		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Instances)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Instances), data(Instances));
 
 		constexpr std::array<uint32_t, 3> Indices = { 0, 1, 2 };
-		IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices));
-		IndexBuffers.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Indices), data(Indices));
+		IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Indices), data(Indices));
 		{
 			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = static_cast<uint32_t>(size(Instances)), .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
-			IndirectBuffers.back().SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
 		}
 	}
 	LOG_OK();
@@ -295,7 +291,7 @@ void InstancingVK::PopulateCommandBuffer(const size_t i)
 		vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
 		
 		const std::array VBs = { VertexBuffers[0].Buffer, VertexBuffers[1].Buffer };
-		const std::array<VkDeviceSize, 2> Offsets = { 0, 0 };
+		constexpr std::array<VkDeviceSize, 2> Offsets = { 0, 0 };
 		vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(size(VBs)), data(VBs), data(Offsets));
 
 		vkCmdBindIndexBuffer(SCB, IndexBuffers[0].Buffer, 0, VK_INDEX_TYPE_UINT32);
@@ -304,14 +300,14 @@ void InstancingVK::PopulateCommandBuffer(const size_t i)
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 
 	const auto CB = CommandBuffers[i];
-	const VkCommandBufferBeginInfo CBBI = {
+	constexpr VkCommandBufferBeginInfo CBBI = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 		.pNext = nullptr,
 		.flags = 0,
 		.pInheritanceInfo = nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
+		constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
 		const VkRenderPassBeginInfo RPBI = {
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 			.pNext = nullptr,

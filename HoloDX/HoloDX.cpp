@@ -272,16 +272,16 @@ void HoloDX::PopulateCommandList(const size_t i)
 		{
 			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-			const auto RtvDH = RtvDescriptorHeaps[0];
-			auto RtvCDH = RtvDH->GetCPUDescriptorHandleForHeapStart();
+			const auto RTDH = RtvDescriptorHeaps[0];
+			auto RTCDH = RTDH->GetCPUDescriptorHandleForHeapStart();
 			constexpr std::array<D3D12_RECT, 0> Rects = {};
-			GCL->ClearRenderTargetView(RtvCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+			GCL->ClearRenderTargetView(RTCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 
 			const auto DsvDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			GCL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 
-			const std::array RtvCDHs = { RtvCDH };
-			GCL->OMSetRenderTargets(static_cast<UINT>(size(RtvCDHs)), data(RtvCDHs), FALSE, &DsvDH);
+			const std::array RTCDHs = { RTCDH };
+			GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, &DsvDH);
 
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
@@ -338,16 +338,16 @@ void HoloDX::PopulateCommandList(const size_t i)
 
 			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
-			auto ScCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); ScCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+			auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 
-			const std::array RtvCDHs = { ScCDH };
+			const std::array RtvCDHs = { SCCDH };
 			GCL->OMSetRenderTargets(static_cast<UINT>(size(RtvCDHs)), data(RtvCDHs), FALSE, nullptr);
 
-			const auto& SrvDH = CbvSrvUavDescriptorHeaps[1];
-			const std::array SrvDHs = { COM_PTR_GET(SrvDH) };
-			GCL->SetDescriptorHeaps(static_cast<UINT>(size(SrvDHs)), data(SrvDHs));
-			auto SrvGDH = SrvDH->GetGPUDescriptorHandleForHeapStart();
-			GCL->SetGraphicsRootDescriptorTable(0, SrvGDH); SrvGDH.ptr += Device->GetDescriptorHandleIncrementSize(SrvDH->GetDesc().Type); //!< SRV
+			const auto& DH = CbvSrvUavDescriptorHeaps[1];
+			const std::array DHs = { COM_PTR_GET(DH) };
+			GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+			auto SrvGDH = DH->GetGPUDescriptorHandleForHeapStart();
+			GCL->SetGraphicsRootDescriptorTable(0, SrvGDH); SrvGDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
 
 			GCL->ExecuteBundle(BGCL1);
 		}

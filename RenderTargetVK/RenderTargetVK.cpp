@@ -319,9 +319,9 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 		//!< メッシュ描画用
 		{
 #ifdef USE_DEPTH
-			const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
+			constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 #else
-			const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
+			constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
 #endif
 			const VkRenderPassBeginInfo RPBI = {
 				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -364,7 +364,7 @@ void RenderTargetVK::PopulateCommandBuffer(const size_t i)
 #pragma region PASS1
 		//!< レンダーテクスチャ描画用
 		{
-			const std::array<VkClearValue, 0> CVs = {};
+			constexpr std::array<VkClearValue, 0> CVs = {};
 			const VkRenderPassBeginInfo RPBI = {
 				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 				.pNext = nullptr,

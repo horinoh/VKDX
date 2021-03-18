@@ -301,10 +301,7 @@ void TriangleDX::PopulateCommandList(const size_t i)
 #if defined(_DEBUG) || defined(USE_PIX)
 		PIXScopedEvent(GCL, PIX_COLOR(0, 255, 0), TEXT("Command Begin"));
 #endif
-		const auto RS = COM_PTR_GET(RootSignatures[0]);
-		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-
-		GCL->SetGraphicsRootSignature(RS);
+		GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 #ifdef USE_ROOT_CONSTANTS
 		GCL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(size(Color)), data(Color), 0);
 #endif
@@ -312,15 +309,16 @@ void TriangleDX::PopulateCommandList(const size_t i)
 		GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 		GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
+		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
-			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+			auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 
 			constexpr std::array<D3D12_RECT, 0> Rects = {};
-			GCL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+			GCL->ClearRenderTargetView(SCCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 
-			const std::array RTDHs = { CDH };
-			GCL->OMSetRenderTargets(static_cast<UINT>(size(RTDHs)), data(RTDHs), FALSE, nullptr);
+			const std::array RTCDHs = { SCCDH };
+			GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, nullptr);
 
 			GCL->ExecuteBundle(BGCL);
 		}
