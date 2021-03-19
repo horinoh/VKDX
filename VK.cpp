@@ -2493,8 +2493,6 @@ void VK::CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipe
 	};
 	VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.emplace_back()));
 
-	//Textures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_FORMAT_R8G8B8A8_UNORM, VkExtent3D({.width = 1, .height = 1, .depth = 1}), VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
-
 	{
 		constexpr auto LayerSize = static_cast<uint32_t>(sizeof(Colors[0]));
 		const auto TotalSize = Layers * LayerSize;

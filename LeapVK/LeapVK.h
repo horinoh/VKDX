@@ -100,7 +100,29 @@ protected:
 			UpdateDistortionImage();
 		}
 #else
+		//const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		//const auto CB = CommandBuffers[0];
+		//Textures.emplace_back().Create(Device, PDMP, VK_FORMAT_R8G8B8A8_UNORM, VkExtent3D({ .width = 1, .height = 1, .depth = 1 }), 1, 2, VK_IMAGE_ASPECT_COLOR_BIT);
+		//const auto PSF = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		//{
+		//	VK::Scoped<BufferMemory> StagingBuffer(Device);
+		//	//CreateStagingBuffer(Device, PDMP, StagingBuffer);
+		//	std::vector<VkBufferImageCopy> BICs;
+		//	for (uint32_t i = 0; i < 2; ++i) {
+		//		//BICs.emplace_back(VkBufferImageCopy({
+		//		//	.bufferOffset = i * LayerSize, .bufferRowLength = 0, .bufferImageHeight = 0,
+		//		//	.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = static_cast<uint32_t>(i), .layerCount = 1 }),
+		//		//	.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),.imageExtent = Extent }));
+		//	}
+		//	constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
+		//	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+		//		PopulateCommandBuffer_CopyBufferToImage(CB, StagingBuffer.Buffer, Textures.back().Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, BICs, 1, 2);
+		//	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+		//	VK::SubmitAndWait(GraphicsQueue, CB);
+		//}
 		CreateTextureArray1x1({ 0xff0000ff, 0xff00ff00 });
+
+		//Textures.emplace_back().Create(Device, PDMP, VK_FORMAT_R8G8B8A8_UNORM, VkExtent3D({ .width = 1, .height = 1, .depth = 1 }), 1, 2, VK_IMAGE_ASPECT_COLOR_BIT);
 		CreateTextureArray1x1({ 0xffff0000, 0xff00ffff });
 #endif
 	}
