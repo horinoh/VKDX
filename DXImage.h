@@ -38,8 +38,8 @@ protected:
 			Dev->GetCopyableFootprints(&RD, 0, static_cast<const UINT>(size(SRDs)), 0, data(PSFs), data(NumRows), data(RowSizeInBytes), &TotalBytes);
 			DX::CreateBufferResource(Upload, Dev, SRDs, PSFs, NumRows, RowSizeInBytes, TotalBytes);
 		}
-		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs0, const D3D12_RESOURCE_STATES RS, ID3D12Resource* Upload) {
-			DX::PopulateCommandList_CopyTextureRegion(GCL, Upload, COM_PTR_GET(Resource), PSFs0, RS);
+		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs, const D3D12_RESOURCE_STATES RS, ID3D12Resource* Upload) {
+			DX::PopulateCommandList_CopyTextureRegion(GCL, Upload, COM_PTR_GET(Resource), PSFs, RS);
 		}
 		void ExecuteCopyCommand(ID3D12Device* Dev, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fnc, const D3D12_RESOURCE_STATES RS) {
 			COM_PTR<ID3D12Resource> Upload;

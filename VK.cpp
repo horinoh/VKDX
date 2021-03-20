@@ -2398,137 +2398,31 @@ void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const s
 	VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DUT));
 }
 
-void VK::CreateTexture1x1(const uint32_t Color, const VkPipelineStageFlags PSF)
-{
-	constexpr auto Format = VK_FORMAT_R8G8B8A8_UNORM;
-	constexpr auto Extent = VkExtent3D({ .width = 1, .height = 1, .depth = 1 });
-
-	Images.emplace_back(Image());
-	CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, 1, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-	AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
-
-	//!< ビューの作成 (Create view)
-	ImageViews.emplace_back(VkImageView());
-	const VkImageViewCreateInfo IVCI = {
-		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = 0,
-		.image = Images.back().Image,
-		.viewType = VK_IMAGE_VIEW_TYPE_2D,
-		.format = Format,
-		.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
-		.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS }),
-	};
-	VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.back()));
-
-	{
-		const std::array Colors = { Color };
-		constexpr auto LayerSize = sizeof(Colors[0]);
-		constexpr auto TotalSize = 1 * LayerSize;
-
-		VkBuffer Buffer;
-		VkDeviceMemory DeviceMemory;
-		{
-			//!< アップロード用バッファ (Buffer for upload)
-			CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TotalSize);
-			AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
-			CopyToHostVisibleDeviceMemory(DeviceMemory, 0, TotalSize, data(Colors));
-
-			//!< バッファ->テクスチャ転送コマンド (Buffer to image copy command)
-			const std::vector BICs = {
-				VkBufferImageCopy({
-					.bufferOffset = 0, .bufferRowLength = 0, .bufferImageHeight = 0,
-					.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 }),
-					.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),
-					.imageExtent = Extent })
-			};
-			const auto& CB = CommandBuffers[0];
-
-			constexpr VkCommandBufferBeginInfo CBBI = {
-				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-				.pNext = nullptr,
-				.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-				.pInheritanceInfo = nullptr
-			};
-			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-				PopulateCommandBuffer_CopyBufferToImage(CB, Buffer, Images.back().Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, BICs, 1, 1);
-			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-			//!< コマンドの実行 (Submit command)
-			SubmitAndWait(GraphicsQueue, CB);
-		}
-		vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
-		vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
-	}
-}
-
-//!< ABRG
+//!< uint32_t -> A8B8R8G8
 void VK::CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipelineStageFlags PSF)
 {
-#pragma region TEX_ARRAY
-	const auto Layers = static_cast<uint32_t>(size(Colors));
-#pragma endregion
 	constexpr auto Format = VK_FORMAT_R8G8B8A8_UNORM;
 	constexpr auto Extent = VkExtent3D({ .width = 1, .height = 1, .depth = 1 });
 
-	Images.emplace_back();
-#pragma region TEX_ARRAY
-	CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-#pragma endregion
-	AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
+	const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+	Textures.emplace_back().Create(Device, PDMP, Format, Extent, 1, static_cast<uint32_t>(size(Colors)), VK_IMAGE_ASPECT_COLOR_BIT);
 
-	const VkImageViewCreateInfo IVCI = {
-		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = 0,
-		.image = Images.back().Image,
-#pragma region TEX_ARRAY
-		.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-#pragma endregion
-		.format = Format,
-		.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
-		.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS }),
-	};
-	VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.emplace_back()));
-
+	const auto CB = CommandBuffers[0];
 	{
-		constexpr auto LayerSize = static_cast<uint32_t>(sizeof(Colors[0]));
-		const auto TotalSize = Layers * LayerSize;
-
-		VkBuffer Buffer;
-		VkDeviceMemory DeviceMemory;
-		{
-			CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TotalSize);
-			AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-			VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
-			CopyToHostVisibleDeviceMemory(DeviceMemory, 0, TotalSize, data(Colors));
-
-#pragma region TEX_ARRAY
-			std::vector<VkBufferImageCopy> BICs;
-			for (uint32_t i = 0; i < Layers; ++i) {
-				BICs.emplace_back(VkBufferImageCopy({
-					.bufferOffset = i * LayerSize, .bufferRowLength = 0, .bufferImageHeight = 0,
-					.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = static_cast<uint32_t>(i), .layerCount = 1 }),
-					.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),.imageExtent = Extent }));
-			}
-#pragma endregion
-
-			const auto& CB = CommandBuffers[0];
-			constexpr VkCommandBufferBeginInfo CBBI = {
-				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-				.pNext = nullptr,
-				.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-				.pInheritanceInfo = nullptr
-			};
-			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-				PopulateCommandBuffer_CopyBufferToImage(CB, Buffer, Images.back().Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, BICs, 1, Layers);
-			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-			SubmitAndWait(GraphicsQueue, CB);
+		VK::Scoped<BufferMemory> StagingBuffer(Device);
+		StagingBuffer.Create(Device, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, sizeof(Colors), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, data(Colors));
+		std::vector<VkBufferImageCopy> BICs;
+		for (uint32_t i = 0; i < size(Colors); ++i) {
+			BICs.emplace_back(VkBufferImageCopy({
+				.bufferOffset = i * sizeof(Colors[0]), .bufferRowLength = 0, .bufferImageHeight = 0,
+				.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = static_cast<uint32_t>(i), .layerCount = 1 }),
+				.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),.imageExtent = Extent }));
 		}
-		vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
-		vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
+		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
+		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+			PopulateCommandBuffer_CopyBufferToImage(CB, StagingBuffer.Buffer, Textures.back().Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, BICs, 1, 2);
+		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+		VK::SubmitAndWait(GraphicsQueue, CB);
 	}
 }
 

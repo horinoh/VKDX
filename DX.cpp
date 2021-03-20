@@ -1417,140 +1417,44 @@ void DX::CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* D
 	LOG_OK();
 }
 
-void DX::CreateTexture1x1(const UINT32 Color, const D3D12_RESOURCE_STATES RS)
-{
-	ImageResources.emplace_back(COM_PTR<ID3D12Resource>());
-	constexpr auto RD = D3D12_RESOURCE_DESC({
-		.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-		.Alignment = 0,
-		.Width = 1, .Height = 1, 
-		.DepthOrArraySize = 1,
-		.MipLevels = 1,
-		.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
-		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
-		.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-		.Flags = D3D12_RESOURCE_FLAG_NONE
-		});
-	const D3D12_HEAP_PROPERTIES HP = {
-		.Type = D3D12_HEAP_TYPE_DEFAULT,
-		.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
-		.CreationNodeMask = 0, .VisibleNodeMask = 0
-	};
-	//!< D3D12_RESOURCE_STATE_COPY_DEST にすること
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, COM_PTR_UUIDOF_PUTVOID(ImageResources.back()))); 
-
-	//!< ビューの作成 (Create view)
-	ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
-		.Format = ImageResources.back()->GetDesc().Format,
-		.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
-		.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-		.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
-		}));
-
-	{
-		constexpr auto PitchSize = 1 * static_cast<UINT32>(sizeof(Color));
-		constexpr auto LayerSize = 1 * PitchSize;
-
-		const auto CA = COM_PTR_GET(CommandAllocators[0]);
-		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
-
-		//!< アップロード用バッファ (Buffer for upload)
-		COM_PTR<ID3D12Resource> UploadResource;
-		CreateBufferResource(COM_PTR_PUT(UploadResource), COM_PTR_GET(Device), LayerSize, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, &Color);
-
-		//!< バッファテクスチャ間転送コマンド (Buffer to image copy command)
-		const std::vector PSFs = {
-			D3D12_PLACED_SUBRESOURCE_FOOTPRINT({
-				.Offset = 0, 
-				.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = RD.Format, .Width = static_cast<UINT>(RD.Width), .Height = RD.Height, .Depth = 1, .RowPitch = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)) })
-			}),
-		};
-		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			PopulateCommandList_CopyTextureRegion(GCL, COM_PTR_GET(UploadResource), COM_PTR_GET(ImageResources.back()), PSFs, RS);
-		} VERIFY_SUCCEEDED(GCL->Close());
-
-		//!< コマンドの実行 (Execute command)
-		ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), static_cast<ID3D12CommandList*>(GCL), COM_PTR_GET(Fence));
-	}
-}
-
-//!< ABRG
+//!< UINT32 -> A8B8R8G8
 void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RESOURCE_STATES RS)
 {
-#pragma region TEX_ARRAY
-	const auto Layers = static_cast<UINT32>(size(Colors));
-#pragma endregion
+	Textures.emplace_back().Create(COM_PTR_GET(Device), 1, 1, static_cast<UINT16>(size(Colors)), DXGI_FORMAT_R8G8B8A8_UNORM);
 
-	const auto RD = D3D12_RESOURCE_DESC({
-		.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-		.Alignment = 0,
-		.Width = 1, .Height = 1, 
-#pragma region TEX_ARRAY
-		.DepthOrArraySize = static_cast<UINT16>(Layers),
-#pragma endregion
-		.MipLevels = 1,
-		.Format = DXGI_FORMAT_R8G8B8A8_UNORM,
-		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
-		.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-		.Flags = D3D12_RESOURCE_FLAG_NONE
-		});
-	const D3D12_HEAP_PROPERTIES HP = {
-		.Type = D3D12_HEAP_TYPE_DEFAULT,
-		.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-		.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
-		.CreationNodeMask = 0, .VisibleNodeMask = 0
-	};
-	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
-
-	ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
-		.Format = ImageResources.back()->GetDesc().Format,
-#pragma region TEX_ARRAY
-		.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY,
-#pragma endregion
-		.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-		.Texture2DArray = D3D12_TEX2D_ARRAY_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .FirstArraySlice = 0, .ArraySize = Layers, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
-	}));
-
-	//Textures.emplace_back().Create(COM_PTR_GET(Device), 1, 1, static_cast<UINT16>(Layers), DXGI_FORMAT_R8G8B8A8_UNORM);
-
+	const auto CA = COM_PTR_GET(CommandAllocators[0]);
+	const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 	{
 		constexpr auto PitchSize = 1 * static_cast<UINT32>(sizeof(Colors[0]));
 		constexpr auto LayerSize = 1 * PitchSize;
-
-		const auto CA = COM_PTR_GET(CommandAllocators[0]);
-		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
-
-		//!< アラインされたサイズを計算 (Calculate aligned size)
-		size_t AlignedSize = 0;
-		for (UINT32 i = 0; i < Layers; ++i) {
-			AlignedSize = RoundUp(i * LayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
-			AlignedSize += LayerSize;
+		ResourceBase Upload;
+		{
+			//!< アラインされたサイズを計算 (Calculate aligned size)
+			size_t AlignedSize = 0;
+			for (UINT32 i = 0; i < size(Colors); ++i) {
+				AlignedSize = RoundUp(i * LayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+				AlignedSize += LayerSize;
+			}
+			//!< Colors をアラインされたメモリへコピー (Copy Colors to aligned memory)
+			std::vector<std::byte> AlignedData(AlignedSize, std::byte());
+			for (UINT32 i = 0; i < size(Colors); ++i) {
+				*reinterpret_cast<UINT32*>(&AlignedData[RoundUp(i * LayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)]) = Colors[i];
+			}
+			Upload.Create(COM_PTR_GET(Device), size(AlignedData), D3D12_HEAP_TYPE_UPLOAD, data(AlignedData));
 		}
-		//!< Colors をアラインされたメモリへコピー (Copy Colors to aligned memory)
-		std::vector<std::byte> AlignedData(AlignedSize, std::byte());
-		for (UINT32 i = 0; i < Layers; ++i) {
-			*reinterpret_cast<UINT32*>(&AlignedData[RoundUp(i * LayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT)]) = Colors[i];
-		}
-		//!< (アラインされた)アップロード用バッファを作成 (Aligned buffer for upload)
-		COM_PTR<ID3D12Resource> UploadResource;
-		CreateBufferResource(COM_PTR_PUT(UploadResource), COM_PTR_GET(Device), size(AlignedData), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, data(AlignedData));
 
-#pragma region TEX_ARRAY
+		const auto RD = Textures.back().Resource->GetDesc();
 		std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs;
-		for (UINT32 i = 0; i < Layers; ++i) {
-			PSFs.emplace_back(D3D12_PLACED_SUBRESOURCE_FOOTPRINT({ 
+		for (UINT32 i = 0; i < size(Colors); ++i) {
+			PSFs.emplace_back(D3D12_PLACED_SUBRESOURCE_FOOTPRINT({
 				.Offset = RoundUp(i * LayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT),
-				.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = RD.Format, .Width = static_cast<UINT>(RD.Width), .Height = RD.Height, .Depth = 1, .RowPitch = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)) }) 
+				.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = RD.Format, .Width = static_cast<UINT>(RD.Width), .Height = RD.Height, .Depth = 1, .RowPitch = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT)) })
 			}));
 		}
-#pragma endregion
-
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			PopulateCommandList_CopyTextureRegion(GCL, COM_PTR_GET(UploadResource), COM_PTR_GET(ImageResources.back()), PSFs, RS);
+			PopulateCommandList_CopyTextureRegion(GCL, COM_PTR_GET(Upload.Resource), COM_PTR_GET(Textures.back().Resource), PSFs, RS);
 		} VERIFY_SUCCEEDED(GCL->Close());
-
-		ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), static_cast<ID3D12CommandList*>(GCL), COM_PTR_GET(Fence));
+		DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), GCL, COM_PTR_GET(Fence));
 	}
 }
 

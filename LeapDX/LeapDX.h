@@ -108,8 +108,8 @@ protected:
 			UpdateDistortionImage();
 		}
 #else
-		CreateTextureArray1x1({ 0xff0000ff, 0xff00ff00 });
-		CreateTextureArray1x1({ 0xffff0000, 0xff00ffff });
+		CreateTextureArray1x1({ 0xff0000ff, 0xff00ff00 }, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		CreateTextureArray1x1({ 0xffff0000, 0xff00ffff }, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 #endif
 	}
 	virtual void CreateStaticSampler() override {
@@ -193,12 +193,11 @@ protected:
 		}
 	}
 	virtual void CreateDescriptorView() override {
-		assert(!empty(ImageResources) && "");
 		const auto& DH = CbvSrvUavDescriptorHeaps[0];
 		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-		Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		Device->CreateShaderResourceView(COM_PTR_GET(Textures[0].Resource), &Textures[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #pragma region SECOND_TEXTURE
-		Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[1]), &ShaderResourceViewDescs[1], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		Device->CreateShaderResourceView(COM_PTR_GET(Textures[0].Resource), &Textures[1].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #pragma endregion
 #pragma region CB
 		DXGI_SWAP_CHAIN_DESC1 SCD;

@@ -138,7 +138,7 @@ public:
 		using Super = DeviceMemoryBase;
 	public:
 		VkBuffer Buffer = VK_NULL_HANDLE;
-		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr) { 
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr) {
 			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, BUF, Size, MPF, Source);
 		}
 		virtual void Destroy(const VkDevice Device) override {
@@ -554,8 +554,7 @@ protected:
 	virtual void UpdateDescriptorSet() {}
 
 	virtual void CreateTexture() {}
-	virtual void CreateTexture1x1(const uint32_t Color, const VkPipelineStageFlags PSF = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-	virtual void CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipelineStageFlags PSF = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+	virtual void CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipelineStageFlags PSF);
 	virtual void CreateImmutableSampler() {}
 	virtual void CreateSampler() {}
 
