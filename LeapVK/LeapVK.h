@@ -53,50 +53,12 @@ protected:
 #ifdef USE_LEAP		
 		//!< Leap イメージ
 		{
-			const auto Layers = static_cast<uint32_t>(size(ImageData));
-			const auto Extent = VkExtent3D({ .width = ImageProperties[0].width, .height = ImageProperties[0].height, .depth = 1 });
-			const auto Format = VK_FORMAT_R8_UNORM;
-
-			Images.emplace_back();
-			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
-			const VkImageViewCreateInfo IVCI = {
-				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-				.pNext = nullptr,
-				.flags = 0,
-				.image = Images.back().Image,
-				.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-				.format = Format,
-				.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
-				.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS }),
-			};
-			VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.emplace_back()));
-
+			Textures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_FORMAT_R8_UNORM, VkExtent3D({ .width = ImageProperties[0].width, .height = ImageProperties[0].height, .depth = 1 }), 1, static_cast<uint32_t>(size(ImageData)), VK_IMAGE_ASPECT_COLOR_BIT);
 			UpdateLeapImage();
 		}
 		//!< ディストーションマップ
 		{
-			const auto Layers = static_cast<uint32_t>(size(DistortionMatrices));
-			constexpr auto Extent = VkExtent3D({ .width = LEAP_DISTORTION_MATRIX_N, .height = LEAP_DISTORTION_MATRIX_N, .depth = 1 });
-			const auto Format = VK_FORMAT_R32G32_SFLOAT;
-
-			Images.emplace_back();
-			CreateImage(&Images.back().Image, 0, VK_IMAGE_TYPE_2D, Format, Extent, 1, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
-			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
-			const VkImageViewCreateInfo IVCI = {
-				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-				.pNext = nullptr,
-				.flags = 0,
-				.image = Images.back().Image,
-				.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-				.format = Format,
-				.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_R, .g = VK_COMPONENT_SWIZZLE_G, .b = VK_COMPONENT_SWIZZLE_B, .a = VK_COMPONENT_SWIZZLE_A }),
-				.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS }),
-			};
-			VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &ImageViews.emplace_back()));
-
+			Textures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_FORMAT_R32G32_SFLOAT, VkExtent3D({ .width = LEAP_DISTORTION_MATRIX_N, .height = LEAP_DISTORTION_MATRIX_N, .depth = 1 }), 1, static_cast<uint32_t>(size(DistortionMatrices)), VK_IMAGE_ASPECT_COLOR_BIT);
 			UpdateDistortionImage();
 		}
 #else	
@@ -225,86 +187,57 @@ protected:
 		}
 	}
 	virtual void UpdateLeapImage() override {
-		if (!empty(Images)) {
-			const auto Layers = static_cast<uint32_t>(size(ImageData));
-			const auto LayerSize = size(ImageData[0]);
-			const auto TotalSize = Layers * LayerSize;
-			const auto Extent = VkExtent3D({ .width = ImageProperties[0].width, .height = ImageProperties[0].height, .depth = 1 });
-
-			VkBuffer Buffer;
-			VkDeviceMemory DeviceMemory;
+		if (!empty(Textures)) {
+			const auto CB = CommandBuffers[0];
 			{
-				CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TotalSize);
-				AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-				VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
+				const auto Layers = static_cast<uint32_t>(size(ImageData));
+				const auto LayerSize = size(ImageData[0]);
+				const auto TotalSize = Layers * LayerSize;
+				const auto Extent = VkExtent3D({ .width = ImageProperties[0].width, .height = ImageProperties[0].height, .depth = 1 });
 
-				CopyToHostVisibleDeviceMemory(DeviceMemory, 0, TotalSize, data(ImageData[0]));
-
+				VK::Scoped<BufferMemory> StagingBuffer(Device);
+				StagingBuffer.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TotalSize, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, data(ImageData[0]));
 				std::vector<VkBufferImageCopy> BICs;
 				for (uint32_t i = 0; i < Layers; ++i) {
 					BICs.emplace_back(VkBufferImageCopy({
 						.bufferOffset = i * LayerSize, .bufferRowLength = 0, .bufferImageHeight = 0,
-						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = i, .layerCount = 1 }),
-						.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),
-						.imageExtent = Extent }));
+						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = static_cast<uint32_t>(i), .layerCount = 1 }),
+						.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),.imageExtent = Extent
+					}));
 				}
-				const auto& CB = CommandBuffers[0];
-
-				constexpr VkCommandBufferBeginInfo CBBI = {
-					.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-					.pNext = nullptr,
-					.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-					.pInheritanceInfo = nullptr
-				};
+				constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 				VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-					PopulateCommandBuffer_CopyBufferToImage(CB, Buffer, Images[0].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, Layers);
+					PopulateCommandBuffer_CopyBufferToImage(CB, StagingBuffer.Buffer, Textures[0].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, 2);
 				} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-
-				SubmitAndWait(GraphicsQueue, CB);
+				VK::SubmitAndWait(GraphicsQueue, CB);
 			}
-			vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
-			vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
 		}
 	}
 	virtual void UpdateDistortionImage() override {
-		if (!empty(Images)) {
-			const auto Layers = static_cast<uint32_t>(size(ImageData));
-			constexpr auto LayerSize = sizeof(DistortionMatrices[0]);
-			const auto TotalSize = Layers * LayerSize;
-			constexpr auto Extent = VkExtent3D({ .width = LEAP_DISTORTION_MATRIX_N, .height = LEAP_DISTORTION_MATRIX_N, .depth = 1 });
-
-			VkBuffer Buffer;
-			VkDeviceMemory DeviceMemory;
+		if (size(Textures) > 1) {
+			const auto CB = CommandBuffers[0];
 			{
-				CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TotalSize);
-				AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-				VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
+				const auto Layers = static_cast<uint32_t>(size(ImageData));
+				constexpr auto LayerSize = sizeof(DistortionMatrices[0]);
+				const auto TotalSize = Layers * LayerSize;
+				constexpr auto Extent = VkExtent3D({ .width = LEAP_DISTORTION_MATRIX_N, .height = LEAP_DISTORTION_MATRIX_N, .depth = 1 });
 
-				CopyToHostVisibleDeviceMemory(DeviceMemory, 0, TotalSize, data(DistortionMatrices));
-
+				VK::Scoped<BufferMemory> StagingBuffer(Device);
+				StagingBuffer.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, TotalSize, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, data(DistortionMatrices));
 				std::vector<VkBufferImageCopy> BICs;
 				for (uint32_t i = 0; i < Layers; ++i) {
 					BICs.emplace_back(VkBufferImageCopy({
 						.bufferOffset = i * LayerSize, .bufferRowLength = 0, .bufferImageHeight = 0,
-						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = i, .layerCount = 1 }),
-						.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),
-						.imageExtent = Extent }));
+						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = static_cast<uint32_t>(i), .layerCount = 1 }),
+						.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),.imageExtent = Extent 
+					}));
 				}
-				const auto& CB = CommandBuffers[0];
-
-				constexpr VkCommandBufferBeginInfo CBBI = {
-					.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-					.pNext = nullptr,
-					.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-					.pInheritanceInfo = nullptr
-				};
+				constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 				VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-					PopulateCommandBuffer_CopyBufferToImage(CB, Buffer, Images[1].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, Layers);
+					PopulateCommandBuffer_CopyBufferToImage(CB, StagingBuffer.Buffer, Textures[1].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, 2);
 				} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-				SubmitAndWait(GraphicsQueue, CB);
+				VK::SubmitAndWait(GraphicsQueue, CB);
 			}
-			vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
-			vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
 		}
 	}
 #endif

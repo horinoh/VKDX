@@ -53,58 +53,12 @@ protected:
 #ifdef USE_LEAP
 		//!< Leap イメージ
 		{
-			const auto Layers = static_cast<uint32_t>(size(ImageData));
-			const auto RD = D3D12_RESOURCE_DESC({
-				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				.Alignment = 0,
-				.Width = ImageProperties[0].width, .Height = ImageProperties[0].height, .DepthOrArraySize = static_cast<UINT16>(Layers), .MipLevels = 1,
-				.Format = DXGI_FORMAT_R8_UNORM,
-				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
-				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				.Flags = D3D12_RESOURCE_FLAG_NONE
-			});
-			const D3D12_HEAP_PROPERTIES HP = {
-				.Type = D3D12_HEAP_TYPE_DEFAULT,
-				.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-				.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
-				.CreationNodeMask = 0, .VisibleNodeMask = 0
-			};
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
-			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
-				.Format = ImageResources.back()->GetDesc().Format,
-				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY,
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.Texture2DArray = D3D12_TEX2D_ARRAY_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .FirstArraySlice = 0, .ArraySize = Layers, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
-			}));
-
+			Textures.emplace_back().Create(COM_PTR_GET(Device), 1, 1, static_cast<UINT16>(size(ImageData)), DXGI_FORMAT_R8_UNORM);
 			UpdateLeapImage();
 		}
 		//!< ディストーションマップ
 		{
-			const auto Layers = static_cast<UINT32>(size(DistortionMatrices));
-			const auto RD = D3D12_RESOURCE_DESC({
-				.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D,
-				.Alignment = 0,
-				.Width = LEAP_DISTORTION_MATRIX_N, .Height = LEAP_DISTORTION_MATRIX_N, .DepthOrArraySize = static_cast<UINT16>(Layers), .MipLevels = 1,
-				.Format = DXGI_FORMAT_R32G32_FLOAT,
-				.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
-				.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
-				.Flags = D3D12_RESOURCE_FLAG_NONE
-			});
-			const D3D12_HEAP_PROPERTIES HP = {
-				.Type = D3D12_HEAP_TYPE_DEFAULT,
-				.CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_UNKNOWN,
-				.MemoryPoolPreference = D3D12_MEMORY_POOL_UNKNOWN,
-				.CreationNodeMask = 0, .VisibleNodeMask = 0
-			};
-			VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, COM_PTR_UUIDOF_PUTVOID(ImageResources.emplace_back())));
-			ShaderResourceViewDescs.emplace_back(D3D12_SHADER_RESOURCE_VIEW_DESC({
-				.Format = ImageResources.back()->GetDesc().Format,
-				.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY,
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.Texture2DArray = D3D12_TEX2D_ARRAY_SRV({.MostDetailedMip = 0, .MipLevels = ImageResources.back()->GetDesc().MipLevels, .FirstArraySlice = 0, .ArraySize = Layers, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
-			}));
-
+			Textures.emplace_back().Create(COM_PTR_GET(Device), 1, 1, static_cast<UINT16>(size(DistortionMatrices)), DXGI_FORMAT_R32G32_FLOAT);
 			UpdateDistortionImage();
 		}
 #else
@@ -228,81 +182,120 @@ protected:
 		}
 	}
 	virtual void UpdateLeapImage() override {
-		if (!empty(ImageResources)) {
-			const auto Desc = ImageResources[0]->GetDesc();
-			const auto Layers = Desc.DepthOrArraySize;
-			const auto LayerSize = size(ImageData[0]);
-			const auto PitchSize = Desc.Width * ImageProperties[0].bpp;
-			const auto AlignedPitchSize = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
-			const auto AlignedLayerSize = Desc.Height * AlignedPitchSize;
-			const std::array AlignedTop = { RoundUp(0, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT), RoundUp(AlignedLayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT) };
-			const size_t AlignedTotalSize = AlignedTop.back() + AlignedLayerSize;
-
+		if (!empty(Textures)) {
 			const auto CA = COM_PTR_GET(CommandAllocators[0]);
-			const auto CL = COM_PTR_GET(GraphicsCommandLists[0]);
+			const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+			{
+				const auto RD = Textures[0].Resource->GetDesc();
+				const auto Layers = RD.DepthOrArraySize;
+				const auto LayerSize = size(ImageData[0]);
+				const auto PitchSize = RD.Width * ImageProperties[0].bpp;
+				const auto AlignedPitchSize = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
+				const auto AlignedLayerSize = RD.Height * AlignedPitchSize;
+				const std::array AlignedTop = { RoundUp(0, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT), RoundUp(AlignedLayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT) };
 
-			std::vector<std::byte> AlignedData(AlignedTotalSize, std::byte());
-			for (UINT32 i = 0; i < Layers; ++i) {
-				for (UINT j = 0; j < Desc.Height; ++j) {
-					std::copy(&ImageData[i][j * PitchSize], &ImageData[i][(j + 1) * PitchSize - 1], &AlignedData[AlignedTop[i] + j * AlignedPitchSize]);
+				ResourceBase Upload;
+				{
+					//!< アラインされたサイズを計算 (Calculate aligned size)
+					const size_t AlignedSize = AlignedTop.back() + AlignedLayerSize;
+					//!< アラインされたメモリへコピー (Copy to aligned memory)
+					std::vector<std::byte> AlignedData(AlignedSize, std::byte());
+					for (UINT32 i = 0; i < Layers; ++i) {
+						for (UINT j = 0; j < RD.Height; ++j) {
+							std::copy(&ImageData[i][j * PitchSize], &ImageData[i][(j + 1) * PitchSize - 1], &AlignedData[AlignedTop[i] + j * AlignedPitchSize]);
+						}
+					}
+					Upload.Create(COM_PTR_GET(Device), size(AlignedData), D3D12_HEAP_TYPE_UPLOAD, data(AlignedData));
 				}
+
+				std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs;
+				for (UINT32 i = 0; i < Layers; ++i) {
+					PSFs.emplace_back(D3D12_PLACED_SUBRESOURCE_FOOTPRINT({
+						.Offset = AlignedTop[i],
+						.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = RD.Format, .Width = static_cast<UINT>(RD.Width), .Height = RD.Height, .Depth = 1, .RowPitch = AlignedPitchSize })
+					}));
+				}
+				VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
+					PopulateCommandList_CopyTextureRegion(GCL, COM_PTR_GET(Upload.Resource), COM_PTR_GET(Textures[0].Resource), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+				} VERIFY_SUCCEEDED(GCL->Close());
+				DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), GCL, COM_PTR_GET(Fence));
 			}
-
-			COM_PTR<ID3D12Resource> UploadResource;
-			CreateBufferResource(COM_PTR_PUT(UploadResource), size(AlignedData), D3D12_HEAP_TYPE_UPLOAD);
-			CopyToUploadResource(COM_PTR_GET(UploadResource), size(AlignedData), data(AlignedData));
-
-			std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs;
-			for (UINT32 i = 0; i < Layers; ++i) {
-				PSFs.emplace_back(D3D12_PLACED_SUBRESOURCE_FOOTPRINT({
-					.Offset = AlignedTop[i],
-					.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = Desc.Format, .Width = static_cast<UINT>(Desc.Width), .Height = Desc.Height, .Depth = 1, .RowPitch = AlignedPitchSize })
-				}));
-			}
-			VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
-				PopulateCommandList_CopyTextureRegion(CL, COM_PTR_GET(UploadResource), COM_PTR_GET(ImageResources[0]), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			} VERIFY_SUCCEEDED(CL->Close());
-
-			ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
 		}
 	}
 	virtual void UpdateDistortionImage() override {
-		if (!empty(ImageResources)) {
-			const auto Desc = ImageResources[1]->GetDesc();
-			const auto Layers = Desc.DepthOrArraySize;
-			constexpr auto LayerSize = sizeof(DistortionMatrices[0]);
-			constexpr auto PitchSize = sizeof(DistortionMatrices[0].matrix[0]);
-			const auto AlignedPitchSize = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
-			const auto AlignedLayerSize = Desc.Height * AlignedPitchSize;
-			const std::array AlignedTop = { RoundUp(0, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT), RoundUp(AlignedLayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT) };
-			const size_t AlignedTotalSize = AlignedTop.back() + AlignedLayerSize;
-
+		if (size(Textures) > 1) {
 			const auto CA = COM_PTR_GET(CommandAllocators[0]);
-			const auto CL = COM_PTR_GET(GraphicsCommandLists[0]);
+			const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+			{
+				const auto RD = Textures[1].Resource->GetDesc();
+				const auto Layers = RD.DepthOrArraySize;
+				constexpr auto LayerSize = sizeof(DistortionMatrices[0]);
+				constexpr auto PitchSize = sizeof(DistortionMatrices[0].matrix[0]);
+				const auto AlignedPitchSize = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
+				const auto AlignedLayerSize = RD.Height * AlignedPitchSize;
+				const std::array AlignedTop = { RoundUp(0, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT), RoundUp(AlignedLayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT) };
 
-			std::vector<std::byte> AlignedData(AlignedTotalSize, std::byte());
-			for (UINT32 i = 0; i < Layers; ++i) {
-				*reinterpret_cast<LEAP_DISTORTION_MATRIX*>(&AlignedData[AlignedTop[i]]) = DistortionMatrices[i];
-			}			
+				ResourceBase Upload;
+				{
+					//!< アラインされたサイズを計算 (Calculate aligned size)
+					const size_t AlignedSize = AlignedTop.back() + AlignedLayerSize;
+					//!< アラインされたメモリへコピー (Copy to aligned memory)
+					std::vector<std::byte> AlignedData(AlignedSize, std::byte());
+					for (UINT32 i = 0; i < Layers; ++i) {
+						*reinterpret_cast<LEAP_DISTORTION_MATRIX*>(&AlignedData[AlignedTop[i]]) = DistortionMatrices[i];
+					}
+					Upload.Create(COM_PTR_GET(Device), size(AlignedData), D3D12_HEAP_TYPE_UPLOAD, data(AlignedData));
+				}
 
-			COM_PTR<ID3D12Resource> UploadResource;
-			CreateBufferResource(COM_PTR_PUT(UploadResource), size(AlignedData), D3D12_HEAP_TYPE_UPLOAD);
-			CopyToUploadResource(COM_PTR_GET(UploadResource), size(AlignedData), data(AlignedData));
-
-			std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs;
-			for (UINT32 i = 0; i < Layers; ++i) {
-				PSFs.emplace_back(D3D12_PLACED_SUBRESOURCE_FOOTPRINT({
-					.Offset = AlignedTop[i],
-					.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = Desc.Format, .Width = static_cast<UINT>(Desc.Width), .Height = Desc.Height, .Depth = 1, .RowPitch = static_cast<UINT>(AlignedPitchSize) })
+				std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs;
+				for (UINT32 i = 0; i < Layers; ++i) {
+					PSFs.emplace_back(D3D12_PLACED_SUBRESOURCE_FOOTPRINT({
+						.Offset = AlignedTop[i],
+						.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = RD.Format, .Width = static_cast<UINT>(RD.Width), .Height = RD.Height, .Depth = 1, .RowPitch = AlignedPitchSize })
 					}));
+				}
+				VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
+					PopulateCommandList_CopyTextureRegion(GCL, COM_PTR_GET(Upload.Resource), COM_PTR_GET(Textures[1].Resource), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+				} VERIFY_SUCCEEDED(GCL->Close());
+				DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), GCL, COM_PTR_GET(Fence));
 			}
-			VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
-				PopulateCommandList_CopyTextureRegion(CL, COM_PTR_GET(UploadResource), COM_PTR_GET(ImageResources[1]), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			} VERIFY_SUCCEEDED(CL->Close());
-
-			ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
 		}
-	}
+//		if (!empty(ImageResources)) {
+//			const auto Desc = ImageResources[1]->GetDesc();
+//			const auto Layers = Desc.DepthOrArraySize;
+//			constexpr auto LayerSize = sizeof(DistortionMatrices[0]);
+//			constexpr auto PitchSize = sizeof(DistortionMatrices[0].matrix[0]);
+//			const auto AlignedPitchSize = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
+//			const auto AlignedLayerSize = Desc.Height * AlignedPitchSize;
+//			const std::array AlignedTop = { RoundUp(0, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT), RoundUp(AlignedLayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT) };
+//			const size_t AlignedTotalSize = AlignedTop.back() + AlignedLayerSize;
+//
+//			const auto CA = COM_PTR_GET(CommandAllocators[0]);
+//			const auto CL = COM_PTR_GET(GraphicsCommandLists[0]);
+//
+//			std::vector<std::byte> AlignedData(AlignedTotalSize, std::byte());
+//			for (UINT32 i = 0; i < Layers; ++i) {
+//				*reinterpret_cast<LEAP_DISTORTION_MATRIX*>(&AlignedData[AlignedTop[i]]) = DistortionMatrices[i];
+//			}			
+//
+//			COM_PTR<ID3D12Resource> UploadResource;
+//			CreateBufferResource(COM_PTR_PUT(UploadResource), size(AlignedData), D3D12_HEAP_TYPE_UPLOAD);
+//			CopyToUploadResource(COM_PTR_GET(UploadResource), size(AlignedData), data(AlignedData));
+//
+//			std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs;
+//			for (UINT32 i = 0; i < Layers; ++i) {
+//				PSFs.emplace_back(D3D12_PLACED_SUBRESOURCE_FOOTPRINT({
+//					.Offset = AlignedTop[i],
+//					.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = Desc.Format, .Width = static_cast<UINT>(Desc.Width), .Height = Desc.Height, .Depth = 1, .RowPitch = static_cast<UINT>(AlignedPitchSize) })
+//					}));
+//			}
+//			VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+//				PopulateCommandList_CopyTextureRegion(CL, COM_PTR_GET(UploadResource), COM_PTR_GET(ImageResources[1]), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+//			} VERIFY_SUCCEEDED(CL->Close());
+//
+//			ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
+//		}
+}
 #endif
 
 private:
