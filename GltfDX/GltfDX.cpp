@@ -341,12 +341,11 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		SemnticInitial += i.first.substr(0, 1);
 	}
 	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(cbegin(SemnticInitial), cend(SemnticInitial));
-	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(ShaderBlobs.back())));
-	const auto VS = D3D12_SHADER_BYTECODE({ ShaderBlobs.back()->GetBufferPointer(), ShaderBlobs.back()->GetBufferSize() });
-	ShaderBlobs.emplace_back(COM_PTR<ID3DBlob>());
-	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(ShaderBlobs.back())));
-	const auto PS = D3D12_SHADER_BYTECODE({ ShaderBlobs.back()->GetBufferPointer(), ShaderBlobs.back()->GetBufferSize() });
+	std::vector<COM_PTR<ID3DBlob>> SBs = {};
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(SBs.emplace_back())));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
+	const auto VS = D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[0]->GetBufferPointer(), .BytecodeLength = SBs[0]->GetBufferSize() });
+	const auto PS = D3D12_SHADER_BYTECODE({ .pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() });
 
 	//!< セマンティックとインデックスのリストを作る (Create semantic and index list)
 	for (const auto& i : Prim.attributes) {
@@ -495,13 +494,13 @@ void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			const auto CA = COM_PTR_GET(CommandAllocators[0]);
 			const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 			if ("indices" == Identifier) {
-				IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), Size, CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), Data, ToDXFormat(Acc.componentType));
+				IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), Size, ToDXFormat(Acc.componentType)).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), Size, Data);
 
 				const D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = Acc.count, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-				IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), DIA);
+				IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DIA), &DIA);
 			}
 			else if ("attributes" == Identifier || "targets" == Identifier) {
-				VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), Size, CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), Data, Stride);
+				VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), Size, Stride).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), Size, Data);
 			}
 			else if ("inverseBindMatrices" == Identifier) {
 				InverseBindMatrices.reserve(Acc.count);

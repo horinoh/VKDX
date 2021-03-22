@@ -260,42 +260,7 @@ protected:
 				DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), GCL, COM_PTR_GET(Fence));
 			}
 		}
-//		if (!empty(ImageResources)) {
-//			const auto Desc = ImageResources[1]->GetDesc();
-//			const auto Layers = Desc.DepthOrArraySize;
-//			constexpr auto LayerSize = sizeof(DistortionMatrices[0]);
-//			constexpr auto PitchSize = sizeof(DistortionMatrices[0].matrix[0]);
-//			const auto AlignedPitchSize = static_cast<UINT>(RoundUp(PitchSize, D3D12_TEXTURE_DATA_PITCH_ALIGNMENT));
-//			const auto AlignedLayerSize = Desc.Height * AlignedPitchSize;
-//			const std::array AlignedTop = { RoundUp(0, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT), RoundUp(AlignedLayerSize, D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT) };
-//			const size_t AlignedTotalSize = AlignedTop.back() + AlignedLayerSize;
-//
-//			const auto CA = COM_PTR_GET(CommandAllocators[0]);
-//			const auto CL = COM_PTR_GET(GraphicsCommandLists[0]);
-//
-//			std::vector<std::byte> AlignedData(AlignedTotalSize, std::byte());
-//			for (UINT32 i = 0; i < Layers; ++i) {
-//				*reinterpret_cast<LEAP_DISTORTION_MATRIX*>(&AlignedData[AlignedTop[i]]) = DistortionMatrices[i];
-//			}			
-//
-//			COM_PTR<ID3D12Resource> UploadResource;
-//			CreateBufferResource(COM_PTR_PUT(UploadResource), size(AlignedData), D3D12_HEAP_TYPE_UPLOAD);
-//			CopyToUploadResource(COM_PTR_GET(UploadResource), size(AlignedData), data(AlignedData));
-//
-//			std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT> PSFs;
-//			for (UINT32 i = 0; i < Layers; ++i) {
-//				PSFs.emplace_back(D3D12_PLACED_SUBRESOURCE_FOOTPRINT({
-//					.Offset = AlignedTop[i],
-//					.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = Desc.Format, .Width = static_cast<UINT>(Desc.Width), .Height = Desc.Height, .Depth = 1, .RowPitch = static_cast<UINT>(AlignedPitchSize) })
-//					}));
-//			}
-//			VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
-//				PopulateCommandList_CopyTextureRegion(CL, COM_PTR_GET(UploadResource), COM_PTR_GET(ImageResources[1]), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-//			} VERIFY_SUCCEEDED(CL->Close());
-//
-//			ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(Fence));
-//		}
-}
+	}
 #endif
 
 private:

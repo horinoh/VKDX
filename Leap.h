@@ -5,7 +5,7 @@
 #include <array>
 #include <thread>
 
-//#define USE_LEAP //!< LeapDX. LeapVK
+#define USE_LEAP //!< LeapDX. LeapVK
 
 #ifdef USE_LEAP
 #pragma warning(push)

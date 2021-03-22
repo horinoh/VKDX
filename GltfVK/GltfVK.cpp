@@ -411,10 +411,12 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 		SemanticInitial += i.first.substr(0, 1);
 	}
 	const auto ShaderPath = GetBasePath() + TEXT("_") + std::wstring(cbegin(SemanticInitial), cend(SemanticInitial));
-	ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))));
-	const auto VS = VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = ShaderModules.back(), .pName = "main", .pSpecializationInfo = nullptr });
-	ShaderModules.emplace_back(VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))));
-	const auto FS = VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = ShaderModules.back(), .pName = "main", .pSpecializationInfo = nullptr });
+	const std::array SMs = {
+		VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
+		VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv")))
+	};
+	const auto VS = VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr });
+	const auto FS = VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr });
 
 	//!< アトリビュート (Attributes)
 	std::vector<VkVertexInputBindingDescription> VIBDs;
@@ -566,13 +568,13 @@ void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Ac
 			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 			const auto CB = CommandBuffers[0];
 			if ("indices" == Identifier) {
-				IndexBuffers.emplace_back().Create(Device, PDMP, Size, Data, CB, GraphicsQueue);
+				IndexBuffers.emplace_back().Create(Device, PDMP, Size).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, Size, Data);
 
 				const VkDrawIndexedIndirectCommand DIIC = { .indexCount = Acc.count, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-				IndirectBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DIIC, CommandBuffers[0], GraphicsQueue);
+				IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
 			}
 			else if ("attributes" == Identifier || "targets" == Identifier) {
-				VertexBuffers.emplace_back().Create(Device, PDMP, Size, Data, CB, GraphicsQueue);
+				VertexBuffers.emplace_back().Create(Device, PDMP, Size).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, Size, Data);
 			}
 			else if ("inverseBindMatrices" == Identifier) {
 				InverseBindMatrices.reserve(Acc.count);

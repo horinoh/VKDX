@@ -696,10 +696,10 @@ public:
 	virtual std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) = 0;
 	virtual std::array<float, 4> Lerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) = 0;
 
-	virtual void UpdateAnimTranslation(const std::array<float, 3>& /*Value*/, const uint32_t /*NodeIndex*/) {}
-	virtual void UpdateAnimScale(const std::array<float, 3>& /*Value*/, const uint32_t /*NodeIndex*/) {}
-	virtual void UpdateAnimRotation(const std::array<float, 4>& /*Value*/, const uint32_t /*NodeIndex*/) {}
-	virtual void UpdateAnimWeights(const float* /*Data*/, const uint32_t /*PrevIndex*/, const uint32_t /*NextIndex*/, const float /*t*/) {}
+	virtual void UpdateAnimTranslation([[maybe_unused]] const std::array<float, 3>& Value, [[maybe_unused]] const uint32_t NodeIndex) {}
+	virtual void UpdateAnimScale([[maybe_unused]] const std::array<float, 3>& Value, [[maybe_unused]] const uint32_t NodeIndex) {}
+	virtual void UpdateAnimRotation([[maybe_unused]] const std::array<float, 4>& Value, [[maybe_unused]] const uint32_t NodeIndex) {}
+	virtual void UpdateAnimWeights([[maybe_unused]] const float* Data, [[maybe_unused]] const uint32_t PrevIndex, [[maybe_unused]] const uint32_t NextIndex, [[maybe_unused]] const float t) {}
 	virtual void UpdateAnimation(float CurrentFrame, bool bIsLoop = true) {
 		const auto& Doc = GetDocument();
 		for (const auto& i : Doc.animations) {
