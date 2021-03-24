@@ -268,7 +268,7 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 	VERIFY_SUCCEEDED(CL->Reset(CA, PS1));
 	{
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-		const auto IR = COM_PTR_GET(ImageResources[0]);
+		const auto IR = COM_PTR_GET(DepthTextures[0].Resource);
 
 		//!< パス0 : (シャドウキャスタ描画用)
 		{

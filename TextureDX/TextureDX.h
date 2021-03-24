@@ -119,7 +119,12 @@ protected:
 	virtual void CreateDescriptorView() override {
 		const auto& DH = CbvSrvUavDescriptorHeaps[0];
 		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+#if 1
 		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#else
+		//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合には D3D12_SHADER_RESOURCE_VIEW_DESC* に nullptrを指定できる
+		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#endif
 	}
 
 	virtual void PopulateCommandList(const size_t i) override;
