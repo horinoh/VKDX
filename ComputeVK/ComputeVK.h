@@ -42,30 +42,8 @@ protected:
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
 	}
 	virtual void CreateTexture() override {
-		const auto Format = VK_FORMAT_R8G8B8A8_UINT;
-
-		{
-			Images.emplace_back();
-			const auto Type = VK_IMAGE_TYPE_2D;
-			const VkExtent3D Extent3D = { 800, 600, 1 };
-			const auto Faces = 1;
-			const auto Layers = 1 * Faces;
-			const auto Levels = 1;
-			//!< 参考 : VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT
-			CreateImage(&Images.back().Image, 0, Type, Format, Extent3D, Levels, Layers, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT);
-
-			AllocateDeviceMemory(&Images.back().DeviceMemory, Images.back().Image, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-			VERIFY_SUCCEEDED(vkBindImageMemory(Device, Images.back().Image, Images.back().DeviceMemory, 0));
-
-			ImageViews.emplace_back();
-			const VkComponentMapping CompMap = { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
-			const VkImageSubresourceRange ISR = {
-				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-				.baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS,
-				.baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS
-			};
-			CreateImageView(&ImageViews.back(), Images.back().Image, VK_IMAGE_VIEW_TYPE_2D, Format, CompMap, ISR);
-		}
+		//!< VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT : コンピュートシェーダでストレージターゲットとなり、フラグメントシェーダでサンプルされる #VK_TODO
+		RenderTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_FORMAT_R8G8B8A8_UINT, VkExtent3D({ .width = 800, .height = 600, .depth = 1 }));
 	}
 	virtual void CreatePipelineLayout() override {
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
@@ -104,7 +82,7 @@ protected:
 		}, DescriptorSetLayouts[0]);
 
 		const DescriptorUpdateInfo DUI = {
-			VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = ImageViews[0], .imageLayout = VK_IMAGE_LAYOUT_GENERAL })
+			VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = RenderTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_GENERAL })
 		};
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
 	}

@@ -372,7 +372,6 @@ protected:
 	static void CreateRenderTextureResource(ID3D12Resource** Resource, ID3D12Device* Device, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize, const UINT16 MipLevels, const D3D12_CLEAR_VALUE& CV, const D3D12_RESOURCE_FLAGS RF, const D3D12_RESOURCE_STATES RS);
 
 	virtual void CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source, const D3D12_RANGE* Range = nullptr);
-	virtual void CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PlacedSubresourceFootprints, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData);
 	static void CreateBufferResourceAndExecuteCopyCommand(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, 
 		ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* Queue, ID3D12Fence* Fence, const void* Source);
 
@@ -409,7 +408,6 @@ public:
 	virtual void CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat);
 	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height);
 	virtual void GetSwapChainResource();
-	//virtual void InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, const DirectX::XMVECTORF32* Color = nullptr);
 	virtual void ResetSwapChainResource() {
 		for (auto& i : SwapChainResources) {
 			COM_PTR_RESET(i);
@@ -503,14 +501,13 @@ protected:
 	std::vector<COM_PTR<ID3D12Resource>> SwapChainResources;
 
 	//COM_PTR<ID3D12Resource> UnorderedAccessTextureResource;
-	std::vector<COM_PTR<ID3D12Resource>> ImageResources;
 	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
 
-	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap; //!< RTVだけど、現状スワップチェインだけは別扱いにしている #DX_TODO
-	std::vector<COM_PTR<ID3D12DescriptorHeap>> SamplerDescriptorHeaps;
-	std::vector<COM_PTR<ID3D12DescriptorHeap>> RtvDescriptorHeaps;
-	std::vector<COM_PTR<ID3D12DescriptorHeap>> DsvDescriptorHeaps;
-	std::vector<COM_PTR<ID3D12DescriptorHeap>> CbvSrvUavDescriptorHeaps;
+	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap;					//!< D3D12_DESCRIPTOR_HEAP_TYPE_RTV : スワップチェインRTVは別扱いにしている (Manage swapchain RTV separately)
+	std::vector<COM_PTR<ID3D12DescriptorHeap>> CbvSrvUavDescriptorHeaps;	//!< D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+	std::vector<COM_PTR<ID3D12DescriptorHeap>> SamplerDescriptorHeaps;		//!< D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
+	std::vector<COM_PTR<ID3D12DescriptorHeap>> RtvDescriptorHeaps;			//!< D3D12_DESCRIPTOR_HEAP_TYPE_RTV
+	std::vector<COM_PTR<ID3D12DescriptorHeap>> DsvDescriptorHeaps;			//!< D3D12_DESCRIPTOR_HEAP_TYPE_DSV
 
 	std::vector<COM_PTR<ID3D12RootSignature>> RootSignatures;
 

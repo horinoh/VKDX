@@ -45,8 +45,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	CreateCommandList();
 
-	//InitializeSwapchainImage(COM_PTR_GET(CommandAllocators[0]), &DirectX::Colors::Red);
-
 	//!< ジオメトリ (バーテックスバッファ、インデックスバッファ、アクセラレーションストラクチャ等)
 	CreateGeometry();
 
@@ -260,31 +258,6 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const
 		BYTE* Data;
 		VERIFY_SUCCEEDED(Resource->Map(0, Range, reinterpret_cast<void**>(&Data))); {
 			memcpy(Data, Source, Size);
-		} Resource->Unmap(0, nullptr);
-	}
-}
-void DX::CopyToUploadResource(ID3D12Resource* Resource, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizes, const std::vector<D3D12_SUBRESOURCE_DATA>& SubresourceData)
-{
-	if (nullptr != Resource) [[likely]] {
-		BYTE* Data;
-		VERIFY_SUCCEEDED(Resource->Map(0, nullptr, reinterpret_cast<void**>(&Data))); {
-			for (auto i = 0; i < size(PSF); ++i) {
-				const auto& SD = SubresourceData[i];
-				const auto RowCount = NumRows[i];
-				const auto RowSize = RowSizes[i];
-				const D3D12_MEMCPY_DEST MemcpyDest = {
-					.pData = Data + PSF[i].Offset,
-					.RowPitch = PSF[i].Footprint.RowPitch,
-					.SlicePitch = static_cast<SIZE_T>(PSF[i].Footprint.RowPitch) * RowCount
-				};
-				for (UINT j = 0; j < PSF[i].Footprint.Depth; ++j) {
-					auto Dst = reinterpret_cast<BYTE*>(MemcpyDest.pData) + MemcpyDest.SlicePitch * j;
-					const auto Src = reinterpret_cast<const BYTE*>(SD.pData) + SD.SlicePitch * j;
-					for (UINT k = 0; k < RowCount; ++k) {
-						memcpy(Dst + MemcpyDest.RowPitch * k, Src + SD.RowPitch * k, RowSize);
-					}
-				}
-			}
 		} Resource->Unmap(0, nullptr);
 	}
 }
@@ -900,39 +873,6 @@ void DX::GetSwapChainResource()
 
 	LOG_OK();
 }
-
-#if 0
-void DX::InitializeSwapchainImage(ID3D12CommandAllocator* CommandAllocator, const DirectX::XMVECTORF32* Color)
-{
-	assert(nullptr != Color && "");
-
-	DXGI_SWAP_CHAIN_DESC1 SCD;
-	SwapChain->GetDesc1(&SCD);
-
-	auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-	for (UINT i = 0; i < SCD.BufferCount; ++i) {
-		const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
-		VERIFY_SUCCEEDED(CL->Reset(CommandAllocator, nullptr));
-		{
-			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET); {
-				CL->ClearRenderTargetView(CDH, *Color, 0, nullptr);
-			} ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-		}
-		VERIFY_SUCCEEDED(CL->Close());
-		CDH.ptr += Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
-	}
-
-	//!< #DX_TODO : 0 番目しかクリアしていない
-
-	const std::array CLs = { static_cast<ID3D12CommandList*>(COM_PTR_GET(GraphicsCommandLists[0])) };
-	CommandQueue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
-
-	WaitForFence();
-
-	LOG_OK();
-}
-#endif
 
 void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 {

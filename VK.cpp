@@ -61,14 +61,8 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateSemaphore(Device);
 
 	CreateSwapchain();
-	GetSwapchainImage(Device, Swapchain);
-	CreateSwapchainImageView();
 
 	AllocateCommandBuffer();
-
-#ifdef USE_MANUAL_CLEAR
-	InitializeSwapchainImage(CommandBuffers[0], &Colors::Red);
-#endif
 
 	//!< ジオメトリ (バーテックスバッファ、インデックスバッファ、アクセラレーションストラクチャ等)
 	CreateGeometry();
@@ -197,7 +191,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	DescriptorSets.clear();
 
 	//!< このプールから確保された全てのデスクリプタセットを解放する、ここでは次のステップでプール自体を破棄しているのでやらなくても良い
-	//!< (デスクリプタセットを個々に解放するのが面倒な場合や、プール自体は破棄したくない場合に使用)
 	for (auto i : DescriptorPools) {
 		vkResetDescriptorPool(Device, i, 0);
 	}
@@ -214,25 +207,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	for (auto& i : RenderTextures) { i.Destroy(Device); } RenderTextures.clear();
 	for (auto& i : DepthTextures) { i.Destroy(Device); } DepthTextures.clear();
 	for (auto& i : Textures) { i.Destroy(Device); } Textures.clear();
-	for (auto& i : ImageViews) {
-		vkDestroyImageView(Device, i, GetAllocationCallbacks());
-	}
-	ImageViews.clear();
 
-	for (auto& i : Images) {
-		vkDestroyImage(Device, i.Image, GetAllocationCallbacks());
-		vkFreeMemory(Device, i.DeviceMemory, GetAllocationCallbacks());
-	}
-	Images.clear();
-
-	for (auto& i : BufferViews) {
-		vkDestroyBufferView(Device, i, GetAllocationCallbacks());
-	}
-	BufferViews.clear();
-
-	for (auto i : StorageTexelBuffers) { i.Destroy(Device); } StorageTexelBuffers.clear();
-	for (auto i : UniformTexelBuffers) { i.Destroy(Device); } UniformTexelBuffers.clear();
-	for (auto i : StorageBuffers) { i.Destroy(Device); } StorageBuffers.clear();
 	for (auto i : UniformBuffers) { i.Destroy(Device); } UniformBuffers.clear();
 #pragma region RAYTRACING
 	for (auto i : ShaderBindingTables) { i.Destroy(Device); } ShaderBindingTables.clear();
@@ -247,17 +222,9 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		vkDestroySampler(Device, i, GetAllocationCallbacks());
 	}
 
-	for (auto i : SwapchainImageViews) {
-		vkDestroyImageView(Device, i, GetAllocationCallbacks());
-	}
-	SwapchainImageViews.clear();
-
+	for (auto i : SwapchainImageViews) { vkDestroyImageView(Device, i, GetAllocationCallbacks()); } SwapchainImageViews.clear();
 	//!< SwapchainImages は取得したもの、破棄しない
-	
-	if (VK_NULL_HANDLE != Swapchain) [[likely]] {
-		vkDestroySwapchainKHR(Device, Swapchain, GetAllocationCallbacks());
-		Swapchain = VK_NULL_HANDLE;
-	}
+	if (VK_NULL_HANDLE != Swapchain) [[likely]] { vkDestroySwapchainKHR(Device, Swapchain, GetAllocationCallbacks()); Swapchain = VK_NULL_HANDLE; }
 
 	//!< コマンドプール破棄時にコマンドバッファは暗黙的に解放されるのでやらなくても良い (Command buffers will be released implicitly, when command pool released)
 	//if(!empty(SecondaryCommandBuffers)) [[likely]] { vkFreeCommandBuffers(Device, SecondaryCommandPools[0], static_cast<uint32_t>(size(SecondaryCommandBuffers)), data(SecondaryCommandBuffers)); SecondaryCommandBuffers.clear(); }	
@@ -758,27 +725,6 @@ void VK::EnumerateMemoryRequirements(const VkMemoryRequirements& MR, const VkPhy
 			Logf("\t\t\tHeapIndex = %d, HeapSize = %llu\n", PDMP.memoryTypes[i].heapIndex, PDMP.memoryHeaps[PDMP.memoryTypes[i].heapIndex].size);
 		}
 	}
-}
-
-//!< Cubemapを作る場合、まずレイヤ化されたイメージを作成し、(イメージビューを用いて)レイヤをフェイスとして扱うようハードウエアに伝える
-void VK::CreateImageView(VkImageView* IV, const VkImage Img, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange)
-{
-	const VkImageViewCreateInfo IVCI = {
-		.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = 0,
-		.image = Img,
-		.viewType = ImageViewType,
-		.format = Format,
-		.components = ComponentMapping,
-		.subresourceRange = ImageSubresourceRange
-	};
-	VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), IV));
-	Logf("\t\tImageViewType = %s\n", GetImageViewTypeChar(ImageViewType));
-	Logf("\t\tFormat = %s\n", GetFormatChar(Format));
-	Logf("\t\tComponentMapping = (%s)\n", data(GetComponentMappingString(ComponentMapping)));
-
-	LOG_OK();
 }
 
 void VK::ValidateFormatProperties(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage) const
@@ -1730,7 +1676,7 @@ VkPresentModeKHR VK::SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR 
 }
 
 //!< 手動でクリアする場合には VkImageUsageFlags に追加で VK_IMAGE_USAGE_TRANSFER_DST_BIT の指定が必要
-void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags IUF)
+void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height)
 {
 	VkSurfaceCapabilitiesKHR SC;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PD, Sfc, &SC));
@@ -1805,8 +1751,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 	//!< レイヤー、ステレオレンダリング等をしたい場合は1以上になるが、ここでは1
 	uint32_t ImageArrayLayers = 1;
 
-	//!< サポートされないImageUsageFlagが指定された
-	assert((IUF & SC.supportedUsageFlags) && "Specified ImageUsageFlag is not supported");
+	assert((VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT & SC.supportedUsageFlags) && "VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT is not supported");
 
 	//!< グラフィックとプレゼントのキューファミリが異なる場合はキューファミリインデックスの配列が必要、また VK_SHARING_MODE_CONCURRENT を指定すること
 	//!< (ただし VK_SHARING_MODE_CONCURRENT にするとパフォーマンスが落ちる場合がある)
@@ -1833,7 +1778,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 		.imageFormat = SurfaceFormat.format, .imageColorSpace = SurfaceFormat.colorSpace,
 		.imageExtent = SurfaceExtent2D,
 		.imageArrayLayers = ImageArrayLayers,
-		.imageUsage = IUF,
+		.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 		.imageSharingMode = empty(QueueFamilyIndices) ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT, 
 		.queueFamilyIndexCount = static_cast<uint32_t>(size(QueueFamilyIndices)), .pQueueFamilyIndices = data(QueueFamilyIndices),
 		.preTransform = SurfaceTransform,
@@ -1872,6 +1817,28 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 		vkDestroySwapchainKHR(Device, OldSwapchain, GetAllocationCallbacks());
 	}
 
+#pragma region SWAPCHAIN_VIEW
+	{
+		uint32_t Count;
+		VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &Count, nullptr));
+		SwapchainImages.clear(); SwapchainImages.resize(Count);
+		VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Device, Swapchain, &Count, data(SwapchainImages)));
+	}
+	for (auto i : SwapchainImages) {
+		const VkImageViewCreateInfo IVCI = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = 0,
+			.image = i,
+			.viewType = VK_IMAGE_VIEW_TYPE_2D,
+			.format = ColorFormat,
+			.components = VkComponentMapping({.r = VK_COMPONENT_SWIZZLE_IDENTITY, .g = VK_COMPONENT_SWIZZLE_IDENTITY, .b = VK_COMPONENT_SWIZZLE_IDENTITY, .a = VK_COMPONENT_SWIZZLE_IDENTITY, }),
+			.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
+		};
+		VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &SwapchainImageViews.emplace_back()));
+	}
+#pragma endregion
+
 	LOG_OK();
 }
 void VK::ResizeSwapchain(const uint32_t Width, const uint32_t Height)
@@ -1891,165 +1858,7 @@ void VK::ResizeSwapchain(const uint32_t Width, const uint32_t Height)
 	//CommandPools.clear();
 
 	CreateSwapchain(GetCurrentPhysicalDevice(), Surface, Width, Height);
-	GetSwapchainImage(Device, Swapchain);
-	CreateSwapchainImageView();
 }
-void VK::GetSwapchainImage(VkDevice Dev, VkSwapchainKHR SC)
-{
-	//!< プレゼンテーションエンジンからイメージを取得する際、ハンドルではなく vkGetSwapchainImagesKHR() で取得したインデックスが返るので、ここで取得した順序は重要になる
-	uint32_t Count;
-	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Dev, SC, &Count, nullptr));
-	assert(Count && "Swapchain image count is zero");
-	SwapchainImages.clear();
-	SwapchainImages.resize(Count);
-	VERIFY_SUCCEEDED(vkGetSwapchainImagesKHR(Dev, SC, &Count, data(SwapchainImages)));
-
-	LOG_OK();
-}
-/**
-@note Vulaknでは、1つのコマンドバッファで複数のスワップチェインイメージをまとめて処理できるっぽい
-*/
-void VK::InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorValue* CCV)
-{
-	const VkCommandBufferBeginInfo CBBI = {
-		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		.pNext = nullptr,
-		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-		.pInheritanceInfo = nullptr
-	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		const VkImageSubresourceRange ISR = {
-			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-			.baseMipLevel = 0, .levelCount = 1,
-			.baseArrayLayer = 0, .layerCount = 1
-		};
-		for (auto& i : SwapchainImages) {
-			if (nullptr == CCV) {
-				const VkImageMemoryBarrier ImageMemoryBarrier_UndefinedToPresent = {
-					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-					.pNext = nullptr,
-					.srcAccessMask = 0, .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-					//!<「現在のレイアウト」または「UNDEFINED」を指定すること、イメージコンテンツを保持したい場合は「UNDEFINED」はダメ、プレゼンテーション可能な VK_IMAGE_LAYOUT_PRESENT_SRC_KHR へ    
-					.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-					.srcQueueFamilyIndex = PresentQueueFamilyIndex, .dstQueueFamilyIndex = PresentQueueFamilyIndex,
-					.image = i,
-					.subresourceRange = ISR
-				};
-				vkCmdPipelineBarrier(CB,
-					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT/*VK_PIPELINE_STAGE_TRANSFER_BIT*/,
-					0,
-					0, nullptr,
-					0, nullptr,
-					1, &ImageMemoryBarrier_UndefinedToPresent);
-			}
-			else {
-				//!< クリアカラーが指定されている場合 (If clear color is specified)
-				const VkImageMemoryBarrier ImageMemoryBarrier_UndefinedToTransfer = {
-					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-					.pNext = nullptr,
-					.srcAccessMask = 0, .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-					//!<「現在のレイアウト」または「UNDEFINED」を指定すること、デスティネーションへ
-					.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-					.srcQueueFamilyIndex = PresentQueueFamilyIndex, .dstQueueFamilyIndex = PresentQueueFamilyIndex,
-					.image = i,
-					.subresourceRange = ISR
-				};
-				vkCmdPipelineBarrier(CB,
-					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-					0,
-					0, nullptr,
-					0, nullptr,
-					1, &ImageMemoryBarrier_UndefinedToTransfer);
-				{
-					vkCmdClearColorImage(CB, i, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, CCV, 1, &ISR);
-				}
-				const VkImageMemoryBarrier ImageMemoryBarrier_TransferToPresent = {
-					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-					.pNext = nullptr,
-					.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT, .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-					//!< デスティネーションから、プレゼンテーション可能な VK_IMAGE_LAYOUT_PRESENT_SRC_KHR へ
-					.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-					.srcQueueFamilyIndex = PresentQueueFamilyIndex, .dstQueueFamilyIndex = PresentQueueFamilyIndex,
-					.image = i,
-					.subresourceRange = ISR
-				};
-				vkCmdPipelineBarrier(CB,
-					VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-					0,
-					0, nullptr,
-					0, nullptr,
-					1, &ImageMemoryBarrier_TransferToPresent);
-			}
-		}
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-
-	SubmitAndWait(GraphicsQueue, CB);
-
-	LOG_OK();
-}
-
-void VK::CreateSwapchainImageView()
-{
-	for(auto i : SwapchainImages) {
-		SwapchainImageViews.emplace_back(VkImageView());
-		const VkComponentMapping CM = { .r = VK_COMPONENT_SWIZZLE_IDENTITY, .g = VK_COMPONENT_SWIZZLE_IDENTITY, .b = VK_COMPONENT_SWIZZLE_IDENTITY, .a = VK_COMPONENT_SWIZZLE_IDENTITY, };
-		const VkImageSubresourceRange ISR = {
-			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-			.baseMipLevel = 0, .levelCount = 1,
-			.baseArrayLayer = 0, .layerCount = 1
-		};
-		CreateImageView(&SwapchainImageViews.back(), i, VK_IMAGE_VIEW_TYPE_2D, ColorFormat, CM, ISR);
-	}
-
-	LOG_OK();
-}
-
-#if 0
-void VK::InitializeDepthStencilImage(const VkCommandBuffer CB)
-{
-	if (VK_NULL_HANDLE == DepthStencilImage) return;
-
-	//!< VK_IMAGE_LAYOUT_UNDEFINED で作成されているので、レイアウトを変更する必要がある
-	const VkCommandBufferBeginInfo CBBI = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-		nullptr
-	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		const VkImageMemoryBarrier IMB = {
-			VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-			nullptr,
-			0,
-			0,
-			VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-			VK_QUEUE_FAMILY_IGNORED,
-			VK_QUEUE_FAMILY_IGNORED,
-			DepthStencilImage,
-			ImageSubresourceRange_DepthStencil/*ImageSubresourceRange_Depth : デプスのみのフォーマットの場合*/
-		};
-		vkCmdPipelineBarrier(CB,
-			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			0,
-			0, nullptr,
-			0, nullptr,
-			1, &IMB);
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-	const std::array<VkSubmitInfo, 1> SIs = {
-		{
-			VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			nullptr,
-			0, nullptr, nullptr,
-			1,  &CB,
-			0, nullptr
-		}
-	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(size(SIs)), data(SIs), VK_NULL_HANDLE));
-	VERIFY_SUCCEEDED(vkQueueWaitIdle(GraphicsQueue));
-}
-#endif
-
 void VK::CreateViewport(const float Width, const float Height, const float MinDepth, const float MaxDepth)
 {
 	//!< Vulkan はデフォルトで「左上」が原点 (DirectX、OpenGLは「左下」が原点)

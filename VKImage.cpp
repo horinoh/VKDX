@@ -75,17 +75,6 @@ VkComponentSwizzle VKImage::ToVkComponentSwizzle(const gli::swizzle Swizzle)
 	return VK_COMPONENT_SWIZZLE_IDENTITY;
 }
 
-void VKImage::CreateImage(VkImage* Img, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage, const gli::texture& GLITexture) const
-{
-	const auto CreateFlag = gli::is_target_cube(GLITexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0;
-	const auto Type = ToVkImageType(GLITexture.target());
-	const auto Format = ToVkFormat(GLITexture.format());
-	const auto Faces = static_cast<const uint32_t>(GLITexture.faces());
-	const auto Layers = static_cast<const uint32_t>(GLITexture.layers()) * Faces;
-	const auto Levels = static_cast<const uint32_t>(GLITexture.levels());
-	Super::CreateImage(Img, CreateFlag, Type, Format, VkExtent3D({ .width = static_cast<const uint32_t>(GLITexture.extent(0).x), .height = static_cast<const uint32_t>(GLITexture.extent(0).y), .depth = static_cast<const uint32_t>(GLITexture.extent(0).z) }), Levels, Layers, SampleCount, Usage);
-}
-
 //!< @param コマンドバッファ
 //!< @param コピー元バッファ
 //!< @param コピー先イメージ
@@ -138,103 +127,6 @@ void VKImage::PopulateCommandBuffer_CopyImageToBuffer(const VkCommandBuffer CB, 
 		}
 	}
 	VK::PopulateCommandBuffer_CopyImageToBuffer(CB, Src, Dst, AF, IL, PSF, BICs, Levels, Layers);
-}
-
-void VKImage::CreateImageView(VkImageView* IV, const VkImage Img, const gli::texture& GLITexture)
-{
-	const auto Type = ToVkImageViewType(GLITexture.target());
-	const auto Format = ToVkFormat(GLITexture.format());
-	const auto CompMap = ToVkComponentMapping(GLITexture.swizzles());
-
-	Super::CreateImageView(IV, Img, Type, Format, CompMap, VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS}));
-}
-
-gli::texture VKImage::LoadImage_DDS(VkImage* Img, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, std::string_view Path)
-{
-	//!< DDS or KTX or KMG を読み込める (DDS or KTX or KMG can be read)
-	const auto GLITexture(gli::load(data(Path)));
-	assert(!GLITexture.empty() && "Load image failed");
-
-#ifdef DEBUG_STDOUT
-	VkFormatProperties FormatProperties;
-	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), ToVkFormat(GLITexture.format()), &FormatProperties);
-
-#define FORMAT_ENTRIES() FORMAT_PROPERTY_ENTRY(SAMPLED_IMAGE_BIT);\
-	FORMAT_PROPERTY_ENTRY(STORAGE_IMAGE_BIT);\
-	FORMAT_PROPERTY_ENTRY(STORAGE_IMAGE_ATOMIC_BIT);\
-	FORMAT_PROPERTY_ENTRY(UNIFORM_TEXEL_BUFFER_BIT);\
-	FORMAT_PROPERTY_ENTRY(STORAGE_TEXEL_BUFFER_BIT);\
-	FORMAT_PROPERTY_ENTRY(STORAGE_TEXEL_BUFFER_ATOMIC_BIT);\
-	FORMAT_PROPERTY_ENTRY(VERTEX_BUFFER_BIT);\
-	FORMAT_PROPERTY_ENTRY(COLOR_ATTACHMENT_BIT);\
-	FORMAT_PROPERTY_ENTRY(COLOR_ATTACHMENT_BLEND_BIT);\
-	FORMAT_PROPERTY_ENTRY(DEPTH_STENCIL_ATTACHMENT_BIT);\
-	FORMAT_PROPERTY_ENTRY(BLIT_SRC_BIT);\
-	FORMAT_PROPERTY_ENTRY(BLIT_DST_BIT);\
-	FORMAT_PROPERTY_ENTRY(SAMPLED_IMAGE_FILTER_LINEAR_BIT);\
-	FORMAT_PROPERTY_ENTRY(SAMPLED_IMAGE_FILTER_CUBIC_BIT_IMG);\
-	FORMAT_PROPERTY_ENTRY(TRANSFER_SRC_BIT_KHR);\
-	FORMAT_PROPERTY_ENTRY(TRANSFER_DST_BIT_KHR);\
-	std::cout << std::endl; std::cout << std::endl;
-
-	std::cout << "\t" << "\t" << "linearTilingFeatures = ";
-#define FORMAT_PROPERTY_ENTRY(entry) if(VK_FORMAT_FEATURE_##entry & FormatProperties.linearTilingFeatures) { std::cout << #entry << " | "; }
-	FORMAT_ENTRIES()
-#undef FORMAT_PROPERTY_ENTRY
-
-		std::cout << "\t" << "\t" << "optimalTilingFeatures = ";
-#define FORMAT_PROPERTY_ENTRY(entry) if(VK_FORMAT_FEATURE_##entry & FormatProperties.optimalTilingFeatures) { std::cout << #entry << " | "; }
-	FORMAT_ENTRIES()
-#undef FORMAT_PROPERTY_ENTRY
-
-		std::cout << "\t" << "\t" << "bufferFeatures = ";
-#define FORMAT_PROPERTY_ENTRY(entry) if(VK_FORMAT_FEATURE_##entry & FormatProperties.bufferFeatures) { std::cout << #entry << " | "; }
-	FORMAT_ENTRIES()
-#undef FORMAT_PROPERTY_ENTRY
-
-		std::cout << std::endl;
-#endif //!< DEBUG_STDOUT
-
-	auto CB = CommandBuffers[0];
-	const auto Size = static_cast<VkDeviceSize>(GLITexture.size());
-
-	//!< デバイスローカルのイメージとメモリを作成 (Create device local image and memory)
-	//!< VK_IMAGE_USAGE_SAMPLED_BIT : サンプルドイメージ ... シェーダ内でサンプラとともに使われる為に指定する
-	//!< - 全てのテクスチャフォーマットとリニアフィルタをサポートするわけではない (ValidateFormatProoerties()でチェックしている)
-	//!< - プラットフォームによってはコンバインドイメージサンプラ(サンプラとサンプルドイメージを１つにまとめたもの)を使った方が効率が良い場合がある
-	CreateImage(Img, VK_SAMPLE_COUNT_1_BIT, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT, GLITexture);
-	AllocateDeviceMemory(DM, *Img, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Img, *DM, 0));
-
-	VkBuffer Buffer;
-	VkDeviceMemory DeviceMemory;
-	{
-		//!< ホストビジブルのバッファとメモリを作成、データをコピー( Create host visible buffer and memory, and copy data)
-		CreateBuffer(&Buffer, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size);
-		AllocateDeviceMemory(&DeviceMemory, Buffer, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
-		VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DeviceMemory, 0));
-
-		CopyToHostVisibleDeviceMemory(DeviceMemory, 0, Size, GLITexture.data());
-
-		constexpr VkCommandBufferBeginInfo CBBI = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			.pNext = nullptr,
-			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-			.pInheritanceInfo = nullptr
-		};
-		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit copy command from host visible to device local)
-			PopulateCommandBuffer_CopyBufferToImage(CB, Buffer, *Img, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, GLITexture);
-		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-
-		SubmitAndWait(GraphicsQueue, CB);
-	}
-	vkFreeMemory(Device, DeviceMemory, GetAllocationCallbacks());
-	vkDestroyBuffer(Device, Buffer, GetAllocationCallbacks());
-
-	ValidateFormatProperties_SampledImage(GetCurrentPhysicalDevice(), ToVkFormat(GLITexture.format()), VK_SAMPLE_COUNT_1_BIT, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
-
-	return GLITexture;
 }
 
 #if 0

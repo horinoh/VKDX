@@ -21,7 +21,9 @@ private:
 	static [[nodiscard]] VkImageViewType ToVkImageViewType(const gli::target GLITarget);
 	static [[nodiscard]] VkImageType ToVkImageType(const gli::target GLITarget);
 	static [[nodiscard]] VkComponentSwizzle ToVkComponentSwizzle(const gli::swizzle GLISwizzle);
-	static [[nodiscard]] VkComponentMapping ToVkComponentMapping(const gli::texture::swizzles_type ST) { return { ToVkComponentSwizzle(ST.r), ToVkComponentSwizzle(ST.g), ToVkComponentSwizzle(ST.b), ToVkComponentSwizzle(ST.a) }; }
+	static [[nodiscard]] VkComponentMapping ToVkComponentMapping(const gli::texture::swizzles_type GLISwizzleType) { 
+		return VkComponentMapping({ .r = ToVkComponentSwizzle(GLISwizzleType.r), .g = ToVkComponentSwizzle(GLISwizzleType.g), .b = ToVkComponentSwizzle(GLISwizzleType.b), .a = ToVkComponentSwizzle(GLISwizzleType.a) });
+	}
 
 protected:
 	class DDSTexture : public Texture
@@ -82,24 +84,12 @@ protected:
 	};
 
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
-		//!< #VK_TODO コマンド終了を待つ (基底でもやっているので2重チェックになっている…)
-		//if (VK_NULL_HANDLE != Device) [[likely]] { VERIFY_SUCCEEDED(vkDeviceWaitIdle(Device)); }
 		for (auto& i : DDSTextures) { i.Destroy(Device); } DDSTextures.clear();
-
 		Super::OnDestroy(hWnd, hInstance);
 	}
 
-	virtual void CreateImage(VkImage* Image, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage, const gli::texture& GLITexture) const;
 	static void PopulateCommandBuffer_CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const gli::texture& GLITexture);
 	static void PopulateCommandBuffer_CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const gli::texture& GLITexture);
-	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const gli::texture& GLITexture);
-
-	virtual [[nodiscard]] gli::texture LoadImage(VkImage* Img, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, std::string_view Path) {
-		assert(std::filesystem::exists(Path) && "");
-		assert(Path.ends_with(".dds") && "");
-		return LoadImage_DDS(Img, DM, PSF, Path);
-	}
-	[[nodiscard]] gli::texture LoadImage_DDS(VkImage* Image, VkDeviceMemory* DM, const VkPipelineStageFlags PSF, std::string_view Path);
 
 	std::vector<DDSTexture> DDSTextures;
 };

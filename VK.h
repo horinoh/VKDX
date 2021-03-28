@@ -383,8 +383,6 @@ protected:
 
 	static void EnumerateMemoryRequirements(const VkMemoryRequirements& MR, const VkPhysicalDeviceMemoryProperties& PDMP);
 
-	virtual void CreateImageView(VkImageView* ImageView, const VkImage Image, const VkImageViewType ImageViewType, const VkFormat Format, const VkComponentMapping& ComponentMapping, const VkImageSubresourceRange& ImageSubresourceRange);
-
 	virtual void ValidateFormatProperties(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage) const;
 	virtual void ValidateFormatProperties_SampledImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const VkFilter Mag, const VkFilter Min, const VkSamplerMipmapMode Mip) const;
 	virtual void ValidateFormatProperties_StorageImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const bool Atomic) const;
@@ -449,11 +447,8 @@ protected:
 	virtual [[nodiscard]] VkPresentModeKHR SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 
 	virtual void CreateSwapchain() { CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight()); }
-	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags IUF = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height);
 	virtual void ResizeSwapchain(const uint32_t Width, const uint32_t Height);
-	virtual void GetSwapchainImage(VkDevice Device, VkSwapchainKHR Swapchain);
-	virtual void CreateSwapchainImageView();
-	virtual void InitializeSwapchainImage(const VkCommandBuffer CB, const VkClearColorValue* CCV = nullptr);
 		
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
 
@@ -740,18 +735,7 @@ protected:
 #pragma endregion
 
 	std::vector<UniformBuffer> UniformBuffers;
-	std::vector<StorageBuffer> StorageBuffers;
 
-	using UniformTexelBuffer = struct BufferMemory;
-	using StorageTexelBuffer = struct BufferMemory;
-	std::vector<UniformTexelBuffer> UniformTexelBuffers;
-	std::vector<StorageTexelBuffer> StorageTexelBuffers;
-	std::vector<VkBufferView> BufferViews; //!< XXXTexelBufferはビューを使用する
-
-	struct Image { VkImage Image; VkDeviceMemory DeviceMemory; };
-	using Image = struct Image;
-	std::vector<Image> Images;
-	std::vector<VkImageView> ImageViews; //!< Imageはビューを使用する
 	std::vector<Texture> Textures;
 	std::vector<DepthTexture> DepthTextures;
 	std::vector<RenderTexture> RenderTextures;

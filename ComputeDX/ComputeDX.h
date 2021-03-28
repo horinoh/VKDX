@@ -43,7 +43,7 @@ protected:
 		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
 		constexpr std::array DRs = {
-			D3D12_DESCRIPTOR_RANGE({ D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0, 0, D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
+			D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 		};
 		DX::SerializeRootSignature(Blob, {
 			D3D12_ROOT_PARAMETER({
@@ -51,7 +51,7 @@ protected:
 				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ static_cast<UINT>(size(DRs)), data(DRs) }),
 				.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL
 			})
-			}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+		}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 #endif
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		LOG_OK();
