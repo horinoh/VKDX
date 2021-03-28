@@ -677,10 +677,12 @@ protected:
 	VkDebugReportCallbackEXT DebugReportCallback = VK_NULL_HANDLE;
 #endif
 	VkSurfaceKHR Surface = VK_NULL_HANDLE;
+	
 	std::vector<VkPhysicalDevice> PhysicalDevices;
 	std::vector<VkPhysicalDeviceMemoryProperties> PhysicalDeviceProperties;
 	VkPhysicalDevice CurrentPhysicalDevice = VK_NULL_HANDLE;
 	VkPhysicalDeviceMemoryProperties CurrentPhysicalDeviceMemoryProperties;
+
 	VkDevice Device = VK_NULL_HANDLE;
 	VkQueue GraphicsQueue = VK_NULL_HANDLE;
 	VkQueue PresentQueue = VK_NULL_HANDLE;
@@ -709,11 +711,6 @@ protected:
 	VkSemaphore NextImageAcquiredSemaphore = VK_NULL_HANDLE;	//!< プレゼント完了までウエイト
 	VkSemaphore RenderFinishedSemaphore = VK_NULL_HANDLE;		//!< 描画完了するまでウエイト
 
-	std::vector<VkCommandPool> CommandPools;
-	std::vector<VkCommandBuffer> CommandBuffers;
-	std::vector<VkCommandPool> SecondaryCommandPools;
-	std::vector<VkCommandBuffer> SecondaryCommandBuffers;
-
 	VkExtent2D SurfaceExtent2D;
 	VkFormat ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
 	VkSwapchainKHR Swapchain = VK_NULL_HANDLE;
@@ -721,10 +718,10 @@ protected:
 	uint32_t SwapchainImageIndex = 0;
 	std::vector<VkImageView> SwapchainImageViews;
 
-	VkFormat DepthFormat = VK_FORMAT_D24_UNORM_S8_UINT;
-
-	//!< VKの場合、通常サンプラ、イミュータブルサンプラとも同様に VkSampler を作成する、デスクリプタセットの指定が異なるだけ
-	std::vector<VkSampler> Samplers;
+	std::vector<VkCommandPool> CommandPools;
+	std::vector<VkCommandBuffer> CommandBuffers;
+	std::vector<VkCommandPool> SecondaryCommandPools;
+	std::vector<VkCommandBuffer> SecondaryCommandBuffers;
 
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;
@@ -736,22 +733,28 @@ protected:
 
 	std::vector<UniformBuffer> UniformBuffers;
 
+	VkFormat DepthFormat = VK_FORMAT_D24_UNORM_S8_UINT;
 	std::vector<Texture> Textures;
 	std::vector<DepthTexture> DepthTextures;
 	std::vector<RenderTexture> RenderTextures;
 
-	std::vector<VkViewport> Viewports;
-	std::vector<VkRect2D> ScissorRects;
-
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
-	std::vector<VkDescriptorPool> DescriptorPools;
-	std::vector<VkDescriptorSet> DescriptorSets;
-	std::vector<VkDescriptorUpdateTemplate> DescriptorUpdateTemplates;
 	std::vector<VkPipelineLayout> PipelineLayouts;
 
-	std::vector<VkPipeline> Pipelines;
 	std::vector<VkRenderPass> RenderPasses;
+	std::vector<VkPipeline> Pipelines;
 	std::vector<VkFramebuffer> Framebuffers;
+
+	std::vector<VkDescriptorPool> DescriptorPools;
+	std::vector<VkDescriptorSet> DescriptorSets;
+
+	//!< VKの場合、通常サンプラ、イミュータブルサンプラとも同様に VkSampler を作成する、デスクリプタセットの指定が異なるだけ
+	std::vector<VkSampler> Samplers;
+
+	std::vector<VkDescriptorUpdateTemplate> DescriptorUpdateTemplates;
+	
+	std::vector<VkViewport> Viewports;
+	std::vector<VkRect2D> ScissorRects;
 
 	//!< https://matthewwellings.com/blog/the-new-vulkan-coordinate-system/
 	//!< VKのクリップスペースはYが反転、Zが半分 (Vulkan clip space has inverted Y and half Z)

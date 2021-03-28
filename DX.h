@@ -397,7 +397,6 @@ public:
 	virtual void EnumOutput(IDXGIAdapter* Adapter);
 	virtual void GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format);
 	virtual void CheckFeatureLevel(ID3D12Device* Device);
-	virtual void CheckMultiSample(const DXGI_FORMAT Format);
 
 	virtual void CreateCommandQueue();
 
@@ -486,33 +485,21 @@ protected:
 
 	COM_PTR<ID3D12Device> Device;
 	std::vector<DXGI_SAMPLE_DESC> SampleDescs;
+	
 	COM_PTR<ID3D12CommandQueue> GraphicsCommandQueue;
 	COM_PTR<ID3D12CommandQueue> ComputeCommandQueue;
+
 	COM_PTR<ID3D12Fence> Fence;
 	UINT64 FenceValue = 0;
 
-	std::vector<COM_PTR<ID3D12CommandAllocator>> CommandAllocators;
-	std::vector<COM_PTR<ID3D12CommandAllocator>> BundleCommandAllocators;
-
-	std::vector<COM_PTR<ID3D12GraphicsCommandList>> GraphicsCommandLists;
-	std::vector<COM_PTR<ID3D12GraphicsCommandList>> BundleGraphicsCommandLists;
-
 	COM_PTR<IDXGISwapChain4> SwapChain;
 	std::vector<COM_PTR<ID3D12Resource>> SwapChainResources;
-
-	//COM_PTR<ID3D12Resource> UnorderedAccessTextureResource;
-	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
-
 	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap;					//!< D3D12_DESCRIPTOR_HEAP_TYPE_RTV : スワップチェインRTVは別扱いにしている (Manage swapchain RTV separately)
-	std::vector<COM_PTR<ID3D12DescriptorHeap>> CbvSrvUavDescriptorHeaps;	//!< D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
-	std::vector<COM_PTR<ID3D12DescriptorHeap>> SamplerDescriptorHeaps;		//!< D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
-	std::vector<COM_PTR<ID3D12DescriptorHeap>> RtvDescriptorHeaps;			//!< D3D12_DESCRIPTOR_HEAP_TYPE_RTV
-	std::vector<COM_PTR<ID3D12DescriptorHeap>> DsvDescriptorHeaps;			//!< D3D12_DESCRIPTOR_HEAP_TYPE_DSV
 
-	std::vector<COM_PTR<ID3D12RootSignature>> RootSignatures;
-
-	COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
-	std::vector<COM_PTR<ID3D12PipelineState>> PipelineStates;
+	std::vector<COM_PTR<ID3D12CommandAllocator>> CommandAllocators;
+	std::vector<COM_PTR<ID3D12CommandAllocator>> BundleCommandAllocators;
+	std::vector<COM_PTR<ID3D12GraphicsCommandList>> GraphicsCommandLists;
+	std::vector<COM_PTR<ID3D12GraphicsCommandList>> BundleGraphicsCommandLists;
 
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;
@@ -520,23 +507,28 @@ protected:
 #pragma region RAYTRACING
 	std::vector<AccelerationStructureBuffer> BLASs, TLASs;
 #pragma endregion
-	std::vector<ConstantBuffer> ConstantBuffers;
-	//std::vector<D3D12_CONSTANT_BUFFER_VIEW_DESC> ConstantBufferViewDescs;
 
-	using Image = struct Image { COM_PTR<ID3D12Resource> Resource; };
-	std::vector<Image> Images; 
-	std::vector<D3D12_SHADER_RESOURCE_VIEW_DESC> ShaderResourceViewDescs; 
-	std::vector<D3D12_DEPTH_STENCIL_VIEW_DESC> DepthStencilViewDescs;
-	std::vector<D3D12_RENDER_TARGET_VIEW_DESC> RenderTargetViewDescs;
-	std::vector<D3D12_UNORDERED_ACCESS_VIEW_DESC> UnorderedAccessViewDescs;
+	std::vector<ConstantBuffer> ConstantBuffers;
+
 	std::vector<Texture> Textures;
 	std::vector<DepthTexture> DepthTextures;
 	std::vector<RenderTexture> RenderTextures;
 
+	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
+
+	std::vector<COM_PTR<ID3D12RootSignature>> RootSignatures;
+	COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
+	std::vector<COM_PTR<ID3D12PipelineState>> PipelineStates;
+
+	std::vector<COM_PTR<ID3D12DescriptorHeap>> CbvSrvUavDescriptorHeaps;	//!< D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+	std::vector<COM_PTR<ID3D12DescriptorHeap>> SamplerDescriptorHeaps;		//!< D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
+	std::vector<COM_PTR<ID3D12DescriptorHeap>> RtvDescriptorHeaps;			//!< D3D12_DESCRIPTOR_HEAP_TYPE_RTV
+	std::vector<COM_PTR<ID3D12DescriptorHeap>> DsvDescriptorHeaps;			//!< D3D12_DESCRIPTOR_HEAP_TYPE_DSV
+
+	std::vector<D3D12_UNORDERED_ACCESS_VIEW_DESC> UnorderedAccessViewDescs;
+
 	std::vector<D3D12_VIEWPORT> Viewports;
 	std::vector<D3D12_RECT> ScissorRects;
-
-	std::array<UINT, D3D12_DESCRIPTOR_HEAP_TYPE_NUM_TYPES> DescriptorHandleIndices{};
 
 protected:
 	const D3D12_SHADER_BYTECODE NullShaderBC = { .pShaderBytecode = nullptr, .BytecodeLength = 0 };

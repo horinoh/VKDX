@@ -36,7 +36,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< デバイス
 	CreateDevice(hWnd);
-	CheckMultiSample(ColorFormat);
 	CreateCommandQueue();
 
 	CreateFence();
@@ -637,33 +636,6 @@ void DX::CheckFeatureLevel(ID3D12Device* Dev)
 #undef D3D_FEATURE_LEVEL_ENTRY
 }
 
-void DX::CheckMultiSample(const DXGI_FORMAT Format)
-{
-	Logf("MultiSample for %s\n", GetFormatChar(Format));
-
-	SampleDescs.clear();
-	for (UINT i = 1; i < D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT; ++i) {
-		//!< Format, SampleCount, Flags は CheckFeatureSupport() への入力、NumQualityLevels は CheckFeatureSupport() からの出力となる
-		D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS DataMultiSampleQaualityLevels = {
-			.Format = Format, //!< 入力 (Input)
-			.SampleCount = i, //!< 入力 (Input)
-			.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE, //!< 入力 (Input)
-			.NumQualityLevels = 0 //!< 出力 (Output)
-		};
-		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, reinterpret_cast<void*>(&DataMultiSampleQaualityLevels), sizeof(DataMultiSampleQaualityLevels)));
-		//!< 0 == NumQualityLevels の場合はサポートされていないということ
-		if (DataMultiSampleQaualityLevels.NumQualityLevels) [[likely]] {
-			const DXGI_SAMPLE_DESC SampleDesc = {
-				.Count = DataMultiSampleQaualityLevels.SampleCount,
-				.Quality = DataMultiSampleQaualityLevels.NumQualityLevels - 1
-			}; 
-			SampleDescs.emplace_back(SampleDesc);
-
-			Logf("\tCount = %d, Quality = %d\n", SampleDesc.Count, SampleDesc.Quality);
-		}
-	}
-}
-
 /**
 @brief マルチスレッドで「同じ」キューへサブミットできる
 @note Vulkan ではマルチスレッドで「異なる」キューへのみサブミットできるので注意
@@ -738,10 +710,24 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 		.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
 		.Scaling = DXGI_MODE_SCALING_UNSPECIFIED
 	};
-	const auto& SampleDesc = SampleDescs[0];
+	std::vector<DXGI_SAMPLE_DESC> SDs;
+	{
+		for (UINT i = 1; i <= D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT; ++i) {
+			D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS FDMSQL = {
+				.Format = ColorFormat,
+				.SampleCount = i, 
+				.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE, 
+				.NumQualityLevels = 0
+			};
+			VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, reinterpret_cast<void*>(&FDMSQL), sizeof(FDMSQL)));
+			if (FDMSQL.NumQualityLevels) {
+				SDs.emplace_back(DXGI_SAMPLE_DESC({ .Count = FDMSQL.SampleCount, .Quality = FDMSQL.NumQualityLevels - 1 }));
+			}
+		}
+	}
 	DXGI_SWAP_CHAIN_DESC SCD = {
 		.BufferDesc = MD,
-		.SampleDesc = SampleDesc,
+		.SampleDesc = SDs[0],
 		.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
 		.BufferCount = BufferCount,
 		.OutputWindow = hWnd,
