@@ -433,4 +433,7 @@ void RayTracingVK::CreatePipeline()
 	ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(Data) + 2 * AlignedSize); //!< 2:ClosestHit
 #pragma endregion
 }
+void RayTracingVK::PopulateCommandBuffer([[maybe_unused]]const size_t i)
+{
+}
 #pragma endregion

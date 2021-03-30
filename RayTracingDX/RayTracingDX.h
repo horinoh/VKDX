@@ -14,12 +14,11 @@ public:
 	virtual ~RayTracingDX() {}
 
 #pragma region RAYTRACING
-	virtual void CreateDevice(HWND hWnd) override { Super::CreateDevice(hWnd); assert(HasRaytracingSupport(COM_PTR_GET(Device)) && "Raytracing is not supported"); }
-
 	virtual void CreateGeometry() override;
 	virtual void CreateTexture() override;
 	virtual void CreateRootSignature() override;
 	virtual void CreatePipelineState() override;
+	virtual void PopulateCommandList(const size_t i) override;
 #pragma endregion
 };
 #pragma endregion
