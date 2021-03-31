@@ -16,14 +16,19 @@ static const float Scale = 0.005f;
 //static const float Scale = 0.5f;
 //static const float Scale = 1.0f;
 
-cbuffer ProjView : register(b0, space0) { float4x4 Projection; float4x4 View; };
+struct TRANSFORM
+{
+    float4x4 Projection;
+    float4x4 View;
+};
+ConstantBuffer<TRANSFORM> Transform : register(b0, space0);
 
 OUT main(IN In)
 {
 	OUT Out;
 
-	const float4x4 PV = mul(Projection, View);
-	//const float4x4 PV = mul(View, Projection);
+    const float4x4 PV = mul(Transform.Projection, Transform.View);
+	//const float4x4 PV = mul(Transform.View, Transform.Projection);
 
 	Out.Position = mul(PV, float4(In.Position, 1.0f));
 	//Out.Position = float4(In.Position * Scale, 1.0f);

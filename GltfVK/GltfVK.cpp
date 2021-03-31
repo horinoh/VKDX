@@ -276,12 +276,12 @@ void GltfVK::PreProcess()
 	const auto Aspect = GetAspectRatioOfClientRect();
 	const auto ZFar = 100.0f;
 	const auto ZNear = ZFar * 0.0001f;
-	PV.Projection = glm::perspective(Fov, Aspect, ZNear, ZFar);
+	Tr.Projection = glm::perspective(Fov, Aspect, ZNear, ZFar);
 
 	const auto CamPos = glm::vec3(0.0f, 0.0f, 6.0f);
 	const auto CamTag = glm::vec3(0.0f);
 	const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
-	PV.View = glm::lookAt(CamPos, CamTag, CamUp);
+	Tr.View = glm::lookAt(CamPos, CamTag, CamUp);
 
 #if 0
 	auto UBSize = sizeof(PV);
@@ -371,30 +371,30 @@ void GltfVK::Process(const fx::gltf::Camera& Cam)
 {
 	Gltf::Process(Cam);
 
-	PV.View = CurrentMatrix.back();
+	Tr.View = CurrentMatrix.back();
 #if 1
-	PV.View[3][0] = 0.0f;
-	PV.View[3][1] = 0.0f;
+	Tr.View[3][0] = 0.0f;
+	Tr.View[3][1] = 0.0f;
 #endif
 
 	switch (Cam.type) {
 		using enum fx::gltf::Camera::Type;
 	case None: break;
 	case Orthographic:
-		PV.Projection = glm::orthoRH(0.0f, Cam.orthographic.xmag, 0.0f, Cam.orthographic.ymag, Cam.orthographic.znear, Cam.orthographic.zfar);
+		Tr.Projection = glm::orthoRH(0.0f, Cam.orthographic.xmag, 0.0f, Cam.orthographic.ymag, Cam.orthographic.znear, Cam.orthographic.zfar);
 		break;
 	case Perspective:
-		PV.Projection = glm::perspective(Cam.perspective.yfov, Cam.perspective.aspectRatio, Cam.perspective.znear, Cam.perspective.zfar);
+		Tr.Projection = glm::perspective(Cam.perspective.yfov, Cam.perspective.aspectRatio, Cam.perspective.znear, Cam.perspective.zfar);
 		break;
 	}
 
 #ifdef DEBUG_STDOUT
 	std::cout << "View =" << std::endl;
-	std::cout << PV.View;
+	std::cout << Tr.View;
 	std::cout << "Projection =" << std::endl;
-	std::cout << PV.Projection;
+	std::cout << Tr.Projection;
 	//!< DX‚Æ‚Í‡ŽŸ‚ª‹t
-	std::cout << "Projection * View = " << PV.Projection * PV.View;
+	std::cout << "Projection * View = " << Tr.Projection * Tr.View;
 #endif
 
 #if 0

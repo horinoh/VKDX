@@ -227,13 +227,13 @@ protected:
 
 	float CurrentFrame = 0.0f;
 	
-	struct ProjView
+	struct Transform
 	{
 		glm::mat4 Projection;
 		glm::mat4 View;
 	};
-	using ProjView = struct ProjView;
-	ProjView PV;	
+	using Transform = struct Transform;
+	Transform Tr;	
 	std::vector<const glm::mat4*> InverseBindMatrices;
 	std::vector<glm::mat4> JointMatrices;
 	std::vector<float> MorphWeights;

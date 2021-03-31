@@ -186,14 +186,14 @@ protected:
 		const auto Aspect = GetAspectRatioOfClientRect();
 		const auto ZFar = 100.0f;
 		const auto ZNear = ZFar * 0.0001f;
-		PV.Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
+		Tr.Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
 
 		const auto CamPos = DirectX::XMVectorSet(0.0f, 0.0f, 6.0f, 1.0f);
 		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-		PV.View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
+		Tr.View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
 
-		ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(PV));
+		ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tr));
 	}
 	virtual void CreateDescriptorHeap() override {
 		{
@@ -229,13 +229,13 @@ protected:
 
 	FLOAT CurrentFrame = 0.0f;
 
-	struct ProjView
+	struct Transform
 	{
 		DirectX::XMMATRIX Projection;
 		DirectX::XMMATRIX View;
 	};
-	using ProjView = struct ProjView;
-	ProjView PV;
+	using Transform = struct Transform;
+	Transform Tr;
 	std::vector<const DirectX::XMMATRIX*> InverseBindMatrices;
 	std::vector<DirectX::XMMATRIX> JointMatrices;
 	std::vector<float> MorphWeights;

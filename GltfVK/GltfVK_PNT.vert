@@ -13,7 +13,7 @@ const float Scale = 0.005f;
 //const float Scale = 0.5f;
 //const float Scale = 1.0f;
 
-//layout (set = 0, binding = 0) uniform ProjView { mat4 Projection; mat4 View; };
+//layout (set = 0, binding = 0) uniform Transform { mat4 Projection; mat4 View; };
 
 void main()
 {

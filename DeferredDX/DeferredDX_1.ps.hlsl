@@ -4,7 +4,14 @@ struct IN
 	float2 Texcoord : TEXCOORD0;
 };
 
-cbuffer Transform : register(b0, space0) { float4x4 Projection; float4x4 View; float4x4 World; float4x4 InverseViewProjection; };
+struct TRANSFORM
+{
+    float4x4 Projection;
+    float4x4 View;
+    float4x4 World;
+    float4x4 InverseViewProjection;
+};
+ConstantBuffer<TRANSFORM> Transform : register(b0, space0);
 
 SamplerState Sampler : register(s0, space0);
 Texture2D Texture : register(t0, space0);	//!< カラー(Color)
@@ -51,7 +58,7 @@ float4 main(IN In) : SV_TARGET
 	//!< UVと深度からワールド位置を求める
 	const float Depth = Texture2.Sample(Sampler, In.Texcoord).r;
 	const float2 UVSnorm = float2(In.Texcoord.x, 1.0f - In.Texcoord.y) * 2.0f - 1.0f;
-	float4 WorldPos = mul(InverseViewProjection, float4(UVSnorm, Depth, 1.0f));
+    float4 WorldPos = mul(Transform.InverseViewProjection, float4(UVSnorm, Depth, 1.0f));
 	WorldPos.xyz /= WorldPos.w;
 	//return float4(WorldPos.x * 0.5f + 0.5f, 0.0f, 0.0f, 1.0f);
 	//return float4(0.0f, WorldPos.y * 0.5f + 0.5f, 0.0f, 1.0f);

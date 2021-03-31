@@ -6,13 +6,8 @@ struct IN
 	float2 Texcoord : TEXCOORD0;
 };
 
-//#define USE_STRUCT
-#ifdef USE_STRUCT
 struct Transform { float4x4 Projection; float4x4 View; float4x4 World; float3 LocalCameraPosition; float3 LocalLightDirection; };
 ConstantBuffer<Transform> Tr : register(b0, space0); 
-#else
-cbuffer Transform : register(b0, space0) { float4x4 Projection; float4x4 View; float4x4 World; float3 LocalCameraPosition; float3 LocalLightDirection; };
-#endif
 
 struct OUT
 {
@@ -28,13 +23,8 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 {
 	OUT Out;
 	
-#ifdef USE_STRUCT
 	const float3 CamPos = -float3(Tr.View[0][3], Tr.View[1][3], Tr.View[2][3]);
 	const float4x4 PVW = mul(mul(Tr.Projection, Tr.View), Tr.World);
-#else
-	const float3 CamPos = -float3(View[0][3], View[1][3], View[2][3]);
-	const float4x4 PVW = mul(mul(Projection, View), World);
-#endif
 	const float4x4 TexTransform = float4x4(1.0f, 0.0f, 0.0f, 0.0f,
 		0.0f, 1.0f, 0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f, 0.0f,
@@ -46,17 +36,10 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 		
 		const float3 Binormal = cross(In[i].Normal, In[i].Tangent);
 
-#ifdef USE_STRUCT
 		Out.Texcoord = mul(TexTransform, float4(In[i].Texcoord, 0.0f, 1.0f)).xy;
 		const float3 V = Tr.LocalCameraPosition - In[i].Position;
 		Out.ViewDirection = float3(dot(V, In[i].Tangent), dot(V, Binormal), dot(V, In[i].Normal));
 		Out.LightDirection = float3(dot(Tr.LocalLightDirection, In[i].Tangent), dot(Tr.LocalLightDirection, Binormal), dot(Tr.LocalLightDirection, In[i].Normal));
-#else
-		Out.Texcoord = mul(TexTransform, float4(In[i].Texcoord, 0.0f, 1.0f)).xy;
-		const float3 V = LocalCameraPosition - In[i].Position;
-		Out.ViewDirection = float3(dot(V, In[i].Tangent), dot(V, Binormal), dot(V, In[i].Normal));
-		Out.LightDirection = float3(dot(LocalLightDirection, In[i].Tangent), dot(LocalLightDirection, Binormal), dot(LocalLightDirection, In[i].Normal));
-#endif
 		
 		stream.Append(Out);
 	}

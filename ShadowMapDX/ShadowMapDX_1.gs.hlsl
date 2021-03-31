@@ -3,7 +3,15 @@ struct IN
 	float3 Position : POSITION;
 };
 
-cbuffer Transform : register(b0, space0) { float4x4 Projection; float4x4 View; float4x4 World; float4x4 LightProjection; float4x4 LightView; };
+struct TRANSFORM
+{
+    float4x4 Projection;
+    float4x4 View;
+    float4x4 World;
+    float4x4 LightProjection;
+    float4x4 LightView;
+};
+ConstantBuffer<TRANSFORM> Transform : register(b0, space0);
 
 struct OUT
 {
@@ -17,8 +25,8 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 {
 	OUT Out;
 	
-	const float4x4 PVW = mul(mul(Projection, View), World);
-	const float4x4 LPVW = mul(mul(LightProjection, LightView), World);
+    const float4x4 PVW = mul(mul(Transform.Projection, Transform.View), Transform.World);
+    const float4x4 LPVW = mul(mul(Transform.LightProjection, Transform.LightView), Transform.World);
 
 	[unroll]
 	for (int i = 0; i<3; ++i) {

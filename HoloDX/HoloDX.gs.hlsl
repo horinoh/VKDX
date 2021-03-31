@@ -4,12 +4,14 @@ struct IN
     float3 Normal : NORMAL;
 };
 
-cbuffer TRANSFORM : register(b0, space0)
+struct TRANSFORM
 {
     float4x4 Projection;
     float4x4 View;
-    float4x4 World; 
+    float4x4 World;
 };
+ConstantBuffer<TRANSFORM> Transform : register(b0, space0);
+
 struct QUILT_DRAW
 {
     int ViewIndexOffset;
@@ -42,7 +44,7 @@ struct OUT
 void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instanceID : SV_GSInstanceID)
 {
 	OUT Out;
-
+    
     const float ViewIndex = float(instanceID + QuiltDraw.ViewIndexOffset); //!< ‚QŽü–ÚˆÈ~‚Ì•`‰æ‚Å‚Í@ViewIndexOffset •ª‚Ì‰º‘Ê‚ð—š‚©‚¹‚Ä‚¢‚é
     
 	//!< [ ã–Ê} ]
@@ -55,22 +57,22 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
     const float OffsetRadian = (ViewIndex / (QuiltDraw.ViewTotal - 1) - 0.5f) * QuiltDraw.ViewCone; 
     const float OffsetX = CameraDistance * tan(OffsetRadian);
     
-    float4 Trans = mul(View, float4(OffsetX, 0.0f, CameraDistance, 1.0f));
-	float4 Tmp = View[0] * Trans.x + View[1] * Trans.y + View[2] * Trans.z + View[3];
-    float4x4 V = View;
+    float4 Trans = mul(Transform.View, float4(OffsetX, 0.0f, CameraDistance, 1.0f));
+    float4 Tmp = Transform.View[0] * Trans.x + Transform.View[1] * Trans.y + Transform.View[2] * Trans.z + Transform.View[3];
+    float4x4 V = Transform.View;
     V[0][3] = Tmp.x; V[1][3] = Tmp.y; V[2][3] = Tmp.z;
     
-    float4x4 P = Projection;
+    float4x4 P = Transform.Projection;
     P[0][2] += OffsetX / (CameraSize * QuiltDraw.Aspect);
     
-    const float3 CamPos = float3(View[0][3], View[1][3], View[2][3]);
-    const float4x4 PVW = mul(mul(P, V), World);
+    const float3 CamPos = float3(Transform.View[0][3], Transform.View[1][3], Transform.View[2][3]);
+    const float4x4 PVW = mul(mul(P, V), Transform.World);
    
 	[unroll]
 	for (int i = 0; i<3; ++i) {
         Out.Position = mul(PVW, float4(In[i].Position, 1.0f));
-        Out.Normal = mul((float3x3) World, In[i].Normal);
-        Out.ViewDirection = CamPos - mul(World, Out.Position).xyz;
+        Out.Normal = mul((float3x3) Transform.World, In[i].Normal);
+        Out.ViewDirection = CamPos - mul(Transform.World, Out.Position).xyz;
         Out.Viewport = instanceID;
 #if 1
         Out.ViewIndex = ViewIndex / (QuiltDraw.ViewTotal - 1);

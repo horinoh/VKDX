@@ -300,34 +300,34 @@ void GltfDX::Process(const fx::gltf::Camera& Cam)
 {
 	Gltf::Process(Cam);
 
-	PV.View = CurrentMatrix.back();
+	Tr.View = CurrentMatrix.back();
 #if 1
-	PV.View.r[3].m128_f32[0] = 0.0f;
-	PV.View.r[3].m128_f32[1] = 0.0f;
+	Tr.View.r[3].m128_f32[0] = 0.0f;
+	Tr.View.r[3].m128_f32[1] = 0.0f;
 #endif
 
 	switch (Cam.type) {
 		using enum fx::gltf::Camera::Type;
 	case None: break;
 	case Orthographic:
-		PV.Projection = DirectX::XMMatrixOrthographicRH(Cam.orthographic.xmag, Cam.orthographic.ymag, Cam.orthographic.znear, Cam.orthographic.zfar);
+		Tr.Projection = DirectX::XMMatrixOrthographicRH(Cam.orthographic.xmag, Cam.orthographic.ymag, Cam.orthographic.znear, Cam.orthographic.zfar);
 		break;
 	case Perspective:
-		PV.Projection = DirectX::XMMatrixPerspectiveFovRH(Cam.perspective.yfov, Cam.perspective.aspectRatio, Cam.perspective.znear, Cam.perspective.zfar);
+		Tr.Projection = DirectX::XMMatrixPerspectiveFovRH(Cam.perspective.yfov, Cam.perspective.aspectRatio, Cam.perspective.znear, Cam.perspective.zfar);
 		break;
 	}
 
 #ifdef DEBUG_STDOUT
 	std::cout << "View =" << std::endl;
-	std::cout << PV.View;
+	std::cout << Tr.View;
 	std::cout << "Projection =" << std::endl;
-	std::cout << PV.Projection;
+	std::cout << Tr.Projection;
 	//!< VK‚Æ‚Í‡ŽŸ‚ª‹t
-	std::cout << "View * Projection = " << PV.View * PV.Projection;
+	std::cout << "View * Projection = " << Tr.View * Tr.Projection;
 #endif
 
 #if 1
-	CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0].Resource), RoundUp256(sizeof(PV)), &PV);
+	CopyToUploadResource(COM_PTR_GET(ConstantBuffers[0].Resource), RoundUp256(sizeof(Tr)), &Tr);
 #endif
 }
 void GltfDX::Process(const fx::gltf::Primitive& Prim)

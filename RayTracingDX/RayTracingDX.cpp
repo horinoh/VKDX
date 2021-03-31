@@ -238,12 +238,9 @@ void RayTracingDX::CreateGeometry()
 	COM_PTR<ID3D12Device5> Device5;
 	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
 
-	//COM_PTR<ID3D12GraphicsCommandList4> GCL4;
-	//VERIFY_SUCCEEDED(COM_PTR_GET(GraphicsCommandLists[0])->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
 	const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
     const auto CA = COM_PTR_GET(CommandAllocators[0]);
-    const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
-    const auto F = COM_PTR_GET(Fence);
+    const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
 #pragma region BLAS
     {
@@ -308,7 +305,7 @@ void RayTracingDX::CreateGeometry()
 		//!< AS作成 (Create AS)
 		BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
         //!< ASビルド (Build AS)
-		BuildAccelerationStructure(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, COM_PTR_GET(BLASs.back().Resource)->GetGPUVirtualAddress(), BRASI, GCL, CA, CQ, F);
+		BuildAccelerationStructure(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, COM_PTR_GET(BLASs.back().Resource)->GetGPUVirtualAddress(), BRASI, GCL, CA, GCQ, COM_PTR_GET(Fence));
     }
 #pragma endregion
 
@@ -353,7 +350,7 @@ void RayTracingDX::CreateGeometry()
 		//!< AS作成 (Create AS)
 		TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
 		//!< ASビルド (Build AS)
-		BuildAccelerationStructure(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, COM_PTR_GET(TLASs.back().Resource)->GetGPUVirtualAddress(), BRASI, GCL, CA, CQ, F);
+		BuildAccelerationStructure(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, COM_PTR_GET(TLASs.back().Resource)->GetGPUVirtualAddress(), BRASI, GCL, CA, GCQ, COM_PTR_GET(Fence));
     }
 #pragma endregion
 }
@@ -466,6 +463,9 @@ void RayTracingDX::PopulateCommandList([[maybe_unused]]const size_t i)
 {
 	if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
+	COM_PTR<ID3D12GraphicsCommandList4> GCL4;
+	VERIFY_SUCCEEDED(COM_PTR_GET(GraphicsCommandLists[i])->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
+
 	const auto DRD = D3D12_DISPATCH_RAYS_DESC({
 	  .RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({ .StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0 }),
 	  .MissShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0}),
@@ -473,6 +473,6 @@ void RayTracingDX::PopulateCommandList([[maybe_unused]]const size_t i)
 	  .CallableShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0}),
 	  .Width = 800,.Height = 600, .Depth = 1
 	});
-	//CMD->DispatchRays(&DRD);
+    GCL4->DispatchRays(&DRD);
 }
 #pragma endregion

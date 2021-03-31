@@ -1,0 +1,27 @@
+#version 460
+#extension GL_EXT_ray_tracing : enable
+
+layout(binding = 0, set = 0) uniform accelerationStructureEXT TLAS;
+layout(binding = 1, set = 0, rgba8) uniform image2D RenderTarget;
+
+layout(location = 0) rayPayloadEXT vec3 Payload;
+
+void main()
+{
+    const vec2 t = vec2(gl_LaunchIDEXT.xy) / gl_LaunchSizeEXT.xy;
+
+    //!< ペイロードを初期化 (Initialize payload)
+    Payload = vec3(0.0f);
+
+    //!< レイ (Ray)
+    const float TMin = 0.0f;
+    const float TMax = 10000.0f;
+    const vec3 Origin = vec3(0.0f, 0.0f, 1.0f);
+    const vec3 Direction = normalize(vec3(t * 2.0f - 1.0f, 0.0f) - Origin);
+    
+    //!< トレーシング (Tracing)
+    traceRayEXT(TLAS, gl_RayFlagsNoneEXT/*gl_RayFlagsCullBackFacingTrianglesEXT */, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
+
+    //!< 結果をレンダーターゲットへ (Write to render target)
+	imageStore(RenderTarget, gl_LaunchIDEXT.xy, vec4(Payload, 1.0));
+}
