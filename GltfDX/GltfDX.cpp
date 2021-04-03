@@ -613,9 +613,9 @@ void GltfDX::PopulateCommandList(const size_t i)
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
 	const auto PrimCount = size(BundleGraphicsCommandLists) / SCD.BufferCount;
-	std::vector<ID3D12GraphicsCommandList*> BCLs;
+	std::vector<ID3D12GraphicsCommandList*> BGCLs;
 	for (auto j = 0; j < PrimCount; ++j) {
-		BCLs.emplace_back(COM_PTR_GET(BundleGraphicsCommandLists[j * SCD.BufferCount + i]));
+		BGCLs.emplace_back(COM_PTR_GET(BundleGraphicsCommandLists[j * SCD.BufferCount + i]));
 	}
 
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
@@ -654,7 +654,7 @@ void GltfDX::PopulateCommandList(const size_t i)
 				GCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
 
-			for (auto j : BCLs) { GCL->ExecuteBundle(j); }
+			for (auto j : BGCLs) { GCL->ExecuteBundle(j); }
 		}
 		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}

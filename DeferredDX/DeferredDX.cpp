@@ -364,7 +364,7 @@ void DeferredDX::PopulateCommandList(const size_t i)
 				//!< #DX_TODO
 				//GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * 4;
 				//GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
-				//CL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV
+				//GCL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV
 #pragma endregion
 			}
 
