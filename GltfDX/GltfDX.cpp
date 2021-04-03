@@ -436,8 +436,8 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators.back());
 	for (auto i = 0; i < static_cast<int>(Count); ++i) {
-		const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[size(BundleGraphicsCommandLists) - Count + i]);
-		VERIFY_SUCCEEDED(BCL->Reset(BCA, PST));
+		const auto BGCL = COM_PTR_GET(BundleGraphicsCommandLists[size(BundleGraphicsCommandLists) - Count + i]);
+		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PST));
 		{
 			//const std::array<D3D12_VERTEX_BUFFER_VIEW, 1> VBVs = { VertexBuffers.back().View };
 			std::vector<D3D12_VERTEX_BUFFER_VIEW> VBVs; for (auto j : VertexBuffers) { VBVs.emplace_back(j.View); }
@@ -446,23 +446,23 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 			const auto IDBR = COM_PTR_GET(IndirectBuffers.back().Resource);
 
 #if 0
-			BCL->SetGraphicsRootSignature(RS);
-			//BCL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(sizeof(CurrentMatrix.back()) / 4), &CurrentMatrix.back(), 0);
+			BGCL->SetGraphicsRootSignature(RS);
+			//BGCL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(sizeof(CurrentMatrix.back()) / 4), &CurrentMatrix.back(), 0);
 
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 
 			const std::array DHs = { COM_PTR_GET(DH) };
-			BCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+			BGCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 			auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-			BCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+			BGCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #endif
-			BCL->IASetPrimitiveTopology(ToDXPrimitiveTopology(Prim.mode));
-			BCL->IASetVertexBuffers(0, static_cast<UINT>(size(VBVs)), data(VBVs));
-			BCL->IASetIndexBuffer(&IBV);
-			BCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+			BGCL->IASetPrimitiveTopology(ToDXPrimitiveTopology(Prim.mode));
+			BGCL->IASetVertexBuffers(0, static_cast<UINT>(size(VBVs)), data(VBVs));
+			BGCL->IASetIndexBuffer(&IBV);
+			BGCL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 		}
-		VERIFY_SUCCEEDED(BCL->Close());
+		VERIFY_SUCCEEDED(BGCL->Close());
 	}
 }
 
@@ -619,45 +619,45 @@ void GltfDX::PopulateCommandList(const size_t i)
 	}
 
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
-	VERIFY_SUCCEEDED(CL->Reset(CA, nullptr));
+	const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
+	VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr));
 	{
 		const auto RS = COM_PTR_GET(RootSignatures[0]);
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 		
-		CL->SetGraphicsRootSignature(RS);
+		GCL->SetGraphicsRootSignature(RS);
 
-		CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-		CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+		GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+		GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-		//CL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(sizeof(ViewProjection) / 4), &ViewProjection, 0);
+		//GCL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(sizeof(ViewProjection) / 4), &ViewProjection, 0);
 
-		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
 			auto SCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 			const auto DDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 
 			constexpr std::array<D3D12_RECT, 0> Rects = {};
-			CL->ClearRenderTargetView(SCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
-			CL->ClearDepthStencilView(DDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+			GCL->ClearRenderTargetView(SCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+			GCL->ClearDepthStencilView(DDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 
 			const std::array RTDHs = { SCDH };
-			CL->OMSetRenderTargets(static_cast<UINT>(size(RTDHs)), data(RTDHs), FALSE, &DDH);
+			GCL->OMSetRenderTargets(static_cast<UINT>(size(RTDHs)), data(RTDHs), FALSE, &DDH);
 
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 
 				const std::array DHs = { COM_PTR_GET(DH) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-				CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				GCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
 
-			for (auto j : BCLs) { CL->ExecuteBundle(j); }
+			for (auto j : BCLs) { GCL->ExecuteBundle(j); }
 		}
-		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
-	VERIFY_SUCCEEDED(CL->Close());
+	VERIFY_SUCCEEDED(GCL->Close());
 }
 #pragma endregion

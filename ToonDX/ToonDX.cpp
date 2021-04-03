@@ -234,57 +234,57 @@ void ToonDX::PopulateCommandList(const size_t i)
 {
 	const auto PS = COM_PTR_GET(PipelineStates[0]);
 
-	const auto BCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	const auto BGCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-	VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
+	VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
     {
-        BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-        BCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+        BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+        BGCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
     }
-	VERIFY_SUCCEEDED(BCL->Close());
+	VERIFY_SUCCEEDED(BGCL->Close());
 
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
+	VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
 	{
-		CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
+		GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-		CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-		CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+		GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+		GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
        
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 		{
 			auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 
 			constexpr std::array<D3D12_RECT, 0> Rects = {};
-			CL->ClearRenderTargetView(SCCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+			GCL->ClearRenderTargetView(SCCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 #ifdef USE_DEPTH
 			const auto DCDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			CL->ClearDepthStencilView(DCDH, D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+			GCL->ClearDepthStencilView(DCDH, D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 #endif
 
 			const std::array RTCDHs = { SCCDH };
 #ifdef USE_DEPTH
-			CL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, &DCDH);
+			GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, &DCDH);
 #else
-			CL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, nullptr);
+			GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, nullptr);
 #endif
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 				const std::array DHs = { COM_PTR_GET(DH) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
 #pragma region FRAME_OBJECT
                 GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
-				CL->SetGraphicsRootDescriptorTable(0, GDH);
+				GCL->SetGraphicsRootDescriptorTable(0, GDH);
 #pragma endregion
 			}
-			CL->ExecuteBundle(BCL);
+			GCL->ExecuteBundle(BGCL);
 		}
-		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
-	VERIFY_SUCCEEDED(CL->Close());
+	VERIFY_SUCCEEDED(GCL->Close());
 }
 #pragma endregion
 
