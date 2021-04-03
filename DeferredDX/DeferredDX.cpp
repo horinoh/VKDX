@@ -302,7 +302,7 @@ void DeferredDX::PopulateCommandList(const size_t i)
 					RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
 					RtvCDH.ptr += Device->GetDescriptorHandleIncrementSize(RtvDH->GetDesc().Type),
 				};
-				CL->OMSetRenderTargets(static_cast<UINT>(size(RtvDHs)), data(RtvDHs), FALSE, &DsvDH); //!< RTV, DSV
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(RtvDHs)), data(RtvDHs), FALSE, &DsvDH); //!< RTV, DSV
 #else
 				//!< 「連続している」場合は、「個数」と「先頭アドレス」を指定して「RTsSingleHandleToDescriptorRange==TRUE」で良い
 				const std::array RtvDHs = { RtvCDH, };
@@ -364,7 +364,7 @@ void DeferredDX::PopulateCommandList(const size_t i)
 				//!< #DX_TODO
 				//GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * 4;
 				//GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
-				//CL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV
+				//GCL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV
 #pragma endregion
 			}
 

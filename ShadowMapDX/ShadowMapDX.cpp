@@ -238,34 +238,34 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	//!< パス0 : バンドルコマンドリスト(シャドウキャスタ描画用)
-	const auto BCL0 = COM_PTR_GET(BundleGraphicsCommandLists[i]);
-	VERIFY_SUCCEEDED(BCL0->Reset(BCA, PS0));
+	const auto BGCL0 = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	VERIFY_SUCCEEDED(BGCL0->Reset(BCA, PS0));
 	{
 		const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
 		const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
-		BCL0->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-		BCL0->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+		BGCL0->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+		BGCL0->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 	}
-	VERIFY_SUCCEEDED(BCL0->Close());
+	VERIFY_SUCCEEDED(BGCL0->Close());
 
 	//!< パス1 : バンドルコマンドリスト(レンダーテクスチャ描画用、シャドウレシーバ描画用)
-	const auto BCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + size(BundleGraphicsCommandLists) / 2]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
-	VERIFY_SUCCEEDED(BCL1->Reset(BCA, PS1));
+	const auto BGCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + size(BundleGraphicsCommandLists) / 2]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
+	VERIFY_SUCCEEDED(BGCL1->Reset(BCA, PS1));
 	{
 		const auto IDBCS = COM_PTR_GET(IndirectBuffers[1].CommandSignature);
 		const auto IDBR = COM_PTR_GET(IndirectBuffers[1].Resource);
 #ifdef USE_SHADOWMAP_VISUALIZE
-		BCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		BGCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 #else
-		BCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+		BGCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
 #endif
-		BCL1->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+		BGCL1->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 	}
-	VERIFY_SUCCEEDED(BCL1->Close());
+	VERIFY_SUCCEEDED(BGCL1->Close());
 
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	VERIFY_SUCCEEDED(CL->Reset(CA, PS1));
+	VERIFY_SUCCEEDED(GCL->Reset(CA, PS1));
 	{
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 		const auto IR = COM_PTR_GET(DepthTextures[0].Resource);
@@ -274,30 +274,30 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 		{
 			const std::array VPs = { D3D12_VIEWPORT({ .TopLeftX = 0.0f, .TopLeftY = 0.0f, .Width = static_cast<FLOAT>(ShadowMapExtentW), .Height = static_cast<FLOAT>(ShadowMapExtentH), .MinDepth = 0.0f, .MaxDepth = 1.0f }) };
 			const std::array SCs = { D3D12_RECT({ .left = 0, .top = 0, .right = static_cast<LONG>(ShadowMapExtentW), .bottom = static_cast<LONG>(ShadowMapExtentH) }) };
-			CL->RSSetViewports(static_cast<UINT>(size(VPs)), data(VPs));
-			CL->RSSetScissorRects(static_cast<UINT>(size(SCs)), data(SCs));
+			GCL->RSSetViewports(static_cast<UINT>(size(VPs)), data(VPs));
+			GCL->RSSetScissorRects(static_cast<UINT>(size(SCs)), data(SCs));
 
-			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
+			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 			const auto& DsvDH = DsvDescriptorHeaps[0];
 			const auto DsvCDH = DsvDH->GetCPUDescriptorHandleForHeapStart();
 			{
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				CL->ClearDepthStencilView(DsvCDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects)); //!< DSV(0)
+				GCL->ClearDepthStencilView(DsvCDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects)); //!< DSV(0)
 			}
 			{
 				const std::array<D3D12_CPU_DESCRIPTOR_HANDLE, 0> RtvDHs = {};
-				CL->OMSetRenderTargets(static_cast<UINT>(size(RtvDHs)), data(RtvDHs), FALSE, &DsvCDH); //!< DSV(0)
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(RtvDHs)), data(RtvDHs), FALSE, &DsvCDH); //!< DSV(0)
 			}
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 				const std::array DHs = { COM_PTR_GET(DH) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart(); 
-				CL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV(0)
+				GCL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV(0)
 			}
-			CL->ExecuteBundle(BCL0);
+			GCL->ExecuteBundle(BGCL0);
 		}
 
 		//!< リソースバリア
@@ -308,15 +308,15 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 				D3D12_RESOURCE_BARRIER({ .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, .Transition = RTB_SCR }),
 				D3D12_RESOURCE_BARRIER({ .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, .Transition = RTB_IR }),
 			};
-			CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 		}
 
 		//!< パス1 : (レンダーテクスチャ描画用、シャドウレシーバ描画用)
 		{
-			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
+			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
 			auto ScCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); ScCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);			
 #ifndef USE_SHADOWMAP_VISUALIZE
@@ -325,22 +325,22 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 			DsvCDH.ptr += Device->GetDescriptorHandleIncrementSize(DsvDH->GetDesc().Type); 
 			{
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				CL->ClearRenderTargetView(ScCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
-				CL->ClearDepthStencilView(DsvCDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects)); //!< DSV(1)
+				GCL->ClearRenderTargetView(ScCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				GCL->ClearDepthStencilView(DsvCDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects)); //!< DSV(1)
 			}
 #endif
 			{
 				const std::array RtvDHs = { ScCDH };
 #ifdef USE_SHADOWMAP_VISUALIZE
-				CL->OMSetRenderTargets(static_cast<UINT>(size(RtvDHs)), data(RtvDHs), FALSE, nullptr);
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(RtvDHs)), data(RtvDHs), FALSE, nullptr);
 #else
-				CL->OMSetRenderTargets(static_cast<UINT>(size(RtvDHs)), data(RtvDHs), FALSE, &DsvCDH); //!< DSV(1)
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(RtvDHs)), data(RtvDHs), FALSE, &DsvCDH); //!< DSV(1)
 #endif
 			}
 			{
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 				const std::array DHs = { COM_PTR_GET(DH) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 				DXGI_SWAP_CHAIN_DESC1 SCD;
 				SwapChain->GetDesc1(&SCD);
@@ -348,20 +348,20 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart(); 
 #pragma region FRAME_OBJECT
 				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
-				CL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV
+				GCL->SetGraphicsRootDescriptorTable(0, GDH); //!< CBV
 				GDH = DH->GetGPUDescriptorHandleForHeapStart(); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * SCD.BufferCount;
 #pragma endregion
-				CL->SetGraphicsRootDescriptorTable(0, GDH); //!< SRV(1)
+				GCL->SetGraphicsRootDescriptorTable(0, GDH); //!< SRV(1)
 				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 
 #ifndef USE_SHADOWMAP_VISUALIZE
 #pragma region FRAME_OBJECT
 				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
-				CL->SetGraphicsRootDescriptorTable(1, GDH); //!< CBV(2)
+				GCL->SetGraphicsRootDescriptorTable(1, GDH); //!< CBV(2)
 #pragma endregion
 #endif
 			}
-			CL->ExecuteBundle(BCL1);
+			GCL->ExecuteBundle(BGCL1);
 		}
 
 		//!< リソースバリア
@@ -372,9 +372,9 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 				D3D12_RESOURCE_BARRIER({ .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, .Transition = RTB_SCR }),
 				D3D12_RESOURCE_BARRIER({ .Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION, .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, .Transition = RTB_IR }),
 			};
-			CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 		}
 	}
-	VERIFY_SUCCEEDED(CL->Close());
+	VERIFY_SUCCEEDED(GCL->Close());
 }
 #pragma endregion

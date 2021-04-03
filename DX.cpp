@@ -670,7 +670,7 @@ void DX::CreateFence()
 //!< ここではデフォルト実装として、ダイレクト、バンドル共にスワップチェイン数分用意することとする
 void DX::CreateCommandList()
 {
-	//!< コマンド実行(CL->ExecuteCommandList())後、GPUがコマンドアロケータの参照を終えるまで、アロケータのリセット(CA->Reset())してはいけない、アロケータが覚えているのでコマンドのリセット(CL->Reset())はしても良い
+	//!< コマンド実行(GCL->ExecuteCommandList())後、GPUがコマンドアロケータの参照を終えるまで、アロケータのリセット(CA->Reset())してはいけない、アロケータが覚えているのでコマンドのリセット(GCL->Reset())はしても良い
 	//!< (ここでは)ダイレクト用1つ、バンドル用1つのコマンドアロケータ作成をデフォルト実装とする
 	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(CommandAllocators.emplace_back())));
 	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_UUIDOF_PUTVOID(BundleCommandAllocators.emplace_back())));
@@ -678,7 +678,7 @@ void DX::CreateCommandList()
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
-		//!< 描画コマンドを発行するコマンドリストにはパイプラインステートの指定が必要だが、後からでも指定(CL->Reset(CA, COM_PTR_GET(PS)))できるので、ここではnullptrを指定
+		//!< 描画コマンドを発行するコマンドリストにはパイプラインステートの指定が必要だが、後からでも指定(GCL->Reset(CA, COM_PTR_GET(PS)))できるので、ここではnullptrを指定
 		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(CommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandLists.emplace_back())));
 		VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
 
@@ -1282,7 +1282,7 @@ void DX::CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* D
 	}
 
 	//!< DXでは「パッチコントロールポイント」個数の指定はIASetPrimitiveTopology()の引数として「コマンドリスト作成時」に指定する、VKとは結構異なるので注意
-	//!< CL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);	
+	//!< GCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);	
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC GPSD = {
 		.pRootSignature = RS,
@@ -1414,22 +1414,22 @@ void DX::PopulateCommandList(const size_t i)
 
 	//!< コマンド実行後に、「コマンドリスト」はリセットして再利用が可能 (GPUは「コマンドアロケータ」を参照している)
 	//!< 「コマンドリスト」作成時に「パイプライン」を指定していなくても、Reset()の引数に「パイプライン」を指定すれば良い
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+	const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	VERIFY_SUCCEEDED(CL->Reset(CA, nullptr));
+	VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr));
 	{
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 
-		CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-		CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+		GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+		GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-		ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET); {
+		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET); {
 			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 			constexpr std::array<D3D12_RECT, 0> Rects = {};
-			CL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
-		} ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+			GCL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+		} ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
-	VERIFY_SUCCEEDED(CL->Close());
+	VERIFY_SUCCEEDED(GCL->Close());
 }
 #endif
 
