@@ -53,9 +53,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< インスタンス、デバイス
 	CreateInstance();
-	CreateSurface(hWnd, hInstance);
-	EnumeratePhysicalDevice(Instance);
-	CreateDevice(GetCurrentPhysicalDevice(), Surface);
+	CreateDevice(hWnd, hInstance);
 	
 	CreateFence(Device);
 	CreateSemaphore(Device);
@@ -862,7 +860,7 @@ void VK::LoadVulkanLibrary()
 void VK::CreateInstance()
 {
 	//!< ここでは最新バージョンで動くようにしておく (Use latest version here)
-	uint32_t APIVersion/*= VK_API_VERSION_1_2*/;
+	uint32_t APIVersion;
 	VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
 	Logf("API Version = %d.%d.(Header = %d)(Patch = %d)\n", VK_VERSION_MAJOR(APIVersion), VK_VERSION_MINOR(APIVersion), VK_HEADER_VERSION, VK_VERSION_PATCH(APIVersion));
 
@@ -945,6 +943,7 @@ void VK::CreateDebugReportCallback()
 		| VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT
 		| VK_DEBUG_REPORT_ERROR_BIT_EXT
 		| VK_DEBUG_REPORT_DEBUG_BIT_EXT;
+		/*| VK_DEBUG_REPORT_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR_EXT*/
 
 	if (VK_NULL_HANDLE != vkCreateDebugReportCallback) [[likely]] {
 		const VkDebugReportCallbackCreateInfoEXT DebugReportCallbackCreateInfo = {
@@ -1048,48 +1047,30 @@ void VK::MarkerSetTag([[maybe_unused]] VkDevice Device, [[maybe_unused]] const V
 #endif
 }
 
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-void VK::CreateSurface(HWND hWnd, HINSTANCE hInstance)
-{
-	const VkWin32SurfaceCreateInfoKHR SCI = {
-		.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
-		.pNext = nullptr,
-		.flags = 0,
-		.hinstance = hInstance,
-		.hwnd = hWnd
-	};
-	VERIFY_SUCCEEDED(vkCreateWin32SurfaceKHR(Instance, &SCI, GetAllocationCallbacks(), &Surface));
-
-	LOG_OK();
-}
-#endif
 void VK::EnumeratePhysicalDeviceProperties(const VkPhysicalDeviceProperties& PDP)
 {
-	Log("\t\tVersion = ");
-	Logf("%d.%d(Patch = %d)\n", VK_VERSION_MAJOR(PDP.apiVersion), VK_VERSION_MINOR(PDP.apiVersion), VK_VERSION_PATCH(PDP.apiVersion));
-
 	//!< バージョンチェック Check version
 #ifdef _DEBUG
-	[&](const uint32_t Version) {
-		uint32_t APIVersion;
-		VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
-		if (Version < APIVersion) {
-			Log("\t\t");
-			Warningf("[ DEVICE ] %d.%d(Patch = %d) < %d.%d(Patch = %d) [ INSTANCE ]\n",
-				VK_VERSION_MAJOR(Version), VK_VERSION_MINOR(Version), VK_VERSION_PATCH(Version),
-				VK_VERSION_MAJOR(APIVersion), VK_VERSION_MINOR(APIVersion), VK_VERSION_PATCH(APIVersion));
-		}
-	}(PDP.apiVersion);
+	Log("\t\tPhysical Device API Version = ");
+	Logf("%d.%d(Patch = %d)\n", VK_VERSION_MAJOR(PDP.apiVersion), VK_VERSION_MINOR(PDP.apiVersion), VK_VERSION_PATCH(PDP.apiVersion));
+	uint32_t APIVersion;
+	VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
+	if (PDP.apiVersion != APIVersion) {
+		Log("\t\t");
+		Warningf("[ PHYSICAL DEVICE(Driver) ] %d.%d(Patch = %d) != %d.%d(Patch = %d) [ INSTANCE(SDK) ]\n",
+			VK_VERSION_MAJOR(PDP.apiVersion), VK_VERSION_MINOR(PDP.apiVersion), VK_VERSION_PATCH(PDP.apiVersion),
+			VK_VERSION_MAJOR(APIVersion), VK_VERSION_MINOR(APIVersion), VK_VERSION_PATCH(APIVersion));
+	}
 #endif
 
 #define PHYSICAL_DEVICE_TYPE_ENTRY(entry) if(VK_PHYSICAL_DEVICE_TYPE_##entry == PDP.deviceType) { Log(#entry); }
-	Logf("\t\t%s, DeviceType = ", PDP.deviceName);
+	Logf("\t\t[ %s ](", PDP.deviceName);
 	PHYSICAL_DEVICE_TYPE_ENTRY(OTHER);
 	PHYSICAL_DEVICE_TYPE_ENTRY(INTEGRATED_GPU);
 	PHYSICAL_DEVICE_TYPE_ENTRY(DISCRETE_GPU);
 	PHYSICAL_DEVICE_TYPE_ENTRY(VIRTUAL_GPU);
 	PHYSICAL_DEVICE_TYPE_ENTRY(CPU);
-	Log("\n");
+	Log(")\n");
 #undef PHYSICAL_DEVICE_TYPE_ENTRY
 
 #define PROPERTY_LIMITS_ENTRY(entry) Logf("\t\t\t\t%s = %d\n", #entry, PDP.limits.##entry);
@@ -1168,6 +1149,7 @@ void VK::EnumeratePhysicalDevice(VkInstance Inst)
 		EnumeratePhysicalDeviceFeatures(PDF);
 #else
 		//!< フィーチャー2 (Feature2)
+#pragma region RAYTRACING
 		{
 			//!< 取得したい全てのフィーチャーを VkPhysicalDeviceFeatures2.pNext へチェイン指定する
 			VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr };
@@ -1195,6 +1177,7 @@ void VK::EnumeratePhysicalDevice(VkInstance Inst)
 			if (PDASF.accelerationStructureHostCommands) { Log("\t\t\t\taccelerationStructureHostCommands\n"); }
 			if (PDASF.descriptorBindingAccelerationStructureUpdateAfterBind) { Log("\t\t\t\tdescriptorBindingAccelerationStructureUpdateAfterBind\n"); }
 		}
+#pragma endregion
 #endif
 
 		//!< メモリプロパティ (MemoryProperty)
@@ -1208,14 +1191,16 @@ void VK::EnumeratePhysicalDevice(VkInstance Inst)
 		Log("\n");
 	}
 
-	PhysicalDeviceProperties.resize(size(PhysicalDevices));
-	for (size_t i = 0; i < size(PhysicalDevices); ++i) {
-		vkGetPhysicalDeviceMemoryProperties(PhysicalDevices[i], &PhysicalDeviceProperties[i]);
-	}
-
-	//!< ここでは最初の物理デバイスを選択することにする (Use first device here) #VK_TODO
-	CurrentPhysicalDevice = PhysicalDevices[0];
-	CurrentPhysicalDeviceMemoryProperties = PhysicalDeviceProperties[0];
+	//!< 物理デバイスの選択、ここでは最大メモリを選択することにする (Select physical device, here select max memory size)
+	const auto Index = std::distance(begin(PhysicalDevices), std::ranges::max_element(PhysicalDevices, [](const VkPhysicalDevice& lhs, const VkPhysicalDevice& rhs) {
+		std::array<VkPhysicalDeviceMemoryProperties, 2> PDMPs;
+		vkGetPhysicalDeviceMemoryProperties(lhs, &PDMPs[0]);
+		vkGetPhysicalDeviceMemoryProperties(rhs, &PDMPs[1]);
+		return std::accumulate(&PDMPs[0].memoryHeaps[0], &PDMPs[0].memoryHeaps[PDMPs[0].memoryHeapCount], static_cast<VkDeviceSize>(0), [](VkDeviceSize Sum, const VkMemoryHeap& rhs) { return Sum + rhs.size; }) 
+			< std::accumulate(&PDMPs[1].memoryHeaps[0], &PDMPs[1].memoryHeaps[PDMPs[1].memoryHeapCount], static_cast<VkDeviceSize>(0), [](VkDeviceSize Sum, const VkMemoryHeap& rhs) { return Sum + rhs.size; });
+	}));
+	CurrentPhysicalDevice = PhysicalDevices[Index];
+	vkGetPhysicalDeviceMemoryProperties(CurrentPhysicalDevice, &CurrentPhysicalDeviceMemoryProperties);
 }
 void VK::EnumeratePhysicalDeviceLayerProperties(VkPhysicalDevice PD)
 {
@@ -1280,8 +1265,22 @@ uint32_t VK::FindQueueFamilyPropertyIndex(const VkPhysicalDevice PD, const VkSur
 	return 0xffff;
 }
 
-void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
+void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext)
 {
+	//!< サーフェス作成
+	const VkWin32SurfaceCreateInfoKHR SCI = {
+		.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
+		.pNext = nullptr,
+		.flags = 0,
+		.hinstance = hInstance,
+		.hwnd = hWnd
+	};
+	VERIFY_SUCCEEDED(vkCreateWin32SurfaceKHR(Instance, &SCI, GetAllocationCallbacks(), &Surface));
+
+	//!< 物理デバイスの取得
+	EnumeratePhysicalDevice(Instance);
+	const auto PD = GetCurrentPhysicalDevice();
+
 	std::vector<VkQueueFamilyProperties> QFPs;
 
 	//!< キューファミリプロパティの列挙
@@ -1307,14 +1306,14 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 		//QFPs[i].minImageTransferGranularity;
 
 		VkBool32 b = VK_FALSE;
-		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PD, i, Sfc, &b));
+		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PD, i, Surface, &b));
 		if (b) { Logf("\t\t\t\tSurface(Present) Supported\n"); }
 	}
 #undef QUEUE_FLAG_ENTRY
 
 	//!< 機能を持つキューファミリインデックスを見つける (Find queue family index for each functions)
 	GraphicsQueueFamilyIndex = FindQueueFamilyPropertyIndex(VK_QUEUE_GRAPHICS_BIT, QFPs);
-	PresentQueueFamilyIndex = FindQueueFamilyPropertyIndex(PD, Sfc, QFPs);
+	PresentQueueFamilyIndex = FindQueueFamilyPropertyIndex(PD, Surface, QFPs);
 	ComputeQueueFamilyIndex = FindQueueFamilyPropertyIndex(VK_QUEUE_COMPUTE_BIT, QFPs);
 
 	//!< キューファミリ内でのインデックス及びプライオリティ、ここではグラフィック、プレゼント、コンピュートの分をプライオリティ0.5fで追加している
@@ -1369,26 +1368,60 @@ void VK::CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 
 #pragma region RAYTRACING
 	//!< レイトレーシング拡張は動的に判断する(サポートしないGPUがまだ多く存在するため)、他の拡張はコンパイルディレクティブ対応でまあいいか(大抵のGPUでサポートされるだろう)
-	if (HasRayTracingSupport(PD)) {
-		Extensions.emplace_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
-		Extensions.emplace_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
-		Extensions.emplace_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
-	}
+	//if (HasRayTracingSupport(PD)) {
+	//	Extensions.emplace_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+	//	Extensions.emplace_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+	//	//Extensions.emplace_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+
+	//	//!< VK_KHR_acceleration_structure
+	//	//Extensions.emplace_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+	//	//Extensions.emplace_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+	//	
+	//	//!< VK_KHR_ray_tracing_pipeline
+	//	//Extensions.emplace_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+	//	
+	//	//!< VK_KHR_spirv_1_4
+	//	//Extensions.emplace_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
+	//}
 #pragma endregion
 
 	//!< サポートされるフィーチャーを全て有効にしている、パフォーマンス的には不必要なものはオフにした方が良い #PERFORMANCE_TODO
 	VkPhysicalDeviceFeatures PDF; vkGetPhysicalDeviceFeatures(PD, &PDF);
-	//constexpr VkPhysicalDeviceFeatures PDF = { .geometryShader = VK_TRUE, .tessellationShader = VK_TRUE };
-	const VkDeviceCreateInfo DCI = {
-		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = 0,
-		.queueCreateInfoCount = static_cast<uint32_t>(size(DQCIs)), .pQueueCreateInfos = data(DQCIs),
-		.enabledLayerCount = 0, .ppEnabledLayerNames = nullptr, //!< デバイスでレイヤーの有効化は非推奨 (Device layer is deprecated)
-		.enabledExtensionCount = static_cast<uint32_t>(size(Extensions)), .ppEnabledExtensionNames = data(Extensions),
-		.pEnabledFeatures = &PDF
-	};
-	VERIFY_SUCCEEDED(vkCreateDevice(PD, &DCI, GetAllocationCallbacks(), &Device));
+	if (nullptr == pNext) {
+		const VkDeviceCreateInfo DCI = {
+			.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = 0,
+			.queueCreateInfoCount = static_cast<uint32_t>(size(DQCIs)), .pQueueCreateInfos = data(DQCIs),
+			.enabledLayerCount = 0, .ppEnabledLayerNames = nullptr, //!< デバイスでレイヤーの有効化は非推奨 (Device layer is deprecated)
+			.enabledExtensionCount = static_cast<uint32_t>(size(Extensions)), .ppEnabledExtensionNames = data(Extensions),
+			.pEnabledFeatures = &PDF
+		};
+		VERIFY_SUCCEEDED(vkCreateDevice(PD, &DCI, GetAllocationCallbacks(), &Device));
+	} else {
+#pragma region RAYTRACING
+		//Extensions.emplace_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+		//Extensions.emplace_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+		//Extensions.emplace_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+
+		VkPhysicalDeviceFeatures2 PDF2 = { 
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, 
+			.pNext = pNext,
+			.features = PDF //!< PDFはここに指定
+		};
+		const VkDeviceCreateInfo DCI = {
+			.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+			.pNext = &PDF2, //!< ここに PDF2 を指定
+			.flags = 0,
+			.queueCreateInfoCount = static_cast<uint32_t>(size(DQCIs)), .pQueueCreateInfos = data(DQCIs),
+			.enabledLayerCount = 0, .ppEnabledLayerNames = nullptr,
+			.enabledExtensionCount = static_cast<uint32_t>(size(Extensions)), .ppEnabledExtensionNames = data(Extensions),
+			.pEnabledFeatures = nullptr //!< PDF は PDF2.features へ指定しているので、ここは nullptr
+		};
+		VERIFY_SUCCEEDED(vkCreateDevice(PD, &DCI, GetAllocationCallbacks(), &Device));
+#pragma endregion
+		HasRayTracingSupport(PD);
+	}
 
 	//!< デバイスレベルの関数をロードする (Load device level functions)
 #ifdef VK_NO_PROTOYYPES

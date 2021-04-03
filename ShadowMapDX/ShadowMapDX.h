@@ -38,19 +38,19 @@ protected:
 		const auto CA = COM_PTR_GET(CommandAllocators[0]);
 		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
-		//!< Pass0 : インダイレクトバッファ(シャドウキャスタ描画用)
+		//!< パス0 : インダイレクトバッファ(シャドウキャスタ描画用 : トーラス)
 		{
 			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
 			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
 		}
 #ifdef USE_SHADOWMAP_VISUALIZE
-		//!< Pass1 : インダイレクトバッファ(シャドウマップ描画用)
+		//!< パス1 : インダイレクトバッファ(シャドウマップ描画用 : フルスクリーン)
 		{
 			constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
 			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DA), &DA);
 		}
 #else
-		//!< Pass1 : インダイレクトバッファ(シャドウレシーバ描画用)
+		//!< パス1 : インダイレクトバッファ(シャドウレシーバ描画用 : トーラス、平面)
 		{
 			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 2, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
 			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
@@ -151,11 +151,6 @@ protected:
 		//	.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
 		//	.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = DepthTextures.back().Resource->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
 		//});
-
-		//!< パス1
-#ifndef USE_SHADOWMAP_VISUALIZE
-		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
-#endif
 	}
 	virtual void CreateStaticSampler() override {
 		//!< パス1 : スタティックサンプラ
@@ -392,8 +387,14 @@ protected:
 			Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures[0].Resource), &DepthTextures[0].DSV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
 
 			//!< パス1
+			const auto SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({
+			.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS,
+			.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D,
+			.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+			.Texture2D = D3D12_TEX2D_SRV({.MostDetailedMip = 0, .MipLevels = DepthTextures.back().Resource->GetDesc().MipLevels, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f })
+			});
 #ifndef USE_SHADOWMAP_VISUALIZE
-			Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures[1].Resource), &DepthTextures[0].DSV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< DSV
+			Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures[0].Resource), &SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
 #endif
 		}
 	}

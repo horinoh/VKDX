@@ -43,19 +43,19 @@ protected:
 	virtual void CreateGeometry() override {
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		const auto CB = CommandBuffers[0];
-		//!< パス0 : インダイレクトバッファ(シャドウキャスタ描画用)
+		//!< パス0 : インダイレクトバッファ(シャドウキャスタ描画用 : トーラス)
 		{
 			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
 		}
 #ifdef USE_SHADOWMAP_VISUALIZE
-		//!< パス1 : インダイレクトバッファ(シャドウマップ描画用)
+		//!< パス1 : インダイレクトバッファ(シャドウマップ描画用 : フルスクリーン)
 		{
 			constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
 			IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIC), &DIC);
 		}
 #else
-		//!< パス1 : インダイレクトバッファ(シャドウレシーバ描画用)
+		//!< パス1 : インダイレクトバッファ(シャドウレシーバ描画用 : トーラス、平面)
 		{
 			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 2, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
@@ -147,12 +147,6 @@ protected:
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		//!< パス0
 		DepthTextures.emplace_back().Create(Device, PDMP, DepthFormat, VkExtent3D({ .width = ShadowMapExtent.width, .height = ShadowMapExtent.height, .depth = 1 }));
-
-		//!< パス1
-#ifndef USE_SHADOWMAP_VISUALIZE
-		//VK_IMAGE_USAGE_SAMPLED_BIT
-		DepthTextures.emplace_back().Create(Device, PDMP, DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
-#endif
 	}
 	virtual void CreateImmutableSampler() override {
 		//!< パス1 : イミュータブルサンプラ
@@ -403,7 +397,7 @@ protected:
 				VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { 
 					i,
 #ifndef USE_SHADOWMAP_VISUALIZE
-					DepthTextures[1].View,
+					DepthTextures[0].View
 #endif
 				});
 			}

@@ -14,6 +14,29 @@ public:
 	virtual ~RayTracingVK() {}
 
 #pragma region RAYTRACING
+	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext) override {
+#ifdef _DEBUG
+		uint32_t APIVersion;
+		VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
+		assert(APIVersion >= VK_MAKE_VERSION(1, 2, 162) && "RayTracing require 1.2.162 or later");
+#endif
+		VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { 
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, 
+			.pNext = nullptr,
+			.bufferDeviceAddress = VK_TRUE
+		};
+		VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = {
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
+			.pNext = &PDBDAF,
+			.rayTracingPipeline = VK_TRUE
+		};
+		VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = {
+			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, 
+			.pNext = &PDRTPF,
+			.accelerationStructure = VK_TRUE
+		};
+		Super::CreateDevice(hWnd, hInstance, &PDASF);
+	}
 	virtual void CreateGeometry() override;
 	virtual void CreateTexture() override;
 	virtual void CreatePipelineLayout() override;

@@ -419,23 +419,19 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	//!< ソフトウエアラスタライザ (Software rasterizer)
 	VERIFY_SUCCEEDED(Factory->EnumWarpAdapter(COM_PTR_UUIDOF_PUTVOID(Adapter)));
 #else
-	//!< アダプター(GPU)の選択、ここでは最大メモリのアダプターを選択することにする (Select Adapter(GPU), here select max memory size adapter)
-	UINT Index = UINT_MAX;
-	SIZE_T VM = 0;
+	std::vector<DXGI_ADAPTER_DESC> ADs;
 	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, COM_PTR_PUT(Adapter)); ++i) {
-		DXGI_ADAPTER_DESC AD;
-		VERIFY_SUCCEEDED(Adapter->GetDesc(&AD));
-		if (AD.DedicatedVideoMemory > VM) {
-			VM = AD.DedicatedSystemMemory;
-			Index = i;
-		}
+		VERIFY_SUCCEEDED(Adapter->GetDesc(&ADs.emplace_back()));
 		COM_PTR_RESET(Adapter);
 	}
-	assert(UINT_MAX != Index);
+	//!< アダプター(GPU)の選択、ここでは最大メモリを選択することにする (Select Adapter(GPU), here select max memory size)
+	const auto Index = static_cast<UINT>(std::distance(begin(ADs), std::ranges::max_element(ADs, [](const DXGI_ADAPTER_DESC& lhs, const DXGI_ADAPTER_DESC& rhs) {
+		return lhs.DedicatedSystemMemory > rhs.DedicatedSystemMemory; 
+	})));
 	VERIFY_SUCCEEDED(Factory->EnumAdapters(Index, COM_PTR_PUT(Adapter)));
 #endif
 	assert(nullptr != Adapter && "");
-	Log("[ Selected Aadapter ]\n");
+	Log("[ Selected Adapter ]\n");
 	LogAdapter(COM_PTR_GET(Adapter));
 
 	//!< アウトプット(ディスプレイ)の選択、ここでは全てのアダプター、アウトプットを列挙して、最初に見つかったアウトプットを選択することにする
@@ -516,12 +512,12 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 //!< アダプタ(GPU)の列挙
 void DX::LogAdapter(IDXGIAdapter* Ad)
 {
-	DXGI_ADAPTER_DESC AdapterDesc;
-	VERIFY_SUCCEEDED(Ad->GetDesc(&AdapterDesc));
-	Logf(TEXT("\t%s\n"), AdapterDesc.Description);
-	Logf(TEXT("\t\tDedicatedVideoMemory = %lld\n"), AdapterDesc.DedicatedVideoMemory);
-	Logf(TEXT("\t\tDedicatedSystemMemory = %lld\n"), AdapterDesc.DedicatedSystemMemory);
-	Logf(TEXT("\t\tSharedSystemMemory = %lld\n"), AdapterDesc.SharedSystemMemory);
+	DXGI_ADAPTER_DESC AD;
+	VERIFY_SUCCEEDED(Ad->GetDesc(&AD));
+	Logf(TEXT("\t%s\n"), AD.Description);
+	Logf(TEXT("\t\tDedicatedVideoMemory = %lld\n"), AD.DedicatedVideoMemory);
+	Logf(TEXT("\t\tDedicatedSystemMemory = %lld\n"), AD.DedicatedSystemMemory);
+	Logf(TEXT("\t\tSharedSystemMemory = %lld\n"), AD.SharedSystemMemory);
 }
 void DX::EnumAdapter(IDXGIFactory4* Fact)
 {

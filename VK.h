@@ -161,7 +161,7 @@ public:
 		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
 			VK::Scoped<BufferMemory> StagingBuffer(Device);
 			StagingBuffer.Create(Device, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);
-			constexpr VkCommandBufferBeginInfo CBBI = {.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
+			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 				PopulateCopyCommand(CB, Size, StagingBuffer.Buffer);
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
@@ -301,7 +301,7 @@ public:
 	};
 
 #pragma region RAYTRACING
-	class AccelerationStructureBuffer : public BufferMemory 
+	class AccelerationStructureBuffer : public BufferMemory
 	{
 	public:
 		VkAccelerationStructureKHR AccelerationStructure;
@@ -324,7 +324,7 @@ public:
 			BufferMemory::Destroy(Device);
 		}
 	};
-	class ScratchBuffer : public BufferMemory 
+	class ScratchBuffer : public BufferMemory
 	{
 	public:
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
@@ -373,12 +373,12 @@ protected:
 	virtual void CreateImage(VkImage* Image, const VkImageCreateFlags CreateFlags, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage) const;
 
 	virtual void CopyToHostVisibleDeviceMemory(const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset, const VkDeviceSize Size, const void* Source, const VkDeviceSize MappedRangeOffset = 0, const VkDeviceSize MappedRangeSize = VK_WHOLE_SIZE);
-	
+
 	static void PopulateCommandBuffer_ClearColor(const VkCommandBuffer CB, const VkImage Img, const VkClearColorValue& Color);
 	static void PopulateCommandBuffer_CopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, const VkBuffer Dst, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF, const size_t Size);
 	static void PopulateCommandBuffer_CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers);
 	static void PopulateCommandBuffer_CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers);
-	
+
 	static void SubmitAndWait(const VkQueue Queue, const VkCommandBuffer CB);
 
 	static void EnumerateMemoryRequirements(const VkMemoryRequirements& MR, const VkPhysicalDeviceMemoryProperties& PDMP);
@@ -420,9 +420,6 @@ protected:
 #ifdef USE_DEBUG_REPORT
 	virtual void CreateDebugReportCallback();
 #endif
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-	virtual void CreateSurface(HWND hWnd, HINSTANCE hInstance);
-#endif
 
 	virtual void EnumeratePhysicalDeviceProperties(const VkPhysicalDeviceProperties& PDP);
 	virtual void EnumeratePhysicalDeviceFeatures(const VkPhysicalDeviceFeatures& PDF);
@@ -435,7 +432,7 @@ protected:
 	static [[nodiscard]] uint32_t FindQueueFamilyPropertyIndex(const VkQueueFlags QF, const std::vector<VkQueueFamilyProperties>& QFPs);
 	static [[nodiscard]] uint32_t FindQueueFamilyPropertyIndex(const VkPhysicalDevice PD, const VkSurfaceKHR Sfc, const std::vector<VkQueueFamilyProperties>& QFPs);
 	//virtual void CreateQueueFamilyPriorities(VkPhysicalDevice PD, VkSurfaceKHR Surface, const std::vector<VkQueueFamilyProperties>& QFPs, std::vector<std::vector<float>>& QueueFamilyPriorites);
-	virtual void CreateDevice(VkPhysicalDevice PD, VkSurfaceKHR Surface);
+	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext = nullptr);
 
 	virtual void CreateFence(VkDevice Device);
 	virtual void CreateSemaphore(VkDevice Device);
@@ -679,7 +676,6 @@ protected:
 	VkSurfaceKHR Surface = VK_NULL_HANDLE;
 	
 	std::vector<VkPhysicalDevice> PhysicalDevices;
-	std::vector<VkPhysicalDeviceMemoryProperties> PhysicalDeviceProperties;
 	VkPhysicalDevice CurrentPhysicalDevice = VK_NULL_HANDLE;
 	VkPhysicalDeviceMemoryProperties CurrentPhysicalDeviceMemoryProperties;
 
