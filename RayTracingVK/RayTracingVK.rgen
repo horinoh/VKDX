@@ -1,14 +1,21 @@
 #version 460
-#extension GL_EXT_ray_tracing : enable
 
-layout(binding = 0, set = 0) uniform accelerationStructureEXT TLAS;
+//!< 現状 EXT -> NV に変えておかないとコンパイルが通らない…
+
+#extension GL_NV_ray_tracing : enable
+//#extension GL_EXT_ray_tracing : enable
+
+layout(binding = 0, set = 0) uniform accelerationStructureNV TLAS;
+//layout(binding = 0, set = 0) uniform accelerationStructureEXT TLAS;
 layout(binding = 1, set = 0, rgba8) uniform image2D RenderTarget;
 
-layout(location = 0) rayPayloadEXT vec3 Payload;
+layout(location = 0) rayPayloadNV vec3 Payload;
+//layout(location = 0) rayPayloadEXT vec3 Payload;
 
 void main()
 {
-    const vec2 t = vec2(gl_LaunchIDEXT.xy) / gl_LaunchSizeEXT.xy;
+    const vec2 t = vec2(gl_LaunchIDNV.xy) / gl_LaunchSizeNV.xy;
+    //const vec2 t = vec2(gl_LaunchIDEXT.xy) / gl_LaunchSizeEXT.xy;
 
     //!< ペイロードを初期化 (Initialize payload)
     Payload = vec3(0.0f);
@@ -20,8 +27,10 @@ void main()
     const vec3 Direction = normalize(vec3(t * 2.0f - 1.0f, 0.0f) - Origin);
     
     //!< トレーシング (Tracing)
-    traceRayEXT(TLAS, gl_RayFlagsNoneEXT/*gl_RayFlagsCullBackFacingTrianglesEXT */, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
+    //traceRayNV(TLAS, gl_RayFlagsNoneNV/*gl_RayFlagsCullBackFacingTrianglesNV*/, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
+    //traceRayEXT(TLAS, gl_RayFlagsNoneEXT/*gl_RayFlagsCullBackFacingTrianglesEXT*/, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
 
     //!< 結果をレンダーターゲットへ (Write to render target)
-	imageStore(RenderTarget, gl_LaunchIDEXT.xy, vec4(Payload, 1.0));
+	//imageStore(RenderTarget, gl_LaunchIDNV.xy, vec4(Payload, 1.0));
+	//imageStore(RenderTarget, gl_LaunchIDEXT.xy, vec4(Payload, 1.0));
 }

@@ -37,7 +37,7 @@ public:
 			D3D12_ROOT_PARAMETER({
 				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
 				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<uint32_t>(size(DRs)), .pDescriptorRanges = data(DRs) }),
-				//.ShaderVisibility = D3D12_SHADER_VISIBILITY_MESH #DX_TODO
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_MESH
 			}),
 		}, {}, SHADER_ROOT_ACCESS_PS);
 #endif

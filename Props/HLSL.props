@@ -5,11 +5,12 @@
   <PropertyGroup />
   <ItemDefinitionGroup>
     <FxCompile>
-      <ShaderModel>6.3</ShaderModel>
+      <ShaderModel>6.5</ShaderModel>
       <ObjectFileOutput>$(ProjectDir)%(Filename).cso</ObjectFileOutput>
       <TreatWarningAsError>true</TreatWarningAsError>
       <AssemblerOutput>AssemblyCode</AssemblerOutput>
       <AssemblerOutputFile>$(ProjectDir)%(Filename).asm</AssemblerOutputFile>
+      <AdditionalOptions>-Qembed_debug</AdditionalOptions>
     </FxCompile>
     <PostBuildEvent>
       <Command>for %%1 in (*.cso) do xcopy /y %%1 $(TargetDir)</Command>

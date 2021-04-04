@@ -236,7 +236,7 @@ void MeshShaderDX::CreatePipelineState()
 	const auto ShaderPath = GetBasePath();
 	std::vector<COM_PTR<ID3DBlob>> SBs;
 	//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".as.cso")), COM_PTR_PUT(SBs.emplace_back())));
-	//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ms.cso")), COM_PTR_PUT(SBs.emplace_back())));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ms.cso")), COM_PTR_PUT(SBs.emplace_back())));
 	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
 
 	constexpr D3D12_RASTERIZER_DESC RD = {
@@ -263,10 +263,8 @@ void MeshShaderDX::CreatePipelineState()
     MESH_SHADER_PIPELINE_STATE_DESC MSPSD = {
         .pRootSignature = COM_PTR_GET(RootSignatures[0]),
         .AS = D3D12_SHADER_BYTECODE({.pShaderBytecode = nullptr, .BytecodeLength = 0 }),
-		.MS = D3D12_SHADER_BYTECODE({.pShaderBytecode = nullptr/*SBs[0]->GetBufferPointer()*/, .BytecodeLength = 0/*SBs[0]->GetBufferSize()*/ }),
-		//.MS = D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[0]->GetBufferPointer(), .BytecodeLength = SBs[0]->GetBufferSize() }),
-		.PS = D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[0]->GetBufferPointer(), .BytecodeLength = SBs[0]->GetBufferSize() }),
-		//.PS = D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
+		.MS = D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[0]->GetBufferPointer(), .BytecodeLength = SBs[0]->GetBufferSize() }),
+		.PS = D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
 		.BlendState = D3D12_BLEND_DESC({.AlphaToCoverageEnable = TRUE, .IndependentBlendEnable = FALSE, .RenderTarget = {}}),
         .SampleMask = D3D12_DEFAULT_SAMPLE_MASK,
         .RasterizerState = RD,
@@ -324,10 +322,9 @@ void MeshShaderDX::PopulateCommandList(const size_t i)
 				GCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
 
-            // #DX_TODO
-			//COM_PTR<ID3D12GraphicsCommandList4> GCL4;
-            //VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
-			//GCL4->DispatchMesh(1, 1, 1);
+			COM_PTR<ID3D12GraphicsCommandList6> GCL6;
+			VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL6)));
+			GCL6->DispatchMesh(1, 1, 1);
 		}
 		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	}
