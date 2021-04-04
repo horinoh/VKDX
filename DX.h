@@ -236,6 +236,21 @@ public:
 			});
 		}
 	};
+	class UnorderedAccessBuffer : public ResourceBase
+	{
+	public:
+		D3D12_UNORDERED_ACCESS_VIEW_DESC View;
+		void Create(ID3D12Device* Device, const size_t Size, const void* Source, const size_t Stride) {
+			//D3D12_CPU_PAGE_PROPERTY_WRITE_BACK
+			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, RoundUp256(Size), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_CUSTOM, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, Source);
+			View = D3D12_UNORDERED_ACCESS_VIEW_DESC({
+				.Format = DXGI_FORMAT_UNKNOWN,
+				.ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.Buffer = D3D12_BUFFER_UAV({.FirstElement = 0, .NumElements = static_cast<UINT>(Size / Stride), .StructureByteStride = static_cast<UINT>(Stride), .Flags = D3D12_BUFFER_UAV_FLAG_NONE })
+			});
+		}
+	};
 	class TextureBase : public ResourceBase
 	{
 	private:
