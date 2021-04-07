@@ -1,0 +1,25 @@
+#version 450
+ 
+#extension GL_NV_mesh_shader : require
+ 
+layout (location = 0) out vec3 OutColor[];
+
+const vec3 Positions[] = { vec3(0.0f, 0.5f, 0.0f), vec3(-0.5f, -0.5f, 0.0f), vec3(0.5f, -0.5f, 0.0f) };
+const vec3 Colors[] = { vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f) };
+
+layout(local_size_x = 1) in;
+layout(triangles, max_vertices = 3, max_primitives = 1) out;
+void main()
+{
+  gl_PrimitiveIndicesNV[0] = 0;
+  gl_PrimitiveIndicesNV[1] = 1;
+  gl_PrimitiveIndicesNV[2] = 2;
+  gl_PrimitiveCountNV = 1;
+  
+  gl_MeshVerticesNV[0].gl_Position = vec4(Positions[0], 1.0); 
+  gl_MeshVerticesNV[1].gl_Position = vec4(Positions[1], 1.0); 
+  gl_MeshVerticesNV[2].gl_Position = vec4(Positions[2], 1.0); 
+  OutColor[0] = Colors[0];
+  OutColor[1] = Colors[1];
+  OutColor[2] = Colors[2];
+}

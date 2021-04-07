@@ -71,13 +71,13 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="TriangleVK.mesh">
-      <Filter>Shader Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="TriangleVK.task">
-      <Filter>Shader Files</Filter>
-    </CustomBuild>
     <CustomBuild Include="MeshShaderVK.frag">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="MeshShaderVK.mesh">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="MeshShaderVK.task">
       <Filter>Shader Files</Filter>
     </CustomBuild>
   </ItemGroup>

@@ -27,7 +27,7 @@ void main()
     const vec3 Direction = normalize(vec3(t * 2.0f - 1.0f, 0.0f) - Origin);
     
     //!< トレーシング (Tracing)
-    //traceRayNV(TLAS, gl_RayFlagsNoneNV/*gl_RayFlagsCullBackFacingTrianglesNV*/, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
+    traceNV(TLAS, gl_RayFlagsNoneNV/*gl_RayFlagsCullBackFacingTrianglesNV*/, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
     //traceRayEXT(TLAS, gl_RayFlagsNoneEXT/*gl_RayFlagsCullBackFacingTrianglesEXT*/, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
 
     //!< 結果をレンダーターゲットへ (Write to render target)

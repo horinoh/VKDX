@@ -312,15 +312,15 @@ void MeshShaderDX::PopulateCommandList(const size_t i)
 			const std::array RTCDHs = { SCCDH };
 			GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, nullptr);
 
-			{
-				const auto& DH = CbvSrvUavDescriptorHeaps[0];
-				
-                const std::array DHs = { COM_PTR_GET(DH) };
-				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-				
-				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-				GCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-			}
+			//{
+			//	const auto& DH = CbvSrvUavDescriptorHeaps[0];
+			//	
+            //  const std::array DHs = { COM_PTR_GET(DH) };
+			//	GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+			//	
+			//	auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+			//	GCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+			//}
 
 			COM_PTR<ID3D12GraphicsCommandList6> GCL6;
 			VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL6)));
