@@ -468,6 +468,11 @@ protected:
 	static bool HasRayTracingSupport(const VkPhysicalDevice PD);
 	static void BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, VkQueue Queue, const VkCommandBuffer CB, const VkAccelerationStructureKHR AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs);
 #pragma endregion
+
+#pragma region MESH_SHADER
+	static bool HasMeshShaderSupport(const VkPhysicalDevice PD);
+#pragma endregion
+
 	virtual void CreateGeometry() {}
 
 	virtual void CreateUniformBuffer() {}

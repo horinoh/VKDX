@@ -1137,27 +1137,66 @@ void VK::EnumeratePhysicalDevice(VkInstance Inst)
 
 	Log("\tPhysicalDevices\n");
 	for (const auto& i : PhysicalDevices) {
-		//!< プロパティ (Property)
-		VkPhysicalDeviceProperties PDP;
-		vkGetPhysicalDeviceProperties(i, &PDP);
-		EnumeratePhysicalDeviceProperties(PDP);
-
-#if 0
-		//!< フィーチャー (Feature)
-		VkPhysicalDeviceFeatures PDF;
-		vkGetPhysicalDeviceFeatures(i, &PDF);
-		EnumeratePhysicalDeviceFeatures(PDF);
-#else
-		//!< フィーチャー2 (Feature2)
+		//!< プロパティ2 (Property2)
+		{
+			//!< 取得したい全てのプロパティを VkPhysicalDeviceProperties2.pNext へチェイン指定する
+#pragma region MESH_SHADER
+			VkPhysicalDeviceMeshShaderPropertiesNV PDMSP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV, .pNext = nullptr };
+#pragma endregion
 #pragma region RAYTRACING
+			VkPhysicalDeviceRayTracingPipelinePropertiesKHR PDRTPP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, .pNext = &PDMSP };
+#pragma endregion
+
+			VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
+			vkGetPhysicalDeviceProperties2(i, &PDP2);
+			EnumeratePhysicalDeviceProperties(PDP2.properties);
+
+#pragma region RAYTRACING
+			Log("\t\t\tVkPhysicalDeviceRayTracingPipelinePropertiesKHR\n");
+			Logf("\t\t\t\tshaderGroupHandleSize = %d\n", PDRTPP.shaderGroupHandleSize);
+			Logf("\t\t\t\tmaxRayRecursionDepth = %d\n", PDRTPP.maxRayRecursionDepth);
+			Logf("\t\t\t\tmaxShaderGroupStride = %d\n", PDRTPP.maxShaderGroupStride);
+			Logf("\t\t\t\tshaderGroupBaseAlignment = %d\n", PDRTPP.shaderGroupBaseAlignment);
+			Logf("\t\t\t\tshaderGroupHandleCaptureReplaySize = %d\n", PDRTPP.shaderGroupHandleCaptureReplaySize);
+			Logf("\t\t\t\tmaxRayDispatchInvocationCount = %d\n", PDRTPP.maxRayDispatchInvocationCount);
+			Logf("\t\t\t\tshaderGroupHandleAlignment = %d\n", PDRTPP.shaderGroupHandleAlignment);
+			Logf("\t\t\t\tmaxRayHitAttributeSize = %d\n", PDRTPP.maxRayHitAttributeSize);
+#pragma endregion
+#pragma region MESH_SHADER
+			Log("\t\t\tVkPhysicalDeviceMeshShaderPropertiesNV\n");
+			Logf("\t\t\t\tmaxDrawMeshTasksCount = %d\n", PDMSP.maxDrawMeshTasksCount); 
+			Logf("\t\t\t\tmaxTaskWorkGroupInvocations = %d\n", PDMSP.maxTaskWorkGroupInvocations);
+			Logf("\t\t\t\tmaxTaskWorkGroupSize[] = %d, %d, %d\n", PDMSP.maxTaskWorkGroupSize[0], PDMSP.maxTaskWorkGroupSize[1], PDMSP.maxTaskWorkGroupSize[2]);
+			Logf("\t\t\t\tmaxTaskTotalMemorySize = %d\n", PDMSP.maxTaskTotalMemorySize);
+			Logf("\t\t\t\tmaxTaskOutputCount = %d\n", PDMSP.maxTaskOutputCount);
+			Logf("\t\t\t\tmaxMeshWorkGroupInvocations = %d\n", PDMSP.maxMeshWorkGroupInvocations);
+			Logf("\t\t\t\tmaxMeshWorkGroupSize[] = %d, %d, %d\n", PDMSP.maxMeshWorkGroupSize[0], PDMSP.maxMeshWorkGroupSize[1], PDMSP.maxMeshWorkGroupSize[2]);
+			Logf("\t\t\t\tmaxMeshTotalMemorySize = %d\n", PDMSP.maxMeshTotalMemorySize);
+			Logf("\t\t\t\tmaxMeshOutputVertices = %d\n", PDMSP.maxMeshOutputVertices);
+			Logf("\t\t\t\tmaxMeshOutputPrimitives = %d\n", PDMSP.maxMeshOutputPrimitives);
+			Logf("\t\t\t\tmaxMeshMultiviewViewCount = %d\n", PDMSP.maxMeshMultiviewViewCount);
+			Logf("\t\t\t\tmeshOutputPerVertexGranularity = %d\n", PDMSP.meshOutputPerVertexGranularity);
+			Logf("\t\t\t\tmeshOutputPerPrimitiveGranularity = %d\n", PDMSP.meshOutputPerPrimitiveGranularity);
+#pragma endregion
+		}
+
+		//!< フィーチャー2 (Feature2)
 		{
 			//!< 取得したい全てのフィーチャーを VkPhysicalDeviceFeatures2.pNext へチェイン指定する
-			VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr };
+#pragma region MESH_SHADER
+			VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr };
+#pragma endregion
+#pragma region RAYTRACING
+			VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = &PDMSF };
 			VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF };
 			VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF };
+#pragma endregion			
+
 			VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDASF };
 			vkGetPhysicalDeviceFeatures2(i, &PDF2);
 			EnumeratePhysicalDeviceFeatures(PDF2.features);
+
+#pragma region RAYTRACING
 			Log("\t\t\tVkPhysicalDeviceBufferDeviceAddressFeatures\n");
 			if (PDBDAF.bufferDeviceAddress) { Log("\t\t\t\tbufferDeviceAddress\n"); }
 			if (PDBDAF.bufferDeviceAddressCaptureReplay) { Log("\t\t\t\tbufferDeviceAddressCaptureReplay\n"); }
@@ -1176,9 +1215,13 @@ void VK::EnumeratePhysicalDevice(VkInstance Inst)
 			if (PDASF.accelerationStructureIndirectBuild) { Log("\t\t\t\taccelerationStructureIndirectBuild\n"); }
 			if (PDASF.accelerationStructureHostCommands) { Log("\t\t\t\taccelerationStructureHostCommands\n"); }
 			if (PDASF.descriptorBindingAccelerationStructureUpdateAfterBind) { Log("\t\t\t\tdescriptorBindingAccelerationStructureUpdateAfterBind\n"); }
-		}
 #pragma endregion
-#endif
+#pragma region MESH_SHADER
+			Log("\t\t\tVkPhysicalDeviceMeshShaderFeaturesNV\n");
+			if (PDMSF.taskShader) { Log("\t\t\t\ttaskShader\n"); }
+			if (PDMSF.meshShader) { Log("\t\t\t\tmeshShader\n"); }
+#pragma endregion
+		}
 
 		//!< メモリプロパティ (MemoryProperty)
 		VkPhysicalDeviceMemoryProperties PDMP;
@@ -1420,7 +1463,10 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext)
 		};
 		VERIFY_SUCCEEDED(vkCreateDevice(PD, &DCI, GetAllocationCallbacks(), &Device));
 #pragma endregion
-		HasRayTracingSupport(PD);
+
+#pragma region MESH_SHADER
+		//Extensions.emplace_back(VK_NV_MESH_SHADER_EXTENSION_NAME)
+#pragma endregion
 	}
 
 	//!< デバイスレベルの関数をロードする (Load device level functions)
@@ -2087,6 +2133,16 @@ void VK::BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDevic
 
 		SubmitAndWait(Queue, CB);
 	} SB.Destroy(Device);
+}
+#pragma endregion
+
+#pragma region MESH_SHADER
+bool VK::HasMeshShaderSupport(const VkPhysicalDevice PD)
+{
+	VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr };
+	VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDMSF };
+	vkGetPhysicalDeviceFeatures2(PD, &PDF2);
+	return PDMSF.taskShader && PDMSF.meshShader;
 }
 #pragma endregion
 
