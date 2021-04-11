@@ -188,6 +188,15 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology Topology
 	for (auto& i : Threads) { i.join(); }
 }
 
+void VKExt::CreatePipeline_MsFs([[maybe_unused]] const VkBool32 DepthEnable, [[maybe_unused]] const std::array<VkPipelineShaderStageCreateInfo, 2>& PSSCIs)
+{
+
+}
+void VKExt::CreatePipeline_TsMsFs([[maybe_unused]] const VkBool32 DepthEnable, [[maybe_unused]] const std::array<VkPipelineShaderStageCreateInfo, 3>& PSSCIs)
+{
+
+}
+
 #if 0
 //!< ファーストパスで ColorDepth に書き込み、セカンドパスで PostProcess を行う場合の例 (In first pass ColorDepth, second pass PostProcess)
 void VKExt::CreateRenderPass_ColorDepth_PostProcess(VkRenderPass& RP, const VkFormat Color, const VkFormat Depth, bool ClearOnLoad)

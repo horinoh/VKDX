@@ -15,7 +15,7 @@ public:
 
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext, [[maybe_unused]] const std::vector<const char*>& AddExtensions) override {
 		VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr, .taskShader = VK_TRUE, .meshShader = VK_TRUE, };
-		Super::CreateDevice(hWnd, hInstance, &PDMSF,{ VK_NV_MESH_SHADER_EXTENSION_NAME });
+		Super::CreateDevice(hWnd, hInstance, &PDMSF, { VK_NV_MESH_SHADER_EXTENSION_NAME });
 	}
 	virtual void CreatePipeline() override {
 		const auto ShaderPath = GetBasePath();
@@ -24,6 +24,12 @@ public:
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".mesh.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
 		};
+		const std::array PSSCIs = {
+			//VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_TASK_BIT_NV, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_MESH_BIT_NV, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),
+		};
+		CreatePipeline_MsFs(VK_FALSE, PSSCIs);
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override {
 		const auto CB = CommandBuffers[i];

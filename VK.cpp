@@ -52,6 +52,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< インスタンス、デバイス
 	CreateInstance();
+	EnumeratePhysicalDevice(Instance);
 	CreateDevice(hWnd, hInstance);
 	
 	CreateFence(Device);
@@ -1190,7 +1191,6 @@ void VK::EnumeratePhysicalDevice(VkInstance Inst)
 			VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF };
 			VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF };
 #pragma endregion			
-
 			VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDASF };
 			vkGetPhysicalDeviceFeatures2(i, &PDF2);
 			EnumeratePhysicalDeviceFeatures(PDF2.features);
@@ -1319,8 +1319,6 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 	};
 	VERIFY_SUCCEEDED(vkCreateWin32SurfaceKHR(Instance, &SCI, GetAllocationCallbacks(), &Surface));
 
-	//!< 物理デバイスの取得
-	EnumeratePhysicalDevice(Instance);
 	const auto PD = GetCurrentPhysicalDevice();
 
 	std::vector<VkQueueFamilyProperties> QFPs;
