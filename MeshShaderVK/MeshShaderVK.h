@@ -13,16 +13,44 @@ public:
 	MeshShaderVK() : Super() {}
 	virtual ~MeshShaderVK() {}
 
-	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext) override {
-		VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = {
-			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV,
-			.pNext = nullptr,
-			.taskShader = VK_TRUE,
-			.meshShader = VK_TRUE,
-		};
-		Super::CreateDevice(hWnd, hInstance, &PDMSF);
+	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext, [[maybe_unused]] const std::vector<const char*>& AddExtensions) override {
+		VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr, .taskShader = VK_TRUE, .meshShader = VK_TRUE, };
+		Super::CreateDevice(hWnd, hInstance, &PDMSF,{ VK_NV_MESH_SHADER_EXTENSION_NAME });
 	}
-	virtual void CreatePipelineLayout() override {}
-	virtual void CreatePipeline() override;
+	virtual void CreatePipeline() override {
+		const auto ShaderPath = GetBasePath();
+		const std::array SMs = {
+			//VK::CreateShaderModule(data(ShaderPath + TEXT(".task.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".mesh.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
+		};
+	}
+	virtual void PopulateCommandBuffer(const size_t i) override {
+		const auto CB = CommandBuffers[i];
+		constexpr VkCommandBufferBeginInfo CBBI = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = 0,
+			.pInheritanceInfo = nullptr
+		};
+		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+			vkCmdSetViewport(CB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
+			vkCmdSetScissor(CB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
+
+			constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
+			const VkRenderPassBeginInfo RPBI = {
+				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+				.pNext = nullptr,
+				.renderPass = RenderPasses[0],
+				.framebuffer = Framebuffers[i],
+				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
+				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
+			};
+			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
+				//vkCmdDrawMeshTasksIndirectNV();
+				vkCmdDrawMeshTasksNV(CB, 0, 0);
+			} vkCmdEndRenderPass(CB);
+		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+	}
 };
 #pragma endregion

@@ -207,6 +207,12 @@ public:
 			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, sizeof(DIC), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			return *this;
 		}
+#pragma region MESH_SHADER
+		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDrawMeshTasksIndirectCommandNV& DMTIC) {
+			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, sizeof(DMTIC), VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			return *this;
+		}
+#pragma endregion
 		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) {
 			PopulateCommandBuffer_CopyBufferToBuffer(CB, Staging, Buffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
 		}
@@ -432,7 +438,7 @@ protected:
 	static [[nodiscard]] uint32_t FindQueueFamilyPropertyIndex(const VkQueueFlags QF, const std::vector<VkQueueFamilyProperties>& QFPs);
 	static [[nodiscard]] uint32_t FindQueueFamilyPropertyIndex(const VkPhysicalDevice PD, const VkSurfaceKHR Sfc, const std::vector<VkQueueFamilyProperties>& QFPs);
 	//virtual void CreateQueueFamilyPriorities(VkPhysicalDevice PD, VkSurfaceKHR Surface, const std::vector<VkQueueFamilyProperties>& QFPs, std::vector<std::vector<float>>& QueueFamilyPriorites);
-	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext = nullptr);
+	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext = nullptr, const std::vector<const char*>& AdditionalExtensions = {});
 
 	virtual void CreateFence(VkDevice Device);
 	virtual void CreateSemaphore(VkDevice Device);
@@ -650,10 +656,8 @@ public:
 	//!< デバイスレベル関数 (Device level functions)
 #define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #include "VKDeviceProcAddr.h"
-#undef VK_DEVICE_PROC_ADDR
-
-#define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #include "VKDeviceProcAddr_RayTracing.h"
+#include "VKDeviceProcAddr_MeshShader.h"
 #undef VK_DEVICE_PROC_ADDR
 
 #endif //!< VK_NO_PROTOYYPES

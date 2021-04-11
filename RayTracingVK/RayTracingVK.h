@@ -14,28 +14,28 @@ public:
 	virtual ~RayTracingVK() {}
 
 #pragma region RAYTRACING
-	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext) override {
+	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext, [[maybe_unused]] const std::vector<const char*>& AddExtensions) override {
 #ifdef _DEBUG
 		uint32_t APIVersion;
 		VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
 		assert(APIVersion >= VK_MAKE_VERSION(1, 2, 162) && "RayTracing require 1.2.162 or later");
 #endif
-		VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { 
-			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, 
-			.pNext = nullptr,
-			.bufferDeviceAddress = VK_TRUE
-		};
-		VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = {
-			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
-			.pNext = &PDBDAF,
-			.rayTracingPipeline = VK_TRUE
-		};
-		VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = {
-			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, 
-			.pNext = &PDRTPF,
-			.accelerationStructure = VK_TRUE
-		};
-		Super::CreateDevice(hWnd, hInstance, &PDASF);
+		VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr, .bufferDeviceAddress = VK_TRUE };
+		VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF, .rayTracingPipeline = VK_TRUE };
+		VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF, .accelerationStructure = VK_TRUE };
+
+		Super::CreateDevice(hWnd, hInstance, &PDASF,{
+			VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+			VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+			//!< VK_KHR_acceleration_structure
+			VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+			VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+			VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+			//!< VK_KHR_ray_tracing_pipeline
+			VK_KHR_SPIRV_1_4_EXTENSION_NAME,
+			//!< VK_KHR_spirv_1_4
+			VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME,
+		});
 	}
 	virtual void CreateGeometry() override;
 	virtual void CreateTexture() override;

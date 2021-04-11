@@ -20,9 +20,8 @@
 	//!< デバイスレベル関数 (Device level functions)
 #define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKDeviceProcAddr.h"
-#undef VK_DEVICE_PROC_ADDR
-#define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKDeviceProcAddr_RayTracing.h"
+#include "VKDeviceProcAddr_MeshShader.h"
 #undef VK_DEVICE_PROC_ADDR
 #endif //!< VK_NO_PROTOYYPES
 
@@ -1308,7 +1307,7 @@ uint32_t VK::FindQueueFamilyPropertyIndex(const VkPhysicalDevice PD, const VkSur
 	return 0xffff;
 }
 
-void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext)
+void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::vector<const char*>& AdditionalExtensions)
 {
 	//!< サーフェス作成
 	const VkWin32SurfaceCreateInfoKHR SCI = {
@@ -1408,27 +1407,9 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext)
 #endif
 		VK_EXT_VALIDATION_CACHE_EXTENSION_NAME,
 	};
+	std::ranges::copy(AdditionalExtensions, std::back_inserter(Extensions));
 
-#pragma region RAYTRACING
-	//!< レイトレーシング拡張は動的に判断する(サポートしないGPUがまだ多く存在するため)、他の拡張はコンパイルディレクティブ対応でまあいいか(大抵のGPUでサポートされるだろう)
-	//if (HasRayTracingSupport(PD)) {
-	//	Extensions.emplace_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
-	//	Extensions.emplace_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
-	//	//Extensions.emplace_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
-
-	//	//!< VK_KHR_acceleration_structure
-	//	//Extensions.emplace_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
-	//	//Extensions.emplace_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
-	//	
-	//	//!< VK_KHR_ray_tracing_pipeline
-	//	//Extensions.emplace_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
-	//	
-	//	//!< VK_KHR_spirv_1_4
-	//	//Extensions.emplace_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
-	//}
-#pragma endregion
-
-	//!< サポートされるフィーチャーを全て有効にしている、パフォーマンス的には不必要なものはオフにした方が良い #PERFORMANCE_TODO
+	//!< ここではサポートされるフィーチャーを全て有効にしている、パフォーマンス的には不必要なものはオフにした方が良い #PERFORMANCE_TODO
 	VkPhysicalDeviceFeatures PDF; vkGetPhysicalDeviceFeatures(PD, &PDF);
 	if (nullptr == pNext) {
 		const VkDeviceCreateInfo DCI = {
@@ -1442,12 +1423,7 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext)
 		};
 		VERIFY_SUCCEEDED(vkCreateDevice(PD, &DCI, GetAllocationCallbacks(), &Device));
 	} else {
-#pragma region RAYTRACING
-		//Extensions.emplace_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
-		//Extensions.emplace_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
-		//Extensions.emplace_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
-
-		VkPhysicalDeviceFeatures2 PDF2 = { 
+		VkPhysicalDeviceFeatures2 PDF2 = {
 			.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, 
 			.pNext = pNext,
 			.features = PDF //!< PDFはここに指定
@@ -1462,30 +1438,22 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext)
 			.pEnabledFeatures = nullptr //!< PDF は PDF2.features へ指定しているので、ここは nullptr
 		};
 		VERIFY_SUCCEEDED(vkCreateDevice(PD, &DCI, GetAllocationCallbacks(), &Device));
-#pragma endregion
-
-#pragma region MESH_SHADER
-		//Extensions.emplace_back(VK_NV_MESH_SHADER_EXTENSION_NAME)
-#pragma endregion
 	}
 
 	//!< デバイスレベルの関数をロードする (Load device level functions)
 #ifdef VK_NO_PROTOYYPES
-
 #define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc)); assert(nullptr != vk ## proc && #proc && #proc);
 #include "VKDeviceProcAddr.h"
 #undef VK_DEVICE_PROC_ADDR
-
-#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc));
+#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc)); //!< レイトレーシング、メッシュシェーダ系は無くても怒らない
 #include "VKDeviceProcAddr_RayTracing.h"
+#include "VKDeviceProcAddr_MeshShader.h"
 #undef VK_DEVICE_PROC_ADDR
-
 #ifdef USE_DEBUG_MARKER
 #define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetDeviceProcAddr(Device, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
 #include "VKDeviceProcAddr_DebugMarker.h"
 #undef VK_DEVICE_PROC_ADDR
-#endif //!< USE_DEBUG_MARKER
-
+#endif
 #endif //!< VK_NO_PROTOYYPES
 
 	//!< グラフィック、プレゼントキューは同じインデックスの場合もあるが別の変数に取得しておく (Graphics and presentation index may be same, but save to individual variables)
