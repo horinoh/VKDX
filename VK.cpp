@@ -885,9 +885,6 @@ void VK::CreateInstance()
 		"VK_LAYER_LUNARG_monitor", //!< タイトルバーにFPSを表示
 	};
 	const std::array Extensions = {
-#ifdef _DEBUG
-		VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME,
-#endif
 		VK_KHR_SURFACE_EXTENSION_NAME,
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
@@ -896,12 +893,13 @@ void VK::CreateInstance()
 #else
 		VK_KHR_XCB_SURFACE_EXTENSION_NAME,
 #endif
+#ifdef _DEBUG
+		VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME,
+		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+#endif
 #ifdef USE_DEBUG_REPORT
 		//!< デバッグレポート用
 		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-#endif
-#ifdef _DEBUG
-		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 #endif
 	};
 	const VkInstanceCreateInfo ICI = {
@@ -924,9 +922,9 @@ void VK::CreateInstance()
 #define VK_INSTANCE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetInstanceProcAddr(Instance, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
 #include "VKInstanceProcAddr_DebugReport.h"
 #undef VK_INSTANCE_PROC_ADDR
-#endif //!< USE_DEBUG_REPORT
+#endif
 
-#endif //!< VK_NO_PROTOYYPES
+#endif
 
 #ifdef USE_DEBUG_REPORT
 	CreateDebugReportCallback();
@@ -1272,18 +1270,6 @@ void VK::EnumeratePhysicalDeviceExtensionProperties(VkPhysicalDevice PD, const c
 	}
 }
 
-//void VK::OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const
-//{
-//	//!< VkPhysicalDeviceFeatures には可能なフィーチャーが全て true になったものが渡されてくる
-//	//!< 不要な項目を false にオーバーライドするとパフォーマンスの改善が期待できるかもしれない
-//	//!< false で渡されてくる項目は使えないフィーチャーなので true に変えても使えない
-//
-//	Log("\tPhysicalDeviceFeatures (Override)\n");
-//#define VK_DEVICEFEATURE_ENTRY(entry) if(PDF.entry) { Logf("\t\t%s\n", #entry); }
-//#include "VKDeviceFeature.h"
-//#undef VK_DEVICEFEATURE_ENTRY
-//}
-
 uint32_t VK::FindQueueFamilyPropertyIndex(const VkQueueFlags QF, const std::vector<VkQueueFamilyProperties>& QFPs)
 {
 	for (auto i = 0; i < size(QFPs); ++i) {
@@ -1320,9 +1306,7 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 	VERIFY_SUCCEEDED(vkCreateWin32SurfaceKHR(Instance, &SCI, GetAllocationCallbacks(), &Surface));
 
 	const auto PD = GetCurrentPhysicalDevice();
-
 	std::vector<VkQueueFamilyProperties> QFPs;
-
 	//!< キューファミリプロパティの列挙
 	uint32_t Count = 0;
 	vkGetPhysicalDeviceQueueFamilyProperties(PD, &Count, nullptr);
@@ -1332,7 +1316,6 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 
 	Log("\tQueueFamilyProperties\n");
 #define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & QFPs[i].queueFlags) { Logf("%s | ", #entry); }
-	//!< インデックスを使うので範囲ベースforにはしない
 	for (uint32_t i = 0; i < size(QFPs); ++i) {
 		Logf("\t\t[%d] QueueCount = %d, ", i, QFPs[i].queueCount);
 		Log("QueueFlags = ");
