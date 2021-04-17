@@ -441,6 +441,15 @@ public:
 	}
 	static void BuildAccelerationStructure(ID3D12Device* Device, const UINT64 SBSize, const D3D12_GPU_VIRTUAL_ADDRESS GVA, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence);
 #pragma endregion
+
+#pragma region MESH_SHADER
+	static bool HasMeshShaderSupport(ID3D12Device* Device) {
+		D3D12_FEATURE_DATA_D3D12_OPTIONS7 FDO7;
+		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, reinterpret_cast<void*>(&FDO7), sizeof(FDO7)));
+		return D3D12_MESH_SHADER_TIER_NOT_SUPPORTED != FDO7.MeshShaderTier;
+	}
+#pragma endregion
+
 	virtual void CreateGeometry() {}
 	
 	virtual void CreateConstantBuffer() {}
