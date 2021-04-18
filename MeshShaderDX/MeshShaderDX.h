@@ -72,7 +72,8 @@ public:
 		}
 	}
 	virtual void PopulateCommandList(const size_t i) override {
-		const auto PS = HasMeshShaderSupport(COM_PTR_GET(Device)) ? COM_PTR_GET(PipelineStates[0]) : nullptr;
+		const auto HasMS = HasMeshShaderSupport(COM_PTR_GET(Device));
+		const auto PS = HasMS ? COM_PTR_GET(PipelineStates[0]) : nullptr;
 		const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
 		const auto CA = COM_PTR_GET(CommandAllocators[0]);
 
@@ -86,7 +87,7 @@ public:
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
-				if (HasMeshShaderSupport(COM_PTR_GET(Device))) {
+				if (HasMS) {
 					auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 
 					constexpr std::array<D3D12_RECT, 0> Rects = {};

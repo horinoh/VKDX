@@ -1,5 +1,4 @@
 #pragma region RAYTRACING
-//!< •K—v‚ÈŠg’£(Needed extensions) : VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME
 VK_DEVICE_PROC_ADDR(GetAccelerationStructureBuildSizesKHR)
 VK_DEVICE_PROC_ADDR(CreateAccelerationStructureKHR)
 VK_DEVICE_PROC_ADDR(CmdBuildAccelerationStructuresKHR)

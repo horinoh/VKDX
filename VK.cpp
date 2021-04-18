@@ -1425,11 +1425,14 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 #ifdef VK_NO_PROTOYYPES
 #define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc)); assert(nullptr != vk ## proc && #proc && #proc);
 #include "VKDeviceProcAddr.h"
-#undef VK_DEVICE_PROC_ADDR
-#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc)); //!< レイトレーシング、メッシュシェーダ系は無くても怒らない
+	if (end(AdditionalExtensions) != std::ranges::find(AdditionalExtensions, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)) {
 #include "VKDeviceProcAddr_RayTracing.h"
+	}
+	if (end(AdditionalExtensions) != std::ranges::find(AdditionalExtensions, VK_NV_MESH_SHADER_EXTENSION_NAME)) {
 #include "VKDeviceProcAddr_MeshShader.h"
+	}
 #undef VK_DEVICE_PROC_ADDR
+
 #ifdef USE_DEBUG_MARKER
 #define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetDeviceProcAddr(Device, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
 #include "VKDeviceProcAddr_DebugMarker.h"
@@ -2050,15 +2053,6 @@ void VK::CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMe
 	}
 }
 #pragma region RAYTRACING
-bool VK::HasRayTracingSupport(const VkPhysicalDevice PD)
-{
-	VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr };
-	VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF };
-	VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF };
-	VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDASF };
-	vkGetPhysicalDeviceFeatures2(PD, &PDF2);
-	return PDBDAF.bufferDeviceAddress && PDRTPF.rayTracingPipeline && PDASF.accelerationStructure;
-}
 void VK::BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkQueue Queue, const VkCommandBuffer CB, const VkAccelerationStructureKHR AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs)
 {
 	Scoped<ScratchBuffer> SB1(Device);
@@ -2082,16 +2076,6 @@ void VK::BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDevic
 
 		SubmitAndWait(Queue, CB);
 	} SB.Destroy(Device);
-}
-#pragma endregion
-
-#pragma region MESH_SHADER
-bool VK::HasMeshShaderSupport(const VkPhysicalDevice PD)
-{
-	VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr };
-	VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDMSF };
-	vkGetPhysicalDeviceFeatures2(PD, &PDF2);
-	return PDMSF.taskShader && PDMSF.meshShader;
 }
 #pragma endregion
 
