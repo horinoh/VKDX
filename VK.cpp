@@ -485,54 +485,6 @@ void VK::CopyToHostVisibleDeviceMemory(const VkDeviceMemory DM, const VkDeviceSi
 	}
 }
 
-void VK::PopulateCommandBuffer_ClearColor(const VkCommandBuffer CB, const VkImage Img, const VkClearColorValue& Color)
-{
-	constexpr VkImageSubresourceRange ISR = {
-		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-		.baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS,
-		.baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS
-	};
-	constexpr std::array<VkMemoryBarrier, 0> MBs = {};
-	constexpr std::array<VkBufferMemoryBarrier, 0> BMBs = {};
-	{
-		const std::array IMBs = {
-			VkImageMemoryBarrier({
-				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-				.pNext = nullptr,
-				.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT, .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-				.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.image = Img,
-				.subresourceRange = ISR
-			}),
-		};
-		vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-			static_cast<uint32_t>(size(MBs)), data(MBs),
-			static_cast<uint32_t>(size(BMBs)), data(BMBs),
-			static_cast<uint32_t>(size(IMBs)), data(IMBs));
-	}
-	//!< vkCmdClearColorImage() はレンダーパス内では使用できない
-	constexpr std::array ISRs = { ISR };
-	vkCmdClearColorImage(CB, Img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Color, static_cast<uint32_t>(size(ISRs)), data(ISRs));
-	{
-		const std::array IMBs = {
-			VkImageMemoryBarrier({
-				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-				.pNext = nullptr,
-				.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT, .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
-				.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.image = Img,
-				.subresourceRange = ISR
-			}),
-		};
-		vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-			static_cast<uint32_t>(size(MBs)), data(MBs),
-			static_cast<uint32_t>(size(BMBs)), data(BMBs),
-			static_cast<uint32_t>(size(IMBs)), data(IMBs));
-	}
-}
-
 //!< @param コマンドバッファ
 //!< @param コピー元バッファ
 //!< @param コピー先バッファ
@@ -888,10 +840,6 @@ void VK::CreateInstance()
 		VK_KHR_SURFACE_EXTENSION_NAME,
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-#elif defined(VK_USE_PLATFORM_XLIB_KHR)
-		VK_KHR_XLIB_SURFACE_EXTENSION_NAME,
-#else
-		VK_KHR_XCB_SURFACE_EXTENSION_NAME,
 #endif
 #ifdef _DEBUG
 		VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME,
@@ -1707,7 +1655,7 @@ VkPresentModeKHR VK::SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR 
 }
 
 //!< 手動でクリアする場合には VkImageUsageFlags に追加で VK_IMAGE_USAGE_TRANSFER_DST_BIT の指定が必要
-void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height)
+void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags AdditionalUsage)
 {
 	VkSurfaceCapabilitiesKHR SC;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PD, Sfc, &SC));
@@ -1809,7 +1757,7 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 		.imageFormat = SurfaceFormat.format, .imageColorSpace = SurfaceFormat.colorSpace,
 		.imageExtent = SurfaceExtent2D,
 		.imageArrayLayers = ImageArrayLayers,
-		.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+		.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | AdditionalUsage,
 		.imageSharingMode = empty(QueueFamilyIndices) ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT, 
 		.queueFamilyIndexCount = static_cast<uint32_t>(size(QueueFamilyIndices)), .pQueueFamilyIndices = data(QueueFamilyIndices),
 		.preTransform = SurfaceTransform,
@@ -2569,209 +2517,50 @@ void VK::CreatePipeline_Compute()
 }
 #endif
 
-/**
-@brief クリア Clear
-@note 「レンダーパス外」でクリア Out of renderpass ... vkCmdClearColorImage()
-@note 「レンダーパス開始時」にクリア Begining of renderpass ... VkAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR, VkRenderPassBeginInfo.pClearValues
-@note 「各々のサブパス」でクリア Each subpass ... vkCmdClearAttachments()
-*/
-//!< 「レンダーパス外」にてクリアを行う
-void VK::ClearColor(const VkCommandBuffer CB, const VkImage Img, const VkClearColorValue& Color)
-{
-	constexpr VkImageSubresourceRange ISR = {
-		.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-		.baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS,
-		.baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS
-	};
-	const VkImageMemoryBarrier ImageMemoryBarrier_PresentToTransfer = {
-		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-		nullptr,
-		VK_ACCESS_MEMORY_READ_BIT,
-		VK_ACCESS_TRANSFER_WRITE_BIT,
-		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		PresentQueueFamilyIndex,
-		PresentQueueFamilyIndex,
-		Img,
-		ISR
-	};
-	vkCmdPipelineBarrier(CB,
-		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-		0,
-		0, nullptr,
-		0, nullptr,
-		1, &ImageMemoryBarrier_PresentToTransfer);
-	{
-		//!< vkCmdClearColorImage() はレンダーパス内では使用できない
-		vkCmdClearColorImage(CB, Img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Color, 1, &ISR);
-	}
-	const VkImageMemoryBarrier ImageMemoryBarrier_TransferToPresent = {
-		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-		nullptr,
-		VK_ACCESS_TRANSFER_WRITE_BIT,
-		VK_ACCESS_MEMORY_READ_BIT,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-		PresentQueueFamilyIndex,
-		PresentQueueFamilyIndex,
-		Img,
-		ISR
-	};
-	vkCmdPipelineBarrier(CB,
-		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-		0,
-		0, nullptr,
-		0, nullptr,
-		1, &ImageMemoryBarrier_TransferToPresent);
-}
-
-//!< 非推奨
-#if 0
-//!< これを用いてデプスをクリアする場合は、イメージ作成時に VK_IMAGE_USAGE_TRANSFER_DST_BIT を指定すること
-void VK::ClearDepthStencil(const VkCommandBuffer CB, const VkImage Img, const VkClearDepthStencilValue& /*DepthStencil*/)
-{
-	const VkImageMemoryBarrier ImageMemoryBarrier_DepthToTransfer = {
-		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-		nullptr,
-		VK_ACCESS_MEMORY_READ_BIT,
-		VK_ACCESS_TRANSFER_WRITE_BIT,
-		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		PresentQueueFamilyIndex,
-		PresentQueueFamilyIndex,
-		Img,
-		ImageSubresourceRange_DepthStencil
-	};
-	vkCmdPipelineBarrier(CB,
-		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-		0,
-		0, nullptr,
-		0, nullptr,
-		1, &ImageMemoryBarrier_DepthToTransfer);
-	{
-		//!< vkCmdClearDepthStencilImage() はレンダーパス内では使用できない
-		vkCmdClearDepthStencilImage(CB, Img, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearDepthStencilValue, 1, &ImageSubresourceRange_DepthStencil);
-	}
-	const VkImageMemoryBarrier ImageMemoryBarrier_TransferToDepth = {
-		VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-		nullptr,
-		VK_ACCESS_TRANSFER_WRITE_BIT,
-		VK_ACCESS_MEMORY_READ_BIT,
-		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-		VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-		PresentQueueFamilyIndex,
-		PresentQueueFamilyIndex,
-		Img,
-		ImageSubresourceRange_DepthStencil
-	};
-	vkCmdPipelineBarrier(CB,
-		VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-		0,
-		0, nullptr,
-		0, nullptr,
-		1, &ImageMemoryBarrier_TransferToDepth);
-}
-#endif
 //!<「サブパス」にてクリアするときに使う
 //!< Drawコール前に使用すると、「それなら VkAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR を使え」と Warnning が出るので注意
-void VK::ClearColorAttachment(const VkCommandBuffer CB, const VkClearColorValue& Color)
-{
-	const VkClearValue ClearValue = { .color = Color };
-	const std::array ClearAttachments = {
-		VkClearAttachment({
-			VK_IMAGE_ASPECT_COLOR_BIT,
-			0, //!< カラーアタッチメントのインデックス #VK_TODO 現状決め打ち
-			ClearValue
-		}),
-	};
-	const std::array ClearRects = {
-		VkClearRect({
-			ScissorRects[0],
-			0, 1 //!< 開始レイヤとレイヤ数 #VK_TODO 現状決め打ち
-		}),
-	};
-	vkCmdClearAttachments(CB,
-		static_cast<uint32_t>(size(ClearAttachments)), data(ClearAttachments),
-		static_cast<uint32_t>(size(ClearRects)), data(ClearRects));
-}
-void VK::ClearDepthStencilAttachment(const VkCommandBuffer CB, const VkClearDepthStencilValue& DepthStencil)
-{
-	VkClearValue ClearValue;
-	ClearValue.depthStencil = DepthStencil;
-	const std::array<VkClearAttachment, 1> ClearAttachments = {
-		{
-			VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
-			0, //!< ここでは無視される
-			ClearValue
-		},
-	};
-	const VkRect2D ClearArea = { { 0, 0 }, SurfaceExtent2D };
-	const std::array<VkClearRect, 1> ClearRects = {
-		{
-			ClearArea,
-			0, 1 //!< 開始レイヤとレイヤ数 #VK_TODO 現状決め打ち
-		},
-	};
-	vkCmdClearAttachments(CB,
-		static_cast<uint32_t>(size(ClearAttachments)), data(ClearAttachments),
-		static_cast<uint32_t>(size(ClearRects)), data(ClearRects));
-}
-
-#if 0
-void VK::PopulateCommandBuffer(const size_t i)
-{
-	//!< vkBeginCommandBuffer() で暗黙的にリセットされるが、明示的にリセットする場合には「メモリをプールへリリースするかどうかを指定できる」
-	//VERIFY_SUCCEEDED(vkResetCommandBuffer(CB, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT));
-
-	//!< @brief VkCommandBufferUsageFlags
-	//!< * VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT		... 一度だけ使用する場合や毎回リセットする場合に指定、何度もサブミットするものには指定しない
-	//!< * VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT		... デバイスでまだ実行されている間に、コマンドバッファを再度サブミットする必要がある場合に指定 (パフォーマンスの観点からは避けるべき)
-	//!< * VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT	... セカンダリコマンドバッファでかつレンダーパス内の場合に指定する
-	const auto CB = CommandBuffers[i];
-	constexpr VkCommandBufferBeginInfo CBBI = {
-		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		.pNext = nullptr,
-		.flags = 0,
-		.pInheritanceInfo = nullptr
-	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		const auto RP = RenderPasses[0];
-		const auto FB = Framebuffers[i];
-
-		//!< ビューポート、シザー
-		vkCmdSetViewport(CB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
-		vkCmdSetScissor(CB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
-
-#ifdef _DEBUG
-		//!< レンダーエリアの最低粒度を確保
-		VkExtent2D Granularity;
-		vkGetRenderAreaGranularity(Device, RP, &Granularity);
-		//!<「自分の環境では」 Granularity = { 1, 1 } だったのでほぼなんでも大丈夫みたい、環境によっては注意が必要
-		assert(ScissorRects[0].extent.width >= Granularity.width && ScissorRects[0].extent.height >= Granularity.height && "ScissorRect is too small");
-#endif
-
-#ifdef USE_MANUAL_CLEAR
-		constexpr std::array CVs = { VkClearValue({}), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
-#else
-		constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
-#endif
-		const VkRenderPassBeginInfo RPBI = {
-			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-			.pNext = nullptr,
-			.renderPass = RP,
-			.framebuffer = FB,
-			.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }), //!< フレームバッファのサイズ以下を指定できる
-			.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
-		};
-		vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
-		} vkCmdEndRenderPass(CB);
-
-#ifdef USE_MANUAL_CLEAR
-		ClearColor(CB, SwapchainImages[i], Colors::Blue);
-#endif
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-}
-#endif
+//void VK::ClearColorAttachment(const VkCommandBuffer CB, const VkClearColorValue& Color)
+//{
+//	const VkClearValue ClearValue = { .color = Color };
+//	const std::array ClearAttachments = {
+//		VkClearAttachment({
+//			VK_IMAGE_ASPECT_COLOR_BIT,
+//			0, //!< カラーアタッチメントのインデックス #VK_TODO 現状決め打ち
+//			ClearValue
+//		}),
+//	};
+//	const std::array ClearRects = {
+//		VkClearRect({
+//			ScissorRects[0],
+//			0, 1 //!< 開始レイヤとレイヤ数 #VK_TODO 現状決め打ち
+//		}),
+//	};
+//	vkCmdClearAttachments(CB,
+//		static_cast<uint32_t>(size(ClearAttachments)), data(ClearAttachments),
+//		static_cast<uint32_t>(size(ClearRects)), data(ClearRects));
+//}
+//void VK::ClearDepthStencilAttachment(const VkCommandBuffer CB, const VkClearDepthStencilValue& DepthStencil)
+//{
+//	VkClearValue ClearValue;
+//	ClearValue.depthStencil = DepthStencil;
+//	const std::array<VkClearAttachment, 1> ClearAttachments = {
+//		{
+//			VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+//			0, //!< ここでは無視される
+//			ClearValue
+//		},
+//	};
+//	const VkRect2D ClearArea = { { 0, 0 }, SurfaceExtent2D };
+//	const std::array<VkClearRect, 1> ClearRects = {
+//		{
+//			ClearArea,
+//			0, 1 //!< 開始レイヤとレイヤ数 #VK_TODO 現状決め打ち
+//		},
+//	};
+//	vkCmdClearAttachments(CB,
+//		static_cast<uint32_t>(size(ClearAttachments)), data(ClearAttachments),
+//		static_cast<uint32_t>(size(ClearRects)), data(ClearRects));
+//}
 
 void VK::Draw()
 {

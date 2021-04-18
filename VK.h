@@ -2,31 +2,21 @@
 
 #include <fstream>
 
-//!< VK_NO_PROTOYYPES が定義されてる場合は DLL を使用する。If VK_NO_PROTOYYPES is defined, using DLL. 
-//!< Vk.props 内 C/C++ - Preprocessor - Preprocessor Definitions に定義してある Definition is in VK.props in C/C++ - Preprocessor - Preprocessor Definitions
-//#define VK_NO_PROTOTYPES //!< VK.props に定義
+//!< VK_NO_PROTOYYPES が定義されてる場合は DLL を使用する。(If VK_NO_PROTOYYPES is defined, using DLL)
+//!< VK_NO_PROTOYYPES は VK.props 内に定義してある (VK_NO_PROTOYYPES is defined is in VK.props here)
 
 #ifdef _WINDOWS
 #define VK_USE_PLATFORM_WIN32_KHR
-#else
-#define VK_USE_PLATFORM_XLIB_KHR
-//#define VK_USE_PLATFORM_XCB_KHR
-//#define VK_USE_PLATFORM_WAYLAND_KHR
-//#define VK_USE_PLATFORM_ANDROID_KHR
 #endif
 #pragma warning(push)
-//#pragma warning(disable : 26812)
-//#pragma warning(disable : 4820)
+//#pragma warning(disable : )
 #include <vulkan/vulkan.h>
 #pragma warning(pop)
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
-
 #pragma warning(push)
 #pragma warning(disable : 4201)
-//#pragma warning(disable : 4464)
-//#pragma warning(disable : 4127)
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -61,7 +51,7 @@
 //#define USE_PUSH_DESCRIPTOR //!< [ BillboardVK ]
 //#define USE_PUSH_CONSTANTS //!< [ TriangleVK ] DX:USE_ROOT_CONSTANTS相当
 //#define USE_UPDATE_DESCRIPTOR_SET_WITH_TEMPLATE //!< [ DisplacementVK ]
-//#define USE_MANUAL_CLEAR //!< [ ClearVK ] #VK_TODO
+//#define USE_MANUAL_CLEAR //!< [ ClearVK ]
 
 #define USE_SEPARATE_SAMPLER //!< [ NormalMapVK ] コンバインドイメージサンプラを使用しない
 
@@ -380,7 +370,6 @@ protected:
 
 	virtual void CopyToHostVisibleDeviceMemory(const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset, const VkDeviceSize Size, const void* Source, const VkDeviceSize MappedRangeOffset = 0, const VkDeviceSize MappedRangeSize = VK_WHOLE_SIZE);
 
-	static void PopulateCommandBuffer_ClearColor(const VkCommandBuffer CB, const VkImage Img, const VkClearColorValue& Color);
 	static void PopulateCommandBuffer_CopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, const VkBuffer Dst, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF, const size_t Size);
 	static void PopulateCommandBuffer_CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers);
 	static void PopulateCommandBuffer_CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers);
@@ -450,7 +439,7 @@ protected:
 	virtual [[nodiscard]] VkPresentModeKHR SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 
 	virtual void CreateSwapchain() { CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight()); }
-	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height);
+	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags AdditionalUsage = 0);
 	virtual void ResizeSwapchain(const uint32_t Width, const uint32_t Height);
 
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
@@ -599,12 +588,8 @@ protected:
 		VkPipelineCache PC = VK_NULL_HANDLE);
 	//virtual void CreatePipeline_Compute();
 
-	virtual void ClearColor(const VkCommandBuffer CB, const VkImage Image, const VkClearColorValue& Color);
-#if 0
-	virtual void ClearDepthStencil(const VkCommandBuffer CommandBuffer, const VkImage Image, const VkClearDepthStencilValue& DepthStencil);
-#endif
-	virtual void ClearColorAttachment(const VkCommandBuffer CommandBuffer, const VkClearColorValue& Color);
-	virtual void ClearDepthStencilAttachment(const VkCommandBuffer CommandBuffer, const VkClearDepthStencilValue& DepthStencil);
+	//virtual void ClearColorAttachment(const VkCommandBuffer CommandBuffer, const VkClearColorValue& Color);
+	//virtual void ClearDepthStencilAttachment(const VkCommandBuffer CommandBuffer, const VkClearDepthStencilValue& DepthStencil);
 	
 	virtual void PopulateCommandBuffer([[maybe_unused]] const size_t i) {}
 

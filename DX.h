@@ -31,9 +31,7 @@
 
 //!< HLSLからルートシグネチャを作成する (Create root signature from HLSL)
 //#define USE_HLSL_ROOTSIGNATRUE //!< [ TriangleDX ]
-
 //#define USE_BUNDLE //!< [ ParametricSurfaceDX ] VK:USE_SECONDARY_COMMAND_BUFFER相当
-
 //#define USE_ROOT_CONSTANTS //!< [ TriangleDX ] VK:USE_PUSH_CONSTANTS相当
 //#define USE_GAMMA_CORRECTION
 

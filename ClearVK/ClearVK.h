@@ -14,8 +14,7 @@ public:
 	virtual ~ClearVK() {}
 
 #ifdef USE_MANUAL_CLEAR
-	//!< 手動でクリアする場合は VK_IMAGE_USAGE_TRANSFER_DST_BIT フラグが追加で必要
-	virtual void CreateSwapchain() override { VK::CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight(), VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT); }
+	virtual void CreateSwapchain() override { VK::CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight(), VK_IMAGE_USAGE_TRANSFER_DST_BIT); }
 #else
 	virtual void CreateRenderPass() { VKExt::CreateRenderPass_Clear(); }
 #endif
@@ -31,7 +30,53 @@ public:
 			vkCmdSetViewport(CB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
 			vkCmdSetScissor(CB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 #ifdef USE_MANUAL_CLEAR
-			PopulateCommandBuffer_ClearColor(CB, SwapchainImages[i], Colors::Blue);
+			const auto Image = SwapchainImages[i];
+			constexpr VkImageSubresourceRange ISR = {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS,
+				.baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS
+			};
+			constexpr std::array<VkMemoryBarrier, 0> MBs = {};
+			constexpr std::array<VkBufferMemoryBarrier, 0> BMBs = {};
+			{
+				const std::array IMBs = {
+					VkImageMemoryBarrier({
+						.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+						.pNext = nullptr,
+						.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT, .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+						.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.image = Image,
+						.subresourceRange = ISR
+					}),
+				};
+				vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 
+					static_cast<uint32_t>(size(MBs)), data(MBs),
+					static_cast<uint32_t>(size(BMBs)), data(BMBs),
+					static_cast<uint32_t>(size(IMBs)), data(IMBs));
+			}
+
+			constexpr std::array ISRs = { ISR };
+			//!< レンダーパス内では使用できない (Cannot be used in renderpass)
+			vkCmdClearColorImage(CB, Image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &Colors::Blue, static_cast<uint32_t>(size(ISRs)), data(ISRs));
+
+			{
+				const std::array IMBs = {
+					VkImageMemoryBarrier({
+						.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+						.pNext = nullptr,
+						.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT, .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+						.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.image = Image,
+						.subresourceRange = ISR
+					}),
+				};
+				vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+					static_cast<uint32_t>(size(MBs)), data(MBs),
+					static_cast<uint32_t>(size(BMBs)), data(BMBs),
+					static_cast<uint32_t>(size(IMBs)), data(IMBs));
+			}
 #else
 			constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
 			const VkRenderPassBeginInfo RPBI = {
