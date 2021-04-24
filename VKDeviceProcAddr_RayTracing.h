@@ -1,8 +1,16 @@
 #pragma region RAYTRACING
 VK_DEVICE_PROC_ADDR(GetAccelerationStructureBuildSizesKHR)
-VK_DEVICE_PROC_ADDR(CreateAccelerationStructureKHR)
-VK_DEVICE_PROC_ADDR(CmdBuildAccelerationStructuresKHR)
+VK_DEVICE_PROC_ADDR(GetAccelerationStructureDeviceAddressKHR)
+VK_DEVICE_PROC_ADDR(GetBufferDeviceAddressKHR)
 VK_DEVICE_PROC_ADDR(GetRayTracingShaderGroupHandlesKHR)
+
+VK_DEVICE_PROC_ADDR(CreateAccelerationStructureKHR)
 VK_DEVICE_PROC_ADDR(CreateRayTracingPipelinesKHR)
+
+VK_DEVICE_PROC_ADDR(BuildAccelerationStructuresKHR)
+
 VK_DEVICE_PROC_ADDR(DestroyAccelerationStructureKHR)
+
+VK_DEVICE_PROC_ADDR(CmdBuildAccelerationStructuresKHR)
+VK_DEVICE_PROC_ADDR(CmdTraceRaysKHR)
 #pragma endregion

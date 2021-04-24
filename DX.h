@@ -556,6 +556,6 @@ protected:
 };
 
 #ifdef DEBUG_STDOUT
-static std::ostream& operator<<(std::ostream& rhs, const DirectX::XMVECTOR& Value) { for (auto i = 0; i < 4; ++i) { rhs << Value.m128_f32[i] << ", "; } rhs << std::endl; return rhs; }
-static std::ostream& operator<<(std::ostream& rhs, const DirectX::XMMATRIX& Value) { for (auto i = 0; i < 4; ++i) { rhs << Value.r[i]; } rhs << std::endl; return rhs; }
+static std::ostream& operator<<(std::ostream& lhs, const DirectX::XMVECTOR& rhs) { for (auto i = 0; i < 4; ++i) { lhs << rhs.m128_f32[i] << ", "; } lhs << std::endl; return lhs; }
+static std::ostream& operator<<(std::ostream& lhs, const DirectX::XMMATRIX& rhs) { for (auto i = 0; i < 4; ++i) { lhs << rhs.r[i]; } lhs << std::endl; return lhs; }
 #endif

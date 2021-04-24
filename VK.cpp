@@ -1188,6 +1188,11 @@ void VK::EnumeratePhysicalDevice(VkInstance Inst)
 			< std::accumulate(&PDMPs[1].memoryHeaps[0], &PDMPs[1].memoryHeaps[PDMPs[1].memoryHeapCount], static_cast<VkDeviceSize>(0), [](VkDeviceSize Sum, const VkMemoryHeap& rhs) { return Sum + rhs.size; });
 	}));
 	CurrentPhysicalDevice = PhysicalDevices[Index];
+
+	//VkPhysicalDeviceProperties PDP = {};
+	//vkGetPhysicalDeviceProperties(CurrentPhysicalDevice, &PDP);
+	//std::cout << PDP.deviceName << "  is selected" << std::endl;
+
 	vkGetPhysicalDeviceMemoryProperties(CurrentPhysicalDevice, &CurrentPhysicalDeviceMemoryProperties);
 }
 void VK::EnumeratePhysicalDeviceLayerProperties(VkPhysicalDevice PD)
@@ -1340,6 +1345,7 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 
 	//!< ここではサポートされるフィーチャーを全て有効にしている、パフォーマンス的には不必要なものはオフにした方が良い #PERFORMANCE_TODO
 	VkPhysicalDeviceFeatures PDF; vkGetPhysicalDeviceFeatures(PD, &PDF);
+	//VkPhysicalDeviceFeatures PDF = {};
 	if (nullptr == pNext) {
 		const VkDeviceCreateInfo DCI = {
 			.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
