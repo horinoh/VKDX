@@ -663,28 +663,7 @@ void DX::CreateCommandQueue()
 void DX::CreateFence()
 {
 	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, COM_PTR_UUIDOF_PUTVOID(Fence)));
-
 	LOG_OK();
-}
-
-//!< ここではデフォルト実装として、ダイレクト、バンドル共にスワップチェイン数分用意することとする
-void DX::CreateCommandList()
-{
-	//!< コマンド実行(GCL->ExecuteCommandList())後、GPUがコマンドアロケータの参照を終えるまで、アロケータのリセット(CA->Reset())してはいけない、アロケータが覚えているのでコマンドのリセット(GCL->Reset())はしても良い
-	//!< (ここでは)ダイレクト用1つ、バンドル用1つのコマンドアロケータ作成をデフォルト実装とする
-	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(CommandAllocators.emplace_back())));
-	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_UUIDOF_PUTVOID(BundleCommandAllocators.emplace_back())));
-
-	DXGI_SWAP_CHAIN_DESC1 SCD;
-	SwapChain->GetDesc1(&SCD);
-	for (UINT i = 0; i < SCD.BufferCount; ++i) {
-		//!< 描画コマンドを発行するコマンドリストにはパイプラインステートの指定が必要だが、後からでも指定(GCL->Reset(CA, COM_PTR_GET(PS)))できるので、ここではnullptrを指定
-		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(CommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandLists.emplace_back())));
-		VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
-
-		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleGraphicsCommandLists.emplace_back())));
-		VERIFY_SUCCEEDED(BundleGraphicsCommandLists.back()->Close());
-	}
 }
 
 void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
@@ -858,7 +837,8 @@ void DX::GetSwapChainResource()
 
 void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 {
-	ResetSwapChainResource();
+	for (auto& i : SwapChainResources) { COM_PTR_RESET(i); }
+	SwapChainResources.clear();
 
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
@@ -877,6 +857,26 @@ void DX::ResizeDepthStencil(const DXGI_FORMAT /*DepthFormat*/, const UINT /*Widt
 	//CreateDepthStencilResource(DepthFormat, Width, Height);
 
 	LOG_OK();
+}
+
+//!< ここではデフォルト実装として、ダイレクト、バンドル共にスワップチェイン数分用意することとする
+void DX::CreateCommandList()
+{
+	//!< コマンド実行(GCL->ExecuteCommandList())後、GPUがコマンドアロケータの参照を終えるまで、アロケータのリセット(CA->Reset())してはいけない、アロケータが覚えているのでコマンドのリセット(GCL->Reset())はしても良い
+	//!< (ここでは)ダイレクト用1つ、バンドル用1つのコマンドアロケータ作成をデフォルト実装とする
+	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(CommandAllocators.emplace_back())));
+	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_UUIDOF_PUTVOID(BundleCommandAllocators.emplace_back())));
+
+	DXGI_SWAP_CHAIN_DESC1 SCD;
+	SwapChain->GetDesc1(&SCD);
+	for (UINT i = 0; i < SCD.BufferCount; ++i) {
+		//!< 描画コマンドを発行するコマンドリストにはパイプラインステートの指定が必要だが、後からでも指定(GCL->Reset(CA, COM_PTR_GET(PS)))できるので、ここではnullptrを指定
+		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(CommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandLists.emplace_back())));
+		VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
+
+		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleGraphicsCommandLists.emplace_back())));
+		VERIFY_SUCCEEDED(BundleGraphicsCommandLists.back()->Close());
+	}
 }
 
 #pragma region RAYTRACING

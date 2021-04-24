@@ -357,31 +357,85 @@ public:
 		return { v.x, v.y, v.z, v.w };
 	}
 
-protected:
-	static [[nodiscard]] bool IsSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, const VkFormat DepthFormat);
+	static [[nodiscard]] bool IsSupportedColorFormat(VkPhysicalDevice PD, const VkFormat Format) {
+		VkFormatProperties FP;
+		vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
+		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) {
+			Error("VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT not supported\n");
+			return false;
+		}
+		return true;
+	}
+	static [[nodiscard]] bool IsSupportedDepthFormat(VkPhysicalDevice PD, const VkFormat Format) {
+		VkFormatProperties FP;
+		vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
+		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
+			Error("VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT not supported\n");
+			return false;
+		}
+		return true;
+	}
+	static [[nodiscard]] bool IsSupportedSampledImage(VkPhysicalDevice PD, const VkFormat Format, const VkFilter Mag = VK_FILTER_LINEAR, const VkFilter Min = VK_FILTER_LINEAR, const VkSamplerMipmapMode Mip = VK_SAMPLER_MIPMAP_MODE_LINEAR) {
+		VkFormatProperties FP;
+		vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
+		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
+			Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT not supported\n");
+			return false;
+		}
+		if (VK_FILTER_LINEAR == Mag || VK_FILTER_LINEAR == Min || VK_SAMPLER_MIPMAP_MODE_LINEAR == Mip) {
+			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+				Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported\n");
+				return false;
+			}
+		}
+		return true;
+	}
+#pragma region RAYTRACING
+	static [[nodiscard]] bool HasRayTracingSupport(const VkPhysicalDevice PD) {
+		VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr };
+		VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF };
+		VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF };
+		VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDASF };
+		vkGetPhysicalDeviceFeatures2(PD, &PDF2);
+		return PDBDAF.bufferDeviceAddress && PDRTPF.rayTracingPipeline && PDASF.accelerationStructure;
+	}
+#pragma endregion
+#pragma region MESH_SHADER
+	static [[nodiscard]] bool HasMeshShaderSupport(const VkPhysicalDevice PD) {
+		VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr };
+		VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDMSF };
+		vkGetPhysicalDeviceFeatures2(PD, &PDF2);
+		return PDMSF.taskShader && PDMSF.meshShader;
+	}
+#pragma endregion
+
+protected:	
 	static [[nodiscard]] uint32_t GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& PDMP, const uint32_t TypeBits, const VkMemoryPropertyFlags MPF);
 
 	void AllocateDeviceMemory(VkDeviceMemory* DM, const VkMemoryRequirements& MR, const VkMemoryPropertyFlags MPF);
 	void AllocateDeviceMemory(VkDeviceMemory* DM, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF) { VkMemoryRequirements MR; vkGetBufferMemoryRequirements(Device, Buffer, &MR); AllocateDeviceMemory(DM, MR, MPF); }
 	void AllocateDeviceMemory(VkDeviceMemory* DM, const VkImage Image, const VkMemoryPropertyFlags MPF) { VkMemoryRequirements MR; vkGetImageMemoryRequirements(Device, Image, &MR); AllocateDeviceMemory(DM, MR, MPF); }
 
-	virtual void CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size) const;
-	virtual void CreateImage(VkImage* Image, const VkImageCreateFlags CreateFlags, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage) const;
+	//virtual void CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size) const;
+	//virtual void CreateImage(VkImage* Image, const VkImageCreateFlags CreateFlags, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage) const;
 
+	[[deprecated("")]]
 	virtual void CopyToHostVisibleDeviceMemory(const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset, const VkDeviceSize Size, const void* Source, const VkDeviceSize MappedRangeOffset = 0, const VkDeviceSize MappedRangeSize = VK_WHOLE_SIZE);
 
+#pragma region COMMAND
 	static void PopulateCommandBuffer_CopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, const VkBuffer Dst, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF, const size_t Size);
 	static void PopulateCommandBuffer_CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers);
 	static void PopulateCommandBuffer_CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers);
-
 	static void SubmitAndWait(const VkQueue Queue, const VkCommandBuffer CB);
+#pragma endregion
 
 	static void EnumerateMemoryRequirements(const VkMemoryRequirements& MR, const VkPhysicalDeviceMemoryProperties& PDMP);
 
-	virtual void ValidateFormatProperties(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage) const;
-	virtual void ValidateFormatProperties_SampledImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const VkFilter Mag, const VkFilter Min, const VkSamplerMipmapMode Mip) const;
-	virtual void ValidateFormatProperties_StorageImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const bool Atomic) const;
+	//virtual void ValidateFormatProperties(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage) const;
+	//virtual void ValidateFormatProperties_SampledImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const VkFilter Mag, const VkFilter Min, const VkSamplerMipmapMode Mip) const;
+	//virtual void ValidateFormatProperties_StorageImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const bool Atomic) const;
 
+#pragma region MARKER
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
 	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::string_view Name) { MarkerInsert(CB, Color, data(Name)); }
 	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
@@ -395,14 +449,39 @@ protected:
 	private:
 		VkCommandBuffer CommandBuffer;
 	};
-	static void MarkerSetName(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const char* Name);
-	static void MarkerSetTag(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const uint64_t TagName, const size_t TagSize, const void* TagData);
+	static void MarkerSetName([[maybe_unused]]VkDevice Device, [[maybe_unused]] const VkDebugReportObjectTypeEXT Type, [[maybe_unused]] const uint64_t Object, [[maybe_unused]] std::string_view Name) {
+#ifdef USE_DEBUG_MARKER
+		if (VK_NULL_HANDLE != vkDebugMarkerSetObjectName) {
+			const VkDebugMarkerObjectNameInfoEXT DMONI = {
+				.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
+				.pNext = nullptr,
+				.objectType = Type, .object = Object, .pObjectName = data(Name)
+			};
+			VERIFY_SUCCEEDED(vkDebugMarkerSetObjectName(Device, &DMONI));
+		}
+#endif
+	}
+	static void MarkerSetTag([[maybe_unused]] VkDevice Device, [[maybe_unused]] const VkDebugReportObjectTypeEXT Type, [[maybe_unused]] const uint64_t Object, [[maybe_unused]] const uint64_t TagName, [[maybe_unused]] const size_t TagSize, [[maybe_unused]] const void* TagData) {
+#ifdef USE_DEBUG_MARKER
+		if (VK_NULL_HANDLE != vkDebugMarkerSetObjectTag) {
+			const VkDebugMarkerObjectTagInfoEXT DMOTI = {
+				.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_TAG_INFO_EXT,
+				.pNext = nullptr,
+				.objectType = Type, .object = Object,
+				.tagName = TagName, .tagSize = TagSize, .pTag = TagData
+			};
+			VERIFY_SUCCEEDED(vkDebugMarkerSetObjectTag(Device, &DMOTI));
+		}
+#endif
+	}
 	static void MarkerSetTag(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const uint64_t TagName, const std::vector<std::byte>& TagData) { MarkerSetTag(Device, Type, Object, TagName, size(TagData), data(TagData)); }
-	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const char* Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
-	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::string_view Name) { MarkerSetObjectName(Device, data(Name)); }
+#pragma endregion
+#pragma region MARKER_TEMPLATE
+	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::string_view Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
 	template<typename T> static void MarkerSetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* TagData) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
 	//!< ↓ここでテンプレート特殊化している (Template specialization here)
 #include "VKDebugMarker.inl"
+#pragma endregion
 
 	virtual void EnumerateInstanceLayerProperties();
 	virtual void EnumerateInstanceExtensionProperties(const char* LayerName);
@@ -429,13 +508,11 @@ protected:
 	//virtual void CreateQueueFamilyPriorities(VkPhysicalDevice PD, VkSurfaceKHR Surface, const std::vector<VkQueueFamilyProperties>& QFPs, std::vector<std::vector<float>>& QueueFamilyPriorites);
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext = nullptr, const std::vector<const char*>& AdditionalExtensions = {});
 
-	virtual void CreateFence(VkDevice Device);
-	virtual void CreateSemaphore(VkDevice Device);
+	virtual void CreateFence(VkDevice Dev);
 
 	virtual void AllocateCommandBuffer();
 
 	virtual [[nodiscard]] VkSurfaceFormatKHR SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface);
-	virtual [[nodiscard]] VkExtent2D SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& Cap, const uint32_t Width, const uint32_t Height);
 	virtual [[nodiscard]] VkPresentModeKHR SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 
 	virtual void CreateSwapchain() { CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight()); }
@@ -460,24 +537,7 @@ protected:
 	}
 
 #pragma region RAYTRACING
-	static bool HasRayTracingSupport(const VkPhysicalDevice PD) {
-		VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr };
-		VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF };
-		VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF };
-		VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDASF };
-		vkGetPhysicalDeviceFeatures2(PD, &PDF2);
-		return PDBDAF.bufferDeviceAddress && PDRTPF.rayTracingPipeline && PDASF.accelerationStructure;
-	}
 	static void BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, VkQueue Queue, const VkCommandBuffer CB, const VkAccelerationStructureKHR AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs);
-#pragma endregion
-
-#pragma region MESH_SHADER
-	static bool HasMeshShaderSupport(const VkPhysicalDevice PD) {
-		VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr };
-		VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDMSF };
-		vkGetPhysicalDeviceFeatures2(PD, &PDF2);
-		return PDMSF.taskShader && PDMSF.meshShader;
-	}
 #pragma endregion
 
 	virtual void CreateGeometry() {}
@@ -538,14 +598,14 @@ protected:
 		layout (input_attachment_index=0, set=0, binding=0) uniform subpassInput MySubpassInput;
 	*/
 
-	[[deprecated("this is example code")]]
-	virtual void CreateUniformBuffer_Example();
-	[[deprecated("this is example code")]]
-	virtual void CreateStorageBuffer_Example();
-	[[deprecated("this is example code")]]
-	virtual void CreateUniformTexelBuffer_Example();
-	[[deprecated("this is example code")]]
-	virtual void CreateStorageTexelBuffer_Example();
+	//[[deprecated("this is example code")]]
+	//virtual void CreateUniformBuffer_Example();
+	//[[deprecated("this is example code")]]
+	//virtual void CreateStorageBuffer_Example();
+	//[[deprecated("this is example code")]]
+	//virtual void CreateUniformTexelBuffer_Example();
+	//[[deprecated("this is example code")]]
+	//virtual void CreateStorageTexelBuffer_Example();
 
 	virtual void CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const VkDescriptorSetLayoutCreateFlags Flags, const std::vector<VkDescriptorSetLayoutBinding>& DSLBs);
 	virtual void CreatePipelineLayout(VkPipelineLayout& PL, const std::vector<VkDescriptorSetLayout>& DSLs, const std::vector<VkPushConstantRange>& PCRs);

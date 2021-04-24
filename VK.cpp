@@ -56,7 +56,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateDevice(hWnd, hInstance);
 	
 	CreateFence(Device);
-	CreateSemaphore(Device);
 
 	CreateSwapchain();
 
@@ -378,16 +377,6 @@ const char* VK::GetSystemAllocationScopeChar(const VkSystemAllocationScope SAS)
 #undef VK_SYSTEM_ALLOCATION_SCOPE_ENTRY
 }
 
-bool VK::IsSupportedDepthFormat(VkPhysicalDevice PhysicalDevice, const VkFormat DepthFormat)
-{
-	VkFormatProperties FP;
-	vkGetPhysicalDeviceFormatProperties(PhysicalDevice, DepthFormat, &FP);
-	if (FP.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-		return true;
-	}
-	return false;
-}
-
 //!< @brief メモリプロパティフラグを(サポートされているかチェックしつつ)メモリタイプへ変換
 //!< @param 物理デバイスのメモリプロパティ
 //!< @param バッファやイメージの要求するメモリタイプ
@@ -407,60 +396,60 @@ uint32_t VK::GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& PDMP, co
 	return 0xffff;
 }
 
-void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size) const
-{
-	//!< バッファは作成時に指定した使用法でしか使用できない、ここでは VK_SHARING_MODE_EXCLUSIVE 決め打ちにしている #VK_TODO (Using VK_SHARING_MODE_EXCLUSIVE here)
-	//!< VK_SHARING_MODE_EXCLUSIVE	: 複数ファミリのキューが同時アクセスできない、他のファミリからアクセスしたい場合はオーナーシップの移譲が必要
-	//!< VK_SHARING_MODE_CONCURRENT	: 複数ファミリのキューが同時アクセス可能、オーナーシップの移譲も必要無し、パフォーマンスは悪い
-	const std::array<uint32_t, 0> QFI = {};
-	const VkBufferCreateInfo BCI = {
-		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = 0,
-		.size = Size,
-		.usage = Usage,
-		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-		.queueFamilyIndexCount = static_cast<uint32_t>(size(QFI)), .pQueueFamilyIndices = data(QFI)
-	};
-	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BCI, GetAllocationCallbacks(), Buffer));
-}
+//void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size) const
+//{
+//	//!< バッファは作成時に指定した使用法でしか使用できない、ここでは VK_SHARING_MODE_EXCLUSIVE 決め打ちにしている #VK_TODO (Using VK_SHARING_MODE_EXCLUSIVE here)
+//	//!< VK_SHARING_MODE_EXCLUSIVE	: 複数ファミリのキューが同時アクセスできない、他のファミリからアクセスしたい場合はオーナーシップの移譲が必要
+//	//!< VK_SHARING_MODE_CONCURRENT	: 複数ファミリのキューが同時アクセス可能、オーナーシップの移譲も必要無し、パフォーマンスは悪い
+//	const std::array<uint32_t, 0> QFI = {};
+//	const VkBufferCreateInfo BCI = {
+//		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+//		.pNext = nullptr,
+//		.flags = 0,
+//		.size = Size,
+//		.usage = Usage,
+//		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+//		.queueFamilyIndexCount = static_cast<uint32_t>(size(QFI)), .pQueueFamilyIndices = data(QFI)
+//	};
+//	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BCI, GetAllocationCallbacks(), Buffer));
+//}
 
-void VK::CreateImage(VkImage* Img, const VkImageCreateFlags CreateFlags, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage) const
-{
-	//!< Usage に VK_IMAGE_USAGE_SAMPLED_BIT が指定されいる場合、フォーマットやフィルタが使用可能かチェック #VK_TODO ここではリニアフィルタ決め打ち
-	ValidateFormatProperties_SampledImage(GetCurrentPhysicalDevice(), Format, Usage, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
-
-	const std::array<uint32_t, 0> QueueFamilyIndices = {};
-	const VkImageCreateInfo ICI = {
-		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = CreateFlags,
-		.imageType = ImageType,
-		.format = Format,
-		.extent = Extent3D,
-		.mipLevels = MipLevels,
-		.arrayLayers = ArrayLayers,
-		.samples = SampleCount,
-		.tiling = VK_IMAGE_TILING_OPTIMAL, //!< リニアはパフォーマンスが悪いので、ここでは OPTIMAL に決め打ちしている
-		.usage = Usage,
-		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-		.queueFamilyIndexCount = static_cast<uint32_t>(size(QueueFamilyIndices)), .pQueueFamilyIndices = data(QueueFamilyIndices),
-		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED //!< 作成時に指定できるのは UNDEFINED, PREINITIALIZED のみ、実際に使用する前にレイアウトを変更する必要がある
-	};
-
-#ifdef _DEBUG
-	if (ICI.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) {
-		assert(ICI.samples == VK_SAMPLE_COUNT_1_BIT && "Must be VK_SAMPLE_COUNT_1_BIT");
-		assert(ICI.extent.width == ICI.extent.height && "Must be square");
-		assert(ICI.arrayLayers >= 6 && "Invalid ArrayLayers");
-	}
-	else {
-		assert(ICI.arrayLayers >= 1 && "Invalid ArrayLayers");
-	}
-#endif
-
-	VERIFY_SUCCEEDED(vkCreateImage(Device, &ICI, GetAllocationCallbacks(), Img));
-}
+//void VK::CreateImage(VkImage* Img, const VkImageCreateFlags CreateFlags, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage) const
+//{
+//	//!< Usage に VK_IMAGE_USAGE_SAMPLED_BIT が指定されいる場合、フォーマットやフィルタが使用可能かチェック #VK_TODO ここではリニアフィルタ決め打ち
+//	ValidateFormatProperties_SampledImage(GetCurrentPhysicalDevice(), Format, Usage, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
+//
+//	const std::array<uint32_t, 0> QueueFamilyIndices = {};
+//	const VkImageCreateInfo ICI = {
+//		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+//		.pNext = nullptr,
+//		.flags = CreateFlags,
+//		.imageType = ImageType,
+//		.format = Format,
+//		.extent = Extent3D,
+//		.mipLevels = MipLevels,
+//		.arrayLayers = ArrayLayers,
+//		.samples = SampleCount,
+//		.tiling = VK_IMAGE_TILING_OPTIMAL, //!< リニアはパフォーマンスが悪いので、ここでは OPTIMAL に決め打ちしている
+//		.usage = Usage,
+//		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+//		.queueFamilyIndexCount = static_cast<uint32_t>(size(QueueFamilyIndices)), .pQueueFamilyIndices = data(QueueFamilyIndices),
+//		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED //!< 作成時に指定できるのは UNDEFINED, PREINITIALIZED のみ、実際に使用する前にレイアウトを変更する必要がある
+//	};
+//
+//#ifdef _DEBUG
+//	if (ICI.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) {
+//		assert(ICI.samples == VK_SAMPLE_COUNT_1_BIT && "Must be VK_SAMPLE_COUNT_1_BIT");
+//		assert(ICI.extent.width == ICI.extent.height && "Must be square");
+//		assert(ICI.arrayLayers >= 6 && "Invalid ArrayLayers");
+//	}
+//	else {
+//		assert(ICI.arrayLayers >= 1 && "Invalid ArrayLayers");
+//	}
+//#endif
+//
+//	VERIFY_SUCCEEDED(vkCreateImage(Device, &ICI, GetAllocationCallbacks(), Img));
+//}
 
 void VK::CopyToHostVisibleDeviceMemory(const VkDeviceMemory DM, const VkDeviceSize Offset, const VkDeviceSize Size, const void* Source, [[maybe_unused]]const VkDeviceSize MappedRangeOffset, [[maybe_unused]]const VkDeviceSize MappedRangeSize)
 {
@@ -677,86 +666,85 @@ void VK::EnumerateMemoryRequirements(const VkMemoryRequirements& MR, const VkPhy
 	}
 }
 
-void VK::ValidateFormatProperties(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage) const
-{
-	VkFormatProperties FP;
-	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
-
-	if (Usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT) {
-#if 0
-		//!< カラーの場合 (In case color)
-		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) {
-			Error("VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT not supported\n");
-			DEBUG_BREAK();
-		}
-		//!< デプスステンシルの場合 (In case depth stencil)
-		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
-			Error("VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT not supported\n");
-			DEBUG_BREAK();
-		}
-#endif
-	}
-
-	if (Usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) {
-		if (!(FP.bufferFeatures &  VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)) {
-			Error("VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT not supported\n");
-			DEBUG_BREAK();
-		}
-	}
-
-	if (Usage & VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT) {
-		if (!(FP.bufferFeatures &  VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT)) {
-			Error("VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT not supported\n");
-			DEBUG_BREAK();
-		}
-		//!< #VK_TODO アトミック使用時のみチェックする
-		const auto bUseAtomic = false;
-		if (bUseAtomic) {
-			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT)) {
-				Error("VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT not supported\n");
-				DEBUG_BREAK();
-			}
-		}
-	}
-}
-void VK::ValidateFormatProperties_SampledImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const VkFilter Mag, const VkFilter Min, const VkSamplerMipmapMode Mip) const
-{
-	VkFormatProperties FP;
-	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
-
-	if (Usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
-		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
-			Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT not supported\n");
-			DEBUG_BREAK();
-		}
-		if (VK_FILTER_LINEAR == Mag || VK_FILTER_LINEAR == Min || VK_SAMPLER_MIPMAP_MODE_LINEAR == Mip) {
-			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-				Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported\n");
-				DEBUG_BREAK();
-			}
-		}
-	}
-}
-
-void VK::ValidateFormatProperties_StorageImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const bool UseAtomic) const
-{
-	VkFormatProperties FP;
-	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
-
-	if (Usage & VK_IMAGE_USAGE_STORAGE_BIT) {
-		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
-			Error("VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT not supported\n");
-			DEBUG_BREAK();
-		}
-		if (UseAtomic) {
-			//!< アトミック操作が保証されているのは VK_FORMAT_R32_UINT, VK_FORMAT_R32_SINT のみ、それ以外でやりたい場合はサポートされているか調べる必要がある
-			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)) {
-				Error("VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT not supported\n");
-				DEBUG_BREAK();
-			}
-		}
-	}
-}
+//void VK::ValidateFormatProperties(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage) const
+//{
+//	VkFormatProperties FP;
+//	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
+//
+//	if (Usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT) {
+//#if 0
+//		//!< カラーの場合 (In case color)
+//		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) {
+//			Error("VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT not supported\n");
+//			DEBUG_BREAK();
+//		}
+//		//!< デプスステンシルの場合 (In case depth stencil)
+//		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
+//			Error("VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT not supported\n");
+//			DEBUG_BREAK();
+//		}
+//#endif
+//	}
+//
+//	if (Usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) {
+//		if (!(FP.bufferFeatures &  VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)) {
+//			Error("VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT not supported\n");
+//			DEBUG_BREAK();
+//		}
+//	}
+//
+//	if (Usage & VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT) {
+//		if (!(FP.bufferFeatures &  VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT)) {
+//			Error("VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT not supported\n");
+//			DEBUG_BREAK();
+//		}
+//		//!< #VK_TODO アトミック使用時のみチェックする
+//		const auto bUseAtomic = false;
+//		if (bUseAtomic) {
+//			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT)) {
+//				Error("VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT not supported\n");
+//				DEBUG_BREAK();
+//			}
+//		}
+//	}
+//}
+//void VK::ValidateFormatProperties_SampledImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const VkFilter Mag, const VkFilter Min, const VkSamplerMipmapMode Mip) const
+//{
+//	VkFormatProperties FP;
+//	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
+//
+//	if (Usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
+//		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
+//			Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT not supported\n");
+//			DEBUG_BREAK();
+//		}
+//		if (VK_FILTER_LINEAR == Mag || VK_FILTER_LINEAR == Min || VK_SAMPLER_MIPMAP_MODE_LINEAR == Mip) {
+//			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+//				Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported\n");
+//				DEBUG_BREAK();
+//			}
+//		}
+//	}
+//}
+//void VK::ValidateFormatProperties_StorageImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const bool UseAtomic) const
+//{
+//	VkFormatProperties FP;
+//	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
+//
+//	if (Usage & VK_IMAGE_USAGE_STORAGE_BIT) {
+//		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
+//			Error("VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT not supported\n");
+//			DEBUG_BREAK();
+//		}
+//		if (UseAtomic) {
+//			//!< アトミック操作が保証されているのは VK_FORMAT_R32_UINT, VK_FORMAT_R32_SINT のみ、それ以外でやりたい場合はサポートされているか調べる必要がある
+//			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)) {
+//				Error("VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT not supported\n");
+//				DEBUG_BREAK();
+//			}
+//		}
+//	}
+//}
 
 void VK::EnumerateInstanceLayerProperties()
 {
@@ -962,33 +950,6 @@ void VK::MarkerEnd([[maybe_unused]] VkCommandBuffer CB)
 #ifdef USE_DEBUG_MARKER
 	if (VK_NULL_HANDLE != vkCmdDebugMarkerEnd) {
 		vkCmdDebugMarkerEnd(CB);
-	}
-#endif
-}
-void VK::MarkerSetName([[maybe_unused]] VkDevice Device, [[maybe_unused]] const VkDebugReportObjectTypeEXT Type, [[maybe_unused]] const uint64_t Object, [[maybe_unused]] const char* Name)
-{
-#ifdef USE_DEBUG_MARKER
-	if (VK_NULL_HANDLE != vkDebugMarkerSetObjectName) {
-		VkDebugMarkerObjectNameInfoEXT DMONI = {
-			.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
-			.pNext = nullptr,
-			.objectType = Type, .object = Object, .pObjectName = Name
-		};
-		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectName(Device, &DMONI));
-	}
-#endif
-}
-void VK::MarkerSetTag([[maybe_unused]] VkDevice Device, [[maybe_unused]] const VkDebugReportObjectTypeEXT Type, [[maybe_unused]] const uint64_t Object, [[maybe_unused]] const uint64_t TagName, [[maybe_unused]] const size_t TagSize, [[maybe_unused]] const void* TagData)
-{
-#ifdef USE_DEBUG_MARKER
-	if (VK_NULL_HANDLE != vkDebugMarkerSetObjectTag) {
-		VkDebugMarkerObjectTagInfoEXT DMOTI = {
-			.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_TAG_INFO_EXT,
-			.pNext = nullptr,
-			.objectType = Type, .object = Object,
-			.tagName = TagName, .tagSize = TagSize, .pTag = TagData
-		};
-		VERIFY_SUCCEEDED(vkDebugMarkerSetObjectTag(Device, &DMOTI));
 	}
 #endif
 }
@@ -1449,38 +1410,26 @@ void VK::AllocateDeviceMemory(VkDeviceMemory* DM, const VkMemoryRequirements& MR
 	VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, GetAllocationCallbacks(), DM));
 }
 
-//!< ホストとデバイスの同期 (Synchronization between host and device)
-//!< サブミット(vkQueueSubmit) に使用し、Draw()やDispatch()の頭でシグナル(サブミットされたコマンドの完了)を待つ (Used when submit, and wait signal on top of Draw())
-//!< 初回と２回目以降を同じに扱う為に、シグナル済み状態(VK_FENCE_CREATE_SIGNALED_BIT)で作成している (Create with signaled state, to do same operation on first time and second time)
 void VK::CreateFence(VkDevice Dev)
 {
-	const VkFenceCreateInfo FCI = {
-		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = VK_FENCE_CREATE_SIGNALED_BIT
-	};
+#pragma region FENCE
+	//!< ホストとデバイスの同期 (Synchronization between host and device)
+	//!< サブミット(vkQueueSubmit) に使用し、Draw()やDispatch()の頭でシグナル(サブミットされたコマンドの完了)を待つ (Used when submit, and wait signal on top of Draw())
+	//!< 初回と２回目以降を同じに扱う為に、シグナル済み状態(VK_FENCE_CREATE_SIGNALED_BIT)で作成している (Create with signaled state, to do same operation on first time and second time)
+	constexpr VkFenceCreateInfo FCI = { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, .pNext = nullptr, .flags = VK_FENCE_CREATE_SIGNALED_BIT };
 	VERIFY_SUCCEEDED(vkCreateFence(Dev, &FCI, GetAllocationCallbacks(), &Fence));
 	VERIFY_SUCCEEDED(vkCreateFence(Dev, &FCI, GetAllocationCallbacks(), &ComputeFence));
+#pragma endregion
 
-	LOG_OK();
-}
-
-//!< キュー内での同期(異なるキュー間の同期も可能) (Synchronization internal queue)
-//!< イメージ取得(vkAcquireNextImageKHR)、サブミット(VkSubmitInfo)、プレゼンテーション(VkPresentInfoKHR)に使用する (Use when image acquire, submit, presentation) 
-void VK::CreateSemaphore(VkDevice Dev)
-{
-	const VkSemaphoreCreateInfo SCI = {
-		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = 0
-	};
-
+#pragma region SEMAPHORE
+	//!< キューの同期(異なるキュー間の同期も可能) (Synchronization internal queue)
+	//!< イメージ取得(vkAcquireNextImageKHR)、サブミット(VkSubmitInfo)、プレゼンテーション(VkPresentInfoKHR)に使用する (Use when image acquire, submit, presentation) 
+	constexpr VkSemaphoreCreateInfo SCI = { .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, .pNext = nullptr, .flags = 0 };
 	//!< プレゼント完了同期用 (Wait for presentation finish)
 	VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SCI, GetAllocationCallbacks(), &NextImageAcquiredSemaphore));
-
 	//!< 描画完了同期用 (Wait for render finish)
 	VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SCI, GetAllocationCallbacks(), &RenderFinishedSemaphore));
-
+#pragma endregion
 	LOG_OK();
 }
 
@@ -1591,18 +1540,6 @@ VkSurfaceFormatKHR VK::SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Sfc
 	}
 
 	return -1 == SelectedIndex ? VkSurfaceFormatKHR({ VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR }) : SFs[SelectedIndex];
-}
-VkExtent2D VK::SelectSurfaceExtent(const VkSurfaceCapabilitiesKHR& SC, const uint32_t Width, const uint32_t Height)
-{
-	if (0xffffffff == SC.currentExtent.width) {
-		//!< 0xffffffff の場合はスワップチェインイメージサイズがウインドウサイズを決定することになる (If 0xffffffff, size of swapchain image determines the size of the window)
-		//!< 引数の Width, Height を使用する (In this case, use argument Width and Height) 
-		return VkExtent2D({ .width = (std::clamp)(Width, SC.maxImageExtent.width, SC.minImageExtent.width), .height = (std::clamp)(Height, SC.minImageExtent.height, SC.minImageExtent.height) });
-	}
-	else {
-		//!< そうでない場合は currentExtent を使用する (Otherwise, use currentExtent)
-		return SC.currentExtent;
-	}
 }
 VkPresentModeKHR VK::SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
 {
@@ -1724,7 +1661,8 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 	ColorFormat = SurfaceFormat.format; //!< カラーファーマットは覚えておく
 
 	//!< サーフェスのサイズを選択
-	SurfaceExtent2D = SelectSurfaceExtent(SC, Width, Height);
+	//!< currentExtent.width == 0xffffffff の場合はスワップチェインのサイズから決定する (If 0xffffffff, surface size will be determined by the extent of a swapchain targeting the surface)
+	SurfaceExtent2D = 0xffffffff != SC.currentExtent.width ? SC.currentExtent : VkExtent2D({ .width = (std::clamp)(Width, SC.maxImageExtent.width, SC.minImageExtent.width), .height = (std::clamp)(Height, SC.minImageExtent.height, SC.minImageExtent.height) });
 	Logf("\t\t\tSurfaceExtent = %d x %d\n", SurfaceExtent2D.width, SurfaceExtent2D.height);
 
 	//!< レイヤー、ステレオレンダリング等をしたい場合は1以上になるが、ここでは1
@@ -2027,93 +1965,93 @@ void VK::BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDevic
 }
 #pragma endregion
 
-void VK::CreateUniformBuffer_Example()
-{
-	//!< これはサンプルコード
-
-	VkBuffer Buffer; //!< #VK_TODO
-	VkDeviceSize Size = 0; //!< #VK_TODO
-	CreateBuffer(&Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, Size);
-
-	VkDeviceMemory DM; //!< #VK_TODO
-	AllocateDeviceMemory(&DM, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DM, 0));
-}
-void VK::CreateStorageBuffer_Example()
-{
-	//!< これはサンプルコード
-
-	VkBuffer Buffer; //!< #VK_TODO
-	VkDeviceSize Size = 0; //!< #VK_TODO
-	CreateBuffer(&Buffer, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, Size);
-	//CreateBuffer(&Buffer, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, Size);
-
-	VkDeviceMemory DM; //!< #VK_TODO
-	AllocateDeviceMemory(&DM, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DM, 0));
-}
-void VK::CreateUniformTexelBuffer_Example()
-{
-	//!< これはサンプルコード
-
-	VkBuffer Buffer; //!< #VK_TODO
-	const VkDeviceSize Size = 0; //!< #VK_TODO
-	CreateBuffer(&Buffer, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, Size);
-
-	VkDeviceMemory DM; //!< #VK_TODO
-	AllocateDeviceMemory(&DM, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DM, 0));
-
-	VkBufferView View; //!< #VK_TODO
-	const VkBufferViewCreateInfo BVCI = {
-		.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = 0,
-		.buffer = Buffer,
-		.format = VK_FORMAT_R8G8B8A8_UINT,
-		.offset = 0,
-		.range = VK_WHOLE_SIZE
-	};
-	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BVCI, GetAllocationCallbacks(), &View)); 
-
-	//!< サポートされているかのチェック
-	VkFormatProperties FP;
-	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), BVCI.format, &FP);
-	assert((FP.bufferFeatures & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT) && "");
-}
-void VK::CreateStorageTexelBuffer_Example()
-{
-	//!< これはサンプルコード
-
-	VkBuffer Buffer; //!< #VK_TODO
-	const VkDeviceSize Size = 0; //!< #VK_TODO
-	CreateBuffer(&Buffer, VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, Size);
-
-	VkDeviceMemory DM; //!< #VK_TODO
-	AllocateDeviceMemory(&DM, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DM, 0));
-
-	VkBufferView View; //!< #VK_TODO
-	const VkBufferViewCreateInfo BVCI = {
-		.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = 0,
-		.buffer = Buffer,
-		.format = VK_FORMAT_R8G8B8A8_UINT,
-		.offset = 0,
-		.range = VK_WHOLE_SIZE
-	};
-	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BVCI, GetAllocationCallbacks(), &View));
-
-	//!< サポートされているかのチェック
-	VkFormatProperties FP;
-	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), BVCI.format, &FP);
-	assert((FP.bufferFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT) && "");
-	//!< #VK_TODO アトミック操作をする場合
-	if (false/*bUseAtomic*/) {
-		assert((FP.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT) && "");
-	}
-}
+//void VK::CreateUniformBuffer_Example()
+//{
+//	//!< これはサンプルコード
+//
+//	VkBuffer Buffer; //!< #VK_TODO
+//	VkDeviceSize Size = 0; //!< #VK_TODO
+//	CreateBuffer(&Buffer, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, Size);
+//
+//	VkDeviceMemory DM; //!< #VK_TODO
+//	AllocateDeviceMemory(&DM, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+//	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DM, 0));
+//}
+//void VK::CreateStorageBuffer_Example()
+//{
+//	//!< これはサンプルコード
+//
+//	VkBuffer Buffer; //!< #VK_TODO
+//	VkDeviceSize Size = 0; //!< #VK_TODO
+//	CreateBuffer(&Buffer, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, Size);
+//	//CreateBuffer(&Buffer, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, Size);
+//
+//	VkDeviceMemory DM; //!< #VK_TODO
+//	AllocateDeviceMemory(&DM, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+//	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DM, 0));
+//}
+//void VK::CreateUniformTexelBuffer_Example()
+//{
+//	//!< これはサンプルコード
+//
+//	VkBuffer Buffer; //!< #VK_TODO
+//	const VkDeviceSize Size = 0; //!< #VK_TODO
+//	CreateBuffer(&Buffer, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, Size);
+//
+//	VkDeviceMemory DM; //!< #VK_TODO
+//	AllocateDeviceMemory(&DM, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+//	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DM, 0));
+//
+//	VkBufferView View; //!< #VK_TODO
+//	const VkBufferViewCreateInfo BVCI = {
+//		.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
+//		.pNext = nullptr,
+//		.flags = 0,
+//		.buffer = Buffer,
+//		.format = VK_FORMAT_R8G8B8A8_UINT,
+//		.offset = 0,
+//		.range = VK_WHOLE_SIZE
+//	};
+//	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BVCI, GetAllocationCallbacks(), &View)); 
+//
+//	//!< サポートされているかのチェック
+//	VkFormatProperties FP;
+//	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), BVCI.format, &FP);
+//	assert((FP.bufferFeatures & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT) && "");
+//}
+//void VK::CreateStorageTexelBuffer_Example()
+//{
+//	//!< これはサンプルコード
+//
+//	VkBuffer Buffer; //!< #VK_TODO
+//	const VkDeviceSize Size = 0; //!< #VK_TODO
+//	CreateBuffer(&Buffer, VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT, Size);
+//
+//	VkDeviceMemory DM; //!< #VK_TODO
+//	AllocateDeviceMemory(&DM, Buffer, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+//	VERIFY_SUCCEEDED(vkBindBufferMemory(Device, Buffer, DM, 0));
+//
+//	VkBufferView View; //!< #VK_TODO
+//	const VkBufferViewCreateInfo BVCI = {
+//		.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
+//		.pNext = nullptr,
+//		.flags = 0,
+//		.buffer = Buffer,
+//		.format = VK_FORMAT_R8G8B8A8_UINT,
+//		.offset = 0,
+//		.range = VK_WHOLE_SIZE
+//	};
+//	VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BVCI, GetAllocationCallbacks(), &View));
+//
+//	//!< サポートされているかのチェック
+//	VkFormatProperties FP;
+//	vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), BVCI.format, &FP);
+//	assert((FP.bufferFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT) && "");
+//	//!< #VK_TODO アトミック操作をする場合
+//	if (false/*bUseAtomic*/) {
+//		assert((FP.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT) && "");
+//	}
+//}
 
 void VK::CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const VkDescriptorSetLayoutCreateFlags Flags, const std::vector<VkDescriptorSetLayoutBinding>& DSLBs)
 {

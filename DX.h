@@ -362,6 +362,21 @@ public:
 		return { v.m128_f32[0], v.m128_f32[1], v.m128_f32[2], v.m128_f32[3] };
 	}
 
+#pragma region RAYTRACING
+	static [[nodiscard]] bool HasRaytracingSupport(ID3D12Device* Device) {
+		D3D12_FEATURE_DATA_D3D12_OPTIONS5 FDO5;
+		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, reinterpret_cast<void*>(&FDO5), sizeof(FDO5)));
+		return D3D12_RAYTRACING_TIER_NOT_SUPPORTED != FDO5.RaytracingTier;
+	}
+#pragma endregion
+#pragma region MESH_SHADER
+	static [[nodiscard]] bool HasMeshShaderSupport(ID3D12Device* Device) {
+		D3D12_FEATURE_DATA_D3D12_OPTIONS7 FDO7;
+		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, reinterpret_cast<void*>(&FDO7), sizeof(FDO7)));
+		return D3D12_MESH_SHADER_TIER_NOT_SUPPORTED != FDO7.MeshShaderTier;
+	}
+#pragma endregion
+
 protected:
 	static void ResourceBarrier(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Resource, const D3D12_RESOURCE_STATES Before, const D3D12_RESOURCE_STATES After) {
 		const std::array RBs = {
@@ -388,12 +403,14 @@ protected:
 		ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* Queue, ID3D12Fence* Fence, const void* Source);
 
 public:
+#pragma region COMMAND
 	static void PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES RS);
 	static void PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
 	static void PopulateCommandList_CopyTextureRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
-	
 	static void ExecuteAndWait(ID3D12CommandQueue* CQ, ID3D12CommandList* CL, ID3D12Fence* Fence);
+#pragma endregion
 
+#pragma region MARKER
 #if defined(_DEBUG) || defined(USE_PIX)
 	//!< #DX_TODO PIX ŠÖ˜A
 	//PIXReportCounter(PCWSTR, float);
@@ -401,6 +418,7 @@ public:
 	static void SetName(ID3D12DeviceChild * Resource, LPCWSTR Name) { Resource->SetName(Name); }
 	static void SetName(ID3D12DeviceChild* Resource, const std::wstring_view Name) { Resource->SetName(data(Name));}
 #endif
+#pragma endregion
 
 	virtual void CreateDevice(HWND hWnd);
 	virtual void LogAdapter(IDXGIAdapter* Adapter);
@@ -414,38 +432,18 @@ public:
 
 	virtual void CreateFence();
 
-	virtual void CreateCommandList();
-
 	virtual void CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat);
 	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height);
 	virtual void GetSwapChainResource();
-	virtual void ResetSwapChainResource() {
-		for (auto& i : SwapChainResources) {
-			COM_PTR_RESET(i);
-		}
-		SwapChainResources.clear();
-	}
 	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
-
 	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
+
+	virtual void CreateCommandList();
 
 	virtual void LoadScene() {}
 
 #pragma region RAYTRACING
-	static bool HasRaytracingSupport(ID3D12Device* Device) {
-		D3D12_FEATURE_DATA_D3D12_OPTIONS5 FDO5;
-		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, reinterpret_cast<void*>(&FDO5), sizeof(FDO5)));
-		return D3D12_RAYTRACING_TIER_NOT_SUPPORTED != FDO5.RaytracingTier;
-	}
 	static void BuildAccelerationStructure(ID3D12Device* Device, const UINT64 SBSize, const D3D12_GPU_VIRTUAL_ADDRESS GVA, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence);
-#pragma endregion
-
-#pragma region MESH_SHADER
-	static bool HasMeshShaderSupport(ID3D12Device* Device) {
-		D3D12_FEATURE_DATA_D3D12_OPTIONS7 FDO7;
-		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, reinterpret_cast<void*>(&FDO7), sizeof(FDO7)));
-		return D3D12_MESH_SHADER_TIER_NOT_SUPPORTED != FDO7.MeshShaderTier;
-	}
 #pragma endregion
 
 	virtual void CreateGeometry() {}
