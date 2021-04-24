@@ -396,61 +396,6 @@ uint32_t VK::GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& PDMP, co
 	return 0xffff;
 }
 
-//void VK::CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size) const
-//{
-//	//!< バッファは作成時に指定した使用法でしか使用できない、ここでは VK_SHARING_MODE_EXCLUSIVE 決め打ちにしている #VK_TODO (Using VK_SHARING_MODE_EXCLUSIVE here)
-//	//!< VK_SHARING_MODE_EXCLUSIVE	: 複数ファミリのキューが同時アクセスできない、他のファミリからアクセスしたい場合はオーナーシップの移譲が必要
-//	//!< VK_SHARING_MODE_CONCURRENT	: 複数ファミリのキューが同時アクセス可能、オーナーシップの移譲も必要無し、パフォーマンスは悪い
-//	const std::array<uint32_t, 0> QFI = {};
-//	const VkBufferCreateInfo BCI = {
-//		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-//		.pNext = nullptr,
-//		.flags = 0,
-//		.size = Size,
-//		.usage = Usage,
-//		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-//		.queueFamilyIndexCount = static_cast<uint32_t>(size(QFI)), .pQueueFamilyIndices = data(QFI)
-//	};
-//	VERIFY_SUCCEEDED(vkCreateBuffer(Device, &BCI, GetAllocationCallbacks(), Buffer));
-//}
-
-//void VK::CreateImage(VkImage* Img, const VkImageCreateFlags CreateFlags, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage) const
-//{
-//	//!< Usage に VK_IMAGE_USAGE_SAMPLED_BIT が指定されいる場合、フォーマットやフィルタが使用可能かチェック #VK_TODO ここではリニアフィルタ決め打ち
-//	ValidateFormatProperties_SampledImage(GetCurrentPhysicalDevice(), Format, Usage, VK_FILTER_LINEAR, VK_FILTER_LINEAR, VK_SAMPLER_MIPMAP_MODE_LINEAR);
-//
-//	const std::array<uint32_t, 0> QueueFamilyIndices = {};
-//	const VkImageCreateInfo ICI = {
-//		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-//		.pNext = nullptr,
-//		.flags = CreateFlags,
-//		.imageType = ImageType,
-//		.format = Format,
-//		.extent = Extent3D,
-//		.mipLevels = MipLevels,
-//		.arrayLayers = ArrayLayers,
-//		.samples = SampleCount,
-//		.tiling = VK_IMAGE_TILING_OPTIMAL, //!< リニアはパフォーマンスが悪いので、ここでは OPTIMAL に決め打ちしている
-//		.usage = Usage,
-//		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-//		.queueFamilyIndexCount = static_cast<uint32_t>(size(QueueFamilyIndices)), .pQueueFamilyIndices = data(QueueFamilyIndices),
-//		.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED //!< 作成時に指定できるのは UNDEFINED, PREINITIALIZED のみ、実際に使用する前にレイアウトを変更する必要がある
-//	};
-//
-//#ifdef _DEBUG
-//	if (ICI.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) {
-//		assert(ICI.samples == VK_SAMPLE_COUNT_1_BIT && "Must be VK_SAMPLE_COUNT_1_BIT");
-//		assert(ICI.extent.width == ICI.extent.height && "Must be square");
-//		assert(ICI.arrayLayers >= 6 && "Invalid ArrayLayers");
-//	}
-//	else {
-//		assert(ICI.arrayLayers >= 1 && "Invalid ArrayLayers");
-//	}
-//#endif
-//
-//	VERIFY_SUCCEEDED(vkCreateImage(Device, &ICI, GetAllocationCallbacks(), Img));
-//}
-
 void VK::CopyToHostVisibleDeviceMemory(const VkDeviceMemory DM, const VkDeviceSize Offset, const VkDeviceSize Size, const void* Source, [[maybe_unused]]const VkDeviceSize MappedRangeOffset, [[maybe_unused]]const VkDeviceSize MappedRangeSize)
 {
 	if (Size && nullptr != Source) [[likely]] {
@@ -915,44 +860,6 @@ void VK::CreateDebugReportCallback()
 	}
 }
 #endif
-
-void VK::MarkerInsert([[maybe_unused]] VkCommandBuffer CB, [[maybe_unused]] const glm::vec4& Color, [[maybe_unused]] const char* Name) 
-{
-#ifdef USE_DEBUG_MARKER
-	if (VK_NULL_HANDLE != vkCmdDebugMarkerInsert) {
-		VkDebugMarkerMarkerInfoEXT DMMI = {
-			.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
-			.pNext = nullptr,
-			.pMarkerName = Name,
-			.color = { Color.r, Color.g, Color.b, Color.a }
-		};
-		vkCmdDebugMarkerInsert(CB, &DMMI);
-	}
-#endif
-}
-
-void VK::MarkerBegin([[maybe_unused]] VkCommandBuffer CB, [[maybe_unused]] const glm::vec4& Color, [[maybe_unused]] const char* Name)
-{
-#ifdef USE_DEBUG_MARKER
-	if (VK_NULL_HANDLE != vkCmdDebugMarkerBegin) {
-		VkDebugMarkerMarkerInfoEXT DMMI = {
-			.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
-			.pNext = nullptr,
-			.pMarkerName = Name,
-			.color = { Color.r, Color.g, Color.b, Color.a }
-		};
-		vkCmdDebugMarkerBegin(CB, &DMMI);
-	}
-#endif
-}
-void VK::MarkerEnd([[maybe_unused]] VkCommandBuffer CB)
-{
-#ifdef USE_DEBUG_MARKER
-	if (VK_NULL_HANDLE != vkCmdDebugMarkerEnd) {
-		vkCmdDebugMarkerEnd(CB);
-	}
-#endif
-}
 
 void VK::EnumeratePhysicalDeviceProperties(const VkPhysicalDeviceProperties& PDP)
 {

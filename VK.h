@@ -357,39 +357,39 @@ public:
 		return { v.x, v.y, v.z, v.w };
 	}
 
-	static [[nodiscard]] bool IsSupportedColorFormat(VkPhysicalDevice PD, const VkFormat Format) {
-		VkFormatProperties FP;
-		vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
-		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) {
-			Error("VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT not supported\n");
-			return false;
-		}
-		return true;
-	}
-	static [[nodiscard]] bool IsSupportedDepthFormat(VkPhysicalDevice PD, const VkFormat Format) {
-		VkFormatProperties FP;
-		vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
-		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
-			Error("VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT not supported\n");
-			return false;
-		}
-		return true;
-	}
-	static [[nodiscard]] bool IsSupportedSampledImage(VkPhysicalDevice PD, const VkFormat Format, const VkFilter Mag = VK_FILTER_LINEAR, const VkFilter Min = VK_FILTER_LINEAR, const VkSamplerMipmapMode Mip = VK_SAMPLER_MIPMAP_MODE_LINEAR) {
-		VkFormatProperties FP;
-		vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
-		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
-			Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT not supported\n");
-			return false;
-		}
-		if (VK_FILTER_LINEAR == Mag || VK_FILTER_LINEAR == Min || VK_SAMPLER_MIPMAP_MODE_LINEAR == Mip) {
-			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-				Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported\n");
-				return false;
-			}
-		}
-		return true;
-	}
+	//static [[nodiscard]] bool IsSupportedColorFormat(VkPhysicalDevice PD, const VkFormat Format) {
+	//	VkFormatProperties FP;
+	//	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
+	//	if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) {
+	//		Error("VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT not supported\n");
+	//		return false;
+	//	}
+	//	return true;
+	//}
+	//static [[nodiscard]] bool IsSupportedDepthFormat(VkPhysicalDevice PD, const VkFormat Format) {
+	//	VkFormatProperties FP;
+	//	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
+	//	if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
+	//		Error("VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT not supported\n");
+	//		return false;
+	//	}
+	//	return true;
+	//}
+	//static [[nodiscard]] bool IsSupportedSampledImage(VkPhysicalDevice PD, const VkFormat Format, const VkFilter Mag = VK_FILTER_LINEAR, const VkFilter Min = VK_FILTER_LINEAR, const VkSamplerMipmapMode Mip = VK_SAMPLER_MIPMAP_MODE_LINEAR) {
+	//	VkFormatProperties FP;
+	//	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
+	//	if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
+	//		Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT not supported\n");
+	//		return false;
+	//	}
+	//	if (VK_FILTER_LINEAR == Mag || VK_FILTER_LINEAR == Min || VK_SAMPLER_MIPMAP_MODE_LINEAR == Mip) {
+	//		if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
+	//			Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported\n");
+	//			return false;
+	//		}
+	//	}
+	//	return true;
+	//}
 #pragma region RAYTRACING
 	static [[nodiscard]] bool HasRayTracingSupport(const VkPhysicalDevice PD) {
 		VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr };
@@ -416,10 +416,7 @@ protected:
 	void AllocateDeviceMemory(VkDeviceMemory* DM, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF) { VkMemoryRequirements MR; vkGetBufferMemoryRequirements(Device, Buffer, &MR); AllocateDeviceMemory(DM, MR, MPF); }
 	void AllocateDeviceMemory(VkDeviceMemory* DM, const VkImage Image, const VkMemoryPropertyFlags MPF) { VkMemoryRequirements MR; vkGetImageMemoryRequirements(Device, Image, &MR); AllocateDeviceMemory(DM, MR, MPF); }
 
-	//virtual void CreateBuffer(VkBuffer* Buffer, const VkBufferUsageFlags Usage, const size_t Size) const;
-	//virtual void CreateImage(VkImage* Image, const VkImageCreateFlags CreateFlags, const VkImageType ImageType, const VkFormat Format, const VkExtent3D& Extent3D, const uint32_t MipLevels, const uint32_t ArrayLayers, const VkSampleCountFlagBits SampleCount, const VkImageUsageFlags Usage) const;
-
-	[[deprecated("")]]
+	//[[deprecated("")]]
 	virtual void CopyToHostVisibleDeviceMemory(const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset, const VkDeviceSize Size, const void* Source, const VkDeviceSize MappedRangeOffset = 0, const VkDeviceSize MappedRangeSize = VK_WHOLE_SIZE);
 
 #pragma region COMMAND
@@ -436,11 +433,37 @@ protected:
 	//virtual void ValidateFormatProperties_StorageImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const bool Atomic) const;
 
 #pragma region MARKER
-	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
-	static void MarkerInsert(VkCommandBuffer CB, const glm::vec4& Color, const std::string_view Name) { MarkerInsert(CB, Color, data(Name)); }
-	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const char* Name);
-	static void MarkerBegin(VkCommandBuffer CB, const glm::vec4& Color, const std::string_view Name) { MarkerBegin(CB, Color, data(Name)); }
-	static void MarkerEnd(VkCommandBuffer CB);
+	static void MarkerInsert([[maybe_unused]] VkCommandBuffer CB, [[maybe_unused]] const glm::vec4& Color, [[maybe_unused]] std::string_view Name) {
+#ifdef USE_DEBUG_MARKER
+		if (VK_NULL_HANDLE != vkCmdDebugMarkerInsert) {
+			const VkDebugMarkerMarkerInfoEXT DMMI = {
+				.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
+				.pNext = nullptr,
+				.pMarkerName = data(Name),
+				.color = { Color.r, Color.g, Color.b, Color.a }
+			};
+			vkCmdDebugMarkerInsert(CB, &DMMI);
+		}
+#endif
+	}
+	static void MarkerBegin([[maybe_unused]] VkCommandBuffer CB, [[maybe_unused]] const glm::vec4& Color, [[maybe_unused]] std::string_view Name) {
+#ifdef USE_DEBUG_MARKER
+		if (VK_NULL_HANDLE != vkCmdDebugMarkerBegin) {
+			const VkDebugMarkerMarkerInfoEXT DMMI = {
+				.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
+				.pNext = nullptr,
+				.pMarkerName = data(Name),
+				.color = { Color.r, Color.g, Color.b, Color.a }
+			};
+			vkCmdDebugMarkerBegin(CB, &DMMI);
+		}
+#endif
+	}
+	static void MarkerEnd([[maybe_unused]] VkCommandBuffer CB) {
+#ifdef USE_DEBUG_MARKER
+		if (VK_NULL_HANDLE != vkCmdDebugMarkerEnd) { vkCmdDebugMarkerEnd(CB); }
+#endif
+	}
 	class ScopedMarker
 	{
 	public:
