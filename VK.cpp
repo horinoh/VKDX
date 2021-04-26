@@ -11,28 +11,26 @@
 #define VK_GLOBAL_PROC_ADDR(proc) PFN_vk ## proc VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKGlobalProcAddr.h"
 #undef VK_GLOBAL_PROC_ADDR
-
 	//!< インスタンスレベル関数 (Instance level functions)
 #define VK_INSTANCE_PROC_ADDR(proc) PFN_vk ## proc VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKInstanceProcAddr.h"
 #undef VK_INSTANCE_PROC_ADDR
-
 	//!< デバイスレベル関数 (Device level functions)
 #define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKDeviceProcAddr.h"
+#undef VK_DEVICE_PROC_ADDR
+#endif
+
+#define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKDeviceProcAddr_RayTracing.h"
 #include "VKDeviceProcAddr_MeshShader.h"
 #undef VK_DEVICE_PROC_ADDR
-#endif //!< VK_NO_PROTOYYPES
 
 #ifdef USE_DEBUG_REPORT
-	//!< インスタンスレベル関数(Debug) (Instance level functions(Debug))
 #define VK_INSTANCE_PROC_ADDR(proc) PFN_vk ## proc ## EXT VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKInstanceProcAddr_DebugReport.h"
 #undef VK_INSTANCE_PROC_ADDR
 #endif
-
-	//!< デバイスレベル関数(Debug) (Device level functions(Debug))
 #ifdef USE_DEBUG_MARKER
 #define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc ## EXT VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKDeviceProcAddr_DebugMarker.h"
@@ -729,11 +727,6 @@ void VK::LoadVulkanLibrary()
 #else
 	VulkanLibrary = dlopen("libvulkan.so.1", RTLD_NOW); assert(nullptr != VulkanLibrary && "dlopen failed");
 #endif
-#ifdef _WINDOWS
-	//vkGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(GetProcAddress(VulkanLibrary, "vkGetInstanceProcAddr")); assert(nullptr != vkGetInstanceProcAddr && "GetProcAddress failed");
-#else
-	//vkGetInstanceProcAddr = reinterpret_cast<PFN_vkGetInstanceProcAddr>(dlsym(VulkanLibrary, "vkGetInstanceProcAddr")); assert(nullptr != vkGetInstanceProcAddr && "dlsym failed");
-#endif
 	
 	//!< グローバルレベルの関数をロードする Load global level functions
 #define VK_GLOBAL_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(nullptr, "vk" #proc)); assert(nullptr != vk ## proc && #proc);
@@ -744,11 +737,13 @@ void VK::LoadVulkanLibrary()
 
 void VK::CreateInstance()
 {
+	//!< インスタンスレベルのレイヤー、エクステンションの列挙
+	EnumerateInstanceLayerProperties();
+	
 	//!< ここでは最新バージョンで動くようにしておく (Use latest version here)
 	uint32_t APIVersion;
 	VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
 	Logf("API Version = %d.%d.(Header = %d)(Patch = %d)\n", VK_VERSION_MAJOR(APIVersion), VK_VERSION_MINOR(APIVersion), VK_HEADER_VERSION, VK_VERSION_PATCH(APIVersion));
-
 	const auto ApplicationName = GetTitle();
 	const VkApplicationInfo AI = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -757,11 +752,7 @@ void VK::CreateInstance()
 		.pEngineName = "VKDX Engine Name", .engineVersion = APIVersion,
 		.apiVersion = APIVersion
 	};
-	
-	//!< インスタンスレベルのレイヤー、エクステンションの列挙
-	EnumerateInstanceLayerProperties();
-
-	const std::array Layers = {
+	constexpr std::array Layers = {
 		"VK_LAYER_KHRONOS_validation", //!< "VK_LAYER_LUNARG_standard_validation" は非推奨となった (is deprecated)
 		//"VK_LAYER_LUNARG_api_dump",
 #ifdef USE_RENDERDOC
@@ -769,7 +760,7 @@ void VK::CreateInstance()
 #endif
 		"VK_LAYER_LUNARG_monitor", //!< タイトルバーにFPSを表示
 	};
-	const std::array Extensions = {
+	constexpr std::array Extensions = {
 		VK_KHR_SURFACE_EXTENSION_NAME,
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
@@ -783,7 +774,7 @@ void VK::CreateInstance()
 		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
 #endif
 	};
-	const VkInstanceCreateInfo ICI = {
+	constexpr VkInstanceCreateInfo ICI = {
 	 	.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 		.pNext = nullptr,
 		.flags = 0,
@@ -798,16 +789,12 @@ void VK::CreateInstance()
 #define VK_INSTANCE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(Instance, "vk" #proc)); assert(nullptr != vk ## proc && #proc);
 #include "VKInstanceProcAddr.h"
 #undef VK_INSTANCE_PROC_ADDR
+#endif
 
 #ifdef USE_DEBUG_REPORT
 #define VK_INSTANCE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetInstanceProcAddr(Instance, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
 #include "VKInstanceProcAddr_DebugReport.h"
 #undef VK_INSTANCE_PROC_ADDR
-#endif
-
-#endif
-
-#ifdef USE_DEBUG_REPORT
 	CreateDebugReportCallback();
 #endif
 
@@ -825,7 +812,7 @@ void VK::CreateDebugReportCallback()
 		/*| VK_DEBUG_REPORT_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR_EXT*/
 
 	if (VK_NULL_HANDLE != vkCreateDebugReportCallback) [[likely]] {
-		const VkDebugReportCallbackCreateInfoEXT DebugReportCallbackCreateInfo = {
+		const VkDebugReportCallbackCreateInfoEXT DRCCI = {
 			.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
 			.pNext = nullptr,
 			.flags = Flags,
@@ -856,7 +843,7 @@ void VK::CreateDebugReportCallback()
 			},
 			.pUserData = nullptr
 		};
-		vkCreateDebugReportCallback(Instance, &DebugReportCallbackCreateInfo, nullptr, &DebugReportCallback);
+		vkCreateDebugReportCallback(Instance, &DRCCI, nullptr, &DebugReportCallback);
 	}
 }
 #endif
@@ -1091,32 +1078,10 @@ void VK::EnumeratePhysicalDeviceExtensionProperties(VkPhysicalDevice PD, const c
 	}
 }
 
-uint32_t VK::FindQueueFamilyPropertyIndex(const VkQueueFlags QF, const std::vector<VkQueueFamilyProperties>& QFPs)
-{
-	for (auto i = 0; i < size(QFPs); ++i) {
-		if (QF & QFPs[i].queueFlags) {
-			return i;
-		}
-	}
-	assert(false && "not found");
-	return 0xffff;
-}
-uint32_t VK::FindQueueFamilyPropertyIndex(const VkPhysicalDevice PD, const VkSurfaceKHR Sfc, const std::vector<VkQueueFamilyProperties>& QFPs)
-{
-	for (auto i = 0; i < size(QFPs); ++i) {
-		VkBool32 b = VK_FALSE;
-		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PD, i, Sfc, &b));
-		if (b) {
-			return i;
-		}
-	}
-	assert(false && "not found");
-	return 0xffff;
-}
-
 void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::vector<const char*>& AdditionalExtensions)
 {
 	//!< サーフェス作成
+#pragma region SURFACE
 	const VkWin32SurfaceCreateInfoKHR SCI = {
 		.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
 		.pNext = nullptr,
@@ -1125,8 +1090,11 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 		.hwnd = hWnd
 	};
 	VERIFY_SUCCEEDED(vkCreateWin32SurfaceKHR(Instance, &SCI, GetAllocationCallbacks(), &Surface));
+#pragma endregion
 
 	const auto PD = GetCurrentPhysicalDevice();
+
+#pragma region QUEUE_FAMILY
 	std::vector<VkQueueFamilyProperties> QFPs;
 	//!< キューファミリプロパティの列挙
 	uint32_t Count = 0;
@@ -1134,7 +1102,6 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 	assert(Count && "QueueFamilyProperty not found");
 	QFPs.resize(Count);
 	vkGetPhysicalDeviceQueueFamilyProperties(PD, &Count, data(QFPs));
-
 	Log("\tQueueFamilyProperties\n");
 #define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & QFPs[i].queueFlags) { Logf("%s | ", #entry); }
 	for (uint32_t i = 0; i < size(QFPs); ++i) {
@@ -1145,42 +1112,55 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 		QUEUE_FLAG_ENTRY(TRANSFER);
 		QUEUE_FLAG_ENTRY(SPARSE_BINDING);
 		QUEUE_FLAG_ENTRY(PROTECTED);
-		Log("\n");
-		//QFPs[i].timestampValidBits;
-		//QFPs[i].minImageTransferGranularity;
-
 		VkBool32 b = VK_FALSE;
 		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PD, i, Surface, &b));
-		if (b) { Logf("\t\t\t\tSurface(Present) Supported\n"); }
+		if (b) { Logf("PRESENT"); }
+		Log("\n");
 	}
 #undef QUEUE_FLAG_ENTRY
-
 	//!< 機能を持つキューファミリインデックスを見つける (Find queue family index for each functions)
-	GraphicsQueueFamilyIndex = FindQueueFamilyPropertyIndex(VK_QUEUE_GRAPHICS_BIT, QFPs);
-	PresentQueueFamilyIndex = FindQueueFamilyPropertyIndex(PD, Surface, QFPs);
-	ComputeQueueFamilyIndex = FindQueueFamilyPropertyIndex(VK_QUEUE_COMPUTE_BIT, QFPs);
-
+	GraphicsQueueFamilyIndex = UINT32_MAX;
+	PresentQueueFamilyIndex = UINT32_MAX;
+	ComputeQueueFamilyIndex = UINT32_MAX;
+	for (auto i = 0; i < size(QFPs); ++i) {
+		if (VK_QUEUE_GRAPHICS_BIT & QFPs[i].queueFlags) {
+			if (UINT32_MAX == GraphicsQueueFamilyIndex) {
+				GraphicsQueueFamilyIndex = i;
+			}
+		}
+		VkBool32 b = VK_FALSE;
+		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PD, i, Surface, &b));
+		if (b) {
+			if (UINT32_MAX == PresentQueueFamilyIndex) {
+				PresentQueueFamilyIndex = i;
+			}
+		}
+		if (VK_QUEUE_COMPUTE_BIT & QFPs[i].queueFlags) {
+			if (UINT32_MAX == ComputeQueueFamilyIndex) {
+				ComputeQueueFamilyIndex = i;
+			}
+		}
+	}
 	//!< キューファミリ内でのインデックス及びプライオリティ、ここではグラフィック、プレゼント、コンピュートの分をプライオリティ0.5fで追加している
 	std::vector<std::vector<float>> Priorites(size(QFPs));
 	const uint32_t GraphicsQueueIndexInFamily = static_cast<uint32_t>(size(Priorites[GraphicsQueueFamilyIndex])); Priorites[GraphicsQueueFamilyIndex].emplace_back(0.5f);
 	const uint32_t PresentQueueIndexInFamily = static_cast<uint32_t>(size(Priorites[PresentQueueFamilyIndex])); Priorites[PresentQueueFamilyIndex].emplace_back(0.5f);
 	const uint32_t ComputeQueueIndexInFamily = static_cast<uint32_t>(size(Priorites[ComputeQueueFamilyIndex])); Priorites[ComputeQueueFamilyIndex].emplace_back(0.5f);
 	Log("\n");
-	Logf("\t\tGraphics QueueFamilyIndex = %d, QueueIndex = %d\n", GraphicsQueueFamilyIndex, GraphicsQueueIndexInFamily);
-	Logf("\t\tPresent QueueFamilyIndex = %d, QueueIndex = %d\n", PresentQueueFamilyIndex, PresentQueueIndexInFamily);
-	Logf("\t\tCompute QueueFamilyIndex = %d, QueueIndex = %d\n", ComputeQueueFamilyIndex, ComputeQueueIndexInFamily);
-	Log("\t\tPriorites = \n");
-	for (const auto& i : Priorites) {
-		Log("\t\t\t");
-		for (const auto j : i) {
-			Logf("%f, ", j);
+	Logf("\t\tGRAPHICS : QueueFamilyIndex = %d, IndexInFamily = %d\n", GraphicsQueueFamilyIndex, GraphicsQueueIndexInFamily);
+	Logf("\t\tPRESENT  : QueueFamilyIndex = %d, IndexInFamily = %d\n", PresentQueueFamilyIndex, PresentQueueIndexInFamily);
+	Logf("\t\tCOMPUTE  : QueueFamilyIndex = %d, IndexInFamily = %d\n", ComputeQueueFamilyIndex, ComputeQueueIndexInFamily);
+	for (size_t i = 0; i < size(Priorites); ++i) {
+		if (!empty(Priorites[i])) {
+			Logf("\t\tPriorites[%d] = { ", i);
+			for (size_t j = 0; j < size(Priorites[i]); ++j) {
+				Logf("%f, ", Priorites[i][j]);
+			}
+			Log("}\n");
 		}
-		Log("\n");
 	}
-
 	//!< キュー作成情報 (Queue create information)
 	std::vector<VkDeviceQueueCreateInfo> DQCIs;
-	//!< インデックスを使うので範囲ベースforにはしない
 	for (size_t i = 0; i < size(Priorites);++i) {
 		if (!empty(Priorites[i])) {
 			DQCIs.emplace_back(
@@ -1194,6 +1174,7 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 			);
 		}
 	}	
+#pragma endregion
 
 	std::vector Extensions = {
 		//!< スワップチェインはプラットフォームに特有の機能なのでデバイス作製時に VK_KHR_SWAPCHAIN_EXTENSION_NAME エクステンションを有効にして作成しておく
@@ -1247,6 +1228,10 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 #ifdef VK_NO_PROTOYYPES
 #define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc)); assert(nullptr != vk ## proc && #proc && #proc);
 #include "VKDeviceProcAddr.h"
+#undef VK_DEVICE_PROC_ADDR
+#endif
+
+#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc)); assert(nullptr != vk ## proc && #proc && #proc);
 	if (end(AdditionalExtensions) != std::ranges::find(AdditionalExtensions, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)) {
 #include "VKDeviceProcAddr_RayTracing.h"
 	}
@@ -1260,7 +1245,6 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 #include "VKDeviceProcAddr_DebugMarker.h"
 #undef VK_DEVICE_PROC_ADDR
 #endif
-#endif //!< VK_NO_PROTOYYPES
 
 	//!< グラフィック、プレゼントキューは同じインデックスの場合もあるが別の変数に取得しておく (Graphics and presentation index may be same, but save to individual variables)
 	vkGetDeviceQueue(Device, GraphicsQueueFamilyIndex, GraphicsQueueIndexInFamily, &GraphicsQueue);
@@ -1271,40 +1255,6 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 
 	LOG_OK();
 }
-
-#if 0
-//!< 実装の要求するアラインを保証して確保する(イメージに128byte、バッファに64byteのアラインが必要な環境なら、128byteアラインで確保される)
-//!< 同じメモリオブジェクトから、(アラインの)異なるタイプ再確保が可能
-void VK::AllocateDeviceMemory()
-{
-	VkPhysicalDeviceMemoryProperties PDMP;
-	vkGetPhysicalDeviceMemoryProperties(GetCurrentPhysicalDevice(), &PDMP);
-	if (PDMP.memoryHeapCount) {
-		DeviceMemories.assign(PDMP.memoryHeapCount, VK_NULL_HANDLE);
-
-		for (uint32_t i = 0; i < PDMP.memoryTypeCount; ++i) {
-			//!< 取り敢えずプロパティフラグが0のものは対象としない(環境依存がありそう注意 #VK_TODO) (Targeting propertyFlags!=0 here)
-			if (PDMP.memoryTypes[i].propertyFlags) {
-				const auto HeapIndex = PDMP.memoryTypes[i].heapIndex;
-				//!< 確保するデバイスメモリサイズ (Device memory size to use) #VK_TODO
-				//!< 最大値で取るとVK_ERROR_OUT_OF_DEVICE_MEMORYになる、あまりに大きく取ると重くなる
-				const auto HeapSize = PDMP.memoryHeaps[HeapIndex].size / 2;
-				assert(HeapSize < PDMP.memoryHeaps[HeapIndex].size && "");
-				if (VK_NULL_HANDLE == DeviceMemories[HeapIndex]) {
-					const VkMemoryAllocateInfo MAI = {
-						.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-						.pNext = nullptr,
-						.allocationSize = HeapSize,
-						.memoryTypeIndex = i
-					};
-					Logf("\t\tAllocateDeviceMemory = %llu / %llu (HeapIndex = %d)\n", HeapSize, PDMP.memoryHeaps[HeapIndex].size, PDMP.memoryTypes[i].heapIndex);
-					VERIFY_SUCCEEDED(vkAllocateMemory(Device, &MAI, GetAllocationCallbacks(), &DeviceMemories[HeapIndex]));
-				}
-			}
-		}
-	}
-}
-#endif
 
 void VK::AllocateDeviceMemory(VkDeviceMemory* DM, const VkMemoryRequirements& MR, const VkMemoryPropertyFlags MPF)
 {

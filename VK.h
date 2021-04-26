@@ -526,8 +526,6 @@ protected:
 	virtual void EnumeratePhysicalDeviceExtensionProperties(VkPhysicalDevice PD, const char* LayerName);
 	//virtual void EnumerateQueueFamilyProperties(VkPhysicalDevice PD, VkSurfaceKHR Surface, std::vector<VkQueueFamilyProperties>& QFPs);
 	//virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const;
-	static [[nodiscard]] uint32_t FindQueueFamilyPropertyIndex(const VkQueueFlags QF, const std::vector<VkQueueFamilyProperties>& QFPs);
-	static [[nodiscard]] uint32_t FindQueueFamilyPropertyIndex(const VkPhysicalDevice PD, const VkSurfaceKHR Sfc, const std::vector<VkQueueFamilyProperties>& QFPs);
 	//virtual void CreateQueueFamilyPriorities(VkPhysicalDevice PD, VkSurfaceKHR Surface, const std::vector<VkQueueFamilyProperties>& QFPs, std::vector<std::vector<float>>& QueueFamilyPriorites);
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext = nullptr, const std::vector<const char*>& AdditionalExtensions = {});
 
@@ -684,7 +682,7 @@ protected:
 	virtual void Submit();
 	virtual void Present();
 
-#pragma region Allocation
+#pragma region ALLOCATION
 	static inline const VkAllocationCallbacks AllocationCallbacks = {
 		.pUserData = nullptr,
 		.pfnAllocation = []([[maybe_unused]] void* pUserData, size_t size, size_t alignment, [[maybe_unused]] VkSystemAllocationScope allocationScope) {
@@ -714,33 +712,31 @@ protected:
 	virtual [[nodiscard]] VkPhysicalDeviceMemoryProperties GetCurrentPhysicalDeviceMemoryProperties() const { return CurrentPhysicalDeviceMemoryProperties; }
 
 #ifdef VK_NO_PROTOYYPES
-
 protected:
 #ifdef _WINDOWS
 	HMODULE VulkanLibrary = nullptr;
 #else
 	void* VulkanLibrary = nullptr;
 #endif
-
 public:
 	//!< グローバルレベル関数 (Global level functions)
 #define VK_GLOBAL_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #include "VKGlobalProcAddr.h"
 #undef VK_GLOBAL_PROC_ADDR
-
 	//!< インスタンスレベル関数 (Instance level functions)
 #define VK_INSTANCE_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #include "VKInstanceProcAddr.h"
 #undef VK_INSTANCE_PROC_ADDR
-
 	//!< デバイスレベル関数 (Device level functions)
 #define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #include "VKDeviceProcAddr.h"
+#undef VK_DEVICE_PROC_ADDR
+#endif
+
+#define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #include "VKDeviceProcAddr_RayTracing.h"
 #include "VKDeviceProcAddr_MeshShader.h"
 #undef VK_DEVICE_PROC_ADDR
-
-#endif //!< VK_NO_PROTOYYPES
 
 public:
 #ifdef USE_DEBUG_REPORT
@@ -749,7 +745,6 @@ public:
 #include "VKInstanceProcAddr_DebugReport.h"
 #undef VK_INSTANCE_PROC_ADDR
 #endif
-
 #ifdef USE_DEBUG_MARKER
 	//!< デバイスレベル関数、デバッグ用 (Device level functions for debug)
 #define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
