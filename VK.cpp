@@ -6,36 +6,20 @@
 // "libvulkan.so.1"
 #endif
 
+#define VK_PROC_ADDR(proc) PFN_vk ## proc VK::vk ## proc = VK_NULL_HANDLE;
 #ifdef VK_NO_PROTOYYPES
-	//!< グローバルレベル関数 (Global level functions)
-#define VK_GLOBAL_PROC_ADDR(proc) PFN_vk ## proc VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKGlobalProcAddr.h"
-#undef VK_GLOBAL_PROC_ADDR
-	//!< インスタンスレベル関数 (Instance level functions)
-#define VK_INSTANCE_PROC_ADDR(proc) PFN_vk ## proc VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKInstanceProcAddr.h"
-#undef VK_INSTANCE_PROC_ADDR
-	//!< デバイスレベル関数 (Device level functions)
-#define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKDeviceProcAddr.h"
-#undef VK_DEVICE_PROC_ADDR
 #endif
-
-#define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKDeviceProcAddr_RayTracing.h"
 #include "VKDeviceProcAddr_MeshShader.h"
-#undef VK_DEVICE_PROC_ADDR
+#undef VK_PROC_ADDR
 
-#ifdef USE_DEBUG_REPORT
-#define VK_INSTANCE_PROC_ADDR(proc) PFN_vk ## proc ## EXT VK::vk ## proc = VK_NULL_HANDLE;
+#define VK_PROC_ADDR(proc) PFN_vk ## proc ## EXT VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKInstanceProcAddr_DebugReport.h"
-#undef VK_INSTANCE_PROC_ADDR
-#endif
-#ifdef USE_DEBUG_MARKER
-#define VK_DEVICE_PROC_ADDR(proc) PFN_vk ## proc ## EXT VK::vk ## proc = VK_NULL_HANDLE;
 #include "VKDeviceProcAddr_DebugMarker.h"
-#undef VK_DEVICE_PROC_ADDR
-#endif
+#undef VK_PROC_ADDR
 
 #ifdef _WINDOWS
 void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
@@ -44,9 +28,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	Super::OnCreate(hWnd, hInstance, Title);
 
-#ifdef VK_NO_PROTOYYPES
 	LoadVulkanLibrary();
-#endif
 
 	//!< インスタンス、デバイス
 	CreateInstance();
@@ -266,12 +248,10 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 		Surface = VK_NULL_HANDLE;
 	}
 
-#ifdef USE_DEBUG_REPORT
 	if (VK_NULL_HANDLE != DebugReportCallback) [[likely]] {
 		vkDestroyDebugReportCallback(Instance, DebugReportCallback, nullptr);
 		DebugReportCallback = VK_NULL_HANDLE;
 	}
-#endif
 
 	if (VK_NULL_HANDLE != Instance) [[likely]] {
 		vkDestroyInstance(Instance, GetAllocationCallbacks());
@@ -717,11 +697,11 @@ void VK::EnumerateInstanceExtensionProperties(const char* LayerName)
 	}
 }
 
-#ifdef VK_NO_PROTOYYPES
 //!< Vulkanローダーが(引数で渡したデバイスに基いて)適切な実装へ関数コールをリダイレクトする必要がある、このリダイレクトには時間がかかりパフォーマンスに影響する
 //!< 以下のようにすると、使用したいデバイスから直接関数をロードするため、リダイレクトをスキップできパフォーマンスを改善できる
 void VK::LoadVulkanLibrary()
 {
+#ifdef VK_NO_PROTOYYPES
 #ifdef _WINDOWS
 	VulkanLibrary = LoadLibrary(TEXT("vulkan-1.dll")); assert(nullptr != VulkanLibrary && "LoadLibrary failed");
 #else
@@ -729,11 +709,11 @@ void VK::LoadVulkanLibrary()
 #endif
 	
 	//!< グローバルレベルの関数をロードする Load global level functions
-#define VK_GLOBAL_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(nullptr, "vk" #proc)); assert(nullptr != vk ## proc && #proc);
+#define VK_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(nullptr, "vk" #proc)); assert(nullptr != vk ## proc && #proc);
 #include "VKGlobalProcAddr.h"
-#undef VK_GLOBAL_PROC_ADDR
-}
+#undef VK_PROC_ADDR
 #endif
+}
 
 void VK::CreateInstance()
 {
@@ -753,27 +733,27 @@ void VK::CreateInstance()
 		.apiVersion = APIVersion
 	};
 	constexpr std::array Layers = {
-		"VK_LAYER_KHRONOS_validation", //!< "VK_LAYER_LUNARG_standard_validation" は非推奨となった (is deprecated)
-		//"VK_LAYER_LUNARG_api_dump",
+		"VK_LAYER_KHRONOS_validation",
+		"VK_LAYER_LUNARG_monitor", //!< タイトルバーにFPSを表示 (Display FPS on titile bar)
 #ifdef USE_RENDERDOC
 		"VK_LAYER_RENDERDOC_Capture",
 #endif
-		"VK_LAYER_LUNARG_monitor", //!< タイトルバーにFPSを表示
 	};
+	//std::ranges::copy(AdditionalLayers, std::back_inserter(Layers));
+
 	constexpr std::array Extensions = {
 		VK_KHR_SURFACE_EXTENSION_NAME,
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 #endif
-#ifdef _DEBUG
-		VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME,
-		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-#endif
-#ifdef USE_DEBUG_REPORT
-		//!< デバッグレポート用
+#ifdef _DEBUG //!< VK_LAYER_KHRONOS_validation
 		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+		VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME,
 #endif
 	};
+	//std::ranges::copy(AdditionalExtensions, std::back_inserter(Extensions));
+
 	constexpr VkInstanceCreateInfo ICI = {
 	 	.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
 		.pNext = nullptr,
@@ -786,24 +766,23 @@ void VK::CreateInstance()
 
 	//!< インスタンスレベルの関数をロードする Load instance level functions
 #ifdef VK_NO_PROTOYYPES
-#define VK_INSTANCE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(Instance, "vk" #proc)); assert(nullptr != vk ## proc && #proc);
+#define VK_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(Instance, "vk" #proc)); assert(nullptr != vk ## proc && #proc);
 #include "VKInstanceProcAddr.h"
-#undef VK_INSTANCE_PROC_ADDR
+#undef VK_PROC_ADDR
 #endif
 
-#ifdef USE_DEBUG_REPORT
-#define VK_INSTANCE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetInstanceProcAddr(Instance, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
+#define VK_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetInstanceProcAddr(Instance, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
 #include "VKInstanceProcAddr_DebugReport.h"
-#undef VK_INSTANCE_PROC_ADDR
+#undef VK_PROC_ADDR
+
 	CreateDebugReportCallback();
-#endif
 
 	LOG_OK();
 }
 
-#ifdef USE_DEBUG_REPORT
 void VK::CreateDebugReportCallback()
 {
+#ifdef _DEBUG
 	const auto Flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT
 		| VK_DEBUG_REPORT_WARNING_BIT_EXT
 		| VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT
@@ -845,8 +824,8 @@ void VK::CreateDebugReportCallback()
 		};
 		vkCreateDebugReportCallback(Instance, &DRCCI, nullptr, &DebugReportCallback);
 	}
-}
 #endif
+}
 
 void VK::EnumeratePhysicalDeviceProperties(const VkPhysicalDeviceProperties& PDP)
 {
@@ -858,7 +837,7 @@ void VK::EnumeratePhysicalDeviceProperties(const VkPhysicalDeviceProperties& PDP
 	VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
 	if (PDP.apiVersion != APIVersion) {
 		Log("\t\t");
-		Warningf("[ PHYSICAL DEVICE(Driver) ] %d.%d(Patch = %d) != %d.%d(Patch = %d) [ INSTANCE(SDK) ]\n",
+		Warningf("[ PHYSICAL DEVICE ] %d.%d(Patch = %d) != %d.%d(Patch = %d) [ INSTANCE(SDK) ]\n",
 			VK_VERSION_MAJOR(PDP.apiVersion), VK_VERSION_MINOR(PDP.apiVersion), VK_VERSION_PATCH(PDP.apiVersion),
 			VK_VERSION_MAJOR(APIVersion), VK_VERSION_MINOR(APIVersion), VK_VERSION_PATCH(APIVersion));
 	}
@@ -1179,12 +1158,6 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 	std::vector Extensions = {
 		//!< スワップチェインはプラットフォームに特有の機能なのでデバイス作製時に VK_KHR_SWAPCHAIN_EXTENSION_NAME エクステンションを有効にして作成しておく
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-#ifdef USE_PUSH_DESCRIPTOR
-		VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
-#endif
-#ifdef USE_DEBUG_MARKER
-		VK_EXT_DEBUG_MARKER_EXTENSION_NAME,
-#endif
 #ifdef USE_HDR
 		VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME,
 #endif
@@ -1224,27 +1197,23 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 		VERIFY_SUCCEEDED(vkCreateDevice(PD, &DCI, GetAllocationCallbacks(), &Device));
 	}
 
-	//!< デバイスレベルの関数をロードする (Load device level functions)
+#define VK_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc)); assert(nullptr != vk ## proc && #proc && #proc);
 #ifdef VK_NO_PROTOYYPES
-#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc)); assert(nullptr != vk ## proc && #proc && #proc);
 #include "VKDeviceProcAddr.h"
-#undef VK_DEVICE_PROC_ADDR
 #endif
-
-#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetDeviceProcAddr(Device, "vk" #proc)); assert(nullptr != vk ## proc && #proc && #proc);
 	if (end(AdditionalExtensions) != std::ranges::find(AdditionalExtensions, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)) {
 #include "VKDeviceProcAddr_RayTracing.h"
 	}
 	if (end(AdditionalExtensions) != std::ranges::find(AdditionalExtensions, VK_NV_MESH_SHADER_EXTENSION_NAME)) {
 #include "VKDeviceProcAddr_MeshShader.h"
 	}
-#undef VK_DEVICE_PROC_ADDR
+#undef VK_PROC_ADDR
 
-#ifdef USE_DEBUG_MARKER
-#define VK_DEVICE_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetDeviceProcAddr(Device, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
+#define VK_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetDeviceProcAddr(Device, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
+	if (end(AdditionalExtensions) != std::ranges::find(AdditionalExtensions, VK_EXT_DEBUG_MARKER_EXTENSION_NAME)) {
 #include "VKDeviceProcAddr_DebugMarker.h"
-#undef VK_DEVICE_PROC_ADDR
-#endif
+	}
+#undef VK_PROC_ADDR
 
 	//!< グラフィック、プレゼントキューは同じインデックスの場合もあるが別の変数に取得しておく (Graphics and presentation index may be same, but save to individual variables)
 	vkGetDeviceQueue(Device, GraphicsQueueFamilyIndex, GraphicsQueueIndexInFamily, &GraphicsQueue);
@@ -1973,7 +1942,7 @@ void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const s
 		.templateType = VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
 		.descriptorSetLayout = DSL,
 		.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS, 
-		.pipelineLayout = VK_NULL_HANDLE, .set = 0 //!< VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_PUSH_DESCRIPTORS_KHR使用時はパイプラインレイアウトを指定 (使用例はUSE_PUSH_DESCRIPTOR参照)
+		.pipelineLayout = VK_NULL_HANDLE, .set = 0
 	};
 	VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DUT));
 }

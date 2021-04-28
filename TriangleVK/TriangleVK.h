@@ -14,6 +14,11 @@ public:
 	virtual ~TriangleVK() {}
 
 protected:
+#ifdef USE_RENDERDOC
+	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, [[maybe_unused]] const std::vector<const char*>& AdditionalExtensions) override { 
+		Super::CreateDevice(hWnd, hInstance, pNext, { VK_EXT_DEBUG_MARKER_EXTENSION_NAME }); 
+	}
+#endif
 	virtual void CreateGeometry() override;
 	virtual void CreatePipelineLayout() override {
 		//!< 【プッシュコンスタント】 : デスクリプタセットよりも高速

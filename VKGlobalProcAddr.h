@@ -1,4 +1,4 @@
-	VK_GLOBAL_PROC_ADDR(CreateInstance)
-	VK_GLOBAL_PROC_ADDR(EnumerateInstanceExtensionProperties)
-	VK_GLOBAL_PROC_ADDR(EnumerateInstanceLayerProperties)
-	VK_GLOBAL_PROC_ADDR(EnumerateInstanceVersion)
+VK_PROC_ADDR(CreateInstance)
+VK_PROC_ADDR(EnumerateInstanceExtensionProperties)
+VK_PROC_ADDR(EnumerateInstanceLayerProperties)
+VK_PROC_ADDR(EnumerateInstanceVersion)

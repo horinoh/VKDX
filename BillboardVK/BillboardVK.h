@@ -14,6 +14,11 @@ public:
 	virtual ~BillboardVK() {}
 
 protected:
+#ifdef USE_PUSH_DESCRIPTOR
+	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, [[maybe_unused]] const std::vector<const char*>& AdditionalExtensions) override { 
+		Super::CreateDevice(hWnd, hInstance, pNext, { VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME }); 
+}
+#endif
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
 		Super::OnTimer(hWnd, hInstance);
 

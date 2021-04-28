@@ -259,24 +259,18 @@ void TriangleVK::CreateGeometry()
 		};
 #endif
 		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Vertices), data(Vertices));
-#ifdef _DEBUG
 		MarkerSetObjectName(Device, VertexBuffers.back().Buffer, "MyVertexBuffer");
-#endif
 	}
 	//!< インデックスバッファ (IndexBuffer)
 	{
 		constexpr std::array<uint32_t, 3> Indices = { 0, 1, 2 };
 		IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Indices), data(Indices));
-#ifdef _DEBUG
 		MarkerSetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
-#endif
 		//!< インダイレクトバッファ (IndirectBuffer)
 		{
 			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
-#ifdef _DEBUG
 			MarkerSetObjectName(Device, IndirectBuffers.back().Buffer, "MyIndirectBuffer");
-#endif
 		}
 	}
 	LOG_OK();
@@ -327,9 +321,8 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 		.pInheritanceInfo = nullptr
 	};
 	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-#ifdef _DEBUG
 		ScopedMarker(CB, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), "Command Begin");
-#endif
+
 		constexpr std::array CVs = { VkClearValue({ .color = Colors::SkyBlue }) };
 		const VkRenderPassBeginInfo RPBI = {
 			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
@@ -343,10 +336,6 @@ void TriangleVK::PopulateCommandBuffer(const size_t i)
 			const std::array SCBs = { SCB };
 			vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
 		} vkCmdEndRenderPass(CB);
-
-#ifdef _DEBUG
-		//MarkerEnd(CB);
-#endif
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
 #pragma endregion //!< Code

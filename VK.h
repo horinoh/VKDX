@@ -2,8 +2,7 @@
 
 #include <fstream>
 
-//!< VK_NO_PROTOYYPES が定義されてる場合は DLL を使用する。(If VK_NO_PROTOYYPES is defined, using DLL)
-//!< VK_NO_PROTOYYPES は VK.props 内に定義してある (VK_NO_PROTOYYPES is defined is in VK.props here)
+//!< VK_NO_PROTOYYPES(VK.props) が定義されてる場合は DLL を使用する。(If VK_NO_PROTOYYPES is defined, using DLL)
 
 #ifdef _WINDOWS
 #define VK_USE_PLATFORM_WIN32_KHR
@@ -67,12 +66,8 @@
 //#define USE_SUBPASS
 
 #ifdef _DEBUG
-#define USE_DEBUG_REPORT
 #define USE_RENDERDOC
-#ifdef USE_RENDERDOC
-#define USE_DEBUG_MARKER
 #endif
-#endif //!< _DEBUG
 
 #include "Cmn.h"
 #ifdef _WINDOWS
@@ -434,7 +429,7 @@ protected:
 
 #pragma region MARKER
 	static void MarkerInsert([[maybe_unused]] VkCommandBuffer CB, [[maybe_unused]] const glm::vec4& Color, [[maybe_unused]] std::string_view Name) {
-#ifdef USE_DEBUG_MARKER
+#ifdef USE_RENDERDOC
 		if (VK_NULL_HANDLE != vkCmdDebugMarkerInsert) {
 			const VkDebugMarkerMarkerInfoEXT DMMI = {
 				.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
@@ -447,7 +442,7 @@ protected:
 #endif
 	}
 	static void MarkerBegin([[maybe_unused]] VkCommandBuffer CB, [[maybe_unused]] const glm::vec4& Color, [[maybe_unused]] std::string_view Name) {
-#ifdef USE_DEBUG_MARKER
+#ifdef USE_RENDERDOC
 		if (VK_NULL_HANDLE != vkCmdDebugMarkerBegin) {
 			const VkDebugMarkerMarkerInfoEXT DMMI = {
 				.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
@@ -460,7 +455,7 @@ protected:
 #endif
 	}
 	static void MarkerEnd([[maybe_unused]] VkCommandBuffer CB) {
-#ifdef USE_DEBUG_MARKER
+#ifdef USE_RENDERDOC
 		if (VK_NULL_HANDLE != vkCmdDebugMarkerEnd) { vkCmdDebugMarkerEnd(CB); }
 #endif
 	}
@@ -473,7 +468,7 @@ protected:
 		VkCommandBuffer CommandBuffer;
 	};
 	static void MarkerSetName([[maybe_unused]]VkDevice Device, [[maybe_unused]] const VkDebugReportObjectTypeEXT Type, [[maybe_unused]] const uint64_t Object, [[maybe_unused]] std::string_view Name) {
-#ifdef USE_DEBUG_MARKER
+#ifdef USE_RENDERDOC
 		if (VK_NULL_HANDLE != vkDebugMarkerSetObjectName) {
 			const VkDebugMarkerObjectNameInfoEXT DMONI = {
 				.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
@@ -485,7 +480,7 @@ protected:
 #endif
 	}
 	static void MarkerSetTag([[maybe_unused]] VkDevice Device, [[maybe_unused]] const VkDebugReportObjectTypeEXT Type, [[maybe_unused]] const uint64_t Object, [[maybe_unused]] const uint64_t TagName, [[maybe_unused]] const size_t TagSize, [[maybe_unused]] const void* TagData) {
-#ifdef USE_DEBUG_MARKER
+#ifdef USE_RENDERDOC
 		if (VK_NULL_HANDLE != vkDebugMarkerSetObjectTag) {
 			const VkDebugMarkerObjectTagInfoEXT DMOTI = {
 				.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_TAG_INFO_EXT,
@@ -509,14 +504,10 @@ protected:
 	virtual void EnumerateInstanceLayerProperties();
 	virtual void EnumerateInstanceExtensionProperties(const char* LayerName);
 
-#ifdef VK_NO_PROTOYYPES
 	void LoadVulkanLibrary();
-#endif
 
 	virtual void CreateInstance();
-#ifdef USE_DEBUG_REPORT
 	virtual void CreateDebugReportCallback();
-#endif
 
 	virtual void EnumeratePhysicalDeviceProperties(const VkPhysicalDeviceProperties& PDP);
 	virtual void EnumeratePhysicalDeviceFeatures(const VkPhysicalDeviceFeatures& PDF);
@@ -711,6 +702,7 @@ protected:
 	virtual [[nodiscard]] VkPhysicalDevice GetCurrentPhysicalDevice() const { return CurrentPhysicalDevice; };
 	virtual [[nodiscard]] VkPhysicalDeviceMemoryProperties GetCurrentPhysicalDeviceMemoryProperties() const { return CurrentPhysicalDeviceMemoryProperties; }
 
+#define VK_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #ifdef VK_NO_PROTOYYPES
 protected:
 #ifdef _WINDOWS
@@ -719,44 +711,22 @@ protected:
 	void* VulkanLibrary = nullptr;
 #endif
 public:
-	//!< グローバルレベル関数 (Global level functions)
-#define VK_GLOBAL_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #include "VKGlobalProcAddr.h"
-#undef VK_GLOBAL_PROC_ADDR
-	//!< インスタンスレベル関数 (Instance level functions)
-#define VK_INSTANCE_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #include "VKInstanceProcAddr.h"
-#undef VK_INSTANCE_PROC_ADDR
-	//!< デバイスレベル関数 (Device level functions)
-#define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #include "VKDeviceProcAddr.h"
-#undef VK_DEVICE_PROC_ADDR
 #endif
-
-#define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #include "VKDeviceProcAddr_RayTracing.h"
 #include "VKDeviceProcAddr_MeshShader.h"
-#undef VK_DEVICE_PROC_ADDR
+#undef VK_PROC_ADDR
 
-public:
-#ifdef USE_DEBUG_REPORT
-	//!< インスタンスレベル関数、デバッグ用 (Instance level functions for debug)
-#define VK_INSTANCE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
+#define VK_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
 #include "VKInstanceProcAddr_DebugReport.h"
-#undef VK_INSTANCE_PROC_ADDR
-#endif
-#ifdef USE_DEBUG_MARKER
-	//!< デバイスレベル関数、デバッグ用 (Device level functions for debug)
-#define VK_DEVICE_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
 #include "VKDeviceProcAddr_DebugMarker.h"
-#undef VK_DEVICE_PROC_ADDR
-#endif
+#undef VK_PROC_ADDR
 
 protected:
 	VkInstance Instance = VK_NULL_HANDLE;
-#ifdef USE_DEBUG_REPORT
 	VkDebugReportCallbackEXT DebugReportCallback = VK_NULL_HANDLE;
-#endif
 	VkSurfaceKHR Surface = VK_NULL_HANDLE;
 	
 	std::vector<VkPhysicalDevice> PhysicalDevices;

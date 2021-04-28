@@ -411,13 +411,14 @@ public:
 #pragma endregion
 
 #pragma region MARKER
-#if defined(_DEBUG) || defined(USE_PIX)
 	//!< #DX_TODO PIX ŠÖ˜A
 	//PIXReportCounter(PCWSTR, float);
 	//PIXNotifyWakeFromFenceSignal(HANDLE);
-	static void SetName(ID3D12DeviceChild * Resource, LPCWSTR Name) { Resource->SetName(Name); }
-	static void SetName(ID3D12DeviceChild* Resource, const std::wstring_view Name) { Resource->SetName(data(Name));}
+	static void SetName([[maybe_unused]] ID3D12DeviceChild* Resource, [[maybe_unused]] const std::wstring_view Name) {
+#if defined(_DEBUG) || defined(USE_PIX)
+		Resource->SetName(data(Name));
 #endif
+	}
 #pragma endregion
 
 	virtual void CreateDevice(HWND hWnd);

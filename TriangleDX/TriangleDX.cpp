@@ -254,24 +254,18 @@ void TriangleDX::CreateGeometry()
 		};
 #endif
 		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), sizeof(Vertices[0])).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(Vertices), data(Vertices));
-#ifdef _DEBUG
 		SetName(COM_PTR_GET(VertexBuffers.back().Resource), TEXT("MyVertexBuffer"));
-#endif
 	}
 	//!< インデックスバッファ (IndexBuffer)
 	{
 		constexpr std::array<UINT32, 3> Indices = { 0, 1, 2 };
 		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), DXGI_FORMAT_R32_UINT).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(Indices), data(Indices));
-#ifdef _DEBUG
 		SetName(COM_PTR_GET(IndexBuffers.back().Resource), TEXT("MyIndexBuffer"));
-#endif
 		//!< インダイレクトバッファ (IndirectBuffer)
 		{
 			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
 			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
-#ifdef _DEBUG
 			SetName(COM_PTR_GET(IndirectBuffers.back().Resource), TEXT("MyIndirectBuffer"));
-#endif
 		}
 	}
 	LOG_OK();
@@ -323,10 +317,6 @@ void TriangleDX::PopulateCommandList(const size_t i)
 			GCL->ExecuteBundle(BGCL);
 		}
 		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-
-#if defined(_DEBUG) || defined(USE_PIX)
-		//PIXEndEvent(CL);
-#endif
 	}
 	VERIFY_SUCCEEDED(GCL->Close());
 }
