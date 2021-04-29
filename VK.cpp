@@ -32,7 +32,7 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< インスタンス、デバイス
 	CreateInstance();
-	EnumeratePhysicalDevice(Instance);
+	SelectPhysicalDevice(Instance);
 	CreateDevice(hWnd, hInstance);
 	
 	CreateFence(Device);
@@ -589,112 +589,31 @@ void VK::EnumerateMemoryRequirements(const VkMemoryRequirements& MR, const VkPhy
 	}
 }
 
-//void VK::ValidateFormatProperties(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage) const
-//{
-//	VkFormatProperties FP;
-//	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
-//
-//	if (Usage & VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT) {
-//#if 0
-//		//!< カラーの場合 (In case color)
-//		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT)) {
-//			Error("VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BIT not supported\n");
-//			DEBUG_BREAK();
-//		}
-//		//!< デプスステンシルの場合 (In case depth stencil)
-//		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT)) {
-//			Error("VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT not supported\n");
-//			DEBUG_BREAK();
-//		}
-//#endif
-//	}
-//
-//	if (Usage & VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT) {
-//		if (!(FP.bufferFeatures &  VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT)) {
-//			Error("VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT not supported\n");
-//			DEBUG_BREAK();
-//		}
-//	}
-//
-//	if (Usage & VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT) {
-//		if (!(FP.bufferFeatures &  VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT)) {
-//			Error("VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_BIT not supported\n");
-//			DEBUG_BREAK();
-//		}
-//		//!< #VK_TODO アトミック使用時のみチェックする
-//		const auto bUseAtomic = false;
-//		if (bUseAtomic) {
-//			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT)) {
-//				Error("VK_FORMAT_FEATURE_STORAGE_TEXEL_BUFFER_ATOMIC_BIT not supported\n");
-//				DEBUG_BREAK();
-//			}
-//		}
-//	}
-//}
-//void VK::ValidateFormatProperties_SampledImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const VkFilter Mag, const VkFilter Min, const VkSamplerMipmapMode Mip) const
-//{
-//	VkFormatProperties FP;
-//	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
-//
-//	if (Usage & VK_IMAGE_USAGE_SAMPLED_BIT) {
-//		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT)) {
-//			Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT not supported\n");
-//			DEBUG_BREAK();
-//		}
-//		if (VK_FILTER_LINEAR == Mag || VK_FILTER_LINEAR == Min || VK_SAMPLER_MIPMAP_MODE_LINEAR == Mip) {
-//			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT)) {
-//				Error("VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT not supported\n");
-//				DEBUG_BREAK();
-//			}
-//		}
-//	}
-//}
-//void VK::ValidateFormatProperties_StorageImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const bool UseAtomic) const
-//{
-//	VkFormatProperties FP;
-//	vkGetPhysicalDeviceFormatProperties(PD, Format, &FP);
-//
-//	if (Usage & VK_IMAGE_USAGE_STORAGE_BIT) {
-//		if (!(FP.optimalTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT)) {
-//			Error("VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT not supported\n");
-//			DEBUG_BREAK();
-//		}
-//		if (UseAtomic) {
-//			//!< アトミック操作が保証されているのは VK_FORMAT_R32_UINT, VK_FORMAT_R32_SINT のみ、それ以外でやりたい場合はサポートされているか調べる必要がある
-//			if (!(FP.linearTilingFeatures & VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT)) {
-//				Error("VK_FORMAT_FEATURE_STORAGE_IMAGE_ATOMIC_BIT not supported\n");
-//				DEBUG_BREAK();
-//			}
-//		}
-//	}
-//}
-
 void VK::EnumerateInstanceLayerProperties()
 {
+#ifdef DEBUG_STDOUT
 	Logf("Instance Layer Properties\n");
 
-	uint32_t Count = 0;
-	VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&Count, nullptr));
-	if (Count) [[likely]] {
-		std::vector<VkLayerProperties> LPs(Count);
-		VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&Count, data(LPs)));
+	uint32_t LC = 0;
+	VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&LC, nullptr));
+	if (LC) [[likely]] {
+		std::vector<VkLayerProperties> LPs(LC);
+		VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&LC, data(LPs)));
 		for (const auto& i : LPs) {
-			Logf("\t\"%s\" (%s)\n", i.layerName, i.description);
-			EnumerateInstanceExtensionProperties(i.layerName);
+			std::cout << i;
+
+			uint32_t EC = 0;
+			VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(i.layerName, &EC, nullptr));
+			if (EC) [[likely]] {
+				std::vector<VkExtensionProperties> EPs(EC);
+				VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(i.layerName, &EC, data(EPs)));
+				for (const auto& j : EPs) {
+					std::cout << j;
+				}
+			}
 		}
 	}
-}
-void VK::EnumerateInstanceExtensionProperties(const char* LayerName)
-{
-	uint32_t Count = 0;
-	VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(LayerName, &Count, nullptr));
-	if (Count) [[likely]] {
-		std::vector<VkExtensionProperties> ExtensionProp(Count);
-		VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(LayerName, &Count, data(ExtensionProp)));
-		for (const auto& i : ExtensionProp) {
-			Logf("\t\t\"%s\"\n", i.extensionName);
-		}
-	}
+#endif
 }
 
 //!< Vulkanローダーが(引数で渡したデバイスに基いて)適切な実装へ関数コールをリダイレクトする必要がある、このリダイレクトには時間がかかりパフォーマンスに影響する
@@ -719,7 +638,7 @@ void VK::CreateInstance()
 {
 	//!< インスタンスレベルのレイヤー、エクステンションの列挙
 	EnumerateInstanceLayerProperties();
-	
+
 	//!< ここでは最新バージョンで動くようにしておく (Use latest version here)
 	uint32_t APIVersion;
 	VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
@@ -746,7 +665,7 @@ void VK::CreateInstance()
 #ifdef VK_USE_PLATFORM_WIN32_KHR
 		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
 #endif
-#ifdef _DEBUG //!< VK_LAYER_KHRONOS_validation
+#ifdef _DEBUG
 		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
 		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
 		VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME,
@@ -764,7 +683,6 @@ void VK::CreateInstance()
 	};
 	VERIFY_SUCCEEDED(vkCreateInstance(&ICI, GetAllocationCallbacks(), &Instance));
 
-	//!< インスタンスレベルの関数をロードする Load instance level functions
 #ifdef VK_NO_PROTOYYPES
 #define VK_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(Instance, "vk" #proc)); assert(nullptr != vk ## proc && #proc);
 #include "VKInstanceProcAddr.h"
@@ -827,86 +745,7 @@ void VK::CreateDebugReportCallback()
 #endif
 }
 
-void VK::EnumeratePhysicalDeviceProperties(const VkPhysicalDeviceProperties& PDP)
-{
-	//!< バージョンチェック Check version
-#ifdef _DEBUG
-	Log("\t\tPhysical Device API Version = ");
-	Logf("%d.%d(Patch = %d)\n", VK_VERSION_MAJOR(PDP.apiVersion), VK_VERSION_MINOR(PDP.apiVersion), VK_VERSION_PATCH(PDP.apiVersion));
-	uint32_t APIVersion;
-	VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
-	if (PDP.apiVersion != APIVersion) {
-		Log("\t\t");
-		Warningf("[ PHYSICAL DEVICE ] %d.%d(Patch = %d) != %d.%d(Patch = %d) [ INSTANCE(SDK) ]\n",
-			VK_VERSION_MAJOR(PDP.apiVersion), VK_VERSION_MINOR(PDP.apiVersion), VK_VERSION_PATCH(PDP.apiVersion),
-			VK_VERSION_MAJOR(APIVersion), VK_VERSION_MINOR(APIVersion), VK_VERSION_PATCH(APIVersion));
-	}
-#endif
-
-#define PHYSICAL_DEVICE_TYPE_ENTRY(entry) if(VK_PHYSICAL_DEVICE_TYPE_##entry == PDP.deviceType) { Log(#entry); }
-	Logf("\t\t[ %s ](", PDP.deviceName);
-	PHYSICAL_DEVICE_TYPE_ENTRY(OTHER);
-	PHYSICAL_DEVICE_TYPE_ENTRY(INTEGRATED_GPU);
-	PHYSICAL_DEVICE_TYPE_ENTRY(DISCRETE_GPU);
-	PHYSICAL_DEVICE_TYPE_ENTRY(VIRTUAL_GPU);
-	PHYSICAL_DEVICE_TYPE_ENTRY(CPU);
-	Log(")\n");
-#undef PHYSICAL_DEVICE_TYPE_ENTRY
-
-#define PROPERTY_LIMITS_ENTRY(entry) Logf("\t\t\t\t%s = %d\n", #entry, PDP.limits.##entry);
-	Log("\t\t\tPhysicalDeviceProperties.PhysicalDeviceLimits\n");
-	PROPERTY_LIMITS_ENTRY(maxUniformBufferRange);
-	//PROPERTY_LIMITS_ENTRY(maxStorageBufferRange);
-	PROPERTY_LIMITS_ENTRY(maxPushConstantsSize);
-	PROPERTY_LIMITS_ENTRY(maxFragmentOutputAttachments);
-	PROPERTY_LIMITS_ENTRY(maxColorAttachments);
-	PROPERTY_LIMITS_ENTRY(maxViewports);
-#undef PROPERTY_LIMITS_ENTRY
-}
-void VK::EnumeratePhysicalDeviceFeatures(const VkPhysicalDeviceFeatures& PDF)
-{
-	assert(PDF.tessellationShader && "tessellationShader is not supported");
-
-	Log("\t\t\tPhysicalDeviceFeatures\n");
-#define VK_DEVICEFEATURE_ENTRY(entry) if (PDF.##entry) { Log("\t\t\t\t" #entry "\n"); }
-#include "VKDeviceFeature.h"
-#undef VK_DEVICEFEATURE_ENTRY
-}
-void VK::EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryProperties& PDMP)
-{
-	Log("\t\t\tMemoryType\n");
-	for (uint32_t i = 0; i < PDMP.memoryTypeCount; ++i) {
-		Log("\t\t\t\t");
-		Logf("[%d] HeapIndex = %d", i, PDMP.memoryTypes[i].heapIndex);
-
-		Logf(", PropertyFlags(%d) = ", PDMP.memoryTypes[i].propertyFlags);
-		if (PDMP.memoryTypes[i].propertyFlags) {
-#define MEMORY_PROPERTY_ENTRY(entry) if(VK_MEMORY_PROPERTY_##entry##_BIT & PDMP.memoryTypes[i].propertyFlags) { Log(#entry " | "); }
-			MEMORY_PROPERTY_ENTRY(DEVICE_LOCAL);
-			MEMORY_PROPERTY_ENTRY(HOST_VISIBLE);
-			MEMORY_PROPERTY_ENTRY(HOST_COHERENT);
-			MEMORY_PROPERTY_ENTRY(HOST_CACHED);
-			MEMORY_PROPERTY_ENTRY(LAZILY_ALLOCATED);
-			MEMORY_PROPERTY_ENTRY(PROTECTED);
-#undef MEMORY_PROPERTY_ENTRY
-		}
-		Log("\n");
-	}
-
-	Log("\t\t\tMemoryHeap\n");
-	for (uint32_t i = 0; i < PDMP.memoryHeapCount; ++i) {
-		Log("\t\t\t\t");
-		Logf("[%d] Size = %llu", i, PDMP.memoryHeaps[i].size);
-
-		if (PDMP.memoryHeaps[i].flags) {
-			Log(", Flags = ");
-			if (VK_MEMORY_HEAP_DEVICE_LOCAL_BIT & PDMP.memoryHeaps[i].flags) { Log("DEVICE_LOCAL | "); }
-			if (VK_MEMORY_HEAP_MULTI_INSTANCE_BIT_KHR & PDMP.memoryHeaps[i].flags) { Log("MULTI_INSTANCE | "); }
-		}
-		Log("\n");
-	}
-}
-void VK::EnumeratePhysicalDevice(VkInstance Inst)
+void VK::SelectPhysicalDevice(VkInstance Inst)
 {
 	//!< 物理デバイス(GPU)の列挙
 	uint32_t Count = 0;
@@ -915,6 +754,7 @@ void VK::EnumeratePhysicalDevice(VkInstance Inst)
 	PhysicalDevices.resize(Count);
 	VERIFY_SUCCEEDED(vkEnumeratePhysicalDevices(Inst, &Count, data(PhysicalDevices)));
 
+#ifdef DEBUG_STDOUT
 	Log("\tPhysicalDevices\n");
 	for (const auto& i : PhysicalDevices) {
 		//!< プロパティ2 (Property2)
@@ -926,43 +766,19 @@ void VK::EnumeratePhysicalDevice(VkInstance Inst)
 #pragma region RAYTRACING
 			VkPhysicalDeviceRayTracingPipelinePropertiesKHR PDRTPP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, .pNext = &PDMSP };
 #pragma endregion
-
 			VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
 			vkGetPhysicalDeviceProperties2(i, &PDP2);
-			EnumeratePhysicalDeviceProperties(PDP2.properties);
-
+			std::cout << PDP2.properties;
 #pragma region RAYTRACING
-			Log("\t\t\tVkPhysicalDeviceRayTracingPipelinePropertiesKHR\n");
-			Logf("\t\t\t\tshaderGroupHandleSize = %d\n", PDRTPP.shaderGroupHandleSize);
-			Logf("\t\t\t\tmaxRayRecursionDepth = %d\n", PDRTPP.maxRayRecursionDepth);
-			Logf("\t\t\t\tmaxShaderGroupStride = %d\n", PDRTPP.maxShaderGroupStride);
-			Logf("\t\t\t\tshaderGroupBaseAlignment = %d\n", PDRTPP.shaderGroupBaseAlignment);
-			Logf("\t\t\t\tshaderGroupHandleCaptureReplaySize = %d\n", PDRTPP.shaderGroupHandleCaptureReplaySize);
-			Logf("\t\t\t\tmaxRayDispatchInvocationCount = %d\n", PDRTPP.maxRayDispatchInvocationCount);
-			Logf("\t\t\t\tshaderGroupHandleAlignment = %d\n", PDRTPP.shaderGroupHandleAlignment);
-			Logf("\t\t\t\tmaxRayHitAttributeSize = %d\n", PDRTPP.maxRayHitAttributeSize);
+			std::cout << PDRTPP;
 #pragma endregion
 #pragma region MESH_SHADER
-			Log("\t\t\tVkPhysicalDeviceMeshShaderPropertiesNV\n");
-			Logf("\t\t\t\tmaxDrawMeshTasksCount = %d\n", PDMSP.maxDrawMeshTasksCount); 
-			Logf("\t\t\t\tmaxTaskWorkGroupInvocations = %d\n", PDMSP.maxTaskWorkGroupInvocations);
-			Logf("\t\t\t\tmaxTaskWorkGroupSize[] = %d, %d, %d\n", PDMSP.maxTaskWorkGroupSize[0], PDMSP.maxTaskWorkGroupSize[1], PDMSP.maxTaskWorkGroupSize[2]);
-			Logf("\t\t\t\tmaxTaskTotalMemorySize = %d\n", PDMSP.maxTaskTotalMemorySize);
-			Logf("\t\t\t\tmaxTaskOutputCount = %d\n", PDMSP.maxTaskOutputCount);
-			Logf("\t\t\t\tmaxMeshWorkGroupInvocations = %d\n", PDMSP.maxMeshWorkGroupInvocations);
-			Logf("\t\t\t\tmaxMeshWorkGroupSize[] = %d, %d, %d\n", PDMSP.maxMeshWorkGroupSize[0], PDMSP.maxMeshWorkGroupSize[1], PDMSP.maxMeshWorkGroupSize[2]);
-			Logf("\t\t\t\tmaxMeshTotalMemorySize = %d\n", PDMSP.maxMeshTotalMemorySize);
-			Logf("\t\t\t\tmaxMeshOutputVertices = %d\n", PDMSP.maxMeshOutputVertices);
-			Logf("\t\t\t\tmaxMeshOutputPrimitives = %d\n", PDMSP.maxMeshOutputPrimitives);
-			Logf("\t\t\t\tmaxMeshMultiviewViewCount = %d\n", PDMSP.maxMeshMultiviewViewCount);
-			Logf("\t\t\t\tmeshOutputPerVertexGranularity = %d\n", PDMSP.meshOutputPerVertexGranularity);
-			Logf("\t\t\t\tmeshOutputPerPrimitiveGranularity = %d\n", PDMSP.meshOutputPerPrimitiveGranularity);
+			std::cout << PDMSP;
 #pragma endregion
 		}
 
 		//!< フィーチャー2 (Feature2)
 		{
-			//!< 取得したい全てのフィーチャーを VkPhysicalDeviceFeatures2.pNext へチェイン指定する
 #pragma region MESH_SHADER
 			VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr };
 #pragma endregion
@@ -973,45 +789,28 @@ void VK::EnumeratePhysicalDevice(VkInstance Inst)
 #pragma endregion			
 			VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDASF };
 			vkGetPhysicalDeviceFeatures2(i, &PDF2);
-			EnumeratePhysicalDeviceFeatures(PDF2.features);
-
+			std::cout << PDF2.features;
 #pragma region RAYTRACING
-			Log("\t\t\tVkPhysicalDeviceBufferDeviceAddressFeatures\n");
-			if (PDBDAF.bufferDeviceAddress) { Log("\t\t\t\tbufferDeviceAddress\n"); }
-			if (PDBDAF.bufferDeviceAddressCaptureReplay) { Log("\t\t\t\tbufferDeviceAddressCaptureReplay\n"); }
-			if (PDBDAF.bufferDeviceAddressMultiDevice) { Log("\t\t\t\tbufferDeviceAddressMultiDevice\n"); }
-			
-			Log("\t\t\tVkPhysicalDeviceRayTracingPipelineFeaturesKHR\n");
-			if (PDRTPF.rayTracingPipeline) { Log("\t\t\t\trayTracingPipeline\n"); }
-			if (PDRTPF.rayTracingPipelineShaderGroupHandleCaptureReplay) { Log("\t\t\t\trayTracingPipelineShaderGroupHandleCaptureReplay\n"); }
-			if (PDRTPF.rayTracingPipelineShaderGroupHandleCaptureReplayMixed) { Log("\t\t\t\trayTracingPipelineShaderGroupHandleCaptureReplayMixed\n"); }
-			if (PDRTPF.rayTracingPipelineTraceRaysIndirect) { Log("\t\t\t\trayTracingPipelineTraceRaysIndirect\n"); }
-			if (PDRTPF.rayTraversalPrimitiveCulling) { Log("\t\t\t\trayTraversalPrimitiveCulling\n"); }
-			
-			Log("\t\t\tVkPhysicalDeviceAccelerationStructureFeaturesKHR\n");
-			if (PDASF.accelerationStructure) { Log("\t\t\t\taccelerationStructure\n"); }
-			if (PDASF.accelerationStructureCaptureReplay) { Log("\t\t\t\taccelerationStructureCaptureReplay\n"); }
-			if (PDASF.accelerationStructureIndirectBuild) { Log("\t\t\t\taccelerationStructureIndirectBuild\n"); }
-			if (PDASF.accelerationStructureHostCommands) { Log("\t\t\t\taccelerationStructureHostCommands\n"); }
-			if (PDASF.descriptorBindingAccelerationStructureUpdateAfterBind) { Log("\t\t\t\tdescriptorBindingAccelerationStructureUpdateAfterBind\n"); }
+			std::cout << PDBDAF;
+			std::cout << PDRTPF;
+			std::cout << PDASF;
 #pragma endregion
 #pragma region MESH_SHADER
-			Log("\t\t\tVkPhysicalDeviceMeshShaderFeaturesNV\n");
-			if (PDMSF.taskShader) { Log("\t\t\t\ttaskShader\n"); }
-			if (PDMSF.meshShader) { Log("\t\t\t\tmeshShader\n"); }
+			std::cout << PDMSF;
 #pragma endregion
 		}
 
 		//!< メモリプロパティ (MemoryProperty)
 		VkPhysicalDeviceMemoryProperties PDMP;
 		vkGetPhysicalDeviceMemoryProperties(i, &PDMP);
-		EnumeratePhysicalDeviceMemoryProperties(PDMP);
+		std::cout << PDMP;
 
-		//!< デバイスレベルのレイヤー、エクステンションの列挙
-		EnumeratePhysicalDeviceLayerProperties(i);
+		//!< フィジカルデバイスのレイヤー、エクステンションの列挙 (Enumrate physical device's layers and extentions)
+		std::cout << i;
 
 		Log("\n");
 	}
+#endif
 
 	//!< 物理デバイスの選択、ここでは最大メモリを選択することにする (Select physical device, here select max memory size)
 	const auto Index = std::distance(begin(PhysicalDevices), std::ranges::max_element(PhysicalDevices, [](const VkPhysicalDevice& lhs, const VkPhysicalDevice& rhs) {
@@ -1022,39 +821,7 @@ void VK::EnumeratePhysicalDevice(VkInstance Inst)
 			< std::accumulate(&PDMPs[1].memoryHeaps[0], &PDMPs[1].memoryHeaps[PDMPs[1].memoryHeapCount], static_cast<VkDeviceSize>(0), [](VkDeviceSize Sum, const VkMemoryHeap& rhs) { return Sum + rhs.size; });
 	}));
 	CurrentPhysicalDevice = PhysicalDevices[Index];
-
-	//VkPhysicalDeviceProperties PDP = {};
-	//vkGetPhysicalDeviceProperties(CurrentPhysicalDevice, &PDP);
-	//std::cout << PDP.deviceName << "  is selected" << std::endl;
-
 	vkGetPhysicalDeviceMemoryProperties(CurrentPhysicalDevice, &CurrentPhysicalDeviceMemoryProperties);
-}
-void VK::EnumeratePhysicalDeviceLayerProperties(VkPhysicalDevice PD)
-{
-	Logf("Device Layer Properties\n");
-
-	uint32_t Count = 0;
-	VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PD, &Count, nullptr));
-	if (Count) {
-		std::vector<VkLayerProperties> LPs(Count);
-		VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(PD, &Count, data(LPs)));
-		for (const auto& i : LPs) {
-			Logf("\t\"%s\" (%s)\n", i.layerName, i.description);
-			EnumeratePhysicalDeviceExtensionProperties(PD, i.layerName);
-		}
-	}
-}
-void VK::EnumeratePhysicalDeviceExtensionProperties(VkPhysicalDevice PD, const char* LayerName)
-{
-	uint32_t Count = 0;
-	VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PD, LayerName, &Count, nullptr));
-	if (Count) {
-		std::vector<VkExtensionProperties> EPs(Count);
-		VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(PD, LayerName, &Count, data(EPs)));
-		for (const auto& i : EPs) {
-			Logf("\t\t\"%s\"\n", i.extensionName);
-		}
-	}
 }
 
 void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::vector<const char*>& AdditionalExtensions)

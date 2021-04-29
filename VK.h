@@ -24,7 +24,7 @@
 #pragma warning(pop)
 
 #ifndef BREAK_ON_FAILED
-#define BREAK_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Log(VK::GetVkResultChar(vr)); DEBUG_BREAK(); }
+#define BREAK_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Win::Log(VK::GetVkResultChar(vr)); DEBUG_BREAK(); }
 #endif
 #ifndef THROW_ON_FAILED
 #define THROW_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + std::string(VK::GetVkResultChar(vr));; }
@@ -423,10 +423,6 @@ protected:
 
 	static void EnumerateMemoryRequirements(const VkMemoryRequirements& MR, const VkPhysicalDeviceMemoryProperties& PDMP);
 
-	//virtual void ValidateFormatProperties(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage) const;
-	//virtual void ValidateFormatProperties_SampledImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const VkFilter Mag, const VkFilter Min, const VkSamplerMipmapMode Mip) const;
-	//virtual void ValidateFormatProperties_StorageImage(VkPhysicalDevice PD, const VkFormat Format, const VkImageUsageFlags Usage, const bool Atomic) const;
-
 #pragma region MARKER
 	static void MarkerInsert([[maybe_unused]] VkCommandBuffer CB, [[maybe_unused]] const glm::vec4& Color, [[maybe_unused]] std::string_view Name) {
 #ifdef USE_RENDERDOC
@@ -502,22 +498,13 @@ protected:
 #pragma endregion
 
 	virtual void EnumerateInstanceLayerProperties();
-	virtual void EnumerateInstanceExtensionProperties(const char* LayerName);
 
 	void LoadVulkanLibrary();
 
 	virtual void CreateInstance();
 	virtual void CreateDebugReportCallback();
 
-	virtual void EnumeratePhysicalDeviceProperties(const VkPhysicalDeviceProperties& PDP);
-	virtual void EnumeratePhysicalDeviceFeatures(const VkPhysicalDeviceFeatures& PDF);
-	virtual void EnumeratePhysicalDeviceMemoryProperties(const VkPhysicalDeviceMemoryProperties& PDMP);
-	virtual void EnumeratePhysicalDevice(VkInstance Instance);
-	virtual void EnumeratePhysicalDeviceLayerProperties(VkPhysicalDevice PD);
-	virtual void EnumeratePhysicalDeviceExtensionProperties(VkPhysicalDevice PD, const char* LayerName);
-	//virtual void EnumerateQueueFamilyProperties(VkPhysicalDevice PD, VkSurfaceKHR Surface, std::vector<VkQueueFamilyProperties>& QFPs);
-	//virtual void OverridePhysicalDeviceFeatures(VkPhysicalDeviceFeatures& PDF) const;
-	//virtual void CreateQueueFamilyPriorities(VkPhysicalDevice PD, VkSurfaceKHR Surface, const std::vector<VkQueueFamilyProperties>& QFPs, std::vector<std::vector<float>>& QueueFamilyPriorites);
+	virtual void SelectPhysicalDevice(VkInstance Instance);
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext = nullptr, const std::vector<const char*>& AdditionalExtensions = {});
 
 	virtual void CreateFence(VkDevice Dev);
@@ -740,7 +727,6 @@ protected:
 	//VkQueue TransferQueue = VK_NULL_HANDLE;
 	//VkQueue SparceBindingQueue = VK_NULL_HANDLE;
 	uint32_t GraphicsQueueFamilyIndex = UINT32_MAX;
-	//uint32_t GraphicsQueueIndexInFamily = UINT32_MAX; //!< ファミリ内でのインデックス (必ずしも覚えておく必要は無いが一応覚えておく)
 	uint32_t PresentQueueFamilyIndex = UINT32_MAX;
 	//uint32_t PresentQueueIndexInFamily = UINT32_MAX;
 	uint32_t ComputeQueueFamilyIndex = UINT32_MAX;
@@ -825,4 +811,185 @@ static std::ostream& operator<<(std::ostream& lhs, const glm::quat& rhs) { for (
 static std::ostream& operator<<(std::ostream& lhs, const glm::mat2& rhs) { for (auto i = 0; i < 2; ++i) { lhs << rhs[i]; } lhs << std::endl; return lhs; }
 static std::ostream& operator<<(std::ostream& lhs, const glm::mat3& rhs) { for (auto i = 0; i < 3; ++i) { lhs << rhs[i]; } lhs << std::endl; return lhs; }
 static std::ostream& operator<<(std::ostream& lhs, const glm::mat4& rhs) { for (auto i = 0; i < 4; ++i) { lhs << rhs[i]; } lhs << std::endl; return lhs; }
+
+#pragma region PROPERTY
+static std::ostream& operator<<(std::ostream& lhs, const VkExtensionProperties& rhs) { Win::Logf("\t\t\"%s\"\n", rhs.extensionName); return lhs; }
+static std::ostream& operator<<(std::ostream& lhs, const VkLayerProperties& rhs) { Win::Logf("\t\"%s\" (%s)\n", rhs.layerName, rhs.description); return lhs; }
+#pragma endregion
+
+#pragma region PHYSICAL_DEVICE_PROPERTY
+static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDeviceProperties& rhs) {
+	Win::Log("\t\tPhysical Device API Version = ");
+	Win::Logf("%d.%d(Patch = %d)\n", VK_VERSION_MAJOR(rhs.apiVersion), VK_VERSION_MINOR(rhs.apiVersion), VK_VERSION_PATCH(rhs.apiVersion));
+	uint32_t APIVersion;
+	VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
+	if (rhs.apiVersion != APIVersion) {
+		Win::Log("\t\t");
+		Win::Warningf("[ PHYSICAL DEVICE ] %d.%d(Patch = %d) != %d.%d(Patch = %d) [ INSTANCE(SDK) ]\n",
+			VK_VERSION_MAJOR(rhs.apiVersion), VK_VERSION_MINOR(rhs.apiVersion), VK_VERSION_PATCH(rhs.apiVersion),
+			VK_VERSION_MAJOR(APIVersion), VK_VERSION_MINOR(APIVersion), VK_VERSION_PATCH(APIVersion));
+	}
+
+#define PHYSICAL_DEVICE_TYPE_ENTRY(entry) if(VK_PHYSICAL_DEVICE_TYPE_##entry == rhs.deviceType) { Win::Log(#entry); }
+	Win::Logf("\t\t[ %s ](", rhs.deviceName);
+	PHYSICAL_DEVICE_TYPE_ENTRY(OTHER);
+	PHYSICAL_DEVICE_TYPE_ENTRY(INTEGRATED_GPU);
+	PHYSICAL_DEVICE_TYPE_ENTRY(DISCRETE_GPU);
+	PHYSICAL_DEVICE_TYPE_ENTRY(VIRTUAL_GPU);
+	PHYSICAL_DEVICE_TYPE_ENTRY(CPU);
+	Win::Log(")\n");
+#undef PHYSICAL_DEVICE_TYPE_ENTRY
+
+#define PROPERTY_LIMITS_ENTRY(entry) Win::Logf("\t\t\t\t%s = %d\n", #entry, rhs.limits.##entry);
+	Win::Log("\t\t\tPhysicalDeviceProperties.PhysicalDeviceLimits\n");
+	PROPERTY_LIMITS_ENTRY(maxUniformBufferRange);
+	//PROPERTY_LIMITS_ENTRY(maxStorageBufferRange);
+	PROPERTY_LIMITS_ENTRY(maxPushConstantsSize);
+	PROPERTY_LIMITS_ENTRY(maxFragmentOutputAttachments);
+	PROPERTY_LIMITS_ENTRY(maxColorAttachments);
+	PROPERTY_LIMITS_ENTRY(maxViewports);
+#undef PROPERTY_LIMITS_ENTRY
+	return lhs;
+}
+#pragma region RAYTRACING
+static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDeviceRayTracingPipelinePropertiesKHR& rhs) {
+	Win::Log("\t\t\tVkPhysicalDeviceRayTracingPipelinePropertiesKHR\n");
+	Win::Logf("\t\t\t\tshaderGroupHandleSize = %d\n", rhs.shaderGroupHandleSize);
+	Win::Logf("\t\t\t\tmaxRayRecursionDepth = %d\n", rhs.maxRayRecursionDepth);
+	Win::Logf("\t\t\t\tmaxShaderGroupStride = %d\n", rhs.maxShaderGroupStride);
+	Win::Logf("\t\t\t\tshaderGroupBaseAlignment = %d\n", rhs.shaderGroupBaseAlignment);
+	Win::Logf("\t\t\t\tshaderGroupHandleCaptureReplaySize = %d\n", rhs.shaderGroupHandleCaptureReplaySize);
+	Win::Logf("\t\t\t\tmaxRayDispatchInvocationCount = %d\n", rhs.maxRayDispatchInvocationCount);
+	Win::Logf("\t\t\t\tshaderGroupHandleAlignment = %d\n", rhs.shaderGroupHandleAlignment);
+	Win::Logf("\t\t\t\tmaxRayHitAttributeSize = %d\n", rhs.maxRayHitAttributeSize);
+	return lhs;
+}
+#pragma endregion
+#pragma region MESH_SHADER
+static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDeviceMeshShaderPropertiesNV& rhs) {
+	Win::Log("\t\t\tVkPhysicalDeviceMeshShaderPropertiesNV\n");
+	Win::Logf("\t\t\t\tmaxDrawMeshTasksCount = %d\n", rhs.maxDrawMeshTasksCount);
+	Win::Logf("\t\t\t\tmaxTaskWorkGroupInvocations = %d\n", rhs.maxTaskWorkGroupInvocations);
+	Win::Logf("\t\t\t\tmaxTaskWorkGroupSize[] = %d, %d, %d\n", rhs.maxTaskWorkGroupSize[0], rhs.maxTaskWorkGroupSize[1], rhs.maxTaskWorkGroupSize[2]);
+	Win::Logf("\t\t\t\tmaxTaskTotalMemorySize = %d\n", rhs.maxTaskTotalMemorySize);
+	Win::Logf("\t\t\t\tmaxTaskOutputCount = %d\n", rhs.maxTaskOutputCount);
+	Win::Logf("\t\t\t\tmaxMeshWorkGroupInvocations = %d\n", rhs.maxMeshWorkGroupInvocations);
+	Win::Logf("\t\t\t\tmaxMeshWorkGroupSize[] = %d, %d, %d\n", rhs.maxMeshWorkGroupSize[0], rhs.maxMeshWorkGroupSize[1], rhs.maxMeshWorkGroupSize[2]);
+	Win::Logf("\t\t\t\tmaxMeshTotalMemorySize = %d\n", rhs.maxMeshTotalMemorySize);
+	Win::Logf("\t\t\t\tmaxMeshOutputVertices = %d\n", rhs.maxMeshOutputVertices);
+	Win::Logf("\t\t\t\tmaxMeshOutputPrimitives = %d\n", rhs.maxMeshOutputPrimitives);
+	Win::Logf("\t\t\t\tmaxMeshMultiviewViewCount = %d\n", rhs.maxMeshMultiviewViewCount);
+	Win::Logf("\t\t\t\tmeshOutputPerVertexGranularity = %d\n", rhs.meshOutputPerVertexGranularity);
+	Win::Logf("\t\t\t\tmeshOutputPerPrimitiveGranularity = %d\n", rhs.meshOutputPerPrimitiveGranularity);
+	return lhs;
+}
+#pragma endregion
+#pragma endregion
+
+#pragma region PHYSICAL_DEVICE_FEATURE
+static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDeviceFeatures& rhs) {
+	assert(rhs.tessellationShader && "tessellationShader is not supported");
+	Win::Log("\t\t\tPhysicalDeviceFeatures\n");
+#define VK_DEVICEFEATURE_ENTRY(entry) if (rhs.##entry) { Win::Log("\t\t\t\t" #entry "\n"); }
+#include "VKDeviceFeature.h"
+#undef VK_DEVICEFEATURE_ENTRY
+	return lhs;
+}
+#pragma region RAYTRACING
+static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDeviceBufferDeviceAddressFeatures& rhs) {
+	Win::Log("\t\t\tVkPhysicalDeviceBufferDeviceAddressFeatures\n");
+	if (rhs.bufferDeviceAddress) { Win::Log("\t\t\t\tbufferDeviceAddress\n"); }
+	if (rhs.bufferDeviceAddressCaptureReplay) { Win::Log("\t\t\t\tbufferDeviceAddressCaptureReplay\n"); }
+	if (rhs.bufferDeviceAddressMultiDevice) { Win::Log("\t\t\t\tbufferDeviceAddressMultiDevice\n"); }
+	return lhs;
+}
+static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDeviceRayTracingPipelineFeaturesKHR& rhs) {
+	Win::Log("\t\t\tVkPhysicalDeviceRayTracingPipelineFeaturesKHR\n");
+	if (rhs.rayTracingPipeline) { Win::Log("\t\t\t\trayTracingPipeline\n"); }
+	if (rhs.rayTracingPipelineShaderGroupHandleCaptureReplay) { Win::Log("\t\t\t\trayTracingPipelineShaderGroupHandleCaptureReplay\n"); }
+	if (rhs.rayTracingPipelineShaderGroupHandleCaptureReplayMixed) { Win::Log("\t\t\t\trayTracingPipelineShaderGroupHandleCaptureReplayMixed\n"); }
+	if (rhs.rayTracingPipelineTraceRaysIndirect) { Win::Log("\t\t\t\trayTracingPipelineTraceRaysIndirect\n"); }
+	if (rhs.rayTraversalPrimitiveCulling) { Win::Log("\t\t\t\trayTraversalPrimitiveCulling\n"); }
+	return lhs;
+}
+static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDeviceAccelerationStructureFeaturesKHR& rhs) {
+	Win::Log("\t\t\tVkPhysicalDeviceAccelerationStructureFeaturesKHR\n");
+	if (rhs.accelerationStructure) { Win::Log("\t\t\t\taccelerationStructure\n"); }
+	if (rhs.accelerationStructureCaptureReplay) { Win::Log("\t\t\t\taccelerationStructureCaptureReplay\n"); }
+	if (rhs.accelerationStructureIndirectBuild) { Win::Log("\t\t\t\taccelerationStructureIndirectBuild\n"); }
+	if (rhs.accelerationStructureHostCommands) { Win::Log("\t\t\t\taccelerationStructureHostCommands\n"); }
+	if (rhs.descriptorBindingAccelerationStructureUpdateAfterBind) { Win::Log("\t\t\t\tdescriptorBindingAccelerationStructureUpdateAfterBind\n"); }
+	return lhs;
+}
+#pragma endregion
+#pragma region MESH_SHADER
+static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDeviceMeshShaderFeaturesNV& rhs) {
+	Win::Log("\t\t\tVkPhysicalDeviceMeshShaderFeaturesNV\n");
+	if (rhs.taskShader) { Win::Log("\t\t\t\ttaskShader\n"); }
+	if (rhs.meshShader) { Win::Log("\t\t\t\tmeshShader\n"); }
+	return lhs;
+}
+#pragma endregion
+#pragma endregion
+
+static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDeviceMemoryProperties& rhs) {
+	Win::Log("\t\t\tMemoryType\n");
+	for (uint32_t i = 0; i < rhs.memoryTypeCount; ++i) {
+		Win::Log("\t\t\t\t");
+		Win::Logf("[%d] HeapIndex = %d", i, rhs.memoryTypes[i].heapIndex);
+
+		Win::Logf(", PropertyFlags(%d) = ", rhs.memoryTypes[i].propertyFlags);
+		if (rhs.memoryTypes[i].propertyFlags) {
+#define MEMORY_PROPERTY_ENTRY(entry) if(VK_MEMORY_PROPERTY_##entry##_BIT & rhs.memoryTypes[i].propertyFlags) { Win::Log(#entry " | "); }
+			MEMORY_PROPERTY_ENTRY(DEVICE_LOCAL);
+			MEMORY_PROPERTY_ENTRY(HOST_VISIBLE);
+			MEMORY_PROPERTY_ENTRY(HOST_COHERENT);
+			MEMORY_PROPERTY_ENTRY(HOST_CACHED);
+			MEMORY_PROPERTY_ENTRY(LAZILY_ALLOCATED);
+			MEMORY_PROPERTY_ENTRY(PROTECTED);
+#undef MEMORY_PROPERTY_ENTRY
+		}
+		Win::Log("\n");
+	}
+
+	Win::Log("\t\t\tMemoryHeap\n");
+	for (uint32_t i = 0; i < rhs.memoryHeapCount; ++i) {
+		Win::Log("\t\t\t\t");
+		Win::Logf("[%d] Size = %llu", i, rhs.memoryHeaps[i].size);
+
+		if (rhs.memoryHeaps[i].flags) {
+			Win::Log(", Flags = ");
+			if (VK_MEMORY_HEAP_DEVICE_LOCAL_BIT & rhs.memoryHeaps[i].flags) { Win::Log("DEVICE_LOCAL | "); }
+			if (VK_MEMORY_HEAP_MULTI_INSTANCE_BIT_KHR & rhs.memoryHeaps[i].flags) { Win::Log("MULTI_INSTANCE | "); }
+		}
+		Win::Log("\n");
+	}
+	return lhs;
+}
+
+#pragma region PHYSICAL_DEVICE
+static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDevice& rhs) {
+	Win::Logf("Device Layer Properties\n");
+	uint32_t LPC = 0;
+	VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(rhs, &LPC, nullptr));
+	if (LPC) [[likely]] {
+		std::vector<VkLayerProperties> LPs(LPC);
+		VERIFY_SUCCEEDED(vkEnumerateDeviceLayerProperties(rhs, &LPC, data(LPs)));
+		for (const auto& i : LPs) {
+			std::cout << i;
+			uint32_t EPC = 0;
+			VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(rhs, i.layerName, &EPC, nullptr));
+			if (EPC) [[likely]] {
+				std::vector<VkExtensionProperties> EPs(EPC);
+				VERIFY_SUCCEEDED(vkEnumerateDeviceExtensionProperties(rhs, i.layerName, &EPC, data(EPs)));
+				for (const auto& j : EPs) {
+					std::cout << j;
+				}
+			}
+		}
+	}
+	return lhs;
+}
+#pragma endregion
+
 #endif
