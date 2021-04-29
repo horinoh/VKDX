@@ -589,33 +589,6 @@ void VK::EnumerateMemoryRequirements(const VkMemoryRequirements& MR, const VkPhy
 	}
 }
 
-void VK::EnumerateInstanceLayerProperties()
-{
-#ifdef DEBUG_STDOUT
-	Logf("Instance Layer Properties\n");
-
-	uint32_t LC = 0;
-	VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&LC, nullptr));
-	if (LC) [[likely]] {
-		std::vector<VkLayerProperties> LPs(LC);
-		VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&LC, data(LPs)));
-		for (const auto& i : LPs) {
-			std::cout << i;
-
-			uint32_t EC = 0;
-			VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(i.layerName, &EC, nullptr));
-			if (EC) [[likely]] {
-				std::vector<VkExtensionProperties> EPs(EC);
-				VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(i.layerName, &EC, data(EPs)));
-				for (const auto& j : EPs) {
-					std::cout << j;
-				}
-			}
-		}
-	}
-#endif
-}
-
 //!< Vulkanローダーが(引数で渡したデバイスに基いて)適切な実装へ関数コールをリダイレクトする必要がある、このリダイレクトには時間がかかりパフォーマンスに影響する
 //!< 以下のようにすると、使用したいデバイスから直接関数をロードするため、リダイレクトをスキップできパフォーマンスを改善できる
 void VK::LoadVulkanLibrary()
@@ -634,70 +607,6 @@ void VK::LoadVulkanLibrary()
 #endif
 }
 
-void VK::CreateInstance()
-{
-	//!< インスタンスレベルのレイヤー、エクステンションの列挙
-	EnumerateInstanceLayerProperties();
-
-	//!< ここでは最新バージョンで動くようにしておく (Use latest version here)
-	uint32_t APIVersion;
-	VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
-	Logf("API Version = %d.%d.(Header = %d)(Patch = %d)\n", VK_VERSION_MAJOR(APIVersion), VK_VERSION_MINOR(APIVersion), VK_HEADER_VERSION, VK_VERSION_PATCH(APIVersion));
-	const auto ApplicationName = GetTitle();
-	const VkApplicationInfo AI = {
-		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-		.pNext = nullptr,
-		.pApplicationName = data(ApplicationName), .applicationVersion = APIVersion,
-		.pEngineName = "VKDX Engine Name", .engineVersion = APIVersion,
-		.apiVersion = APIVersion
-	};
-	constexpr std::array Layers = {
-		"VK_LAYER_KHRONOS_validation",
-		"VK_LAYER_LUNARG_monitor", //!< タイトルバーにFPSを表示 (Display FPS on titile bar)
-#ifdef USE_RENDERDOC
-		"VK_LAYER_RENDERDOC_Capture",
-#endif
-	};
-	//std::ranges::copy(AdditionalLayers, std::back_inserter(Layers));
-
-	constexpr std::array Extensions = {
-		VK_KHR_SURFACE_EXTENSION_NAME,
-#ifdef VK_USE_PLATFORM_WIN32_KHR
-		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
-#endif
-#ifdef _DEBUG
-		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
-		VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME,
-#endif
-	};
-	//std::ranges::copy(AdditionalExtensions, std::back_inserter(Extensions));
-
-	constexpr VkInstanceCreateInfo ICI = {
-	 	.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = 0,
-		.pApplicationInfo = &AI,
-		.enabledLayerCount = static_cast<uint32_t>(size(Layers)), .ppEnabledLayerNames = data(Layers),
-		.enabledExtensionCount = static_cast<uint32_t>(size(Extensions)), .ppEnabledExtensionNames = data(Extensions)
-	};
-	VERIFY_SUCCEEDED(vkCreateInstance(&ICI, GetAllocationCallbacks(), &Instance));
-
-#ifdef VK_NO_PROTOYYPES
-#define VK_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(Instance, "vk" #proc)); assert(nullptr != vk ## proc && #proc);
-#include "VKInstanceProcAddr.h"
-#undef VK_PROC_ADDR
-#endif
-
-#define VK_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetInstanceProcAddr(Instance, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
-#include "VKInstanceProcAddr_DebugReport.h"
-#undef VK_PROC_ADDR
-
-	CreateDebugReportCallback();
-
-	LOG_OK();
-}
-
 void VK::CreateDebugReportCallback()
 {
 #ifdef _DEBUG
@@ -705,8 +614,9 @@ void VK::CreateDebugReportCallback()
 		| VK_DEBUG_REPORT_WARNING_BIT_EXT
 		| VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT
 		| VK_DEBUG_REPORT_ERROR_BIT_EXT
-		| VK_DEBUG_REPORT_DEBUG_BIT_EXT;
-		/*| VK_DEBUG_REPORT_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR_EXT*/
+		| VK_DEBUG_REPORT_DEBUG_BIT_EXT
+		//| VK_DEBUG_REPORT_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR_EXT
+		;
 
 	if (VK_NULL_HANDLE != vkCreateDebugReportCallback) [[likely]] {
 		const VkDebugReportCallbackCreateInfoEXT DRCCI = {
@@ -743,6 +653,88 @@ void VK::CreateDebugReportCallback()
 		vkCreateDebugReportCallback(Instance, &DRCCI, nullptr, &DebugReportCallback);
 	}
 #endif
+}
+void VK::CreateInstance(const std::vector<const char*>& AdditionalLayers, const std::vector<const char*>& AdditionalExtensions)
+{
+	//!< インスタンスレベルのレイヤー、エクステンションの列挙
+	{
+#ifdef DEBUG_STDOUT
+		Logf("Instance Layer Properties\n");
+		uint32_t LC = 0;
+		VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&LC, nullptr));
+		if (LC) [[likely]] {
+			std::vector<VkLayerProperties> LPs(LC);
+			VERIFY_SUCCEEDED(vkEnumerateInstanceLayerProperties(&LC, data(LPs)));
+			for (const auto& i : LPs) {
+				std::cout << i;
+
+				uint32_t EC = 0;
+				VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(i.layerName, &EC, nullptr));
+				if (EC) [[likely]] {
+					std::vector<VkExtensionProperties> EPs(EC);
+					VERIFY_SUCCEEDED(vkEnumerateInstanceExtensionProperties(i.layerName, &EC, data(EPs)));
+					for (const auto& j : EPs) {
+						std::cout << j;
+					}
+				}
+			}
+		}
+#endif
+	}
+
+	//!< ここでは最新バージョンで動くようにしておく (Use latest version here)
+	uint32_t APIVersion;
+	VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
+	Logf("API Version = %d.%d.(Header = %d)(Patch = %d)\n", VK_VERSION_MAJOR(APIVersion), VK_VERSION_MINOR(APIVersion), VK_HEADER_VERSION, VK_VERSION_PATCH(APIVersion));
+	const auto ApplicationName = GetTitle();
+	const VkApplicationInfo AI = {
+		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+		.pNext = nullptr,
+		.pApplicationName = data(ApplicationName), .applicationVersion = APIVersion,
+		.pEngineName = "VKDX Engine Name", .engineVersion = APIVersion,
+		.apiVersion = APIVersion
+	};
+	std::vector Layers = {
+		"VK_LAYER_KHRONOS_validation",
+		"VK_LAYER_LUNARG_monitor", //!< タイトルバーにFPSを表示 (Display FPS on titile bar)
+	};
+	std::ranges::copy(AdditionalLayers, std::back_inserter(Layers));
+
+	std::vector Extensions = {
+		VK_KHR_SURFACE_EXTENSION_NAME,
+#ifdef VK_USE_PLATFORM_WIN32_KHR
+		VK_KHR_WIN32_SURFACE_EXTENSION_NAME,
+#endif
+#ifdef _DEBUG
+		VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
+		VK_EXT_DEBUG_UTILS_EXTENSION_NAME,
+		VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME,
+#endif
+	};
+	std::ranges::copy(AdditionalExtensions, std::back_inserter(Extensions));
+
+	const VkInstanceCreateInfo ICI = {
+	 	.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.pApplicationInfo = &AI,
+		.enabledLayerCount = static_cast<uint32_t>(size(Layers)), .ppEnabledLayerNames = data(Layers),
+		.enabledExtensionCount = static_cast<uint32_t>(size(Extensions)), .ppEnabledExtensionNames = data(Extensions)
+	};
+	VERIFY_SUCCEEDED(vkCreateInstance(&ICI, GetAllocationCallbacks(), &Instance));
+
+#ifdef VK_NO_PROTOYYPES
+#define VK_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc>(vkGetInstanceProcAddr(Instance, "vk" #proc)); assert(nullptr != vk ## proc && #proc);
+#include "VKInstanceProcAddr.h"
+#undef VK_PROC_ADDR
+#endif
+
+#define VK_PROC_ADDR(proc) vk ## proc = reinterpret_cast<PFN_vk ## proc ## EXT>(vkGetInstanceProcAddr(Instance, "vk" #proc "EXT")); assert(nullptr != vk ## proc && #proc);
+#include "VKInstanceProcAddr_DebugReport.h"
+#undef VK_PROC_ADDR
+	CreateDebugReportCallback();
+
+	LOG_OK();
 }
 
 void VK::SelectPhysicalDevice(VkInstance Inst)

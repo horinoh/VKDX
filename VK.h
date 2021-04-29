@@ -497,12 +497,10 @@ protected:
 #include "VKDebugMarker.inl"
 #pragma endregion
 
-	virtual void EnumerateInstanceLayerProperties();
-
 	void LoadVulkanLibrary();
 
-	virtual void CreateInstance();
 	virtual void CreateDebugReportCallback();
+	virtual void CreateInstance(const std::vector<const char*>& AdditionalLayers = {}, const std::vector<const char*>& AdditionalExtensions = {});
 
 	virtual void SelectPhysicalDevice(VkInstance Instance);
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext = nullptr, const std::vector<const char*>& AdditionalExtensions = {});

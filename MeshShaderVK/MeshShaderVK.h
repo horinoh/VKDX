@@ -13,6 +13,7 @@ public:
 	MeshShaderVK() : Super() {}
 	virtual ~MeshShaderVK() {}
 
+	//!< #TIPS インスタンスレイヤー "VK_LAYER_RENDERDOC_Capture" を使用すると vkCreateDevice() でコケるので注意 (If we use "VK_LAYER_RENDERDOC_Capture", vkCreateDevice() failed)
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext, [[maybe_unused]] const std::vector<const char*>& AddExtensions) override {
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
 			VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr, .taskShader = VK_TRUE, .meshShader = VK_TRUE, };

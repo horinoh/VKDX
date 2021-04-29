@@ -13,6 +13,7 @@ public:
 	RayTracingVK() : Super() {}
 	virtual ~RayTracingVK() {}
 
+	//!< #TIPS インスタンスレイヤー "VK_LAYER_RENDERDOC_Capture" を使用すると vkCreateDevice() でコケるので注意 (If we use "VK_LAYER_RENDERDOC_Capture", vkCreateDevice() failed)
 #pragma region RAYTRACING
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext, [[maybe_unused]] const std::vector<const char*>& AddExtensions) override {
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
