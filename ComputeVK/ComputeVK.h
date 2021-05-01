@@ -57,7 +57,7 @@ protected:
 		const std::array SMs = {
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".comp.spv"))),
 		};
-		const auto PSSCI = VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_COMPUTE_BIT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
+		const auto PSSCI = VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_COMPUTE_BIT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr });
 		
 		const std::array CPCIs = {
 			VkComputePipelineCreateInfo({
