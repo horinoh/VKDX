@@ -643,10 +643,6 @@ protected:
 		const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs,
 		const std::vector<VkPipelineColorBlendAttachmentState>& PCBASs,
 		VkPipelineCache PC = VK_NULL_HANDLE);
-	//virtual void CreatePipeline_Compute();
-
-	//virtual void ClearColorAttachment(const VkCommandBuffer CommandBuffer, const VkClearColorValue& Color);
-	//virtual void ClearDepthStencilAttachment(const VkCommandBuffer CommandBuffer, const VkClearDepthStencilValue& DepthStencil);
 	
 	virtual void PopulateCommandBuffer([[maybe_unused]] const size_t i) {}
 
@@ -986,6 +982,66 @@ static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDevice& rhs) 
 			}
 		}
 	}
+	return lhs;
+}
+#pragma endregion
+
+#pragma region SWAPCHAIN
+static std::ostream& operator<<(std::ostream& lhs, const VkSurfaceCapabilitiesKHR& rhs) {
+	Win::Log("\tSurfaceCapabilities\n");
+	Win::Logf("\t\tminImageCount = %d\n", rhs.minImageCount);
+	Win::Logf("\t\tmaxImageCount = %d\n", rhs.maxImageCount);
+	Win::Logf("\t\tcurrentExtent = %d x %d\n", rhs.minImageExtent.width, rhs.currentExtent.height);
+	Win::Logf("\t\tminImageExtent = %d x %d\n", rhs.currentExtent.width, rhs.minImageExtent.height);
+	Win::Logf("\t\tmaxImageExtent = %d x %d\n", rhs.maxImageExtent.width, rhs.maxImageExtent.height);
+	Win::Logf("\t\tmaxImageArrayLayers = %d\n", rhs.maxImageArrayLayers);
+	Win::Log("\t\tsupportedTransforms = ");
+#define VK_SURFACE_TRANSFORM_ENTRY(entry) if(rhs.supportedTransforms & VK_SURFACE_TRANSFORM_##entry##_BIT_KHR) { Win::Logf("%s | ", #entry); }
+	VK_SURFACE_TRANSFORM_ENTRY(IDENTITY);
+	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_90);
+	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_180);
+	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_270);
+	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR);
+	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_90);
+	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_180);
+	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_270);
+	VK_SURFACE_TRANSFORM_ENTRY(INHERIT);
+#undef VK_SURFACE_TRANSFORM_ENTRY
+	Win::Log("\n");
+	Win::Log("\t\tcurrentTransform = ");
+#define VK_SURFACE_TRANSFORM_ENTRY(entry) if(rhs.currentTransform == VK_SURFACE_TRANSFORM_##entry##_BIT_KHR) { Win::Logf("%s\n", #entry); }
+	VK_SURFACE_TRANSFORM_ENTRY(IDENTITY);
+	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_90);
+	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_180);
+	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_270);
+	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR);
+	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_90);
+	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_180);
+	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_270);
+	VK_SURFACE_TRANSFORM_ENTRY(INHERIT);
+#undef VK_SURFACE_TRANSFORM_ENTRY
+	Win::Log("\t\tsupportedCompositeAlpha = ");
+#define VK_COMPOSITE_ALPHA_ENTRY(entry) if(rhs.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_##entry##_BIT_KHR) { Win::Logf("%s | ", #entry); }
+	VK_COMPOSITE_ALPHA_ENTRY(OPAQUE);
+	VK_COMPOSITE_ALPHA_ENTRY(PRE_MULTIPLIED);
+	VK_COMPOSITE_ALPHA_ENTRY(POST_MULTIPLIED);
+	VK_COMPOSITE_ALPHA_ENTRY(INHERIT);
+#undef VK_COMPOSITE_ALPHA_ENTRY
+	Win::Log("\n");
+	Win::Log("\t\tsupportedUsageFlags = ");
+#define VK_IMAGE_USAGE_ENTRY(entry) if(rhs.supportedUsageFlags & VK_IMAGE_USAGE_##entry) { Win::Logf("%s | ", #entry); }
+	VK_IMAGE_USAGE_ENTRY(TRANSFER_SRC_BIT);
+	VK_IMAGE_USAGE_ENTRY(TRANSFER_DST_BIT);
+	VK_IMAGE_USAGE_ENTRY(SAMPLED_BIT);
+	VK_IMAGE_USAGE_ENTRY(STORAGE_BIT);
+	VK_IMAGE_USAGE_ENTRY(COLOR_ATTACHMENT_BIT);
+	VK_IMAGE_USAGE_ENTRY(DEPTH_STENCIL_ATTACHMENT_BIT);
+	VK_IMAGE_USAGE_ENTRY(TRANSIENT_ATTACHMENT_BIT);
+	VK_IMAGE_USAGE_ENTRY(INPUT_ATTACHMENT_BIT);
+	VK_IMAGE_USAGE_ENTRY(SHADING_RATE_IMAGE_BIT_NV);
+	VK_IMAGE_USAGE_ENTRY(FRAGMENT_DENSITY_MAP_BIT_EXT);
+#undef VK_IMAGE_USAGE_ENTRY
+	Win::Log("\n");
 	return lhs;
 }
 #pragma endregion

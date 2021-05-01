@@ -57,6 +57,26 @@ protected:
 		const std::array SMs = {
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".comp.spv"))),
 		};
+		const auto PSSCI = VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_COMPUTE_BIT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
+		
+		const std::array CPCIs = {
+			VkComputePipelineCreateInfo({
+				.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+				.pNext = nullptr,
+	#ifdef _DEBUG
+				.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+	#else
+				.flags = 0,
+	#endif
+				.stage = PSSCI,
+				.layout = PipelineLayouts[0],
+				.basePipelineHandle = VK_NULL_HANDLE, .basePipelineIndex  = -1
+			}),
+		};
+
+		VERIFY_SUCCEEDED(vkCreateComputePipelines(Device, VK_NULL_HANDLE, static_cast<uint32_t>(size(CPCIs)), data(CPCIs), GetAllocationCallbacks(), &Pipelines.emplace_back()));
+
+		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
 	virtual void CreateDescriptorSet() override {
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {

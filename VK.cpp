@@ -1187,61 +1187,9 @@ void VK::CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t W
 {
 	VkSurfaceCapabilitiesKHR SC;
 	VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(PD, Sfc, &SC));
-
-	Log("\tSurfaceCapabilities\n");
-	Logf("\t\tminImageCount = %d\n", SC.minImageCount);
-	Logf("\t\tmaxImageCount = %d\n", SC.maxImageCount);
-	Logf("\t\tcurrentExtent = %d x %d\n", SC.minImageExtent.width, SC.currentExtent.height);
-	Logf("\t\tminImageExtent = %d x %d\n", SC.currentExtent.width, SC.minImageExtent.height);
-	Logf("\t\tmaxImageExtent = %d x %d\n", SC.maxImageExtent.width, SC.maxImageExtent.height);
-	Logf("\t\tmaxImageArrayLayers = %d\n", SC.maxImageArrayLayers);
-	Log("\t\tsupportedTransforms = ");
-#define VK_SURFACE_TRANSFORM_ENTRY(entry) if(SC.supportedTransforms & VK_SURFACE_TRANSFORM_##entry##_BIT_KHR) { Logf("%s | ", #entry); }
-	VK_SURFACE_TRANSFORM_ENTRY(IDENTITY);
-	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_90);
-	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_180);
-	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_270);
-	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR);
-	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_90);
-	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_180);
-	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_270);
-	VK_SURFACE_TRANSFORM_ENTRY(INHERIT);
-#undef VK_SURFACE_TRANSFORM_ENTRY
-	Log("\n");
-	Log("\t\tcurrentTransform = ");
-#define VK_SURFACE_TRANSFORM_ENTRY(entry) if(SC.currentTransform == VK_SURFACE_TRANSFORM_##entry##_BIT_KHR) { Logf("%s\n", #entry); }
-	VK_SURFACE_TRANSFORM_ENTRY(IDENTITY);
-	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_90);
-	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_180);
-	VK_SURFACE_TRANSFORM_ENTRY(ROTATE_270);
-	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR);
-	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_90);
-	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_180);
-	VK_SURFACE_TRANSFORM_ENTRY(HORIZONTAL_MIRROR_ROTATE_270);
-	VK_SURFACE_TRANSFORM_ENTRY(INHERIT);
-#undef VK_SURFACE_TRANSFORM_ENTRY
-	Log("\t\tsupportedCompositeAlpha = ");
-#define VK_COMPOSITE_ALPHA_ENTRY(entry) if(SC.supportedCompositeAlpha & VK_COMPOSITE_ALPHA_##entry##_BIT_KHR) { Logf("%s | ", #entry); }
-	VK_COMPOSITE_ALPHA_ENTRY(OPAQUE);
-	VK_COMPOSITE_ALPHA_ENTRY(PRE_MULTIPLIED);
-	VK_COMPOSITE_ALPHA_ENTRY(POST_MULTIPLIED);
-	VK_COMPOSITE_ALPHA_ENTRY(INHERIT);
-#undef VK_COMPOSITE_ALPHA_ENTRY
-	Log("\n");
-	Log("\t\tsupportedUsageFlags = ");
-#define VK_IMAGE_USAGE_ENTRY(entry) if(SC.supportedUsageFlags & VK_IMAGE_USAGE_##entry) { Logf("%s | ", #entry); }
-	VK_IMAGE_USAGE_ENTRY(TRANSFER_SRC_BIT);
-	VK_IMAGE_USAGE_ENTRY(TRANSFER_DST_BIT);
-	VK_IMAGE_USAGE_ENTRY(SAMPLED_BIT);
-	VK_IMAGE_USAGE_ENTRY(STORAGE_BIT);
-	VK_IMAGE_USAGE_ENTRY(COLOR_ATTACHMENT_BIT);
-	VK_IMAGE_USAGE_ENTRY(DEPTH_STENCIL_ATTACHMENT_BIT);
-	VK_IMAGE_USAGE_ENTRY(TRANSIENT_ATTACHMENT_BIT);
-	VK_IMAGE_USAGE_ENTRY(INPUT_ATTACHMENT_BIT);
-	VK_IMAGE_USAGE_ENTRY(SHADING_RATE_IMAGE_BIT_NV);
-	VK_IMAGE_USAGE_ENTRY(FRAGMENT_DENSITY_MAP_BIT_EXT);
-#undef VK_IMAGE_USAGE_ENTRY
-	Log("\n");
+#ifdef DEBUG_STDOUT
+	std::cout << SC;
+#endif
 
 	//!< 最低よりも1枚多く取りたい、ただし最大値でクランプする(maxImageCount が0の場合は上限無し)
 	const auto ImageCount = (std::min)(SC.minImageCount + 1, 0 == SC.maxImageCount ? UINT32_MAX : SC.maxImageCount);
@@ -2003,93 +1951,6 @@ void VK::CreatePipeline_(VkPipeline& PL, const VkDevice Dev, const VkPipelineLay
 
 	LOG_OK();
 }
-
-#if 0
-void VK::CreatePipeline_Compute()
-{
-	PERFORMANCE_COUNTER();
-
-	std::vector<VkShaderModule> ShaderModules;
-	std::vector<VkPipelineShaderStageCreateInfo> PipelineShaderStageCreateInfos;
-	//CreateShader(ShaderModules, PipelineShaderStageCreateInfos);
-	
-	const auto PL = PipelineLayouts[0];
-
-	const std::array<VkComputePipelineCreateInfo, 1> ComputePipelineCreateInfos = {
-		{
-			VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-			VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-			nullptr,
-#ifdef _DEBUG
-			VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
-#else
-			0,
-#endif
-			PipelineShaderStageCreateInfos[0],
-			PL,
-			VK_NULL_HANDLE, -1 //!< basePipelineHandle, basePipelineIndex
-		},
-	};
-
-	VERIFY_SUCCEEDED(vkCreateComputePipelines(Device,
-		PipelineCache,
-		static_cast<uint32_t>(size(ComputePipelineCreateInfos)), data(ComputePipelineCreateInfos),
-		GetAllocationCallbacks(),
-		&Pipeline));
-
-	for (auto i : ShaderModules) {
-		vkDestroyShaderModule(Device, i, GetAllocationCallbacks());
-	}
-	ShaderModules.clear();
-
-	LOG_OK();
-}
-#endif
-
-//!<「サブパス」にてクリアするときに使う
-//!< Drawコール前に使用すると、「それなら VkAttachmentDescription.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR を使え」と Warnning が出るので注意
-//void VK::ClearColorAttachment(const VkCommandBuffer CB, const VkClearColorValue& Color)
-//{
-//	const VkClearValue ClearValue = { .color = Color };
-//	const std::array ClearAttachments = {
-//		VkClearAttachment({
-//			VK_IMAGE_ASPECT_COLOR_BIT,
-//			0, //!< カラーアタッチメントのインデックス #VK_TODO 現状決め打ち
-//			ClearValue
-//		}),
-//	};
-//	const std::array ClearRects = {
-//		VkClearRect({
-//			ScissorRects[0],
-//			0, 1 //!< 開始レイヤとレイヤ数 #VK_TODO 現状決め打ち
-//		}),
-//	};
-//	vkCmdClearAttachments(CB,
-//		static_cast<uint32_t>(size(ClearAttachments)), data(ClearAttachments),
-//		static_cast<uint32_t>(size(ClearRects)), data(ClearRects));
-//}
-//void VK::ClearDepthStencilAttachment(const VkCommandBuffer CB, const VkClearDepthStencilValue& DepthStencil)
-//{
-//	VkClearValue ClearValue;
-//	ClearValue.depthStencil = DepthStencil;
-//	const std::array<VkClearAttachment, 1> ClearAttachments = {
-//		{
-//			VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
-//			0, //!< ここでは無視される
-//			ClearValue
-//		},
-//	};
-//	const VkRect2D ClearArea = { { 0, 0 }, SurfaceExtent2D };
-//	const std::array<VkClearRect, 1> ClearRects = {
-//		{
-//			ClearArea,
-//			0, 1 //!< 開始レイヤとレイヤ数 #VK_TODO 現状決め打ち
-//		},
-//	};
-//	vkCmdClearAttachments(CB,
-//		static_cast<uint32_t>(size(ClearAttachments)), data(ClearAttachments),
-//		static_cast<uint32_t>(size(ClearRects)), data(ClearRects));
-//}
 
 void VK::Draw()
 {
