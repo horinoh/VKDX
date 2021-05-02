@@ -523,7 +523,7 @@ protected:
 	static void CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr);
 	static void CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkImageCreateFlags ICF, const VkImageType IT, const VkFormat Format, const VkExtent3D& Extent, const uint32_t Levels, const uint32_t Layers, const VkImageUsageFlags IUF);
 
-	virtual void SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source);
+	//virtual void SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source);
 	static void CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory,
 		const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size,
 		const void* Source, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue);
@@ -1089,6 +1089,20 @@ static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDevice& rhs) 
 			}
 		}
 	}
+	return lhs;
+}
+#pragma endregion
+
+#pragma region DEVICE
+static std::ostream& operator<<(std::ostream& lhs, const VkQueueFamilyProperties& rhs) {
+#define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & rhs.queueFlags) { Win::Logf("%s | ", #entry); }
+	Win::Log("QueueFlags = ");
+	QUEUE_FLAG_ENTRY(GRAPHICS);
+	QUEUE_FLAG_ENTRY(COMPUTE);
+	QUEUE_FLAG_ENTRY(TRANSFER);
+	QUEUE_FLAG_ENTRY(SPARSE_BINDING);
+	QUEUE_FLAG_ENTRY(PROTECTED);
+#undef QUEUE_FLAG_ENTRY
 	return lhs;
 }
 #pragma endregion

@@ -841,21 +841,16 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 	QFPs.resize(Count);
 	vkGetPhysicalDeviceQueueFamilyProperties(PD, &Count, data(QFPs));
 	Log("\tQueueFamilyProperties\n");
-#define QUEUE_FLAG_ENTRY(entry) if(VK_QUEUE_##entry##_BIT & QFPs[i].queueFlags) { Logf("%s | ", #entry); }
 	for (uint32_t i = 0; i < size(QFPs); ++i) {
 		Logf("\t\t[%d] QueueCount = %d, ", i, QFPs[i].queueCount);
-		Log("QueueFlags = ");
-		QUEUE_FLAG_ENTRY(GRAPHICS);
-		QUEUE_FLAG_ENTRY(COMPUTE);
-		QUEUE_FLAG_ENTRY(TRANSFER);
-		QUEUE_FLAG_ENTRY(SPARSE_BINDING);
-		QUEUE_FLAG_ENTRY(PROTECTED);
+#ifdef DEBUG_STDOUT
+		std::cout << QFPs[i];
+#endif
 		VkBool32 b = VK_FALSE;
 		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PD, i, Surface, &b));
 		if (b) { Logf("PRESENT"); }
 		Log("\n");
 	}
-#undef QUEUE_FLAG_ENTRY
 	//!< 機能を持つキューファミリインデックスを見つける (Find queue family index for each functions)
 	GraphicsQueueFamilyIndex = UINT32_MAX;
 	PresentQueueFamilyIndex = UINT32_MAX;
@@ -926,7 +921,6 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 
 	//!< ここではサポートされるフィーチャーを全て有効にしている、パフォーマンス的には不必要なものはオフにした方が良い #PERFORMANCE_TODO
 	VkPhysicalDeviceFeatures PDF; vkGetPhysicalDeviceFeatures(PD, &PDF);
-	//VkPhysicalDeviceFeatures PDF = {};
 	if (nullptr == pNext) {
 		const VkDeviceCreateInfo DCI = {
 			.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -1148,7 +1142,7 @@ VkPresentModeKHR VK::SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR 
 	* VK_PRESENT_MODE_FIFO_KHR			... VulkanAPI が必ずサポートする vsyncで更新 (VulkanAPI always support this, updated on vsync)
 	* VK_PRESENT_MODE_FIFO_RELAXED_KHR	... FIFOに在庫がある場合は vsyncを待つが、間に合わない場合は即座に更新されテアリングが起こる (If FIFO is not empty wait vsync. but if empty, updated immediately and tearing will happen)
 	*/
-	const VkPresentModeKHR SelectedPresentMode = [&]() {
+	const auto SelectedPresentMode = [&]() {
 		for (auto i : PMs) {
 			if (VK_PRESENT_MODE_MAILBOX_KHR == i) {
 				//!< 可能なら MAILBOX (If possible, want to use MAILBOX)
@@ -1347,7 +1341,7 @@ void VK::CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, cons
 	//!< バッファは作成時に指定した使用法でしか使用できない、ここでは VK_SHARING_MODE_EXCLUSIVE 決め打ちにしている #VK_TODO (Using VK_SHARING_MODE_EXCLUSIVE here)
 	//!< VK_SHARING_MODE_EXCLUSIVE	: 複数ファミリのキューが同時アクセスできない、他のファミリからアクセスしたい場合はオーナーシップの移譲が必要
 	//!< VK_SHARING_MODE_CONCURRENT	: 複数ファミリのキューが同時アクセス可能、オーナーシップの移譲も必要無し、パフォーマンスは悪い
-	const std::array<uint32_t, 0> QFI = {};
+	constexpr std::array<uint32_t, 0> QFI = {};
 	const VkBufferCreateInfo BCI = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 		.pNext = nullptr,
@@ -1369,7 +1363,7 @@ void VK::CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, cons
 	Logf("\t\tAllocateDeviceMemory = %llu / %llu (HeapIndex = %d, Align = %llu)\n", MR.size, PDMP.memoryHeaps[PDMP.memoryTypes[TypeIndex].heapIndex].size, PDMP.memoryTypes[TypeIndex].heapIndex, MR.alignment);
 #endif
 	//!< VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT が指定された場合に pNext へ指定する
-	const VkMemoryAllocateFlagsInfo MAFI = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO, .pNext = nullptr, .flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT, .deviceMask = 0 };
+	constexpr VkMemoryAllocateFlagsInfo MAFI = {.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_FLAGS_INFO, .pNext = nullptr, .flags = VK_MEMORY_ALLOCATE_DEVICE_ADDRESS_BIT, .deviceMask = 0 };
 	const VkMemoryAllocateInfo MAI = {
 		.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
 		.pNext = (VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT & BUF) ? &MAFI : nullptr,
@@ -1433,26 +1427,26 @@ void VK::CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice De
 	VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Image, *DM, 0));
 }
 
-void VK::SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source)
-{
-	Scoped<BufferMemory> StagingBuffer(Device);
-	//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
-	StagingBuffer.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);	
-
-	{
-		constexpr VkCommandBufferBeginInfo CBBI = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			.pNext = nullptr,
-			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-			.pInheritanceInfo = nullptr
-		};
-		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit host visible to device local copy command)
-			PopulateCommandBuffer_CopyBufferToBuffer(CB, StagingBuffer.Buffer, Buf, AF, PSF, Size);
-		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-		SubmitAndWait(Queue, CB);
-	}
-}
+//void VK::SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source)
+//{
+//	Scoped<BufferMemory> StagingBuffer(Device);
+//	//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
+//	StagingBuffer.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);	
+//
+//	{
+//		constexpr VkCommandBufferBeginInfo CBBI = {
+//			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+//			.pNext = nullptr,
+//			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+//			.pInheritanceInfo = nullptr
+//		};
+//		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+//			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit host visible to device local copy command)
+//			PopulateCommandBuffer_CopyBufferToBuffer(CB, StagingBuffer.Buffer, Buf, AF, PSF, Size);
+//		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+//		SubmitAndWait(Queue, CB);
+//	}
+//}
 void VK::CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const void* Source, 
 	const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue)
 {
