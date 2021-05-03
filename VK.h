@@ -633,7 +633,6 @@ protected:
 
 	virtual [[nodiscard]] VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 
-//#include "VKPipelineCache.inl"
 #ifdef USE_PIPELINE_SERIALIZE
 public:
 	struct PipelineCacheData
@@ -662,10 +661,8 @@ protected:
 				if (Size) {
 					auto Data = new char[Size];
 					In.read(Data, Size);
-
 					assert(Size == *reinterpret_cast<const uint32_t*>(Data) && "");
 					assert(VK_PIPELINE_CACHE_HEADER_VERSION_ONE == *(reinterpret_cast<const uint32_t*>(Data) + 1) && "");
-					//Validate(Size, Data);
 #ifdef DEBUG_STDOUT
 					//std::cout << *reinterpret_cast<const PipelineCacheData*>(Data);
 #endif
@@ -713,25 +710,6 @@ protected:
 			}
 			PipelineCaches.clear();
 			LOG_OK();
-		}
-		void Validate(const size_t Size, const void* Data) {
-			auto Ptr = reinterpret_cast<const uint32_t*>(Data);
-			const auto PCSize = *Ptr++;
-			const auto PCVersion = *Ptr++;
-			const auto PCVenderID = *Ptr++;
-			const auto PCDeviceID = *Ptr++;
-			uint8_t PCUUID[VK_UUID_SIZE];
-			memcpy(PCUUID, Ptr, sizeof(PCUUID));
-
-			assert(Size == PCSize && "");
-			assert(VK_PIPELINE_CACHE_HEADER_VERSION_ONE == PCVersion && "");
-
-			Log("PipelineCacheSerializer\n");
-			Logf("\tSize = %d\n", Size);
-			Logf("\tVersion = %s\n", PCVersion == VK_PIPELINE_CACHE_HEADER_VERSION_ONE ? "VK_PIPELINE_CACHE_HEADER_VERSION_ONE" : "Unknown");
-			Logf("\tVenderID = %d\n", PCVenderID);
-			Logf("\tDeviceID = %d\n", PCDeviceID);
-			Log("\tUUID = "); for (auto i = 0; i < sizeof(PCUUID); ++i) { Logf("%c", PCUUID[i]); } Log("\n");
 		}
 		VkPipelineCache GetPipelineCache(const size_t i) const { return IsLoaded ? PipelineCaches[0] : PipelineCaches[i]; }
 	private:
@@ -1168,7 +1146,7 @@ static std::ostream& operator<<(std::ostream& lhs, const VkSurfaceCapabilitiesKH
 #pragma endregion
 
 #ifdef USE_PIPELINE_SERIALIZE
-static std::ostream& operator<<(std::ostream& lhs, const VK::PipelineCacheData& rhs) {
+static std::ostream& operator<<(std::ostream& lhs, const  VK::PipelineCacheData& rhs) {
 	Win::Log("PipelineCacheSerializer\n");
 	Win::Logf("\tSize = %d\n", rhs.Size);
 	Win::Logf("\tVersion = %s\n", rhs.Version == VK_PIPELINE_CACHE_HEADER_VERSION_ONE ? "VK_PIPELINE_CACHE_HEADER_VERSION_ONE" : "Unknown");

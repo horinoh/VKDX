@@ -228,6 +228,7 @@ void DX::CreateTextureResource(ID3D12Resource** Resource, ID3D12Device* Device, 
 	assert(!(RD.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) && "pOptimizedClearValue を使用しない");
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, RS, nullptr, IID_PPV_ARGS(Resource)));
 }
+//!< レンダーテクスチャの場合は D3D12_CLEAR_VALUE を指定する部分が通常テクスチャと異なる
 void DX::CreateRenderTextureResource(ID3D12Resource** Resource, ID3D12Device* Device, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize, const UINT16 MipLevels, const D3D12_CLEAR_VALUE& CV, const D3D12_RESOURCE_FLAGS RF, const D3D12_RESOURCE_STATES RS)
 {
 	constexpr D3D12_HEAP_PROPERTIES HP = {
@@ -261,18 +262,18 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const
 	}
 }
 
-void DX::CreateBufferResourceAndExecuteCopyCommand(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source)
-{
-	CreateBufferResource(Resource, Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
-
-	COM_PTR<ID3D12Resource> Upload;
-	CreateBufferResource(COM_PTR_PUT(Upload), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
-	VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-		PopulateCommandList_CopyBufferRegion(GCL, COM_PTR_GET(Upload), *Resource, Size, D3D12_RESOURCE_STATE_GENERIC_READ);
-	} VERIFY_SUCCEEDED(GCL->Close());
-
-	ExecuteAndWait(CQ, GCL, Fence);
-}
+//void DX::CreateBufferResourceAndExecuteCopyCommand(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source)
+//{
+//	CreateBufferResource(Resource, Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
+//
+//	COM_PTR<ID3D12Resource> Upload;
+//	CreateBufferResource(COM_PTR_PUT(Upload), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
+//	VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
+//		PopulateCommandList_CopyBufferRegion(GCL, COM_PTR_GET(Upload), *Resource, Size, D3D12_RESOURCE_STATE_GENERIC_READ);
+//	} VERIFY_SUCCEEDED(GCL->Close());
+//
+//	ExecuteAndWait(CQ, GCL, Fence);
+//}
 
 void DX::PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES RS)
 {
