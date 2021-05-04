@@ -57,9 +57,8 @@ protected:
 		LOG_OK();
 	}
 	virtual void CreatePipelineState() override {
-		const auto ShaderPath = GetBasePath();
 		COM_PTR<ID3DBlob> SB;
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".cs.cso")), COM_PTR_PUT(SB)));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetBasePath() + TEXT(".cs.cso")), COM_PTR_PUT(SB)));
 		const D3D12_COMPUTE_PIPELINE_STATE_DESC CPSD = {
 			.pRootSignature = COM_PTR_GET(RootSignatures[0]),
 			.CS = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB->GetBufferPointer(), .BytecodeLength = SB->GetBufferSize() }),

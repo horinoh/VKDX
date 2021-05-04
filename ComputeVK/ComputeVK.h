@@ -53,11 +53,7 @@ protected:
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 	virtual void CreatePipeline() override {
-		const auto ShaderPath = GetBasePath();
-		const std::array SMs = {
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".comp.spv"))),
-		};
-		const auto PSSCI = VkPipelineShaderStageCreateInfo({ .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_COMPUTE_BIT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr });
+		const auto SM = VK::CreateShaderModule(data(GetBasePath() + TEXT(".comp.spv")));
 		
 		const std::array CPCIs = {
 			VkComputePipelineCreateInfo({
@@ -68,15 +64,22 @@ protected:
 	#else
 				.flags = 0,
 	#endif
-				.stage = PSSCI,
+				.stage = VkPipelineShaderStageCreateInfo({
+					.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+					.pNext = nullptr, 
+					.flags = 0, 
+					.stage = VK_SHADER_STAGE_COMPUTE_BIT,
+					.module = SM,
+					.pName = "main", 
+					.pSpecializationInfo = nullptr 
+				}),
 				.layout = PipelineLayouts[0],
 				.basePipelineHandle = VK_NULL_HANDLE, .basePipelineIndex  = -1
 			}),
 		};
-
 		VERIFY_SUCCEEDED(vkCreateComputePipelines(Device, VK_NULL_HANDLE, static_cast<uint32_t>(size(CPCIs)), data(CPCIs), GetAllocationCallbacks(), &Pipelines.emplace_back()));
 
-		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
+		vkDestroyShaderModule(Device, SM, GetAllocationCallbacks()); 
 	}
 	virtual void CreateDescriptorSet() override {
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {

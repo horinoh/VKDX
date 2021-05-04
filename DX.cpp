@@ -92,7 +92,7 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 	Super::OnExitSizeMove(hWnd, hInstance);
 
 	//!< コマンドリストの完了を待つ
-	WaitForFence();
+	WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence));
 
 	const auto W = GetClientRectWidth(), H = GetClientRectHeight();
 
@@ -123,7 +123,7 @@ void DX::OnPreDestroy(HWND hWnd, HINSTANCE hInstance)
 	Super::OnPreDestroy(hWnd, hInstance);
 
 	//!< GPUが完了するまでここで待機 (Wait GPU)
-	WaitForFence();
+	WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence));
 }
 
 const char* DX::GetFormatChar(const DXGI_FORMAT Format)
@@ -262,19 +262,6 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const
 	}
 }
 
-//void DX::CreateBufferResourceAndExecuteCopyCommand(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const void* Source)
-//{
-//	CreateBufferResource(Resource, Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
-//
-//	COM_PTR<ID3D12Resource> Upload;
-//	CreateBufferResource(COM_PTR_PUT(Upload), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
-//	VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-//		PopulateCommandList_CopyBufferRegion(GCL, COM_PTR_GET(Upload), *Resource, Size, D3D12_RESOURCE_STATE_GENERIC_READ);
-//	} VERIFY_SUCCEEDED(GCL->Close());
-//
-//	ExecuteAndWait(CQ, GCL, Fence);
-//}
-
 void DX::PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES RS)
 {
 	{
@@ -380,7 +367,6 @@ void DX::ExecuteAndWait(ID3D12CommandQueue* CQ, ID3D12CommandList* CL, ID3D12Fen
 	CQ->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
 
 	WaitForFence(CQ, Fence);
-	//WaitForFence();
 }
 
 void DX::CreateDevice([[maybe_unused]] HWND hWnd)
@@ -1381,62 +1367,9 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 	}
 }
 
-#if 0
-void DX::CreatePipelineState_Compute()
-{
-	PERFORMANCE_COUNTER();
-
-	assert(nullptr != RootSignature && "");
-
-	//!< シェーダ
-	std::vector<COM_PTR<ID3DBlob>> ShaderBlobs;
-	CreateShader(ShaderBlobs);
-	assert(!empty(ShaderBlobs) && "");
-
-	const D3D12_CACHED_PIPELINE_STATE CPS = { nullptr, 0 };
-	const D3D12_COMPUTE_PIPELINE_STATE_DESC CPSD = {
-		COM_PTR_GET(RootSignature),
-		D3D12_SHADER_BYTECODE({ ShaderBlobs[0]->GetBufferPointer(), ShaderBlobs[0]->GetBufferSize() }),
-		0, //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-		CPS,
-		D3D12_PIPELINE_STATE_FLAG_NONE
-	};
-	VERIFY_SUCCEEDED(Device->CreateComputePipelineState(&CPSD, COM_PTR_UUIDOF_PUTVOID(PipelineState)));
-
-	LOG_OK();
-}
-#endif
-
-#if 0
-void DX::PopulateCommandList(const size_t i)
-{
-	//!< GPUが参照している間は、「コマンドアロケータ」のリセットはできない
-	//VERIFY_SUCCEEDED(CA->Reset());
-
-	//!< コマンド実行後に、「コマンドリスト」はリセットして再利用が可能 (GPUは「コマンドアロケータ」を参照している)
-	//!< 「コマンドリスト」作成時に「パイプライン」を指定していなくても、Reset()の引数に「パイプライン」を指定すれば良い
-	const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
-	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr));
-	{
-		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-
-		GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-		GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
-
-		ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET); {
-			auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); CDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
-			constexpr std::array<D3D12_RECT, 0> Rects = {};
-			GCL->ClearRenderTargetView(CDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
-		} ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-	}
-	VERIFY_SUCCEEDED(GCL->Close());
-}
-#endif
-
 void DX::Draw()
 {
-	WaitForFence();
+	WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence));
 
 	DrawFrame(GetCurrentBackBufferIndex());
 
@@ -1448,25 +1381,6 @@ void DX::Dispatch()
 {
 	//!< #DX_TODO Dispatch実装
 	DEBUG_BREAK();
-}
-void DX::WaitForFence()
-{
-	//!< CPU 側のフェンス値をインクリメント
-	++FenceValue;
-
-	//!< コマンドキューに Fencevalue を引数に Signal を追加する (GPU が到達すれば GetCompletedValue() が FenceValue になり、CPUに追いついたことになる)
-	VERIFY_SUCCEEDED(GraphicsCommandQueue->Signal(COM_PTR_GET(Fence), FenceValue));
-	if (Fence->GetCompletedValue() < FenceValue) {
-		auto hEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-		if (nullptr != hEvent) [[likely]] {
-			//!< GetCompletedValue() が FenceValue になったらイベントが発行される
-			VERIFY_SUCCEEDED(Fence->SetEventOnCompletion(FenceValue, hEvent));
-
-			//!< イベント発行まで待つ
-			WaitForSingleObject(hEvent, INFINITE);
-			CloseHandle(hEvent);
-		}
-	}
 }
 
 void DX::WaitForFence(ID3D12CommandQueue* CQ, ID3D12Fence* Fence)

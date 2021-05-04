@@ -185,12 +185,12 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	for (auto& i : DepthTextures) { i.Destroy(Device); } DepthTextures.clear();
 	for (auto& i : Textures) { i.Destroy(Device); } Textures.clear();
 
-	for (auto i : UniformBuffers) { i.Destroy(Device); } UniformBuffers.clear();
 #pragma region RAYTRACING
 	for (auto i : ShaderBindingTables) { i.Destroy(Device); } ShaderBindingTables.clear();
 	for (auto i : BLASs) { i.Destroy(Device); } BLASs.clear();
 	for (auto i : TLASs) { i.Destroy(Device); } TLASs.clear();
 #pragma endregion
+	for (auto i : UniformBuffers) { i.Destroy(Device); } UniformBuffers.clear();
 	for (auto i : IndirectBuffers) { i.Destroy(Device); } IndirectBuffers.clear();
 	for (auto i : IndexBuffers) { i.Destroy(Device); } IndexBuffers.clear();
 	for (auto i : VertexBuffers) { i.Destroy(Device); } VertexBuffers.clear();
@@ -1427,26 +1427,6 @@ void VK::CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice De
 	VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Image, *DM, 0));
 }
 
-//void VK::SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source)
-//{
-//	Scoped<BufferMemory> StagingBuffer(Device);
-//	//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
-//	StagingBuffer.Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);	
-//
-//	{
-//		constexpr VkCommandBufferBeginInfo CBBI = {
-//			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-//			.pNext = nullptr,
-//			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-//			.pInheritanceInfo = nullptr
-//		};
-//		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-//			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit host visible to device local copy command)
-//			PopulateCommandBuffer_CopyBufferToBuffer(CB, StagingBuffer.Buffer, Buf, AF, PSF, Size);
-//		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-//		SubmitAndWait(Queue, CB);
-//	}
-//}
 void VK::CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const void* Source, 
 	const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue)
 {

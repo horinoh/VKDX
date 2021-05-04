@@ -397,9 +397,7 @@ protected:
 	static void CreateBufferResource(ID3D12Resource** Resource, ID3D12Device* Device, const std::vector<D3D12_SUBRESOURCE_DATA>& SRDs, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs, const std::vector<UINT>& NumRows, const std::vector<UINT64>& RowSizeInBytes, const UINT64 TotalBytes);
 	static void CreateTextureResource(ID3D12Resource** Resource, ID3D12Device* Device, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize, const UINT16 MipLevels, DXGI_FORMAT Format, const D3D12_RESOURCE_FLAGS RF, const D3D12_RESOURCE_STATES RS);
 	static void CreateRenderTextureResource(ID3D12Resource** Resource, ID3D12Device* Device, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize, const UINT16 MipLevels, const D3D12_CLEAR_VALUE& CV, const D3D12_RESOURCE_FLAGS RF, const D3D12_RESOURCE_STATES RS);
-
 	virtual void CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const void* Source, const D3D12_RANGE* Range = nullptr);
-	//static void CreateBufferResourceAndExecuteCopyCommand(ID3D12Resource** Resource, ID3D12Device* Device, const size_t Size, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* Queue, ID3D12Fence* Fence, const void* Source);
 
 public:
 #pragma region COMMAND
@@ -521,7 +519,6 @@ public:
 		const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, 
 		const std::vector<DXGI_FORMAT>& RtvFormats,
 		const PipelineLibrarySerializer* PLS = nullptr, LPCWSTR Name = nullptr);
-	//virtual void CreatePipelineState_Compute();
 
 	virtual void CreateTexture() {}
 	virtual void CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RESOURCE_STATES RS);
@@ -534,7 +531,6 @@ public:
 	virtual void DrawFrame([[maybe_unused]] const UINT i) {}
 	virtual void Draw();
 	virtual void Dispatch();
-	virtual void WaitForFence();
 	static void WaitForFence(ID3D12CommandQueue* CQ, ID3D12Fence* Fence);
 	virtual void Submit();
 	virtual void Present();
@@ -569,11 +565,10 @@ protected:
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;
 	std::vector<IndirectBuffer> IndirectBuffers;
+	std::vector<ConstantBuffer> ConstantBuffers;
 #pragma region RAYTRACING
 	std::vector<AccelerationStructureBuffer> BLASs, TLASs;
 #pragma endregion
-
-	std::vector<ConstantBuffer> ConstantBuffers;
 
 	std::vector<Texture> Textures;
 	std::vector<DepthTexture> DepthTextures;

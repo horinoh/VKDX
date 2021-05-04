@@ -290,7 +290,6 @@ public:
 			VERIFY_SUCCEEDED(vkCreateImageView(Device, &IVCI, GetAllocationCallbacks(), &View));
 		}
 	};
-
 #pragma region RAYTRACING
 	class AccelerationStructureBuffer : public BufferMemory
 	{
@@ -523,7 +522,6 @@ protected:
 	static void CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr);
 	static void CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkImageCreateFlags ICF, const VkImageType IT, const VkFormat Format, const VkExtent3D& Extent, const uint32_t Levels, const uint32_t Layers, const VkImageUsageFlags IUF);
 
-	//virtual void SubmitStagingCopy(const VkBuffer Buf, const VkQueue Queue, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkDeviceSize Size, const void* Source);
 	static void CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory,
 		const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size,
 		const void* Source, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue);
@@ -759,10 +757,7 @@ protected:
 		.pfnInternalFree = []([[maybe_unused]] void* pUserData, [[maybe_unused]] size_t size, [[maybe_unused]] VkInternalAllocationType allocationType, [[maybe_unused]] VkSystemAllocationScope allocationScope) {
 		},
 	};
-	static const [[nodiscard]] VkAllocationCallbacks* GetAllocationCallbacks() { 
-		return nullptr;
-		//return &AllocationCallbacks;
-	}
+	static const [[nodiscard]] VkAllocationCallbacks* GetAllocationCallbacks() { return nullptr/*&AllocationCallbacks*/; }
 #pragma endregion
 
 	virtual [[nodiscard]] VkPhysicalDevice GetCurrentPhysicalDevice() const { return CurrentPhysicalDevice; };
@@ -841,12 +836,11 @@ protected:
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;
 	std::vector<IndirectBuffer> IndirectBuffers;
+	std::vector<UniformBuffer> UniformBuffers;
 #pragma region RAYTRACING
 	std::vector<AccelerationStructureBuffer> BLASs, TLASs;
 	std::vector<ShaderBindingTable> ShaderBindingTables;
 #pragma endregion
-
-	std::vector<UniformBuffer> UniformBuffers;
 
 	VkFormat DepthFormat = VK_FORMAT_D24_UNORM_S8_UINT;
 	std::vector<Texture> Textures;
