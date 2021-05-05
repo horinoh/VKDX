@@ -16,7 +16,6 @@ void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE P
 			.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL, //!< 書き込み時のマスク値
 		}),
 	};
-
 	constexpr D3D12_RASTERIZER_DESC RD = {
 		.FillMode = D3D12_FILL_MODE_SOLID,
 		.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
@@ -63,7 +62,6 @@ void DXExt::CreatePipelineState_VsPsDsHsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_
 			.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,
 		}),
 	};
-
 	constexpr D3D12_RASTERIZER_DESC RD = {
 		.FillMode = D3D12_FILL_MODE_SOLID,
 		.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
@@ -94,4 +92,56 @@ void DXExt::CreatePipelineState_VsPsDsHsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_
 	Threads.emplace_back(std::thread::thread(DX::CreatePipelineState_, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), Topology, RTBDs, RD, DSD, SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4], IEDs, RTVs, nullptr, nullptr));
 #endif	
 	for (auto& i : Threads) { i.join(); }
+}
+
+void DXExt::CreatePipelineState_MsPs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 2>& SBCs)
+{
+	constexpr D3D12_RASTERIZER_DESC RD = {
+		.FillMode = D3D12_FILL_MODE_SOLID,
+		.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
+		.DepthBias = D3D12_DEFAULT_DEPTH_BIAS, .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP, .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
+		.DepthClipEnable = TRUE,
+		.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
+		.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
+	};
+	constexpr D3D12_DEPTH_STENCILOP_DESC DSOD = {
+		.StencilFailOp = D3D12_STENCIL_OP_KEEP,
+		.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP,
+		.StencilPassOp = D3D12_STENCIL_OP_KEEP,
+		.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS
+	};
+	const D3D12_DEPTH_STENCIL_DESC DSD = {
+		.DepthEnable = DepthEnable, .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D12_COMPARISON_FUNC_LESS,
+		.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
+		.FrontFace = DSOD, .BackFace = DSOD
+	};
+	constexpr std::array RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
+
+	MESH_SHADER_PIPELINE_STATE_DESC MSPSD = {
+		.pRootSignature = COM_PTR_GET(RootSignatures[0]),
+		.AS = NullSB,
+		.MS = SBCs[0],
+		.PS = SBCs[1],
+		.BlendState = D3D12_BLEND_DESC({.AlphaToCoverageEnable = TRUE, .IndependentBlendEnable = FALSE, .RenderTarget = {}}),
+		.SampleMask = D3D12_DEFAULT_SAMPLE_MASK,
+		.RasterizerState = RD,
+		.DepthStencilState = DSD,
+		.PrimitiveTopologyType = PTT,
+		.NumRenderTargets = static_cast<UINT>(size(RTVs)), .RTVFormats = {},
+		.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT,
+		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+		.NodeMask = 0,
+		.CachedPSO = D3D12_CACHED_PIPELINE_STATE({.pCachedBlob = nullptr, .CachedBlobSizeInBytes = 0 }),
+#if defined(_DEBUG) && defined(USE_WARP)
+		.Flags = D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG
+#else
+		.Flags = D3D12_PIPELINE_STATE_FLAG_NONE
+#endif
+	};
+	std::ranges::copy(RTVs, MSPSD.RTVFormats);
+
+	const D3D12_PIPELINE_STATE_STREAM_DESC PSSD = { .SizeInBytes = sizeof(MSPSD), .pPipelineStateSubobjectStream = &MSPSD };
+	COM_PTR<ID3D12Device2> Device2;
+	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device2)));
+	VERIFY_SUCCEEDED(Device2->CreatePipelineState(&PSSD, COM_PTR_UUIDOF_PUTVOID(PipelineStates.emplace_back())));
 }

@@ -16,18 +16,26 @@ public:
 	virtual void CreatePipelineState() override {
 		if (HasMeshShaderSupport(COM_PTR_GET(Device))) {
 			const auto ShaderPath = GetBasePath();
-				std::vector<COM_PTR<ID3DBlob>> SBs;
-				//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".as.cso")), COM_PTR_PUT(SBs.emplace_back())));
-				VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ms.cso")), COM_PTR_PUT(SBs.emplace_back())));
-				VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
-
-				constexpr D3D12_RASTERIZER_DESC RD = {
-					.FillMode = D3D12_FILL_MODE_SOLID,
-					.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
-					.DepthBias = D3D12_DEFAULT_DEPTH_BIAS, .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP, .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
-					.DepthClipEnable = TRUE,
-					.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
-					.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
+			std::vector<COM_PTR<ID3DBlob>> SBs;
+			//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".as.cso")), COM_PTR_PUT(SBs.emplace_back())));
+			VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ms.cso")), COM_PTR_PUT(SBs.emplace_back())));
+			VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
+			const std::array SBCs = {
+				D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[0]->GetBufferPointer(), .BytecodeLength = SBs[0]->GetBufferSize() }),
+				D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
+				//D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[2]->GetBufferPointer(), .BytecodeLength = SBs[2]->GetBufferSize() }),
+			};
+#if 1
+			//CreatePipelineState_AsMsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE, SBCs);
+			CreatePipelineState_MsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE, SBCs);
+#else
+			constexpr D3D12_RASTERIZER_DESC RD = {
+				.FillMode = D3D12_FILL_MODE_SOLID,
+				.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
+				.DepthBias = D3D12_DEFAULT_DEPTH_BIAS, .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP, .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
+				.DepthClipEnable = TRUE,
+				.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
+				.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 			};
 			constexpr D3D12_DEPTH_STENCILOP_DESC DSOD = {
 				.StencilFailOp = D3D12_STENCIL_OP_KEEP,
@@ -69,6 +77,7 @@ public:
 			COM_PTR<ID3D12Device2> Device2;
 			VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device2)));
 			VERIFY_SUCCEEDED(Device2->CreatePipelineState(&PSSD, COM_PTR_UUIDOF_PUTVOID(PipelineStates.emplace_back())));
+#endif
 		}
 	}
 	virtual void PopulateCommandList(const size_t i) override {
