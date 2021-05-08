@@ -21,6 +21,6 @@ public:
 	//void CreatePipelineState_VsGsFs();
 	//void CreatePipelineState_VsFsTesTcs();
 
-	void CreatePipeline_MsFs(const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 2>& PSSCIs);
-	void CreatePipeline_TsMsFs([[maybe_unused]] const VkBool32 DepthEnable, [[maybe_unused]] const std::array<VkPipelineShaderStageCreateInfo, 3>& PSSCIs) {}
+	void CreatePipeline_MsFs(const VkPrimitiveTopology PT, const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 2>& PSSCIs);
+	void CreatePipeline_TsMsFs([[maybe_unused]] const VkPrimitiveTopology PT, [[maybe_unused]] const VkBool32 DepthEnable, [[maybe_unused]] const std::array<VkPipelineShaderStageCreateInfo, 3>& PSSCIs) {}
 };

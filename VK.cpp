@@ -1427,30 +1427,30 @@ void VK::CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice De
 	VERIFY_SUCCEEDED(vkBindImageMemory(Device, *Image, *DM, 0));
 }
 
-void VK::CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const void* Source, 
-	const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue)
-{
-	//!< デバイスローカルバッファ、デバイスメモリを作成 (Create device local buffer, device memory)
-	CreateBufferMemory(Buffer, DeviceMemory, Device, PDMP, BUF | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-	Scoped<BufferMemory> StagingBuffer(Device);
-	//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
-	StagingBuffer.Create(Device, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);
-	{
-		constexpr VkCommandBufferBeginInfo CBBI = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			.pNext = nullptr,
-			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-			.pInheritanceInfo = nullptr
-		};
-		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit host visible to device local copy command)
-			PopulateCommandBuffer_CopyBufferToBuffer(CB, StagingBuffer.Buffer, *Buffer, AF, PSF, Size);
-		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-
-		SubmitAndWait(Queue, CB);
-	}
-}
+//void VK::CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const void* Source, 
+//	const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue)
+//{
+//	//!< デバイスローカルバッファ、デバイスメモリを作成 (Create device local buffer, device memory)
+//	CreateBufferMemory(Buffer, DeviceMemory, Device, PDMP, BUF | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+//
+//	Scoped<BufferMemory> StagingBuffer(Device);
+//	//!< ホストビジブルバッファ、デバイスメモリを作成 (Create host visible buffer, device memory)
+//	StagingBuffer.Create(Device, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);
+//	{
+//		constexpr VkCommandBufferBeginInfo CBBI = {
+//			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+//			.pNext = nullptr,
+//			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+//			.pInheritanceInfo = nullptr
+//		};
+//		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+//			//!< ホストビジブルからデバイスローカルへのコピーコマンドを発行 (Submit host visible to device local copy command)
+//			PopulateCommandBuffer_CopyBufferToBuffer(CB, StagingBuffer.Buffer, *Buffer, AF, PSF, Size);
+//		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+//
+//		SubmitAndWait(Queue, CB);
+//	}
+//}
 #pragma region RAYTRACING
 void VK::BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkQueue Queue, const VkCommandBuffer CB, const VkAccelerationStructureKHR AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs)
 {
@@ -1760,8 +1760,11 @@ VkShaderModule VK::CreateShaderModule(const std::wstring& Path) const
 	return ShaderModule;
 }
 
-void VK::CreatePipeline_(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP, 
-	const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints, 
+void VK::CreatePipeline_(VkPipeline& PL, 
+	const VkDevice Dev, 
+	const VkPipelineLayout PLL,
+	const VkRenderPass RP, 
+	const VkPrimitiveTopology PT, const uint32_t PatchControlPoints, 
 	const VkPipelineRasterizationStateCreateInfo& PRSCI,
 	const VkPipelineDepthStencilStateCreateInfo& PDSSCI,
 	const VkPipelineShaderStageCreateInfo* VS, const VkPipelineShaderStageCreateInfo* FS, const VkPipelineShaderStageCreateInfo* TES, const VkPipelineShaderStageCreateInfo* TCS, const VkPipelineShaderStageCreateInfo* GS,
@@ -1771,6 +1774,7 @@ void VK::CreatePipeline_(VkPipeline& PL, const VkDevice Dev, const VkPipelineLay
 {
 	PERFORMANCE_COUNTER();
 
+	//!< シェーダステージ (ShaderStage)
 	std::vector<VkPipelineShaderStageCreateInfo> PSSCIs;
 	if (nullptr != VS) { PSSCIs.emplace_back(*VS); }
 	if (nullptr != FS) { PSSCIs.emplace_back(*FS); }
@@ -1798,7 +1802,7 @@ void VK::CreatePipeline_(VkPipeline& PL, const VkDevice Dev, const VkPipelineLay
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
 		.pNext = nullptr,
 		.flags = 0,
-		.topology = Topology,
+		.topology = PT,
 		.primitiveRestartEnable = VK_FALSE
 	};
 	//!< WITH_ADJACENCY 系使用時には デバイスフィーチャー geometryShader が有効であること
@@ -1814,7 +1818,7 @@ void VK::CreatePipeline_(VkPipeline& PL, const VkDevice Dev, const VkPipelineLay
 		|| PIASCI.primitiveRestartEnable == VK_FALSE) /*&& ""*/);
 
 	//!< テセレーション (Tessellation)
-	assert((Topology != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST || PatchControlPoints != 0) && "");
+	assert((PT != VK_PRIMITIVE_TOPOLOGY_PATCH_LIST || PatchControlPoints != 0) && "");
 	const VkPipelineTessellationStateCreateInfo PTSCI = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO,
 		.pNext = nullptr,
@@ -1857,9 +1861,9 @@ void VK::CreatePipeline_(VkPipeline& PL, const VkDevice Dev, const VkPipelineLay
 	assert((PMSCI.minSampleShading >= 0.0f && PMSCI.minSampleShading <= 1.0f) && "");
 	//assert((PMSCI.alphaToOneEnable == VK_FALSE || PDF.alphaToOne) && "");
 
+	//!< カラーブレンド (ColorBlend)
 	//!< VK_BLEND_FACTOR_SRC1 系をを使用するには、デバイスフィーチャー dualSrcBlend が有効であること
 	///!< SRCコンポーネント * SRCファクタ OP DSTコンポーネント * DSTファクタ
-
 	//!< デバイスフィーチャー independentBlend が有効で無い場合は、配列の各要素は「完全に同じ値」であること (If device feature independentBlend is not enabled, each array element must be exactly same)
 	//if (!PDF.independentBlend) {
 	//	for (auto i : PCBASs) {
@@ -1923,6 +1927,102 @@ void VK::CreatePipeline_(VkPipeline& PL, const VkDevice Dev, const VkPipelineLay
 	//!< VKでは1コールで複数のパイプラインを作成することもできるが、DXに合わせて1つしか作らないことにしておく
 	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Dev, PC, static_cast<uint32_t>(size(GPCIs)), data(GPCIs), GetAllocationCallbacks(), &PL));
 
+	LOG_OK();
+}
+void VK::CreatePipeline__(VkPipeline& PL,
+	const VkDevice Dev, 
+	const VkPipelineLayout PLL,
+	const VkRenderPass RP, 
+	const VkPrimitiveTopology PT,
+	const VkPipelineRasterizationStateCreateInfo& PRSCI, 
+	const VkPipelineDepthStencilStateCreateInfo& PDSSCI, 
+	const VkPipelineShaderStageCreateInfo* TS, const VkPipelineShaderStageCreateInfo* MS, const VkPipelineShaderStageCreateInfo* FS, 
+	const std::vector<VkPipelineColorBlendAttachmentState>& PCBASs, 
+	VkPipelineCache PC)
+{
+	PERFORMANCE_COUNTER();
+
+	//!< シェーダステージ (ShaderStage)
+	std::vector<VkPipelineShaderStageCreateInfo> PSSCIs;
+	if (nullptr != TS) { PSSCIs.emplace_back(*TS); }
+	if (nullptr != MS) { PSSCIs.emplace_back(*MS); }
+	if (nullptr != FS) { PSSCIs.emplace_back(*FS); }
+	assert(!empty(PSSCIs) && "");
+
+	//!< インプットアセンブリ (InputAssembly)
+	const VkPipelineInputAssemblyStateCreateInfo PIASCI = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.topology = PT,
+		.primitiveRestartEnable = VK_FALSE
+	};
+
+	//!< ビューポート (Viewport)
+	constexpr VkPipelineViewportStateCreateInfo PVSCI = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.viewportCount = 1, .pViewports = nullptr,
+		.scissorCount = 1, .pScissors = nullptr
+	};
+
+	//!< マルチサンプル (Multisample)
+	constexpr VkSampleMask SM = 0xffffffff;
+	constexpr VkPipelineMultisampleStateCreateInfo PMSCI = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
+		.sampleShadingEnable = VK_FALSE, .minSampleShading = 0.0f,
+		.pSampleMask = &SM,
+		.alphaToCoverageEnable = VK_FALSE, .alphaToOneEnable = VK_FALSE
+	};
+	
+	//!< カラーブレンド (ColorBlend)
+	const VkPipelineColorBlendStateCreateInfo PCBSCI = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.logicOpEnable = VK_FALSE, .logicOp = VK_LOGIC_OP_COPY, 
+		.attachmentCount = static_cast<uint32_t>(size(PCBASs)), .pAttachments = data(PCBASs),
+		.blendConstants = { 1.0f, 1.0f, 1.0f, 1.0f }
+	};
+
+	//!< ダイナミックステート (DynamicState)
+	constexpr std::array DSs = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, };
+	constexpr VkPipelineDynamicStateCreateInfo PDSCI = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.dynamicStateCount = static_cast<uint32_t>(size(DSs)), .pDynamicStates = data(DSs)
+	};
+
+	const std::array GPCIs = {
+	VkGraphicsPipelineCreateInfo({
+		.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+		.pNext = nullptr,
+#ifdef _DEBUG
+			.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+#else
+			.flags = 0,
+#endif
+			.stageCount = static_cast<uint32_t>(size(PSSCIs)), .pStages = data(PSSCIs),
+			.pVertexInputState = nullptr,
+			.pInputAssemblyState = &PIASCI,
+			.pTessellationState = nullptr,
+			.pViewportState = &PVSCI,
+			.pRasterizationState = &PRSCI,
+			.pMultisampleState = &PMSCI,
+			.pDepthStencilState = &PDSSCI,
+			.pColorBlendState = &PCBSCI,
+			.pDynamicState = &PDSCI,
+			.layout = PLL,
+			.renderPass = RP, .subpass = 0, 
+			.basePipelineHandle = VK_NULL_HANDLE, .basePipelineIndex = -1
+		})
+	};
+	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Dev, PC, static_cast<uint32_t>(size(GPCIs)), data(GPCIs), GetAllocationCallbacks(), &PL));
 	LOG_OK();
 }
 

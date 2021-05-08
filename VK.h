@@ -522,9 +522,9 @@ protected:
 	static void CreateBufferMemory(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const VkMemoryPropertyFlags MPF, const void* Source = nullptr);
 	static void CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkImageCreateFlags ICF, const VkImageType IT, const VkFormat Format, const VkExtent3D& Extent, const uint32_t Levels, const uint32_t Layers, const VkImageUsageFlags IUF);
 
-	static void CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory,
-		const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size,
-		const void* Source, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue);
+	//static void CreateBufferMemoryAndSubmitTransferCommand(VkBuffer* Buffer, VkDeviceMemory* DeviceMemory,
+	//	const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size,
+	//	const void* Source, const VkCommandBuffer CB, const VkAccessFlagBits AF, const VkPipelineStageFlagBits PSF, const VkQueue Queue);
 
 	static VkDeviceAddress GetDeviceAddress(const VkDevice Device, const VkBuffer Buffer) {
 		const VkBufferDeviceAddressInfo BDAI = { .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, .pNext = nullptr, .buffer = Buffer };
@@ -718,7 +718,8 @@ protected:
 	};
 #endif
 	virtual void CreatePipeline() {}
-	static void CreatePipeline_(VkPipeline& PL, const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP,
+	static void CreatePipeline_(VkPipeline& PL,
+		const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP,
 		const VkPrimitiveTopology Topology, const uint32_t PatchControlPoints,
 		const VkPipelineRasterizationStateCreateInfo& PRSCI,
 		const VkPipelineDepthStencilStateCreateInfo& PDSSCI,
@@ -726,7 +727,15 @@ protected:
 		const std::vector<VkVertexInputBindingDescription>& VIBDs, const std::vector<VkVertexInputAttributeDescription>& VIADs,
 		const std::vector<VkPipelineColorBlendAttachmentState>& PCBASs,
 		VkPipelineCache PC = VK_NULL_HANDLE);
-	
+	static void CreatePipeline__(VkPipeline& PL,
+		const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP,
+		const VkPrimitiveTopology PT,
+		const VkPipelineRasterizationStateCreateInfo& PRSCI,
+		const VkPipelineDepthStencilStateCreateInfo& PDSSCI,
+		const VkPipelineShaderStageCreateInfo* TS, const VkPipelineShaderStageCreateInfo* MS, const VkPipelineShaderStageCreateInfo* FS,
+		const std::vector<VkPipelineColorBlendAttachmentState>& PCBASs,
+		VkPipelineCache PC = VK_NULL_HANDLE);
+
 	virtual void PopulateCommandBuffer([[maybe_unused]] const size_t i) {}
 
 	virtual uint32_t GetCurrentBackBufferIndex() const { return SwapchainImageIndex; }

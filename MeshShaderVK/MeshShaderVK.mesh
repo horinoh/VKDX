@@ -13,17 +13,8 @@ layout(triangles, max_vertices = 3, max_primitives = 1) out;
 void main()
 {
 	gl_PrimitiveIndicesNV[gl_LocalInvocationID.x] = gl_LocalInvocationID.x;
-//  gl_PrimitiveIndicesNV[0] = 0;
-//  gl_PrimitiveIndicesNV[1] = 1;
-//  gl_PrimitiveIndicesNV[2] = 2;
 	gl_PrimitiveCountNV = 1;
 
 	gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = vec4(Positions[gl_LocalInvocationID.x], 1.0); 
 	OutColor[gl_LocalInvocationID.x] = Colors[gl_LocalInvocationID.x];  
-//  gl_MeshVerticesNV[0].gl_Position = vec4(Positions[0], 1.0); 
-//  OutColor[0] = Colors[0];
-//  gl_MeshVerticesNV[1].gl_Position = vec4(Positions[1], 1.0); 
-//  OutColor[1] = Colors[1];
-//  gl_MeshVerticesNV[2].gl_Position = vec4(Positions[2], 1.0); 
-//  OutColor[2] = Colors[2];
 }
