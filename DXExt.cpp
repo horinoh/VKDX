@@ -96,6 +96,15 @@ void DXExt::CreatePipelineState_VsPsDsHsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_
 
 void DXExt::CreatePipelineState_MsPs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 2>& SBCs)
 {
+	const std::vector RTBDs = {
+		D3D12_RENDER_TARGET_BLEND_DESC({
+			.BlendEnable = FALSE, .LogicOpEnable = FALSE,
+			.SrcBlend = D3D12_BLEND_ONE, .DestBlend = D3D12_BLEND_ZERO, .BlendOp = D3D12_BLEND_OP_ADD,
+			.SrcBlendAlpha = D3D12_BLEND_ONE, .DestBlendAlpha = D3D12_BLEND_ZERO, .BlendOpAlpha = D3D12_BLEND_OP_ADD,
+			.LogicOp = D3D12_LOGIC_OP_NOOP,
+			.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,
+		}),
+	};
 	constexpr D3D12_RASTERIZER_DESC RD = {
 		.FillMode = D3D12_FILL_MODE_SOLID,
 		.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
@@ -115,33 +124,15 @@ void DXExt::CreatePipelineState_MsPs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, co
 		.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
 		.FrontFace = DSOD, .BackFace = DSOD
 	};
-	constexpr std::array RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
+	const std::vector RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
 
-	MESH_SHADER_PIPELINE_STATE_DESC MSPSD = {
-		.pRootSignature = COM_PTR_GET(RootSignatures[0]),
-		.AS = NullSB,
-		.MS = SBCs[0],
-		.PS = SBCs[1],
-		.BlendState = D3D12_BLEND_DESC({.AlphaToCoverageEnable = TRUE, .IndependentBlendEnable = FALSE, .RenderTarget = {}}),
-		.SampleMask = D3D12_DEFAULT_SAMPLE_MASK,
-		.RasterizerState = RD,
-		.DepthStencilState = DSD,
-		.PrimitiveTopologyType = PTT,
-		.NumRenderTargets = static_cast<UINT>(size(RTVs)), .RTVFormats = {},
-		.DSVFormat = DXGI_FORMAT_D24_UNORM_S8_UINT,
-		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
-		.NodeMask = 0,
-		.CachedPSO = D3D12_CACHED_PIPELINE_STATE({.pCachedBlob = nullptr, .CachedBlobSizeInBytes = 0 }),
-#if defined(_DEBUG) && defined(USE_WARP)
-		.Flags = D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG
+	PipelineStates.emplace_back();
+	std::vector<std::thread> Threads;
+#ifdef USE_PIPELINE_SERIALIZE
+	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
+	Threads.emplace_back(std::thread::thread(DX::CreatePipelineState__, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), PTT, RTBDs, RD, DSD, NullSB, SBCs[0], SBCs[1], RTVs, &PLS, TEXT("0")));
 #else
-		.Flags = D3D12_PIPELINE_STATE_FLAG_NONE
-#endif
-	};
-	std::ranges::copy(RTVs, MSPSD.RTVFormats);
-
-	const D3D12_PIPELINE_STATE_STREAM_DESC PSSD = { .SizeInBytes = sizeof(MSPSD), .pPipelineStateSubobjectStream = &MSPSD };
-	COM_PTR<ID3D12Device2> Device2;
-	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device2)));
-	VERIFY_SUCCEEDED(Device2->CreatePipelineState(&PSSD, COM_PTR_UUIDOF_PUTVOID(PipelineStates.emplace_back())));
+	Threads.emplace_back(std::thread::thread(DX::CreatePipelineState__, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), PTT, RTBDs, RD, DSD, NullSB, SBCs[0], SBCs[1], RTVs, nullptr, nullptr));
+#endif	
+	for (auto& i : Threads) { i.join(); }
 }

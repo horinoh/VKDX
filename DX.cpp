@@ -1247,8 +1247,9 @@ void DX::StripShader(COM_PTR<ID3DBlob>& Blob)
 	}
 }
 
-void DX::CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* Device, ID3D12RootSignature* RS,
-	const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology,
+void DX::CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST,
+	ID3D12Device* Device, ID3D12RootSignature* RS,
+	const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT,
 	const std::vector<D3D12_RENDER_TARGET_BLEND_DESC>& RTBDs,
 	const D3D12_RASTERIZER_DESC& RD,
 	const D3D12_DEPTH_STENCIL_DESC& DSD,
@@ -1289,8 +1290,8 @@ void DX::CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* D
 		.DepthStencilState = DSD,
 		.InputLayout = D3D12_INPUT_LAYOUT_DESC({ .pInputElementDescs = data(IEDs), .NumElements = static_cast<UINT>(size(IEDs)) }),
 		.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
-		.PrimitiveTopologyType = Topology,
-		.NumRenderTargets = static_cast<UINT>(size(RtvFormats)), .RTVFormats = {}, 
+		.PrimitiveTopologyType = PTT,
+		.NumRenderTargets = static_cast<UINT>(size(RtvFormats)), .RTVFormats = {},
 		.DSVFormat = DSD.DepthEnable ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_UNKNOWN,
 		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
 		.NodeMask = 0, //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
@@ -1322,7 +1323,67 @@ void DX::CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST, ID3D12Device* D
 			VERIFY_SUCCEEDED(PLS->GetPipelineLibrary()->StorePipeline(Name, COM_PTR_GET(PST)));
 		}
 	}
-	
+	LOG_OK();
+}
+
+void DX::CreatePipelineState__(COM_PTR<ID3D12PipelineState>& PST, 
+	ID3D12Device* Device, 
+	ID3D12RootSignature* RS,
+	const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT,
+	const std::vector<D3D12_RENDER_TARGET_BLEND_DESC>& RTBDs, 
+	const D3D12_RASTERIZER_DESC& RD,
+	const D3D12_DEPTH_STENCIL_DESC& DSD, 
+	const D3D12_SHADER_BYTECODE AS, const D3D12_SHADER_BYTECODE MS, const D3D12_SHADER_BYTECODE PS, 
+	const std::vector<DXGI_FORMAT>& RtvFormats, 
+	const PipelineLibrarySerializer* PLS, LPCWSTR Name)
+{
+	PERFORMANCE_COUNTER();
+
+	//!< キャッシュドパイプラインステート (CachedPipelineState)
+	COM_PTR<ID3DBlob> CachedBlob;
+	if (nullptr != PST) {
+		VERIFY_SUCCEEDED(PST->GetCachedBlob(COM_PTR_PUT(CachedBlob)));
+	}
+
+	MESH_SHADER_PIPELINE_STATE_DESC MSPSD = {
+		.pRootSignature = RS,
+		.AS = AS, .MS = MS, .PS = PS,
+		.BlendState = D3D12_BLEND_DESC({.AlphaToCoverageEnable = TRUE, .IndependentBlendEnable = FALSE, .RenderTarget = {}}),
+		.SampleMask = D3D12_DEFAULT_SAMPLE_MASK,
+		.RasterizerState = RD,
+		.DepthStencilState = DSD,
+		.PrimitiveTopologyType = PTT,
+		.NumRenderTargets = static_cast<UINT>(size(RtvFormats)), .RTVFormats = {},
+		.DSVFormat = DSD.DepthEnable ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_UNKNOWN,
+		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
+		.NodeMask = 0,
+		.CachedPSO = D3D12_CACHED_PIPELINE_STATE({.pCachedBlob = nullptr != CachedBlob ? CachedBlob->GetBufferPointer() : nullptr, .CachedBlobSizeInBytes = nullptr != CachedBlob ? CachedBlob->GetBufferSize() : 0 }),
+#if defined(_DEBUG) && defined(USE_WARP)
+		.Flags = D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG
+#else
+		.Flags = D3D12_PIPELINE_STATE_FLAG_NONE
+#endif
+	};
+	assert(size(RTBDs) <= _countof(MSPSD.BlendState.RenderTarget) && "");
+	std::ranges::copy(RTBDs, MSPSD.BlendState.RenderTarget);
+	assert((false == MSPSD.BlendState.IndependentBlendEnable || size(RTBDs) == MSPSD.NumRenderTargets) && "");
+	assert(MSPSD.NumRenderTargets <= _countof(MSPSD.RTVFormats) && "");
+	std::ranges::copy(RtvFormats, MSPSD.RTVFormats);
+	const D3D12_PIPELINE_STATE_STREAM_DESC PSSD = { .SizeInBytes = sizeof(MSPSD), .pPipelineStateSubobjectStream = &MSPSD };
+
+	if (nullptr != PLS && PLS->IsLoadSucceeded()) {
+		COM_PTR<ID3D12PipelineLibrary1> PL1;
+		VERIFY_SUCCEEDED(PLS->GetPipelineLibrary()->QueryInterface(COM_PTR_UUIDOF_PUTVOID(PL1)));
+		VERIFY_SUCCEEDED(PL1->LoadPipeline(Name, &PSSD, COM_PTR_UUIDOF_PUTVOID(PST)));
+	}
+	else {
+		COM_PTR<ID3D12Device2> Device2;
+		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device2)));
+		VERIFY_SUCCEEDED(Device2->CreatePipelineState(&PSSD, COM_PTR_UUIDOF_PUTVOID(PST)));
+		if (nullptr != PLS) {
+			VERIFY_SUCCEEDED(PLS->GetPipelineLibrary()->StorePipeline(Name, COM_PTR_GET(PST)));
+		}
+	}
 	LOG_OK();
 }
 
