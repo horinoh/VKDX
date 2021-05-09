@@ -190,7 +190,7 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology PT, cons
 	for (auto& i : Threads) { i.join(); }
 }
 
-void VKExt::CreatePipeline_MsFs([[maybe_unused]] const VkPrimitiveTopology PT, const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 2>& PSSCIs)
+void VKExt::CreatePipeline_MsFs(const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 2>& PSSCIs)
 {
 	constexpr VkPipelineViewportStateCreateInfo PVSCI = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
@@ -267,33 +267,16 @@ void VKExt::CreatePipeline_MsFs([[maybe_unused]] const VkPrimitiveTopology PT, c
 		.flags = 0,
 		.dynamicStateCount = static_cast<uint32_t>(size(DSs)), .pDynamicStates = data(DSs)
 	};
-	const auto PLL = PipelineLayouts[0];
-	const auto RP = RenderPasses[0];
-	const std::array GPCIs = {
-		VkGraphicsPipelineCreateInfo({
-			.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-			.pNext = nullptr,
-#ifdef _DEBUG
-			.flags = VK_PIPELINE_CREATE_DISABLE_OPTIMIZATION_BIT,
+
+	Pipelines.emplace_back();
+	std::vector<std::thread> Threads;
+#ifdef USE_PIPELINE_SERIALIZE
+	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
+	Threads.emplace_back(std::thread::thread(VK::CreatePipeline__, std::ref(Pipelines.back()), Device, PipelineLayouts[0], RenderPasses[0], PRSCI, PDSSCI, nullptr, &PSSCIs[0], &PSSCIs[1], PCBASs, PCS.GetPipelineCache(0)));
 #else
-			.flags = 0,
+	Threads.emplace_back(std::thread::thread(VK::CreatePipeline__, std::ref(Pipelines.back()), Device, PipelineLayouts[0], RenderPasses[0], PRSCI, PDSSCI, nullptr, &PSSCIs[0], &PSSCIs[1], PCBASs));
 #endif
-			.stageCount = static_cast<uint32_t>(size(PSSCIs)), .pStages = data(PSSCIs),
-			.pVertexInputState = nullptr/*&PVISCI*/,
-			.pInputAssemblyState = nullptr/*&PIASCI*/,
-			.pTessellationState = nullptr/*&PTSCI*/,
-			.pViewportState = &PVSCI,
-			.pRasterizationState = &PRSCI,
-			.pMultisampleState = &PMSCI,
-			.pDepthStencilState = &PDSSCI,
-			.pColorBlendState = &PCBSCI,
-			.pDynamicState = &PDSCI,
-			.layout = PLL,
-			.renderPass = RP, .subpass = 0,
-			.basePipelineHandle = VK_NULL_HANDLE, .basePipelineIndex = -1
-		})
-	};
-	VERIFY_SUCCEEDED(vkCreateGraphicsPipelines(Device, VK_NULL_HANDLE, static_cast<uint32_t>(size(GPCIs)), data(GPCIs), GetAllocationCallbacks(), &Pipelines.emplace_back()));
+	for (auto& i : Threads) { i.join(); }
 }
 
 #if 0

@@ -729,7 +729,6 @@ protected:
 		VkPipelineCache PC = VK_NULL_HANDLE);
 	static void CreatePipeline__(VkPipeline& PL,
 		const VkDevice Dev, const VkPipelineLayout PLL, const VkRenderPass RP,
-		const VkPrimitiveTopology PT,
 		const VkPipelineRasterizationStateCreateInfo& PRSCI,
 		const VkPipelineDepthStencilStateCreateInfo& PDSSCI,
 		const VkPipelineShaderStageCreateInfo* TS, const VkPipelineShaderStageCreateInfo* MS, const VkPipelineShaderStageCreateInfo* FS,

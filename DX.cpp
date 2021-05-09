@@ -1329,10 +1329,10 @@ void DX::CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST,
 void DX::CreatePipelineState__(COM_PTR<ID3D12PipelineState>& PST, 
 	ID3D12Device* Device, 
 	ID3D12RootSignature* RS,
-	const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT,
+	[[maybe_unused]] const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT,
 	const std::vector<D3D12_RENDER_TARGET_BLEND_DESC>& RTBDs, 
 	const D3D12_RASTERIZER_DESC& RD,
-	const D3D12_DEPTH_STENCIL_DESC& DSD, 
+	const D3D12_DEPTH_STENCIL_DESC1& DSD, 
 	const D3D12_SHADER_BYTECODE AS, const D3D12_SHADER_BYTECODE MS, const D3D12_SHADER_BYTECODE PS, 
 	const std::vector<DXGI_FORMAT>& RTVFormats, 
 	const PipelineLibrarySerializer* PLS, LPCWSTR Name)
@@ -1344,37 +1344,33 @@ void DX::CreatePipelineState__(COM_PTR<ID3D12PipelineState>& PST,
 	if (nullptr != PST) {
 		VERIFY_SUCCEEDED(PST->GetCachedBlob(COM_PTR_PUT(CachedBlob)));
 	}
-
-	MESH_SHADER_PIPELINE_STATE_DESC MSPSD = {
-		.pRootSignature = RS,
-		.AS = AS, .MS = MS, .PS = PS,
-		.BlendState = D3D12_BLEND_DESC({.AlphaToCoverageEnable = TRUE, .IndependentBlendEnable = FALSE, .RenderTarget = {}}),
-		.SampleMask = D3D12_DEFAULT_SAMPLE_MASK,
-		.RasterizerState = RD,
-		.DepthStencilState = DSD,
-		.PrimitiveTopologyType = PTT,
-		.NumRenderTargets = static_cast<UINT>(size(RTVFormats)), .RTVFormats = {},
-		.DSVFormat = DSD.DepthEnable ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_UNKNOWN,
-		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
-		.NodeMask = 0,
-		.CachedPSO = D3D12_CACHED_PIPELINE_STATE({.pCachedBlob = nullptr != CachedBlob ? CachedBlob->GetBufferPointer() : nullptr, .CachedBlobSizeInBytes = nullptr != CachedBlob ? CachedBlob->GetBufferSize() : 0 }),
-#if defined(_DEBUG) && defined(USE_WARP)
-		.Flags = D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG
-#else
-		.Flags = D3D12_PIPELINE_STATE_FLAG_NONE
-#endif
-	};
-	assert(size(RTBDs) <= _countof(MSPSD.BlendState.RenderTarget) && "");
-	std::ranges::copy(RTBDs, MSPSD.BlendState.RenderTarget);
-	assert((false == MSPSD.BlendState.IndependentBlendEnable || size(RTBDs) == MSPSD.NumRenderTargets) && "");
-	assert(MSPSD.NumRenderTargets <= _countof(MSPSD.RTVFormats) && "");
-	std::ranges::copy(RTVFormats, MSPSD.RTVFormats);
 	
 	PIPELINE_MESH_STATE_STREAM PMSS = {
 		.pRootSignature = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_ROOT_SIGNATURE, RS },
 		.AS = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_AS, AS }, .MS = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS, MS }, .PS = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PS, PS },
+		.BlendState = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_BLEND, D3D12_BLEND_DESC({.AlphaToCoverageEnable = TRUE, .IndependentBlendEnable = FALSE, .RenderTarget = {}}) },
+		.SampleMask = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_MASK, D3D12_DEFAULT_SAMPLE_MASK },
+		.RasterizerState = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RASTERIZER, RD },
+		.DepthStencilState = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL, DSD },
+		.RTVFormats = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_RENDER_TARGET_FORMATS, D3D12_RT_FORMAT_ARRAY({.RTFormats = {}, .NumRenderTargets = static_cast<UINT>(size(RTVFormats)) }) },
+		.DSVFormat = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_DEPTH_STENCIL_FORMAT, DSD.DepthEnable ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_UNKNOWN },
+		.SampleDesc = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_SAMPLE_DESC, DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }) },
+		.NodeMask = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_NODE_MASK, 0 },
+		.CachedPSO = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_CACHED_PSO, D3D12_CACHED_PIPELINE_STATE({.pCachedBlob = nullptr != CachedBlob ? CachedBlob->GetBufferPointer() : nullptr, .CachedBlobSizeInBytes = nullptr != CachedBlob ? CachedBlob->GetBufferSize() : 0 }) },
+#if defined(_DEBUG) && defined(USE_WARP)
+		.Flags = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_FLAGS, D3D12_PIPELINE_STATE_FLAG_TOOL_DEBUG },
+#else
+		.Flags = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_FLAGS, D3D12_PIPELINE_STATE_FLAG_NONE },
+#endif
+		//.ViewInstancingDesc = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_VIEW_INSTANCING, D3D12_VIEW_INSTANCING_DESC({.ViewInstanceCount = 0, .pViewInstanceLocations = nullptr, .Flags = D3D12_VIEW_INSTANCING_FLAG_NONE }) },
 	};
-	const D3D12_PIPELINE_STATE_STREAM_DESC PSSD = { .SizeInBytes = sizeof(PMSS), .pPipelineStateSubobjectStream = reinterpret_cast<void *>(&PMSS) };
+	assert(size(RTBDs) <= _countof(PMSS.BlendState.second.RenderTarget) && "");
+	std::ranges::copy(RTBDs, PMSS.BlendState.second.RenderTarget);
+	assert((false == PMSS.BlendState.second.IndependentBlendEnable || size(RTBDs) == PMSS.RTVFormats.second.NumRenderTargets) && "");
+	assert(PMSS.RTVFormats.second.NumRenderTargets <= _countof(PMSS.RTVFormats.second.RTFormats) && "");
+	std::ranges::copy(RTVFormats, PMSS.RTVFormats.second.RTFormats);
+	
+	const D3D12_PIPELINE_STATE_STREAM_DESC PSSD = { .SizeInBytes = sizeof(PMSS), .pPipelineStateSubobjectStream = reinterpret_cast<void*>(&PMSS) };
 
 	if (nullptr != PLS && PLS->IsLoadSucceeded()) {
 		COM_PTR<ID3D12PipelineLibrary1> PL1;

@@ -1933,7 +1933,6 @@ void VK::CreatePipeline__(VkPipeline& PL,
 	const VkDevice Dev, 
 	const VkPipelineLayout PLL,
 	const VkRenderPass RP, 
-	const VkPrimitiveTopology PT,
 	const VkPipelineRasterizationStateCreateInfo& PRSCI, 
 	const VkPipelineDepthStencilStateCreateInfo& PDSSCI, 
 	const VkPipelineShaderStageCreateInfo* TS, const VkPipelineShaderStageCreateInfo* MS, const VkPipelineShaderStageCreateInfo* FS, 
@@ -1948,15 +1947,6 @@ void VK::CreatePipeline__(VkPipeline& PL,
 	if (nullptr != MS) { PSSCIs.emplace_back(*MS); }
 	if (nullptr != FS) { PSSCIs.emplace_back(*FS); }
 	assert(!empty(PSSCIs) && "");
-
-	//!< インプットアセンブリ (InputAssembly)
-	const VkPipelineInputAssemblyStateCreateInfo PIASCI = {
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = 0,
-		.topology = PT,
-		.primitiveRestartEnable = VK_FALSE
-	};
 
 	//!< ビューポート (Viewport)
 	constexpr VkPipelineViewportStateCreateInfo PVSCI = {
@@ -2009,7 +1999,7 @@ void VK::CreatePipeline__(VkPipeline& PL,
 #endif
 			.stageCount = static_cast<uint32_t>(size(PSSCIs)), .pStages = data(PSSCIs),
 			.pVertexInputState = nullptr,
-			.pInputAssemblyState = &PIASCI,
+			.pInputAssemblyState = nullptr,//&PIASCI,
 			.pTessellationState = nullptr,
 			.pViewportState = &PVSCI,
 			.pRasterizationState = &PRSCI,

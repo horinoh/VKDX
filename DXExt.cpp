@@ -119,10 +119,16 @@ void DXExt::CreatePipelineState_MsPs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, co
 		.StencilPassOp = D3D12_STENCIL_OP_KEEP,
 		.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS
 	};
-	const D3D12_DEPTH_STENCIL_DESC DSD = {
+	//const D3D12_DEPTH_STENCIL_DESC DSD = {
+	//	.DepthEnable = DepthEnable, .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D12_COMPARISON_FUNC_LESS,
+	//	.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
+	//	.FrontFace = DSOD, .BackFace = DSOD
+	//};
+	const D3D12_DEPTH_STENCIL_DESC1 DSD = {
 		.DepthEnable = DepthEnable, .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D12_COMPARISON_FUNC_LESS,
 		.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
-		.FrontFace = DSOD, .BackFace = DSOD
+		.FrontFace = DSOD, .BackFace = DSOD,
+		.DepthBoundsTestEnable = FALSE,
 	};
 	const std::vector RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
 
