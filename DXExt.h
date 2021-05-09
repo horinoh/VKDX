@@ -17,6 +17,6 @@ public:
 	//void CreatePipelineState_VsGsPs();
 	//void CreatePipelineState_VsPsDsHs();
 
-	void CreatePipelineState_MsPs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 2>& SBCs);
-	void CreatePipelineState_AsMsPs([[maybe_unused]] const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, [[maybe_unused]] const BOOL DepthEnable, [[maybe_unused]] const std::array<D3D12_SHADER_BYTECODE, 3>& SBCs) {}
+	void CreatePipelineState_MsPs(const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 2>& SBCs);
+	void CreatePipelineState_AsMsPs([[maybe_unused]] const BOOL DepthEnable, [[maybe_unused]] const std::array<D3D12_SHADER_BYTECODE, 3>& SBCs) {}
 };

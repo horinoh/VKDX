@@ -521,7 +521,6 @@ public:
 		const PipelineLibrarySerializer* PLS = nullptr, LPCWSTR Name = nullptr);
 	static void CreatePipelineState__(COM_PTR<ID3D12PipelineState>& PST,
 		ID3D12Device* Device, ID3D12RootSignature* RS,
-		const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT,
 		const std::vector<D3D12_RENDER_TARGET_BLEND_DESC>& RTBDs,
 		const D3D12_RASTERIZER_DESC& RD,
 		const D3D12_DEPTH_STENCIL_DESC1& DSD,

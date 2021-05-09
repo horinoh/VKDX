@@ -25,8 +25,8 @@ public:
 				D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
 				//D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[2]->GetBufferPointer(), .BytecodeLength = SBs[2]->GetBufferSize() }),
 			};
-			//CreatePipelineState_AsMsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE, SBCs);
-			CreatePipelineState_MsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE, SBCs);
+			//CreatePipelineState_AsMsPs(FALSE, SBCs);
+			CreatePipelineState_MsPs(FALSE, SBCs);
 		}
 	}
 	virtual void PopulateCommandList(const size_t i) override {
