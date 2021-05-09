@@ -1255,7 +1255,7 @@ void DX::CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST,
 	const D3D12_DEPTH_STENCIL_DESC& DSD,
 	const D3D12_SHADER_BYTECODE VS, const D3D12_SHADER_BYTECODE PS, const D3D12_SHADER_BYTECODE DS, const D3D12_SHADER_BYTECODE HS, const D3D12_SHADER_BYTECODE GS,
 	const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs,
-	const std::vector<DXGI_FORMAT>& RtvFormats,
+	const std::vector<DXGI_FORMAT>& RTVFormats,
 	const PipelineLibrarySerializer* PLS, LPCWSTR Name)
 {
 	PERFORMANCE_COUNTER();
@@ -1291,7 +1291,7 @@ void DX::CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST,
 		.InputLayout = D3D12_INPUT_LAYOUT_DESC({ .pInputElementDescs = data(IEDs), .NumElements = static_cast<UINT>(size(IEDs)) }),
 		.IBStripCutValue = D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED,
 		.PrimitiveTopologyType = PTT,
-		.NumRenderTargets = static_cast<UINT>(size(RtvFormats)), .RTVFormats = {},
+		.NumRenderTargets = static_cast<UINT>(size(RTVFormats)), .RTVFormats = {},
 		.DSVFormat = DSD.DepthEnable ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_UNKNOWN,
 		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
 		.NodeMask = 0, //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
@@ -1310,7 +1310,7 @@ void DX::CreatePipelineState_(COM_PTR<ID3D12PipelineState>& PST,
 	//!< TRUE == IndependentBlendEnable の場合はレンダーターゲットの分だけ用意すること (If TRUE == IndependentBlendEnable, need NumRenderTarget elements)
 	assert((false == GPSD.BlendState.IndependentBlendEnable || size(RTBDs) == GPSD.NumRenderTargets) && "");
 	assert(GPSD.NumRenderTargets <= _countof(GPSD.RTVFormats) && "");
-	std::ranges::copy(RtvFormats, GPSD.RTVFormats);
+	std::ranges::copy(RTVFormats, GPSD.RTVFormats);
 
 	assert((0 == GPSD.DS.BytecodeLength || 0 == GPSD.HS.BytecodeLength || GPSD.PrimitiveTopologyType == D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH) && "");
 
@@ -1334,7 +1334,7 @@ void DX::CreatePipelineState__(COM_PTR<ID3D12PipelineState>& PST,
 	const D3D12_RASTERIZER_DESC& RD,
 	const D3D12_DEPTH_STENCIL_DESC& DSD, 
 	const D3D12_SHADER_BYTECODE AS, const D3D12_SHADER_BYTECODE MS, const D3D12_SHADER_BYTECODE PS, 
-	const std::vector<DXGI_FORMAT>& RtvFormats, 
+	const std::vector<DXGI_FORMAT>& RTVFormats, 
 	const PipelineLibrarySerializer* PLS, LPCWSTR Name)
 {
 	PERFORMANCE_COUNTER();
@@ -1353,7 +1353,7 @@ void DX::CreatePipelineState__(COM_PTR<ID3D12PipelineState>& PST,
 		.RasterizerState = RD,
 		.DepthStencilState = DSD,
 		.PrimitiveTopologyType = PTT,
-		.NumRenderTargets = static_cast<UINT>(size(RtvFormats)), .RTVFormats = {},
+		.NumRenderTargets = static_cast<UINT>(size(RTVFormats)), .RTVFormats = {},
 		.DSVFormat = DSD.DepthEnable ? DXGI_FORMAT_D24_UNORM_S8_UINT : DXGI_FORMAT_UNKNOWN,
 		.SampleDesc = DXGI_SAMPLE_DESC({.Count = 1, .Quality = 0 }),
 		.NodeMask = 0,
@@ -1368,8 +1368,13 @@ void DX::CreatePipelineState__(COM_PTR<ID3D12PipelineState>& PST,
 	std::ranges::copy(RTBDs, MSPSD.BlendState.RenderTarget);
 	assert((false == MSPSD.BlendState.IndependentBlendEnable || size(RTBDs) == MSPSD.NumRenderTargets) && "");
 	assert(MSPSD.NumRenderTargets <= _countof(MSPSD.RTVFormats) && "");
-	std::ranges::copy(RtvFormats, MSPSD.RTVFormats);
-	const D3D12_PIPELINE_STATE_STREAM_DESC PSSD = { .SizeInBytes = sizeof(MSPSD), .pPipelineStateSubobjectStream = &MSPSD };
+	std::ranges::copy(RTVFormats, MSPSD.RTVFormats);
+	
+	PIPELINE_MESH_STATE_STREAM PMSS = {
+		.pRootSignature = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_ROOT_SIGNATURE, RS },
+		.AS = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_AS, AS }, .MS = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_MS, MS }, .PS = { D3D12_PIPELINE_STATE_SUBOBJECT_TYPE_PS, PS },
+	};
+	const D3D12_PIPELINE_STATE_STREAM_DESC PSSD = { .SizeInBytes = sizeof(PMSS), .pPipelineStateSubobjectStream = reinterpret_cast<void *>(&PMSS) };
 
 	if (nullptr != PLS && PLS->IsLoadSucceeded()) {
 		COM_PTR<ID3D12PipelineLibrary1> PL1;
