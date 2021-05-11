@@ -257,7 +257,7 @@ void FullscreenVK::PopulateCommandBuffer(const size_t i)
 
         vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
 
-#ifdef USE_DRAW_INDIRECT
+#ifdef USE_INDIRECT
         vkCmdDrawIndirect(SCB, IndirectBuffers[0].Buffer, 0, 1, 0);
 #else
         vkCmdDraw(SCB, 4, 1, 0, 0);

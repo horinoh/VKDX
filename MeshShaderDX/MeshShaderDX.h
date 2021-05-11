@@ -13,6 +13,15 @@ public:
 	MeshShaderDX() : Super() {}
 	virtual ~MeshShaderDX() {}
 
+#ifdef USE_INDIRECT
+	virtual void CreateGeometry() override {
+		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+		const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
+		constexpr D3D12_DISPATCH_MESH_ARGUMENTS DMA = { .ThreadGroupCountX = 3, .ThreadGroupCountY = 1, .ThreadGroupCountZ = 1 };
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DMA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(DMA), &DMA);
+	}
+#endif
 	virtual void CreatePipelineState() override {
 		if (HasMeshShaderSupport(COM_PTR_GET(Device))) {
 			const auto ShaderPath = GetBasePath();
@@ -54,9 +63,13 @@ public:
 					const std::array RTCDHs = { SCCDH };
 					GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, nullptr);
 
+#ifdef USE_INDIRECT
+					GCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+#else
 					COM_PTR<ID3D12GraphicsCommandList6> GCL6;
 					VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL6)));
-					GCL6->DispatchMesh(1, 1, 1);
+					GCL6->DispatchMesh(3, 1, 1);
+#endif
 				}
 				else {
 					auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);

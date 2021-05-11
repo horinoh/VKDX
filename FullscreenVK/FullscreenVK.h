@@ -14,7 +14,7 @@ public:
 	virtual ~FullscreenVK() {}
 
 protected:
-#ifdef USE_DRAW_INDIRECT
+#ifdef USE_INDIRECT
 	virtual void CreateGeometry() override { 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };

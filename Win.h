@@ -37,7 +37,7 @@
 //#define USE_FULL_SCREEN
 #define USE_DEPTH //!< [ ToonDX, ToonVK ], [ RenderTargetDX, RenderTargetVK ]
 #define USE_SCREENSPACE_WIREFRAME //!< [ ToonDX, ToonVK ]
-#define USE_DRAW_INDIRECT //!< [ FullscreenDX, FullscreenVK ]
+#define USE_INDIRECT //!< [ FullscreenDX, FullscreenVK ]
 #define USE_DISTANCE_FUNCTION //!< [ FullscreenDX, FullscreenVK ]
 #define USE_PIPELINE_SERIALIZE //!< [ *DX, *VK ]
 //#define USE_PARALLAX_MAP //!< [ NormalMapDX, NormalMapVK ]

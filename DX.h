@@ -199,6 +199,15 @@ public:
 			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
 			return *this;
 		}
+#pragma region MESH_SHADER
+		IndirectBuffer& Create(ID3D12Device* Device, const D3D12_DISPATCH_MESH_ARGUMENTS& DMA) {
+			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, sizeof(DMA), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
+			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH }), };
+			const D3D12_COMMAND_SIGNATURE_DESC CSD = { .ByteStride = static_cast<UINT>(sizeof(DMA)), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
+			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
+			return *this;
+		}
+#pragma endregion
 		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const size_t Size, ID3D12Resource* Upload) {
 			DX::PopulateCommandList_CopyBufferRegion(GCL, Upload, COM_PTR_GET(Resource), Size, D3D12_RESOURCE_STATE_GENERIC_READ);
 		}

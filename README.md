@@ -290,8 +290,9 @@
 #### 条件コンパイル対応
 - USE_VIEWPORT_Y_UP
 	- *VK
-- USE_DRAW_INDIRECT
+- USE_INDIRECT
 	- FullscreenDX, FullscreenVK
+	- MeshShaderDX, MeshShaderVK
 - USE_PIPELINE_SERIALIZE
 	- ALL
 - USE_HLSL_ROOTSIGNATRUE
