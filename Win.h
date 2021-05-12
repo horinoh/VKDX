@@ -135,15 +135,15 @@ public:
 	virtual void OnPreDestroy([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
 	virtual void OnDestroy([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
 
-	static [[nodiscard]] LONG GetWidth(const RECT& R) { return R.right - R.left; }
-	static [[nodiscard]] LONG GetHeight(const RECT& R) { return R.bottom - R.top; }
-	static [[nodiscard]] FLOAT GetAspectRatio(const FLOAT Width, const FLOAT Height) { return Width / Height; }
+	[[nodiscard]] static LONG GetWidth(const RECT& R) { return R.right - R.left; }
+	[[nodiscard]] static LONG GetHeight(const RECT& R) { return R.bottom - R.top; }
+	[[nodiscard]] static FLOAT GetAspectRatio(const FLOAT Width, const FLOAT Height) { return Width / Height; }
 	[[nodiscard]] const RECT& GetRect() const { return Rect; }
 	[[nodiscard]] LONG GetClientRectWidth() const { return GetWidth(GetRect()); }
 	[[nodiscard]] LONG GetClientRectHeight() const { return GetHeight(GetRect()); }
 	[[nodiscard]] FLOAT GetAspectRatioOfClientRect() const { return GetAspectRatio(static_cast<const FLOAT>(GetClientRectWidth()), static_cast<const FLOAT>(GetClientRectHeight())); }
 
-	static [[nodiscard]] std::string ToString(std::wstring_view WStr) {
+	[[nodiscard]] static std::string ToString(std::wstring_view WStr) {
 #if 1
 		std::vector<CHAR> Buffer(WideCharToMultiByte(CP_UTF8, 0, data(WStr), -1, nullptr, 0, nullptr, nullptr));
 		WideCharToMultiByte(CP_UTF8, 0, data(WStr), -1, data(Buffer), static_cast<int>(size(Buffer)), nullptr, nullptr);
@@ -161,7 +161,7 @@ public:
 		return std::string(cbegin(WStr), cend(WStr));
 #endif
 	}
-	static [[nodiscard]] std::wstring ToWString(std::string_view Str) {
+	[[nodiscard]] static std::wstring ToWString(std::string_view Str) {
 #if 0
 		std::vector<wchar_t> Buffer(MultiByteToWideChar(CP_UTF8, 0, data(Str), -1, nullptr, 0));
 		MultiByteToWideChar(CP_UTF8, 0, data(Str), -1, data(Buffer), static_cast<int>(size(Buffer)));
@@ -179,8 +179,8 @@ public:
 #endif
 	}
 
-	virtual [[nodiscard]] const std::wstring& GetTitleW() const { return TitleW; }
-	virtual [[nodiscard]] std::string GetTitle() const { return ToString(TitleW); }
+	[[nodiscard]] virtual const std::wstring& GetTitleW() const { return TitleW; }
+	[[nodiscard]] virtual std::string GetTitle() const { return ToString(TitleW); }
 	void SetTitleW(LPCWSTR Title) { TitleW = Title; }
 
 	[[nodiscard]] std::wstring GetBasePath() const { return TEXT(".\\") + GetTitleW(); }

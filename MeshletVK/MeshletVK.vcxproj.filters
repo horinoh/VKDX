@@ -14,7 +14,7 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Shader Files">
-      <UniqueIdentifier>{27fbc9d6-cbee-48da-9d11-f78dc0087adf}</UniqueIdentifier>
+      <UniqueIdentifier>{2a17a303-a3dc-4388-a753-d4abeb021a4a}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -27,7 +27,7 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MeshShaderVK.h">
+    <ClInclude Include="MeshletVK.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\VK.h">
@@ -41,7 +41,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MeshShaderVK.cpp">
+    <ClCompile Include="MeshletVK.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="framework.cpp">
@@ -58,7 +58,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="MeshShaderVK.rc">
+    <ResourceCompile Include="MeshletVK.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
@@ -66,15 +66,18 @@
     <Image Include="small.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="MeshShaderVK.ico">
+    <Image Include="MeshletVK.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="MeshShaderVK.frag">
+    <CustomBuild Include="MeshletVK.frag">
       <Filter>Shader Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="MeshShaderVK.mesh">
+    <CustomBuild Include="MeshletVK.mesh">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="MeshletVK.task">
       <Filter>Shader Files</Filter>
     </CustomBuild>
   </ItemGroup>

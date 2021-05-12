@@ -17,11 +17,11 @@ class VKImage : public VKExt
 private:
 	using Super = VKExt;
 
-	static [[nodiscard]] VkFormat ToVkFormat(const gli::format GLIFormat);
-	static [[nodiscard]] VkImageViewType ToVkImageViewType(const gli::target GLITarget);
-	static [[nodiscard]] VkImageType ToVkImageType(const gli::target GLITarget);
-	static [[nodiscard]] VkComponentSwizzle ToVkComponentSwizzle(const gli::swizzle GLISwizzle);
-	static [[nodiscard]] VkComponentMapping ToVkComponentMapping(const gli::texture::swizzles_type GLISwizzleType) { 
+	[[nodiscard]] static VkFormat ToVkFormat(const gli::format GLIFormat);
+	[[nodiscard]] static VkImageViewType ToVkImageViewType(const gli::target GLITarget);
+	[[nodiscard]] static VkImageType ToVkImageType(const gli::target GLITarget);
+	[[nodiscard]] static VkComponentSwizzle ToVkComponentSwizzle(const gli::swizzle GLISwizzle);
+	[[nodiscard]] static VkComponentMapping ToVkComponentMapping(const gli::texture::swizzles_type GLISwizzleType) { 
 		return VkComponentMapping({ .r = ToVkComponentSwizzle(GLISwizzleType.r), .g = ToVkComponentSwizzle(GLISwizzleType.g), .b = ToVkComponentSwizzle(GLISwizzleType.b), .a = ToVkComponentSwizzle(GLISwizzleType.a) });
 	}
 

@@ -332,21 +332,21 @@ public:
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override;
 #endif
 
-	static [[nodiscard]] const char* GetVkResultChar(const VkResult Result);
-	static [[nodiscard]] const char* GetFormatChar(const VkFormat Format);
-	static [[nodiscard]] const char* GetColorSpaceChar(const VkColorSpaceKHR ColorSpace);
-	static [[nodiscard]] const char* GetImageViewTypeChar(const VkImageViewType ImageViewType);
-	static [[nodiscard]] const char* GetComponentSwizzleChar(const VkComponentSwizzle ComponentSwizzle);
-	static [[nodiscard]] std::string GetComponentMappingString(const VkComponentMapping& CM) {
+	[[nodiscard]] static const char* GetVkResultChar(const VkResult Result);
+	[[nodiscard]] static const char* GetFormatChar(const VkFormat Format);
+	[[nodiscard]] static const char* GetColorSpaceChar(const VkColorSpaceKHR ColorSpace);
+	[[nodiscard]] static const char* GetImageViewTypeChar(const VkImageViewType ImageViewType);
+	[[nodiscard]] static const char* GetComponentSwizzleChar(const VkComponentSwizzle ComponentSwizzle);
+	[[nodiscard]] static std::string GetComponentMappingString(const VkComponentMapping& CM) {
 		return std::string(GetComponentSwizzleChar(CM.r)) + ", " + GetComponentSwizzleChar(CM.g) + ", " + GetComponentSwizzleChar(CM.b) + ", " + GetComponentSwizzleChar(CM.a);
 	}
-	static [[nodiscard]] const char* GetSystemAllocationScopeChar(const VkSystemAllocationScope SAS);
+	[[nodiscard]] static const char* GetSystemAllocationScopeChar(const VkSystemAllocationScope SAS);
 
-	static [[nodiscard]] std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) {
+	[[nodiscard]] static std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) {
 		const auto v = glm::mix(*reinterpret_cast<const glm::vec3*>(data(lhs)), *reinterpret_cast<const glm::vec3*>(data(rhs)), t);
 		return { v.x, v.y, v.z };
 	}
-	static [[nodiscard]] std::array<float, 4> Lerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) {
+	[[nodiscard]] static std::array<float, 4> Lerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) {
 		const auto v = glm::lerp(*reinterpret_cast<const glm::quat*>(data(lhs)), *reinterpret_cast<const glm::quat*>(data(rhs)), t);
 		return { v.x, v.y, v.z, v.w };
 	}
@@ -385,7 +385,7 @@ public:
 	//	return true;
 	//}
 #pragma region RAYTRACING
-	static [[nodiscard]] bool HasRayTracingSupport(const VkPhysicalDevice PD) {
+	[[nodiscard]] static bool HasRayTracingSupport(const VkPhysicalDevice PD) {
 		VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr };
 		VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF };
 		VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF };
@@ -395,7 +395,7 @@ public:
 	}
 #pragma endregion
 #pragma region MESH_SHADER
-	static [[nodiscard]] bool HasMeshShaderSupport(const VkPhysicalDevice PD) {
+	[[nodiscard]] static bool HasMeshShaderSupport(const VkPhysicalDevice PD) {
 		VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr };
 		VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDMSF };
 		vkGetPhysicalDeviceFeatures2(PD, &PDF2);
@@ -404,7 +404,7 @@ public:
 #pragma endregion
 
 protected:	
-	static [[nodiscard]] uint32_t GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& PDMP, const uint32_t TypeBits, const VkMemoryPropertyFlags MPF);
+	[[nodiscard]] static uint32_t GetMemoryTypeIndex(const VkPhysicalDeviceMemoryProperties& PDMP, const uint32_t TypeBits, const VkMemoryPropertyFlags MPF);
 
 	void AllocateDeviceMemory(VkDeviceMemory* DM, const VkMemoryRequirements& MR, const VkMemoryPropertyFlags MPF);
 	void AllocateDeviceMemory(VkDeviceMemory* DM, const VkBuffer Buffer, const VkMemoryPropertyFlags MPF) { VkMemoryRequirements MR; vkGetBufferMemoryRequirements(Device, Buffer, &MR); AllocateDeviceMemory(DM, MR, MPF); }
@@ -508,8 +508,8 @@ protected:
 
 	virtual void AllocateCommandBuffer();
 
-	virtual [[nodiscard]] VkSurfaceFormatKHR SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface);
-	virtual [[nodiscard]] VkPresentModeKHR SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface);
+	[[nodiscard]] virtual VkSurfaceFormatKHR SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface);
+	[[nodiscard]] virtual VkPresentModeKHR SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 
 	virtual void CreateSwapchain() { CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight()); }
 	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags AdditionalUsage = 0);
@@ -629,7 +629,7 @@ protected:
 		}
 	}
 
-	virtual [[nodiscard]] VkShaderModule CreateShaderModule(const std::wstring& Path) const;
+	[[nodiscard]] virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
 
 #ifdef USE_PIPELINE_SERIALIZE
 public:
@@ -765,11 +765,11 @@ protected:
 		.pfnInternalFree = []([[maybe_unused]] void* pUserData, [[maybe_unused]] size_t size, [[maybe_unused]] VkInternalAllocationType allocationType, [[maybe_unused]] VkSystemAllocationScope allocationScope) {
 		},
 	};
-	static const [[nodiscard]] VkAllocationCallbacks* GetAllocationCallbacks() { return nullptr/*&AllocationCallbacks*/; }
+	[[nodiscard]] static const VkAllocationCallbacks* GetAllocationCallbacks() { return nullptr/*&AllocationCallbacks*/; }
 #pragma endregion
 
-	virtual [[nodiscard]] VkPhysicalDevice GetCurrentPhysicalDevice() const { return CurrentPhysicalDevice; };
-	virtual [[nodiscard]] VkPhysicalDeviceMemoryProperties GetCurrentPhysicalDeviceMemoryProperties() const { return CurrentPhysicalDeviceMemoryProperties; }
+	[[nodiscard]] virtual VkPhysicalDevice GetCurrentPhysicalDevice() const { return CurrentPhysicalDevice; };
+	[[nodiscard]] virtual VkPhysicalDeviceMemoryProperties GetCurrentPhysicalDeviceMemoryProperties() const { return CurrentPhysicalDeviceMemoryProperties; }
 
 #define VK_PROC_ADDR(proc) static PFN_vk ## proc vk ## proc;
 #ifdef VK_NO_PROTOYYPES

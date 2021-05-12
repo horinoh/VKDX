@@ -5,13 +5,13 @@
 #pragma region Code
 #include "../VKExt.h"
 
-class MeshShaderVK : public VKExt
+class MeshletVK : public VKExt
 {
 private:
 	using Super = VKExt;
 public:
-	MeshShaderVK() : Super() {}
-	virtual ~MeshShaderVK() {}
+	MeshletVK() : Super() {}
+	virtual ~MeshletVK() {}
 
 #ifdef USE_INDIRECT
 	void CreateGeometry() override {
@@ -27,7 +27,7 @@ public:
 			VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr, .taskShader = VK_TRUE, .meshShader = VK_TRUE, };
 			Super::CreateDevice(hWnd, hInstance, &PDMSF, {
 				VK_NV_MESH_SHADER_EXTENSION_NAME
-			});
+				});
 		}
 		else {
 			Super::CreateDevice(hWnd, hInstance);
@@ -38,13 +38,16 @@ public:
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
 			const auto ShaderPath = GetBasePath();
 			const std::array SMs = {
+				//VK::CreateShaderModule(data(ShaderPath + TEXT(".task.spv"))),
 				VK::CreateShaderModule(data(ShaderPath + TEXT(".mesh.spv"))),
 				VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
 			};
 			const std::array PSSCIs = {
+				//VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_TASK_BIT_NV, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
 				VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_MESH_BIT_NV, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
 				VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),
 			};
+			//CreatePipeline_TsMsFs(VK_FALSE, PSSCIs);
 			CreatePipeline_MsFs(VK_FALSE, PSSCIs);
 			for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 		}
@@ -60,7 +63,7 @@ public:
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 			vkCmdSetViewport(CB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
 			vkCmdSetScissor(CB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
-			
+
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
 
 			constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };

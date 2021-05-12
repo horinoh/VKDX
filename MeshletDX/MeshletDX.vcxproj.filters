@@ -14,7 +14,7 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Shader Files">
-      <UniqueIdentifier>{27fbc9d6-cbee-48da-9d11-f78dc0087adf}</UniqueIdentifier>
+      <UniqueIdentifier>{3caf0e94-6768-415d-8e7f-6a2aa016d6f9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -27,13 +27,13 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MeshShaderVK.h">
+    <ClInclude Include="MeshletDX.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\VK.h">
+    <ClInclude Include="..\DX.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\VKExt.h">
+    <ClInclude Include="..\DXExt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Win.h">
@@ -41,16 +41,16 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MeshShaderVK.cpp">
+    <ClCompile Include="MeshletDX.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="framework.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\VK.cpp">
+    <ClCompile Include="..\DX.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\VKExt.cpp">
+    <ClCompile Include="..\DXExt.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Win.cpp">
@@ -58,7 +58,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="MeshShaderVK.rc">
+    <ResourceCompile Include="MeshletDX.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
@@ -66,16 +66,22 @@
     <Image Include="small.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="MeshShaderVK.ico">
+    <Image Include="MeshletDX.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="MeshShaderVK.frag">
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="MeshletDX.as.hlsl">
       <Filter>Shader Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="MeshShaderVK.mesh">
+    </FxCompile>
+    <FxCompile Include="MeshletDX.ms.hlsl">
       <Filter>Shader Files</Filter>
-    </CustomBuild>
+    </FxCompile>
+    <FxCompile Include="MeshletDX.ps.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

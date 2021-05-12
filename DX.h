@@ -365,17 +365,17 @@ public:
 	virtual void OnPreDestroy(HWND hWnd, HINSTANCE hInstance) override;
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override { Super::OnDestroy(hWnd, hInstance); }
 
-	static [[nodiscard]] std::string GetHRESULTString(const HRESULT Result) { return ToString(GetHRESULTWString(Result)); }
-	static [[nodiscard]] std::wstring GetHRESULTWString(const HRESULT Result) { return std::wstring(_com_error(Result).ErrorMessage()); }
-	static [[nodiscard]] const char* GetFormatChar(const DXGI_FORMAT Format);
+	[[nodiscard]] static std::string GetHRESULTString(const HRESULT Result) { return ToString(GetHRESULTWString(Result)); }
+	[[nodiscard]] static std::wstring GetHRESULTWString(const HRESULT Result) { return std::wstring(_com_error(Result).ErrorMessage()); }
+	[[nodiscard]] static const char* GetFormatChar(const DXGI_FORMAT Format);
 
-	static [[nodiscard]] std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) {
+	[[nodiscard]] static std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) {
 		const auto l = DirectX::XMFLOAT3(data(lhs));
 		const auto r = DirectX::XMFLOAT3(data(rhs));
 		const auto v = DirectX::XMVectorLerp(DirectX::XMLoadFloat3(&l), DirectX::XMLoadFloat3(&r), t);
 		return { v.m128_f32[0], v.m128_f32[1], v.m128_f32[2] };
 	}
-	static [[nodiscard]] std::array<float, 4> Lerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) {
+	[[nodiscard]] static std::array<float, 4> Lerp(const std::array<float, 4>& lhs, const std::array<float, 4>& rhs, const float t) {
 		const auto l = DirectX::XMFLOAT4(data(lhs));
 		const auto r = DirectX::XMFLOAT4(data(rhs));
 		const auto v = DirectX::XMVectorLerp(DirectX::XMLoadFloat4(&l), DirectX::XMLoadFloat4(&r), t);
@@ -383,14 +383,14 @@ public:
 	}
 
 #pragma region RAYTRACING
-	static [[nodiscard]] bool HasRaytracingSupport(ID3D12Device* Device) {
+	[[nodiscard]] static bool HasRaytracingSupport(ID3D12Device* Device) {
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 FDO5;
 		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, reinterpret_cast<void*>(&FDO5), sizeof(FDO5)));
 		return D3D12_RAYTRACING_TIER_NOT_SUPPORTED != FDO5.RaytracingTier;
 	}
 #pragma endregion
 #pragma region MESH_SHADER
-	static [[nodiscard]] bool HasMeshShaderSupport(ID3D12Device* Device) {
+	[[nodiscard]] static bool HasMeshShaderSupport(ID3D12Device* Device) {
 		D3D12_FEATURE_DATA_D3D12_OPTIONS7 FDO7;
 		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, reinterpret_cast<void*>(&FDO7), sizeof(FDO7)));
 		return D3D12_MESH_SHADER_TIER_NOT_SUPPORTED != FDO7.MeshShaderTier;

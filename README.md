@@ -411,7 +411,7 @@
 #### DX
  * WinPixEventRuntimeのインストール
 	* 右クリック - Manage NuGet Packages - Browse - WinPixEventRuntimeで検索 - インストール
- * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/HLSL.props、Props/RS.props. (Props/DXTK.prop, Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop)
+ * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/HLSL(OPT).props、Props/RS.props. (Props/DXTK.prop, Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop)
  * Header Files に Win.h、DX.h、DXExt.h、(DXImage.h) を追加 
  * Source Files に Win.cpp、DX.cpp、DXExt.cpp、(DXImage.cpp) を追加
  * XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
@@ -436,28 +436,6 @@
     * Item Type を Custom Build Tool
    * 適用 - Custom Build Tool 項目が追加されるので GLSL Compiler になっていることを確認 (↑のプロパティを先に設定しておくこと)
  -->
-
-<!--
-# テクスチャを増やした場合に変更する箇所の例
-## DX
-- CreateRootSingnature()
-	- D3D12_DESCRIPTOR_RANGE.NumDescriptors を増やす
-- CreateDescriptorHeap()
-	- D3D12_DESCRIPTOR_HEAP_DESC.NumDescriptors を増やす
-- CreateDescriptorView()
-	- CreateShaderResourceView() 呼び出しを増やす
-## VK
-- CreateDescriptorSetLayout()
-	- VkDescriptorSetLayoutBinding エントリを増やす
-- CreateDescriptorPool()
-	- VkDescriptorPoolSize.descriptorCount を増やす
-- CreateDescriptorUpdateTemplate()
-	- VkDescriptorUpdateTemplateEntry エントリを増やす
-- UpdateDescriptorSet()
-	- VkDescriptorImageInfo エントリを増やす
-- DescriptorUpdateInfo 構造体
-	- VkDescriptorImageInfo エントリを増やす
--->
 
 <!-- 
 # 外部ライブラリ
