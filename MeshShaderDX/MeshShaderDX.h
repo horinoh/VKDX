@@ -18,7 +18,7 @@ public:
 		const auto CA = COM_PTR_GET(CommandAllocators[0]);
 		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 		const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
-		constexpr D3D12_DISPATCH_MESH_ARGUMENTS DMA = { .ThreadGroupCountX = 3, .ThreadGroupCountY = 1, .ThreadGroupCountZ = 1 };
+		constexpr D3D12_DISPATCH_MESH_ARGUMENTS DMA = { .ThreadGroupCountX = 1, .ThreadGroupCountY = 1, .ThreadGroupCountZ = 1 };
 		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DMA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(DMA), &DMA);
 	}
 #endif
@@ -26,15 +26,12 @@ public:
 		if (HasMeshShaderSupport(COM_PTR_GET(Device))) {
 			const auto ShaderPath = GetBasePath();
 			std::vector<COM_PTR<ID3DBlob>> SBs;
-			//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".as.cso")), COM_PTR_PUT(SBs.emplace_back())));
 			VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ms.cso")), COM_PTR_PUT(SBs.emplace_back())));
 			VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
 			const std::array SBCs = {
 				D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[0]->GetBufferPointer(), .BytecodeLength = SBs[0]->GetBufferSize() }),
 				D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
-				//D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[2]->GetBufferPointer(), .BytecodeLength = SBs[2]->GetBufferSize() }),
 			};
-			//CreatePipelineState_AsMsPs(FALSE, SBCs);
 			CreatePipelineState_MsPs(FALSE, SBCs);
 		}
 	}
@@ -68,7 +65,7 @@ public:
 #else
 					COM_PTR<ID3D12GraphicsCommandList6> GCL6;
 					VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL6)));
-					GCL6->DispatchMesh(3, 1, 1);
+					GCL6->DispatchMesh(1, 1, 1);
 #endif
 				}
 				else {

@@ -620,7 +620,7 @@ protected:
 	std::vector<D3D12_RECT> ScissorRects;
 
 protected:
-	const D3D12_SHADER_BYTECODE NullSB = { .pShaderBytecode = nullptr, .BytecodeLength = 0 };
+	const D3D12_SHADER_BYTECODE NullSBC = { .pShaderBytecode = nullptr, .BytecodeLength = 0 };
 };
 
 #ifdef DEBUG_STDOUT

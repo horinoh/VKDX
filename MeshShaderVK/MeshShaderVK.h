@@ -17,7 +17,7 @@ public:
 	void CreateGeometry() override {
 		const auto& CB = CommandBuffers[0];
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-		constexpr VkDrawMeshTasksIndirectCommandNV DMTIC = { .taskCount = 3, .firstTask = 0 };
+		constexpr VkDrawMeshTasksIndirectCommandNV DMTIC = { .taskCount = 1, .firstTask = 0 };
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DMTIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DMTIC), &DMTIC);
 	}
 #endif
@@ -77,7 +77,7 @@ public:
 #ifdef USE_INDIRECT
 					vkCmdDrawMeshTasksIndirectNV(CB, IndirectBuffers[0].Buffer, 0, 1, 0);
 #else
-					vkCmdDrawMeshTasksNV(CB, 3, 0);
+					vkCmdDrawMeshTasksNV(CB, 1, 0);
 #endif
 				}
 			} vkCmdEndRenderPass(CB);

@@ -1,3 +1,25 @@
 #version 450
 
 #extension GL_NV_mesh_shader : require
+#extension GL_KHR_shader_subgroup_ballot : require
+
+taskNV out Task {
+  uint MeshletIDs[32];
+} Payload;
+
+layout(local_size_x=32) in;
+void main()
+{
+	bool Visible = true;
+	
+	uvec4 Vote = subgroupBallot(Visible);
+
+	if(Visible)
+	{
+		uint Index = subgroupBallotExclusiveBitCount(Vote);
+		Payload.MeshletIDs[Index] = uint(gl_LocalInvocationID.x);
+	}
+
+	uint Count = subgroupBallotBitCount(Vote);
+	gl_TaskCountNV = Count;
+}

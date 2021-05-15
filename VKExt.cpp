@@ -190,7 +190,7 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology PT, cons
 	for (auto& i : Threads) { i.join(); }
 }
 
-void VKExt::CreatePipeline_MsFs(const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 2>& PSSCIs)
+void VKExt::CreatePipeline_TsMsFs(const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 3>& PSSCIs)
 {
 	constexpr VkPipelineViewportStateCreateInfo PVSCI = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
@@ -229,9 +229,9 @@ void VKExt::CreatePipeline_MsFs(const VkBool32 DepthEnable, const std::array<VkP
 		.depthBoundsTestEnable = VK_FALSE,
 		.stencilTestEnable = VK_FALSE,
 		.front = VkStencilOpState({
-			.failOp = VK_STENCIL_OP_KEEP,		
-			.passOp = VK_STENCIL_OP_KEEP,		
-			.depthFailOp = VK_STENCIL_OP_KEEP,	
+			.failOp = VK_STENCIL_OP_KEEP,
+			.passOp = VK_STENCIL_OP_KEEP,
+			.depthFailOp = VK_STENCIL_OP_KEEP,
 			.compareOp = VK_COMPARE_OP_NEVER,
 			.compareMask = 0, .writeMask = 0, .reference = 0
 			}),
@@ -272,9 +272,9 @@ void VKExt::CreatePipeline_MsFs(const VkBool32 DepthEnable, const std::array<VkP
 	std::vector<std::thread> Threads;
 #ifdef USE_PIPELINE_SERIALIZE
 	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
-	Threads.emplace_back(std::thread::thread(VK::CreatePipeline__, std::ref(Pipelines.back()), Device, PipelineLayouts[0], RenderPasses[0], PRSCI, PDSSCI, nullptr, &PSSCIs[0], &PSSCIs[1], PCBASs, PCS.GetPipelineCache(0)));
+	Threads.emplace_back(std::thread::thread(VK::CreatePipeline__, std::ref(Pipelines.back()), Device, PipelineLayouts[0], RenderPasses[0], PRSCI, PDSSCI, VK_NULL_HANDLE == PSSCIs[0].module ? nullptr : &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], PCBASs, PCS.GetPipelineCache(0)));
 #else
-	Threads.emplace_back(std::thread::thread(VK::CreatePipeline__, std::ref(Pipelines.back()), Device, PipelineLayouts[0], RenderPasses[0], PRSCI, PDSSCI, nullptr, &PSSCIs[0], &PSSCIs[1], PCBASs));
+	Threads.emplace_back(std::thread::thread(VK::CreatePipeline__, std::ref(Pipelines.back()), Device, PipelineLayouts[0], RenderPasses[0], PRSCI, PDSSCI, VK_NULL_HANDLE == PSSCIs[0].module ? nullptr : &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], PCBASs));
 #endif
 	for (auto& i : Threads) { i.join(); }
 }

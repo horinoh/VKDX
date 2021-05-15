@@ -417,7 +417,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
 		.FrontFace = DSOD, .BackFace = DSOD
 	};
-	DX::CreatePipelineState_(std::ref(PipelineStates.back()), COM_PTR_GET(Device), RS, ToDXPrimitiveTopologyType(Prim.mode), RTBDs, RD, DSD, VS, PS, NullSB, NullSB, NullSB, IEDs, RTVs);
+	DX::CreatePipelineState_(std::ref(PipelineStates.back()), COM_PTR_GET(Device), RS, ToDXPrimitiveTopologyType(Prim.mode), RTBDs, RD, DSD, VS, PS, NullSBC, NullSBC, NullSBC, IEDs, RTVs);
 
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
