@@ -334,7 +334,7 @@ void GltfVK::PreProcess()
 
 	//!< アップデート
 	const DescriptorUpdateInfo DUI = {
-		{ UniformBuffers[0].Buffer, 0, VK_WHOLE_SIZE },
+		VkDescriptorBufferInfo({ .buffer = UniformBuffers[0].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
 	};
 	assert(!empty(DescriptorSets) && "");
 	assert(!empty(DescriptorUpdateTemplates) && "");
