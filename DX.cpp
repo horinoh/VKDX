@@ -9,18 +9,6 @@
 #pragma comment(lib, "dxcompiler")
 #endif
 
-const std::array FeatureLevels = {
-	D3D_FEATURE_LEVEL_12_1,
-	D3D_FEATURE_LEVEL_12_0,
-	D3D_FEATURE_LEVEL_11_1,
-	D3D_FEATURE_LEVEL_11_0,
-	D3D_FEATURE_LEVEL_10_1,
-	D3D_FEATURE_LEVEL_10_0,
-	D3D_FEATURE_LEVEL_9_3,
-	D3D_FEATURE_LEVEL_9_2,
-	D3D_FEATURE_LEVEL_9_1,
-};
-
 void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 {
 	PERFORMANCE_COUNTER();
@@ -397,9 +385,9 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	VERIFY_SUCCEEDED(CreateDXGIFactory1(COM_PTR_UUIDOF_PUTVOID(Factory)));
 #endif
 
-#ifdef _DEBUG
+#ifdef DEBUG_STDOUT
 	//!< アダプター(GPU)の列挙 (Enumerate adapter(GPU))
-	EnumAdapter(COM_PTR_GET(Factory));
+	std::cout << COM_PTR_GET(Factory);
 #endif
 
 #ifdef USE_WARP
@@ -411,34 +399,34 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 		VERIFY_SUCCEEDED(Adapter->GetDesc(&ADs.emplace_back()));
 		COM_PTR_RESET(Adapter);
 	}
-	//!< アダプター(GPU)の選択、ここでは最大メモリを選択することにする (Select Adapter(GPU), here select max memory size)
-	const auto Index = static_cast<UINT>(std::distance(begin(ADs), std::ranges::max_element(ADs, [](const DXGI_ADAPTER_DESC& lhs, const DXGI_ADAPTER_DESC& rhs) {
-		return lhs.DedicatedSystemMemory > rhs.DedicatedSystemMemory; 
-	})));
+	//!< アダプター(GPU)の選択、ここでは最大メモリを選択することにする (Here, select max memory size adapter(GPU))
+	const auto Index = static_cast<UINT>(std::distance(begin(ADs), std::ranges::max_element(ADs, [](const DXGI_ADAPTER_DESC& lhs, const DXGI_ADAPTER_DESC& rhs) { return lhs.DedicatedSystemMemory > rhs.DedicatedSystemMemory; })));
 	VERIFY_SUCCEEDED(Factory->EnumAdapters(Index, COM_PTR_PUT(Adapter)));
 #endif
 	assert(nullptr != Adapter && "");
 	Log("[ Selected Adapter ]\n");
-	LogAdapter(COM_PTR_GET(Adapter));
+#ifdef DEBUG_STDOUT
+	std::cout << COM_PTR_GET(Adapter);
+#endif
 
-	//!< アウトプット(ディスプレイ)の選択、ここでは全てのアダプター、アウトプットを列挙して、最初に見つかったアウトプットを選択することにする
-	COM_PTR<IDXGIAdapter> Ad;
-	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, COM_PTR_PUT(Ad)); ++i) {
-		for (UINT j = 0; DXGI_ERROR_NOT_FOUND != Ad->EnumOutputs(j, COM_PTR_PUT(Output)); ++j) {
-			if (nullptr != Output) {
-				break;
+	//!< ここでは最初に見つかったアウトプット(Display)を選択することにする (Here, select first found output(Display))
+	{
+		COM_PTR<IDXGIAdapter> DA;
+		for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Factory->EnumAdapters(i, COM_PTR_PUT(DA)); ++i) {
+			for (UINT j = 0; DXGI_ERROR_NOT_FOUND != DA->EnumOutputs(j, COM_PTR_PUT(Output)); ++j) {
+				if (nullptr != Output) { break; }
+				COM_PTR_RESET(Output);
 			}
-			COM_PTR_RESET(Output);
+			COM_PTR_RESET(DA);
+			if (nullptr != Output) { break; }
 		}
-		COM_PTR_RESET(Ad);
-		if (nullptr != Output) {
-			break;
-		}
+		assert(nullptr != Output && "");
 	}
-	assert(nullptr != Output && "");
 	Log("\t\t[ Selected Output ]\n");
-	LogOutput(COM_PTR_GET(Output));
-	
+#ifdef DEBUG_STDOUT
+	std::cout << COM_PTR_GET(Output);
+#endif
+
 	//!< (フォーマット指定で)選択したアウトプットのディスプレイモードを列挙
 	GetDisplayModeList(COM_PTR_GET(Output), DXGI_FORMAT_R8G8B8A8_UNORM);
 
@@ -449,22 +437,51 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	}
 
 	//!< 高フィーチャーレベル優先でデバイスを作成 (Create device with higher feature level possible)
-	for (const auto i : FeatureLevels) {
-		if (SUCCEEDED(D3D12CreateDevice(COM_PTR_GET(Adapter), i, COM_PTR_UUIDOF_PUTVOID(Device)))) {
-			break;
+	{
+		constexpr std::array FeatureLevels = {
+			D3D_FEATURE_LEVEL_12_1,
+			D3D_FEATURE_LEVEL_12_0,
+			D3D_FEATURE_LEVEL_11_1,
+			D3D_FEATURE_LEVEL_11_0,
+			D3D_FEATURE_LEVEL_10_1,
+			D3D_FEATURE_LEVEL_10_0,
+			D3D_FEATURE_LEVEL_9_3,
+			D3D_FEATURE_LEVEL_9_2,
+			D3D_FEATURE_LEVEL_9_1,
+		};
+		for (const auto i : FeatureLevels) {
+			if (SUCCEEDED(D3D12CreateDevice(COM_PTR_GET(Adapter), i, COM_PTR_UUIDOF_PUTVOID(Device)))) {
+				//!< NumFeatureLevels, pFeatureLevelsRequested は入力、MaxSupportedFeatureLevel は出力となる (NumFeatureLevels, pFeatureLevelsRequested is input, MaxSupportedFeatureLevel is output)
+				D3D12_FEATURE_DATA_FEATURE_LEVELS FDFL = { .NumFeatureLevels = static_cast<UINT>(size(FeatureLevels)), .pFeatureLevelsRequested = data(FeatureLevels) };
+				VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, reinterpret_cast<void*>(&FDFL), sizeof(FDFL)));
+				Log("MaxSupportedFeatureLevel\n");
+#define D3D_FEATURE_LEVEL_ENTRY(fl) case D3D_FEATURE_LEVEL_##fl: Logf("\tD3D_FEATURE_LEVEL_%s\n", #fl); break;
+				switch (FDFL.MaxSupportedFeatureLevel) {
+				default: assert(0 && "Unknown FeatureLevel"); break;
+					D3D_FEATURE_LEVEL_ENTRY(12_1)
+					D3D_FEATURE_LEVEL_ENTRY(12_0)
+					D3D_FEATURE_LEVEL_ENTRY(11_1)
+					D3D_FEATURE_LEVEL_ENTRY(11_0)
+					D3D_FEATURE_LEVEL_ENTRY(10_1)
+					D3D_FEATURE_LEVEL_ENTRY(10_0)
+					D3D_FEATURE_LEVEL_ENTRY(9_3)
+					D3D_FEATURE_LEVEL_ENTRY(9_2)
+					D3D_FEATURE_LEVEL_ENTRY(9_1)
+				}
+#undef D3D_FEATURE_LEVEL_ENTRY
+				break;
+			}
 		}
 	}
-	CheckFeatureLevel(COM_PTR_GET(Device));
 
-	//!< ID3D12InfoQueue 関連はデバイス作成後 (ID3D12InfoQueue after device creation)
 	{
-		COM_PTR<ID3D12InfoQueue> InfoQueue;
-		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(InfoQueue)));
-		if (nullptr != InfoQueue) {
-			//!< エラー等でブレークする設定 (Break with error)
+		COM_PTR<ID3D12InfoQueue> IQ;
+		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(IQ)));
+		if (nullptr != IQ) {
 #ifdef _DEBUG
-			VERIFY_SUCCEEDED(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
-			VERIFY_SUCCEEDED(InfoQueue->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE));
+			//!< エラー等でブレークする設定 (Break with error)
+			VERIFY_SUCCEEDED(IQ->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
+			VERIFY_SUCCEEDED(IQ->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE));
 #endif
 
 			//!< ワーニング等をフィルタリングしたい場合等に使用
@@ -496,67 +513,6 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	LOG_OK();
 }
 
-//!< アダプタ(GPU)の列挙
-void DX::LogAdapter(IDXGIAdapter* Ad)
-{
-	DXGI_ADAPTER_DESC AD;
-	VERIFY_SUCCEEDED(Ad->GetDesc(&AD));
-	Logf(TEXT("\t%s\n"), AD.Description);
-	Logf(TEXT("\t\tDedicatedVideoMemory = %lld\n"), AD.DedicatedVideoMemory);
-	Logf(TEXT("\t\tDedicatedSystemMemory = %lld\n"), AD.DedicatedSystemMemory);
-	Logf(TEXT("\t\tSharedSystemMemory = %lld\n"), AD.SharedSystemMemory);
-}
-void DX::EnumAdapter(IDXGIFactory4* Fact)
-{
-	Log("[ Aadapters ]\n");
-	COM_PTR<IDXGIAdapter> Ad;
-	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Fact->EnumAdapters(i, COM_PTR_PUT(Ad)); ++i) {
-		LogAdapter(COM_PTR_GET(Ad));
-		EnumOutput(COM_PTR_GET(Ad));
-		COM_PTR_RESET(Ad);
-	}
-}
-
-//!< アダプター(GPU)に接続されている、アウトプット(ディスプレイ)の列挙
-void DX::LogOutput(IDXGIOutput* Outp)
-{
-#ifdef USE_HDR
-	COM_PTR<IDXGIOutput6> Output6;
-	COM_PTR_AS(Outp, Output6);
-
-	DXGI_OUTPUT_DESC1 OutputDesc;
-	VERIFY_SUCCEEDED(Output6->GetDesc1(&OutputDesc));
-	//!< Need to enable "Play HDR game and apps" in windows settings 
-	assert(DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020 == OutputDesc.ColorSpace && "HDR not supported");
-#else
-	DXGI_OUTPUT_DESC OutputDesc;
-	VERIFY_SUCCEEDED(Outp->GetDesc(&OutputDesc));
-#endif
-
-	const auto Width = OutputDesc.DesktopCoordinates.right - OutputDesc.DesktopCoordinates.left;
-	const auto Height = OutputDesc.DesktopCoordinates.bottom - OutputDesc.DesktopCoordinates.top;
-	Logf(TEXT("\t\t\t%s\n"), OutputDesc.DeviceName);
-	Logf(TEXT("\t\t\t%d x %d\n"), Width, Height);
-	switch (OutputDesc.Rotation)
-	{
-	default: break;
-	case DXGI_MODE_ROTATION_UNSPECIFIED: Log("\t\t\tROTATION_UNSPECIFIED\n"); break;
-	case DXGI_MODE_ROTATION_IDENTITY: Log("\t\t\tROTATION_IDENTITY\n"); break;
-	case DXGI_MODE_ROTATION_ROTATE90: Log("\t\t\tROTATE90\n"); break;
-	case DXGI_MODE_ROTATION_ROTATE180: Log("\t\t\tROTATE180\n"); break;
-	case DXGI_MODE_ROTATION_ROTATE270: Log("\t\t\tROTATE270\n"); break;
-	}
-}
-void DX::EnumOutput(IDXGIAdapter* Ad)
-{
-	Log("\t\t[ Outputs ]\n");
-	COM_PTR<IDXGIOutput> Outp;
-	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != Ad->EnumOutputs(i, COM_PTR_PUT(Outp)); ++i) {
-		LogOutput(COM_PTR_GET(Outp));
-		COM_PTR_RESET(Outp);
-	}
-}
-//!< アウトプット(ディスプレイ)の描画モードの列挙
 void DX::GetDisplayModeList(IDXGIOutput* Outp, const DXGI_FORMAT Format)
 {
 	UINT Count = 0;
@@ -591,32 +547,6 @@ void DX::GetDisplayModeList(IDXGIOutput* Outp, const DXGI_FORMAT Format)
 			Log("\n");
 		}
 	}
-}
-
-void DX::CheckFeatureLevel(ID3D12Device* Dev)
-{
-	//!< NumFeatureLevels, pFeatureLevelsRequested は CheckFeatureSupport() への入力、MaxSupportedFeatureLevel は CheckFeatureSupport() からの出力となる (NumFeatureLevels, pFeatureLevelsRequested is input to CheckFeatureSupport(), MaxSupportedFeatureLevel is output from CheckFeatureSupport())
-	D3D12_FEATURE_DATA_FEATURE_LEVELS FDFL = {
-		.NumFeatureLevels = static_cast<UINT>(size(FeatureLevels)), .pFeatureLevelsRequested = data(FeatureLevels) //!< 入力 (Input)
-		//.MaxSupportedFeatureLevel //!< 出力 (Output)
-	};
-	VERIFY_SUCCEEDED(Dev->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, reinterpret_cast<void*>(&FDFL), sizeof(FDFL)));
-
-	Log("MaxSupportedFeatureLevel\n");
-#define D3D_FEATURE_LEVEL_ENTRY(fl) case D3D_FEATURE_LEVEL_##fl: Logf("\tD3D_FEATURE_LEVEL_%s\n", #fl); break;
-	switch (FDFL.MaxSupportedFeatureLevel) {
-	default: assert(0 && "Unknown FeatureLevel"); break;
-	D3D_FEATURE_LEVEL_ENTRY(12_1)
-	D3D_FEATURE_LEVEL_ENTRY(12_0)
-	D3D_FEATURE_LEVEL_ENTRY(11_1)
-	D3D_FEATURE_LEVEL_ENTRY(11_0)
-	D3D_FEATURE_LEVEL_ENTRY(10_1)
-	D3D_FEATURE_LEVEL_ENTRY(10_0)
-	D3D_FEATURE_LEVEL_ENTRY(9_3)
-	D3D_FEATURE_LEVEL_ENTRY(9_2)
-	D3D_FEATURE_LEVEL_ENTRY(9_1)
-	}
-#undef D3D_FEATURE_LEVEL_ENTRY
 }
 
 /**

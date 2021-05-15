@@ -86,7 +86,7 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 #endif
 
 #ifndef BREAK_ON_FAILED
-#define BREAK_ON_FAILED(hr) if(FAILED(hr)) { Log(data(DX::GetHRESULTString(hr))); DEBUG_BREAK(); }
+#define BREAK_ON_FAILED(hr) if(FAILED(hr)) { Win::Log(data(DX::GetHRESULTString(hr))); DEBUG_BREAK(); }
 #endif
 #ifndef THROW_ON_FAILED
 #define THROW_ON_FAILED(hr) if(FAILED(hr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + DX::GetHRESULTString(hr)); }
@@ -439,12 +439,7 @@ public:
 #pragma endregion
 
 	virtual void CreateDevice(HWND hWnd);
-	virtual void LogAdapter(IDXGIAdapter* Adapter);
-	virtual void EnumAdapter(IDXGIFactory4* Factory);
-	virtual void LogOutput(IDXGIOutput* Output);
-	virtual void EnumOutput(IDXGIAdapter* Adapter);
 	virtual void GetDisplayModeList(IDXGIOutput* Output, const DXGI_FORMAT Format);
-	virtual void CheckFeatureLevel(ID3D12Device* Device);
 
 	virtual void CreateCommandQueue();
 
@@ -626,4 +621,55 @@ protected:
 #ifdef DEBUG_STDOUT
 static std::ostream& operator<<(std::ostream& lhs, const DirectX::XMVECTOR& rhs) { for (auto i = 0; i < 4; ++i) { lhs << rhs.m128_f32[i] << ", "; } lhs << std::endl; return lhs; }
 static std::ostream& operator<<(std::ostream& lhs, const DirectX::XMMATRIX& rhs) { for (auto i = 0; i < 4; ++i) { lhs << rhs.r[i]; } lhs << std::endl; return lhs; }
+
+static std::ostream& operator<<(std::ostream& lhs, IDXGIOutput* rhs) {
+#ifdef USE_HDR
+	COM_PTR<IDXGIOutput6> DO6;
+	COM_PTR_AS(rhs, DO6);
+	DXGI_OUTPUT_DESC1 OD;
+	VERIFY_SUCCEEDED(DO6->GetDesc1(&OD));
+	//!< Windows‘¤‚Å "Play HDR game and apps" ‚ð—LŒø‚É‚·‚éÝ’è‚ª•K—v (Need to enable "Play HDR game and apps" in windows settings)
+	assert(DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020 == OD.ColorSpace && "HDR not supported");
+#else
+	DXGI_OUTPUT_DESC OD;
+	VERIFY_SUCCEEDED(rhs->GetDesc(&OD));
+#endif
+	Win::Logf(TEXT("\t\t\t%s\n"), OD.DeviceName);
+	Win::Logf(TEXT("\t\t\t%d x %d\n"), OD.DesktopCoordinates.right - OD.DesktopCoordinates.left, OD.DesktopCoordinates.bottom - OD.DesktopCoordinates.top);
+	switch (OD.Rotation)
+	{
+		default: break;
+		case DXGI_MODE_ROTATION_UNSPECIFIED: Win::Log("\t\t\tROTATION_UNSPECIFIED\n"); break;
+		case DXGI_MODE_ROTATION_IDENTITY: Win::Log("\t\t\tROTATION_IDENTITY\n"); break;
+		case DXGI_MODE_ROTATION_ROTATE90: Win::Log("\t\t\tROTATE90\n"); break;
+		case DXGI_MODE_ROTATION_ROTATE180: Win::Log("\t\t\tROTATE180\n"); break;
+		case DXGI_MODE_ROTATION_ROTATE270: Win::Log("\t\t\tROTATE270\n"); break;
+	}
+	return lhs;
+}
+static std::ostream& operator<<(std::ostream& lhs, IDXGIAdapter* rhs) {
+	DXGI_ADAPTER_DESC AD;
+	VERIFY_SUCCEEDED(rhs->GetDesc(&AD));
+	Win::Logf(TEXT("\t%s\n"), AD.Description);
+	Win::Logf(TEXT("\t\tDedicatedVideoMemory = %lld\n"), AD.DedicatedVideoMemory);
+	Win::Logf(TEXT("\t\tDedicatedSystemMemory = %lld\n"), AD.DedicatedSystemMemory);
+	Win::Logf(TEXT("\t\tSharedSystemMemory = %lld\n"), AD.SharedSystemMemory);
+
+	Win::Log("\t\t[ Outputs ]\n");
+	COM_PTR<IDXGIOutput> DO;
+	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != rhs->EnumOutputs(i, COM_PTR_PUT(DO)); ++i) {
+		std::cout << COM_PTR_GET(DO);
+		COM_PTR_RESET(DO);
+	}
+	return lhs;
+}
+static std::ostream& operator<<(std::ostream& lhs, IDXGIFactory4* rhs) {
+	Win::Log("[ Aadapters ]\n");
+	COM_PTR<IDXGIAdapter> DA;
+	for (UINT i = 0; DXGI_ERROR_NOT_FOUND != rhs->EnumAdapters(i, COM_PTR_PUT(DA)); ++i) {
+		std::cout << COM_PTR_GET(DA);
+		COM_PTR_RESET(DA);
+	}
+	return lhs;
+}
 #endif
