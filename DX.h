@@ -385,15 +385,13 @@ public:
 #pragma region RAYTRACING
 	[[nodiscard]] static bool HasRaytracingSupport(ID3D12Device* Device) {
 		D3D12_FEATURE_DATA_D3D12_OPTIONS5 FDO5;
-		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, reinterpret_cast<void*>(&FDO5), sizeof(FDO5)));
-		return D3D12_RAYTRACING_TIER_NOT_SUPPORTED != FDO5.RaytracingTier;
+		return SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, reinterpret_cast<void*>(&FDO5), sizeof(FDO5))) && D3D12_RAYTRACING_TIER_NOT_SUPPORTED != FDO5.RaytracingTier;
 	}
 #pragma endregion
 #pragma region MESH_SHADER
 	[[nodiscard]] static bool HasMeshShaderSupport(ID3D12Device* Device) {
 		D3D12_FEATURE_DATA_D3D12_OPTIONS7 FDO7;
-		VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, reinterpret_cast<void*>(&FDO7), sizeof(FDO7)));
-		return D3D12_MESH_SHADER_TIER_NOT_SUPPORTED != FDO7.MeshShaderTier;
+		return SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS7, reinterpret_cast<void*>(&FDO7), sizeof(FDO7))) && D3D12_MESH_SHADER_TIER_NOT_SUPPORTED != FDO7.MeshShaderTier;
 	}
 #pragma endregion
 

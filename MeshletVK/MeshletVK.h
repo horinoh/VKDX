@@ -13,12 +13,6 @@ public:
 	MeshletVK() : Super() {}
 	virtual ~MeshletVK() {}
 
-	void CreateGeometry() override {
-		const auto& CB = CommandBuffers[0];
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-		constexpr VkDrawMeshTasksIndirectCommandNV DMTIC = { .taskCount = 3, .firstTask = 0 };
-		IndirectBuffers.emplace_back().Create(Device, PDMP, DMTIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DMTIC), &DMTIC);
-	}
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext, [[maybe_unused]] const std::vector<const char*>& AddExtensions) override {
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
 			VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr, .taskShader = VK_TRUE, .meshShader = VK_TRUE, };
@@ -28,6 +22,14 @@ public:
 		}
 		else {
 			Super::CreateDevice(hWnd, hInstance);
+		}
+	}
+	void CreateGeometry() override {
+		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
+			const auto& CB = CommandBuffers[0];
+			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+			constexpr VkDrawMeshTasksIndirectCommandNV DMTIC = { .taskCount = 3, .firstTask = 0 };
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DMTIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DMTIC), &DMTIC);
 		}
 	}
 	virtual void CreateRenderPass() { VKExt::CreateRenderPass_Clear(); }

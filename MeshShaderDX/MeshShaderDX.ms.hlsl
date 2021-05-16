@@ -18,6 +18,36 @@ static const float3 Colors[] = { float3(1.0f, 0.0f, 0.0f), float3(0.0f, 1.0f, 0.
 [outputtopology("triangle")]
 void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, out indices uint3 Indices[1], out primitives PRIM_OUT Prims[1], out vertices VERT_OUT Vertices[3])
 {
+    /*
+    V = N * N ... 4, 9, 16
+    P = 2(N - 1)(N - 1) ... 2, 4, 8, 18,
+
+    0 1 2 N
+    +-+-+
+    | | |
+    +-+-+
+    | | |
+    +-+-+
+    6 7 8
+  */
+
+    /*
+    V = (N + 1) * (2N + 1) ... 6, 15, 28
+    P = 2 * 2(N - 1)(N - 1) ... 4, 16, 36, 
+
+    0 1 2 N
+    +-+-+
+    | | |   
+    +-+-+      
+    | | |
+    +-+-+
+    | | |   
+    +-+-+      
+    | | |
+    +-+-+
+    12 13 14
+    */
+    
     //!< スレッドグループから出力する、頂点数、プリミティブ数を宣言
     SetMeshOutputCounts(3, 1);
     

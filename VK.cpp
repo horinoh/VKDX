@@ -753,43 +753,51 @@ void VK::SelectPhysicalDevice(VkInstance Inst)
 		{
 			//!< 取得したい全てのプロパティを VkPhysicalDeviceProperties2.pNext へチェイン指定する
 #pragma region MESH_SHADER
-			VkPhysicalDeviceMeshShaderPropertiesNV PDMSP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV, .pNext = nullptr };
+			{
+				VkPhysicalDeviceMeshShaderPropertiesNV PDMSP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_NV, .pNext = nullptr };
+				VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDMSP, };
+				vkGetPhysicalDeviceProperties2(i, &PDP2);
+				std::cout << PDMSP;
+			}
 #pragma endregion
 #pragma region RAYTRACING
-			VkPhysicalDeviceRayTracingPipelinePropertiesKHR PDRTPP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, .pNext = &PDMSP };
+			{
+				VkPhysicalDeviceRayTracingPipelinePropertiesKHR PDRTPP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, .pNext = nullptr };
+				VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
+				vkGetPhysicalDeviceProperties2(i, &PDP2);
+				std::cout << PDRTPP;
+			}
 #pragma endregion
-			VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
-			vkGetPhysicalDeviceProperties2(i, &PDP2);
-			std::cout << PDP2.properties;
-#pragma region RAYTRACING
-			std::cout << PDRTPP;
-#pragma endregion
-#pragma region MESH_SHADER
-			std::cout << PDMSP;
-#pragma endregion
+			VkPhysicalDeviceProperties PDP = {};
+			vkGetPhysicalDeviceProperties(i, &PDP);
+			std::cout << PDP;
 		}
 
 		//!< フィーチャー2 (Feature2)
 		{
 #pragma region MESH_SHADER
-			VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr };
+			{
+				VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr };
+				VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDMSF };
+				vkGetPhysicalDeviceFeatures2(i, &PDF2);
+				std::cout << PDMSF;
+			}
 #pragma endregion
 #pragma region RAYTRACING
-			VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = &PDMSF };
-			VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF };
-			VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF };
+			{
+				VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr };
+				VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF };
+				VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF };
+				VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDASF };
+				vkGetPhysicalDeviceFeatures2(i, &PDF2);
+				std::cout << PDBDAF;
+				std::cout << PDRTPF;
+				std::cout << PDASF;
+			}
 #pragma endregion			
-			VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDASF };
-			vkGetPhysicalDeviceFeatures2(i, &PDF2);
-			std::cout << PDF2.features;
-#pragma region RAYTRACING
-			std::cout << PDBDAF;
-			std::cout << PDRTPF;
-			std::cout << PDASF;
-#pragma endregion
-#pragma region MESH_SHADER
-			std::cout << PDMSF;
-#pragma endregion
+			VkPhysicalDeviceFeatures PDF = {};
+			vkGetPhysicalDeviceFeatures(i, &PDF);
+			std::cout << PDF;
 		}
 
 		//!< メモリプロパティ (MemoryProperty)

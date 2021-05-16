@@ -13,14 +13,6 @@ public:
 	MeshShaderVK() : Super() {}
 	virtual ~MeshShaderVK() {}
 
-#ifdef USE_INDIRECT
-	void CreateGeometry() override {
-		const auto& CB = CommandBuffers[0];
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-		constexpr VkDrawMeshTasksIndirectCommandNV DMTIC = { .taskCount = 1, .firstTask = 0 };
-		IndirectBuffers.emplace_back().Create(Device, PDMP, DMTIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DMTIC), &DMTIC);
-	}
-#endif
 	//!< #TIPS インスタンスレイヤー "VK_LAYER_RENDERDOC_Capture" を使用すると vkCreateDevice() でコケるので注意 (If we use "VK_LAYER_RENDERDOC_Capture", vkCreateDevice() failed)
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext, [[maybe_unused]] const std::vector<const char*>& AddExtensions) override {
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
@@ -33,6 +25,16 @@ public:
 			Super::CreateDevice(hWnd, hInstance);
 		}
 	}
+#ifdef USE_INDIRECT
+	void CreateGeometry() override {
+		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
+			const auto& CB = CommandBuffers[0];
+			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+			constexpr VkDrawMeshTasksIndirectCommandNV DMTIC = { .taskCount = 1, .firstTask = 0 };
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DMTIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DMTIC), &DMTIC);
+		}
+	}
+#endif
 	virtual void CreateRenderPass() { VKExt::CreateRenderPass_Clear(); }
 	virtual void CreatePipeline() override {
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
