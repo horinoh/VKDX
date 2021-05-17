@@ -80,5 +80,8 @@
     <FxCompile Include="MeshShaderDX.ps.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+    <FxCompile Include="MeshShaderDX_ps.ms.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

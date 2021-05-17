@@ -1,0 +1,47 @@
+#version 450
+ 
+#extension GL_NV_mesh_shader : require
+ 
+layout (location = 0) out vec3 OutColor[];
+
+const vec3 Colors[] = { vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f) };
+
+#define N 2
+
+layout(local_size_x = N * N) in;
+layout(triangles, max_vertices = N * N, max_primitives = 2 * (N - 1) * (N - 1)) out;
+void main()
+{
+   /*
+    V = N * N ... 4, 9, 16
+    P = 2(N - 1)(N - 1) ... 2, 4, 8, 18,
+    +-+-+ 0, 1, ..., N-1
+    | | |
+    +-+-+ N, N+1, ..., N+(N-1)
+    | | |
+    +-+-+ 2N, 2N+1, ..., 2N+(N-1)
+    | | |
+    +-+-+ NN, NN+1, ..., NN+(N-1)
+   */
+
+    uint IndexCount = 0;
+	gl_PrimitiveCountNV = 2 * (N - 1) * (N - 1);
+    for (uint i = 0; i < N; ++i)
+    {
+        for (uint j = 0; j < N; ++j)
+        {
+            const uint LT = i * N + j;
+            const uint RT = LT + 1;
+            const uint LB = LT + N;
+            const uint RB = LB + 1;
+            gl_PrimitiveIndicesNV[IndexCount++] = LT; gl_PrimitiveIndicesNV[IndexCount++] = LB; gl_PrimitiveIndicesNV[IndexCount++] = RT;
+            gl_PrimitiveIndicesNV[IndexCount++] = LB; gl_PrimitiveIndicesNV[IndexCount++] = RB; gl_PrimitiveIndicesNV[IndexCount++] = RT;
+        }
+    }
+
+    const uint x = gl_LocalInvocationID.x % N;
+    const uint y = gl_LocalInvocationID.x / N;
+	gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = vec4(vec3(float(x) / (N - 1), 1.0f - float(y) / (N - 1), 0.0f) - vec3(0.5f, 0.5f, 0.0f), 1.0); 
+
+	OutColor[gl_LocalInvocationID.x] = Colors[gl_LocalInvocationID.x%3];
+}

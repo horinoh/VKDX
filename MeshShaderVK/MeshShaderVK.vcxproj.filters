@@ -77,5 +77,8 @@
     <CustomBuild Include="MeshShaderVK.mesh">
       <Filter>Shader Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="MeshShaderVK_ps.mesh">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

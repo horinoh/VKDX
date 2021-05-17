@@ -14,8 +14,8 @@ layout(local_size_x = 3) in;
 layout(triangles, max_vertices = 3, max_primitives = 1) out;
 void main()
 {
-	gl_PrimitiveIndicesNV[gl_LocalInvocationID.x] = gl_LocalInvocationID.x;
 	gl_PrimitiveCountNV = 1;
+	gl_PrimitiveIndicesNV[gl_LocalInvocationID.x] = gl_LocalInvocationID.x;
 
 	gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = vec4(Positions[gl_LocalInvocationID.x], 1.0); 
 	OutColor[gl_LocalInvocationID.x] = Colors[gl_LocalInvocationID.x];  

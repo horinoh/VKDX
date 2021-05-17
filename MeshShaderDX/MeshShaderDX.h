@@ -28,7 +28,8 @@ public:
 		if (HasMeshShaderSupport(COM_PTR_GET(Device))) {
 			const auto ShaderPath = GetBasePath();
 			std::vector<COM_PTR<ID3DBlob>> SBs;
-			VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ms.cso")), COM_PTR_PUT(SBs.emplace_back())));
+			//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ms.cso")), COM_PTR_PUT(SBs.emplace_back())));
+			VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_ps.ms.cso")), COM_PTR_PUT(SBs.emplace_back())));
 			VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
 			const std::array SBCs = {
 				D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[0]->GetBufferPointer(), .BytecodeLength = SBs[0]->GetBufferSize() }),
