@@ -6,7 +6,7 @@ struct VERT_OUT
 
 static const float3 Colors[] = { float3(1.0f, 0.0f, 0.0f), float3(0.0f, 1.0f, 0.0f), float3(0.0f, 0.0f, 1.0f) };
 
-#define N 2
+#define N 4
 
 [numthreads(N * N, 1, 1)]
 [outputtopology("triangle")]
@@ -23,13 +23,12 @@ void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, out 
     | | |
     +-+-+ NN, NN+1, ..., NN+(N-1)
     */
-    
     SetMeshOutputCounts(N * N, 2 * (N - 1) * (N - 1));
     
     uint PrimCount = 0;
-    for (uint i = 0; i < N; ++i)
+    for (uint i = 0; i < N - 1; ++i)
     {
-        for (uint j = 0; j < N; ++j)
+        for (uint j = 0; j < N - 1; ++j)
         {
             const uint LT = i * N + j;
             const uint RT = LT + 1;
