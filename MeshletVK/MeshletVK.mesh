@@ -7,7 +7,6 @@ layout (location = 0) out vec3 OutColor[];
 const vec3 Positions[] = { vec3(0.0f, 0.5f, 0.0f), vec3(-0.5f, -0.5f, 0.0f), vec3(0.5f, -0.5f, 0.0f) };
 const vec3 Colors[] = { vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec3(1.0f, 1.0f, 0.0f), vec3(0.0f, 1.0f, 1.0f), vec3(1.0f, 0.0f, 1.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f) };
 
-
 taskNV in Task {
   uint MeshletIDs[32];
 } Payload;
@@ -19,7 +18,7 @@ void main()
 	gl_PrimitiveIndicesNV[gl_LocalInvocationID.x] = gl_LocalInvocationID.x;
 	gl_PrimitiveCountNV = 1;
 
-	const vec3 Offset = vec3(gl_WorkGroupID.x, gl_WorkGroupID.x, 0.0f) / 32.0f - vec3(0.5f, 0.5f, 0.0f);
+	const vec3 Offset = vec3(gl_WorkGroupID.x, gl_WorkGroupID.x, 0.0f) / 16.0f - vec3(0.5f, 0.5f, 0.0f);
 	gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = vec4(Positions[gl_LocalInvocationID.x] + Offset, 1.0); 
 	OutColor[gl_LocalInvocationID.x] = Colors[Payload.MeshletIDs[gl_WorkGroupID.x] % 8];  
 }

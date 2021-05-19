@@ -7,19 +7,22 @@ taskNV out Task {
   uint MeshletIDs[32];
 } Payload;
 
-layout(local_size_x=32) in;
+layout(local_size_x = 16) in;
 void main()
 {
 	bool Visible = true;
+	//bool Visible = 0 == (gl_LocalInvocationID.x % 2);
+	//bool Visible = 1 == (gl_LocalInvocationID.x % 2);
 	
+	//!< スレッド間同期される
 	uvec4 Vote = subgroupBallot(Visible);
 
 	if(Visible)
 	{
-		uint Index = subgroupBallotExclusiveBitCount(Vote);
-		Payload.MeshletIDs[Index] = uint(gl_LocalInvocationID.x);
+        //!< subgroupBallotExclusiveBitCount() : true を返す(より若い)スレッド数を返す、結果的に true を返すスレッド ID が前詰めで格納されていく
+		Payload.MeshletIDs[subgroupBallotExclusiveBitCount(Vote)] = uint(gl_LocalInvocationID.x);
 	}
 
-	uint Count = subgroupBallotBitCount(Vote);
-	gl_TaskCountNV = Count;
+    //!< subgroupBallotBitCount() : true を返す全スレッド数を返す、その分(メッシュレット数)だけメッシュシェーダを起動する(gl_TaskCountNV)
+	gl_TaskCountNV = subgroupBallotBitCount(Vote);
 }
