@@ -4,13 +4,14 @@ struct VERT_OUT
     float3 Color : COLOR;
 };
 
-static const float3 Colors[] = { float3(1.0f, 0.0f, 0.0f), float3(0.0f, 1.0f, 0.0f), float3(0.0f, 0.0f, 1.0f) };
-
 #define N 4
+#define NN (N * N)
+#define N1 (N - 1)
+#define N1N1 (N1 * N1)
 
-[numthreads(N * N, 1, 1)]
+[numthreads(NN, 1, 1)]
 [outputtopology("triangle")]
-void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, out indices uint3 Indices[2 * (N - 1) * (N - 1)], out vertices VERT_OUT Vertices[N * N])
+void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, out indices uint3 Indices[2 * N1N1], out vertices VERT_OUT Vertices[NN])
 {
     /*
     V = N * N ... 4, 9, 16
@@ -23,12 +24,12 @@ void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, out 
     | | |
     +-+-+ NN, NN+1, ..., NN+(N-1)
     */
-    SetMeshOutputCounts(N * N, 2 * (N - 1) * (N - 1));
+    SetMeshOutputCounts(NN, 2 * N1N1);
     
     uint PrimCount = 0;
-    for (uint i = 0; i < N - 1; ++i)
+    for (uint i = 0; i < N1; ++i)
     {
-        for (uint j = 0; j < N - 1; ++j)
+        for (uint j = 0; j < N1; ++j)
         {
             const uint LT = i * N + j;
             const uint RT = LT + 1;
@@ -41,8 +42,8 @@ void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, out 
     
     const uint x = GroupThreadID % N;
     const uint y = GroupThreadID / N;
-    Vertices[GroupThreadID].Position = float4(float3((float)x / (N - 1), 1.0f - (float)y / (N - 1), 0.0f) - float3(0.5f, 0.5f, 0.0f), 1.0f);
-    Vertices[GroupThreadID].Color = Colors[GroupThreadID%3];
+    Vertices[GroupThreadID].Position = float4(float3((float)x / N1, 1.0f - (float)y / N1, 0.0f) - float3(0.5f, 0.5f, 0.0f), 1.0f);
+    Vertices[GroupThreadID].Color = float3(GroupThreadID % 2, (GroupThreadID / N) % 2, 0.0f);
 
     /*
     6 = 4 + 2, 15 = 9 + 2 * 3, 28 = 16 + 3 * 4, N*N + (N-1)*N

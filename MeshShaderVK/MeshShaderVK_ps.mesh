@@ -4,12 +4,13 @@
  
 layout (location = 0) out vec3 OutColor[];
 
-const vec3 Colors[] = { vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f) };
-
 #define N 4
+#define NN (N * N)
+#define N1 (N - 1)
+#define N1N1 (N1 * N1)
 
-layout(local_size_x = N * N) in;
-layout(triangles, max_vertices = N * N, max_primitives = 2 * (N - 1) * (N - 1)) out;
+layout(local_size_x = NN) in;
+layout(triangles, max_vertices = NN, max_primitives = 2 * N1N1) out;
 void main()
 {
    /*
@@ -24,10 +25,10 @@ void main()
     +-+-+ NN, NN+1, ..., NN+(N-1)
    */
     uint IndexCount = 0;
-	gl_PrimitiveCountNV = 2 * (N - 1) * (N - 1);
-    for (uint i = 0; i < N - 1; ++i)
+	gl_PrimitiveCountNV = 2 * N1N1;
+    for (uint i = 0; i < N1; ++i)
     {
-        for (uint j = 0; j < N - 1; ++j)
+        for (uint j = 0; j < N1; ++j)
         {
             const uint LT = i * N + j;
             const uint RT = LT + 1;
@@ -40,7 +41,7 @@ void main()
 
     const uint x = gl_LocalInvocationID.x % N;
     const uint y = gl_LocalInvocationID.x / N;
-	gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = vec4(vec3(float(x) / (N - 1), 1.0f - float(y) / (N - 1), 0.0f) - vec3(0.5f, 0.5f, 0.0f), 1.0); 
+	gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = vec4(vec3(float(x) / N1, 1.0f - float(y) / N, 0.0f) - vec3(0.5f, 0.5f, 0.0f), 1.0); 
 
-	OutColor[gl_LocalInvocationID.x] = Colors[gl_LocalInvocationID.x%3];
+	OutColor[gl_LocalInvocationID.x] = vec3(gl_LocalInvocationID.x % 2, (gl_LocalInvocationID.x / N) % 2, 0.0f);
 }
