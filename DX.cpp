@@ -213,7 +213,7 @@ void DX::CreateTextureResource(ID3D12Resource** Resource, ID3D12Device* Device, 
 		.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		.Flags = RF
 	};
-	assert(!(RD.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) && "pOptimizedClearValue を使用しない");
+	assert(!(RD.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL)) && "非 RENDER_TARGET, DEPTH_STENCIL の場合、pOptimizedClearValue を使用しない");
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, RS, nullptr, IID_PPV_ARGS(Resource)));
 }
 //!< レンダーテクスチャの場合は D3D12_CLEAR_VALUE を指定する部分が通常テクスチャと異なる
@@ -236,7 +236,7 @@ void DX::CreateRenderTextureResource(ID3D12Resource** Resource, ID3D12Device* De
 		.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN,
 		.Flags = RF
 	};
-	assert(RD.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) && "RENDER_TARGET, DEPTH_STENCIL の場合 pOptimizedClearValue を使用する");
+	assert(RD.Flags & (D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET | D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL) && "RENDER_TARGET, DEPTH_STENCIL の場合、pOptimizedClearValue を使用する");
 	VERIFY_SUCCEEDED(Device->CreateCommittedResource(&HP, D3D12_HEAP_FLAG_NONE, &RD, RS, &CV, IID_PPV_ARGS(Resource)));
 }
 
@@ -318,7 +318,8 @@ void DX::PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* GCL, ID
 }
 void DX::PopulateCommandList_CopyTextureRegion(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs, const D3D12_RESOURCE_STATES RS)
 {
-	//!< LoadDDSTextureFromFile() で作成されるリソースのステートは既に D3D12_RESOURCE_STATE_COPY_DESTで 作成されている (Resource created by LoadDDSTextureFromFile()'s state is already D3D12_RESOURCE_STATE_COPY_DEST)
+	//!< LoadDDSTextureFromFile() を使用すると D3D12_RESOURCE_STATE_COPY_DEST で作成されているのでバリアの必要は無い (Resource created by LoadDDSTextureFromFile()'s state is already D3D12_RESOURCE_STATE_COPY_DEST)
+	
 	for (UINT i = 0; i < size(PSFs); ++i) {
 		const D3D12_TEXTURE_COPY_LOCATION TCL_Dst = {
 			.pResource = Dst,
@@ -430,11 +431,13 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	//!< (フォーマット指定で)選択したアウトプットのディスプレイモードを列挙
 	GetDisplayModeList(COM_PTR_GET(Output), DXGI_FORMAT_R8G8B8A8_UNORM);
 
-	//!< 実験的機能、OS が Developer Mode でないとダメみたい
+#if 1
+	//!< 実験的機能を有効化する
 	const std::array Experimental = { D3D12ExperimentalShaderModels, /*D3D12RaytracingPrototype*/ };
 	if (FAILED(D3D12EnableExperimentalFeatures(static_cast<UINT>(size(Experimental)), data(Experimental), nullptr, nullptr))) {
 		Warning("\tD3D12EnableExperimentalFeatures() failed\n");
 	}
+#endif
 
 	//!< 高フィーチャーレベル優先でデバイスを作成 (Create device with higher feature level possible)
 	{
@@ -513,40 +516,20 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	LOG_OK();
 }
 
-void DX::GetDisplayModeList(IDXGIOutput* Outp, const DXGI_FORMAT Format)
+void DX::GetDisplayModeList([[maybe_unused]] IDXGIOutput* Outp, [[maybe_unused]] const DXGI_FORMAT Format)
 {
+#ifdef DEBUG_STDOUT
 	UINT Count = 0;
 	VERIFY_SUCCEEDED(Outp->GetDisplayModeList(Format, 0, &Count, nullptr));
 	if (Count) [[likely]] {
 		Logf("\t\t\t[ DisplayModes ] : %s\n", GetFormatChar(Format));
-
 		std::vector<DXGI_MODE_DESC> MDs(Count);
 		VERIFY_SUCCEEDED(Outp->GetDisplayModeList(Format, 0, &Count, data(MDs)));
 		for (const auto& i : MDs) {
-			Logf("\t\t\t\t%d x %d @ %d, ", i.Width, i.Height, i.RefreshRate.Numerator / i.RefreshRate.Denominator);
-
-#define SCANLINE_ORDERING_ENTRY(slo) case DXGI_MODE_SCANLINE_ORDER_##slo: Logf("SCANLINE_ORDER_%s, ", #slo); break;
-			switch (i.ScanlineOrdering) {
-			default: assert(0 && "Unknown ScanlineOrdering"); break;
-				SCANLINE_ORDERING_ENTRY(UNSPECIFIED)
-				SCANLINE_ORDERING_ENTRY(PROGRESSIVE)
-				SCANLINE_ORDERING_ENTRY(UPPER_FIELD_FIRST)
-				SCANLINE_ORDERING_ENTRY(LOWER_FIELD_FIRST)
-			}
-#undef SCANLINE_ORDERING_ENTRY
-
-#define SCALING_ENTRY(s) case DXGI_MODE_SCALING_##s: Logf("SCALING_%s", #s); break;
-			switch (i.Scaling) {
-			default: assert(0 && "Unknown Scaling"); break;
-				SCALING_ENTRY(UNSPECIFIED)
-				SCALING_ENTRY(CENTERED)
-				SCALING_ENTRY(STRETCHED)
-			}
-#undef SCALING_ENTRY
-
-			Log("\n");
+			std::cout << i;
 		}
 	}
+#endif
 }
 
 /**
@@ -594,31 +577,61 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 {
 	const UINT BufferCount = 3;
 
-	//!< 最適なフルスクリーンのパフォーマンスを得るには、IDXGIOutput->GetDisplayModeList() で取得する(ディスプレイのサポートする)DXGI_MODE_DESC でないとダメなので注意  #DX_TODO
-	const DXGI_MODE_DESC MD = {
-		.Width = Width, .Height = Height,
-		.RefreshRate = DXGI_RATIONAL({.Numerator = 60, .Denominator = 1 }),
-		.Format = ColorFormat,
-		.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
-		.Scaling = DXGI_MODE_SCALING_UNSPECIFIED
-	};
 	std::vector<DXGI_SAMPLE_DESC> SDs;
 	{
 		for (UINT i = 1; i <= D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT; ++i) {
-			D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS FDMSQL = {
+			auto FDMSQL = D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS({
 				.Format = ColorFormat,
 				.SampleCount = i, 
 				.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE, 
 				.NumQualityLevels = 0
-			};
+			});
 			VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, reinterpret_cast<void*>(&FDMSQL), sizeof(FDMSQL)));
 			if (FDMSQL.NumQualityLevels) {
 				SDs.emplace_back(DXGI_SAMPLE_DESC({ .Count = FDMSQL.SampleCount, .Quality = FDMSQL.NumQualityLevels - 1 }));
 			}
 		}
 	}
+
+#ifdef USE_FULLSCREEN
+	//!< 起動時にフルスクリーンにする場合
+	const DXGI_SWAP_CHAIN_DESC1 SCD = {
+		.Width = Width, .Height = Height,
+		.Format = ColorFormat,
+		.Stereo = FALSE,
+		.SampleDesc = SDs[0],
+		.BufferUsage = DXGI_USAGE_BACK_BUFFER/*DXGI_USAGE_RENDER_TARGET_OUTPUT*/,
+		.BufferCount = BufferCount,
+		.Scaling = DXGI_SCALING_STRETCH/*DXGI_SCALING_NONE*/,
+		.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
+		.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED,
+		.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH,
+	};
+	const DXGI_SWAP_CHAIN_FULLSCREEN_DESC SCFD = {
+		.RefreshRate = DXGI_RATIONAL({.Numerator = 60, .Denominator = 1 }),
+		.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
+		.Scaling = DXGI_MODE_SCALING_UNSPECIFIED,
+		.Windowed = FALSE,
+	};
+	COM_PTR_RESET(SwapChain);
+	COM_PTR<IDXGISwapChain1> NewSwapChain;
+	VERIFY_SUCCEEDED(Factory->CreateSwapChainForHwnd(COM_PTR_GET(GraphicsCommandQueue), hWnd, &SCD, &SCFD, COM_PTR_GET(Output), COM_PTR_PUT(NewSwapChain)));
+
+	//!< DXGI によるフルスクリーン化(Alt + Enter)を抑制する場合
+	//Factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
+
+	//!< 任意のタイミングでフルスクリーン化する場合、以下をコールする
+	//VERIFY_SUCCEEDED(SwapChain->SetFullscreenState(TRUE, nullptr));
+#else
 	DXGI_SWAP_CHAIN_DESC SCD = {
-		.BufferDesc = MD,
+		//!< 最適なフルスクリーンのパフォーマンスを得るには、IDXGIOutput->GetDisplayModeList() で取得する(ディスプレイのサポートする)DXGI_MODE_DESC でないとダメなので注意  #DX_TODO
+		.BufferDesc = DXGI_MODE_DESC({
+			.Width = Width, .Height = Height,
+			.RefreshRate = DXGI_RATIONAL({.Numerator = 60, .Denominator = 1 }),
+			.Format = ColorFormat,
+			.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
+			.Scaling = DXGI_MODE_SCALING_UNSPECIFIED
+		}),
 		.SampleDesc = SDs[0],
 		.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
 		.BufferCount = BufferCount,
@@ -632,35 +645,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	COM_PTR<IDXGISwapChain> NewSwapChain;
 	VERIFY_SUCCEEDED(Factory->CreateSwapChain(COM_PTR_GET(GraphicsCommandQueue), &SCD, COM_PTR_PUT(NewSwapChain)));
 	COM_PTR_AS(NewSwapChain, SwapChain);
-
-	//!< 起動時にフルスクリーンにする場合
-	//DXGI_SWAP_CHAIN_DESC1 SCD = {
-	//	Width, Height,
-	//	ColorFormat,
-	//	FALSE,
-	//	SampleDesc,
-	//	DXGI_USAGE_BACK_BUFFER/*DXGI_USAGE_RENDER_TARGET_OUTPUT*/, 
-	//	BufferCount,
-	//	DXGI_SCALING_STRETCH/*DXGI_SCALING_NONE*/,
-	//	DXGI_SWAP_EFFECT_FLIP_DISCARD,
-	//	DXGI_ALPHA_MODE_UNSPECIFIED,
-	//	DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH,
-	//};
-	//DXGI_SWAP_CHAIN_FULLSCREEN_DESC SCFD = {
-	//	Rational,
-	//	DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
-	//	DXGI_MODE_SCALING_UNSPECIFIED,
-	//	FALSE,
-	//};
-	//COM_PTR_RESET(SwapChain);
-	//COM_PTR<IDXGISwapChain1> NewSwapChain;
-	//VERIFY_SUCCEEDED(Factory->CreateSwapChainForHwnd(COM_PTR_GET(CommandQueue), hWnd, &SCD, &SCFD, COM_PTR_GET(Output), COM_PTR_PUT(NewSwapChain)));
-
-	//!< DXGI によるフルスクリーン化(Alt + Enter)を抑制する場合
-	//Factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
-
-	//!< 任意のタイミングでフルスクリーン化する場合、以下をコールする
-	//VERIFY_SUCCEEDED(SwapChain->SetFullscreenState(TRUE, nullptr));
+#endif
 
 #ifdef USE_HDR
 	switch (ColorFormat)
@@ -725,25 +710,21 @@ void DX::GetSwapChainResource()
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
 
-#ifdef USE_GAMMA_CORRECTION
-	const D3D12_RENDER_TARGET_VIEW_DESC RTVD = {
-		.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, //!< ガンマ補正あり
-		.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
-		.Texture2D = D3D12_TEX2D_RTV({ .MipSlice = 0, .PlaneSlice = 0 })
-	};
-#endif
-
 	auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
-		SwapChainResources.emplace_back(COM_PTR<ID3D12Resource>());
 		//!< スワップチェインのバッファリソースを SwapChainResources へ取得
-		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, COM_PTR_UUIDOF_PUTVOID(SwapChainResources.back())));
+		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, COM_PTR_UUIDOF_PUTVOID(SwapChainResources.emplace_back())));
 
-		//!< デスクリプタ(ビュー)の作成。リソース上でのオフセットを指定して作成している、結果が変数等に返るわけではない
-		//!< (リソースがタイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能)
+		//!< デスクリプタ(ビュー)の作成
 #ifdef USE_GAMMA_CORRECTION
+		constexpr D3D12_RENDER_TARGET_VIEW_DESC RTVD = {
+			.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB, //!< ガンマ補正あり
+			.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D,
+			.Texture2D = D3D12_TEX2D_RTV({.MipSlice = 0, .PlaneSlice = 0 })
+		};
 		Device->CreateRenderTargetView(COM_PTR_GET(SwapChainResources.back()), &RTVD, CDH);
 #else
+		//!< タイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能
 		Device->CreateRenderTargetView(COM_PTR_GET(SwapChainResources.back()), nullptr, CDH);
 #endif
 		CDH.ptr += Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
@@ -768,7 +749,7 @@ void DX::ResizeSwapChain(const UINT Width, const UINT Height)
 	LOG_OK();
 }
 
-void DX::ResizeDepthStencil(const DXGI_FORMAT /*DepthFormat*/, const UINT /*Width*/, const UINT /*Height*/)
+void DX::ResizeDepthStencil([[maybe_unused]] const DXGI_FORMAT DepthFormat, [[maybe_unused]] const UINT Width, [[maybe_unused]] const UINT Height)
 {
 	//COM_PTR_RESET(DepthStencilResource);
 	//CreateDepthStencilResource(DepthFormat, Width, Height);
@@ -787,7 +768,7 @@ void DX::CreateCommandList()
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
-		//!< 描画コマンドを発行するコマンドリストにはパイプラインステートの指定が必要だが、後からでも指定(GCL->Reset(CA, COM_PTR_GET(PS)))できるので、ここではnullptrを指定
+		//!< パイプラインステートは後からでも指定できる GCL->Reset(CA, COM_PTR_GET(PS)) ので、ここでは nullptr を指定
 		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(CommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandLists.emplace_back())));
 		VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
 
@@ -805,10 +786,10 @@ void DX::BuildAccelerationStructure(ID3D12Device* Device, const UINT64 SBSize, c
 	VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
 	VERIFY_SUCCEEDED(GCL4->Reset(CA, nullptr)); {
 		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
-		.DestAccelerationStructureData = GVA,
-		.Inputs = BRASI,
-		.SourceAccelerationStructureData = 0,
-		.ScratchAccelerationStructureData = COM_PTR_GET(SB.Resource)->GetGPUVirtualAddress()
+			.DestAccelerationStructureData = GVA,
+			.Inputs = BRASI,
+			.SourceAccelerationStructureData = 0,
+			.ScratchAccelerationStructureData = COM_PTR_GET(SB.Resource)->GetGPUVirtualAddress()
 		};
 		GCL4->BuildRaytracingAccelerationStructure(&BRASD, 0, nullptr);
 	} VERIFY_SUCCEEDED(GCL4->Close());
@@ -857,35 +838,31 @@ void DX::CreateUnorderedAccessTexture()
 }
 #endif
 
+//!< D3D_ROOT_SIGNATURE_VERSION_1_0 を使用する場合
 template<> void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::vector<D3D12_ROOT_PARAMETER>& RPs, const std::vector<D3D12_STATIC_SAMPLER_DESC>& SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags)
 {
 	D3D12_FEATURE_DATA_ROOT_SIGNATURE FDRS = { .HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0 };
 	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, reinterpret_cast<void*>(&FDRS), sizeof(FDRS)));
 	assert(FDRS.HighestVersion >= D3D_ROOT_SIGNATURE_VERSION_1_0 && "");
 
-#if 1
-	const D3D12_VERSIONED_ROOT_SIGNATURE_DESC VRSD = {
-		.Version = D3D_ROOT_SIGNATURE_VERSION_1_0,
-		.Desc_1_0 = D3D12_ROOT_SIGNATURE_DESC({
-			.NumParameters = static_cast<UINT>(size(RPs)), .pParameters = data(RPs),
-			.NumStaticSamplers = static_cast<UINT>(size(SSDs)), .pStaticSamplers = data(SSDs),
-			.Flags = Flags
-		}),
-	};
 	COM_PTR<ID3DBlob> ErrorBlob;
-	VERIFY_SUCCEEDED(D3D12SerializeVersionedRootSignature(&VRSD, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
-#else
 	const D3D12_ROOT_SIGNATURE_DESC RSD = {
 		.NumParameters = static_cast<UINT>(size(RPs)), .pParameters = data(RPs),
 		.NumStaticSamplers = static_cast<UINT>(size(SSDs)), .pStaticSamplers = data(SSDs),
 		.Flags = Flags
-	};
-	COM_PTR<ID3DBlob> ErrorBlob;
-	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&VRSD.Desc_1_0, D3D_ROOT_SIGNATURE_VERSION_1_0, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
+	}; 
+#if 1
+	//!< デスクリプタにバージョンを含めるやり方
+	const D3D12_VERSIONED_ROOT_SIGNATURE_DESC VRSD = { .Version = D3D_ROOT_SIGNATURE_VERSION_1_0, .Desc_1_0 = RSD, };
+	VERIFY_SUCCEEDED(D3D12SerializeVersionedRootSignature(&VRSD, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
+#else
+	//!< 引数にバージョンを指定するやり方
+	VERIFY_SUCCEEDED(D3D12SerializeRootSignature(&RSD, D3D_ROOT_SIGNATURE_VERSION_1_0, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
 #endif
 	LOG_OK();
 }
 
+//!< D3D_ROOT_SIGNATURE_VERSION_1_1 を使用する場合
 //!< [ D3D12_ROOT_SIGNATURE_DESC と D3D12_ROOT_SIGNATURE_DESC1 の違い ]
 //!< D3D12_ROOT_SIGNATURE_DESC1 では D3D12_ROOT_PARAMETER -> D3D12_ROOT_PARAMETER1 に変更されている
 //!< D3D12_ROOT_PARAMETER1 では D3D12_ROOT_DESCRIPTOR -> D3D12_ROOT_DESCRIPTOR1 に変更されている
@@ -896,6 +873,8 @@ template<> void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::v
 	VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, reinterpret_cast<void*>(&FDRS), sizeof(FDRS)));
 	assert(FDRS.HighestVersion >= D3D_ROOT_SIGNATURE_VERSION_1_1 && "");
 	
+	COM_PTR<ID3DBlob> ErrorBlob;
+	//!< デスクリプタにバージョンを含めるやり方のみ
 	const D3D12_VERSIONED_ROOT_SIGNATURE_DESC VRSD = {
 		.Version = D3D_ROOT_SIGNATURE_VERSION_1_1,
 		.Desc_1_1 = D3D12_ROOT_SIGNATURE_DESC1({
@@ -904,7 +883,6 @@ template<> void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::v
 			.Flags = Flags
 		}),
 	};
-	COM_PTR<ID3DBlob> ErrorBlob;
 	VERIFY_SUCCEEDED(D3D12SerializeVersionedRootSignature(&VRSD, COM_PTR_PUT(Blob), COM_PTR_PUT(ErrorBlob)));
 	LOG_OK();
 }
@@ -924,17 +902,12 @@ void DX::GetRootSignaturePartFromShader(COM_PTR<ID3DBlob>& Blob, LPCWSTR Path)
 void DX::CreateRootSignature()
 {
 	COM_PTR<ID3DBlob> Blob;
-
 #ifdef USE_HLSL_ROOTSIGNATRUE
 	GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
 	SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE | SHADER_ROOT_ACCESS_DENY_ALL);
 #endif
-
-	RootSignatures.emplace_back(COM_PTR<ID3D12RootSignature>());
-	VERIFY_SUCCEEDED(Device->CreateRootSignature(0, //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-		Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.back())));
-
+	VERIFY_SUCCEEDED(Device->CreateRootSignature(0/* マルチGPUの場合に使用(1つしか使わない場合は0で良い)*/, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 	LOG_OK();
 }
 
@@ -963,6 +936,9 @@ void DX::ProcessShaderReflection(ID3DBlob* Blob)
 
 	D3D12_SHADER_DESC SD;
 	VERIFY_SUCCEEDED(SR->GetDesc(&SD));
+#ifdef DEBUG_STDOUT
+	std::cout << SD;
+#endif
 
 	if (0 < SD.ConstantBuffers) { Log("\tConstantBuffers\n"); }
 	for (UINT i = 0; i < SD.ConstantBuffers; ++i) {

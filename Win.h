@@ -34,7 +34,7 @@
 //!< DXの場合「HDRのゲームとアプリを使用する」設定が必要 (Need to enable "Play HDR game and apps" in windows settings )
 //!< https://support.microsoft.com/ja-jp/help/4040263/windows-10-hdr-advanced-color-settings
 //#define USE_HDR
-//#define USE_FULL_SCREEN
+//#define USE_FULLSCREEN
 #define USE_DEPTH //!< [ ToonDX, ToonVK ], [ RenderTargetDX, RenderTargetVK ]
 #define USE_SCREENSPACE_WIREFRAME //!< [ ToonDX, ToonVK ]
 #define USE_INDIRECT //!< [ FullscreenDX, FullscreenVK ]

@@ -670,4 +670,32 @@ static std::ostream& operator<<(std::ostream& lhs, IDXGIFactory4* rhs) {
 	}
 	return lhs;
 }
+static std::ostream& operator<<(std::ostream& lhs, const DXGI_MODE_DESC& rhs) {
+	Win::Logf("\t\t\t\t%d x %d @ %d, ", rhs.Width, rhs.Height, rhs.RefreshRate.Numerator / rhs.RefreshRate.Denominator);
+#define SCANLINE_ORDERING_ENTRY(slo) case DXGI_MODE_SCANLINE_ORDER_##slo: Win::Logf("SCANLINE_ORDER_%s, ", #slo); break;
+	switch (rhs.ScanlineOrdering) {
+		default: assert(0 && "Unknown ScanlineOrdering"); break;
+		SCANLINE_ORDERING_ENTRY(UNSPECIFIED)
+		SCANLINE_ORDERING_ENTRY(PROGRESSIVE)
+		SCANLINE_ORDERING_ENTRY(UPPER_FIELD_FIRST)
+		SCANLINE_ORDERING_ENTRY(LOWER_FIELD_FIRST)
+	}
+#undef SCANLINE_ORDERING_ENTRY
+
+#define SCALING_ENTRY(s) case DXGI_MODE_SCALING_##s: Win::Logf("SCALING_%s", #s); break;
+	switch (rhs.Scaling) {
+		default: assert(0 && "Unknown Scaling"); break;
+		SCALING_ENTRY(UNSPECIFIED)
+		SCALING_ENTRY(CENTERED)
+		SCALING_ENTRY(STRETCHED)
+	}
+#undef SCALING_ENTRY
+	Win::Log("\n");
+	return lhs;
+}
+
+static std::ostream& operator<<(std::ostream& lhs, [[maybe_unused]] const D3D12_SHADER_DESC& rhs) {
+	//!< #DX_TODO
+	return lhs;
+}
 #endif
