@@ -1,7 +1,7 @@
 struct IN
 {
 	float4 Position : SV_POSITION;
-	float3 Color : COLOR;
+	/*nointerpolation*/ float3 Color : COLOR;
 };
 
 float4 main(IN In) : SV_TARGET

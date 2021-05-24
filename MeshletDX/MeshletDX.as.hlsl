@@ -5,6 +5,7 @@ struct PAYLOAD_OUT
 
 groupshared PAYLOAD_OUT Payload;
 
+//!< 可視判定, LOD, テセレーション等, 動的なものにアンプリフィケーションシェーダーを使う、静的なものならメッシュシェーダのみで良い
 [numthreads(16, 1, 1)]
 void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID)
 {

@@ -1,7 +1,11 @@
 #version 450
  
 #extension GL_NV_mesh_shader : require
- 
+
+taskNV in Task {
+  uint MeshletIDs[32];
+} Payload;
+
 layout (location = 0) out vec3 OutColor[];
 
 #define N 4
@@ -13,17 +17,6 @@ layout(local_size_x = NN) in;
 layout(triangles, max_vertices = NN, max_primitives = 2 * N1N1) out;
 void main()
 {
-   /*
-    V = N * N ... 4, 9, 16
-    P = 2(N - 1)(N - 1) ... 2, 4, 8, 18,
-    +-+-+ 0, 1, ..., N-1
-    | | |
-    +-+-+ N, N+1, ..., N+(N-1)
-    | | |
-    +-+-+ 2N, 2N+1, ..., 2N+(N-1)
-    | | |
-    +-+-+ NN, NN+1, ..., NN+(N-1)
-   */
     uint IndexCount = 0;
 	gl_PrimitiveCountNV = 2 * N1N1;
     for (uint i = 0; i < N1; ++i)
@@ -38,9 +31,11 @@ void main()
             gl_PrimitiveIndicesNV[IndexCount++] = LB; gl_PrimitiveIndicesNV[IndexCount++] = RB; gl_PrimitiveIndicesNV[IndexCount++] = RT;
         }
     }
+
+    const vec3 Offset = vec3(gl_WorkGroupID.x, gl_WorkGroupID.x, 0.0f) / 15.0f - vec3(1.0f, 1.0f, 0.0f);
     const uint x = gl_LocalInvocationID.x % N;
     const uint y = gl_LocalInvocationID.x / N;
-	gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = vec4(vec3(float(x) / N1, 1.0f - float(y) / N1, 0.0f) - vec3(0.5f, 0.5f, 0.0f), 1.0); 
+	gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = vec4(vec3(float(x) / N1, 1.0f - float(y) / N1, 0.0f) + Offset, 1.0); 
 
-    OutColor[gl_LocalInvocationID.x] = vec3(gl_LocalInvocationID.x % 2, (gl_LocalInvocationID.x / N) % 2, 0.0f);
+	OutColor[gl_LocalInvocationID.x] = vec3(gl_LocalInvocationID.x % 2, (gl_LocalInvocationID.x / N) % 2, 0.0f);
 }

@@ -7,6 +7,7 @@ taskNV out Task {
   uint MeshletIDs[32];
 } Payload;
 
+//!< 可視判定, LOD, テセレーション等, 動的なものにタスクシェーダーを使う、静的なものならメッシュシェーダのみで良い
 layout(local_size_x = 16) in;
 void main()
 {

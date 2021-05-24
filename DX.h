@@ -694,8 +694,7 @@ static std::ostream& operator<<(std::ostream& lhs, const DXGI_MODE_DESC& rhs) {
 	return lhs;
 }
 
-static std::ostream& operator<<(std::ostream& lhs, [[maybe_unused]] const D3D12_SHADER_DESC& rhs) {
-	//!< #DX_TODO
+static std::ostream& operator<<(std::ostream& lhs, [[maybe_unused]] const ID3D12ShaderReflection* rhs) {
 	return lhs;
 }
 #endif

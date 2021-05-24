@@ -934,12 +934,12 @@ void DX::ProcessShaderReflection(ID3DBlob* Blob)
 	VERIFY_SUCCEEDED(D3DReflect(Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(SR)));
 #endif
 
-	D3D12_SHADER_DESC SD;
-	VERIFY_SUCCEEDED(SR->GetDesc(&SD));
 #ifdef DEBUG_STDOUT
-	std::cout << SD;
+	std::cout << COM_PTR_GET(SR);
 #endif
 
+	D3D12_SHADER_DESC SD;
+	VERIFY_SUCCEEDED(SR->GetDesc(&SD));
 	if (0 < SD.ConstantBuffers) { Log("\tConstantBuffers\n"); }
 	for (UINT i = 0; i < SD.ConstantBuffers; ++i) {
 		const auto CB = SR->GetConstantBufferByIndex(i);
