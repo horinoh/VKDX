@@ -80,8 +80,5 @@
     <CustomBuild Include="MeshletVK.task">
       <Filter>Shader Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="MeshletVK_ps.mesh">
-      <Filter>Shader Files</Filter>
-    </CustomBuild>
   </ItemGroup>
 </Project>

@@ -38,8 +38,7 @@ public:
 			const auto ShaderPath = GetBasePath();
 			const std::array SMs = {
 				VK::CreateShaderModule(data(ShaderPath + TEXT(".task.spv"))),
-				//VK::CreateShaderModule(data(ShaderPath + TEXT(".mesh.spv"))),
-				VK::CreateShaderModule(data(ShaderPath + TEXT("_ps.mesh.spv"))),
+				VK::CreateShaderModule(data(ShaderPath + TEXT(".mesh.spv"))),
 				VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
 			};
 			const std::array PSSCIs = {

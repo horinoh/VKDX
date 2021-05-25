@@ -9,18 +9,37 @@ struct VERT_OUT
     float3 Color : COLOR;
 };
 
-static const float3 Positions[] = { float3(0.0f, 0.5f, 0.0f), float3(-0.5f, -0.5f, 0.0f), float3(0.5f, -0.5f, 0.0f) };
+#define N 4
+#define NN (N * N)
+#define N1 (N - 1)
+#define N1N1 (N1 * N1)
+
 static const float3 Colors[] = { float3(1.0f, 0.0f, 0.0f), float3(0.0f, 1.0f, 0.0f), float3(0.0f, 0.0f, 1.0f), float3(1.0f, 1.0f, 0.0f), float3(0.0f, 1.0f, 1.0f), float3(1.0f, 0.0f, 1.0f), float3(1.0f, 1.0f, 1.0f), float3(0.0f, 0.0f, 0.0f) };
 
-[numthreads(3, 1, 1)]
+[numthreads(NN, 1, 1)]
 [outputtopology("triangle")]
-void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, in payload PAYLOAD_IN Payload, out indices uint3 Indices[1], out vertices VERT_OUT Vertices[3])
+void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, in payload PAYLOAD_IN Payload, out indices uint3 Indices[2 * N1N1], out vertices VERT_OUT Vertices[NN])
 {
-    SetMeshOutputCounts(3, 1);
-    
-    Indices[0] = uint3(0, 1, 2);
- 
-    const float3 Offset = float3(GroupID, GroupID, 0.0f) / 16.0f - float3(0.5f, 0.5f, 0.0f);
-    Vertices[GroupThreadID].Position = float4(Positions[GroupThreadID] + Offset, 1.0f);
+    SetMeshOutputCounts(NN, 2 * N1N1);
+
+    uint PrimCount = 0;
+    for (uint i = 0; i < N1; ++i)
+    {
+        for (uint j = 0; j < N1; ++j)
+        {
+            const uint LT = i * N + j;
+            const uint RT = LT + 1;
+            const uint LB = LT + N;
+            const uint RB = LB + 1;
+            Indices[PrimCount++] = uint3(LT, LB, RT);
+            Indices[PrimCount++] = uint3(LB, RB, RT);
+        }
+    }
+
+    //!< GLSL ‚Ì gl_WorkGroupSize ‘Š“–‚Í‘¶Ý‚µ‚È‚¢H ‚Á‚Û‚¢‚Ì‚Å 15.0f
+    const float3 Offset = float3(GroupID, GroupID, 0.0f) / 15.0f + float3(-1.0f, -1.0f, 0.0f);
+    const uint x = GroupThreadID % N;
+    const uint y = GroupThreadID / N;
+    Vertices[GroupThreadID].Position = float4(float3((float)x / N1, 1.0f - (float)y / N1, 0.0f) + Offset, 1.0f);
     Vertices[GroupThreadID].Color = Colors[Payload.MeshletIDs[GroupID] % 8];
 }

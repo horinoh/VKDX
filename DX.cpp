@@ -110,6 +110,13 @@ void DX::OnPreDestroy(HWND hWnd, HINSTANCE hInstance)
 {
 	Super::OnPreDestroy(hWnd, hInstance);
 
+	//!< フルスクリーンの場合は解除
+	DXGI_SWAP_CHAIN_DESC1 SCD1;
+	SwapChain->GetDesc1(&SCD1);
+	if (SCD1.Flags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING) {
+		VERIFY_SUCCEEDED(SwapChain->SetFullscreenState(FALSE, nullptr));
+	}
+
 	//!< GPUが完了するまでここで待機 (Wait GPU)
 	WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence));
 }
@@ -582,10 +589,10 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 		for (UINT i = 1; i <= D3D12_MAX_MULTISAMPLE_SAMPLE_COUNT; ++i) {
 			auto FDMSQL = D3D12_FEATURE_DATA_MULTISAMPLE_QUALITY_LEVELS({
 				.Format = ColorFormat,
-				.SampleCount = i, 
-				.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE, 
+				.SampleCount = i,
+				.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE,
 				.NumQualityLevels = 0
-			});
+				});
 			VERIFY_SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS, reinterpret_cast<void*>(&FDMSQL), sizeof(FDMSQL)));
 			if (FDMSQL.NumQualityLevels) {
 				SDs.emplace_back(DXGI_SAMPLE_DESC({ .Count = FDMSQL.SampleCount, .Quality = FDMSQL.NumQualityLevels - 1 }));
@@ -595,35 +602,45 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 
 #ifdef USE_FULLSCREEN
 	//!< 起動時にフルスクリーンにする場合
-	const DXGI_SWAP_CHAIN_DESC1 SCD = {
+	const DXGI_SWAP_CHAIN_DESC1 SCD1 = {
 		.Width = Width, .Height = Height,
 		.Format = ColorFormat,
 		.Stereo = FALSE,
 		.SampleDesc = SDs[0],
-		.BufferUsage = DXGI_USAGE_BACK_BUFFER/*DXGI_USAGE_RENDER_TARGET_OUTPUT*/,
+		.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
 		.BufferCount = BufferCount,
 		.Scaling = DXGI_SCALING_STRETCH/*DXGI_SCALING_NONE*/,
 		.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
 		.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED,
-		.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH,
+		.Flags = 0/*DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING*/,
 	};
-	const DXGI_SWAP_CHAIN_FULLSCREEN_DESC SCFD = {
-		.RefreshRate = DXGI_RATIONAL({.Numerator = 60, .Denominator = 1 }),
-		.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
-		.Scaling = DXGI_MODE_SCALING_UNSPECIFIED,
-		.Windowed = FALSE,
-	};
+	//const DXGI_SWAP_CHAIN_FULLSCREEN_DESC SCFD = {
+	//	.RefreshRate = DXGI_RATIONAL({.Numerator = 60, .Denominator = 1 }),
+	//	.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
+	//	.Scaling = DXGI_MODE_SCALING_UNSPECIFIED,
+	//	.Windowed = FALSE,
+	//};
 	COM_PTR_RESET(SwapChain);
 	COM_PTR<IDXGISwapChain1> NewSwapChain;
-	VERIFY_SUCCEEDED(Factory->CreateSwapChainForHwnd(COM_PTR_GET(GraphicsCommandQueue), hWnd, &SCD, &SCFD, COM_PTR_GET(Output), COM_PTR_PUT(NewSwapChain)));
+	VERIFY_SUCCEEDED(Factory->CreateSwapChainForHwnd(COM_PTR_GET(GraphicsCommandQueue), hWnd, &SCD1, /*&SCFD*/nullptr, /*COM_PTR_GET(Output)*/nullptr, COM_PTR_PUT(NewSwapChain)));
 
-	//!< DXGI によるフルスクリーン化(Alt + Enter)を抑制する場合
-	//Factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
+	//!< DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING 時は、Alt + Enter によるフルスクリーン切替えを抑制、SwapChain->SetFullscreenState() を使用する
+	if (SCD1.Flags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING) {
+		Factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
+	}
 
-	//!< 任意のタイミングでフルスクリーン化する場合、以下をコールする
-	//VERIFY_SUCCEEDED(SwapChain->SetFullscreenState(TRUE, nullptr));
+	//!< フルスクリーン切替え(トグル)の例
+	if(false){
+		DXGI_SWAP_CHAIN_DESC1 SCD1;
+		SwapChain->GetDesc1(&SCD1);
+		if (!(SCD1.Flags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING)) {
+			BOOL IsFullScreen;
+			VERIFY_SUCCEEDED(SwapChain->SetFullscreenState(&IsFullScreen));
+			VERIFY_SUCCEEDED(SwapChain->SetFullscreenState(!IsFullScreen, nullptr));
+		}
+	}
 #else
-	DXGI_SWAP_CHAIN_DESC SCD = {
+	DXGI_SWAP_CHAIN_DESC SCD1 = {
 		//!< 最適なフルスクリーンのパフォーマンスを得るには、IDXGIOutput->GetDisplayModeList() で取得する(ディスプレイのサポートする)DXGI_MODE_DESC でないとダメなので注意  #DX_TODO
 		.BufferDesc = DXGI_MODE_DESC({
 			.Width = Width, .Height = Height,
@@ -643,7 +660,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	//!< セッティングを変更してスワップチェインを再作成できるように、既存のを開放している
 	COM_PTR_RESET(SwapChain);
 	COM_PTR<IDXGISwapChain> NewSwapChain;
-	VERIFY_SUCCEEDED(Factory->CreateSwapChain(COM_PTR_GET(GraphicsCommandQueue), &SCD, COM_PTR_PUT(NewSwapChain)));
+	VERIFY_SUCCEEDED(Factory->CreateSwapChain(COM_PTR_GET(GraphicsCommandQueue), &SCD1, COM_PTR_PUT(NewSwapChain)));
 	COM_PTR_AS(NewSwapChain, SwapChain);
 #endif
 
@@ -697,7 +714,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 
 	const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
 		.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-		.NumDescriptors = SCD.BufferCount,
+		.NumDescriptors = SCD1.BufferCount,
 		.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 		.NodeMask = 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
 	};
