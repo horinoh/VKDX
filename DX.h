@@ -693,8 +693,116 @@ static std::ostream& operator<<(std::ostream& lhs, const DXGI_MODE_DESC& rhs) {
 	Win::Log("\n");
 	return lhs;
 }
+static std::ostream& operator<<(std::ostream& lhs, ID3D12ShaderReflection* rhs) {
+	D3D12_SHADER_DESC SD;
+	VERIFY_SUCCEEDED(rhs->GetDesc(&SD));
+	if (0 < SD.ConstantBuffers) { Win::Log("\tConstantBuffers\n"); }
+	for (UINT i = 0; i < SD.ConstantBuffers; ++i) {
+		const auto CB = rhs->GetConstantBufferByIndex(i);
+		D3D12_SHADER_BUFFER_DESC SBD;
+		VERIFY_SUCCEEDED(CB->GetDesc(&SBD));
+		Win::Logf("\t\t%s\n", SBD.Name);
+		for (UINT j = 0; j < SBD.Variables; ++j) {
+			const auto SRV = CB->GetVariableByIndex(j);
+			D3D12_SHADER_VARIABLE_DESC SVD;
+			VERIFY_SUCCEEDED(SRV->GetDesc(&SVD));
+			D3D12_SHADER_TYPE_DESC STD;
+			VERIFY_SUCCEEDED(SRV->GetType()->GetDesc(&STD));
+			Win::Logf("\t\t\t%s\t%s\n", SVD.Name, STD.Name);
+		}
+	}
 
-static std::ostream& operator<<(std::ostream& lhs, [[maybe_unused]] const ID3D12ShaderReflection* rhs) {
+	if (0 < SD.BoundResources) { Win::Log("\tBoundResources\n"); }
+	for (UINT i = 0; i < SD.BoundResources; ++i) {
+		D3D12_SHADER_INPUT_BIND_DESC SIBD;
+		VERIFY_SUCCEEDED(rhs->GetResourceBindingDesc(i, &SIBD));
+		Win::Logf("\t\t%s\n", SIBD.Name);
+		Win::Log("\t\t\tInput = ");
+#define SHADER_INPUT_TYPE_ENTRY(X) case D3D_SIT_##X: Win::Log(#X); break;
+		switch (SIBD.Type) {
+		SHADER_INPUT_TYPE_ENTRY(CBUFFER)
+		SHADER_INPUT_TYPE_ENTRY(TBUFFER)
+		SHADER_INPUT_TYPE_ENTRY(TEXTURE)
+		SHADER_INPUT_TYPE_ENTRY(SAMPLER)
+		SHADER_INPUT_TYPE_ENTRY(UAV_RWTYPED)
+		SHADER_INPUT_TYPE_ENTRY(STRUCTURED)
+		SHADER_INPUT_TYPE_ENTRY(UAV_RWSTRUCTURED)
+		SHADER_INPUT_TYPE_ENTRY(BYTEADDRESS)
+		SHADER_INPUT_TYPE_ENTRY(UAV_RWBYTEADDRESS)
+		SHADER_INPUT_TYPE_ENTRY(UAV_APPEND_STRUCTURED)
+		SHADER_INPUT_TYPE_ENTRY(UAV_CONSUME_STRUCTURED)
+		SHADER_INPUT_TYPE_ENTRY(UAV_RWSTRUCTURED_WITH_COUNTER)
+		default: break;
+		}
+#undef SHADER_INPUT_TYPE_ENTRY
+		0 < SIBD.BindCount ? Win::Logf("(%d-%d)", SIBD.BindPoint, SIBD.BindCount + SIBD.BindCount) : Win::Logf("(%d)", SIBD.BindPoint);
+		Win::Log("\n");
+		//!< ReturnType, Dimension はテクスチャの場合のみ
+		if (D3D_SIT_TEXTURE == SIBD.Type) {
+			Win::Log("\t\t\tReturn = ");
+#define RETURN_TYPE_ENTRY(X) case D3D_RETURN_TYPE_##X: Win::Log(#X); break;
+			switch (SIBD.ReturnType) {
+			RETURN_TYPE_ENTRY(UNORM)
+			RETURN_TYPE_ENTRY(SNORM)
+			RETURN_TYPE_ENTRY(SINT)
+			RETURN_TYPE_ENTRY(UINT)
+			RETURN_TYPE_ENTRY(FLOAT)
+			RETURN_TYPE_ENTRY(MIXED)
+			RETURN_TYPE_ENTRY(DOUBLE)
+			RETURN_TYPE_ENTRY(CONTINUED)
+			default: break;
+			}
+#undef RETURN_TYPE_ENTRY
+			Win::Log("\n");
+
+			Win::Log("\t\t\tDimension = ");
+#define DIMENSION_ENTRY(X) case D3D_SRV_DIMENSION_##X: Win::Log(#X); break;
+			switch (SIBD.Dimension) {
+			DIMENSION_ENTRY(UNKNOWN)
+			DIMENSION_ENTRY(BUFFER)
+			DIMENSION_ENTRY(TEXTURE1D)
+			DIMENSION_ENTRY(TEXTURE1DARRAY)
+			DIMENSION_ENTRY(TEXTURE2D)
+			DIMENSION_ENTRY(TEXTURE2DARRAY)
+			DIMENSION_ENTRY(TEXTURE2DMS)
+			DIMENSION_ENTRY(TEXTURE2DMSARRAY)
+			DIMENSION_ENTRY(TEXTURE3D)
+			DIMENSION_ENTRY(TEXTURECUBE)
+			DIMENSION_ENTRY(TEXTURECUBEARRAY)
+			DIMENSION_ENTRY(BUFFEREX)
+			default: break;
+			}
+#undef DIMENSION_ENTRY
+			Win::Log("\n");
+		}
+	}
+
+#define COMPONENT_TYPE_ENTRY(X) case D3D_REGISTER_COMPONENT_##X: Win::Log(#X); break;
+#define LOG_SIGNATURE_PARAMETER_DESC(X)	Win::Logf("\t\t%s%d\t", X.SemanticName, X.SemanticIndex);\
+	switch (X.ComponentType) {\
+		COMPONENT_TYPE_ENTRY(UNKNOWN)\
+		COMPONENT_TYPE_ENTRY(UINT32)\
+		COMPONENT_TYPE_ENTRY(SINT32)\
+		COMPONENT_TYPE_ENTRY(FLOAT32)\
+		default: break;\
+	}\
+	Win::Logf("(%s%s%s%s)\n", (X.Mask & 1) ? "X" : "-", (X.Mask & 2) ? "Y" : "-", (X.Mask & 4) ? "Z" : "-", (X.Mask & 8) ? "W" : "-");
+
+	if (0 < SD.InputParameters) { Win::Logf("\tInputParameters\n"); }
+	for (UINT i = 0; i < SD.InputParameters; ++i) {
+		D3D12_SIGNATURE_PARAMETER_DESC SPD;
+		VERIFY_SUCCEEDED(rhs->GetInputParameterDesc(i, &SPD));
+		LOG_SIGNATURE_PARAMETER_DESC(SPD);
+	}
+	if (0 < SD.OutputParameters) { Win::Logf("\tOutputParameters\n"); }
+	for (UINT i = 0; i < SD.OutputParameters; ++i) {
+		D3D12_SIGNATURE_PARAMETER_DESC SPD;
+		VERIFY_SUCCEEDED(rhs->GetOutputParameterDesc(i, &SPD));
+		LOG_SIGNATURE_PARAMETER_DESC(SPD);
+	}
+#undef LOG_SIGNATURE_PARAMETER_DESC
+#undef COMPONENT_TYPE_ENTRY
+
 	return lhs;
 }
 #endif
