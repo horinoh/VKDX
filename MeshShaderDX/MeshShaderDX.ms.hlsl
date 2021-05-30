@@ -14,7 +14,7 @@ static const float3 Colors[] = { float3(1.0f, 0.0f, 0.0f), float3(0.0f, 1.0f, 0.
 //!< SV_GroupID             : 【C++】DispatchMesh() で発行されたどのグループか
 //!< SV_GroupThreadID       : 【HLSL】 [numthreads()] で発行されたどのスレッドか (ローカル ... グループ内ID)
 //!< SV_DispatchThreadID    : 【HLSL】 [numthreads()] で発行されたどのスレッドか (グローバル ... 全グループ通しID)
-[numthreads(3, 1, 1)] //!< 自分の環境では gl_MaxMeshWorkGroupSizeNV.x == 32 が最大だった
+[numthreads(3, 1, 1)]
 [outputtopology("triangle")]
 void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, out indices uint3 Indices[1], out primitives PRIM_OUT Prims[1], out vertices VERT_OUT Vertices[3])
 {

@@ -5,8 +5,11 @@ struct PAYLOAD_OUT
 
 groupshared PAYLOAD_OUT Payload;
 
+#define N 4
+#define NN (N * N)
+
 //!< 可視判定, LOD, テセレーション等, 動的なものにアンプリフィケーションシェーダーを使う、静的なものならメッシュシェーダのみで良い
-[numthreads(16, 1, 1)]
+[numthreads(NN, 1, 1)]
 void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID)
 {
     bool Visible = true;

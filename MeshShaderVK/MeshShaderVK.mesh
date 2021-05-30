@@ -10,7 +10,7 @@ const vec3 Colors[] = { vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(0.0
 //!< gl_WorkGroupID				: 【C++】 vkCmdDrawMeshTasksNV() で発行されたどのグループか
 //!< gl_LocalInvocationID		: 【GLSL】 layout(local_size_x) で発行されたどのスレッドか (ローカル ... グループ内ID)
 //!< gl_GlobalInvocationID		: 【GLSL】 layout(local_size_x) で発行されたどのスレッドか (グローバル ... 全グループ通しID)
-layout(local_size_x = 3) in;
+layout(local_size_x = 3) in; //!< 自分の環境では gl_MaxMeshWorkGroupSizeNV.x == 32 が最大だった
 layout(triangles, max_vertices = 3, max_primitives = 1) out;
 void main()
 {

@@ -36,10 +36,18 @@ void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, in p
         }
     }
 
-    //!< GLSL ‚Ì gl_WorkGroupSize ‘Š“–‚Í‘¶Ý‚µ‚È‚¢H ‚Á‚Û‚¢‚Ì‚Å 15.0f
-    const float3 Offset = float3(GroupID, GroupID, 0.0f) / 15.0f + float3(-1.0f, -1.0f, 0.0f);
-    const uint x = GroupThreadID % N;
-    const uint y = GroupThreadID / N;
-    Vertices[GroupThreadID].Position = float4(float3((float)x / N1, 1.0f - (float)y / N1, 0.0f) + Offset, 1.0f);
-    Vertices[GroupThreadID].Color = Colors[Payload.MeshletIDs[GroupID] % 8];
+    const uint MeshletID = Payload.MeshletIDs[GroupID];
+
+    const uint m = 4;
+#if 1
+    const float2 Scale = float2(1.0f, 1.0f) / m;
+    const float2 Offset = float2((float)(MeshletID % m), (float)(MeshletID / m)) * Scale;
+#else
+    const float2 Scale = float2(2.0f, 2.0f) / m;
+    const float2 Offset = float2((float)(MeshletID % m) - 2.0f, 1.0f - (float)(MeshletID / m)) * Scale;
+#endif
+
+    const uint2 Coord = uint2(GroupThreadID % N, GroupThreadID / N);
+    Vertices[GroupThreadID].Position = float4(float2((float)Coord.x / N1, 1.0f - (float)Coord.y / N1) * Scale + Offset, 0.0f, 1.0f);
+    Vertices[GroupThreadID].Color = Colors[MeshletID % 8];
 }

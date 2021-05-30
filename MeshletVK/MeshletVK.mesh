@@ -34,9 +34,19 @@ void main()
         }
     }
 
-    const vec3 Offset = vec3(gl_WorkGroupID.x, gl_WorkGroupID.x, 0.0f) / (gl_WorkGroupSize.x - 1.0f) + vec3(-1.0f, -1.0f, 0.0f);
-    const uint x = gl_LocalInvocationID.x % N;
-    const uint y = gl_LocalInvocationID.x / N;
-	gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = vec4(vec3(float(x) / N1, 1.0f - float(y) / N1, 0.0f) + Offset, 1.0); 
-	OutColor[gl_LocalInvocationID.x] = Colors[Payload.MeshletIDs[gl_WorkGroupID.x] % 8];  
+    const uint MeshletID = Payload.MeshletIDs[gl_WorkGroupID.x];
+
+    const uint m = uint(sqrt(gl_WorkGroupSize.x));
+#if 1
+    const vec2 Scale = vec2(1.0f, 1.0f) / m;
+    const vec2 Offset = vec2(float(MeshletID % m), float(MeshletID / m)) * Scale;
+#else
+    const vec2 Scale = vec2(2.0f, 2.0f) / m;
+    const vec2 Offset = vec2(float(MeshletID % m) - 2.0f, 1.0f - float(MeshletID / m)) * Scale;
+#endif
+
+    const uvec2 Coord = uvec2(gl_LocalInvocationID.x % N, gl_LocalInvocationID.x / N);
+	gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = vec4(vec2(float(Coord.x) / N1, 1.0f - float(Coord.y) / N1) * Scale + Offset, 0.0f, 1.0f); 
+
+	OutColor[gl_LocalInvocationID.x] = Colors[MeshletID % 8];  
 }
