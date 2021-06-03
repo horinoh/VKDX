@@ -4,19 +4,25 @@
 #extension GL_KHR_shader_subgroup_ballot : require
 
 taskNV out Task {
-  uint MeshletIDs[32];
+	uint InstanceID;
+	uint MeshletDimension;
+	uint MeshletIDs[32];
 } Payload;
 
-#define N 4
+#define N 5
 #define NN (N * N)
 
 //!< 可視判定, LOD, テセレーション等, 動的なものにタスクシェーダーを使う、静的なものならメッシュシェーダのみで良い
 layout(local_size_x = NN) in; //!< 自分の環境では gl_MaxTaskWorkGroupSizeNV.x == 32 が最大だった
 void main()
 {
+	Payload.InstanceID = gl_WorkGroupID.x;
+	Payload.MeshletDimension = N;
+
 	bool Visible = true;
 	//bool Visible = 0 == (gl_LocalInvocationID.x % 2);
 	//bool Visible = 1 == (gl_LocalInvocationID.x % 2);
+	//bool Visible = (gl_WorkGroupID.x % 2) == (gl_LocalInvocationID.x % 2);
 	
 	//!< スレッド間同期される
 	uvec4 Vote = subgroupBallot(Visible);

@@ -1,5 +1,7 @@
 struct PAYLOAD_IN
 {
+    uint InstanceID;
+    uint MeshletDimension;
     uint MeshletIDs[32];
 };
 
@@ -9,12 +11,24 @@ struct VERT_OUT
     float3 Color : COLOR;
 };
 
-#define N 4
+#define N 5
 #define NN (N * N)
 #define N1 (N - 1)
 #define N1N1 (N1 * N1)
 
 static const float3 Colors[] = { float3(1.0f, 0.0f, 0.0f), float3(0.0f, 1.0f, 0.0f), float3(0.0f, 0.0f, 1.0f), float3(1.0f, 1.0f, 0.0f), float3(0.0f, 1.0f, 1.0f), float3(1.0f, 0.0f, 1.0f), float3(1.0f, 1.0f, 1.0f), float3(0.0f, 0.0f, 0.0f) };
+
+static const float PI = 4.0f * atan(1.0f);
+float2 GetUV_Torus(const float2 uv)
+{
+    return frac(uv) * 2.0f * PI;
+}
+float3 GetPosition_Torus(const float2 uv)
+{
+    const float2 UV = GetUV_Torus(uv);
+    const float2 R = float2(0.5f, 1.0f);
+    return float3((R.y + R.x * cos(UV.y)) * cos(UV.x), (R.y + R.x * cos(UV.y)) * sin(UV.x), R.x * sin(UV.y));
+}
 
 [numthreads(NN, 1, 1)]
 [outputtopology("triangle")]
@@ -38,16 +52,16 @@ void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, in p
 
     const uint MeshletID = Payload.MeshletIDs[GroupID];
 
-    const uint m = 4;
+    const float2 MeshletScale = float2(1.0f, 1.0f) / Payload.MeshletDimension;
+    const float2 MeshletOffset = float2((float)(MeshletID % Payload.MeshletDimension), (float)(MeshletID / Payload.MeshletDimension)) * MeshletScale;
+
+    const float2 UV = float2((float)(GroupThreadID % N) / N1, 1.0f - (float)(GroupThreadID / N) / N1);
 #if 1
-    const float2 Scale = float2(1.0f, 1.0f) / m;
-    const float2 Offset = float2((float)(MeshletID % m), (float)(MeshletID / m)) * Scale;
+    const float3 InstanceOffset = float3((float)(Payload.InstanceID % 4) / 3 - 0.5f, (float)(Payload.InstanceID / 4) / 3 - 0.5f, 0.0f);
+    Vertices[GroupThreadID].Position = float4(GetPosition_Torus(UV * MeshletScale + MeshletOffset) * 0.1f + InstanceOffset, 1.0f);
 #else
-    const float2 Scale = float2(2.0f, 2.0f) / m;
-    const float2 Offset = float2((float)(MeshletID % m) - 2.0f, 1.0f - (float)(MeshletID / m)) * Scale;
+    Vertices[GroupThreadID].Position = float4(UV * MeshletScale + MeshletOffset, 0.0f, 1.0f);
 #endif
 
-    const uint2 Coord = uint2(GroupThreadID % N, GroupThreadID / N);
-    Vertices[GroupThreadID].Position = float4(float2((float)Coord.x / N1, 1.0f - (float)Coord.y / N1) * Scale + Offset, 0.0f, 1.0f);
     Vertices[GroupThreadID].Color = Colors[MeshletID % 8];
 }

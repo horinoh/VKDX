@@ -1,20 +1,26 @@
 struct PAYLOAD_OUT
 {
+    uint InstanceID;
+    uint MeshletDimension;
     uint MeshletIDs[32];
 };
 
 groupshared PAYLOAD_OUT Payload;
 
-#define N 4
+#define N 5
 #define NN (N * N)
 
 //!< 可視判定, LOD, テセレーション等, 動的なものにアンプリフィケーションシェーダーを使う、静的なものならメッシュシェーダのみで良い
 [numthreads(NN, 1, 1)]
 void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID)
 {
+    Payload.InstanceID = GroupID;
+    Payload.MeshletDimension = N;
+
     bool Visible = true;
     //bool Visible = 0 == (GroupThreadID % 2);
     //bool Visible = 1 == (GroupThreadID % 2);
+    //bool Visible = (GroupID % 2) == (GroupThreadID % 2);
 
     //!< Wave命令はスレッド間同期される
     
