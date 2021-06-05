@@ -25,8 +25,7 @@ protected:
 			.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
 			.queueFamilyIndex = GraphicsQueueFamilyIndex
 		};
-		CommandPools.emplace_back(VkCommandPool());
-		VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &CommandPools.back()));
+		VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &CommandPools.emplace_back()));
 
 		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
 		assert(!empty(CommandPools) && "");

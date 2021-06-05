@@ -624,8 +624,7 @@ protected:
 	virtual void CreateFramebuffer() {
 		const auto RP = RenderPasses[0];
 		for (auto i : SwapchainImageViews) {
-			Framebuffers.emplace_back(VkFramebuffer());
-			VK::CreateFramebuffer(Framebuffers.back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
 		}
 	}
 

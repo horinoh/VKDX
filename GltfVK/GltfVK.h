@@ -133,8 +133,7 @@ protected:
 	virtual void UpdateAnimWeights(const float* Data, const uint32_t PrevIndex, const uint32_t NextIndex, const float t);
 
 //	virtual void CreateDescriptorSetLayout() override {
-//		DescriptorSetLayouts.emplace_back(VkDescriptorSetLayout());
-//		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts[0], 0, {
+//		VKExt::CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
 //#if 0
 //				VkDescriptorSetLayoutBinding({ 0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1, VK_SHADER_STAGE_VERTEX_BIT, nullptr })
 //#endif
@@ -160,18 +159,16 @@ protected:
 		const auto RP = RenderPasses[0];
 		const auto DIV = DepthTextures[0].View;
 		for (auto i : SwapchainImageViews) {
-			Framebuffers.emplace_back(VkFramebuffer());
-			VK::CreateFramebuffer(Framebuffers.back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DIV });
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RP, SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DIV });
 		}
 	}
 	virtual void CreateRenderPass() override { 
 #if 1
 		VKExt::CreateRenderPass_Depth();
 #else
-		RenderPasses.emplace_back(VkRenderPass());
 		const std::array ColorAttach = { VkAttachmentReference({ .attachment = 0, .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL }), };
 		const VkAttachmentReference DepthAttach = { .attachment = 1, .layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
-		VK::CreateRenderPass(RenderPasses.back(), {
+		VK::CreateRenderPass(RenderPasses.emplace_back(), {
 				//!< アタッチメント
 				VkAttachmentDescription({
 					.flags = 0,

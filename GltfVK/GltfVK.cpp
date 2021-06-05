@@ -444,7 +444,6 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 
 	const auto RP = RenderPasses[0];
 	const auto PLL = PipelineLayouts[0];
-	Pipelines.emplace_back(VkPipeline());
 	const VkPipelineRasterizationStateCreateInfo PRSCI = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 		.pNext = nullptr,
@@ -476,7 +475,7 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 			.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
 		}),
 	};
-	VK::CreatePipeline_(Pipelines.back(), Device, PLL, RP, ToVKPrimitiveTopology(Prim.mode), 0, PRSCI, PDSSCI, &VS, &FS, nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs);
+	VK::CreatePipeline_(Pipelines.emplace_back(), Device, PLL, RP, ToVKPrimitiveTopology(Prim.mode), 0, PRSCI, PDSSCI, &VS, &FS, nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs);
 
 #ifdef DEBUG_STDOUT
 	std::cout << "World =" << std::endl;

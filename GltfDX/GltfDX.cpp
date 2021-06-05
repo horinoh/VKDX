@@ -393,7 +393,6 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	const std::vector RTVs = { DXGI_FORMAT_R8G8B8A8_UNORM };
 
 	const auto RS = COM_PTR_GET(RootSignatures[0]);
-	PipelineStates.emplace_back(COM_PTR<ID3D12PipelineState>());
 	const std::vector RTBDs = {
 		D3D12_RENDER_TARGET_BLEND_DESC({
 			.BlendEnable = FALSE, .LogicOpEnable = FALSE,
@@ -417,7 +416,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
 		.FrontFace = DSOD, .BackFace = DSOD
 	};
-	DX::CreatePipelineState_(std::ref(PipelineStates.back()), COM_PTR_GET(Device), RS, ToDXPrimitiveTopologyType(Prim.mode), RTBDs, RD, DSD, VS, PS, NullSBC, NullSBC, NullSBC, IEDs, RTVs);
+	DX::CreatePipelineState_(std::ref(PipelineStates.emplace_back()), COM_PTR_GET(Device), RS, ToDXPrimitiveTopologyType(Prim.mode), RTBDs, RD, DSD, VS, PS, NullSBC, NullSBC, NullSBC, IEDs, RTVs);
 
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
