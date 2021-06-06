@@ -479,7 +479,7 @@ public:
 	class PipelineLibrarySerializer
 	{
 	public:
-		PipelineLibrarySerializer(ID3D12Device* Dev, const std::wstring& Path) : Device(Dev), FilePath(Path) {
+		PipelineLibrarySerializer(ID3D12Device* Dev, std::wstring_view Path) : Device(Dev), FilePath(Path) {
 #ifdef ALWAYS_REBUILD_PIPELINE
 			DeleteFile(data(FilePath));
 #endif
@@ -517,7 +517,7 @@ public:
 		bool IsLoadSucceeded() const { return IsLoaded; }
 	private:
 		ID3D12Device* Device;
-		std::wstring FilePath;
+		std::wstring_view FilePath;
 		COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
 		bool IsLoaded = false;
 	};

@@ -644,7 +644,7 @@ protected:
 	class PipelineCacheSerializer
 	{
 	public:
-		PipelineCacheSerializer(VkDevice Dev, const std::wstring& Path, const size_t Count) : Device(Dev), FilePath(Path) {
+		PipelineCacheSerializer(VkDevice Dev, std::wstring_view Path, const size_t Count) : Device(Dev), FilePath(Path) {
 #ifdef ALWAYS_REBUILD_PIPELINE
 			DeleteFile(data(FilePath));
 #endif
@@ -660,9 +660,18 @@ protected:
 					In.read(Data, Size);
 					assert(Size == *reinterpret_cast<const uint32_t*>(Data) && "");
 					assert(VK_PIPELINE_CACHE_HEADER_VERSION_ONE == *(reinterpret_cast<const uint32_t*>(Data) + 1) && "");
-#ifdef DEBUG_STDOUT
-					//std::cout << *reinterpret_cast<const PipelineCacheData*>(Data);
-#endif
+					{
+//#ifdef DEBUG_STDOUT
+//						std::cout << *reinterpret_cast<const PipelineCacheData*>(Data);
+//#endif
+						const auto PCD = reinterpret_cast<const PipelineCacheData*>(Data);
+						Win::Log("PipelineCacheSerializer\n");
+						Win::Logf("\tSize = %d\n", PCD->Size);
+						Win::Logf("\tVersion = %s\n", PCD->Version == VK_PIPELINE_CACHE_HEADER_VERSION_ONE ? "VK_PIPELINE_CACHE_HEADER_VERSION_ONE" : "Unknown");
+						Win::Logf("\tVenderID = %d\n", PCD->VenderID);
+						Win::Logf("\tDeviceID = %d\n", PCD->DeviceID);
+						Win::Log("\tUUID = "); for (auto i : PCD->UUID) { Win::Logf("%c", i); } Win::Log("\n");
+					}
 					PipelineCaches.resize(1); //!< ‘‚«ž‚ÞÛ‚Éƒ}[ƒW‚³‚ê‚Ä‚¢‚é‚Í‚¸‚È‚Ì‚Å“Ç‚Ýž‚ß‚½ê‡‚Í1‚Â‚Å—Ç‚¢
 					const VkPipelineCacheCreateInfo PCCI = { .sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO, .pNext = nullptr, .flags = 0, .initialDataSize = Size, .pInitialData = Data };
 					VERIFY_SUCCEEDED(vkCreatePipelineCache(Device, &PCCI, nullptr, data(PipelineCaches)));
@@ -711,7 +720,7 @@ protected:
 		VkPipelineCache GetPipelineCache(const size_t i) const { return IsLoaded ? PipelineCaches[0] : PipelineCaches[i]; }
 	private:
 		VkDevice Device;
-		std::wstring FilePath;
+		std::wstring_view FilePath;
 		std::vector<VkPipelineCache> PipelineCaches;
 		bool IsLoaded = false;
 	};
@@ -1147,7 +1156,7 @@ static std::ostream& operator<<(std::ostream& lhs, const VkSurfaceCapabilitiesKH
 #pragma endregion
 
 #ifdef USE_PIPELINE_SERIALIZE
-static std::ostream& operator<<(std::ostream& lhs, const  VK::PipelineCacheData& rhs) {
+static std::ostream& operator<<(std::ostream& lhs, const VK::PipelineCacheData& rhs) {
 	Win::Log("PipelineCacheSerializer\n");
 	Win::Logf("\tSize = %d\n", rhs.Size);
 	Win::Logf("\tVersion = %s\n", rhs.Version == VK_PIPELINE_CACHE_HEADER_VERSION_ONE ? "VK_PIPELINE_CACHE_HEADER_VERSION_ONE" : "Unknown");

@@ -784,15 +784,24 @@ void VK::SelectPhysicalDevice(VkInstance Inst)
 			}
 #pragma endregion
 #pragma region RAYTRACING
+			//!< VkPhysicalDeviceAccelerationStructureFeaturesKHR ‚ªãŽè‚­‚¢‚©‚È‚¢ŠÂ‹«‚ª‚ ‚éc
+			//{
+			//	VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr };
+			//	VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF };
+			//	VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF };
+			//	VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDASF };
+			//	vkGetPhysicalDeviceFeatures2(i, &PDF2);
+			//	std::cout << PDBDAF;
+			//	std::cout << PDRTPF;
+			//	std::cout << PDASF;
+			//}
 			{
 				VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr };
 				VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF };
-				VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = &PDRTPF };
-				VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDASF };
+				VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDRTPF };
 				vkGetPhysicalDeviceFeatures2(i, &PDF2);
 				std::cout << PDBDAF;
 				std::cout << PDRTPF;
-				std::cout << PDASF;
 			}
 #pragma endregion			
 			VkPhysicalDeviceFeatures PDF = {};
