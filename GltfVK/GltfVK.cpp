@@ -539,7 +539,7 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 	}
 }
 
-void GltfVK::Process(const std::string& Identifier, const fx::gltf::Accessor& Acc)
+void GltfVK::Process(std::string_view Identifier, const fx::gltf::Accessor& Acc)
 {
 	Gltf::Process(Identifier, Acc);
 

@@ -84,11 +84,11 @@ public:
 	}
 
 	virtual void Unload() { Documents.clear(); }
-	virtual void Load(const std::string& Path) {
+	virtual void Load(std::string_view Path) {
 		if (std::string::npos != Path.rfind(".glb")) {
-			Documents.emplace_back(fx::gltf::LoadFromBinary(Path, fx::gltf::ReadQuotas()));
+			Documents.emplace_back(fx::gltf::LoadFromBinary(data(Path), fx::gltf::ReadQuotas()));
 		} else /*if(std::string::npos != Path.rfind(".gltf"))*/{
-			Documents.emplace_back(fx::gltf::LoadFromText(Path, fx::gltf::ReadQuotas()));
+			Documents.emplace_back(fx::gltf::LoadFromText(data(Path), fx::gltf::ReadQuotas()));
 		}
 
 		const auto& Doc = GetDocument();
@@ -383,7 +383,7 @@ public:
 		}
 		PopTab();
 	}
-	virtual void Process(const std::string& Identifier, const fx::gltf::Accessor& Acc) {
+	virtual void Process(std::string_view Identifier, const fx::gltf::Accessor& Acc) {
 		Tabs(); std::cout << Identifier << std::endl;
 		Process(Acc);
 	}

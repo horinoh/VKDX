@@ -517,7 +517,7 @@ public:
 		bool IsLoadSucceeded() const { return IsLoaded; }
 	private:
 		ID3D12Device* Device;
-		std::wstring_view FilePath;
+		std::wstring FilePath;
 		COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
 		bool IsLoaded = false;
 	};

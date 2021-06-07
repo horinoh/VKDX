@@ -131,7 +131,7 @@ protected:
 	virtual void Process(const fx::gltf::Node& Nd, const uint32_t i) override;
 	virtual void Process(const fx::gltf::Camera& Cam) override;
 	virtual void Process(const fx::gltf::Primitive& Prim) override;
-	virtual void Process(const std::string& Identifier, const fx::gltf::Accessor& Acc) override;
+	virtual void Process(std::string_view Identifier, const fx::gltf::Accessor& Acc) override;
 	virtual void Process(const fx::gltf::Mesh& Msh) override;
 	virtual void Process(const fx::gltf::Skin& Skn) override;
 

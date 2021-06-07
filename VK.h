@@ -720,7 +720,7 @@ protected:
 		VkPipelineCache GetPipelineCache(const size_t i) const { return IsLoaded ? PipelineCaches[0] : PipelineCaches[i]; }
 	private:
 		VkDevice Device;
-		std::wstring_view FilePath;
+		std::wstring FilePath;
 		std::vector<VkPipelineCache> PipelineCaches;
 		bool IsLoaded = false;
 	};

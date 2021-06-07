@@ -335,7 +335,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	Gltf::Process(Prim);
 
 	//!< セマンティックの頭文字から読み込むシェーダを決定 (Select shader file by semantic initial)
-	std::vector<std::pair<std::string, UINT>> SemanticAndIndices;
+	std::vector<std::pair<std::string_view, UINT>> SemanticAndIndices;
 	std::string SemnticInitial;
 	for (const auto& i : Prim.attributes) {
 		SemnticInitial += i.first.substr(0, 1);
@@ -351,10 +351,10 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	for (const auto& i : Prim.attributes) {
 		std::string Name, IndexStr;
 		if (DecomposeSemantic(i.first, Name, IndexStr)) {
-			SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ data(Name), std::stoi(IndexStr) }));
+			SemanticAndIndices.emplace_back(std::pair<std::string_view, UINT>({ data(Name), std::stoi(IndexStr) }));
 		}
 		else {
-			SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ data(i.first), 0 }));
+			SemanticAndIndices.emplace_back(std::pair<std::string_view, UINT>({ data(i.first), 0 }));
 		}
 	}
 	auto MorphIndex = 1;
@@ -362,10 +362,10 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 		for (const auto& j : i) {
 			std::string Name, IndexStr;
 			if (DecomposeSemantic(j.first, Name, IndexStr)) {
-				SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ data(Name), std::stoi(IndexStr) }));
+				SemanticAndIndices.emplace_back(std::pair<std::string_view, UINT>({ data(Name), std::stoi(IndexStr) }));
 			}
 			else {
-				SemanticAndIndices.emplace_back(std::pair<std::string, UINT>({ data(j.first), MorphIndex }));
+				SemanticAndIndices.emplace_back(std::pair<std::string_view, UINT>({ data(j.first), MorphIndex }));
 			}
 		}
 		++MorphIndex;
@@ -465,7 +465,7 @@ void GltfDX::Process(const fx::gltf::Primitive& Prim)
 	}
 }
 
-void GltfDX::Process(const std::string& Identifier, const fx::gltf::Accessor& Acc)
+void GltfDX::Process(std::string_view Identifier, const fx::gltf::Accessor& Acc)
 {
 	Gltf::Process(Identifier, Acc);
 
