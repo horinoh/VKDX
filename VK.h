@@ -23,14 +23,13 @@
 #include <glm/gtx/quaternion.hpp>
 #pragma warning(pop)
 
-#ifndef BREAK_ON_FAILED
-#define BREAK_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Win::Log(VK::GetVkResultChar(vr)); DEBUG_BREAK(); }
+#ifndef VERIFY_SUCCEEDED
+#ifdef _DEBUG
+//#define VERIFY_SUCCEEDED(X) { const auto VR = (X); if(FAILED(VR)) { OutputDebugStringA(data(std::string(VK::GetVkResultChar(VR)) + "\n")); DEBUG_BREAK(); } }
+#define VERIFY_SUCCEEDED(X) { const auto VR = (X); if(FAILED(VR)) { MessageBoxA(nullptr, VK::GetVkResultChar(VR), "", MB_OK); DEBUG_BREAK(); } }
+#else
+#define VERIFY_SUCCEEDED(X) (X)
 #endif
-#ifndef THROW_ON_FAILED
-#define THROW_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + std::string(VK::GetVkResultChar(vr));; }
-#endif
-#ifndef MESSAGEBOX_ON_FAILED
-#define MESSAGEBOX_ON_FAILED(vr) if(VK_SUCCESS != (vr)) { Win::ShowMessageBox(nullptr, VK::GetVkResultChar(vr)); }
 #endif
 
 #define USE_VIEWPORT_Y_UP //!< *VK

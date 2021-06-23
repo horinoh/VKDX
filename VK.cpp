@@ -626,21 +626,21 @@ void VK::CreateDebugReportCallback()
 			.pfnCallback = [](VkDebugReportFlagsEXT flags, [[maybe_unused]] VkDebugReportObjectTypeEXT objectType, [[maybe_unused]] uint64_t object, [[maybe_unused]] size_t location, [[maybe_unused]] int32_t messageCode, [[maybe_unused]] const char* pLayerPrefix, const char* pMessage, [[maybe_unused]] void* pUserData) -> VkBool32 {
 					using namespace std;
 					if (VK_DEBUG_REPORT_ERROR_BIT_EXT & flags) {
-						DEBUG_BREAK();
 						Errorf("%s\n", pMessage);
+						DEBUG_BREAK();
 						return VK_TRUE;
 					}
 					else if (VK_DEBUG_REPORT_WARNING_BIT_EXT & flags) {
-						DEBUG_BREAK();
 						Warningf("%s\n", pMessage);
+						DEBUG_BREAK();
 						return VK_TRUE;
 					}
 					else if (VK_DEBUG_REPORT_INFORMATION_BIT_EXT & flags) {
 						//Logf(" %s\n", pMessage);
 					}
 					else if (VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT & flags) {
-						DEBUG_BREAK();
 						Logf("%s\n", pMessage);
+						DEBUG_BREAK();
 						return VK_TRUE;
 					}
 					else if (VK_DEBUG_REPORT_DEBUG_BIT_EXT & flags) {

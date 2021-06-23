@@ -1,5 +1,5 @@
 #pragma once
-
+ 
 //!< USE_WINRT が定義されない場合は WRL が使用される、WINRT では 要C++17以降 (If USE_WINRT is not defined, WRL will be used, WINRT require C++17 or later)
 #define USE_WINRT
 #ifdef USE_WINRT
@@ -24,26 +24,31 @@
 #define COM_PTR_COPY(_x, _y) (_x = _y)
 #endif
 
-//!< ソフトウエアラスタライザ (Software rasterizer)
-//#define USE_WARP
-
-#define USE_STATIC_SAMPLER //!< [ TextureDX ] VK:USE_IMMUTABLE_SAMPLER相当
-
-//!< HLSLからルートシグネチャを作成する (Create root signature from HLSL)
-//#define USE_HLSL_ROOTSIGNATRUE //!< [ TriangleDX ]
-//#define USE_BUNDLE //!< [ ParametricSurfaceDX ] VK:USE_SECONDARY_COMMAND_BUFFER相当
-//#define USE_ROOT_CONSTANTS //!< [ TriangleDX ] VK:USE_PUSH_CONSTANTS相当
-//#define USE_GAMMA_CORRECTION
-
-#define USE_SHADER_BLOB_PART //!< [ TriangleDX ]
-
-#define USE_DXC
-
 #include <initguid.h>
 #include <d3d12.h>
 #include <d3dcompiler.h>
 #include <DXGI1_6.h>
 #include <DirectXMath.h>
+
+#ifndef VERIFY_SUCCEEDED
+#ifdef _DEBUG
+//#define VERIFY_SUCCEEDED(X) { const auto HR = (X); if(FAILED(HR)) { OutputDebugStringA(data(std::system_category().message(HR) + "\n")); DEBUG_BREAK(); } }
+#define VERIFY_SUCCEEDED(X) { const auto HR = (X); if(FAILED(HR)) { MessageBoxA(nullptr, data(std::system_category().message(HR)), "", MB_OK); DEBUG_BREAK(); } }
+#else
+#define VERIFY_SUCCEEDED(X) (X) 
+#endif
+#endif
+
+//!< ソフトウエアラスタライザ (Software rasterizer)
+//#define USE_WARP
+#define USE_STATIC_SAMPLER //!< [ TextureDX ] VK:USE_IMMUTABLE_SAMPLER相当
+//!< HLSLからルートシグネチャを作成する (Create root signature from HLSL)
+//#define USE_HLSL_ROOTSIGNATRUE //!< [ TriangleDX ]
+//#define USE_BUNDLE //!< [ ParametricSurfaceDX ] VK:USE_SECONDARY_COMMAND_BUFFER相当
+//#define USE_ROOT_CONSTANTS //!< [ TriangleDX ] VK:USE_PUSH_CONSTANTS相当
+//#define USE_GAMMA_CORRECTION
+#define USE_SHADER_BLOB_PART //!< [ TriangleDX ]
+#define USE_DXC
 
 #ifdef USE_DXC
 #include <dxcapi.h>
@@ -75,6 +80,7 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 #include <DirectXColors.h>
 
 #include <comdef.h>
+#include <system_error>
 
 //!< _DEBUG であれば何もしなくても PIX 使用可能、Release で PIX を使用したいような場合は USE_PIX を定義する (In case want to use pix in Release build, define USE_PIX)
 //!< ソリューション右クリック - ソリューションのNuGetパッケージの管理 - 参照タブ - WinPixEventRuntimeで検索 - プロジェクトを選択してPIXをインストールしておくこと
@@ -83,16 +89,6 @@ Color128 = DirectX::PackedVector::XMLoadColor(Color32);
 //!< プログラムからキャプチャを行いたい場合 (Capture in program code)
 #if defined(_DEBUG) || defined(USE_PIX)
 #include <DXProgrammableCapture.h>
-#endif
-
-#ifndef BREAK_ON_FAILED
-#define BREAK_ON_FAILED(hr) if(FAILED(hr)) { Win::Log(data(DX::GetHRESULTString(hr))); DEBUG_BREAK(); }
-#endif
-#ifndef THROW_ON_FAILED
-#define THROW_ON_FAILED(hr) if(FAILED(hr)) { throw std::runtime_error("VERIFY_SUCCEEDED failed : " + DX::GetHRESULTString(hr)); }
-#endif
-#ifndef MESSAGEBOX_ON_FAILED
-#define MESSAGEBOX_ON_FAILED(hr) if(FAILED(hr)) { Win::ShowMessageBox(nullptr, data(DX::GetHRESULTString(hr))); }
 #endif
 
 #include "Cmn.h"
@@ -365,8 +361,6 @@ public:
 	virtual void OnPreDestroy(HWND hWnd, HINSTANCE hInstance) override;
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override { Super::OnDestroy(hWnd, hInstance); }
 
-	[[nodiscard]] static std::string GetHRESULTString(const HRESULT Result) { return ToString(GetHRESULTWString(Result)); }
-	[[nodiscard]] static std::wstring GetHRESULTWString(const HRESULT Result) { return std::wstring(_com_error(Result).ErrorMessage()); }
 	[[nodiscard]] static const char* GetFormatChar(const DXGI_FORMAT Format);
 
 	[[nodiscard]] static std::array<float, 3> Lerp(const std::array<float, 3>& lhs, const std::array<float, 3>& rhs, const float t) {

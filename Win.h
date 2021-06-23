@@ -2,12 +2,6 @@
 
 #pragma warning(disable: 4505) //!< unreferenced function has been removed
 
-#ifndef VERIFY_SUCCEEDED
-#define VERIFY_SUCCEEDED(vr) BREAK_ON_FAILED(vr)
-//#define VERIFY_SUCCEEDED(vr) THROW_ON_FAILED(vr)
-//#define VERIFY_SUCCEEDED(vr) MESSAGEBOX_ON_FAILED(vr)
-#endif
-
 //!< メモリリーク検出用
 #define _CRTDBG_MAP_ALLOC
 #include <cstdlib>
@@ -84,31 +78,15 @@
 //#include <source_location> //!< #TODO インクルードできない
 //#include <cinttypes>
 
-#ifndef SAFE_DELETE
-#define SAFE_DELETE(x) if(nullptr != x) { delete x; x = nullptr; }
-#endif
-#ifndef SAFE_DELETE_ARRAY
-#define SAFE_DELETE_ARRAY(x) if(nullptr != x) { delete [] x; x = nullptr; }
-#endif
 #ifndef SAFE_FCLOSE
 #define SAFE_FCLOSE(x) if(nullptr != x) { fclose(x); x = nullptr; }
 #endif
 
 #ifndef DEBUG_BREAK
 #ifdef _DEBUG
-#define DEBUG_BREAK() DebugBreak()
+#define DEBUG_BREAK() __debugbreak()
 #else
 #define DEBUG_BREAK()
-#endif
-#endif
-
-#ifndef VERIFY
-#ifdef  _DEBUG
-//#define VERIFY(x) assert(x)
-//#define VERIFY(x) if(!(x)) { DEBUG_BREAK(); }
-#define VERIFY(x) if (!(x)) { throw std::runtime_error("VERIFY failed"); }
-#else
-#define VERIFY(x) (x)
 #endif
 #endif
 
@@ -198,8 +176,6 @@ public:
 		}
 		return false;
 	}
-
-	static void ShowMessageBox(HWND hWnd, const char* Str) { MessageBox(hWnd, data(ToWString(Str)), TEXT("CAPTION"), MB_OK); }
 #ifdef DEBUG_STDOUT
 	static void SetColor(const WORD Color = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE) { 
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), Color | FOREGROUND_INTENSITY);
