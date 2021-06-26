@@ -758,6 +758,7 @@ void VK::SelectPhysicalDevice(VkInstance Inst)
 				VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDMSP, };
 				vkGetPhysicalDeviceProperties2(i, &PDP2);
 				std::cout << PDMSP;
+				//std::cout << PDP2.properties;
 			}
 #pragma endregion
 #pragma region RAYTRACING
@@ -766,6 +767,7 @@ void VK::SelectPhysicalDevice(VkInstance Inst)
 				VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
 				vkGetPhysicalDeviceProperties2(i, &PDP2);
 				std::cout << PDRTPP;
+				//std::cout << PDP2.properties;
 			}
 #pragma endregion
 			VkPhysicalDeviceProperties PDP = {};
@@ -781,10 +783,11 @@ void VK::SelectPhysicalDevice(VkInstance Inst)
 				VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDMSF };
 				vkGetPhysicalDeviceFeatures2(i, &PDF2);
 				std::cout << PDMSF;
+				//std::cout << PDF2.features;
 			}
 #pragma endregion
 #pragma region RAYTRACING
-			//!< VkPhysicalDeviceAccelerationStructureFeaturesKHR が上手くいかない環境がある…
+			//!< VkPhysicalDeviceAccelerationStructureFeaturesKHR が上手くいかない環境がある… (サポートしない環境ではフィーチャーのチェックもできない?) #VK_TODO
 			//{
 			//	VkPhysicalDeviceBufferDeviceAddressFeatures PDBDAF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES, .pNext = nullptr };
 			//	VkPhysicalDeviceRayTracingPipelineFeaturesKHR PDRTPF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR, .pNext = &PDBDAF };
@@ -802,6 +805,13 @@ void VK::SelectPhysicalDevice(VkInstance Inst)
 				vkGetPhysicalDeviceFeatures2(i, &PDF2);
 				std::cout << PDBDAF;
 				std::cout << PDRTPF;
+				if(PDRTPF.rayTracingPipeline){
+					VkPhysicalDeviceAccelerationStructureFeaturesKHR PDASF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR, .pNext = nullptr };
+					VkPhysicalDeviceFeatures2 PDF2_1 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDASF };
+					vkGetPhysicalDeviceFeatures2(i, &PDF2_1);
+					std::cout << PDASF;
+				}
+				//std::cout << PDF2.features;
 			}
 #pragma endregion			
 			VkPhysicalDeviceFeatures PDF = {};

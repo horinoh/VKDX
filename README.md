@@ -51,6 +51,9 @@
  * (ここでは)framework.cpp を追加 - 右クリック - Properties - C/C++ - Precompiled Headers - Create(/Yc)
  * Properties - C/C++ - Advanced - Forced Include File に framework.h を指定しているので、framework.cpp に #include "framework.h" は記述しなくて良い
 
+### Gitサブモジュール
+ * TortoiseGit - Submodule update - 対象(Path)を選択 - Remote tracking branch にチェックを入れて - OK でサブモジュールを最新のものに更新できる
+
 ## VK
 
 #### SDK
@@ -411,9 +414,12 @@
 #### DX
  * WinPixEventRuntimeのインストール
 	* 右クリック - Manage NuGet Packages - Browse - WinPixEventRuntimeで検索 - インストール
- * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/HLSL(OPT).props、Props/RS.props. (Props/DXTK.prop, Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop)
- * Header Files に Win.h、DX.h、DXExt.h、(DXImage.h) を追加 
- * Source Files に Win.cpp、DX.cpp、DXExt.cpp、(DXImage.cpp) を追加
+ * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/HLSL(OPT).props、Props/RS.props
+ 	* 必要に応じて Props/DXTK.prop, Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop
+ * Header Files に Win.h, DX.h, DXExt.h を追加 
+	* 必要に応じて DXImage.h 
+ * Source Files に Win.cpp, DX.cpp, DXExt.cpp を追加
+ 	* 必要に応じて DXImage.cpp
  * XxxDX.h、XxxDX.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * Shader Files フォルダを作成し、シェーダを突っ込む
   * シェーダファイルを右クリック - プロパティ - Configuration Propeties - General
@@ -423,12 +429,15 @@
 * ルートシグネチャ用HLSL XxxDX.rs.hlsl を作成する
 
 #### VK
- * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop、(Props/GLI.prop, Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop)
- * Header Files に Win.h、VK.h、VKExt.h、(VKImage.h) を追加
- * Source Files に Win.cpp、VK.cpp、VKExt.cpp、(VKImage.cpp) を追加
+ * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop
+ 	* 必要に応じて Props/GLI.prop, Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop
+ * Header Files に Win.h, VK.h, VKExt.h を追加
+	* 必要に応じて VKImage.h
+ * Source Files に Win.cpp, VK.cpp, VKExt.cpp を追加
+	* 必要に応じて VKIMage.cpp
  * XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * Shader Files フォルダを作成し、シェーダを突っ込む
-  * 拡張子を glslangValidator に沿うようにしておく(.vert、.frag、...)
+  * 拡張子を glslangValidator に沿うようにしておく
 	* .vert, .tesc. .tese, .geom, .frag, .comp, .mesh, .task, .rgen, .rhit, .rahit, .rchit, .rmiss, .rcall,...
   * 右クリック - プロパティ - Configuration Propeties - General
     * Excluded From Build を No
@@ -452,15 +461,20 @@
 
 ## FBX
  * SDKをインストールする
- * 環境変数 **FBX_SDK_PATH** を定義しておく
+ * ここでは環境変数 **FBX_SDK_PATH** を定義しておく
+	* FBX_SDK_PATH の例
+	~~~
+	FBX_SDK_PATH=C:\Program Files\Autodesk\FBX\FBX SDK\2020.2.1
+	~~~
  * 環境変数 **Path** に DLL のパスを通しておく
- ~~~
- Path=%Path%:%FBX_SDK_PATH%\lib\vs2015\x64\debug
- Path=%Path%:%FBX_SDK_PATH%\lib\vs2015\x64\release
- ~~~
+	* DLL のパスの例
+	~~~
+	$(FBX_SDK_PATH)\lib\vs2019\x64\debug
+	$(FBX_SDK_PATH)\lib\vs2019\x64\release
+	~~~
  ~~~
  #include <fbxsdk.h
- #pragma comment(lib, "vs2015\\x64\\debug\\libfbxsdk.lib")
+ #pragma comment(lib, "vs2019\\x64\\debug\\libfbxsdk.lib")
  ~~~
 * サンプルデータは $(FBX_SDK_PATH)\samples 以下にある
 
