@@ -3,8 +3,8 @@
 #include "resource.h"
 
 #pragma region Code
-#include "../VKExt.h"
 #include "../FBX.h"
+#include "../VKExt.h"
 
 class FbxVK : public VKExt
 {

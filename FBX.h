@@ -1,7 +1,5 @@
 #pragma once
 
-#if 0
-//#define FBXSDK_SHARED
 #include <fbxsdk.h>
 
 class Fbx
@@ -34,14 +32,14 @@ public:
 							for (int i = 0; i < RootNode->GetChildCount(); i++) {
 								const auto Node = RootNode->GetChild(i);
 								if (nullptr != Node) {
-									const auto Name = Node->GetName();
-									const auto T = Node->LclTranslation.Get();
-									const auto R = Node->LclRotation.Get();
-									const auto S = Node->LclScaling.Get();
+									[[maybe_unused]] const auto Name = Node->GetName();
+									[[maybe_unused]] const auto T = Node->LclTranslation.Get();
+									[[maybe_unused]] const auto R = Node->LclRotation.Get();
+									[[maybe_unused]] const auto S = Node->LclScaling.Get();
 									for (int j = 0; j < Node->GetNodeAttributeCount(); ++j) {
 										const auto Attr = Node->GetNodeAttributeByIndex(j);
 										if (nullptr != Attr) {
-											const auto AttrName = Attr->GetName();
+											[[maybe_unused]] const auto AttrName = Attr->GetName();
 											switch (Attr->GetAttributeType())
 											{
 											default:
@@ -94,7 +92,7 @@ public:
 										}
 									}
 									for (int j = 0; j < Node->GetChildCount(); ++j) {
-										const auto ChildNode = Node->GetChild(j);
+										[[maybe_unused]] const auto ChildNode = Node->GetChild(j);
 									}
 								}
 							}
@@ -122,7 +120,7 @@ public:
 							if (nullptr != Material) {
 								const auto Prop = Material->FindProperty(FbxSurfaceMaterial::sAmbient);
 								if (Prop.IsValid()) {
-									const auto& Color = Prop.Get<FbxDouble3>();
+									[[maybe_unused]] const auto& Color = Prop.Get<FbxDouble3>();
 								}
 							}
 						}
@@ -137,5 +135,3 @@ protected:
 	FbxManager* Manager = nullptr;
 	FbxScene* Scene = nullptr;
 };
-
-#endif

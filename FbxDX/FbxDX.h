@@ -3,8 +3,8 @@
 #include "resource.h"
 
 #pragma region Code
-#include "../DXExt.h"
 #include "../FBX.h"
+#include "../DXExt.h"
 
 class FbxDX : public DXExt
 {
