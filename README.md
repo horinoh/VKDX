@@ -402,7 +402,7 @@
 <!-- 
 ## プロジェクトの追加方法 (自分用覚書)
  * ソリューションを右クリック - Add - New Project で Windows Desktop Application
- * プロジェクトを右クリック - Retarget SDK Verson で 10以上にする
+ //* プロジェクトを右クリック - Retarget SDK Verson で 10以上にする
  * プロジェクト右クリック - Property - All Configurations にする - C/C++ - Language - C++ Language Standard - Preview - Features from the Latest... を選択しておく(vs2019のデフォルトはC++14)
  * プロジェクト右クリック - Property - All Configurations にする - C/C++ - General - Warning Level を Level4、Treat Warnings As Errors を Yes にする
  * プロジェクト右クリック - Property - All Configurations にする - C/C++ - Precompiled headers - Precompiled Header を Use(/Yu) 、Precompiled Header Files を framework.h にする

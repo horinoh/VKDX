@@ -1679,6 +1679,7 @@ void VK::CreateRenderPass(VkRenderPass& RP, const std::vector<VkAttachmentDescri
 	};
 	VERIFY_SUCCEEDED(vkCreateRenderPass(Device, &RPCI, GetAllocationCallbacks(), &RP));
 }
+//!< デフォルト実装は何もしないものにしている (全画面を描画するような、クリアを必要としないケース)
 void VK::CreateRenderPass()
 {
 	//!< インプットアタッチメント (InputAttachment)
