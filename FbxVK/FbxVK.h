@@ -6,7 +6,7 @@
 #include "../FBX.h"
 #include "../VKExt.h"
 
-class FbxVK : public VKExt
+class FbxVK : public VKExt, public Fbx
 {
 private:
 	using Super = VKExt;

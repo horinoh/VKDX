@@ -3,6 +3,8 @@
 #include <fx/gltf.h>
 #include <cmath>
 
+#include "Hierarchy.h"
+
 //!< KHR_texture_transform Šg’£
 //!< https://github.com/KhronosGroup/glTF/tree/master/extensions/2.0/Khronos/KHR_texture_transform
 #define USE_GLTF_EXT_TEX_TRANS
@@ -19,7 +21,7 @@ static std::array<float, 4> operator+(const std::array<float, 4>& lhs, const std
 static std::array<float, 4> operator*(const std::array<float, 4>& lhs, const float rhs) { return std::array<float, 4>({ lhs[0] * rhs, lhs[1] * rhs, lhs[2] * rhs, lhs[3] * rhs }); }
 static std::array<float, 4> operator*(const float rhs, const std::array<float, 4>& lhs) { return lhs * rhs; }
 
-class Gltf
+class Gltf : public Hierarchy
 {
 public:
 	static uint32_t GetTypeCount(const fx::gltf::Accessor::Type Type) {
@@ -838,20 +840,21 @@ public:
 		}
 	}
 
-#ifdef _DEBUG
-	void Tabs() { for (auto i = 0; i < TabDepth; ++i) { std::cout << "\t"; } }
-	void PushTab() { ++TabDepth; }
-	void PopTab() { --TabDepth; }
-#else
-	void Tabs() {}
-	void PushTab() {}
-	void PopTab() {}
-#endif
-
 	const fx::gltf::Document& GetDocument() const { return Documents.back(); }
+
+//#ifdef _DEBUG
+//	void Tabs() { for (auto i = 0; i < TabDepth; ++i) { std::cout << "\t"; } }
+//	void PushTab() { ++TabDepth; }
+//	void PopTab() { --TabDepth; }
+//#else
+//	void Tabs() {}
+//	void PushTab() {}
+//	void PopTab() {}
+//#endif
+
 protected:
 	std::vector<fx::gltf::Document> Documents;
-#ifdef _DEBUG
-	uint8_t TabDepth = 0;
-#endif
+//#ifdef _DEBUG
+//	uint8_t TabDepth = 0;
+//#endif
 };

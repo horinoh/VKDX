@@ -6,7 +6,7 @@
 #include "../FBX.h"
 #include "../DXExt.h"
 
-class FbxDX : public DXExt
+class FbxDX : public DXExt, public Fbx
 {
 private:
 	using Super = DXExt;
