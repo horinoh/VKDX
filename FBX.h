@@ -30,8 +30,8 @@ public:
 		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\StereoCamera\\StereoCamera.fbx"); //!< カメラのみ
 		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\SwitchBinding\\Bind_Before_Switch.fbx"); //!< メッシュ、ジョイント、(四角形ポリゴン)
 		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\Transformations\\JointHierarchy.fbx"); //!< ジョイントのみ
-		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\UVSample\\sadface.fbx"); //!< メッシュ、テクスチャ
-		Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ViewScene\\humanoid.fbx"); //!< ジョイント、メッシュ、アニメーション、カメラ、ライト
+		Load(GetEnv("FBX_SDK_PATH") + "\\samples\\UVSample\\sadface.fbx"); //!< メッシュ、テクスチャ
+		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ViewScene\\humanoid.fbx"); //!< ジョイント、メッシュ、アニメーション、カメラ、ライト
 	}
 	virtual ~Fbx() {
 		if (nullptr != Scene) { Scene->Destroy(); }
@@ -43,11 +43,19 @@ public:
 			FbxStringList UVSetName;
 			Mesh->GetUVSetNames(UVSetName);			
 
+			//!< マテリアル
+			for (int i = 0; i < Mesh->GetElementMaterialCount(); ++i) {
+				const auto ElementMaterial = Mesh->GetElementMaterial(i);
+				for (int j = 0; j < ElementMaterial->GetIndexArray().GetCount(); ++j) {
+					const auto Material = Mesh->GetNode()->GetMaterial(ElementMaterial->GetIndexArray()[j]);
+					Tabs(); std::cout << "Material -> " << Material->GetName() << std::endl;
+				}
+			}
+
 			for (int i = 0; i < Mesh->GetPolygonCount(); ++i) {
-				if (i > 50) { Tabs(); std::cout << "..." << std::endl; return; }
+				if (i > 32) { Tabs(); std::cout << "..." << std::endl; return; }
 
 				Tabs(); std::cout << "[" << i << "]{" << std::endl;
-				const auto PS = Mesh->GetPolygonSize(i);
 				for (int j = 0; j < Mesh->GetPolygonSize(i); ++j) {
 					Tabs(); std::cout << "\t";
 					//!< 頂点
@@ -76,6 +84,16 @@ public:
 	}
 	virtual void Process(FbxCamera* Camera) {
 		if (nullptr != Camera) {
+			switch (Camera->ProjectionType.Get()) {
+				using enum FbxCamera::EProjectionType;
+			case ePerspective:
+				Tabs(); std::cout << "ePerspective" << std::endl;
+				break;
+			case eOrthogonal:
+				Tabs(); std::cout << "eOrthogonal" << std::endl;
+				break;
+			}
+			
 			FbxTime Time;
 			const auto Pos = Camera->EvaluatePosition(Time);
 			const auto LookAt = Camera->EvaluateLookAtPosition(Time);
@@ -87,6 +105,7 @@ public:
 	}
 	virtual void Process(FbxLight* Light) {
 		if (nullptr != Light) {
+			//Light->Color.Get();
 			switch (Light->LightType.Get()) {
 				using enum FbxLight::EType;
 			default: break;
@@ -183,7 +202,6 @@ public:
 			[[maybe_unused]] const auto LTrans = Node->EvaluateLocalTransform();
 
 			FbxTime Time;
-			Time.SetSecondDouble(2.0);
 			[[maybe_unused]] const auto GTransAnim = Node->EvaluateGlobalTransform(Time);
 
 			PushTab();
@@ -197,6 +215,88 @@ public:
 				Process(Node->GetChild(i));
 			}
 			PopTab();
+		}
+	}
+	virtual void Process(FbxSurfaceMaterial* Material) {
+		if (nullptr != Material) {
+			Tabs(); std::cout << "[ Material ] " << Material->GetName() << std::endl;
+			Tabs(); std::cout << "\t" << Material->ShadingModel.Get() << std::endl;
+
+			//const auto Diffuse = Material->FindProperty(FbxSurfaceMaterial::sDiffuse);
+
+			//const auto Phong = FbxCast<FbxSurfacePhong>(Material);
+			const auto Phong = static_cast<FbxSurfacePhong*>(Material);
+			if (nullptr != Phong) {
+				const auto Specular = Phong->Specular.Get();
+				const auto SpecularFactor = Phong->SpecularFactor.Get();
+				const auto Shiness = Phong->Shininess.Get();
+				const auto Reflection = Phong->Reflection.Get();
+				const auto ReflectionFactor = Phong->ReflectionFactor.Get();
+				Tabs(); std::cout << "\t\t" << "Specular = " << Specular[0] << ", " << Specular[1] << ", " << Specular[2] << ", SpecularFactor = " << SpecularFactor << std::endl;
+				Tabs(); std::cout << "\t\t" << "Shiness = " << Shiness << std::endl;
+				Tabs(); std::cout << "\t\t" << "Reflection = " << Reflection[0] << ", " << Reflection[1] << ", " << Reflection[2] << ", ReflectionFactor = " << ReflectionFactor << std::endl;
+
+				const auto Lambert = static_cast<FbxSurfaceLambert*>(Phong);
+				Lambert->Emissive.Get();
+				Lambert->EmissiveFactor.Get();
+				Lambert->Ambient.Get();
+				Lambert->AmbientFactor.Get();
+				Lambert->Diffuse.Get();
+				Lambert->DiffuseFactor.Get();
+				Lambert->NormalMap.Get();
+				Lambert->Bump.Get();
+				Lambert->BumpFactor.Get();
+				Lambert->TransparentColor.Get();
+				Lambert->TransparencyFactor.Get();
+				Lambert->DisplacementColor.Get();
+				Lambert->DisplacementFactor.Get();
+				Lambert->VectorDisplacementColor.Get();
+				Lambert->VectorDisplacementFactor.Get();
+			}
+			else {
+				//const auto Lambert = static_cast<FbxSurfaceLambert>(Material);
+				const auto Lambert = static_cast<FbxSurfaceLambert*>(Material);
+				if (nullptr != Lambert) {
+				}
+			}
+		}
+	}
+	virtual void Process(FbxTexture* Texture) {
+		if (nullptr != Texture) {
+			Tabs(); std::cout << "[ Texture ] " << Texture->GetName() << std::endl;
+
+			std::cout << typeid(Texture).name() << std::endl;
+
+			Tabs(); std::cout << "\t";
+			switch (Texture->GetTextureUse())
+			{
+				using enum FbxTexture::ETextureUse;
+			default: break;
+			case eStandard:
+				std::cout << "eStandard" << std::endl;
+				break;
+			case eShadowMap:
+				std::cout << "eShadowMap" << std::endl;
+				break;
+			case eLightMap:
+				std::cout << "eLightMap" << std::endl;
+				break;
+			case eSphericalReflectionMap:
+				std::cout << "eSphericalReflectionMap" << std::endl;
+				break;
+			case eSphereReflectionMap:
+				std::cout << "eSphereReflectionMap" << std::endl;
+				break;
+			case eBumpNormalMap:
+				std::cout << "eBumpNormalMap" << std::endl;
+				break;
+			}
+
+			//const auto FileTexture = FbxCast<FbxFileTexture>(Texture);
+			const auto FileTexture = static_cast<FbxFileTexture*>(Texture);
+			if (nullptr != FileTexture) {
+				Tabs(); std::cout << "\t" << FileTexture->GetRelativeFileName() << " (" << FileTexture->GetFileName() << ") " << std::endl;
+			}
 		}
 	}
 
@@ -214,29 +314,12 @@ public:
 						//!< ノードをたどる
 						Process(Scene->GetRootNode());
 
-						//!< 直接取得
-						//for (int i = 0; i < Scene->GetSrcObjectCount<FbxMesh>(); ++i) {
-						//	const auto Mesh = Scene->GetSrcObject<FbxMesh>(i);
-						//	if (nullptr != Mesh) {
-						//		FbxArray<FbxVector4> Normals;
-						//		if (Mesh->GetPolygonVertexNormals(Normals)) {
-						//		}
-						//		FbxStringList UVSetName;
-						//		Mesh->GetUVSetNames(UVSetName);
-						//		FbxArray<FbxVector2> UVs;
-						//		if (Mesh->GetPolygonVertexUVs(UVSetName.GetStringAt(0), UVs)) {
-						//		}
-						//	}
-						//}
-						//for (int i = 0; i < Scene->GetMaterialCount(); ++i) {
-						//	const auto Material = Scene->GetMaterial(i);
-						//	if (nullptr != Material) {
-						//		const auto Prop = Material->FindProperty(FbxSurfaceMaterial::sAmbient);
-						//		if (Prop.IsValid()) {
-						//			[[maybe_unused]] const auto& Color = Prop.Get<FbxDouble3>();
-						//		}
-						//	}
-						//}
+						for (int i = 0; i < Scene->GetMaterialCount(); ++i) {
+							Process(Scene->GetMaterial(i));
+						}
+						for (int i = 0; i < Scene->GetTextureCount(); ++i) {
+							Process(Scene->GetTexture(i));
+						}
 					}
 				} else {
 					std::cerr << Importer->GetStatus().GetErrorString() << std::endl;
