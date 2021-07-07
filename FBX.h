@@ -1,10 +1,19 @@
 #pragma once
 
-#include <fbxsdk.h>
+#include <vector>
 #include <iostream>
 #include <cassert>
 
+//!< DLL ライブラリを使用する場合は FBXSDK_SHARED を定義する必要がある
+#define FBXSDK_SHARED
+#include <fbxsdk.h>
+
 #include "Hierarchy.h"
+
+static std::ostream& operator<<(std::ostream& lhs, const FbxVector2& rhs) { lhs << rhs[0] << ", " << rhs[1] << std::endl; return lhs; }
+static std::ostream& operator<<(std::ostream& lhs, const FbxVector4& rhs) { lhs << rhs[0] << ", " << rhs[1] << ", " << rhs[2] << ", " << rhs[3] << std::endl; return lhs; }
+//static std::ostream& operator<<(std::ostream& lhs, const FbxMatrix& rhs) { lhs << rhs.GetRow(0); lhs << rhs.GetRow(1); lhs << rhs.GetRow(2); lhs << rhs.GetRow(3); return lhs; }
+static std::ostream& operator<<(std::ostream& lhs, const FbxColor& rhs) { lhs << rhs[0] << ", " << rhs[1] << ", " << rhs[2] << ", " << rhs[3] << std::endl; return lhs; }
 
 class Fbx : public Hierarchy
 {
@@ -28,10 +37,10 @@ public:
 		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ConvertScene\\box.fbx"); //!< メッシュのみ 
 		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\Normals\\Normals.fbx"); //!< (四角形ポリゴン)
 		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\StereoCamera\\StereoCamera.fbx"); //!< カメラのみ
-		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\SwitchBinding\\Bind_Before_Switch.fbx"); //!< メッシュ、ジョイント、(四角形ポリゴン)
+		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\SwitchBinding\\Bind_Before_Switch.fbx"); //!< メッシュ、ジョイント、アニメーション、(四角形ポリゴン)
 		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\Transformations\\JointHierarchy.fbx"); //!< ジョイントのみ
-		Load(GetEnv("FBX_SDK_PATH") + "\\samples\\UVSample\\sadface.fbx"); //!< メッシュ、テクスチャ
-		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ViewScene\\humanoid.fbx"); //!< ジョイント、メッシュ、アニメーション、カメラ、ライト
+		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\UVSample\\sadface.fbx"); //!< メッシュ、テクスチャ
+		Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ViewScene\\humanoid.fbx"); //!< ジョイント、メッシュ、アニメーション、カメラ、ライト
 	}
 	virtual ~Fbx() {
 		if (nullptr != Scene) { Scene->Destroy(); }
@@ -40,23 +49,290 @@ public:
 
 	virtual void Process(FbxMesh* Mesh) {
 		if (nullptr != Mesh) {
+#pragma region POLYGON
+			for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
+				if (i > 8) { Tabs(); std::cout << "..." << std::endl; return; }
+
+#pragma region POLYGON_GROUP
+				if (Mesh->GetElementPolygonGroupCount()) { Tabs(); std::cout << "[ PolygonGroup ]" << std::endl; }
+				for (auto j = 0; j < Mesh->GetElementPolygonGroupCount(); ++j) {
+					if (j > 8) { Tabs(); std::cout << "..." << std::endl; return; }
+					const auto PolygonGroup = Mesh->GetElementPolygonGroup(j);
+					switch (PolygonGroup->GetMappingMode()) {
+					default: break;
+					//case FbxGeometryElementPolygonGroup::eNone: break;
+					//case FbxGeometryElementPolygonGroup::eByControlPoint: break;
+					//case FbxGeometryElementPolygonGroup::eByPolygonVertex: break;
+					case FbxGeometryElementPolygonGroup::eByPolygon:
+						if (FbxGeometryElement::eIndex == PolygonGroup->GetReferenceMode()) {
+							Tabs(); std::cout << "\t" << PolygonGroup->GetIndexArray().GetAt(i);
+						}
+						break;
+					//case FbxGeometryElementPolygonGroup::eByEdge: break;
+					//case FbxGeometryElementPolygonGroup::eAllSame: break;
+					}
+				}
+#pragma endregion
+
+#pragma region POLYGON_SZIE
+				for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
+					Tabs(); std::cout << "["<< j << "]" << std::endl;
+					const auto PolygonVertex = Mesh->GetPolygonVertex(i, j);
+					if (0 <= PolygonVertex) {
+#pragma region VERTEX
+						Tabs(); std::cout << "\t" << "[ Vertex ]" << std::endl;
+						Tabs(); std::cout << "\t" << "\t" << Mesh->GetControlPoints()[PolygonVertex];
+#pragma endregion
+
+#pragma region VERTEX_COLOR
+						if (Mesh->GetElementVertexColorCount()) { Tabs(); std::cout << "\t" << "[ VertexColor ]" << std::endl; }
+						for (auto k = 0; k < Mesh->GetElementVertexColorCount(); ++k) {
+							if (k > 8) { Tabs(); std::cout << "\t" << "..." << std::endl; return; }
+							const auto VertexColor = Mesh->GetElementVertexColor(k);
+							switch (VertexColor->GetMappingMode()) {
+							default: break;
+							//case FbxGeometryElementVertexColor::eNone: break;
+							case FbxGeometryElementVertexColor::eByControlPoint:
+								Tabs(); std::cout << "\t" << "\t" << VertexColor->GetDirectArray().GetAt(j);
+								break;
+							case FbxGeometryElementVertexColor::eByPolygonVertex:
+								Tabs(); std::cout << "\t" << "\t" << VertexColor->GetDirectArray().GetAt(VertexColor->GetIndexArray().GetAt(j));
+								break;
+							//case FbxGeometryElementVertexColor::eByPolygon: break;
+							//case FbxGeometryElementVertexColor::eByEdge: break;
+							//case FbxGeometryElementVertexColor::eAllSame: break;
+							}
+						}
+#pragma endregion
+
+#pragma region UV
+						if (Mesh->GetElementUVCount()) { Tabs(); std::cout << "\t" << "[ UV ]" << std::endl; }
+						for (auto k = 0; k < Mesh->GetElementUVCount(); ++k) {
+							if (k > 8) { Tabs(); std::cout << "\t" << "..." << std::endl; return; }
+							const auto UV = Mesh->GetElementUV(k);
+							switch (UV->GetMappingMode()) {
+							default: break;
+							//case FbxGeometryElementUV::eNone: break;
+							case FbxGeometryElementUV::eByControlPoint:
+								switch (UV->GetReferenceMode()) {
+								case FbxGeometryElementUV::eDirect:
+									Tabs(); std::cout << "\t" << "\t" << UV->GetDirectArray().GetAt(PolygonVertex);
+									break;
+								case FbxGeometryElementUV::eIndexToDirect:
+									Tabs(); std::cout << "\t" << "\t" << UV->GetDirectArray().GetAt(UV->GetIndexArray().GetAt(PolygonVertex));
+									break;
+								//case FbxGeometryElementUV::eIndex: break;
+								default: break;
+								}
+								break;
+							case FbxGeometryElementUV::eByPolygonVertex:
+								switch (UV->GetReferenceMode())
+								{
+								case FbxGeometryElementUV::eDirect:
+								case FbxGeometryElementUV::eIndexToDirect:
+									Tabs(); std::cout << "\t" << "\t" << UV->GetDirectArray().GetAt(Mesh->GetTextureUVIndex(i, j));
+									break;
+								default: break;
+								//case FbxGeometryElementUV::eIndex: break;
+								}
+								break;
+							//case FbxGeometryElementUV::eByPolygon: break;
+							//case FbxGeometryElementUV::eByEdge: break;
+							//case FbxGeometryElementUV::eAllSame: break;
+							}
+						}
+#pragma endregion
+
+#pragma region NORMAL
+						if (Mesh->GetElementNormalCount()) { Tabs(); std::cout << "\t" << "[ Normal ]" << std::endl; }
+						for (auto k = 0; k < Mesh->GetElementNormalCount(); ++k) {
+							if (k > 8) { Tabs(); std::cout << "\t" << "..." << std::endl; return; }
+							const auto Normal = Mesh->GetElementNormal(k);
+							switch (Normal->GetMappingMode()) {
+							default: break;
+							//case FbxGeometryElementNormal::eNone: break;
+							case FbxGeometryElementNormal::eByControlPoint:
+								if (FbxGeometryElement::eDirect == Normal->GetReferenceMode()) {
+									Tabs(); std::cout << "\t" << "\t" << Normal->GetDirectArray().GetAt(i);
+								}
+								break;
+							case FbxGeometryElementNormal::eByPolygonVertex:
+								switch (Normal->GetReferenceMode()) {
+								default: break;
+								case FbxGeometryElementNormal::eDirect:
+									Tabs(); std::cout << "\t" << "\t" << Normal->GetDirectArray().GetAt(j);
+									break;
+									//case FbxGeometryElementNormal::eIndex: break;
+								case FbxGeometryElementNormal::eIndexToDirect:
+									Tabs(); std::cout << "\t" << "\t" << Normal->GetDirectArray().GetAt(Normal->GetIndexArray().GetAt(j));
+									break;
+								}
+								break;
+							//case FbxGeometryElementNormal::eByPolygon: break;
+							//case FbxGeometryElementNormal::eByEdge: break;
+							//case FbxGeometryElementNormal::eAllSame: break;
+							}
+						}
+#pragma endregion
+
+#pragma region TANGENT
+						if (Mesh->GetElementTangentCount()) { Tabs(); std::cout << "\t" << "[ Tangent ]" << std::endl; }
+						for (auto k = 0; k < Mesh->GetElementTangentCount(); ++k) {
+							if (k > 8) { Tabs(); std::cout << "\t" << "..." << std::endl; return; }
+							const auto Tangent = Mesh->GetElementTangent(k);
+							if (FbxGeometryElement::eByPolygonVertex == Tangent->GetMappingMode()) {
+								switch (Tangent->GetReferenceMode()) {
+								default: break;
+								case FbxGeometryElementTangent::eDirect:
+									Tabs(); std::cout << "\t" << "\t" << Tangent->GetDirectArray().GetAt(j);
+									break;
+								//case FbxGeometryElementTangent::eIndex: break;
+								case FbxGeometryElementTangent::eIndexToDirect:
+									Tabs(); std::cout << "\t" << "\t" << Tangent->GetDirectArray().GetAt(Tangent->GetIndexArray().GetAt(j));
+									break;
+								}
+							}
+						}
+#pragma endregion
+
+#pragma region BINORMAL
+						if (Mesh->GetElementBinormalCount()) { Tabs(); std::cout << "\t" << "[ Binormal ]" << std::endl; }
+						for (auto k = 0; k < Mesh->GetElementBinormalCount(); ++k) {
+							if (k > 8) { Tabs(); std::cout << "\t" << "..." << std::endl; return; }
+							const auto Binormal = Mesh->GetElementBinormal(k);
+							if (FbxGeometryElement::eByPolygonVertex == Binormal->GetMappingMode()) {
+								switch (Binormal->GetReferenceMode())
+								{
+								default: break;
+								case FbxGeometryElementBinormal::eDirect:
+									Tabs(); std::cout << "\t" << "\t" << Binormal->GetDirectArray().GetAt(j);
+									break;
+								//case FbxGeometryElementBinormal::eIndex: break;
+								case FbxGeometryElementBinormal::eIndexToDirect:
+									Tabs(); std::cout << "\t" << "\t" << Binormal->GetDirectArray().GetAt(Binormal->GetIndexArray().GetAt(j));
+									break;
+								}
+							}
+						}
+#pragma endregion
+					}
+				}
+#pragma endregion //!< POLYGON_SIZE
+			}
+#pragma endregion //!< POLYGON
+
+#pragma region CONTROL_POINT
+			for (auto i = 0; i < Mesh->GetControlPointsCount(); ++i) {
+				if (i > 8) { Tabs(); std::cout << "..." << std::endl; return; }
+				Tabs(); std::cout << "[ ControlPoint ]" << std::endl;
+				Tabs(); std::cout << "\t" << Mesh->GetControlPoints()[i];
+
+				if (Mesh->GetElementBinormalCount()) { Tabs(); std::cout << "[ Normal ]" << std::endl; }
+				for (auto j = 0; j < Mesh->GetElementNormalCount(); ++j){
+					const auto Normal = Mesh->GetElementNormal(j);
+					if (FbxGeometryElement::eByControlPoint == Normal->GetMappingMode()) {
+						if (FbxGeometryElement::eDirect == Normal->GetReferenceMode()) {
+							Tabs(); std::cout << "\t" << Normal->GetDirectArray().GetAt(i);
+						}
+					}
+				}
+			}
+#pragma endregion //!< CONTROL_POINT
+
+
+#pragma region VISIBILITY
+			if (Mesh->GetElementVisibilityCount()) { Tabs(); std::cout << "[ Visibility ]" << std::endl; }
+			for (auto i = 0; i < Mesh->GetElementVisibilityCount(); ++i) {
+				const auto Visibility = Mesh->GetElementVisibility(i);
+				if (FbxGeometryElement::eByEdge == Visibility->GetMappingMode()) {
+					for (auto j = 0; j < Mesh->GetMeshEdgeCount(); ++j) {
+						Tabs(); std::cout << "\t" << Visibility->GetDirectArray().GetAt(j);
+					}
+				}
+			}
+#pragma endregion
+
+
+#if 0
 			FbxStringList UVSetName;
 			Mesh->GetUVSetNames(UVSetName);			
 
-			//!< マテリアル
-			for (int i = 0; i < Mesh->GetElementMaterialCount(); ++i) {
-				const auto ElementMaterial = Mesh->GetElementMaterial(i);
-				for (int j = 0; j < ElementMaterial->GetIndexArray().GetCount(); ++j) {
-					const auto Material = Mesh->GetNode()->GetMaterial(ElementMaterial->GetIndexArray()[j]);
-					Tabs(); std::cout << "Material -> " << Material->GetName() << std::endl;
+			for (auto i = 0; i < Mesh->GetLayerCount(); ++i) {
+				Tabs(); std::cout << "[ Layer ]" << std::endl;
+				const auto Layer = Mesh->GetLayer(i);
+				
+				const auto Normals = Layer->GetNormals();
+				if (nullptr != Normals) {
+					Tabs(); std::cout << "\t" << "Normals" << std::endl;
+					switch (Normals->GetMappingMode()) {
+					case FbxLayerElementNormal::eNone: break;
+					case FbxLayerElementNormal::eByControlPoint: break;
+					case FbxLayerElementNormal::eByPolygonVertex: break;
+					case FbxLayerElementNormal::eByPolygon: break;
+					case FbxLayerElementNormal::eByEdge: break;
+					case FbxLayerElementNormal::eAllSame: break;
+					default: break;
+					}
+					{
+						const auto Normal = Normals->GetDirectArray()[Normals->GetIndexArray()[0]];
+					}
+				}
+
+				const auto Tangends = Layer->GetTangents();
+				if (nullptr != Tangends) {
+					Tabs(); std::cout << "\t" << "Tangents" << std::endl;
+				}
+				
+				const auto Binormals = Layer->GetBinormals();
+				if (nullptr != Binormals) {
+					Tabs(); std::cout << "\t" << "Binormals" << std::endl;
+				}
+
+				const auto Materials = Layer->GetMaterials();
+				if (nullptr != Materials) {
+					for (auto j = 0; j < Materials->GetIndexArray().GetCount(); ++j) {
+						const auto Material = Mesh->GetNode()->GetMaterial(Materials->GetIndexArray()[j]);
+						Tabs(); std::cout << "\t" << "Material -> "  << Material->GetName() << std::endl;
+					}
+				}
+
+				const auto UVSets = Layer->GetUVSets();
+				if (nullptr != UVSets) {
+					for (auto j = 0; j < UVSets.GetCount(); ++j) {
+						Tabs(); std::cout << "\t" << "UVSets[" << j << "]" << std::endl;
+						{
+							const auto UVSet = UVSets.GetAt(j);
+							UVSet->GetMappingMode();
+							const auto UV = UVSet->GetDirectArray()[UVSet->GetIndexArray()[0]];
+						}
+					}
+				}
+
+				const auto VertexColors = Layer->GetVertexColors();
+				if (nullptr != VertexColors) {
+					Tabs(); std::cout << "\t" << "VertexColors" << std::endl;
+				}
+
+				const auto UserData = Layer->GetUserData();
+				if (nullptr != UserData) {
+					Tabs(); std::cout << "\t" << "UserData" << std::endl;
 				}
 			}
+			
+			//!< マテリアル
+			//for (auto i = 0; i < Mesh->GetElementMaterialCount(); ++i) {
+			//	const auto ElementMaterial = Mesh->GetElementMaterial(i);
+			//	for (auto j = 0; j < ElementMaterial->GetIndexArray().GetCount(); ++j) {
+			//		const auto Material = Mesh->GetNode()->GetMaterial(ElementMaterial->GetIndexArray()[j]);
+			//		Tabs(); std::cout << "Material -> " << Material->GetName() << std::endl;
+			//	}
+			//}
 
-			for (int i = 0; i < Mesh->GetPolygonCount(); ++i) {
-				if (i > 32) { Tabs(); std::cout << "..." << std::endl; return; }
+			for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
+				if (i > 8) { Tabs(); std::cout << "..." << std::endl; return; }
 
 				Tabs(); std::cout << "[" << i << "]{" << std::endl;
-				for (int j = 0; j < Mesh->GetPolygonSize(i); ++j) {
+				for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
 					Tabs(); std::cout << "\t";
 					//!< 頂点
 					const auto Vertex = Mesh->GetControlPointAt(Mesh->GetPolygonVertex(i, j));
@@ -69,7 +345,7 @@ public:
 					}
 
 					//!< UV
-					for (int k = 0; k < UVSetName.GetCount(); ++k) {
+					for (auto k = 0; k < UVSetName.GetCount(); ++k) {
 						FbxVector2 UV;
 						bool Unmapped;
 						if (Mesh->GetPolygonVertexUV(i, j, UVSetName.GetStringAt(k), UV, Unmapped)) {
@@ -80,6 +356,7 @@ public:
 				}
 				Tabs(); std::cout << "}" << std::endl;
 			}
+#endif
 		}
 	}
 	virtual void Process(FbxCamera* Camera) {
@@ -204,14 +481,25 @@ public:
 			FbxTime Time;
 			[[maybe_unused]] const auto GTransAnim = Node->EvaluateGlobalTransform(Time);
 
+			const auto Evaluator = Scene->GetAnimationEvaluator();
+			if (nullptr != Evaluator) {
+				const FbxTime t(32);
+				const auto GlobalMatrix = Evaluator->GetNodeGlobalTransform(Node, t);
+				const auto LocalMatrix = Evaluator->GetNodeLocalTransform(Node, t);
+			
+				const auto LocalTranslation = Evaluator->GetNodeLocalTranslation(Node, t);
+				const auto LocalRotation = Evaluator->GetNodeLocalRotation(Node, t);
+				const auto LocalScaling = Evaluator->GetNodeLocalScaling(Node, t);
+			}
+
 			PushTab();
-			for (int i = 0; i < Node->GetNodeAttributeCount(); ++i) {
+			for (auto i = 0; i < Node->GetNodeAttributeCount(); ++i) {
 				Process(Node->GetNodeAttributeByIndex(i));
 			}
 			PopTab();
 
 			PushTab();
-			for (int i = 0; i < Node->GetChildCount(); i++) {
+			for (auto i = 0; i < Node->GetChildCount(); i++) {
 				Process(Node->GetChild(i));
 			}
 			PopTab();
@@ -222,41 +510,65 @@ public:
 			Tabs(); std::cout << "[ Material ] " << Material->GetName() << std::endl;
 			Tabs(); std::cout << "\t" << Material->ShadingModel.Get() << std::endl;
 
-			//const auto Diffuse = Material->FindProperty(FbxSurfaceMaterial::sDiffuse);
+			const auto Lambert = FbxCast<FbxSurfaceLambert>(Material);
+			if (nullptr != Lambert) {
+				const auto Emissive = Lambert->Emissive.Get();
+				const auto EmissiveFactor = Lambert->EmissiveFactor.Get();
+				Tabs(); std::cout << "\t\t" << "Emissive = " << Emissive[0] << ", " << Emissive[1] << ", " << Emissive[2] << ", EmissiveFactor = " << EmissiveFactor << std::endl;
 
-			//const auto Phong = FbxCast<FbxSurfacePhong>(Material);
-			const auto Phong = static_cast<FbxSurfacePhong*>(Material);
-			if (nullptr != Phong) {
-				const auto Specular = Phong->Specular.Get();
-				const auto SpecularFactor = Phong->SpecularFactor.Get();
-				const auto Shiness = Phong->Shininess.Get();
-				const auto Reflection = Phong->Reflection.Get();
-				const auto ReflectionFactor = Phong->ReflectionFactor.Get();
-				Tabs(); std::cout << "\t\t" << "Specular = " << Specular[0] << ", " << Specular[1] << ", " << Specular[2] << ", SpecularFactor = " << SpecularFactor << std::endl;
-				Tabs(); std::cout << "\t\t" << "Shiness = " << Shiness << std::endl;
-				Tabs(); std::cout << "\t\t" << "Reflection = " << Reflection[0] << ", " << Reflection[1] << ", " << Reflection[2] << ", ReflectionFactor = " << ReflectionFactor << std::endl;
+				const auto Ambient = Lambert->Ambient.Get();
+				const auto AmbientFactor = Lambert->AmbientFactor.Get();
+				Tabs(); std::cout << "\t\t" << "Ambient = " << Ambient[0] << ", " << Ambient[1] << ", " << Ambient[2] << ", AmbientFactor = " << AmbientFactor << std::endl;
 
-				const auto Lambert = static_cast<FbxSurfaceLambert*>(Phong);
-				Lambert->Emissive.Get();
-				Lambert->EmissiveFactor.Get();
-				Lambert->Ambient.Get();
-				Lambert->AmbientFactor.Get();
-				Lambert->Diffuse.Get();
-				Lambert->DiffuseFactor.Get();
-				Lambert->NormalMap.Get();
-				Lambert->Bump.Get();
-				Lambert->BumpFactor.Get();
-				Lambert->TransparentColor.Get();
-				Lambert->TransparencyFactor.Get();
-				Lambert->DisplacementColor.Get();
-				Lambert->DisplacementFactor.Get();
-				Lambert->VectorDisplacementColor.Get();
-				Lambert->VectorDisplacementFactor.Get();
-			}
-			else {
-				//const auto Lambert = static_cast<FbxSurfaceLambert>(Material);
-				const auto Lambert = static_cast<FbxSurfaceLambert*>(Material);
-				if (nullptr != Lambert) {
+				const auto Diffuse = Lambert->Diffuse.Get();
+				const auto DiffuseFactor = Lambert->DiffuseFactor.Get();
+				Tabs(); std::cout << "\t\t" << "Diffuse = " << Diffuse[0] << ", " << Diffuse[1] << ", " << Diffuse[2] << ", DiffuseFactor = " << DiffuseFactor << std::endl;
+				//!< テクスチャの有無を調べている
+				for (auto i = 0; i < Lambert->Diffuse.GetSrcObjectCount<FbxFileTexture>(); ++i) {
+					const auto FileTexture = Lambert->Diffuse.GetSrcObject<FbxFileTexture>(i);
+					if (nullptr != FileTexture) {
+						Tabs(); std::cout << "\t\t\t" << FileTexture->GetRelativeFileName() << std::endl;
+					}
+				}
+
+				const auto NormalMap = Lambert->NormalMap.Get();
+				Tabs(); std::cout << "\t\t" << "NormalMap = " << NormalMap[0] << ", " << NormalMap[1] << ", " << NormalMap[2] << std::endl;
+				//!< テクスチャの有無を調べている
+				for (auto i = 0; i < Lambert->NormalMap.GetSrcObjectCount<FbxFileTexture>(); ++i) {
+					const auto FileTexture = Lambert->NormalMap.GetSrcObject<FbxFileTexture>(i);
+					if (nullptr != FileTexture) {
+						Tabs(); std::cout << "\t\t\t" << FileTexture->GetRelativeFileName() << std::endl;
+					}
+				}
+
+				const auto Bump = Lambert->Bump.Get();
+				const auto BumpFactor = Lambert->BumpFactor.Get();
+				Tabs(); std::cout << "\t\t" << "Bump = " << Bump[0] << ", " << Bump[1] << ", " << Bump[2] << ", BumpFactor = " << BumpFactor << std::endl;
+
+				const auto TransparentColor = Lambert->TransparentColor.Get();
+				const auto TransparentFactor = Lambert->TransparencyFactor.Get();
+				Tabs(); std::cout << "\t\t" << "TransparentColor = " << TransparentColor[0] << ", " << TransparentColor[1] << ", " << TransparentColor[2] << ", TransparentFactor = " << TransparentFactor << std::endl;
+
+				const auto DisplacementColor = Lambert->DisplacementColor.Get();
+				const auto DisplacementFactor = Lambert->DisplacementFactor.Get();
+				Tabs(); std::cout << "\t\t" << "DisplacementColor = " << DisplacementColor[0] << ", " << DisplacementColor[1] << ", " << DisplacementColor[2] << ", DisplacementFactor = " << DisplacementFactor << std::endl;
+
+				const auto VectorDisplacementColor = Lambert->VectorDisplacementColor.Get();
+				const auto VectorDisplacementFactor = Lambert->VectorDisplacementFactor.Get();
+				Tabs(); std::cout << "\t\t" << "VectorDisplacementColor = " << VectorDisplacementColor[0] << ", " << VectorDisplacementColor[1] << ", " << VectorDisplacementColor[2] << ", VectorDisplacementFactor = " << VectorDisplacementFactor << std::endl;
+
+				const auto Phong = FbxCast<FbxSurfacePhong>(Lambert);
+				if (nullptr != Phong) {
+					const auto Specular = Phong->Specular.Get();
+					const auto SpecularFactor = Phong->SpecularFactor.Get();
+					Tabs(); std::cout << "\t\t" << "Specular = " << Specular[0] << ", " << Specular[1] << ", " << Specular[2] << ", SpecularFactor = " << SpecularFactor << std::endl;
+
+					const auto Shiness = Phong->Shininess.Get();
+					Tabs(); std::cout << "\t\t" << "Shiness = " << Shiness << std::endl;
+
+					const auto Reflection = Phong->Reflection.Get();
+					const auto ReflectionFactor = Phong->ReflectionFactor.Get();
+					Tabs(); std::cout << "\t\t" << "Reflection = " << Reflection[0] << ", " << Reflection[1] << ", " << Reflection[2] << ", ReflectionFactor = " << ReflectionFactor << std::endl;
 				}
 			}
 		}
@@ -265,37 +577,34 @@ public:
 		if (nullptr != Texture) {
 			Tabs(); std::cout << "[ Texture ] " << Texture->GetName() << std::endl;
 
-			std::cout << typeid(Texture).name() << std::endl;
-
 			Tabs(); std::cout << "\t";
 			switch (Texture->GetTextureUse())
 			{
 				using enum FbxTexture::ETextureUse;
 			default: break;
-			case eStandard:
-				std::cout << "eStandard" << std::endl;
-				break;
-			case eShadowMap:
-				std::cout << "eShadowMap" << std::endl;
-				break;
-			case eLightMap:
-				std::cout << "eLightMap" << std::endl;
-				break;
-			case eSphericalReflectionMap:
-				std::cout << "eSphericalReflectionMap" << std::endl;
-				break;
-			case eSphereReflectionMap:
-				std::cout << "eSphereReflectionMap" << std::endl;
-				break;
-			case eBumpNormalMap:
-				std::cout << "eBumpNormalMap" << std::endl;
-				break;
+			case eStandard: std::cout << "eStandard" << std::endl; break;
+			case eShadowMap: std::cout << "eShadowMap" << std::endl; break;
+			case eLightMap: std::cout << "eLightMap" << std::endl; break;
+			case eSphereReflectionMap: std::cout << "eSphereReflectionMap" << std::endl; break;
+			case eBumpNormalMap: std::cout << "eBumpNormalMap" << std::endl; break;
 			}
 
-			//const auto FileTexture = FbxCast<FbxFileTexture>(Texture);
-			const auto FileTexture = static_cast<FbxFileTexture*>(Texture);
-			if (nullptr != FileTexture) {
-				Tabs(); std::cout << "\t" << FileTexture->GetRelativeFileName() << " (" << FileTexture->GetFileName() << ") " << std::endl;
+			const auto LayeredTexture = FbxCast<FbxLayeredTexture>(Texture);
+			if (nullptr != LayeredTexture) {
+				Tabs(); std::cout << "\t" << "[ LayeredTexture ]" << std::endl;
+				for (auto i = 0; i < LayeredTexture->GetSrcObjectCount<FbxFileTexture>(); ++i) {
+					const auto FileTexture = LayeredTexture->GetSrcObject<FbxFileTexture>(i);
+					Tabs(); std::cout << "\t\t" << FileTexture->GetRelativeFileName() << " (" << FileTexture->GetFileName() << ") " << std::endl;
+					FileTextures.emplace_back(FileTexture);
+				}
+			}
+			else {
+				const auto FileTexture = FbxCast<FbxFileTexture>(Texture);
+				if (nullptr != FileTexture) {
+					Tabs(); std::cout << "\t" << "[ FileTexture ]" << std::endl;
+					Tabs(); std::cout << "\t\t" << FileTexture->GetRelativeFileName() << " (" << FileTexture->GetFileName() << ") " << std::endl;
+					FileTextures.emplace_back(FileTexture);
+				}
 			}
 		}
 	}
@@ -310,16 +619,41 @@ public:
 						int Major, Minor, Revision;
 						Importer->GetFileVersion(Major, Minor, Revision);
 						std::cout << Major << "." << Minor << "." << Revision << std::endl;
+						
+						//!< テクスチャを列挙しておく
+						for (auto i = 0; i < Scene->GetTextureCount(); ++i) {
+							Process(Scene->GetTexture(i));
+						}
+						//!< マテリアルを列挙しておく
+						for (auto i = 0; i < Scene->GetMaterialCount(); ++i) {
+							Process(Scene->GetMaterial(i));
+						}
+						//!< アニメーション
+						Tabs(); std::cout << "[ AnimStack ]" << std::endl;
+						for (auto i = 0; i < Scene->GetSrcObjectCount<FbxAnimStack>(); ++i) {
+							const auto AnimStack = Scene->GetSrcObject<FbxAnimStack>(i);
+							Tabs(); std::cout << "\t" << AnimStack->GetName() << std::endl;
+
+							Tabs(); std::cout << "\t" << "[ AnimLayer ]" << std::endl;
+							for (auto j = 0; j < AnimStack->GetMemberCount<FbxAnimLayer>(); ++j) {
+								const auto AnimLayer = AnimStack->GetMember<FbxAnimLayer>(j);
+								Tabs(); std::cout << "\t\t" << AnimLayer->GetName() << std::endl;
+
+								const FbxTime t;
+								const auto Weight = AnimLayer->Weight.EvaluateValue(t);
+								//AnimLayer->Mute;
+								//AnimLayer->Solo;
+								//AnimLayer->Lock;
+								//AnimLayer->Color;
+								//AnimLayer->BlendMode;
+								//AnimLayer->RotationAccumulationMode;
+								//AnimLayer->ScaleAccumulationMode;
+								//AnimLayer->GetBlendModeBypass();
+							}
+						}
 
 						//!< ノードをたどる
 						Process(Scene->GetRootNode());
-
-						for (int i = 0; i < Scene->GetMaterialCount(); ++i) {
-							Process(Scene->GetMaterial(i));
-						}
-						for (int i = 0; i < Scene->GetTextureCount(); ++i) {
-							Process(Scene->GetTexture(i));
-						}
 					}
 				} else {
 					std::cerr << Importer->GetStatus().GetErrorString() << std::endl;
@@ -344,4 +678,5 @@ public:
 protected:
 	FbxManager* Manager = nullptr;
 	FbxScene* Scene = nullptr;
+	std::vector<FbxFileTexture*> FileTextures;
 };

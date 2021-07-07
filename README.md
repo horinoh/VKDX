@@ -47,6 +47,38 @@
  * サンプルデータ 
  	* fx-gltfのサブモジュールに含まれるのを使用する
 
+### FBX
+ * SDKをインストールする
+ * ここでは環境変数 **FBX_SDK_PATH** を定義しておく
+	* FBX_SDK_PATH の例
+	~~~
+	FBX_SDK_PATH=C:\Program Files\Autodesk\FBX\FBX SDK\2020.2.1
+	~~~
+ * 環境変数 **Path** に DLL のパスを通しておく
+	* DLL のパスの例
+	~~~
+	$(FBX_SDK_PATH)\lib\vs2019\x64\debug
+	$(FBX_SDK_PATH)\lib\vs2019\x64\release
+	~~~
+ ~~~
+ #define FBXSDK_SHARED //!< DLL を使用する場合は定義する
+ #include <fbxsdk.h>
+ #ifdef _DEBUG
+ #pragma comment(lib, "vs2019\\x64\\debug\\libfbxsdk.lib")
+ #else
+ #pragma comment(lib, "vs2019\\x64\\release\\libfbxsdk.lib")
+ #endif
+ ~~~
+* サンプルデータは $(FBX_SDK_PATH)\samples 以下にある
+	* InmportScene が参考になる
+	* 普通にインストールすると管理者権限が必要な場所にあるので、どこかにコピーする
+	* 以下のようにしてソリューションファイルを生成
+	~~~
+	$cd ImportScene
+	//$cmake -G "Visual Studio 15 Win64"
+	$cmake -G "Visual Studio 16"
+	~~~
+
 ### プリコンパイルヘッダーを使う
  * (ここでは)framework.cpp を追加 - 右クリック - Properties - C/C++ - Precompiled Headers - Create(/Yc)
  * Properties - C/C++ - Advanced - Forced Include File に framework.h を指定しているので、framework.cpp に #include "framework.h" は記述しなくて良い
@@ -458,25 +490,6 @@
 
 ## ParametricSurface
  * http://www.3d-meier.de/tut3/Seite0.html
-
-## FBX
- * SDKをインストールする
- * ここでは環境変数 **FBX_SDK_PATH** を定義しておく
-	* FBX_SDK_PATH の例
-	~~~
-	FBX_SDK_PATH=C:\Program Files\Autodesk\FBX\FBX SDK\2020.2.1
-	~~~
- * 環境変数 **Path** に DLL のパスを通しておく
-	* DLL のパスの例
-	~~~
-	$(FBX_SDK_PATH)\lib\vs2019\x64\debug
-	$(FBX_SDK_PATH)\lib\vs2019\x64\release
-	~~~
- ~~~
- #include <fbxsdk.h
- #pragma comment(lib, "vs2019\\x64\\debug\\libfbxsdk.lib")
- ~~~
-* サンプルデータは $(FBX_SDK_PATH)\samples 以下にある
 
 ## DRACO
  * CMakeでプロジェクトを作成
