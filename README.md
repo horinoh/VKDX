@@ -33,7 +33,8 @@
 ### エディット & コンティニュー
 - Tools - Option - Debugging - General - Enable Edit and Continue
 
-### GLTF
+### 外部ライブラリ
+#### GLTF
  * C++ローダー https://github.com/jessey-git/fx-gltf をサブモジュール化した
 	* .gitmoudles に以下を追加
 		~~~
@@ -47,7 +48,7 @@
  * サンプルデータ 
  	* fx-gltfのサブモジュールに含まれるのを使用する
 
-### FBX
+#### FBX
  * SDKをインストールする
  * ここでは環境変数 **FBX_SDK_PATH** を定義しておく
 	* FBX_SDK_PATH の例
@@ -78,6 +79,20 @@
 	//$cmake -G "Visual Studio 15 Win64"
 	$cmake -G "Visual Studio 16"
 	~~~
+
+#### LeapMotion
+ * [SDK](https://developer.leapmotion.com/sdk-leap-motion-controller/) をダウンロードし解凍、ドライバをインストールしておく
+ * LeapSDKを適当な場所へ配置
+	* 配置先を環境変数 LEAP_SDK_PATH として定義しておく
+	* LeapSDK\lib\x64 を環境変数にPATHに通しておく
+	* Leap.h USE_LEAP 定義を有効にする
+ * [ドキュメント](https://developer.leapmotion.com/documentation/v4/index.html)
+
+#### HoloPlay
+ * [HoloPlayService](https://lookingglassfactory.com/software) をインストールしておく
+ * HoloPlayCoreSDK\HoloPlayCore\dylib\Win64 を環境変数にPATHに通しておく
+ * Holo.h USE_HOLO 定義を有効にする
+ * [SDK](https://github.com/Looking-Glass/HoloPlayCoreSDK) はサブモジュールとしてある
 
 ### プリコンパイルヘッダーを使う
  * (ここでは)framework.cpp を追加 - 右クリック - Properties - C/C++ - Precompiled Headers - Create(/Yc)
@@ -524,16 +539,6 @@
  #include <SDL.h>
  #pragma comment(lib, "SDL2.lib")
  ~~~
-
- ## HoloPlay
- * [HoloPlayService](https://lookingglassfactory.com/software) をインストールしておく
- * HoloPlayCoreSDK\HoloPlayCore\dylib\Win64 を環境変数にPATHに通しておく
-
- ## LeapMotion
- * [SDK](https://developer.leapmotion.com/sdk-leap-motion-controller/) をダウンロードし解凍、ドライバをインストールしておく
- * LeapSDKを適当な場所へ配置
- 	* LeapSDK\lib\x64 を環境変数にPATHに通しておく
- * [ドキュメント](https://developer.leapmotion.com/documentation/v4/index.html)
  -->
 
 <!--

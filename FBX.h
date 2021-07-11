@@ -40,8 +40,8 @@ public:
 		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\StereoCamera\\StereoCamera.fbx"); //!< カメラのみ
 		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\SwitchBinding\\Bind_Before_Switch.fbx"); //!< メッシュ、ジョイント、アニメーション、(四角形ポリゴン)
 		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\Transformations\\JointHierarchy.fbx"); //!< ジョイントのみ
-		Load(GetEnv("FBX_SDK_PATH") + "\\samples\\UVSample\\sadface.fbx"); //!< メッシュ、テクスチャ
-		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ViewScene\\humanoid.fbx"); //!< ジョイント、メッシュ、アニメーション、カメラ、ライト
+		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\UVSample\\sadface.fbx"); //!< メッシュ、テクスチャ
+		Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ViewScene\\humanoid.fbx"); //!< ジョイント、メッシュ、アニメーション、カメラ、ライト
 	}
 	virtual ~Fbx() {
 		if (nullptr != Scene) { Scene->Destroy(); }
@@ -53,6 +53,29 @@ public:
 #pragma region POLYGON
 			for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
 				if (i > 8) { Tabs(); std::cout << "..." << std::endl; return; }
+
+#pragma region MATERIAL
+				for (auto j = 0; j < Mesh->GetElementMaterialCount(); ++j) {
+					const auto ElementMaterial = Mesh->GetElementMaterial(j);
+					const auto a = ElementMaterial->GetMappingMode();
+					switch (ElementMaterial->GetMappingMode()) {
+					default: break;
+					//case FbxGeometryElementMaterial::eNone: break;
+					//case FbxGeometryElementMaterial::eByControlPoint: break;
+					//case FbxGeometryElementMaterial::eByPolygonVertex: break;
+					case FbxGeometryElementMaterial::eByPolygon:
+						Tabs(); std::cout << "[ Material ] (eByPolygon)" << std::endl;
+						Tabs(); std::cout << "\t" << Mesh->GetNode()->GetMaterial(ElementMaterial->GetIndexArray().GetAt(i))->GetName() << std::endl;
+						break;
+					//case FbxGeometryElementMaterial::eByEdge: break;
+					case FbxGeometryElementMaterial::eAllSame:
+						Tabs(); std::cout << "[ Material ] (eAllSame)" << std::endl;
+						//!< 全部一緒なので GetAt(0) で良い (GetAt(i)でも問題はないみたい)
+						Tabs(); std::cout << "\t" << Mesh->GetNode()->GetMaterial(ElementMaterial->GetIndexArray().GetAt(0/*i*/))->GetName() << std::endl;
+						break;
+					}
+				}
+#pragma endregion
 
 #pragma region POLYGON_GROUP
 				if (Mesh->GetElementPolygonGroupCount()) { Tabs(); std::cout << "[ PolygonGroup ]" << std::endl; }
@@ -240,7 +263,6 @@ public:
 			}
 #pragma endregion //!< CONTROL_POINT
 
-
 #pragma region VISIBILITY
 			if (Mesh->GetElementVisibilityCount()) { Tabs(); std::cout << "[ Visibility ]" << std::endl; }
 			for (auto i = 0; i < Mesh->GetElementVisibilityCount(); ++i) {
@@ -253,134 +275,114 @@ public:
 			}
 #pragma endregion
 
-			for (auto i = 0; i < Mesh->GetElementMaterialCount(); ++i) {
-				const auto Material = Mesh->GetElementMaterial(i);
-				switch (Material->GetMappingMode()) {
-				default: break;
-				case FbxGeometryElementMaterial::eNone: break;
-				case FbxGeometryElementMaterial::eByControlPoint: break;
-				case FbxGeometryElementMaterial::eByPolygonVertex: break;
-				case FbxGeometryElementMaterial::eByPolygon: break;
-				case FbxGeometryElementMaterial::eByEdge: break;
-				case FbxGeometryElementMaterial::eAllSame: break;
-				}
-				switch (Material->GetReferenceMode()) {
-				default: break;
-					//case FbxGeometryElementMaterial::eDirect: break;
-				case FbxGeometryElementMaterial::eIndex:
-				case FbxGeometryElementMaterial::eIndexToDirect:
-					for (auto j = 0; j < Material->GetIndexArray().GetCount(); ++j) {
-						Material->GetIndexArray().GetAt(j);
-					}
-					break;
-				}
-			}
-
-
-#if 0
-			FbxStringList UVSetName;
-			Mesh->GetUVSetNames(UVSetName);
-
-			for (auto i = 0; i < Mesh->GetLayerCount(); ++i) {
-				Tabs(); std::cout << "[ Layer ]" << std::endl;
-				const auto Layer = Mesh->GetLayer(i);
-
-				const auto Normals = Layer->GetNormals();
-				if (nullptr != Normals) {
-					Tabs(); std::cout << "\t" << "Normals" << std::endl;
-					switch (Normals->GetMappingMode()) {
-					case FbxLayerElementNormal::eNone: break;
-					case FbxLayerElementNormal::eByControlPoint: break;
-					case FbxLayerElementNormal::eByPolygonVertex: break;
-					case FbxLayerElementNormal::eByPolygon: break;
-					case FbxLayerElementNormal::eByEdge: break;
-					case FbxLayerElementNormal::eAllSame: break;
+#pragma region DEFORMER
+#pragma region SKIN
+			for (auto i = 0; i < Mesh->GetDeformerCount(FbxDeformer::eSkin); ++i) {
+				const auto Skin = FbxCast<FbxSkin>(Mesh->GetDeformer(i, FbxDeformer::eSkin));
+				for (auto j = 0; j < Skin->GetClusterCount(); ++j) {
+					const auto Cluster = Skin->GetCluster(j);
+					switch (Cluster->GetLinkMode()) {
 					default: break;
+					case FbxCluster::eNormalize: break;
+					case FbxCluster::eAdditive: break;
+					case FbxCluster::eTotalOne: break;
 					}
-					{
-						const auto Normal = Normals->GetDirectArray()[Normals->GetIndexArray()[0]];
+					Cluster->GetLink();
+					for (auto k = 0; k < Cluster->GetControlPointIndicesCount(); ++k) {
+						Cluster->GetControlPointIndices()[k];
+						Cluster->GetControlPointWeights()[k];
 					}
-				}
-
-				const auto Tangends = Layer->GetTangents();
-				if (nullptr != Tangends) {
-					Tabs(); std::cout << "\t" << "Tangents" << std::endl;
-				}
-
-				const auto Binormals = Layer->GetBinormals();
-				if (nullptr != Binormals) {
-					Tabs(); std::cout << "\t" << "Binormals" << std::endl;
-				}
-
-				const auto Materials = Layer->GetMaterials();
-				if (nullptr != Materials) {
-					for (auto j = 0; j < Materials->GetIndexArray().GetCount(); ++j) {
-						const auto Material = Mesh->GetNode()->GetMaterial(Materials->GetIndexArray()[j]);
-						Tabs(); std::cout << "\t" << "Material -> " << Material->GetName() << std::endl;
+					FbxAMatrix Matrix;
+					Cluster->GetTransformMatrix(Matrix);
+					Cluster->GetTransformLinkMatrix(Matrix);
+					if (nullptr != Cluster->GetAssociateModel()) {
+						Cluster->GetTransformAssociateModelMatrix(Matrix);
 					}
 				}
+			}
+#pragma endregion
+#pragma region BLEND_SHAPE
+			for (auto i = 0; i < Mesh->GetDeformerCount(FbxDeformer::eBlendShape); ++i) {
+				const auto BlendShape = FbxCast<FbxBlendShape>(Mesh->GetDeformer(i, FbxDeformer::eBlendShape));
+				for (auto j = 0; j < BlendShape->GetBlendShapeChannelCount(); ++j) {
+					const auto BlendShapeChannel = BlendShape->GetBlendShapeChannel(j);
+					BlendShapeChannel->DeformPercent.Get();
+					for (auto k = 0; k < BlendShapeChannel->GetTargetShapeCount(); ++k) {
+						const auto Shape = BlendShapeChannel->GetTargetShape(k);
+						if (FbxNodeAttribute::eMesh == Mesh->GetAttributeType()) {
 
-				const auto UVSets = Layer->GetUVSets();
-				if (nullptr != UVSets) {
-					for (auto j = 0; j < UVSets.GetCount(); ++j) {
-						Tabs(); std::cout << "\t" << "UVSets[" << j << "]" << std::endl;
-						{
-							const auto UVSet = UVSets.GetAt(j);
-							UVSet->GetMappingMode();
-							const auto UV = UVSet->GetDirectArray()[UVSet->GetIndexArray()[0]];
+						}
+						else {
+							FbxLayerElementArrayTemplate<FbxVector4>* Normals = nullptr;
+							if (Shape->GetNormals(&Normals)) {}
+							for (auto l = 0; l < Shape->GetControlPointsCount(); ++l) {
+								Shape->GetControlPoints()[l];
+								if (Normals) {
+									Normals->GetAt(l);
+								}
+							}
 						}
 					}
 				}
-
-				const auto VertexColors = Layer->GetVertexColors();
-				if (nullptr != VertexColors) {
-					Tabs(); std::cout << "\t" << "VertexColors" << std::endl;
-				}
-
-				const auto UserData = Layer->GetUserData();
-				if (nullptr != UserData) {
-					Tabs(); std::cout << "\t" << "UserData" << std::endl;
-				}
 			}
+#pragma endregion
+#pragma region VERTEX_CACHE
+			for (auto i = 0; i < Mesh->GetDeformerCount(FbxDeformer::eVertexCache); ++i) {
+				const auto VertexCacheDeformer = FbxCast<FbxVertexCacheDeformer>(Mesh->GetDeformer(i, FbxDeformer::eVertexCache));
+				const auto Cache = VertexCacheDeformer->GetCache();
+				if (nullptr != Cache && Cache->OpenFileForRead()) {
+					const auto Index = Cache->GetChannelIndex(VertexCacheDeformer->Channel.Get());
+					if (Index >= 0) {
+						FbxString Name;
+						if (Cache->GetChannelName(Index, Name)) {}
 
-			//!< マテリアル
-			//for (auto i = 0; i < Mesh->GetElementMaterialCount(); ++i) {
-			//	const auto ElementMaterial = Mesh->GetElementMaterial(i);
-			//	for (auto j = 0; j < ElementMaterial->GetIndexArray().GetCount(); ++j) {
-			//		const auto Material = Mesh->GetNode()->GetMaterial(ElementMaterial->GetIndexArray()[j]);
-			//		Tabs(); std::cout << "Material -> " << Material->GetName() << std::endl;
-			//	}
-			//}
+						FbxString Interpolation;
+						if (Cache->GetChannelInterpretation(Index, Interpolation)) {}
 
-			for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
-				if (i > 8) { Tabs(); std::cout << "..." << std::endl; return; }
+						FbxCache::EMCSamplingType SamplingType;
+						if (Cache->GetChannelSamplingType(Index, SamplingType)) {
+							switch (SamplingType) {
+							case fbxsdk::FbxCache::eSamplingRegular: break;
+							case fbxsdk::FbxCache::eSamplingIrregular: break;
+							default: break;
+							}
+						}
 
-				Tabs(); std::cout << "[" << i << "]{" << std::endl;
-				for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
-					Tabs(); std::cout << "\t";
-					//!< 頂点
-					const auto Vertex = Mesh->GetControlPointAt(Mesh->GetPolygonVertex(i, j));
-					std::cout << "( " << Vertex[0] << ", " << Vertex[1] << ", " << Vertex[2] << " ), ";
+						FbxTime Start, Stop;
+						if (Cache->GetAnimationRange(Index, Start, Stop)) {}
 
-					//!< 法線
-					FbxVector4 Normal;
-					if (Mesh->GetPolygonVertexNormal(i, j, Normal)) {
-						std::cout << "( " << Normal[0] << ", " << Normal[1] << ", " << Normal[2] << " ), ";
-					}
+						FbxTime Rate;
+						if (Cache->GetChannelSamplingRate(Index, Rate)) {}
 
-					//!< UV
-					for (auto k = 0; k < UVSetName.GetCount(); ++k) {
-						FbxVector2 UV;
-						bool Unmapped;
-						if (Mesh->GetPolygonVertexUV(i, j, UVSetName.GetStringAt(k), UV, Unmapped)) {
-							std::cout << "( " << UV[0] << ", " << UV[1] << " ), ";
+						unsigned int SampleCount;
+						if (Cache->GetChannelSampleCount(Index, SampleCount)) {}
+
+						FbxCache::EMCDataType Type;
+						if (Cache->GetChannelDataType(Index, Type)) {
+							switch (Type) {
+							case fbxsdk::FbxCache::eUnknownData: break;
+							case fbxsdk::FbxCache::eDouble: break;
+							case fbxsdk::FbxCache::eDoubleArray: break;
+							case fbxsdk::FbxCache::eDoubleVectorArray: break;
+							case fbxsdk::FbxCache::eInt32Array: break;
+							case fbxsdk::FbxCache::eFloatArray: break;
+							case fbxsdk::FbxCache::eFloatVectorArray:
+								for (auto t = Start; t <= Stop; t += Rate) {
+									unsigned int ChannelPointCount;
+									if (Cache->GetChannelPointCount(Index, t, ChannelPointCount)) {
+										//Cache->Read(Index, t, Buffer, ChannelPointCount);
+									}
+								}
+								break;
+							default: break;
+							}
 						}
 					}
-					std::cout << std::endl;
+					Cache->CloseFile();
 				}
-				Tabs(); std::cout << "}" << std::endl;
 			}
-#endif
+#pragma endregion
+#pragma endregion
 		}
 	}
 	virtual void Process(FbxCamera* Camera) {
@@ -428,6 +430,54 @@ public:
 			}
 		}
 	}
+	virtual void Process(FbxSkeleton* Skeleton) {
+		if (nullptr != Skeleton) {
+			switch (Skeleton->GetSkeletonType()) {
+			default: break;
+			case FbxSkeleton::eRoot:
+				Skeleton->Size.Get();
+				break;
+			case FbxSkeleton::eLimb:
+				Skeleton->LimbLength.Get();
+				break;
+			case FbxSkeleton::eLimbNode:
+				Skeleton->Size.Get();
+				break;
+			case FbxSkeleton::eEffector: break;
+			}
+			Skeleton->GetLimbNodeColor();
+			for (auto i = 0; i < Skeleton->GetSrcObjectCount<FbxObjectMetaData>(); ++i) {
+				const auto MetaData = Skeleton->GetSrcObject<FbxObjectMetaData>(i);
+			}
+		}
+	}
+	virtual void Process(FbxLODGroup* LODGroup) {
+		if (nullptr != LODGroup) {
+			if (LODGroup->MinMaxDistance.Get()) {
+				LODGroup->MinDistance.Get();
+				LODGroup->MaxDistance.Get();
+			}
+			if (LODGroup->WorldSpace.Get()) {}
+			for (auto i = 0; i < LODGroup->GetNumThresholds(); ++i) {
+				FbxDistance Threshold;
+				if (LODGroup->GetThreshold(i, Threshold) || LODGroup->ThresholdsUsedAsPercentage.Get()) {
+					//!< ThresholdsUsedAsPercentage の場合には GetThreshold() は false を返すが Threshold には(パーセンテージの)値が返っている
+					Threshold.value();
+				}
+			}
+			for (auto i = 0; i < LODGroup->GetNumDisplayLevels(); ++i) {
+				FbxLODGroup::EDisplayLevel DisplayLevel;
+				if (LODGroup->GetDisplayLevel(i, DisplayLevel)) {
+					switch (DisplayLevel) {
+					case fbxsdk::FbxLODGroup::eUseLOD: break;
+					case fbxsdk::FbxLODGroup::eShow: break;
+					case fbxsdk::FbxLODGroup::eHide: break;
+					default: break;
+					}
+				}
+			}
+		}
+	}
 	virtual void Process(FbxNodeAttribute* Attr) {
 		if (nullptr != Attr) {
 			Tabs(); std::cout << "[ Attribute ] " << Attr->GetTypeName() << std::endl;
@@ -443,10 +493,13 @@ public:
 			case eMarker:
 				break;
 			case eSkeleton:
+				PushTab();
+				Process(FbxCast<FbxSkeleton>(Attr));
+				PopTab();
 				break;
 			case eMesh:
 				PushTab();
-				Process(static_cast<FbxMesh*>(Attr));
+				Process(FbxCast<FbxMesh>(Attr));
 				PopTab();
 				break;
 			case eNurbs:
@@ -455,7 +508,7 @@ public:
 				break;
 			case eCamera:
 				PushTab();
-				Process(static_cast<FbxCamera*>(Attr));
+				Process(FbxCast<FbxCamera>(Attr));
 				PopTab();
 				break;
 			case eCameraStereo:
@@ -464,7 +517,7 @@ public:
 				break;
 			case eLight:
 				PushTab();
-				Process(static_cast<FbxLight*>(Attr));
+				Process(FbxCast<FbxLight>(Attr));
 				PopTab();
 				break;
 			case eOpticalReference:
@@ -482,6 +535,9 @@ public:
 			case eShape:
 				break;
 			case eLODGroup:
+				PushTab();
+				Process(FbxCast<FbxLODGroup>(Attr));
+				PopTab();
 				break;
 			case eSubDiv:
 				break;
@@ -683,57 +739,14 @@ public:
 					for (auto j = 0; j < Prop.GetSrcObjectCount<FbxTexture>(); ++j) {
 						const auto LayeredTexture = Prop.GetSrcObject<FbxLayeredTexture>(j);
 						if (nullptr != LayeredTexture) {
-							FbxLayeredTexture::EBlendMode BlendMode;
-							if (LayeredTexture->GetTextureBlendMode(j, BlendMode)) {
-								switch (BlendMode) {
-								case fbxsdk::FbxLayeredTexture::eTranslucent: break;
-								case fbxsdk::FbxLayeredTexture::eAdditive: break;
-								case fbxsdk::FbxLayeredTexture::eModulate: break;
-								case fbxsdk::FbxLayeredTexture::eModulate2: break;
-								case fbxsdk::FbxLayeredTexture::eOver: break;
-								case fbxsdk::FbxLayeredTexture::eNormal: break;
-								case fbxsdk::FbxLayeredTexture::eDissolve: break;
-								case fbxsdk::FbxLayeredTexture::eDarken: break;
-								case fbxsdk::FbxLayeredTexture::eColorBurn: break;
-								case fbxsdk::FbxLayeredTexture::eLinearBurn: break;
-								case fbxsdk::FbxLayeredTexture::eDarkerColor: break;
-								case fbxsdk::FbxLayeredTexture::eLighten: break;
-								case fbxsdk::FbxLayeredTexture::eScreen: break;
-								case fbxsdk::FbxLayeredTexture::eColorDodge: break;
-								case fbxsdk::FbxLayeredTexture::eLinearDodge: break;
-								case fbxsdk::FbxLayeredTexture::eLighterColor: break;
-								case fbxsdk::FbxLayeredTexture::eSoftLight: break;
-								case fbxsdk::FbxLayeredTexture::eHardLight: break;
-								case fbxsdk::FbxLayeredTexture::eVividLight: break;
-								case fbxsdk::FbxLayeredTexture::eLinearLight: break;
-								case fbxsdk::FbxLayeredTexture::ePinLight: break;
-								case fbxsdk::FbxLayeredTexture::eHardMix: break;
-								case fbxsdk::FbxLayeredTexture::eDifference: break;
-								case fbxsdk::FbxLayeredTexture::eExclusion: break;
-								case fbxsdk::FbxLayeredTexture::eSubtract: break;
-								case fbxsdk::FbxLayeredTexture::eDivide: break;
-								case fbxsdk::FbxLayeredTexture::eHue: break;
-								case fbxsdk::FbxLayeredTexture::eSaturation: break;
-								case fbxsdk::FbxLayeredTexture::eColor: break;
-								case fbxsdk::FbxLayeredTexture::eLuminosity: break;
-								case fbxsdk::FbxLayeredTexture::eOverlay: break;
-								case fbxsdk::FbxLayeredTexture::eBlendModeCount: break;
-								default: break;
-								}
-							}
-
-							for (auto k = 0; k < LayeredTexture->GetSrcObjectCount<FbxTexture>(); ++k) {
-								const auto Texture = LayeredTexture->GetSrcObject<FbxTexture>(k);
-								if (nullptr != Texture) {
-									Tabs(); std::cout << "\t" << "[ Texture ] " << Texture->GetName() << std::endl;
-								}
-							}
+							PushTab();
+							Process(LayeredTexture);
+							PopTab();
 						}
 						else {
-							const auto Texture = Prop.GetSrcObject<FbxTexture>(j);
-							if (nullptr != Texture) {
-								Tabs(); std::cout << "\t" << "[ Texture ] " << Texture->GetName() << std::endl;
-							}
+							PushTab();
+							Process(Prop.GetSrcObject<FbxTexture>(j));
+							PopTab();
 						}
 					}
 				}
@@ -741,38 +754,114 @@ public:
 #pragma endregion
 		}
 	}
+	virtual void Process(FbxLayeredTexture* LayeredTexture) {
+		if (nullptr != LayeredTexture) {
+			Tabs(); std::cout << "[ LayeredTexture ] " << LayeredTexture->GetName() << std::endl;
+			for (auto i = 0; i < LayeredTexture->GetSrcObjectCount<FbxTexture>(); ++i) {
+
+				FbxLayeredTexture::EBlendMode BlendMode;
+				if (LayeredTexture->GetTextureBlendMode(i, BlendMode)) {
+					switch (BlendMode) {
+					case fbxsdk::FbxLayeredTexture::eTranslucent: break;
+					case fbxsdk::FbxLayeredTexture::eAdditive: break;
+					case fbxsdk::FbxLayeredTexture::eModulate: break;
+					case fbxsdk::FbxLayeredTexture::eModulate2: break;
+					case fbxsdk::FbxLayeredTexture::eOver: break;
+					case fbxsdk::FbxLayeredTexture::eNormal: break;
+					case fbxsdk::FbxLayeredTexture::eDissolve: break;
+					case fbxsdk::FbxLayeredTexture::eDarken: break;
+					case fbxsdk::FbxLayeredTexture::eColorBurn: break;
+					case fbxsdk::FbxLayeredTexture::eLinearBurn: break;
+					case fbxsdk::FbxLayeredTexture::eDarkerColor: break;
+					case fbxsdk::FbxLayeredTexture::eLighten: break;
+					case fbxsdk::FbxLayeredTexture::eScreen: break;
+					case fbxsdk::FbxLayeredTexture::eColorDodge: break;
+					case fbxsdk::FbxLayeredTexture::eLinearDodge: break;
+					case fbxsdk::FbxLayeredTexture::eLighterColor: break;
+					case fbxsdk::FbxLayeredTexture::eSoftLight: break;
+					case fbxsdk::FbxLayeredTexture::eHardLight: break;
+					case fbxsdk::FbxLayeredTexture::eVividLight: break;
+					case fbxsdk::FbxLayeredTexture::eLinearLight: break;
+					case fbxsdk::FbxLayeredTexture::ePinLight: break;
+					case fbxsdk::FbxLayeredTexture::eHardMix: break;
+					case fbxsdk::FbxLayeredTexture::eDifference: break;
+					case fbxsdk::FbxLayeredTexture::eExclusion: break;
+					case fbxsdk::FbxLayeredTexture::eSubtract: break;
+					case fbxsdk::FbxLayeredTexture::eDivide: break;
+					case fbxsdk::FbxLayeredTexture::eHue: break;
+					case fbxsdk::FbxLayeredTexture::eSaturation: break;
+					case fbxsdk::FbxLayeredTexture::eColor: break;
+					case fbxsdk::FbxLayeredTexture::eLuminosity: break;
+					case fbxsdk::FbxLayeredTexture::eOverlay: break;
+					case fbxsdk::FbxLayeredTexture::eBlendModeCount: break;
+					default: break;
+					}
+				}
+
+				PushTab();
+				Process(LayeredTexture->GetSrcObject<FbxTexture>(i));
+				PopTab();
+			}
+		}
+	}
 	virtual void Process(FbxTexture* Texture) {
 		if (nullptr != Texture) {
 			Tabs(); std::cout << "[ Texture ] " << Texture->GetName() << std::endl;
 
-			Tabs(); std::cout << "\t";
-			switch (Texture->GetTextureUse())
-			{
-				using enum FbxTexture::ETextureUse;
-			default: break;
-			case eStandard: std::cout << "eStandard" << std::endl; break;
-			case eShadowMap: std::cout << "eShadowMap" << std::endl; break;
-			case eLightMap: std::cout << "eLightMap" << std::endl; break;
-			case eSphereReflectionMap: std::cout << "eSphereReflectionMap" << std::endl; break;
-			case eBumpNormalMap: std::cout << "eBumpNormalMap" << std::endl; break;
+			const auto FileTexture = FbxCast<FbxFileTexture>(Texture);
+			if (nullptr != FileTexture) {
+				switch (FileTexture->GetMaterialUse()) {
+				default: break;
+				case FbxFileTexture::eModelMaterial: break;
+				case FbxFileTexture::eDefaultMaterial: break;
+				}
+				Tabs(); std::cout << "\t" << "[ FileTexture ]" << std::endl;
+				Tabs(); std::cout << "\t\t" << FileTexture->GetRelativeFileName() << " (" << FileTexture->GetFileName() << ") " << std::endl;
 			}
 
-			const auto LayeredTexture = FbxCast<FbxLayeredTexture>(Texture);
-			if (nullptr != LayeredTexture) {
-				Tabs(); std::cout << "\t" << "[ LayeredTexture ]" << std::endl;
-				for (auto i = 0; i < LayeredTexture->GetSrcObjectCount<FbxFileTexture>(); ++i) {
-					const auto FileTexture = LayeredTexture->GetSrcObject<FbxFileTexture>(i);
-					Tabs(); std::cout << "\t\t" << FileTexture->GetRelativeFileName() << " (" << FileTexture->GetFileName() << ") " << std::endl;
-					FileTextures.emplace_back(FileTexture);
-				}
+			const auto ProceduralTexture = FbxCast<FbxProceduralTexture>(Texture);
+			if (nullptr != ProceduralTexture) {
+				Tabs(); std::cout << "\t" << "[ ProceduralTexture ]" << std::endl;
 			}
-			else {
-				const auto FileTexture = FbxCast<FbxFileTexture>(Texture);
-				if (nullptr != FileTexture) {
-					Tabs(); std::cout << "\t" << "[ FileTexture ]" << std::endl;
-					Tabs(); std::cout << "\t\t" << FileTexture->GetRelativeFileName() << " (" << FileTexture->GetFileName() << ") " << std::endl;
-					FileTextures.emplace_back(FileTexture);
-				}
+
+			Texture->GetScaleU(); Texture->GetScaleV();
+			Texture->GetTranslationU();Texture->GetTranslationV();
+			Texture->GetSwapUV();
+			Texture->GetRotationU(); Texture->GetRotationV(); Texture->GetRotationW();
+			switch (Texture->GetAlphaSource()) {
+			default: break;
+			case FbxTexture::eNone: break;
+			case FbxTexture::eRGBIntensity: break;
+			case FbxTexture::eBlack: break;
+			};
+			Texture->GetCroppingLeft();Texture->GetCroppingTop();Texture->GetCroppingRight();Texture->GetCroppingBottom();
+			switch (Texture->GetMappingType()) {
+			default: break;
+			case FbxTexture::eNull: break;
+			case FbxTexture::ePlanar:
+				switch (Texture->GetPlanarMappingNormal()) {
+				default: break;
+				case FbxTexture::ePlanarNormalX: break;
+				case FbxTexture::ePlanarNormalY: break;
+				case FbxTexture::ePlanarNormalZ: break;
+				};
+				break;
+			case FbxTexture::eSpherical: break;
+			case FbxTexture::eCylindrical: break;
+			case FbxTexture::eBox: break;
+			case FbxTexture::eFace: break;
+			case FbxTexture::eUV: break;
+			case FbxTexture::eEnvironment: break;
+			}
+			Texture->GetDefaultAlpha();
+			switch (Texture->GetTextureUse()) {
+			default: break;
+			case FbxTexture::eStandard: break;
+			case FbxTexture::eShadowMap: break;
+			case FbxTexture::eLightMap: break;
+			case FbxTexture::eSphericalReflectionMap: break;
+			case FbxTexture::eSphereReflectionMap: break;
+			case FbxTexture::eBumpNormalMap: break;
 			}
 		}
 	}
@@ -790,7 +879,13 @@ public:
 						
 						//!< テクスチャを列挙しておく
 						for (auto i = 0; i < Scene->GetTextureCount(); ++i) {
-							Process(Scene->GetTexture(i));
+							const auto LayeredTexture = FbxCast<FbxLayeredTexture>(Scene->GetTexture(i));
+							if (nullptr != LayeredTexture) {
+								Process(LayeredTexture);
+							}
+							else {
+								Process(Scene->GetTexture(i));
+							}
 						}
 						//!< マテリアルを列挙しておく
 						for (auto i = 0; i < Scene->GetMaterialCount(); ++i) {
@@ -846,5 +941,4 @@ public:
 protected:
 	FbxManager* Manager = nullptr;
 	FbxScene* Scene = nullptr;
-	std::vector<FbxFileTexture*> FileTextures;
 };
