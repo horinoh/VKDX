@@ -447,7 +447,7 @@ public:
 			}
 			Skeleton->GetLimbNodeColor();
 			for (auto i = 0; i < Skeleton->GetSrcObjectCount<FbxObjectMetaData>(); ++i) {
-				const auto MetaData = Skeleton->GetSrcObject<FbxObjectMetaData>(i);
+				[[maybe_unused]] const auto MetaData = Skeleton->GetSrcObject<FbxObjectMetaData>(i);
 			}
 		}
 	}
