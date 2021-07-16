@@ -78,6 +78,8 @@
 //#include <source_location> //!< #TODO インクルードできない
 //#include <cinttypes>
 
+#include <dwmapi.h>
+
 #ifndef SAFE_FCLOSE
 #define SAFE_FCLOSE(x) if(nullptr != x) { fclose(x); x = nullptr; }
 #endif
@@ -112,6 +114,10 @@ public:
 	virtual void OnPaint([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
 	virtual void OnPreDestroy([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
 	virtual void OnDestroy([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
+
+	static bool IsBorderless(HWND hWnd) { return ::GetWindowLongPtrW(hWnd, GWL_STYLE) & WS_POPUP; }
+	static void ToggleBorderless(HWND hWnd);
+	static bool AdjustBorderlessRect(HWND hWnd, RECT& r);
 
 	[[nodiscard]] static LONG GetWidth(const RECT& R) { return R.right - R.left; }
 	[[nodiscard]] static LONG GetHeight(const RECT& R) { return R.bottom - R.top; }

@@ -150,6 +150,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	case WM_CREATE:
 		if (nullptr == Inst) {
 			Inst = new HoloDX();
+			Win::ToggleBorderless(hWnd);
 		}
 		if (nullptr != Inst) {
 			try {
@@ -179,8 +180,33 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		if (VK_ESCAPE == wParam) {
 			SendMessage(hWnd, WM_DESTROY, 0, 0);
 		}
+		if (VK_RETURN == wParam) {
+			Inst->ToggleBorderless(hWnd);
+		}
 		break;
 #pragma endregion
+
+#pragma region Borderless
+	case WM_NCCALCSIZE: 
+		if (wParam && Win::IsBorderless(hWnd)) {
+			Win::AdjustBorderlessRect(hWnd, reinterpret_cast<NCCALCSIZE_PARAMS*>(lParam)->rgrc[0]);
+		}
+		else {
+			return DefWindowProc(hWnd, message, wParam, lParam);
+		}
+		break;
+	case WM_NCACTIVATE: 
+		{
+			//!< ウインドウがアクティブになった時にフレームが歳出減するのを抑制
+			BOOL IsComposition = FALSE;
+			::DwmIsCompositionEnabled(&IsComposition);
+			if (IsComposition) {
+				return DefWindowProc(hWnd, message, wParam, lParam);
+			}
+		}
+		break;
+#pragma endregion
+
     case WM_PAINT:
         {
             PAINTSTRUCT ps;

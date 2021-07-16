@@ -1,5 +1,7 @@
 #include "Win.h"
 
+#pragma comment(lib, "dwmapi.lib")
+
 #if 0
 //!< pair, tuple
 std::pair<int, float> getTwo() { return { 1, 1.0f }; }
@@ -82,6 +84,50 @@ void Win::OnExitSizeMove(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance)
 void Win::OnTimer(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance)
 {
 	SendMessage(hWnd, WM_PAINT, 0, 0);
+}
+
+//!< WndProc() へ WM_NCCALCSIZE, WM_NCACTIVATE の処理を追加すること
+void Win::ToggleBorderless(HWND hWnd)
+{
+	BOOL IsComposition = FALSE;
+	::DwmIsCompositionEnabled(&IsComposition);
+
+	//!< ボーダーレス切替え‘
+	constexpr auto Common = WS_THICKFRAME | WS_SYSMENU | WS_MAXIMIZEBOX | WS_MINIMIZEBOX;
+	constexpr auto Borderless = Common | WS_POPUP;
+	constexpr auto Aero = Borderless | WS_CAPTION;
+	constexpr auto Windowed = Common | WS_OVERLAPPEDWINDOW | WS_CAPTION;
+	::SetWindowLongPtrW(hWnd, GWL_STYLE, IsBorderless(hWnd) ? Windowed : (IsComposition ? Aero : Borderless));
+	
+	//!< シャドウ
+	if (IsComposition) {
+		constexpr auto WithoutShadow = MARGINS({ .cxLeftWidth = 0, .cxRightWidth = 0, .cyTopHeight = 0, .cyBottomHeight = 0 });
+		constexpr auto WithShadow = MARGINS({ .cxLeftWidth = 1, .cxRightWidth = 1, .cyTopHeight = 1, .cyBottomHeight = 1 });
+		::DwmExtendFrameIntoClientArea(hWnd, IsBorderless(hWnd) ? &WithShadow : &WithoutShadow);
+	}
+	
+	//!< 再描画
+	::SetWindowPos(hWnd, nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE);
+	::ShowWindow(hWnd, SW_SHOW);
+}
+//!< WndProc() へ WM_NCCALCSIZE, WM_NCACTIVATE の処理を追加すること
+bool Win::AdjustBorderlessRect(HWND hWnd, RECT& r)
+{
+	WINDOWPLACEMENT Placement;
+	::GetWindowPlacement(hWnd, &Placement);
+	//!< 最大化されている場合
+	if (SW_MAXIMIZE == Placement.showCmd) {
+		const auto Monitor = ::MonitorFromWindow(hWnd, MONITOR_DEFAULTTONULL);
+		if (nullptr != Monitor) {
+			MONITORINFO MonitorInfo;
+			MonitorInfo.cbSize = sizeof(MonitorInfo);
+			::GetMonitorInfoW(Monitor, &MonitorInfo);
+			//!< クライアント矩形が画面からはみ出さないように調整
+			r = MonitorInfo.rcWork;
+			return true;
+		}
+	}
+	return false;
 }
 
 template<> void Win::_Log([[maybe_unused]] const LogType Type, [[maybe_unused]] const char* Str)
