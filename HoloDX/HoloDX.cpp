@@ -4,6 +4,9 @@
 #include "framework.h"
 #include "HoloDX.h"
 
+//!< GET_X_LPARAM(), GET_Y_LPARAM() ‚É•K—v
+#include <windowsx.h>
+
 #pragma region Code
 DX* Inst = nullptr;
 #pragma endregion
@@ -203,6 +206,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if (IsComposition) {
 				return DefWindowProc(hWnd, message, wParam, lParam);
 			}
+		}
+		break;
+	case WM_NCHITTEST:
+		if (Win::IsBorderless(hWnd)) {
+			return Win::GetBorderlessHit(hWnd, POINT({ .x = GET_X_LPARAM(lParam), .y = GET_Y_LPARAM(lParam) }), true, false);
 		}
 		break;
 #pragma endregion

@@ -111,7 +111,7 @@ void Win::ToggleBorderless(HWND hWnd)
 	::ShowWindow(hWnd, SW_SHOW);
 }
 //!< WndProc() へ WM_NCCALCSIZE, WM_NCACTIVATE の処理を追加すること
-bool Win::AdjustBorderlessRect(HWND hWnd, RECT& r)
+bool Win::AdjustBorderlessRect(HWND hWnd, RECT& Rect)
 {
 	WINDOWPLACEMENT Placement;
 	::GetWindowPlacement(hWnd, &Placement);
@@ -123,11 +123,54 @@ bool Win::AdjustBorderlessRect(HWND hWnd, RECT& r)
 			MonitorInfo.cbSize = sizeof(MonitorInfo);
 			::GetMonitorInfoW(Monitor, &MonitorInfo);
 			//!< クライアント矩形が画面からはみ出さないように調整
-			r = MonitorInfo.rcWork;
+			Rect = MonitorInfo.rcWork;
 			return true;
 		}
 	}
 	return false;
+}
+LRESULT Win::GetBorderlessHit(HWND hWnd, const POINT& Cursor, const bool IsDrag, const bool IsResize)
+{
+	RECT Rect;
+	//!< カーソルがウインドウ内
+	if (::GetWindowRect(hWnd, &Rect)) {
+		if (IsResize) {
+			const auto Border = POINT({ .x = ::GetSystemMetrics(SM_CXFRAME) + ::GetSystemMetrics(SM_CXPADDEDBORDER), .y = ::GetSystemMetrics(SM_CYFRAME) + ::GetSystemMetrics(SM_CXPADDEDBORDER) });
+
+			enum EdgeMask {
+				L = 0x1,
+				R = 0x2,
+				T = 0x4,
+				B = 0x8,
+				LT = L | T,
+				RT = R | T,
+				LB = L | B,
+				RB = R | B,
+			};
+		
+			//!< カーソルがエッジ上(上下左右)にいるか判定
+			const auto IsOnEdge = (Cursor.x < Rect.left + Border.x ? EdgeMask::L : 0)
+				| (Cursor.x >= Rect.right - Border.x ? EdgeMask::R : 0)
+				| (Cursor.y < Rect.top + Border.y ? EdgeMask::T : 0)
+				| (Cursor.y >= Rect.bottom - Border.y ? EdgeMask::B : 0);
+
+			if (IsOnEdge) {
+				switch (static_cast<EdgeMask>(IsOnEdge)) {
+					using enum EdgeMask;
+				case L: return HTLEFT;
+				case R: return HTRIGHT;
+				case T: return HTTOP;
+				case B: return HTBOTTOM;
+				case LT: return HTTOPLEFT;
+				case RT: return HTTOPRIGHT;
+				case LB: return HTBOTTOMLEFT;
+				case RB: return HTBOTTOMRIGHT;
+				}
+			}
+		}
+		return IsDrag ? HTCAPTION : HTCLIENT;
+	}
+	return HTNOWHERE;
 }
 
 template<> void Win::_Log([[maybe_unused]] const LogType Type, [[maybe_unused]] const char* Str)
