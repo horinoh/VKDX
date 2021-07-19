@@ -86,7 +86,7 @@ void Win::OnTimer(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance)
 	SendMessage(hWnd, WM_PAINT, 0, 0);
 }
 
-//!< WndProc() ‚Ö WM_NCCALCSIZE, WM_NCACTIVATE ‚Ìˆ—‚ð’Ç‰Á‚·‚é‚±‚Æ
+//!< WndProc() ‚Ö WM_NCCALCSIZE, WM_NCACTIVATE, WM_NCHITTEST ‚Ìˆ—‚ð’Ç‰Á‚µ‚ÄŽg—p‚·‚é
 void Win::ToggleBorderless(HWND hWnd)
 {
 	BOOL IsComposition = FALSE;
@@ -110,7 +110,6 @@ void Win::ToggleBorderless(HWND hWnd)
 	::SetWindowPos(hWnd, nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE);
 	::ShowWindow(hWnd, SW_SHOW);
 }
-//!< WndProc() ‚Ö WM_NCCALCSIZE, WM_NCACTIVATE ‚Ìˆ—‚ð’Ç‰Á‚·‚é‚±‚Æ
 bool Win::AdjustBorderlessRect(HWND hWnd, RECT& Rect)
 {
 	WINDOWPLACEMENT Placement;

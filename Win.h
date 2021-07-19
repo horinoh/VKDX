@@ -108,7 +108,7 @@ public:
 
 	//virtual void OnInitialize(HWND hWnd, HINSTANCE hInstance) {}
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title);
-	virtual void OnSize(HWND /*hWnd*/, HINSTANCE /*hInstance*/) {} //!< WM_SIZE はドラッグ中に繰り返しコールされてしまうので↓
+	virtual void OnSize([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {} //!< WM_SIZE はドラッグ中に繰り返しコールされてしまうので↓
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance); //!< ウインドウサイズ確定時にコールされる WM_EXITSIZEMOVE を使用する
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance);
 	virtual void OnPaint([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}

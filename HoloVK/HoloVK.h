@@ -19,7 +19,11 @@ public:
 	virtual ~HoloVK() {}
 
 protected:
-	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override { 
+	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) {
+		SetWindow(hWnd);
+		Super::OnCreate(hWnd, hInstance, Title);
+	}
+	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
 		Super::OnTimer(hWnd, hInstance); 
 #pragma region FRAME_OBJECT
 		//CopyToHostVisibleDeviceMemory(UniformBuffers[GetCurrentBackBufferIndex()].DeviceMemory, 0, sizeof(Tr), &Tr);

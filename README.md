@@ -90,9 +90,12 @@
 
 #### HoloPlay
  * [HoloPlayService](https://lookingglassfactory.com/software) をインストールしておく
+	* HoloPlayStudio も必要に応じてインストールしておく
  * HoloPlayCoreSDK\HoloPlayCore\dylib\Win64 を環境変数にPATHに通しておく
  * Holo.h USE_HOLO 定義を有効にする
  * [SDK](https://github.com/Looking-Glass/HoloPlayCoreSDK) はサブモジュールとしてある
+ * USB-C, HDMI を PC に接続
+ * スタート - 設定 - システム - ディスプレイ - マルチディスプレイ - 画面表示を拡張する - Looking Glass の画面を選択 - 拡大縮小とレイアウトを 100% にする
 
 ### プリコンパイルヘッダーを使う
  * (ここでは)framework.cpp を追加 - 右クリック - Properties - C/C++ - Precompiled Headers - Create(/Yc)
