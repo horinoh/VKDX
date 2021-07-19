@@ -101,5 +101,8 @@
     <FxCompile Include="HoloDX.ds.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+    <FxCompile Include="HoloDX_1_Quilt.ps.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

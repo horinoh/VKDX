@@ -98,5 +98,8 @@
     <CustomBuild Include="HoloVK_1.vert">
       <Filter>Shader Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="HoloVK_1_Quilt.frag">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

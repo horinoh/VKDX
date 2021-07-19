@@ -65,7 +65,6 @@ public:
 					std::cout << "hpc_GetDeviceSerial = " << data(Buf) << std::endl;
 				}
 				{
-					//<! currently one of "standard", "large", "pro", "8k"
 					std::vector<char> Buf(hpc_GetDeviceType(i, nullptr, 0));
 					hpc_GetDeviceType(i, data(Buf), size(Buf));
 					std::cout << "hpc_GetDeviceType = " << data(Buf) << std::endl;
@@ -108,33 +107,31 @@ public:
 				std::cout << "hpc_GetDevicePropertyFloat(viewCone) = " << hpc_GetDevicePropertyFloat(i, "/calibration/viewCone/value") << std::endl;
 #pragma endregion
 			}
+		}
+
+		if(0 < hpc_GetNumDevices()) {
+			//!< ここでは最初のデバイスを選択 (Select 1st device here)
+			DeviceIndex = 0;
+			std::cout << "DeviceIndex = " << GetDeviceIndex() << std::endl;
 
 			//!< キルト設定
 			{
-				//Looking Glass Portrait : 8 columns by 6 rows, 3360 by 3360
-				//Looking Glass 15.6": 5 columns by 9 rows, 4096 by 4096
-				//Looking Glass 8K : 5 columns by 9 rows, 8192 by 8192
-
 				//!< [ DX, VK ] 一度に描画できるビュー
 				//!< DX : D3D12_VIEWPORT_AND_SCISSORRECT_OBJECT_COUNT_PER_PIPELINE 16
 				//!< VK : VkPhysicalDeviceProperties.limits.maxViewports = 16
-				
+
 				//!< 必要なビュー数
+				//Looking Glass Portrait : 8 columns by 6 rows, 3360 by 3360
+				//Looking Glass 15.6": 5 columns by 9 rows, 4096 by 4096
+				//Looking Glass 8K : 5 columns by 9 rows, 8192 by 8192
 				//!< [ Portrait ] 
 				//!< 3360 x 3360, column x row = 8 x 6 = 48views
 				//! [ 15.6 ]
 				//!< 4096 x 4096, column x row = 5 x 9 = 45views
 				//! [ 8K ]
 				//!< 8192 x 8192, column x row = 5 x 9 = 45views
-			}
-		}
-
-		if(0 < hpc_GetNumDevices()) {
-			//!< ここでは最初のデバイスを選択 (Select 1st device here)
-			DeviceIndex = 0;
-			{
+				
 				std::vector<char> Buf(hpc_GetDeviceType(GetDeviceIndex(), nullptr, 0));
-				//!< currently one of "standard", "large", "pro", "8k"
 				hpc_GetDeviceType(GetDeviceIndex(), data(Buf), size(Buf));
 				std::string_view TypeStr(data(Buf));
 
@@ -151,13 +148,11 @@ public:
 					QuiltSetting = QUILT_SETTING({ .Size = 4096, .Column = 5, .Row = 9 });
 				}
 			}
+			std::cout << "QuiltSettings = " << GetQuiltSetting().GetWidth() << " x " << GetQuiltSetting().GetHeight() << " (" << GetQuiltSetting().GetViewColumn() << " x " << GetQuiltSetting().GetViewRow() << " = " << GetQuiltSetting().GetViewTotal() << ")" << std::endl;
 		}
 		else {
 			std::cerr << "[ HoloPlay ] Device not found" << std::endl;
 		}
-
-		std::cout << "DeviceIndex = " << GetDeviceIndex() << std::endl;
-		std::cout << "QuiltSettings = " << GetQuiltSetting().GetWidth() << " x " << GetQuiltSetting().GetHeight() << " (" << GetQuiltSetting().GetViewColumn() << " x " << GetQuiltSetting().GetViewRow() << " = " << GetQuiltSetting().GetViewTotal() << ")" << std::endl;
 #endif
 	}
 	virtual ~Holo() {
