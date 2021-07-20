@@ -4,7 +4,8 @@
 
 layout (location = 0) in vec3 InNormal;
 layout (location = 1) in vec3 InViewDirection;
-#if 1
+//!< デバッグ描画用
+#if 0
 layout (location = 2) in float InViewIndex;
 #endif
 
@@ -47,6 +48,7 @@ void main()
 
 	Color = vec4((Amb + (Dif + Spc) * Atn) * Spt, 1.0f);
 
+    //!< デバッグ描画用
 #if 0
 	Color.rgb = vec3(InViewIndex);
 #endif

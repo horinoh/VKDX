@@ -10,7 +10,50 @@ layout (location = 0) out vec4 OutColor;
 
 layout (set=0, binding=0) uniform sampler2D Sampler2D;
 
+float Pitch;
+float Tilt;
+float Center;
+int InvView;
+float Subp;
+float DisplayAspect;
+int Ri, Bi;
+
+vec3 Tile;
+vec2 ViewPortion;
+float QuiltAspect;
+int Overscan;
+int QuiltInvert;
+
+vec2 TexArr(const vec3 UVZ) {
+	const float z = floor(UVZ.z * Tile.z);
+	const float x = (mod(z, Tile.x) + UVZ.x) / Tile.x;
+	const float y = (floor(z / Tile.x) + UVZ.y) / Tile.y;
+	return vec2(x, y) * ViewPortion.xy;
+}
+
 void main()
 {
-	OutColor = texture(Sampler2D, InTexcoord);	
+	const float modx = clamp(
+		step(QuiltAspect, DisplayAspect) * step(float(Overscan), 0.5f) +
+		step(DisplayAspect, QuiltAspect) * step(0.5f, float(Overscan))
+	, 0.0f, 1.0f);
+
+	vec3 nuv = vec3(InTexcoord, 0.0f);
+	nuv -= 0.5f;
+	{
+		nuv.x = modx * nuv.x * DisplayAspect / QuiltAspect + (1.0f - modx) * nuv.x;
+		nuv.y = modx * nuv.y + (1.0f - modx) * nuv.y * QuiltAspect / DisplayAspect;
+	}
+	nuv += 0.5f;
+
+	 if (any(lessThan(nuv, vec3(0.0f, 0.0f, 0.0f)))) discard;
+	 if (any(lessThan(1.0f - nuv, vec3(0.0f, 0.0f, 0.0f)))) discard;
+
+	vec4 rgb[3];
+	for (int i = 0; i < 3; ++i) {
+		nuv.z = (InTexcoord.x + i * Subp + InTexcoord.y * Tilt) * Pitch - Center;
+		nuv.z = mod(nuv.z + ceil(abs(nuv.z)), 1.0f);
+		rgb[i] = texture(Sampler2D, TexArr(nuv));
+	}
+	OutColor = vec4(rgb[Ri].r, rgb[1].g, rgb[Bi].b, 1.0f);
 }

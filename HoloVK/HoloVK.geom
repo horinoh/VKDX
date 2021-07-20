@@ -31,7 +31,8 @@ const float CameraDistance = -CameraSize / tan(radians(14.0f) * 0.5f);
 
 layout (location = 0) out vec3 OutNormal;
 layout (location = 1) out vec3 OutViewDirection;
-#if 1
+//!< デバッグ描画用
+#if 0
 layout (location = 2) out float OutViewIndex;
 #endif
 
@@ -65,7 +66,8 @@ void main()
 		gl_Position = PVW * gl_in[i].gl_Position;
 		OutNormal = mat3(World) * InNormal[i];
 		OutViewDirection = CamPos - (World * gl_Position).xyz;
-#if 1
+		//!< デバッグ描画用
+#if 0
 		OutViewIndex = ViewIndex / (QuiltDraw.ViewTotal - 1);
 #endif
 		gl_ViewportIndex = gl_InvocationID;

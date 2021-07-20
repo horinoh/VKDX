@@ -74,7 +74,8 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
         Out.Normal = mul((float3x3) Transform.World, In[i].Normal);
         Out.ViewDirection = CamPos - mul(Transform.World, Out.Position).xyz;
         Out.Viewport = instanceID;
-#if 1
+        //!< デバッグ描画用
+#if 0
         Out.ViewIndex = ViewIndex / (QuiltDraw.ViewTotal - 1);
 #endif
 		stream.Append(Out);

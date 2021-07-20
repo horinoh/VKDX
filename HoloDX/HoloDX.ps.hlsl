@@ -4,7 +4,8 @@ struct IN
     float3 Normal : NORMAL;
     float3 ViewDirection : TEXCOORD0;
     uint Viewport : SV_ViewportArrayIndex;
-#if 1
+    //!< デバッグ描画用
+#if 0
     float ViewIndex : TEXCOORD1;
 #endif
 };
@@ -52,6 +53,7 @@ OUT main(const IN In)
 
     Out.Color = float4((Amb + (Dif + Spc) * Atn) * Spt, 1.0f);
 
+    //!< デバッグ描画用
 #if 0
     Out.Color.rgb = In.ViewIndex;
 #endif
