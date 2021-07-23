@@ -27,24 +27,15 @@ layout (push_constant) uniform HOLO_DRAW
 //	int QuiltInvert;
 } HoloDraw;
 
-const float Pitch = 246.866f;
-const float Tilt = -0.185377f;
-const float Center = 0.565845f;
-const int InvView = 1;
-const float Subp = 0.000217014f;
-const float DisplayAspect = 0.75f;
-const int Ri = 0, Bi = 2;
-
-const vec3 Tile = vec3(8.0f, 6.0f, 48.0f);
-const vec2 ViewPortion = vec2(1.0f, 1.0f);//vec2(1536.0f * 8.0f / 3360.0f, 2048.0f * 6.0f / 3360.0f);
-const float QuiltAspect = DisplayAspect;
+const vec2 ViewPortion = vec2(1.0f, 1.0f);
+float QuiltAspect = HoloDraw.DisplayAspect;
 const int Overscan = 0;
 const int QuiltInvert = 0;
 
 vec2 TexArr(const vec3 UVZ) {
-	const float z = floor(UVZ.z * Tile.z);
-	const float x = (mod(z, Tile.x) + UVZ.x) / Tile.x;
-	const float y = (floor(z / Tile.x) + UVZ.y) / Tile.y;
+	const float z = floor(UVZ.z * HoloDraw.Tile.z);
+	const float x = (mod(z, HoloDraw.Tile.x) + UVZ.x) / HoloDraw.Tile.x;
+	const float y = (floor(z / HoloDraw.Tile.x) + UVZ.y) / HoloDraw.Tile.y;
 	return vec2(x, y) * ViewPortion.xy;
 }
 
@@ -54,15 +45,15 @@ void main()
 	//if (1 == InvView + QuiltInvert) { Invert = -1.0f; }
 
 	const float modx = clamp(
-		step(QuiltAspect, DisplayAspect) * step(float(Overscan), 0.5f) +
-		step(DisplayAspect, QuiltAspect) * step(0.5f, float(Overscan))
+		step(QuiltAspect, HoloDraw.DisplayAspect) * step(float(Overscan), 0.5f) +
+		step(HoloDraw.DisplayAspect, QuiltAspect) * step(0.5f, float(Overscan))
 	, 0.0f, 1.0f);
 
 	vec3 nuv = vec3(InTexcoord, 0.0f);
 	nuv -= 0.5f;
 	{
-		nuv.x = modx * nuv.x * DisplayAspect / QuiltAspect + (1.0f - modx) * nuv.x;
-		nuv.y = modx * nuv.y + (1.0f - modx) * nuv.y * QuiltAspect / DisplayAspect;
+		nuv.x = modx * nuv.x * HoloDraw.DisplayAspect / QuiltAspect + (1.0f - modx) * nuv.x;
+		nuv.y = modx * nuv.y + (1.0f - modx) * nuv.y * QuiltAspect / HoloDraw.DisplayAspect;
 	}
 	nuv += 0.5f;
 
@@ -71,9 +62,9 @@ void main()
 
 	vec4 rgb[3];
 	for (int i = 0; i < 3; ++i) {
-		nuv.z = (InTexcoord.x + i * Subp + InTexcoord.y * Tilt) * Pitch - Center;
+		nuv.z = (InTexcoord.x + i * HoloDraw.Subp + InTexcoord.y * HoloDraw.Tilt) * HoloDraw.Pitch - HoloDraw.Center;
 		nuv.z = mod(nuv.z + ceil(abs(nuv.z)), 1.0f);
 		rgb[i] = texture(Sampler2D, TexArr(nuv));
 	}
-	OutColor = vec4(rgb[Ri].r, rgb[1].g, rgb[Bi].b, 1.0f);
+	OutColor = vec4(rgb[HoloDraw.Ri].r, rgb[1].g, rgb[HoloDraw.Bi].b, 1.0f);
 }

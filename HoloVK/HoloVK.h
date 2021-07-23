@@ -68,7 +68,8 @@ protected:
 	}
 	virtual void CreateUniformBuffer() override {
 		constexpr auto Fov = glm::radians(14.0f);
-		const auto Aspect = Holo::GetAspectRatio(GetDeviceIndex());
+		//const auto Aspect = Holo::GetAspectRatio(GetDeviceIndex());
+		const auto Aspect = HoloDraw.DisplayAspect;
 		constexpr auto ZFar = 100.0f;
 		constexpr auto ZNear = 0.1f;
 
@@ -135,7 +136,11 @@ protected:
 			CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
 				VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .pImmutableSamplers = data(ISs) })
 			});
-			VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), { DescriptorSetLayouts.back() }, {});
+			VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), { DescriptorSetLayouts.back() }, {
+	#pragma region PUSH_CONSTANT
+				VkPushConstantRange({.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT, .offset = 0, .size = static_cast<uint32_t>(sizeof(HoloDraw)) })
+	#pragma endregion
+			});
 		}
 #pragma endregion
 	}

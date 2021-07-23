@@ -63,7 +63,8 @@ protected:
 	}
 	virtual void CreateConstantBuffer() override {
 		constexpr auto Fov = DirectX::XMConvertToRadians(14.0f);
-		const auto Aspect = Holo::GetAspectRatio(GetDeviceIndex());
+		//const auto Aspect = Holo::GetAspectRatio(GetDeviceIndex());
+		const auto Aspect = HoloDraw.DisplayAspect;
 		constexpr auto ZFar = 100.0f;
 		constexpr auto ZNear = 0.1f;
 
@@ -150,7 +151,14 @@ protected:
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
 					.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<uint32_t>(size(DRs_Srv)), .pDescriptorRanges = data(DRs_Srv) }), 
 					.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL 
-				})
+				}),
+#pragma region ROOT_CONSTANT
+				D3D12_ROOT_PARAMETER({
+					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS,
+					.Constants = {.ShaderRegister = 0, .RegisterSpace = 0, .Num32BitValues = static_cast<UINT>(sizeof(HoloDraw)) },
+					.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL
+				}),
+#pragma endregion
 			}, {
 				StaticSamplerDescs[0],
 			}, SHADER_ROOT_ACCESS_PS);

@@ -99,12 +99,12 @@ public:
 				std::cout << "hpc_GetDevicePropertyInvView = " << (hpc_GetDevicePropertyInvView(i) ? "true" : "false") << std::endl; //!< 参考値) 1
 
 				//!< Display fringe correction uniform (currently only applicable to 15.6" Developer/Pro units)
-				std::cout << "hpc_GetDevicePropertyFringe = " << hpc_GetDevicePropertyFringe(i) << std::endl; //!< 参考値)
+				std::cout << "hpc_GetDevicePropertyFringe = " << hpc_GetDevicePropertyFringe(i) << std::endl; //!< 参考値) 0
 
 				//!< 基本的に libHoloPlayCore.h の内容は理解する必要はないと書いてあるが、サンプルでは使っている…
 #pragma region libHoloPlayCore
 				//!< ビューの取りうる範囲 [-viewCone * 0.5f, viewCone * 0.5f]
-				std::cout << "hpc_GetDevicePropertyFloat(viewCone) = " << hpc_GetDevicePropertyFloat(i, "/calibration/viewCone/value") << std::endl; //!< 参考値)
+				std::cout << "hpc_GetDevicePropertyFloat(viewCone) = " << hpc_GetDevicePropertyFloat(i, "/calibration/viewCone/value") << std::endl; //!< 参考値) 40
 #pragma endregion
 			}
 		}
@@ -183,35 +183,39 @@ public:
 #pragma endregion
 		}
 		else {
-			QuiltSetting = QUILT_SETTING({ .Size = 3360, .Column = 8, .Row = 6 });
-
-#pragma region ROOT_CONSTANT, PUSH_CONSTANT
-			QuiltDraw.ViewIndexOffset = 0;
-			QuiltDraw.ViewTotal = GetQuiltSetting().GetViewTotal();
-			QuiltDraw.Aspect = 0.75f;
-			QuiltDraw.ViewCone = 0 * std::numbers::pi_v<float> / 180.0f;
-
-			HoloDraw.Pitch = 246.866f;
-			HoloDraw.Tilt = -0.185377f;
-			HoloDraw.Center = 0.565845f;
-			HoloDraw.InvView = 1;
-			HoloDraw.Subp = 0.000217014f;
-			HoloDraw.DisplayAspect = 0.75f;
-			HoloDraw.Ri = 0;
-			HoloDraw.Bi = 2;
-			HoloDraw.Tile[0] = static_cast<float>(QuiltSetting.GetViewColumn());
-			HoloDraw.Tile[1] = static_cast<float>(QuiltSetting.GetViewRow());
-			HoloDraw.Tile[2] = static_cast<float>(QuiltSetting.GetViewTotal());
-#pragma endregion
-
 			std::cerr << "[ HoloPlay ] Device not found" << std::endl;
+			DefaultSettings();
 		}
+#else
+		DefaultSettings();
 #endif
 	}
 	virtual ~Holo() {
 #ifdef USE_HOLO
 		hpc_CloseApp(); 
 #endif
+	}
+
+	void DefaultSettings() {
+		QuiltSetting = QUILT_SETTING({ .Size = 3360, .Column = 8, .Row = 6 });
+#pragma region ROOT_CONSTANT, PUSH_CONSTANT
+		QuiltDraw.ViewIndexOffset = 0;
+		QuiltDraw.ViewTotal = GetQuiltSetting().GetViewTotal();
+		QuiltDraw.Aspect = 0.75f;
+		QuiltDraw.ViewCone = 40.0f * std::numbers::pi_v<float> / 180.0f;
+
+		HoloDraw.Pitch = 246.866f;
+		HoloDraw.Tilt = -0.185377f;
+		HoloDraw.Center = 0.565845f;
+		HoloDraw.InvView = 1;
+		HoloDraw.Subp = 0.000217014f;
+		HoloDraw.DisplayAspect = 0.75f;
+		HoloDraw.Ri = 0;
+		HoloDraw.Bi = 2;
+		HoloDraw.Tile[0] = static_cast<float>(QuiltSetting.GetViewColumn());
+		HoloDraw.Tile[1] = static_cast<float>(QuiltSetting.GetViewRow());
+		HoloDraw.Tile[2] = static_cast<float>(QuiltSetting.GetViewTotal());
+#pragma endregion
 	}
 
 	void SetWindow([[maybe_unused]] HWND hWnd) {
@@ -226,19 +230,6 @@ public:
 
 	int GetDeviceIndex() const { return DeviceIndex; }
 	const QUILT_SETTING& GetQuiltSetting() const { return QuiltSetting; }
-
-	float GetViewCone([[maybe_unused]] const int i) const {
-#ifdef USE_HOLO
-		if (-1 != i) { return hpc_GetDevicePropertyFloat(i, "/calibration/viewCone/value"); }
-#endif
-		return 40.0f;
-	}
-	float GetAspectRatio([[maybe_unused]] const int i) const {
-#ifdef USE_HOLO
-		if (-1 != i) { return hpc_GetDevicePropertyDisplayAspect(i); }
-#endif
-		return 0.75f;
-	}
 	virtual int GetViewportMax() const = 0;
 
 protected:

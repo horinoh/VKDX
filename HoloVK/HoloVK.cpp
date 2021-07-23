@@ -339,6 +339,8 @@ void HoloVK::PopulateCommandBuffer(const size_t i)
 			.pInheritanceInfo = &CBII
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB1, &CBBI)); {
+			const auto PLL = PipelineLayouts[1];
+
 			vkCmdSetViewport(SCB1, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
 			vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
 
@@ -346,7 +348,11 @@ void HoloVK::PopulateCommandBuffer(const size_t i)
 
 			const std::array DSs = { DescriptorSets[size(SwapchainImages)] };
 			constexpr std::array<uint32_t, 0> DynamicOffsets = {};
-			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[1], 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
+			vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PLL, 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
+
+#pragma region PUSH_CONSTANT
+			vkCmdPushConstants(SCB1, PLL, VK_SHADER_STAGE_FRAGMENT_BIT, 0, static_cast<uint32_t>(sizeof(HoloDraw)), &HoloDraw);
+#pragma endregion
 
 			vkCmdDrawIndirect(SCB1, IndirectBuffers[1].Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));

@@ -383,6 +383,10 @@ void HoloDX::PopulateCommandList(const size_t i)
 			auto SrvGDH = DH->GetGPUDescriptorHandleForHeapStart();
 			GCL->SetGraphicsRootDescriptorTable(0, SrvGDH); SrvGDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
 
+#pragma region ROOT_CONSTANT
+			GCL->SetGraphicsRoot32BitConstants(1, static_cast<UINT>(sizeof(HoloDraw)), &HoloDraw, 0);
+#pragma endregion
+
 			GCL->ExecuteBundle(BGCL1);
 		}
 #pragma endregion
