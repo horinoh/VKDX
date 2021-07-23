@@ -79,13 +79,6 @@ protected:
 		DirectX::XMStoreFloat4x4(&Transform.View, View);
 		DirectX::XMStoreFloat4x4(&Transform.Projection, Projection);
 
-#pragma region ROOT_CONSTANT
-		QuiltDraw.ViewIndexOffset = 0;
-		QuiltDraw.ViewTotal = GetQuiltSetting().GetViewTotal();
-		QuiltDraw.Aspect = Aspect;
-		QuiltDraw.ViewCone = DirectX::XMConvertToRadians(GetViewCone(GetDeviceIndex()));
-#pragma endregion
-
 #pragma region FRAME_OBJECT
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
@@ -229,8 +222,8 @@ protected:
 		};
 		std::vector<COM_PTR<ID3DBlob>> SBs1;
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.vs.cso")), COM_PTR_PUT(SBs1.emplace_back())));
-		//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.ps.cso")), COM_PTR_PUT(SBs1.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1_QUilt.ps.cso")), COM_PTR_PUT(SBs1.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.ps.cso")), COM_PTR_PUT(SBs1.emplace_back())));
+		//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1_Quilt.ps.cso")), COM_PTR_PUT(SBs1.emplace_back())));
 		const std::array SBCs1 = {
 			D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs1[0]->GetBufferPointer(), .BytecodeLength = SBs1[0]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs1[1]->GetBufferPointer(), .BytecodeLength = SBs1[1]->GetBufferSize() }),
@@ -333,16 +326,6 @@ protected:
 	};
 	using TRANSFORM = struct TRANSFORM;
 	TRANSFORM Transform;
-
-#pragma region ROOT_CONSTANT
-	struct QUILT_DRAW {
-		int ViewIndexOffset;
-		int ViewTotal;
-		float Aspect;
-		float ViewCone;
-	};
-	QUILT_DRAW QuiltDraw;
-#pragma endregion
 
 	UINT64 QuiltWidth;
 	UINT QuiltHeight;

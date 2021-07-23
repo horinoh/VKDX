@@ -25,7 +25,7 @@ ConstantBuffer<QUILT_DRAW> QuiltDraw : register(b1, space0);
 //!  / Fov(=rad(14.0)) * 0.5 | CameraSize
 //! +------------------------|
 //!   CameraDistance
-static const float CameraSize = 5.0f;
+static const float CameraSize = 10.0f;
 static const float CameraDistance = -CameraSize / tan(radians(14.0f) * 0.5f);
 
 struct OUT
@@ -54,7 +54,8 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 	//!            /  |
 	//!		     +----| 
 	//!           OffsetX
-    const float OffsetRadian = (ViewIndex / (QuiltDraw.ViewTotal - 1) - 0.5f) * QuiltDraw.ViewCone; 
+    //<! [-ViewCone * 0.5f, ViewCone * 0.5f] 
+    const float OffsetRadian = (ViewIndex / (QuiltDraw.ViewTotal - 1) - 0.5f) * QuiltDraw.ViewCone;
     const float OffsetX = CameraDistance * tan(OffsetRadian);
     
     float4 Trans = mul(Transform.View, float4(OffsetX, 0.0f, CameraDistance, 1.0f));

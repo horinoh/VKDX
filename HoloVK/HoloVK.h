@@ -84,13 +84,6 @@ protected:
 		Transform.View = View;
 		Transform.Projection = Projection;
 
-#pragma region PUSH_CONSTANT
-		QuiltDraw.ViewIndexOffset = 0;
-		QuiltDraw.ViewTotal = GetQuiltSetting().GetViewTotal();
-		QuiltDraw.Aspect = Aspect;
-		QuiltDraw.ViewCone = glm::radians(GetViewCone(GetDeviceIndex()));
-#pragma endregion
-
 #pragma region FRAME_OBJECT
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Transform));
@@ -272,8 +265,8 @@ protected:
 #pragma region PASS1
 		const std::array SMs1 = {
 			VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".vert.spv"))),
-			//VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".frag.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_1_Quilt") + TEXT(".frag.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".frag.spv"))),
+			//VK::CreateShaderModule(data(ShaderPath + TEXT("_1_Quilt") + TEXT(".frag.spv"))),
 		};
 		const std::array PSSCIs1 = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs1[0], .pName = "main", .pSpecializationInfo = nullptr }),
@@ -403,16 +396,6 @@ private:
 	};
 	using TRANSFORM = struct TRANSFORM;
 	TRANSFORM Transform;
-	
-#pragma region PUSH_CONSTANT
-	struct QUILT_DRAW {
-		int ViewIndexOffset;
-		int ViewTotal;
-		float Aspect;
-		float ViewCone;
-	};
-	QUILT_DRAW QuiltDraw;
-#pragma endregion
 
 	struct DescriptorUpdateInfo_0
 	{

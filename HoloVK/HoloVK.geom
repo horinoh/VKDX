@@ -49,6 +49,7 @@ void main()
 	//!            /  |
 	//!		     +----| 
 	//!           OffsetX
+    //<! [-ViewCone * 0.5f, ViewCone * 0.5f] 
 	const float OffsetRadian = (ViewIndex / (QuiltDraw.ViewTotal - 1) - 0.5f) * QuiltDraw.ViewCone;
 	const float OffsetX = CameraDistance * tan(OffsetRadian);
 
