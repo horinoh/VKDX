@@ -306,7 +306,7 @@ void RayTracingDX::CreateGeometry()
             Device5->GetRaytracingAccelerationStructurePrebuildInfo(&BRASI, &RASPI);
 
 			//!< AS作成、ビルド (Create and build AS)
-            BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes).Build(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI, GCL, CA, GCQ, COM_PTR_GET(Fence));
+            BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes).ExecuteBuildCommand(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI, GCL, CA, GCQ, COM_PTR_GET(Fence));
         }
 #pragma endregion
     }
@@ -354,7 +354,7 @@ void RayTracingDX::CreateGeometry()
             Device5->GetRaytracingAccelerationStructurePrebuildInfo(&BRASI, &RASPI);
 
 			//!< AS作成、ビルド (Create and build AS)
-            TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes).Build(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI, GCL, CA, GCQ, COM_PTR_GET(Fence));
+            TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes).ExecuteBuildCommand(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI, GCL, CA, GCQ, COM_PTR_GET(Fence));
         }
 #pragma endregion
     }

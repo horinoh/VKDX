@@ -288,7 +288,7 @@ void RayTracingVK::CreateGeometry()
             vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI, &MaxPrimitiveCounts, &ASBSI);
 
 			//!< AS作成、ビルド (Create and build AS)
-            BLASs.emplace_back().Create(Device, PDMP, ASBGI.type, ASBSI.accelerationStructureSize).Build(Device, PDMP, ASBGI.type, ASBSI.buildScratchSize, ASGs, GraphicsQueue, CB);
+            BLASs.emplace_back().Create(Device, PDMP, ASBGI.type, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBGI.type, ASBSI.buildScratchSize, ASGs, GraphicsQueue, CB);
         }
 #pragma endregion
     }
@@ -310,7 +310,7 @@ void RayTracingVK::CreateGeometry()
         Scoped<BufferMemory> IB(Device);
         IB.Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(ASI), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &ASI);
 
-#pragma region TLAS
+#pragma region AS
         {
             //!< ジオメトリ (Geometry)
             const std::vector ASGs = {
@@ -346,7 +346,7 @@ void RayTracingVK::CreateGeometry()
             vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI, &MaxPrimitiveCounts, &ASBSI);
 
 			//!< AS作成、ビルド (Create and build AS)
-            TLASs.emplace_back().Create(Device, PDMP, ASBGI.type, ASBSI.accelerationStructureSize).Build(Device, PDMP, ASBGI.type, ASBSI.buildScratchSize, ASGs, GraphicsQueue, CB);
+            TLASs.emplace_back().Create(Device, PDMP, ASBGI.type, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBGI.type, ASBSI.buildScratchSize, ASGs, GraphicsQueue, CB);
         }
 #pragma endregion
     }
