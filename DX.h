@@ -316,11 +316,11 @@ public:
 			ScratchBuffer SB;
 			SB.Create(Device, Size);
 
-			COM_PTR<ID3D12GraphicsCommandList4> GCL4;
-			VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
-			VERIFY_SUCCEEDED(GCL4->Reset(CA, nullptr)); {
+			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 
 				PopulateBuildCommand();
+				COM_PTR<ID3D12GraphicsCommandList4> GCL4;
+				VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
 				{
 					const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
 						.DestAccelerationStructureData = COM_PTR_GET(Resource)->GetGPUVirtualAddress(),
@@ -337,7 +337,7 @@ public:
 #endif
 				}
 
-			} VERIFY_SUCCEEDED(GCL4->Close());
+			} VERIFY_SUCCEEDED(GCL->Close());
 
 			DX::ExecuteAndWait(CQ, static_cast<ID3D12CommandList*>(GCL), Fence);
 		}

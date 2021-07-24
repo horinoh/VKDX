@@ -284,7 +284,7 @@ void RayTracingVK::CreateGeometry()
                 .scratchData = VkDeviceOrHostAddressKHR()
             };
             constexpr uint32_t MaxPrimitiveCounts = 1;
-            VkAccelerationStructureBuildSizesInfoKHR ASBSI;
+			VkAccelerationStructureBuildSizesInfoKHR ASBSI = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, };
             vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI, &MaxPrimitiveCounts, &ASBSI);
 
 			//!< AS作成、ビルド (Create and build AS)
@@ -342,7 +342,7 @@ void RayTracingVK::CreateGeometry()
                 .scratchData = VkDeviceOrHostAddressKHR()
             };
             constexpr uint32_t MaxPrimitiveCounts = 1;
-            VkAccelerationStructureBuildSizesInfoKHR ASBSI;
+			VkAccelerationStructureBuildSizesInfoKHR ASBSI = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, };
             vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI, &MaxPrimitiveCounts, &ASBSI);
 
 			//!< AS作成、ビルド (Create and build AS)
@@ -361,8 +361,8 @@ void RayTracingVK::CreatePipelineLayout()
 	if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 
 	CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
-		//VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
-		//VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
+	    VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
+		VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
     });
 	VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 }
@@ -372,7 +372,7 @@ void RayTracingVK::CreatePipeline()
 
 	const auto ShaderPath = GetBasePath();
     const std::array SMs = {
-        VK::CreateShaderModule(data(ShaderPath + TEXT(".rgeb.spv"))),
+        VK::CreateShaderModule(data(ShaderPath + TEXT(".rgen.spv"))),
         VK::CreateShaderModule(data(ShaderPath + TEXT(".rchit.spv"))),
         VK::CreateShaderModule(data(ShaderPath + TEXT(".rmiss.spv"))),
     };
@@ -415,8 +415,7 @@ void RayTracingVK::CreatePipeline()
             .basePipelineHandle = VK_NULL_HANDLE, .basePipelineIndex = -1
 	    }),
 	};
-	VkPipeline PL;
-	VERIFY_SUCCEEDED(vkCreateRayTracingPipelinesKHR(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, static_cast<uint32_t>(size(RTPCIs)), data(RTPCIs), GetAllocationCallbacks(), &PL));
+	VERIFY_SUCCEEDED(vkCreateRayTracingPipelinesKHR(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, static_cast<uint32_t>(size(RTPCIs)), data(RTPCIs), GetAllocationCallbacks(), &Pipelines.emplace_back()));
 #pragma endregion
 
 #pragma region BINDING_TABLE
