@@ -29,7 +29,7 @@ public:
 			const auto& CB = CommandBuffers[0];
 			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 			constexpr VkDrawMeshTasksIndirectCommandNV DMTIC = { .taskCount = 16, .firstTask = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, DMTIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DMTIC), &DMTIC);
+			IndirectBuffers.emplace_back().Create(Device, PDMP, sizeof(DMTIC)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DMTIC), &DMTIC);
 		}
 	}
 	virtual void CreateRenderPass() { VKExt::CreateRenderPass_Clear(); }

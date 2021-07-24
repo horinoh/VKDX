@@ -794,26 +794,6 @@ void DX::CreateCommandList()
 	}
 }
 
-#pragma region RAYTRACING
-void DX::BuildAccelerationStructure(ID3D12Device* Device, const UINT64 SBSize, const D3D12_GPU_VIRTUAL_ADDRESS GVA, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence)
-{
-	ScratchBuffer SB;
-	SB.Create(Device, SBSize);
-	COM_PTR<ID3D12GraphicsCommandList4> GCL4;
-	VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
-	VERIFY_SUCCEEDED(GCL4->Reset(CA, nullptr)); {
-		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
-			.DestAccelerationStructureData = GVA,
-			.Inputs = BRASI,
-			.SourceAccelerationStructureData = 0,
-			.ScratchAccelerationStructureData = COM_PTR_GET(SB.Resource)->GetGPUVirtualAddress()
-		};
-		GCL4->BuildRaytracingAccelerationStructure(&BRASD, 0, nullptr);
-	} VERIFY_SUCCEEDED(GCL4->Close());
-	ExecuteAndWait(CQ, static_cast<ID3D12CommandList*>(GCL), Fence);
-}
-#pragma endregion
-
 void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth, const FLOAT MaxDepth)
 {
 	//!< DirectX、OpenGLは「左下」が原点 (Vulkan はデフォルトで「左上」が原点)

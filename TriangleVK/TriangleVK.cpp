@@ -269,7 +269,7 @@ void TriangleVK::CreateGeometry()
 		//!< インダイレクトバッファ (IndirectBuffer)
 		{
 			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
+			IndirectBuffers.emplace_back().Create(Device, PDMP, sizeof(DIIC)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
 			MarkerSetObjectName(Device, IndirectBuffers.back().Buffer, "MyIndirectBuffer");
 		}
 	}

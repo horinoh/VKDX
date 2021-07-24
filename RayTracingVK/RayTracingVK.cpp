@@ -250,45 +250,47 @@ void RayTracingVK::CreateGeometry()
         Scoped<BufferMemory> IB(Device);
         IB.Create(Device, PDMP, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(Indices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Indices));
 
-        //!< ジオメトリ (Geometry)
-        const std::vector ASGs = {
-            VkAccelerationStructureGeometryKHR({
-                .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
-                .pNext = nullptr,
-                .geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
-                .geometry = VkAccelerationStructureGeometryDataKHR({
-                    .triangles = VkAccelerationStructureGeometryTrianglesDataKHR({
-                        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
-                        .pNext = nullptr,
-                        .vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
-                        .vertexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, VB.Buffer)}), .vertexStride = sizeof(Vertices[0]), .maxVertex = static_cast<uint32_t>(size(Vertices)),
-                        .indexType = VK_INDEX_TYPE_UINT32, .indexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, IB.Buffer)}),
-                        .transformData = VkDeviceOrHostAddressConstKHR(),
+#pragma region AS
+        {
+            //!< ジオメトリ (Geometry)
+            const std::vector ASGs = {
+                VkAccelerationStructureGeometryKHR({
+                    .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+                    .pNext = nullptr,
+                    .geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+                    .geometry = VkAccelerationStructureGeometryDataKHR({
+                        .triangles = VkAccelerationStructureGeometryTrianglesDataKHR({
+                            .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
+                            .pNext = nullptr,
+                            .vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
+                            .vertexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, VB.Buffer)}), .vertexStride = sizeof(Vertices[0]), .maxVertex = static_cast<uint32_t>(size(Vertices)),
+                            .indexType = VK_INDEX_TYPE_UINT32, .indexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, IB.Buffer)}),
+                            .transformData = VkDeviceOrHostAddressConstKHR(),
+                        }),
                     }),
+                    .flags = VK_GEOMETRY_OPAQUE_BIT_KHR
                 }),
-                .flags = VK_GEOMETRY_OPAQUE_BIT_KHR
-            }),
-        };
+            };
 
-        //!< サイズ取得 (Get sizes)
-        const VkAccelerationStructureBuildGeometryInfoKHR ASBGI = {
-            .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
-            .pNext = nullptr,
-            .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
-            .flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
-            .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
-            .srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = VK_NULL_HANDLE,
-            .geometryCount = static_cast<uint32_t>(size(ASGs)),.pGeometries = data(ASGs), .ppGeometries = nullptr,
-            .scratchData = VkDeviceOrHostAddressKHR()
-        };
-        constexpr uint32_t MaxPrimitiveCounts = 1;
-        VkAccelerationStructureBuildSizesInfoKHR ASBSI;
-        vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI, &MaxPrimitiveCounts, &ASBSI);
+            //!< サイズ取得 (Get sizes)
+            const VkAccelerationStructureBuildGeometryInfoKHR ASBGI = {
+                .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+                .pNext = nullptr,
+                .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+                .flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
+                .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+                .srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = VK_NULL_HANDLE,
+                .geometryCount = static_cast<uint32_t>(size(ASGs)),.pGeometries = data(ASGs), .ppGeometries = nullptr,
+                .scratchData = VkDeviceOrHostAddressKHR()
+            };
+            constexpr uint32_t MaxPrimitiveCounts = 1;
+            VkAccelerationStructureBuildSizesInfoKHR ASBSI;
+            vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI, &MaxPrimitiveCounts, &ASBSI);
 
-        //!< AS作成 (Create AS)
-		BLASs.emplace_back().Create(Device, PDMP, ASBGI.type, ASBSI.accelerationStructureSize);
-        //!< ASビルド (Build AS)
-        BuildAccelerationStructure(Device, PDMP, GraphicsQueue, CB, BLASs.back().AccelerationStructure, ASBGI.type, ASBSI.buildScratchSize, ASGs);
+			//!< AS作成、ビルド (Create and build AS)
+            BLASs.emplace_back().Create(Device, PDMP, ASBGI.type, ASBSI.accelerationStructureSize).Build(Device, PDMP, ASBGI.type, ASBSI.buildScratchSize, ASGs, GraphicsQueue, CB);
+        }
+#pragma endregion
     }
 #pragma endregion
 
@@ -308,43 +310,45 @@ void RayTracingVK::CreateGeometry()
         Scoped<BufferMemory> IB(Device);
         IB.Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(ASI), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &ASI);
 
-		//!< ジオメトリ (Geometry)
-		const std::vector ASGs = {
-			VkAccelerationStructureGeometryKHR({
-				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
-				.pNext = nullptr,
-				.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
-				.geometry = VkAccelerationStructureGeometryDataKHR({
-					.instances = VkAccelerationStructureGeometryInstancesDataKHR({
-						.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
-						.pNext = nullptr,
-						.arrayOfPointers = VK_FALSE,
-						.data = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, IB.Buffer)})
-					})
-				}),
-				.flags = VK_GEOMETRY_OPAQUE_BIT_KHR
-			}),
-		};
+#pragma region TLAS
+        {
+            //!< ジオメトリ (Geometry)
+            const std::vector ASGs = {
+                VkAccelerationStructureGeometryKHR({
+                    .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+                    .pNext = nullptr,
+                    .geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
+                    .geometry = VkAccelerationStructureGeometryDataKHR({
+                        .instances = VkAccelerationStructureGeometryInstancesDataKHR({
+                            .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
+                            .pNext = nullptr,
+                            .arrayOfPointers = VK_FALSE,
+                            .data = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, IB.Buffer)})
+                        })
+                    }),
+                    .flags = VK_GEOMETRY_OPAQUE_BIT_KHR
+                }),
+            };
 
-		//!< サイズ取得 (Get sizes)
-		const VkAccelerationStructureBuildGeometryInfoKHR ASBGI = {
-			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
-			.pNext = nullptr,
-			.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
-			.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
-			.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
-			.srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = VK_NULL_HANDLE,
-			.geometryCount = static_cast<uint32_t>(size(ASGs)),.pGeometries = data(ASGs), .ppGeometries = nullptr,
-			.scratchData = VkDeviceOrHostAddressKHR()
-		};
-		constexpr uint32_t MaxPrimitiveCounts = 1;
-		VkAccelerationStructureBuildSizesInfoKHR ASBSI;
-		vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI, &MaxPrimitiveCounts, &ASBSI);
+            //!< サイズ取得 (Get sizes)
+            const VkAccelerationStructureBuildGeometryInfoKHR ASBGI = {
+                .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+                .pNext = nullptr,
+                .type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
+                .flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
+                .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+                .srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = VK_NULL_HANDLE,
+                .geometryCount = static_cast<uint32_t>(size(ASGs)),.pGeometries = data(ASGs), .ppGeometries = nullptr,
+                .scratchData = VkDeviceOrHostAddressKHR()
+            };
+            constexpr uint32_t MaxPrimitiveCounts = 1;
+            VkAccelerationStructureBuildSizesInfoKHR ASBSI;
+            vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI, &MaxPrimitiveCounts, &ASBSI);
 
-		//!< AS作成 (Create AS)
-		TLASs.emplace_back().Create(Device, PDMP, ASBGI.type, ASBSI.accelerationStructureSize);
-		//!< ASビルド (Build AS)
-		BuildAccelerationStructure(Device, PDMP, GraphicsQueue, CB, TLASs.back().AccelerationStructure, ASBGI.type, ASBSI.buildScratchSize, ASGs);
+			//!< AS作成、ビルド (Create and build AS)
+            TLASs.emplace_back().Create(Device, PDMP, ASBGI.type, ASBSI.accelerationStructureSize).Build(Device, PDMP, ASBGI.type, ASBSI.buildScratchSize, ASGs, GraphicsQueue, CB);
+        }
+#pragma endregion
     }
 #pragma endregion
 }

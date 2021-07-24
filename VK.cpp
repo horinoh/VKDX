@@ -1462,32 +1462,6 @@ void VK::CreateImageMemory(VkImage* Image, VkDeviceMemory* DM, const VkDevice De
 //		SubmitAndWait(Queue, CB);
 //	}
 //}
-#pragma region RAYTRACING
-void VK::BuildAccelerationStructure(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkQueue Queue, const VkCommandBuffer CB, const VkAccelerationStructureKHR AS, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs)
-{
-	Scoped<ScratchBuffer> SB1(Device);
-	ScratchBuffer SB;
-	SB.Create(Device, PDMP, Size); {
-		const std::array ASBGIs = {
-			VkAccelerationStructureBuildGeometryInfoKHR({
-				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
-				.pNext = nullptr,
-				.type = Type,
-				.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
-				.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
-				.srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = AS,
-				.geometryCount = static_cast<uint32_t>(size(ASGs)),.pGeometries = data(ASGs), .ppGeometries = nullptr,
-				.scratchData = VkDeviceOrHostAddressKHR({.deviceAddress = GetDeviceAddress(Device, SB.Buffer)})
-			}),
-		};
-		const std::array ASBRIs = { VkAccelerationStructureBuildRangeInfoKHR({.primitiveCount = 1, .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0 }), };
-		const std::array ASBRIss = { data(ASBRIs) };
-		vkCmdBuildAccelerationStructuresKHR(CB, static_cast<uint32_t>(size(ASBGIs)), data(ASBGIs), data(ASBRIss));
-
-		SubmitAndWait(Queue, CB);
-	} SB.Destroy(Device);
-}
-#pragma endregion
 
 //void VK::CreateUniformBuffer_Example()
 //{

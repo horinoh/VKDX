@@ -33,7 +33,7 @@
 #ifndef VERIFY_SUCCEEDED
 #ifdef _DEBUG
 //#define VERIFY_SUCCEEDED(X) { const auto HR = (X); if(FAILED(HR)) { OutputDebugStringA(data(std::system_category().message(HR) + "\n")); DEBUG_BREAK(); } }
-#define VERIFY_SUCCEEDED(X) { const auto HR = (X); if(FAILED(HR)) { MessageBoxA(nullptr, data(std::system_category().message(HR)), "", MB_OK); DEBUG_BREAK(); } }
+#define VERIFY_SUCCEEDED(X) { const auto HR = (X); if(FAILED(HR)) { MessageBoxA(nullptr, data(std::system_category().message(HR)), "", MB_OK); DEBUG_BREAK(); /*throw std::runtime_error("");*/ } }
 #else
 #define VERIFY_SUCCEEDED(X) (X) 
 #endif
@@ -122,14 +122,28 @@ public:
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, HT, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
 		}
 	};
-	class VertexBuffer : public ResourceBase 
+	class DefaultResource : public ResourceBase
 	{
 	private:
 		using Super = ResourceBase;
 	public:
+		void Create(ID3D12Device* Device, const size_t Size) { DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ); }
+	};
+	class UploadResource : public ResourceBase
+	{
+	private:
+		using Super = ResourceBase;
+	public:
+		void Create(ID3D12Device* Device, const size_t Size, const void* Source = nullptr) { DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source); }
+	};
+	class VertexBuffer : public DefaultResource
+	{
+	private:
+		using Super = DefaultResource;
+	public:
 		D3D12_VERTEX_BUFFER_VIEW View;
 		VertexBuffer& Create(ID3D12Device* Device, const size_t Size, const UINT Stride) {
-			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
+			Super::Create(Device, Size);
 			View = D3D12_VERTEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .StrideInBytes = Stride });
 			return *this;
 		}
@@ -137,22 +151,22 @@ public:
 			DX::PopulateCommandList_CopyBufferRegion(GCL, Upload, COM_PTR_GET(Resource), Size, D3D12_RESOURCE_STATE_GENERIC_READ);
 		}
 		void ExecuteCopyCommand(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const size_t Size, const void* Source) {
-			COM_PTR<ID3D12Resource> Upload;
-			DX::CreateBufferResource(COM_PTR_PUT(Upload), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
+			ResourceBase Upload;
+			Upload.Create(Device, Size, D3D12_HEAP_TYPE_UPLOAD, Source);
 			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-				PopulateCopyCommand(GCL, Size, COM_PTR_GET(Upload));
+				PopulateCopyCommand(GCL, Size, COM_PTR_GET(Upload.Resource));
 			} VERIFY_SUCCEEDED(GCL->Close());
 			DX::ExecuteAndWait(CQ, GCL, Fence);
 		}
 	};
-	class IndexBuffer : public ResourceBase
+	class IndexBuffer : public DefaultResource
 	{
 	private:
-		using Super = ResourceBase;
+		using Super = DefaultResource;
 	public:
 		D3D12_INDEX_BUFFER_VIEW View;
 		IndexBuffer& Create(ID3D12Device* Device, const size_t Size, const DXGI_FORMAT Format) {
-			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
+			Super::Create(Device, Size);
 			View = D3D12_INDEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .Format = Format });
 			return *this;
 		}
@@ -160,69 +174,52 @@ public:
 			DX::PopulateCommandList_CopyBufferRegion(GCL, Upload, COM_PTR_GET(Resource), Size, D3D12_RESOURCE_STATE_GENERIC_READ);
 		}
 		void ExecuteCopyCommand(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const size_t Size, const void* Source) {
-			COM_PTR<ID3D12Resource> Upload;
-			DX::CreateBufferResource(COM_PTR_PUT(Upload), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
+			ResourceBase Upload;
+			Upload.Create(Device, Size, D3D12_HEAP_TYPE_UPLOAD, Source);
 			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-				PopulateCopyCommand(GCL, Size, COM_PTR_GET(Upload));
+				PopulateCopyCommand(GCL, Size, COM_PTR_GET(Upload.Resource));
 			} VERIFY_SUCCEEDED(GCL->Close());
 			DX::ExecuteAndWait(CQ, GCL, Fence);
 		}
 	};
-	class IndirectBuffer : public ResourceBase
+	class IndirectBuffer : public DefaultResource
 	{
 	private:
-		using Super = ResourceBase;
+		using Super = DefaultResource;
 	public:
 		COM_PTR<ID3D12CommandSignature> CommandSignature;
-		IndirectBuffer& Create(ID3D12Device* Device, const D3D12_DRAW_INDEXED_ARGUMENTS& DIA) {
-			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, sizeof(DIA), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
-			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED }), };
-			const D3D12_COMMAND_SIGNATURE_DESC CSD = { .ByteStride = static_cast<UINT>(sizeof(DIA)), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
+		IndirectBuffer& Create(ID3D12Device* Device, const size_t Size, const D3D12_INDIRECT_ARGUMENT_TYPE Type) {
+			Super::Create(Device, Size);
+			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = Type }), };
+			const D3D12_COMMAND_SIGNATURE_DESC CSD = { .ByteStride = static_cast<UINT>(Size), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
 			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
 			return *this;
 		}
-		IndirectBuffer& Create(ID3D12Device* Device, const D3D12_DRAW_ARGUMENTS& DA) {
-			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, sizeof(DA), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
-			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW }), };
-			const D3D12_COMMAND_SIGNATURE_DESC CSD = { .ByteStride = static_cast<UINT>(sizeof(DA)), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
-			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
-			return *this;
-		}
-		IndirectBuffer& Create(ID3D12Device* Device, const D3D12_DISPATCH_ARGUMENTS& DA) {
-			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, sizeof(DA), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
-			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH }), };
-			const D3D12_COMMAND_SIGNATURE_DESC CSD = { .ByteStride = static_cast<UINT>(sizeof(DA)), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
-			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
-			return *this;
-		}
+		IndirectBuffer& Create(ID3D12Device* Device, const D3D12_DRAW_INDEXED_ARGUMENTS& DIA) { return Create(Device, sizeof(DIA), D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED); }
+		IndirectBuffer& Create(ID3D12Device* Device, const D3D12_DRAW_ARGUMENTS& DA) { return Create(Device, sizeof(DA), D3D12_INDIRECT_ARGUMENT_TYPE_DRAW); }
+		IndirectBuffer& Create(ID3D12Device* Device, const D3D12_DISPATCH_ARGUMENTS& DA) { return Create(Device, sizeof(DA), D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH); }
 #pragma region MESH_SHADER
-		IndirectBuffer& Create(ID3D12Device* Device, const D3D12_DISPATCH_MESH_ARGUMENTS& DMA) {
-			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, sizeof(DMA), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ);
-			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH }), };
-			const D3D12_COMMAND_SIGNATURE_DESC CSD = { .ByteStride = static_cast<UINT>(sizeof(DMA)), .NumArgumentDescs = static_cast<const UINT>(size(IADs)), .pArgumentDescs = data(IADs), .NodeMask = 0 };
-			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
-			return *this;
-		}
+		IndirectBuffer& Create(ID3D12Device* Device, const D3D12_DISPATCH_MESH_ARGUMENTS& DMA) { return Create(Device, sizeof(DMA), D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH); }
 #pragma endregion
 		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const size_t Size, ID3D12Resource* Upload) {
 			DX::PopulateCommandList_CopyBufferRegion(GCL, Upload, COM_PTR_GET(Resource), Size, D3D12_RESOURCE_STATE_GENERIC_READ);
 		}
 		void ExecuteCopyCommand(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const size_t Size, const void* Source) {
-			COM_PTR<ID3D12Resource> Upload;
-			DX::CreateBufferResource(COM_PTR_PUT(Upload), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
+			UploadResource Upload;
+			Upload.Create(Device, Size, Source);
 			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-				PopulateCopyCommand(GCL, Size, COM_PTR_GET(Upload));
+				PopulateCopyCommand(GCL, Size, COM_PTR_GET(Upload.Resource));
 			} VERIFY_SUCCEEDED(GCL->Close());
 			DX::ExecuteAndWait(CQ, GCL, Fence);
 		}
 	};
-	class ConstantBuffer : public ResourceBase
+	class ConstantBuffer : public UploadResource
 	{
 	private:
-		using Super = ResourceBase;
+		using Super = UploadResource;
 	public:
 		void Create(ID3D12Device* Device, const size_t Size, const void* Source = nullptr) {
-			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, RoundUp256(Size), D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
+			Super::Create(Device, RoundUp256(Size), Source);
 		}
 	};
 	class ShaderResourceBuffer : public ResourceBase
@@ -310,8 +307,39 @@ public:
 	class AccelerationStructureBuffer : public ResourceBase
 	{
 	public:
-		void Create(ID3D12Device* Device, const size_t Size) {
+		AccelerationStructureBuffer& Create(ID3D12Device* Device, const size_t Size) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
+			return *this;
+		}
+		void PopulateBuildCommand() {}
+		void ExecuteBuildCommand(ID3D12Device* Device, const size_t Size, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, [[maybe_unused]] ID3D12Fence* Fence) {
+			ScratchBuffer SB;
+			SB.Create(Device, Size);
+
+			COM_PTR<ID3D12GraphicsCommandList4> GCL4;
+			VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
+			VERIFY_SUCCEEDED(GCL4->Reset(CA, nullptr)); {
+
+				PopulateBuildCommand();
+				{
+					const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
+						.DestAccelerationStructureData = COM_PTR_GET(Resource)->GetGPUVirtualAddress(),
+						.Inputs = BRASI,
+						.SourceAccelerationStructureData = 0,
+						.ScratchAccelerationStructureData = COM_PTR_GET(SB.Resource)->GetGPUVirtualAddress()
+					};
+					GCL4->BuildRaytracingAccelerationStructure(&BRASD, 0, nullptr);
+#if 1
+					const auto RBs = {
+						D3D12_RESOURCE_BARRIER({.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV, .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, .UAV = D3D12_RESOURCE_UAV_BARRIER({.pResource = COM_PTR_GET(Resource)}) }),
+					};
+					GCL4->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+#endif
+				}
+
+			} VERIFY_SUCCEEDED(GCL4->Close());
+
+			DX::ExecuteAndWait(CQ, static_cast<ID3D12CommandList*>(GCL), Fence);
 		}
 	};
 	class ScratchBuffer : public ResourceBase
@@ -446,10 +474,6 @@ public:
 	virtual void CreateCommandList();
 
 	virtual void LoadScene() {}
-
-#pragma region RAYTRACING
-	static void BuildAccelerationStructure(ID3D12Device* Device, const UINT64 SBSize, const D3D12_GPU_VIRTUAL_ADDRESS GVA, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence);
-#pragma endregion
 
 	virtual void CreateGeometry() {}
 	

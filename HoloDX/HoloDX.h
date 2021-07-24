@@ -63,7 +63,6 @@ protected:
 	}
 	virtual void CreateConstantBuffer() override {
 		constexpr auto Fov = DirectX::XMConvertToRadians(14.0f);
-		//const auto Aspect = Holo::GetAspectRatio(GetDeviceIndex());
 		const auto Aspect = HoloDraw.DisplayAspect;
 		constexpr auto ZFar = 100.0f;
 		constexpr auto ZNear = 0.1f;

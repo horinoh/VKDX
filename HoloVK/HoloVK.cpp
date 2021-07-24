@@ -437,6 +437,9 @@ void HoloVK::CreateViewport(const float Width, const float Height, const float M
 {
 #pragma region PASS0
 	{
+		//!< VKではデフォルトで「Yが下」を向くが、高さに負の値を指定すると「Yが上」を向き、DXと同様になる (In VK, by specifying negative height, Y become up. same as DX)
+		//!< 通常基点は「左上」を指定するが、高さに負の値を指定する場合は「左下」を指定すること (When negative height, specify left bottom as base, otherwise left up)
+			
 		//!< キルトの構造
 		//!< ------------> RightMost
 		//!< ---------------------->
@@ -450,6 +453,11 @@ void HoloVK::CreateViewport(const float Width, const float Height, const float M
 				const auto X = j * W, Y = QS.GetHeight() - (i + 1) * H, BottomY = QS.GetHeight() - i * H;
 				QuiltViewports.emplace_back(VkViewport({ .x = static_cast<float>(X), .y = static_cast<float>(BottomY), .width = static_cast<float>(W), .height = -static_cast<float>(H), .minDepth = MinDepth, .maxDepth = MaxDepth }));
 				QuiltScissorRects.emplace_back(VkRect2D({ VkOffset2D({.x = X, .y = Y }), VkExtent2D({.width = static_cast<uint32_t>(W), .height = static_cast<uint32_t>(H) }) }));
+
+				//!< そのまま出力する場合
+				//Logf("QuiltViewport[%d] = (%d, %d) %d x %d\n", i * QS.GetViewColumn() + j, static_cast<int>(QuiltViewports.back().x), static_cast<int>(QuiltViewports.back().y), static_cast<int>(QuiltViewports.back().width), static_cast<int>(QuiltViewports.back().height));
+				//!< 左上起点、高さを正の値で出力する場合
+				Logf("QuiltViewport[%d] = (%d, %d) %d x %d\n", i * QS.GetViewColumn() + j, static_cast<int>(QuiltViewports.back().x), static_cast<int>(QuiltViewports.back().y + QuiltViewports.back().height), static_cast<int>(QuiltViewports.back().width), static_cast<int>(std::abs(QuiltViewports.back().height)));
 			}
 		}
 	}

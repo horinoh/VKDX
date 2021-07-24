@@ -273,39 +273,42 @@ void RayTracingDX::CreateGeometry()
 		    }),
 		});
 #endif
-        //!< ジオメトリ (Geometry)
-        const std::array RGDs = {
-            D3D12_RAYTRACING_GEOMETRY_DESC({
-                .Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES,
-                .Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE,
-                .Triangles = D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC({
-                    .Transform3x4 = 0,
-                    .IndexFormat = DXGI_FORMAT_R32_UINT,
-                    .VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT,
-                    .IndexCount = static_cast<UINT>(size(Indices)),
-                    .VertexCount = static_cast<UINT>(size(Vertices)),
-                    .IndexBuffer = COM_PTR_GET(IB.Resource)->GetGPUVirtualAddress(),
-                    .VertexBuffer = COM_PTR_GET(VB.Resource)->GetGPUVirtualAddress(),
-                })
-            }),
-        };
-        //!< インプット (Input)
-        const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BRASI = {
-            .Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL,
-            .Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE,
-            .NumDescs = static_cast<UINT>(size(RGDs)),
-            .DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY,
-            .pGeometryDescs = data(RGDs),
-        };
+  
+#pragma region AS
+		{
+            //!< ジオメトリ (Geometry)
+            const std::array RGDs = {
+                D3D12_RAYTRACING_GEOMETRY_DESC({
+                    .Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES,
+                    .Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE,
+                    .Triangles = D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC({
+                        .Transform3x4 = 0,
+                        .IndexFormat = DXGI_FORMAT_R32_UINT,
+                        .VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT,
+                        .IndexCount = static_cast<UINT>(size(Indices)),
+                        .VertexCount = static_cast<UINT>(size(Vertices)),
+                        .IndexBuffer = COM_PTR_GET(IB.Resource)->GetGPUVirtualAddress(),
+                        .VertexBuffer = COM_PTR_GET(VB.Resource)->GetGPUVirtualAddress(),
+                    })
+                }),
+            };
+            //!< インプット (Input)
+            const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BRASI = {
+                .Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL,
+                .Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE/*D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE*/,
+                .NumDescs = static_cast<UINT>(size(RGDs)),
+                .DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY,
+                .pGeometryDescs = data(RGDs),
+            };
 
-        //!< サイズ取得 (Get sizes)
-        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO RASPI;
-		Device5->GetRaytracingAccelerationStructurePrebuildInfo(&BRASI, &RASPI);
+            //!< サイズ取得 (Get sizes)
+            D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO RASPI;
+            Device5->GetRaytracingAccelerationStructurePrebuildInfo(&BRASI, &RASPI);
 
-		//!< AS作成 (Create AS)
-		BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
-        //!< ASビルド (Build AS)
-		BuildAccelerationStructure(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, COM_PTR_GET(BLASs.back().Resource)->GetGPUVirtualAddress(), BRASI, GCL, CA, GCQ, COM_PTR_GET(Fence));
+			//!< AS作成、ビルド (Create and build AS)
+            BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes).Build(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI, GCL, CA, GCQ, COM_PTR_GET(Fence));
+        }
+#pragma endregion
     }
 #pragma endregion
 
@@ -334,23 +337,26 @@ void RayTracingDX::CreateGeometry()
 			}),
 		});
 #endif
-        //!< インプット (Input)
-		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BRASI = {
-			.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL,
-			.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE,
-			.NumDescs = static_cast<UINT>(size(RIDs)),
-			.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY,
-            .InstanceDescs = COM_PTR_GET(IB.Resource)->GetGPUVirtualAddress()
-		};
 
-        //!< サイズ取得 (Get sizes)
-		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO RASPI;
-		Device5->GetRaytracingAccelerationStructurePrebuildInfo(&BRASI, &RASPI);
+#pragma region AS
+        {
+            //!< インプット (Input)
+            const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BRASI = {
+                .Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL,
+                .Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE,
+                .NumDescs = static_cast<UINT>(size(RIDs)),
+                .DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY,
+                .InstanceDescs = COM_PTR_GET(IB.Resource)->GetGPUVirtualAddress()
+            };
 
-		//!< AS作成 (Create AS)
-		TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
-		//!< ASビルド (Build AS)
-		BuildAccelerationStructure(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, COM_PTR_GET(TLASs.back().Resource)->GetGPUVirtualAddress(), BRASI, GCL, CA, GCQ, COM_PTR_GET(Fence));
+            //!< サイズ取得 (Get sizes)
+            D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO RASPI;
+            Device5->GetRaytracingAccelerationStructurePrebuildInfo(&BRASI, &RASPI);
+
+			//!< AS作成、ビルド (Create and build AS)
+            TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes).Build(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI, GCL, CA, GCQ, COM_PTR_GET(Fence));
+        }
+#pragma endregion
     }
 #pragma endregion
 }

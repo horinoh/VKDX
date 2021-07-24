@@ -429,6 +429,8 @@ void HoloDX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT M
 				const auto X = j * W, Y = QS.GetHeight() - (i + 1) * H;
 				QuiltViewports.emplace_back(D3D12_VIEWPORT({ .TopLeftX = static_cast<FLOAT>(X), .TopLeftY = static_cast<FLOAT>(Y), .Width = static_cast<FLOAT>(W), .Height = static_cast<FLOAT>(H), .MinDepth = MinDepth, .MaxDepth = MaxDepth }));
 				QuiltScissorRects.emplace_back(D3D12_RECT({ .left = X, .top = Y, .right = static_cast<LONG>(X + W), .bottom = static_cast<LONG>(Y + H) }));
+
+				Logf("QuiltViewport[%d] = (%d, %d) %d x %d\n", i * QS.GetViewColumn() + j, static_cast<int>(QuiltViewports.back().TopLeftX), static_cast<int>(QuiltViewports.back().TopLeftY), static_cast<int>(QuiltViewports.back().Width), static_cast<int>(QuiltViewports.back().Height));
 			}
 		}
 	}
