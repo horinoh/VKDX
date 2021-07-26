@@ -287,18 +287,18 @@ void RayTracingDX::CreateGeometry()
                         .VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT,
                         .IndexCount = static_cast<UINT>(size(Indices)),
                         .VertexCount = static_cast<UINT>(size(Vertices)),
-                        .IndexBuffer = COM_PTR_GET(IB.Resource)->GetGPUVirtualAddress(),
-                        .VertexBuffer = COM_PTR_GET(VB.Resource)->GetGPUVirtualAddress(),
+						.IndexBuffer = IB.Resource->GetGPUVirtualAddress(),
+						.VertexBuffer = VB.Resource->GetGPUVirtualAddress(),
                     })
                 }),
             };
             //!< インプット (Input)
             const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BRASI = {
-                .Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL,
+                .Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL, //!< ボトムレベル
                 .Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE/*D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE*/,
                 .NumDescs = static_cast<UINT>(size(RGDs)),
                 .DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY,
-                .pGeometryDescs = data(RGDs),
+                .pGeometryDescs = data(RGDs), //!< ジオメトリ(トライアングル)
             };
 
             //!< サイズ取得 (Get sizes)
@@ -321,8 +321,8 @@ void RayTracingDX::CreateGeometry()
                 .InstanceID = 0,
                 .InstanceMask = 0xff,
                 .InstanceContributionToHitGroupIndex = 0,
-                .Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_CULL_DISABLE,
-                .AccelerationStructure = COM_PTR_GET(BLASs.back().Resource)->GetGPUVirtualAddress()
+                .Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_CULL_DISABLE/*D3D12_RAYTRACING_INSTANCE_FLAG_NONE*/,
+				.AccelerationStructure = BLASs.back().Resource->GetGPUVirtualAddress()
             })
         };
         ResourceBase IB;
@@ -342,11 +342,11 @@ void RayTracingDX::CreateGeometry()
         {
             //!< インプット (Input)
             const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BRASI = {
-                .Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL,
-                .Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE,
+                .Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL, //!< トップレベル
+                .Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE/*D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE*/,
                 .NumDescs = static_cast<UINT>(size(RIDs)),
                 .DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY,
-                .InstanceDescs = COM_PTR_GET(IB.Resource)->GetGPUVirtualAddress()
+				.InstanceDescs = IB.Resource->GetGPUVirtualAddress() //!< インスタンス
             };
 
             //!< サイズ取得 (Get sizes)
@@ -360,125 +360,122 @@ void RayTracingDX::CreateGeometry()
     }
 #pragma endregion
 }
-void RayTracingDX::CreateTexture()
-{
-	if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
-}
-void RayTracingDX::CreateRootSignature()
-{
-	if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
-
-	//!< グローバルルートシグネチャ (Global root signature)
-    {
-        COM_PTR<ID3DBlob> Blob;
-#ifdef USE_HLSL_ROOTSIGNATRUE
-        GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".grs.cso")));
-#else
-        DX::SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE); //!< #DX_TODO
-#endif
-        VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
-    }
-	//!< ローカルルートシグネチャ (Local root signature)
-	{
-		COM_PTR<ID3DBlob> Blob;
-#ifdef USE_HLSL_ROOTSIGNATRUE
-		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".lrs.cso")));
-#else
-		DX::SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE);
-#endif
-		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
-	}
-}
 void RayTracingDX::CreatePipelineState()
 {
 	if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
+#pragma region STATE_OBJECT
 	//!< グローバルルートシグネチャ (Global root signature)
     const D3D12_GLOBAL_ROOT_SIGNATURE GRS = { .pGlobalRootSignature = COM_PTR_GET(RootSignatures[0]) };
 
 	//!< ローカルルートシグネチャ (Local root signature)
-	const D3D12_LOCAL_ROOT_SIGNATURE LRS = { .pLocalRootSignature = COM_PTR_GET(RootSignatures[1]) };
+	//const D3D12_LOCAL_ROOT_SIGNATURE LRS = { .pLocalRootSignature = COM_PTR_GET(RootSignatures[1]) };
 
     //!< ライブラリ
-    std::array EDs = { 
-		D3D12_EXPORT_DESC({.Name = TEXT("OnRayGeneration"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }),
-		D3D12_EXPORT_DESC({.Name = TEXT("OnClosestHit"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }),
-		D3D12_EXPORT_DESC({.Name = TEXT("OnMiss"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }),
-    };
 	const auto ShaderPath = GetBasePath();
 	COM_PTR<ID3DBlob> SB;
 	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rts.cso")), COM_PTR_PUT(SB))); 
+	std::array EDs = {
+	   D3D12_EXPORT_DESC({.Name = TEXT("OnRayGeneration"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }),
+	   D3D12_EXPORT_DESC({.Name = TEXT("OnClosestHit"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }),
+	   D3D12_EXPORT_DESC({.Name = TEXT("OnMiss"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }),
+	};
     const D3D12_DXIL_LIBRARY_DESC DLD = {
         .DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB->GetBufferPointer(), .BytecodeLength = SB->GetBufferSize() }),
         .NumExports = static_cast<UINT>(size(EDs)), .pExports = data(EDs) 
     };
 
-    //!< ヒットグループ ここでは D3D12_HIT_GROUP_TYPE_TRIANGLES なので、ClosestHit のみ使用
-    const D3D12_HIT_GROUP_DESC HGD = {
+    //!< ヒットグループ AnyHit, ClosestHit, Intersection の3つからなる、ここでは D3D12_HIT_GROUP_TYPE_TRIANGLES なので、ClosestHit のみを使用
+    //!< ヒットグループ内のシェーダは同じローカルルートシグネチャを使用する 
+    constexpr D3D12_HIT_GROUP_DESC HGD = {
         .HitGroupExport = TEXT("MyHitGroup"),
         .Type = D3D12_HIT_GROUP_TYPE_TRIANGLES,
 	    .AnyHitShaderImport = nullptr, .ClosestHitShaderImport = TEXT("OnClosestHit"), .IntersectionShaderImport = nullptr
     };
 
-    //!< #DX_TODO
-    const D3D12_RAYTRACING_SHADER_CONFIG RSC = {
-	    .MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT4), //!< Payload のサイズ
-	    .MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2)
+    //!< シェーダ内、ペイロードやアトリビュートサイズの指定
+    constexpr D3D12_RAYTRACING_SHADER_CONFIG RSC = {
+		.MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT4), //!< Payload のサイズ ここでは struct Payload { float3 Color; } を使用するため XMFLOAT3
+	    .MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2) //!< ここでは struct BuiltInTriangleIntersectionAttributes { float2 barycentrics; } を使用するため XMFLOAT2
     };
 
-    const D3D12_RAYTRACING_PIPELINE_CONFIG RPC = { .MaxTraceRecursionDepth = 1 };
+    //!< レイトレーシング再帰呼び出し可能な段数
+    constexpr D3D12_RAYTRACING_PIPELINE_CONFIG RPC = { .MaxTraceRecursionDepth = 1 };
 
-    const std::array SSs = {
+    constexpr std::array SSs = {
 		D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, .pDesc = &GRS }),
-		D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, .pDesc = &LRS }),
+		//D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, .pDesc = &LRS }),
 		//D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION, .pDesc = &STEA }),
 		D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD }),
 		D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, .pDesc = &HGD }),
 		D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, .pDesc = &RSC }),
 		D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, .pDesc = &RPC }),
     };
-
-    const D3D12_STATE_OBJECT_DESC SOD = {
+    constexpr D3D12_STATE_OBJECT_DESC SOD = {
         .Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE,
 	    .NumSubobjects = static_cast<UINT>(size(SSs)), .pSubobjects = data(SSs)
     };
-    COM_PTR<ID3D12StateObject> StateObject; //#DX_TODO メンバにする
-	COM_PTR<ID3D12Device5> Device5;
-	VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5))); 
-    VERIFY_SUCCEEDED(Device5->CreateStateObject(&SOD, COM_PTR_UUIDOF_PUTVOID(StateObject)));
+    COM_PTR<ID3D12Device5> Device5;
+    VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
+    VERIFY_SUCCEEDED(Device5->CreateStateObject(&SOD, COM_PTR_UUIDOF_PUTVOID(StateObjects.emplace_back())));
+#pragma endregion
 
 #pragma region SHADER_TABLE
 	COM_PTR<ID3D12StateObjectProperties> SOP;
-	VERIFY_SUCCEEDED(StateObject->QueryInterface(COM_PTR_UUIDOF_PUTVOID(SOP)));
+	VERIFY_SUCCEEDED(StateObjects.back()->QueryInterface(COM_PTR_UUIDOF_PUTVOID(SOP)));
 
-	const auto SI_RayGen = SOP->GetShaderIdentifier(TEXT("OnRayGeneration"));
-    const auto SI_Miss = SOP->GetShaderIdentifier(TEXT("OnMiss"));
-    const auto SI_HitGroup = SOP->GetShaderIdentifier(TEXT("MyHitGroup"));
+	const auto RaygenAlignedSize = Cmn::RoundUp(1 * Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT), D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+	const auto MissAlignedSize = Cmn::RoundUp(1 * Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT), D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+	const auto HitAlienedSize = Cmn::RoundUp(1 * Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT), D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+	const auto TotalSize = RaygenAlignedSize + MissAlignedSize + HitAlienedSize;
 
-    //!< #DX_TODO メンバにする
-    //!< #DX_TODO リソースはアラインされたサイズで確保 RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT)
-	ResourceBase ST_RayGen;
-    ST_RayGen.Create(COM_PTR_GET(Device), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_HEAP_TYPE_UPLOAD, SI_RayGen);
-	ResourceBase ST_Miss;
-	ST_Miss.Create(COM_PTR_GET(Device), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_HEAP_TYPE_UPLOAD, SI_Miss); 
-	ResourceBase ST_HitGroup;
-	ST_HitGroup.Create(COM_PTR_GET(Device), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_HEAP_TYPE_UPLOAD, SI_HitGroup); 
+	//!< #DX_TODO 1つのバッファにまとめる?
+	ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RaygenAlignedSize, D3D12_HEAP_TYPE_UPLOAD, SOP->GetShaderIdentifier(TEXT("OnRayGeneration")));
+	ShaderTables.emplace_back().Create(COM_PTR_GET(Device), MissAlignedSize, D3D12_HEAP_TYPE_UPLOAD, SOP->GetShaderIdentifier(TEXT("OnMiss")));
+	ShaderTables.emplace_back().Create(COM_PTR_GET(Device), HitAlienedSize, D3D12_HEAP_TYPE_UPLOAD, SOP->GetShaderIdentifier(TEXT("MyHitGroup")));
 #pragma endregion
 }
-void RayTracingDX::PopulateCommandList([[maybe_unused]]const size_t i)
+void RayTracingDX::PopulateCommandList(const size_t i)
 {
 	if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
-	COM_PTR<ID3D12GraphicsCommandList4> GCL4;
-	VERIFY_SUCCEEDED(COM_PTR_GET(GraphicsCommandLists[i])->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
+    const auto GCL = GraphicsCommandLists[i];
 
+    GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
+    {
+        const auto& DH = CbvSrvUavDescriptorHeaps[0];
+		auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+        GCL->SetComputeRootDescriptorTable(0, GDH); //!< TLAS
+		GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+        GCL->SetComputeRootDescriptorTable(1, GDH); //!< UAV
+    }
+
+    const auto UAV = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
+	ResourceBarrier(COM_PTR_GET(GCL), UAV, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+    //!< バリア
+    
+    COM_PTR<ID3D12GraphicsCommandList4> GCL4;
+	VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
+	GCL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
 	const auto DRD = D3D12_DISPATCH_RAYS_DESC({
-	  .RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({ .StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0 }),
-	  .MissShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0}),
-	  .HitGroupTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0}),
+	  .RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({.StartAddress = ShaderTables[0].Resource->GetGPUVirtualAddress(), .SizeInBytes = 1 * Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT) }),
+	  .MissShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = ShaderTables[1].Resource->GetGPUVirtualAddress(), .SizeInBytes = 1 * Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT), .StrideInBytes = 0}),
+	  .HitGroupTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = ShaderTables[2].Resource->GetGPUVirtualAddress(), .SizeInBytes = 1 * Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT), .StrideInBytes = 0}),
 	  .CallableShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0}),
-	  .Width = 800,.Height = 600, .Depth = 1
+	  .Width = 1280,.Height = 720, .Depth = 1
 	});
     GCL4->DispatchRays(&DRD);
+
+	const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+
+	ResourceBarrier(COM_PTR_GET(GCL), UAV, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+	ResourceBarrier(COM_PTR_GET(GCL), SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_COPY_DEST);
+
+    //!< #DX_TODO コピー
+    
+	ResourceBarrier(COM_PTR_GET(GCL), SCR, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PRESENT);
+
+    VERIFY_SUCCEEDED(GCL->Close());
 }
 #pragma endregion

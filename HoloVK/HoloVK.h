@@ -269,8 +269,11 @@ protected:
 #pragma region PASS1
 		const std::array SMs1 = {
 			VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".vert.spv"))),
+#ifdef DRAW_QUILT
+			VK::CreateShaderModule(data(ShaderPath + TEXT("_1_Quilt") + TEXT(".frag.spv"))),
+#else
 			VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".frag.spv"))),
-			//VK::CreateShaderModule(data(ShaderPath + TEXT("_1_Quilt") + TEXT(".frag.spv"))),
+#endif
 		};
 		const std::array PSSCIs1 = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs1[0], .pName = "main", .pSpecializationInfo = nullptr }),

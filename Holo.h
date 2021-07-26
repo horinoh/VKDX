@@ -5,6 +5,7 @@
 #include <numbers>
 
 //#define USE_HOLO //!< HoloDX, HoloVK
+//#define DRAW_QUILT
 
 #ifdef USE_HOLO
 #include <HoloPlayCore.h>
@@ -225,6 +226,9 @@ public:
 			::SetWindowPos(hWnd, nullptr, hpc_GetDevicePropertyWinX(i), hpc_GetDevicePropertyWinY(i), hpc_GetDevicePropertyScreenW(i), hpc_GetDevicePropertyScreenH(i), SWP_FRAMECHANGED);
 			::ShowWindow(hWnd, SW_SHOW);
 		}
+#else
+		::SetWindowPos(hWnd, nullptr, 10/*1920*/, 10/*0*/, 1536 >> 1, 2040 >> 1, SWP_FRAMECHANGED);
+		::ShowWindow(hWnd, SW_SHOW);
 #endif
 	}
 

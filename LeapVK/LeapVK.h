@@ -53,12 +53,12 @@ protected:
 #ifdef USE_LEAP		
 		//!< Leap イメージ
 		{
-			Textures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_FORMAT_R8_UNORM, VkExtent3D({ .width = ImageProperties[0].width, .height = ImageProperties[0].height, .depth = 1 }), 1, static_cast<uint32_t>(size(ImageData)), VK_IMAGE_ASPECT_COLOR_BIT);
+			Textures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_FORMAT_R8_UNORM, VkExtent3D({ .width = ImageProperties[0].width, .height = ImageProperties[0].height, .depth = 1 }), 1, static_cast<uint32_t>(size(ImageData)));
 			UpdateLeapImage();
 		}
 		//!< ディストーションマップ
 		{
-			Textures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_FORMAT_R32G32_SFLOAT, VkExtent3D({ .width = LEAP_DISTORTION_MATRIX_N, .height = LEAP_DISTORTION_MATRIX_N, .depth = 1 }), 1, static_cast<uint32_t>(size(DistortionMatrices)), VK_IMAGE_ASPECT_COLOR_BIT);
+			Textures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_FORMAT_R32G32_SFLOAT, VkExtent3D({ .width = LEAP_DISTORTION_MATRIX_N, .height = LEAP_DISTORTION_MATRIX_N, .depth = 1 }), 1, static_cast<uint32_t>(size(DistortionMatrices)));
 			UpdateDistortionImage();
 		}
 #else	

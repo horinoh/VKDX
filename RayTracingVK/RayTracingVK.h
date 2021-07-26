@@ -41,10 +41,60 @@ public:
 		}
 	}
 	virtual void CreateGeometry() override;
-	virtual void CreateTexture() override;
-	virtual void CreatePipelineLayout() override;
+	virtual void CreateTexture() override {
+		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
+		StorageTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_FORMAT_R8G8B8A8_UNORM, VkExtent3D({.width = 1280, .height = 720, .depth = 1}));
+	}
+	virtual void CreatePipelineLayout() override {
+		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
+
+		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
+			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
+			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
+		});
+		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
+	}
 	virtual void CreatePipeline() override;
+	virtual void CreateDescriptorSet() override {
+		VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1 }),
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1 })
+		});
+		const std::array DSLs = { DescriptorSetLayouts[0] };
+		const VkDescriptorSetAllocateInfo DSAI = {
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			.pNext = nullptr,
+			.descriptorPool = DescriptorPools[0],
+			.descriptorSetCount = static_cast<uint32_t>(size(DSLs)), .pSetLayouts = data(DSLs)
+		};
+	}
+	virtual void UpdateDescriptorSet() override {
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
+			VkDescriptorUpdateTemplateEntry({
+				.dstBinding = 0, .dstArrayElement = 0,
+				.descriptorCount = _countof(DescriptorUpdateInfo::DescriptorBufferInfos), .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
+				.offset = offsetof(DescriptorUpdateInfo, DescriptorBufferInfos), .stride = sizeof(DescriptorUpdateInfo)
+			}),
+			VkDescriptorUpdateTemplateEntry({
+				.dstBinding = 1, .dstArrayElement = 0,
+				.descriptorCount = _countof(DescriptorUpdateInfo::DescriptorImageInfos), .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+				.offset = offsetof(DescriptorUpdateInfo, DescriptorImageInfos), .stride = sizeof(DescriptorUpdateInfo)
+			}),
+			}, DescriptorSetLayouts[0]);
+
+		const DescriptorUpdateInfo DUI = {
+			VkDescriptorBufferInfo({.buffer = TLASs[0].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }), //!< TLAS
+			VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = StorageTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }), //!< StorageImage
+		};
+		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+	}
 	virtual void PopulateCommandBuffer(const size_t i) override;
 #pragma endregion
+private:
+	struct DescriptorUpdateInfo
+	{
+		VkDescriptorBufferInfo DescriptorBufferInfos[1];
+		VkDescriptorImageInfo DescriptorImageInfos[1];
+	};
 };
 #pragma endregion

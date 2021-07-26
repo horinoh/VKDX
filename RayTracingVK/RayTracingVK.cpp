@@ -257,7 +257,8 @@ void RayTracingVK::CreateGeometry()
                 VkAccelerationStructureGeometryKHR({
                     .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
                     .pNext = nullptr,
-                    .geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+                    //!< トライアングル
+                    .geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR, 
                     .geometry = VkAccelerationStructureGeometryDataKHR({
                         .triangles = VkAccelerationStructureGeometryTrianglesDataKHR({
                             .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
@@ -276,11 +277,11 @@ void RayTracingVK::CreateGeometry()
             const VkAccelerationStructureBuildGeometryInfoKHR ASBGI = {
                 .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
                 .pNext = nullptr,
-                .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+                .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, //!< ボトムレベル
                 .flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
                 .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
                 .srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = VK_NULL_HANDLE,
-                .geometryCount = static_cast<uint32_t>(size(ASGs)),.pGeometries = data(ASGs), .ppGeometries = nullptr,
+                .geometryCount = static_cast<uint32_t>(size(ASGs)),.pGeometries = data(ASGs), .ppGeometries = nullptr, //!< ジオメトリ(トライアングル)
                 .scratchData = VkDeviceOrHostAddressKHR()
             };
             constexpr uint32_t MaxPrimitiveCounts = 1;
@@ -317,6 +318,7 @@ void RayTracingVK::CreateGeometry()
                 VkAccelerationStructureGeometryKHR({
                     .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
                     .pNext = nullptr,
+                    //!< インスタンス
                     .geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
                     .geometry = VkAccelerationStructureGeometryDataKHR({
                         .instances = VkAccelerationStructureGeometryInstancesDataKHR({
@@ -334,11 +336,11 @@ void RayTracingVK::CreateGeometry()
             const VkAccelerationStructureBuildGeometryInfoKHR ASBGI = {
                 .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
                 .pNext = nullptr,
-                .type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
+                .type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, //!< トップレベル
                 .flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
                 .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
                 .srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = VK_NULL_HANDLE,
-                .geometryCount = static_cast<uint32_t>(size(ASGs)),.pGeometries = data(ASGs), .ppGeometries = nullptr,
+                .geometryCount = static_cast<uint32_t>(size(ASGs)),.pGeometries = data(ASGs), .ppGeometries = nullptr, //!< ジオメトリ(インスタンス)
                 .scratchData = VkDeviceOrHostAddressKHR()
             };
             constexpr uint32_t MaxPrimitiveCounts = 1;
@@ -351,20 +353,6 @@ void RayTracingVK::CreateGeometry()
 #pragma endregion
     }
 #pragma endregion
-}
-void RayTracingVK::CreateTexture()
-{
-	if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
-}
-void RayTracingVK::CreatePipelineLayout()
-{
-	if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
-
-	CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
-	    VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
-		VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
-    });
-	VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 }
 void RayTracingVK::CreatePipeline()
 {
@@ -418,19 +406,20 @@ void RayTracingVK::CreatePipeline()
 	VERIFY_SUCCEEDED(vkCreateRayTracingPipelinesKHR(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, static_cast<uint32_t>(size(RTPCIs)), data(RTPCIs), GetAllocationCallbacks(), &Pipelines.emplace_back()));
 #pragma endregion
 
-#pragma region BINDING_TABLE
+#pragma region SHADER_BINDING_TABLE
 	VkPhysicalDeviceRayTracingPipelinePropertiesKHR PDRTPP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, .pNext = nullptr };
 	VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
 	vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
 
 	const auto AlignedSize = RoundUp(PDRTPP.shaderGroupHandleSize, PDRTPP.shaderGroupHandleAlignment);
-    constexpr auto Count = size(PSSCIs);
+	constexpr auto Count = size(PSSCIs);
 	std::vector<std::byte> Data(AlignedSize * Count);
 	VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, Count, size(Data), data(Data)));
 
 	const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 	constexpr auto BUF = VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 	constexpr auto MPF = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+	//!< #VK_TODO 1つのバッファにまとめる?
 	ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(Data) + 0 * AlignedSize); //!< 0:RayGen
 	ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(Data) + 1 * AlignedSize); //!< 1:Miss
 	ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(Data) + 2 * AlignedSize); //!< 2:ClosestHit
@@ -438,5 +427,38 @@ void RayTracingVK::CreatePipeline()
 }
 void RayTracingVK::PopulateCommandBuffer([[maybe_unused]]const size_t i)
 {
+	if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
+
+	const auto CB = CommandBuffers[i];
+	constexpr VkCommandBufferBeginInfo CBBI = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.pNext = nullptr,
+		.flags = 0,
+		.pInheritanceInfo = nullptr
+	};
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+		vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, Pipelines[0]);
+
+		const std::array DSs = { DescriptorSets[0] };
+		constexpr std::array<uint32_t, 0> DynamicOffsets = {};
+		vkCmdBindDescriptorSets(CB, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, PipelineLayouts[0], 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
+        
+		VkPhysicalDeviceRayTracingPipelinePropertiesKHR PDRTPP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, .pNext = nullptr };
+		VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
+		vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
+
+		const auto AlignedSize = RoundUp(PDRTPP.shaderGroupHandleSize, PDRTPP.shaderGroupHandleAlignment);
+		const auto RayGen = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[0].Buffer), .stride = AlignedSize, .size = AlignedSize });
+		const auto Miss = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[1].Buffer), .stride = AlignedSize, .size = AlignedSize });
+		const auto Hit = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[2].Buffer), .stride = AlignedSize, .size = AlignedSize });
+#if 0
+        uint32_t imageWidth = 1, imageHeight = 1;
+        vkCmdTraceRaysKHR(CB, &Raygen, &Miss, &Hit, nullptr, imageWidth, imageHeight, 1);
+        //vkCmdTraceRaysIndirectKHR(CB, &Raygen, &Miss, &Hit, nullptr, (VkDeviceAddress)0);
+#endif
+
+        //!< ストレージイメージをスワップチェインへコピー
+
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
 #pragma endregion

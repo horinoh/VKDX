@@ -229,8 +229,11 @@ protected:
 		};
 		std::vector<COM_PTR<ID3DBlob>> SBs1;
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.vs.cso")), COM_PTR_PUT(SBs1.emplace_back())));
+#ifdef DRAW_QUILT
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1_Quilt.ps.cso")), COM_PTR_PUT(SBs1.emplace_back())));
+#else
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.ps.cso")), COM_PTR_PUT(SBs1.emplace_back())));
-		//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1_Quilt.ps.cso")), COM_PTR_PUT(SBs1.emplace_back())));
+#endif
 		const std::array SBCs1 = {
 			D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs1[0]->GetBufferPointer(), .BytecodeLength = SBs1[0]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs1[1]->GetBufferPointer(), .BytecodeLength = SBs1[1]->GetBufferSize() }),
@@ -282,7 +285,7 @@ protected:
 				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 #pragma region FRAME_OBJECT
 				for (UINT i = 0; i < SCD.BufferCount; ++i) {
-					const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = COM_PTR_GET(ConstantBuffers[i].Resource)->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
+					const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = ConstantBuffers[i].Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
 					Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 				}
 #pragma endregion

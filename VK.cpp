@@ -181,6 +181,7 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 	DescriptorSetLayouts.clear();
 
+	for (auto& i : StorageTextures) { i.Destroy(Device); } StorageTextures.clear();
 	for (auto& i : RenderTextures) { i.Destroy(Device); } RenderTextures.clear();
 	for (auto& i : DepthTextures) { i.Destroy(Device); } DepthTextures.clear();
 	for (auto& i : Textures) { i.Destroy(Device); } Textures.clear();
@@ -1620,7 +1621,7 @@ void VK::CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipe
 	constexpr auto Extent = VkExtent3D({ .width = 1, .height = 1, .depth = 1 });
 
 	const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-	Textures.emplace_back().Create(Device, PDMP, Format, Extent, 1, static_cast<uint32_t>(size(Colors)), VK_IMAGE_ASPECT_COLOR_BIT);
+	Textures.emplace_back().Create(Device, PDMP, Format, Extent, 1, static_cast<uint32_t>(size(Colors)));
 
 	const auto CB = CommandBuffers[0];
 	{

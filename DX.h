@@ -302,43 +302,57 @@ public:
 				D3D12_SHADER_RESOURCE_VIEW_DESC({ .Format = CV.Format, .ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY, .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, .Texture2DArray = D3D12_TEX2D_ARRAY_SRV({.MostDetailedMip = 0, .MipLevels = Resource->GetDesc().MipLevels, .FirstArraySlice = 0, .ArraySize = DepthOrArraySize, .PlaneSlice = 0, .ResourceMinLODClamp = 0.0f }) });
 		}
 	};
-
+	class UnorderedAccessTexture : public TextureBase
+	{
+	private:
+		using Super = TextureBase;
+	public:
+		D3D12_UNORDERED_ACCESS_VIEW_DESC UAV;
+		void Create(ID3D12Device* Device, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize, const DXGI_FORMAT Format) {
+			DX::CreateTextureResource(COM_PTR_PUT(Resource), Device, Width, Height, DepthOrArraySize, 1, Format, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+			//UAV = DepthOrArraySize == 1 ?
+			//	D3D12_UNORDERED_ACCESS_VIEW_DESC({ .Format = Format, .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D, .Texture2D = D3D12_TEX2D_UAV({.MipSlice = 0, .PlaneSlice = 0}) }) :
+			//	D3D12_UNORDERED_ACCESS_VIEW_DESC({ .Format = Format, .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY, .Texture2DArray = D3D12_TEX2D_ARRAY_UAV({ .MipSlice = 0, .FirstArraySlice = 0, .ArraySize = DepthOrArraySize, .PlaneSlice = 0}) });
+		}
+	};
 #pragma region RAYTRACING
 	class AccelerationStructureBuffer : public ResourceBase
 	{
 	public:
+		D3D12_SHADER_RESOURCE_VIEW_DESC SRV;
 		AccelerationStructureBuffer& Create(ID3D12Device* Device, const size_t Size) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
+			SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({ 
+				.Format = DXGI_FORMAT_UNKNOWN,
+				.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE, 
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.RaytracingAccelerationStructure = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_SRV({.Location = Resource->GetGPUVirtualAddress()})
+			});
 			return *this;
 		}
-		void PopulateBuildCommand() {}
+		void PopulateBuildCommand(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12Resource* SB) {
+			COM_PTR<ID3D12GraphicsCommandList4> GCL4;
+			VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
+			const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
+				.DestAccelerationStructureData = Resource->GetGPUVirtualAddress(),
+				.Inputs = BRASI,
+				.SourceAccelerationStructureData = 0,
+				.ScratchAccelerationStructureData = SB->GetGPUVirtualAddress()
+			};
+			GCL4->BuildRaytracingAccelerationStructure(&BRASD, 0, nullptr);
+#if 1
+			const auto RBs = {
+				D3D12_RESOURCE_BARRIER({.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV, .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, .UAV = D3D12_RESOURCE_UAV_BARRIER({.pResource = COM_PTR_GET(Resource)}) }),
+			};
+			GCL4->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+#endif
+		}
 		void ExecuteBuildCommand(ID3D12Device* Device, const size_t Size, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, [[maybe_unused]] ID3D12Fence* Fence) {
 			ScratchBuffer SB;
 			SB.Create(Device, Size);
-
 			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-
-				PopulateBuildCommand();
-				COM_PTR<ID3D12GraphicsCommandList4> GCL4;
-				VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
-				{
-					const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
-						.DestAccelerationStructureData = COM_PTR_GET(Resource)->GetGPUVirtualAddress(),
-						.Inputs = BRASI,
-						.SourceAccelerationStructureData = 0,
-						.ScratchAccelerationStructureData = COM_PTR_GET(SB.Resource)->GetGPUVirtualAddress()
-					};
-					GCL4->BuildRaytracingAccelerationStructure(&BRASD, 0, nullptr);
-#if 1
-					const auto RBs = {
-						D3D12_RESOURCE_BARRIER({.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV, .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, .UAV = D3D12_RESOURCE_UAV_BARRIER({.pResource = COM_PTR_GET(Resource)}) }),
-					};
-					GCL4->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-#endif
-				}
-
+				PopulateBuildCommand(BRASI, GCL, COM_PTR_GET(SB.Resource));
 			} VERIFY_SUCCEEDED(GCL->Close());
-
 			DX::ExecuteAndWait(CQ, static_cast<ID3D12CommandList*>(GCL), Fence);
 		}
 	};
@@ -349,6 +363,7 @@ public:
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 		}
 	}; 
+	using ShaderTable = ResourceBase;
 #pragma endregion
 #pragma region MESH_SHADER
 #pragma warning(push)
@@ -476,7 +491,7 @@ public:
 	virtual void LoadScene() {}
 
 	virtual void CreateGeometry() {}
-	
+
 	virtual void CreateConstantBuffer() {}
 
 	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f);
@@ -608,17 +623,22 @@ protected:
 	std::vector<ConstantBuffer> ConstantBuffers;
 #pragma region RAYTRACING
 	std::vector<AccelerationStructureBuffer> BLASs, TLASs;
+	std::vector<ShaderTable> ShaderTables;
 #pragma endregion
 
 	std::vector<Texture> Textures;
 	std::vector<DepthTexture> DepthTextures;
 	std::vector<RenderTexture> RenderTextures;
+	std::vector<UnorderedAccessTexture> UnorderedAccessTextures;
 
 	std::vector<D3D12_STATIC_SAMPLER_DESC> StaticSamplerDescs;
 
 	std::vector<COM_PTR<ID3D12RootSignature>> RootSignatures;
 	COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
 	std::vector<COM_PTR<ID3D12PipelineState>> PipelineStates;
+#pragma region RAYTRACING
+	std::vector<COM_PTR<ID3D12StateObject>> StateObjects;
+#pragma endregion
 
 	std::vector<COM_PTR<ID3D12DescriptorHeap>> CbvSrvUavDescriptorHeaps;	//!< D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
 	std::vector<COM_PTR<ID3D12DescriptorHeap>> SamplerDescriptorHeaps;		//!< D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER
