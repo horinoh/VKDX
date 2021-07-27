@@ -46,19 +46,19 @@ protected:
 		//!< パス0 : インダイレクトバッファ(シャドウキャスタ描画用 : トーラス)
 		{
 			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, sizeof(DIIC)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
 		}
 #ifdef USE_SHADOWMAP_VISUALIZE
 		//!< パス1 : インダイレクトバッファ(シャドウマップ描画用 : フルスクリーン)
 		{
 			constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, sizeof(DIC)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIC), &DIC);
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIC), &DIC);
 		}
 #else
 		//!< パス1 : インダイレクトバッファ(シャドウレシーバ描画用 : トーラス、平面)
 		{
 			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 2, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, sizeof(DIIC)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
 		}
 #endif		
 	}

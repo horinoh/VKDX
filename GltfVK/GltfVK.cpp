@@ -570,7 +570,7 @@ void GltfVK::Process(std::string_view Identifier, const fx::gltf::Accessor& Acc)
 				IndexBuffers.emplace_back().Create(Device, PDMP, Size).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, Size, Data);
 
 				const VkDrawIndexedIndirectCommand DIIC = { .indexCount = Acc.count, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-				IndirectBuffers.emplace_back().Create(Device, PDMP, sizeof(DIIC)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
+				IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
 			}
 			else if ("attributes" == Identifier || "targets" == Identifier) {
 				VertexBuffers.emplace_back().Create(Device, PDMP, Size).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, Size, Data);

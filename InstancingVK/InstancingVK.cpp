@@ -258,7 +258,7 @@ void InstancingVK::CreateGeometry()
 		IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Indices), data(Indices));
 		{
 			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = static_cast<uint32_t>(size(Instances)), .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, sizeof(DIIC)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
 		}
 	}
 	LOG_OK();

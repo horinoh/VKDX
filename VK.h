@@ -192,16 +192,23 @@ public:
 	{
 	private:
 		using Super = DeviceLocalBuffer;
-	public:
+	protected:
 		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) { 
 			Super::Create(Device, PDMP, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
 			return *this;
 		}
+	public:
 		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDrawIndexedIndirectCommand& DIIC) { return Create(Device, PDMP, sizeof(DIIC)); }
 		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDrawIndirectCommand& DIC) { return Create(Device, PDMP, sizeof(DIC)); }
 		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDispatchIndirectCommand& DIC) { return Create(Device, PDMP, sizeof(DIC)); }
 #pragma region MESH_SHADER
 		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDrawMeshTasksIndirectCommandNV& DMTIC) { return Create(Device, PDMP, sizeof(DMTIC)); }
+#pragma endregion
+#pragma region RAYTRACING
+		IndirectBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkTraceRaysIndirectCommandKHR& TRIC) {
+			Super::Create(Device, PDMP, VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(TRIC));
+			return *this;
+		}
 #pragma endregion
 		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) {
 			PopulateCommandBuffer_CopyBufferToBuffer(CB, Staging, Buffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
@@ -290,7 +297,7 @@ public:
 	public:
 		VkAccelerationStructureKHR AccelerationStructure;
 		AccelerationStructureBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkAccelerationStructureTypeKHR Type, const size_t Size) {
-			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 			const VkAccelerationStructureCreateInfoKHR ASCI = {
 				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
 				.pNext = nullptr,
@@ -308,7 +315,7 @@ public:
 			if (VK_NULL_HANDLE != AccelerationStructure) { vkDestroyAccelerationStructureKHR(Device, AccelerationStructure, GetAllocationCallbacks()); }
 			Super::Destroy(Device);
 		}
-		void PopulateBuildCommand(const VkDevice Device, const VkAccelerationStructureTypeKHR Type, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs, const VkBuffer SB, const VkCommandBuffer CB) {
+		void PopulateBuildCommand(const VkDevice Device, const VkAccelerationStructureTypeKHR Type, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs, const VkBuffer Scratch, const VkCommandBuffer CB) {
 			const std::array ASBGIs = {
 				VkAccelerationStructureBuildGeometryInfoKHR({
 					.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
@@ -318,11 +325,13 @@ public:
 					.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
 					.srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = AccelerationStructure,
 					.geometryCount = static_cast<uint32_t>(size(ASGs)),.pGeometries = data(ASGs), .ppGeometries = nullptr,
-					.scratchData = VkDeviceOrHostAddressKHR({.deviceAddress = VK::GetDeviceAddress(Device, SB)})
+					.scratchData = VkDeviceOrHostAddressKHR({.deviceAddress = VK::GetDeviceAddress(Device, Scratch)})
 				}),
 			};
-			const std::array ASBRIs = { VkAccelerationStructureBuildRangeInfoKHR({.primitiveCount = 1, .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0 }), };
-			const std::array ASBRIss = { data(ASBRIs) };
+			const std::array ASBRIs_0 = { VkAccelerationStructureBuildRangeInfoKHR({.primitiveCount = 1, .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0 }), };
+			const std::array ASBRIss = { data(ASBRIs_0)};
+			assert(size(ASBGIs) == size(ASBRIss));
+			assert(ASBGIs[0].geometryCount == size(ASBRIs_0));
 			vkCmdBuildAccelerationStructuresKHR(CB, static_cast<uint32_t>(size(ASBGIs)), data(ASBGIs), data(ASBRIss));
 		}
 		void SubmitBuildCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs, VkQueue Queue, const VkCommandBuffer CB) {

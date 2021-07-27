@@ -267,7 +267,6 @@ void DisplacementDX::PopulateCommandList(const size_t i)
             GCL->OMSetRenderTargets(static_cast<UINT>(size(RTDHs)), data(RTDHs), FALSE, &DCDH);
 
 			{
-				assert(!empty(CbvSrvUavDescriptorHeaps) && "");
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 
 				const std::array DHs = { COM_PTR_GET(DH) };

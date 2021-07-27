@@ -186,8 +186,7 @@ public:
 	{
 	private:
 		using Super = DefaultResource;
-	public:
-		COM_PTR<ID3D12CommandSignature> CommandSignature;
+	protected:
 		IndirectBuffer& Create(ID3D12Device* Device, const size_t Size, const D3D12_INDIRECT_ARGUMENT_TYPE Type) {
 			Super::Create(Device, Size);
 			const std::array IADs = { D3D12_INDIRECT_ARGUMENT_DESC({.Type = Type }), };
@@ -195,6 +194,8 @@ public:
 			Device->CreateCommandSignature(&CSD, nullptr, COM_PTR_UUIDOF_PUTVOID(CommandSignature));
 			return *this;
 		}
+	public:
+		COM_PTR<ID3D12CommandSignature> CommandSignature;
 		IndirectBuffer& Create(ID3D12Device* Device, const D3D12_DRAW_INDEXED_ARGUMENTS& DIA) { return Create(Device, sizeof(DIA), D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED); }
 		IndirectBuffer& Create(ID3D12Device* Device, const D3D12_DRAW_ARGUMENTS& DA) { return Create(Device, sizeof(DA), D3D12_INDIRECT_ARGUMENT_TYPE_DRAW); }
 		IndirectBuffer& Create(ID3D12Device* Device, const D3D12_DISPATCH_ARGUMENTS& DA) { return Create(Device, sizeof(DA), D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH); }
@@ -310,16 +311,16 @@ public:
 		D3D12_UNORDERED_ACCESS_VIEW_DESC UAV;
 		void Create(ID3D12Device* Device, const UINT64 Width, const UINT Height, const UINT16 DepthOrArraySize, const DXGI_FORMAT Format) {
 			DX::CreateTextureResource(COM_PTR_PUT(Resource), Device, Width, Height, DepthOrArraySize, 1, Format, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
-			//UAV = DepthOrArraySize == 1 ?
-			//	D3D12_UNORDERED_ACCESS_VIEW_DESC({ .Format = Format, .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D, .Texture2D = D3D12_TEX2D_UAV({.MipSlice = 0, .PlaneSlice = 0}) }) :
-			//	D3D12_UNORDERED_ACCESS_VIEW_DESC({ .Format = Format, .ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY, .Texture2DArray = D3D12_TEX2D_ARRAY_UAV({ .MipSlice = 0, .FirstArraySlice = 0, .ArraySize = DepthOrArraySize, .PlaneSlice = 0}) });
+			UAV = DepthOrArraySize == 1 ?
+				D3D12_UNORDERED_ACCESS_VIEW_DESC({ .Format = Format, .ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D, .Texture2D = D3D12_TEX2D_UAV({.MipSlice = 0, .PlaneSlice = 0}) }) :
+				D3D12_UNORDERED_ACCESS_VIEW_DESC({ .Format = Format, .ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY, .Texture2DArray = D3D12_TEX2D_ARRAY_UAV({.MipSlice = 0, .FirstArraySlice = 0, .ArraySize = DepthOrArraySize, .PlaneSlice = 0}) });
 		}
 	};
 #pragma region RAYTRACING
 	class AccelerationStructureBuffer : public ResourceBase
 	{
 	public:
-		D3D12_SHADER_RESOURCE_VIEW_DESC SRV;
+		D3D12_SHADER_RESOURCE_VIEW_DESC SRV; //!< TLAS ‚ÅŽg—p
 		AccelerationStructureBuffer& Create(ID3D12Device* Device, const size_t Size) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
 			SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({ 
@@ -330,14 +331,14 @@ public:
 			});
 			return *this;
 		}
-		void PopulateBuildCommand(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12Resource* SB) {
+		void PopulateBuildCommand(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12Resource* Scratch) {
 			COM_PTR<ID3D12GraphicsCommandList4> GCL4;
 			VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
 			const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
 				.DestAccelerationStructureData = Resource->GetGPUVirtualAddress(),
 				.Inputs = BRASI,
 				.SourceAccelerationStructureData = 0,
-				.ScratchAccelerationStructureData = SB->GetGPUVirtualAddress()
+				.ScratchAccelerationStructureData = Scratch->GetGPUVirtualAddress()
 			};
 			GCL4->BuildRaytracingAccelerationStructure(&BRASD, 0, nullptr);
 #if 1

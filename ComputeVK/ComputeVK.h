@@ -39,7 +39,7 @@ protected:
 	virtual void CreateGeometry() override { 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		constexpr VkDispatchIndirectCommand DIC = { .x = 32, .y = 1, .z = 1 };
-		IndirectBuffers.emplace_back().Create(Device, PDMP, sizeof(DIC)).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
+		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
 	}
 	virtual void CreateTexture() override {
 		//!< VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT : コンピュートシェーダでストレージターゲットとなり、フラグメントシェーダでサンプルされる #VK_TODO
