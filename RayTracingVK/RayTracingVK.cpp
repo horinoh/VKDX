@@ -288,13 +288,13 @@ void RayTracingVK::PopulateCommandBuffer([[maybe_unused]]const size_t i)
 			vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, static_cast<uint32_t>(size(IMBs)), data(IMBs));
         }
 
-        constexpr std::array ICs = {
+        const std::array ICs = {
             VkImageCopy({
                 .srcSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 }),
                 .srcOffset = VkOffset3D({.x = 0, .y = 0, .z = 0}),
                 .dstSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = 0, .layerCount = 1 }),
                 .dstOffset = VkOffset3D({.x = 0, .y = 0, .z = 0}),
-                .extent = VkExtent3D({.width = 1280, .height = 720, .depth = 1 }),
+                .extent = VkExtent3D({.width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 }),
             }),
         };
 		vkCmdCopyImage(CB, StorageTextures[0].Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, SwapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(size(ICs)), data(ICs));

@@ -384,9 +384,7 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	//COM_PTR<ID3D12Debug1> Debug1;
 	//VERIFY_SUCCEEDED(Debug->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Debug1)));
 	//Debug1->SetEnableGPUBasedValidation(true);
-#endif
 
-#ifdef _DEBUG
 	//!< CreateDXGIFactory2()では引数にフラグを取ることができるので DXGI_CREATE_FACTORY_DEBUG フラグを指定 (CreateDXGIFactory2() can specify flag argument, here use DXGI_CREATE_FACTORY_DEBUG)
 	VERIFY_SUCCEEDED(CreateDXGIFactory2(DXGI_CREATE_FACTORY_DEBUG, COM_PTR_UUIDOF_PUTVOID(Factory)));
 #else
@@ -484,15 +482,15 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 		}
 	}
 
+	//!< デバイス作成後
+#ifdef _DEBUG
 	{
 		COM_PTR<ID3D12InfoQueue> IQ;
 		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(IQ)));
 		if (nullptr != IQ) {
-#ifdef _DEBUG
 			//!< エラー等でブレークする設定 (Break with error)
 			VERIFY_SUCCEEDED(IQ->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_ERROR, TRUE));
 			VERIFY_SUCCEEDED(IQ->SetBreakOnSeverity(D3D12_MESSAGE_SEVERITY_WARNING, TRUE));
-#endif
 
 			//!< ワーニング等をフィルタリングしたい場合等に使用
 			//!< 適切に設定しないと出力がうるさいのでここでは無効にしている
@@ -519,6 +517,7 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 #endif
 		}
 	}
+#endif
 
 	LOG_OK();
 }

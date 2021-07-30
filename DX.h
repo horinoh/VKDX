@@ -340,8 +340,9 @@ public:
 				.SourceAccelerationStructureData = 0,
 				.ScratchAccelerationStructureData = Scratch->GetGPUVirtualAddress()
 			};
-			GCL4->BuildRaytracingAccelerationStructure(&BRASD, 0, nullptr);
-#if 1
+			constexpr std::array<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC, 0> RASPIDs = {};
+			GCL4->BuildRaytracingAccelerationStructure(&BRASD, static_cast<UINT>(size(RASPIDs)), data(RASPIDs));
+#if 0
 			const auto RBs = {
 				D3D12_RESOURCE_BARRIER({.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV, .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, .UAV = D3D12_RESOURCE_UAV_BARRIER({.pResource = COM_PTR_GET(Resource)}) }),
 			};
