@@ -144,6 +144,13 @@ public:
 	public:
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size, const void* Source = nullptr) { VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, BUF, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source); }
 	};
+	class StagingBuffer : public HostVisibleBuffer
+	{
+	private:
+		using Super = HostVisibleBuffer;
+	public:
+		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const void* Source = nullptr) { VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source); }
+	};
 	class VertexBuffer : public DeviceLocalBuffer
 	{
 	private:
@@ -157,11 +164,11 @@ public:
 			PopulateCommandBuffer_CopyBufferToBuffer(CB, Staging, Buffer, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
 		}
 		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
-			VK::Scoped<HostVisibleBuffer> StagingBuffer(Device);
-			StagingBuffer.Create(Device, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, Source);
+			VK::Scoped<StagingBuffer> Staging(Device);
+			Staging.Create(Device, PDMP, Size, Source);
 			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-				PopulateCopyCommand(CB, Size, StagingBuffer.Buffer);
+				PopulateCopyCommand(CB, Size, Staging.Buffer);
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 			VK::SubmitAndWait(Queue, CB);
 		}
@@ -179,11 +186,11 @@ public:
 			PopulateCommandBuffer_CopyBufferToBuffer(CB, Staging, Buffer, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
 		}
 		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
-			VK::Scoped<HostVisibleBuffer> StagingBuffer(Device);
-			StagingBuffer.Create(Device, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, Source);
+			VK::Scoped<StagingBuffer> Staging(Device);
+			Staging.Create(Device, PDMP, Size, Source);
 			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-				PopulateCopyCommand(CB, Size, StagingBuffer.Buffer);
+				PopulateCopyCommand(CB, Size, Staging.Buffer);
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 			VK::SubmitAndWait(Queue, CB);
 		}
@@ -214,11 +221,11 @@ public:
 			PopulateCommandBuffer_CopyBufferToBuffer(CB, Staging, Buffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
 		}
 		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
-			VK::Scoped<HostVisibleBuffer> StagingBuffer(Device);
-			StagingBuffer.Create(Device, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, Size, Source);
+			VK::Scoped<StagingBuffer> Staging(Device);
+			Staging.Create(Device, PDMP, Size, Source);
 			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-				PopulateCopyCommand(CB, Size, StagingBuffer.Buffer);
+				PopulateCopyCommand(CB, Size, Staging.Buffer);
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 			VK::SubmitAndWait(Queue, CB);
 		}
@@ -290,14 +297,14 @@ public:
 		}
 	};
 #pragma region RAYTRACING
-	class AccelerationStructureBuffer : public BufferMemory
+	class AccelerationStructureBuffer : public DeviceLocalBuffer
 	{
 	private:
-		using Super = BufferMemory;
+		using Super = DeviceLocalBuffer;
 	public:
 		VkAccelerationStructureKHR AccelerationStructure;
 		AccelerationStructureBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkAccelerationStructureTypeKHR Type, const size_t Size) {
-			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			Super::Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size);
 			const VkAccelerationStructureCreateInfoKHR ASCI = {
 				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
 				.pNext = nullptr,
@@ -344,11 +351,13 @@ public:
 			SubmitAndWait(Queue, CB);
 		}
 	};
-	class ScratchBuffer : public BufferMemory
+	class ScratchBuffer : public DeviceLocalBuffer
 	{
+	private:
+		using Super = DeviceLocalBuffer;
 	public:
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
-			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			Super::Create(Device, PDMP, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size);
 		}
 	};
 	using ShaderBindingTable = BufferMemory;

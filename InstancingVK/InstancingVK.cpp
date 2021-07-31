@@ -236,31 +236,46 @@ void InstancingVK::CreateGeometry()
 	const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 	const auto& CB = CommandBuffers[0];
 
-	{
-		constexpr std::array Vertices = {
-			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }),
-			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }),
-			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }),
-		};
-		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Vertices), data(Vertices));
-	}
-	{
-		constexpr std::array Instances = {
-			Instance_OffsetXY({ { -0.5f, -0.5f } }),
-			Instance_OffsetXY({ { -0.25f, -0.25f } }),
-			Instance_OffsetXY({ { 0.0f, 0.0f } }),
-			Instance_OffsetXY({ { 0.25f, 0.25f } }),
-			Instance_OffsetXY({ { 0.5f, 0.5f } }),
-		};
-		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Instances)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Instances), data(Instances));
+	constexpr std::array Vertices = {
+		Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }),
+		Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }),
+		Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }),
+	};
+	constexpr std::array Instances = {
+		Instance_OffsetXY({ { -0.5f, -0.5f } }),
+		Instance_OffsetXY({ { -0.25f, -0.25f } }),
+		Instance_OffsetXY({ { 0.0f, 0.0f } }),
+		Instance_OffsetXY({ { 0.25f, 0.25f } }),
+		Instance_OffsetXY({ { 0.5f, 0.5f } }),
+	};
+	constexpr std::array<uint32_t, 3> Indices = { 0, 1, 2 };
+	constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = static_cast<uint32_t>(size(Instances)), .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 
-		constexpr std::array<uint32_t, 3> Indices = { 0, 1, 2 };
-		IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Indices), data(Indices));
-		{
-			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = static_cast<uint32_t>(size(Instances)), .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
-		}
-	}
+	VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices));
+	VK::Scoped<StagingBuffer> Staging_Vertex0(Device);
+	Staging_Vertex0.Create(Device, PDMP, sizeof(Vertices), data(Vertices));
+	
+	VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Instances));
+	VK::Scoped<StagingBuffer> Staging_Vertex1(Device);
+	Staging_Vertex1.Create(Device, PDMP, sizeof(Instances), data(Instances));
+
+	IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices));
+	VK::Scoped<StagingBuffer> Staging_Index(Device);
+	Staging_Index.Create(Device, PDMP, sizeof(Indices), data(Indices));
+
+	IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
+	VK::Scoped<StagingBuffer> Staging_Indirect(Device);
+	Staging_Indirect.Create(Device, PDMP, sizeof(DIIC), &DIIC);
+
+	constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+		VertexBuffers[0].PopulateCopyCommand(CB, sizeof(Vertices), Staging_Vertex0.Buffer);
+		VertexBuffers[1].PopulateCopyCommand(CB, sizeof(Instances), Staging_Vertex1.Buffer);
+		IndexBuffers.back().PopulateCopyCommand(CB, sizeof(Indices), Staging_Index.Buffer);
+		IndirectBuffers.back().PopulateCopyCommand(CB, sizeof(DIIC), Staging_Indirect.Buffer);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+	VK::SubmitAndWait(GraphicsQueue, CB);
+
 	LOG_OK();
 }
 void InstancingVK::PopulateCommandBuffer(const size_t i)

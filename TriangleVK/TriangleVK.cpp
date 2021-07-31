@@ -232,47 +232,72 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void TriangleVK::CreateGeometry()
 {
+#define COMMAND_COPY_TOGETHER
+
 	const auto& CB = CommandBuffers[0];
 	const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 
-	//!< バーテックスバッファ (VertexBuffer)
-	{
 #if 1
-		constexpr std::array Vertices = {
-	#ifdef USE_VIEWPORT_Y_UP
-			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
-			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
-			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
-	#else
-			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
-			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
-			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
-	#endif
-		};
+	constexpr std::array Vertices = {
+#ifdef USE_VIEWPORT_Y_UP
+		Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
+		Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
+		Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
 #else
-		//!< ピクセル指定
-		constexpr float W = 1280.0f, H = 720.0f;
-		constexpr std::array Vertices = {
-			Vertex_PositionColor({.Position = { W * 0.5f, 100.0f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
-			Vertex_PositionColor({.Position = { W * 0.5f - 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
-			Vertex_PositionColor({.Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
-		};
+		Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
+		Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
+		Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
 #endif
-		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Vertices), data(Vertices));
-		MarkerSetObjectName(Device, VertexBuffers.back().Buffer, "MyVertexBuffer");
-	}
-	//!< インデックスバッファ (IndexBuffer)
-	{
-		constexpr std::array<uint32_t, 3> Indices = { 0, 1, 2 };
-		IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Indices), data(Indices));
-		MarkerSetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
-		//!< インダイレクトバッファ (IndirectBuffer)
-		{
-			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
-			MarkerSetObjectName(Device, IndirectBuffers.back().Buffer, "MyIndirectBuffer");
-		}
-	}
+	};
+#else
+	//!< ピクセル指定
+	constexpr float W = 1280.0f, H = 720.0f;
+	constexpr std::array Vertices = {
+		Vertex_PositionColor({.Position = { W * 0.5f, 100.0f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
+		Vertex_PositionColor({.Position = { W * 0.5f - 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
+		Vertex_PositionColor({.Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
+	};
+#endif
+	constexpr std::array<uint32_t, 3> Indices = { 0, 1, 2 };
+	constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
+
+#ifdef COMMAND_COPY_TOGETHER
+	VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices));
+	VK::Scoped<StagingBuffer> Staging_Vertex(Device);
+	Staging_Vertex.Create(Device, PDMP, sizeof(Vertices), data(Vertices));
+#else
+	VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Vertices), data(Vertices));
+#endif
+	MarkerSetObjectName(Device, VertexBuffers.back().Buffer, "MyVertexBuffer");
+
+#ifdef COMMAND_COPY_TOGETHER
+	IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices));
+	VK::Scoped<StagingBuffer> Staging_Index(Device);
+	Staging_Index.Create(Device, PDMP, sizeof(Indices), data(Indices));
+#else
+	IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Indices), data(Indices));
+#endif	
+	MarkerSetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
+		
+#ifdef COMMAND_COPY_TOGETHER
+	IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
+	VK::Scoped<StagingBuffer> Staging_Indirect(Device);
+	Staging_Indirect.Create(Device, PDMP, sizeof(DIIC), &DIIC);
+#else
+	IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
+#endif	
+	MarkerSetObjectName(Device, IndirectBuffers.back().Buffer, "MyIndirectBuffer");
+
+#ifdef COMMAND_COPY_TOGETHER
+	constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+		VertexBuffers.back().PopulateCopyCommand(CB, sizeof(Vertices), Staging_Vertex.Buffer);
+		IndexBuffers.back().PopulateCopyCommand(CB, sizeof(Indices), Staging_Index.Buffer);
+		IndirectBuffers.back().PopulateCopyCommand(CB, sizeof(DIIC), Staging_Indirect.Buffer);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+	VK::SubmitAndWait(GraphicsQueue, CB);
+#endif
+
 	LOG_OK();
 }
 

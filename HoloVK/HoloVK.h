@@ -50,21 +50,29 @@ protected:
 	virtual void CreateGeometry() override {
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		const auto CB = CommandBuffers[0];
+
 #pragma region PASS0
 		//!< メッシュ描画用
-		{
-			constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
-		}
+		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
+		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
+		VK::Scoped<StagingBuffer> Staging_Indirect0(Device);
+		Staging_Indirect0.Create(Device, PDMP, sizeof(DIIC), &DIIC);
 #pragma endregion
 
 #pragma region PASS1
 		//!< レンダーテクスチャ描画用
-		{
-			constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIC), &DIC); 
-		}
+		constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
+		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC);
+		VK::Scoped<StagingBuffer> Staging_Indirect1(Device);
+		Staging_Indirect1.Create(Device, PDMP, sizeof(DIC), &DIC);
 #pragma endregion
+
+		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
+		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+			IndirectBuffers[0].PopulateCopyCommand(CB, sizeof(DIIC), Staging_Indirect0.Buffer);
+			IndirectBuffers[1].PopulateCopyCommand(CB, sizeof(DIC), Staging_Indirect1.Buffer);
+		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+		VK::SubmitAndWait(GraphicsQueue, CB);
 	}
 	virtual void CreateUniformBuffer() override {
 		constexpr auto Fov = glm::radians(14.0f);

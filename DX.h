@@ -151,8 +151,8 @@ public:
 			DX::PopulateCommandList_CopyBufferRegion(GCL, Upload, COM_PTR_GET(Resource), Size, D3D12_RESOURCE_STATE_GENERIC_READ);
 		}
 		void ExecuteCopyCommand(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const size_t Size, const void* Source) {
-			ResourceBase Upload;
-			Upload.Create(Device, Size, D3D12_HEAP_TYPE_UPLOAD, Source);
+			UploadResource Upload;
+			Upload.Create(Device, Size, Source);
 			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 				PopulateCopyCommand(GCL, Size, COM_PTR_GET(Upload.Resource));
 			} VERIFY_SUCCEEDED(GCL->Close());
@@ -174,8 +174,8 @@ public:
 			DX::PopulateCommandList_CopyBufferRegion(GCL, Upload, COM_PTR_GET(Resource), Size, D3D12_RESOURCE_STATE_GENERIC_READ);
 		}
 		void ExecuteCopyCommand(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const size_t Size, const void* Source) {
-			ResourceBase Upload;
-			Upload.Create(Device, Size, D3D12_HEAP_TYPE_UPLOAD, Source);
+			UploadResource Upload;
+			Upload.Create(Device, Size, Source);
 			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 				PopulateCopyCommand(GCL, Size, COM_PTR_GET(Upload.Resource));
 			} VERIFY_SUCCEEDED(GCL->Close());
@@ -223,20 +223,22 @@ public:
 			Super::Create(Device, RoundUp256(Size), Source);
 		}
 	};
-	class ShaderResourceBuffer : public ResourceBase
-	{
-	public:
-		D3D12_SHADER_RESOURCE_VIEW_DESC View;
-		void Create(ID3D12Device* Device, const size_t Size, const void* Source, const size_t Stride) {
-			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
-			View = D3D12_SHADER_RESOURCE_VIEW_DESC({ 
-				.Format = DXGI_FORMAT_UNKNOWN,
-				.ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.Buffer = D3D12_BUFFER_SRV({.FirstElement = 0, .NumElements = static_cast<UINT>(Size / Stride), .StructureByteStride = static_cast<UINT>(Stride), .Flags = D3D12_BUFFER_SRV_FLAG_NONE })
-			});
-		}
-	};
+	//class ShaderResourceBuffer : public UploadResource
+	//{
+	//private:
+	//	using Super = UploadResource;
+	//public:
+	//	D3D12_SHADER_RESOURCE_VIEW_DESC View;
+	//	void Create(ID3D12Device* Device, const size_t Size, const void* Source, const size_t Stride) {
+	//		Super::Create(Device, Size, Source);
+	//		View = D3D12_SHADER_RESOURCE_VIEW_DESC({ 
+	//			.Format = DXGI_FORMAT_UNKNOWN,
+	//			.ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
+	//			.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+	//			.Buffer = D3D12_BUFFER_SRV({.FirstElement = 0, .NumElements = static_cast<UINT>(Size / Stride), .StructureByteStride = static_cast<UINT>(Stride), .Flags = D3D12_BUFFER_SRV_FLAG_NONE })
+	//		});
+	//	}
+	//};
 	class UnorderedAccessBuffer : public ResourceBase
 	{
 	public:
@@ -343,9 +345,7 @@ public:
 			constexpr std::array<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC, 0> RASPIDs = {};
 			GCL4->BuildRaytracingAccelerationStructure(&BRASD, static_cast<UINT>(size(RASPIDs)), data(RASPIDs));
 #if 0
-			const auto RBs = {
-				D3D12_RESOURCE_BARRIER({.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV, .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, .UAV = D3D12_RESOURCE_UAV_BARRIER({.pResource = COM_PTR_GET(Resource)}) }),
-			};
+			const auto RBs = { D3D12_RESOURCE_BARRIER({.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV, .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, .UAV = D3D12_RESOURCE_UAV_BARRIER({.pResource = COM_PTR_GET(Resource)}) }),};
 			GCL4->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 #endif
 		}

@@ -38,24 +38,36 @@ protected:
 		const auto CA = COM_PTR_GET(CommandAllocators[0]);
 		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
-		//!< パス0 : インダイレクトバッファ(シャドウキャスタ描画用 : トーラス)
-		{
-			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
-		}
+
+#pragma region PASS0
+		//!< インダイレクトバッファ(シャドウキャスタ描画用 : トーラス)
+		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
+		UploadResource Upload_Indirect0;
+		Upload_Indirect0.Create(COM_PTR_GET(Device), sizeof(DIA), &DIA);
+#pragma endregion
+
+#pragma region PASS1
 #ifdef USE_SHADOWMAP_VISUALIZE
-		//!< パス1 : インダイレクトバッファ(シャドウマップ描画用 : フルスクリーン)
-		{
-			constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DA), &DA);
-		}
+		//!< インダイレクトバッファ(シャドウマップ描画用 : フルスクリーン)
+		constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DA), &DA);
+		UploadResource Upload_Indirect1;
+		Upload_Indirect1.Create(COM_PTR_GET(Device), sizeof(DA), &DA); 
 #else
-		//!< パス1 : インダイレクトバッファ(シャドウレシーバ描画用 : トーラス、平面)
-		{
-			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 2, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
-		}
+		//!< インダイレクトバッファ(シャドウレシーバ描画用 : トーラス、平面)
+		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 2, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
+		UploadResource Upload_Indirect1;
+		Upload_Indirect1.Create(COM_PTR_GET(Device), sizeof(DIA), &DIA);
 #endif
+#pragma endregion
+
+		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
+			IndirectBuffers[0].PopulateCopyCommand(GCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect0.Resource));
+			IndirectBuffers[1].PopulateCopyCommand(GCL, sizeof(DA), COM_PTR_GET(Upload_Indirect1.Resource));
+		} VERIFY_SUCCEEDED(GCL->Close());
+		DX::ExecuteAndWait(GCQ, GCL, COM_PTR_GET(Fence));
 	}
 	virtual void CreateConstantBuffer() override {
 		{

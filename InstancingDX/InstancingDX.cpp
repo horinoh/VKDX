@@ -236,31 +236,46 @@ void InstancingDX::CreateGeometry()
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 	const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
-	{
-		constexpr std::array Vertices = {
-			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }),
-			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }),
-			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }),
-		};
-		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), sizeof(Vertices[0])).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(Vertices), data(Vertices));
-	}
-	{
-		constexpr std::array Instances = {
-			Instance_OffsetXY({ { -0.5f, -0.5f } }),
-			Instance_OffsetXY({ { -0.25f, -0.25f } }),
-			Instance_OffsetXY({ { 0.0f, 0.0f } }),
-			Instance_OffsetXY({ { 0.25f, 0.25f } }),
-			Instance_OffsetXY({ { 0.5f, 0.5f } }),
-		};
-		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Instances), sizeof(Instances[0])).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(Instances), data(Instances));
 
-		constexpr std::array<UINT32, 3> Indices = { 0, 1, 2 };
-		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), DXGI_FORMAT_R32_UINT).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(Indices), data(Indices)); 
-		{
-			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = static_cast<UINT>(size(Instances)), .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
-		}
-	}
+	constexpr std::array Vertices = {
+		Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }),
+		Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }),
+		Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }),
+	};
+	constexpr std::array Instances = {
+		Instance_OffsetXY({ { -0.5f, -0.5f } }),
+		Instance_OffsetXY({ { -0.25f, -0.25f } }),
+		Instance_OffsetXY({ { 0.0f, 0.0f } }),
+		Instance_OffsetXY({ { 0.25f, 0.25f } }),
+		Instance_OffsetXY({ { 0.5f, 0.5f } }),
+	};
+	constexpr std::array<UINT32, 3> Indices = { 0, 1, 2 };
+	constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = static_cast<UINT>(size(Instances)), .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
+		
+	VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), sizeof(Vertices[0]));
+	UploadResource Upload_Vertex0;
+	Upload_Vertex0.Create(COM_PTR_GET(Device), sizeof(Vertices), data(Vertices));
+
+	VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Instances), sizeof(Instances[0]));
+	UploadResource Upload_Vertex1;
+	Upload_Vertex1.Create(COM_PTR_GET(Device), sizeof(Instances), data(Instances));
+
+	IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), DXGI_FORMAT_R32_UINT);
+	UploadResource Upload_Index;
+	Upload_Index.Create(COM_PTR_GET(Device), sizeof(Indices), data(Indices));
+
+	IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA);
+	UploadResource Upload_Indirect;
+	Upload_Indirect.Create(COM_PTR_GET(Device), sizeof(DIA), &DIA);
+	
+	VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
+		VertexBuffers[0].PopulateCopyCommand(GCL, sizeof(Vertices), COM_PTR_GET(Upload_Vertex0.Resource));
+		VertexBuffers[1].PopulateCopyCommand(GCL, sizeof(Instances), COM_PTR_GET(Upload_Vertex1.Resource));
+		IndexBuffers.back().PopulateCopyCommand(GCL, sizeof(Indices), COM_PTR_GET(Upload_Index.Resource));
+		IndirectBuffers.back().PopulateCopyCommand(GCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
+	} VERIFY_SUCCEEDED(GCL->Close());
+	DX::ExecuteAndWait(GCQ, GCL, COM_PTR_GET(Fence));
+
 	LOG_OK();
 }
 void InstancingDX::PopulateCommandList(const size_t i)

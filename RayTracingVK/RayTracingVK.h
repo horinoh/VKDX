@@ -13,7 +13,8 @@ public:
 	RayTracingVK() : Super() {}
 	virtual ~RayTracingVK() {}
 
-	//!< #TIPS インスタンスレイヤー "VK_LAYER_RENDERDOC_Capture" を使用すると vkCreateDevice() でコケるので注意 (If we use "VK_LAYER_RENDERDOC_Capture", vkCreateDevice() failed)
+	//!< #TIPS VKインスタンス作成時に "VK_LAYER_RENDERDOC_Capture" を使用すると、メッシュシェーダーやレイトレーシングと同時に使用した場合、vkCreateDevice() でコケるようになるので注意 (If we use "VK_LAYER_RENDERDOC_Capture" with mesh shader or raytracing, vkCreateDevice() failed)
+
 #pragma region RAYTRACING
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext, [[maybe_unused]] const std::vector<const char*>& AddExtensions) override {
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
@@ -66,7 +67,7 @@ public:
 				.pNext = nullptr,
 				.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
 				.geometry = VkAccelerationStructureGeometryDataKHR({
-					//!< ここではトライアングル
+					//!< トライアングル (Triangle)
 					.triangles = VkAccelerationStructureGeometryTrianglesDataKHR({
 						.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
 						.pNext = nullptr,
@@ -132,7 +133,7 @@ public:
 			VkAccelerationStructureGeometryKHR({
 				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
 				.pNext = nullptr,
-				//!< インスタンス
+				//!< インスタンス (Instance)
 				.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
 				.geometry = VkAccelerationStructureGeometryDataKHR({
 					.instances = VkAccelerationStructureGeometryInstancesDataKHR({
@@ -175,20 +176,25 @@ public:
 		}
 #pragma endregion
 	
+		//!< インダイレクトバッファ (IndirectBuffer)
+		const VkTraceRaysIndirectCommandKHR TRIC = { .width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 };
+#ifdef AS_BUILD_TOGETHER
+		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC);
+		VK::Scoped<StagingBuffer> Staging_Indirect(Device);
+		Staging_Indirect.Create(Device, PDMP, sizeof(TRIC), &TRIC);
+#else
+		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(TRIC), &TRIC);
+#endif
+
 #ifdef AS_BUILD_TOGETHER
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 			BLASs.back().PopulateBuildCommand(Device, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, ASGs_Blas, Scratch_Blas.Buffer, CB);
 			TLASs.back().PopulateBuildCommand(Device, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, ASGs_Tlas, Scratch_Tlas.Buffer, CB);
+			IndirectBuffers.back().PopulateCopyCommand(CB, sizeof(TRIC), Staging_Indirect.Buffer);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		SubmitAndWait(GraphicsQueue, CB);
 #endif
-
-		//!< インダイレクトバッファ (IndirectBuffer)
-		{
-			const VkTraceRaysIndirectCommandKHR TRIC = {.width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(TRIC), &TRIC);
-		}
 
 #undef AS_BUILD_TOGETHER
 	}

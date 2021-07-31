@@ -232,42 +232,66 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 void TriangleDX::CreateGeometry()
 {
+#define COMMAND_COPY_TOGETHER
+
 	const auto CA = COM_PTR_GET(CommandAllocators[0]);
 	const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 	const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
 
-	//!< バーテックスバッファ (VertexBuffer)
-	{
 #if 1
-		constexpr std::array Vertices = {
-			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
-			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
-			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
-		};
+	constexpr std::array Vertices = {
+		Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
+		Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
+		Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
+	};
 #else
-		//!< ピクセル指定
-		constexpr FLOAT W = 1280.0f, H = 720.0f;
-		constexpr std::array Vertices = {
-			Vertex_PositionColor({.Position = { W * 0.5f, 100.0f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
-			Vertex_PositionColor({.Position = { W * 0.5f - 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
-			Vertex_PositionColor({.Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
-		};
+	//!< ピクセル指定
+	constexpr FLOAT W = 1280.0f, H = 720.0f;
+	constexpr std::array Vertices = {
+		Vertex_PositionColor({.Position = { W * 0.5f, 100.0f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
+		Vertex_PositionColor({.Position = { W * 0.5f - 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
+		Vertex_PositionColor({.Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
+	};
 #endif
-		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), sizeof(Vertices[0])).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(Vertices), data(Vertices));
-		SetName(COM_PTR_GET(VertexBuffers.back().Resource), TEXT("MyVertexBuffer"));
-	}
-	//!< インデックスバッファ (IndexBuffer)
-	{
-		constexpr std::array<UINT32, 3> Indices = { 0, 1, 2 };
-		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), DXGI_FORMAT_R32_UINT).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(Indices), data(Indices));
-		SetName(COM_PTR_GET(IndexBuffers.back().Resource), TEXT("MyIndexBuffer"));
-		//!< インダイレクトバッファ (IndirectBuffer)
-		{
-			constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
-			SetName(COM_PTR_GET(IndirectBuffers.back().Resource), TEXT("MyIndirectBuffer"));
-		}
-	}
+	constexpr std::array<UINT32, 3> Indices = { 0, 1, 2 };
+	constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
+
+#ifdef COMMAND_COPY_TOGETHER
+	VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), sizeof(Vertices[0]));
+	UploadResource Upload_Vertex;
+	Upload_Vertex.Create(COM_PTR_GET(Device), sizeof(Vertices), data(Vertices));
+#else
+	VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), sizeof(Vertices[0])).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(Vertices), data(Vertices));
+#endif
+	SetName(COM_PTR_GET(VertexBuffers.back().Resource), TEXT("MyVertexBuffer"));
+	
+#ifdef COMMAND_COPY_TOGETHER
+	IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), DXGI_FORMAT_R32_UINT);
+	UploadResource Upload_Index;
+	Upload_Index.Create(COM_PTR_GET(Device), sizeof(Indices), data(Indices));
+#else
+	IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), DXGI_FORMAT_R32_UINT).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(Indices), data(Indices));
+#endif	
+	SetName(COM_PTR_GET(IndexBuffers.back().Resource), TEXT("MyIndexBuffer"));
+
+#ifdef COMMAND_COPY_TOGETHER
+	IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA);
+	UploadResource Upload_Indirect;
+	Upload_Indirect.Create(COM_PTR_GET(Device), sizeof(DIA), &DIA);
+#else
+	IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
+#endif	
+	SetName(COM_PTR_GET(IndirectBuffers.back().Resource), TEXT("MyIndirectBuffer"));
+
+#ifdef COMMAND_COPY_TOGETHER
+	VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
+		VertexBuffers.back().PopulateCopyCommand(GCL, sizeof(Vertices), COM_PTR_GET(Upload_Vertex.Resource));
+		IndexBuffers.back().PopulateCopyCommand(GCL, sizeof(Indices), COM_PTR_GET(Upload_Index.Resource));
+		IndirectBuffers.back().PopulateCopyCommand(GCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
+	} VERIFY_SUCCEEDED(GCL->Close());
+	DX::ExecuteAndWait(CQ, GCL, COM_PTR_GET(Fence));
+#endif
+
 	LOG_OK();
 }
 void TriangleDX::PopulateCommandList(const size_t i)
