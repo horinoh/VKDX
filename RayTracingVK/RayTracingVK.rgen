@@ -24,5 +24,6 @@ void main()
     traceRayEXT(TLAS, gl_RayFlagsNoneEXT/*gl_RayFlagsCullBackFacingTrianglesEXT*/, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
 
     //!< 結果をレンダーターゲットへ (Write to render target)
-	imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(Payload, 1.0));
+	//imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(Payload, 1.0f));
+	imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(0.529411793f, 0.807843208f, 0.921568692f, 1.0f));
 }

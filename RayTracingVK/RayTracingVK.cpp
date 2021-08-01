@@ -265,15 +265,17 @@ void RayTracingVK::PopulateCommandBuffer([[maybe_unused]]const size_t i)
 		constexpr auto ISR = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 });
         {
             const std::array IMBs = {
+                //!< PRESENT_SRC_KHR -> TRANSFER_DST_OPTIMAL
                 VkImageMemoryBarrier({
                     .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
                     .pNext = nullptr,
                     .srcAccessMask = 0, .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-                    .oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                    .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                     .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                     .image = SwapchainImages[i],
                     .subresourceRange = ISR
                 }),
+                //!< GENERAL -> TRANSFER_SRC_OPTIMAL
                 VkImageMemoryBarrier({
                     .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
                     .pNext = nullptr,
@@ -300,16 +302,18 @@ void RayTracingVK::PopulateCommandBuffer([[maybe_unused]]const size_t i)
 		vkCmdCopyImage(CB, StorageTextures[0].Image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, SwapchainImages[i], VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, static_cast<uint32_t>(size(ICs)), data(ICs));
 
         {
-			const std::array IMBs = {
+			const std::array IMBs = {	
+				//!< TRANSFER_DST_OPTIMAL -> PRESENT_SRC_KHR, 
 		        VkImageMemoryBarrier({
 			        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 			        .pNext = nullptr,
 			        .srcAccessMask = 0, .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-			        .oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-			        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 			        .image = SwapchainImages[i],
 			        .subresourceRange = ISR
 		        }),
+                //!< TRANSFER_SRC_OPTIMAL -> GENERAL
 		        VkImageMemoryBarrier({
 			        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 			        .pNext = nullptr,

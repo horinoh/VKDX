@@ -200,7 +200,9 @@ public:
 	}
 	virtual void CreateTexture() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
-		StorageTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), VK_FORMAT_R8G8B8A8_UNORM, VkExtent3D({.width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1}));
+		//!< スワップチェインと同じカラーフォーマットにする
+		StorageTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), ColorFormat, VkExtent3D({.width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1}));
+		StorageTextures.back().SubmitSetLayoutCommand(CommandBuffers[0], GraphicsQueue);
 	}
 	virtual void CreatePipelineLayout() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
@@ -265,24 +267,30 @@ public:
 #pragma endregion
 
 #pragma region SHADER_BINDING_TABLE
+		CreateShaderBindingTable(size(RTSGCIs));
+#pragma endregion
+
+		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
+	}
+	virtual void CreateShaderBindingTable(const size_t ShaderGroupCount) override {
+		//!< サイズ、アライメントを取得
 		VkPhysicalDeviceRayTracingPipelinePropertiesKHR PDRTPP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, .pNext = nullptr };
 		VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
 		vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
 
 		const auto AlignedSize = RoundUp(PDRTPP.shaderGroupHandleSize, PDRTPP.shaderGroupHandleAlignment);
-		constexpr auto ShaderGroupCount = size(RTSGCIs);
-		std::vector<std::byte> Data(AlignedSize * ShaderGroupCount);
-		VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, ShaderGroupCount, size(Data), data(Data)));
+		std::vector<std::byte> ShaderHandleStorage(AlignedSize * ShaderGroupCount);
+		VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, static_cast<uint32_t>(ShaderGroupCount), size(ShaderHandleStorage), data(ShaderHandleStorage)));
 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		constexpr auto BUF = VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 		constexpr auto MPF = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 		//!< #VK_TODO 1つのバッファにまとめる?
-		ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(Data) + 0 * AlignedSize); //!< 0:RayGen
-		ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(Data) + 1 * AlignedSize); //!< 1:Miss
-		ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(Data) + 2 * AlignedSize); //!< 2:ClosestHit
-#pragma endregion
+		ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(ShaderHandleStorage) + 0 * AlignedSize); //!< 0:RayGen
+		ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(ShaderHandleStorage) + 1 * AlignedSize); //!< 1:Miss
+		ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(ShaderHandleStorage) + 2 * AlignedSize); //!< 2:ClosestHit
 	}
+
 	virtual void CreateDescriptorSet() override {
 		VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT, {
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1 }),
@@ -323,34 +331,38 @@ public:
 		vkUpdateDescriptorSets(Device, static_cast<uint32_t>(size(WDSs)), data(WDSs), static_cast<uint32_t>(size(CDSs)), data(CDSs));
 
 		//!< #VK_TODO vkUpdateDescriptorSetWithTemplate() の AccelerationStructure 対応
-		//VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
-		//	VkDescriptorUpdateTemplateEntry({
-		//		.dstBinding = 0, .dstArrayElement = 0,
-		//		.descriptorCount = _countof(DescriptorUpdateInfo::DescriptorASInfos), .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
-		//		.offset = offsetof(DescriptorUpdateInfo, DescriptorASInfos), .stride = sizeof(DescriptorUpdateInfo)
-		//	}),
-		//	VkDescriptorUpdateTemplateEntry({
-		//		.dstBinding = 1, .dstArrayElement = 0,
-		//		.descriptorCount = _countof(DescriptorUpdateInfo::DescriptorImageInfos), .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-		//		.offset = offsetof(DescriptorUpdateInfo, DescriptorImageInfos), .stride = sizeof(DescriptorUpdateInfo)
-		//	}),
-		//	}, DescriptorSetLayouts[0]);
+#if 0
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
+			VkDescriptorUpdateTemplateEntry({
+				.dstBinding = 0, .dstArrayElement = 0,
+				.descriptorCount = _countof(DescriptorUpdateInfo::DescriptorASInfos), .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
+				.offset = offsetof(DescriptorUpdateInfo, DescriptorASInfos), .stride = sizeof(DescriptorUpdateInfo)
+			}),
+			VkDescriptorUpdateTemplateEntry({
+				.dstBinding = 1, .dstArrayElement = 0,
+				.descriptorCount = _countof(DescriptorUpdateInfo::DescriptorImageInfos), .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+				.offset = offsetof(DescriptorUpdateInfo, DescriptorImageInfos), .stride = sizeof(DescriptorUpdateInfo)
+			}),
+			}, DescriptorSetLayouts[0]);
 
-		//const DescriptorUpdateInfo DUI = {
-		//	VkDescriptorBufferInfo({.buffer = TLASs[0].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }), //!< TLAS
-		//	VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = StorageTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_GENERAL }), //!< StorageImage
-		//};
-		//vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+		const DescriptorUpdateInfo DUI = {
+			VkDescriptorBufferInfo({.buffer = TLASs[0].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }), //!< TLAS
+			VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = StorageTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_GENERAL }), //!< StorageImage
+		};
+		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+#endif
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 	//!< #VK_TODO vkUpdateDescriptorSetWithTemplate() の AccelerationStructure 対応
-//private:
-//	struct DescriptorUpdateInfo
-//	{
-//		//VkDescriptorAccelerationStructureInfo DescriptorASInfos[1];
-//		VkDescriptorImageInfo DescriptorImageInfos[1];
-//	};
+#if 0
+private:
+	struct DescriptorUpdateInfo
+	{
+		//VkDescriptorAccelerationStructureInfo DescriptorASInfos[1];
+		VkDescriptorImageInfo DescriptorImageInfos[1];
+	};
+#endif
 #pragma endregion
 };
 #pragma endregion

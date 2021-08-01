@@ -268,6 +268,31 @@ public:
 			if (VK_NULL_HANDLE != Image) { vkDestroyImage(Device, Image, GetAllocationCallbacks()); }
 			if (VK_NULL_HANDLE != View) { vkDestroyImageView(Device, View, GetAllocationCallbacks()); }
 		}
+
+		//!< レイアウトを GENERAL にしておく必要がある場合に使用
+		//!< 例) 頻繁にレイアウトの変更や戻しが必要になるような場合 UNDEFINED へは戻せないので、戻せるレイアウトである GENERAL を初期レイアウトとしておく
+		void PopulateSetLayoutCommand(const VkCommandBuffer CB, const VkImageLayout Layout) {
+			const std::array IMBs = {
+			   //!< UNDEFINED -> Layout
+			   VkImageMemoryBarrier({
+				   .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				   .pNext = nullptr,
+				   .srcAccessMask = 0, .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+				   .oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = Layout,
+				   .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				   .image = Image,
+				   .subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
+			   }),
+			};
+			vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, static_cast<uint32_t>(size(IMBs)), data(IMBs));
+		}
+		void SubmitSetLayoutCommand(const VkCommandBuffer CB, const VkQueue Queue, const VkImageLayout Layout = VK_IMAGE_LAYOUT_GENERAL) {
+			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
+			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+				PopulateSetLayoutCommand(CB, Layout);
+			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+			VK::SubmitAndWait(Queue, CB);
+		}
 	};
 	class DepthTexture : public Texture
 	{
@@ -294,6 +319,8 @@ public:
 	public:
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent) {
 			Super::Create(Device, PDMP, Format, Extent, 1, 1, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
+
+			//SubmitToGeneralCommand()
 		}
 	};
 #pragma region RAYTRACING
@@ -568,6 +595,7 @@ protected:
 	}
 
 	virtual void CreateGeometry() {}
+	virtual void CreateShaderBindingTable([[maybe_unused]] const size_t ShaderGroupCount) {}
 
 	virtual void CreateUniformBuffer() {}
 	virtual void CreateStorageBuffer() {}

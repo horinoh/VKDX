@@ -493,6 +493,7 @@ public:
 	virtual void LoadScene() {}
 
 	virtual void CreateGeometry() {}
+	virtual void CreateShaderTable() {}
 
 	virtual void CreateConstantBuffer() {}
 
