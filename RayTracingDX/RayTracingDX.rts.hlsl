@@ -7,41 +7,40 @@ struct Payload
 
 RaytracingAccelerationStructure TLAS : register(t0);
 RWTexture2D<float4> RenderTarget : register(u0);
-#if 0
-ByteAddressBuffer Vertices : register(t1);
-ByteAddressBuffer Indices : register(t2);
-#endif
-//struct TRANSFORM
-//{
-//    float4x4 InvView;
-//    float4x4 InvViewProjection;
-//};
-//ConstantBuffer<TRANSFORM> Transform : register(b0, space0);
 
 [shader("raygeneration")]
 void OnRayGeneration()
 {
-    const float2 t = (float2) DispatchRaysIndex().xy / DispatchRaysDimensions().xy;
-    
     //!< ペイロードを初期化 (Initialize payload)
     Payload Pay;
     Pay.Color = float3(0.0f, 0.0f, 0.0f);
-    
+ 
+    //!< UV
+    const float2 PixelCenter = (float2)DispatchRaysIndex().xy + 0.5f;
+    const float2 UV = PixelCenter / DispatchRaysDimensions().xy  * 2.0f - 1.0f;
+
     //!< レイ (Ray)
     RayDesc Ray;
     Ray.TMin = 0.0f;
     Ray.TMax = 10000.0f;
-    //Ray.Origin = mul(Transform.InvView, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
-    //const float4 Screen = mul(Transform.InvViewProjection, float4(-2.0f * t + 1.0f, 0.0f, 1.0f));
-    //Ray.Direction = normalize(Screen.xyz / Screen.w - Ray.Origin);
-    Ray.Origin = float3(0.0f, 0.0f, 1.0f);
-    Ray.Direction = normalize(float3(t * 2.0f - 1.0f, 0.0f) - Ray.Origin);
-    
+#if 0
+    Ray.Origin = mul(InvView, float4(0.0f, 0.0f, 0.0f, 1)).xyz;
+    const float4 Target4 = mul(InvViewProj, float4(UV, 0.0f, 1.0f));
+    const float3 Target = Target4.xyz / Target4.w;
+#else
+    Ray.Origin = float3(0.0f, 0.0f, 0.0f);
+    const float3 Target = float3(UV, -6.0f);
+#endif
+    Ray.Direction = normalize(Target - Ray.Origin);
     //!< トレーシング (Tracing)
-    TraceRay(TLAS, RAY_FLAG_NONE/*RAY_FLAG_CULL_BACK_FACING_TRIANGLES*/, 0xff, 0, 1, 0, Ray, Pay);
-    
+    TraceRay(TLAS, RAY_FLAG_FORCE_OPAQUE, 0xff, 0, 1, 0, Ray, Pay);
+    //TraceRay(TLAS, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xff, 0, 1, 0, Ray, Pay);
+    //TraceRay(TLAS, RAY_FLAG_NONE, 0xff, 0, 1, 0, Ray, Pay);
+
     //!< 結果をレンダーターゲットへ (Write to render target)
     RenderTarget[DispatchRaysIndex().xy] = float4(Pay.Color, 1.0f);
+    //!< UV デバッグ描画
+    RenderTarget[DispatchRaysIndex().xy] = float4(abs(UV), 0.0f, 1.0f);
 }
 [shader("closesthit")]
 void OnClosestHit(inout Payload Pay, in BuiltInTriangleIntersectionAttributes BITIA)

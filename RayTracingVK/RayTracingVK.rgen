@@ -1,5 +1,4 @@
 #version 460
-
 #extension GL_EXT_ray_tracing : enable
 
 layout(binding = 0, set = 0) uniform accelerationStructureEXT TLAS;
@@ -9,21 +8,31 @@ layout(location = 0) rayPayloadEXT vec3 Payload;
 
 void main()
 {
-    const vec2 t = vec2(gl_LaunchIDEXT.xy) / gl_LaunchSizeEXT.xy;
-
     //!< ペイロードを初期化 (Initialize payload)
     Payload = vec3(0.0f);
+
+    //!< UV
+    const vec2 PixelCenter = vec2(gl_LaunchIDEXT.xy) + 0.5f;
+    const vec2 UV = PixelCenter / gl_LaunchSizeEXT.xy * 2.0f - 1.0f;
 
     //!< レイ (Ray)
     const float TMin = 0.0f;
     const float TMax = 10000.0f;
-    const vec3 Origin = vec3(0.0f, 0.0f, 1.0f);
-    const vec3 Direction = normalize(vec3(t * 2.0f - 1.0f, 0.0f) - Origin);
-    
+#if 0
+    const vec3 Origin = (InvView * vec4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+    const vec4 Target4 = (InvProj * vec4(UV, 0.0f, 1.0f));
+    const vec3 Target = Target4.xyz / Target4.w;
+#else
+    const vec3 Origin = vec3(0.0f, 0.0f, 5.0f);
+    const vec3 Target = vec3(UV, 0.0f);
+#endif
+    const vec3 Direction = normalize(Target - Origin);
     //!< トレーシング (Tracing)
-    traceRayEXT(TLAS, gl_RayFlagsNoneEXT/*gl_RayFlagsCullBackFacingTrianglesEXT*/, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
+    traceRayEXT(TLAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
+    //traceRayEXT(TLAS, gl_RayFlagsCullBackFacingTrianglesEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
 
     //!< 結果をレンダーターゲットへ (Write to render target)
-	//imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(Payload, 1.0f));
-	imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(0.529411793f, 0.807843208f, 0.921568692f, 1.0f));
+	imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(Payload, 1.0f));
+    //!< UV デバッグ描画
+	imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(abs(UV), 0.0f, 1.0f));
 }

@@ -255,11 +255,11 @@ void RayTracingVK::PopulateCommandBuffer([[maybe_unused]]const size_t i)
 
 		const auto AlignedSize = RoundUp(PDRTPP.shaderGroupHandleSize, PDRTPP.shaderGroupHandleAlignment);
 		const auto RayGen = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[0].Buffer), .stride = AlignedSize, .size = AlignedSize });
-		const auto Miss = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[1].Buffer), .stride = AlignedSize, .size = AlignedSize });
-		const auto Hit = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[2].Buffer), .stride = AlignedSize, .size = AlignedSize });
+		const auto Hit = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[1].Buffer), .stride = AlignedSize, .size = AlignedSize });
+		const auto Miss = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[2].Buffer), .stride = AlignedSize, .size = AlignedSize });
 		const auto Callable = VkStridedDeviceAddressRegionKHR({ .deviceAddress = 0, .stride = 0, .size = 0 });
 
-        //vkCmdTraceRaysKHR(CB, &RayGen, &Miss, &Hit, &Callable, 1280, 720, 1);
+        //vkCmdTraceRaysKHR(CB, &RayGen, &Miss, &Hit, &Callable, GetClientRectWidth(), GetClientRectHeight(), 1);
         vkCmdTraceRaysIndirectKHR(CB, &RayGen, &Miss, &Hit, &Callable, GetDeviceAddress(Device, IndirectBuffers[0].Buffer));
         
 		constexpr auto ISR = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 });
@@ -286,7 +286,6 @@ void RayTracingVK::PopulateCommandBuffer([[maybe_unused]]const size_t i)
                     .subresourceRange = ISR
                 })
             };
-			//vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, static_cast<uint32_t>(size(IMBs)), data(IMBs));
 			vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0, 0, nullptr, 0, nullptr, static_cast<uint32_t>(size(IMBs)), data(IMBs));
         }
 

@@ -147,7 +147,7 @@ public:
 			}),
 		};
 
-#pragma region BLAS_AND_SCRATCH
+#pragma region TLAS_AND_SCRATCH
 		Scoped<ScratchBuffer> Scratch_Tlas(Device);
 		{
 			//!< サイズ取得 (Get sizes)
@@ -200,8 +200,9 @@ public:
 	}
 	virtual void CreateTexture() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
-		//!< スワップチェインと同じカラーフォーマットにする
+		//!< スワップチェインと同じカラーフォーマットにしておく
 		StorageTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), ColorFormat, VkExtent3D({.width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1}));
+		//!< レイアウトを GENERAL にしておく
 		StorageTextures.back().SubmitSetLayoutCommand(CommandBuffers[0], GraphicsQueue);
 	}
 	virtual void CreatePipelineLayout() override {
@@ -287,8 +288,8 @@ public:
 		constexpr auto MPF = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 		//!< #VK_TODO 1つのバッファにまとめる?
 		ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(ShaderHandleStorage) + 0 * AlignedSize); //!< 0:RayGen
-		ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(ShaderHandleStorage) + 1 * AlignedSize); //!< 1:Miss
-		ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(ShaderHandleStorage) + 2 * AlignedSize); //!< 2:ClosestHit
+		ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(ShaderHandleStorage) + 1 * AlignedSize); //!< 1:ClosestHit
+		ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(ShaderHandleStorage) + 2 * AlignedSize); //!< 2:Miss
 	}
 
 	virtual void CreateDescriptorSet() override {
