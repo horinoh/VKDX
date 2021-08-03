@@ -11,28 +11,20 @@ void main()
     //!< ペイロードを初期化 (Initialize payload)
     Payload = vec3(0.0f);
 
-    //!< UV
-    const vec2 PixelCenter = vec2(gl_LaunchIDEXT.xy) + 0.5f;
-    const vec2 UV = PixelCenter / gl_LaunchSizeEXT.xy * 2.0f - 1.0f;
+    //!< +0.5f はピクセルの中心にするため
+    const vec2 UV = (vec2(gl_LaunchIDEXT.xy) + 0.5f) / gl_LaunchSizeEXT.xy * 2.0f - 1.0f;
 
     //!< レイ (Ray)
-    const float TMin = 0.0f;
-    const float TMax = 10000.0f;
-#if 0
-    const vec3 Origin = (InvView * vec4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
-    const vec4 Target4 = (InvProj * vec4(UV, 0.0f, 1.0f));
-    const vec3 Target = Target4.xyz / Target4.w;
-#else
-    const vec3 Origin = vec3(0.0f, 0.0f, 5.0f);
-    const vec3 Target = vec3(UV, 0.0f);
-#endif
-    const vec3 Direction = normalize(Target - Origin);
+    const float TMin = 0.001f; //!< float エラー対策 非 0.0f の小さな値にする
+    const float TMax = 100000.0f;
+    const vec3 Origin = vec3(UV.x, -UV.y, 0.0f);
+    const vec3 Direction = vec3(0.0f, 0.0f, -1.0f);
+
     //!< トレーシング (Tracing)
     traceRayEXT(TLAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
     //traceRayEXT(TLAS, gl_RayFlagsCullBackFacingTrianglesEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
 
     //!< 結果をレンダーターゲットへ (Write to render target)
 	imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(Payload, 1.0f));
-    //!< UV デバッグ描画
-	imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(abs(UV), 0.0f, 1.0f));
+	//imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(UV.x, -UV.y, 0.0f, 1.0f));
 }

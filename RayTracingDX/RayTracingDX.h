@@ -217,31 +217,41 @@ public:
 		//!< ローカルルートシグネチャ (Local root signature)
 		//const D3D12_LOCAL_ROOT_SIGNATURE LRS = { .pLocalRootSignature = COM_PTR_GET(RootSignatures[1]) };
 
-		//!< ライブラリ
+		//!< ここではシェーダーファイルを分けている
 		const auto ShaderPath = GetBasePath();
-		COM_PTR<ID3DBlob> ShaderBlob;
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rts.cso")), COM_PTR_PUT(ShaderBlob)));
-		std::array EDs = {
-		   D3D12_EXPORT_DESC({.Name = TEXT("OnRayGeneration"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }),
-		   D3D12_EXPORT_DESC({.Name = TEXT("OnClosestHit"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }),
-		   D3D12_EXPORT_DESC({.Name = TEXT("OnMiss"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }),
-		};
-		const D3D12_DXIL_LIBRARY_DESC DLD = {
-			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = ShaderBlob->GetBufferPointer(), .BytecodeLength = ShaderBlob->GetBufferSize() }),
-			.NumExports = static_cast<UINT>(size(EDs)), .pExports = data(EDs)
-		};
+		COM_PTR<ID3DBlob> SB_rgen;
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rgen.cso")), COM_PTR_PUT(SB_rgen)));
+		COM_PTR<ID3DBlob> SB_rchit;
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rchit.cso")), COM_PTR_PUT(SB_rchit)));
+		COM_PTR<ID3DBlob> SB_miss;
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".miss.cso")), COM_PTR_PUT(SB_miss)));
+		std::array EDs_rgen = { D3D12_EXPORT_DESC({.Name = TEXT("OnRayGeneration"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
+		std::array EDs_rchit = { D3D12_EXPORT_DESC({.Name = TEXT("OnClosestHit"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
+		std::array EDs_miss = { D3D12_EXPORT_DESC({.Name = TEXT("OnMiss"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
+		const auto DLD_rgen = D3D12_DXIL_LIBRARY_DESC({
+			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rgen->GetBufferPointer(), .BytecodeLength = SB_rgen->GetBufferSize() }),
+			.NumExports = static_cast<UINT>(size(EDs_rgen)), .pExports = data(EDs_rgen)
+		});
+		const auto DLD_rchit = D3D12_DXIL_LIBRARY_DESC({
+			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rchit->GetBufferPointer(), .BytecodeLength = SB_rchit->GetBufferSize() }),
+			.NumExports = static_cast<UINT>(size(EDs_rchit)), .pExports = data(EDs_rchit)
+		});
+		const auto DLD_miss = D3D12_DXIL_LIBRARY_DESC({
+			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_miss->GetBufferPointer(), .BytecodeLength = SB_miss->GetBufferSize() }),
+			.NumExports = static_cast<UINT>(size(EDs_miss)), .pExports = data(EDs_miss)
+		});
 
 		//!< ヒットグループ AnyHit, ClosestHit, Intersection の3つからなる、ここでは D3D12_HIT_GROUP_TYPE_TRIANGLES なので、ClosestHit のみを使用
 		//!< ヒットグループ内のシェーダは同じローカルルートシグネチャを使用する 
 		constexpr D3D12_HIT_GROUP_DESC HGD = {
-			.HitGroupExport = TEXT("MyHitGroup"),
+			.HitGroupExport = TEXT("HitGroup"),
 			.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES,
 			.AnyHitShaderImport = nullptr, .ClosestHitShaderImport = TEXT("OnClosestHit"), .IntersectionShaderImport = nullptr
 		};
 
 		//!< シェーダ内、ペイロードやアトリビュートサイズの指定
 		constexpr D3D12_RAYTRACING_SHADER_CONFIG RSC = {
-			.MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT4), //!< Payload のサイズ ここでは struct Payload { float3 Color; } を使用するため XMFLOAT3
+			.MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT3), //!< Payload のサイズ ここでは struct Payload { float3 Color; } を使用するため XMFLOAT3
 			.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2) //!< ここでは struct BuiltInTriangleIntersectionAttributes { float2 barycentrics; } を使用するため XMFLOAT2
 		};
 
@@ -252,7 +262,9 @@ public:
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, .pDesc = &GRS }),
 			//D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, .pDesc = &LRS }),
 			//D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION, .pDesc = &STEA }),
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD }),
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rgen }),
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rchit }),
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_miss }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, .pDesc = &HGD }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, .pDesc = &RSC }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, .pDesc = &RPC }),
@@ -282,7 +294,7 @@ public:
 		//!< #DX_TODO 1つのバッファにまとめる?
 		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RaygenAlignedSize, D3D12_HEAP_TYPE_UPLOAD, SOP->GetShaderIdentifier(TEXT("OnRayGeneration")));
 		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), MissAlignedSize, D3D12_HEAP_TYPE_UPLOAD, SOP->GetShaderIdentifier(TEXT("OnMiss")));
-		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), HitAlienedSize, D3D12_HEAP_TYPE_UPLOAD, SOP->GetShaderIdentifier(TEXT("MyHitGroup")));
+		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), HitAlienedSize, D3D12_HEAP_TYPE_UPLOAD, SOP->GetShaderIdentifier(TEXT("HitGroup")));
 	}
 	virtual void CreateDescriptorHeap() override {
 		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 2, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
