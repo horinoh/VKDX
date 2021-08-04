@@ -23,7 +23,7 @@ void OnRayGeneration()
     Ray.Origin = float3(UV.x, -UV.y, 1.0f);
     Ray.Direction = float3(0.0f, 0.0f, -1.0f);
 
-    //!< トレーシング (Tracing)
+    //!< レイトレーシング (RayTracing)
     TraceRay(TLAS, RAY_FLAG_NONE, 0xff, 0, 1, 0, Ray, Pay);
 
     //!< 結果をレンダーターゲットへ (Write to render target)

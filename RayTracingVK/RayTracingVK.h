@@ -221,22 +221,21 @@ public:
 		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".rgen.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".rchit.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".rmiss.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".rchit.spv"))),
 		};
-		//!< 0:RayGen, 1:ClosestHit, 2:Miss, 
 		const std::array PSSCIs = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
-			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),
-			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_MISS_BIT_KHR, .module = SMs[2], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_MISS_BIT_KHR, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .module = SMs[2], .pName = "main", .pSpecializationInfo = nullptr }),
 		};
 		//!< シェーダグループ
 		//<!	RayGen, Miss は GENERAL タイプ .generalShader へインデックスを指定
 		//<!	ClosestHit は TRIANGLES_HIT_GROUP タイプ .closestHitShader へインデックスを指定
 		const std::array RTSGCIs = {
 			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, .generalShader = 0, .closestHitShader = VK_SHADER_UNUSED_KHR, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
-			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR, .generalShader = VK_SHADER_UNUSED_KHR, .closestHitShader = 1, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
-			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, .generalShader = 2, .closestHitShader = VK_SHADER_UNUSED_KHR, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
+			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, .generalShader = 1, .closestHitShader = VK_SHADER_UNUSED_KHR, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
+			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR, .generalShader = VK_SHADER_UNUSED_KHR, .closestHitShader = 2, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
 		};
 
 		constexpr std::array DSs = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
@@ -284,10 +283,9 @@ public:
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		constexpr auto BUF = VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 		constexpr auto MPF = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-		//!< #VK_TODO 1つのバッファにまとめる?
-		ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(ShaderHandleStorage) + 0 * AlignedSize); //!< 0:RayGen
-		ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(ShaderHandleStorage) + 1 * AlignedSize); //!< 1:ClosestHit
-		ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(ShaderHandleStorage) + 2 * AlignedSize); //!< 2:Miss
+		ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(ShaderHandleStorage) + 0 * AlignedSize);
+		ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(ShaderHandleStorage) + 1 * AlignedSize); 
+		ShaderBindingTables.emplace_back().Create(Device, PDMP, BUF, PDRTPP.shaderGroupHandleSize, MPF, data(ShaderHandleStorage) + 2 * AlignedSize); 
 	}
 
 	virtual void CreateDescriptorSet() override {

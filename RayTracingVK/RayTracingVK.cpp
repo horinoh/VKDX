@@ -255,8 +255,8 @@ void RayTracingVK::PopulateCommandBuffer([[maybe_unused]]const size_t i)
 
 		const auto AlignedSize = RoundUp(PDRTPP.shaderGroupHandleSize, PDRTPP.shaderGroupHandleAlignment);
 		const auto RayGen = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[0].Buffer), .stride = AlignedSize, .size = AlignedSize });
-		const auto Hit = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[1].Buffer), .stride = AlignedSize, .size = AlignedSize });
-		const auto Miss = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[2].Buffer), .stride = AlignedSize, .size = AlignedSize });
+		const auto Miss = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[1].Buffer), .stride = AlignedSize, .size = AlignedSize });
+		const auto Hit = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[2].Buffer), .stride = AlignedSize, .size = AlignedSize });
 		const auto Callable = VkStridedDeviceAddressRegionKHR({ .deviceAddress = 0, .stride = 0, .size = 0 });
 
         //vkCmdTraceRaysKHR(CB, &RayGen, &Miss, &Hit, &Callable, GetClientRectWidth(), GetClientRectHeight(), 1);

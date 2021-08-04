@@ -5,22 +5,6 @@
 #pragma region Code
 #include "../DXExt.h"
 
-//!< RayGeneration <- Shader Identifier 1
-//!< Miss
-//!< HitGroup <- Shader Identifier 2
-//!<	ClosestHit
-//!<	AnyHit
-//!<	Intersection
-//!< HitGroup...
-
-//!< ShaderRecord
-//!<	Shader Identifier -> 1
-//!<	Local Root Argument
-//!< ShaderRecord
-//!<	Shader Identifier -> 2 
-//!<	Local Root Argument
-//!< ShaderRecord...  
-
 class RayTracingDX : public DXExt
 {
 private:
@@ -221,26 +205,26 @@ public:
 		const auto ShaderPath = GetBasePath();
 		COM_PTR<ID3DBlob> SB_rgen;
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rgen.cso")), COM_PTR_PUT(SB_rgen)));
-		COM_PTR<ID3DBlob> SB_rchit;
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rchit.cso")), COM_PTR_PUT(SB_rchit)));
 		COM_PTR<ID3DBlob> SB_miss;
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".miss.cso")), COM_PTR_PUT(SB_miss)));
+		COM_PTR<ID3DBlob> SB_rchit;
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rchit.cso")), COM_PTR_PUT(SB_rchit)));
 		std::array EDs_rgen = { D3D12_EXPORT_DESC({.Name = TEXT("OnRayGeneration"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
-		std::array EDs_rchit = { D3D12_EXPORT_DESC({.Name = TEXT("OnClosestHit"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
 		std::array EDs_miss = { D3D12_EXPORT_DESC({.Name = TEXT("OnMiss"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
+		std::array EDs_rchit = { D3D12_EXPORT_DESC({.Name = TEXT("OnClosestHit"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
 		const auto DLD_rgen = D3D12_DXIL_LIBRARY_DESC({
 			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rgen->GetBufferPointer(), .BytecodeLength = SB_rgen->GetBufferSize() }),
 			.NumExports = static_cast<UINT>(size(EDs_rgen)), .pExports = data(EDs_rgen)
 		});
+		const auto DLD_miss = D3D12_DXIL_LIBRARY_DESC({
+			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_miss->GetBufferPointer(), .BytecodeLength = SB_miss->GetBufferSize() }),
+			.NumExports = static_cast<UINT>(size(EDs_miss)), .pExports = data(EDs_miss)
+			}); 
 		const auto DLD_rchit = D3D12_DXIL_LIBRARY_DESC({
 			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rchit->GetBufferPointer(), .BytecodeLength = SB_rchit->GetBufferSize() }),
 			.NumExports = static_cast<UINT>(size(EDs_rchit)), .pExports = data(EDs_rchit)
 		});
-		const auto DLD_miss = D3D12_DXIL_LIBRARY_DESC({
-			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_miss->GetBufferPointer(), .BytecodeLength = SB_miss->GetBufferSize() }),
-			.NumExports = static_cast<UINT>(size(EDs_miss)), .pExports = data(EDs_miss)
-		});
-
+		
 		//!< ヒットグループ AnyHit, ClosestHit, Intersection の3つからなる、ここでは D3D12_HIT_GROUP_TYPE_TRIANGLES なので、ClosestHit のみを使用
 		//!< ヒットグループ内のシェーダは同じローカルルートシグネチャを使用する 
 		constexpr D3D12_HIT_GROUP_DESC HGD = {
@@ -263,8 +247,8 @@ public:
 			//D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, .pDesc = &LRS }),
 			//D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION, .pDesc = &STEA }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rgen }),
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rchit }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_miss }),
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rchit }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, .pDesc = &HGD }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, .pDesc = &RSC }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, .pDesc = &RPC }),
@@ -286,15 +270,20 @@ public:
 		COM_PTR<ID3D12StateObjectProperties> SOP;
 		VERIFY_SUCCEEDED(StateObjects.back()->QueryInterface(COM_PTR_UUIDOF_PUTVOID(SOP)));
 
-		const auto RaygenAlignedSize = Cmn::RoundUp(1 * Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT), D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
-		const auto MissAlignedSize = Cmn::RoundUp(1 * Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT), D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
-		const auto HitAlienedSize = Cmn::RoundUp(1 * Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT), D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
-		const auto TotalSize = RaygenAlignedSize + MissAlignedSize + HitAlienedSize;
+		//!< レコードサイズ = シェーダ識別子サイズ + ローカルルート引数サイズ(ここでは未使用なので0)
+		constexpr auto RgenRecordSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0;
+		//!< テーブルサイズ = レコード数 * RoundUp(レコードサイズ, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT)
+		constexpr auto RgenTableSize = 1 * Cmn::RoundUp(RgenRecordSize, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
 
-		//!< #DX_TODO 1つのバッファにまとめる?
-		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RaygenAlignedSize, D3D12_HEAP_TYPE_UPLOAD, SOP->GetShaderIdentifier(TEXT("OnRayGeneration")));
-		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), MissAlignedSize, D3D12_HEAP_TYPE_UPLOAD, SOP->GetShaderIdentifier(TEXT("OnMiss")));
-		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), HitAlienedSize, D3D12_HEAP_TYPE_UPLOAD, SOP->GetShaderIdentifier(TEXT("HitGroup")));
+		constexpr auto MissRecordSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0;
+		constexpr auto MissTableSize = 1 * Cmn::RoundUp(MissRecordSize, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+
+		constexpr auto RchitRecordSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0;
+		constexpr auto RchitTableSize = 1 * Cmn::RoundUp(RchitRecordSize, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+
+		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RgenTableSize, D3D12_HEAP_TYPE_UPLOAD, SOP->GetShaderIdentifier(TEXT("OnRayGeneration")));
+		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), MissTableSize, D3D12_HEAP_TYPE_UPLOAD, SOP->GetShaderIdentifier(TEXT("OnMiss")));
+		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RchitTableSize, D3D12_HEAP_TYPE_UPLOAD, SOP->GetShaderIdentifier(TEXT("HitGroup")));
 	}
 	virtual void CreateDescriptorHeap() override {
 		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 2, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };

@@ -2,6 +2,7 @@ struct Payload
 {
     float3 Color;
 };
+
 [shader("closesthit")]
 void OnClosestHit(inout Payload Pay, in BuiltInTriangleIntersectionAttributes BITIA)
 {

@@ -17,10 +17,10 @@ void main()
     //!< レイ (Ray)
     const float TMin = 0.001f; //!< float エラー対策 非 0.0f の小さな値にする
     const float TMax = 100000.0f;
-    const vec3 Origin = vec3(UV.x, -UV.y, 0.0f);
+    const vec3 Origin = vec3(UV.x, -UV.y, 1.0f);
     const vec3 Direction = vec3(0.0f, 0.0f, -1.0f);
 
-    //!< トレーシング (Tracing)
+    //!< レイトレーシング (RayTracing)
     traceRayEXT(TLAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
     //traceRayEXT(TLAS, gl_RayFlagsCullBackFacingTrianglesEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
 
