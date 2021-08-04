@@ -16,7 +16,7 @@ public:
 #pragma region RAYTRACING
 	virtual void CreateGeometry() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
-#define AS_BUILD_TOGETHER
+//#define AS_BUILD_TOGETHER
 
 		COM_PTR<ID3D12Device5> Device5;
 		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
