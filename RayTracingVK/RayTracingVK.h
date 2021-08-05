@@ -44,7 +44,7 @@ public:
 	virtual void CreateSwapchain() override { VK::CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight(), VK_IMAGE_USAGE_TRANSFER_DST_BIT); }
 	virtual void CreateGeometry() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
-//#define AS_BUILD_TOGETHER
+#define AS_BUILD_TOGETHER
 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		const auto& CB = CommandBuffers[0];
@@ -121,8 +121,7 @@ public:
 			.instanceCustomIndex = 0,
 			.mask = 0xff,
 			.instanceShaderBindingTableRecordOffset = 0,
-			.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR,
-			//.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR,
+			.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR,
 			.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().Buffer)
 		};
 		Scoped<BufferMemory> InstBuf(Device);
@@ -190,7 +189,28 @@ public:
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 			BLASs.back().PopulateBuildCommand(Device, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, ASGs_Blas, Scratch_Blas.Buffer, CB);
+
+			//!< TLAS のビルド時には BLAS のビルドが完了している必要がある
+			{
+				constexpr std::array<VkMemoryBarrier, 0> MBs = {};
+				constexpr std::array<VkImageMemoryBarrier, 0> IMBs = {};
+				const std::array BMBs = {
+					VkBufferMemoryBarrier({
+						.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+						.pNext = nullptr,
+						.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT, .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.buffer = BLASs.back().Buffer, .offset = 0, .size = VK_WHOLE_SIZE
+					}),
+				};
+				vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, 0,
+					static_cast<uint32_t>(size(MBs)), data(MBs),
+					static_cast<uint32_t>(size(BMBs)), data(BMBs),
+					static_cast<uint32_t>(size(IMBs)), data(IMBs));
+			}
+
 			TLASs.back().PopulateBuildCommand(Device, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, ASGs_Tlas, Scratch_Tlas.Buffer, CB);
+			
 			IndirectBuffers.back().PopulateCopyCommand(CB, sizeof(TRIC), Staging_Indirect.Buffer);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		SubmitAndWait(GraphicsQueue, CB);

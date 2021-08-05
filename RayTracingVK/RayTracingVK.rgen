@@ -13,18 +13,18 @@ void main()
 
     //!< +0.5f はピクセルの中心にするため
     const vec2 UV = (vec2(gl_LaunchIDEXT.xy) + 0.5f) / gl_LaunchSizeEXT.xy * 2.0f - 1.0f;
+    const vec2 UpY = vec2(UV.x, -UV.y);
 
     //!< レイ (Ray)
     const float TMin = 0.001f; //!< float エラー対策 非 0.0f の小さな値にする
     const float TMax = 100000.0f;
-    const vec3 Origin = vec3(UV.x, -UV.y, 1.0f);
-    const vec3 Direction = vec3(0.0f, 0.0f, -1.0f);
+    const vec3 Origin = vec3(UpY, -1.0f);
+    const vec3 Direction = vec3(0.0f, 0.0f, 1.0f);
 
     //!< レイトレーシング (RayTracing)
-    traceRayEXT(TLAS, gl_RayFlagsOpaqueEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
-    //traceRayEXT(TLAS, gl_RayFlagsCullBackFacingTrianglesEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
+    traceRayEXT(TLAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsCullBackFacingTrianglesEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
 
     //!< 結果をレンダーターゲットへ (Write to render target)
 	imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(Payload, 1.0f));
-	//imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(UV.x, -UV.y, 0.0f, 1.0f));
+	//imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(UpY, 0.0f, 1.0f));
 }

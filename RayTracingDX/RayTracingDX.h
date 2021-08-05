@@ -16,7 +16,7 @@ public:
 #pragma region RAYTRACING
 	virtual void CreateGeometry() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
-//#define AS_BUILD_TOGETHER
+#define AS_BUILD_TOGETHER
 
 		COM_PTR<ID3D12Device5> Device5;
 		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
@@ -89,8 +89,7 @@ public:
 				.InstanceID = 0,
 				.InstanceMask = 0xff,
 				.InstanceContributionToHitGroupIndex = 0,
-				.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_CULL_DISABLE,
-				//.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE,
+				.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE,
 				.AccelerationStructure = BLASs.back().Resource->GetGPUVirtualAddress()
 			})
 		};
@@ -128,6 +127,15 @@ public:
 #ifdef AS_BUILD_TOGETHER
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 			BLASs.back().PopulateBuildCommand(BRASI_Blas, GCL, COM_PTR_GET(Scratch_Blas.Resource));
+			
+			//!< TLAS のビルド時には BLAS のビルドが完了している必要がある
+			{
+				const std::array RBs = {
+					D3D12_RESOURCE_BARRIER({.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV, .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, .UAV = D3D12_RESOURCE_UAV_BARRIER({.pResource = COM_PTR_GET(BLASs.back().Resource)}) })
+				};
+				GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+			}
+
 			TLASs.back().PopulateBuildCommand(BRASI_Tlas, GCL, COM_PTR_GET(Scratch_Tlas.Resource));
 		} VERIFY_SUCCEEDED(GCL->Close());
 		DX::ExecuteAndWait(GCQ, static_cast<ID3D12CommandList*>(GCL), COM_PTR_GET(Fence));
@@ -201,7 +209,7 @@ public:
 		//!< ローカルルートシグネチャ (Local root signature)
 		//const D3D12_LOCAL_ROOT_SIGNATURE LRS = { .pLocalRootSignature = COM_PTR_GET(RootSignatures[1]) };
 
-		//!< ここではシェーダーファイルを分けている
+		//!< ここでは (VKに合わせて) シェーダーファイルを分けている
 		const auto ShaderPath = GetBasePath();
 		COM_PTR<ID3DBlob> SB_rgen;
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rgen.cso")), COM_PTR_PUT(SB_rgen)));
@@ -292,8 +300,7 @@ public:
 	virtual void CreateDescriptorView() override {
 		const auto DH = CbvSrvUavDescriptorHeaps[0];
 		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-		//!< AS の場合、第一引数(リソース)には nullptr を指定する
-		Device->CreateShaderResourceView(nullptr, &TLASs[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		Device->CreateShaderResourceView(nullptr/* AS の場合 nullptr を指定する*/, &TLASs[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 	}
 	virtual void PopulateCommandList(const size_t i) override;
