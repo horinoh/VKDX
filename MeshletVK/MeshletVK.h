@@ -28,6 +28,7 @@ public:
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
 			const auto& CB = CommandBuffers[0];
 			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+			//!< ƒg[ƒ‰ƒX16ŒÂ (16 of torus)
 			constexpr VkDrawMeshTasksIndirectCommandNV DMTIC = { .taskCount = 16, .firstTask = 0 };
 			IndirectBuffers.emplace_back().Create(Device, PDMP, DMTIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DMTIC), &DMTIC);
 		}

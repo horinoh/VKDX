@@ -16,7 +16,7 @@ void main()
 {
 	gl_PrimitiveCountNV = 1;
 	gl_PrimitiveIndicesNV[gl_LocalInvocationID.x] = gl_LocalInvocationID.x;
-
+	//!< 三角形の3頂点を出力 (Output 3 vertices of triangle)
 	gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = vec4(Positions[gl_LocalInvocationID.x], 1.0); 
 	OutColor[gl_LocalInvocationID.x] = Colors[gl_LocalInvocationID.x];  
 }

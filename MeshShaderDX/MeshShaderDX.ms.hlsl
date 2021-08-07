@@ -23,7 +23,8 @@ void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, out 
     
     Prims[0].Id = 0;
     Indices[0] = uint3(0, 1, 2);
- 
+
+    //!< 三角形の3頂点を出力 (Output 3 vertices of triangle)
     Vertices[GroupThreadID].Position = float4(Positions[GroupThreadID], 1.0f);
     Vertices[GroupThreadID].Color = Colors[GroupThreadID];
 }

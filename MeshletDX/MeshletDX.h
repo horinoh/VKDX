@@ -18,6 +18,7 @@ public:
 			const auto CA = COM_PTR_GET(CommandAllocators[0]);
 			const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 			const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
+			//!< ƒg[ƒ‰ƒX16ŒÂ (16 of torus)
 			constexpr D3D12_DISPATCH_MESH_ARGUMENTS DMA = { .ThreadGroupCountX = 16, .ThreadGroupCountY = 1, .ThreadGroupCountZ = 1 };
 			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DMA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(DMA), &DMA);
 		}

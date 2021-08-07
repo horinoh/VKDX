@@ -72,7 +72,7 @@ public:
 		const std::array RIDs = {
 			D3D12_RAYTRACING_INSTANCE_DESC({
 				.Transform = {{ 1.0f, 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f, 0.0f }, {0.0f, 0.0f, 1.0f, 0.0f}},
-				.InstanceID = 0,
+				.InstanceID = 0, //!< HLSL ‚©‚ç InstanceID() ‚ÅŽQÆ‚Å‚«‚é
 				.InstanceMask = 0xff,
 				.InstanceContributionToHitGroupIndex = 0,
 				.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE,

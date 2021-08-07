@@ -72,7 +72,7 @@ protected:
 			const auto CA = COM_PTR_GET(CommandAllocators[0]);
 			const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 			//!< [0] キューブ(Cube) : PX, NX, PY, NY, PZ, NZ
-			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\CubeMap\\DebugCube.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\CubeMap\\ninomaru_teien.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			{
 				//!< D3D12_SRV_DIMENSION_TEXTURECUBE にするため SRV を明示的に上書きしている (To use D3D12_SRV_DIMENSION_TEXTURECUBE, overwrite SRV explicitly)
 				const auto RD = DDSTextures.back().Resource->GetDesc();

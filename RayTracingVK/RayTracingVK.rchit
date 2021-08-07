@@ -6,5 +6,6 @@ hitAttributeEXT vec2 HitAttr;
 
 void main()
 {
+	//!< gl_InstanceCustomIndexEXT : TLAS ì¬Žž‚Ì VkAccelerationStructureInstanceKHR.instanceCustomIndex 
 	Payload = vec3(1.0f - HitAttr.x - HitAttr.y, HitAttr.x, HitAttr.y);
 }

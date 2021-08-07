@@ -36,6 +36,7 @@ void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, in p
 {
     SetMeshOutputCounts(NN, 2 * N1N1);
 
+    //!< (N-1) * (N-1) のメッシュ構造 ((N-1) * (N-1) Mesh structure)
     uint PrimCount = 0;
     for (uint i = 0; i < N1; ++i)
     {
@@ -51,17 +52,19 @@ void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, in p
     }
 
     const uint MeshletID = Payload.MeshletIDs[GroupID];
-
     const float2 MeshletScale = float2(1.0f, 1.0f) / Payload.MeshletDimension;
     const float2 MeshletOffset = float2((float)(MeshletID % Payload.MeshletDimension), (float)(MeshletID / Payload.MeshletDimension)) * MeshletScale;
 
     const float2 UV = float2((float)(GroupThreadID % N) / N1, 1.0f - (float)(GroupThreadID / N) / N1);
 #if 1
-    const float3 InstanceOffset = float3((float)(Payload.InstanceID % 4) / 3 - 0.5f, (float)(Payload.InstanceID / 4) / 3 - 0.5f, 0.0f);
-    Vertices[GroupThreadID].Position = float4(GetPosition_Torus(UV * MeshletScale + MeshletOffset) * 0.1f + InstanceOffset, 1.0f);
+    //!< トーラスを描画 (Draw torus)
+    const float3 InstanceOffset = float3((float)(Payload.InstanceID % 4) / 3 - 0.5f, (float)(Payload.InstanceID / 4) / 3 - 0.5f, 0.0f); //!< インスタンス毎にオフセット (Offset by instance)
+    Vertices[GroupThreadID].Position = float4(GetPosition_Torus(UV * MeshletScale + MeshletOffset) * 0.1f + InstanceOffset, 1.0f); //!< メッシュレットがトーラスの一部となる (Meshlet becomes part of torus)
 #else
+    //!< UV平面を描画 (Draw UV plane)
     Vertices[GroupThreadID].Position = float4(UV * MeshletScale + MeshletOffset, 0.0f, 1.0f);
 #endif
 
+    //!< メッシュレット毎に色を変える (Change color by meshlet)
     Vertices[GroupThreadID].Color = Colors[MeshletID % 8];
 }

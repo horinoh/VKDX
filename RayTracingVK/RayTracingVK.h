@@ -105,7 +105,7 @@ public:
 			.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, 0.0f,
 												0.0f, 1.0f, 0.0f, 0.0f,
 												0.0f, 0.0f, 1.0f, 0.0f}),
-			.instanceCustomIndex = 0,
+			.instanceCustomIndex = 0, //!< GLSL ‚©‚ç gl_InstanceCustomIndexEXT ‚ÅŽQÆ‚Å‚«‚é
 			.mask = 0xff,
 			.instanceShaderBindingTableRecordOffset = 0,
 			.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR,

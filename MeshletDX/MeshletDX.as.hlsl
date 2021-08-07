@@ -19,7 +19,7 @@ void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID)
 
     bool Visible = true;
     //bool Visible = 0 == (GroupThreadID % 2);
-    //bool Visible = 1 == (GroupThreadID % 2);
+    //bool Visible = 0 == (GroupID % 2);
 
     //!< Wave–½—ß‚ÍƒXƒŒƒbƒhŠÔ“¯Šú‚³‚ê‚é
     

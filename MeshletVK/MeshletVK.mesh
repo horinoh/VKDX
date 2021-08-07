@@ -33,6 +33,7 @@ layout(local_size_x = NN) in;
 layout(triangles, max_vertices = NN, max_primitives = 2 * N1N1) out;
 void main()
 {
+    //!< (N-1) * (N-1) のメッシュ構造 ((N-1) * (N-1) Mesh structure)
     uint IndexCount = 0;
 	gl_PrimitiveCountNV = 2 * N1N1;
     for (uint i = 0; i < N1; ++i)
@@ -49,17 +50,19 @@ void main()
     }
 
     const uint MeshletID = Payload.MeshletIDs[gl_WorkGroupID.x];
-
     const vec2 MeshletScale = vec2(1.0f, 1.0f) / Payload.MeshletDimension;
     const vec2 MeshletOffset = vec2(float(MeshletID % Payload.MeshletDimension), float(MeshletID / Payload.MeshletDimension)) * MeshletScale;
 
     const vec2 UV = vec2(float(gl_LocalInvocationID.x % N) / N1, 1.0f - float(gl_LocalInvocationID.x / N) / N1);
 #if 1
-    const vec3 InstanceOffset = vec3(float(Payload.InstanceID % 4) / 3 -0.5f, float(Payload.InstanceID / 4) / 3 - 0.5f, 0.0f);
-	gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = vec4(GetPosition_Torus(UV * MeshletScale + MeshletOffset) * 0.1f + InstanceOffset, 1.0f);
+    //!< トーラスを描画 (Draw torus)
+    const vec3 InstanceOffset = vec3(float(Payload.InstanceID % 4) / 3 -0.5f, float(Payload.InstanceID / 4) / 3 - 0.5f, 0.0f); //!< インスタンス毎にオフセット (Offset by instance)
+	gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = vec4(GetPosition_Torus(UV * MeshletScale + MeshletOffset) * 0.1f + InstanceOffset, 1.0f); //!< メッシュレットがトーラスの一部となる (Meshlet becomes part of torus)
 #else
+    //!< UV平面を描画 (Draw UV plane)
 	gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = vec4(UV * MeshletScale + MeshletOffset, 0.0f, 1.0f); 
 #endif
 
-	OutColor[gl_LocalInvocationID.x] = Colors[MeshletID % 8];  
+    //!< メッシュレット毎に色を変える (Change color by meshlet)
+	OutColor[gl_LocalInvocationID.x] = Colors[MeshletID % 8];
 }

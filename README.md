@@ -17,8 +17,9 @@
 ### テクスチャ
 #### 素材
 * [cc0textures](https://cc0textures.com/)
-	* 非dds テクスチャは DirectX Texture Tool で開いた後、Save As で dds として保存できる
-	* [cc0texture](https://cc0textures.com/)のテクスチャ素材を使わせてもらっています (Thanks to [cc0texture](https://cc0textures.com/)'s assets)
+	* cc0texture のテクスチャ素材を使わせてもらっています (Thanks to cc0texture's assets)
+* [polyhaven](https://polyhaven.com/)
+	* polyhaven のテクスチャ素材を使わせてもらっています (Thanks to polyhaven's assets)
 #### DDS ツール
 * [DirectXTex](https://github.com/Microsoft/DirectXTex)
   * DirectXTex\DirectXTex_Desktop_2015.sln を開いて Release、x64 にしてビルドすると実行ファイルが作成される
@@ -29,6 +30,13 @@
 	Texdiag\Bin\Desktop_2015\x64\Release\texdiag.exe
 	~~~
 * [DDSサムネイル表示](https://sourceforge.net/projects/sagethumbs/)
+* 非 dds テクスチャは DirectX Texture Tool で開いた後、Save As で dds として保存できる
+* [cmftStudio](https://github.com/dariomanesku/cmftStudio) 
+	* HDR テクスチャを DDSキューブマップにするのに使用 (Used to convert HDR to DDS cubemap)
+		* アプリを起動
+		* 右側から Skybox をクリック - Browse... - HDR テクスチャを選択して - Load
+		* 必要に応じて Tonemap を調整
+		* Save - DDS - Cubemap - BGRA8 - Save でファイルを出力
 
 ### エディット & コンティニュー
 - Tools - Option - Debugging - General - Enable Edit and Continue

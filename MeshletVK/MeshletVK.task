@@ -21,8 +21,8 @@ void main()
 
 	bool Visible = true;
 	//bool Visible = 0 == (gl_LocalInvocationID.x % 2);
-	//bool Visible = 1 == (gl_LocalInvocationID.x % 2);
-	
+	//bool Visible = 0 == (gl_WorkGroupID.x % 2);
+
 	//!< ƒXƒŒƒbƒhŠÔ“¯Šú‚³‚ê‚é
 	uvec4 Vote = subgroupBallot(Visible);
 
