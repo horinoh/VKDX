@@ -77,9 +77,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <FxCompile Include="HoloDX.gs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
@@ -104,5 +101,8 @@
     <FxCompile Include="HoloDX_1_Quilt.ps.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

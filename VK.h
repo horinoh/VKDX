@@ -317,10 +317,9 @@ public:
 	private:
 		using Super = Texture;
 	public:
-		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent) {
+		StorageTexture& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent) {
 			Super::Create(Device, PDMP, Format, Extent, 1, 1, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
-
-			//SubmitToGeneralCommand()
+			return *this;
 		}
 	};
 #pragma region RAYTRACING
@@ -368,6 +367,23 @@ public:
 			assert(ASBGIs[0].geometryCount == size(ASBRIs_0));
 			vkCmdBuildAccelerationStructuresKHR(CB, static_cast<uint32_t>(size(ASBGIs)), data(ASBGIs), data(ASBRIss));
 		}
+		void PopulateBarrierCommand(const VkCommandBuffer CB) {
+			constexpr std::array<VkMemoryBarrier, 0> MBs = {};
+			constexpr std::array<VkImageMemoryBarrier, 0> IMBs = {};
+			const std::array BMBs = {
+				VkBufferMemoryBarrier({
+					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT, .dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.buffer = Buffer, .offset = 0, .size = VK_WHOLE_SIZE
+				}),
+			};
+			vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, 0,
+				static_cast<uint32_t>(size(MBs)), data(MBs),
+				static_cast<uint32_t>(size(BMBs)), data(BMBs),
+				static_cast<uint32_t>(size(IMBs)), data(IMBs));
+		}
 		void SubmitBuildCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs, VkQueue Queue, const VkCommandBuffer CB) {
 			Scoped<ScratchBuffer> Scratch(Device);
 			Scratch.Create(Device, PDMP, Size);
@@ -378,6 +394,8 @@ public:
 			SubmitAndWait(Queue, CB);
 		}
 	};
+	using BLAS = AccelerationStructureBuffer;
+	using TLAS = AccelerationStructureBuffer;
 	class ScratchBuffer : public DeviceLocalBuffer
 	{
 	private:
@@ -387,7 +405,24 @@ public:
 			Super::Create(Device, PDMP, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size);
 		}
 	};
-	using ShaderBindingTable = BufferMemory;
+	class ShaderBindingTable : public BufferMemory
+	{
+	private:
+		using Super = BufferMemory;
+	public:
+		ShaderBindingTable& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
+			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			return *this;
+		}
+		void* Map(const VkDevice Device) {
+			void* Data;
+			VERIFY_SUCCEEDED(vkMapMemory(Device, DeviceMemory, 0, VK_WHOLE_SIZE, static_cast<VkMemoryMapFlags>(0), &Data));
+			return Data;
+		}
+		void Unmap(const VkDevice Device) {
+			vkUnmapMemory(Device, DeviceMemory);
+		}
+	};
 #pragma endregion
 
 #ifdef _WINDOWS
@@ -595,7 +630,7 @@ protected:
 	}
 
 	virtual void CreateGeometry() {}
-	virtual void CreateShaderBindingTable([[maybe_unused]] const size_t ShaderGroupCount) {}
+	virtual void CreateShaderBindingTable() {}
 
 	virtual void CreateUniformBuffer() {}
 	virtual void CreateStorageBuffer() {}
@@ -914,7 +949,8 @@ protected:
 	std::vector<IndirectBuffer> IndirectBuffers;
 	std::vector<UniformBuffer> UniformBuffers;
 #pragma region RAYTRACING
-	std::vector<AccelerationStructureBuffer> BLASs, TLASs;
+	std::vector<BLAS> BLASs;
+	std::vector<TLAS> TLASs;
 	std::vector<ShaderBindingTable> ShaderBindingTables;
 #pragma endregion
 

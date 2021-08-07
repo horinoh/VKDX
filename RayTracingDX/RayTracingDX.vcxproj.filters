@@ -71,9 +71,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <FxCompile Include="RayTracingDX.miss.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
@@ -83,5 +80,8 @@
     <FxCompile Include="RayTracingDX.rgen.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

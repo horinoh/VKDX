@@ -33,6 +33,10 @@
 ### エディット & コンティニュー
 - Tools - Option - Debugging - General - Enable Edit and Continue
 
+### メッシュ
+#### 素材
+* [The Stanford 3D Scanning Repository](http://graphics.stanford.edu/data/3Dscanrep/)
+
 ### 外部ライブラリ
 #### GLTF
  * C++ローダー https://github.com/jessey-git/fx-gltf をサブモジュール化した
@@ -476,6 +480,7 @@
    * Excluded From Build を No
    * Content を Yes
   * 右クリック - プロパティ - HLSL Compiler - General - Shader Type でタイプを適切に選択しておく
+	* RayTracing の場合は Library(/lib) を指定、Entrypoint Name は空欄としておく
 * ルートシグネチャ用HLSL XxxDX.rs.hlsl を作成する
 
 #### VK

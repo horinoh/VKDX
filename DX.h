@@ -322,15 +322,8 @@ public:
 	class AccelerationStructureBuffer : public ResourceBase
 	{
 	public:
-		D3D12_SHADER_RESOURCE_VIEW_DESC SRV; //!< TLAS ‚ÅŽg—p
-		AccelerationStructureBuffer& Create(ID3D12Device* Device, const size_t Size) {
+		virtual AccelerationStructureBuffer& Create(ID3D12Device* Device, const size_t Size) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
-			SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({ 
-				.Format = DXGI_FORMAT_UNKNOWN,
-				.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE, 
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.RaytracingAccelerationStructure = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_SRV({.Location = Resource->GetGPUVirtualAddress()})
-			});
 			return *this;
 		}
 		void PopulateBuildCommand(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12Resource* Scratch) {
@@ -344,10 +337,16 @@ public:
 			};
 			constexpr std::array<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC, 0> RASPIDs = {};
 			GCL4->BuildRaytracingAccelerationStructure(&BRASD, static_cast<UINT>(size(RASPIDs)), data(RASPIDs));
-#if 0
-			const auto RBs = { D3D12_RESOURCE_BARRIER({.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV, .Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE, .UAV = D3D12_RESOURCE_UAV_BARRIER({.pResource = COM_PTR_GET(Resource)}) }),};
-			GCL4->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-#endif
+		}
+		void PopulateBarrierCommand(ID3D12GraphicsCommandList* GCL) {
+			const std::array RBs = {
+				D3D12_RESOURCE_BARRIER({
+					.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV, 
+					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+					.UAV = D3D12_RESOURCE_UAV_BARRIER({.pResource = COM_PTR_GET(Resource)})
+				})
+			};
+			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 		}
 		void ExecuteBuildCommand(ID3D12Device* Device, const size_t Size, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, [[maybe_unused]] ID3D12Fence* Fence) {
 			ScratchBuffer SB;
@@ -358,15 +357,51 @@ public:
 			DX::ExecuteAndWait(CQ, static_cast<ID3D12CommandList*>(GCL), Fence);
 		}
 	};
+	using BLAS = AccelerationStructureBuffer;
+	class TLAS : public AccelerationStructureBuffer 
+	{
+	private:
+		using Super = AccelerationStructureBuffer;
+	public:
+		D3D12_SHADER_RESOURCE_VIEW_DESC SRV;
+		virtual AccelerationStructureBuffer& Create(ID3D12Device* Device, const size_t Size) override {
+			Super::Create(Device, Size);
+			SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({
+				.Format = DXGI_FORMAT_UNKNOWN,
+				.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.RaytracingAccelerationStructure = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_SRV({.Location = Resource->GetGPUVirtualAddress()})
+			});
+			return *this;
+		}
+	};
 	class ScratchBuffer : public ResourceBase
 	{
+	private:
+		using Super = ResourceBase;
 	public:
 		void Create(ID3D12Device* Device, const size_t Size) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
 		}
 	}; 
-	using ShaderTable = ResourceBase;
+	class ShaderTable : public ResourceBase 
+	{
+	private:
+		using Super = ResourceBase;
+	public:
+		ShaderTable& Create(ID3D12Device* Device, const size_t Size) {
+			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
+			return *this;
+		}
+		BYTE* Map() {
+			BYTE* Data;
+			Resource->Map(0, nullptr, reinterpret_cast<void**>(&Data));
+			return Data;
+		}
+		void Unmap() { Resource->Unmap(0, nullptr); }
+	};
 #pragma endregion
+
 #pragma region MESH_SHADER
 #pragma warning(push)
 #pragma warning(disable : 4324)
@@ -625,7 +660,8 @@ protected:
 	std::vector<IndirectBuffer> IndirectBuffers;
 	std::vector<ConstantBuffer> ConstantBuffers;
 #pragma region RAYTRACING
-	std::vector<AccelerationStructureBuffer> BLASs, TLASs;
+	std::vector<BLAS> BLASs;
+	std::vector<TLAS> TLASs;
 	std::vector<ShaderTable> ShaderTables;
 #pragma endregion
 
