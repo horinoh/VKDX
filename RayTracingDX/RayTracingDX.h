@@ -3,12 +3,12 @@
 #include "resource.h"
 
 #pragma region Code
-#include "../DXExt.h"
+#include "../DXImage.h"
 
-class RayTracingDX : public DXExt
+class RayTracingDX : public DXImage
 {
 private:
-	using Super = DXExt;
+	using Super = DXImage;
 public:
 	RayTracingDX() : Super() {}
 	virtual ~RayTracingDX() {}
@@ -116,6 +116,17 @@ public:
 		SwapChain->GetDesc1(&SCD);
 
 		UnorderedAccessTextures.emplace_back().Create(COM_PTR_GET(Device), GetClientRectWidth(), GetClientRectHeight(), 1, SCD.Format);
+
+		std::wstring Path;
+		if (FindDirectory("DDS", Path)) {
+			const auto CA = COM_PTR_GET(CommandAllocators[0]);
+			const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\CubeMap\\ninomaru_teien.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			{
+				const auto RD = DDSTextures.back().Resource->GetDesc();
+				DDSTextures.back().SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({ .Format = RD.Format, .ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE, .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, .TextureCube = D3D12_TEXCUBE_SRV({.MostDetailedMip = 0, .MipLevels = RD.MipLevels, .ResourceMinLODClamp = 0.0f }), });
+			}
+		}
 	}
 	virtual void CreateRootSignature() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
@@ -178,9 +189,24 @@ public:
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".miss.cso")), COM_PTR_PUT(SB_miss)));
 		COM_PTR<ID3DBlob> SB_rchit;
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rchit.cso")), COM_PTR_PUT(SB_rchit)));
+#pragma region CALLABLE
+		COM_PTR<ID3DBlob> SB_rcall;
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rcall.cso")), COM_PTR_PUT(SB_rcall)));
+		COM_PTR<ID3DBlob> SB_rcall_1;
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.rcall.cso")), COM_PTR_PUT(SB_rcall_1)));
+		COM_PTR<ID3DBlob> SB_rcall_2;
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_2.rcall.cso")), COM_PTR_PUT(SB_rcall_2)));
+#pragma endregion
+
 		std::array EDs_rgen = { D3D12_EXPORT_DESC({.Name = TEXT("OnRayGeneration"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
 		std::array EDs_miss = { D3D12_EXPORT_DESC({.Name = TEXT("OnMiss"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
 		std::array EDs_rchit = { D3D12_EXPORT_DESC({.Name = TEXT("OnClosestHit"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
+#pragma region CALLABLE
+		std::array EDs_rcall = { D3D12_EXPORT_DESC({.Name = TEXT("OnCallable"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }),};
+		std::array EDs_rcall_1 = { D3D12_EXPORT_DESC({.Name = TEXT("OnCallable_1"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
+		std::array EDs_rcall_2 = { D3D12_EXPORT_DESC({.Name = TEXT("OnCallable_2"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
+#pragma endregion
+
 		const auto DLD_rgen = D3D12_DXIL_LIBRARY_DESC({
 			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rgen->GetBufferPointer(), .BytecodeLength = SB_rgen->GetBufferSize() }),
 			.NumExports = static_cast<UINT>(size(EDs_rgen)), .pExports = data(EDs_rgen)
@@ -193,7 +219,21 @@ public:
 			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rchit->GetBufferPointer(), .BytecodeLength = SB_rchit->GetBufferSize() }),
 			.NumExports = static_cast<UINT>(size(EDs_rchit)), .pExports = data(EDs_rchit)
 		});
-		
+#pragma region CALLABLE
+		const auto DLD_rcall = D3D12_DXIL_LIBRARY_DESC({
+			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rcall->GetBufferPointer(), .BytecodeLength = SB_rcall->GetBufferSize() }),
+			.NumExports = static_cast<UINT>(size(EDs_rcall)), .pExports = data(EDs_rcall)
+		});
+		const auto DLD_rcall_1 = D3D12_DXIL_LIBRARY_DESC({
+			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rcall_1->GetBufferPointer(), .BytecodeLength = SB_rcall_1->GetBufferSize() }),
+			.NumExports = static_cast<UINT>(size(EDs_rcall_1)), .pExports = data(EDs_rcall_1)
+		});
+		const auto DLD_rcall_2 = D3D12_DXIL_LIBRARY_DESC({
+			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rcall_2->GetBufferPointer(), .BytecodeLength = SB_rcall_2->GetBufferSize() }),
+			.NumExports = static_cast<UINT>(size(EDs_rcall_2)), .pExports = data(EDs_rcall_2)
+		});
+#pragma endregion
+
 		constexpr D3D12_HIT_GROUP_DESC HGD = {
 			.HitGroupExport = TEXT("HitGroup"),
 			.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES,
@@ -207,17 +247,21 @@ public:
 
 		constexpr D3D12_RAYTRACING_PIPELINE_CONFIG RPC = { .MaxTraceRecursionDepth = 1 };
 
-#if 0
-		std::vector SSs = {
+		constexpr std::array SSs = {
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, .pDesc = &GRS }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rgen }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_miss }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rchit }),
+#pragma region CALLABLE
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rcall }),
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rcall_1 }),
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rcall_2 }),
+#pragma endregion
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, .pDesc = &HGD }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, .pDesc = &RSC }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, .pDesc = &RPC }),
 		};
-
+#if 0
 		//!< ローカルルートシグネチャ (Local root signature)
 		const D3D12_LOCAL_ROOT_SIGNATURE LRS = { .pLocalRootSignature = COM_PTR_GET(RootSignatures[1]) };
 		SSs.emplace_back(D3D12_STATE_SUBOBJECT({ .Type = D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, .pDesc = &LRS }));
@@ -225,26 +269,11 @@ public:
 		std::array Exports = { TEXT("HitGroup") };
 		const D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION STEA = { .pSubobjectToAssociate = &SSs.back(), .NumExports = static_cast<UINT>(size(Exports)), .pExports = data(Exports) };
 		SSs.emplace_back(D3D12_STATE_SUBOBJECT({ .Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION, .pDesc = &STEA }));
-
-		const D3D12_STATE_OBJECT_DESC SOD = {
-			.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE,
-			.NumSubobjects = static_cast<UINT>(size(SSs)), .pSubobjects = data(SSs)
-		}; 
-#else
-		constexpr std::array SSs = {
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, .pDesc = &GRS }),
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rgen }),
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_miss }),
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rchit }),
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, .pDesc = &HGD }),
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, .pDesc = &RSC }),
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, .pDesc = &RPC }),
-		};
+#endif
 		constexpr D3D12_STATE_OBJECT_DESC SOD = {
 			.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE,
 			.NumSubobjects = static_cast<UINT>(size(SSs)), .pSubobjects = data(SSs)
 		};
-#endif
 		
 		COM_PTR<ID3D12Device5> Device5;
 		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
@@ -257,14 +286,20 @@ public:
 		COM_PTR<ID3D12StateObjectProperties> SOP;
 		VERIFY_SUCCEEDED(StateObjects.back()->QueryInterface(COM_PTR_UUIDOF_PUTVOID(SOP)));
 
-		constexpr auto RgenRecordSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0;
-		constexpr auto RgenTableSize = 1 * Cmn::RoundUp(RgenRecordSize, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		constexpr auto RgenRecordSize = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		constexpr auto RgenTableSize = 1 * RgenRecordSize;
 
-		constexpr auto MissRecordSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0;
-		constexpr auto MissTableSize = 1 * Cmn::RoundUp(MissRecordSize, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		constexpr auto MissRecordSize = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		constexpr auto MissTableSize = 1 * MissRecordSize;
 
-		constexpr auto RchitRecordSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0;
-		constexpr auto RchitTableSize = 1 * Cmn::RoundUp(RchitRecordSize, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		constexpr auto RchitRecordSize = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		constexpr auto RchitTableSize = 1 * RchitRecordSize;
+
+#pragma region CALLABLE
+		constexpr auto CallableCount = 3;
+		constexpr auto RcallRecordSize = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		constexpr auto RcallTableSize = CallableCount * RcallRecordSize;
+#pragma endregion
 
 		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RgenTableSize); {
 			auto Data = ShaderTables.back().Map(); {
@@ -281,6 +316,15 @@ public:
 				std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("HitGroup")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 			} ShaderTables.back().Unmap();
 		}
+#pragma region CALLABLE
+		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RcallTableSize); {
+			auto Data = ShaderTables.back().Map(); {
+				std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("OnCallable")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+				std::memcpy(Data + RcallRecordSize, SOP->GetShaderIdentifier(TEXT("OnCallable_1")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+				std::memcpy(Data + RcallRecordSize + RcallRecordSize, SOP->GetShaderIdentifier(TEXT("OnCallable_2")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+			} ShaderTables.back().Unmap();
+		}
+#pragma endregion
 	}
 	virtual void CreateDescriptorHeap() override {
 		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 2, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
@@ -319,11 +363,14 @@ public:
 			COM_PTR<ID3D12GraphicsCommandList4> GCL4;
 			VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
 			GCL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
+			constexpr auto CallableCount = 3;
 			const auto DRD = D3D12_DISPATCH_RAYS_DESC({
 			  .RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({.StartAddress = ShaderTables[0].Resource->GetGPUVirtualAddress(), .SizeInBytes = ShaderTables[0].Resource->GetDesc().Width }),
 			  .MissShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = ShaderTables[1].Resource->GetGPUVirtualAddress(), .SizeInBytes = ShaderTables[1].Resource->GetDesc().Width, .StrideInBytes = 0}),
 			  .HitGroupTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = ShaderTables[2].Resource->GetGPUVirtualAddress(), .SizeInBytes = ShaderTables[2].Resource->GetDesc().Width, .StrideInBytes = 0}),
-			  .CallableShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0}),
+#pragma region CALLABLE
+			  .CallableShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = ShaderTables[3].Resource->GetGPUVirtualAddress(), .SizeInBytes = ShaderTables[3].Resource->GetDesc().Width, .StrideInBytes = ShaderTables[3].Resource->GetDesc().Width / CallableCount}),
+#pragma endregion
 			  .Width = static_cast<UINT>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()), .Depth = 1
 			});
 			GCL4->DispatchRays(&DRD);

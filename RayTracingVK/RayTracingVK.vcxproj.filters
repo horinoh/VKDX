@@ -39,6 +39,9 @@
     <ClInclude Include="..\Win.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\VKImage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RayTracingVK.cpp">
@@ -54,6 +57,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Win.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\VKImage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -87,6 +93,12 @@
       <Filter>Shader Files</Filter>
     </CustomBuild>
     <CustomBuild Include="RayTracingVK.rmiss">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="RayTracingVK_1.rcall">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="RayTracingVK_2.rcall">
       <Filter>Shader Files</Filter>
     </CustomBuild>
   </ItemGroup>

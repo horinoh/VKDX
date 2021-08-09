@@ -6,5 +6,5 @@ layout(location = 0) callableDataInEXT vec3 CallableData;
 void main()
 {
 	const vec2 pos = vec2(gl_LaunchIDEXT / 8);
-	CallableData = vec3(mod(pos.x + mod(pos.y, 2.0f), 2.0f));
+	CallableData = vec3(mod(pos.y, 2.0f));
 }

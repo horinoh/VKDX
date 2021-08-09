@@ -39,6 +39,9 @@
     <ClInclude Include="..\Win.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\DXImage.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RayTracingDX.cpp">
@@ -54,6 +57,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Win.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\DXImage.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -78,6 +84,15 @@
       <Filter>Shader Files</Filter>
     </FxCompile>
     <FxCompile Include="RayTracingDX.rgen.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="RayTracingDX_2.rcall.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="RayTracingDX_1.rcall.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="RayTracingDX.rcall.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
   </ItemGroup>

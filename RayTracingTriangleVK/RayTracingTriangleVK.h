@@ -175,6 +175,7 @@ public:
 		}
 #pragma endregion
 
+#ifdef USE_INDIRECT
 		//!< インダイレクトバッファ (IndirectBuffer)
 		const VkTraceRaysIndirectCommandKHR TRIC = { .width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 };
 #ifdef AS_BUILD_TOGETHER
@@ -184,6 +185,7 @@ public:
 #else
 		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(TRIC), &TRIC);
 #endif
+#endif
 
 #ifdef AS_BUILD_TOGETHER
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
@@ -192,7 +194,9 @@ public:
 			//!< TLAS のビルド時には BLAS のビルドが完了している必要がある
 			BLASs.back().PopulateBarrierCommand(CB);
 			TLASs.back().PopulateBuildCommand(Device, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, ASGs_Tlas, Scratch_Tlas.Buffer, CB);
+#ifdef USE_INDIRECT
 			IndirectBuffers.back().PopulateCopyCommand(CB, sizeof(TRIC), Staging_Indirect.Buffer);
+#endif
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		SubmitAndWait(GraphicsQueue, CB);
 #endif
@@ -276,16 +280,16 @@ public:
 		VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
 		vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
 
-		//!< レコードサイズ = シェーダ識別子サイズ
-		const auto RgenRecordSize = PDRTPP.shaderGroupHandleSize + 0;
-		//!< テーブルサイズ = レコード数 * RoundUp(レコードサイズ, PDRTPP.shaderGroupHandleAlignment)
-		const auto RgenTableSize = 1 * Cmn::RoundUp(RgenRecordSize, PDRTPP.shaderGroupHandleAlignment);
+		//!< レコードサイズ = シェーダ識別子サイズ + 0 をアライン(shaderGroupHandleAlignment)したもの
+		const auto RgenRecordSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
+		//!< テーブルサイズ = レコード数 * レコードサイズ
+		const auto RgenTableSize = 1 * RgenRecordSize;
 
-		const auto MissRecordSize = PDRTPP.shaderGroupHandleSize + 0;
-		const auto MissTableSize = 1 * Cmn::RoundUp(MissRecordSize, PDRTPP.shaderGroupHandleAlignment);
+		const auto MissRecordSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
+		const auto MissTableSize = 1 * MissRecordSize;
 
-		const auto RchitRecordSize = PDRTPP.shaderGroupHandleSize + 0;
-		const auto RchitTableSize = 1 * Cmn::RoundUp(RchitRecordSize, PDRTPP.shaderGroupHandleAlignment);
+		const auto RchitRecordSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
+		const auto RchitTableSize = 1 * RchitRecordSize;
 
 		std::vector<std::byte> Handles(RgenTableSize + MissTableSize + RchitTableSize);
 		VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, 3, size(Handles), data(Handles)));
@@ -396,10 +400,10 @@ public:
 			const auto Hit = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[2].Buffer), .stride = AlignedSize, .size = AlignedSize });
 			const auto Callable = VkStridedDeviceAddressRegionKHR({ .deviceAddress = 0, .stride = 0, .size = 0 });
 
-#if 0
-			vkCmdTraceRaysKHR(CB, &RayGen, &Miss, &Hit, &Callable, GetClientRectWidth(), GetClientRectHeight(), 1);
-#else
+#ifdef USE_INDIRECT
 			vkCmdTraceRaysIndirectKHR(CB, &RayGen, &Miss, &Hit, &Callable, GetDeviceAddress(Device, IndirectBuffers[0].Buffer));
+#else
+			vkCmdTraceRaysKHR(CB, &RayGen, &Miss, &Hit, &Callable, GetClientRectWidth(), GetClientRectHeight(), 1);
 #endif
 
 			constexpr auto ISR = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 });

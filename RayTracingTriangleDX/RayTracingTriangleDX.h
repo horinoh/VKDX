@@ -194,21 +194,22 @@ public:
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".miss.cso")), COM_PTR_PUT(SB_miss)));
 		COM_PTR<ID3DBlob> SB_rchit;
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rchit.cso")), COM_PTR_PUT(SB_rchit)));
+
 		std::array EDs_rgen = { D3D12_EXPORT_DESC({.Name = TEXT("OnRayGeneration"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
 		std::array EDs_miss = { D3D12_EXPORT_DESC({.Name = TEXT("OnMiss"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
 		std::array EDs_rchit = { D3D12_EXPORT_DESC({.Name = TEXT("OnClosestHit"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
 		const auto DLD_rgen = D3D12_DXIL_LIBRARY_DESC({
 			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rgen->GetBufferPointer(), .BytecodeLength = SB_rgen->GetBufferSize() }),
 			.NumExports = static_cast<UINT>(size(EDs_rgen)), .pExports = data(EDs_rgen)
-			});
+		});
 		const auto DLD_miss = D3D12_DXIL_LIBRARY_DESC({
 			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_miss->GetBufferPointer(), .BytecodeLength = SB_miss->GetBufferSize() }),
 			.NumExports = static_cast<UINT>(size(EDs_miss)), .pExports = data(EDs_miss)
-			});
+		});
 		const auto DLD_rchit = D3D12_DXIL_LIBRARY_DESC({
 			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rchit->GetBufferPointer(), .BytecodeLength = SB_rchit->GetBufferSize() }),
 			.NumExports = static_cast<UINT>(size(EDs_rchit)), .pExports = data(EDs_rchit)
-			});
+		});
 
 		//!< ヒットグループ AnyHit, ClosestHit, Intersection の3つからなる、ここでは D3D12_HIT_GROUP_TYPE_TRIANGLES なので、ClosestHit のみを使用
 		//!< ヒットグループ内のシェーダは同じローカルルートシグネチャを使用する 
@@ -252,16 +253,16 @@ public:
 		COM_PTR<ID3D12StateObjectProperties> SOP;
 		VERIFY_SUCCEEDED(StateObjects.back()->QueryInterface(COM_PTR_UUIDOF_PUTVOID(SOP)));
 
-		//!< レコードサイズ = シェーダ識別子サイズ + ローカルルート引数サイズ(ここでは未使用なので0)
-		constexpr auto RgenRecordSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0;
-		//!< テーブルサイズ = レコード数 * RoundUp(レコードサイズ, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT)
-		constexpr auto RgenTableSize = 1 * Cmn::RoundUp(RgenRecordSize, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		//!< レコードサイズ = シェーダ識別子サイズ + ローカルルート引数サイズ(ここでは未使用なので0) をアライン(D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT)したもの
+		constexpr auto RgenRecordSize = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		//!< テーブルサイズ = レコード数 * レコードサイズ
+		constexpr auto RgenTableSize = 1 * RgenRecordSize;
 
-		constexpr auto MissRecordSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0;
-		constexpr auto MissTableSize = 1 * Cmn::RoundUp(MissRecordSize, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		constexpr auto MissRecordSize = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		constexpr auto MissTableSize = 1 * MissRecordSize;
 
-		constexpr auto RchitRecordSize = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0;
-		constexpr auto RchitTableSize = 1 * Cmn::RoundUp(RchitRecordSize, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		constexpr auto RchitRecordSize = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		constexpr auto RchitTableSize = 1 * RchitRecordSize;
 
 		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RgenTableSize); {
 			auto Data = ShaderTables.back().Map(); {
