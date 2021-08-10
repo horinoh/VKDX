@@ -5,6 +5,11 @@ layout(location = 0) rayPayloadInEXT vec3 Payload;
 layout(location = 0) callableDataEXT vec3 CallableData;
 hitAttributeEXT vec2 HitAttr;
 
+//!< ShaderRecordBuffer ‚Ì—á
+//layout(shaderRecordNV) buffer XXX {
+//    uint32_t yyy;
+//};
+
 void main()
 {
 	//!< gl_InstanceCustomIndexEXT : TLAS ì¬Žž‚Ì VkAccelerationStructureInstanceKHR.instanceCustomIndex 

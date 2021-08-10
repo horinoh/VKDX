@@ -14,12 +14,13 @@
 	* Tool - Options - Text Editor - File Extension - Editor で Microsoft Visual C++ を選択 - Extension に inl を記述 - Add
 	* Visual Assist X をリビルドする
 
+### 素材
+* 以下の素材を使わせてもらっている (Thanks to these asetts)
+	* [cc0textures](https://cc0textures.com/)
+	* [polyhaven](https://polyhaven.com/)
+	* [The Stanford 3D Scanning Repository](http://graphics.stanford.edu/data/3Dscanrep/)
+
 ### テクスチャ
-#### 素材
-* [cc0textures](https://cc0textures.com/)
-	* cc0texture のテクスチャ素材を使わせてもらっています (Thanks to cc0texture's assets)
-* [polyhaven](https://polyhaven.com/)
-	* polyhaven のテクスチャ素材を使わせてもらっています (Thanks to polyhaven's assets)
 #### DDS ツール
 * [DirectXTex](https://github.com/Microsoft/DirectXTex)
   * DirectXTex\DirectXTex_Desktop_2015.sln を開いて Release、x64 にしてビルドすると実行ファイルが作成される
@@ -37,13 +38,6 @@
 		* 右側から Skybox をクリック - Browse... - HDR テクスチャを選択して - Load
 		* 必要に応じて Tonemap を調整
 		* Save - DDS - Cubemap - BGRA8 - Save でファイルを出力
-
-### エディット & コンティニュー
-- Tools - Option - Debugging - General - Enable Edit and Continue
-
-### メッシュ
-#### 素材
-* [The Stanford 3D Scanning Repository](http://graphics.stanford.edu/data/3Dscanrep/)
 
 ### 外部ライブラリ
 #### GLTF

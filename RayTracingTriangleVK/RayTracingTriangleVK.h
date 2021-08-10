@@ -395,9 +395,21 @@ public:
 			vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
 
 			const auto AlignedSize = RoundUp(PDRTPP.shaderGroupHandleSize, PDRTPP.shaderGroupHandleAlignment);
-			const auto RayGen = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[0].Buffer), .stride = AlignedSize, .size = AlignedSize });
-			const auto Miss = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[1].Buffer), .stride = AlignedSize, .size = AlignedSize });
-			const auto Hit = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[2].Buffer), .stride = AlignedSize, .size = AlignedSize });
+			const auto RayGen = VkStridedDeviceAddressRegionKHR({
+				.deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[0].Buffer), 
+				.stride = AlignedSize, 
+				.size = 1 * AlignedSize 
+			});
+			const auto Miss = VkStridedDeviceAddressRegionKHR({ 
+				.deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[1].Buffer), 
+				.stride = AlignedSize,
+				.size = 1 * AlignedSize 
+			});
+			const auto Hit = VkStridedDeviceAddressRegionKHR({
+				.deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[2].Buffer), 
+				.stride = AlignedSize,
+				.size = 1 * AlignedSize
+			});
 			const auto Callable = VkStridedDeviceAddressRegionKHR({ .deviceAddress = 0, .stride = 0, .size = 0 });
 
 #ifdef USE_INDIRECT

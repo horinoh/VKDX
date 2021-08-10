@@ -318,12 +318,23 @@ public:
 			VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
 			GCL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
 			const auto DRD = D3D12_DISPATCH_RAYS_DESC({
-			  .RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({.StartAddress = ShaderTables[0].Resource->GetGPUVirtualAddress(), .SizeInBytes = ShaderTables[0].Resource->GetDesc().Width }),
-			  .MissShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = ShaderTables[1].Resource->GetGPUVirtualAddress(), .SizeInBytes = ShaderTables[1].Resource->GetDesc().Width, .StrideInBytes = 0}),
-			  .HitGroupTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = ShaderTables[2].Resource->GetGPUVirtualAddress(), .SizeInBytes = ShaderTables[2].Resource->GetDesc().Width, .StrideInBytes = 0}),
+			  .RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({
+					.StartAddress = ShaderTables[0].Resource->GetGPUVirtualAddress(),
+					.SizeInBytes = ShaderTables[0].Resource->GetDesc().Width
+				}),
+			  .MissShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({
+					.StartAddress = ShaderTables[1].Resource->GetGPUVirtualAddress(), 
+					.SizeInBytes = ShaderTables[1].Resource->GetDesc().Width, 
+					.StrideInBytes = 0
+				}),
+			  .HitGroupTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({
+					.StartAddress = ShaderTables[2].Resource->GetGPUVirtualAddress(),
+					.SizeInBytes = ShaderTables[2].Resource->GetDesc().Width, 
+					.StrideInBytes = 0
+				}),
 			  .CallableShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0}),
 			  .Width = static_cast<UINT>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()), .Depth = 1
-				});
+			});
 			GCL4->DispatchRays(&DRD);
 
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);

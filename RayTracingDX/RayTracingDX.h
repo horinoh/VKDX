@@ -381,11 +381,26 @@ public:
 			GCL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
 			constexpr auto CallableCount = 3;
 			const auto DRD = D3D12_DISPATCH_RAYS_DESC({
-			  .RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({.StartAddress = ShaderTables[0].Resource->GetGPUVirtualAddress(), .SizeInBytes = ShaderTables[0].Resource->GetDesc().Width }),
-			  .MissShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = ShaderTables[1].Resource->GetGPUVirtualAddress(), .SizeInBytes = ShaderTables[1].Resource->GetDesc().Width, .StrideInBytes = 0}),
-			  .HitGroupTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = ShaderTables[2].Resource->GetGPUVirtualAddress(), .SizeInBytes = ShaderTables[2].Resource->GetDesc().Width, .StrideInBytes = 0}),
+			  .RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({
+					.StartAddress = ShaderTables[0].Resource->GetGPUVirtualAddress(), 
+					.SizeInBytes = ShaderTables[0].Resource->GetDesc().Width
+				 }),
+			  .MissShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({
+					.StartAddress = ShaderTables[1].Resource->GetGPUVirtualAddress(), 
+					.SizeInBytes = ShaderTables[1].Resource->GetDesc().Width, 
+					.StrideInBytes = 0 //!< 1つしかないのでストライドは 0 でも良い
+				}),
+			  .HitGroupTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({
+					.StartAddress = ShaderTables[2].Resource->GetGPUVirtualAddress(), 
+					.SizeInBytes = ShaderTables[2].Resource->GetDesc().Width,
+					.StrideInBytes = 0
+				}),
 #pragma region CALLABLE
-			  .CallableShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = ShaderTables[3].Resource->GetGPUVirtualAddress(), .SizeInBytes = ShaderTables[3].Resource->GetDesc().Width, .StrideInBytes = ShaderTables[3].Resource->GetDesc().Width / CallableCount}),
+			  .CallableShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({
+					.StartAddress = ShaderTables[3].Resource->GetGPUVirtualAddress(), 
+					.SizeInBytes = ShaderTables[3].Resource->GetDesc().Width,
+					.StrideInBytes = ShaderTables[3].Resource->GetDesc().Width / CallableCount
+				}),
 #pragma endregion
 			  .Width = static_cast<UINT>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()), .Depth = 1
 			});

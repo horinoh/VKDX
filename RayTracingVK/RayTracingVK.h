@@ -281,19 +281,19 @@ public:
 		VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
 		vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
 
-		const auto RgenRecordSize = PDRTPP.shaderGroupHandleSize + 0;
-		const auto RgenTableSize = 1 * Cmn::RoundUp(RgenRecordSize, PDRTPP.shaderGroupHandleAlignment);
+		const auto RgenRecordSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
+		const auto RgenTableSize = 1 * RgenRecordSize;
 
-		const auto MissRecordSize = PDRTPP.shaderGroupHandleSize + 0;
-		const auto MissTableSize = 1 * Cmn::RoundUp(MissRecordSize, PDRTPP.shaderGroupHandleAlignment);
+		const auto MissRecordSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
+		const auto MissTableSize = 1 * MissRecordSize;
 
-		const auto RchitRecordSize = PDRTPP.shaderGroupHandleSize + 0;
-		const auto RchitTableSize = 1 * Cmn::RoundUp(RchitRecordSize, PDRTPP.shaderGroupHandleAlignment);
+		const auto RchitRecordSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
+		const auto RchitTableSize = 1 * RchitRecordSize;
 
 #pragma region CALLABLE
 		constexpr auto CallableCount = 3;
-		const auto RcallRecordSize = PDRTPP.shaderGroupHandleSize + 0;
-		const auto RcallTableSize = CallableCount * Cmn::RoundUp(RcallRecordSize, PDRTPP.shaderGroupHandleAlignment);
+		const auto RcallRecordSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
+		const auto RcallTableSize = CallableCount * RcallRecordSize;
 #pragma endregion
 
 		std::vector<std::byte> HandleData(RgenTableSize + MissTableSize + RchitTableSize + RcallTableSize);
@@ -395,12 +395,28 @@ public:
 			vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
 
 			const auto AlignedSize = RoundUp(PDRTPP.shaderGroupHandleSize, PDRTPP.shaderGroupHandleAlignment);
-			const auto RayGen = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[0].Buffer), .stride = AlignedSize, .size = AlignedSize * 1 });
-			const auto Miss = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[1].Buffer), .stride = AlignedSize, .size = AlignedSize * 1});
-			const auto Hit = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[2].Buffer), .stride = AlignedSize, .size = AlignedSize * 1 });
+			const auto RayGen = VkStridedDeviceAddressRegionKHR({ 
+				.deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[0].Buffer), 
+				.stride = AlignedSize, 
+				.size = AlignedSize * 1 
+			});
+			const auto Miss = VkStridedDeviceAddressRegionKHR({ 
+				.deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[1].Buffer),
+				.stride = AlignedSize,
+				.size = AlignedSize * 1
+			});
+			const auto Hit = VkStridedDeviceAddressRegionKHR({ 
+				.deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[2].Buffer),
+				.stride = AlignedSize,
+				.size = AlignedSize * 1
+			});
 #pragma region CALLABLE
 			constexpr auto CallableCount = 3;
-			const auto Callable = VkStridedDeviceAddressRegionKHR({ .deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[3].Buffer), .stride = AlignedSize, .size = AlignedSize * CallableCount });
+			const auto Callable = VkStridedDeviceAddressRegionKHR({ 
+				.deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[3].Buffer),
+				.stride = AlignedSize, 
+				.size = AlignedSize * CallableCount
+			});
 #pragma endregion
 
 			vkCmdTraceRaysIndirectKHR(CB, &RayGen, &Miss, &Hit, &Callable, GetDeviceAddress(Device, IndirectBuffers[0].Buffer));
