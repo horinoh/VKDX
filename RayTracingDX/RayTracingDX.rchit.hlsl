@@ -13,12 +13,15 @@ struct CallableDataIn
 [shader("closesthit")]
 void OnClosestHit(inout Payload Pay, in BuiltInTriangleIntersectionAttributes BITIA)
 {
-    //InstanceID() : TLAS çÏê¨éûÇÃ D3D12_RAYTRACING_INSTANCE_DESC.InstanceID
     Pay.Color = float3(1.0f - BITIA.barycentrics.x - BITIA.barycentrics.y, BITIA.barycentrics.x, BITIA.barycentrics.y);
 
     CallableDataIn Data; Data.CallableData = float3(0.0f, 0.0f, 0.0f);
+
+    //!< GeometryIndex() : BLAS çÏê¨éûÇÃ D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS.NumDescs
     //CallShader(GeometryIndex(), Data);
-    const uint ShaderIndex = 0; //!< Ç±Ç±Ç≈ÇÕ [0, 2]
-    CallShader(ShaderIndex, Data);
+    
+    //!< InstanceID() : TLAS çÏê¨éûÇÃ D3D12_RAYTRACING_INSTANCE_DESC.InstanceID
+    CallShader(InstanceID(), Data);
+
     Pay.Color = Data.CallableData;
 }

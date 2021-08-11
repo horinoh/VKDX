@@ -103,48 +103,48 @@ public:
 
 #ifdef AS_BUILD_TOGETHER
 			//!< AS、スクラッチ作成 (Create AS and scratch)
-			BLASs.emplace_back().Create(Device, PDMP, ASBGI.type, ASBSI.accelerationStructureSize);
+			BLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize);
 			Scratch_Blas.Create(Device, PDMP, ASBSI.buildScratchSize);
 #else
 			//!< AS作成、ビルド (Create and build AS)
-			BLASs.emplace_back().Create(Device, PDMP, ASBGI.type, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBGI.type, ASBSI.buildScratchSize, ASGs_Blas, GraphicsQueue, CB);
+			BLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBSI.buildScratchSize, ASGs_Blas, GraphicsQueue, CB);
 #endif
 		}
 #pragma endregion
 
 #pragma region TLAS_GEOMETRY
 		//!< インスタンスバッファ (InstanceBuffer) ... ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | SHADER_DEVICE_ADDRESS_BIT、HOST_VISIBLE_BIT | HOST_COHERENT_BIT で作成
-		const VkAccelerationStructureInstanceKHR ASI = {
-			.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, 0.0f,
-												0.0f, 1.0f, 0.0f, 0.0f,
-												0.0f, 0.0f, 1.0f, 0.0f}),
-			.instanceCustomIndex = 0,
-			.mask = 0xff,
-			.instanceShaderBindingTableRecordOffset = 0,
-			.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR,
-			.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().Buffer)
-		};
-		Scoped<BufferMemory> InstBuf(Device);
-		InstBuf.Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(ASI), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &ASI);
-
-		//!< ジオメトリ (Geometry)
-		const std::vector ASGs_Tlas = {
-			VkAccelerationStructureGeometryKHR({
-				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
-				.pNext = nullptr,
-				//!< インスタンス (Instance)
-				.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
-				.geometry = VkAccelerationStructureGeometryDataKHR({
-					.instances = VkAccelerationStructureGeometryInstancesDataKHR({
-						.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
-						.pNext = nullptr,
-						.arrayOfPointers = VK_FALSE,
-						.data = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, InstBuf.Buffer)})
-					})
-				}),
-				.flags = VK_GEOMETRY_OPAQUE_BIT_KHR
+		const std::array ASIs = {
+			VkAccelerationStructureInstanceKHR({
+				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, 0.0f,
+													0.0f, 1.0f, 0.0f, 0.0f,
+													0.0f, 0.0f, 1.0f, 0.0f}),
+				.instanceCustomIndex = 0,
+				.mask = 0xff,
+				.instanceShaderBindingTableRecordOffset = 0,
+				.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR,
+				.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().Buffer)
 			}),
 		};
+		Scoped<BufferMemory> InstBuf(Device);
+		InstBuf.Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(ASIs), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(ASIs));
+
+		//!< ジオメトリ (Geometry)
+		const auto ASG_Tlas = VkAccelerationStructureGeometryKHR({
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+			.pNext = nullptr,
+			//!< インスタンス (Instance)
+			.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
+			.geometry = VkAccelerationStructureGeometryDataKHR({
+				.instances = VkAccelerationStructureGeometryInstancesDataKHR({
+					.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
+					.pNext = nullptr,
+					.arrayOfPointers = VK_FALSE,
+					.data = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, InstBuf.Buffer)})
+				})
+			}),
+			.flags = VK_GEOMETRY_OPAQUE_BIT_KHR
+		});
 
 #pragma region TLAS_AND_SCRATCH
 		Scoped<ScratchBuffer> Scratch_Tlas(Device);
@@ -157,7 +157,7 @@ public:
 				.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
 				.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
 				.srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = VK_NULL_HANDLE,
-				.geometryCount = static_cast<uint32_t>(size(ASGs_Tlas)),.pGeometries = data(ASGs_Tlas), .ppGeometries = nullptr, //!< ジオメトリ(インスタンス)を指定
+				.geometryCount = 1, .pGeometries = &ASG_Tlas, .ppGeometries = nullptr, //!< ジオメトリ(インスタンス)を指定
 				.scratchData = VkDeviceOrHostAddressKHR({.deviceAddress = 0})
 			};
 			constexpr uint32_t MaxPrimitiveCounts = 1;
@@ -166,11 +166,11 @@ public:
 
 #ifdef AS_BUILD_TOGETHER
 			//!< AS、スクラッチ作成 (Create AS and scratch)
-			TLASs.emplace_back().Create(Device, PDMP, ASBGI.type, ASBSI.accelerationStructureSize);
+			TLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize);
 			Scratch_Tlas.Create(Device, PDMP, ASBSI.buildScratchSize);
 #else
 			//!< AS作成、ビルド (Create and build AS)
-			TLASs.emplace_back().Create(Device, PDMP, ASBGI.type, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBGI.type, ASBSI.buildScratchSize, ASGs_Tlas, GraphicsQueue, CB);
+			TLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBSI.buildScratchSize, ASG_Tlas, static_cast<uint32_t>(size(ASIs)), GraphicsQueue, CB);
 #endif
 		}
 #pragma endregion
@@ -190,10 +190,10 @@ public:
 #ifdef AS_BUILD_TOGETHER
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-			BLASs.back().PopulateBuildCommand(Device, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, ASGs_Blas, Scratch_Blas.Buffer, CB);
+			BLASs.back().PopulateBuildCommand(Device, ASGs_Blas, Scratch_Blas.Buffer, CB);
 			//!< TLAS のビルド時には BLAS のビルドが完了している必要がある
 			BLASs.back().PopulateBarrierCommand(CB);
-			TLASs.back().PopulateBuildCommand(Device, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, ASGs_Tlas, Scratch_Tlas.Buffer, CB);
+			TLASs.back().PopulateBuildCommand(Device, ASG_Tlas, static_cast<uint32_t>(size(ASIs)), Scratch_Tlas.Buffer, CB);
 #ifdef USE_INDIRECT
 			IndirectBuffers.back().PopulateCopyCommand(CB, sizeof(TRIC), Staging_Indirect.Buffer);
 #endif

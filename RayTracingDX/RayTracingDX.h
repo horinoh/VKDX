@@ -51,9 +51,9 @@ public:
 		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BRASI_Blas = {
 			.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL, //!< ボトムレベル
 			.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE,
-			.NumDescs = static_cast<UINT>(size(RGDs)),
+			.NumDescs = static_cast<UINT>(size(RGDs)), //!< [HLSL] GeometryIndex() ([GLSL] gl_GeometryIndexEXT 相当)
 			.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY,
-			.pGeometryDescs = data(RGDs), //!< ジオメトリを指定
+			.pGeometryDescs = data(RGDs), 
 		};
 #pragma endregion
 
@@ -70,14 +70,32 @@ public:
 		
 #pragma region TLAS_INPUT
 		const std::array RIDs = {
+			#pragma region INSTANCES
 			D3D12_RAYTRACING_INSTANCE_DESC({
-				.Transform = {{ 1.0f, 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f, 0.0f }, {0.0f, 0.0f, 1.0f, 0.0f}},
-				.InstanceID = 0, //!< HLSL から InstanceID() で参照できる
+				.Transform = {
+					{ 1.0f, 0.0f, 0.0f, -0.5f }, 
+					{ 0.0f, 1.0f, 0.0f,  0.0f },
+					{ 0.0f, 0.0f, 1.0f,  0.0f }
+				},
+				.InstanceID = 0, //!< [HLSL] InstanceID() ([GLSL] gl_InstanceCustomIndexEXT 相当)
+				.InstanceMask = 0xff,
+				.InstanceContributionToHitGroupIndex = 0, //!< ヒットグループインデックス
+				.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE,
+				.AccelerationStructure = BLASs.back().Resource->GetGPUVirtualAddress()
+			}),
+			D3D12_RAYTRACING_INSTANCE_DESC({
+				.Transform = {
+					{ 1.0f, 0.0f, 0.0f, 0.5f },
+					{ 0.0f, 1.0f, 0.0f, 0.0f },
+					{ 0.0f, 0.0f, 1.0f, 0.0f }
+				},
+				.InstanceID = 1, 
 				.InstanceMask = 0xff,
 				.InstanceContributionToHitGroupIndex = 0,
 				.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE,
 				.AccelerationStructure = BLASs.back().Resource->GetGPUVirtualAddress()
 			})
+			#pragma endregion
 		};
 		ResourceBase InsBuf;
 		InsBuf.Create(COM_PTR_GET(Device), sizeof(RIDs), D3D12_HEAP_TYPE_UPLOAD, data(RIDs));

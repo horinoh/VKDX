@@ -348,12 +348,22 @@ public:
 			if (VK_NULL_HANDLE != AccelerationStructure) { vkDestroyAccelerationStructureKHR(Device, AccelerationStructure, GetAllocationCallbacks()); }
 			Super::Destroy(Device);
 		}
-		void PopulateBuildCommand(const VkDevice Device, const VkAccelerationStructureTypeKHR Type, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs, const VkBuffer Scratch, const VkCommandBuffer CB) {
+	};
+	class BLAS : public AccelerationStructureBuffer 
+	{
+	private:
+		using Super = AccelerationStructureBuffer;
+	public:
+		BLAS& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
+			Super::Create(Device, PDMP, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, Size);
+			return *this;
+		}
+		void PopulateBuildCommand(const VkDevice Device, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs, const VkBuffer Scratch, const VkCommandBuffer CB) {
 			const std::array ASBGIs = {
 				VkAccelerationStructureBuildGeometryInfoKHR({
 					.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
 					.pNext = nullptr,
-					.type = Type,
+					.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
 					.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
 					.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
 					.srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = AccelerationStructure,
@@ -362,7 +372,7 @@ public:
 				}),
 			};
 			const std::array ASBRIs_0 = { VkAccelerationStructureBuildRangeInfoKHR({.primitiveCount = 1, .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0 }), };
-			const std::array ASBRIss = { data(ASBRIs_0)};
+			const std::array ASBRIss = { data(ASBRIs_0) };
 			assert(size(ASBGIs) == size(ASBRIss));
 			assert(ASBGIs[0].geometryCount == size(ASBRIs_0));
 			vkCmdBuildAccelerationStructuresKHR(CB, static_cast<uint32_t>(size(ASBGIs)), data(ASBGIs), data(ASBRIss));
@@ -384,18 +394,53 @@ public:
 				static_cast<uint32_t>(size(BMBs)), data(BMBs),
 				static_cast<uint32_t>(size(IMBs)), data(IMBs));
 		}
-		void SubmitBuildCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkAccelerationStructureTypeKHR Type, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs, VkQueue Queue, const VkCommandBuffer CB) {
+		void SubmitBuildCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDeviceSize Size, const std::vector<VkAccelerationStructureGeometryKHR>& ASGs, VkQueue Queue, const VkCommandBuffer CB) {
 			Scoped<ScratchBuffer> Scratch(Device);
 			Scratch.Create(Device, PDMP, Size);
 			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-				PopulateBuildCommand(Device, Type, ASGs, Scratch.Buffer, CB);
+				PopulateBuildCommand(Device, ASGs, Scratch.Buffer, CB);
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 			SubmitAndWait(Queue, CB);
 		}
 	};
-	using BLAS = AccelerationStructureBuffer;
-	using TLAS = AccelerationStructureBuffer;
+	class TLAS : public AccelerationStructureBuffer 
+	{
+	private:
+		using Super = AccelerationStructureBuffer;
+	public:
+		TLAS& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
+			Super::Create(Device, PDMP, VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR, Size);
+			return *this;
+		}
+		void PopulateBuildCommand(const VkDevice Device, const VkAccelerationStructureGeometryKHR& ASG, const uint32_t PrimitiveCount, const VkBuffer Scratch, const VkCommandBuffer CB) {
+			const std::array ASBGIs = {
+				VkAccelerationStructureBuildGeometryInfoKHR({
+					.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+					.pNext = nullptr,
+					.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
+					.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
+					.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+					.srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = AccelerationStructure,
+					.geometryCount = 1/* TLAS‚Å‚Í 1 ‚Å‚È‚¢‚Æ‚¢‚¯‚È‚¢*/, .pGeometries = &ASG, .ppGeometries = nullptr,
+					.scratchData = VkDeviceOrHostAddressKHR({.deviceAddress = VK::GetDeviceAddress(Device, Scratch)})
+				}),
+			};
+			const std::array ASBRIs_0 = { VkAccelerationStructureBuildRangeInfoKHR({.primitiveCount = PrimitiveCount, .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0 }), };
+			const std::array ASBRIss = { data(ASBRIs_0) };
+			assert(size(ASBGIs) == size(ASBRIss));
+			vkCmdBuildAccelerationStructuresKHR(CB, static_cast<uint32_t>(size(ASBGIs)), data(ASBGIs), data(ASBRIss));
+		}
+		void SubmitBuildCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDeviceSize Size, const VkAccelerationStructureGeometryKHR& ASG, const uint32_t PrimitiveCount, VkQueue Queue, const VkCommandBuffer CB) {
+			Scoped<ScratchBuffer> Scratch(Device);
+			Scratch.Create(Device, PDMP, Size);
+			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
+			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+				PopulateBuildCommand(Device, ASG, PrimitiveCount, Scratch.Buffer, CB);
+			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+			SubmitAndWait(Queue, CB);
+		}
+	};
 	class ScratchBuffer : public DeviceLocalBuffer
 	{
 	private:

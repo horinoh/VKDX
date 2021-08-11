@@ -12,11 +12,13 @@ hitAttributeEXT vec2 HitAttr;
 
 void main()
 {
-	//!< gl_InstanceCustomIndexEXT : TLAS ì¬Žž‚Ì VkAccelerationStructureInstanceKHR.instanceCustomIndex 
 	Payload = vec3(1.0f - HitAttr.x - HitAttr.y, HitAttr.x, HitAttr.y);
 
+	//!< gl_GeometryIndexEXT : BLAS ì¬Žž‚Ì VkAccelerationStructureBuildGeometryInfoKHR.geometryCount
 	//executeCallableEXT(gl_GeometryIndexEXT, 0);
-	const uint RecordIndex = 0; //!< ‚±‚±‚Å‚Í [0, 2]
-	executeCallableEXT(RecordIndex, 0);
+
+	//!< gl_InstanceCustomIndexEXT : TLAS ì¬Žž‚Ì VkAccelerationStructureInstanceKHR.instanceCustomIndex 
+	executeCallableEXT(gl_InstanceCustomIndexEXT, 0);
+
 	Payload = CallableData;
 }

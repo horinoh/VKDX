@@ -338,16 +338,7 @@ public:
 			constexpr std::array<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC, 0> RASPIDs = {};
 			GCL4->BuildRaytracingAccelerationStructure(&BRASD, static_cast<UINT>(size(RASPIDs)), data(RASPIDs));
 		}
-		void PopulateBarrierCommand(ID3D12GraphicsCommandList* GCL) {
-			const std::array RBs = {
-				D3D12_RESOURCE_BARRIER({
-					.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV, 
-					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-					.UAV = D3D12_RESOURCE_UAV_BARRIER({.pResource = COM_PTR_GET(Resource)})
-				})
-			};
-			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-		}
+
 		void ExecuteBuildCommand(ID3D12Device* Device, const size_t Size, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, [[maybe_unused]] ID3D12Fence* Fence) {
 			ScratchBuffer SB;
 			SB.Create(Device, Size);
@@ -357,14 +348,33 @@ public:
 			DX::ExecuteAndWait(CQ, static_cast<ID3D12CommandList*>(GCL), Fence);
 		}
 	};
-	using BLAS = AccelerationStructureBuffer;
+	class BLAS : public AccelerationStructureBuffer 
+	{
+	private:
+		using Super = AccelerationStructureBuffer;
+	public:
+		virtual BLAS& Create(ID3D12Device* Device, const size_t Size) {
+			Super::Create(Device, Size);
+			return *this;
+		}
+		void PopulateBarrierCommand(ID3D12GraphicsCommandList* GCL) {
+			const std::array RBs = {
+				D3D12_RESOURCE_BARRIER({
+					.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV,
+					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+					.UAV = D3D12_RESOURCE_UAV_BARRIER({.pResource = COM_PTR_GET(Resource)})
+				})
+			};
+			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+		}
+	};
 	class TLAS : public AccelerationStructureBuffer 
 	{
 	private:
 		using Super = AccelerationStructureBuffer;
 	public:
 		D3D12_SHADER_RESOURCE_VIEW_DESC SRV;
-		virtual AccelerationStructureBuffer& Create(ID3D12Device* Device, const size_t Size) override {
+		virtual TLAS& Create(ID3D12Device* Device, const size_t Size) override {
 			Super::Create(Device, Size);
 			SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({
 				.Format = DXGI_FORMAT_UNKNOWN,
