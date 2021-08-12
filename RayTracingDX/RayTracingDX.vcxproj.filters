@@ -95,6 +95,9 @@
     <FxCompile Include="RayTracingDX.rcall.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+    <FxCompile Include="RayTracingDX_1.rchit.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

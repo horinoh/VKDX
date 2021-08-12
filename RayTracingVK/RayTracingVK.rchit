@@ -20,5 +20,5 @@ void main()
 	//!< gl_InstanceCustomIndexEXT : TLAS ì¬Žž‚Ì VkAccelerationStructureInstanceKHR.instanceCustomIndex 
 	executeCallableEXT(gl_InstanceCustomIndexEXT, 0);
 
-	Payload = CallableData;
+	Payload = CallableData * vec3(1.0f, 0.0f, 0.0f);
 }

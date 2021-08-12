@@ -23,5 +23,5 @@ void OnClosestHit(inout Payload Pay, in BuiltInTriangleIntersectionAttributes BI
     //!< InstanceID() : TLAS ì¬Žž‚Ì D3D12_RAYTRACING_INSTANCE_DESC.InstanceID
     CallShader(InstanceID(), Data);
 
-    Pay.Color = Data.CallableData;
+    Pay.Color = Data.CallableData * float3(1.0f, 0.0f, 0.0f);
 }

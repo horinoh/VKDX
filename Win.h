@@ -22,7 +22,7 @@
 #ifndef DEBUG_OUTPUT
 #define DEBUG_OUTPUT
 #endif
-#endif //!< _DEBUGObi
+#endif //!< _DEBUG
 
 //!< HDR環境が無いので保留…
 //!< DXの場合「HDRのゲームとアプリを使用する」設定が必要 (Need to enable "Play HDR game and apps" in windows settings )
