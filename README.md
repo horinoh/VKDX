@@ -470,8 +470,9 @@
 #### DX
  * WinPixEventRuntimeのインストール
 	* 右クリック - Manage NuGet Packages - Browse - WinPixEventRuntimeで検索 - インストール
- * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/HLSL(OPT).props、Props/RS.props
- 	* 必要に応じて Props/DXTK.prop, Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop
+ * プロパティマネージャで Add Existing Property Sheet... - Props/DX_DEBUG.props, DX_RELEASE.props
+ 	* 必要に応じて Props/DX_DEBUG_TEX.prop, Props/DX_RELEASE_TEX.prop
+	* 必要に応じて Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop, Props/FBX.prop
  * Header Files に Win.h, DX.h, DXExt.h を追加 
 	* 必要に応じて DXImage.h 
  * Source Files に Win.cpp, DX.cpp, DXExt.cpp を追加
@@ -486,8 +487,9 @@
 * ルートシグネチャ用HLSL XxxDX.rs.hlsl を作成する
 
 #### VK
- * プロパティマネージャで Add Existing Property Sheet... - Props/PRECOMP.props, Props/VK.props、Props/GLSL(REMAP).props、Props/GLM.prop
- 	* 必要に応じて Props/GLI.prop, Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop
+ * プロパティマネージャで Add Existing Property Sheet... - Props/VK_DEBUG.props, Props/VK_RELEASE.props
+ 	* 必要に応じて Props/VK_DEBUG_TEX.prop, Props/VK_RELEASE_TEX.prop
+	* 必要に応じて Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop, Props/FBX.prop
  * Header Files に Win.h, VK.h, VKExt.h を追加
 	* 必要に応じて VKImage.h
  * Source Files に Win.cpp, VK.cpp, VKExt.cpp を追加

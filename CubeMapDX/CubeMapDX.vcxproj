@@ -65,17 +65,11 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\Props\PRECOMP.props" />
-    <Import Project="..\Props\HLSL.props" />
-    <Import Project="..\Props\RS.props" />
-    <Import Project="..\Props\DXTK.props" />
+    <Import Project="..\Props\DX_DEBUG_TEX.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\Props\PRECOMP.props" />
-    <Import Project="..\Props\RS.props" />
-    <Import Project="..\Props\DXTK.props" />
-    <Import Project="..\Props\HLSLOPT.props" />
+    <Import Project="..\Props\DX_RELEASE_TEX.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
