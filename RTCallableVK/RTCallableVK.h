@@ -5,13 +5,13 @@
 #pragma region Code
 #include "../VKExt.h"
 
-class RayTracingTriangleVK : public VKExt
+class RTCallableVK : public VKExt
 {
 private:
 	using Super = VKExt;
 public:
-	RayTracingTriangleVK() : Super() {}
-	virtual ~RayTracingTriangleVK() {}
+	RTCallableVK() : Super() {}
+	virtual ~RTCallableVK() {}
 
 	//!< #TIPS VKインスタンス作成時に "VK_LAYER_RENDERDOC_Capture" を使用すると、メッシュシェーダーやレイトレーシングと同時に使用した場合、vkCreateDevice() でコケるようになるので注意 (If we use "VK_LAYER_RENDERDOC_Capture" with mesh shader or raytracing, vkCreateDevice() failed)
 
@@ -44,30 +44,25 @@ public:
 	virtual void CreateSwapchain() override { VK::CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight(), VK_IMAGE_USAGE_TRANSFER_DST_BIT); }
 	virtual void CreateGeometry() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
-#define AS_BUILD_TOGETHER
 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		const auto& CB = CommandBuffers[0];
 
 #pragma region BLAS_GEOMETRY
-		//!< バーテックスバッファ (VertexBuffer) ... 通常と異なり ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | SHADER_DEVICE_ADDRESS_BIT、HOST_VISIBLE_BIT | HOST_COHERENT_BIT で作成
 		constexpr std::array Vertices = { glm::vec3({ 0.0f, 0.5f, 0.0f }), glm::vec3({ -0.5f, -0.5f, 0.0f }), glm::vec3({ 0.5f, -0.5f, 0.0f }), };
 		Scoped<BufferMemory> VertBuf(Device);
 		VertBuf.Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(Vertices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Vertices));
 
-		//!< インデックスバッファ (IndexBuffer) ... 通常と異なり ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | SHADER_DEVICE_ADDRESS_BIT、HOST_VISIBLE_BIT | HOST_COHERENT_BIT で作成
 		constexpr std::array Indices = { uint32_t(0), uint32_t(1), uint32_t(2) };
 		Scoped<BufferMemory> IndBuf(Device);
 		IndBuf.Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(Indices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Indices));
 
-		//!< ジオメトリ (Geometry)
 		const std::vector ASGs_Blas = {
 			VkAccelerationStructureGeometryKHR({
 				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
 				.pNext = nullptr,
 				.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
 				.geometry = VkAccelerationStructureGeometryDataKHR({
-					//!< トライアングル (Triangle)
 					.triangles = VkAccelerationStructureGeometryTrianglesDataKHR({
 						.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
 						.pNext = nullptr,
@@ -91,53 +86,58 @@ public:
 			.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
 			.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
 			.srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = VK_NULL_HANDLE,
-			.geometryCount = static_cast<uint32_t>(size(ASGs_Blas)),.pGeometries = data(ASGs_Blas), .ppGeometries = nullptr, //!< ジオメトリを指定
+			.geometryCount = static_cast<uint32_t>(size(ASGs_Blas)),.pGeometries = data(ASGs_Blas), .ppGeometries = nullptr, //!< [GLSL] gl_GeometryIndexEXT ([HLSL] GeometryIndex() 相当)
 			.scratchData = VkDeviceOrHostAddressKHR({.deviceAddress = 0})
 		};
 		constexpr auto ASBRI_Blas = VkAccelerationStructureBuildRangeInfoKHR({ .primitiveCount = 1, .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0 });
 
 		Scoped<ScratchBuffer> Scratch_Blas(Device);
 		{
-			//!< サイズ取得 (Get sizes)
-			const std::array MaxPrimitiveCounts = { ASBRI_Blas.primitiveCount };
 			VkAccelerationStructureBuildSizesInfoKHR ASBSI = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, };
+			const std::array MaxPrimitiveCounts = { ASBRI_Blas.primitiveCount };
 			vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI_Blas, data(MaxPrimitiveCounts), &ASBSI);
 
-#ifdef AS_BUILD_TOGETHER
-			//!< AS、スクラッチ作成 (Create AS and scratch)
 			BLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize);
 			Scratch_Blas.Create(Device, PDMP, ASBSI.buildScratchSize);
+
 			ASBGI_Blas.dstAccelerationStructure = BLASs.back().AccelerationStructure;
 			ASBGI_Blas.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch_Blas.Buffer) });
-#else
-			//!< AS作成、ビルド (Create and build AS)
-			BLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBSI.buildScratchSize, ASBGI_Blas, ASBRI_Blas, GraphicsQueue, CB);
-#endif
 		}
 #pragma endregion
 
 #pragma region TLAS_GEOMETRY
-		//!< インスタンスバッファ (InstanceBuffer) ... ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | SHADER_DEVICE_ADDRESS_BIT、HOST_VISIBLE_BIT | HOST_COHERENT_BIT で作成
+		//!< instanceCustomIndex					: 0==市松模様, 1==縦線, 2==横線
+		//!< instanceShaderBindingTableRecordOffset	: 0==赤, 1==緑
 		const std::array ASIs = {
+			#pragma region INSTANCES
 			VkAccelerationStructureInstanceKHR({
-				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, 0.0f,
+				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, -0.5f,
 													0.0f, 1.0f, 0.0f, 0.0f,
 													0.0f, 0.0f, 1.0f, 0.0f}),
-				.instanceCustomIndex = 0,
+				.instanceCustomIndex = 0, //!< [GLSL] gl_InstanceCustomIndexEXT ([HLSL] InstanceID()相当)
 				.mask = 0xff,
-				.instanceShaderBindingTableRecordOffset = 0,
+				.instanceShaderBindingTableRecordOffset = 0, //!< ヒットシェーダインデックス
 				.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR,
 				.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().Buffer)
 			}),
+			VkAccelerationStructureInstanceKHR({
+				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, 0.5f,
+													0.0f, 1.0f, 0.0f, 0.0f,
+													0.0f, 0.0f, 1.0f, 0.0f}),
+				.instanceCustomIndex = 1,
+				.mask = 0xff,
+				.instanceShaderBindingTableRecordOffset = 1,
+				.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR,
+				.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().Buffer)
+			}),
+			#pragma endregion
 		};
 		Scoped<BufferMemory> InstBuf(Device);
 		InstBuf.Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(ASIs), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(ASIs));
 
-		//!< ジオメトリ (Geometry)
 		const auto ASG_Tlas = VkAccelerationStructureGeometryKHR({
 			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
 			.pNext = nullptr,
-			//!< インスタンス (Instance)
 			.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
 			.geometry = VkAccelerationStructureGeometryDataKHR({
 				.instances = VkAccelerationStructureGeometryInstancesDataKHR({
@@ -148,7 +148,7 @@ public:
 				})
 			}),
 			.flags = VK_GEOMETRY_OPAQUE_BIT_KHR
-		});
+			});
 
 #pragma region TLAS_AND_SCRATCH
 		VkAccelerationStructureBuildGeometryInfoKHR ASBGI_Tlas = {
@@ -165,65 +165,47 @@ public:
 
 		Scoped<ScratchBuffer> Scratch_Tlas(Device);
 		{
-			//!< サイズ取得 (Get sizes)
-			const std::array MaxPrimitiveCounts = { ASBRI_Tlas.primitiveCount };
 			VkAccelerationStructureBuildSizesInfoKHR ASBSI = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, };
+			const std::array MaxPrimitiveCounts = { ASBRI_Tlas.primitiveCount };
 			vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI_Tlas, data(MaxPrimitiveCounts), &ASBSI);
 
-#ifdef AS_BUILD_TOGETHER
-			//!< AS、スクラッチ作成 (Create AS and scratch)
 			TLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize);
 			Scratch_Tlas.Create(Device, PDMP, ASBSI.buildScratchSize);
-			ASBGI_Tlas.dstAccelerationStructure = TLASs.back().AccelerationStructure;
-			ASBGI_Tlas.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch_Tlas.Buffer) }); 
-#else
-			//!< AS作成、ビルド (Create and build AS)
-			TLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBSI.buildScratchSize, ASBGI_Tlas, ASBRI_Tlas, GraphicsQueue, CB);
-#endif
 
+			ASBGI_Tlas.dstAccelerationStructure = TLASs.back().AccelerationStructure;
+			ASBGI_Tlas.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch_Tlas.Buffer) });
 		}
 #pragma endregion
 
-#ifdef USE_INDIRECT
-		//!< インダイレクトバッファ (IndirectBuffer)
 		const VkTraceRaysIndirectCommandKHR TRIC = { .width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 };
-#ifdef AS_BUILD_TOGETHER
 		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC);
 		VK::Scoped<StagingBuffer> Staging_Indirect(Device);
 		Staging_Indirect.Create(Device, PDMP, sizeof(TRIC), &TRIC);
-#else
-		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(TRIC), &TRIC);
-#endif
-#endif
 
-#ifdef AS_BUILD_TOGETHER
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 			BLASs.back().PopulateBuildCommand(ASBGI_Blas, ASBRI_Blas, CB);
-			//!< TLAS のビルド時には BLAS のビルドが完了している必要がある
 			BLASs.back().PopulateBarrierCommand(CB);
 			TLASs.back().PopulateBuildCommand(ASBGI_Tlas, ASBRI_Tlas, CB);
-#ifdef USE_INDIRECT
 			IndirectBuffers.back().PopulateCopyCommand(CB, sizeof(TRIC), Staging_Indirect.Buffer);
-#endif
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		SubmitAndWait(GraphicsQueue, CB);
-#endif
-
-#undef AS_BUILD_TOGETHER
 	}
 	virtual void CreateTexture() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
-		//!< スワップチェインと同じカラーフォーマットにしておく、(レイアウトは変更したり戻したりするので、戻せるレイアウトである GENERALにしておく)
-		StorageTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), ColorFormat, VkExtent3D({ .width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 }))
+		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+
+		StorageTextures.emplace_back().Create(Device, PDMP, ColorFormat, VkExtent3D({ .width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 }))
 			.SubmitSetLayoutCommand(CommandBuffers[0], GraphicsQueue, VK_IMAGE_LAYOUT_GENERAL);
 	}
 	virtual void CreatePipelineLayout() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
+			//!< TLAS
 			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
+			//!< Storage Image
 			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
-			});
+		});
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 	virtual void CreatePipeline() override {
@@ -235,20 +217,41 @@ public:
 		const std::array SMs = {
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".rgen.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".rmiss.spv"))),
+#pragma region HIT
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".rchit.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT("_1.rchit.spv"))),
+#pragma endregion
+#pragma region CALLABLE
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".rcall.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT("_1.rcall.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT("_2.rcall.spv"))),
+#pragma endregion
 		};
 		const std::array PSSCIs = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_MISS_BIT_KHR, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),
+#pragma region HIT
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .module = SMs[2], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .module = SMs[3], .pName = "main", .pSpecializationInfo = nullptr }),
+#pragma endregion
+#pragma region CALLABLE
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_CALLABLE_BIT_KHR, .module = SMs[4], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_CALLABLE_BIT_KHR, .module = SMs[5], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_CALLABLE_BIT_KHR, .module = SMs[6], .pName = "main", .pSpecializationInfo = nullptr }),
+#pragma endregion
 		};
-		//!< シェーダグループ
-		//<!	RayGen, Miss は GENERAL タイプ .generalShader へインデックスを指定
-		//<!	ClosestHit は TRIANGLES_HIT_GROUP タイプ .closestHitShader へインデックスを指定
 		const std::array RTSGCIs = {
 			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, .generalShader = 0, .closestHitShader = VK_SHADER_UNUSED_KHR, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
 			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, .generalShader = 1, .closestHitShader = VK_SHADER_UNUSED_KHR, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
+#pragma region HIT
 			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR, .generalShader = VK_SHADER_UNUSED_KHR, .closestHitShader = 2, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
+			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR, .generalShader = VK_SHADER_UNUSED_KHR, .closestHitShader = 3, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
+#pragma endregion
+#pragma region CALLABLE
+			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, .generalShader = 4, .closestHitShader = VK_SHADER_UNUSED_KHR, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
+			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, .generalShader = 5, .closestHitShader = VK_SHADER_UNUSED_KHR, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
+			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, .generalShader = 6, .closestHitShader = VK_SHADER_UNUSED_KHR, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
+#pragma endregion
 		};
 
 		constexpr std::array DSs = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
@@ -277,55 +280,68 @@ public:
 		VERIFY_SUCCEEDED(vkCreateRayTracingPipelinesKHR(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, static_cast<uint32_t>(size(RTPCIs)), data(RTPCIs), GetAllocationCallbacks(), &Pipelines.emplace_back()));
 #pragma endregion
 
-#pragma region SHADER_BINDING_TABLE
 		CreateShaderBindingTable();
-#pragma endregion
 
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
 	virtual void CreateShaderBindingTable() override {
-		//!< サイズ、アライメントを取得
 		VkPhysicalDeviceRayTracingPipelinePropertiesKHR PDRTPP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, .pNext = nullptr };
 		VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
 		vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
 
-		//!< レコードサイズ = シェーダ識別子サイズ + 0 をアライン(shaderGroupHandleAlignment)したもの
 		const auto RgenRecordSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
-		//!< テーブルサイズ = レコード数 * レコードサイズ
 		const auto RgenTableSize = 1 * RgenRecordSize;
 
 		const auto MissRecordSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
 		const auto MissTableSize = 1 * MissRecordSize;
 
+#pragma region HIT
+		constexpr auto HitCount = 2;
 		const auto RchitRecordSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
-		const auto RchitTableSize = 1 * RchitRecordSize;
+		const auto RchitTableSize = HitCount * RchitRecordSize;
+#pragma endregion
 
-		std::vector<std::byte> Handles(RgenTableSize + MissTableSize + RchitTableSize);
-		VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, 3, size(Handles), data(Handles)));
+#pragma region CALLABLE
+		constexpr auto CallableCount = 3;
+		const auto RcallRecordSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
+		const auto RcallTableSize = CallableCount * RcallRecordSize;
+#pragma endregion
+
+		std::vector<std::byte> HandleData(RgenTableSize + MissTableSize + RchitTableSize + RcallTableSize);
+		VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, 2 + HitCount + CallableCount, size(HandleData), data(HandleData)));
 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		ShaderBindingTables.emplace_back().Create(Device, PDMP, RgenTableSize); {
 			auto Data = ShaderBindingTables.back().Map(Device); {
-				std::memcpy(Data, data(Handles), PDRTPP.shaderGroupHandleSize);
+				std::memcpy(Data, data(HandleData), PDRTPP.shaderGroupHandleSize);
 			} ShaderBindingTables.back().Unmap(Device);
 		}
 		ShaderBindingTables.emplace_back().Create(Device, PDMP, MissTableSize); {
 			auto Data = ShaderBindingTables.back().Map(Device); {
-				std::memcpy(Data, data(Handles) + RgenTableSize, PDRTPP.shaderGroupHandleSize);
+				std::memcpy(Data, data(HandleData) + RgenTableSize, PDRTPP.shaderGroupHandleSize);
 			} ShaderBindingTables.back().Unmap(Device);
 		}
+#pragma region HIT
 		ShaderBindingTables.emplace_back().Create(Device, PDMP, RchitTableSize); {
 			auto Data = ShaderBindingTables.back().Map(Device); {
-				std::memcpy(Data, data(Handles) + RchitTableSize + MissTableSize, PDRTPP.shaderGroupHandleSize);
+				std::memcpy(Data, data(HandleData) + RgenTableSize + MissTableSize, PDRTPP.shaderGroupHandleSize * HitCount);
 			} ShaderBindingTables.back().Unmap(Device);
 		}
+#pragma endregion
+#pragma region CALLABLE
+		ShaderBindingTables.emplace_back().Create(Device, PDMP, RcallTableSize); {
+			auto Data = ShaderBindingTables.back().Map(Device); {
+				std::memcpy(Data, data(HandleData) + RgenTableSize + MissTableSize + RchitTableSize, PDRTPP.shaderGroupHandleSize * CallableCount);
+			} ShaderBindingTables.back().Unmap(Device);
+		}
+#pragma endregion
 	}
 
 	virtual void CreateDescriptorSet() override {
 		VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT, {
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1 }),
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1 })
-			});
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1 }), //!< TLAS
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1 }) //!< StorageImage
+		});
 		const std::array DSLs = { DescriptorSetLayouts[0] };
 		const VkDescriptorSetAllocateInfo DSAI = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -359,28 +375,6 @@ public:
 		};
 		constexpr std::array<VkCopyDescriptorSet, 0> CDSs = {};
 		vkUpdateDescriptorSets(Device, static_cast<uint32_t>(size(WDSs)), data(WDSs), static_cast<uint32_t>(size(CDSs)), data(CDSs));
-
-		//!< #VK_TODO vkUpdateDescriptorSetWithTemplate() の AccelerationStructure 対応
-#if 0
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
-			VkDescriptorUpdateTemplateEntry({
-				.dstBinding = 0, .dstArrayElement = 0,
-				.descriptorCount = _countof(DescriptorUpdateInfo::DescriptorASInfos), .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
-				.offset = offsetof(DescriptorUpdateInfo, DescriptorASInfos), .stride = sizeof(DescriptorUpdateInfo)
-			}),
-			VkDescriptorUpdateTemplateEntry({
-				.dstBinding = 1, .dstArrayElement = 0,
-				.descriptorCount = _countof(DescriptorUpdateInfo::DescriptorImageInfos), .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-				.offset = offsetof(DescriptorUpdateInfo, DescriptorImageInfos), .stride = sizeof(DescriptorUpdateInfo)
-			}),
-			}, DescriptorSetLayouts[0]);
-
-		const DescriptorUpdateInfo DUI = {
-			VkDescriptorBufferInfo({.buffer = TLASs[0].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }), //!< TLAS
-			VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = StorageTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_GENERAL }), //!< StorageImage
-		};
-		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
-#endif
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
@@ -405,32 +399,37 @@ public:
 
 			const auto AlignedSize = RoundUp(PDRTPP.shaderGroupHandleSize, PDRTPP.shaderGroupHandleAlignment);
 			const auto RayGen = VkStridedDeviceAddressRegionKHR({
-				.deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[0].Buffer), 
-				.stride = AlignedSize, 
-				.size = 1 * AlignedSize 
-			});
-			const auto Miss = VkStridedDeviceAddressRegionKHR({ 
-				.deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[1].Buffer), 
+				.deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[0].Buffer),
 				.stride = AlignedSize,
-				.size = 1 * AlignedSize 
-			});
+				.size = AlignedSize * 1
+				});
+			const auto Miss = VkStridedDeviceAddressRegionKHR({
+				.deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[1].Buffer),
+				.stride = AlignedSize,
+				.size = AlignedSize * 1
+				});
+#pragma region HIT
+			constexpr auto HitCount = 2;
 			const auto Hit = VkStridedDeviceAddressRegionKHR({
-				.deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[2].Buffer), 
+				.deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[2].Buffer),
 				.stride = AlignedSize,
-				.size = 1 * AlignedSize
-			});
-			const auto Callable = VkStridedDeviceAddressRegionKHR({ .deviceAddress = 0, .stride = 0, .size = 0 });
+				.size = AlignedSize * HitCount
+				});
+#pragma endregion
+#pragma region CALLABLE
+			constexpr auto CallableCount = 3;
+			const auto Callable = VkStridedDeviceAddressRegionKHR({
+				.deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[3].Buffer),
+				.stride = AlignedSize,
+				.size = AlignedSize * CallableCount
+				});
+#pragma endregion
 
-#ifdef USE_INDIRECT
 			vkCmdTraceRaysIndirectKHR(CB, &RayGen, &Miss, &Hit, &Callable, GetDeviceAddress(Device, IndirectBuffers[0].Buffer));
-#else
-			vkCmdTraceRaysKHR(CB, &RayGen, &Miss, &Hit, &Callable, GetClientRectWidth(), GetClientRectHeight(), 1);
-#endif
 
 			constexpr auto ISR = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 });
 			{
 				const std::array IMBs = {
-					//!< PRESENT_SRC_KHR -> TRANSFER_DST_OPTIMAL
 					VkImageMemoryBarrier({
 						.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 						.pNext = nullptr,
@@ -440,7 +439,6 @@ public:
 						.image = SwapchainImages[i],
 						.subresourceRange = ISR
 					}),
-					//!< GENERAL -> TRANSFER_SRC_OPTIMAL
 					VkImageMemoryBarrier({
 						.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 						.pNext = nullptr,
@@ -467,7 +465,6 @@ public:
 
 			{
 				const std::array IMBs = {
-					//!< TRANSFER_DST_OPTIMAL -> PRESENT_SRC_KHR, 
 					VkImageMemoryBarrier({
 						.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 						.pNext = nullptr,
@@ -477,7 +474,6 @@ public:
 						.image = SwapchainImages[i],
 						.subresourceRange = ISR
 					}),
-					//!< TRANSFER_SRC_OPTIMAL -> GENERAL
 					VkImageMemoryBarrier({
 						.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
 						.pNext = nullptr,
@@ -493,16 +489,7 @@ public:
 
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 	}
-
-	//!< #VK_TODO vkUpdateDescriptorSetWithTemplate() の AccelerationStructure 対応
-#if 0
-private:
-	struct DescriptorUpdateInfo
-	{
-		//VkDescriptorAccelerationStructureInfo DescriptorASInfos[1];
-		VkDescriptorImageInfo DescriptorImageInfos[1];
-	};
-#endif
 #pragma endregion
 };
 #pragma endregion
+

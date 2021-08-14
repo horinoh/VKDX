@@ -1,11 +1,11 @@
-// RayTracingTriangleVK.cpp : Defines the entry point for the application.
+// RTTriangleDX.cpp : Defines the entry point for the application.
 //
 
 #include "framework.h"
-#include "RayTracingTriangleVK.h"
- 
+#include "RTTriangleDX.h"
+
 #pragma region Code
-VK* Inst = nullptr;
+DX* Inst = nullptr;
 #pragma endregion
 
 #define MAX_LOADSTRING 100
@@ -33,7 +33,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_RAYTRACINGTRIANGLEVK, szWindowClass, MAX_LOADSTRING);
+    LoadStringW(hInstance, IDC_RTTRIANGLEDX, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
@@ -42,7 +42,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_RAYTRACINGTRIANGLEVK));
+    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_RTTRIANGLEDX));
 
     MSG msg;
 
@@ -77,10 +77,10 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_RAYTRACINGTRIANGLEVK));
+    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_RTTRIANGLEDX));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_RAYTRACINGTRIANGLEVK);
+    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_RTTRIANGLEDX);
     wcex.lpszClassName  = szWindowClass;
     wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
@@ -149,7 +149,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 	case WM_CREATE:
 		if (nullptr == Inst) {
-			Inst = new RayTracingTriangleVK();
+			Inst = new RTTriangleDX();
 		}
 		if (nullptr != Inst) {
 			try {

@@ -25,7 +25,7 @@
     </PostBuildEvent>
     <CustomBuild>
       <Command>glslangValidator -V %(Identity) -o %(Identity).spv  --target-env vulkan1.2
-glslangValidator -H %(Identity) &gt; %(Identity).asm
+glslangValidator -H %(Identity) &gt; %(Identity).asm  --target-env vulkan1.2
 xcopy /y %(Identity).spv $(TargetDir)</Command>
     </CustomBuild>
     <CustomBuild>

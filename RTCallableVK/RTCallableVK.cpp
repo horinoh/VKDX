@@ -1,11 +1,11 @@
-// RayTracingTriangleDX.cpp : Defines the entry point for the application.
+// RTCallableVK.cpp : Defines the entry point for the application.
 //
 
 #include "framework.h"
-#include "RayTracingTriangleDX.h"
+#include "RTCallableVK.h"
 
 #pragma region Code
-DX* Inst = nullptr;
+VK* Inst = nullptr;
 #pragma endregion
 
 #define MAX_LOADSTRING 100
@@ -33,7 +33,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_RAYTRACINGTRIANGLEDX, szWindowClass, MAX_LOADSTRING);
+    LoadStringW(hInstance, IDC_RTCALLABLEVK, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
     // Perform application initialization:
@@ -42,7 +42,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         return FALSE;
     }
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_RAYTRACINGTRIANGLEDX));
+    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_RTCALLABLEVK));
 
     MSG msg;
 
@@ -77,10 +77,10 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     wcex.cbClsExtra     = 0;
     wcex.cbWndExtra     = 0;
     wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_RAYTRACINGTRIANGLEDX));
+    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_RTCALLABLEVK));
     wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
     wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_RAYTRACINGTRIANGLEDX);
+    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_RTCALLABLEVK);
     wcex.lpszClassName  = szWindowClass;
     wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
 
@@ -149,7 +149,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 #pragma region Code
 	case WM_CREATE:
 		if (nullptr == Inst) {
-			Inst = new RayTracingTriangleDX();
+			Inst = new RTCallableVK();
 		}
 		if (nullptr != Inst) {
 			try {

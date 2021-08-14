@@ -14,7 +14,7 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Shader Files">
-      <UniqueIdentifier>{f5243fe2-a1e8-4692-905f-8f1e5ae7be67}</UniqueIdentifier>
+      <UniqueIdentifier>{5d4c4ce2-b33a-446b-a075-55e2003e876b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -27,13 +27,13 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RayTracingTriangleVK.h">
+    <ClInclude Include="RTCallableDX.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\VK.h">
+    <ClInclude Include="..\DX.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\VKExt.h">
+    <ClInclude Include="..\DXExt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Win.h">
@@ -41,16 +41,16 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="RayTracingTriangleVK.cpp">
+    <ClCompile Include="RTCallableDX.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="framework.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\VK.cpp">
+    <ClCompile Include="..\DX.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\VKExt.cpp">
+    <ClCompile Include="..\DXExt.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\Win.cpp">
@@ -58,7 +58,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="RayTracingTriangleVK.rc">
+    <ResourceCompile Include="RTCallableDX.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
@@ -66,19 +66,34 @@
     <Image Include="small.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="RayTracingTriangleVK.ico">
+    <Image Include="RTCallableDX.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="RayTracingTriangleVK.rchit">
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="RTCallableDX.rchit.hlsl">
       <Filter>Shader Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="RayTracingTriangleVK.rgen">
+    </FxCompile>
+    <FxCompile Include="RTCallableDX.rgen.hlsl">
       <Filter>Shader Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="RayTracingTriangleVK.rmiss">
+    </FxCompile>
+    <FxCompile Include="RTCallableDX_1.rcall.hlsl">
       <Filter>Shader Files</Filter>
-    </CustomBuild>
+    </FxCompile>
+    <FxCompile Include="RTCallableDX_1.rchit.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="RTCallableDX_2.rcall.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="RTCallableDX.miss.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="RTCallableDX.rcall.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

@@ -3,6 +3,7 @@
   <ImportGroup Label="PropertySheets">
     <Import Project="PRECOMP.props" />
     <Import Project="RS.props" />
+    <Import Project="CMN.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />

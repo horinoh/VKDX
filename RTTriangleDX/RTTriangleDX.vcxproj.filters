@@ -14,7 +14,7 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Shader Files">
-      <UniqueIdentifier>{6d07f015-aa8a-47f8-a419-24da584b33e7}</UniqueIdentifier>
+      <UniqueIdentifier>{20365776-550a-4166-8e88-4fc6e2e70ee3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -27,7 +27,7 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RayTracingTriangleDX.h">
+    <ClInclude Include="RTTriangleDX.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\DX.h">
@@ -41,7 +41,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="RayTracingTriangleDX.cpp">
+    <ClCompile Include="RTTriangleDX.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="framework.cpp">
@@ -58,7 +58,7 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="RayTracingTriangleDX.rc">
+    <ResourceCompile Include="RTTriangleDX.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
@@ -66,22 +66,22 @@
     <Image Include="small.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="RayTracingTriangleDX.ico">
+    <Image Include="RTTriangleDX.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="RayTracingTriangleDX.rchit.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
-    <FxCompile Include="RayTracingTriangleDX.rgen.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
-    <FxCompile Include="RayTracingTriangleDX.miss.hlsl">
-      <Filter>Shader Files</Filter>
-    </FxCompile>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <FxCompile Include="RTTriangleDX.rchit.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="RTTriangleDX.rgen.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="RTTriangleDX.miss.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

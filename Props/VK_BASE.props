@@ -4,6 +4,7 @@
     <Import Project="PRECOMP.props" />
     <Import Project="GLM.props" />
     <Import Project="VK.props" />
+    <Import Project="CMN.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
