@@ -3,9 +3,10 @@
 #include "resource.h"
 
 #pragma region Code
+#include "../FBX.h"
 #include "../DXImage.h"
 
-class RayTracingDX : public DXImage
+class RayTracingDX : public DXImage, public Fbx
 {
 private:
 	using Super = DXImage;
@@ -13,9 +14,38 @@ public:
 	RayTracingDX() : Super() {}
 	virtual ~RayTracingDX() {}
 
+#pragma region FBX
+	DirectX::XMFLOAT3 ToFloat3(const FbxVector4& rhs) { return DirectX::XMFLOAT3(static_cast<FLOAT>(rhs[0]), static_cast<FLOAT>(rhs[1]), static_cast<FLOAT>(rhs[2])); }
+	std::vector<UINT32> _Indices;
+	std::vector<DirectX::XMFLOAT3> _Vertices;
+	std::vector<DirectX::XMFLOAT3> _Normals;
+	virtual void Process(FbxMesh* Mesh) override {
+		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
+		for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
+			for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
+				_Indices.emplace_back(i * Mesh->GetPolygonSize(i) + j);
+
+				_Vertices.emplace_back(ToFloat3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
+
+				for (auto k = 0; k < Mesh->GetElementNormalCount(); ++k) {
+					_Normals.emplace_back(ToFloat3(Mesh->GetElementNormal(k)->GetDirectArray().GetAt(i)));
+				}
+			}
+		}
+	}
+#pragma endregion
+
 #pragma region RAYTRACING
 	virtual void CreateGeometry() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
+
+		{
+			//std::wstring Path;
+			//if (FindDirectory("FBX", Path)) {
+			//	Load(ToString(Path) + "//ALucy.FBX");
+			//}
+			//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ConvertScene\\box.fbx");
+		}
 
 		COM_PTR<ID3D12Device5> Device5;
 		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
@@ -25,13 +55,15 @@ public:
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
 #pragma region BLAS_INPUT
-		constexpr std::array Vertices = { DirectX::XMFLOAT3({ 0.0f, 0.5f, 0.0f }), DirectX::XMFLOAT3({ -0.5f, -0.5f, 0.0f }), DirectX::XMFLOAT3({ 0.5f, -0.5f, 0.0f }), };
 		ResourceBase VertBuf;
+		constexpr std::array Vertices = { DirectX::XMFLOAT3({ 0.0f, 0.5f, 0.0f }), DirectX::XMFLOAT3({ -0.5f, -0.5f, 0.0f }), DirectX::XMFLOAT3({ 0.5f, -0.5f, 0.0f }), };
 		VertBuf.Create(COM_PTR_GET(Device), sizeof(Vertices), D3D12_HEAP_TYPE_UPLOAD, data(Vertices));
+		//VertBuf.Create(COM_PTR_GET(Device), sizeof(_Vertices), D3D12_HEAP_TYPE_UPLOAD, data(_Vertices));
 
-		constexpr std::array Indices = { UINT32(0), UINT32(1), UINT32(2) };
 		ResourceBase IndBuf;
+		constexpr std::array Indices = { UINT32(0), UINT32(1), UINT32(2) };
 		IndBuf.Create(COM_PTR_GET(Device), sizeof(Indices), D3D12_HEAP_TYPE_UPLOAD, data(Indices));
+		//IndBuf.Create(COM_PTR_GET(Device), sizeof(_Indices), D3D12_HEAP_TYPE_UPLOAD, data(_Indices));
 
 		const std::array RGDs = {
 			D3D12_RAYTRACING_GEOMETRY_DESC({
@@ -42,9 +74,12 @@ public:
 					.IndexFormat = DXGI_FORMAT_R32_UINT,
 					.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT,
 					.IndexCount = static_cast<UINT>(size(Indices)),
+					//.IndexCount = static_cast<UINT>(size(_Indices)),
 					.VertexCount = static_cast<UINT>(size(Vertices)),
+					//.VertexCount = static_cast<UINT>(size(_Vertices)),
 					.IndexBuffer = IndBuf.Resource->GetGPUVirtualAddress(),
 					.VertexBuffer = D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE({.StartAddress = VertBuf.Resource->GetGPUVirtualAddress(), .StrideInBytes = sizeof(Vertices[0]) }),
+					//.VertexBuffer = D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE({.StartAddress = VertBuf.Resource->GetGPUVirtualAddress(), .StrideInBytes = sizeof(_Vertices[0]) }),
 				})
 			}),
 		};
@@ -69,8 +104,6 @@ public:
 #pragma endregion
 		
 #pragma region TLAS_INPUT
-		//!< InstanceID								: 0==Žs¼–Í—l, 1==cü, 2==‰¡ü
-		//!< InstanceContributionToHitGroupIndex	: 0==Ô, 1==—Î
 		const std::array RIDs = {
 			#pragma region INSTANCES
 			D3D12_RAYTRACING_INSTANCE_DESC({

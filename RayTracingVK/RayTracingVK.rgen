@@ -19,7 +19,8 @@ void main()
     const vec3 Origin = vec3(UpY, -1.0f);
     const vec3 Direction = vec3(0.0f, 0.0f, 1.0f);
 
-    traceRayEXT(TLAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsCullBackFacingTrianglesEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
+    //traceRayEXT(TLAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsCullBackFacingTrianglesEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
+    traceRayEXT(TLAS, gl_RayFlagsNoneEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
 
 	imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(Payload, 1.0f));
 }

@@ -7,7 +7,9 @@ class VKExt : public VK
 private:
 	using Super = VK;
 public:
+	using Vertex_Position = struct Vertex_Position { glm::vec3 Position; };
 	using Vertex_PositionColor = struct Vertex_PositionColor { glm::vec3 Position; glm::vec4 Color; };
+	using Vertex_PositionNormal = struct Vertex_PositionNormal { glm::vec3 Position; glm::vec3 Normal; };
 	using Instance_OffsetXY = struct Instance_OffsetXY { glm::vec2 Offset; };
 
 	void CreateRenderPass_Clear();

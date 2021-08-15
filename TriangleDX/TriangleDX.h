@@ -14,7 +14,69 @@ public:
 	virtual ~TriangleDX() {}
 
 protected:
-	virtual void CreateGeometry() override;
+	virtual void CreateGeometry() override {
+#define COMMAND_COPY_TOGETHER
+
+		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+		const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
+
+#if 1
+		constexpr std::array Vertices = {
+			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
+			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
+			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
+		};
+#else
+		//!< ピクセル指定
+		constexpr FLOAT W = 1280.0f, H = 720.0f;
+		constexpr std::array Vertices = {
+			Vertex_PositionColor({.Position = { W * 0.5f, 100.0f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
+			Vertex_PositionColor({.Position = { W * 0.5f - 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB
+			Vertex_PositionColor({.Position = { W * 0.5f + 200.0f, H - 100.0f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }), //!< RB
+		};
+#endif
+		constexpr std::array<UINT32, 3> Indices = { 0, 1, 2 };
+
+#ifdef COMMAND_COPY_TOGETHER
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), sizeof(Vertices[0]));
+		UploadResource Upload_Vertex;
+		Upload_Vertex.Create(COM_PTR_GET(Device), sizeof(Vertices), data(Vertices));
+#else
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), sizeof(Vertices[0])).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(Vertices), data(Vertices));
+#endif
+		SetName(COM_PTR_GET(VertexBuffers.back().Resource), TEXT("MyVertexBuffer"));
+
+#ifdef COMMAND_COPY_TOGETHER
+		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), DXGI_FORMAT_R32_UINT);
+		UploadResource Upload_Index;
+		Upload_Index.Create(COM_PTR_GET(Device), sizeof(Indices), data(Indices));
+#else
+		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), DXGI_FORMAT_R32_UINT).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(Indices), data(Indices));
+#endif	
+		SetName(COM_PTR_GET(IndexBuffers.back().Resource), TEXT("MyIndexBuffer"));
+
+		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
+#ifdef COMMAND_COPY_TOGETHER
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA);
+		UploadResource Upload_Indirect;
+		Upload_Indirect.Create(COM_PTR_GET(Device), sizeof(DIA), &DIA);
+#else
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(Fence), sizeof(DIA), &DIA);
+#endif	
+		SetName(COM_PTR_GET(IndirectBuffers.back().Resource), TEXT("MyIndirectBuffer"));
+
+#ifdef COMMAND_COPY_TOGETHER
+		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
+			VertexBuffers.back().PopulateCopyCommand(GCL, sizeof(Vertices), COM_PTR_GET(Upload_Vertex.Resource));
+			IndexBuffers.back().PopulateCopyCommand(GCL, sizeof(Indices), COM_PTR_GET(Upload_Index.Resource));
+			IndirectBuffers.back().PopulateCopyCommand(GCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
+		} VERIFY_SUCCEEDED(GCL->Close());
+		DX::ExecuteAndWait(CQ, GCL, COM_PTR_GET(Fence));
+#endif
+
+		LOG_OK();
+	}
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
@@ -71,7 +133,57 @@ protected:
 		DXExt::CreatePipelineState_VsPs_Input(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE, IEDs, SBCs);
 	}
 
-	virtual void PopulateCommandList(const size_t i) override;
+	virtual void PopulateCommandList(const size_t i) override {
+		const auto PS = COM_PTR_GET(PipelineStates[0]);
+
+#pragma region BUNDLE_COMMAND_LIST
+		const auto BGCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
+		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
+		{
+			BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+
+			const std::array VBVs = { VertexBuffers[0].View };
+			BGCL->IASetVertexBuffers(0, static_cast<UINT>(size(VBVs)), data(VBVs));
+			BGCL->IASetIndexBuffer(&IndexBuffers[0].View);
+
+			BGCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+		}
+		VERIFY_SUCCEEDED(BGCL->Close());
+#pragma endregion
+
+		const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
+		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
+		{
+#if defined(_DEBUG) || defined(USE_PIX)
+			PIXScopedEvent(GCL, PIX_COLOR(0, 255, 0), TEXT("Command Begin"));
+#endif
+			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
+#ifdef USE_ROOT_CONSTANTS
+			GCL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(size(Color)), data(Color), 0);
+#endif
+
+			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+
+			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			{
+				auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+
+				constexpr std::array<D3D12_RECT, 0> Rects = {};
+				GCL->ClearRenderTargetView(SCCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+
+				const std::array RTCDHs = { SCCDH };
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, nullptr);
+
+				GCL->ExecuteBundle(BGCL);
+			}
+			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		}
+		VERIFY_SUCCEEDED(GCL->Close());
+	}
 
 #ifdef USE_ROOT_CONSTANTS
 	const std::array<FLOAT, 4> Color = { 1.0f, 0.0f, 0.0f, 1.0f };

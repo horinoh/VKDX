@@ -41,7 +41,7 @@ public:
 		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\SwitchBinding\\Bind_Before_Switch.fbx"); //!< メッシュ、ジョイント、アニメーション、(四角形ポリゴン)
 		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\Transformations\\JointHierarchy.fbx"); //!< ジョイントのみ
 		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\UVSample\\sadface.fbx"); //!< メッシュ、テクスチャ
-		Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ViewScene\\humanoid.fbx"); //!< ジョイント、メッシュ、アニメーション、カメラ、ライト
+		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ViewScene\\humanoid.fbx"); //!< ジョイント、メッシュ、アニメーション、カメラ、ライト
 	}
 	virtual ~Fbx() {
 		if (nullptr != Scene) { Scene->Destroy(); }

@@ -66,10 +66,14 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\Props\VK_DEBUG_TEX.props" />
+    <Import Project="..\Props\GLTF.props" />
+    <Import Project="..\Props\FBX.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\Props\VK_RELEASE_TEX.props" />
+    <Import Project="..\Props\GLTF.props" />
+    <Import Project="..\Props\FBX.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -161,6 +165,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\FBX.cpp" />
     <ClCompile Include="..\VK.cpp" />
     <ClCompile Include="..\VKExt.cpp" />
     <ClCompile Include="..\VKImage.cpp" />

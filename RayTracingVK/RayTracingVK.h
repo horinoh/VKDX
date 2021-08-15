@@ -3,15 +3,37 @@
 #include "resource.h"
 
 #pragma region Code
+#include "../FBX.h"
 #include "../VKImage.h"
 
-class RayTracingVK : public VKImage
+class RayTracingVK : public VKImage, public Fbx
 {
 private:
 	using Super = VKImage;
 public:
 	RayTracingVK() : Super() {}
 	virtual ~RayTracingVK() {}
+
+#pragma region FBX
+	glm::vec3 ToVec3(const FbxVector4& rhs) { return glm::vec3(static_cast<FLOAT>(rhs[0]), static_cast<FLOAT>(rhs[1]), static_cast<FLOAT>(rhs[2])); }
+	std::vector<uint32_t> _Indices;
+	std::vector<glm::vec3> _Vertices;
+	std::vector<glm::vec3> _Normals;
+	virtual void Process(FbxMesh* Mesh) override {
+		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
+		for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
+			for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
+				_Indices.emplace_back(i * Mesh->GetPolygonSize(i) + j);
+
+				_Vertices.emplace_back(ToVec3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
+
+				for (auto k = 0; k < Mesh->GetElementNormalCount(); ++k) {
+					_Normals.emplace_back(ToVec3(Mesh->GetElementNormal(k)->GetDirectArray().GetAt(i)));
+				}
+			}
+		}
+	}
+#pragma endregion
 
 	//!< #TIPS VKインスタンス作成時に "VK_LAYER_RENDERDOC_Capture" を使用すると、メッシュシェーダーやレイトレーシングと同時に使用した場合、vkCreateDevice() でコケるようになるので注意 (If we use "VK_LAYER_RENDERDOC_Capture" with mesh shader or raytracing, vkCreateDevice() failed)
 
@@ -44,6 +66,14 @@ public:
 	virtual void CreateSwapchain() override { VK::CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight(), VK_IMAGE_USAGE_TRANSFER_DST_BIT); }
 	virtual void CreateGeometry() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
+
+		{
+			//std::wstring Path;
+			//if (FindDirectory("FBX", Path)) {
+			//	Load(ToString(Path) + "//ALucy.FBX");
+			//}
+			//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ConvertScene\\box.fbx"); 
+		}
 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		const auto& CB = CommandBuffers[0];
@@ -106,8 +136,6 @@ public:
 #pragma endregion
 
 #pragma region TLAS_GEOMETRY
-		//!< instanceCustomIndex					: 0==市松模様, 1==縦線, 2==横線
-		//!< instanceShaderBindingTableRecordOffset	: 0==赤, 1==緑
 		const std::array ASIs = {
 			#pragma region INSTANCES
 			VkAccelerationStructureInstanceKHR({

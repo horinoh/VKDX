@@ -76,6 +76,7 @@
  #pragma comment(lib, "vs2019\\x64\\release\\libfbxsdk.lib")
  #endif
  ~~~
+* Fbx.h は DXExt.h や VKExt.h 等よりも前に include する
 * サンプルデータは $(FBX_SDK_PATH)\samples 以下にある
 	* InmportScene が参考になる
 	* 普通にインストールすると管理者権限が必要な場所にあるので、どこかにコピーする

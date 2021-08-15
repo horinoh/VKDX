@@ -7,7 +7,9 @@ class DXExt : public DX
 private:
 	using Super = DX;
 public:
+	using Vertex_Position = struct Vertex_Position { DirectX::XMFLOAT3 Position; };
 	using Vertex_PositionColor = struct Vertex_PositionColor { DirectX::XMFLOAT3 Position; DirectX::XMFLOAT4 Color; };
+	using Vertex_PositionNormal = struct Vertex_PositionNormal { DirectX::XMFLOAT3 Position; DirectX::XMFLOAT3 Normal; };
 	using Instance_OffsetXY = struct Instance_OffsetXY { DirectX::XMFLOAT2 Offset; };
 
 	void CreatePipelineState_VsPs(const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, const BOOL DepthEnable, const std::array<D3D12_SHADER_BYTECODE, 2>& SBCs) { CreatePipelineState_VsPs_Input(PTT, DepthEnable, {}, SBCs); }
