@@ -17,6 +17,8 @@ public:
 	std::vector<DirectX::XMFLOAT3> Vertices;
 	std::vector<DirectX::XMFLOAT3> Normals;
 	virtual void Process(FbxMesh* Mesh) override {
+		Fbx::Process(Mesh);
+
 		auto Max = DirectX::XMFLOAT3((std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)());
 		auto Min = DirectX::XMFLOAT3((std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)());
 		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
@@ -37,8 +39,10 @@ public:
 				}
 			}
 		}
-		const auto Range = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 0.5f;
-		std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Range, rhs.y / Range, rhs.z / Range); });
+		const auto Bound = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 2.0f;
+		std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Bound, rhs.y / Bound, rhs.z / Bound - Min.z / Bound); });
+
+		//for (auto i : Vertices) { std::cout << i.x << ", " << i.y << ", " << i.z << std::endl; }
 	}
 #pragma endregion
 
@@ -46,22 +50,24 @@ public:
 	virtual ~FbxDX() {}
 	virtual void CreateGeometry() override {
 		std::wstring Path;
-			if (FindDirectory("FBX", Path)) {
-				Load(ToString(Path) + "//ALucy.FBX");
-			}
+		if (FindDirectory("FBX", Path)) {
+			//Load(ToString(Path) + "//bunny.FBX");
+			Load(ToString(Path) + "//dragon.FBX");
+		}
 		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ConvertScene\\box.fbx");
+		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ViewScene\\humanoid.fbx"); 
 
 		const auto CA = COM_PTR_GET(CommandAllocators[0]);
 		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 		const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
 
-		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), sizeof(Vertices[0]));
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices[0]) * size(Vertices), sizeof(Vertices[0]));
 		UploadResource Upload_Vertex;
-		Upload_Vertex.Create(COM_PTR_GET(Device), sizeof(Vertices), data(Vertices));
+		Upload_Vertex.Create(COM_PTR_GET(Device), sizeof(Vertices[0]) * size(Vertices), data(Vertices));
 
-		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), DXGI_FORMAT_R32_UINT);
+		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices[0]) * size(Indices), DXGI_FORMAT_R32_UINT);
 		UploadResource Upload_Index;
-		Upload_Index.Create(COM_PTR_GET(Device), sizeof(Indices), data(Indices));
+		Upload_Index.Create(COM_PTR_GET(Device), sizeof(Indices[0]) * size(Indices), data(Indices));
 
 		const D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
 		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA);
@@ -69,8 +75,8 @@ public:
 		Upload_Indirect.Create(COM_PTR_GET(Device), sizeof(DIA), &DIA);
 
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			VertexBuffers.back().PopulateCopyCommand(GCL, sizeof(Vertices), COM_PTR_GET(Upload_Vertex.Resource));
-			IndexBuffers.back().PopulateCopyCommand(GCL, sizeof(Indices), COM_PTR_GET(Upload_Index.Resource));
+			VertexBuffers.back().PopulateCopyCommand(GCL, sizeof(Vertices[0]) * size(Vertices), COM_PTR_GET(Upload_Vertex.Resource));
+			IndexBuffers.back().PopulateCopyCommand(GCL, sizeof(Indices[0]) * size(Indices), COM_PTR_GET(Upload_Index.Resource));
 			IndirectBuffers.back().PopulateCopyCommand(GCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
 		} VERIFY_SUCCEEDED(GCL->Close());
 		DX::ExecuteAndWait(CQ, GCL, COM_PTR_GET(Fence));
@@ -92,7 +98,7 @@ public:
 		};
 		const std::vector IEDs = {
 			D3D12_INPUT_ELEMENT_DESC({.SemanticName = "POSITION", .SemanticIndex = 0, .Format = DXGI_FORMAT_R32G32B32_FLOAT, .InputSlot = 0, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }),
-			//D3D12_INPUT_ELEMENT_DESC({.SemanticName = "NORMAL", .SemanticIndex = 0, .Format = DXGI_FORMAT_R32G32B32_FLOAT, .InputSlot = 0, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }),
+			//D3D12_INPUT_ELEMENT_DESC({.SemanticName = "NORMAL", .SemanticIndex = 0, .Format = DXGI_FORMAT_R32G32B32_FLOAT, .InputSlot = 1, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }),
 		};
 		DXExt::CreatePipelineState_VsPs_Input(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, FALSE, IEDs, SBCs);
 	}
@@ -104,7 +110,7 @@ public:
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
 		{
-			BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 			const std::array VBVs = { VertexBuffers[0].View };
 			BGCL->IASetVertexBuffers(0, static_cast<UINT>(size(VBVs)), data(VBVs));

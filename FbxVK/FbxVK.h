@@ -20,8 +20,10 @@ public:
 	std::vector<glm::vec3> Vertices;
 	std::vector<glm::vec3> Normals;
 	virtual void Process(FbxMesh* Mesh) override {
+		Fbx::Process(Mesh);
+
 		auto Max = glm::vec3((std::numeric_limits<float>::min)());
-		auto Min = glm::vec3((std::numeric_limits<float>::max)()); 
+		auto Min = glm::vec3((std::numeric_limits<float>::max)());
 		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
 		for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
 			for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
@@ -40,8 +42,10 @@ public:
 				}
 			}
 		}
-		const auto Range = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 0.5f;
-		std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const glm::vec3& rhs) { return rhs / Range; });
+		const auto Bound = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 2.0f;
+		std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const glm::vec3& rhs) { return rhs / Bound - glm::vec3(0.0f, 0.0f, Min.z / Bound); });
+
+		//for (auto i : Vertices) { std::cout << i.x << ", " << i.y << ", " << i.z << std::endl; }
 	}
 #pragma endregion
 
@@ -50,24 +54,29 @@ public:
 		//!< #TIPS　レイトレーシングやメッシュシェーダーと同時に "VK_LAYER_RENDERDOC_Capture" を使用した場合に vkCreateDevice() でコケていたので、用途によっては注意が必要
 		Super::CreateInstance({ "VK_LAYER_RENDERDOC_Capture" }, AdditionalExtensions);
 	}
+	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, [[maybe_unused]] const std::vector<const char*>& AdditionalExtensions) override {
+		Super::CreateDevice(hWnd, hInstance, pNext, { VK_EXT_DEBUG_MARKER_EXTENSION_NAME });
+	}
 #endif
 	virtual void CreateGeometry() override {
 		std::wstring Path;
 		if (FindDirectory("FBX", Path)) {
-			Load(ToString(Path) + "//ALucy.FBX");
+			//Load(ToString(Path) + "//bunny.FBX");
+			Load(ToString(Path) + "//dragon.FBX");
 		}
 		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ConvertScene\\box.fbx");
+		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ViewScene\\humanoid.fbx"); 
 
 		const auto& CB = CommandBuffers[0];
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-		
-		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices));
-		VK::Scoped<StagingBuffer> Staging_Vertex(Device);
-		Staging_Vertex.Create(Device, PDMP, sizeof(Vertices), data(Vertices));
 
-		IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices));
+		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices[0]) * size(Vertices));
+		VK::Scoped<StagingBuffer> Staging_Vertex(Device);
+		Staging_Vertex.Create(Device, PDMP, sizeof(Vertices[0]) * size(Vertices), data(Vertices));
+
+		IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices[0]) * size(Indices));
 		VK::Scoped<StagingBuffer> Staging_Index(Device);
-		Staging_Index.Create(Device, PDMP, sizeof(Indices), data(Indices));
+		Staging_Index.Create(Device, PDMP, sizeof(Indices[0]) * size(Indices), data(Indices));
 
 		const VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
@@ -76,8 +85,8 @@ public:
 
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-			VertexBuffers.back().PopulateCopyCommand(CB, sizeof(Vertices), Staging_Vertex.Buffer);
-			IndexBuffers.back().PopulateCopyCommand(CB, sizeof(Indices), Staging_Index.Buffer);
+			VertexBuffers.back().PopulateCopyCommand(CB, sizeof(Vertices[0]) * size(Vertices), Staging_Vertex.Buffer);
+			IndexBuffers.back().PopulateCopyCommand(CB, sizeof(Indices[0]) * size(Indices), Staging_Index.Buffer);
 			IndirectBuffers.back().PopulateCopyCommand(CB, sizeof(DIIC), Staging_Indirect.Buffer);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		VK::SubmitAndWait(GraphicsQueue, CB);
@@ -94,13 +103,13 @@ public:
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),
 		};
 		const std::vector VIBDs = {
-			VkVertexInputBindingDescription({.binding = 0, .stride = sizeof(Vertex_Position), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
+			VkVertexInputBindingDescription({.binding = 0, .stride = sizeof(Vertices[0]), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
 		};
 		const std::vector VIADs = {
-			VkVertexInputAttributeDescription({.location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = offsetof(Vertex_Position, Position) }),
-			//VkVertexInputAttributeDescription({.location = 1, .binding = 0, .format = VK_FORMAT_R32G32B32A32_SFLOAT, .offset = offsetof(Vertex_PositionNormal, Normal) }),
+			VkVertexInputAttributeDescription({.location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 }),
+			//VkVertexInputAttributeDescription({.location = 0, .binding = 1, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 }),
 		};
-		VKExt::CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP, 0, VK_FALSE, VIBDs, VIADs, PSSCIs);
+		VKExt::CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, 0, VK_FALSE, VIBDs, VIADs, PSSCIs);
 
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
@@ -140,7 +149,6 @@ public:
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
 #pragma endregion
 
-
 		const auto CB = CommandBuffers[i];
 		constexpr VkCommandBufferBeginInfo CBBI = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -149,8 +157,6 @@ public:
 			.pInheritanceInfo = nullptr
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-			ScopedMarker(CB, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), "Command Begin");
-
 			constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
 			const VkRenderPassBeginInfo RPBI = {
 				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

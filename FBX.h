@@ -866,6 +866,21 @@ public:
 		}
 	}
 
+	virtual void Convert(FbxScene* Scn) {
+		if (nullptr != Scn) {
+			//!< yOpenGLzRight Hand
+			FbxAxisSystem::OpenGL.ConvertScene(Scn);
+			//!< yDirectXzLeft Hand
+			//FbxAxisSystem::DirectX.ConvertScene(Scn);
+
+			//!< y’PˆÊzm (ƒ[ƒgƒ‹)
+			FbxSystemUnit::m.ConvertScene(Scn);
+
+			if (FbxGeometryConverter(Manager).Triangulate(Scn, true)) {
+			}
+		}
+	}
+
 	virtual void Load(std::string_view Path) {
 		if (nullptr != Manager) {
 			const auto Importer = FbxImporter::Create(Manager, "");
@@ -873,6 +888,9 @@ public:
 				if (Importer->Initialize(data(Path), -1, Manager->GetIOSettings())) {
 					Scene = FbxScene::Create(Manager, "");
 					if (Importer->Import(Scene)) {
+						
+						Convert(Scene);
+
 						int Major, Minor, Revision;
 						Importer->GetFileVersion(Major, Minor, Revision);
 						std::cout << Major << "." << Minor << "." << Revision << std::endl;

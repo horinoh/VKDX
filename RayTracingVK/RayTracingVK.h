@@ -20,18 +20,29 @@ public:
 	std::vector<glm::vec3> _Vertices;
 	std::vector<glm::vec3> _Normals;
 	virtual void Process(FbxMesh* Mesh) override {
+		auto Max = glm::vec3((std::numeric_limits<float>::min)());
+		auto Min = glm::vec3((std::numeric_limits<float>::max)());
 		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
 		for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
 			for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
 				_Indices.emplace_back(i * Mesh->GetPolygonSize(i) + j);
 
 				_Vertices.emplace_back(ToVec3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
+				Max.x = std::max(Max.x, _Vertices.back().x);
+				Max.y = std::max(Max.y, _Vertices.back().y);
+				Max.z = std::max(Max.z, _Vertices.back().z);
+				Min.x = std::min(Min.x, _Vertices.back().x);
+				Min.y = std::min(Min.y, _Vertices.back().y);
+				Min.z = std::min(Min.z, _Vertices.back().z);
 
 				for (auto k = 0; k < Mesh->GetElementNormalCount(); ++k) {
 					_Normals.emplace_back(ToVec3(Mesh->GetElementNormal(k)->GetDirectArray().GetAt(i)));
 				}
 			}
 		}
+
+		const auto Bound = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
+		std::transform(begin(_Vertices), end(_Vertices), begin(_Vertices), [&](const glm::vec3& rhs) { return rhs / Bound; });
 	}
 #pragma endregion
 
@@ -68,10 +79,10 @@ public:
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 
 		{
-			//std::wstring Path;
-			//if (FindDirectory("FBX", Path)) {
-			//	Load(ToString(Path) + "//ALucy.FBX");
-			//}
+			std::wstring Path;
+			if (FindDirectory("FBX", Path)) {
+				Load(ToString(Path) + "//ALucy.FBX");
+			}
 			//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ConvertScene\\box.fbx"); 
 		}
 
@@ -79,13 +90,15 @@ public:
 		const auto& CB = CommandBuffers[0];
 
 #pragma region BLAS_GEOMETRY
-		constexpr std::array Vertices = { glm::vec3({ 0.0f, 0.5f, 0.0f }), glm::vec3({ -0.5f, -0.5f, 0.0f }), glm::vec3({ 0.5f, -0.5f, 0.0f }), };
+		//constexpr std::array Vertices = { glm::vec3({ 0.0f, 0.5f, 0.0f }), glm::vec3({ -0.5f, -0.5f, 0.0f }), glm::vec3({ 0.5f, -0.5f, 0.0f }), };
 		Scoped<BufferMemory> VertBuf(Device);
-		VertBuf.Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(Vertices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Vertices));
+		//VertBuf.Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(Vertices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Vertices));
+		VertBuf.Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(_Vertices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(_Vertices));
 
-		constexpr std::array Indices = { uint32_t(0), uint32_t(1), uint32_t(2) };
+		//constexpr std::array Indices = { uint32_t(0), uint32_t(1), uint32_t(2) };
 		Scoped<BufferMemory> IndBuf(Device);
-		IndBuf.Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(Indices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Indices));
+		//IndBuf.Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(Indices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Indices));
+		IndBuf.Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, sizeof(_Indices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(_Indices));
 
 		const std::vector ASGs_Blas = {
 			VkAccelerationStructureGeometryKHR({
@@ -97,7 +110,8 @@ public:
 						.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
 						.pNext = nullptr,
 						.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
-						.vertexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, VertBuf.Buffer)}), .vertexStride = sizeof(Vertices[0]), .maxVertex = static_cast<uint32_t>(size(Vertices)),
+						//.vertexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, VertBuf.Buffer)}), .vertexStride = sizeof(Vertices[0]), .maxVertex = static_cast<uint32_t>(size(Vertices)),
+						.vertexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, VertBuf.Buffer)}), .vertexStride = sizeof(_Vertices[0]), .maxVertex = static_cast<uint32_t>(size(_Vertices)),
 						.indexType = VK_INDEX_TYPE_UINT32,
 						.indexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, IndBuf.Buffer)}),
 						.transformData = VkDeviceOrHostAddressConstKHR({.deviceAddress = 0}),
