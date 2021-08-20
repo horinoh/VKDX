@@ -42,8 +42,8 @@ public:
 				}
 			}
 		}
-		const auto Bound = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 2.0f;
-		std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const glm::vec3& rhs) { return rhs / Bound - glm::vec3(0.0f, 0.0f, Min.z / Bound); });
+		const auto Bound = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
+		std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const glm::vec3& rhs) { return rhs / Bound - glm::vec3(0.0f, (Max.y - Min.y) * 0.5f, Min.z) / Bound; });
 
 		//for (auto i : Vertices) { std::cout << i.x << ", " << i.y << ", " << i.z << std::endl; }
 	}
@@ -61,8 +61,8 @@ public:
 	virtual void CreateGeometry() override {
 		std::wstring Path;
 		if (FindDirectory("FBX", Path)) {
-			//Load(ToString(Path) + "//bunny.FBX");
-			Load(ToString(Path) + "//dragon.FBX");
+			Load(ToString(Path) + "//bunny.FBX");
+			//Load(ToString(Path) + "//dragon.FBX");
 		}
 		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ConvertScene\\box.fbx");
 		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ViewScene\\humanoid.fbx"); 
@@ -70,13 +70,17 @@ public:
 		const auto& CB = CommandBuffers[0];
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 
-		VertexBuffers.emplace_back().Create(Device, PDMP, sizeof(Vertices[0]) * size(Vertices));
+		VertexBuffers.emplace_back().Create(Device, PDMP, Sizeof(Vertices));
 		VK::Scoped<StagingBuffer> Staging_Vertex(Device);
-		Staging_Vertex.Create(Device, PDMP, sizeof(Vertices[0]) * size(Vertices), data(Vertices));
+		Staging_Vertex.Create(Device, PDMP, Sizeof(Vertices), data(Vertices));
 
-		IndexBuffers.emplace_back().Create(Device, PDMP, sizeof(Indices[0]) * size(Indices));
+		VertexBuffers.emplace_back().Create(Device, PDMP, Sizeof(Normals));
+		VK::Scoped<StagingBuffer> Staging_Normal(Device);
+		Staging_Normal.Create(Device, PDMP, Sizeof(Normals), data(Normals));
+
+		IndexBuffers.emplace_back().Create(Device, PDMP, Sizeof(Indices));
 		VK::Scoped<StagingBuffer> Staging_Index(Device);
-		Staging_Index.Create(Device, PDMP, sizeof(Indices[0]) * size(Indices), data(Indices));
+		Staging_Index.Create(Device, PDMP, Sizeof(Indices), data(Indices));
 
 		const VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
@@ -85,8 +89,9 @@ public:
 
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-			VertexBuffers.back().PopulateCopyCommand(CB, sizeof(Vertices[0]) * size(Vertices), Staging_Vertex.Buffer);
-			IndexBuffers.back().PopulateCopyCommand(CB, sizeof(Indices[0]) * size(Indices), Staging_Index.Buffer);
+			VertexBuffers[0].PopulateCopyCommand(CB, Sizeof(Vertices), Staging_Vertex.Buffer);
+			VertexBuffers[1].PopulateCopyCommand(CB, Sizeof(Normals), Staging_Normal.Buffer);
+			IndexBuffers.back().PopulateCopyCommand(CB, Sizeof(Indices), Staging_Index.Buffer);
 			IndirectBuffers.back().PopulateCopyCommand(CB, sizeof(DIIC), Staging_Indirect.Buffer);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		VK::SubmitAndWait(GraphicsQueue, CB);
@@ -104,12 +109,29 @@ public:
 		};
 		const std::vector VIBDs = {
 			VkVertexInputBindingDescription({.binding = 0, .stride = sizeof(Vertices[0]), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
+			VkVertexInputBindingDescription({.binding = 1, .stride = sizeof(Normals[0]), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
 		};
 		const std::vector VIADs = {
+			//!< location = 0 ‚Í binding = 0
 			VkVertexInputAttributeDescription({.location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 }),
-			//VkVertexInputAttributeDescription({.location = 0, .binding = 1, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 }),
+			//!< location = 1 ‚Í binding = 1
+			VkVertexInputAttributeDescription({.location = 1, .binding = 1, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 }),
 		};
-		VKExt::CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, 0, VK_FALSE, VIBDs, VIADs, PSSCIs);
+
+		constexpr VkPipelineRasterizationStateCreateInfo PRSCI = {
+			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+			.pNext = nullptr,
+			.flags = 0,
+			.depthClampEnable = VK_FALSE,
+			.rasterizerDiscardEnable = VK_FALSE,
+			.polygonMode = VK_POLYGON_MODE_LINE,
+			//.polygonMode = VK_POLYGON_MODE_FILL,
+			.cullMode = VK_CULL_MODE_BACK_BIT,
+			.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+			.depthBiasEnable = VK_FALSE, .depthBiasConstantFactor = 0.0f, .depthBiasClamp = 0.0f, .depthBiasSlopeFactor = 0.0f,
+			.lineWidth = 1.0f
+		};
+		VKExt::CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, 0, PRSCI, VK_FALSE, VIBDs, VIADs, PSSCIs);
 
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
@@ -141,8 +163,10 @@ public:
 			vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
 
 			const std::array VBs = { VertexBuffers[0].Buffer };
+			const std::array NBs = { VertexBuffers[1].Buffer };
 			const std::array Offsets = { VkDeviceSize(0) };
 			vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(size(VBs)), data(VBs), data(Offsets));
+			vkCmdBindVertexBuffers(SCB, 1, static_cast<uint32_t>(size(NBs)), data(NBs), data(Offsets));
 			vkCmdBindIndexBuffer(SCB, IndexBuffers[0].Buffer, 0, VK_INDEX_TYPE_UINT32);
 
 			vkCmdDrawIndexedIndirect(SCB, IndirectBuffers[0].Buffer, 0, 1, 0);

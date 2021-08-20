@@ -1760,7 +1760,7 @@ void VK::CreatePipeline_(VkPipeline& PL,
 	VkPipelineCache PC)
 {
 	PERFORMANCE_COUNTER();
-
+	
 	//!< シェーダステージ (ShaderStage)
 	std::vector<VkPipelineShaderStageCreateInfo> PSSCIs;
 	if (nullptr != VS) { PSSCIs.emplace_back(*VS); }
@@ -1829,9 +1829,9 @@ void VK::CreatePipeline_(VkPipeline& PL,
 
 	//!< PRSCI
 	//!< FILL以外使用時には、デバイスフィーチャーfillModeNonSolidが有効であること
-	assert(PRSCI.polygonMode == VK_POLYGON_MODE_FILL && "");
+	//assert(PRSCI.polygonMode == VK_POLYGON_MODE_FILL || PDF.fillModeNonSolid && "");
 	//!< 1.0f より大きな値には、デバイスフィーチャーwidelines が有効であること
-	assert(PRSCI.lineWidth <= 1.0f&& "");
+	//assert(PRSCI.lineWidth <= 1.0f || PDF.wideLines && "");
 
 	//!< マルチサンプル (Multisample)
 	constexpr VkSampleMask SM = 0xffffffff; //!< 0xffffffff を指定する場合は、代わりに nullptr でもよい

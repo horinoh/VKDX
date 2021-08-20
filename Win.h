@@ -45,7 +45,6 @@
 
 #define ALWAYS_REBUILD_PIPELINE
 
-#include <vector>
 #include <array>
 #include <ranges>
 #include <algorithm>

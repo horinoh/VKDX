@@ -16,22 +16,36 @@ public:
 
 #pragma region FBX
 	DirectX::XMFLOAT3 ToFloat3(const FbxVector4& rhs) { return DirectX::XMFLOAT3(static_cast<FLOAT>(rhs[0]), static_cast<FLOAT>(rhs[1]), static_cast<FLOAT>(rhs[2])); }
-	std::vector<UINT32> _Indices;
-	std::vector<DirectX::XMFLOAT3> _Vertices;
-	std::vector<DirectX::XMFLOAT3> _Normals;
+	std::vector<UINT32> Indices;
+	std::vector<DirectX::XMFLOAT3> Vertices;
+	std::vector<DirectX::XMFLOAT3> Normals;
 	virtual void Process(FbxMesh* Mesh) override {
+		Fbx::Process(Mesh);
+
+		auto Max = DirectX::XMFLOAT3((std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)());
+		auto Min = DirectX::XMFLOAT3((std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)());
 		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
 		for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
 			for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
-				_Indices.emplace_back(i * Mesh->GetPolygonSize(i) + j);
+				Indices.emplace_back(i * Mesh->GetPolygonSize(i) + j);
 
-				_Vertices.emplace_back(ToFloat3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
+				Vertices.emplace_back(ToFloat3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
+				Max.x = std::max(Max.x, Vertices.back().x);
+				Max.y = std::max(Max.y, Vertices.back().y);
+				Max.z = std::max(Max.z, Vertices.back().z);
+				Min.x = std::min(Min.x, Vertices.back().x);
+				Min.y = std::min(Min.y, Vertices.back().y);
+				Min.z = std::min(Min.z, Vertices.back().z);
 
 				for (auto k = 0; k < Mesh->GetElementNormalCount(); ++k) {
-					_Normals.emplace_back(ToFloat3(Mesh->GetElementNormal(k)->GetDirectArray().GetAt(i)));
+					Normals.emplace_back(ToFloat3(Mesh->GetElementNormal(k)->GetDirectArray().GetAt(i)));
 				}
 			}
 		}
+		const auto Bound = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
+		std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Bound, (rhs.y - (Max.y - Min.y) * 0.5f) / Bound, (rhs.z - Min.z) / Bound); });
+
+		//for (auto i : Vertices) { std::cout << i.x << ", " << i.y << ", " << i.z << std::endl; }
 	}
 #pragma endregion
 
@@ -39,13 +53,12 @@ public:
 	virtual void CreateGeometry() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
-		{
-			//std::wstring Path;
-			//if (FindDirectory("FBX", Path)) {
-			//	Load(ToString(Path) + "//ALucy.FBX");
-			//}
-			//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ConvertScene\\box.fbx");
+		std::wstring Path;
+		if (FindDirectory("FBX", Path)) {
+			//Load(ToString(Path) + "//bunny.FBX");
+			Load(ToString(Path) + "//dragon.FBX");
 		}
+		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ConvertScene\\box.fbx");
 
 		COM_PTR<ID3D12Device5> Device5;
 		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
@@ -56,14 +69,10 @@ public:
 
 #pragma region BLAS_INPUT
 		ResourceBase VertBuf;
-		constexpr std::array Vertices = { DirectX::XMFLOAT3({ 0.0f, 0.5f, 0.0f }), DirectX::XMFLOAT3({ -0.5f, -0.5f, 0.0f }), DirectX::XMFLOAT3({ 0.5f, -0.5f, 0.0f }), };
-		VertBuf.Create(COM_PTR_GET(Device), sizeof(Vertices), D3D12_HEAP_TYPE_UPLOAD, data(Vertices));
-		//VertBuf.Create(COM_PTR_GET(Device), sizeof(_Vertices), D3D12_HEAP_TYPE_UPLOAD, data(_Vertices));
+		VertBuf.Create(COM_PTR_GET(Device), Sizeof(Vertices), D3D12_HEAP_TYPE_UPLOAD, data(Vertices));
 
 		ResourceBase IndBuf;
-		constexpr std::array Indices = { UINT32(0), UINT32(1), UINT32(2) };
-		IndBuf.Create(COM_PTR_GET(Device), sizeof(Indices), D3D12_HEAP_TYPE_UPLOAD, data(Indices));
-		//IndBuf.Create(COM_PTR_GET(Device), sizeof(_Indices), D3D12_HEAP_TYPE_UPLOAD, data(_Indices));
+		IndBuf.Create(COM_PTR_GET(Device), Sizeof(Indices), D3D12_HEAP_TYPE_UPLOAD, data(Indices));
 
 		const std::array RGDs = {
 			D3D12_RAYTRACING_GEOMETRY_DESC({
@@ -74,12 +83,9 @@ public:
 					.IndexFormat = DXGI_FORMAT_R32_UINT,
 					.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT,
 					.IndexCount = static_cast<UINT>(size(Indices)),
-					//.IndexCount = static_cast<UINT>(size(_Indices)),
 					.VertexCount = static_cast<UINT>(size(Vertices)),
-					//.VertexCount = static_cast<UINT>(size(_Vertices)),
 					.IndexBuffer = IndBuf.Resource->GetGPUVirtualAddress(),
 					.VertexBuffer = D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE({.StartAddress = VertBuf.Resource->GetGPUVirtualAddress(), .StrideInBytes = sizeof(Vertices[0]) }),
-					//.VertexBuffer = D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE({.StartAddress = VertBuf.Resource->GetGPUVirtualAddress(), .StrideInBytes = sizeof(_Vertices[0]) }),
 				})
 			}),
 		};

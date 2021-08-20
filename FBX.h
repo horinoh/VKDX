@@ -50,6 +50,8 @@ public:
 
 	virtual void Process(FbxMesh* Mesh) {
 		if (nullptr != Mesh) {
+			Mesh->GenerateNormals();
+
 #pragma region POLYGON
 			for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
 				if (i > 8) { Tabs(); std::cout << "..." << std::endl; return; }

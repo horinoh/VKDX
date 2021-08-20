@@ -1,6 +1,6 @@
 #include "DXExt.h"
 
-void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 2>& SBCs)
+void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE PTT, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 2>& SBCs)
 {
 	//!< ブレンド (Blend)
 	//!< 例) 
@@ -15,14 +15,6 @@ void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE P
 			.LogicOp = D3D12_LOGIC_OP_NOOP, //!< 論理演算
 			.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL, //!< 書き込み時のマスク値
 		}),
-	};
-	constexpr D3D12_RASTERIZER_DESC RD = {
-		.FillMode = D3D12_FILL_MODE_SOLID,
-		.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
-		.DepthBias = D3D12_DEFAULT_DEPTH_BIAS, .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP, .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, 
-		.DepthClipEnable = TRUE,
-		.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
-		.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 	};
 	constexpr D3D12_DEPTH_STENCILOP_DESC DSOD = {
 		.StencilFailOp = D3D12_STENCIL_OP_KEEP,			//!< ステンシルテスト失敗時
@@ -50,7 +42,7 @@ void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE P
 	for (auto& i : Threads) { i.join(); }
 }
 
-void DXExt::CreatePipelineState_VsPsDsHsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 5>& SBCs)
+void DXExt::CreatePipelineState_VsPsDsHsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE Topology, const D3D12_RASTERIZER_DESC& RD, const BOOL DepthEnable, const std::vector<D3D12_INPUT_ELEMENT_DESC>& IEDs, const std::array<D3D12_SHADER_BYTECODE, 5>& SBCs)
 {
 	const std::vector RTBDs = {
 		D3D12_RENDER_TARGET_BLEND_DESC({
@@ -60,14 +52,6 @@ void DXExt::CreatePipelineState_VsPsDsHsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_
 			.LogicOp = D3D12_LOGIC_OP_NOOP,
 			.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL,
 		}),
-	};
-	constexpr D3D12_RASTERIZER_DESC RD = {
-		.FillMode = D3D12_FILL_MODE_SOLID,
-		.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
-		.DepthBias = D3D12_DEFAULT_DEPTH_BIAS, .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP, .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS, 
-		.DepthClipEnable = TRUE,
-		.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
-		.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 	};
 	constexpr D3D12_DEPTH_STENCILOP_DESC DSOD = {
 		.StencilFailOp = D3D12_STENCIL_OP_KEEP, 

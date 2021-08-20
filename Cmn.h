@@ -17,10 +17,14 @@
 #endif
 #endif
 
+#include <vector>
+
 class Cmn
 {
 public:
 	static constexpr size_t RoundUpMask(const size_t Size, const size_t Mask) { return (Size + Mask) & ~Mask; }
 	static constexpr size_t RoundUp(const size_t Size, const size_t Align) { return RoundUpMask(Size, Align - 1); }
 	static constexpr size_t RoundUp256(const size_t Size) { return RoundUpMask(Size, 0xff); }
+
+	template<typename T> static constexpr size_t Sizeof(const std::vector<T>& rhs) { return sizeof(T) * size(rhs); }
 };
