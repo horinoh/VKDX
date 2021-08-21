@@ -274,9 +274,10 @@ void ToonDX::PopulateCommandList(const size_t i)
 				const auto& DH = CbvSrvUavDescriptorHeaps[0];
 				const std::array DHs = { COM_PTR_GET(DH) };
 				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
 #pragma region FRAME_OBJECT
-                GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
+				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
 				GCL->SetGraphicsRootDescriptorTable(0, GDH);
 #pragma endregion
 			}

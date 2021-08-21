@@ -83,9 +83,6 @@
     <CustomBuild Include="RayTracingVK.rahit">
       <Filter>Shader Files</Filter>
     </CustomBuild>
-    <CustomBuild Include="RayTracingVK.rcall">
-      <Filter>Shader Files</Filter>
-    </CustomBuild>
     <CustomBuild Include="RayTracingVK.rchit">
       <Filter>Shader Files</Filter>
     </CustomBuild>
@@ -96,15 +93,6 @@
       <Filter>Shader Files</Filter>
     </CustomBuild>
     <CustomBuild Include="RayTracingVK.rmiss">
-      <Filter>Shader Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="RayTracingVK_1.rcall">
-      <Filter>Shader Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="RayTracingVK_2.rcall">
-      <Filter>Shader Files</Filter>
-    </CustomBuild>
-    <CustomBuild Include="RayTracingVK_1.rchit">
       <Filter>Shader Files</Filter>
     </CustomBuild>
   </ItemGroup>

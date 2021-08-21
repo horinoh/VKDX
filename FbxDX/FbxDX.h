@@ -34,8 +34,8 @@ public:
 				Min.y = std::min(Min.y, Vertices.back().y);
 				Min.z = std::min(Min.z, Vertices.back().z);
 
-				for (auto k = 0; k < Mesh->GetElementNormalCount(); ++k) {
-					Normals.emplace_back(ToFloat3(Mesh->GetElementNormal(k)->GetDirectArray().GetAt(i)));
+				if (0 < Mesh->GetElementNormalCount()) {
+					Normals.emplace_back(ToFloat3(Mesh->GetElementNormal(0)->GetDirectArray().GetAt(i)));
 				}
 			}
 		}

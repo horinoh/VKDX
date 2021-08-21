@@ -6,6 +6,14 @@ struct Payload
 RaytracingAccelerationStructure TLAS : register(t0);
 RWTexture2D<float4> RenderTarget : register(u0);
 
+struct Transform {
+    float4x4 Projection;
+    float4x4 View;
+    float4x4 InvProjection;
+    float4x4 InvView;
+};
+ConstantBuffer<Transform> CB : register(b0);
+
 [shader("raygeneration")]
 void OnRayGeneration()
 {

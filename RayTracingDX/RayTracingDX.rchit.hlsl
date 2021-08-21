@@ -5,23 +5,20 @@ struct Payload
 {
     float3 Color;
 };
-struct CallableDataIn
-{
-    float3 CallableData;
-};
+//RaytracingAccelerationStructure TLAS : register(t0);
 
 [shader("closesthit")]
 void OnClosestHit(inout Payload Pay, in BuiltInTriangleIntersectionAttributes BITIA)
 {
     Pay.Color = float3(1.0f - BITIA.barycentrics.x - BITIA.barycentrics.y, BITIA.barycentrics.x, BITIA.barycentrics.y);
 
-    CallableDataIn Data; Data.CallableData = float3(0.0f, 0.0f, 0.0f);
-
-    //!< GeometryIndex() : BLAS ì¬Žž‚Ì D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS.NumDescs
-    //CallShader(GeometryIndex(), Data);
-    
-    //!< InstanceID() : TLAS ì¬Žž‚Ì D3D12_RAYTRACING_INSTANCE_DESC.InstanceID
-    CallShader(InstanceID(), Data);
-
-    Pay.Color = Data.CallableData * float3(1.0f, 0.0f, 0.0f);
+    //Payload Pay1;
+    //Pay1.Color = float3(0.0f, 0.0f, 0.0f);
+    //RayDesc Ray;
+    //Ray.TMin = 0.001f;
+    //Ray.TMax = 100000.0f;
+    //Ray.Origin = mul(float4(CD.Position, 1.0f), ObjectToWorld4x3());
+    //Ray.Direction = reflect(WorldRayDirection(), mul(CD.Normal, (float3x3)ObjectToWorld4x3()));
+    //TraceRay(TLAS, RAY_FLAG_NONE, 0xff, 0, 1, 0, Ray, Pay1);
+    //Pay.Color = Pay1.Color;
 }

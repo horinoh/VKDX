@@ -1,8 +1,8 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
 
+//layout(binding = 0, set = 0) uniform accelerationStructureEXT TLAS;
 layout(location = 0) rayPayloadInEXT vec3 Payload;
-layout(location = 0) callableDataEXT vec3 CallableData;
 hitAttributeEXT vec2 HitAttr;
 
 //!< ShaderRecordBuffer ‚Ì—á
@@ -14,11 +14,10 @@ void main()
 {
 	Payload = vec3(1.0f - HitAttr.x - HitAttr.y, HitAttr.x, HitAttr.y);
 
-	//!< gl_GeometryIndexEXT : BLAS ì¬Žž‚Ì VkAccelerationStructureBuildGeometryInfoKHR.geometryCount
-	//executeCallableEXT(gl_GeometryIndexEXT, 0);
-
-	//!< gl_InstanceCustomIndexEXT : TLAS ì¬Žž‚Ì VkAccelerationStructureInstanceKHR.instanceCustomIndex 
-	executeCallableEXT(gl_InstanceCustomIndexEXT, 0);
-
-	Payload = CallableData * vec3(1.0f, 0.0f, 0.0f);
+//	  Payload1 = vec3(0.0f);
+//    const float TMin = 0.001f;
+//    const float TMax = 100000.0f;
+//    const vec3 Origin = mul(float4(CD.Position, 1.0f), ObjectToWorld4x3());
+//    const vec3 Direction = reflect(WorldRayDirection(), mul(CD.Normal, (float3x3)ObjectToWorld4x3()));
+//    traceRayEXT(TLAS, gl_RayFlagsNoneEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
 }
