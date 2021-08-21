@@ -27,8 +27,13 @@ void OnRayGeneration()
     RayDesc Ray;
     Ray.TMin = 0.001f; //!< float ƒGƒ‰[‘Îô ”ñ 0.0f ‚Ì¬‚³‚È’l‚É‚·‚é
     Ray.TMax = 100000.0f;
+#if 1
     Ray.Origin = float3(UpY, -1.0f);
     Ray.Direction = float3(0.0f, 0.0f, 1.0f);
+#else
+    Ray.Origin = mul(CB.InvView, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+    Ray.Direction = normalize(mul(CB.InvView, float4(mul(CB.InvProjection, float4(UpY, 1.0f, 1.0f)).xyz, 0)).xyz);
+#endif
 
     //TraceRay(TLAS, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xff, 0, 1, 0, Ray, Pay);
     TraceRay(TLAS, RAY_FLAG_NONE, 0xff, 0, 1, 0, Ray, Pay);

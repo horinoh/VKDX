@@ -197,10 +197,8 @@ public:
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		const auto Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
 		const auto View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
-		auto DetProjection = DirectX::XMMatrixDeterminant(Projection);
-		const auto InvProjection = DirectX::XMMatrixInverse(&DetProjection, Projection);
-		auto DetView = DirectX::XMMatrixDeterminant(View);
-		const auto InvView = DirectX::XMMatrixInverse(&DetView, View);
+		const auto InvProjection = DirectX::XMMatrixInverse(nullptr, Projection);
+		const auto InvView = DirectX::XMMatrixInverse(nullptr, View);
 		DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
 		DirectX::XMStoreFloat4x4(&Tr.View, View);
 		DirectX::XMStoreFloat4x4(&Tr.InvProjection, InvProjection);

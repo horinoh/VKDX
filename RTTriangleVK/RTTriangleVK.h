@@ -94,7 +94,7 @@ public:
 			.geometryCount = static_cast<uint32_t>(size(ASGs_Blas)),.pGeometries = data(ASGs_Blas), .ppGeometries = nullptr, //!< ジオメトリを指定
 			.scratchData = VkDeviceOrHostAddressKHR({.deviceAddress = 0})
 		};
-		constexpr auto ASBRI_Blas = VkAccelerationStructureBuildRangeInfoKHR({ .primitiveCount = 1, .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0 });
+		constexpr auto ASBRI_Blas = VkAccelerationStructureBuildRangeInfoKHR({ .primitiveCount = static_cast<uint32_t>(size(Indices) / 3), .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0 });
 
 		Scoped<ScratchBuffer> Scratch_Blas(Device);
 		{
