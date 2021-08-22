@@ -18,13 +18,14 @@ public:
 	std::vector<DirectX::XMFLOAT3> Normals;
 	virtual void Process(FbxMesh* Mesh) override {
 		Fbx::Process(Mesh);
-
+		
 		auto Max = DirectX::XMFLOAT3((std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)());
 		auto Min = DirectX::XMFLOAT3((std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)());
 		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
 		for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
 			for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
-				Indices.emplace_back(i * Mesh->GetPolygonSize(i) + j);
+				Indices.emplace_back(i * Mesh->GetPolygonSize(i) + j); //!< RH
+				//Indices.emplace_back(i * Mesh->GetPolygonSize(i) + Mesh->GetPolygonSize(i) - j - 1); //!< LH
 
 				Vertices.emplace_back(ToFloat3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
 				Max.x = std::max(Max.x, Vertices.back().x);
@@ -34,13 +35,26 @@ public:
 				Min.y = std::min(Min.y, Vertices.back().y);
 				Min.z = std::min(Min.z, Vertices.back().z);
 
-				if (0 < Mesh->GetElementNormalCount()) {
-					Normals.emplace_back(ToFloat3(Mesh->GetElementNormal(0)->GetDirectArray().GetAt(i)));
-				}
+				//if (0 < Mesh->GetElementNormalCount()) {
+				//	Normals.emplace_back(ToFloat3(Mesh->GetElementNormal(0)->GetDirectArray().GetAt(i)));
+				//}
 			}
 		}
 		const auto Bound = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
 		std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Bound, (rhs.y - (Max.y - Min.y) * 0.5f)/ Bound, (rhs.z - Min.z) / Bound); });
+
+		FbxArray<FbxVector4> Nrms;
+		Mesh->GetPolygonVertexNormals(Nrms);
+		for (auto i = 0; i < Nrms.Size(); ++i) {
+			Normals.emplace_back(ToFloat3(Nrms[i]));
+		}
+
+		FbxStringList UVSetNames;
+		Mesh->GetUVSetNames(UVSetNames);
+		for (auto i = 0; i < UVSetNames.GetCount();++i) {
+			FbxArray<FbxVector2> UVs;
+			Mesh->GetPolygonVertexUVs(UVSetNames.GetStringAt(i), UVs);
+		}
 
 		//for (auto i : Vertices) { std::cout << i.x << ", " << i.y << ", " << i.z << std::endl; }
 	}
@@ -80,11 +94,14 @@ public:
 
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 			VertexBuffers[0].PopulateCopyCommand(GCL, Sizeof(Vertices), COM_PTR_GET(Upload_Vertex.Resource));
-			VertexBuffers[1].PopulateCopyCommand(GCL, Sizeof(Normals), COM_PTR_GET(Upload_Vertex.Resource));
+			VertexBuffers[1].PopulateCopyCommand(GCL, Sizeof(Normals), COM_PTR_GET(Upload_Normal.Resource));
 			IndexBuffers.back().PopulateCopyCommand(GCL, Sizeof(Indices), COM_PTR_GET(Upload_Index.Resource));
 			IndirectBuffers.back().PopulateCopyCommand(GCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
 		} VERIFY_SUCCEEDED(GCL->Close());
 		DX::ExecuteAndWait(CQ, GCL, COM_PTR_GET(Fence));
+	}
+	virtual void CreateTexture() override {
+		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
 	}
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
@@ -107,15 +124,24 @@ public:
 		};
 
 		constexpr D3D12_RASTERIZER_DESC RD = {
-			.FillMode = D3D12_FILL_MODE_WIREFRAME,
-			//.FillMode = D3D12_FILL_MODE_SOLID,
+			//.FillMode = D3D12_FILL_MODE_WIREFRAME,
+			.FillMode = D3D12_FILL_MODE_SOLID,
 			.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
 			.DepthBias = D3D12_DEFAULT_DEPTH_BIAS, .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP, .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
 			.DepthClipEnable = TRUE,
 			.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
 			.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 		};
-		DXExt::CreatePipelineState_VsPs_Input(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD, FALSE, IEDs, SBCs);
+		DXExt::CreatePipelineState_VsPs_Input(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD, TRUE, IEDs, SBCs);
+	}
+	virtual void CreateDescriptorHeap() override {
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
+	}
+	virtual void CreateDescriptorView() override {
+		const auto& DH = DsvDescriptorHeaps[0];
+		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+		Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 	}
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
@@ -152,9 +178,11 @@ public:
 
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
 				GCL->ClearRenderTargetView(SCCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				const auto DCDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+				GCL->ClearDepthStencilView(DCDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 
 				const std::array RTCDHs = { SCCDH };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, nullptr);
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, &DCDH);
 
 				GCL->ExecuteBundle(BGCL);
 			}

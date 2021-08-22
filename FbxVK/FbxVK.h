@@ -27,7 +27,8 @@ public:
 		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
 		for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
 			for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
-				Indices.emplace_back(i * Mesh->GetPolygonSize(i) + j);
+				Indices.emplace_back(i * Mesh->GetPolygonSize(i) + j); //!< RH
+				//Indices.emplace_back(i * Mesh->GetPolygonSize(i) + Mesh->GetPolygonSize(i) - j - 1); //!< LH
 
 				Vertices.emplace_back(ToVec3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
 				Max.x = std::max(Max.x, Vertices.back().x);
@@ -37,13 +38,26 @@ public:
 				Min.y = std::min(Min.y, Vertices.back().y);
 				Min.z = std::min(Min.z, Vertices.back().z);
 
-				if (0 < Mesh->GetElementNormalCount()) {
-					Normals.emplace_back(ToVec3(Mesh->GetElementNormal(0)->GetDirectArray().GetAt(i)));
-				}
+				//if (0 < Mesh->GetElementNormalCount()) {
+				//	Normals.emplace_back(ToVec3(Mesh->GetElementNormal(0)->GetDirectArray().GetAt(i)));
+				//}
 			}
 		}
 		const auto Bound = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
 		std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const glm::vec3& rhs) { return rhs / Bound - glm::vec3(0.0f, (Max.y - Min.y) * 0.5f, Min.z) / Bound; });
+
+		FbxArray<FbxVector4> Nrms;
+		Mesh->GetPolygonVertexNormals(Nrms);
+		for (auto i = 0; i < Nrms.Size(); ++i) {
+			Normals.emplace_back(ToVec3(Nrms[i]));
+		}
+
+		FbxStringList UVSetNames;
+		Mesh->GetUVSetNames(UVSetNames);
+		for (auto i = 0; i < UVSetNames.GetCount(); ++i) {
+			FbxArray<FbxVector2> UVs;
+			Mesh->GetPolygonVertexUVs(UVSetNames.GetStringAt(i), UVs);
+		}
 
 		//for (auto i : Vertices) { std::cout << i.x << ", " << i.y << ", " << i.z << std::endl; }
 	}
@@ -96,7 +110,10 @@ public:
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		VK::SubmitAndWait(GraphicsQueue, CB);
 	}
-	virtual void CreateRenderPass() override { VKExt::CreateRenderPass_Clear(); }
+	virtual void CreateTexture() override {
+		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
+	}
+	virtual void CreateRenderPass() override { VKExt::CreateRenderPass_Depth(); }
 	virtual void CreatePipeline() override {
 		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
@@ -124,16 +141,21 @@ public:
 			.flags = 0,
 			.depthClampEnable = VK_FALSE,
 			.rasterizerDiscardEnable = VK_FALSE,
-			.polygonMode = VK_POLYGON_MODE_LINE,
-			//.polygonMode = VK_POLYGON_MODE_FILL,
+			//.polygonMode = VK_POLYGON_MODE_LINE,
+			.polygonMode = VK_POLYGON_MODE_FILL,
 			.cullMode = VK_CULL_MODE_BACK_BIT,
 			.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
 			.depthBiasEnable = VK_FALSE, .depthBiasConstantFactor = 0.0f, .depthBiasClamp = 0.0f, .depthBiasSlopeFactor = 0.0f,
 			.lineWidth = 1.0f
 		};
-		VKExt::CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, 0, PRSCI, VK_FALSE, VIBDs, VIADs, PSSCIs);
+		VKExt::CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, 0, PRSCI, VK_TRUE, VIBDs, VIADs, PSSCIs);
 
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
+	}
+	virtual void CreateFramebuffer() override {
+		for (auto i : SwapchainImageViews) {
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DepthTextures.back().View });
+		}
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override {
 		const auto RP = RenderPasses[0];
@@ -181,7 +203,7 @@ public:
 			.pInheritanceInfo = nullptr
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-			constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
+			constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 			const VkRenderPassBeginInfo RPBI = {
 				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 				.pNext = nullptr,

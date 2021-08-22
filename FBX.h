@@ -52,6 +52,8 @@ public:
 		if (nullptr != Mesh) {
 			Mesh->GenerateNormals();
 
+			Tabs(); std::cout << (Mesh->CheckIfVertexNormalsCCW() ? "CCW" : "CW") << std::endl;
+
 #pragma region POLYGON
 			for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
 				if (i > 8) { Tabs(); std::cout << "..." << std::endl; return; }
@@ -877,9 +879,7 @@ public:
 
 			//!< y’PˆÊzm (ƒ[ƒgƒ‹)
 			FbxSystemUnit::m.ConvertScene(Scn);
-
-			if (FbxGeometryConverter(Manager).Triangulate(Scn, true)) {
-			}
+			if (FbxGeometryConverter(Manager).Triangulate(Scn, true)) {}
 		}
 	}
 
