@@ -298,49 +298,47 @@ public:
 		COM_PTR<ID3D12StateObjectProperties> SOP;
 		VERIFY_SUCCEEDED(StateObjects.back()->QueryInterface(COM_PTR_UUIDOF_PUTVOID(SOP)));
 
-		constexpr auto RgenRecordSize = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
-		constexpr auto RgenTableSize = 1 * RgenRecordSize;
+		constexpr auto RgenStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		constexpr auto RgenSize = 1 * RgenStride;
 
-		constexpr auto MissRecordSize = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
-		constexpr auto MissTableSize = 1 * MissRecordSize;
+		constexpr auto MissStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		constexpr auto MissSize = 1 * MissStride;
 
 #pragma region HIT
-		constexpr auto HitGroupCount = 2;
-		constexpr auto RchitRecordSize = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
-		constexpr auto RchitTableSize = HitGroupCount * RchitRecordSize;
+		constexpr auto RchitStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		constexpr auto RchitSize = 2 * RchitStride;
 #pragma endregion
 
 #pragma region CALLABLE
-		constexpr auto CallableCount = 3;
-		constexpr auto RcallRecordSize = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
-		constexpr auto RcallTableSize = CallableCount * RcallRecordSize;
+		constexpr auto RcallStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		constexpr auto RcallSize = 3 * RcallStride;
 #pragma endregion
 
-		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RgenTableSize); {
+		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RgenSize, RgenStride); {
 			auto Data = ShaderTables.back().Map(); {
 				std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("OnRayGeneration")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 			} ShaderTables.back().Unmap();
 		}
-		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), MissTableSize); {
+		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), MissSize, MissStride); {
 			auto Data = ShaderTables.back().Map(); {
 				std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("OnMiss")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 			} ShaderTables.back().Unmap();
 		}
 #pragma region HIT
-		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RchitTableSize); {
+		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RchitSize, RchitStride); {
 			auto Data = ShaderTables.back().Map(); {
 				std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("HitGroup")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-				std::memcpy(Data + RchitRecordSize, SOP->GetShaderIdentifier(TEXT("HitGroup_1")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+				std::memcpy(Data + RchitStride, SOP->GetShaderIdentifier(TEXT("HitGroup_1")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 			} ShaderTables.back().Unmap();
 		}
 #pragma endregion
 
 #pragma region CALLABLE
-		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RcallTableSize); {
+		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RcallSize, RcallStride); {
 			auto Data = ShaderTables.back().Map(); {
 				std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("OnCallable")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-				std::memcpy(Data + RcallRecordSize, SOP->GetShaderIdentifier(TEXT("OnCallable_1")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-				std::memcpy(Data + RcallRecordSize + RcallRecordSize, SOP->GetShaderIdentifier(TEXT("OnCallable_2")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+				std::memcpy(Data + RcallStride, SOP->GetShaderIdentifier(TEXT("OnCallable_1")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+				std::memcpy(Data + RcallStride + RcallStride, SOP->GetShaderIdentifier(TEXT("OnCallable_2")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 			} ShaderTables.back().Unmap();
 		}
 #pragma endregion
@@ -382,34 +380,18 @@ public:
 			COM_PTR<ID3D12GraphicsCommandList4> GCL4;
 			VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
 			GCL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
-			constexpr auto HitGroupCount = 2;
-			constexpr auto CallableCount = 3;
+
 			const auto DRD = D3D12_DISPATCH_RAYS_DESC({
-			  .RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({
-					.StartAddress = ShaderTables[0].Resource->GetGPUVirtualAddress(),
-					.SizeInBytes = ShaderTables[0].Resource->GetDesc().Width
-				 }),
-			  .MissShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({
-					.StartAddress = ShaderTables[1].Resource->GetGPUVirtualAddress(),
-					.SizeInBytes = ShaderTables[1].Resource->GetDesc().Width,
-					.StrideInBytes = 0 //!< 1つしかないのでストライドは 0 でも良い
-				}),
+			  .RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({ .StartAddress = ShaderTables[0].Range.StartAddress, .SizeInBytes = ShaderTables[0].Range.SizeInBytes }),
+			  .MissShaderTable = ShaderTables[1].Range,
 #pragma region HIT
-			  .HitGroupTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({
-					.StartAddress = ShaderTables[2].Resource->GetGPUVirtualAddress(),
-					.SizeInBytes = ShaderTables[2].Resource->GetDesc().Width,
-					.StrideInBytes = ShaderTables[2].Resource->GetDesc().Width / HitGroupCount
-				}),
+			  .HitGroupTable = ShaderTables[2].Range,
 #pragma endregion
 #pragma region CALLABLE
-			  .CallableShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({
-					.StartAddress = ShaderTables[3].Resource->GetGPUVirtualAddress(),
-					.SizeInBytes = ShaderTables[3].Resource->GetDesc().Width,
-					.StrideInBytes = ShaderTables[3].Resource->GetDesc().Width / CallableCount
-				}),
+			  .CallableShaderTable = ShaderTables[3].Range,
 #pragma endregion
 			  .Width = static_cast<UINT>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()), .Depth = 1
-				});
+			});
 			GCL4->DispatchRays(&DRD);
 
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);

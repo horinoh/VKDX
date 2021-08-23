@@ -872,13 +872,18 @@ public:
 
 	virtual void Convert(FbxScene* Scn) {
 		if (nullptr != Scn) {
-			//!< yOpenGLzRight Hand
-			FbxAxisSystem::OpenGL.ConvertScene(Scn);
-			//!< yDirectXzLeft Hand
-			//FbxAxisSystem::DirectX.ConvertScene(Scn);
+			//!< ƒm[ƒh‚Ìƒgƒ‰ƒ“ƒXƒtƒH[ƒ€‚É‰e‹¿‚·‚éA’¸“_“™‚É‚Í‰e‹¿‚µ‚È‚¢
+			{
+				//!< yOpenGLzRH
+				FbxAxisSystem::OpenGL.ConvertScene(Scn);
+				//!< yDirectXzLH
+				//FbxAxisSystem::DirectX.ConvertScene(Scn);
+			}
 
 			//!< y’PˆÊzm (ƒ[ƒgƒ‹)
 			FbxSystemUnit::m.ConvertScene(Scn);
+
+			//!< ŽOŠpŒ`ƒ|ƒŠƒSƒ“‰»
 			if (FbxGeometryConverter(Manager).Triangulate(Scn, true)) {}
 		}
 	}
@@ -890,7 +895,6 @@ public:
 				if (Importer->Initialize(data(Path), -1, Manager->GetIOSettings())) {
 					Scene = FbxScene::Create(Manager, "");
 					if (Importer->Import(Scene)) {
-						
 						Convert(Scene);
 
 						int Major, Minor, Revision;

@@ -53,13 +53,16 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< フレームバッファ相当は存在しない
 
-	//!< デスクリプタヒープ
-	CreateDescriptorHeap();
-	//!< サンプラ ... デスクリプタが必要
-	CreateSampler();
-
-	//!< デスクリプタビュー ... この時点でリソース、デスクリプタヒープ等が必要
-	CreateDescriptorView();
+	//!< デスクリプタ
+	CreateDescriptor();
+	{
+		//!< デスクリプタヒープ
+		CreateDescriptorHeap();
+		//!< サンプラ ... デスクリプタが必要
+		//CreateSampler();
+		//!< デスクリプタビュー ... この時点でリソース、デスクリプタヒープ等が必要
+		CreateDescriptorView();
+	}
 
 	SetTimer(hWnd, NULL, Elapse, nullptr);
 

@@ -359,36 +359,35 @@ public:
 		VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
 		vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
 
-		const auto RgenRecordSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
-		const auto RgenTableSize = 1 * RgenRecordSize;
+		const auto RgenStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
+		const auto RgenSize = 1 * RgenStride;
 
-		const auto MissRecordSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
-		const auto MissTableSize = 1 * MissRecordSize;
+		const auto MissStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
+		const auto MissSize = 1 * MissStride;
 
 #pragma region HIT
-		constexpr auto HitCount = 1;
-		const auto RchitRecordSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
-		const auto RchitTableSize = HitCount * RchitRecordSize;
+		const auto RchitStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
+		const auto RchitSize = 1 * RchitStride;
 #pragma endregion
 
-		std::vector<std::byte> HandleData(RgenTableSize + MissTableSize + RchitTableSize);
-		VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, 2 + HitCount, size(HandleData), data(HandleData)));
+		std::vector<std::byte> HandleData(RgenSize + MissSize + RchitSize);
+		VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, 1 + 1 + 1, size(HandleData), data(HandleData)));
 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-		ShaderBindingTables.emplace_back().Create(Device, PDMP, RgenTableSize); {
+		ShaderBindingTables.emplace_back().Create(Device, PDMP, RgenSize, RgenStride); {
 			auto Data = ShaderBindingTables.back().Map(Device); {
 				std::memcpy(Data, data(HandleData), PDRTPP.shaderGroupHandleSize);
 			} ShaderBindingTables.back().Unmap(Device);
 		}
-		ShaderBindingTables.emplace_back().Create(Device, PDMP, MissTableSize); {
+		ShaderBindingTables.emplace_back().Create(Device, PDMP, MissSize, MissStride); {
 			auto Data = ShaderBindingTables.back().Map(Device); {
-				std::memcpy(Data, data(HandleData) + RgenTableSize, PDRTPP.shaderGroupHandleSize);
+				std::memcpy(Data, data(HandleData) + RgenSize, PDRTPP.shaderGroupHandleSize);
 			} ShaderBindingTables.back().Unmap(Device);
 		}
 #pragma region HIT
-		ShaderBindingTables.emplace_back().Create(Device, PDMP, RchitTableSize); {
+		ShaderBindingTables.emplace_back().Create(Device, PDMP, RchitSize, RchitStride); {
 			auto Data = ShaderBindingTables.back().Map(Device); {
-				std::memcpy(Data, data(HandleData) + RgenTableSize + MissTableSize, PDRTPP.shaderGroupHandleSize * HitCount);
+				std::memcpy(Data, data(HandleData) + RgenSize + MissSize, PDRTPP.shaderGroupHandleSize);
 			} ShaderBindingTables.back().Unmap(Device);
 		}
 #pragma endregion
@@ -474,33 +473,11 @@ public:
 			constexpr std::array<uint32_t, 0> DynamicOffsets = {};
 			vkCmdBindDescriptorSets(CB, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, PipelineLayouts[0], 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
 
-			VkPhysicalDeviceRayTracingPipelinePropertiesKHR PDRTPP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, .pNext = nullptr };
-			VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
-			vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
-
-			const auto AlignedSize = RoundUp(PDRTPP.shaderGroupHandleSize, PDRTPP.shaderGroupHandleAlignment);
-			const auto RayGen = VkStridedDeviceAddressRegionKHR({ 
-				.deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[0].Buffer), 
-				.stride = AlignedSize, 
-				.size = AlignedSize * 1 
-			});
-			const auto Miss = VkStridedDeviceAddressRegionKHR({ 
-				.deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[1].Buffer),
-				.stride = AlignedSize,
-				.size = AlignedSize * 1
-			});
-#pragma region HIT
-			const auto Hit = VkStridedDeviceAddressRegionKHR({
-				.deviceAddress = GetDeviceAddress(Device, ShaderBindingTables[2].Buffer),
-				.stride = AlignedSize,
-				.size = AlignedSize * 1
-			});
 #pragma endregion
 #pragma region CALLABLE
 			const auto Callable = VkStridedDeviceAddressRegionKHR({ .deviceAddress = 0, .stride = 0, .size = 0 });
 #pragma endregion
-
-			vkCmdTraceRaysIndirectKHR(CB, &RayGen, &Miss, &Hit, &Callable, GetDeviceAddress(Device, IndirectBuffers[0].Buffer));
+			vkCmdTraceRaysIndirectKHR(CB, &ShaderBindingTables[0].Region, &ShaderBindingTables[1].Region, &ShaderBindingTables[2].Region, &Callable, GetDeviceAddress(Device, IndirectBuffers[0].Buffer));
 
 			constexpr auto ISR = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 });
 			{

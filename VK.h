@@ -419,8 +419,14 @@ public:
 	private:
 		using Super = BufferMemory;
 	public:
-		ShaderBindingTable& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
+		VkStridedDeviceAddressRegionKHR Region;
+		ShaderBindingTable& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const size_t Stride) {
 			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Size, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			Region = VkStridedDeviceAddressRegionKHR({
+				.deviceAddress = GetDeviceAddress(Device, Buffer),
+				.stride = Stride,
+				.size = Size
+			});
 			return *this;
 		}
 		void* Map(const VkDevice Device) {
@@ -710,16 +716,16 @@ protected:
 	virtual void CreatePipelineLayout(VkPipelineLayout& PL, const std::vector<VkDescriptorSetLayout>& DSLs, const std::vector<VkPushConstantRange>& PCRs);
 	virtual void CreatePipelineLayout() { PipelineLayouts.emplace_back(VkPipelineLayout()); CreatePipelineLayout(PipelineLayouts.back(), {}, {}); }
 
-	virtual void CreateDescriptorSet() {}
 	virtual void CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreateFlags Flags, const std::vector<VkDescriptorPoolSize>& DPSs);
-
 	virtual void CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const std::vector<VkDescriptorUpdateTemplateEntry>& DUTEs, const VkDescriptorSetLayout DSL);
+	virtual void CreateDescriptor() {}
+	virtual void CreateDescriptorSet() {}
 	virtual void UpdateDescriptorSet() {}
 
 	virtual void CreateTexture() {}
 	virtual void CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipelineStageFlags PSF);
 	virtual void CreateImmutableSampler() {}
-	virtual void CreateSampler() {}
+	//virtual void CreateSampler() {}
 
 	virtual void CreateRenderPass(VkRenderPass& RP, const std::vector<VkAttachmentDescription>& ADs, const std::vector<VkSubpassDescription> &SDs, const std::vector<VkSubpassDependency>& Deps);
 	virtual void CreateRenderPass();

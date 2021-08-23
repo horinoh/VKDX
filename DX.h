@@ -338,7 +338,6 @@ public:
 			constexpr std::array<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC, 0> RASPIDs = {};
 			GCL4->BuildRaytracingAccelerationStructure(&BRASD, static_cast<UINT>(size(RASPIDs)), data(RASPIDs));
 		}
-
 		void ExecuteBuildCommand(ID3D12Device* Device, const size_t Size, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, [[maybe_unused]] ID3D12Fence* Fence) {
 			ScratchBuffer SB;
 			SB.Create(Device, Size);
@@ -385,6 +384,27 @@ public:
 			return *this;
 		}
 	};
+	class StructuredBuffer : public UploadResource
+	{
+	private:
+		using Super = UploadResource;
+	public:
+		D3D12_SHADER_RESOURCE_VIEW_DESC SRV;
+		void Create(ID3D12Device* Device, const size_t Size, const size_t Stride, const void* Source) { 
+			Super::Create(Device, Size, Source);
+			SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({
+				.Format = DXGI_FORMAT_UNKNOWN,
+				.ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.Buffer = D3D12_BUFFER_SRV({
+					.FirstElement = 0,
+					.NumElements = static_cast<UINT>(Size / Stride),
+					.StructureByteStride = static_cast<UINT>(Stride),
+					.Flags = D3D12_BUFFER_SRV_FLAG_NONE,
+				})
+			});
+		}
+	};
 	class ScratchBuffer : public ResourceBase
 	{
 	private:
@@ -399,8 +419,14 @@ public:
 	private:
 		using Super = ResourceBase;
 	public:
-		ShaderTable& Create(ID3D12Device* Device, const size_t Size) {
+		D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE Range;
+		ShaderTable& Create(ID3D12Device* Device, const size_t Size, const size_t Stride) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
+			Range = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({
+				.StartAddress = Resource->GetGPUVirtualAddress(),
+				.SizeInBytes = Size,
+				.StrideInBytes = Stride //!< ŒÂ”‚ª1‚Â‚Ìê‡‚Í 0 ‚Å‚à—Ç‚¢
+			});
 			return *this;
 		}
 		BYTE* Map() {
@@ -548,8 +574,8 @@ public:
 	virtual void GetRootSignaturePartFromShader(COM_PTR<ID3DBlob>& Blob, LPCWSTR Path);
 	virtual void CreateRootSignature();
 
+	virtual void CreateDescriptor() {}
 	virtual void CreateDescriptorHeap() {}
-
 	virtual void CreateDescriptorView() {}
 
 	virtual void ProcessShaderReflection(ID3DBlob* Blob);
@@ -626,7 +652,7 @@ public:
 	virtual void CreateTexture() {}
 	virtual void CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RESOURCE_STATES RS);
 	virtual void CreateStaticSampler() {}
-	virtual void CreateSampler() {}
+	//virtual void CreateSampler() {}
 
 	virtual void PopulateCommandList([[maybe_unused]] const size_t i) {}
 

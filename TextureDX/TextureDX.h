@@ -99,20 +99,21 @@ protected:
 		};
 		CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD, FALSE, SBCs); 
 	}
-	virtual void CreateDescriptorHeap() override {
-		{
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< SRV
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
-		}
+	virtual void CreateDescriptor() override {
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< SRV
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 #ifndef USE_STATIC_SAMPLER
-		{
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< Sampler
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(SamplerDescriptorHeaps.emplace_back())));
-		}
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD_Sampler = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< Sampler
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD_Sampler, COM_PTR_UUIDOF_PUTVOID(SamplerDescriptorHeaps.emplace_back())));
 #endif
-	}
+
+		const auto& DH = CbvSrvUavDescriptorHeaps[0];
+		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合には D3D12_SHADER_RESOURCE_VIEW_DESC* に nullptrを指定できる
+		//Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+
 #ifndef USE_STATIC_SAMPLER
-	virtual void CreateSampler() override {
 		constexpr D3D12_SAMPLER_DESC SD = {
 			.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT, //!< ここではスタティックサンプラは LINEAR、非スタティックサンプラは　POINT にしている
 			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
@@ -123,19 +124,64 @@ protected:
 			.MinLOD = 0.0f, .MaxLOD = 1.0f,
 		};
 		Device->CreateSampler(&SD, SamplerDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart());
-	}
-#endif
-	virtual void CreateDescriptorView() override {
-		const auto& DH = CbvSrvUavDescriptorHeaps[0];
-		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-#if 1
-		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-#else
-		//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合には D3D12_SHADER_RESOURCE_VIEW_DESC* に nullptrを指定できる
-		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #endif
 	}
 
-	virtual void PopulateCommandList(const size_t i) override;
+	virtual void PopulateCommandList(const size_t i) override {
+		const auto PS = COM_PTR_GET(PipelineStates[0]);
+
+		const auto BGCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
+		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
+		{
+			BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			BGCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+		}
+		VERIFY_SUCCEEDED(BGCL->Close());
+
+		const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
+		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
+		{
+			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
+
+			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+
+			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			{
+				auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+				const std::array RTCDHs = { SCCDH };
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, nullptr);
+
+#ifdef USE_STATIC_SAMPLER
+				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
+				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				{
+					const auto& DH = CbvSrvUavDescriptorHeaps[0];
+					auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+					GCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
+				}
+#else
+				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]), COM_PTR_GET(SamplerDescriptorHeaps[0]) };
+				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				{
+					const auto& DH = CbvSrvUavDescriptorHeaps[0];
+					auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+					GCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
+				}
+				{
+					const auto& DH = SamplerDescriptorHeaps[0];
+					auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+					GCL->SetGraphicsRootDescriptorTable(1, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< Sampler
+				}
+#endif
+				GCL->ExecuteBundle(BGCL);
+			}
+			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		}
+		VERIFY_SUCCEEDED(GCL->Close());
+	}
 };
 #pragma endregion
