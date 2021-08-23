@@ -58,8 +58,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	{
 		//!< デスクリプタヒープ
 		CreateDescriptorHeap();
-		//!< サンプラ ... デスクリプタが必要
-		//CreateSampler();
 		//!< デスクリプタビュー ... この時点でリソース、デスクリプタヒープ等が必要
 		CreateDescriptorView();
 	}

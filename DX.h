@@ -652,7 +652,6 @@ public:
 	virtual void CreateTexture() {}
 	virtual void CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RESOURCE_STATES RS);
 	virtual void CreateStaticSampler() {}
-	//virtual void CreateSampler() {}
 
 	virtual void PopulateCommandList([[maybe_unused]] const size_t i) {}
 

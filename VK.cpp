@@ -69,8 +69,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	{
 		//!< デスクリプタセット
 		CreateDescriptorSet();
-		//!< サンプラ ... DXがデスクリプタを必要とするので付き合いでここにする
-		//CreateSampler();
 		//!< デスクリプタセット更新 ... この時点でデスクリプタセット、ユニフォームバッファ、イメージビュー、サンプラ等が必要
 		UpdateDescriptorSet();
 	}

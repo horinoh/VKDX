@@ -9,7 +9,10 @@ layout (location = 0) out vec3 OutColor;
 
 void main()
 {
-	gl_Position = vec4(InPosition, 1.0f);
+	const mat4 WVP = mat4(1.93643117f, 0.0f, 0.0f, 0.0f,
+							0.0f, 3.89474273f, 0.0f, 0.0f,
+							0.0f, 0.0f, -1.00010002f, -1.0f,
+							0.0f, 0.0f, 2.99029899f, 3.0f);
+	gl_Position = WVP * vec4(InPosition, 1.0f);
 	OutColor = InNormal * 0.5f + 0.5f;
-	OutColor = gl_Position.zzz;
 }

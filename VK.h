@@ -725,7 +725,6 @@ protected:
 	virtual void CreateTexture() {}
 	virtual void CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipelineStageFlags PSF);
 	virtual void CreateImmutableSampler() {}
-	//virtual void CreateSampler() {}
 
 	virtual void CreateRenderPass(VkRenderPass& RP, const std::vector<VkAttachmentDescription>& ADs, const std::vector<VkSubpassDescription> &SDs, const std::vector<VkSubpassDependency>& Deps);
 	virtual void CreateRenderPass();

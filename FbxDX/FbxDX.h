@@ -126,8 +126,7 @@ public:
 		constexpr D3D12_RASTERIZER_DESC RD = {
 			//.FillMode = D3D12_FILL_MODE_WIREFRAME,
 			.FillMode = D3D12_FILL_MODE_SOLID,
-			//.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
-			.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = FALSE,
+			.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
 			.DepthBias = D3D12_DEFAULT_DEPTH_BIAS, .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP, .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
 			.DepthClipEnable = TRUE,
 			.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
