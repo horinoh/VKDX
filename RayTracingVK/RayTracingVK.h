@@ -426,7 +426,7 @@ public:
 		const auto MissSize = 1 * MissStride;
 
 #pragma region HIT
-		const auto RchitStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
+		const auto RchitStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + sizeof(VkDeviceAddress) * 2, PDRTPP.shaderGroupHandleAlignment);
 		const auto RchitSize = 1 * RchitStride;
 #pragma endregion
 
@@ -448,6 +448,8 @@ public:
 		ShaderBindingTables.emplace_back().Create(Device, PDMP, RchitSize, RchitStride); {
 			auto Data = ShaderBindingTables.back().Map(Device); {
 				std::memcpy(Data, data(HandleData) + RgenSize + MissSize, PDRTPP.shaderGroupHandleSize);
+				//std::memcpy(Data + PDRTPP.shaderGroupHandleSize, GetDeviceAddress(Device, VertBuf.Buffer), sizeof(VkDeviceAddress));
+				//std::memcpy(Data + PDRTPP.shaderGroupHandleSize + PDRTPP.shaderGroupHandleSize, GetDeviceAddress(Device, IndBuf.Buffer), sizeof(VkDeviceAddress));
 			} ShaderBindingTables.back().Unmap(Device);
 		}
 #pragma endregion

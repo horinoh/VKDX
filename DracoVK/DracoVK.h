@@ -87,9 +87,9 @@ public:
 		VK::Scoped<StagingBuffer> Staging_Vertex(Device);
 		Staging_Vertex.Create(Device, PDMP, Sizeof(Vertices), data(Vertices));
 
-		//VertexBuffers.emplace_back().Create(Device, PDMP, Sizeof(Normals));
-		//VK::Scoped<StagingBuffer> Staging_Normal(Device);
-		//Staging_Normal.Create(Device, PDMP, Sizeof(Normals), data(Normals));
+		VertexBuffers.emplace_back().Create(Device, PDMP, Sizeof(Normals));
+		VK::Scoped<StagingBuffer> Staging_Normal(Device);
+		Staging_Normal.Create(Device, PDMP, Sizeof(Normals), data(Normals));
 
 		IndexBuffers.emplace_back().Create(Device, PDMP, Sizeof(Indices));
 		VK::Scoped<StagingBuffer> Staging_Index(Device);
@@ -103,7 +103,7 @@ public:
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 			VertexBuffers[0].PopulateCopyCommand(CB, Sizeof(Vertices), Staging_Vertex.Buffer);
-			//VertexBuffers[1].PopulateCopyCommand(CB, Sizeof(Normals), Staging_Normal.Buffer);
+			VertexBuffers[1].PopulateCopyCommand(CB, Sizeof(Normals), Staging_Normal.Buffer);
 			IndexBuffers.back().PopulateCopyCommand(CB, Sizeof(Indices), Staging_Index.Buffer);
 			IndirectBuffers.back().PopulateCopyCommand(CB, sizeof(DIIC), Staging_Indirect.Buffer);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
@@ -125,13 +125,11 @@ public:
 		};
 		const std::vector VIBDs = {
 			VkVertexInputBindingDescription({.binding = 0, .stride = sizeof(Vertices[0]), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
-			//VkVertexInputBindingDescription({.binding = 1, .stride = sizeof(Normals[0]), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
+			VkVertexInputBindingDescription({.binding = 1, .stride = sizeof(Normals[0]), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
 		};
 		const std::vector VIADs = {
-			//!< location = 0 ‚Í binding = 0
 			VkVertexInputAttributeDescription({.location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 }),
-			//!< location = 1 ‚Í binding = 1
-			//VkVertexInputAttributeDescription({.location = 1, .binding = 1, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 }),
+			VkVertexInputAttributeDescription({.location = 1, .binding = 1, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 }),
 		};
 
 		constexpr VkPipelineRasterizationStateCreateInfo PRSCI = {
@@ -140,7 +138,7 @@ public:
 			.flags = 0,
 			.depthClampEnable = VK_FALSE,
 			.rasterizerDiscardEnable = VK_FALSE,
-			.polygonMode = /*VK_POLYGON_MODE_FILL*/VK_POLYGON_MODE_LINE,
+			.polygonMode = VK_POLYGON_MODE_FILL,
 			.cullMode = VK_CULL_MODE_BACK_BIT,
 			.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
 			.depthBiasEnable = VK_FALSE, .depthBiasConstantFactor = 0.0f, .depthBiasClamp = 0.0f, .depthBiasSlopeFactor = 0.0f,
@@ -183,10 +181,10 @@ public:
 			vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
 
 			const std::array VBs = { VertexBuffers[0].Buffer };
-			//const std::array NBs = { VertexBuffers[1].Buffer };
+			const std::array NBs = { VertexBuffers[1].Buffer };
 			const std::array Offsets = { VkDeviceSize(0) };
 			vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(size(VBs)), data(VBs), data(Offsets));
-			//vkCmdBindVertexBuffers(SCB, 1, static_cast<uint32_t>(size(NBs)), data(NBs), data(Offsets));
+			vkCmdBindVertexBuffers(SCB, 1, static_cast<uint32_t>(size(NBs)), data(NBs), data(Offsets));
 			vkCmdBindIndexBuffer(SCB, IndexBuffers[0].Buffer, 0, VK_INDEX_TYPE_UINT32);
 
 			vkCmdDrawIndexedIndirect(SCB, IndirectBuffers[0].Buffer, 0, 1, 0);

@@ -479,7 +479,7 @@ public:
 						Tabs(); std::cout << "\t" << "IsEmbeddedResource = " << Buf.IsEmbeddedResource() << std::endl;
 					}
 					else {
-						const auto Path = fx::gltf::detail::GetDocumentRootPath("../../") + "/" + Buf.uri;
+						//const auto Path = fx::gltf::detail::GetDocumentRootPath("../../") + "/" + Buf.uri;
 					}
 				}
 			}
@@ -688,7 +688,7 @@ public:
 				Tabs(); std::cout << "\t" << "IsEmbeddedResource = " << Img.IsEmbeddedResource() << std::endl;
 			}
 			else {
-				const auto Path = fx::gltf::detail::GetDocumentRootPath("../../") + "/" + Img.uri;
+				//const auto Path = fx::gltf::detail::GetDocumentRootPath("../../") + "/" + Img.uri;
 			}
 		}
 

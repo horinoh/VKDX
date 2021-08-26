@@ -1,17 +1,27 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
 
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_scalar_block_layout : enable
+
 //layout(binding = 0, set = 0) uniform accelerationStructureEXT TLAS;
 layout(location = 0) rayPayloadInEXT vec3 Payload;
 hitAttributeEXT vec2 HitAttr;
 
-//!< LocalRootSignature‘Š“–
-//layout(shaderRecordEXT) buffer XXX {
-//    uint32_t yyy;
+//layout(buffer_reference, buffer_reference_align=8, scalar) buffer VertexBuffer { vec3 Vertices[]; };
+//layout(buffer_reference, buffer_reference_align=8, scalar) buffer IndexBuffer { uint Indices[]; };
+//layout(shaderRecordEXT) buffer SBT {
+//    VertexBuffer VB;
+//    IndexBuffer IB;
 //};
 
 void main()
 {
+//    vec3 Pos[3];
+//    for (int i = 0; i < 3; ++i) {
+//        Pos[i] = VB.Vertices[IB.Indices[gl_PrimitiveID * 3 + i]];
+//    }
+
 	Payload = vec3(1.0f - HitAttr.x - HitAttr.y, HitAttr.x, HitAttr.y);
 
 //	  Payload1 = vec3(0.0f);

@@ -79,9 +79,9 @@ public:
 		UploadResource Upload_Vertex;
 		Upload_Vertex.Create(COM_PTR_GET(Device), Sizeof(Vertices), data(Vertices));
 
-		//VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), Sizeof(Normals), sizeof(Normals[0]));
-		//UploadResource Upload_Normal;
-		//Upload_Normal.Create(COM_PTR_GET(Device), Sizeof(Normals), data(Normals));
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), Sizeof(Normals), sizeof(Normals[0]));
+		UploadResource Upload_Normal;
+		Upload_Normal.Create(COM_PTR_GET(Device), Sizeof(Normals), data(Normals));
 
 		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), Sizeof(Indices), DXGI_FORMAT_R32_UINT);
 		UploadResource Upload_Index;
@@ -94,7 +94,7 @@ public:
 
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 			VertexBuffers[0].PopulateCopyCommand(GCL, Sizeof(Vertices), COM_PTR_GET(Upload_Vertex.Resource));
-			//VertexBuffers[1].PopulateCopyCommand(GCL, Sizeof(Normals), COM_PTR_GET(Upload_Normal.Resource));
+			VertexBuffers[1].PopulateCopyCommand(GCL, Sizeof(Normals), COM_PTR_GET(Upload_Normal.Resource));
 			IndexBuffers.back().PopulateCopyCommand(GCL, Sizeof(Indices), COM_PTR_GET(Upload_Index.Resource));
 			IndirectBuffers.back().PopulateCopyCommand(GCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
 		} VERIFY_SUCCEEDED(GCL->Close());
@@ -120,11 +120,11 @@ public:
 		};
 		const std::vector IEDs = {
 			D3D12_INPUT_ELEMENT_DESC({.SemanticName = "POSITION", .SemanticIndex = 0, .Format = DXGI_FORMAT_R32G32B32_FLOAT, .InputSlot = 0, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }),
-			//D3D12_INPUT_ELEMENT_DESC({.SemanticName = "NORMAL", .SemanticIndex = 0, .Format = DXGI_FORMAT_R32G32B32_FLOAT, .InputSlot = 1, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }),
+			D3D12_INPUT_ELEMENT_DESC({.SemanticName = "NORMAL", .SemanticIndex = 0, .Format = DXGI_FORMAT_R32G32B32_FLOAT, .InputSlot = 1, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }),
 		};
 
 		constexpr D3D12_RASTERIZER_DESC RD = {
-			.FillMode = /*D3D12_FILL_MODE_SOLID*/D3D12_FILL_MODE_WIREFRAME,
+			.FillMode = D3D12_FILL_MODE_SOLID,
 			.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
 			.DepthBias = D3D12_DEFAULT_DEPTH_BIAS, .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP, .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
 			.DepthClipEnable = TRUE,
@@ -152,7 +152,7 @@ public:
 		{
 			BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-			const std::array VBVs = { VertexBuffers[0].View/*, VertexBuffers[1].View*/ };
+			const std::array VBVs = { VertexBuffers[0].View, VertexBuffers[1].View };
 			BGCL->IASetVertexBuffers(0, static_cast<UINT>(size(VBVs)), data(VBVs));
 			BGCL->IASetIndexBuffer(&IndexBuffers[0].View);
 
