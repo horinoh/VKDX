@@ -11,11 +11,11 @@ class FbxDX : public DXExt, public Fbx
 private:
 	using Super = DXExt;
 public:
-#pragma region FBX
-	DirectX::XMFLOAT3 ToFloat3(const FbxVector4& rhs) { return DirectX::XMFLOAT3(static_cast<FLOAT>(rhs[0]), static_cast<FLOAT>(rhs[1]), static_cast<FLOAT>(rhs[2])); }
 	std::vector<UINT32> Indices;
 	std::vector<DirectX::XMFLOAT3> Vertices;
 	std::vector<DirectX::XMFLOAT3> Normals;
+#pragma region FBX
+	DirectX::XMFLOAT3 ToFloat3(const FbxVector4& rhs) { return DirectX::XMFLOAT3(static_cast<FLOAT>(rhs[0]), static_cast<FLOAT>(rhs[1]), static_cast<FLOAT>(rhs[2])); }
 	virtual void Process(FbxMesh* Mesh) override {
 		Fbx::Process(Mesh);
 		
@@ -68,8 +68,6 @@ public:
 			Load(ToString(Path) + "//bunny.FBX");
 			//Load(ToString(Path) + "//dragon.FBX");
 		}
-		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ConvertScene\\box.fbx");
-		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ViewScene\\humanoid.fbx"); 
 
 		const auto CA = COM_PTR_GET(CommandAllocators[0]);
 		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
@@ -124,8 +122,7 @@ public:
 		};
 
 		constexpr D3D12_RASTERIZER_DESC RD = {
-			//.FillMode = D3D12_FILL_MODE_WIREFRAME,
-			.FillMode = D3D12_FILL_MODE_SOLID,
+			.FillMode = D3D12_FILL_MODE_SOLID/*D3D12_FILL_MODE_WIREFRAME*/,
 			.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
 			.DepthBias = D3D12_DEFAULT_DEPTH_BIAS, .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP, .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
 			.DepthClipEnable = TRUE,

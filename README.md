@@ -87,6 +87,24 @@
 	$cmake -G "Visual Studio 16"
 	~~~
 
+#### DRACO
+ * CMakeでプロジェクトを作成
+	* 同じ階層に draco_build フォルダを作成して、出力先として指定する
+ * draco.sln を開いて Debug, Release をビルド
+ ~~~
+ #include "draco_build/compression/decode.h"
+ #pragma comment(lib, "draco.lib")
+ #pragma comment(lib, "dracodec.lib")
+ #pragma comment(lib, "dracoenc.lib")
+ ~~~
+* サンプルデータは draco\testdata 以下にある
+* エンコード、デコード例
+	* フォーマットは .ply, .obj が .drc へ変換可能
+"""
+$draco_encoder -i XXX.ply -o YYY.drc
+$draco_decoder -i YYY.drc -o ZZZ.obj
+"""
+
 #### LeapMotion
  * [SDK](https://developer.leapmotion.com/sdk-leap-motion-controller/) をダウンロードし解凍、ドライバをインストールしておく
  * LeapSDKを適当な場所へ配置
@@ -458,13 +476,6 @@
 
 <!-- 
 ## プロジェクトの追加方法 (自分用覚書)
- //* ソリューションを右クリック - Add - New Project で Windows Desktop Application
- //* プロジェクトを右クリック - Retarget SDK Verson で 10以上にする
- //* プロジェクト右クリック - Property - All Configurations にする - C/C++ - Language - C++ Language Standard - Preview - Features from the Latest... を選択しておく(vs2019のデフォルトはC++14)
- //* プロジェクト右クリック - Property - All Configurations にする - C/C++ - General - Warning Level を Level4、Treat Warnings As Errors を Yes にする
- //* プロジェクト右クリック - Property - All Configurations にする - C/C++ - Precompiled headers - Precompiled Header を Use(/Yu) 、Precompiled Header Files を framework.h にする
- //* プロジェクト右クリック - Property - All Configurations にする - C/C++ - Command Line - Additional Options に /await と記述
-
  * Source Files に framework.cpp(内容空で作成)を追加
  	* framewordk.cpp に対してのみ C/C++ - Precompiled headers - Precompiled Header を Create(/Yc) にする
  * framework.h(旧stdafx.h)は既存のものを参考に編集 (#pragma region Code でマークしてある)
@@ -474,7 +485,7 @@
 	* 右クリック - Manage NuGet Packages - Browse - WinPixEventRuntimeで検索 - インストール
  * プロパティマネージャで Add Existing Property Sheet... - Props/DX_DEBUG.props, DX_RELEASE.props
  	* 必要に応じて Props/DX_DEBUG_TEX.prop, Props/DX_RELEASE_TEX.prop
-	* 必要に応じて Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop, Props/FBX.prop
+	* 必要に応じて Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop, Props/FBX.prop, Props/DRACO.prop
  * Header Files に Win.h, DX.h, DXExt.h を追加 
 	* 必要に応じて DXImage.h 
  * Source Files に Win.cpp, DX.cpp, DXExt.cpp を追加
@@ -491,7 +502,7 @@
 #### VK
  * プロパティマネージャで Add Existing Property Sheet... - Props/VK_DEBUG.props, Props/VK_RELEASE.props
  	* 必要に応じて Props/VK_DEBUG_TEX.prop, Props/VK_RELEASE_TEX.prop
-	* 必要に応じて Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop, Props/FBX.prop
+	* 必要に応じて Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop, Props/FBX.prop, Props/DRACO.prop
  * Header Files に Win.h, VK.h, VKExt.h を追加
 	* 必要に応じて VKImage.h
  * Source Files に Win.cpp, VK.cpp, VKExt.cpp を追加
@@ -519,17 +530,6 @@
 
 ## ParametricSurface
  * http://www.3d-meier.de/tut3/Seite0.html
-
-## DRACO
- * CMakeでプロジェクトを作成
- * 開いて Debug, Release をビルド
- ~~~
- #include "draco/compression/decode.h"
- #pragma comment(lib, "draco.lib")
- #pragma comment(lib, "dracodec.lib")
- #pragma comment(lib, "dracoenc.lib")
- ~~~
-* サンプルデータは draco\testdata 以下にある
 
  ## OPENCV
  * 環境変数 **OPENCV_SDK_PATH** を定義しておく

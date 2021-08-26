@@ -645,7 +645,6 @@ protected:
 	}
 
 	virtual void CreateGeometry() {}
-	virtual void CreateShaderBindingTable() {}
 
 	virtual void CreateUniformBuffer() {}
 	virtual void CreateStorageBuffer() {}
@@ -721,6 +720,7 @@ protected:
 	virtual void CreateDescriptor() {}
 	virtual void CreateDescriptorSet() {}
 	virtual void UpdateDescriptorSet() {}
+	virtual void CreateShaderBindingTable() {}
 
 	virtual void CreateTexture() {}
 	virtual void CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipelineStageFlags PSF);

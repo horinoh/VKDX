@@ -22,3 +22,6 @@
 	path = HoloPlayCoreSDK
 	url = https://github.com/Looking-Glass/HoloPlayCoreSDK.git
 	ignore = dirty
+[submodule "draco"]
+	path = draco
+	url = https://github.com/google/draco.git

@@ -564,7 +564,6 @@ public:
 	virtual void LoadScene() {}
 
 	virtual void CreateGeometry() {}
-	virtual void CreateShaderTable() {}
 
 	virtual void CreateConstantBuffer() {}
 
@@ -577,6 +576,7 @@ public:
 	virtual void CreateDescriptor() {}
 	virtual void CreateDescriptorHeap() {}
 	virtual void CreateDescriptorView() {}
+	virtual void CreateShaderTable() {}
 
 	virtual void ProcessShaderReflection(ID3DBlob* Blob);
 	virtual void SetBlobPart(COM_PTR<ID3DBlob>& Blob);

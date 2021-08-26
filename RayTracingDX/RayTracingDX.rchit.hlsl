@@ -1,6 +1,6 @@
 // #DX_TODO LocalRootSignature‚Ö“o˜^
-//StructuredBuffer<float3> VertexBuffer : register(t0, space0);
-//StructuredBuffer<uint> IndexBuffer : register(t1, space0);
+StructuredBuffer<float3> VertexBuffer : register(t0, space0);
+StructuredBuffer<uint> IndexBuffer : register(t1, space0);
 
 struct Payload
 {
@@ -11,12 +11,12 @@ struct Payload
 [shader("closesthit")]
 void OnClosestHit(inout Payload Pay, in BuiltInTriangleIntersectionAttributes BITIA)
 {
-    //float3 Pos[3], Nrm[3];
-    //const uint start = PrimitiveIndex() * 3;
-    //for (int i = 0; i < 3; ++i) {
-    //    const uint index = IndexBuffer[start + i];
-    //    Pos[i] = VertexBuffer[index];
-    //}
+    float3 Pos[3], Nrm[3];
+    const uint start = PrimitiveIndex() * 3;
+    for (int i = 0; i < 3; ++i) {
+        const uint index = IndexBuffer[start + i];
+        Pos[i] = VertexBuffer[index];
+    }
 
     Pay.Color = float3(1.0f - BITIA.barycentrics.x - BITIA.barycentrics.y, BITIA.barycentrics.x, BITIA.barycentrics.y);
 

@@ -5,8 +5,8 @@
 layout(location = 0) rayPayloadInEXT vec3 Payload;
 hitAttributeEXT vec2 HitAttr;
 
-//!< ShaderRecordBuffer ‚Ì—á
-//layout(shaderRecordNV) buffer XXX {
+//!< LocalRootSignature‘Š“–
+//layout(shaderRecordEXT) buffer XXX {
 //    uint32_t yyy;
 //};
 

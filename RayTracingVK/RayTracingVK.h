@@ -350,49 +350,8 @@ public:
 		VERIFY_SUCCEEDED(vkCreateRayTracingPipelinesKHR(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, static_cast<uint32_t>(size(RTPCIs)), data(RTPCIs), GetAllocationCallbacks(), &Pipelines.emplace_back()));
 #pragma endregion
 
-		CreateShaderBindingTable();
-
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
-	virtual void CreateShaderBindingTable() override {
-		VkPhysicalDeviceRayTracingPipelinePropertiesKHR PDRTPP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, .pNext = nullptr };
-		VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
-		vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
-
-		const auto RgenStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
-		const auto RgenSize = 1 * RgenStride;
-
-		const auto MissStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
-		const auto MissSize = 1 * MissStride;
-
-#pragma region HIT
-		const auto RchitStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
-		const auto RchitSize = 1 * RchitStride;
-#pragma endregion
-
-		std::vector<std::byte> HandleData(RgenSize + MissSize + RchitSize);
-		VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, 1 + 1 + 1, size(HandleData), data(HandleData)));
-
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-		ShaderBindingTables.emplace_back().Create(Device, PDMP, RgenSize, RgenStride); {
-			auto Data = ShaderBindingTables.back().Map(Device); {
-				std::memcpy(Data, data(HandleData), PDRTPP.shaderGroupHandleSize);
-			} ShaderBindingTables.back().Unmap(Device);
-		}
-		ShaderBindingTables.emplace_back().Create(Device, PDMP, MissSize, MissStride); {
-			auto Data = ShaderBindingTables.back().Map(Device); {
-				std::memcpy(Data, data(HandleData) + RgenSize, PDRTPP.shaderGroupHandleSize);
-			} ShaderBindingTables.back().Unmap(Device);
-		}
-#pragma region HIT
-		ShaderBindingTables.emplace_back().Create(Device, PDMP, RchitSize, RchitStride); {
-			auto Data = ShaderBindingTables.back().Map(Device); {
-				std::memcpy(Data, data(HandleData) + RgenSize + MissSize, PDRTPP.shaderGroupHandleSize);
-			} ShaderBindingTables.back().Unmap(Device);
-		}
-#pragma endregion
-	}
-
 	virtual void CreateDescriptor() override {
 		VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT, {
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1 }), //!< TLAS
@@ -454,6 +413,44 @@ public:
 			};
 			vkUpdateDescriptorSets(Device, static_cast<uint32_t>(size(WDSs)), data(WDSs), static_cast<uint32_t>(size(CDSs)), data(CDSs));
 		}
+	}
+	virtual void CreateShaderBindingTable() override {
+		VkPhysicalDeviceRayTracingPipelinePropertiesKHR PDRTPP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, .pNext = nullptr };
+		VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
+		vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
+
+		const auto RgenStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
+		const auto RgenSize = 1 * RgenStride;
+
+		const auto MissStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
+		const auto MissSize = 1 * MissStride;
+
+#pragma region HIT
+		const auto RchitStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
+		const auto RchitSize = 1 * RchitStride;
+#pragma endregion
+
+		std::vector<std::byte> HandleData(RgenSize + MissSize + RchitSize);
+		VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, 1 + 1 + 1, size(HandleData), data(HandleData)));
+
+		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		ShaderBindingTables.emplace_back().Create(Device, PDMP, RgenSize, RgenStride); {
+			auto Data = ShaderBindingTables.back().Map(Device); {
+				std::memcpy(Data, data(HandleData), PDRTPP.shaderGroupHandleSize);
+			} ShaderBindingTables.back().Unmap(Device);
+		}
+		ShaderBindingTables.emplace_back().Create(Device, PDMP, MissSize, MissStride); {
+			auto Data = ShaderBindingTables.back().Map(Device); {
+				std::memcpy(Data, data(HandleData) + RgenSize, PDRTPP.shaderGroupHandleSize);
+			} ShaderBindingTables.back().Unmap(Device);
+		}
+#pragma region HIT
+		ShaderBindingTables.emplace_back().Create(Device, PDMP, RchitSize, RchitStride); {
+			auto Data = ShaderBindingTables.back().Map(Device); {
+				std::memcpy(Data, data(HandleData) + RgenSize + MissSize, PDRTPP.shaderGroupHandleSize);
+			} ShaderBindingTables.back().Unmap(Device);
+		}
+#pragma endregion
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }

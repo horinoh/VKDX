@@ -269,6 +269,7 @@ public:
 			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		}
 
+#pragma region LOCAL_ROOTSIGNATURE
 		//!< ローカルルートシグネチャ (Local root signature)
 		{
 			COM_PTR<ID3DBlob> Blob;
@@ -292,6 +293,7 @@ public:
 #endif
 			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		}
+#pragma endregion
 	}
 	virtual void CreatePipelineState() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
@@ -346,7 +348,8 @@ public:
 
 		constexpr D3D12_RAYTRACING_PIPELINE_CONFIG RPC = { .MaxTraceRecursionDepth = 31 }; //!< 最大再帰呼び出し回数を指定
 
-		constexpr std::array SSs = {
+		/*constexpr std::array*/
+		std::vector SSs = {
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, .pDesc = &GRS }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rgen }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_miss }),
@@ -357,16 +360,19 @@ public:
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, .pDesc = &RSC }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, .pDesc = &RPC }),
 		};
-#if 0
-		//!< ローカルルートシグネチャ (Local root signature)
-		const D3D12_LOCAL_ROOT_SIGNATURE LRS = { .pLocalRootSignature = COM_PTR_GET(RootSignatures[1]) };
-		SSs.emplace_back(D3D12_STATE_SUBOBJECT({ .Type = D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, .pDesc = &LRS }));
-		//!< ローカルルートシグネチャとヒットグループの関連付け
-		std::array Exports = { TEXT("HitGroup") };
-		const D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION STEA = { .pSubobjectToAssociate = &SSs.back(), .NumExports = static_cast<UINT>(size(Exports)), .pExports = data(Exports) };
-		SSs.emplace_back(D3D12_STATE_SUBOBJECT({ .Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION, .pDesc = &STEA }));
-#endif
-		constexpr D3D12_STATE_OBJECT_DESC SOD = {
+#pragma region LOCAL_ROOTSIGNATURE
+		if(0){
+			//!< ローカルルートシグネチャ (Local root signature)
+			const D3D12_LOCAL_ROOT_SIGNATURE LRS = { .pLocalRootSignature = COM_PTR_GET(RootSignatures[1]) };
+			SSs.emplace_back(D3D12_STATE_SUBOBJECT({ .Type = D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, .pDesc = &LRS }));
+			//!< ローカルルートシグネチャとヒットグループの関連付け
+			std::array Exports = { TEXT("HitGroup") };
+			const D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION STEA = { .pSubobjectToAssociate = &SSs.back(), .NumExports = static_cast<UINT>(size(Exports)), .pExports = data(Exports) };
+			SSs.emplace_back(D3D12_STATE_SUBOBJECT({ .Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION, .pDesc = &STEA }));
+		}
+#pragma endregion
+		/*constexpr*/
+		const D3D12_STATE_OBJECT_DESC SOD = {
 			.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE,
 			.NumSubobjects = static_cast<UINT>(size(SSs)), .pSubobjects = data(SSs)
 		};
@@ -375,8 +381,21 @@ public:
 		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
 		VERIFY_SUCCEEDED(Device5->CreateStateObject(&SOD, COM_PTR_UUIDOF_PUTVOID(StateObjects.emplace_back())));
 #pragma endregion
+	}
+	virtual void CreateDescriptor() override {
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 3 + 2, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0};
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 
-		CreateShaderTable();
+		const auto DH = CbvSrvUavDescriptorHeaps[0];
+		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+		Device->CreateShaderResourceView(nullptr, &TLASs[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		
+		Device->CreateShaderResourceView(COM_PTR_GET(StructuredBuffers[0].Resource), &StructuredBuffers[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		Device->CreateShaderResourceView(COM_PTR_GET(StructuredBuffers[1].Resource), &StructuredBuffers[1].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 	}
 	virtual void CreateShaderTable() override {
 		COM_PTR<ID3D12StateObjectProperties> SOP;
@@ -389,7 +408,9 @@ public:
 		constexpr auto MissSize = 1 * MissStride;
 
 #pragma region HIT
-		constexpr auto RchitStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0/*sizeof(D3D12_GPU_DESCRIPTOR_HANDLE)*2 */, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+#pragma region LOCAL_ROOTSIGNATURE
+		constexpr auto RchitStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + sizeof(D3D12_GPU_DESCRIPTOR_HANDLE) * 2, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+#pragma endregion
 		constexpr auto RchitSize = 1 * RchitStride;
 #pragma endregion
 
@@ -407,34 +428,21 @@ public:
 		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RchitSize, RchitStride); {
 			auto Data = ShaderTables.back().Map(); {
 				std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("HitGroup")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-				//{
-				//	DXGI_SWAP_CHAIN_DESC1 SCD;
-				//	SwapChain->GetDesc1(&SCD);
-				//	const auto& DH = CbvSrvUavDescriptorHeaps[0];
-				//	auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-				//	GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * (3 + SCD.BufferCount);
-				//	std::memcpy(Data + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &GDH, sizeof(GDH)); //!< VB
-				//	GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				//	std::memcpy(Data + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + sizeof(GDH), &GDH, sizeof(GDH)); //!< IB
-				//}
+#pragma region LOCAL_ROOTSIGNATURE
+				{
+					const auto& DH = CbvSrvUavDescriptorHeaps[0];
+					auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+					GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * 3;
+					std::memcpy(Data + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &GDH, sizeof(GDH)); //!< VB
+					GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+					std::memcpy(Data + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + sizeof(GDH), &GDH, sizeof(GDH)); //!< IB
+				}
+#pragma endregion
 			} ShaderTables.back().Unmap();
 		}
 #pragma endregion
 	}
-	virtual void CreateDescriptor() override {
-		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
-		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 5, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0};
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 
-		const auto DH = CbvSrvUavDescriptorHeaps[0];
-		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-		Device->CreateShaderResourceView(nullptr, &TLASs[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-		Device->CreateShaderResourceView(COM_PTR_GET(StructuredBuffers[0].Resource), &StructuredBuffers[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-		Device->CreateShaderResourceView(COM_PTR_GET(StructuredBuffers[1].Resource), &StructuredBuffers[1].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-	}
 	virtual void PopulateCommandList(const size_t i) override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
@@ -450,7 +458,6 @@ public:
 				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-
 				GCL->SetComputeRootDescriptorTable(0, GDH); //!< TLAS, CubeMap
 				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * 2;
 
@@ -458,6 +465,7 @@ public:
 				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 			}
 
+			//!< ここでは CBV はデスクリプタヒープとは別扱い
 			GCL->SetComputeRootConstantBufferView(2, ConstantBuffers[i].Resource->GetGPUVirtualAddress()); //!< CBV
 
 			const auto UAV = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
