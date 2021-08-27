@@ -212,7 +212,7 @@ public:
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
-			ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tr));
+			ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tr), &Tr);
 		}
 	}
 	virtual void CreateStaticSampler() override {

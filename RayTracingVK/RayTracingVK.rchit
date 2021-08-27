@@ -8,19 +8,19 @@
 layout(location = 0) rayPayloadInEXT vec3 Payload;
 hitAttributeEXT vec2 HitAttr;
 
-//layout(buffer_reference, buffer_reference_align=8, scalar) buffer VertexBuffer { vec3 Vertices[]; };
-//layout(buffer_reference, buffer_reference_align=8, scalar) buffer IndexBuffer { uint Indices[]; };
-//layout(shaderRecordEXT) buffer SBT {
-//    VertexBuffer VB;
-//    IndexBuffer IB;
-//};
+layout(buffer_reference, buffer_reference_align=8, scalar) buffer VertexBuffer { vec3 Vertices[]; };
+layout(buffer_reference, buffer_reference_align=8, scalar) buffer IndexBuffer { uint Indices[]; };
+layout(shaderRecordEXT) buffer SBT {
+    VertexBuffer VB;
+    IndexBuffer IB;
+};
 
 void main()
 {
-//    vec3 Pos[3];
-//    for (int i = 0; i < 3; ++i) {
-//        Pos[i] = VB.Vertices[IB.Indices[gl_PrimitiveID * 3 + i]];
-//    }
+    vec3 Pos[3];
+    for (int i = 0; i < 3; ++i) {
+        Pos[i] = VB.Vertices[IB.Indices[gl_PrimitiveID * 3 + i]];
+    }
 
 	Payload = vec3(1.0f - HitAttr.x - HitAttr.y, HitAttr.x, HitAttr.y);
 

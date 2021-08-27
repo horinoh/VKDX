@@ -18,8 +18,13 @@ void main()
 
     const float TMin = 0.001f; //!< float ƒGƒ‰[‘Îô ”ñ 0.0f ‚Ì¬‚³‚È’l‚É‚·‚é
     const float TMax = 100000.0f;
-    const vec3 Origin = vec3(UpY, -1.0f);
-    const vec3 Direction = vec3(0.0f, 0.0f, 1.0f);
+    const vec3 Origin = (InvView * vec4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
+	const vec4 Target = InvProjection * vec4(UpY, 1.0f, 1.0f);
+#if 1
+	const vec3 Direction = (InvView * vec4(normalize(Target.xyz / Target.w), 0.0f)).xyz;
+#else
+	const vec3 Direction = normalize((InvView * vec4(Target.xyz, 0.0f)).xyz);
+#endif
 
     //traceRayEXT(TLAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsCullBackFacingTrianglesEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
     traceRayEXT(TLAS, gl_RayFlagsNoneEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);

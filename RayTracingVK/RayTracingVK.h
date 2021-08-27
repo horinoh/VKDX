@@ -244,9 +244,9 @@ public:
 		const auto View = glm::lookAt(CamPos, CamTag, CamUp);
 		const auto InvProjection = glm::inverse(Projection);
 		const auto InvView = glm::inverse(View);
-		Tr = Transform({ .Projection = Projection, .View = View, .InvProjection = Projection, .InvView = InvView });
+		Tr = Transform({ .Projection = Projection, .View = View, .InvProjection = InvProjection, .InvView = InvView });
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
-			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
+			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr), &Tr);
 		}
 	}
 	virtual void CreateTexture() override {
