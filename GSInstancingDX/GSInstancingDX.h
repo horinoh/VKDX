@@ -45,7 +45,44 @@ protected:
 		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD, FALSE, SBCs);
 	}
 
-	virtual void PopulateCommandList(const size_t i) override;
+	virtual void PopulateCommandList(const size_t i) override {
+		const auto PS = COM_PTR_GET(PipelineStates[0]);
+
+		const auto BGCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
+		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
+		{
+			BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+			BGCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+		}
+		VERIFY_SUCCEEDED(BGCL->Close());
+
+		const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
+		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
+		{
+			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
+
+			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+
+			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			{
+				auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+
+				constexpr std::array<D3D12_RECT, 0> Rects = {};
+				GCL->ClearRenderTargetView(SCCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+
+				const std::array RTCDHs = { SCCDH };
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, nullptr);
+
+				GCL->ExecuteBundle(BGCL);
+			}
+			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		}
+		VERIFY_SUCCEEDED(GCL->Close());
+	}
 
 	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f) override {
 		D3D12_FEATURE_DATA_D3D12_OPTIONS3 FDO3;

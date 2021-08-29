@@ -17,11 +17,12 @@ public:
 #pragma region FBX
 	DirectX::XMFLOAT3 ToFloat3(const FbxVector4& rhs) { return DirectX::XMFLOAT3(static_cast<FLOAT>(rhs[0]), static_cast<FLOAT>(rhs[1]), static_cast<FLOAT>(rhs[2])); }
 	std::vector<UINT32> Indices;
-	std::vector<DirectX::XMFLOAT3> Vertices;
-	std::vector<DirectX::XMFLOAT3> Normals;
+	std::vector<std::array<DirectX::XMFLOAT3, 2>> PNs;
 	virtual void Process(FbxMesh* Mesh) override {
 		Fbx::Process(Mesh);
 
+		std::vector<DirectX::XMFLOAT3> Vertices;
+		std::vector<DirectX::XMFLOAT3> Normals;
 		auto Max = DirectX::XMFLOAT3((std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)());
 		auto Min = DirectX::XMFLOAT3((std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)());
 		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
@@ -47,7 +48,9 @@ public:
 			Normals.emplace_back(ToFloat3(Nrms[i]));
 		}
 
-		//for (auto i : Vertices) { std::cout << i.x << ", " << i.y << ", " << i.z << std::endl; }
+		for (auto i = 0; i < size(Vertices); ++i) {
+			PNs.emplace_back(std::array<DirectX::XMFLOAT3, 2>({ Vertices[i], Normals[i] }));
+		}
 	}
 #pragma endregion
 
@@ -70,12 +73,8 @@ public:
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
 #pragma region BLAS_INPUT
-		//UploadShaderResource VertBuf;
-		//VertBuf.Create(COM_PTR_GET(Device), Sizeof(Vertices), sizeof(Vertices[0]), data(Vertices));
-		StructuredBuffers.emplace_back().Create(COM_PTR_GET(Device), Sizeof(Vertices), sizeof(Vertices[0]), data(Vertices));
+		StructuredBuffers.emplace_back().Create(COM_PTR_GET(Device), Sizeof(PNs), sizeof(PNs[0]), data(PNs));
 
-		//UploadShaderResource IndBuf;
-		//IndBuf.Create(COM_PTR_GET(Device), Sizeof(Indices), sizeof(Indices[0]), data(Indices));
 		StructuredBuffers.emplace_back().Create(COM_PTR_GET(Device), Sizeof(Indices), sizeof(Indices[0]), data(Indices));
 
 		const std::array RGDs = {
@@ -87,11 +86,9 @@ public:
 					.IndexFormat = DXGI_FORMAT_R32_UINT,
 					.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT,
 					.IndexCount = static_cast<UINT>(size(Indices)),
-					.VertexCount = static_cast<UINT>(size(Vertices)),
-					//.IndexBuffer = IndBuf.Resource->GetGPUVirtualAddress(),
+					.VertexCount = static_cast<UINT>(size(PNs)),
 					.IndexBuffer = StructuredBuffers[1].Resource->GetGPUVirtualAddress(),
-					//.VertexBuffer = D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE({.StartAddress = VertBuf.Resource->GetGPUVirtualAddress(), .StrideInBytes = sizeof(Vertices[0]) }),
-					.VertexBuffer = D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE({.StartAddress = StructuredBuffers[0].Resource->GetGPUVirtualAddress(), .StrideInBytes = sizeof(Vertices[0]) }),
+					.VertexBuffer = D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE({.StartAddress = StructuredBuffers[0].Resource->GetGPUVirtualAddress(), .StrideInBytes = sizeof(PNs[0]) }),
 				})
 			}),
 		};
@@ -120,7 +117,7 @@ public:
 			#pragma region INSTANCES
 			D3D12_RAYTRACING_INSTANCE_DESC({
 				.Transform = {
-					{ 1.0f, 0.0f, 0.0f, -0.5f }, 
+					{ 1.0f, 0.0f, 0.0f, -1.0f }, 
 					{ 0.0f, 1.0f, 0.0f,  0.0f },
 					{ 0.0f, 0.0f, 1.0f,  0.0f }
 				},
@@ -132,11 +129,23 @@ public:
 			}),
 			D3D12_RAYTRACING_INSTANCE_DESC({
 				.Transform = {
-					{ 1.0f, 0.0f, 0.0f, 0.5f },
+					{ 1.0f, 0.0f, 0.0f, 0.0f },
 					{ 0.0f, 1.0f, 0.0f, 0.0f },
 					{ 0.0f, 0.0f, 1.0f, 0.0f }
 				},
-				.InstanceID = 1, 
+				.InstanceID = 1,
+				.InstanceMask = 0xff,
+				.InstanceContributionToHitGroupIndex = 0,
+				.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE,
+				.AccelerationStructure = BLASs.back().Resource->GetGPUVirtualAddress()
+			}),
+			D3D12_RAYTRACING_INSTANCE_DESC({
+				.Transform = {
+					{ 1.0f, 0.0f, 0.0f, 1.0f },
+					{ 0.0f, 1.0f, 0.0f, 0.0f },
+					{ 0.0f, 0.0f, 1.0f, 0.0f }
+				},
+				.InstanceID = 2, 
 				.InstanceMask = 0xff,
 				.InstanceContributionToHitGroupIndex = 0,
 				.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE,
@@ -152,7 +161,7 @@ public:
 			.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE,
 			.NumDescs = static_cast<UINT>(size(RIDs)),
 			.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY,
-			.InstanceDescs = InsBuf.Resource->GetGPUVirtualAddress() //!< インスタンスを指定
+			.InstanceDescs = InsBuf.Resource->GetGPUVirtualAddress()
 		};
 #pragma endregion
 
@@ -256,7 +265,7 @@ public:
 					.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Uav)), .pDescriptorRanges = data(DRs_Uav) }),
 					.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
 				}),
-				//!< CBV0 : D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE ではなくて D3D12_ROOT_PARAMETER_TYPE_CBV を使用している点に注意
+				//!< CBV0 : D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE ではなくて D3D12_ROOT_PARAMETER_TYPE_CBV を使用している
 				D3D12_ROOT_PARAMETER({
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV,
 					.Descriptor = D3D12_ROOT_DESCRIPTOR({ .ShaderRegister = 0, .RegisterSpace = 0 }),
@@ -269,7 +278,7 @@ public:
 			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		}
 
-#pragma region LOCAL_ROOTSIGNATURE
+#pragma region SHADER_RECORD
 		//!< ローカルルートシグネチャ (Local root signature)
 		{
 			COM_PTR<ID3DBlob> Blob;
@@ -280,13 +289,13 @@ public:
 				//!< SRV1 : VertexBuffer
 				D3D12_ROOT_PARAMETER({
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV,
-					.Descriptor = D3D12_ROOT_DESCRIPTOR({.ShaderRegister = 0, .RegisterSpace = 0 }),
+					.Descriptor = D3D12_ROOT_DESCRIPTOR({.ShaderRegister = 0, .RegisterSpace = 1 }),
 					.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
 				}),
 				//!< SRV2 : IndexBuffer
 				D3D12_ROOT_PARAMETER({
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV,
-					.Descriptor = D3D12_ROOT_DESCRIPTOR({.ShaderRegister = 1, .RegisterSpace = 0 }),
+					.Descriptor = D3D12_ROOT_DESCRIPTOR({.ShaderRegister = 1, .RegisterSpace = 1 }),
 					.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
 				}),
 				}, {}, D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE);
@@ -348,7 +357,6 @@ public:
 
 		constexpr D3D12_RAYTRACING_PIPELINE_CONFIG RPC = { .MaxTraceRecursionDepth = 31 }; //!< 最大再帰呼び出し回数を指定
 
-		/*constexpr std::array*/
 		std::vector SSs = {
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, .pDesc = &GRS }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rgen }),
@@ -360,9 +368,8 @@ public:
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, .pDesc = &RSC }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, .pDesc = &RPC }),
 		};
-#pragma region LOCAL_ROOTSIGNATURE
-		if(0){
-			//!< ローカルルートシグネチャ (Local root signature)
+#pragma region SHADER_RECORD
+		{
 			const D3D12_LOCAL_ROOT_SIGNATURE LRS = { .pLocalRootSignature = COM_PTR_GET(RootSignatures[1]) };
 			SSs.emplace_back(D3D12_STATE_SUBOBJECT({ .Type = D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, .pDesc = &LRS }));
 			//!< ローカルルートシグネチャとヒットグループの関連付け
@@ -371,7 +378,6 @@ public:
 			SSs.emplace_back(D3D12_STATE_SUBOBJECT({ .Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION, .pDesc = &STEA }));
 		}
 #pragma endregion
-		/*constexpr*/
 		const D3D12_STATE_OBJECT_DESC SOD = {
 			.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE,
 			.NumSubobjects = static_cast<UINT>(size(SSs)), .pSubobjects = data(SSs)
@@ -385,7 +391,9 @@ public:
 	virtual void CreateDescriptor() override {
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
+#pragma region SHADER_RECORD
 		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 3 + 2, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0};
+#pragma endregion
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 
 		const auto DH = CbvSrvUavDescriptorHeaps[0];
@@ -394,8 +402,13 @@ public:
 		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		
+#pragma region SHADER_RECORD
 		Device->CreateShaderResourceView(COM_PTR_GET(StructuredBuffers[0].Resource), &StructuredBuffers[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 		Device->CreateShaderResourceView(COM_PTR_GET(StructuredBuffers[1].Resource), &StructuredBuffers[1].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+#pragma endregion
+
+		//!< この時点で削除してしまって良い？
+		//for (auto i : StructuredBuffers) { COM_PTR_RESET(i.Resource); }
 	}
 	virtual void CreateShaderTable() override {
 		COM_PTR<ID3D12StateObjectProperties> SOP;
@@ -408,7 +421,7 @@ public:
 		constexpr auto MissSize = 1 * MissStride;
 
 #pragma region HIT
-#pragma region LOCAL_ROOTSIGNATURE
+#pragma region SHADER_RECORD
 		constexpr auto RchitStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + sizeof(D3D12_GPU_DESCRIPTOR_HANDLE) * 2, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
 #pragma endregion
 		constexpr auto RchitSize = 1 * RchitStride;
@@ -428,7 +441,7 @@ public:
 		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RchitSize, RchitStride); {
 			auto Data = ShaderTables.back().Map(); {
 				std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("HitGroup")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-#pragma region LOCAL_ROOTSIGNATURE
+#pragma region SHADER_RECORD
 				{
 					const auto& DH = CbvSrvUavDescriptorHeaps[0];
 					auto GDH = DH->GetGPUDescriptorHandleForHeapStart();

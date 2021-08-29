@@ -14,14 +14,22 @@ public:
 	RayTracingVK() : Super() {}
 	virtual ~RayTracingVK() {}
 
+#if 1
+	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
+		for (auto i : StructuredBuffers) { i.Destroy(Device); }
+		Super::OnDestroy(hWnd, hInstance);
+	}
+#endif
+
 #pragma region FBX
 	glm::vec3 ToVec3(const FbxVector4& rhs) { return glm::vec3(static_cast<FLOAT>(rhs[0]), static_cast<FLOAT>(rhs[1]), static_cast<FLOAT>(rhs[2])); }
 	std::vector<uint32_t> Indices;
-	std::vector<glm::vec3> Vertices;
-	std::vector<glm::vec3> Normals;
+	std::vector<std::array<glm::vec3, 2>> PNs;
 	virtual void Process(FbxMesh* Mesh) override {
 		Fbx::Process(Mesh);
 
+		std::vector<glm::vec3> Vertices;
+		std::vector<glm::vec3> Normals;
 		auto Max = glm::vec3((std::numeric_limits<float>::min)());
 		auto Min = glm::vec3((std::numeric_limits<float>::max)());
 		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
@@ -47,7 +55,9 @@ public:
 			Normals.emplace_back(ToVec3(Nrms[i]));
 		}
 
-		//for (auto i : Vertices) { std::cout << i.x << ", " << i.y << ", " << i.z << std::endl; }
+		for (auto i = 0; i < size(Vertices); ++i) {
+			PNs.emplace_back(std::array<glm::vec3, 2>({Vertices[i], Normals[i]}));
+		}
 	}
 #pragma endregion
 
@@ -94,11 +104,9 @@ public:
 		const auto& CB = CommandBuffers[0];
 
 #pragma region BLAS_GEOMETRY
-		Scoped<BufferMemory> VertBuf(Device);
-		VertBuf.Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Sizeof(Vertices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Vertices));
+		StructuredBuffers.emplace_back().Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Sizeof(PNs), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(PNs));
 
-		Scoped<BufferMemory> IndBuf(Device);
-		IndBuf.Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Sizeof(Indices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Indices));
+		StructuredBuffers.emplace_back().Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Sizeof(Indices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Indices));
 
 		const std::vector ASGs_Blas = {
 			VkAccelerationStructureGeometryKHR({
@@ -110,9 +118,9 @@ public:
 						.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
 						.pNext = nullptr,
 						.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
-						.vertexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, VertBuf.Buffer)}), .vertexStride = sizeof(Vertices[0]), .maxVertex = static_cast<uint32_t>(size(Vertices)),
+						.vertexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, StructuredBuffers[0].Buffer)}), .vertexStride = sizeof(PNs[0]), .maxVertex = static_cast<uint32_t>(size(PNs)),
 						.indexType = VK_INDEX_TYPE_UINT32,
-						.indexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, IndBuf.Buffer)}),
+						.indexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, StructuredBuffers[1].Buffer)}),
 						.transformData = VkDeviceOrHostAddressConstKHR({.deviceAddress = 0}),
 					}),
 				}),
@@ -152,7 +160,7 @@ public:
 		const std::array ASIs = {
 			#pragma region INSTANCES
 			VkAccelerationStructureInstanceKHR({
-				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, -0.5f,
+				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, -1.0f,
 													0.0f, 1.0f, 0.0f, 0.0f,
 													0.0f, 0.0f, 1.0f, 0.0f}),
 				.instanceCustomIndex = 0, //!< [GLSL] gl_InstanceCustomIndexEXT ([HLSL] InstanceID()‘Š“–)
@@ -162,10 +170,20 @@ public:
 				.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().Buffer)
 			}),
 			VkAccelerationStructureInstanceKHR({
-				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, 0.5f,
+				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, 0.0f,
 													0.0f, 1.0f, 0.0f, 0.0f,
 													0.0f, 0.0f, 1.0f, 0.0f}),
-				.instanceCustomIndex = 1, 
+				.instanceCustomIndex = 1,
+				.mask = 0xff,
+				.instanceShaderBindingTableRecordOffset = 0,
+				.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR,
+				.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().Buffer)
+			}),
+			VkAccelerationStructureInstanceKHR({
+				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, 1.0f,
+													0.0f, 1.0f, 0.0f, 0.0f,
+													0.0f, 0.0f, 1.0f, 0.0f}),
+				.instanceCustomIndex = 2, 
 				.mask = 0xff,
 				.instanceShaderBindingTableRecordOffset = 0,
 				.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR,
@@ -378,6 +396,7 @@ public:
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			const auto DII_UB = VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE });
 			const std::array WDSs = {
+				//!< TLAS
 				VkWriteDescriptorSet({
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.pNext = &WDSAS, //!< pNext ‚É VkWriteDescriptorSetAccelerationStructureKHR ‚ðŽw’è‚·‚é
@@ -386,6 +405,7 @@ public:
 					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
 					.pImageInfo = nullptr, .pBufferInfo = nullptr, .pTexelBufferView = nullptr
 				}),
+				//!< CubeMap
 				VkWriteDescriptorSet({
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.pNext = nullptr,
@@ -394,6 +414,7 @@ public:
 					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 					.pImageInfo = &DII_Cube, .pBufferInfo = nullptr, .pTexelBufferView = nullptr
 				}),
+				//!< StorageImage
 				VkWriteDescriptorSet({
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.pNext = nullptr,
@@ -402,6 +423,7 @@ public:
 					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
 					.pImageInfo = &DII_Storage, .pBufferInfo = nullptr, .pTexelBufferView = nullptr
 				}),
+				//!< UniformBuffer
 				VkWriteDescriptorSet({
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.pNext = nullptr,
@@ -426,7 +448,9 @@ public:
 		const auto MissSize = 1 * MissStride;
 
 #pragma region HIT
+#pragma region SHADER_RECORD
 		const auto RchitStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + sizeof(VkDeviceAddress) * 2, PDRTPP.shaderGroupHandleAlignment);
+#pragma endregion
 		const auto RchitSize = 1 * RchitStride;
 #pragma endregion
 
@@ -448,11 +472,18 @@ public:
 		ShaderBindingTables.emplace_back().Create(Device, PDMP, RchitSize, RchitStride); {
 			auto Data = ShaderBindingTables.back().Map(Device); {
 				std::memcpy(Data, data(HandleData) + RgenSize + MissSize, PDRTPP.shaderGroupHandleSize);
-				//std::memcpy(Data + PDRTPP.shaderGroupHandleSize, GetDeviceAddress(Device, VertBuf.Buffer), sizeof(VkDeviceAddress));
-				//std::memcpy(Data + PDRTPP.shaderGroupHandleSize + PDRTPP.shaderGroupHandleSize, GetDeviceAddress(Device, IndBuf.Buffer), sizeof(VkDeviceAddress));
+#pragma region SHADER_RECORD
+				const auto DA_Vert = GetDeviceAddress(Device, StructuredBuffers[0].Buffer);
+				std::memcpy(reinterpret_cast<std::byte*>(Data) + PDRTPP.shaderGroupHandleSize, &DA_Vert, sizeof(DA_Vert));
+				const auto DA_Ind = GetDeviceAddress(Device, StructuredBuffers[1].Buffer);
+				std::memcpy(reinterpret_cast<std::byte*>(Data) + PDRTPP.shaderGroupHandleSize + PDRTPP.shaderGroupHandleSize, &DA_Ind, sizeof(DA_Ind));
+#pragma endregion
 			} ShaderBindingTables.back().Unmap(Device);
 		}
 #pragma endregion
+
+		//!< ‚±‚ÌŽž“_‚Åíœ‚µ‚Ä‚µ‚Ü‚Á‚Ä—Ç‚¢H
+		//for (auto i : StructuredBuffers) { i.Destroy(Device); }
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
@@ -540,6 +571,8 @@ public:
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 	}
 #pragma endregion
+
+	std::vector<BufferMemory> StructuredBuffers;
 
 private:
 	struct Transform

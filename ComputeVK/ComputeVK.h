@@ -81,7 +81,7 @@ protected:
 
 		vkDestroyShaderModule(Device, SM, GetAllocationCallbacks()); 
 	}
-	virtual void CreateDescriptorSet() override {
+	virtual void CreateDescriptor() override {
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1 }
 		});
@@ -94,30 +94,22 @@ protected:
 			static_cast<uint32_t>(size(DSLs)), data(DSLs)
 		};
 		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
-	}
-	virtual void UpdateDescriptorSet() override {
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
+
+		VkDescriptorUpdateTemplate DUT;
+		VK::CreateDescriptorUpdateTemplate(DUT, {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
-				.descriptorCount = _countof(DescriptorUpdateInfo::DII), .descriptorType = /*VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER*/VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-				.offset = offsetof(DescriptorUpdateInfo, DII), .stride = sizeof(DescriptorUpdateInfo)
+				.descriptorCount = 1, .descriptorType = /*VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER*/VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+				.offset = 0, .stride = sizeof(VkDescriptorImageInfo)
 			}),
 		}, DescriptorSetLayouts[0]);
 
-		const DescriptorUpdateInfo DUI = {
-			VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = RenderTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_GENERAL })
-		};
-		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
+		const auto DII = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = RenderTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_GENERAL });
+		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DUT, &DII);
 	}
 	
 	virtual void PopulateCommandBuffer(const size_t i) override;
 
 	virtual void Draw() override { Dispatch(); }
-
-private:
-	struct DescriptorUpdateInfo
-	{
-		VkDescriptorImageInfo DII[1];
-	}; 
 };
 #pragma endregion

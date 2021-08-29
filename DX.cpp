@@ -55,12 +55,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< デスクリプタ
 	CreateDescriptor();
-	{
-		//!< デスクリプタヒープ
-		CreateDescriptorHeap();
-		//!< デスクリプタビュー ... この時点でリソース、デスクリプタヒープ等が必要
-		CreateDescriptorView();
-	}
 	CreateShaderTable();
 
 	SetTimer(hWnd, NULL, Elapse, nullptr);

@@ -124,7 +124,7 @@ protected:
 
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
-	virtual void CreateDescriptorSet() override {
+	virtual void CreateDescriptor() override {
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region SECOND_TEXTURE
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 2 }),
@@ -145,25 +145,35 @@ protected:
 			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 		}
 #pragma endregion
-	}
-	virtual void UpdateDescriptorSet() override {
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
+
+		struct DescriptorUpdateInfo
+		{
+			VkDescriptorImageInfo DII;
+#pragma region SECOND_TEXTURE
+			VkDescriptorImageInfo DII_1;
+#pragma endregion
+#pragma region UB
+			VkDescriptorBufferInfo DBI;
+#pragma endregion
+		};
+		VkDescriptorUpdateTemplate DUT;
+		VK::CreateDescriptorUpdateTemplate(DUT, {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
-				.descriptorCount = _countof(DescriptorUpdateInfo::DII), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				.offset = offsetof(DescriptorUpdateInfo, DII), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 #pragma region SECOND_TEXTURE
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 1, .dstArrayElement = 0,
-				.descriptorCount = _countof(DescriptorUpdateInfo::DII_1), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				.offset = offsetof(DescriptorUpdateInfo, DII_1), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 #pragma endregion
 #pragma region UB
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 2, .dstArrayElement = 0,
-				.descriptorCount = _countof(DescriptorUpdateInfo::DBI), .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				.offset = offsetof(DescriptorUpdateInfo, DBI), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 #pragma endregion
@@ -177,8 +187,9 @@ protected:
 #pragma endregion
 				VkDescriptorBufferInfo({.buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
 			};
-			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DescriptorUpdateTemplates[0], &DUI);
+			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DUT, &DUI);
 		}
+		vkDestroyDescriptorUpdateTemplate(Device, DUT, GetAllocationCallbacks());
 #pragma endregion
 	}
 
@@ -257,17 +268,6 @@ protected:
 #endif
 
 private:
-	struct DescriptorUpdateInfo
-	{
-		VkDescriptorImageInfo DII[1];
-#pragma region SECOND_TEXTURE
-		VkDescriptorImageInfo DII_1[1]; 
-#pragma endregion
-#pragma region UB
-		VkDescriptorBufferInfo DBI[1];
-#pragma endregion
-	};
-
 	struct HandTracking
 	{
 		//!< 16バイトアライン境界をまたいではいけないので vec3 ではなく、vec4 を使用する

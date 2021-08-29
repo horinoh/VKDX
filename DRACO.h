@@ -43,7 +43,7 @@ public:
 		}
 		for (auto i = 0; i < POSITION->size(); ++i) {
 			const auto Len = std::sqrt(Normals[i][0] * Normals[i][0] + Normals[i][1] * Normals[i][1] + Normals[i][2] * Normals[i][2]);
-#if 0
+#if 1
 			const std::array<float, 3> N = { Normals[i][0] / Len, Normals[i][1] / Len, Normals[i][2] / Len };
 			Mesh->attribute(AttrId)->SetAttributeValue(static_cast<draco::AttributeValueIndex>(i), data(N));
 #else

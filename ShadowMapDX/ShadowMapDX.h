@@ -333,7 +333,7 @@ protected:
 #endif	
 		for (auto& i : Threads) { i.join(); }
 	}
-	virtual void CreateDescriptorHeap() override {
+	virtual void CreateDescriptor() override {
 		{
 			//!< パス0 + パス1
 #pragma region FRAME_OBJECT
@@ -356,8 +356,7 @@ protected:
 #endif
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
 		}
-	}
-	virtual void CreateDescriptorView() override {
+
 		{
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();

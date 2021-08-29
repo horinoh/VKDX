@@ -266,7 +266,7 @@ protected:
 
 		for (auto& i : Threads) { i.join(); }
 	}
-	virtual void CreateDescriptorHeap() override {
+	virtual void CreateDescriptor() override {
 #pragma region FRAME_OBJECT
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
@@ -306,12 +306,6 @@ protected:
 			}
 #pragma endregion
 		}
-#pragma endregion
-	}
-	virtual void CreateDescriptorView() override {
-#pragma region FRAME_OBJECT
-		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
 #pragma endregion
 
 #pragma region PASS0

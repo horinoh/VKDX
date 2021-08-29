@@ -155,7 +155,7 @@ protected:
 			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DepthTextures.back().View });
 		}
 	}
-	virtual void CreateDescriptorSet() override {
+	virtual void CreateDescriptor() override {
 		VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }), //!< UB * N
@@ -181,34 +181,46 @@ protected:
 			VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 		}
 #pragma endregion
-	}
-	virtual void UpdateDescriptorSet() override {
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
+
+		struct DescriptorUpdateInfo
+		{
+			VkDescriptorBufferInfo DBI;
+#ifdef USE_SEPARATE_SAMPLER
+			VkDescriptorImageInfo DII_S; //!< Sampler
+			VkDescriptorImageInfo DII_0; //!< Image0
+			VkDescriptorImageInfo DII_1; //!< Image1
+#else
+			VkDescriptorImageInfo DII_0; //!< Sampelr + Image0
+			VkDescriptorImageInfo DII_1; //!< Sampler + Image1
+#endif
+		};
+		VkDescriptorUpdateTemplate DUT;
+		VK::CreateDescriptorUpdateTemplate(DUT, {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
-				.descriptorCount = _countof(DescriptorUpdateInfo::DBI), .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< UniformBuffer
+				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< UniformBuffer
 				.offset = offsetof(DescriptorUpdateInfo, DBI), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 #ifdef USE_SEPARATE_SAMPLER
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 2, .dstArrayElement = 0,
-				.descriptorCount = _countof(DescriptorUpdateInfo::DII_0), .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, //!< Image0
+				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, //!< Image0
 				.offset = offsetof(DescriptorUpdateInfo, DII_0), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 3, .dstArrayElement = 0,
-				.descriptorCount = _countof(DescriptorUpdateInfo::DII_1), .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, //!< Image1
+				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, //!< Image1
 				.offset = offsetof(DescriptorUpdateInfo, DII_1), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 #else
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 1, .dstArrayElement = 0,
-				.descriptorCount = _countof(DescriptorUpdateInfo::DII_0), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< Sampler + Image0
+				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< Sampler + Image0
 				.offset = offsetof(DescriptorUpdateInfo, DII_0), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 2, .dstArrayElement = 0,
-				.descriptorCount = _countof(DescriptorUpdateInfo::DII_1), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< Sampler + Image1
+				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< Sampler + Image1
 				.offset = offsetof(DescriptorUpdateInfo, DII_1), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 #endif
@@ -227,12 +239,69 @@ protected:
 				VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = DDSTextures[1].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }), //!< Sampler + Image1
 #endif
 			};
-			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DescriptorUpdateTemplates[0], &DUI);
+			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DUT, &DUI);
 		}
 #pragma endregion
+		vkDestroyDescriptorUpdateTemplate(Device, DUT, GetAllocationCallbacks());
 	}
 	
-	virtual void PopulateCommandBuffer(const size_t i) override;
+	virtual void PopulateCommandBuffer(const size_t i) override {
+		const auto RP = RenderPasses[0];
+		const auto FB = Framebuffers[i];
+
+		const auto SCB = SecondaryCommandBuffers[i];
+		const VkCommandBufferInheritanceInfo CBII = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+			.pNext = nullptr,
+			.renderPass = RP,
+			.subpass = 0,
+			.framebuffer = FB,
+			.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
+			.pipelineStatistics = 0,
+		};
+		const VkCommandBufferBeginInfo SCBBI = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+			.pInheritanceInfo = &CBII
+		};
+		VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB, &SCBBI)); {
+			vkCmdSetViewport(SCB, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
+			vkCmdSetScissor(SCB, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
+#pragma region FRAME_OBJECT
+			const std::array DSs = { DescriptorSets[i] };
+#pragma endregion
+			constexpr std::array<uint32_t, 0> DynamicOffsets = {};
+			vkCmdBindDescriptorSets(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[0], 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
+
+			vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
+
+			vkCmdDrawIndirect(SCB, IndirectBuffers[0].Buffer, 0, 1, 0);
+		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
+
+		const auto CB = CommandBuffers[i];
+		const VkCommandBufferBeginInfo CBBI = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = 0,
+			.pInheritanceInfo = nullptr
+		};
+		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+			const std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
+			const VkRenderPassBeginInfo RPBI = {
+				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+				.pNext = nullptr,
+				.renderPass = RP,
+				.framebuffer = FB,
+				.renderArea = VkRect2D({.offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D }),
+				.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
+			};
+			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
+				const std::array SCBs = { SCB };
+				vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
+			} vkCmdEndRenderPass(CB);
+		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+	}
 
 private:
 	struct Transform
@@ -248,18 +317,5 @@ private:
 	Transform Tr;
 	uint32_t HeapIndex;
 	VkDeviceSize Offset;
-
-	struct DescriptorUpdateInfo
-	{
-		VkDescriptorBufferInfo DBI[1];
-#ifdef USE_SEPARATE_SAMPLER
-		VkDescriptorImageInfo DII_S[1]; //!< Sampler
-		VkDescriptorImageInfo DII_0[1]; //!< Image0
-		VkDescriptorImageInfo DII_1[1]; //!< Image1
-#else
-		VkDescriptorImageInfo DII_0[1]; //!< Sampelr + Image0
-		VkDescriptorImageInfo DII_1[1]; //!< Sampler + Image1
-#endif
-	};
 };
 #pragma endregion

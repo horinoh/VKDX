@@ -296,7 +296,7 @@ protected:
 		}
 #pragma endregion
 	}
-	virtual void CreateDescriptorSet() override {
+	virtual void CreateDescriptor() override {
 #ifdef USE_SUBPASS
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, .descriptorCount = 1 })
@@ -307,7 +307,6 @@ protected:
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 })
 		});
 #pragma endregion
-
 #pragma region PASS1
 		const std::array DSLs = { DescriptorSetLayouts[0] };
 		const VkDescriptorSetAllocateInfo DSAI = {
@@ -318,38 +317,183 @@ protected:
 		};
 		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 #pragma endregion
-	}
-	virtual void UpdateDescriptorSet() override {
-#ifdef USE_SUBPASS
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
-			VkDescriptorUpdateTemplateEntry({
-				.dstBinding = 0, .dstArrayElement = 0,
-				.descriptorCount = _countof(DescriptorUpdateInfo::DescriptorImageInfos), .descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
-				.offset = offsetof(DescriptorUpdateInfo, DescriptorImageInfos), .stride = sizeof(DescriptorUpdateInfo)
-			}),
-		}, DescriptorSetLayouts[0]);
-#endif
-#pragma region PASS1
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
-			VkDescriptorUpdateTemplateEntry({
-				.dstBinding = 0, .dstArrayElement = 0,
-				.descriptorCount = _countof(DescriptorUpdateInfo::DescriptorImageInfos), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				.offset = offsetof(DescriptorUpdateInfo, DescriptorImageInfos), .stride = sizeof(DescriptorUpdateInfo)
-			}),
-		}, DescriptorSetLayouts[0]);
-		const DescriptorUpdateInfo DUI = {
-			VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = RenderTextures.back().View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }),
-		};
-		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DescriptorUpdateTemplates[0], &DUI);
-#pragma endregion
-	}
-	
-	virtual void PopulateCommandBuffer(const size_t i) override;
 
-private:
 		struct DescriptorUpdateInfo
 		{
 			VkDescriptorImageInfo DescriptorImageInfos[1];
 		};
+		VkDescriptorUpdateTemplate DUT;
+#ifdef USE_SUBPASS
+		VK::CreateDescriptorUpdateTemplate(DUT, {
+			VkDescriptorUpdateTemplateEntry({
+				.dstBinding = 0, .dstArrayElement = 0,
+				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
+				.offset = 0, .stride = sizeof(VkDescriptorImageInfo)
+			}),
+		}, DescriptorSetLayouts[0]);
+#endif
+#pragma region PASS1
+		VK::CreateDescriptorUpdateTemplate(DUT, {
+			VkDescriptorUpdateTemplateEntry({
+				.dstBinding = 0, .dstArrayElement = 0,
+				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.offset = 0, .stride = sizeof(VkDescriptorImageInfo)
+			}),
+		}, DescriptorSetLayouts[0]);
+		const auto DII = VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = RenderTextures.back().View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DUT, &DII);
+#pragma endregion
+		vkDestroyDescriptorUpdateTemplate(Device, DUT, GetAllocationCallbacks());
+	}
+	
+	virtual void PopulateCommandBuffer(const size_t i) override {
+#pragma region PASS0
+		//!< メッシュ描画用
+		const auto RP0 = RenderPasses[0];
+		const auto FB0 = Framebuffers[0];
+		const auto SCB0 = SecondaryCommandBuffers[i];
+		{
+			const VkCommandBufferInheritanceInfo CBII = {
+				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+				.pNext = nullptr,
+				.renderPass = RP0,
+				.subpass = 0,
+				.framebuffer = FB0,
+				.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
+				.pipelineStatistics = 0,
+			};
+			const VkCommandBufferBeginInfo CBBI = {
+				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+				.pNext = nullptr,
+				.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+				.pInheritanceInfo = &CBII
+			};
+			VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB0, &CBBI)); {
+				vkCmdSetViewport(SCB0, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
+				vkCmdSetScissor(SCB0, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
+
+				vkCmdBindPipeline(SCB0, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
+
+				vkCmdDrawIndirect(SCB0, IndirectBuffers[0].Buffer, 0, 1, 0);
+			} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB0));
+		}
+#pragma endregion
+
+#pragma region PASS1
+		//!< レンダーテクスチャ描画用
+		const auto RP1 = RenderPasses[1];
+		const auto FB1 = Framebuffers[i + 1];
+		const auto SCCount = size(SwapchainImages);
+		const auto SCB1 = SecondaryCommandBuffers[i + SCCount]; //!< オフセットさせる(ここでは2つのセカンダリコマンドバッファがぞれぞれスワップチェインイメージ数だけある)
+		{
+			const VkCommandBufferInheritanceInfo CBII = {
+				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+				.pNext = nullptr,
+				.renderPass = RP1,
+				.subpass = 0,
+				.framebuffer = FB1,
+				.occlusionQueryEnable = VK_FALSE, .queryFlags = 0,
+				.pipelineStatistics = 0,
+			};
+			const VkCommandBufferBeginInfo CBBI = {
+				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+				.pNext = nullptr,
+				.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+				.pInheritanceInfo = &CBII
+			};
+			VERIFY_SUCCEEDED(vkBeginCommandBuffer(SCB1, &CBBI)); {
+				vkCmdSetViewport(SCB1, 0, static_cast<uint32_t>(size(Viewports)), data(Viewports));
+				vkCmdSetScissor(SCB1, 0, static_cast<uint32_t>(size(ScissorRects)), data(ScissorRects));
+
+				vkCmdBindPipeline(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[1]);
+
+				constexpr std::array<uint32_t, 0> DynamicOffsets = {};
+				vkCmdBindDescriptorSets(SCB1, VK_PIPELINE_BIND_POINT_GRAPHICS, PipelineLayouts[1], 0, static_cast<uint32_t>(size(DescriptorSets)), data(DescriptorSets), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
+
+				vkCmdDrawIndirect(SCB1, IndirectBuffers[1].Buffer, 0, 1, 0);
+			} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB1));
+		}
+#pragma endregion
+
+#ifdef USE_SUBPASS
+		//vkCmdNextSubpass() を使用する
+#endif
+
+		const auto CB = CommandBuffers[i];
+		const VkCommandBufferBeginInfo CBBI = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.pNext = nullptr,
+			.flags = 0,
+			.pInheritanceInfo = nullptr
+		};
+		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+			const auto RenderArea = VkRect2D({ .offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D });
+
+#pragma region PASS0
+			//!< メッシュ描画用
+			{
+#ifdef USE_DEPTH
+				constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
+#else
+				constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
+#endif
+				const VkRenderPassBeginInfo RPBI = {
+					.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+					.pNext = nullptr,
+					.renderPass = RP0,
+					.framebuffer = FB0,
+					.renderArea = RenderArea,
+					.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
+				};
+				vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
+					const std::array SCBs = { SCB0 };
+					vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
+				} vkCmdEndRenderPass(CB);
+			}
+#pragma endregion
+
+			//!< リソースバリア
+			{
+				const std::array IMBs = {
+					//!< COLOR_ATTACHMENT_READ_BIT -> SHADER_READ_BIT
+					VkImageMemoryBarrier({
+						.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+						.pNext = nullptr,
+						.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT, .dstAccessMask = VK_ACCESS_SHADER_READ_BIT,
+						.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, .newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.image = RenderTextures[0].Image,
+						.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 })
+					}),
+				};
+				//!< COLOR_ATTACHMENT_OUTPUT_BIT -> FRAGMENT_SHADER_BIT
+				vkCmdPipelineBarrier(CB,
+					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+					VK_DEPENDENCY_BY_REGION_BIT,
+					0, nullptr,
+					0, nullptr,
+					static_cast<uint32_t>(size(IMBs)), data(IMBs));
+			}
+
+#pragma region PASS1
+			//!< レンダーテクスチャ描画用
+			{
+				constexpr std::array<VkClearValue, 0> CVs = {};
+				const VkRenderPassBeginInfo RPBI = {
+					.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+					.pNext = nullptr,
+					.renderPass = RP1,
+					.framebuffer = FB1,
+					.renderArea = RenderArea,
+					.clearValueCount = static_cast<uint32_t>(size(CVs)), .pClearValues = data(CVs)
+				};
+				vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS); {
+					const std::array SCBs = { SCB1 };
+					vkCmdExecuteCommands(CB, static_cast<uint32_t>(size(SCBs)), data(SCBs));
+				} vkCmdEndRenderPass(CB);
+			}
+#pragma endregion
+		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+	}
 };
 #pragma endregion

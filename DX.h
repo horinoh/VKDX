@@ -574,8 +574,6 @@ public:
 	virtual void CreateRootSignature();
 
 	virtual void CreateDescriptor() {}
-	virtual void CreateDescriptorHeap() {}
-	virtual void CreateDescriptorView() {}
 	virtual void CreateShaderTable() {}
 
 	virtual void ProcessShaderReflection(ID3DBlob* Blob);

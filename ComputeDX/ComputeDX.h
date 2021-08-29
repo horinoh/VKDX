@@ -68,11 +68,10 @@ protected:
 		};
 		VERIFY_SUCCEEDED(Device->CreateComputePipelineState(&CPSD, COM_PTR_UUIDOF_PUTVOID(PipelineStates.emplace_back())));
 	}
-	virtual void CreateDescriptorHeap() override {
+	virtual void CreateDescriptor() override {
 		constexpr D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));		
-	}
-	virtual void CreateDescriptorView() override {
+
 		const auto& DH = CbvSrvUavDescriptorHeaps[0];
 		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 		//Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);

@@ -195,7 +195,7 @@ protected:
 
 		ConstantBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Tr));
 	}
-	virtual void CreateDescriptorHeap() override {
+	virtual void CreateDescriptor() override {
 		{
 			CbvSrvUavDescriptorHeaps.emplace_back(COM_PTR<ID3D12DescriptorHeap>());
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
@@ -206,8 +206,7 @@ protected:
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.back())));
 		}
-	}
-	virtual void CreateDescriptorView() override {
+
 		{
 			const auto& DH = CbvSrvUavDescriptorHeaps[0];
 			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();

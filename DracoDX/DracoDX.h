@@ -70,7 +70,7 @@ public:
 			Load(ToString(Path) + "//dragon4.drc");
 		}
 		//Load(std::string("..//draco//testdata//") + "car.drc");
-
+		
 		const auto CA = COM_PTR_GET(CommandAllocators[0]);
 		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 		const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
@@ -133,11 +133,10 @@ public:
 		};
 		DXExt::CreatePipelineState_VsPs_Input(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD, TRUE, IEDs, SBCs);
 	}
-	virtual void CreateDescriptorHeap() override {
+	virtual void CreateDescriptor() override {
 		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
-	}
-	virtual void CreateDescriptorView() override {
+
 		const auto& DH = DsvDescriptorHeaps[0];
 		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 		Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);

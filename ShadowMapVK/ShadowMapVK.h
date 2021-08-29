@@ -416,7 +416,7 @@ protected:
 			}
 		}
 	}
-	virtual void CreateDescriptorSet() override {
+	virtual void CreateDescriptor() override {
 		//!< Pass0, Pass1 : デスクリプタプール
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
@@ -455,8 +455,7 @@ protected:
 			}
 #pragma endregion
 		}
-	}
-	virtual void UpdateDescriptorSet() override {
+
 #pragma region FRAME_OBJECT
 		const auto SCCount = size(SwapchainImages);
 		//!< パス0 :

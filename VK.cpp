@@ -66,12 +66,6 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< デスクリプタ
 	CreateDescriptor();
-	{
-		//!< デスクリプタセット
-		CreateDescriptorSet();
-		//!< デスクリプタセット更新 ... この時点でデスクリプタセット、ユニフォームバッファ、イメージビュー、サンプラ等が必要
-		UpdateDescriptorSet();
-	}
 	CreateShaderBindingTable();
 
 	SetTimer(hWnd, NULL, Elapse, nullptr);

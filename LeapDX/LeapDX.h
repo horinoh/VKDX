@@ -139,7 +139,7 @@ protected:
 		CreatePipelineState_VsPs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE, RD, FALSE, SBCs); 
 	}
 
-	virtual void CreateDescriptorHeap() override {
+	virtual void CreateDescriptor() override {
 		{
 #pragma region CB
 			DXGI_SWAP_CHAIN_DESC1 SCD;
@@ -154,8 +154,7 @@ protected:
 			};
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 		}
-	}
-	virtual void CreateDescriptorView() override {
+
 		const auto& DH = CbvSrvUavDescriptorHeaps[0];
 		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
 		Device->CreateShaderResourceView(COM_PTR_GET(Textures[0].Resource), &Textures[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
@@ -172,7 +171,57 @@ protected:
 #pragma endregion
 	}
 
-	virtual void PopulateCommandList(const size_t i) override;
+	virtual void PopulateCommandList(const size_t i) override {
+		const auto PS = COM_PTR_GET(PipelineStates[0]);
+
+		const auto BGCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
+		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
+		{
+			BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			BGCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+		}
+		VERIFY_SUCCEEDED(BGCL->Close());
+
+		const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
+		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
+		{
+			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
+
+			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+
+			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			{
+				auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+				const std::array RTCDHs = { SCCDH };
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, nullptr);
+
+				assert(!empty(CbvSrvUavDescriptorHeaps) && "");
+				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
+				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+
+				{
+					const auto& DH = CbvSrvUavDescriptorHeaps[0];
+					auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
+					GCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * 2;
+
+#pragma region CB
+					DXGI_SWAP_CHAIN_DESC1 SCD;
+					SwapChain->GetDesc1(&SCD);
+					GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
+					GCL->SetGraphicsRootDescriptorTable(1, GDH);
+#pragma endregion
+				}
+
+				GCL->ExecuteBundle(BGCL);
+			}
+			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		}
+		VERIFY_SUCCEEDED(GCL->Close());
+	}
 
 #ifdef USE_LEAP
 	virtual void OnHand(const LEAP_HAND& Hand) override {

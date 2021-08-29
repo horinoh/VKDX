@@ -412,7 +412,7 @@ protected:
 		}
 #pragma endregion
 	}
-	virtual void CreateDescriptorSet() override {
+	virtual void CreateDescriptor() override {
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
 			VkDescriptorPoolSize({ .type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) * 2 }), //!< UB * N * 2
@@ -456,8 +456,7 @@ protected:
 #pragma endregion
 		}
 #pragma endregion
-	}
-	virtual void UpdateDescriptorSet() override {
+
 #pragma region FRAME_OBJECT
 		const auto SCCount = size(SwapchainImages);
 #pragma region PASS0

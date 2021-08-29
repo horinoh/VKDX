@@ -62,7 +62,7 @@
 //!< シェーダ内での使用例
 //!<	layout(input_attachment_index = 0, set = 0, binding = 0) uniform subpassInput XXX;
 //!<	vec3 Color = subpassLoad(XXX).rgb;
-//#define USE_SUBPASS
+//#define USE_SUBPASS #VK_TODO
 
 #ifdef _DEBUG
 #define USE_RENDERDOC
@@ -718,8 +718,6 @@ protected:
 	virtual void CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreateFlags Flags, const std::vector<VkDescriptorPoolSize>& DPSs);
 	virtual void CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const std::vector<VkDescriptorUpdateTemplateEntry>& DUTEs, const VkDescriptorSetLayout DSL);
 	virtual void CreateDescriptor() {}
-	virtual void CreateDescriptorSet() {}
-	virtual void UpdateDescriptorSet() {}
 	virtual void CreateShaderBindingTable() {}
 
 	virtual void CreateTexture() {}
