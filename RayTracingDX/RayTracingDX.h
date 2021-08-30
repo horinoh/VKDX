@@ -253,7 +253,7 @@ public:
 				D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 			};
 			DX::SerializeRootSignature(Blob, {
-				//!< TLAS, CubeMap
+				//!< SRV0, SRV1 (TLAS, CubeMap)
 				D3D12_ROOT_PARAMETER({
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, 
 					.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Srv)), .pDescriptorRanges = data(DRs_Srv) }),
@@ -279,20 +279,20 @@ public:
 		}
 
 #pragma region SHADER_RECORD
-		//!< ローカルルートシグネチャ (Local root signature)
+		//!< ローカルルートシグネチャ (Local root signature) ここでは RegisterSpace = 1 とする
 		{
 			COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
 			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".lrs.cso")));
 #else
 			DX::SerializeRootSignature(Blob, {
-				//!< SRV1 : VertexBuffer
+				//!< SRV (VB)
 				D3D12_ROOT_PARAMETER({
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV,
 					.Descriptor = D3D12_ROOT_DESCRIPTOR({.ShaderRegister = 0, .RegisterSpace = 1 }),
 					.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
 				}),
-				//!< SRV2 : IndexBuffer
+				//!< SRV (IB)
 				D3D12_ROOT_PARAMETER({
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV,
 					.Descriptor = D3D12_ROOT_DESCRIPTOR({.ShaderRegister = 1, .RegisterSpace = 1 }),
@@ -396,15 +396,36 @@ public:
 #pragma endregion
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 
-		const auto DH = CbvSrvUavDescriptorHeaps[0];
-		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-		Device->CreateShaderResourceView(nullptr, &TLASs[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+		auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
+		const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		//!< [0] SRV (TLAS)
+		Device->CreateShaderResourceView(nullptr, &TLASs[0].SRV, CDH); 
+		CbvSrvUavGPUHandles.emplace_back(GDH); 
+		CDH.ptr += IncSize;
+		GDH.ptr += IncSize;
+		//!< [1] SRV (CubeMap)
+		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH); 
+		CbvSrvUavGPUHandles.emplace_back(GDH);
+		CDH.ptr += IncSize;
+		GDH.ptr += IncSize;		
+		//!< [2] UAV
+		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH); 
+		CbvSrvUavGPUHandles.emplace_back(GDH); 
+		CDH.ptr += IncSize;
+		GDH.ptr += IncSize; 
 		
 #pragma region SHADER_RECORD
-		Device->CreateShaderResourceView(COM_PTR_GET(StructuredBuffers[0].Resource), &StructuredBuffers[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-		Device->CreateShaderResourceView(COM_PTR_GET(StructuredBuffers[1].Resource), &StructuredBuffers[1].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		//!< [3] SRV (VB)
+		Device->CreateShaderResourceView(COM_PTR_GET(StructuredBuffers[0].Resource), &StructuredBuffers[0].SRV, CDH); 
+		CbvSrvUavGPUHandles.emplace_back(GDH);
+		CDH.ptr += IncSize;
+		GDH.ptr += IncSize;
+		//!< [4] SRV (IB)
+		Device->CreateShaderResourceView(COM_PTR_GET(StructuredBuffers[1].Resource), &StructuredBuffers[1].SRV, CDH); 
+		CbvSrvUavGPUHandles.emplace_back(GDH); 
+		//CDH.ptr += IncSize;
+		//GDH.ptr += IncSize;
 #pragma endregion
 
 		//!< この時点で削除してしまって良い？
@@ -422,7 +443,8 @@ public:
 
 #pragma region HIT
 #pragma region SHADER_RECORD
-		constexpr auto RchitStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + sizeof(D3D12_GPU_DESCRIPTOR_HANDLE) * 2, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+		constexpr auto GPUDescSize = sizeof(D3D12_GPU_DESCRIPTOR_HANDLE);
+		constexpr auto RchitStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + GPUDescSize * 2, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
 #pragma endregion
 		constexpr auto RchitSize = 1 * RchitStride;
 #pragma endregion
@@ -443,12 +465,10 @@ public:
 				std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("HitGroup")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 #pragma region SHADER_RECORD
 				{
-					const auto& DH = CbvSrvUavDescriptorHeaps[0];
-					auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-					GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * 3;
-					std::memcpy(Data + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &GDH, sizeof(GDH)); //!< VB
-					GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-					std::memcpy(Data + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + sizeof(GDH), &GDH, sizeof(GDH)); //!< IB
+					//!< [3] SRV (VB)
+					std::memcpy(Data + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &CbvSrvUavGPUHandles[3], GPUDescSize);
+					//!< [4] SRV (IB)
+					std::memcpy(Data + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + GPUDescSize, &CbvSrvUavGPUHandles[4], GPUDescSize);
 				}
 #pragma endregion
 			} ShaderTables.back().Unmap();
@@ -466,20 +486,18 @@ public:
 			GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 			{
-				const auto& DH = CbvSrvUavDescriptorHeaps[0];
-				const std::array DHs = { COM_PTR_GET(DH) };
+				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
 				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
-				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-				GCL->SetComputeRootDescriptorTable(0, GDH); //!< TLAS, CubeMap
-				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * 2;
+				//!< [0] SRV(TLAS)
+				//!< [1] SRV(CubeMap)
+				GCL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles[0]);
 
-				GCL->SetComputeRootDescriptorTable(1, GDH); //!< UAV
-				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				//!< [2] UAV
+				GCL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles[2]);
 			}
-
-			//!< ここでは CBV はデスクリプタヒープとは別扱い
-			GCL->SetComputeRootConstantBufferView(2, ConstantBuffers[i].Resource->GetGPUVirtualAddress()); //!< CBV
+			//!< CBV (デスクリプタヒープとは別扱い)
+			GCL->SetComputeRootConstantBufferView(2, ConstantBuffers[i].Resource->GetGPUVirtualAddress());
 
 			const auto UAV = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
 			ResourceBarrier(COM_PTR_GET(GCL), UAV, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);

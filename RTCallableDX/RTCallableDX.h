@@ -296,10 +296,19 @@ public:
 		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 3, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 
-		const auto DH = CbvSrvUavDescriptorHeaps[0];
-		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-		Device->CreateShaderResourceView(nullptr, &TLASs[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+		auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
+		const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		//!< [0] TLAS
+		Device->CreateShaderResourceView(nullptr, &TLASs[0].SRV, CDH);
+		CbvSrvUavGPUHandles.emplace_back(GDH);
+		CDH.ptr += IncSize;
+		GDH.ptr += IncSize;
+		//!< [1] UAV
+		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH);
+		CbvSrvUavGPUHandles.emplace_back(GDH);
+		//CDH.ptr += IncSize;
+		//GDH.ptr += IncSize;
 	}
 	virtual void CreateShaderTable() override {
 		COM_PTR<ID3D12StateObjectProperties> SOP;
@@ -360,15 +369,13 @@ public:
 			GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 			{
-				const auto& DH = CbvSrvUavDescriptorHeaps[0];
-
-				const std::array DHs = { COM_PTR_GET(DH) };
+				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
 				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
-				auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-				GCL->SetComputeRootDescriptorTable(0, GDH); //!< TLAS
-				GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				GCL->SetComputeRootDescriptorTable(1, GDH); //!< UAV
+				//!< [0] TLAS
+				GCL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles[0]); 
+				//!< [1] UAV
+				GCL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles[1]); 
 			}
 
 			const auto UAV = COM_PTR_GET(UnorderedAccessTextures[0].Resource);

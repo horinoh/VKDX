@@ -106,24 +106,31 @@ protected:
 		const D3D12_DESCRIPTOR_HEAP_DESC DHD_Sampler = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< Sampler
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD_Sampler, COM_PTR_UUIDOF_PUTVOID(SamplerDescriptorHeaps.emplace_back())));
 #endif
-
-		const auto& DH = CbvSrvUavDescriptorHeaps[0];
-		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-		//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合には D3D12_SHADER_RESOURCE_VIEW_DESC* に nullptrを指定できる
-		//Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), nullptr, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		{
+			auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+			auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
+			Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH);
+			//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合には D3D12_SHADER_RESOURCE_VIEW_DESC* に nullptrを指定できる
+			//Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), nullptr, CDH); 
+			CbvSrvUavGPUHandles.emplace_back(GDH);
+		}
 
 #ifndef USE_STATIC_SAMPLER
-		constexpr D3D12_SAMPLER_DESC SD = {
-			.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT, //!< ここではスタティックサンプラは LINEAR、非スタティックサンプラは　POINT にしている
-			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
-			.MipLODBias = 0.0f,
-			.MaxAnisotropy = 0,
-			.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,
-			.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
-			.MinLOD = 0.0f, .MaxLOD = 1.0f,
-		};
-		Device->CreateSampler(&SD, SamplerDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart());
+		{
+			auto CDH = SamplerDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+			auto GDH = SamplerDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
+			constexpr D3D12_SAMPLER_DESC SD = {
+				.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT, //!< ここではスタティックサンプラは LINEAR、非スタティックサンプラは　POINT にしている
+				.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+				.MipLODBias = 0.0f,
+				.MaxAnisotropy = 0,
+				.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,
+				.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+				.MinLOD = 0.0f, .MaxLOD = 1.0f,
+			};
+			Device->CreateSampler(&SD, CDH);
+			SamplerGPUHandles.emplace_back(GDH);
+		}
 #endif
 	}
 
@@ -158,24 +165,12 @@ protected:
 #ifdef USE_STATIC_SAMPLER
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
 				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-				{
-					const auto& DH = CbvSrvUavDescriptorHeaps[0];
-					auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-					GCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
-				}
+				GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles[0]);//!< SRV
 #else
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]), COM_PTR_GET(SamplerDescriptorHeaps[0]) };
 				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-				{
-					const auto& DH = CbvSrvUavDescriptorHeaps[0];
-					auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-					GCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
-				}
-				{
-					const auto& DH = SamplerDescriptorHeaps[0];
-					auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-					GCL->SetGraphicsRootDescriptorTable(1, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< Sampler
-				}
+				GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles[0]);//!< SRV
+				GCL->SetGraphicsRootDescriptorTable(1, SamplerGPUHandles[0]); //!< Sampler
 #endif
 				GCL->ExecuteBundle(BGCL);
 			}

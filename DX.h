@@ -717,6 +717,11 @@ protected:
 	std::vector<COM_PTR<ID3D12DescriptorHeap>> RtvDescriptorHeaps;			//!< D3D12_DESCRIPTOR_HEAP_TYPE_RTV
 	std::vector<COM_PTR<ID3D12DescriptorHeap>> DsvDescriptorHeaps;			//!< D3D12_DESCRIPTOR_HEAP_TYPE_DSV
 
+	std::vector<D3D12_GPU_DESCRIPTOR_HANDLE> CbvSrvUavGPUHandles;
+	std::vector<D3D12_GPU_DESCRIPTOR_HANDLE> SamplerGPUHandles;
+	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RtvCPUHandles;
+	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> DsvCPUHandles;
+
 	std::vector<D3D12_UNORDERED_ACCESS_VIEW_DESC> UnorderedAccessViewDescs;
 
 	std::vector<D3D12_VIEWPORT> Viewports;
