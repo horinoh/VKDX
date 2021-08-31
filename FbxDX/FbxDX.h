@@ -135,9 +135,10 @@ public:
 		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
 
-		const auto& DH = DsvDescriptorHeaps[0];
-		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-		Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		//!< DSV
+		auto CDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+		Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH);
+		DsvCPUHandles.emplace_back(CDH);
 	}
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
@@ -170,15 +171,12 @@ public:
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
-				auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
-
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				GCL->ClearRenderTargetView(SCCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
-				const auto DCDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-				GCL->ClearDepthStencilView(DCDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+				GCL->ClearRenderTargetView(SwapChainCPUHandles[i], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				GCL->ClearDepthStencilView(DsvCPUHandles[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 
-				const std::array RTCDHs = { SCCDH };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, &DCDH);
+				const std::array CHs = { SwapChainCPUHandles[i] };
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles[0]);
 
 				GCL->ExecuteBundle(BGCL);
 			}

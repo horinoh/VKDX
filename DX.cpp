@@ -723,6 +723,7 @@ void DX::GetSwapChainResource()
 	SwapChain->GetDesc1(&SCD);
 
 	auto CDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+	const auto IncSize = Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
 		//!< スワップチェインのバッファリソースを SwapChainResources へ取得
 		VERIFY_SUCCEEDED(SwapChain->GetBuffer(i, COM_PTR_UUIDOF_PUTVOID(SwapChainResources.emplace_back())));
@@ -739,7 +740,8 @@ void DX::GetSwapChainResource()
 		//!< タイプドフォーマットなら D3D12_RENDER_TARGET_VIEW_DESC* へ nullptr 指定可能
 		Device->CreateRenderTargetView(COM_PTR_GET(SwapChainResources.back()), nullptr, CDH);
 #endif
-		CDH.ptr += Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
+		SwapChainCPUHandles.emplace_back(CDH);
+		CDH.ptr += IncSize;
 	}
 
 	LOG_OK();

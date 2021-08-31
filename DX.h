@@ -682,6 +682,7 @@ protected:
 	COM_PTR<IDXGISwapChain4> SwapChain;
 	std::vector<COM_PTR<ID3D12Resource>> SwapChainResources;
 	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap;					//!< D3D12_DESCRIPTOR_HEAP_TYPE_RTV : スワップチェインRTVは別扱いにしている (Manage swapchain RTV separately)
+	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SwapChainCPUHandles;
 
 	std::vector<COM_PTR<ID3D12CommandAllocator>> CommandAllocators;
 	std::vector<COM_PTR<ID3D12CommandAllocator>> BundleCommandAllocators;

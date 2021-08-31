@@ -322,10 +322,8 @@ protected:
 			{
 				GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
-				auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
-
-				const std::array RTCHs = { SCCDH };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCHs)), data(RTCHs), FALSE, nullptr);
+				const std::array CHs = { SwapChainCPUHandles[i] };
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
 
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
 				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));

@@ -74,10 +74,8 @@ protected:
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
-				auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
-
-				const std::array RTDescriptorHandles = { SCCDH };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTDescriptorHandles)), data(RTDescriptorHandles), FALSE, nullptr);
+				const std::array CHs = { SwapChainCPUHandles[i] };
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
 
 				GCL->ExecuteBundle(BGCL);
 			}

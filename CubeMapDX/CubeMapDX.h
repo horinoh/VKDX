@@ -247,18 +247,16 @@ protected:
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
-				auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
-
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				GCL->ClearRenderTargetView(SCCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				GCL->ClearRenderTargetView(SwapChainCPUHandles[i], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 #ifndef USE_SKY_DOME
 				GCL->ClearDepthStencilView(DsvCPUHandles[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 #endif
-				const std::array RTCDHs = { SCCDH };
+				const std::array CHs = { SwapChainCPUHandles[i] };
 #ifndef USE_SKY_DOME
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, &DsvCPUHandles[0]);
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles[0]);
 #else
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, nullptr);
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
 #endif
 				{
 					const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
