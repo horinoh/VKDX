@@ -25,3 +25,6 @@
 [submodule "draco"]
 	path = draco
 	url = https://github.com/google/draco.git
+[submodule "tinygltf"]
+	path = tinygltf
+	url = https://github.com/syoyo/tinygltf.git
