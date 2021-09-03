@@ -396,36 +396,35 @@ public:
 #pragma endregion
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 
+		CbvSrvUavGPUHandles.emplace_back();
 		auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 		auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
 		const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		//!< [0] SRV (TLAS)
 		Device->CreateShaderResourceView(nullptr, &TLASs[0].SRV, CDH); 
-		CbvSrvUavGPUHandles.emplace_back(GDH); 
+		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
 		//!< [1] SRV (CubeMap)
 		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH); 
-		CbvSrvUavGPUHandles.emplace_back(GDH);
+		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;		
 		//!< [2] UAV
 		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH); 
-		CbvSrvUavGPUHandles.emplace_back(GDH); 
+		CbvSrvUavGPUHandles.back().emplace_back(GDH); 
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize; 
 		
 #pragma region SHADER_RECORD
 		//!< [3] SRV (VB)
 		Device->CreateShaderResourceView(COM_PTR_GET(StructuredBuffers[0].Resource), &StructuredBuffers[0].SRV, CDH); 
-		CbvSrvUavGPUHandles.emplace_back(GDH);
+		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
 		//!< [4] SRV (IB)
 		Device->CreateShaderResourceView(COM_PTR_GET(StructuredBuffers[1].Resource), &StructuredBuffers[1].SRV, CDH); 
-		CbvSrvUavGPUHandles.emplace_back(GDH); 
-		//CDH.ptr += IncSize;
-		//GDH.ptr += IncSize;
+		CbvSrvUavGPUHandles.back().emplace_back(GDH); 
 #pragma endregion
 
 		//!< この時点で削除してしまって良い？
@@ -466,9 +465,9 @@ public:
 #pragma region SHADER_RECORD
 				{
 					//!< [3] SRV (VB)
-					std::memcpy(Data + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &CbvSrvUavGPUHandles[3], GPUDescSize);
+					std::memcpy(Data + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &CbvSrvUavGPUHandles.back()[3], GPUDescSize);
 					//!< [4] SRV (IB)
-					std::memcpy(Data + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + GPUDescSize, &CbvSrvUavGPUHandles[4], GPUDescSize);
+					std::memcpy(Data + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + GPUDescSize, &CbvSrvUavGPUHandles.back()[4], GPUDescSize);
 				}
 #pragma endregion
 			} ShaderTables.back().Unmap();
@@ -491,10 +490,10 @@ public:
 
 				//!< [0] SRV(TLAS)
 				//!< [1] SRV(CubeMap)
-				GCL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles[0]);
+				GCL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
 
 				//!< [2] UAV
-				GCL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles[2]);
+				GCL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[2]);
 			}
 			//!< CBV (デスクリプタヒープとは別扱い)
 			GCL->SetComputeRootConstantBufferView(2, ConstantBuffers[i].Resource->GetGPUVirtualAddress());

@@ -186,6 +186,7 @@ protected:
 #endif
 
 		{
+			CbvSrvUavGPUHandles.emplace_back();
 			auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
 			const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -196,7 +197,7 @@ protected:
 			for (UINT i = 0; i < SCD.BufferCount; ++i) {
 				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = ConstantBuffers[i].Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
 				Device->CreateConstantBufferView(&CBVD, CDH);
-				CbvSrvUavGPUHandles.emplace_back(GDH);
+				CbvSrvUavGPUHandles.back().emplace_back(GDH);
 				CDH.ptr += IncSize;
 				GDH.ptr += IncSize;
 			}
@@ -204,21 +205,22 @@ protected:
 			//!< D3D12_SRV_DIMENSION_TEXTURECUBE を指定する必要がある為、(nullptr ではなく) 明示的にSHADER_RESOURCE_VIEW_DESCを使用すること
 			//!< SRV0
 			Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH);
-			CbvSrvUavGPUHandles.emplace_back(GDH);
+			CbvSrvUavGPUHandles.back().emplace_back(GDH);
 			CDH.ptr += IncSize;
 			GDH.ptr += IncSize;
 			//!< SRV1
 			Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[1].Resource), &DDSTextures[1].SRV, CDH);
-			CbvSrvUavGPUHandles.emplace_back(GDH);
+			CbvSrvUavGPUHandles.back().emplace_back(GDH);
 			CDH.ptr += IncSize;
 			GDH.ptr += IncSize; 
 		}
 #ifndef USE_SKY_DOME
 		{
-			//!< DSV
+			DsvCPUHandles.emplace_back();
 			auto CDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+			//!< DSV
 			Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH);
-			DsvCPUHandles.emplace_back(CDH);
+			DsvCPUHandles.back().emplace_back(CDH);
 		}
 #endif
 	}
@@ -250,11 +252,11 @@ protected:
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
 				GCL->ClearRenderTargetView(SwapChainCPUHandles[i], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 #ifndef USE_SKY_DOME
-				GCL->ClearDepthStencilView(DsvCPUHandles[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+				GCL->ClearDepthStencilView(DsvCPUHandles.back()[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 #endif
 				const std::array CHs = { SwapChainCPUHandles[i] };
 #ifndef USE_SKY_DOME
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles[0]);
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles.back()[0]);
 #else
 				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
 #endif
@@ -264,12 +266,12 @@ protected:
 
 #pragma region FRAME_OBJECT
 					//!< CBV
-					GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles[i]); 
+					GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[i]); 
 #pragma endregion
 					//!< SRV0, SRV1
 					DXGI_SWAP_CHAIN_DESC1 SCD;
 					SwapChain->GetDesc1(&SCD);
-					GCL->SetGraphicsRootDescriptorTable(1, CbvSrvUavGPUHandles[SCD.BufferCount]);
+					GCL->SetGraphicsRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[SCD.BufferCount]);
 				}
 
 				GCL->ExecuteBundle(BGCL);

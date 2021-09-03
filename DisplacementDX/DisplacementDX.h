@@ -174,6 +174,7 @@ protected:
 		}
 
 		{
+			CbvSrvUavGPUHandles.emplace_back();
 			auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
 			const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -184,27 +185,28 @@ protected:
 			for (UINT i = 0; i < SCD.BufferCount; ++i) {
 				const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = ConstantBuffers[i].Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
 				Device->CreateConstantBufferView(&CBVD, CDH);
-				CbvSrvUavGPUHandles.emplace_back(GDH);
+				CbvSrvUavGPUHandles.back().emplace_back(GDH);
 				CDH.ptr += IncSize;
 				GDH.ptr += IncSize;
 			}
 #pragma endregion
 			//!< SRV0
 			Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH);
-			CbvSrvUavGPUHandles.emplace_back(GDH);
+			CbvSrvUavGPUHandles.back().emplace_back(GDH);
 			CDH.ptr += IncSize;
 			GDH.ptr += IncSize;
 			//!< SRV1
 			Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[1].Resource), &DDSTextures[1].SRV, CDH);
-			CbvSrvUavGPUHandles.emplace_back(GDH);
+			CbvSrvUavGPUHandles.back().emplace_back(GDH);
 			CDH.ptr += IncSize;
 			GDH.ptr += IncSize; 
 		}
 		{
-			//!< DSV
+			DsvCPUHandles.emplace_back();
 			auto CDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+			//!< DSV
 			Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH);
-			DsvCPUHandles.emplace_back(CDH);
+			DsvCPUHandles.back().emplace_back(CDH);
 		}
 	}
 	
@@ -234,9 +236,9 @@ protected:
 			{
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
 				GCL->ClearRenderTargetView(SwapChainCPUHandles[i], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
-				GCL->ClearDepthStencilView(DsvCPUHandles[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+				GCL->ClearDepthStencilView(DsvCPUHandles.back()[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 				const std::array CHs = { SwapChainCPUHandles[i] };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles[0]);
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles.back()[0]);
 
 				{
 					const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
@@ -244,14 +246,14 @@ protected:
 
 #pragma region FRAME_OBJECT
 					 //!< CBV					
-					GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles[i]);
+					GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[i]);
 #pragma endregion
 					DXGI_SWAP_CHAIN_DESC1 SCD;
 					SwapChain->GetDesc1(&SCD);
 					//!< SRV0
-					GCL->SetGraphicsRootDescriptorTable(1, CbvSrvUavGPUHandles[SCD.BufferCount]); 
+					GCL->SetGraphicsRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[SCD.BufferCount]); 
 					//!< SRV1
-					GCL->SetGraphicsRootDescriptorTable(2, CbvSrvUavGPUHandles[SCD.BufferCount + 1]);
+					GCL->SetGraphicsRootDescriptorTable(2, CbvSrvUavGPUHandles.back()[SCD.BufferCount + 1]);
 				}
 				GCL->ExecuteBundle(BGCL);
 			}

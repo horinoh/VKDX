@@ -133,7 +133,11 @@ protected:
 				D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }),
 			};
 			SerializeRootSignature(Blob, {
-				D3D12_ROOT_PARAMETER({ .ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ .NumDescriptorRanges = static_cast<UINT>(size(DRs)), .pDescriptorRanges = data(DRs) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY }),
+				D3D12_ROOT_PARAMETER({ 
+					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, 
+					.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ .NumDescriptorRanges = static_cast<UINT>(size(DRs)), .pDescriptorRanges = data(DRs) }), 
+					.ShaderVisibility = D3D12_SHADER_VISIBILITY_GEOMETRY
+				}),
 			}, {}, SHADER_ROOT_ACCESS_GS);
 #endif
 			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
@@ -151,10 +155,16 @@ protected:
 				//!< レンダーターゲット : カラー(Color), 法線(Normal), 深度(Depth), 未定
 				D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 4, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }),
 #pragma endregion
+#ifndef USE_GBUFFER_VISUALIZE
 				D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND }),
+#endif
 			};
 			DX::SerializeRootSignature(Blob, {
-				D3D12_ROOT_PARAMETER({ .ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, .DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ .NumDescriptorRanges = static_cast<uint32_t>(size(DRs)), .pDescriptorRanges = data(DRs) }), .ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL }),
+				D3D12_ROOT_PARAMETER({ 
+					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+					.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ .NumDescriptorRanges = static_cast<uint32_t>(size(DRs)), .pDescriptorRanges = data(DRs) }), 
+					.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL 
+				}),
 			}, {
 				StaticSamplerDescs[0],
 			}, SHADER_ROOT_ACCESS_PS);
@@ -199,9 +209,9 @@ protected:
 		const std::vector RTVs0 = {
 			DXGI_FORMAT_R8G8B8A8_UNORM,
 #pragma region MRT
-				DXGI_FORMAT_R10G10B10A2_UNORM,
-				DXGI_FORMAT_R32_FLOAT,
-				DXGI_FORMAT_R8G8B8A8_UNORM
+			DXGI_FORMAT_R10G10B10A2_UNORM,
+			DXGI_FORMAT_R32_FLOAT,
+			DXGI_FORMAT_R8G8B8A8_UNORM
 #pragma endregion
 		};
 		std::vector<COM_PTR<ID3DBlob>> SBs0;
@@ -241,12 +251,12 @@ protected:
 #endif
 		const std::array SBCs1 = {
 #ifdef USE_GBUFFER_VISUALIZE
-				D3D12_SHADER_BYTECODE({ SBs1[0]->GetBufferPointer(), SBs1[0]->GetBufferSize() }),
-				D3D12_SHADER_BYTECODE({ SBs1[1]->GetBufferPointer(), SBs1[1]->GetBufferSize() }),
-				D3D12_SHADER_BYTECODE({ SBs1[2]->GetBufferPointer(), SBs1[2]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ SBs1[0]->GetBufferPointer(), SBs1[0]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ SBs1[1]->GetBufferPointer(), SBs1[1]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ SBs1[2]->GetBufferPointer(), SBs1[2]->GetBufferSize() }),
 #else
-				D3D12_SHADER_BYTECODE({ SBs1[0]->GetBufferPointer(), SBs1[0]->GetBufferSize() }),
-				D3D12_SHADER_BYTECODE({ SBs1[1]->GetBufferPointer(), SBs1[1]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ SBs1[0]->GetBufferPointer(), SBs1[0]->GetBufferSize() }),
+			D3D12_SHADER_BYTECODE({ SBs1[1]->GetBufferPointer(), SBs1[1]->GetBufferSize() }),
 #endif
 		};
 #ifdef USE_PIPELINE_SERIALIZE
@@ -276,101 +286,309 @@ protected:
 		{
 			{
 #pragma region FRAME_OBJECT
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< CBV * N
-#pragma endregion
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
-			}
-#pragma region MRT
-			{
-				//!< レンダーターゲット : カラー(Color), 法線(Normal), 深度(Depth), 未定
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV, .NumDescriptors = 4, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 }; //!< 4RTV
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps.emplace_back())));
-			}
-#pragma endregion
-			{
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 }; //!< DSV
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
-			}
-		}
-#pragma endregion
-
-#pragma region PASS1
-		{
-#pragma region MRT
-			{
-				//!< レンダーターゲット : カラー(Color), 法線(Normal), 深度(Depth), 未定
-#pragma region FRAME_OBJECT
-				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 4 + SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< 4SRV + CBV * N
-#pragma endregion
-				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
-			}
-#pragma endregion
-		}
-#pragma endregion
-
-#pragma region PASS0
-		{
-			{
-				const auto& DH = CbvSrvUavDescriptorHeaps[0];
-				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-#pragma region FRAME_OBJECT
-				for (UINT i = 0; i < SCD.BufferCount; ++i) {
-					const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = ConstantBuffers[i].Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
-					Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
+				{
+					const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
+					//!< CBV * N
+					VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 				}
 #pragma endregion
-			}
-			{
-				const auto& DH = RtvDescriptorHeaps[0];
-				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-				//!< カラー(Color)
-				Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures[0].Resource), &RenderTextures[0].RTV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
 #pragma region MRT
-				//!< 法線(Normal)
-				Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures[1].Resource), &RenderTextures[1].RTV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				//!< 深度(Depth)
-				Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures[2].Resource), &RenderTextures[2].RTV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-				//!< 未定
-				Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures[3].Resource), &RenderTextures[3].RTV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				{
+					//!< レンダーターゲット : カラー(Color), 法線(Normal), 深度(Depth), 未定
+					const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV, .NumDescriptors = 4, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
+					//!< RTV * 4
+					VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps.emplace_back())));
+				}
 #pragma endregion
+				{
+					const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
+					//!< DSV
+					VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
+				}
 			}
+
 			{
-				const auto& DH = DsvDescriptorHeaps[0];
-				auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-				Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				//!< CBV
+				{
+					CbvSrvUavGPUHandles.emplace_back();
+					auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+					auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
+					const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+#pragma region FRAME_OBJECT
+					for (UINT i = 0; i < SCD.BufferCount; ++i) {
+						const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = {
+							.BufferLocation = ConstantBuffers[i].Resource->GetGPUVirtualAddress(),
+							.SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width)
+						};
+						Device->CreateConstantBufferView(&CBVD, CDH);
+						CbvSrvUavGPUHandles.back().emplace_back(GDH);
+						CDH.ptr += IncSize;
+						GDH.ptr += IncSize;
+					}
+#pragma endregion
+				}
+				//!< RTV
+				{
+					RtvCPUHandles.emplace_back();
+					auto CDH = RtvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+					const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+					//!< カラー(Color)
+					Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures[0].Resource), &RenderTextures[0].RTV, CDH);
+					RtvCPUHandles.back().emplace_back(CDH);
+					CDH.ptr += IncSize;
+#pragma region MRT
+					//!< 法線(Normal)
+					Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures[1].Resource), &RenderTextures[1].RTV, CDH);
+					RtvCPUHandles.back().emplace_back(CDH);
+					CDH.ptr += IncSize;
+					//!< 深度(Depth)
+					Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures[2].Resource), &RenderTextures[2].RTV, CDH);
+					RtvCPUHandles.back().emplace_back(CDH);
+					CDH.ptr += IncSize;
+					//!< 未定
+					Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures[3].Resource), &RenderTextures[3].RTV, CDH);
+					RtvCPUHandles.back().emplace_back(CDH);
+					CDH.ptr += IncSize;
+#pragma endregion
+				}
+				//!< DSV
+				{
+					DsvCPUHandles.emplace_back();
+					auto CDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+					Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH);
+					DsvCPUHandles.back().emplace_back(CDH);
+				}
 			}
 		}
 #pragma endregion
 
 #pragma region PASS1
 		{
-			const auto& DH = CbvSrvUavDescriptorHeaps[1];
-			auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
+#pragma region MRT
+#pragma region FRAME_OBJECT
 			{
+				//!< レンダーターゲット : カラー(Color), 法線(Normal), 深度(Depth), 未定
+				const D3D12_DESCRIPTOR_HEAP_DESC DHD = { 
+					.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV,
+#ifdef USE_GBUFFER_VISUALIZE
+					.NumDescriptors = 4,
+#else
+					.NumDescriptors = 4 + SCD.BufferCount,
+#endif
+					.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+					.NodeMask = 0
+				}; 
+				//!< SRV * 4 + CBV * N
+				VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
+			}
+#pragma endregion
+#pragma endregion
+			//!< SRV
+			{
+				CbvSrvUavGPUHandles.emplace_back();
+				auto CDH = CbvSrvUavDescriptorHeaps[1]->GetCPUDescriptorHandleForHeapStart();
+				auto GDH = CbvSrvUavDescriptorHeaps[1]->GetGPUDescriptorHandleForHeapStart();
+				const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
-				Device->CreateShaderResourceView(COM_PTR_GET(RenderTextures[0].Resource), &RenderTextures[0].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				Device->CreateShaderResourceView(COM_PTR_GET(RenderTextures[0].Resource), &RenderTextures[0].SRV, CDH); 
+				CbvSrvUavGPUHandles.back().emplace_back(GDH);
+				CDH.ptr += IncSize;
+				GDH.ptr += IncSize;
 #pragma region MRT
 				//!< レンダーターゲット : 法線(RenderTarget : Normal)
-				Device->CreateShaderResourceView(COM_PTR_GET(RenderTextures[1].Resource), &RenderTextures[1].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				Device->CreateShaderResourceView(COM_PTR_GET(RenderTextures[1].Resource), &RenderTextures[1].SRV, CDH);
+				CbvSrvUavGPUHandles.back().emplace_back(GDH);
+				CDH.ptr += IncSize;
+				GDH.ptr += IncSize;
 				//!< レンダーターゲット : 深度(RenderTarget : Depth)
-				Device->CreateShaderResourceView(COM_PTR_GET(RenderTextures[2].Resource), &RenderTextures[2].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				Device->CreateShaderResourceView(COM_PTR_GET(RenderTextures[2].Resource), &RenderTextures[2].SRV, CDH);
+				CbvSrvUavGPUHandles.back().emplace_back(GDH);
+				CDH.ptr += IncSize;
+				GDH.ptr += IncSize;
 				//!< レンダーターゲット : 未定
-				Device->CreateShaderResourceView(COM_PTR_GET(RenderTextures[3].Resource), &RenderTextures[3].SRV, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+				Device->CreateShaderResourceView(COM_PTR_GET(RenderTextures[3].Resource), &RenderTextures[3].SRV, CDH);
+				CbvSrvUavGPUHandles.back().emplace_back(GDH);
+				CDH.ptr += IncSize;
+				GDH.ptr += IncSize; 
 #pragma	endregion
-			}
-			{
+
+#ifndef USE_GBUFFER_VISUALIZE
+				//!< CBV
+				{
 #pragma region FRAME_OBJECT
-				for (UINT i = 0; i < SCD.BufferCount; ++i) {
-					const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = { .BufferLocation = ConstantBuffers[i].Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width) };
-					Device->CreateConstantBufferView(&CBVD, CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< CBV
-				}
+					for (UINT i = 0; i < SCD.BufferCount; ++i) {
+						const D3D12_CONSTANT_BUFFER_VIEW_DESC CBVD = {
+							.BufferLocation = ConstantBuffers[i].Resource->GetGPUVirtualAddress(),
+							.SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width)
+						};
+						Device->CreateConstantBufferView(&CBVD, CDH);
+						CbvSrvUavGPUHandles.back().emplace_back(GDH);
+						CDH.ptr += IncSize;
+						GDH.ptr += IncSize;
+					}
 #pragma endregion
+				}
+#endif
 			}
 		}
 #pragma endregion
 	}
 
-	virtual void PopulateCommandList(const size_t i) override;
+	virtual void PopulateCommandList(const size_t i) override {
+		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
+
+#pragma region PASS0
+		//!< メッシュ描画用
+		const auto PS0 = COM_PTR_GET(PipelineStates[0]);
+		const auto BGCL0 = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+		VERIFY_SUCCEEDED(BGCL0->Reset(BCA, PS0));
+		{
+			const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
+			const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
+
+			BGCL0->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+			BGCL0->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+		}
+		VERIFY_SUCCEEDED(BGCL0->Close());
+#pragma endregion
+
+#pragma region PASS1
+		//!< レンダーテクスチャ描画用
+		const auto PS1 = COM_PTR_GET(PipelineStates[1]);
+		const auto BGCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + size(BundleGraphicsCommandLists) / 2]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
+		VERIFY_SUCCEEDED(BGCL1->Reset(BCA, PS1));
+		{
+			const auto IDBCS = COM_PTR_GET(IndirectBuffers[1].CommandSignature);
+			const auto IDBR = COM_PTR_GET(IndirectBuffers[1].Resource);
+
+			BGCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			BGCL1->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+		}
+		VERIFY_SUCCEEDED(BGCL1->Close());
+#pragma endregion
+
+		const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
+		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		VERIFY_SUCCEEDED(GCL->Reset(CA, PS1));
+		{
+			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+			const auto RT = COM_PTR_GET(RenderTextures[0].Resource);
+
+			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+
+#pragma region PASS0
+			auto Pass = 0;
+			//!< メッシュ描画用
+			{
+				GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[Pass]));
+
+				//!< クリア
+				{
+					constexpr std::array<D3D12_RECT, 0> Rects = {};
+					GCL->ClearRenderTargetView(RtvCPUHandles[Pass][0], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+#pragma region MRT
+					GCL->ClearRenderTargetView(RtvCPUHandles[Pass][1], data(std::array<FLOAT, 4>({ 0.5f, 0.5f, 1.0f, 1.0f })), static_cast<UINT>(size(Rects)), data(Rects));
+					GCL->ClearRenderTargetView(RtvCPUHandles[Pass][2], DirectX::Colors::Red, static_cast<UINT>(size(Rects)), data(Rects));
+					GCL->ClearRenderTargetView(RtvCPUHandles[Pass][3], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+#pragma endregion
+					GCL->ClearDepthStencilView(DsvCPUHandles[Pass][0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+				}
+
+				//!< レンダーターゲット
+				{
+#if 0
+					const std::array CHs = { RtvCPUHandles[Pass][0], RtvCPUHandles[Pass][1], RtvCPUHandles[Pass][2], RtvCPUHandles[Pass][3] };
+					//!< RTV, DSV
+					GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles[Pass][0]);
+#else
+					//!< 「連続している」場合は、「個数」と「先頭アドレス」を指定して「RTsSingleHandleToDescriptorRange==TRUE」で良い
+					const std::array CHs = { RtvCPUHandles[Pass][0] };
+					//!< RTV, DSV
+					GCL->OMSetRenderTargets(4, data(CHs), TRUE, &DsvCPUHandles[Pass][0]);
+#endif
+				}
+
+				{
+					const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[Pass]) };
+					GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+#pragma region FRAME_OBJECT
+					//!< CBV
+					GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles[Pass][i]);
+#pragma endregion
+				}
+
+				GCL->ExecuteBundle(BGCL0);
+			}
+#pragma endregion
+
+			//!< リソースバリア
+			{
+				const std::array RBs = {
+					//!< スワップチェイン PRESENT -> RENDER_TARGET
+					D3D12_RESOURCE_BARRIER({
+						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+						.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = SCR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PRESENT, .StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET })
+					}),
+					//!< イメージ RENDER_TARGET -> PIXEL_SHADER_RESOURCE
+					D3D12_RESOURCE_BARRIER({
+						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+						.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = RT, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET, .StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE })
+					}),
+				};
+				GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+			}
+
+#pragma region PASS1
+			Pass = 1;
+			//!< レンダーテクスチャ描画用
+			{
+				GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[Pass]));
+
+				const std::array CHs = { SwapChainCPUHandles[i] };
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr); 
+
+				{
+					const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[Pass]) };
+					GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+					
+					//!< SRV
+					GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles[Pass][0]);
+#ifndef USE_GBUFFER_VISUALIZE
+#pragma region FRAME_OBJECT
+					//!< CBV
+					//GCL->SetGraphicsRootDescriptorTable(1, CbvSrvUavGPUHandles[Pass][4 + i]);
+#pragma endregion
+#endif
+				}
+
+				GCL->ExecuteBundle(BGCL1);
+			}
+#pragma endregion
+
+			//!< リソースバリア : D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE -> D3D12_RESOURCE_STATE_RENDER_TARGET
+			{
+				const std::array RBs = {
+					//!< スワップチェイン RENDER_TARGET -> PRESENT
+					D3D12_RESOURCE_BARRIER({
+						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+						.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = SCR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET, .StateAfter = D3D12_RESOURCE_STATE_PRESENT })
+					}),
+					//!< イメージ PIXEL_SHADER_RESOURCE -> RENDER_TARGET
+					D3D12_RESOURCE_BARRIER({
+						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+						.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = RT, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, .StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET })
+					}),
+				};
+				GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+			}
+		}
+		VERIFY_SUCCEEDED(GCL->Close());
+	}
 
 #ifdef USE_GBUFFER_VISUALIZE
 	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f) override {

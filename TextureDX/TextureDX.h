@@ -106,17 +106,21 @@ protected:
 		const D3D12_DESCRIPTOR_HEAP_DESC DHD_Sampler = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< Sampler
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD_Sampler, COM_PTR_UUIDOF_PUTVOID(SamplerDescriptorHeaps.emplace_back())));
 #endif
+
 		{
+			CbvSrvUavGPUHandles.emplace_back();
+
 			auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
 			Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH);
 			//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合には D3D12_SHADER_RESOURCE_VIEW_DESC* に nullptrを指定できる
 			//Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), nullptr, CDH); 
-			CbvSrvUavGPUHandles.emplace_back(GDH);
+			CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		}
 
 #ifndef USE_STATIC_SAMPLER
 		{
+			SamplerGPUHandles.emplace_back();
 			auto CDH = SamplerDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			auto GDH = SamplerDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
 			constexpr D3D12_SAMPLER_DESC SD = {
@@ -129,7 +133,7 @@ protected:
 				.MinLOD = 0.0f, .MaxLOD = 1.0f,
 			};
 			Device->CreateSampler(&SD, CDH);
-			SamplerGPUHandles.emplace_back(GDH);
+			SamplerGPUHandles.back().emplace_back(GDH);
 		}
 #endif
 	}
@@ -164,12 +168,12 @@ protected:
 #ifdef USE_STATIC_SAMPLER
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
 				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-				GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles[0]);//!< SRV
+				GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);//!< SRV
 #else
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]), COM_PTR_GET(SamplerDescriptorHeaps[0]) };
 				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-				GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles[0]);//!< SRV
-				GCL->SetGraphicsRootDescriptorTable(1, SamplerGPUHandles[0]); //!< Sampler
+				GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);//!< SRV
+				GCL->SetGraphicsRootDescriptorTable(1, SamplerGPUHandles.back()[0]); //!< Sampler
 #endif
 				GCL->ExecuteBundle(BGCL);
 			}

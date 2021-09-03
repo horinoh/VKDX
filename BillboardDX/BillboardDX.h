@@ -114,6 +114,7 @@ protected:
 
 		//!< CBV
 		{
+			CbvSrvUavGPUHandles.emplace_back();
 			auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
 			const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -126,7 +127,7 @@ protected:
 					.SizeInBytes = static_cast<UINT>(ConstantBuffers[i].Resource->GetDesc().Width)
 				};
 				Device->CreateConstantBufferView(&CBVD, CDH);
-				CbvSrvUavGPUHandles.emplace_back(GDH);
+				CbvSrvUavGPUHandles.back().emplace_back(GDH);
 				CDH.ptr += IncSize;
 				GDH.ptr += IncSize;
 			}
@@ -134,9 +135,10 @@ protected:
 		}
 		//!< DSV
 		{
+			DsvCPUHandles.emplace_back();
 			auto CDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH);
-			DsvCPUHandles.emplace_back(CDH);
+			DsvCPUHandles.back().emplace_back(CDH);
 		}
 	}
 
@@ -166,16 +168,16 @@ protected:
 			{
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
 				GCL->ClearRenderTargetView(SwapChainCPUHandles[i], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
-				GCL->ClearDepthStencilView(DsvCPUHandles[0], D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, 0, nullptr);
+				GCL->ClearDepthStencilView(DsvCPUHandles.back()[0], D3D12_CLEAR_FLAG_DEPTH/*| D3D12_CLEAR_FLAG_STENCIL*/, 1.0f, 0, 0, nullptr);
 				const std::array CHs = { SwapChainCPUHandles[i] };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles[0]);
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles.back()[0]);
 
 				{
 					const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
 					GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 #pragma region FRAME_OBJECT
 					//!< CBV
-					GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles[i]); 
+					GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[i]); 
 #pragma endregion
 				}
 

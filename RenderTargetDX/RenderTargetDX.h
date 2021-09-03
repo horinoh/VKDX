@@ -214,26 +214,29 @@ protected:
 #pragma region PASS0
 		//!< RTV
 		{
+			RtvCPUHandles.emplace_back();
 			auto CDH = RtvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			Device->CreateRenderTargetView(COM_PTR_GET(RenderTextures.back().Resource), &RenderTextures.back().RTV, CDH); 
-			RtvCPUHandles.emplace_back(CDH);
+			RtvCPUHandles.back().emplace_back(CDH);
 		}
 #ifdef USE_DEPTH
 		//!< DSV
 		{
+			DsvCPUHandles.emplace_back();
 			auto CDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH);
-			DsvCPUHandles.emplace_back(CDH);
+			DsvCPUHandles.back().emplace_back(CDH);
 		}
 #endif
 #pragma endregion
 #pragma region PASS1
 		//!< SRV
 		{
+			CbvSrvUavGPUHandles.emplace_back();
 			auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
 			Device->CreateShaderResourceView(COM_PTR_GET(RenderTextures.back().Resource), &RenderTextures.back().SRV, CDH);
-			CbvSrvUavGPUHandles.emplace_back(GDH);
+			CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		}
 #pragma endregion
 	}
@@ -283,12 +286,12 @@ protected:
 				GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				GCL->ClearRenderTargetView(RtvCPUHandles[0], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				GCL->ClearRenderTargetView(RtvCPUHandles.back()[0], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 #ifdef USE_DEPTH
-				GCL->ClearDepthStencilView(DsvCPUHandles[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+				GCL->ClearDepthStencilView(DsvCPUHandles.back()[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 
-				const std::array RTCHs = { RtvCPUHandles[0] };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCHs)), data(RTCHs), FALSE, &DsvCPUHandles[0]);
+				const std::array RTCHs = { RtvCPUHandles.back()[0] };
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCHs)), data(RTCHs), FALSE, &DsvCPUHandles.back()[0]);
 #else			
 				const std::array RTCHs = { RtvCPUHandles[0] };
 				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCHs)), data(RTCHs), FALSE, nullptr);
@@ -328,7 +331,7 @@ protected:
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
 				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 				//!< SRV
-				GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles[0]); 
+				GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]); 
 
 				GCL->ExecuteBundle(BGCL1);
 			}

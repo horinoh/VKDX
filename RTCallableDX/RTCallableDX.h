@@ -296,19 +296,18 @@ public:
 		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 3, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 
+		CbvSrvUavGPUHandles.emplace_back();
 		auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 		auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
 		const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 		//!< [0] TLAS
 		Device->CreateShaderResourceView(nullptr, &TLASs[0].SRV, CDH);
-		CbvSrvUavGPUHandles.emplace_back(GDH);
+		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
 		//!< [1] UAV
 		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH);
-		CbvSrvUavGPUHandles.emplace_back(GDH);
-		//CDH.ptr += IncSize;
-		//GDH.ptr += IncSize;
+		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 	}
 	virtual void CreateShaderTable() override {
 		COM_PTR<ID3D12StateObjectProperties> SOP;
@@ -373,9 +372,9 @@ public:
 				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 				//!< [0] TLAS
-				GCL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles[0]); 
+				GCL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]); 
 				//!< [1] UAV
-				GCL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles[1]); 
+				GCL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[1]); 
 			}
 
 			const auto UAV = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
