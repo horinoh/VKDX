@@ -70,7 +70,7 @@ public:
 			Load(ToString(Path) + "//dragon4.drc");
 		}
 		//Load(std::string("..//draco//testdata//") + "car.drc");
-		
+
 		const auto CA = COM_PTR_GET(CommandAllocators[0]);
 		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
 		const auto CQ = COM_PTR_GET(GraphicsCommandQueue);

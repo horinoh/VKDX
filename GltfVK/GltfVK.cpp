@@ -231,7 +231,7 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 }
 
 #pragma region Code
-
+#if 0
 void GltfVK::LoadScene()
 {
 	Unload();
@@ -365,11 +365,11 @@ void GltfVK::Process(const fx::gltf::Node& Nd, const uint32_t i)
 
 	NodeMatrices[i] = Mtx;
 
-	Gltf::Process(Nd, i);
+	SuperGltf::Process(Nd, i);
 }
 void GltfVK::Process(const fx::gltf::Camera& Cam)
 {
-	Gltf::Process(Cam);
+	SuperGltf::Process(Cam);
 
 	Tr.View = CurrentMatrix.back();
 #if 1
@@ -403,7 +403,7 @@ void GltfVK::Process(const fx::gltf::Camera& Cam)
 }
 void GltfVK::Process(const fx::gltf::Primitive& Prim)
 {
-	Gltf::Process(Prim);
+	SuperGltf::Process(Prim);
 
 	//!< セマンティックの頭文字から読み込むシェーダを決定 (Select shader file by semantic initial)
 	std::string SemanticInitial;
@@ -541,7 +541,7 @@ void GltfVK::Process(const fx::gltf::Primitive& Prim)
 
 void GltfVK::Process(std::string_view Identifier, const fx::gltf::Accessor& Acc)
 {
-	Gltf::Process(Identifier, Acc);
+	SuperGltf::Process(Identifier, Acc);
 
 	if (-1 != Acc.bufferView) {
 		const auto& Doc = GetDocument();
@@ -594,13 +594,13 @@ void GltfVK::Process(std::string_view Identifier, const fx::gltf::Accessor& Acc)
 }
 void GltfVK::Process(const fx::gltf::Mesh& Msh)
 {
-	Gltf::Process(Msh);
+	SuperGltf::Process(Msh);
 
 	MorphWeights = Msh.weights;
 }
 void GltfVK::Process(const fx::gltf::Skin& Skn)
 {
-	Gltf::Process(Skn);
+	SuperGltf::Process(Skn);
 
 	JointMatrices.reserve(size(Skn.joints));
 	for (uint32_t i = 0; i < size(Skn.joints); ++i) {
@@ -717,4 +717,5 @@ void GltfVK::PopulateCommandBuffer(const size_t i)
 		} vkCmdEndRenderPass(CB);
 	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 }
+#endif
 #pragma endregion //!< Code

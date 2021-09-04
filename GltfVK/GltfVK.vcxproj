@@ -157,7 +157,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\FxGltf.h" />
     <ClInclude Include="..\GLTF.h" />
+    <ClInclude Include="..\TinyGltf.h" />
     <ClInclude Include="..\VK.h" />
     <ClInclude Include="..\VKExt.h" />
     <ClInclude Include="..\VKImage.h" />

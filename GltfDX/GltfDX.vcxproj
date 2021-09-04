@@ -160,7 +160,9 @@
     <ClInclude Include="..\DX.h" />
     <ClInclude Include="..\DXExt.h" />
     <ClInclude Include="..\DXImage.h" />
+    <ClInclude Include="..\FxGltf.h" />
     <ClInclude Include="..\GLTF.h" />
+    <ClInclude Include="..\TinyGltf.h" />
     <ClInclude Include="..\Win.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="GltfDX.h" />

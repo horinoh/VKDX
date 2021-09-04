@@ -45,6 +45,12 @@
     <ClInclude Include="..\GLTF.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\FxGltf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\TinyGltf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GltfDX.cpp">
