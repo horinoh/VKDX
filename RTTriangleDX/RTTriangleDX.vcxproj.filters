@@ -71,9 +71,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <FxCompile Include="RTTriangleDX.rchit.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
@@ -83,5 +80,8 @@
     <FxCompile Include="RTTriangleDX.miss.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

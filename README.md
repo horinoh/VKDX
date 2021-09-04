@@ -41,6 +41,9 @@
 
 ### 外部ライブラリ
 #### GLTF
+ * https://github.com/syoyo/tinygltf をサブモジュール化した
+ * サンプルは https://github.com/KhronosGroup/glTF-Sample-Models
+ <!--
  * C++ローダー https://github.com/jessey-git/fx-gltf をサブモジュール化した
 	* .gitmoudles に以下を追加
 		~~~
@@ -53,6 +56,7 @@
 ~~~
  * サンプルデータ 
  	* fx-gltfのサブモジュールに含まれるのを使用する
+-->
 
 #### FBX
  * SDKをインストールする
@@ -286,7 +290,7 @@ $draco_decoder -i YYY.drc -o ZZZ.obj
 
 ### DirectXTK (DDS読み込みに使用)
 * https://github.com/Microsoft/DirectXTK12
-* ~~DirectXTK_Desktop_2017_Win10.sln~~DirectXTK_Desktop_2019_Win10.sln を開いてx64をビルド(Debug, Release)
+* DirectXTK_Desktop_2019_Win10.sln を開いてx64をビルド(Debug, Release)
 	* D3D12_DESCRIPTOR_RANGE1 がないと言われて、コンパイルが通らない場合は  Windows 10 Anniversary Update SDK が必要(VisualStudioを更新する)
 * サブモジュール化したので再帰的にクローンする
 	* .gitmoudles に以下を追加

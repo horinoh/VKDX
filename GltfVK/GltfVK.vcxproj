@@ -157,7 +157,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="..\Gltf.h" />
+    <ClInclude Include="..\GLTF.h" />
     <ClInclude Include="..\VK.h" />
     <ClInclude Include="..\VKExt.h" />
     <ClInclude Include="..\VKImage.h" />
@@ -168,7 +168,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\Gltf.cpp" />
+    <ClCompile Include="..\GLTF.cpp" />
     <ClCompile Include="..\VK.cpp" />
     <ClCompile Include="..\VKExt.cpp" />
     <ClCompile Include="..\VKImage.cpp" />

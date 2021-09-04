@@ -39,10 +39,10 @@
     <ClInclude Include="..\Win.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Gltf.h">
+    <ClInclude Include="..\DXImage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\DXImage.h">
+    <ClInclude Include="..\GLTF.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -59,13 +59,13 @@
     <ClCompile Include="..\Win.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Gltf.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="framework.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\DXImage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\GLTF.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

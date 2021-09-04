@@ -160,7 +160,7 @@
     <ClInclude Include="..\DX.h" />
     <ClInclude Include="..\DXExt.h" />
     <ClInclude Include="..\DXImage.h" />
-    <ClInclude Include="..\Gltf.h" />
+    <ClInclude Include="..\GLTF.h" />
     <ClInclude Include="..\Win.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="GltfDX.h" />
@@ -171,7 +171,7 @@
     <ClCompile Include="..\DX.cpp" />
     <ClCompile Include="..\DXExt.cpp" />
     <ClCompile Include="..\DXImage.cpp" />
-    <ClCompile Include="..\Gltf.cpp" />
+    <ClCompile Include="..\GLTF.cpp" />
     <ClCompile Include="..\Win.cpp" />
     <ClCompile Include="framework.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

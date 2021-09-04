@@ -42,7 +42,7 @@
     <ClInclude Include="..\Win.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Gltf.h">
+    <ClInclude Include="..\GLTF.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -62,10 +62,10 @@
     <ClCompile Include="..\Win.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\Gltf.cpp">
+    <ClCompile Include="framework.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="framework.cpp">
+    <ClCompile Include="..\GLTF.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
