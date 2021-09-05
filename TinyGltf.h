@@ -142,6 +142,12 @@ namespace Gltf {
 			PopTab();
 		}
 		virtual void Process(const tinygltf::Node& Node) {
+			Node.matrix;
+			Node.rotation;
+			Node.scale;
+			Node.translation;
+			Node.weights;
+
 			if (-1 != Node.mesh) {
 				Process(Model.meshes[Node.mesh]);
 			}

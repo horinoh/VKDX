@@ -74,9 +74,9 @@ public:
 	virtual void CreateGeometry() override {
 		std::wstring Path;
 		if (FindDirectory("DRC", Path)) {
-			//Load(ToString(Path) + "//bunny.drc");
+			Load(ToString(Path) + "//bunny.drc");
 			//Load(ToString(Path) + "//dragon.drc");
-			Load(ToString(Path) + "//dragon4.drc");
+			//Load(ToString(Path) + "//dragon4.drc");
 		}
 		//Load(std::string("..//draco//testdata//") + "car.drc");
 
@@ -138,7 +138,7 @@ public:
 			.flags = 0,
 			.depthClampEnable = VK_FALSE,
 			.rasterizerDiscardEnable = VK_FALSE,
-			.polygonMode = VK_POLYGON_MODE_FILL,
+			.polygonMode = VK_POLYGON_MODE_LINE,
 			.cullMode = VK_CULL_MODE_BACK_BIT,
 			.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
 			.depthBiasEnable = VK_FALSE, .depthBiasConstantFactor = 0.0f, .depthBiasClamp = 0.0f, .depthBiasSlopeFactor = 0.0f,

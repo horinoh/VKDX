@@ -65,9 +65,9 @@ public:
 	virtual void CreateGeometry() override {
 		std::wstring Path;
 		if (FindDirectory("DRC", Path)) {
-			//Load(ToString(Path) + "//bunny.drc");
+			Load(ToString(Path) + "//bunny.drc");
 			//Load(ToString(Path) + "//dragon.drc");
-			Load(ToString(Path) + "//dragon4.drc");
+			//Load(ToString(Path) + "//dragon4.drc");
 		}
 		//Load(std::string("..//draco//testdata//") + "car.drc");
 
@@ -124,7 +124,7 @@ public:
 		};
 
 		constexpr D3D12_RASTERIZER_DESC RD = {
-			.FillMode = D3D12_FILL_MODE_SOLID,
+			.FillMode = D3D12_FILL_MODE_WIREFRAME,
 			.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
 			.DepthBias = D3D12_DEFAULT_DEPTH_BIAS, .DepthBiasClamp = D3D12_DEFAULT_DEPTH_BIAS_CLAMP, .SlopeScaledDepthBias = D3D12_DEFAULT_SLOPE_SCALED_DEPTH_BIAS,
 			.DepthClipEnable = TRUE,

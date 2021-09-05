@@ -18,14 +18,15 @@ public:
 	GltfVK() : Super() {}
 	virtual ~GltfVK() {}
 
-	//std::vector<uint32_t> Indices;
-	std::vector<uint16_t> Indices;
+	std::vector<uint32_t> Indices;
 	std::vector<glm::vec3> Vertices;
 	std::vector<glm::vec3> Normals;
 #pragma region GLTF
 	virtual void Process(const tinygltf::Primitive& Primitive) {
 		SuperGltf::Process(Primitive);
 
+		auto Max = glm::vec3((std::numeric_limits<float>::min)());
+		auto Min = glm::vec3((std::numeric_limits<float>::max)());
 		//!< バーテックス
 		for (auto i : Primitive.attributes) {
 			const auto Acc = Model.accessors[i.second];
@@ -39,6 +40,17 @@ public:
 				if ("POSITION" == i.first) {
 					Vertices.resize(Acc.count);
 					std::memcpy(data(Vertices), p, Size);
+
+					for (auto j : Vertices) {
+						Max.x = std::max(Max.x, j.x);
+						Max.y = std::max(Max.y, j.y);
+						Max.z = std::max(Max.z, j.z);
+						Min.x = std::min(Min.x, j.x);
+						Min.y = std::min(Min.y, j.y);
+						Min.z = std::min(Min.z, j.z);
+					}
+					const auto Bound = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
+					std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const glm::vec3& rhs) { return rhs / Bound - glm::vec3(0.0f, (Max.y - Min.y) * 0.5f, Min.z) / Bound; });
 				}
 				if ("NORMAL" == i.first) {
 					Normals.resize(Acc.count);
@@ -85,10 +97,10 @@ public:
 	virtual void CreateGeometry() override {
 		std::wstring Path;
 		if (FindDirectory("GLTF", Path)) {
-			//Load(ToString(Path) + "//bunny.gltf");
+			Load(ToString(Path) + "//bunny.gltf");
 			//Load(ToString(Path) + "//dragon.gltf");
 		}
-		Load(std::string("..//tinygltf//models//Cube//") + "Cube.gltf");
+		//Load(std::string("..//tinygltf//models//Cube//") + "Cube.gltf");
 
 		const auto& CB = CommandBuffers[0];
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
@@ -97,9 +109,9 @@ public:
 		VK::Scoped<StagingBuffer> Staging_Vertex(Device);
 		Staging_Vertex.Create(Device, PDMP, Sizeof(Vertices), data(Vertices));
 
-		VertexBuffers.emplace_back().Create(Device, PDMP, Sizeof(Normals));
-		VK::Scoped<StagingBuffer> Staging_Normal(Device);
-		Staging_Normal.Create(Device, PDMP, Sizeof(Normals), data(Normals));
+		//VertexBuffers.emplace_back().Create(Device, PDMP, Sizeof(Normals));
+		//VK::Scoped<StagingBuffer> Staging_Normal(Device);
+		//Staging_Normal.Create(Device, PDMP, Sizeof(Normals), data(Normals));
 
 		IndexBuffers.emplace_back().Create(Device, PDMP, Sizeof(Indices));
 		VK::Scoped<StagingBuffer> Staging_Index(Device);
@@ -113,7 +125,7 @@ public:
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 			VertexBuffers[0].PopulateCopyCommand(CB, Sizeof(Vertices), Staging_Vertex.Buffer);
-			VertexBuffers[1].PopulateCopyCommand(CB, Sizeof(Normals), Staging_Normal.Buffer);
+			//VertexBuffers[1].PopulateCopyCommand(CB, Sizeof(Normals), Staging_Normal.Buffer);
 			IndexBuffers.back().PopulateCopyCommand(CB, Sizeof(Indices), Staging_Index.Buffer);
 			IndirectBuffers.back().PopulateCopyCommand(CB, sizeof(DIIC), Staging_Indirect.Buffer);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
@@ -135,13 +147,11 @@ public:
 		};
 		const std::vector VIBDs = {
 			VkVertexInputBindingDescription({.binding = 0, .stride = sizeof(Vertices[0]), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
-			VkVertexInputBindingDescription({.binding = 1, .stride = sizeof(Normals[0]), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
+			//VkVertexInputBindingDescription({.binding = 1, .stride = sizeof(Normals[0]), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
 		};
 		const std::vector VIADs = {
-			//!< location = 0 は binding = 0
 			VkVertexInputAttributeDescription({.location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 }),
-			//!< location = 1 は binding = 1
-			VkVertexInputAttributeDescription({.location = 1, .binding = 1, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 }),
+			//VkVertexInputAttributeDescription({.location = 1, .binding = 1, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 }),
 		};
 
 		constexpr VkPipelineRasterizationStateCreateInfo PRSCI = {
@@ -150,7 +160,7 @@ public:
 			.flags = 0,
 			.depthClampEnable = VK_FALSE,
 			.rasterizerDiscardEnable = VK_FALSE,
-			.polygonMode = VK_POLYGON_MODE_FILL/*VK_POLYGON_MODE_LINE*/,
+			.polygonMode = VK_POLYGON_MODE_LINE,
 			.cullMode = VK_CULL_MODE_BACK_BIT,
 			.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
 			.depthBiasEnable = VK_FALSE, .depthBiasConstantFactor = 0.0f, .depthBiasClamp = 0.0f, .depthBiasSlopeFactor = 0.0f,
@@ -193,10 +203,10 @@ public:
 			vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
 
 			const std::array VBs = { VertexBuffers[0].Buffer };
-			const std::array NBs = { VertexBuffers[1].Buffer };
+			//const std::array NBs = { VertexBuffers[1].Buffer };
 			const std::array Offsets = { VkDeviceSize(0) };
 			vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(size(VBs)), data(VBs), data(Offsets));
-			vkCmdBindVertexBuffers(SCB, 1, static_cast<uint32_t>(size(NBs)), data(NBs), data(Offsets));
+			//vkCmdBindVertexBuffers(SCB, 1, static_cast<uint32_t>(size(NBs)), data(NBs), data(Offsets));
 			vkCmdBindIndexBuffer(SCB, IndexBuffers[0].Buffer, 0, VK_INDEX_TYPE_UINT32);
 
 			vkCmdDrawIndexedIndirect(SCB, IndirectBuffers[0].Buffer, 0, 1, 0);

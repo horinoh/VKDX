@@ -131,5 +131,11 @@
     <CustomBuild Include="GltfVK_TPN.frag">
       <Filter>Shader Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="GltfVK.frag">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GltfVK.vert">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>
