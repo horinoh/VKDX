@@ -88,7 +88,11 @@ public:
 			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
 			.pNext = nullptr,
 			.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, //!< ボトムレベルを指定
+#ifdef USE_BLAS_COMPACTION
+			.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR | VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR,
+#else
 			.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
+#endif
 			.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
 			.srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = VK_NULL_HANDLE,
 			.geometryCount = static_cast<uint32_t>(size(ASGs_Blas)),.pGeometries = data(ASGs_Blas), .ppGeometries = nullptr, //!< ジオメトリを指定
@@ -103,6 +107,40 @@ public:
 			VkAccelerationStructureBuildSizesInfoKHR ASBSI = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, };
 			vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI_Blas, data(MaxPrimitiveCounts), &ASBSI);
 
+#ifdef USE_BLAS_COMPACTION
+			{
+				//!< クエリプールを作成
+				VkQueryPool QueryPool = VK_NULL_HANDLE;
+				const VkQueryPoolCreateInfo QPCI = {
+					.sType = VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO,
+					.pNext = nullptr,
+					.flags = 0,
+					.queryType = VK_QUERY_TYPE_ACCELERATION_STRUCTURE_COMPACTED_SIZE_KHR,
+					.queryCount = 1,
+					.pipelineStatistics = 0
+				};
+				VERIFY_SUCCEEDED(vkCreateQueryPool(Device, &QPCI, GetAllocationCallbacks(), &QueryPool));
+
+				//!< (圧縮サイズを取得できるように)クエリプールを引数指定して (一時)BLAS を作成
+				BLAS Tmp;
+				Tmp.Create(Device, PDMP, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBSI.buildScratchSize, ASBGI_Blas, ASBRI_Blas, GraphicsQueue, CB, QueryPool);
+
+				//!< クエリプールから圧縮サイズを取得
+				std::array CompactSizes = { VkDeviceSize(0) };
+				VERIFY_SUCCEEDED(vkGetQueryPoolResults(Device, QueryPool, 0, static_cast<uint32_t>(size(CompactSizes)), sizeof(CompactSizes), data(CompactSizes), sizeof(CompactSizes[0]), VK_QUERY_RESULT_WAIT_BIT));
+				std::cout << "BLAS Compaction = " << ASBSI.accelerationStructureSize  << " -> "  << CompactSizes[0] << std::endl;
+
+				//!< 圧縮サイズで (正規)BLAS を作成する (コピーするのでビルドはしないよ)
+				BLASs.emplace_back().Create(Device, PDMP, CompactSizes[0]);
+
+				//!< 一時BLAS -> 正規BLAS コピーコマンドを発行する 
+				BLASs.back().SubmitCopyCommand(Tmp.AccelerationStructure, BLASs.back().AccelerationStructure, GraphicsQueue, CB);
+				
+				//!< 後始末
+				Tmp.Destroy(Device);
+				vkDestroyQueryPool(Device, QueryPool, GetAllocationCallbacks());
+			}
+#else
 #ifdef AS_BUILD_TOGETHER
 			//!< AS、スクラッチ作成 (Create AS and scratch)
 			BLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize);
@@ -112,6 +150,7 @@ public:
 #else
 			//!< AS作成、ビルド (Create and build AS)
 			BLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBSI.buildScratchSize, ASBGI_Blas, ASBRI_Blas, GraphicsQueue, CB);
+#endif
 #endif
 		}
 #pragma endregion
@@ -127,7 +166,8 @@ public:
 				.mask = 0xff,
 				.instanceShaderBindingTableRecordOffset = 0,
 				.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR,
-				.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().Buffer)
+				//.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().Buffer)
+				.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().AccelerationStructure)
 			}),
 		};
 		Scoped<BufferMemory> InstBuf(Device);
@@ -170,7 +210,7 @@ public:
 			VkAccelerationStructureBuildSizesInfoKHR ASBSI = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, };
 			vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI_Tlas, data(MaxPrimitiveCounts), &ASBSI);
 
-#ifdef AS_BUILD_TOGETHER
+#if defined(AS_BUILD_TOGETHER) && !defined(USE_BLAS_COMPACTION)
 			//!< AS、スクラッチ作成 (Create AS and scratch)
 			TLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize);
 			Scratch_Tlas.Create(Device, PDMP, ASBSI.buildScratchSize);
@@ -180,14 +220,13 @@ public:
 			//!< AS作成、ビルド (Create and build AS)
 			TLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBSI.buildScratchSize, ASBGI_Tlas, ASBRI_Tlas, GraphicsQueue, CB);
 #endif
-
 		}
 #pragma endregion
 
 #ifdef USE_INDIRECT
 		//!< インダイレクトバッファ (IndirectBuffer)
 		const VkTraceRaysIndirectCommandKHR TRIC = { .width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 };
-#ifdef AS_BUILD_TOGETHER
+#if defined(AS_BUILD_TOGETHER) && !defined(USE_BLAS_COMPACTION)
 		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC);
 		VK::Scoped<StagingBuffer> Staging_Indirect(Device);
 		Staging_Indirect.Create(Device, PDMP, sizeof(TRIC), &TRIC);
@@ -196,7 +235,7 @@ public:
 #endif
 #endif
 
-#ifdef AS_BUILD_TOGETHER
+#if defined(AS_BUILD_TOGETHER) && !defined(USE_BLAS_COMPACTION)
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 			BLASs.back().PopulateBuildCommand(ASBGI_Blas, ASBRI_Blas, CB);

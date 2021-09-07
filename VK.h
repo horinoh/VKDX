@@ -348,22 +348,29 @@ public:
 			if (VK_NULL_HANDLE != AccelerationStructure) { vkDestroyAccelerationStructureKHR(Device, AccelerationStructure, GetAllocationCallbacks()); }
 			Super::Destroy(Device);
 		}
-		void PopulateBuildCommand(const VkAccelerationStructureBuildGeometryInfoKHR& ASBGI, const VkAccelerationStructureBuildRangeInfoKHR& ASBRI, const VkCommandBuffer CB) {
+		void PopulateBuildCommand(const VkAccelerationStructureBuildGeometryInfoKHR& ASBGI, const VkAccelerationStructureBuildRangeInfoKHR& ASBRI, const VkCommandBuffer CB, const VkQueryPool QP = VK_NULL_HANDLE) {
 			const std::array ASBGIs = { ASBGI };
 			const std::array ASBRIs = { ASBRI };
 			const std::array ASBRIss = { data(ASBRIs) };
 			assert(size(ASBGIs) == size(ASBRIss));
 			assert(ASBGIs[0].geometryCount == size(ASBRIs));
 			vkCmdBuildAccelerationStructuresKHR(CB, static_cast<uint32_t>(size(ASBGIs)), data(ASBGIs), data(ASBRIss));
+
+			//!< QueryPool が指定された場合は COMPACTED_SIZE プロパティを QueryPool へ書き込む
+			if (VK_NULL_HANDLE != QP) {
+				vkCmdResetQueryPool(CB, QP, 0, 1);
+				const std::array ASs = { AccelerationStructure };
+				vkCmdWriteAccelerationStructuresPropertiesKHR(CB, static_cast<uint32_t>(size(ASs)), data(ASs), VK_QUERY_TYPE_ACCELERATION_STRUCTURE_COMPACTED_SIZE_KHR, QP, 0);
+			}
 		}
-		void SubmitBuildCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDeviceSize Size, VkAccelerationStructureBuildGeometryInfoKHR ASBGI, const VkAccelerationStructureBuildRangeInfoKHR& ASBRI, VkQueue Queue, const VkCommandBuffer CB) {
+		void SubmitBuildCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDeviceSize Size, VkAccelerationStructureBuildGeometryInfoKHR ASBGI, const VkAccelerationStructureBuildRangeInfoKHR& ASBRI, VkQueue Queue, const VkCommandBuffer CB, const VkQueryPool QP = VK_NULL_HANDLE) {
 			Scoped<ScratchBuffer> Scratch(Device);
 			Scratch.Create(Device, PDMP, Size);
 			ASBGI.dstAccelerationStructure = AccelerationStructure;
 			ASBGI.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch.Buffer) });
 			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-				PopulateBuildCommand(ASBGI, ASBRI, CB);
+				PopulateBuildCommand(ASBGI, ASBRI, CB, QP);
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 			SubmitAndWait(Queue, CB);
 		}
@@ -393,6 +400,19 @@ public:
 				static_cast<uint32_t>(size(MBs)), data(MBs),
 				static_cast<uint32_t>(size(BMBs)), data(BMBs),
 				static_cast<uint32_t>(size(IMBs)), data(IMBs));
+		}
+		void SubmitCopyCommand(const VkAccelerationStructureKHR& Src, const VkAccelerationStructureKHR& Dst, const VkQueue Queue, const VkCommandBuffer CB) {
+			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
+			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+				const VkCopyAccelerationStructureInfoKHR CASI = {
+				.sType = VK_STRUCTURE_TYPE_COPY_ACCELERATION_STRUCTURE_INFO_KHR,
+				.pNext = nullptr,
+				.src = Src, .dst = Dst,
+				.mode = VK_COPY_ACCELERATION_STRUCTURE_MODE_COMPACT_KHR
+				};
+				vkCmdCopyAccelerationStructureKHR(CB, &CASI);
+			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+			SubmitAndWait(Queue, CB);
 		}
 	};
 	class TLAS : public AccelerationStructureBuffer 
@@ -642,6 +662,10 @@ protected:
 	static VkDeviceAddress GetDeviceAddress(const VkDevice Device, const VkBuffer Buffer) {
 		const VkBufferDeviceAddressInfo BDAI = { .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO, .pNext = nullptr, .buffer = Buffer };
 		return vkGetBufferDeviceAddress(Device, &BDAI);
+	}
+	static VkDeviceAddress GetDeviceAddress(const VkDevice Device, const VkAccelerationStructureKHR AS) {
+		const VkAccelerationStructureDeviceAddressInfoKHR ASDAI = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR, .pNext = nullptr, .accelerationStructure = AS };
+		return vkGetAccelerationStructureDeviceAddressKHR(Device, &ASDAI);
 	}
 
 	virtual void CreateGeometry() {}

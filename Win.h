@@ -43,6 +43,8 @@
 //!< Property - C/C++ - Command Line - Additional Options に "/await" と記述する必要がある (Need to write "/await" to Property - C/C++ - Command Line - Additional Options)
 #define USE_EXPERIMENTAL
 
+#define USE_BLAS_COMPACTION //!< [RTTriangleVK, RTTriangleDX]
+
 #define ALWAYS_REBUILD_PIPELINE
 
 #include <array>
