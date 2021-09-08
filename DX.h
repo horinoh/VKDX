@@ -331,7 +331,7 @@ public:
 			return *this;
 		}
 		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL) {
-			//!< 結果をリードバックへコピーする
+			//!< リードバックへのコピーコマンドを発行する 
 			const std::array RBs = {
 				D3D12_RESOURCE_BARRIER({
 				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
@@ -352,7 +352,7 @@ public:
 			BYTE* Data;
 			Read->Map(0, nullptr, reinterpret_cast<void**>(&Data)); {
 				Size = reinterpret_cast<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC*>(Data)->CompactedSizeInBytes;
-			}Read->Unmap(0, nullptr);
+			} Read->Unmap(0, nullptr);
 			return Size;
 		}
 	};

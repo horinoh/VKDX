@@ -88,7 +88,7 @@ public:
 			const UINT64 CompactedSizeInBytes = Compaction.GetSize();
 			std::cout << "BLAS Compaction = " << RASPI.ResultDataMaxSizeInBytes << " -> " << CompactedSizeInBytes << std::endl;
 
-			//!< コンパクトサイズで (正規)BLAS を作成する (コピーするのでビルドはしないよ)
+			//!< コンパクションサイズで (正規)BLAS を作成する (コピーするのでビルドはしないよ)
 			BLASs.emplace_back().Create(COM_PTR_GET(Device), CompactedSizeInBytes)
 				//!< 一時BLAS -> 正規BLAS コピーコマンドを発行する 
 				.ExecuteCopyCommand(GCL, CA, GCQ, COM_PTR_GET(Fence), COM_PTR_GET(Tmp.Resource));
