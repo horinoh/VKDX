@@ -75,23 +75,17 @@ public:
 			Device5->GetRaytracingAccelerationStructurePrebuildInfo(&BRASI_Blas, &RASPI);
 
 #ifdef USE_BLAS_COMPACTION
-			//!< コンパクトサイズリソースを作成
-			COM_PTR<ID3D12Resource> CompactInfo;
-			COM_PTR<ID3D12Resource> CompactRead;
-			constexpr auto Size = sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC);
-			DX::CreateBufferResource(COM_PTR_PUT(CompactInfo), COM_PTR_GET(Device), Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-			DX::CreateBufferResource(COM_PTR_PUT(CompactRead), COM_PTR_GET(Device), Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST);
+			//!< コンパクションサイズリソースを作成
+			ASCompaction Compaction;
+			Compaction.Create(COM_PTR_GET(Device));
 
-			//!< (コンパクトサイズを取得できるように)リソースを引数指定して (一時)BLAS を作成
+			//!< (コンパクションサイズを取得できるように)引数指定して (一時)BLAS を作成
 			BLAS Tmp;
 			Tmp.Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes)
-				.ExecuteBuildCommand(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI_Blas, GCL, CA, GCQ, COM_PTR_GET(Fence), COM_PTR_GET(CompactInfo), COM_PTR_GET(CompactRead));
+				.ExecuteBuildCommand(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI_Blas, GCL, CA, GCQ, COM_PTR_GET(Fence), &Compaction);
 
-			//!< リソースからコンパクトサイズを取得
-			BYTE* Data;
-			CompactRead->Map(0, nullptr, reinterpret_cast<void**>(&Data));
-			const UINT64 CompactedSizeInBytes = reinterpret_cast<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC*>(Data)->CompactedSizeInBytes;
-			CompactRead->Unmap(0, nullptr);
+			//!< コンパクションサイズを取得
+			const UINT64 CompactedSizeInBytes = Compaction.GetSize();
 			std::cout << "BLAS Compaction = " << RASPI.ResultDataMaxSizeInBytes << " -> " << CompactedSizeInBytes << std::endl;
 
 			//!< コンパクトサイズで (正規)BLAS を作成する (コピーするのでビルドはしないよ)

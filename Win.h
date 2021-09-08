@@ -39,11 +39,10 @@
 #define USE_GBUFFER_VISUALIZE //!< [ DeferredDX, DeferredVK ]
 #define USE_SHADOWMAP_VISUALIZE //!< [ ShadowMapDX, ShadowMapVK ]
 #define USE_SHADER_REFLECTION //!< [ TriangleDX ]
+#define USE_BLAS_COMPACTION //!< [ RTTriangleDX, RTTriangleVK ] ... TLAS もコンパクションできるが、効果が大きいのは BLAS
 
 //!< Property - C/C++ - Command Line - Additional Options に "/await" と記述する必要がある (Need to write "/await" to Property - C/C++ - Command Line - Additional Options)
 #define USE_EXPERIMENTAL
-
-#define USE_BLAS_COMPACTION //!< [RTTriangleVK, RTTriangleDX]
 
 #define ALWAYS_REBUILD_PIPELINE
 

@@ -121,16 +121,16 @@ public:
 				};
 				VERIFY_SUCCEEDED(vkCreateQueryPool(Device, &QPCI, GetAllocationCallbacks(), &QueryPool));
 
-				//!< (コンパクトサイズを取得できるように)クエリプールを引数指定して (一時)BLAS を作成
+				//!< (コンパクションサイズを取得できるように)クエリプールを引数指定して (一時)BLAS を作成
 				BLAS Tmp;
 				Tmp.Create(Device, PDMP, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBSI.buildScratchSize, ASBGI_Blas, ASBRI_Blas, GraphicsQueue, CB, QueryPool);
 
-				//!< クエリプールからコンパクトサイズを取得
+				//!< クエリプールからコンパクションサイズを取得
 				std::array CompactSizes = { VkDeviceSize(0) };
 				VERIFY_SUCCEEDED(vkGetQueryPoolResults(Device, QueryPool, 0, static_cast<uint32_t>(size(CompactSizes)), sizeof(CompactSizes), data(CompactSizes), sizeof(CompactSizes[0]), VK_QUERY_RESULT_WAIT_BIT));
 				std::cout << "BLAS Compaction = " << ASBSI.accelerationStructureSize << " -> " << CompactSizes[0] << std::endl;
 
-				//!< コンパクトサイズで (正規)BLAS を作成する (コピーするのでビルドはしないよ)
+				//!< コンパクションサイズで (正規)BLAS を作成する (コピーするのでビルドはしないよ)
 				BLASs.emplace_back().Create(Device, PDMP, CompactSizes[0])
 					//!< 一時BLAS -> 正規BLAS コピーコマンドを発行する
 					.SubmitCopyCommand(Tmp.AccelerationStructure, BLASs.back().AccelerationStructure, GraphicsQueue, CB);
