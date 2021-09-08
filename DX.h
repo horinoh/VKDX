@@ -239,20 +239,20 @@ public:
 	//		});
 	//	}
 	//};
-	class UnorderedAccessBuffer : public ResourceBase
-	{
-	public:
-		D3D12_UNORDERED_ACCESS_VIEW_DESC View;
-		void Create(ID3D12Device* Device, const size_t Size, const void* Source, const size_t Stride) {
-			//D3D12_CPU_PAGE_PROPERTY_WRITE_BACK
-			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, RoundUp256(Size), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_CUSTOM, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, Source);
-			View = D3D12_UNORDERED_ACCESS_VIEW_DESC({
-				.Format = DXGI_FORMAT_UNKNOWN,
-				.ViewDimension = D3D12_UAV_DIMENSION_BUFFER,
-				.Buffer = D3D12_BUFFER_UAV({.FirstElement = 0, .NumElements = static_cast<UINT>(Size / Stride), .StructureByteStride = static_cast<UINT>(Stride), .CounterOffsetInBytes = 0, .Flags = D3D12_BUFFER_UAV_FLAG_NONE })
-			});
-		}
-	};
+	//class UnorderedAccessBuffer : public ResourceBase
+	//{
+	//public:
+	//	D3D12_UNORDERED_ACCESS_VIEW_DESC View;
+	//	void Create(ID3D12Device* Device, const size_t Size, const void* Source, const size_t Stride) {
+	//		//D3D12_CPU_PAGE_PROPERTY_WRITE_BACK
+	//		DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, RoundUp256(Size), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_CUSTOM, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, Source);
+	//		View = D3D12_UNORDERED_ACCESS_VIEW_DESC({
+	//			.Format = DXGI_FORMAT_UNKNOWN,
+	//			.ViewDimension = D3D12_UAV_DIMENSION_BUFFER,
+	//			.Buffer = D3D12_BUFFER_UAV({.FirstElement = 0, .NumElements = static_cast<UINT>(Size / Stride), .StructureByteStride = static_cast<UINT>(Stride), .CounterOffsetInBytes = 0, .Flags = D3D12_BUFFER_UAV_FLAG_NONE })
+	//		});
+	//	}
+	//};
 	class TextureBase : public ResourceBase
 	{
 	private:
@@ -326,7 +326,7 @@ public:
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
 			return *this;
 		}
-		void PopulateBuildCommand(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12Resource* Scratch) {
+		void PopulateBuildCommand(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12Resource* Scratch, ID3D12Resource* CompactInfo = nullptr, ID3D12Resource* CompactRead = nullptr) {
 			COM_PTR<ID3D12GraphicsCommandList4> GCL4;
 			VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
 			const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
@@ -335,14 +335,40 @@ public:
 				.SourceAccelerationStructureData = 0,
 				.ScratchAccelerationStructureData = Scratch->GetGPUVirtualAddress()
 			};
-			constexpr std::array<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC, 0> RASPIDs = {};
-			GCL4->BuildRaytracingAccelerationStructure(&BRASD, static_cast<UINT>(size(RASPIDs)), data(RASPIDs));
+			if (nullptr != CompactInfo) {
+				//!< コンパクトサイズ情報を取得
+				const std::array RASPIDs = {
+					D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC({ .DestBuffer = CompactInfo->GetGPUVirtualAddress(), .InfoType = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE}), 
+				};
+				GCL4->BuildRaytracingAccelerationStructure(&BRASD, static_cast<UINT>(size(RASPIDs)), data(RASPIDs));
+
+				//!< コンパクトサイズをコピー元へ遷移
+				const std::array RBs = {
+					D3D12_RESOURCE_BARRIER({
+					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
+						.pResource = CompactInfo,
+						.Subresource = 0,
+						.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS, .StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE
+						})
+					})
+				};
+				GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+
+				//!< コンパクトリードへコピー
+				GCL4->CopyResource(CompactRead, CompactInfo);
+			}
+			else {
+				constexpr std::array<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC, 0> RASPIDs = {};
+				GCL4->BuildRaytracingAccelerationStructure(&BRASD, static_cast<UINT>(size(RASPIDs)), data(RASPIDs));
+			}
 		}
-		void ExecuteBuildCommand(ID3D12Device* Device, const size_t Size, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, [[maybe_unused]] ID3D12Fence* Fence) {
+		void ExecuteBuildCommand(ID3D12Device* Device, const size_t Size, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, ID3D12Resource* CompactInfo = nullptr, ID3D12Resource* CompactRead = nullptr) {
 			ScratchBuffer SB;
 			SB.Create(Device, Size);
 			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-				PopulateBuildCommand(BRASI, GCL, COM_PTR_GET(SB.Resource));
+				PopulateBuildCommand(BRASI, GCL, COM_PTR_GET(SB.Resource), CompactInfo, CompactRead);
 			} VERIFY_SUCCEEDED(GCL->Close());
 			DX::ExecuteAndWait(CQ, static_cast<ID3D12CommandList*>(GCL), Fence);
 		}
@@ -365,6 +391,14 @@ public:
 				})
 			};
 			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+		}
+		void ExecuteCopyCommand(ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, ID3D12Resource* Src) {
+			COM_PTR<ID3D12GraphicsCommandList4> GCL4;
+			VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
+			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
+				GCL4->CopyRaytracingAccelerationStructure(Resource->GetGPUVirtualAddress(), Src->GetGPUVirtualAddress(), D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_COMPACT);
+			} VERIFY_SUCCEEDED(GCL->Close());
+			DX::ExecuteAndWait(CQ, static_cast<ID3D12CommandList*>(GCL), Fence);
 		}
 	};
 	class TLAS : public AccelerationStructureBuffer 

@@ -56,7 +56,11 @@ public:
 		//!< インプット (Input)
 		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BRASI_Blas = {
 			.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL, //!< ボトムレベル
+#ifdef USE_BLAS_COMPACTION
+			.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE | D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION,
+#else
 			.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE,
+#endif
 			.NumDescs = static_cast<UINT>(size(RGDs)),
 			.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY,
 			.pGeometryDescs = data(RGDs), //!< ジオメトリを指定
@@ -70,6 +74,31 @@ public:
 			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO RASPI;
 			Device5->GetRaytracingAccelerationStructurePrebuildInfo(&BRASI_Blas, &RASPI);
 
+#ifdef USE_BLAS_COMPACTION
+			//!< コンパクトサイズリソースを作成
+			COM_PTR<ID3D12Resource> CompactInfo;
+			COM_PTR<ID3D12Resource> CompactRead;
+			constexpr auto Size = sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC);
+			DX::CreateBufferResource(COM_PTR_PUT(CompactInfo), COM_PTR_GET(Device), Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			DX::CreateBufferResource(COM_PTR_PUT(CompactRead), COM_PTR_GET(Device), Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST);
+
+			//!< (コンパクトサイズを取得できるように)リソースを引数指定して (一時)BLAS を作成
+			BLAS Tmp;
+			Tmp.Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes)
+				.ExecuteBuildCommand(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI_Blas, GCL, CA, GCQ, COM_PTR_GET(Fence), COM_PTR_GET(CompactInfo), COM_PTR_GET(CompactRead));
+
+			//!< リソースからコンパクトサイズを取得
+			BYTE* Data;
+			CompactRead->Map(0, nullptr, reinterpret_cast<void**>(&Data));
+			const UINT64 CompactedSizeInBytes = reinterpret_cast<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC*>(Data)->CompactedSizeInBytes;
+			CompactRead->Unmap(0, nullptr);
+			std::cout << "BLAS Compaction = " << RASPI.ResultDataMaxSizeInBytes << " -> " << CompactedSizeInBytes << std::endl;
+
+			//!< コンパクトサイズで (正規)BLAS を作成する (コピーするのでビルドはしないよ)
+			BLASs.emplace_back().Create(COM_PTR_GET(Device), CompactedSizeInBytes)
+				//!< 一時BLAS -> 正規BLAS コピーコマンドを発行する 
+				.ExecuteCopyCommand(GCL, CA, GCQ, COM_PTR_GET(Fence), COM_PTR_GET(Tmp.Resource));
+#else
 #ifdef AS_BUILD_TOGETHER
 			//!< AS、スクラッチ作成 (Create AS and scratch)
 			BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
@@ -77,6 +106,7 @@ public:
 #else
 			//!< AS作成、ビルド (Create and build AS)
 			BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes).ExecuteBuildCommand(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI_Blas, GCL, CA, GCQ, COM_PTR_GET(Fence));
+#endif
 #endif
 		}
 #pragma endregion
@@ -113,7 +143,7 @@ public:
 			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO RASPI;
 			Device5->GetRaytracingAccelerationStructurePrebuildInfo(&BRASI_Tlas, &RASPI);
 
-#ifdef AS_BUILD_TOGETHER
+#if defined(AS_BUILD_TOGETHER) && !defined(USE_BLAS_COMPACTION)
 			//!< AS、スクラッチ作成 (Create AS and scratch)
 			TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
 			Scratch_Tlas.Create(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes);
@@ -124,7 +154,7 @@ public:
 		}
 #pragma endregion
 
-#ifdef AS_BUILD_TOGETHER
+#if defined(AS_BUILD_TOGETHER) && !defined(USE_BLAS_COMPACTION)
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 			BLASs.back().PopulateBuildCommand(BRASI_Blas, GCL, COM_PTR_GET(Scratch_Blas.Resource));
 			//!< TLAS のビルド時には BLAS のビルドが完了している必要がある
