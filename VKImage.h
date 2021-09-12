@@ -35,7 +35,7 @@ protected:
 	public:
 		DDSTexture& Create(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, std::string_view Path) {
 			assert(std::filesystem::exists(Path) && "");
-			assert(Path.ends_with(".dds") && "");
+			//assert(Path.ends_with(".dds") && "");
 			GLITexture = gli::load(data(Path));
 			assert(!GLITexture.empty() && "Load image failed");
 

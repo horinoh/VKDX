@@ -10,11 +10,10 @@ struct CallableDataIn
 [shader("closesthit")]
 void OnClosestHit_1(inout Payload Pay, in BuiltInTriangleIntersectionAttributes BITIA)
 {
-    Pay.Color = float3(1.0f - BITIA.barycentrics.x - BITIA.barycentrics.y, BITIA.barycentrics.x, BITIA.barycentrics.y);
-
     CallableDataIn Data; Data.CallableData = float3(0.0f, 0.0f, 0.0f);
 
     CallShader(InstanceID(), Data);
 
+    //!< —Î
     Pay.Color = Data.CallableData * float3(0.0f, 1.0f, 0.0f);
 }

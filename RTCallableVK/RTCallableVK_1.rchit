@@ -7,9 +7,8 @@ hitAttributeEXT vec2 HitAttr;
 
 void main()
 {
-	Payload = vec3(1.0f - HitAttr.x - HitAttr.y, HitAttr.x, HitAttr.y);
-
 	executeCallableEXT(gl_InstanceCustomIndexEXT, 0);
 
+	//!< —Î
 	Payload = CallableData * vec3(0.0f, 1.0f, 0.0f);
 }

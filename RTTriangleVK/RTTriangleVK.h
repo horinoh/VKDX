@@ -44,7 +44,6 @@ public:
 	virtual void CreateSwapchain() override { VK::CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight(), VK_IMAGE_USAGE_TRANSFER_DST_BIT); }
 	virtual void CreateGeometry() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
-#define AS_BUILD_TOGETHER
 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		const auto& CB = CommandBuffers[0];
@@ -139,17 +138,14 @@ public:
 				Tmp.Destroy(Device);
 				vkDestroyQueryPool(Device, QueryPool, GetAllocationCallbacks());
 			}
+			//!< AS作成、ビルド (Create and build AS)
+			//BLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBSI.buildScratchSize, ASBGI_Blas, ASBRI_Blas, GraphicsQueue, CB);
 #else
-#ifdef AS_BUILD_TOGETHER
 			//!< AS、スクラッチ作成 (Create AS and scratch)
 			BLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize);
 			Scratch_Blas.Create(Device, PDMP, ASBSI.buildScratchSize);
 			ASBGI_Blas.dstAccelerationStructure = BLASs.back().AccelerationStructure;
 			ASBGI_Blas.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch_Blas.Buffer) });
-#else
-			//!< AS作成、ビルド (Create and build AS)
-			BLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBSI.buildScratchSize, ASBGI_Blas, ASBRI_Blas, GraphicsQueue, CB);
-#endif
 #endif
 		}
 #pragma endregion
@@ -165,8 +161,7 @@ public:
 				.mask = 0xff,
 				.instanceShaderBindingTableRecordOffset = 0,
 				.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR,
-				//.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().Buffer)
-				.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().AccelerationStructure)
+				.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().AccelerationStructure) /* GetDeviceAddress(Device, BLASs.back().Buffer)でも良い */
 			}),
 		};
 		Scoped<BufferMemory> InstBuf(Device);
@@ -209,15 +204,15 @@ public:
 			VkAccelerationStructureBuildSizesInfoKHR ASBSI = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, };
 			vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI_Tlas, data(MaxPrimitiveCounts), &ASBSI);
 
-#if defined(AS_BUILD_TOGETHER) && !defined(USE_BLAS_COMPACTION)
+#ifdef USE_BLAS_COMPACTION
+			//!< AS作成、ビルド (Create and build AS)
+			TLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBSI.buildScratchSize, ASBGI_Tlas, ASBRI_Tlas, GraphicsQueue, CB);
+#else
 			//!< AS、スクラッチ作成 (Create AS and scratch)
 			TLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize);
 			Scratch_Tlas.Create(Device, PDMP, ASBSI.buildScratchSize);
 			ASBGI_Tlas.dstAccelerationStructure = TLASs.back().AccelerationStructure;
 			ASBGI_Tlas.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch_Tlas.Buffer) });
-#else
-			//!< AS作成、ビルド (Create and build AS)
-			TLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBSI.buildScratchSize, ASBGI_Tlas, ASBRI_Tlas, GraphicsQueue, CB);
 #endif
 		}
 #pragma endregion
@@ -225,16 +220,16 @@ public:
 #ifdef USE_INDIRECT
 		//!< インダイレクトバッファ (IndirectBuffer)
 		const VkTraceRaysIndirectCommandKHR TRIC = { .width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 };
-#if defined(AS_BUILD_TOGETHER) && !defined(USE_BLAS_COMPACTION)
+#ifdef USE_BLAS_COMPACTION
+		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(TRIC), &TRIC);
+#else
 		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC);
 		VK::Scoped<StagingBuffer> Staging_Indirect(Device);
-		Staging_Indirect.Create(Device, PDMP, sizeof(TRIC), &TRIC);
-#else
-		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(TRIC), &TRIC);
+		Staging_Indirect.Create(Device, PDMP, sizeof(TRIC), & TRIC); 
 #endif
 #endif
 
-#if defined(AS_BUILD_TOGETHER) && !defined(USE_BLAS_COMPACTION)
+#ifndef USE_BLAS_COMPACTION
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 			BLASs.back().PopulateBuildCommand(ASBGI_Blas, ASBRI_Blas, CB);
@@ -247,8 +242,6 @@ public:
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		SubmitAndWait(GraphicsQueue, CB);
 #endif
-
-#undef AS_BUILD_TOGETHER
 	}
 	virtual void CreateTexture() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
@@ -275,14 +268,15 @@ public:
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".rmiss.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".rchit.spv"))),
 		};
+		//!< シェーダステージ
 		const std::array PSSCIs = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_MISS_BIT_KHR, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .module = SMs[2], .pName = "main", .pSpecializationInfo = nullptr }),
 		};
 		//!< シェーダグループ
-		//<!	RayGen, Miss は GENERAL タイプ .generalShader へインデックスを指定
-		//<!	ClosestHit は TRIANGLES_HIT_GROUP タイプ .closestHitShader へインデックスを指定
+		//!< ヒット系は 1 グループで 3種(closestHit, anyHit, intersection)取り得る、それ以外(general タイプ)は 1 つ 1 グループとなる
+		//!< .generalShader, .closestHitShader, ... にシェーダステージのインデックスを指定する
 		const std::array RTSGCIs = {
 			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, .generalShader = 0, .closestHitShader = VK_SHADER_UNUSED_KHR, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
 			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, .generalShader = 1, .closestHitShader = VK_SHADER_UNUSED_KHR, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
@@ -337,7 +331,7 @@ public:
 		const std::array WDSs = {
 			VkWriteDescriptorSet({
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.pNext = &WDSAS, //!< pNext に VkWriteDescriptorSetAccelerationStructureKHR を指定する
+				.pNext = &WDSAS, //!< pNext に VkWriteDescriptorSetAccelerationStructureKHR を指定すること
 				.dstSet = DescriptorSets[0],
 				.dstBinding = 0, .dstArrayElement = 0,
 				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,

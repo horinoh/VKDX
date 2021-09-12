@@ -17,12 +17,12 @@ public:
 #pragma region FBX
 	DirectX::XMFLOAT3 ToFloat3(const FbxVector4& rhs) { return DirectX::XMFLOAT3(static_cast<FLOAT>(rhs[0]), static_cast<FLOAT>(rhs[1]), static_cast<FLOAT>(rhs[2])); }
 	std::vector<UINT32> Indices;
-	std::vector<std::array<DirectX::XMFLOAT3, 2>> PNs;
+	std::vector<Vertex_PositionNormal> Vertices;
 	virtual void Process(FbxMesh* Mesh) override {
 		Fbx::Process(Mesh);
 
-		std::vector<DirectX::XMFLOAT3> Vertices;
-		std::vector<DirectX::XMFLOAT3> Normals;
+		std::vector<DirectX::XMFLOAT3> Vs;
+		std::vector<DirectX::XMFLOAT3> Ns;
 		auto Max = DirectX::XMFLOAT3((std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)());
 		auto Min = DirectX::XMFLOAT3((std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)());
 		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
@@ -30,26 +30,26 @@ public:
 			for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
 				Indices.emplace_back(i * Mesh->GetPolygonSize(i) + j);
 
-				Vertices.emplace_back(ToFloat3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
-				Max.x = std::max(Max.x, Vertices.back().x);
-				Max.y = std::max(Max.y, Vertices.back().y);
-				Max.z = std::max(Max.z, Vertices.back().z);
-				Min.x = std::min(Min.x, Vertices.back().x);
-				Min.y = std::min(Min.y, Vertices.back().y);
-				Min.z = std::min(Min.z, Vertices.back().z);
+				Vs.emplace_back(ToFloat3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
+				Max.x = std::max(Max.x, Vs.back().x);
+				Max.y = std::max(Max.y, Vs.back().y);
+				Max.z = std::max(Max.z, Vs.back().z);
+				Min.x = std::min(Min.x, Vs.back().x);
+				Min.y = std::min(Min.y, Vs.back().y);
+				Min.z = std::min(Min.z, Vs.back().z);
 			}
 		}
 		const auto Bound = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
-		std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Bound, (rhs.y - (Max.y - Min.y) * 0.5f) / Bound, (rhs.z - Min.z) / Bound); });
+		std::transform(begin(Vs), end(Vs), begin(Vs), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Bound, (rhs.y - (Max.y - Min.y) * 0.5f) / Bound, (rhs.z - Min.z) / Bound); });
 
-		FbxArray<FbxVector4> Nrms;
-		Mesh->GetPolygonVertexNormals(Nrms);
-		for (auto i = 0; i < Nrms.Size(); ++i) {
-			Normals.emplace_back(ToFloat3(Nrms[i]));
+		FbxArray<FbxVector4> PVNs;
+		Mesh->GetPolygonVertexNormals(PVNs);
+		for (auto i = 0; i < PVNs.Size(); ++i) {
+			Ns.emplace_back(ToFloat3(PVNs[i]));
 		}
 
-		for (auto i = 0; i < size(Vertices); ++i) {
-			PNs.emplace_back(std::array<DirectX::XMFLOAT3, 2>({ Vertices[i], Normals[i] }));
+		for (auto i = 0; i < size(Vs); ++i) {
+			Vertices.emplace_back(Vertex_PositionNormal({ Vs[i], Ns[i] }));
 		}
 	}
 #pragma endregion
@@ -63,7 +63,6 @@ public:
 			//Load(ToString(Path) + "//bunny.FBX");
 			Load(ToString(Path) + "//dragon.FBX");
 		}
-		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ConvertScene\\box.fbx");
 
 		COM_PTR<ID3D12Device5> Device5;
 		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
@@ -73,10 +72,8 @@ public:
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
 #pragma region BLAS_INPUT
-		StructuredBuffers.emplace_back().Create(COM_PTR_GET(Device), Sizeof(PNs), sizeof(PNs[0]), data(PNs));
-
+		StructuredBuffers.emplace_back().Create(COM_PTR_GET(Device), Sizeof(Vertices), sizeof(Vertices[0]), data(Vertices));
 		StructuredBuffers.emplace_back().Create(COM_PTR_GET(Device), Sizeof(Indices), sizeof(Indices[0]), data(Indices));
-
 		const std::array RGDs = {
 			D3D12_RAYTRACING_GEOMETRY_DESC({
 				.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES,
@@ -86,16 +83,16 @@ public:
 					.IndexFormat = DXGI_FORMAT_R32_UINT,
 					.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT,
 					.IndexCount = static_cast<UINT>(size(Indices)),
-					.VertexCount = static_cast<UINT>(size(PNs)),
+					.VertexCount = static_cast<UINT>(size(Vertices)),
 					.IndexBuffer = StructuredBuffers[1].Resource->GetGPUVirtualAddress(),
-					.VertexBuffer = D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE({.StartAddress = StructuredBuffers[0].Resource->GetGPUVirtualAddress(), .StrideInBytes = sizeof(PNs[0]) }),
+					.VertexBuffer = D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE({.StartAddress = StructuredBuffers[0].Resource->GetGPUVirtualAddress(), .StrideInBytes = sizeof(Vertices[0]) }),
 				})
 			}),
 		};
 		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BRASI_Blas = {
 			.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL,
 			.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE,
-			.NumDescs = static_cast<UINT>(size(RGDs)), //!< [HLSL] GeometryIndex() ([GLSL] gl_GeometryIndexEXT 相当)
+			.NumDescs = static_cast<UINT>(size(RGDs)), 
 			.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY,
 			.pGeometryDescs = data(RGDs), 
 		};
@@ -121,9 +118,9 @@ public:
 					{ 0.0f, 1.0f, 0.0f,  0.0f },
 					{ 0.0f, 0.0f, 1.0f,  0.0f }
 				},
-				.InstanceID = 0, //!< [HLSL] InstanceID() ([GLSL] gl_InstanceCustomIndexEXT 相当)
+				.InstanceID = 0, 
 				.InstanceMask = 0xff,
-				.InstanceContributionToHitGroupIndex = 0, //!< ヒットグループインデックス
+				.InstanceContributionToHitGroupIndex = 0, 
 				.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE,
 				.AccelerationStructure = BLASs.back().Resource->GetGPUVirtualAddress()
 			}),
@@ -239,33 +236,33 @@ public:
 	virtual void CreateRootSignature() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
+		//!< (グローバル)ルートシグネチャ (Global root signature) ... ここでは RegisterSpace = 0 とする
 		{
 			COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
 			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".grs.cso")));
 #else
 			constexpr std::array DRs_Srv = {
-				//!< register(t0, space0), register(t1, space0)
 				D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 2, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 			};
 			constexpr std::array DRs_Uav = {
-				//!< register(u0, space0)
 				D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 			};
 			DX::SerializeRootSignature(Blob, {
-				//!< SRV0, SRV1 (TLAS, CubeMap)
+				//!< SRV0, SRV1 (TLAS, CubeMap) ... register(t0, space0), register(t1, space0)
 				D3D12_ROOT_PARAMETER({
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, 
 					.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Srv)), .pDescriptorRanges = data(DRs_Srv) }),
 					.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL 
 				}),
-				//!< UAV0
+				//!< UAV0 (RenderTarget) ... register(u0, space0)
 				D3D12_ROOT_PARAMETER({
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE, 
 					.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Uav)), .pDescriptorRanges = data(DRs_Uav) }),
 					.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
 				}),
-				//!< CBV0 : D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE ではなくて D3D12_ROOT_PARAMETER_TYPE_CBV を使用している
+				//!< CBV0 (CB) ... register(b0, space0)
+				//!< SetComputeRootConstantBufferView() を使用する為、D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE ではなくて D3D12_ROOT_PARAMETER_TYPE_CBV を使用している
 				D3D12_ROOT_PARAMETER({
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV,
 					.Descriptor = D3D12_ROOT_DESCRIPTOR({ .ShaderRegister = 0, .RegisterSpace = 0 }),
@@ -279,20 +276,20 @@ public:
 		}
 
 #pragma region SHADER_RECORD
-		//!< ローカルルートシグネチャ (Local root signature) ここでは RegisterSpace = 1 とする
+		//!< ローカルルートシグネチャ (Local root signature) ... ここでは RegisterSpace = 1 とする
 		{
 			COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
 			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".lrs.cso")));
 #else
 			DX::SerializeRootSignature(Blob, {
-				//!< SRV (VB)
+				//!< SRV0 (VB) ... register(t0, space1)
 				D3D12_ROOT_PARAMETER({
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV,
 					.Descriptor = D3D12_ROOT_DESCRIPTOR({.ShaderRegister = 0, .RegisterSpace = 1 }),
 					.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
 				}),
-				//!< SRV (IB)
+				//!< SRV1 (IB) ... register(t1, space1)
 				D3D12_ROOT_PARAMETER({
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV,
 					.Descriptor = D3D12_ROOT_DESCRIPTOR({.ShaderRegister = 1, .RegisterSpace = 1 }),
@@ -310,22 +307,17 @@ public:
 #pragma region STATE_OBJECT
 		const D3D12_GLOBAL_ROOT_SIGNATURE GRS = { .pGlobalRootSignature = COM_PTR_GET(RootSignatures[0]) };
 
-		//!< ここでは (VKに合わせて) シェーダーファイルを分けている
 		const auto ShaderPath = GetBasePath();
 		COM_PTR<ID3DBlob> SB_rgen;
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rgen.cso")), COM_PTR_PUT(SB_rgen)));
 		COM_PTR<ID3DBlob> SB_miss;
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".miss.cso")), COM_PTR_PUT(SB_miss)));
-#pragma region HIT
 		COM_PTR<ID3DBlob> SB_rchit;
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rchit.cso")), COM_PTR_PUT(SB_rchit)));
-#pragma endregion
 
 		std::array EDs_rgen = { D3D12_EXPORT_DESC({.Name = TEXT("OnRayGeneration"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
 		std::array EDs_miss = { D3D12_EXPORT_DESC({.Name = TEXT("OnMiss"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
-#pragma region HIT
 		std::array EDs_rchit = { D3D12_EXPORT_DESC({.Name = TEXT("OnClosestHit"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
-#pragma endregion
 
 		const auto DLD_rgen = D3D12_DXIL_LIBRARY_DESC({
 			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rgen->GetBufferPointer(), .BytecodeLength = SB_rgen->GetBufferSize() }),
@@ -335,20 +327,16 @@ public:
 			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_miss->GetBufferPointer(), .BytecodeLength = SB_miss->GetBufferSize() }),
 			.NumExports = static_cast<UINT>(size(EDs_miss)), .pExports = data(EDs_miss)
 		});
-#pragma region HIT
 		const auto DLD_rchit = D3D12_DXIL_LIBRARY_DESC({
 			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rchit->GetBufferPointer(), .BytecodeLength = SB_rchit->GetBufferSize() }),
 			.NumExports = static_cast<UINT>(size(EDs_rchit)), .pExports = data(EDs_rchit)
 		});
-#pragma endregion
 
-#pragma region HIT
 		constexpr D3D12_HIT_GROUP_DESC HGD = {
 			.HitGroupExport = TEXT("HitGroup"),
 			.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES,
 			.AnyHitShaderImport = nullptr, .ClosestHitShaderImport = TEXT("OnClosestHit"), .IntersectionShaderImport = nullptr
 		};
-#pragma endregion
 
 		constexpr D3D12_RAYTRACING_SHADER_CONFIG RSC = {
 			.MaxPayloadSizeInBytes = static_cast<UINT>(sizeof(DirectX::XMFLOAT3)), //!< Payload のサイズ
@@ -361,9 +349,7 @@ public:
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, .pDesc = &GRS }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rgen }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_miss }),
-#pragma region HIT
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rchit }),
-#pragma endregion
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, .pDesc = &HGD }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, .pDesc = &RSC }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, .pDesc = &RPC }),
@@ -410,7 +396,7 @@ public:
 		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;		
-		//!< [2] UAV
+		//!< [2] UAV (RenderTarget)
 		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH); 
 		CbvSrvUavGPUHandles.back().emplace_back(GDH); 
 		CDH.ptr += IncSize;
@@ -462,13 +448,12 @@ public:
 		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RchitSize, RchitStride); {
 			auto Data = ShaderTables.back().Map(); {
 				std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("HitGroup")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+				//!< GPUハンドルを書き込む
 #pragma region SHADER_RECORD
-				{
-					//!< [3] SRV (VB)
-					std::memcpy(Data + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &CbvSrvUavGPUHandles.back()[3], GPUDescSize);
-					//!< [4] SRV (IB)
-					std::memcpy(Data + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + GPUDescSize, &CbvSrvUavGPUHandles.back()[4], GPUDescSize);
-				}
+				//!< [3] SRV (VB)
+				std::memcpy(Data + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &CbvSrvUavGPUHandles.back()[3], GPUDescSize);
+				//!< [4] SRV (IB)
+				std::memcpy(Data + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + GPUDescSize, &CbvSrvUavGPUHandles.back()[4], GPUDescSize);
 #pragma endregion
 			} ShaderTables.back().Unmap();
 		}

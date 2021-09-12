@@ -3,8 +3,8 @@ struct Payload
     float3 Color;
 };
 
-RaytracingAccelerationStructure TLAS : register(t0);
-RWTexture2D<float4> RenderTarget : register(u0);
+RaytracingAccelerationStructure TLAS : register(t0, space0);
+RWTexture2D<float4> RenderTarget : register(u0, space0);
 
 [shader("raygeneration")]
 void OnRayGeneration()

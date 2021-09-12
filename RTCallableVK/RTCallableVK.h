@@ -13,8 +13,6 @@ public:
 	RTCallableVK() : Super() {}
 	virtual ~RTCallableVK() {}
 
-	//!< #TIPS VKインスタンス作成時に "VK_LAYER_RENDERDOC_Capture" を使用すると、メッシュシェーダーやレイトレーシングと同時に使用した場合、vkCreateDevice() でコケるようになるので注意 (If we use "VK_LAYER_RENDERDOC_Capture" with mesh shader or raytracing, vkCreateDevice() failed)
-
 #pragma region RAYTRACING
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext, [[maybe_unused]] const std::vector<const char*>& AddExtensions) override {
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
@@ -106,19 +104,19 @@ public:
 #pragma endregion
 
 #pragma region TLAS_GEOMETRY
-		//!< instanceCustomIndex					: 0==市松模様, 1==縦線, 2==横線
-		//!< instanceShaderBindingTableRecordOffset	: 0==赤, 1==緑
+		//!< instanceCustomIndex					: 0==市松模様, 1==縦線, 2==横線 (ここでは CallableShader の出し分けに使用)
+		//!< instanceShaderBindingTableRecordOffset	: 0==赤, 1==緑 (HitShader の出し分けに使用)
 		const std::array ASIs = {
 			#pragma region INSTANCES
 			VkAccelerationStructureInstanceKHR({
 				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, -0.5f,
 													0.0f, 1.0f, 0.0f, 0.0f,
 													0.0f, 0.0f, 1.0f, 0.0f}),
-				.instanceCustomIndex = 0, //!< [GLSL] gl_InstanceCustomIndexEXT ([HLSL] InstanceID()相当)
+				.instanceCustomIndex = 0, //!< [GLSL] gl_InstanceCustomIndexEXT ([HLSL] InstanceID()相当) (ここでは CallableShader の出し分けに使用)
 				.mask = 0xff,
-				.instanceShaderBindingTableRecordOffset = 0, //!< ヒットシェーダインデックス
+				.instanceShaderBindingTableRecordOffset = 0, //!< ヒットシェーダインデックス (HitShader の出し分けに使用)
 				.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR,
-				.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().Buffer)
+				.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().AccelerationStructure)
 			}),
 			VkAccelerationStructureInstanceKHR({
 				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, 0.5f,
@@ -302,7 +300,7 @@ public:
 		const std::array WDSs = {
 			VkWriteDescriptorSet({
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.pNext = &WDSAS, //!< pNext に VkWriteDescriptorSetAccelerationStructureKHR を指定する
+				.pNext = &WDSAS, 
 				.dstSet = DescriptorSets[0],
 				.dstBinding = 0, .dstArrayElement = 0,
 				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,

@@ -21,7 +21,7 @@
 	* [The Stanford 3D Scanning Repository](http://graphics.stanford.edu/data/3Dscanrep/)
 
 ### テクスチャ
-#### DDS ツール
+#### DDS
 * [DirectXTex](https://github.com/Microsoft/DirectXTex)
   * DirectXTex\DirectXTex_Desktop_2015.sln を開いて Release、x64 にしてビルドすると実行ファイルが作成される
 	~~~
@@ -38,6 +38,20 @@
 		* 右側から Skybox をクリック - Browse... - HDR テクスチャを選択して - Load
 		* 必要に応じて Tonemap を調整
 		* Save - DDS - Cubemap - BGRA8 - Save でファイルを出力
+#### KTX
+* [KTX](https://www.khronos.org/ktx/)
+* KTX-Software-X.X.X-win64.exe をインストール
+	* [ドキュメント](https://github.khronos.org/KTX-Software/ktxtools.html)
+		* ktx2check ... 有効な ktx かどうかのチェック
+		* ktx2ktx2 ... ktx → ktx2 への変換
+		* ktxinfo ... 情報の表示
+		* ktxsc ... 圧縮
+		* toktx ... ktx への変換 (.jpg や .png から変換できる)
+			~~~
+			REM .jpg -> .ktx 変換の例
+			$for %i in (*.jpg) do toktx %~ni.ktx %~ni.jpg
+			~~~
+* [ビューア](https://github.com/kopaka1822/ImageViewer)
 
 ### 外部ライブラリ
 #### GLTF

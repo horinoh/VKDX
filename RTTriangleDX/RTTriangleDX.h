@@ -16,7 +16,6 @@ public:
 #pragma region RAYTRACING
 	virtual void CreateGeometry() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
-#define AS_BUILD_TOGETHER
 
 		COM_PTR<ID3D12Device5> Device5;
 		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
@@ -92,15 +91,13 @@ public:
 			BLASs.emplace_back().Create(COM_PTR_GET(Device), CompactedSizeInBytes)
 				//!< 一時BLAS -> 正規BLAS コピーコマンドを発行する 
 				.ExecuteCopyCommand(GCL, CA, GCQ, COM_PTR_GET(Fence), COM_PTR_GET(Tmp.Resource));
+
+			//!< AS作成、ビルド (Create and build AS)
+			//BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes).ExecuteBuildCommand(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI_Blas, GCL, CA, GCQ, COM_PTR_GET(Fence));
 #else
-#ifdef AS_BUILD_TOGETHER
 			//!< AS、スクラッチ作成 (Create AS and scratch)
 			BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
 			Scratch_Blas.Create(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes);
-#else
-			//!< AS作成、ビルド (Create and build AS)
-			BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes).ExecuteBuildCommand(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI_Blas, GCL, CA, GCQ, COM_PTR_GET(Fence));
-#endif
 #endif
 		}
 #pragma endregion
@@ -137,18 +134,18 @@ public:
 			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO RASPI;
 			Device5->GetRaytracingAccelerationStructurePrebuildInfo(&BRASI_Tlas, &RASPI);
 
-#if defined(AS_BUILD_TOGETHER) && !defined(USE_BLAS_COMPACTION)
+#ifdef USE_BLAS_COMPACTION
+			//!< AS作成、ビルド (Create and build AS)
+			TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes).ExecuteBuildCommand(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI_Tlas, GCL, CA, GCQ, COM_PTR_GET(Fence));
+#else
 			//!< AS、スクラッチ作成 (Create AS and scratch)
 			TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
 			Scratch_Tlas.Create(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes);
-#else
-			//!< AS作成、ビルド (Create and build AS)
-			TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes).ExecuteBuildCommand(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI_Tlas, GCL, CA, GCQ, COM_PTR_GET(Fence));
 #endif
 		}
 #pragma endregion
 
-#if defined(AS_BUILD_TOGETHER) && !defined(USE_BLAS_COMPACTION)
+#ifndef USE_BLAS_COMPACTION
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 			BLASs.back().PopulateBuildCommand(BRASI_Blas, GCL, COM_PTR_GET(Scratch_Blas.Resource));
 			//!< TLAS のビルド時には BLAS のビルドが完了している必要がある
@@ -157,8 +154,6 @@ public:
 		} VERIFY_SUCCEEDED(GCL->Close());
 		DX::ExecuteAndWait(GCQ, static_cast<ID3D12CommandList*>(GCL), COM_PTR_GET(Fence));
 #endif
-
-#undef AS_BUILD_TOGETHER
 	}
 	virtual void CreateTexture() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }

@@ -2,10 +2,14 @@ struct Payload
 {
     float3 Color;
 };
-RaytracingAccelerationStructure TLAS : register(t0);
 
-struct PN { float3 Position; float3 Normal; };
-StructuredBuffer<PN> VertexBuffer : register(t0, space1);
+RaytracingAccelerationStructure TLAS : register(t0, space0);
+struct VertexPN 
+{ 
+    float3 Position; 
+    float3 Normal;
+};
+StructuredBuffer<VertexPN> VertexBuffer : register(t0, space1);
 StructuredBuffer<uint> IndexBuffer : register(t1, space1);
 
 [shader("closesthit")]

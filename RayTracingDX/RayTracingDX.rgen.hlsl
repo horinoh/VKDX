@@ -3,16 +3,15 @@ struct Payload
     float3 Color;
 };
 
-RaytracingAccelerationStructure TLAS : register(t0);
-RWTexture2D<float4> RenderTarget : register(u0);
-
+RaytracingAccelerationStructure TLAS : register(t0, space0);
+RWTexture2D<float4> RenderTarget : register(u0, space0);
 struct Transform {
     float4x4 Projection;
     float4x4 View;
     float4x4 InvProjection;
     float4x4 InvView;
 };
-ConstantBuffer<Transform> CB : register(b0);
+ConstantBuffer<Transform> CB : register(b0, space0);
 
 [shader("raygeneration")]
 void OnRayGeneration()

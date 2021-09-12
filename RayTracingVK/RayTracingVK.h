@@ -24,12 +24,12 @@ public:
 #pragma region FBX
 	glm::vec3 ToVec3(const FbxVector4& rhs) { return glm::vec3(static_cast<FLOAT>(rhs[0]), static_cast<FLOAT>(rhs[1]), static_cast<FLOAT>(rhs[2])); }
 	std::vector<uint32_t> Indices;
-	std::vector<std::array<glm::vec3, 2>> PNs;
+	std::vector<Vertex_PositionNormal> Vertices;
 	virtual void Process(FbxMesh* Mesh) override {
 		Fbx::Process(Mesh);
 
-		std::vector<glm::vec3> Vertices;
-		std::vector<glm::vec3> Normals;
+		std::vector<glm::vec3> Vs;
+		std::vector<glm::vec3> Ns;
 		auto Max = glm::vec3((std::numeric_limits<float>::min)());
 		auto Min = glm::vec3((std::numeric_limits<float>::max)());
 		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
@@ -37,31 +37,29 @@ public:
 			for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
 				Indices.emplace_back(i * Mesh->GetPolygonSize(i) + j);
 
-				Vertices.emplace_back(ToVec3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
-				Max.x = std::max(Max.x, Vertices.back().x);
-				Max.y = std::max(Max.y, Vertices.back().y);
-				Max.z = std::max(Max.z, Vertices.back().z);
-				Min.x = std::min(Min.x, Vertices.back().x);
-				Min.y = std::min(Min.y, Vertices.back().y);
-				Min.z = std::min(Min.z, Vertices.back().z);
+				Vs.emplace_back(ToVec3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
+				Max.x = std::max(Max.x, Vs.back().x);
+				Max.y = std::max(Max.y, Vs.back().y);
+				Max.z = std::max(Max.z, Vs.back().z);
+				Min.x = std::min(Min.x, Vs.back().x);
+				Min.y = std::min(Min.y, Vs.back().y);
+				Min.z = std::min(Min.z, Vs.back().z);
 			}
 		}
 		const auto Bound = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
-		std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const glm::vec3& rhs) { return rhs / Bound - glm::vec3(0.0f, (Max.y - Min.y) * 0.5f, Min.z) / Bound; });
+		std::transform(begin(Vs), end(Vs), begin(Vs), [&](const glm::vec3& rhs) { return rhs / Bound - glm::vec3(0.0f, (Max.y - Min.y) * 0.5f, Min.z) / Bound; });
 
-		FbxArray<FbxVector4> Nrms;
-		Mesh->GetPolygonVertexNormals(Nrms);
-		for (auto i = 0; i < Nrms.Size(); ++i) {
-			Normals.emplace_back(ToVec3(Nrms[i]));
+		FbxArray<FbxVector4> PVNs;
+		Mesh->GetPolygonVertexNormals(PVNs);
+		for (auto i = 0; i < PVNs.Size(); ++i) {
+			Ns.emplace_back(ToVec3(PVNs[i]));
 		}
 
-		for (auto i = 0; i < size(Vertices); ++i) {
-			PNs.emplace_back(std::array<glm::vec3, 2>({Vertices[i], Normals[i]}));
+		for (auto i = 0; i < size(Vs); ++i) {
+			Vertices.emplace_back(Vertex_PositionNormal({Vs[i], Ns[i]}));
 		}
 	}
 #pragma endregion
-
-	//!< #TIPS VKインスタンス作成時に "VK_LAYER_RENDERDOC_Capture" を使用すると、メッシュシェーダーやレイトレーシングと同時に使用した場合、vkCreateDevice() でコケるようになるので注意 (If we use "VK_LAYER_RENDERDOC_Capture" with mesh shader or raytracing, vkCreateDevice() failed)
 
 #pragma region RAYTRACING
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext, [[maybe_unused]] const std::vector<const char*>& AddExtensions) override {
@@ -98,16 +96,13 @@ public:
 			//Load(ToString(Path) + "//bunny.FBX");
 			Load(ToString(Path) + "//dragon.FBX");
 		}
-		//Load(GetEnv("FBX_SDK_PATH") + "\\samples\\ConvertScene\\box.fbx");
 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		const auto& CB = CommandBuffers[0];
 
 #pragma region BLAS_GEOMETRY
-		StructuredBuffers.emplace_back().Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Sizeof(PNs), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(PNs));
-
+		StructuredBuffers.emplace_back().Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Sizeof(Vertices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Vertices));
 		StructuredBuffers.emplace_back().Create(Device, PDMP, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Sizeof(Indices), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Indices));
-
 		const std::vector ASGs_Blas = {
 			VkAccelerationStructureGeometryKHR({
 				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
@@ -118,7 +113,7 @@ public:
 						.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
 						.pNext = nullptr,
 						.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
-						.vertexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, StructuredBuffers[0].Buffer)}), .vertexStride = sizeof(PNs[0]), .maxVertex = static_cast<uint32_t>(size(PNs)),
+						.vertexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, StructuredBuffers[0].Buffer)}), .vertexStride = sizeof(Vertices[0]), .maxVertex = static_cast<uint32_t>(size(Vertices)),
 						.indexType = VK_INDEX_TYPE_UINT32,
 						.indexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, StructuredBuffers[1].Buffer)}),
 						.transformData = VkDeviceOrHostAddressConstKHR({.deviceAddress = 0}),
@@ -163,11 +158,11 @@ public:
 				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, -1.0f,
 													0.0f, 1.0f, 0.0f, 0.0f,
 													0.0f, 0.0f, 1.0f, 0.0f}),
-				.instanceCustomIndex = 0, //!< [GLSL] gl_InstanceCustomIndexEXT ([HLSL] InstanceID()相当)
+				.instanceCustomIndex = 0, 
 				.mask = 0xff,
-				.instanceShaderBindingTableRecordOffset = 0, //!< ヒットシェーダインデックス
+				.instanceShaderBindingTableRecordOffset = 0, 
 				.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR,
-				.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().Buffer)
+				.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().AccelerationStructure)
 			}),
 			VkAccelerationStructureInstanceKHR({
 				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, 0.0f,
@@ -217,7 +212,7 @@ public:
 			.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
 			.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
 			.srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = VK_NULL_HANDLE,
-			.geometryCount = 1,.pGeometries = &ASG_Tlas, .ppGeometries = nullptr, //!< [GLSL] gl_GeometryIndexEXT ([HLSL] GeometryIndex() 相当)
+			.geometryCount = 1,.pGeometries = &ASG_Tlas, .ppGeometries = nullptr, 
 			.scratchData = VkDeviceOrHostAddressKHR({.deviceAddress = 0})
 		};
 		constexpr auto ASBRI_Tlas = VkAccelerationStructureBuildRangeInfoKHR({ .primitiveCount = static_cast<uint32_t>(size(ASIs)), .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0 });
@@ -320,23 +315,17 @@ public:
 		const std::array SMs = {
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".rgen.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".rmiss.spv"))),
-#pragma region HIT
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".rchit.spv"))),
-#pragma endregion
 		};
 		const std::array PSSCIs = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_MISS_BIT_KHR, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),
-#pragma region HIT
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .module = SMs[2], .pName = "main", .pSpecializationInfo = nullptr }),
-#pragma endregion
 		};
 		const std::array RTSGCIs = {
 			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, .generalShader = 0, .closestHitShader = VK_SHADER_UNUSED_KHR, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
 			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, .generalShader = 1, .closestHitShader = VK_SHADER_UNUSED_KHR, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
-#pragma region HIT
 			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR, .generalShader = VK_SHADER_UNUSED_KHR, .closestHitShader = 2, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
-#pragma endregion
 		};
 
 		constexpr std::array DSs = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
@@ -399,7 +388,7 @@ public:
 				//!< TLAS
 				VkWriteDescriptorSet({
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					.pNext = &WDSAS, //!< pNext に VkWriteDescriptorSetAccelerationStructureKHR を指定する
+					.pNext = &WDSAS,
 					.dstSet = DescriptorSets[0],
 					.dstBinding = 0, .dstArrayElement = 0,
 					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
