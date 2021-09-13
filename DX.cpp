@@ -252,7 +252,7 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const
 		} Resource->Unmap(0, nullptr);
 	}
 }
-
+#if 0
 void DX::PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES RS)
 {
 	{
@@ -319,6 +319,7 @@ void DX::PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* GCL, ID
 		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 	}
 }
+#endif
 void DX::PopulateCommandList_CopyTextureRegion(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs, const D3D12_RESOURCE_STATES RS)
 {
 	//!< LoadDDSTextureFromFile() を使用すると D3D12_RESOURCE_STATE_COPY_DEST で作成されているのでバリアの必要は無い (Resource created by LoadDDSTextureFromFile()'s state is already D3D12_RESOURCE_STATE_COPY_DEST)

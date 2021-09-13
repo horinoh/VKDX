@@ -313,6 +313,19 @@ public:
 				std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("HitGroup")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 			} ShaderTables.back().Unmap();
 		}
+
+#ifdef USE_INDIRECT
+		//!< インダイレクトバッファ (IndirectBuffer)
+		//!< DX では ShaderTable を含めるため、この時点でないと作れない
+		const auto DRD = D3D12_DISPATCH_RAYS_DESC({
+			.RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({.StartAddress = ShaderTables[0].Range.StartAddress, .SizeInBytes = ShaderTables[0].Range.SizeInBytes }),
+			.MissShaderTable = ShaderTables[1].Range,
+			.HitGroupTable = ShaderTables[2].Range,
+			.CallableShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0}),
+			.Width = static_cast<UINT>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()), .Depth = 1
+		});
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DRD).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DRD), &DRD);
+#endif
 	}
 	virtual void PopulateCommandList(const size_t i) override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
@@ -340,6 +353,9 @@ public:
 			VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
 			GCL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
 
+#ifdef USE_INDIRECT
+			GCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+#else
 			const auto DRD = D3D12_DISPATCH_RAYS_DESC({
 			  .RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({ .StartAddress = ShaderTables[0].Range.StartAddress, .SizeInBytes = ShaderTables[0].Range.SizeInBytes }),
 			  .MissShaderTable = ShaderTables[1].Range,
@@ -348,7 +364,7 @@ public:
 			  .Width = static_cast<UINT>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()), .Depth = 1
 			});
 			GCL4->DispatchRays(&DRD);
-
+#endif
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 			{
 				const std::array RBs = {

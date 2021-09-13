@@ -22,6 +22,18 @@ protected:
 	virtual void CreateTexture() override {
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
+#ifdef _DEBUG
+			auto GLITexture = gli::load(data(ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds"))));
+			VkImageFormatProperties IFP;
+			VERIFY_SUCCEEDED(vkGetPhysicalDeviceImageFormatProperties(GetCurrentPhysicalDevice(),
+				VKImage::ToVkFormat(GLITexture.format()),
+				VKImage::ToVkImageType(GLITexture.target()),
+				VK_IMAGE_TILING_OPTIMAL,
+				VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+				gli::is_target_cube(GLITexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
+				&IFP));
+#endif
+
 			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds"))).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		}

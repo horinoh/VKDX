@@ -44,6 +44,7 @@ VkImageViewType VKImage::ToVkImageViewType(const gli::target GLITarget)
 }
 VkImageType VKImage::ToVkImageType(const gli::target GLITarget)
 {
+	assert(gli::TARGET_INVALID != static_cast<int>(GLITarget) && "TARGET_INVALID");
 	switch (GLITarget)
 	{
 		using enum gli::target;

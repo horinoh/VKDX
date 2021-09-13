@@ -16,7 +16,7 @@ class VKImage : public VKExt
 {
 private:
 	using Super = VKExt;
-
+public:
 	[[nodiscard]] static VkFormat ToVkFormat(const gli::format GLIFormat);
 	[[nodiscard]] static VkImageViewType ToVkImageViewType(const gli::target GLITarget);
 	[[nodiscard]] static VkImageType ToVkImageType(const gli::target GLITarget);

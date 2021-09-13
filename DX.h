@@ -121,6 +121,45 @@ public:
 		void Create(ID3D12Device* Device, const size_t Size, const D3D12_HEAP_TYPE HT, const void* Source = nullptr) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, HT, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
 		}
+		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const size_t Size, ID3D12Resource* Upload) {
+			{
+				const std::array RBs = {
+					D3D12_RESOURCE_BARRIER({
+						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+						.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
+							.pResource = COM_PTR_GET(Resource),
+							.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+							.StateBefore = D3D12_RESOURCE_STATE_GENERIC_READ, .StateAfter = D3D12_RESOURCE_STATE_COPY_DEST
+						})
+					})
+				};
+				GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+			}
+			GCL->CopyBufferRegion(COM_PTR_GET(Resource), 0, Upload, 0, Size);
+			{
+				const std::array RBs = {
+					D3D12_RESOURCE_BARRIER({
+						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+						.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
+							.pResource = COM_PTR_GET(Resource),
+							.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+							.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST, .StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ
+						})
+					})
+				};
+				GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+			}
+		}
+		void ExecuteCopyCommand(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const size_t Size, const void* Source) {
+			UploadResource Upload;
+			Upload.Create(Device, Size, Source);
+			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
+				PopulateCopyCommand(GCL, Size, COM_PTR_GET(Upload.Resource));
+			} VERIFY_SUCCEEDED(GCL->Close());
+			DX::ExecuteAndWait(CQ, GCL, Fence);
+		}
 	};
 	class DefaultResource : public ResourceBase
 	{
@@ -147,17 +186,6 @@ public:
 			View = D3D12_VERTEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .StrideInBytes = Stride });
 			return *this;
 		}
-		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const size_t Size, ID3D12Resource* Upload) {
-			DX::PopulateCommandList_CopyBufferRegion(GCL, Upload, COM_PTR_GET(Resource), Size, D3D12_RESOURCE_STATE_GENERIC_READ);
-		}
-		void ExecuteCopyCommand(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const size_t Size, const void* Source) {
-			UploadResource Upload;
-			Upload.Create(Device, Size, Source);
-			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-				PopulateCopyCommand(GCL, Size, COM_PTR_GET(Upload.Resource));
-			} VERIFY_SUCCEEDED(GCL->Close());
-			DX::ExecuteAndWait(CQ, GCL, Fence);
-		}
 	};
 	class IndexBuffer : public DefaultResource
 	{
@@ -169,17 +197,6 @@ public:
 			Super::Create(Device, Size);
 			View = D3D12_INDEX_BUFFER_VIEW({ .BufferLocation = Resource->GetGPUVirtualAddress(), .SizeInBytes = static_cast<UINT>(Size), .Format = Format });
 			return *this;
-		}
-		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const size_t Size, ID3D12Resource* Upload) {
-			DX::PopulateCommandList_CopyBufferRegion(GCL, Upload, COM_PTR_GET(Resource), Size, D3D12_RESOURCE_STATE_GENERIC_READ);
-		}
-		void ExecuteCopyCommand(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const size_t Size, const void* Source) {
-			UploadResource Upload;
-			Upload.Create(Device, Size, Source);
-			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-				PopulateCopyCommand(GCL, Size, COM_PTR_GET(Upload.Resource));
-			} VERIFY_SUCCEEDED(GCL->Close());
-			DX::ExecuteAndWait(CQ, GCL, Fence);
 		}
 	};
 	class IndirectBuffer : public DefaultResource
@@ -202,17 +219,9 @@ public:
 #pragma region MESH_SHADER
 		IndirectBuffer& Create(ID3D12Device* Device, const D3D12_DISPATCH_MESH_ARGUMENTS& DMA) { return Create(Device, sizeof(DMA), D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_MESH); }
 #pragma endregion
-		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const size_t Size, ID3D12Resource* Upload) {
-			DX::PopulateCommandList_CopyBufferRegion(GCL, Upload, COM_PTR_GET(Resource), Size, D3D12_RESOURCE_STATE_GENERIC_READ);
-		}
-		void ExecuteCopyCommand(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const size_t Size, const void* Source) {
-			UploadResource Upload;
-			Upload.Create(Device, Size, Source);
-			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-				PopulateCopyCommand(GCL, Size, COM_PTR_GET(Upload.Resource));
-			} VERIFY_SUCCEEDED(GCL->Close());
-			DX::ExecuteAndWait(CQ, GCL, Fence);
-		}
+#pragma region RAYTRACING
+		IndirectBuffer& Create(ID3D12Device* Device, const D3D12_DISPATCH_RAYS_DESC& DRD) { return Create(Device, sizeof(DRD), D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH_RAYS); }
+#pragma endregion
 	};
 	class ConstantBuffer : public UploadResource
 	{
@@ -586,8 +595,8 @@ protected:
 
 public:
 #pragma region COMMAND
-	static void PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES RS);
-	static void PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
+	//static void PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES RS);
+	//static void PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
 	static void PopulateCommandList_CopyTextureRegion(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
 	static void ExecuteAndWait(ID3D12CommandQueue* CQ, ID3D12CommandList* CL, ID3D12Fence* Fence);
 #pragma endregion

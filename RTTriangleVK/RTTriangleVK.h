@@ -217,18 +217,6 @@ public:
 		}
 #pragma endregion
 
-#ifdef USE_INDIRECT
-		//!< インダイレクトバッファ (IndirectBuffer)
-		const VkTraceRaysIndirectCommandKHR TRIC = { .width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 };
-#ifdef USE_BLAS_COMPACTION
-		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(TRIC), &TRIC);
-#else
-		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC);
-		VK::Scoped<StagingBuffer> Staging_Indirect(Device);
-		Staging_Indirect.Create(Device, PDMP, sizeof(TRIC), & TRIC); 
-#endif
-#endif
-
 #ifndef USE_BLAS_COMPACTION
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
@@ -236,9 +224,6 @@ public:
 			//!< TLAS のビルド時には BLAS のビルドが完了している必要がある
 			BLASs.back().PopulateBarrierCommand(CB);
 			TLASs.back().PopulateBuildCommand(ASBGI_Tlas, ASBRI_Tlas, CB);
-#ifdef USE_INDIRECT
-			IndirectBuffers.back().PopulateCopyCommand(CB, sizeof(TRIC), Staging_Indirect.Buffer);
-#endif
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		SubmitAndWait(GraphicsQueue, CB);
 #endif
@@ -407,6 +392,13 @@ public:
 				std::memcpy(Data, data(Handles) + RchitSize + MissSize, PDRTPP.shaderGroupHandleSize);
 			} ShaderBindingTables.back().Unmap(Device);
 		}
+
+#ifdef USE_INDIRECT
+		//!< インダイレクトバッファ (IndirectBuffer) 
+		//!< VK では ShaderTable を含めないのでもっと前でもできるが、DX に合わせてここで行うことにする
+		const VkTraceRaysIndirectCommandKHR TRIC = { .width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 };
+		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(TRIC), &TRIC);
+#endif
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }

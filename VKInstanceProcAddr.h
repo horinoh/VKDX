@@ -9,6 +9,7 @@ VK_PROC_ADDR(GetPhysicalDeviceFormatProperties)
 VK_PROC_ADDR(GetPhysicalDeviceMemoryProperties)
 VK_PROC_ADDR(GetPhysicalDeviceProperties)
 VK_PROC_ADDR(GetPhysicalDeviceQueueFamilyProperties)
+VK_PROC_ADDR(GetPhysicalDeviceImageFormatProperties)
 
 //!< VK_KHR_SURFACE_EXTENSION_NAME
 VK_PROC_ADDR(DestroySurfaceKHR)
