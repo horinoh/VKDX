@@ -3,12 +3,12 @@
 #include "resource.h"
 
 #pragma region Code
-#include "../DXExt.h"
+#include "../DXRT.h"
 
-class RTCallableDX : public DXExt
+class RTCallableDX : public DXRT
 {
 private:
-	using Super = DXExt;
+	using Super = DXRT;
 public:
 	RTCallableDX() : Super() {}
 	virtual ~RTCallableDX() {}
@@ -128,49 +128,6 @@ public:
 			TLASs.back().PopulateBuildCommand(BRASI_Tlas, GCL, COM_PTR_GET(Scratch_Tlas.Resource));
 		} VERIFY_SUCCEEDED(GCL->Close());
 		DX::ExecuteAndWait(GCQ, static_cast<ID3D12CommandList*>(GCL), COM_PTR_GET(Fence));
-	}
-	virtual void CreateTexture() override {
-		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
-
-		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
-
-		UnorderedAccessTextures.emplace_back().Create(COM_PTR_GET(Device), GetClientRectWidth(), GetClientRectHeight(), 1, SCD.Format);
-	}
-	virtual void CreateRootSignature() override {
-		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
-
-		{
-			COM_PTR<ID3DBlob> Blob;
-#ifdef USE_HLSL_ROOTSIGNATRUE
-			GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".grs.cso")));
-#else
-			constexpr std::array DRs_Srv = {
-				//!< register(t0, space0)
-				D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
-			};
-			constexpr std::array DRs_Uav = {
-				//!< register(u0, space0)
-				D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
-			};
-			DX::SerializeRootSignature(Blob, {
-				//!< TLAS
-				D3D12_ROOT_PARAMETER({
-					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-					.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Srv)), .pDescriptorRanges = data(DRs_Srv) }),
-					.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
-				}),
-				//!< UAV0
-				D3D12_ROOT_PARAMETER({
-					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-					.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Uav)), .pDescriptorRanges = data(DRs_Uav) }),
-					.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
-				}),
-				}, {
-				}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
-#endif
-			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
-		}
 	}
 	virtual void CreatePipelineState() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
@@ -292,23 +249,6 @@ public:
 		VERIFY_SUCCEEDED(Device5->CreateStateObject(&SOD, COM_PTR_UUIDOF_PUTVOID(StateObjects.emplace_back())));
 #pragma endregion
 	}
-	virtual void CreateDescriptor() override {
-		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 3, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
-
-		CbvSrvUavGPUHandles.emplace_back();
-		auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-		auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
-		const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		//!< [0] TLAS
-		Device->CreateShaderResourceView(nullptr, &TLASs[0].SRV, CDH);
-		CbvSrvUavGPUHandles.back().emplace_back(GDH);
-		CDH.ptr += IncSize;
-		GDH.ptr += IncSize;
-		//!< [1] UAV
-		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH);
-		CbvSrvUavGPUHandles.back().emplace_back(GDH);
-	}
 	virtual void CreateShaderTable() override {
 		COM_PTR<ID3D12StateObjectProperties> SOP;
 		VERIFY_SUCCEEDED(StateObjects.back()->QueryInterface(COM_PTR_UUIDOF_PUTVOID(SOP)));
@@ -357,6 +297,19 @@ public:
 			} ShaderTables.back().Unmap();
 		}
 #pragma endregion
+
+		const auto DRD = D3D12_DISPATCH_RAYS_DESC({
+			.RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({.StartAddress = ShaderTables[0].Range.StartAddress, .SizeInBytes = ShaderTables[0].Range.SizeInBytes }),
+			.MissShaderTable = ShaderTables[1].Range,
+#pragma region HIT
+			.HitGroupTable = ShaderTables[2].Range,
+#pragma endregion
+#pragma region CALLABLE
+			.CallableShaderTable = ShaderTables[3].Range,
+#pragma endregion
+			.Width = static_cast<UINT>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()), .Depth = 1
+		});
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DRD).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DRD), &DRD);
 	}
 	virtual void PopulateCommandList(const size_t i) override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
@@ -365,59 +318,23 @@ public:
 		const auto CA = COM_PTR_GET(CommandAllocators[0]);
 
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
+			PopulateBeginRenderTargetCommand(i); {
+				GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-			{
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
 				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-
 				//!< [0] TLAS
-				GCL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]); 
+				GCL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
 				//!< [1] UAV
-				GCL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[1]); 
-			}
+				GCL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[1]);
 
-			const auto UAV = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
-			ResourceBarrier(COM_PTR_GET(GCL), UAV, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+				COM_PTR<ID3D12GraphicsCommandList4> GCL4;
+				VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
+				GCL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
 
-			COM_PTR<ID3D12GraphicsCommandList4> GCL4;
-			VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
-			GCL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
+				GCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 
-			const auto DRD = D3D12_DISPATCH_RAYS_DESC({
-			  .RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({ .StartAddress = ShaderTables[0].Range.StartAddress, .SizeInBytes = ShaderTables[0].Range.SizeInBytes }),
-			  .MissShaderTable = ShaderTables[1].Range,
-#pragma region HIT
-			  .HitGroupTable = ShaderTables[2].Range,
-#pragma endregion
-#pragma region CALLABLE
-			  .CallableShaderTable = ShaderTables[3].Range,
-#pragma endregion
-			  .Width = static_cast<UINT>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()), .Depth = 1
-			});
-			GCL4->DispatchRays(&DRD);
-
-			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-			{
-				const std::array RBs = {
-					D3D12_RESOURCE_BARRIER({
-						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-						.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = UAV, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS, .StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE })
-					 }),
-					D3D12_RESOURCE_BARRIER({
-						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-						.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = SCR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PRESENT, .StateAfter = D3D12_RESOURCE_STATE_COPY_DEST })
-					})
-				};
-				GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-			}
-
-			GCL->CopyResource(SCR, UAV);
-
-			ResourceBarrier(COM_PTR_GET(GCL), SCR, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PRESENT);
-
+			} PopulateEndRenderTargetCommand(i);
 		} VERIFY_SUCCEEDED(GCL->Close());
 	}
 #pragma endregion

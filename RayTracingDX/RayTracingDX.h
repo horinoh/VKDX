@@ -426,13 +426,11 @@ public:
 		constexpr auto MissStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
 		constexpr auto MissSize = 1 * MissStride;
 
-#pragma region HIT
 #pragma region SHADER_RECORD
 		constexpr auto GPUDescSize = sizeof(D3D12_GPU_DESCRIPTOR_HANDLE);
 		constexpr auto RchitStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + GPUDescSize * 2, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
 #pragma endregion
 		constexpr auto RchitSize = 1 * RchitStride;
-#pragma endregion
 
 		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RgenSize, RgenStride); {
 			auto Data = ShaderTables.back().Map(); {
@@ -444,7 +442,6 @@ public:
 				std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("OnMiss")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 			} ShaderTables.back().Unmap();
 		}
-#pragma region HIT
 		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RchitSize, RchitStride); {
 			auto Data = ShaderTables.back().Map(); {
 				std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("HitGroup")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
@@ -457,7 +454,15 @@ public:
 #pragma endregion
 			} ShaderTables.back().Unmap();
 		}
-#pragma endregion
+
+		const auto DRD = D3D12_DISPATCH_RAYS_DESC({
+			.RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({.StartAddress = ShaderTables[0].Range.StartAddress, .SizeInBytes = ShaderTables[0].Range.SizeInBytes }),
+			.MissShaderTable = ShaderTables[1].Range,
+			.HitGroupTable = ShaderTables[2].Range,
+			.CallableShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = 0, .SizeInBytes = 0, .StrideInBytes = 0 }),
+			.Width = static_cast<UINT>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()), .Depth = 1
+		});
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DRD).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DRD), &DRD);
 	}
 
 	virtual void PopulateCommandList(const size_t i) override {
@@ -489,18 +494,8 @@ public:
 			COM_PTR<ID3D12GraphicsCommandList4> GCL4;
 			VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
 			GCL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
-			const auto DRD = D3D12_DISPATCH_RAYS_DESC({
-			  .RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({ .StartAddress = ShaderTables[0].Range.StartAddress, .SizeInBytes = ShaderTables[0].Range.SizeInBytes }),
-			  .MissShaderTable = ShaderTables[1].Range,
-#pragma region HIT
-			  .HitGroupTable = ShaderTables[2].Range,
-#pragma endregion
-#pragma region CALLABLE
-			  .CallableShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({ .StartAddress = 0, .SizeInBytes = 0, .StrideInBytes = 0 }),
-#pragma endregion
-			  .Width = static_cast<UINT>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()), .Depth = 1
-			});
-			GCL4->DispatchRays(&DRD);
+
+			GCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 			{

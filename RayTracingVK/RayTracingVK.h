@@ -231,17 +231,11 @@ public:
 		}
 #pragma endregion
 	
-		const VkTraceRaysIndirectCommandKHR TRIC = { .width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 };
-		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC);
-		VK::Scoped<StagingBuffer> Staging_Indirect(Device);
-		Staging_Indirect.Create(Device, PDMP, sizeof(TRIC), &TRIC);
-
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 			BLASs.back().PopulateBuildCommand(ASBGI_Blas, ASBRI_Blas, CB);
 			BLASs.back().PopulateBarrierCommand(CB);
 			TLASs.back().PopulateBuildCommand(ASBGI_Tlas, ASBRI_Tlas, CB);
-			IndirectBuffers.back().PopulateCopyCommand(CB, sizeof(TRIC), Staging_Indirect.Buffer);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		SubmitAndWait(GraphicsQueue, CB);
 	}
@@ -436,12 +430,10 @@ public:
 		const auto MissStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
 		const auto MissSize = 1 * MissStride;
 
-#pragma region HIT
 #pragma region SHADER_RECORD
 		const auto RchitStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + sizeof(VkDeviceAddress) * 2, PDRTPP.shaderGroupHandleAlignment);
 #pragma endregion
 		const auto RchitSize = 1 * RchitStride;
-#pragma endregion
 
 		std::vector<std::byte> HandleData(RgenSize + MissSize + RchitSize);
 		VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, 1 + 1 + 1, size(HandleData), data(HandleData)));
@@ -457,7 +449,6 @@ public:
 				std::memcpy(Data, data(HandleData) + RgenSize, PDRTPP.shaderGroupHandleSize);
 			} ShaderBindingTables.back().Unmap(Device);
 		}
-#pragma region HIT
 		ShaderBindingTables.emplace_back().Create(Device, PDMP, RchitSize, RchitStride); {
 			auto Data = ShaderBindingTables.back().Map(Device); {
 				std::memcpy(Data, data(HandleData) + RgenSize + MissSize, PDRTPP.shaderGroupHandleSize);
@@ -469,10 +460,12 @@ public:
 #pragma endregion
 			} ShaderBindingTables.back().Unmap(Device);
 		}
-#pragma endregion
 
 		//!< ‚±‚ÌŽž“_‚Åíœ‚µ‚Ä‚µ‚Ü‚Á‚Ä—Ç‚¢H
 		//for (auto i : StructuredBuffers) { i.Destroy(Device); }
+
+		const VkTraceRaysIndirectCommandKHR TRIC = { .width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 };
+		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(TRIC), &TRIC);
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
@@ -491,10 +484,7 @@ public:
 			constexpr std::array<uint32_t, 0> DynamicOffsets = {};
 			vkCmdBindDescriptorSets(CB, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, PipelineLayouts[0], 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
 
-#pragma endregion
-#pragma region CALLABLE
 			const auto Callable = VkStridedDeviceAddressRegionKHR({ .deviceAddress = 0, .stride = 0, .size = 0 });
-#pragma endregion
 			vkCmdTraceRaysIndirectKHR(CB, &ShaderBindingTables[0].Region, &ShaderBindingTables[1].Region, &ShaderBindingTables[2].Region, &Callable, GetDeviceAddress(Device, IndirectBuffers[0].Buffer));
 
 			constexpr auto ISR = VkImageSubresourceRange({ .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = 1, .baseArrayLayer = 0, .layerCount = 1 });
