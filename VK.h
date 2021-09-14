@@ -136,6 +136,54 @@ public:
 		using Super = BufferMemory;
 	public:
 		void Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkBufferUsageFlags BUF, const size_t Size) { VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, BUF, Size, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT); }
+		virtual void PopulateCopyCommand([[maybe_unused]] const VkCommandBuffer CB, [[maybe_unused]] const size_t Size, [[maybe_unused]] const VkBuffer Staging) {}
+		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
+			VK::Scoped<StagingBuffer> Staging(Device);
+			Staging.Create(Device, PDMP, Size, Source);
+			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
+			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+				PopulateCopyCommand(CB, Size, Staging.Buffer);
+			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+			VK::SubmitAndWait(Queue, CB);
+		}
+	protected:
+		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF) {
+			constexpr std::array<VkMemoryBarrier, 0> MBs = {};
+			constexpr std::array<VkImageMemoryBarrier, 0> IMBs = {};
+			{
+				const std::array BMBs = {
+					VkBufferMemoryBarrier({
+						.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+						.pNext = nullptr,
+						.srcAccessMask = 0, .dstAccessMask = VK_ACCESS_MEMORY_WRITE_BIT,
+						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.buffer = Buffer, .offset = 0, .size = VK_WHOLE_SIZE
+					}),
+				};
+				vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+					static_cast<uint32_t>(size(MBs)), data(MBs),
+					static_cast<uint32_t>(size(BMBs)), data(BMBs),
+					static_cast<uint32_t>(size(IMBs)), data(IMBs));
+			}
+			const std::array BCs = { VkBufferCopy({.srcOffset = 0, .dstOffset = 0, .size = Size }), };
+			vkCmdCopyBuffer(CB, Staging, Buffer, static_cast<uint32_t>(size(BCs)), data(BCs));
+			{
+				const std::array BMBs = {
+					VkBufferMemoryBarrier({
+						.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+						.pNext = nullptr,
+						.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT, .dstAccessMask = AF,
+						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+						.buffer = Buffer, .offset = 0, .size = VK_WHOLE_SIZE
+					}),
+				};
+				vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_TRANSFER_BIT, PSF, 0,
+					static_cast<uint32_t>(size(MBs)), data(MBs),
+					static_cast<uint32_t>(size(BMBs)), data(BMBs),
+					static_cast<uint32_t>(size(IMBs)), data(IMBs));
+			}
+			//PopulateCommandBuffer_CopyBufferToBuffer(CB, Staging, Buffer, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
+		}
 	};
 	class HostVisibleBuffer : public BufferMemory
 	{
@@ -160,17 +208,8 @@ public:
 			Super::Create(Device, PDMP, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
 			return *this;
 		}
-		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) {
-			PopulateCommandBuffer_CopyBufferToBuffer(CB, Staging, Buffer, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
-		}
-		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
-			VK::Scoped<StagingBuffer> Staging(Device);
-			Staging.Create(Device, PDMP, Size, Source);
-			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
-			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-				PopulateCopyCommand(CB, Size, Staging.Buffer);
-			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-			VK::SubmitAndWait(Queue, CB);
+		virtual void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) override { 
+			Super::PopulateCopyCommand(CB, Size, Staging, VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
 		}
 	};
 	class IndexBuffer : public DeviceLocalBuffer
@@ -182,17 +221,8 @@ public:
 			Super::Create(Device, PDMP, VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, Size);
 			return *this;
 		}
-		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) {
-			PopulateCommandBuffer_CopyBufferToBuffer(CB, Staging, Buffer, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, Size);
-		}
-		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
-			VK::Scoped<StagingBuffer> Staging(Device);
-			Staging.Create(Device, PDMP, Size, Source);
-			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
-			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-				PopulateCopyCommand(CB, Size, Staging.Buffer);
-			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-			VK::SubmitAndWait(Queue, CB);
+		virtual void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) override {
+			Super::PopulateCopyCommand(CB, Size, Staging, VK_ACCESS_INDEX_READ_BIT, VK_PIPELINE_STAGE_VERTEX_INPUT_BIT);
 		}
 	};
 	class IndirectBuffer : public DeviceLocalBuffer
@@ -217,17 +247,8 @@ public:
 			return *this;
 		}
 #pragma endregion
-		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) {
-			PopulateCommandBuffer_CopyBufferToBuffer(CB, Staging, Buffer, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT, Size);
-		}
-		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
-			VK::Scoped<StagingBuffer> Staging(Device);
-			Staging.Create(Device, PDMP, Size, Source);
-			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
-			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-				PopulateCopyCommand(CB, Size, Staging.Buffer);
-			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-			VK::SubmitAndWait(Queue, CB);
+		virtual void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) override {
+			Super::PopulateCopyCommand(CB, Size, Staging, VK_ACCESS_INDIRECT_COMMAND_READ_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT);
 		}
 	};
 	class UniformBuffer : public BufferMemory
@@ -546,7 +567,6 @@ public:
 	virtual void CopyToHostVisibleDeviceMemory(const VkDeviceMemory DeviceMemory, const VkDeviceSize Offset, const VkDeviceSize Size, const void* Source, const VkDeviceSize MappedRangeOffset = 0, const VkDeviceSize MappedRangeSize = VK_WHOLE_SIZE);
 
 #pragma region COMMAND
-	static void PopulateCommandBuffer_CopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, const VkBuffer Dst, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF, const size_t Size);
 	static void PopulateCommandBuffer_CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers);
 	static void PopulateCommandBuffer_CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers);
 	static void SubmitAndWait(const VkQueue Queue, const VkCommandBuffer CB);

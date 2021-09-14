@@ -11,7 +11,6 @@
 #include <gli/gli.hpp>
 #pragma warning(pop)
 
-
 class VKImage : public VKExt
 {
 private:

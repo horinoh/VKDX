@@ -252,74 +252,40 @@ void DX::CopyToUploadResource(ID3D12Resource* Resource, const size_t Size, const
 		} Resource->Unmap(0, nullptr);
 	}
 }
-#if 0
-void DX::PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Src, ID3D12Resource* Dst, const UINT64 Size, const D3D12_RESOURCE_STATES RS)
-{
-	{
-		const std::array RBs = {
-			D3D12_RESOURCE_BARRIER({
-				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-				.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
-					.pResource = Dst,
-					.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-					.StateBefore = D3D12_RESOURCE_STATE_GENERIC_READ, .StateAfter = D3D12_RESOURCE_STATE_COPY_DEST
-				})
-			})
-		};
-		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-	}
-	GCL->CopyBufferRegion(Dst, 0, Src, 0, Size);
-	{
-		const std::array RBs = {
-			D3D12_RESOURCE_BARRIER({
-				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-				.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
-					.pResource = Dst,
-					.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-					.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST, .StateAfter = RS
-				})
-			})
-		};
-		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-	}
-}
-void DX::PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS)
-{
-	{
-		const std::array RBs = {
-			D3D12_RESOURCE_BARRIER({
-				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-				.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
-					.pResource = Dst,
-					.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-					.StateBefore = D3D12_RESOURCE_STATE_GENERIC_READ, .StateAfter = D3D12_RESOURCE_STATE_COPY_DEST
-				})
-			})
-		};
-		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-	}
-	for (auto i : PSF) {
-		GCL->CopyBufferRegion(Dst, 0, Src, i.Offset, i.Footprint.Width);
-	}
-	{
-		const std::array RBs = {
-			D3D12_RESOURCE_BARRIER({
-				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-				.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
-					.pResource = Dst,
-					.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-					.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST, .StateAfter = RS
-				})
-			})
-		};
-		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-	}
-}
-#endif
+//void DX::PopulateCommandList_CopyBufferRegion(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS)
+//{
+//	{
+//		const std::array RBs = {
+//			D3D12_RESOURCE_BARRIER({
+//				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+//				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+//				.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
+//					.pResource = Dst,
+//					.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+//					.StateBefore = D3D12_RESOURCE_STATE_GENERIC_READ, .StateAfter = D3D12_RESOURCE_STATE_COPY_DEST
+//				})
+//			})
+//		};
+//		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+//	}
+//	for (auto i : PSF) {
+//		GCL->CopyBufferRegion(Dst, 0, Src, i.Offset, i.Footprint.Width);
+//	}
+//	{
+//		const std::array RBs = {
+//			D3D12_RESOURCE_BARRIER({
+//				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+//				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+//				.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
+//					.pResource = Dst,
+//					.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+//					.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST, .StateAfter = RS
+//				})
+//			})
+//		};
+//		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+//	}
+//}
 void DX::PopulateCommandList_CopyTextureRegion(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs, const D3D12_RESOURCE_STATES RS)
 {
 	//!< LoadDDSTextureFromFile() を使用すると D3D12_RESOURCE_STATE_COPY_DEST で作成されているのでバリアの必要は無い (Resource created by LoadDDSTextureFromFile()'s state is already D3D12_RESOURCE_STATE_COPY_DEST)

@@ -393,49 +393,6 @@ void VK::CopyToHostVisibleDeviceMemory(const VkDeviceMemory DM, const VkDeviceSi
 		} vkUnmapMemory(Device, DM);
 	}
 }
-
-//!< @param コマンドバッファ
-//!< @param コピー元バッファ
-//!< @param コピー先バッファ
-//!< @param (コピー後の)バッファのアクセスフラグ ex) VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT, VK_ACCESS_INDEX_READ_BIT, VK_ACCESS_INDIRECT_READ_BIT,...等
-//!< @param (コピー後に)バッファが使われるパイプラインステージ ex) VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, VK_PIPELINE_STAGE_DRAW_INDIRECT_BIT,...等
-void VK::PopulateCommandBuffer_CopyBufferToBuffer(const VkCommandBuffer CB, const VkBuffer Src, const VkBuffer Dst, const VkAccessFlags AF, const VkPipelineStageFlagBits PSF, const size_t Size)
-{
-	constexpr std::array<VkMemoryBarrier, 0> MBs = {};
-	constexpr std::array<VkImageMemoryBarrier, 0> IMBs = {};
-	{
-		const std::array BMBs = {
-			VkBufferMemoryBarrier({
-				.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-				.pNext = nullptr,
-				.srcAccessMask = 0, .dstAccessMask = VK_ACCESS_MEMORY_WRITE_BIT,
-				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.buffer = Dst, .offset = 0, .size = VK_WHOLE_SIZE
-			}),
-		};
-		vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-			static_cast<uint32_t>(size(MBs)), data(MBs),
-			static_cast<uint32_t>(size(BMBs)), data(BMBs),
-			static_cast<uint32_t>(size(IMBs)), data(IMBs));
-	}
-	const std::array BCs = { VkBufferCopy({.srcOffset = 0, .dstOffset = 0, .size = Size }), };
-	vkCmdCopyBuffer(CB, Src, Dst, static_cast<uint32_t>(size(BCs)), data(BCs));
-	{
-		const std::array BMBs = {
-			VkBufferMemoryBarrier({
-				.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-				.pNext = nullptr,
-				.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT, .dstAccessMask = AF,
-				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-				.buffer = Dst, .offset = 0, .size = VK_WHOLE_SIZE
-			}),
-		};
-		vkCmdPipelineBarrier(CB, VK_PIPELINE_STAGE_TRANSFER_BIT, PSF, 0,
-			static_cast<uint32_t>(size(MBs)), data(MBs),
-			static_cast<uint32_t>(size(BMBs)), data(BMBs),
-			static_cast<uint32_t>(size(IMBs)), data(IMBs));
-	}
-}
 void VK::PopulateCommandBuffer_CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers)
 {	
 	constexpr std::array<VkMemoryBarrier, 0> MBs = {};
