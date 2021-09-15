@@ -1,6 +1,6 @@
 #pragma once
 
-#include "VKExt.h"
+#include "VKRT.h"
 
 #pragma warning(push)
 #pragma warning(disable : 4100)
@@ -23,29 +23,45 @@ public:
 	[[nodiscard]] static VkComponentMapping ToVkComponentMapping(const gli::texture::swizzles_type GLISwizzleType) { 
 		return VkComponentMapping({ .r = ToVkComponentSwizzle(GLISwizzleType.r), .g = ToVkComponentSwizzle(GLISwizzleType.g), .b = ToVkComponentSwizzle(GLISwizzleType.b), .a = ToVkComponentSwizzle(GLISwizzleType.a) });
 	}
+	//static void PopulateCommandBuffer_CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const gli::texture& GliTexture) {
+	//	const auto Layers = static_cast<const uint32_t>(GliTexture.layers()) * static_cast<const uint32_t>(GliTexture.faces());
+	//	const auto Levels = static_cast<const uint32_t>(GliTexture.levels());
+	//	std::vector<VkBufferImageCopy> BICs; BICs.reserve(Layers);
+	//	VkDeviceSize Offset = 0;
+	//	for (uint32_t i = 0; i < Layers; ++i) {
+	//		for (uint32_t j = 0; j < Levels; ++j) {
+	//			BICs.emplace_back(VkBufferImageCopy({
+	//				.bufferOffset = Offset, .bufferRowLength = 0, .bufferImageHeight = 0,
+	//				.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = j, .baseArrayLayer = i, .layerCount = 1 }),
+	//				.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),
+	//				.imageExtent = VkExtent3D({.width = static_cast<const uint32_t>(GliTexture.extent(j).x), .height = static_cast<const uint32_t>(GliTexture.extent(j).y), .depth = static_cast<const uint32_t>(GliTexture.extent(j).z) }) }));
+	//			Offset += static_cast<const VkDeviceSize>(GliTexture.size(j));
+	//		}
+	//	}
+	//	VK::PopulateCommandBuffer_CopyImageToBuffer(CB, Src, Dst, AF, IL, PSF, BICs, Levels, Layers);
+	//}
 
-protected:
-	class DDSTexture : public Texture
+	class GLITexture : public Texture
 	{
 	private:
 		using Super = Texture;
-		gli::texture GLITexture;
+		gli::texture GliTexture;
 
 	public:
-		DDSTexture& Create(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, std::string_view Path) {
+		GLITexture& Create(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, std::string_view Path) {
 			assert(std::filesystem::exists(Path) && "");
 			//assert(Path.ends_with(".dds") && "");
-			GLITexture = gli::load(data(Path));
-			assert(!GLITexture.empty() && "Load image failed");
+			GliTexture = gli::load(data(Path));
+			assert(!GliTexture.empty() && "Load image failed");
 
-			const auto Format = ToVkFormat(GLITexture.format());
+			const auto Format = ToVkFormat(GliTexture.format());
 			VK::CreateImageMemory(&Image, &DeviceMemory, Dev, PDMP, 
-				gli::is_target_cube(GLITexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0, 
-				ToVkImageType(GLITexture.target()), 
+				gli::is_target_cube(GliTexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0, 
+				ToVkImageType(GliTexture.target()), 
 				Format, 
-				VkExtent3D({ .width = static_cast<const uint32_t>(GLITexture.extent(0).x), .height = static_cast<const uint32_t>(GLITexture.extent(0).y), .depth = static_cast<const uint32_t>(GLITexture.extent(0).z) }),
-				static_cast<const uint32_t>(GLITexture.levels()), 
-				static_cast<const uint32_t>(GLITexture.layers()) * static_cast<const uint32_t>(GLITexture.faces()), 
+				VkExtent3D({ .width = static_cast<const uint32_t>(GliTexture.extent(0).x), .height = static_cast<const uint32_t>(GliTexture.extent(0).y), .depth = static_cast<const uint32_t>(GliTexture.extent(0).z) }),
+				static_cast<const uint32_t>(GliTexture.levels()), 
+				static_cast<const uint32_t>(GliTexture.layers()) * static_cast<const uint32_t>(GliTexture.faces()), 
 				VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
 
 			const VkImageViewCreateInfo IVCI = {
@@ -53,9 +69,9 @@ protected:
 				.pNext = nullptr,
 				.flags = 0,
 				.image = Image,
-				.viewType = ToVkImageViewType(GLITexture.target()),
+				.viewType = ToVkImageViewType(GliTexture.target()),
 				.format = Format,
-				.components = ToVkComponentMapping(GLITexture.swizzles()),
+				.components = ToVkComponentMapping(GliTexture.swizzles()),
 				.subresourceRange = VkImageSubresourceRange({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .baseMipLevel = 0, .levelCount = VK_REMAINING_MIP_LEVELS, .baseArrayLayer = 0, .layerCount = VK_REMAINING_ARRAY_LAYERS })
 			};
 			VERIFY_SUCCEEDED(vkCreateImageView(Dev, &IVCI, GetAllocationCallbacks(), &View));
@@ -63,13 +79,30 @@ protected:
 		}
 		void CreateStagingBuffer(const VkDevice Dev, VkPhysicalDeviceMemoryProperties PDMP, BufferMemory& BM) {
 #ifdef USE_EXPERIMENTAL
-			BM.Create(Dev, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, static_cast<VkDeviceSize>(Util::size(GLITexture)), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Util::data(GLITexture));
+			BM.Create(Dev, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, static_cast<VkDeviceSize>(Util::size(GliTexture)), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Util::data(GliTexture));
 #else
-			BM.Create(Dev, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, static_cast<VkDeviceSize>(GLITexture.size()), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, GLITexture.data());
+			BM.Create(Dev, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, static_cast<VkDeviceSize>(GliTexture.size()), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, GliTexture.data());
 #endif
 		}
 		void PopulateCopyCommand(const VkCommandBuffer CB, const VkPipelineStageFlags PSF, const VkBuffer Staging) {
-			PopulateCommandBuffer_CopyBufferToImage(CB, Staging, Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, GLITexture);
+			//!< キューブマップの場合は、複数レイヤのイメージとして作成する。(When cubemap, create as layered image)
+			//!< イメージビューを介して、レイヤをフェイスとして扱うようハードウエアへ伝える (Tell the hardware that it should interpret its layers as faces)
+			//!< キューブマップの場合フェイスの順序は +X-X+Y-Y+Z-Z (When cubemap, faces order is +X-X+Y-Y+Z-Z)
+			const auto Layers = static_cast<const uint32_t>(GliTexture.layers()) * static_cast<const uint32_t>(GliTexture.faces());
+			const auto Levels = static_cast<const uint32_t>(GliTexture.levels());
+			std::vector<VkBufferImageCopy> BICs; BICs.reserve(Layers * Levels);
+			VkDeviceSize Offset = 0;
+			for (uint32_t i = 0; i < Layers; ++i) {
+				for (uint32_t j = 0; j < Levels; ++j) {
+					BICs.emplace_back(VkBufferImageCopy({
+						.bufferOffset = Offset, .bufferRowLength = 0, .bufferImageHeight = 0,
+						.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = j, .baseArrayLayer = i, .layerCount = 1 }),
+						.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),
+						.imageExtent = VkExtent3D({.width = static_cast<const uint32_t>(GliTexture.extent(j).x), .height = static_cast<const uint32_t>(GliTexture.extent(j).y), .depth = static_cast<const uint32_t>(GliTexture.extent(j).z) }) }));
+					Offset += static_cast<const VkDeviceSize>(GliTexture.size(j));
+				}
+			}
+			VK::PopulateCopyBufferToImageCommand(CB, Staging, Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, BICs, Levels, Layers);
 		}
 		void SubmitCopyCommand(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const VkPipelineStageFlags PSF) {
 			VK::Scoped<BufferMemory> StagingBuffer(Dev);
@@ -82,13 +115,23 @@ protected:
 		}
 	};
 
+protected:
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
 		for (auto& i : DDSTextures) { i.Destroy(Device); } DDSTextures.clear();
 		Super::OnDestroy(hWnd, hInstance);
 	}
+	std::vector<GLITexture> DDSTextures;
+};
 
-	static void PopulateCommandBuffer_CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const gli::texture& GLITexture);
-	static void PopulateCommandBuffer_CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const gli::texture& GLITexture);
+class VKImageRT : public VKRT
+{
+private:
+	using Super = VKRT;
 
-	std::vector<DDSTexture> DDSTextures;
+protected:
+	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
+		for (auto& i : DDSTextures) { i.Destroy(Device); } DDSTextures.clear();
+		Super::OnDestroy(hWnd, hInstance);
+	}
+	std::vector<VKImage::GLITexture> DDSTextures;
 };

@@ -232,7 +232,7 @@ protected:
 				}
 				constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 				VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-					PopulateCommandBuffer_CopyBufferToImage(CB, StagingBuffer.Buffer, Textures[0].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, 2);
+					PopulateCopyBufferToImageCommand(CB, StagingBuffer.Buffer, Textures[0].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, 2);
 				} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 				VK::SubmitAndWait(GraphicsQueue, CB);
 			}
@@ -259,7 +259,7 @@ protected:
 				}
 				constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 				VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-					PopulateCommandBuffer_CopyBufferToImage(CB, StagingBuffer.Buffer, Textures[1].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, 2);
+					PopulateCopyBufferToImageCommand(CB, StagingBuffer.Buffer, Textures[1].Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, BICs, 1, 2);
 				} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 				VK::SubmitAndWait(GraphicsQueue, CB);
 			}

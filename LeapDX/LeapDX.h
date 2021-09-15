@@ -274,7 +274,7 @@ protected:
 					}));
 				}
 				VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-					PopulateCommandList_CopyTextureRegion(GCL, COM_PTR_GET(Upload.Resource), COM_PTR_GET(Textures[0].Resource), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+					PopulateCopyTextureRegionCommand(GCL, COM_PTR_GET(Upload.Resource), COM_PTR_GET(Textures[0].Resource), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 				} VERIFY_SUCCEEDED(GCL->Close());
 				DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), GCL, COM_PTR_GET(Fence));
 			}
@@ -313,7 +313,7 @@ protected:
 					}));
 				}
 				VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-					PopulateCommandList_CopyTextureRegion(GCL, COM_PTR_GET(Upload.Resource), COM_PTR_GET(Textures[1].Resource), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+					PopulateCopyTextureRegionCommand(GCL, COM_PTR_GET(Upload.Resource), COM_PTR_GET(Textures[1].Resource), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 				} VERIFY_SUCCEEDED(GCL->Close());
 				DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), GCL, COM_PTR_GET(Fence));
 			}

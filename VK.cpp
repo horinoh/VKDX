@@ -393,7 +393,7 @@ void VK::CopyToHostVisibleDeviceMemory(const VkDeviceMemory DM, const VkDeviceSi
 		} vkUnmapMemory(Device, DM);
 	}
 }
-void VK::PopulateCommandBuffer_CopyBufferToImage(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers)
+void VK::PopulateCopyBufferToImageCommand(const VkCommandBuffer CB, const VkBuffer Src, const VkImage Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers)
 {	
 	constexpr std::array<VkMemoryBarrier, 0> MBs = {};
 	constexpr std::array<VkBufferMemoryBarrier, 0> BMBs = {};
@@ -440,66 +440,66 @@ void VK::PopulateCommandBuffer_CopyBufferToImage(const VkCommandBuffer CB, const
 	}
 }
 
-void VK::PopulateCommandBuffer_CopyImageToBuffer(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers)
-{
-	//!< コマンド開始 (Begin command)
-	const VkCommandBufferBeginInfo CBBI = {
-		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		.pNext = nullptr,
-		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-		.pInheritanceInfo = nullptr
-	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-		assert(!empty(BICs) && "BufferImageCopy is empty");
-		const VkImageSubresourceRange ISR = {
-			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-			.baseMipLevel = 0, .levelCount = Levels,
-			.baseArrayLayer = 0, .layerCount = Layers
-		};
-		//!< イメージメモリバリア (Image memory barrier)
-		{
-			const std::array IMBs = {
-				VkImageMemoryBarrier({
-					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-					.pNext = nullptr,
-					.srcAccessMask = 0, .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-					.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.image = Src,
-					.subresourceRange = ISR})
-			};
-			vkCmdPipelineBarrier(CB,
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-				0,
-				0, nullptr,
-				0, nullptr,
-				static_cast<uint32_t>(size(IMBs)), data(IMBs));
-		}
-		{
-			//!< イメージバッファ間コピーコマンド (Image to buffer copy command)
-			vkCmdCopyImageToBuffer(CB, Src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Dst, static_cast<uint32_t>(size(BICs)), data(BICs));
-		}
-		//!< イメージメモリバリア (Image memory barrier)
-		{
-			const std::array IMBs = {
-				VkImageMemoryBarrier({
-					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-					.pNext = nullptr,
-					.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT, .dstAccessMask = AF,
-					.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, .newLayout = IL,
-					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.image = Src,
-					.subresourceRange = ISR})
-			};
-			vkCmdPipelineBarrier(CB,
-				VK_PIPELINE_STAGE_TRANSFER_BIT, PSF,
-				0,
-				0, nullptr,
-				0, nullptr,
-				static_cast<uint32_t>(size(IMBs)), data(IMBs));
-		}
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-}
+//void VK::PopulateCopyImageToBufferCommand(const VkCommandBuffer CB, const VkImage Src, const VkBuffer Dst, const VkAccessFlags AF, const VkImageLayout IL, const VkPipelineStageFlags PSF, const std::vector<VkBufferImageCopy>& BICs, const uint32_t Levels, const uint32_t Layers)
+//{
+//	//!< コマンド開始 (Begin command)
+//	const VkCommandBufferBeginInfo CBBI = {
+//		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+//		.pNext = nullptr,
+//		.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+//		.pInheritanceInfo = nullptr
+//	};
+//	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+//		assert(!empty(BICs) && "BufferImageCopy is empty");
+//		const VkImageSubresourceRange ISR = {
+//			.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+//			.baseMipLevel = 0, .levelCount = Levels,
+//			.baseArrayLayer = 0, .layerCount = Layers
+//		};
+//		//!< イメージメモリバリア (Image memory barrier)
+//		{
+//			const std::array IMBs = {
+//				VkImageMemoryBarrier({
+//					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+//					.pNext = nullptr,
+//					.srcAccessMask = 0, .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+//					.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED, .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+//					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+//					.image = Src,
+//					.subresourceRange = ISR})
+//			};
+//			vkCmdPipelineBarrier(CB,
+//				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+//				0,
+//				0, nullptr,
+//				0, nullptr,
+//				static_cast<uint32_t>(size(IMBs)), data(IMBs));
+//		}
+//		{
+//			//!< イメージバッファ間コピーコマンド (Image to buffer copy command)
+//			vkCmdCopyImageToBuffer(CB, Src, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, Dst, static_cast<uint32_t>(size(BICs)), data(BICs));
+//		}
+//		//!< イメージメモリバリア (Image memory barrier)
+//		{
+//			const std::array IMBs = {
+//				VkImageMemoryBarrier({
+//					.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+//					.pNext = nullptr,
+//					.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT, .dstAccessMask = AF,
+//					.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, .newLayout = IL,
+//					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+//					.image = Src,
+//					.subresourceRange = ISR})
+//			};
+//			vkCmdPipelineBarrier(CB,
+//				VK_PIPELINE_STAGE_TRANSFER_BIT, PSF,
+//				0,
+//				0, nullptr,
+//				0, nullptr,
+//				static_cast<uint32_t>(size(IMBs)), data(IMBs));
+//		}
+//	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+//}
 
 void VK::SubmitAndWait(const VkQueue Queue, const VkCommandBuffer CB)
 {
@@ -1577,22 +1577,20 @@ void VK::CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipe
 	Textures.emplace_back().Create(Device, PDMP, Format, Extent, 1, static_cast<uint32_t>(size(Colors)));
 
 	const auto CB = CommandBuffers[0];
-	{
-		VK::Scoped<BufferMemory> StagingBuffer(Device);
-		StagingBuffer.Create(Device, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, sizeof(Colors), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, data(Colors));
-		std::vector<VkBufferImageCopy> BICs;
-		for (uint32_t i = 0; i < size(Colors); ++i) {
-			BICs.emplace_back(VkBufferImageCopy({
-				.bufferOffset = i * sizeof(Colors[0]), .bufferRowLength = 0, .bufferImageHeight = 0,
-				.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = static_cast<uint32_t>(i), .layerCount = 1 }),
-				.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),.imageExtent = Extent }));
-		}
-		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
-		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-			PopulateCommandBuffer_CopyBufferToImage(CB, StagingBuffer.Buffer, Textures.back().Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, BICs, 1, 2);
-		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-		VK::SubmitAndWait(GraphicsQueue, CB);
+	VK::Scoped<BufferMemory> StagingBuffer(Device);
+	StagingBuffer.Create(Device, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, sizeof(Colors), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, data(Colors));
+	std::vector<VkBufferImageCopy> BICs;
+	for (uint32_t i = 0; i < size(Colors); ++i) {
+		BICs.emplace_back(VkBufferImageCopy({
+			.bufferOffset = i * sizeof(Colors[0]), .bufferRowLength = 0, .bufferImageHeight = 0,
+			.imageSubresource = VkImageSubresourceLayers({.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .mipLevel = 0, .baseArrayLayer = static_cast<uint32_t>(i), .layerCount = 1 }),
+			.imageOffset = VkOffset3D({.x = 0, .y = 0, .z = 0 }),.imageExtent = Extent }));
 	}
+	constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
+	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+		PopulateCopyBufferToImageCommand(CB, StagingBuffer.Buffer, Textures.back().Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, BICs, 1, 2);
+	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+	VK::SubmitAndWait(GraphicsQueue, CB);
 }
 
 void VK::CreateRenderPass(VkRenderPass& RP, const std::vector<VkAttachmentDescription>& ADs, const std::vector<VkSubpassDescription>& SDs, const std::vector<VkSubpassDependency>& Deps)

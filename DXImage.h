@@ -2,14 +2,13 @@
 
 #include "DDSTextureLoader.h"
 
-#include "DXExt.h"
+#include "DXRT.h"
 
 class DXImage : public DXExt
 {
 private:
 	using Super = DXExt;
-
-protected:
+public:
 	class DDSTexture : public Texture
 	{
 	protected:
@@ -39,7 +38,7 @@ protected:
 			DX::CreateBufferResource(Upload, Dev, SRDs, PSFs, NumRows, RowSizeInBytes, TotalBytes);
 		}
 		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSFs, const D3D12_RESOURCE_STATES RS, ID3D12Resource* Upload) {
-			DX::PopulateCommandList_CopyTextureRegion(GCL, Upload, COM_PTR_GET(Resource), PSFs, RS);
+			DX::PopulateCopyTextureRegionCommand(GCL, Upload, COM_PTR_GET(Resource), PSFs, RS);
 		}
 		void ExecuteCopyCommand(ID3D12Device* Dev, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fnc, const D3D12_RESOURCE_STATES RS) {
 			COM_PTR<ID3D12Resource> Upload;
@@ -56,6 +55,14 @@ protected:
 			DDSData.reset();
 		}
 	};
-
+protected:
 	std::vector<DDSTexture> DDSTextures;
+};
+
+class DXImageRT : public DXRT
+{
+private:
+	using Super = DXRT;
+protected:
+	std::vector<DXImage::DDSTexture> DDSTextures;
 };

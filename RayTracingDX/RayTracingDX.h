@@ -6,10 +6,10 @@
 #include "../FBX.h"
 #include "../DXImage.h"
 
-class RayTracingDX : public DXImage, public Fbx
+class RayTracingDX : public DXImageRT, public Fbx
 {
 private:
-	using Super = DXImage;
+	using Super = DXImageRT;
 public:
 	RayTracingDX() : Super() {}
 	virtual ~RayTracingDX() {}
@@ -181,22 +181,17 @@ public:
 		DX::ExecuteAndWait(GCQ, static_cast<ID3D12CommandList*>(GCL), COM_PTR_GET(Fence));
 	}
 	virtual void CreateTexture() override {
-		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
-
-		DXGI_SWAP_CHAIN_DESC1 SCD;
-		SwapChain->GetDesc1(&SCD);
-
-		UnorderedAccessTextures.emplace_back().Create(COM_PTR_GET(Device), GetClientRectWidth(), GetClientRectHeight(), 1, SCD.Format);
+		Super::CreateTexture();
 
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
 			const auto CA = COM_PTR_GET(CommandAllocators[0]);
 			const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
-			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\CubeMap\\ninomaru_teien.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			{
-				const auto RD = DDSTextures.back().Resource->GetDesc();
-				DDSTextures.back().SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({ .Format = RD.Format, .ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE, .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, .TextureCube = D3D12_TEXCUBE_SRV({.MostDetailedMip = 0, .MipLevels = RD.MipLevels, .ResourceMinLODClamp = 0.0f }), });
-			}
+			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\CubeMap\\ninomaru_teien.dds"))
+				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+			const auto RD = DDSTextures.back().Resource->GetDesc();
+			DDSTextures.back().SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({ .Format = RD.Format, .ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE, .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, .TextureCube = D3D12_TEXCUBE_SRV({.MostDetailedMip = 0, .MipLevels = RD.MipLevels, .ResourceMinLODClamp = 0.0f }), });
 		}
 	}
 	virtual void CreateConstantBuffer() override {
@@ -472,52 +467,27 @@ public:
 		const auto CA = COM_PTR_GET(CommandAllocators[0]);
 
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
+			PopulateBeginRenderTargetCommand(i); {
 
-			{
+				GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
+
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
 				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-
-				//!< [0] SRV(TLAS)
-				//!< [1] SRV(CubeMap)
+				//!< [0] SRV(TLAS), [1] SRV(CubeMap)
 				GCL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
-
 				//!< [2] UAV
 				GCL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[2]);
-			}
-			//!< CBV (デスクリプタヒープとは別扱い)
-			GCL->SetComputeRootConstantBufferView(2, ConstantBuffers[i].Resource->GetGPUVirtualAddress());
+				
+				//!< CBV (デスクリプタヒープとは別扱い)
+				GCL->SetComputeRootConstantBufferView(2, ConstantBuffers[i].Resource->GetGPUVirtualAddress());
 
-			const auto UAV = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
-			ResourceBarrier(COM_PTR_GET(GCL), UAV, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+				COM_PTR<ID3D12GraphicsCommandList4> GCL4;
+				VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
+				GCL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
 
-			COM_PTR<ID3D12GraphicsCommandList4> GCL4;
-			VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
-			GCL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
+				GCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 
-			GCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
-
-			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-			{
-				const std::array RBs = {
-					D3D12_RESOURCE_BARRIER({
-						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-						.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = UAV, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS, .StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE })
-					 }),
-					D3D12_RESOURCE_BARRIER({
-						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-						.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = SCR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PRESENT, .StateAfter = D3D12_RESOURCE_STATE_COPY_DEST })
-					})
-				};
-				GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-			}
-
-			GCL->CopyResource(SCR, UAV);
-
-			ResourceBarrier(COM_PTR_GET(GCL), SCR, D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_PRESENT);
-
+			} PopulateEndRenderTargetCommand(i);
 		} VERIFY_SUCCEEDED(GCL->Close());
 	}
 #pragma endregion
