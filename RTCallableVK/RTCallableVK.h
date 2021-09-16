@@ -13,7 +13,6 @@ public:
 	RTCallableVK() : Super() {}
 	virtual ~RTCallableVK() {}
 
-#pragma region RAYTRACING
 	virtual void CreateGeometry() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 
@@ -307,7 +306,6 @@ public:
 			} PopulateEndRenderTargetCommand(i);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 	}
-#pragma endregion
 };
 #pragma endregion
 

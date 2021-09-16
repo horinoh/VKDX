@@ -13,7 +13,6 @@ public:
 	RTCallableDX() : Super() {}
 	virtual ~RTCallableDX() {}
 
-#pragma region RAYTRACING
 	virtual void CreateGeometry() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
@@ -337,6 +336,5 @@ public:
 			} PopulateEndRenderTargetCommand(i);
 		} VERIFY_SUCCEEDED(GCL->Close());
 	}
-#pragma endregion
 };
 #pragma endregion

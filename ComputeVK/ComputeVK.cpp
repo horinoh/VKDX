@@ -228,28 +228,3 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return (INT_PTR)FALSE;
 }
-
-#pragma region Code
-void ComputeVK::PopulateCommandBuffer(const size_t i)
-{
-	const auto CB = CommandBuffers[i];
-	const auto PLL = PipelineLayouts[0];
-	const auto& IDB = IndirectBuffers[0];
-	const auto PL = Pipelines[0];
-
-	const VkCommandBufferBeginInfo BeginInfo = {
-		VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		nullptr,
-		0,
-		nullptr
-	};
-	VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &BeginInfo)); {
-		constexpr std::array<uint32_t, 0> DynamicOffsets = {};
-		vkCmdBindDescriptorSets(CB, VK_PIPELINE_BIND_POINT_COMPUTE, PLL, 0, static_cast<uint32_t>(size(DescriptorSets)), data(DescriptorSets), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
-		
-		vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_COMPUTE, PL);
-
-		vkCmdDispatchIndirect(CB, IDB.Buffer, 0);
-	} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
-}
-#pragma endregion

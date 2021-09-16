@@ -228,31 +228,3 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     }
     return (INT_PTR)FALSE;
 }
-
-#pragma region Code
-void ComputeDX::PopulateCommandList(const size_t i)
-{
-	const auto PS = COM_PTR_GET(PipelineStates[0]);
-
-	const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
-	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	VERIFY_SUCCEEDED(CL->Reset(CA, PS));
-	{
-		const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
-		const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
-		
-        {
-			const auto& DH = CbvSrvUavDescriptorHeaps[0];
-			const std::array<ID3D12DescriptorHeap*, 1> DHs = { COM_PTR_GET(DH) };
-			CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-
-			auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-			CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-		}
-
-		CL->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
-	}
-	VERIFY_SUCCEEDED(CL->Close());
-}
-
-#pragma region

@@ -16,7 +16,6 @@ public:
 protected:
 	virtual void CreateCommandList() override {
 		VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, COM_PTR_UUIDOF_PUTVOID(CommandAllocators.emplace_back())));
-
 		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, COM_PTR_GET(CommandAllocators.back()), nullptr, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandLists.back())));
 		VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
 	}
@@ -25,17 +24,10 @@ protected:
 		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DA), &DA);
 	}
 	virtual void CreateTexture() override {
-		constexpr std::array Data = { 0.0f, 0.0f, 0.0f };
-
-		COM_PTR<ID3D12Resource> Resource;
-		//constexpr auto HP = D3D12_HEAP_PROPERTIES({.Type = D3D12_HEAP_TYPE_CUSTOM, .CPUPageProperty = D3D12_CPU_PAGE_PROPERTY_WRITE_BACK , .MemoryPoolPreference  = D3D12_MEMORY_POOL_L0 });
-		DX::CreateBufferResource(COM_PTR_PUT(Resource), COM_PTR_GET(Device), RoundUp256(sizeof(Data)), D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-
-		UnorderedAccessViewDescs.emplace_back(D3D12_UNORDERED_ACCESS_VIEW_DESC({
-			.Format = DXGI_FORMAT_UNKNOWN,
-			.ViewDimension = D3D12_UAV_DIMENSION_BUFFER,
-			.Buffer = D3D12_BUFFER_UAV({.FirstElement = 0, .NumElements = static_cast<UINT>(size(Data)), .StructureByteStride = sizeof(Data[0]), .CounterOffsetInBytes = 0, .Flags = D3D12_BUFFER_UAV_FLAG_NONE})
-		}));
+		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
+		DXGI_SWAP_CHAIN_DESC1 SCD;
+		SwapChain->GetDesc1(&SCD);
+		UnorderedAccessTextures.emplace_back().Create(COM_PTR_GET(Device), GetClientRectWidth(), GetClientRectHeight(), 1, SCD.Format);
 	}
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
@@ -69,16 +61,35 @@ protected:
 		VERIFY_SUCCEEDED(Device->CreateComputePipelineState(&CPSD, COM_PTR_UUIDOF_PUTVOID(PipelineStates.emplace_back())));
 	}
 	virtual void CreateDescriptor() override {
-		constexpr D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, 0 };
-		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));		
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 
-		const auto& DH = CbvSrvUavDescriptorHeaps[0];
-		auto CDH = DH->GetCPUDescriptorHandleForHeapStart();
-		//Device->CreateShaderResourceView(COM_PTR_GET(ImageResources[0]), &ShaderResourceViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
-		//Device->CreateUnorderedAccessView(COM_PTR_GET(), nullptr, &UnorderedAccessViewDescs[0], CDH); CDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type);
+		CbvSrvUavGPUHandles.emplace_back();
+		auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+		auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
+		const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		
+		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH);
+		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		//CDH.ptr += IncSize;
+		//GDH.ptr += IncSize;
 	}
 	
-	virtual void PopulateCommandList(const size_t i) override;
+	virtual void PopulateCommandList(const size_t i) override {
+		const auto PS = COM_PTR_GET(PipelineStates[0]);
+		const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
+		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		VERIFY_SUCCEEDED(CL->Reset(CA, PS)); {
+			PopulateBeginRenderTargetCommand(i); {
+				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
+				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				
+				CL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
+
+				CL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+			} PopulateEndRenderTargetCommand(i);
+		} VERIFY_SUCCEEDED(CL->Close());
+	}
 
 	virtual void Draw() override { Dispatch(); }
 

@@ -13,7 +13,6 @@ public:
 	RTTriangleVK() : Super() {}
 	virtual ~RTTriangleVK() {}
 
-#pragma region RAYTRACING
 	virtual void CreateGeometry() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 
@@ -336,6 +335,5 @@ private:
 		VkDescriptorImageInfo DescriptorImageInfos[1];
 	};
 #endif
-#pragma endregion
 };
 #pragma endregion

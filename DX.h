@@ -598,6 +598,64 @@ public:
 	//static void PopulateCopyBufferRegionCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
 	static void PopulateCopyTextureRegionCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
 	static void ExecuteAndWait(ID3D12CommandQueue* CQ, ID3D12CommandList* CL, ID3D12Fence* Fence);
+
+	virtual void PopulateBeginRenderTargetCommand(const size_t i) {
+		const auto GCL = GraphicsCommandLists[i];
+		const auto UAV = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
+		const std::array RBs = {
+			//!< RenderTarget : COPY_SOURCE -> UNORDERED_ACCESS
+			D3D12_RESOURCE_BARRIER({
+				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+				.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
+					.pResource = UAV,
+					.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+					.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE, .StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS
+				})
+			})
+		};
+		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+	}
+	virtual void PopulateEndRenderTargetCommand(const size_t i) {
+		const auto GCL = GraphicsCommandLists[i];
+		const auto UAV = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
+		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+		{
+			const std::array RBs = {
+				//!< RenderTarget : UNORDERED_ACCESS -> COPY_SOURCE
+				D3D12_RESOURCE_BARRIER({
+					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = UAV, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS, .StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE })
+				 }),
+				//!< SwapChain : PRESENT -> COPY_DEST
+				D3D12_RESOURCE_BARRIER({
+					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = SCR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PRESENT, .StateAfter = D3D12_RESOURCE_STATE_COPY_DEST })
+				})
+			};
+			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+		}
+
+		GCL->CopyResource(SCR, UAV);
+
+		{
+			const std::array RBs = {
+				//!< SwapChain : COPY_DEST -> PRESENT
+				D3D12_RESOURCE_BARRIER({
+					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
+					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
+					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
+						.pResource = SCR,
+						.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
+						.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST, .StateAfter = D3D12_RESOURCE_STATE_PRESENT
+					})
+				}),
+			};
+			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+		}
+	}
 #pragma endregion
 
 #pragma region MARKER
