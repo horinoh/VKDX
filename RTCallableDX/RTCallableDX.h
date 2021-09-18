@@ -19,8 +19,8 @@ public:
 		COM_PTR<ID3D12Device5> Device5;
 		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
 
-		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
-		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
 #pragma region BLAS_INPUT
@@ -308,13 +308,13 @@ public:
 #pragma endregion
 			.Width = static_cast<UINT>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()), .Depth = 1
 		});
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DRD).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DRD), &DRD);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DRD).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DRD), &DRD);
 	}
 	virtual void PopulateCommandList(const size_t i) override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
-		const auto GCL = GraphicsCommandLists[i];
-		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		const auto GCL = DirectCommandLists[i];
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 			PopulateBeginRenderTargetCommand(i); {

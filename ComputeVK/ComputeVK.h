@@ -15,24 +15,6 @@ public:
 
 protected:
 	virtual void CreateSwapchain() override { VK::CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight(), VK_IMAGE_USAGE_TRANSFER_DST_BIT); }
-	virtual void AllocateCommandBuffer() override {
-		const VkCommandPoolCreateInfo CPCI = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-			.pNext = nullptr,
-			.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-			.queueFamilyIndex = ComputeQueueFamilyIndex
-		};
-		VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &CommandPools.emplace_back()));
-
-		const VkCommandBufferAllocateInfo CBAI = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			.pNext = nullptr,
-			.commandPool = CommandPools.back(),
-			.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-			.commandBufferCount = 1
-		};
-		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &CommandBuffers.emplace_back()));
-	}
 	virtual void CreateGeometry() override { 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		constexpr VkDispatchIndirectCommand DIC = { .x = 32, .y = 1, .z = 1 };
@@ -108,15 +90,15 @@ protected:
 	}
 	
 	virtual void PopulateCommandBuffer(const size_t i) override {
-		const auto CB = CommandBuffers[i];
-		constexpr VkCommandBufferBeginInfo CBBI = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			.pNext = nullptr,
-			.flags = 0,
-			.pInheritanceInfo = nullptr
-		};
-		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-			PopulateBeginRenderTargetCommand(i); {
+		{
+			const auto CB = ComputeCommandBuffers[0];
+			constexpr VkCommandBufferBeginInfo CBBI = {
+				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.pInheritanceInfo = nullptr
+			};
+			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 				vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_COMPUTE, Pipelines[0]);
 
 				const std::array DSs = { DescriptorSets[0] };
@@ -124,8 +106,21 @@ protected:
 				vkCmdBindDescriptorSets(CB, VK_PIPELINE_BIND_POINT_COMPUTE, PipelineLayouts[0], 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
 
 				vkCmdDispatchIndirect(CB, IndirectBuffers[0].Buffer, 0);
-			} PopulateEndRenderTargetCommand(i);
-		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+		}
+		{
+			const auto CB = CommandBuffers[i];
+			constexpr VkCommandBufferBeginInfo CBBI = {
+				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.pInheritanceInfo = nullptr
+			};
+			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+				PopulateBeginRenderTargetCommand(i); {
+				} PopulateEndRenderTargetCommand(i);
+			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+		}
 	}
 };
 #pragma endregion

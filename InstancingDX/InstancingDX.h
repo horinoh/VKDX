@@ -15,8 +15,8 @@ public:
 
 protected:
 	virtual void CreateGeometry() override {
-		const auto CA = COM_PTR_GET(CommandAllocators[0]);
-		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
 		constexpr std::array Vertices = {
@@ -101,7 +101,7 @@ protected:
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
 
-		const auto BGCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+		const auto BGCL = COM_PTR_GET(BundleCommandLists[i]);
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
 		{
@@ -116,8 +116,8 @@ protected:
 		}
 		VERIFY_SUCCEEDED(BGCL->Close());
 
-		const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
-		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
 		{
 			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));

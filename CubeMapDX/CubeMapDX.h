@@ -14,9 +14,7 @@ public:
 	virtual ~CubeMapDX() {}
 
 protected:
-	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
-		Super::OnTimer(hWnd, hInstance);
-
+	virtual void DrawFrame(const UINT i) override {
 		const auto CamPos = DirectX::XMVector3Transform(DirectX::XMVectorSet(0.0f, 0.0f, 3.0f, 1.0f), DirectX::XMMatrixRotationY(DirectX::XMConvertToRadians(Degree)));
 #ifdef USE_SKY_DOME
 		const auto View = DirectX::XMMatrixLookAtRH(CamPos, DirectX::XMVectorSet(0.0f, 2.0f * DirectX::XMScalarSin(DirectX::XMConvertToRadians(Degree)), 0.0f, 1.0f), DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f));
@@ -33,13 +31,12 @@ protected:
 		Degree += 1.0f;
 
 #pragma region FRAME_OBJECT
-		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tr)), &Tr);
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[i].Resource), RoundUp256(sizeof(Tr)), &Tr);
 #pragma endregion
 	}
-
 	virtual void CreateGeometry() override {
 		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DIA), &DIA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DIA), &DIA);
 	}
 	virtual void CreateConstantBuffer() override {
 		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
@@ -69,8 +66,8 @@ protected:
 	virtual void CreateTexture() override {
 		std::wstring Path;
 		if (FindDirectory("DDS", Path)) {
-			const auto CA = COM_PTR_GET(CommandAllocators[0]);
-			const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
+			const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 			//!< [0] ƒLƒ…[ƒu(Cube) : PX, NX, PY, NY, PZ, NZ
 			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\CubeMap\\ninomaru_teien.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			{
@@ -228,7 +225,7 @@ protected:
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
 
-		const auto BGCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+		const auto BGCL = COM_PTR_GET(BundleCommandLists[i]);
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
 		{
@@ -237,8 +234,8 @@ protected:
 		}
 		VERIFY_SUCCEEDED(BGCL->Close());
 
-		const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
-		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
 		{
 			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));

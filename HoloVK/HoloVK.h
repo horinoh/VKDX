@@ -23,13 +23,11 @@ protected:
 		SetWindow(hWnd);
 		Super::OnCreate(hWnd, hInstance, Title);
 	}
-	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
-		Super::OnTimer(hWnd, hInstance); 
+	virtual void DrawFrame([[maybe_unused]] const uint32_t i) override {
 #pragma region FRAME_OBJECT
-		//CopyToHostVisibleDeviceMemory(UniformBuffers[GetCurrentBackBufferIndex()].DeviceMemory, 0, sizeof(Tr), &Tr);
+		//CopyToHostVisibleDeviceMemory(UniformBuffers[i].DeviceMemory, 0, sizeof(Tr), &Tr);
 #pragma endregion
 	}
-
 	virtual void AllocateCommandBuffer() override {
 		Super::AllocateCommandBuffer();
 #pragma region PASS	1

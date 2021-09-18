@@ -15,8 +15,8 @@ public:
 
 	virtual void CreateGeometry() override {
 		if (HasMeshShaderSupport(COM_PTR_GET(Device))) {
-			const auto CA = COM_PTR_GET(CommandAllocators[0]);
-			const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
+			const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 			const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
 			//!< ƒg[ƒ‰ƒX16ŒÂ (16 of torus)
 			constexpr D3D12_DISPATCH_MESH_ARGUMENTS DMA = { .ThreadGroupCountX = 16, .ThreadGroupCountY = 1, .ThreadGroupCountZ = 1 };
@@ -41,8 +41,8 @@ public:
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto HasMS = HasMeshShaderSupport(COM_PTR_GET(Device));
 		const auto PS = HasMS ? COM_PTR_GET(PipelineStates[0]) : nullptr;
-		const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
-		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 
 		VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
 		{

@@ -33,7 +33,7 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 	[unroll]
 	for (int i = 0; i<3; ++i) {
 		Out.Position = mul(PVW, float4(In[i].Position, 1.0f));
-		
+
 		const float3 Binormal = cross(In[i].Normal, In[i].Tangent);
 
 		Out.Texcoord = mul(TexTransform, float4(In[i].Texcoord, 0.0f, 1.0f)).xy;

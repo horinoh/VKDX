@@ -23,27 +23,25 @@ protected:
 		SetWindow(hWnd);
 		Super::OnCreate(hWnd, hInstance, Title);
 	}
-	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override { 
-		Super::OnTimer(hWnd, hInstance); 
+	virtual void DrawFrame([[maybe_unused]] const UINT i) override {
 #pragma region FRAME_OBJECT
-		//CopyToUploadResource(COM_PTR_GET(ConstantBuffers[GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tr)), &Tr);
+		//CopyToUploadResource(COM_PTR_GET(ConstantBuffers[i].Resource), RoundUp256(sizeof(Tr)), &Tr);
 #pragma endregion
 	}
-
 	virtual void CreateCommandList() override {
 		Super::CreateCommandList();
 #pragma region PASS1
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
-			VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleGraphicsCommandLists.emplace_back())));
-			VERIFY_SUCCEEDED(BundleGraphicsCommandLists.back()->Close());
+			VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleCommandLists.emplace_back())));
+			VERIFY_SUCCEEDED(BundleCommandLists.back()->Close());
 		}
 #pragma endregion
 	}
 	virtual void CreateGeometry() override {
-		const auto CA = COM_PTR_GET(CommandAllocators[0]);
-		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
 #pragma region PASS0
@@ -333,7 +331,7 @@ protected:
 #pragma region PASS0
 		//!< メッシュ描画用
 		const auto PS0 = COM_PTR_GET(PipelineStates[0]);
-		const auto BGCL0 = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+		const auto BGCL0 = COM_PTR_GET(BundleCommandLists[i]);
 		VERIFY_SUCCEEDED(BGCL0->Reset(BCA, PS0));
 		{
 			BGCL0->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
@@ -347,7 +345,7 @@ protected:
 		const auto PS1 = COM_PTR_GET(PipelineStates[1]);
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
-		const auto BGCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + SCD.BufferCount]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
+		const auto BGCL1 = COM_PTR_GET(BundleCommandLists[i + SCD.BufferCount]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
 		VERIFY_SUCCEEDED(BGCL1->Reset(BCA, PS1));
 		{
 			BGCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
@@ -356,8 +354,8 @@ protected:
 		VERIFY_SUCCEEDED(BGCL1->Close());
 #pragma endregion
 
-		const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
-		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		VERIFY_SUCCEEDED(GCL->Reset(CA, PS1));
 		{
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);

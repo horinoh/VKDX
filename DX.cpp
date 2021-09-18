@@ -98,7 +98,7 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 
 	//!< ビューポートサイズが決定してから
 	LoadScene();
-	for (auto i = 0; i < size(GraphicsCommandLists); ++i) {
+	for (auto i = 0; i < size(DirectCommandLists); ++i) {
 		PopulateCommandList(i);
 	}
 }
@@ -738,25 +738,60 @@ void DX::ResizeDepthStencil([[maybe_unused]] const DXGI_FORMAT DepthFormat, [[ma
 	LOG_OK();
 }
 
-//!< ここではデフォルト実装として、ダイレクト、バンドル共にスワップチェイン数分用意することとする
-void DX::CreateCommandList()
+void DX::CreateDirectCommandList()
 {
 	//!< コマンド実行(GCL->ExecuteCommandList())後、GPUがコマンドアロケータの参照を終えるまで、アロケータのリセット(CA->Reset())してはいけない、アロケータが覚えているのでコマンドのリセット(GCL->Reset())はしても良い
-	//!< (ここでは)ダイレクト用1つ、バンドル用1つのコマンドアロケータ作成をデフォルト実装とする
-	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(CommandAllocators.emplace_back())));
-	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_UUIDOF_PUTVOID(BundleCommandAllocators.emplace_back())));
+	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(DirectCommandAllocators.emplace_back())));
 
 	DXGI_SWAP_CHAIN_DESC1 SCD;
 	SwapChain->GetDesc1(&SCD);
 	for (UINT i = 0; i < SCD.BufferCount; ++i) {
 		//!< パイプラインステートは後からでも指定できる GCL->Reset(CA, COM_PTR_GET(PS)) ので、ここでは nullptr を指定
-		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(CommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandLists.emplace_back())));
-		VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
-
-		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleGraphicsCommandLists.emplace_back())));
-		VERIFY_SUCCEEDED(BundleGraphicsCommandLists.back()->Close());
+		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(DirectCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(DirectCommandLists.emplace_back())));
+		VERIFY_SUCCEEDED(DirectCommandLists.back()->Close());
 	}
 }
+void DX::CreateBundleCommandList()
+{
+	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_UUIDOF_PUTVOID(BundleCommandAllocators.emplace_back())));
+
+	DXGI_SWAP_CHAIN_DESC1 SCD;
+	SwapChain->GetDesc1(&SCD);
+	for (UINT i = 0; i < SCD.BufferCount; ++i) {
+		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleCommandLists.emplace_back())));
+		VERIFY_SUCCEEDED(BundleCommandLists.back()->Close());
+	}
+}
+void DX::CreateComputeCommandList()
+{
+	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, COM_PTR_UUIDOF_PUTVOID(ComputeCommandAllocators.emplace_back())));
+
+	DXGI_SWAP_CHAIN_DESC1 SCD;
+	SwapChain->GetDesc1(&SCD);
+	for (UINT i = 0; i < SCD.BufferCount; ++i) {
+		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, COM_PTR_GET(ComputeCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(ComputeCommandLists.emplace_back())));
+		VERIFY_SUCCEEDED(ComputeCommandLists.back()->Close());
+	}
+}
+//!< ここではデフォルト実装として、ダイレクト、バンドル共にスワップチェイン数分用意することとする
+//void DX::CreateCommandList()
+//{
+//	//!< コマンド実行(GCL->ExecuteCommandList())後、GPUがコマンドアロケータの参照を終えるまで、アロケータのリセット(CA->Reset())してはいけない、アロケータが覚えているのでコマンドのリセット(GCL->Reset())はしても良い
+//	//!< (ここでは)ダイレクト用1つ、バンドル用1つのコマンドアロケータ作成をデフォルト実装とする
+//	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(DirectCommandAllocators.emplace_back())));
+//	VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_UUIDOF_PUTVOID(BundleCommandAllocators.emplace_back())));
+//
+//	DXGI_SWAP_CHAIN_DESC1 SCD;
+//	SwapChain->GetDesc1(&SCD);
+//	for (UINT i = 0; i < SCD.BufferCount; ++i) {
+//		//!< パイプラインステートは後からでも指定できる GCL->Reset(CA, COM_PTR_GET(PS)) ので、ここでは nullptr を指定
+//		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(DirectCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(DirectCommandLists.emplace_back())));
+//		VERIFY_SUCCEEDED(DirectCommandLists.back()->Close());
+//
+//		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleCommandLists.emplace_back())));
+//		VERIFY_SUCCEEDED(BundleCommandLists.back()->Close());
+//	}
+//}
 
 void DX::CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth, const FLOAT MaxDepth)
 {
@@ -1145,8 +1180,8 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 {
 	Textures.emplace_back().Create(COM_PTR_GET(Device), 1, 1, static_cast<UINT16>(size(Colors)), DXGI_FORMAT_R8G8B8A8_UNORM);
 
-	const auto CA = COM_PTR_GET(CommandAllocators[0]);
-	const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+	const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
+	const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 	{
 		constexpr auto PitchSize = 1 * static_cast<UINT32>(sizeof(Colors[0]));
 		constexpr auto LayerSize = 1 * PitchSize;
@@ -1180,7 +1215,32 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 		DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), GCL, COM_PTR_GET(Fence));
 	}
 }
-
+void DX::WaitForFence(ID3D12CommandQueue* CQ, ID3D12Fence* Fence)
+{
+	auto Value = Fence->GetCompletedValue();
+	++Value;
+	//!< GPUが到達すれば Value になる
+	VERIFY_SUCCEEDED(CQ->Signal(Fence, Value));
+	if (Fence->GetCompletedValue() < Value) {
+		auto hEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
+		if (nullptr != hEvent) [[likely]] {
+			//!< GetCompletedValue() が FenceValue になったらイベントが発行されるようにする
+			VERIFY_SUCCEEDED(Fence->SetEventOnCompletion(Value, hEvent));
+		//!< イベント発行まで待つ
+		WaitForSingleObject(hEvent, INFINITE);
+		CloseHandle(hEvent);
+		}
+	}
+}
+void DX::Submit()
+{
+	const std::array CLs = { static_cast<ID3D12CommandList*>(COM_PTR_GET(DirectCommandLists[GetCurrentBackBufferIndex()])) };
+	GraphicsCommandQueue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
+}
+void DX::Present()
+{
+	VERIFY_SUCCEEDED(SwapChain->Present(1/*垂直同期を待つ*/, 0));
+}
 void DX::Draw()
 {
 	WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence));
@@ -1197,32 +1257,4 @@ void DX::Dispatch()
 	DEBUG_BREAK();
 }
 
-void DX::WaitForFence(ID3D12CommandQueue* CQ, ID3D12Fence* Fence)
-{
-	auto Value = Fence->GetCompletedValue();
-	++Value;
-	//!< GPUが到達すれば Value になる
-	VERIFY_SUCCEEDED(CQ->Signal(Fence, Value));
-	if (Fence->GetCompletedValue() < Value) {
-		auto hEvent = CreateEventEx(nullptr, nullptr, 0, EVENT_ALL_ACCESS);
-		if (nullptr != hEvent) [[likely]] {
-			//!< GetCompletedValue() が FenceValue になったらイベントが発行されるようにする
-			VERIFY_SUCCEEDED(Fence->SetEventOnCompletion(Value, hEvent));
-			//!< イベント発行まで待つ
-			WaitForSingleObject(hEvent, INFINITE);
-			CloseHandle(hEvent);
-		}
-	}
-}
-
-void DX::Submit()
-{
-	const std::array CLs = { static_cast<ID3D12CommandList*>(COM_PTR_GET(GraphicsCommandLists[GetCurrentBackBufferIndex()])) };
-	GraphicsCommandQueue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
-}
-void DX::Present()
-{
-	//!< 垂直同期を待つ : 1
-	VERIFY_SUCCEEDED(SwapChain->Present(1, 0));
-}
 

@@ -16,8 +16,7 @@ public:
 
 protected:
 protected:
-	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
-		Super::OnTimer(hWnd, hInstance);
+	virtual void DrawFrame(const uint32_t Index) override {
 #ifdef USE_LEAP
 		InterpolatedTrackingEvent();
 #else
@@ -33,10 +32,9 @@ protected:
 		}
 #endif
 #pragma region UB
-		CopyToHostVisibleDeviceMemory(UniformBuffers[GetCurrentBackBufferIndex()].DeviceMemory, 0, sizeof(Tracking), &Tracking);
+		CopyToHostVisibleDeviceMemory(UniformBuffers[Index].DeviceMemory, 0, sizeof(Tracking), &Tracking);
 #pragma endregion
 	}
-
 	virtual void CreateGeometry() override {
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };

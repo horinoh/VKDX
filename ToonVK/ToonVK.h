@@ -14,14 +14,12 @@ public:
 	virtual ~ToonVK() {}
 
 protected:
-	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
-		Super::OnTimer(hWnd, hInstance);
-
+	virtual void DrawFrame(const uint32_t i) override {
 		Tr.World = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(1.0f, 0.0f, 0.0f));
 		Degree += 1.0f;
 
 #pragma region FRAME_OBJECT
-		CopyToHostVisibleDeviceMemory(UniformBuffers[GetCurrentBackBufferIndex()].DeviceMemory, 0, sizeof(Tr), &Tr);
+		CopyToHostVisibleDeviceMemory(UniformBuffers[i].DeviceMemory, 0, sizeof(Tr), &Tr);
 #pragma endregion
 	}
 

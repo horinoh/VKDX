@@ -732,7 +732,14 @@ protected:
 
 	virtual void CreateFence(VkDevice Dev);
 
-	virtual void AllocateCommandBuffer();
+	virtual void AllocatePrimaryCommandBuffer();
+	virtual void AllocateSecondaryCommandBuffer();
+	virtual void AllocateComputeCommandBuffer();
+	virtual void AllocateCommandBuffer() {
+		AllocatePrimaryCommandBuffer();
+		AllocateSecondaryCommandBuffer();
+		AllocateComputeCommandBuffer();
+	}
 
 	[[nodiscard]] virtual VkSurfaceFormatKHR SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 	[[nodiscard]] virtual VkPresentModeKHR SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface);
@@ -971,12 +978,12 @@ protected:
 
 	virtual uint32_t GetCurrentBackBufferIndex() const { return SwapchainImageIndex; }
 	virtual void DrawFrame([[maybe_unused]] const uint32_t i) {}
-	virtual void Draw();
-	virtual void Dispatch();
 	virtual void WaitForFence();
 	virtual void Submit();
-	virtual void Present();
-
+	virtual void Present(); 
+	virtual void Draw();
+	virtual void Dispatch();
+	
 #pragma region ALLOCATION
 	static inline const VkAllocationCallbacks AllocationCallbacks = {
 		.pUserData = nullptr,
@@ -1051,15 +1058,16 @@ protected:
 	//uint32_t SparceBindingQueueIndex = UINT32_MAX;;
 
 	/**
-	フェンス		... デバイスとホストの同期(GPUとCPUの同期)
-	セマフォ		... 複数キュー間の同期
-	イベント		... コマンドバッファ間の同期(同一キューファミリ)
+	フェンス		... デバイスとホスト(GPUとCPU)の同期
+	セマフォ		... コマンドバッファ間の同期 (異なるキューファミリでもよい) ... DXには存在せずフェンスで代用
+	イベント		... コマンドバッファ間の同期 (同一キューファミリであること) ... DXには存在しない
 	バリア		... コマンドバッファ内の同期
 	*/
 	VkFence Fence = VK_NULL_HANDLE;
 	VkFence ComputeFence = VK_NULL_HANDLE;
 	VkSemaphore NextImageAcquiredSemaphore = VK_NULL_HANDLE;	//!< プレゼント完了までウエイト
 	VkSemaphore RenderFinishedSemaphore = VK_NULL_HANDLE;		//!< 描画完了するまでウエイト
+	VkSemaphore ComputeSemaphore = VK_NULL_HANDLE;
 
 	VkExtent2D SurfaceExtent2D;
 	VkFormat ColorFormat = VK_FORMAT_B8G8R8A8_UNORM;
@@ -1072,6 +1080,8 @@ protected:
 	std::vector<VkCommandBuffer> CommandBuffers;
 	std::vector<VkCommandPool> SecondaryCommandPools;
 	std::vector<VkCommandBuffer> SecondaryCommandBuffers;
+	std::vector<VkCommandPool> ComputeCommandPools;
+	std::vector<VkCommandBuffer> ComputeCommandBuffers;
 
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;

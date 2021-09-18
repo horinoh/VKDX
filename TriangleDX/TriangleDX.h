@@ -17,8 +17,8 @@ protected:
 	virtual void CreateGeometry() override {
 #define COMMAND_COPY_TOGETHER
 
-		const auto CA = COM_PTR_GET(CommandAllocators[0]);
-		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 		const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
 
 #if 1
@@ -146,7 +146,7 @@ protected:
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
 
 #pragma region BUNDLE_COMMAND_LIST
-		const auto BGCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+		const auto BGCL = COM_PTR_GET(BundleCommandLists[i]);
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
 		{
@@ -161,8 +161,8 @@ protected:
 		VERIFY_SUCCEEDED(BGCL->Close());
 #pragma endregion
 
-		const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
-		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
 		{
 #if defined(_DEBUG) || defined(USE_PIX)

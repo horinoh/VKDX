@@ -14,8 +14,8 @@ public:
 	virtual ~ClearDX() {}
 
 	virtual void PopulateCommandList(const size_t i) override {
-		const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
-		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));

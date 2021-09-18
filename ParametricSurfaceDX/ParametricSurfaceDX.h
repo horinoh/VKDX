@@ -19,15 +19,15 @@ protected:
 #ifndef USE_BUNDLE
 	//!< デフォルト実装をバンドルを作成する実装にしているので、オーバーライドしてバンドルを作成しないようにしている
 	virtual void CreateCommandList() override {
-		CommandAllocators.emplace_back(COM_PTR<ID3D12CommandAllocator>());
-		VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(CommandAllocators.back())));
+		DirectCommandAllocators.emplace_back(COM_PTR<ID3D12CommandAllocator>());
+		VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_UUIDOF_PUTVOID(DirectCommandAllocators.back())));
 
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
-			GraphicsCommandLists.emplace_back(COM_PTR<ID3D12GraphicsCommandList>());
-			VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(CommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandLists.back())));
-			VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
+			DirectCommandLists.emplace_back(COM_PTR<ID3D12GraphicsCommandList>());
+			VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, COM_PTR_GET(DirectCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(DirectCommandLists.back())));
+			VERIFY_SUCCEEDED(DirectCommandLists.back()->Close());
 		}
 		LOG_OK();
 	}
@@ -35,7 +35,7 @@ protected:
 	virtual void CreateGeometry() override { 
 		//!< 最低でもインデックス数1が必要 (At least index count must be 1)
 		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DIA), &DIA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DIA), &DIA);
 	}
 	virtual void CreatePipelineState() override { 
 		const auto ShaderPath = GetBasePath();
@@ -68,7 +68,7 @@ protected:
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
 
 #ifdef USE_BUNDLE
-		const auto BGCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+		const auto BGCL = COM_PTR_GET(BundleCommandLists[i]);
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
 		{
@@ -78,8 +78,8 @@ protected:
 		VERIFY_SUCCEEDED(BGCL->Close());
 #endif
 
-		const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
-		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
 		{
 			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));

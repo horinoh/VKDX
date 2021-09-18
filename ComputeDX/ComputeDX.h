@@ -14,17 +14,11 @@ public:
 	virtual ~ComputeDX() {}
 
 protected:
-	virtual void CreateCommandList() override {
-		VERIFY_SUCCEEDED(Device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_COMPUTE, COM_PTR_UUIDOF_PUTVOID(CommandAllocators.emplace_back())));
-		VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_COMPUTE, COM_PTR_GET(CommandAllocators.back()), nullptr, COM_PTR_UUIDOF_PUTVOID(GraphicsCommandLists.back())));
-		VERIFY_SUCCEEDED(GraphicsCommandLists.back()->Close());
-	}
 	virtual void CreateGeometry() override { 
 		constexpr D3D12_DISPATCH_ARGUMENTS DA = { .ThreadGroupCountX = 32, .ThreadGroupCountY = 1, .ThreadGroupCountZ = 1 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DA), &DA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DA), &DA);
 	}
 	virtual void CreateTexture() override {
-		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
 		UnorderedAccessTextures.emplace_back().Create(COM_PTR_GET(Device), GetClientRectWidth(), GetClientRectHeight(), 1, SCD.Format);
@@ -35,14 +29,16 @@ protected:
 		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
 		constexpr std::array DRs = {
-			D3D12_DESCRIPTOR_RANGE({ .RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
+			//!< register(u0, space0)
+			D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 		};
 		DX::SerializeRootSignature(Blob, {
+			//!< UAV0
 			D3D12_ROOT_PARAMETER({
 				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
-				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({ static_cast<UINT>(size(DRs)), data(DRs) }),
-				.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL
-			})
+				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs)), .pDescriptorRanges = data(DRs) }),
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
+			}),
 		}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
 #endif
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
@@ -71,28 +67,33 @@ protected:
 		
 		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH);
 		CbvSrvUavGPUHandles.back().emplace_back(GDH);
-		//CDH.ptr += IncSize;
-		//GDH.ptr += IncSize;
 	}
 	
 	virtual void PopulateCommandList(const size_t i) override {
-		const auto PS = COM_PTR_GET(PipelineStates[0]);
-		const auto CL = COM_PTR_GET(GraphicsCommandLists[i]);
-		const auto CA = COM_PTR_GET(CommandAllocators[0]);
-		VERIFY_SUCCEEDED(CL->Reset(CA, PS)); {
-			PopulateBeginRenderTargetCommand(i); {
+		{
+			const auto PS = COM_PTR_GET(PipelineStates[0]);
+			const auto CL = COM_PTR_GET(ComputeCommandLists[i]);
+			const auto CA = COM_PTR_GET(ComputeCommandAllocators[0]);
+			VERIFY_SUCCEEDED(CL->Reset(CA, PS)); {
+				CL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
+
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
 				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-				
+
 				CL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
 
 				CL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
-			} PopulateEndRenderTargetCommand(i);
-		} VERIFY_SUCCEEDED(CL->Close());
+			} VERIFY_SUCCEEDED(CL->Close());
+		}
+		{
+			const auto PS = COM_PTR_GET(PipelineStates[0]);
+			const auto CL = COM_PTR_GET(DirectCommandLists[i]);
+			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
+			VERIFY_SUCCEEDED(CL->Reset(CA, PS)); {
+				PopulateBeginRenderTargetCommand(i); {
+				} PopulateEndRenderTargetCommand(i);
+			} VERIFY_SUCCEEDED(CL->Close());
+		}
 	}
-
-	virtual void Draw() override { Dispatch(); }
-
-private:
 };
 #pragma endregion

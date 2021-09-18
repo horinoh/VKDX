@@ -17,29 +17,8 @@ public:
 
 protected:
 #ifndef USE_SECONDARY_COMMAND_BUFFER
-	//!< デフォルト実装をセカンダリを作成する実装にしているので、オーバーライドしてセカンダリを作成しないようにしている
-	virtual void AllocateCommandBuffer() override {
-		const VkCommandPoolCreateInfo CPCI = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-			.pNext = nullptr,
-			.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-			.queueFamilyIndex = GraphicsQueueFamilyIndex
-		};
-		VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &CommandPools.emplace_back()));
-
-		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
-		assert(!empty(CommandPools) && "");
-		const auto PrevCount = size(CommandBuffers);
-		CommandBuffers.resize(PrevCount + SCCount);
-		const VkCommandBufferAllocateInfo CBAI = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			.pNext = nullptr,
-			.commandPool = CommandPools[0],
-			.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-			.commandBufferCount = SCCount
-		};
-		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &CommandBuffers[PrevCount]));
-	}
+	//!< デフォルト実装がセカンダリを作成するので、オーバーライドしてセカンダリを作成しないようにしている
+	virtual void AllocateSecondaryCommandBuffer() override {}
 #endif
 	virtual void CreateGeometry() override { 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();

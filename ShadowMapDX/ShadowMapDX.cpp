@@ -238,7 +238,7 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 
 	const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 	//!< パス0 : バンドルコマンドリスト(シャドウキャスタ描画用)
-	const auto BGCL0 = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+	const auto BGCL0 = COM_PTR_GET(BundleCommandLists[i]);
 	VERIFY_SUCCEEDED(BGCL0->Reset(BCA, PS0));
 	{
 		const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
@@ -249,7 +249,7 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 	VERIFY_SUCCEEDED(BGCL0->Close());
 
 	//!< パス1 : バンドルコマンドリスト(レンダーテクスチャ描画用、シャドウレシーバ描画用)
-	const auto BGCL1 = COM_PTR_GET(BundleGraphicsCommandLists[i + size(BundleGraphicsCommandLists) / 2]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
+	const auto BGCL1 = COM_PTR_GET(BundleCommandLists[i + size(BundleCommandLists) / 2]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
 	VERIFY_SUCCEEDED(BGCL1->Reset(BCA, PS1));
 	{
 		const auto IDBCS = COM_PTR_GET(IndirectBuffers[1].CommandSignature);
@@ -263,8 +263,8 @@ void ShadowMapDX::PopulateCommandList(const size_t i)
 	}
 	VERIFY_SUCCEEDED(BGCL1->Close());
 
-	const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
-	const auto CA = COM_PTR_GET(CommandAllocators[0]);
+	const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+	const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 	VERIFY_SUCCEEDED(GCL->Reset(CA, PS1));
 	{
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);

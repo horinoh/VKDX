@@ -14,14 +14,12 @@ public:
 	virtual ~ShadowMapDX() {}
 
 protected:
-	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
-		Super::OnTimer(hWnd, hInstance);
-
+	virtual void DrawFrame(const UINT i) override {
 		DirectX::XMStoreFloat4x4(&Tr.World, DirectX::XMMatrixRotationY(DirectX::XMConvertToRadians(Degree)));
 		Degree += 1.0f;
 
 #pragma region FRAME_OBJECT
-		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tr)), &Tr);
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[i].Resource), RoundUp256(sizeof(Tr)), &Tr);
 #pragma endregion
 	}
 	virtual void CreateCommandList() override {
@@ -30,13 +28,13 @@ protected:
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
-			VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleGraphicsCommandLists.emplace_back())));
-			VERIFY_SUCCEEDED(BundleGraphicsCommandLists.back()->Close());
+			VERIFY_SUCCEEDED(Device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_BUNDLE, COM_PTR_GET(BundleCommandAllocators[0]), nullptr, COM_PTR_UUIDOF_PUTVOID(BundleCommandLists.emplace_back())));
+			VERIFY_SUCCEEDED(BundleCommandLists.back()->Close());
 		}
 	}
 	virtual void CreateGeometry() override {
-		const auto CA = COM_PTR_GET(CommandAllocators[0]);
-		const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
 #pragma region PASS0

@@ -600,7 +600,7 @@ public:
 	static void ExecuteAndWait(ID3D12CommandQueue* CQ, ID3D12CommandList* CL, ID3D12Fence* Fence);
 
 	virtual void PopulateBeginRenderTargetCommand(const size_t i) {
-		const auto GCL = GraphicsCommandLists[i];
+		const auto GCL = DirectCommandLists[i];
 		const auto UAV = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
 		const std::array RBs = {
 			//!< RenderTarget : COPY_SOURCE -> UNORDERED_ACCESS
@@ -617,7 +617,7 @@ public:
 		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 	}
 	virtual void PopulateEndRenderTargetCommand(const size_t i) {
-		const auto GCL = GraphicsCommandLists[i];
+		const auto GCL = DirectCommandLists[i];
 		const auto UAV = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
 		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 		{
@@ -682,7 +682,14 @@ public:
 	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
 	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
 
-	virtual void CreateCommandList();
+	virtual void CreateDirectCommandList();
+	virtual void CreateBundleCommandList();
+	virtual void CreateComputeCommandList();
+	virtual void CreateCommandList() {
+		CreateDirectCommandList();
+		CreateBundleCommandList();
+		CreateComputeCommandList();
+	}
 
 	virtual void LoadScene() {}
 
@@ -778,12 +785,12 @@ public:
 
 	virtual UINT GetCurrentBackBufferIndex() const { return SwapChain->GetCurrentBackBufferIndex(); }
 	virtual void DrawFrame([[maybe_unused]] const UINT i) {}
-	virtual void Draw();
-	virtual void Dispatch();
 	static void WaitForFence(ID3D12CommandQueue* CQ, ID3D12Fence* Fence);
 	virtual void Submit();
-	virtual void Present();
-
+	virtual void Present(); 
+	virtual void Draw();
+	virtual void Dispatch();
+	
 protected:
 #if defined(_DEBUG) || defined(USE_PIX)
 	COM_PTR<IDXGraphicsAnalysis> GraphicsAnalysis;
@@ -807,10 +814,12 @@ protected:
 	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap;					//!< D3D12_DESCRIPTOR_HEAP_TYPE_RTV : スワップチェインRTVは別扱いにしている (Manage swapchain RTV separately)
 	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SwapChainCPUHandles;
 
-	std::vector<COM_PTR<ID3D12CommandAllocator>> CommandAllocators;
+	std::vector<COM_PTR<ID3D12CommandAllocator>> DirectCommandAllocators;
+	std::vector<COM_PTR<ID3D12GraphicsCommandList>> DirectCommandLists;
 	std::vector<COM_PTR<ID3D12CommandAllocator>> BundleCommandAllocators;
-	std::vector<COM_PTR<ID3D12GraphicsCommandList>> GraphicsCommandLists;
-	std::vector<COM_PTR<ID3D12GraphicsCommandList>> BundleGraphicsCommandLists;
+	std::vector<COM_PTR<ID3D12GraphicsCommandList>> BundleCommandLists;
+	std::vector<COM_PTR<ID3D12CommandAllocator>> ComputeCommandAllocators;
+	std::vector<COM_PTR<ID3D12GraphicsCommandList>> ComputeCommandLists;
 
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;

@@ -200,8 +200,11 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	//!< SwapchainImages は取得したもの、破棄しない
 	if (VK_NULL_HANDLE != Swapchain) [[likely]] { vkDestroySwapchainKHR(Device, Swapchain, GetAllocationCallbacks()); Swapchain = VK_NULL_HANDLE; }
 
-	//!< コマンドプール破棄時にコマンドバッファは暗黙的に解放されるのでやらなくても良い (Command buffers will be released implicitly, when command pool released)
-	//if(!empty(SecondaryCommandBuffers)) [[likely]] { vkFreeCommandBuffers(Device, SecondaryCommandPools[0], static_cast<uint32_t>(size(SecondaryCommandBuffers)), data(SecondaryCommandBuffers)); SecondaryCommandBuffers.clear(); }	
+	for (auto i : ComputeCommandPools) {
+		vkDestroyCommandPool(Device, i, GetAllocationCallbacks());
+	}
+	ComputeCommandPools.clear();
+
 	for (auto i : SecondaryCommandPools) {
 		vkDestroyCommandPool(Device, i, GetAllocationCallbacks());
 	}
@@ -214,21 +217,20 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 	CommandPools.clear();
 
+	if (VK_NULL_HANDLE != ComputeSemaphore) [[likely]] {
+		vkDestroySemaphore(Device, ComputeSemaphore, GetAllocationCallbacks());
+	}
 	if (VK_NULL_HANDLE != RenderFinishedSemaphore) [[likely]] {
 		vkDestroySemaphore(Device, RenderFinishedSemaphore, GetAllocationCallbacks());
-		RenderFinishedSemaphore = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != NextImageAcquiredSemaphore) [[likely]] {
 		vkDestroySemaphore(Device, NextImageAcquiredSemaphore, GetAllocationCallbacks());
-		NextImageAcquiredSemaphore = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != Fence) [[likely]] {
 		vkDestroyFence(Device, Fence, GetAllocationCallbacks());
-		Fence = VK_NULL_HANDLE;
 	}
 	if (VK_NULL_HANDLE != ComputeFence) [[likely]] {
 		vkDestroyFence(Device, ComputeFence, GetAllocationCallbacks());
-		ComputeFence = VK_NULL_HANDLE;
 	}
 
 	//!< キューは論理デバイスと共に破棄される
@@ -832,12 +834,19 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 		if (b) { Logf("PRESENT"); }
 		Log("\n");
 	}
+	std::bitset<4> GraphicsMask;
+	std::bitset<4> PresentMask;
+	std::bitset<4> ComputeMask;
+	std::bitset<4> TransferMask;
+	std::bitset<4> SparseBindingMask;
+	std::bitset<4> ProtectedMask;
 	//!< 機能を持つキューファミリインデックスを見つける (Find queue family index for each functions)
 	GraphicsQueueFamilyIndex = UINT32_MAX;
 	PresentQueueFamilyIndex = UINT32_MAX;
 	ComputeQueueFamilyIndex = UINT32_MAX;
 	for (auto i = 0; i < size(QFPs); ++i) {
 		if (VK_QUEUE_GRAPHICS_BIT & QFPs[i].queueFlags) {
+			GraphicsMask.set(i);
 			if (UINT32_MAX == GraphicsQueueFamilyIndex) {
 				GraphicsQueueFamilyIndex = i;
 			}
@@ -845,16 +854,39 @@ void VK::CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, const std::ve
 		VkBool32 b = VK_FALSE;
 		VERIFY_SUCCEEDED(vkGetPhysicalDeviceSurfaceSupportKHR(PD, i, Surface, &b));
 		if (b) {
+			PresentMask.set(i);
 			if (UINT32_MAX == PresentQueueFamilyIndex) {
 				PresentQueueFamilyIndex = i;
 			}
 		}
 		if (VK_QUEUE_COMPUTE_BIT & QFPs[i].queueFlags) {
-			if (UINT32_MAX == ComputeQueueFamilyIndex) {
+			ComputeMask.set(i);
+			//!< コンピュートはグラフィックと異なるファミリを希望
+			if (UINT32_MAX == ComputeQueueFamilyIndex && GraphicsQueueFamilyIndex != static_cast<uint32_t>(i)) {
 				ComputeQueueFamilyIndex = i;
 			}
 		}
+		if (VK_QUEUE_TRANSFER_BIT & QFPs[i].queueFlags) { TransferMask.set(i); }
+		if (VK_QUEUE_SPARSE_BINDING_BIT & QFPs[i].queueFlags) { SparseBindingMask.set(i); }
+		if (VK_QUEUE_PROTECTED_BIT & QFPs[i].queueFlags) { ProtectedMask.set(i); }
 	}
+	//!< 見つからない場合はグラフィックと同じファミリで良い
+	if (UINT32_MAX == ComputeQueueFamilyIndex) {
+		for (auto i = 0; i < size(QFPs); ++i) {
+			if (VK_QUEUE_COMPUTE_BIT & QFPs[i].queueFlags) {
+				if (UINT32_MAX == ComputeQueueFamilyIndex) {
+					ComputeQueueFamilyIndex = i;
+				}
+			}
+		}
+	}
+	std::cout << "\t\tGRAPHICS\t" << GraphicsMask << std::endl;
+	std::cout << "\t\tPRESENT\t\t" << PresentMask << std::endl;
+	std::cout << "\t\tCOMPUTE\t\t" << ComputeMask << std::endl;
+	std::cout << "\t\tTRANSFER\t" << TransferMask << std::endl;
+	std::cout << "\t\tSPARCE_BINDING\t" << SparseBindingMask << std::endl;
+	std::cout << "\t\tPROTECTED\t" << ProtectedMask << std::endl;
+
 	//!< キューファミリ内でのインデックス及びプライオリティ、ここではグラフィック、プレゼント、コンピュートの分をプライオリティ0.5fで追加している
 	std::vector<std::vector<float>> Priorites(size(QFPs));
 	const uint32_t GraphicsQueueIndexInFamily = static_cast<uint32_t>(size(Priorites[GraphicsQueueFamilyIndex])); Priorites[GraphicsQueueFamilyIndex].emplace_back(0.5f);
@@ -978,17 +1010,17 @@ void VK::CreateFence(VkDevice Dev)
 	VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SCI, GetAllocationCallbacks(), &NextImageAcquiredSemaphore));
 	//!< 描画完了同期用 (Wait for render finish)
 	VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SCI, GetAllocationCallbacks(), &RenderFinishedSemaphore));
+	VERIFY_SUCCEEDED(vkCreateSemaphore(Dev, &SCI, GetAllocationCallbacks(), &ComputeSemaphore));
 #pragma endregion
 	LOG_OK();
 }
 
-void VK::AllocateCommandBuffer()
+void VK::AllocatePrimaryCommandBuffer()
 {
 	//!< キューファミリが異なる場合は別のコマンドプールを用意する必要がある、そのキューにのみサブミットできる
 	//!< 複数スレッドで同時にレコーディングするには、別のコマンドプールからアロケートされたコマンドバッファである必要がある (コマンドプールは複数スレッドからアクセス不可)
 	//!< VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT	: コマンドバッファ毎にリセットが可能、指定しない場合はプール毎にまとめてリセット (コマンドバッファのレコーディング開始時に暗黙的にリセットされるので注意)
 	//!< VK_COMMAND_POOL_CREATE_TRANSIENT_BIT				: 短命で、何度もサブミットしない、すぐにリセットやリリースされる場合に指定
-	//!< (ここでは)プライマリ用1つ、セカンダリ用1つのコマンドプール作成をデフォルト実装とする
 	const VkCommandPoolCreateInfo CPCI = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
 		.pNext = nullptr,
@@ -996,38 +1028,59 @@ void VK::AllocateCommandBuffer()
 		.queueFamilyIndex = GraphicsQueueFamilyIndex
 	};
 	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &CommandPools.emplace_back()));
-	//!< セカンダリ用 : 必ずしも別プールにする必要は無いがここでは別プールとしておく
+
+	//!< VK_COMMAND_BUFFER_LEVEL_PRIMARY : 直接キューにサブミットできる、セカンダリをコールできる (Can be submit, can execute secondary)
+	CommandBuffers.resize(size(SwapchainImages));
+	const VkCommandBufferAllocateInfo CBAI = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		.pNext = nullptr,
+		.commandPool = CommandPools[0],
+		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+		.commandBufferCount = static_cast<uint32_t>(size(CommandBuffers))
+	};
+	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, data(CommandBuffers)));
+}
+void VK::AllocateSecondaryCommandBuffer()
+{
+	//!< セカンダリ用、必ずしも別プールにする必要は無い (DXのコマンドアロケータは DIRECT と BUNDLE で別なのでそれに合わせる形で別にしている)
+	const VkCommandPoolCreateInfo CPCI = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		.queueFamilyIndex = GraphicsQueueFamilyIndex
+	};
 	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &SecondaryCommandPools.emplace_back()));
 
-	//!< VK_COMMAND_BUFFER_LEVEL_PRIMARY	: 直接キューにサブミットできる、セカンダリをコールできる (Can be submit, can execute secondary)
 	//!< VK_COMMAND_BUFFER_LEVEL_SECONDARY	: サブミットできない、プライマリから実行されるのみ (Cannot submit, only executed from primary)
-	//!< ここではデフォルト実装として、プライマリ、セカンダリ共にスワップチェイン数分用意することとする
-	const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
-	{
-		const auto PrevCount = size(CommandBuffers);
-		CommandBuffers.resize(PrevCount + SCCount);
-		const VkCommandBufferAllocateInfo CBAI = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			.pNext = nullptr,
-			.commandPool = CommandPools[0],
-			.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-			.commandBufferCount = SCCount
-		};
-		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &CommandBuffers[PrevCount]));
-	}
-	{
-		const auto PrevCount = size(SecondaryCommandBuffers);
-		SecondaryCommandBuffers.resize(PrevCount + SCCount);
-		const VkCommandBufferAllocateInfo CBAI = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-			.pNext = nullptr,
-			.commandPool = SecondaryCommandPools[0],
-			.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY,
-			.commandBufferCount = SCCount
-		};
-		VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &SecondaryCommandBuffers[PrevCount]));
-	}
-	LOG_OK();
+	SecondaryCommandBuffers.resize(size(SwapchainImages));
+	const VkCommandBufferAllocateInfo CBAI = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		.pNext = nullptr,
+		.commandPool = SecondaryCommandPools[0],
+		.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+		.commandBufferCount = static_cast<uint32_t>(size(SecondaryCommandBuffers))
+	};
+	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, data(SecondaryCommandBuffers)));
+}
+void VK::AllocateComputeCommandBuffer()
+{
+	//!< キューファミリが同じ場合は必ずしも別プールにする必要はない、ファミリが異なる場合や別スレッドで使用したい場合には別プールとすること
+	const VkCommandPoolCreateInfo CPCI = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+		.pNext = nullptr,
+		.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+		.queueFamilyIndex = ComputeQueueFamilyIndex
+	};
+	VERIFY_SUCCEEDED(vkCreateCommandPool(Device, &CPCI, GetAllocationCallbacks(), &ComputeCommandPools.emplace_back()));
+
+	const VkCommandBufferAllocateInfo CBAI = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		.pNext = nullptr,
+		.commandPool = ComputeCommandPools[0],
+		.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+		.commandBufferCount = 1
+	};
+	VERIFY_SUCCEEDED(vkAllocateCommandBuffers(Device, &CBAI, &ComputeCommandBuffers.emplace_back()));
 }
 
 VkSurfaceFormatKHR VK::SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Sfc)
@@ -1954,42 +2007,6 @@ void VK::CreatePipeline__(VkPipeline& PL,
 	LOG_OK();
 }
 
-void VK::Draw()
-{
-	WaitForFence();
-
-	//!< 次のイメージが取得できるまでブロック(タイムアウトは指定可能)、取得できたからといってイメージは直ぐに目的に使用可能とは限らない
-	//!< (引数で指定した場合)使用可能になるとフェンスやセマフォがシグナルされる
-	//!< ここではセマフォを指定し、このセマフォはサブミット時に使用する(サブミットしたコマンドがプレゼンテーションを待つように指示している)
-	//!<	VK_SUBOPTIMAL_KHR : イメージは使用可能ではあるがプレゼンテーションエンジンにとってベストではない状態
-	//!<	VK_ERROR_OUT_OF_DATE_KHR : イメージは使用不可で再作成が必要
-	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, NextImageAcquiredSemaphore, VK_NULL_HANDLE, &SwapchainImageIndex));
-
-	DrawFrame(GetCurrentBackBufferIndex());
-	
-	Submit();
-	
-	Present();
-}
-void VK::Dispatch()
-{
-	//!< (Fenceを指定して)サブミットしたコマンドが完了するまでブロッキングして待つ
-	const std::array Fences = { ComputeFence };
-	VERIFY_SUCCEEDED(vkWaitForFences(Device, static_cast<uint32_t>(size(Fences)), data(Fences), VK_TRUE, (std::numeric_limits<uint64_t>::max)()));
-	vkResetFences(Device, static_cast<uint32_t>(size(Fences)), data(Fences));
-
-	const auto& CB = CommandBuffers[0];
-	const std::array SIs = {
-		VkSubmitInfo({
-			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			.pNext = nullptr,
-			.waitSemaphoreCount = 0, .pWaitSemaphores = nullptr, .pWaitDstStageMask = nullptr,
-			.commandBufferCount = 1, .pCommandBuffers = &CB/*ComputeCommandBuffers[0]*/,
-			.signalSemaphoreCount = 0, .pSignalSemaphores = nullptr,
-		}),
-	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(ComputeQueue, static_cast<uint32_t>(size(SIs)), data(SIs), ComputeFence));
-}
 void VK::WaitForFence()
 {
 	//!< サブミットしたコマンドの完了を待つ
@@ -2000,7 +2017,7 @@ void VK::WaitForFence()
 void VK::Submit()
 {
 	//!< コマンドは指定のパイプラインステージに到達するまで実行され、そこでセマフォがシグナルされるまで待つ
-	const std::array WaitSems = { NextImageAcquiredSemaphore };
+	const std::array WaitSems = { NextImageAcquiredSemaphore/*, ComputeSemaphore*/ };
 	const std::array WaitStages = { VkPipelineStageFlags(VK_PIPELINE_STAGE_TRANSFER_BIT) };
 	assert(size(WaitSems) == size(WaitStages) && "Must be same size");
 	//!< 実行するコマンドバッファ
@@ -2020,6 +2037,7 @@ void VK::Submit()
 }
 void VK::Present()
 {
+	const std::array WaitSems = { RenderFinishedSemaphore };
 	//!< 同時に複数のプレゼントが可能だが、1つのスワップチェインからは1つのみ
 	const std::array Swapchains = { Swapchain };
 	const std::array ImageIndices = { GetCurrentBackBufferIndex() };
@@ -2029,9 +2047,49 @@ void VK::Present()
 	const VkPresentInfoKHR PresentInfo = {
 		.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 		.pNext = nullptr,
-		.waitSemaphoreCount = 1, .pWaitSemaphores = &RenderFinishedSemaphore,
+		.waitSemaphoreCount = static_cast<uint32_t>(size(WaitSems)), .pWaitSemaphores = data(WaitSems),
 		.swapchainCount = static_cast<uint32_t>(size(Swapchains)), .pSwapchains = data(Swapchains), .pImageIndices = data(ImageIndices),
 		.pResults = nullptr
 	};
 	VERIFY_SUCCEEDED(vkQueuePresentKHR(PresentQueue, &PresentInfo));
+}
+void VK::Draw()
+{
+	WaitForFence();
+
+	//!< 次のイメージが取得できるまでブロック(タイムアウトは指定可能)、取得できたからといってイメージは直ぐに目的に使用可能とは限らない
+	//!< 使用可能になるとフェンスやセマフォがシグナルされる (シグナルするように指定した場合)
+	//!< ここではセマフォを指定し、このセマフォはサブミット時に使用する(サブミットしたコマンドがプレゼンテーションを待つように指示している)
+	//!<	VK_SUBOPTIMAL_KHR : イメージは使用可能ではあるがプレゼンテーションエンジンにとってベストではない状態
+	//!<	VK_ERROR_OUT_OF_DATE_KHR : イメージは使用不可で再作成が必要
+	VERIFY_SUCCEEDED(vkAcquireNextImageKHR(Device, Swapchain, UINT64_MAX, NextImageAcquiredSemaphore, VK_NULL_HANDLE, &SwapchainImageIndex));
+
+	DrawFrame(GetCurrentBackBufferIndex());
+	
+	Submit();
+	
+	Present();
+}
+void VK::Dispatch()
+{
+	//!< WaitForFence
+	const std::array Fences = { ComputeFence };
+	VERIFY_SUCCEEDED(vkWaitForFences(Device, static_cast<uint32_t>(size(Fences)), data(Fences), VK_TRUE, (std::numeric_limits<uint64_t>::max)()));
+	vkResetFences(Device, static_cast<uint32_t>(size(Fences)), data(Fences));
+
+	//!< Submit
+	constexpr std::array<VkSemaphore, 0> WaitSems = { };
+	constexpr std::array<VkPipelineStageFlags, 0> WaitStages = { };
+	const std::array CBs = { ComputeCommandBuffers[0] };
+	const std::array SigSems = { ComputeSemaphore };
+	const std::array SIs = {
+		VkSubmitInfo({
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.pNext = nullptr,
+			.waitSemaphoreCount = static_cast<uint32_t>(size(WaitSems)), .pWaitSemaphores = data(WaitSems), .pWaitDstStageMask = data(WaitStages),
+			.commandBufferCount = static_cast<uint32_t>(size(CBs)), .pCommandBuffers = data(CBs),
+			.signalSemaphoreCount = static_cast<uint32_t>(size(SigSems)), .pSignalSemaphores = data(SigSems),
+		}),
+	};
+	VERIFY_SUCCEEDED(vkQueueSubmit(ComputeQueue, static_cast<uint32_t>(size(SIs)), data(SIs), ComputeFence));
 }

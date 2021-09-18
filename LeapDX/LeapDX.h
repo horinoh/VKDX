@@ -15,8 +15,7 @@ public:
 	virtual ~LeapDX() {}
 
 protected:
-	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
-		Super::OnTimer(hWnd, hInstance);
+	virtual void DrawFrame(const UINT Index) override {
 #ifdef USE_LEAP
 		InterpolatedTrackingEvent();
 #else
@@ -27,18 +26,17 @@ protected:
 		}
 		for (auto i = 0; i < 5; ++i) {
 			for (auto j = 0; j < 4; ++j) {
-				DirectX::XMStoreFloat4(&Tracking.Hands[1][i][j], DirectX::XMVectorSet(- i * 0.2f - 0.1f, 0.5f, (j + 1) * 0.2f - 0.5f, 1.0f));
+				DirectX::XMStoreFloat4(&Tracking.Hands[1][i][j], DirectX::XMVectorSet(-i * 0.2f - 0.1f, 0.5f, (j + 1) * 0.2f - 0.5f, 1.0f));
 			}
 		}
 #endif
 #pragma region CB
-		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[GetCurrentBackBufferIndex()].Resource), RoundUp256(sizeof(Tracking)), &Tracking);
+		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[Index].Resource), RoundUp256(sizeof(Tracking)), &Tracking);
 #pragma endregion
 	}
-
 	virtual void CreateGeometry() override {
 		constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(CommandAllocators[0]), COM_PTR_GET(GraphicsCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DA), &DA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DA), &DA);
 	}
 #pragma region CB
 	virtual void CreateConstantBuffer() override {
@@ -174,7 +172,7 @@ protected:
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
 
-		const auto BGCL = COM_PTR_GET(BundleGraphicsCommandLists[i]);
+		const auto BGCL = COM_PTR_GET(BundleCommandLists[i]);
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
 		{
@@ -183,8 +181,8 @@ protected:
 		}
 		VERIFY_SUCCEEDED(BGCL->Close());
 
-		const auto GCL = COM_PTR_GET(GraphicsCommandLists[i]);
-		const auto CA = COM_PTR_GET(CommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
 		{
 			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
@@ -241,8 +239,8 @@ protected:
 	}
 	virtual void UpdateLeapImage() override {
 		if (!empty(Textures)) {
-			const auto CA = COM_PTR_GET(CommandAllocators[0]);
-			const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
+			const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 			{
 				const auto RD = Textures[0].Resource->GetDesc();
 				const auto Layers = RD.DepthOrArraySize;
@@ -282,8 +280,8 @@ protected:
 	}
 	virtual void UpdateDistortionImage() override {
 		if (size(Textures) > 1) {
-			const auto CA = COM_PTR_GET(CommandAllocators[0]);
-			const auto GCL = COM_PTR_GET(GraphicsCommandLists[0]);
+			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
+			const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 			{
 				const auto RD = Textures[1].Resource->GetDesc();
 				const auto Layers = RD.DepthOrArraySize;
