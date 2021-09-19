@@ -66,11 +66,9 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< デスクリプタ
 	CreateDescriptor();
+
 	CreateShaderBindingTable();
 
-	SetTimer(hWnd, NULL, Elapse, nullptr);
-
-	//!< ウインドウサイズ変更時に作り直すもの
 	OnExitSizeMove(hWnd, hInstance);
 }
 
@@ -226,8 +224,8 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	if (VK_NULL_HANDLE != NextImageAcquiredSemaphore) [[likely]] {
 		vkDestroySemaphore(Device, NextImageAcquiredSemaphore, GetAllocationCallbacks());
 	}
-	if (VK_NULL_HANDLE != Fence) [[likely]] {
-		vkDestroyFence(Device, Fence, GetAllocationCallbacks());
+	if (VK_NULL_HANDLE != GraphicsFence) [[likely]] {
+		vkDestroyFence(Device, GraphicsFence, GetAllocationCallbacks());
 	}
 	if (VK_NULL_HANDLE != ComputeFence) [[likely]] {
 		vkDestroyFence(Device, ComputeFence, GetAllocationCallbacks());
@@ -998,7 +996,7 @@ void VK::CreateFence(VkDevice Dev)
 	//!< サブミット(vkQueueSubmit) に使用し、Draw()やDispatch()の頭でシグナル(サブミットされたコマンドの完了)を待つ (Used when submit, and wait signal on top of Draw())
 	//!< 初回と２回目以降を同じに扱う為に、シグナル済み状態(VK_FENCE_CREATE_SIGNALED_BIT)で作成している (Create with signaled state, to do same operation on first time and second time)
 	constexpr VkFenceCreateInfo FCI = { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, .pNext = nullptr, .flags = VK_FENCE_CREATE_SIGNALED_BIT };
-	VERIFY_SUCCEEDED(vkCreateFence(Dev, &FCI, GetAllocationCallbacks(), &Fence));
+	VERIFY_SUCCEEDED(vkCreateFence(Dev, &FCI, GetAllocationCallbacks(), &GraphicsFence));
 	VERIFY_SUCCEEDED(vkCreateFence(Dev, &FCI, GetAllocationCallbacks(), &ComputeFence));
 #pragma endregion
 
@@ -2007,21 +2005,20 @@ void VK::CreatePipeline__(VkPipeline& PL,
 	LOG_OK();
 }
 
-void VK::WaitForFence()
+void VK::WaitForFence(VkDevice Device, VkFence Fence)
 {
-	//!< サブミットしたコマンドの完了を待つ
 	const std::array Fences = { Fence };
 	VERIFY_SUCCEEDED(vkWaitForFences(Device, static_cast<uint32_t>(size(Fences)), data(Fences), VK_TRUE, (std::numeric_limits<uint64_t>::max)()));
 	vkResetFences(Device, static_cast<uint32_t>(size(Fences)), data(Fences));
 }
-void VK::Submit()
+void VK::SubmitGrapphics(const uint32_t i)
 {
 	//!< コマンドは指定のパイプラインステージに到達するまで実行され、そこでセマフォがシグナルされるまで待つ
 	const std::array WaitSems = { NextImageAcquiredSemaphore/*, ComputeSemaphore*/ };
 	const std::array WaitStages = { VkPipelineStageFlags(VK_PIPELINE_STAGE_TRANSFER_BIT) };
 	assert(size(WaitSems) == size(WaitStages) && "Must be same size");
 	//!< 実行するコマンドバッファ
-	const std::array CBs = { CommandBuffers[GetCurrentBackBufferIndex()], };
+	const std::array CBs = { CommandBuffers[i], };
 	//!< 完了時にシグナルされるセマフォ(RenderFinishedSemaphore)
 	const std::array SigSems = { RenderFinishedSemaphore };
 	const std::array SIs = {
@@ -2033,7 +2030,24 @@ void VK::Submit()
 			.signalSemaphoreCount = static_cast<uint32_t>(size(SigSems)), .pSignalSemaphores = data(SigSems) //!< 描画完了を通知する
 		}),
 	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(size(SIs)), data(SIs), Fence));
+	VERIFY_SUCCEEDED(vkQueueSubmit(GraphicsQueue, static_cast<uint32_t>(size(SIs)), data(SIs), GraphicsFence));
+}
+void VK::SubmitCompute(const uint32_t i)
+{
+	constexpr std::array<VkSemaphore, 0> WaitSems = { };
+	constexpr std::array<VkPipelineStageFlags, 0> WaitStages = { };
+	const std::array CBs = { ComputeCommandBuffers[i] };
+	const std::array SigSems = { ComputeSemaphore };
+	const std::array SIs = {
+		VkSubmitInfo({
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.pNext = nullptr,
+			.waitSemaphoreCount = static_cast<uint32_t>(size(WaitSems)), .pWaitSemaphores = data(WaitSems), .pWaitDstStageMask = data(WaitStages),
+			.commandBufferCount = static_cast<uint32_t>(size(CBs)), .pCommandBuffers = data(CBs),
+			.signalSemaphoreCount = static_cast<uint32_t>(size(SigSems)), .pSignalSemaphores = data(SigSems),
+		}),
+	};
+	VERIFY_SUCCEEDED(vkQueueSubmit(ComputeQueue, static_cast<uint32_t>(size(SIs)), data(SIs), ComputeFence));
 }
 void VK::Present()
 {
@@ -2055,7 +2069,7 @@ void VK::Present()
 }
 void VK::Draw()
 {
-	WaitForFence();
+	WaitForFence(Device, GraphicsFence);
 
 	//!< 次のイメージが取得できるまでブロック(タイムアウトは指定可能)、取得できたからといってイメージは直ぐに目的に使用可能とは限らない
 	//!< 使用可能になるとフェンスやセマフォがシグナルされる (シグナルするように指定した場合)
@@ -2066,30 +2080,13 @@ void VK::Draw()
 
 	DrawFrame(GetCurrentBackBufferIndex());
 	
-	Submit();
+	SubmitGrapphics(GetCurrentBackBufferIndex());
 	
 	Present();
 }
 void VK::Dispatch()
 {
-	//!< WaitForFence
-	const std::array Fences = { ComputeFence };
-	VERIFY_SUCCEEDED(vkWaitForFences(Device, static_cast<uint32_t>(size(Fences)), data(Fences), VK_TRUE, (std::numeric_limits<uint64_t>::max)()));
-	vkResetFences(Device, static_cast<uint32_t>(size(Fences)), data(Fences));
+	WaitForFence(Device, ComputeFence);
 
-	//!< Submit
-	constexpr std::array<VkSemaphore, 0> WaitSems = { };
-	constexpr std::array<VkPipelineStageFlags, 0> WaitStages = { };
-	const std::array CBs = { ComputeCommandBuffers[0] };
-	const std::array SigSems = { ComputeSemaphore };
-	const std::array SIs = {
-		VkSubmitInfo({
-			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-			.pNext = nullptr,
-			.waitSemaphoreCount = static_cast<uint32_t>(size(WaitSems)), .pWaitSemaphores = data(WaitSems), .pWaitDstStageMask = data(WaitStages),
-			.commandBufferCount = static_cast<uint32_t>(size(CBs)), .pCommandBuffers = data(CBs),
-			.signalSemaphoreCount = static_cast<uint32_t>(size(SigSems)), .pSignalSemaphores = data(SigSems),
-		}),
-	};
-	VERIFY_SUCCEEDED(vkQueueSubmit(ComputeQueue, static_cast<uint32_t>(size(SIs)), data(SIs), ComputeFence));
+	SubmitCompute(0);
 }

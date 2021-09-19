@@ -80,7 +80,7 @@ public:
 			//!< (コンパクションサイズを取得できるように)引数指定して (一時)BLAS を作成
 			BLAS Tmp;
 			Tmp.Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes)
-				.ExecuteBuildCommand(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI_Blas, GCL, CA, GCQ, COM_PTR_GET(Fence), &Compaction);
+				.ExecuteBuildCommand(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI_Blas, GCL, CA, GCQ, COM_PTR_GET(GraphicsFence), &Compaction);
 
 			//!< コンパクションサイズを取得
 			const UINT64 CompactedSizeInBytes = Compaction.GetSize();
@@ -89,10 +89,7 @@ public:
 			//!< コンパクションサイズで (正規)BLAS を作成する (コピーするのでビルドはしないよ)
 			BLASs.emplace_back().Create(COM_PTR_GET(Device), CompactedSizeInBytes)
 				//!< 一時BLAS -> 正規BLAS コピーコマンドを発行する 
-				.ExecuteCopyCommand(GCL, CA, GCQ, COM_PTR_GET(Fence), COM_PTR_GET(Tmp.Resource));
-
-			//!< AS作成、ビルド (Create and build AS)
-			//BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes).ExecuteBuildCommand(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI_Blas, GCL, CA, GCQ, COM_PTR_GET(Fence));
+				.ExecuteCopyCommand(GCL, CA, GCQ, COM_PTR_GET(GraphicsFence), COM_PTR_GET(Tmp.Resource));
 #else
 			//!< AS、スクラッチ作成 (Create AS and scratch)
 			BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
@@ -135,7 +132,7 @@ public:
 
 #ifdef USE_BLAS_COMPACTION
 			//!< AS作成、ビルド (Create and build AS)
-			TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes).ExecuteBuildCommand(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI_Tlas, GCL, CA, GCQ, COM_PTR_GET(Fence));
+			TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes).ExecuteBuildCommand(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI_Tlas, GCL, CA, GCQ, COM_PTR_GET(GraphicsFence));
 #else
 			//!< AS、スクラッチ作成 (Create AS and scratch)
 			TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
@@ -151,7 +148,7 @@ public:
 			BLASs.back().PopulateBarrierCommand(GCL);
 			TLASs.back().PopulateBuildCommand(BRASI_Tlas, GCL, COM_PTR_GET(Scratch_Tlas.Resource));
 		} VERIFY_SUCCEEDED(GCL->Close());
-		DX::ExecuteAndWait(GCQ, static_cast<ID3D12CommandList*>(GCL), COM_PTR_GET(Fence));
+		DX::ExecuteAndWait(GCQ, static_cast<ID3D12CommandList*>(GCL), COM_PTR_GET(GraphicsFence));
 #endif
 	}
 	virtual void CreatePipelineState() override {
@@ -263,7 +260,7 @@ public:
 			.CallableShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0}),
 			.Width = static_cast<UINT>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()), .Depth = 1
 		});
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DRD).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DRD), &DRD);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DRD).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), sizeof(DRD), &DRD);
 #endif
 	}
 	virtual void PopulateCommandList(const size_t i) override {

@@ -786,8 +786,9 @@ public:
 	virtual UINT GetCurrentBackBufferIndex() const { return SwapChain->GetCurrentBackBufferIndex(); }
 	virtual void DrawFrame([[maybe_unused]] const UINT i) {}
 	static void WaitForFence(ID3D12CommandQueue* CQ, ID3D12Fence* Fence);
-	virtual void Submit();
-	virtual void Present(); 
+	virtual void SubmitGraphics(const UINT i);
+	virtual void SubmitCompute(const UINT i);
+	virtual void Present();
 	virtual void Draw();
 	virtual void Dispatch();
 	
@@ -806,8 +807,14 @@ protected:
 	COM_PTR<ID3D12CommandQueue> GraphicsCommandQueue;
 	COM_PTR<ID3D12CommandQueue> ComputeCommandQueue;
 
-	COM_PTR<ID3D12Fence> Fence;
-	UINT64 FenceValue = 0;
+	/**
+	フェンス		... デバイスとホスト(GPUとCPU)の同期、コマンドバッファ間の同期
+	セマフォ		... 存在しない、フェンスで代用 ... VKには存在
+	バリア		... コマンドバッファ内の同期
+	イベント		... 存在しない ... VKには存在
+	*/
+	COM_PTR<ID3D12Fence> GraphicsFence;
+	COM_PTR<ID3D12Fence> ComputeFence;
 
 	COM_PTR<IDXGISwapChain4> SwapChain;
 	std::vector<COM_PTR<ID3D12Resource>> SwapChainResources;
@@ -825,6 +832,7 @@ protected:
 	std::vector<IndexBuffer> IndexBuffers;
 	std::vector<IndirectBuffer> IndirectBuffers;
 	std::vector<ConstantBuffer> ConstantBuffers;
+
 #pragma region RAYTRACING
 	std::vector<BLAS> BLASs;
 	std::vector<TLAS> TLASs;

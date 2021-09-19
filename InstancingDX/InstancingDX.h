@@ -56,7 +56,7 @@ protected:
 			IndexBuffers.back().PopulateCopyCommand(GCL, sizeof(Indices), COM_PTR_GET(Upload_Index.Resource));
 			IndirectBuffers.back().PopulateCopyCommand(GCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
 		} VERIFY_SUCCEEDED(GCL->Close());
-		DX::ExecuteAndWait(GCQ, GCL, COM_PTR_GET(Fence));
+		DX::ExecuteAndWait(GCQ, GCL, COM_PTR_GET(GraphicsFence));
 
 		LOG_OK();
 	}

@@ -63,15 +63,6 @@ public:
 	}
 #pragma endregion
 
-#ifdef USE_RENDERDOC
-	virtual void CreateInstance([[maybe_unused]] const std::vector<const char*>& AdditionalLayers, const std::vector<const char*>& AdditionalExtensions) override {
-		//!< #TIPS　レイトレーシングやメッシュシェーダーと同時に "VK_LAYER_RENDERDOC_Capture" を使用した場合に vkCreateDevice() でコケていたので、用途によっては注意が必要
-		Super::CreateInstance({ "VK_LAYER_RENDERDOC_Capture" }, AdditionalExtensions);
-	}
-	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, [[maybe_unused]] const std::vector<const char*>& AdditionalExtensions) override {
-		Super::CreateDevice(hWnd, hInstance, pNext, { VK_EXT_DEBUG_MARKER_EXTENSION_NAME });
-	}
-#endif
 	virtual void CreateGeometry() override {
 		std::wstring Path;
 		if (FindDirectory("FBX", Path)) {

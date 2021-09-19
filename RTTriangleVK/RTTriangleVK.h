@@ -109,8 +109,6 @@ public:
 				Tmp.Destroy(Device);
 				vkDestroyQueryPool(Device, QueryPool, GetAllocationCallbacks());
 			}
-			//!< AS作成、ビルド (Create and build AS)
-			//BLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBSI.buildScratchSize, ASBGI_Blas, ASBRI_Blas, GraphicsQueue, CB);
 #else
 			//!< AS、スクラッチ作成 (Create AS and scratch)
 			BLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize);

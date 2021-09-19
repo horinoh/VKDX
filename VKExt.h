@@ -12,6 +12,21 @@ public:
 	using Vertex_PositionNormal = struct Vertex_PositionNormal { glm::vec3 Position; glm::vec3 Normal; };
 	using Instance_OffsetXY = struct Instance_OffsetXY { glm::vec2 Offset; };
 
+protected:
+#ifdef USE_RENDERDOC
+	virtual void CreateInstance([[maybe_unused]] const std::vector<const char*>& AdditionalLayers, const std::vector<const char*>& AdditionalExtensions) override {
+		//!< #TIPS "VK_LAYER_RENDERDOC_Capture" を使用すると、メッシュシェーダーやレイトレーシングと同時に使用した場合、vkCreateDevice() でコケるようになるので注意 (If we use "VK_LAYER_RENDERDOC_Capture" with mesh shader or raytracing, vkCreateDevice() failed)
+		std::vector  ALs(AdditionalLayers);
+		ALs.emplace_back("VK_LAYER_RENDERDOC_Capture");
+		Super::CreateInstance(ALs, AdditionalExtensions);
+	}
+	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, [[maybe_unused]] const std::vector<const char*>& AdditionalExtensions) override {
+		std::vector AEs(AdditionalExtensions);
+		AEs.emplace_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+		Super::CreateDevice(hWnd, hInstance, pNext, AEs);
+	}
+#endif
+
 	void CreateRenderPass_Clear();
 	void CreateRenderPass_Depth();
 

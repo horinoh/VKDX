@@ -55,11 +55,9 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	//!< デスクリプタ
 	CreateDescriptor();
+
 	CreateShaderTable();
 
-	SetTimer(hWnd, NULL, Elapse, nullptr);
-
-	//!< ウインドウサイズ変更時に作り直すもの
 	OnExitSizeMove(hWnd, hInstance);
 }
 
@@ -76,7 +74,7 @@ void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 	Super::OnExitSizeMove(hWnd, hInstance);
 
 	//!< コマンドリストの完了を待つ
-	WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence));
+	WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence));
 
 	const auto W = GetClientRectWidth(), H = GetClientRectHeight();
 
@@ -114,7 +112,7 @@ void DX::OnPreDestroy(HWND hWnd, HINSTANCE hInstance)
 	}
 
 	//!< GPUが完了するまでここで待機 (Wait GPU)
-	WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence));
+	WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence));
 }
 
 const char* DX::GetFormatChar(const DXGI_FORMAT Format)
@@ -531,7 +529,8 @@ void DX::CreateCommandQueue()
 //!< CPU と GPU の同期用
 void DX::CreateFence()
 {
-	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, COM_PTR_UUIDOF_PUTVOID(Fence)));
+	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, COM_PTR_UUIDOF_PUTVOID(GraphicsFence)));
+	VERIFY_SUCCEEDED(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, COM_PTR_UUIDOF_PUTVOID(ComputeFence)));
 	LOG_OK();
 }
 
@@ -1212,7 +1211,7 @@ void DX::CreateTextureArray1x1(const std::vector<UINT32>& Colors, const D3D12_RE
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 			PopulateCopyTextureRegionCommand(GCL, COM_PTR_GET(Upload.Resource), COM_PTR_GET(Textures.back().Resource), PSFs, RS);
 		} VERIFY_SUCCEEDED(GCL->Close());
-		DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), GCL, COM_PTR_GET(Fence));
+		DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), GCL, COM_PTR_GET(GraphicsFence));
 	}
 }
 void DX::WaitForFence(ID3D12CommandQueue* CQ, ID3D12Fence* Fence)
@@ -1226,16 +1225,21 @@ void DX::WaitForFence(ID3D12CommandQueue* CQ, ID3D12Fence* Fence)
 		if (nullptr != hEvent) [[likely]] {
 			//!< GetCompletedValue() が FenceValue になったらイベントが発行されるようにする
 			VERIFY_SUCCEEDED(Fence->SetEventOnCompletion(Value, hEvent));
-		//!< イベント発行まで待つ
-		WaitForSingleObject(hEvent, INFINITE);
-		CloseHandle(hEvent);
+			//!< イベント発行まで待つ
+			WaitForSingleObject(hEvent, INFINITE);
+			CloseHandle(hEvent);
 		}
 	}
 }
-void DX::Submit()
+void DX::SubmitGraphics(const UINT i)
 {
-	const std::array CLs = { static_cast<ID3D12CommandList*>(COM_PTR_GET(DirectCommandLists[GetCurrentBackBufferIndex()])) };
+	const std::array CLs = { static_cast<ID3D12CommandList*>(COM_PTR_GET(DirectCommandLists[i])) };
 	GraphicsCommandQueue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
+}
+void DX::SubmitCompute(const UINT i)
+{
+	const std::array CLs = { static_cast<ID3D12CommandList*>(COM_PTR_GET(ComputeCommandLists[i])) };
+	ComputeCommandQueue->ExecuteCommandLists(static_cast<UINT>(size(CLs)), data(CLs));
 }
 void DX::Present()
 {
@@ -1243,18 +1247,22 @@ void DX::Present()
 }
 void DX::Draw()
 {
-	WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence));
+	WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence));
 
 	DrawFrame(GetCurrentBackBufferIndex());
 
-	Submit();
+	SubmitGraphics(GetCurrentBackBufferIndex());
 	
 	Present();
 }
 void DX::Dispatch()
 {
-	//!< #DX_TODO Dispatch実装
-	DEBUG_BREAK();
+	//!< WaitForFence
+	WaitForFence(COM_PTR_GET(ComputeCommandQueue), COM_PTR_GET(ComputeFence));
+
+	//!< Submit
+	SubmitCompute(0);
 }
+
 
 

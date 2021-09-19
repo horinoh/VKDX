@@ -713,12 +713,12 @@ public:
 #endif
 	}
 	static void MarkerSetTag(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const uint64_t TagName, const std::vector<std::byte>& TagData) { MarkerSetTag(Device, Type, Object, TagName, size(TagData), data(TagData)); }
-#pragma endregion
 #pragma region MARKER_TEMPLATE
 	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::string_view Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
 	template<typename T> static void MarkerSetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* TagData) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
 	//!< ↓ここでテンプレート特殊化している (Template specialization here)
 #include "VKDebugMarker.inl"
+#pragma endregion
 #pragma endregion
 
 protected:
@@ -978,9 +978,10 @@ protected:
 
 	virtual uint32_t GetCurrentBackBufferIndex() const { return SwapchainImageIndex; }
 	virtual void DrawFrame([[maybe_unused]] const uint32_t i) {}
-	virtual void WaitForFence();
-	virtual void Submit();
-	virtual void Present(); 
+	static void WaitForFence(VkDevice Device, VkFence Fence);
+	virtual void SubmitGrapphics(const uint32_t i);
+	virtual void SubmitCompute(const uint32_t i);
+	virtual void Present();
 	virtual void Draw();
 	virtual void Dispatch();
 	
@@ -1060,11 +1061,12 @@ protected:
 	/**
 	フェンス		... デバイスとホスト(GPUとCPU)の同期
 	セマフォ		... コマンドバッファ間の同期 (異なるキューファミリでもよい) ... DXには存在せずフェンスで代用
-	イベント		... コマンドバッファ間の同期 (同一キューファミリであること) ... DXには存在しない
 	バリア		... コマンドバッファ内の同期
+	イベント		... コマンドバッファ間の同期 (同一キューファミリであること) ... DXには存在しない
 	*/
-	VkFence Fence = VK_NULL_HANDLE;
+	VkFence GraphicsFence = VK_NULL_HANDLE;
 	VkFence ComputeFence = VK_NULL_HANDLE;
+
 	VkSemaphore NextImageAcquiredSemaphore = VK_NULL_HANDLE;	//!< プレゼント完了までウエイト
 	VkSemaphore RenderFinishedSemaphore = VK_NULL_HANDLE;		//!< 描画完了するまでウエイト
 	VkSemaphore ComputeSemaphore = VK_NULL_HANDLE;

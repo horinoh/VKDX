@@ -76,6 +76,8 @@ void Win::OnCreate(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance, LPCWSTR Titl
 	SetTitleW(Title);
 
 	GetClientRect(hWnd, &Rect);
+
+	SetTimer(hWnd, NULL, Elapse, nullptr);
 }
 void Win::OnExitSizeMove(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance)
 {

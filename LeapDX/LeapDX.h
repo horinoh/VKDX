@@ -36,7 +36,7 @@ protected:
 	}
 	virtual void CreateGeometry() override {
 		constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(Fence), sizeof(DA), &DA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), sizeof(DA), &DA);
 	}
 #pragma region CB
 	virtual void CreateConstantBuffer() override {
@@ -274,7 +274,7 @@ protected:
 				VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 					PopulateCopyTextureRegionCommand(GCL, COM_PTR_GET(Upload.Resource), COM_PTR_GET(Textures[0].Resource), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 				} VERIFY_SUCCEEDED(GCL->Close());
-				DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), GCL, COM_PTR_GET(Fence));
+				DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), GCL, COM_PTR_GET(GraphicsFence));
 			}
 		}
 	}
@@ -313,7 +313,7 @@ protected:
 				VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 					PopulateCopyTextureRegionCommand(GCL, COM_PTR_GET(Upload.Resource), COM_PTR_GET(Textures[1].Resource), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 				} VERIFY_SUCCEEDED(GCL->Close());
-				DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), GCL, COM_PTR_GET(Fence));
+				DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), GCL, COM_PTR_GET(GraphicsFence));
 			}
 		}
 	}

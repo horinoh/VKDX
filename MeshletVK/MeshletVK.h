@@ -13,6 +13,10 @@ public:
 	MeshletVK() : Super() {}
 	virtual ~MeshletVK() {}
 
+	virtual void CreateInstance([[maybe_unused]] const std::vector<const char*>& AdditionalLayers, const std::vector<const char*>& AdditionalExtensions) override {
+		//!< VK_LAYER_RENDERDOC_Capture ‚ðŽg—p‚µ‚È‚¢
+		VK::CreateInstance(AdditionalLayers, AdditionalExtensions);
+	}
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext, [[maybe_unused]] const std::vector<const char*>& AddExtensions) override {
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
 			VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr, .taskShader = VK_TRUE, .meshShader = VK_TRUE, };
@@ -21,7 +25,7 @@ public:
 				});
 		}
 		else {
-			Super::CreateDevice(hWnd, hInstance);
+			Super::CreateDevice(hWnd, hInstance, pNext, AddExtensions);
 		}
 	}
 	void CreateGeometry() override {

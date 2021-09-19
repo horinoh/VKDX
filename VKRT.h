@@ -7,7 +7,10 @@ class VKRT : public VKExt
 private:
 	using Super = VKExt;
 protected:
-	//!< #TIPS VKインスタンス作成時に "VK_LAYER_RENDERDOC_Capture" を使用すると、メッシュシェーダーやレイトレーシングと同時に使用した場合、vkCreateDevice() でコケるようになるので注意 (If we use "VK_LAYER_RENDERDOC_Capture" with mesh shader or raytracing, vkCreateDevice() failed)
+	virtual void CreateInstance([[maybe_unused]] const std::vector<const char*>& AdditionalLayers, const std::vector<const char*>& AdditionalExtensions) override {
+		//!< VK_LAYER_RENDERDOC_Capture を使用しない
+		VK::CreateInstance(AdditionalLayers, AdditionalExtensions);
+	}
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext, [[maybe_unused]] const std::vector<const char*>& AddExtensions) override {
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
 #ifdef _DEBUG
@@ -30,7 +33,7 @@ protected:
 				});
 		}
 		else {
-			Super::CreateDevice(hWnd, hInstance);
+			Super::CreateDevice(hWnd, hInstance, pNext, AddExtensions);
 		}
 	}
 	virtual void CreateSwapchain() override { VK::CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight(), VK_IMAGE_USAGE_TRANSFER_DST_BIT); }
