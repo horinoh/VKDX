@@ -524,7 +524,7 @@ $draco_decoder -i YYY.drc -o ZZZ.obj
  * Header Files に Win.h, VK.h, VKExt.h を追加
 	* 必要に応じて VKImage.h
  * Source Files に Win.cpp, VK.cpp, VKExt.cpp を追加
-	* 必要に応じて VKIMage.cpp
+	* 必要に応じて VKImage.cpp
  * XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
  * Shader Files フォルダを作成し、シェーダを突っ込む
   * 拡張子を glslangValidator に沿うようにしておく

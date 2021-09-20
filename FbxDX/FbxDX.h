@@ -11,10 +11,13 @@ class FbxDX : public DXExt, public Fbx
 private:
 	using Super = DXExt;
 public:
+	FbxDX() : Super() {}
+	virtual ~FbxDX() {}
+
+#pragma region FBX
 	std::vector<UINT32> Indices;
 	std::vector<DirectX::XMFLOAT3> Vertices;
 	std::vector<DirectX::XMFLOAT3> Normals;
-#pragma region FBX
 	DirectX::XMFLOAT3 ToFloat3(const FbxVector4& rhs) { return DirectX::XMFLOAT3(static_cast<FLOAT>(rhs[0]), static_cast<FLOAT>(rhs[1]), static_cast<FLOAT>(rhs[2])); }
 	virtual void Process(FbxMesh* Mesh) override {
 		Fbx::Process(Mesh);
@@ -60,8 +63,7 @@ public:
 	}
 #pragma endregion
 
-	FbxDX() : Super() {}
-	virtual ~FbxDX() {}
+	
 	virtual void CreateGeometry() override {
 		std::wstring Path;
 		if (FindDirectory("FBX", Path)) {
