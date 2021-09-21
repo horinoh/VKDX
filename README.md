@@ -123,6 +123,10 @@ $draco_encoder -i XXX.ply -o YYY.drc
 $draco_decoder -i YYY.drc -o ZZZ.obj
 """
 
+#### DirectXMesh
+* [DirectXMesh](https://github.com/microsoft/DirectXMesh.git)
+	* DirectXMesh_Desktop_2019_Win10.sln を開いて x64 Debug, Release をビルド
+
 #### LeapMotion
  * [SDK](https://developer.leapmotion.com/sdk-leap-motion-controller/) をダウンロードし解凍、ドライバをインストールしておく
  * LeapSDKを適当な場所へ配置

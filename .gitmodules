@@ -28,3 +28,6 @@
 [submodule "tinygltf"]
 	path = tinygltf
 	url = https://github.com/syoyo/tinygltf.git
+[submodule "DirectXMesh"]
+	path = DirectXMesh
+	url = https://github.com/microsoft/DirectXMesh.git
