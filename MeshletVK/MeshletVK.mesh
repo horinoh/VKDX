@@ -10,6 +10,7 @@ taskNV in Task {
 
 layout (location = 0) out vec3 OutColor[];
 
+//!< テセレーション数
 #define N 5
 #define NN (N * N)
 #define N1 (N - 1)

@@ -11,6 +11,7 @@ struct VERT_OUT
     float3 Color : COLOR;
 };
 
+//!< テセレーション数
 #define N 5
 #define NN (N * N)
 #define N1 (N - 1)

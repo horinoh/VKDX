@@ -15,10 +15,15 @@ public:
 	MeshletBuildDX() : Super() {}
 	virtual ~MeshletBuildDX() {}
 
+	DefaultStructuredBuffer VertexBuffer;
+	DefaultStructuredBuffer MeshletBuffer;
+	DefaultStructuredBuffer VertexIndexBuffer;
+	DefaultStructuredBuffer TriangleBuffer;
+
+#pragma region FBX
 	std::vector<UINT32> Indices;
 	std::vector<DirectX::XMFLOAT3> Vertices;
 	std::vector<DirectX::XMFLOAT3> Normals;
-#pragma region FBX
 	DirectX::XMFLOAT3 ToFloat3(const FbxVector4& rhs) { return DirectX::XMFLOAT3(static_cast<FLOAT>(rhs[0]), static_cast<FLOAT>(rhs[1]), static_cast<FLOAT>(rhs[2])); }
 	virtual void Process(FbxMesh* Mesh) override {
 		Fbx::Process(Mesh);
@@ -58,23 +63,51 @@ public:
 #pragma endregion
 
 	virtual void CreateGeometry() override {
-		std::wstring Path;
-		if (FindDirectory("FBX", Path)) {
-			Load(ToString(Path) + "//bunny4.FBX");
-		}
-
-		std::vector<DirectX::Meshlet> Meshlets;
-		std::vector<uint8_t> VertexIndices;
-		std::vector<DirectX::MeshletTriangle> Triangles;
-		VERIFY_SUCCEEDED(DirectX::ComputeMeshlets(data(Indices), size(Indices) / 3, data(Vertices), size(Vertices), nullptr, Meshlets, VertexIndices, Triangles));
-
 		if (HasMeshShaderSupport(COM_PTR_GET(Device))) {
 			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 			const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 			const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
+			
 			constexpr D3D12_DISPATCH_MESH_ARGUMENTS DMA = { .ThreadGroupCountX = 1, .ThreadGroupCountY = 1, .ThreadGroupCountZ = 1 };
 			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DMA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), sizeof(DMA), &DMA);
+
+			std::wstring Path;
+			if (FindDirectory("FBX", Path)) {
+				Load(ToString(Path) + "//bunny4.FBX");
+			}
+			std::vector<DirectX::Meshlet> Meshlets;
+			std::vector<uint8_t> VertexIndices;
+			std::vector<DirectX::MeshletTriangle> Triangles;
+			VERIFY_SUCCEEDED(DirectX::ComputeMeshlets(data(Indices), size(Indices) / 3, data(Vertices), size(Vertices), nullptr, Meshlets, VertexIndices, Triangles));
+
+
+			VertexBuffer.Create(COM_PTR_GET(Device), Sizeof(Vertices), sizeof(Vertices[0]))
+				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), Sizeof(Vertices), data(Vertices), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			MeshletBuffer.Create(COM_PTR_GET(Device), Sizeof(Meshlets), sizeof(Meshlets[0]))
+				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), Sizeof(Meshlets), data(Meshlets), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			VertexIndexBuffer.Create(COM_PTR_GET(Device), Sizeof(VertexIndices), sizeof(VertexIndices[0]))
+				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), Sizeof(VertexIndices), data(VertexIndices), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			TriangleBuffer.Create(COM_PTR_GET(Device), Sizeof(Triangles), sizeof(Triangles[0]))
+				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), Sizeof(Triangles), data(Triangles), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		}
+	}
+	virtual void CreateRootSignature() override {
+		COM_PTR<ID3DBlob> Blob;
+#ifdef USE_HLSL_ROOTSIGNATRUE
+		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".grs.cso")));
+#else
+		constexpr std::array DRs = {
+			D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 4, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
+		};
+		DX::SerializeRootSignature(Blob, {
+			D3D12_ROOT_PARAMETER({
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs)), .pDescriptorRanges = data(DRs) }),
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
+			}),
+		}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+#endif
+		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 	}
 	virtual void CreatePipelineState() override {
 		if (HasMeshShaderSupport(COM_PTR_GET(Device))) {
@@ -90,6 +123,29 @@ public:
 			};
 			CreatePipelineState_AsMsPs(FALSE, SBCs);
 		}
+	}
+	virtual void CreateDescriptor() override {
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 4, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
+
+		CbvSrvUavGPUHandles.emplace_back();
+		auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+		auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
+		const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		Device->CreateShaderResourceView(COM_PTR_GET(VertexBuffer.Resource), &VertexBuffer.SRV, CDH);
+		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		CDH.ptr += IncSize;
+		GDH.ptr += IncSize;
+		Device->CreateShaderResourceView(COM_PTR_GET(MeshletBuffer.Resource), &MeshletBuffer.SRV, CDH);
+		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		CDH.ptr += IncSize;
+		GDH.ptr += IncSize;
+		Device->CreateShaderResourceView(COM_PTR_GET(VertexIndexBuffer.Resource), &VertexIndexBuffer.SRV, CDH);
+		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		CDH.ptr += IncSize;
+		GDH.ptr += IncSize;
+		Device->CreateShaderResourceView(COM_PTR_GET(TriangleBuffer.Resource), &TriangleBuffer.SRV, CDH);
+		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 	}
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto HasMS = HasMeshShaderSupport(COM_PTR_GET(Device));
@@ -113,6 +169,15 @@ public:
 
 					const std::array CHs = { SwapChainCPUHandles[i] };
 					GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
+
+					{
+						const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
+						GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+						GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
+						GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[1]);
+						GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[2]);
+						GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[3]);
+					}
 
 					GCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 				}

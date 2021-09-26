@@ -118,24 +118,11 @@ public:
 	{
 	public:
 		COM_PTR<ID3D12Resource> Resource;
-		void Create(ID3D12Device* Device, const size_t Size, const D3D12_HEAP_TYPE HT, const void* Source = nullptr) {
+		ResourceBase& Create(ID3D12Device* Device, const size_t Size, const D3D12_HEAP_TYPE HT, const void* Source = nullptr) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, HT, D3D12_RESOURCE_STATE_GENERIC_READ, Source);
+			return *this;
 		}
-		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const size_t Size, ID3D12Resource* Upload) {
-			{
-				const std::array RBs = {
-					D3D12_RESOURCE_BARRIER({
-						.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-						.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
-							.pResource = COM_PTR_GET(Resource),
-							.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-							.StateBefore = D3D12_RESOURCE_STATE_GENERIC_READ, .StateAfter = D3D12_RESOURCE_STATE_COPY_DEST
-						})
-					})
-				};
-				GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-			}
+		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, const size_t Size, ID3D12Resource* Upload, const D3D12_RESOURCE_STATES RS = D3D12_RESOURCE_STATE_GENERIC_READ) {
 			GCL->CopyBufferRegion(COM_PTR_GET(Resource), 0, Upload, 0, Size);
 			{
 				const std::array RBs = {
@@ -145,18 +132,18 @@ public:
 						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
 							.pResource = COM_PTR_GET(Resource),
 							.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
-							.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST, .StateAfter = D3D12_RESOURCE_STATE_GENERIC_READ
+							.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST, .StateAfter = RS
 						})
 					})
 				};
 				GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 			}
 		}
-		void ExecuteCopyCommand(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const size_t Size, const void* Source) {
+		void ExecuteCopyCommand(ID3D12Device* Device, ID3D12CommandAllocator* CA, ID3D12GraphicsCommandList* GCL, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, const size_t Size, const void* Source, const D3D12_RESOURCE_STATES RS = D3D12_RESOURCE_STATE_GENERIC_READ) {
 			UploadResource Upload;
 			Upload.Create(Device, Size, Source);
 			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-				PopulateCopyCommand(GCL, Size, COM_PTR_GET(Upload.Resource));
+				PopulateCopyCommand(GCL, Size, COM_PTR_GET(Upload.Resource), RS);
 			} VERIFY_SUCCEEDED(GCL->Close());
 			DX::ExecuteAndWait(CQ, GCL, Fence);
 		}
@@ -166,14 +153,20 @@ public:
 	private:
 		using Super = ResourceBase;
 	public:
-		void Create(ID3D12Device* Device, const size_t Size) { DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_GENERIC_READ); }
+		DefaultResource& Create(ID3D12Device* Device, const size_t Size) {
+			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COPY_DEST);
+			return *this;
+		}
 	};
 	class UploadResource : public ResourceBase
 	{
 	private:
 		using Super = ResourceBase;
 	public:
-		void Create(ID3D12Device* Device, const size_t Size, const void* Source = nullptr) { DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source); }
+		UploadResource& Create(ID3D12Device* Device, const size_t Size, const void* Source = nullptr) { 
+			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ, Source); 
+			return *this;
+		}
 	};
 	class VertexBuffer : public DefaultResource
 	{
@@ -450,13 +443,35 @@ public:
 			return *this;
 		}
 	};
-	class StructuredBuffer : public UploadResource
+	class DefaultStructuredBuffer : public DefaultResource
+	{
+	private:
+		using Super = DefaultResource;
+	public:
+		D3D12_SHADER_RESOURCE_VIEW_DESC SRV;
+		DefaultStructuredBuffer& Create(ID3D12Device* Device, const size_t Size, const size_t Stride) {
+			Super::Create(Device, Size);
+			SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({
+				.Format = DXGI_FORMAT_UNKNOWN,
+				.ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
+				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+				.Buffer = D3D12_BUFFER_SRV({
+					.FirstElement = 0,
+					.NumElements = static_cast<UINT>(Size / Stride),
+					.StructureByteStride = static_cast<UINT>(Stride),
+					.Flags = D3D12_BUFFER_SRV_FLAG_NONE,
+				})
+			});
+			return *this;
+		}
+	};
+	class UploadStructuredBuffer : public UploadResource
 	{
 	private:
 		using Super = UploadResource;
 	public:
 		D3D12_SHADER_RESOURCE_VIEW_DESC SRV;
-		void Create(ID3D12Device* Device, const size_t Size, const size_t Stride, const void* Source) { 
+		UploadStructuredBuffer& Create(ID3D12Device* Device, const size_t Size, const size_t Stride, const void* Source) {
 			Super::Create(Device, Size, Source);
 			SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({
 				.Format = DXGI_FORMAT_UNKNOWN,
@@ -469,6 +484,7 @@ public:
 					.Flags = D3D12_BUFFER_SRV_FLAG_NONE,
 				})
 			});
+			return *this;
 		}
 	};
 	class ScratchBuffer : public ResourceBase

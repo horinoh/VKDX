@@ -126,6 +126,8 @@ $draco_decoder -i YYY.drc -o ZZZ.obj
 #### DirectXMesh
 * [DirectXMesh](https://github.com/microsoft/DirectXMesh.git)
 	* DirectXMesh_Desktop_2019_Win10.sln を開いて x64 Debug, Release をビルド
+	* meshconver を使う場合
+		* DirectXMesh_Desktop_2019_Win10 ではなくて、**DirectXMesh_Desktop_2019.sln** を開いてビルドしないと作られないので注意
 
 #### LeapMotion
  * [SDK](https://developer.leapmotion.com/sdk-leap-motion-controller/) をダウンロードし解凍、ドライバをインストールしておく
@@ -507,7 +509,7 @@ $draco_decoder -i YYY.drc -o ZZZ.obj
 	* 右クリック - Manage NuGet Packages - Browse - WinPixEventRuntimeで検索 - インストール
  * プロパティマネージャで Add Existing Property Sheet... - Props/DX_DEBUG.props, DX_RELEASE.props
  	* 必要に応じて Props/DX_DEBUG_TEX.prop, Props/DX_RELEASE_TEX.prop
-	* 必要に応じて Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop, Props/FBX.prop, Props/DRACO.prop
+	* 必要に応じて Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop, Props/FBX.prop, Props/DRACO.prop, Prop/DXMESH.prop
  * Header Files に Win.h, DX.h, DXExt.h を追加 
 	* 必要に応じて DXImage.h 
  * Source Files に Win.cpp, DX.cpp, DXExt.cpp を追加
@@ -524,7 +526,7 @@ $draco_decoder -i YYY.drc -o ZZZ.obj
 #### VK
  * プロパティマネージャで Add Existing Property Sheet... - Props/VK_DEBUG.props, Props/VK_RELEASE.props
  	* 必要に応じて Props/VK_DEBUG_TEX.prop, Props/VK_RELEASE_TEX.prop
-	* 必要に応じて Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop, Props/FBX.prop, Props/DRACO.prop
+	* 必要に応じて Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop, Props/FBX.prop, Props/DRACO.prop, Prop/DXMESH.prop
  * Header Files に Win.h, VK.h, VKExt.h を追加
 	* 必要に応じて VKImage.h
  * Source Files に Win.cpp, VK.cpp, VKExt.cpp を追加

@@ -79,9 +79,9 @@ public:
 		}
 		void CreateStagingBuffer(const VkDevice Dev, VkPhysicalDeviceMemoryProperties PDMP, BufferMemory& BM) {
 #ifdef USE_EXPERIMENTAL
-			BM.Create(Dev, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, static_cast<VkDeviceSize>(Util::size(GliTexture)), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Util::data(GliTexture));
+			BM.Create(Dev, PDMP, static_cast<VkDeviceSize>(Util::size(GliTexture)), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Util::data(GliTexture));
 #else
-			BM.Create(Dev, PDMP, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, static_cast<VkDeviceSize>(GliTexture.size()), VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, GliTexture.data());
+			BM.Create(Dev, PDMP, static_cast<VkDeviceSize>(GliTexture.size()), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, GliTexture.data());
 #endif
 		}
 		void PopulateCopyCommand(const VkCommandBuffer CB, const VkPipelineStageFlags PSF, const VkBuffer Staging) {

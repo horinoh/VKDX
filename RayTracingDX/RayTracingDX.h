@@ -490,7 +490,7 @@ public:
 		} VERIFY_SUCCEEDED(GCL->Close());
 	}
 	
-	std::vector<StructuredBuffer> StructuredBuffers;
+	std::vector<UploadStructuredBuffer> StructuredBuffers;
 
 private:
 	struct Transform

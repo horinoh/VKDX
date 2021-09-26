@@ -7,6 +7,7 @@ struct PAYLOAD_OUT
 
 groupshared PAYLOAD_OUT Payload;
 
+//!< メッシュレット数
 #define N 5
 #define NN (N * N)
 

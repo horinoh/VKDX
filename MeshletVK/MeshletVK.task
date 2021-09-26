@@ -9,6 +9,7 @@ taskNV out Task {
 	uint MeshletIDs[32];
 } Payload;
 
+//!< メッシュレット数
 #define N 5
 #define NN (N * N)
 
