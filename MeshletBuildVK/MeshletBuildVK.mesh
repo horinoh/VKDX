@@ -27,6 +27,14 @@ uvec3 Unpack(uint tri)
 {
     return uvec3(tri & 0x3ff, (tri >> 10) & 0x3ff, (tri >> 20) & 0x3ff);
 }
+uint GetVertexIndex32(const uint i) 
+{
+    return 0;//TODO
+}
+uint GetVertexIndex16(const uint i) 
+{
+    return (GetVertexIndex32(i >> 1) >> (16 * (i & 0x1))) & 0xffff;
+}
 
 const vec3 Colors[] = { vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec3(1.0f, 1.0f, 0.0f), vec3(0.0f, 1.0f, 1.0f), vec3(1.0f, 0.0f, 1.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f) };
 

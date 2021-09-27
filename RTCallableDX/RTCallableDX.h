@@ -313,11 +313,11 @@ public:
 	virtual void PopulateCommandList(const size_t i) override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
-		const auto GCL = DirectCommandLists[i];
+		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-
+		const auto RT = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			PopulateBeginRenderTargetCommand(i); {
+			PopulateBeginRenderTargetCommand(GCL, RT); {
 				GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
@@ -333,7 +333,7 @@ public:
 
 				GCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 
-			} PopulateEndRenderTargetCommand(i);
+			} PopulateEndRenderTargetCommand(GCL, RT, COM_PTR_GET(SwapChainResources[i]));
 		} VERIFY_SUCCEEDED(GCL->Close());
 	}
 };

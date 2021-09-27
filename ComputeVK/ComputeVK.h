@@ -116,9 +116,10 @@ protected:
 				.flags = 0,
 				.pInheritanceInfo = nullptr
 			};
+			const auto RT = StorageTextures[0].Image;
 			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-				PopulateBeginRenderTargetCommand(i); {
-				} PopulateEndRenderTargetCommand(i);
+				PopulateBeginRenderTargetCommand(CB, RT); {
+				} PopulateEndRenderTargetCommand(CB, RT, SwapchainImages[i], static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		}
 	}

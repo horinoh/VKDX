@@ -299,6 +299,7 @@ public:
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 
 		const auto CB = CommandBuffers[i];
+		const auto RT = StorageTextures[0].Image;
 		constexpr VkCommandBufferBeginInfo CBBI = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 			.pNext = nullptr,
@@ -306,7 +307,7 @@ public:
 			.pInheritanceInfo = nullptr
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-			PopulateBeginRenderTargetCommand(i); {
+			PopulateBeginRenderTargetCommand(CB, RT); {
 				vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, Pipelines[0]);
 
 				const std::array DSs = { DescriptorSets[0] };
@@ -319,7 +320,7 @@ public:
 #else
 				vkCmdTraceRaysKHR(CB, &ShaderBindingTables[0].Region, &ShaderBindingTables[1].Region, &ShaderBindingTables[2].Region, &CallableRegion, GetClientRectWidth(), GetClientRectHeight(), 1);
 #endif
-			} PopulateEndRenderTargetCommand(i);
+			} PopulateEndRenderTargetCommand(CB, RT, SwapchainImages[i], static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
 
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 	}

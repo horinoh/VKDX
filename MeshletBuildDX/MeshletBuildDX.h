@@ -105,7 +105,7 @@ public:
 				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs)), .pDescriptorRanges = data(DRs) }),
 				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
 			}),
-		}, {}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+		}, {}, SHADER_ROOT_ACCESS_MS);
 #endif
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 	}
@@ -174,9 +174,6 @@ public:
 						const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
 						GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 						GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
-						GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[1]);
-						GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[2]);
-						GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[3]);
 					}
 
 					GCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);

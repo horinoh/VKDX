@@ -56,12 +56,14 @@
 #define DXIL_FOURCC(ch0, ch1, ch2, ch3) ((uint32_t)(uint8_t)(ch0) | (uint32_t)(uint8_t)(ch1) << 8  | (uint32_t)(uint8_t)(ch2) << 16  | (uint32_t)(uint8_t)(ch3) << 24)
 #endif
 
-#define SHADER_ROOT_ACCESS_DENY_ALL (D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS)
+#define SHADER_ROOT_ACCESS_DENY_ALL (D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS)
 #define SHADER_ROOT_ACCESS_VS (SHADER_ROOT_ACCESS_DENY_ALL & ~D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS)
 #define SHADER_ROOT_ACCESS_GS (SHADER_ROOT_ACCESS_DENY_ALL & ~D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS)
 #define SHADER_ROOT_ACCESS_PS (SHADER_ROOT_ACCESS_DENY_ALL & ~D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS)
 #define SHADER_ROOT_ACCESS_GS_PS (SHADER_ROOT_ACCESS_DENY_ALL & ~(D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS))
 #define SHADER_ROOT_ACCESS_DS_GS_PS (SHADER_ROOT_ACCESS_DENY_ALL & ~(D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_GEOMETRY_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS))
+#define SHADER_ROOT_ACCESS_MS (SHADER_ROOT_ACCESS_DENY_ALL & ~D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS)
+#define SHADER_ROOT_ACCESS_MS_AS (SHADER_ROOT_ACCESS_DENY_ALL & ~(D3D12_ROOT_SIGNATURE_FLAG_DENY_MESH_SHADER_ROOT_ACCESS | D3D12_ROOT_SIGNATURE_FLAG_DENY_AMPLIFICATION_SHADER_ROOT_ACCESS))
 
 /**
 @brief 32 bit ƒJƒ‰[ DirectX::PackedVector::XMCOLOR
@@ -221,8 +223,9 @@ public:
 	private:
 		using Super = UploadResource;
 	public:
-		void Create(ID3D12Device* Device, const size_t Size, const void* Source = nullptr) {
+		ConstantBuffer& Create(ID3D12Device* Device, const size_t Size, const void* Source = nullptr) {
 			Super::Create(Device, RoundUp256(Size), Source);
+			return *this;
 		}
 	};
 	//class ShaderResourceBuffer : public UploadResource
@@ -614,17 +617,14 @@ public:
 	//static void PopulateCopyBufferRegionCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
 	static void PopulateCopyTextureRegionCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src, ID3D12Resource* Dst, const std::vector<D3D12_PLACED_SUBRESOURCE_FOOTPRINT>& PSF, const D3D12_RESOURCE_STATES RS);
 	static void ExecuteAndWait(ID3D12CommandQueue* CQ, ID3D12CommandList* CL, ID3D12Fence* Fence);
-
-	virtual void PopulateBeginRenderTargetCommand(const size_t i) {
-		const auto GCL = DirectCommandLists[i];
-		const auto UAV = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
+	static void PopulateBeginRenderTargetCommand(ID3D12GraphicsCommandList* GCL, ID3D12Resource* RenderTarget) {
 		const std::array RBs = {
 			//!< RenderTarget : COPY_SOURCE -> UNORDERED_ACCESS
 			D3D12_RESOURCE_BARRIER({
 				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
 				.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
-					.pResource = UAV,
+					.pResource = RenderTarget,
 					.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
 					.StateBefore = D3D12_RESOURCE_STATE_COPY_SOURCE, .StateAfter = D3D12_RESOURCE_STATE_UNORDERED_ACCESS
 				})
@@ -632,29 +632,26 @@ public:
 		};
 		GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 	}
-	virtual void PopulateEndRenderTargetCommand(const size_t i) {
-		const auto GCL = DirectCommandLists[i];
-		const auto UAV = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
-		const auto SCR = COM_PTR_GET(SwapChainResources[i]);
+	static void PopulateEndRenderTargetCommand(ID3D12GraphicsCommandList* GCL, ID3D12Resource* RenderTarget, ID3D12Resource* SwapChain) {
 		{
 			const std::array RBs = {
 				//!< RenderTarget : UNORDERED_ACCESS -> COPY_SOURCE
 				D3D12_RESOURCE_BARRIER({
 					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = UAV, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS, .StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE })
+					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = RenderTarget, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS, .StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE })
 				 }),
 				//!< SwapChain : PRESENT -> COPY_DEST
 				D3D12_RESOURCE_BARRIER({
 					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = SCR, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PRESENT, .StateAfter = D3D12_RESOURCE_STATE_COPY_DEST })
+					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = SwapChain, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PRESENT, .StateAfter = D3D12_RESOURCE_STATE_COPY_DEST })
 				})
 			};
 			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 		}
 
-		GCL->CopyResource(SCR, UAV);
+		GCL->CopyResource(SwapChain, RenderTarget);
 
 		{
 			const std::array RBs = {
@@ -663,7 +660,7 @@ public:
 					.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
 					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
 					.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
-						.pResource = SCR,
+						.pResource = SwapChain,
 						.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES,
 						.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST, .StateAfter = D3D12_RESOURCE_STATE_PRESENT
 					})

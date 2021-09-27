@@ -89,9 +89,10 @@ protected:
 			const auto PS = COM_PTR_GET(PipelineStates[0]);
 			const auto CL = COM_PTR_GET(DirectCommandLists[i]);
 			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
+			const auto RT = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
 			VERIFY_SUCCEEDED(CL->Reset(CA, PS)); {
-				PopulateBeginRenderTargetCommand(i); {
-				} PopulateEndRenderTargetCommand(i);
+				PopulateBeginRenderTargetCommand(CL, RT); {
+				} PopulateEndRenderTargetCommand(CL, RT, COM_PTR_GET(SwapChainResources[i]));
 			} VERIFY_SUCCEEDED(CL->Close());
 		}
 	}
