@@ -77,13 +77,6 @@ public:
 			VERIFY_SUCCEEDED(vkCreateImageView(Dev, &IVCI, GetAllocationCallbacks(), &View));
 			return *this;
 		}
-		void CreateStagingBuffer(const VkDevice Dev, VkPhysicalDeviceMemoryProperties PDMP, BufferMemory& BM) {
-#ifdef USE_EXPERIMENTAL
-			BM.Create(Dev, PDMP, static_cast<VkDeviceSize>(Util::size(GliTexture)), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Util::data(GliTexture));
-#else
-			BM.Create(Dev, PDMP, static_cast<VkDeviceSize>(GliTexture.size()), VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, GliTexture.data());
-#endif
-		}
 		void PopulateCopyCommand(const VkCommandBuffer CB, const VkPipelineStageFlags PSF, const VkBuffer Staging) {
 			//!< キューブマップの場合は、複数レイヤのイメージとして作成する。(When cubemap, create as layered image)
 			//!< イメージビューを介して、レイヤをフェイスとして扱うようハードウエアへ伝える (Tell the hardware that it should interpret its layers as faces)
@@ -105,11 +98,11 @@ public:
 			VK::PopulateCopyBufferToImageCommand(CB, Staging, Image, VK_ACCESS_SHADER_READ_BIT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, PSF, BICs, Levels, Layers);
 		}
 		void SubmitCopyCommand(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const VkPipelineStageFlags PSF) {
-			VK::Scoped<BufferMemory> StagingBuffer(Dev);
-			CreateStagingBuffer(Dev, PDMP, StagingBuffer);
+			VK::Scoped<StagingBuffer> Staging(Dev);
+			Staging.Create(Dev, PDMP, static_cast<VkDeviceSize>(GliTexture.size()), GliTexture.data());
 			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-				PopulateCopyCommand(CB, PSF, StagingBuffer.Buffer);
+				PopulateCopyCommand(CB, PSF, Staging.Buffer);
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 			VK::SubmitAndWait(Queue, CB);
 		}

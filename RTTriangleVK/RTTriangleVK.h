@@ -20,16 +20,14 @@ public:
 		const auto& CB = CommandBuffers[0];
 
 #pragma region BLAS_GEOMETRY
-		//!< バーテックスバッファ (VertexBuffer) ... 通常と異なり ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | SHADER_DEVICE_ADDRESS_BIT、HOST_VISIBLE_BIT | HOST_COHERENT_BIT で作成
+		//!< バーテックスバッファ (VertexBuffer) 
 		constexpr std::array Vertices = { glm::vec3({ 0.0f, 0.5f, 0.0f }), glm::vec3({ -0.5f, -0.5f, 0.0f }), glm::vec3({ 0.5f, -0.5f, 0.0f }), };
-		Scoped<BufferMemory> VertBuf(Device);
-		VertBuf.Create(Device, PDMP, sizeof(Vertices), VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Vertices));
-
-		//!< インデックスバッファ (IndexBuffer) ... 通常と異なり ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | SHADER_DEVICE_ADDRESS_BIT、HOST_VISIBLE_BIT | HOST_COHERENT_BIT で作成
+		Scoped<DeviceLocalASBuffer> VertBuf(Device);
+		VertBuf.Create(Device, PDMP, sizeof(Vertices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Vertices), data(Vertices));
+		//!< インデックスバッファ (IndexBuffer) 
 		constexpr std::array Indices = { uint32_t(0), uint32_t(1), uint32_t(2) };
-		Scoped<BufferMemory> IndBuf(Device);
-		IndBuf.Create(Device, PDMP, sizeof(Indices), VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Indices));
-
+		Scoped<DeviceLocalASBuffer> IndBuf(Device);
+		IndBuf.Create(Device, PDMP, sizeof(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Indices), data(Indices));
 		//!< ジオメトリ (Geometry)
 		const std::vector ASGs_Blas = {
 			VkAccelerationStructureGeometryKHR({
@@ -133,9 +131,8 @@ public:
 				.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().AccelerationStructure) /* GetDeviceAddress(Device, BLASs.back().Buffer)でも良い */
 			}),
 		};
-		Scoped<BufferMemory> InstBuf(Device);
-		InstBuf.Create(Device, PDMP, sizeof(ASIs), VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(ASIs));
-
+		Scoped<DeviceLocalASBuffer> InstBuf(Device);
+		InstBuf.Create(Device, PDMP, sizeof(ASIs)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(ASIs), data(ASIs));
 		//!< ジオメトリ (Geometry)
 		const auto ASG_Tlas = VkAccelerationStructureGeometryKHR({
 			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
@@ -151,7 +148,7 @@ public:
 				})
 			}),
 			.flags = VK_GEOMETRY_OPAQUE_BIT_KHR
-			});
+		});
 
 #pragma region TLAS_AND_SCRATCH
 		VkAccelerationStructureBuildGeometryInfoKHR ASBGI_Tlas = {

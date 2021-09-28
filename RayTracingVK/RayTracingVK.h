@@ -14,6 +14,8 @@ public:
 	RayTracingVK() : Super() {}
 	virtual ~RayTracingVK() {}
 
+	std::vector<BufferMemory> StructuredBuffers;
+
 #if 1
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
 		for (auto i : StructuredBuffers) { i.Destroy(Device); }
@@ -463,7 +465,6 @@ public:
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 	}
 
-	std::vector<BufferMemory> StructuredBuffers;
 private:
 	struct Transform
 	{

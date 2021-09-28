@@ -384,6 +384,32 @@ public:
 		}
 	};
 #pragma region RAYTRACING
+	class DeviceLocalASBuffer : public DeviceLocalBuffer
+	{
+	private:
+		using Super = DeviceLocalBuffer;
+	public:
+		DeviceLocalASBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
+			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT| VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+			return *this;
+		}
+		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) {
+			Super::PopulateCopyCommand(CB, Size, Staging, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
+		}
+		void SubmitCopyCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkCommandBuffer CB, const VkQueue Queue, const size_t Size, const void* Source) {
+			Super::SubmitCopyCommand(Device, PDMP, CB, Queue, Size, Source, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
+		}
+	};
+	class HostVisibleASBuffer : public HostVisibleBuffer
+	{
+	private:
+		using Super = HostVisibleBuffer;
+	public:
+		HostVisibleASBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const void* Source = nullptr) {
+			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, Source);
+			return *this;
+		}
+	};
 	class AccelerationStructureBuffer : public DeviceLocalBuffer
 	{
 	private:
