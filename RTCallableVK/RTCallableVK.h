@@ -21,12 +21,12 @@ public:
 
 #pragma region BLAS_GEOMETRY
 		constexpr std::array Vertices = { glm::vec3({ 0.0f, 0.5f, 0.0f }), glm::vec3({ -0.5f, -0.5f, 0.0f }), glm::vec3({ 0.5f, -0.5f, 0.0f }), };
-		Scoped<BufferMemory> VertBuf(Device);
-		VertBuf.Create(Device, PDMP, sizeof(Vertices), VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Vertices));
+		Scoped<DeviceLocalASBuffer> VertBuf(Device);
+		VertBuf.Create(Device, PDMP, sizeof(Vertices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Vertices), data(Vertices));
 
 		constexpr std::array Indices = { uint32_t(0), uint32_t(1), uint32_t(2) };
-		Scoped<BufferMemory> IndBuf(Device);
-		IndBuf.Create(Device, PDMP, sizeof(Indices), VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(Indices));
+		Scoped<DeviceLocalASBuffer> IndBuf(Device);
+		IndBuf.Create(Device, PDMP, sizeof(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Indices), data(Indices));
 
 		const std::vector ASGs_Blas = {
 			VkAccelerationStructureGeometryKHR({
@@ -103,8 +103,8 @@ public:
 			}),
 			#pragma endregion
 		};
-		Scoped<BufferMemory> InstBuf(Device);
-		InstBuf.Create(Device, PDMP, sizeof(ASIs), VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, data(ASIs));
+		Scoped<DeviceLocalASBuffer> InstBuf(Device);
+		InstBuf.Create(Device, PDMP, sizeof(ASIs)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(ASIs), data(ASIs));
 
 		const auto ASG_Tlas = VkAccelerationStructureGeometryKHR({
 			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,

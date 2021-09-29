@@ -14,7 +14,6 @@ public:
 	RayTracingDX() : Super() {}
 	virtual ~RayTracingDX() {}
 
-	std::vector<UploadStructuredBuffer> StructuredBuffers;
 	DefaultStructuredBuffer VertexBuffer;
 	DefaultStructuredBuffer IndexBuffer;
 
@@ -75,10 +74,8 @@ public:
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
 #pragma region BLAS_INPUT
-		StructuredBuffers.emplace_back().Create(COM_PTR_GET(Device), Sizeof(Vertices), sizeof(Vertices[0]), data(Vertices));
-		StructuredBuffers.emplace_back().Create(COM_PTR_GET(Device), Sizeof(Indices), sizeof(Indices[0]), data(Indices));
-		VertexBuffer.Create(COM_PTR_GET(Device), Sizeof(Vertices), sizeof(Vertices[0])).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(GraphicsFence), Sizeof(Vertices), data(Vertices));
-		IndexBuffer.Create(COM_PTR_GET(Device), Sizeof(Indices), sizeof(Indices[0])).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(GraphicsFence), Sizeof(Indices), data(Indices));
+		VertexBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), sizeof(Vertices[0])).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Vertices), data(Vertices));
+		IndexBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(Indices), sizeof(Indices[0])).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Indices), data(Indices));
 		const std::array RGDs = {
 			D3D12_RAYTRACING_GEOMETRY_DESC({
 				.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES,
@@ -89,8 +86,6 @@ public:
 					.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT,
 					.IndexCount = static_cast<UINT>(size(Indices)),
 					.VertexCount = static_cast<UINT>(size(Vertices)),
-					//.IndexBuffer = StructuredBuffers[1].Resource->GetGPUVirtualAddress(),
-					//.VertexBuffer = D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE({.StartAddress = StructuredBuffers[0].Resource->GetGPUVirtualAddress(), .StrideInBytes = sizeof(Vertices[0]) }),
 					.IndexBuffer = IndexBuffer.Resource->GetGPUVirtualAddress(),
 					.VertexBuffer = D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE({.StartAddress = VertexBuffer.Resource->GetGPUVirtualAddress(), .StrideInBytes = sizeof(Vertices[0]) }),
 				})
@@ -406,19 +401,18 @@ public:
 		
 #pragma region SHADER_RECORD
 		//!< [3] SRV (VB)
-		//Device->CreateShaderResourceView(COM_PTR_GET(StructuredBuffers[0].Resource), &StructuredBuffers[0].SRV, CDH);
 		Device->CreateShaderResourceView(COM_PTR_GET(VertexBuffer.Resource), &VertexBuffer.SRV, CDH);
 		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
 		//!< [4] SRV (IB)
-		//Device->CreateShaderResourceView(COM_PTR_GET(StructuredBuffers[1].Resource), &StructuredBuffers[1].SRV, CDH);
 		Device->CreateShaderResourceView(COM_PTR_GET(IndexBuffer.Resource), &IndexBuffer.SRV, CDH);
 		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 #pragma endregion
 
 		//!< ‚±‚ÌŽž“_‚Åíœ‚µ‚Ä‚µ‚Ü‚Á‚Ä—Ç‚¢H
-		//for (auto i : StructuredBuffers) { COM_PTR_RESET(i.Resource); }
+		//COM_PTR_RESET(VertexBuffer.Resource);
+		//COM_PTR_RESET(IndexBuffer.Resource);
 	}
 	virtual void CreateShaderTable() override {
 		COM_PTR<ID3D12StateObjectProperties> SOP;

@@ -24,10 +24,12 @@ public:
 		constexpr std::array Vertices = { glm::vec3({ 0.0f, 0.5f, 0.0f }), glm::vec3({ -0.5f, -0.5f, 0.0f }), glm::vec3({ 0.5f, -0.5f, 0.0f }), };
 		Scoped<DeviceLocalASBuffer> VertBuf(Device);
 		VertBuf.Create(Device, PDMP, sizeof(Vertices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Vertices), data(Vertices));
+
 		//!< インデックスバッファ (IndexBuffer) 
 		constexpr std::array Indices = { uint32_t(0), uint32_t(1), uint32_t(2) };
 		Scoped<DeviceLocalASBuffer> IndBuf(Device);
 		IndBuf.Create(Device, PDMP, sizeof(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Indices), data(Indices));
+
 		//!< ジオメトリ (Geometry)
 		const std::vector ASGs_Blas = {
 			VkAccelerationStructureGeometryKHR({
@@ -133,6 +135,7 @@ public:
 		};
 		Scoped<DeviceLocalASBuffer> InstBuf(Device);
 		InstBuf.Create(Device, PDMP, sizeof(ASIs)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(ASIs), data(ASIs));
+
 		//!< ジオメトリ (Geometry)
 		const auto ASG_Tlas = VkAccelerationStructureGeometryKHR({
 			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,

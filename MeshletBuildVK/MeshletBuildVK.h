@@ -106,14 +106,14 @@ public:
 			std::vector<DirectX::MeshletTriangle> Triangles;
 			DirectX::ComputeMeshlets(data(Indices), size(Indices) / 3, data(VerticesDX), size(VerticesDX), nullptr, Meshlets, VertexIndices, Triangles);
 
-			VertexBuffer.Create(Device, PDMP, Sizeof(Vertices))
-				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, Sizeof(Vertices), data(Vertices), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
-			MeshletBuffer.Create(Device, PDMP, Sizeof(Meshlets))
-				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, Sizeof(Meshlets), data(Meshlets), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
-			VertexIndexBuffer.Create(Device, PDMP, Sizeof(VertexIndices))
-				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, Sizeof(VertexIndices), data(VertexIndices), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
-			TriangleBuffer.Create(Device, PDMP, Sizeof(Triangles))
-				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, Sizeof(Triangles), data(Triangles), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
+			VertexBuffer.Create(Device, PDMP, TotalSizeOf(Vertices))
+				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Vertices), data(Vertices), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
+			MeshletBuffer.Create(Device, PDMP, TotalSizeOf(Meshlets))
+				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Meshlets), data(Meshlets), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
+			VertexIndexBuffer.Create(Device, PDMP, TotalSizeOf(VertexIndices))
+				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(VertexIndices), data(VertexIndices), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
+			TriangleBuffer.Create(Device, PDMP, TotalSizeOf(Triangles))
+				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Triangles), data(Triangles), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
 		}
 	}
 	virtual void CreateRenderPass() { VKExt::CreateRenderPass_Clear(); }

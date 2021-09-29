@@ -75,17 +75,17 @@ public:
 		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 		const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
 
-		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), Sizeof(Vertices), sizeof(Vertices[0]));
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), sizeof(Vertices[0]));
 		UploadResource Upload_Vertex;
-		Upload_Vertex.Create(COM_PTR_GET(Device), Sizeof(Vertices), data(Vertices));
+		Upload_Vertex.Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), data(Vertices));
 
-		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), Sizeof(Normals), sizeof(Normals[0]));
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Normals), sizeof(Normals[0]));
 		UploadResource Upload_Normal;
-		Upload_Normal.Create(COM_PTR_GET(Device), Sizeof(Normals), data(Normals));
+		Upload_Normal.Create(COM_PTR_GET(Device), TotalSizeOf(Normals), data(Normals));
 
-		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), Sizeof(Indices), DXGI_FORMAT_R32_UINT);
+		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Indices), DXGI_FORMAT_R32_UINT);
 		UploadResource Upload_Index;
-		Upload_Index.Create(COM_PTR_GET(Device), Sizeof(Indices), data(Indices));
+		Upload_Index.Create(COM_PTR_GET(Device), TotalSizeOf(Indices), data(Indices));
 
 		const D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
 		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA);
@@ -93,9 +93,9 @@ public:
 		Upload_Indirect.Create(COM_PTR_GET(Device), sizeof(DIA), &DIA);
 
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			VertexBuffers[0].PopulateCopyCommand(GCL, Sizeof(Vertices), COM_PTR_GET(Upload_Vertex.Resource));
-			VertexBuffers[1].PopulateCopyCommand(GCL, Sizeof(Normals), COM_PTR_GET(Upload_Normal.Resource));
-			IndexBuffers.back().PopulateCopyCommand(GCL, Sizeof(Indices), COM_PTR_GET(Upload_Index.Resource));
+			VertexBuffers[0].PopulateCopyCommand(GCL, TotalSizeOf(Vertices), COM_PTR_GET(Upload_Vertex.Resource));
+			VertexBuffers[1].PopulateCopyCommand(GCL, TotalSizeOf(Normals), COM_PTR_GET(Upload_Normal.Resource));
+			IndexBuffers.back().PopulateCopyCommand(GCL, TotalSizeOf(Indices), COM_PTR_GET(Upload_Index.Resource));
 			IndirectBuffers.back().PopulateCopyCommand(GCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
 		} VERIFY_SUCCEEDED(GCL->Close());
 		DX::ExecuteAndWait(CQ, GCL, COM_PTR_GET(GraphicsFence));

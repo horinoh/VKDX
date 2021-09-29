@@ -99,17 +99,17 @@ public:
 		const auto& CB = CommandBuffers[0];
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 
-		VertexBuffers.emplace_back().Create(Device, PDMP, Sizeof(Vertices));
+		VertexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Vertices));
 		VK::Scoped<StagingBuffer> Staging_Vertex(Device);
-		Staging_Vertex.Create(Device, PDMP, Sizeof(Vertices), data(Vertices));
+		Staging_Vertex.Create(Device, PDMP, TotalSizeOf(Vertices), data(Vertices));
 
-		VertexBuffers.emplace_back().Create(Device, PDMP, Sizeof(Normals));
+		VertexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Normals));
 		VK::Scoped<StagingBuffer> Staging_Normal(Device);
-		Staging_Normal.Create(Device, PDMP, Sizeof(Normals), data(Normals));
+		Staging_Normal.Create(Device, PDMP, TotalSizeOf(Normals), data(Normals));
 
-		IndexBuffers.emplace_back().Create(Device, PDMP, Sizeof(Indices));
+		IndexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Indices));
 		VK::Scoped<StagingBuffer> Staging_Index(Device);
-		Staging_Index.Create(Device, PDMP, Sizeof(Indices), data(Indices));
+		Staging_Index.Create(Device, PDMP, TotalSizeOf(Indices), data(Indices));
 
 		const VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
@@ -118,9 +118,9 @@ public:
 
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-			VertexBuffers[0].PopulateCopyCommand(CB, Sizeof(Vertices), Staging_Vertex.Buffer);
-			VertexBuffers[1].PopulateCopyCommand(CB, Sizeof(Normals), Staging_Normal.Buffer);
-			IndexBuffers.back().PopulateCopyCommand(CB, Sizeof(Indices), Staging_Index.Buffer);
+			VertexBuffers[0].PopulateCopyCommand(CB, TotalSizeOf(Vertices), Staging_Vertex.Buffer);
+			VertexBuffers[1].PopulateCopyCommand(CB, TotalSizeOf(Normals), Staging_Normal.Buffer);
+			IndexBuffers.back().PopulateCopyCommand(CB, TotalSizeOf(Indices), Staging_Index.Buffer);
 			IndirectBuffers.back().PopulateCopyCommand(CB, sizeof(DIIC), Staging_Indirect.Buffer);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		VK::SubmitAndWait(GraphicsQueue, CB);

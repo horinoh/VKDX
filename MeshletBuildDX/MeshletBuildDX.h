@@ -81,14 +81,14 @@ public:
 			VERIFY_SUCCEEDED(DirectX::ComputeMeshlets(data(Indices), size(Indices) / 3, data(Vertices), size(Vertices), nullptr, Meshlets, VertexIndices, Triangles));
 
 
-			VertexBuffer.Create(COM_PTR_GET(Device), Sizeof(Vertices), sizeof(Vertices[0]))
-				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), Sizeof(Vertices), data(Vertices), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			MeshletBuffer.Create(COM_PTR_GET(Device), Sizeof(Meshlets), sizeof(Meshlets[0]))
-				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), Sizeof(Meshlets), data(Meshlets), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			VertexIndexBuffer.Create(COM_PTR_GET(Device), Sizeof(VertexIndices), sizeof(VertexIndices[0]))
-				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), Sizeof(VertexIndices), data(VertexIndices), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			TriangleBuffer.Create(COM_PTR_GET(Device), Sizeof(Triangles), sizeof(Triangles[0]))
-				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), Sizeof(Triangles), data(Triangles), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			VertexBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), sizeof(Vertices[0]))
+				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Vertices), data(Vertices), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			MeshletBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(Meshlets), sizeof(Meshlets[0]))
+				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Meshlets), data(Meshlets), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			VertexIndexBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(VertexIndices), sizeof(VertexIndices[0]))
+				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(VertexIndices), data(VertexIndices), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			TriangleBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(Triangles), sizeof(Triangles[0]))
+				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Triangles), data(Triangles), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		}
 	}
 	virtual void CreateRootSignature() override {
