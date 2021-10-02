@@ -39,20 +39,20 @@ protected:
 		constexpr std::array<UINT32, 3> Indices = { 0, 1, 2 };
 
 #ifdef COMMAND_COPY_TOGETHER
-		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), sizeof(Vertices[0]));
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), sizeof(Vertices[0]));
 		UploadResource Upload_Vertex;
-		Upload_Vertex.Create(COM_PTR_GET(Device), sizeof(Vertices), data(Vertices));
+		Upload_Vertex.Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), data(Vertices));
 #else
-		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Vertices), sizeof(Vertices[0])).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), sizeof(Vertices), data(Vertices));
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), sizeof(Vertices[0])).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Vertices), data(Vertices));
 #endif
 		SetName(COM_PTR_GET(VertexBuffers.back().Resource), TEXT("MyVertexBuffer"));
 
 #ifdef COMMAND_COPY_TOGETHER
-		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), DXGI_FORMAT_R32_UINT);
+		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Indices), DXGI_FORMAT_R32_UINT);
 		UploadResource Upload_Index;
-		Upload_Index.Create(COM_PTR_GET(Device), sizeof(Indices), data(Indices));
+		Upload_Index.Create(COM_PTR_GET(Device), TotalSizeOf(Indices), data(Indices));
 #else
-		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), sizeof(Indices), DXGI_FORMAT_R32_UINT).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), sizeof(Indices), data(Indices));
+		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Indices), DXGI_FORMAT_R32_UINT).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Indices), data(Indices));
 #endif	
 		SetName(COM_PTR_GET(IndexBuffers.back().Resource), TEXT("MyIndexBuffer"));
 
@@ -68,8 +68,8 @@ protected:
 
 #ifdef COMMAND_COPY_TOGETHER
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			VertexBuffers.back().PopulateCopyCommand(GCL, sizeof(Vertices), COM_PTR_GET(Upload_Vertex.Resource));
-			IndexBuffers.back().PopulateCopyCommand(GCL, sizeof(Indices), COM_PTR_GET(Upload_Index.Resource));
+			VertexBuffers.back().PopulateCopyCommand(GCL, TotalSizeOf(Vertices), COM_PTR_GET(Upload_Vertex.Resource));
+			IndexBuffers.back().PopulateCopyCommand(GCL, TotalSizeOf(Indices), COM_PTR_GET(Upload_Index.Resource));
 			IndirectBuffers.back().PopulateCopyCommand(GCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
 		} VERIFY_SUCCEEDED(GCL->Close());
 		DX::ExecuteAndWait(CQ, GCL, COM_PTR_GET(GraphicsFence));

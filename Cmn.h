@@ -27,4 +27,5 @@ public:
 	static constexpr size_t RoundUp256(const size_t Size) { return RoundUpMask(Size, 0xff); }
 
 	template<typename T> static constexpr size_t TotalSizeOf(const std::vector<T>& rhs) { return sizeof(T) * size(rhs); }
+	template<typename T, size_t U> static constexpr size_t TotalSizeOf(const std::array<T, U>& rhs) { return sizeof(rhs); }
 };

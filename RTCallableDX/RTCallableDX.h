@@ -25,12 +25,12 @@ public:
 
 #pragma region BLAS_INPUT
 		constexpr std::array Vertices = { DirectX::XMFLOAT3({ 0.0f, 0.5f, 0.0f }), DirectX::XMFLOAT3({ -0.5f, -0.5f, 0.0f }), DirectX::XMFLOAT3({ 0.5f, -0.5f, 0.0f }), };
-		ResourceBase VertBuf;
-		VertBuf.Create(COM_PTR_GET(Device), sizeof(Vertices), D3D12_HEAP_TYPE_UPLOAD, data(Vertices));
+		DefaultResource VB;
+		VB.Create(COM_PTR_GET(Device), TotalSizeOf(Vertices)).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Vertices), data(Vertices));
 
 		constexpr std::array Indices = { UINT32(0), UINT32(1), UINT32(2) };
-		ResourceBase IndBuf;
-		IndBuf.Create(COM_PTR_GET(Device), sizeof(Indices), D3D12_HEAP_TYPE_UPLOAD, data(Indices));
+		DefaultResource IB;
+		IB.Create(COM_PTR_GET(Device), TotalSizeOf(Indices)).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Indices), data(Indices));
 
 		const std::array RGDs = {
 			D3D12_RAYTRACING_GEOMETRY_DESC({
@@ -42,8 +42,8 @@ public:
 					.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT,
 					.IndexCount = static_cast<UINT>(size(Indices)),
 					.VertexCount = static_cast<UINT>(size(Vertices)),
-					.IndexBuffer = IndBuf.Resource->GetGPUVirtualAddress(),
-					.VertexBuffer = D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE({.StartAddress = VertBuf.Resource->GetGPUVirtualAddress(), .StrideInBytes = sizeof(Vertices[0]) }),
+					.IndexBuffer = IB.Resource->GetGPUVirtualAddress(),
+					.VertexBuffer = D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE({.StartAddress = VB.Resource->GetGPUVirtualAddress(), .StrideInBytes = sizeof(Vertices[0]) }),
 				})
 			}),
 		};

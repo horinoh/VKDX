@@ -22,13 +22,13 @@ public:
 #pragma region BLAS_GEOMETRY
 		//!< バーテックスバッファ (VertexBuffer) 
 		constexpr std::array Vertices = { glm::vec3({ 0.0f, 0.5f, 0.0f }), glm::vec3({ -0.5f, -0.5f, 0.0f }), glm::vec3({ 0.5f, -0.5f, 0.0f }), };
-		Scoped<DeviceLocalASBuffer> VertBuf(Device);
-		VertBuf.Create(Device, PDMP, sizeof(Vertices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Vertices), data(Vertices));
+		Scoped<DeviceLocalASBuffer> VB(Device);
+		VB.Create(Device, PDMP, TotalSizeOf(Vertices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Vertices), data(Vertices));
 
 		//!< インデックスバッファ (IndexBuffer) 
 		constexpr std::array Indices = { uint32_t(0), uint32_t(1), uint32_t(2) };
-		Scoped<DeviceLocalASBuffer> IndBuf(Device);
-		IndBuf.Create(Device, PDMP, sizeof(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(Indices), data(Indices));
+		Scoped<DeviceLocalASBuffer> IB(Device);
+		IB.Create(Device, PDMP, TotalSizeOf(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Indices), data(Indices));
 
 		//!< ジオメトリ (Geometry)
 		const std::vector ASGs_Blas = {
@@ -42,9 +42,9 @@ public:
 						.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
 						.pNext = nullptr,
 						.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
-						.vertexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, VertBuf.Buffer)}), .vertexStride = sizeof(Vertices[0]), .maxVertex = static_cast<uint32_t>(size(Vertices)),
+						.vertexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, VB.Buffer)}), .vertexStride = sizeof(Vertices[0]), .maxVertex = static_cast<uint32_t>(size(Vertices)),
 						.indexType = VK_INDEX_TYPE_UINT32,
-						.indexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, IndBuf.Buffer)}),
+						.indexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, IB.Buffer)}),
 						.transformData = VkDeviceOrHostAddressConstKHR({.deviceAddress = 0}),
 					}),
 				}),
