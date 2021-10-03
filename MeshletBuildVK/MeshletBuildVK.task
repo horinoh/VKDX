@@ -3,11 +3,14 @@
 #extension GL_NV_mesh_shader : require
 #extension GL_KHR_shader_subgroup_ballot : require
 
+#define MESHLET_COUNT 32
+
 taskNV out Task {
-	uint MeshletIDs[32];
+	uint MeshletIDs[MESHLET_COUNT];
 } Payload;
 
-layout(local_size_x = 1) in;
+//!< メッシュレット数が 32 を超える場合は複数回に分けて描画する
+layout(local_size_x = MESHLET_COUNT) in;
 void main()
 {
 	bool Visible = true;

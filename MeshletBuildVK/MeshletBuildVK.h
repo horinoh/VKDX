@@ -104,7 +104,14 @@ public:
 			std::vector<DirectX::Meshlet> Meshlets;
 			std::vector<uint8_t> VertexIndices;
 			std::vector<DirectX::MeshletTriangle> Triangles;
-			DirectX::ComputeMeshlets(data(Indices), size(Indices) / 3, data(VerticesDX), size(VerticesDX), nullptr, Meshlets, VertexIndices, Triangles);
+			if (FAILED(DirectX::ComputeMeshlets(data(Indices), size(Indices) / 3, data(VerticesDX), size(VerticesDX), nullptr, Meshlets, VertexIndices, Triangles,
+				DirectX::MESHLET_DEFAULT_MAX_VERTS, DirectX::MESHLET_DEFAULT_MAX_PRIMS))) { assert(false); }
+
+			assert(size(Meshlets) < 32 && "");
+			Logf("Meshlets Count = %d\n", size(Meshlets));
+			for (size_t i = 0; i < std::min<size_t>(size(Meshlets), 8); ++i) {
+				Logf("\tVertCount = %d, PrimCount = %d\n", Meshlets[i].VertCount, Meshlets[i].PrimCount);
+			}
 
 			VertexBuffer.Create(Device, PDMP, TotalSizeOf(Vertices))
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Vertices), data(Vertices), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);

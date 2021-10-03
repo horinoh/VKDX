@@ -18,6 +18,7 @@
 #endif
 
 #include <vector>
+#include <array>
 
 class Cmn
 {

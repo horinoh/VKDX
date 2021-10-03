@@ -46,7 +46,6 @@
 
 #define ALWAYS_REBUILD_PIPELINE
 
-#include <array>
 #include <ranges>
 #include <algorithm>
 #include <bitset>

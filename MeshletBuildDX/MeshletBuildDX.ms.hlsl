@@ -1,6 +1,8 @@
+#define MESHLET_COUNT 32
+
 struct PAYLOAD_IN
 {
-    uint MeshletIDs[32];
+    uint MeshletIDs[MESHLET_COUNT];
 };
 
 struct VERT_IN
@@ -43,7 +45,7 @@ static const float3 Colors[] = { float3(1.0f, 0.0f, 0.0f), float3(0.0f, 1.0f, 0.
 [outputtopology("triangle")]
 void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, in payload PAYLOAD_IN Payload, out indices uint3 Indices[126], out vertices VERT_OUT Vertices[64])
 {
-    MESHLET ML = Meshlets[GroupID];
+    MESHLET ML = Meshlets[Payload.MeshletIDs[GroupID]];
     
     SetMeshOutputCounts(ML.VertCount, ML.PrimCount);
 
@@ -56,5 +58,5 @@ void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, in p
     //Vertices[GroupThreadID].Position = mul(WVP, float4(InVertices[GetVertexIndex32(ML.VertOffset + GroupThreadID)].Position, 1.0f));
     Vertices[GroupThreadID].Position = mul(WVP, float4(InVertices[ML.VertOffset + GroupThreadID].Position, 1.0f));
 
-    Vertices[GroupThreadID].Color = Colors[GroupThreadID % 8];
+    Vertices[GroupThreadID].Color = Colors[GroupID % 8];
 }

@@ -1,11 +1,14 @@
+#define MESHLET_COUNT 32
+
 struct PAYLOAD_OUT
 {
-    uint MeshletIDs[32];
+    uint MeshletIDs[MESHLET_COUNT];
 };
 
 groupshared PAYLOAD_OUT Payload;
 
-[numthreads(1, 1, 1)]
+//!< メッシュレット数が 32 を超える場合は複数回に分けて描画する
+[numthreads(MESHLET_COUNT, 1, 1)]
 void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID)
 {
     bool Visible = true;

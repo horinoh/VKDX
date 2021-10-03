@@ -2,8 +2,10 @@
  
 #extension GL_NV_mesh_shader : require
 
+#define MESHLET_COUNT 32
+
 taskNV in Task {
-    uint MeshletIDs[32];
+    uint MeshletIDs[MESHLET_COUNT];
 } Payload;
 
 layout (location = 0) out vec3 OutColor[];
@@ -29,7 +31,8 @@ uvec3 Unpack(uint tri)
 }
 uint GetVertexIndex32(const uint i) 
 {
-    return 0;//TODO
+    //return VertexIndices.Load(i << 2); //!< Load() ‚Ìˆø”‚Í byte Žw’è‚È‚Ì‚Å 4 ‚ðŠ|‚¯‚Ä‚¢‚é 
+    return 0;
 }
 uint GetVertexIndex16(const uint i) 
 {
@@ -43,10 +46,20 @@ layout(triangles, max_vertices = 126, max_primitives = 64) out;
 void main()
 {
     const MESHLET ML = Meshlets[gl_WorkGroupID.x];
+
+    gl_PrimitiveCountNV = ML.PrimCount;
+    
+//    const uvec3 Tri = Unpack(Triangles[ML.PrimOffset + gl_LocalInvocationID.x]); 
+//    gl_PrimitiveIndicesNV[gl_LocalInvocationID.x + 0] = Tri.x;
+//    gl_PrimitiveIndicesNV[gl_LocalInvocationID.x + 1] = Tri.y;
+//    gl_PrimitiveIndicesNV[gl_LocalInvocationID.x + 2] = Tri.z;
+
     const mat4 PVW = mat4(1.93643117f, 0.0f, 0.0f, 0.0f,
 							0.0f, 3.89474273f, 0.0f, 0.0f,
 							0.0f, 0.0f, -1.00010002f, -1.0f,
 							0.0f, 0.0f, 2.99029899f, 3.0f);
-	gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = PVW * vec4(Vertices[gl_LocalInvocationID.x].Position, 1.0f);
-	OutColor[gl_LocalInvocationID.x] = Colors[gl_LocalInvocationID.x % 8];
+	gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = PVW * vec4(Vertices[GetVertexIndex32(ML.VertOffset + gl_LocalInvocationID.x)].Position, 1.0f);
+	//gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = PVW * vec4(Vertices[ML.VertOffset + gl_LocalInvocationID.x].Position, 1.0f);
+
+	OutColor[gl_LocalInvocationID.x] = Colors[gl_WorkGroupID.x % 8];
 }

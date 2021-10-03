@@ -78,8 +78,14 @@ public:
 			std::vector<DirectX::Meshlet> Meshlets;
 			std::vector<uint8_t> VertexIndices;
 			std::vector<DirectX::MeshletTriangle> Triangles;
-			VERIFY_SUCCEEDED(DirectX::ComputeMeshlets(data(Indices), size(Indices) / 3, data(Vertices), size(Vertices), nullptr, Meshlets, VertexIndices, Triangles));
+			VERIFY_SUCCEEDED(DirectX::ComputeMeshlets(data(Indices), size(Indices) / 3, data(Vertices), size(Vertices), nullptr, Meshlets, VertexIndices, Triangles,
+				DirectX::MESHLET_DEFAULT_MAX_VERTS, DirectX::MESHLET_DEFAULT_MAX_PRIMS));
 
+			assert(size(Meshlets) < 32 && "");
+			Logf("Meshlets Count = %d\n", size(Meshlets));
+			for (size_t i = 0; i < std::min<size_t>(size(Meshlets), 8); ++i) {
+				Logf("\tVertCount = %d, PrimCount = %d\n", Meshlets[i].VertCount, Meshlets[i].PrimCount);
+			}
 
 			VertexBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), sizeof(Vertices[0]))
 				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Vertices), data(Vertices), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
