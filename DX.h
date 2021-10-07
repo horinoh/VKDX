@@ -467,28 +467,28 @@ public:
 			return *this;
 		}
 	};
-	class UploadStructuredBuffer : public UploadResource
-	{
-	private:
-		using Super = UploadResource;
-	public:
-		D3D12_SHADER_RESOURCE_VIEW_DESC SRV;
-		UploadStructuredBuffer& Create(ID3D12Device* Device, const size_t Size, const size_t Stride, const void* Source) {
-			Super::Create(Device, Size, Source);
-			SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({
-				.Format = DXGI_FORMAT_UNKNOWN,
-				.ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.Buffer = D3D12_BUFFER_SRV({
-					.FirstElement = 0,
-					.NumElements = static_cast<UINT>(Size / Stride),
-					.StructureByteStride = static_cast<UINT>(Stride),
-					.Flags = D3D12_BUFFER_SRV_FLAG_NONE,
-				})
-			});
-			return *this;
-		}
-	};
+	//class UploadStructuredBuffer : public UploadResource
+	//{
+	//private:
+	//	using Super = UploadResource;
+	//public:
+	//	D3D12_SHADER_RESOURCE_VIEW_DESC SRV;
+	//	UploadStructuredBuffer& Create(ID3D12Device* Device, const size_t Size, const size_t Stride, const void* Source) {
+	//		Super::Create(Device, Size, Source);
+	//		SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({
+	//			.Format = DXGI_FORMAT_UNKNOWN,
+	//			.ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
+	//			.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
+	//			.Buffer = D3D12_BUFFER_SRV({
+	//				.FirstElement = 0,
+	//				.NumElements = static_cast<UINT>(Size / Stride),
+	//				.StructureByteStride = static_cast<UINT>(Stride),
+	//				.Flags = D3D12_BUFFER_SRV_FLAG_NONE,
+	//			})
+	//		});
+	//		return *this;
+	//	}
+	//};
 	class ScratchBuffer : public ResourceBase
 	{
 	private:

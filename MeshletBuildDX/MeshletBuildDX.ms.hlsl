@@ -45,8 +45,8 @@ static const float3 Colors[] = { float3(1.0f, 0.0f, 0.0f), float3(0.0f, 1.0f, 0.
 [outputtopology("triangle")]
 void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, in payload PAYLOAD_IN Payload, out indices uint3 Indices[126], out vertices VERT_OUT Vertices[64])
 {
-    MESHLET ML = Meshlets[Payload.MeshletIDs[GroupID]];
-    
+    const MESHLET ML = Meshlets[Payload.MeshletIDs[GroupID]];
+
     SetMeshOutputCounts(ML.VertCount, ML.PrimCount);
 
     Indices[GroupThreadID] = Unpack(Triangles[ML.PrimOffset + GroupThreadID]);

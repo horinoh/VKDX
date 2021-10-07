@@ -15,9 +15,11 @@ public:
 	MeshletBuildVK() : Super() {}
 	virtual ~MeshletBuildVK() {}
 
-	DeviceLocalStorageBuffer VertexBuffer;
+	//DeviceLocalStorageBuffer VertexBuffer;
+	DeviceLocalUniformTexelBuffer VertexBuffer;
 	DeviceLocalStorageBuffer MeshletBuffer;
 	DeviceLocalStorageBuffer VertexIndexBuffer;
+	//DeviceLocalUniformTexelBuffer VertexIndexBuffer;
 	DeviceLocalStorageBuffer TriangleBuffer;
 
 #pragma region FBX
@@ -113,11 +115,18 @@ public:
 				Logf("\tVertCount = %d, PrimCount = %d\n", Meshlets[i].VertCount, Meshlets[i].PrimCount);
 			}
 
-			VertexBuffer.Create(Device, PDMP, TotalSizeOf(Vertices))
+			//!< テクセルバッファ系はフォーマットがサポートされるかチェックする (UNIFORM_TEXEL_BUFFER が R32G32B32A32_SFLOAT をサポートするか)
+#ifdef _DEBUG
+			VkFormatProperties FP;
+			vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), VK_FORMAT_R32G32B32A32_SFLOAT, &FP); 
+			assert((FP.bufferFeatures & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT) && "Format not supported");
+#endif
+			VertexBuffer.Create(Device, PDMP, TotalSizeOf(Vertices), VK_FORMAT_R32G32B32A32_SFLOAT)
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Vertices), data(Vertices), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
 			MeshletBuffer.Create(Device, PDMP, TotalSizeOf(Meshlets))
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Meshlets), data(Meshlets), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
 			VertexIndexBuffer.Create(Device, PDMP, TotalSizeOf(VertexIndices))
+			//VertexIndexBuffer.Create(Device, PDMP, TotalSizeOf(VertexIndices), VK_FORMAT_R32_UINT)
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(VertexIndices), data(VertexIndices), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
 			TriangleBuffer.Create(Device, PDMP, TotalSizeOf(Triangles))
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Triangles), data(Triangles), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
@@ -126,7 +135,8 @@ public:
 	virtual void CreateRenderPass() { VKExt::CreateRenderPass_Clear(); }
 	virtual void CreatePipelineLayout() override {
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
-			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER , .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_MESH_BIT_NV, .pImmutableSamplers = nullptr }),
+			//VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER , .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_MESH_BIT_NV, .pImmutableSamplers = nullptr }),
+			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_MESH_BIT_NV, .pImmutableSamplers = nullptr }),
 			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER , .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_MESH_BIT_NV, .pImmutableSamplers = nullptr }),
 			VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER , .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_MESH_BIT_NV, .pImmutableSamplers = nullptr }),
 			VkDescriptorSetLayoutBinding({.binding = 3, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER , .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_MESH_BIT_NV, .pImmutableSamplers = nullptr }),
@@ -152,7 +162,9 @@ public:
 	}
 	virtual void CreateDescriptor() override {
 		VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER , .descriptorCount = 4 })
+			//VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER , .descriptorCount = 4 }),
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, .descriptorCount = 1 }),
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = 3 }),
 		});
 		const std::array DSLs = { DescriptorSetLayouts[0] };
 		const VkDescriptorSetAllocateInfo DSAI = {
@@ -165,36 +177,43 @@ public:
 
 		struct DescriptorUpdateInfo
 		{
-			VkDescriptorBufferInfo DBI_0;
+			//VkDescriptorBufferInfo DBI_0;
+			VkBufferView BV_0;
 			VkDescriptorBufferInfo DBI_1;
 			VkDescriptorBufferInfo DBI_2;
 			VkDescriptorBufferInfo DBI_3;
 		};
 		VkDescriptorUpdateTemplate DUT;
 		VK::CreateDescriptorUpdateTemplate(DUT, {
+			//VkDescriptorUpdateTemplateEntry({
+			//	.dstBinding = 0, .dstArrayElement = 0,
+			//	.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+			//	.offset = offsetof(DescriptorUpdateInfo, DBI_0), .stride = sizeof(DescriptorUpdateInfo)
+			//}),
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
-				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.offset = offsetof(DescriptorUpdateInfo, DBI_0), .stride = sizeof(DescriptorUpdateInfo)
-			}),
-			VkDescriptorUpdateTemplateEntry({
-				.dstBinding = 0, .dstArrayElement = 0,
-				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.offset = offsetof(DescriptorUpdateInfo, DBI_1), .stride = sizeof(DescriptorUpdateInfo)
+				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
+				.offset = offsetof(DescriptorUpdateInfo, BV_0), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 1, .dstArrayElement = 0,
 				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.offset = offsetof(DescriptorUpdateInfo, DBI_2), .stride = sizeof(DescriptorUpdateInfo)
+				.offset = offsetof(DescriptorUpdateInfo, DBI_1), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 2, .dstArrayElement = 0,
+				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+				.offset = offsetof(DescriptorUpdateInfo, DBI_2), .stride = sizeof(DescriptorUpdateInfo)
+			}),
+			VkDescriptorUpdateTemplateEntry({
+				.dstBinding = 3, .dstArrayElement = 0,
 				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
 				.offset = offsetof(DescriptorUpdateInfo, DBI_3), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 		}, DescriptorSetLayouts[0]);
 		const DescriptorUpdateInfo DUI = {
-			VkDescriptorBufferInfo({.buffer = VertexBuffer.Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
+			//VkDescriptorBufferInfo({.buffer = VertexBuffer.Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
+			VertexBuffer.View,
 			VkDescriptorBufferInfo({.buffer = MeshletBuffer.Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
 			VkDescriptorBufferInfo({.buffer = VertexIndexBuffer.Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
 			VkDescriptorBufferInfo({.buffer = TriangleBuffer.Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),

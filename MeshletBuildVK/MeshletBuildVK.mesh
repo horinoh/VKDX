@@ -21,9 +21,10 @@ struct MESHLET
     uint PrimCount;
     uint PrimOffset;
 };
-layout(binding = 0, set = 0) buffer Vertex { VERTEX_IN Vertices[]; };
+//layout(binding = 0, set = 0) buffer Vertex { VERTEX_IN Vertices[]; };
+layout(binding = 0, set=0)  uniform samplerBuffer  Vertex;
 layout(binding = 1, set = 0) buffer Meshlet { MESHLET Meshlets[]; };
-layout(binding = 2, set = 0) buffer VertexIndex { uint/*8*/ VertexIndices[]; }; // TODO
+layout(binding = 2, set = 0) buffer VertexIndex { uint VertexIndices[]; };
 layout(binding = 3, set = 0) buffer Triangle { uint Triangles[]; };
 uvec3 Unpack(uint tri)
 {
@@ -41,14 +42,23 @@ uint GetVertexIndex16(const uint i)
 
 const vec3 Colors[] = { vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec3(1.0f, 1.0f, 0.0f), vec3(0.0f, 1.0f, 1.0f), vec3(1.0f, 0.0f, 1.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f) };
 
-layout(local_size_x = 32) in;
+#define VERTEX_MAX 128
+#define GROUP_SIZE 32
+layout(local_size_x = GROUP_SIZE) in;
 layout(triangles, max_vertices = 126, max_primitives = 64) out;
 void main()
 {
-    const MESHLET ML = Meshlets[gl_WorkGroupID.x];
+    const MESHLET ML = Meshlets[Payload.MeshletIDs[gl_WorkGroupID.x]];
 
     gl_PrimitiveCountNV = ML.PrimCount;
     
+    //!< VK では GROUP_SIZE の最大が 32 とかなので、複数回ループさせることで VERTEX_MAX の頂点に対応する
+    const uint Loop = (VERTEX_MAX + GROUP_SIZE - 1) / GROUP_SIZE;
+    for(uint i = 0; i < Loop; ++i) {
+        const uint index = VertexIndices[0];
+        texelFetch(Vertex, int(index)).xyz;
+    }
+
 //    const uvec3 Tri = Unpack(Triangles[ML.PrimOffset + gl_LocalInvocationID.x]); 
 //    gl_PrimitiveIndicesNV[gl_LocalInvocationID.x + 0] = Tri.x;
 //    gl_PrimitiveIndicesNV[gl_LocalInvocationID.x + 1] = Tri.y;
@@ -58,7 +68,9 @@ void main()
 							0.0f, 3.89474273f, 0.0f, 0.0f,
 							0.0f, 0.0f, -1.00010002f, -1.0f,
 							0.0f, 0.0f, 2.99029899f, 3.0f);
-	gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = PVW * vec4(Vertices[GetVertexIndex32(ML.VertOffset + gl_LocalInvocationID.x)].Position, 1.0f);
+
+    texelFetch(Vertex, int(0)).xyz;
+	//gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = PVW * vec4(Vertices[GetVertexIndex32(ML.VertOffset + gl_LocalInvocationID.x)].Position, 1.0f);
 	//gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = PVW * vec4(Vertices[ML.VertOffset + gl_LocalInvocationID.x].Position, 1.0f);
 
 	OutColor[gl_LocalInvocationID.x] = Colors[gl_WorkGroupID.x % 8];

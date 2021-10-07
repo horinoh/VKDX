@@ -284,21 +284,80 @@ public:
 	private:
 		using Super = DeviceLocalBuffer;
 	public:
+		VkBufferView View = VK_NULL_HANDLE;
 		DeviceLocalStorageBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
 			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 			return *this;
 		}
-	};
-	class HostVisibleStorageBuffer : public HostVisibleBuffer
-	{
-	private:
-		using Super = HostVisibleBuffer;
-	public:
-		HostVisibleStorageBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const void* Source = nullptr) {
-			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, Source);
+		DeviceLocalStorageBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const VkFormat Format) {
+			Create(Device, PDMP, Size);
+			const VkBufferViewCreateInfo BVCI = {
+				.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.buffer = Buffer,
+				.format = Format,
+				.offset = 0,
+				.range = VK_WHOLE_SIZE
+			};
+			VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BVCI, GetAllocationCallbacks(), &View));
 			return *this;
 		}
+		virtual void Destroy(const VkDevice Device) override {
+			Super::Destroy(Device);
+			if (VK_NULL_HANDLE != View) { vkDestroyBufferView(Device, View, GetAllocationCallbacks()); }
+		}
 	};
+	//class HostVisibleStorageBuffer : public HostVisibleBuffer
+	//{
+	//private:
+	//	using Super = HostVisibleBuffer;
+	//public:
+	//	HostVisibleStorageBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const void* Source = nullptr) {
+	//		Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, Source);
+	//		return *this;
+	//	}
+	//};
+
+	class DeviceLocalUniformTexelBuffer : public DeviceLocalBuffer
+	{
+	private:
+		using Super = DeviceLocalBuffer;
+	public:
+		VkBufferView View = VK_NULL_HANDLE;
+		DeviceLocalUniformTexelBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
+			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+			return *this;
+		}
+		DeviceLocalUniformTexelBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const VkFormat Format) {
+			Create(Device, PDMP, Size);
+			const VkBufferViewCreateInfo BVCI = {
+				.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
+				.pNext = nullptr,
+				.flags = 0,
+				.buffer = Buffer,
+				.format = Format,
+				.offset = 0,
+				.range = VK_WHOLE_SIZE
+			};
+			VERIFY_SUCCEEDED(vkCreateBufferView(Device, &BVCI, GetAllocationCallbacks(), &View));
+			return *this;
+		}
+		virtual void Destroy(const VkDevice Device) override {
+			Super::Destroy(Device);
+			if (VK_NULL_HANDLE != View) { vkDestroyBufferView(Device, View, GetAllocationCallbacks()); }
+		}
+	};
+	//class HostVisibleUniformTexelBuffer : public HostVisibleBuffer
+	//{
+	//private:
+	//	using Super = HostVisibleBuffer;
+	//public:
+	//	HostVisibleUniformTexelBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const void* Source = nullptr) {
+	//		Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT, Source);
+	//		return *this;
+	//	}
+	//};
 
 	class Texture : public DeviceMemoryBase
 	{
@@ -836,9 +895,9 @@ protected:
 	virtual void CreateGeometry() {}
 
 	virtual void CreateUniformBuffer() {}
-	virtual void CreateStorageBuffer() {}
+	/*virtual void CreateStorageBuffer() {}
 	virtual void CreateUniformTexelBuffer() {}
-	virtual void CreateStorageTexStorageTexelBuffer() {}
+	virtual void CreateStorageTexStorageTexelBuffer() {}*/
 
 	/**
 	アプリ内ではサンプラとサンプルドイメージは別のオブジェクトとして扱うが、シェーダ内ではまとめた一つのオブジェクトとして扱うことができ、プラットフォームによっては効率が良い場合がある
@@ -891,13 +950,6 @@ protected:
 		layout (input_attachment_index=0, set=0, binding=0) uniform subpassInput MySubpassInput;
 	*/
 
-	//[[deprecated("this is example code")]]
-	//virtual void CreateUniformBuffer_Example();
-	//[[deprecated("this is example code")]]
-	//virtual void CreateStorageBuffer_Example();
-	//[[deprecated("this is example code")]]
-	//virtual void CreateUniformTexelBuffer_Example();
-	//[[deprecated("this is example code")]]
 	//virtual void CreateStorageTexelBuffer_Example();
 
 	virtual void CreateDescriptorSetLayout(VkDescriptorSetLayout& DSL, const VkDescriptorSetLayoutCreateFlags Flags, const std::vector<VkDescriptorSetLayoutBinding>& DSLBs);
