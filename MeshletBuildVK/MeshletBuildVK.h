@@ -15,11 +15,9 @@ public:
 	MeshletBuildVK() : Super() {}
 	virtual ~MeshletBuildVK() {}
 
-	//DeviceLocalStorageBuffer VertexBuffer;
 	DeviceLocalUniformTexelBuffer VertexBuffer;
+	DeviceLocalUniformTexelBuffer VertexIndexBuffer;
 	DeviceLocalStorageBuffer MeshletBuffer;
-	DeviceLocalStorageBuffer VertexIndexBuffer;
-	//DeviceLocalUniformTexelBuffer VertexIndexBuffer;
 	DeviceLocalStorageBuffer TriangleBuffer;
 
 #pragma region FBX
@@ -70,8 +68,8 @@ public:
 
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
 		TriangleBuffer.Destroy(Device);
-		VertexIndexBuffer.Destroy(Device);
 		MeshletBuffer.Destroy(Device);
+		VertexIndexBuffer.Destroy(Device);
 		VertexBuffer.Destroy(Device);
 		Super::OnDestroy(hWnd, hInstance);
 	}
@@ -83,9 +81,7 @@ public:
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext, [[maybe_unused]] const std::vector<const char*>& AddExtensions) override {
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
 			VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr, .taskShader = VK_TRUE, .meshShader = VK_TRUE, };
-			Super::CreateDevice(hWnd, hInstance, &PDMSF, {
-				VK_NV_MESH_SHADER_EXTENSION_NAME
-			});
+			Super::CreateDevice(hWnd, hInstance, &PDMSF, { VK_NV_MESH_SHADER_EXTENSION_NAME });
 		}
 		else {
 			Super::CreateDevice(hWnd, hInstance, pNext, AddExtensions);
@@ -105,29 +101,32 @@ public:
 
 			std::vector<DirectX::Meshlet> Meshlets;
 			std::vector<uint8_t> VertexIndices;
-			std::vector<DirectX::MeshletTriangle> Triangles;
+			std::vector<DirectX::MeshletTriangle> Triangles; //!< uint32_t の 30bit を使用して i0, i1, i2 それぞれ 10bit
 			if (FAILED(DirectX::ComputeMeshlets(data(Indices), size(Indices) / 3, data(VerticesDX), size(VerticesDX), nullptr, Meshlets, VertexIndices, Triangles,
 				DirectX::MESHLET_DEFAULT_MAX_VERTS, DirectX::MESHLET_DEFAULT_MAX_PRIMS))) { assert(false); }
 
-			assert(size(Meshlets) < 32 && "");
+			//assert(size(Meshlets) <= 32 && "32 を超える場合は複数回に分けて描画する必要があるが、ここでは超えてはいけないこととする");
 			Logf("Meshlets Count = %d\n", size(Meshlets));
 			for (size_t i = 0; i < std::min<size_t>(size(Meshlets), 8); ++i) {
-				Logf("\tVertCount = %d, PrimCount = %d\n", Meshlets[i].VertCount, Meshlets[i].PrimCount);
+				Logf("\t[%d] VertCount = %d, PrimCount = %d\n", i, Meshlets[i].VertCount, Meshlets[i].PrimCount);
 			}
+			Log("\t...\n");
 
 			//!< テクセルバッファ系はフォーマットがサポートされるかチェックする (UNIFORM_TEXEL_BUFFER が R32G32B32A32_SFLOAT をサポートするか)
 #ifdef _DEBUG
 			VkFormatProperties FP;
-			vkGetPhysicalDeviceFormatProperties(GetCurrentPhysicalDevice(), VK_FORMAT_R32G32B32A32_SFLOAT, &FP); 
+			const auto PD = GetCurrentPhysicalDevice();
+			vkGetPhysicalDeviceFormatProperties(PD, VK_FORMAT_R32G32B32A32_SFLOAT, &FP); 
+			assert((FP.bufferFeatures & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT) && "Format not supported");
+			vkGetPhysicalDeviceFormatProperties(PD, VK_FORMAT_R32_UINT, &FP);
 			assert((FP.bufferFeatures & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT) && "Format not supported");
 #endif
 			VertexBuffer.Create(Device, PDMP, TotalSizeOf(Vertices), VK_FORMAT_R32G32B32A32_SFLOAT)
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Vertices), data(Vertices), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
-			MeshletBuffer.Create(Device, PDMP, TotalSizeOf(Meshlets))
-				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Meshlets), data(Meshlets), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
-			VertexIndexBuffer.Create(Device, PDMP, TotalSizeOf(VertexIndices))
-			//VertexIndexBuffer.Create(Device, PDMP, TotalSizeOf(VertexIndices), VK_FORMAT_R32_UINT)
+			VertexIndexBuffer.Create(Device, PDMP, TotalSizeOf(VertexIndices), VK_FORMAT_R32_UINT)
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(VertexIndices), data(VertexIndices), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
+			MeshletBuffer.Create(Device, PDMP, TotalSizeOf(Meshlets))
+				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Meshlets), data(Meshlets), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV); 
 			TriangleBuffer.Create(Device, PDMP, TotalSizeOf(Triangles))
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Triangles), data(Triangles), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
 		}
@@ -135,9 +134,8 @@ public:
 	virtual void CreateRenderPass() { VKExt::CreateRenderPass_Clear(); }
 	virtual void CreatePipelineLayout() override {
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
-			//VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER , .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_MESH_BIT_NV, .pImmutableSamplers = nullptr }),
 			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_MESH_BIT_NV, .pImmutableSamplers = nullptr }),
-			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER , .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_MESH_BIT_NV, .pImmutableSamplers = nullptr }),
+			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER , .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_MESH_BIT_NV, .pImmutableSamplers = nullptr }),
 			VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER , .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_MESH_BIT_NV, .pImmutableSamplers = nullptr }),
 			VkDescriptorSetLayoutBinding({.binding = 3, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER , .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_MESH_BIT_NV, .pImmutableSamplers = nullptr }),
 		});
@@ -162,9 +160,8 @@ public:
 	}
 	virtual void CreateDescriptor() override {
 		VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
-			//VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER , .descriptorCount = 4 }),
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, .descriptorCount = 1 }),
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = 3 }),
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, .descriptorCount = 2 }),
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = 2 }),
 		});
 		const std::array DSLs = { DescriptorSetLayouts[0] };
 		const VkDescriptorSetAllocateInfo DSAI = {
@@ -177,19 +174,13 @@ public:
 
 		struct DescriptorUpdateInfo
 		{
-			//VkDescriptorBufferInfo DBI_0;
 			VkBufferView BV_0;
+			VkBufferView BV_1;
+			VkDescriptorBufferInfo DBI_0;
 			VkDescriptorBufferInfo DBI_1;
-			VkDescriptorBufferInfo DBI_2;
-			VkDescriptorBufferInfo DBI_3;
 		};
 		VkDescriptorUpdateTemplate DUT;
 		VK::CreateDescriptorUpdateTemplate(DUT, {
-			//VkDescriptorUpdateTemplateEntry({
-			//	.dstBinding = 0, .dstArrayElement = 0,
-			//	.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-			//	.offset = offsetof(DescriptorUpdateInfo, DBI_0), .stride = sizeof(DescriptorUpdateInfo)
-			//}),
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
 				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
@@ -197,25 +188,24 @@ public:
 			}),
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 1, .dstArrayElement = 0,
-				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.offset = offsetof(DescriptorUpdateInfo, DBI_1), .stride = sizeof(DescriptorUpdateInfo)
+				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
+				.offset = offsetof(DescriptorUpdateInfo, BV_1), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 2, .dstArrayElement = 0,
 				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.offset = offsetof(DescriptorUpdateInfo, DBI_2), .stride = sizeof(DescriptorUpdateInfo)
+				.offset = offsetof(DescriptorUpdateInfo, DBI_0), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 3, .dstArrayElement = 0,
 				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-				.offset = offsetof(DescriptorUpdateInfo, DBI_3), .stride = sizeof(DescriptorUpdateInfo)
+				.offset = offsetof(DescriptorUpdateInfo, DBI_1), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 		}, DescriptorSetLayouts[0]);
 		const DescriptorUpdateInfo DUI = {
-			//VkDescriptorBufferInfo({.buffer = VertexBuffer.Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
 			VertexBuffer.View,
+			VertexIndexBuffer.View,
 			VkDescriptorBufferInfo({.buffer = MeshletBuffer.Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
-			VkDescriptorBufferInfo({.buffer = VertexIndexBuffer.Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
 			VkDescriptorBufferInfo({.buffer = TriangleBuffer.Buffer, .offset = 0, .range = VK_WHOLE_SIZE }),
 		};
 		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DUT, &DUI);

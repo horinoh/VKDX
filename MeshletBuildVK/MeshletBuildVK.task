@@ -14,9 +14,6 @@ layout(local_size_x = MESHLET_COUNT) in;
 void main()
 {
 	bool Visible = true;
-	//bool Visible = 0 == (gl_LocalInvocationID.x % 2);
-	//bool Visible = 0 == (gl_WorkGroupID.x % 2);
-
 	uvec4 Vote = subgroupBallot(Visible);
 	if(Visible)
 	{

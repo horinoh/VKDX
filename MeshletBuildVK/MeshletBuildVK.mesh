@@ -21,26 +21,32 @@ struct MESHLET
     uint PrimCount;
     uint PrimOffset;
 };
-//layout(binding = 0, set = 0) buffer Vertex { VERTEX_IN Vertices[]; };
 layout(binding = 0, set=0)  uniform samplerBuffer  Vertex;
-layout(binding = 1, set = 0) buffer Meshlet { MESHLET Meshlets[]; };
-layout(binding = 2, set = 0) buffer VertexIndex { uint VertexIndices[]; };
+layout(binding = 1, set=0)  uniform usamplerBuffer  VertexIndex;
+layout(binding = 2, set = 0) buffer Meshlet { MESHLET Meshlets[]; };
 layout(binding = 3, set = 0) buffer Triangle { uint Triangles[]; };
+
 uvec3 Unpack(uint tri)
 {
+    //!< uint32_t の 30bit を使用して i0, i1, i2 それぞれ 10bit
     return uvec3(tri & 0x3ff, (tri >> 10) & 0x3ff, (tri >> 20) & 0x3ff);
 }
 uint GetVertexIndex32(const uint i) 
 {
-    //return VertexIndices.Load(i << 2); //!< Load() の引数は byte 指定なので 4 を掛けている 
-    return 0;
+    return texelFetch(VertexIndex, int(i)).x;
 }
 uint GetVertexIndex16(const uint i) 
 {
+    //!< 16bit の場合 uint に インデックスが 2 つ含まれるので i を 2 で割り、i が奇数なら 16bit シフトして取得している
     return (GetVertexIndex32(i >> 1) >> (16 * (i & 0x1))) & 0xffff;
 }
 
 const vec3 Colors[] = { vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec3(1.0f, 1.0f, 0.0f), vec3(0.0f, 1.0f, 1.0f), vec3(1.0f, 0.0f, 1.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f) };
+
+const mat4 PV = mat4(1.93643117f, 0.0f, 0.0f, 0.0f,
+							0.0f, 3.89474273f, 0.0f, 0.0f,
+							0.0f, 0.0f, -1.00010002f, -1.0f,
+							0.0f, 0.0f, 2.99029899f, 3.0f);
 
 #define VERTEX_MAX 128
 #define GROUP_SIZE 32
@@ -51,27 +57,18 @@ void main()
     const MESHLET ML = Meshlets[Payload.MeshletIDs[gl_WorkGroupID.x]];
 
     gl_PrimitiveCountNV = ML.PrimCount;
-    
-    //!< VK では GROUP_SIZE の最大が 32 とかなので、複数回ループさせることで VERTEX_MAX の頂点に対応する
-    const uint Loop = (VERTEX_MAX + GROUP_SIZE - 1) / GROUP_SIZE;
-    for(uint i = 0; i < Loop; ++i) {
-        const uint index = VertexIndices[0];
-        texelFetch(Vertex, int(index)).xyz;
+  
+    //!< VK では GROUP_SIZE の最大が 32 とかなので、複数回ループさせて対処する
+    for(uint i = 0; i < (VERTEX_MAX + GROUP_SIZE - 1) / GROUP_SIZE; ++i) {
+        const uint index = i * GROUP_SIZE + gl_LocalInvocationID.x;
+
+        const uvec3 Tri = Unpack(Triangles[ML.PrimOffset + index]); 
+        gl_PrimitiveIndicesNV[index + 0] = Tri.x;
+        gl_PrimitiveIndicesNV[index + 1] = Tri.y;
+        gl_PrimitiveIndicesNV[index + 2] = Tri.z;
+
+        gl_MeshVerticesNV[index].gl_Position = PV * vec4(texelFetch(Vertex, int(GetVertexIndex32(ML.VertOffset + index))).xyz, 1.0f);
     }
-
-//    const uvec3 Tri = Unpack(Triangles[ML.PrimOffset + gl_LocalInvocationID.x]); 
-//    gl_PrimitiveIndicesNV[gl_LocalInvocationID.x + 0] = Tri.x;
-//    gl_PrimitiveIndicesNV[gl_LocalInvocationID.x + 1] = Tri.y;
-//    gl_PrimitiveIndicesNV[gl_LocalInvocationID.x + 2] = Tri.z;
-
-    const mat4 PVW = mat4(1.93643117f, 0.0f, 0.0f, 0.0f,
-							0.0f, 3.89474273f, 0.0f, 0.0f,
-							0.0f, 0.0f, -1.00010002f, -1.0f,
-							0.0f, 0.0f, 2.99029899f, 3.0f);
-
-    texelFetch(Vertex, int(0)).xyz;
-	//gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = PVW * vec4(Vertices[GetVertexIndex32(ML.VertOffset + gl_LocalInvocationID.x)].Position, 1.0f);
-	//gl_MeshVerticesNV[gl_LocalInvocationID.x].gl_Position = PVW * vec4(Vertices[ML.VertOffset + gl_LocalInvocationID.x].Position, 1.0f);
 
 	OutColor[gl_LocalInvocationID.x] = Colors[gl_WorkGroupID.x % 8];
 }

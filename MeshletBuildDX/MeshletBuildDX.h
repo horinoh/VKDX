@@ -16,8 +16,8 @@ public:
 	virtual ~MeshletBuildDX() {}
 
 	DefaultStructuredBuffer VertexBuffer;
-	DefaultStructuredBuffer MeshletBuffer;
 	DefaultStructuredBuffer VertexIndexBuffer;
+	DefaultStructuredBuffer MeshletBuffer;
 	DefaultStructuredBuffer TriangleBuffer;
 
 #pragma region FBX
@@ -77,22 +77,23 @@ public:
 			}
 			std::vector<DirectX::Meshlet> Meshlets;
 			std::vector<uint8_t> VertexIndices;
-			std::vector<DirectX::MeshletTriangle> Triangles;
+			std::vector<DirectX::MeshletTriangle> Triangles; //!< uint32_t の 30bit を使用して i0, i1, i2 それぞれ 10bit
 			VERIFY_SUCCEEDED(DirectX::ComputeMeshlets(data(Indices), size(Indices) / 3, data(Vertices), size(Vertices), nullptr, Meshlets, VertexIndices, Triangles,
 				DirectX::MESHLET_DEFAULT_MAX_VERTS, DirectX::MESHLET_DEFAULT_MAX_PRIMS));
 
-			assert(size(Meshlets) < 32 && "");
+			//assert(size(Meshlets) <= 32 && "32 を超える場合は複数回に分けて描画する必要があるが、ここでは超えてはいけないこととする");
 			Logf("Meshlets Count = %d\n", size(Meshlets));
 			for (size_t i = 0; i < std::min<size_t>(size(Meshlets), 8); ++i) {
-				Logf("\tVertCount = %d, PrimCount = %d\n", Meshlets[i].VertCount, Meshlets[i].PrimCount);
+				Logf("\t[%d] VertCount = %d, PrimCount = %d\n", i, Meshlets[i].VertCount, Meshlets[i].PrimCount);
 			}
+			Log("\t...\n");
 
 			VertexBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), sizeof(Vertices[0]))
 				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Vertices), data(Vertices), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+			VertexIndexBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(VertexIndices), sizeof(VertexIndices[0]))
+				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(VertexIndices), data(VertexIndices), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE); 
 			MeshletBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(Meshlets), sizeof(Meshlets[0]))
 				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Meshlets), data(Meshlets), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			VertexIndexBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(VertexIndices), sizeof(VertexIndices[0]))
-				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(VertexIndices), data(VertexIndices), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			TriangleBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(Triangles), sizeof(Triangles[0]))
 				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Triangles), data(Triangles), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		}
@@ -142,11 +143,11 @@ public:
 		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
-		Device->CreateShaderResourceView(COM_PTR_GET(MeshletBuffer.Resource), &MeshletBuffer.SRV, CDH);
+		Device->CreateShaderResourceView(COM_PTR_GET(VertexIndexBuffer.Resource), &VertexIndexBuffer.SRV, CDH);
 		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		CDH.ptr += IncSize;
-		GDH.ptr += IncSize;
-		Device->CreateShaderResourceView(COM_PTR_GET(VertexIndexBuffer.Resource), &VertexIndexBuffer.SRV, CDH);
+		GDH.ptr += IncSize; 
+		Device->CreateShaderResourceView(COM_PTR_GET(MeshletBuffer.Resource), &MeshletBuffer.SRV, CDH);
 		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
