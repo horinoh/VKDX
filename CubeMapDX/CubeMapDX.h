@@ -5,10 +5,18 @@
 #pragma region Code
 #include "../DXImage.h"
 
+#ifdef USE_SKY_DOME
 class CubeMapDX : public DXImage
+#else
+class CubeMapDX : public DXImageDepth
+#endif
 {
 private:
+#ifdef USE_SKY_DOME
 	using Super = DXImage;
+#else
+	using Super = DXImageDepth;
+#endif
 public:
 	CubeMapDX() : Super() {}
 	virtual ~CubeMapDX() {}
@@ -73,10 +81,7 @@ protected:
 			//!< [1] –@ü(Normal)
 			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		}
-#ifndef USE_SKY_DOME
-		//!< [2] [“x(Depth)
-		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
-#endif
+		Super::CreateTexture();
 	}
 	virtual void CreateStaticSampler() override {
 		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
@@ -155,10 +160,10 @@ protected:
 			.MultisampleEnable = FALSE, .AntialiasedLineEnable = FALSE, .ForcedSampleCount = 0,
 			.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF
 		};
-#ifndef USE_SKY_DOME
-		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD, TRUE, SBCs);
-#else
+#ifdef USE_SKY_DOME
 		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD, FALSE, SBCs);
+#else
+		CreatePipelineState_VsPsDsHsGs(D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RD, TRUE, SBCs);
 #endif
 	}
 	virtual void CreateDescriptor() override {
@@ -170,12 +175,6 @@ protected:
 #pragma endregion
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 		}
-#ifndef USE_SKY_DOME
-		{
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 }; //!< DSV
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
-		}
-#endif
 
 		{
 			CbvSrvUavGPUHandles.emplace_back();
@@ -206,15 +205,7 @@ protected:
 			CDH.ptr += IncSize;
 			GDH.ptr += IncSize; 
 		}
-#ifndef USE_SKY_DOME
-		{
-			DsvCPUHandles.emplace_back();
-			auto CDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			//!< DSV
-			Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH);
-			DsvCPUHandles.back().emplace_back(CDH);
-		}
-#endif
+		Super::CreateDescriptor();
 	}
 
 	virtual void PopulateCommandList(const size_t i) override {
@@ -247,10 +238,10 @@ protected:
 				GCL->ClearDepthStencilView(DsvCPUHandles.back()[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 #endif
 				const std::array CHs = { SwapChainCPUHandles[i] };
-#ifndef USE_SKY_DOME
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles.back()[0]);
-#else
+#ifdef USE_SKY_DOME
 				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
+#else
+				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles.back()[0]);
 #endif
 				{
 					const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };

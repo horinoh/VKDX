@@ -7,10 +7,10 @@
 #include "../DXExt.h"
 #include "../DXMesh.h"
 
-class MeshletBuildDX : public DXExt, public Fbx
+class MeshletBuildDX : public DXExtDepth, public Fbx
 {
 private:
-	using Super = DXExt;
+	using Super = DXExtDepth;
 public:
 	MeshletBuildDX() : Super() {}
 	virtual ~MeshletBuildDX() {}
@@ -128,7 +128,7 @@ public:
 				D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
 				D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[2]->GetBufferPointer(), .BytecodeLength = SBs[2]->GetBufferSize() }),
 			};
-			CreatePipelineState_AsMsPs(FALSE, SBCs);
+			CreatePipelineState_AsMsPs(TRUE, SBCs);
 		}
 	}
 	virtual void CreateDescriptor() override {
@@ -153,6 +153,8 @@ public:
 		GDH.ptr += IncSize;
 		Device->CreateShaderResourceView(COM_PTR_GET(TriangleBuffer.Resource), &TriangleBuffer.SRV, CDH);
 		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+
+		Super::CreateDescriptor();
 	}
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto HasMS = HasMeshShaderSupport(COM_PTR_GET(Device));
@@ -173,9 +175,10 @@ public:
 				if (HasMS) {
 					constexpr std::array<D3D12_RECT, 0> Rects = {};
 					GCL->ClearRenderTargetView(SwapChainCPUHandles[i], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+					GCL->ClearDepthStencilView(DsvCPUHandles.back()[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 
 					const std::array CHs = { SwapChainCPUHandles[i] };
-					GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
+					GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles.back()[0]);
 
 					{
 						const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };

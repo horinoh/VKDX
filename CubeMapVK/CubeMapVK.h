@@ -6,10 +6,18 @@
 #pragma region Code
 #include "../VKImage.h"
 
+#ifdef USE_SKY_DOME
 class CubeMapVK : public VKImage
+#else
+class CubeMapVK : public VKImageDepth
+#endif
 {
 private:
+#ifdef USE_SKY_DOME
 	using Super = VKImage;
+#else
+	using Super = VKImageDepth;
+#endif
 public:
 	CubeMapVK() : Super() {}
 	virtual ~CubeMapVK() {}
@@ -65,10 +73,7 @@ protected:
 			//!< [1] –@ü(Normal)
 			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds"))).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		}
-#ifndef USE_SKY_DOME
-		//!< [2] [“x(DepthMap)
-		DepthTextures.emplace_back().Create(Device, PDMP, DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
-#endif
+		Super::CreateTexture();
 	}
 	virtual void CreateImmutableSampler() override {
 		constexpr VkSamplerCreateInfo SCI = {
@@ -98,9 +103,6 @@ protected:
 		});
 		VKExt::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
-#ifndef USE_SKY_DOME
-	virtual void CreateRenderPass() override { VKExt::CreateRenderPass_Depth(); }
-#endif
 	virtual void CreatePipeline() override {
 		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
@@ -146,13 +148,6 @@ protected:
 
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
-#ifndef USE_SKY_DOME
-	virtual void CreateFramebuffer() override {
-		for (auto i : SwapchainImageViews) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DepthTextures.back().View });
-		}
-	}
-#endif
 	virtual void CreateDescriptor() override {
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT

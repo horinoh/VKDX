@@ -54,7 +54,9 @@ protected:
 		VKExt::CreateRenderPass_Depth(); 
 	}
 	//!< パイプラインを深度を有効にして作成すること
-	//virtual void CreatePipeline() override {}
+	//virtual void CreatePipeline() override {
+	//	CreatePipeline_XXX(VK_TRUE, ...);
+	//}
 	virtual void CreateFramebuffer() override {
 		for (auto i : SwapchainImageViews) {
 			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DepthTextures.back().View });

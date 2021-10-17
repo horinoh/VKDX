@@ -7,10 +7,10 @@
 #include "../VKExt.h"
 #include "../DXMesh.h"
 
-class MeshletBuildVK : public VKExt, public Fbx
+class MeshletBuildVK : public VKExtDepth, public Fbx
 {
 private:
-	using Super = VKExt;
+	using Super = VKExtDepth;
 public:
 	MeshletBuildVK() : Super() {}
 	virtual ~MeshletBuildVK() {}
@@ -131,7 +131,6 @@ public:
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Triangles), data(Triangles), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
 		}
 	}
-	virtual void CreateRenderPass() { VKExt::CreateRenderPass_Clear(); }
 	virtual void CreatePipelineLayout() override {
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
 			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_MESH_BIT_NV, .pImmutableSamplers = nullptr }),
@@ -154,7 +153,7 @@ public:
 				VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_MESH_BIT_NV, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),
 				VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = SMs[2], .pName = "main", .pSpecializationInfo = nullptr }),
 			};
-			CreatePipeline_TsMsFs(VK_FALSE, PSSCIs);
+			CreatePipeline_TsMsFs(VK_TRUE, PSSCIs);
 			for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 		}
 	}
@@ -229,7 +228,7 @@ public:
 
 			vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
 
-			constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
+			constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
 			const VkRenderPassBeginInfo RPBI = {
 				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
 				.pNext = nullptr,
