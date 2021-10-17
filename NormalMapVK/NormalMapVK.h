@@ -5,10 +5,10 @@
 #pragma region Code
 #include "../VKImage.h"
 
-class NormalMapVK : public VKImage
+class NormalMapVK : public VKImageDepth
 {
 private:
-	using Super = VKImage;
+	using Super = VKImageDepth;
 public:
 	NormalMapVK() : Super() {}
 	virtual ~NormalMapVK() {}
@@ -69,7 +69,7 @@ protected:
 #endif
 		}
 		//!< [2] [“x(Depth)
-		DepthTextures.emplace_back().Create(Device, PDMP, DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
+		Super::CreateTexture();
 	}
 	virtual void CreateImmutableSampler() override {
 		constexpr VkSamplerCreateInfo SCI = {
@@ -102,7 +102,6 @@ protected:
 		});
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
-	virtual void CreateRenderPass() override { VKExt::CreateRenderPass_Depth(); }
 	virtual void CreatePipeline() override {
 		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
@@ -147,11 +146,6 @@ protected:
 		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, VK_TRUE, PSSCIs);
 
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
-	}
-	virtual void CreateFramebuffer() override { 
-		for (auto i : SwapchainImageViews) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DepthTextures.back().View });
-		}
 	}
 	virtual void CreateDescriptor() override {
 		VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
@@ -242,7 +236,6 @@ protected:
 #pragma endregion
 		vkDestroyDescriptorUpdateTemplate(Device, DUT, GetAllocationCallbacks());
 	}
-	
 	virtual void PopulateCommandBuffer(const size_t i) override {
 		const auto RP = RenderPasses[0];
 		const auto FB = Framebuffers[i];

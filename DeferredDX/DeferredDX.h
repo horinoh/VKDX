@@ -5,10 +5,10 @@
 #pragma region Code
 #include "../DXExt.h"
 
-class DeferredDX : public DXExt
+class DeferredDX : public DXExtDepth
 {
 private:
-	using Super = DXExt;
+	using Super = DXExtDepth;
 public:
 	DeferredDX() : Super() {}
 	virtual ~DeferredDX() {}
@@ -88,8 +88,7 @@ protected:
 		}
 #pragma endregion
 	}
-	virtual void CreateTexture()
-	{
+	virtual void CreateTexture() override {
 		const auto W = static_cast<UINT64>(GetClientRectWidth());
 		const auto H = static_cast<UINT>(GetClientRectHeight());
 
@@ -103,7 +102,8 @@ protected:
 		//!< –¢’è
 		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_R8G8B8A8_UNORM, .Color = { DirectX::Colors::SkyBlue.f[0], DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] } }));
 #pragma endregion
-		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
+
+		Super::CreateTexture();
 	}
 	virtual void CreateStaticSampler() override {
 #pragma region PASS1
@@ -297,11 +297,6 @@ protected:
 					VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps.emplace_back())));
 				}
 #pragma endregion
-				{
-					const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
-					//!< DSV
-					VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
-				}
 			}
 
 			{
@@ -348,14 +343,9 @@ protected:
 					CDH.ptr += IncSize;
 #pragma endregion
 				}
-				//!< DSV
-				{
-					DsvCPUHandles.emplace_back();
-					auto CDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-					Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH);
-					DsvCPUHandles.back().emplace_back(CDH);
-				}
 			}
+
+			Super::CreateDescriptor();
 		}
 #pragma endregion
 
@@ -430,7 +420,6 @@ protected:
 		}
 #pragma endregion
 	}
-
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 

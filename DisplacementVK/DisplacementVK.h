@@ -5,10 +5,10 @@
 #pragma region Code
 #include "../VKImage.h"
 
-class DisplacementVK : public VKImage
+class DisplacementVK : public VKImageDepth
 {
 private:
-	using Super = VKImage;
+	using Super = VKImageDepth;
 public:
 	DisplacementVK() : Super() {}
 	virtual ~DisplacementVK() {}
@@ -54,7 +54,7 @@ protected:
 			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds"))).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		}
 		//!< [2] [“x(Depth)
-		DepthTextures.emplace_back().Create(Device, PDMP, DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
+		Super::CreateTexture();
 	}
 	virtual void CreateImmutableSampler() override {
 		constexpr VkSamplerCreateInfo SCI = {
@@ -84,7 +84,6 @@ protected:
 		});
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
-	virtual void CreateRenderPass() override { VKExt::CreateRenderPass_Depth(); }
 	virtual void CreatePipeline() override { 
 		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
@@ -101,7 +100,6 @@ protected:
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, .module = SMs[3], .pName = "main", .pSpecializationInfo = nullptr }),
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_GEOMETRY_BIT, .module = SMs[4], .pName = "main", .pSpecializationInfo = nullptr }),
 		};
-
 		constexpr VkPipelineRasterizationStateCreateInfo PRSCI = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 			.pNext = nullptr,
@@ -117,11 +115,6 @@ protected:
 		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, VK_TRUE, PSSCIs);
 
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
-	}
-	virtual void CreateFramebuffer() override {
-		for (auto i : SwapchainImageViews) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DepthTextures.back().View });
-		}
 	}
 	virtual void CreateDescriptor() override {
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {

@@ -5,10 +5,10 @@
 #pragma region Code
 #include "../DXImage.h"
 
-class DisplacementDX : public DXImage
+class DisplacementDX : public DXImageDepth
 {
 private:
-	using Super = DXImage;
+	using Super = DXImageDepth;
 public:
 	DisplacementDX() : Super() {}
 	virtual ~DisplacementDX() {}
@@ -58,7 +58,7 @@ protected:
 			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		}
 		//!< [2] Depth
-		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
+		Super::CreateTexture();
 	}
 	virtual void CreateStaticSampler() override {
 		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
@@ -142,7 +142,6 @@ protected:
 			D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[3]->GetBufferPointer(), .BytecodeLength = SBs[3]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[4]->GetBufferPointer(), .BytecodeLength = SBs[4]->GetBufferSize() }),
 		};
-
 		constexpr D3D12_RASTERIZER_DESC RD = {
 			.FillMode = D3D12_FILL_MODE_SOLID,
 			.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
@@ -162,11 +161,6 @@ protected:
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount + 2, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; 
 #pragma endregion
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
-		}
-		{
-			//!< DSV
-			constexpr D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 }; 
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
 		}
 
 		{
@@ -197,15 +191,8 @@ protected:
 			CDH.ptr += IncSize;
 			GDH.ptr += IncSize; 
 		}
-		{
-			DsvCPUHandles.emplace_back();
-			auto CDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			//!< DSV
-			Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH);
-			DsvCPUHandles.back().emplace_back(CDH);
-		}
+		Super::CreateDescriptor();
 	}
-	
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
 

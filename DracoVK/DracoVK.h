@@ -6,10 +6,10 @@
 #include "../DRACO.h"
 #include "../VKExt.h"
 
-class DracoVK : public VKExt, public Draco 
+class DracoVK : public VKExtDepth, public Draco 
 {
 private:
-	using Super = VKExt;
+	using Super = VKExtDepth;
 public:
 	DracoVK() : Super() {}
 	virtual ~DracoVK() {}
@@ -100,10 +100,6 @@ public:
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		VK::SubmitAndWait(GraphicsQueue, CB);
 	}
-	virtual void CreateTexture() override {
-		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
-	}
-	virtual void CreateRenderPass() override { VKExt::CreateRenderPass_Depth(); }
 	virtual void CreatePipeline() override {
 		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
@@ -138,11 +134,6 @@ public:
 		VKExt::CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, 0, PRSCI, VK_TRUE, VIBDs, VIADs, PSSCIs);
 
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
-	}
-	virtual void CreateFramebuffer() override {
-		for (auto i : SwapchainImageViews) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DepthTextures.back().View });
-		}
 	}
 	virtual void PopulateCommandBuffer(const size_t i) override {
 		const auto RP = RenderPasses[0];

@@ -5,10 +5,10 @@
 #pragma region Code
 #include "../VKExt.h"
 
-class BillboardVK : public VKExt
+class BillboardVK : public VKExtDepth
 {
 private:
-	using Super = VKExt;
+	using Super = VKExtDepth;
 public:
 	BillboardVK() : Super() {}
 	virtual ~BillboardVK() {}
@@ -49,9 +49,6 @@ protected:
 		}
 #pragma endregion
 	}
-	virtual void CreateTexture() override {
-		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
-	}
 	virtual void CreatePipelineLayout() override {
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(),
 #ifdef USE_PUSH_DESCRIPTOR
@@ -64,7 +61,6 @@ protected:
 			});
 		VKExt::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
-	virtual void CreateRenderPass() override { VKExt::CreateRenderPass_Depth(); }
 	virtual void CreatePipeline() override {
 		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
@@ -97,11 +93,6 @@ protected:
 		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, VK_TRUE, PSSCIs);
 		
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
-	}
-	virtual void CreateFramebuffer() override { 
-		for (auto i : SwapchainImageViews) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DepthTextures.back().View });
-		}
 	}
 	virtual void CreateDescriptor() override {
 #ifdef USE_PUSH_DESCRIPTOR

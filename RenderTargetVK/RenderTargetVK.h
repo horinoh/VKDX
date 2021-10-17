@@ -5,10 +5,18 @@
 #pragma region Code
 #include "../VKExt.h"
 
+#ifdef USE_DEPTH
+class RenderTargetVK : public VKExtDepth
+#else
 class RenderTargetVK : public VKExt
+#endif
 {
 private:
+#ifdef USE_DEPTH
+	using Super = VKExtDepth;
+#else
 	using Super = VKExt;
+#endif
 public:
 	RenderTargetVK() : Super() {}
 	virtual ~RenderTargetVK() {}
@@ -63,7 +71,7 @@ protected:
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		RenderTextures.emplace_back().Create(Device, PDMP, ColorFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
 #ifdef USE_DEPTH
-		DepthTextures.emplace_back().Create(Device, PDMP, DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
+		Super::CreateTexture();
 #endif
 	}
 	virtual void CreateImmutableSampler() override {

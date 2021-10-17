@@ -5,10 +5,18 @@
 #pragma region Code
 #include "../VKExt.h"
 
+#ifdef USE_DEPTH
+class ToonVK : public VKExtDepth
+#else
 class ToonVK : public VKExt
+#endif
 {
 private:
+#ifdef USE_DEPTH
+	using Super = VKExtDepth;
+#else
 	using Super = VKExt;
+#endif
 public:
 	ToonVK() : Super() {}
 	virtual ~ToonVK() {}
@@ -43,22 +51,13 @@ protected:
 		}
 #pragma endregion
 	}
-#ifdef USE_DEPTH
-	//!< 深度テクスチャ
-	virtual void CreateTexture() override {		
-		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
-	}
-#endif
 	virtual void CreatePipelineLayout() override {
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
 			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }),
 		});
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
-#ifdef USE_DEPTH
-	virtual void CreateRenderPass() override { VKExt::CreateRenderPass_Depth(); }
-#endif
-	virtual void CreatePipeline() override { 
+	virtual void CreatePipeline() override {
 		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
 #ifdef USE_SCREENSPACE_WIREFRAME
@@ -103,13 +102,6 @@ protected:
 
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
-#ifdef USE_DEPTH
-	virtual void CreateFramebuffer() override {
-		for (auto i : SwapchainImageViews) {
-			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DepthTextures.back().View });
-		}
-	}
-#endif
 	virtual void CreateDescriptor() override {
 		VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT

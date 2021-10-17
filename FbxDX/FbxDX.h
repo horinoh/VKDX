@@ -6,10 +6,10 @@
 #include "../FBX.h"
 #include "../DXExt.h"
 
-class FbxDX : public DXExt, public Fbx
+class FbxDX : public DXExtDepth, public Fbx
 {
 private:
-	using Super = DXExt;
+	using Super = DXExtDepth;
 public:
 	FbxDX() : Super() {}
 	virtual ~FbxDX() {}
@@ -62,8 +62,6 @@ public:
 		//for (auto i : Vertices) { std::cout << i.x << ", " << i.y << ", " << i.z << std::endl; }
 	}
 #pragma endregion
-
-	
 	virtual void CreateGeometry() override {
 		std::wstring Path;
 		if (FindDirectory("FBX", Path)) {
@@ -100,9 +98,6 @@ public:
 		} VERIFY_SUCCEEDED(GCL->Close());
 		DX::ExecuteAndWait(CQ, GCL, COM_PTR_GET(GraphicsFence));
 	}
-	virtual void CreateTexture() override {
-		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
-	}
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 		DX::SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | SHADER_ROOT_ACCESS_DENY_ALL);
@@ -122,7 +117,6 @@ public:
 			D3D12_INPUT_ELEMENT_DESC({.SemanticName = "POSITION", .SemanticIndex = 0, .Format = DXGI_FORMAT_R32G32B32_FLOAT, .InputSlot = 0, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }),
 			D3D12_INPUT_ELEMENT_DESC({.SemanticName = "NORMAL", .SemanticIndex = 0, .Format = DXGI_FORMAT_R32G32B32_FLOAT, .InputSlot = 1, .AlignedByteOffset = D3D12_APPEND_ALIGNED_ELEMENT, .InputSlotClass = D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, .InstanceDataStepRate = 0 }),
 		};
-
 		constexpr D3D12_RASTERIZER_DESC RD = {
 			.FillMode = D3D12_FILL_MODE_SOLID/*D3D12_FILL_MODE_WIREFRAME*/,
 			.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
@@ -137,11 +131,7 @@ public:
 		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
 
-		DsvCPUHandles.emplace_back();
-		auto CDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-		//!< DSV
-		Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH);
-		DsvCPUHandles.back().emplace_back(CDH);
+		Super::CreateDescriptor();
 	}
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);

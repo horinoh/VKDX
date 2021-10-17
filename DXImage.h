@@ -63,6 +63,14 @@ protected:
 	std::vector<DDSTexture> DDSTextures;
 };
 
+class DXImageDepth : public DXExtDepth
+{
+private:
+	using Super = DXExtDepth;
+protected:
+	std::vector<DXImage::DDSTexture> DDSTextures;
+};
+
 class DXImageRT : public DXRT
 {
 private:

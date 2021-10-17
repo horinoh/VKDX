@@ -6,10 +6,10 @@
 #include "../DRACO.h"
 #include "../DXExt.h"
 
-class DracoDX : public DXExt, public Draco 
+class DracoDX : public DXExtDepth, public Draco 
 {
 private:
-	using Super = DXExt;
+	using Super = DXExtDepth;
 public:
 	std::vector<UINT32> Indices;
 	std::vector<DirectX::XMFLOAT3> Vertices;
@@ -100,9 +100,6 @@ public:
 		} VERIFY_SUCCEEDED(GCL->Close());
 		DX::ExecuteAndWait(CQ, GCL, COM_PTR_GET(GraphicsFence));
 	}
-	virtual void CreateTexture() override {
-		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
-	}
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 		DX::SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | SHADER_ROOT_ACCESS_DENY_ALL);
@@ -137,11 +134,7 @@ public:
 		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
 
-		DsvCPUHandles.emplace_back();
-		auto CDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-		//!< DSV
-		Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH);
-		DsvCPUHandles.back().emplace_back(CDH);
+		Super::CreateDescriptor();
 	}
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);

@@ -91,22 +91,22 @@ protected:
 	
 	virtual void PopulateCommandBuffer(const size_t i) override {
 		{
-			const auto CB = ComputeCommandBuffers[0];
+			const auto CCB = ComputeCommandBuffers[0];
 			constexpr VkCommandBufferBeginInfo CBBI = {
 				.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 				.pNext = nullptr,
 				.flags = 0,
 				.pInheritanceInfo = nullptr
 			};
-			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-				vkCmdBindPipeline(CB, VK_PIPELINE_BIND_POINT_COMPUTE, Pipelines[0]);
+			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CCB, &CBBI)); {
+				vkCmdBindPipeline(CCB, VK_PIPELINE_BIND_POINT_COMPUTE, Pipelines[0]);
 
 				const std::array DSs = { DescriptorSets[0] };
 				constexpr std::array<uint32_t, 0> DynamicOffsets = {};
-				vkCmdBindDescriptorSets(CB, VK_PIPELINE_BIND_POINT_COMPUTE, PipelineLayouts[0], 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
+				vkCmdBindDescriptorSets(CCB, VK_PIPELINE_BIND_POINT_COMPUTE, PipelineLayouts[0], 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
 
-				vkCmdDispatchIndirect(CB, IndirectBuffers[0].Buffer, 0);
-			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
+				vkCmdDispatchIndirect(CCB, IndirectBuffers[0].Buffer, 0);
+			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CCB));
 		}
 		{
 			const auto CB = CommandBuffers[i];

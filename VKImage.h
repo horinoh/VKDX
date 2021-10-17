@@ -116,6 +116,19 @@ protected:
 	std::vector<GLITexture> DDSTextures;
 };
 
+class VKImageDepth : public VKExtDepth
+{
+private:
+	using Super = VKExtDepth;
+
+protected:
+	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
+		for (auto& i : DDSTextures) { i.Destroy(Device); } DDSTextures.clear();
+		Super::OnDestroy(hWnd, hInstance);
+	}
+	std::vector<VKImage::GLITexture> DDSTextures;
+};
+
 class VKImageRT : public VKRT
 {
 private:

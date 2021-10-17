@@ -5,10 +5,10 @@
 #pragma region Code
 #include "../VKExt.h"
 
-class DeferredVK : public VKExt
+class DeferredVK : public VKExtDepth
 {
 private:
-	using Super = VKExt;
+	using Super = VKExtDepth;
 public:
 	DeferredVK() : Super() {}
 	virtual ~DeferredVK() {}
@@ -104,7 +104,7 @@ protected:
 		RenderTextures.emplace_back().Create(Device, PDMP, VK_FORMAT_B8G8R8A8_UNORM, Extent);
 #pragma endregion
 		//!< 深度バッファ(Depth Buffer)
-		DepthTextures.emplace_back().Create(Device, PDMP, DepthFormat, Extent);
+		Super::CreateTexture();
 	}
 	virtual void CreateImmutableSampler() override {
 #pragma region PASS1

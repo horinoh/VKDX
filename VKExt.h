@@ -41,3 +41,27 @@ protected:
 	void CreatePipeline_MsFs(const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 2>& PSSCIs) { CreatePipeline_TsMsFs(DepthEnable, { VkPipelineShaderStageCreateInfo({.module = VK_NULL_HANDLE }), PSSCIs[0], PSSCIs[1] }); }
 	void CreatePipeline_TsMsFs(const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 3>& PSSCIs);
 };
+
+class VKExtDepth : public VKExt
+{
+private:
+	using Super = VKExt;
+protected:
+	virtual void CreateTexture() override {
+		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
+	}
+	virtual void CreateRenderPass() override { 
+		VKExt::CreateRenderPass_Depth(); 
+	}
+	//!< パイプラインを深度を有効にして作成すること
+	//virtual void CreatePipeline() override {}
+	virtual void CreateFramebuffer() override {
+		for (auto i : SwapchainImageViews) {
+			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i, DepthTextures.back().View });
+		}
+	}
+	//!< 深度クリアの設定をすること
+	//virtual void PopulateCommandBuffer(const size_t i) override {
+	//	constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }), VkClearValue({.depthStencil = {.depth = 1.0f, .stencil = 0 } }) };
+	//}
+};

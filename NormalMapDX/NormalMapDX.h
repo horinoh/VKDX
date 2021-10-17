@@ -5,10 +5,10 @@
 #pragma region Code
 #include "../DXImage.h"
 
-class NormalMapDX : public DXImage
+class NormalMapDX : public DXImageDepth
 {
 private:
-	using Super = DXImage;
+	using Super = DXImageDepth;
 public:
 	NormalMapDX() : Super() {}
 	virtual ~NormalMapDX() {}
@@ -77,7 +77,7 @@ protected:
 			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 #endif
 		}
-		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
+		Super::CreateTexture();
 	}
 	virtual void CreateStaticSampler() override {
 		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
@@ -168,10 +168,6 @@ protected:
 #pragma endregion
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 		}
-		{
-			constexpr D3D12_DESCRIPTOR_HEAP_DESC DHD = { D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 1, D3D12_DESCRIPTOR_HEAP_FLAG_NONE, 0 }; //!< DSV
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
-		}
 
 		{
 			CbvSrvUavGPUHandles.emplace_back();
@@ -199,15 +195,9 @@ protected:
 			Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[1].Resource), &DDSTextures[1].SRV, CDH);
 			CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		}
-		{
-			DsvCPUHandles.emplace_back();
-			auto CDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			//!< DSV
-			Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH); 
-			DsvCPUHandles.back().emplace_back(CDH);
-		}
-	}
 
+		Super::CreateDescriptor();
+	}
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
 

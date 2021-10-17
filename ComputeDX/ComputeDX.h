@@ -70,30 +70,28 @@ protected:
 	}
 	
 	virtual void PopulateCommandList(const size_t i) override {
+		const auto PS = COM_PTR_GET(PipelineStates[0]);
 		{
-			const auto PS = COM_PTR_GET(PipelineStates[0]);
-			const auto CL = COM_PTR_GET(ComputeCommandLists[i]);
-			const auto CA = COM_PTR_GET(ComputeCommandAllocators[0]);
-			VERIFY_SUCCEEDED(CL->Reset(CA, PS)); {
-				CL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
+			const auto CCL = COM_PTR_GET(ComputeCommandLists[i]);
+			const auto CCA = COM_PTR_GET(ComputeCommandAllocators[0]);
+			VERIFY_SUCCEEDED(CCL->Reset(CCA, PS)); {
+				CCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
-				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				CCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				CCL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
 
-				CL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
-
-				CL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
-			} VERIFY_SUCCEEDED(CL->Close());
+				CCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+			} VERIFY_SUCCEEDED(CCL->Close());
 		}
 		{
-			const auto PS = COM_PTR_GET(PipelineStates[0]);
-			const auto CL = COM_PTR_GET(DirectCommandLists[i]);
-			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
+			const auto DCL = COM_PTR_GET(DirectCommandLists[i]);
+			const auto DCA = COM_PTR_GET(DirectCommandAllocators[0]);
 			const auto RT = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
-			VERIFY_SUCCEEDED(CL->Reset(CA, PS)); {
-				PopulateBeginRenderTargetCommand(CL, RT); {
-				} PopulateEndRenderTargetCommand(CL, RT, COM_PTR_GET(SwapChainResources[i]));
-			} VERIFY_SUCCEEDED(CL->Close());
+			VERIFY_SUCCEEDED(DCL->Reset(DCA, PS)); {
+				PopulateBeginRenderTargetCommand(DCL, RT); {
+				} PopulateEndRenderTargetCommand(DCL, RT, COM_PTR_GET(SwapChainResources[i]));
+			} VERIFY_SUCCEEDED(DCL->Close());
 		}
 	}
 };

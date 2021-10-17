@@ -11,7 +11,7 @@ groupshared PAYLOAD_OUT Payload;
 [numthreads(MESHLET_COUNT, 1, 1)]
 void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID)
 {
-    bool Visible = true;    
+    bool Visible = true;
     if (Visible)
     {
         Payload.MeshletIDs[WavePrefixCountBits(Visible)] = GroupThreadID;

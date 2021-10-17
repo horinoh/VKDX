@@ -5,10 +5,18 @@
 #pragma region Code
 #include "../DXExt.h"
 
+#ifdef USE_DEPTH
+class ToonDX : public DXExtDepth
+#else
 class ToonDX : public DXExt
+#endif
 {
 private:
+#ifdef USE_DEPTH
+	using Super = DXExtDepth;
+#else
 	using Super = DXExt;
+#endif
 public:
 	ToonDX() : Super() {}
 	virtual ~ToonDX() {}
@@ -49,12 +57,6 @@ protected:
 		}
 #pragma endregion
 	}
-#ifdef USE_DEPTH
-	//!< 深度テクスチャ
-	virtual void CreateTexture() override {
-		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), static_cast<UINT64>(GetClientRectWidth()), static_cast<UINT>(GetClientRectHeight()), 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
-	}
-#endif
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
@@ -121,13 +123,6 @@ protected:
 #pragma endregion
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 		}
-#ifdef USE_DEPTH
-		{
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
-		}
-#endif
-
 		{
 			CbvSrvUavGPUHandles.emplace_back();
 			auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
@@ -146,15 +141,7 @@ protected:
 			}
 #pragma endregion
 		}
-#ifdef USE_DEPTH
-		//!< DSV
-		{
-			DsvCPUHandles.emplace_back();
-			auto CDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH); 
-			DsvCPUHandles.back().emplace_back(CDH);
-		}
-#endif
+		Super::CreateDescriptor();
 	}
 
 	virtual void PopulateCommandList(const size_t i) override {

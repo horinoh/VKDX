@@ -5,10 +5,18 @@
 #pragma region Code
 #include "../DXExt.h"
 
+#ifdef USE_DEPTH
+class RenderTargetDX : public DXExtDepth
+#else
 class RenderTargetDX : public DXExt
+#endif
 {
 private:
+#ifdef USE_DEPTH
+	using Super = DXExtDepth;
+#else
 	using Super = DXExt;
+#endif
 public:
 	RenderTargetDX() : Super() {}
 	virtual ~RenderTargetDX() {}
@@ -58,7 +66,7 @@ protected:
 		const auto H = static_cast<UINT>(GetClientRectHeight());
 		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, 1, D3D12_CLEAR_VALUE({.Format = DXGI_FORMAT_R8G8B8A8_UNORM, .Color = { DirectX::Colors::SkyBlue.f[0], DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] } }));
 #ifdef USE_DEPTH
-		DepthTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_D24_UNORM_S8_UINT, .DepthStencil = D3D12_DEPTH_STENCIL_VALUE({.Depth = 1.0f, .Stencil = 0 }) }));
+		Super::CreateTexture();
 #endif
 	}
 	virtual void CreateStaticSampler() override {
@@ -197,13 +205,8 @@ protected:
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(RtvDescriptorHeaps.emplace_back())));
 		}
-#ifdef USE_DEPTH
-		{
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE, .NodeMask = 0 };
-			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(DsvDescriptorHeaps.emplace_back())));
-		}
-#endif
 #pragma endregion
+
 #pragma region PASS1
 		{
 			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 1, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
@@ -221,14 +224,10 @@ protected:
 		}
 #ifdef USE_DEPTH
 		//!< DSV
-		{
-			DsvCPUHandles.emplace_back();
-			auto CDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-			Device->CreateDepthStencilView(COM_PTR_GET(DepthTextures.back().Resource), &DepthTextures.back().DSV, CDH);
-			DsvCPUHandles.back().emplace_back(CDH);
-		}
+		Super::CreateDescriptor();
 #endif
 #pragma endregion
+
 #pragma region PASS1
 		//!< SRV
 		{

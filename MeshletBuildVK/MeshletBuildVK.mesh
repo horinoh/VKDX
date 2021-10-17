@@ -54,7 +54,8 @@ layout(local_size_x = GROUP_SIZE) in;
 layout(triangles, max_vertices = 126, max_primitives = 64) out;
 void main()
 {
-    const MESHLET ML = Meshlets[Payload.MeshletIDs[gl_WorkGroupID.x]];
+    const uint MeshletID = Payload.MeshletIDs[gl_WorkGroupID.x];
+    const MESHLET ML = Meshlets[MeshletID];
 
     gl_PrimitiveCountNV = ML.PrimCount;
   
@@ -70,5 +71,5 @@ void main()
         gl_MeshVerticesNV[index].gl_Position = PV * vec4(texelFetch(Vertex, int(GetVertexIndex32(ML.VertOffset + index))).xyz, 1.0f);
     }
 
-	OutColor[gl_LocalInvocationID.x] = Colors[gl_WorkGroupID.x % 8];
+	OutColor[gl_LocalInvocationID.x] = Colors[MeshletID % 8];
 }
