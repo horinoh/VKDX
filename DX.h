@@ -115,6 +115,9 @@ private:
 	using Super = Win;
 
 public:
+	static constexpr DirectX::XMFLOAT3 Min(const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3((std::min)(lhs.x, rhs.x), (std::min)(lhs.y, rhs.y), (std::min)(lhs.z, rhs.z)); }
+	static constexpr DirectX::XMFLOAT3 Max(const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3((std::max)(lhs.x, rhs.x), (std::max)(lhs.y, rhs.y), (std::max)(lhs.z, rhs.z)); }
+
 	class ResourceBase
 	{
 	public:

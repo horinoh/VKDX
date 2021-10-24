@@ -100,6 +100,9 @@ private:
 	using Super = Win;
 
 public:
+	static constexpr glm::vec3 Min(const glm::vec3& lhs, const glm::vec3& rhs) { return glm::vec3((std::min)(lhs.x, rhs.x), (std::min)(lhs.y, rhs.y), (std::min)(lhs.z, rhs.z)); }
+	static constexpr glm::vec3 Max(const glm::vec3& lhs, const glm::vec3& rhs) { return glm::vec3((std::max)(lhs.x, rhs.x), (std::max)(lhs.y, rhs.y), (std::max)(lhs.z, rhs.z)); }
+
 	template<typename T> class Scoped : public T
 	{
 	public:
@@ -325,12 +328,12 @@ public:
 		using Super = DeviceLocalBuffer;
 	public:
 		VkBufferView View = VK_NULL_HANDLE;
-		DeviceLocalUniformTexelBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
-			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+		DeviceLocalUniformTexelBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const VkBufferUsageFlagBits AdditionalUsage = static_cast< VkBufferUsageFlagBits>(0)) {
+			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | AdditionalUsage);
 			return *this;
 		}
-		DeviceLocalUniformTexelBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const VkFormat Format) {
-			Create(Device, PDMP, Size);
+		DeviceLocalUniformTexelBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const VkFormat Format, const VkBufferUsageFlagBits AdditionalUsage = static_cast<VkBufferUsageFlagBits>(0)) {
+			Create(Device, PDMP, Size, AdditionalUsage);
 			const VkBufferViewCreateInfo BVCI = {
 				.sType = VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
 				.pNext = nullptr,

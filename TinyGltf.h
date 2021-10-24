@@ -73,13 +73,13 @@ namespace Gltf {
 					const float* p = reinterpret_cast<const float*>(data(Buffer.data) + BufferView.byteOffset + Acc.byteOffset);
 					switch (Acc.type) {
 					case TINYGLTF_TYPE_VEC2: 
-						for (auto j = 0; j < std::min(8, static_cast<int>(Acc.count)); ++j) { Tabs(); std::cout << "\t" << p[j * 2 + 0] << ", " << p[j * 2 + 1] << std::endl; }
+						for (auto j = 0; j < (std::min)(8, static_cast<int>(Acc.count)); ++j) { Tabs(); std::cout << "\t" << p[j * 2 + 0] << ", " << p[j * 2 + 1] << std::endl; }
 						break;
 					case TINYGLTF_TYPE_VEC3:
-						for (auto j = 0; j < std::min(8, static_cast<int>(Acc.count)); ++j) { Tabs(); std::cout << "\t" << p[j * 3 + 0] << ", " << p[j * 3 + 1] << ", " << p[j * 3 + 2] << std::endl; }
+						for (auto j = 0; j < (std::min)(8, static_cast<int>(Acc.count)); ++j) { Tabs(); std::cout << "\t" << p[j * 3 + 0] << ", " << p[j * 3 + 1] << ", " << p[j * 3 + 2] << std::endl; }
 						break;
 					case TINYGLTF_TYPE_VEC4:
-						for (auto j = 0; j < std::min(8, static_cast<int>(Acc.count)); ++j) { Tabs(); std::cout << "\t" << p[j * 4 + 0] << ", " << p[j * 4 + 1] << ", " << p[j * 4 + 2] << ", " << p[j * 4 + 3] << std::endl; }
+						for (auto j = 0; j < (std::min)(8, static_cast<int>(Acc.count)); ++j) { Tabs(); std::cout << "\t" << p[j * 4 + 0] << ", " << p[j * 4 + 1] << ", " << p[j * 4 + 2] << ", " << p[j * 4 + 3] << std::endl; }
 						break;
 					}
 				}
@@ -119,7 +119,7 @@ namespace Gltf {
 				{
 					const uint16_t* p = reinterpret_cast<const uint16_t*>(data(Buffer.data) + BufferView.byteOffset + Acc.byteOffset);
 					Tabs(); std::cout << "\t";
-					for (auto j = 0; j < std::min(8, static_cast<int>(Acc.count)); ++j) { std::cout << p[j] << ", "; }
+					for (auto j = 0; j < (std::min)(8, static_cast<int>(Acc.count)); ++j) { std::cout << p[j] << ", "; }
 					std::cout << std::endl;
 				}
 					break;
@@ -127,7 +127,7 @@ namespace Gltf {
 				{
 					const uint32_t* p = reinterpret_cast<const uint32_t*>(data(Buffer.data) + BufferView.byteOffset + Acc.byteOffset);
 					Tabs(); std::cout << "\t";
-					for (auto j = 0; j < std::min(8, static_cast<int>(Acc.count)); ++j) { std::cout << p[j] << ", "; }
+					for (auto j = 0; j < (std::min)(8, static_cast<int>(Acc.count)); ++j) { std::cout << p[j] << ", "; }
 					std::cout << std::endl;
 				}
 					break;

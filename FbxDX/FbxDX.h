@@ -22,8 +22,8 @@ public:
 	virtual void Process(FbxMesh* Mesh) override {
 		Fbx::Process(Mesh);
 		
-		auto Max = DirectX::XMFLOAT3((std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)());
-		auto Min = DirectX::XMFLOAT3((std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)());
+		auto Max = (std::numeric_limits<DirectX::XMFLOAT3>::min)();
+		auto Min = (std::numeric_limits<DirectX::XMFLOAT3>::max)();
 		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
 		for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
 			for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
@@ -31,19 +31,15 @@ public:
 				//Indices.emplace_back(i * Mesh->GetPolygonSize(i) + Mesh->GetPolygonSize(i) - j - 1); //!< LH
 
 				Vertices.emplace_back(ToFloat3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
-				Max.x = std::max(Max.x, Vertices.back().x);
-				Max.y = std::max(Max.y, Vertices.back().y);
-				Max.z = std::max(Max.z, Vertices.back().z);
-				Min.x = std::min(Min.x, Vertices.back().x);
-				Min.y = std::min(Min.y, Vertices.back().y);
-				Min.z = std::min(Min.z, Vertices.back().z);
-
+				Min = DX::Min(Min, Vertices.back());
+				Max = DX::Max(Max, Vertices.back());
+				
 				//if (0 < Mesh->GetElementNormalCount()) {
 				//	Normals.emplace_back(ToFloat3(Mesh->GetElementNormal(0)->GetDirectArray().GetAt(i)));
 				//}
 			}
 		}
-		const auto Bound = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
+		const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
 		std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Bound, (rhs.y - (Max.y - Min.y) * 0.5f) / Bound, (rhs.z - Min.z) / Bound); });
 
 		FbxArray<FbxVector4> Nrms;

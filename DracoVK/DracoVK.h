@@ -24,19 +24,15 @@ public:
 #pragma region POSITION
 			const auto POSITION = Mesh->GetNamedAttribute(draco::GeometryAttribute::POSITION);
 			if (nullptr != POSITION) {
-				auto Max = glm::vec3((std::numeric_limits<float>::min)());
-				auto Min = glm::vec3((std::numeric_limits<float>::max)());
+				auto Max = (std::numeric_limits<glm::vec3>::min)();
+				auto Min = (std::numeric_limits<glm::vec3>::max)();
 				for (auto i = 0; i < POSITION->size(); ++i) {
 					POSITION->ConvertValue(static_cast<draco::AttributeValueIndex>(i), &Vertices.emplace_back()[0]);
 
-					Max.x = std::max(Max.x, Vertices.back().x);
-					Max.y = std::max(Max.y, Vertices.back().y);
-					Max.z = std::max(Max.z, Vertices.back().z);
-					Min.x = std::min(Min.x, Vertices.back().x);
-					Min.y = std::min(Min.y, Vertices.back().y);
-					Min.z = std::min(Min.z, Vertices.back().z);
+					Min = VK::Min(Min, Vertices.back());
+					Max = VK::Max(Max, Vertices.back());
 				}
-				const auto Bound = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
+				const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
 				std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const glm::vec3& rhs) { return rhs / Bound - glm::vec3(0.0f, (Max.y - Min.y) * 0.5f, Min.z) / Bound; });
 			}
 #pragma endregion

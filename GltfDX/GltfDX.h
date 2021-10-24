@@ -22,8 +22,8 @@ public:
 	virtual void Process(const tinygltf::Primitive& Primitive) {
 		SuperGltf::Process(Primitive);
 
-		auto Max = DirectX::XMFLOAT3((std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)());
-		auto Min = DirectX::XMFLOAT3((std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)());
+		auto Max = (std::numeric_limits<DirectX::XMFLOAT3>::min)();
+		auto Min = (std::numeric_limits<DirectX::XMFLOAT3>::max)();
 		//!< バーテックス
 		for (auto i : Primitive.attributes) {
 			const auto Acc = Model.accessors[i.second];
@@ -39,14 +39,10 @@ public:
 					std::memcpy(data(Vertices), p, Size);
 
 					for (auto j : Vertices) {
-						Max.x = std::max(Max.x, j.x);
-						Max.y = std::max(Max.y, j.y);
-						Max.z = std::max(Max.z, j.z);
-						Min.x = std::min(Min.x, j.x);
-						Min.y = std::min(Min.y, j.y);
-						Min.z = std::min(Min.z, j.z);
+						Min = DX::Min(Min, j);
+						Max = DX::Max(Max, j);
 					}
-					const auto Bound = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
+					const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
 					std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Bound, (rhs.y - (Max.y - Min.y) * 0.5f) / Bound, (rhs.z - Min.z) / Bound); });
 				}
 				if ("NORMAL" == i.first) {

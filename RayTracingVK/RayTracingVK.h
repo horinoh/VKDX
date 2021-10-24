@@ -32,23 +32,19 @@ public:
 
 		std::vector<glm::vec3> Vs;
 		std::vector<glm::vec3> Ns;
-		auto Max = glm::vec3((std::numeric_limits<float>::min)());
-		auto Min = glm::vec3((std::numeric_limits<float>::max)());
+		auto Max = (std::numeric_limits<glm::vec3>::min)();
+		auto Min = (std::numeric_limits<glm::vec3>::max)();
 		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
 		for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
 			for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
 				Indices.emplace_back(i * Mesh->GetPolygonSize(i) + j);
 
 				Vs.emplace_back(ToVec3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
-				Max.x = std::max(Max.x, Vs.back().x);
-				Max.y = std::max(Max.y, Vs.back().y);
-				Max.z = std::max(Max.z, Vs.back().z);
-				Min.x = std::min(Min.x, Vs.back().x);
-				Min.y = std::min(Min.y, Vs.back().y);
-				Min.z = std::min(Min.z, Vs.back().z);
+				Min = VK::Min(Min, Vs.back());
+				Max = VK::Max(Max, Vs.back());
 			}
 		}
-		const auto Bound = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
+		const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
 		std::transform(begin(Vs), end(Vs), begin(Vs), [&](const glm::vec3& rhs) { return rhs / Bound - glm::vec3(0.0f, (Max.y - Min.y) * 0.5f, Min.z) / Bound; });
 
 		FbxArray<FbxVector4> PVNs;

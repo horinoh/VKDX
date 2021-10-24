@@ -17,8 +17,10 @@ public:
 
 	DeviceLocalUniformTexelBuffer VertexBuffer;
 	DeviceLocalUniformTexelBuffer VertexIndexBuffer;
-	DeviceLocalStorageBuffer MeshletBuffer;
-	DeviceLocalStorageBuffer TriangleBuffer;
+	DeviceLocalUniformTexelBuffer MeshletBuffer;
+	DeviceLocalUniformTexelBuffer TriangleBuffer;
+	//DeviceLocalStorageBuffer MeshletBuffer;
+	//DeviceLocalStorageBuffer TriangleBuffer;
 
 #pragma region FBX
 	std::vector<uint32_t> Indices;
@@ -30,8 +32,8 @@ public:
 	virtual void Process(FbxMesh* Mesh) override {
 		Fbx::Process(Mesh);
 
-		auto Max = glm::vec3((std::numeric_limits<float>::min)());
-		auto Min = glm::vec3((std::numeric_limits<float>::max)());
+		auto Max = (std::numeric_limits<glm::vec3>::min)();
+		auto Min = (std::numeric_limits<glm::vec3>::max)();
 		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
 		for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
 			for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
@@ -39,15 +41,17 @@ public:
 
 				Vertices.emplace_back(ToVec3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
 				VerticesDX.emplace_back(ToFloat3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
-				Max.x = std::max(Max.x, VerticesDX.back().x);
-				Max.y = std::max(Max.y, VerticesDX.back().y);
-				Max.z = std::max(Max.z, VerticesDX.back().z);
-				Min.x = std::min(Min.x, VerticesDX.back().x);
-				Min.y = std::min(Min.y, VerticesDX.back().y);
-				Min.z = std::min(Min.z, VerticesDX.back().z);
+				Max.x = (std::max)(Max.x, VerticesDX.back().x);
+				Max.y = (std::max)(Max.y, VerticesDX.back().y);
+				Max.z = (std::max)(Max.z, VerticesDX.back().z);
+				Min.x = (std::min)(Min.x, VerticesDX.back().x);
+				Min.y = (std::min)(Min.y, VerticesDX.back().y);
+				Min.z = (std::min)(Min.z, VerticesDX.back().z);
+				//Min = DX::Min(Min, VerticesDX.back());
+				//Max = DX::Max(Max, VerticesDX.back());
 			}
 		}
-		const auto Bound = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
+		const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
 		std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const glm::vec3& rhs) { return rhs / Bound - glm::vec3(0.0f, (Max.y - Min.y) * 0.5f, Min.z) / Bound; });
 		std::transform(begin(VerticesDX), end(VerticesDX), begin(VerticesDX), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Bound, (rhs.y - (Max.y - Min.y) * 0.5f) / Bound, (rhs.z - Min.z) / Bound); });
 
@@ -121,13 +125,13 @@ public:
 			vkGetPhysicalDeviceFormatProperties(PD, VK_FORMAT_R32_UINT, &FP);
 			assert((FP.bufferFeatures & VK_FORMAT_FEATURE_UNIFORM_TEXEL_BUFFER_BIT) && "Format not supported");
 #endif
-			VertexBuffer.Create(Device, PDMP, TotalSizeOf(Vertices), VK_FORMAT_R32G32B32A32_SFLOAT)
+			VertexBuffer.Create(Device, PDMP, TotalSizeOf(Vertices), VK_FORMAT_R32G32B32A32_SFLOAT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Vertices), data(Vertices), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
-			VertexIndexBuffer.Create(Device, PDMP, TotalSizeOf(VertexIndices), VK_FORMAT_R32_UINT)
+			VertexIndexBuffer.Create(Device, PDMP, TotalSizeOf(VertexIndices), VK_FORMAT_R32_UINT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT)
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(VertexIndices), data(VertexIndices), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
-			MeshletBuffer.Create(Device, PDMP, TotalSizeOf(Meshlets))
+			MeshletBuffer.Create(Device, PDMP, TotalSizeOf(Meshlets), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Meshlets), data(Meshlets), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV); 
-			TriangleBuffer.Create(Device, PDMP, TotalSizeOf(Triangles))
+			TriangleBuffer.Create(Device, PDMP, TotalSizeOf(Triangles), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Triangles), data(Triangles), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
 		}
 	}

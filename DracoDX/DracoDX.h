@@ -18,23 +18,18 @@ public:
 	virtual void Process(const draco::Mesh* Mesh) override {
 		Draco::Process(Mesh);
 		if (nullptr != Mesh) {
-			auto Max = DirectX::XMFLOAT3((std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)());
-			auto Min = DirectX::XMFLOAT3((std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)());
-
 #pragma region POSITION
 			const auto POSITION = Mesh->GetNamedAttribute(draco::GeometryAttribute::POSITION);
 			if (nullptr != POSITION) {
+				auto Max = (std::numeric_limits<DirectX::XMFLOAT3>::min)();
+				auto Min = (std::numeric_limits<DirectX::XMFLOAT3>::max)();
 				for (auto i = 0; i < POSITION->size(); ++i) {
 					POSITION->ConvertValue(static_cast<draco::AttributeValueIndex>(i), &Vertices.emplace_back().x);
 
-					Max.x = std::max(Max.x, Vertices.back().x);
-					Max.y = std::max(Max.y, Vertices.back().y);
-					Max.z = std::max(Max.z, Vertices.back().z);
-					Min.x = std::min(Min.x, Vertices.back().x);
-					Min.y = std::min(Min.y, Vertices.back().y);
-					Min.z = std::min(Min.z, Vertices.back().z);
+					Min = DX::Min(Min, Vertices.back());
+					Max = DX::Max(Max, Vertices.back());
 				}
-				const auto Bound = std::max(std::max(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
+				const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
 				std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Bound, (rhs.y - (Max.y - Min.y) * 0.5f) / Bound, (rhs.z - Min.z) / Bound); });
 			}
 #pragma endregion
