@@ -21,8 +21,8 @@ struct MESHLET
     uint PrimCount;
     uint PrimOffset;
 };
-layout(binding = 0, set=0)  uniform samplerBuffer  Vertex;
-layout(binding = 1, set=0)  uniform usamplerBuffer  VertexIndex;
+layout(binding = 0, set = 0)  uniform samplerBuffer  Vertex;
+layout(binding = 1, set = 0)  uniform usamplerBuffer  VertexIndex;
 layout(binding = 2, set = 0) buffer Meshlet { MESHLET Meshlets[]; };
 layout(binding = 3, set = 0) buffer Triangle { uint Triangles[]; };
 

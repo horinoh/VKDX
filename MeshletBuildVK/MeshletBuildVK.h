@@ -19,8 +19,6 @@ public:
 	DeviceLocalUniformTexelBuffer VertexIndexBuffer;
 	DeviceLocalUniformTexelBuffer MeshletBuffer;
 	DeviceLocalUniformTexelBuffer TriangleBuffer;
-	//DeviceLocalStorageBuffer MeshletBuffer;
-	//DeviceLocalStorageBuffer TriangleBuffer;
 
 #pragma region FBX
 	std::vector<uint32_t> Indices;
@@ -104,17 +102,38 @@ public:
 			}
 
 			std::vector<DirectX::Meshlet> Meshlets;
-			std::vector<uint8_t> VertexIndices;
+			std::vector<uint8_t> VertexIndices8;
 			std::vector<DirectX::MeshletTriangle> Triangles; //!< uint32_t の 30bit を使用して i0, i1, i2 それぞれ 10bit
-			if (FAILED(DirectX::ComputeMeshlets(data(Indices), size(Indices) / 3, data(VerticesDX), size(VerticesDX), nullptr, Meshlets, VertexIndices, Triangles,
+			if (FAILED(DirectX::ComputeMeshlets(data(Indices), size(Indices) / 3, data(VerticesDX), size(VerticesDX), nullptr, Meshlets, VertexIndices8, Triangles,
 				DirectX::MESHLET_DEFAULT_MAX_VERTS, DirectX::MESHLET_DEFAULT_MAX_PRIMS))) { assert(false); }
 
-			//assert(size(Meshlets) <= 32 && "32 を超える場合は複数回に分けて描画する必要があるが、ここでは超えてはいけないこととする");
-			Logf("Meshlets Count = %d\n", size(Meshlets));
-			for (size_t i = 0; i < std::min<size_t>(size(Meshlets), 8); ++i) {
-				Logf("\t[%d] VertCount = %d, PrimCount = %d\n", i, Meshlets[i].VertCount, Meshlets[i].PrimCount);
+#ifdef _DEBUG
+			{
+				Logf("Vertex Count = %d\n", size(Vertices));
+				Logf("Index Count = %d\n", size(Indices));
+
+				//!< VertexIndices8 は UINT32 や UINT16 の配列に置き換えて参照する、ここでは UINT32
+				//const auto VertexIndices16 = reinterpret_cast<const uint16_t*>(data(VertexIndices8));
+				const auto VertexIndices32 = reinterpret_cast<const uint32_t*>(data(VertexIndices8));
+				assert(size(Vertices) == TotalSizeOf(VertexIndices8) / sizeof(Indices[0]) && "");
+
+				//assert(size(Meshlets) <= 32 && "32 を超える場合は複数回に分けて描画する必要があるが、ここでは超えてはいけないこととする");
+				Log("---- Meshlet build ----\n");
+				Logf("Meshlet Count = %d\n", size(Meshlets));
+				Logf("VertexIndex Count = %d\n", size(VertexIndices8));
+				Logf("Triangle Count = %d\n", size(Triangles));
+				for (size_t i = 0; i < (std::min<size_t>)(size(Meshlets), 8); ++i) {
+					const auto& ML = Meshlets[i];
+					Logf("\tMeshlet [%d] PrimCount = %d, PrimOffset = %d, VertCount = %d, VertOffset = %d\n", i, ML.PrimCount, ML.PrimOffset, ML.VertCount, ML.VertOffset);
+					for (uint32_t j = 0; j < (std::min<uint32_t>)(ML.PrimCount, 8); ++j) {
+						const auto& Tri = Triangles[ML.PrimOffset + j];
+						Logf("\t\t%d, %d, %d => %d, %d, %d\n", Tri.i0, Tri.i1, Tri.i2, VertexIndices32[ML.VertOffset + Tri.i0], VertexIndices32[ML.VertOffset + Tri.i1], VertexIndices32[ML.VertOffset + Tri.i2]);
+					}
+					Log("\t\t...\n");
+				}
+				Log("\t...\n");
 			}
-			Log("\t...\n");
+#endif
 
 			//!< テクセルバッファ系はフォーマットがサポートされるかチェックする (UNIFORM_TEXEL_BUFFER が R32G32B32A32_SFLOAT をサポートするか)
 #ifdef _DEBUG
@@ -127,8 +146,8 @@ public:
 #endif
 			VertexBuffer.Create(Device, PDMP, TotalSizeOf(Vertices), VK_FORMAT_R32G32B32A32_SFLOAT, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Vertices), data(Vertices), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
-			VertexIndexBuffer.Create(Device, PDMP, TotalSizeOf(VertexIndices), VK_FORMAT_R32_UINT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT)
-				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(VertexIndices), data(VertexIndices), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
+			VertexIndexBuffer.Create(Device, PDMP, TotalSizeOf(VertexIndices8), VK_FORMAT_R32_UINT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT)
+				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(VertexIndices8), data(VertexIndices8), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
 			MeshletBuffer.Create(Device, PDMP, TotalSizeOf(Meshlets), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Meshlets), data(Meshlets), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV); 
 			TriangleBuffer.Create(Device, PDMP, TotalSizeOf(Triangles), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)

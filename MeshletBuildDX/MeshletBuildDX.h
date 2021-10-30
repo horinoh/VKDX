@@ -62,7 +62,7 @@ public:
 			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 			const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 			const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
-			
+
 			constexpr D3D12_DISPATCH_MESH_ARGUMENTS DMA = { .ThreadGroupCountX = 1, .ThreadGroupCountY = 1, .ThreadGroupCountZ = 1 };
 			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DMA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), sizeof(DMA), &DMA);
 
@@ -71,22 +71,43 @@ public:
 				Load(ToString(Path) + "//bunny4.FBX");
 			}
 			std::vector<DirectX::Meshlet> Meshlets;
-			std::vector<uint8_t> VertexIndices;
+			std::vector<uint8_t> VertexIndices8;
 			std::vector<DirectX::MeshletTriangle> Triangles; //!< uint32_t の 30bit を使用して i0, i1, i2 それぞれ 10bit
-			VERIFY_SUCCEEDED(DirectX::ComputeMeshlets(data(Indices), size(Indices) / 3, data(Vertices), size(Vertices), nullptr, Meshlets, VertexIndices, Triangles,
+			VERIFY_SUCCEEDED(DirectX::ComputeMeshlets(data(Indices), size(Indices) / 3, data(Vertices), size(Vertices), nullptr, Meshlets, VertexIndices8, Triangles,
 				DirectX::MESHLET_DEFAULT_MAX_VERTS, DirectX::MESHLET_DEFAULT_MAX_PRIMS));
 
-			//assert(size(Meshlets) <= 32 && "32 を超える場合は複数回に分けて描画する必要があるが、ここでは超えてはいけないこととする");
-			Logf("Meshlets Count = %d\n", size(Meshlets));
-			for (size_t i = 0; i < std::min<size_t>(size(Meshlets), 8); ++i) {
-				Logf("\t[%d] VertCount = %d, PrimCount = %d\n", i, Meshlets[i].VertCount, Meshlets[i].PrimCount);
+#ifdef _DEBUG
+			{
+				Logf("Vertex Count = %d\n", size(Vertices));
+				Logf("Index Count = %d\n", size(Indices));
+
+				//!< VertexIndices8 は UINT32 や UINT16 の配列に置き換えて参照する、ここでは UINT32
+				//const auto VertexIndices16 = reinterpret_cast<const UINT16*>(data(VertexIndices8));
+				const auto VertexIndices32 = reinterpret_cast<const UINT32*>(data(VertexIndices8));
+				assert(size(Vertices) == TotalSizeOf(VertexIndices8) / sizeof(Indices[0]) && "");
+
+				//assert(size(Meshlets) <= 32 && "32 を超える場合は複数回に分けて描画する必要があるが、ここでは超えてはいけないこととする");
+				Log("---- Meshlet build ----\n");
+				Logf("Meshlet Count = %d\n", size(Meshlets));
+				Logf("VertexIndex Count = %d\n", size(VertexIndices8));
+				Logf("Triangle Count = %d\n", size(Triangles));
+				for (size_t i = 0; i < (std::min<size_t>)(size(Meshlets), 8); ++i) {
+					const auto& ML = Meshlets[i];
+					Logf("\tMeshlet [%d] PrimCount = %d, PrimOffset = %d, VertCount = %d, VertOffset = %d\n", i, ML.PrimCount, ML.PrimOffset, ML.VertCount, ML.VertOffset);
+					for (uint32_t j = 0; j < (std::min<uint32_t>)(ML.PrimCount, 8); ++j) {
+						const auto& Tri = Triangles[ML.PrimOffset + j];
+						Logf("\t\t%d, %d, %d => %d, %d, %d\n", Tri.i0, Tri.i1, Tri.i2, VertexIndices32[ML.VertOffset + Tri.i0], VertexIndices32[ML.VertOffset + Tri.i1], VertexIndices32[ML.VertOffset + Tri.i2]);
+					}
+					Log("\t\t...\n");
+				}
+				Log("\t...\n");
 			}
-			Log("\t...\n");
+#endif
 
 			VertexBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), sizeof(Vertices[0]))
 				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Vertices), data(Vertices), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			VertexIndexBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(VertexIndices), sizeof(VertexIndices[0]))
-				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(VertexIndices), data(VertexIndices), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE); 
+			VertexIndexBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(VertexIndices8), sizeof(VertexIndices8[0]))
+				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(VertexIndices8), data(VertexIndices8), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE); 
 			MeshletBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(Meshlets), sizeof(Meshlets[0]))
 				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Meshlets), data(Meshlets), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			TriangleBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(Triangles), sizeof(Triangles[0]))
