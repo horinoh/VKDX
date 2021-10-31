@@ -42,7 +42,9 @@ struct VERT_OUT
     float3 Color : COLOR;
 };
 
-static const float3 Colors[] = { float3(1.0f, 0.0f, 0.0f), float3(0.0f, 1.0f, 0.0f), float3(0.0f, 0.0f, 1.0f), float3(1.0f, 1.0f, 0.0f), float3(0.0f, 1.0f, 1.0f), float3(1.0f, 0.0f, 1.0f), float3(1.0f, 1.0f, 1.0f), float3(0.0f, 0.0f, 0.0f) };
+static const float3 Colors[] = { 
+    float3(1.0f, 0.0f, 0.0f), float3(0.0f, 1.0f, 0.0f), float3(0.0f, 0.0f, 1.0f), float3(1.0f, 1.0f, 0.0f), float3(0.0f, 1.0f, 1.0f), float3(1.0f, 0.0f, 1.0f), float3(1.0f, 1.0f, 1.0f), float3(0.0f, 0.0f, 0.0f),
+};
 
 static const float4x4 VP = transpose(float4x4(1.93643105f, 0.0f, 0.0f, 0.0f,
     0.0f, 3.89474249f, 0.0f, 0.0f,
@@ -60,8 +62,7 @@ void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, in p
 
     OutIndices[GroupThreadID] = Unpack(Triangles[ML.PrimOffset + GroupThreadID]);
     
-    //OutVertices[GroupThreadID].Position = mul(VP, float4(InVertices[GetVertexIndex32(ML.VertOffset + GroupThreadID)].Position, 1.0f));
-    OutVertices[GroupThreadID].Position = mul(VP, float4(InVertices[ML.VertOffset + GroupThreadID].Position, 1.0f));
-
+    OutVertices[GroupThreadID].Position = mul(VP, float4(InVertices[GetVertexIndex32(ML.VertOffset + GroupThreadID)].Position, 1.0f));
     OutVertices[GroupThreadID].Color = Colors[MeshletID % 8];
+    //OutVertices[GroupThreadID].Color = Colors[MeshletID % 8] * (1.0f - (float)GroupThreadID / 128.0f);
 }

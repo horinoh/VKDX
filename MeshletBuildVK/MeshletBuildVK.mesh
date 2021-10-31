@@ -21,8 +21,8 @@ struct MESHLET
     uint PrimCount;
     uint PrimOffset;
 };
-layout(binding = 0, set = 0)  uniform samplerBuffer  Vertex;
-layout(binding = 1, set = 0)  uniform usamplerBuffer  VertexIndex;
+layout(binding = 0, set = 0)  uniform samplerBuffer InVertices;
+layout(binding = 1, set = 0)  uniform usamplerBuffer VertexIndices;
 layout(binding = 2, set = 0) buffer Meshlet { MESHLET Meshlets[]; };
 layout(binding = 3, set = 0) buffer Triangle { uint Triangles[]; };
 
@@ -33,7 +33,7 @@ uvec3 Unpack(uint tri)
 }
 uint GetVertexIndex32(const uint i) 
 {
-    return texelFetch(VertexIndex, int(i)).x;
+    return texelFetch(VertexIndices, int(i)).x;
 }
 uint GetVertexIndex16(const uint i) 
 {
@@ -41,7 +41,9 @@ uint GetVertexIndex16(const uint i)
     return (GetVertexIndex32(i >> 1) >> (16 * (i & 0x1))) & 0xffff;
 }
 
-const vec3 Colors[] = { vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec3(1.0f, 1.0f, 0.0f), vec3(0.0f, 1.0f, 1.0f), vec3(1.0f, 0.0f, 1.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f) };
+const vec3 Colors[] = { 
+    vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec3(1.0f, 1.0f, 0.0f), vec3(0.0f, 1.0f, 1.0f), vec3(1.0f, 0.0f, 1.0f), vec3(1.0f, 1.0f, 1.0f), vec3(0.0f, 0.0f, 0.0f),
+};
 
 const mat4 PV = mat4(1.93643117f, 0.0f, 0.0f, 0.0f,
 							0.0f, 3.89474273f, 0.0f, 0.0f,
@@ -68,7 +70,7 @@ void main()
         gl_PrimitiveIndicesNV[index + 1] = Tri.y;
         gl_PrimitiveIndicesNV[index + 2] = Tri.z;
 
-        gl_MeshVerticesNV[index].gl_Position = PV * vec4(texelFetch(Vertex, int(GetVertexIndex32(ML.VertOffset + index))).xyz, 1.0f);
+        gl_MeshVerticesNV[index].gl_Position = PV * vec4(texelFetch(InVertices, int(GetVertexIndex32(ML.VertOffset + index))).xyz, 1.0f);
     }
 
 	OutColor[gl_LocalInvocationID.x] = Colors[MeshletID % 8];

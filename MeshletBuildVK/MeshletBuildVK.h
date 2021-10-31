@@ -117,7 +117,7 @@ public:
 				const auto VertexIndices32 = reinterpret_cast<const uint32_t*>(data(VertexIndices8));
 				assert(size(Vertices) == TotalSizeOf(VertexIndices8) / sizeof(Indices[0]) && "");
 
-				//assert(size(Meshlets) <= 32 && "32 を超える場合は複数回に分けて描画する必要があるが、ここでは超えてはいけないこととする");
+				if (size(Meshlets) > 32) { Warning("複数回に分けて描画する必要がある\n"); }
 				Log("---- Meshlet build ----\n");
 				Logf("Meshlet Count = %d\n", size(Meshlets));
 				Logf("VertexIndex Count = %d\n", size(VertexIndices8));

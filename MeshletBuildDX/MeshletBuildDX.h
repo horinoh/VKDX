@@ -86,7 +86,7 @@ public:
 				const auto VertexIndices32 = reinterpret_cast<const UINT32*>(data(VertexIndices8));
 				assert(size(Vertices) == TotalSizeOf(VertexIndices8) / sizeof(Indices[0]) && "");
 
-				//assert(size(Meshlets) <= 32 && "32 を超える場合は複数回に分けて描画する必要があるが、ここでは超えてはいけないこととする");
+				if (size(Meshlets) > 32) { Warning("複数回に分けて描画する必要がある\n"); }
 				Log("---- Meshlet build ----\n");
 				Logf("Meshlet Count = %d\n", size(Meshlets));
 				Logf("VertexIndex Count = %d\n", size(VertexIndices8));
@@ -106,7 +106,7 @@ public:
 
 			VertexBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), sizeof(Vertices[0]))
 				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Vertices), data(Vertices), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			VertexIndexBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(VertexIndices8), sizeof(VertexIndices8[0]))
+			VertexIndexBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(VertexIndices8), sizeof(Indices[0])) //!< ここではストライドは sizeof(UINT32)
 				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(VertexIndices8), data(VertexIndices8), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE); 
 			MeshletBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(Meshlets), sizeof(Meshlets[0]))
 				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Meshlets), data(Meshlets), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
