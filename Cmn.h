@@ -27,6 +27,9 @@ public:
 	static constexpr size_t RoundUp(const size_t Size, const size_t Align) { return RoundUpMask(Size, Align - 1); }
 	static constexpr size_t RoundUp256(const size_t Size) { return RoundUpMask(Size, 0xff); }
 
+	//!< TotalSize ‚ð ChunkSize ’PˆÊ‚Å•ª‚¯‚½ê‡—v‚·‚é‰ñ”
+	static constexpr size_t IterationCount(const size_t TotalSize, const size_t ChunkSize) { return (TotalSize + (ChunkSize - 1)) / ChunkSize; }
+
 	template<typename T> static constexpr size_t TotalSizeOf(const std::vector<T>& rhs) { return sizeof(T) * size(rhs); }
 	template<typename T, size_t U> static constexpr size_t TotalSizeOf(const std::array<T, U>& rhs) { return sizeof(rhs); }
 };

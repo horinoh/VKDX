@@ -7,17 +7,25 @@
 
 taskNV out Task {
 	uint MeshletIDs[MESHLET_COUNT];
+	uint MeshletChunkID;
 } Payload;
 
 //!< メッシュレット数が 32 を超える場合は複数回に分けて描画する
 layout(local_size_x = MESHLET_COUNT) in;
 void main()
 {
-	bool Visible = true;
+	bool Visible = false;
+
+	if(gl_LocalInvocationID.x < 32) {
+		Visible = true;
+	}
+
 	uvec4 Vote = subgroupBallot(Visible);
-	if(Visible)
-	{
+	if(Visible) {
 		Payload.MeshletIDs[subgroupBallotExclusiveBitCount(Vote)] = uint(gl_LocalInvocationID.x);
 	}
+
+	Payload.MeshletChunkID = gl_WorkGroupID.x;
+
 	gl_TaskCountNV = subgroupBallotBitCount(Vote);
 }

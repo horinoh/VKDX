@@ -6,6 +6,7 @@
 
 taskNV in Task {
     uint MeshletIDs[MESHLET_COUNT];
+	uint MeshletChunkID;
 } Payload;
 
 layout (location = 0) out vec3 OutColor[];
@@ -50,6 +51,8 @@ const mat4 PV = mat4(1.93643117f, 0.0f, 0.0f, 0.0f,
 							0.0f, 0.0f, -1.00010002f, -1.0f,
 							0.0f, 0.0f, 2.99029899f, 3.0f);
 
+#define ITERATION_COUNT(Size, Unit) ((Size + (Unit - 1)) / Unit)
+
 #define VERTEX_MAX 128
 #define GROUP_SIZE 32
 layout(local_size_x = GROUP_SIZE) in;
@@ -57,12 +60,13 @@ layout(triangles, max_vertices = 126, max_primitives = 64) out;
 void main()
 {
     const uint MeshletID = Payload.MeshletIDs[gl_WorkGroupID.x];
-    const MESHLET ML = Meshlets[MeshletID];
+    if(MeshletID >= 128) { return; }
+    const MESHLET ML = Meshlets[Payload.MeshletChunkID * MESHLET_COUNT + MeshletID];
 
     gl_PrimitiveCountNV = ML.PrimCount;
   
     //!< VK ‚Å‚Í GROUP_SIZE ‚ÌÅ‘å‚ª 32 ‚Æ‚©‚È‚Ì‚ÅA•¡”‰ñƒ‹[ƒv‚³‚¹‚Ä‘Îˆ‚·‚é
-    for(uint i = 0; i < (VERTEX_MAX + GROUP_SIZE - 1) / GROUP_SIZE; ++i) {
+    for(uint i = 0; i < ITERATION_COUNT(VERTEX_MAX, GROUP_SIZE); ++i) {
         const uint index = i * GROUP_SIZE + gl_LocalInvocationID.x;
 
         const uvec3 Tri = Unpack(Triangles[ML.PrimOffset + index]); 

@@ -63,9 +63,6 @@ public:
 			const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 			const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
 
-			constexpr D3D12_DISPATCH_MESH_ARGUMENTS DMA = { .ThreadGroupCountX = 1, .ThreadGroupCountY = 1, .ThreadGroupCountZ = 1 };
-			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DMA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), sizeof(DMA), &DMA);
-
 			std::wstring Path;
 			if (FindDirectory("FBX", Path)) {
 				Load(ToString(Path) + "//bunny4.FBX");
@@ -76,7 +73,6 @@ public:
 			VERIFY_SUCCEEDED(DirectX::ComputeMeshlets(data(Indices), size(Indices) / 3, data(Vertices), size(Vertices), nullptr, Meshlets, VertexIndices8, Triangles,
 				DirectX::MESHLET_DEFAULT_MAX_VERTS, DirectX::MESHLET_DEFAULT_MAX_PRIMS));
 
-#ifdef _DEBUG
 			{
 				Logf("Vertex Count = %d\n", size(Vertices));
 				Logf("Index Count = %d\n", size(Indices));
@@ -86,7 +82,6 @@ public:
 				const auto VertexIndices32 = reinterpret_cast<const UINT32*>(data(VertexIndices8));
 				assert(size(Vertices) == TotalSizeOf(VertexIndices8) / sizeof(Indices[0]) && "");
 
-				if (size(Meshlets) > 32) { Warning("ï°êîâÒÇ…ï™ÇØÇƒï`âÊÇ∑ÇÈïKóvÇ™Ç†ÇÈ\n"); }
 				Log("---- Meshlet build ----\n");
 				Logf("Meshlet Count = %d\n", size(Meshlets));
 				Logf("VertexIndex Count = %d\n", size(VertexIndices8));
@@ -102,7 +97,6 @@ public:
 				}
 				Log("\t...\n");
 			}
-#endif
 
 			VertexBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), sizeof(Vertices[0]))
 				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Vertices), data(Vertices), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
@@ -112,6 +106,10 @@ public:
 				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Meshlets), data(Meshlets), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 			TriangleBuffer.Create(COM_PTR_GET(Device), TotalSizeOf(Triangles), sizeof(Triangles[0]))
 				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Triangles), data(Triangles), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+			const D3D12_DISPATCH_MESH_ARGUMENTS DMA = { .ThreadGroupCountX = static_cast<UINT>(IterationCount(size(Meshlets), 32)), .ThreadGroupCountY = 1, .ThreadGroupCountZ = 1 };
+			Logf("Meshlet Chunk Count = %d\n", DMA.ThreadGroupCountX);
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DMA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), sizeof(DMA), &DMA);
 		}
 	}
 	virtual void CreateRootSignature() override {

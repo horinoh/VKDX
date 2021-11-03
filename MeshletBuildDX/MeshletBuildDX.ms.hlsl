@@ -3,6 +3,7 @@
 struct PAYLOAD_IN
 {
     uint MeshletIDs[MESHLET_COUNT];
+    uint MeshletChunkID;
 };
 
 struct VERT_IN
@@ -56,7 +57,8 @@ static const float4x4 VP = transpose(float4x4(1.93643105f, 0.0f, 0.0f, 0.0f,
 void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, in payload PAYLOAD_IN Payload, out indices uint3 OutIndices[64], out vertices VERT_OUT OutVertices[126])
 {
     const uint MeshletID = Payload.MeshletIDs[GroupID];
-    const MESHLET ML = Meshlets[MeshletID];
+    if (MeshletID >= 128) { return; }
+    const MESHLET ML = Meshlets[Payload.MeshletChunkID * MESHLET_COUNT + MeshletID];
 
     SetMeshOutputCounts(ML.VertCount, ML.PrimCount);
 
@@ -64,5 +66,4 @@ void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID, in p
     
     OutVertices[GroupThreadID].Position = mul(VP, float4(InVertices[GetVertexIndex32(ML.VertOffset + GroupThreadID)].Position, 1.0f));
     OutVertices[GroupThreadID].Color = Colors[MeshletID % 8];
-    //OutVertices[GroupThreadID].Color = Colors[MeshletID % 8] * (1.0f - (float)GroupThreadID / 128.0f);
 }

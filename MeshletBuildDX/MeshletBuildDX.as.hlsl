@@ -3,6 +3,7 @@
 struct PAYLOAD_OUT
 {
     uint MeshletIDs[MESHLET_COUNT];
+    uint MeshletChunkID;
 };
 
 groupshared PAYLOAD_OUT Payload;
@@ -11,10 +12,16 @@ groupshared PAYLOAD_OUT Payload;
 [numthreads(MESHLET_COUNT, 1, 1)]
 void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID)
 {
-    bool Visible = true;
-    if (Visible)
-    {
+    bool Visible = false;
+   
+    if (GroupThreadID < 32) {
+        Visible = true;
+    }
+
+    if (Visible) {
         Payload.MeshletIDs[WavePrefixCountBits(Visible)] = GroupThreadID;
     }
+    Payload.MeshletChunkID = GroupID;
+
     DispatchMesh(WaveActiveCountBits(Visible), 1, 1, Payload);
 }

@@ -93,21 +93,17 @@ public:
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
 			const auto& CB = CommandBuffers[0];
 			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-			constexpr VkDrawMeshTasksIndirectCommandNV DMTIC = { .taskCount = 1, .firstTask = 0 };
-			IndirectBuffers.emplace_back().Create(Device, PDMP, DMTIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DMTIC), &DMTIC);
 
 			std::wstring Path;
 			if (FindDirectory("FBX", Path)) {
 				Load(ToString(Path) + "//bunny4.FBX");
 			}
-
 			std::vector<DirectX::Meshlet> Meshlets;
 			std::vector<uint8_t> VertexIndices8;
 			std::vector<DirectX::MeshletTriangle> Triangles; //!< uint32_t の 30bit を使用して i0, i1, i2 それぞれ 10bit
 			if (FAILED(DirectX::ComputeMeshlets(data(Indices), size(Indices) / 3, data(VerticesDX), size(VerticesDX), nullptr, Meshlets, VertexIndices8, Triangles,
 				DirectX::MESHLET_DEFAULT_MAX_VERTS, DirectX::MESHLET_DEFAULT_MAX_PRIMS))) { assert(false); }
 
-#ifdef _DEBUG
 			{
 				Logf("Vertex Count = %d\n", size(Vertices));
 				Logf("Index Count = %d\n", size(Indices));
@@ -117,7 +113,6 @@ public:
 				const auto VertexIndices32 = reinterpret_cast<const uint32_t*>(data(VertexIndices8));
 				assert(size(Vertices) == TotalSizeOf(VertexIndices8) / sizeof(Indices[0]) && "");
 
-				if (size(Meshlets) > 32) { Warning("複数回に分けて描画する必要がある\n"); }
 				Log("---- Meshlet build ----\n");
 				Logf("Meshlet Count = %d\n", size(Meshlets));
 				Logf("VertexIndex Count = %d\n", size(VertexIndices8));
@@ -133,7 +128,6 @@ public:
 				}
 				Log("\t...\n");
 			}
-#endif
 
 			//!< テクセルバッファ系はフォーマットがサポートされるかチェックする (UNIFORM_TEXEL_BUFFER が R32G32B32A32_SFLOAT をサポートするか)
 #ifdef _DEBUG
@@ -152,6 +146,10 @@ public:
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Meshlets), data(Meshlets), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV); 
 			TriangleBuffer.Create(Device, PDMP, TotalSizeOf(Triangles), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Triangles), data(Triangles), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
+
+			const VkDrawMeshTasksIndirectCommandNV DMTIC = { .taskCount = static_cast<uint32_t>(IterationCount(size(Meshlets), 32)), .firstTask = 0 };
+			Logf("Meshlet Chunk Count = %d\n", DMTIC.taskCount);
+			IndirectBuffers.emplace_back().Create(Device, PDMP, DMTIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DMTIC), &DMTIC);
 		}
 	}
 	virtual void CreatePipelineLayout() override {
