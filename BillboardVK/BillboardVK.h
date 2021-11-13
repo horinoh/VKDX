@@ -117,7 +117,10 @@ protected:
 #else
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), /*VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT*/0, {
 #pragma region FRAME_OBJECT
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }), //!< UB * N
+			VkDescriptorPoolSize({
+				//!< UB * N
+				.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages))
+				}), 
 #pragma endregion
 			});
 		const std::array DSLs = { DescriptorSetLayouts[0] };

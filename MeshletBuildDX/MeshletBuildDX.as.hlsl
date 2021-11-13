@@ -17,7 +17,7 @@ void main(uint GroupThreadID : SV_GroupThreadID, uint GroupID : SV_GroupID)
     if (GroupThreadID < 32) {
         Visible = true;
     }
-
+    
     if (Visible) {
         Payload.MeshletIDs[WavePrefixCountBits(Visible)] = GroupThreadID;
     }

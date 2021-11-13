@@ -19,7 +19,7 @@ OUT main(const IN In)
 {
 	OUT Out;
 	Out.Color = ColorMap.Sample(Sampler, In.Texcoord);
-	//Out.Color =float4(In.Texcoord, 0,1);
+	//Out.Color = float4(In.Texcoord, 0.0f, 1.0f);
 	return Out;
 }
 

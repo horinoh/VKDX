@@ -15,4 +15,5 @@ layout (early_fragment_tests) in;
 void main()
 {
 	Color = texture(ColorMap, InTexcoord);
+	//Color = vec4(InTexcoord, 0.0f, 1.0f);
 }

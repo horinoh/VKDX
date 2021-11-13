@@ -69,12 +69,16 @@ void main()
     for(uint i = 0; i < ITERATION_COUNT(VERTEX_MAX, GROUP_SIZE); ++i) {
         const uint index = i * GROUP_SIZE + gl_LocalInvocationID.x;
 
-        const uvec3 Tri = Unpack(Triangles[ML.PrimOffset + index]); 
-        gl_PrimitiveIndicesNV[index + 0] = Tri.x;
-        gl_PrimitiveIndicesNV[index + 1] = Tri.y;
-        gl_PrimitiveIndicesNV[index + 2] = Tri.z;
+        if(ML.PrimCount > index) {
+            const uvec3 Tri = Unpack(Triangles[ML.PrimOffset + index]); 
+            gl_PrimitiveIndicesNV[index + 0] = Tri.x;
+            gl_PrimitiveIndicesNV[index + 1] = Tri.y;
+            gl_PrimitiveIndicesNV[index + 2] = Tri.z;
+        }
 
-        gl_MeshVerticesNV[index].gl_Position = PV * vec4(texelFetch(InVertices, int(GetVertexIndex32(ML.VertOffset + index))).xyz, 1.0f);
+        if(ML.VertCount > index) {
+            gl_MeshVerticesNV[index].gl_Position = PV * vec4(texelFetch(InVertices, int(GetVertexIndex32(ML.VertOffset + index))).xyz, 1.0f);
+        }
     }
 
 	OutColor[gl_LocalInvocationID.x] = Colors[MeshletID % 8];

@@ -119,9 +119,11 @@ protected:
 	virtual void CreateDescriptor() override {
 		VK::CreateDescriptorPool(DescriptorPools.emplace_back(), 0, {
 #pragma region FRAME_OBJECT
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }), //!< UB * N
+			//!< UB * N
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }), 
 #pragma endregion
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 2 }), //!< Sampler + Image0, Sampler + Image1
+			//!< ImageSampler0 + ImageSampler1
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 2 }), 
 		});
 		const std::array DSLs = { DescriptorSetLayouts[0] };
 		const VkDescriptorSetAllocateInfo DSAI = {
@@ -147,17 +149,17 @@ protected:
 		VK::CreateDescriptorUpdateTemplate(DUT, {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
-				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< UniformBuffer
+				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< UB
 				.offset = offsetof(DescriptorUpdateInfo, DBI), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 1, .dstArrayElement = 0,
-				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< Sampler + Image0
+				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< SamplerImage0
 				.offset = offsetof(DescriptorUpdateInfo, DII_0), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 2, .dstArrayElement = 0,
-				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< Sampler + Image1
+				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< SamplerImage1
 				.offset = offsetof(DescriptorUpdateInfo, DII_1), .stride = sizeof(DescriptorUpdateInfo)
 			}),
 		}, DescriptorSetLayouts[0]);
@@ -165,8 +167,8 @@ protected:
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			const DescriptorUpdateInfo DUI = {
 				VkDescriptorBufferInfo({.buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }), //!< UniformBuffer
-				VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = DDSTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }), //!< Sampler + Image0
-				VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = DDSTextures[1].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }), //!< Sampler + Image1
+				VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = DDSTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }), //!< SamplerImage0
+				VkDescriptorImageInfo({.sampler = VK_NULL_HANDLE, .imageView = DDSTextures[1].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }), //!< SamplerImage1
 			};
 			vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[i], DUT, &DUI);
 		}
@@ -174,8 +176,8 @@ protected:
 #pragma endregion
 #else
 #pragma region FRAME_OBJECT
-		const auto DII0 = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = DDSTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }); //!< Sampler + Image0
-		const auto DII1 = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = DDSTextures[1].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }); //!< Sampler + Image1
+		const auto DII0 = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = DDSTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }); //!< SamplerImage0
+		const auto DII1 = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = DDSTextures[1].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }); //!< SamplerImage1
 		constexpr std::array<VkCopyDescriptorSet, 0> CDSs = {};
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			const auto DBI = VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE }); //!< UniformBuffer
@@ -193,7 +195,7 @@ protected:
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.pNext = nullptr,
 					.dstSet = DescriptorSets[i],
-					.dstBinding = 1, .dstArrayElement = 0, .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< Sampler + Image0
+					.dstBinding = 1, .dstArrayElement = 0, .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< SamplerImage0
 					.pImageInfo = &DII0,
 					.pBufferInfo = nullptr,
 					.pTexelBufferView = nullptr
@@ -202,7 +204,7 @@ protected:
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.pNext = nullptr,
 					.dstSet = DescriptorSets[i],
-					.dstBinding = 2, .dstArrayElement = 0, .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< Sampler + Image1
+					.dstBinding = 2, .dstArrayElement = 0, .descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, //!< SamplerImage1
 					.pImageInfo = &DII1,
 					.pBufferInfo = nullptr,
 					.pTexelBufferView = nullptr

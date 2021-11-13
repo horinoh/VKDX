@@ -97,7 +97,10 @@ protected:
 #pragma region FRAME_OBJECT
 			DXGI_SWAP_CHAIN_DESC1 SCD;
 			SwapChain->GetDesc1(&SCD);
-			const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 }; //!< CBV * N, SRV0, SRV1
+			const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
+				//!< CBV * N
+				.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = SCD.BufferCount, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 
+			}; 
 #pragma endregion
 			VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 		}

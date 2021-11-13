@@ -96,7 +96,9 @@ public:
 
 			std::wstring Path;
 			if (FindDirectory("FBX", Path)) {
+				//Load(ToString(Path) + "//dragon.FBX");
 				Load(ToString(Path) + "//bunny4.FBX");
+				//Load(ToString(Path) + "//bunny.FBX");
 			}
 			std::vector<DirectX::Meshlet> Meshlets;
 			std::vector<uint8_t> VertexIndices8;
