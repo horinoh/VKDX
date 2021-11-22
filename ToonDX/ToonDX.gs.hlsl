@@ -43,10 +43,10 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 		Out.Position = mul(PVW, float4(In[i].Position, 1.0f));
 #ifdef USE_CBUFFER
 		Out.Normal = mul((float3x3)World, In[i].Normal);
-		Out.ViewDirection = CamPos - mul(World, Out.Position).xyz;
+		Out.ViewDirection = CamPos - mul(World, float4(In[i].Position, 1.0f)).xyz;
 #else
-        Out.Normal = mul((float3x3) Transform.World, In[i].Normal);
-        Out.ViewDirection = CamPos - mul(Transform.World, Out.Position).xyz;
+        Out.Normal = mul((float3x3)Transform.World, In[i].Normal);
+        Out.ViewDirection = CamPos - mul(Transform.World, float4(In[i].Position, 1.0f)).xyz;
 #endif
 		stream.Append(Out);
     }

@@ -20,9 +20,7 @@ protected:
 		DirectX::XMStoreFloat4(&Tr.LocalCameraPosition, DirectX::XMVector4Transform(DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), DirectX::XMMatrixInverse(&DetWV, WV)));
 
 		const auto LightPos = DirectX::XMVector4Transform(DirectX::XMVectorSet(10.0f, 0.0f, 0.0f, 0.0f), DirectX::XMMatrixRotationY(DirectX::XMConvertToRadians(Degree)));
-		const auto World = DirectX::XMLoadFloat4x4(&Tr.World);
-		auto DetWorld = DirectX::XMMatrixDeterminant(DirectX::XMLoadFloat4x4(&Tr.World));
-		DirectX::XMStoreFloat4(&Tr.LocalLightDirection, DirectX::XMVector3Normalize(DirectX::XMVector4Transform(LightPos, DirectX::XMMatrixInverse(&DetWorld, World))));
+		DirectX::XMStoreFloat4(&Tr.LocalLightDirection, DirectX::XMVector3Normalize(DirectX::XMVector4Transform(LightPos, DirectX::XMMatrixInverse(nullptr, DirectX::XMLoadFloat4x4(&Tr.World)))));
 
 		Degree += 1.0f;
 

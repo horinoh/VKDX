@@ -19,7 +19,7 @@ void main()
 	for(int i=0;i<gl_in.length();++i) {
 		gl_Position = PVW * gl_in[i].gl_Position;
 		OutNormal = mat3(World) * InNormal[i];
-		OutViewDirection = CamPos - (World * gl_Position).xyz;
+		OutViewDirection = CamPos - (World * gl_in[i].gl_Position).xyz;
 		EmitVertex();
 	}
 	EndPrimitive();	

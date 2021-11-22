@@ -3,8 +3,8 @@
 #extension GL_ARB_shading_language_420pack : enable
 
 layout (location = 0) in vec2 InTexcoord;
-layout (location = 1) in vec3 InViewDirection;
-layout (location = 2) in vec3 InLightDirection;
+layout (location = 1) in vec3 InTangentViewDirection;
+layout (location = 2) in vec3 InTangentLightDirection;
 
 //!< コンバインドイメージサンプラ : texture(sampler2D, TexCoord)
 layout (set = 0, binding = 1) uniform sampler2D NormalMap;
@@ -18,27 +18,25 @@ vec3 diffuse(const vec3 MC, const vec3 LC, const float LN)
 }
 vec3 specular(const vec3 MC, const vec4 LC, const float LN, const vec3 L, const vec3 N, const vec3 V)
 {
-	return clamp(clamp(sign(LN), 0.0f, 1.0f) * pow(clamp(dot(reflect(-L, N), V), 0.0f, 1.0f), LC.a) * LC.rgb * MC, 0.0f, 1.0f); // phong
-	//return clamp(clamp(sign(LN), 0.0f, 1.0f) * pow(clamp(dot(N, normalize(V + L)), 0.0f, 1.0f), LC.a) * LC.rgb * MC, 0.0f, 1.0f); // blinn
+	return clamp(clamp(sign(LN), 0.0f, 1.0f) * pow(clamp(dot(reflect(-L, N), V), 0.0f, 1.0f), LC.a) * LC.rgb * MC, 0.0f, 1.0f); 
 }
 
 layout (early_fragment_tests) in;
 void main()
 {
 	//!< V
-	const vec3 V = normalize(InViewDirection);
+	const vec3 V = normalize(InTangentViewDirection);
 	
 	//!< N
 	const vec3 N = texture(NormalMap, InTexcoord).xyz * 2.0f - 1.0f;
 
 	//!< L
-	const vec3 L = normalize(InLightDirection);
+	const vec3 L = normalize(InTangentLightDirection);
 
 	//!< LN
 	const float LN = dot(L, N);
 
 	//!< Color
-	//const vec3 MC = vec3(0.5f, 0.5f, 0.5f);
 	const vec3 MC = texture(ColorMap, InTexcoord).rgb;
 	const vec4 LC = vec4(1.0f, 1.0f, 1.0f, 32.0f);
 
@@ -47,12 +45,8 @@ void main()
 	const vec3 Spc = specular(MC, LC, LN, L, N, V);
 	const float Atn = 1.0f;
 	const float Spt = 1.0f;
+	const vec3 Rim = vec3(0.0f);
+	const vec3 Hemi = vec3(0.0f);
 
-	Color = vec4((Amb + (Dif + Spc) * Atn) * Spt, 1.0f);
-
-	//Color = vec4(n * 0.5f + 0.5f, 1.0f);
-	//Color = vec4(t * 0.5f + 0.5f, 1.0f);
-	//Color = vec4(b * 0.5f + 0.5f, 1.0f);
-	//Color = vec4(InTexcoord, 0.0f, 1.0f);
-	//Color = vec4(texture(NormalMap, InTexcoord).xyz, 1.0f);
+	Color = vec4(Amb + (Dif + Spc) * Atn * Spt + Rim + Hemi, 1.0f);
 }

@@ -23,12 +23,12 @@
 ### テクスチャ
 #### DDS
 * [DirectXTex](https://github.com/Microsoft/DirectXTex)
-  * DirectXTex\DirectXTex_Desktop_2015.sln を開いて Release、x64 にしてビルドすると実行ファイルが作成される
+  * DirectXTex\DirectXTex_Desktop_2019.sln を開いて Release、x64 にして必要なもの(DDDSView, Texassemble, Texconv, Texdiag)をビルドすると実行ファイルが作成される
 	~~~
-	DDSView\Bin\Desktop_2015\x64\Release\DDSView.exe
-	Texassemble\Bin\Desktop_2015\x64\Release\texassemble.exe
-	Texconv\Bin\Desktop_2015\x64\Release\texconv.exe
-	Texdiag\Bin\Desktop_2015\x64\Release\texdiag.exe
+	DDSView\Bin\Desktop_2019\x64\Release\DDSView.exe
+	Texassemble\Bin\Desktop_2019\x64\Release\texassemble.exe
+	Texconv\Bin\Desktop_2019\x64\Release\texconv.exe
+	Texdiag\Bin\Desktop_2019\x64\Release\texdiag.exe
 	~~~
 * [DDSサムネイル表示](https://sourceforge.net/projects/sagethumbs/)
 * 非 dds テクスチャは DirectX Texture Tool で開いた後、Save As で dds として保存できる
@@ -507,9 +507,8 @@ $draco_decoder -i YYY.drc -o ZZZ.obj
 #### DX
  * WinPixEventRuntimeのインストール
 	* 右クリック - Manage NuGet Packages - Browse - WinPixEventRuntimeで検索 - インストール
- * プロパティマネージャで Add Existing Property Sheet... - Props/DX_DEBUG.props, DX_RELEASE.props
- 	* 必要に応じて Props/DX_DEBUG_TEX.prop, Props/DX_RELEASE_TEX.prop
-	* 必要に応じて Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop, Props/FBX.prop, Props/DRACO.prop, Prop/DXMESH.prop
+ * プロパティマネージャで Add Existing Property Sheet... - Props/DX_DEBUG.props, DX_RELEASE.props もしくはテクスチャが必要な場合は Props/DX_DEBUG_TEX.prop, Props/DX_RELEASE_TEX.prop 
+	* 必要に応じて Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop, Props/FBX.prop, Props/DRACO.prop, Prop/DXMESH.prop 等を追加
  * Header Files に Win.h, DX.h, DXExt.h を追加 
 	* 必要に応じて DXImage.h 
  * Source Files に Win.cpp, DX.cpp, DXExt.cpp を追加
@@ -524,9 +523,8 @@ $draco_decoder -i YYY.drc -o ZZZ.obj
 * ルートシグネチャ用HLSL XxxDX.rs.hlsl を作成する
 
 #### VK
- * プロパティマネージャで Add Existing Property Sheet... - Props/VK_DEBUG.props, Props/VK_RELEASE.props
- 	* 必要に応じて Props/VK_DEBUG_TEX.prop, Props/VK_RELEASE_TEX.prop
-	* 必要に応じて Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop, Props/FBX.prop, Props/DRACO.prop, Prop/DXMESH.prop
+ * プロパティマネージャで Add Existing Property Sheet... - Props/VK_DEBUG.props, Props/VK_RELEASE.props もしくはテクスチャが必要な場合は Props/VK_DEBUG_TEX.prop, Props/VK_RELEASE_TEX.prop
+	* 必要に応じて Props/GLTF.prop, Props/HOLO.prop, Props/LEAP.prop, Props/FBX.prop, Props/DRACO.prop, Prop/DXMESH.prop 等を追加
  * Header Files に Win.h, VK.h, VKExt.h を追加
 	* 必要に応じて VKImage.h
  * Source Files に Win.cpp, VK.cpp, VKExt.cpp を追加

@@ -3,8 +3,8 @@
 #extension GL_ARB_shading_language_420pack : enable
 
 layout (location = 0) in vec2 InTexcoord;
-layout (location = 1) in vec3 InViewDirection;
-layout (location = 2) in vec3 InLightDirection;
+layout (location = 1) in vec3 InTangentViewDirection;
+layout (location = 2) in vec3 InTangentLightDirection;
 
 layout (set = 0, binding = 1) uniform sampler2D NormalMap;
 layout (set = 0, binding = 2) uniform sampler2D DisplacementMap;
@@ -17,15 +17,14 @@ vec3 diffuse(const vec3 MC, const vec3 LC, const float LN)
 }
 vec3 specular(const vec3 MC, const vec4 LC, const float LN, const vec3 L, const vec3 N, const vec3 V)
 {
-	return clamp(clamp(sign(LN), 0.0f, 1.0f) * pow(clamp(dot(reflect(-L, N), V), 0.0f, 1.0f), LC.a) * LC.rgb * MC, 0.0f, 1.0f); // phong
-	//return clamp(clamp(sign(LN), 0.0f, 1.0f) * pow(clamp(dot(N, normalize(V + L)), 0.0f, 1.0f), LC.a) * LC.rgb * MC, 0.0f, 1.0f); // blinn
+	return clamp(clamp(sign(LN), 0.0f, 1.0f) * pow(clamp(dot(reflect(-L, N), V), 0.0f, 1.0f), LC.a) * LC.rgb * MC, 0.0f, 1.0f);
 }
 
 layout (early_fragment_tests) in;
 void main()
 {
 	//!< V
-	const vec3 V = normalize(InViewDirection);
+	const vec3 V = normalize(InTangentViewDirection);
 	
 	//!< N
 	const float ParallaxHeight = 0.03f;
@@ -33,7 +32,7 @@ void main()
 	const vec3 N = texture(NormalMap, tc).xyz * 2.0f - 1.0f;
 
 	//!< L
-	const vec3 L = -normalize(InLightDirection);
+	const vec3 L = -normalize(InTangentLightDirection);
 
 	//!< LN
 	const float LN = dot(L, N);
@@ -47,6 +46,8 @@ void main()
 	const vec3 Spc = specular(MC, LC, LN, L, N, V);
 	const float Atn = 1.0f;
 	const float Spt = 1.0f;
+	const vec3 Rim = vec3(0.0f);
+	const vec3 Hemi = vec3(0.0f);
 
-	Color = vec4((Amb + (Dif + Spc) * Atn) * Spt, 1.0f);
+	Color = vec4(Amb + (Dif + Spc) * Atn * Spt + Rim + Hemi, 1.0f);
 }

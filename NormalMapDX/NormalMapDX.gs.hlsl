@@ -13,8 +13,8 @@ struct OUT
 {
 	float4 Position : SV_POSITION;
 	float2 Texcoord : TEXCOORD0;
-	float3 ViewDirection : TEXCOORD1;
-	float3 LightDirection : TEXCOORD2;
+	float3 TangentViewDirection : TEXCOORD1;
+	float3 TangentLightDirection : TEXCOORD2;
 };
 
 [instance(1)]
@@ -32,14 +32,14 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 
 	[unroll]
 	for (int i = 0; i<3; ++i) {
-		Out.Position = mul(PVW, float4(In[i].Position, 1.0f));
-
 		const float3 Binormal = cross(In[i].Normal, In[i].Tangent);
 
+		Out.Position = mul(PVW, float4(In[i].Position, 1.0f));
 		Out.Texcoord = mul(TexTransform, float4(In[i].Texcoord, 0.0f, 1.0f)).xy;
+
 		const float3 V = Tr.LocalCameraPosition - In[i].Position;
-		Out.ViewDirection = float3(dot(V, In[i].Tangent), dot(V, Binormal), dot(V, In[i].Normal));
-		Out.LightDirection = float3(dot(Tr.LocalLightDirection, In[i].Tangent), dot(Tr.LocalLightDirection, Binormal), dot(Tr.LocalLightDirection, In[i].Normal));
+		Out.TangentViewDirection = float3(dot(V, In[i].Tangent), dot(V, Binormal), dot(V, In[i].Normal));
+		Out.TangentLightDirection = float3(dot(Tr.LocalLightDirection, In[i].Tangent), dot(Tr.LocalLightDirection, Binormal), dot(Tr.LocalLightDirection, In[i].Normal));
 		
 		stream.Append(Out);
 	}
