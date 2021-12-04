@@ -13,7 +13,7 @@ public:
 	RTTriangleVK() : Super() {}
 	virtual ~RTTriangleVK() {}
 
-	virtual void CreateriaGeometry() override {
+	virtual void CreateGeometry() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
