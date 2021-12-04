@@ -76,15 +76,34 @@ protected:
 		VERIFY_SUCCEEDED(vkAllocateDescriptorSets(Device, &DSAI, &DescriptorSets.emplace_back()));
 
 		const auto DII = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = StorageTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_GENERAL });
+		
 		VkDescriptorUpdateTemplate DUT;
-		VK::CreateDescriptorUpdateTemplate(DUT, {
+		VK::CreateDescriptorUpdateTemplate(DUT, VK_PIPELINE_BIND_POINT_COMPUTE, {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
 				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
 				.offset = 0, .stride = sizeof(DII)
 			}),
 		}, DescriptorSetLayouts[0]);
-		vkUpdateDescriptorSetWithTemplate(Device, DescriptorSets[0], DUT, &DII);
+
+		//constexpr std::array DUTEs = {
+		//	VkDescriptorUpdateTemplateEntry({
+		//		.dstBinding = 0, .dstArrayElement = 0,
+		//		.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+		//		.offset = 0, .stride = sizeof(DII)
+		//	}),
+		//};
+		//const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
+		//	.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
+		//	.pNext = nullptr,
+		//	.flags = 0,
+		//	.descriptorUpdateEntryCount = static_cast<uint32_t>(size(DUTEs)), .pDescriptorUpdateEntries = data(DUTEs),
+		//	.templateType = VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
+		//	.descriptorSetLayout = DescriptorSetLayouts[0],
+		//	.pipelineBindPoint = VK_PIPELINE_BIND_POINT_COMPUTE,
+		//	.pipelineLayout = VK_NULL_HANDLE, .set = 0
+		//};
+		//VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DUT));
 
 		vkDestroyDescriptorUpdateTemplate(Device, DUT, GetAllocationCallbacks());
 	}

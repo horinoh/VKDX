@@ -50,6 +50,22 @@ float3 GaussianFilter(const Texture2D textureMap, const int2 coord, const int2 h
 float3 GaussianFilterH(const Texture2D textureMap, const int2 coord) { return GaussianFilter(textureMap, coord, int2(1, 0)); }
 float3 GaussianFilterV(const Texture2D textureMap, const int2 coord) { return GaussianFilter(textureMap, coord, int2(0, 1)); }
 
+float Hash(float n) { return frac(sin(n) * 43758.5453f); }
+float SimplexNoise(float3 v)
+{
+	const float3 p = floor(v);
+	float3 f = frac(v);
+	
+	f = f * f * (3.0f - 2.0f * f);
+	
+	const float n = p.x + p.y * 57.0f + 113.0f * p.z;
+
+	return lerp(lerp(lerp(Hash(n + 0.0f), Hash(n + 1.0f), f.x),
+		lerp(Hash(n + 57.0f), Hash(n + 58.0f), f.x), f.y),
+		lerp(lerp(Hash(n + 113.0f), Hash(n + 114.0f), f.x),
+			lerp(Hash(n + 170.0f), Hash(n + 171.0f), f.x), f.y), f.z);
+}
+
 float4 main(IN In) : SV_TARGET
 {
 #if 0
@@ -85,13 +101,28 @@ float4 main(IN In) : SV_TARGET
 	const float C = length(ddx(Center) + ddy(Center));
 	return 1.0f - float4(C, C, C, 0.0f);
 #elif 0
-	//!< ガウスフィルタ (GaussianFilter) ... 本来は2パス必要
+	//!< ブラー
+	int2 TexSize; Texture.GetDimensions(TexSize.x, TexSize.y);
+	float2 Offset = 1.5f / float2(TexSize);
+	float3 Color = Texture.Sample(Sampler, In.Texcoord).rgb;
+	Color += Texture.Sample(Sampler, In.Texcoord + float2( Offset.x, 0.0f)).rgb;
+	Color += Texture.Sample(Sampler, In.Texcoord + float2(-Offset.x, 0.0f)).rgb;
+	Color += Texture.Sample(Sampler, In.Texcoord + float2(0.0f,  Offset.y)).rgb;
+	Color += Texture.Sample(Sampler, In.Texcoord + float2(0.0f, -Offset.y)).rgb;
+	Color += Texture.Sample(Sampler, In.Texcoord + float2( Offset.x,  Offset.y)).rgb;
+	Color += Texture.Sample(Sampler, In.Texcoord + float2( Offset.x, -Offset.y)).rgb;
+	Color += Texture.Sample(Sampler, In.Texcoord + float2(-Offset.x, Offset.y)).rgb;
+	Color += Texture.Sample(Sampler, In.Texcoord + float2(-Offset.x, -Offset.y)).rgb;
+	Color /= 9.0f;
+	return float4(Color, 1.0f);
+#elif 0
+	//!< ガウスフィルタ (GaussianFilter) ... 本来は2パス必要 (ここでは1パス分だけ)
 	return float4(GaussianFilterH(Texture, int2(In.Position.xy)), 1.0f);
 	//return float4(GaussianFilterV(Texture, int2(In.Position.xy)), 1.0f);
 #elif 0
 	//!< ディザ (Dither)	... シェーダでは関数の再帰呼び出しができないので、計算で求めるのではなく、予めBayerを生成しておく
 	const float N = 4.0f;
-	const float4x4 Bayer = float4x4( 0.0f, 8.0f, 2.0f, 10.0f,
+	const float4x4 Bayer = float4x4(0.0f, 8.0f, 2.0f, 10.0f,
 									12.0f, 4.0f, 14.0f, 6.0f,
 									 3.0f, 11.0f, 1.0f, 9.0f,
 									15.0f, 7.0f, 13.0f, 5.0f);
@@ -100,9 +131,14 @@ float4 main(IN In) : SV_TARGET
 	const float Threshold = Bayer[BayerUV.x][BayerUV.y] / (N * N);
 
 	const float Mono = dot(float3(0.299f, 0.587f, 0.114f), Texture.Sample(Sampler, In.Texcoord).rgb);
-	
+
 	const bool b = Threshold > Mono;
-	return float4(b, b, b, 1.0f);
+	return float4(b.xxx, 1.0f);
+#elif 0
+	//!< シンプレックスノイズ (SimplexNoise)
+	const float2 UV = In.Texcoord + 0.01f * (SimplexNoise(In.Position.xyz) * 2.0f - 1.0f);
+	return Texture.Sample(Sampler, UV);
+	//return float4(SimplexNoise(In.Position.xyz).xxx, 1);
 #else
 	//!< モザイク (Mosaic)
 	const float2 Resolution = float2(800.0f, 600.0f);

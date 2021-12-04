@@ -15,12 +15,13 @@ public:
 
 protected:
 	virtual void DrawFrame(const UINT i) override {
-		const auto WV = DirectX::XMMatrixMultiply(DirectX::XMLoadFloat4x4(&Tr.World), DirectX::XMLoadFloat4x4(&Tr.View));
-		auto DetWV = DirectX::XMMatrixDeterminant(WV);
-		DirectX::XMStoreFloat4(&Tr.LocalCameraPosition, DirectX::XMVector4Transform(DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), DirectX::XMMatrixInverse(&DetWV, WV)));
+		const auto CameraPos = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+		const auto WVInv = DirectX::XMMatrixInverse(nullptr, DirectX::XMMatrixMultiply(DirectX::XMLoadFloat4x4(&Tr.World), DirectX::XMLoadFloat4x4(&Tr.View)));
+		DirectX::XMStoreFloat4(&Tr.LocalCameraPosition, DirectX::XMVector4Transform(CameraPos, WVInv));
 
 		const auto LightPos = DirectX::XMVector4Transform(DirectX::XMVectorSet(10.0f, 0.0f, 0.0f, 0.0f), DirectX::XMMatrixRotationY(DirectX::XMConvertToRadians(Degree)));
-		DirectX::XMStoreFloat4(&Tr.LocalLightDirection, DirectX::XMVector3Normalize(DirectX::XMVector4Transform(LightPos, DirectX::XMMatrixInverse(nullptr, DirectX::XMLoadFloat4x4(&Tr.World)))));
+		const auto WInv = DirectX::XMMatrixInverse(nullptr, DirectX::XMLoadFloat4x4(&Tr.World));
+		DirectX::XMStoreFloat4(&Tr.LocalLightDirection, DirectX::XMVector3Normalize(DirectX::XMVector4Transform(LightPos, WInv)));
 
 		Degree += 1.0f;
 

@@ -1544,7 +1544,7 @@ void VK::CreateDescriptorPool(VkDescriptorPool& DP, const VkDescriptorPoolCreate
 	VERIFY_SUCCEEDED(vkCreateDescriptorPool(Device, &DPCI, GetAllocationCallbacks(), &DP));
 }
 
-void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const std::vector<VkDescriptorUpdateTemplateEntry>& DUTEs, const VkDescriptorSetLayout DSL)
+void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const VkPipelineBindPoint PBP, const std::vector<VkDescriptorUpdateTemplateEntry>& DUTEs, const VkDescriptorSetLayout DSL)
 {
 	const VkDescriptorUpdateTemplateCreateInfo DUTCI = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO,
@@ -1553,7 +1553,7 @@ void VK::CreateDescriptorUpdateTemplate(VkDescriptorUpdateTemplate& DUT, const s
 		.descriptorUpdateEntryCount = static_cast<uint32_t>(size(DUTEs)), .pDescriptorUpdateEntries = data(DUTEs),
 		.templateType = VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_DESCRIPTOR_SET,
 		.descriptorSetLayout = DSL,
-		.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS, 
+		.pipelineBindPoint = PBP, 
 		.pipelineLayout = VK_NULL_HANDLE, .set = 0
 	};
 	VERIFY_SUCCEEDED(vkCreateDescriptorUpdateTemplate(Device, &DUTCI, GetAllocationCallbacks(), &DUT));

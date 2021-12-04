@@ -18,8 +18,8 @@ protected:
 #define COMMAND_COPY_TOGETHER
 
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
-		const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
+		const auto DCL = COM_PTR_GET(DirectCommandLists[0]);
+		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
 #if 1
 		constexpr std::array Vertices = {
@@ -43,7 +43,7 @@ protected:
 		UploadResource Upload_Vertex;
 		Upload_Vertex.Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), data(Vertices));
 #else
-		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), sizeof(Vertices[0])).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Vertices), data(Vertices));
+		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), sizeof(Vertices[0])).ExecuteCopyCommand(COM_PTR_GET(Device), CA, DCL, GCQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Vertices), data(Vertices));
 #endif
 		SetName(COM_PTR_GET(VertexBuffers.back().Resource), TEXT("MyVertexBuffer"));
 
@@ -52,7 +52,7 @@ protected:
 		UploadResource Upload_Index;
 		Upload_Index.Create(COM_PTR_GET(Device), TotalSizeOf(Indices), data(Indices));
 #else
-		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Indices), DXGI_FORMAT_R32_UINT).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Indices), data(Indices));
+		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Indices), DXGI_FORMAT_R32_UINT).ExecuteCopyCommand(COM_PTR_GET(Device), CA, DCL, GCQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Indices), data(Indices));
 #endif	
 		SetName(COM_PTR_GET(IndexBuffers.back().Resource), TEXT("MyIndexBuffer"));
 
@@ -62,17 +62,17 @@ protected:
 		UploadResource Upload_Indirect;
 		Upload_Indirect.Create(COM_PTR_GET(Device), sizeof(DIA), &DIA);
 #else
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, CQ, COM_PTR_GET(GraphicsFence), sizeof(DIA), &DIA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, DCL, GCQ, COM_PTR_GET(GraphicsFence), sizeof(DIA), &DIA);
 #endif	
 		SetName(COM_PTR_GET(IndirectBuffers.back().Resource), TEXT("MyIndirectBuffer"));
 
 #ifdef COMMAND_COPY_TOGETHER
-		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			VertexBuffers.back().PopulateCopyCommand(GCL, TotalSizeOf(Vertices), COM_PTR_GET(Upload_Vertex.Resource));
-			IndexBuffers.back().PopulateCopyCommand(GCL, TotalSizeOf(Indices), COM_PTR_GET(Upload_Index.Resource));
-			IndirectBuffers.back().PopulateCopyCommand(GCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
-		} VERIFY_SUCCEEDED(GCL->Close());
-		DX::ExecuteAndWait(CQ, GCL, COM_PTR_GET(GraphicsFence));
+		VERIFY_SUCCEEDED(DCL->Reset(CA, nullptr)); {
+			VertexBuffers.back().PopulateCopyCommand(DCL, TotalSizeOf(Vertices), COM_PTR_GET(Upload_Vertex.Resource));
+			IndexBuffers.back().PopulateCopyCommand(DCL, TotalSizeOf(Indices), COM_PTR_GET(Upload_Index.Resource));
+			IndirectBuffers.back().PopulateCopyCommand(DCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
+		} VERIFY_SUCCEEDED(DCL->Close());
+		DX::ExecuteAndWait(GCQ, DCL, COM_PTR_GET(GraphicsFence));
 #endif
 
 		LOG_OK();
@@ -82,21 +82,17 @@ protected:
 #ifdef USE_HLSL_ROOTSIGNATRUE
 		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".rs.cso")));
 #else
-		DX::SerializeRootSignature(Blob, {
 #ifdef USE_ROOT_CONSTANTS
+		DX::SerializeRootSignature(Blob, {
 			D3D12_ROOT_PARAMETER({
-				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS, 
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS,
 				.Constants = D3D12_ROOT_CONSTANTS({.ShaderRegister = 0, .RegisterSpace = 0, .Num32BitValues = static_cast<UINT>(size(Color)) }),
 				.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL
 			}),
-#endif
-			}, {}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT
-#ifdef USE_ROOT_CONSTANTS
-			| SHADER_ROOT_ACCESS_PS
+		}, {}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | SHADER_ROOT_ACCESS_PS);
 #else
-			| SHADER_ROOT_ACCESS_DENY_ALL
+		DX::SerializeRootSignature(Blob, {}, {}, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT | SHADER_ROOT_ACCESS_DENY_ALL);
 #endif
-		); 
 #endif
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		LOG_OK();
@@ -117,7 +113,6 @@ protected:
 			SetBlobPart(SBs.back()); GetBlobPart(COM_PTR_GET(SBs.back())); StripShader(SBs.back());
 #endif
 		}
-
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
 #endif
 		const std::array SBCs = {
@@ -146,50 +141,50 @@ protected:
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
 
 #pragma region BUNDLE_COMMAND_LIST
-		const auto BGCL = COM_PTR_GET(BundleCommandLists[i]);
+		const auto BCL = COM_PTR_GET(BundleCommandLists[i]);
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
+		VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 		{
-			BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 			const std::array VBVs = { VertexBuffers[0].View };
-			BGCL->IASetVertexBuffers(0, static_cast<UINT>(size(VBVs)), data(VBVs));
-			BGCL->IASetIndexBuffer(&IndexBuffers[0].View);
+			BCL->IASetVertexBuffers(0, static_cast<UINT>(size(VBVs)), data(VBVs));
+			BCL->IASetIndexBuffer(&IndexBuffers[0].View);
 
-			BGCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+			BCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 		}
-		VERIFY_SUCCEEDED(BGCL->Close());
+		VERIFY_SUCCEEDED(BCL->Close());
 #pragma endregion
 
-		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
-		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
+		const auto DCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto DCA = COM_PTR_GET(DirectCommandAllocators[0]);
+		VERIFY_SUCCEEDED(DCL->Reset(DCA, PS));
 		{
 #if defined(_DEBUG) || defined(USE_PIX)
-			PIXScopedEvent(GCL, PIX_COLOR(0, 255, 0), TEXT("Command Begin"));
+			PIXScopedEvent(DCL, PIX_COLOR(0, 255, 0), TEXT("Command Begin"));
 #endif
-			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
+			DCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 #ifdef USE_ROOT_CONSTANTS
-			GCL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(size(Color)), data(Color), 0);
+			DCL->SetGraphicsRoot32BitConstants(0, static_cast<UINT>(size(Color)), data(Color), 0);
 #endif
 
-			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			DCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+			DCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			ResourceBarrier(DCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				GCL->ClearRenderTargetView(SwapChainCPUHandles[i], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				DCL->ClearRenderTargetView(SwapChainCPUHandles[i], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 
 				const std::array CHs = { SwapChainCPUHandles[i] };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
+				DCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
 
-				GCL->ExecuteBundle(BGCL);
+				DCL->ExecuteBundle(BCL);
 			}
-			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+			ResourceBarrier(DCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		}
-		VERIFY_SUCCEEDED(GCL->Close());
+		VERIFY_SUCCEEDED(DCL->Close());
 	}
 
 #ifdef USE_ROOT_CONSTANTS

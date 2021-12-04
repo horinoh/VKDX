@@ -21,6 +21,7 @@ VkFormat VKImage::ToVkFormat(const gli::format GLIFormat)
 #include "VKGLIFormat.h"
 	}
 #undef GLI_FORMAT_TO_VK_FORMAT_ENTRY
+	Error("GLIFormat is not supported");
 	assert(false && "Not supported");
 	return VK_FORMAT_UNDEFINED;
 }

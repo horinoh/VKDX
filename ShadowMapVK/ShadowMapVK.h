@@ -459,7 +459,7 @@ protected:
 #pragma region FRAME_OBJECT
 		const auto SCCount = size(SwapchainImages);
 		//!< パス0 :
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), VK_PIPELINE_BIND_POINT_GRAPHICS, {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
 				.descriptorCount = _countof(DescriptorUpdateInfo_0::DBI), .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -474,7 +474,7 @@ protected:
 		}
 
 		//!< パス1 :
-		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), {
+		VK::CreateDescriptorUpdateTemplate(DescriptorUpdateTemplates.emplace_back(), VK_PIPELINE_BIND_POINT_GRAPHICS, {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
 				.descriptorCount = _countof(DescriptorUpdateInfo_1::DII), .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,

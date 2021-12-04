@@ -436,7 +436,7 @@ protected:
 #pragma endregion
 
 			VkDescriptorUpdateTemplate DUT;
-			VK::CreateDescriptorUpdateTemplate(DUT, {
+			VK::CreateDescriptorUpdateTemplate(DUT, VK_PIPELINE_BIND_POINT_GRAPHICS, {
 				VkDescriptorUpdateTemplateEntry({
 					.dstBinding = 0, .dstArrayElement = 0,
 					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -486,7 +486,7 @@ protected:
 				VkDescriptorBufferInfo DBI;
 			};
 			VkDescriptorUpdateTemplate DUT;
-			VK::CreateDescriptorUpdateTemplate(DUT, {
+			VK::CreateDescriptorUpdateTemplate(DUT, VK_PIPELINE_BIND_POINT_GRAPHICS, {
 				//!< レンダーターゲット : カラー(RenderTarget : Color)
 				VkDescriptorUpdateTemplateEntry({
 					.dstBinding = 0, .dstArrayElement = 0,

@@ -15,8 +15,8 @@ public:
 
 protected:
 	virtual void DrawFrame(const uint32_t i) override {
-		const auto VW = Tr.View * Tr.World;
-		Tr.LocalCameraPosition = glm::inverse(VW) * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		const auto CameraPos = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+		Tr.LocalCameraPosition = glm::inverse(Tr.View * Tr.World) * CameraPos;
 
 		const auto LightPos = glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(0.0f, 1.0f, 0.0f)) * glm::vec4(10.0f, 0.0f, 0.0f, 0.0f);
 		Tr.LocalLightDirection = glm::normalize(glm::inverse(Tr.World) * LightPos);
@@ -185,7 +185,7 @@ protected:
 #endif
 		};
 		VkDescriptorUpdateTemplate DUT;
-		VK::CreateDescriptorUpdateTemplate(DUT, {
+		VK::CreateDescriptorUpdateTemplate(DUT, VK_PIPELINE_BIND_POINT_GRAPHICS, {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
 				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, //!< UniformBuffer

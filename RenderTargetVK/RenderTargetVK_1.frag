@@ -5,6 +5,7 @@
 layout (early_fragment_tests) in;
 
 layout (location = 0) in vec2 InTexcoord;
+layout (location = 1) in vec3 InPosition;
 
 layout (location = 0) out vec4 OutColor;
 
@@ -110,6 +111,22 @@ vec3 GaussianFilterV(const sampler2D textureMap, const ivec2 xy)
 }
 #endif
 
+float Hash(float n) { return fract(sin(n) * 43758.5453f); }
+float SimplexNoise(vec3 v)
+{
+	const vec3 p = floor(v);
+	vec3 f = fract(v);
+	
+	f = f * f * (3.0f - 2.0f * f);
+	
+	const float n = p.x + p.y * 57.0f + 113.0f * p.z;
+
+	return mix(mix(mix(Hash(n + 0.0f), Hash(n + 1.0f), f.x),
+		mix(Hash(n + 57.0f), Hash(n + 58.0f), f.x), f.y),
+		mix(mix(Hash(n + 113.0f), Hash(n + 114.0f), f.x),
+			mix(Hash(n + 170.0f), Hash(n + 171.0f), f.x), f.y), f.z);
+}
+
 void main()
 {
 #if 0
@@ -145,7 +162,22 @@ void main()
 	const float C = length(dFdx(Center) + dFdy(Center));
 	OutColor = 1.0f - vec4(C, C, C, 0.0f);
 #elif 0
-	//!< ガウスフィルタ (GaussianFilter) ... 本来は2パス必要
+	//!< ブラー
+	const vec2 TexSize = textureSize(Sampler2D, 0);
+	const vec2 Offset = 1.5f / TexSize;
+	vec3 Color = texture(Sampler2D, InTexcoord).rgb;
+	Color += texture(Sampler2D, InTexcoord + vec2( Offset.x, 0.0f)).rgb;
+	Color += texture(Sampler2D, InTexcoord + vec2(-Offset.x, 0.0f)).rgb;
+	Color += texture(Sampler2D, InTexcoord + vec2(0.0f,  Offset.y)).rgb;
+	Color += texture(Sampler2D, InTexcoord + vec2(0.0f, -Offset.y)).rgb;
+	Color += texture(Sampler2D, InTexcoord + vec2( Offset.x,  Offset.y)).rgb;
+	Color += texture(Sampler2D, InTexcoord + vec2( Offset.x, -Offset.y)).rgb;
+	Color += texture(Sampler2D, InTexcoord + vec2(-Offset.x,  Offset.y)).rgb;
+	Color += texture(Sampler2D, InTexcoord + vec2(-Offset.x, -Offset.y)).rgb;
+	Color /= 9.0f;
+	OutColor = vec4(Color, 1.0f);
+#elif 0
+	//!< ガウスフィルタ (GaussianFilter) ... 本来は2パス必要 (ここでは1パス分だけ)
 	OutColor = vec4(GaussianFilterH(Sampler2D, ivec2(gl_FragCoord.xy)), 1.0f);
 	//OutColor = vec4(GaussianFilterV(Sampler2D, ivec2(gl_FragCoord.xy)), 1.0f);
 #elif 0
@@ -161,14 +193,17 @@ void main()
 
 	const float Mono = dot(vec3(0.299f, 0.587f, 0.114f), texture(Sampler2D, InTexcoord).rgb);
 	
-	OutColor = vec4(vec3(Threshold > Mono), 1.0f);
+	OutColor = vec4((Threshold > Mono).xxx, 1.0f);
+#elif 0
+	//!< シンプレックスノイズ (SimplexNoise) #VK_TODO
+	const vec2 UV = InTexcoord + 0.01f * (SimplexNoise(InPosition) * 2.0f - 1.0f);
+	OutColor = texture(Sampler2D, UV);
+	//OutColor = vec4(SimplexNoise(InPosition.xyz).rrr, 1.0f);
 #else
 	//!< モザイク (Mosaic)
 	const vec2 Resolution = vec2(800.0f, 600.0f);
 	const float Block = 10.0f;
 	const vec2 UV = floor(InTexcoord * Resolution / Block) * Block / Resolution;
 	OutColor = texture(Sampler2D, UV);
-#endif
-
-	
+#endif	
 }

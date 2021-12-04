@@ -354,7 +354,7 @@ protected:
 
 		VkDescriptorUpdateTemplate DUT;
 #pragma region PASS0
-		VK::CreateDescriptorUpdateTemplate(DUT, {
+		VK::CreateDescriptorUpdateTemplate(DUT, VK_PIPELINE_BIND_POINT_GRAPHICS, {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
 				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -371,7 +371,7 @@ protected:
 #pragma endregion
 
 #pragma region PASS1
-		VK::CreateDescriptorUpdateTemplate(DUT, {
+		VK::CreateDescriptorUpdateTemplate(DUT, VK_PIPELINE_BIND_POINT_GRAPHICS, {
 			VkDescriptorUpdateTemplateEntry({
 				.dstBinding = 0, .dstArrayElement = 0,
 				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
