@@ -9,7 +9,7 @@
       </Command>
     </PostBuildEvent>
     <CustomBuild>
-      <Command>glslangValidator -V %(Identity) -o %(Identity).spv --target-env vulkan1.2
+      <Command>glslangValidator -V %(Identity) -o %(Identity).spv --target-env vulkan1.2 -g0
 spirv-remap --map all --input %(Identity).spv --output .
 xcopy /y %(Identity).spv $(TargetDir)
 </Command>

@@ -15,15 +15,17 @@ StructuredBuffer<uint> IndexBuffer : register(t1, space1);
 [shader("closesthit")]
 void OnClosestHit(inout Payload Pay, in BuiltInTriangleIntersectionAttributes BITIA)
 {
-    Pay.Color = float3(1.0f - BITIA.barycentrics.x - BITIA.barycentrics.y, BITIA.barycentrics.x, BITIA.barycentrics.y);
+    const float3 BaryCentric = float3(1.0f - BITIA.barycentrics.x - BITIA.barycentrics.y, BITIA.barycentrics.x, BITIA.barycentrics.y);
+    Pay.Color = BaryCentric;
 
     float3 Pos[3], Nrm[3];
     for (int i = 0; i < 3; ++i) {
-        Pos[i] = VertexBuffer[IndexBuffer[PrimitiveIndex() * 3 + i]].Position;
-        Nrm[i] = VertexBuffer[IndexBuffer[PrimitiveIndex() * 3 + i]].Normal;
+        const uint Index = IndexBuffer[PrimitiveIndex() * 3 + i];
+        Pos[i] = VertexBuffer[Index].Position;
+        Nrm[i] = VertexBuffer[Index].Normal;
     }
-    const float3 HitPos = Pos[0] * (1.0f - BITIA.barycentrics.x - BITIA.barycentrics.y) + Pos[1] * BITIA.barycentrics.x + Pos[2] * BITIA.barycentrics.y;
-    //const float3 HitNrm = Nrm[0] * (1.0f - BITIA.barycentrics.x - BITIA.barycentrics.y) + Nrm[1] * BITIA.barycentrics.x + Nrm[2] * BITIA.barycentrics.y;
+    const float3 HitPos = Pos[0] * BaryCentric.x + Pos[1] * BaryCentric.y + Pos[2] * BaryCentric.z;
+    //const float3 HitNrm = Nrm[0] * BaryCentric.x + Nrm[1] * BaryCentric.y + Nrm[2] * BaryCentric.z;
     const float3 HitNrm = float3(0, 1, 0);// TODO
 
     const float3 WorldPos = mul(float4(HitPos, 1.0f), ObjectToWorld4x3());

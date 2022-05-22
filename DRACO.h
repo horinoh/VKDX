@@ -4,6 +4,7 @@
 
 #pragma warning(push)
 #pragma warning(disable:4804)
+#pragma warning(disable:4018)
 #include "draco/compression/decode.h"
 #pragma warning(pop)
 

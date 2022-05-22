@@ -21,15 +21,17 @@ layout(shaderRecordEXT) buffer SBT {
 
 void main()
 {
-	Payload = vec3(1.0f - HitAttr.x - HitAttr.y, HitAttr.x, HitAttr.y);
+    const vec3 BaryCentric = vec3(1.0f - HitAttr.x - HitAttr.y, HitAttr.x, HitAttr.y);
+	Payload = BaryCentric;
 
     vec3 Pos[3], Nrm[3];
     for (int i = 0; i < 3; ++i) {
-        Pos[i] = VB.Vertices[IB.Indices[gl_PrimitiveID * 3 + i]].Position;
-        Nrm[i] = VB.Vertices[IB.Indices[gl_PrimitiveID * 3 + i]].Normal;
+        const uint Index = IB.Indices[gl_PrimitiveID * 3 + i];
+        Pos[i] = VB.Vertices[Index].Position;
+        Nrm[i] = VB.Vertices[Index].Normal;
     }
-    const vec3 HitPos = Pos[0] * (1.0f -  HitAttr.x - HitAttr.y) + Pos[1] * HitAttr.x + Pos[2] * HitAttr.y;
-    //const vec3 HitNrm = Nrm[0] * (1.0f -  HitAttr.x - HitAttr.y) + Nrm[1] * HitAttr.x + Nrm[2] * HitAttr.y;
+    const vec3 HitPos = Pos[0] * BaryCentric.x + Pos[1] * BaryCentric.y + Pos[2] * BaryCentric.z;
+    //const vec3 HitNrm = Nrm[0] * BaryCentric.x + Nrm[1] * BaryCentric.y + Nrm[2] * BaryCentric.z;
     const vec3 HitNrm = vec3(0, 1, 0); //TODO
 
 //    Payload = vec3(0.0f);

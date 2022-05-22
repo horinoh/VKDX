@@ -25,7 +25,19 @@ void OnRayGeneration()
     Ray.Direction = float3(0.0f, 0.0f, 1.0f);
 
     //!< レイトレーシング (RayTracing)
-    TraceRay(TLAS, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xff, 0, 1, 0, Ray, Pay);
+    //!< フラグ
+    //!<    RAY_FLAG_NONE,
+    //!<    RAY_FLAG_FORCE_OPAQUE, RAY_FLAG_FORCE_NON_OPAQUE,
+    //!<    RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
+    //!<    RAY_FLAG_CULL_BACK_FACING_TRIANGLES, RAY_FLAG_CULL_FRONT_FACING_TRIANGLES, RAY_FLAG_CULL_OPAQUE, RAY_FLAG_CULL_NON_OPAQUE = 0x80,
+    //!<    RAY_FLAG_SKIP_TRIANGLES, RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES,
+    TraceRay(TLAS, 
+            RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 
+            0xff,
+            0, 1,   //!< RayContributionToHitGroupIndex, MultiplierForGeometryContributionToHitGroupIndex
+            0,      //!< MissShaderIndex
+            Ray, 
+            Pay);
 
     //!< 結果をレンダーターゲットへ (Write to render target)
     RenderTarget[DispatchRaysIndex().xy] = float4(Pay.Color, 1.0f);

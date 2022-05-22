@@ -59,6 +59,8 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateShaderTable();
 
 	OnExitSizeMove(hWnd, hInstance);
+
+	SetTimer(hWnd, NULL, Elapse, nullptr);
 }
 
 /**

@@ -70,6 +70,8 @@ void VK::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateShaderBindingTable();
 
 	OnExitSizeMove(hWnd, hInstance);
+
+	SetTimer(hWnd, NULL, Elapse, nullptr);
 }
 
 /**
@@ -637,8 +639,11 @@ void VK::CreateInstance(const std::vector<const char*>& AdditionalLayers, const 
 	}
 
 	//!< ここでは最新バージョンで動くようにしておく (Use latest version here)
-	uint32_t APIVersion;
-	VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
+#if true
+	constexpr auto APIVersion = VK_HEADER_VERSION_COMPLETE;
+#else
+	uint32_t APIVersion; VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion)); 
+#endif
 	Logf("API Version = %d.%d.(Header = %d)(Patch = %d)\n", VK_VERSION_MAJOR(APIVersion), VK_VERSION_MINOR(APIVersion), VK_HEADER_VERSION, VK_VERSION_PATCH(APIVersion));
 	const auto ApplicationName = GetTitle();
 	const VkApplicationInfo AI = {

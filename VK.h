@@ -453,7 +453,7 @@ public:
 		using Super = DeviceLocalBuffer;
 	public:
 		DeviceLocalASBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
-			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT| VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 			return *this;
 		}
 		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) {
@@ -1268,8 +1268,11 @@ static std::ostream& operator<<(std::ostream& lhs, const VkLayerProperties& rhs)
 static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDeviceProperties& rhs) {
 	Win::Log("\t\tPhysical Device API Version = ");
 	Win::Logf("%d.%d(Patch = %d)\n", VK_VERSION_MAJOR(rhs.apiVersion), VK_VERSION_MINOR(rhs.apiVersion), VK_VERSION_PATCH(rhs.apiVersion));
-	uint32_t APIVersion;
-	VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
+#if true
+	constexpr auto APIVersion = VK_HEADER_VERSION_COMPLETE;
+#else
+	uint32_t APIVersion; VERIFY_SUCCEEDED(vkEnumerateInstanceVersion(&APIVersion));
+#endif
 	if (rhs.apiVersion != APIVersion) {
 		Win::Log("\t\t");
 		Win::Warningf("[ PHYSICAL DEVICE ] %d.%d(Patch = %d) != %d.%d(Patch = %d) [ INSTANCE(SDK) ]\n",

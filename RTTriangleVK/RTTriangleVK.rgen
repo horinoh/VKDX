@@ -1,5 +1,26 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
+#extension GL_EXT_ray_flags_primitive_culling : enable
+
+//!< スレッド
+//!<    uvec3 gl_LaunchSizeEXT, gl_LaunchIDEXT 
+
+//!< レイ
+//!<    uint gl_IncomingRayFlagsEXT
+//!<    vec3 gl_WorldRayOriginEXT, gl_WorldRayDirectionEXT, gl_ObjectRayOriginEXT, gl_ObjectRayDirectionEXT
+//!<    float gl_RayTminEXT, gl_RayTmaxEXT
+
+//!< インデックス
+//!<    int gl_InstanceCustomIndexEXT, gl_InstanceID, gl_GeometryIndexEXT, gl_PrimitiveID
+
+//!< オブジェクト <-> ワールド
+//!<    mat4x3 gl_ObjectToWorldEXT;
+//!<    mat3x4 gl_ObjectToWorld3x4EXT
+//!<    mat4x3 gl_WorldToObjectEXT;
+//!<    mat3x4 gl_WorldToObject3x4EXT
+
+//!<    float gl_HitTEXT
+//!<    uint gl_HitKindEXT
 
 layout(location = 0) rayPayloadEXT vec3 Payload;
 
@@ -22,7 +43,19 @@ void main()
     const vec3 Direction = vec3(0.0f, 0.0f, 1.0f);
 
     //!< レイトレーシング (RayTracing)
-    traceRayEXT(TLAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsCullBackFacingTrianglesEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0/* rayPayloadEXT の location */);
+    //!< フラグ
+    //!<    gl_RayFlagsNoneEXT, 
+    //!<    gl_RayFlagsOpaqueEXT, gl_RayFlagsNoOpaqueEXT, 
+    //!<    gl_RayFlagsTerminateOnFirstHitEXT, gl_RayFlagsSkipClosestHitShaderEXT, 
+    //!<    gl_RayFlagsCullBackFacingTrianglesEXT, gl_RayFlagsCullFrontFacingTrianglesEXT, gl_RayFlagsCullOpaqueEXT, gl_RayFlagsCullNoOpaqueEXT
+    //!<    gl_RayFlagsSkipTrianglesEXT, gl_RayFlagsSkipAABBEXT ... 要 GL_EXT_ray_flags_primitive_culling
+    traceRayEXT(TLAS, 
+        gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsCullBackFacingTrianglesEXT, 
+        0xff,
+        0, 0,   //!< sbtRecordOffset, sbtRecordStride : RecordAddress = sbtRecordOffset + sbtRecordStride * GeometryContributionHitGroupIndex + instanceShaderBindingTableRecordOffset
+        0,      //!< missIndex
+        Origin, TMin, Direction, TMax, 
+        0);     //!< payload ペイロードインデックス : rayPayloadEXT の location
 
     //!< 結果をレンダーターゲットへ (Write to render target)
 	imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(Payload, 1.0f));
