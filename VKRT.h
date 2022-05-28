@@ -12,7 +12,7 @@ protected:
 		VK::CreateInstance(AdditionalLayers, AdditionalExtensions); //!< VK_LAYER_RENDERDOC_Capture ‚ðŽg—p‚µ‚È‚¢
 	}
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext, [[maybe_unused]] const std::vector<const char*>& AddExtensions) override {
-		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
+		if (HasRayTracingSupport(GetCurrentPhysicalDevice())) {
 #ifdef _DEBUG
 #if true
 			assert(VK_HEADER_VERSION_COMPLETE >= VK_MAKE_VERSION(1, 2, 162) && "RayTracing require 1.2.162 or later");

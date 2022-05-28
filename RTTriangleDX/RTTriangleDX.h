@@ -65,37 +65,31 @@ public:
 		};
 #pragma endregion
 
-#pragma region BLAS_AND_SCRATCH
-		ScratchBuffer Scratch_Blas;
-		{
-			//!< サイズ取得 (Get sizes)
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO RASPI;
-			Device5->GetRaytracingAccelerationStructurePrebuildInfo(&BRASI_Blas, &RASPI);
+#pragma region BLAS
+		//!< サイズ取得 (Get sizes)
+		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO RASPI_Blas;
+		Device5->GetRaytracingAccelerationStructurePrebuildInfo(&BRASI_Blas, &RASPI_Blas); 
 
 #ifdef USE_BLAS_COMPACTION
-			//!< コンパクションサイズリソースを作成
-			ASCompaction Compaction;
-			Compaction.Create(COM_PTR_GET(Device));
+		//!< コンパクションサイズリソースを作成
+		ASCompaction Compaction;
+		Compaction.Create(COM_PTR_GET(Device));
 
-			//!< (コンパクションサイズを取得できるように)引数指定して (一時)BLAS を作成
-			BLAS Tmp;
-			Tmp.Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes)
-				.ExecuteBuildCommand(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI_Blas, GCL, CA, GCQ, COM_PTR_GET(GraphicsFence), &Compaction);
+		//!< (コンパクションサイズを取得できるように)引数指定して (一時)BLAS を作成
+		BLAS Tmp;
+		Tmp.Create(COM_PTR_GET(Device), RASPI_Blas.ResultDataMaxSizeInBytes)
+			.ExecuteBuildCommand(COM_PTR_GET(Device), RASPI_Blas.ScratchDataSizeInBytes, BRASI_Blas, GCL, CA, GCQ, COM_PTR_GET(GraphicsFence), &Compaction);
 
-			//!< コンパクションサイズを取得
-			const UINT64 CompactedSizeInBytes = Compaction.GetSize();
-			std::cout << "BLAS Compaction = " << RASPI.ResultDataMaxSizeInBytes << " -> " << CompactedSizeInBytes << std::endl;
+		//!< コンパクションサイズを取得
+		const UINT64 CompactedSizeInBytes = Compaction.GetSize();
+		std::cout << "BLAS Compaction = " << RASPI_Blas.ResultDataMaxSizeInBytes << " -> " << CompactedSizeInBytes << std::endl;
 
-			//!< コンパクションサイズで (正規)BLAS を作成する (コピーするのでビルドはしないよ)
-			BLASs.emplace_back().Create(COM_PTR_GET(Device), CompactedSizeInBytes)
-				//!< 一時BLAS -> 正規BLAS コピーコマンドを発行する 
-				.ExecuteCopyCommand(GCL, CA, GCQ, COM_PTR_GET(GraphicsFence), COM_PTR_GET(Tmp.Resource));
+		//!< コンパクションサイズで (正規)BLAS を作成する
+		BLASs.emplace_back().Create(COM_PTR_GET(Device), CompactedSizeInBytes);
 #else
-			//!< AS、スクラッチ作成 (Create AS and scratch)
-			BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
-			Scratch_Blas.Create(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes);
+		//!< AS作成 (Create AS)
+		BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI_Blas.ResultDataMaxSizeInBytes);
 #endif
-		}
 #pragma endregion
 
 #pragma region TLAS_INPUT
@@ -123,33 +117,35 @@ public:
 		};
 #pragma endregion
 
-#pragma region TLAS_AND_SCRATCH
-		ScratchBuffer Scratch_Tlas;
-		{
-			//!< サイズ取得 (Get sizes)
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO RASPI;
-			Device5->GetRaytracingAccelerationStructurePrebuildInfo(&BRASI_Tlas, &RASPI);
-
-#ifdef USE_BLAS_COMPACTION
-			//!< AS作成、ビルド (Create and build AS)
-			TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes).ExecuteBuildCommand(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes, BRASI_Tlas, GCL, CA, GCQ, COM_PTR_GET(GraphicsFence));
-#else
-			//!< AS、スクラッチ作成 (Create AS and scratch)
-			TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI.ResultDataMaxSizeInBytes);
-			Scratch_Tlas.Create(COM_PTR_GET(Device), RASPI.ScratchDataSizeInBytes);
-#endif
-		}
+#pragma region TLAS
+		//!< サイズ取得 (Get sizes)
+		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO RASPI_Tlas;
+		Device5->GetRaytracingAccelerationStructurePrebuildInfo(&BRASI_Tlas, &RASPI_Tlas);
+		//!< AS作成 (Create AS)
+		TLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI_Tlas.ResultDataMaxSizeInBytes);
 #pragma endregion
 
-#ifndef USE_BLAS_COMPACTION
+#pragma region SCRATCH
+		ScratchBuffer Scratch;
+#ifdef USE_BLAS_COMPACTION
+		Scratch.Create(COM_PTR_GET(Device), RASPI_Tlas.ScratchDataSizeInBytes);
+#else
+		Scratch.Create(COM_PTR_GET(Device), std::max(RASPI_Blas.ScratchDataSizeInBytes, RASPI_Tlas.ScratchDataSizeInBytes));
+#endif
+#pragma endregion
+
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			BLASs.back().PopulateBuildCommand(BRASI_Blas, GCL, COM_PTR_GET(Scratch_Blas.Resource));
-			//!< TLAS のビルド時には BLAS のビルドが完了している必要がある
+#ifdef USE_BLAS_COMPACTION
+			//!< 一時BLAS -> 正規BLAS コピーコマンドを発行する 
+			BLASs.back().PopulateCopyCommand(GCL, COM_PTR_GET(Tmp.Resource));
+#else
+			BLASs.back().PopulateBuildCommand(BRASI_Blas, GCL, COM_PTR_GET(Scratch.Resource));
+#endif
+			//!< TLAS のビルド時には BLAS のビルド(コピー)が完了している必要があるのでバリア
 			BLASs.back().PopulateBarrierCommand(GCL);
-			TLASs.back().PopulateBuildCommand(BRASI_Tlas, GCL, COM_PTR_GET(Scratch_Tlas.Resource));
+			TLASs.back().PopulateBuildCommand(BRASI_Tlas, GCL, COM_PTR_GET(Scratch.Resource));
 		} VERIFY_SUCCEEDED(GCL->Close());
 		DX::ExecuteAndWait(GCQ, static_cast<ID3D12CommandList*>(GCL), COM_PTR_GET(GraphicsFence));
-#endif
 	}
 	virtual void CreatePipelineState() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }

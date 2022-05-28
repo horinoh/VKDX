@@ -95,7 +95,7 @@ public:
 		};
 #pragma endregion
 
-#pragma region BLAS_AND_SCRATCH
+#pragma region BLAS
 		VkAccelerationStructureBuildGeometryInfoKHR ASBGI_Blas = {
 			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
 			.pNext = nullptr,
@@ -106,19 +106,21 @@ public:
 			.geometryCount = static_cast<uint32_t>(size(ASGs_Blas)),.pGeometries = data(ASGs_Blas), .ppGeometries = nullptr, //!< [GLSL] gl_GeometryIndexEXT ([HLSL] GeometryIndex() ‘Š“–)
 			.scratchData = VkDeviceOrHostAddressKHR({.deviceAddress = 0})
 		};
-		const auto ASBRI_Blas = VkAccelerationStructureBuildRangeInfoKHR({ .primitiveCount = static_cast<uint32_t>(size(Indices) / 3), .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0 });
+		const std::vector ASBRIs_Blas = {
+			VkAccelerationStructureBuildRangeInfoKHR({.primitiveCount = static_cast<uint32_t>(size(Indices) / 3), .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0 }),
+		};
+		assert(ASBGI_Blas.geometryCount == size(ASBRIs_Blas));
 
-		Scoped<ScratchBuffer> Scratch_Blas(Device);
+		VkAccelerationStructureBuildSizesInfoKHR ASBSI_Blas = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, };
 		{
-			VkAccelerationStructureBuildSizesInfoKHR ASBSI = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, };
-			const std::array MaxPrimitiveCounts = { ASBRI_Blas.primitiveCount };
-			vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI_Blas, data(MaxPrimitiveCounts), &ASBSI);
+			const std::array MaxPrimitiveCounts = {
+				std::ranges::max_element(ASBRIs_Blas, [](const auto& lhs, const auto& rhs) { return lhs.primitiveCount < rhs.primitiveCount; })->primitiveCount
+			};
+			assert(ASBGI_Blas.geometryCount == size(MaxPrimitiveCounts));
+			vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI_Blas, data(MaxPrimitiveCounts), &ASBSI_Blas);
 
-			BLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize);
-			Scratch_Blas.Create(Device, PDMP, ASBSI.buildScratchSize);
-
+			BLASs.emplace_back().Create(Device, PDMP, ASBSI_Blas.accelerationStructureSize);
 			ASBGI_Blas.dstAccelerationStructure = BLASs.back().AccelerationStructure;
-			ASBGI_Blas.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch_Blas.Buffer) });
 		}
 #pragma endregion
 
@@ -175,7 +177,7 @@ public:
 			.flags = VK_GEOMETRY_OPAQUE_BIT_KHR
 		});
 
-#pragma region TLAS_AND_SCRATCH
+#pragma region TLAS
 		VkAccelerationStructureBuildGeometryInfoKHR ASBGI_Tlas = {
 			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
 			.pNext = nullptr,
@@ -186,26 +188,39 @@ public:
 			.geometryCount = 1,.pGeometries = &ASG_Tlas, .ppGeometries = nullptr, 
 			.scratchData = VkDeviceOrHostAddressKHR({.deviceAddress = 0})
 		};
-		constexpr auto ASBRI_Tlas = VkAccelerationStructureBuildRangeInfoKHR({ .primitiveCount = static_cast<uint32_t>(size(ASIs)), .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0 });
+		const std::vector ASBRIs_Tlas = {
+			VkAccelerationStructureBuildRangeInfoKHR({.primitiveCount = static_cast<uint32_t>(size(ASIs)), .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0 }),
+		};
+		assert(ASBGI_Tlas.geometryCount == size(ASBRIs_Tlas));
 
-		Scoped<ScratchBuffer> Scratch_Tlas(Device);
+		VkAccelerationStructureBuildSizesInfoKHR ASBSI_Tlas = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, };
 		{
-			VkAccelerationStructureBuildSizesInfoKHR ASBSI = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, };
-			const std::array MaxPrimitiveCounts = { ASBRI_Tlas.primitiveCount };
-			vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI_Tlas, data(MaxPrimitiveCounts), &ASBSI);
+			const std::array MaxPrimitiveCounts = {
+				std::ranges::max_element(ASBRIs_Tlas, [](const auto& lhs, const auto& rhs) { return lhs.primitiveCount < rhs.primitiveCount; })->primitiveCount
+			};
+			assert(ASBGI_Tlas.geometryCount == size(MaxPrimitiveCounts));
 
-			TLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize);
-			Scratch_Tlas.Create(Device, PDMP, ASBSI.buildScratchSize);
+			vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI_Tlas, data(MaxPrimitiveCounts), &ASBSI_Tlas);
 
+			TLASs.emplace_back().Create(Device, PDMP, ASBSI_Tlas.accelerationStructureSize);
 			ASBGI_Tlas.dstAccelerationStructure = TLASs.back().AccelerationStructure;
-			ASBGI_Tlas.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch_Tlas.Buffer) });
 		}
 #pragma endregion
+
+#pragma region SCRATCH
+		Scoped<ScratchBuffer> Scratch(Device);
+		Scratch.Create(Device, PDMP, std::max(ASBSI_Blas.buildScratchSize, ASBSI_Tlas.buildScratchSize));
+		ASBGI_Blas.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch.Buffer) });
+		ASBGI_Tlas.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch.Buffer) });
+#pragma endregion
+
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-			BLASs.back().PopulateBuildCommand(ASBGI_Blas, ASBRI_Blas, CB);
-			BLASs.back().PopulateBarrierCommand(CB);
-			TLASs.back().PopulateBuildCommand(ASBGI_Tlas, ASBRI_Tlas, CB);
+			BLASs.back().PopulateBuildCommand(ASBGI_Blas, ASBRIs_Blas, CB);
+
+			AccelerationStructureBuffer::PopulateBarrierCommand(CB);
+			///BLASs.back().PopulateBarrierCommand(CB);
+			TLASs.back().PopulateBuildCommand(ASBGI_Tlas, ASBRIs_Tlas, CB);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		SubmitAndWait(GraphicsQueue, CB);
 	}

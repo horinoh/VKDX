@@ -498,12 +498,10 @@ public:
 			if (VK_NULL_HANDLE != AccelerationStructure) { vkDestroyAccelerationStructureKHR(Device, AccelerationStructure, GetAllocationCallbacks()); }
 			Super::Destroy(Device);
 		}
-		void PopulateBuildCommand(const VkAccelerationStructureBuildGeometryInfoKHR& ASBGI, const VkAccelerationStructureBuildRangeInfoKHR& ASBRI, const VkCommandBuffer CB, const VkQueryPool QP = VK_NULL_HANDLE) {
+		void PopulateBuildCommand(const VkAccelerationStructureBuildGeometryInfoKHR& ASBGI, const std::vector<VkAccelerationStructureBuildRangeInfoKHR>& ASBRIs, const VkCommandBuffer CB, const VkQueryPool QP = VK_NULL_HANDLE) {
+			assert(ASBGI.geometryCount == size(ASBRIs));
 			const std::array ASBGIs = { ASBGI };
-			const std::array ASBRIs = { ASBRI };
 			const std::array ASBRIss = { data(ASBRIs) };
-			assert(size(ASBGIs) == size(ASBRIss));
-			assert(ASBGIs[0].geometryCount == size(ASBRIs));
 			vkCmdBuildAccelerationStructuresKHR(CB, static_cast<uint32_t>(size(ASBGIs)), data(ASBGIs), data(ASBRIss));
 
 			//!< QueryPool が指定された場合は COMPACTED_SIZE プロパティを QueryPool へ書き込む
@@ -513,16 +511,34 @@ public:
 				vkCmdWriteAccelerationStructuresPropertiesKHR(CB, static_cast<uint32_t>(size(ASs)), data(ASs), VK_QUERY_TYPE_ACCELERATION_STRUCTURE_COMPACTED_SIZE_KHR, QP, 0);
 			}
 		}
-		void SubmitBuildCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDeviceSize Size, VkAccelerationStructureBuildGeometryInfoKHR ASBGI, const VkAccelerationStructureBuildRangeInfoKHR& ASBRI, VkQueue Queue, const VkCommandBuffer CB, const VkQueryPool QP = VK_NULL_HANDLE) {
+		void SubmitBuildCommand(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkDeviceSize Size, VkAccelerationStructureBuildGeometryInfoKHR ASBGI, const std::vector<VkAccelerationStructureBuildRangeInfoKHR>& ASBRIs, VkQueue Queue, const VkCommandBuffer CB, const VkQueryPool QP = VK_NULL_HANDLE) {
 			Scoped<ScratchBuffer> Scratch(Device);
 			Scratch.Create(Device, PDMP, Size);
 			ASBGI.dstAccelerationStructure = AccelerationStructure;
 			ASBGI.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch.Buffer) });
 			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-				PopulateBuildCommand(ASBGI, ASBRI, CB, QP);
+				PopulateBuildCommand(ASBGI, ASBRIs, CB, QP);
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 			SubmitAndWait(Queue, CB);
+		}
+		static void PopulateBarrierCommand(const VkCommandBuffer CB) {
+			constexpr std::array MBs = {
+				VkMemoryBarrier({
+					.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
+					.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR
+				}),
+			};
+			constexpr std::array<VkBufferMemoryBarrier, 0> BMBs = {};
+			constexpr std::array<VkImageMemoryBarrier, 0> IMBs = {};
+			vkCmdPipelineBarrier(CB,
+				VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+				0,
+				static_cast<uint32_t>(size(MBs)), data(MBs),
+				static_cast<uint32_t>(size(BMBs)), data(BMBs),
+				static_cast<uint32_t>(size(IMBs)), data(IMBs));
 		}
 	};
 	class BLAS : public AccelerationStructureBuffer 
