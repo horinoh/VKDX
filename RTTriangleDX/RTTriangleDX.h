@@ -84,8 +84,10 @@ public:
 		const UINT64 CompactedSizeInBytes = Compaction.GetSize();
 		std::cout << "BLAS Compaction = " << RASPI_Blas.ResultDataMaxSizeInBytes << " -> " << CompactedSizeInBytes << std::endl;
 
-		//!< コンパクションサイズで (正規)BLAS を作成する
-		BLASs.emplace_back().Create(COM_PTR_GET(Device), CompactedSizeInBytes);
+		//!< コンパクションサイズで (正規)BLAS を作成する (コピーするのでビルドはしないよ)
+		BLASs.emplace_back().Create(COM_PTR_GET(Device), CompactedSizeInBytes)
+			//!< 一時BLAS -> 正規BLAS コピーコマンドを発行する 
+			.ExecuteCopyCommand(GCL, CA, GCQ, COM_PTR_GET(GraphicsFence), COM_PTR_GET(Tmp.Resource));
 #else
 		//!< AS作成 (Create AS)
 		BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI_Blas.ResultDataMaxSizeInBytes);
@@ -135,14 +137,12 @@ public:
 #pragma endregion
 
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-#ifdef USE_BLAS_COMPACTION
-			//!< 一時BLAS -> 正規BLAS コピーコマンドを発行する 
-			BLASs.back().PopulateCopyCommand(GCL, COM_PTR_GET(Tmp.Resource));
-#else
+#ifndef USE_BLAS_COMPACTION
 			BLASs.back().PopulateBuildCommand(BRASI_Blas, GCL, COM_PTR_GET(Scratch.Resource));
 #endif
 			//!< TLAS のビルド時には BLAS のビルド(コピー)が完了している必要があるのでバリア
 			BLASs.back().PopulateBarrierCommand(GCL);
+
 			TLASs.back().PopulateBuildCommand(BRASI_Tlas, GCL, COM_PTR_GET(Scratch.Resource));
 		} VERIFY_SUCCEEDED(GCL->Close());
 		DX::ExecuteAndWait(GCQ, static_cast<ID3D12CommandList*>(GCL), COM_PTR_GET(GraphicsFence));

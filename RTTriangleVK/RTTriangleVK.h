@@ -53,7 +53,7 @@ public:
 		};
 #pragma endregion
 
-#pragma region BLAS_AND_SCRATCH
+#pragma region BLAS
 		VkAccelerationStructureBuildGeometryInfoKHR ASBGI_Blas = {
 			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
 			.pNext = nullptr,
@@ -73,16 +73,20 @@ public:
 		};
 		assert(ASBGI_Blas.geometryCount == size(ASBRIs_Blas));
 
-		Scoped<ScratchBuffer> Scratch_Blas(Device);
+		//!< サイズ取得 (Get sizes)
+		VkAccelerationStructureBuildSizesInfoKHR ASBSI_Blas = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, };
 		{
-			//!< サイズ取得 (Get sizes)
 			const std::array MaxPrimitiveCounts = {
-				std::ranges::max_element(ASBRIs_Blas, [](const auto& lhs, const auto& rhs) { return lhs.primitiveCount < rhs.primitiveCount; })->primitiveCount 
+				std::ranges::max_element(ASBRIs_Blas, [](const auto& lhs, const auto& rhs) { return lhs.primitiveCount < rhs.primitiveCount; })->primitiveCount
 			};
 			assert(ASBGI_Blas.geometryCount == size(MaxPrimitiveCounts));
-			VkAccelerationStructureBuildSizesInfoKHR ASBSI = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, };
-			vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI_Blas, data(MaxPrimitiveCounts), &ASBSI);
+			vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI_Blas, data(MaxPrimitiveCounts), &ASBSI_Blas);
+		}
 
+		//!< AS作成 (Create AS)
+		BLASs.emplace_back().Create(Device, PDMP, ASBSI_Blas.accelerationStructureSize);
+		ASBGI_Blas.dstAccelerationStructure = BLASs.back().AccelerationStructure;
+		
 #ifdef USE_BLAS_COMPACTION
 			{
 				//!< クエリプールを作成
@@ -99,12 +103,12 @@ public:
 
 				//!< (コンパクションサイズを取得できるように)クエリプールを引数指定して (一時)BLAS を作成
 				BLAS Tmp;
-				Tmp.Create(Device, PDMP, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBSI.buildScratchSize, ASBGI_Blas, ASBRIs_Blas, GraphicsQueue, CB, QueryPool);
+				Tmp.Create(Device, PDMP, ASBSI_Blas.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBSI_Blas.buildScratchSize, ASBGI_Blas, ASBRIs_Blas, GraphicsQueue, CB, QueryPool);
 
 				//!< クエリプールからコンパクションサイズを取得
 				std::array CompactSizes = { VkDeviceSize(0) };
 				VERIFY_SUCCEEDED(vkGetQueryPoolResults(Device, QueryPool, 0, static_cast<uint32_t>(size(CompactSizes)), sizeof(CompactSizes), data(CompactSizes), sizeof(CompactSizes[0]), VK_QUERY_RESULT_WAIT_BIT));
-				std::cout << "BLAS Compaction = " << ASBSI.accelerationStructureSize << " -> " << CompactSizes[0] << std::endl;
+				std::cout << "BLAS Compaction = " << ASBSI_Blas.accelerationStructureSize << " -> " << CompactSizes[0] << std::endl;
 
 				//!< コンパクションサイズで (正規)BLAS を作成する (コピーするのでビルドはしないよ)
 				BLASs.emplace_back().Create(Device, PDMP, CompactSizes[0])
@@ -115,14 +119,7 @@ public:
 				Tmp.Destroy(Device);
 				vkDestroyQueryPool(Device, QueryPool, GetAllocationCallbacks());
 			}
-#else
-			//!< AS、スクラッチ作成 (Create AS and scratch)
-			BLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize);
-			Scratch_Blas.Create(Device, PDMP, ASBSI.buildScratchSize);
-			ASBGI_Blas.dstAccelerationStructure = BLASs.back().AccelerationStructure;
-			ASBGI_Blas.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch_Blas.Buffer) });
 #endif
-		}
 #pragma endregion
 
 #pragma region TLAS_GEOMETRY
@@ -159,7 +156,7 @@ public:
 			.flags = VK_GEOMETRY_OPAQUE_BIT_KHR
 		});
 
-#pragma region TLAS_AND_SCRATCH
+#pragma region TLAS
 		VkAccelerationStructureBuildGeometryInfoKHR ASBGI_Tlas = {
 			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
 			.pNext = nullptr,
@@ -175,39 +172,43 @@ public:
 		};
 		assert(ASBGI_Tlas.geometryCount == size(ASBRIs_Tlas));
 
-		Scoped<ScratchBuffer> Scratch_Tlas(Device);
+		//!< サイズ取得 (Get sizes)
+		VkAccelerationStructureBuildSizesInfoKHR ASBSI_Tlas = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, };
 		{
-			//!< サイズ取得 (Get sizes)
 			const std::array MaxPrimitiveCounts = {
 				std::ranges::max_element(ASBRIs_Tlas, [](const auto& lhs, const auto& rhs) { return lhs.primitiveCount < rhs.primitiveCount; })->primitiveCount
 			};
 			assert(ASBGI_Tlas.geometryCount == size(MaxPrimitiveCounts));
-			VkAccelerationStructureBuildSizesInfoKHR ASBSI = { .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR, };
-			vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI_Tlas, data(MaxPrimitiveCounts), &ASBSI);
-
-#ifdef USE_BLAS_COMPACTION
-			//!< AS作成、ビルド (Create and build AS)
-			TLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize).SubmitBuildCommand(Device, PDMP, ASBSI.buildScratchSize, ASBGI_Tlas, ASBRIs_Tlas, GraphicsQueue, CB);
-#else
-			//!< AS、スクラッチ作成 (Create AS and scratch)
-			TLASs.emplace_back().Create(Device, PDMP, ASBSI.accelerationStructureSize);
-			Scratch_Tlas.Create(Device, PDMP, ASBSI.buildScratchSize);
-			ASBGI_Tlas.dstAccelerationStructure = TLASs.back().AccelerationStructure;
-			ASBGI_Tlas.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch_Tlas.Buffer) });
-#endif
+			vkGetAccelerationStructureBuildSizesKHR(Device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &ASBGI_Tlas, data(MaxPrimitiveCounts), &ASBSI_Tlas);
 		}
+
+		//!< AS作成 (Create AS)
+		TLASs.emplace_back().Create(Device, PDMP, ASBSI_Tlas.accelerationStructureSize);
+		ASBGI_Tlas.dstAccelerationStructure = TLASs.back().AccelerationStructure;
 #pragma endregion
 
-#ifndef USE_BLAS_COMPACTION
+#pragma region SCRATCH
+		Scoped<ScratchBuffer> Scratch(Device);
+#ifdef USE_BLAS_COMPACTION
+		Scratch.Create(Device, PDMP, ASBSI_Tlas.buildScratchSize);
+#else
+		Scratch.Create(Device, PDMP, std::max(ASBSI_Blas.buildScratchSize, ASBSI_Tlas.buildScratchSize));
+		ASBGI_Blas.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch.Buffer) });
+#endif
+		ASBGI_Tlas.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch.Buffer) });
+#pragma endregion
+
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+#ifndef USE_BLAS_COMPACTION
 			BLASs.back().PopulateBuildCommand(ASBGI_Blas, ASBRIs_Blas, CB);
-			//!< TLAS のビルド時には BLAS のビルドが完了している必要がある
-			BLASs.back().PopulateBarrierCommand(CB);
+#endif
+			//!< TLAS のビルド時には BLAS のビルドが完了している必要があるのでバリア
+			AccelerationStructureBuffer::PopulateBarrierCommand(CB);
+
 			TLASs.back().PopulateBuildCommand(ASBGI_Tlas, ASBRIs_Tlas, CB);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		SubmitAndWait(GraphicsQueue, CB);
-#endif
 	}
 	virtual void CreatePipeline() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }

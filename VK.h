@@ -567,16 +567,19 @@ public:
 				static_cast<uint32_t>(size(BMBs)), data(BMBs),
 				static_cast<uint32_t>(size(IMBs)), data(IMBs));
 		}
-		void SubmitCopyCommand(const VkAccelerationStructureKHR& Src, const VkAccelerationStructureKHR& Dst, const VkQueue Queue, const VkCommandBuffer CB) {
-			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
-			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
-				const VkCopyAccelerationStructureInfoKHR CASI = {
+		void PopulateCopyCommand(const VkAccelerationStructureKHR& Src, const VkAccelerationStructureKHR& Dst, const VkCommandBuffer CB) {
+			const VkCopyAccelerationStructureInfoKHR CASI = {
 				.sType = VK_STRUCTURE_TYPE_COPY_ACCELERATION_STRUCTURE_INFO_KHR,
 				.pNext = nullptr,
 				.src = Src, .dst = Dst,
 				.mode = VK_COPY_ACCELERATION_STRUCTURE_MODE_COMPACT_KHR
-				};
-				vkCmdCopyAccelerationStructureKHR(CB, &CASI);
+			};
+			vkCmdCopyAccelerationStructureKHR(CB, &CASI);
+		}
+		void SubmitCopyCommand(const VkAccelerationStructureKHR& Src, const VkAccelerationStructureKHR& Dst, const VkQueue Queue, const VkCommandBuffer CB) {
+			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
+			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+				PopulateCopyCommand(Src, Dst, CB);
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 			SubmitAndWait(Queue, CB);
 		}
