@@ -522,7 +522,26 @@ public:
 			} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 			SubmitAndWait(Queue, CB);
 		}
-		static void PopulateBarrierCommand(const VkCommandBuffer CB) {
+		void PopulateBufferMemoryBarrierCommand(const VkCommandBuffer CB) {
+			constexpr std::array<VkMemoryBarrier, 0> MBs = {};
+			const std::array BMBs = {
+				VkBufferMemoryBarrier({
+					.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+					.pNext = nullptr,
+					.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR | VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR, .dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR,
+					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED, .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+					.buffer = Buffer, .offset = 0, .size = VK_WHOLE_SIZE
+				}),
+			};
+			constexpr std::array<VkImageMemoryBarrier, 0> IMBs = {};
+			vkCmdPipelineBarrier(CB,
+				VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR, VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+				0,
+				static_cast<uint32_t>(size(MBs)), data(MBs),
+				static_cast<uint32_t>(size(BMBs)), data(BMBs),
+				static_cast<uint32_t>(size(IMBs)), data(IMBs));
+		}
+		static void PopulateMemoryBarrierCommand(const VkCommandBuffer CB) {
 			constexpr std::array MBs = {
 				VkMemoryBarrier({
 					.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
@@ -550,7 +569,7 @@ public:
 			Super::Create(Device, PDMP, VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR, Size);
 			return *this;
 		}
-		void PopulateBarrierCommand(const VkCommandBuffer CB) {
+		void PopulateMemoryBarrierCommand(const VkCommandBuffer CB) {
 			constexpr std::array<VkMemoryBarrier, 0> MBs = {};
 			constexpr std::array<VkImageMemoryBarrier, 0> IMBs = {};
 			const std::array BMBs = {

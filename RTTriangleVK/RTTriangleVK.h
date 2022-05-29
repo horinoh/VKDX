@@ -31,7 +31,7 @@ public:
 		IB.Create(Device, PDMP, TotalSizeOf(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Indices), data(Indices));
 
 		//!< ジオメトリ (Geometry)
-		const std::vector ASGs_Blas = {
+		const std::array ASGs_Blas = {
 			VkAccelerationStructureGeometryKHR({
 				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
 				.pNext = nullptr,
@@ -140,21 +140,23 @@ public:
 		InstBuf.Create(Device, PDMP, sizeof(ASIs)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(ASIs), data(ASIs));
 
 		//!< ジオメトリ (Geometry)
-		const auto ASG_Tlas = VkAccelerationStructureGeometryKHR({
-			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
-			.pNext = nullptr,
-			//!< インスタンス (Instance)
-			.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
-			.geometry = VkAccelerationStructureGeometryDataKHR({
-				.instances = VkAccelerationStructureGeometryInstancesDataKHR({
-					.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
-					.pNext = nullptr,
-					.arrayOfPointers = VK_FALSE,
-					.data = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, InstBuf.Buffer)})
-				})
+		const std::array ASGs_Tlas = {
+			VkAccelerationStructureGeometryKHR({
+				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+				.pNext = nullptr,
+				//!< インスタンス (Instance)
+				.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
+				.geometry = VkAccelerationStructureGeometryDataKHR({
+					.instances = VkAccelerationStructureGeometryInstancesDataKHR({
+						.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
+						.pNext = nullptr,
+						.arrayOfPointers = VK_FALSE,
+						.data = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, InstBuf.Buffer)})
+					})
+				}),
+				.flags = VK_GEOMETRY_OPAQUE_BIT_KHR
 			}),
-			.flags = VK_GEOMETRY_OPAQUE_BIT_KHR
-		});
+		};
 
 #pragma region TLAS
 		VkAccelerationStructureBuildGeometryInfoKHR ASBGI_Tlas = {
@@ -164,7 +166,7 @@ public:
 			.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
 			.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
 			.srcAccelerationStructure = VK_NULL_HANDLE, .dstAccelerationStructure = VK_NULL_HANDLE,
-			.geometryCount = 1, .pGeometries = &ASG_Tlas, .ppGeometries = nullptr, //!< [GLSL] gl_GeometryIndexEXT ([HLSL] GeometryIndex() 相当)
+			.geometryCount = static_cast<uint32_t>(size(ASGs_Tlas)), .pGeometries = data(ASGs_Tlas), .ppGeometries = nullptr, //!< [GLSL] gl_GeometryIndexEXT ([HLSL] GeometryIndex() 相当)
 			.scratchData = VkDeviceOrHostAddressKHR({.deviceAddress = 0})
 		};
 		const std::vector ASBRIs_Tlas = {
@@ -204,7 +206,7 @@ public:
 			BLASs.back().PopulateBuildCommand(ASBGI_Blas, ASBRIs_Blas, CB);
 #endif
 			//!< TLAS のビルド時には BLAS のビルドが完了している必要があるのでバリア
-			AccelerationStructureBuffer::PopulateBarrierCommand(CB);
+			AccelerationStructureBuffer::PopulateMemoryBarrierCommand(CB);
 
 			TLASs.back().PopulateBuildCommand(ASBGI_Tlas, ASBRIs_Tlas, CB);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
