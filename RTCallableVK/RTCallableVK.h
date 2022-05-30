@@ -21,12 +21,12 @@ public:
 
 #pragma region BLAS_GEOMETRY
 		constexpr std::array Vertices = { glm::vec3({ 0.0f, 0.5f, 0.0f }), glm::vec3({ -0.5f, -0.5f, 0.0f }), glm::vec3({ 0.5f, -0.5f, 0.0f }), };
-		Scoped<DeviceLocalASBuffer> VB(Device);
-		VB.Create(Device, PDMP, TotalSizeOf(Vertices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Vertices), data(Vertices));
+		Scoped<HostVisibleASBuffer> VB(Device);
+		VB.Create(Device, PDMP, TotalSizeOf(Vertices), data(Vertices));
 
 		constexpr std::array Indices = { uint32_t(0), uint32_t(1), uint32_t(2) };
-		Scoped<DeviceLocalASBuffer> IB(Device);
-		IB.Create(Device, PDMP, TotalSizeOf(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Indices), data(Indices));
+		Scoped<HostVisibleASBuffer> IB(Device);
+		IB.Create(Device, PDMP, TotalSizeOf(Indices), data(Indices));
 
 		const std::array ASGs_Blas = {
 			VkAccelerationStructureGeometryKHR({
@@ -105,8 +105,8 @@ public:
 			}),
 			#pragma endregion
 		};
-		Scoped<DeviceLocalASBuffer> InstBuf(Device);
-		InstBuf.Create(Device, PDMP, sizeof(ASIs)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(ASIs), data(ASIs));
+		Scoped<HostVisibleASBuffer> InstBuf(Device);
+		InstBuf.Create(Device, PDMP, sizeof(ASIs), data(ASIs));
 
 		const std::array ASGs_Tlas = {
 			VkAccelerationStructureGeometryKHR({

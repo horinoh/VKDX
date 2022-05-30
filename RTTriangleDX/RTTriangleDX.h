@@ -26,13 +26,13 @@ public:
 #pragma region BLAS_INPUT
 		//!< バーテックスバッファ (VertexBuffer) ... 通常と異なり D3D12_HEAP_TYPE_UPLOAD で作成
 		constexpr std::array Vertices = { DirectX::XMFLOAT3({ 0.0f, 0.5f, 0.0f }), DirectX::XMFLOAT3({ -0.5f, -0.5f, 0.0f }), DirectX::XMFLOAT3({ 0.5f, -0.5f, 0.0f }), };
-		DefaultResource VB;
-		VB.Create(COM_PTR_GET(Device), TotalSizeOf(Vertices)).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Vertices), data(Vertices));
+		UploadResource VB;
+		VB.Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), data(Vertices));
 
 		//!< インデックスバッファ (IndexBuffer) ... 通常と異なり D3D12_HEAP_TYPE_UPLOAD で作成
 		constexpr std::array Indices = { UINT32(0), UINT32(1), UINT32(2) };
-		DefaultResource IB;
-		IB.Create(COM_PTR_GET(Device), TotalSizeOf(Indices)).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(GraphicsFence), TotalSizeOf(Indices), data(Indices));
+		UploadResource IB;
+		IB.Create(COM_PTR_GET(Device), TotalSizeOf(Indices), data(Indices));
 
 		//!< ジオメトリ (Geometry)
 		const std::array RGDs = {
@@ -106,8 +106,8 @@ public:
 				.AccelerationStructure = BLASs.back().Resource->GetGPUVirtualAddress()
 			})
 		};
-		ResourceBase InsBuf;
-		InsBuf.Create(COM_PTR_GET(Device), sizeof(RIDs), D3D12_HEAP_TYPE_UPLOAD, data(RIDs));
+		UploadResource InsBuf;
+		InsBuf.Create(COM_PTR_GET(Device), sizeof(RIDs), data(RIDs));
 
 		//!< インプット (Input)
 		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BRASI_Tlas = {

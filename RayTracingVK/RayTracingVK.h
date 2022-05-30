@@ -14,11 +14,13 @@ public:
 	RayTracingVK() : Super() {}
 	virtual ~RayTracingVK() {}
 
-	std::vector<DeviceLocalASBuffer> ASBuffers;
+	VertexASBuffer VertexBuffer;
+	IndexASBuffer IndexBuffer;
 
 #if 1
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
-		for (auto i : ASBuffers) { i.Destroy(Device); }
+		IndexBuffer.Destroy(Device);
+		VertexBuffer.Destroy(Device);
 		Super::OnDestroy(hWnd, hInstance);
 	}
 #endif
@@ -72,8 +74,8 @@ public:
 		const auto& CB = CommandBuffers[0];
 
 #pragma region BLAS_GEOMETRY
-		ASBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Vertices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Vertices), data(Vertices));
-		ASBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Indices), data(Indices));
+		VertexBuffer.Create(Device, PDMP, TotalSizeOf(Vertices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Vertices), data(Vertices));
+		IndexBuffer.Create(Device, PDMP, TotalSizeOf(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Indices), data(Indices));
 		const std::array ASGs_Blas = {
 			VkAccelerationStructureGeometryKHR({
 				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
@@ -84,9 +86,9 @@ public:
 						.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
 						.pNext = nullptr,
 						.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
-						.vertexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, ASBuffers[0].Buffer)}), .vertexStride = sizeof(Vertices[0]), .maxVertex = static_cast<uint32_t>(size(Vertices)),
+						.vertexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, VertexBuffer.Buffer)}), .vertexStride = sizeof(Vertices[0]), .maxVertex = static_cast<uint32_t>(size(Vertices)),
 						.indexType = VK_INDEX_TYPE_UINT32,
-						.indexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, ASBuffers[1].Buffer)}),
+						.indexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, IndexBuffer.Buffer)}),
 						.transformData = VkDeviceOrHostAddressConstKHR({.deviceAddress = 0}),
 					}),
 				}),
@@ -437,16 +439,17 @@ public:
 			auto Data = ShaderBindingTables.back().Map(Device); {
 				std::memcpy(Data, data(HandleData) + RgenSize + MissSize, PDRTPP.shaderGroupHandleSize);
 #pragma region SHADER_RECORD
-				const auto DA_Vert = GetDeviceAddress(Device, ASBuffers[0].Buffer);
+				const auto DA_Vert = GetDeviceAddress(Device, VertexBuffer.Buffer);
 				std::memcpy(reinterpret_cast<std::byte*>(Data) + PDRTPP.shaderGroupHandleSize, &DA_Vert, sizeof(DA_Vert));
-				const auto DA_Ind = GetDeviceAddress(Device, ASBuffers[1].Buffer);
+				const auto DA_Ind = GetDeviceAddress(Device, IndexBuffer.Buffer);
 				std::memcpy(reinterpret_cast<std::byte*>(Data) + PDRTPP.shaderGroupHandleSize + PDRTPP.shaderGroupHandleSize, &DA_Ind, sizeof(DA_Ind));
 #pragma endregion
 			} ShaderBindingTables.back().Unmap(Device);
 		}
 
 		//!< ‚±‚ÌŽž“_‚Åíœ‚µ‚Ä‚µ‚Ü‚Á‚Ä—Ç‚¢H
-		//for (auto i : ASBuffers) { i.Destroy(Device); }
+		//IndexBuffer.Destroy(Device);
+		//VertexBuffer.Destroy(Device);
 
 		const VkTraceRaysIndirectCommandKHR TRIC = { .width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 };
 		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(TRIC), &TRIC);
