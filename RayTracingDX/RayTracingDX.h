@@ -143,8 +143,8 @@ public:
 			})
 			#pragma endregion
 		};
-		ResourceBase InsBuf;
-		InsBuf.Create(COM_PTR_GET(Device), sizeof(RIDs), D3D12_HEAP_TYPE_UPLOAD, data(RIDs));
+		UploadResource InsBuf;
+		InsBuf.Create(COM_PTR_GET(Device), sizeof(RIDs), data(RIDs));
 		
 		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BRASI_Tlas = {
 			.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL,

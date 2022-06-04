@@ -4,8 +4,8 @@
 layout(location = 0) rayPayloadEXT vec3 Payload;
 
 layout(binding = 0, set = 0) uniform accelerationStructureEXT TLAS;
-layout(binding = 2, set = 0, rgba8) uniform image2D RenderTarget;
-layout(binding = 3, set = 0) uniform Transform 
+layout(binding = 1, set = 0, rgba8) uniform image2D RenderTarget;
+layout(binding = 5, set = 0) uniform Transform 
 { 
     mat4 Projection; mat4 View;
     mat4 InvProjection; 

@@ -161,8 +161,8 @@ public:
 			}),
 			#pragma endregion
 		};
-		Scoped<DeviceLocalASBuffer> InstBuf(Device);
-		InstBuf.Create(Device, PDMP, sizeof(ASIs)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(ASIs), data(ASIs));
+		Scoped<HostVisibleASBuffer> InstBuf(Device);
+		InstBuf.Create(Device, PDMP, sizeof(ASIs), data(ASIs));
 
 		const std::array ASGs_Tlas = {
 			VkAccelerationStructureGeometryKHR({
@@ -223,7 +223,7 @@ public:
 			BLASs.back().PopulateBuildCommand(ASBGI_Blas, ASBRIs_Blas, CB);
 
 			AccelerationStructureBuffer::PopulateMemoryBarrierCommand(CB);
-			///BLASs.back().PopulateBarrierCommand(CB);
+
 			TLASs.back().PopulateBuildCommand(ASBGI_Tlas, ASBRIs_Tlas, CB);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		SubmitAndWait(GraphicsQueue, CB);
@@ -277,12 +277,17 @@ public:
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
 			//!< TLAS
 			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .pImmutableSamplers = nullptr }),
-			//!< Sampler + Cubemap
-			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_MISS_BIT_KHR/*| VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR*/, .pImmutableSamplers = data(ISs)}),
 			//!< Storage Image
-			VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
+			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
+
+			//!< VertexBuffer
+			VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .pImmutableSamplers = nullptr }),
+			//!< IndexBuffer
+			VkDescriptorSetLayoutBinding({.binding = 3, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .pImmutableSamplers = nullptr }),
+			//!< Sampler + Cubemap
+			VkDescriptorSetLayoutBinding({.binding = 4, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_MISS_BIT_KHR/*| VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR*/, .pImmutableSamplers = data(ISs)}),
 			//!< UB
-			VkDescriptorSetLayoutBinding({.binding = 3, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
+			VkDescriptorSetLayoutBinding({.binding = 5, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
 		});
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
@@ -342,8 +347,10 @@ public:
 	virtual void CreateDescriptor() override {
 		VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT, {
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1 }), //!< TLAS
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 }), //!< Sampler + Cubemap
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1 }), //!< StorageImage
+
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = 2 }), //!< VertexBuffer, IndexBuffer
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 }), //!< Sampler + Cubemap
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }) //!< UB * N
 		});
 		const std::array DSLs = { DescriptorSetLayouts[0] };
@@ -359,8 +366,10 @@ public:
 
 		const std::array ASs = { TLASs[0].AccelerationStructure };
 		const auto WDSAS = VkWriteDescriptorSetAccelerationStructureKHR({.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR, .pNext = nullptr, .accelerationStructureCount = static_cast<uint32_t>(size(ASs)), .pAccelerationStructures = data(ASs) });
+		const auto DII_Storage = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = StorageTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_GENERAL });
+		const auto DII_VB = VkDescriptorBufferInfo({ .buffer = VertexBuffer.Buffer, .offset = 0, .range = VK_WHOLE_SIZE });
+		const auto DII_IB = VkDescriptorBufferInfo({ .buffer = IndexBuffer.Buffer, .offset = 0, .range = VK_WHOLE_SIZE });
 		const auto DII_Cube = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = DDSTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-		const auto DII_Storage = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = StorageTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_GENERAL });		
 		constexpr std::array<VkCopyDescriptorSet, 0> CDSs = {};
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			const auto DII_UB = VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE });
@@ -374,30 +383,49 @@ public:
 					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
 					.pImageInfo = nullptr, .pBufferInfo = nullptr, .pTexelBufferView = nullptr
 				}),
-				//!< CubeMap
-				VkWriteDescriptorSet({
-					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					.pNext = nullptr,
-					.dstSet = DescriptorSets[0],
-					.dstBinding = 1, .dstArrayElement = 0,
-					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					.pImageInfo = &DII_Cube, .pBufferInfo = nullptr, .pTexelBufferView = nullptr
-				}),
 				//!< StorageImage
 				VkWriteDescriptorSet({
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.pNext = nullptr,
 					.dstSet = DescriptorSets[0],
-					.dstBinding = 2, .dstArrayElement = 0,
+					.dstBinding = 1, .dstArrayElement = 0,
 					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
 					.pImageInfo = &DII_Storage, .pBufferInfo = nullptr, .pTexelBufferView = nullptr
+				}),
+
+				//!< VertexBuffer
+				VkWriteDescriptorSet({
+					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					.pNext = nullptr,
+					.dstSet = DescriptorSets[0],
+					.dstBinding = 2, .dstArrayElement = 0,
+					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+					.pImageInfo = nullptr, .pBufferInfo = &DII_VB, .pTexelBufferView = nullptr
+				}),
+				//!< IndexBuffer
+				VkWriteDescriptorSet({
+					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					.pNext = nullptr,
+					.dstSet = DescriptorSets[0],
+					.dstBinding = 3, .dstArrayElement = 0,
+					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+					.pImageInfo = nullptr, .pBufferInfo = &DII_IB, .pTexelBufferView = nullptr
+				}),
+				//!< CubeMap
+				VkWriteDescriptorSet({
+					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					.pNext = nullptr,
+					.dstSet = DescriptorSets[0],
+					.dstBinding = 4, .dstArrayElement = 0,
+					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+					.pImageInfo = &DII_Cube, .pBufferInfo = nullptr, .pTexelBufferView = nullptr
 				}),
 				//!< UniformBuffer
 				VkWriteDescriptorSet({
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.pNext = nullptr,
 					.dstSet = DescriptorSets[0],
-					.dstBinding = 3, .dstArrayElement = 0,
+					.dstBinding = 5, .dstArrayElement = 0,
 					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 					.pImageInfo = nullptr, .pBufferInfo = &DII_UB, .pTexelBufferView = nullptr
 				})
@@ -406,50 +434,65 @@ public:
 		}
 	}
 	virtual void CreateShaderBindingTable() override {
-		VkPhysicalDeviceRayTracingPipelinePropertiesKHR PDRTPP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, .pNext = nullptr };
-		VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
-		vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
+		const auto& PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		auto& SBT = ShaderBindingTables.emplace_back(); {
+			VkPhysicalDeviceRayTracingPipelinePropertiesKHR PDRTPP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, .pNext = nullptr };
+			VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
+			vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
 
-		const auto RgenStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
-		const auto RgenSize = 1 * RgenStride;
+			const auto GenHandleCount = 1;
+			const auto MissHandleCount = 1;
+			const auto HitHandleCount = 1;
+			const auto TotalHandleCount = GenHandleCount + MissHandleCount + HitHandleCount;
 
-		const auto MissStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + 0, PDRTPP.shaderGroupHandleAlignment);
-		const auto MissSize = 1 * MissStride;
-
+			const auto AlignedHandleSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize, PDRTPP.shaderGroupHandleAlignment);
+			const auto GenStrideSize = Cmn::RoundUp(GenHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment);
+			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = GenStrideSize, .size = GenStrideSize }));
+			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(MissHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment) }));
+			//SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(HitHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment) }));
+			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(HitHandleCount * AlignedHandleSize + sizeof(VkDeviceAddress) * 2, PDRTPP.shaderGroupBaseAlignment) }));
 #pragma region SHADER_RECORD
-		const auto RchitStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + sizeof(VkDeviceAddress) * 2, PDRTPP.shaderGroupHandleAlignment);
+			//const auto RchitStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + sizeof(VkDeviceAddress) * 2, PDRTPP.shaderGroupHandleAlignment);
 #pragma endregion
-		const auto RchitSize = 1 * RchitStride;
 
-		std::vector<std::byte> HandleData(RgenSize + MissSize + RchitSize);
-		VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, 1 + 1 + 1, size(HandleData), data(HandleData)));
+			SBT.Create(Device, PDMP);
 
-		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-		ShaderBindingTables.emplace_back().Create(Device, PDMP, RgenSize, RgenStride); {
-			auto Data = ShaderBindingTables.back().Map(Device); {
-				std::memcpy(Data, data(HandleData), PDRTPP.shaderGroupHandleSize);
-			} ShaderBindingTables.back().Unmap(Device);
-		}
-		ShaderBindingTables.emplace_back().Create(Device, PDMP, MissSize, MissStride); {
-			auto Data = ShaderBindingTables.back().Map(Device); {
-				std::memcpy(Data, data(HandleData) + RgenSize, PDRTPP.shaderGroupHandleSize);
-			} ShaderBindingTables.back().Unmap(Device);
-		}
-		ShaderBindingTables.emplace_back().Create(Device, PDMP, RchitSize, RchitStride); {
-			auto Data = ShaderBindingTables.back().Map(Device); {
-				std::memcpy(Data, data(HandleData) + RgenSize + MissSize, PDRTPP.shaderGroupHandleSize);
+			std::vector<std::byte> HandleData(PDRTPP.shaderGroupHandleSize * TotalHandleCount);
+			VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, TotalHandleCount, size(HandleData), data(HandleData)));
+
+			auto MapData = SBT.Map(Device); {
+				auto BData = reinterpret_cast<std::byte*>(MapData);
+				auto HData = data(HandleData);
+
+				const auto& GenRegion = SBT.StridedDeviceAddressRegions[0]; {
+					for (auto i = 0; i < GenHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize) {
+						std::memcpy(BData + i * GenRegion.stride, HData, PDRTPP.shaderGroupHandleSize);
+					}
+					BData += GenRegion.size;
+				}
+
+				const auto& MissRegion = SBT.StridedDeviceAddressRegions[1]; {
+					for (auto i = 0; i < MissHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize) {
+						std::memcpy(BData + i * MissRegion.stride, HData, PDRTPP.shaderGroupHandleSize);
+					}
+					BData += MissRegion.size;
+				}
+
+				const auto& HitRegion = SBT.StridedDeviceAddressRegions[2]; {
+					for (auto i = 0; i < HitHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize) {
+						std::memcpy(BData + i * HitRegion.stride, HData, PDRTPP.shaderGroupHandleSize);
+					}
 #pragma region SHADER_RECORD
-				const auto DA_Vert = GetDeviceAddress(Device, VertexBuffer.Buffer);
-				std::memcpy(reinterpret_cast<std::byte*>(Data) + PDRTPP.shaderGroupHandleSize, &DA_Vert, sizeof(DA_Vert));
-				const auto DA_Ind = GetDeviceAddress(Device, IndexBuffer.Buffer);
-				std::memcpy(reinterpret_cast<std::byte*>(Data) + PDRTPP.shaderGroupHandleSize + PDRTPP.shaderGroupHandleSize, &DA_Ind, sizeof(DA_Ind));
+					const auto VB = GetDeviceAddress(Device, VertexBuffer.Buffer);
+					std::memcpy(BData + HitHandleCount * HitRegion.stride, &VB, sizeof(VB));
+					const auto IB = GetDeviceAddress(Device, IndexBuffer.Buffer);
+					std::memcpy(BData + HitHandleCount * HitRegion.stride + PDRTPP.shaderGroupHandleSize, &IB, sizeof(IB));
 #pragma endregion
-			} ShaderBindingTables.back().Unmap(Device);
-		}
+					BData += HitRegion.size;
+				}
 
-		//!< ‚±‚ÌŽž“_‚Åíœ‚µ‚Ä‚µ‚Ü‚Á‚Ä—Ç‚¢H
-		//IndexBuffer.Destroy(Device);
-		//VertexBuffer.Destroy(Device);
+			} SBT.Unmap(Device);
+		}
 
 		const VkTraceRaysIndirectCommandKHR TRIC = { .width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 };
 		IndirectBuffers.emplace_back().Create(Device, PDMP, TRIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(TRIC), &TRIC);
@@ -473,8 +516,9 @@ public:
 				constexpr std::array<uint32_t, 0> DynamicOffsets = {};
 				vkCmdBindDescriptorSets(CB, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, PipelineLayouts[0], 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
 
+				const auto& SBT = ShaderBindingTables.back();
 				const auto Callable = VkStridedDeviceAddressRegionKHR({ .deviceAddress = 0, .stride = 0, .size = 0 });
-				vkCmdTraceRaysIndirectKHR(CB, &ShaderBindingTables[0].Region, &ShaderBindingTables[1].Region, &ShaderBindingTables[2].Region, &Callable, GetDeviceAddress(Device, IndirectBuffers[0].Buffer));
+				vkCmdTraceRaysIndirectKHR(CB, &SBT.StridedDeviceAddressRegions[0], &SBT.StridedDeviceAddressRegions[1], &SBT.StridedDeviceAddressRegions[2], &Callable, GetDeviceAddress(Device, IndirectBuffers[0].Buffer));
 
 			} PopulateEndRenderTargetCommand(CB, RT, SwapchainImages[i], static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));

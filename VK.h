@@ -442,7 +442,7 @@ public:
 		using Super = Texture;
 	public:
 		StorageTexture& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent) {
-			Super::Create(Device, PDMP, Format, Extent, 1, 1, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
+			Super::Create(Device, PDMP, Format, Extent, 1, 1, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT/*| VK_IMAGE_USAGE_TRANSFER_DST_BIT*/, VK_IMAGE_ASPECT_COLOR_BIT);
 			return *this;
 		}
 	};
@@ -647,14 +647,19 @@ public:
 	private:
 		using Super = BufferMemory;
 	public:
-		VkStridedDeviceAddressRegionKHR Region;
-		ShaderBindingTable& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const size_t Stride) {
+		std::vector<VkStridedDeviceAddressRegionKHR> StridedDeviceAddressRegions;
+		ShaderBindingTable& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP) {
+			//!< グループの総サイズ
+			const auto Size = std::accumulate(begin(StridedDeviceAddressRegions), end(StridedDeviceAddressRegions), 0, [](int Acc, const auto& lhs) { return Acc + static_cast<int>(lhs.size); });
 			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, Size, VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-			Region = VkStridedDeviceAddressRegionKHR({
-				.deviceAddress = GetDeviceAddress(Device, Buffer),
-				.stride = Stride,
-				.size = Size
-			});
+			
+			//!< デバイスアドレスの決定
+			auto da = GetDeviceAddress(Device, Buffer);
+			for (auto& i : StridedDeviceAddressRegions) {
+				i.deviceAddress = da;
+				da += i.size;
+			}
+
 			return *this;
 		}
 		void* Map(const VkDevice Device) {
