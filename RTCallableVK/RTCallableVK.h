@@ -164,7 +164,9 @@ public:
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 			BLASs.back().PopulateBuildCommand(ASBGI_Blas, ASBRIs_Blas, CB);
+
 			AccelerationStructureBuffer::PopulateMemoryBarrierCommand(CB);
+			
 			TLASs.back().PopulateBuildCommand(ASBGI_Tlas, ASBRIs_Tlas, CB);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		SubmitAndWait(GraphicsQueue, CB);
@@ -262,6 +264,7 @@ public:
 
 			const auto AlignedHandleSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize, PDRTPP.shaderGroupHandleAlignment);
 			const auto GenStrideSize = Cmn::RoundUp(GenHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment);
+			//!< RayGen では stride と size が同じサイズでないといけないので注意
 			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = GenStrideSize, .size = GenStrideSize }));
 			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(MissHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment) }));
 #pragma region HIT
@@ -273,8 +276,13 @@ public:
 
 			SBT.Create(Device, PDMP);
 
+#if true
 			std::vector<std::byte> HandleData(PDRTPP.shaderGroupHandleSize * TotalHandleCount);
 			VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, TotalHandleCount, size(HandleData), data(HandleData)));
+#else
+			std::vector<std::byte> HandleData(AlignedHandleSize * size(SBT.StridedDeviceAddressRegions));
+			VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, static_cast<uint32_t>(size(SBT.StridedDeviceAddressRegions)), size(HandleData), data(HandleData)));
+#endif
 
 			//!< (マップして)ハンドルデータをバッファに書き込む
 			auto MapData = SBT.Map(Device); {

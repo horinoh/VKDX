@@ -447,6 +447,7 @@ public:
 
 			const auto AlignedHandleSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize, PDRTPP.shaderGroupHandleAlignment);
 			const auto GenStrideSize = Cmn::RoundUp(GenHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment);
+			//!< RayGen ‚Å‚Í stride ‚Æ size ‚ª“¯‚¶ƒTƒCƒY‚Å‚È‚¢‚Æ‚¢‚¯‚È‚¢‚Ì‚Å’ˆÓ
 			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = GenStrideSize, .size = GenStrideSize }));
 			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(MissHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment) }));
 			//SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(HitHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment) }));
@@ -457,8 +458,13 @@ public:
 
 			SBT.Create(Device, PDMP);
 
+#if true
 			std::vector<std::byte> HandleData(PDRTPP.shaderGroupHandleSize * TotalHandleCount);
 			VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, TotalHandleCount, size(HandleData), data(HandleData)));
+#else
+			std::vector<std::byte> HandleData(AlignedHandleSize * size(SBT.StridedDeviceAddressRegions));
+			VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, static_cast<uint32_t>(size(SBT.StridedDeviceAddressRegions)), size(HandleData), data(HandleData)));
+#endif
 
 			auto MapData = SBT.Map(Device); {
 				auto BData = reinterpret_cast<std::byte*>(MapData);

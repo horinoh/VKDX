@@ -284,7 +284,7 @@ public:
 			const auto AlignedHandleSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize, PDRTPP.shaderGroupHandleAlignment);
 			const auto GenStrideSize = Cmn::RoundUp(GenHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment);
 			//!< RayGen では stride と size が同じサイズでないといけないので注意
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = GenStrideSize, .size = GenStrideSize})); 
+			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = GenStrideSize, .size = GenStrideSize}));
 			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(MissHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment) }));
 			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(HitHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment) }));
 		
@@ -292,8 +292,13 @@ public:
 			SBT.Create(Device, PDMP);
 
 			//!< ハンドルデータ(コピー元)を取得
+#if true
 			std::vector<std::byte> HandleData(PDRTPP.shaderGroupHandleSize * TotalHandleCount);
 			VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, TotalHandleCount/*ハンドル数なのかグループ数なのか？*/, size(HandleData), data(HandleData)));
+#else
+			std::vector<std::byte> HandleData(AlignedHandleSize * size(SBT.StridedDeviceAddressRegions));
+			VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, static_cast<uint32_t>(size(SBT.StridedDeviceAddressRegions)), size(HandleData), data(HandleData)));
+#endif
 
 			//!< (マップして)ハンドルデータをバッファに書き込む
 			auto MapData = SBT.Map(Device); {
