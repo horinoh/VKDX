@@ -450,10 +450,8 @@ public:
 			//!< RayGen ‚Å‚Í stride ‚Æ size ‚ª“¯‚¶ƒTƒCƒY‚Å‚È‚¢‚Æ‚¢‚¯‚È‚¢‚Ì‚Å’ˆÓ
 			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = GenStrideSize, .size = GenStrideSize }));
 			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(MissHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment) }));
-			//SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(HitHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment) }));
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(HitHandleCount * AlignedHandleSize + sizeof(VkDeviceAddress) * 2, PDRTPP.shaderGroupBaseAlignment) }));
 #pragma region SHADER_RECORD
-			//const auto RchitStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + sizeof(VkDeviceAddress) * 2, PDRTPP.shaderGroupHandleAlignment);
+			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(HitHandleCount * AlignedHandleSize + sizeof(VkDeviceAddress) * 2, PDRTPP.shaderGroupBaseAlignment) }));
 #pragma endregion
 
 			SBT.Create(Device, PDMP);
@@ -471,28 +469,31 @@ public:
 				auto HData = data(HandleData);
 
 				const auto& GenRegion = SBT.StridedDeviceAddressRegions[0]; {
-					for (auto i = 0; i < GenHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize) {
-						std::memcpy(BData + i * GenRegion.stride, HData, PDRTPP.shaderGroupHandleSize);
+					auto p = BData;
+					for (auto i = 0; i < GenHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += GenRegion.stride) {
+						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
 					BData += GenRegion.size;
 				}
 
 				const auto& MissRegion = SBT.StridedDeviceAddressRegions[1]; {
-					for (auto i = 0; i < MissHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize) {
-						std::memcpy(BData + i * MissRegion.stride, HData, PDRTPP.shaderGroupHandleSize);
+					auto p = BData;
+					for (auto i = 0; i < MissHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += MissRegion.stride) {
+						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
 					BData += MissRegion.size;
 				}
 
 				const auto& HitRegion = SBT.StridedDeviceAddressRegions[2]; {
-					for (auto i = 0; i < HitHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize) {
-						std::memcpy(BData + i * HitRegion.stride, HData, PDRTPP.shaderGroupHandleSize);
+					auto p = BData;
+					for (auto i = 0; i < HitHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += HitRegion.stride) {
+						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
 #pragma region SHADER_RECORD
 					const auto VB = GetDeviceAddress(Device, VertexBuffer.Buffer);
-					std::memcpy(BData + HitHandleCount * HitRegion.stride, &VB, sizeof(VB));
+					std::memcpy(p, &VB, sizeof(VB)); p += sizeof(VB);
 					const auto IB = GetDeviceAddress(Device, IndexBuffer.Buffer);
-					std::memcpy(BData + HitHandleCount * HitRegion.stride + PDRTPP.shaderGroupHandleSize, &IB, sizeof(IB));
+					std::memcpy(p, &IB, sizeof(IB)); p += sizeof(IB);
 #pragma endregion
 					BData += HitRegion.size;
 				}

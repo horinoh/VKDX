@@ -307,27 +307,30 @@ public:
 
 				//!< グループ (Gen)
 				const auto& GenRegion = SBT.StridedDeviceAddressRegions[0]; {
+					auto p = BData;
 					//!< グループのハンドル
-					for (auto i = 0; i < GenHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize) {
-						std::memcpy(BData + i * GenRegion.stride, HData, PDRTPP.shaderGroupHandleSize);
+					for (auto i = 0; i < GenHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += GenRegion.stride) {
+						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
 					BData += GenRegion.size;
 				}
 
 				//!< グループ (Miss)
 				const auto& MissRegion = SBT.StridedDeviceAddressRegions[1]; {
+					auto p = BData;
 					//!< グループのハンドル
-					for (auto i = 0; i < MissHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize) {
-						std::memcpy(BData + i * MissRegion.stride, HData, PDRTPP.shaderGroupHandleSize);
+					for (auto i = 0; i < MissHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += MissRegion.stride) {
+						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
 					BData += MissRegion.size;
 				}
 
 				//!< グループ (Hit)
 				const auto& HitRegion = SBT.StridedDeviceAddressRegions[2]; {
+					auto p = BData;
 					//!< グループのハンドル
-					for (auto i = 0; i < HitHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize) {
-						std::memcpy(BData + i * HitRegion.stride, HData, PDRTPP.shaderGroupHandleSize);
+					for (auto i = 0; i < HitHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += HitRegion.stride) {
+						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
 					BData += HitRegion.size;
 				}

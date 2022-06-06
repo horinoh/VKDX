@@ -290,22 +290,25 @@ public:
 				auto HData = data(HandleData);
 
 				const auto& GenRegion = SBT.StridedDeviceAddressRegions[0]; {
-					for (auto i = 0; i < GenHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize) {
-						std::memcpy(BData + i * GenRegion.stride, HData, PDRTPP.shaderGroupHandleSize);
+					auto p = BData;
+					for (auto i = 0; i < GenHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += GenRegion.stride) {
+						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
 					BData += GenRegion.size;
 				}
 
 				const auto& MissRegion = SBT.StridedDeviceAddressRegions[1]; {
-					for (auto i = 0; i < MissHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize) {
-						std::memcpy(BData + i * MissRegion.stride, HData, PDRTPP.shaderGroupHandleSize);
+					auto p = BData;
+					for (auto i = 0; i < MissHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += MissRegion.stride) {
+						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
 					BData += MissRegion.size;
 				}
 #pragma region HIT
 				const auto& HitRegion = SBT.StridedDeviceAddressRegions[2]; {
-					for (auto i = 0; i < HitHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize) {
-						std::memcpy(BData + i * HitRegion.stride, HData, PDRTPP.shaderGroupHandleSize);
+					auto p = BData;
+					for (auto i = 0; i < HitHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += HitRegion.stride) {
+						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
 					BData += HitRegion.size;
 				}
@@ -313,8 +316,9 @@ public:
 
 #pragma region CALLABLE
 				const auto& CallRegion = SBT.StridedDeviceAddressRegions[3]; {
-					for (auto i = 0; i < CallHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize) {
-						std::memcpy(BData + i * CallRegion.stride, HData, PDRTPP.shaderGroupHandleSize);
+					auto p = BData;
+					for (auto i = 0; i < CallHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += CallRegion.stride) {
+						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
 					BData += CallRegion.size;
 				}
