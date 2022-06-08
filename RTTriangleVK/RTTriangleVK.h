@@ -278,21 +278,29 @@ public:
 			const auto GenHandleCount = 1;
 			const auto MissHandleCount = 1;
 			const auto HitHandleCount = 1;
-			const auto TotalHandleCount = GenHandleCount + MissHandleCount + HitHandleCount;
-
-			//!< 各グループのストライドとサイズを決定
-			const auto AlignedHandleSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize, PDRTPP.shaderGroupHandleAlignment);
-			const auto GenStrideSize = Cmn::RoundUp(GenHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment);
-			//!< RayGen では stride と size が同じサイズでないといけないので注意
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = GenStrideSize, .size = GenStrideSize}));
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(MissHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment) }));
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(HitHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment) }));
+			//!< シェーダレコードサイズ
+			constexpr auto GenRecordSize = 0;
+			constexpr auto MissRecordSize = 0;
+			constexpr auto HitRecordSize = 0;
+			//!< ストライド
+			const auto GenStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + GenRecordSize, PDRTPP.shaderGroupHandleAlignment);
+			const auto MissStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + MissRecordSize, PDRTPP.shaderGroupHandleAlignment);
+			const auto HitStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + HitRecordSize, PDRTPP.shaderGroupHandleAlignment);
+			//!< サイズ
+			const auto GenSize = Cmn::RoundUp(GenHandleCount * GenStride, PDRTPP.shaderGroupBaseAlignment);
+			const auto MissSize = Cmn::RoundUp(MissHandleCount * MissStride, PDRTPP.shaderGroupBaseAlignment);
+			const auto HitSize = Cmn::RoundUp(HitHandleCount * HitStride, PDRTPP.shaderGroupBaseAlignment);
+			//!< RayGen ではストライドにサイズと同じ値を指定しなくてはならないので注意
+			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = GenSize, .size = GenSize }));
+			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = MissStride, .size = MissSize }));
+			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = HitStride, .size = HitSize }));
 		
 			//!< バッファの作成、デバイスアドレスの決定
 			SBT.Create(Device, PDMP);
 
 			//!< ハンドルデータ(コピー元)を取得
 #if true
+			const auto TotalHandleCount = GenHandleCount + MissHandleCount + HitHandleCount;
 			std::vector<std::byte> HandleData(PDRTPP.shaderGroupHandleSize * TotalHandleCount);
 			VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, TotalHandleCount/*ハンドル数なのかグループ数なのか？*/, size(HandleData), data(HandleData)));
 #else

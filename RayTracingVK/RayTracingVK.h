@@ -443,20 +443,27 @@ public:
 			const auto GenHandleCount = 1;
 			const auto MissHandleCount = 1;
 			const auto HitHandleCount = 1;
-			const auto TotalHandleCount = GenHandleCount + MissHandleCount + HitHandleCount;
 
-			const auto AlignedHandleSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize, PDRTPP.shaderGroupHandleAlignment);
-			const auto GenStrideSize = Cmn::RoundUp(GenHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment);
-			//!< RayGen ‚Å‚Í stride ‚Æ size ‚ª“¯‚¶ƒTƒCƒY‚Å‚È‚¢‚Æ‚¢‚¯‚È‚¢‚Ì‚Å’ˆÓ
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = GenStrideSize, .size = GenStrideSize }));
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(MissHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment) }));
-#pragma region SHADER_RECORD
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(HitHandleCount * AlignedHandleSize + sizeof(VkDeviceAddress) * 2, PDRTPP.shaderGroupBaseAlignment) }));
-#pragma endregion
+			constexpr auto GenRecordSize = 0;
+			constexpr auto MissRecordSize = 0;
+			constexpr auto HitRecordSize = 0;//sizeof(VkDeviceAddress) * 2
+
+			const auto GenStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + GenRecordSize, PDRTPP.shaderGroupHandleAlignment);
+			const auto MissStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + MissRecordSize, PDRTPP.shaderGroupHandleAlignment);
+			const auto HitStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + HitRecordSize, PDRTPP.shaderGroupHandleAlignment);
+
+			const auto GenSize = Cmn::RoundUp(GenHandleCount * GenStride, PDRTPP.shaderGroupBaseAlignment);
+			const auto MissSize = Cmn::RoundUp(MissHandleCount * MissStride, PDRTPP.shaderGroupBaseAlignment);
+			const auto HitSize = Cmn::RoundUp(HitHandleCount * HitStride, PDRTPP.shaderGroupBaseAlignment);
+
+			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = GenSize, .size = GenSize }));
+			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = MissStride, .size = MissSize }));
+			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = HitStride, .size = HitSize }));
 
 			SBT.Create(Device, PDMP);
 
 #if true
+			const auto TotalHandleCount = GenHandleCount + MissHandleCount + HitHandleCount;
 			std::vector<std::byte> HandleData(PDRTPP.shaderGroupHandleSize * TotalHandleCount);
 			VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, TotalHandleCount, size(HandleData), data(HandleData)));
 #else
@@ -490,10 +497,10 @@ public:
 						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
 #pragma region SHADER_RECORD
-					const auto VB = GetDeviceAddress(Device, VertexBuffer.Buffer);
-					std::memcpy(p, &VB, sizeof(VB)); p += sizeof(VB);
-					const auto IB = GetDeviceAddress(Device, IndexBuffer.Buffer);
-					std::memcpy(p, &IB, sizeof(IB)); p += sizeof(IB);
+					//const auto VB = GetDeviceAddress(Device, VertexBuffer.Buffer);
+					//std::memcpy(p, &VB, sizeof(VB)); p += sizeof(VB);
+					//const auto IB = GetDeviceAddress(Device, IndexBuffer.Buffer);
+					//std::memcpy(p, &IB, sizeof(IB)); p += sizeof(IB);
 #pragma endregion
 					BData += HitRegion.size;
 				}

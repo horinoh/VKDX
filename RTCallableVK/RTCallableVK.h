@@ -254,29 +254,33 @@ public:
 
 			const auto GenHandleCount = 1;
 			const auto MissHandleCount = 1;
-#pragma region HIT
 			const auto HitHandleCount = 2;
-#pragma endregion
-#pragma region CALLABLE
 			const auto CallHandleCount = 3;
-#pragma endregion
-			const auto TotalHandleCount = GenHandleCount + MissHandleCount + HitHandleCount + CallHandleCount;
 
-			const auto AlignedHandleSize = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize, PDRTPP.shaderGroupHandleAlignment);
-			const auto GenStrideSize = Cmn::RoundUp(GenHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment);
-			//!< RayGen ‚Å‚Í stride ‚Æ size ‚ª“¯‚¶ƒTƒCƒY‚Å‚È‚¢‚Æ‚¢‚¯‚È‚¢‚Ì‚Å’ˆÓ
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = GenStrideSize, .size = GenStrideSize }));
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(MissHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment) }));
-#pragma region HIT
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(HitHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment) }));
-#pragma endregion
-#pragma region CALLABLE
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = AlignedHandleSize, .size = Cmn::RoundUp(CallHandleCount * AlignedHandleSize, PDRTPP.shaderGroupBaseAlignment) }));
-#pragma endregion
+			constexpr auto GenRecordSize = 0;
+			constexpr auto MissRecordSize = 0;
+			constexpr auto HitRecordSize = 0;
+			constexpr auto CallRecordSize = 0;
+
+			const auto GenStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + GenRecordSize, PDRTPP.shaderGroupHandleAlignment);
+			const auto MissStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + MissRecordSize, PDRTPP.shaderGroupHandleAlignment);
+			const auto HitStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + HitRecordSize, PDRTPP.shaderGroupHandleAlignment);
+			const auto CallStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + CallRecordSize, PDRTPP.shaderGroupHandleAlignment);
+
+			const auto GenSize = Cmn::RoundUp(GenHandleCount * GenStride, PDRTPP.shaderGroupBaseAlignment);
+			const auto MissSize = Cmn::RoundUp(MissHandleCount * MissStride, PDRTPP.shaderGroupBaseAlignment);
+			const auto HitSize = Cmn::RoundUp(HitHandleCount * HitStride, PDRTPP.shaderGroupBaseAlignment);
+			const auto CallSize = Cmn::RoundUp(CallHandleCount * CallStride, PDRTPP.shaderGroupBaseAlignment);
+
+			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = GenSize, .size = GenSize }));
+			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = MissStride, .size = MissSize }));
+			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = HitStride, .size = HitSize }));
+			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = CallStride, .size = CallSize }));
 
 			SBT.Create(Device, PDMP);
 
 #if true
+			const auto TotalHandleCount = GenHandleCount + MissHandleCount + HitHandleCount + CallHandleCount;
 			std::vector<std::byte> HandleData(PDRTPP.shaderGroupHandleSize * TotalHandleCount);
 			VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, TotalHandleCount, size(HandleData), data(HandleData)));
 #else
@@ -304,7 +308,7 @@ public:
 					}
 					BData += MissRegion.size;
 				}
-#pragma region HIT
+
 				const auto& HitRegion = SBT.StridedDeviceAddressRegions[2]; {
 					auto p = BData;
 					for (auto i = 0; i < HitHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += HitRegion.stride) {
@@ -312,9 +316,7 @@ public:
 					}
 					BData += HitRegion.size;
 				}
-#pragma endregion
 
-#pragma region CALLABLE
 				const auto& CallRegion = SBT.StridedDeviceAddressRegions[3]; {
 					auto p = BData;
 					for (auto i = 0; i < CallHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += CallRegion.stride) {
@@ -322,7 +324,6 @@ public:
 					}
 					BData += CallRegion.size;
 				}
-#pragma endregion
 
 			} SBT.Unmap(Device);
 		}
