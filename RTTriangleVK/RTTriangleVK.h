@@ -274,10 +274,9 @@ public:
 			VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
 			vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
 
-			//!< 各グループのハンドルの個数
-			const auto GenHandleCount = 1;
-			const auto MissHandleCount = 1;
-			const auto HitHandleCount = 1;
+			//!< 各グループのハンドルの個数 (Genは1固定)
+			const auto MissCount = 1;
+			const auto HitCount = 1;
 			//!< シェーダレコードサイズ
 			constexpr auto GenRecordSize = 0;
 			constexpr auto MissRecordSize = 0;
@@ -287,20 +286,20 @@ public:
 			const auto MissStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + MissRecordSize, PDRTPP.shaderGroupHandleAlignment);
 			const auto HitStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + HitRecordSize, PDRTPP.shaderGroupHandleAlignment);
 			//!< サイズ
-			const auto GenSize = Cmn::RoundUp(GenHandleCount * GenStride, PDRTPP.shaderGroupBaseAlignment);
-			const auto MissSize = Cmn::RoundUp(MissHandleCount * MissStride, PDRTPP.shaderGroupBaseAlignment);
-			const auto HitSize = Cmn::RoundUp(HitHandleCount * HitStride, PDRTPP.shaderGroupBaseAlignment);
-			//!< RayGen ではストライドにサイズと同じ値を指定しなくてはならないので注意
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = GenSize, .size = GenSize }));
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = MissStride, .size = MissSize }));
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = HitStride, .size = HitSize }));
+			const auto GenSize = Cmn::RoundUp(GenStride, PDRTPP.shaderGroupBaseAlignment);
+			const auto MissSize = Cmn::RoundUp(MissCount * MissStride, PDRTPP.shaderGroupBaseAlignment);
+			const auto HitSize = Cmn::RoundUp(HitCount * HitStride, PDRTPP.shaderGroupBaseAlignment);
+			//!< Gen ではストライドにサイズと同じ値を指定しなくてはならないので注意
+			SBT.StridedDeviceAddressRegions[0] = VkStridedDeviceAddressRegionKHR({ .stride = GenSize, .size = GenSize });
+			SBT.StridedDeviceAddressRegions[1] = VkStridedDeviceAddressRegionKHR({ .stride = MissStride, .size = MissSize });
+			SBT.StridedDeviceAddressRegions[2] = VkStridedDeviceAddressRegionKHR({ .stride = HitStride, .size = HitSize });
 		
 			//!< バッファの作成、デバイスアドレスの決定
 			SBT.Create(Device, PDMP);
 
 			//!< ハンドルデータ(コピー元)を取得
 #if true
-			const auto TotalHandleCount = GenHandleCount + MissHandleCount + HitHandleCount;
+			const auto TotalHandleCount = 1 + MissCount + HitCount;
 			std::vector<std::byte> HandleData(PDRTPP.shaderGroupHandleSize * TotalHandleCount);
 			VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, TotalHandleCount/*ハンドル数なのかグループ数なのか？*/, size(HandleData), data(HandleData)));
 #else
@@ -315,11 +314,9 @@ public:
 
 				//!< グループ (Gen)
 				const auto& GenRegion = SBT.StridedDeviceAddressRegions[0]; {
-					auto p = BData;
 					//!< グループのハンドル
-					for (auto i = 0; i < GenHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += GenRegion.stride) {
-						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
-					}
+					std::memcpy(BData, HData, PDRTPP.shaderGroupHandleSize);
+					HData += PDRTPP.shaderGroupHandleSize;
 					BData += GenRegion.size;
 				}
 
@@ -327,7 +324,7 @@ public:
 				const auto& MissRegion = SBT.StridedDeviceAddressRegions[1]; {
 					auto p = BData;
 					//!< グループのハンドル
-					for (auto i = 0; i < MissHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += MissRegion.stride) {
+					for (auto i = 0; i < MissCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += MissRegion.stride) {
 						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
 					BData += MissRegion.size;
@@ -337,7 +334,7 @@ public:
 				const auto& HitRegion = SBT.StridedDeviceAddressRegions[2]; {
 					auto p = BData;
 					//!< グループのハンドル
-					for (auto i = 0; i < HitHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += HitRegion.stride) {
+					for (auto i = 0; i < HitCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += HitRegion.stride) {
 						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
 					BData += HitRegion.size;
@@ -373,11 +370,10 @@ public:
 				vkCmdBindDescriptorSets(CB, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, PipelineLayouts[0], 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
 
 				const auto& SBT = ShaderBindingTables.back();
-				const auto CallableRegion = VkStridedDeviceAddressRegionKHR({ .deviceAddress = 0, .stride = 0, .size = 0 });
 #ifdef USE_INDIRECT
-				vkCmdTraceRaysIndirectKHR(CB, &SBT.StridedDeviceAddressRegions[0], &SBT.StridedDeviceAddressRegions[1], &SBT.StridedDeviceAddressRegions[2], &CallableRegion, GetDeviceAddress(Device, IndirectBuffers[0].Buffer));
+				vkCmdTraceRaysIndirectKHR(CB, &SBT.StridedDeviceAddressRegions[0], &SBT.StridedDeviceAddressRegions[1], &SBT.StridedDeviceAddressRegions[2], &SBT.StridedDeviceAddressRegions[3], GetDeviceAddress(Device, IndirectBuffers[0].Buffer));
 #else
-				vkCmdTraceRaysKHR(CB, &SBT.StridedDeviceAddressRegions[0], &SBT.StridedDeviceAddressRegions[1], &SBT.StridedDeviceAddressRegions[2], &CallableRegion, GetClientRectWidth(), GetClientRectHeight(), 1);
+				vkCmdTraceRaysKHR(CB, &SBT.StridedDeviceAddressRegions[0], &SBT.StridedDeviceAddressRegions[1], &SBT.StridedDeviceAddressRegions[2], &SBT.StridedDeviceAddressRegions[3], GetClientRectWidth(), GetClientRectHeight(), 1);
 #endif
 			} PopulateEndRenderTargetCommand(CB, RT, SwapchainImages[i], static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
 

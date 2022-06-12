@@ -12,27 +12,20 @@ struct VertexPN
     vec3 Position; 
     vec3 Normal;
 };
-layout(buffer_reference, scalar) buffer VertexBuffer { VertexPN Vertices[]; };
-layout(buffer_reference, scalar) buffer IndexBuffer { uint Indices[]; };
+layout(binding = 2, set = 0) buffer VertexBuffer { VertexPN Vertices[]; } VB;
+layout(binding = 3, set = 0) buffer IndexBuffer { uvec3 Indices[]; } IB;
+
 layout(shaderRecordEXT) buffer SBT {
-    VertexBuffer VB;
-    IndexBuffer IB;
+    vec4 v;
 };
 
 void main()
 {
     const vec3 BaryCentric = vec3(1.0f - HitAttr.x - HitAttr.y, HitAttr.x, HitAttr.y);
-	Payload = BaryCentric;
 
-    vec3 Pos[3], Nrm[3];
-    for (int i = 0; i < 3; ++i) {
-        const uint Index = IB.Indices[gl_PrimitiveID * 3 + i];
-        Pos[i] = VB.Vertices[Index].Position;
-        Nrm[i] = VB.Vertices[Index].Normal;
-    }
-    const vec3 HitPos = Pos[0] * BaryCentric.x + Pos[1] * BaryCentric.y + Pos[2] * BaryCentric.z;
-    //const vec3 HitNrm = Nrm[0] * BaryCentric.x + Nrm[1] * BaryCentric.y + Nrm[2] * BaryCentric.z;
-    const vec3 HitNrm = vec3(0, 1, 0); //TODO
+    const uvec3 i = IB.Indices[gl_PrimitiveID];
+    const vec3 HitPos = VB.Vertices[i.x].Position * BaryCentric.x + VB.Vertices[i.y].Position * BaryCentric.y + VB.Vertices[i.z].Position * BaryCentric.z;
+    const vec3 HitNrm = VB.Vertices[i.x].Normal * BaryCentric.x + VB.Vertices[i.y].Normal * BaryCentric.y + VB.Vertices[i.z].Normal * BaryCentric.z;
 
 //    Payload = vec3(0.0f);
 //    const float TMin = 0.001f;
@@ -42,4 +35,5 @@ void main()
 //    traceRayEXT(TLAS, gl_RayFlagsNoneEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
 
     Payload = HitNrm * 0.5f + 0.5f;
+    //Payload = v.xyz;
 }

@@ -195,8 +195,7 @@ public:
 		using Super = BufferMemory;
 	public:
 		HostVisibleBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const VkBufferUsageFlags BUF, const void* Source = nullptr) {
-			Super::Create(Device, PDMP, Size, BUF, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, Source);
-			//Super::Create(Device, PDMP, Size, BUF, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, Source);
+			Super::Create(Device, PDMP, Size, BUF, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT/*| VK_MEMORY_PROPERTY_HOST_COHERENT_BIT*/, Source);
 			return *this;
 		}
 	};
@@ -442,20 +441,33 @@ public:
 		using Super = Texture;
 	public:
 		StorageTexture& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const VkFormat Format, const VkExtent3D& Extent) {
-			Super::Create(Device, PDMP, Format, Extent, 1, 1, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT/*| VK_IMAGE_USAGE_TRANSFER_DST_BIT*/, VK_IMAGE_ASPECT_COLOR_BIT);
+			Super::Create(Device, PDMP, Format, Extent, 1, 1, VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
 			return *this;
 		}
 	};
 #pragma region RAYTRACING
-	class DeviceLocalASBuffer : public DeviceLocalBuffer
+	class DeviceLocalShaderDeviceStorageBuffer : public DeviceLocalBuffer
 	{
 	private:
 		using Super = DeviceLocalBuffer;
 	public:
-		DeviceLocalASBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size, const VkBufferUsageFlags AddBUF = 0) {
-			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | AddBUF);
+		DeviceLocalShaderDeviceStorageBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
+			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
 			return *this;
 		}
+	};
+	class ASBuffer : public DeviceLocalBuffer
+	{
+	private:
+		using Super = DeviceLocalBuffer;
+	protected:
+		const VkBufferUsageFlags Usage = VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+	public:
+		ASBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
+			Super::Create(Device, PDMP, Size, Usage);
+			return *this;
+		}
+	public:
 		void PopulateCopyCommand(const VkCommandBuffer CB, const size_t Size, const VkBuffer Staging) {
 			Super::PopulateCopyCommand(CB, Size, Staging, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 		}
@@ -463,23 +475,23 @@ public:
 			Super::SubmitCopyCommand(Device, PDMP, CB, Queue, Size, Source, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 		}
 	};
-	class VertexASBuffer : public DeviceLocalASBuffer
+	class VertexASBuffer : public ASBuffer
 	{
 	private:
-		using Super = DeviceLocalASBuffer;
+		using Super = ASBuffer;
 	public:
 		VertexASBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
-			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+			DeviceLocalBuffer::Create(Device, PDMP, Size, Usage | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 			return *this;
 		}
 	};
-	class IndexASBuffer : public DeviceLocalASBuffer
+	class IndexASBuffer : public ASBuffer
 	{
 	private:
-		using Super = DeviceLocalASBuffer;
+		using Super = ASBuffer;
 	public:
 		IndexASBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
-			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+			DeviceLocalBuffer::Create(Device, PDMP, Size, Usage | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 			return *this;
 		}
 	};
@@ -647,17 +659,24 @@ public:
 	private:
 		using Super = BufferMemory;
 	public:
-		std::vector<VkStridedDeviceAddressRegionKHR> StridedDeviceAddressRegions;
+		std::array<VkStridedDeviceAddressRegionKHR, 4> StridedDeviceAddressRegions = {
+			VkStridedDeviceAddressRegionKHR({.deviceAddress = 0, .stride = 0, .size = 0 }),
+			VkStridedDeviceAddressRegionKHR({.deviceAddress = 0, .stride = 0, .size = 0 }),
+			VkStridedDeviceAddressRegionKHR({.deviceAddress = 0, .stride = 0, .size = 0 }),
+			VkStridedDeviceAddressRegionKHR({.deviceAddress = 0, .stride = 0, .size = 0 }),
+		};
 		ShaderBindingTable& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP) {
 			//!< グループの総サイズ
 			const auto Size = std::accumulate(begin(StridedDeviceAddressRegions), end(StridedDeviceAddressRegions), 0, [](int Acc, const auto& lhs) { return Acc + static_cast<int>(lhs.size); });
 			VK::CreateBufferMemory(&Buffer, &DeviceMemory, Device, PDMP, Size, VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 			
+			Win::Log("StridedDeviceAddressRegions\n");
 			//!< デバイスアドレスの決定
 			auto da = GetDeviceAddress(Device, Buffer);
 			for (auto& i : StridedDeviceAddressRegions) {
 				i.deviceAddress = da;
 				da += i.size;
+				Win::Logf("\tdeviceAddress = %d, stride = %d, size = %d\n", i.deviceAddress, i.stride, i.size);
 			}
 
 			return *this;

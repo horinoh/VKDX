@@ -14,16 +14,14 @@ public:
 	RayTracingVK() : Super() {}
 	virtual ~RayTracingVK() {}
 
-	VertexASBuffer VertexBuffer;
-	IndexASBuffer IndexBuffer;
+	ASBuffer VertexBuffer;
+	ASBuffer IndexBuffer;
 
-#if 1
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
 		IndexBuffer.Destroy(Device);
 		VertexBuffer.Destroy(Device);
 		Super::OnDestroy(hWnd, hInstance);
 	}
-#endif
 
 #pragma region FBX
 	glm::vec3 ToVec3(const FbxVector4& rhs) { return glm::vec3(static_cast<FLOAT>(rhs[0]), static_cast<FLOAT>(rhs[1]), static_cast<FLOAT>(rhs[2])); }
@@ -193,7 +191,7 @@ public:
 			.scratchData = VkDeviceOrHostAddressKHR({.deviceAddress = 0})
 		};
 		const std::vector ASBRIs_Tlas = {
-			VkAccelerationStructureBuildRangeInfoKHR({.primitiveCount = static_cast<uint32_t>(size(ASIs)), .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0 }),
+			VkAccelerationStructureBuildRangeInfoKHR({ .primitiveCount = static_cast<uint32_t>(size(ASIs)), .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0 }),
 		};
 		assert(ASBGI_Tlas.geometryCount == size(ASBRIs_Tlas));
 
@@ -440,52 +438,44 @@ public:
 			VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
 			vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
 
-			const auto GenHandleCount = 1;
-			const auto MissHandleCount = 1;
-			const auto HitHandleCount = 1;
+			const auto MissCount = 1;
+			const auto HitCount = 1;
 
 			constexpr auto GenRecordSize = 0;
 			constexpr auto MissRecordSize = 0;
-			constexpr auto HitRecordSize = 0;//sizeof(VkDeviceAddress) * 2
+			constexpr auto HitRecordSize = sizeof(glm::vec4);
 
 			const auto GenStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + GenRecordSize, PDRTPP.shaderGroupHandleAlignment);
 			const auto MissStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + MissRecordSize, PDRTPP.shaderGroupHandleAlignment);
 			const auto HitStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + HitRecordSize, PDRTPP.shaderGroupHandleAlignment);
 
-			const auto GenSize = Cmn::RoundUp(GenHandleCount * GenStride, PDRTPP.shaderGroupBaseAlignment);
-			const auto MissSize = Cmn::RoundUp(MissHandleCount * MissStride, PDRTPP.shaderGroupBaseAlignment);
-			const auto HitSize = Cmn::RoundUp(HitHandleCount * HitStride, PDRTPP.shaderGroupBaseAlignment);
+			const auto GenSize = Cmn::RoundUp(GenStride, PDRTPP.shaderGroupBaseAlignment);
+			const auto MissSize = Cmn::RoundUp(MissCount * MissStride, PDRTPP.shaderGroupBaseAlignment);
+			const auto HitSize = Cmn::RoundUp(HitCount * HitStride, PDRTPP.shaderGroupBaseAlignment);
 
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = GenSize, .size = GenSize }));
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = MissStride, .size = MissSize }));
-			SBT.StridedDeviceAddressRegions.emplace_back(VkStridedDeviceAddressRegionKHR({ .stride = HitStride, .size = HitSize }));
+			SBT.StridedDeviceAddressRegions[0] = VkStridedDeviceAddressRegionKHR({ .stride = GenSize, .size = GenSize });
+			SBT.StridedDeviceAddressRegions[1] = VkStridedDeviceAddressRegionKHR({ .stride = MissStride, .size = MissSize });
+			SBT.StridedDeviceAddressRegions[2] = VkStridedDeviceAddressRegionKHR({ .stride = HitStride, .size = HitSize });
 
 			SBT.Create(Device, PDMP);
 
-#if true
-			const auto TotalHandleCount = GenHandleCount + MissHandleCount + HitHandleCount;
+			const auto TotalHandleCount = 1 + MissCount + HitCount;
 			std::vector<std::byte> HandleData(PDRTPP.shaderGroupHandleSize * TotalHandleCount);
 			VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, TotalHandleCount, size(HandleData), data(HandleData)));
-#else
-			std::vector<std::byte> HandleData(AlignedHandleSize * size(SBT.StridedDeviceAddressRegions));
-			VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, static_cast<uint32_t>(size(SBT.StridedDeviceAddressRegions)), size(HandleData), data(HandleData)));
-#endif
 
 			auto MapData = SBT.Map(Device); {
 				auto BData = reinterpret_cast<std::byte*>(MapData);
 				auto HData = data(HandleData);
 
 				const auto& GenRegion = SBT.StridedDeviceAddressRegions[0]; {
-					auto p = BData;
-					for (auto i = 0; i < GenHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += GenRegion.stride) {
-						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
-					}
+					std::memcpy(BData, HData, PDRTPP.shaderGroupHandleSize);
+					HData += PDRTPP.shaderGroupHandleSize;
 					BData += GenRegion.size;
 				}
 
 				const auto& MissRegion = SBT.StridedDeviceAddressRegions[1]; {
 					auto p = BData;
-					for (auto i = 0; i < MissHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += MissRegion.stride) {
+					for (auto i = 0; i < MissCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += MissRegion.stride) {
 						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
 					BData += MissRegion.size;
@@ -493,14 +483,12 @@ public:
 
 				const auto& HitRegion = SBT.StridedDeviceAddressRegions[2]; {
 					auto p = BData;
-					for (auto i = 0; i < HitHandleCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += HitRegion.stride) {
+					for (auto i = 0; i < HitCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += HitRegion.stride) {
 						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
 #pragma region SHADER_RECORD
-					//const auto VB = GetDeviceAddress(Device, VertexBuffer.Buffer);
-					//std::memcpy(p, &VB, sizeof(VB)); p += sizeof(VB);
-					//const auto IB = GetDeviceAddress(Device, IndexBuffer.Buffer);
-					//std::memcpy(p, &IB, sizeof(IB)); p += sizeof(IB);
+					const auto v = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+					std::memcpy(p, &v, sizeof(v)); p += HitRegion.stride;
 #pragma endregion
 					BData += HitRegion.size;
 				}
@@ -531,8 +519,7 @@ public:
 				vkCmdBindDescriptorSets(CB, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, PipelineLayouts[0], 0, static_cast<uint32_t>(size(DSs)), data(DSs), static_cast<uint32_t>(size(DynamicOffsets)), data(DynamicOffsets));
 
 				const auto& SBT = ShaderBindingTables.back();
-				const auto Callable = VkStridedDeviceAddressRegionKHR({ .deviceAddress = 0, .stride = 0, .size = 0 });
-				vkCmdTraceRaysIndirectKHR(CB, &SBT.StridedDeviceAddressRegions[0], &SBT.StridedDeviceAddressRegions[1], &SBT.StridedDeviceAddressRegions[2], &Callable, GetDeviceAddress(Device, IndirectBuffers[0].Buffer));
+				vkCmdTraceRaysIndirectKHR(CB, &SBT.StridedDeviceAddressRegions[0], &SBT.StridedDeviceAddressRegions[1], &SBT.StridedDeviceAddressRegions[2], &SBT.StridedDeviceAddressRegions[3], GetDeviceAddress(Device, IndirectBuffers[0].Buffer));
 
 			} PopulateEndRenderTargetCommand(CB, RT, SwapchainImages[i], static_cast<uint32_t>(GetClientRectWidth()), static_cast<uint32_t>(GetClientRectHeight()));
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
