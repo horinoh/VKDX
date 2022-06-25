@@ -144,8 +144,12 @@ public:
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Vertices), data(Vertices), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
 			VertexIndexBuffer.Create(Device, PDMP, TotalSizeOf(VertexIndices8), VK_FORMAT_R32_UINT, VK_BUFFER_USAGE_INDEX_BUFFER_BIT)
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(VertexIndices8), data(VertexIndices8), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
+
+			VkPhysicalDeviceProperties PDP = {}; vkGetPhysicalDeviceProperties(GetCurrentPhysicalDevice(), &PDP);
+			assert(TotalSizeOf(Meshlets) == Cmn::RoundUp(TotalSizeOf(Meshlets), PDP.limits.minStorageBufferOffsetAlignment));
 			MeshletBuffer.Create(Device, PDMP, TotalSizeOf(Meshlets), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Meshlets), data(Meshlets), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV); 
+			assert(TotalSizeOf(Triangles) == Cmn::RoundUp(TotalSizeOf(Triangles), PDP.limits.minStorageBufferOffsetAlignment));
 			TriangleBuffer.Create(Device, PDMP, TotalSizeOf(Triangles), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Triangles), data(Triangles), VK_ACCESS_NONE_KHR, VK_PIPELINE_STAGE_MESH_SHADER_BIT_NV);
 

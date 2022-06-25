@@ -446,16 +446,16 @@ public:
 		}
 	};
 #pragma region RAYTRACING
-	class DeviceLocalShaderDeviceStorageBuffer : public DeviceLocalBuffer
-	{
-	private:
-		using Super = DeviceLocalBuffer;
-	public:
-		DeviceLocalShaderDeviceStorageBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
-			Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
-			return *this;
-		}
-	};
+	//class DeviceLocalShaderDeviceStorageBuffer : public DeviceLocalBuffer
+	//{
+	//private:
+	//	using Super = DeviceLocalBuffer;
+	//public:
+	//	DeviceLocalShaderDeviceStorageBuffer& Create(const VkDevice Device, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
+	//		Super::Create(Device, PDMP, Size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT);
+	//		return *this;
+	//	}
+	//};
 	class ASBuffer : public DeviceLocalBuffer
 	{
 	private:
