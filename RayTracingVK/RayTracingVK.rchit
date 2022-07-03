@@ -1,8 +1,16 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
+
 //!< layout(buffer_reference) に必要
 #extension GL_EXT_buffer_reference : enable
 #extension GL_EXT_scalar_block_layout : enable
+
+//!< uint64_t(==VkDeviceAddress) 等の型を使えるようにする
+#extension GL_EXT_shader_explicit_arithmetic_types : enable
+
+//!< nonuniformEXT(シェーダの入力としてユニフォームでない変数に対して修飾する) に必要 
+#extension GL_EXT_nonuniform_qualifier : enable
+
 
 layout(location = 0) rayPayloadInEXT vec3 Payload;
 hitAttributeEXT vec2 HitAttr;
@@ -14,21 +22,17 @@ struct VertexPN
     vec3 Normal;
 };
 #if 1
-layout(binding = 2, set = 0) buffer VertexBuffer { VertexPN Vertices[]; } VB;
-layout(binding = 3, set = 0) buffer IndexBuffer { uvec3 Indices[]; } IB;
+layout(binding = 2, set = 0) readonly buffer VertexBuffer { VertexPN Vertices[]; } VB;
+layout(binding = 3, set = 0) readonly buffer IndexBuffer { uvec3 Indices[]; } IB;
 #else
-layout(buffer_reference, scalar) buffer VertexBuffer { VertexPN Vertices[]; };
-layout(buffer_reference, scalar) buffer IndexBuffer { uvec3 Indices[]; };
+layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer VertexBuffer { VertexPN Vertices[]; };
+layout(buffer_reference, scalar) readonly buffer IndexBuffer { uvec3 Indices[]; };
 layout(shaderRecordEXT, std430) buffer ShaderRecord
 {
     VertexBuffer VB;
     IndexBuffer IB;
 };
 #endif
-
-//layout(shaderRecordEXT, std430) buffer SBT {
-//    vec4 v;
-//};
 
 void main()
 {

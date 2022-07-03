@@ -195,9 +195,9 @@ public:
 		Scratch.Create(Device, PDMP, ASBSI_Tlas.buildScratchSize);
 #else
 		Scratch.Create(Device, PDMP, std::max(ASBSI_Blas.buildScratchSize, ASBSI_Tlas.buildScratchSize));
-		ASBGI_Blas.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch.Buffer) });
+		ASBGI_Blas.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = GetDeviceAddress(Device, Scratch.Buffer) });
 #endif
-		ASBGI_Tlas.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch.Buffer) });
+		ASBGI_Tlas.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = GetDeviceAddress(Device, Scratch.Buffer) });
 #pragma endregion
 
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
@@ -261,6 +261,10 @@ public:
 				.basePipelineHandle = VK_NULL_HANDLE, .basePipelineIndex = -1
 			}),
 		};
+#ifdef _DEBUG
+		//!< 自分の環境では PDRTPP.maxRayRecursionDepth == 31 だった (DX は [0, 31])
+		for (auto i : RTPCIs) { assert(i.maxPipelineRayRecursionDepth <= PDRTPP.maxRayRecursionDepth); }
+#endif
 		VERIFY_SUCCEEDED(vkCreateRayTracingPipelinesKHR(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, static_cast<uint32_t>(size(RTPCIs)), data(RTPCIs), GetAllocationCallbacks(), &Pipelines.emplace_back()));
 #pragma endregion
 
@@ -269,11 +273,6 @@ public:
 	virtual void CreateShaderBindingTable() override {
 		const auto& PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		auto& SBT = ShaderBindingTables.emplace_back(); {
-			//!< サイズ、アライメントを取得
-			VkPhysicalDeviceRayTracingPipelinePropertiesKHR PDRTPP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, .pNext = nullptr };
-			VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
-			vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
-
 			//!< 各グループのハンドルの個数 (Genは1固定)
 			const auto MissCount = 1;
 			const auto HitCount = 1;

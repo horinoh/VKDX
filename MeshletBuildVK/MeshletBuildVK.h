@@ -4,13 +4,13 @@
 
 #pragma region Code
 #include "../FBX.h"
-#include "../VKExt.h"
+#include "../VKMS.h"
 #include "../DXMesh.h"
 
-class MeshletBuildVK : public VKExtDepth, public Fbx
+class MeshletBuildVK : public VKMSDepth, public Fbx
 {
 private:
-	using Super = VKExtDepth;
+	using Super = VKMSDepth;
 public:
 	MeshletBuildVK() : Super() {}
 	virtual ~MeshletBuildVK() {}
@@ -76,19 +76,6 @@ public:
 		Super::OnDestroy(hWnd, hInstance);
 	}
 
-	virtual void CreateInstance([[maybe_unused]] const std::vector<const char*>& AdditionalLayers, const std::vector<const char*>& AdditionalExtensions) override {
-		//Super::CreateInstance(AdditionalLayers, AdditionalExtensions); //!< VK_LAYER_RENDERDOC_Capture を使用する
-		VK::CreateInstance(AdditionalLayers, AdditionalExtensions); //!< VK_LAYER_RENDERDOC_Capture を使用しない
-	}
-	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, [[maybe_unused]] void* pNext, [[maybe_unused]] const std::vector<const char*>& AddExtensions) override {
-		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
-			VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr, .taskShader = VK_TRUE, .meshShader = VK_TRUE, };
-			Super::CreateDevice(hWnd, hInstance, &PDMSF, { VK_NV_MESH_SHADER_EXTENSION_NAME });
-		}
-		else {
-			Super::CreateDevice(hWnd, hInstance, pNext, AddExtensions);
-		}
-	}
 	void CreateGeometry() override {
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
 			const auto& CB = CommandBuffers[0];

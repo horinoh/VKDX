@@ -4,13 +4,13 @@
 
 #pragma region Code
 #include "../FBX.h"
-#include "../DXExt.h"
+#include "../DXMS.h"
 #include "../DXMesh.h"
 
-class MeshletBuildDX : public DXExtDepth, public Fbx
+class MeshletBuildDX : public DXMSDepth, public Fbx
 {
 private:
-	using Super = DXExtDepth;
+	using Super = DXMSDepth;
 public:
 	MeshletBuildDX() : Super() {}
 	virtual ~MeshletBuildDX() {}

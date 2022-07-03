@@ -547,7 +547,7 @@ public:
 			Scoped<ScratchBuffer> Scratch(Device);
 			Scratch.Create(Device, PDMP, Size);
 			ASBGI.dstAccelerationStructure = AccelerationStructure;
-			ASBGI.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = VK::GetDeviceAddress(Device, Scratch.Buffer) });
+			ASBGI.scratchData = VkDeviceOrHostAddressKHR({ .deviceAddress = GetDeviceAddress(Device, Scratch.Buffer) });
 			constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 			VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 				PopulateBuildCommand(ASBGI, ASBRIs, CB, QP);

@@ -51,7 +51,7 @@ protected:
 		DepthTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), DepthFormat, VkExtent3D({ .width = SurfaceExtent2D.width, .height = SurfaceExtent2D.height, .depth = 1 }));
 	}
 	virtual void CreateRenderPass() override { 
-		VKExt::CreateRenderPass_Depth(); 
+		Super::CreateRenderPass_Depth(); 
 	}
 	//!< パイプラインを深度を有効にして作成すること
 	//virtual void CreatePipeline() override {

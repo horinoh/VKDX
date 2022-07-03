@@ -319,9 +319,6 @@ public:
 			.dynamicStateCount = static_cast<uint32_t>(size(DSs)), .pDynamicStates = data(DSs)
 		};
 
-		VkPhysicalDeviceRayTracingPipelinePropertiesKHR PDRTPP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, .pNext = nullptr };
-		VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
-		vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
 		const std::array RTPCIs = {
 			VkRayTracingPipelineCreateInfoKHR({
 				.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR,
@@ -434,10 +431,6 @@ public:
 	virtual void CreateShaderBindingTable() override {
 		const auto& PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		auto& SBT = ShaderBindingTables.emplace_back(); {
-			VkPhysicalDeviceRayTracingPipelinePropertiesKHR PDRTPP = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR, .pNext = nullptr };
-			VkPhysicalDeviceProperties2 PDP2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &PDRTPP, };
-			vkGetPhysicalDeviceProperties2(GetCurrentPhysicalDevice(), &PDP2);
-
 			const auto MissCount = 1;
 			const auto HitCount = 1;
 
@@ -487,8 +480,13 @@ public:
 						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
 #pragma region SHADER_RECORD
-					const auto v = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-					std::memcpy(p, &v, sizeof(v)); p += HitRegion.stride;
+					//const auto v = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+					//std::memcpy(p, &v, sizeof(v)); p += HitRegion.stride;
+
+					const auto VB = GetDeviceAddress(Device, VertexBuffer.Buffer);
+					std::memcpy(p, &VB, sizeof(VB)); p += HitRegion.stride;
+					const auto IB = GetDeviceAddress(Device, IndexBuffer.Buffer);
+					std::memcpy(p, &VB, sizeof(IB)); p += HitRegion.stride;
 #pragma endregion
 					BData += HitRegion.size;
 				}

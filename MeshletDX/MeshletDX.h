@@ -3,12 +3,12 @@
 #include "resource.h"
 
 #pragma region Code
-#include "../DXExt.h"
+#include "../DXMS.h"
 
-class MeshletDX : public DXExt
+class MeshletDX : public DXMS
 {
 private:
-	using Super = DXExt;
+	using Super = DXMS;
 public:
 	MeshletDX() : Super() {}
 	virtual ~MeshletDX() {}
