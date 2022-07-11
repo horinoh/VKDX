@@ -21,7 +21,6 @@ protected:
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
 	}
 	virtual void CreateTexture() override {
-		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 		//!< スワップチェインと同じカラーフォーマットにしておく、(レイアウトは変更したり戻したりするので、戻せるレイアウトにしておく(ここでは TRANSFER_SRC_OPTIMAL))
 		StorageTextures.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), ColorFormat, VkExtent3D({ .width = static_cast<uint32_t>(GetClientRectWidth()), .height = static_cast<uint32_t>(GetClientRectHeight()), .depth = 1 }))
 			.SubmitSetLayoutCommand(CommandBuffers[0], GraphicsQueue, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);

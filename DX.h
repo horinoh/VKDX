@@ -325,140 +325,15 @@ public:
 				D3D12_UNORDERED_ACCESS_VIEW_DESC({ .Format = Format, .ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY, .Texture2DArray = D3D12_TEX2D_ARRAY_UAV({.MipSlice = 0, .FirstArraySlice = 0, .ArraySize = DepthOrArraySize, .PlaneSlice = 0}) });
 		}
 	};
-#pragma region RAYTRACING
-	class ASCompaction
-	{
-	public:
-		COM_PTR<ID3D12Resource> Info;
-		COM_PTR<ID3D12Resource> Read;
-		virtual ASCompaction& Create(ID3D12Device* Device) {
-			constexpr auto Size = sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC);
-			DX::CreateBufferResource(COM_PTR_PUT(Info), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-			DX::CreateBufferResource(COM_PTR_PUT(Read), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST);
-			return *this;
-		}
-		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL) {
-			//!< リードバックへのコピーコマンドを発行する 
-			const std::array RBs = {
-				D3D12_RESOURCE_BARRIER({
-				.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION,
-				.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-				.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({
-					.pResource = COM_PTR_GET(Info),
-					.Subresource = 0,
-					.StateBefore = D3D12_RESOURCE_STATE_UNORDERED_ACCESS, .StateAfter = D3D12_RESOURCE_STATE_COPY_SOURCE
-					})
-				})
-			};
-			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-			GCL->CopyResource(COM_PTR_GET(Read), COM_PTR_GET(Info));
-		}
-		UINT64 GetSize() {
-			//!< 結果をリードバックへコピーした後に使用すること
-			UINT64 Size;
-			BYTE* Data;
-			Read->Map(0, nullptr, reinterpret_cast<void**>(&Data)); {
-				Size = reinterpret_cast<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC*>(Data)->CompactedSizeInBytes;
-			} Read->Unmap(0, nullptr);
-			return Size;
-		}
-	};
-	class AccelerationStructureBuffer : public ResourceBase
-	{
-	public:
-		virtual AccelerationStructureBuffer& Create(ID3D12Device* Device, const size_t Size) {
-			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
-			return *this;
-		}
-		void PopulateBuildCommand(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12Resource* Scratch, ASCompaction* Compaction = nullptr) {
-			COM_PTR<ID3D12GraphicsCommandList4> GCL4;
-			VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
-			const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
-				.DestAccelerationStructureData = Resource->GetGPUVirtualAddress(),
-				.Inputs = BRASI,
-				.SourceAccelerationStructureData = 0,
-				.ScratchAccelerationStructureData = Scratch->GetGPUVirtualAddress()
-			};
-			if (nullptr != Compaction) {
-				//!< コンパクションサイズを取得する設定
-				const std::array RASPIDs = {
-					D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC({.DestBuffer = Compaction->Info->GetGPUVirtualAddress(), .InfoType = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE}),
-				};
-				GCL4->BuildRaytracingAccelerationStructure(&BRASD, static_cast<UINT>(size(RASPIDs)), data(RASPIDs));
-				
-				//!< 結果をリードバックへコピー
-				Compaction->PopulateCopyCommand(GCL);
-			}
-			else {
-				constexpr std::array<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC, 0> RASPIDs = {};
-				GCL4->BuildRaytracingAccelerationStructure(&BRASD, static_cast<UINT>(size(RASPIDs)), data(RASPIDs));
-			}
-		}
-		void ExecuteBuildCommand(ID3D12Device* Device, const size_t Size, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, ASCompaction* Compaction = nullptr) {
-			ScratchBuffer SB;
-			SB.Create(Device, Size);
-			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-				PopulateBuildCommand(BRASI, GCL, COM_PTR_GET(SB.Resource), Compaction);
-			} VERIFY_SUCCEEDED(GCL->Close());
-			DX::ExecuteAndWait(CQ, static_cast<ID3D12CommandList*>(GCL), Fence);
-		}
-		void PopulateBarrierCommand(ID3D12GraphicsCommandList* GCL) {
-			const std::array RBs = {
-				D3D12_RESOURCE_BARRIER({
-					.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV,
-					.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE,
-					.UAV = D3D12_RESOURCE_UAV_BARRIER({.pResource = COM_PTR_GET(Resource)})
-				})
-			};
-			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-		}
-	};
-	class BLAS : public AccelerationStructureBuffer 
-	{
-	private:
-		using Super = AccelerationStructureBuffer;
-	public:
-		virtual BLAS& Create(ID3D12Device* Device, const size_t Size) {
-			Super::Create(Device, Size);
-			return *this;
-		}
-		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Src) {
-			COM_PTR<ID3D12GraphicsCommandList4> GCL4;
-			VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
-			GCL4->CopyRaytracingAccelerationStructure(Resource->GetGPUVirtualAddress(), Src->GetGPUVirtualAddress(), D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_COMPACT);
-		}
-		void ExecuteCopyCommand(ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, ID3D12Resource* Src) {
-			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-				PopulateCopyCommand(GCL, Src);
-			} VERIFY_SUCCEEDED(GCL->Close());
-			DX::ExecuteAndWait(CQ, static_cast<ID3D12CommandList*>(GCL), Fence);
-		}
-	};
-	class TLAS : public AccelerationStructureBuffer 
-	{
-	private:
-		using Super = AccelerationStructureBuffer;
-	public:
-		D3D12_SHADER_RESOURCE_VIEW_DESC SRV;
-		virtual TLAS& Create(ID3D12Device* Device, const size_t Size) override {
-			Super::Create(Device, Size);
-			SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({
-				.Format = DXGI_FORMAT_UNKNOWN,
-				.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE,
-				.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-				.RaytracingAccelerationStructure = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_SRV({.Location = Resource->GetGPUVirtualAddress()})
-			});
-			return *this;
-		}
-	};
+
 	class DefaultStructuredBuffer : public DefaultResource
 	{
 	private:
 		using Super = DefaultResource;
 	public:
 		D3D12_SHADER_RESOURCE_VIEW_DESC SRV;
-		DefaultStructuredBuffer& Create(ID3D12Device* Device, const size_t Size, const size_t Stride) {
-			Super::Create(Device, Size);
+		DefaultStructuredBuffer& Create(ID3D12Device* Dev, const size_t Size, const size_t Stride) {
+			Super::Create(Dev, Size);
 			SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({
 				.Format = DXGI_FORMAT_UNKNOWN,
 				.ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
@@ -469,64 +344,10 @@ public:
 					.StructureByteStride = static_cast<UINT>(Stride),
 					.Flags = D3D12_BUFFER_SRV_FLAG_NONE,
 				})
-			});
+				});
 			return *this;
 		}
 	};
-	//class UploadStructuredBuffer : public UploadResource
-	//{
-	//private:
-	//	using Super = UploadResource;
-	//public:
-	//	D3D12_SHADER_RESOURCE_VIEW_DESC SRV;
-	//	UploadStructuredBuffer& Create(ID3D12Device* Device, const size_t Size, const size_t Stride, const void* Source) {
-	//		Super::Create(Device, Size, Source);
-	//		SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({
-	//			.Format = DXGI_FORMAT_UNKNOWN,
-	//			.ViewDimension = D3D12_SRV_DIMENSION_BUFFER,
-	//			.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING,
-	//			.Buffer = D3D12_BUFFER_SRV({
-	//				.FirstElement = 0,
-	//				.NumElements = static_cast<UINT>(Size / Stride),
-	//				.StructureByteStride = static_cast<UINT>(Stride),
-	//				.Flags = D3D12_BUFFER_SRV_FLAG_NONE,
-	//			})
-	//		});
-	//		return *this;
-	//	}
-	//};
-	class ScratchBuffer : public ResourceBase
-	{
-	private:
-		using Super = ResourceBase;
-	public:
-		void Create(ID3D12Device* Device, const size_t Size) {
-			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-		}
-	}; 
-	class ShaderTable : public ResourceBase 
-	{
-	private:
-		using Super = ResourceBase;
-	public:
-		D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE Range;
-		ShaderTable& Create(ID3D12Device* Device, const size_t Size, const size_t Stride) {
-			DX::CreateBufferResource(COM_PTR_PUT(Resource), Device, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
-			Range = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({
-				.StartAddress = Resource->GetGPUVirtualAddress(),
-				.SizeInBytes = Size,
-				.StrideInBytes = Stride //!< 個数が1つの場合は 0 でも良い
-			});
-			return *this;
-		}
-		BYTE* Map() {
-			BYTE* Data;
-			Resource->Map(0, nullptr, reinterpret_cast<void**>(&Data));
-			return Data;
-		}
-		void Unmap() { Resource->Unmap(0, nullptr); }
-	};
-#pragma endregion
 
 #pragma region MESH_SHADER
 #pragma warning(push)
@@ -582,12 +403,6 @@ public:
 		return { v.m128_f32[0], v.m128_f32[1], v.m128_f32[2], v.m128_f32[3] };
 	}
 
-#pragma region RAYTRACING
-	[[nodiscard]] static bool HasRaytracingSupport(ID3D12Device* Device) {
-		D3D12_FEATURE_DATA_D3D12_OPTIONS5 FDO5;
-		return SUCCEEDED(Device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, reinterpret_cast<void*>(&FDO5), sizeof(FDO5))) && D3D12_RAYTRACING_TIER_NOT_SUPPORTED != FDO5.RaytracingTier;
-	}
-#pragma endregion
 #pragma region MESH_SHADER
 	[[nodiscard]] static bool HasMeshShaderSupport(ID3D12Device* Device) {
 		D3D12_FEATURE_DATA_D3D12_OPTIONS7 FDO7;
@@ -851,12 +666,6 @@ protected:
 	std::vector<IndirectBuffer> IndirectBuffers;
 	std::vector<ConstantBuffer> ConstantBuffers;
 
-#pragma region RAYTRACING
-	std::vector<BLAS> BLASs;
-	std::vector<TLAS> TLASs;
-	std::vector<ShaderTable> ShaderTables;
-#pragma endregion
-
 	std::vector<Texture> Textures;
 	std::vector<DepthTexture> DepthTextures;
 	std::vector<RenderTexture> RenderTextures;
@@ -867,9 +676,6 @@ protected:
 	std::vector<COM_PTR<ID3D12RootSignature>> RootSignatures;
 	COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
 	std::vector<COM_PTR<ID3D12PipelineState>> PipelineStates;
-#pragma region RAYTRACING
-	std::vector<COM_PTR<ID3D12StateObject>> StateObjects;
-#pragma endregion
 
 	std::vector<COM_PTR<ID3D12DescriptorHeap>> CbvSrvUavDescriptorHeaps;	//!< D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
 	std::vector<COM_PTR<ID3D12DescriptorHeap>> SamplerDescriptorHeaps;		//!< D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER

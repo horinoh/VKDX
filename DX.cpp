@@ -6,7 +6,10 @@
 
 #ifdef USE_DXC
 //!< DXC (dxcompiler.dll が無いと怒られる場合は C:\Program Files (x86)\Windows Kits\10\bin\10.0.18362.0\x64 とかに存在するので、環境変数 Path に通しておく必要がある)
-#pragma comment(lib, "dxcompiler")
+#pragma comment(lib, "dxcompiler.lib")
+
+//!< オンラインコンパイルしたシェーダを使用する場合は $(WindowsSdkDir)Redist\D3D\$(PlatformTarget)\dxil.dll へのパスを通しておく
+//!<	ex) C:\Program Files (x86)\Windows Kits\10\Redist\D3D\x64
 #endif
 
 void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)

@@ -182,11 +182,6 @@ void VK::OnDestroy(HWND hWnd, HINSTANCE hInstance)
 	for (auto& i : DepthTextures) { i.Destroy(Device); } DepthTextures.clear();
 	for (auto& i : Textures) { i.Destroy(Device); } Textures.clear();
 
-#pragma region RAYTRACING
-	for (auto i : ShaderBindingTables) { i.Destroy(Device); } ShaderBindingTables.clear();
-	for (auto i : BLASs) { i.Destroy(Device); } BLASs.clear();
-	for (auto i : TLASs) { i.Destroy(Device); } TLASs.clear();
-#pragma endregion
 	for (auto i : UniformBuffers) { i.Destroy(Device); } UniformBuffers.clear();
 	for (auto i : IndirectBuffers) { i.Destroy(Device); } IndirectBuffers.clear();
 	for (auto i : IndexBuffers) { i.Destroy(Device); } IndexBuffers.clear();

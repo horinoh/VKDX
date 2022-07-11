@@ -2,6 +2,14 @@
 
 #include "DXExt.h"
 
-//!< DX ‚Å‚Í“Á‚ÉŽÀ‘•‚È‚µ
-using DXMS = DXExt;
-using DXMSDepth = DXExtDepth;
+class DXMS : public DXExt
+{
+private:
+	using Super = DXMS;
+};
+
+class DXMSDepth : public DXExtDepth
+{
+private:
+	using Super = DXExtDepth;
+};

@@ -1,3 +1,23 @@
+//!< スレッド
+//!<    uint3 DispatchRaysIndex(), DispatchRaysDimemsions()
+
+//!< レイ
+//!<    uint RayFlags()
+//!<    float3 WorldRayOrigin(), WorldRayDirection(), ObjectRayOrigin(), ObjectRayDirection()
+//!<    float RayTMin(), RayTCurrent()
+
+//!< インデックス
+//!<    uint InstanceID()(D3D12_RAYTRACING_INSTANCE_DESC.InstanceID), InstanceIndex(), GeometryIndex(), PrimitiveIndex()
+
+//!< オブジェクト <-> ワールド
+//!<    float4x3 ObjectToWorld4x3()
+//!<    float3x4 ObjectToWorld3x4()
+//!<    float4x3 WorldToObject4x3()
+//!<    float3x4 WorldToObject3x4()
+
+//!< ヒット
+//!<    uint HitKind()(HIT_KIND_TRIANGLE_FRONT_FACE, HIT_KIND_TRIANGLE_BACK_FACE)
+    
 struct Payload
 {
     float3 Color;
@@ -30,11 +50,11 @@ void OnRayGeneration()
     //!<    RAY_FLAG_FORCE_OPAQUE, RAY_FLAG_FORCE_NON_OPAQUE,
     //!<    RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
     //!<    RAY_FLAG_CULL_BACK_FACING_TRIANGLES, RAY_FLAG_CULL_FRONT_FACING_TRIANGLES, RAY_FLAG_CULL_OPAQUE, RAY_FLAG_CULL_NON_OPAQUE = 0x80,
-    //!<    RAY_FLAG_SKIP_TRIANGLES, RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES,
+    //!<    RAY_FLAG_SKIP_TRIANGLES, RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES ... 要 DXR1.1
     TraceRay(TLAS, 
-            RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_CULL_BACK_FACING_TRIANGLES | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
+            RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_CULL_BACK_FACING_TRIANGLES | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH  ,
             0xff,
-            0, 1,   //!< RayContributionToHitGroupIndex, MultiplierForGeometryContributionToHitGroupIndex
+            0, 1, //!< RayContributionToHitGroupIndex, MultiplierForGeometryContributionToHitGroupIndex : RecordAddress = RayContributionToHitGroupIndex + MultiplierForGeometryContributionToHitGroupIndex * GeometryContributionToHitGroupIndex + instanceContributionToHitGroupIndex   
             0,      //!< MissShaderIndex
             Ray, 
             Pay);

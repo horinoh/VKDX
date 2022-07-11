@@ -16,10 +16,9 @@ public:
 	virtual void CreateGeometry() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
-		COM_PTR<ID3D12Device5> Device5;
-		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
-
 		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
+		COM_PTR<ID3D12GraphicsCommandList4> GCL4;
+		VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
@@ -189,8 +188,8 @@ public:
 
 		//!< シェーダ内、ペイロードやアトリビュートサイズの指定
 		constexpr D3D12_RAYTRACING_SHADER_CONFIG RSC = {
-			.MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT3), //!< Payload のサイズ ここでは struct Payload { float3 Color; } を使用するため XMFLOAT3
-			.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2) //!< ここでは struct BuiltInTriangleIntersectionAttributes { float2 barycentrics; } を使用するため XMFLOAT2
+			.MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT3), //!< Payload のサイズ ここでは HLSL内で struct Payload { float3 Color; } を使用するため XMFLOAT3
+			.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2) //!< ここでは HLSL内で struct BuiltInTriangleIntersectionAttributes { float2 barycentrics; } を使用するため XMFLOAT2
 		};
 
 		//!< レイトレーシング再帰呼び出し可能な段数 [0, 31]
@@ -210,8 +209,6 @@ public:
 			.NumSubobjects = static_cast<UINT>(size(SSs)), .pSubobjects = data(SSs)
 		};
 
-		COM_PTR<ID3D12Device5> Device5;
-		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
 		VERIFY_SUCCEEDED(Device5->CreateStateObject(&SOD, COM_PTR_UUIDOF_PUTVOID(StateObjects.emplace_back())));
 #pragma endregion
 	}

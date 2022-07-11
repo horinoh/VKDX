@@ -62,9 +62,6 @@ public:
 			Load(ToString(Path) + "//dragon.FBX");
 		}
 
-		COM_PTR<ID3D12Device5> Device5;
-		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
-
 		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
@@ -357,8 +354,6 @@ public:
 			.NumSubobjects = static_cast<UINT>(size(SSs)), .pSubobjects = data(SSs)
 		};
 		
-		COM_PTR<ID3D12Device5> Device5;
-		VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device5)));
 		VERIFY_SUCCEEDED(Device5->CreateStateObject(&SOD, COM_PTR_UUIDOF_PUTVOID(StateObjects.emplace_back())));
 #pragma endregion
 	}
