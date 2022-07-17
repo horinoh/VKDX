@@ -42,6 +42,9 @@
     <ClInclude Include="..\DXImage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\DXRT.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RayTracingDX.cpp">

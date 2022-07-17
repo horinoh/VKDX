@@ -158,6 +158,7 @@
     <ClInclude Include="..\VK.h" />
     <ClInclude Include="..\VKExt.h" />
     <ClInclude Include="..\VKImage.h" />
+    <ClInclude Include="..\VKRT.h" />
     <ClInclude Include="..\Win.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="RayTracingVK.h" />

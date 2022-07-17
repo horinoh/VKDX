@@ -139,6 +139,7 @@
   <ItemGroup>
     <ClInclude Include="..\DX.h" />
     <ClInclude Include="..\DXExt.h" />
+    <ClInclude Include="..\DXRT.h" />
     <ClInclude Include="..\Win.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Resource.h" />
