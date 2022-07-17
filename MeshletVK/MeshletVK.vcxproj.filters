@@ -39,6 +39,9 @@
     <ClInclude Include="..\Win.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\VKMS.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MeshletVK.cpp">

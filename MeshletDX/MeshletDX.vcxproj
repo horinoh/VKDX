@@ -163,6 +163,7 @@
   <ItemGroup>
     <ClInclude Include="..\DX.h" />
     <ClInclude Include="..\DXExt.h" />
+    <ClInclude Include="..\DXMS.h" />
     <ClInclude Include="..\Win.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="MeshletDX.h" />

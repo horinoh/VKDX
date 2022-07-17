@@ -153,6 +153,7 @@
   <ItemGroup>
     <ClInclude Include="..\VK.h" />
     <ClInclude Include="..\VKExt.h" />
+    <ClInclude Include="..\VKMS.h" />
     <ClInclude Include="..\Win.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="MeshShaderVK.h" />
