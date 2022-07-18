@@ -27,21 +27,21 @@ protected:
 		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".grs.cso")));
 #else
 		constexpr std::array DRs_Tlas = {
-			//!< register(t0, space0)
+			//!< TLAS (SRV0) : register(t0, space0)
 			D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 		};
 		constexpr std::array DRs_Uav = {
-			//!< register(u0, space0)
+			//!< 出力 (UAV0) : register(u0, space0)
 			D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 		};
 		DX::SerializeRootSignature(Blob, {
-			//!< TLAS
+			//!< TLAS (SRV0)
 			D3D12_ROOT_PARAMETER({
 				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
 				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Tlas)), .pDescriptorRanges = data(DRs_Tlas) }),
 				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
 			}),
-			//!< UAV0
+			//!< 出力 (UAV0)
 			D3D12_ROOT_PARAMETER({
 				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
 				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Uav)), .pDescriptorRanges = data(DRs_Uav) }),
@@ -59,12 +59,12 @@ protected:
 		auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 		auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
 		const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-		//!< [0] TLAS
+		//!< [0] TLAS (SRV0)
 		Device->CreateShaderResourceView(nullptr/* AS の場合 nullptr を指定する*/, &TLASs[0].SRV, CDH);
 		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
-		//!< [1] UAV
+		//!< [1] 出力 (UAV0)
 		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH);
 		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 	}
@@ -237,6 +237,14 @@ protected:
 	private:
 		using Super = ResourceBase;
 	public:
+		//!< Gen 用
+		D3D12_GPU_VIRTUAL_ADDRESS_RANGE AddressRange = { .StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0 };
+		//!< 順序は決まっていないが、Miss, Hit, Call 用の 3 つ分
+		std::array<D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE, 3> AddressRangeAndStrides = {
+			D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({ .StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0 }),
+			D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({ .StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0 }),
+			D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({ .StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0 }),
+		};
 		D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE Range;
 		ShaderTable& Create(ID3D12Device* Dev, const size_t Size, const size_t Stride) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Dev, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);

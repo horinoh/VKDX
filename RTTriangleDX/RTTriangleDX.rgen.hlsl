@@ -54,7 +54,7 @@ void OnRayGeneration()
     TraceRay(TLAS, 
             RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_CULL_BACK_FACING_TRIANGLES | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH  ,
             0xff,
-            0, 1, //!< RayContributionToHitGroupIndex, MultiplierForGeometryContributionToHitGroupIndex : RecordAddress = RayContributionToHitGroupIndex + MultiplierForGeometryContributionToHitGroupIndex * GeometryContributionToHitGroupIndex + instanceContributionToHitGroupIndex   
+            0, 1,   //!< RayContributionToHitGroupIndex, MultiplierForGeometryContributionToHitGroupIndex : RecordAddress = RayContributionToHitGroupIndex + MultiplierForGeometryContributionToHitGroupIndex * GeometryContributionToHitGroupIndex + instanceContributionToHitGroupIndex   
             0,      //!< MissShaderIndex
             Ray, 
             Pay);

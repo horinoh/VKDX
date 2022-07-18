@@ -274,8 +274,8 @@ public:
 		const auto& PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		auto& SBT = ShaderBindingTables.emplace_back(); {
 			//!< 各グループのハンドルの個数 (Genは1固定)
-			const auto MissCount = 1;
-			const auto HitCount = 1;
+			constexpr auto MissCount = 1;
+			constexpr auto HitCount = 1;
 			//!< シェーダレコードサイズ
 			constexpr auto GenRecordSize = 0;
 			constexpr auto MissRecordSize = 0;
@@ -298,7 +298,7 @@ public:
 
 			//!< ハンドルデータ(コピー元)を取得
 #if true
-			const auto TotalHandleCount = 1 + MissCount + HitCount;
+			constexpr auto TotalHandleCount = 1 + MissCount + HitCount;
 			std::vector<std::byte> HandleData(PDRTPP.shaderGroupHandleSize * TotalHandleCount);
 			VERIFY_SUCCEEDED(vkGetRayTracingShaderGroupHandlesKHR(Device, Pipelines.back(), 0, TotalHandleCount/*ハンドル数なのかグループ数なのか？*/, size(HandleData), data(HandleData)));
 #else
@@ -308,35 +308,35 @@ public:
 
 			//!< (マップして)ハンドルデータをバッファに書き込む
 			auto MapData = SBT.Map(Device); {
-				auto BData = reinterpret_cast<std::byte*>(MapData);
 				auto HData = data(HandleData);
+				auto Data = reinterpret_cast<std::byte*>(MapData);
 
 				//!< グループ (Gen)
 				const auto& GenRegion = SBT.StridedDeviceAddressRegions[0]; {
 					//!< グループのハンドル
-					std::memcpy(BData, HData, PDRTPP.shaderGroupHandleSize);
+					std::memcpy(Data, HData, PDRTPP.shaderGroupHandleSize);
 					HData += PDRTPP.shaderGroupHandleSize;
-					BData += GenRegion.size;
+					Data += GenRegion.size;
 				}
 
 				//!< グループ (Miss)
 				const auto& MissRegion = SBT.StridedDeviceAddressRegions[1]; {
-					auto p = BData;
+					auto p = Data;
 					//!< グループのハンドル
 					for (auto i = 0; i < MissCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += MissRegion.stride) {
 						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
-					BData += MissRegion.size;
+					Data += MissRegion.size;
 				}
 
 				//!< グループ (Hit)
 				const auto& HitRegion = SBT.StridedDeviceAddressRegions[2]; {
-					auto p = BData;
+					auto p = Data;
 					//!< グループのハンドル
 					for (auto i = 0; i < HitCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += HitRegion.stride) {
 						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 					}
-					BData += HitRegion.size;
+					Data += HitRegion.size;
 				}
 
 			} SBT.Unmap(Device);

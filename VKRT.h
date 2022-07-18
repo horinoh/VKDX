@@ -67,7 +67,9 @@ protected:
 	virtual void CreatePipelineLayout() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
+			//!< TLAS
 			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
+			//!< 出力 (StorageImage)
 			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
 			});
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
@@ -90,6 +92,7 @@ protected:
 		const auto WDSAS = VkWriteDescriptorSetAccelerationStructureKHR({ .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR, .pNext = nullptr, .accelerationStructureCount = static_cast<uint32_t>(size(ASs)), .pAccelerationStructures = data(ASs) });
 		const auto DII = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = StorageTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_GENERAL });
 		const std::array WDSs = {
+			//!< TLAS
 			VkWriteDescriptorSet({
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.pNext = &WDSAS, //!< pNext に VkWriteDescriptorSetAccelerationStructureKHR を指定すること
@@ -98,6 +101,7 @@ protected:
 				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
 				.pImageInfo = nullptr, .pBufferInfo = nullptr, .pTexelBufferView = nullptr
 			}),
+			//!< 出力 (StorageImage)
 			VkWriteDescriptorSet({
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.pNext = nullptr,
@@ -334,10 +338,11 @@ protected:
 	private:
 		using Super = BufferMemory;
 	public:
+		//!< 順序は決まっていないが、Gen, Miss, Hit, Call 用の 4 つ分
 		std::array<VkStridedDeviceAddressRegionKHR, 4> StridedDeviceAddressRegions = {
 			VkStridedDeviceAddressRegionKHR({.deviceAddress = 0, .stride = 0, .size = 0 }),
-			VkStridedDeviceAddressRegionKHR({.deviceAddress = 0, .stride = 0, .size = 0 }),
-			VkStridedDeviceAddressRegionKHR({.deviceAddress = 0, .stride = 0, .size = 0 }),
+			VkStridedDeviceAddressRegionKHR({.deviceAddress = 0, .stride = 0, .size = 0 }), 
+			VkStridedDeviceAddressRegionKHR({.deviceAddress = 0, .stride = 0, .size = 0 }), 
 			VkStridedDeviceAddressRegionKHR({.deviceAddress = 0, .stride = 0, .size = 0 }),
 		};
 		ShaderBindingTable& Create(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP) {
