@@ -245,14 +245,18 @@ protected:
 			D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({ .StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0 }),
 			D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({ .StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0 }),
 		};
-		D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE Range;
-		ShaderTable& Create(ID3D12Device* Dev, const size_t Size, const size_t Stride) {
+		ShaderTable& Create(ID3D12Device* Dev, const size_t Size) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Dev, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_UPLOAD, D3D12_RESOURCE_STATE_GENERIC_READ);
-			Range = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({
-				.StartAddress = Resource->GetGPUVirtualAddress(),
-				.SizeInBytes = Size,
-				.StrideInBytes = Stride //!< ŒÂ”‚ª1‚Â‚Ìê‡‚Í 0 ‚Å‚à—Ç‚¢
-				});
+			
+			auto va = Resource->GetGPUVirtualAddress();
+			AddressRange.StartAddress = va;
+			va += AddressRange.SizeInBytes;
+			for (auto& i : AddressRangeAndStrides) {
+				i.StartAddress = va;
+				va += i.SizeInBytes;
+				Win::Logf("\tStartAddress = %d, StrideInBytes = %d, SizeInBytes = %d\n", i.StartAddress, i.StrideInBytes, i.SizeInBytes);
+			}
+
 			return *this;
 		}
 		BYTE* Map() {
