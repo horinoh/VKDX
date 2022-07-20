@@ -8,7 +8,7 @@ struct CallableDataIn
 };
 
 [shader("closesthit")]
-void OnClosestHit(inout Payload Pay, in BuiltInTriangleIntersectionAttributes BITIA)
+void OnClosestHit_0(inout Payload Pay, in BuiltInTriangleIntersectionAttributes BITIA)
 {
     CallableDataIn Data; Data.CallableData = float3(0.0f, 0.0f, 0.0f);
 

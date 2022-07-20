@@ -4,7 +4,7 @@ struct CallableDataIn
 };
 
 [shader("callable")]
-void OnCallable(inout CallableDataIn In)
+void OnCallable_0(inout CallableDataIn In)
 {
 	//!< Žs¼–Í—l
 	const float2 pos = float2(DispatchRaysIndex().xy / 8);

@@ -218,7 +218,6 @@ public:
 			//!< 各グループのハンドルの個数 (Genは1固定)
 			constexpr auto MissCount = 1;
 			constexpr auto HitCount = 1;
-
 			//!< シェーダレコードサイズ
 			constexpr auto GenRecordSize = 0;
 			constexpr auto MissRecordSize = 0;
@@ -237,7 +236,7 @@ public:
 			ST.AddressRangeAndStrides[1] = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({ .SizeInBytes = HitSize, .StrideInBytes = HitStride });
 
 			ST.Create(COM_PTR_GET(Device), GenSize + MissSize + HitSize);
-			auto MapData = ShaderTables.back().Map(); {
+			auto MapData = ST.Map(); {
 				auto Data = reinterpret_cast<std::byte*>(MapData);
 
 				//!< グループ (Gen)
@@ -263,8 +262,7 @@ public:
 					}
 					Data += HitRegion.SizeInBytes;
 				}
-			} ShaderTables.back().Unmap();
-
+			} ST.Unmap();
 
 #ifdef USE_INDIRECT
 			//!< インダイレクトバッファ (IndirectBuffer)

@@ -128,77 +128,72 @@ public:
 
 		//!< ここでは (VKに合わせて) シェーダーファイルを分けている
 		const auto ShaderPath = GetBasePath();
-		COM_PTR<ID3DBlob> SB_rgen;
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rgen.cso")), COM_PTR_PUT(SB_rgen)));
-		COM_PTR<ID3DBlob> SB_miss;
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".miss.cso")), COM_PTR_PUT(SB_miss)));
-#pragma region HIT
-		COM_PTR<ID3DBlob> SB_rchit;
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rchit.cso")), COM_PTR_PUT(SB_rchit)));
-		COM_PTR<ID3DBlob> SB_rchit_1;
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.rchit.cso")), COM_PTR_PUT(SB_rchit_1)));
-#pragma endregion
-#pragma region CALLABLE
-		COM_PTR<ID3DBlob> SB_rcall;
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rcall.cso")), COM_PTR_PUT(SB_rcall)));
-		COM_PTR<ID3DBlob> SB_rcall_1;
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.rcall.cso")), COM_PTR_PUT(SB_rcall_1)));
-		COM_PTR<ID3DBlob> SB_rcall_2;
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_2.rcall.cso")), COM_PTR_PUT(SB_rcall_2)));
-#pragma endregion
+		COM_PTR<ID3DBlob> SB_Gen;
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rgen.cso")), COM_PTR_PUT(SB_Gen)));
+		COM_PTR<ID3DBlob> SB_Miss;
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".miss.cso")), COM_PTR_PUT(SB_Miss)));
 
-		std::array EDs_rgen = { D3D12_EXPORT_DESC({.Name = TEXT("OnRayGeneration"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
-		std::array EDs_miss = { D3D12_EXPORT_DESC({.Name = TEXT("OnMiss"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
-#pragma region HIT
-		std::array EDs_rchit = { D3D12_EXPORT_DESC({.Name = TEXT("OnClosestHit"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
-		std::array EDs_rchit_1 = { D3D12_EXPORT_DESC({.Name = TEXT("OnClosestHit_1"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
-#pragma endregion
-#pragma region CALLABLE
-		std::array EDs_rcall = { D3D12_EXPORT_DESC({.Name = TEXT("OnCallable"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
-		std::array EDs_rcall_1 = { D3D12_EXPORT_DESC({.Name = TEXT("OnCallable_1"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
-		std::array EDs_rcall_2 = { D3D12_EXPORT_DESC({.Name = TEXT("OnCallable_2"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
-#pragma endregion
+		COM_PTR<ID3DBlob> SB_Hit0;
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rchit.cso")), COM_PTR_PUT(SB_Hit0)));
+		COM_PTR<ID3DBlob> SB_Hit1;
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.rchit.cso")), COM_PTR_PUT(SB_Hit1)));
 
-		const auto DLD_rgen = D3D12_DXIL_LIBRARY_DESC({
-			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rgen->GetBufferPointer(), .BytecodeLength = SB_rgen->GetBufferSize() }),
-			.NumExports = static_cast<UINT>(size(EDs_rgen)), .pExports = data(EDs_rgen)
+		COM_PTR<ID3DBlob> SB_Call0;
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rcall.cso")), COM_PTR_PUT(SB_Call0)));
+		COM_PTR<ID3DBlob> SB_Call1;
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.rcall.cso")), COM_PTR_PUT(SB_Call1)));
+		COM_PTR<ID3DBlob> SB_Call2;
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_2.rcall.cso")), COM_PTR_PUT(SB_Call2)));
+
+		std::array EDs_Gen = { D3D12_EXPORT_DESC({.Name = TEXT("OnRayGeneration"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
+		std::array EDs_Miss = { D3D12_EXPORT_DESC({.Name = TEXT("OnMiss"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
+
+		std::array EDs_Hit0 = { D3D12_EXPORT_DESC({.Name = TEXT("OnClosestHit_0"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
+		std::array EDs_Hit1 = { D3D12_EXPORT_DESC({.Name = TEXT("OnClosestHit_1"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
+
+		std::array EDs_Call0 = { D3D12_EXPORT_DESC({.Name = TEXT("OnCallable_0"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
+		std::array EDs_Call1 = { D3D12_EXPORT_DESC({.Name = TEXT("OnCallable_1"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
+		std::array EDs_Call2 = { D3D12_EXPORT_DESC({.Name = TEXT("OnCallable_2"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
+
+		const auto DLD_Gen = D3D12_DXIL_LIBRARY_DESC({
+			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_Gen->GetBufferPointer(), .BytecodeLength = SB_Gen->GetBufferSize() }),
+			.NumExports = static_cast<UINT>(size(EDs_Gen)), .pExports = data(EDs_Gen)
 			});
-		const auto DLD_miss = D3D12_DXIL_LIBRARY_DESC({
-			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_miss->GetBufferPointer(), .BytecodeLength = SB_miss->GetBufferSize() }),
-			.NumExports = static_cast<UINT>(size(EDs_miss)), .pExports = data(EDs_miss)
+		const auto DLD_Miss = D3D12_DXIL_LIBRARY_DESC({
+			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_Miss->GetBufferPointer(), .BytecodeLength = SB_Miss->GetBufferSize() }),
+			.NumExports = static_cast<UINT>(size(EDs_Miss)), .pExports = data(EDs_Miss)
 			});
-#pragma region HIT
-		const auto DLD_rchit = D3D12_DXIL_LIBRARY_DESC({
-			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rchit->GetBufferPointer(), .BytecodeLength = SB_rchit->GetBufferSize() }),
-			.NumExports = static_cast<UINT>(size(EDs_rchit)), .pExports = data(EDs_rchit)
+
+		const auto DLD_Hit0 = D3D12_DXIL_LIBRARY_DESC({
+			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_Hit0->GetBufferPointer(), .BytecodeLength = SB_Hit0->GetBufferSize() }),
+			.NumExports = static_cast<UINT>(size(EDs_Hit0)), .pExports = data(EDs_Hit0)
 			});
-		const auto DLD_rchit_1 = D3D12_DXIL_LIBRARY_DESC({
-			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rchit_1->GetBufferPointer(), .BytecodeLength = SB_rchit_1->GetBufferSize() }),
-			.NumExports = static_cast<UINT>(size(EDs_rchit_1)), .pExports = data(EDs_rchit_1)
+		const auto DLD_Hit1 = D3D12_DXIL_LIBRARY_DESC({
+			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_Hit1->GetBufferPointer(), .BytecodeLength = SB_Hit1->GetBufferSize() }),
+			.NumExports = static_cast<UINT>(size(EDs_Hit1)), .pExports = data(EDs_Hit1)
 			});
-#pragma endregion
-#pragma region CALLABLE
-		const auto DLD_rcall = D3D12_DXIL_LIBRARY_DESC({
-			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rcall->GetBufferPointer(), .BytecodeLength = SB_rcall->GetBufferSize() }),
-			.NumExports = static_cast<UINT>(size(EDs_rcall)), .pExports = data(EDs_rcall)
+
+		const auto DLD_Call0 = D3D12_DXIL_LIBRARY_DESC({
+			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_Call0->GetBufferPointer(), .BytecodeLength = SB_Call0->GetBufferSize() }),
+			.NumExports = static_cast<UINT>(size(EDs_Call0)), .pExports = data(EDs_Call0)
 			});
-		const auto DLD_rcall_1 = D3D12_DXIL_LIBRARY_DESC({
-			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rcall_1->GetBufferPointer(), .BytecodeLength = SB_rcall_1->GetBufferSize() }),
-			.NumExports = static_cast<UINT>(size(EDs_rcall_1)), .pExports = data(EDs_rcall_1)
+		const auto DLD_Call1 = D3D12_DXIL_LIBRARY_DESC({
+			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_Call1->GetBufferPointer(), .BytecodeLength = SB_Call1->GetBufferSize() }),
+			.NumExports = static_cast<UINT>(size(EDs_Call1)), .pExports = data(EDs_Call1)
 			});
-		const auto DLD_rcall_2 = D3D12_DXIL_LIBRARY_DESC({
-			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_rcall_2->GetBufferPointer(), .BytecodeLength = SB_rcall_2->GetBufferSize() }),
-			.NumExports = static_cast<UINT>(size(EDs_rcall_2)), .pExports = data(EDs_rcall_2)
+		const auto DLD_Call2 = D3D12_DXIL_LIBRARY_DESC({
+			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_Call2->GetBufferPointer(), .BytecodeLength = SB_Call2->GetBufferSize() }),
+			.NumExports = static_cast<UINT>(size(EDs_Call2)), .pExports = data(EDs_Call2)
 			});
 #pragma endregion
 
 #pragma region HIT
-		constexpr D3D12_HIT_GROUP_DESC HGD = {
-			.HitGroupExport = TEXT("HitGroup"),
+		constexpr D3D12_HIT_GROUP_DESC HGD0 = {
+			.HitGroupExport = TEXT("HitGroup_0"),
 			.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES,
-			.AnyHitShaderImport = nullptr, .ClosestHitShaderImport = TEXT("OnClosestHit"), .IntersectionShaderImport = nullptr
+			.AnyHitShaderImport = nullptr, .ClosestHitShaderImport = TEXT("OnClosestHit_0"), .IntersectionShaderImport = nullptr
 		};
-		constexpr D3D12_HIT_GROUP_DESC HGD_1 = {
+		constexpr D3D12_HIT_GROUP_DESC HGD1 = {
 			.HitGroupExport = TEXT("HitGroup_1"),
 			.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES,
 			.AnyHitShaderImport = nullptr, .ClosestHitShaderImport = TEXT("OnClosestHit_1"), .IntersectionShaderImport = nullptr
@@ -214,19 +209,19 @@ public:
 
 		constexpr std::array SSs = {
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, .pDesc = &GRS }),
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rgen }),
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_miss }),
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_Gen }),
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_Miss }),
 #pragma region HIT
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rchit }),
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rchit_1 }),
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_Hit0 }),
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_Hit1 }),
 #pragma endregion
 #pragma region CALLABLE
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rcall }),
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rcall_1 }),
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_rcall_2 }),
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_Call0 }),
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_Call1 }),
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_Call2 }),
 #pragma endregion
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, .pDesc = &HGD }),
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, .pDesc = &HGD_1 }),
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, .pDesc = &HGD0 }),
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, .pDesc = &HGD1 }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, .pDesc = &RSC }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, .pDesc = &RPC }),
 		};
@@ -241,64 +236,79 @@ public:
 	virtual void CreateShaderTable() override {
 		COM_PTR<ID3D12StateObjectProperties> SOP;
 		VERIFY_SUCCEEDED(StateObjects.back()->QueryInterface(COM_PTR_UUIDOF_PUTVOID(SOP)));
+		auto& ST = ShaderTables.emplace_back(); {
+			//!< 各グループのハンドルの個数 (Genは1固定)
+			constexpr auto MissCount = 1;
+			constexpr auto HitCount = 2;
+			constexpr auto CallCount = 3;
+			//!< シェーダレコードサイズ
+			constexpr auto GenRecordSize = 0;
+			constexpr auto MissRecordSize = 0;
+			constexpr auto HitRecordSize = 0;
+			constexpr auto CallRecordSize = 0;
+			//!< ストライド
+			constexpr auto GenStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + GenRecordSize, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+			constexpr auto MissStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + MissRecordSize, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+			constexpr auto HitStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + HitRecordSize, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+			constexpr auto CallStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + CallRecordSize, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
+			//!< サイズ
+			constexpr auto GenSize = Cmn::RoundUp(GenStride, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+			constexpr auto MissSize = Cmn::RoundUp(MissStride, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+			constexpr auto HitSize = Cmn::RoundUp(HitStride, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+			constexpr auto CallSize = Cmn::RoundUp(CallStride, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+			//!< レンジ
+			ST.AddressRange = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({ .SizeInBytes = GenSize });
+			ST.AddressRangeAndStrides[0] = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({ .SizeInBytes = MissSize, .StrideInBytes = MissStride });
+			ST.AddressRangeAndStrides[1] = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({ .SizeInBytes = HitSize, .StrideInBytes = HitStride });
+			ST.AddressRangeAndStrides[2] = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({ .SizeInBytes = CallSize, .StrideInBytes = CallStride });
 
-		constexpr auto RgenStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
-		constexpr auto RgenSize = 1 * RgenStride;
+			ST.Create(COM_PTR_GET(Device), GenSize + MissSize + HitSize + CallSize);
+			auto MapData = ST.Map(); {
+				auto Data = reinterpret_cast<std::byte*>(MapData);
 
-		constexpr auto MissStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
-		constexpr auto MissSize = 1 * MissStride;
+				//!< グループ (Gen)
+				const auto& GenRegion = ST.AddressRange; {
+					std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("OnRayGeneration")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+					Data += GenRegion.SizeInBytes;
+				}
 
-#pragma region HIT
-		constexpr auto RchitStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
-		constexpr auto RchitSize = 2 * RchitStride;
-#pragma endregion
+				//!< グループ (Miss)
+				const auto& MissRegion = ST.AddressRangeAndStrides[0]; {
+					auto p = Data;
+					for (auto i = 0; i < MissCount; ++i, p += MissRegion.StrideInBytes) {
+						std::memcpy(p, SOP->GetShaderIdentifier(TEXT("OnMiss")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+					}
+					Data += MissRegion.SizeInBytes;
+				}
 
-#pragma region CALLABLE
-		constexpr auto RcallStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 0, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
-		constexpr auto RcallSize = 3 * RcallStride;
-#pragma endregion
+				//!< グループ (Hit)
+				const auto& HitRegion = ST.AddressRangeAndStrides[1]; {
+					auto p = Data;
+					for (auto i = 0; i < HitCount; ++i, p += HitRegion.StrideInBytes) {
+						std::memcpy(p, SOP->GetShaderIdentifier(data(std::wstring(TEXT("HitGroup_")) + std::to_wstring(i))), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES); //!< ヒットグループ作成時に指定したヒットグループ名を使用
+					}
+					Data += HitRegion.SizeInBytes;
+				}
 
-		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RgenSize, RgenStride); {
-			auto Data = ShaderTables.back().Map(); {
-				std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("OnRayGeneration")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-			} ShaderTables.back().Unmap();
+				//!< グループ (Call)
+				const auto& CallRegion = ST.AddressRangeAndStrides[2]; {
+					auto p = Data;
+					for (auto i = 0; i < CallCount; ++i, p += CallRegion.StrideInBytes) {
+						std::memcpy(p, SOP->GetShaderIdentifier(data(std::wstring(TEXT("OnCallable_")) + std::to_wstring(i))), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+					}
+					Data += CallRegion.SizeInBytes;
+				}
+			} ST.Unmap();
+
+			const auto DRD = D3D12_DISPATCH_RAYS_DESC({
+				.RayGenerationShaderRecord = ST.AddressRange,
+				.MissShaderTable = ST.AddressRangeAndStrides[0],
+				.HitGroupTable = ST.AddressRangeAndStrides[1],
+				.CallableShaderTable = ST.AddressRangeAndStrides[2],
+				.Width = static_cast<UINT>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()), .Depth = 1
+			});
+			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DRD).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), sizeof(DRD), &DRD);
 		}
-		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), MissSize, MissStride); {
-			auto Data = ShaderTables.back().Map(); {
-				std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("OnMiss")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-			} ShaderTables.back().Unmap();
-		}
-#pragma region HIT
-		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RchitSize, RchitStride); {
-			auto Data = ShaderTables.back().Map(); {
-				std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("HitGroup")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-				std::memcpy(Data + RchitStride, SOP->GetShaderIdentifier(TEXT("HitGroup_1")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-			} ShaderTables.back().Unmap();
-		}
-#pragma endregion
-
-#pragma region CALLABLE
-		ShaderTables.emplace_back().Create(COM_PTR_GET(Device), RcallSize, RcallStride); {
-			auto Data = ShaderTables.back().Map(); {
-				std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("OnCallable")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-				std::memcpy(Data + RcallStride, SOP->GetShaderIdentifier(TEXT("OnCallable_1")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-				std::memcpy(Data + RcallStride + RcallStride, SOP->GetShaderIdentifier(TEXT("OnCallable_2")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-			} ShaderTables.back().Unmap();
-		}
-#pragma endregion
-
-		const auto DRD = D3D12_DISPATCH_RAYS_DESC({
-			.RayGenerationShaderRecord = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({.StartAddress = ShaderTables[0].Range.StartAddress, .SizeInBytes = ShaderTables[0].Range.SizeInBytes }),
-			.MissShaderTable = ShaderTables[1].Range,
-#pragma region HIT
-			.HitGroupTable = ShaderTables[2].Range,
-#pragma endregion
-#pragma region CALLABLE
-			.CallableShaderTable = ShaderTables[3].Range,
-#pragma endregion
-			.Width = static_cast<UINT>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()), .Depth = 1
-		});
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DRD).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), sizeof(DRD), &DRD);
 	}
 	virtual void PopulateCommandList(const size_t i) override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }

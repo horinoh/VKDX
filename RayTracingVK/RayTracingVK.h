@@ -431,21 +431,24 @@ public:
 	virtual void CreateShaderBindingTable() override {
 		const auto& PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		auto& SBT = ShaderBindingTables.emplace_back(); {
+			//!< 各グループのハンドルの個数 (Genは1固定)
 			const auto MissCount = 1;
 			const auto HitCount = 1;
-
+			//!< シェーダレコードサイズ
 			constexpr auto GenRecordSize = 0;
 			constexpr auto MissRecordSize = 0;
+#pragma region SHADER_RECORD
 			constexpr auto HitRecordSize = sizeof(glm::vec4);
-
+#pragma endregion
+			//!< ストライド
 			const auto GenStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + GenRecordSize, PDRTPP.shaderGroupHandleAlignment);
 			const auto MissStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + MissRecordSize, PDRTPP.shaderGroupHandleAlignment);
 			const auto HitStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + HitRecordSize, PDRTPP.shaderGroupHandleAlignment);
-
+			//!< サイズ
 			const auto GenSize = Cmn::RoundUp(GenStride, PDRTPP.shaderGroupBaseAlignment);
 			const auto MissSize = Cmn::RoundUp(MissCount * MissStride, PDRTPP.shaderGroupBaseAlignment);
 			const auto HitSize = Cmn::RoundUp(HitCount * HitStride, PDRTPP.shaderGroupBaseAlignment);
-
+			//!< リージョン
 			SBT.StridedDeviceAddressRegions[0] = VkStridedDeviceAddressRegionKHR({ .stride = GenSize, .size = GenSize });
 			SBT.StridedDeviceAddressRegions[1] = VkStridedDeviceAddressRegionKHR({ .stride = MissStride, .size = MissSize });
 			SBT.StridedDeviceAddressRegions[2] = VkStridedDeviceAddressRegionKHR({ .stride = HitStride, .size = HitSize });
@@ -460,12 +463,14 @@ public:
 				auto BData = reinterpret_cast<std::byte*>(MapData);
 				auto HData = data(HandleData);
 
+				//!< グループ (Gen)
 				const auto& GenRegion = SBT.StridedDeviceAddressRegions[0]; {
 					std::memcpy(BData, HData, PDRTPP.shaderGroupHandleSize);
 					HData += PDRTPP.shaderGroupHandleSize;
 					BData += GenRegion.size;
 				}
 
+				//!< グループ (Miss)
 				const auto& MissRegion = SBT.StridedDeviceAddressRegions[1]; {
 					auto p = BData;
 					for (auto i = 0; i < MissCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += MissRegion.stride) {
@@ -474,6 +479,7 @@ public:
 					BData += MissRegion.size;
 				}
 
+				//!< グループ (Hit)
 				const auto& HitRegion = SBT.StridedDeviceAddressRegions[2]; {
 					auto p = BData;
 					for (auto i = 0; i < HitCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += HitRegion.stride) {
