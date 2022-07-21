@@ -447,14 +447,22 @@ public:
 
 				//!< グループ (Hit)
 				const auto& HitRegion = ST.AddressRangeAndStrides[1]; {
+#pragma region SHADER_RECORD
+					const auto& VB = CbvSrvUavGPUHandles.back()[3];
+					const auto& IB = CbvSrvUavGPUHandles.back()[4];
+#pragma endregion
+
 					auto p = Data;
 					for (auto i = 0; i < HitCount; ++i, p += HitRegion.StrideInBytes) {
 						std::memcpy(p, SOP->GetShaderIdentifier(TEXT("HitGroup")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES); //!< ヒットグループ作成時に指定したヒットグループ名を使用
+
+						//!< 詰めて格納してよい
 #pragma region SHADER_RECORD
+						auto pp = p + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 						//!< [3] SRV (VB)
-						std::memcpy(p + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, &CbvSrvUavGPUHandles.back()[3], sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
+						std::memcpy(pp, &VB, sizeof(VB)); pp += sizeof(VB);
 						//!< [4] SRV (IB)
-						std::memcpy(p + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + sizeof(D3D12_GPU_DESCRIPTOR_HANDLE), &CbvSrvUavGPUHandles.back()[4], sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
+						std::memcpy(pp, &IB, sizeof(IB)); pp += sizeof(IB);
 #pragma endregion
 					}
 					Data += HitRegion.SizeInBytes;

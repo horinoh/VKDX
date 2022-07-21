@@ -481,19 +481,24 @@ public:
 
 				//!< ƒOƒ‹[ƒv (Hit)
 				const auto& HitRegion = SBT.StridedDeviceAddressRegions[2]; {
+#pragma region SHADER_RECORD
+					const auto VB = GetDeviceAddress(Device, VertexBuffer.Buffer);
+					const auto IB = GetDeviceAddress(Device, IndexBuffer.Buffer);
+#pragma endregion
 					auto p = BData;
 					for (auto i = 0; i < HitCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += HitRegion.stride) {
 						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
-					}
-#pragma region SHADER_RECORD
-					//const auto v = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-					//std::memcpy(p, &v, sizeof(v)); p += HitRegion.stride;
 
-					const auto VB = GetDeviceAddress(Device, VertexBuffer.Buffer);
-					std::memcpy(p, &VB, sizeof(VB)); p += HitRegion.stride;
-					const auto IB = GetDeviceAddress(Device, IndexBuffer.Buffer);
-					std::memcpy(p, &VB, sizeof(IB)); p += HitRegion.stride;
+						//!< ‹l‚ß‚ÄŠi”[‚µ‚Ä‚æ‚¢
+#pragma region SHADER_RECORD
+						auto pp = p + PDRTPP.shaderGroupHandleSize;
+						std::memcpy(pp, &VB, sizeof(VB)); p += sizeof(VB);
+						std::memcpy(pp, &IB, sizeof(IB)); p += sizeof(IB);
+						//const auto v = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+						//std::memcpy(pp, &v, sizeof(v)); p += sizeof(v);
 #pragma endregion
+					}
+
 					BData += HitRegion.size;
 				}
 
