@@ -3,7 +3,7 @@
 
 layout(location = 0) rayPayloadInEXT vec3 Payload;
 
-layout (binding = 4, set = 0) uniform samplerCube CubeMap;
+layout (binding = 2, set = 0) uniform samplerCube CubeMap;
 
 void main()
 {

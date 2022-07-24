@@ -402,8 +402,8 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	//!< (フォーマット指定で)選択したアウトプットのディスプレイモードを列挙
 	GetDisplayModeList(COM_PTR_GET(Output), DXGI_FORMAT_R8G8B8A8_UNORM);
 
-#if 1
-	//!< 実験的機能を有効化する
+#if false
+	//!< 実験的機能を有効化する (Windows を Developer Mode にする必要がある)
 	const std::array Experimental = { D3D12ExperimentalShaderModels, /*D3D12RaytracingPrototype*/ };
 	if (FAILED(D3D12EnableExperimentalFeatures(static_cast<UINT>(size(Experimental)), data(Experimental), nullptr, nullptr))) {
 		Warning("\tD3D12EnableExperimentalFeatures() failed\n");

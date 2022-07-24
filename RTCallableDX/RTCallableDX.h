@@ -324,8 +324,7 @@ public:
 				//!< [1] UAV
 				GCL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[1]);
 
-				COM_PTR<ID3D12GraphicsCommandList4> GCL4;
-				VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
+				TO_GCL4(GCL, GCL4);
 				GCL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
 
 				GCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);

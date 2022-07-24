@@ -22,8 +22,8 @@ struct VertexPN
     vec3 Normal;
 };
 #if 1
-layout(binding = 2, set = 0) readonly buffer VertexBuffer { VertexPN Vertices[]; } VB;
-layout(binding = 3, set = 0) readonly buffer IndexBuffer { uvec3 Indices[]; } IB;
+layout(binding = 4, set = 0) readonly buffer VertexBuffer { VertexPN Vertices[]; } VB;
+layout(binding = 5, set = 0) readonly buffer IndexBuffer { uvec3 Indices[]; } IB;
 #else
 layout(buffer_reference, scalar, buffer_reference_align = 4) readonly buffer VertexBuffer { VertexPN Vertices[]; };
 layout(buffer_reference, scalar) readonly buffer IndexBuffer { uvec3 Indices[]; };
@@ -56,6 +56,6 @@ void main()
 //    traceRayEXT(TLAS, gl_RayFlagsNoneEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
 
     Payload = Hit.Normal * 0.5f + 0.5f;
-    Payload = WorldNrm * 0.5f + 0.5f;
+    //Payload = WorldNrm * 0.5f + 0.5f;
     //Payload = v.xyz;
 }

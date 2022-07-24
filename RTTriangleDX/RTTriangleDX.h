@@ -17,8 +17,6 @@ public:
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
 		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
-		COM_PTR<ID3D12GraphicsCommandList4> GCL4;
-		VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
@@ -286,6 +284,8 @@ public:
 		const auto RT = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 			PopulateBeginRenderTargetCommand(GCL, RT); {
+				//!< レイトレーシングでは SetGraphicsXXX ではなく SetComputeXXX 系を使用
+				
 				GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
@@ -295,8 +295,7 @@ public:
 				//!< [1] UAV
 				GCL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[1]);
 
-				COM_PTR<ID3D12GraphicsCommandList4> GCL4;
-				VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
+				TO_GCL4(GCL, GCL4);
 				GCL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
 
 #ifdef USE_INDIRECT

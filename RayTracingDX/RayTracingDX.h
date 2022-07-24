@@ -221,7 +221,9 @@ public:
 	virtual void CreateRootSignature() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
-		//!< (グローバル)ルートシグネチャ (Global root signature) ... ここでは RegisterSpace = 0 とする
+		//!< ここではグローバルルートシグネチャに RegisterSpace = 0、ローカルルートシグネチャに RegisterSpace = 1 で運用する (レジスタ割り当てを楽にする為)
+
+		//!< グローバルルートシグネチャ (Global root signature) 
 		{
 			COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
@@ -247,7 +249,8 @@ public:
 					.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
 				}),
 				//!< CBV0 (CB) ... register(b0, space0)
-				//!< SetComputeRootConstantBufferView() を使用する為、D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE ではなくて D3D12_ROOT_PARAMETER_TYPE_CBV を使用している
+				//!< バックバッファ分のシェーダテーブルを作成しないで済むように SetComputeRootConstantBufferView() を使用する
+				//!< SetComputeRootConstantBufferView() を使用する為、D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE ではなくて D3D12_ROOT_PARAMETER_TYPE_CBV を使用
 				D3D12_ROOT_PARAMETER({
 					.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV,
 					.Descriptor = D3D12_ROOT_DESCRIPTOR({ .ShaderRegister = 0, .RegisterSpace = 0 }),
@@ -255,13 +258,13 @@ public:
 				}),
 			}, {
 				StaticSamplerDescs[0],
-			}, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+			}, D3D12_ROOT_SIGNATURE_FLAG_NONE); //!< グローバルルートシグネチャでは D3D12_ROOT_SIGNATURE_FLAG_NONE を指定して作成
 #endif
 			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		}
 
 #pragma region SHADER_RECORD
-		//!< ローカルルートシグネチャ (Local root signature) ... ここでは RegisterSpace = 1 とする
+		//!< ローカルルートシグネチャ (Local root signature) ... D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE を指定して作成
 		{
 			COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
@@ -280,7 +283,7 @@ public:
 					.Descriptor = D3D12_ROOT_DESCRIPTOR({.ShaderRegister = 1, .RegisterSpace = 1 }),
 					.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
 				}),
-				}, {}, D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE);
+				}, {}, D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE); //!< ローカルルートシグネチャでは D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE を指定して作成
 #endif
 			VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 		}
@@ -339,16 +342,21 @@ public:
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, .pDesc = &RSC }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, .pDesc = &RPC }),
 		};
+
 #pragma region SHADER_RECORD
+		SSs.reserve(size(SSs) + 2); //!< 以下で直前要素のポインタを指定するため、内部データの引っ越しが起こらないようにしておく
 		{
+			//!< ローカルルートシグネチャ
 			const D3D12_LOCAL_ROOT_SIGNATURE LRS = { .pLocalRootSignature = COM_PTR_GET(RootSignatures[1]) };
 			SSs.emplace_back(D3D12_STATE_SUBOBJECT({ .Type = D3D12_STATE_SUBOBJECT_TYPE_LOCAL_ROOT_SIGNATURE, .pDesc = &LRS }));
-			//!< ローカルルートシグネチャとヒットグループの関連付け
+
+			//!< ローカルルートシグネチャ(直前に追加したD3D12_STATE_SUBOBJECT)とヒットグループの関連付け
 			std::array Exports = { TEXT("HitGroup") };
-			const D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION STEA = { .pSubobjectToAssociate = &SSs.back(), .NumExports = static_cast<UINT>(size(Exports)), .pExports = data(Exports) };
+			const D3D12_SUBOBJECT_TO_EXPORTS_ASSOCIATION STEA = { .pSubobjectToAssociate = &SSs.back()/*直前のD3D12_STATE_SUBOBJECT*/, .NumExports = static_cast<UINT>(size(Exports)), .pExports = data(Exports)};
 			SSs.emplace_back(D3D12_STATE_SUBOBJECT({ .Type = D3D12_STATE_SUBOBJECT_TYPE_SUBOBJECT_TO_EXPORTS_ASSOCIATION, .pDesc = &STEA }));
 		}
 #pragma endregion
+
 		const D3D12_STATE_OBJECT_DESC SOD = {
 			.Type = D3D12_STATE_OBJECT_TYPE_RAYTRACING_PIPELINE,
 			.NumSubobjects = static_cast<UINT>(size(SSs)), .pSubobjects = data(SSs)
@@ -498,11 +506,10 @@ public:
 				//!< [2] UAV
 				GCL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[2]);
 				
-				//!< CBV (デスクリプタヒープとは別扱い)
+				//!< CBV (デスクリプタヒープとは別扱い) バックバッファ分のシェーダテーブルを作成しないで済む為に SetComputeRootConstantBufferView() を使用 
 				GCL->SetComputeRootConstantBufferView(2, ConstantBuffers[i].Resource->GetGPUVirtualAddress());
 
-				COM_PTR<ID3D12GraphicsCommandList4> GCL4;
-				VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)));
+				TO_GCL4(GCL, GCL4);
 				GCL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
 
 				GCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);

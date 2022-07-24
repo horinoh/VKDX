@@ -22,7 +22,7 @@ void OnClosestHit(inout Payload Pay, in BuiltInTriangleIntersectionAttributes BI
     VertexPN Hit;
     Hit.Position = VB[Index.x].Position * BaryCentric.x + VB[Index.y].Position * BaryCentric.y + VB[Index.z].Position * BaryCentric.z;
     Hit.Normal = normalize(VB[Index.x].Normal * BaryCentric.x + VB[Index.y].Normal * BaryCentric.y + VB[Index.z].Normal * BaryCentric.z);
-    Hit.Normal = float3(0, 1, 0);
+    //Hit.Normal = float3(0, 1, 0);
     
     //const float3 WorldPos = mul(float4(Hit.Position, 1.0f), ObjectToWorld4x3());
     //const float3 WorldNrm = mul(Hit.Normal, (float3x3) ObjectToWorld4x3());
@@ -63,4 +63,6 @@ void OnClosestHit(inout Payload Pay, in BuiltInTriangleIntersectionAttributes BI
         TraceRay(TLAS, RAY_FLAG_NONE, 0xff, 0, 1, 0, Ray, Pay2);
         Pay.Color = Pay2.Color;
     }
+    
+    Pay.Color = Hit.Normal * 0.5f + 0.5f;
 }

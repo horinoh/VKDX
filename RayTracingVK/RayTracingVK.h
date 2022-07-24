@@ -273,19 +273,20 @@ public:
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 		const std::array ISs = { Samplers[0] };
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
-			//!< TLAS
+			//!< AS (TLAS)
 			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR | VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .pImmutableSamplers = nullptr }),
-			//!< Storage Image
+			//!< StorageImage (RenderTarget)
 			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
 
-			//!< VertexBuffer
-			VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .pImmutableSamplers = nullptr }),
-			//!< IndexBuffer
-			VkDescriptorSetLayoutBinding({.binding = 3, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .pImmutableSamplers = nullptr }),
-			//!< Sampler + Cubemap
-			VkDescriptorSetLayoutBinding({.binding = 4, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_MISS_BIT_KHR/*| VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR*/, .pImmutableSamplers = data(ISs)}),
-			//!< UB
-			VkDescriptorSetLayoutBinding({.binding = 5, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
+			//!< CombinedImageSampler (CubeMap)
+			VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_MISS_BIT_KHR/*| VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR*/, .pImmutableSamplers = data(ISs)}),
+			//!< UniformBuffer
+			VkDescriptorSetLayoutBinding({.binding = 3, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
+		
+			//!< StorageBuffer (VB)
+			VkDescriptorSetLayoutBinding({.binding = 4, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .pImmutableSamplers = nullptr }),
+			//!< StorageBuffer (IB)
+			VkDescriptorSetLayoutBinding({.binding = 5, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .pImmutableSamplers = nullptr }),
 		});
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
@@ -341,12 +342,18 @@ public:
 	}
 	virtual void CreateDescriptor() override {
 		VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT, {
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1 }), //!< TLAS
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1 }), //!< StorageImage
+			//!< AS (TLAS)
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1 }), 
+			//!< StorageImage (RenderTarget)
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1 }),
 
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = 2 }), //!< VertexBuffer, IndexBuffer
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 }), //!< Sampler + Cubemap
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }) //!< UB * N
+			//!< CombinedImageSampler (CubeMap)
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 }),
+			//!< UniformBuffer * N
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = static_cast<uint32_t>(size(SwapchainImages)) }), 
+			
+			//!< StoageBuffer (VB, IB)
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, .descriptorCount = 2 }),
 		});
 		const std::array DSLs = { DescriptorSetLayouts[0] };
 		const VkDescriptorSetAllocateInfo DSAI = {
@@ -369,7 +376,7 @@ public:
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			const auto DII_UB = VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE });
 			const std::array WDSs = {
-				//!< TLAS
+				//!< AS (TLAS)
 				VkWriteDescriptorSet({
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.pNext = &WDSAS,
@@ -378,7 +385,7 @@ public:
 					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
 					.pImageInfo = nullptr, .pBufferInfo = nullptr, .pTexelBufferView = nullptr
 				}),
-				//!< StorageImage
+				//!< StorageImage (RenderTarget)
 				VkWriteDescriptorSet({
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.pNext = nullptr,
@@ -388,30 +395,12 @@ public:
 					.pImageInfo = &DII_Storage, .pBufferInfo = nullptr, .pTexelBufferView = nullptr
 				}),
 
-				//!< VertexBuffer
+				//!< CombinedImageSampler (CubeMap)
 				VkWriteDescriptorSet({
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.pNext = nullptr,
 					.dstSet = DescriptorSets[0],
 					.dstBinding = 2, .dstArrayElement = 0,
-					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-					.pImageInfo = nullptr, .pBufferInfo = &DII_VB, .pTexelBufferView = nullptr
-				}),
-				//!< IndexBuffer
-				VkWriteDescriptorSet({
-					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					.pNext = nullptr,
-					.dstSet = DescriptorSets[0],
-					.dstBinding = 3, .dstArrayElement = 0,
-					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-					.pImageInfo = nullptr, .pBufferInfo = &DII_IB, .pTexelBufferView = nullptr
-				}),
-				//!< CubeMap
-				VkWriteDescriptorSet({
-					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-					.pNext = nullptr,
-					.dstSet = DescriptorSets[0],
-					.dstBinding = 4, .dstArrayElement = 0,
 					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 					.pImageInfo = &DII_Cube, .pBufferInfo = nullptr, .pTexelBufferView = nullptr
 				}),
@@ -420,10 +409,29 @@ public:
 					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 					.pNext = nullptr,
 					.dstSet = DescriptorSets[0],
-					.dstBinding = 5, .dstArrayElement = 0,
+					.dstBinding = 3, .dstArrayElement = 0,
 					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 					.pImageInfo = nullptr, .pBufferInfo = &DII_UB, .pTexelBufferView = nullptr
-				})
+				}),
+
+				//!< StorageBuffer (VB)
+				VkWriteDescriptorSet({
+					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					.pNext = nullptr,
+					.dstSet = DescriptorSets[0],
+					.dstBinding = 4, .dstArrayElement = 0,
+					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+					.pImageInfo = nullptr, .pBufferInfo = &DII_VB, .pTexelBufferView = nullptr
+				}),
+				//!< StorageBuffer (IB)
+				VkWriteDescriptorSet({
+					.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+					.pNext = nullptr,
+					.dstSet = DescriptorSets[0],
+					.dstBinding = 5, .dstArrayElement = 0,
+					.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+					.pImageInfo = nullptr, .pBufferInfo = &DII_IB, .pTexelBufferView = nullptr
+				}),
 			};
 			vkUpdateDescriptorSets(Device, static_cast<uint32_t>(size(WDSs)), data(WDSs), static_cast<uint32_t>(size(CDSs)), data(CDSs));
 		}
