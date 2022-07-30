@@ -356,7 +356,9 @@ protected:
 			for (auto& i : StridedDeviceAddressRegions) {
 				i.deviceAddress = da;
 				da += i.size;
-				Win::Logf("\tdeviceAddress = %d, stride = %d, size = %d\n", i.deviceAddress, i.stride, i.size);
+				if (i.size) {
+					Win::Logf("\tdeviceAddress = %d, size = %d, stride = %d\n", i.deviceAddress, i.size, i.stride);
+				}
 			}
 
 			return *this;

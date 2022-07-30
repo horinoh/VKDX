@@ -238,27 +238,35 @@ public:
 				auto Data = reinterpret_cast<std::byte*>(MapData);
 
 				//!< グループ (Gen)
-				const auto& GenRegion = ST.AddressRange; {
-					std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("OnRayGeneration")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-					Data += GenRegion.SizeInBytes;
+				{
+					const auto& Range = ST.AddressRange; {
+						std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("OnRayGeneration")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+						Data += Range.SizeInBytes;
+					}
 				}
 
 				//!< グループ (Miss)
-				const auto& MissRegion = ST.AddressRangeAndStrides[0]; {
-					auto p = Data;
-					for (auto i = 0; i < MissCount; ++i, p += MissRegion.StrideInBytes) {
-						std::memcpy(p, SOP->GetShaderIdentifier(TEXT("OnMiss")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+				{
+					const auto Count = MissCount;
+					const auto& Range = ST.AddressRangeAndStrides[0]; {
+						auto p = Data;
+						for (auto i = 0; i < Count; ++i, p += Range.StrideInBytes) {
+							std::memcpy(p, SOP->GetShaderIdentifier(TEXT("OnMiss")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+						}
+						Data += Range.SizeInBytes;
 					}
-					Data += MissRegion.SizeInBytes;
 				}
 
 				//!< グループ (Hit)
-				const auto& HitRegion = ST.AddressRangeAndStrides[1]; {
-					auto p = Data;
-					for (auto i = 0; i < HitCount; ++i, p += HitRegion.StrideInBytes) {
-						std::memcpy(p, SOP->GetShaderIdentifier(TEXT("HitGroup")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES); //!< ヒットグループ作成時に指定したヒットグループ名を使用
+				{
+					const auto Count = HitCount;
+					const auto& Range = ST.AddressRangeAndStrides[1]; {
+						auto p = Data;
+						for (auto i = 0; i < Count; ++i, p += Range.StrideInBytes) {
+							std::memcpy(p, SOP->GetShaderIdentifier(TEXT("HitGroup")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES); //!< ヒットグループ作成時に指定したヒットグループ名を使用
+						}
+						Data += Range.SizeInBytes;
 					}
-					Data += HitRegion.SizeInBytes;
 				}
 			} ST.Unmap();
 

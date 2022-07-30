@@ -472,44 +472,51 @@ public:
 				auto HData = data(HandleData);
 
 				//!< ƒOƒ‹[ƒv (Gen)
-				const auto& GenRegion = SBT.StridedDeviceAddressRegions[0]; {
-					std::memcpy(BData, HData, PDRTPP.shaderGroupHandleSize);
-					HData += PDRTPP.shaderGroupHandleSize;
-					BData += GenRegion.size;
+				{
+					const auto& Region = SBT.StridedDeviceAddressRegions[0]; {
+						std::memcpy(BData, HData, PDRTPP.shaderGroupHandleSize);
+						HData += PDRTPP.shaderGroupHandleSize;
+						BData += Region.size;
+					}
 				}
 
 				//!< ƒOƒ‹[ƒv (Miss)
-				const auto& MissRegion = SBT.StridedDeviceAddressRegions[1]; {
-					auto p = BData;
-					for (auto i = 0; i < MissCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += MissRegion.stride) {
-						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
+				{
+					const auto Count = MissCount;
+					const auto& Region = SBT.StridedDeviceAddressRegions[1]; {
+						auto p = BData;
+						for (auto i = 0; i < Count; ++i, HData += PDRTPP.shaderGroupHandleSize, p += Region.stride) {
+							std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
+						}
+						BData += Region.size;
 					}
-					BData += MissRegion.size;
 				}
 
 				//!< ƒOƒ‹[ƒv (Hit)
-				const auto& HitRegion = SBT.StridedDeviceAddressRegions[2]; {
+				{
+					const auto Count = HitCount;
+					const auto& Region = SBT.StridedDeviceAddressRegions[2]; {
 #pragma region SHADER_RECORD
-					const auto VB = GetDeviceAddress(Device, VertexBuffer.Buffer);
-					const auto IB = GetDeviceAddress(Device, IndexBuffer.Buffer);
+						const auto VB = GetDeviceAddress(Device, VertexBuffer.Buffer);
+						const auto IB = GetDeviceAddress(Device, IndexBuffer.Buffer);
 #pragma endregion
-					auto p = BData;
-					for (auto i = 0; i < HitCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += HitRegion.stride) {
-						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
+						auto p = BData;
+						for (auto i = 0; i < Count; ++i, HData += PDRTPP.shaderGroupHandleSize, p += Region.stride) {
+							std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
 
-						//!< ‹l‚ß‚ÄŠi”[‚µ‚Ä‚æ‚¢
+							//!< ‹l‚ß‚ÄŠi”[‚µ‚Ä‚æ‚¢
 #pragma region SHADER_RECORD
-						auto pp = p + PDRTPP.shaderGroupHandleSize;
-						std::memcpy(pp, &VB, sizeof(VB)); p += sizeof(VB);
-						std::memcpy(pp, &IB, sizeof(IB)); p += sizeof(IB);
-						//const auto v = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-						//std::memcpy(pp, &v, sizeof(v)); p += sizeof(v);
+							auto pp = p + PDRTPP.shaderGroupHandleSize;
+							std::memcpy(pp, &VB, sizeof(VB)); p += sizeof(VB);
+							std::memcpy(pp, &IB, sizeof(IB)); p += sizeof(IB);
+							//const auto v = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+							//std::memcpy(pp, &v, sizeof(v)); p += sizeof(v);
 #pragma endregion
+						}
+
+						BData += Region.size;
 					}
-
-					BData += HitRegion.size;
 				}
-
 			} SBT.Unmap(Device);
 		}
 

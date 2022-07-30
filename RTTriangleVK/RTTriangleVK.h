@@ -313,33 +313,40 @@ public:
 				auto Data = reinterpret_cast<std::byte*>(MapData);
 
 				//!< グループ (Gen)
-				const auto& GenRegion = SBT.StridedDeviceAddressRegions[0]; {
-					//!< グループのハンドル
-					std::memcpy(Data, HData, PDRTPP.shaderGroupHandleSize);
-					HData += PDRTPP.shaderGroupHandleSize;
-					Data += GenRegion.size;
+				{
+					const auto& Region = SBT.StridedDeviceAddressRegions[0]; {
+						//!< グループのハンドル
+						std::memcpy(Data, HData, PDRTPP.shaderGroupHandleSize);
+						HData += PDRTPP.shaderGroupHandleSize;
+						Data += Region.size;
+					}
 				}
 
 				//!< グループ (Miss)
-				const auto& MissRegion = SBT.StridedDeviceAddressRegions[1]; {
-					auto p = Data;
-					//!< グループのハンドル
-					for (auto i = 0; i < MissCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += MissRegion.stride) {
-						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
+				{
+					const auto Count = MissCount;
+					const auto& Region = SBT.StridedDeviceAddressRegions[1]; {
+						auto p = Data;
+						//!< グループのハンドル
+						for (auto i = 0; i < Count; ++i, HData += PDRTPP.shaderGroupHandleSize, p += Region.stride) {
+							std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
+						}
+						Data += Region.size;
 					}
-					Data += MissRegion.size;
 				}
 
 				//!< グループ (Hit)
-				const auto& HitRegion = SBT.StridedDeviceAddressRegions[2]; {
-					auto p = Data;
-					//!< グループのハンドル
-					for (auto i = 0; i < HitCount; ++i, HData += PDRTPP.shaderGroupHandleSize, p += HitRegion.stride) {
-						std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
+				{
+					const auto Count = HitCount;
+					const auto& Region = SBT.StridedDeviceAddressRegions[2]; {
+						auto p = Data;
+						//!< グループのハンドル
+						for (auto i = 0; i < Count; ++i, HData += PDRTPP.shaderGroupHandleSize, p += Region.stride) {
+							std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
+						}
+						Data += Region.size;
 					}
-					Data += HitRegion.size;
 				}
-
 			} SBT.Unmap(Device);
 		}
 

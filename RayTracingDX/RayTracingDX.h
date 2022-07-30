@@ -427,8 +427,8 @@ public:
 			constexpr auto HitStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + HitRecordSize, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
 			//!< サイズ
 			constexpr auto GenSize = Cmn::RoundUp(GenStride, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
-			constexpr auto MissSize = Cmn::RoundUp(MissStride, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
-			constexpr auto HitSize = Cmn::RoundUp(HitStride, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+			constexpr auto MissSize = Cmn::RoundUp(MissCount * MissStride, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
+			constexpr auto HitSize = Cmn::RoundUp(HitCount * HitStride, D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT);
 			//!< レンジ
 			ST.AddressRange = D3D12_GPU_VIRTUAL_ADDRESS_RANGE({ .SizeInBytes = GenSize });
 			ST.AddressRangeAndStrides[0] = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({ .SizeInBytes = MissSize, .StrideInBytes = MissStride });
@@ -439,41 +439,49 @@ public:
 				auto Data = reinterpret_cast<std::byte*>(MapData);
 
 				//!< グループ (Gen)
-				const auto& GenRegion = ST.AddressRange; {
-					std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("OnRayGeneration")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-					Data += GenRegion.SizeInBytes;
+				{
+					const auto& Range = ST.AddressRange; {
+						std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("OnRayGeneration")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+						Data += Range.SizeInBytes;
+					}
 				}
 
 				//!< グループ (Miss)
-				const auto& MissRegion = ST.AddressRangeAndStrides[0]; {
-					auto p = Data;
-					for (auto i = 0; i < MissCount; ++i, p += MissRegion.StrideInBytes) {
-						std::memcpy(p, SOP->GetShaderIdentifier(TEXT("OnMiss")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+				{
+					const auto Count = MissCount;
+					const auto& Range = ST.AddressRangeAndStrides[0]; {
+						auto p = Data;
+						for (auto i = 0; i < Count; ++i, p += Range.StrideInBytes) {
+							std::memcpy(p, SOP->GetShaderIdentifier(TEXT("OnMiss")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+						}
+						Data += Range.SizeInBytes;
 					}
-					Data += MissRegion.SizeInBytes;
 				}
 
 				//!< グループ (Hit)
-				const auto& HitRegion = ST.AddressRangeAndStrides[1]; {
+				{
+					const auto Count = HitCount;
+					const auto& Range = ST.AddressRangeAndStrides[1]; {
 #pragma region SHADER_RECORD
-					const auto& VB = CbvSrvUavGPUHandles.back()[3];
-					const auto& IB = CbvSrvUavGPUHandles.back()[4];
+						const auto& VB = CbvSrvUavGPUHandles.back()[3];
+						const auto& IB = CbvSrvUavGPUHandles.back()[4];
 #pragma endregion
 
-					auto p = Data;
-					for (auto i = 0; i < HitCount; ++i, p += HitRegion.StrideInBytes) {
-						std::memcpy(p, SOP->GetShaderIdentifier(TEXT("HitGroup")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES); //!< ヒットグループ作成時に指定したヒットグループ名を使用
+						auto p = Data;
+						for (auto i = 0; i < Count; ++i, p += Range.StrideInBytes) {
+							std::memcpy(p, SOP->GetShaderIdentifier(TEXT("HitGroup")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES); //!< ヒットグループ作成時に指定したヒットグループ名を使用
 
-						//!< 詰めて格納してよい
+							//!< 詰めて格納してよい
 #pragma region SHADER_RECORD
-						auto pp = p + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
-						//!< [3] SRV (VB)
-						std::memcpy(pp, &VB, sizeof(VB)); pp += sizeof(VB);
-						//!< [4] SRV (IB)
-						std::memcpy(pp, &IB, sizeof(IB)); pp += sizeof(IB);
+							auto pp = p + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
+							//!< [3] SRV (VB)
+							std::memcpy(pp, &VB, sizeof(VB)); pp += sizeof(VB);
+							//!< [4] SRV (IB)
+							std::memcpy(pp, &IB, sizeof(IB)); pp += sizeof(IB);
 #pragma endregion
+						}
+						Data += Range.SizeInBytes;
 					}
-					Data += HitRegion.SizeInBytes;
 				}
 			} ST.Unmap();
 

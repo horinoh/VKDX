@@ -251,10 +251,14 @@ protected:
 			auto va = Resource->GetGPUVirtualAddress();
 			AddressRange.StartAddress = va;
 			va += AddressRange.SizeInBytes;
+			Win::Logf("\tStartAddress = %d, SizeInBytes = %d\n", AddressRange.StartAddress, AddressRange.SizeInBytes);
+
 			for (auto& i : AddressRangeAndStrides) {
 				i.StartAddress = va;
 				va += i.SizeInBytes;
-				Win::Logf("\tStartAddress = %d, StrideInBytes = %d, SizeInBytes = %d\n", i.StartAddress, i.StrideInBytes, i.SizeInBytes);
+				if (i.SizeInBytes) {
+					Win::Logf("\tStartAddress = %d, SizeInBytes = %d, StrideInBytes = %d\n", i.StartAddress, i.SizeInBytes, i.StrideInBytes);
+				}
 			}
 
 			return *this;
