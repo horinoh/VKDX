@@ -326,10 +326,10 @@ public:
 		const auto RT = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 			PopulateBeginRenderTargetCommand(GCL, RT); {
-				GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
-
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
-				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs)); 
+				
+				GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
 				//!< [0] TLAS
 				GCL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
 				//!< [1] UAV

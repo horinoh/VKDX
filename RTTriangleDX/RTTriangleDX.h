@@ -277,7 +277,7 @@ public:
 				.RayGenerationShaderRecord = ST.AddressRange,
 				.MissShaderTable = ST.AddressRangeAndStrides[0],
 				.HitGroupTable = ST.AddressRangeAndStrides[1],
-				.CallableShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0}),
+				.CallableShaderTable = ST.AddressRangeAndStrides[2],
 				.Width = static_cast<UINT>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()), .Depth = 1
 			});
 			IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DRD).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), sizeof(DRD), &DRD);
@@ -292,12 +292,11 @@ public:
 		const auto RT = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 			PopulateBeginRenderTargetCommand(GCL, RT); {
-				//!< レイトレーシングでは SetGraphicsXXX ではなく SetComputeXXX 系を使用
-				
-				GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
-
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
 				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+
+				//!< レイトレーシングでは SetGraphicsXXX ではなく SetComputeXXX 系を使用
+				GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
 				//!< [0] TLAS
 				GCL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
 				//!< [1] UAV
@@ -314,7 +313,7 @@ public:
 				  .RayGenerationShaderRecord = ST.AddressRange,
 				  .MissShaderTable = ST.AddressRangeAndStrides[0],
 				  .HitGroupTable = ST.AddressRangeAndStrides[1],
-				  .CallableShaderTable = D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({.StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0}),
+				  .CallableShaderTable = ST.AddressRangeAndStrides[2],
 				  .Width = static_cast<UINT>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()), .Depth = 1
 				});
 				GCL4->DispatchRays(&DRD);

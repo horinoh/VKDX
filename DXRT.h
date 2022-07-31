@@ -239,7 +239,8 @@ protected:
 	public:
 		//!< Gen 用
 		D3D12_GPU_VIRTUAL_ADDRESS_RANGE AddressRange = { .StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0 };
-		//!< 順序は決まっていないが、Miss, Hit, Call 用の 3 つ分
+		//!< 順序は任意だが、Miss, Hit, Call 用の 3 つ分
+		//!< (ただし D3D12_DISPATCH_RAYS_DESC にそのままの順序で渡したい場合は Miss, Hit, Call の順にすること)
 		std::array<D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE, 3> AddressRangeAndStrides = {
 			D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({ .StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0 }),
 			D3D12_GPU_VIRTUAL_ADDRESS_RANGE_AND_STRIDE({ .StartAddress = D3D12_GPU_VIRTUAL_ADDRESS(0), .SizeInBytes = 0, .StrideInBytes = 0 }),

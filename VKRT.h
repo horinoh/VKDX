@@ -338,7 +338,8 @@ protected:
 	private:
 		using Super = BufferMemory;
 	public:
-		//!< ‡˜‚ÍŒˆ‚Ü‚Á‚Ä‚¢‚È‚¢‚ªAGen, Miss, Hit, Call —p‚Ì 4 ‚Â•ª
+		//!< ‡˜‚Í”CˆÓ‚¾‚ªAGen, Miss, Hit, Call —p‚Ì 4 ‚Â•ª 
+		//!< (‚½‚¾‚µ vkCmdTraceRaysKHR(), vkCmdTraceRaysIndirectKHR() ‚É‚»‚Ì‚Ü‚Ü‚Ì‡˜‚Å“n‚µ‚½‚¢ê‡‚Í Gen, Miss, Hit, Call ‚Ì‡‚É‚·‚é‚±‚Æ)
 		std::array<VkStridedDeviceAddressRegionKHR, 4> StridedDeviceAddressRegions = {
 			VkStridedDeviceAddressRegionKHR({.deviceAddress = 0, .stride = 0, .size = 0 }),
 			VkStridedDeviceAddressRegionKHR({.deviceAddress = 0, .stride = 0, .size = 0 }), 
