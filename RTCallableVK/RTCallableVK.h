@@ -79,25 +79,38 @@ public:
 #pragma endregion
 
 #pragma region TLAS_GEOMETRY
-		//!< instanceCustomIndex					: 0==市松模様, 1==縦線, 2==横線 (ここでは CallableShader の出し分けに使用)
-		//!< instanceShaderBindingTableRecordOffset	: 0==赤, 1==緑 (HitShader の出し分けに使用)
+		//!< instanceCustomIndex					: 0==市松模様, 1==縦線, 2==横線 (ここではインスタンス毎の CallableShader の出し分けに使用)
+		//!< instanceShaderBindingTableRecordOffset	: 0==赤, 1==緑 (ここではインスタンス毎の HitShader の出し分けに使用)
 		const std::array ASIs = {
 			#pragma region INSTANCES
+			//!< 市松赤(中央)
 			VkAccelerationStructureInstanceKHR({
-				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, -0.5f,
+				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, 0.0f,
 													0.0f, 1.0f, 0.0f, 0.0f,
 													0.0f, 0.0f, 1.0f, 0.0f}),
-				.instanceCustomIndex = 0, //!< [GLSL] gl_InstanceCustomIndexEXT ([HLSL] InstanceID()相当) (ここでは CallableShader の出し分けに使用)
+				.instanceCustomIndex = 0, //!< [GLSL] gl_InstanceCustomIndexEXT ([HLSL] InstanceID()相当) (ここではインスタンス毎の CallableShader の出し分けに使用)
 				.mask = 0xff,
-				.instanceShaderBindingTableRecordOffset = 0, //!< ヒットシェーダインデックス (HitShader の出し分けに使用)
+				.instanceShaderBindingTableRecordOffset = 0, //!< ヒットインデックス (ここではインスタンス毎の HitShader の出し分けに使用)
 				.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR,
 				.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().AccelerationStructure)
 			}),
+			//!< 縦赤(左)
 			VkAccelerationStructureInstanceKHR({
-				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, 0.5f,
+				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, -1.0f,
 													0.0f, 1.0f, 0.0f, 0.0f,
 													0.0f, 0.0f, 1.0f, 0.0f}),
-				.instanceCustomIndex = 1,
+				.instanceCustomIndex = 1, 
+				.mask = 0xff,
+				.instanceShaderBindingTableRecordOffset = 0, 
+				.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR,
+				.accelerationStructureReference = GetDeviceAddress(Device, BLASs.back().AccelerationStructure)
+			}),
+			//!< 横緑(右)
+			VkAccelerationStructureInstanceKHR({
+				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, 1.0f,
+													0.0f, 1.0f, 0.0f, 0.0f,
+													0.0f, 0.0f, 1.0f, 0.0f}),
+				.instanceCustomIndex = 2,
 				.mask = 0xff,
 				.instanceShaderBindingTableRecordOffset = 1,
 				.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR,
@@ -234,6 +247,9 @@ public:
 				.basePipelineHandle = VK_NULL_HANDLE, .basePipelineIndex = -1
 			}),
 		};
+#ifdef _DEBUG
+		for (auto i : RTPCIs) { assert(i.maxPipelineRayRecursionDepth <= PDRTPP.maxRayRecursionDepth); }
+#endif
 		VERIFY_SUCCEEDED(vkCreateRayTracingPipelinesKHR(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, static_cast<uint32_t>(size(RTPCIs)), data(RTPCIs), GetAllocationCallbacks(), &Pipelines.emplace_back()));
 #pragma endregion
 

@@ -131,7 +131,7 @@ public:
 				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, -1.0f,
 													0.0f, 1.0f, 0.0f, 0.0f,
 													0.0f, 0.0f, 1.0f, 0.0f}),
-				.instanceCustomIndex = 0, 
+				.instanceCustomIndex = 0, //!< [GLSL] gl_InstanceCustomIndexEXT ([HLSL] InstanceID()相当) (ここではインスタンス毎の出し分けに使)
 				.mask = 0xff,
 				.instanceShaderBindingTableRecordOffset = 0, 
 				.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FRONT_COUNTERCLOCKWISE_BIT_KHR,
@@ -327,7 +327,7 @@ public:
 				.flags = 0,
 				.stageCount = static_cast<uint32_t>(size(PSSCIs)), .pStages = data(PSSCIs),
 				.groupCount = static_cast<uint32_t>(size(RTSGCIs)), .pGroups = data(RTSGCIs),
-				.maxPipelineRayRecursionDepth = PDRTPP.maxRayRecursionDepth, //!< 最大再帰呼び出し回数を指定 (自分の環境では31だった)
+				.maxPipelineRayRecursionDepth = PDRTPP.maxRayRecursionDepth, //!< ここでは最大再帰呼び出し回数を指定 (自分の環境では31だった)
 				.pLibraryInfo = nullptr,
 				.pLibraryInterface = nullptr,
 				.pDynamicState = &PDSCI,
@@ -335,6 +335,9 @@ public:
 				.basePipelineHandle = VK_NULL_HANDLE, .basePipelineIndex = -1
 			}),
 		};
+#ifdef _DEBUG
+		for (auto i : RTPCIs) { assert(i.maxPipelineRayRecursionDepth <= PDRTPP.maxRayRecursionDepth); }
+#endif
 		VERIFY_SUCCEEDED(vkCreateRayTracingPipelinesKHR(Device, VK_NULL_HANDLE, VK_NULL_HANDLE, static_cast<uint32_t>(size(RTPCIs)), data(RTPCIs), GetAllocationCallbacks(), &Pipelines.emplace_back()));
 #pragma endregion
 

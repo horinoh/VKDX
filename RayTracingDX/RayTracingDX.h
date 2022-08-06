@@ -108,7 +108,7 @@ public:
 					{ 0.0f, 1.0f, 0.0f,  0.0f },
 					{ 0.0f, 0.0f, 1.0f,  0.0f }
 				},
-				.InstanceID = 0, 
+				.InstanceID = 0, //!< [HLSL] InstanceID() ([GLSL] gl_InstanceCustomIndexEXT 相当) (ここではインスタンス毎の出し分けに使用)
 				.InstanceMask = 0xff,
 				.InstanceContributionToHitGroupIndex = 0, 
 				.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE,
@@ -331,7 +331,8 @@ public:
 			.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2) //!< ここでは struct BuiltInTriangleIntersectionAttributes { float2 barycentrics; } を使用するため XMFLOAT2
 		};
 
-		constexpr D3D12_RAYTRACING_PIPELINE_CONFIG RPC = { .MaxTraceRecursionDepth = 31 }; //!< 最大再帰呼び出し回数を指定
+		//!< レイトレーシング再帰呼び出し可能な段数 ([0, 31]でなければならない) 
+		constexpr D3D12_RAYTRACING_PIPELINE_CONFIG RPC = { .MaxTraceRecursionDepth = 31 }; //!< ここでは最大再帰呼び出し回数を指定
 
 		std::vector SSs = {
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, .pDesc = &GRS }),

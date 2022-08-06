@@ -48,6 +48,15 @@ void main()
     const vec3 WorldPos = gl_ObjectToWorldEXT * vec4(Hit.Position, 1.0f);
     const vec3 WorldNrm = mat3(gl_ObjectToWorld3x4EXT) * Hit.Normal;
 
+    switch(gl_InstanceCustomIndexEXT) {
+        case 0:
+            break;
+        case 1:
+            break;
+        case 2:
+            break;
+    }
+
 //    Payload = vec3(0.0f);
 //    const float TMin = 0.001f;
 //    const float TMax = 100000.0f;

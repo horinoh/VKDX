@@ -11,6 +11,7 @@ struct VertexPN
 };
 StructuredBuffer<VertexPN> VB : register(t0, space1);
 StructuredBuffer<uint3> IB : register(t1, space1);
+//Texture2D<float4> Diffuse : register(t2, space1); Diffuse.SampleLevel(Sampler, UV, 0.0f);
 
 [shader("closesthit")]
 void OnClosestHit(inout Payload Pay, in BuiltInTriangleIntersectionAttributes BITIA)
@@ -29,6 +30,15 @@ void OnClosestHit(inout Payload Pay, in BuiltInTriangleIntersectionAttributes BI
     const float3 WorldPos = mul(ObjectToWorld3x4(), float4(Hit.Position, 1.0f));
     const float3 WorldNrm = mul((float3x3) ObjectToWorld3x4(), Hit.Normal);
 
+    switch(InstanceID()) {
+        case 0:
+            break;
+        case 1:
+            break;
+        case 2:
+            break;
+    }
+    
     //!< Reflection
     {
         Payload Pay1;

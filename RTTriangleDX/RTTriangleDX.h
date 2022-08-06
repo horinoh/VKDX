@@ -190,7 +190,7 @@ public:
 		};
 
 		//!< レイトレーシング再帰呼び出し可能な段数 ([0, 31]でなければならない) 
-		constexpr D3D12_RAYTRACING_PIPELINE_CONFIG RPC = { .MaxTraceRecursionDepth = 1 }; 
+		constexpr D3D12_RAYTRACING_PIPELINE_CONFIG RPC = { .MaxTraceRecursionDepth = 1 };
 
 		constexpr std::array SSs = {
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, .pDesc = &GRS }),

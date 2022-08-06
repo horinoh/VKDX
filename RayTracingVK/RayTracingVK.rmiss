@@ -7,6 +7,6 @@ layout (binding = 2, set = 0) uniform samplerCube CubeMap;
 
 void main()
 {
-    //!< 自動的にミップマップを決定できないので textureLod() で明示的に指定する
+    //!< 自動的にミップマップを決定できないので textureLod() で明示的にミップレベルを指定する
     Payload = textureLod(CubeMap, gl_WorldRayDirectionEXT, 0.0f).rgb;
 }

@@ -60,29 +60,44 @@ public:
 #pragma endregion
 
 #pragma region TLAS_INPUT
-		//!< InstanceID								: 0==市松模様, 1==縦線, 2==横線 (ここでは CallableShader の出し分けに使用)
-		//!< InstanceContributionToHitGroupIndex	: 0==赤, 1==緑 (HitShader の出し分けに使用)
+		//!< InstanceID								: 0==市松模様, 1==縦線, 2==横線 (ここではインスタンス毎の CallableShader の出し分けに使用)
+		//!< InstanceContributionToHitGroupIndex	: 0==赤, 1==緑 (ここではインスタンス毎の HitShader の出し分けに使用)
 		const std::array RIDs = {
 			#pragma region INSTANCES
+			//!< 市松赤(中央)
 			D3D12_RAYTRACING_INSTANCE_DESC({
 				.Transform = {
-					{ 1.0f, 0.0f, 0.0f, -0.5f },
+					{ 1.0f, 0.0f, 0.0f,  0.0f },
 					{ 0.0f, 1.0f, 0.0f,  0.0f },
 					{ 0.0f, 0.0f, 1.0f,  0.0f }
 				},
-				.InstanceID = 0, //!< [HLSL] InstanceID() ([GLSL] gl_InstanceCustomIndexEXT 相当) (ここでは CallableShader の出し分けに使用)
+				.InstanceID = 0, //!< [HLSL] InstanceID() ([GLSL] gl_InstanceCustomIndexEXT 相当) (ここではインスタンス毎の CallableShader の出し分けに使用)
 				.InstanceMask = 0xff,
-				.InstanceContributionToHitGroupIndex = 0, //!< ヒットグループインデックス (HitShader の出し分けに使用)
+				.InstanceContributionToHitGroupIndex = 0, //!< ヒットインデックス (ここではインスタンス毎の HitShader の出し分けに使用)
 				.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE,
 				.AccelerationStructure = BLASs.back().Resource->GetGPUVirtualAddress()
 			}),
+			//!< 縦赤(左)
 			D3D12_RAYTRACING_INSTANCE_DESC({
 				.Transform = {
-					{ 1.0f, 0.0f, 0.0f, 0.5f },
+					{ 1.0f, 0.0f, 0.0f, -1.0f },
+					{ 0.0f, 1.0f, 0.0f,  0.0f },
+					{ 0.0f, 0.0f, 1.0f,  0.0f }
+				},
+				.InstanceID = 1, 
+				.InstanceMask = 0xff,
+				.InstanceContributionToHitGroupIndex = 0,
+				.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE,
+				.AccelerationStructure = BLASs.back().Resource->GetGPUVirtualAddress()
+			}),
+			//!< 横緑(右)
+			D3D12_RAYTRACING_INSTANCE_DESC({
+				.Transform = {
+					{ 1.0f, 0.0f, 0.0f, 1.0f },
 					{ 0.0f, 1.0f, 0.0f, 0.0f },
 					{ 0.0f, 0.0f, 1.0f, 0.0f }
 				},
-				.InstanceID = 1,
+				.InstanceID = 2,
 				.InstanceMask = 0xff,
 				.InstanceContributionToHitGroupIndex = 1,
 				.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE,

@@ -9,6 +9,6 @@ TextureCube CubeMap : register(t1, space0);
 [shader("miss")]
 void OnMiss(inout Payload Pay)
 {
-    //!< 自動的にミップマップを決定できないので SampleLevel() で明示的に指定する
+    //!< 自動的にミップマップを決定できないので SampleLevel() で明示的にミップレベルを指定する
     Pay.Color = CubeMap.SampleLevel(Sampler, WorldRayDirection(), 0.0f).rgb;
 }
