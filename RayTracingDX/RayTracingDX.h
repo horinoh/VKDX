@@ -327,8 +327,8 @@ public:
 		};
 
 		constexpr D3D12_RAYTRACING_SHADER_CONFIG RSC = {
-			.MaxPayloadSizeInBytes = static_cast<UINT>(sizeof(DirectX::XMFLOAT3)), //!< Payload のサイズ
-			.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2) //!< ここでは struct BuiltInTriangleIntersectionAttributes { float2 barycentrics; } を使用するため XMFLOAT2
+			.MaxPayloadSizeInBytes = static_cast<UINT>(sizeof(DirectX::XMFLOAT3) + sizeof(int)), //!< ここでは struct PAYLOAD { float3 Color; int Recursive; } を使用するため
+			.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2) //!< ここでは struct BuiltInTriangleIntersectionAttributes { float2 barycentrics; } を使用するため
 		};
 
 		//!< レイトレーシング再帰呼び出し可能な段数 ([0, 31]でなければならない) 

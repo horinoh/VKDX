@@ -185,8 +185,8 @@ public:
 
 		//!< シェーダ内、ペイロードやアトリビュートサイズの指定
 		constexpr D3D12_RAYTRACING_SHADER_CONFIG RSC = {
-			.MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT3), //!< ペイロードサイズ (ここでは HLSL内で struct Payload { float3 Color; } を使用するため XMFLOAT3)
-			.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2) //!< アトリビュートサイズ (ここでは HLSL内で struct BuiltInTriangleIntersectionAttributes { float2 barycentrics; } を使用するため XMFLOAT2)
+			.MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT3) + sizeof(int), //!< ペイロードサイズ (ここでは HLSL内で struct PAYLOAD { float3 Color; int Recursive; } を使用するため)
+			.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2) //!< アトリビュートサイズ (ここでは HLSL内で struct BuiltInTriangleIntersectionAttributes { float2 barycentrics; } を使用するため)
 		};
 
 		//!< レイトレーシング再帰呼び出し可能な段数 ([0, 31]でなければならない) 

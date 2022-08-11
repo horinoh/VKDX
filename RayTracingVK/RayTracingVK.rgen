@@ -1,7 +1,13 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
+#extension GL_EXT_ray_flags_primitive_culling : enable
 
-layout(location = 0) rayPayloadEXT vec3 Payload;
+struct PAYLOAD 
+{
+    vec3 Color;
+    int Recursive;
+};
+layout(location = 0) rayPayloadEXT PAYLOAD Payload;
 
 layout(binding = 0, set = 0) uniform accelerationStructureEXT TLAS;
 layout(binding = 1, set = 0, rgba8) uniform image2D RenderTarget;
@@ -14,7 +20,8 @@ layout(binding = 3, set = 0) uniform Transform
 
 void main()
 {
-    Payload = vec3(0.0f);
+    Payload.Color = vec3(0.0f);
+    Payload.Recursive = 0;
 
     //!< +0.5f はピクセルの中心にするため
     const vec2 UV = (vec2(gl_LaunchIDEXT.xy) + 0.5f) / gl_LaunchSizeEXT.xy * 2.0f - 1.0f;
@@ -33,5 +40,5 @@ void main()
     //traceRayEXT(TLAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsCullBackFacingTrianglesEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
     traceRayEXT(TLAS, gl_RayFlagsNoneEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
 
-	imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(Payload, 1.0f));
+	imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(Payload.Color, 1.0f));
 }

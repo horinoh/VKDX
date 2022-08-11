@@ -1,6 +1,7 @@
-struct Payload
+struct PAYLOAD
 {
     float3 Color;
+    int Recursive;
 };
 
 RaytracingAccelerationStructure TLAS : register(t0, space0);
@@ -16,9 +17,10 @@ ConstantBuffer<Transform> CB : register(b0, space0);
 [shader("raygeneration")]
 void OnRayGeneration()
 {
-    Payload Pay;
-    Pay.Color = float3(0.0f, 0.0f, 0.0f);
- 
+    PAYLOAD Payload;
+    Payload.Color = float3(0.0f, 0.0f, 0.0f);
+    Payload.Recursive = 0;
+    
     //!< +0.5f はピクセルの中心にするため
     const float2 UV = ((float2)DispatchRaysIndex().xy + 0.5f) / DispatchRaysDimensions().xy  * 2.0f - 1.0f;
     const float2 UpY = float2(UV.x, -UV.y);
@@ -34,8 +36,8 @@ void OnRayGeneration()
     Ray.Direction = normalize(mul(CB.InvView, float4(Target.xyz, 0.0f)).xyz);
 #endif
 
-    //TraceRay(TLAS, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xff, 0, 1, 0, Ray, Pay);
-    TraceRay(TLAS, RAY_FLAG_NONE, 0xff, 0, 1, 0, Ray, Pay);
+    //TraceRay(TLAS, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xff, 0, 1, 0, Ray, Payload);
+    TraceRay(TLAS, RAY_FLAG_NONE, 0xff, 0, 1, 0, Ray, Payload);
 
-    RenderTarget[DispatchRaysIndex().xy] = float4(Pay.Color, 1.0f);
+    RenderTarget[DispatchRaysIndex().xy] = float4(Payload.Color, 1.0f);
 }

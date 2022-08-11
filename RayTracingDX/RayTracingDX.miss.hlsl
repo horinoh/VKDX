@@ -1,6 +1,7 @@
 struct Payload
 {
     float3 Color;
+    int Recursive;
 };
 
 SamplerState Sampler : register(s0, space0);

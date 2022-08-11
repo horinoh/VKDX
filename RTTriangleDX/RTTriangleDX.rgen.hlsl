@@ -18,9 +18,10 @@
 //!< ヒット
 //!<    uint HitKind()(HIT_KIND_TRIANGLE_FRONT_FACE, HIT_KIND_TRIANGLE_BACK_FACE)
     
-struct Payload
+struct PAYLOAD
 {
     float3 Color;
+    int Recursive;
 };
 
 RaytracingAccelerationStructure TLAS : register(t0, space0);
@@ -30,9 +31,10 @@ RWTexture2D<float4> RenderTarget : register(u0, space0);
 void OnRayGeneration()
 {
     //!< ペイロードを初期化 (Initialize payload)
-    Payload Pay;
-    Pay.Color = float3(0.0f, 0.0f, 0.0f);
- 
+    PAYLOAD Payload;
+    Payload.Color = float3(0.0f, 0.0f, 0.0f);
+    Payload.Recursive = 0;
+    
     //!< +0.5f はピクセルの中心にするため
     const float2 UV = ((float2)DispatchRaysIndex().xy + 0.5f) / DispatchRaysDimensions().xy  * 2.0f - 1.0f;
     const float2 UpY = float2(UV.x, -UV.y);
@@ -57,9 +59,9 @@ void OnRayGeneration()
             0, 1,   //!< RayContributionToHitGroupIndex, MultiplierForGeometryContributionToHitGroupIndex : RecordAddress = RayContributionToHitGroupIndex + MultiplierForGeometryContributionToHitGroupIndex * GeometryContributionToHitGroupIndex + instanceContributionToHitGroupIndex   
             0,      //!< MissShaderIndex
             Ray, 
-            Pay);
+            Payload);
 
     //!< 結果をレンダーターゲットへ (Write to render target)
-    RenderTarget[DispatchRaysIndex().xy] = float4(Pay.Color, 1.0f);
+    RenderTarget[DispatchRaysIndex().xy] = float4(Payload.Color, 1.0f);
     //RenderTarget[DispatchRaysIndex().xy] = float4(UpY, 0.0f, 1.0f);
 }

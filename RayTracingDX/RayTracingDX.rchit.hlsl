@@ -1,6 +1,7 @@
-struct Payload
+struct PAYLOAD
 {
     float3 Color;
+    int Recursive;
 };
 
 RaytracingAccelerationStructure TLAS : register(t0, space0);
@@ -14,8 +15,14 @@ StructuredBuffer<uint3> IB : register(t1, space1);
 //Texture2D<float4> Diffuse : register(t2, space1); Diffuse.SampleLevel(Sampler, UV, 0.0f);
 
 [shader("closesthit")]
-void OnClosestHit(inout Payload Pay, in BuiltInTriangleIntersectionAttributes BITIA)
+void OnClosestHit(inout PAYLOAD Payload, in BuiltInTriangleIntersectionAttributes BITIA)
 {
+    if (Payload.Recursive++ >= 31)
+    {
+        Payload.Color = float3(0.0f, 0.0f, 0.0f);
+        return;
+    }
+    
     const float3 BaryCentric = float3(1.0f - BITIA.barycentrics.x - BITIA.barycentrics.y, BITIA.barycentrics.x, BITIA.barycentrics.y);
 
     //!< プリミティブインデックス : GLSL gl_PrimitiveID 相当
@@ -41,15 +48,16 @@ void OnClosestHit(inout Payload Pay, in BuiltInTriangleIntersectionAttributes BI
     
     //!< Reflection
     {
-        Payload Pay1;
-        Pay1.Color = float3(0.0f, 0.0f, 0.0f);
+        PAYLOAD Reflect;
+        Reflect.Color = float3(0.0f, 0.0f, 0.0f);
+        Reflect.Recursive = Payload.Recursive;
         RayDesc Ray;
         Ray.TMin = 0.001f;
         Ray.TMax = 100000.0f;
         Ray.Origin = WorldPos;
         Ray.Direction = reflect(WorldRayDirection(), WorldNrm);
-        TraceRay(TLAS, RAY_FLAG_NONE, 0xff, 0, 1, 0, Ray, Pay1);
-        Pay.Color = Pay1.Color;
+        TraceRay(TLAS, RAY_FLAG_NONE, 0xff, 0, 1, 0, Ray, Reflect);
+        Payload.Color = Reflect.Color;
     }
 
     //!< Refraction
@@ -63,16 +71,17 @@ void OnClosestHit(inout Payload Pay, in BuiltInTriangleIntersectionAttributes BI
         const float3 Refracted = refract(L, N, 1.0f / Index); //!< In
         //const float3 Refracted = refract(L, -N, Index); //!< Out
 
-        Payload Pay2;
-        Pay2.Color = float3(0.0f, 0.0f, 0.0f);
+        PAYLOAD Refract;
+        Refract.Color = float3(0.0f, 0.0f, 0.0f);
+        Refract.Recursive = Payload.Recursive;
         RayDesc Ray;
         Ray.TMin = 0.001f;
         Ray.TMax = 100000.0f;
         Ray.Origin = WorldPos;
         Ray.Direction = Refracted;
-        TraceRay(TLAS, RAY_FLAG_NONE, 0xff, 0, 1, 0, Ray, Pay2);
-        Pay.Color = Pay2.Color;
+        TraceRay(TLAS, RAY_FLAG_NONE, 0xff, 0, 1, 0, Ray, Refract);
+        Payload.Color = Refract.Color;
     }
     
-    Pay.Color = Hit.Normal * 0.5f + 0.5f;
+    Payload.Color = Hit.Normal * 0.5f + 0.5f;
 }

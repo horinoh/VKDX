@@ -1,8 +1,7 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
-
 //!< traceRayEXT() のフラグ gl_RayFlagsSkipTrianglesEXT, gl_RayFlagsSkipAABBEXT を使用する場合に必要
-#extension GL_EXT_ray_flags_primitive_culling : enable
+#extension GL_EXT_ray_flags_primitive_culling : enable 
 
 //!< スレッド
 //!<    uvec3 gl_LaunchSizeEXT, gl_LaunchIDEXT 
@@ -25,7 +24,12 @@
 //!<    uint gl_HitKindEXT
 //!<    float gl_HitTEXT
 
-layout(location = 0) rayPayloadEXT vec3 Payload;
+struct PAYLOAD 
+{
+    vec3 Color;
+    int Recursive;
+};
+layout(location = 0) rayPayloadEXT PAYLOAD Payload;
 
 layout(binding = 0, set = 0) uniform accelerationStructureEXT TLAS;
 layout(binding = 1, set = 0, rgba8) uniform image2D RenderTarget;
@@ -33,7 +37,8 @@ layout(binding = 1, set = 0, rgba8) uniform image2D RenderTarget;
 void main()
 {
     //!< ペイロードを初期化 (Initialize payload)
-    Payload = vec3(0.0f);
+    Payload.Color = vec3(0.0f);
+    Payload.Recursive = 0;
 
     //!< +0.5f はピクセルの中心にするため
     const vec2 UV = (vec2(gl_LaunchIDEXT.xy) + 0.5f) / gl_LaunchSizeEXT.xy * 2.0f - 1.0f;
@@ -51,16 +56,16 @@ void main()
     //!<    gl_RayFlagsOpaqueEXT, gl_RayFlagsNoOpaqueEXT, 
     //!<    gl_RayFlagsTerminateOnFirstHitEXT, gl_RayFlagsSkipClosestHitShaderEXT, 
     //!<    gl_RayFlagsCullBackFacingTrianglesEXT, gl_RayFlagsCullFrontFacingTrianglesEXT, gl_RayFlagsCullOpaqueEXT, gl_RayFlagsCullNoOpaqueEXT
-    //!<    gl_RayFlagsSkipTrianglesEXT, gl_RayFlagsSkipAABBEXT ... 要 GL_EXT_ray_flags_primitive_culling
+    //!<    gl_RayFlagsSkipTrianglesEXT, gl_RayFlagsSkipAABBEXT ... 要エクステンション GL_EXT_ray_flags_primitive_culling
     traceRayEXT(TLAS, 
         gl_RayFlagsOpaqueEXT | gl_RayFlagsCullBackFacingTrianglesEXT | gl_RayFlagsTerminateOnFirstHitEXT, 
         0xff,
         0, 0,   //!< sbtRecordOffset, sbtRecordStride : RecordAddress = sbtRecordOffset + sbtRecordStride * GeometryContributionHitGroupIndex + instanceShaderBindingTableRecordOffset
         0,      //!< missIndex
         Origin, TMin, Direction, TMax, 
-        0);     //!< "layout(location = N) rayPayloadEXT vec3 Payload;" の N
+        0);     //!< "layout(location = N) rayPayloadEXT PAYLOAD Payload;" の N
 
     //!< 結果をレンダーターゲットへ (Write to render target)
-	imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(Payload, 1.0f));
+	imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(Payload.Color, 1.0f));
 	//imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(UpY, 0.0f, 1.0f));
 }

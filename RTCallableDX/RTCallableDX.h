@@ -214,8 +214,8 @@ public:
 		};
 
 		constexpr D3D12_RAYTRACING_SHADER_CONFIG RSC = {
-			.MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT3), //!< Payload のサイズ ここでは struct Payload { float3 Color; } を使用するため XMFLOAT3
-			.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2) //!< ここでは struct BuiltInTriangleIntersectionAttributes { float2 barycentrics; } を使用するため XMFLOAT2
+			.MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT3) + sizeof(int), //!< ここでは struct PAYLOAD { float3 Color; int Recursive; } を使用するため
+			.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2) //!< ここでは struct BuiltInTriangleIntersectionAttributes { float2 barycentrics; } を使用するため
 		};
 
 		constexpr D3D12_RAYTRACING_PIPELINE_CONFIG RPC = { .MaxTraceRecursionDepth = 1 };
