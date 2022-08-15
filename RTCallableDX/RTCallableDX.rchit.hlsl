@@ -13,7 +13,7 @@ void OnClosestHit_0(inout PAYLOAD Payload, in BuiltInTriangleIntersectionAttribu
 {
     if (Payload.Recursive++ >= 1)
     {
-        Payload.Color = float3(0.0f, 0.0f, 0.0f);
+        Payload.Color = float3(0.0f, 1.0f, 0.0f);
         return;
     }
     

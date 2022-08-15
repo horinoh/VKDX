@@ -13,7 +13,7 @@ hitAttributeEXT vec2 HitAttr;
 void main()
 {
     if(Payload.Recursive++ >= 1) {
-        Payload.Color = vec3(0.0f);
+        Payload.Color = vec3(0.0f, 1.0f, 0.0f);
         return;
     }
 

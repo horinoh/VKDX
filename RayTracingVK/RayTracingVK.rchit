@@ -39,7 +39,7 @@ layout(shaderRecordEXT, std430) buffer ShaderRecord
 void main()
 {
     if(Payload.Recursive++ >= 31) {
-        Payload.Color = vec3(0.0f);
+        Payload.Color = vec3(0.0f, 1.0f, 0.0f);
         return;
     }
 
@@ -53,25 +53,50 @@ void main()
 
     //!< gl_ObjectToWorldEXT ‚Í 4x3
     const vec3 WorldPos = gl_ObjectToWorldEXT * vec4(Hit.Position, 1.0f);
-    const vec3 WorldNrm = mat3(gl_ObjectToWorld3x4EXT) * Hit.Normal;
+    const vec3 WorldNrm = normalize(mat3(gl_ObjectToWorld3x4EXT) * Hit.Normal);
 
     switch(gl_InstanceCustomIndexEXT) {
         case 0:
+            {
+                const float TMin = 0.001f;
+                const float TMax = 100000.0f;
+                const vec3 Origin = WorldPos;
+                const vec3 Direction = reflect(gl_WorldRayDirectionEXT, WorldNrm);
+                traceRayEXT(TLAS, gl_RayFlagsNoneEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
+            }
             break;
         case 1:
+            {
+                const float TMin = 0.001f;
+                const float TMax = 100000.0f;
+                const vec3 Origin = WorldPos;
+                vec3 Direction = vec3(0.0f);
+
+                const float IndexAir = 1.0f; //!<y‹üÜ—¦z‹ó‹C
+                const float IndexWater = 1.3334f; //!<y‹üÜ—¦z…
+                //const float IndexCrystal = 1.5443f; //!<y‹üÜ—¦z…»
+                //const float IndexDiamond = 2.417f; //!<y‹üÜ—¦zƒ_ƒCƒ„ƒ‚ƒ“ƒh
+                const float NL = dot(WorldNrm, gl_WorldRayDirectionEXT);
+                //!< eta = “üŽË‘O / “üŽËŒã
+                if(NL < 0.0f) {
+                    const float eta = IndexAir / IndexWater; //!< ‹üÜ—¦‚Ì”ä (In : ‹ó‹C -> •¨Ž¿)
+                    Direction = refract(gl_WorldRayDirectionEXT, WorldNrm, eta);
+                } else {
+                    const float eta = IndexWater / IndexAir; //!< ‹üÜ—¦‚Ì”ä (Out : •¨Ž¿ -> ‹ó‹C)
+                    Direction = refract(gl_WorldRayDirectionEXT, WorldNrm, eta);
+                }
+
+                if(length(Direction) < 0.001f) {
+                    //!< Reflect
+                    Direction = reflect(gl_WorldRayDirectionEXT, WorldNrm);
+                    traceRayEXT(TLAS, gl_RayFlagsNoneEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
+                } else {
+                    traceRayEXT(TLAS, gl_RayFlagsNoneEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
+                }
+            }
             break;
         case 2:
+            Payload.Color = Hit.Normal * 0.5f + 0.5f;
             break;
     }
-
-//    Payload.Color = vec3(0.0f);
-//    const float TMin = 0.001f;
-//    const float TMax = 100000.0f;
-//    const vec3 Origin = vec4(HitPos, 1.0f) * gl_ObjectToWorld3x4EXT ;
-//    const vec3 Direction = reflect(gl_WorldRayDirectionEXT, vec4(HitNrm, 0.0f) * gl_ObjectToWorld3x4EXT);
-//    traceRayEXT(TLAS, gl_RayFlagsNoneEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
-
-    Payload.Color = Hit.Normal * 0.5f + 0.5f;
-    //Payload.Color = WorldNrm * 0.5f + 0.5f;
-    //Payload.Color = v.xyz;
 }

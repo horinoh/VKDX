@@ -19,7 +19,7 @@ void OnClosestHit(inout PAYLOAD Payload, in BuiltInTriangleIntersectionAttribute
 {
     if (Payload.Recursive++ >= 31)
     {
-        Payload.Color = float3(0.0f, 0.0f, 0.0f);
+        Payload.Color = float3(0.0f, 1.0f, 0.0f);
         return;
     }
     
@@ -35,53 +35,59 @@ void OnClosestHit(inout PAYLOAD Payload, in BuiltInTriangleIntersectionAttribute
     //const float3 WorldPos = mul(float4(Hit.Position, 1.0f), ObjectToWorld4x3());
     //const float3 WorldNrm = mul(Hit.Normal, (float3x3) ObjectToWorld4x3());
     const float3 WorldPos = mul(ObjectToWorld3x4(), float4(Hit.Position, 1.0f));
-    const float3 WorldNrm = mul((float3x3) ObjectToWorld3x4(), Hit.Normal);
+    const float3 WorldNrm = normalize(mul((float3x3) ObjectToWorld3x4(), Hit.Normal));
 
     switch(InstanceID()) {
         case 0:
+          {
+                PAYLOAD Pay;
+                Pay.Color = float3(0.0f, 0.0f, 0.0f);
+                Pay.Recursive = Payload.Recursive;
+                RayDesc Ray;
+                Ray.TMin = 0.001f;
+                Ray.TMax = 100000.0f;
+                Ray.Origin = WorldPos;
+                Ray.Direction = reflect(WorldRayDirection(), WorldNrm);
+                TraceRay(TLAS, RAY_FLAG_NONE, 0xff, 0, 1, 0, Ray, Pay);
+                Payload.Color = Pay.Color;
+            }
             break;
         case 1:
+            {
+                PAYLOAD Pay;
+                Pay.Color = float3(0.0f, 0.0f, 0.0f);
+                Pay.Recursive = Payload.Recursive;
+                RayDesc Ray;
+                Ray.TMin = 0.001f;
+                Ray.TMax = 100000.0f;
+                Ray.Origin = WorldPos;
+
+                const float IndexAir = 1.0f; //!<y‹üÜ—¦z‹ó‹C
+                const float IndexWater = 1.3334f; //!<y‹üÜ—¦z…
+                //const float IndexCrystal = 1.5443f; //!<y‹üÜ—¦z…»
+                //const float IndexDiamond = 2.417f; //!<y‹üÜ—¦zƒ_ƒCƒ„ƒ‚ƒ“ƒh
+                const float NL = dot(WorldNrm, WorldRayDirection());
+                //!< eta = “üŽË‘O / “üŽËŒã
+                if (NL < 0.0f) {
+                    const float eta = IndexAir / IndexWater; //!< ‹üÜ—¦‚Ì”ä (In : ‹ó‹C -> •¨Ž¿)
+                    Ray.Direction = refract(WorldRayDirection(), WorldNrm, eta);
+                } else {    
+                    const float eta = IndexWater / IndexAir; //!< ‹üÜ—¦‚Ì”ä (Out : •¨Ž¿ -> ‹ó‹C)
+                    Ray.Direction = refract(WorldRayDirection(), -WorldNrm, eta);
+                }
+
+                if (length(Ray.Direction) < 0.01f) {
+                    //!< Reflect
+                    Ray.Direction = reflect(WorldRayDirection(), WorldNrm);
+                    TraceRay(TLAS, RAY_FLAG_NONE, 0xff, 0, 1, 0, Ray, Pay);
+                } else {
+                    TraceRay(TLAS, RAY_FLAG_NONE, 0xff, 0, 1, 0, Ray, Pay);
+                }                
+                Payload.Color = Pay.Color;
+            }
             break;
         case 2:
+            Payload.Color = Hit.Normal * 0.5f + 0.5f;
             break;
     }
-    
-    //!< Reflection
-    {
-        PAYLOAD Reflect;
-        Reflect.Color = float3(0.0f, 0.0f, 0.0f);
-        Reflect.Recursive = Payload.Recursive;
-        RayDesc Ray;
-        Ray.TMin = 0.001f;
-        Ray.TMax = 100000.0f;
-        Ray.Origin = WorldPos;
-        Ray.Direction = reflect(WorldRayDirection(), WorldNrm);
-        TraceRay(TLAS, RAY_FLAG_NONE, 0xff, 0, 1, 0, Ray, Reflect);
-        Payload.Color = Reflect.Color;
-    }
-
-    //!< Refraction
-    {
-        const float Index = 1.3334f; //!<y‹üÜ—¦z…
-        //const float Index = 1.5443f; //!<y‹üÜ—¦z…»
-        //const float Index = 2.417f; //!<y‹üÜ—¦zƒ_ƒCƒ„ƒ‚ƒ“ƒh
-        const float3 N = normalize(WorldNrm);
-        const float3 L = normalize(WorldRayDirection());
-        const float NL = dot(N, L);
-        const float3 Refracted = refract(L, N, 1.0f / Index); //!< In
-        //const float3 Refracted = refract(L, -N, Index); //!< Out
-
-        PAYLOAD Refract;
-        Refract.Color = float3(0.0f, 0.0f, 0.0f);
-        Refract.Recursive = Payload.Recursive;
-        RayDesc Ray;
-        Ray.TMin = 0.001f;
-        Ray.TMax = 100000.0f;
-        Ray.Origin = WorldPos;
-        Ray.Direction = Refracted;
-        TraceRay(TLAS, RAY_FLAG_NONE, 0xff, 0, 1, 0, Ray, Refract);
-        Payload.Color = Refract.Color;
-    }
-    
-    Payload.Color = Hit.Normal * 0.5f + 0.5f;
 }
