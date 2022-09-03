@@ -1,0 +1,13 @@
+#version 460
+#extension GL_EXT_ray_tracing : enable
+
+hitAttributeEXT vec2 HitAttr;
+
+void main()
+{
+	if(false) {
+		float t = 0.0f;
+		uint Kind = 0;
+		reportIntersectionEXT(t, Kind);
+	}
+}

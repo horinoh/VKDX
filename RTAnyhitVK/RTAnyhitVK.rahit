@@ -1,0 +1,30 @@
+#version 460
+#extension GL_EXT_ray_tracing : enable
+
+struct PAYLOAD 
+{
+    vec3 Color;
+    int Recursive;
+};
+//!< rayPayloadEXT ではなくて rayPayloadInEXT であることに注意
+layout(location = 0) rayPayloadInEXT PAYLOAD Payload;
+hitAttributeEXT vec2 HitAttr;
+
+//layout (binding = 2, set = 0) uniform sampler2D TransparentMap;
+
+//!< Anyhit シェーダが呼び出されるには対象のオブジェクトが半透明(非VK_GEOMETRY_OPAQUE_BIT_KHR)である必要があるので注意
+void main()
+{
+    //texture();
+//    if(HitAttr.x>0.5f/*textureLod(TransparentMap, UV, 0.0f).a < 0.5f*/) {
+//        ignoreIntersectionEXT; //!< 交差判定を棄却後、再開
+//        terminateRayEXT; //!< これ以上の交差判定は不必要
+//    }
+
+    //!< 市松模様
+	const vec2 pos = vec2(gl_LaunchIDEXT / 8);
+	if(mod(pos.x + mod(pos.y, 2.0f), 2.0f) < 0.5f) {
+        ignoreIntersectionEXT; //!< 交差判定を棄却後、再開
+        //terminateRayEXT; //!< これ以上の交差判定は不必要
+    }
+}
