@@ -15,14 +15,15 @@ hitAttributeEXT vec2 HitAttr;
 //!< Anyhit シェーダが呼び出されるには対象のオブジェクトが半透明(非VK_GEOMETRY_OPAQUE_BIT_KHR)である必要があるので注意
 void main()
 {
-    //texture();
-//    if(HitAttr.x>0.5f/*textureLod(TransparentMap, UV, 0.0f).a < 0.5f*/) {
+//    const vec2 UV = vec2(gl_LaunchIDEXT.xy) / gl_LaunchSizeEXT.xy;
+//    if(textureLod(TransparentMap, UV, 0.0f).a < 0.5f) {
 //        ignoreIntersectionEXT; //!< 交差判定を棄却後、再開
 //        terminateRayEXT; //!< これ以上の交差判定は不必要
 //    }
 
+
     //!< 市松模様
-	const vec2 pos = vec2(gl_LaunchIDEXT / 8);
+	const vec2 pos = vec2(gl_LaunchIDEXT.xy / 8);
 	if(mod(pos.x + mod(pos.y, 2.0f), 2.0f) < 0.5f) {
         ignoreIntersectionEXT; //!< 交差判定を棄却後、再開
         //terminateRayEXT; //!< これ以上の交差判定は不必要

@@ -20,28 +20,21 @@ public:
 		const auto& CB = CommandBuffers[0];
 
 #pragma region BLAS_GEOMETRY
-		constexpr std::array Vertices = { glm::vec3({ 0.0f, 0.5f, 0.0f }), glm::vec3({ -0.5f, -0.5f, 0.0f }), glm::vec3({ 0.5f, -0.5f, 0.0f }), };
-		Scoped<HostVisibleASBuffer> VB(Device);
-		VB.Create(Device, PDMP, TotalSizeOf(Vertices), data(Vertices));
-
-		constexpr std::array Indices = { uint32_t(0), uint32_t(1), uint32_t(2) };
-		Scoped<HostVisibleASBuffer> IB(Device);
-		IB.Create(Device, PDMP, TotalSizeOf(Indices), data(Indices));
+		constexpr std::array AABBs = { AABB({ .Min = glm::vec3(-0.5f), .Max = glm::vec3(0.5f) }), };
+		Scoped<HostVisibleASBuffer> AB(Device);
+		AB.Create(Device, PDMP, TotalSizeOf(AABBs), data(AABBs));
 
 		const std::array ASGs_Blas = {
 			VkAccelerationStructureGeometryKHR({
 				.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
 				.pNext = nullptr,
-				.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+				.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR, //!< AABB
 				.geometry = VkAccelerationStructureGeometryDataKHR({
-					.triangles = VkAccelerationStructureGeometryTrianglesDataKHR({
-						.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
+					.aabbs = VkAccelerationStructureGeometryAabbsDataKHR({
+						.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR,
 						.pNext = nullptr,
-						.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT,
-						.vertexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, VB.Buffer)}), .vertexStride = sizeof(Vertices[0]), .maxVertex = static_cast<uint32_t>(size(Vertices)),
-						.indexType = VK_INDEX_TYPE_UINT32,
-						.indexData = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, IB.Buffer)}),
-						.transformData = VkDeviceOrHostAddressConstKHR({.deviceAddress = 0}),
+						.data = VkDeviceOrHostAddressConstKHR({.deviceAddress = GetDeviceAddress(Device, AB.Buffer) }),
+	                    .stride = sizeof(AABBs[0]),
 					}),
 				}),
 				.flags = VK_GEOMETRY_OPAQUE_BIT_KHR
@@ -61,7 +54,7 @@ public:
 			.scratchData = VkDeviceOrHostAddressKHR({.deviceAddress = 0})
 		};
 		const std::vector ASBRIs_Blas = {
-			VkAccelerationStructureBuildRangeInfoKHR({.primitiveCount = static_cast<uint32_t>(size(Indices) / 3), .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0 }),
+			VkAccelerationStructureBuildRangeInfoKHR({.primitiveCount = static_cast<uint32_t>(size(AABBs)), .primitiveOffset = 0, .firstVertex = 0, .transformOffset = 0}),
 		};
 		assert(ASBGI_Blas.geometryCount == size(ASBRIs_Blas));
 
@@ -165,18 +158,21 @@ public:
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".rgen.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".rmiss.spv"))),
 			VK::CreateShaderModule(data(ShaderPath + TEXT(".rchit.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT(".rint.spv"))),
 		};
 
 		const std::array PSSCIs = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_MISS_BIT_KHR, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .module = SMs[2], .pName = "main", .pSpecializationInfo = nullptr }),
+			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_INTERSECTION_BIT_KHR, .module = SMs[3], .pName = "main", .pSpecializationInfo = nullptr }),
 		};
 
 		const std::array RTSGCIs = {
 			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, .generalShader = 0, .closestHitShader = VK_SHADER_UNUSED_KHR, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
 			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR, .generalShader = 1, .closestHitShader = VK_SHADER_UNUSED_KHR, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
-			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR, .generalShader = VK_SHADER_UNUSED_KHR, .closestHitShader = 2, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = VK_SHADER_UNUSED_KHR, .pShaderGroupCaptureReplayHandle = nullptr }),
+			//!< TRIANGLES_HIT_GROUP ‚Å‚Í‚È‚­ PROCEDURAL_HIT_GROUP
+			VkRayTracingShaderGroupCreateInfoKHR({.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR, .pNext = nullptr, .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR, .generalShader = VK_SHADER_UNUSED_KHR, .closestHitShader = 2, .anyHitShader = VK_SHADER_UNUSED_KHR, .intersectionShader = 3, .pShaderGroupCaptureReplayHandle = nullptr }),
 		};
 
 		constexpr std::array DSs = { VK_DYNAMIC_STATE_RAY_TRACING_PIPELINE_STACK_SIZE_KHR };
