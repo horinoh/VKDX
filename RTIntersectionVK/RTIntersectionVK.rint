@@ -37,6 +37,6 @@ void main()
 
         //!< ヒットした場合のみ
 		const uint Kind = 0; //!< ここでは使用しないので 0
-		reportIntersectionEXT(t, Kind);
+		reportIntersectionEXT(t0, Kind);
 	}
 }

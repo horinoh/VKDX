@@ -34,6 +34,6 @@ void OnIntersection()
         //!< ヒットした場合のみ
         BuiltInTriangleIntersectionAttributes Attr;
         const uint Kind = 0; //!< ここでは使用しないので 0
-        ReportHit(t, Kind, Attr);
+        ReportHit(t0, Kind, Attr);
     }
 }
