@@ -12,7 +12,7 @@ static const float PI2 = PI * 2.0f;
 void OnIntersection()
 {
     const float3 Center = float3(0.0f, 0.0f, 0.0f);
-    const float Radius = 0.25f;
+    const float Radius = 0.5f;
     
     //!< レイのパラメータ表現 Ray = o + d * t ただし o = ObjectRayOrigin(), d = ObjectRayDirection()
     //!< (Ray - Center)^2 = Radius^2
@@ -39,19 +39,22 @@ void OnIntersection()
         //const float t1 = (-B + sqrt(D)) / (A * 2.0f);
         
         const float Sq = sqrt(D4);
-        const float t0 = (-B2 - Sq) / A;
-        const float t1 = (-B2 + Sq) / A;
-        const float t = 0;
+        const float tmp0 = (-B2 - Sq) / A;
+        const float tmp1 = (-B2 + Sq) / A;
+        const float t0 = min(tmp0, tmp1);
+        //const float t1 = max(tmp0, tmp1);
         
-        const float3 Hit = ObjectRayOrigin() + ObjectRayDirection() * t;
+        const float t = (t0 >= RayTMin() && t0 <= RayTCurrent()) ? t0 : max(tmp0, tmp1);
+        if (t >= RayTMin() && t <= RayTCurrent()) {        
+            const float3 Hit = ObjectRayOrigin() + ObjectRayDirection() * t;
         
-        VertexNT Attr;
-        Attr.Normal = normalize(Hit - Center);
-        const float3 LocalN = mul(WorldToObject3x4(), float4(Attr.Normal, 0.0f));
-        Attr.Texcoord = float2(frac(atan2(LocalN.y, LocalN.x) / PI2), acos(-LocalN.z) / PI);
+            VertexNT Attr;
+            Attr.Normal = normalize(Hit - Center);
+            const float3 LocalN = mul(WorldToObject3x4(), float4(Attr.Normal, 0.0f));
+            Attr.Texcoord = float2(frac(atan2(LocalN.y, LocalN.x) / PI2), acos(-LocalN.z) / PI);
         
-        const uint Kind = 0; //!< ここでは使用しないので 0
-        //!< ヒットした場合のみ
-        ReportHit(t0, Kind, Attr);
+            const uint Kind = 0; //!< ここでは使用しないので 0
+            ReportHit(t0, Kind, Attr);
+        }
     }
 }

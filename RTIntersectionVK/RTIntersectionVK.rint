@@ -15,7 +15,7 @@ const float PI2 = PI * 2.0f;
 void main()
 {
 	const vec3 Center = vec3(0.0f);
-	const float Radius = 0.25f;
+	const float Radius = 0.5f;
 
 	//!< レイのパラメータ表現 Ray = o + d * t ただし o = gl_ObjectRayOriginEXT, d = gl_ObjectRayDirectionEXT
     //!< (Ray - Center)^2 = Radius^2
@@ -41,18 +41,21 @@ void main()
         //const float t0 = (-B - sqrt(D)) / (A * 2.0f);
         //const float t1 = (-B + sqrt(D)) / (A * 2.0f);
         const float Sq = sqrt(D4);
-        const float t0 = (-B2 - Sq) / A;
-        const float t1 = (-B2 + Sq) / A;
-        const float t = 0;
+        const float tmp0 = (-B2 - Sq) / A;
+        const float tmp1 = (-B2 + Sq) / A;
+        const float t0 = min(tmp0, tmp1);
+        //const float t1 = max(tmp0, tmp1);
 
-        const vec3 Hit = gl_ObjectRayOriginEXT + gl_ObjectRayDirectionEXT * t;
+        const float t = (t0 >= gl_RayTminEXT && t0 <= gl_RayTmaxEXT) ? t0 : max(tmp0, tmp1);
+        if(t >= gl_RayTminEXT && t <= gl_RayTmaxEXT) {
+            const vec3 Hit = gl_ObjectRayOriginEXT + gl_ObjectRayDirectionEXT * t;
 
-        Attr.Normal = normalize(Hit - Center);
-        const vec3 LocalN = gl_WorldToObjectEXT * vec4(Attr.Normal, 0.0f);
-        Attr.Texcoord = vec2(fract(atan(LocalN.y, LocalN.x) / PI2), acos(-LocalN.z) / PI);
+            Attr.Normal = normalize(Hit - Center);
+            const vec3 LocalN = gl_WorldToObjectEXT * vec4(Attr.Normal, 0.0f);
+            Attr.Texcoord = vec2(fract(atan(LocalN.y, LocalN.x) / PI2), acos(-LocalN.z) / PI);
 
-        //!< ヒットした場合のみ
-		const uint Kind = 0; //!< ここでは使用しないので 0
-		reportIntersectionEXT(t0, Kind);
+		    const uint Kind = 0; //!< ここでは使用しないので 0
+		    reportIntersectionEXT(t0, Kind);
+        }
 	}
 }

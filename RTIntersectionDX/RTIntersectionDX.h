@@ -136,7 +136,7 @@ public:
 
 		constexpr D3D12_RAYTRACING_SHADER_CONFIG RSC = {
 			.MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT3) + sizeof(int), 
-			.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2) 
+			.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT3) + sizeof(DirectX::XMFLOAT2) //!< float3 Normal; fload2 Texcoord;
 		};
 
 		constexpr D3D12_RAYTRACING_PIPELINE_CONFIG RPC = { .MaxTraceRecursionDepth = 1 };
