@@ -14,7 +14,7 @@ struct VertexNT
     vec3 Normal;
     vec2 Texcoord;
 };
-hitAttributeEXT VertexNT HitAttr;
+hitAttributeEXT VertexNT Attr;
 
 void main()
 {
@@ -22,5 +22,6 @@ void main()
         Payload.Color = vec3(0.0f, 1.0f, 0.0f);
         return;
     }
-    Payload.Color = vec3(1.0f, 1.0f, 1.0f);
+    Payload.Color = Attr.Normal * 0.5f + 0.5f;
+    //Payload.Color = vec3(Attr.Texcoord, 0);
 }

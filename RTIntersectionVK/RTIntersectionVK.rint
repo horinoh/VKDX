@@ -8,13 +8,13 @@ struct VertexNT
 };
 hitAttributeEXT VertexNT Attr;
 
-const float PI = 4.0f * atan(1.0f);
-const float PI2 = PI * 2.0f;
-
 //!< ペイロードへ書き込みはできない、アトリビュートを生成して他シェーダへ供給
 void main()
 {
-	const vec3 Center = vec3(0.0f);
+    const float PI = 4.0f * atan(1.0f);
+    const float PI2 = PI * 2.0f;
+    
+    const vec3 Center = vec3(0.0f);
 	const float Radius = 0.5f;
 
 	//!< レイのパラメータ表現 Ray = o + d * t ただし o = gl_ObjectRayOriginEXT, d = gl_ObjectRayDirectionEXT

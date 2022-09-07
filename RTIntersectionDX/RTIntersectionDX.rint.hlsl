@@ -4,13 +4,13 @@ struct VertexNT
     float2 Texcoord;
 };
 
-static const float PI = 4.0f * atan(1.0f);
-static const float PI2 = PI * 2.0f;
-
 //!< ペイロードへ書き込みはできない、アトリビュートを生成して他シェーダへ供給
 [shader("intersection")]
 void OnIntersection()
 {
+    const float PI = 4.0f * atan(1.0f);
+    const float PI2 = PI * 2;
+    
     const float3 Center = float3(0.0f, 0.0f, 0.0f);
     const float Radius = 0.5f;
     

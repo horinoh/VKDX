@@ -17,5 +17,6 @@ void OnClosestHit(inout PAYLOAD Payload, in VertexNT Attr)
         Payload.Color = float3(0.0f, 1.0f, 0.0f);
         return;
     }
-    Payload.Color = float3(1.0f, 1.0f, 1.0f);
+    Payload.Color = Attr.Normal * 0.5f + 0.5f;
+    //Payload.Color = float3(Attr.Texcoord, 0.0f);
 }
