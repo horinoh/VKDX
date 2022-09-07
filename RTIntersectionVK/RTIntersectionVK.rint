@@ -1,7 +1,15 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
 
-hitAttributeEXT vec2 HitAttr;
+struct VertexNT
+{
+    vec3 Normal;
+    vec2 Texcoord;
+};
+hitAttributeEXT VertexNT Attr;
+
+const float PI = 4.0f * atan(1.0f);
+const float PI2 = PI * 2.0f;
 
 //!< ペイロードへ書き込みはできない、アトリビュートを生成して他シェーダへ供給
 void main()
@@ -32,8 +40,16 @@ void main()
 	if(D4 >= 0.0f) {
         //const float t0 = (-B - sqrt(D)) / (A * 2.0f);
         //const float t1 = (-B + sqrt(D)) / (A * 2.0f);
-        const float t0 = (-B2 - sqrt(D4)) / A;
-        const float t1 = (-B2 + sqrt(D4)) / A;
+        const float Sq = sqrt(D4);
+        const float t0 = (-B2 - Sq) / A;
+        const float t1 = (-B2 + Sq) / A;
+        const float t = 0;
+
+        const vec3 Hit = gl_ObjectRayOriginEXT + gl_ObjectRayDirectionEXT * t;
+
+        Attr.Normal = normalize(Hit - Center);
+        const vec3 LocalN = gl_WorldToObjectEXT * vec4(Attr.Normal, 0.0f);
+        Attr.Texcoord = vec2(fract(atan(LocalN.y, LocalN.x) / PI2), acos(-LocalN.z) / PI);
 
         //!< ヒットした場合のみ
 		const uint Kind = 0; //!< ここでは使用しないので 0

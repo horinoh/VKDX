@@ -11,7 +11,7 @@ struct PAYLOAD
 [shader("anyhit")]
 void OnAnyHit(inout PAYLOAD Payload, in BuiltInTriangleIntersectionAttributes BITIA)
 {
-    //const float2 UV = float2(DispatchRaysIndex().xy) / DispatchRaysDimensions().xy;
+    //const float2 UV = ((float2) DispatchRaysIndex().xy + 0.5f) / DispatchRaysDimensions().xy;
     //if (TransparentMap.SampleLevel(Sampler, UV, 0.0f).a < 0.5f) {
     //    IgnoreHit(); //!< 交差判定を棄却後、再開
     //    AcceptHitAndEndSearch(); //!< これ以上の交差判定は不必要

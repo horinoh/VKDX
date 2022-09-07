@@ -8,7 +8,13 @@ struct PAYLOAD
 };
 //!< rayPayloadEXT ではなくて rayPayloadInEXT であることに注意
 layout(location = 0) rayPayloadInEXT PAYLOAD Payload;
-hitAttributeEXT vec2 HitAttr;
+
+struct VertexNT
+{
+    vec3 Normal;
+    vec2 Texcoord;
+};
+hitAttributeEXT VertexNT HitAttr;
 
 void main()
 {
@@ -16,8 +22,5 @@ void main()
         Payload.Color = vec3(0.0f, 1.0f, 0.0f);
         return;
     }
-
-    //!< v0, v1, v2 の３頂点の場合、hitAttributeEXT.xy はそれぞれ v1, v2 のウエイト
-    //!< v = v0 + hitAttributeEXT.x * (v1 - v0) + hitAttributeEXT.y * (v2 - v0)
-	Payload.Color = vec3(1.0f - HitAttr.x - HitAttr.y, HitAttr.x, HitAttr.y); //!< BaryCentric
+    Payload.Color = vec3(1.0f, 1.0f, 1.0f);
 }

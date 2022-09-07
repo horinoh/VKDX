@@ -1,3 +1,12 @@
+struct VertexNT
+{
+    float3 Normal;
+    float2 Texcoord;
+};
+
+static const float PI = 4.0f * atan(1.0f);
+static const float PI2 = PI * 2.0f;
+
 //!< ペイロードへ書き込みはできない、アトリビュートを生成して他シェーダへ供給
 [shader("intersection")]
 void OnIntersection()
@@ -28,12 +37,21 @@ void OnIntersection()
     if (D4 >= 0.0f) {    
         //const float t0 = (-B - sqrt(D)) / (A * 2.0f);
         //const float t1 = (-B + sqrt(D)) / (A * 2.0f);
-        const float t0 = (-B2 - sqrt(D4)) / A;
-        const float t1 = (-B2 + sqrt(D4)) / A;
         
-        //!< ヒットした場合のみ
-        BuiltInTriangleIntersectionAttributes Attr;
+        const float Sq = sqrt(D4);
+        const float t0 = (-B2 - Sq) / A;
+        const float t1 = (-B2 + Sq) / A;
+        const float t = 0;
+        
+        const float3 Hit = ObjectRayOrigin() + ObjectRayDirection() * t;
+        
+        VertexNT Attr;
+        Attr.Normal = normalize(Hit - Center);
+        const float3 LocalN = mul(WorldToObject3x4(), float4(Attr.Normal, 0.0f));
+        Attr.Texcoord = float2(frac(atan2(LocalN.y, LocalN.x) / PI2), acos(-LocalN.z) / PI);
+        
         const uint Kind = 0; //!< ここでは使用しないので 0
+        //!< ヒットした場合のみ
         ReportHit(t0, Kind, Attr);
     }
 }
