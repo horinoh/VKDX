@@ -1,61 +1,63 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
 
-struct VertexNT
+struct AttrNT
 {
     vec3 Normal;
     vec2 Texcoord;
 };
-hitAttributeEXT VertexNT Attr;
+hitAttributeEXT AttrNT Attr;
 
-//!< ペイロードへ書き込みはできない、アトリビュートを生成して他シェーダへ供給
-void main()
+bool Sphere(const vec3 Center, const float Radius, out float t)
 {
-    const float PI = 4.0f * atan(1.0f);
-    const float PI2 = PI * 2.0f;
-    
-    const vec3 Center = vec3(0.0f);
-	const float Radius = 0.5f;
-
 	//!< レイのパラメータ表現 Ray = o + d * t ただし o = gl_ObjectRayOriginEXT, d = gl_ObjectRayDirectionEXT
     //!< (Ray - Center)^2 = Radius^2
-    //!< (d * t + Tmp)^2 = Radius^2 ただし Tmp = (o - Center)
-    //!< d^2 * t^2 + 2 * Tmp * d * t + Tmp^2 - Radius^2 = 0
-    //!< A * t^2 + B * t + C = 0 ただし A = d^2, B = 2 * Tmp * d, C = Tmp^2 - Radius^2
+    //!< (d * t + Tmp0)^2 = Radius^2 ただし Tmp0 = (o - Center)
+    //!< d^2 * t^2 + 2 * Tmp0 * d * t + Tmp0^2 - Radius^2 = 0
+    //!< A * t^2 + B * t + C = 0 ただし A = d^2, B = 2 * Tmp0 * d, C = Tmp0^2 - Radius^2
     //!< 判別式 D = B * B - 4.0f * A * C
     //!< 判別式 D4 = B2 * B2 - A * C ただし B2 = B / 2
     //!< 解の公式 t = (-B +- sqrt(D)) / 2 * A
     //!< 解の公式 t = (-B2 +- sqrt(D4)) / A
     
-    const vec3 Tmp = gl_ObjectRayOriginEXT - Center;
+    const vec3 Tmp0 = gl_ObjectRayOriginEXT - Center;
     const vec3 d = gl_ObjectRayDirectionEXT;
 
     const float A = dot(d, d);
-    const float B = 2.0f * dot(Tmp, d);
-    const float B2 = dot(Tmp, d);
-    const float C = dot(Tmp, Tmp) - Radius * Radius;
-    const float D = B * B - 4.0f * A * C;
+    const float B2 = dot(Tmp0, d);
+    const float C = dot(Tmp0, Tmp0) - Radius * Radius;
     const float D4 = B2 * B2 - A * C;
 
 	if(D4 >= 0.0f) {
-        //const float t0 = (-B - sqrt(D)) / (A * 2.0f);
-        //const float t1 = (-B + sqrt(D)) / (A * 2.0f);
         const float Sq = sqrt(D4);
-        const float tmp0 = (-B2 - Sq) / A;
-        const float tmp1 = (-B2 + Sq) / A;
-        const float t0 = min(tmp0, tmp1);
-        //const float t1 = max(tmp0, tmp1);
-
-        const float t = (t0 >= gl_RayTminEXT && t0 <= gl_RayTmaxEXT) ? t0 : max(tmp0, tmp1);
+        const float Tmp1 = (-B2 - Sq) / A;
+        const float Tmp2 = (-B2 + Sq) / A;
+        const float t0 = min(Tmp1, Tmp2);
+        t = (t0 >= gl_RayTminEXT && t0 <= gl_RayTmaxEXT) ? t0 : max(Tmp1, Tmp2);
         if(t >= gl_RayTminEXT && t <= gl_RayTmaxEXT) {
-            const vec3 Hit = gl_ObjectRayOriginEXT + gl_ObjectRayDirectionEXT * t;
-
-            Attr.Normal = normalize(Hit - Center);
-            const vec3 LocalN = gl_WorldToObjectEXT * vec4(Attr.Normal, 0.0f);
-            Attr.Texcoord = vec2(fract(atan(LocalN.y, LocalN.x) / PI2), acos(-LocalN.z) / PI);
-
-		    const uint Kind = 0; //!< ここでは使用しないので 0
-		    reportIntersectionEXT(t0, Kind);
+            return true;
         }
 	}
+    return false;
+}
+
+//!< ペイロードへ書き込みはできない、アトリビュートを生成して他シェーダへ供給
+void main()
+{
+   
+    
+    const vec3 Center = vec3(0.0f);
+	const float Radius = 0.5f;
+    float t;
+    if(Sphere(Center, Radius, t)) {
+        const vec3 Hit = gl_ObjectRayOriginEXT + gl_ObjectRayDirectionEXT * t;
+        Attr.Normal = normalize(Hit - Center);
+
+        const float PI = 4.0f * atan(1.0f);
+        const float PI2 = PI * 2.0f;
+        Attr.Texcoord = vec2(fract(atan(Attr.Normal.y, Attr.Normal.x) / PI2), acos(-Attr.Normal.z) / PI);
+
+        const uint Kind = 0; //!< ここでは使用しないので 0
+        reportIntersectionEXT(t, Kind);
+    }
 }
