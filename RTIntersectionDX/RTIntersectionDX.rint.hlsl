@@ -38,10 +38,63 @@ bool Sphere(const float3 Center, const float Radius, out float t)
     return false;
 }
 
+bool AABB(const float3 Center, const float3 Radius, out float t)
+{
+    //!< レイのパラメータ表現 Ray = o + d * t ただし o = ObjectRayOrigin(), d = ObjectRayDirection()
+    //!< Ray = Plane[+-X+-Y+-Z] ... レイに 6 平面を代入
+    //!< o + d * t = Plane[+-X+-Y+-Z]
+    //!< t = (Plane[+-X+-Y+-Z] - o) / d
+    
+    const float3 AABBMin = Center - Radius;
+    const float3 AABBMax = Center + Radius;
+
+    const float3 invd = 1.0f / ObjectRayDirection();
+    const float3 Tmp0 = (AABBMin - ObjectRayOrigin()) * invd;
+    const float3 Tmp1 = (AABBMax - ObjectRayOrigin()) * invd;
+    const float3 tMin = min(Tmp0, Tmp1);
+    const float3 tMax = max(Tmp0, Tmp1);
+    const float t0 = max(max(tMin.x, tMin.y), tMin.z);
+    const float t1 = min(min(tMax.x, tMax.y), tMax.z);
+    if (t0 <= t1) {
+        t = t0 < RayTMin() ? t1 : t0;
+        if (t >= RayTMin() && t <= RayTCurrent()) {
+            return true;
+        }
+    }
+    return false;
+}
+
 //!< ペイロードへ書き込みはできない、アトリビュートを生成して他シェーダへ供給
 [shader("intersection")]
 void OnIntersection()
 {
+#if 0
+    const float3 Center = float3(0.0f, 0.0f, 0.0f);
+    const float3 Radius = float3(0.5f, 0.5f, 0.5f);
+    float t;
+    if (AABB(Center, Radius, t))
+    {
+        AttrNT Attr;
+
+        const float3 Hit = ObjectRayOrigin() + ObjectRayDirection() * t;
+        const float3 N = normalize(Hit - Center);
+        const float3 NAbs = abs(N);
+        const float MaxComp = max(max(NAbs.x, NAbs.y), NAbs.z);
+        if (MaxComp == NAbs.x) {
+            Attr.Normal = float3(sign(N.x), 0.0f, 0.0f);
+        }
+        else if (MaxComp == NAbs.y) {
+            Attr.Normal = float3(0.0f, sign(N.x), 0.0f);
+        }
+        else {
+            Attr.Normal = float3(0.0f, 0.0f, sign(N.x));
+        }
+        //Attr.Texcoord = 
+        
+        const uint Kind = 0; //!< ここでは使用しないので 0
+        ReportHit(t, Kind, Attr);
+    }
+#else
     const float3 Center = float3(0.0f, 0.0f, 0.0f);
     const float Radius = 0.5f;
     float t;
@@ -58,4 +111,5 @@ void OnIntersection()
         const uint Kind = 0; //!< ここでは使用しないので 0
         ReportHit(t, Kind, Attr);
     }
+#endif
 }

@@ -41,11 +41,60 @@ bool Sphere(const vec3 Center, const float Radius, out float t)
     return false;
 }
 
+bool AABB(const vec3 Center, const vec3 Radius, out float t)
+{
+    //!< レイのパラメータ表現 Ray = o + d * t ただし o = ObjectRayOrigin(), d = ObjectRayDirection()
+    //!< Ray = Plane[+-X+-Y+-Z] ... レイに 6 平面を代入
+    //!< o + d * t = Plane[+-X+-Y+-Z]
+    //!< t = (Plane[+-X+-Y+-Z] - o) / d
+    
+    const vec3 AABBMin = Center - Radius;
+    const vec3 AABBMax = Center + Radius;
+
+    const vec3 invd = 1.0f / gl_ObjectRayDirectionEXT;
+    const vec3 Tmp0 = (AABBMin - gl_ObjectRayOriginEXT) * invd;
+    const vec3 Tmp1 = (AABBMax - gl_ObjectRayOriginEXT) * invd;
+    const vec3 tMin = min(Tmp0, Tmp1);
+    const vec3 tMax = max(Tmp0, Tmp1);
+    const float t0 = max(max(tMin.x, tMin.y), tMin.z);
+    const float t1 = min(min(tMax.x, tMax.y), tMax.z);
+    if (t0 <= t1) {
+        t = t0 < gl_RayTminEXT ? t1 : t0;
+        if (t >= gl_RayTminEXT && t <= gl_RayTmaxEXT) {
+            return true;
+        }
+    }
+    return false;
+}
+
 //!< ペイロードへ書き込みはできない、アトリビュートを生成して他シェーダへ供給
 void main()
 {
-   
-    
+#if 0
+   const vec3 Center = vec3(0.0f);
+   const vec3 Radius = vec3(0.5f);
+   float t;
+   if(AABB(Center, Radius, t)) {
+        const vec3 Hit = gl_ObjectRayOriginEXT + gl_ObjectRayDirectionEXT * t;
+        const vec3 N = normalize(Hit - Center);
+        const vec3 NAbs = abs(N);
+        const float MaxComp = max(max(NAbs.x, NAbs.y), NAbs.z);
+        if (MaxComp == NAbs.x) {
+            Attr.Normal = vec3(sign(N.x), 0.0f, 0.0f);
+        }
+        else if (MaxComp == NAbs.y) {
+            Attr.Normal = vec3(0.0f, sign(N.x), 0.0f);
+        }
+        else {
+            Attr.Normal = vec3(0.0f, 0.0f, sign(N.x));
+        }
+
+        //Attr.Texcoord
+
+        const uint Kind = 0; //!< ここでは使用しないので 0
+        reportIntersectionEXT(t, Kind);
+    }
+#else    
     const vec3 Center = vec3(0.0f);
 	const float Radius = 0.5f;
     float t;
@@ -60,4 +109,5 @@ void main()
         const uint Kind = 0; //!< ここでは使用しないので 0
         reportIntersectionEXT(t, Kind);
     }
+#endif
 }
