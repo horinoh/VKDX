@@ -72,11 +72,15 @@ public:
 #pragma endregion
 
 #pragma region TLAS_GEOMETRY
+		const auto Tr3x4 = glm::mat3x4(glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(20.0f), glm::vec3(1.0f, 0.0f, 0.0f)), glm::radians(135.0f), glm::vec3(0.0f, 1.0f, 0.0f)));
 		const std::array ASIs = {
 			VkAccelerationStructureInstanceKHR({
-				.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, 0.0f,
-													0.0f, 1.0f, 0.0f, 0.0f,
-													0.0f, 0.0f, 1.0f, 0.0f}),
+				//.transform = VkTransformMatrixKHR({1.0f, 0.0f, 0.0f, 0.0f,
+				//									0.0f, 1.0f, 0.0f, 0.0f,
+				//									0.0f, 0.0f, 1.0f, 0.0f}),
+				.transform = VkTransformMatrixKHR({ Tr3x4[0].x, Tr3x4[0].y, Tr3x4[0].z, Tr3x4[0].w,
+													Tr3x4[1].x, Tr3x4[1].y, Tr3x4[1].z, Tr3x4[1].w,
+													Tr3x4[2].x, Tr3x4[2].y, Tr3x4[2].z, Tr3x4[2].w, }),
 				.instanceCustomIndex = 0,
 				.mask = 0xff,
 				.instanceShaderBindingTableRecordOffset = 0,

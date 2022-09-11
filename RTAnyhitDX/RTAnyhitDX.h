@@ -22,19 +22,13 @@ public:
 
 #pragma region BLAS_INPUT
 		constexpr std::array Vertices = {
-#if true
 			DirectX::XMFLOAT3({ 0.0f, 0.5f, 0.0f }), DirectX::XMFLOAT3({ -0.5f, -0.5f, 0.0f }), DirectX::XMFLOAT3({ 0.5f, -0.5f, 0.0f }),
-#else
-			DirectX::XMFLOAT3({ -1.0f, 1.0f, 0.0f }), DirectX::XMFLOAT3({ -1.0f, -1.0f, 0.0f }), DirectX::XMFLOAT3({ 1.0f, 1.0f, 0.0f }),
-			DirectX::XMFLOAT3({ -1.0f, -1.0f, 0.0f }), DirectX::XMFLOAT3({ 1.0f, -1.0f, 0.0f }), DirectX::XMFLOAT3({ 1.0f, 1.0f, 0.0f }),
-#endif
 		};
 		UploadResource VB;
 		VB.Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), data(Vertices));
 
 		constexpr std::array Indices = {
 			UINT32(0), UINT32(1), UINT32(2),
-			//UINT32(3), UINT32(4), UINT32(5),
 		};
 		UploadResource IB;
 		IB.Create(COM_PTR_GET(Device), TotalSizeOf(Indices), data(Indices));
@@ -260,6 +254,7 @@ public:
 				GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
 				GCL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
 				GCL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[1]);
+				GCL->SetComputeRootDescriptorTable(2, CbvSrvUavGPUHandles.back()[2]);
 
 				TO_GCL4(GCL, GCL4);
 				GCL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
@@ -276,12 +271,100 @@ public:
 		if (FindDirectory("DDS", Path)) {
 			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 			const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
-			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\SheetMetal001_1K-JPG\\SheetMetal001_1K_Opacity.dds"))
-				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-
-			const auto RD = DDSTextures.back().Resource->GetDesc();
-			DDSTextures.back().SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({ .Format = RD.Format, .ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE, .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, .TextureCube = D3D12_TEXCUBE_SRV({.MostDetailedMip = 0, .MipLevels = RD.MipLevels, .ResourceMinLODClamp = 0.0f }), });
+			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\SheetMetal001_1K-JPG\\SheetMetal001_1K_Opacity.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 		}
 	}
+	virtual void CreateRootSignature() override {
+		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
+		COM_PTR<ID3DBlob> Blob;
+#ifdef USE_HLSL_ROOTSIGNATRUE
+		GetRootSignaturePartFromShader(Blob, data(GetBasePath() + TEXT(".grs.cso")));
+#else
+		constexpr std::array DRs_Tlas = {
+			//!< TLAS (SRV0) : register(t0, space0)
+			D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
+		};
+		constexpr std::array DRs_Uav = {
+			//!< o—Í (UAV0) : register(u0, space0)
+			D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
+		};
+		constexpr std::array DRs_Tex = {
+			//!< TransparentMap (SRV1) : register(t1, space0)
+			D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 1, .BaseShaderRegister = 1, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
+		};
+		DX::SerializeRootSignature(Blob, {
+			//!< TLAS (SRV0)
+			D3D12_ROOT_PARAMETER({
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Tlas)), .pDescriptorRanges = data(DRs_Tlas) }),
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
+			}),
+			//!< o—Í (UAV0)
+			D3D12_ROOT_PARAMETER({
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Uav)), .pDescriptorRanges = data(DRs_Uav) }),
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
+			}),
+			//!< TransparentMap (SRV1)
+			D3D12_ROOT_PARAMETER({
+				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
+				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Tex)), .pDescriptorRanges = data(DRs_Tex) }),
+				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
+			}),
+			}, { StaticSamplerDescs[0], }, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+#endif
+		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
+	}
+	virtual void CreateDescriptor() override {
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 3, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
+		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
+
+		CbvSrvUavGPUHandles.emplace_back();
+		auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
+		auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
+		const auto IncSize = Device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+		//!< [0] TLAS (SRV0)
+		Device->CreateShaderResourceView(nullptr, &TLASs[0].SRV, CDH);
+		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		CDH.ptr += IncSize;
+		GDH.ptr += IncSize;
+		//!< [1] o—Í (UAV0)
+		Device->CreateUnorderedAccessView(COM_PTR_GET(UnorderedAccessTextures[0].Resource), nullptr, &UnorderedAccessTextures[0].UAV, CDH);
+		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		CDH.ptr += IncSize;
+		GDH.ptr += IncSize;
+		//!< [2] TransparentMap (SRV1)
+		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH);
+		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		CDH.ptr += IncSize;
+		GDH.ptr += IncSize;
+	}
+	virtual void CreateStaticSampler() override {
+		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
+			.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR,
+			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
+			.MipLODBias = 0.0f,
+			.MaxAnisotropy = 0,
+			.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER,
+			.BorderColor = D3D12_STATIC_BORDER_COLOR_OPAQUE_WHITE,
+			.MinLOD = 0.0f, .MaxLOD = 1.0f,
+			.ShaderRegister = 0, .RegisterSpace = 0, .ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL //!< register(s0, space0)
+		}));
+	}
 };
-#pragma endregion
+#pragma endregion //!< Code
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

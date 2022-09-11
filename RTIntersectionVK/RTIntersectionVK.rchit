@@ -22,6 +22,7 @@ void main()
         Payload.Color = vec3(0.0f, 1.0f, 0.0f);
         return;
     }
-    Payload.Color = Attr.Normal * 0.5f + 0.5f;
+    //Payload.Color = Attr.Normal * 0.5f + 0.5f;
+    Payload.Color = Attr.Normal;
     //Payload.Color = vec3(Attr.Texcoord, 0);
 }

@@ -26,7 +26,7 @@ void main()
     const vec3 Direction = vec3(0.0f, 0.0f, 1.0f);
 
     traceRayEXT(TLAS, 
-        gl_RayFlagsCullBackFacingTrianglesEXT | gl_RayFlagsTerminateOnFirstHitEXT, //!< gl_RayFlagsOpaqueEXT を指定すると AnyHitShader は呼び出されないので注意‘
+        gl_RayFlagsCullBackFacingTrianglesEXT | gl_RayFlagsTerminateOnFirstHitEXT, //!< gl_RayFlagsOpaqueEXT を指定すると AnyHitShader は呼び出されないので注意
         0xff,
         0, 0,   
         0,      

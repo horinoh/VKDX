@@ -70,26 +70,29 @@ bool AABB(const vec3 Center, const vec3 Radius, out float t)
 //!< ペイロードへ書き込みはできない、アトリビュートを生成して他シェーダへ供給
 void main()
 {
-#if 0
+#if 1
    const vec3 Center = vec3(0.0f);
    const vec3 Radius = vec3(0.5f);
    float t;
    if(AABB(Center, Radius, t)) {
+        const vec3 AABBMin = Center - Radius;
+
         const vec3 Hit = gl_ObjectRayOriginEXT + gl_ObjectRayDirectionEXT * t;
         const vec3 N = normalize(Hit - Center);
         const vec3 NAbs = abs(N);
         const float MaxComp = max(max(NAbs.x, NAbs.y), NAbs.z);
         if (MaxComp == NAbs.x) {
             Attr.Normal = vec3(sign(N.x), 0.0f, 0.0f);
+            Attr.Texcoord = (vec2(Attr.Normal.x, 1.0) * Hit.yz - AABBMin.yz) / Radius.yz;
         }
         else if (MaxComp == NAbs.y) {
-            Attr.Normal = vec3(0.0f, sign(N.x), 0.0f);
+            Attr.Normal = vec3(0.0f, sign(N.y), 0.0f);
+            Attr.Texcoord = (vec2(-Attr.Normal.y, 1.0) * Hit.xz - AABBMin.xz) / Radius.xz;
         }
         else {
-            Attr.Normal = vec3(0.0f, 0.0f, sign(N.x));
+            Attr.Normal = vec3(0.0f, 0.0f, sign(N.z));
+            Attr.Texcoord = (vec2(Attr.Normal.z, 1.0) * Hit.xy - AABBMin.xy) / Radius.xy;
         }
-
-        //Attr.Texcoord
 
         const uint Kind = 0; //!< ここでは使用しないので 0
         reportIntersectionEXT(t, Kind);

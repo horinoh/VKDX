@@ -68,7 +68,7 @@ bool AABB(const float3 Center, const float3 Radius, out float t)
 [shader("intersection")]
 void OnIntersection()
 {
-#if 0
+#if 1
     const float3 Center = float3(0.0f, 0.0f, 0.0f);
     const float3 Radius = float3(0.5f, 0.5f, 0.5f);
     float t;
@@ -76,20 +76,23 @@ void OnIntersection()
     {
         AttrNT Attr;
 
+        const float3 AABBMin = Center - Radius;
         const float3 Hit = ObjectRayOrigin() + ObjectRayDirection() * t;
         const float3 N = normalize(Hit - Center);
         const float3 NAbs = abs(N);
         const float MaxComp = max(max(NAbs.x, NAbs.y), NAbs.z);
         if (MaxComp == NAbs.x) {
             Attr.Normal = float3(sign(N.x), 0.0f, 0.0f);
+            Attr.Texcoord = (float2(Attr.Normal.x, 1.0) * Hit.yz - AABBMin.yz) / Radius.yz;
         }
         else if (MaxComp == NAbs.y) {
-            Attr.Normal = float3(0.0f, sign(N.x), 0.0f);
+            Attr.Normal = float3(0.0f, sign(N.y), 0.0f);
+            Attr.Texcoord = (float2(-Attr.Normal.y, 1.0) * Hit.xz - AABBMin.xz) / Radius.xz;
         }
         else {
-            Attr.Normal = float3(0.0f, 0.0f, sign(N.x));
+            Attr.Normal = float3(0.0f, 0.0f, sign(N.z));
+            Attr.Texcoord = (float2(Attr.Normal.z, 1.0) * Hit.xy - AABBMin.xy) / Radius.xy;
         }
-        //Attr.Texcoord = 
         
         const uint Kind = 0; //!< ‚±‚±‚Å‚ÍŽg—p‚µ‚È‚¢‚Ì‚Å 0
         ReportHit(t, Kind, Attr);
