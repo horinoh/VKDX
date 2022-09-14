@@ -55,8 +55,10 @@ public:
 		DirectX::XMStoreFloat3x4(&Tr3x4, DirectX::XMMatrixRotationRollPitchYaw(DirectX::XMConvertToRadians(20.0f), DirectX::XMConvertToRadians(135.0f), 0.0f));
 		const std::array RIDs = {
 			D3D12_RAYTRACING_INSTANCE_DESC({
-				//.Transform = {{ 1.0f, 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f, 0.0f }, {0.0f, 0.0f, 1.0f, 0.0f}},
-				.Transform = {{ Tr3x4.m[0][0], Tr3x4.m[0][1], Tr3x4.m[0][2], Tr3x4.m[0][3] }, { Tr3x4.m[1][0], Tr3x4.m[1][1], Tr3x4.m[1][2], Tr3x4.m[1][3]}, {Tr3x4.m[2][0], Tr3x4.m[2][1], Tr3x4.m[2][2], Tr3x4.m[2][3]}},
+				.Transform = {	{ Tr3x4.m[0][0], Tr3x4.m[0][1], Tr3x4.m[0][2], Tr3x4.m[0][3] }, 
+								{ Tr3x4.m[1][0], Tr3x4.m[1][1], Tr3x4.m[1][2], Tr3x4.m[1][3] }, 
+								{ Tr3x4.m[2][0], Tr3x4.m[2][1], Tr3x4.m[2][2], Tr3x4.m[2][3] },
+							 },
 				.InstanceID = 0,
 				.InstanceMask = 0xff,
 				.InstanceContributionToHitGroupIndex = 0,
