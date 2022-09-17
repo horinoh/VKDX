@@ -10,6 +10,8 @@ struct PAYLOAD
 layout(location = 0) rayPayloadInEXT PAYLOAD Payload;
 hitAttributeEXT vec2 HitAttr;
 
+layout (binding = 3, set = 0) uniform sampler2D ColorMap;
+
 void main()
 {
     if(Payload.Recursive++ >= 1) {
@@ -17,5 +19,6 @@ void main()
         return;
     }
     const vec2 UV = (vec2(gl_LaunchIDEXT.xy) + 0.5f) / gl_LaunchSizeEXT.xy;
-    Payload.Color = vec3(UV, 0.0f);
+    //Payload.Color = vec3(UV, 0.0f);
+    Payload.Color = textureLod(ColorMap, UV, 0.0f).rgb;
 }

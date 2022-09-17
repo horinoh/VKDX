@@ -51,8 +51,9 @@ public:
 #pragma endregion
 
 #pragma region TLAS_INPUT
+		constexpr auto DegX = 20.0f, DegY = 135.0f;
 		DirectX::XMFLOAT3X4 Tr3x4;
-		DirectX::XMStoreFloat3x4(&Tr3x4, DirectX::XMMatrixRotationRollPitchYaw(DirectX::XMConvertToRadians(20.0f), DirectX::XMConvertToRadians(135.0f), 0.0f));
+		DirectX::XMStoreFloat3x4(&Tr3x4, DirectX::XMMatrixRotationRollPitchYaw(DirectX::XMConvertToRadians(DegX), DirectX::XMConvertToRadians(DegY), 0.0f));
 		const std::array RIDs = {
 			D3D12_RAYTRACING_INSTANCE_DESC({
 				.Transform = {	{ Tr3x4.m[0][0], Tr3x4.m[0][1], Tr3x4.m[0][2], Tr3x4.m[0][3] }, 

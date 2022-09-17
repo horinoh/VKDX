@@ -272,6 +272,7 @@ public:
 			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 			const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\SheetMetal001_1K-JPG\\SheetMetal001_1K_Opacity.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\SheetMetal001_1K-JPG\\SheetMetal001_1K_Color.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 		}
 	}
 	virtual void CreateRootSignature() override {
@@ -289,8 +290,8 @@ public:
 			D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV, .NumDescriptors = 1, .BaseShaderRegister = 0, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 		};
 		constexpr std::array DRs_Tex = {
-			//!< TransparentMap (SRV1) : register(t1, space0)
-			D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 1, .BaseShaderRegister = 1, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
+			//!< Opacity, ColorMap (SRV[12]) : register(t[12], space0)
+			D3D12_DESCRIPTOR_RANGE({.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV, .NumDescriptors = 2, .BaseShaderRegister = 1, .RegisterSpace = 0, .OffsetInDescriptorsFromTableStart = D3D12_DESCRIPTOR_RANGE_OFFSET_APPEND })
 		};
 		DX::SerializeRootSignature(Blob, {
 			//!< TLAS (SRV0)
@@ -305,7 +306,7 @@ public:
 				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Uav)), .pDescriptorRanges = data(DRs_Uav) }),
 				.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL
 			}),
-			//!< TransparentMap (SRV1)
+			//!< Opacity, ColorMap (SRV[12])
 			D3D12_ROOT_PARAMETER({
 				.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE,
 				.DescriptorTable = D3D12_ROOT_DESCRIPTOR_TABLE({.NumDescriptorRanges = static_cast<UINT>(size(DRs_Tex)), .pDescriptorRanges = data(DRs_Tex) }),
@@ -316,7 +317,12 @@ public:
 		VERIFY_SUCCEEDED(Device->CreateRootSignature(0, Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(RootSignatures.emplace_back())));
 	}
 	virtual void CreateDescriptor() override {
-		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { .Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, .NumDescriptors = 3, .Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE, .NodeMask = 0 };
+		const D3D12_DESCRIPTOR_HEAP_DESC DHD = { 
+			.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 
+			.NumDescriptors = 4, 
+			.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE,
+			.NodeMask = 0
+		};
 		VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(CbvSrvUavDescriptorHeaps.emplace_back())));
 
 		CbvSrvUavGPUHandles.emplace_back();
@@ -333,8 +339,13 @@ public:
 		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
-		//!< [2] TransparentMap (SRV1)
+		//!< [2] OpacityMap (SRV1)
 		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH);
+		CbvSrvUavGPUHandles.back().emplace_back(GDH);
+		CDH.ptr += IncSize;
+		GDH.ptr += IncSize;
+		//!< [3] ColorMap (SRV2)
+		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[1].Resource), &DDSTextures[1].SRV, CDH);
 		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;

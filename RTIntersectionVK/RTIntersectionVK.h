@@ -72,7 +72,8 @@ public:
 #pragma endregion
 
 #pragma region TLAS_GEOMETRY
-		const auto Tr4x3 = glm::mat4x3(glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(135.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(20.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+		constexpr auto DegX = 20.0f, DegY = 135.0f;
+		const auto Tr4x3 = glm::mat4x3(glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(DegY), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(DegX), glm::vec3(1.0f, 0.0f, 0.0f)));
 		const std::array ASIs = {
 			VkAccelerationStructureInstanceKHR({
 				.transform = VkTransformMatrixKHR({ Tr4x3[0].x, Tr4x3[1].x, Tr4x3[2].x, Tr4x3[3].x,

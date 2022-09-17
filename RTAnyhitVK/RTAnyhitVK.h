@@ -314,6 +314,7 @@ public:
 			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 			const auto CB = CommandBuffers[0];
 			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\SheetMetal001_1K-JPG\\SheetMetal001_1K_Opacity.dds"))).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
+			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\SheetMetal001_1K-JPG\\SheetMetal001_1K_Color.dds"))).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 		}
 	}
 	virtual void CreateImmutableSampler() override {
@@ -336,12 +337,14 @@ public:
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 		const std::array ISs = { Samplers[0] };
 		CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
-			//!< TLAS
+			//!< [0] TLAS
 			VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
-			//!< 出力 (StorageImage)
+			//!< [1] 出力 (StorageImage)
 			VkDescriptorSetLayoutBinding({.binding = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .pImmutableSamplers = nullptr }),
-			//!< コンバインドイメージサンプラ (TransparentMap)
+			//!< [2] コンバインドイメージサンプラ (OpacityMap)
 			VkDescriptorSetLayoutBinding({.binding = 2, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_ANY_HIT_BIT_KHR, .pImmutableSamplers = data(ISs)}),
+			//!< [3] コンバインドイメージサンプラ (ColorMap)
+			VkDescriptorSetLayoutBinding({.binding = 3, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = static_cast<uint32_t>(size(ISs)), .stageFlags = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR, .pImmutableSamplers = data(ISs)}),
 		});
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
@@ -349,8 +352,8 @@ public:
 		VKExt::CreateDescriptorPool(DescriptorPools.emplace_back(), VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT, {
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, .descriptorCount = 1 }),
 			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = 1 }),
-			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 1 }),
-			});
+			VkDescriptorPoolSize({.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, .descriptorCount = 2 }),
+		});
 		const std::array DSLs = { DescriptorSetLayouts[0] };
 		const VkDescriptorSetAllocateInfo DSAI = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -363,9 +366,10 @@ public:
 		const std::array ASs = { TLASs[0].AccelerationStructure };
 		const auto WDSAS = VkWriteDescriptorSetAccelerationStructureKHR({ .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR, .pNext = nullptr, .accelerationStructureCount = static_cast<uint32_t>(size(ASs)), .pAccelerationStructures = data(ASs) });
 		const auto DII = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = StorageTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_GENERAL });
-		const auto DII_Transparent = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = DDSTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+		const auto DII_Opacity = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = DDSTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+		const auto DII_Color = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = DDSTextures[1].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 		const std::array WDSs = {
-			//!< TLAS
+			//!< [0] TLAS
 			VkWriteDescriptorSet({
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.pNext = &WDSAS, //!< pNext に VkWriteDescriptorSetAccelerationStructureKHR を指定すること
@@ -374,7 +378,7 @@ public:
 				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
 				.pImageInfo = nullptr, .pBufferInfo = nullptr, .pTexelBufferView = nullptr
 			}),
-			//!< 出力 (StorageImage)
+			//!< [1] 出力 (StorageImage)
 			VkWriteDescriptorSet({
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.pNext = nullptr,
@@ -383,14 +387,23 @@ public:
 				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
 				.pImageInfo = &DII, .pBufferInfo = nullptr, .pTexelBufferView = nullptr
 			}),
-			//!< コンバインドイメージサンプラ (TransparentMap)
+			//!< [2] コンバインドイメージサンプラ (OpacityMap)
 			VkWriteDescriptorSet({
 				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.pNext = nullptr,
 				.dstSet = DescriptorSets[0],
 				.dstBinding = 2, .dstArrayElement = 0,
 				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				.pImageInfo = &DII_Transparent, .pBufferInfo = nullptr, .pTexelBufferView = nullptr
+				.pImageInfo = &DII_Opacity, .pBufferInfo = nullptr, .pTexelBufferView = nullptr
+			}),
+			//!< [3] コンバインドイメージサンプラ (ColorMap)
+			VkWriteDescriptorSet({
+				.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.pNext = nullptr,
+				.dstSet = DescriptorSets[0],
+				.dstBinding = 3, .dstArrayElement = 0,
+				.descriptorCount = 1, .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.pImageInfo = &DII_Color, .pBufferInfo = nullptr, .pTexelBufferView = nullptr
 			}),
 		};
 		constexpr std::array<VkCopyDescriptorSet, 0> CDSs = {};

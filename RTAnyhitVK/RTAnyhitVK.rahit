@@ -10,14 +10,14 @@ struct PAYLOAD
 layout(location = 0) rayPayloadInEXT PAYLOAD Payload;
 hitAttributeEXT vec2 HitAttr;
 
-layout (binding = 2, set = 0) uniform sampler2D TransparentMap;
+layout (binding = 2, set = 0) uniform sampler2D OpacityMap;
 
 //!< Anyhit シェーダが呼び出されるには対象のオブジェクトが半透明(非VK_GEOMETRY_OPAQUE_BIT_KHR)である必要があるので注意
 void main()
 {
 #if 1
     const vec2 UV = (vec2(gl_LaunchIDEXT.xy) + 0.5f) / gl_LaunchSizeEXT.xy;
-    if(textureLod(TransparentMap, UV, 0.0f).r < 0.5f) {
+    if(textureLod(OpacityMap, UV, 0.0f).r < 0.5f) {
         ignoreIntersectionEXT; //!< 交差判定を棄却後、再開
         //terminateRayEXT; //!< これ以上の交差判定は不必要
     }
