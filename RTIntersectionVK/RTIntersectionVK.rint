@@ -40,6 +40,17 @@ bool Sphere(const vec3 Center, const float Radius, out float t)
 	}
     return false;
 }
+void SphereNormal(const vec3 Center, const float t, out vec3 Normal)
+{
+    Normal = normalize((gl_ObjectRayOriginEXT + gl_ObjectRayDirectionEXT * t) - Center);
+}
+void SphereNormalTexcoord(const vec3 Center, const float t, out vec3 Normal, out vec2 Texcoord)
+{
+    SphereNormal(Center, t, Normal);
+    const float PI = 4.0f * atan(1.0f);
+    const float PI2 = PI * 2;
+    Texcoord = vec2(fract(atan(Normal.y, Normal.x) / PI2), acos(-Normal.z) / PI);
+}
 
 bool AABB(const vec3 Center, const vec3 Radius, out float t)
 {
@@ -66,33 +77,112 @@ bool AABB(const vec3 Center, const vec3 Radius, out float t)
     }
     return false;
 }
+void AABBNormal(const vec3 Center, const float t, out vec3 Normal)
+{
+    const vec3 N = normalize((gl_ObjectRayOriginEXT + gl_ObjectRayDirectionEXT * t) - Center);
+    const vec3 NAbs = abs(N);
+    const float MaxComp = max(max(NAbs.x, NAbs.y), NAbs.z);
+    if (MaxComp == NAbs.x)
+    {
+        Normal = vec3(sign(N.x), 0.0f, 0.0f);
+    }
+    else if (MaxComp == NAbs.y)
+    {
+        Normal = vec3(0.0f, sign(N.y), 0.0f);
+    }
+    else
+    {
+        Normal = vec3(0.0f, 0.0f, sign(N.z));
+    }
+}
+void AABBNormalTexcoord(const vec3 Center, const vec3 Radius, const float t, out vec3 Normal, out vec2 Texcoord)
+{
+    const vec3 Hit = gl_ObjectRayOriginEXT + gl_ObjectRayDirectionEXT * t;
+    const vec3 N = normalize(Hit - Center);
+    const vec3 NAbs = abs(N);
+    const float MaxComp = max(max(NAbs.x, NAbs.y), NAbs.z);
+    
+    const vec3 AABBMin = Center - Radius;
+    
+    if (MaxComp == NAbs.x)
+    {
+        Normal = vec3(sign(N.x), 0.0f, 0.0f);
+        Texcoord = (vec2(Normal.x, 1.0) * Hit.yz - AABBMin.yz) / Radius.yz;
+    }
+    else if (MaxComp == NAbs.y)
+    {
+        Normal = vec3(0.0f, sign(N.y), 0.0f);
+        Texcoord = (vec2(-Normal.y, 1.0) * Hit.xz - AABBMin.xz) / Radius.xz;
+    }
+    else
+    {
+        Normal = vec3(0.0f, 0.0f, sign(N.z));
+        Texcoord = (vec2(Normal.z, 1.0) * Hit.xy - AABBMin.xy) / Radius.xy;
+    }
+}
 
+//!< 距離関数 (DistanceFunction) https://iquilezles.org/articles/distfunctions/
+float DFSphere(const vec3 Pos, const vec3 Center, const float Radius)
+{
+    return length(Pos - Center) - Radius;
+}
+vec3 DFSphereNormal(const vec3 Pos, const vec3 Center, const float Radius)
+{
+    const float Epsilon = 0.0001f;
+    const vec3 Ex = vec3(Epsilon, 0.0f, 0.0f), Ey =vec3(0.0f, Epsilon, 0.0f), Ez = vec3(0.0f, 0.0f, Epsilon);
+    return normalize(vec3(DFSphere(Pos + Ex, Center, Radius) - DFSphere(Pos - Ex, Center, Radius), DFSphere(Pos + Ey, Center, Radius) - DFSphere(Pos - Ey, Center, Radius), DFSphere(Pos + Ez, Center, Radius) - DFSphere(Pos - Ez, Center, Radius)));
+}
+float DFTorus(const vec3 Pos, const vec3 Center, const float Radius, const float Width)
+{
+    const vec3 d = Pos - Center;
+    return length(vec2(length(d.xz) - Radius, d.y)) - Width;
+}
+vec3 DFTorusNormal(const vec3 Pos, const vec3 Center, const float Radius, const float Width)
+{
+    const float Epsilon = 0.0001f;
+    const vec3 Ex = vec3(Epsilon, 0.0f, 0.0f), Ey = vec3(0.0f, Epsilon, 0.0f), Ez = vec3(0.0f, 0.0f, Epsilon);
+    return normalize(vec3(DFTorus(Pos + Ex, Center, Radius, Width) - DFTorus(Pos - Ex, Center, Radius, Width), DFTorus(Pos + Ey, Center, Radius, Width) - DFTorus(Pos - Ey, Center, Radius, Width), DFTorus(Pos + Ez, Center, Radius, Width) - DFTorus(Pos - Ez, Center, Radius, Width)));
+}
+float DFBox(const vec3 Pos, const vec3 Center, const vec3 Radius)
+{
+    return length(max(abs(Pos - Center) - Radius, 0.0f));
+}
+vec3 DFBoxNormal(const vec3 Pos, const vec3 Center, const vec3 Radius)
+{
+    const float Epsilon = 0.0001f;
+    const vec3 Ex = vec3(Epsilon, 0.0f, 0.0f), Ey = vec3(0.0f, Epsilon, 0.0f), Ez = vec3(0.0f, 0.0f, Epsilon);
+    return normalize(vec3(DFBox(Pos + Ex, Center, Radius) - DFBox(Pos - Ex, Center, Radius), DFBox(Pos + Ey, Center, Radius) - DFBox(Pos - Ey, Center, Radius), DFBox(Pos + Ez, Center, Radius) - DFBox(Pos - Ez, Center, Radius)));
+}
 //!< ペイロードへ書き込みはできない、アトリビュートを生成して他シェーダへ供給
 void main()
 {
 #if 1
+    const float Threshold = 0.0001f;
+    const uint MaxSteps = 256;
+
+    const vec3 Center = vec3(0.0f);
+	const float Radius = 0.25f;
+
+    uint i = 0;
+    float t = gl_RayTminEXT;
+    while(i++ < MaxSteps && t <= gl_RayTmaxEXT) {
+        const vec3 Pos = gl_ObjectRayOriginEXT + t * gl_ObjectRayDirectionEXT;
+        const float Distance = DFTorus(Pos, Center, Radius, Radius);
+        if(Distance < Threshold) {
+            Attr.Normal = DFTorusNormal(Pos, Center, Radius, Radius);
+
+            const uint Kind = 0; //!< ここでは使用しないので 0
+            reportIntersectionEXT(t, Kind);
+            return;
+        }
+        t += Distance;
+    }
+#elif 1
    const vec3 Center = vec3(0.0f);
    const vec3 Radius = vec3(0.5f);
    float t;
    if(AABB(Center, Radius, t)) {
-        const vec3 AABBMin = Center - Radius;
-
-        const vec3 Hit = gl_ObjectRayOriginEXT + gl_ObjectRayDirectionEXT * t;
-        const vec3 N = normalize(Hit - Center);
-        const vec3 NAbs = abs(N);
-        const float MaxComp = max(max(NAbs.x, NAbs.y), NAbs.z);
-        if (MaxComp == NAbs.x) {
-            Attr.Normal = vec3(sign(N.x), 0.0f, 0.0f);
-            Attr.Texcoord = (vec2(Attr.Normal.x, 1.0) * Hit.yz - AABBMin.yz) / Radius.yz;
-        }
-        else if (MaxComp == NAbs.y) {
-            Attr.Normal = vec3(0.0f, sign(N.y), 0.0f);
-            Attr.Texcoord = (vec2(-Attr.Normal.y, 1.0) * Hit.xz - AABBMin.xz) / Radius.xz;
-        }
-        else {
-            Attr.Normal = vec3(0.0f, 0.0f, sign(N.z));
-            Attr.Texcoord = (vec2(Attr.Normal.z, 1.0) * Hit.xy - AABBMin.xy) / Radius.xy;
-        }
+        AABBNormalTexcoord(Center, Radius, t, Attr.Normal, Attr.Texcoord);
 
         const uint Kind = 0; //!< ここでは使用しないので 0
         reportIntersectionEXT(t, Kind);
@@ -102,12 +192,7 @@ void main()
 	const float Radius = 0.5f;
     float t;
     if(Sphere(Center, Radius, t)) {
-        const vec3 Hit = gl_ObjectRayOriginEXT + gl_ObjectRayDirectionEXT * t;
-        Attr.Normal = normalize(Hit - Center);
-
-        const float PI = 4.0f * atan(1.0f);
-        const float PI2 = PI * 2.0f;
-        Attr.Texcoord = vec2(fract(atan(Attr.Normal.y, Attr.Normal.x) / PI2), acos(-Attr.Normal.z) / PI);
+        SphereNormalTexcoord(Center, t, Attr.Normal, Attr.Texcoord);
 
         const uint Kind = 0; //!< ここでは使用しないので 0
         reportIntersectionEXT(t, Kind);

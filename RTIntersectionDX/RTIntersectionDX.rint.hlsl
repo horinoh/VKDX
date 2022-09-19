@@ -37,7 +37,17 @@ bool Sphere(const float3 Center, const float Radius, out float t)
     
     return false;
 }
-
+void SphereNormal(const float3 Center, const float t, out float3 Normal)
+{
+    Normal = normalize((ObjectRayOrigin() + ObjectRayDirection() * t) - Center);
+}
+void SphereNormalTexcoord(const float3 Center, const float t, out float3 Normal, out float2 Texcoord)
+{
+    SphereNormal(Center, t, Normal);
+    const float PI = 4.0f * atan(1.0f);
+    const float PI2 = PI * 2;
+    Texcoord = float2(frac(atan2(Normal.y, Normal.x) / PI2), acos(-Normal.z) / PI);
+}
 bool AABB(const float3 Center, const float3 Radius, out float t)
 {
     //!< レイのパラメータ表現 Ray = o + d * t ただし o = ObjectRayOrigin(), d = ObjectRayDirection()
@@ -63,36 +73,117 @@ bool AABB(const float3 Center, const float3 Radius, out float t)
     }
     return false;
 }
+void AABBNormal(const float3 Center, const float t, out float3 Normal)
+{
+    const float3 N = normalize((ObjectRayOrigin() + ObjectRayDirection() * t) - Center);
+    const float3 NAbs = abs(N);
+    const float MaxComp = max(max(NAbs.x, NAbs.y), NAbs.z);
+    if (MaxComp == NAbs.x)
+    {
+        Normal = float3(sign(N.x), 0.0f, 0.0f);
+    }
+    else if (MaxComp == NAbs.y)
+    {
+        Normal = float3(0.0f, sign(N.y), 0.0f);
+    }
+    else
+    {
+        Normal = float3(0.0f, 0.0f, sign(N.z));
+    }
+}
+void AABBNormalTexcoord(const float3 Center, const float3 Radius, const float t, out float3 Normal, out float2 Texcoord)
+{
+    const float3 Hit = ObjectRayOrigin() + ObjectRayDirection() * t;
+    const float3 N = normalize(Hit - Center);
+    const float3 NAbs = abs(N);
+    const float MaxComp = max(max(NAbs.x, NAbs.y), NAbs.z);
+    
+    const float3 AABBMin = Center - Radius;
+    
+    if (MaxComp == NAbs.x)
+    {
+        Normal = float3(sign(N.x), 0.0f, 0.0f);
+        Texcoord = (float2(Normal.x, 1.0) * Hit.yz - AABBMin.yz) / Radius.yz;
+    }
+    else if (MaxComp == NAbs.y)
+    {
+        Normal = float3(0.0f, sign(N.y), 0.0f);
+        Texcoord = (float2(-Normal.y, 1.0) * Hit.xz - AABBMin.xz) / Radius.xz;
+    }
+    else
+    {
+        Normal = float3(0.0f, 0.0f, sign(N.z));
+        Texcoord = (float2(Normal.z, 1.0) * Hit.xy - AABBMin.xy) / Radius.xy;
+    }
+}
+
+//!< 距離関数 (DistanceFunction) https://iquilezles.org/articles/distfunctions/
+float DFSphere(const float3 Pos, const float3 Center, const float Radius)
+{
+    return length(Pos - Center) - Radius;
+}
+float3 DFSphereNormal(const float3 Pos, const float3 Center, const float Radius)
+{
+    const float Epsilon = 0.0001f;
+    const float3 Ex = float3(Epsilon, 0.0f, 0.0f), Ey = float3(0.0f, Epsilon, 0.0f), Ez = float3(0.0f, 0.0f, Epsilon);
+    return normalize(float3(DFSphere(Pos + Ex, Center, Radius) - DFSphere(Pos - Ex, Center, Radius), DFSphere(Pos + Ey, Center, Radius) - DFSphere(Pos - Ey, Center, Radius), DFSphere(Pos + Ez, Center, Radius) - DFSphere(Pos - Ez, Center, Radius)));
+}
+float DFTorus(const float3 Pos, const float3 Center, const float Radius, const float Width)
+{
+    const float3 d = Pos - Center;
+    return length(float2(length(d.xz) - Radius, d.y)) - Width;
+}
+float3 DFTorusNormal(const float3 Pos, const float3 Center, const float Radius, const float Width)
+{
+    const float Epsilon = 0.0001f;
+    const float3 Ex = float3(Epsilon, 0.0f, 0.0f), Ey = float3(0.0f, Epsilon, 0.0f), Ez = float3(0.0f, 0.0f, Epsilon);
+    return normalize(float3(DFTorus(Pos + Ex, Center, Radius, Width) - DFTorus(Pos - Ex, Center, Radius, Width), DFTorus(Pos + Ey, Center, Radius, Width) - DFTorus(Pos - Ey, Center, Radius, Width), DFTorus(Pos + Ez, Center, Radius, Width) - DFTorus(Pos - Ez, Center, Radius, Width)));
+}
+float DFBox(const float3 Pos, const float3 Center, const float3 Radius)
+{
+    return length(max(abs(Pos - Center) - Radius, 0.0f));
+}
+float3 DFBoxNormal(const float3 Pos, const float3 Center, const float3 Radius)
+{
+    const float Epsilon = 0.0001f;
+    const float3 Ex = float3(Epsilon, 0.0f, 0.0f), Ey = float3(0.0f, Epsilon, 0.0f), Ez = float3(0.0f, 0.0f, Epsilon);
+    return normalize(float3(DFBox(Pos + Ex, Center, Radius) - DFBox(Pos - Ex, Center, Radius), DFBox(Pos + Ey, Center, Radius) - DFBox(Pos - Ey, Center, Radius), DFBox(Pos + Ez, Center, Radius) - DFBox(Pos - Ez, Center, Radius)));
+}
 
 //!< ペイロードへ書き込みはできない、アトリビュートを生成して他シェーダへ供給
 [shader("intersection")]
 void OnIntersection()
 {
 #if 1
+    const float Threshold = 0.0001f;
+    const uint MaxSteps = 256;
+
+    const float3 Center = float3(0.0f, 0.0f, 0.0f);
+    const float Radius = 0.25f;
+    
+    uint i = 0;
+    float t = RayTMin(); 
+    while (i++ < MaxSteps && t <= RayTCurrent()) {
+        const float3 Pos = ObjectRayOrigin() + t * ObjectRayDirection();
+        const float Distance = DFTorus(Pos, Center, Radius, Radius);
+        if (Distance < Threshold) {
+            AttrNT Attr;
+            Attr.Normal = DFTorusNormal(Pos, Center, Radius, Radius);
+            
+            const uint Kind = 0; //!< ここでは使用しないので 0
+            ReportHit(t, Kind, Attr);
+            return;
+        }
+        t += Distance;
+    }
+#elif 1
     const float3 Center = float3(0.0f, 0.0f, 0.0f);
     const float3 Radius = float3(0.5f, 0.5f, 0.5f);
     float t;
     if (AABB(Center, Radius, t))
     {
         AttrNT Attr;
-
-        const float3 AABBMin = Center - Radius;
-        const float3 Hit = ObjectRayOrigin() + ObjectRayDirection() * t;
-        const float3 N = normalize(Hit - Center);
-        const float3 NAbs = abs(N);
-        const float MaxComp = max(max(NAbs.x, NAbs.y), NAbs.z);
-        if (MaxComp == NAbs.x) {
-            Attr.Normal = float3(sign(N.x), 0.0f, 0.0f);
-            Attr.Texcoord = (float2(Attr.Normal.x, 1.0) * Hit.yz - AABBMin.yz) / Radius.yz;
-        }
-        else if (MaxComp == NAbs.y) {
-            Attr.Normal = float3(0.0f, sign(N.y), 0.0f);
-            Attr.Texcoord = (float2(-Attr.Normal.y, 1.0) * Hit.xz - AABBMin.xz) / Radius.xz;
-        }
-        else {
-            Attr.Normal = float3(0.0f, 0.0f, sign(N.z));
-            Attr.Texcoord = (float2(Attr.Normal.z, 1.0) * Hit.xy - AABBMin.xy) / Radius.xy;
-        }
+        AABBNormalTexcoord(Center, Radius, t, Attr.Normal, Attr.Texcoord);
         
         const uint Kind = 0; //!< ここでは使用しないので 0
         ReportHit(t, Kind, Attr);
@@ -103,13 +194,7 @@ void OnIntersection()
     float t;
     if (Sphere(Center, Radius, t)) {
         AttrNT Attr;
-
-        const float3 Hit = ObjectRayOrigin() + ObjectRayDirection() * t;        
-        Attr.Normal = normalize(Hit - Center);
-            
-        const float PI = 4.0f * atan(1.0f);
-        const float PI2 = PI * 2;
-        Attr.Texcoord = float2(frac(atan2(Attr.Normal.y, Attr.Normal.x) / PI2), acos(-Attr.Normal.z) / PI);
+        SphereNormalTexcoord(Center, t, Attr.Normal, Attr.Texcoord);
         
         const uint Kind = 0; //!< ここでは使用しないので 0
         ReportHit(t, Kind, Attr);
