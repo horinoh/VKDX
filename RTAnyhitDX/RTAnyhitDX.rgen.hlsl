@@ -26,7 +26,7 @@ void OnRayGeneration()
     TraceRay(TLAS, 
             RAY_FLAG_CULL_BACK_FACING_TRIANGLES | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, //!< RAY_FLAG_FORCE_OPAQUE ‚ðŽw’è‚·‚é‚Æ AnyHitShader ‚ÍŒÄ‚Ño‚³‚ê‚È‚¢‚Ì‚Å’ˆÓ
             0xff,
-            0, 1,   
+            0, 0,   
             0,     
             Ray, 
             Payload);

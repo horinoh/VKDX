@@ -57,11 +57,16 @@ void main()
     //!<    gl_RayFlagsTerminateOnFirstHitEXT, gl_RayFlagsSkipClosestHitShaderEXT, 
     //!<    gl_RayFlagsCullBackFacingTrianglesEXT, gl_RayFlagsCullFrontFacingTrianglesEXT, gl_RayFlagsCullOpaqueEXT, gl_RayFlagsCullNoOpaqueEXT
     //!<    gl_RayFlagsSkipTrianglesEXT, gl_RayFlagsSkipAABBEXT ... 要エクステンション GL_EXT_ray_flags_primitive_culling
+
+    //!< instanceShaderBindingTableRecordOffset : TLAS の VkAccelerationStructureInstanceKHR.instanceShaderBindingTableRecordOffset
+    //!< GeometryContributionHitGroupIndex      : BLAS のジオメトリインデックス (VK では gl_GeometryIndexEXT としてシェーダから参照可能、DXでは不可)
+    //!< RecordAddress = RO + RS * GeometryContributionHitGroupIndex + instanceShaderBindingTableRecordOffset
     traceRayEXT(TLAS, 
         gl_RayFlagsOpaqueEXT | gl_RayFlagsCullBackFacingTrianglesEXT | gl_RayFlagsTerminateOnFirstHitEXT, 
         0xff,
-        0, 0,   //!< sbtRecordOffset, sbtRecordStride : RecordAddress = sbtRecordOffset + sbtRecordStride * GeometryContributionHitGroupIndex + instanceShaderBindingTableRecordOffset
-        0,      //!< missIndex
+        0,      //!< sbtRecordOffset (RO)
+        0,      //!< sbtRecordStride (RS)
+        0,      //!< missIndex : ここではミスシェーダは 1 つなので 0
         Origin, TMin, Direction, TMax, 
         0);     //!< "layout(location = N) rayPayloadEXT PAYLOAD Payload;" の N
 

@@ -1,28 +1,6 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
-//!< traceRayEXT() のフラグ gl_RayFlagsSkipTrianglesEXT, gl_RayFlagsSkipAABBEXT を使用する場合に必要
 #extension GL_EXT_ray_flags_primitive_culling : enable 
-
-//!< スレッド
-//!<    uvec3 gl_LaunchSizeEXT, gl_LaunchIDEXT 
-
-//!< レイ
-//!<    uint gl_IncomingRayFlagsEXT
-//!<    vec3 gl_WorldRayOriginEXT, gl_WorldRayDirectionEXT, gl_ObjectRayOriginEXT, gl_ObjectRayDirectionEXT
-//!<    float gl_RayTminEXT, gl_RayTmaxEXT
-
-//!< インデックス
-//!<    int gl_InstanceCustomIndexEXT(VkAccelerationStructureInstanceKHR.instanceCustomIndex), gl_InstanceID, gl_GeometryIndexEXT, gl_PrimitiveID
-
-//!< オブジェクト <-> ワールド
-//!<    mat4x3 gl_ObjectToWorldEXT;
-//!<    mat3x4 gl_ObjectToWorld3x4EXT
-//!<    mat4x3 gl_WorldToObjectEXT;
-//!<    mat3x4 gl_WorldToObject3x4EXT
-
-//!< ヒット
-//!<    uint gl_HitKindEXT
-//!<    float gl_HitTEXT
 
 struct PAYLOAD 
 {
@@ -36,36 +14,24 @@ layout(binding = 1, set = 0, rgba8) uniform image2D RenderTarget;
 
 void main()
 {
-    //!< ペイロードを初期化 (Initialize payload)
     Payload.Color = vec3(0.0f);
     Payload.Recursive = 0;
 
-    //!< +0.5f はピクセルの中心にするため
     const vec2 UV = (vec2(gl_LaunchIDEXT.xy) + 0.5f) / gl_LaunchSizeEXT.xy * 2.0f - 1.0f;
     const vec2 UpY = vec2(UV.x, -UV.y);
 
-    //!< レイ (Ray)
-    const float TMin = 0.001f; //!< float エラー対策 非 0.0f の小さな値にする
+    const float TMin = 0.001f; 
     const float TMax = 100000.0f;
     const vec3 Origin = vec3(UpY, -1.0f);
     const vec3 Direction = vec3(0.0f, 0.0f, 1.0f);
 
-    //!< レイトレーシング (RayTracing)
-    //!< フラグ
-    //!<    gl_RayFlagsNoneEXT, 
-    //!<    gl_RayFlagsOpaqueEXT, gl_RayFlagsNoOpaqueEXT, 
-    //!<    gl_RayFlagsTerminateOnFirstHitEXT, gl_RayFlagsSkipClosestHitShaderEXT, 
-    //!<    gl_RayFlagsCullBackFacingTrianglesEXT, gl_RayFlagsCullFrontFacingTrianglesEXT, gl_RayFlagsCullOpaqueEXT, gl_RayFlagsCullNoOpaqueEXT
-    //!<    gl_RayFlagsSkipTrianglesEXT, gl_RayFlagsSkipAABBEXT ... 要エクステンション GL_EXT_ray_flags_primitive_culling
     traceRayEXT(TLAS, 
         gl_RayFlagsOpaqueEXT | gl_RayFlagsCullBackFacingTrianglesEXT | gl_RayFlagsTerminateOnFirstHitEXT, 
         0xff,
-        0, 0,   //!< sbtRecordOffset, sbtRecordStride : RecordAddress = sbtRecordOffset + sbtRecordStride * GeometryContributionHitGroupIndex + instanceShaderBindingTableRecordOffset
-        0,      //!< missIndex
+        0, 0,   
+        0,
         Origin, TMin, Direction, TMax, 
-        0);     //!< "layout(location = N) rayPayloadEXT PAYLOAD Payload;" の N
+        0);
 
-    //!< 結果をレンダーターゲットへ (Write to render target)
 	imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(Payload.Color, 1.0f));
-	//imageStore(RenderTarget, ivec2(gl_LaunchIDEXT.xy), vec4(UpY, 0.0f, 1.0f));
 }

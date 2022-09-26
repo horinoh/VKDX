@@ -280,11 +280,11 @@ public:
 			constexpr auto GenRecordSize = 0;
 			constexpr auto MissRecordSize = 0;
 			constexpr auto HitRecordSize = 0;
-			//!< ストライド
+			//!< ストライド (各シェーダレコードの先頭アライメント)
 			const auto GenStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + GenRecordSize, PDRTPP.shaderGroupHandleAlignment);
 			const auto MissStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + MissRecordSize, PDRTPP.shaderGroupHandleAlignment);
 			const auto HitStride = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize + HitRecordSize, PDRTPP.shaderGroupHandleAlignment);
-			//!< サイズ
+			//!< サイズ (各グループの先頭アライメント)
 			const auto GenSize = Cmn::RoundUp(GenStride, PDRTPP.shaderGroupBaseAlignment);
 			const auto MissSize = Cmn::RoundUp(MissCount * MissStride, PDRTPP.shaderGroupBaseAlignment);
 			const auto HitSize = Cmn::RoundUp(HitCount * HitStride, PDRTPP.shaderGroupBaseAlignment);

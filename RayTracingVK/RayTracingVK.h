@@ -506,14 +506,13 @@ public:
 						auto p = BData;
 						for (auto i = 0; i < Count; ++i, HData += PDRTPP.shaderGroupHandleSize, p += Region.stride) {
 							std::memcpy(p, HData, PDRTPP.shaderGroupHandleSize);
+							size_t Offset = Cmn::RoundUp(PDRTPP.shaderGroupHandleSize, PDRTPP.shaderGroupHandleSize);
 
-							//!< ‹l‚ß‚ÄŠi”[‚µ‚Ä‚æ‚¢
 #pragma region SHADER_RECORD
-							auto pp = p + PDRTPP.shaderGroupHandleSize;
-							std::memcpy(pp, &VB, sizeof(VB)); p += sizeof(VB);
-							std::memcpy(pp, &IB, sizeof(IB)); p += sizeof(IB);
-							//const auto v = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-							//std::memcpy(pp, &v, sizeof(v)); p += sizeof(v);
+							std::memcpy(p + Offset, &VB, sizeof(VB));
+							Offset = Cmn::RoundUp(Offset + sizeof(VB), sizeof(VB));
+							std::memcpy(p + Offset, &IB, sizeof(IB)); 
+							Offset = Cmn::RoundUp(Offset + sizeof(IB), sizeof(IB));
 #pragma endregion
 						}
 

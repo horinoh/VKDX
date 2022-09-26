@@ -4,6 +4,44 @@ struct AttrNT
     float2 Texcoord;
 };
 
+#define USE_DISTANCE_FUNCTION
+
+#ifdef USE_DISTANCE_FUNCTION
+//!< 距離関数 (DistanceFunction) https://iquilezles.org/articles/distfunctions/
+float DFSphere(const float3 Pos, const float3 Center, const float Radius)
+{
+    return length(Pos - Center) - Radius;
+}
+float3 DFSphereNormal(const float3 Pos, const float3 Center, const float Radius)
+{
+    const float Epsilon = 0.0001f;
+    const float3 Ex = float3(Epsilon, 0.0f, 0.0f), Ey = float3(0.0f, Epsilon, 0.0f), Ez = float3(0.0f, 0.0f, Epsilon);
+    return normalize(float3(DFSphere(Pos + Ex, Center, Radius) - DFSphere(Pos - Ex, Center, Radius), DFSphere(Pos + Ey, Center, Radius) - DFSphere(Pos - Ey, Center, Radius), DFSphere(Pos + Ez, Center, Radius) - DFSphere(Pos - Ez, Center, Radius)));
+}
+float DFTorus(const float3 Pos, const float3 Center, const float Radius, const float Width)
+{
+    const float3 d = Pos - Center;
+    return length(float2(length(d.xz) - Radius, d.y)) - Width;
+}
+float3 DFTorusNormal(const float3 Pos, const float3 Center, const float Radius, const float Width)
+{
+    const float Epsilon = 0.0001f;
+    const float3 Ex = float3(Epsilon, 0.0f, 0.0f), Ey = float3(0.0f, Epsilon, 0.0f), Ez = float3(0.0f, 0.0f, Epsilon);
+    return normalize(float3(DFTorus(Pos + Ex, Center, Radius, Width) - DFTorus(Pos - Ex, Center, Radius, Width), DFTorus(Pos + Ey, Center, Radius, Width) - DFTorus(Pos - Ey, Center, Radius, Width), DFTorus(Pos + Ez, Center, Radius, Width) - DFTorus(Pos - Ez, Center, Radius, Width)));
+}
+float DFBox(const float3 Pos, const float3 Center, const float3 Radius)
+{
+    return length(max(abs(Pos - Center) - Radius, 0.0f));
+}
+float3 DFBoxNormal(const float3 Pos, const float3 Center, const float3 Radius)
+{
+    const float Epsilon = 0.0001f;
+    const float3 Ex = float3(Epsilon, 0.0f, 0.0f), Ey = float3(0.0f, Epsilon, 0.0f), Ez = float3(0.0f, 0.0f, Epsilon);
+    return normalize(float3(DFBox(Pos + Ex, Center, Radius) - DFBox(Pos - Ex, Center, Radius), DFBox(Pos + Ey, Center, Radius) - DFBox(Pos - Ey, Center, Radius), DFBox(Pos + Ez, Center, Radius) - DFBox(Pos - Ez, Center, Radius)));
+}
+
+#else
+
 bool Sphere(const float3 Center, const float Radius, out float t)
 {
     //!< レイのパラメータ表現 Ray = o + d * t ただし o = ObjectRayOrigin(), d = ObjectRayDirection()
@@ -116,45 +154,13 @@ void AABBNormalTexcoord(const float3 Center, const float3 Radius, const float t,
         Texcoord = (float2(Normal.z, 1.0) * Hit.xy - AABBMin.xy) / Radius.xy;
     }
 }
-
-//!< 距離関数 (DistanceFunction) https://iquilezles.org/articles/distfunctions/
-float DFSphere(const float3 Pos, const float3 Center, const float Radius)
-{
-    return length(Pos - Center) - Radius;
-}
-float3 DFSphereNormal(const float3 Pos, const float3 Center, const float Radius)
-{
-    const float Epsilon = 0.0001f;
-    const float3 Ex = float3(Epsilon, 0.0f, 0.0f), Ey = float3(0.0f, Epsilon, 0.0f), Ez = float3(0.0f, 0.0f, Epsilon);
-    return normalize(float3(DFSphere(Pos + Ex, Center, Radius) - DFSphere(Pos - Ex, Center, Radius), DFSphere(Pos + Ey, Center, Radius) - DFSphere(Pos - Ey, Center, Radius), DFSphere(Pos + Ez, Center, Radius) - DFSphere(Pos - Ez, Center, Radius)));
-}
-float DFTorus(const float3 Pos, const float3 Center, const float Radius, const float Width)
-{
-    const float3 d = Pos - Center;
-    return length(float2(length(d.xz) - Radius, d.y)) - Width;
-}
-float3 DFTorusNormal(const float3 Pos, const float3 Center, const float Radius, const float Width)
-{
-    const float Epsilon = 0.0001f;
-    const float3 Ex = float3(Epsilon, 0.0f, 0.0f), Ey = float3(0.0f, Epsilon, 0.0f), Ez = float3(0.0f, 0.0f, Epsilon);
-    return normalize(float3(DFTorus(Pos + Ex, Center, Radius, Width) - DFTorus(Pos - Ex, Center, Radius, Width), DFTorus(Pos + Ey, Center, Radius, Width) - DFTorus(Pos - Ey, Center, Radius, Width), DFTorus(Pos + Ez, Center, Radius, Width) - DFTorus(Pos - Ez, Center, Radius, Width)));
-}
-float DFBox(const float3 Pos, const float3 Center, const float3 Radius)
-{
-    return length(max(abs(Pos - Center) - Radius, 0.0f));
-}
-float3 DFBoxNormal(const float3 Pos, const float3 Center, const float3 Radius)
-{
-    const float Epsilon = 0.0001f;
-    const float3 Ex = float3(Epsilon, 0.0f, 0.0f), Ey = float3(0.0f, Epsilon, 0.0f), Ez = float3(0.0f, 0.0f, Epsilon);
-    return normalize(float3(DFBox(Pos + Ex, Center, Radius) - DFBox(Pos - Ex, Center, Radius), DFBox(Pos + Ey, Center, Radius) - DFBox(Pos - Ey, Center, Radius), DFBox(Pos + Ez, Center, Radius) - DFBox(Pos - Ez, Center, Radius)));
-}
+#endif
 
 //!< ペイロードへ書き込みはできない、アトリビュートを生成して他シェーダへ供給
 [shader("intersection")]
 void OnIntersection()
 {
-#if 1
+#ifdef USE_DISTANCE_FUNCTION
     const float Threshold = 0.0001f;
     const uint MaxSteps = 256;
 
@@ -162,11 +168,13 @@ void OnIntersection()
     const float Radius = 0.25f;
     
     uint i = 0;
-    float t = RayTMin(); 
-    while (i++ < MaxSteps && t <= RayTCurrent()) {
+    float t = RayTMin();
+    while (i++ < MaxSteps && t <= RayTCurrent())
+    {
         const float3 Pos = ObjectRayOrigin() + t * ObjectRayDirection();
         const float Distance = DFTorus(Pos, Center, Radius, Radius);
-        if (Distance < Threshold) {
+        if (Distance < Threshold)
+        {
             AttrNT Attr;
             Attr.Normal = DFTorusNormal(Pos, Center, Radius, Radius);
             
@@ -176,7 +184,8 @@ void OnIntersection()
         }
         t += Distance;
     }
-#elif 1
+#else
+#if 1
     const float3 Center = float3(0.0f, 0.0f, 0.0f);
     const float3 Radius = float3(0.5f, 0.5f, 0.5f);
     float t;
@@ -199,5 +208,6 @@ void OnIntersection()
         const uint Kind = 0; //!< ここでは使用しないので 0
         ReportHit(t, Kind, Attr);
     }
+#endif
 #endif
 }

@@ -420,7 +420,17 @@ public:
 			constexpr auto GenRecordSize = 0;
 			constexpr auto MissRecordSize = 0;
 #pragma region SHADER_RECORD
-			constexpr auto HitRecordSize = sizeof(D3D12_GPU_DESCRIPTOR_HANDLE) * 2;
+			//!< D3D12_GPU_VIRTUAL_ADDRESS		: 8 Byte アライン
+			//!< D3D12_GPU_DESCRIPTOR_HANDLE	: 8 Byte アライン
+			//!< uint32_t						: 4 Byte アライン
+			//!<	8 Byte アラインに 4 Byte アラインのものを挟む場合等ではパディングが必要になるので注意
+			//!<	8 8 4 4
+			//!<	8 4 (4) 8 ... (4)はパディング
+			constexpr auto HitRecordSize = Cmn::RoundUp(
+				Cmn::RoundUp(
+					sizeof(D3D12_GPU_DESCRIPTOR_HANDLE), 
+					sizeof(D3D12_GPU_DESCRIPTOR_HANDLE)) + sizeof(D3D12_GPU_DESCRIPTOR_HANDLE),
+				sizeof(D3D12_GPU_DESCRIPTOR_HANDLE));
 #pragma endregion
 			//!< ストライド
 			constexpr auto GenStride = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + GenRecordSize, D3D12_RAYTRACING_SHADER_RECORD_BYTE_ALIGNMENT);
@@ -467,18 +477,18 @@ public:
 						const auto& VB = CbvSrvUavGPUHandles.back()[3];
 						const auto& IB = CbvSrvUavGPUHandles.back()[4];
 #pragma endregion
-
 						auto p = Data;
 						for (auto i = 0; i < Count; ++i, p += Range.StrideInBytes) {
 							std::memcpy(p, SOP->GetShaderIdentifier(TEXT("HitGroup")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES); //!< ヒットグループ作成時に指定したヒットグループ名を使用
+							size_t Offset = Cmn::RoundUp(D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
 
-							//!< 詰めて格納してよい
 #pragma region SHADER_RECORD
-							auto pp = p + D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES;
 							//!< [3] SRV (VB)
-							std::memcpy(pp, &VB, sizeof(VB)); pp += sizeof(VB);
+							std::memcpy(p + Offset, &VB, sizeof(VB));
+							Offset = Cmn::RoundUp(Offset + sizeof(VB), sizeof(VB));
 							//!< [4] SRV (IB)
-							std::memcpy(pp, &IB, sizeof(IB)); pp += sizeof(IB);
+							std::memcpy(p + Offset, &IB, sizeof(IB));
+							Offset = Cmn::RoundUp(Offset + sizeof(IB), sizeof(IB));
 #pragma endregion
 						}
 						Data += Range.SizeInBytes;

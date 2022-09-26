@@ -53,11 +53,16 @@ void OnRayGeneration()
     //!<    RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH, RAY_FLAG_SKIP_CLOSEST_HIT_SHADER,
     //!<    RAY_FLAG_CULL_BACK_FACING_TRIANGLES, RAY_FLAG_CULL_FRONT_FACING_TRIANGLES, RAY_FLAG_CULL_OPAQUE, RAY_FLAG_CULL_NON_OPAQUE = 0x80,
     //!<    RAY_FLAG_SKIP_TRIANGLES, RAY_FLAG_SKIP_PROCEDURAL_PRIMITIVES ... 要 DXR1.1
+
+    //!< InstanceContributionToHitGroupIndex    : TLAS の D3D12_RAYTRACING_INSTANCE_DESC.InstanceContributionToHitGroupIndex
+    //!< GeometryContributionToHitGroupIndex    : BLAS のジオメトリインデックス (DX ではシェーダから参照不可、VK では可能)
+    //!< RecordAddress = RCTHGI + MFGCTHGI * GeometryContributionToHitGroupIndex + InstanceContributionToHitGroupIndex   
     TraceRay(TLAS, 
-            RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_CULL_BACK_FACING_TRIANGLES | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH  ,
+            RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_CULL_BACK_FACING_TRIANGLES | RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH,
             0xff,
-            0, 1,   //!< RayContributionToHitGroupIndex, MultiplierForGeometryContributionToHitGroupIndex : RecordAddress = RayContributionToHitGroupIndex + MultiplierForGeometryContributionToHitGroupIndex * GeometryContributionToHitGroupIndex + instanceContributionToHitGroupIndex   
-            0,      //!< MissShaderIndex
+            0,      //!< RayContributionToHitGroupIndex (RCTHGI)
+            0,      //!< MultiplierForGeometryContributionToHitGroupIndex (MFGCTHGI)
+            0,      //!< MissShaderIndex : ここではミスシェーダは 1 つなので 0
             Ray, 
             Payload);
 

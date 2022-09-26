@@ -81,8 +81,8 @@ protected:
 		COM_PTR<ID3D12Resource> Read;
 		virtual ASCompaction& Create(ID3D12Device* Dev) {
 			constexpr auto Size = sizeof(D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE_DESC);
-			DX::CreateBufferResource(COM_PTR_PUT(Info), Dev, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-			DX::CreateBufferResource(COM_PTR_PUT(Read), Dev, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COPY_DEST);
+			DX::CreateBufferResource(COM_PTR_PUT(Info), Dev, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON);
+			DX::CreateBufferResource(COM_PTR_PUT(Read), Dev, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COMMON);
 			return *this;
 		}
 		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL) {
@@ -229,7 +229,7 @@ protected:
 		using Super = ResourceBase;
 	public:
 		void Create(ID3D12Device* Dev, const size_t Size) {
-			DX::CreateBufferResource(COM_PTR_PUT(Resource), Dev, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+			DX::CreateBufferResource(COM_PTR_PUT(Resource), Dev, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_COMMON);
 		}
 	};
 	class ShaderTable : public ResourceBase
