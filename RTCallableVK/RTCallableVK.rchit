@@ -7,7 +7,11 @@ struct PAYLOAD
     int Recursive;
 };
 layout(location = 0) rayPayloadInEXT PAYLOAD Payload;
-layout(location = 0) callableDataEXT vec3 CallableData;
+struct CALLABLEDATA
+{
+    vec3 Data;
+};
+layout(location = 0) callableDataEXT CALLABLEDATA CallableData;
 hitAttributeEXT vec2 HitAttr;
 
 void main()
@@ -21,5 +25,5 @@ void main()
 	executeCallableEXT(gl_InstanceCustomIndexEXT, 0);
 
 	//!< Ô
-	Payload.Color = CallableData * vec3(1.0f, 0.0f, 0.0f);
+	Payload.Color = CallableData.Data * vec3(1.0f, 0.0f, 0.0f);
 }

@@ -1,11 +1,15 @@
 #version 460
 #extension GL_EXT_ray_tracing : enable
 
-layout(location = 0) callableDataInEXT vec3 CallableData;
+struct CALLABLEDATA
+{
+    vec3 Data;
+};
+layout(location = 0) callableDataInEXT CALLABLEDATA CallableData;
 
 void main()
 {
 	//!< cü
 	const vec2 pos = vec2(gl_LaunchIDEXT.xy / 8);
-	CallableData = vec3(mod(pos.x, 2.0f));
+	CallableData.Data = vec3(mod(pos.x, 2.0f));
 }

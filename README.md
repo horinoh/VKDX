@@ -470,10 +470,16 @@ $draco_decoder -i YYY.drc -o ZZZ.obj
 		~~~
 		[shader("raygeneration")]
 		void MyRayGen(){}
+		[shader("intersection")]
+		void MyIntersection()
+		[shader("anyhit")]
+		void MyAnyHit(inout MYPAYLOAD Payload, in BuiltInTriangleIntersectionAttributes BITIA)
 		[shader("closesthit")]
-		void MyClosestHit(){}
+		void MyClosestHit(inout MYPAYLOAD Payload, in BuiltInTriangleIntersectionAttributes BITIA){}
 		[shader("miss")]
-		void MyMiss(){}
+		void MyMiss(inout MYPAYLOAD Payload){}
+		[shader("callable")]
+		void MyCallable(inout MYCALLABLE In)
 		~~~
 	- VK 
 		~~~

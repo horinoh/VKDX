@@ -3,9 +3,9 @@ struct PAYLOAD
     float3 Color;
     int Recursive;
 };
-struct CallableDataIn
+struct CALLABLEDATA
 {
-    float3 CallableData;
+    float3 Data;
 };
 
 [shader("closesthit")]
@@ -17,11 +17,12 @@ void OnClosestHit_0(inout PAYLOAD Payload, in BuiltInTriangleIntersectionAttribu
         return;
     }
     
-    CallableDataIn Data; Data.CallableData = float3(0.0f, 0.0f, 0.0f);
+    CALLABLEDATA CallableData;
+    CallableData.Data = float3(0.0f, 0.0f, 0.0f);
 
     //!< [C++] D3D12_RAYTRACING_INSTANCE_DESC.InstanceID, [HLSL] InstanceID()
-    CallShader(InstanceID(), Data);
+    CallShader(InstanceID(), CallableData);
 
     //!< Ô
-    Payload.Color = Data.CallableData * float3(1.0f, 0.0f, 0.0f);
+    Payload.Color = CallableData.Data * float3(1.0f, 0.0f, 0.0f);
 }
