@@ -17,16 +17,11 @@ ConstantBuffer<Transform> CB : register(b0, space0);
 [shader("raygeneration")]
 void OnRayGeneration()
 {
-    PAYLOAD Payload;
-    Payload.Color = float3(0.0f, 0.0f, 0.0f);
-    Payload.Recursive = 0;
-    
-    //!< +0.5f はピクセルの中心にするため
     const float2 UV = ((float2)DispatchRaysIndex().xy + 0.5f) / DispatchRaysDimensions().xy  * 2.0f - 1.0f;
     const float2 UpY = float2(UV.x, -UV.y);
 
     RayDesc Ray;
-    Ray.TMin = 0.001f; //!< float エラー対策 非 0.0f の小さな値にする
+    Ray.TMin = 0.001f; 
     Ray.TMax = 100000.0f;
     Ray.Origin = mul(CB.InvView, float4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
     const float4 Target = mul(CB.InvProjection, float4(UpY, 1.0f, 1.0f));
@@ -36,6 +31,10 @@ void OnRayGeneration()
     Ray.Direction = normalize(mul(CB.InvView, float4(Target.xyz, 0.0f)).xyz);
 #endif
 
+    PAYLOAD Payload;
+    Payload.Color = float3(0.0f, 0.0f, 0.0f);
+    Payload.Recursive = 0;
+    
     //TraceRay(TLAS, RAY_FLAG_ACCEPT_FIRST_HIT_AND_END_SEARCH | RAY_FLAG_CULL_BACK_FACING_TRIANGLES, 0xff, 0, 1, 0, Ray, Payload);
     TraceRay(TLAS, RAY_FLAG_NONE, 0xff, 0, 0, 0, Ray, Payload);
 

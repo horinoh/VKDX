@@ -5,13 +5,13 @@
 #pragma region Code
 #include "../DXRT.h"
 
-class RTIntersectionDX : public DXRT
+class RTShadowDX : public DXRT
 {
 private:
 	using Super = DXRT;
 public:
-	RTIntersectionDX() : Super() {}
-	virtual ~RTIntersectionDX() {}
+	RTShadowDX() : Super() {}
+	virtual ~RTShadowDX() {}
 
 	virtual void CreateGeometry() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
@@ -21,22 +21,31 @@ public:
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
 #pragma region BLAS_INPUT
-		constexpr std::array AABBs = { D3D12_RAYTRACING_AABB({.MinX = -0.5f, .MinY = -0.5f, .MinZ = -0.5f, .MaxX = 0.5f, .MaxY = 0.5f, .MaxZ = 0.5f }), };
-		UploadResource AB;
-		AB.Create(COM_PTR_GET(Device), TotalSizeOf(AABBs), data(AABBs));
+		constexpr std::array Vertices = { DirectX::XMFLOAT3({ 0.0f, 0.5f, 0.0f }), DirectX::XMFLOAT3({ -0.5f, -0.5f, 0.0f }), DirectX::XMFLOAT3({ 0.5f, -0.5f, 0.0f }), };
+		UploadResource VB;
+		VB.Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), data(Vertices));
+
+		constexpr std::array Indices = { UINT32(0), UINT32(1), UINT32(2) };
+		UploadResource IB;
+		IB.Create(COM_PTR_GET(Device), TotalSizeOf(Indices), data(Indices));
 
 		const std::array RGDs = {
 			D3D12_RAYTRACING_GEOMETRY_DESC({
-				.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS, //!< AABB
+				.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES,
 				.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE,
-				.AABBs = D3D12_RAYTRACING_GEOMETRY_AABBS_DESC({
-					.AABBCount = size(AABBs),
-					.AABBs = D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE({ .StartAddress = AB.Resource->GetGPUVirtualAddress(), .StrideInBytes = sizeof(AABBs[0]) }),
+				.Triangles = D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC({
+					.Transform3x4 = 0,
+					.IndexFormat = DXGI_FORMAT_R32_UINT,
+					.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT,
+					.IndexCount = static_cast<UINT>(size(Indices)),
+					.VertexCount = static_cast<UINT>(size(Vertices)),
+					.IndexBuffer = IB.Resource->GetGPUVirtualAddress(),
+					.VertexBuffer = D3D12_GPU_VIRTUAL_ADDRESS_AND_STRIDE({.StartAddress = VB.Resource->GetGPUVirtualAddress(), .StrideInBytes = sizeof(Vertices[0]) }),
 				})
 			}),
 		};
 		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BRASI_Blas = {
-			.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL,
+			.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL, //!< ボトムレベル
 			.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE,
 			.NumDescs = static_cast<UINT>(size(RGDs)),
 			.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY,
@@ -51,14 +60,24 @@ public:
 #pragma endregion
 
 #pragma region TLAS_INPUT
-		constexpr auto DegX = 20.0f, DegY = 135.0f;
-		DirectX::XMFLOAT3X4 Tr3x4;
-		DirectX::XMStoreFloat3x4(&Tr3x4, DirectX::XMMatrixRotationRollPitchYaw(DirectX::XMConvertToRadians(DegX), DirectX::XMConvertToRadians(DegY), 0.0f));
+		DirectX::XMFLOAT3X4 Tri, Floor;
+		DirectX::XMStoreFloat3x4(&Tri, DirectX::XMMatrixScaling(0.25f, 0.25f, 1.0f) * DirectX::XMMatrixRotationRollPitchYaw(DirectX::XMConvertToRadians(45), 0.0f, 0.0f) * DirectX::XMMatrixTranslation(0.0f, 0.75f, 0.0f));
+		DirectX::XMStoreFloat3x4(&Floor, DirectX::XMMatrixScaling(2.0f, 2.0f, 1.0f) * DirectX::XMMatrixRotationRollPitchYaw(DirectX::XMConvertToRadians(80), 0.0f, 0.0f) * DirectX::XMMatrixTranslation(0.0f, -0.75f, 0.0f));
 		const std::array RIDs = {
 			D3D12_RAYTRACING_INSTANCE_DESC({
-				.Transform = {	{ Tr3x4.m[0][0], Tr3x4.m[0][1], Tr3x4.m[0][2], Tr3x4.m[0][3] }, 
-								{ Tr3x4.m[1][0], Tr3x4.m[1][1], Tr3x4.m[1][2], Tr3x4.m[1][3] }, 
-								{ Tr3x4.m[2][0], Tr3x4.m[2][1], Tr3x4.m[2][2], Tr3x4.m[2][3] }, },
+				.Transform = {	{ Tri.m[0][0], Tri.m[0][1], Tri.m[0][2], Tri.m[0][3] },
+								{ Tri.m[1][0], Tri.m[1][1], Tri.m[1][2], Tri.m[1][3] },
+								{ Tri.m[2][0], Tri.m[2][1], Tri.m[2][2], Tri.m[2][3] }, },
+				.InstanceID = 0,
+				.InstanceMask = 0xff,
+				.InstanceContributionToHitGroupIndex = 0,
+				.Flags = D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE,
+				.AccelerationStructure = BLASs.back().Resource->GetGPUVirtualAddress()
+			}),
+			D3D12_RAYTRACING_INSTANCE_DESC({
+				.Transform = {	{ Floor.m[0][0], Floor.m[0][1], Floor.m[0][2], Floor.m[0][3] },
+								{ Floor.m[1][0], Floor.m[1][1], Floor.m[1][2], Floor.m[1][3] },
+								{ Floor.m[2][0], Floor.m[2][1], Floor.m[2][2], Floor.m[2][3] }, },
 				.InstanceID = 0,
 				.InstanceMask = 0xff,
 				.InstanceContributionToHitGroupIndex = 0,
@@ -70,11 +89,11 @@ public:
 		InsBuf.Create(COM_PTR_GET(Device), sizeof(RIDs), data(RIDs));
 
 		const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS BRASI_Tlas = {
-			.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL,
+			.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL, //!< トップレベル
 			.Flags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE,
 			.NumDescs = static_cast<UINT>(size(RIDs)),
 			.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY,
-			.InstanceDescs = InsBuf.Resource->GetGPUVirtualAddress()
+			.InstanceDescs = InsBuf.Resource->GetGPUVirtualAddress() 
 		};
 #pragma endregion
 
@@ -107,15 +126,15 @@ public:
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rgen.cso")), COM_PTR_PUT(SB_Gen)));
 		COM_PTR<ID3DBlob> SB_Miss;
 		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".miss.cso")), COM_PTR_PUT(SB_Miss)));
-		COM_PTR<ID3DBlob> SB_CHit;
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rchit.cso")), COM_PTR_PUT(SB_CHit)));
-		COM_PTR<ID3DBlob> SB_Int;
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rint.cso")), COM_PTR_PUT(SB_Int)));
+		COM_PTR<ID3DBlob> SB_Miss1;
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.miss.cso")), COM_PTR_PUT(SB_Miss1)));
+		COM_PTR<ID3DBlob> SB_Hit;
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".rchit.cso")), COM_PTR_PUT(SB_Hit)));
 
 		std::array EDs_Gen = { D3D12_EXPORT_DESC({.Name = TEXT("OnRayGeneration"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
 		std::array EDs_Miss = { D3D12_EXPORT_DESC({.Name = TEXT("OnMiss"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
-		std::array EDs_CHit = { D3D12_EXPORT_DESC({.Name = TEXT("OnClosestHit"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
-		std::array EDs_Int = { D3D12_EXPORT_DESC({.Name = TEXT("OnIntersection"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
+		std::array EDs_Miss1 = { D3D12_EXPORT_DESC({.Name = TEXT("OnMiss_1"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
+		std::array EDs_Hit = { D3D12_EXPORT_DESC({.Name = TEXT("OnClosestHit"), .ExportToRename = nullptr, .Flags = D3D12_EXPORT_FLAG_NONE }), };
 		const auto DLD_Gen = D3D12_DXIL_LIBRARY_DESC({
 			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_Gen->GetBufferPointer(), .BytecodeLength = SB_Gen->GetBufferSize() }),
 			.NumExports = static_cast<UINT>(size(EDs_Gen)), .pExports = data(EDs_Gen)
@@ -124,34 +143,34 @@ public:
 			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_Miss->GetBufferPointer(), .BytecodeLength = SB_Miss->GetBufferSize() }),
 			.NumExports = static_cast<UINT>(size(EDs_Miss)), .pExports = data(EDs_Miss)
 			});
-		const auto DLD_CHit = D3D12_DXIL_LIBRARY_DESC({
-			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_CHit->GetBufferPointer(), .BytecodeLength = SB_CHit->GetBufferSize() }),
-			.NumExports = static_cast<UINT>(size(EDs_CHit)), .pExports = data(EDs_CHit)
+		const auto DLD_Miss1 = D3D12_DXIL_LIBRARY_DESC({
+			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_Miss1->GetBufferPointer(), .BytecodeLength = SB_Miss1->GetBufferSize() }),
+			.NumExports = static_cast<UINT>(size(EDs_Miss1)), .pExports = data(EDs_Miss1)
 			});
-		const auto DLD_Int = D3D12_DXIL_LIBRARY_DESC({
-			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_Int->GetBufferPointer(), .BytecodeLength = SB_Int->GetBufferSize() }),
-			.NumExports = static_cast<UINT>(size(EDs_Int)), .pExports = data(EDs_Int)
+		const auto DLD_Hit = D3D12_DXIL_LIBRARY_DESC({
+			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_Hit->GetBufferPointer(), .BytecodeLength = SB_Hit->GetBufferSize() }),
+			.NumExports = static_cast<UINT>(size(EDs_Hit)), .pExports = data(EDs_Hit)
 			});
 
 		constexpr D3D12_HIT_GROUP_DESC HGD = {
 			.HitGroupExport = TEXT("HitGroup"), 
-			.Type = D3D12_HIT_GROUP_TYPE_PROCEDURAL_PRIMITIVE, //!< TRIANGLES ではなく PROCEDURAL_PRIMITIVE を指定
-			.AnyHitShaderImport = nullptr, .ClosestHitShaderImport = TEXT("OnClosestHit"), .IntersectionShaderImport = TEXT("OnIntersection"),
+			.Type = D3D12_HIT_GROUP_TYPE_TRIANGLES,
+			.AnyHitShaderImport = nullptr, .ClosestHitShaderImport = TEXT("OnClosestHit"), .IntersectionShaderImport = nullptr 
 		};
 
 		constexpr D3D12_RAYTRACING_SHADER_CONFIG RSC = {
 			.MaxPayloadSizeInBytes = sizeof(DirectX::XMFLOAT3) + sizeof(int), 
-			.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT3) + sizeof(DirectX::XMFLOAT2) //!< float3 Normal; fload2 Texcoord;
+			.MaxAttributeSizeInBytes = sizeof(DirectX::XMFLOAT2)
 		};
 
-		constexpr D3D12_RAYTRACING_PIPELINE_CONFIG RPC = { .MaxTraceRecursionDepth = 1 };
+		constexpr D3D12_RAYTRACING_PIPELINE_CONFIG RPC = { .MaxTraceRecursionDepth = 2 }; //!< 2 にする
 
 		constexpr std::array SSs = {
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_GLOBAL_ROOT_SIGNATURE, .pDesc = &GRS }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_Gen }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_Miss }),
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_CHit }),
-			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_Int }),
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_Miss1 }),
+			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_DXIL_LIBRARY, .pDesc = &DLD_Hit }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_HIT_GROUP, .pDesc = &HGD }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_SHADER_CONFIG, .pDesc = &RSC }),
 			D3D12_STATE_SUBOBJECT({.Type = D3D12_STATE_SUBOBJECT_TYPE_RAYTRACING_PIPELINE_CONFIG, .pDesc = &RPC }),
@@ -169,7 +188,7 @@ public:
 		VERIFY_SUCCEEDED(StateObjects.back()->QueryInterface(COM_PTR_UUIDOF_PUTVOID(SOP)));
 		auto& ST = ShaderTables.emplace_back(); {
 			constexpr auto MissCount = 1;
-			constexpr auto HitCount = 1;
+			constexpr auto HitCount = 2;
 
 			constexpr auto GenRecordSize = 0;
 			constexpr auto MissRecordSize = 0;
@@ -191,6 +210,7 @@ public:
 			auto MapData = ST.Map(); {
 				auto Data = reinterpret_cast<std::byte*>(MapData);
 
+				//!< グループ (Gen)
 				{
 					const auto& Range = ST.AddressRange; {
 						std::memcpy(Data, SOP->GetShaderIdentifier(TEXT("OnRayGeneration")), D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
@@ -198,6 +218,7 @@ public:
 					}
 				}
 
+				//!< グループ (Miss)
 				{
 					const auto Count = MissCount;
 					const auto& Range = ST.AddressRangeAndStrides[0]; {
@@ -209,6 +230,7 @@ public:
 					}
 				}
 
+				//!< グループ (Hit)
 				{
 					const auto Count = HitCount;
 					const auto& Range = ST.AddressRangeAndStrides[1]; {

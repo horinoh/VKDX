@@ -36,10 +36,6 @@ layout(binding = 1, set = 0, rgba8) uniform image2D RenderTarget;
 
 void main()
 {
-    //!< ペイロードを初期化 (Initialize payload)
-    Payload.Color = vec3(0.0f);
-    Payload.Recursive = 0;
-
     //!< +0.5f はピクセルの中心にするため
     const vec2 UV = (vec2(gl_LaunchIDEXT.xy) + 0.5f) / gl_LaunchSizeEXT.xy * 2.0f - 1.0f;
     const vec2 UpY = vec2(UV.x, -UV.y);
@@ -49,6 +45,10 @@ void main()
     const float TMax = 100000.0f;
     const vec3 Origin = vec3(UpY, -1.0f);
     const vec3 Direction = vec3(0.0f, 0.0f, 1.0f);
+
+    //!< ペイロードを初期化 (Initialize payload)
+    Payload.Color = vec3(0.0f);
+    Payload.Recursive = 0;
 
     //!< レイトレーシング (RayTracing)
     //!< フラグ

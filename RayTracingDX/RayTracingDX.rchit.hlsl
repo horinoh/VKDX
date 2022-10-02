@@ -14,6 +14,19 @@ StructuredBuffer<VertexPN> VB : register(t0, space1);
 StructuredBuffer<uint3> IB : register(t1, space1);
 //Texture2D<float4> Diffuse : register(t2, space1); Diffuse.SampleLevel(Sampler, UV, 0.0f);
 
+float3 ToBaryCentric(const float2 Attr)
+{
+    return float3(1.0f - Attr.x - Attr.y, Attr.x, Attr.y);
+}
+float3 ToCartesian(const float3 A, const float3 B, const float3 C, const float3 BaryCentric)
+{
+    return BaryCentric.x * A + BaryCentric.y * B + BaryCentric.z * C;
+}
+float3 ToCartesian(const float3 V[3], const float3 BaryCentric)
+{
+    return ToCartesian(V[0], V[1], V[2], BaryCentric);
+}
+
 [shader("closesthit")]
 void OnClosestHit(inout PAYLOAD Payload, in BuiltInTriangleIntersectionAttributes BITIA)
 {
@@ -23,13 +36,13 @@ void OnClosestHit(inout PAYLOAD Payload, in BuiltInTriangleIntersectionAttribute
         return;
     }
     
-    const float3 BaryCentric = float3(1.0f - BITIA.barycentrics.x - BITIA.barycentrics.y, BITIA.barycentrics.x, BITIA.barycentrics.y);
+    const float3 BaryCentric = ToBaryCentric(BITIA.barycentrics);
 
     //!< プリミティブインデックス : GLSL gl_PrimitiveID 相当
     const uint3 Index = IB[PrimitiveIndex()];
     VertexPN Hit;
-    Hit.Position = VB[Index.x].Position * BaryCentric.x + VB[Index.y].Position * BaryCentric.y + VB[Index.z].Position * BaryCentric.z;
-    Hit.Normal = normalize(VB[Index.x].Normal * BaryCentric.x + VB[Index.y].Normal * BaryCentric.y + VB[Index.z].Normal * BaryCentric.z);
+    Hit.Position = ToCartesian(VB[Index.x].Position, VB[Index.y].Position, VB[Index.z].Position, BaryCentric);
+    Hit.Normal = ToCartesian(VB[Index.x].Normal, VB[Index.y].Normal, VB[Index.z].Normal, BaryCentric);
     //Hit.Normal = float3(0, 1, 0);
     
     //const float3 WorldPos = mul(float4(Hit.Position, 1.0f), ObjectToWorld4x3());

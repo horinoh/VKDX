@@ -528,7 +528,7 @@ $draco_decoder -i YYY.drc -o ZZZ.obj
    * Excluded From Build を No
    * Content を Yes
   * 右クリック - プロパティ - HLSL Compiler - General - Shader Type でタイプを適切に選択しておく
-	* RayTracing の場合は Library(/lib) を指定、Entrypoint Name は空欄としておく
+	* RayTracing の場合は Library(/lib) を指定、Entrypoint Name は空欄とすること
 
 * ルートシグネチャ用HLSL XxxDX.rs.hlsl を作成する
 * WinPixEventRuntimeのインストール

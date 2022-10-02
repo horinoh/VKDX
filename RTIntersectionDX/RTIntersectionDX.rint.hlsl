@@ -6,6 +6,11 @@ struct AttrNT
 
 #define USE_DISTANCE_FUNCTION
 
+float3 GetPosition(const float t)
+{
+    return ObjectRayOrigin() + ObjectRayDirection() * t;
+}
+
 #ifdef USE_DISTANCE_FUNCTION
 //!< 距離関数 (DistanceFunction) https://iquilezles.org/articles/distfunctions/
 float DFSphere(const float3 Pos, const float3 Center, const float Radius)
@@ -75,17 +80,17 @@ bool Sphere(const float3 Center, const float Radius, out float t)
     
     return false;
 }
-void SphereNormal(const float3 Center, const float t, out float3 Normal)
+float3 GetNormal_Sphere(const float3 Center, const float3 Pos)
 {
-    Normal = normalize((ObjectRayOrigin() + ObjectRayDirection() * t) - Center);
+    return normalize(Pos - Center);
 }
-void SphereNormalTexcoord(const float3 Center, const float t, out float3 Normal, out float2 Texcoord)
+float2 GetTexcoord_Sphere(const float3 Nrm)
 {
-    SphereNormal(Center, t, Normal);
     const float PI = 4.0f * atan(1.0f);
     const float PI2 = PI * 2;
-    Texcoord = float2(frac(atan2(Normal.y, Normal.x) / PI2), acos(-Normal.z) / PI);
+    return float2(frac(atan2(Nrm.y, Nrm.x) / PI2), acos(-Nrm.z) / PI);
 }
+
 bool AABB(const float3 Center, const float3 Radius, out float t)
 {
     //!< レイのパラメータ表現 Ray = o + d * t ただし o = ObjectRayOrigin(), d = ObjectRayDirection()
@@ -111,47 +116,40 @@ bool AABB(const float3 Center, const float3 Radius, out float t)
     }
     return false;
 }
-void AABBNormal(const float3 Center, const float t, out float3 Normal)
+float3 GetNormal_AABB(const float3 Center, const float3 Pos)
 {
-    const float3 N = normalize((ObjectRayOrigin() + ObjectRayDirection() * t) - Center);
+    const float3 N = normalize(Pos - Center);
     const float3 NAbs = abs(N);
     const float MaxComp = max(max(NAbs.x, NAbs.y), NAbs.z);
     if (MaxComp == NAbs.x)
     {
-        Normal = float3(sign(N.x), 0.0f, 0.0f);
+        return float3(sign(N.x), 0.0f, 0.0f);
     }
     else if (MaxComp == NAbs.y)
     {
-        Normal = float3(0.0f, sign(N.y), 0.0f);
+        return float3(0.0f, sign(N.y), 0.0f);
     }
     else
     {
-        Normal = float3(0.0f, 0.0f, sign(N.z));
+        return float3(0.0f, 0.0f, sign(N.z));
     }
 }
-void AABBNormalTexcoord(const float3 Center, const float3 Radius, const float t, out float3 Normal, out float2 Texcoord)
+float2 GetTexcoord_AABB(const float3 Center, const float3 Radius,const float3 Pos, const float3 Nrm)
 {
-    const float3 Hit = ObjectRayOrigin() + ObjectRayDirection() * t;
-    const float3 N = normalize(Hit - Center);
-    const float3 NAbs = abs(N);
+    const float3 NAbs = abs(normalize(Pos - Center));
     const float MaxComp = max(max(NAbs.x, NAbs.y), NAbs.z);
-    
     const float3 AABBMin = Center - Radius;
-    
     if (MaxComp == NAbs.x)
     {
-        Normal = float3(sign(N.x), 0.0f, 0.0f);
-        Texcoord = (float2(Normal.x, 1.0) * Hit.yz - AABBMin.yz) / Radius.yz;
+        return (float2(Nrm.x, 1.0) * Pos.yz - AABBMin.yz) / Radius.yz;
     }
     else if (MaxComp == NAbs.y)
     {
-        Normal = float3(0.0f, sign(N.y), 0.0f);
-        Texcoord = (float2(-Normal.y, 1.0) * Hit.xz - AABBMin.xz) / Radius.xz;
+        return (float2(-Nrm.y, 1.0) * Pos.xz - AABBMin.xz) / Radius.xz;
     }
     else
     {
-        Normal = float3(0.0f, 0.0f, sign(N.z));
-        Texcoord = (float2(Normal.z, 1.0) * Hit.xy - AABBMin.xy) / Radius.xy;
+        return (float2(Nrm.z, 1.0) * Pos.xy - AABBMin.xy) / Radius.xy;
     }
 }
 #endif
@@ -171,7 +169,7 @@ void OnIntersection()
     float t = RayTMin();
     while (i++ < MaxSteps && t <= RayTCurrent())
     {
-        const float3 Pos = ObjectRayOrigin() + t * ObjectRayDirection();
+        const float3 Pos = GetPosition(t);
         const float Distance = DFTorus(Pos, Center, Radius, Radius);
         if (Distance < Threshold)
         {
@@ -185,14 +183,16 @@ void OnIntersection()
         t += Distance;
     }
 #else
-#if 1
+#if 0
     const float3 Center = float3(0.0f, 0.0f, 0.0f);
     const float3 Radius = float3(0.5f, 0.5f, 0.5f);
     float t;
     if (AABB(Center, Radius, t))
     {
         AttrNT Attr;
-        AABBNormalTexcoord(Center, Radius, t, Attr.Normal, Attr.Texcoord);
+        const float3 Pos = GetPosition(t);
+        Attr.Normal = GetNormal_AABB(Center, Pos);
+        Attr.Texcoord = GetTexcoord_AABB(Center, Radius, Pos, Attr.Normal);
         
         const uint Kind = 0; //!< ここでは使用しないので 0
         ReportHit(t, Kind, Attr);
@@ -203,7 +203,9 @@ void OnIntersection()
     float t;
     if (Sphere(Center, Radius, t)) {
         AttrNT Attr;
-        SphereNormalTexcoord(Center, t, Attr.Normal, Attr.Texcoord);
+        const float3 Pos = GetPosition(t);
+        Attr.Normal = GetNormal_Sphere(Center, Pos);
+        Attr.Texcoord = GetTexcoord_Sphere(Attr.Normal);
         
         const uint Kind = 0; //!< ここでは使用しないので 0
         ReportHit(t, Kind, Attr);

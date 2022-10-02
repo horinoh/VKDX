@@ -20,14 +20,10 @@ layout(binding = 3, set = 0) uniform Transform
 
 void main()
 {
-    Payload.Color = vec3(0.0f);
-    Payload.Recursive = 0;
-
-    //!< +0.5f はピクセルの中心にするため
     const vec2 UV = (vec2(gl_LaunchIDEXT.xy) + 0.5f) / gl_LaunchSizeEXT.xy * 2.0f - 1.0f;
     const vec2 UpY = vec2(UV.x, -UV.y);
 
-    const float TMin = 0.001f; //!< float エラー対策 非 0.0f の小さな値にする
+    const float TMin = 0.001f; 
     const float TMax = 100000.0f;
     const vec3 Origin = (InvView * vec4(0.0f, 0.0f, 0.0f, 1.0f)).xyz;
 	const vec4 Target = InvProjection * vec4(UpY, 1.0f, 1.0f);
@@ -36,6 +32,9 @@ void main()
 #else
 	const vec3 Direction = normalize((InvView * vec4(Target.xyz, 0.0f)).xyz);
 #endif
+
+    Payload.Color = vec3(0.0f);
+    Payload.Recursive = 0;
 
     //traceRayEXT(TLAS, gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsCullBackFacingTrianglesEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);
     traceRayEXT(TLAS, gl_RayFlagsNoneEXT, 0xff, 0, 0, 0, Origin, TMin, Direction, TMax, 0);

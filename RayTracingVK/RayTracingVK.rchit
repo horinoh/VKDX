@@ -36,6 +36,19 @@ layout(shaderRecordEXT, std430) buffer ShaderRecord
 };
 #endif
 
+vec3 ToBaryCentric(const vec2 Attr)
+{
+    return vec3(1.0f - Attr.x - Attr.y, Attr.x, Attr.y);
+}
+vec3 ToCartesian(const vec3 A, const vec3 B, const vec3 C, const vec3 BaryCentric)
+{
+    return BaryCentric.x * A + BaryCentric.y * B + BaryCentric.z * C;
+}
+vec3 ToCartesian(const vec3 V[3], const vec3 BaryCentric)
+{
+    return ToCartesian(V[0], V[1], V[2], BaryCentric);
+}
+
 void main()
 {
     if(Payload.Recursive++ >= 31) {
@@ -43,13 +56,13 @@ void main()
         return;
     }
 
-    const vec3 BaryCentric = vec3(1.0f - HitAttr.x - HitAttr.y, HitAttr.x, HitAttr.y);
+    const vec3 BaryCentric = ToBaryCentric(HitAttr);
 
     //!< プリミティブインデックス : HLSL PrimitiveIndex() 相当
-    const uvec3 i = IB.Indices[gl_PrimitiveID];
+    const uvec3 Index = IB.Indices[gl_PrimitiveID];
     VertexPN Hit;
-    Hit.Position = VB.Vertices[i.x].Position * BaryCentric.x + VB.Vertices[i.y].Position * BaryCentric.y + VB.Vertices[i.z].Position * BaryCentric.z;
-    Hit.Normal = normalize(VB.Vertices[i.x].Normal * BaryCentric.x + VB.Vertices[i.y].Normal * BaryCentric.y + VB.Vertices[i.z].Normal * BaryCentric.z);
+    Hit.Position = ToCartesian(VB.Vertices[Index.x].Position, VB.Vertices[Index.y].Position, VB.Vertices[Index.z].Position, BaryCentric);
+    Hit.Normal = ToCartesian(VB.Vertices[Index.x].Normal, VB.Vertices[Index.y].Normal, VB.Vertices[Index.z].Normal, BaryCentric);
 
     //!< gl_ObjectToWorldEXT は 4x3
     const vec3 WorldPos = gl_ObjectToWorldEXT * vec4(Hit.Position, 1.0f);
