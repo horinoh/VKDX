@@ -91,13 +91,6 @@ namespace Colors
 	constexpr VkClearColorValue Yellow = { 1.0f, 1.0f, 0.0f, 1.0f };
 }
 
-class AABB
-{
-	public:
-		glm::vec3 Min;
-		glm::vec3 Max; 
-};
-
 class VK : public Cmn
 #ifdef _WINDOWS
 	, public Win

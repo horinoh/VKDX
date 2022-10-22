@@ -14,7 +14,7 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Shader Files">
-      <UniqueIdentifier>{c3a5df14-b708-4a2c-be1c-b06deb203162}</UniqueIdentifier>
+      <UniqueIdentifier>{53e69e94-46a7-4d90-bb9a-03c0ee958705}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -27,7 +27,7 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RTShadowDX.h">
+    <ClInclude Include="PhysicsDX.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\DX.h">
@@ -36,15 +36,15 @@
     <ClInclude Include="..\DXExt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\DXRT.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\Win.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="RTShadowDX.cpp">
+    <ClCompile Include="PhysicsDX.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="framework.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\DX.cpp">
@@ -56,12 +56,9 @@
     <ClCompile Include="..\Win.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="framework.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="RTShadowDX.rc">
+    <ResourceCompile Include="PhysicsDX.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
@@ -69,7 +66,7 @@
     <Image Include="small.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="RTShadowDX.ico">
+    <Image Include="PhysicsDX.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
@@ -77,19 +74,19 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="RTShadowDX.miss.hlsl">
+    <FxCompile Include="PhysicsDX.gs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="RTShadowDX.rchit.hlsl">
+    <FxCompile Include="PhysicsDX.hs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="RTShadowDX.rgen.hlsl">
+    <FxCompile Include="PhysicsDX.ps.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="RTShadowDX_1.miss.hlsl">
+    <FxCompile Include="PhysicsDX.vs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
-    <FxCompile Include="RTShadowDX.rint.hlsl">
+    <FxCompile Include="PhysicsDX.ds.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
   </ItemGroup>

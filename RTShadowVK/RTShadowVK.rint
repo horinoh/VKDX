@@ -1,0 +1,134 @@
+#version 460
+#extension GL_EXT_ray_tracing : enable
+
+struct AttrPNT
+{
+    vec3 Position;
+    vec3 Normal;
+    vec2 Texcoord;
+};
+hitAttributeEXT AttrPNT Attr;
+
+vec3 GetPosition(const float t)
+{
+    return gl_ObjectRayOriginEXT + gl_ObjectRayDirectionEXT * t;
+}
+
+bool Trace_Sphere(const vec3 Center, const float Radius, out float t)
+{
+    const vec3 Tmp0 = gl_ObjectRayOriginEXT - Center;
+    const vec3 d = gl_ObjectRayDirectionEXT;
+
+    const float A = dot(d, d);
+    const float B2 = dot(Tmp0, d);
+    const float C = dot(Tmp0, Tmp0) - Radius * Radius;
+    const float D4 = B2 * B2 - A * C;
+
+	if(D4 >= 0.0f) {
+        const float Sq = sqrt(D4);
+        const float Tmp1 = (-B2 - Sq) / A;
+        const float Tmp2 = (-B2 + Sq) / A;
+        const float t0 = min(Tmp1, Tmp2);
+        t = (t0 >= gl_RayTminEXT && t0 <= gl_RayTmaxEXT) ? t0 : max(Tmp1, Tmp2);
+        if(t >= gl_RayTminEXT && t <= gl_RayTmaxEXT) {
+            return true;
+        }
+	}
+    return false;
+}
+vec3 GetNormal_Sphere(const vec3 Center, const vec3 Pos)
+{
+    return normalize(Pos - Center);
+}
+vec2 GetTexcoord_Sphere(const vec3 Nrm)
+{
+    const float PI = 4.0f * atan(1.0f);
+    const float PI2 = PI * 2;
+    return vec2(fract(atan(Nrm.y, Nrm.x) / PI2), acos(-Nrm.z) / PI);
+}
+
+bool Trace_AABB(const vec3 Center, const vec3 Radius, out float t)
+{
+    const vec3 AABBMin = Center - Radius;
+    const vec3 AABBMax = Center + Radius;
+
+    const vec3 invd = 1.0f / gl_ObjectRayDirectionEXT;
+    const vec3 Tmp0 = (AABBMin - gl_ObjectRayOriginEXT) * invd;
+    const vec3 Tmp1 = (AABBMax - gl_ObjectRayOriginEXT) * invd;
+    const vec3 tMin = min(Tmp0, Tmp1);
+    const vec3 tMax = max(Tmp0, Tmp1);
+    const float t0 = max(max(tMin.x, tMin.y), tMin.z);
+    const float t1 = min(min(tMax.x, tMax.y), tMax.z);
+    if (t0 <= t1) {
+        t = t0 < gl_RayTminEXT ? t1 : t0;
+        if (t >= gl_RayTminEXT && t <= gl_RayTmaxEXT) {
+            return true;
+        }
+    }
+    return false;
+}
+vec3 GetNormal_AABB(const vec3 Center, const vec3 Pos)
+{
+    const vec3 N = normalize(Pos - Center);
+    const vec3 NAbs = abs(N);
+    const float MaxComp = max(max(NAbs.x, NAbs.y), NAbs.z);
+    if (MaxComp == NAbs.x)
+    {
+        return vec3(sign(N.x), 0.0f, 0.0f);
+    }
+    else if (MaxComp == NAbs.y)
+    {
+        return vec3(0.0f, sign(N.y), 0.0f);
+    }
+    else
+    {
+        return vec3(0.0f, 0.0f, sign(N.z));
+    }
+}
+vec2 GetTexcoord_AABB(const vec3 Center, const vec3 Radius,const vec3 Pos, const vec3 Nrm)
+{
+    const vec3 NAbs = abs(normalize(Pos - Center));
+    const float MaxComp = max(max(NAbs.x, NAbs.y), NAbs.z);
+    const vec3 AABBMin = Center - Radius;
+    if (MaxComp == NAbs.x)
+    {
+        return (vec2(Nrm.x, 1.0) * Pos.yz - AABBMin.yz) / Radius.yz;
+    }
+    else if (MaxComp == NAbs.y)
+    {
+        return (vec2(-Nrm.y, 1.0) * Pos.xz - AABBMin.xz) / Radius.xz;
+    }
+    else
+    {
+        return (vec2(Nrm.z, 1.0) * Pos.xy - AABBMin.xy) / Radius.xy;
+    }
+}
+
+void main()
+{
+#if 0
+   const vec3 Center = vec3(0.0f);
+   const vec3 Radius = vec3(0.5f);
+   float t;
+   if(Trace_AABB(Center, Radius, t)) {
+        Attr.Position = GetPosition(t);
+        Attr.Normal = GetNormal_AABB(Center, Attr.Position);
+        Attr.Texcoord = GetTexcoord_AABB(Center, Radius, Pos, Attr.Normal);
+
+        const uint Kind = 0;
+        reportIntersectionEXT(t, Kind);
+    }
+#else    
+    const vec3 Center = vec3(0.0f);
+	const float Radius = 0.5f;
+    float t;
+    if(Trace_Sphere(Center, Radius, t)) {
+        Attr.Position = GetPosition(t);
+        Attr.Normal = GetNormal_Sphere(Center, Attr.Position);
+        Attr.Texcoord = GetTexcoord_Sphere(Attr.Normal);
+
+        const uint Kind = 0; 
+        reportIntersectionEXT(t, Kind);
+    }
+#endif
+}

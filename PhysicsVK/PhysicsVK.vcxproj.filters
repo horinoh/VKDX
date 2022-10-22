@@ -14,7 +14,7 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Shader Files">
-      <UniqueIdentifier>{c3a5df14-b708-4a2c-be1c-b06deb203162}</UniqueIdentifier>
+      <UniqueIdentifier>{7d537fee-b4f8-4bee-bd70-a047923a9527}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -27,16 +27,13 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RTShadowDX.h">
+    <ClInclude Include="PhysicsVK.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\DX.h">
+    <ClInclude Include="..\VK.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\DXExt.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\DXRT.h">
+    <ClInclude Include="..\VKExt.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\Win.h">
@@ -44,24 +41,24 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="RTShadowDX.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\DX.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\DXExt.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\Win.cpp">
+    <ClCompile Include="PhysicsVK.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="framework.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\VK.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\VKExt.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Win.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="RTShadowDX.rc">
+    <ResourceCompile Include="PhysicsVK.rc">
       <Filter>Resource Files</Filter>
     </ResourceCompile>
   </ItemGroup>
@@ -69,28 +66,25 @@
     <Image Include="small.ico">
       <Filter>Resource Files</Filter>
     </Image>
-    <Image Include="RTShadowDX.ico">
+    <Image Include="PhysicsVK.ico">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="RTShadowDX.miss.hlsl">
+    <CustomBuild Include="PhysicsVK.frag">
       <Filter>Shader Files</Filter>
-    </FxCompile>
-    <FxCompile Include="RTShadowDX.rchit.hlsl">
+    </CustomBuild>
+    <CustomBuild Include="PhysicsVK.geom">
       <Filter>Shader Files</Filter>
-    </FxCompile>
-    <FxCompile Include="RTShadowDX.rgen.hlsl">
+    </CustomBuild>
+    <CustomBuild Include="PhysicsVK.tesc">
       <Filter>Shader Files</Filter>
-    </FxCompile>
-    <FxCompile Include="RTShadowDX_1.miss.hlsl">
+    </CustomBuild>
+    <CustomBuild Include="PhysicsVK.tese">
       <Filter>Shader Files</Filter>
-    </FxCompile>
-    <FxCompile Include="RTShadowDX.rint.hlsl">
+    </CustomBuild>
+    <CustomBuild Include="PhysicsVK.vert">
       <Filter>Shader Files</Filter>
-    </FxCompile>
+    </CustomBuild>
   </ItemGroup>
 </Project>

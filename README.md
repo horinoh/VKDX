@@ -511,6 +511,7 @@ $draco_decoder -i YYY.drc -o ZZZ.obj
  * Windows Desktop Application を選択
  * Source Files に framework.cpp(内容空で作成)を追加
  	* framewordk.cpp に対してのみ C/C++ - Precompiled headers - Precompiled Header を Create(/Yc) にする
+	* Precompiled Header File には stdafx.h を消して framework.h と書く
  * framework.h(旧stdafx.h)は既存のものを参考に編集 (#pragma region Code でマークしてある)
 
 #### DX

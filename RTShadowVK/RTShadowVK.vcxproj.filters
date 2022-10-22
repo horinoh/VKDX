@@ -83,5 +83,8 @@
     <CustomBuild Include="RTShadowVK_1.rmiss">
       <Filter>Shader Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="RTShadowVK.rint">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

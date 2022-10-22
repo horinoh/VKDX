@@ -3,27 +3,27 @@
 #extension GL_ARB_shading_language_420pack : enable
 
 layout (location = 0) in vec3 InNormal[];
+layout (location = 1) in int InInstanceIndex[];
 
-layout (set = 0, binding = 0) uniform Transform { 
-	mat4 Projection; 
+#define INSTANCE_COUNT 10
+layout (set = 0, binding = 0) uniform Transform {
+	mat4 Projection;
 	mat4 View; 
-	mat4 World;
+	mat4 World[INSTANCE_COUNT]; 
 };
 
 layout (location = 0) out vec3 OutNormal;
-layout (location = 1) out vec3 OutViewDirection;
 
 layout (triangles, invocations = 1) in;
 layout (triangle_strip, max_vertices = 3) out;
 void main()
 {
-	const vec3 CamPos = vec3(View[3][0], View[3][1], View[3][2]);
-	const mat4 PVW = Projection * View * World;
+	const mat4 W = World[InInstanceIndex[0]];
+	const mat4 PVW = Projection * View * W;
 
-	for(int i=0;i<gl_in.length();++i) {
+	for(int i = 0; i < gl_in.length();++i) {
 		gl_Position = PVW * gl_in[i].gl_Position;
-		OutNormal = mat3(World) * InNormal[i];
-		OutViewDirection = CamPos - (World * gl_in[i].gl_Position).xyz;
+		OutNormal = mat3(W) * InNormal[i];
 		EmitVertex();
 	}
 	EndPrimitive();	

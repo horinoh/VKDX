@@ -30,8 +30,9 @@ float3 ToCartesian(const float3 V[3], const float3 BaryCentric)
     return ToCartesian(V[0], V[1], V[2], BaryCentric);
 }
 
+//!< ˆø”‚ð‚Æ‚é‚Æƒ_ƒ
 bool ShadowRay(const float3 Origin, const float3 Direction)
-{
+{    
     RayDesc Ray;
     Ray.TMin = 0.001f;
     Ray.TMax = 100000.0f;

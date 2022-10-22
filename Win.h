@@ -211,7 +211,8 @@ public:
 
 protected:
 	std::wstring TitleW;
-	static const UINT Elapse = 1000 / 60; //!< msec
+	static constexpr UINT DeltaMsec = 1000 / 60;
+	static constexpr FLOAT DeltaSec = 1.0f / 60.0f;
 
 private:
 	RECT Rect;

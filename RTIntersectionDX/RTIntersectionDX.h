@@ -128,7 +128,7 @@ public:
 			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_CHit->GetBufferPointer(), .BytecodeLength = SB_CHit->GetBufferSize() }),
 			.NumExports = static_cast<UINT>(size(EDs_CHit)), .pExports = data(EDs_CHit)
 			});
-		const auto DLD_Int = D3D12_DXIL_LIBRARY_DESC({
+		const auto DLD_Int = D3D12_DXIL_LIBRARY_DESC({ 
 			.DXILLibrary = D3D12_SHADER_BYTECODE({.pShaderBytecode = SB_Int->GetBufferPointer(), .BytecodeLength = SB_Int->GetBufferSize() }),
 			.NumExports = static_cast<UINT>(size(EDs_Int)), .pExports = data(EDs_Int)
 			});

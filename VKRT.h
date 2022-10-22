@@ -7,6 +7,13 @@ class VKRT : public VKExt
 private:
 	using Super = VKExt;
 protected:
+	class AABB
+	{
+	public:
+		glm::vec3 Min;
+		glm::vec3 Max;
+	};
+
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {	
 		for (auto i : ShaderBindingTables) { i.Destroy(Device); } ShaderBindingTables.clear();
 		for (auto i : BLASs) { i.Destroy(Device); } BLASs.clear();

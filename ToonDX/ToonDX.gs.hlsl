@@ -39,7 +39,7 @@ void main(const triangle IN In[3], inout TriangleStream<OUT> stream, uint instan
 #endif
 	
 	[unroll]
-	for (int i = 0; i<3; ++i) {
+	for (int i = 0; i < 3; ++i) {
 		Out.Position = mul(PVW, float4(In[i].Position, 1.0f));
 #ifdef USE_CBUFFER
 		Out.Normal = mul((float3x3)World, In[i].Normal);

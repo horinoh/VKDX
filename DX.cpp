@@ -63,7 +63,7 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 
 	OnExitSizeMove(hWnd, hInstance);
 
-	SetTimer(hWnd, NULL, Elapse, nullptr);
+	SetTimer(hWnd, NULL, DeltaMsec, nullptr);
 }
 
 /**

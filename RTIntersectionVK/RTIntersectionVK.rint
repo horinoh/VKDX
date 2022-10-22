@@ -51,7 +51,7 @@ vec3 DFBoxNormal(const vec3 Pos, const vec3 Center, const vec3 Radius)
 
 #else
 
-bool Sphere(const vec3 Center, const float Radius, out float t)
+bool Trace_Sphere(const vec3 Center, const float Radius, out float t)
 {
 	//!< レイのパラメータ表現 Ray = o + d * t ただし o = gl_ObjectRayOriginEXT, d = gl_ObjectRayDirectionEXT
     //!< (Ray - Center)^2 = Radius^2
@@ -94,7 +94,7 @@ vec2 GetTexcoord_Sphere(const vec3 Nrm)
     return vec2(fract(atan(Nrm.y, Nrm.x) / PI2), acos(-Nrm.z) / PI);
 }
 
-bool AABB(const vec3 Center, const vec3 Radius, out float t)
+bool Trace_AABB(const vec3 Center, const vec3 Radius, out float t)
 {
     //!< レイのパラメータ表現 Ray = o + d * t ただし o = ObjectRayOrigin(), d = ObjectRayDirection()
     //!< Ray = Plane[+-X+-Y+-Z] ... レイに 6 平面を代入
@@ -186,7 +186,7 @@ void main()
    const vec3 Center = vec3(0.0f);
    const vec3 Radius = vec3(0.5f);
    float t;
-   if(AABB(Center, Radius, t)) {
+   if(Trace_AABB(Center, Radius, t)) {
         const vec3 Pos = GetPosition(t);
         Attr.Normal = GetNormal_AABB(Center, Pos);
         Attr.Texcoord = GetTexcoord_AABB(Center, Radius, Pos, Attr.Normal);
@@ -198,7 +198,7 @@ void main()
     const vec3 Center = vec3(0.0f);
 	const float Radius = 0.5f;
     float t;
-    if(Sphere(Center, Radius, t)) {
+    if(Trace_Sphere(Center, Radius, t)) {
         const vec3 Pos = GetPosition(t);
         Attr.Normal = GetNormal_Sphere(Center, Pos);
         Attr.Texcoord = GetTexcoord_Sphere(Attr.Normal);
