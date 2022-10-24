@@ -26,8 +26,8 @@ namespace Phys
 			InvInertiaTensor = GetInertiaTensor().Inverse() * InvMass;
 		}
 
-		Vec3 GetCenterOfMass() const { return Shape->GetCenterOfMass(); }; //!< Local Space
-		Mat3 GetInertiaTensor() const { return Shape->GetInertiaTensor(); } //!< Local Space
+		Vec3 GetCenterOfMass() const { return Shape->GetCenterOfMass(); };
+		Mat3 GetInertiaTensor() const { return Shape->GetInertiaTensor(); }
 
 		Vec3 ToLocal(const Vec3& rhs) const {
 			return Rotation.Inverse().Rotate(rhs - GetCenterOfMass());
@@ -69,8 +69,9 @@ namespace Phys
 		void ApplyImpulse(const Vec3& ImpactPoint, const Vec3& Impulse) {
 			if (0.0f != InvMass) {
 				ApplyLinearImpulse(Impulse);
+
 				//!< J_ang = r X J_lin
-				ApplyAngularImpulse((ToWorld(GetCenterOfMass()) - ImpactPoint).Cross(Impulse));
+				ApplyAngularImpulse((ImpactPoint - ToWorld(GetCenterOfMass())).Cross(Impulse));
 			}
 		}
 

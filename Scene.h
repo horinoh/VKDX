@@ -37,8 +37,8 @@ namespace Phys
 				for (auto x = 0; x < n; ++x) {
 					for (auto z = 0; z < n; ++z) {
 						auto Rb = RigidBodies.emplace_back(new RigidBody());
-						Rb->Init(new ShapeSphere(Radius));
 						Rb->Position = Vec3(static_cast<float>(x - n2) * Radius * 2.0f * 1.5f, Y, static_cast<float>(z - n2) * Radius * 2.0f * 1.5f);
+						Rb->Init(new ShapeSphere(Radius));
 					}
 				}
 			}
@@ -53,10 +53,9 @@ namespace Phys
 				for (auto x = 0; x < n; ++x) {
 					for (auto z = 0; z < n; ++z) {
 						auto Rb = RigidBodies.emplace_back(new RigidBody());
-						Rb->Init(new ShapeSphere(Radius));
 						Rb->Position = Vec3(static_cast<float>(x - n2) * Radius * 0.25f, Y, static_cast<float>(z - n2) * Radius * 0.25f);
 						Rb->InvMass = 0;
-						//Rb->Elasticity = 0.99f;
+						Rb->Init(new ShapeSphere(Radius));
 					}
 				}
 			}
@@ -67,7 +66,6 @@ namespace Phys
 			for (auto i : RigidBodies) {
 				i->ApplyGravity(DeltaSec);
 			}
-#if false
 
 #pragma region ブロードフェーズ
 			std::vector<std::pair<int, int>> PotentialPairs;
@@ -115,7 +113,7 @@ namespace Phys
 					}
 				}
 #ifdef _DEBUG
-				if (!empty(PotentialPairs)) { std::cout << "Potential collision = " << size(PotentialPairs) << std::endl; }
+				//if (!empty(PotentialPairs)) { std::cout << "Potential collision = " << size(PotentialPairs) << std::endl; }
 #endif
 			}
 #pragma endregion
@@ -156,7 +154,7 @@ namespace Phys
 				//!< TOI でソート
 				std::ranges::sort(Contacts, std::ranges::less{}, &Contact::TimeOfImpact);
 #ifdef _DEBUG
-				if (!empty(Contacts)) { std::cout << "Contact detected = " << size(Contacts) << std::endl; }
+				//if (!empty(Contacts)) { std::cout << "Contact detected = " << size(Contacts) << std::endl; }
 #endif
 			}
 #pragma endregion
@@ -180,27 +178,32 @@ namespace Phys
 					i->Update(RemainTime);
 				}
 			}
-#else
-			const auto nRb = size(RigidBodies);
-			for (auto i = 0; i < nRb; ++i) {
-				for (auto j = i + 1; j < nRb; ++j) {
-					const auto RbA = RigidBodies[i];
-					const auto RbB = RigidBodies[j];
-
-					if (0.0f != RbA->InvMass || 0.0f != RbB->InvMass) {
-						Contact Ct;
-						if (Intersect(RbA, RbB, DeltaSec, Ct)) {
-							Resolve(Ct);
-						}
-					}
-				}
-			}
-
-			for (auto i : RigidBodies) {
-				i->Update(DeltaSec);
-			}
-#endif
 		}
+
+		//!< Brute force
+		//virtual void Update(const float DeltaSec)
+		//{
+		//	//!< 重力
+		//	for (auto i : RigidBodies) {
+		//		i->ApplyGravity(DeltaSec);
+		//	}
+		//	const auto nRb = size(RigidBodies);
+		//	for (auto i = 0; i < nRb; ++i) {
+		//		for (auto j = i + 1; j < nRb; ++j) {
+		//			const auto RbA = RigidBodies[i];
+		//			const auto RbB = RigidBodies[j];
+		//			if (0.0f != RbA->InvMass || 0.0f != RbB->InvMass) {
+		//				Contact Ct;
+		//				if (Intersect(RbA, RbB, DeltaSec, Ct)) {
+		//					Resolve(Ct);
+		//				}
+		//			}
+		//		}
+		//	}
+		//	for (auto i : RigidBodies) {
+		//		i->Update(DeltaSec);
+		//	}
+		//}
 
 		std::vector<RigidBody *> RigidBodies;
 	};

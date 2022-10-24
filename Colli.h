@@ -101,7 +101,6 @@ namespace Colli
 			const auto rB = Ct.WorldB - Ct.RigidBodyB->ToWorld(Ct.RigidBodyB->GetCenterOfMass());
 			{
 				const auto velAB = (Ct.RigidBodyB->LinearVelocity + Ct.RigidBodyB->AngularVelocity.Cross(rB)) - (Ct.RigidBodyA->LinearVelocity + Ct.RigidBodyA->AngularVelocity.Cross(rA));
-				//const auto velAB = (Ct.RigidBodyA->LinearVelocity + Ct.RigidBodyA->AngularVelocity.Cross(rA)) - (Ct.RigidBodyB->LinearVelocity + Ct.RigidBodyB->AngularVelocity.Cross(rB));
 
 				//!< 速度の法線成分
 				const auto velABNrm = velAB.Dot(Ct.Normal);
@@ -127,7 +126,7 @@ namespace Colli
 				//!< 摩擦力 (接線方向の力積として扱う)
 				{
 					//!< 速度の接線成分
-					const auto velTan = Ct.Normal * velABNrm - velAB;
+					const auto velTan = velAB - Ct.Normal * velABNrm;
 					const auto Tangent = velTan.Normalize();
 
 					//!< 2) 接線方向 ... 1) と同じ式、接線方向にしただけ
