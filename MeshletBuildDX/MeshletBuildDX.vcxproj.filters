@@ -86,9 +86,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <FxCompile Include="MeshletBuildDX.ms.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
@@ -98,5 +95,8 @@
     <FxCompile Include="MeshletBuildDX.as.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

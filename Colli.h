@@ -94,28 +94,15 @@ namespace Colli
 	}
 	static void Resolve(const Contact& Ct) 
 	{
-		{
-			const auto TotalInvMass = Ct.RigidBodyA->InvMass + Ct.RigidBodyB->InvMass;
-			const auto TotalElasticity = Ct.RigidBodyA->Elasticity * Ct.RigidBodyB->Elasticity;
-
-			const auto velAB = Ct.RigidBodyB->LinearVelocity - Ct.RigidBodyA->LinearVelocity;
-			const auto J = Ct.Normal * ((1.0f + TotalElasticity) * velAB.Dot(Ct.Normal) / TotalInvMass);
-			Ct.RigidBodyA->ApplyImpulse(Ct.WorldA, J);
-			Ct.RigidBodyB->ApplyImpulse(Ct.WorldB, -J);
-
-			const auto dAB = Ct.WorldB - Ct.WorldA;
-			Ct.RigidBodyA->Position += dAB * (Ct.RigidBodyA->InvMass / TotalInvMass);
-			Ct.RigidBodyA->Position -= dAB * (Ct.RigidBodyB->InvMass / TotalInvMass);
-			return;
-		}
-
 		const auto TotalInvMass = Ct.RigidBodyA->InvMass + Ct.RigidBodyB->InvMass;
 		{
 			//!< 衝突点と重心を結ぶ半径
 			const auto rA = Ct.WorldA - Ct.RigidBodyA->ToWorld(Ct.RigidBodyA->GetCenterOfMass());
 			const auto rB = Ct.WorldB - Ct.RigidBodyB->ToWorld(Ct.RigidBodyB->GetCenterOfMass());
 			{
-				const auto velAB = Ct.RigidBodyB->LinearVelocity + Ct.RigidBodyB->AngularVelocity.Cross(rB) - Ct.RigidBodyA->LinearVelocity + Ct.RigidBodyA->AngularVelocity.Cross(rA);
+				const auto velAB = (Ct.RigidBodyB->LinearVelocity + Ct.RigidBodyB->AngularVelocity.Cross(rB)) - (Ct.RigidBodyA->LinearVelocity + Ct.RigidBodyA->AngularVelocity.Cross(rA));
+				//const auto velAB = (Ct.RigidBodyA->LinearVelocity + Ct.RigidBodyA->AngularVelocity.Cross(rA)) - (Ct.RigidBodyB->LinearVelocity + Ct.RigidBodyB->AngularVelocity.Cross(rB));
+
 				//!< 速度の法線成分
 				const auto velABNrm = velAB.Dot(Ct.Normal);
 
@@ -130,16 +117,17 @@ namespace Colli
 					const auto invInertia = (inertiaA + inertiaB).Dot(Ct.Normal);
 
 					const auto TotalElasticity = Ct.RigidBodyA->Elasticity * Ct.RigidBodyB->Elasticity;
+					//!< TODO
 					const auto J = Ct.Normal * ((1.0f + TotalElasticity) * velABNrm / (TotalInvMass + invInertia));
-	
-					//Ct.RigidBodyA->ApplyImpulse(Ct.WorldA, J);
-					//Ct.RigidBodyB->ApplyImpulse(Ct.WorldB, -J);
+
+					Ct.RigidBodyA->ApplyImpulse(Ct.WorldA, J);
+					Ct.RigidBodyB->ApplyImpulse(Ct.WorldB, -J);
 				}
-	
+
 				//!< 摩擦力 (接線方向の力積として扱う)
 				{
 					//!< 速度の接線成分
-					const auto velTan = velAB - Ct.Normal * velABNrm;
+					const auto velTan = Ct.Normal * velABNrm - velAB;
 					const auto Tangent = velTan.Normalize();
 
 					//!< 2) 接線方向 ... 1) と同じ式、接線方向にしただけ
@@ -148,10 +136,10 @@ namespace Colli
 					const auto invInertia = (inertiaA + inertiaB).Dot(Tangent);
 
 					const auto TotalFriction = Ct.RigidBodyA->Friction * Ct.RigidBodyB->Friction;
-					const auto J = velTan * TotalFriction / (TotalInvMass + invInertia);
+					const auto J = velTan * (TotalFriction / (TotalInvMass + invInertia));
 
-					//Ct.RigidBodyA->ApplyImpulse(Ct.WorldA, J);
-					//Ct.RigidBodyB->ApplyImpulse(Ct.WorldB, -J);
+					Ct.RigidBodyA->ApplyImpulse(Ct.WorldA, J);
+					Ct.RigidBodyB->ApplyImpulse(Ct.WorldB, -J);
 				}
 			}
 		}

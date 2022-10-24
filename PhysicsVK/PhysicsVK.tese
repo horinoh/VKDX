@@ -25,14 +25,15 @@ vec3 GetNormal_Sphere(const vec2 uv, const vec3 pos)
 layout (location = 0) in int InInstanceIndex[];
 
 layout (location = 0) out vec3 OutNormal;
-
-layout (location = 1) out int OutInstanceIndex[];
+layout (location = 1) out vec2 OutTexcoord;
+layout (location = 2) out int OutInstanceIndex[];
 
 layout (quads, equal_spacing, cw) in;
 void main()
 {
 	gl_Position = vec4(GetPosition_Sphere(gl_TessCoord.xy) * 0.5f, 1.0f);
 	OutNormal = GetNormal_Sphere(gl_TessCoord.xy, gl_Position.xyz);
+	OutTexcoord = vec2(gl_TessCoord.x, 1.0f - gl_TessCoord.y);
 	OutInstanceIndex[0] = InInstanceIndex[0];
 }
 

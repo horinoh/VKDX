@@ -66,7 +66,7 @@ protected:
 		const auto Aspect = GetAspectRatioOfClientRect();
 		constexpr auto ZFar = 100.0f;
 		constexpr auto ZNear = ZFar * 0.0001f;
-		const auto CamPos = DirectX::XMVectorSet(0.0f, 30.0f, 50.0f, 1.0f);
+		const auto CamPos = DirectX::XMVectorSet(0.0f, 15.0f, 30.0f, 1.0f);
 		const auto CamTag = DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		const auto Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);

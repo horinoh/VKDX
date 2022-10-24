@@ -47,6 +47,7 @@ namespace Math
 				Rotate(Vec3::AxisZ()),
 			};
 		}
+		inline Mat3 ToMat3() const { return static_cast<Mat3>(*this); }
 
 		inline float Dot(const Quat& rhs) const { return x() * rhs.x() + y() * rhs.y() + z() * rhs.z() + w() * rhs.w(); }
 		inline float LengthSq() const { return Dot(*this); }

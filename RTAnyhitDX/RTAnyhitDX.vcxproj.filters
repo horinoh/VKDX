@@ -80,9 +80,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <FxCompile Include="RTAnyhitDX.miss.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
@@ -95,5 +92,8 @@
     <FxCompile Include="RTAnyhitDX.rahit.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

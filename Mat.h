@@ -17,9 +17,13 @@ namespace Math
 		inline Mat2 operator*(const float rhs) const { return { _rows[0] * rhs, _rows[1] * rhs }; }
 		inline Vec2 operator*(const Vec2& rhs) const { return { _rows[0].Dot(rhs), _rows[1].Dot(rhs) }; }
 		inline Mat2 operator*(const Mat2& rhs) const {
-			return {
-				{ _rows[0].Dot({ rhs._rows[0].x(), rhs._rows[1].x() }), _rows[0].Dot({ rhs._rows[0].y(), rhs._rows[1].y() }) },
-				{ _rows[1].Dot({ rhs._rows[0].x(), rhs._rows[1].x() }), _rows[1].Dot({ rhs._rows[0].y(), rhs._rows[1].y() }) },
+			//!< ŒŸŽZ—p : glm ‚Ìê‡‚ÍŠ|‚¯‚é‡˜‚ª‹t‚È‚Ì‚Å’ˆÓ
+			//glm::make_mat2(static_cast<const float*>(rhs)) * glm::make_mat2(static_cast<const float*>(*this));
+			const auto c0 = Vec2({ rhs._rows[0][0], rhs._rows[1][0] });
+			const auto c1 = Vec2({ rhs._rows[0][1], rhs._rows[1][1] });
+			return { 
+				{ _rows[0].Dot(c0), _rows[0].Dot(c1) }, 
+				{ _rows[1].Dot(c0), _rows[1].Dot(c1) } 
 			};
 		}
 		inline Mat2 operator/(const float rhs) const { return { _rows[0] / rhs, _rows[1] / rhs }; }
@@ -75,10 +79,15 @@ namespace Math
 		inline Mat3 operator*(const float rhs) const { return { _rows[0] * rhs, _rows[1] * rhs, _rows[2] * rhs }; }
 		inline Vec3 operator*(const Vec3& rhs) const { return { _rows[0].Dot(rhs), _rows[1].Dot(rhs), _rows[2].Dot(rhs) }; }
 		inline Mat3 operator*(const Mat3& rhs) const {
-			return {
-				{ _rows[0].Dot({ rhs._rows[0].x(), rhs._rows[1].x(), rhs._rows[2].x() }), _rows[0].Dot({ rhs._rows[0].y(), rhs._rows[1].y(), rhs._rows[2].y() }), _rows[0].Dot({ rhs._rows[0].z(), rhs._rows[1].z(), rhs._rows[2].z() }) },
-				{ _rows[1].Dot({ rhs._rows[0].x(), rhs._rows[1].x(), rhs._rows[2].x() }), _rows[1].Dot({ rhs._rows[0].y(), rhs._rows[1].y(), rhs._rows[2].y() }), _rows[1].Dot({ rhs._rows[0].z(), rhs._rows[1].z(), rhs._rows[2].z() }) },
-				{ _rows[2].Dot({ rhs._rows[0].x(), rhs._rows[1].x(), rhs._rows[2].x() }), _rows[2].Dot({ rhs._rows[0].y(), rhs._rows[1].y(), rhs._rows[2].y() }), _rows[2].Dot({ rhs._rows[0].z(), rhs._rows[1].z(), rhs._rows[2].z() }) },
+			//!< ŒŸŽZ—p : glm ‚Ìê‡‚ÍŠ|‚¯‚é‡˜‚ª‹t‚È‚Ì‚Å’ˆÓ
+			//glm::make_mat3(static_cast<const float*>(rhs)) * glm::make_mat3(static_cast<const float*>(*this));
+			const auto c0 = Vec3({ rhs._rows[0][0],rhs._rows[1][0], rhs._rows[2][0] });
+			const auto c1 = Vec3({ rhs._rows[0][1],rhs._rows[1][1], rhs._rows[2][1] });
+			const auto c2 = Vec3({ rhs._rows[0][2],rhs._rows[1][2], rhs._rows[2][2] });
+			return { 
+				{ _rows[0].Dot(c0), _rows[0].Dot(c1), _rows[0].Dot(c2) }, 
+				{ _rows[1].Dot(c0), _rows[1].Dot(c1), _rows[1].Dot(c2) }, 
+				{ _rows[2].Dot(c0), _rows[2].Dot(c1), _rows[2].Dot(c2) } 
 			};
 		}
 		inline Mat3 operator/(const float rhs) const { return { _rows[0] / rhs, _rows[1] / rhs, _rows[2] / rhs }; }
@@ -133,7 +142,7 @@ namespace Math
 		inline Mat3& ToZero() { return (*this = Zero()); }
 		inline Mat3& ToIdentity() { return (*this = Identity()); }
 
-	private:
+	//private:
 		Vec3 _rows[3];
 		//glm::mat3;
 		//XMFLOAT3X3
@@ -154,11 +163,17 @@ namespace Math
 		inline Mat4 operator*(const float rhs) const { return { _rows[0] * rhs, _rows[1] * rhs, _rows[2] * rhs, _rows[3] * rhs }; }
 		inline Vec4 operator*(const Vec4& rhs) const { return { _rows[0].Dot(rhs), _rows[1].Dot(rhs), _rows[2].Dot(rhs), _rows[3].Dot(rhs) }; }
 		inline Mat4 operator*(const Mat4& rhs) const {
-			return {
-				{ _rows[0].Dot({ rhs._rows[0].x(), rhs._rows[1].x(), rhs._rows[2].x(), rhs._rows[3].x() }), _rows[0].Dot({ rhs._rows[0].y(), rhs._rows[1].y(), rhs._rows[2].y(), rhs._rows[3].y() }), _rows[0].Dot({ rhs._rows[0].z(), rhs._rows[1].z(), rhs._rows[2].z(), rhs._rows[3].z() }), _rows[0].Dot({ rhs._rows[0].w(), rhs._rows[1].w(), rhs._rows[2].w(), rhs._rows[3].w() }) },
-				{ _rows[1].Dot({ rhs._rows[0].x(), rhs._rows[1].x(), rhs._rows[2].x(), rhs._rows[3].x() }), _rows[1].Dot({ rhs._rows[0].y(), rhs._rows[1].y(), rhs._rows[2].y(), rhs._rows[3].y() }), _rows[1].Dot({ rhs._rows[0].z(), rhs._rows[1].z(), rhs._rows[2].z(), rhs._rows[3].z() }), _rows[1].Dot({ rhs._rows[0].w(), rhs._rows[1].w(), rhs._rows[2].w(), rhs._rows[3].w() }) },
-				{ _rows[2].Dot({ rhs._rows[0].x(), rhs._rows[1].x(), rhs._rows[2].x(), rhs._rows[3].x() }), _rows[2].Dot({ rhs._rows[0].y(), rhs._rows[1].y(), rhs._rows[2].y(), rhs._rows[3].y() }), _rows[2].Dot({ rhs._rows[0].z(), rhs._rows[1].z(), rhs._rows[2].z(), rhs._rows[3].z() }), _rows[2].Dot({ rhs._rows[0].w(), rhs._rows[1].w(), rhs._rows[2].w(), rhs._rows[3].w() }) },
-				{ _rows[3].Dot({ rhs._rows[0].x(), rhs._rows[1].x(), rhs._rows[2].x(), rhs._rows[3].x() }), _rows[3].Dot({ rhs._rows[0].y(), rhs._rows[1].y(), rhs._rows[2].y(), rhs._rows[3].y() }), _rows[3].Dot({ rhs._rows[0].z(), rhs._rows[1].z(), rhs._rows[2].z(), rhs._rows[3].z() }), _rows[3].Dot({ rhs._rows[0].w(), rhs._rows[1].w(), rhs._rows[2].w(), rhs._rows[3].w() }) },
+			//!< ŒŸŽZ—p : glm ‚Ìê‡‚ÍŠ|‚¯‚é‡˜‚ª‹t‚È‚Ì‚Å’ˆÓ
+			//glm::make_mat4(static_cast<const float*>(rhs)) * glm::make_mat4(static_cast<const float*>(*this));
+			const auto c0 = Vec4({ rhs._rows[0][0],rhs._rows[1][0], rhs._rows[2][0], rhs._rows[3][0] });
+			const auto c1 = Vec4({ rhs._rows[0][1],rhs._rows[1][1], rhs._rows[2][1], rhs._rows[3][1] });
+			const auto c2 = Vec4({ rhs._rows[0][2],rhs._rows[1][2], rhs._rows[2][2], rhs._rows[3][2] });
+			const auto c3 = Vec4({ rhs._rows[0][3],rhs._rows[1][3], rhs._rows[2][3], rhs._rows[3][3] });
+			return { 
+				{ _rows[0].Dot(c0), _rows[0].Dot(c1), _rows[0].Dot(c2), _rows[0].Dot(c3) }, 
+				{ _rows[1].Dot(c0), _rows[1].Dot(c1), _rows[1].Dot(c2), _rows[1].Dot(c3) },
+				{ _rows[2].Dot(c0), _rows[2].Dot(c1), _rows[2].Dot(c2), _rows[2].Dot(c3) }, 
+				{ _rows[3].Dot(c0), _rows[3].Dot(c1), _rows[3].Dot(c2), _rows[3].Dot(c3) } 
 			};
 		}
 		inline Mat4 operator/(const float rhs) const { return { _rows[0] / rhs, _rows[1] / rhs, _rows[2] / rhs, _rows[3] / rhs }; }

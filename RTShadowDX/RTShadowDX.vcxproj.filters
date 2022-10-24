@@ -74,9 +74,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <FxCompile Include="RTShadowDX.miss.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
@@ -92,5 +89,8 @@
     <FxCompile Include="RTShadowDX.rint.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

@@ -4,21 +4,16 @@
 
 layout (location = 0) in int InInstanceIndex[];
 
-//!< USE_SPECIALIZATION_INFO : パイプライン作成時にシェーダ内の定数値を上書き指定できる(スカラ値のみ)
-//!< (上書きしない場合はただのシェーダ内定数となるだけなので、シェーダを書き換える必要は無い)
-layout (constant_id = 0) const float TessLevelOuter = 16.0f;
-layout (constant_id = 1) const float TessLevelInner = 16.0f;
-
 layout (location = 0) out int OutInstanceIndex[];
 
 layout (vertices = 4) out;
 void main()
 {
 	for(int i=0;i<gl_TessLevelOuter.length();++i) {
-		gl_TessLevelOuter[i] = TessLevelOuter;
+		gl_TessLevelOuter[i] = 16.0f;
 	}
 	for(int i=0;i<gl_TessLevelInner.length();++i) {
-		gl_TessLevelInner[i] = TessLevelInner;
+		gl_TessLevelInner[i] = 16.0f;
 	}
 	gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 

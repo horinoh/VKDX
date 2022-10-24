@@ -33,7 +33,7 @@ namespace Phys
 			return Rotation.Inverse().Rotate(rhs - GetCenterOfMass());
 		}
 		Vec3 ToWorld(const Vec3& rhs) const {
-			return GetCenterOfMass() + Rotation.Rotate(rhs);
+			return Position + Rotation.Rotate(rhs);
 		}
 		Mat3 ToWorld(const Mat3& rhs) const {
 			const auto Rot3 = static_cast<const Mat3>(Rotation);
@@ -79,27 +79,23 @@ namespace Phys
 				//!< üŒ`‘¬“x‚©‚çˆÊ’u‚ð‹‚ß‚é
 				Position += LinearVelocity * DeltaSec;
 
-#if false
-				//!< Šp‘¬“x‚©‚ç‰ñ“]‚ð‹‚ß‚é
-				const auto Rot3 = static_cast<Mat3>(Rotation);
-				const auto InertiaTensor = Rot3 * GetInertiaTensor() * Rot3.Transpose();
-				//!< Še‰Á‘¬“x a = I^-1 (w X (I * w))
-				const auto Accel = InertiaTensor.Inverse() * (AngularVelocity.Cross(InertiaTensor * AngularVelocity));
-				//!< Šp‘¬“x
-				AngularVelocity += Accel * DeltaSec;
-				//!< q' = dq * q
-				const auto dAng = AngularVelocity * DeltaSec;
-				const auto dQuat = Quat(dAng, dAng.Length());
-				Rotation = (dQuat * Rotation).Normalize();
+				{
+					//!< Šp‘¬“x‚©‚ç‰ñ“]‚ð‹‚ß‚é
+					const auto Rot3 = Rotation.ToMat3();
+					const auto InertiaTensor = Rot3 * GetInertiaTensor() * Rot3.Transpose();
+					//!< Še‰Á‘¬“x a = I^-1 (w X (I * w))
+					const auto Accel = InertiaTensor.Inverse() * (AngularVelocity.Cross(InertiaTensor * AngularVelocity));
+					//!< Šp‘¬“x
+					AngularVelocity += Accel * DeltaSec;
+					//!< q' = dq * q0
+					const auto dAng = AngularVelocity * DeltaSec;
+					const auto dQuat = Quat(dAng, dAng.Length());
+					Rotation = (dQuat * Rotation).Normalize();
 
-				//!< ‰ñ“]‚É‚æ‚éˆÊ’u‚ÌXV
-				const auto CM = ToWorld(GetCenterOfMass());
-				Position = CM + dQuat.Rotate(Position - CM);
-#endif
-
-#ifdef _DEBUG
-				//std::cout << Position << std::endl;
-#endif
+					//!< ‰ñ“]‚É‚æ‚éˆÊ’u‚ÌXV
+					const auto CM = ToWorld(GetCenterOfMass());
+					Position = CM + dQuat.Rotate(Position - CM);
+				}
 			}
 		}
 

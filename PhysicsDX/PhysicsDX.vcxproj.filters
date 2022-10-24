@@ -71,9 +71,6 @@
     </Image>
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <FxCompile Include="PhysicsDX.gs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
@@ -89,5 +86,8 @@
     <FxCompile Include="PhysicsDX.ds.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

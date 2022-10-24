@@ -29,23 +29,23 @@ namespace Phys
 		{
 			//!< “®“I
 			{
-				constexpr auto Radius = 1.0f;
+				constexpr auto Radius = 0.5f;
 				constexpr auto Y = 10.0f;
 
-				const auto n = 5;
+				const auto n = 6;
 				const auto n2 = n >> 1;
 				for (auto x = 0; x < n; ++x) {
 					for (auto z = 0; z < n; ++z) {
 						auto Rb = RigidBodies.emplace_back(new RigidBody());
 						Rb->Init(new ShapeSphere(Radius));
-						Rb->Position = Vec3(static_cast<float>(x - n2) * Radius * 3.0f, Y, static_cast<float>(z - n2) * Radius * 3.0f);
+						Rb->Position = Vec3(static_cast<float>(x - n2) * Radius * 2.0f * 1.5f, Y, static_cast<float>(z - n2) * Radius * 2.0f * 1.5f);
 					}
 				}
 			}
 
 			//!< Ã“I
 			{
-				constexpr auto Radius = 30.0f;
+				constexpr auto Radius = 80.0f;
 				constexpr auto Y = -Radius;
 
 				const auto n = 3;
@@ -54,8 +54,9 @@ namespace Phys
 					for (auto z = 0; z < n; ++z) {
 						auto Rb = RigidBodies.emplace_back(new RigidBody());
 						Rb->Init(new ShapeSphere(Radius));
-						Rb->Position = Vec3(static_cast<float>(x - n2) * Radius * 0.5f, Y, static_cast<float>(z - n2) * Radius * 0.5f);
+						Rb->Position = Vec3(static_cast<float>(x - n2) * Radius * 0.25f, Y, static_cast<float>(z - n2) * Radius * 0.25f);
 						Rb->InvMass = 0;
+						//Rb->Elasticity = 0.99f;
 					}
 				}
 			}

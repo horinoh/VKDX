@@ -11,6 +11,7 @@ struct OUT
 {
 	float3 Position : POSITION;
 	float3 Normal : NORMAL;
+    float2 Texcoord : TEXCOORD0;
     uint InstanceID : SV_InstanceID;
 };
 
@@ -40,6 +41,7 @@ OUT main(const TESS_FACTOR tess, const float2 uv : SV_DomainLocation, const Outp
 	OUT Out;
 	Out.Position = GetPosition_Sphere(uv) * 0.5f;
     Out.Normal = GetNormal_Sphere(uv, Out.Position);
+    Out.Texcoord = float2(uv.x, 1.0f - uv.y);
     Out.InstanceID = quad[0].InstanceID;
 	return Out;
 }

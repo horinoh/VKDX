@@ -6,5 +6,6 @@ layout (location = 0) out int OutInstanceIndex;
 
 void main()
 {
-	OutInstanceIndex = gl_InstanceIndex; //!< gl_InstanceID ‚Å‚Í‚È‚­ gl_InstanceIndex ‚È‚Ì‚Å’ˆÓ
+	//!< gl_InstanceID ‚Å‚Í‚È‚­ gl_InstanceIndex ‚È‚Ì‚Å’ˆÓ
+	OutInstanceIndex = gl_InstanceIndex; 
 }
