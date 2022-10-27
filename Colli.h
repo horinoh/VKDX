@@ -13,17 +13,18 @@ namespace Colli
 {
 	static bool RaySphere(const Vec3& RayPos, const Vec3& RayDir, const Vec3& SpPos, const float SpRad, float& t0, float& t1) 
 	{
-		//!< 1)球	(x - SpPos)^2 = SpRad^2 
+		//!< 1)球	(x - SpPos)^2 = SpRad^2
+		//!<		x^2 - 2 * x * SpPos + SpPos^2 - SpRad^2 = 0
 		//!< 2)レイ	RayPos + RayDir * t 
 		//!<	1) の x に 2) を代入 
 		//!< (RayPos + RayDir * t - SpPos)^2 = SpRad^2
-		//!< RayDir^2 * t^2 + 2 * (RayDir.Dot(RayPos - SpPos) * t + (RayPos - SpPos)^2 - SpRad^2 = 0
-		//!< A * t^2 + B * t + C = 0 とすると
-		//!<	A = RayDir.Dot(RayDir), B/2 = RayDir.Dot(Tmp), C = Tmp.Dot(Tmp) - SpRad^2, ただし Tmp = SpPos - RayPos
-		const auto Tmp = SpPos - RayPos;
+		//!< (RayDir * t + M)^2 - SpRad^2 = 0 ... M = RayPos - SpPos
+		//!< RayDir^2 * t^2 + 2 * M * RayDir * t + M^2 - SpRad^2 = 0
+		//!< A * t^2 + B * t + C = 0 ... A = RayDir^2, B = 2 * M * RayDir, C = M^2 - SpRad^2
+		const auto M = RayPos - SpPos;
 		const auto A = RayDir.Dot(RayDir);
-		const auto B2 = RayDir.Dot(Tmp);
-		const auto C = Tmp.Dot(Tmp) - SpRad * SpRad;
+		const auto B2 = M.Dot(RayDir);
+		const auto C = M.Dot(M) - SpRad * SpRad;
 
 		const auto D4 = B2 * B2 - A * C;
 		if (D4 >= 0) {
@@ -67,9 +68,7 @@ namespace Colli
 			const auto SpB = static_cast<const ShapeSphere*>(RbB->Shape);
 
 			const auto TotalRadius = SpA->Radius + SpB->Radius;
-			const auto VelAB = RbA->LinearVelocity - RbB->LinearVelocity;
-			// TODO
-			//const auto VelAB = (RbA->LinearVelocity - RbB->LinearVelocity) * DeltaSec;
+			const auto VelAB = (RbB->LinearVelocity - RbA->LinearVelocity) * DeltaSec;
 
 			//!< 殆ど移動してない場合は既に重なっているかチェック
 			if (VelAB.LengthSq() < 0.001f * 0.001f) {

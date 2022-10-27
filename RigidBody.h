@@ -43,6 +43,11 @@ namespace Phys
 			return Rot3 * rhs * Rot3.Transpose();
 		}
 
+		void ApplyGravity(const float DeltaSec) {
+			if (0.0f != InvMass) {
+				LinearVelocity += Graivity * DeltaSec;
+			}
+		}
 		void ApplyLinearImpulse(const Vec3& Impulse) {
 			if (0.0f != InvMass) {
 				LinearVelocity += Impulse * InvMass;
@@ -74,8 +79,6 @@ namespace Phys
 		void Update(const float DeltaSec) {
 			if (0.0f != InvMass) {
 				{
-					//!< 線形速度
-					LinearVelocity += Graivity * DeltaSec;
 					//!< 位置の更新
 					Position += LinearVelocity * DeltaSec;
 				}

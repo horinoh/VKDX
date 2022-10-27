@@ -152,6 +152,10 @@ namespace Phys
 		}
 		virtual void Update(const float DeltaSec)
 		{
+			for (auto i : RigidBodies) {
+				i->ApplyGravity(DeltaSec);
+			}
+
 #pragma region
 			std::vector<CollidablePair> CollidablePairs;
 			BroadPhase(CollidablePairs, DeltaSec);
