@@ -27,13 +27,15 @@ namespace Phys
 		}
 
 		Vec3 GetCenterOfMass() const { return Shape->GetCenterOfMass(); };
+		Vec3 GetWorldSpaceCenterOfMass() const { return Position + Rotation.Rotate(GetCenterOfMass()); }
+
 		Mat3 GetInertiaTensor() const { return Shape->GetInertiaTensor(); }
 
 		Vec3 ToLocal(const Vec3& rhs) const {
-			return Rotation.Inverse().Rotate(rhs - GetCenterOfMass());
+			return Rotation.Inverse().Rotate(rhs - GetWorldSpaceCenterOfMass());
 		}
 		Vec3 ToWorld(const Vec3& rhs) const {
-			return Position + Rotation.Rotate(rhs);
+			return GetWorldSpaceCenterOfMass() + Rotation.Rotate(rhs);
 		}
 		Mat3 ToWorld(const Mat3& rhs) const {
 			const auto Rot3 = static_cast<const Mat3>(Rotation);
@@ -41,27 +43,22 @@ namespace Phys
 			return Rot3 * rhs * Rot3.Transpose();
 		}
 
-		void ApplyGravity(const float DeltaSec) {
-			if (0.0f != InvMass) {
-				LinearVelocity += Graivity * DeltaSec * InvMass;
-			}
-		}
 		void ApplyLinearImpulse(const Vec3& Impulse) {
 			if (0.0f != InvMass) {
 				LinearVelocity += Impulse * InvMass;
 			}
 		}
 		void ApplyAngularImpulse(const Vec3& Impulse) {
-			//!< dw = I^-1 * J 
 			if (0.0f != InvMass) {
+				//!< w = Inv(I) * AngJ 
 				AngularVelocity += ToWorld(InvInertiaTensor) * Impulse;
 
 #pragma region 角速度限界値
-				constexpr auto AngVelLim = 30.0f;
-				if (AngularVelocity.LengthSq() > AngVelLim * AngVelLim) {
-					AngularVelocity.ToNormalized();
-					AngularVelocity *= AngVelLim;
-				}
+				//constexpr auto AngVelLim = 30.0f;
+				//if (AngularVelocity.LengthSq() > AngVelLim * AngVelLim) {
+				//	AngularVelocity.ToNormalized();
+				//	AngularVelocity *= AngVelLim;
+				//}
 #pragma endregion
 			}
 		}
@@ -69,33 +66,35 @@ namespace Phys
 		void ApplyImpulse(const Vec3& ImpactPoint, const Vec3& Impulse) {
 			if (0.0f != InvMass) {
 				ApplyLinearImpulse(Impulse);
-
-				//!< J_ang = r X J_lin
-				ApplyAngularImpulse((ImpactPoint - ToWorld(GetCenterOfMass())).Cross(Impulse));
+				//!< AngJ = r x LinearJ
+				ApplyAngularImpulse((ImpactPoint - GetWorldSpaceCenterOfMass()).Cross(Impulse));
 			}
 		}
 
 		void Update(const float DeltaSec) {
 			if (0.0f != InvMass) {
-				//!< 線形速度から位置を求める
-				Position += LinearVelocity * DeltaSec;
+				{
+					//!< 線形速度
+					LinearVelocity += Graivity * DeltaSec;
+					//!< 位置の更新
+					Position += LinearVelocity * DeltaSec;
+				}
 
 				{
-					//!< 角速度から回転を求める
-					const auto Rot3 = Rotation.ToMat3();
-					const auto InertiaTensor = Rot3 * GetInertiaTensor() * Rot3.Transpose();
-					//!< 各加速度 a = I^-1 (w X (I * w))
-					const auto Accel = InertiaTensor.Inverse() * (AngularVelocity.Cross(InertiaTensor * AngularVelocity));
+					//!< 角加速度 a = Inv(I) * (w x (I ・ w))
+					const auto WIT = ToWorld(GetInertiaTensor());
+					const auto AngAccel = WIT.Inverse() * (AngularVelocity.Cross(WIT * AngularVelocity));
 					//!< 角速度
-					AngularVelocity += Accel * DeltaSec;
-					//!< q' = dq * q0
-					const auto dAng = AngularVelocity * DeltaSec;
-					const auto dQuat = Quat(dAng, dAng.Length());
-					Rotation = (dQuat * Rotation).Normalize();
+					AngularVelocity += AngAccel * DeltaSec;
 
-					//!< 回転による位置の更新
-					const auto CM = ToWorld(GetCenterOfMass());
-					Position = CM + dQuat.Rotate(Position - CM);
+					//!< 回転の更新 Quat' = dQuat * Quat
+					const auto DeltaAng = AngularVelocity * DeltaSec;
+					const auto DeltaQuat = Quat(DeltaAng, DeltaAng.Length());
+					Rotation = (DeltaQuat * Rotation).Normalize();
+
+					//!< (回転による) 位置の更新
+					const auto WCOM = GetWorldSpaceCenterOfMass();
+					Position = WCOM + DeltaQuat.Rotate(Position - WCOM);
 				}
 			}
 		}

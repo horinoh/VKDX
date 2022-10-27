@@ -10,10 +10,10 @@ layout (vertices = 4) out;
 void main()
 {
 	for(int i=0;i<gl_TessLevelOuter.length();++i) {
-		gl_TessLevelOuter[i] = 16.0f;
+		gl_TessLevelOuter[i] = 64.0f;
 	}
 	for(int i=0;i<gl_TessLevelInner.length();++i) {
-		gl_TessLevelInner[i] = 16.0f;
+		gl_TessLevelInner[i] = 64.0f;
 	}
 	gl_out[gl_InvocationID].gl_Position = gl_in[gl_InvocationID].gl_Position;
 

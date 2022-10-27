@@ -15,8 +15,8 @@ struct TESS_FACTOR
 TESS_FACTOR ConstantHS()
 {
 	TESS_FACTOR Out;
-	const float Edge = 16.0f;
-	const float Inside = 16.0f;
+	const float Edge = 64.0f;
+	const float Inside = 64.0f;
 	Out.Edge[0] = Edge;
 	Out.Edge[1] = Edge;
 	Out.Edge[2] = Edge;
