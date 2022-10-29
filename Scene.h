@@ -156,22 +156,16 @@ namespace Phys
 				i->ApplyGravity(DeltaSec);
 			}
 
-#pragma region
-			std::vector<CollidablePair> CollidablePairs;
-			BroadPhase(CollidablePairs, DeltaSec);
-
-			std::vector<Contact> Contacts_;
-			NarrowPhase(Contacts_, CollidablePairs, DeltaSec);
-#pragma endregion
-
-#pragma region
 			std::vector<Contact> Contacts;
-			BruteForce(Contacts, DeltaSec);
-#pragma endregion
-
-			if (!std::ranges::equal(Contacts, Contacts_)) {
-				std::cout << "Different" << std::endl;
+#if true
+			{
+				std::vector<CollidablePair> CollidablePairs;
+				BroadPhase(CollidablePairs, DeltaSec);
+				NarrowPhase(Contacts, CollidablePairs, DeltaSec);
 			}
+#else
+			BruteForce(Contacts, DeltaSec);
+#endif
 
 			//!< TOI 毎に時間をスライスして、シミュレーションを進める
 			auto AccumTime = 0.0f;

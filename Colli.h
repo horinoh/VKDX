@@ -176,7 +176,7 @@ namespace Colli
 		if(0.0f == Ct.TimeOfImpact) {
 			const auto dAB = Ct.PointB - Ct.PointA;
 			Ct.RigidBodyA->Position += dAB * (Ct.RigidBodyA->InvMass / TotalInvMass);
-			Ct.RigidBodyA->Position -= dAB * (Ct.RigidBodyB->InvMass / TotalInvMass);
+			Ct.RigidBodyB->Position -= dAB * (Ct.RigidBodyB->InvMass / TotalInvMass);
 		}
 	}
 }
