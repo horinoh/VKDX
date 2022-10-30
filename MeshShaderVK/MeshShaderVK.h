@@ -3,6 +3,7 @@
 #include "resource.h"
 
 #pragma region Code
+#define USE_NV_MESH_SHADER
 #include "../VKMS.h"
 
 class MeshShaderVK : public VKMS

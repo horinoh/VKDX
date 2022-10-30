@@ -509,8 +509,14 @@ public:
 	//}
 
 #pragma region MESH_SHADER
-	[[nodiscard]] static bool HasMeshShaderSupport(const VkPhysicalDevice PD) {
+	[[nodiscard]] static bool HasMeshShaderNVSupport(const VkPhysicalDevice PD) {
 		VkPhysicalDeviceMeshShaderFeaturesNV PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_NV, .pNext = nullptr };
+		VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDMSF };
+		vkGetPhysicalDeviceFeatures2(PD, &PDF2);
+		return PDMSF.taskShader && PDMSF.meshShader;
+	}
+	[[nodiscard]] static bool HasMeshShaderEXTSupport(const VkPhysicalDevice PD) {
+		VkPhysicalDeviceMeshShaderFeaturesEXT PDMSF = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT, .pNext = nullptr };
 		VkPhysicalDeviceFeatures2 PDF2 = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &PDMSF };
 		vkGetPhysicalDeviceFeatures2(PD, &PDF2);
 		return PDMSF.taskShader && PDMSF.meshShader;
@@ -1158,6 +1164,38 @@ static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDeviceMeshSha
 	Win::Logf("\t\t\t\tmeshOutputPerPrimitiveGranularity = %d\n", rhs.meshOutputPerPrimitiveGranularity);
 	return lhs;
 }
+static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDeviceMeshShaderPropertiesEXT& rhs) {
+	Win::Log("\t\t\tVkPhysicalDeviceMeshShaderPropertiesEXT\n");
+	Win::Logf("\t\t\t\tmaxTaskWorkGroupTotalCount = %d\n", rhs.maxTaskWorkGroupTotalCount);
+	Win::Logf("\t\t\t\tmaxTaskWorkGroupCount[] = %d, %d, %d\n", rhs.maxTaskWorkGroupCount[0], rhs.maxTaskWorkGroupCount[1], rhs.maxTaskWorkGroupCount[2]);
+	Win::Logf("\t\t\t\tmaxTaskWorkGroupInvocations = %d\n", rhs.maxTaskWorkGroupInvocations);
+	Win::Logf("\t\t\t\tmaxTaskWorkGroupSize[] = %d, %d, %d\n", rhs.maxTaskWorkGroupSize[0], rhs.maxTaskWorkGroupSize[1], rhs.maxTaskWorkGroupSize[2]);
+	Win::Logf("\t\t\t\tmaxTaskPayloadSize = %d\n", rhs.maxTaskPayloadSize);
+	Win::Logf("\t\t\t\tmaxTaskSharedMemorySize = %d\n", rhs.maxTaskSharedMemorySize);
+	Win::Logf("\t\t\t\tmaxTaskPayloadAndSharedMemorySize = %d\n", rhs.maxTaskPayloadAndSharedMemorySize);
+	Win::Logf("\t\t\t\tmaxMeshWorkGroupTotalCount = %d\n", rhs.maxMeshWorkGroupTotalCount);
+	Win::Logf("\t\t\t\tmaxMeshWorkGroupCount[] = %d, %d, %d\n", rhs.maxMeshWorkGroupCount[0], rhs.maxMeshWorkGroupCount[1], rhs.maxMeshWorkGroupCount[2]);
+	Win::Logf("\t\t\t\tmaxMeshWorkGroupInvocations = %d\n", rhs.maxMeshWorkGroupInvocations);
+	Win::Logf("\t\t\t\tmaxMeshWorkGroupSize[] = %d, %d, %d\n", rhs.maxMeshWorkGroupSize[0], rhs.maxMeshWorkGroupSize[1], rhs.maxMeshWorkGroupSize[2]);
+	Win::Logf("\t\t\t\tmaxMeshSharedMemorySize = %d\n", rhs.maxMeshSharedMemorySize);
+	Win::Logf("\t\t\t\tmaxMeshPayloadAndSharedMemorySize = %d\n", rhs.maxMeshPayloadAndSharedMemorySize);
+	Win::Logf("\t\t\t\tmaxMeshOutputMemorySize = %d\n", rhs.maxMeshOutputMemorySize);
+	Win::Logf("\t\t\t\tmaxMeshPayloadAndOutputMemorySize = %d\n", rhs.maxMeshPayloadAndOutputMemorySize);
+	Win::Logf("\t\t\t\tmaxMeshOutputComponents = %d\n", rhs.maxMeshOutputComponents);
+	Win::Logf("\t\t\t\tmaxMeshOutputVertices = %d\n", rhs.maxMeshOutputVertices);
+	Win::Logf("\t\t\t\tmaxMeshOutputPrimitives = %d\n", rhs.maxMeshOutputPrimitives);
+	Win::Logf("\t\t\t\tmaxMeshOutputLayers = %d\n", rhs.maxMeshOutputLayers);
+	Win::Logf("\t\t\t\tmaxMeshMultiviewViewCount = %d\n", rhs.maxMeshMultiviewViewCount);
+	Win::Logf("\t\t\t\tmeshOutputPerVertexGranularity = %d\n", rhs.meshOutputPerVertexGranularity);
+	Win::Logf("\t\t\t\tmeshOutputPerPrimitiveGranularity = %d\n", rhs.meshOutputPerPrimitiveGranularity);
+	Win::Logf("\t\t\t\tmaxPreferredTaskWorkGroupInvocations = %d\n", rhs.maxPreferredTaskWorkGroupInvocations);
+	Win::Logf("\t\t\t\tmaxPreferredMeshWorkGroupInvocations = %d\n", rhs.maxPreferredMeshWorkGroupInvocations);
+	Win::Logf("\t\t\t\tprefersLocalInvocationVertexOutput = %d\n", rhs.prefersLocalInvocationVertexOutput);
+	Win::Logf("\t\t\t\tprefersLocalInvocationPrimitiveOutput = %d\n", rhs.prefersLocalInvocationPrimitiveOutput);
+	Win::Logf("\t\t\t\tprefersCompactVertexOutput = %d\n", rhs.prefersCompactVertexOutput);
+	Win::Logf("\t\t\t\tprefersCompactPrimitiveOutput = %d\n", rhs.prefersCompactPrimitiveOutput);
+	return lhs;
+}
 #pragma endregion
 #pragma endregion
 
@@ -1202,6 +1240,15 @@ static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDeviceMeshSha
 	Win::Log("\t\t\tVkPhysicalDeviceMeshShaderFeaturesNV\n");
 	if (rhs.taskShader) { Win::Log("\t\t\t\ttaskShader\n"); }
 	if (rhs.meshShader) { Win::Log("\t\t\t\tmeshShader\n"); }
+	return lhs;
+}
+static std::ostream& operator<<(std::ostream& lhs, const VkPhysicalDeviceMeshShaderFeaturesEXT& rhs) {
+	Win::Log("\t\t\tVkPhysicalDeviceMeshShaderFeaturesEXT\n");
+	if (rhs.taskShader) { Win::Log("\t\t\t\ttaskShader\n"); }
+	if (rhs.meshShader) { Win::Log("\t\t\t\tmeshShader\n"); }
+	if (rhs.multiviewMeshShader) { Win::Log("\t\t\t\tmultiviewMeshShader\n"); }
+	if (rhs.primitiveFragmentShadingRateMeshShader) { Win::Log("\t\t\t\tprimitiveFragmentShadingRateMeshShader\n"); }
+	if (rhs.meshShaderQueries) { Win::Log("\t\t\t\tmeshShaderQueries\n"); }
 	return lhs;
 }
 #pragma endregion

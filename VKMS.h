@@ -2,14 +2,20 @@
 
 #include "VKExt.h"
 
-#define USE_NV_MESH_SHADER
-
 class VKMS : public VKExt
 {
 private:
 	using Super = VKExt;
 
 protected:
+	[[nodiscard]] static bool HasMeshShaderSupport(const VkPhysicalDevice PD) {
+#ifdef USE_NV_MESH_SHADER
+		return HasMeshShaderNVSupport(PD);
+#else
+		return HasMeshShaderEXTSupport(PD);
+#endif
+	}
+
 	virtual void CreateInstance([[maybe_unused]] const std::vector<const char*>& AdditionalLayers, const std::vector<const char*>& AdditionalExtensions) override {
 		//Super::CreateInstance(AdditionalLayers, AdditionalExtensions);	//!< VKExt	: VK_LAYER_RENDERDOC_Capture を使用する
 		VK::CreateInstance(AdditionalLayers, AdditionalExtensions);			//!< VK		: VK_LAYER_RENDERDOC_Capture を使用しない
@@ -47,6 +53,14 @@ private:
 	using Super = VKExtDepth;
 
 protected:
+	[[nodiscard]] static bool HasMeshShaderSupport(const VkPhysicalDevice PD) {
+#ifdef USE_NV_MESH_SHADER
+		return HasMeshShaderNVSupport(PD);
+#else
+		return HasMeshShaderEXTSupport(PD);
+#endif
+	}
+
 	virtual void CreateInstance([[maybe_unused]] const std::vector<const char*>& AdditionalLayers, const std::vector<const char*>& AdditionalExtensions) override {
 		//Super::CreateInstance(AdditionalLayers, AdditionalExtensions);	//!< VKExt	: VK_LAYER_RENDERDOC_Capture を使用する
 		VK::CreateInstance(AdditionalLayers, AdditionalExtensions);			//!< VK		: VK_LAYER_RENDERDOC_Capture を使用しない
