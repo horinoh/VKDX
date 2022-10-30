@@ -18,7 +18,11 @@ public:
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
 			const auto& CB = CommandBuffers[0];
 			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+#ifdef USE_NV_MESH_SHADER
 			constexpr VkDrawMeshTasksIndirectCommandNV DMTIC = { .taskCount = 1, .firstTask = 0 };
+#else
+			constexpr VkDrawMeshTasksIndirectCommandEXT DMTIC = { .groupCountX = 1, .groupCountY = 1, .groupCountZ = 1 };
+#endif
 			IndirectBuffers.emplace_back().Create(Device, PDMP, DMTIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DMTIC), &DMTIC);
 		}
 	}
@@ -31,7 +35,11 @@ public:
 				VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
 			};
 			const std::array PSSCIs = {
+#ifdef USE_NV_MESH_SHADER
 				VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_MESH_BIT_NV, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
+#else
+				VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_MESH_BIT_EXT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
+#endif
 				VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_FRAGMENT_BIT, .module = SMs[1], .pName = "main", .pSpecializationInfo = nullptr }),
 			};
 			CreatePipeline_MsFs(VK_FALSE, PSSCIs);
@@ -64,9 +72,17 @@ public:
 			vkCmdBeginRenderPass(CB, &RPBI, VK_SUBPASS_CONTENTS_INLINE); {
 				if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
 #ifdef USE_INDIRECT
+#ifdef USE_NV_MESH_SHADER
 					vkCmdDrawMeshTasksIndirectNV(CB, IndirectBuffers[0].Buffer, 0, 1, 0);
 #else
+					vkCmdDrawMeshTasksIndirectEXT(CB, IndirectBuffers[0].Buffer, 0, 1, 0);
+#endif
+#else
+#ifdef USE_NV_MESH_SHADER
 					vkCmdDrawMeshTasksNV(CB, 1, 0);
+#else
+					vkCmdDrawMeshTasksEXT(CB, 1, 1, 1);
+#endif
 #endif
 				}
 			} vkCmdEndRenderPass(CB);
