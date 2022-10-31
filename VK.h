@@ -979,6 +979,7 @@ public:
 #include "VKDeviceProcAddr.h"
 #endif
 #include "VKDeviceProcAddr_RayTracing.h"
+#include "VKDeviceProcAddr_MeshShaderNV.h"
 #include "VKDeviceProcAddr_MeshShader.h"
 #undef VK_PROC_ADDR
 

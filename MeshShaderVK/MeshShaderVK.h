@@ -32,7 +32,11 @@ public:
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
 			const auto ShaderPath = GetBasePath();
 			const std::array SMs = {
+#ifdef USE_NV_MESH_SHADER
+				VK::CreateShaderModule(data(ShaderPath + TEXT("_nv.mesh.spv"))),
+#else
 				VK::CreateShaderModule(data(ShaderPath + TEXT(".mesh.spv"))),
+#endif
 				VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
 			};
 			const std::array PSSCIs = {
