@@ -2,6 +2,8 @@
 
 #include "VKExt.h"
 
+#define USE_NV_MESH_SHADER
+
 class VKMS : public VKExt
 {
 private:
