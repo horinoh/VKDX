@@ -166,13 +166,6 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology PT, cons
 
 void VKExt::CreatePipeline_TsMsFs(const VkBool32 DepthEnable, const std::array<VkPipelineShaderStageCreateInfo, 3>& PSSCIs)
 {
-	constexpr VkPipelineViewportStateCreateInfo PVSCI = {
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = 0,
-		.viewportCount = 1, .pViewports = nullptr,
-		.scissorCount = 1, .pScissors = nullptr
-	};
 	constexpr VkPipelineRasterizationStateCreateInfo PRSCI = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 		.pNext = nullptr,
@@ -184,16 +177,6 @@ void VKExt::CreatePipeline_TsMsFs(const VkBool32 DepthEnable, const std::array<V
 		.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
 		.depthBiasEnable = VK_FALSE, .depthBiasConstantFactor = 0.0f, .depthBiasClamp = 0.0f, .depthBiasSlopeFactor = 0.0f,
 		.lineWidth = 1.0f
-	};
-	constexpr VkSampleMask SM = 0xffffffff;
-	constexpr VkPipelineMultisampleStateCreateInfo PMSCI = {
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = 0,
-		.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT,
-		.sampleShadingEnable = VK_FALSE, .minSampleShading = 0.0f,
-		.pSampleMask = &SM,
-		.alphaToCoverageEnable = VK_FALSE, .alphaToOneEnable = VK_FALSE
 	};
 	const VkPipelineDepthStencilStateCreateInfo PDSSCI = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
@@ -225,14 +208,6 @@ void VKExt::CreatePipeline_TsMsFs(const VkBool32 DepthEnable, const std::array<V
 			.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE, .alphaBlendOp = VK_BLEND_OP_ADD,
 			.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
 		}),
-	};
-	const VkPipelineColorBlendStateCreateInfo PCBSCI = {
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-		.pNext = nullptr,
-		.flags = 0,
-		.logicOpEnable = VK_FALSE, .logicOp = VK_LOGIC_OP_COPY,
-		.attachmentCount = static_cast<uint32_t>(size(PCBASs)), .pAttachments = data(PCBASs),
-		.blendConstants = { 1.0f, 1.0f, 1.0f, 1.0f }
 	};
 	constexpr std::array DSs = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, };
 	constexpr VkPipelineDynamicStateCreateInfo PDSCI = {
