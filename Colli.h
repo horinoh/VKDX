@@ -204,7 +204,8 @@ namespace Colli
 
 	using TriangleIndices = std::tuple<int, int, int>;
 
-	static void BuildTetrahedron(const std::vector<Vec3>& Pts, std::vector<Vec3>& HullVerts, std::vector<TriangleIndices>& HullInds) {
+	static void BuildTetrahedron(const std::vector<Vec3>& Pts, std::vector<Vec3>& HullVerts, std::vector<TriangleIndices>& HullInds) 
+	{
 		std::array<Vec3, 4> P = { Pts[Distance::Farthest(Pts, Vec3::AxisX())] };
 		P[1] = Pts[Distance::Farthest(Pts, -P[0])];
 		P[2] = Pts[Distance::Farthest(Pts, P[0], P[1])];
@@ -215,20 +216,45 @@ namespace Colli
 			std::swap(P[0], P[1]);
 		}
 
-		//HullVerts = { P[0], P[1], P[2], P[3] };
 		HullVerts.emplace_back(P[0]);
 		HullVerts.emplace_back(P[1]);
 		HullVerts.emplace_back(P[2]);
 		HullVerts.emplace_back(P[3]);
 
-		//HullInds = { std::make_tuple(0, 1, 2), std::make_tuple(0, 2, 3), std::make_tuple(2, 1, 3), std::make_tuple(1, 0, 3), };
-		//HullInds = { TriangleIndices({ 0, 1, 2 }), TriangleIndices({ 0, 2, 3 }), TriangleIndices({ 2, 1, 3 }), TriangleIndices({ 1, 0, 3 }), };
 		HullInds.emplace_back(TriangleIndices({ 0, 1, 2 }));
 		HullInds.emplace_back(TriangleIndices({ 0, 2, 3 }));
 		HullInds.emplace_back(TriangleIndices({ 2, 1, 3 }));
 		HullInds.emplace_back(TriangleIndices({ 1, 0, 3 }));
 	}
-	static void BuildConvexHull(const std::vector<Vec3>& Pts, std::vector<Vec3>& HullVerts, std::vector<TriangleIndices>& HullInds) {
+	static void RemoveInternal(const std::vector<Vec3>& HullVerts, const std::vector<TriangleIndices>& HullInds, std::vector<Vec3>& Pts) 
+	{
+		//!< 内部点を除外
+		{
+			const auto [B, E] = std::ranges::remove_if(Pts, [&](const Vec3& Pt) {
+				for (auto& i : HullInds) {
+					if (Distance::PointTriangle(Pt, HullVerts[std::get<0>(i)], HullVerts[std::get<1>(i)], HullVerts[std::get<2>(i)]) <= 0.0f) {
+						return true;
+					}
+				}
+				return false;
+				});
+			Pts.erase(B, E);
+		}
+		//!< 近接点を除外
+		{
+			const auto [B, E] = std::ranges::remove_if(Pts, [&](const Vec3& Pt) {
+				for (auto& i : HullVerts) {
+					if ((i - Pt).LengthSq() < 0.001f * 0.001f) {
+						return true;
+					}
+				}
+				return false;
+			});
+			Pts.erase(B, E);
+		}
+	}
+	static void BuildConvexHull(const std::vector<Vec3>& Pts, std::vector<Vec3>& HullVerts, std::vector<TriangleIndices>& HullInds) 
+	{
 		//!< 内部点の除外
 		 
 		//!< 最遠点を見つける
