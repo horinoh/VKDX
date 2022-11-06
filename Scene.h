@@ -81,8 +81,8 @@ namespace Phys
 					Aabb.Expand(Aabb.Max + Rb->LinearVelocity * DeltaSec);
 					//aabb.Expand(aabb.Min - Vec3::Epsilon());
 					//aabb.Expand(aabb.Max + Vec3::Epsilon());
-					Aabb.Expand(Aabb.Min - Vec3::One() * 0.01f);
-					Aabb.Expand(Aabb.Max + Vec3::One() * 0.01f);
+					//Aabb.Expand(Aabb.Min - Vec3::One() * 0.01f);
+					//Aabb.Expand(Aabb.Max + Vec3::One() * 0.01f);
 
 					BoundEdges.emplace_back(BoundEdge({ i, Axis.Dot(Aabb.Min), true }));
 					BoundEdges.emplace_back(BoundEdge({ i, Axis.Dot(Aabb.Max), false }));

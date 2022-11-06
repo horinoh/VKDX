@@ -180,11 +180,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	case WM_KEYDOWN:
-		if (VK_ESCAPE == wParam) {
-			SendMessage(hWnd, WM_DESTROY, 0, 0);
-		}
-		if (VK_RETURN == wParam) {
-			Inst->ToggleBorderless(hWnd);
+		if (nullptr != Inst) {
+			Inst->OnKeyDown(hWnd, hInst, wParam);
 		}
 		break;
 #pragma endregion

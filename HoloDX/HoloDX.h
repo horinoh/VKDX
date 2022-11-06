@@ -19,15 +19,34 @@ public:
 	virtual ~HoloDX() {}
 
 protected:
-	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) {
+	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title) override {
 		SetWindow(hWnd);
 		Super::OnCreate(hWnd, hInstance, Title);
+	}
+	virtual void OnKeyDown(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance, const WPARAM Param) override {
+		switch (Param) {
+		case VK_ESCAPE:
+			SendMessage(hWnd, WM_DESTROY, 0, 0);
+			break;
+		case VK_PAUSE:
+			TogglePause();
+			break;
+		case VK_RETURN:
+			ToggleBorderless(hWnd);
+			break;
+		case VK_SPACE:
+			Step();
+			break;
+		default:
+			break;
+		}
 	}
 	virtual void DrawFrame([[maybe_unused]] const UINT i) override {
 #pragma region FRAME_OBJECT
 		//CopyToUploadResource(COM_PTR_GET(ConstantBuffers[i].Resource), RoundUp256(sizeof(Tr)), &Tr);
 #pragma endregion
 	}
+
 	virtual void CreateCommandList() override {
 		Super::CreateCommandList();
 #pragma region PASS1

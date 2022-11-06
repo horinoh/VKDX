@@ -141,6 +141,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="..\Phys.h" />
     <ClInclude Include="..\VK.h" />
     <ClInclude Include="..\VKExt.h" />
     <ClInclude Include="..\Win.h" />

@@ -26,8 +26,10 @@ protected:
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
 		Super::OnTimer(hWnd, hInstance);
 
-		if (nullptr != Scn) {
-			Scn->Update(DeltaSec);
+		if (IsUpdate()) {
+			if (nullptr != Scn) {
+				Scn->Update(DeltaSec);
+			}
 		}
 	}
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
@@ -46,7 +48,7 @@ protected:
 
 					const auto Pos = DirectX::XMLoadFloat4(reinterpret_cast<const DirectX::XMFLOAT4*>(static_cast<const float*>(Rb->Position)));
 					const auto Rot = DirectX::XMLoadFloat4(reinterpret_cast<const DirectX::XMFLOAT4*>(static_cast<const float*>(Rb->Rotation)));
-					const auto Scl = static_cast<ShapeSphere*>(Rb->Shape)->Radius * 2.0f;
+					const auto Scl = static_cast<ShapeSphere*>(Rb->Shape)->Radius;
 
 					//!< SRT
 					DirectX::XMStoreFloat4x4(&Tr.World[i], DirectX::XMMatrixScaling(Scl, Scl, Scl) * DirectX::XMMatrixRotationQuaternion(Rot) * DirectX::XMMatrixTranslationFromVector(Pos));
@@ -71,10 +73,12 @@ protected:
 		const auto CamUp = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 		const auto Projection = DirectX::XMMatrixPerspectiveFovRH(Fov, Aspect, ZNear, ZFar);
 		const auto View = DirectX::XMMatrixLookAtRH(CamPos, CamTag, CamUp);
-		const auto World = DirectX::XMMatrixIdentity();
 		DirectX::XMStoreFloat4x4(&Tr.Projection, Projection);
 		DirectX::XMStoreFloat4x4(&Tr.View, View);
-		DirectX::XMStoreFloat4x4(&Tr.World[0], World);
+		//!< Œ©‚¦‚È‚¢‚Æ‚±‚ë‚É”ò‚Î‚µ‚Ä‚¨‚­
+		for (auto& i : Tr.World) {
+			DirectX::XMStoreFloat4x4(&i, DirectX::XMMatrixTranslation(0.0f, -1000.0f, 0.0f));
+		}
 
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);

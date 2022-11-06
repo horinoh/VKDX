@@ -23,7 +23,9 @@ protected:
 		const auto WInv = DirectX::XMMatrixInverse(nullptr, DirectX::XMLoadFloat4x4(&Tr.World));
 		DirectX::XMStoreFloat4(&Tr.LocalLightDirection, DirectX::XMVector3Normalize(DirectX::XMVector4Transform(LightPos, WInv)));
 
-		Degree += 1.0f;
+		if (IsUpdate()) {
+			Degree += 1.0f;
+		}
 
 #pragma region FRAME_OBJECT
 		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[i].Resource), RoundUp256(sizeof(Tr)), &Tr);

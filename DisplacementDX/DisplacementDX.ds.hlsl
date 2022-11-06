@@ -49,7 +49,7 @@ float3 GetPosition_Sphere(const float2 uv)
 {
 	const float2 UV = GetUV_Sphere(uv);
 	const float3 R = float3(1.0f, 1.0f, 1.0f);
-	return R * float3(cos(UV.x) * sin(UV.y), sin(UV.x) * sin(UV.y), cos(UV.y));
+    return 2.0f * R * float3(cos(UV.x) * sin(UV.y), sin(UV.x) * sin(UV.y), cos(UV.y));
 }
 float3 GetNormal_Sphere(const float2 uv, const float3 pos)
 {

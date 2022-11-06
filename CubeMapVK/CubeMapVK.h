@@ -34,7 +34,9 @@ protected:
 		const auto VW = Tr.View * Tr.World;
 		Tr.LocalCameraPosition = glm::inverse(VW) * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
-		Degree += 1.0f;
+		if (IsUpdate()) {
+			Degree += 1.0f;
+		}
 
 #pragma region FRAME_OBJECT
 		CopyToHostVisibleDeviceMemory(UniformBuffers[i].DeviceMemory, 0, sizeof(Tr), &Tr);

@@ -13,7 +13,7 @@ vec3 GetPosition_Sphere(const vec2 uv)
 {
 	const vec2 UV = GetUV_Sphere(uv);
 	const float R = 1.0f;
-	return R * vec3(cos(UV.x) * sin(UV.y), sin(UV.x) * sin(UV.y), cos(UV.y));
+	return 2.0f * R * vec3(cos(UV.x) * sin(UV.y), sin(UV.x) * sin(UV.y), cos(UV.y));
 }
 vec3 GetNormal_Sphere(const vec2 uv, const vec3 pos)
 {
@@ -26,9 +26,9 @@ vec2 GetUV_Cube(const vec2 uv) { return GetUV_Sphere(uv); }
 vec3 GetPosition_Cube(const vec2 uv)
 {
     const vec2 UV = GetUV_Cube(uv);
-    const float Extent = 1.0f;
-    const float R = sqrt(2.0f) * Extent;
-    return clamp(R * vec3(cos(UV.x) * sin(UV.y), sin(UV.x) * sin(UV.y), cos(UV.y)), -Extent * 0.5f, Extent * 0.5f);
+    const vec3 Extent = vec3(1.0f, 1.0f, 1.0f);
+    const float R = sqrt(2.0f) * max(max(Extent.x, Extent.y), Extent.z);
+    return clamp(2.0f * R * vec3(cos(UV.x) * sin(UV.y), sin(UV.x) * sin(UV.y), cos(UV.y)), -Extent, Extent);
 }
 vec3 GetNormal_Cube(const vec2 uv, const vec3 pos)
 {

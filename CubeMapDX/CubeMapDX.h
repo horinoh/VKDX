@@ -36,7 +36,9 @@ protected:
 		auto DetWV = DirectX::XMMatrixDeterminant(WV);
 		DirectX::XMStoreFloat4(&Tr.LocalCameraPosition, DirectX::XMVector4Transform(DirectX::XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f), DirectX::XMMatrixInverse(&DetWV, WV)));
 
-		Degree += 1.0f;
+		if (IsUpdate()) {
+			Degree += 1.0f;
+		}
 
 #pragma region FRAME_OBJECT
 		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[i].Resource), RoundUp256(sizeof(Tr)), &Tr);

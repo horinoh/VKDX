@@ -26,7 +26,7 @@ float3 GetPosition_Sphere(const float2 uv)
 {
 	const float2 UV = GetUV_Sphere(uv);
     const float R = 1.0f;
-	return R * float3(cos(UV.x) * sin(UV.y), sin(UV.x) * sin(UV.y), cos(UV.y));
+	return 2.0f * R * float3(cos(UV.x) * sin(UV.y), sin(UV.x) * sin(UV.y), cos(UV.y));
 }
 float3 GetNormal_Sphere(const float2 uv, const float3 pos)
 {
@@ -39,9 +39,9 @@ float2 GetUV_Cube(const float2 uv) { return GetUV_Sphere(uv); }
 float3 GetPosition_Cube(const float2 uv)
 {
     const float2 UV = GetUV_Cube(uv);
-    const float Extent = 1.0f;
-    const float R = sqrt(2.0f) * Extent;
-    return clamp(R * float3(cos(UV.x) * sin(UV.y), sin(UV.x) * sin(UV.y), cos(UV.y)), -Extent * 0.5f, Extent * 0.5f);
+    const float3 Extent = float3(1.0f, 1.0f, 1.0f);
+    const float R = sqrt(2.0f) * max(max(Extent.x, Extent.y), Extent.z);
+    return clamp(2.0f * R * float3(cos(UV.x) * sin(UV.y), sin(UV.x) * sin(UV.y), cos(UV.y)), -Extent, Extent);
 }
 float3 GetNormal_Cube(const float2 uv, const float3 pos)
 {
@@ -63,5 +63,6 @@ OUT main(const TESS_FACTOR tess, const float2 uv : SV_DomainLocation, const Outp
     
     Out.Texcoord = float2(uv.x, 1.0f - uv.y);
     Out.InstanceID = quad[0].InstanceID;
+    
 	return Out;
 }

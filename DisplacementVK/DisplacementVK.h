@@ -16,7 +16,10 @@ public:
 protected:
 	virtual void DrawFrame(const uint32_t i) override {
 		Tr.World = glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(Degree), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(270.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-		Degree += 1.0f;
+
+		if (IsUpdate()) {
+			Degree += 1.0f;
+		}
 
 #pragma region FRAME_OBJECT
 		CopyToHostVisibleDeviceMemory(UniformBuffers[i].DeviceMemory, 0, sizeof(Tr), &Tr);

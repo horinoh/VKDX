@@ -179,6 +179,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		if (VK_ESCAPE == wParam) {
 			SendMessage(hWnd, WM_DESTROY, 0, 0);
 		}
+		if (nullptr != Inst) {
+			Inst->OnKeyDown(hWnd, hInst, wParam);
+		}
 		break;
 #pragma endregion
     case WM_PAINT:

@@ -24,7 +24,10 @@ public:
 protected:
 	virtual void DrawFrame(const UINT i) override {
 		DirectX::XMStoreFloat4x4(&Tr.World, DirectX::XMMatrixRotationX(DirectX::XMConvertToRadians(Degree)));
-		Degree += 1.0f;
+
+		if (IsUpdate()) {
+			Degree += 1.0f;
+		}
 
 #pragma region FRAME_OBJECT
 		CopyToUploadResource(COM_PTR_GET(ConstantBuffers[i].Resource), RoundUp256(sizeof(Tr)), &Tr);

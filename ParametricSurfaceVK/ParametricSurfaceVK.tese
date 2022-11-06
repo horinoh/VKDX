@@ -23,7 +23,7 @@ vec3 GetPosition_Sphere(const vec2 uv)
 {
 	const vec2 UV = GetUV_Sphere(uv);
 	const vec3 R = vec3(1.0f, 1.0f, 1.0f);
-	return R * vec3(cos(UV.x) * sin(UV.y), sin(UV.x) * sin(UV.y), cos(UV.y));
+	return 2.0f * R * vec3(cos(UV.x) * sin(UV.y), sin(UV.x) * sin(UV.y), cos(UV.y));
 }
 vec2 GetUV_Snail(const vec2 uv) 
 {

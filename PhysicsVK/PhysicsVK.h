@@ -26,8 +26,10 @@ protected:
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance) override {
 		Super::OnTimer(hWnd, hInstance);
 
-		if (nullptr != Scn) {
-			Scn->Update(DeltaSec);
+		if (IsUpdate()) {
+			if (nullptr != Scn) {
+				Scn->Update(DeltaSec);
+			}
 		}
 	}
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override { 
@@ -46,7 +48,7 @@ protected:
 
 					const auto Pos = glm::make_vec3(static_cast<float*>(Rb->Position));
 					const auto Rot = glm::make_quat(static_cast<float*>(Rb->Rotation));
-					const auto Scl = static_cast<ShapeSphere*>(Rb->Shape)->Radius * 2.0f;
+					const auto Scl = static_cast<ShapeSphere*>(Rb->Shape)->Radius;
 
 					//!< TRS
 					Tr.World[i] = glm::translate(glm::mat4(1.0f), Pos) * glm::mat4_cast(Rot) * glm::scale(glm::mat4(1.0f), glm::vec3(Scl));
@@ -70,7 +72,12 @@ protected:
 		constexpr auto CamPos = glm::vec3(0.0f, 15.0f, 30.0f);
 		constexpr auto CamTag = glm::vec3(0.0f);
 		constexpr auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
-		Tr = Transform({ .Projection = glm::perspective(Fov, Aspect, ZNear, ZFar), .View = glm::lookAt(CamPos, CamTag, CamUp), .World = { glm::mat4(1.0f) } });
+		Tr = Transform({ .Projection = glm::perspective(Fov, Aspect, ZNear, ZFar), .View = glm::lookAt(CamPos, CamTag, CamUp) });
+		//!< Œ©‚¦‚È‚¢‚Æ‚±‚ë‚É”ò‚Î‚µ‚Ä‚¨‚­
+		for (auto& i : Tr.World) {
+			i = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -1000.0f, 0.0f));
+		}
+
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			UniformBuffers.emplace_back().Create(Device, GetCurrentPhysicalDeviceMemoryProperties(), sizeof(Tr));
 		}

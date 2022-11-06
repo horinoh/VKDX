@@ -11,39 +11,61 @@ using namespace Phys;
 
 namespace Colli
 {
-	static bool RaySphere(const Vec3& RayPos, const Vec3& RayDir, const Vec3& SpPos, const float SpRad, float& t0, float& t1) 
-	{
-		//!< 1)球	(x - SpPos)^2 = SpRad^2
-		//!<		x^2 - 2 * x * SpPos + SpPos^2 - SpRad^2 = 0
-		//!< 2)レイ	RayPos + RayDir * t 
-		//!<	1) の x に 2) を代入 
-		//!< (RayPos + RayDir * t - SpPos)^2 = SpRad^2
-		//!< (RayDir * t + M)^2 - SpRad^2 = 0 ... M = RayPos - SpPos
-		//!< RayDir^2 * t^2 + 2 * M * RayDir * t + M^2 - SpRad^2 = 0
-		//!< A * t^2 + B * t + C = 0 ... A = RayDir^2, B = 2 * M * RayDir, C = M^2 - SpRad^2
-		const auto M = RayPos - SpPos;
-		const auto A = RayDir.Dot(RayDir);
-		const auto B2 = M.Dot(RayDir);
-		const auto C = M.Dot(M) - SpRad * SpRad;
-
-		const auto D4 = B2 * B2 - A * C;
-		if (D4 >= 0) {
-			const auto D4Sqrt = sqrt(D4);
-			t0 = (-B2 - D4Sqrt) / A;
-			t1 = (-B2 + D4Sqrt) / A;
-			return true;
+	namespace Distance {
+		static float PointRaySq(const Vec3& Pt, const Vec3& RayPos, const Vec3& RayDir) {
+			const auto ToPt = Pt - RayPos;
+			return ((RayDir * ToPt.Dot(RayDir)) - ToPt).LengthSq();
 		}
-		return false;
+		static float PointRay(const Vec3& Pt, const Vec3& RayPos, const Vec3& RayDir) { return sqrtf(PointRaySq(Pt, RayPos, RayDir)); }
+
+		static float PointTriangle(const Vec3& Pt, const Vec3& A, const Vec3& B, const Vec3& C) {
+			return (Pt - A).Dot((B - A).Cross(C - A).Normalize());
+		}
+
+		static size_t Farthest(const std::vector<Vec3>& Pts, const Vec3& Dir) {
+			return std::distance(std::begin(Pts), std::ranges::max_element(Pts, [&](const auto lhs, const auto rhs) { return Dir.Dot(lhs) < Dir.Dot(rhs); }));
+		}
+		static size_t Farthest(const std::vector<Vec3>& Pts, const Vec3& RayPos, const Vec3& RayDir) {
+			return std::distance(std::begin(Pts), std::ranges::max_element(Pts, [&](const auto lhs, const auto rhs) { return PointRaySq(lhs, RayPos, RayDir) < PointRaySq(rhs, RayPos, RayDir); }));
+		}
+		static size_t Farthest(const std::vector<Vec3>& Pts, const Vec3& A, const Vec3& B, const Vec3& C) {
+			return std::distance(std::begin(Pts), std::ranges::max_element(Pts, [&](const auto lhs, const auto rhs) { return PointTriangle(lhs, A, B, C) < PointTriangle(rhs, A, B, C); }));
+		}
+	}
+	namespace Intersection {
+		static bool RaySphere(const Vec3& RayPos, const Vec3& RayDir, const Vec3& SpPos, const float SpRad, float& t0, float& t1) {
+			//!< 1)球	(x - SpPos)^2 = SpRad^2
+			//!<		x^2 - 2 * x * SpPos + SpPos^2 - SpRad^2 = 0
+			//!< 2)レイ	RayPos + RayDir * t 
+			//!<	1) の x に 2) を代入 
+			//!< (RayPos + RayDir * t - SpPos)^2 = SpRad^2
+			//!< (RayDir * t + M)^2 - SpRad^2 = 0 ... M = RayPos - SpPos
+			//!< RayDir^2 * t^2 + 2 * M * RayDir * t + M^2 - SpRad^2 = 0
+			//!< A * t^2 + B * t + C = 0 ... A = RayDir^2, B = 2 * M * RayDir, C = M^2 - SpRad^2
+			const auto M = RayPos - SpPos;
+			const auto A = RayDir.Dot(RayDir);
+			const auto B2 = M.Dot(RayDir);
+			const auto C = M.Dot(M) - SpRad * SpRad;
+
+			const auto D4 = B2 * B2 - A * C;
+			if (D4 >= 0) {
+				const auto D4Sqrt = sqrt(D4);
+				t0 = (-B2 - D4Sqrt) / A;
+				t1 = (-B2 + D4Sqrt) / A;
+				return true;
+			}
+			return false;
+		}
 	}
 
-	struct BoundEdge 
+	struct BoundEdge
 	{
 		int Index;
 		float Value;
 		bool isMin;
 	};
 
-	struct Contact 
+	struct Contact
 	{
 		float TimeOfImpact = 0.0f;
 
@@ -61,7 +83,7 @@ namespace Colli
 			return Normal == rhs.Normal && PointA == rhs.PointA && PointB == rhs.PointB && TimeOfImpact == rhs.TimeOfImpact && RigidBodyA == rhs.RigidBodyA && RigidBodyB == rhs.RigidBodyB;
 		}
 	};
-	
+
 	static bool Intersect(const RigidBody* RbA, const RigidBody* RbB, const float DeltaSec, Contact& Ct) {
 		if (RbA->Shape->GetShapeTyoe() == Shape::SHAPE::SPHERE && RbB->Shape->GetShapeTyoe() == Shape::SHAPE::SPHERE) {
 			const auto SpA = static_cast<const ShapeSphere*>(RbA->Shape);
@@ -93,7 +115,7 @@ namespace Colli
 
 			float t0, t1;
 			//!< 移動球同士 -> 相対速度 -> 球とカプセル -> (拡大)球とレイとの衝突に帰着
-			if (RaySphere(RbA->Position, VelAB, RbB->Position, TotalRadius, t0, t1)) {
+			if (Intersection::RaySphere(RbA->Position, VelAB, RbB->Position, TotalRadius, t0, t1)) {
 				if (0.0f <= t1 && t1 <= 1.0f) {
 					t0 = std::max<float>(t0, 0.0f);
 
@@ -136,7 +158,7 @@ namespace Colli
 				//!< 逆慣性テンソル (ワールドスペース)
 				const auto IWIA = Ct.RigidBodyA->ToWorld(Ct.RigidBodyA->InvInertiaTensor);
 				const auto IWIB = Ct.RigidBodyB->ToWorld(Ct.RigidBodyB->InvInertiaTensor);
-				
+
 				//!< 速度の法線成分
 				const auto VelNrmAB = Ct.Normal * VelAB.Dot(Ct.Normal);
 
@@ -173,10 +195,47 @@ namespace Colli
 		}
 
 		//!< めり込みの追い出し (TOIをスライスしてめり込まないようにシミュレーションを進めているため、めり込む可能性があるのは TOI が 0 の時)
-		if(0.0f == Ct.TimeOfImpact) {
-			const auto dAB = Ct.PointB - Ct.PointA;
-			Ct.RigidBodyA->Position += dAB * (Ct.RigidBodyA->InvMass / TotalInvMass);
-			Ct.RigidBodyB->Position -= dAB * (Ct.RigidBodyB->InvMass / TotalInvMass);
+		if (0.0f == Ct.TimeOfImpact) {
+			const auto AB = Ct.PointB - Ct.PointA;
+			Ct.RigidBodyA->Position += AB * (Ct.RigidBodyA->InvMass / TotalInvMass);
+			Ct.RigidBodyB->Position -= AB * (Ct.RigidBodyB->InvMass / TotalInvMass);
 		}
+	}
+
+	using TriangleIndices = std::tuple<int, int, int>;
+
+	static void BuildTetrahedron(const std::vector<Vec3>& Pts, std::vector<Vec3>& HullVerts, std::vector<TriangleIndices>& HullInds) {
+		std::array<Vec3, 4> P = { Pts[Distance::Farthest(Pts, Vec3::AxisX())] };
+		P[1] = Pts[Distance::Farthest(Pts, -P[0])];
+		P[2] = Pts[Distance::Farthest(Pts, P[0], P[1])];
+		P[3] = Pts[Distance::Farthest(Pts, P[0], P[1], P[2])];
+		
+		//!< CCW
+		if (Distance::PointTriangle(P[0], P[1], P[2], P[3]) > 0.0f) {
+			std::swap(P[0], P[1]);
+		}
+
+		//HullVerts = { P[0], P[1], P[2], P[3] };
+		HullVerts.emplace_back(P[0]);
+		HullVerts.emplace_back(P[1]);
+		HullVerts.emplace_back(P[2]);
+		HullVerts.emplace_back(P[3]);
+
+		//HullInds = { std::make_tuple(0, 1, 2), std::make_tuple(0, 2, 3), std::make_tuple(2, 1, 3), std::make_tuple(1, 0, 3), };
+		//HullInds = { TriangleIndices({ 0, 1, 2 }), TriangleIndices({ 0, 2, 3 }), TriangleIndices({ 2, 1, 3 }), TriangleIndices({ 1, 0, 3 }), };
+		HullInds.emplace_back(TriangleIndices({ 0, 1, 2 }));
+		HullInds.emplace_back(TriangleIndices({ 0, 2, 3 }));
+		HullInds.emplace_back(TriangleIndices({ 2, 1, 3 }));
+		HullInds.emplace_back(TriangleIndices({ 1, 0, 3 }));
+	}
+	static void BuildConvexHull(const std::vector<Vec3>& Pts, std::vector<Vec3>& HullVerts, std::vector<TriangleIndices>& HullInds) {
+		//!< 内部点の除外
+		 
+		//!< 最遠点を見つける
+		 
+		//!< 最遠点に向いている三角形を除外
+		
+		//!< 宙ぶらりんになったエッジから三角形を作成
+		
 	}
 }

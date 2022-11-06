@@ -111,6 +111,22 @@ public:
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance); //!< ウインドウサイズ確定時にコールされる WM_EXITSIZEMOVE を使用する
 	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance);
 	virtual void OnPaint([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
+	virtual void OnKeyDown(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance, const WPARAM Param) {
+		switch (Param) {
+		case VK_ESCAPE:
+			SendMessage(hWnd, WM_DESTROY, 0, 0);
+			break;
+		case VK_PAUSE:
+			TogglePause();
+			break;
+		case VK_RETURN:
+		case VK_SPACE:
+			Step();
+			break;
+		default:
+			break;
+		}
+	}
 	virtual void OnPreDestroy([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
 	virtual void OnDestroy([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
 
@@ -183,7 +199,7 @@ public:
 		return false;
 	}
 #ifdef DEBUG_STDOUT
-	static void SetColor(const WORD Color = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE) { 
+	static void SetColor(const WORD Color = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE) {
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), Color | FOREGROUND_INTENSITY);
 	}
 #endif
@@ -200,14 +216,32 @@ public:
 	template <typename T> static void Log(const T Str) { _Log(LogType::Log, Str); }
 	template <typename T> static void Warning(const T Str) { _Log(LogType::Warning, Str); }
 	template <typename T> static void Error(const T Str) { _Log(LogType::Error, Str); }
-	template <typename ... T> static void Logf(const char *Format, T const & ... Args) { _Logf(LogType::Log, Format, Args ...); }
-	template <typename ... T> static void Logf(const WCHAR *Format, T const & ... Args) { _Logf(LogType::Log, Format, Args ...); }
-	template <typename ... T> static void Warningf(const char *Format, T const & ... Args) { _Logf(LogType::Warning, Format, Args ...); }
-	template <typename ... T> static void Warningf(const WCHAR *Format, T const & ... Args) { _Logf(LogType::Warning, Format, Args ...); }
-	template <typename ... T> static void Errorf(const char *Format, T const & ... Args) { _Logf(LogType::Error, Format, Args ...); }
-	template <typename ... T> static void Errorf(const WCHAR *Format, T const & ... Args) { _Logf(LogType::Error, Format, Args ...); }
+	template <typename ... T> static void Logf(const char* Format, T const & ... Args) { _Logf(LogType::Log, Format, Args ...); }
+	template <typename ... T> static void Logf(const WCHAR* Format, T const & ... Args) { _Logf(LogType::Log, Format, Args ...); }
+	template <typename ... T> static void Warningf(const char* Format, T const & ... Args) { _Logf(LogType::Warning, Format, Args ...); }
+	template <typename ... T> static void Warningf(const WCHAR* Format, T const & ... Args) { _Logf(LogType::Warning, Format, Args ...); }
+	template <typename ... T> static void Errorf(const char* Format, T const & ... Args) { _Logf(LogType::Error, Format, Args ...); }
+	template <typename ... T> static void Errorf(const WCHAR* Format, T const & ... Args) { _Logf(LogType::Error, Format, Args ...); }
 	template <typename T> static void LogOK(T Str);
 	template <typename T> static void LogNG(T Str);
+
+public:
+	bool IsPause() const { return ControlFlag.test(0); }
+	void Pause() { ControlFlag.set(0); }
+	void UnPause() { ControlFlag.reset(0); }
+	void TogglePause() { IsPause() ? UnPause() : Pause(); }
+
+	bool IsStep() const { return ControlFlag.test(1); }
+	void Step() { ControlFlag.set(1); }
+	void UnStep() { ControlFlag.reset(1); }
+	bool ProcessStep() {
+		if (IsStep()) {
+			UnStep();
+			return true;
+		}
+		return false;
+	}
+	bool IsUpdate() { return !IsPause() || ProcessStep(); }
 
 protected:
 	std::wstring TitleW;
@@ -220,6 +254,7 @@ private:
 	FILE* StdOut = nullptr; 
 	FILE* StdErr = nullptr;
 #endif
+	std::bitset<32> ControlFlag;
 };
 
 class PerformanceCounter
