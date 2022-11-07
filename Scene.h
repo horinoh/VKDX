@@ -112,8 +112,7 @@ namespace Phys
 		}
 		virtual void NarrowPhase(std::vector<Contact>& Contacts, const std::vector<CollidablePair>& CollidablePairs, const float DeltaSec)
 		{
-			const auto nRb = size(RigidBodies);
-			Contacts.reserve(nRb * nRb);
+			Contacts.reserve(std::size(CollidablePairs));
 			Contacts.clear();
 			for (auto i : CollidablePairs) {
 				const auto RbA = RigidBodies[i.first];
