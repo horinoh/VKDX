@@ -202,9 +202,9 @@ namespace Colli
 		}
 	}
 
-	using TriangleIndices = std::tuple<int, int, int>;
+	using TriangleIndex = std::tuple<int, int, int>;
 
-	static void BuildTetrahedron(const std::vector<Vec3>& Pts, std::vector<Vec3>& HullVerts, std::vector<TriangleIndices>& HullInds) 
+	static void BuildTetrahedron(const std::vector<Vec3>& Pts, std::vector<Vec3>& HullVerts, std::vector<TriangleIndex>& HullInds) 
 	{
 		std::array<Vec3, 4> P = { Pts[Distance::Farthest(Pts, Vec3::AxisX())] };
 		P[1] = Pts[Distance::Farthest(Pts, -P[0])];
@@ -221,12 +221,12 @@ namespace Colli
 		HullVerts.emplace_back(P[2]);
 		HullVerts.emplace_back(P[3]);
 
-		HullInds.emplace_back(TriangleIndices({ 0, 1, 2 }));
-		HullInds.emplace_back(TriangleIndices({ 0, 2, 3 }));
-		HullInds.emplace_back(TriangleIndices({ 2, 1, 3 }));
-		HullInds.emplace_back(TriangleIndices({ 1, 0, 3 }));
+		HullInds.emplace_back(TriangleIndex({ 0, 1, 2 }));
+		HullInds.emplace_back(TriangleIndex({ 0, 2, 3 }));
+		HullInds.emplace_back(TriangleIndex({ 2, 1, 3 }));
+		HullInds.emplace_back(TriangleIndex({ 1, 0, 3 }));
 	}
-	static void RemoveInternal(const std::vector<Vec3>& HullVerts, const std::vector<TriangleIndices>& HullInds, std::vector<Vec3>& Pts) 
+	static void RemoveInternal(const std::vector<Vec3>& HullVerts, const std::vector<TriangleIndex>& HullInds, std::vector<Vec3>& Pts) 
 	{
 		//!< 内部点を除外
 		{
@@ -253,15 +253,52 @@ namespace Colli
 			Pts.erase(B, E);
 		}
 	}
-	static void BuildConvexHull(const std::vector<Vec3>& Pts, std::vector<Vec3>& HullVerts, std::vector<TriangleIndices>& HullInds) 
+	static void BuildConvexHull(const std::vector<Vec3>& Pts, std::vector<Vec3>& HullVerts, std::vector<TriangleIndex>& HullInds)
 	{
+		auto External = Pts;
 		//!< 内部点の除外
-		 
-		//!< 最遠点を見つける
-		 
-		//!< 最遠点に向いている三角形を除外
-		
-		//!< 宙ぶらりんになったエッジから三角形を作成
-		
+		RemoveInternal(HullVerts, HullInds, External);
+
+		//!< 外部点が無くなるまで繰り返す
+		while (!std::empty(External)) {
+			//!< 最遠点を見つける
+			const auto FarIndex = Distance::Farthest(External, External[0]);
+			const auto& FarPoint = External[FarIndex];
+
+			//!< 最遠点を向いていない三角形 [begin(), B) と、向いている三角形 [B, end()) に分割
+			const auto [B, E] = std::ranges::partition(HullInds, [&](const auto& i) {
+				return Distance::PointTriangle(FarPoint, HullVerts[std::get<0>(i)], HullVerts[std::get<1>(i)], HullVerts[std::get<2>(i)]) <= 0.0f;
+			});
+
+			//!< ユニークな (向いている他の三角形と辺を共有していない) 辺の列挙
+			std::vector<std::pair<int, int>> UniqueEdges;
+			std::for_each(B, std::end(HullInds), [&](const auto& i) {
+				//!< 向いている三角形の３辺
+				const std::array Edges = {
+					std::pair<int, int>({ std::get<0>(i), std::get<1>(i) }),
+					std::pair<int, int>({ std::get<1>(i), std::get<2>(i) }),
+					std::pair<int, int>({ std::get<2>(i), std::get<0>(i) }),
+				};
+				//!< ユニークな辺のみを収集する TODO
+				//UniqueEdges.emplace_back();
+			});
+
+			//!< 最遠点を向いていない三角形は残す
+			HullInds.erase(B, E);
+
+			//!< 最遠点を頂点として追加する
+			HullVerts.emplace_back(FarPoint);
+
+			//!< 最遠点とユニーク辺からなる三角形を追加
+			for (auto& i : UniqueEdges) {
+				HullInds.emplace_back(TriangleIndex({ i.first, i.second, static_cast<int>(FarIndex) }));
+			}
+
+			//!< ここまで済んだら最遠点は削除してよい
+			External.erase(std::next(std::begin(External), FarIndex));
+
+			//!< 凸包を更新したので、内部点の削除
+			RemoveInternal(HullVerts, HullInds, External);
+		}
 	}
 }
