@@ -6,6 +6,10 @@
 #include "../DRACO.h"
 #include "../VKExt.h"
 
+#ifdef USE_CONVEXHULL
+#include "../Colli.h"
+#endif
+
 class DracoVK : public VKExtDepth, public Draco 
 {
 private:
@@ -33,7 +37,7 @@ public:
 					Max = VK::Max(Max, Vertices.back());
 				}
 				const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
-				std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const glm::vec3& rhs) { return rhs / Bound - glm::vec3(0.0f, (Max.y - Min.y) * 0.5f, Min.z) / Bound; });
+				std::transform(std::begin(Vertices), std::end(Vertices), std::begin(Vertices), [&](const glm::vec3& rhs) { return rhs / Bound - glm::vec3(0.0f, (Max.y - Min.y) * 0.5f, Min.z) / Bound; });
 			}
 #pragma endregion
 
@@ -61,11 +65,35 @@ public:
 	virtual void CreateGeometry() override {
 		std::wstring Path;
 		if (FindDirectory("DRC", Path)) {
-			Load(ToString(Path) + "//bunny.drc");
+			//Load(ToString(Path) + "//bunny.drc");
 			//Load(ToString(Path) + "//dragon.drc");
-			//Load(ToString(Path) + "//dragon4.drc");
+			Load(ToString(Path) + "//dragon4.drc");
 		}
 		//Load(std::string("..//draco//testdata//") + "car.drc");
+
+#ifdef USE_CONVEXHULL
+		std::vector<Vec3> Vs;
+		Vs.reserve(size(Vertices));
+		for (auto& i : Vertices) { Vs.emplace_back(Vec3({ i.x, i.y, i.z })); }
+
+		std::vector<Vec3> HullVertices;
+		std::vector<TriangleIndices> HullIndices;
+		BuildConvexHull(Vs, HullVertices, HullIndices);
+		{
+			Vertices.clear();
+			Indices.clear();
+		
+			for (auto& i : HullVertices) {
+				Vertices.emplace_back(glm::vec3(i.x(), i.y(), i.z()));
+			}
+			const auto IndexBase = static_cast<uint32_t>(size(Indices));
+			for (auto i : HullIndices) {
+				Indices.emplace_back(IndexBase + static_cast<uint32_t>(std::get<0>(i)));
+				Indices.emplace_back(IndexBase + static_cast<uint32_t>(std::get<1>(i)));
+				Indices.emplace_back(IndexBase + static_cast<uint32_t>(std::get<2>(i)));
+			}
+		}
+#endif
 
 		const auto& CB = CommandBuffers[0];
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();

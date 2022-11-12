@@ -6,6 +6,10 @@
 #include "../DRACO.h"
 #include "../DXExt.h"
 
+#ifdef USE_CONVEXHULL
+#include "../Colli.h"
+#endif
+
 class DracoDX : public DXExtDepth, public Draco 
 {
 private:
@@ -30,7 +34,7 @@ public:
 					Max = DX::Max(Max, Vertices.back());
 				}
 				const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
-				std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Bound, (rhs.y - (Max.y - Min.y) * 0.5f) / Bound, (rhs.z - Min.z) / Bound); });
+				std::transform(std::begin(Vertices), std::end(Vertices), std::begin(Vertices), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Bound, (rhs.y - (Max.y - Min.y) * 0.5f) / Bound, (rhs.z - Min.z) / Bound); });
 			}
 #pragma endregion
 
@@ -60,11 +64,35 @@ public:
 	virtual void CreateGeometry() override {
 		std::wstring Path;
 		if (FindDirectory("DRC", Path)) {
-			Load(ToString(Path) + "//bunny.drc");
+			//Load(ToString(Path) + "//bunny.drc");
 			//Load(ToString(Path) + "//dragon.drc");
-			//Load(ToString(Path) + "//dragon4.drc");
+			Load(ToString(Path) + "//dragon4.drc");
 		}
 		//Load(std::string("..//draco//testdata//") + "car.drc");
+
+#ifdef USE_CONVEXHULL
+		std::vector<Vec3> Vs; 
+		Vs.reserve(size(Vertices));
+		for (auto& i : Vertices) { Vs.emplace_back(Vec3({ i.x, i.y, i.z })); }
+
+		std::vector<Vec3> HullVertices;
+		std::vector<TriangleIndices> HullIndices;
+		BuildConvexHull(Vs, HullVertices, HullIndices);
+		{
+			Vertices.clear();
+			Indices.clear();
+
+			for (auto& i : HullVertices) {
+				Vertices.emplace_back(DirectX::XMFLOAT3(i.x(), i.y(), i.z()));
+			}
+			const auto IndexBase = static_cast<UINT32>(size(Indices));
+			for (auto i : HullIndices) {
+				Indices.emplace_back(IndexBase + static_cast<UINT32>(std::get<0>(i)));
+				Indices.emplace_back(IndexBase + static_cast<UINT32>(std::get<1>(i)));
+				Indices.emplace_back(IndexBase + static_cast<UINT32>(std::get<2>(i)));
+			}
+		}
+#endif
 
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
