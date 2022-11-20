@@ -19,16 +19,16 @@ namespace Phys
 			BOX,
 			CONVEX,
 		};
-		virtual SHAPE GetShapeTyoe() const = 0;
+		[[nodiscard]] virtual SHAPE GetShapeTyoe() const = 0;
 
-		virtual Vec3 GetCenterOfMass() const = 0;
-		virtual Mat3 GetInertiaTensor() const = 0;
+		[[nodiscard]] virtual Vec3 GetCenterOfMass() const = 0;
+		[[nodiscard]] virtual Mat3 GetInertiaTensor() const = 0;
 
-		virtual AABB GetAABB(const Vec3& Pos, const Quat& Rot) const = 0;
+		[[nodiscard]] virtual AABB GetAABB(const Vec3& Pos, const Quat& Rot) const = 0;
 
 #pragma region GJK
 		//!< Žw’è‚Ì•ûŒü(NormalizedDir : ³‹K‰»‚³‚ê‚Ä‚¢‚é‚±‚Æ)‚Éˆê”Ô‰“‚¢“_‚ð•Ô‚·
-		virtual Vec3 GetSupportPoint(const Vec3& Pos, const Quat& Rot, const Vec3& NormalizedDir, const float Bias) const = 0;
+		[[nodiscard]] virtual Vec3 GetSupportPoint(const Vec3& Pos, const Quat& Rot, const Vec3& NormalizedDir, const float Bias) const = 0;
 		//virtual float GetFastestPointSpeed(const Vec3& AngVel, const Vec3& Dir) const { return 0.0f; }
 #pragma endregion
 

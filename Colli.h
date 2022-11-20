@@ -12,28 +12,31 @@ using namespace Phys;
 namespace Colli
 {
 	namespace Distance {
-		static float PointRaySq(const Vec3& Pt, const Vec3& RayPos, const Vec3& RayDir) {
+		[[nodiscard]] static float PointRaySq(const Vec3& Pt, const Vec3& RayPos, const Vec3& RayDir) {
 			const auto ToPt = Pt - RayPos;
 			return ((RayDir * ToPt.Dot(RayDir)) - ToPt).LengthSq();
 		}
-		static float PointRay(const Vec3& Pt, const Vec3& RayPos, const Vec3& RayDir) { return sqrtf(PointRaySq(Pt, RayPos, RayDir)); }
+		[[nodiscard]] static float PointRay(const Vec3& Pt, const Vec3& RayPos, const Vec3& RayDir) { return sqrtf(PointRaySq(Pt, RayPos, RayDir)); }
 
-		static float PointTriangle(const Vec3& Pt, const Vec3& A, const Vec3& B, const Vec3& C) {
+		[[nodiscard]] static float PointTriangle(const Vec3& Pt, const Vec3& A, const Vec3& B, const Vec3& C) {
 			return (Pt - A).Dot((B - A).Cross(C - A).Normalize());
 		}
 
-		static size_t Farthest(const std::vector<Vec3>& Pts, const Vec3& Dir) {
+		//!< 指定の方向に一番遠い点のインデックスを返す 
+		[[nodiscard]] static size_t Farthest(const std::vector<Vec3>& Pts, const Vec3& Dir) {
 			return std::distance(std::begin(Pts), std::ranges::max_element(Pts, [&](const auto& lhs, const auto& rhs) { return Dir.Dot(lhs) < Dir.Dot(rhs); }));
 		}
-		static size_t Farthest(const std::vector<Vec3>& Pts, const Vec3& RayPos, const Vec3& RayDir) {
+		//!< レイから一番遠い点のインデックスを返す
+		[[nodiscard]] static size_t Farthest(const std::vector<Vec3>& Pts, const Vec3& RayPos, const Vec3& RayDir) {
 			return std::distance(std::begin(Pts), std::ranges::max_element(Pts, [&](const auto& lhs, const auto& rhs) { return PointRaySq(lhs, RayPos, RayDir) < PointRaySq(rhs, RayPos, RayDir); }));
 		}
-		static size_t Farthest(const std::vector<Vec3>& Pts, const Vec3& A, const Vec3& B, const Vec3& C) {
+		//!< 三角形から一番遠い点のインデックスを返す
+		[[nodiscard]] static size_t Farthest(const std::vector<Vec3>& Pts, const Vec3& A, const Vec3& B, const Vec3& C) {
 			return std::distance(std::begin(Pts), std::ranges::max_element(Pts, [&](const auto& lhs, const auto& rhs) { return PointTriangle(lhs, A, B, C) < PointTriangle(rhs, A, B, C); }));
 		}
 	}
 	namespace Intersection {
-		static bool RaySphere(const Vec3& RayPos, const Vec3& RayDir, const Vec3& SpPos, const float SpRad, float& t0, float& t1) {
+		[[nodiscard]] static bool RaySphere(const Vec3& RayPos, const Vec3& RayDir, const Vec3& SpPos, const float SpRad, float& t0, float& t1) {
 			//!< 1)球	(x - SpPos)^2 = SpRad^2
 			//!<		x^2 - 2 * x * SpPos + SpPos^2 - SpRad^2 = 0
 			//!< 2)レイ	RayPos + RayDir * t 
@@ -84,7 +87,7 @@ namespace Colli
 		}
 	};
 
-	static bool Intersect(const RigidBody* RbA, const RigidBody* RbB, const float DeltaSec, Contact& Ct) {
+	[[nodiscard]] static bool Intersect(const RigidBody* RbA, const RigidBody* RbB, const float DeltaSec, Contact& Ct) {
 		if (RbA->Shape->GetShapeTyoe() == Shape::SHAPE::SPHERE && RbB->Shape->GetShapeTyoe() == Shape::SHAPE::SPHERE) {
 			const auto SpA = static_cast<const ShapeSphere*>(RbA->Shape);
 			const auto SpB = static_cast<const ShapeSphere*>(RbB->Shape);
@@ -204,54 +207,64 @@ namespace Colli
 
 	using TriangleIndices = std::tuple<int, int, int>;
 
+	//!< 頂点を「なるべく」包含するような四面体を作成
 	static void BuildTetrahedron(const std::vector<Vec3>& Pts, std::vector<Vec3>& HullVerts, std::vector<TriangleIndices>& HullInds)
 	{
+		//!< 特定の軸(ここではX)に一番遠い点
 		std::array<Vec3, 4> P = { Pts[Distance::Farthest(Pts, Vec3::AxisX())] };
+		//< 前出の逆向きの軸軸に一番遠い点
 		P[1] = Pts[Distance::Farthest(Pts, -P[0])];
+		//!< 前出の 2 点からなる線分に一番遠い点
 		P[2] = Pts[Distance::Farthest(Pts, P[0], P[1])];
+		//!< 前出の 3 点からなる三角形に一番遠い点
 		P[3] = Pts[Distance::Farthest(Pts, P[0], P[1], P[2])];
-	
-		//const std::array I = { Distance::Farthest(Pts, Vec3::AxisX()), Distance::Farthest(Pts, -P[0]), Distance::Farthest(Pts, P[0], P[1]), Distance::Farthest(Pts, P[0], P[1], P[2]) };
 
-		//!< CCW
+		//!< CCW になるように調整
 		if (Distance::PointTriangle(P[0], P[1], P[2], P[3]) > 0.0f) {
 			std::swap(P[0], P[1]);
 		}
 
+		//!< 四面体の頂点
 		HullVerts.emplace_back(P[0]);
 		HullVerts.emplace_back(P[1]);
 		HullVerts.emplace_back(P[2]);
 		HullVerts.emplace_back(P[3]);
 
+		//!< 四面体のインデックス
 		HullInds.emplace_back(TriangleIndices({ 0, 1, 2 }));
 		HullInds.emplace_back(TriangleIndices({ 0, 2, 3 }));
 		HullInds.emplace_back(TriangleIndices({ 2, 1, 3 }));
 		HullInds.emplace_back(TriangleIndices({ 1, 0, 3 }));
 	}
+
+	//!< 指定の点が凸包の内部点かどうか
+	[[nodiscard]] static bool IsInternal(const Vec3& Pt, const std::vector<Vec3>& HullVerts, const std::vector<TriangleIndices>& HullInds) {
+		for (auto& i : HullInds) {
+			if (Distance::PointTriangle(Pt, HullVerts[std::get<0>(i)], HullVerts[std::get<1>(i)], HullVerts[std::get<2>(i)]) > 0.0f) {
+				//!< 少なくとも１つの三角形に対し、正の側にあれば外部点なので早期終了
+				return false;
+			}
+		}
+		return true;
+	}
+	//!< 凸包の内部点を削除
 	static void RemoveInternal(const std::vector<Vec3>& HullVerts, const std::vector<TriangleIndices>& HullInds, std::vector<Vec3>& Pts) 
 	{
 		//!< 内部点を除外
 		{
 			const auto [B, E] = std::ranges::remove_if(Pts, [&](const Vec3& Pt) {
-				for (auto& i : HullInds) {
-					if (Distance::PointTriangle(Pt, HullVerts[std::get<0>(i)], HullVerts[std::get<1>(i)], HullVerts[std::get<2>(i)]) > 0.0f) {
-						//!< 少なくとも１つの三角形に対し、正の側にあれば外部点なので早期終了
-						return false;
-					}
-				}
-				return true;
+				return IsInternal(Pt, HullVerts, HullInds);
 			});
 #ifdef _DEBUG
 			//std::cout << "内部点 : " << std::distance(B, std::end(Pts)) << "削除 (" << std::distance(std::begin(Pts), B) << ")" << std::endl;
 #endif
 			Pts.erase(B, E);
 		}
-		//!< 近接点を除外
+		//!< 表面に非常に近い点を除外
 		{
 			const auto [B, E] = std::ranges::remove_if(Pts, [&](const Vec3& Pt) {
 				for (auto& i : HullVerts) {
-					constexpr auto ep = (std::numeric_limits<float>::epsilon)();
-					//constexpr auto ep = 0.001f;
+					constexpr auto ep = (std::numeric_limits<float>::epsilon)(); //!< 0.001f;
 					if ((i - Pt).LengthSq() < ep * ep) {
 						return true;
 					}
@@ -270,10 +283,11 @@ namespace Colli
 #ifdef _DEBUG
 		std::cout << "凸包を構築しています..." << std::endl;
 #endif
+		//!< 「なるべく」包含するような四面体を作成
 		BuildTetrahedron(Pts, HullVerts, HullInds);
 
+		//!< 内部点の除外 -> 外部点が残る
 		auto External = Pts;
-		//!< 内部点の除外
 		RemoveInternal(HullVerts, HullInds, External);
 
 		//!< 外部点が無くなるまで繰り返す
@@ -282,15 +296,15 @@ namespace Colli
 			//std::cout << "残りの頂点=" << size(External) << std::endl;
 #endif
 			//!< 最遠点を見つける
-			const auto FarIndex = Distance::Farthest(External, External[0]);
-			const auto& FarPoint = External[FarIndex];
+			const auto FarIndexOfExternal = Distance::Farthest(External, External[0]);
+			const auto& FarPoint = External[FarIndexOfExternal];
 
 			//!< 最遠点を向いていない三角形 [begin(), B) と、向いている三角形 [B, end()) に分割
 			const auto [B, E] = std::ranges::partition(HullInds, [&](const auto& i) {
 				return Distance::PointTriangle(FarPoint, HullVerts[std::get<0>(i)], HullVerts[std::get<1>(i)], HullVerts[std::get<2>(i)]) <= 0.0f;
 			});
 
-			//!< 向いている三角形から、(他の三角形と辺を共有していない) ユニークな辺を収集
+			//!< 向いている三角形から、(他の三角形と辺を共有していない) ユニークな辺のみを収集
 			using UniqueEdgeIndices = std::pair<EdgeIndices, bool>;
 			std::vector<UniqueEdgeIndices> UniqueEdges;
 			std::for_each(B, std::end(HullInds), [&](const auto& i) {
@@ -310,32 +324,217 @@ namespace Colli
 						UniqueEdges.emplace_back(UniqueEdgeIndices({ i, true }));
 					}
 					else {
-						//!< 既存の辺は 非ユニーク (false) として編集
+						//!< 既出の辺は 非ユニーク (false) として更新
 						It->second = false;
 					}
 				}
 			});
-			
-			//!< (ユニークな辺は収集済みなので) 向いている三角形は削除
-			//!< (向いていない三角形が残る)
-			HullInds.erase(B, end(HullInds));
 
-			//!< 【バーテックス】最遠点を頂点として追加する
-			HullVerts.emplace_back(FarPoint);
-
-			//!< 【インデックス】最遠点とユニーク辺からなる三角形を追加
+			//!< 凸包の更新
 			{
-				const auto [B, E] = std::ranges::remove_if(UniqueEdges, [](const auto& lhs) { return lhs.second == false; });
-				std::for_each(std::begin(UniqueEdges), B, [&](const auto& i) {
-					HullInds.emplace_back(TriangleIndices({ i.first.first, i.first.second, static_cast<int>(size(HullVerts) - 1) }));
-				});
+				//!< (ユニークな辺は収集済みなので) 向いている三角形は削除
+				HullInds.erase(B, std::end(HullInds));
+
+				//!< 【バーテックス】最遠点を頂点として追加する
+				HullVerts.emplace_back(FarPoint);
+
+				//!< 【インデックス】最遠点とユニーク辺からなる三角形群を追加
+				{
+					const auto FarIndexOfHull = static_cast<int>(std::size(HullVerts) - 1);
+					//!< ユニークな辺だけを集める
+					const auto [B, E] = std::ranges::remove_if(UniqueEdges, [](const auto& lhs) { return lhs.second == false; });
+					std::for_each(std::begin(UniqueEdges), B, [&](const auto& i) {
+						HullInds.emplace_back(TriangleIndices({ i.first.first, i.first.second, FarIndexOfHull }));
+					});
+					//UniqueEdges.erase(B, std::end(UniqueEdges));
+				}
 			}
 
-			//!< ここまで済んだら最遠点は削除してよい
-			External.erase(std::next(std::begin(External), FarIndex));
+			//!< 外部点の更新
+			{
+				//!< ここまで済んだら最遠点は削除してよい
+				External.erase(std::next(std::begin(External), FarIndexOfExternal));
 
-			//!< 凸包を更新したので、内部点の削除
-			RemoveInternal(HullVerts, HullInds, External);
+				//!< 更新した凸包に対して内部点の削除
+				RemoveInternal(HullVerts, HullInds, External);
+			}
 		}
+	}
+	[[nodiscard]] static Vec3 CalcCenterOfMass(const AABB& Aabb, const std::vector<Vec3>& HullVerts, const std::vector<TriangleIndices>& HullInds) {
+		constexpr auto SampleCount = 100;
+
+		auto Sampled = 0;
+		auto CenterOfMass = Vec3::Zero();
+		const Vec3 d = Aabb.GetExtent() / static_cast<float>(SampleCount);
+		for (auto x = 0; x < SampleCount; ++x) {
+			for (auto y = 0; y < SampleCount; ++y) {
+				for (auto z = 0; z < SampleCount; ++z) {
+					const auto Pt = Vec3(Aabb.Min.x() + d.x() * x, Aabb.Min.y() + d.y() * y, Aabb.Min.z() + d.z() * z);
+					if (IsInternal(Pt, HullVerts, HullInds)) {
+						CenterOfMass += Pt;
+						++Sampled;
+					}
+				}
+			}
+		}
+		return CenterOfMass / static_cast<float>(Sampled);
+	}
+	[[nodiscard]] static Mat3 CalcInertiaTensor(const AABB& Aabb, const std::vector<Vec3>& HullVerts, const std::vector<TriangleIndices>& HullInds, const Vec3& CenterOfMass) {
+		constexpr auto SampleCount = 100;
+
+		auto Sampled = 0;
+		auto InertiaTensor = Mat3::Zero();
+		const Vec3 d = Aabb.GetExtent() / static_cast<float>(SampleCount);
+		for (auto x = 0; x < SampleCount; ++x) {
+			for (auto y = 0; y < SampleCount; ++y) {
+				for (auto z = 0; z < SampleCount; ++z) {
+					const auto Pt = Vec3(Aabb.Min.x() + d.x() * x, Aabb.Min.y() + d.y() * y, Aabb.Min.z() + d.z() * z) - CenterOfMass;
+					if (IsInternal(Pt, HullVerts, HullInds)) {
+
+						InertiaTensor[0][0] += Pt.y() * Pt.y() + Pt.z() * Pt.z();
+						InertiaTensor[1][1] += Pt.z() * Pt.z() + Pt.x() * Pt.x();
+						InertiaTensor[2][2] += Pt.x() * Pt.x() + Pt.y() * Pt.y();
+
+						InertiaTensor[0][1] += -Pt.x() * Pt.y();
+						InertiaTensor[0][2] += -Pt.x() * Pt.z();
+						InertiaTensor[1][2] += -Pt.y() * Pt.z();
+
+						InertiaTensor[1][0] += -Pt.x() * Pt.y();
+						InertiaTensor[2][0] += -Pt.x() * Pt.z();
+						InertiaTensor[2][1] += -Pt.y() * Pt.z();
+
+						++Sampled;
+					}
+				}
+			}
+		}
+		return InertiaTensor / static_cast<float>(Sampled);
+	}
+	[[nodiscard]] static Mat3 CalcInertiaTensor(const AABB& Aabb, const std::vector<Vec3>& HullVerts, const std::vector<TriangleIndices>& HullInds) {
+		return CalcInertiaTensor(Aabb, HullVerts, HullInds, CalcCenterOfMass(Aabb, HullVerts, HullInds)); 
+	}
+
+	[[nodiscard]] static Vec2 SignedVolume(const Vec3& A, const Vec3& B) {
+		const auto AB = (B - A).Normalize();
+		//!< 原点を、(選択した)軸に射影し、軸上での重心を求める
+		const auto P = A - AB * AB.Dot(A);
+
+		//!< 3 軸の内、射影範囲が最大のものを見つける
+		auto MaxComp = 0;
+		for (auto i = 1; i < 3; ++i) {
+			if (std::abs(AB[MaxComp]) < std::abs(AB[i])) {
+				MaxComp = i;
+			}
+		}
+
+		const auto CompA = A[MaxComp];
+		const auto CompB = B[MaxComp];
+		const auto CompP = P[MaxComp];
+
+		//!< P が [A, B] (もしくは [B, A]) の間にある
+		if ((CompA < CompP && CompP < CompB) || (CompB < CompP && CompP < CompA)) {
+			return Vec2(CompB - CompP, CompP - CompA) / AB[MaxComp];
+		}
+		//!< P が A 側の外側
+		if ((CompA < CompB && CompP <= CompA) || (CompA >= CompB && CompP >= CompA)) {
+			return Vec2::AxisX();
+		}
+		//!< P が B 側の外側
+		else {
+			return Vec2::AxisY();
+		}
+	}
+	[[nodiscard]] static Vec3 SignedVolume(const Vec3& A, const Vec3& B, const Vec3& C) {
+		const auto N = (B - A).Cross(C - A).Normalize();
+		const auto P = N * A.Dot(N);
+
+		//!< 3 平面の内、射影面積が最大のものを見つける
+		auto MaxComp = 0;
+		auto MaxArea = 0.0f;
+		for (auto i = 0; i < 3; ++i) {
+			const auto j = (i + 1) & 3;
+			const auto k = (i + 2) & 3;
+
+			const auto a = Vec2(A[j], A[k]);
+			const auto b = Vec2(B[j], B[k]);
+			const auto c = Vec2(C[j], C[k]);
+			const auto ab = b - a;
+			const auto ac = c - a;
+
+			const auto Area = ab.x() * ac.y() - ab.y() * ac.x();
+			if (std::abs(Area) > std::abs(MaxArea)) {
+				MaxArea = Area;
+				MaxComp = i;
+			}
+		}
+
+		//!< 対象の平面に射影
+		const auto x = (MaxComp + 1) % 3, y = (MaxComp + 2) % 3;
+		const std::array Planes = { Vec2(A[x], A[y]), Vec2(B[x], B[y]), Vec2(C[x], C[y]) };
+		const auto a = Vec2(P[x], P[y]);
+
+		//!< 射影と辺からなるサブ三角形の面積
+		Vec3 Areas;
+		for (auto i = 0; i < 3; ++i) {
+			const auto j = (i + 1) % 3;
+			const auto k = (i + 2) % 3;
+
+			const auto ab = Planes[j] - a;
+			const auto ac = Planes[k] - a;
+
+			Areas[i] = ab.x() * ac.y() - ab.y() * ac.x();
+		}
+
+		//!< 射影点が三角形の内部
+		if (Sign(MaxArea) == Sign(Areas.x()) && Sign(MaxArea) == Sign(Areas.y()) && Sign(MaxArea) == Sign(Areas.z())){
+			return Areas / MaxArea;
+		}
+
+		//!< 3 辺に射影して一番近いものを見つける (1D の SignedVolume に帰着)
+		const std::array EdgesPts = { A, B, C };
+		auto Lambda = Vec3::AxisX();
+		auto MaxLenSq = (std::numeric_limits<float>::max)();
+		for (auto i = 0; i < 3; ++i) {
+			const auto j = (i + 1) % 3;
+			const auto k = (i + 2) % 3;
+
+			const auto LambdaEdge = SignedVolume(EdgesPts[j], EdgesPts[k]);
+			const auto LenSq = (EdgesPts[j] * LambdaEdge[0] + EdgesPts[k] * LambdaEdge[1]).LengthSq();
+			if (LenSq < MaxLenSq) {
+				Lambda = Vec3(0.0f, LambdaEdge[0], LambdaEdge[1]);
+				MaxLenSq = LenSq;
+			}
+		}
+		return Lambda;
+	}
+	[[nodiscard]] static Vec4 SignedVolume(const Vec3& A, const Vec3& B, const Vec3& C, const Vec3& D) {
+		const auto M = Mat4({ A.x(), B.x(), C.x(), D.x() }, { A.y(), B.y(), C.y(), D.y() }, { A.z(), B.z(), C.z(), D.z() }, Vec4::One());
+		const auto Cofactor = Vec4(-Mat3({ M[1][0], M[1][1], M[1][2] }, { M[2][0], M[2][1], M[2][2] }, { M[3][0], M[3][1], M[3][2] }).Determinant(),
+			Mat3({ M[0][0], M[0][1], M[0][2] }, { M[2][0], M[2][1], M[2][2] }, { M[3][0], M[3][1], M[3][2] }).Determinant(),
+			-Mat3({ M[0][0], M[0][1], M[0][2] }, { M[1][0], M[1][1], M[1][2] }, { M[3][0], M[3][1], M[3][2] }).Determinant(),
+			Mat3({ M[0][0], M[0][1], M[0][2] }, { M[1][0], M[1][1], M[1][2] }, { M[2][0], M[2][1], M[2][2] }).Determinant());
+		const auto Det = Cofactor.x() + Cofactor.y() + Cofactor.z() + Cofactor.w();
+
+		//!< 四面体内部にあれば、重心座標を返す
+		if (Sign(Det) == Sign(Cofactor.x()) && Sign(Det) == Sign(Cofactor.y()) && Sign(Det) == Sign(Cofactor.z()) && Sign(Det) == Sign(Cofactor.w())) {
+			return Cofactor / Det;
+		}
+
+		//!< 3 面に射影して一番近いものを見つける (2D の SignedVolume に帰着)
+		const std::array FacePts = { A, B, C, D };
+		auto Lambda = Vec4::AxisX();
+		auto MaxLenSq = (std::numeric_limits<float>::max)();
+		for (auto i = 0; i < 4; ++i) {
+			const auto j = (i + 1) % 4;
+			const auto k = (i + 2) % 4;
+
+			const auto LambdaFace = SignedVolume(FacePts[i], FacePts[j], FacePts[k]);
+			const auto LenSq = (FacePts[i] * LambdaFace[0] + FacePts[j] * LambdaFace[1] + FacePts[k] * LambdaFace[2]).LengthSq();
+			if (LenSq < MaxLenSq) {
+				Lambda = Vec4(0.0f, LambdaFace[0], LambdaFace[1], LambdaFace[2]);
+				MaxLenSq = LenSq;
+			}
+		}
+		return Lambda;
 	}
 }

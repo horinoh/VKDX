@@ -71,24 +71,23 @@ public:
 		//Load(std::string("..//draco//testdata//") + "car.drc");
 
 #ifdef USE_CONVEXHULL
-		std::vector<Vec3> Vs; 
-		Vs.reserve(size(Vertices));
-		for (auto& i : Vertices) { Vs.emplace_back(Vec3({ i.x, i.y, i.z })); }
+		std::vector<Vec3> VerticesVec3; 
+		VerticesVec3.reserve(size(Vertices));
+		for (auto& i : Vertices) { VerticesVec3.emplace_back(Vec3({ i.x, i.y, i.z })); }
 
 		std::vector<Vec3> HullVertices;
 		std::vector<TriangleIndices> HullIndices;
-		BuildConvexHull(Vs, HullVertices, HullIndices);
+		BuildConvexHull(VerticesVec3, HullVertices, HullIndices);
 		{
 			Vertices.clear();
 			Indices.clear();
-
 			for (auto& i : HullVertices) {
 				Vertices.emplace_back(DirectX::XMFLOAT3(i.x(), i.y(), i.z()));
 			}
 			const auto IndexBase = static_cast<UINT32>(size(Indices));
 			for (auto i : HullIndices) {
-				Indices.emplace_back(IndexBase + static_cast<UINT32>(std::get<0>(i)));
 				Indices.emplace_back(IndexBase + static_cast<UINT32>(std::get<1>(i)));
+				Indices.emplace_back(IndexBase + static_cast<UINT32>(std::get<0>(i)));
 				Indices.emplace_back(IndexBase + static_cast<UINT32>(std::get<2>(i)));
 			}
 		}

@@ -62,6 +62,74 @@ namespace Phys
 					}
 				}
 			}
+
+#if false
+			const std::array OrgPts = { Vec3::Zero(), Vec3::AxisX(), Vec3::AxisY(), Vec3::AxisZ() };
+			{
+				const auto Tmp = Vec3::One();
+				const std::array Pts = { Vec3::Zero() + Tmp, Vec3::AxisX() + Tmp, Vec3::AxisY() + Tmp, Vec3::AxisZ() + Tmp };
+				{
+					const auto Lambda1 = SignedVolume(Pts[0], Pts[1]);
+					std::cout << Lambda1 << "== 1, 0" << std::endl << std::endl;
+					const auto Lambda2 = SignedVolume(Pts[0], Pts[1], Pts[2]);
+					std::cout << Lambda2 << "== 1, 0, 0" << std::endl << std::endl;
+				}
+				const auto Lambda = SignedVolume(Pts[0], Pts[1], Pts[2], Pts[3]);
+
+				std::cout << Lambda << "== 1, 0, 0, 0" << std::endl << std::endl;
+			}
+			{
+				const auto Tmp = -Vec3::One() * 0.25f;
+				const std::array Pts = { Vec3::Zero() + Tmp, Vec3::AxisX() + Tmp, Vec3::AxisY() + Tmp, Vec3::AxisZ() + Tmp };
+				{
+					const auto Lambda1 = SignedVolume(Pts[0], Pts[1]);
+					std::cout << Lambda1 << "== 0.75, 0.25" << std::endl << std::endl;
+					const auto Lambda2 = SignedVolume(Pts[0], Pts[1], Pts[2]);
+					std::cout << Lambda2 << "== 0.5, 0.25, 0.25" << std::endl << std::endl;
+				}
+				const auto Lambda = SignedVolume(Pts[0], Pts[1], Pts[2], Pts[3]);
+
+				std::cout << Lambda << "== 0.25, 0.25, 0.25, 0.25" << std::endl << std::endl;
+			}
+			{
+				const auto Tmp = -Vec3::One();
+				const std::array Pts = { Vec3::Zero() + Tmp, Vec3::AxisX() + Tmp, Vec3::AxisY() + Tmp, Vec3::AxisZ() + Tmp };
+				{
+					const auto Lambda1 = SignedVolume(Pts[0], Pts[1]);
+					std::cout << Lambda1 << "== 0, 1" << std::endl << std::endl;
+					const auto Lambda2 = SignedVolume(Pts[0], Pts[1], Pts[2]);
+					std::cout << Lambda2 << "== 0, 0.5, 0.5" << std::endl << std::endl;
+				}
+				const auto Lambda = SignedVolume(Pts[0], Pts[1], Pts[2], Pts[3]);
+
+				std::cout << Lambda << "== 0, 0.333, 0.333, 0.333" << std::endl << std::endl;
+			}
+			{
+				const auto Tmp = Vec3(1.0f, 1.0f, -0.5f);
+				const std::array Pts = { Vec3::Zero() + Tmp, Vec3::AxisX() + Tmp, Vec3::AxisY() + Tmp, Vec3::AxisZ() + Tmp };
+				{
+					const auto Lambda1 = SignedVolume(Pts[0], Pts[1]);
+					std::cout << Lambda1 << "== 1, 0" << std::endl << std::endl;
+					const auto Lambda2 = SignedVolume(Pts[0], Pts[1], Pts[2]);
+					std::cout << Lambda2 << "== 1, 0, 0" << std::endl << std::endl;
+				}
+				const auto Lambda = SignedVolume(Pts[0], Pts[1], Pts[2], Pts[3]);
+
+				std::cout << Lambda << "== 0.5, 0, 0, 0.5" << std::endl << std::endl;
+			}
+			{
+				const std::array Pts = { Vec3(51.1996613f, 26.1989613f, 1.91339576f), Vec3(-51.0567360f, -26.0565681f, -0.436143428f), Vec3(50.8978920f, -24.1035538f, -1.04042661f), Vec3(-49.1021080f, 25.8964462f, -1.04042661f) };
+				{
+					const auto Lambda1 = SignedVolume(Pts[0], Pts[1]);
+					std::cout << Lambda1 << "== 0.499, 0.501" << std::endl << std::endl;
+					const auto Lambda2 = SignedVolume(Pts[0], Pts[1], Pts[2]);
+					std::cout << Lambda2 << "== 0.498, 0.501, 0.002" << std::endl << std::endl;
+				}
+				const auto Lambda = SignedVolume(Pts[0], Pts[1], Pts[2], Pts[3]);
+
+				std::cout << Lambda << "== 0.29, 0.302, 0.206, 0.202" << std::endl << std::endl;
+			}
+#endif
 		}
 		virtual void BroadPhase(std::vector<CollidablePair>& CollidablePairs, const float DeltaSec)
 		{

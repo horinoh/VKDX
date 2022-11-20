@@ -11,15 +11,18 @@
 #include "Mat.h"
 #include "Quat.h"
 
-static Math::Vec2 operator*(const float lhs, const Math::Vec2& rhs) { return rhs * lhs; }
-static Math::Vec3 operator*(const float lhs, const Math::Vec3& rhs) { return rhs * lhs; }
-static Math::Vec4 operator*(const float lhs, const Math::Vec4& rhs) { return rhs * lhs; }
+template<typename T>
+static [[nodiscard]] T Sign(const T rhs) { return static_cast<T>((rhs > 0) - (rhs < 0)); }
 
-static Math::Mat2 operator*(const float lhs, const Math::Mat2& rhs) { return rhs * lhs; }
-static Math::Mat3 operator*(const float lhs, const Math::Mat3& rhs) { return rhs * lhs; }
-static Math::Mat4 operator*(const float lhs, const Math::Mat4& rhs) { return rhs * lhs; }
+static [[nodiscard]] Math::Vec2 operator*(const float lhs, const Math::Vec2& rhs) { return rhs * lhs; }
+static [[nodiscard]] Math::Vec3 operator*(const float lhs, const Math::Vec3& rhs) { return rhs * lhs; }
+static [[nodiscard]] Math::Vec4 operator*(const float lhs, const Math::Vec4& rhs) { return rhs * lhs; }
 
-static Math::Quat operator*(const float lhs, const Math::Quat& rhs) { return rhs * lhs; }
+static [[nodiscard]] Math::Mat2 operator*(const float lhs, const Math::Mat2& rhs) { return rhs * lhs; }
+static [[nodiscard]] Math::Mat3 operator*(const float lhs, const Math::Mat3& rhs) { return rhs * lhs; }
+static [[nodiscard]] Math::Mat4 operator*(const float lhs, const Math::Mat4& rhs) { return rhs * lhs; }
+
+static [[nodiscard]] Math::Quat operator*(const float lhs, const Math::Quat& rhs) { return rhs * lhs; }
 
 #ifdef _DEBUG
 static std::ostream& operator<<(std::ostream& lhs, const Math::Vec2& rhs) { lhs << rhs.x() << ", " << rhs.y() << ", " << std::endl; return lhs; }

@@ -26,18 +26,18 @@ namespace Phys
 			InvInertiaTensor = GetInertiaTensor().Inverse() * InvMass;
 		}
 
-		Vec3 GetCenterOfMass() const { return Shape->GetCenterOfMass(); };
-		Vec3 GetWorldSpaceCenterOfMass() const { return Position + Rotation.Rotate(GetCenterOfMass()); }
+		[[nodiscard]] Vec3 GetCenterOfMass() const { return Shape->GetCenterOfMass(); };
+		[[nodiscard]] Vec3 GetWorldSpaceCenterOfMass() const { return Position + Rotation.Rotate(GetCenterOfMass()); }
 
-		Mat3 GetInertiaTensor() const { return Shape->GetInertiaTensor(); }
+		[[nodiscard]] Mat3 GetInertiaTensor() const { return Shape->GetInertiaTensor(); }
 
-		Vec3 ToLocal(const Vec3& rhs) const {
+		[[nodiscard]] Vec3 ToLocal(const Vec3& rhs) const {
 			return Rotation.Inverse().Rotate(rhs - GetWorldSpaceCenterOfMass());
 		}
-		Vec3 ToWorld(const Vec3& rhs) const {
+		[[nodiscard]] Vec3 ToWorld(const Vec3& rhs) const {
 			return GetWorldSpaceCenterOfMass() + Rotation.Rotate(rhs);
 		}
-		Mat3 ToWorld(const Mat3& rhs) const {
+		[[nodiscard]] Mat3 ToWorld(const Mat3& rhs) const {
 			const auto Rot3 = static_cast<const Mat3>(Rotation);
 			//!< 本来は Rot3 * rhs * Rot3.Inverse() だが、スケーリングが無いので Rot3 * rhs * Rot3.Transpose() で良い
 			return Rot3 * rhs * Rot3.Transpose();

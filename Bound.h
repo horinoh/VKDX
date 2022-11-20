@@ -31,7 +31,7 @@ namespace Colli
 			return *this;
 		}
 
-		bool Intersect(const AABB& rhs) const {
+		[[nodiscard]] bool Intersect(const AABB& rhs) const {
 			if (Max.x() < rhs.Min.x() || rhs.Max.x() < Min.x() ||
 				Max.y() < rhs.Min.y() || rhs.Max.y() < Min.y() ||
 				Max.z() < rhs.Min.z() || rhs.Max.z() < Min.z()) {
@@ -40,8 +40,8 @@ namespace Colli
 			return true;
 		}
 
-		Vec3 GetCenter() const { return (Min + Max) * 0.5f; }
-		Vec3 GetExtent() const { return Max - Min; }
+		[[nodiscard]] Vec3 GetCenter() const { return (Min + Max) * 0.5f; }
+		[[nodiscard]] Vec3 GetExtent() const { return Max - Min; }
 
 		Vec3 Min = Vec3::Max();
 		Vec3 Max = Vec3::Min();
