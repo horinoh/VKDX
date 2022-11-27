@@ -268,6 +268,8 @@ private:
 	std::string Label;
 };
 
+template<typename T> static [[nodiscard]] size_t IndexOf(const std::vector<T>& Vector, const T& rhs) { return static_cast<size_t>(&rhs - &*std::begin(Vector)); }
+
 #ifdef DEBUG_STDOUT
 static std::ostream& Red(std::ostream& rhs) { Win::SetColor(FOREGROUND_RED); return rhs; }
 static std::ostream& Green(std::ostream& rhs) { Win::SetColor(FOREGROUND_GREEN); return rhs; }

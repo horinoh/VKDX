@@ -64,6 +64,33 @@ namespace Phys
 			}
 
 #if false
+			{
+				const std::vector Hoge = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+				std::cout << IndexOf(Hoge, Hoge[4]) << std::endl;
+				std::cout << std::distance(std::begin(Hoge), std::ranges::find(Hoge, 4)) << std::endl;
+			}
+#endif
+
+#if false
+			{
+				const auto Lambda = Vec4(1, 0, 1, 0);
+				std::vector SimplexPoints = {
+					SupportPoints(Vec3::AxisX(), Vec3::Zero()),
+					SupportPoints(Vec3::AxisY(), Vec3::Zero()),
+					SupportPoints(Vec3::AxisZ(), Vec3::Zero()),
+					SupportPoints(Vec3::One(), Vec3::Zero()),
+				};
+
+				const auto [B, E] = std::ranges::remove_if(SimplexPoints, [&](const auto& rhs) { return 0.0f == Lambda[static_cast<int>(IndexOf(SimplexPoints, rhs))]; });
+				SimplexPoints.erase(B, E);
+
+				for (auto i : SimplexPoints) {
+					std::cout << i.GetA() << std::endl;
+				}
+			}
+#endif
+
+#if false
 			const std::array OrgPts = { Vec3::Zero(), Vec3::AxisX(), Vec3::AxisY(), Vec3::AxisZ() };
 			{
 				const auto Tmp = Vec3::One();

@@ -556,8 +556,6 @@ namespace Colli
 		const Vec3 GetB() const { return std::get<1>(Data); }
 		const Vec3 GetDiff() const { return std::get<2>(Data); }
 
-		//bool operator==(const auto& rhs) const { return GetDiff().NearlyEqual(rhs.GetDiff()); }
-
 	private:
 		std::tuple<Vec3, Vec3, Vec3> Data;
 	};
@@ -566,10 +564,70 @@ namespace Colli
 		return { RbA->Shape->GetSupportPoint(RbA->Position, RbA->Rotation, NormalizedDir, Bias), RbB->Shape->GetSupportPoint(RbB->Position, RbB->Rotation, NormalizedDir, Bias) };
 	}
 
-	namespace Intersection {
-		[[nodiscard]] static bool GJK(const RigidBody* RbA, const RigidBody* RbB) {
-			constexpr auto EpsilonSq = (std::numeric_limits<float>::epsilon)() * (std::numeric_limits<float>::epsilon)();
+	static [[nodiscard]] bool SimplexSignedVolume4(std::vector<SupportPoints>& SimplexPoints, Vec3& Dir)
+	{
+		const auto Lambda = SignedVolume(SimplexPoints[0].GetDiff(), SimplexPoints[1].GetDiff(), SimplexPoints[2].GetDiff(), SimplexPoints[3].GetDiff());
 
+		//!< Dir の更新
+		Dir = SimplexPoints[0].GetDiff() * Lambda[0] + SimplexPoints[1].GetDiff() * Lambda[1] + SimplexPoints[2].GetDiff() * Lambda[2] + SimplexPoints[3].GetDiff() * Lambda[3];
+		constexpr auto EpsilonSq = (std::numeric_limits<float>::epsilon)() * (std::numeric_limits<float>::epsilon)();
+		if (Dir.LengthSq() < EpsilonSq) {
+			//!< 原点を含む -> 衝突
+			return true;
+		}
+
+		//!< 0.0f == Lambda[i] となる SimplexPoints[i] は削除
+		const auto [B, E] = std::ranges::remove_if(SimplexPoints, [&](const auto& rhs) { return 0.0f == Lambda[static_cast<int>(IndexOf(SimplexPoints, rhs))]; });
+		SimplexPoints.erase(B, E);
+
+		return false;
+	}
+	static [[nodiscard]] bool SimplexSignedVolume3(std::vector<SupportPoints>& SimplexPoints, Vec3& Dir)
+	{
+		const auto Lambda = SignedVolume(SimplexPoints[0].GetDiff(), SimplexPoints[1].GetDiff(), SimplexPoints[2].GetDiff());
+
+		Dir = SimplexPoints[0].GetDiff() * Lambda[0] + SimplexPoints[1].GetDiff() * Lambda[1] + SimplexPoints[2].GetDiff() * Lambda[2];
+		constexpr auto EpsilonSq = (std::numeric_limits<float>::epsilon)() * (std::numeric_limits<float>::epsilon)();
+		if (Dir.LengthSq() < EpsilonSq) {
+			return true;
+		}
+
+		const auto [B, E] = std::ranges::remove_if(SimplexPoints, [&](const auto& rhs) { return 0.0f == Lambda[static_cast<int>(IndexOf(SimplexPoints, rhs))]; });
+		SimplexPoints.erase(B, E);
+
+		return false;
+	}
+	static [[nodiscard]] bool SimplexSignedVolume2(std::vector<SupportPoints>& SimplexPoints, Vec3& Dir)
+	{
+		const auto Lambda = SignedVolume(SimplexPoints[0].GetDiff(), SimplexPoints[1].GetDiff());
+
+		Dir = SimplexPoints[0].GetDiff() * Lambda[0] + SimplexPoints[1].GetDiff() * Lambda[1];
+		constexpr auto EpsilonSq = (std::numeric_limits<float>::epsilon)() * (std::numeric_limits<float>::epsilon)();
+		if (Dir.LengthSq() < EpsilonSq) {
+			return true;
+		}
+
+		const auto [B, E] = std::ranges::remove_if(SimplexPoints, [&](const auto& rhs) { return 0.0f == Lambda[static_cast<int>(IndexOf(SimplexPoints, rhs))]; });
+		SimplexPoints.erase(B, E);
+
+		return false;
+	}
+	static [[nodiscard]] bool SimplexSignedVolume(std::vector<SupportPoints>& SimplexPoints, Vec3& Dir)
+	{
+		switch (size(SimplexPoints)) {
+		case 2: return SimplexSignedVolume2(SimplexPoints, Dir);
+		case 3: return SimplexSignedVolume3(SimplexPoints, Dir);
+		case 4: return SimplexSignedVolume4(SimplexPoints, Dir);
+		default:
+			assert(false && "");
+			return false;
+			break;
+		}
+	}
+
+	namespace Intersection {
+		[[nodiscard]] static bool GJK(const RigidBody* RbA, const RigidBody* RbB) 
+		{
 			//!< 4 枠必要
 			std::vector<SupportPoints> SimplexPoints;
 			SimplexPoints.reserve(4);
@@ -594,42 +652,9 @@ namespace Colli
 				}
 
 				//!< シンプレックスポイント個数毎の処理
-				const auto Count = size(SimplexPoints);
-				if (4 == Count) {
-					const auto Lambda = SignedVolume(SimplexPoints[0].GetDiff(), SimplexPoints[1].GetDiff(), SimplexPoints[2].GetDiff(), SimplexPoints[3].GetDiff());
-
-					//!< Dir の更新
-					Dir = SimplexPoints[0].GetDiff() * Lambda[0] + SimplexPoints[1].GetDiff() * Lambda[1] + SimplexPoints[2].GetDiff() * Lambda[2] + SimplexPoints[3].GetDiff() * Lambda[3];
-					if (Dir.LengthSq() < EpsilonSq) {
-						//!< 原点を含む -> 衝突
-						return true;
-					}
-
-					//!< 0.0f == Lambda[i] となる SimplexPoints[i] は削除
-					const auto [B, E] = std::ranges::remove_if(SimplexPoints, [&](const auto& rhs) { return 0.0f == Lambda[static_cast<int>(&rhs - &*std::begin(SimplexPoints))]; });
-					SimplexPoints.erase(B, E);
-				}
-				else if (3 == Count) {
-					const auto Lambda = SignedVolume(SimplexPoints[0].GetDiff(), SimplexPoints[1].GetDiff(), SimplexPoints[2].GetDiff());
-
-					Dir = SimplexPoints[0].GetDiff() * Lambda[0] + SimplexPoints[1].GetDiff() * Lambda[1] + SimplexPoints[2].GetDiff() * Lambda[2];
-					if (Dir.LengthSq() < EpsilonSq) {
-						return true;
-					}
-
-					const auto [B, E] = std::ranges::remove_if(SimplexPoints, [&](const auto& rhs) { return 0.0f == Lambda[static_cast<int>(&rhs - &*std::begin(SimplexPoints))]; });
-					SimplexPoints.erase(B, E);
-				}
-				else {
-					const auto Lambda = SignedVolume(SimplexPoints[0].GetDiff(), SimplexPoints[1].GetDiff());
-					
-					Dir = SimplexPoints[0].GetDiff() * Lambda[0] + SimplexPoints[1].GetDiff() * Lambda[1];
-					if (Dir.LengthSq() < EpsilonSq) {
-						return true;
-					}
-
-					const auto [B, E] = std::ranges::remove_if(SimplexPoints, [&](const auto& rhs) { return 0.0f == Lambda[static_cast<int>(&rhs - &*std::begin(SimplexPoints))]; });
-					SimplexPoints.erase(B, E);
+				if (SimplexSignedVolume(SimplexPoints, Dir)) {
+					//!< -> 衝突
+					return true;
 				}
 
 				//!< 最短距離を更新、更新できなれば終了
