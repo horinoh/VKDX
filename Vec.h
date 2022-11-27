@@ -18,6 +18,8 @@ namespace Math
 		inline static Vec2 Min() { return { (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)() }; }
 		inline static Vec2 Max() { return { (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)() }; }
 
+		inline bool NearlyEqual(const Vec2& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { return std::abs(x() - rhs.x()) < Epsilon && std::abs(y() - rhs.y()) < Epsilon; }
+
 		inline bool operator==(const Vec2& rhs) const { return x() == rhs.x() && y() == rhs.y(); }
 		inline bool operator!=(const Vec2& rhs) const { return !(*this == rhs); }
 		inline Vec2 operator+(const Vec2& rhs) const { return { x() + rhs.x(), y() + rhs.y() }; }
@@ -75,6 +77,8 @@ namespace Math
 		inline static Vec3 Epsilon() { return { (std::numeric_limits<float>::epsilon)(), (std::numeric_limits<float>::epsilon)(), (std::numeric_limits<float>::epsilon)() }; }
 		inline static Vec3 Min() { return { (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)() }; }
 		inline static Vec3 Max() { return { (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)() }; }
+
+		inline bool NearlyEqual(const Vec3& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { return std::abs(x() - rhs.x()) < Epsilon && std::abs(y() - rhs.y()) < Epsilon && std::abs(z() - rhs.z()) < Epsilon; }
 
 		inline bool operator==(const Vec3& rhs) const { return x() == rhs.x() && y() == rhs.y() && z() == rhs.z(); }
 		inline bool operator!=(const Vec3& rhs) const { return !(*this == rhs); }
@@ -136,6 +140,8 @@ namespace Math
 		inline static Vec4 Epsilon() { return { (std::numeric_limits<float>::epsilon)(), (std::numeric_limits<float>::epsilon)(), (std::numeric_limits<float>::epsilon)(), (std::numeric_limits<float>::epsilon)() }; }
 		inline static Vec4 Min() { return { (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)(), (std::numeric_limits<float>::min)() }; }
 		inline static Vec4 Max() { return { (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)(), (std::numeric_limits<float>::max)() }; }
+
+		inline bool NearlyEqual(const Vec4& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { return std::abs(x() - rhs.x()) < Epsilon && std::abs(y() - rhs.y()) < Epsilon && std::abs(z() - rhs.z()) < Epsilon && std::abs(w() - rhs.w()) < Epsilon; }
 
 		inline bool operator==(const Vec4& rhs) const { return x() == rhs.x() && y() == rhs.y() && z() == rhs.z() && w() == rhs.w(); }
 		inline bool operator!=(const Vec4& rhs) const { return !(*this == rhs); }

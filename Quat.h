@@ -20,6 +20,8 @@ namespace Math
 
 		inline static Quat Identity() { return { 0.0f, 0.0f, 0.0f, 1.0f }; }
 
+		inline bool NearlyEqual(const Quat& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { return std::abs(x() - rhs.x()) < Epsilon && std::abs(y() - rhs.y()) < Epsilon && std::abs(z() - rhs.z()) < Epsilon && std::abs(w() - rhs.w()) < Epsilon; }
+
 		inline bool operator==(const Quat& rhs) const { return x() == rhs.x() && y() == rhs.y() && z() == rhs.z() && w() == rhs.w(); }
 		inline bool operator!=(const Quat& rhs) const { return !(*this == rhs); }
 		inline Quat operator*(const float rhs) const { return { x() * rhs, y() * rhs, z() * rhs, w() * rhs }; }

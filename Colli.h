@@ -252,7 +252,7 @@ namespace Colli
 	{
 		//!< 内部点を除外
 		{
-			const auto [B, E] = std::ranges::remove_if(Pts, [&](const Vec3& Pt) {
+			const auto [B, E] = std::ranges::remove_if(Pts, [&](const auto& Pt) {
 				return IsInternal(Pt, HullVerts, HullInds);
 			});
 #ifdef _DEBUG
@@ -262,7 +262,7 @@ namespace Colli
 		}
 		//!< 表面に非常に近い点を除外
 		{
-			const auto [B, E] = std::ranges::remove_if(Pts, [&](const Vec3& Pt) {
+			const auto [B, E] = std::ranges::remove_if(Pts, [&](const auto& Pt) {
 				for (auto& i : HullVerts) {
 					constexpr auto ep = (std::numeric_limits<float>::epsilon)(); //!< 0.001f;
 					if ((i - Pt).LengthSq() < ep * ep) {
@@ -316,8 +316,8 @@ namespace Colli
 				};
 				for (auto& i : Edges) {
 					//!< 既出の辺 (逆向き許容) かどうかを調べる
-					const auto It = std::ranges::find_if(UniqueEdges, [&](const auto& lhs) {
-						return (lhs.first.first == i.first && lhs.first.second == i.second) || (lhs.first.first == i.second && lhs.first.second == i.first); 
+					const auto It = std::ranges::find_if(UniqueEdges, [&](const auto& rhs) {
+						return (rhs.first.first == i.first && rhs.first.second == i.second) || (rhs.first.first == i.second && rhs.first.second == i.first); 
 					});
 					if (std::end(UniqueEdges) == It) {
 						//!< 新規の辺は ユニーク (true) として覚えておく
@@ -414,6 +414,7 @@ namespace Colli
 		return CalcInertiaTensor(Aabb, HullVerts, HullInds, CalcCenterOfMass(Aabb, HullVerts, HullInds)); 
 	}
 
+#pragma region GJK
 	[[nodiscard]] static Vec2 SignedVolume(const Vec3& A, const Vec3& B) {
 		const auto AB = B - A;
 		const auto U = AB.Normalize();
@@ -545,4 +546,105 @@ namespace Colli
 		}
 		return Lambda;
 	}
+
+	class SupportPoints
+	{
+	public:
+		SupportPoints(const Vec3& A, const Vec3& B) : Data({A, B, B - A}) { }
+
+		const Vec3 GetA() const { return std::get<0>(Data); }
+		const Vec3 GetB() const { return std::get<1>(Data); }
+		const Vec3 GetDiff() const { return std::get<2>(Data); }
+
+		//bool operator==(const auto& rhs) const { return GetDiff().NearlyEqual(rhs.GetDiff()); }
+
+	private:
+		std::tuple<Vec3, Vec3, Vec3> Data;
+	};
+
+	static [[nodiscard]] SupportPoints GetSupportPoints(const RigidBody* RbA, const RigidBody* RbB, const Vec3& NormalizedDir, const float Bias) {
+		return { RbA->Shape->GetSupportPoint(RbA->Position, RbA->Rotation, NormalizedDir, Bias), RbB->Shape->GetSupportPoint(RbB->Position, RbB->Rotation, NormalizedDir, Bias) };
+	}
+
+	namespace Intersection {
+		[[nodiscard]] static bool GJK(const RigidBody* RbA, const RigidBody* RbB) {
+			constexpr auto EpsilonSq = (std::numeric_limits<float>::epsilon)() * (std::numeric_limits<float>::epsilon)();
+
+			//!< 4 枠必要
+			std::vector<SupportPoints> SimplexPoints;
+			SimplexPoints.reserve(4);
+
+			SimplexPoints.emplace_back(GetSupportPoints(RbA, RbB, Vec3::One().Normalize(), 0.0f));
+
+			auto Closest = (std::numeric_limits<float>::max)();
+			auto Dir = SimplexPoints.back().GetDiff();
+			do {
+				const auto Pt = GetSupportPoints(RbA, RbB, Dir, 0.0f);
+
+				//!< 既存の点が返るということはもう拡張できない -> 衝突無し
+				if (std::end(SimplexPoints) != std::ranges::find_if(SimplexPoints, [&](const auto& rhs) { return Pt.GetDiff().NearlyEqual(rhs.GetDiff()); })) {
+					break;
+				}
+
+				SimplexPoints.emplace_back(Pt);
+
+				//!< 新しい点が原点を超えていない場合、原点が内部に含まれない -> 衝突無し
+				if (Dir.Dot(Pt.GetDiff()) >= 0.0f) {
+					break;
+				}
+
+				//!< シンプレックスポイント個数毎の処理
+				const auto Count = size(SimplexPoints);
+				if (4 == Count) {
+					const auto Lambda = SignedVolume(SimplexPoints[0].GetDiff(), SimplexPoints[1].GetDiff(), SimplexPoints[2].GetDiff(), SimplexPoints[3].GetDiff());
+
+					//!< Dir の更新
+					Dir = SimplexPoints[0].GetDiff() * Lambda[0] + SimplexPoints[1].GetDiff() * Lambda[1] + SimplexPoints[2].GetDiff() * Lambda[2] + SimplexPoints[3].GetDiff() * Lambda[3];
+					if (Dir.LengthSq() < EpsilonSq) {
+						//!< 原点を含む -> 衝突
+						return true;
+					}
+
+					//!< 0.0f == Lambda[i] となる SimplexPoints[i] は削除
+					const auto [B, E] = std::ranges::remove_if(SimplexPoints, [&](const auto& rhs) { return 0.0f == Lambda[static_cast<int>(&rhs - &*std::begin(SimplexPoints))]; });
+					SimplexPoints.erase(B, E);
+				}
+				else if (3 == Count) {
+					const auto Lambda = SignedVolume(SimplexPoints[0].GetDiff(), SimplexPoints[1].GetDiff(), SimplexPoints[2].GetDiff());
+
+					Dir = SimplexPoints[0].GetDiff() * Lambda[0] + SimplexPoints[1].GetDiff() * Lambda[1] + SimplexPoints[2].GetDiff() * Lambda[2];
+					if (Dir.LengthSq() < EpsilonSq) {
+						return true;
+					}
+
+					const auto [B, E] = std::ranges::remove_if(SimplexPoints, [&](const auto& rhs) { return 0.0f == Lambda[static_cast<int>(&rhs - &*std::begin(SimplexPoints))]; });
+					SimplexPoints.erase(B, E);
+				}
+				else {
+					const auto Lambda = SignedVolume(SimplexPoints[0].GetDiff(), SimplexPoints[1].GetDiff());
+					
+					Dir = SimplexPoints[0].GetDiff() * Lambda[0] + SimplexPoints[1].GetDiff() * Lambda[1];
+					if (Dir.LengthSq() < EpsilonSq) {
+						return true;
+					}
+
+					const auto [B, E] = std::ranges::remove_if(SimplexPoints, [&](const auto& rhs) { return 0.0f == Lambda[static_cast<int>(&rhs - &*std::begin(SimplexPoints))]; });
+					SimplexPoints.erase(B, E);
+				}
+
+				//!< 最短距離を更新、更新できなれば終了
+				const auto DistSq = Dir.LengthSq();
+				if (DistSq < Closest) {
+					Closest = DistSq;
+				}
+				else {
+					break;
+				}
+
+			} while (4 != size(SimplexPoints));
+
+			return false; 
+		}
+	}
+#pragma endregion
 }

@@ -12,6 +12,9 @@ namespace Math
 		inline static Mat2 Identity() { return { { 1.0f, 0.0f }, { 0.0f, 1.0f } }; }
 		inline static Mat2 Zero() { return { Vec2::Zero(), Vec2::Zero() }; }
 
+		inline bool NearlyEqual(const Mat2& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { return _rows[0].NearlyEqual(rhs._rows[0]) && _rows[1].NearlyEqual(rhs._rows[1]); }
+
+		inline bool operator==(const Mat2& rhs) const { return _rows[0] == rhs._rows[0] && _rows[1] == rhs._rows[1]; }
 		inline Mat2 operator+(const Mat2& rhs) const { return { _rows[0] + rhs._rows[0], _rows[1] + rhs._rows[1] }; }
 		inline Mat2 operator-(const Mat2& rhs) const { return { _rows[0] - rhs._rows[0], _rows[1] - rhs._rows[1] }; }
 		inline Mat2 operator*(const float rhs) const { return { _rows[0] * rhs, _rows[1] * rhs }; }
@@ -74,6 +77,9 @@ namespace Math
 		inline static Mat3 Identity() { return { { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } }; }
 		inline static Mat3 Zero() { return { Vec3::Zero(), Vec3::Zero(), Vec3::Zero() }; }
 
+		inline bool NearlyEqual(const Mat3& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { return _rows[0].NearlyEqual(rhs._rows[0]) && _rows[1].NearlyEqual(rhs._rows[1]) && _rows[2].NearlyEqual(rhs._rows[2]); }
+
+		inline bool operator==(const Mat3& rhs) const { return _rows[0] == rhs._rows[0] && _rows[1] == rhs._rows[1] && _rows[2] == rhs._rows[2]; }
 		inline Mat3 operator+(const Mat3& rhs) const { return { _rows[0] + rhs._rows[0], _rows[1] + rhs._rows[1], _rows[2] + rhs._rows[2] }; }
 		inline Mat3 operator-(const Mat3& rhs) const { return { _rows[0] - rhs._rows[0], _rows[1] - rhs._rows[1], _rows[2] - rhs._rows[2] }; }
 		inline Mat3 operator*(const float rhs) const { return { _rows[0] * rhs, _rows[1] * rhs, _rows[2] * rhs }; }
@@ -158,6 +164,9 @@ namespace Math
 		inline static Mat4 Identity() { return { { 1.0f, 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 0.0f, 1.0f } }; }
 		inline static Mat4 Zero() { return { Vec4::Zero(), Vec4::Zero(), Vec4::Zero(), Vec4::Zero() }; }
 
+		inline bool NearlyEqual(const Mat4& rhs, const float Epsilon = (std::numeric_limits<float>::epsilon)()) const { return _rows[0].NearlyEqual(rhs._rows[0]) && _rows[1].NearlyEqual(rhs._rows[1]) && _rows[2].NearlyEqual(rhs._rows[2]) && _rows[3].NearlyEqual(rhs._rows[3]); }
+
+		inline bool operator==(const Mat4& rhs) const { return _rows[0] == rhs._rows[0] && _rows[1] == rhs._rows[1] && _rows[2] == rhs._rows[2] && _rows[3] == rhs._rows[3]; }
 		inline Mat4 operator+(const Mat4& rhs) const { return { _rows[0] + rhs._rows[0], _rows[1] + rhs._rows[1], _rows[2] + rhs._rows[2], _rows[3] + rhs._rows[3] }; }
 		inline Mat4 operator-(const Mat4& rhs) const { return { _rows[0] - rhs._rows[0], _rows[1] - rhs._rows[1], _rows[2] - rhs._rows[2], _rows[3] - rhs._rows[3] }; }
 		inline Mat4 operator*(const float rhs) const { return { _rows[0] * rhs, _rows[1] * rhs, _rows[2] * rhs, _rows[3] * rhs }; }
