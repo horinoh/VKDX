@@ -1,14 +1,15 @@
 #version 450
 
-#extension GL_NV_mesh_shader : require
+#extension GL_EXT_mesh_shader : require
 #extension GL_KHR_shader_subgroup_ballot : require
 
 #define MESHLET_COUNT 32
 
-taskNV out Task {
+struct PAYLOAD_OUT {
 	uint MeshletIDs[MESHLET_COUNT];
 	uint MeshletChunkID;
-} Payload;
+};
+taskPayloadSharedEXT PAYLOAD_OUT Payload;
 
 //!< メッシュレット数が 32 を超える場合は複数回に分けて描画する
 layout(local_size_x = MESHLET_COUNT) in;
@@ -27,5 +28,5 @@ void main()
 
 	Payload.MeshletChunkID = gl_WorkGroupID.x;
 
-	gl_TaskCountNV = subgroupBallotBitCount(Vote);
+	EmitMeshTasksEXT(subgroupBallotBitCount(Vote), 1, 1);
 }

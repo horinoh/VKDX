@@ -1,14 +1,13 @@
 #version 450
 
-#extension GL_EXT_mesh_shader : require
+#extension GL_NV_mesh_shader : require
 #extension GL_KHR_shader_subgroup_ballot : require
 
-struct PAYLOAD_OUT {
+taskNV out Task {
 	uint InstanceID;
 	uint MeshletDimension;
 	uint MeshletIDs[32];
-};
-taskPayloadSharedEXT PAYLOAD_OUT Payload;
+} Payload;
 
 //!< メッシュレット数
 #define N 5
@@ -34,6 +33,6 @@ void main()
 		Payload.MeshletIDs[subgroupBallotExclusiveBitCount(Vote)] = uint(gl_LocalInvocationID.x);
 	}
 
-    //!< subgroupBallotBitCount() : true を返す全スレッド数を返す、その分(メッシュレット数)だけメッシュシェーダを起動する
-	EmitMeshTasksEXT(subgroupBallotBitCount(Vote), 1, 1);
+    //!< subgroupBallotBitCount() : true を返す全スレッド数を返す、その分(メッシュレット数)だけメッシュシェーダを起動する(gl_TaskCountNV)
+	gl_TaskCountNV = subgroupBallotBitCount(Vote);
 }
