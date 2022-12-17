@@ -8,6 +8,7 @@
 #pragma warning(disable : 4244)
 #pragma warning(disable : 4458)
 #pragma warning(disable : 5054)
+#pragma warning(disable : 4189)
 #include <gli/gli.hpp>
 #pragma warning(pop)
 

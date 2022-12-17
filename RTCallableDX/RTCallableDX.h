@@ -300,7 +300,7 @@ public:
 
 				//!< グループ (Hit)
 				{
-					const auto Count = HitCount;
+					//const auto Count = HitCount;
 					const auto& Range = ST.AddressRangeAndStrides[1]; {
 						auto p = Data;
 						for (auto i = 0; i < HitCount; ++i, p += Range.StrideInBytes) {
@@ -312,7 +312,7 @@ public:
 
 				//!< グループ (Call)
 				{
-					const auto Count = CallCount;
+					//const auto Count = CallCount;
 					const auto& Range = ST.AddressRangeAndStrides[2]; {
 						auto p = Data;
 						for (auto i = 0; i < CallCount; ++i, p += Range.StrideInBytes) {

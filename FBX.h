@@ -61,7 +61,7 @@ public:
 #pragma region MATERIAL
 				for (auto j = 0; j < Mesh->GetElementMaterialCount(); ++j) {
 					const auto ElementMaterial = Mesh->GetElementMaterial(j);
-					const auto a = ElementMaterial->GetMappingMode();
+					//const auto a = ElementMaterial->GetMappingMode();
 					switch (ElementMaterial->GetMappingMode()) {
 					default: break;
 					//case FbxGeometryElementMaterial::eNone: break;
@@ -927,7 +927,7 @@ public:
 								Tabs(); std::cout << "\t\t" << AnimLayer->GetName() << std::endl;
 
 								const FbxTime t;
-								const auto Weight = AnimLayer->Weight.EvaluateValue(t);
+								//const auto Weight = AnimLayer->Weight.EvaluateValue(t);
 								//AnimLayer->Mute;
 								//AnimLayer->Solo;
 								//AnimLayer->Lock;
