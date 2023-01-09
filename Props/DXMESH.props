@@ -8,7 +8,7 @@
       <AdditionalIncludeDirectories>..\DirectXMesh\DirectXMesh;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalLibraryDirectories>..\DirectXMesh\DirectXMesh\Bin\Desktop_2019_Win10\x64\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\DirectXMesh\DirectXMesh\Bin\Desktop_2022_Win10\x64\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup />
