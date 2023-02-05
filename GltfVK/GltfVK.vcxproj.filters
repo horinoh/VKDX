@@ -51,6 +51,9 @@
     <ClInclude Include="..\TinyGltf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\SDKGltf.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GltfVK.cpp">
@@ -137,5 +140,8 @@
     <CustomBuild Include="GltfVK.vert">
       <Filter>Shader Files</Filter>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

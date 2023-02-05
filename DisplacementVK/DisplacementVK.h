@@ -47,14 +47,14 @@ protected:
 	}
 	virtual void CreateTexture() override {
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-		std::wstring Path;
-		if (FindDirectory("DDS", Path)) {
+		std::filesystem::path Path;
+		if (FindDirectory(DDS_DIR, Path)) {
 			const auto CB = CommandBuffers[0];
 			//!< [0] ディスプレースメント(Displacement)
-			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Displacement.dds"))).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("Rocks007_2K-JPG\\Rocks007_2K_Displacement.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 			
 			//!< [1] カラー(Color)
-			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\Rocks007_2K-JPG\\Rocks007_2K_Color.dds"))).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("Rocks007_2K-JPG\\Rocks007_2K_Color.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		}
 		//!< [2] 深度(Depth)
 		Super::CreateTexture();

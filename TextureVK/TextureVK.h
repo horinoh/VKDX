@@ -20,10 +20,10 @@ protected:
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
 	}
 	virtual void CreateTexture() override {
-		std::wstring Path;
-		if (FindDirectory("DDS", Path)) {
+		std::filesystem::path Path;
+		if (FindDirectory(DDS_DIR, Path)) {
 #ifdef _DEBUG
-			auto GLITexture = gli::load(data(ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds"))));
+			auto GLITexture = gli::load(data((Path / TEXT("PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")).string()));
 			VkImageFormatProperties IFP;
 			VERIFY_SUCCEEDED(vkGetPhysicalDeviceImageFormatProperties(GetCurrentPhysicalDevice(),
 				VKImage::ToVkFormat(GLITexture.format()),
@@ -35,7 +35,7 @@ protected:
 #endif
 
 			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds"))).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		}
 	}
 #ifdef USE_IMMUTABLE_SAMPLER

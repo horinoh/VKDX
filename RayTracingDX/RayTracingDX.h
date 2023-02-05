@@ -56,10 +56,10 @@ public:
 	virtual void CreateGeometry() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
-		std::wstring Path;
-		if (FindDirectory("FBX", Path)) {
-			//Load(ToString(Path) + "//bunny.FBX");
-			Load(ToString(Path) + "//dragon.FBX");
+		std::filesystem::path Path;
+		if (FindDirectory(FBX_DIR, Path)) {
+			//Load(Path / TEXT("bunny.FBX"));
+			Load(Path / TEXT("dragon.FBX"));
 		}
 
 		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
@@ -173,11 +173,11 @@ public:
 	virtual void CreateTexture() override {
 		Super::CreateTexture();
 
-		std::wstring Path;
-		if (FindDirectory("DDS", Path)) {
+		std::filesystem::path Path;
+		if (FindDirectory(DDS_DIR, Path)) {
 			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 			const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
-			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path + TEXT("\\CubeMap\\ninomaru_teien.dds"))
+			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / TEXT("CubeMap\\ninomaru_teien.dds"))
 				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 			const auto RD = DDSTextures.back().Resource->GetDesc();

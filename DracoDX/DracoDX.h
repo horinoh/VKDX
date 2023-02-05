@@ -62,11 +62,11 @@ public:
 	DracoDX() : Super() {}
 	virtual ~DracoDX() {}
 	virtual void CreateGeometry() override {
-		std::wstring Path;
-		if (FindDirectory("DRC", Path)) {
-			//Load(ToString(Path) + "//bunny.drc");
-			//Load(ToString(Path) + "//dragon.drc");
-			Load(ToString(Path) + "//dragon4.drc");
+		std::filesystem::path Path;
+		if (FindDirectory(DRC_DIR, Path)) {
+			//Load(Path / "bunny.drc");
+			//Load(Path / "dragon.drc");
+			Load(Path / "dragon4.drc");
 		}
 		//Load(std::string("..//draco//testdata//") + "car.drc");
 

@@ -62,10 +62,10 @@ public:
 	virtual void CreateGeometry() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 
-		std::wstring Path;
-		if (FindDirectory("FBX", Path)) {
-			//Load(ToString(Path) + "//bunny.FBX");
-			Load(ToString(Path) + "//dragon.FBX");
+		std::filesystem::path Path;
+		if (FindDirectory(FBX_DIR, Path)) {
+			//Load(Path / TEXT("bunny.FBX"));
+			Load(Path / TEXT("dragon.FBX"));
 		}
 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
@@ -245,11 +245,11 @@ public:
 	}
 	virtual void CreateTexture() override {
 		Super::CreateTexture();
-		std::wstring Path;
-		if (FindDirectory("DDS", Path)) {
+		std::filesystem::path Path;
+		if (FindDirectory(DDS_DIR, Path)) {
 			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 			const auto CB = CommandBuffers[0];
-			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\CubeMap\\ninomaru_teien.dds")))
+			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("CubeMap\\ninomaru_teien.dds"))
 				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 		}
 	}

@@ -55,9 +55,11 @@
 
 ### 外部ライブラリ
 #### GLTF
- * https://github.com/syoyo/tinygltf をサブモジュール化した
- * サンプルは https://github.com/KhronosGroup/glTF-Sample-Models
+ * NuGetPackage で Microsoft.glTF.CPP をインストール
+	* glTF-SDK のサンプルプログラムは https://github.com/microsoft/glTF-SDK
+ * サンプルモデルは https://github.com/KhronosGroup/glTF-Sample-Models
  <!--
+ * https://github.com/syoyo/tinygltf をサブモジュール化した
  * C++ローダー https://github.com/jessey-git/fx-gltf をサブモジュール化した
 	* .gitmoudles に以下を追加
 		~~~

@@ -49,10 +49,10 @@ public:
 		gli::texture GliTexture;
 
 	public:
-		GLITexture& Create(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, std::string_view Path) {
+		GLITexture& Create(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, const std::filesystem::path& Path) {
 			assert(std::filesystem::exists(Path) && "");
-			//assert(Path.ends_with(".dds") && "");
-			GliTexture = gli::load(data(Path));
+			//assert(Path.extension() == TEXT(".dds") && "");
+			GliTexture = gli::load(data(Path.string()));
 			assert(!GliTexture.empty() && "Load image failed");
 
 			const auto Format = ToVkFormat(GliTexture.format());

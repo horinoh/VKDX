@@ -1,6 +1,7 @@
 #pragma once
 	
 #include <fstream>
+#include <filesystem>
 
 #pragma warning(push)
 #pragma warning(disable:4804)
@@ -129,8 +130,8 @@ public:
 #pragma endregion
 		}
 	}
-	virtual void Load(std::string_view Path) {
-		std::ifstream In(data(Path), std::ios::in | std::ios::binary);
+	virtual void Load(const std::filesystem::path& Path) {
+		std::ifstream In(data(Path.string()), std::ios::in | std::ios::binary);
 		if (!In.fail()) {
 			In.seekg(0, std::ios_base::end);
 			const auto Size = In.tellg();

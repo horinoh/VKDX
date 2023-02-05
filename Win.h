@@ -100,6 +100,12 @@
 #define PERFORMANCE_COUNTER() PerformanceCounter __PC(__func__/*std::source_location::current().function_name()*/)
 #endif
 
+//!< アセットフォルダ (Asset folder)
+constexpr std::string_view DDS_DIR = "DDS";
+constexpr std::string_view DRC_DIR = "DRC";
+constexpr std::string_view FBX_DIR = "FBX";
+constexpr std::string_view GLTF_DIR = "GLTF";
+
 class Win
 {
 public:
@@ -186,12 +192,12 @@ public:
 
 	[[nodiscard]] std::wstring GetBasePath() const { return TEXT(".\\") + GetTitleW(); }
 
-	[[nodiscard]] bool FindDirectory(std::string_view Target, std::wstring& Path) {
+	[[nodiscard]] bool FindDirectory(std::string_view Target, std::filesystem::path& Path) {
 		auto Cur = std::filesystem::current_path();
 		while (Cur.has_parent_path()) {
 			for (auto i : std::filesystem::recursive_directory_iterator(Cur)) {
 				if (i.is_directory() && std::equal(crbegin(Target), crend(Target), crbegin(i.path().string()))) {
-					Path = i.path().native();
+					Path = i.path();
 					return true;
 				}
 			}

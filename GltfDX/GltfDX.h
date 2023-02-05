@@ -2,94 +2,29 @@
 
 #include "resource.h"
 
-#pragma region Code::
+#pragma region Code
 #include "../DXExt.h"
-
-#if 1
-#define USE_GLTF_TINY
 #include "../GLTF.h"
 
-class GltfDX : public DXExtDepth, public Gltf::Tiny
+class GltfBaseDX : public DXExtDepth
 {
 private:
 	using Super = DXExtDepth;
-	using SuperGltf = Gltf::Tiny;
-public:
+
 	std::vector<UINT32> Indices;
 	std::vector<DirectX::XMFLOAT3> Vertices;
 	std::vector<DirectX::XMFLOAT3> Normals;
+
 #pragma region GLTF
-	virtual void Process(const tinygltf::Primitive& Primitive) {
-		SuperGltf::Process(Primitive);
-
-		auto Max = (std::numeric_limits<DirectX::XMFLOAT3>::min)();
-		auto Min = (std::numeric_limits<DirectX::XMFLOAT3>::max)();
-		//!< バーテックス
-		for (auto i : Primitive.attributes) {
-			const auto Acc = Model.accessors[i.second];
-			const auto BufferView = Model.bufferViews[Acc.bufferView];
-			const auto Buffer = Model.buffers[BufferView.buffer];
-			const auto Stride = Acc.ByteStride(BufferView);
-			const auto Size = Acc.count * Stride;
-
-			if (TINYGLTF_COMPONENT_TYPE_FLOAT == Acc.componentType) {
-				const float* p = reinterpret_cast<const float*>(data(Buffer.data) + BufferView.byteOffset + Acc.byteOffset);
-				if ("POSITION" == i.first) {
-					Vertices.resize(Acc.count);
-					std::memcpy(data(Vertices), p, Size);
-
-					for (auto j : Vertices) {
-						Min = DX::Min(Min, j);
-						Max = DX::Max(Max, j);
-					}
-					const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
-					std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Bound, (rhs.y - (Max.y - Min.y) * 0.5f) / Bound, (rhs.z - Min.z) / Bound); });
-				}
-				if ("NORMAL" == i.first) {
-					Normals.resize(Acc.count);
-					std::memcpy(data(Normals), p, Size);
-				}
-			}
-		}
-		if (empty(Normals)) {
-			Normals.assign(size(Vertices), DirectX::XMFLOAT3(0.0f, 0.0f, 1.0f));
-		}
-
-		//!< インデックス
-		{
-			const auto Acc = Model.accessors[Primitive.indices];
-			const auto BufferView = Model.bufferViews[Acc.bufferView];
-			const auto Buffer = Model.buffers[BufferView.buffer];
-			const auto Stride = Acc.ByteStride(BufferView);
-			const auto Size = Acc.count * Stride;
-			Indices.resize(Acc.count);
-			switch (Acc.componentType) {
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-			{
-				const uint16_t* p = reinterpret_cast<const uint16_t*>(data(Buffer.data) + BufferView.byteOffset + Acc.byteOffset);
-				std::memcpy(data(Indices), p, Size);
-			}
-				break;
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-			{
-				const uint32_t* p = reinterpret_cast<const uint32_t*>(data(Buffer.data) + BufferView.byteOffset + Acc.byteOffset);
-				std::memcpy(data(Indices), p, Size);
-			}
-				break;
-			}
-		}
-	}
+	virtual void Load(const std::filesystem::path& Path) = 0;
 #pragma endregion
 
-	GltfDX() : Super() {}
-	virtual ~GltfDX() {}
 	virtual void CreateGeometry() override {
-		std::wstring Path;
-		if (FindDirectory("GLTF", Path)) {
-			Load(ToString(Path) + "//bunny.gltf");
-			//Load(ToString(Path) + "//dragon.gltf");
+		std::filesystem::path Path;
+		if (FindDirectory(GLTF_DIR, Path)) {
+			Load(Path / TEXT("bunny.gltf"));
+			//Load(Path) / TEXT("dragon.gltf"));
 		}
-		//Load(std::string("..//tinygltf//models//Cube//") + "Cube.gltf");
 
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
@@ -200,10 +135,92 @@ public:
 		VERIFY_SUCCEEDED(GCL->Close());
 	}
 };
-#else
-#define USE_GLTF_FX
-#include "../GLTF.h"
 
+#ifdef USE_GLTF_SDK
+class GltfDX : public GltfBaseDX, public Gltf::SDK
+{
+private:
+#pragma region GLTF
+	virtual void Load([[maybe_unused]]const std::filesystem::path& Path) override {};
+#pragma endregion
+};
+#endif
+
+#ifdef USE_GLTF_TINY
+class GltfDX : public GltfBaseDX, public Gltf::Tiny
+{
+private:
+public:
+#pragma region GLTF
+	virtual void Load(const std::filesystem::path& Path) override {
+		Gltf::Tiny::Load(Path.string());
+	}
+
+	virtual void Process(const tinygltf::Primitive& Primitive) {
+		SuperGltf::Process(Primitive);
+
+		auto Max = (std::numeric_limits<DirectX::XMFLOAT3>::min)();
+		auto Min = (std::numeric_limits<DirectX::XMFLOAT3>::max)();
+		//!< バーテックス
+		for (auto i : Primitive.attributes) {
+			const auto Acc = Model.accessors[i.second];
+			const auto BufferView = Model.bufferViews[Acc.bufferView];
+			const auto Buffer = Model.buffers[BufferView.buffer];
+			const auto Stride = Acc.ByteStride(BufferView);
+			const auto Size = Acc.count * Stride;
+
+			if (TINYGLTF_COMPONENT_TYPE_FLOAT == Acc.componentType) {
+				const float* p = reinterpret_cast<const float*>(data(Buffer.data) + BufferView.byteOffset + Acc.byteOffset);
+				if ("POSITION" == i.first) {
+					Vertices.resize(Acc.count);
+					std::memcpy(data(Vertices), p, Size);
+
+					for (auto j : Vertices) {
+						Min = DX::Min(Min, j);
+						Max = DX::Max(Max, j);
+					}
+					const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
+					std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Bound, (rhs.y - (Max.y - Min.y) * 0.5f) / Bound, (rhs.z - Min.z) / Bound); });
+				}
+				if ("NORMAL" == i.first) {
+					Normals.resize(Acc.count);
+					std::memcpy(data(Normals), p, Size);
+				}
+			}
+		}
+		if (empty(Normals)) {
+			Normals.assign(size(Vertices), DirectX::XMFLOAT3(0.0f, 0.0f, 1.0f));
+		}
+
+		//!< インデックス
+		{
+			const auto Acc = Model.accessors[Primitive.indices];
+			const auto BufferView = Model.bufferViews[Acc.bufferView];
+			const auto Buffer = Model.buffers[BufferView.buffer];
+			const auto Stride = Acc.ByteStride(BufferView);
+			const auto Size = Acc.count * Stride;
+			Indices.resize(Acc.count);
+			switch (Acc.componentType) {
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+			{
+				const uint16_t* p = reinterpret_cast<const uint16_t*>(data(Buffer.data) + BufferView.byteOffset + Acc.byteOffset);
+				std::memcpy(data(Indices), p, Size);
+			}
+				break;
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+			{
+				const uint32_t* p = reinterpret_cast<const uint32_t*>(data(Buffer.data) + BufferView.byteOffset + Acc.byteOffset);
+				std::memcpy(data(Indices), p, Size);
+			}
+				break;
+			}
+		}
+	}
+#pragma endregion
+};
+#endif
+
+#ifdef USE_GLTF_FX
 class GltfDX : public DXExt, public Gltf::Fx
 {
 private:
@@ -439,4 +456,5 @@ protected:
 	std::vector<float> MorphWeights;
 };
 #endif
-#pragma endregion
+
+#pragma endregion //!< Code

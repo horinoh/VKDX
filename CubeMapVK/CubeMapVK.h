@@ -67,13 +67,13 @@ protected:
 	}
 	virtual void CreateTexture() override {
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-		std::wstring Path;
-		if (FindDirectory("DDS", Path)) {
+		std::filesystem::path Path;
+		if (FindDirectory(DDS_DIR, Path)) {
 			const auto CB = CommandBuffers[0];
 			//!< [0] キューブ(Cube) : PX, NX, PY, NY, PZ, NZ
-			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\CubeMap\\ninomaru_teien.dds"))).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("CubeMap\\ninomaru_teien.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 			//!< [1] 法線(Normal)
-			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\Metal012_2K-JPG\\Metal012_2K_Normal.dds"))).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("Metal012_2K-JPG\\Metal012_2K_Normal.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		}
 		Super::CreateTexture();
 	}

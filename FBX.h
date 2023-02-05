@@ -4,6 +4,7 @@
 #include <array>
 #include <iostream>
 #include <cassert>
+#include <filesystem>
 
 //!< DLL ライブラリを使用する場合は FBXSDK_SHARED を定義する必要がある
 #define FBXSDK_SHARED
@@ -888,11 +889,11 @@ public:
 		}
 	}
 
-	virtual void Load(std::string_view Path) {
+	virtual void Load(const std::filesystem::path& Path) {
 		if (nullptr != Manager) {
 			const auto Importer = FbxImporter::Create(Manager, "");
 			if (nullptr != Importer) {
-				if (Importer->Initialize(data(Path), -1, Manager->GetIOSettings())) {
+				if (Importer->Initialize(data(Path.string()), -1, Manager->GetIOSettings())) {
 					Scene = FbxScene::Create(Manager, "");
 					if (Importer->Import(Scene)) {
 						Convert(Scene);

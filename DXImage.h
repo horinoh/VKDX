@@ -17,12 +17,12 @@ public:
 		std::vector<D3D12_SUBRESOURCE_DATA> SRDs;
 	public:
 		D3D12_SHADER_RESOURCE_VIEW_DESC SRV;
-		DDSTexture& Create(ID3D12Device* Dev, std::wstring_view Path) {
+		DDSTexture& Create(ID3D12Device* Dev, const std::filesystem::path& Path) {
 			assert(std::filesystem::exists(Path) && "");
-			assert(Path.ends_with(TEXT(".dds")) && "");
+			assert(Path.extension() == TEXT(".dds") && "");
 			DirectX::DDS_ALPHA_MODE AlphaMode;
 			bool IsCubeMap;
-			VERIFY_SUCCEEDED(DirectX::LoadDDSTextureFromFile(Dev, data(Path), COM_PTR_PUT(Resource), DDSData, SRDs, 0, &AlphaMode, &IsCubeMap));
+			VERIFY_SUCCEEDED(DirectX::LoadDDSTextureFromFile(Dev, data(Path.wstring()), COM_PTR_PUT(Resource), DDSData, SRDs, 0, &AlphaMode, &IsCubeMap));
 			//!< ˆµ‚¢‚½‚¢ê‡“™‚ÍŒã‚©‚ç SRV ‚ð–¾Ž¦“I‚Éã‘‚«‚·‚é
 			const auto RD = Resource->GetDesc();
 			SRV = IsCubeMap ? D3D12_SHADER_RESOURCE_VIEW_DESC({ .Format = RD.Format, .ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE, .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, .TextureCube = D3D12_TEXCUBE_SRV({.MostDetailedMip = 0, .MipLevels = RD.MipLevels, .ResourceMinLODClamp = 0.0f }) }) :

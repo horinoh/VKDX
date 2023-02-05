@@ -309,12 +309,12 @@ public:
 	virtual void CreateTexture() override {
 		Super::CreateTexture();
 
-		std::wstring Path;
-		if (FindDirectory("DDS", Path)) {
+		std::filesystem::path Path;
+		if (FindDirectory(DDS_DIR, Path)) {
 			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 			const auto CB = CommandBuffers[0];
-			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\SheetMetal001_1K-JPG\\SheetMetal001_1K_Opacity.dds"))).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
-			DDSTextures.emplace_back().Create(Device, PDMP, ToString(Path + TEXT("\\SheetMetal001_1K-JPG\\SheetMetal001_1K_Color.dds"))).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
+			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("SheetMetal001_1K-JPG\\SheetMetal001_1K_Opacity.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
+			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("SheetMetal001_1K-JPG\\SheetMetal001_1K_Color.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 		}
 	}
 	virtual void CreateImmutableSampler() override {

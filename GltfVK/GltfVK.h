@@ -4,93 +4,27 @@
 
 #pragma region Code
 #include "../VKExt.h"
-
-#if 1
-#define USE_GLTF_TINY
 #include "../GLTF.h"
 
-class GltfVK : public VKExtDepth, public Gltf::Tiny
+class GltfBaseVK : public VKExtDepth
 {
 private:
 	using Super = VKExtDepth;
-	using SuperGltf = Gltf::Tiny;
-public:
-	GltfVK() : Super() {}
-	virtual ~GltfVK() {}
 
 	std::vector<uint32_t> Indices;
 	std::vector<glm::vec3> Vertices;
 	std::vector<glm::vec3> Normals;
+
 #pragma region GLTF
-	virtual void Process(const tinygltf::Primitive& Primitive) {
-		SuperGltf::Process(Primitive);
-
-		auto Max = (std::numeric_limits<glm::vec3>::min)();
-		auto Min = (std::numeric_limits<glm::vec3>::max)();
-		//!< バーテックス
-		for (auto i : Primitive.attributes) {
-			const auto Acc = Model.accessors[i.second];
-			const auto BufferView = Model.bufferViews[Acc.bufferView];
-			const auto Buffer = Model.buffers[BufferView.buffer];
-			const auto Stride = Acc.ByteStride(BufferView);
-			const auto Size = Acc.count * Stride;
-
-			if (TINYGLTF_COMPONENT_TYPE_FLOAT == Acc.componentType) {
-				const float* p = reinterpret_cast<const float*>(data(Buffer.data) + BufferView.byteOffset + Acc.byteOffset);
-				if ("POSITION" == i.first) {
-					Vertices.resize(Acc.count);
-					std::memcpy(data(Vertices), p, Size);
-
-					for (auto j : Vertices) {
-						Min = VK::Min(Min, j);
-						Max = VK::Max(Max, j);
-					}
-					const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
-					std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const glm::vec3& rhs) { return rhs / Bound - glm::vec3(0.0f, (Max.y - Min.y) * 0.5f, Min.z) / Bound; });
-				}
-				if ("NORMAL" == i.first) {
-					Normals.resize(Acc.count);
-					std::memcpy(data(Normals), p, Size);
-				}
-			}
-		}
-		if (empty(Normals)) {
-			Normals.assign(size(Vertices), glm::vec3(0.0f, 0.0f, 1.0f));
-		}
-
-		//!< インデックス
-		{
-			const auto Acc = Model.accessors[Primitive.indices];
-			const auto BufferView = Model.bufferViews[Acc.bufferView];
-			const auto Buffer = Model.buffers[BufferView.buffer];
-			const auto Stride = Acc.ByteStride(BufferView);
-			const auto Size = Acc.count * Stride;
-			Indices.resize(Acc.count);
-			switch (Acc.componentType) {
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-			{
-				const uint16_t* p = reinterpret_cast<const uint16_t*>(data(Buffer.data) + BufferView.byteOffset + Acc.byteOffset);
-				std::memcpy(data(Indices), p, Size);
-			}
-			break;
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-			{
-				const uint32_t* p = reinterpret_cast<const uint32_t*>(data(Buffer.data) + BufferView.byteOffset + Acc.byteOffset);
-				std::memcpy(data(Indices), p, Size);
-			}
-			break;
-			}
-		}	
-	}
+	virtual void Load(const std::filesystem::path& Path) = 0;
 #pragma endregion
 
 	virtual void CreateGeometry() override {
-		std::wstring Path;
-		if (FindDirectory("GLTF", Path)) {
-			Load(ToString(Path) + "//bunny.gltf");
-			//Load(ToString(Path) + "//dragon.gltf");
+		std::filesystem::path Path;
+		if (FindDirectory(GLTF_DIR, Path)) {
+			Load(Path / TEXT("bunny.gltf"));
+			//Load(Path / TEXT("dragon.gltf"));
 		}
-		//Load(std::string("..//tinygltf//models//Cube//") + "Cube.gltf");
 
 		const auto& CB = CommandBuffers[0];
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
@@ -217,11 +151,31 @@ public:
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 	}
 };
-#else
 
-#define USE_GLTF_FX
-#include "../GLTF.h"
+#ifdef USE_GLTF_SDK
+class GltfVK : public GltfBaseVK, public Gltf::SDK
+{
+private:
+#pragma region GLTF
+	virtual void Load([[maybe_unused]]const std::filesystem::path& Path) override {};
+#pragma endregion
+};
+#endif
 
+#ifdef USE_GLTF_TINY
+class GltfVK : public GltfBaseVK, public Gltf::Tiny
+{
+private:
+public:
+#pragma region GLTF
+	virtual void Load(const std::filesystem::path& Path) override {
+		Gltf::Tiny::Load(Path.string());
+	}
+#pragma endregion
+};
+#endif
+
+#ifdef USE_GLTF_FX
 class GltfVK : public VKExt, public Gltf::Fx
 {
 private:
@@ -458,4 +412,5 @@ protected:
 	};
 };
 #endif
-#pragma endregion
+
+#pragma endregion //!< Code
