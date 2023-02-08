@@ -11,20 +11,17 @@ class GltfBaseVK : public VKExtDepth
 private:
 	using Super = VKExtDepth;
 
+public:
 	std::vector<uint32_t> Indices;
 	std::vector<glm::vec3> Vertices;
 	std::vector<glm::vec3> Normals;
 
 #pragma region GLTF
-	virtual void Load(const std::filesystem::path& Path) = 0;
+	virtual void LoadGltf() = 0;
 #pragma endregion
 
 	virtual void CreateGeometry() override {
-		std::filesystem::path Path;
-		if (FindDirectory(GLTF_DIR, Path)) {
-			Load(Path / TEXT("bunny.gltf"));
-			//Load(Path / TEXT("dragon.gltf"));
-		}
+		LoadGltf();
 
 		const auto& CB = CommandBuffers[0];
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
@@ -157,7 +154,14 @@ class GltfVK : public GltfBaseVK, public Gltf::SDK
 {
 private:
 #pragma region GLTF
-	virtual void Load([[maybe_unused]]const std::filesystem::path& Path) override {};
+	virtual void LoadGltf() override {
+		Load("C://GitHub//VKDX//GLTF//bunny.gltf");
+		//std::filesystem::path Path;
+		//if (FindDirectory(GLTF_DIR, Path)) {
+		//	Load(Path / TEXT("bunny.gltf"));
+		//	//Load(Path / TEXT("dragon.gltf"));
+		//}
+	}
 #pragma endregion
 };
 #endif
@@ -169,7 +173,7 @@ private:
 public:
 #pragma region GLTF
 	virtual void Load(const std::filesystem::path& Path) override {
-		Gltf::Tiny::Load(Path.string());
+		Gltf::Tiny::Load(Path);
 	}
 #pragma endregion
 };

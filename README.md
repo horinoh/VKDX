@@ -56,6 +56,8 @@
 ### 外部ライブラリ
 #### GLTF
  * NuGetPackage で Microsoft.glTF.CPP をインストール
+ 	* リンカエラー 4099 が出る(#pragma では回避できない)ので以下のようにしている 
+		* Configuration Properties - Linker - CommandLine - AdditionalOptions - /ignore:4099
 	* glTF-SDK のサンプルプログラムは https://github.com/microsoft/glTF-SDK
  * サンプルモデルは https://github.com/KhronosGroup/glTF-Sample-Models
  <!--

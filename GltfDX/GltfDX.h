@@ -11,21 +11,18 @@ class GltfBaseDX : public DXExtDepth
 private:
 	using Super = DXExtDepth;
 
+public:
 	std::vector<UINT32> Indices;
 	std::vector<DirectX::XMFLOAT3> Vertices;
 	std::vector<DirectX::XMFLOAT3> Normals;
 
 #pragma region GLTF
-	virtual void Load(const std::filesystem::path& Path) = 0;
+	virtual void LoadGltf() = 0;
 #pragma endregion
 
 	virtual void CreateGeometry() override {
-		std::filesystem::path Path;
-		if (FindDirectory(GLTF_DIR, Path)) {
-			Load(Path / TEXT("bunny.gltf"));
-			//Load(Path) / TEXT("dragon.gltf"));
-		}
-
+		LoadGltf();
+		
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 		const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
@@ -139,9 +136,17 @@ private:
 #ifdef USE_GLTF_SDK
 class GltfDX : public GltfBaseDX, public Gltf::SDK
 {
-private:
+public:
 #pragma region GLTF
-	virtual void Load([[maybe_unused]]const std::filesystem::path& Path) override {};
+		virtual void LoadGltf() override {
+			Load("C://GitHub//VKDX//GLTF//bunny.gltf");
+
+			//std::filesystem::path Path;
+			//if (FindDirectory(GLTF_DIR, Path)) {
+			//	Load(Path / TEXT("bunny.gltf"));
+			//	//Load(Path) / TEXT("dragon.gltf"));
+			//}
+		}
 #pragma endregion
 };
 #endif
@@ -152,8 +157,12 @@ class GltfDX : public GltfBaseDX, public Gltf::Tiny
 private:
 public:
 #pragma region GLTF
-	virtual void Load(const std::filesystem::path& Path) override {
-		Gltf::Tiny::Load(Path.string());
+	virtual void LoadGltf() override {
+		std::filesystem::path Path;
+		if (FindDirectory(GLTF_DIR, Path)) {
+			Load(Path / TEXT("bunny.gltf"));
+			//Load(Path) / TEXT("dragon.gltf"));
+		}
 	}
 
 	virtual void Process(const tinygltf::Primitive& Primitive) {
