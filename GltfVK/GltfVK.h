@@ -153,14 +153,134 @@ public:
 class GltfVK : public GltfBaseVK, public Gltf::SDK
 {
 private:
+	using Super = Gltf::SDK;
 #pragma region GLTF
+public:
+	virtual void Process() override {
+		Super::Process();
+
+		for (const auto& i : Document.meshes.Elements()) {
+			for (const auto& j : i.primitives) {
+				switch (j.mode)
+				{
+				case Microsoft::glTF::MeshMode::MESH_POINTS: break;
+				case Microsoft::glTF::MeshMode::MESH_LINES: break;
+				case Microsoft::glTF::MeshMode::MESH_LINE_LOOP: break;
+				case Microsoft::glTF::MeshMode::MESH_LINE_STRIP: break;
+				case Microsoft::glTF::MeshMode::MESH_TRIANGLES: break;
+				case Microsoft::glTF::MeshMode::MESH_TRIANGLE_STRIP: break;
+				case Microsoft::glTF::MeshMode::MESH_TRIANGLE_FAN: break;
+				default: break;
+				}
+
+				if (Document.accessors.Has(j.indicesAccessorId)) {
+					const auto& Accessor = Document.accessors.Get(j.indicesAccessorId);
+					if (empty(Indices)) {
+						Indices.resize(Accessor.count);
+
+						switch (Accessor.componentType)
+						{
+						case Microsoft::glTF::ComponentType::COMPONENT_UNSIGNED_SHORT:
+							switch (Accessor.type)
+							{
+							case Microsoft::glTF::AccessorType::TYPE_SCALAR:
+							{
+								const auto Data = ResourceReader->ReadBinaryData<uint16_t>(Document, Accessor);
+							}
+							break;
+							default: break;
+							}
+							break;
+						case Microsoft::glTF::ComponentType::COMPONENT_UNSIGNED_INT:
+							switch (Accessor.type)
+							{
+							case Microsoft::glTF::AccessorType::TYPE_SCALAR:
+							{
+								const auto Data = ResourceReader->ReadBinaryData<uint32_t>(Document, Accessor);
+								std::ranges::copy(Data, std::begin(Indices));
+							}
+							break;
+							default: break;
+							}
+							break;
+						default: break;
+						}
+					}
+				}
+
+				std::string AccessorId;
+				if (j.TryGetAttributeAccessorId(Microsoft::glTF::ACCESSOR_POSITION, AccessorId))
+				{
+					const auto& Accessor = Document.accessors.Get(AccessorId);
+					if (empty(Vertices)) {
+						Vertices.resize(Accessor.count);
+						switch (Accessor.componentType)
+						{
+						case Microsoft::glTF::ComponentType::COMPONENT_FLOAT:
+							switch (Accessor.type)
+							{
+							case Microsoft::glTF::AccessorType::TYPE_VEC3:
+							{
+								const auto Data = ResourceReader->ReadBinaryData<float>(Document, Accessor);
+								std::memcpy(data(Vertices), data(Data), TotalSizeOf(Vertices));
+							}
+							break;
+							default: break;
+							}
+							break;
+						default: break;
+						}
+					}
+				}
+
+				if (j.TryGetAttributeAccessorId(Microsoft::glTF::ACCESSOR_NORMAL, AccessorId))
+				{
+					const auto& Accessor = Document.accessors.Get(AccessorId);
+					if (empty(Normals)) {
+						Normals.resize(Accessor.count);
+						switch (Accessor.componentType)
+						{
+						case Microsoft::glTF::ComponentType::COMPONENT_FLOAT:
+							switch (Accessor.type)
+							{
+							case Microsoft::glTF::AccessorType::TYPE_VEC3:
+							{
+								const auto Data = ResourceReader->ReadBinaryData<float>(Document, Accessor);
+								std::memcpy(data(Normals), data(Data), TotalSizeOf(Normals));
+							}
+							break;
+							default: break;
+							}
+							break;
+						default: break;
+						}
+					}
+				}
+
+			}
+		}
+
+	}
 	virtual void LoadGltf() override {
-		Load("C://GitHub//VKDX//GLTF//bunny.gltf");
-		//std::filesystem::path Path;
-		//if (FindDirectory(GLTF_DIR, Path)) {
-		//	Load(Path / TEXT("bunny.gltf"));
-		//	//Load(Path / TEXT("dragon.gltf"));
-		//}
+		{
+			std::filesystem::path Path = "..\\glTF-Sample-Models\\2.0";
+
+			//Load(Path / "Duck//glTF-Embedded//Duck.gltf");
+			//Load(Path / "Suzanne//glTF//Suzanne.gltf");
+			//Load(Path / "WaterBottle//glTF-Binary//WaterBottle.glb");
+			//Load(Path / "AnimatedTriangle//glTF-Embedded//AnimatedTriangle.gltf");
+
+			//Load(Path / "RiggedSimple//glTF-Embedded//RiggedSimple.gltf");
+			//Load(Path / "RiggedFigure//glTF-Embedded//RiggedFigure.gltf");
+
+			//Load(Path / "SimpleSkin//glTF-Embedded//SimpleSkin.gltf");
+		}
+		{
+			std::filesystem::path Path = "..\\GLTF";
+
+			//Load(Path / "bunny.gltf");
+			Load(Path / "dragon.gltf");
+		}
 	}
 #pragma endregion
 };

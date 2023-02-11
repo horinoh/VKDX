@@ -31,3 +31,6 @@
 [submodule "DirectXMesh"]
 	path = DirectXMesh
 	url = https://github.com/microsoft/DirectXMesh.git
+[submodule "glTF-Sample-Models"]
+	path = glTF-Sample-Models
+	url = https://github.com/KhronosGroup/glTF-Sample-Models.git

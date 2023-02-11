@@ -7,6 +7,9 @@
 
 #include "Hierarchy.h"
 
+static std::ostream& operator<<(std::ostream& lhs, const Microsoft::glTF::Color3& rhs) { lhs << rhs.r << ", " << rhs.g << ", " << rhs.b; return lhs; }
+static std::ostream& operator<<(std::ostream& lhs, const Microsoft::glTF::Color4& rhs) { lhs << rhs.r << ", " << rhs.g << ", " << rhs.b << ", " << rhs.a; return lhs; }
+
 namespace Gltf {
     class StreamReader : public Microsoft::glTF::IStreamReader
     {
@@ -14,7 +17,6 @@ namespace Gltf {
         virtual std::shared_ptr<std::istream> GetInputStream(const std::string& FilePath) const override {
             return std::make_shared<std::ifstream>(FilePath, std::ios_base::binary);
         }
-
     private:
     };
 	class SDK : public Hierarchy
@@ -27,10 +29,95 @@ namespace Gltf {
 		Microsoft::glTF::Document Document;
 
 	public:
-		virtual void Process(const Microsoft::glTF::Image& Image) {
+		virtual void Process(const Microsoft::glTF::Sampler& Sampler) {
+			Tabs(); std::cout << "Sampler [" << Sampler.id << "] : " << Sampler.name << std::endl;
+
+			Tabs(); std::cout << "\tMagFilter = ";
+			switch (Sampler.magFilter)
+			{
+			case Microsoft::glTF::MagFilterMode::MagFilter_NEAREST:
+				std::cout << "NEAREST";
+				break;
+			case Microsoft::glTF::MagFilterMode::MagFilter_LINEAR:
+				std::cout << "LINEAR";
+				break;
+			default: break;
+			}
+			std::cout << std::endl;
+
+			Tabs(); std::cout << "\tMinFilter = ";
+			switch (Sampler.minFilter)
+			{
+			case Microsoft::glTF::MinFilterMode::MinFilter_NEAREST:
+				std::cout << "NEAREST";
+				break;
+			case Microsoft::glTF::MinFilterMode::MinFilter_LINEAR:
+				std::cout << "LINEAR";
+				break;
+			case Microsoft::glTF::MinFilterMode::MinFilter_NEAREST_MIPMAP_NEAREST:
+				std::cout << "NEAREST_MIPMAP_NEAREST";
+				break;
+			case Microsoft::glTF::MinFilterMode::MinFilter_LINEAR_MIPMAP_NEAREST:
+				std::cout << "LINEAR_MIPMAP_NEAREST";
+				break;
+			case Microsoft::glTF::MinFilterMode::MinFilter_NEAREST_MIPMAP_LINEAR:
+				std::cout << "NEAREST_MIPMAP_LINEAR";
+				break;
+			case Microsoft::glTF::MinFilterMode::MinFilter_LINEAR_MIPMAP_LINEAR:
+				std::cout << "LINEAR_MIPMAP_LINEAR";
+				break;
+			default: break;
+			}
+			std::cout << std::endl;
+
+			Tabs(); std::cout << "\tWrapS = ";
+			switch (Sampler.wrapS)
+			{
+			case Microsoft::glTF::WrapMode::Wrap_REPEAT:
+				std::cout << "REPEAT";
+				break;
+			case Microsoft::glTF::WrapMode::Wrap_CLAMP_TO_EDGE:
+				std::cout << "CLAMP_TO_EDGE";
+				break;
+			case Microsoft::glTF::WrapMode::Wrap_MIRRORED_REPEAT:
+				std::cout << "MIRRORED_REPEAT";
+				break;
+			default: break;
+			}
+			std::cout << std::endl;
+
+			Tabs(); std::cout << "\tWrapT = ";
+			switch (Sampler.wrapT)
+			{
+			case Microsoft::glTF::WrapMode::Wrap_REPEAT:
+				std::cout << "REPEAT";
+				break;
+			case Microsoft::glTF::WrapMode::Wrap_CLAMP_TO_EDGE:
+				std::cout << "CLAMP_TO_EDGE";
+				break;
+			case Microsoft::glTF::WrapMode::Wrap_MIRRORED_REPEAT:
+				std::cout << "MIRRORED_REPEAT";
+				break;
+			default: break;
+			}
+			std::cout << std::endl;
+		}
+		virtual void Process(const Microsoft::glTF::Image & Image) {
 			Tabs(); std::cout << "Image [" << Image.id << "] : " << Image.name << std::endl;
 
-			Tabs(); std::cout << "\tUri = " << Image.uri.substr(0, 32) << " ..." << std::endl;
+			if (empty(Image.uri)) {
+				if (Document.bufferViews.Has(Image.bufferViewId)) {
+					const auto& BufferView = Document.bufferViews.Get(Image.bufferViewId);
+					if (Document.buffers.Has(BufferView.bufferId)) {
+						const auto& Buffer = Document.buffers.Get(BufferView.bufferId);
+						Tabs(); std::cout << "\tUri = " << Buffer.uri.substr(0, 32) << " ..." << std::endl;
+					}
+				}
+			}
+			else {
+				Tabs(); std::cout << "\tUri = " << Image.uri.substr(0, 32) << " ..." << std::endl;
+			}
+
 			Tabs(); std::cout << "\tMimeType = " << Image.mimeType << " ..." << std::endl;
 			
 			if (Document.bufferViews.Has(Image.bufferViewId)) {
@@ -39,44 +126,105 @@ namespace Gltf {
 				PopTab();
 			}
 
-			const auto Data = ResourceReader->ReadBinaryData(Document, Image);
+			//const auto Data = ResourceReader->ReadBinaryData(Document, Image);
+		}
+		virtual void Process(const Microsoft::glTF::Texture& Texture, std::string_view name = "") {
+			Tabs(); std::cout << "Texture [" << Texture.id << "] : " << (empty(Texture.name) ? name : Texture.name) << std::endl;
+
+			if (Document.samplers.Has(Texture.samplerId)) {
+				PushTab();
+				Process(Document.samplers.Get(Texture.samplerId));
+				PopTab();
+			}
+
+			if (Document.images.Has(Texture.imageId)) {
+				PushTab();
+				Process(Document.images.Get(Texture.imageId));
+				PopTab();
+			}
+		}
+		virtual void Process(const Microsoft::glTF::Material::PBRMetallicRoughness& MetallicRoughness) {
+			Tabs(); std::cout << "MetallicRoughness" << std::endl;
+
+			Tabs(); std::cout << "\tBaseColorFactor = " << MetallicRoughness.baseColorFactor << std::endl;
+			Tabs(); std::cout << "\tMetallicFactor = " << MetallicRoughness.metallicFactor << std::endl;;
+			Tabs(); std::cout << "\tRoughnessFactor = " << MetallicRoughness.roughnessFactor << std::endl;
+
+			if (Document.textures.Has(MetallicRoughness.baseColorTexture.textureId)) {
+				PushTab();
+				Process(Document.textures.Get(MetallicRoughness.baseColorTexture.textureId), "BaseColorTexture");
+				Tabs(); std::cout << "\tTexCoord = " << MetallicRoughness.baseColorTexture.texCoord << std::endl;
+				PopTab();
+			}
+			if (Document.textures.Has(MetallicRoughness.metallicRoughnessTexture.textureId)) {
+				PushTab();
+				Process(Document.textures.Get(MetallicRoughness.metallicRoughnessTexture.textureId), "MetallicRoughnessTexture");
+				Tabs(); std::cout << "\tTexCoord = " << MetallicRoughness.metallicRoughnessTexture.texCoord << std::endl;
+				PopTab();
+			}
 		}
 		virtual void Process(const Microsoft::glTF::Material& Material) {
 			Tabs(); std::cout << "Material [" << Material.id << "] : " << Material.name << std::endl;
 
-			Material.metallicRoughness.baseColorFactor;
-			Material.metallicRoughness.baseColorTexture.textureId;
-			Material.metallicRoughness.baseColorTexture.texCoord;
-			Material.metallicRoughness.metallicFactor;
-			Material.metallicRoughness.roughnessFactor;
-			Material.metallicRoughness.metallicRoughnessTexture.textureId;
-			Material.metallicRoughness.metallicRoughnessTexture.texCoord;
+			PushTab();
+			Process(Material.metallicRoughness);
+			PopTab();
 
-			Material.normalTexture.scale;
-			
-			Material.occlusionTexture.strength;
-			
-			Material.emissiveTexture.textureId;
-			Material.emissiveTexture.texCoord;
-
-			Material.emissiveFactor;
-			switch (Material.alphaMode) {
-			case Microsoft::glTF::AlphaMode::ALPHA_UNKNOWN: break;
-			case Microsoft::glTF::AlphaMode::ALPHA_OPAQUE: 
-				Microsoft::glTF::ALPHAMODE_NAME_OPAQUE;
-				break;
-			case Microsoft::glTF::AlphaMode::ALPHA_BLEND: 
-				Microsoft::glTF::ALPHAMODE_NAME_BLEND;
-				break;
-			case Microsoft::glTF::AlphaMode::ALPHA_MASK: 
-				Microsoft::glTF::ALPHAMODE_NAME_MASK;
-				break;
+			if (Document.textures.Has(Material.normalTexture.textureId)) {
+				PushTab();
+				Process(Document.textures.Get(Material.normalTexture.textureId), "NormalTexture");
+				Tabs(); std::cout << "\tTexCoord = " << Material.normalTexture.texCoord << std::endl;
+				Tabs(); std::cout << "\tScale = " << Material.normalTexture.scale << std::endl;
+				PopTab();
 			}
 
-			Material.alphaCutoff;
-			Material.doubleSided;
+			if (Document.textures.Has(Material.occlusionTexture.textureId)) {
+				PushTab();
+				Process(Document.textures.Get(Material.occlusionTexture.textureId), "OcclusionTexture");
+				Tabs(); std::cout << "\tTexCoord = " << Material.occlusionTexture.texCoord << std::endl;
+				Tabs(); std::cout << "\tStrength = " << Material.occlusionTexture.strength << std::endl;
+				PopTab();
+			}
 
-			const auto Texures = Material.GetTextures();
+			if (Document.textures.Has(Material.emissiveTexture.textureId)) {
+				PushTab();
+				Process(Document.textures.Get(Material.emissiveTexture.textureId), "EmissiveTexture");
+				Tabs(); std::cout << "\tTexCoord = " << Material.emissiveTexture.texCoord << std::endl;
+				PopTab();
+			}
+
+			Tabs(); std::cout << "\tEmissiveFactor = " << Material.emissiveFactor << std::endl;
+			Tabs(); std::cout << "\tAlphaCutoff = " << Material.alphaCutoff << std::endl;
+			Tabs(); std::cout << "\tDoubleSided = " << (Material.doubleSided ? "true" : "false") << std::endl;
+			Tabs(); std::cout << "\tAlphaMode = ";
+			switch (Material.alphaMode) {
+			case Microsoft::glTF::AlphaMode::ALPHA_UNKNOWN:
+				std::cout << "UNKNOWN"; 
+				break;
+			case Microsoft::glTF::AlphaMode::ALPHA_OPAQUE: 
+				std::cout << Microsoft::glTF::ALPHAMODE_NAME_OPAQUE; 
+				break;
+			case Microsoft::glTF::AlphaMode::ALPHA_BLEND:
+				std::cout << Microsoft::glTF::ALPHAMODE_NAME_BLEND;
+				break;
+			case Microsoft::glTF::AlphaMode::ALPHA_MASK:
+				std::cout << Microsoft::glTF::ALPHAMODE_NAME_MASK;
+				break;
+			}
+			std::cout << std::endl;
+
+			//!< マテリアル中のテクスチャをなめる場合に便利
+			for (const auto& i : Material.GetTextures()) {
+				switch (i.second)
+				{
+				case Microsoft::glTF::TextureType::BaseColor: break;
+				case Microsoft::glTF::TextureType::MetallicRoughness: break;
+				case Microsoft::glTF::TextureType::Normal: break;
+				case Microsoft::glTF::TextureType::Occlusion: break;
+				case Microsoft::glTF::TextureType::Emissive: break;
+				default: break;
+				}
+			}
 		}
 		virtual void Process(const Microsoft::glTF::Buffer& Buffer) {
 			Tabs(); std::cout << "Buffer [" << Buffer.id << "] : " << Buffer.name << std::endl;
@@ -114,8 +262,8 @@ namespace Gltf {
 				PopTab();
 			}
 		}
-		virtual void Process(const Microsoft::glTF::Accessor& Accessor) {
-			Tabs(); std::cout << "Accessor [" << Accessor.id << "] : " << Accessor.name << std::endl;
+		virtual void Process(const Microsoft::glTF::Accessor& Accessor, std::string_view name = "") {
+			Tabs(); std::cout << "Accessor [" << Accessor.id << "] : " << (empty(Accessor.name) ? name : Accessor.name) << std::endl;
 
 			Tabs(); std::cout << "\tComponentType = " << Microsoft::glTF::Accessor::GetComponentTypeName(Accessor.componentType) << std::endl;
 			switch (Accessor.componentType)
@@ -157,11 +305,46 @@ namespace Gltf {
 		}
 		virtual void Process(const Microsoft::glTF::Camera& Camera) {
 			Tabs(); std::cout << "Camera [" << Camera.id << "] : " << Camera.name << std::endl;
-			//!< #TODO
+
+			switch (Camera.projection->GetProjectionType()) 
+			{
+			case Microsoft::glTF::ProjectionType::PERSPECTIVE:
+				{
+					const auto& Perspective = Camera.GetPerspective();
+					Tabs(); std::cout << "\tZFar = " << Perspective.zfar << std::endl;
+					Tabs(); std::cout << "\tZNear = " << Perspective.znear << std::endl;
+					Tabs(); std::cout << "\tAspectRatio = " << Perspective.aspectRatio << std::endl;
+					Tabs(); std::cout << "\tYFov = " << Perspective.yfov << std::endl;
+			}
+				break;
+			case Microsoft::glTF::ProjectionType::ORTHOGRAPHIC:
+				{
+					const auto& Orthographic =  Camera.GetOrthographic();
+					Tabs(); std::cout << "\tZFar = " << Orthographic.zfar << std::endl;
+					Tabs(); std::cout << "\tZNear = " << Orthographic.znear << std::endl;
+					Tabs(); std::cout << "\tXMag = " << Orthographic.xmag << std::endl;
+					Tabs(); std::cout << "\tYMag = " << Orthographic.ymag << std::endl;
+				}
+				break;
+			default: break;
+			} 
 		}
 		virtual void Process(const Microsoft::glTF::Skin& Skin) {
 			Tabs(); std::cout << "Skin [" << Skin.id << "] : " << Skin.name << std::endl;
-			//!< #TODO
+			
+			if (Document.accessors.Has(Skin.inverseBindMatricesAccessorId)) {
+				PushTab();
+				Process(Document.accessors.Get(Skin.inverseBindMatricesAccessorId));
+				PopTab();
+			}
+
+			Tabs(); std::cout << "SkeletonId = " << Skin.skeletonId << std::endl;
+
+			Tabs(); std::cout << "jointIds = ";
+			for (const auto& i : Skin.jointIds) {
+				std::cout << i << ", ";
+			}
+			std::cout << std::endl;
 		}
 		virtual void Process(const Microsoft::glTF::MeshPrimitive& Primitive) {
 			Tabs(); std::cout << "\tMeshMode = ";
@@ -205,11 +388,12 @@ namespace Gltf {
 				case Microsoft::glTF::ComponentType::COMPONENT_UNSIGNED_SHORT:
 					switch (Accessor.type)
 					{
-					case Microsoft::glTF::AccessorType::TYPE_SCALAR: 
-						{
-							const auto Data = ResourceReader->ReadBinaryData<uint16_t>(Document, Accessor);
-							assert(Accessor.count == size(Data) && "");
-						}
+					case Microsoft::glTF::AccessorType::TYPE_SCALAR:
+						//!< 埋め込まれていないとこの取り方はできない？
+						//{
+						//	const auto Data = ResourceReader->ReadBinaryData<uint16_t>(Document, Accessor);
+						//	assert(Accessor.count == size(Data) && "");
+						//}
 						break;
 					default: break;
 					}
@@ -218,10 +402,11 @@ namespace Gltf {
 					switch (Accessor.type)
 					{
 					case Microsoft::glTF::AccessorType::TYPE_SCALAR: 
-						{
-							const auto Data = ResourceReader->ReadBinaryData<uint32_t>(Document, Accessor);
-							assert(Accessor.count == size(Data) && "");
-						}
+						//!< 埋め込まれていないとこの取り方はできない？
+						//{
+						//	const auto Data = ResourceReader->ReadBinaryData<uint32_t>(Document, Accessor);
+						//	assert(Accessor.count == size(Data) && "");
+						//}
 						break;
 					default: break;
 					}
@@ -229,11 +414,20 @@ namespace Gltf {
 				default: break;
 				}
 
-				if (Document.bufferViews.Has(Accessor.bufferViewId)) {
-					assert(Microsoft::glTF::BufferViewTarget::ELEMENT_ARRAY_BUFFER == Document.bufferViews.Get(Accessor.bufferViewId).target && "");
+				//!< UNKNOWN_BUFFER が返る事が普通にあるので assert しない
+				//if (Document.bufferViews.Has(Accessor.bufferViewId)) { assert(Microsoft::glTF::BufferViewTarget::ELEMENT_ARRAY_BUFFER == Document.bufferViews.Get(Accessor.bufferViewId).target && ""); }
+			}
+
+			//!< バーテックス
+#if true
+			if (size(Primitive.attributes)) {
+				for (const auto& i : Primitive.attributes) {
+					PushTab();
+					Process(Document.accessors.Get(i.second), i.first);
+					PopTab();
 				}
 			}
-			//!< バーテックス
+#else
 			{
 				std::string AccessorId;
 				if (Primitive.TryGetAttributeAccessorId(Microsoft::glTF::ACCESSOR_POSITION, AccessorId))
@@ -314,14 +508,7 @@ namespace Gltf {
 					PopTab();
 				}
 			}
-
-			if (size(Primitive.attributes)) {
-				Tabs(); std::cout << "\tAttributes" << std::endl;
-				for (const auto& i : Primitive.attributes) {
-					Tabs(); std::cout << "\t\t<" << i.first << ", " << i.second << ">" << std::endl;
-				}
-			}
-
+#endif
 			if (size(Primitive.targets)) {
 				Tabs(); std::cout << "\tMorphTarget" << std::endl;
 				for (const auto& i : Primitive.targets) {
@@ -357,11 +544,11 @@ namespace Gltf {
 				std::cout << ")" << std::endl;
 			}
 
-			PushTab();
 			for (const auto& i : Mesh.primitives) {
+				PushTab();
 				Process(i);
+				PopTab();
 			}
-			PopTab();
 		}
 		virtual void Process(const Microsoft::glTF::Node& Node) {
 			Tabs(); std::cout << "Node [" << Node.id << "] : " << Node.name << std::endl;
@@ -390,12 +577,12 @@ namespace Gltf {
 			}
 			if (Document.cameras.Has(Node.cameraId)) {
 				PushTab();
-				Process(Document.cameras.Get(Node.cameraId)); //!< #TODO
+				Process(Document.cameras.Get(Node.cameraId));
 				PopTab();
 			}
 			if (Document.skins.Has(Node.skinId)) {
 				PushTab();
-				Process(Document.skins.Get(Node.skinId)); //!< #TODO
+				Process(Document.skins.Get(Node.skinId));
 				PopTab();
 			}
 
@@ -421,6 +608,100 @@ namespace Gltf {
 				Process(Document.nodes.Get(i));
 			}
 			PopTab();
+		}
+		virtual void Process(const Microsoft::glTF::AnimationSampler& Sampler) {
+			Tabs(); std::cout << "AnimationSampler [" << Sampler.id << "]" << std::endl;
+
+			Tabs(); std::cout << "\tInterpolation = ";
+			switch (Sampler.interpolation)
+			{
+			case Microsoft::glTF::InterpolationType::INTERPOLATION_UNKNOWN:
+				std::cout << "UNKNOWN";
+				break;
+			case Microsoft::glTF::InterpolationType::INTERPOLATION_LINEAR:
+				std::cout << Microsoft::glTF::INTERPOLATIONTYPE_NAME_LINEAR;
+				break;
+			case Microsoft::glTF::InterpolationType::INTERPOLATION_STEP:
+				std::cout << Microsoft::glTF::INTERPOLATIONTYPE_NAME_STEP;
+				break;
+			case Microsoft::glTF::InterpolationType::INTERPOLATION_CUBICSPLINE:
+				std::cout << Microsoft::glTF::INTERPOLATIONTYPE_NAME_CUBICSPLINE;
+				break;
+			default: break;
+			}
+			std::cout << std::endl;
+
+			if (Document.accessors.Has(Sampler.inputAccessorId)) {
+				PushTab();
+				Process(Document.accessors.Get(Sampler.inputAccessorId), "Input");
+				PopTab();
+			}
+
+			if (Document.accessors.Has(Sampler.outputAccessorId)) {
+				PushTab();
+				Process(Document.accessors.Get(Sampler.outputAccessorId), "Output");
+				PopTab();
+			}
+		}
+		virtual void Process(const Microsoft::glTF::Animation& Animation, const Microsoft::glTF::AnimationChannel& Channel) {
+			Tabs(); std::cout << "AnimationChannel [" << Channel.id << "]" << std::endl;
+
+			Tabs(); std::cout << "\tTarget.NodeId = [" << Channel.target.nodeId << "]" << std::endl;
+			Tabs(); std::cout << "\tTarget.Path = ";
+			switch (Channel.target.path)
+			{
+			case Microsoft::glTF::TargetPath::TARGET_UNKNOWN:
+				std::cout << "UNKNOWN";
+				break;
+			case Microsoft::glTF::TargetPath::TARGET_TRANSLATION:
+				std::cout << Microsoft::glTF::TARGETPATH_NAME_TRANSLATION;
+				break;
+			case Microsoft::glTF::TargetPath::TARGET_ROTATION:
+				std::cout << Microsoft::glTF::TARGETPATH_NAME_ROTATION;
+				break;
+			case Microsoft::glTF::TargetPath::TARGET_SCALE:
+				std::cout << Microsoft::glTF::TARGETPATH_NAME_SCALE;
+				break;
+			case Microsoft::glTF::TargetPath::TARGET_WEIGHTS:
+				std::cout << Microsoft::glTF::TARGETPATH_NAME_WEIGHTS;
+				break;
+			}
+			std::cout << std::endl;
+
+			if (Animation.samplers.Has(Channel.samplerId)) {
+				PushTab();
+				Process(Animation.samplers.Get(Channel.samplerId));
+				PopTab();
+			}
+		}
+		virtual void Process(const Microsoft::glTF::Animation& Animation) {
+			Tabs(); std::cout << "Animation [" << Animation.id << "] : " << Animation.name << std::endl;
+
+			for (auto i = 0; i < Animation.channels.Size(); ++i) {
+				PushTab();
+				Process(Animation, Animation.channels[i]);
+				PopTab();
+			}
+
+			//for (auto i = 0; i < Animation.samplers.Size();++i) {}
+		}
+		virtual void ProcessScene() {
+			if (Document.HasDefaultScene()) {
+				//!< デフォルトシーンがある場合
+				Process(Document.scenes.Get(Document.GetDefaultScene().id));
+			}
+			else
+			{
+				//!< デフォルトシーンが無い場合は全シーン
+				for (const auto& i : Document.scenes.Elements()) {
+					Process(i);
+				}
+			}
+		}
+		virtual void ProcessAnimation() {
+			for (const auto& i : Document.animations.Elements()) {
+				Process(i);
+			}
 		}
 		virtual void Process() {
 			std::cout << "Version:    " << Document.asset.version << std::endl;
@@ -452,33 +733,10 @@ namespace Gltf {
 			std::cout << "Animation Count: " << Document.animations.Size() << std::endl;
 
 			//!< シーン
-			if (Document.HasDefaultScene()) {
-				//!< デフォルトシーンがある場合
-				Process(Document.scenes.Get(Document.GetDefaultScene().id));
-			}
-			else 
-			{
-				//!< デフォルトシーンが無い場合は全シーン
-				for (const auto& i : Document.scenes.Elements()) {
-					Process(i);
-				}
-			}
+			//ProcessScene();
 
-#if false
-			//!< 各種リストアップ
-			for (const auto& i : Document.images.Elements()) {
-				Process(i);
-			}
-			for (const auto& i : Document.materials.Elements()) {
-				Process(i);
-			}
-			for (const auto& i : Document.meshes.Elements()) {
-				Process(i);
-			}
-			for (const auto& i : Document.nodes.Elements()) {
-				Process(i);
-			}
-#endif
+			//!< アニメーション
+			//ProcessAnimation();
 		}
 
 		//!< リンカエラー 4099 が出る(#pragma では回避できない)ので以下のようにしている 

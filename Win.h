@@ -105,6 +105,7 @@ constexpr std::string_view DDS_DIR = "DDS";
 constexpr std::string_view DRC_DIR = "DRC";
 constexpr std::string_view FBX_DIR = "FBX";
 constexpr std::string_view GLTF_DIR = "GLTF";
+constexpr std::string_view GLTF_SAMPLE_DIR = "glTF-Sample-Models";
 
 class Win
 {
