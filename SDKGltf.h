@@ -733,10 +733,10 @@ namespace Gltf {
 			std::cout << "Animation Count: " << Document.animations.Size() << std::endl;
 
 			//!< シーン
-			//ProcessScene();
+			ProcessScene();
 
 			//!< アニメーション
-			//ProcessAnimation();
+			ProcessAnimation();
 		}
 
 		//!< リンカエラー 4099 が出る(#pragma では回避できない)ので以下のようにしている 

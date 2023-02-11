@@ -140,6 +140,12 @@
     <CustomBuild Include="GltfVK.vert">
       <Filter>Shader Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="GltfVK_P.frag">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="GltfVK_P.vert">
+      <Filter>Shader Files</Filter>
+    </CustomBuild>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

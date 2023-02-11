@@ -45,7 +45,7 @@ public:
 			}
 		}
 		const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
-		std::transform(begin(Vs), end(Vs), begin(Vs), [&](const glm::vec3& rhs) { return rhs / Bound - glm::vec3(0.0f, (Max.y - Min.y) * 0.5f, Min.z) / Bound; });
+		std::ranges::transform(Vs, std::begin(Vs), [&](const glm::vec3& rhs) { return rhs / Bound - glm::vec3(0.0f, (Max.y - Min.y) * 0.5f, Min.z) / Bound; });
 
 		FbxArray<FbxVector4> PVNs;
 		Mesh->GetPolygonVertexNormals(PVNs);

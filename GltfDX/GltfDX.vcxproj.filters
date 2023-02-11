@@ -134,6 +134,12 @@
     <FxCompile Include="GltfDX.vs.hlsl">
       <Filter>Shader Files</Filter>
     </FxCompile>
+    <FxCompile Include="GltfDX_P.ps.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
+    <FxCompile Include="GltfDX_P.vs.hlsl">
+      <Filter>Shader Files</Filter>
+    </FxCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

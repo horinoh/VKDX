@@ -14,7 +14,7 @@ private:
 public:
 	std::vector<uint32_t> Indices;
 	std::vector<glm::vec3> Vertices;
-	std::vector<glm::vec3> Normals;
+	//std::vector<glm::vec3> Normals;
 
 #pragma region GLTF
 	virtual void LoadGltf() = 0;
@@ -30,9 +30,9 @@ public:
 		VK::Scoped<StagingBuffer> Staging_Vertex(Device);
 		Staging_Vertex.Create(Device, PDMP, TotalSizeOf(Vertices), data(Vertices));
 
-		VertexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Normals));
-		VK::Scoped<StagingBuffer> Staging_Normal(Device);
-		Staging_Normal.Create(Device, PDMP, TotalSizeOf(Normals), data(Normals));
+		//VertexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Normals));
+		//VK::Scoped<StagingBuffer> Staging_Normal(Device);
+		//Staging_Normal.Create(Device, PDMP, TotalSizeOf(Normals), data(Normals));
 
 		IndexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Indices));
 		VK::Scoped<StagingBuffer> Staging_Index(Device);
@@ -46,7 +46,7 @@ public:
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 			VertexBuffers[0].PopulateCopyCommand(CB, TotalSizeOf(Vertices), Staging_Vertex.Buffer);
-			VertexBuffers[1].PopulateCopyCommand(CB, TotalSizeOf(Normals), Staging_Normal.Buffer);
+			//VertexBuffers[1].PopulateCopyCommand(CB, TotalSizeOf(Normals), Staging_Normal.Buffer);
 			IndexBuffers.back().PopulateCopyCommand(CB, TotalSizeOf(Indices), Staging_Index.Buffer);
 			IndirectBuffers.back().PopulateCopyCommand(CB, sizeof(DIIC), Staging_Indirect.Buffer);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
@@ -55,8 +55,10 @@ public:
 	virtual void CreatePipeline() override {
 		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv")))
+			//VK::CreateShaderModule(data(ShaderPath + TEXT("_PN.vert.spv"))),
+			//VK::CreateShaderModule(data(ShaderPath + TEXT("_PN.frag.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT("_P.vert.spv"))),
+			VK::CreateShaderModule(data(ShaderPath + TEXT("_P.frag.spv"))),
 		};
 		const std::array PSSCIs = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
@@ -64,11 +66,11 @@ public:
 		};
 		const std::vector VIBDs = {
 			VkVertexInputBindingDescription({.binding = 0, .stride = sizeof(Vertices[0]), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
-			VkVertexInputBindingDescription({.binding = 1, .stride = sizeof(Normals[0]), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
+			//VkVertexInputBindingDescription({.binding = 1, .stride = sizeof(Normals[0]), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX }),
 		};
 		const std::vector VIADs = {
 			VkVertexInputAttributeDescription({.location = 0, .binding = 0, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 }),
-			VkVertexInputAttributeDescription({.location = 1, .binding = 1, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 }),
+			//VkVertexInputAttributeDescription({.location = 1, .binding = 1, .format = VK_FORMAT_R32G32B32_SFLOAT, .offset = 0 }),
 		};
 		constexpr VkPipelineRasterizationStateCreateInfo PRSCI = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -114,10 +116,10 @@ public:
 			vkCmdBindPipeline(SCB, VK_PIPELINE_BIND_POINT_GRAPHICS, Pipelines[0]);
 
 			const std::array VBs = { VertexBuffers[0].Buffer };
-			const std::array NBs = { VertexBuffers[1].Buffer };
+			//const std::array NBs = { VertexBuffers[1].Buffer };
 			const std::array Offsets = { VkDeviceSize(0) };
 			vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(size(VBs)), data(VBs), data(Offsets));
-			vkCmdBindVertexBuffers(SCB, 1, static_cast<uint32_t>(size(NBs)), data(NBs), data(Offsets));
+			//vkCmdBindVertexBuffers(SCB, 1, static_cast<uint32_t>(size(NBs)), data(NBs), data(Offsets));
 			vkCmdBindIndexBuffer(SCB, IndexBuffers[0].Buffer, 0, VK_INDEX_TYPE_UINT32);
 
 			vkCmdDrawIndexedIndirect(SCB, IndirectBuffers[0].Buffer, 0, 1, 0);
@@ -173,9 +175,10 @@ public:
 				default: break;
 				}
 
-				if (Document.accessors.Has(j.indicesAccessorId)) {
-					const auto& Accessor = Document.accessors.Get(j.indicesAccessorId);
-					if (empty(Indices)) {
+				//!< Å‰‚Ì‚â‚Â‚¾‚¯
+				if (empty(Indices)) {
+					if (Document.accessors.Has(j.indicesAccessorId)) {
+						const auto& Accessor = Document.accessors.Get(j.indicesAccessorId);
 						Indices.resize(Accessor.count);
 
 						switch (Accessor.componentType)
@@ -209,10 +212,11 @@ public:
 				}
 
 				std::string AccessorId;
-				if (j.TryGetAttributeAccessorId(Microsoft::glTF::ACCESSOR_POSITION, AccessorId))
-				{
-					const auto& Accessor = Document.accessors.Get(AccessorId);
-					if (empty(Vertices)) {
+				//!< Å‰‚Ì‚â‚Â‚¾‚¯
+				if (empty(Vertices)) {
+					if (j.TryGetAttributeAccessorId(Microsoft::glTF::ACCESSOR_POSITION, AccessorId))
+					{
+						const auto& Accessor = Document.accessors.Get(AccessorId);
 						Vertices.resize(Accessor.count);
 						switch (Accessor.componentType)
 						{
@@ -223,6 +227,19 @@ public:
 							{
 								const auto Data = ResourceReader->ReadBinaryData<float>(Document, Accessor);
 								std::memcpy(data(Vertices), data(Data), TotalSizeOf(Vertices));
+
+								{
+									auto Max = (std::numeric_limits<glm::vec3>::min)();
+									auto Min = (std::numeric_limits<glm::vec3>::max)();
+
+									for (const auto& k : Vertices) {
+										Min = VK::Min(Min, k);
+										Max = VK::Max(Max, k);
+									}
+
+									const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
+									std::ranges::transform(Vertices, std::begin(Vertices), [&](const glm::vec3& rhs) { return rhs / Bound - glm::vec3(0.0f, (Max.y - Min.y) * 0.5f, Min.z) / Bound; });
+								}
 							}
 							break;
 							default: break;
@@ -233,37 +250,36 @@ public:
 					}
 				}
 
-				if (j.TryGetAttributeAccessorId(Microsoft::glTF::ACCESSOR_NORMAL, AccessorId))
-				{
-					const auto& Accessor = Document.accessors.Get(AccessorId);
-					if (empty(Normals)) {
-						Normals.resize(Accessor.count);
-						switch (Accessor.componentType)
-						{
-						case Microsoft::glTF::ComponentType::COMPONENT_FLOAT:
-							switch (Accessor.type)
-							{
-							case Microsoft::glTF::AccessorType::TYPE_VEC3:
-							{
-								const auto Data = ResourceReader->ReadBinaryData<float>(Document, Accessor);
-								std::memcpy(data(Normals), data(Data), TotalSizeOf(Normals));
-							}
-							break;
-							default: break;
-							}
-							break;
-						default: break;
-						}
-					}
-				}
-
+				//!< Å‰‚Ì‚â‚Â‚¾‚¯
+				//if (empty(Normals)) {
+				//	if (j.TryGetAttributeAccessorId(Microsoft::glTF::ACCESSOR_NORMAL, AccessorId))
+				//	{
+				//		const auto& Accessor = Document.accessors.Get(AccessorId);
+				//		Normals.resize(Accessor.count);
+				//		switch (Accessor.componentType)
+				//		{
+				//		case Microsoft::glTF::ComponentType::COMPONENT_FLOAT:
+				//			switch (Accessor.type)
+				//			{
+				//			case Microsoft::glTF::AccessorType::TYPE_VEC3:
+				//			{
+				//				const auto Data = ResourceReader->ReadBinaryData<float>(Document, Accessor);
+				//				std::memcpy(data(Normals), data(Data), TotalSizeOf(Normals));
+				//			}
+				//			break;
+				//			default: break;
+				//			}
+				//			break;
+				//		default: break;
+				//		}
+				//	}
+				//}
 			}
 		}
-
 	}
 	virtual void LoadGltf() override {
 		{
-			std::filesystem::path Path = "..\\glTF-Sample-Models\\2.0";
+			std::filesystem::path Path = GLTF_SAMPLE_DIR;
 
 			//Load(Path / "Duck//glTF-Embedded//Duck.gltf");
 			//Load(Path / "Suzanne//glTF//Suzanne.gltf");
@@ -276,7 +292,7 @@ public:
 			//Load(Path / "SimpleSkin//glTF-Embedded//SimpleSkin.gltf");
 		}
 		{
-			std::filesystem::path Path = "..\\GLTF";
+			std::filesystem::path Path = GLTF_DIR;
 
 			//Load(Path / "bunny.gltf");
 			Load(Path / "dragon.gltf");
