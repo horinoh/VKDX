@@ -118,6 +118,12 @@ public:
 	static constexpr DirectX::XMFLOAT3 Min(const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3((std::min)(lhs.x, rhs.x), (std::min)(lhs.y, rhs.y), (std::min)(lhs.z, rhs.z)); }
 	static constexpr DirectX::XMFLOAT3 Max(const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3((std::max)(lhs.x, rhs.x), (std::max)(lhs.y, rhs.y), (std::max)(lhs.z, rhs.z)); }
 
+	static void AdjustScale(std::vector<DirectX::XMFLOAT3>& Vertices, const DirectX::XMFLOAT3& Min, const DirectX::XMFLOAT3& Max, const float Scale = 1.0f) {
+		const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z);
+		const auto A = Scale / Bound;
+		std::ranges::transform(Vertices, std::begin(Vertices), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x * A, (rhs.y - (Max.y - Min.y) * 0.5f) * A, (rhs.z - Min.z) * A); });
+	}
+
 	class ResourceBase
 	{
 	public:

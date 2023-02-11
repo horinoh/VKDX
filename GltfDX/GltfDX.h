@@ -217,14 +217,11 @@ public:
 								{
 									auto Max = (std::numeric_limits<DirectX::XMFLOAT3>::min)();
 									auto Min = (std::numeric_limits<DirectX::XMFLOAT3>::max)();
-
 									for (const auto& k : Vertices) {
 										Min = DX::Min(Min, k);
 										Max = DX::Max(Max, k);
 									}
-
-									const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
-									std::ranges::transform(Vertices, std::begin(Vertices), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Bound, (rhs.y - (Max.y - Min.y) * 0.5f) / Bound, (rhs.z - Min.z) / Bound); });
+									AdjustScale(Vertices, Min, Max);
 								}
 							}
 							break;
@@ -326,7 +323,7 @@ public:
 						Max = DX::Max(Max, j);
 					}
 					const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
-					std::transform(begin(Vertices), end(Vertices), begin(Vertices), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Bound, (rhs.y - (Max.y - Min.y) * 0.5f) / Bound, (rhs.z - Min.z) / Bound); });
+					std::ranges::transform(Vertices, std::begin(Vertices), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Bound, (rhs.y - (Max.y - Min.y) * 0.5f) / Bound, (rhs.z - Min.z) / Bound); });
 				}
 				if ("NORMAL" == i.first) {
 					Normals.resize(Acc.count);

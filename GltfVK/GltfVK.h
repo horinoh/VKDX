@@ -231,14 +231,11 @@ public:
 								{
 									auto Max = (std::numeric_limits<glm::vec3>::min)();
 									auto Min = (std::numeric_limits<glm::vec3>::max)();
-
 									for (const auto& k : Vertices) {
 										Min = VK::Min(Min, k);
 										Max = VK::Max(Max, k);
 									}
-
-									const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
-									std::ranges::transform(Vertices, std::begin(Vertices), [&](const glm::vec3& rhs) { return rhs / Bound - glm::vec3(0.0f, (Max.y - Min.y) * 0.5f, Min.z) / Bound; });
+									AdjustScale(Vertices, Min, Max);
 								}
 							}
 							break;
