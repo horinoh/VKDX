@@ -12,7 +12,10 @@ private:
 	using Super = DXExtDepth;
 
 public:
-	std::vector<UINT32> Indices;
+	std::vector<std::vector<std::byte>> Buffers;
+
+	std::vector<UINT16> Indices16;
+	std::vector<UINT32> Indices32;
 	std::vector<DirectX::XMFLOAT3> Vertices;
 	//std::vector<DirectX::XMFLOAT3> Normals;
 
@@ -35,11 +38,24 @@ public:
 		//UploadResource Upload_Normal;
 		//Upload_Normal.Create(COM_PTR_GET(Device), TotalSizeOf(Normals), data(Normals));
 
-		IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Indices), DXGI_FORMAT_R32_UINT);
 		UploadResource Upload_Index;
-		Upload_Index.Create(COM_PTR_GET(Device), TotalSizeOf(Indices), data(Indices));
+		UINT32 IndicesCount = 0;
+		size_t IndicesSize = 0;
+		if (!empty(Indices16)) {
+			IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Indices16), DXGI_FORMAT_R16_UINT);
+			Upload_Index.Create(COM_PTR_GET(Device), TotalSizeOf(Indices16), data(Indices16));
+			IndicesCount = static_cast<UINT32>(size(Indices16));
+			IndicesSize = TotalSizeOf(Indices16);
+		}
+		if (!empty(Indices32)) {
+			IndexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Indices32), DXGI_FORMAT_R32_UINT);
+			Upload_Index.Create(COM_PTR_GET(Device), TotalSizeOf(Indices32), data(Indices32));
+			IndicesCount = static_cast<UINT32>(size(Indices32));
+			IndicesSize = TotalSizeOf(Indices32);
+		}
+		assert(IndicesCount && IndicesSize && "");
 
-		const D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = static_cast<UINT32>(size(Indices)), .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
+		const D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = IndicesCount, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
 		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA);
 		UploadResource Upload_Indirect;
 		Upload_Indirect.Create(COM_PTR_GET(Device), sizeof(DIA), &DIA);
@@ -47,7 +63,7 @@ public:
 		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
 			VertexBuffers[0].PopulateCopyCommand(GCL, TotalSizeOf(Vertices), COM_PTR_GET(Upload_Vertex.Resource));
 			//VertexBuffers[1].PopulateCopyCommand(GCL, TotalSizeOf(Normals), COM_PTR_GET(Upload_Normal.Resource));
-			IndexBuffers.back().PopulateCopyCommand(GCL, TotalSizeOf(Indices), COM_PTR_GET(Upload_Index.Resource));
+			IndexBuffers.back().PopulateCopyCommand(GCL, IndicesSize, COM_PTR_GET(Upload_Index.Resource));
 			IndirectBuffers.back().PopulateCopyCommand(GCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
 		} VERIFY_SUCCEEDED(GCL->Close());
 		DX::ExecuteAndWait(CQ, GCL, COM_PTR_GET(GraphicsFence));
@@ -145,6 +161,28 @@ private:
 public:
 	virtual void Process() override {
 		Super::Process();
+		
+		Buffers.resize(Document.buffers.Size());
+		for (const auto& i : Document.buffers.Elements()) {
+			//!< バッファが URI 指定の場合はファイルを読み込んでおく
+			if (!empty(i.uri)) {
+				std::cout << "Uri = " << i.uri.substr(0, 32) << std::endl;
+				if (std::filesystem::exists(std::filesystem::path(i.uri))) {
+					std::ifstream In(std::filesystem::path(i.uri), std::ios::binary);
+					if (!In.fail()) {
+						In.seekg(0, std::ios_base::end);
+						const auto Size = In.tellg();
+						if (Size) {
+							In.seekg(0, std::ios_base::beg);
+						}
+
+						auto& Buf = Buffers[Document.buffers.GetIndex(i.id)];
+						Buf.resize(Size);
+						In.read(reinterpret_cast<char*>(data(Buf)), Size);
+					}
+				}
+			}
+		}
 
 		for (const auto& i : Document.meshes.Elements()) {
 			for (const auto& j : i.primitives) {
@@ -161,12 +199,9 @@ public:
 				}
 
 				//!< 最初のやつだけ
-				if (empty(Indices)) {
+				if (empty(Indices16)&& empty(Indices32)) {
 					if (Document.accessors.Has(j.indicesAccessorId)) {
 						const auto& Accessor = Document.accessors.Get(j.indicesAccessorId);
-
-						Indices.resize(Accessor.count);
-
 						switch (Accessor.componentType)
 						{
 						case Microsoft::glTF::ComponentType::COMPONENT_UNSIGNED_SHORT:
@@ -174,7 +209,25 @@ public:
 							{
 							case Microsoft::glTF::AccessorType::TYPE_SCALAR:
 							{
-								const auto Data = ResourceReader->ReadBinaryData<uint16_t>(Document, Accessor);
+								Indices16.resize(Accessor.count);
+
+								if (Document.bufferViews.Has(Accessor.bufferViewId)) {
+									const auto& BufferView = Document.bufferViews.Get(Accessor.bufferViewId);
+									if (Document.buffers.Has(BufferView.bufferId)) {
+										const auto& Buffer = Document.buffers.Get(BufferView.bufferId);
+										if (!empty(Buffer.uri)) {
+											//!< URI 指定のものはファイルから読み込んだバッファを使用する
+											if (0 == BufferView.byteStride) {
+												//std::copy(&Buffers[Document.buffers.GetIndex(Buffer.id)][BufferView.byteOffset], &Buffers[Document.buffers.GetIndex(Buffer.id)][BufferView.byteOffset + BufferView.byteLength], std::begin(Indices16));
+											}
+										}
+										else {
+											//!< 埋め込まれている場合は以下のように取得できる
+											const auto Data = ResourceReader->ReadBinaryData<uint16_t>(Document, Accessor);
+											std::ranges::copy(Data, std::begin(Indices16));
+										}
+									}
+								}
 							}
 							break;
 							default: break;
@@ -185,8 +238,9 @@ public:
 							{
 							case Microsoft::glTF::AccessorType::TYPE_SCALAR:
 							{
+								Indices32.resize(Accessor.count);
 								const auto Data = ResourceReader->ReadBinaryData<uint32_t>(Document, Accessor);
-								std::ranges::copy(Data, std::begin(Indices));
+								std::ranges::copy(Data, std::begin(Indices32));
 							}
 							break;
 							default: break;
@@ -261,11 +315,13 @@ public:
 		}
 	}
 	virtual void LoadGltf() override {
+		const auto CurPath = std::filesystem::current_path();
 		{
-			std::filesystem::path Path = GLTF_SAMPLE_DIR;
+			//!< データが埋め込まれていない(別ファイルになっている)タイプの場合は読み込む必要があるので、カレントパスを変更しておく
+			//std::filesystem::current_path(std::filesystem::path(GLTF_SAMPLE_DIR) / "Suzanne" / "glTF");
+			//Load("Suzanne.gltf");
 
 			//Load(Path / "Duck//glTF-Embedded//Duck.gltf");
-			//Load(Path / "Suzanne//glTF//Suzanne.gltf");
 			//Load(Path / "WaterBottle//glTF-Binary//WaterBottle.glb");
 			//Load(Path / "AnimatedTriangle//glTF-Embedded//AnimatedTriangle.gltf");
 
@@ -280,6 +336,7 @@ public:
 			//Load(Path / "bunny.gltf");
 			Load(Path / "dragon.gltf");
 		}
+		std::filesystem::current_path(CurPath);
 	}
 #pragma endregion
 };

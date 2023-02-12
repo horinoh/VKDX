@@ -12,7 +12,11 @@ private:
 	using Super = VKExtDepth;
 
 public:
-	std::vector<uint32_t> Indices;
+	std::vector<std::vector<std::byte>> Buffers;
+
+	VkIndexType IndexType = VkIndexType::VK_INDEX_TYPE_UINT32;
+	std::vector<uint16_t> Indices16;
+	std::vector<uint32_t> Indices32;
 	std::vector<glm::vec3> Vertices;
 	//std::vector<glm::vec3> Normals;
 
@@ -34,11 +38,26 @@ public:
 		//VK::Scoped<StagingBuffer> Staging_Normal(Device);
 		//Staging_Normal.Create(Device, PDMP, TotalSizeOf(Normals), data(Normals));
 
-		IndexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Indices));
 		VK::Scoped<StagingBuffer> Staging_Index(Device);
-		Staging_Index.Create(Device, PDMP, TotalSizeOf(Indices), data(Indices));
+		uint32_t IndicesCount = 0;
+		size_t IndicesSize = 0;
+		if (!empty(Indices16)) {
+			IndexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Indices16));
+			Staging_Index.Create(Device, PDMP, TotalSizeOf(Indices16), data(Indices16));
+			IndicesCount = static_cast<uint32_t>(size(Indices16));
+			IndicesSize = TotalSizeOf(Indices16);
+			IndexType = VkIndexType::VK_INDEX_TYPE_UINT16;
+		}
+		if (!empty(Indices32)) {
+			IndexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Indices32));
+			Staging_Index.Create(Device, PDMP, TotalSizeOf(Indices32), data(Indices32));
+			IndicesCount = static_cast<uint32_t>(size(Indices32));
+			IndicesSize = TotalSizeOf(Indices32);
+			IndexType = VkIndexType::VK_INDEX_TYPE_UINT32;
+		}
+		assert(IndicesCount && IndicesSize && "");
 
-		const VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
+		const VkDrawIndexedIndirectCommand DIIC = { .indexCount = IndicesCount, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
 		VK::Scoped<StagingBuffer> Staging_Indirect(Device);
 		Staging_Indirect.Create(Device, PDMP, sizeof(DIIC), &DIIC);
@@ -47,7 +66,7 @@ public:
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 			VertexBuffers[0].PopulateCopyCommand(CB, TotalSizeOf(Vertices), Staging_Vertex.Buffer);
 			//VertexBuffers[1].PopulateCopyCommand(CB, TotalSizeOf(Normals), Staging_Normal.Buffer);
-			IndexBuffers.back().PopulateCopyCommand(CB, TotalSizeOf(Indices), Staging_Index.Buffer);
+			IndexBuffers.back().PopulateCopyCommand(CB, IndicesSize, Staging_Index.Buffer);
 			IndirectBuffers.back().PopulateCopyCommand(CB, sizeof(DIIC), Staging_Indirect.Buffer);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(CB));
 		VK::SubmitAndWait(GraphicsQueue, CB);
@@ -119,8 +138,7 @@ public:
 			//const std::array NBs = { VertexBuffers[1].Buffer };
 			const std::array Offsets = { VkDeviceSize(0) };
 			vkCmdBindVertexBuffers(SCB, 0, static_cast<uint32_t>(size(VBs)), data(VBs), data(Offsets));
-			//vkCmdBindVertexBuffers(SCB, 1, static_cast<uint32_t>(size(NBs)), data(NBs), data(Offsets));
-			vkCmdBindIndexBuffer(SCB, IndexBuffers[0].Buffer, 0, VK_INDEX_TYPE_UINT32);
+			vkCmdBindIndexBuffer(SCB, IndexBuffers[0].Buffer, 0, IndexType);
 
 			vkCmdDrawIndexedIndirect(SCB, IndirectBuffers[0].Buffer, 0, 1, 0);
 		} VERIFY_SUCCEEDED(vkEndCommandBuffer(SCB));
@@ -160,6 +178,14 @@ private:
 public:
 	virtual void Process() override {
 		Super::Process();
+		
+		Buffers.resize(Document.buffers.Size());
+		for (const auto& i : Document.buffers.Elements()) {
+			//!< バッファが URI 指定の場合はファイルを読み込んでおく
+			if (!empty(i.uri)) {
+				std::cout << "Uri = " << i.uri.substr(0, 32) << std::endl;
+			}
+		}
 
 		for (const auto& i : Document.meshes.Elements()) {
 			for (const auto& j : i.primitives) {
@@ -176,11 +202,9 @@ public:
 				}
 
 				//!< 最初のやつだけ
-				if (empty(Indices)) {
+				if (empty(Indices16) && empty(Indices32)) {
 					if (Document.accessors.Has(j.indicesAccessorId)) {
 						const auto& Accessor = Document.accessors.Get(j.indicesAccessorId);
-						Indices.resize(Accessor.count);
-
 						switch (Accessor.componentType)
 						{
 						case Microsoft::glTF::ComponentType::COMPONENT_UNSIGNED_SHORT:
@@ -188,7 +212,9 @@ public:
 							{
 							case Microsoft::glTF::AccessorType::TYPE_SCALAR:
 							{
+								Indices16.resize(Accessor.count);
 								const auto Data = ResourceReader->ReadBinaryData<uint16_t>(Document, Accessor);
+								std::ranges::copy(Data, std::begin(Indices16));
 							}
 							break;
 							default: break;
@@ -199,8 +225,9 @@ public:
 							{
 							case Microsoft::glTF::AccessorType::TYPE_SCALAR:
 							{
+								Indices32.resize(Accessor.count);
 								const auto Data = ResourceReader->ReadBinaryData<uint32_t>(Document, Accessor);
-								std::ranges::copy(Data, std::begin(Indices));
+								std::ranges::copy(Data, std::begin(Indices32));
 							}
 							break;
 							default: break;
