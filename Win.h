@@ -68,6 +68,7 @@
 #include <charconv>
 #include <locale>
 #include <string>
+#include <stack>
 
 #ifdef USE_EXPERIMENTAL
 #include <experimental/coroutine>
@@ -106,6 +107,11 @@ constexpr std::string_view DRC_DIR = "DRC";
 constexpr std::string_view FBX_DIR = "FBX";
 constexpr std::string_view GLTF_DIR = "..\\GLTF";
 constexpr std::string_view GLTF_SAMPLE_DIR = "..\\glTF-Sample-Models\\2.0";
+
+template<typename T> constexpr T GetMin(const T& lhs, const T& rhs);
+template<typename T> constexpr T GetMax(const T& lhs, const T& rhs);
+
+template<typename T> void AdjustScale(std::vector<T>& Vertices, const float Scale);
 
 class Win
 {
@@ -251,6 +257,18 @@ public:
 	}
 	bool IsUpdate() { return !IsPause() || ProcessStep(); }
 
+	void Pushd(const std::filesystem::path& Path) {
+		PathStack.push(Path);
+		std::filesystem::current_path(PathStack.top());
+	}
+	void Pushd() { Pushd(std::filesystem::current_path()); }
+	void Popd() {
+		PathStack.pop();
+		if (!empty(PathStack)) {
+			std::filesystem::current_path(PathStack.top());
+		}
+	}
+
 protected:
 	std::wstring TitleW;
 	static constexpr UINT DeltaMsec = 1000 / 60;
@@ -263,6 +281,8 @@ private:
 	FILE* StdErr = nullptr;
 #endif
 	std::bitset<32> ControlFlag;
+
+	std::stack<std::filesystem::path> PathStack;
 };
 
 class PerformanceCounter

@@ -103,12 +103,6 @@ public:
 	static constexpr glm::vec3 Min(const glm::vec3& lhs, const glm::vec3& rhs) { return glm::vec3((std::min)(lhs.x, rhs.x), (std::min)(lhs.y, rhs.y), (std::min)(lhs.z, rhs.z)); }
 	static constexpr glm::vec3 Max(const glm::vec3& lhs, const glm::vec3& rhs) { return glm::vec3((std::max)(lhs.x, rhs.x), (std::max)(lhs.y, rhs.y), (std::max)(lhs.z, rhs.z)); }
 
-	static void AdjustScale(std::vector<glm::vec3>& Vertices, const glm::vec3& Min, const glm::vec3& Max, const float Scale = 1.0f) {
-		const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z);
-		const auto A = Scale / Bound;
-		std::ranges::transform(Vertices, std::begin(Vertices), [&](const glm::vec3& rhs) { return rhs * A - glm::vec3(0.0f, (Max.y - Min.y) * 0.5f, Min.z) * A; });
-	}
-
 	template<typename T> class Scoped : public T
 	{
 	public:

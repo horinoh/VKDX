@@ -12,8 +12,7 @@ private:
 	using Super = VKExtDepth;
 
 public:
-	std::vector<std::vector<std::byte>> Buffers;
-
+	VkPrimitiveTopology Topology;
 	VkIndexType IndexType = VkIndexType::VK_INDEX_TYPE_UINT32;
 	std::vector<uint16_t> Indices16;
 	std::vector<uint32_t> Indices32;
@@ -103,7 +102,7 @@ public:
 			.depthBiasEnable = VK_FALSE, .depthBiasConstantFactor = 0.0f, .depthBiasClamp = 0.0f, .depthBiasSlopeFactor = 0.0f,
 			.lineWidth = 1.0f
 		};
-		VKExt::CreatePipeline_VsFs_Input(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, 0, PRSCI, VK_TRUE, VIBDs, VIADs, PSSCIs);
+		VKExt::CreatePipeline_VsFs_Input(Topology, 0, PRSCI, VK_TRUE, VIBDs, VIADs, PSSCIs);
 
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
@@ -178,26 +177,30 @@ private:
 public:
 	virtual void Process() override {
 		Super::Process();
-		
-		Buffers.resize(Document.buffers.Size());
-		for (const auto& i : Document.buffers.Elements()) {
-			//!< バッファが URI 指定の場合はファイルを読み込んでおく
-			if (!empty(i.uri)) {
-				std::cout << "Uri = " << i.uri.substr(0, 32) << std::endl;
-			}
-		}
 
 		for (const auto& i : Document.meshes.Elements()) {
 			for (const auto& j : i.primitives) {
 				switch (j.mode)
 				{
-				case Microsoft::glTF::MeshMode::MESH_POINTS: break;
-				case Microsoft::glTF::MeshMode::MESH_LINES: break;
+				case Microsoft::glTF::MeshMode::MESH_POINTS: 
+					Topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+					break;
+				case Microsoft::glTF::MeshMode::MESH_LINES: 
+					Topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+					break;
 				case Microsoft::glTF::MeshMode::MESH_LINE_LOOP: break;
-				case Microsoft::glTF::MeshMode::MESH_LINE_STRIP: break;
-				case Microsoft::glTF::MeshMode::MESH_TRIANGLES: break;
-				case Microsoft::glTF::MeshMode::MESH_TRIANGLE_STRIP: break;
-				case Microsoft::glTF::MeshMode::MESH_TRIANGLE_FAN: break;
+				case Microsoft::glTF::MeshMode::MESH_LINE_STRIP: 
+					Topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+					break;
+				case Microsoft::glTF::MeshMode::MESH_TRIANGLES: 
+					Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+					break;
+				case Microsoft::glTF::MeshMode::MESH_TRIANGLE_STRIP: 
+					Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+					break;
+				case Microsoft::glTF::MeshMode::MESH_TRIANGLE_FAN:
+					Topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN;
+					break;
 				default: break;
 				}
 
@@ -213,8 +216,7 @@ public:
 							case Microsoft::glTF::AccessorType::TYPE_SCALAR:
 							{
 								Indices16.resize(Accessor.count);
-								const auto Data = ResourceReader->ReadBinaryData<uint16_t>(Document, Accessor);
-								std::ranges::copy(Data, std::begin(Indices16));
+								std::ranges::copy(ResourceReader->ReadBinaryData<uint16_t>(Document, Accessor), std::begin(Indices16));
 							}
 							break;
 							default: break;
@@ -226,8 +228,7 @@ public:
 							case Microsoft::glTF::AccessorType::TYPE_SCALAR:
 							{
 								Indices32.resize(Accessor.count);
-								const auto Data = ResourceReader->ReadBinaryData<uint32_t>(Document, Accessor);
-								std::ranges::copy(Data, std::begin(Indices32));
+								std::ranges::copy(ResourceReader->ReadBinaryData<uint32_t>(Document, Accessor), std::begin(Indices32));
 							}
 							break;
 							default: break;
@@ -252,18 +253,9 @@ public:
 							{
 							case Microsoft::glTF::AccessorType::TYPE_VEC3:
 							{
-								const auto Data = ResourceReader->ReadBinaryData<float>(Document, Accessor);
-								std::memcpy(data(Vertices), data(Data), TotalSizeOf(Vertices));
+								std::memcpy(data(Vertices), data(ResourceReader->ReadBinaryData<float>(Document, Accessor)), TotalSizeOf(Vertices));
 
-								{
-									auto Max = (std::numeric_limits<glm::vec3>::min)();
-									auto Min = (std::numeric_limits<glm::vec3>::max)();
-									for (const auto& k : Vertices) {
-										Min = VK::Min(Min, k);
-										Max = VK::Max(Max, k);
-									}
-									AdjustScale(Vertices, Min, Max);
-								}
+								AdjustScale(Vertices, 1.0f);
 							}
 							break;
 							default: break;
@@ -287,8 +279,7 @@ public:
 				//			{
 				//			case Microsoft::glTF::AccessorType::TYPE_VEC3:
 				//			{
-				//				const auto Data = ResourceReader->ReadBinaryData<float>(Document, Accessor);
-				//				std::memcpy(data(Normals), data(Data), TotalSizeOf(Normals));
+				//				std::memcpy(data(Normals), data(ResourceReader->ReadBinaryData<float>(Document, Accessor)), TotalSizeOf(Normals));
 				//			}
 				//			break;
 				//			default: break;
@@ -302,25 +293,46 @@ public:
 		}
 	}
 	virtual void LoadGltf() override {
-		{
-			std::filesystem::path Path = GLTF_SAMPLE_DIR;
+		//!< データが埋め込まれていない(別ファイルになっている)タイプの場合は、カレントパスを変更しておくと読み込んでくれる
+		Pushd(); {
+			{
+				std::filesystem::path Path = std::filesystem::path(GLTF_SAMPLE_DIR);
 
-			//Load(Path / "Duck//glTF-Embedded//Duck.gltf");
-			//Load(Path / "Suzanne//glTF//Suzanne.gltf");
-			//Load(Path / "WaterBottle//glTF-Binary//WaterBottle.glb");
-			//Load(Path / "AnimatedTriangle//glTF-Embedded//AnimatedTriangle.gltf");
+				//Pushd(Path / "Suzanne" / "glTF"); {
+				//	Load("Suzanne.gltf");
+				//} Popd();
 
-			//Load(Path / "RiggedSimple//glTF-Embedded//RiggedSimple.gltf");
-			//Load(Path / "RiggedFigure//glTF-Embedded//RiggedFigure.gltf");
+				//Pushd(Path / "Duck" / "glTF-Embedded"); {
+				//	Load("Duck.gltf");
+				//} Popd();
 
-			//Load(Path / "SimpleSkin//glTF-Embedded//SimpleSkin.gltf");
-		}
-		{
-			std::filesystem::path Path = GLTF_DIR;
+				//Pushd(Path / "WaterBottle" / "glTF-Binary"); {
+				//	Load("WaterBottle.glb");
+				//} Popd();
 
-			//Load(Path / "bunny.gltf");
-			Load(Path / "dragon.gltf");
-		}
+				//Pushd(Path / "AnimatedTriangle" / "glTF-Embedded"); {
+				//	Load("AnimatedTriangle.gltf");
+				//} Popd();
+
+				//Pushd(Path / "RiggedSimple" / "glTF-Embedded"); {
+				//	Load("RiggedSimple.gltf");
+				//} Popd();
+
+				//Pushd(Path / "RiggedFigure" / "glTF-Embedded"); {
+				//	Load("RiggedFigure.gltf");
+				//} Popd();
+
+				//Pushd(Path / "SimpleSkin" / "glTF-Embedded"); {
+				//	Load("SimpleSkin.gltf");
+				//} Popd();
+			}
+			{
+				std::filesystem::path Path = GLTF_DIR;
+
+				//Load(Path / "bunny.gltf");
+				Load(Path / "dragon.gltf");
+			}
+		} Popd();
 	}
 #pragma endregion
 };

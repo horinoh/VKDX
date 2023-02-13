@@ -22,8 +22,6 @@ public:
 	virtual void Process(FbxMesh* Mesh) override {
 		Fbx::Process(Mesh);
 
-		auto Max = (std::numeric_limits<glm::vec3>::min)();
-		auto Min = (std::numeric_limits<glm::vec3>::max)();
 		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
 		for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
 			for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
@@ -31,15 +29,13 @@ public:
 				//Indices.emplace_back(i * Mesh->GetPolygonSize(i) + Mesh->GetPolygonSize(i) - j - 1); //!< LH
 
 				Vertices.emplace_back(ToVec3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
-				Min = VK::Min(Min, Vertices.back());
-				Max = VK::Max(Max, Vertices.back());
 
 				//if (0 < Mesh->GetElementNormalCount()) {
 				//	Normals.emplace_back(ToVec3(Mesh->GetElementNormal(0)->GetDirectArray().GetAt(i)));
 				//}
 			}
 		}
-		AdjustScale(Vertices, Min, Max);
+		AdjustScale(Vertices, 1.0f);
 
 		FbxArray<FbxVector4> Nrms;
 		Mesh->GetPolygonVertexNormals(Nrms);

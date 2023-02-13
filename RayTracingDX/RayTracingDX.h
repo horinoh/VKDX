@@ -26,19 +26,15 @@ public:
 
 		std::vector<DirectX::XMFLOAT3> Vs;
 		std::vector<DirectX::XMFLOAT3> Ns;
-		auto Max = (std::numeric_limits<DirectX::XMFLOAT3>::min)();
-		auto Min = (std::numeric_limits<DirectX::XMFLOAT3>::max)();
 		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
 		for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
 			for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
 				Indices.emplace_back(i * Mesh->GetPolygonSize(i) + j);
 
 				Vs.emplace_back(ToFloat3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
-				Min = DX::Min(Min, Vs.back());
-				Max = DX::Max(Max, Vs.back());
 			}
 		}
-		AdjustScale(Vs, Min, Max);
+		AdjustScale(Vs, 1.0f);
 
 		FbxArray<FbxVector4> PVNs;
 		Mesh->GetPolygonVertexNormals(PVNs);

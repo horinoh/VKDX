@@ -27,19 +27,15 @@ public:
 	DirectX::XMFLOAT3 ToFloat3(const FbxVector4& rhs) { return DirectX::XMFLOAT3(static_cast<FLOAT>(rhs[0]), static_cast<FLOAT>(rhs[1]), static_cast<FLOAT>(rhs[2])); }
 	virtual void Process(FbxMesh* Mesh) override {
 		Fbx::Process(Mesh);
-		auto Max = (std::numeric_limits<DirectX::XMFLOAT3>::min)();
-		auto Min = (std::numeric_limits<DirectX::XMFLOAT3>::max)();
 		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
 		for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
 			for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
 				Indices.emplace_back(i * Mesh->GetPolygonSize(i) + j);
 
 				Vertices.emplace_back(ToFloat3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
-				Min = DX::Min(Min, Vertices.back());
-				Max = DX::Max(Max, Vertices.back());
 			}
 		}
-		AdjustScale(Vertices, Min, Max);
+		AdjustScale(Vertices, 1.0f);
 
 		FbxArray<FbxVector4> Nrms;
 		Mesh->GetPolygonVertexNormals(Nrms);

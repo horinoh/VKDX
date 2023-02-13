@@ -32,19 +32,15 @@ public:
 
 		std::vector<glm::vec3> Vs;
 		std::vector<glm::vec3> Ns;
-		auto Max = (std::numeric_limits<glm::vec3>::min)();
-		auto Min = (std::numeric_limits<glm::vec3>::max)();
 		std::cout << "PolygonCount = " << Mesh->GetPolygonCount() << std::endl;
 		for (auto i = 0; i < Mesh->GetPolygonCount(); ++i) {
 			for (auto j = 0; j < Mesh->GetPolygonSize(i); ++j) {
 				Indices.emplace_back(i * Mesh->GetPolygonSize(i) + j);
 
 				Vs.emplace_back(ToVec3(Mesh->GetControlPoints()[Mesh->GetPolygonVertex(i, j)]));
-				Min = VK::Min(Min, Vs.back());
-				Max = VK::Max(Max, Vs.back());
 			}
 		}
-		AdjustScale(Vs, Min, Max);
+		AdjustScale(Vs, 1.0f);
 
 		FbxArray<FbxVector4> PVNs;
 		Mesh->GetPolygonVertexNormals(PVNs);

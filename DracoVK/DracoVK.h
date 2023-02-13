@@ -28,15 +28,10 @@ public:
 #pragma region POSITION
 			const auto POSITION = Mesh->GetNamedAttribute(draco::GeometryAttribute::POSITION);
 			if (nullptr != POSITION) {
-				auto Max = (std::numeric_limits<glm::vec3>::min)();
-				auto Min = (std::numeric_limits<glm::vec3>::max)();
 				for (auto i = 0; i < POSITION->size(); ++i) {
 					POSITION->ConvertValue(static_cast<draco::AttributeValueIndex>(i), &Vertices.emplace_back()[0]);
-
-					Min = VK::Min(Min, Vertices.back());
-					Max = VK::Max(Max, Vertices.back());
 				}
-				AdjustScale(Vertices, Min, Max);
+				AdjustScale(Vertices, 1.0f);
 			}
 #pragma endregion
 

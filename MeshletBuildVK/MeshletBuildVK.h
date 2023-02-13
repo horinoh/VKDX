@@ -45,11 +45,9 @@ public:
 				Min.x = (std::min)(Min.x, VerticesDX.back().x);
 				Min.y = (std::min)(Min.y, VerticesDX.back().y);
 				Min.z = (std::min)(Min.z, VerticesDX.back().z);
-				//Min = DX::Min(Min, VerticesDX.back());
-				//Max = DX::Max(Max, VerticesDX.back());
 			}
 		}
-		AdjustScale(Vertices, Min, Max);
+		AdjustScale(Vertices, 1.0f);
 		//DX::AdjustScale(VerticesDX, Min, Max);
 		const auto Bound = (std::max)((std::max)(Max.x - Min.x, Max.y - Min.y), Max.z - Min.z) * 1.0f;
 		std::ranges::transform(VerticesDX, std::begin(VerticesDX), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x / Bound, (rhs.y - (Max.y - Min.y) * 0.5f) / Bound, (rhs.z - Min.z) / Bound); });

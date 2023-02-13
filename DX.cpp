@@ -1,5 +1,24 @@
 #include "DX.h"
 
+template<> constexpr DirectX::XMFLOAT3 GetMin(const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3((std::min)(lhs.x, rhs.x), (std::min)(lhs.y, rhs.y), (std::min)(lhs.z, rhs.z)); }
+template<> constexpr DirectX::XMFLOAT3 GetMax(const DirectX::XMFLOAT3& lhs, const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3((std::max)(lhs.x, rhs.x), (std::max)(lhs.y, rhs.y), (std::max)(lhs.z, rhs.z)); }
+
+template<>
+void AdjustScale(std::vector<DirectX::XMFLOAT3>& Vertices, const float Scale)
+{
+	auto Max = (std::numeric_limits<DirectX::XMFLOAT3>::min)();
+	auto Min = (std::numeric_limits<DirectX::XMFLOAT3>::max)();
+	for (const auto& i : Vertices) {
+		Min = GetMin(Min, i);
+		Max = GetMax(Max, i);
+	}
+
+	const auto Diff = DirectX::XMFLOAT3(Max.x - Min.x, Max.y - Min.y, Max.z - Min.z);
+	const auto Bound = (std::max)((std::max)(Diff.x, Diff.y), Diff.z);
+	const auto Coef = Scale / Bound;
+	std::ranges::transform(Vertices, std::begin(Vertices), [&](const DirectX::XMFLOAT3& rhs) { return DirectX::XMFLOAT3(rhs.x * Coef, (rhs.y - Diff.y * 0.5f) * Coef, (rhs.z - Min.z) * Coef); });
+}
+
 #pragma comment(lib, "d3d12.lib")
 #pragma comment(lib, "d3dcompiler.lib")
 #pragma comment(lib, "dxgi.lib")

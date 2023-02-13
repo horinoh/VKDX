@@ -12,8 +12,7 @@ private:
 	using Super = DXExtDepth;
 
 public:
-	std::vector<std::vector<std::byte>> Buffers;
-
+	D3D12_PRIMITIVE_TOPOLOGY Topology;
 	std::vector<UINT16> Indices16;
 	std::vector<UINT32> Indices32;
 	std::vector<DirectX::XMFLOAT3> Vertices;
@@ -113,7 +112,7 @@ public:
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
 		{
-			BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			BGCL->IASetPrimitiveTopology(Topology);
 
 			//const std::array VBVs = { VertexBuffers[0].View, VertexBuffers[1].View };
 			const std::array VBVs = { VertexBuffers[0].View };
@@ -162,38 +161,26 @@ public:
 	virtual void Process() override {
 		Super::Process();
 		
-		Buffers.resize(Document.buffers.Size());
-		for (const auto& i : Document.buffers.Elements()) {
-			//!< バッファが URI 指定の場合はファイルを読み込んでおく
-			if (!empty(i.uri)) {
-				std::cout << "Uri = " << i.uri.substr(0, 32) << std::endl;
-				if (std::filesystem::exists(std::filesystem::path(i.uri))) {
-					std::ifstream In(std::filesystem::path(i.uri), std::ios::binary);
-					if (!In.fail()) {
-						In.seekg(0, std::ios_base::end);
-						const auto Size = In.tellg();
-						if (Size) {
-							In.seekg(0, std::ios_base::beg);
-						}
-
-						auto& Buf = Buffers[Document.buffers.GetIndex(i.id)];
-						Buf.resize(Size);
-						In.read(reinterpret_cast<char*>(data(Buf)), Size);
-					}
-				}
-			}
-		}
-
 		for (const auto& i : Document.meshes.Elements()) {
 			for (const auto& j : i.primitives) {
 				switch (j.mode)
 				{
-				case Microsoft::glTF::MeshMode::MESH_POINTS: break;
-				case Microsoft::glTF::MeshMode::MESH_LINES: break;
+				case Microsoft::glTF::MeshMode::MESH_POINTS: 
+					Topology = D3D_PRIMITIVE_TOPOLOGY_POINTLIST;
+					break;
+				case Microsoft::glTF::MeshMode::MESH_LINES: 
+					Topology = D3D_PRIMITIVE_TOPOLOGY_LINELIST;
+					break;
 				case Microsoft::glTF::MeshMode::MESH_LINE_LOOP: break;
-				case Microsoft::glTF::MeshMode::MESH_LINE_STRIP: break;
-				case Microsoft::glTF::MeshMode::MESH_TRIANGLES: break;
-				case Microsoft::glTF::MeshMode::MESH_TRIANGLE_STRIP: break;
+				case Microsoft::glTF::MeshMode::MESH_LINE_STRIP: 
+					Topology = D3D_PRIMITIVE_TOPOLOGY_LINESTRIP;
+					break;
+				case Microsoft::glTF::MeshMode::MESH_TRIANGLES: 
+					Topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+					break;
+				case Microsoft::glTF::MeshMode::MESH_TRIANGLE_STRIP: 
+					Topology = D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP;
+					break;
 				case Microsoft::glTF::MeshMode::MESH_TRIANGLE_FAN: break;
 				default: break;
 				}
@@ -210,24 +197,7 @@ public:
 							case Microsoft::glTF::AccessorType::TYPE_SCALAR:
 							{
 								Indices16.resize(Accessor.count);
-
-								if (Document.bufferViews.Has(Accessor.bufferViewId)) {
-									const auto& BufferView = Document.bufferViews.Get(Accessor.bufferViewId);
-									if (Document.buffers.Has(BufferView.bufferId)) {
-										const auto& Buffer = Document.buffers.Get(BufferView.bufferId);
-										if (!empty(Buffer.uri)) {
-											//!< URI 指定のものはファイルから読み込んだバッファを使用する
-											if (0 == BufferView.byteStride) {
-												//std::copy(&Buffers[Document.buffers.GetIndex(Buffer.id)][BufferView.byteOffset], &Buffers[Document.buffers.GetIndex(Buffer.id)][BufferView.byteOffset + BufferView.byteLength], std::begin(Indices16));
-											}
-										}
-										else {
-											//!< 埋め込まれている場合は以下のように取得できる
-											const auto Data = ResourceReader->ReadBinaryData<uint16_t>(Document, Accessor);
-											std::ranges::copy(Data, std::begin(Indices16));
-										}
-									}
-								}
+								std::ranges::copy(ResourceReader->ReadBinaryData<uint16_t>(Document, Accessor), std::begin(Indices16));
 							}
 							break;
 							default: break;
@@ -239,8 +209,7 @@ public:
 							case Microsoft::glTF::AccessorType::TYPE_SCALAR:
 							{
 								Indices32.resize(Accessor.count);
-								const auto Data = ResourceReader->ReadBinaryData<uint32_t>(Document, Accessor);
-								std::ranges::copy(Data, std::begin(Indices32));
+								std::ranges::copy(ResourceReader->ReadBinaryData<uint32_t>(Document, Accessor), std::begin(Indices32));
 							}
 							break;
 							default: break;
@@ -265,18 +234,9 @@ public:
 							{
 							case Microsoft::glTF::AccessorType::TYPE_VEC3:
 							{
-								const auto Data = ResourceReader->ReadBinaryData<float>(Document, Accessor);
-								std::memcpy(data(Vertices), data(Data), TotalSizeOf(Vertices));
+								std::memcpy(data(Vertices), data(ResourceReader->ReadBinaryData<float>(Document, Accessor)), TotalSizeOf(Vertices));
 
-								{
-									auto Max = (std::numeric_limits<DirectX::XMFLOAT3>::min)();
-									auto Min = (std::numeric_limits<DirectX::XMFLOAT3>::max)();
-									for (const auto& k : Vertices) {
-										Min = DX::Min(Min, k);
-										Max = DX::Max(Max, k);
-									}
-									AdjustScale(Vertices, Min, Max);
-								}
+								AdjustScale(Vertices, 1.0f);
 							}
 							break;
 							default: break;
@@ -300,8 +260,7 @@ public:
 				//			{
 				//			case Microsoft::glTF::AccessorType::TYPE_VEC3:
 				//			{
-				//				const auto Data = ResourceReader->ReadBinaryData<float>(Document, Accessor);
-				//				std::memcpy(data(Normals), data(Data), TotalSizeOf(Normals));
+				//				std::memcpy(data(Normals), data(ResourceReader->ReadBinaryData<float>(Document, Accessor)), TotalSizeOf(Normals));
 				//			}
 				//			break;
 				//			default: break;
@@ -315,28 +274,46 @@ public:
 		}
 	}
 	virtual void LoadGltf() override {
-		const auto CurPath = std::filesystem::current_path();
-		{
-			//!< データが埋め込まれていない(別ファイルになっている)タイプの場合は読み込む必要があるので、カレントパスを変更しておく
-			//std::filesystem::current_path(std::filesystem::path(GLTF_SAMPLE_DIR) / "Suzanne" / "glTF");
-			//Load("Suzanne.gltf");
+		//!< データが埋め込まれていない(別ファイルになっている)タイプの場合は、カレントパスを変更しておくと読み込んでくれる
+		Pushd(); {
+			{
+				std::filesystem::path Path = std::filesystem::path(GLTF_SAMPLE_DIR);
 
-			//Load(Path / "Duck//glTF-Embedded//Duck.gltf");
-			//Load(Path / "WaterBottle//glTF-Binary//WaterBottle.glb");
-			//Load(Path / "AnimatedTriangle//glTF-Embedded//AnimatedTriangle.gltf");
+				//Pushd(Path / "Suzanne" / "glTF"); {
+				//	Load("Suzanne.gltf");
+				//} Popd();
 
-			//Load(Path / "RiggedSimple//glTF-Embedded//RiggedSimple.gltf");
-			//Load(Path / "RiggedFigure//glTF-Embedded//RiggedFigure.gltf");
+				//Pushd(Path / "Duck" / "glTF-Embedded"); {
+				//	Load("Duck.gltf");
+				//} Popd();
 
-			//Load(Path / "SimpleSkin//glTF-Embedded//SimpleSkin.gltf");
-		}
-		{
-			std::filesystem::path Path = GLTF_DIR;
+				//Pushd(Path / "WaterBottle" / "glTF-Binary"); {
+				//	Load("WaterBottle.glb");
+				//} Popd();
 
-			//Load(Path / "bunny.gltf");
-			Load(Path / "dragon.gltf");
-		}
-		std::filesystem::current_path(CurPath);
+				//Pushd(Path / "AnimatedTriangle" / "glTF-Embedded"); {
+				//	Load("AnimatedTriangle.gltf");
+				//} Popd();
+				
+				//Pushd(Path / "RiggedSimple" / "glTF-Embedded"); {
+				//	Load("RiggedSimple.gltf");
+				//} Popd();
+				
+				//Pushd(Path / "RiggedFigure" / "glTF-Embedded"); {
+				//	Load("RiggedFigure.gltf");
+				//} Popd();
+
+				//Pushd(Path / "SimpleSkin" / "glTF-Embedded"); {
+				//	Load("SimpleSkin.gltf");
+				//} Popd();
+			}
+			{
+				std::filesystem::path Path = GLTF_DIR;
+
+				//Load(Path / "bunny.gltf");
+				Load(Path / "dragon.gltf");
+			}
+		} Popd();
 	}
 #pragma endregion
 };
