@@ -6,6 +6,8 @@
 #include "../DXExt.h"
 #include "../GLTF.h"
 
+#include "WICTextureLoader.h"
+
 class GltfBaseDX : public DXExtDepth
 {
 private:
@@ -158,6 +160,24 @@ private:
 	using Super = Gltf::SDK;
 #pragma region GLTF
 public:
+	virtual void Process(const Microsoft::glTF::Image& Image) override {
+		Super::Process(Image);
+
+		const auto Data = ResourceReader->ReadBinaryData(Document, Image);
+
+		const std::array<uint8_t, 4> PNGHeader = { 0x89, 0x50, 0x4e, 0x47 };
+		//const std::array<uint8_t, 2> JPGHeader = { 0xff, 0xd8 };
+		//const std::array<uint8_t, 4> GIFGHeader = { 0x47, 0x49, 0x46, 0x38 };
+
+		//!< ƒwƒbƒ_Ž¯•Ê PNG ‚Ìê‡
+		if (!std::memcmp(data(Data), data(PNGHeader), sizeof(PNGHeader))) {
+			//COM_PTR<ID3D12Resource> Resource;
+			//std::unique_ptr<uint8_t[]> DecodedData;
+			//D3D12_SUBRESOURCE_DATA SubResource;
+			//VERIFY_SUCCEEDED(DirectX::LoadWICTextureFromMemory(Device, data(Data), sizeof(Data), COM_PTR_PUT(Resource), DecodedData, SubResource, 0));
+			//DecodedData.reset();
+		}
+	}
 	virtual void Process() override {
 		Super::Process();
 		
@@ -283,9 +303,9 @@ public:
 				//	Load("Suzanne.gltf");
 				//} Popd();
 
-				//Pushd(Path / "Duck" / "glTF-Embedded"); {
-				//	Load("Duck.gltf");
-				//} Popd();
+				Pushd(Path / "Duck" / "glTF-Embedded"); {
+					Load("Duck.gltf");
+				} Popd();
 
 				//Pushd(Path / "WaterBottle" / "glTF-Binary"); {
 				//	Load("WaterBottle.glb");
@@ -311,7 +331,7 @@ public:
 				std::filesystem::path Path = GLTF_DIR;
 
 				//Load(Path / "bunny.gltf");
-				Load(Path / "dragon.gltf");
+				//Load(Path / "dragon.gltf");
 			}
 		} Popd();
 	}

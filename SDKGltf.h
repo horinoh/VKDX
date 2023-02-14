@@ -102,7 +102,7 @@ namespace Gltf {
 			}
 			std::cout << std::endl;
 		}
-		virtual void Process(const Microsoft::glTF::Image & Image) {
+		virtual void Process(const Microsoft::glTF::Image& Image) {
 			Tabs(); std::cout << "Image [" << Image.id << "] : " << Image.name << std::endl;
 
 			if (empty(Image.uri)) {
