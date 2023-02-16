@@ -347,6 +347,7 @@ protected:
 	public:
 		//!< 順序は任意だが、Gen, Miss, Hit, Call 用の 4 つ分 
 		//!< (ただし vkCmdTraceRaysKHR(), vkCmdTraceRaysIndirectKHR() にそのままの順序で渡したい場合は Gen, Miss, Hit, Call の順にすること)
+		//!< 使用しないシェーダの箇所はゼロクリア (.deviceAddress = 0, .stride = 0, .size = 0) しておくこと
 		std::array<VkStridedDeviceAddressRegionKHR, 4> StridedDeviceAddressRegions = {
 			VkStridedDeviceAddressRegionKHR({.deviceAddress = 0, .stride = 0, .size = 0 }),
 			VkStridedDeviceAddressRegionKHR({.deviceAddress = 0, .stride = 0, .size = 0 }), 
@@ -362,9 +363,9 @@ protected:
 			//!< デバイスアドレスの決定
 			auto da = GetDeviceAddress(Dev, Buffer);
 			for (auto& i : StridedDeviceAddressRegions) {
-				i.deviceAddress = da;
-				da += i.size;
 				if (i.size) {
+					i.deviceAddress = da;
+					da += i.size;
 					Win::Logf("\tdeviceAddress = %d, size = %d, stride = %d\n", i.deviceAddress, i.size, i.stride);
 				}
 			}
