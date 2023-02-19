@@ -74,16 +74,17 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateTexture() override {
-		std::filesystem::path Path;
-		if (FindDirectory(DDS_DIR, Path)) {
-			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-			const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
-			//!< [0] キューブ(Cube) : PX, NX, PY, NY, PZ, NZ
-			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / TEXT("CubeMap\\ninomaru_teien.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			//!< [1] 法線(Normal)
-			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / TEXT("Metal012_2K-JPG\\Metal012_2K_Normal.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		}
+		std::filesystem::path Path = std::filesystem::path(DDS_DIR);
+
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
+		//!< [0] キューブ(Cube) : PX, NX, PY, NY, PZ, NZ
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / "CubeMap" / "ninomaru_teien.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		//!< [1] 法線(Normal)
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / "Metal012_2K-JPG" / "Metal012_2K_Normal.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
 		Super::CreateTexture();
+
 	}
 	virtual void CreateStaticSampler() override {
 		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({

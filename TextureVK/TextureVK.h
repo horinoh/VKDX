@@ -20,23 +20,22 @@ protected:
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
 	}
 	virtual void CreateTexture() override {
-		std::filesystem::path Path;
-		if (FindDirectory(DDS_DIR, Path)) {
+		std::filesystem::path Path = std::filesystem::path(DDS_DIR);
+
 #ifdef _DEBUG
-			auto GLITexture = gli::load(data((Path / TEXT("PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")).string()));
-			VkImageFormatProperties IFP;
-			VERIFY_SUCCEEDED(vkGetPhysicalDeviceImageFormatProperties(GetCurrentPhysicalDevice(),
-				VKImage::ToVkFormat(GLITexture.format()),
-				VKImage::ToVkImageType(GLITexture.target()),
-				VK_IMAGE_TILING_OPTIMAL,
-				VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-				gli::is_target_cube(GLITexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
-				&IFP));
+		auto GLITexture = gli::load(data((Path / "PavingStones050_2K-JPG" / "PavingStones050_2K_Color.dds").string()));
+		VkImageFormatProperties IFP;
+		VERIFY_SUCCEEDED(vkGetPhysicalDeviceImageFormatProperties(GetCurrentPhysicalDevice(),
+			VKImage::ToVkFormat(GLITexture.format()),
+			VKImage::ToVkImageType(GLITexture.target()),
+			VK_IMAGE_TILING_OPTIMAL,
+			VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+			gli::is_target_cube(GLITexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
+			&IFP));
 #endif
 
-			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-		}
+		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		DDSTextures.emplace_back().Create(Device, PDMP, Path / "PavingStones050_2K-JPG" / "PavingStones050_2K_Color.dds").SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 	}
 #ifdef USE_IMMUTABLE_SAMPLER
 	//!< VKの場合イミュータブルサンプラと通常のサンプラは基本的に同じもの、デスクリプタセットレイアウトの指定が異なるだけ

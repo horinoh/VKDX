@@ -6,7 +6,9 @@ class DXRT : public DXExt
 {
 private:
 	using Super = DXExt;
+
 protected:
+
 	virtual void CreateDevice(HWND hWnd) override {
 		Super::CreateDevice(hWnd);
 

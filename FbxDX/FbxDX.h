@@ -54,11 +54,10 @@ public:
 	}
 #pragma endregion
 	virtual void CreateGeometry() override {
-		std::filesystem::path Path;
-		if (FindDirectory(FBX_DIR, Path)) {
-			Load(Path / "bunny.FBX");
-			//Load(Path / "dragon.FBX");
-		}
+		std::filesystem::path Path = std::filesystem::path(FBX_DIR);
+
+		Load(Path / "bunny.FBX");
+		//Load(Path / "dragon.FBX");
 
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);

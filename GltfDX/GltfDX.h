@@ -303,9 +303,9 @@ public:
 				//	Load("Suzanne.gltf");
 				//} Popd();
 
-				Pushd(Path / "Duck" / "glTF-Embedded"); {
-					Load("Duck.gltf");
-				} Popd();
+				//Pushd(Path / "Duck" / "glTF-Embedded"); {
+				//	Load("Duck.gltf");
+				//} Popd();
 
 				//Pushd(Path / "WaterBottle" / "glTF-Binary"); {
 				//	Load("WaterBottle.glb");
@@ -331,7 +331,7 @@ public:
 				std::filesystem::path Path = GLTF_DIR;
 
 				//Load(Path / "bunny.gltf");
-				//Load(Path / "dragon.gltf");
+				Load(Path / "dragon.gltf");
 			}
 		} Popd();
 	}

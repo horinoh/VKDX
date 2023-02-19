@@ -62,22 +62,22 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateTexture() override {
+		std::filesystem::path Path = std::filesystem::path(DDS_DIR);
+
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
-		std::filesystem::path Path;
-		if (FindDirectory(DDS_DIR, Path)) {
 #ifdef USE_PARALLAX_MAP
-			//!< [0] 法線(Normal)
-			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / TEXT("Leather009_2K-JPG\\Leather009_2K_Normal.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			//!< [1] ディスプレースメント(Displacement)
-			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / TEXT("Leather009_2K-JPG\\Leather009_2K_Displacement.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		//!< [0] 法線(Normal)
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / "Leather009_2K-JPG" / "Leather009_2K_Normal.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		//!< [1] ディスプレースメント(Displacement)
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / "Leather009_2K-JPG" / "Leather009_2K_Displacement.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 #else
-			//!< [0] 法線(Normal)
-			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / TEXT("Rocks007_2K-JPG\\Rocks007_2K_Normal.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			//!< [1] カラー(Color)
-			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / TEXT("Rocks007_2K-JPG\\Rocks007_2K_Color.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		//!< [0] 法線(Normal)
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / "Rocks007_2K-JPG" / "Rocks007_2K_Normal.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		//!< [1] カラー(Color)
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / "Rocks007_2K-JPG" / "Rocks007_2K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 #endif
-		}
+
 		Super::CreateTexture();
 	}
 	virtual void CreateStaticSampler() override {

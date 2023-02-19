@@ -55,21 +55,22 @@ protected:
 	}
 	virtual void CreateTexture() override {
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-		std::filesystem::path Path;
-		if (FindDirectory(DDS_DIR, Path)) {
-			const auto CB = CommandBuffers[0];
+
+		std::filesystem::path Path = std::filesystem::path(DDS_DIR);
+
+		const auto CB = CommandBuffers[0];
 #ifdef USE_PARALLAX_MAP
-			//!< [0] 法線(Normal)
-			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("Leather009_2K-JPG\\Leather009_2K_Normal.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-			//!< [1] ディスプレースメント(Displacement)
-			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("Leather009_2K-JPG\\Leather009_2K_Displacement.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		//!< [0] 法線(Normal)
+		DDSTextures.emplace_back().Create(Device, PDMP, Path / "Leather009_2K-JPG" / "Leather009_2K_Normal.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		//!< [1] ディスプレースメント(Displacement)
+		DDSTextures.emplace_back().Create(Device, PDMP, Path / "Leather009_2K-JPG" / "Leather009_2K_Displacement.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 #else
-			//!< [0] 法線(Normal)
-			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("Rocks007_2K-JPG\\Rocks007_2K_Normal.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-			//!< [1] カラー(Color)
-			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("Rocks007_2K-JPG\\Rocks007_2K_Color.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		//!< [0] 法線(Normal)
+		DDSTextures.emplace_back().Create(Device, PDMP, Path / "Rocks007_2K-JPG" / "Rocks007_2K_Normal.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		//!< [1] カラー(Color)
+		DDSTextures.emplace_back().Create(Device, PDMP, Path / "Rocks007_2K-JPG" / "Rocks007_2K_Color.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 #endif
-		}
+		
 		//!< [2] 深度(Depth)
 		Super::CreateTexture();
 	}

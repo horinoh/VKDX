@@ -52,15 +52,15 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateTexture() override {
-		std::filesystem::path Path;
-		if (FindDirectory(DDS_DIR, Path)) {
-			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-			const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
-			//!< [0] Displacemnt
-			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / TEXT("Rocks007_2K-JPG\\Rocks007_2K_Displacement.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-			//!< [1] Color
-			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / TEXT("Rocks007_2K-JPG\\Rocks007_2K_Color.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		}
+		std::filesystem::path Path = std::filesystem::path(DDS_DIR);
+
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
+		//!< [0] Displacemnt
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / "Rocks007_2K-JPG" / "Rocks007_2K_Displacement.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		//!< [1] Color
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / "Rocks007_2K-JPG" / "Rocks007_2K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
 		//!< [2] Depth
 		Super::CreateTexture();
 	}

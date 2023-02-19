@@ -267,13 +267,12 @@ public:
 	virtual void CreateTexture() override {
 		Super::CreateTexture();
 
-		std::filesystem::path Path;
-		if (FindDirectory(DDS_DIR, Path)) {
-			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-			const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
-			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / TEXT("SheetMetal001_1K-JPG\\SheetMetal001_1K_Opacity.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / TEXT("SheetMetal001_1K-JPG\\SheetMetal001_1K_Color.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-		}
+		std::filesystem::path Path = std::filesystem::path(DDS_DIR);
+
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / "SheetMetal001_1K-JPG" / "SheetMetal001_1K_Opacity.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / "SheetMetal001_1K-JPG" / "SheetMetal001_1K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	}
 	virtual void CreateRootSignature() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }

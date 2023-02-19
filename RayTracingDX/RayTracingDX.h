@@ -51,11 +51,10 @@ public:
 	virtual void CreateGeometry() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
-		std::filesystem::path Path;
-		if (FindDirectory(FBX_DIR, Path)) {
-			//Load(Path / TEXT("bunny.FBX"));
-			Load(Path / TEXT("dragon.FBX"));
-		}
+		std::filesystem::path Path = std::filesystem::path(FBX_DIR);
+
+		//Load(Path / "bunny.FBX");
+		Load(Path / "dragon.FBX");
 
 		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
@@ -168,16 +167,15 @@ public:
 	virtual void CreateTexture() override {
 		Super::CreateTexture();
 
-		std::filesystem::path Path;
-		if (FindDirectory(DDS_DIR, Path)) {
-			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-			const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
-			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / TEXT("CubeMap\\ninomaru_teien.dds"))
-				.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		std::filesystem::path Path = std::filesystem::path(DDS_DIR);
 
-			const auto RD = DDSTextures.back().Resource->GetDesc();
-			DDSTextures.back().SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({ .Format = RD.Format, .ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE, .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, .TextureCube = D3D12_TEXCUBE_SRV({.MostDetailedMip = 0, .MipLevels = RD.MipLevels, .ResourceMinLODClamp = 0.0f }), });
-		}
+		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
+		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / "CubeMap" / "ninomaru_teien.dds")
+			.ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+
+		const auto RD = DDSTextures.back().Resource->GetDesc();
+		DDSTextures.back().SRV = D3D12_SHADER_RESOURCE_VIEW_DESC({ .Format = RD.Format, .ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE, .Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING, .TextureCube = D3D12_TEXCUBE_SRV({.MostDetailedMip = 0, .MipLevels = RD.MipLevels, .ResourceMinLODClamp = 0.0f }), });
 	}
 	virtual void CreateConstantBuffer() override {
 		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;

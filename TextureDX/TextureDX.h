@@ -19,10 +19,9 @@ protected:
 		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), sizeof(DA), &DA);
 	}
 	virtual void CreateTexture() override {
-		std::filesystem::path Path;
-		if (FindDirectory(DDS_DIR, Path)) {
-			DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / TEXT("PavingStones050_2K-JPG\\PavingStones050_2K_Color.dds")).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-		}
+		std::filesystem::path Path = std::filesystem::path(DDS_DIR);
+
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / "PavingStones050_2K-JPG" / "PavingStones050_2K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}
 #ifdef USE_STATIC_SAMPLER
 	virtual void CreateStaticSampler() override {

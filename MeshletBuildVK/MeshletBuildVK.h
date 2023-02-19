@@ -80,12 +80,11 @@ public:
 			const auto& CB = CommandBuffers[0];
 			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 
-			std::filesystem::path Path;
-			if (FindDirectory(FBX_DIR, Path)) {
-				//Load(Path / "dragon.FBX");
-				//Load(Path / "bunny4.FBX");
-				Load(Path / "bunny.FBX");
-			}
+			std::filesystem::path Path = std::filesystem::path(FBX_DIR);
+			//Load(Path / "dragon.FBX");
+			//Load(Path / "bunny4.FBX");
+			Load(Path / "bunny.FBX");
+
 			std::vector<DirectX::Meshlet> Meshlets;
 			std::vector<uint8_t> VertexIndices8;
 			std::vector<DirectX::MeshletTriangle> Triangles; //!< uint32_t ‚Ì 30bit ‚ðŽg—p‚µ‚Ä i0, i1, i2 ‚»‚ê‚¼‚ê 10bit

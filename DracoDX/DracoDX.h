@@ -56,12 +56,11 @@ public:
 	DracoDX() : Super() {}
 	virtual ~DracoDX() {}
 	virtual void CreateGeometry() override {
-		std::filesystem::path Path;
-		if (FindDirectory(DRC_DIR, Path)) {
-			//Load(Path / "bunny.drc");
-			//Load(Path / "dragon.drc");
-			Load(Path / "dragon4.drc");
-		}
+		std::filesystem::path Path = std::filesystem::path(DRC_DIR);
+
+		//Load(Path / "bunny.drc");
+		//Load(Path / "dragon.drc");
+		Load(Path / "dragon4.drc");
 		//Load(std::string("..//draco//testdata//") + "car.drc");
 
 #ifdef USE_CONVEXHULL

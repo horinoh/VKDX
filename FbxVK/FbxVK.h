@@ -55,11 +55,9 @@ public:
 #pragma endregion
 
 	virtual void CreateGeometry() override {
-		std::filesystem::path Path;
-		if (FindDirectory(FBX_DIR, Path)) {
-			Load(Path / "bunny.FBX");
-			//Load(Path / "dragon.FBX");
-		}
+		std::filesystem::path Path = std::filesystem::path(FBX_DIR);
+		Load(Path / "bunny.FBX");
+		//Load(Path / "dragon.FBX");
 
 		const auto& CB = CommandBuffers[0];
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();

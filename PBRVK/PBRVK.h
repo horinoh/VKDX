@@ -55,29 +55,30 @@ protected:
 	}
 	virtual void CreateTexture() override {
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-		std::filesystem::path Path;
-		if (FindDirectory(DDS_DIR, Path)) {
-			const auto CB = CommandBuffers[0];
+
+		std::filesystem::path Path = std::filesystem::path(DDS_DIR);
+
+		const auto CB = CommandBuffers[0];
 #if 0
-			//!< [0] 法線(Normal)
-			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("Metal012_2K-JPG\\Metal012_2K_Normal.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-			//!< [1] カラー(Color)
-			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("Metal012_2K-JPG\\Metal012_2K_Color.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-			//!< [2] ラフネス(Roughness)
-			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("Metal012_2K-JPG\\Metal012_2K_Roughness.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-			//!< [3] メタリック(Metallic)
-			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("Metal012_2K-JPG\\Metal012_2K_Metalness.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		//!< [0] 法線(Normal)
+		DDSTextures.emplace_back().Create(Device, PDMP, Path / "Metal012_2K-JPG" / "Metal012_2K_Normal.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		//!< [1] カラー(Color)
+		DDSTextures.emplace_back().Create(Device, PDMP, Path / "Metal012_2K-JPG" / "Metal012_2K_Color.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		//!< [2] ラフネス(Roughness)
+		DDSTextures.emplace_back().Create(Device, PDMP, Path / "Metal012_2K-JPG" / "Metal012_2K_Roughness.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		//!< [3] メタリック(Metallic)
+		DDSTextures.emplace_back().Create(Device, PDMP, Path / "Metal012_2K-JPG" / "Metal012_2K_Metalness.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 #else
-			//!< [0] 法線(Normal)
-			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("MetalPlates008_1K-JPG\\MetalPlates008_1K_NormalGL.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-			//!< [1] カラー(Color)
-			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("MetalPlates008_1K-JPG\\MetalPlates008_1K_Color.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-			//!< [2] ラフネス(Roughness)
-			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("MetalPlates008_1K-JPG\\MetalPlates008_1K_Roughness.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-			//!< [3] メタリック(Metallic)
-			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("MetalPlates008_1K-JPG\\MetalPlates008_1K_Metalness.dds")).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		//!< [0] 法線(Normal)
+		DDSTextures.emplace_back().Create(Device, PDMP, Path / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_NormalGL.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		//!< [1] カラー(Color)
+		DDSTextures.emplace_back().Create(Device, PDMP, Path / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_Color.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		//!< [2] ラフネス(Roughness)
+		DDSTextures.emplace_back().Create(Device, PDMP, Path / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_Roughness.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		//!< [3] メタリック(Metallic)
+		DDSTextures.emplace_back().Create(Device, PDMP, Path / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_Metalness.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 #endif
-		}
+		
 		//!< [2] 深度(Depth)
 		Super::CreateTexture();
 	}

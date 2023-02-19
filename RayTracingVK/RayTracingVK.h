@@ -57,11 +57,10 @@ public:
 	virtual void CreateGeometry() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 
-		std::filesystem::path Path;
-		if (FindDirectory(FBX_DIR, Path)) {
-			//Load(Path / TEXT("bunny.FBX"));
-			Load(Path / TEXT("dragon.FBX"));
-		}
+		std::filesystem::path Path = std::filesystem::path(FBX_DIR);
+
+		//Load(Path / "bunny.FBX");
+		Load(Path / "dragon.FBX");
 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		const auto& CB = CommandBuffers[0];
@@ -240,13 +239,13 @@ public:
 	}
 	virtual void CreateTexture() override {
 		Super::CreateTexture();
-		std::filesystem::path Path;
-		if (FindDirectory(DDS_DIR, Path)) {
-			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-			const auto CB = CommandBuffers[0];
-			DDSTextures.emplace_back().Create(Device, PDMP, Path / TEXT("CubeMap\\ninomaru_teien.dds"))
-				.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
-		}
+
+		std::filesystem::path Path = std::filesystem::path(DDS_DIR);
+
+		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
+		const auto CB = CommandBuffers[0];
+		DDSTextures.emplace_back().Create(Device, PDMP, Path / "CubeMap" / "ninomaru_teien.dds")
+			.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 	}
 	virtual void CreateImmutableSampler() override {
 		constexpr VkSamplerCreateInfo SCI = {
