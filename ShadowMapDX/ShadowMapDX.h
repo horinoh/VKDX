@@ -224,20 +224,19 @@ protected:
 		LOG_OK();
 	}
 	virtual void CreatePipelineState() override {
-		const auto ShaderPath = GetBasePath();
 		std::vector<COM_PTR<ID3DBlob>> SBs;
 		//!< パス0 : シェーダブロブ
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(SBs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ds.cso")), COM_PTR_PUT(SBs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".hs.cso")), COM_PTR_PUT(SBs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".gs.cso")), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath(".vs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath(".ds.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath(".hs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath(".gs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
 		//!< パス1 : シェーダブロブ
 #ifdef USE_SHADOWMAP_VISUALIZE
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sm_1.vs.cso")), COM_PTR_PUT(SBs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sm_1.ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_sm_1.vs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_sm_1.ps.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
 #else
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_1.gs.cso")), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_1.ps.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_1.gs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
 #endif
 
 		PipelineStates.resize(2);
@@ -312,7 +311,7 @@ protected:
 		const std::vector<DXGI_FORMAT> RTVs_0 = {};
 		const std::vector RTVs_1 = { DXGI_FORMAT_R8G8B8A8_UNORM };
 #ifdef USE_PIPELINE_SERIALIZE
-		PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
+		PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetFilePath(".plo"));
 		//!< パス0 : パイプラインステート
 		Threads.emplace_back(std::thread::thread(DX::CreatePipelineState_, std::ref(PipelineStates[0]), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH, RTBDs, RD_0, DSD_0, SBCs_0[0], NullSBC, SBCs_0[1], SBCs_0[2], SBCs_0[3], IEDs, RTVs_0, &PLS, TEXT("0")));
 		//!< パス1 : パイプラインステート

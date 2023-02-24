@@ -268,20 +268,19 @@ protected:
 		}
 	}
 	virtual void CreatePipeline() override {
-		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
 			//!< Pass0 : シェーダモジュール
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".geom.spv"))),
+			VK::CreateShaderModule(GetFilePath(".vert.spv")),
+			VK::CreateShaderModule(GetFilePath(".tese.spv")),
+			VK::CreateShaderModule(GetFilePath(".tesc.spv")),
+			VK::CreateShaderModule(GetFilePath(".geom.spv")),
 			//!< Pass1 : シェーダモジュール
 	#ifdef USE_SHADOWMAP_VISUALIZE
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_sm_1") + TEXT(".vert.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_sm_1") + TEXT(".frag.spv"))),
+			VK::CreateShaderModule(GetFilePath("_sm_1.vert.spv")),
+			VK::CreateShaderModule(GetFilePath("_sm_1.frag.spv")),
 	#else
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".frag.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".geom.spv"))),
+			VK::CreateShaderModule(GetFilePath("_1.frag.spv")),
+			VK::CreateShaderModule(GetFilePath("_1.geom.spv")),
 	#endif
 		};
 
@@ -379,7 +378,7 @@ protected:
 			}),
 		};
 #ifdef USE_PIPELINE_SERIALIZE
-		PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 2);
+		PipelineCacheSerializer PCS(Device, GetFilePath(".pco"), 2);
 		//!< パス0 : パイプライン
 		Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines[0]), Device, PipelineLayouts[0], RenderPasses[0], VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI_0, PDSSCI_0, &PSSCIs_0[0], nullptr, &PSSCIs_0[1], &PSSCIs_0[2], &PSSCIs_0[3], VIBDs, VIADs, PCBASs_0, PCS.GetPipelineCache(0)));
 		//!< パス1 : パイプライン

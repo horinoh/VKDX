@@ -907,10 +907,10 @@ template<> void DX::SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::v
 }
 
 //!< シェーダからルートシグネチャパートを取り出しブロブを作る
-void DX::GetRootSignaturePartFromShader(COM_PTR<ID3DBlob>& Blob, LPCWSTR Path)
+void DX::GetRootSignaturePartFromShader(COM_PTR<ID3DBlob>& Blob, const std::filesystem::path& Path)
 {
 	COM_PTR<ID3DBlob> ShaderBlob;
-	VERIFY_SUCCEEDED(D3DReadFileToBlob(Path, COM_PTR_PUT(ShaderBlob)));
+	VERIFY_SUCCEEDED(D3DReadFileToBlob(data(Path.wstring()), COM_PTR_PUT(ShaderBlob)));
 	VERIFY_SUCCEEDED(D3DGetBlobPart(ShaderBlob->GetBufferPointer(), ShaderBlob->GetBufferSize(), D3D_BLOB_ROOT_SIGNATURE, 0, COM_PTR_PUT(Blob)));
 	LOG_OK();
 }

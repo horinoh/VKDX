@@ -96,14 +96,12 @@ protected:
 #endif
 	virtual void CreateRenderPass() override { VKExt::CreateRenderPass_Clear(); }
 	virtual void CreatePipeline() override {
-		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
+			VK::CreateShaderModule(GetFilePath(".vert.spv")),
 #ifdef USE_PUSH_CONSTANTS
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_pc.frag.spv")))
+			VK::CreateShaderModule(GetFilePath("_pc.frag.spv")),
 #else
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv")))
+			VK::CreateShaderModule(GetFilePath(".frag.spv")),
 #endif
 		};
 		const std::array PSSCIs = {

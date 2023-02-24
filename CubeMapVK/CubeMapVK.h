@@ -67,14 +67,11 @@ protected:
 	}
 	virtual void CreateTexture() override {
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-
-		std::filesystem::path Path = std::filesystem::path(DDS_DIR);
-
 		const auto CB = CommandBuffers[0];
 		//!< [0] キューブ(Cube) : PX, NX, PY, NY, PZ, NZ
-		DDSTextures.emplace_back().Create(Device, PDMP, Path / "CubeMap" / "ninomaru_teien.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		DDSTextures.emplace_back().Create(Device, PDMP, DDS_PATH / "CubeMap" / "ninomaru_teien.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		//!< [1] 法線(Normal)
-		DDSTextures.emplace_back().Create(Device, PDMP, Path / "Metal012_2K-JPG" / "Metal012_2K_Normal.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		DDSTextures.emplace_back().Create(Device, PDMP, DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Normal.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		
 		Super::CreateTexture();
 	}
@@ -107,20 +104,19 @@ protected:
 		VKExt::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 	virtual void CreatePipeline() override {
-		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
 #ifdef USE_SKY_DOME
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_sd.frag.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_sd.tese.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_sd.geom.spv"))),
+			VK::CreateShaderModule(GetFilePath(".vert.spv")),
+			VK::CreateShaderModule(GetFilePath("_sd.frag.spv")),
+			VK::CreateShaderModule(GetFilePath("_sd.tese.spv")),
+			VK::CreateShaderModule(GetFilePath(".tesc.spv")),
+			VK::CreateShaderModule(GetFilePath("_sd.geom.spv")),
 #else
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".geom.spv"))),
+			VK::CreateShaderModule(GetFilePath(".vert.spv")),
+			VK::CreateShaderModule(GetFilePath(".frag.spv")),
+			VK::CreateShaderModule(GetFilePath(".tese.spv")),
+			VK::CreateShaderModule(GetFilePath(".tesc.spv")),
+			VK::CreateShaderModule(GetFilePath(".geom.spv")),
 #endif
 		};
 		const std::array PSSCIs = {

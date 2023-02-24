@@ -28,13 +28,12 @@ protected:
 	} 
 	virtual void CreateRenderPass() override { VKExt::CreateRenderPass_Clear(); }
 	virtual void CreatePipeline() override { 
-		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".geom.spv"))),
+			VK::CreateShaderModule(GetFilePath(".vert.spv")),
+			VK::CreateShaderModule(GetFilePath(".frag.spv")),
+			VK::CreateShaderModule(GetFilePath(".tese.spv")),
+			VK::CreateShaderModule(GetFilePath(".tesc.spv")),
+			VK::CreateShaderModule(GetFilePath(".geom.spv")),
 		};
 #ifdef USE_SPECIALIZATION_INFO
 		//!< パイプライン作成時に上書きするシェーダ内定数値の設定 (Overwritten in shader variable, on pipeline creation time)

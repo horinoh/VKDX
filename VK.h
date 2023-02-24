@@ -813,7 +813,7 @@ protected:
 		}
 	}
 
-	[[nodiscard]] virtual VkShaderModule CreateShaderModule(const std::wstring& Path) const;
+	[[nodiscard]] virtual VkShaderModule CreateShaderModule(const std::filesystem::path& Path) const;
 
 #ifdef USE_PIPELINE_SERIALIZE
 public:
@@ -829,14 +829,14 @@ protected:
 	class PipelineCacheSerializer
 	{
 	public:
-		PipelineCacheSerializer(VkDevice Dev, std::wstring_view Path, const size_t Count) : Device(Dev), FilePath(Path) {
+		PipelineCacheSerializer(VkDevice Dev, const std::filesystem::path& Path, const size_t Count) : Device(Dev), FilePath(Path) {
 #ifdef ALWAYS_REBUILD_PIPELINE
-			DeleteFile(data(FilePath));
+			DeleteFile(data(FilePath.wstring()));
 #endif
 			//!< ファイルが読めた場合は PipelineCaches[0] へ読み込む (If file is read, load to PipelineCaches[0])
-			std::ifstream In(data(FilePath), std::ios::in | std::ios::binary);
+			std::ifstream In(data(FilePath.string()), std::ios::in | std::ios::binary);
 			if (!In.fail()) {
-				Logf("PipelineCacheSerializer : Reading PipelineCache = %ls\n", data(FilePath));
+				Logf("PipelineCacheSerializer : Reading PipelineCache = %ls\n", data(FilePath.string()));
 				In.seekg(0, std::ios_base::end);
 				const size_t Size = In.tellg();
 				In.seekg(0, std::ios_base::beg);
@@ -877,7 +877,7 @@ protected:
 		}
 		virtual ~PipelineCacheSerializer() {
 			if (!IsLoaded) {
-				Logf("PipelineCacheSerializer : Writing PipelineCache = %ls\n", data(FilePath));
+				Logf("PipelineCacheSerializer : Writing PipelineCache = %ls\n", data(FilePath.string()));
 				//!< パイプラインキャッシュが複数ある場合、末尾のパイプラインキャッシュへマージする (Merge PipelineCaches to the last element)
 				if (PipelineCaches.size() > 1) {
 					VERIFY_SUCCEEDED(vkMergePipelineCaches(Device, PipelineCaches.back(), static_cast<uint32_t>(size(PipelineCaches) - 1), data(PipelineCaches)));
@@ -888,7 +888,7 @@ protected:
 				if (Size) {
 					auto Data = new char[Size];
 					VERIFY_SUCCEEDED(vkGetPipelineCacheData(Device, PipelineCaches.back(), &Size, Data));
-					std::ofstream Out(data(FilePath), std::ios::out | std::ios::binary);
+					std::ofstream Out(data(FilePath.string()), std::ios::out | std::ios::binary);
 					if (!Out.fail()) {
 						Out.write(Data, Size);
 						Out.close();
@@ -905,7 +905,7 @@ protected:
 		VkPipelineCache GetPipelineCache(const size_t i) const { return IsLoaded ? PipelineCaches[0] : PipelineCaches[i]; }
 	private:
 		VkDevice Device;
-		std::wstring FilePath;
+		std::filesystem::path FilePath;
 		std::vector<VkPipelineCache> PipelineCaches;
 		bool IsLoaded = false;
 	};

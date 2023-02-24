@@ -71,12 +71,11 @@ public:
 		VK::SubmitAndWait(GraphicsQueue, CB);
 	}
 	virtual void CreatePipeline() override {
-		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
-			//VK::CreateShaderModule(data(ShaderPath + TEXT("_PN.vert.spv"))),
-			//VK::CreateShaderModule(data(ShaderPath + TEXT("_PN.frag.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_P.vert.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_P.frag.spv"))),
+			//VK::CreateShaderModule(GetFilePath("_PN.vert.spv")),
+			//VK::CreateShaderModule(GetFilePath("_PN.frag.spv")),
+			VK::CreateShaderModule(GetFilePath("_P.vert.spv")),
+			VK::CreateShaderModule(GetFilePath("_P.frag.spv")),
 		};
 		const std::array PSSCIs = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
@@ -296,41 +295,37 @@ public:
 		//!< データが埋め込まれていない(別ファイルになっている)タイプの場合は、カレントパスを変更しておくと読み込んでくれる
 		Pushd(); {
 			{
-				std::filesystem::path Path = std::filesystem::path(GLTF_SAMPLE_DIR);
-
-				//Pushd(Path / "Suzanne" / "glTF"); {
+				//Pushd(GLTF_SAMPLE_PATH / "Suzanne" / "glTF"); {
 				//	Load("Suzanne.gltf");
 				//} Popd();
 
-				//Pushd(Path / "Duck" / "glTF-Embedded"); {
+				//Pushd(GLTF_SAMPLE_PATH / "Duck" / "glTF-Embedded"); {
 				//	Load("Duck.gltf");
 				//} Popd();
 
-				//Pushd(Path / "WaterBottle" / "glTF-Binary"); {
+				//Pushd(GLTF_SAMPLE_PATH / "WaterBottle" / "glTF-Binary"); {
 				//	Load("WaterBottle.glb");
 				//} Popd();
 
-				//Pushd(Path / "AnimatedTriangle" / "glTF-Embedded"); {
+				//Pushd(GLTF_SAMPLE_PATH / "AnimatedTriangle" / "glTF-Embedded"); {
 				//	Load("AnimatedTriangle.gltf");
 				//} Popd();
 
-				//Pushd(Path / "RiggedSimple" / "glTF-Embedded"); {
+				//Pushd(GLTF_SAMPLE_PATH / "RiggedSimple" / "glTF-Embedded"); {
 				//	Load("RiggedSimple.gltf");
 				//} Popd();
 
-				//Pushd(Path / "RiggedFigure" / "glTF-Embedded"); {
+				//Pushd(GLTF_SAMPLE_PATH / "RiggedFigure" / "glTF-Embedded"); {
 				//	Load("RiggedFigure.gltf");
 				//} Popd();
 
-				//Pushd(Path / "SimpleSkin" / "glTF-Embedded"); {
+				//Pushd(GLTF_SAMPLE_PATH / "SimpleSkin" / "glTF-Embedded"); {
 				//	Load("SimpleSkin.gltf");
 				//} Popd();
 			}
 			{
-				std::filesystem::path Path = GLTF_DIR;
-
-				//Load(Path / "bunny.gltf");
-				Load(Path / "dragon.gltf");
+				//Load(GLTF_PATH / "bunny.gltf");
+				Load(GLTF_PATH / "dragon.gltf");
 			}
 		} Popd();
 	}

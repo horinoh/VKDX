@@ -56,19 +56,17 @@ protected:
 	virtual void CreateTexture() override {
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 
-		std::filesystem::path Path = std::filesystem::path(DDS_DIR);
-
 		const auto CB = CommandBuffers[0];
 #ifdef USE_PARALLAX_MAP
 		//!< [0] 法線(Normal)
-		DDSTextures.emplace_back().Create(Device, PDMP, Path / "Leather009_2K-JPG" / "Leather009_2K_Normal.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		DDSTextures.emplace_back().Create(Device, PDMP, DDS_PATH / "Leather009_2K-JPG" / "Leather009_2K_Normal.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		//!< [1] ディスプレースメント(Displacement)
-		DDSTextures.emplace_back().Create(Device, PDMP, Path / "Leather009_2K-JPG" / "Leather009_2K_Displacement.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		DDSTextures.emplace_back().Create(Device, PDMP, DDS_PATH / "Leather009_2K-JPG" / "Leather009_2K_Displacement.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 #else
 		//!< [0] 法線(Normal)
-		DDSTextures.emplace_back().Create(Device, PDMP, Path / "Rocks007_2K-JPG" / "Rocks007_2K_Normal.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		DDSTextures.emplace_back().Create(Device, PDMP, DDS_PATH / "Rocks007_2K-JPG" / "Rocks007_2K_Normal.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		//!< [1] カラー(Color)
-		DDSTextures.emplace_back().Create(Device, PDMP, Path / "Rocks007_2K-JPG" / "Rocks007_2K_Color.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		DDSTextures.emplace_back().Create(Device, PDMP, DDS_PATH / "Rocks007_2K-JPG" / "Rocks007_2K_Color.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 #endif
 		
 		//!< [2] 深度(Depth)
@@ -106,25 +104,24 @@ protected:
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 	virtual void CreatePipeline() override {
-		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
+			VK::CreateShaderModule(GetFilePath(".vert.spv")),
 #ifdef USE_SEPARATE_SAMPLER
 #ifdef USE_PARALLAX_MAP
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_pm.frag.spv"))),
+			VK::CreateShaderModule(GetFilePath("_pm.frag.spv")),
 #else
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
+			VK::CreateShaderModule(GetFilePath(".frag.spv")),
 #endif
 #else
 #ifdef USE_PARALLAX_MAP
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_cis_pm.frag.spv"))),
+			VK::CreateShaderModule(GetFilePath("_cis_pm.frag.spv")),
 #else
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_cis.frag.spv"))),
+			VK::CreateShaderModule(GetFilePath("_cis.frag.spv")),
 #endif
 #endif
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".geom.spv"))),
+			VK::CreateShaderModule(GetFilePath(".tese.spv")),
+			VK::CreateShaderModule(GetFilePath(".tesc.spv")),
+			VK::CreateShaderModule(GetFilePath(".geom.spv")),
 		};
 		const std::array PSSCIs = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),

@@ -189,17 +189,16 @@ public:
 #pragma region PIPELINE
 		const auto PLL = PipelineLayouts.back();
 
-		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".rgen.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".rmiss.spv"))),
+			VK::CreateShaderModule(GetFilePath(".rgen.spv")),
+			VK::CreateShaderModule(GetFilePath(".rmiss.spv")),
 
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".rchit.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_1.rchit.spv"))),
+			VK::CreateShaderModule(GetFilePath(".rchit.spv")),
+			VK::CreateShaderModule(GetFilePath("_1.rchit.spv")),
 
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".rcall.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_1.rcall.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_2.rcall.spv"))),
+			VK::CreateShaderModule(GetFilePath(".rcall.spv")),
+			VK::CreateShaderModule(GetFilePath("_1.rcall.spv")),
+			VK::CreateShaderModule(GetFilePath("_2.rcall.spv")),
 		};
 		const std::array PSSCIs = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),

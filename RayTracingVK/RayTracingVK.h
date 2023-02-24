@@ -57,10 +57,8 @@ public:
 	virtual void CreateGeometry() override {
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 
-		std::filesystem::path Path = std::filesystem::path(FBX_DIR);
-
-		//Load(Path / "bunny.FBX");
-		Load(Path / "dragon.FBX");
+		//Load(FBX_PATH / "bunny.FBX");
+		Load(FBX_PATH / "dragon.FBX");
 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		const auto& CB = CommandBuffers[0];
@@ -240,11 +238,9 @@ public:
 	virtual void CreateTexture() override {
 		Super::CreateTexture();
 
-		std::filesystem::path Path = std::filesystem::path(DDS_DIR);
-
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		const auto CB = CommandBuffers[0];
-		DDSTextures.emplace_back().Create(Device, PDMP, Path / "CubeMap" / "ninomaru_teien.dds")
+		DDSTextures.emplace_back().Create(Device, PDMP, DDS_PATH / "CubeMap" / "ninomaru_teien.dds")
 			.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 	}
 	virtual void CreateImmutableSampler() override {
@@ -288,12 +284,10 @@ public:
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 #pragma region PIPELINE
 		const auto PLL = PipelineLayouts.back();
-
-		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".rgen.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".rmiss.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".rchit.spv"))),
+			VK::CreateShaderModule(GetFilePath(".rgen.spv")),
+			VK::CreateShaderModule(GetFilePath(".rmiss.spv")),
+			VK::CreateShaderModule(GetFilePath(".rchit.spv")),
 		};
 		const std::array PSSCIs = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),

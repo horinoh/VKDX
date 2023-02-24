@@ -32,7 +32,7 @@ protected:
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 	virtual void CreatePipeline() override {
-		const auto SM = VK::CreateShaderModule(data(GetBasePath() + TEXT(".comp.spv")));
+		const auto SM = VK::CreateShaderModule(GetFilePath(".comp.spv"));
 		
 		const std::array CPCIs = {
 			VkComputePipelineCreateInfo({

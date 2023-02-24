@@ -80,10 +80,9 @@ public:
 			const auto& CB = CommandBuffers[0];
 			const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 
-			std::filesystem::path Path = std::filesystem::path(FBX_DIR);
-			//Load(Path / "dragon.FBX");
-			//Load(Path / "bunny4.FBX");
-			Load(Path / "bunny.FBX");
+			//Load(FBX_PATH / "dragon.FBX");
+			//Load(FBX_PATH / "bunny4.FBX");
+			Load(FBX_PATH / "bunny.FBX");
 
 			std::vector<DirectX::Meshlet> Meshlets;
 			std::vector<uint8_t> VertexIndices8;
@@ -154,11 +153,10 @@ public:
 	}
 	virtual void CreatePipeline() override {
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
-			const auto ShaderPath = GetBasePath();
 			const std::array SMs = {
-				VK::CreateShaderModule(data(ShaderPath + TEXT(".task.spv"))),
-				VK::CreateShaderModule(data(ShaderPath + TEXT(".mesh.spv"))),
-				VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
+				VK::CreateShaderModule(GetFilePath(".task.spv")),
+				VK::CreateShaderModule(GetFilePath(".mesh.spv")),
+				VK::CreateShaderModule(GetFilePath(".frag.spv")),
 			};
 			const std::array PSSCIs = {
 				VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_TASK_BIT_EXT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),

@@ -74,14 +74,12 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateTexture() override {
-		std::filesystem::path Path = std::filesystem::path(DDS_DIR);
-
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
 		//!< [0] キューブ(Cube) : PX, NX, PY, NY, PZ, NZ
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / "CubeMap" / "ninomaru_teien.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "CubeMap" / "ninomaru_teien.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		//!< [1] 法線(Normal)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), Path / "Metal012_2K-JPG" / "Metal012_2K_Normal.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Normal.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 		Super::CreateTexture();
 
@@ -132,20 +130,19 @@ protected:
 		LOG_OK();
 	}
 	virtual void CreatePipelineState() override {
-		const auto ShaderPath = GetBasePath();
 		std::vector<COM_PTR<ID3DBlob>> SBs;
 #ifdef USE_SKY_DOME
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(SBs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sd.ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sd.ds.cso")), COM_PTR_PUT(SBs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sd.hs.cso")), COM_PTR_PUT(SBs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_sd.gs.cso")), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath(".vs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_sd.ps.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_sd.ds.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_sd.hs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_sd.gs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
 #else
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".vs.cso")), COM_PTR_PUT(SBs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".ds.cso")), COM_PTR_PUT(SBs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".hs.cso")), COM_PTR_PUT(SBs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT(".gs.cso")), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath(".vs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath(".ps.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath(".ds.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath(".hs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath(".gs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
 #endif
 		const std::array SBCs = {
 			D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[0]->GetBufferPointer(), .BytecodeLength = SBs[0]->GetBufferSize() }),

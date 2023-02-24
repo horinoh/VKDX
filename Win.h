@@ -7,10 +7,12 @@
 #include <cstdlib>
 #include <crtdbg.h>
 #include <filesystem>
+#include <source_location>
 
 #ifdef _DEBUG
 #ifndef DEBUG_NEW 
-#define DEBUG_NEW new ( _NORMAL_BLOCK , __FILE__/*std::source_location::current().file_name()*/, __LINE__/*std::source_location::current().line()*/) 
+//#define DEBUG_NEW new (_NORMAL_BLOCK , __FILE__, __LINE__) 
+#define DEBUG_NEW new (_NORMAL_BLOCK , std::source_location::current().file_name(), std::source_location::current().line()) 
 #define new DEBUG_NEW 
 #endif 
 #endif
@@ -76,7 +78,6 @@
 //#include <coroutine>
 #endif
 
-//#include <source_location> //!< #TODO インクルードできない
 //#include <cinttypes>
 
 #include <dwmapi.h>
@@ -94,19 +95,23 @@
 #endif
 
 #ifndef LOG_OK
-#define LOG_OK() LogOK(__func__/*std::source_location::current().function_name()*/)
+//#define LOG_OK() LogOK(__func__)
+#define LOG_OK() LogOK(std::source_location::current().function_name())
 #endif
 
 #ifndef PERFORMANCE_COUNTER
-#define PERFORMANCE_COUNTER() PerformanceCounter __PC(__func__/*std::source_location::current().function_name()*/)
+//#define PERFORMANCE_COUNTER() PerformanceCounter __PC(__func__)
+#define PERFORMANCE_COUNTER() PerformanceCounter __PC(std::source_location::current().function_name())
 #endif
 
 //!< アセットフォルダ (Asset folder)
-constexpr std::string_view DDS_DIR = "..\\DDS";
-constexpr std::string_view DRC_DIR = "..\\DRC";
-constexpr std::string_view FBX_DIR = "..\\FBX";
-constexpr std::string_view GLTF_DIR = "..\\GLTF";
-constexpr std::string_view GLTF_SAMPLE_DIR = "..\\glTF-Sample-Models\\2.0";
+const auto DDS_PATH = std::filesystem::path("..") / "DDS";
+const auto DRC_PATH = std::filesystem::path("..") / "DRC";
+const auto FBX_PATH = std::filesystem::path("..") / "FBX";
+const auto GLTF_PATH = std::filesystem::path("..") / "GLTF";
+
+const auto DRC_SAMPLE_PATH = std::filesystem::path("..") / "draco" / "testdata";
+const auto GLTF_SAMPLE_PATH = std::filesystem::path("..") / "glTF-Sample-Models" / "2.0";
 
 template<typename T> constexpr T GetMin(const T& lhs, const T& rhs);
 template<typename T> constexpr T GetMax(const T& lhs, const T& rhs);
@@ -119,7 +124,7 @@ public:
 	Win();
 	virtual ~Win();
 
-	//virtual void OnInitialize(HWND hWnd, HINSTANCE hInstance) {}
+	//virtual void OnInitialize([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
 	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title);
 	virtual void OnSize([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {} //!< WM_SIZE はドラッグ中に繰り返しコールされてしまうので↓
 	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance); //!< ウインドウサイズ確定時にコールされる WM_EXITSIZEMOVE を使用する
@@ -149,6 +154,8 @@ public:
 	static bool AdjustBorderlessRect(HWND hWnd, RECT& Rect);
 	static LRESULT GetBorderlessHit(HWND hWnd, const POINT& Cursor, const bool IsDrag = false, const bool IsResize = false);
 
+	[[nodiscard]] std::filesystem::path GetFilePath(const std::string& Suffix) const { return std::filesystem::path(".") / (GetTitleString() + Suffix); }
+
 	[[nodiscard]] static LONG GetWidth(const RECT& R) { return R.right - R.left; }
 	[[nodiscard]] static LONG GetHeight(const RECT& R) { return R.bottom - R.top; }
 	[[nodiscard]] static FLOAT GetAspectRatio(const FLOAT Width, const FLOAT Height) { return Width / Height; }
@@ -163,15 +170,17 @@ public:
 		WideCharToMultiByte(CP_UTF8, 0, data(WStr), -1, data(Buffer), static_cast<int>(size(Buffer)), nullptr, nullptr);
 		return std::string(cbegin(Buffer), --cend(Buffer));
 #elif 0
-		std::vector<CHAR> Buffer(WStr.length() + 1);
-		size_t i; wcstombs_s(&i, data(Buffer), size(Buffer), data(WStr), _TRUNCATE);
+		//!< 時代遅れ(obsolescent)
+		std::vector<CHAR> Buffer(size(WStr) + 1);
+		size_t i; 
+		wcstombs_s(&i, data(Buffer), size(Buffer), data(WStr), _TRUNCATE);
 		return std::string(cbegin(Buffer), --cend(Buffer));
 #elif 0
-		//!< NG
+		//!< 非推奨(deprecated)
 		std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> Converter;
 		return Converter.to_bytes(WStr);
 #else
-		//!< NG : C4244
+		//!< NG :  C2220 //C4244
 		return std::string(cbegin(WStr), cend(WStr));
 #endif
 	}
@@ -181,37 +190,36 @@ public:
 		MultiByteToWideChar(CP_UTF8, 0, data(Str), -1, data(Buffer), static_cast<int>(size(Buffer)));
 		return std::wstring(cbegin(Buffer), cend(Buffer));
 #elif 0
-		std::vector<wchar_t> Buffer(Str.length() + 1);
-		size_t i; mbstowcs_s(&i, data(Buffer), size(Buffer), data(Str), _TRUNCATE);
+		//!< 時代遅れ(obsolescent)
+		std::vector<wchar_t> Buffer(size(Str) + 1);
+		size_t i; 
+		mbstowcs_s(&i, data(Buffer), size(Buffer), data(Str), _TRUNCATE);
 		return std::wstring(cbegin(Buffer), cend(Buffer));
 #elif 0
-		//!< NG
+		//!< 非推奨(deprecated)
 		std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> Converter;
 		return Converter.from_bytes(Str);
 #else
-		return std::wstring(cbegin(Str), cend(Str));
+		return std::wstring(std::cbegin(Str), std::cend(Str));
 #endif
 	}
 
-	[[nodiscard]] virtual const std::wstring& GetTitleW() const { return TitleW; }
-	[[nodiscard]] virtual std::string GetTitle() const { return ToString(TitleW); }
-	void SetTitleW(LPCWSTR Title) { TitleW = Title; }
+	[[nodiscard]] virtual std::string GetTitleString() const { return TitleString; }
+	void SetTitleWString(LPCWSTR Title) { TitleString = ToString(Title); }
 
-	[[nodiscard]] std::wstring GetBasePath() const { return TEXT(".\\") + GetTitleW(); }
-
-	[[nodiscard]] bool FindDirectory(std::string_view Target, std::filesystem::path& Path) {
-		auto Cur = std::filesystem::current_path();
-		while (Cur.has_parent_path()) {
-			for (auto i : std::filesystem::recursive_directory_iterator(Cur)) {
-				if (i.is_directory() && std::equal(crbegin(Target), crend(Target), crbegin(i.path().string()))) {
-					Path = i.path();
-					return true;
-				}
-			}
-			Cur = Cur.parent_path();
-		}
-		return false;
-	}
+	//[[nodiscard]] bool FindDirectory(std::string_view Target, std::filesystem::path& Path) {
+	//	auto Cur = std::filesystem::current_path();
+	//	while (Cur.has_parent_path()) {
+	//		for (auto i : std::filesystem::recursive_directory_iterator(Cur)) {
+	//			if (i.is_directory() && std::equal(crbegin(Target), crend(Target), crbegin(i.path().string()))) {
+	//				Path = i.path();
+	//				return true;
+	//			}
+	//		}
+	//		Cur = Cur.parent_path();
+	//	}
+	//	return false;
+	//}
 #ifdef DEBUG_STDOUT
 	static void SetColor(const WORD Color = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE) {
 		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), Color | FOREGROUND_INTENSITY);
@@ -270,7 +278,7 @@ public:
 	}
 
 protected:
-	std::wstring TitleW;
+	std::string TitleString;
 	static constexpr UINT DeltaMsec = 1000 / 60;
 	static constexpr FLOAT DeltaSec = 1.0f / 60.0f;
 

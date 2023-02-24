@@ -34,7 +34,7 @@ void DXExt::CreatePipelineState_VsPs_Input(const D3D12_PRIMITIVE_TOPOLOGY_TYPE P
 	//!< メンバ関数をスレッドで使用したい場合は、以下のようにthisを引数に取る形式を使用すればよい
 	//std::thread::thread(&DXExt::Func, this, Arg0, Arg1,...);
 #ifdef USE_PIPELINE_SERIALIZE
-	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
+	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), (GetTitleString() + ".plo"));
 	Threads.emplace_back(std::thread::thread(DX::CreatePipelineState_, std::ref(PipelineStates.emplace_back()), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), PTT, RTBDs, RD, DSD, SBCs[0], SBCs[1], NullSBC, NullSBC, NullSBC, IEDs, RTVs, &PLS, TEXT("0")));
 #else
 	Threads.emplace_back(std::thread::thread(DX::CreatePipelineState_, std::ref(PipelineStates.emplace_back()), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), PTT, RTBDs, RD, DSD, SBCs[0], SBCs[1], NullSBC, NullSBC, NullSBC, IEDs, RTVs, nullptr, nullptr));
@@ -68,7 +68,7 @@ void DXExt::CreatePipelineState_VsPsDsHsGs_Input(const D3D12_PRIMITIVE_TOPOLOGY_
 
 	std::vector<std::thread> Threads;
 #ifdef USE_PIPELINE_SERIALIZE
-	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
+	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), std::filesystem::path(".") / (GetTitleString() + ".plo"));
 	Threads.emplace_back(std::thread::thread(DX::CreatePipelineState_, std::ref(PipelineStates.emplace_back()), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), Topology, RTBDs, RD, DSD, SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4], IEDs, RTVs, &PLS, TEXT("0")));
 #else
 	Threads.emplace_back(std::thread::thread(DX::CreatePipelineState_, std::ref(PipelineStates.emplace_back()), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), Topology, RTBDs, RD, DSD, SBCs[0], SBCs[1], SBCs[2], SBCs[3], SBCs[4], IEDs, RTVs, nullptr, nullptr));
@@ -111,7 +111,7 @@ void DXExt::CreatePipelineState_AsMsPs(const BOOL DepthEnable, const std::array<
 
 	std::vector<std::thread> Threads;
 #ifdef USE_PIPELINE_SERIALIZE
-	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), GetBasePath() + TEXT(".plo"));
+	PipelineLibrarySerializer PLS(COM_PTR_GET(Device), std::filesystem::path(".") / (GetTitleString() + ".plo"));
 	Threads.emplace_back(std::thread::thread(DX::CreatePipelineState__, std::ref(PipelineStates.emplace_back()), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), RTBDs, RD, DSD, SBCs[0], SBCs[1], SBCs[2], RTVs, &PLS, TEXT("0")));
 #else
 	Threads.emplace_back(std::thread::thread(DX::CreatePipelineState__, std::ref(PipelineStates.emplace_back()), COM_PTR_GET(Device), COM_PTR_GET(RootSignatures[0]), RTBDs, RD, DSD, SBCs[0], SBCs[1], SBCs[2], RTVs, nullptr, nullptr));

@@ -30,14 +30,13 @@ public:
 #endif
 	virtual void CreatePipeline() override {
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
-			const auto ShaderPath = GetBasePath();
 			const std::array SMs = {
 #ifdef USE_NV_MESH_SHADER
-				VK::CreateShaderModule(data(ShaderPath + TEXT("_nv.mesh.spv"))),
+				VK::CreateShaderModule(GetFilePath("_nv.mesh.spv")),
 #else
-				VK::CreateShaderModule(data(ShaderPath + TEXT(".mesh.spv"))),
+				VK::CreateShaderModule(GetFilePath(".mesh.spv")),
 #endif
-				VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
+				VK::CreateShaderModule(GetFilePath(".frag.spv")),
 			};
 			const std::array PSSCIs = {
 #ifdef USE_NV_MESH_SHADER

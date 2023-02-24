@@ -154,13 +154,12 @@ public:
 		if (!HasRayTracingSupport(GetCurrentPhysicalDevice())) { return; }
 #pragma region PIPELINE
 		const auto PLL = PipelineLayouts.back();
-
-		const auto ShaderPath = GetBasePath();
+		
 		const std::array SMs = {
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".rgen.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".rmiss.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".rchit.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".rint.spv"))),
+			VK::CreateShaderModule(GetFilePath(".rgen.spv")),
+			VK::CreateShaderModule(GetFilePath(".rmiss.spv")),
+			VK::CreateShaderModule(GetFilePath(".rchit.spv")),
+			VK::CreateShaderModule(GetFilePath(".rint.spv")),
 		};
 
 		const std::array PSSCIs = {

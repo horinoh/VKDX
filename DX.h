@@ -533,7 +533,7 @@ public:
 	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f);
 
 	template<typename T = D3D12_ROOT_PARAMETER> void SerializeRootSignature(COM_PTR<ID3DBlob>& Blob, const std::vector<T>& RPs, const std::vector<D3D12_STATIC_SAMPLER_DESC>& SSDs, const D3D12_ROOT_SIGNATURE_FLAGS Flags);
-	virtual void GetRootSignaturePartFromShader(COM_PTR<ID3DBlob>& Blob, LPCWSTR Path);
+	virtual void GetRootSignaturePartFromShader(COM_PTR<ID3DBlob>& Blob, const std::filesystem::path& Path);
 	virtual void CreateRootSignature();
 
 	virtual void CreateDescriptor() {}
@@ -547,16 +547,16 @@ public:
 	class PipelineLibrarySerializer
 	{
 	public:
-		PipelineLibrarySerializer(ID3D12Device* Dev, std::wstring_view Path) : Device(Dev), FilePath(Path) {
+		PipelineLibrarySerializer(ID3D12Device* Dev, const std::filesystem::path& Path) : Device(Dev), FilePath(Path) {
 #ifdef ALWAYS_REBUILD_PIPELINE
-			DeleteFile(data(FilePath));
+			DeleteFile(data(FilePath.wstring()));
 #endif
 			COM_PTR<ID3D12Device1> Device1;
 			VERIFY_SUCCEEDED(Device->QueryInterface(COM_PTR_UUIDOF_PUTVOID(Device1)));
 
 			COM_PTR<ID3DBlob> Blob;
-			if (SUCCEEDED(D3DReadFileToBlob(data(FilePath), COM_PTR_PUT(Blob))) && Blob->GetBufferSize()) {
-				Logf("PipelineLibrarySerializer : Reading PipelineLibrary = %ls\n", data(FilePath));
+			if (SUCCEEDED(D3DReadFileToBlob(data(FilePath.wstring()), COM_PTR_PUT(Blob))) && Blob->GetBufferSize()) {
+				Logf("PipelineLibrarySerializer : Reading PipelineLibrary = %ls\n", data(FilePath.string()));
 				//!< ファイルが読めた場合は PipelineLinrary へ読み込む (If file is read, load to PipplineLibrary)
 				VERIFY_SUCCEEDED(Device1->CreatePipelineLibrary(Blob->GetBufferPointer(), Blob->GetBufferSize(), COM_PTR_UUIDOF_PUTVOID(PipelineLibrary)));
 				IsLoaded = true;
@@ -569,14 +569,14 @@ public:
 		}
 		virtual ~PipelineLibrarySerializer() {
 			if (!IsLoaded) {
-				Logf("PipelineLibrarySerializer : Writing PipelineLibrary = %ls\n", data(FilePath));
+				Logf("PipelineLibrarySerializer : Writing PipelineLibrary = %ls\n", data(FilePath.string()));
 				//!< ファイルへ書き込む (Write to file)
 				const auto Size = PipelineLibrary->GetSerializedSize();
 				if (Size) {
 					COM_PTR<ID3DBlob> Blob;
 					VERIFY_SUCCEEDED(D3DCreateBlob(Size, COM_PTR_PUT(Blob)));
 					VERIFY_SUCCEEDED(PipelineLibrary->Serialize(Blob->GetBufferPointer(), Size));
-					VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blob), data(FilePath), TRUE));
+					VERIFY_SUCCEEDED(D3DWriteBlobToFile(COM_PTR_GET(Blob), data(FilePath.wstring()), TRUE));
 				}
 			}
 			LOG_OK();
@@ -585,7 +585,7 @@ public:
 		bool IsLoadSucceeded() const { return IsLoaded; }
 	private:
 		ID3D12Device* Device;
-		std::wstring FilePath;
+		std::filesystem::path FilePath;
 		COM_PTR<ID3D12PipelineLibrary> PipelineLibrary;
 		bool IsLoaded = false;
 	};

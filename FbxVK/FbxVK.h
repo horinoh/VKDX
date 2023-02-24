@@ -55,9 +55,8 @@ public:
 #pragma endregion
 
 	virtual void CreateGeometry() override {
-		std::filesystem::path Path = std::filesystem::path(FBX_DIR);
-		Load(Path / "bunny.FBX");
-		//Load(Path / "dragon.FBX");
+		Load(FBX_PATH / "bunny.FBX");
+		//Load(FBX_PATH / "dragon.FBX");
 
 		const auto& CB = CommandBuffers[0];
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
@@ -89,10 +88,9 @@ public:
 		VK::SubmitAndWait(GraphicsQueue, CB);
 	}
 	virtual void CreatePipeline() override {
-		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv")))
+			VK::CreateShaderModule(GetFilePath(".vert.spv")),
+			VK::CreateShaderModule(GetFilePath(".frag.spv")),
 		};
 		const std::array PSSCIs = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),

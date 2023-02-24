@@ -73,7 +73,7 @@ Win::~Win()
 
 void Win::OnCreate(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance, LPCWSTR Title)
 {
-	SetTitleW(Title);
+	SetTitleWString(Title);
 
 	GetClientRect(hWnd, &Rect);
 }

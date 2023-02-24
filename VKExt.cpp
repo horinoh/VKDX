@@ -111,7 +111,7 @@ void VKExt::CreatePipeline_VsFs_Input(const VkPrimitiveTopology PT, const uint32
 	//!< メンバ関数をスレッドで使用したい場合は、以下のようにthisを引数に取る形式を使用すればよい
 	//std::thread::thread(&VKExt::Func, this, Arg0, Arg1,...);
 #ifdef USE_PIPELINE_SERIALIZE
-	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
+	PipelineCacheSerializer PCS(Device, std::filesystem::path(".") / (GetTitleString() + ".pco"), 1);
 	Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
 #else
 	Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], nullptr, nullptr, nullptr, VIBDs, VIADs, PCBASs));
@@ -156,7 +156,7 @@ void VKExt::CreatePipeline_VsFsTesTcsGs_Input(const VkPrimitiveTopology PT, cons
 
 	std::vector<std::thread> Threads;
 #ifdef USE_PIPELINE_SERIALIZE
-	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
+	PipelineCacheSerializer PCS(Device, std::filesystem::path(".") / (GetTitleString() + ".pco"), 1);
 	Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs, PCS.GetPipelineCache(0)));
 #else
 	Threads.emplace_back(std::thread::thread(VK::CreatePipeline_, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PT, PatchControlPoints, PRSCI, PDSSCI, &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], &PSSCIs[3], &PSSCIs[4], VIBDs, VIADs, PCBASs));
@@ -219,7 +219,7 @@ void VKExt::CreatePipeline_TsMsFs(const VkBool32 DepthEnable, const std::array<V
 
 	std::vector<std::thread> Threads;
 #ifdef USE_PIPELINE_SERIALIZE
-	PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 1);
+	PipelineCacheSerializer PCS(Device, std::filesystem::path(".") / (GetTitleString() + ".pco"), 1);
 	Threads.emplace_back(std::thread::thread(VK::CreatePipeline__, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PRSCI, PDSSCI, VK_NULL_HANDLE == PSSCIs[0].module ? nullptr : &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], PCBASs, PCS.GetPipelineCache(0)));
 #else
 	Threads.emplace_back(std::thread::thread(VK::CreatePipeline__, std::ref(Pipelines.emplace_back()), Device, PipelineLayouts[0], RenderPasses[0], PRSCI, PDSSCI, VK_NULL_HANDLE == PSSCIs[0].module ? nullptr : &PSSCIs[0], &PSSCIs[1], &PSSCIs[2], PCBASs));

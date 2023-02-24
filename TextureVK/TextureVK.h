@@ -20,10 +20,8 @@ protected:
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC).SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, sizeof(DIC), &DIC);
 	}
 	virtual void CreateTexture() override {
-		std::filesystem::path Path = std::filesystem::path(DDS_DIR);
-
 #ifdef _DEBUG
-		auto GLITexture = gli::load(data((Path / "PavingStones050_2K-JPG" / "PavingStones050_2K_Color.dds").string()));
+		auto GLITexture = gli::load(data((DDS_PATH / "PavingStones050_2K-JPG" / "PavingStones050_2K_Color.dds").string()));
 		VkImageFormatProperties IFP;
 		VERIFY_SUCCEEDED(vkGetPhysicalDeviceImageFormatProperties(GetCurrentPhysicalDevice(),
 			VKImage::ToVkFormat(GLITexture.format()),
@@ -32,10 +30,14 @@ protected:
 			VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 			gli::is_target_cube(GLITexture.target()) ? VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : 0,
 			&IFP));
+		std::cout << "maxExtent = " << IFP.maxExtent.width << " x " << IFP.maxExtent.height << " x " << IFP.maxExtent.depth << std::endl;
+		std::cout << "maxMipLevels = " << IFP.maxMipLevels << std::endl;
+		std::cout << "maxArrayLayers = " << IFP.maxArrayLayers << std::endl;
+		std::cout << "sampleCounts = " << IFP.sampleCounts << std::endl;
+		std::cout << "maxResourceSize = " << IFP.maxResourceSize << std::endl;
 #endif
-
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-		DDSTextures.emplace_back().Create(Device, PDMP, Path / "PavingStones050_2K-JPG" / "PavingStones050_2K_Color.dds").SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		DDSTextures.emplace_back().Create(Device, PDMP, DDS_PATH / "PavingStones050_2K-JPG" / "PavingStones050_2K_Color.dds").SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 	}
 #ifdef USE_IMMUTABLE_SAMPLER
 	//!< VKの場合イミュータブルサンプラと通常のサンプラは基本的に同じもの、デスクリプタセットレイアウトの指定が異なるだけ
@@ -73,10 +75,9 @@ protected:
 		VK::CreatePipelineLayout(PipelineLayouts.emplace_back(), DescriptorSetLayouts, {});
 	}
 	virtual void CreatePipeline() override {
-		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
+			VK::CreateShaderModule(GetFilePath(".vert.spv")),
+			VK::CreateShaderModule(GetFilePath(".frag.spv")),
 		};
 		const std::array PSSCIs = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),

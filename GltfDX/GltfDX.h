@@ -76,12 +76,11 @@ public:
 		LOG_OK();
 	}
 	virtual void CreatePipelineState() override {
-		const auto ShaderPath = GetBasePath();
 		std::vector<COM_PTR<ID3DBlob>> SBs;
-		//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_PN.vs.cso")), COM_PTR_PUT(SBs.emplace_back())));
-		//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_PN.ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_P.vs.cso")), COM_PTR_PUT(SBs.emplace_back())));
-		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(ShaderPath + TEXT("_P.ps.cso")), COM_PTR_PUT(SBs.emplace_back())));
+		//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_PN.vs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		//VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_PN.ps.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_P.vs.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
+		VERIFY_SUCCEEDED(D3DReadFileToBlob(data(GetFilePath("_P.ps.cso").wstring()), COM_PTR_PUT(SBs.emplace_back())));
 		const std::array SBCs = {
 			D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[0]->GetBufferPointer(), .BytecodeLength = SBs[0]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[1]->GetBufferPointer(), .BytecodeLength = SBs[1]->GetBufferSize() }),
@@ -297,41 +296,37 @@ public:
 		//!< データが埋め込まれていない(別ファイルになっている)タイプの場合は、カレントパスを変更しておくと読み込んでくれる
 		Pushd(); {
 			{
-				std::filesystem::path Path = std::filesystem::path(GLTF_SAMPLE_DIR);
-
-				//Pushd(Path / "Suzanne" / "glTF"); {
+				//Pushd(GLTF_SAMPLE_PATH / "Suzanne" / "glTF"); {
 				//	Load("Suzanne.gltf");
 				//} Popd();
 
-				//Pushd(Path / "Duck" / "glTF-Embedded"); {
+				//Pushd(GLTF_SAMPLE_PATH / "Duck" / "glTF-Embedded"); {
 				//	Load("Duck.gltf");
 				//} Popd();
 
-				//Pushd(Path / "WaterBottle" / "glTF-Binary"); {
+				//Pushd(GLTF_SAMPLE_PATH / "WaterBottle" / "glTF-Binary"); {
 				//	Load("WaterBottle.glb");
 				//} Popd();
 
-				//Pushd(Path / "AnimatedTriangle" / "glTF-Embedded"); {
+				//Pushd(GLTF_SAMPLE_PATH / "AnimatedTriangle" / "glTF-Embedded"); {
 				//	Load("AnimatedTriangle.gltf");
 				//} Popd();
 				
-				//Pushd(Path / "RiggedSimple" / "glTF-Embedded"); {
+				//Pushd(GLTF_SAMPLE_PATH / "RiggedSimple" / "glTF-Embedded"); {
 				//	Load("RiggedSimple.gltf");
 				//} Popd();
 				
-				//Pushd(Path / "RiggedFigure" / "glTF-Embedded"); {
+				//Pushd(GLTF_SAMPLE_PATH / "RiggedFigure" / "glTF-Embedded"); {
 				//	Load("RiggedFigure.gltf");
 				//} Popd();
 
-				//Pushd(Path / "SimpleSkin" / "glTF-Embedded"); {
+				//Pushd(GLTF_SAMPLE_PATH / "SimpleSkin" / "glTF-Embedded"); {
 				//	Load("SimpleSkin.gltf");
 				//} Popd();
 			}
 			{
-				std::filesystem::path Path = GLTF_DIR;
-
-				//Load(Path / "bunny.gltf");
-				Load(Path / "dragon.gltf");
+				//Load(GLTF_PATH / "bunny.gltf");
+				Load(GLTF_PATH / "dragon.gltf");
 			}
 		} Popd();
 	}

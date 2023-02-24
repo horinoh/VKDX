@@ -230,9 +230,8 @@ protected:
 	virtual void CreatePipeline() override {
 		std::vector<std::thread> Threads;
 		Pipelines.resize(2);
-		const auto ShaderPath = GetBasePath();
 #ifdef USE_PIPELINE_SERIALIZE
-		PipelineCacheSerializer PCS(Device, GetBasePath() + TEXT(".pco"), 2);
+		PipelineCacheSerializer PCS(Device, GetFilePath(".pco"), 2);
 #endif
 		const VkPipelineRasterizationStateCreateInfo PRSCI = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -270,11 +269,11 @@ protected:
 
 #pragma region PASS0
 		const std::array SMs0 = {
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".tese.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".tesc.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".geom.spv"))),
+			VK::CreateShaderModule(GetFilePath(".vert.spv")),
+			VK::CreateShaderModule(GetFilePath(".frag.spv")),
+			VK::CreateShaderModule(GetFilePath(".tese.spv")),
+			VK::CreateShaderModule(GetFilePath(".tesc.spv")),
+			VK::CreateShaderModule(GetFilePath(".geom.spv")),
 		};
 		const std::array PSSCIs0 = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs0[0], .pName = "main", .pSpecializationInfo = nullptr }),
@@ -292,11 +291,11 @@ protected:
 
 #pragma region PASS1
 		const std::array SMs1 = {
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".vert.spv"))),
+			VK::CreateShaderModule(GetFilePath("_1.vert.spv")),
 #ifdef DRAW_QUILT
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_1_Quilt") + TEXT(".frag.spv"))),
+			VK::CreateShaderModule(GetFilePath("_1_Quilt.frag.spv")),
 #else
-			VK::CreateShaderModule(data(ShaderPath + TEXT("_1") + TEXT(".frag.spv"))),
+			VK::CreateShaderModule(GetFilePath("_1.frag.spv")),
 #endif
 		};
 		const std::array PSSCIs1 = {

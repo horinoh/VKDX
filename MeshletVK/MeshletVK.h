@@ -25,11 +25,10 @@ public:
 	}
 	virtual void CreatePipeline() override {
 		if (HasMeshShaderSupport(GetCurrentPhysicalDevice())) {
-			const auto ShaderPath = GetBasePath();
 			const std::array SMs = {
-				VK::CreateShaderModule(data(ShaderPath + TEXT(".task.spv"))),
-				VK::CreateShaderModule(data(ShaderPath + TEXT(".mesh.spv"))),
-				VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv"))),
+				VK::CreateShaderModule(GetFilePath(".task.spv")),
+				VK::CreateShaderModule(GetFilePath(".mesh.spv")),
+				VK::CreateShaderModule(GetFilePath(".frag.spv")),
 			};
 			const std::array PSSCIs = {
 				VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_TASK_BIT_EXT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),

@@ -217,11 +217,10 @@ public:
 #pragma region PIPELINE
 		const auto PLL = PipelineLayouts.back();
 
-		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".rgen.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".rmiss.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".rchit.spv"))),
+			VK::CreateShaderModule(GetFilePath(".rgen.spv")),
+			VK::CreateShaderModule(GetFilePath(".rmiss.spv")),
+			VK::CreateShaderModule(GetFilePath(".rchit.spv")),
 		};
 		//!< シェーダステージ
 		const std::array PSSCIs = {

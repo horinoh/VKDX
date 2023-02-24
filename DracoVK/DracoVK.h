@@ -57,12 +57,10 @@ public:
 #pragma endregion
 
 	virtual void CreateGeometry() override {
-		std::filesystem::path Path = std::filesystem::path(DRC_DIR);
-
-		//Load(Path / "bunny.drc");
-		//Load(Path / "dragon.drc");
-		Load(Path / "dragon4.drc");
-		//Load(std::string("..//draco//testdata//") + "car.drc");
+		//Load(DRC_PATH / "bunny.drc");
+		//Load(DRC_PATH / "dragon.drc");
+		Load(DRC_PATH / "dragon4.drc");
+		//Load(DRC_SAMPLE_PATH / "car.drc");
 
 #ifdef USE_CONVEXHULL
 		std::vector<Vec3> VerticesVec3;
@@ -117,10 +115,9 @@ public:
 		VK::SubmitAndWait(GraphicsQueue, CB);
 	}
 	virtual void CreatePipeline() override {
-		const auto ShaderPath = GetBasePath();
 		const std::array SMs = {
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".vert.spv"))),
-			VK::CreateShaderModule(data(ShaderPath + TEXT(".frag.spv")))
+			VK::CreateShaderModule(GetFilePath(".vert.spv")),
+			VK::CreateShaderModule(GetFilePath(".frag.spv")),
 		};
 		const std::array PSSCIs = {
 			VkPipelineShaderStageCreateInfo({.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO, .pNext = nullptr, .flags = 0, .stage = VK_SHADER_STAGE_VERTEX_BIT, .module = SMs[0], .pName = "main", .pSpecializationInfo = nullptr }),
