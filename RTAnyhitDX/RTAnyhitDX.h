@@ -16,7 +16,7 @@ public:
 	virtual void CreateGeometry() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
-		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[0]);
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
@@ -98,12 +98,12 @@ public:
 		Scratch.Create(COM_PTR_GET(Device), std::max(RASPI_Blas.ScratchDataSizeInBytes, RASPI_Tlas.ScratchDataSizeInBytes));
 #pragma endregion
 
-		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			BLASs.back().PopulateBuildCommand(BRASI_Blas, GCL, COM_PTR_GET(Scratch.Resource));
-			BLASs.back().PopulateBarrierCommand(GCL);
-			TLASs.back().PopulateBuildCommand(BRASI_Tlas, GCL, COM_PTR_GET(Scratch.Resource));
-		} VERIFY_SUCCEEDED(GCL->Close());
-		DX::ExecuteAndWait(GCQ, static_cast<ID3D12CommandList*>(GCL), COM_PTR_GET(GraphicsFence));
+		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+			BLASs.back().PopulateBuildCommand(BRASI_Blas, CL, COM_PTR_GET(Scratch.Resource));
+			BLASs.back().PopulateBarrierCommand(CL);
+			TLASs.back().PopulateBuildCommand(BRASI_Tlas, CL, COM_PTR_GET(Scratch.Resource));
+		} VERIFY_SUCCEEDED(CL->Close());
+		DX::ExecuteAndWait(GCQ, static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(GraphicsFence));
 	}
 	virtual void CreatePipelineState() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
@@ -242,34 +242,34 @@ public:
 	virtual void PopulateCommandList(const size_t i) override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
-		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[i]);
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto RT = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
-		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			PopulateBeginRenderTargetCommand(GCL, RT); {
+		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+			PopulateBeginRenderTargetCommand(CL, RT); {
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
-				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
-				GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
-				GCL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
-				GCL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[1]);
-				GCL->SetComputeRootDescriptorTable(2, CbvSrvUavGPUHandles.back()[2]);
+				CL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
+				CL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
+				CL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[1]);
+				CL->SetComputeRootDescriptorTable(2, CbvSrvUavGPUHandles.back()[2]);
 
-				TO_GCL4(GCL, GCL4);
-				GCL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
+				TO_CL4(CL, CL4);
+				CL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
 
-				GCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
-			} PopulateEndRenderTargetCommand(GCL, RT, COM_PTR_GET(SwapChainResources[i]));
-		} VERIFY_SUCCEEDED(GCL->Close());
+				CL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+			} PopulateEndRenderTargetCommand(CL, RT, COM_PTR_GET(SwapChainResources[i]));
+		} VERIFY_SUCCEEDED(CL->Close());
 	}
 
 	virtual void CreateTexture() override {
 		Super::CreateTexture();
 
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "SheetMetal001_1K-JPG" / "SheetMetal001_1K_Opacity.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "SheetMetal001_1K-JPG" / "SheetMetal001_1K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		const auto CL = COM_PTR_GET(DirectCommandLists[0]);
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "SheetMetal001_1K-JPG" / "SheetMetal001_1K_Opacity.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "SheetMetal001_1K-JPG" / "SheetMetal001_1K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	}
 	virtual void CreateRootSignature() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }

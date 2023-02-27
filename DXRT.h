@@ -87,7 +87,7 @@ protected:
 			DX::CreateBufferResource(COM_PTR_PUT(Read), Dev, Size, D3D12_RESOURCE_FLAG_NONE, D3D12_HEAP_TYPE_READBACK, D3D12_RESOURCE_STATE_COMMON);
 			return *this;
 		}
-		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL) {
+		void PopulateCopyCommand(ID3D12GraphicsCommandList* CL) {
 			//!< リードバックへのコピーコマンドを発行する 
 			const std::array RBs = {
 				D3D12_RESOURCE_BARRIER({
@@ -100,8 +100,8 @@ protected:
 					})
 				})
 			};
-			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
-			GCL->CopyResource(COM_PTR_GET(Read), COM_PTR_GET(Info));
+			CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+			CL->CopyResource(COM_PTR_GET(Read), COM_PTR_GET(Info));
 		}
 		UINT64 GetSize() {
 			//!< 結果をリードバックへコピーした後に使用すること
@@ -115,47 +115,47 @@ protected:
 	};
 	class AccelerationStructureBuffer : public ResourceBase
 	{
-#define TO_GCL4(GCL, GCL4) COM_PTR<ID3D12GraphicsCommandList4> GCL4; VERIFY_SUCCEEDED(GCL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(GCL4)))
+#define TO_CL4(CL, CL4) COM_PTR<ID3D12GraphicsCommandList4> CL4; VERIFY_SUCCEEDED(CL->QueryInterface(COM_PTR_UUIDOF_PUTVOID(CL4)))
 	public:
 		virtual AccelerationStructureBuffer& Create(ID3D12Device* Dev, const size_t Size) {
 			DX::CreateBufferResource(COM_PTR_PUT(Resource), Dev, Size, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, D3D12_HEAP_TYPE_DEFAULT, D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE);
 			return *this;
 		}
-		void PopulateBuildCommand(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD, ID3D12GraphicsCommandList* GCL, ASCompaction* Compaction = nullptr) {
-			TO_GCL4(GCL, GCL4);
+		void PopulateBuildCommand(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD, ID3D12GraphicsCommandList* CL, ASCompaction* Compaction = nullptr) {
+			TO_CL4(CL, CL4);
 			if (nullptr != Compaction) {
 				//!< コンパクションサイズを取得する設定
 				const std::array RASPIDs = {
 					D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC({.DestBuffer = Compaction->Info->GetGPUVirtualAddress(), .InfoType = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_COMPACTED_SIZE}),
 				};
-				GCL4->BuildRaytracingAccelerationStructure(&BRASD, static_cast<UINT>(size(RASPIDs)), data(RASPIDs));
+				CL4->BuildRaytracingAccelerationStructure(&BRASD, static_cast<UINT>(size(RASPIDs)), data(RASPIDs));
 
 				//!< 結果をリードバックへコピー
-				Compaction->PopulateCopyCommand(GCL);
+				Compaction->PopulateCopyCommand(CL);
 			}
 			else {
 				constexpr std::array<D3D12_RAYTRACING_ACCELERATION_STRUCTURE_POSTBUILD_INFO_DESC, 0> RASPIDs = {};
-				GCL4->BuildRaytracingAccelerationStructure(&BRASD, static_cast<UINT>(size(RASPIDs)), data(RASPIDs));
+				CL4->BuildRaytracingAccelerationStructure(&BRASD, static_cast<UINT>(size(RASPIDs)), data(RASPIDs));
 			}
 		}
-		void PopulateBuildCommand(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12Resource* Scratch, ASCompaction* Compaction = nullptr) {
+		void PopulateBuildCommand(const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* CL, ID3D12Resource* Scratch, ASCompaction* Compaction = nullptr) {
 			const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC BRASD = {
 				.DestAccelerationStructureData = Resource->GetGPUVirtualAddress(),
 				.Inputs = BRASI,
 				.SourceAccelerationStructureData = 0,
 				.ScratchAccelerationStructureData = Scratch->GetGPUVirtualAddress()
 			};
-			PopulateBuildCommand(BRASD, GCL, Compaction);
+			PopulateBuildCommand(BRASD, CL, Compaction);
 		}
-		void ExecuteBuildCommand(ID3D12Device* Dev, const size_t Size, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, ASCompaction* Compaction = nullptr) {
+		void ExecuteBuildCommand(ID3D12Device* Dev, const size_t Size, const D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS& BRASI, ID3D12GraphicsCommandList* CL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, ASCompaction* Compaction = nullptr) {
 			ScratchBuffer SB;
 			SB.Create(Dev, Size);
-			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-				PopulateBuildCommand(BRASI, GCL, COM_PTR_GET(SB.Resource), Compaction);
-			} VERIFY_SUCCEEDED(GCL->Close());
-			DX::ExecuteAndWait(CQ, static_cast<ID3D12CommandList*>(GCL), Fence);
+			VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+				PopulateBuildCommand(BRASI, CL, COM_PTR_GET(SB.Resource), Compaction);
+			} VERIFY_SUCCEEDED(CL->Close());
+			DX::ExecuteAndWait(CQ, static_cast<ID3D12CommandList*>(CL), Fence);
 		}
-		void PopulateBarrierCommand(ID3D12GraphicsCommandList* GCL) {
+		void PopulateBarrierCommand(ID3D12GraphicsCommandList* CL) {
 			const std::array RBs = {
 				D3D12_RESOURCE_BARRIER({
 					.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV,
@@ -163,7 +163,7 @@ protected:
 					.UAV = D3D12_RESOURCE_UAV_BARRIER({.pResource = COM_PTR_GET(Resource)})
 				})
 			};
-			GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+			CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 		}
 	};
 	class BLAS : public AccelerationStructureBuffer
@@ -175,15 +175,15 @@ protected:
 			Super::Create(Dev, Size);
 			return *this;
 		}
-		void PopulateCopyCommand(ID3D12GraphicsCommandList* GCL, ID3D12Resource* Src) {
-			TO_GCL4(GCL, GCL4);
-			GCL4->CopyRaytracingAccelerationStructure(Resource->GetGPUVirtualAddress(), Src->GetGPUVirtualAddress(), D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_COMPACT);
+		void PopulateCopyCommand(ID3D12GraphicsCommandList* CL, ID3D12Resource* Src) {
+			TO_CL4(CL, CL4);
+			CL4->CopyRaytracingAccelerationStructure(Resource->GetGPUVirtualAddress(), Src->GetGPUVirtualAddress(), D3D12_RAYTRACING_ACCELERATION_STRUCTURE_COPY_MODE_COMPACT);
 		}
-		void ExecuteCopyCommand(ID3D12GraphicsCommandList* GCL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, ID3D12Resource* Src) {
-			VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-				PopulateCopyCommand(GCL, Src);
-			} VERIFY_SUCCEEDED(GCL->Close());
-			DX::ExecuteAndWait(CQ, static_cast<ID3D12CommandList*>(GCL), Fence);
+		void ExecuteCopyCommand(ID3D12GraphicsCommandList* CL, ID3D12CommandAllocator* CA, ID3D12CommandQueue* CQ, ID3D12Fence* Fence, ID3D12Resource* Src) {
+			VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+				PopulateCopyCommand(CL, Src);
+			} VERIFY_SUCCEEDED(CL->Close());
+			DX::ExecuteAndWait(CQ, static_cast<ID3D12CommandList*>(CL), Fence);
 		}
 	};
 	class TLAS : public AccelerationStructureBuffer

@@ -137,45 +137,45 @@ protected:
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
 
-		const auto BGCL = COM_PTR_GET(BundleCommandLists[i]);
+		const auto BCL = COM_PTR_GET(BundleCommandLists[i]);
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
+		VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 		{
-			BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-			BGCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+			BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			BCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 		}
-		VERIFY_SUCCEEDED(BGCL->Close());
+		VERIFY_SUCCEEDED(BCL->Close());
 
-		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[i]);
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
+		VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 		{
-			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
+			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				const std::array CHs = { SwapChainCPUHandles[i] };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
+				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
 
 #ifdef USE_STATIC_SAMPLER
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
-				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-				GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);//!< SRV
+				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				CL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);//!< SRV
 #else
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]), COM_PTR_GET(SamplerDescriptorHeaps[0]) };
-				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
-				GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);//!< SRV
-				GCL->SetGraphicsRootDescriptorTable(1, SamplerGPUHandles.back()[0]); //!< Sampler
+				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				CL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);//!< SRV
+				CL->SetGraphicsRootDescriptorTable(1, SamplerGPUHandles.back()[0]); //!< Sampler
 #endif
-				GCL->ExecuteBundle(BGCL);
+				CL->ExecuteBundle(BCL);
 			}
-			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		}
-		VERIFY_SUCCEEDED(GCL->Close());
+		VERIFY_SUCCEEDED(CL->Close());
 	}
 };
 #pragma endregion

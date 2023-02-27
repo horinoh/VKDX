@@ -51,7 +51,7 @@
     <ClInclude Include="..\TinyGltf.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\SDKGltf.h">
+    <ClInclude Include="..\GltfSDK.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -171,53 +171,53 @@ protected:
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
 
-		const auto BGCL = COM_PTR_GET(BundleCommandLists[i]);
+		const auto BCL = COM_PTR_GET(BundleCommandLists[i]);
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
+		VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 		{
-			BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-			BGCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+			BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			BCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 		}
-		VERIFY_SUCCEEDED(BGCL->Close());
+		VERIFY_SUCCEEDED(BCL->Close());
 
-		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[i]);
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
+		VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 		{
-			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
+			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 				const std::array RTCDHs = { SCCDH };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, nullptr);
+				CL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, nullptr);
 
 				assert(!empty(CbvSrvUavDescriptorHeaps) && "");
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
-				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 				{
 					const auto& DH = CbvSrvUavDescriptorHeaps[0];
 					auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
-					GCL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * 2;
+					CL->SetGraphicsRootDescriptorTable(0, GDH); GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * 2;
 
 #pragma region CB
 					DXGI_SWAP_CHAIN_DESC1 SCD;
 					SwapChain->GetDesc1(&SCD);
 					GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
-					GCL->SetGraphicsRootDescriptorTable(1, GDH);
+					CL->SetGraphicsRootDescriptorTable(1, GDH);
 #pragma endregion
 				}
 
-				GCL->ExecuteBundle(BGCL);
+				CL->ExecuteBundle(BCL);
 			}
-			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		}
-		VERIFY_SUCCEEDED(GCL->Close());
+		VERIFY_SUCCEEDED(CL->Close());
 	}
 
 #ifdef USE_LEAP
@@ -239,7 +239,7 @@ protected:
 	virtual void UpdateLeapImage() override {
 		if (!empty(Textures)) {
 			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-			const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
+			const auto CL = COM_PTR_GET(DirectCommandLists[0]);
 			{
 				const auto RD = Textures[0].Resource->GetDesc();
 				const auto Layers = RD.DepthOrArraySize;
@@ -270,17 +270,17 @@ protected:
 						.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = RD.Format, .Width = static_cast<UINT>(RD.Width), .Height = RD.Height, .Depth = 1, .RowPitch = AlignedPitchSize })
 					}));
 				}
-				VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-					PopulateCopyTextureRegionCommand(GCL, COM_PTR_GET(Upload.Resource), COM_PTR_GET(Textures[0].Resource), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-				} VERIFY_SUCCEEDED(GCL->Close());
-				DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), GCL, COM_PTR_GET(GraphicsFence));
+				VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+					PopulateCopyTextureRegionCommand(CL, COM_PTR_GET(Upload.Resource), COM_PTR_GET(Textures[0].Resource), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+				} VERIFY_SUCCEEDED(CL->Close());
+				DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), CL, COM_PTR_GET(GraphicsFence));
 			}
 		}
 	}
 	virtual void UpdateDistortionImage() override {
 		if (size(Textures) > 1) {
 			const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-			const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
+			const auto CL = COM_PTR_GET(DirectCommandLists[0]);
 			{
 				const auto RD = Textures[1].Resource->GetDesc();
 				const auto Layers = RD.DepthOrArraySize;
@@ -309,10 +309,10 @@ protected:
 						.Footprint = D3D12_SUBRESOURCE_FOOTPRINT({.Format = RD.Format, .Width = static_cast<UINT>(RD.Width), .Height = RD.Height, .Depth = 1, .RowPitch = AlignedPitchSize })
 					}));
 				}
-				VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-					PopulateCopyTextureRegionCommand(GCL, COM_PTR_GET(Upload.Resource), COM_PTR_GET(Textures[1].Resource), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
-				} VERIFY_SUCCEEDED(GCL->Close());
-				DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), GCL, COM_PTR_GET(GraphicsFence));
+				VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+					PopulateCopyTextureRegionCommand(CL, COM_PTR_GET(Upload.Resource), COM_PTR_GET(Textures[1].Resource), PSFs, D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+				} VERIFY_SUCCEEDED(CL->Close());
+				DX::ExecuteAndWait(COM_PTR_GET(GraphicsCommandQueue), CL, COM_PTR_GET(GraphicsFence));
 			}
 		}
 	}

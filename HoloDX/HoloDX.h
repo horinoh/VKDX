@@ -60,13 +60,13 @@ protected:
 	}
 	virtual void CreateGeometry() override {
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[0]);
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
 #pragma region PASS0
 		//!< メッシュ描画用
 		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(GraphicsFence), sizeof(DIA), &DIA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, GCQ, COM_PTR_GET(GraphicsFence), sizeof(DIA), &DIA);
 		UploadResource Upload_Indirect0;
 		Upload_Indirect0.Create(COM_PTR_GET(Device), sizeof(DIA), &DIA); 
 #pragma endregion
@@ -74,16 +74,16 @@ protected:
 #pragma region PASS1
 		//!< フルスクリーン描画用
 		constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(GraphicsFence), sizeof(DA), &DA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, GCQ, COM_PTR_GET(GraphicsFence), sizeof(DA), &DA);
 		UploadResource Upload_Indirect1;
 		Upload_Indirect1.Create(COM_PTR_GET(Device), sizeof(DA), &DA); 
 #pragma endregion
 
-		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			IndirectBuffers[0].PopulateCopyCommand(GCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect0.Resource));
-			IndirectBuffers[1].PopulateCopyCommand(GCL, sizeof(DA), COM_PTR_GET(Upload_Indirect1.Resource));
-		} VERIFY_SUCCEEDED(GCL->Close());
-		DX::ExecuteAndWait(GCQ, GCL, COM_PTR_GET(GraphicsFence));
+		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+			IndirectBuffers[0].PopulateCopyCommand(CL, sizeof(DIA), COM_PTR_GET(Upload_Indirect0.Resource));
+			IndirectBuffers[1].PopulateCopyCommand(CL, sizeof(DA), COM_PTR_GET(Upload_Indirect1.Resource));
+		} VERIFY_SUCCEEDED(CL->Close());
+		DX::ExecuteAndWait(GCQ, CL, COM_PTR_GET(GraphicsFence));
 	}
 	virtual void CreateConstantBuffer() override {
 		constexpr auto Fov = DirectX::XMConvertToRadians(14.0f);
@@ -349,13 +349,13 @@ protected:
 #pragma region PASS0
 		//!< メッシュ描画用
 		const auto PS0 = COM_PTR_GET(PipelineStates[0]);
-		const auto BGCL0 = COM_PTR_GET(BundleCommandLists[i]);
-		VERIFY_SUCCEEDED(BGCL0->Reset(BCA, PS0));
+		const auto BCL0 = COM_PTR_GET(BundleCommandLists[i]);
+		VERIFY_SUCCEEDED(BCL0->Reset(BCA, PS0));
 		{
-			BGCL0->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-			BGCL0->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+			BCL0->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+			BCL0->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 		}
-		VERIFY_SUCCEEDED(BGCL0->Close());
+		VERIFY_SUCCEEDED(BCL0->Close());
 #pragma endregion
 
 #pragma region PASS1
@@ -363,18 +363,18 @@ protected:
 		const auto PS1 = COM_PTR_GET(PipelineStates[1]);
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
-		const auto BGCL1 = COM_PTR_GET(BundleCommandLists[i + SCD.BufferCount]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
-		VERIFY_SUCCEEDED(BGCL1->Reset(BCA, PS1));
+		const auto BCL1 = COM_PTR_GET(BundleCommandLists[i + SCD.BufferCount]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
+		VERIFY_SUCCEEDED(BCL1->Reset(BCA, PS1));
 		{
-			BGCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-			BGCL1->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[1].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[1].Resource), 0, nullptr, 0);
+			BCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			BCL1->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[1].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[1].Resource), 0, nullptr, 0);
 		}
-		VERIFY_SUCCEEDED(BGCL1->Close());
+		VERIFY_SUCCEEDED(BCL1->Close());
 #pragma endregion
 
-		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[i]);
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		VERIFY_SUCCEEDED(GCL->Reset(CA, PS1));
+		VERIFY_SUCCEEDED(CL->Reset(CA, PS1));
 		{
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 			const auto RT = COM_PTR_GET(RenderTextures[0].Resource);
@@ -382,27 +382,27 @@ protected:
 #pragma region PASS0
 			//!< メッシュ描画用
 			{
-				GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
+				CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 				const auto RTDH = RtvDescriptorHeaps[0];
 				auto RTCDH = RTDH->GetCPUDescriptorHandleForHeapStart();
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				GCL->ClearRenderTargetView(RTCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				CL->ClearRenderTargetView(RTCDH, DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 
 				const auto DsvDH = DsvDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
-				GCL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+				CL->ClearDepthStencilView(DsvDH, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 
 				const std::array RTCDHs = { RTCDH };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, &DsvDH);
+				CL->OMSetRenderTargets(static_cast<UINT>(size(RTCDHs)), data(RTCDHs), FALSE, &DsvDH);
 
 				{
 					const auto& DH = CbvSrvUavDescriptorHeaps[0];
 					const std::array DHs = { COM_PTR_GET(DH) };
-					GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+					CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 					auto GDH = DH->GetGPUDescriptorHandleForHeapStart();
 #pragma region FRAME_OBJECT
 					GDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type) * i;
-					GCL->SetGraphicsRootDescriptorTable(0, GDH);
+					CL->SetGraphicsRootDescriptorTable(0, GDH);
 #pragma endregion
 				}
 
@@ -414,11 +414,11 @@ protected:
 					const auto Count = (std::min)(ViewTotal - j * ViewportMax, ViewportMax);
 #pragma region ROOT_CONSTANT
 					QuiltDraw.ViewIndexOffset = Start;
-					GCL->SetGraphicsRoot32BitConstants(1, static_cast<UINT>(sizeof(QuiltDraw)), &QuiltDraw, 0);
+					CL->SetGraphicsRoot32BitConstants(1, static_cast<UINT>(sizeof(QuiltDraw)), &QuiltDraw, 0);
 #pragma endregion
-					GCL->RSSetViewports(Count, &QuiltViewports[Start]);
-					GCL->RSSetScissorRects(Count, &QuiltScissorRects[Start]);
-					GCL->ExecuteBundle(BGCL0);
+					CL->RSSetViewports(Count, &QuiltViewports[Start]);
+					CL->RSSetScissorRects(Count, &QuiltScissorRects[Start]);
+					CL->ExecuteBundle(BCL0);
 				}
 			}
 #pragma endregion
@@ -439,33 +439,33 @@ protected:
 						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = RT, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET, .StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE })
 					}),
 				};
-				GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+				CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 			}
 
 #pragma region PASS1
 			//!< レンダーテクスチャ描画用
 			{
-				GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-				GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+				CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+				CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-				GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
+				CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
 				auto SCCDH = SwapChainDescriptorHeap->GetCPUDescriptorHandleForHeapStart(); SCCDH.ptr += i * Device->GetDescriptorHandleIncrementSize(SwapChainDescriptorHeap->GetDesc().Type);
 
 				const std::array RtvCDHs = { SCCDH };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(RtvCDHs)), data(RtvCDHs), FALSE, nullptr);
+				CL->OMSetRenderTargets(static_cast<UINT>(size(RtvCDHs)), data(RtvCDHs), FALSE, nullptr);
 
 				const auto& DH = CbvSrvUavDescriptorHeaps[1];
 				const std::array DHs = { COM_PTR_GET(DH) };
-				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 				auto SrvGDH = DH->GetGPUDescriptorHandleForHeapStart();
-				GCL->SetGraphicsRootDescriptorTable(0, SrvGDH); SrvGDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
+				CL->SetGraphicsRootDescriptorTable(0, SrvGDH); SrvGDH.ptr += Device->GetDescriptorHandleIncrementSize(DH->GetDesc().Type); //!< SRV
 
 #pragma region ROOT_CONSTANT
-				GCL->SetGraphicsRoot32BitConstants(1, static_cast<UINT>(sizeof(HoloDraw)), &HoloDraw, 0);
+				CL->SetGraphicsRoot32BitConstants(1, static_cast<UINT>(sizeof(HoloDraw)), &HoloDraw, 0);
 #pragma endregion
 
-				GCL->ExecuteBundle(BGCL1);
+				CL->ExecuteBundle(BCL1);
 			}
 #pragma endregion
 
@@ -485,10 +485,10 @@ protected:
 						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = RT, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, .StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET })
 					}),
 				};
-				GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+				CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 			}
 		}
-		VERIFY_SUCCEEDED(GCL->Close());
+		VERIFY_SUCCEEDED(CL->Close());
 	}
 
 	virtual void CreateViewport(const FLOAT Width, const FLOAT Height, const FLOAT MinDepth = 0.0f, const FLOAT MaxDepth = 1.0f) override {

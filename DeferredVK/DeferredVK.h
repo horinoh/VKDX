@@ -29,7 +29,7 @@ protected:
 		Super::AllocateCommandBuffer();
 #pragma region FRAME_OBJECT
 		const auto SCCount = static_cast<uint32_t>(size(SwapchainImages));
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 		const auto PrevCount = size(SecondaryCommandBuffers);
 		SecondaryCommandBuffers.resize(PrevCount + SCCount);
 		const VkCommandBufferAllocateInfo SCBAI = {
@@ -47,7 +47,7 @@ protected:
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		const auto CB = CommandBuffers[0];
 
-#pragma region PASS0
+#pragma region PASS0 (Draw mesh)
 		//!< メッシュ描画用
 		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = 1, .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
@@ -55,7 +55,7 @@ protected:
 		Staging_Indirect0.Create(Device, PDMP, sizeof(DIIC), &DIIC);
 #pragma endregion
 
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 		//!< レンダーテクスチャ描画用
 		constexpr VkDrawIndirectCommand DIC = { .vertexCount = 4, .instanceCount = 1, .firstVertex = 0, .firstInstance = 0 };
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIC);
@@ -110,7 +110,7 @@ protected:
 		Super::CreateTexture();
 	}
 	virtual void CreateImmutableSampler() override {
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 		constexpr VkSamplerCreateInfo SCI = {
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 			.pNext = nullptr,
@@ -128,7 +128,7 @@ protected:
 #pragma endregion
 	}
 	virtual void CreatePipelineLayout() override {
-#pragma region PASS0
+#pragma region PASS0 (Draw mesh)
 		{
 			CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
 				VkDescriptorSetLayoutBinding({.binding = 0, .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, .descriptorCount = 1, .stageFlags = VK_SHADER_STAGE_GEOMETRY_BIT, .pImmutableSamplers = nullptr }),
@@ -137,7 +137,7 @@ protected:
 		}
 #pragma endregion
 
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 		{
 			const std::array ISs = { Samplers[0] };
 			CreateDescriptorSetLayout(DescriptorSetLayouts.emplace_back(), 0, {
@@ -158,7 +158,7 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateRenderPass() override {
-#pragma region PASS0
+#pragma region PASS0 (Draw mesh)
 		{
 			constexpr std::array CAs = {
 				//!< カラー(Color)
@@ -234,7 +234,7 @@ protected:
 		}
 #pragma endregion
 
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 		VK::CreateRenderPass();
 #pragma endregion
 	}
@@ -259,7 +259,7 @@ protected:
 		const std::vector<VkVertexInputBindingDescription> VIBDs = {};
 		const std::vector<VkVertexInputAttributeDescription> VIADs = {};
 
-#pragma region PASS0
+#pragma region PASS0 (Draw mesh)
 		constexpr VkPipelineDepthStencilStateCreateInfo PDSSCI0 = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 			.pNext = nullptr,
@@ -324,7 +324,7 @@ protected:
 #endif
 #pragma endregion
 
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 		constexpr VkPipelineDepthStencilStateCreateInfo PDSSCI1 = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 			.pNext = nullptr,
@@ -384,15 +384,15 @@ protected:
 		for (auto i : SMs1) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }
 	}
 	virtual void CreateFramebuffer() override {
-#pragma region PASS0
+#pragma region PASS0 (Draw mesh)
 		{
 			VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[0], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, {
-				//!< カラー(Color)
+				//!< カラー (Color)
 				RenderTextures[0].View,
 #pragma region MRT 
-				//!< 法線(Normal)
+				//!< 法線 (Normal)
 				RenderTextures[1].View,
-				//!< 深度(Depth)
+				//!< 深度 (Depth)
 				RenderTextures[2].View,
 				//!< 未定
 				RenderTextures[3].View,
@@ -403,7 +403,7 @@ protected:
 		}
 #pragma endregion
 
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 		{
 			for (auto i : SwapchainImageViews) {
 				VK::CreateFramebuffer(Framebuffers.emplace_back(), RenderPasses[1], SurfaceExtent2D.width, SurfaceExtent2D.height, 1, { i });
@@ -422,7 +422,7 @@ protected:
 #pragma endregion
 			});
 
-#pragma region PASS0
+#pragma region PASS0 (Draw mesh)
 		{
 			const std::array DSLs = { DescriptorSetLayouts[0] };
 			const VkDescriptorSetAllocateInfo DSAI = {
@@ -453,7 +453,7 @@ protected:
 		}
 #pragma endregion
 
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 		{
 			const std::array DSLs = { DescriptorSetLayouts[1] };
 			const VkDescriptorSetAllocateInfo DSAI = {
@@ -470,7 +470,7 @@ protected:
 		}
 #pragma endregion
 
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 		{
 #pragma region FRAME_OBJECT
 			struct DescriptorUpdateInfo
@@ -544,7 +544,7 @@ protected:
 	}
 
 	virtual void PopulateCommandBuffer(const size_t i) override {
-#pragma region PASS0
+#pragma region PASS0 (Draw mesh)
 		//!< メッシュ描画用
 		const auto RP0 = RenderPasses[0];
 		const auto FB0 = Framebuffers[0];
@@ -583,7 +583,7 @@ protected:
 		}
 #pragma endregion
 
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 		//!< レンダーテクスチャ描画用
 		const auto RP1 = RenderPasses[1];
 		const auto FB1 = Framebuffers[i + 1];
@@ -635,7 +635,7 @@ protected:
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 			const VkRect2D RenderArea = { .offset = VkOffset2D({.x = 0, .y = 0 }), .extent = SurfaceExtent2D };
 
-#pragma region PASS0
+#pragma region PASS0 (Draw mesh)
 			//!< メッシュ描画用
 			{
 				constexpr std::array CVs = {
@@ -720,7 +720,7 @@ protected:
 					static_cast<uint32_t>(size(IMBs)), data(IMBs));
 			}
 
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 			//!< レンダーテクスチャ描画用
 			{
 				const std::array<VkClearValue, 0> CVs = {};

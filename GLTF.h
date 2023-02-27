@@ -41,7 +41,7 @@ namespace Gltf {
 //#define USE_GLTF_FX
 
 #ifdef USE_GLTF_SDK
-#include "SDKGltf.h"
+#include "GltfSDK.h"
 #endif
 
 #ifdef USE_GLTF_FX

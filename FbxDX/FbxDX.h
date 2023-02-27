@@ -58,7 +58,7 @@ public:
 		//Load(FBX_PATH / "dragon.FBX");
 
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[0]);
 		const auto CQ = COM_PTR_GET(GraphicsCommandQueue);
 
 		VertexBuffers.emplace_back().Create(COM_PTR_GET(Device), TotalSizeOf(Vertices), sizeof(Vertices[0]));
@@ -78,13 +78,13 @@ public:
 		UploadResource Upload_Indirect;
 		Upload_Indirect.Create(COM_PTR_GET(Device), sizeof(DIA), &DIA);
 
-		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			VertexBuffers[0].PopulateCopyCommand(GCL, TotalSizeOf(Vertices), COM_PTR_GET(Upload_Vertex.Resource));
-			VertexBuffers[1].PopulateCopyCommand(GCL, TotalSizeOf(Normals), COM_PTR_GET(Upload_Normal.Resource));
-			IndexBuffers.back().PopulateCopyCommand(GCL, TotalSizeOf(Indices), COM_PTR_GET(Upload_Index.Resource));
-			IndirectBuffers.back().PopulateCopyCommand(GCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
-		} VERIFY_SUCCEEDED(GCL->Close());
-		DX::ExecuteAndWait(CQ, GCL, COM_PTR_GET(GraphicsFence));
+		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+			VertexBuffers[0].PopulateCopyCommand(CL, TotalSizeOf(Vertices), COM_PTR_GET(Upload_Vertex.Resource));
+			VertexBuffers[1].PopulateCopyCommand(CL, TotalSizeOf(Normals), COM_PTR_GET(Upload_Normal.Resource));
+			IndexBuffers.back().PopulateCopyCommand(CL, TotalSizeOf(Indices), COM_PTR_GET(Upload_Index.Resource));
+			IndirectBuffers.back().PopulateCopyCommand(CL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
+		} VERIFY_SUCCEEDED(CL->Close());
+		DX::ExecuteAndWait(CQ, CL, COM_PTR_GET(GraphicsFence));
 	}
 	virtual void CreateRootSignature() override {
 		COM_PTR<ID3DBlob> Blob;
@@ -124,19 +124,19 @@ public:
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
 
 #pragma region BUNDLE_COMMAND_LIST
-		const auto BGCL = COM_PTR_GET(BundleCommandLists[i]);
+		const auto BCL = COM_PTR_GET(BundleCommandLists[i]);
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
+		VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 		{
-			BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+			BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 			const std::array VBVs = { VertexBuffers[0].View, VertexBuffers[1].View };
-			BGCL->IASetVertexBuffers(0, static_cast<UINT>(size(VBVs)), data(VBVs));
-			BGCL->IASetIndexBuffer(&IndexBuffers[0].View);
+			BCL->IASetVertexBuffers(0, static_cast<UINT>(size(VBVs)), data(VBVs));
+			BCL->IASetIndexBuffer(&IndexBuffers[0].View);
 
-			BGCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+			BCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 		}
-		VERIFY_SUCCEEDED(BGCL->Close());
+		VERIFY_SUCCEEDED(BCL->Close());
 #pragma endregion
 
 		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
@@ -158,7 +158,7 @@ public:
 				const std::array CHs = { SwapChainCPUHandles[i] };
 				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles.back()[0]);
 
-				GCL->ExecuteBundle(BGCL);
+				GCL->ExecuteBundle(BCL);
 			}
 			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		}

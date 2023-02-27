@@ -73,6 +73,7 @@ protected:
 			.depthBiasEnable = VK_FALSE, .depthBiasConstantFactor = 0.0f, .depthBiasClamp = 0.0f, .depthBiasSlopeFactor = 0.0f,
 			.lineWidth = 1.0f
 		};
+		//!< トポロジ (DX では PopulateCommandList 時に IASetPrimitiveTopology で指定している)
 		CreatePipeline_VsFsTesTcsGs(VK_PRIMITIVE_TOPOLOGY_PATCH_LIST, 1, PRSCI, VK_FALSE, PSSCIs);
 		
 		for (auto i : SMs) { vkDestroyShaderModule(Device, i, GetAllocationCallbacks()); }

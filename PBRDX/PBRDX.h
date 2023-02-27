@@ -64,25 +64,25 @@ protected:
 	}
 	virtual void CreateTexture() override {
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[0]);
 #if 0
 		//!< [0] 法線(Normal)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Normal.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Normal.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		//!< [1] カラー(Color)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		//!< [2] ラフネス(Roughness)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Roughness.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Roughness.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		//!< [3] メタリック(Metallic)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Metalness.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Metalness.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 #else
 		//!< [0] 法線(Normal)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_NormalGL.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_NormalGL.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		//!< [1] カラー(Color)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		//!< [2] ラフネス(Roughness)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_Roughness.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_Roughness.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		//!< [3] メタリック(Metallic)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_Metalness.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_Metalness.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 #endif
 		
 		Super::CreateTexture();
@@ -210,55 +210,55 @@ protected:
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
 
-		const auto BGCL = COM_PTR_GET(BundleCommandLists[i]);
+		const auto BCL = COM_PTR_GET(BundleCommandLists[i]);
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
+		VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 		{
-			BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-			BGCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+			BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+			BCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 		}
-		VERIFY_SUCCEEDED(BGCL->Close());
+		VERIFY_SUCCEEDED(BCL->Close());
 
-		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[i]);
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
+		VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 		{
 			const auto RS = COM_PTR_GET(RootSignatures[0]);
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 
-			GCL->SetGraphicsRootSignature(RS);
+			CL->SetGraphicsRootSignature(RS);
 
-			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				GCL->ClearRenderTargetView(SwapChainCPUHandles[i], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
-				GCL->ClearDepthStencilView(DsvCPUHandles.back()[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+				CL->ClearRenderTargetView(SwapChainCPUHandles[i], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				CL->ClearDepthStencilView(DsvCPUHandles.back()[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 
 				const std::array CHs = { SwapChainCPUHandles[i] };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles.back()[0]);
+				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles.back()[0]);
 
 				{
 					const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
-					GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+					CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 					DXGI_SWAP_CHAIN_DESC1 SCD;
 					SwapChain->GetDesc1(&SCD);
 #pragma region FRAME_OBJECT
 					//!< CBV
-					GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[i]);
+					CL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[i]);
 #pragma endregion
 					//!< SRV0, SRV1
-					GCL->SetGraphicsRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[SCD.BufferCount]);
+					CL->SetGraphicsRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[SCD.BufferCount]);
 				}
 
-				GCL->ExecuteBundle(BGCL);
+				CL->ExecuteBundle(BCL);
 			}
-			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		}
-		VERIFY_SUCCEEDED(GCL->Close());
+		VERIFY_SUCCEEDED(CL->Close());
 	}
 
 private:

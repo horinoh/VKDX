@@ -36,13 +36,13 @@ protected:
 
 	virtual void CreateGeometry() override {
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[0]);
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
 #pragma region PASS0
 		//!< メッシュ描画用
 		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(GraphicsFence), sizeof(DIA), &DIA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, GCQ, COM_PTR_GET(GraphicsFence), sizeof(DIA), &DIA);
 		UploadResource Upload_Indirect0;
 		Upload_Indirect0.Create(COM_PTR_GET(Device), sizeof(DIA), &DIA);
 #pragma endregion
@@ -50,16 +50,16 @@ protected:
 #pragma region PASS1
 		//!< フルスクリーン描画用
 		constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
-		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, GCQ, COM_PTR_GET(GraphicsFence), sizeof(DA), &DA);
+		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, GCQ, COM_PTR_GET(GraphicsFence), sizeof(DA), &DA);
 		UploadResource Upload_Indirect1;
 		Upload_Indirect1.Create(COM_PTR_GET(Device), sizeof(DA), &DA);
 #pragma endregion
 
-		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			IndirectBuffers[0].PopulateCopyCommand(GCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect0.Resource));
-			IndirectBuffers[1].PopulateCopyCommand(GCL, sizeof(DA), COM_PTR_GET(Upload_Indirect1.Resource));
-		} VERIFY_SUCCEEDED(GCL->Close());
-		DX::ExecuteAndWait(GCQ, GCL, COM_PTR_GET(GraphicsFence));
+		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+			IndirectBuffers[0].PopulateCopyCommand(CL, sizeof(DIA), COM_PTR_GET(Upload_Indirect0.Resource));
+			IndirectBuffers[1].PopulateCopyCommand(CL, sizeof(DA), COM_PTR_GET(Upload_Indirect1.Resource));
+		} VERIFY_SUCCEEDED(CL->Close());
+		DX::ExecuteAndWait(GCQ, CL, COM_PTR_GET(GraphicsFence));
 	}
 	virtual void CreateTexture() {
 		const auto W = static_cast<UINT64>(GetClientRectWidth());
@@ -245,13 +245,13 @@ protected:
 #pragma region PASS0
 		//!< バンドルコマンドリスト(メッシュ描画用
 		const auto PS0 = COM_PTR_GET(PipelineStates[0]);
-		const auto BGCL0 = COM_PTR_GET(BundleCommandLists[i]);
-		VERIFY_SUCCEEDED(BGCL0->Reset(BCA, PS0));
+		const auto BCL0 = COM_PTR_GET(BundleCommandLists[i]);
+		VERIFY_SUCCEEDED(BCL0->Reset(BCA, PS0));
 		{
-			BGCL0->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-			BGCL0->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+			BCL0->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+			BCL0->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 		}
-		VERIFY_SUCCEEDED(BGCL0->Close());
+		VERIFY_SUCCEEDED(BCL0->Close());
 #pragma endregion
 
 #pragma region PASS1
@@ -259,43 +259,43 @@ protected:
 		const auto PS1 = COM_PTR_GET(PipelineStates[1]);
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
-		const auto BGCL1 = COM_PTR_GET(BundleCommandLists[i + SCD.BufferCount]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
-		VERIFY_SUCCEEDED(BGCL1->Reset(BCA, PS1));
+		const auto BCL1 = COM_PTR_GET(BundleCommandLists[i + SCD.BufferCount]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
+		VERIFY_SUCCEEDED(BCL1->Reset(BCA, PS1));
 		{
-			BGCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-			BGCL1->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[1].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[1].Resource), 0, nullptr, 0);
+			BCL1->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			BCL1->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[1].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[1].Resource), 0, nullptr, 0);
 		}
-		VERIFY_SUCCEEDED(BGCL1->Close());
+		VERIFY_SUCCEEDED(BCL1->Close());
 #pragma endregion
 
-		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[i]);
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		VERIFY_SUCCEEDED(GCL->Reset(CA, PS1));
+		VERIFY_SUCCEEDED(CL->Reset(CA, PS1));
 		{
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
 			const auto RT = COM_PTR_GET(RenderTextures.back().Resource);
 
-			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
 #pragma region PASS0
 			//!< メッシュ描画用
 			{
-				GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
+				CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				GCL->ClearRenderTargetView(RtvCPUHandles.back()[0], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				CL->ClearRenderTargetView(RtvCPUHandles.back()[0], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 #ifdef USE_DEPTH
-				GCL->ClearDepthStencilView(DsvCPUHandles.back()[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+				CL->ClearDepthStencilView(DsvCPUHandles.back()[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 
 				const std::array RTCHs = { RtvCPUHandles.back()[0] };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCHs)), data(RTCHs), FALSE, &DsvCPUHandles.back()[0]);
+				CL->OMSetRenderTargets(static_cast<UINT>(size(RTCHs)), data(RTCHs), FALSE, &DsvCPUHandles.back()[0]);
 #else			
 				const std::array RTCHs = { RtvCPUHandles[0] };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(RTCHs)), data(RTCHs), FALSE, nullptr);
+				CL->OMSetRenderTargets(static_cast<UINT>(size(RTCHs)), data(RTCHs), FALSE, nullptr);
 #endif
 
-				GCL->ExecuteBundle(BGCL0);
+				CL->ExecuteBundle(BCL0);
 			}
 #pragma endregion
 
@@ -315,23 +315,23 @@ protected:
 						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = RT, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET, .StateAfter = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE })
 					}),
 				};
-				GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+				CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 			}
 
 #pragma region PASS1
 			//!< レンダーテクスチャ描画用
 			{
-				GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
+				CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[1]));
 
 				const std::array CHs = { SwapChainCPUHandles[i] };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
+				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
 
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
-				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 				//!< SRV
-				GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]); 
+				CL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]); 
 
-				GCL->ExecuteBundle(BGCL1);
+				CL->ExecuteBundle(BCL1);
 			}
 
 			//!< リソースバリア : D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE -> D3D12_RESOURCE_STATE_RENDER_TARGET
@@ -350,11 +350,11 @@ protected:
 						.Transition = D3D12_RESOURCE_TRANSITION_BARRIER({.pResource = RT, .Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES, .StateBefore = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, .StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET })
 					}),
 				};
-				GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
+				CL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 			}
 #pragma endregion
 		}
-		VERIFY_SUCCEEDED(GCL->Close());
+		VERIFY_SUCCEEDED(CL->Close());
 	}
 };
 #pragma endregion

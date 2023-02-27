@@ -69,6 +69,7 @@ protected:
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		const auto CB = CommandBuffers[0];
 		//!< [0] キューブ(Cube) : PX, NX, PY, NY, PZ, NZ
+		//!<	(作成時にキューブマップであることを識別、専用の View も作成)
 		DDSTextures.emplace_back().Create(Device, PDMP, DDS_PATH / "CubeMap" / "ninomaru_teien.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		//!< [1] 法線(Normal)
 		DDSTextures.emplace_back().Create(Device, PDMP, DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Normal.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);

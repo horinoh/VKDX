@@ -75,14 +75,14 @@ protected:
 	}
 	virtual void CreateTexture() override {
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[0]);
 		//!< [0] キューブ(Cube) : PX, NX, PY, NY, PZ, NZ
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "CubeMap" / "ninomaru_teien.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		//!<	(作成時にキューブマップであることを識別、専用の SRV も作成)
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "CubeMap" / "ninomaru_teien.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		//!< [1] 法線(Normal)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Normal.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, GCL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Normal.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 		Super::CreateTexture();
-
 	}
 	virtual void CreateStaticSampler() override {
 		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
@@ -151,7 +151,6 @@ protected:
 			D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[3]->GetBufferPointer(), .BytecodeLength = SBs[3]->GetBufferSize() }),
 			D3D12_SHADER_BYTECODE({.pShaderBytecode = SBs[4]->GetBufferPointer(), .BytecodeLength = SBs[4]->GetBufferSize() }),
 		};
-
 		constexpr D3D12_RASTERIZER_DESC RD = {
 			.FillMode = D3D12_FILL_MODE_SOLID,
 			.CullMode = D3D12_CULL_MODE_BACK, .FrontCounterClockwise = TRUE,
@@ -193,8 +192,9 @@ protected:
 				GDH.ptr += IncSize;
 			}
 #pragma endregion
-			//!< D3D12_SRV_DIMENSION_TEXTURECUBE を指定する必要がある為、(nullptr ではなく) 明示的にSHADER_RESOURCE_VIEW_DESCを使用すること
 			//!< SRV0
+			//!<	(D3D12_SRV_DIMENSION_TEXTURECUBE を指定する必要がある為、(nullptr で済ませるのではなく) 明示的に SRV を指定すること)
+			//!<	(リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合には D3D12_SHADER_RESOURCE_VIEW_DESC* に nullptrを指定できる)
 			Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH);
 			CbvSrvUavGPUHandles.back().emplace_back(GDH);
 			CDH.ptr += IncSize;
@@ -211,57 +211,57 @@ protected:
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
 
-		const auto BGCL = COM_PTR_GET(BundleCommandLists[i]);
+		const auto BCL = COM_PTR_GET(BundleCommandLists[i]);
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
+		VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 		{
-			BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-			BGCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+			BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+			BCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 		}
-		VERIFY_SUCCEEDED(BGCL->Close());
+		VERIFY_SUCCEEDED(BCL->Close());
 
-		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[i]);
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
+		VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 		{
-			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
+			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				GCL->ClearRenderTargetView(SwapChainCPUHandles[i], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				CL->ClearRenderTargetView(SwapChainCPUHandles[i], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 #ifndef USE_SKY_DOME
-				GCL->ClearDepthStencilView(DsvCPUHandles.back()[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
+				CL->ClearDepthStencilView(DsvCPUHandles.back()[0], D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, static_cast<UINT>(size(Rects)), data(Rects));
 #endif
 				const std::array CHs = { SwapChainCPUHandles[i] };
 #ifdef USE_SKY_DOME
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
+				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
 #else
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles.back()[0]);
+				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, &DsvCPUHandles.back()[0]);
 #endif
 				{
 					const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
-					GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+					CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 #pragma region FRAME_OBJECT
 					//!< CBV
-					GCL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[i]); 
+					CL->SetGraphicsRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[i]); 
 #pragma endregion
 					//!< SRV0, SRV1
 					DXGI_SWAP_CHAIN_DESC1 SCD;
 					SwapChain->GetDesc1(&SCD);
-					GCL->SetGraphicsRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[SCD.BufferCount]);
+					CL->SetGraphicsRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[SCD.BufferCount]);
 				}
 
-				GCL->ExecuteBundle(BGCL);
+				CL->ExecuteBundle(BCL);
 			}
-			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		}
-		VERIFY_SUCCEEDED(GCL->Close());
+		VERIFY_SUCCEEDED(CL->Close());
 	}
 
 private:

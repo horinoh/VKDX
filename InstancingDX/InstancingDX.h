@@ -16,7 +16,7 @@ public:
 protected:
 	virtual void CreateGeometry() override {
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[0]);
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
 		constexpr std::array Vertices = {
@@ -50,13 +50,13 @@ protected:
 		UploadResource Upload_Indirect;
 		Upload_Indirect.Create(COM_PTR_GET(Device), sizeof(DIA), &DIA);
 
-		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			VertexBuffers[0].PopulateCopyCommand(GCL, TotalSizeOf(Vertices), COM_PTR_GET(Upload_Vertex0.Resource));
-			VertexBuffers[1].PopulateCopyCommand(GCL, TotalSizeOf(Instances), COM_PTR_GET(Upload_Vertex1.Resource));
-			IndexBuffers.back().PopulateCopyCommand(GCL, TotalSizeOf(Indices), COM_PTR_GET(Upload_Index.Resource));
-			IndirectBuffers.back().PopulateCopyCommand(GCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
-		} VERIFY_SUCCEEDED(GCL->Close());
-		DX::ExecuteAndWait(GCQ, GCL, COM_PTR_GET(GraphicsFence));
+		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+			VertexBuffers[0].PopulateCopyCommand(CL, TotalSizeOf(Vertices), COM_PTR_GET(Upload_Vertex0.Resource));
+			VertexBuffers[1].PopulateCopyCommand(CL, TotalSizeOf(Instances), COM_PTR_GET(Upload_Vertex1.Resource));
+			IndexBuffers.back().PopulateCopyCommand(CL, TotalSizeOf(Indices), COM_PTR_GET(Upload_Index.Resource));
+			IndirectBuffers.back().PopulateCopyCommand(CL, sizeof(DIA), COM_PTR_GET(Upload_Indirect.Resource));
+		} VERIFY_SUCCEEDED(CL->Close());
+		DX::ExecuteAndWait(GCQ, CL, COM_PTR_GET(GraphicsFence));
 
 		LOG_OK();
 	}
@@ -100,44 +100,44 @@ protected:
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto PS = COM_PTR_GET(PipelineStates[0]);
 
-		const auto BGCL = COM_PTR_GET(BundleCommandLists[i]);
+		const auto BCL = COM_PTR_GET(BundleCommandLists[i]);
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
-		VERIFY_SUCCEEDED(BGCL->Reset(BCA, PS));
+		VERIFY_SUCCEEDED(BCL->Reset(BCA, PS));
 		{
-			BGCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+			BCL->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
 
 			const std::array VBVs = { VertexBuffers[0].View, VertexBuffers[1].View };
-			BGCL->IASetVertexBuffers(0, static_cast<UINT>(size(VBVs)), data(VBVs));
+			BCL->IASetVertexBuffers(0, static_cast<UINT>(size(VBVs)), data(VBVs));
 
-			BGCL->IASetIndexBuffer(&IndexBuffers[0].View);
+			BCL->IASetIndexBuffer(&IndexBuffers[0].View);
 
-			BGCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+			BCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 		}
-		VERIFY_SUCCEEDED(BGCL->Close());
+		VERIFY_SUCCEEDED(BCL->Close());
 
-		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[i]);
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		VERIFY_SUCCEEDED(GCL->Reset(CA, PS));
+		VERIFY_SUCCEEDED(CL->Reset(CA, PS));
 		{
-			GCL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
+			CL->SetGraphicsRootSignature(COM_PTR_GET(RootSignatures[0]));
 
-			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
-			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
+			CL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
+			CL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
 			const auto SCR = COM_PTR_GET(SwapChainResources[i]);
-			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
 			{
 				constexpr std::array<D3D12_RECT, 0> Rects = {};
-				GCL->ClearRenderTargetView(SwapChainCPUHandles[i], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
+				CL->ClearRenderTargetView(SwapChainCPUHandles[i], DirectX::Colors::SkyBlue, static_cast<UINT>(size(Rects)), data(Rects));
 
 				const std::array CHs = { SwapChainCPUHandles[i] };
-				GCL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
+				CL->OMSetRenderTargets(static_cast<UINT>(size(CHs)), data(CHs), FALSE, nullptr);
 
-				GCL->ExecuteBundle(BGCL);
+				CL->ExecuteBundle(BCL);
 			}
-			ResourceBarrier(GCL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+			ResourceBarrier(CL, SCR, D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 		}
-		VERIFY_SUCCEEDED(GCL->Close());
+		VERIFY_SUCCEEDED(CL->Close());
 	}
 };
 #pragma endregion

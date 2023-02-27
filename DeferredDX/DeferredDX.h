@@ -27,7 +27,7 @@ protected:
 	}
 	virtual void CreateCommandList() override {
 		Super::CreateCommandList();
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD);
 		for (UINT i = 0; i < SCD.BufferCount; ++i) {
@@ -38,9 +38,9 @@ protected:
 	}
 	virtual void CreateGeometry() override {
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
-		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[0]);
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
-#pragma region PASS0
+#pragma region PASS0 (Draw mesh)
 		//!< メッシュ描画用
 		constexpr D3D12_DRAW_INDEXED_ARGUMENTS DIA = { .IndexCountPerInstance = 1, .InstanceCount = 1, .StartIndexLocation = 0, .BaseVertexLocation = 0, .StartInstanceLocation = 0 };
 		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DIA);
@@ -48,7 +48,7 @@ protected:
 		Upload_Indirect0.Create(COM_PTR_GET(Device), sizeof(DIA), &DIA);
 #pragma endregion
 
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 		//!< フルスクリーン描画用
 		constexpr D3D12_DRAW_ARGUMENTS DA = { .VertexCountPerInstance = 4, .InstanceCount = 1, .StartVertexLocation = 0, .StartInstanceLocation = 0 };
 		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA);
@@ -56,11 +56,11 @@ protected:
 		Upload_Indirect1.Create(COM_PTR_GET(Device), sizeof(DA), &DA);
 #pragma endregion
 	
-		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			IndirectBuffers[0].PopulateCopyCommand(GCL, sizeof(DIA), COM_PTR_GET(Upload_Indirect0.Resource));
-			IndirectBuffers[1].PopulateCopyCommand(GCL, sizeof(DA), COM_PTR_GET(Upload_Indirect1.Resource));
-		} VERIFY_SUCCEEDED(GCL->Close());
-		DX::ExecuteAndWait(GCQ, GCL, COM_PTR_GET(GraphicsFence));
+		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+			IndirectBuffers[0].PopulateCopyCommand(CL, sizeof(DIA), COM_PTR_GET(Upload_Indirect0.Resource));
+			IndirectBuffers[1].PopulateCopyCommand(CL, sizeof(DA), COM_PTR_GET(Upload_Indirect1.Resource));
+		} VERIFY_SUCCEEDED(CL->Close());
+		DX::ExecuteAndWait(GCQ, CL, COM_PTR_GET(GraphicsFence));
 	}
 	virtual void CreateConstantBuffer() override {
 		constexpr auto Fov = 0.16f * std::numbers::pi_v<float>;
@@ -95,21 +95,21 @@ protected:
 		const auto W = static_cast<UINT64>(GetClientRectWidth());
 		const auto H = static_cast<UINT>(GetClientRectHeight());
 
-		//!< カラー(Color)
+		//!< カラー (Color)
 		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_R8G8B8A8_UNORM, .Color = { DirectX::Colors::SkyBlue.f[0], DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] } }));
 #pragma region MRT
-		//!< 法線(Normal)
+		//!< 法線 (Normal)
 		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, 1, D3D12_CLEAR_VALUE({.Format = DXGI_FORMAT_R10G10B10A2_UNORM, .Color = { 0.5f, 0.5f, 1.0f, 1.0f} }));
-		//!< 深度(Depth)
+		//!< 深度 (Depth)
 		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_R32_FLOAT, .Color = { DirectX::Colors::Red.f[0], DirectX::Colors::Red.f[1], DirectX::Colors::Red.f[2], DirectX::Colors::Red.f[3] } }));
-		//!< 未定
+		//!< 未定 
 		RenderTextures.emplace_back().Create(COM_PTR_GET(Device), W, H, 1, D3D12_CLEAR_VALUE({ .Format = DXGI_FORMAT_R8G8B8A8_UNORM, .Color = { DirectX::Colors::SkyBlue.f[0], DirectX::Colors::SkyBlue.f[1], DirectX::Colors::SkyBlue.f[2], DirectX::Colors::SkyBlue.f[3] } }));
 #pragma endregion
 
 		Super::CreateTexture();
 	}
 	virtual void CreateStaticSampler() override {
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 		StaticSamplerDescs.emplace_back(D3D12_STATIC_SAMPLER_DESC({
 			.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR,
 			.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP, .AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP,
@@ -123,7 +123,7 @@ protected:
 #pragma endregion
 	}
 	virtual void CreateRootSignature() override {
-#pragma region PASS0
+#pragma region PASS0 (Draw mesh)
 		{
 			COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE
@@ -144,7 +144,7 @@ protected:
 		}
 #pragma endregion
 
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 		{
 			COM_PTR<ID3DBlob> Blob;
 #ifdef USE_HLSL_ROOTSIGNATRUE 
@@ -199,7 +199,7 @@ protected:
 		};
 		const D3D12_DEPTH_STENCILOP_DESC DSOD = { .StencilFailOp = D3D12_STENCIL_OP_KEEP, .StencilDepthFailOp = D3D12_STENCIL_OP_KEEP, .StencilPassOp = D3D12_STENCIL_OP_KEEP, .StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS };
 		const std::vector<D3D12_INPUT_ELEMENT_DESC> IEDs = {};
-#pragma region PASS0
+#pragma region PASS0 (Draw mesh)
 		const D3D12_DEPTH_STENCIL_DESC DSD0 = {
 			.DepthEnable = TRUE, .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D12_COMPARISON_FUNC_LESS,
 			.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
@@ -233,7 +233,7 @@ protected:
 #endif	
 #pragma endregion
 
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 		const D3D12_DEPTH_STENCIL_DESC DSD1 = {
 			.DepthEnable = FALSE, .DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL, .DepthFunc = D3D12_COMPARISON_FUNC_LESS,
 			.StencilEnable = FALSE, .StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK, .StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK,
@@ -281,7 +281,7 @@ protected:
 		SwapChain->GetDesc1(&SCD);
 #pragma endregion
 
-#pragma region PASS0
+#pragma region PASS0 (Draw mesh)
 		{
 			{
 #pragma region FRAME_OBJECT
@@ -351,7 +351,7 @@ protected:
 		}
 #pragma endregion
 
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 		{
 #pragma region MRT
 #pragma region FRAME_OBJECT
@@ -425,22 +425,22 @@ protected:
 	virtual void PopulateCommandList(const size_t i) override {
 		const auto BCA = COM_PTR_GET(BundleCommandAllocators[0]);
 
-#pragma region PASS0
+#pragma region PASS0 (Draw mesh)
 		//!< メッシュ描画用
 		const auto PS0 = COM_PTR_GET(PipelineStates[0]);
-		const auto BGCL0 = COM_PTR_GET(BundleCommandLists[i]);
-		VERIFY_SUCCEEDED(BGCL0->Reset(BCA, PS0));
+		const auto BCL0 = COM_PTR_GET(BundleCommandLists[i]);
+		VERIFY_SUCCEEDED(BCL0->Reset(BCA, PS0));
 		{
 			const auto IDBCS = COM_PTR_GET(IndirectBuffers[0].CommandSignature);
 			const auto IDBR = COM_PTR_GET(IndirectBuffers[0].Resource);
 
-			BGCL0->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
-			BGCL0->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
+			BCL0->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_1_CONTROL_POINT_PATCHLIST);
+			BCL0->ExecuteIndirect(IDBCS, 1, IDBR, 0, nullptr, 0);
 		}
-		VERIFY_SUCCEEDED(BGCL0->Close());
+		VERIFY_SUCCEEDED(BCL0->Close());
 #pragma endregion
 
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 		//!< レンダーテクスチャ描画用
 		const auto PS1 = COM_PTR_GET(PipelineStates[1]);
 		const auto BGCL1 = COM_PTR_GET(BundleCommandLists[i + size(BundleCommandLists) / 2]); //!< オフセットさせる(ここでは2つのバンドルコマンドリストがぞれぞれスワップチェインイメージ数だけある)
@@ -465,7 +465,7 @@ protected:
 			GCL->RSSetViewports(static_cast<UINT>(size(Viewports)), data(Viewports));
 			GCL->RSSetScissorRects(static_cast<UINT>(size(ScissorRects)), data(ScissorRects));
 
-#pragma region PASS0
+#pragma region PASS0 (Draw mesh)
 			auto Pass = 0;
 			//!< メッシュ描画用
 			{
@@ -506,7 +506,7 @@ protected:
 #pragma endregion
 				}
 
-				GCL->ExecuteBundle(BGCL0);
+				GCL->ExecuteBundle(BCL0);
 			}
 #pragma endregion
 
@@ -529,7 +529,7 @@ protected:
 				GCL->ResourceBarrier(static_cast<UINT>(size(RBs)), data(RBs));
 			}
 
-#pragma region PASS1
+#pragma region PASS1 (Draw fullscreen)
 			Pass = 1;
 			//!< レンダーテクスチャ描画用
 			{

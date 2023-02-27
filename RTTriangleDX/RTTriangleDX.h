@@ -16,7 +16,7 @@ public:
 	virtual void CreateGeometry() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
-		const auto GCL = COM_PTR_GET(DirectCommandLists[0]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[0]);
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto GCQ = COM_PTR_GET(GraphicsCommandQueue);
 
@@ -75,7 +75,7 @@ public:
 		//!< (コンパクションサイズを取得できるように)引数指定して (一時)BLAS を作成
 		BLAS Tmp;
 		Tmp.Create(COM_PTR_GET(Device), RASPI_Blas.ResultDataMaxSizeInBytes)
-			.ExecuteBuildCommand(COM_PTR_GET(Device), RASPI_Blas.ScratchDataSizeInBytes, BRASI_Blas, GCL, CA, GCQ, COM_PTR_GET(GraphicsFence), &Compaction);
+			.ExecuteBuildCommand(COM_PTR_GET(Device), RASPI_Blas.ScratchDataSizeInBytes, BRASI_Blas, CL, CA, GCQ, COM_PTR_GET(GraphicsFence), &Compaction);
 
 		//!< コンパクションサイズを取得
 		const UINT64 CompactedSizeInBytes = Compaction.GetSize();
@@ -84,7 +84,7 @@ public:
 		//!< コンパクションサイズで (正規)BLAS を作成する (コピーするのでビルドはしないよ)
 		BLASs.emplace_back().Create(COM_PTR_GET(Device), CompactedSizeInBytes)
 			//!< 一時BLAS -> 正規BLAS コピーコマンドを発行する 
-			.ExecuteCopyCommand(GCL, CA, GCQ, COM_PTR_GET(GraphicsFence), COM_PTR_GET(Tmp.Resource));
+			.ExecuteCopyCommand(CL, CA, GCQ, COM_PTR_GET(GraphicsFence), COM_PTR_GET(Tmp.Resource));
 #else
 		//!< AS作成 (Create AS)
 		BLASs.emplace_back().Create(COM_PTR_GET(Device), RASPI_Blas.ResultDataMaxSizeInBytes);
@@ -133,16 +133,16 @@ public:
 #endif
 #pragma endregion
 
-		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
+		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
 #ifndef USE_BLAS_COMPACTION
-			BLASs.back().PopulateBuildCommand(BRASI_Blas, GCL, COM_PTR_GET(Scratch.Resource));
+			BLASs.back().PopulateBuildCommand(BRASI_Blas, CL, COM_PTR_GET(Scratch.Resource));
 #endif
 			//!< TLAS のビルド時には BLAS のビルド(コピー)が完了している必要があるのでバリア
-			BLASs.back().PopulateBarrierCommand(GCL);
+			BLASs.back().PopulateBarrierCommand(CL);
 
-			TLASs.back().PopulateBuildCommand(BRASI_Tlas, GCL, COM_PTR_GET(Scratch.Resource));
-		} VERIFY_SUCCEEDED(GCL->Close());
-		DX::ExecuteAndWait(GCQ, static_cast<ID3D12CommandList*>(GCL), COM_PTR_GET(GraphicsFence));
+			TLASs.back().PopulateBuildCommand(BRASI_Tlas, CL, COM_PTR_GET(Scratch.Resource));
+		} VERIFY_SUCCEEDED(CL->Close());
+		DX::ExecuteAndWait(GCQ, static_cast<ID3D12CommandList*>(CL), COM_PTR_GET(GraphicsFence));
 	}
 	virtual void CreatePipelineState() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
@@ -286,26 +286,26 @@ public:
 	virtual void PopulateCommandList(const size_t i) override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
 
-		const auto GCL = COM_PTR_GET(DirectCommandLists[i]);
+		const auto CL = COM_PTR_GET(DirectCommandLists[i]);
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto RT = COM_PTR_GET(UnorderedAccessTextures[0].Resource);
-		VERIFY_SUCCEEDED(GCL->Reset(CA, nullptr)); {
-			PopulateBeginRenderTargetCommand(GCL, RT); {
+		VERIFY_SUCCEEDED(CL->Reset(CA, nullptr)); {
+			PopulateBeginRenderTargetCommand(CL, RT); {
 				const std::array DHs = { COM_PTR_GET(CbvSrvUavDescriptorHeaps[0]) };
-				GCL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
+				CL->SetDescriptorHeaps(static_cast<UINT>(size(DHs)), data(DHs));
 
 				//!< レイトレーシングでは SetGraphicsXXX ではなく SetComputeXXX 系を使用
-				GCL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
+				CL->SetComputeRootSignature(COM_PTR_GET(RootSignatures[0]));
 				//!< [0] TLAS
-				GCL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
+				CL->SetComputeRootDescriptorTable(0, CbvSrvUavGPUHandles.back()[0]);
 				//!< [1] UAV
-				GCL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[1]);
+				CL->SetComputeRootDescriptorTable(1, CbvSrvUavGPUHandles.back()[1]);
 
-				TO_GCL4(GCL, GCL4);
-				GCL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
+				TO_CL4(CL, CL4);
+				CL4->SetPipelineState1(COM_PTR_GET(StateObjects[0]));
 
 #ifdef USE_INDIRECT
-				GCL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
+				CL->ExecuteIndirect(COM_PTR_GET(IndirectBuffers[0].CommandSignature), 1, COM_PTR_GET(IndirectBuffers[0].Resource), 0, nullptr, 0);
 #else
 				const auto& ST = ShaderTables.back();
 				const auto DRD = D3D12_DISPATCH_RAYS_DESC({
@@ -315,10 +315,10 @@ public:
 				  .CallableShaderTable = ST.AddressRangeAndStrides[2],
 				  .Width = static_cast<UINT>(GetClientRectWidth()), .Height = static_cast<UINT>(GetClientRectHeight()), .Depth = 1
 				});
-				GCL4->DispatchRays(&DRD);
+				CL4->DispatchRays(&DRD);
 #endif
-			} PopulateEndRenderTargetCommand(GCL, RT, COM_PTR_GET(SwapChainResources[i]));
-		} VERIFY_SUCCEEDED(GCL->Close());
+			} PopulateEndRenderTargetCommand(CL, RT, COM_PTR_GET(SwapChainResources[i]));
+		} VERIFY_SUCCEEDED(CL->Close());
 	}
 };
 #pragma endregion
