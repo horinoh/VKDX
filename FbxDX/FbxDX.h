@@ -56,6 +56,7 @@ public:
 	virtual void CreateGeometry() override {
 		Load(FBX_PATH / "bunny.FBX");
 		//Load(FBX_PATH / "dragon.FBX");
+		//Load(FBX_PATH / "13100_tokyo23-ku_2020_fbx_3_op" / "bldg" / "lod1" / "53394525_bldg_6677.fbx");
 
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto CL = COM_PTR_GET(DirectCommandLists[0]);
