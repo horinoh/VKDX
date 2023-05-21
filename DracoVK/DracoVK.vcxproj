@@ -155,6 +155,7 @@
   <ItemGroup>
     <ClCompile Include="..\DRACO.cpp" />
     <ClCompile Include="..\VK.cpp" />
+    <ClCompile Include="..\VKDebugUtils.cpp" />
     <ClCompile Include="..\VKExt.cpp" />
     <ClCompile Include="..\Win.cpp" />
     <ClCompile Include="DracoVK.cpp" />

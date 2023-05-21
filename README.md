@@ -545,7 +545,7 @@ $draco_decoder -i YYY.drc -o ZZZ.obj
  
  * Header Files に Win.h, VK.h, VKExt.h を追加
 	* 必要に応じて VKImage.h, VKRT.h, VKMS.h
- * Source Files に Win.cpp, VK.cpp, VKExt.cpp を追加
+ * Source Files に Win.cpp, VK.cpp, VKExt.cpp, VKDebugUtils.cpp を追加
 	* 必要に応じて VKImage.cpp
  * XxxVK.h、XxxVK.cpp は既存のものを参考に編集 (#pragma region Code でマークしてある)
 

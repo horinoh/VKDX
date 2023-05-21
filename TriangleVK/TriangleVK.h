@@ -51,6 +51,7 @@ protected:
 		VertexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Vertices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Vertices), data(Vertices));
 #endif
 		MarkerSetObjectName(Device, VertexBuffers.back().Buffer, "MyVertexBuffer");
+		SetObjectName(Device, VertexBuffers.back().Buffer, "MyVertexBuffer");
 
 #ifdef COMMAND_COPY_TOGETHER
 		IndexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Indices));
@@ -60,6 +61,7 @@ protected:
 		IndexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Indices), data(Indices));
 #endif	
 		MarkerSetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
+		SetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
 
 		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 #ifdef COMMAND_COPY_TOGETHER
@@ -70,6 +72,7 @@ protected:
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
 #endif	
 		MarkerSetObjectName(Device, IndirectBuffers.back().Buffer, "MyIndirectBuffer");
+		SetObjectName(Device, IndirectBuffers.back().Buffer, "MyIndirectBuffer");
 
 #ifdef COMMAND_COPY_TOGETHER
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
@@ -184,6 +187,7 @@ protected:
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
 			ScopedMarker(CB, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), "Command Begin");
+			ScopedLabel(CB, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), "Command Begin");
 
 			constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
 			const VkRenderPassBeginInfo RPBI = {

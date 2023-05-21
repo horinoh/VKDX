@@ -988,9 +988,40 @@ public:
 #include "VKDeviceProcAddr_DebugMarker.h"
 #undef VK_PROC_ADDR
 
+#pragma region DebugUtils
+#define VK_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
+#include "VKInstanceProcAddr_DebugUtils.h"
+#undef VK_PROC_ADDR
+
+	static VKAPI_ATTR VkBool32 VKAPI_CALL MessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT MessageSeverity, VkDebugUtilsMessageTypeFlagsEXT MessageTypes, const VkDebugUtilsMessengerCallbackDataEXT* CallbackData, void* UserData);
+	
+	static void SetObjectName([[maybe_unused]] VkDevice Device, [[maybe_unused]] const VkObjectType ObjectType, [[maybe_unused]] const uint64_t ObjectHandle, [[maybe_unused]] std::string_view ObjectName);
+	static void SetObjectTag([[maybe_unused]] VkDevice Device, [[maybe_unused]] const VkObjectType ObjectType, [[maybe_unused]] const uint64_t ObjectHandle, [[maybe_unused]] const uint64_t TagName, [[maybe_unused]] const size_t TagSize, [[maybe_unused]] const void* TagData);
+	static void SetObjectTag(VkDevice Device, const VkObjectType ObjectType, const uint64_t ObjectHandle, const uint64_t TagName, const std::vector<std::byte>& TagData) { SetObjectTag(Device, ObjectType, ObjectHandle, TagName, size(TagData), data(TagData)); }
+	
+	template<typename T> static void SetObjectName(VkDevice Device, T Object, const std::string_view Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
+	template<typename T> static void SetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* TagData) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
+#include "VKDebugUtilsNameTag.inl"
+
+	template<typename T> static void InsertLabel([[maybe_unused]] T Object, [[maybe_unused]] const glm::vec4& Color, [[maybe_unused]] std::string_view Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
+	template<typename T> static void BeginLabel([[maybe_unused]] T Object, [[maybe_unused]] const glm::vec4& Color, [[maybe_unused]] std::string_view Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
+	template<typename T> static void EndLabel([[maybe_unused]] T Object) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
+#include "VKDebugUtilsLabel.inl"
+
+	template<typename T> class ScopedLabel
+	{
+	public:
+		ScopedLabel(T Obj, const glm::vec4& Color, const std::string_view Name) : Object(Obj) { BeginLabel(Object, Color, Name); }
+		~ScopedLabel() { EndLabel(Object); }
+	private:
+		T Object;
+	};
+#pragma endregion
+
 protected:
 	VkInstance Instance = VK_NULL_HANDLE;
 	VkDebugReportCallbackEXT DebugReportCallback = VK_NULL_HANDLE;
+	VkDebugUtilsMessengerEXT DebugUtilsMessenger = VK_NULL_HANDLE;
 	VkSurfaceKHR Surface = VK_NULL_HANDLE;
 	
 	std::vector<VkPhysicalDevice> PhysicalDevices;

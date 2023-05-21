@@ -161,13 +161,14 @@ protected:
 			Super::SubmitCopyCommand(Dev, PDMP, CB, Queue, Size, Source, VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 		}
 	};
+#if true
 	class VertexASBuffer : public ASBuffer
 	{
 	private:
 		using Super = ASBuffer;
 	public:
 		VertexASBuffer& Create(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, const size_t Size) {
-			DeviceLocalBuffer::Create(Dev, PDMP, Size, Usage | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+			DeviceLocalBuffer::Create(Dev, PDMP, Size, Usage | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
 			return *this;
 		}
 	};
@@ -181,6 +182,10 @@ protected:
 			return *this;
 		}
 	};
+#else
+	using VertexASBuffer = ASBuffer;
+	using IndexASBuffer = ASBuffer;
+#endif
 	class HostVisibleASBuffer : public HostVisibleBuffer
 	{
 	private:

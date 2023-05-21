@@ -22,7 +22,7 @@ protected:
 	}
 	virtual void CreateDevice(HWND hWnd, HINSTANCE hInstance, void* pNext, [[maybe_unused]] const std::vector<const char*>& AdditionalExtensions) override {
 		std::vector AEs(AdditionalExtensions);
-		AEs.emplace_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+		//AEs.emplace_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
 		Super::CreateDevice(hWnd, hInstance, pNext, AEs);
 	}
 #endif

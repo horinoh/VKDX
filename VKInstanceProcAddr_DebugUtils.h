@@ -1,0 +1,16 @@
+//!< VK_EXT_DEBUG_UTILS_EXTENSION_NAME
+VK_PROC_ADDR(CreateDebugUtilsMessenger)
+VK_PROC_ADDR(DestroyDebugUtilsMessenger)
+
+VK_PROC_ADDR(SetDebugUtilsObjectName)
+VK_PROC_ADDR(SetDebugUtilsObjectTag)
+
+VK_PROC_ADDR(QueueBeginDebugUtilsLabel)
+VK_PROC_ADDR(QueueEndDebugUtilsLabel)
+VK_PROC_ADDR(QueueInsertDebugUtilsLabel)
+
+VK_PROC_ADDR(CmdBeginDebugUtilsLabel)
+VK_PROC_ADDR(CmdEndDebugUtilsLabel)
+VK_PROC_ADDR(CmdInsertDebugUtilsLabel)
+
+VK_PROC_ADDR(SubmitDebugUtilsMessage)

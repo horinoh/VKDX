@@ -161,6 +161,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\VK.cpp" />
+    <ClCompile Include="..\VKDebugUtils.cpp" />
     <ClCompile Include="..\VKExt.cpp" />
     <ClCompile Include="..\Win.cpp" />
     <ClCompile Include="FlatVK.cpp" />

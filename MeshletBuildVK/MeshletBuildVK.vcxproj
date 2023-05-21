@@ -160,6 +160,7 @@
     <ClCompile Include="..\DXMesh.cpp" />
     <ClCompile Include="..\FBX.cpp" />
     <ClCompile Include="..\VK.cpp" />
+    <ClCompile Include="..\VKDebugUtils.cpp" />
     <ClCompile Include="..\VKExt.cpp" />
     <ClCompile Include="..\Win.cpp" />
     <ClCompile Include="framework.cpp">
