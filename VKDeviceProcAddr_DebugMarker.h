@@ -1,6 +1,0 @@
-//!< VK_EXT_DEBUG_MARKER_EXTENSION_NAME
-VK_PROC_ADDR(CmdDebugMarkerBegin)
-VK_PROC_ADDR(CmdDebugMarkerEnd)
-VK_PROC_ADDR(CmdDebugMarkerInsert)
-VK_PROC_ADDR(DebugMarkerSetObjectName)
-VK_PROC_ADDR(DebugMarkerSetObjectTag)

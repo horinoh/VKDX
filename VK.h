@@ -64,6 +64,8 @@
 //!<	vec3 Color = subpassLoad(XXX).rgb;
 //#define USE_SUBPASS #VK_TODO
 
+#define USE_DEBUG_UTILS
+
 #ifdef _DEBUG
 #define USE_RENDERDOC
 #endif
@@ -608,84 +610,9 @@ public:
 
 	static void EnumerateMemoryRequirements(const VkMemoryRequirements& MR, const VkPhysicalDeviceMemoryProperties& PDMP);
 
-#pragma region MARKER
-	static void MarkerInsert([[maybe_unused]] VkCommandBuffer CB, [[maybe_unused]] const glm::vec4& Color, [[maybe_unused]] std::string_view Name) {
-#ifdef USE_RENDERDOC
-		if (VK_NULL_HANDLE != vkCmdDebugMarkerInsert) {
-			const VkDebugMarkerMarkerInfoEXT DMMI = {
-				.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
-				.pNext = nullptr,
-				.pMarkerName = data(Name),
-				.color = { Color.r, Color.g, Color.b, Color.a }
-			};
-			vkCmdDebugMarkerInsert(CB, &DMMI);
-		}
-#endif
-	}
-	static void MarkerBegin([[maybe_unused]] VkCommandBuffer CB, [[maybe_unused]] const glm::vec4& Color, [[maybe_unused]] std::string_view Name) {
-#ifdef USE_RENDERDOC
-		if (VK_NULL_HANDLE != vkCmdDebugMarkerBegin) {
-			const VkDebugMarkerMarkerInfoEXT DMMI = {
-				.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_MARKER_INFO_EXT,
-				.pNext = nullptr,
-				.pMarkerName = data(Name),
-				.color = { Color.r, Color.g, Color.b, Color.a }
-			};
-			vkCmdDebugMarkerBegin(CB, &DMMI);
-		}
-#endif
-	}
-	static void MarkerEnd([[maybe_unused]] VkCommandBuffer CB) {
-#ifdef USE_RENDERDOC
-		if (VK_NULL_HANDLE != vkCmdDebugMarkerEnd) { vkCmdDebugMarkerEnd(CB); }
-#endif
-	}
-	class ScopedMarker
-	{
-	public:
-		ScopedMarker(VkCommandBuffer CB, const glm::vec4& Color, const std::string_view Name) : CommandBuffer(CB) { MarkerBegin(CommandBuffer, Color, Name); }
-		~ScopedMarker() { MarkerEnd(CommandBuffer); }
-	private:
-		VkCommandBuffer CommandBuffer;
-	};
-	static void MarkerSetName([[maybe_unused]]VkDevice Device, [[maybe_unused]] const VkDebugReportObjectTypeEXT Type, [[maybe_unused]] const uint64_t Object, [[maybe_unused]] std::string_view Name) {
-#ifdef USE_RENDERDOC
-		if (VK_NULL_HANDLE != vkDebugMarkerSetObjectName) {
-			const VkDebugMarkerObjectNameInfoEXT DMONI = {
-				.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_NAME_INFO_EXT,
-				.pNext = nullptr,
-				.objectType = Type, .object = Object, .pObjectName = data(Name)
-			};
-			VERIFY_SUCCEEDED(vkDebugMarkerSetObjectName(Device, &DMONI));
-		}
-#endif
-	}
-	static void MarkerSetTag([[maybe_unused]] VkDevice Device, [[maybe_unused]] const VkDebugReportObjectTypeEXT Type, [[maybe_unused]] const uint64_t Object, [[maybe_unused]] const uint64_t TagName, [[maybe_unused]] const size_t TagSize, [[maybe_unused]] const void* TagData) {
-#ifdef USE_RENDERDOC
-		if (VK_NULL_HANDLE != vkDebugMarkerSetObjectTag) {
-			const VkDebugMarkerObjectTagInfoEXT DMOTI = {
-				.sType = VK_STRUCTURE_TYPE_DEBUG_MARKER_OBJECT_TAG_INFO_EXT,
-				.pNext = nullptr,
-				.objectType = Type, .object = Object,
-				.tagName = TagName, .tagSize = TagSize, .pTag = TagData
-			};
-			VERIFY_SUCCEEDED(vkDebugMarkerSetObjectTag(Device, &DMOTI));
-		}
-#endif
-	}
-	static void MarkerSetTag(VkDevice Device, const VkDebugReportObjectTypeEXT Type, const uint64_t Object, const uint64_t TagName, const std::vector<std::byte>& TagData) { MarkerSetTag(Device, Type, Object, TagName, size(TagData), data(TagData)); }
-#pragma region MARKER_TEMPLATE
-	template<typename T> static void MarkerSetObjectName(VkDevice Device, T Object, const std::string_view Name) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
-	template<typename T> static void MarkerSetObjectTag(VkDevice Device, T Object, const uint64_t TagName, const size_t TagSize, const void* TagData) { DEBUG_BREAK(); /* テンプレート特殊化されていない (Not template specialized) */ }
-	//!< ↓ここでテンプレート特殊化している (Template specialization here)
-#include "VKDebugMarker.inl"
-#pragma endregion
-#pragma endregion
-
 protected:
 	void LoadVulkanLibrary();
 
-	virtual void CreateDebugReportCallback();
 	virtual void CreateInstance(const std::vector<const char*>& AdditionalLayers = {}, const std::vector<const char*>& AdditionalExtensions = {});
 
 	virtual void SelectPhysicalDevice(VkInstance Instance);
@@ -983,12 +910,7 @@ public:
 #include "VKDeviceProcAddr_MeshShader.h"
 #undef VK_PROC_ADDR
 
-#define VK_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
-#include "VKInstanceProcAddr_DebugReport.h"
-#include "VKDeviceProcAddr_DebugMarker.h"
-#undef VK_PROC_ADDR
-
-#pragma region DebugUtils
+#ifdef USE_DEBUG_UTILS
 #define VK_PROC_ADDR(proc) static PFN_vk ## proc ## EXT vk ## proc;
 #include "VKInstanceProcAddr_DebugUtils.h"
 #undef VK_PROC_ADDR
@@ -1016,12 +938,13 @@ public:
 	private:
 		T Object;
 	};
-#pragma endregion
+#endif
 
 protected:
 	VkInstance Instance = VK_NULL_HANDLE;
-	VkDebugReportCallbackEXT DebugReportCallback = VK_NULL_HANDLE;
+#ifdef USE_DEBUG_UTILS
 	VkDebugUtilsMessengerEXT DebugUtilsMessenger = VK_NULL_HANDLE;
+#endif
 	VkSurfaceKHR Surface = VK_NULL_HANDLE;
 	
 	std::vector<VkPhysicalDevice> PhysicalDevices;
