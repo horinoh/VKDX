@@ -16,7 +16,6 @@ public:
 protected:
 	virtual void CreateGeometry() override {
 #define COMMAND_COPY_TOGETHER
-
 		const auto& CB = CommandBuffers[0];
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 
@@ -45,31 +44,51 @@ protected:
 
 #ifdef COMMAND_COPY_TOGETHER
 		VertexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Vertices));
+#ifdef USE_DEBUG_UTILS
 		VK::Scoped<StagingBuffer> Staging_Vertex(Device);
+#else
+		StagingBuffer Staging_Vertex;
+#endif
 		Staging_Vertex.Create(Device, PDMP, TotalSizeOf(Vertices), data(Vertices));
 #else
 		VertexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Vertices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Vertices), data(Vertices));
 #endif
+
+#ifdef USE_DEBUG_UTILS
 		SetObjectName(Device, VertexBuffers.back().Buffer, "MyVertexBuffer");
+#endif
 
 #ifdef COMMAND_COPY_TOGETHER
 		IndexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Indices));
+#ifdef USE_DEBUG_UTILS
 		VK::Scoped<StagingBuffer> Staging_Index(Device);
+#else
+		StagingBuffer Staging_Index;
+#endif
 		Staging_Index.Create(Device, PDMP, TotalSizeOf(Indices), data(Indices));
 #else
 		IndexBuffers.emplace_back().Create(Device, PDMP, TotalSizeOf(Indices)).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, TotalSizeOf(Indices), data(Indices));
 #endif	
-		SetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
 
+#ifdef USE_DEBUG_UTILS
+		SetObjectName(Device, IndexBuffers.back().Buffer, "MyIndexBuffer");
+#endif
 		constexpr VkDrawIndexedIndirectCommand DIIC = { .indexCount = static_cast<uint32_t>(size(Indices)), .instanceCount = 1, .firstIndex = 0, .vertexOffset = 0, .firstInstance = 0 };
 #ifdef COMMAND_COPY_TOGETHER
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC);
+#ifdef USE_DEBUG_UTILS
 		VK::Scoped<StagingBuffer> Staging_Indirect(Device);
+#else
+		StagingBuffer Staging_Indirect;
+#endif
 		Staging_Indirect.Create(Device, PDMP, sizeof(DIIC), &DIIC);
 #else
 		IndirectBuffers.emplace_back().Create(Device, PDMP, DIIC).SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, sizeof(DIIC), &DIIC);
 #endif	
+
+#ifdef USE_DEBUG_UTILS
 		SetObjectName(Device, IndirectBuffers.back().Buffer, "MyIndirectBuffer");
+#endif
 
 #ifdef COMMAND_COPY_TOGETHER
 		constexpr VkCommandBufferBeginInfo CBBI = { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO, .pNext = nullptr, .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, .pInheritanceInfo = nullptr };
@@ -183,8 +202,9 @@ protected:
 			.pInheritanceInfo = nullptr
 		};
 		VERIFY_SUCCEEDED(vkBeginCommandBuffer(CB, &CBBI)); {
+#ifdef USE_DEBUG_UTILS
 			ScopedLabel(CB, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), "Command Begin");
-
+#endif
 			constexpr std::array CVs = { VkClearValue({.color = Colors::SkyBlue }) };
 			const VkRenderPassBeginInfo RPBI = {
 				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

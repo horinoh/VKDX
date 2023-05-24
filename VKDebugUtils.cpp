@@ -1,5 +1,6 @@
 #include "VK.h"
 
+#ifdef USE_DEBUG_UTILS
 VKAPI_ATTR VkBool32 VKAPI_CALL VK::MessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT MessageSeverity, VkDebugUtilsMessageTypeFlagsEXT MessageTypes, const VkDebugUtilsMessengerCallbackDataEXT* CallbackData, void* UserData)
 {
 	if (MessageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT) {}
@@ -100,3 +101,4 @@ void VK::SetObjectTag([[maybe_unused]] VkDevice Device, [[maybe_unused]] const V
 	}
 #endif
 }
+#endif
