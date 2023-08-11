@@ -210,7 +210,7 @@ void VKExt::CreatePipeline_TsMsFs(const VkBool32 DepthEnable, const std::array<V
 		}),
 	};
 	constexpr std::array DSs = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, };
-	constexpr VkPipelineDynamicStateCreateInfo PDSCI = {
+	const VkPipelineDynamicStateCreateInfo PDSCI = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
 		.pNext = nullptr,
 		.flags = 0,

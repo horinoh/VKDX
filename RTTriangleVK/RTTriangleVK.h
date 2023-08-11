@@ -238,7 +238,7 @@ public:
 		};
 
 		constexpr std::array DSs = { VK_DYNAMIC_STATE_RAY_TRACING_PIPELINE_STACK_SIZE_KHR };
-		constexpr VkPipelineDynamicStateCreateInfo PDSCI = {
+		const VkPipelineDynamicStateCreateInfo PDSCI = {
 			.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
 			.pNext = nullptr,
 			.flags = 0,
