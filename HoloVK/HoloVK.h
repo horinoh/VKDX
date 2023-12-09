@@ -91,14 +91,14 @@ protected:
 		VK::SubmitAndWait(GraphicsQueue, CB);
 	}
 	virtual void CreateUniformBuffer() override {
-		constexpr auto Fov = glm::radians(14.0f);
+		const auto Fov = glm::radians(14.0f);
 		const auto Aspect = HoloDraw.DisplayAspect;
 		constexpr auto ZFar = 100.0f;
 		constexpr auto ZNear = 0.1f;
 
-		constexpr auto CamPos = glm::vec3(0.0f, 0.0f, 7.0f);
-		constexpr auto CamTag = glm::vec3(0.0f);
-		constexpr auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
+		const auto CamPos = glm::vec3(0.0f, 0.0f, 7.0f);
+		const auto CamTag = glm::vec3(0.0f);
+		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 
 		const auto Projection = glm::perspective(Fov, Aspect, ZNear, ZFar);
 		const auto View = glm::lookAt(CamPos, CamTag, CamUp);

@@ -18,12 +18,12 @@ protected:
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		const auto& CB = CommandBuffers[0];
 
-		constexpr std::array Vertices = {
+		const std::array Vertices = {
 			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }),
 			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }),
 			Vertex_PositionColor({.Position = { 0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 0.0f, 1.0f, 1.0f } }),
 		};
-		constexpr std::array Instances = {
+		const std::array Instances = {
 			Instance_OffsetXY({ { -0.5f, -0.5f } }),
 			Instance_OffsetXY({ { -0.25f, -0.25f } }),
 			Instance_OffsetXY({ { 0.0f, 0.0f } }),

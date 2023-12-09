@@ -21,7 +21,7 @@ public:
 
 #pragma region BLAS_GEOMETRY
 		//!< バーテックスバッファ (VertexBuffer) 
-		constexpr std::array Vertices = { glm::vec3({ 0.0f, 0.5f, 0.0f }), glm::vec3({ -0.5f, -0.5f, 0.0f }), glm::vec3({ 0.5f, -0.5f, 0.0f }), };
+		const std::array Vertices = { glm::vec3({ 0.0f, 0.5f, 0.0f }), glm::vec3({ -0.5f, -0.5f, 0.0f }), glm::vec3({ 0.5f, -0.5f, 0.0f }), };
 		Scoped<HostVisibleASBuffer> VB(Device);
 		VB.Create(Device, PDMP, TotalSizeOf(Vertices), data(Vertices));
 

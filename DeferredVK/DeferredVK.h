@@ -75,12 +75,12 @@ protected:
 		const auto Aspect = GetAspectRatioOfClientRect();
 		constexpr auto ZFar = 4.0f;
 		constexpr auto ZNear = 2.0f;
-		constexpr auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
-		constexpr auto CamTag = glm::vec3(0.0f);
-		constexpr auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
+		const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
+		const auto CamTag = glm::vec3(0.0f);
+		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		const auto Projection = glm::perspective(Fov, Aspect, ZNear, ZFar);
 		const auto View = glm::lookAt(CamPos, CamTag, CamUp);
-		constexpr auto World = glm::mat4(1.0f);
+		const auto World = glm::mat4(1.0f);
 
 		const auto ViewProjection = Projection * View;
 		const auto InverseViewProjection = glm::inverse(ViewProjection);

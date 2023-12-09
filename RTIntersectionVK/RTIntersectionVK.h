@@ -20,7 +20,7 @@ public:
 		const auto& CB = CommandBuffers[0];
 
 #pragma region BLAS_GEOMETRY
-		constexpr std::array AABBs = { AABB({ .Min = glm::vec3(-0.5f), .Max = glm::vec3(0.5f) }), };
+		const std::array AABBs = { AABB({ .Min = glm::vec3(-0.5f), .Max = glm::vec3(0.5f) }), };
 		Scoped<HostVisibleASBuffer> AB(Device);
 		AB.Create(Device, PDMP, TotalSizeOf(AABBs), data(AABBs));
 

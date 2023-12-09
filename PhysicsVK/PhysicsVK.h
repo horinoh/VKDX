@@ -69,9 +69,9 @@ protected:
 		const auto Aspect = GetAspectRatioOfClientRect();
 		constexpr auto ZFar = 100.0f;
 		constexpr auto ZNear = ZFar * 0.0001f;
-		constexpr auto CamPos = glm::vec3(0.0f, 15.0f, 30.0f);
-		constexpr auto CamTag = glm::vec3(0.0f);
-		constexpr auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
+		const auto CamPos = glm::vec3(0.0f, 15.0f, 30.0f);
+		const auto CamTag = glm::vec3(0.0f);
+		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		Tr = Transform({ .Projection = glm::perspective(Fov, Aspect, ZNear, ZFar), .View = glm::lookAt(CamPos, CamTag, CamUp) });
 		//!< Œ©‚¦‚È‚¢‚Æ‚±‚ë‚É”ò‚Î‚µ‚Ä‚¨‚­
 		for (auto& i : Tr.World) {

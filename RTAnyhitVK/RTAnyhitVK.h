@@ -20,7 +20,7 @@ public:
 		const auto& CB = CommandBuffers[0];
 
 #pragma region BLAS_GEOMETRY
-		constexpr std::array Vertices = {
+		const std::array Vertices = {
 			glm::vec3({ 0.0f, 0.5f, 0.0f }), glm::vec3({ -0.5f, -0.5f, 0.0f }), glm::vec3({ 0.5f, -0.5f, 0.0f }),
 		};
 		Scoped<HostVisibleASBuffer> VB(Device);

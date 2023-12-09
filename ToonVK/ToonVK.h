@@ -44,9 +44,9 @@ protected:
 		const auto Aspect = GetAspectRatioOfClientRect();
 		constexpr auto ZFar = 100.0f;
 		constexpr auto ZNear = ZFar * 0.0001f;
-		constexpr auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
-		constexpr auto CamTag = glm::vec3(0.0f);
-		constexpr auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
+		const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
+		const auto CamTag = glm::vec3(0.0f);
+		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		Tr = Transform({ .Projection = glm::perspective(Fov, Aspect, ZNear, ZFar), .View = glm::lookAt(CamPos, CamTag, CamUp), .World = glm::mat4(1.0f) });
 #pragma region FRAME_OBJECT
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {

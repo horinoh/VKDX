@@ -186,8 +186,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		break;
 #pragma endregion
 
-#pragma region Borderless
-	case WM_NCCALCSIZE: 
+#pragma region BORDERLESS
+	case WM_NCCALCSIZE:
+        //!< クライアント領域のサイズを再計算する
 		if (wParam && Win::IsBorderless(hWnd)) {
 			Win::AdjustBorderlessRect(hWnd, reinterpret_cast<NCCALCSIZE_PARAMS*>(lParam)->rgrc[0]);
 		}
@@ -195,20 +196,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			return DefWindowProc(hWnd, message, wParam, lParam);
 		}
 		break;
-	case WM_NCACTIVATE: 
-		{
-			//!< ウインドウがアクティブになった時にフレームが歳出減するのを抑制
-			BOOL IsComposition = FALSE;
-			::DwmIsCompositionEnabled(&IsComposition);
-			if (IsComposition) {
-				return DefWindowProc(hWnd, message, wParam, lParam);
-			}
-		}
-		break;
+	//case WM_NCACTIVATE: 
+	//	{
+	//		//!< ウインドウがアクティブになった時にフレームが再出減するのを抑制
+	//		BOOL IsComposition = FALSE;
+	//		::DwmIsCompositionEnabled(&IsComposition);
+	//		if (IsComposition) {
+	//		    return DefWindowProc(hWnd, message, wParam, lParam);
+	//		}
+	//	}
+	//	break;
 	case WM_NCHITTEST:
-		if (Win::IsBorderless(hWnd)) {
-			return Win::GetBorderlessHit(hWnd, POINT({ .x = GET_X_LPARAM(lParam), .y = GET_Y_LPARAM(lParam) }), true, false);
-		}
+        //!< カーソルとのヒットを検出して、ドラッグ、サイズ変更を処理する
+        if (Win::IsBorderless(hWnd)) {
+            //!< ここではドラッグのみ可能、リサイズ不可
+            return Win::GetBorderlessHit(hWnd, POINT({ .x = GET_X_LPARAM(lParam), .y = GET_Y_LPARAM(lParam) }), true, false);
+        }
 		break;
 #pragma endregion
 

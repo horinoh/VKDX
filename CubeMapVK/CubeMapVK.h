@@ -52,12 +52,12 @@ protected:
 		const auto Aspect = GetAspectRatioOfClientRect();
 		constexpr auto ZFar = 100.0f;
 		constexpr auto ZNear = ZFar * 0.0001f;
-		constexpr auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
-		constexpr auto CamTag = glm::vec3(0.0f);
-		constexpr auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
+		const auto CamPos = glm::vec3(0.0f, 0.0f, 3.0f);
+		const auto CamTag = glm::vec3(0.0f);
+		const auto CamUp = glm::vec3(0.0f, 1.0f, 0.0f);
 		const auto Projection = glm::perspective(Fov, Aspect, ZNear, ZFar);
 		const auto View = glm::lookAt(CamPos, CamTag, CamUp);
-		constexpr auto World = glm::mat4(1.0f);
+		const auto World = glm::mat4(1.0f);
 		Tr = Transform({ Projection, View, World, glm::vec4(0.0f, 0.0f, 0.0f, 1.0f) });
 #pragma region FRAME_OBJECT
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {

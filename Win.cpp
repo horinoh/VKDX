@@ -86,13 +86,15 @@ void Win::OnTimer(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance)
 	SendMessage(hWnd, WM_PAINT, 0, 0);
 }
 
-//!< WndProc() へ WM_NCCALCSIZE, WM_NCACTIVATE, WM_NCHITTEST の処理を追加して使用する
+#pragma region BORDERLESS
+//!< case WM_CREATE:
+//!<		Win::ToggleBorderless(hWnd);
 void Win::ToggleBorderless(HWND hWnd)
 {
 	BOOL IsComposition = FALSE;
 	::DwmIsCompositionEnabled(&IsComposition);
 
-	//!< ボーダーレス切替え‘
+	//!< ボーダーレス切替え
 	constexpr auto Common = WS_THICKFRAME | WS_SYSMENU | WS_MAXIMIZEBOX | WS_MINIMIZEBOX;
 	constexpr auto Borderless = Common | WS_POPUP;
 	constexpr auto Aero = Borderless | WS_CAPTION;
@@ -110,6 +112,15 @@ void Win::ToggleBorderless(HWND hWnd)
 	::SetWindowPos(hWnd, nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE);
 	::ShowWindow(hWnd, SW_SHOW);
 }
+
+//!< クライアント領域のサイズを再計算する
+//!< case WM_NCCALCSIZE:
+//!<	if (wParam && Win::IsBorderless(hWnd)) {
+//!<		Win::AdjustBorderlessRect(hWnd, reinterpret_cast<NCCALCSIZE_PARAMS*>(lParam)->rgrc[0]);
+//!<	}
+//!<	else {
+//!<		return DefWindowProc(hWnd, message, wParam, lParam);
+//!<	}
 bool Win::AdjustBorderlessRect(HWND hWnd, RECT& Rect)
 {
 	WINDOWPLACEMENT Placement;
@@ -128,14 +139,20 @@ bool Win::AdjustBorderlessRect(HWND hWnd, RECT& Rect)
 	}
 	return false;
 }
+
+//!< カーソルとのヒットを検出して、ドラッグ、サイズ変更を処理する
+//!< case WM_NCHITTEST:
+//!<	if (Win::IsBorderless(hWnd)) {
+//!<		return Win::GetBorderlessHit(hWnd, POINT({ .x = GET_X_LPARAM(lParam), .y = GET_Y_LPARAM(lParam) }), true, true);
+//!<	}
 LRESULT Win::GetBorderlessHit(HWND hWnd, const POINT& Cursor, const bool IsDrag, const bool IsResize)
 {
 	RECT Rect;
-	//!< カーソルがウインドウ内
+	//!< カーソルがウインドウ内に無いとダメ
 	if (::GetWindowRect(hWnd, &Rect)) {
+		//!< リサイズが有効
 		if (IsResize) {
 			const auto Border = POINT({ .x = ::GetSystemMetrics(SM_CXFRAME) + ::GetSystemMetrics(SM_CXPADDEDBORDER), .y = ::GetSystemMetrics(SM_CYFRAME) + ::GetSystemMetrics(SM_CXPADDEDBORDER) });
-
 			enum EdgeMask {
 				L = 0x1,
 				R = 0x2,
@@ -146,14 +163,13 @@ LRESULT Win::GetBorderlessHit(HWND hWnd, const POINT& Cursor, const bool IsDrag,
 				LB = L | B,
 				RB = R | B,
 			};
-		
 			//!< カーソルがエッジ上(上下左右)にいるか判定
 			const auto IsOnEdge = (Cursor.x < Rect.left + Border.x ? EdgeMask::L : 0)
 				| (Cursor.x >= Rect.right - Border.x ? EdgeMask::R : 0)
 				| (Cursor.y < Rect.top + Border.y ? EdgeMask::T : 0)
 				| (Cursor.y >= Rect.bottom - Border.y ? EdgeMask::B : 0);
-
 			if (IsOnEdge) {
+				//!< カーソルがどのエッジにいるかでリサイズできる方向を選択
 				switch (static_cast<EdgeMask>(IsOnEdge)) {
 					using enum EdgeMask;
 				case L: return HTLEFT;
@@ -167,10 +183,13 @@ LRESULT Win::GetBorderlessHit(HWND hWnd, const POINT& Cursor, const bool IsDrag,
 				}
 			}
 		}
+
+		//!< ドラッグが有効かどうかにより選択
 		return IsDrag ? HTCAPTION : HTCLIENT;
 	}
 	return HTNOWHERE;
 }
+#pragma endregion
 
 template<> void Win::_Log([[maybe_unused]] const LogType Type, [[maybe_unused]] const char* Str)
 {

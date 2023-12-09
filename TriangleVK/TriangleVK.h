@@ -20,7 +20,7 @@ protected:
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 
 #if 1
-		constexpr std::array Vertices = {
+		const std::array Vertices = {
 	#ifdef USE_VIEWPORT_Y_UP
 			Vertex_PositionColor({.Position = { 0.0f, 0.5f, 0.0f }, .Color = { 1.0f, 0.0f, 0.0f, 1.0f } }), //!< CT
 			Vertex_PositionColor({.Position = { -0.5f, -0.5f, 0.0f }, .Color = { 0.0f, 1.0f, 0.0f, 1.0f } }), //!< LB

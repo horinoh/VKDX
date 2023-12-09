@@ -113,8 +113,8 @@ const auto GLTF_PATH = std::filesystem::path("..") / "GLTF";
 const auto DRC_SAMPLE_PATH = std::filesystem::path("..") / "draco" / "testdata";
 const auto GLTF_SAMPLE_PATH = std::filesystem::path("..") / "glTF-Sample-Models" / "2.0";
 
-template<typename T> constexpr T GetMin(const T& lhs, const T& rhs);
-template<typename T> constexpr T GetMax(const T& lhs, const T& rhs);
+template<typename T> const T GetMin(const T& lhs, const T& rhs);
+template<typename T> const T GetMax(const T& lhs, const T& rhs);
 
 template<typename T> void AdjustScale(std::vector<T>& Vertices, const float Scale);
 
@@ -149,10 +149,12 @@ public:
 	virtual void OnPreDestroy([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
 	virtual void OnDestroy([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
 
+#pragma region BORDERLESS
 	static bool IsBorderless(HWND hWnd) { return ::GetWindowLongPtrW(hWnd, GWL_STYLE) & WS_POPUP; }
 	static void ToggleBorderless(HWND hWnd);
 	static bool AdjustBorderlessRect(HWND hWnd, RECT& Rect);
 	static LRESULT GetBorderlessHit(HWND hWnd, const POINT& Cursor, const bool IsDrag = false, const bool IsResize = false);
+#pragma endregion
 
 	[[nodiscard]] std::filesystem::path GetFilePath(const std::string& Suffix) const { return std::filesystem::path(".") / (GetTitleString() + Suffix); }
 

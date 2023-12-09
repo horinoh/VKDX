@@ -77,14 +77,14 @@ protected:
 	}
 	virtual void CreateUniformBuffer() override {
 		{
-			constexpr auto Direction = glm::vec3(0.0f, 0.0f, 1.0f);
+			const auto Direction = glm::vec3(0.0f, 0.0f, 1.0f);
 			const auto Z = glm::normalize(-Direction);
 			const auto X = glm::normalize(glm::cross(Z, glm::vec3(0.0f, 1.0f, 0.0f)));
 			const auto Y = glm::cross(X, Z);
 			//!< シャドウキャスタのAABB
-			constexpr auto Center = glm::vec3(0.0f, 0.0f, 0.0f);
-			constexpr auto Radius = glm::vec3(1.0f, 1.0f, 1.0f);
-			constexpr std::array Points = {
+			const auto Center = glm::vec3(0.0f, 0.0f, 0.0f);
+			const auto Radius = glm::vec3(1.0f, 1.0f, 1.0f);
+			const std::array Points = {
 				Center + glm::vec3(Radius.x,  Radius.y,  Radius.z),
 				Center + glm::vec3(Radius.x,  Radius.y, -Radius.z),
 				Center + glm::vec3(Radius.x, -Radius.y,  Radius.z),
