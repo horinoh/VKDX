@@ -4,7 +4,7 @@
 #include <vector>
 #include <numbers>
 
-//#define USE_HOLO //!< HoloDX, HoloVK
+#define USE_HOLO //!< HoloDX, HoloVK
 //#define DRAW_QUILT
 
 #ifdef USE_HOLO

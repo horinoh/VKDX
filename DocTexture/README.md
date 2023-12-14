@@ -1,9 +1,9 @@
 ﻿# テクスチャ
 ## DDS
-* [DirectXTex](https://github.com/Microsoft/DirectXTex)
-  * DirectXTex\DirectXTex_Desktop_2019.sln を開いて Release、x64 にして必要なもの(DDDSView, Texassemble, Texconv, Texdiag)をビルドすると実行ファイルが作成される
+* [DirectXTex](https://github.com/Microsoft/DirectXTex) ツール
+  * DirectXTex\DirectXTex_Desktop_2022.sln を開いて Release、x64 にして必要なもの(DDDSView, Texassemble, Texconv, Texdiag)をビルドすると実行ファイルが作成される
 	~~~
-	DDSView\Bin\Desktop_2019\x64\Release\DDSView.exe
+	DSView\Bin\Desktop_2019\x64\Release\DDSView.exe
 	Texassemble\Bin\Desktop_2019\x64\Release\texassemble.exe
 	Texconv\Bin\Desktop_2019\x64\Release\texconv.exe
 	Texdiag\Bin\Desktop_2019\x64\Release\texdiag.exe

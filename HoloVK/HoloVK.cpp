@@ -4,9 +4,6 @@
 #include "framework.h"
 #include "HoloVK.h"
 
-//!< GET_X_LPARAM(), GET_Y_LPARAM() ‚É•K—v
-#include <windowsx.h>
-
 #pragma region Code
 VK* Inst = nullptr;
 #pragma endregion

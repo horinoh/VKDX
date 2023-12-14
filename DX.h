@@ -509,9 +509,9 @@ public:
 
 	virtual void CreateFence();
 
-	virtual void CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat);
 	virtual void CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height);
 	virtual void GetSwapChainResource();
+	virtual void CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat);
 	virtual void ResizeSwapChain(const UINT Width, const UINT Height);
 	virtual void ResizeDepthStencil(const DXGI_FORMAT DepthFormat, const UINT Width, const UINT Height);
 
@@ -633,10 +633,8 @@ protected:
 	COM_PTR<IDXGIFactory4> Factory;
 	COM_PTR<IDXGIAdapter> Adapter;
 	COM_PTR<IDXGIOutput> Output;
-
 	COM_PTR<ID3D12Device> Device;
-	std::vector<DXGI_SAMPLE_DESC> SampleDescs;
-	
+
 	COM_PTR<ID3D12CommandQueue> GraphicsCommandQueue;
 	COM_PTR<ID3D12CommandQueue> ComputeCommandQueue;
 
@@ -650,8 +648,8 @@ protected:
 	COM_PTR<ID3D12Fence> ComputeFence;
 
 	COM_PTR<IDXGISwapChain4> SwapChain;
-	std::vector<COM_PTR<ID3D12Resource>> SwapChainResources;
 	COM_PTR<ID3D12DescriptorHeap> SwapChainDescriptorHeap;					//!< D3D12_DESCRIPTOR_HEAP_TYPE_RTV : スワップチェインRTVは別扱いにしている (Manage swapchain RTV separately)
+	std::vector<COM_PTR<ID3D12Resource>> SwapChainResources;
 	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SwapChainCPUHandles;
 
 	std::vector<COM_PTR<ID3D12CommandAllocator>> DirectCommandAllocators;
@@ -660,6 +658,8 @@ protected:
 	std::vector<COM_PTR<ID3D12GraphicsCommandList>> BundleCommandLists;
 	std::vector<COM_PTR<ID3D12CommandAllocator>> ComputeCommandAllocators;
 	std::vector<COM_PTR<ID3D12GraphicsCommandList>> ComputeCommandLists;
+
+	std::vector<DXGI_SAMPLE_DESC> SampleDescs;
 
 	std::vector<VertexBuffer> VertexBuffers;
 	std::vector<IndexBuffer> IndexBuffers;

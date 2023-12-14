@@ -71,21 +71,6 @@ Win::~Win()
 #endif
 }
 
-void Win::OnCreate(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance, LPCWSTR Title)
-{
-	SetTitleWString(Title);
-
-	GetClientRect(hWnd, &Rect);
-}
-void Win::OnExitSizeMove(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance)
-{
-	GetClientRect(hWnd, &Rect);
-}
-void Win::OnTimer(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance)
-{
-	SendMessage(hWnd, WM_PAINT, 0, 0);
-}
-
 #pragma region BORDERLESS
 //!< case WM_CREATE:
 //!<		Win::ToggleBorderless(hWnd);

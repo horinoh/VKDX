@@ -4,9 +4,6 @@
 #include "framework.h"
 #include "HoloDX.h"
 
-//!< GET_X_LPARAM(), GET_Y_LPARAM() ‚É•K—v
-#include <windowsx.h>
-
 #pragma region Code
 DX* Inst = nullptr;
 #pragma endregion

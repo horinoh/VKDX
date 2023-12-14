@@ -81,6 +81,8 @@
 //#include <cinttypes>
 
 #include <dwmapi.h>
+//!< GET_X_LPARAM(), GET_Y_LPARAM() に必要
+#include <windowsx.h>
 
 #ifndef SAFE_FCLOSE
 #define SAFE_FCLOSE(x) if(nullptr != x) { fclose(x); x = nullptr; }
@@ -125,10 +127,12 @@ public:
 	virtual ~Win();
 
 	//virtual void OnInitialize([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
-	virtual void OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title);
-	virtual void OnSize([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {} //!< WM_SIZE はドラッグ中に繰り返しコールされてしまうので↓
-	virtual void OnExitSizeMove(HWND hWnd, HINSTANCE hInstance); //!< ウインドウサイズ確定時にコールされる WM_EXITSIZEMOVE を使用する
-	virtual void OnTimer(HWND hWnd, HINSTANCE hInstance);
+	virtual void OnCreate(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance, LPCWSTR Title) { SetTitleWString(Title); GetClientRect(hWnd, &Rect); }
+	//!< WM_SIZE はドラッグ中に繰り返しコールされてしまうので OnExitSizeMove() を使う
+	virtual void OnSize([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {} 
+	//!< ウインドウサイズ確定時にコールされる WM_EXITSIZEMOVE を使用する
+	virtual void OnExitSizeMove(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) { GetClientRect(hWnd, &Rect); }
+	virtual void OnTimer(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) { SendMessage(hWnd, WM_PAINT, 0, 0); }
 	virtual void OnPaint([[maybe_unused]] HWND hWnd, [[maybe_unused]] HINSTANCE hInstance) {}
 	virtual void OnKeyDown(HWND hWnd, [[maybe_unused]] HINSTANCE hInstance, const WPARAM Param) {
 		switch (Param) {

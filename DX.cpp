@@ -81,8 +81,6 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 	CreateShaderTable();
 
 	OnExitSizeMove(hWnd, hInstance);
-
-	SetTimer(hWnd, NULL, DeltaMsec, nullptr);
 }
 
 /**
@@ -93,36 +91,39 @@ void DX::OnCreate(HWND hWnd, HINSTANCE hInstance, LPCWSTR Title)
 */
 void DX::OnExitSizeMove(HWND hWnd, HINSTANCE hInstance)
 {
-	PERFORMANCE_COUNTER();
+	constexpr UINT_PTR IDT_TIMER1 = 1000; //!< 何でも良い
+	KillTimer(hWnd, IDT_TIMER1); {
+		PERFORMANCE_COUNTER();
 
-	Super::OnExitSizeMove(hWnd, hInstance);
+		Super::OnExitSizeMove(hWnd, hInstance);
 
-	//!< コマンドリストの完了を待つ
-	WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence));
+		//!< コマンドリストの完了を待つ
+		WaitForFence(COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence));
 
-	const auto W = GetClientRectWidth(), H = GetClientRectHeight();
+		const auto W = GetClientRectWidth(), H = GetClientRectHeight();
 
-	ResizeSwapChain(W, H);
+		ResizeSwapChain(W, H);
 
-	//const auto CommandList = GraphicsCommandLists[0].Get();
-	//const auto CommandAllocator = CommandAllocators[0].Get();
+		//const auto CommandList = GraphicsCommandLists[0].Get();
+		//const auto CommandAllocator = CommandAllocators[0].Get();
 
-	//VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr));
-	//{		
-	//	ResizeSwapChain(Rect);
-	//	ResizeDepthStencil(Rect);
-	//}
-	//VERIFY_SUCCEEDED(CommandList->Close());
+		//VERIFY_SUCCEEDED(CommandList->Reset(CommandAllocator, nullptr));
+		//{		
+		//	ResizeSwapChain(Rect);
+		//	ResizeDepthStencil(Rect);
+		//}
+		//VERIFY_SUCCEEDED(CommandList->Close());
 
-	//ExecuteCommandListAndWaitForFence(CommandList);
+		//ExecuteCommandListAndWaitForFence(CommandList);
 
-	CreateViewport(static_cast<const FLOAT>(W), static_cast<const FLOAT>(H));
+		CreateViewport(static_cast<const FLOAT>(W), static_cast<const FLOAT>(H));
 
-	//!< ビューポートサイズが決定してから
-	LoadScene();
-	for (auto i = 0; i < size(DirectCommandLists); ++i) {
-		PopulateCommandList(i);
-	}
+		//!< ビューポートサイズが決定してから
+		LoadScene();
+		for (auto i = 0; i < size(DirectCommandLists); ++i) {
+			PopulateCommandList(i);
+		}
+	} SetTimer(hWnd, IDT_TIMER1, DeltaMsec, nullptr);
 }
 void DX::OnPreDestroy(HWND hWnd, HINSTANCE hInstance)
 {
@@ -432,6 +433,7 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 	//!< 高フィーチャーレベル優先でデバイスを作成 (Create device with higher feature level possible)
 	{
 		constexpr std::array FeatureLevels = {
+			D3D_FEATURE_LEVEL_12_2,
 			D3D_FEATURE_LEVEL_12_1,
 			D3D_FEATURE_LEVEL_12_0,
 			D3D_FEATURE_LEVEL_11_1,
@@ -451,6 +453,7 @@ void DX::CreateDevice([[maybe_unused]] HWND hWnd)
 #define D3D_FEATURE_LEVEL_ENTRY(fl) case D3D_FEATURE_LEVEL_##fl: Logf("\tD3D_FEATURE_LEVEL_%s\n", #fl); break;
 				switch (FDFL.MaxSupportedFeatureLevel) {
 				default: assert(0 && "Unknown FeatureLevel"); break;
+					D3D_FEATURE_LEVEL_ENTRY(12_2)
 					D3D_FEATURE_LEVEL_ENTRY(12_1)
 					D3D_FEATURE_LEVEL_ENTRY(12_0)
 					D3D_FEATURE_LEVEL_ENTRY(11_1)
@@ -558,16 +561,9 @@ void DX::CreateFence()
 	LOG_OK();
 }
 
-void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
-{
-	CreateSwapChain(hWnd, ColorFormat, GetClientRectWidth(), GetClientRectHeight());
-
-	//!< リソースを取得、ビューを作成 (Get resource, create view)
-	GetSwapChainResource();
-}
 void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Width, const UINT Height)
 {
-	const UINT BufferCount = 3;
+	constexpr UINT BufferCount = 3;
 
 	std::vector<DXGI_SAMPLE_DESC> SDs;
 	{
@@ -587,7 +583,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 
 #ifdef USE_FULLSCREEN
 	//!< 起動時にフルスクリーンにする場合
-	const DXGI_SWAP_CHAIN_DESC1 SCD1 = {
+	const auto SCD = DXGI_SWAP_CHAIN_DESC1({
 		.Width = Width, .Height = Height,
 		.Format = ColorFormat,
 		.Stereo = FALSE,
@@ -598,7 +594,7 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 		.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
 		.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED,
 		.Flags = 0/*DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING*/,
-	};
+	});
 	//const DXGI_SWAP_CHAIN_FULLSCREEN_DESC SCFD = {
 	//	.RefreshRate = DXGI_RATIONAL({.Numerator = 60, .Denominator = 1 }),
 	//	.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED,
@@ -607,25 +603,25 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	//};
 	COM_PTR_RESET(SwapChain);
 	COM_PTR<IDXGISwapChain1> NewSwapChain;
-	VERIFY_SUCCEEDED(Factory->CreateSwapChainForHwnd(COM_PTR_GET(GraphicsCommandQueue), hWnd, &SCD1, /*&SCFD*/nullptr, /*COM_PTR_GET(Output)*/nullptr, COM_PTR_PUT(NewSwapChain)));
+	VERIFY_SUCCEEDED(Factory->CreateSwapChainForHwnd(COM_PTR_GET(GraphicsCommandQueue), hWnd, &SCD, /*&SCFD*/nullptr, /*COM_PTR_GET(Output)*/nullptr, COM_PTR_PUT(NewSwapChain)));
 
 	//!< DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING 時は、Alt + Enter によるフルスクリーン切替えを抑制、SwapChain->SetFullscreenState() を使用する
-	if (SCD1.Flags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING) {
+	if (SCD.Flags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING) {
 		Factory->MakeWindowAssociation(hWnd, DXGI_MWA_NO_ALT_ENTER);
 	}
 
 	//!< フルスクリーン切替え(トグル)の例
 	if(false){
-		DXGI_SWAP_CHAIN_DESC1 SCD1;
+		DXGI_SWAP_CHAIN_DESC1 SCD;
 		SwapChain->GetDesc1(&SCD1);
-		if (!(SCD1.Flags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING)) {
+		if (!(SCD.Flags & DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING)) {
 			BOOL IsFullScreen;
 			VERIFY_SUCCEEDED(SwapChain->SetFullscreenState(&IsFullScreen));
 			VERIFY_SUCCEEDED(SwapChain->SetFullscreenState(!IsFullScreen, nullptr));
 		}
 	}
 #else
-	DXGI_SWAP_CHAIN_DESC SCD1 = {
+	auto SCD = DXGI_SWAP_CHAIN_DESC({
 		//!< 最適なフルスクリーンのパフォーマンスを得るには、IDXGIOutput->GetDisplayModeList() で取得する(ディスプレイのサポートする)DXGI_MODE_DESC でないとダメなので注意  #DX_TODO
 		.BufferDesc = DXGI_MODE_DESC({
 			.Width = Width, .Height = Height,
@@ -641,11 +637,11 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 		.Windowed = TRUE,
 		.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD,
 		.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH //!< フルスクリーンにした時、最適なディスプレイモードが選択されるのを許可
-	};
+	});
 	//!< セッティングを変更してスワップチェインを再作成できるように、既存のを開放している
 	COM_PTR_RESET(SwapChain);
 	COM_PTR<IDXGISwapChain> NewSwapChain;
-	VERIFY_SUCCEEDED(Factory->CreateSwapChain(COM_PTR_GET(GraphicsCommandQueue), &SCD1, COM_PTR_PUT(NewSwapChain)));
+	VERIFY_SUCCEEDED(Factory->CreateSwapChain(COM_PTR_GET(GraphicsCommandQueue), &SCD, COM_PTR_PUT(NewSwapChain)));
 	COM_PTR_AS(NewSwapChain, SwapChain);
 #endif
 
@@ -697,12 +693,12 @@ void DX::CreateSwapChain(HWND hWnd, const DXGI_FORMAT ColorFormat, const UINT Wi
 	}
 #endif
 
-	const D3D12_DESCRIPTOR_HEAP_DESC DHD = {
+	const auto DHD = D3D12_DESCRIPTOR_HEAP_DESC({
 		.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV,
-		.NumDescriptors = SCD1.BufferCount,
+		.NumDescriptors = SCD.BufferCount,
 		.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE,
 		.NodeMask = 0 //!< マルチGPUの場合に使用(1つしか使わない場合は0で良い)
-	};
+	});
 	VERIFY_SUCCEEDED(Device->CreateDescriptorHeap(&DHD, COM_PTR_UUIDOF_PUTVOID(SwapChainDescriptorHeap)));
 
 	LOG_OK();
@@ -735,6 +731,13 @@ void DX::GetSwapChainResource()
 	}
 
 	LOG_OK();
+}
+void DX::CreateSwapchain(HWND hWnd, const DXGI_FORMAT ColorFormat)
+{
+	CreateSwapChain(hWnd, ColorFormat, GetClientRectWidth(), GetClientRectHeight());
+
+	//!< リソースを取得、ビューを作成 (Get resource, create view)
+	GetSwapChainResource();
 }
 
 void DX::ResizeSwapChain(const UINT Width, const UINT Height)
