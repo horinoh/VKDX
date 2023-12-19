@@ -631,9 +631,12 @@ protected:
 
 	[[nodiscard]] virtual VkSurfaceFormatKHR SelectSurfaceFormat(VkPhysicalDevice PD, VkSurfaceKHR Surface);
 	[[nodiscard]] virtual VkPresentModeKHR SelectSurfacePresentMode(VkPhysicalDevice PD, VkSurfaceKHR Surface);
-
-	virtual void CreateSwapchain() { CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight()); }
 	virtual void CreateSwapchain(VkPhysicalDevice PD, VkSurfaceKHR Sfc, const uint32_t Width, const uint32_t Height, const VkImageUsageFlags AdditionalUsage = 0);
+	virtual void GetSwapchainImages();
+	virtual void CreateSwapchain() {
+		CreateSwapchain(GetCurrentPhysicalDevice(), Surface, GetClientRectWidth(), GetClientRectHeight()); 
+		GetSwapchainImages();
+	}
 	virtual void ResizeSwapchain(const uint32_t Width, const uint32_t Height);
 
 	virtual void CreateViewport(const float Width, const float Height, const float MinDepth = 0.0f, const float MaxDepth = 1.0f);
@@ -729,7 +732,7 @@ protected:
 	virtual void CreateTextureArray1x1(const std::vector<uint32_t>& Colors, const VkPipelineStageFlags PSF);
 	virtual void CreateImmutableSampler() {}
 
-	virtual void CreateRenderPass(VkRenderPass& RP, const std::vector<VkAttachmentDescription>& ADs, const std::vector<VkSubpassDescription> &SDs, const std::vector<VkSubpassDependency>& Deps);
+	virtual void CreateRenderPass(VkRenderPass& RP, const std::vector<VkAttachmentDescription>& ADs, const std::vector<VkSubpassDescription>& SDs, const std::vector<VkSubpassDependency>& Deps);
 	virtual void CreateRenderPass();
 
 	virtual void CreateFramebuffer(VkFramebuffer& FB, const VkRenderPass RP, const uint32_t Width, const uint32_t Height, const uint32_t Layers, const std::vector<VkImageView>& IVs);
@@ -860,7 +863,7 @@ protected:
 	virtual uint32_t GetCurrentBackBufferIndex() const { return SwapchainImageIndex; }
 	virtual void DrawFrame([[maybe_unused]] const uint32_t i) {}
 	static void WaitForFence(VkDevice Device, VkFence Fence);
-	virtual void SubmitGrapphics(const uint32_t i);
+	virtual void SubmitGraphics(const uint32_t i);
 	virtual void SubmitCompute(const uint32_t i);
 	virtual void Present();
 	virtual void Draw();
