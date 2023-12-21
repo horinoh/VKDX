@@ -268,8 +268,8 @@ public:
 
 		const auto CA = COM_PTR_GET(DirectCommandAllocators[0]);
 		const auto CL = COM_PTR_GET(DirectCommandLists[0]);
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "SheetMetal001_1K-JPG" / "SheetMetal001_1K_Opacity.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "SheetMetal001_1K-JPG" / "SheetMetal001_1K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "SheetMetal001_1K-JPG" / "SheetMetal001_1K_Opacity.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "SheetMetal001_1K-JPG" / "SheetMetal001_1K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
 	}
 	virtual void CreateRootSignature() override {
 		if (!HasRaytracingSupport(COM_PTR_GET(Device))) { return; }
@@ -336,12 +336,12 @@ public:
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
 		//!< [2] OpacityMap (SRV1)
-		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH);
+		Device->CreateShaderResourceView(COM_PTR_GET(XTKTextures[0].Resource), &XTKTextures[0].SRV, CDH);
 		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;
 		//!< [3] ColorMap (SRV2)
-		Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[1].Resource), &DDSTextures[1].SRV, CDH);
+		Device->CreateShaderResourceView(COM_PTR_GET(XTKTextures[1].Resource), &XTKTextures[1].SRV, CDH);
 		CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		CDH.ptr += IncSize;
 		GDH.ptr += IncSize;

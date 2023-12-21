@@ -78,9 +78,9 @@ protected:
 		const auto CL = COM_PTR_GET(DirectCommandLists[0]);
 		//!< [0] キューブ(Cube) : PX, NX, PY, NY, PZ, NZ
 		//!<	(作成時にキューブマップであることを識別、専用の SRV も作成)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "CubeMap" / "ninomaru_teien.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "CubeMap" / "ninomaru_teien.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		//!< [1] 法線(Normal)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Normal.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Normal.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 
 		Super::CreateTexture();
 	}
@@ -195,12 +195,12 @@ protected:
 			//!< SRV0
 			//!<	(D3D12_SRV_DIMENSION_TEXTURECUBE を指定する必要がある為、(nullptr で済ませるのではなく) 明示的に SRV を指定すること)
 			//!<	(リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合には D3D12_SHADER_RESOURCE_VIEW_DESC* に nullptrを指定できる)
-			Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH);
+			Device->CreateShaderResourceView(COM_PTR_GET(XTKTextures[0].Resource), &XTKTextures[0].SRV, CDH);
 			CbvSrvUavGPUHandles.back().emplace_back(GDH);
 			CDH.ptr += IncSize;
 			GDH.ptr += IncSize;
 			//!< SRV1
-			Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[1].Resource), &DDSTextures[1].SRV, CDH);
+			Device->CreateShaderResourceView(COM_PTR_GET(XTKTextures[1].Resource), &XTKTextures[1].SRV, CDH);
 			CbvSrvUavGPUHandles.back().emplace_back(GDH);
 			CDH.ptr += IncSize;
 			GDH.ptr += IncSize; 

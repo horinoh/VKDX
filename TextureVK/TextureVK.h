@@ -37,7 +37,7 @@ protected:
 		std::cout << "maxResourceSize = " << IFP.maxResourceSize << std::endl;
 #endif
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
-		DDSTextures.emplace_back().Create(Device, PDMP, DDS_PATH / "PavingStones050_2K-JPG" / "PavingStones050_2K_Color.dds").SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+		GLITextures.emplace_back().Create(Device, PDMP, DDS_PATH / "PavingStones050_2K-JPG" / "PavingStones050_2K_Color.dds").SubmitCopyCommand(Device, PDMP, CommandBuffers[0], GraphicsQueue, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 	}
 #ifdef USE_IMMUTABLE_SAMPLER
 	//!< VKの場合イミュータブルサンプラと通常のサンプラは基本的に同じもの、デスクリプタセットレイアウトの指定が異なるだけ
@@ -138,7 +138,7 @@ protected:
 			}),
 		}, DescriptorSetLayouts[0]);
 #ifdef USE_IMMUTABLE_SAMPLER
-		const auto DII = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = DDSTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+		const auto DII = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = GLITextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 #else
 		const auto DII = VkDescriptorImageInfo({ .sampler = Samplers[0], .imageView = DDSTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 #endif

@@ -51,7 +51,6 @@ public:
 	public:
 		GLITexture& Create(const VkDevice Dev, const VkPhysicalDeviceMemoryProperties PDMP, const std::filesystem::path& Path) {
 			assert(std::filesystem::exists(Path) && "");
-			//assert(Path.extension() == TEXT(".dds") && "");
 			GliTexture = gli::load(data(Path.string()));
 			assert(!GliTexture.empty() && "Load image failed");
 
@@ -111,10 +110,10 @@ public:
 
 protected:
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
-		for (auto& i : DDSTextures) { i.Destroy(Device); } DDSTextures.clear();
+		for (auto& i : GLITextures) { i.Destroy(Device); } GLITextures.clear();
 		Super::OnDestroy(hWnd, hInstance);
 	}
-	std::vector<GLITexture> DDSTextures;
+	std::vector<GLITexture> GLITextures;
 };
 
 class VKImageDepth : public VKExtDepth
@@ -124,10 +123,10 @@ private:
 
 protected:
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
-		for (auto& i : DDSTextures) { i.Destroy(Device); } DDSTextures.clear();
+		for (auto& i : GLITextures) { i.Destroy(Device); } GLITextures.clear();
 		Super::OnDestroy(hWnd, hInstance);
 	}
-	std::vector<VKImage::GLITexture> DDSTextures;
+	std::vector<VKImage::GLITexture> GLITextures;
 };
 
 class VKImageRT : public VKRT
@@ -137,8 +136,8 @@ private:
 
 protected:
 	virtual void OnDestroy(HWND hWnd, HINSTANCE hInstance) override {
-		for (auto& i : DDSTextures) { i.Destroy(Device); } DDSTextures.clear();
+		for (auto& i : GLITextures) { i.Destroy(Device); } GLITextures.clear();
 		Super::OnDestroy(hWnd, hInstance);
 	}
-	std::vector<VKImage::GLITexture> DDSTextures;
+	std::vector<VKImage::GLITexture> GLITextures;
 };

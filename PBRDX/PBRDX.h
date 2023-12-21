@@ -67,22 +67,22 @@ protected:
 		const auto CL = COM_PTR_GET(DirectCommandLists[0]);
 #if 0
 		//!< [0] 法線(Normal)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Normal.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Normal.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		//!< [1] カラー(Color)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		//!< [2] ラフネス(Roughness)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Roughness.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Roughness.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		//!< [3] メタリック(Metallic)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Metalness.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "Metal012_2K-JPG" / "Metal012_2K_Metalness.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 #else
 		//!< [0] 法線(Normal)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_NormalGL.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_NormalGL.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		//!< [1] カラー(Color)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		//!< [2] ラフネス(Roughness)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_Roughness.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_Roughness.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 		//!< [3] メタリック(Metallic)
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_Metalness.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "MetalPlates008_1K-JPG" / "MetalPlates008_1K_Metalness.dds").ExecuteCopyCommand(COM_PTR_GET(Device), CA, CL, COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 #endif
 		
 		Super::CreateTexture();
@@ -186,22 +186,22 @@ protected:
 			}
 #pragma endregion
 			//!< SRV0
-			Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH);
+			Device->CreateShaderResourceView(COM_PTR_GET(XTKTextures[0].Resource), &XTKTextures[0].SRV, CDH);
 			CbvSrvUavGPUHandles.back().emplace_back(GDH);
 			CDH.ptr += IncSize;
 			GDH.ptr += IncSize;
 			//!< SRV1
-			Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[1].Resource), &DDSTextures[1].SRV, CDH);
+			Device->CreateShaderResourceView(COM_PTR_GET(XTKTextures[1].Resource), &XTKTextures[1].SRV, CDH);
 			CbvSrvUavGPUHandles.back().emplace_back(GDH);
 			CDH.ptr += IncSize;
 			GDH.ptr += IncSize;
 			//!< SRV2
-			Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[2].Resource), &DDSTextures[2].SRV, CDH);
+			Device->CreateShaderResourceView(COM_PTR_GET(XTKTextures[2].Resource), &XTKTextures[2].SRV, CDH);
 			CbvSrvUavGPUHandles.back().emplace_back(GDH);
 			CDH.ptr += IncSize;
 			GDH.ptr += IncSize;
 			//!< SRV3
-			Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[3].Resource), &DDSTextures[3].SRV, CDH);
+			Device->CreateShaderResourceView(COM_PTR_GET(XTKTextures[3].Resource), &XTKTextures[3].SRV, CDH);
 			CbvSrvUavGPUHandles.back().emplace_back(GDH);
 		}
 

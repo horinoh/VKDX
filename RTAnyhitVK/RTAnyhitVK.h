@@ -309,8 +309,8 @@ public:
 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		const auto CB = CommandBuffers[0];
-		DDSTextures.emplace_back().Create(Device, PDMP, DDS_PATH / "SheetMetal001_1K-JPG" / "SheetMetal001_1K_Opacity.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
-		DDSTextures.emplace_back().Create(Device, PDMP, DDS_PATH / "SheetMetal001_1K-JPG" / "SheetMetal001_1K_Color.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
+		GLITextures.emplace_back().Create(Device, PDMP, DDS_PATH / "SheetMetal001_1K-JPG" / "SheetMetal001_1K_Opacity.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
+		GLITextures.emplace_back().Create(Device, PDMP, DDS_PATH / "SheetMetal001_1K-JPG" / "SheetMetal001_1K_Color.dds").SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 	}
 	virtual void CreateImmutableSampler() override {
 		constexpr VkSamplerCreateInfo SCI = {
@@ -361,8 +361,8 @@ public:
 		const std::array ASs = { TLASs[0].AccelerationStructure };
 		const auto WDSAS = VkWriteDescriptorSetAccelerationStructureKHR({ .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR, .pNext = nullptr, .accelerationStructureCount = static_cast<uint32_t>(size(ASs)), .pAccelerationStructures = data(ASs) });
 		const auto DII = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = StorageTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_GENERAL });
-		const auto DII_Opacity = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = DDSTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
-		const auto DII_Color = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = DDSTextures[1].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+		const auto DII_Opacity = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = GLITextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+		const auto DII_Color = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = GLITextures[1].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 		const std::array WDSs = {
 			//!< [0] TLAS
 			VkWriteDescriptorSet({

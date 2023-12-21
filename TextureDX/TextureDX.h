@@ -19,7 +19,7 @@ protected:
 		IndirectBuffers.emplace_back().Create(COM_PTR_GET(Device), DA).ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), sizeof(DA), &DA);
 	}
 	virtual void CreateTexture() override {
-		DDSTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "PavingStones050_2K-JPG" / "PavingStones050_2K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
+		XTKTextures.emplace_back().Create(COM_PTR_GET(Device), DDS_PATH / "PavingStones050_2K-JPG" / "PavingStones050_2K_Color.dds").ExecuteCopyCommand(COM_PTR_GET(Device), COM_PTR_GET(DirectCommandAllocators[0]), COM_PTR_GET(DirectCommandLists[0]), COM_PTR_GET(GraphicsCommandQueue), COM_PTR_GET(GraphicsFence), D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE);
 	}
 #ifdef USE_STATIC_SAMPLER
 	virtual void CreateStaticSampler() override {
@@ -106,9 +106,10 @@ protected:
 		{
 			CbvSrvUavGPUHandles.emplace_back();
 
+			const auto& Tex = XTKTextures[0];
 			auto CDH = CbvSrvUavDescriptorHeaps[0]->GetCPUDescriptorHandleForHeapStart();
 			auto GDH = CbvSrvUavDescriptorHeaps[0]->GetGPUDescriptorHandleForHeapStart();
-			Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), &DDSTextures[0].SRV, CDH);
+			Device->CreateShaderResourceView(COM_PTR_GET(Tex.Resource), &Tex.SRV, CDH);
 			//!< リソースと同じフォーマットとディメンションで最初のミップマップとスライスをターゲットするような場合には D3D12_SHADER_RESOURCE_VIEW_DESC* に nullptrを指定できる
 			//Device->CreateShaderResourceView(COM_PTR_GET(DDSTextures[0].Resource), nullptr, CDH); 
 			CbvSrvUavGPUHandles.back().emplace_back(GDH);

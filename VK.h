@@ -1008,6 +1008,9 @@ protected:
 	std::vector<RenderTexture> RenderTextures;
 	std::vector<StorageTexture> StorageTextures;
 
+	//!< VKの場合、通常サンプラ、イミュータブルサンプラとも同様に VkSampler を作成する、デスクリプタセットの指定が異なるだけ
+	std::vector<VkSampler> Samplers;
+
 	std::vector<VkDescriptorSetLayout> DescriptorSetLayouts;
 	std::vector<VkPipelineLayout> PipelineLayouts;
 
@@ -1017,9 +1020,6 @@ protected:
 
 	std::vector<VkDescriptorPool> DescriptorPools;
 	std::vector<VkDescriptorSet> DescriptorSets;
-
-	//!< VKの場合、通常サンプラ、イミュータブルサンプラとも同様に VkSampler を作成する、デスクリプタセットの指定が異なるだけ
-	std::vector<VkSampler> Samplers;
 
 	std::vector<VkDescriptorUpdateTemplate> DescriptorUpdateTemplates;
 	

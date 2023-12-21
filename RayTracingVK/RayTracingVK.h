@@ -240,7 +240,7 @@ public:
 
 		const auto PDMP = GetCurrentPhysicalDeviceMemoryProperties();
 		const auto CB = CommandBuffers[0];
-		DDSTextures.emplace_back().Create(Device, PDMP, DDS_PATH / "CubeMap" / "ninomaru_teien.dds")
+		GLITextures.emplace_back().Create(Device, PDMP, DDS_PATH / "CubeMap" / "ninomaru_teien.dds")
 			.SubmitCopyCommand(Device, PDMP, CB, GraphicsQueue, VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
 	}
 	virtual void CreateImmutableSampler() override {
@@ -362,7 +362,7 @@ public:
 		const auto DII_Storage = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = StorageTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_GENERAL });
 		const auto DII_VB = VkDescriptorBufferInfo({ .buffer = VertexBuffer.Buffer, .offset = 0, .range = VK_WHOLE_SIZE });
 		const auto DII_IB = VkDescriptorBufferInfo({ .buffer = IndexBuffer.Buffer, .offset = 0, .range = VK_WHOLE_SIZE });
-		const auto DII_Cube = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = DDSTextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
+		const auto DII_Cube = VkDescriptorImageInfo({ .sampler = VK_NULL_HANDLE, .imageView = GLITextures[0].View, .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL });
 		constexpr std::array<VkCopyDescriptorSet, 0> CDSs = {};
 		for (size_t i = 0; i < size(SwapchainImages); ++i) {
 			const auto DII_UB = VkDescriptorBufferInfo({ .buffer = UniformBuffers[i].Buffer, .offset = 0, .range = VK_WHOLE_SIZE });
